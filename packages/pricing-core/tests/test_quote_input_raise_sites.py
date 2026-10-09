@@ -64,6 +64,9 @@ _INPUT_FREE = {
     ("rating/score.py", "_check_billing_surface"): 1,  # names the constant billing-surface keys
     # FR-213's refusal: names the declared step outputs the inputs collide with, never a value
     ("rating/score.py", "_check_no_shadowed_produced_names"): 1,
+    # FR-221 as_at refusal: step id and field name only, never the value
+    # (test_rating_lookup_as_at.py drives it with a sentinel)
+    ("rating/score.py", "_check_as_at_values"): 1,
     ("rating/score.py", "_check_lookup_misses"): 2,  # step ids only
     ("rating/score.py", "_reraise_engine_failure"): 1,  # engine error is reduced to its type name
     # RL-1346's refusal: clause, rung names and minor-unit differences from `ladder_violations`
@@ -78,6 +81,13 @@ _INPUT_FREE = {
     ("rating/runtime.py", "handler"): 2,  # `_model_call_failure`: step id and the pinned model_type
     ("rating/compile.py", "check_step_refs_pinned"): 1,  # step id and ref string, no quote
     ("rating/compile.py", "compile_bundle"): 5,  # artifact-level (compile time), no quote
+    # PL-1471 (SL-1472), each at compile time over pinned artifacts, never a quote:
+    # model ref, objective ref and its status
+    ("rating/compile.py", "_refuse_unapproved_objectives"): 1,
+    # rate table ref, key name and Factor ref
+    ("rating/compile.py", "_refuse_control_factor_keys"): 1,
+    # model ref, a fitted feature name and the Factor's slug@version
+    ("rating/compile.py", "_refuse_control_factor_model_calls"): 1,
     ("rating/compile.py", "_raise_named"): 1,  # the constructor helper itself (`from None`)
 }
 #: The functions holding the quote-input sites, whose count must equal the cases.

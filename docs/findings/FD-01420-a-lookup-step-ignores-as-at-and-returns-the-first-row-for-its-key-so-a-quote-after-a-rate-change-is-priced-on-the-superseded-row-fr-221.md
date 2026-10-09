@@ -2,7 +2,7 @@
 id: FD-1420
 family: finding
 title: A lookup step ignores as_at and returns the first row for its key, so a quote after a rate change is priced on the superseded row (FR-221)
-status: active
+status: closed
 created: 2026-10-05            # original date 2026-10-05, set at the draft; minted 2026-10-05
 owner: auditor
 tree: caa4e411a9c07a389cf47092a923c7761b2b92dc

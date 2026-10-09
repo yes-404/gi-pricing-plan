@@ -3,7 +3,7 @@ id: PL-1471
 family: plan
 kind: leaf
 title: WK-673 — the FR-240 family fix, model approval and compile refuse an unapproved custom objective or a control-intent factor (FR-240, FR-88, R4): leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-06            # original date 2026-10-05, set at the draft; minted 2026-10-06
 owner: planner
 tree: 83ea509023d6d705d6f78fe74b7124fdf1375739

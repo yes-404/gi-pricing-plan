@@ -64,7 +64,7 @@ auditor, or a regulator:
 | **Governed Artifact** | Any artifact with an approval-bearing lifecycle: Dataset Version, Validation Rule, Model, Custom Objective, Custom Metric, Peril Structure, ~~Rate Table Version~~, Rating Version, Optimisation Run (when cited as evidence). *(Rate Table Version struck 2026-09-28: it has no approval lifecycle and is governed through the Rating Version that pins it. See `03` FR-1186 and OQ-620.)* |
 | **Evidence Bundle** | The set of artifact references required for that artifact type (§3.3), resolved and pinned at submission time. |
 | **Approval Policy** | The workspace configuration stating, per artifact type and environment, how many approvers are needed, which roles may approve, and what evidence is required. |
-| **Approval Decision** | An approve / reject / request-changes act by an Approver, with a mandatory comment. |
+| **Approval Decision** | An approve / reject / request-changes act by an Approver, with a ~~mandatory comment~~ comment, mandatory when requesting changes (FR-355) *(amended 2026-10-05, `RL-1522` DP-5)*. |
 | **Attestation** | A periodic, recorded confirmation by a named role that a live artifact remains fit for purpose (annual model review). |
 
 ---
@@ -480,12 +480,22 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
   "flags": [],
   "status": "review",
   "decisions": [
-    {"approver_id": "uuid", "decision": "approved", "at": "2026-09-13T10:11:00Z",
+    {"approver_id": "uuid", "decision": "approve", "at": "2026-09-13T10:11:00Z",
      "comment": "Dislocation is within the agreed envelope; young-driver softening is supported by the refit and the GIPP evidence is clean."}
   ],
   "approvers_required": 2, "approvers_recorded": 1
 }
 ```
+
+*Amended 2026-10-05 (WK-1178), on `RL-1522` DP-1 and DP-4.* A decision's value is
+the act: `approve`, `reject` or `request_changes`, as §5.1's decide row and the glossary's
+Approval Decision entry write it. The request's `status` is the state that act produces
+(`approved`, `changes_requested`, `rejected`). The example wrote the participle `approved`
+as a decision value, which mixed the two value sets. The example illustrates FR-352's full submission. Its
+`expedited`, `evidence_bundle`, `checklist` and `flags` are not fields of the `ApprovalRequest`
+the API returns: FR-352's checklist and evidence limbs are WK-677's, and a Deployment Request's
+pinned evidence lives on the Deployment Request (`RL-1301` A.2). The example is not a key list.
+The authoritative shape is `model-schema`'s `ApprovalRequest` (ADR-704).
 
 ### 4.4 `Dossier` structure
 
@@ -555,7 +565,7 @@ Generated sections, in order (R3). Each cites the artifacts it drew from.
 | `POST` | `/api/v1/role-assignments` | Assign a scoped role (FR-345) |
 | `POST` | `/api/v1/break-glass` | Time-boxed elevation with reason (FR-349) |
 | `GET`/`PUT` | `/api/v1/approval-policy` | Read / update the workspace policy (FR-354) |
-| `POST` | `/api/v1/approval-requests` | Submit an artifact; validates evidence and checklist (FR-352) |
+| `POST` | `/api/v1/approval-requests` | Submit an artifact; validates evidence and checklist (FR-352) *(Clarified 2026-10-05, `RL-1524` DP-2: a Rating Version is submitted through its own route, `POST /api/v1/rating-versions/{id}/submit` (`03` FR-260 (1)), which moves it to `review` and opens its request. This route refuses a Rating Version that is not in `review` with `APPROVAL_SUBJECT_NOT_IN_REVIEW` (FR-351).)* |
 | `GET` | `/api/v1/approval-requests?assigned_to=me&status=review` | Approvals inbox (FR-358) |
 | `GET` | `/api/v1/approval-requests/{id}` | Request with resolved evidence inline |
 | `POST` | `/api/v1/approval-requests/{id}/decide` | `approve` / `reject` / `request_changes` + comment (FR-353/355) |
@@ -637,7 +647,7 @@ async def generate(artifact: ArtifactRef, as_at: datetime | None) -> Dossier
 | View | Route | Contents |
 |---|---|---|
 | Approvals inbox | `/approvals` | Pending requests with artifact type, submitter, age, flags; evidence rendered inline (diffs, dislocation charts, diagnostics) so no context-gathering is needed |
-| Approval detail | `/approvals/:id` | Evidence bundle, checklist, flags, decision panel with mandatory comment, prior decisions and change requests |
+| Approval detail | `/approvals/:id` | Evidence bundle, checklist, flags, decision panel with ~~mandatory comment~~ a comment, mandatory when requesting changes (FR-355) *(amended 2026-10-05, `RL-1522` DP-5)*, prior decisions and change requests |
 | Audit explorer | `/audit` | Filterable timeline, entity-centric view, justification search, chain verification status, export |
 | Artifact history | `/artifacts/:ref/history` | Uniform version/transition timeline with diffs and actors |
 | Dependencies | `/artifacts/:ref/dependencies` | Blast-radius graph in both directions |
@@ -745,3 +755,4 @@ Mirrored into [`open-questions.md`](../open-questions.md).
 | **OQ-638** | ~~Does TAS 200 (Insurance) cover pricing and premium rating, or only reserving, capital and Solvency II actuarial-function work?~~ **DETERMINED 2026-08-18 by reading TAS 200 v2.0: it applies, through the `Pricing frameworks` scope item, whose glossary definition names the methodologies, assumptions and models behind an insurer's premium rates — FR-362.** No pricing-specific provisions section exists, so §1's P1.1–P1.4 bind, plus TAS 100. |
 | **OQ-639** | ~~Does `06` §3.3's per-artifact evidence table or `06` §4.2's `ApprovalPolicy` defaults decide what a submission actually requires?~~ **DECIDED 2026-08-18: §3.3 is a floor per artifact type and §4.2 may only add to it — FR-364**, with the floor restated in §4.2 so a reader of the defaults sees it, refused at policy save, and applied as a union at submission. The enforced floor is §3.3's checkable projection; the uncheckable remainder is named with an owner. |
 | **OQ-632** | ~~Does an `expression` Custom Objective (Phase 2, `02` FR-150) need an authoring permission distinct from `model:fit`?~~ **DECIDED 2026-08-18: yes — `custom_objective:author`, granted by no built-in role's default set — FR-367**, discharging FR-366's trigger before WK-690 rather than at it. Template selection stays `model:fit`; submission stays `model:submit`. |
+| **OQ-1486** | **OPEN** — **Is a Validation Rule Set a Governed Artifact?** §2 (`:64`) lists Validation Rule, but not Rule Set. `replace_rule_set` publishes each set version `approved` with no review, so a new version can drop member rules or re-point the Reference Dataset Version unreviewed. Raised 2026-09-30 by the decision-maker (`RL-1485`). Mirrored in `docs/open-questions.md`. *Amended 2026-10-05 before mint (currency only, at `47d770e8`): the cites above are at `65b33479`; at `47d770e8` they are `validation_rules.py:549` (`replace_rule_set`), `:654` (`status=APPROVED`), `models.py:1247` and `validation.py:400-432`. `RL-1407` (#1109) has since ruled that a rule set runs only approved, existing members (FD-1414; delivered by `SL-1409`, not yet in the code); that does not review a change of composition, and the options are not re-weighed here (`RL-1485` J2).* Status: **open** (owner WK-1178). |

@@ -421,14 +421,12 @@ def _consumed_by(steps: list[RatingStep]) -> dict[str, list[str]]:
     return consumed
 
 
-class RatingAlgorithm(BaseModel):
-    """A Rating Algorithm: the declarative DAG of rating steps (03 §4.1).
+class RatingAlgorithmDraft(BaseModel):
+    """A Rating Algorithm's field set, without its graph invariants (03 §4.1; RL-1474 item 1).
 
-    Invariants (spec §4.1): the DAG is acyclic; every `consumes` name is produced by
-    exactly one upstream step; every declared output has an `output` step; no step is
-    unreachable from an `input` and unreferenced by an `output` (FR-212). Enforced
-    here at the shape level; the strict save-time validation (types, determinism) is
-    W9-2.
+    The body of `POST /rating-algorithms` (WK-675 S2) and of S3's validate route: a graph
+    that breaks an invariant reaches the handler, which validates it into `RatingAlgorithm`
+    and refuses with the invariant's own code, not a generic request-validation 422.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -439,6 +437,27 @@ class RatingAlgorithm(BaseModel):
     outputs: list[AlgorithmOutput]
     steps: list[RatingStep]
     sub_graphs: list[SubGraphRef] = Field(default_factory=list)
+
+
+class RatingAlgorithmSaved(BaseModel):
+    """The 201 of `POST /rating-algorithms`: the saved version's id and address (DP-S2-2)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    id: UUID
+    slug: Slug
+    version: int = Field(ge=1)
+
+
+class RatingAlgorithm(RatingAlgorithmDraft):
+    """A Rating Algorithm: the declarative DAG of rating steps (03 §4.1).
+
+    Invariants (spec §4.1): the DAG is acyclic; every `consumes` name is produced by
+    exactly one upstream step; every declared output has an `output` step; no step is
+    unreachable from an `input` and unreferenced by an `output` (FR-212). Enforced
+    here at the shape level; the strict save-time validation (types, determinism) is
+    W9-2.
+    """
 
     @model_validator(mode="after")
     def _graph_invariants(self) -> RatingAlgorithm:
