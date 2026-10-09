@@ -34,6 +34,7 @@ from app.platform import rate_tables as rate_tables_service
 from app.platform import reference as reference_service
 from app.platform import regression_runs as regression_runs_service
 from app.platform import regression_suites as regression_suites_service
+from app.platform import sub_graphs as sub_graphs_service
 from app.platform.blobs import BlobStore
 from app.platform.modelling import load_factors, to_factor, to_model
 from model_schema import (
@@ -503,6 +504,20 @@ async def compile_rating_version(
                 # `pricing_core.rating.compile._MATURITY_CHECK_EXEMPT` reads for a pin kind with
                 # nothing to report.
                 return ResolvedArtifact(status="no_maturity_concept", payload=algo.content)
+            if ref.type == "sub_graph":
+                # WK-1250 Slice 2 (RL-1309 DP-1 item 5, G4): a Sub-graph Version has no status
+                # and no approval lifecycle of its own (`SubGraphVersionRow` has no status
+                # column), so there is no real maturity to read. The sentinel is deliberately
+                # not a member of `_APPROVED_OR_BETTER`: `_MATURITY_CHECK_EXEMPT` is what admits
+                # the pin, as for `rate_table` (RL-856), and the pin fails closed if the
+                # exemption is ever removed. `test_sub_graph_version_row_has_no_status_column`
+                # is the tripwire.
+                sub_graph = await sub_graphs_service.resolve_ref(
+                    session, workspace_id=workspace_id, ref=ref
+                )
+                return ResolvedArtifact(
+                    status="no_maturity_concept", payload=sub_graph.model_dump(mode="json")
+                )
             if ref.type == "model":
                 model = await session.scalar(
                     select(ModelRow).where(

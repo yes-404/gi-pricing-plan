@@ -85,7 +85,7 @@ inliner's order.
 - [x] Task 3 — `pricing-core/rating/inline.py` and the `vocabulary.py` token helper
 - [x] Task 4 — the diff limb (`diff_algorithms`)
 - [x] Task 5 — `compile_bundle` and `load_bundle` inline (C1)
-- [ ] Task 6 — backend: the resolver `sub_graph` branch, G1 objective clause, G2, G4 (c)
+- [x] Task 6 — backend: the resolver `sub_graph` branch, G1 objective clause, G2, G4 (c)
 - [ ] Task 7 — the trace (FR-258), order (b)
 - [ ] Task 8 — `RL-1242` stays, stated
 - [ ] Task 9 — the gate (owed after the Task 7 measurement; not run by the authoring seat)
@@ -134,6 +134,13 @@ lines listed in Scope.
 - **Broken-input proofs**, local edits restored by copy and `cmp` or by the reverse `sed`, never committed: dropping `*pins.sub_graphs` from `all_refs` reds the bundle-carries-the-fragment and G4 tests; `bundle_hash` ignoring `sub_graphs` reds `test_the_hash_covers_the_pinned_fragment`; treating every mount as pinned reds both G1 tests. The G4 (b) exemption proof is the in-test `monkeypatch` of `_MATURITY_CHECK_EXEMPT` (`PIN_NOT_APPROVED`).
 - **Findings in flight**: (1) the first inliner refused a text outside FR-244's allow-list itself, which pre-empted the save-time checks' own codes (`now()` gave `VALIDATION_FAILED`, not `EXPRESSION_NON_DETERMINISTIC`); seen red and fixed: `rename_tokens` now returns such a text unchanged and the checks over the inlined algorithm name it. (2) A helper first named `_check_*` was caught by `test_rating_authored_fields.py` (its `_check_` prefix means a registered save-time check); renamed `_refuse_mount_port_type_mismatch`, as the other compile-time helpers are named.
 - Not run: whole-tree mypy and `lint-imports` (gate slot).
+
+**2026-10-09, Task 6 (backend and the guards).**
+- **Resolver**: `_Resolver.resolve` has a `sub_graph` branch before the `NOT_FOUND` fall-through; it calls Slice 1's `sub_graphs.resolve_ref` and returns `ResolvedArtifact(status="no_maturity_concept", ...)`, the rate-table sentinel and reason (RL-856); `_MATURITY_CHECK_EXEMPT` (Task 5) is what admits it. `ruff check backend`: clean.
+- **G1 objective clause** (pricing-core, no database): `test_rating_compile_fr240.py` gained `test_g1_an_unapproved_objective_planted_in_a_pinned_sub_graph_is_refused` (3 statuses) and its approved control. The refusal is the merged `_refuse_unapproved_objectives` (`compile.py`, SL-1472), **called, not copied**: `git grep -c 'def _refuse_unapproved_objectives' -- packages/pricing-core/src` prints 1 (`compile.py:1`). Broken-input proof: with the `await _refuse_unapproved_objectives(...)` call replaced by `pass` locally (restored by copy and `cmp`, never committed), the planted objective compiled and the tests failed `DID NOT RAISE ValueError`. 15 passed with the call.
+- **G2 enumeration** at `61e2a8d9`, `git grep -nE '\.pins\s*=[^=]|pins=' -- backend/src`: `backend/src/app/api/models.py:1204` (`pins=body.pins`, the create route forwarding), `backend/src/app/platform/rating_versions.py:117` (`pins=Pins.model_validate(row.pins)`, a READ in `to_schema`) and `:283` (`pins=pins.model_dump(mode="json")`, the WRITE in `create_rating_version`, which inserts a new `draft` row). No path reaches an existing row, so no refusal is added; none exists to test red. The tripwire `test_g2_every_pin_write_path_is_enumerated` (backend, no database) fails on a new writer: proof with a comment line `x.pins = 1` appended to `rating_versions.py` locally: `{'app/platform/rating_versions.py': 3} != {...: 2}` (restored, never committed). PL 9683 (FD 9708), which adds `algorithm_ref`/`pins` writers to the create path, has not merged at this tree; whoever merges second re-runs the enumeration (plan Task 0).
+- **G4 (c)**: `test_sub_graph_version_row_has_no_status_column` (backend, no database), in the form of `test_rate_table_version_row_has_no_status_column`; like its siblings it passes at birth. The two sync tripwires ran: `-k 'no_status_column or g2_every'` 4 passed (3 tripwires and the enumerator).
+- **NOT RUN, owed after Task 7 (needs Postgres, so outside the small-test rule)**: `test_a_version_mounting_a_stored_sub_graph_compiles_over_http` and `test_a_mount_whose_sub_graph_is_not_pinned_fails_the_compile_job` (acceptance 11), authored by mirroring `test_a_pinned_version_compiles_over_http`'s helpers. They have never run: expect to correct fixtures at the first database run.
 
 ## PRs
 

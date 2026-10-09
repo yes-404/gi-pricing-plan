@@ -11,6 +11,8 @@ the Job to succeed rather than fail with `NOT_FOUND` / `PIN_NOT_APPROVED`.
 from __future__ import annotations
 
 import asyncio
+import re
+from pathlib import Path
 from uuid import UUID, uuid4
 
 import pytest
@@ -31,6 +33,7 @@ from app.db.models import (
     RateTableVersionRow,
     RatingAlgorithmRow,
     RatingVersionRow,
+    SubGraphVersionRow,
 )
 from app.db.session import Database
 from app.platform import rating_versions
@@ -931,3 +934,144 @@ def test_c4_control_a_version_returned_to_draft_compiles_again(
     _set_status(database, compiled_version, "draft")
     job = _run_compile_job(api_client, headers, database, blob_store, compiled_version)
     assert job.status is JobStatus.SUCCEEDED, job.error
+
+
+# --- WK-1250 Slice 2 (SL-1340): the compile resolver reads a pinned Sub-graph Version -----------
+# (FR-217; RL-1309 G1, G2, G4 (c))
+
+
+@pytest.mark.req("FR-20")
+@pytest.mark.req("FR-217")
+def test_sub_graph_version_row_has_no_status_column() -> None:
+    """G4 (c), the tripwire for `RL-1309` DP-1 item 5's `sub_graph` maturity exemption.
+
+    A Sub-graph Version has no approval lifecycle, so `compile.py`'s `_MATURITY_CHECK_EXEMPT`
+    admits the pin and the resolver reports the `"no_maturity_concept"` sentinel rather than an
+    invented `"approved"`. That is sound only while the premise holds: the day a migration adds
+    a `status` column to `sub_graph_versions`, this fails and names `RL-1309`, and the
+    exemption must be revisited rather than carried forward silently.
+    """
+    assert "status" not in SubGraphVersionRow.__table__.columns, (
+        "SubGraphVersionRow gained a status column: RL-1309 DP-1 item 5's sub_graph maturity "
+        "exemption must be revisited; the resolver should report this real status instead of "
+        "staying exempt from the FR-20 floor."
+    )
+
+
+#: Every place in `backend/src` that writes or forwards a Rating Version's `pins`, by the
+#: predicate `RL-1309` G2 names (`git grep -nE '\.pins\s*=[^=]|pins=' -- backend/src`), counted
+#: per file at the tree of SL-1340. `create_rating_version` is the only writer, and it inserts a
+#: new `draft` row: there is no path that reaches an existing row, so none needs a refusal.
+_PIN_WRITE_SITES = {
+    "app/api/models.py": 1,  # the create route forwards `body.pins` to the service
+    # `to_schema` reads `row.pins`; `create_rating_version` writes it (a new draft row)
+    "app/platform/rating_versions.py": 2,
+}
+
+
+@pytest.mark.req("FR-237")
+@pytest.mark.req("FR-217")
+def test_g2_every_pin_write_path_is_enumerated() -> None:
+    """RL-1309 G2: a pin write path that can reach an existing row must refuse a pin change
+    unless the row is `draft`. At this tree there is exactly one writer and it creates a row. A
+    new writer fails this test until it is enumerated here AND given the refusal."""
+    src = Path(__file__).resolve().parents[1] / "src"
+    pattern = re.compile(r"\.pins\s*=[^=]|pins=")
+    found = {
+        str(path.relative_to(src)): len(pattern.findall(path.read_text(encoding="utf-8")))
+        for path in sorted(src.rglob("*.py"))
+        if pattern.search(path.read_text(encoding="utf-8"))
+    }
+    assert found == _PIN_WRITE_SITES
+
+
+def _ncd_sub_graph() -> dict:
+    return {
+        "slug": "ncd-ladder",
+        "inputs": [{"name": "ncd_years", "type": "int"}],
+        "outputs": [{"name": "ncd_factor", "type": "decimal", "required": True}],
+        "steps": [
+            {"step_id": "s_ladder", "type": "expression", "label": "Ladder",
+             "expr": "ncd_years * 10", "result_type": "decimal",
+             "consumes": ["ncd_years"], "produces": "ncd_factor"},
+        ],
+        "change_note": "first cut",
+    }
+
+
+def _mounting_algorithm() -> dict:
+    return {
+        "slug": "mounting",
+        "version": 1,
+        "input_contract": [
+            {"name": "premium_in", "type": "int", "nullable": False},
+            {"name": "ncd_years", "type": "int", "nullable": False},
+        ],
+        "outputs": [{"name": "payable_premium_minor", "type": "money_minor", "required": True}],
+        "steps": [
+            {"step_id": "s_in", "type": "input", "label": "In", "input_name": "premium_in",
+             "on_missing": "error", "produces": "premium_in"},
+            {"step_id": "s_in_ncd", "type": "input", "label": "NCD", "input_name": "ncd_years",
+             "on_missing": "error", "produces": "ncd_years"},
+            {"step_id": "s_expr", "type": "expression", "label": "Apply",
+             "expr": "premium_in * ncd_factor", "result_type": "money_minor",
+             "consumes": ["premium_in", "ncd_factor"], "produces": "payable"},
+            {"step_id": "s_out", "type": "output", "label": "Out",
+             "output_name": "payable_premium_minor", "rounding": {"mode": "half_even", "dp": 0},
+             "consumes": ["payable"]},
+        ],
+        "sub_graphs": [{"ref": "sub_graph:ncd-ladder@1", "mount_point": "m_ncd",
+                        "inputs": {"ncd_years": "ncd_years"},
+                        "outputs": {"ncd_factor": "ncd_factor"}}],
+    }
+
+
+def _mount_a_stored_sub_graph(
+    api_client, workspace_id, principal, grant, database, *, pinned: bool
+) -> UUID:
+    asyncio.get_event_loop().run_until_complete(grant("analyst"))
+    headers = _headers(principal, workspace_id)
+    made = api_client.post("/api/v1/sub-graphs", json=_ncd_sub_graph(), headers=headers)
+    assert made.status_code == 201, made.text
+    algorithm = api_client.post(
+        "/api/v1/rating-algorithms", json=_mounting_algorithm(), headers=headers
+    )
+    assert algorithm.status_code == 201, algorithm.text
+    pins = _empty_pins() | ({"sub_graphs": ["sub_graph:ncd-ladder@1"]} if pinned else {})
+    row = asyncio.get_event_loop().run_until_complete(
+        _insert_version(
+            database, workspace_id, principal.id,
+            algorithm_ref="rating_algorithm:mounting@1", pins=pins,
+        )
+    )
+    return row.id
+
+
+@pytest.mark.req("FR-217")
+def test_a_version_mounting_a_stored_sub_graph_compiles_over_http(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """Acceptance 11: 202, and the `rating.compile` Job succeeds with the fragment inlined."""
+    version_id = _mount_a_stored_sub_graph(
+        api_client, workspace_id, principal, grant, database, pinned=True
+    )
+    headers = _headers(principal, workspace_id)
+    job_row = _run_compile_job(api_client, headers, database, blob_store, version_id)
+    assert job_row.status is JobStatus.SUCCEEDED, job_row.error
+    bundle = Bundle.model_validate_json(_read_blob(database, blob_store, job_row.result["ref"]))
+    assert "m_ncd__s_ladder" in bundle.graph.nodes
+    assert "sub_graph:ncd-ladder@1" in bundle.resolved_payloads
+
+
+@pytest.mark.req("FR-217")
+@pytest.mark.req("FR-237")
+def test_a_mount_whose_sub_graph_is_not_pinned_fails_the_compile_job(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    version_id = _mount_a_stored_sub_graph(
+        api_client, workspace_id, principal, grant, database, pinned=False
+    )
+    headers = _headers(principal, workspace_id)
+    job_row = _run_compile_job(api_client, headers, database, blob_store, version_id)
+    assert job_row.status is JobStatus.FAILED
+    assert job_row.error["code"] == "RATING_VERSION_UNPINNED"
