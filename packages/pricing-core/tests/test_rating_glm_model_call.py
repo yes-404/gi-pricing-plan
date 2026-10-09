@@ -291,6 +291,10 @@ async def test_a_frequency_glm_model_call_returns_its_exact_rate(world: GlmWorld
 async def test_a_model_call_equals_predict_glm_at_full_precision(world: GlmWorld) -> None:
     """No quantize and no `round()` at the step, whichever `result_type` it declares.
 
+    **Item 15 is STOPPED / RULED in part (see LG-9449): this 1e-14 assertion is a DRAFT, not
+    the item's evidence.** The lead's ruling of 2026-10-10 00:23:38 BST makes the evidence the
+    four checks recorded in LG-9449 (bit-exact money downstream, the analytic bound, a
+    deterministic pinned engine, the spec grep); this test only documents the carriage.
     **Deviation from item 15's "exact Decimal of the float", reported to the lead.** The
     engine carries a handler's float at 15 significant digits (`0.0588198259273704` for
     `0.058819825927370374`, probed live; a `str` value cannot enter `v * 2`), so no form
@@ -506,3 +510,18 @@ async def test_the_output_step_rounds_a_model_call_once() -> None:
     assert result["risk"] == pytest.approx(prediction, rel=1e-14)  # not rounded by the step
     assert result["office"] == pytest.approx(prediction * factor, rel=1e-12)
     assert Decimal(repr(result["office"])).quantize(Decimal(1), ROUND_HALF_EVEN) == once
+
+
+@pytest.mark.req("NFR-495")
+async def test_a_glm_quote_scored_twice_gives_identical_outputs(world: GlmWorld) -> None:
+    """Item 15 check (3): the engine (`zen-engine` 0.53.0, uv.lock) is deterministic for a GLM
+    `model_call`: the same input run twice returns identical results, compared as Decimals
+    through `Decimal(repr(x))` (FR-244's boundary), not as floats."""
+    from decimal import Decimal
+
+    compiled = load_bundle(await compiled_bundle(world))
+    for quote in QUOTES:
+        first = await _value(compiled, **quote)
+        second = await _value(compiled, **quote)
+        assert Decimal(repr(first["risk"])) == Decimal(repr(second["risk"]))
+        assert first == second
