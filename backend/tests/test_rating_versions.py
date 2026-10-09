@@ -32,6 +32,7 @@ from app.db.models import (
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import approvals as approval_service
+from app.platform import dislocation_runs as dislocation_service
 from app.platform import rating_algorithms as algorithm_service
 from app.platform import rating_versions as rating_service
 from app.platform import rbac
@@ -49,6 +50,7 @@ from model_schema import (
     new_uuid7,
     suite_content_hash,
 )
+from model_schema.dislocation import DislocationRun
 from pricing_core.rating.compile import Bundle
 from pricing_core.rating.runtime import CompiledBundle, load_bundle
 
@@ -776,6 +778,51 @@ def _suite(*quotes: dict[str, Any], algorithm_slug: str = "minimal") -> Regressi
     )
 
 
+async def record_dislocation_run(
+    database: Database,
+    workspace_id: UUID,
+    *,
+    candidate_ref: str,
+    candidate_hash: str,
+    baseline_ref: str,
+    actor_id: UUID,
+    quantiles: dict[str, str | None] | None = None,
+) -> UUID:
+    """Persist a Dislocation Run naming `candidate_ref` at `candidate_hash` against
+    `baseline_ref` (FR-257 limb (2)'s evidence), through the one writer `persist_run`.
+
+    The run is empty-portfolio and valid; the limb (2) gate reads only its refs and hashes.
+    `quantiles` is FR-224's observed figure (PL-1500 Task 4), left out of a limb (2) run."""
+    body: dict[str, Any] = {
+        "baseline_ref": baseline_ref,
+        "candidate_ref": candidate_ref,
+        "portfolio_dataset_version_id": str(new_uuid7()),
+        "job_id": str(new_uuid7()),
+        "policy_count": 0,
+        "exposure_years": "0",
+        "totals": {"baseline_premium_minor": 0, "candidate_premium_minor": 0, "change_pct": None},
+        "outcomes": {
+            "quoted_both": 0, "quoted_to_declined": 0, "declined_to_quoted": 0,
+            "declined_both": 0, "error": 0, "zero_baseline": 0, "negative_baseline": 0,
+        },
+        "distribution": [
+            {"band": "all", "policies": 0, "exposure_share": None, "mean_change_pct": None}
+        ],
+        "largest_movers_blob": "blob:sha256:" + "d" * 64,
+        "errors": [],
+    }
+    if quantiles is not None:
+        body["abs_change_pct_quantiles"] = quantiles
+    run = DislocationRun.model_validate(body)
+    async with database.unit_of_work() as session:
+        row = await dislocation_service.persist_run(
+            session, workspace_id=workspace_id, run=run,
+            baseline_bundle_hash=candidate_hash, candidate_bundle_hash=candidate_hash,
+            actor_id=actor_id,
+        )
+        return row.id
+
+
 class _Gate:
     """One workspace's golden-quote world: principals, algorithms, versions, suites."""
 
@@ -917,14 +964,37 @@ class _Gate:
         await self.ensure_suite(rating_id)
         await self.record_run(rating_id, "pass")
 
+    async def ensure_dislocation_run(self, rating_id: UUID) -> UUID | None:
+        """Record the Dislocation Run FR-257 limb (2) needs, if the version has a baseline:
+        the shared fixture that gives every existing submit test its new evidence (PL-1500
+        Acceptance 10). A first version has no baseline and needs none. The run names the
+        version's current bundle hash and the baseline the gate itself will pick."""
+        row = await self.row(rating_id)
+        if row.bundle is None:
+            return None
+        async with self.database.session() as session:
+            policy = await approval_service.policy_for(session, self.workspace_id)
+            baseline, _reason = await rating_service._dislocation_baseline(
+                session, workspace_id=self.workspace_id, row=row, policy=policy
+            )
+        if baseline is None:
+            return None
+        return await record_dislocation_run(
+            self.database, self.workspace_id,
+            candidate_ref=f"rating_version:{row.slug}@{row.version}",
+            candidate_hash=str(row.bundle["content_hash"]), baseline_ref=str(baseline),
+            actor_id=self.analyst.id,
+        )
+
     async def submit(
         self, rating_id: UUID, loader: Any = None, *, run: str | None = "pass",
-        provision: bool = True,
+        provision: bool = True, dislocation: bool = True,
     ) -> ApprovalRequestRow:
         """Submit. By default the version's algorithm is given a golden-quote suite if it has
         none, and a passing Regression Run is recorded first (FR-257 limb (1), DP-S3-1 forward):
         every golden-quote test that must reach `review` goes through this one fixture (T6b).
-        `provision=False` authors no suite; `run=None` records no run."""
+        `provision=False` authors no suite; `run=None` records no run; `dislocation=False`
+        records no Dislocation Run (FR-257 limb (2), PL-1500 Task 3)."""
         if provision:
             await self.ensure_suite(rating_id)
         row = await self.row(rating_id)
@@ -935,6 +1005,8 @@ class _Gate:
             ) is not None
         if run is not None and has_suite and row.bundle is not None:
             await self.record_run(rating_id, run)
+        if dislocation:
+            await self.ensure_dislocation_run(rating_id)
         async with self.database.unit_of_work() as session:
             _, request = await rating_service.submit_for_review(
                 session, workspace_id=self.workspace_id, actor=self.actuary,

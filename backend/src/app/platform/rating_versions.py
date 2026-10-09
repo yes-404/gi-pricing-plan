@@ -29,6 +29,7 @@ from app.db.models import (
 )
 from app.errors import PlatformError
 from app.platform import approvals, audit, rbac
+from app.platform import environments as environments_service
 from app.platform import objectives as objectives_service
 from app.platform import rate_tables as rate_tables_service
 from app.platform import reference as reference_service
@@ -37,6 +38,7 @@ from app.platform import regression_suites as regression_suites_service
 from app.platform.blobs import BlobStore
 from app.platform.modelling import load_factors, to_factor, to_model
 from model_schema import (
+    ApprovalPolicy,
     ApprovalStatus,
     ArtifactRef,
     BundleMetadata,
@@ -60,6 +62,7 @@ from model_schema import (
     check_model_reference_mode,
     context_hash,
 )
+from model_schema.approvals import DEFAULT_DISLOCATION_BASELINE_ENVIRONMENT
 from pricing_core.rating.compile import Bundle, ResolvedArtifact, compile_bundle
 from pricing_core.rating.runtime import CompiledBundle
 from pricing_core.rating.testing import evaluate_golden_quotes
@@ -88,6 +91,7 @@ __all__ = [
     "apply_approval_decision",
     "compile_rating_version",
     "create_rating_version",
+    "dislocation_run_verified",
     "golden_quote_delta_authors",
     "load_rating_version",
     "submit_for_review",
@@ -360,12 +364,24 @@ async def submit_for_review(
     run_id = await _regression_run_gate(
         session, workspace_id=workspace_id, row=row, ref=ref, golden_quotes=golden_quotes
     )
-    # Written once, here, and never edited after (`03` §4.3's invariant). The run id is the
-    # only other key this gate writes; `golden_quotes` is exactly what the gate returned.
+    policy = await approvals.policy_for(session, workspace_id)
+    baseline, baseline_reason = await _dislocation_baseline(
+        session, workspace_id=workspace_id, row=row, policy=policy
+    )
+    dislocation_run_id = await _dislocation_gate(
+        session, workspace_id=workspace_id, row=row, ref=ref, baseline=baseline
+    )
+    # Written once, here, and never edited after (`03` §4.3's invariant). The ids are the
+    # only other keys these gates write; `golden_quotes` is exactly what the gate returned.
     row.evidence = {
         **(row.evidence or {}),
         "golden_quotes": golden_quotes,
         "regression_suite_run_id": str(run_id),
+        **(
+            {"dislocation_run_id": str(dislocation_run_id)}
+            if dislocation_run_id is not None
+            else {"no_baseline": baseline_reason}
+        ),
     }
     request = await approvals.submit(
         session,
@@ -764,6 +780,108 @@ async def _regression_run_gate(
             f"the latest Regression Run ({latest.id}) for this bundle and suite failed (FR-257)",
         )
     return latest.id
+
+
+async def _dislocation_baseline(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    row: RatingVersionRow,
+    policy: ApprovalPolicy,
+) -> tuple[ArtifactRef | None, str]:
+    """FR-257 limb (2)'s baseline and why (DP-S5-1 (a); `03` FR-257, 2026-10-10 clarification).
+
+    The Rating Version live in the Environment the `rating_version` policy entry names (default
+    `prod`); with nothing live there, the most recently approved other version of the same
+    algorithm (`_baseline`, the golden-quote precedent); with neither, the version is the
+    algorithm's first. The reason is `live:<environment>`, `approved` or `first_version`.
+    """
+    entry = policy.entry_for("rating_version")
+    environment = (
+        entry.dislocation_baseline_environment if entry is not None else None
+    ) or DEFAULT_DISLOCATION_BASELINE_ENVIRONMENT
+    live = await environments_service.live_rating_version_ref(
+        session, workspace_id=workspace_id, environment_slug=environment
+    )
+    if live is not None:
+        return ArtifactRef.parse(live), f"live:{environment}"
+    if row.algorithm_ref is not None:
+        found = await _baseline(
+            session,
+            workspace_id=workspace_id,
+            algorithm_slug=ArtifactRef.model_validate(row.algorithm_ref).slug,
+            exclude_id=row.id,
+        )
+        if found is not None:
+            approved = found[0]
+            return (
+                ArtifactRef(type="rating_version", slug=approved.slug, version=approved.version),
+                "approved",
+            )
+    return None, "first_version"
+
+
+async def _dislocation_gate(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    row: RatingVersionRow,
+    ref: ArtifactRef,
+    baseline: ArtifactRef | None,
+) -> UUID | None:
+    """FR-257 limb (2), a Dislocation Run against the baseline: the run id to record.
+
+    `None` only for a first version (no baseline, so no run is required; the caller records
+    `no_baseline`). Otherwise the latest run naming this version at its **current** bundle hash
+    as candidate and the baseline as baseline, else `EVIDENCE_INCOMPLETE` naming which of the
+    three failed: no run at all, a run on an earlier bundle hash (stale), or a run against a
+    different baseline.
+    """
+    if baseline is None:
+        return None
+    # Local, because `dislocation_runs` imports `WorkspaceResolver` and `to_schema` from this
+    # module: a module-level import here is a cycle (PL-1500 Task 3).
+    from app.platform import dislocation_runs as dislocation_runs_service
+
+    bundle_hash = (row.bundle or {}).get("content_hash")
+    if bundle_hash is None:
+        raise _evidence_incomplete(
+            ref, "FR-257 limb (2): the version has no compiled bundle for a Dislocation Run to name"
+        )
+    latest = await dislocation_runs_service.latest_run_for(
+        session,
+        workspace_id=workspace_id,
+        candidate_ref=str(ref),
+        candidate_bundle_hash=str(bundle_hash),
+        baseline_ref=str(baseline),
+    )
+    if latest is not None:
+        return latest.id
+    keys = await dislocation_runs_service.candidate_run_keys(
+        session, workspace_id=workspace_id, candidate_ref=str(ref)
+    )
+    if not keys:
+        why = f"no Dislocation Run names this version as its candidate against {baseline}"
+    elif not any(candidate_hash == str(bundle_hash) for candidate_hash, _ in keys):
+        why = (
+            f"every Dislocation Run of this version is on an earlier bundle hash than its "
+            f"current {bundle_hash} (stale)"
+        )
+    else:
+        why = (
+            f"no Dislocation Run at this version's current bundle hash has {baseline}, the "
+            "current live version, as its baseline"
+        )
+    raise _evidence_incomplete(ref, f"FR-257 limb (2): {why}")
+
+
+def dislocation_run_verified(row: RatingVersionRow) -> bool:
+    """Whether the evidence shows limb (2) satisfied: a run id, or the recorded first-version
+    case. Slice 6's `verifiable` entry for `dislocation_run` (PL-1500 Hand-off)."""
+    evidence = row.evidence or {}
+    return evidence.get("dislocation_run_id") is not None or (
+        evidence.get("no_baseline") == "first_version"
+    )
 
 
 def _evidence_incomplete(ref: ArtifactRef, why: str) -> PlatformError:

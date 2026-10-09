@@ -313,3 +313,40 @@ def test_an_unqualified_entry_carrying_the_field_grants_no_skip() -> None:
         )
         is not None
     )
+
+
+@pytest.mark.req("FR-257")
+def test_the_dislocation_baseline_environment_is_only_on_rating_version_entries() -> None:
+    """FR-257 limb (2), DP-S5-1 (a): the baseline Environment lives on the `rating_version`
+    entry and nowhere else (`06` §4.2, RL-1504 T5). Before the field exists, `extra="forbid"`
+    refuses it everywhere (a `ValidationError` for an unknown field), which is the red; after,
+    only a `rating_version` entry accepts it."""
+    accepted = ApprovalPolicyEntry(
+        artifact_type="rating_version",
+        approvers_required=2,
+        approver_roles=("approver",),
+        dislocation_baseline_environment="uat",
+    )
+    assert accepted.dislocation_baseline_environment == "uat"
+    unset = ApprovalPolicyEntry(
+        artifact_type="rating_version", approvers_required=2, approver_roles=("approver",)
+    )
+    assert unset.dislocation_baseline_environment is None
+    with pytest.raises(ValidationError, match="dislocation_baseline_environment"):
+        ApprovalPolicyEntry(
+            artifact_type="model",
+            approvers_required=1,
+            approver_roles=("approver",),
+            dislocation_baseline_environment="prod",
+        )
+
+
+@pytest.mark.req("FR-257")
+def test_a_blank_dislocation_baseline_environment_is_refused() -> None:
+    with pytest.raises(ValidationError, match="dislocation_baseline_environment"):
+        ApprovalPolicyEntry(
+            artifact_type="rating_version",
+            approvers_required=2,
+            approver_roles=("approver",),
+            dislocation_baseline_environment="",
+        )

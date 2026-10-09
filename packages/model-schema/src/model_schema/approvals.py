@@ -26,6 +26,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from model_schema.refs import ArtifactRef
 
 __all__ = [
+    "DEFAULT_DISLOCATION_BASELINE_ENVIRONMENT",
     "DEFAULT_POLICY",
     "EVIDENCE_FLOOR",
     "VALID_APPROVAL_TRANSITIONS",
@@ -122,6 +123,12 @@ EVIDENCE_FLOOR: Final[dict[str, tuple[str, ...]]] = {
 }
 
 
+#: The Environment whose live version is FR-257 limb (2)'s baseline when a `rating_version`
+#: policy entry names none (`03` FR-257's 2026-10-10 clarification, `06` §4.2). It is the slug
+#: `DEFAULT_POLICY`'s `deployment` entry already uses.
+DEFAULT_DISLOCATION_BASELINE_ENVIRONMENT: Final = "prod"
+
+
 class ApprovalPolicyEntry(BaseModel):
     """What a given artifact type requires (`06` §4.2)."""
 
@@ -142,6 +149,29 @@ class ApprovalPolicyEntry(BaseModel):
             "entry that names an environment."
         ),
     )
+
+    dislocation_baseline_environment: str | None = Field(
+        default=None,
+        min_length=1,
+        description=(
+            "The Environment slug whose live Rating Version is FR-257 limb (2)'s baseline "
+            "(`06` §4.2, RL-1504 T5). Unset means `DEFAULT_DISLOCATION_BASELINE_ENVIRONMENT`. "
+            "Valid only on a `rating_version` entry."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _baseline_environment_is_only_on_a_rating_version_entry(
+        self,
+    ) -> ApprovalPolicyEntry:
+        if self.dislocation_baseline_environment is not None and (
+            self.artifact_type != "rating_version"
+        ):
+            raise ValueError(
+                "dislocation_baseline_environment is valid only on a `rating_version` entry "
+                "(`06` §4.2, RL-1504 T5)"
+            )
+        return self
 
     @model_validator(mode="after")
     def _skip_permission_is_only_on_a_qualified_deployment_entry(

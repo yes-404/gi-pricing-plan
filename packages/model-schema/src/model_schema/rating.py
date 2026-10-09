@@ -126,6 +126,9 @@ class RatingVersionEvidence(BaseModel):
     dislocation_run_id: UUID | None = None
     gipp_check_id: UUID | None = None
     structural_diff_blob: str | None = None
+    #: Written by the submit gate when FR-257 limb (2) finds no baseline: the algorithm's first
+    #: version, so no Dislocation Run is required (`03` FR-257, 2026-10-10 clarification).
+    no_baseline: Literal["first_version"] | None = None
     #: Written once by the submit gate (FR-260, amended 2026-09-28) and never edited after.
     #: `None` means not yet submitted; a submitted version carries one of the two variants.
     golden_quotes: GoldenQuoteEvidence | None = None
