@@ -35,6 +35,7 @@ from app.platform import rate_tables as rate_tables_service
 from app.platform import reference as reference_service
 from app.platform import regression_runs as regression_runs_service
 from app.platform import regression_suites as regression_suites_service
+from app.platform import transparency as transparency_service
 from app.platform.blobs import BlobStore
 from app.platform.modelling import load_factors, to_factor, to_model
 from model_schema import (
@@ -55,6 +56,7 @@ from model_schema import (
     Pins,
     Principal,
     RatingAlgorithm,
+    RatingModelCallStep,
     RatingVersion,
     RatingVersionEvidence,
     RatingVersionStatus,
@@ -90,6 +92,7 @@ __all__ = [
     "BundleLoader",
     "WorkspaceResolver",
     "apply_approval_decision",
+    "approximation_fidelity_statements",
     "compile_rating_version",
     "create_rating_version",
     "dislocation_run_verified",
@@ -885,6 +888,66 @@ async def _dislocation_gate(
             "current live version, as its baseline"
         )
     raise _evidence_incomplete(ref, f"FR-257 limb (2): {why}")
+
+
+async def approximation_fidelity_statements(
+    session: AsyncSession, *, workspace_id: UUID, row: RatingVersionRow
+) -> list[str]:
+    """FR-136's pre-check for FR-224 (DP-S5-5 (a), `03` FR-224): the fidelity statements of the
+    models a version references in `approximation` mode, or `EVIDENCE_INCOMPLETE` naming the
+    first model whose transparency artifact has no GLM approximation (or none at all).
+
+    A model with no approximation cannot be rated in `approximation` mode (`02` FR-133), so
+    refusing it before a portfolio run is spent is the "plainly poor surrogate" case with no
+    new threshold. Run at `POST /dislocation-runs` for an exact-mode baseline spec and again
+    at submission; the statements are copied onto the evidence for the approver. A version
+    that references no model in `approximation` mode yields none.
+    """
+    ref = ArtifactRef(type="rating_version", slug=row.slug, version=row.version)
+    algorithm = await _algorithm_of(session, workspace_id=workspace_id, rating_version=row)
+    if algorithm is None:
+        return []
+    model_refs = sorted(
+        {
+            step.model_ref
+            for step in algorithm.steps
+            if isinstance(step, RatingModelCallStep)
+            and step.mode == "approximation"
+            and step.model_ref is not None
+        },
+        key=str,
+    )
+    statements: list[str] = []
+    for model_ref in model_refs:
+        model = await session.scalar(
+            select(ModelRow).where(
+                ModelRow.workspace_id == workspace_id,
+                ModelRow.model_family_slug == model_ref.slug,
+                ModelRow.version == model_ref.version,
+            )
+        )
+        if model is None:
+            raise _evidence_incomplete(ref, f"FR-136: {model_ref} is not a model of this workspace")
+        try:
+            artifact = await transparency_service.load_transparency(
+                session, workspace_id=workspace_id, model_id=model.id
+            )
+        except PlatformError as exc:
+            if exc.code != "NOT_FOUND":
+                raise
+            raise _evidence_incomplete(
+                ref,
+                f"FR-136: {model_ref} is referenced in approximation mode but has no "
+                "transparency artifact",
+            ) from exc
+        if artifact.glm_approximation is None:
+            raise _evidence_incomplete(
+                ref,
+                f"FR-136: {model_ref} is referenced in approximation mode but its transparency "
+                "artifact has no GLM approximation",
+            )
+        statements.append(f"{model_ref}: {artifact.fidelity_statement}")
+    return statements
 
 
 def _empty_algorithm(*, like: RatingAlgorithm) -> RatingAlgorithm:

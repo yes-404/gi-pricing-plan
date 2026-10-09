@@ -12,9 +12,11 @@ default; these tests pass `dislocation=False` and record, or withhold, the run t
 from __future__ import annotations
 
 import hashlib
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
+import polars as pl
 import pytest
 from backend.tests.test_rating_version_compile import _minimal_algorithm
 from backend.tests.test_rating_versions import (
@@ -28,11 +30,20 @@ from backend.tests.test_rating_versions import (
     record_dislocation_run,
 )
 
-from app.db.models import DeploymentRow, EnvironmentRow
+from app.db.models import (
+    DeploymentRow,
+    EnvironmentRow,
+    ModelRow,
+    RatingAlgorithmRow,
+    RatingVersionRow,
+    TransparencyArtifactRow,
+)
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import rating_versions as rating_versions_service
-from model_schema import RatingAlgorithm, diff_algorithms
+from app.worker.dislocation_handlers import _ExactModeResolver, abs_change_pct_quantiles
+from model_schema import ArtifactRef, RatingAlgorithm, diff_algorithms, new_uuid7
+from pricing_core.rating.compile import ResolvedArtifact
 
 _STALE_HASH = "sha256:" + "0" * 64
 
@@ -275,3 +286,203 @@ async def test_a_blob_store_is_required_to_submit(database: Database, workspace_
                 session, workspace_id=workspace_id, actor=gate.actuary,
                 rating_version_id=rv_id, change_summary="no store",
             )
+
+
+# ---- Task 4: the run's observed figure (RL-1504 T7; Acceptance 17 to 19, run half) --------
+
+_KEYS = ("0.5", "0.9", "0.95", "0.99", "0.999", "1")
+
+
+def _frame(*pairs: tuple[int, int]) -> pl.DataFrame:
+    """A dislocation frame of policies quoted in both: `(baseline, candidate)` minor units."""
+    return pl.DataFrame(
+        {
+            "quote_id": [f"q{i}" for i in range(len(pairs))],
+            "baseline_outcome": ["quoted"] * len(pairs),
+            "candidate_outcome": ["quoted"] * len(pairs),
+            "baseline_minor": [b for b, _ in pairs],
+            "candidate_minor": [c for _, c in pairs],
+            "change_minor": [c - b for b, c in pairs],
+        },
+        schema_overrides={"change_minor": pl.Int64},
+    )
+
+
+@pytest.mark.req("FR-224")
+def test_quantiles_are_nearest_rank_not_interpolated() -> None:
+    """Choice (1): changes -1, +2, -3, +4 % have absolute values 1, 2, 3, 4 (n = 4). Rank
+    ceil(0.5 x 4) = 2 gives 2; linear interpolation gives 2.5 and Polars' default 3.0; a signed
+    order gives -1. Rank ceil(0.9 x 4) = 4 gives 4 (interpolation 3.7)."""
+    quantiles = abs_change_pct_quantiles(
+        _frame((10000, 9900), (10000, 10200), (10000, 9700), (10000, 10400))
+    )
+    assert quantiles == {
+        "0.5": "2.000000",
+        "0.9": "4.000000",
+        "0.95": "4.000000",
+        "0.99": "4.000000",
+        "0.999": "4.000000",
+        "1": "4.000000",
+    }
+
+
+@pytest.mark.req("FR-224")
+def test_quantiles_round_once_toward_positive_infinity() -> None:
+    """Choice (2): +100/3 % is 33.333... exactly, so its 7th place is 3 and half-even rounds
+    DOWN to 33.333333; toward +infinity gives 33.333334. An exact +10 % is not moved."""
+    quantiles = abs_change_pct_quantiles(_frame((30000, 40000), (10000, 11000)))
+    assert quantiles == {
+        "0.5": "10.000000",
+        "0.9": "33.333334",
+        "0.95": "33.333334",
+        "0.99": "33.333334",
+        "0.999": "33.333334",
+        "1": "33.333334",
+    }
+
+
+@pytest.mark.req("FR-224")
+def test_an_empty_banded_set_has_null_quantiles() -> None:
+    """Choice (3), run half: two policies quoted in both with a zero baseline are not banded
+    (n = 0); the run holds all six keys, each null. FR-224's gate refuses it (Task 5)."""
+    assert abs_change_pct_quantiles(_frame((0, 5000), (0, 5000))) == dict.fromkeys(_KEYS)
+
+
+# ---- Task 4: the exact-mode twin and FR-136's pre-check -----------------------------------
+
+_MODEL_REF = "model:fidelity-model@1"
+
+
+def _approximation_algorithm() -> dict[str, Any]:
+    """`premium_in` through one `model_call` in `approximation` mode, then an expression."""
+    return {
+        "slug": "approx-algo",
+        "version": 1,
+        "input_contract": [{"name": "premium_in", "type": "int", "nullable": False}],
+        "outputs": [{"name": "payable_premium_minor", "type": "money_minor", "required": True}],
+        "steps": [
+            {"step_id": "s_in", "type": "input", "label": "In", "input_name": "premium_in",
+             "on_missing": "error", "produces": "premium_in"},
+            {"step_id": "s_mc", "type": "model_call", "label": "Risk premium",
+             "model_ref": _MODEL_REF, "mode": "approximation",
+             "feature_map": {"premium_in": "premium_in"}, "consumes": ["premium_in"],
+             "produces": ["risk_premium_minor"]},
+            {"step_id": "s_out", "type": "output", "label": "Out",
+             "output_name": "payable_premium_minor", "rounding": {"mode": "half_even", "dp": 0},
+             "consumes": ["risk_premium_minor"]},
+        ],
+        "sub_graphs": [],
+    }
+
+
+def _glm_payload(statement: str) -> dict[str, Any]:
+    return {
+        "glm_approximation": {
+            "target": "gbm_prediction", "family": "gamma", "link": "log",
+            "r_squared": 0.94, "deviance_explained": 0.9,
+            "coefficients": [
+                {"term": "intercept", "estimate": -2.4, "std_error": 0.01, "z": -199.8,
+                 "p_value": 0.0, "ci_95": [-2.44, -2.39]},
+            ],
+            "relativities": {"region": [{"level": "north", "relativity": 1.0, "is_base": True}]},
+            "worst_regions": [],
+        },
+        "shap_summary": None,
+        "fidelity_statement": statement,
+        "monotonicity_verified": None,
+    }
+
+
+async def _approximation_version(
+    database: Database, workspace_id: UUID, actor_id: UUID, *, transparency: dict[str, Any] | None
+) -> RatingVersionRow:
+    """A draft `approximation`-mode version over `_approximation_algorithm`, its model with the
+    given transparency payload (`None`: the model has no transparency artifact)."""
+    async with database.unit_of_work() as session:
+        model = ModelRow(
+            workspace_id=workspace_id, model_family_slug="fidelity-model", version=1,
+            status="draft", dataset_version_id=new_uuid7(),
+            spec={"model_family_slug": "fidelity-model"}, spec_hash="v3:sha256:" + "e" * 64,
+        )
+        session.add(model)
+        session.add(
+            RatingAlgorithmRow(
+                workspace_id=workspace_id, slug="approx-algo", version=1,
+                content=_approximation_algorithm(), created_by=actor_id,
+            )
+        )
+        await session.flush()
+        if transparency is not None:
+            session.add(
+                TransparencyArtifactRow(
+                    id=new_uuid7(), workspace_id=workspace_id, model_id=model.id,
+                    created_at=datetime.now(UTC), job_id=None, payload=transparency,
+                )
+            )
+        version = RatingVersionRow(
+            workspace_id=workspace_id, slug="approx-rv", version=1, status="draft",
+            dataset_version_id=new_uuid7(), model_ref=_MODEL_REF, created_by=actor_id,
+            algorithm_ref="rating_algorithm:approx-algo@1", model_reference_mode="approximation",
+        )
+        session.add(version)
+        await session.flush()
+        return version
+
+
+@pytest.mark.req("FR-224")
+@pytest.mark.req("FR-136")
+async def test_fr136_precheck_refuses_before_any_run(database: Database, workspace_id) -> None:
+    """DP-S5-5 (a): a model referenced in `approximation` mode with no GLM approximation is
+    refused `EVIDENCE_INCOMPLETE` naming the model, ahead of any portfolio run."""
+    row = await _approximation_version(database, workspace_id, new_uuid7(), transparency=None)
+    async with database.session() as session:
+        with pytest.raises(PlatformError) as refused:
+            await rating_versions_service.approximation_fidelity_statements(
+                session, workspace_id=workspace_id, row=row
+            )
+    assert refused.value.code == "EVIDENCE_INCOMPLETE"
+    assert refused.value.status_code == 422
+    assert refused.value.detail is not None
+    assert _MODEL_REF in refused.value.detail
+    assert "FR-136" in refused.value.detail
+
+
+@pytest.mark.req("FR-136")
+async def test_fr136_precheck_returns_the_statements_of_approximated_models(
+    database: Database, workspace_id
+) -> None:
+    row = await _approximation_version(
+        database, workspace_id, new_uuid7(), transparency=_glm_payload("94% of deviance.")
+    )
+    async with database.session() as session:
+        statements = await rating_versions_service.approximation_fidelity_statements(
+            session, workspace_id=workspace_id, row=row
+        )
+    assert statements == [f"{_MODEL_REF}: 94% of deviance."]
+
+
+@pytest.mark.req("FR-224")
+async def test_the_exact_twin_resolver_flips_only_model_call_modes() -> None:
+    """DP-S5-3 (a): the ephemeral exact-mode twin is the same algorithm with every
+    `model_call` in `exact` mode; every other step and every other artifact is untouched."""
+    algorithm_ref = ArtifactRef.parse("rating_algorithm:approx-algo@1")
+    other_ref = ArtifactRef.parse("model:fidelity-model@1")
+    payload = _approximation_algorithm()
+    artifacts = {
+        algorithm_ref: ResolvedArtifact(status="approved", payload=payload),
+        other_ref: ResolvedArtifact(status="approved", payload={"unchanged": True}),
+    }
+
+    class _Inner:
+        async def resolve(self, ref: ArtifactRef) -> ResolvedArtifact:
+            return artifacts[ref]
+
+    resolver = _ExactModeResolver(_Inner(), algorithm_ref)
+    flipped = await resolver.resolve(algorithm_ref)
+    modes = {s["step_id"]: s.get("mode") for s in flipped.payload["steps"]}
+    assert modes == {"s_in": None, "s_mc": "exact", "s_out": None}
+    assert [s for s in flipped.payload["steps"] if s["type"] != "model_call"] == [
+        s for s in payload["steps"] if s["type"] != "model_call"
+    ]
+    assert payload["steps"][1]["mode"] == "approximation"  # the source payload is not mutated
+    assert (await resolver.resolve(other_ref)).payload == {"unchanged": True}

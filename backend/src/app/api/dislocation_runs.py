@@ -23,6 +23,7 @@ from app.api.responses import problems
 from app.errors import PlatformError
 from app.platform import dislocation_runs as service
 from app.platform import jobs as job_service
+from app.platform import rating_versions as rating_versions_service
 from app.platform import rbac
 from app.platform.blobs import BlobStore
 from app.platform.datasets import read_version
@@ -97,9 +98,19 @@ async def start_dislocation_run(
     """**202** with a `dislocation.run` Job. **422** `VALIDATION_FAILED`, with no Job, when the
     change groups do not partition the derived changes (FR-1399, naming each change) or when
     the run is estimated above the single-Job bound (`RL-1504` item 1, naming K, the policy
-    count and the estimate)."""
+    count and the estimate). A spec with `baseline_mode_override` also gets FR-136's pre-check
+    before any Job: **422** `EVIDENCE_INCOMPLETE` naming a model referenced in `approximation`
+    mode whose transparency artifact has no GLM approximation (`03` FR-224, DP-S5-5)."""
     await _require_dataset_read(database, caller)
     async with database.unit_of_work() as session:
+        if spec.baseline_mode_override is not None:
+            await rating_versions_service.approximation_fidelity_statements(
+                session,
+                workspace_id=caller.workspace_id,
+                row=await rating_versions_service.resolve_rating_version_ref(
+                    session, workspace_id=caller.workspace_id, ref=spec.candidate_ref
+                ),
+            )
         estimate = await service.estimate_for_spec(
             session, workspace_id=caller.workspace_id, spec=spec, blob_store=blob_store
         )

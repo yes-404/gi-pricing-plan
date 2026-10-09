@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from datetime import date
 from itertools import pairwise
-from typing import Annotated, Literal, Self
+from typing import Annotated, Final, Literal, Self
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -20,6 +20,11 @@ from model_schema.refs import ArtifactRef
 from model_schema.scoring import LadderRungName
 
 _FROZEN = ConfigDict(frozen=True, extra="forbid")
+
+#: The fixed quantile set of a run's `abs_change_pct_quantiles` (03 §4.6, RL-1504 T7): the keys
+#: are these strings, "1" the largest absolute change. The `rating_version` policy entry's
+#: `approximation_deviation.quantile` must be one of them (06 §4.2).
+ABS_CHANGE_PCT_QUANTILE_KEYS: Final = ("0.5", "0.9", "0.95", "0.99", "0.999", "1")
 _Share = Annotated[float, Field(ge=0, le=1)]
 _Count = Annotated[int, Field(ge=0)]
 
@@ -45,6 +50,19 @@ class DislocationSpec(BaseModel):
     band_edges_pct: Annotated[list[DecimalStr], Field(min_length=1)]
     mover_threshold_pct: DecimalStr
     change_groups: Annotated[list[ChangeGroup], Field(max_length=6)] | None = None
+    #: FR-224's exact-mode baseline (RL-1504 item 8): when `"exact"`, the run's baseline is
+    #: the candidate's own Rating Version compiled in `exact` mode (ephemeral, FR-1398), so
+    #: `baseline_ref` and `candidate_ref` name one version and no attribution is run.
+    baseline_mode_override: Literal["exact"] | None = None
+
+    @model_validator(mode="after")
+    def _exact_override_names_one_version(self) -> Self:
+        if self.baseline_mode_override is not None and self.baseline_ref != self.candidate_ref:
+            raise ValueError(
+                "baseline_mode_override applies to one version: baseline_ref and candidate_ref "
+                "must be equal (FR-224, RL-1504 item 8)"
+            )
+        return self
 
     @model_validator(mode="after")
     def _edges_increase_and_threshold_positive(self) -> Self:
@@ -192,6 +210,21 @@ class DislocationRun(BaseModel):
     change_groups: Annotated[list[ChangeGroup], Field(max_length=6)] | None = None
     attribution: list[AttributionItem] | None = None
     attribution_summary: AttributionSummary | None = None
+    #: FR-224's observed figure (03 §4.6, RL-1504 T7): nearest-rank quantiles of the banded
+    #: set's absolute percentage changes, decimal strings rounded once to 6 places toward +inf,
+    #: every key null for an empty banded set. All six keys or none (a run before this field).
+    abs_change_pct_quantiles: dict[str, DecimalStr | None] | None = None
+
+    @model_validator(mode="after")
+    def _quantile_keys_are_the_fixed_set(self) -> Self:
+        if self.abs_change_pct_quantiles is not None and (
+            tuple(self.abs_change_pct_quantiles) != ABS_CHANGE_PCT_QUANTILE_KEYS
+        ):
+            raise ValueError(
+                "abs_change_pct_quantiles must hold exactly the keys "
+                f"{list(ABS_CHANGE_PCT_QUANTILE_KEYS)}, in that order (03 §4.6)"
+            )
+        return self
 
     @model_validator(mode="after")
     def _attribution_is_all_or_none(self) -> Self:
