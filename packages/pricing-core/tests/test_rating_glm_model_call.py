@@ -363,3 +363,72 @@ async def test_a_glm_whose_offset_is_not_mapped_is_refused_naming_the_offset(
     compiled = load_bundle(await compiled_bundle(world, algorithm_payload(feature_map=no_offset)))
     result = await _value(compiled, **QUOTES[0])
     assert "MODEL_OFFSET_MISSING" in result[MODEL_CALL_ERROR_KEY]
+
+
+def _offset_world() -> tuple[GlmWorld, GlmWorld]:
+    """A source severity-free base model and a residual GLM whose offset is that model."""
+    base = glm_world()
+    residual_spec = base.spec.model_copy(
+        update={
+            "model_family_slug": "motor-resid",
+            "offset": OffsetSpec(kind="model", offset_model_ref=MODEL_REF),
+        }
+    )
+    return base, GlmWorld(residual_spec, base.fit, base.factors, base.bandings, base.groupings)
+
+
+@pytest.mark.req("FR-116")
+async def test_a_model_offset_glm_scores_with_its_source_model() -> None:
+    """DP-3 (a): the source model's fit, spec and inputs travel under its own ref, and its
+    linear predictor is the residual model's offset — as `/predict` does it."""
+    from pricing_core.modelling.predict import linear_predictor
+
+    base, residual = _offset_world()
+    bundle_resolver = _OffsetResolver(base, residual)
+    bundle = await compile_bundle(version("model:motor-resid@1"), bundle_resolver)
+    assert MODEL_REF in bundle.resolved_payloads  # the source, under its own ref
+    compiled = load_bundle(bundle)
+    quote = QUOTES[1]
+    row = {
+        "driver_age": float(quote["driver_age"]), "region": quote["region"],
+        "exposure_years": quote["exposure_years"],
+    }
+    frame = pl.DataFrame([row])
+    source_eta = linear_predictor(
+        base.fit, frame, base.factors, base.spec,
+        bandings={b.id: b for b in base.bandings},
+        groupings={g.id: g for g in base.groupings},
+    )
+    expected = float(
+        predict_glm(
+            residual.fit, frame, residual.factors, residual.spec, model_offset=source_eta,
+            bandings={b.id: b for b in residual.bandings},
+            groupings={g.id: g for g in residual.groupings},
+        )[0]
+    )
+    result = await _value(compiled, **quote)
+    assert MODEL_CALL_ERROR_KEY not in result
+    assert result["risk"] == pytest.approx(expected, rel=1e-14)
+
+
+class _OffsetResolver:
+    def __init__(self, base: GlmWorld, residual: GlmWorld) -> None:
+        self._base, self._residual = base, residual
+
+    async def resolve(self, ref: ArtifactRef) -> ResolvedArtifact:
+        if ref.type == "rating_algorithm":
+            return ResolvedArtifact(
+                status="no_maturity_concept",
+                payload=algorithm_payload(model_ref="model:motor-resid@1"),
+            )
+        assert str(ref) == "model:motor-resid@1", ref
+        source = ResolvedArtifact(
+            status="approved", payload=self._base.model_payload(),
+            factors=self._base.factors, bandings=self._base.bandings,
+            groupings=self._base.groupings,
+        )
+        return ResolvedArtifact(
+            status="approved", payload=self._residual.model_payload(),
+            factors=self._residual.factors, bandings=self._residual.bandings,
+            groupings=self._residual.groupings, offset_source=source,
+        )

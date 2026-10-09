@@ -379,8 +379,8 @@ def test_to_wire_refuses_a_clamp_constraint_with_nothing_to_clamp() -> None:
 async def test_a_glm_model_call_scores() -> None:
     """FD-1458: a real GLM, with the Factors and Banding the Bundle carries, scores.
 
-    Was `test_a_glm_model_call_is_refused_with_a_named_code`, which pinned the refusal
-    (`predict_glm has no such fallback`). The handler now returns the model's value and no
+    Was `test_a_glm_model_call_is_refused_with_a_named_code`, which pinned the old GLM
+    refusal. The handler now returns the model's value and no
     `MODEL_CALL_ERROR_KEY`, through the engine and called directly.
     """
     resolver = _FakeResolver(glm=True)

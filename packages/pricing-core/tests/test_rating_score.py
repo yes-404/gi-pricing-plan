@@ -628,6 +628,22 @@ async def test_score_one_makes_no_network_call(monkeypatch: pytest.MonkeyPatch) 
         socket.socket()  # the deliberate call the guard must catch
 
 
+@pytest.mark.req("NFR-491")
+async def test_scoring_a_glm_makes_no_network_call(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The same guard with a GLM pin (FD-1458): its Factors, Banding and fit are rebuilt from
+    the Bundle alone, so no socket opens at score either."""
+
+    def _forbidden(*args: Any, **kwargs: Any) -> Any:
+        raise AssertionError("score_one attempted to open a network socket (NFR-491)")
+
+    compiled = await _compiled(glm=True)
+    monkeypatch.setattr(socket, "socket", _forbidden)
+    result = await score_one(compiled, _ctx())
+    assert result.outcome == "quoted"
+    with pytest.raises(AssertionError, match="NFR-491"):
+        socket.socket()
+
+
 # ---------------------------------------------------------------------------
 # NFR-495: determinism, in-process and across a subprocess.
 # ---------------------------------------------------------------------------
