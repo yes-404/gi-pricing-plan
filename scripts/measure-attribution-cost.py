@@ -228,9 +228,9 @@ def _algorithm(
                 "on_miss": "error", "consumes": [f], "produces": f"rel_{f}"}  # fmt: skip
 
     def freq_step(factors: list[str], base: str) -> dict[str, Any]:
-        expr = " * ".join([base, *[f"rel_{f}" for f in factors]])
+        prod = " * ".join([base, *[f"rel_{f}" for f in factors]])
         return {"step_id": "s_freq", "type": "expression", "label": "Claim frequency",
-                "expr": expr, "result_type": "decimal", "consumes": [f"rel_{f}" for f in factors],
+                "expr": prod, "result_type": "decimal", "consumes": [f"rel_{f}" for f in factors],
                 "produces": "freq"}  # fmt: skip
 
     def out_step(step_id: str, rung: str, source: str) -> dict[str, Any]:
