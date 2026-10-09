@@ -270,6 +270,10 @@ log "DRIVER DONE"
 
 **Projection at the observed rate (DERIVED, linear in ratings).** One score pass over 678,013: 23.5 min. K=3/4/5/6 on 20,000 policies, one run each: 364, 728, 1,456, 2,912 s (about 91 min together); N=5 of those: about 7.6 h. Five full score passes about 2 h; the full-portfolio K=3 run about 3.1 h. Plan total about 12.8 h at N=5, past the 6 h STOP of the brief. Reported to the lead; nothing further started.
 
+**(a) Rate probe at 20,000** (the lead's ruling, by flags only): `cost --policies 20000 --score-policies 20000 --ks 3 --runs 1` (`out/11-a-probe20k.jsonl`), START 16:12:14 BST (load1 1.50), END 16:22:24 BST (load1 2.32), rc 0, tree `7dba2d11`: score_batch 20,000 policies = 41.17 s = **485.76 policies/s** (50,000 policies gave 480.65; the two agree within 1%); attribute K=3, 20,000 policies, 1 run = 370.86 s. One score pass over 678,013 projects to 678,013 / 485.76 = 1,396 s = 23.3 min, within the 45 min test, so step (c) (one timed full-book pass) stays in the plan, last.
+
+**(b) K = 3 runs** are separate invocations, each under its own gate-1 flock, driver `loop-k.sh` (local, next to `inv.sh`): `cost --policies 20000 --ks 3 --runs 1 --rate 485.7552475841824`, files `out/23-k3-r1.jsonl` to `r5`; `--rate` is (a)'s rate, used only for the DERIVED lines.
+
 ## PRs
 
 #1243, a draft. The branch `sl-1387-attribution-exact-shapley-largest-remainder` is pushed; the PR is not merged by the executor.
