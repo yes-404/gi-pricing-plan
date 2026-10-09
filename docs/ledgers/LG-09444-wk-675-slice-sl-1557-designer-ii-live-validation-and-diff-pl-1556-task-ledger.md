@@ -149,6 +149,19 @@ Count: **4** sites keep `BUNDLE_COMPILE_FAILED` with a reason (rows 1–4), **1*
 
 **Handover to the next seat.** Remaining: Task 9 (the gate, after the lead's slot). First after install: `pnpm --dir <wt>/frontend generate:api`, then `vitest run` each new file singly (Task 6: `useGraphValidation.test.ts`, `DagDesignerValidation.test.ts`; Task 7: `DiffOverlay.test.ts`), then `lint` and `type-check` and fix what they find (expect fixes: `exactOptionalPropertyTypes` on the `diffMark` prop, `draft.version` typing, the `RatingAlgorithmDraft` vs `AlgorithmDiff` import in `DiffOverlay`). Then the heavy owed list: the unrun backend DB tests of Tasks 2 and 4 with their red-on-main, the browser a11y checks above, `test_sub_graph.py`, whole-tree mypy, audit-docs, `migrate --verify`, and the FR-id replacement of `FR 9445` once the lead names it.
 
+#### 2026-10-10 — Acceptance 14 grep hits, listed and classified (lead's instruction; ruling pending with the maintainer)
+
+Predicate verbatim, run at tree `a7a66a6f`: `git -C <wt> grep -n -i -E 'RATING_GRAPH_CYCLIC|RATING_GRAPH_UNRESOLVED_REF|topolog|kahn' -- frontend/src ':!frontend/src/api/generated'` → 4 lines (the case-sensitive form of the plan's command differs only on the `kahn` hit).
+
+| # | Hit | Classification | Reason |
+|---|---|---|---|
+| 1 | `components/dag/__tests__/graph.test.ts:38` — test title "orders the topological eleven-step fixture as declared" | not a check | the word "topological" in a title; asserts S2's display layout order |
+| 2 | `components/dag/graph.ts:39` — comment "Kahn's order, ties by declared position…" | not a check | describes `graphOrder`, S2's navigator/layout ordering; it validates nothing and emits no issue |
+| 3 | `views/__tests__/RatingDesignView.test.ts:93` — fixture `code: "RATING_GRAPH_CYCLIC"` | not a check | a mocked save refusal (S2); the code is displayed from the response, never produced client-side |
+| 4 | `views/__tests__/RatingDesignView.test.ts:102` — assertion that the alert shows that code | not a check | asserts display of a server-supplied code |
+
+Neither `useGraphValidation.ts` nor `GraphIssues.vue` contains any of the four tokens. No file is edited on this account.
+
 ## PRs
 
 None yet.
