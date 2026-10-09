@@ -40,7 +40,7 @@ FR-240, FR-244, FR-403, NFR-463, and the FR that RL-1474 T1 creates. FR-246 is n
 |---|---|---|---|
 | 0 | Task 0 preconditions | Task 0 rows re-run at the dispatch tree | done (below) |
 | 0A | diff route typed, contract regenerated | Acceptance 21 | done, commit 2 |
-| 1 | `graph_invariant_issues` and types in model-schema | Acceptance 2, 4 | open |
+| 1 | `graph_invariant_issues` and types in model-schema | Acceptance 2, 4 | done, commit 3 |
 | 2 | mode mismatch named at compile | Acceptance 16–19 | open |
 | 3 | bare-`ValueError` sweep | Acceptance 20 | open |
 | 4 | validate route and spec texts | Acceptance 1, 3, 5–11 | open |
@@ -95,6 +95,15 @@ Not yet. The auditor writes it.
 - `scripts/generate-contracts.py` then `--check`: rc 0 (`46 generated contracts match the models`). `pnpm generate:api` waits for the frontend install after Task 7 (generated, VCS-ignored).
 - GREEN: same command → `1 passed, 154 deselected`.
 - Position: this is the slice's **second** commit, after the activation commit `b15d1a57` (docs only); no frontend code consumes the route, so the FD-1335 item-5 reading (own route, before any frontend consumption) holds. The ledger's "first commit" requirement is read as the first code commit.
+
+#### 2026-10-09 15:50 BST — Task 1 (commit 3)
+
+- RED: `nice -n 19 flock -w 300 /tmp/slots/small-test -c "timeout 150 uv run --directory <wt> pytest -q -p no:xdist packages/model-schema/tests/test_graph_invariant_issues.py"` → rc 2, collection `ImportError: cannot import name 'graph_invariant_issues' from 'model_schema'`.
+- Code: `ValidationIssue` moved into `model_schema/rating.py` (unchanged), `AlgorithmValidationReport`, `graph_invariant_issues`; `RatingAlgorithm._graph_invariants` raises on the first issue with today's exception classes and messages. Exports added to `__init__`.
+- GREEN: same file `7 passed`; `test_rating_algorithm.py` + `test_graph_errors.py` `13 passed` unmodified.
+- One test assertion was wrong in my first draft (which of two unchained producers is flagged depends on Kahn's pop order, today's behaviour); the test now asserts exactly one ambiguous issue naming one of the two. Behaviour unchanged from the pre-move code.
+- Broken input (Acceptance 2 and 4), each run then restored: (M1) drop the duplicate-id `return` → `test_a_duplicate_step_id_is_the_only_issue_even_with_a_cycle` FAILED; (M2) ambiguous-producer check run unconditionally → `test_no_ambiguous_producer_issue_after_a_cycle` FAILED; (M3) return early at the orphan stage → `test_every_breach_is_reported_not_the_first` and the ambiguous-after-cycle test FAILED.
+- Not yet done for Task 1: `pricing-core`'s `ValidationIssue` re-import (Task 2's file; `compile.py` still defines its own class, so the class exists twice until Task 2, by plan order). `test_sub_graph.py` and whole-tree mypy wait for the gate slot.
 
 ## PRs
 
