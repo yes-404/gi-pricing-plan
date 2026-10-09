@@ -82,7 +82,7 @@ inliner's order.
 - [ ] Task 0 — preconditions and premises a–n at `61e2a8d9` (this entry: partial; pending items listed in Scope)
 - [x] Task 1 — spec: `03` §4.1, §4.3, §4.11, §5.2 (T1, T2 verbatim from RL 9586)
 - [x] Task 2 — `model-schema`: `Pins.sub_graphs`, the port map, the mount as a node, the two contracts
-- [ ] Task 3 — `pricing-core/rating/inline.py` and the `vocabulary.py` token helper
+- [x] Task 3 — `pricing-core/rating/inline.py` and the `vocabulary.py` token helper
 - [ ] Task 4 — the diff limb (`diff_algorithms`)
 - [ ] Task 5 — `compile_bundle` and `load_bundle` inline (C1)
 - [ ] Task 6 — backend: the resolver `sub_graph` branch, G1 objective clause, G2, G4 (c)
@@ -113,6 +113,13 @@ lines listed in Scope.
 - **Green**: `Pins.sub_graphs`; `SubGraphRef.inputs`/`outputs` (default empty so the existing mount tests at `test_rating_algorithm.py:74` and `test_rating_score.py:466` pass unmodified; completeness against the pinned ports is compile's, Task 5); `mount_point` pattern `^[A-Za-z][A-Za-z0-9_]*$` plus a no-`__` validator; `_graph_invariants` counts each mount as a `_MountNode` (id `mount_point`, consumes its inputs, produces its outputs) through the existing helpers, with mount-point uniqueness beside FR-215. The orphan check stays on real steps. `test_rating_algorithm.py`: 21 passed, rc 0 (load1 3.4). `ruff check packages/model-schema`: clean.
 - Contracts: `rating-version.schema.json` (`pins.sub_graphs`), `rating-algorithm.schema.json` (`sub_graphs` items: pattern, `inputs`, `outputs`) hand-edited; `generate-contracts.py` regenerated `generated.json` and `rating-version-create.schema.json`; `--check`: "46 generated contracts match the models". `backend/tests/test_contracts.py`: 152 passed, 2 skipped (load1 4.08 at launch, 0.08 over the cap; no database used, the teardown warning is the unset test DB).
 - Not run: whole-tree mypy (waits for the gate slot).
+
+**2026-10-09, Task 3 (inliner).**
+- **Red**: `test_rating_inline.py` first run at 14:31 (load1 4.12 at launch, 0.12 over the cap; later runs 3.3 to 3.8): collection `ModuleNotFoundError: No module named 'pricing_core.rating.inline'`, rc 2.
+- **Green**: `pricing_core/rating/inline.py` (`inline_mounts`, the proposed name, kept) and `vocabulary.py` (`_scan` with spans; `_tokenize` is now a wrapper over it; new `rename_tokens`). `test_rating_inline.py`: 22 passed (rc 0). `test_rating_vocabulary.py`: 58 passed. `ruff check packages`: clean. Two fixture slips seen red and fixed in the tests (short artifact slugs; a parent that cannot be built with no mapped output).
+- **Raise-site register**: `test_quote_input_raise_sites.py` went red ("a `_raise_named` site is not accounted for", the five `inline.py` sites) until `_INPUT_FREE` gained five `rating/inline.py` rows with their input-free reasons; then 19 passed. Plan acceptance 10 allows this only for `compile_bundle`'s own count; this is the new-file case, named here.
+- **Deviations from PL 9610 Task 3 (read at `202d6777`)**: (1) the separator is `__` and renaming is by token (RL 9586), not `/`; (2) steps are in RL 9586 P5's Kahn order, not "parent then mounts"; (3) `as_at` is renamed as well as RL 9586's seven fields, because `authored.py` `EXPRESSION_FIELDS` lists it as an evaluated string (additive, no unruled choice); (4) the plan's "nested mount: refused" case is not an inliner case, since `fragments` is already `SubGraph`s; it is Task 5's (the payload is validated into `SubGraph`, whose `extra="forbid"` refuses `sub_graphs`).
+- **OPEN DP (reported to the lead, not picked)**: a fragment that re-produces one of its own input ports (the in-place clamp that Slice 1's `SubGraphBody` allows) cannot be inlined faithfully, since the port IS the parent's value and the write would reach the parent. `inline_mounts` refuses it with `VALIDATION_FAILED` (test `test_a_fragment_that_re_produces_its_input_port_is_refused`). No ruling covers it; the refusal is the conservative, reversible default.
 
 ## PRs
 

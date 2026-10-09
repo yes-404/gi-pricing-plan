@@ -89,6 +89,14 @@ _INPUT_FREE = {
     # model ref, a fitted feature name and the Factor's slug@version
     ("rating/compile.py", "_refuse_control_factor_model_calls"): 1,
     ("rating/compile.py", "_raise_named"): 1,  # the constructor helper itself (`from None`)
+    # WK-1250 Slice 2 (SL-1340), `inline.py`: each at compile and load time over pinned artifacts,
+    # never a quote. The text names a mount point, a port or a step id (authored identifiers), an
+    # artifact ref, or the first graph-invariant message (step ids and value names).
+    ("rating/inline.py", "_raise_named"): 1,  # the constructor helper itself (`from None`)
+    ("rating/inline.py", "_rename_text"): 1,  # a step id
+    ("rating/inline.py", "_port_mapping"): 4,  # mount point and port names
+    ("rating/inline.py", "_inline_one"): 1,  # mount point and port names
+    ("rating/inline.py", "inline_mounts"): 3,  # mount point, artifact ref, namespaced names
 }
 #: The functions holding the quote-input sites, whose count must equal the cases.
 _INPUT_SITES = {("rating/score.py", "_validate_inputs"), ("rating/score.py", "_row_to_ctx")}
