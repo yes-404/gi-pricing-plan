@@ -463,6 +463,26 @@ _ACTION = {
 }
 
 
+async def _resolve_sub_graph_pin(
+    session: AsyncSession, workspace_id: UUID, ref: ArtifactRef
+) -> ResolvedArtifact:
+    """The compile resolver's `sub_graph` branch (WK-1250 Slice 2; RL-1309 DP-1 item 5, G4).
+
+    A Sub-graph Version has no status and no approval lifecycle of its own
+    (`SubGraphVersionRow` has no status column), so there is no real maturity to read. The
+    sentinel is deliberately not a member of `_APPROVED_OR_BETTER`: `_MATURITY_CHECK_EXEMPT` is
+    what admits the pin, as for `rate_table` (RL-856), and the pin fails closed if the
+    exemption is ever removed. `test_sub_graph_version_row_has_no_status_column` is the
+    tripwire. A free function so the resolver's branch is two lines wherever the resolver lives.
+    """
+    sub_graph = await sub_graphs_service.resolve_ref(
+        session, workspace_id=workspace_id, ref=ref
+    )
+    return ResolvedArtifact(
+        status="no_maturity_concept", payload=sub_graph.model_dump(mode="json")
+    )
+
+
 async def compile_rating_version(
     session: AsyncSession,
     *,
@@ -505,19 +525,7 @@ async def compile_rating_version(
                 # nothing to report.
                 return ResolvedArtifact(status="no_maturity_concept", payload=algo.content)
             if ref.type == "sub_graph":
-                # WK-1250 Slice 2 (RL-1309 DP-1 item 5, G4): a Sub-graph Version has no status
-                # and no approval lifecycle of its own (`SubGraphVersionRow` has no status
-                # column), so there is no real maturity to read. The sentinel is deliberately
-                # not a member of `_APPROVED_OR_BETTER`: `_MATURITY_CHECK_EXEMPT` is what admits
-                # the pin, as for `rate_table` (RL-856), and the pin fails closed if the
-                # exemption is ever removed. `test_sub_graph_version_row_has_no_status_column`
-                # is the tripwire.
-                sub_graph = await sub_graphs_service.resolve_ref(
-                    session, workspace_id=workspace_id, ref=ref
-                )
-                return ResolvedArtifact(
-                    status="no_maturity_concept", payload=sub_graph.model_dump(mode="json")
-                )
+                return await _resolve_sub_graph_pin(session, workspace_id, ref)
             if ref.type == "model":
                 model = await session.scalar(
                     select(ModelRow).where(

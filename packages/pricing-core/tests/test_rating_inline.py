@@ -216,7 +216,7 @@ def test_a_namespaced_name_equal_to_a_parent_name_is_refused_never_merged(parent
 
 @pytest.mark.req("FR-217")
 def test_a_fragment_that_re_produces_its_input_port_is_refused() -> None:
-    """It would overwrite the parent's value the port maps to (unruled: refused, not picked)."""
+    """It would overwrite the parent's value the port maps to (ruled: refused, VALIDATION_FAILED)."""
     fragment = _fragment(
         steps=[
             {"step_id": "s_clamp", "type": "expression", "label": "c",
@@ -226,8 +226,18 @@ def test_a_fragment_that_re_produces_its_input_port_is_refused() -> None:
              "result_type": "decimal", "consumes": ["ncd_years"], "produces": "ncd_factor"},
         ],
     )
+    parent = _parent()
+    before = parent.model_dump()
     with pytest.raises(CodedError, match=r"^VALIDATION_FAILED"):
-        _inline(_parent(), fragment)
+        _inline(parent, fragment)
+    assert parent.model_dump() == before  # the parent's value is untouched
+
+
+@pytest.mark.req("FR-217")
+def test_a_fragment_that_only_reads_its_input_port_still_inlines() -> None:
+    """Positive control for the refusal above: reading a port is the normal case."""
+    inlined = _inline(_parent())
+    assert any(s.step_id == "m_ncd__s_ladder" for s in inlined.steps)
 
 
 @pytest.mark.req("FR-217")
