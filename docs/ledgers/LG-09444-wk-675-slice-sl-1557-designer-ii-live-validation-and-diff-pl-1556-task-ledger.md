@@ -41,7 +41,7 @@ FR-240, FR-244, FR-403, NFR-463, and the FR that RL-1474 T1 creates. FR-246 is n
 | 0 | Task 0 preconditions | Task 0 rows re-run at the dispatch tree | done (below) |
 | 0A | diff route typed, contract regenerated | Acceptance 21 | done, commit 2 |
 | 1 | `graph_invariant_issues` and types in model-schema | Acceptance 2, 4 | done, commit 3 |
-| 2 | mode mismatch named at compile | Acceptance 16–19 | open |
+| 2 | mode mismatch named at compile | Acceptance 16, 17, 19 (18 already on main) | pure level done, commit 4; HTTP test authored, unrun (DB) |
 | 3 | bare-`ValueError` sweep | Acceptance 20 | open |
 | 4 | validate route and spec texts | Acceptance 1, 3, 5–11 | open |
 | 6 | live validation in the designer | Acceptance 12–15, 23 | open |
@@ -104,6 +104,15 @@ Not yet. The auditor writes it.
 - One test assertion was wrong in my first draft (which of two unchained producers is flagged depends on Kahn's pop order, today's behaviour); the test now asserts exactly one ambiguous issue naming one of the two. Behaviour unchanged from the pre-move code.
 - Broken input (Acceptance 2 and 4), each run then restored: (M1) drop the duplicate-id `return` → `test_a_duplicate_step_id_is_the_only_issue_even_with_a_cycle` FAILED; (M2) ambiguous-producer check run unconditionally → `test_no_ambiguous_producer_issue_after_a_cycle` FAILED; (M3) return early at the orphan stage → `test_every_breach_is_reported_not_the_first` and the ambiguous-after-cycle test FAILED.
 - Not yet done for Task 1: `pricing-core`'s `ValidationIssue` re-import (Task 2's file; `compile.py` still defines its own class, so the class exists twice until Task 2, by plan order). `test_sub_graph.py` and whole-tree mypy wait for the gate slot.
+
+#### 2026-10-09 16:10 BST — Task 2 (commit 4), scope reduced per the lead's ruling "2026-10-09 15:29:43 BST — RULINGS …" DELTA 2
+
+- Scope: the compile-site wrapping and its tests only. Already on main: `RATING_ERROR_CODES` entry (SL-1430/#1227, `errors.py:341`), RL-1438 T1 on `03` FR-223, and the Acceptance 18 test (`test_rating_version_create_pins.py:328`).
+- RED: `pytest -q -p no:xdist packages/pricing-core/tests/test_rating_compile_bundle.py -k mode_mismatch` → `1 failed, 9 deselected`: `ValueError: model_call step 's_rp' declares mode 'exact', but the version declares 'approximation' (FR-223)` raised where `CodedError` `^MODEL_REFERENCE_MODE_INCONSISTENT: .*'s_rp'` was expected. (Load1 read 4.34 at that run, a little over the 4.0 cap.)
+- Code: `compile_bundle` catches the `ValueError` of `check_model_reference_mode` and re-raises through `_raise_named`; `ValidationIssue` is removed from `compile.py` and imported from `model_schema` (still in `__all__`).
+- GREEN: `test_rating_compile_bundle.py` `10 passed`; `test_rating_compile.py` `45 passed`. `ruff check packages/pricing-core` clean.
+- `backend/tests/test_rating_mode_mismatch_api.py` is authored (Acceptance 16 over HTTP and the 201 save of the same algorithm, 19). It imports clean but is **not run**: it needs the Postgres fixtures, which the small-test rule bars. Owed in the heavy-run phase; its red on main (`BUNDLE_COMPILE_FAILED`) is to be shown then, by running it at `origin/main`'s `compile.py`. The `s_model` step shape is written from the valid-algorithm fixture and unverified against `validate_algorithm` until that run.
+- Acceptance 17 (the matching version compiles) is covered by the existing compile-bundle tests that use `_version()` unchanged.
 
 ## PRs
 

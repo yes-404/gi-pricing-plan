@@ -20,6 +20,7 @@ from pricing_core.rating.compile import (
     compile_bundle,
     to_jdm,
 )
+from pricing_core.safe_error import CodedError
 
 
 def valid_algorithm_payload() -> dict:
@@ -233,9 +234,9 @@ async def test_the_algorithm_maturity_check_would_be_caught_if_removed(
 
 @pytest.mark.req("FR-223")
 async def test_a_mode_mismatch_is_refused_at_compile() -> None:
-    """FR-223: a model_call mode disagreeing with the version fails compilation."""
+    """FR-223: a model_call mode disagreeing with the version fails compilation, named."""
     version = _version().model_copy(update={"model_reference_mode": "approximation"})
-    with pytest.raises(ValueError, match="FR-223"):
+    with pytest.raises(CodedError, match=r"^MODEL_REFERENCE_MODE_INCONSISTENT: .*'s_rp'"):
         await compile_bundle(version, _resolver())
 
 
