@@ -432,6 +432,45 @@ def test_submit_rating_version_over_http(
 
 
 @pytest.mark.req("FR-257")
+@pytest.mark.req("FR-242")
+def test_submit_writes_the_change_summary_on_the_version(
+    api_client, workspace_id, principal, grant, database, monkeypatch
+) -> None:
+    """PL-1500 Task 7 (DP-E1-6 (a)): the version carries the summary it was submitted with.
+    The submit answers with it, and a later GET of the version reads the same text. Red first:
+    the submit response's `change_summary` is `None`, because nothing wrote the field."""
+    import asyncio
+
+    from app.api.deps import DEV_PRINCIPAL_HEADER
+
+    asyncio.get_event_loop().run_until_complete(grant("pricing_actuary"))
+    headers = {DEV_PRINCIPAL_HEADER: str(principal.id), "Workspace-Id": str(workspace_id)}
+    created = api_client.post(
+        "/api/v1/rating-versions",
+        json={
+            "slug": "fremtpl2-summary",
+            "dataset_version_id": str(new_uuid7()),
+            "model_ref": ArtifactRef(type="model", slug="fremtpl2-glm", version=1).model_dump(),
+        },
+        headers=headers,
+    )
+    assert created.status_code == 201, created.text
+    rating_id = created.json()["id"]
+    _submittable_over_http(database, workspace_id, principal, rating_id, monkeypatch)
+
+    summary = "Moved the young-driver relativity; see the structural diff."
+    submitted = api_client.post(
+        f"/api/v1/rating-versions/{rating_id}/submit",
+        json={"change_summary": summary},
+        headers=headers,
+    )
+    assert submitted.status_code == 200, submitted.text
+    assert submitted.json()["change_summary"] == summary
+    read = api_client.get(f"/api/v1/rating-versions/{rating_id}", headers=headers)
+    assert read.status_code == 200, read.text
+    assert read.json()["change_summary"] == summary
+
+
 def test_a_blank_change_summary_cannot_submit_a_rating_version(
     api_client, workspace_id, principal, grant, database, monkeypatch
 ) -> None:

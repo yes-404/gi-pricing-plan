@@ -412,6 +412,10 @@ async def submit_for_review(
             else {"no_baseline": baseline_reason}
         ),
     }
+    # The version carries the summary it was submitted with (`03` FR-242; PL-1500 Task 7,
+    # DP-E1-6 (a)); a resubmission overwrites it, as the evidence above is. A blank summary is
+    # still `approvals.submit`'s refusal (FR-352), which rolls this assignment back.
+    row.change_summary = change_summary
     request = await approvals.submit(
         session,
         workspace_id=workspace_id,
