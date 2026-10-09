@@ -274,6 +274,10 @@ log "DRIVER DONE"
 
 **(b) K = 3 runs** are separate invocations, each under its own gate-1 flock, driver `loop-k.sh` (local, next to `inv.sh`): `cost --policies 20000 --ks 3 --runs 1 --rate 485.7552475841824`, files `out/23-k3-r1.jsonl` to `r5`; `--rate` is (a)'s rate, used only for the DERIVED lines.
 
+**K = 3 block result (b).** Five invocations, 16:22:38 to 17:01:39 BST, all rc 0, load1 at END 2.85, 1.92, 1.92, 2.60, 1.80 (none above 4.0), tree `7dba2d11`/`59e24c85`: attribute K=3 on the first 20,000 policies: 372.20, 364.28, 351.89, 400.11, 366.85 s; **median 366.85 s** (`out/23-k3-r1..r5.jsonl`).
+
+**K = 4 block result.** Five invocations `cost --policies 20000 --ks 4 --runs 1 --rate 485.7552475841824`, 17:01:57 to 18:11:14 BST, all rc 0, load1 at END 1.96, 1.55, 2.72, 1.85, 2.07: 742.40, 768.35, 702.56, 734.73, 733.90 s; **median 734.73 s** (`out/24-k4-r1..r5.jsonl`). K=4 / K=3 = 2.00 (the expected 2^K ratio is 2.0).
+
 ## PRs
 
 #1243, a draft. The branch `sl-1387-attribution-exact-shapley-largest-remainder` is pushed; the PR is not merged by the executor.
