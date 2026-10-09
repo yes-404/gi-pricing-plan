@@ -32,16 +32,18 @@ from app.platform import approvals, audit, rbac
 from app.platform import objectives as objectives_service
 from app.platform import perils as perils_service
 from app.platform import rate_tables as rate_tables_service
+from app.platform import transformations as transform_service
 from app.platform import reference as reference_service
 from app.platform import regression_runs as regression_runs_service
 from app.platform import regression_suites as regression_suites_service
 from app.platform.blobs import BlobStore
-from app.platform.modelling import load_factors, to_factor, to_model
+from app.platform.modelling import load_factors, resolve_offset_model, to_factor, to_model
 from model_schema import (
     ApprovalStatus,
     ArtifactRef,
     BundleMetadata,
     GbmFitResult,
+    GlmFitResult,
     GoldenQuote,
     GoldenQuoteChange,
     GoldenQuoteChangeStep,
@@ -522,8 +524,43 @@ class WorkspaceResolver:
             factors = await load_factors(
                 session, workspace_id=workspace_id, factor_ids=list(model_obj.spec.factors)
             )
+            if not isinstance(model_obj.fit_result, GlmFitResult):
+                return ResolvedArtifact(
+                    status=model.status, payload=payload, factors=tuple(factors)
+                )
+            # FD-1458 (PL-1464): `predict_glm` needs the Factors' Bandings and Groupings, which
+            # `/predict` loads the same way (`prediction.py`); compile carries them in the
+            # Bundle so scoring touches no database (NFR-491). A model offset (FR-116) is
+            # resolved as `/predict` resolves it, and carried under its own ref (DP-3 (a)).
+            bandings = await transform_service.load_bandings(
+                session, workspace_id=workspace_id,
+                ids=[f.banding_id for f in factors if f.banding_id],
+            )
+            groupings = await transform_service.load_groupings(
+                session, workspace_id=workspace_id,
+                ids=[f.grouping_id for f in factors if f.grouping_id],
+            )
+            offset_source = None
+            offset = model_obj.spec.offset
+            if offset.kind == "model":
+                source = await resolve_offset_model(
+                    session, workspace_id=workspace_id, ref=str(offset.offset_model_ref),
+                    caller_link=model_obj.spec.link,
+                )
+                offset_source = ResolvedArtifact(
+                    status="approved",
+                    payload={
+                        "spec": source.spec.model_dump(mode="json"),
+                        "fit_result": source.fit.model_dump(mode="json"),
+                    },
+                    factors=tuple(source.factors),
+                    bandings=tuple(source.bandings.values()),
+                    groupings=tuple(source.groupings.values()),
+                )
             return ResolvedArtifact(
-                status=model.status, payload=payload, factors=tuple(factors)
+                status=model.status, payload=payload, factors=tuple(factors),
+                bandings=tuple(bandings.values()), groupings=tuple(groupings.values()),
+                offset_source=offset_source,
             )
         if ref.type == "rate_table":
             # `rate_tables.py`'s own materialiser: a version's cells are either row-
