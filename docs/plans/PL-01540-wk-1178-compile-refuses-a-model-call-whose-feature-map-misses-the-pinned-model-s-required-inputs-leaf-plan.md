@@ -21,7 +21,7 @@ relates: [RL-1263, PL-1371]
 
 Filed under working id 9494 (this plan) and slice working id 9495 (its `SL-` row under
 WK-1178 in [`../roadmap.md`](../roadmap.md), `draft`, added by this PR). Both were reserved
-by the lead in `~/gi-pricing-plan.local/handover/eta.md` (row "SL 9495 / PL 9494", 5 Oct
+by the lead in `~/gi-pricing-plan.local/handover/eta.md` (row "SL-1541 / PL-1540", 5 Oct
 18:52:06). The ruling this plan applies is **RL-1523** (working id 9491, the decision-maker's,
 drafted in parallel on branch `dm-9491-fr240-compile-completeness`; minted in G2-a). The ids this plan
 still cites as working ids are listed in the batch PR body.
@@ -333,7 +333,7 @@ named.** `PL-1371` §5 rule 4 serialises `compile_bundle` outright.
 | **A-2**, PL-1464 (WK-1178; #1178 @`176a6a75`) | `compile.py` `ResolvedArtifact`, `compile_bundle`'s pin loop, `_check_result_types`; `03` §5.1 owned list; `errors.py`; `backend/tests/test_rating_glm_model_call.py` | `bandings`, `groupings`; GLM inputs written; the code appended; the module added | reads the code and the module; one call in `compile_bundle` | **plan dependency** (need 3) → after A-2, never concurrent |
 | **A-3**, PL-1465 (WK-1178; #1174 @`2404ac86`) | `compile.py` `compile_bundle`, `_resolve_peril_components`; `03` FR-240 cell (`:137`) | adds the component resolution and `_check_peril_model_calls`; T-texts on FR-240 | reads the components; RL-1523's text on the same cell | **plan dependency** (need 4) → after A-3; the FR-240 cell edited by both → **SERIALISE** (already serial) |
 | **SL-1436**, PL-1435 (WK-673; #1193 @`42d8be16`) | `docs/roadmap.md` | its SL row (in WK-673) | the SL-1541 row (WK-1178) | registry, distinct rows → ALLOWED; `compile.py` is not in its write set ("`compile.py` is not in the write set", its `:592`) |
-| **PL 9521**, the FD-1424 fix (WK-1178; #1202 @`9396bdb3`) | `compile.py` | `_compatible`, `output_type_issues`, `_check_result_types` | `compile_bundle`, two new functions, `__all__` | different definitions in one file, **same Work** → ALLOWED one-sided only with the dispatch record naming each definition, `RL-1445` (a)/(b) written ((b): neither consumes the other's output). FD-1424's fix **is** PL 9521 (its `:23`, FD 9549 → FD-1424, #1197 merged); no separate plan exists |
+| **PL 9521**, the FD-1424 fix (WK-1178; #1202 @`9396bdb3`) | `compile.py` | `_compatible`, `output_type_issues`, `_check_result_types` | `compile_bundle`, two new functions, `__all__` | different definitions in one file, **same Work** → ALLOWED one-sided only with the dispatch record naming each definition, `RL-1445` (a)/(b) written ((b): neither consumes the other's output). FD-1424's fix **is** PL 9521 (its `:23`, FD-1424 → FD-1424, #1197 merged); no separate plan exists |
 | **PL 9578**, WK-675 S3 (#1186 @`aea4b634`) | `compile.py` | import block, `ValidationIssue`, `compile_bundle` (`:614`, the mode check wrapped), `__all__` | `compile_bundle`, `__all__` | `compile_bundle`: **SERIALISE** (rule 4, PL 9578's own `:392`) |
 | **PL-1471**, FR-240 family fix (WK-673; #1152 @`df8ba756`) | `compile.py` `ResolvedArtifact`, `compile_bundle`; `03` FR-240 cell | `factors`; three checks; T1/T5 on FR-240 | reads `factors`; the same cell | **plan dependency** (need 2) → never concurrent |
 | **PL 9610**, **PL 9609** (WK-1250 S2/S3; #1170, #1173) and **PL-1452** (WK-673 S3; #1138) | `compile.py` `compile_bundle` | as A-2's table records | one call | **SERIALISE** (rule 4) |

@@ -22,7 +22,7 @@ relates: [PL-1371, FD-1209, FD-1374, RL-1263, RL-1343, SL-1409]
 This plan is filed under working id 9593. Its `SL-` row under WK-1178 in
 [`../roadmap.md`](../roadmap.md) is working id 9594, `draft`. Both ids were reserved by the
 lead (`handover/eta.md`, 2026-10-05 16:46:27 BST, *"CONDITIONAL: Option A A-4, only if it needs
-its own slice rather than amending PL 9624/9629"* [PL 9624 is PL-1525; PL 9629 is a working id, not yet minted]). **The planner took the "own slice"
+its own slice rather than amending PL-1525/9629"* [PL 9624 is PL-1525; PL 9629 is PL-1544]). **The planner took the "own slice"
 branch.** §"Why A-4 is its own slice" gives the reasons. The lead was told at 16:48:17 BST.
 
 It is the fourth of the four Option A build slices (A-1 to A-4). The maintainer ordered them
@@ -110,7 +110,7 @@ decides** (DP-A4-1). Slice (b)'s journey walks B4 and pins the structure at C1. 
 `SKIPPED` lines slice (b) prints for them (B4's `model_call` clause and C1′) are removed. The
 golden quotes and every expected premium are re-derived under the ruled combination.
 
-When this slice merges, G2 is met (PL 9629 Hand-off 6, working id).
+When this slice merges, G2 is met (PL-1544 Hand-off 6).
 
 **Architecture:** no backend or `packages/` code. A-1 to A-3 build the engine paths: the peril
 approval carry and resolver branch (A-1), GLM scoring through `model_call` (A-2), and Peril
@@ -154,7 +154,7 @@ item 5 (the fit risk, *"3 lanes every day"*) is this plan's §"Size" constraint.
 **The sizing this plan follows**: `handover/sizing-g2-peril-path-2026-10-05.md` §2, the A-4
 row (local memo; its figures are 0.75 / 1 / 2 executor-days best / likely / worst).
 
-### Why A-4 is its own slice, not edits to PL-1525 and PL 9629
+### Why A-4 is its own slice, not edits to PL-1525 and PL-1544
 
 The brief asked the planner to decide this first. Item 1's *"the demo scope on PL-1525/PL
 9629"* is read as **the demo scope those plans own, extended by a follow-on slice**. It is not
@@ -163,8 +163,8 @@ and its content folds into both. The reasons:
 
 1. **Dependencies.** PL-1525's only build need is the FD-1357 fix, and that need is met.
    A-4 needs A-1, A-2 and A-3 merged, and the double-count ruling. If A-4 were folded into
-   PL-1525 or PL 9629, both would wait behind PL-1429, then PL-1471, then the whole A chain.
-   As a separate slice, PL-1525 and PL 9629 have no plan dependency on the A chain. Under
+   PL-1525 or PL-1544, both would wait behind PL-1429, then PL-1471, then the whole A chain.
+   As a separate slice, PL-1525 and PL-1544 have no plan dependency on the A chain. Under
    RL-1445's same-Work rule they can then run beside it, and item 5's 3-lane fit needs that
    parallelism.
 2. **Ruled decision points.** PL-1525's DP-a0 is ruled *"do NOT adopt S3's model_call fixture
@@ -172,7 +172,7 @@ and its content folds into both. The reasons:
    Folding B4 into PL-1525 would reverse a ruled DP in a draft plan, which the planner may not
    do (prep-wave Common rule 6). A follow-on slice adds the `model_call` once A-2 makes it
    possible, and the ruling (DP-A4-1) decides its form.
-3. **Freezing.** PL-1525 and PL 9629 can mint now with their scope unchanged. This plan stays
+3. **Freezing.** PL-1525 and PL-1544 can mint now with their scope unchanged. This plan stays
    `draft` while DP-A4-1 is open.
 4. **Write set.** A-4 edits the same files as both plans. It must therefore run after both
    anyway, which is the natural order for a delta slice.
@@ -199,7 +199,7 @@ status flip and this plan's.
 | 4 | **A-3 merged** (SL-1466 / PL-1465): Peril Structure scoring | B4's `model_call` on `peril_structure_ref` | plan in preparation. On `main`, `handler` reads `payload["fit_result"]` (`runtime.py:539`), which a structure payload does not carry; `assemble_risk_premium` (`pricing_core/modelling/perils.py:104`) has one production caller, `_reconcile` (`backend/src/app/worker/model_handlers.py:1486`) |
 | 4a | **SL-1541 merged** (PL-1540, working ids, #1216): compile refuses a `model_call` whose `feature_map` misses an input its pinned model needs, per component for a Peril Structure *(added 2026-10-05, pre-mint delta 2; the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", item 2)* | the order is A-2 → A-3 → SL-1541 → A-4 (the same entry, item 1). B4's `model_call` on the structure is compiled under that check, so its `feature_map` must cover every component's inputs | plan `draft`, #1216, unminted |
 | 5 | **Exit-demo slice (a) merged** (SL-1526 / PL-1525, #1161) | the builder, banded factors and golden quotes this slice extends | draft |
-| 6 | **Exit-demo slice (b) merged** (SL-1527 / PL 9629, #1164) | the journey and its two `SKIPPED` lines this slice removes | draft |
+| 6 | **Exit-demo slice (b) merged** (SL-1527 / PL-1544, #1164) | the journey and its two `SKIPPED` lines this slice removes | draft |
 | 7 | DP-A4-2 and DP-A4-3 ruled | Tasks 1 and 2 | open. *(Pre-mint delta 2026-10-05, RL-1459; see §"Pre-mint delta, 2026-10-05". Ruled by RL-1459, #1188 @`cc5d0d61`, unminted.)* |
 | 8 | The lead's go, in an activation PR | — | — |
 
@@ -345,12 +345,12 @@ its unit tests.
 | `examples/fremtpl2/model.py` | added: `fit_severity_glm`, `create_ad_peril_structure` (create, reconcile, submit, approve); edited: `fit_demo_models` or the seed's call order | **PL-1525** (`_create_factor`, `fit_demo_models`, `author_demo_rating_evidence`); **PL-1429** (#1140: `save_demo_algorithm`, `author_demo_rating_evidence`) | **serial**: both merge first (needs 5, 2) |
 | `examples/fremtpl2/seed.py` | edited: `run`'s order, the severity fit and the structure after `compare_and_approve`, before the Rating Version | **PL-1525**; SL-1409 (merged) | serial (need 5) |
 | `examples/fremtpl2/algorithm.py` | edited (PL-1525's new module): `build_fremtpl2_algorithm` gains B4's `model_call` and the DP-A4-1 combination | **PL-1525** creates it | serial (need 5) |
-| `examples/fremtpl2/journey.py` | edited (PL 9629's new module): B4 and C1′ walked; the two `SKIPPED` branches removed | **PL 9629** creates it | serial (need 6) |
+| `examples/fremtpl2/journey.py` | edited (PL-1544's new module): B4 and C1′ walked; the two `SKIPPED` branches removed | **PL-1544** creates it | serial (need 6) |
 | `backend/tests/test_demo_peril_structure.py` | added: Acceptance 1, 2 and 4 | none | none |
 | `backend/tests/test_fremtpl2_algorithm.py` | edited (PL-1525's): Acceptance 3 | PL-1525 | serial (need 5) |
-| `backend/tests/test_wf699_journey.py` | edited (PL 9629's): Acceptance 5, 6 | PL 9629 | serial (need 6) |
+| `backend/tests/test_wf699_journey.py` | edited (PL-1544's): Acceptance 5, 6 | PL-1544 | serial (need 6) |
 | `backend/tests/test_demo_rating_evidence.py` | edited: the golden expectations slice (a) sets, re-derived (P5) | PL-1525, PL-1429; PL-1447 and PL-1520 name it | serial (needs 2, 5) |
-| `examples/fremtpl2/README.md` | edited: the Peril Structure paragraph | PL-1525, PL 9629 (other paragraphs) | different paragraphs |
+| `examples/fremtpl2/README.md` | edited: the Peril Structure paragraph | PL-1525, PL-1544 (other paragraphs) | different paragraphs |
 | the slice's ledger `docs/ledgers/LG-<n>`; `docs/INDEX.md` | added; regenerated | every PR | registry |
 
 **Not written:** `backend/src/`, `packages/`, `frontend/`, `docs/specs/`, `scripts/demo.py`.
@@ -363,7 +363,7 @@ lands with that ruling's own record, not in this slice.
 **Contention with other in-flight plans** (`gh pr list --state open`, 2026-10-05 16:5x BST;
 each plan file's write-set rows grepped for `examples/fremtpl2`, `scripts/demo.py` and the
 demo test files):
-- **PL-1525 (#1161), PL 9629 (#1164):** same files, so serial; both are activation needs.
+- **PL-1525 (#1161), PL-1544 (#1164):** same files, so serial; both are activation needs.
 - **PL-1429 (#1140):** `examples/fremtpl2/model.py` and `test_demo_rating_evidence.py`, so
   serial. A-1 follows PL-1429, so this is met through need 2.
 - **PL-1452 (#1138, WK-673 S3):** adds `examples/fremtpl2/rating/` (a new directory). It is
@@ -499,7 +499,7 @@ this slice is last: it starts only after A-3 merges and DP-A4-1 is ruled (item 5
    separate activation PR.
 2. **Post-mint working-id sweep** (the lead's item 7a): re-point every working id this plan
    cites to its minted id where one exists at the mint tree: SL-1543, PL-1542, SL-1462,
-   PL-1461, SL-1463, PL-1464, SL-1466, PL-1465, SL-1526, PL-1525, SL-1527, PL 9629, PL-1429,
+   PL-1461, SL-1463, PL-1464, SL-1466, PL-1465, SL-1526, PL-1525, SL-1527, PL-1544, PL-1429,
    PL-1471, PL-1447, PL-1452, PL-1454, PL-1520, PL-1528, PL 9617, PL 9609, PL 9610, PL 9662,
    PL-1476, FD-1456, FD-1458, RL-1445. List the ids not yet minted in the mint PR body.
 3. **The `roadmap.md` row conflicts textually with #1161.** Both insert `SL-` rows at the end

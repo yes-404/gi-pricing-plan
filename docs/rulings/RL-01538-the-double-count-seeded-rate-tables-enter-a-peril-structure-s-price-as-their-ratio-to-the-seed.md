@@ -21,8 +21,8 @@ relates: [WF-699, FR-222, FR-230, FR-237, FR-247, FR-266, RL-1375, RL-1329]
 ## How this was ruled
 
 - **Filed under working id 9588, reserved by the lead (team-lead) on 2026-10-05; the new
-  question it raises is working id OQ 9587, reserved with it.** At the mint, `RL 9588` and
-  `OQ-9587` / `OQ 9587` in this record and in the three rows this commit adds were re-pointed
+  question it raises is working id OQ 9587, reserved with it.** At the mint, `RL-1538` and
+  `OQ-1539` / `OQ-1539` in this record and in the three rows this commit adds were re-pointed
   to `RL-1538` and `OQ-1539`. Nothing else in the texts below is a placeholder.
 - **The decision is not this record's.** It is the maintainer's (by delegation), in the entry
   "2026-10-05 16:54:17 BST — CLEANUP NOW (the maintainer chose "now, before lane A starts",
