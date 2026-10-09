@@ -254,6 +254,22 @@ blk 07-full-k3 cost --policies 678013 --ks 3 --runs 1 --rate $RATE
 log "DRIVER DONE"
 ```
 
+## Task 7 run — block 1 stopped, the rate probe (2026-10-09, executor-s3e)
+
+**Concurrent load disclosure.** From about 15:2x BST three authoring seats ran small single-file tests beside the run (nice 19, one at a time via `/tmp/slots/small-test`, at most 2 min each; the lead's ruling at to-lead 15:22:26 BST item 3). load1 is recorded per invocation in `out/progress.log`.
+
+**Block 1 stopped (no figure).** Driver started 14:02:18 BST (load1 0.79) on `cost --policies 20000 --score-policies 678013 --ks 3 --runs 5` at tree `088a0c23`. The lead stopped it with `kill -TERM -- -707382` at 15:56:31 BST under the maintainer's authority (to-lead 15:56:07 BST, STOP AUTHORISED); progress.log: `END 01-k3-score rc=143` (load1 2.68). Elapsed 1h54m13s; output file 0 bytes ("no line emitted"). Cause: `cmd_cost` emits its first line only after all `--runs` score_batch passes, so with 5 passes over 678,013 policies no projection was possible. The probe below puts one pass at about 23.5 min, so the five passes alone (about 118 min) fit the elapsed time.
+
+**Per-invocation design from here (no script edit).** Each invocation is `/home/puzhenhao1989/gi-pricing-plan.local/task7-s3e/inv.sh <name> cost ...` under its own gate-1 flock, own file `out/<name>.jsonl`, own START/END progress lines, `--runs 1`.
+
+**(i) Rate probe** `cost --policies 20000 --score-policies 50000 --ks 3 --runs 1`, START 15:57:23 BST (load1 1.43), END 16:11:32 BST (load1 2.11), rc 0, wall 14m09s, file `out/10-rate-probe.jsonl`:
+- score_batch, 50,000 policies, 1 run: 104.03 s = **480.65 policies/s** (load1 2.56). Not the 1414/s planning rate: 2.9x slower.
+- attribute K=3, 20,000 policies, 1 run: 363.92 s (8 re-rates x 20,000 = 160,000 ratings, 440 ratings/s).
+- DERIVED K=3 full portfolio: 2^3 x 678,013 / 480.65 = 11,285 s (3.13 h). DERIVED, no verdict.
+- About 8 min of the wall time is setup before the first score (portfolio build and compile), not a rating cost.
+
+**Projection at the observed rate (DERIVED, linear in ratings).** One score pass over 678,013: 23.5 min. K=3/4/5/6 on 20,000 policies, one run each: 364, 728, 1,456, 2,912 s (about 91 min together); N=5 of those: about 7.6 h. Five full score passes about 2 h; the full-portfolio K=3 run about 3.1 h. Plan total about 12.8 h at N=5, past the 6 h STOP of the brief. Reported to the lead; nothing further started.
+
 ## PRs
 
 #1243, a draft. The branch `sl-1387-attribution-exact-shapley-largest-remainder` is pushed; the PR is not merged by the executor.
