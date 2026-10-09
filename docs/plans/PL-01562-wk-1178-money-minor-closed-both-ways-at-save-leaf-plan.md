@@ -1,10 +1,10 @@
 ---
-id: PL-9521
+id: PL-1562
 family: plan
 kind: leaf
 title: WK-1178 — money_minor closed both ways at save, the numeric type-check fix (FR-227, FR-226): leaf plan
 status: draft                  # draft → active → superseded | retired (§1.2a)
-created: 2026-10-05            # working id; the mint date will replace this (check 31)
+created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
 owner: planner
 tree: 4d3be1414ad4dacdaa0c14ef49fb21853adbaed6
 phase: P2
@@ -17,10 +17,12 @@ relates: [RL-1263, PL-1371]
 
 # WK-1178 — money_minor closed both ways at save: the numeric type-check fix, leaf plan
 
+*(Minted 2026-10-09 as PL-1562 from working id 9521, in the D4 batch mint; citations of the ids minted in this batch, and of ids already minted on main, are re-pointed outside quoted text, quoted channel entries and code blocks, which stay as quoted; PL-1556 (the D3 batch) are forward cites into batches not yet merged; SL 9511, SL 9522 are working ids not minted by any batch and stay working ids.)*
+
 Filed under working id 9521 (this plan) and slice working id 9522 (its `SL-` row under WK-1178
 in [`../roadmap.md`](../roadmap.md), `draft`). The lead reserved both in
 `~/gi-pricing-plan.local/handover/eta.md` (row "SL 9522 / PL 9521"). The finding it fixes is
-FD 9549 (working id; #1197, branch `fd-9549-numeric`, read at `9c8a52c6`). Nothing here is
+FD-1424 (#1197, branch `fd-9549-numeric`, read at `9c8a52c6`). Nothing here is
 minted. Every line number was read at `origin/main` `4d3be141`, the `tree:` above.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended)
@@ -41,7 +43,7 @@ FR-227's save-time check treats every pair of numeric types as interchangeable.
 check to "the bundle compilation", and no such check was ever built. So a pence-valued
 `money_minor` value can be declared as a `decimal`, `relativity`, `percentage`, `count` or
 `int` output, or the reverse, and it saves and compiles. At score time, the declared type
-decides how the value is served (`score.py:751`, `:947-975`, as FD 9549 records).
+decides how the value is served (`score.py:751`, `:947-975`, as FD-1424 records).
 
 This slice closes `money_minor` in both directions at save, as the maintainer (by delegation)
 ruled. A value leaves `money_minor` only into `money_minor`. A value enters `money_minor` only
@@ -54,7 +56,7 @@ rule holds on all three call paths: `output_type_issues`, `_check_result_types` 
   declares its result type, and type compatibility is checked at save time. A monetary result
   must be `decimal` or `money_minor` (R2)."* FR-226 (`03:112`): *"`output` steps declare
   rounding explicitly … Rounding is never implicit and never happens twice."*
-- FD 9549 (working id; #1197 @`9c8a52c6`). Its finding file is under `docs/findings/` on that
+- FD-1424 (#1197 @`9c8a52c6`). Its finding file is under `docs/findings/` on that
   branch, and its name begins with the working id (`…09549-rating-save-time-type-check-…`). The
   full name is not written here, because check 32 reads an id in it. Its §"Disposition" (a)
   reads: "make `_compatible` exact for `money_minor`". Its §"Boundary" reads: "the `model_call`
@@ -76,9 +78,9 @@ to 3:
 >    The fix slice's FIRST task is red-first: one red per refused direction, plus a sweep showing no committed algorithm or fixture newly fails. If one does, STOP and report; do not loosen the rule.
 > 3. Reserve the fix slice under WK-1178, AFTER the emergency slice (lane B order: emergency (c) → FD 9707 fix → this, unless PL 9728 is ready first; you sequence it).
 
-The OQ in item 2 is OQ 9556 (working id; #1200).
+The OQ in item 2 is OQ-1560 (#1200).
 
-**Dated note, 2026-10-05 (written 17:46:24 BST, pre-mint): OQ 9556 is decided.** The entry is
+**Dated note, 2026-10-05 (written 17:46:24 BST, pre-mint): OQ-1560 is decided.** The entry is
 in the same file. Its header carries the literal word "STAMP" in place of a time, and its body
 says why: *"The header above carries the literal word STAMP by my error; its true time is 2026-10-05 17:42:06 BST, taken by `date` in the same command that wrote it. Nothing is deleted."* So it is cited here by its body's time,
 **2026-10-05 17:42:06 BST**, and by its header text, *"STAMP — OQ 9556 (#1200 @f46ca86f)
@@ -97,7 +99,7 @@ and the tasks. The sweep now runs **before** the reds (Task 1), and a hit is a S
 maintainer (by delegation), never an automatic fallback. The real-time `/score` coercion is
 read first (Task 0 Step 3), with a red if it differs from batch (item 11).
 
-**Dated note, 2026-10-05 (written 17:50:39 BST, pre-mint): DP-1, the FD 9549-fix RL, A-2's
+**Dated note, 2026-10-05 (written 17:50:39 BST, pre-mint): DP-1, the FD-1424-fix RL, A-2's
 control and the `/score` check.** Two entries, each read in full by this planner. From the
 entry headed *"2026-10-05 17:47:06 BST — PL 9521 DP-1: (a) refuse decimal→money_minor at a sub-graph port, flip test_rating_compile.py:389, ON A MECHANISM CONDITION; one RL yes; lane B order agreed"*, items 2 to 4, verbatim:
 
@@ -149,7 +151,7 @@ So:
 - **The A-control is item 12.**
 - **DP-2 is the gap of item 2, open,** with the count of committed money_minor-declared
   expression steps (§"Decision points").
-- FD 9549's own text gains the gap pre-mint; that is the finding's author's edit, not this
+- FD-1424's own text gains the gap pre-mint; that is the finding's author's edit, not this
   plan's.
 
 **Dated note, 2026-10-05 (written 17:58:23 BST, pre-mint): DP-2 ruled (r), closed by
@@ -167,8 +169,8 @@ And from the entry headed *"2026-10-05 17:58:03 BST — PL 9521 @148892d6 and A-
 > Item 12 (c), the mounted case (a decimal port → the parent's output step rounds once): ACCEPTED as "owed by whichever of SL-1340 (PL 9610) and PL 9521 merges SECOND". PL 9610 gets the hand-off line at its next fold, and PL 9521 names it. Neither closes its slice without either building the mounted red or citing the other's merged test.
 
 So:
-- **DP-2 is ruled (r).** The definition is RL 9512's FR-227 T-text (working id; a
-  decision-maker drafts it), and activation need 5 names RL 9512.
+- **DP-2 is ruled (r).** The definition is RL-1563's FR-227 T-text (a
+  decision-maker drafts it), and activation need 5 names RL-1563.
 - **The served half is a named red:** item 2's `test_a_money_minor_expression_feeding_a_decimal_output_is_refused`
   (D1, explicit).
 - **Item 12 (c)'s closure condition is added.**
@@ -176,31 +178,31 @@ So:
 ## Status
 
 `draft`. **DP-1 is ruled (ii)** (17:50:43 BST) and **DP-2 is ruled (r), by definition**
-(17:54:12 BST); see the dated notes above. No decision point is open. **OQ 9556 is decided** (A1 + B3,
+(17:54:12 BST); see the dated notes above. No decision point is open. **OQ-1560 is decided** (A1 + B3,
 17:42:06 BST; dated note above). The plan moves to `active` only through a separate
 activation PR, after every activation need below holds.
 
 ### Activation needs, in order
 
-1. **FD 9549 minted** (batch 2, after RL 9562 and before PL 9560; the 17:36:28 entry, item 4).
-2. **OQ 9556 decided on main** (#1200). Its decision (A1 + B3, 17:42:06 BST) is already written
-   into this plan. The need is met when OQ 9556's row on `main` reads decided, citing that entry,
+1. **FD-1424 minted** (batch 2, after RL-1423 and before PL-1426; the 17:36:28 entry, item 4).
+2. **OQ-1560 decided on main** (#1200). Its decision (A1 + B3, 17:42:06 BST) is already written
+   into this plan. The need is met when OQ-1560's row on `main` reads decided, citing that entry,
    with the `03` §10 mirror decided in the same commit. *(Dated note, 2026-10-05: this need
    said "decided … before this plan mints"; the decision came at 17:42:06.)*
 3. **DP-1 ruled** *(held: (ii), 17:50:43 BST)* **and DP-2 ruled** *(added 2026-10-05; held:
    (r), 17:54:12 BST)*.
-4. **The emergency slice merged** (SL 9561 / PL 9560, #1196). The ruling's item 3 places this
-   slice after it. Lane B's order is: the emergency slice (c) → the FD 9707 fix (PL 9688,
-   #1145) → this slice, unless PL 9728 (#1113) is ready first. The lead sequences that.
-5. **RL 9512 (working id), the FD 9549-fix `RL-`, minted** *(dated note, 2026-10-05: named
+4. **The emergency slice merged** (SL-1427 / PL-1426, #1196). The ruling's item 3 places this
+   slice after it. Lane B's order is: the emergency slice (c) → the FD-1420 fix (PL-1447,
+   #1145) → this slice, unless PL-1454 (#1113) is ready first. The lead sequences that.
+5. **RL-1563, the FD-1424-fix `RL-`, minted** *(dated note, 2026-10-05: named
    on the 17:54:12 BST ruling; it carries DP-1 (ii)'s convention and DP-2 (r)'s definition as
    FR-227 T-text)* (17:47:06 item 3: 17:47:06 item 3: "ONE
-   RL for the FD 9549 fix (DP-1, FR-227's dated T-text with money_minor closed both ways at
-   save, A1, B3), before PL 9521 mints: YES"). A decision-maker drafts it after DP-1's
+   RL for the FD-1424 fix (DP-1, FR-227's dated T-text with money_minor closed both ways at
+   save, A1, B3), before PL-1562 mints: YES"). A decision-maker drafts it after DP-1's
    mechanism question is answered. Task 5 applies its FR-227 text byte for byte. This plan
    drafts no spec text. *(Dated note, 2026-10-05: this need was conditional, "If an `RL-`
    carries FR-227 text"; it is now required.)*
-6. **The lane and the dispatch GO.** The dispatch record writes `RL 9620`'s same-Work lines
+6. **The lane and the dispatch GO.** The dispatch record writes `RL-1445`'s same-Work lines
    (a) and (b) for every WK-1178 slice in flight beside this one (§"Write set").
 
 ## Acceptance Standard
@@ -229,8 +231,8 @@ path:
 | D9 | `decimal` → `money_minor` at a sub-graph **output port** (not an output step) | yes, on the fragment path only (DP-1 (ii), 17:50:43 BST) | "decimal AT AN OUTPUT STEP ONLY"; "a sub-graph port carries money as decimal; money_minor is produced only at an output step" |
 | A1 | `money_minor` → `money_minor` | no (control) | — |
 | A2 | `decimal` → `money_minor` at an **output step** | no (control) | "or decimal AT AN OUTPUT STEP ONLY" |
-| D10 | `int` → `money_minor` | yes | OQ 9556 A1: "int→money_minor is REFUSED at save" |
-| D11 | `decimal` → `int` | yes | OQ 9556 B3: "EVERY other non-money pair is refused, including … decimal→int, count, relativity or percentage" |
+| D10 | `int` → `money_minor` | yes | OQ-1560 A1: "int→money_minor is REFUSED at save" |
+| D11 | `decimal` → `int` | yes | OQ-1560 B3: "EVERY other non-money pair is refused, including … decimal→int, count, relativity or percentage" |
 | D12 | `decimal` → `count` | yes | same |
 | D13 | `decimal` → `relativity` | yes | same |
 | D14 | `decimal` → `percentage` | yes | same |
@@ -254,7 +256,7 @@ path:
 The table covers all 30 ordered pairs of `_NUMERIC`'s six types: 5 out of `money_minor`
 (D1–D5); 5 into it (D6–D8, D10, and `decimal`, which is A2 at an output step and D9 at a port);
 and 20 non-money pairs (A3–A7 allowed, D11–D25 refused). *(Dated note, 2026-10-05: rows O1 and
-O2, "OPEN (OQ 9556)", are replaced by D10–D25 and A3–A7 on the 17:42:06 BST decision.)*
+O2, "OPEN (OQ-1560)", are replaced by D10–D25 and A3–A7 on the 17:42:06 BST decision.)*
 
 The **refused set** is D1–D8 and D10–D25; D9 is DP-1's. The **allowed set** is A1–A7.
 *(Dated note, 2026-10-05: items 1–3 were parametrised over D1–D8. Item 6 held the OQ pairs at
@@ -312,9 +314,9 @@ today's behaviour, and item 11 is new. All are rewritten to the 17:42:06 BST dec
    show one issue, not two (§"Hand-off").
 6. **Widening is kept: the allowed set passes on every path (P).**
    `test_a_widening_pair_is_allowed` is parametrised over A3–A7 and run on all three paths,
-   with A1 and A2 as well. *(Added 2026-10-05, OQ 9556 A1's control:)*
+   with A1 and A2 as well. *(Added 2026-10-05, OQ-1560 A1's control:)*
    `test_an_explicit_money_minor_expression_step_admits_an_int_input` (P): an `int` input feeds
-   an `expression` step declared `money_minor` (OQ 9556 A1: "Money enters a computation
+   an `expression` step declared `money_minor` (OQ-1560 A1: "Money enters a computation
    through an EXPLICIT money_minor-typed expression step"), which feeds a `money_minor` output.
    It saves with no `RATING_TYPE_MISMATCH`, on the algorithm path. The same `int` input wired
    straight to the output is D10. Each passes. This is the control that keeps the refused set from
@@ -330,12 +332,12 @@ today's behaviour, and item 11 is new. All are rewritten to the 17:42:06 BST dec
    - `scripts/bench-rating.py:248-267`;
    - `scripts/bench-score-batch.py:78-86`;
    - `scripts/bench-compiled-for.py:79-87`;
-   - any seed under `backend/src/app/demo/` (FD 9549 found that it builds none);
+   - any seed under `backend/src/app/demo/` (FD-1424 found that it builds none);
    - every algorithm or sub-graph body built in a test module under `packages/*/tests` and
      `backend/tests`. Task 1 Step 1 names its predicate.
 
    **Any hit, an `int` input into a `money_minor` output included, is a STOP to the maintainer
-   (by delegation), with `file:line`.** It is **not** an automatic fallback (OQ 9556:
+   (by delegation), with `file:line`.** It is **not** an automatic fallback (OQ-1560:
    "It is NOT an automatic A3 fallback") and not a reason to loosen the rule. One hit is
    already known, and it is DP-1's: `test_a_compatible_fragment_output_port_raises_no_issue`
    (`P:386-389`) asserts `_fragment("money_minor", result_type="decimal") == []`, which is D9.
@@ -348,7 +350,7 @@ today's behaviour, and item 11 is new. All are rewritten to the 17:42:06 BST dec
    packages/pricing-core/src` prints nothing. `_compatible`'s docstring states the closed rule
    and cites the 17:36:28 and 17:42:06 BST entries.
 9. **The gate.** The full two-half gate (`CLAUDE.md` §11) passes on the merge tree, run once,
-   holding the one gate slot (`RL 9620` as corrected at 15:27:25 BST). The ledger records each
+   holding the one gate slot (`RL-1445` as corrected at 15:27:25 BST). The ledger records each
    rc and the tree.
 10. **The write set.** `git diff --stat origin/main...HEAD` names only §"Write set"'s paths.
 11. **The real-time vs batch check, read-only, in Task 1 beside the sweep** (17:49:25 BST item
@@ -362,7 +364,7 @@ today's behaviour, and item 11 is new. All are rewritten to the 17:42:06 BST dec
     - **if they differ for an allowed pair,** it is a separate finding (17:49:25 item 2, option
       (b)): the slice reports it to the lead for an auditor to file, and it continues;
     - **if they agree, and the sweep found no stored refused pair,** it is (c): recorded as
-      FD 9549's residue, owner WK-1178;
+      FD-1424's residue, owner WK-1178;
     - **if the sweep found a stored refused pair,** it is a STOP (item 7).
 
     *A planning-time reading, for the check to confirm, not to replace:* batch's
@@ -377,7 +379,7 @@ today's behaviour, and item 11 is new. All are rewritten to the 17:42:06 BST dec
 12. *(Added 2026-10-05, pre-mint, from the 17:50:43 BST entry, item 1.)* **The A-control:
     money crosses a sub-graph boundary as `decimal`, and the output step rounds it once.**
     The mechanism needs a parent that mounts a fragment. Inlining is WK-1250 Slice 2
-    (`SL-1340`, `draft` at `5fe56b87`; PL 9610, #1170), and it is not on `main`. So the control
+    (`SL-1340`, `draft` at `5fe56b87`; PL-1564, #1170), and it is not on `main`. So the control
     is built in two halves now, and the mounted case is owned by whichever of SL-1340 and this
     slice merges second:
     - (a) `test_a_fragment_with_a_decimal_money_port_saves` (P): a fragment computes a money
@@ -396,7 +398,7 @@ today's behaviour, and item 11 is new. All are rewritten to the 17:42:06 BST dec
       mounted, its port feeds the parent's `money_minor` output step, and the served value is
       (b)'s single rounding. The ledger of whichever merges first names the owed test.
       *(Dated note, 2026-10-05, 17:58:03 BST:)* "Neither closes its slice without either
-      building the mounted red or citing the other's merged test." PL 9610 gets the matching
+      building the mounted red or citing the other's merged test." PL-1564 gets the matching
       hand-off line at its own next fold.
 
     **Red first:** (a) and (b) are controls, green at the base and green after the change, and
@@ -411,9 +413,9 @@ today's behaviour, and item 11 is new. All are rewritten to the 17:42:06 BST dec
   fails is a STOP, not a reason to narrow the rule.
 - **A-2's tests are not edited** (the ruling, item 2: "the fix slice generalises it without
   editing A-2's tests").
-- **Widening only** (OQ 9556 B3): A3–A7 stay allowed (item 6). A sweep hit is a STOP to the
+- **Widening only** (OQ-1560 B3): A3–A7 stay allowed (item 6). A sweep hit is a STOP to the
   maintainer, never an automatic fallback (item 7).
-- **Shared files** (`RL-1263`, amended by `RL 9620`): two concurrent build slices may not
+- **Shared files** (`RL-1263`, amended by `RL-1445`): two concurrent build slices may not
   both change the same existing function, class, spec section or policy table.
 - **Enforcement is proven on deliberately broken input** (`CLAUDE.md` §13): items 1–5 are red
   first.
@@ -429,7 +431,7 @@ today's behaviour, and item 11 is new. All are rewritten to the 17:42:06 BST dec
 | `03` | FR-217 | A sub-graph's output ports obey the same rule at create | `req("FR-217")` on items 3, 4 |
 
 Out of scope, named so no reader assumes it:
-- a new input type for money (OQ 9556: "A4 (a new input type) is not taken now");
+- a new input type for money (OQ-1560: "A4 (a new input type) is not taken now");
 - the `model_call` producer's typing (A-2 item 15, #1178);
 - typing an `expression` step's **inputs** (the maintainer (by delegation), 17:22:01 BST:
   "typing expression INPUTS is wider and a STOP");
@@ -449,10 +451,10 @@ Read at `4d3be141` by this planner; no code was run.
 | 0.5 | `fragment_output_type_issues` compares sub-graph **output ports** (`AlgorithmOutput`) and calls `output_type_issues` | `compile.py:173-199`; called by `_check`, `backend/src/app/platform/sub_graphs.py:40-42` | a port is not an output step: D9 is DP-1's |
 | 0.6 | `producer_types` types `input` steps (from the input contract) and `expression` steps (`result_type`) only | `compile.py:95-116` | a `model_call` producer is untyped until A-2 lands |
 | 0.7 | `test_a_compatible_fragment_output_port_raises_no_issue` asserts `_fragment("money_minor", result_type="decimal") == []` | `P:386-389` | D9 under DP-1 (a) flips this assertion: the ruling's STOP. *(Dated note, 2026-10-05: DP-1 is ruled (ii), and the flip is approved; item 3.)* |
-| 0.8 | Every non-test algorithm is `money_minor` → `money_minor` (demo `examples/fremtpl2/model.py:334-343`; `bench-rating.py:248-267`; `bench-score-batch.py:78-86`; `bench-compiled-for.py:79-87`) | FD 9549 §"Liveness" | the sweep's committed-algorithm half is expected clean |
-| 0.9 | A `RatingInputType` (`int`, `decimal`, `string`, `date`, `bool`, `enum`) is never `money_minor` | `model_schema/rating.py:195-203` | an `input` producer reaches `money_minor` only as `int` (D10, refused: OQ 9556 A1) or `decimal` (A2) |
+| 0.8 | Every non-test algorithm is `money_minor` → `money_minor` (demo `examples/fremtpl2/model.py:334-343`; `bench-rating.py:248-267`; `bench-score-batch.py:78-86`; `bench-compiled-for.py:79-87`) | FD-1424 §"Liveness" | the sweep's committed-algorithm half is expected clean |
+| 0.9 | A `RatingInputType` (`int`, `decimal`, `string`, `date`, `bool`, `enum`) is never `money_minor` | `model_schema/rating.py:195-203` | an `input` producer reaches `money_minor` only as `int` (D10, refused: OQ-1560 A1) or `decimal` (A2) |
 
-### Write set, and its contention (`RL-1263`, `RL 9620`)
+### Write set, and its contention (`RL-1263`, `RL-1445`)
 
 | Path | Change |
 |---|---|
@@ -471,19 +473,19 @@ Read at `4d3be141` by this planner; no code was run.
 
 | Other slice (Work; source read) | Shared path | Them | Us | Class → consequence |
 |---|---|---|---|---|
-| **A-2**, PL 9597 (#1178 @`04f99c1f`; WK-1178) | `compile.py` `producer_types`, `_check_result_types` / `output_type_issues`; `test_rating_compile.py` (via its item 15) | types a `model_call` producer by `result_type`; refuses a `money_minor` `model_call` into a non-money output, for `model_call` producers only, `_compatible` untouched | `_compatible`; `output_type_issues`'s and `_check_result_types`'s flag | **same functions → SERIALISE.** The overlap: both refuse `money_minor` → `relativity` for a `model_call` producer. Whichever lands **second** leaves one refusal (item 5). If this slice is second, it removes A-2's `model_call`-only refusal branch, because the general rule now covers it through `producer_types`, and A-2's tests stay green unedited. If A-2 is second, its dispatch record drops that branch and keeps only the `producer_types` typing. **A-2's control is changed pre-mint** *(dated note, 2026-10-05; 17:49:25 BST item 1, which supersedes the second-merger flip of 17:47:06 item 4 for this control)*. #1178 item 15's control becomes a `decimal` `model_call` into a **`decimal`** output, legal under B3, in A-2's own plan before its mint. This plan names the change and flips nothing. Its earlier control (a `decimal` `model_call` into `relativity`) is D13 under B3 |
-| **The FD 9707 fix**, PL 9688 (#1145 @`2f3269c8`; WK-673), and RL 9642 (#1148, its ruling) | `compile.py` | adds `_check_lookup_as_at`; appends one entry to `ALGORITHM_CHECKS` (`:359-363`) | `_compatible`, `output_type_issues`, `_check_result_types`, `fragment_output_type_issues`; not `ALGORITHM_CHECKS` | different definitions, one file → **ALLOWED one-sided** with the dispatch record naming each path and its check; lane B's order puts it first anyway. RL 9642 writes no code. PL 9688 uses `RATING_TYPE_MISMATCH` for a lookup input (its DP-4), at a different site |
-| **PL 9728**, the NFR-489 remedy (#1113 @`3ad98fe2`; WK-1178) | none written by both: it edits `scripts/bench-rating.py`, `backend/src/app/db/session.py`, `config.py`, `api/deps.py`, `api/authz.py`, `auth/service.py`, `api/score.py`, `main.py` | — | item 7's sweep **reads** `scripts/bench-rating.py:248-267` | **no shared write → concurrent allowed.** Same Work: `RL 9620` (a) and (b) are written ((b): neither consumes the other's output). If PL 9728 changes `bench-rating.py`'s algorithm, item 7's sweep reads it at the dispatch tree |
-| **PL 9610**, WK-1250 S2 (#1170; WK-1250) | `compile.py` `_compatible` (**called**) | adds a mount-port check that calls `producer_types` and `_compatible` (its plan `:581-583`) | changes `_compatible`'s signature (a required `at_output_step`) and its numeric rule | **a caller of an edited function → SERIALISE.** Whichever lands second updates the other's call: a mount port is not an output step, so it passes `at_output_step=False` |
-| **PL 9578**, WK-675 S3 (#1186 @`c5d1d03a`) | `compile.py` (its `ValidationIssue` move, RL 9767; the import block) | moves `ValidationIssue` to `model-schema`; runs `test_rating_compile.py` | `output_type_issues` builds `ValidationIssue`s | the holds register: "S3 is never concurrent with a slice editing compile.py" → **SERIALISE** |
-| **The emergency slice**, PL 9560 / SL 9561 (#1196 @`68b2f860`; WK-1178) | none (it edits `score.py`, `test_rating_shadowed_inputs.py`, `test_quote_input_raise_sites.py`, backend score tests, `03` FR-213) | — | — | no shared write; **ordered first** by the ruling's item 3 (activation need 4) |
+| **A-2**, PL-1464 (#1178 @`04f99c1f`; WK-1178) | `compile.py` `producer_types`, `_check_result_types` / `output_type_issues`; `test_rating_compile.py` (via its item 15) | types a `model_call` producer by `result_type`; refuses a `money_minor` `model_call` into a non-money output, for `model_call` producers only, `_compatible` untouched | `_compatible`; `output_type_issues`'s and `_check_result_types`'s flag | **same functions → SERIALISE.** The overlap: both refuse `money_minor` → `relativity` for a `model_call` producer. Whichever lands **second** leaves one refusal (item 5). If this slice is second, it removes A-2's `model_call`-only refusal branch, because the general rule now covers it through `producer_types`, and A-2's tests stay green unedited. If A-2 is second, its dispatch record drops that branch and keeps only the `producer_types` typing. **A-2's control is changed pre-mint** *(dated note, 2026-10-05; 17:49:25 BST item 1, which supersedes the second-merger flip of 17:47:06 item 4 for this control)*. #1178 item 15's control becomes a `decimal` `model_call` into a **`decimal`** output, legal under B3, in A-2's own plan before its mint. This plan names the change and flips nothing. Its earlier control (a `decimal` `model_call` into `relativity`) is D13 under B3 |
+| **The FD-1420 fix**, PL-1447 (#1145 @`2f3269c8`; WK-673), and RL-1446 (#1148, its ruling) | `compile.py` | adds `_check_lookup_as_at`; appends one entry to `ALGORITHM_CHECKS` (`:359-363`) | `_compatible`, `output_type_issues`, `_check_result_types`, `fragment_output_type_issues`; not `ALGORITHM_CHECKS` | different definitions, one file → **ALLOWED one-sided** with the dispatch record naming each path and its check; lane B's order puts it first anyway. RL-1446 writes no code. PL-1447 uses `RATING_TYPE_MISMATCH` for a lookup input (its DP-4), at a different site |
+| **PL-1454**, the NFR-489 remedy (#1113 @`3ad98fe2`; WK-1178) | none written by both: it edits `scripts/bench-rating.py`, `backend/src/app/db/session.py`, `config.py`, `api/deps.py`, `api/authz.py`, `auth/service.py`, `api/score.py`, `main.py` | — | item 7's sweep **reads** `scripts/bench-rating.py:248-267` | **no shared write → concurrent allowed.** Same Work: `RL-1445` (a) and (b) are written ((b): neither consumes the other's output). If PL-1454 changes `bench-rating.py`'s algorithm, item 7's sweep reads it at the dispatch tree |
+| **PL-1564**, WK-1250 S2 (#1170; WK-1250) | `compile.py` `_compatible` (**called**) | adds a mount-port check that calls `producer_types` and `_compatible` (its plan `:581-583`) | changes `_compatible`'s signature (a required `at_output_step`) and its numeric rule | **a caller of an edited function → SERIALISE.** Whichever lands second updates the other's call: a mount port is not an output step, so it passes `at_output_step=False` |
+| **PL-1556**, WK-675 S3 (#1186 @`c5d1d03a`) | `compile.py` (its `ValidationIssue` move, RL-1474; the import block) | moves `ValidationIssue` to `model-schema`; runs `test_rating_compile.py` | `output_type_issues` builds `ValidationIssue`s | the holds register: "S3 is never concurrent with a slice editing compile.py" → **SERIALISE** |
+| **The emergency slice**, PL-1426 / SL-1427 (#1196 @`68b2f860`; WK-1178) | none (it edits `score.py`, `test_rating_shadowed_inputs.py`, `test_quote_input_raise_sites.py`, backend score tests, `03` FR-213) | — | — | no shared write; **ordered first** by the ruling's item 3 (activation need 4) |
 
 Every other open plan names none of this write set. That was checked by the same grep over
 each plan file on its branch.
 
 ### Size
 
-Small: about half an executor day, to three quarters with OQ 9556's 16 added directions and
+Small: about half an executor day, to three quarters with OQ-1560's 16 added directions and
 item 11's check. It is one pure function and three callers, about 75 parametrised cases (24
 refused directions and 8 controls, on three paths), one backend test, a sweep script run
 twice, one read-only scoring check, and item 12's two controls. *(Dated note, 2026-10-05: "DP-1
@@ -494,10 +496,10 @@ may add D9's three reds" is superseded: DP-1 (ii) adds one red, D9 on the fragme
 
 | DP | Question | Options | Recommendation | Owner | Blocks |
 |---|---|---|---|---|---|
-| **DP-1** | D9: `decimal` into a `money_minor` sub-graph **output port**. The ruling admits `decimal` → `money_minor` "AT AN OUTPUT STEP ONLY (FR-226's rounding point)". A port is not an output step, and it carries no rounding (0.5). The committed `test_a_compatible_fragment_output_port_raises_no_issue` (`P:386-389`) asserts that this pair passes today | (a) refuse at a port, as the ruling reads, and flip `P:389`'s second assertion, with the maintainer's (by delegation) approval, because the ruling's STOP covers a newly failing fixture; (b) admit it at a port, read as the parent's output step rounding it after inlining. No assertion flips, but a `decimal` value enters the parent as `money_minor` unrounded, and nothing guarantees an output step consumes it; (c) admit it at a port now, and check it at mount (PL 9610's mount-port check, `at_output_step=False`) | **(a).** It is the ruling's text, and the hazard FD 9549 names is a unit changing by declaration without a rounding point. Under (a), a sub-graph exposes the value as `decimal`, and the mounting algorithm's output step rounds it once (FR-226, option (B)). (b) leaves the gap open for sub-graphs. (c) moves the check to a slice that is not merged | the maintainer (by delegation) *(Dated note, 2026-10-05: ruled (a) at 17:47:06 BST, ON A MECHANISM CONDITION, which this planner found NOT met at `5fe56b87`: no rounding path exists in a fragment (`sub_graphs.py:67-68`; `rating.py:293-296`; `vocabulary.py:31`). STOP reported to the lead. DP-1 stays **open**, between "(a) plus a rounding step in scope, or (c)" (17:47:06 item 2).)* *(Dated note, 2026-10-05: **ruled (ii)** at 17:50:43 BST: "a sub-graph port carries money as decimal; money_minor is produced only at an output step"; the mechanism condition is discharged by (ii); (iii) is refused. D9 is refused at a port; item 12 is the A-control.)* | item 3 (D9), item 7, activation need 3 |
-| **DP-2** *(added 2026-10-05; ruled (r), 17:54:12 BST)* | An `expression` step **declared** `money_minor` over `decimal` operands saves (an expression's inputs are untyped, `compile.py:95-116`) and runs unrounded (`_expression_node`, `runtime.py:163-176`, never rounds by `result_type`). `assert_integer_minor_round_trip` (`compile.py:79`) is a startup self-check over constants, not a run-time check (17:50:43 BST item 2). **Count, at `5fe56b87`**, by the predicate `git grep -n -E '"result_type"\s*:\s*"money_minor"\|result_type[^,)\n]*=\s*"money_minor"\|result_type:\s*money_minor' 5fe56b87 -- . ':!docs'`: **28 declarations** in 18 files (and 1 assertion, `model-schema/tests/test_rating_algorithm.py:146`). They are the demo seed `examples/fremtpl2/model.py:341`; the benches `scripts/bench-rating.py:248`, `:254`, `bench-score-batch.py:84` and `bench-compiled-for.py:85`; 0 in `backend/src` and `frontend`; and 23 in tests: `backend/tests` 7 (`test_rating_algorithms.py:49`, `:97`, `:110`; `test_rating_version_compile.py:65`; `test_regression_suites.py:317`; `test_score.py:1249`; `test_score_compare.py:109`), `model-schema/tests` 2 (`test_rating_algorithm.py:62`, `:269`), and `pricing-core/tests` 14 (`test_rating_compile.py:47`, `:95`, `:108`; `test_rating_compile_bundle.py:58`; `test_rating_ladder_control.py:227`; `test_rating_ladder_exact.py:49`, `:244`, `:540`, `:563`; `test_rating_pin_membership.py:256`; `test_rating_runtime.py:126`; `test_rating_score.py:73`, `:90`; `test_testing.py:479`). Several are fractional **by design**: `ladder_exact.py:244` (`+ 0.6`), `:540` (`* 1.0137`), `:563`, `test_score.py:1249`, `test_rating_score.py:90` (`* 1.05`) and `bench-rating.py:254` (`* 1.0001`) | (p) a run-time integrality refusal of a non-integer value under a `money_minor` declaration, with the code `RATING_EVALUATION_FAILED` (in `errors.py` `RATING_ERROR_CODES` and `03` §5.1, `03:146`, `:972`) or a new code spec first. It breaks the fractional sites above, and it contradicts FR-248 as amended by `RL-1329` (`03:155`): "Each rung records its **unrounded value**, the engine's exact decimal for that rung in minor units". (q) refuse `result_type` `money_minor` on expression steps: it breaks all 28, including the G2 demo seed and the three benches. (r) defer to an OQ, with the gap named | **(r), closed by definition rather than by a check.** The FD 9549-fix `RL-`'s FR-227 T-text states that `money_minor` on an expression step is a unit (minor units) carrying an exact decimal that may be fractional, and that only an output step's rounding makes it an integer (FR-226, FR-248). That breaks 0 of 28, matches `RL-1329`, and leaves A1 (`int` → `money_minor` refused at save) as it is. (p) contradicts FR-248's unrounded rungs. (q) costs 28 edits, the demo seed among them | the maintainer (by delegation) *(Dated note, 2026-10-05: **ruled (r), closed by definition** at 17:54:12 BST, in RL 9512's FR-227 T-text: "money_minor on an expression step is a unit (minor units) carrying an exact decimal that may be fractional; only an output step's rounding makes it an integer (FR-226, FR-248)". No OQ. (p) and (q) are recorded with the count of 28 as their costs, and the table is kept as that record. The served half is D1's named red, item 2.)* | activation need 3; Task 5 (the `RL-`'s text) |
+| **DP-1** | D9: `decimal` into a `money_minor` sub-graph **output port**. The ruling admits `decimal` → `money_minor` "AT AN OUTPUT STEP ONLY (FR-226's rounding point)". A port is not an output step, and it carries no rounding (0.5). The committed `test_a_compatible_fragment_output_port_raises_no_issue` (`P:386-389`) asserts that this pair passes today | (a) refuse at a port, as the ruling reads, and flip `P:389`'s second assertion, with the maintainer's (by delegation) approval, because the ruling's STOP covers a newly failing fixture; (b) admit it at a port, read as the parent's output step rounding it after inlining. No assertion flips, but a `decimal` value enters the parent as `money_minor` unrounded, and nothing guarantees an output step consumes it; (c) admit it at a port now, and check it at mount (PL-1564's mount-port check, `at_output_step=False`) | **(a).** It is the ruling's text, and the hazard FD-1424 names is a unit changing by declaration without a rounding point. Under (a), a sub-graph exposes the value as `decimal`, and the mounting algorithm's output step rounds it once (FR-226, option (B)). (b) leaves the gap open for sub-graphs. (c) moves the check to a slice that is not merged | the maintainer (by delegation) *(Dated note, 2026-10-05: ruled (a) at 17:47:06 BST, ON A MECHANISM CONDITION, which this planner found NOT met at `5fe56b87`: no rounding path exists in a fragment (`sub_graphs.py:67-68`; `rating.py:293-296`; `vocabulary.py:31`). STOP reported to the lead. DP-1 stays **open**, between "(a) plus a rounding step in scope, or (c)" (17:47:06 item 2).)* *(Dated note, 2026-10-05: **ruled (ii)** at 17:50:43 BST: "a sub-graph port carries money as decimal; money_minor is produced only at an output step"; the mechanism condition is discharged by (ii); (iii) is refused. D9 is refused at a port; item 12 is the A-control.)* | item 3 (D9), item 7, activation need 3 |
+| **DP-2** *(added 2026-10-05; ruled (r), 17:54:12 BST)* | An `expression` step **declared** `money_minor` over `decimal` operands saves (an expression's inputs are untyped, `compile.py:95-116`) and runs unrounded (`_expression_node`, `runtime.py:163-176`, never rounds by `result_type`). `assert_integer_minor_round_trip` (`compile.py:79`) is a startup self-check over constants, not a run-time check (17:50:43 BST item 2). **Count, at `5fe56b87`**, by the predicate `git grep -n -E '"result_type"\s*:\s*"money_minor"\|result_type[^,)\n]*=\s*"money_minor"\|result_type:\s*money_minor' 5fe56b87 -- . ':!docs'`: **28 declarations** in 18 files (and 1 assertion, `model-schema/tests/test_rating_algorithm.py:146`). They are the demo seed `examples/fremtpl2/model.py:341`; the benches `scripts/bench-rating.py:248`, `:254`, `bench-score-batch.py:84` and `bench-compiled-for.py:85`; 0 in `backend/src` and `frontend`; and 23 in tests: `backend/tests` 7 (`test_rating_algorithms.py:49`, `:97`, `:110`; `test_rating_version_compile.py:65`; `test_regression_suites.py:317`; `test_score.py:1249`; `test_score_compare.py:109`), `model-schema/tests` 2 (`test_rating_algorithm.py:62`, `:269`), and `pricing-core/tests` 14 (`test_rating_compile.py:47`, `:95`, `:108`; `test_rating_compile_bundle.py:58`; `test_rating_ladder_control.py:227`; `test_rating_ladder_exact.py:49`, `:244`, `:540`, `:563`; `test_rating_pin_membership.py:256`; `test_rating_runtime.py:126`; `test_rating_score.py:73`, `:90`; `test_testing.py:479`). Several are fractional **by design**: `ladder_exact.py:244` (`+ 0.6`), `:540` (`* 1.0137`), `:563`, `test_score.py:1249`, `test_rating_score.py:90` (`* 1.05`) and `bench-rating.py:254` (`* 1.0001`) | (p) a run-time integrality refusal of a non-integer value under a `money_minor` declaration, with the code `RATING_EVALUATION_FAILED` (in `errors.py` `RATING_ERROR_CODES` and `03` §5.1, `03:146`, `:972`) or a new code spec first. It breaks the fractional sites above, and it contradicts FR-248 as amended by `RL-1329` (`03:155`): "Each rung records its **unrounded value**, the engine's exact decimal for that rung in minor units". (q) refuse `result_type` `money_minor` on expression steps: it breaks all 28, including the G2 demo seed and the three benches. (r) defer to an OQ, with the gap named | **(r), closed by definition rather than by a check.** The FD-1424-fix `RL-`'s FR-227 T-text states that `money_minor` on an expression step is a unit (minor units) carrying an exact decimal that may be fractional, and that only an output step's rounding makes it an integer (FR-226, FR-248). That breaks 0 of 28, matches `RL-1329`, and leaves A1 (`int` → `money_minor` refused at save) as it is. (p) contradicts FR-248's unrounded rungs. (q) costs 28 edits, the demo seed among them | the maintainer (by delegation) *(Dated note, 2026-10-05: **ruled (r), closed by definition** at 17:54:12 BST, in RL-1563's FR-227 T-text: "money_minor on an expression step is a unit (minor units) carrying an exact decimal that may be fractional; only an output step's rounding makes it an integer (FR-226, FR-248)". No OQ. (p) and (q) are recorded with the count of 28 as their costs, and the table is kept as that record. The served half is D1's named red, item 2.)* | activation need 3; Task 5 (the `RL-`'s text) |
 
-OQ 9556 is not a DP of this plan: it is recorded by a decision-maker and decided before the
+OQ-1560 is not a DP of this plan: it is recorded by a decision-maker and decided before the
 mint (activation need 2).
 
 ## Tasks
@@ -510,10 +512,10 @@ the order. The read-first step for `/score` is Task 0 Step 3.*
 ### Task 0: Preconditions (no code)
 
 - [ ] **Step 1:** Confirm activation needs 1–6 on `origin/main`. Re-read every line cite at
-  the dispatch tree and re-anchor it by symbol. A-2, PL 9610, PL 9578 and PL 9688 may have
+  the dispatch tree and re-anchor it by symbol. A-2, PL-1564, PL-1556 and PL-1447 may have
   moved `compile.py`.
 - [ ] **Step 2:** Re-read the write set of every slice in flight against §"Write set". Give the
-  lead the `RL 9620` (a)/(b) lines for each same-Work pair (A-2, PL 9728). Record which of A-2
+  lead the `RL-1445` (a)/(b) lines for each same-Work pair (A-2, PL-1454). Record which of A-2
   and this slice merged first, because item 5 and §"Hand-off" depend on it.
 - [ ] **Step 3: Read first, the real-time `/score` coercion (item 11).** Read
   `_KNOWN_OUTPUT_TYPES` (`score.py:947`), `_coerce_output_value` (`:950`), `_build_outputs`
@@ -540,17 +542,17 @@ the order. The read-first step for `/score` is Task 0 Step 3.*
   to the lead for an auditor to file the finding, and continue.
 
   *(Dated note, 2026-10-05, pre-mint, on the lead's instruction: this check's (b) outcome is
-  **already filed** as FD 9513 (working id; #1204, read at `0303d0bf`). The maintainer (by
+  **already filed** as FD-1561 (#1204, read at `0303d0bf`). The maintainer (by
   delegation) accepted it in `~/gi-pricing-plan.local/channel/to-lead.md`, the entry headed
   "2026-10-05 17:58:45 BST — FD 9513 (#1204 @0303d0bf): your decision ACCEPTED (MEDIUM, LATENT, WK-1178, its own fix slice after SL 9561); the row escape is the first red",
   item 1, verbatim: "ACCEPTED: MEDIUM; LATENT; carry forward, owner WK-1178; its OWN fix slice
-  editing score.py AFTER SL 9561. Reserve the SL/PL ids; a planner drafts when a seat frees."
-  Its fix is SL 9511 / PL 9509 (working ids; #1210). FD 9513's probe measured this divergence:
+  editing score.py AFTER SL-1427. Reserve the SL/PL ids; a planner drafts when a seat frees."
+  Its fix is SL 9511 (a working id) / PL-1566 (#1210). FD-1561's probe measured this divergence:
   a declared `decimal` output is a JSON number on `/score` (an integer for a whole value, a
   float for a fractional one) and a JSON string in batch, and that decimal half stays with
-  `FD-1333` / `RL-1343` (the same entry, item 3). So Step 1a **cites FD 9513** rather than
+  `FD-1333` / `RL-1343` (the same entry, item 3). So Step 1a **cites FD-1561** rather than
   discovering it. The executor still runs the read-only comparison, as a confirmation, and
-  records it in the ledger against FD 9513. **A new divergence beyond FD 9513's record is a
+  records it in the ledger against FD-1561. **A new divergence beyond FD-1561's record is a
   STOP**, reported to the lead.)*
 - [ ] **Step 2:** Run the script at the base and keep its output and the script inline in the
   ledger. **Any hit other than DP-1's known `P:389`, an `int` input into a `money_minor`
@@ -632,9 +634,9 @@ def _compatible(producer: str, declared: str, *, at_output_step: bool) -> bool:
 
 ## Hand-off
 
-1. The lead mints PL 9521 and SL 9522 after FD 9549 and OQ 9556, and dispatches only after
+1. The lead mints PL-1562 and SL 9522 after FD-1424 and OQ-1560, and dispatches only after
    §"Activation needs" hold, in a separate activation PR.
-2. When this slice merges, FD 9549's event is discharged: "a merged change to `_compatible`".
+2. When this slice merges, FD-1424's event is discharged: "a merged change to `_compatible`".
    The auditor closes it.
 3. **To A-2's planner and executor (#1178):** if this slice merges first, A-2's dispatch
    record drops item 15's `model_call`-only refusal branch and keeps the `producer_types`
@@ -642,9 +644,9 @@ def _compatible(producer: str, declared: str, *, at_output_step: bool) -> bool:
    the branch (Task 3 Step 3). A-2's control is changed in its own plan before its mint: a
    `decimal` `model_call` into a `decimal` output (17:49:25 BST item 1). This plan flips nothing
    of A-2's.
-4. **To PL 9610's executor:** `_compatible` now takes a required `at_output_step`. A mount
+4. **To PL-1564's executor:** `_compatible` now takes a required `at_output_step`. A mount
    port passes `False`.
-5. **OQ 9556:** its decision (17:42:06 BST) is written into the directions table, items 1–3,
+5. **OQ-1560:** its decision (17:42:06 BST) is written into the directions table, items 1–3,
    6, 7 and 11, and Task 3's sketch. Activation need 2 is met when its row is decided on
    `main` (#1200).
 
@@ -658,12 +660,12 @@ def _compatible(producer: str, declared: str, *, at_output_step: bool) -> bool:
    - "INTO money_minor: from money_minor, or decimal AT AN OUTPUT STEP ONLY": A1, A2 and D9
      (DP-1).
    - "Refuse relativity, percentage and count into money_minor": D6–D8.
-   - "int→money_minor and the non-money pairs … ONE OQ": OQ 9556, decided at 17:42:06 BST.
+   - "int→money_minor and the non-money pairs … ONE OQ": OQ-1560, decided at 17:42:06 BST.
      A1 is D10. B3 is D11–D25, and A3–A7 are its allowed widenings. These are items 1–3 and
      6, and activation need 2.
    - "FIRST task is red-first: one red per refused direction, plus a sweep": Task 1.
    - "If one does, STOP and report; do not loosen the rule": item 7, Tasks 1 and 4, DP-1.
-   - OQ 9556's "sweep, BEFORE its red tasks … NOT an automatic A3 fallback": Task 1, item 7.
+   - OQ-1560's "sweep, BEFORE its red tasks … NOT an automatic A3 fallback": Task 1, item 7.
      Its "/score output coercion" is read first (Task 0 Step 3), and the check of 17:49:25 item
      2 is item 11 and Task 1 Step 1a.
    - 17:47:06 item 2, DP-1's mechanism condition: checked and NOT met; DP-1 stays open (the
@@ -671,11 +673,11 @@ def _compatible(producer: str, declared: str, *, at_output_step: bool) -> bool:
 2. **Coverage of item 3** ("AFTER the emergency slice … you sequence it"): activation need 4
    and the contention table. The lead sequences.
 3. **Every design choice is ruled:** DP-1 (ii) at 17:50:43 BST, DP-2 (r) at 17:54:12 BST,
-   and OQ 9556 at 17:42:06 BST. *(Dated note, 2026-10-05: this said DP-1 was open.)* A divergence found by
-   item 11 goes to a separate finding (option (b)). No spec text is drafted: the FD 9549-fix
+   and OQ-1560 at 17:42:06 BST. *(Dated note, 2026-10-05: this said DP-1 was open.)* A divergence found by
+   item 11 goes to a separate finding (option (b)). No spec text is drafted: the FD-1424-fix
    `RL-` carries FR-227's text (Task 5).
 4. **Repository literals read at `4d3be141`:** every line in §"Task 0 at planning time" and
-   §"Write set". FD 9549 was read at `9c8a52c6`. Each other plan was read on its branch at
+   §"Write set". FD-1424 was read at `9c8a52c6`. Each other plan was read on its branch at
    the head named in the contention table.
 5. **What was not executed.** No test, script or code was run. The sketch is against names
    read at `4d3be141`. `score.py`'s anchors (`:729`, `:950`, `:991-1002`) were read at

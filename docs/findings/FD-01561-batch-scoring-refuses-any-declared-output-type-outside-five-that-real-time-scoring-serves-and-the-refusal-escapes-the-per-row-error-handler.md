@@ -1,16 +1,18 @@
 ---
-id: FD-9513
+id: FD-1561
 family: finding
 title: Batch scoring refuses any declared output type outside five that real-time scoring serves, and the refusal escapes the per-row error handler
 status: active
-created: 2026-10-05            # working id; the mint date will replace this (check 31)
+created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
 owner: auditor
 tree: 5fe56b87e55b0a29399f96f0af2e7c2e2ef9b72a
 corrected_by: []
 relates: [WK-1178, FR-214, FR-227, FR-253, FR-254, FR-255, FD-1333, RL-1343, RL-923]
 ---
 
-# FD-9513 — `_coerce_output_value` raises for `int`, `count`, `relativity` and `percentage`, which `/score` serves
+# FD-1561 — `_coerce_output_value` raises for `int`, `count`, `relativity` and `percentage`, which `/score` serves
+
+*(Minted 2026-10-09 as FD-1561 from working id 9513, in the D4 batch mint; citations of the ids minted in this batch, and of ids already minted on main, are re-pointed outside quoted text, quoted channel entries and code blocks, which stay as quoted; SL 9500, SL 9511 are working ids not minted by any batch and stay working ids.)*
 
 **Filed** by the auditor on the lead's brief of 2026-10-05, working id 9513 (reserved in the lead's `eta.md`). The claim
 came from planner-a12fold's planning-time reading and was **not verified when made**. The maintainer (by delegation)
@@ -144,9 +146,9 @@ is the fix plan's to decide, with `RL-1343` as the precedent for `decimal`.
 ## Disposition
 
 **Proposed by the auditor; the verdict is the lead's.** Carry forward with an owner, **WK-1178**, at MEDIUM, LATENT,
-the grade the sibling FD 9549 (save-time numeric interchange, working id, not merged at this tree) proposes. Why not lower: one declared output of an accepted type fails an
+the grade the sibling FD-1424 (save-time numeric interchange) proposes. Why not lower: one declared output of an accepted type fails an
 entire batch run rather than one row. Why not higher: nothing committed declares one. The fix edits `score.py` and runs
-after SL 9561, in `PL 9521`'s Step 1a (working ids), which cites this record. It needs: (1) the serialised form decided
+after SL-1427, in `PL-1562`'s Step 1a, which cites this record. It needs: (1) the serialised form decided
 for the four types; (2) `_outputs_json` moved inside the row's `try`, or the types made total, so no declared type can
 leave the row handler (red first: a batch fixture declaring each of the four types, with an assertion on the row, not on
 a raised exception); (3) `FD-1333`'s change and this one made in one place so `/score` and `outputs_json` stay one
@@ -164,15 +166,15 @@ and `_score_batch_row`, or a dated ruling that closes the output-type vocabulary
 > 3. The decimal half stays with FD-1333 / OQ-1334 / RL-1343, not re-filed. The new fact (a whole-valued decimal reaches /score as a JSON INTEGER, a fractional one as a float; FD-1333/RL-1343 say only "float") goes into FD 9513's text as a related observation, cited to FD-1333. Whichever plan discharges RL-1343's clause must cover BOTH forms; FD 9513's fix plan checks whether that plan exists and names it.
 
 **In those terms.** Severity **MEDIUM**, **LATENT**; **carry forward with an owner, WK-1178**; the fix is its own slice,
-**SL 9511 under PL 9509** (working ids), editing `score.py` after SL 9561. This **supersedes** the Disposition section's
-placement of the fix in PL 9521 Step 1a: PL 9521 cites this record and does not carry the fix. Reds, in order: **(1) the row
+**SL 9511 (a working id) under PL-1566**, editing `score.py` after SL-1427. This **supersedes** the Disposition section's
+placement of the fix in PL-1562 Step 1a: PL-1562 cites this record and does not carry the fix. Reds, in order: **(1) the row
 escape first**, independent of the type question; **(2) the four types** (`int`, `count`, `relativity`, `percentage`), the JSON
 form of `count`, `relativity` and `percentage` being a decision point for the maintainer, proposed by the plan.
 
 **Related observation, cited to `FD-1333`: the decimal wire form depends on the value.** A whole-valued `decimal` output
 reaches `/score` as a JSON **integer** and a fractional one as a JSON **float** (the probe above: `driver_age * 1.5` gives
 `27`, an int; `driver_age * 1.1` gives `19.8`, a float). `FD-1333` and `RL-1343` say only "float". Whichever plan discharges
-`RL-1343`'s clause (the JSON string on every scoring path) must cover **both** forms. PL 9509 checks whether that plan exists
+`RL-1343`'s clause (the JSON string on every scoring path) must cover **both** forms. PL-1566 checks whether that plan exists
 and names it.
 
 ## Disposition — decision points ruled (pre-mint)
@@ -186,9 +188,9 @@ reserved NOW". DP-1 and DP-2, quoted verbatim:
 > DP-3: the exception class name, as today.
 
 **In those terms.**
-- **DP-1 (b):** SL 9511 under PL 9509 makes `int` and `count` JSON integers on both paths (a non-integral value is that row's
+- **DP-1 (b):** SL 9511 under PL-1566 makes `int` and `count` JSON integers on both paths (a non-integral value is that row's
   error) and `relativity` and `percentage` decimal strings in BATCH.
 - **The residue:** `relativity` and `percentage` on real-time `/score` stay JSON numbers until the `RL-1343` plan,
-  **PL 9499 / SL 9500** (working ids, space form), discharges it (DP-2 (ii)). `FD-1333`'s divergence therefore persists for
+  **PL-1568 / SL 9500** (SL 9500 a working id, space form), discharges it (DP-2 (ii)). `FD-1333`'s divergence therefore persists for
   those two types until then.
 - **DP-3:** the error code is the class name.

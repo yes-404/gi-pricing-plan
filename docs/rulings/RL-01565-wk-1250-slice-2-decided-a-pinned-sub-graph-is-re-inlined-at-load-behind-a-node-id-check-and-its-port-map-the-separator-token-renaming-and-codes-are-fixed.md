@@ -1,9 +1,9 @@
 ---
-id: RL-9586
+id: RL-1565
 family: ruling
 title: WK-1250 Slice 2 decided — a pinned sub-graph is re-inlined at load behind a node-id check, and its port map, the separator __, token renaming and codes are fixed
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-10-05            # working id; the mint date is set at the mint (check 31)
+created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
 owner: decision-maker
 tree: 137bc817ef1fb40ea57e9053e0ad40b73bdff3a8
 phase: P2
@@ -15,7 +15,9 @@ corrects: ~
 relates: [RL-1309, RL-1344, PL-1254, SL-1340, FR-212, FR-217, FR-244, FR-258, FR-274]
 ---
 
-# RL 9586 (working id) — WK-1250 Slice 2: DP-S2-1 and DP-S2-2 decided
+# RL-1565 — WK-1250 Slice 2: DP-S2-1 and DP-S2-2 decided
+
+*(Minted 2026-10-09 as RL-1565 from working id 9586, in the D4 batch mint; citations of the ids minted in this batch, and of ids already minted on main, are re-pointed outside quoted text, quoted channel entries and code blocks, which stay as quoted.)*
 
 ## How this was ruled
 
@@ -29,15 +31,15 @@ relates: [RL-1309, RL-1344, PL-1254, SL-1340, FR-212, FR-217, FR-244, FR-258, FR
   > - DP-S2-1: (a), re-inline at load, WITH C1: load_bundle refuses BUNDLE_COMPILE_FAILED when the graph's node ids and the re-inlined step ids differ, red first.
   > - DP-S2-2: shape (a), completeness and codes as recommended. The SEPARATOR is `__`, not `/` (`/` is FR-244's division token; _check_division_guards, compile.py :273/:282, would refuse every inlined expression naming an internal value). mount_point matches ^[A-Za-z][A-Za-z0-9_]*$ and contains no `__` (VALIDATION_FAILED); collision checks cover the parent's step ids and the to_wire-derived keys. The inliner renames by FR-244 TOKEN through a shared vocabulary._tokenize helper, never by substring, with 2 red tests (an internal name in an expression; `ncd` vs `ncd_years`). vocabulary.py joins the write set. 03 §4.11's example is corrected in the DM's T-text.
 
-- **The decision points** are PL 9610's (working id, #1170, branch `pl-9610-wk1250-s2-leaf` at
+- **The decision points** are PL-1564's (#1170, branch `pl-9610-wk1250-s2-leaf` at
   `ca407ed9c7d296a676a0bbc248d5ce6706a40f59`), §"Decision points". The DP memo the ruling
   names is `~/gi-pricing-plan.local/handover/dp-memo-wk1250-s2-2026-10-05.md` (a local file).
 - **Written 2026-10-05 17:02 BST (by `date`)**, by the decision-maker session `dm-finals2`, on
   the lead's order. Every fact below was read at `origin/main`
-  `137bc817ef1fb40ea57e9053e0ad40b73bdff3a8`, by symbol with its line at that tree. PL 9610 is
+  `137bc817ef1fb40ea57e9053e0ad40b73bdff3a8`, by symbol with its line at that tree. PL-1564 is
   unminted, so it is cited in working-id form and kept out of `relates:` (check 32).
 - **This record rules a plan's decision points and never edits the plan** (`document-ids.md`
-  §1.6, PL row). Its texts for PL 9610 (P1 to P5) are applied by the planner as a pre-mint edit,
+  §1.6, PL row). Its texts for PL-1564 (P1 to P5) are applied by the planner as a pre-mint edit,
   or carried by the dispatch record if the plan is minted first. P5 was proposed by the DM outside
   the 16:54 ruling, and the maintainer, by delegation, **accepted it at 2026-10-05 17:06:26 BST**
   (the dated clause under P5).
@@ -70,7 +72,7 @@ relates: [RL-1309, RL-1344, PL-1254, SL-1340, FR-212, FR-217, FR-244, FR-258, FR
 | **DP-S2-2, collisions** | A namespaced name or step id equal to a parent name, a parent `step_id`, or a key `to_wire` derives from a `step_id` (`<id>__violated`, `<id>__before`, `<id>__min`, `<id>__max`) is refused with `VALIDATION_FAILED`; a `mount_point` clash likewise |
 | **DP-S2-2, renaming** | **By FR-244 token, never by substring**, through a shared helper over `vocabulary._tokenize`. Only `_NAME` tokens that are fragment names are renamed, never a function or a literal word. Every name-bearing field is covered: `consumes`, `produces`, `key_expr`, `expr`, `condition`, `clamp_bounds` values, `feature_map` values. Two red tests: an internal name inside an expression; `ncd` beside `ncd_years`, where only the exact name is renamed |
 | **DP-S2-2, codes** | An unmapped or undeclared port → `RATING_GRAPH_UNRESOLVED_REF`; an incompatible input type → `RATING_TYPE_MISMATCH`; a sub-graph not pinned → `RATING_VERSION_UNPINNED`; a nested mount → `VALIDATION_FAILED`; a `mount_point` clash or a namespacing collision → `VALIDATION_FAILED`. No new code; `errors.py` is not edited |
-| **Write set** | `packages/pricing-core/src/pricing_core/rating/vocabulary.py` joins PL 9610's write set (the shared tokenizer helper) |
+| **Write set** | `packages/pricing-core/src/pricing_core/rating/vocabulary.py` joins PL-1564's write set (the shared tokenizer helper) |
 | **`03` §4.11's example** | Corrected by T2 below: the worked namespacing of the §4.11 fragment under the §4.1 mount |
 
 ## The spec texts
@@ -89,7 +91,7 @@ Find `` "sub_graphs": [{"ref": "sub_graph:ncd-ladder@4", "mount_point": "s_ncd"}
 ```
 
 The port names are the §4.11 fragment's (`03:830-831`). `s_ncd` stays: it matches the
-`mount_point` pattern, and no parent step is called `s_ncd`, so PL 9610 Task 1's conditional
+`mount_point` pattern, and no parent step is called `s_ncd`, so PL-1564 Task 1's conditional
 rename to `m_ncd` is not needed. Like the example's other steps, it shows the shape, not a
 complete FR-212 graph: the example's own `postcode_outcode` and `payable_premium_pre_round` are
 not produced by any step either, and are not this ruling's.
@@ -97,34 +99,34 @@ not produced by any step either, and are not this ruling's.
 ### T2 — `03` §4.11, the namespacing bullet. Find `` so a fragment cannot mount another: depth is 1. `` and insert after the end of that bullet's line, as a new bullet
 
 ```markdown
-- **Inlining and namespacing** *(added <date>, WK-1250 Slice 2, RL 9586 (working id))*. At compile, a pinned mount is inlined at its `mount_point` (FR-217). Every fragment `step_id`, and every fragment name that is not a mapped port, becomes `<mount_point>__<name>`: `__`, not `/`, because `/` is FR-244's division operator. A mapped input port's name becomes the parent value it is mapped to, and a mapped output port's name becomes the parent name it is mapped to. Names are renamed by FR-244 token in every field that holds one (`consumes`, `produces`, `key_expr`, `expr`, `condition`, the values of `clamp_bounds` and `feature_map`), never by substring. A `mount_point` matches `^[A-Za-z][A-Za-z0-9_]*$` and contains no `__`. Mounted under §4.1's example, this fragment's step `s_ncd` becomes `s_ncd__s_ncd`; it consumes the parent's `ncd_years` and produces the parent's `ncd_factor`. Compile refuses an unmapped or undeclared port (`RATING_GRAPH_UNRESOLVED_REF`), an incompatible input type (`RATING_TYPE_MISMATCH`), a mount whose sub-graph is not pinned (`RATING_VERSION_UNPINNED`), and a `mount_point` that breaks the pattern, clashes, or produces a namespaced name equal to a parent name, step id or engine-derived key (`VALIDATION_FAILED`).
+- **Inlining and namespacing** *(added <date>, WK-1250 Slice 2, RL-1565)*. At compile, a pinned mount is inlined at its `mount_point` (FR-217). Every fragment `step_id`, and every fragment name that is not a mapped port, becomes `<mount_point>__<name>`: `__`, not `/`, because `/` is FR-244's division operator. A mapped input port's name becomes the parent value it is mapped to, and a mapped output port's name becomes the parent name it is mapped to. Names are renamed by FR-244 token in every field that holds one (`consumes`, `produces`, `key_expr`, `expr`, `condition`, the values of `clamp_bounds` and `feature_map`), never by substring. A `mount_point` matches `^[A-Za-z][A-Za-z0-9_]*$` and contains no `__`. Mounted under §4.1's example, this fragment's step `s_ncd` becomes `s_ncd__s_ncd`; it consumes the parent's `ncd_years` and produces the parent's `ncd_factor`. Compile refuses an unmapped or undeclared port (`RATING_GRAPH_UNRESOLVED_REF`), an incompatible input type (`RATING_TYPE_MISMATCH`), a mount whose sub-graph is not pinned (`RATING_VERSION_UNPINNED`), and a `mount_point` that breaks the pattern, clashes, or produces a namespaced name equal to a parent name, step id or engine-derived key (`VALIDATION_FAILED`).
 ```
 
-## The texts for PL 9610 (applied by the planner, pre-mint)
+## The texts for PL-1564 (applied by the planner, pre-mint)
 
-Each find string has exactly one hit in PL 9610 at `ca407ed9`.
+Each find string has exactly one hit in PL-1564 at `ca407ed9`.
 
 - **P1 — Task 3, Step 1, namespacing.** Find `` `f"{mount_point}/{name}"` under DP-S2-2's separator; `` and replace it with
-  `` `f"{mount_point}__{name}"` (RL 9586, the separator `__`), renamed by FR-244 token in every name-bearing field, never by substring; ``.
+  `` `f"{mount_point}__{name}"` (RL-1565, the separator `__`), renamed by FR-244 token in every name-bearing field, never by substring; ``.
 - **P2 — Task 3, Step 1, the two token tests.** Find `` - **collisions:** a namespaced name equal to a parent name → refused (DP-S2-2); `` and insert after it:
-  `` - **token renaming** (RL 9586): an internal name inside an `expr` is renamed and the expression passes `_check_division_guards`; with `ncd` and `ncd_years` both present, only the exact token `ncd` is renamed; ``
+  `` - **token renaming** (RL-1565): an internal name inside an `expr` is renamed and the expression passes `_check_division_guards`; with `ncd` and `ncd_years` both present, only the exact token `ncd` is renamed; ``
 - **P3 — File contention, a row for `vocabulary.py`.** Find the row
   `` | `packages/pricing-core/src/pricing_core/rating/inline.py` | **new**: the pure inliner (Task 3) | none | Not shared | ``
   and insert after it:
-  `` | `packages/pricing-core/src/pricing_core/rating/vocabulary.py` | the shared tokenizer helper the inliner renames with (RL 9586) | the dispatch record checks in-flight plans for `vocabulary.py` | An existing-module edit. The dispatch record names it | ``
+  `` | `packages/pricing-core/src/pricing_core/rating/vocabulary.py` | the shared tokenizer helper the inliner renames with (RL-1565) | the dispatch record checks in-flight plans for `vocabulary.py` | An existing-module edit. The dispatch record names it | ``
 - **P4 — Task 5, Step 4, C1.** Find `` `_load_boosters`. Update its docstring. `` and replace it with
-  `` `_load_boosters`. Then C1 (RL 9586): refuse with `BUNDLE_COMPILE_FAILED` when the set of `bundle.graph` node ids differs from the set of the inlined algorithm's `step_id`s, naming the first difference, before the engine is built; red first, on a bundle whose graph has one node renamed. Update its docstring. ``
+  `` `_load_boosters`. Then C1 (RL-1565): refuse with `BUNDLE_COMPILE_FAILED` when the set of `bundle.graph` node ids differs from the set of the inlined algorithm's `step_id`s, naming the first difference, before the engine is built; red first, on a bundle whose graph has one node renamed. Update its docstring. ``
 - **P5 — Task 3, Interfaces, the inlined step order. Accepted 2026-10-05 17:06:26 BST** (the
   dated clause below). Find
   `` has `sub_graphs == []` and the parent's steps followed by each mount's namespaced steps, in ``
   and replace that line and the next (`` mount order. It is a proposal name, recorded in the ledger if it differs. ``) with:
-  `` has `sub_graphs == []`, and its steps in a stable topological order computed from the dependency edges: Kahn's algorithm with list order as the tie-break (the parent's steps, then each mount's namespaced steps), the rule the maintainer, by delegation, ruled for `to_wire` (RL 9586, P5). It is a proposal name, recorded in the ledger if it differs. ``
+  `` has `sub_graphs == []`, and its steps in a stable topological order computed from the dependency edges: Kahn's algorithm with list order as the tie-break (the parent's steps, then each mount's namespaced steps), the rule the maintainer, by delegation, ruled for `to_wire` (RL-1565, P5). It is a proposal name, recorded in the ledger if it differs. ``
   with a red test that scores `03` §4.1's shape through `load_bundle` and asserts that the parent
   step consuming `ncd_factor` reads the fragment's value. **Why:** `to_wire` wires a consumed
   name to the producer seen so far in node order (Locators, last row). With the mount's steps
   appended after the parent's, a parent step consuming a mount output is wired to `inputNode`
   and does not read the fragment's value. This is by code reading at `137bc817`; nothing was
-  run here. The `to_wire` question itself is not this record's: it was reproduced as FD 9572
+  run here. The `to_wire` question itself is not this record's: it was reproduced as FD-1425
   (working id) and ruled in the entry quoted below.
 
   *(Dated clause, 2026-10-05 17:09 BST (by `date`), pre-mint, dm-finals2: **P5 ACCEPTED.**)* The
@@ -143,7 +145,7 @@ Each find string has exactly one hit in PL 9610 at `ca407ed9`.
 
 ## What it obliges
 
-- **PL 9610's planner** applies P1 to P5 as a pre-mint edit to #1170. The plan's DP-S2-1 and DP-S2-2 rows then cite this record. Activation need 2
+- **PL-1564's planner** applies P1 to P5 as a pre-mint edit to #1170. The plan's DP-S2-1 and DP-S2-2 rows then cite this record. Activation need 2
   ("DP-S2-1 and DP-S2-2 ruled by an `RL-`") is met at this record's mint.
 - **WK-1250 Slice 2 (`SL-1340`)** applies T1 and T2 verbatim in its Task 1 spec commit, with its
   code (`CLAUDE.md` §2).
