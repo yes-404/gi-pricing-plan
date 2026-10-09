@@ -31,7 +31,14 @@ Write set: `PL-1535` §Tasks / `PL-1520` Task 1A "Files" only. **FD-1534's remed
 
 ### Task list
 
-Added with each commit.
+PL-1520 Task 1A, by step (acceptance checks are PL-1535 Acceptance Standard items 1 to 6):
+- [x] Step 1: `test_rating_declared_reads.py` (6 tests), commit `3af2475f`. **Red proof owed** (Step 2: expected `ModuleNotFoundError: No module named 'pricing_core.rating.references'` at collection, then per Step 3 the two refusal tests and the two example tests red by their causes).
+- [x] Step 3: `pricing_core/rating/references.py` (deviation D4 below).
+- [x] Step 4: `_check_declared_reads` appended to `compile.py`, last entry of `ALGORITHM_CHECKS`; commit `aeeb39ad` (Steps 3 and 4 together).
+- [x] Step 5: four fixtures fixed, three `input` steps added in `test_rating_score.py`, one in the model-schema fixture (whose `input_contract` gains `min_premium_minor`; its step-count assert 9 to 10); commit `cb945b84` and a style commit.
+- [ ] Step 6, 7: **owed** (need pytest; gate slot for Step 7).
+- [x] Step 8 (authoring half): RL-1519 T1 to T5 applied: `03` (FR-246 row, the 4.1 example fence, its Invariants note, the owned-code row) and `errors.py`; commit `497bd69d`. T2's sha256 (with final newline) printed `6a35964d410f9b6c`, matching RL-1519. Audit-docs, FD-1374's predicate, the release note in the squash body, `git diff` of `03` beside the RL text: **owed**.
+- [ ] FD-1534's remedy (a): **STOPPED**, see build log.
 
 ### Gate
 
@@ -48,6 +55,11 @@ Added with each commit.
 **2026-10-09, authoring phase.** Worktree `.claude/worktrees/sl-1536`, branch `sl-1536-fd1374-dp-f35-1`, from `origin/main` `d471a43bdc4ed123258a7398bbcf30c62605aa27`.
 
 - Commit 1: `PL-1535`'s `status:` line `draft` to `active`, and this file.
+- **Deviation D4 (this slice, not PL-1535's D1 to D3).** `references.py` takes its evaluated field names from `authored.EXPRESSION_FIELDS` (FD-1317's one registry, which landed after PL-1520 was written) rather than repeating a hard-coded field list; it skips a `None` clamp bound. `referenced_names`' contract and the plan's tests are unchanged. D1 (the tokenizer, no Spike S1) applies as PL-1535 says.
+- **RATING_ERROR_CODES placement.** RL-1519 T5 inserts the code immediately after `"LADDER_CLAMP_UNPLACEABLE",`; applied so, byte for byte. The lead's brief said tail; the ruling wins and the insertion site does not touch the tail S4 appends to (`ATTRIBUTION_RECONCILIATION_FAILED`).
+- **Light smoke, no pytest (not the red/green proof).** With `PYTHONPATH` on the tests dir, the six test functions called directly all passed, `validate_algorithm` over `test_rating_score._algorithm_payload`, `test_rating_compile.valid_algorithm`, `test_rating_compile_bundle.valid_algorithm_payload` and the model-schema fixture gave 0 FR-246 issues.
+- **STOP, FD-1534's remedy (a).** It edits `packages/pricing-core/tests/test_rating_committed_strings.py`, which is not in `PL-1535` / Task 1A's write set. Reported to the lead 2026-10-09; not touched until ruled.
+- **Alembic.** This slice adds no migration.
 
 ## PRs
 
