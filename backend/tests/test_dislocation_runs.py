@@ -7,27 +7,52 @@ The `dislocation.run` Job handler, its persisted row (`dislocation_runs`, one wr
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+import io
+from dataclasses import dataclass
+from datetime import date
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
+import polars as pl
 import pytest
 import pytest_asyncio
 from backend.tests.blob_fixtures import blob_row, digest, job_result_owner
+from backend.tests.test_rating_version_compile import (
+    _empty_pins,
+    _headers,
+    _insert_version,
+)
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.api.deps import DEV_PRINCIPAL_HEADER
-from app.config import Environment, Settings
-from app.db.models import DislocationRunRow
+from app.db.models import (
+    BlobRow,
+    DatasetVersionRow,
+    DislocationRunRow,
+    JobRow,
+    RatingVersionRow,
+)
 from app.db.session import Database
 from app.errors import RATING_ERROR_CODES, PlatformError
-from app.main import create_app
 from app.platform import dislocation_runs as service
+from app.platform import jobs
+from app.platform.blobs import BlobStore, to_ref
 from app.platform.rating_versions import WorkspaceResolver
-from app.worker.dislocation_handlers import PreloadedResolver, _Recorder
-from model_schema import ArtifactRef, new_uuid7
+from app.worker import dislocation_handlers
+from app.worker.celery_app import build_celery
+from app.worker.dislocation_handlers import (
+    DISLOCATION_SINGLE_JOB_MAX_HOURS,
+    MOVERS_COLUMNS,
+    PreloadedResolver,
+    _Recorder,
+    register_dislocation_handlers,
+)
+from app.worker.rating_handlers import register_rating_handlers
+from app.worker.tasks import execute_job
+from model_schema import ArtifactRef, JobKind, JobStatus, new_uuid7
 from model_schema.dislocation import DislocationRun
+from pricing_core.rating.analysis import AttributionError
 from pricing_core.rating.compile import ResolvedArtifact
 
 _BASELINE = "rating_version:motor-gb@26"
@@ -128,26 +153,6 @@ async def test_a_run_without_a_movers_blob_or_a_job_id_is_not_persisted(
             await _persist(database, workspace_id, broken)
 
 
-@pytest.fixture
-def api_settings() -> Settings:
-    from backend.tests.conftest_db import test_blob_bucket, test_database_url
-    from pydantic import SecretStr
-
-    return Settings(
-        environment=Environment.LOCAL,
-        version="test",
-        dev_auth_enabled=True,
-        database_url=SecretStr(test_database_url()),
-        blob_bucket=test_blob_bucket(),
-    )
-
-
-@pytest.fixture
-def client(api_settings: Settings) -> Iterator[TestClient]:
-    with TestClient(create_app(api_settings), raise_server_exceptions=False) as c:
-        yield c
-
-
 @pytest_asyncio.fixture
 async def reader_headers(workspace_id: UUID, principal: Any, grant: Any) -> dict[str, str]:
     """A `dataset:read` holder in `workspace_id` (the blob route's only permission)."""
@@ -161,14 +166,14 @@ def _blob_get(client: TestClient, headers: dict[str, str], sha256: str) -> Any:
 
 @pytest.mark.req("NFR-499")
 async def test_the_generic_blob_route_refuses_a_movers_blob(
-    client: TestClient, database: Database, workspace_id: UUID, reader_headers: dict[str, str]
+    api_client: TestClient, database: Database, workspace_id: UUID, reader_headers: dict[str, str]
 ) -> None:
     """RL-1504 item 5: the movers digest is referenced by the run row only, so
     `GET /api/v1/blobs/{sha256}` answers it as an unknown digest (404 `NOT_FOUND`)."""
     sha256 = digest()
     await blob_row(database, sha256, "application/vnd.apache.parquet")
     await _persist(database, workspace_id, _run(movers=sha256))
-    response = _blob_get(client, reader_headers, sha256)
+    response = _blob_get(api_client, reader_headers, sha256)
     assert response.status_code == 404, response.text
     body = response.json()
     assert (body["code"], body["title"], body["detail"]) == (
@@ -178,7 +183,7 @@ async def test_the_generic_blob_route_refuses_a_movers_blob(
 
 @pytest.mark.req("NFR-499")
 async def test_the_movers_digest_would_download_if_a_job_blob_result_named_it(
-    client: TestClient, database: Database, workspace_id: UUID, reader_headers: dict[str, str]
+    api_client: TestClient, database: Database, workspace_id: UUID, reader_headers: dict[str, str]
 ) -> None:
     """The positive control for the test above: the 404 is the deny working, not a route that
     cannot serve this digest. Record it as a Job's `JobResult(kind="blob")` (the broken
@@ -187,7 +192,7 @@ async def test_the_movers_digest_would_download_if_a_job_blob_result_named_it(
     await blob_row(database, sha256, "application/vnd.apache.parquet")
     await _persist(database, workspace_id, _run(movers=sha256))
     await job_result_owner(database, workspace_id, sha256)
-    assert _blob_get(client, reader_headers, sha256).status_code == 307
+    assert _blob_get(api_client, reader_headers, sha256).status_code == 307
 
 
 # ---- Task 3: the workspace resolver, moved (DP-S4-4) --------------------------------
@@ -237,3 +242,281 @@ def test_the_compile_resolver_is_a_module_level_class_with_the_nested_ones_argum
         "session", "workspace_id", "blob_store",
     ]
     assert inspect.iscoroutinefunction(WorkspaceResolver.resolve)
+
+
+# ---- Task 4: the `dislocation.run` handler -------------------------------------------
+#
+# The handler is driven through `execute_job` (a Job row, a registered handler), over two
+# genuinely compiled Rating Versions whose algorithms differ in three independent branches,
+# so the derived changes are c1, c2, c3 (sorted by step id) and K = 3 with no grouping.
+
+
+@pytest.fixture(autouse=True)
+def _handlers() -> None:
+    register_rating_handlers()
+    register_dislocation_handlers()
+
+
+def _algorithm(a: str, b: str, c: str) -> dict[str, Any]:
+    """Three independent expression branches summed: editing a branch is one derived change."""
+    def branch(step_id: str, expr: str, produces: str) -> dict[str, Any]:
+        return {"step_id": step_id, "type": "expression", "label": step_id, "expr": expr,
+                "result_type": "money_minor", "consumes": ["premium_in"], "produces": produces}
+
+    return {
+        "slug": "dislocation-fixture",
+        "version": 1,
+        "input_contract": [{"name": "premium_in", "type": "int", "nullable": False}],
+        "outputs": [{"name": "payable_premium_minor", "type": "money_minor", "required": True}],
+        "steps": [
+            {"step_id": "s_in", "type": "input", "label": "In", "input_name": "premium_in",
+             "on_missing": "error", "produces": "premium_in"},
+            branch("s_a", a, "va"), branch("s_b", b, "vb"), branch("s_c", c, "vc"),
+            {"step_id": "s_sum", "type": "expression", "label": "Sum", "expr": "va + vb + vc",
+             "result_type": "money_minor", "consumes": ["va", "vb", "vc"], "produces": "payable"},
+            {"step_id": "s_out", "type": "output", "label": "Out",
+             "output_name": "payable_premium_minor", "rounding": {"mode": "half_even", "dp": 0},
+             "consumes": ["payable"]},
+        ],
+        "sub_graphs": [],
+    }
+
+
+_BASE_BRANCHES = ("premium_in * 2", "premium_in + 10", "premium_in + 7")
+_CAND_BRANCHES = ("premium_in * 3", "premium_in + 20", "premium_in + 9")
+
+
+def _portfolio(n: int = 12) -> pl.DataFrame:
+    """`03` §4.8's frame for the fixture (one input) plus a non-frame column, `channel`."""
+    return pl.DataFrame({
+        "quote_id": [f"Q{i:03d}" for i in range(n)],
+        "exposure_years": [1.0] * n,
+        "premium_in": [100 + 10 * i for i in range(n)],
+        "channel": ["direct" if i % 2 == 0 else "broker" for i in range(n)],
+    })
+
+
+@dataclass(frozen=True)
+class _World:
+    workspace_id: UUID
+    principal: Any
+    headers: dict[str, str]
+    portfolio_id: UUID
+    baseline: ArtifactRef
+    candidate: ArtifactRef
+
+    def spec(self, **overrides: Any) -> dict[str, Any]:
+        spec: dict[str, Any] = {
+            "baseline_ref": str(self.baseline),
+            "candidate_ref": str(self.candidate),
+            "portfolio_dataset_version_id": str(self.portfolio_id),
+            "purpose": "renewal",
+            "as_at": date(2026, 9, 1).isoformat(),
+            "band_edges_pct": ["-50", "50"],
+            "mover_threshold_pct": "1",
+        }
+        return spec | overrides
+
+
+async def _compile(
+    api_client: TestClient, headers: dict[str, str], database: Database,
+    blob_store: BlobStore, row: RatingVersionRow,
+) -> None:
+    response = api_client.post(f"/api/v1/rating-versions/{row.id}/compile", headers=headers)
+    assert response.status_code == 202, response.text
+    status = await execute_job(database, UUID(response.json()["id"]), blob_store)
+    assert status is JobStatus.SUCCEEDED, status
+
+
+@pytest_asyncio.fixture
+async def world(
+    api_client: TestClient, database: Database, blob_store: BlobStore, workspace_id: UUID,
+    principal: Any, grant: Any,
+) -> _World:
+    await grant("analyst")
+    headers = _headers(principal, workspace_id)
+    refs = []
+    for branches in (_BASE_BRANCHES, _CAND_BRANCHES):
+        created = api_client.post(
+            "/api/v1/rating-algorithms", json=_algorithm(*branches), headers=headers
+        )
+        assert created.status_code in (200, 201), created.text
+        row = await _insert_version(
+            database, workspace_id, principal.id,
+            algorithm_ref=f"rating_algorithm:dislocation-fixture@{created.json()['version']}",
+            pins=_empty_pins(), slug=f"dislocation-rv-{len(refs)}", version=1,
+        )
+        await _compile(api_client, headers, database, blob_store, row)
+        refs.append(ArtifactRef(type="rating_version", slug=row.slug, version=1))
+    buffer = io.BytesIO()
+    frame = _portfolio()
+    frame.write_parquet(buffer, compression="zstd")
+    async with database.unit_of_work() as session:
+        blob = await blob_store.put(session, buffer.getvalue(), "application/vnd.apache.parquet")
+        version = DatasetVersionRow(
+            slug="dislocation-portfolio", workspace_id=workspace_id, dataset_id=uuid4(),
+            version=1, status="validated", created_by=principal.id, currency="GBP",
+            tables=[{"name": "portfolio", "row_count": frame.height,
+                     "blob": {"sha256": blob.sha256}}],
+        )
+        session.add(version)
+        await session.flush()
+        portfolio_id = version.id
+    return _World(workspace_id, principal, headers, portfolio_id, refs[0], refs[1])
+
+
+async def _run_job(
+    database: Database, blob_store: BlobStore, world: _World, spec: dict[str, Any]
+) -> tuple[UUID, JobRow]:
+    """Submit a `dislocation.run` Job as the route will and drive it to a terminal state."""
+    parameters = {
+        "workspace_id": str(world.workspace_id),
+        "actor": world.principal.model_dump(mode="json"),
+        "spec": spec,
+    }
+    async with database.unit_of_work() as session:
+        job = await jobs.submit(
+            session, JobKind.DISLOCATION_RUN, parameters, world.principal,
+            workspace_id=world.workspace_id,
+        )
+    await execute_job(database, job.id, blob_store)
+    async with database.session() as session:
+        row = await session.get(JobRow, job.id)
+    assert row is not None
+    return job.id, row
+
+
+async def _runs(database: Database, workspace_id: UUID) -> list[DislocationRunRow]:
+    async with database.session() as session:
+        return list((await session.execute(
+            select(DislocationRunRow).where(DislocationRunRow.workspace_id == workspace_id)
+        )).scalars())
+
+
+async def _blob(database: Database, blob_store: BlobStore, sha256: str) -> bytes:
+    async with database.session() as session:
+        row = await session.get(BlobRow, sha256)
+        assert row is not None
+        return await blob_store.read(to_ref(row))
+
+
+@pytest.mark.req("FR-263")
+@pytest.mark.req("FR-265")
+@pytest.mark.req("FR-266")
+async def test_a_dislocation_run_persists_with_its_job_id_and_movers_blob(
+    database: Database, blob_store: BlobStore, world: _World
+) -> None:
+    job_id, job = await _run_job(database, blob_store, world, world.spec())
+    assert job.status is JobStatus.SUCCEEDED, job.error
+    rows = await _runs(database, world.workspace_id)
+    assert len(rows) == 1
+    row = rows[0]
+    run = DislocationRun.model_validate(row.run)
+    assert run.job_id == job_id == row.job_id
+    assert row.movers_blob_sha256 == run.largest_movers_blob.removeprefix("blob:sha256:")
+    assert job.result == {"kind": "artifact", "ref": f"dislocation_run:{row.id}"}
+    assert run.attribution is not None
+    assert len(run.derived_changes or []) == 3
+
+
+@pytest.mark.req("NFR-499")
+async def test_the_stored_movers_hold_no_portfolio_column(
+    database: Database, blob_store: BlobStore, world: _World
+) -> None:
+    """RL-1504 item 5: the stored blob's columns are exactly `dislocation_frame`'s own, though
+    the portfolio carries `channel` and `premium_in`."""
+    await _run_job(database, blob_store, world, world.spec())
+    (row,) = await _runs(database, world.workspace_id)
+    movers = pl.read_parquet(io.BytesIO(await _blob(database, blob_store, row.movers_blob_sha256)))
+    assert tuple(movers.columns) == MOVERS_COLUMNS
+    assert movers.height > 0  # a threshold of 1% moves every policy of this fixture
+
+
+@pytest.mark.req("FR-1398")
+async def test_dislocation_subset_bundles_never_become_rating_versions(
+    database: Database, blob_store: BlobStore, world: _World
+) -> None:
+    async def versions() -> int:
+        async with database.session() as session:
+            return (await session.execute(
+                select(func.count()).select_from(RatingVersionRow)
+                .where(RatingVersionRow.workspace_id == world.workspace_id)
+            )).scalar_one()
+
+    before = await versions()
+    _, job = await _run_job(database, blob_store, world, world.spec())
+    assert job.status is JobStatus.SUCCEEDED, job.error
+    (row,) = await _runs(database, world.workspace_id)
+    summary = DislocationRun.model_validate(row.run).attribution_summary
+    assert summary is not None
+    assert summary.subset_bundle_count == 2**3
+    assert len(summary.subset_bundle_hashes) == 2**3
+    assert await versions() == before
+
+
+@pytest.mark.req("FR-1397")
+async def test_a_run_that_does_not_reconcile_fails_with_attribution_reconciliation_failed(
+    database: Database, blob_store: BlobStore, world: _World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def refuse(*_: Any, **__: Any) -> Any:
+        raise AttributionError(
+            "ATTRIBUTION_RECONCILIATION_FAILED", "policy Q000 does not reconcile"
+        )
+
+    monkeypatch.setattr(dislocation_handlers, "attribute", refuse)
+    _, job = await _run_job(database, blob_store, world, world.spec())
+    assert job.status is JobStatus.FAILED
+    assert job.error is not None
+    assert job.error["code"] == "ATTRIBUTION_RECONCILIATION_FAILED"
+    assert await _runs(database, world.workspace_id) == []
+
+
+@pytest.mark.req("NFR-495")
+async def test_two_runs_of_the_same_spec_are_byte_identical(
+    database: Database, blob_store: BlobStore, world: _World
+) -> None:
+    for _ in range(2):
+        _, job = await _run_job(database, blob_store, world, world.spec())
+        assert job.status is JobStatus.SUCCEEDED, job.error
+    first, second = await _runs(database, world.workspace_id)
+
+    def without_job(row: DislocationRunRow) -> dict[str, Any]:
+        return {k: v for k, v in row.run.items() if k != "job_id"}
+
+    assert without_job(first) == without_job(second)
+    assert first.movers_blob_sha256 == second.movers_blob_sha256
+    assert first.job_id != second.job_id
+
+
+@pytest.mark.req("FR-263")
+def test_the_celery_visibility_timeout_exceeds_the_single_job_bound() -> None:
+    """RL-1504 item 2: red at origin/main, where the key is absent (Celery's one-hour default
+    would redeliver a running 4-hour Job to a second worker)."""
+    from app.config import Settings
+
+    options = build_celery(Settings()).conf.broker_transport_options
+    assert options["visibility_timeout"] > DISLOCATION_SINGLE_JOB_MAX_HOURS * 3600
+
+
+@pytest.mark.req("FR-263")
+async def test_a_second_delivery_for_a_running_dislocation_job_does_nothing(
+    database: Database, blob_store: BlobStore, world: _World
+) -> None:
+    parameters = {
+        "workspace_id": str(world.workspace_id),
+        "actor": world.principal.model_dump(mode="json"),
+        "spec": world.spec(),
+    }
+    async with database.unit_of_work() as session:
+        job = await jobs.submit(
+            session, JobKind.DISLOCATION_RUN, parameters, world.principal,
+            workspace_id=world.workspace_id,
+        )
+        (await session.get(JobRow, job.id)).status = JobStatus.RUNNING  # type: ignore[union-attr]
+    assert await execute_job(database, job.id, blob_store) is JobStatus.RUNNING
+    assert await _runs(database, world.workspace_id) == []
+    async with database.session() as session:
+        row = await session.get(JobRow, job.id)
+    assert row is not None
+    assert (row.status, row.result) == (JobStatus.RUNNING, None)
+

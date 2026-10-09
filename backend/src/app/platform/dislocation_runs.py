@@ -19,7 +19,25 @@ from app.db.models import DislocationRunRow
 from app.errors import PlatformError
 from model_schema.dislocation import DislocationRun
 
-__all__ = ["MOVERS_BLOB_PREFIX", "fetch_run", "movers_digest", "persist_run"]
+__all__ = [
+    "DISLOCATION_RATINGS_PER_WORKER_HOUR",
+    "DISLOCATION_SINGLE_JOB_MAX_HOURS",
+    "MOVERS_BLOB_PREFIX",
+    "fetch_run",
+    "movers_digest",
+    "persist_run",
+]
+
+#: Ratings one worker performs in an hour: NFR-493's measured throughput, the CR-927 closure
+#: record's NFR table (`docs/closures/CR-00927-work-item-record-wk-671-scoring.md`, line 355,
+#: "5,093,947 risks/hour/worker"; `RL-1504` "Details"). Replaced by Slice 3's measured
+#: dislocation-path rate (`RL-1264` item 1) when its ledger records one.
+DISLOCATION_RATINGS_PER_WORKER_HOUR: Final = 5_093_947
+
+#: A run estimated above this many hours on one worker is refused before any Job: one
+#: `dislocation.run` Job, not a fan-out, is the ruled shape (`RL-1504` item 1, DP-S4-1). The
+#: Celery `visibility_timeout` exceeds it (`celery_app.build_celery`).
+DISLOCATION_SINGLE_JOB_MAX_HOURS: Final = 4
 
 #: How `DislocationRun.largest_movers_blob` writes a digest (03 §4.6's example).
 MOVERS_BLOB_PREFIX: Final = "blob:sha256:"
