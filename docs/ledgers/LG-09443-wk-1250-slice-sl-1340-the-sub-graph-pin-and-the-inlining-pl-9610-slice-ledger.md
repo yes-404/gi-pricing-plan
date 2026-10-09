@@ -80,7 +80,7 @@ inliner's order.
 ### Task list
 
 - [ ] Task 0 — preconditions and premises a–n at `61e2a8d9` (this entry: partial; pending items listed in Scope)
-- [ ] Task 1 — spec: `03` §4.1, §4.3, §4.11, §5.2 (T1, T2 verbatim from RL 9586)
+- [x] Task 1 — spec: `03` §4.1, §4.3, §4.11, §5.2 (T1, T2 verbatim from RL 9586)
 - [ ] Task 2 — `model-schema`: `Pins.sub_graphs`, the port map, the mount as a node, the two contracts
 - [ ] Task 3 — `pricing-core/rating/inline.py` and the `vocabulary.py` token helper
 - [ ] Task 4 — the diff limb (`diff_algorithms`)
@@ -105,6 +105,8 @@ Not yet run.
 `pl-9610-wk1250-s2-leaf` (`202d6777…`) and `dm-9586-wk1250-s2` (`4f1c8a90…`) matched the brief.
 PL 9610 (734 lines) and RL 9586 (162 lines) read in full. Premises re-derived by symbol at the new
 lines listed in Scope.
+
+**2026-10-09, Task 1.** `03` §4.1 (example per RL 9586 T1, invariants note), §4.3 (pins example, FR-20 restated by class with the struck clause kept), §4.11 (Slice note, T2 namespacing bullet verbatim with date 2026-10-09), §5.2 (`compile_bundle` comment, `inline_mounts` line) edited by script (each find string counted 1 first). FR-217/218/258 not reworded. `audit-docs.py` NOT run: waits for the gate slot (brief, small-test rule). `inline_mounts` is the plan's proposed name.
 
 ## PRs
 
