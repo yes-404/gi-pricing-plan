@@ -1,5 +1,5 @@
 ---
-id: PL-1555
+id: PL-1556
 family: plan
 kind: leaf
 title: WK-675 Slice 3 — Designer II, live validation and diff (FR-212, FR-214, FR-215, FR-219, FR-223, FR-227, FR-244, FR-246, FR-24): leaf plan
@@ -15,13 +15,13 @@ corrected_by: []
 relates: [PL-1286, PL-1371, PL-1364, SL-1367, FD-1335, FD-1366, FD-1374, RL-1263, SL-1387, SL-1340, SL-1341, SL-1389]
 ---
 
-# PL-1555 — WK-675 Slice 3: Designer II, live validation and diff, leaf plan
+# PL-1556 — WK-675 Slice 3: Designer II, live validation and diff, leaf plan
 
-*(Minted 2026-10-09 as PL-1555 from working id 9578, in the D3 batch mint; citations of the ids minted in this batch, and of ids already minted on main (RL-1474, RL-1475, RL-1473, RL-1445, PL-1476, SL-1477, FD-1437, RL-1438), are re-pointed outside quotes, quoted text and quoted channel entries stay as quoted, and cites of PL 9576, PL 9574, SL 9577 and SL 9575 stay working ids.)*
+*(Minted 2026-10-09 as PL-1556 from working id 9578, in the D3 batch mint; citations of the ids minted in this batch, and of ids already minted on main (RL-1474, RL-1475, RL-1473, RL-1445, PL-1476, SL-1477, FD-1437, RL-1438), are re-pointed outside quotes, quoted text and quoted channel entries stay as quoted, and cites of PL 9576, PL 9574, SL 9577 and SL 9575 stay working ids. (Re-minted +1 on 2026-10-09 by the minting rewrite, on the lead's 13:09:28 BST ruling (1): first minted as PL 1555, before the D1 mint moved the allocation.))*
 
 This plan is filed under working id 9578. Its `SL-` row under WK-675 in
 [`../roadmap.md`](../roadmap.md) is slice working id 9581, `draft`. That row is filed in the
-WK-675 S4 plan PR (PL-1557, working id), which carries the rows for S4, S3, S13 and S14. The
+WK-675 S4 plan PR (PL-1558, working id), which carries the rows for S4, S3, S13 and S14. The
 lead reserved both ids on 2026-10-05 and mints both at the merge turn. Written by the planner
 (planner-675) on the lead's prep-wave brief of 2026-10-05, section AW. Evidence was read at
 origin/main `137bc817` (tree `94894053`); the clock read 2026-10-05 17:09:40 BST during the
@@ -141,12 +141,12 @@ Vite, Vitest with happy-dom, `@vue-flow/core` (added by S2), and the generated c
 plan moves to `active` only through a separate activation PR, after every activation need
 below holds.
 
-*Dated note, 2026-10-05 (written 18:40:25 BST, pre-mint): P-texts of RL-1554
-applied 2026-10-05. RL-1554 (working id; #1198 at `0e872448d7dde4d652ae15bafa097983909441bc`), §"The plan texts" lines 232–247 and its "Amendment, 2026-10-05 17:42
+*Dated note, 2026-10-05 (written 18:40:25 BST, pre-mint): P-texts of RL-1555
+applied 2026-10-05. RL-1555 (working id; #1198 at `0e872448d7dde4d652ae15bafa097983909441bc`), §"The plan texts" lines 232–247 and its "Amendment, 2026-10-05 17:42
 BST" (lines 323–340), gives P7 and P8 for this plan; P9 and P10 are discharged by that
 amendment and are not applied. Counts (Python `str.count` over this file): P7 (Status) and P8
 (activation need 4, appended) each find 1 before and 0 after, new text 0 before and 1 after.
-P8 carries the `PL-1364` guard dependency of RL-1554 item 7: `backend/tests/test_contracts.py`'s
+P8 carries the `PL-1364` guard dependency of RL-1555 item 7: `backend/tests/test_contracts.py`'s
 pending list holds 11 entries if S3 dispatches before `SL-1367`, and the second of the two to
 dispatch carries the delta.*
 
@@ -159,13 +159,13 @@ dispatch carries the delta.*
 3. **S2 (SL-1477, PL-1476) merged.** S3 consumes S2's output: `RatingAlgorithmDraft`, the
    designer components and `ratingAlgorithms.ts`. So under RL-1445 condition (b), S2 and S3
    never run at the same time.
-4. **DP-S3-1 and DP-S3-2 decided**, each by a dated line. Decided (RL-1554). The dispatch record names `backend/tests/test_contracts.py` as shared with `SL-1367`; whichever of S3 and `SL-1367` dispatches second carries the pending-list delta (11 entries if S3 is first; RL-1554 item 7).
+4. **DP-S3-1 and DP-S3-2 decided**, each by a dated line. Decided (RL-1555). The dispatch record names `backend/tests/test_contracts.py` as shared with `SL-1367`; whichever of S3 and `SL-1367` dispatches second carries the pending-list delta (11 entries if S3 is first; RL-1555 item 7).
 5. **No slice editing `compile.py` in flight** (decision 4; `PL-1371` §5 rule 4): WK-673 S3
    (`SL-1387`), WK-1250 S2 (`SL-1340`) and WK-1250 S3 (`SL-1341`), and any other slice whose
    dispatch record names `pricing_core/rating/compile.py`.
 6. **Task 0 re-run at the dispatch tree**, with every row as expected or its delta named.
 7. **The maintainer's agreement** to this plan, as a dated line, and **the lead's go**,
-   recorded in a separate activation PR. That PR sets this plan and SL-1556 `active`.
+   recorded in a separate activation PR. That PR sets this plan and SL-1557 `active`.
 
 ## Acceptance Standard
 
@@ -407,7 +407,7 @@ Classes are those of `docs/process/delivery-process.core.json`
 | `backend/tests/test_contracts.py` `UNTYPED_2XX_PENDING_PART_B` | FD-1335 Part B's slices | not registry-exempt: **SERIALISES** with a slice editing that list |
 
 **Same-Work pairs** (RL-1445 condition (b)): S3 consumes S2's output, so S2 → S3 serialise.
-S3 and S4 (PL-1557, working id) share no source file named here except `03` §5.1, and
+S3 and S4 (PL-1558, working id) share no source file named here except `03` §5.1, and
 neither consumes the other's output. They may overlap only if the dispatch record names both
 §5.1 hunks and their anchors. The second to merge merges `origin/main`, reads
 `git merge-tree --write-tree origin/main HEAD` rc 0 before using the tree, regenerates the

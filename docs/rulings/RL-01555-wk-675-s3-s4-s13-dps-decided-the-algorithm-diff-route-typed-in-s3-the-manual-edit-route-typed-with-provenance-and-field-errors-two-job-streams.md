@@ -1,5 +1,5 @@
 ---
-id: RL-1554
+id: RL-1555
 family: ruling
 title: WK-675 S3, S4 and S13 decision points decided — the algorithm diff route typed in S3's first commit, the manual-edit route typed with a created_by_edit record and FR-234's failures as field errors, and the Jobs list holding at most two event streams
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -15,9 +15,9 @@ corrects: ~
 relates: [PL-1286, PL-1364, FR-219, FR-229, FR-231, FR-234, FD-1335, FD-1366, RL-1184, RL-1361, RL-1418]
 ---
 
-# RL-1554 — WK-675 S3, S4 and S13: the decision points that block activation, decided
+# RL-1555 — WK-675 S3, S4 and S13: the decision points that block activation, decided
 
-*(Minted 2026-10-09 as RL-1554 from working id 9543, in the D3 batch mint; citations of the ids minted in this batch, and of ids already minted on main (RL-1474, RL-1475, RL-1473, RL-1445, PL-1476, SL-1477, FD-1437, RL-1438), are re-pointed outside quotes, quoted text and quoted channel entries stay as quoted, and cites of PL 9576, PL 9574, SL 9577 and SL 9575 stay working ids.)*
+*(Minted 2026-10-09 as RL-1555 from working id 9543, in the D3 batch mint; citations of the ids minted in this batch, and of ids already minted on main (RL-1474, RL-1475, RL-1473, RL-1445, PL-1476, SL-1477, FD-1437, RL-1438), are re-pointed outside quotes, quoted text and quoted channel entries stay as quoted, and cites of PL 9576, PL 9574, SL 9577 and SL 9575 stay working ids. (Re-minted +1 on 2026-10-09 by the minting rewrite, on the lead's 13:09:28 BST ruling (1): first minted as RL 1554, before the D1 mint moved the allocation.))*
 
 ## How this was ruled
 
@@ -32,7 +32,7 @@ relates: [PL-1286, PL-1364, FR-219, FR-229, FR-231, FR-234, FD-1335, FD-1366, RL
 - **This record** writes the rulings down, gives the spec texts (T1–T4) and the plan texts
   (P1–P14) that carry them, and states the acceptance. Filed by decision-maker `dm-675s4`
   under working id 9543, reserved by the lead.
-- **The plans it rules on** are unmerged drafts: PL-1557 (WK-675 S4, #1187), PL-1555 (S3,
+- **The plans it rules on** are unmerged drafts: PL-1558 (WK-675 S4, #1187), PL-1556 (S3,
   #1186) and PL 9576 (S13, #1185), all working ids at filing. Their planner applies the P-texts as a
   dated pre-mint edit. This record edits no plan.
 
@@ -92,7 +92,7 @@ relates: [PL-1286, PL-1364, FR-219, FR-229, FR-231, FR-234, FD-1335, FD-1366, RL
 
 ## Ruled
 
-**S4 (PL-1557).**
+**S4 (PL-1558).**
 
 1. **DP-S4-1: (a), edits only.** The request body is `RateTableManualEdit` `{base_version: int
    ≥ 1, edits: list[RateTableCell] (one or more; each an existing key's full row; a key at most
@@ -121,7 +121,7 @@ relates: [PL-1286, PL-1364, FR-219, FR-229, FR-231, FR-234, FD-1335, FD-1366, RL
    amendment "2026-10-05 17:29 BST"), on the 17:26:46 entry's order. It is recorded here and not
    repeated: the find string is `` | `GET` | `/api/v1/rate-tables/{slug}@{version}/diff?against= ``.
 
-**S3 (PL-1555).**
+**S3 (PL-1556).**
 
 6. **DP-S3-1: (a)**, on the dated line in item 4 above. S3 types `GET
    /api/v1/rating-algorithms/{slug}@{version}/diff` as `-> AlgorithmDiff` in its **first
@@ -201,9 +201,9 @@ Find `` > `created_by_import` remain mutually exclusive. ``; replace with:
 
 Each find string is counted with `grep -cF` over the plan file at the PR head named; each is
 **1**. The planner applies them as one dated pre-mint edit per plan and adds the note
-"P-texts of RL-1554 applied <date>".
+"P-texts of RL-1555 applied <date>".
 
-**PL-1557 (S4), #1187 at `800d3a70`** (the plan file is unchanged since `feb8510f`).
+**PL-1558 (S4), #1187 at `800d3a70`** (the plan file is unchanged since `feb8510f`).
 
 - **P1, the DP table.** After the line beginning `| **DP-S4-4** |`, insert a blank line and:
   `**Ruled 2026-10-05 (RL 9543, working id):** DP-S4-1 (a), its 200 a bare `RateTableDiff` and a 409 for a base that is not the latest; DP-S4-1c (ii), `created_by_edit`; DP-S4-2 (d), every failure a `FieldError` in the problem's existing `errors`; DP-S4-3 and DP-S4-4 as recommended.`
@@ -234,7 +234,7 @@ Each find string is counted with `grep -cF` over the plan file at the PR head na
   The pure-core tests' raise form (`apply_cell_edits`, Step 1) is the planner's to keep or
   reshape, provided P4's Acceptance holds.
 
-**PL-1555 (S3), #1186 at `20ba9a2e`; re-counted at `c5d1d03a` (amendment of 2026-10-05 17:42 BST below).**
+**PL-1556 (S3), #1186 at `20ba9a2e`; re-counted at `c5d1d03a` (amendment of 2026-10-05 17:42 BST below).**
 
 - **P7, Status.** Find (the fenced line, byte for byte)
   ```text
@@ -285,7 +285,7 @@ Each find string is counted with `grep -cF` over the plan file at the PR head na
 ## What it obliges
 
 - **This commit:** this record only. No spec, plan or code file is edited here.
-- **The planner** applies P1–P6 to PL-1557, P7 and P8 to PL-1555 (P9 and P10 are discharged) and P11–P14 to PL 9576 before
+- **The planner** applies P1–P6 to PL-1558, P7 and P8 to PL-1556 (P9 and P10 are discharged) and P11–P14 to PL 9576 before
   each mints, citing this record. If a find string no longer counts 1 at the plan's head, the
   planner stops and reports it to the decision-maker; it is never re-anchored by guess.
 - **WK-675 S4** applies T1–T4 with its code in one commit, with `docs/contracts/` and the
@@ -293,7 +293,7 @@ Each find string is counted with `grep -cF` over the plan file at the PR head na
   **WK-675 S13** builds the two-stream rule.
 - **The dispatch records**: S4's names its serialisation with `SL-1391`; S3's and `SL-1367`'s
   each name `backend/tests/test_contracts.py`, and the second carries the pending-list delta.
-- **At the mint:** `RL-<this>` resolves; the working ids RL-1475, RL 9907, PL-1557, PL-1555 and
+- **At the mint:** `RL-<this>` resolves; the working ids RL-1475, RL 9907, PL-1558, PL-1556 and
   PL 9576 are re-pointed to their minted ids in the same run where they have minted.
 
 ## Acceptance — the violation that must become detectable
@@ -333,10 +333,10 @@ Each is a test that is red on the code before its slice and green after it.
   hit). `created_by_edit` is the version's own record and does not discharge it. Routed to the
   lead as a possible finding; not ruled here.
 
-## Amendment, 2026-10-05 17:42 BST: P7–P10 re-counted at PL-1555's new head, before mint
+## Amendment, 2026-10-05 17:42 BST: P7–P10 re-counted at PL-1556's new head, before mint
 
 Plan-text update only; nothing ruled above changes (decision-maker `dm-675s4`, on the lead's
-order). PL-1555 (#1186) moved from `20ba9a2e` to `c5d1d03acdb292e34ff30ebaf58ff87ab3f918d3`:
+order). PL-1556 (#1186) moved from `20ba9a2e` to `c5d1d03acdb292e34ff30ebaf58ff87ab3f918d3`:
 the planner moved the diff-route typing to a new Task 0A, "the slice's FIRST commit", left
 Task 5 as a tombstone ("### Task 5: moved to Task 0A (dated pre-mint note)"), and added a
 dated note to Acceptance 21. Each find string was re-counted with Python `str.count` on the
@@ -349,7 +349,7 @@ plan file at `c5d1d03a`:
 | P9 | `21. **The diff route is typed** (DP-S3-1, if (a)).` | 1 | **discharged**: the line's own dated note now reads "this holds in the slice's **first** commit (Task 0A), before any frontend code consumes the route, with `generate-contracts --check` exiting 0 at that commit", which is P9's content; applying P9 would state it twice |
 | P10 | `### Task 5: The diff route typed; the contract and the client (DP-S3-1)` | **0** | **discharged**: the heading is now `### Task 0A: The diff route typed; the contract and the client (DP-S3-1) — the slice's FIRST commit` (count 1), which is P10's order |
 
-So the planner applies P7 and P8 only. PL-1557 (`800d3a70`) and PL 9576 (`06fb5ca3`) are
+So the planner applies P7 and P8 only. PL-1558 (`800d3a70`) and PL 9576 (`06fb5ca3`) are
 unchanged at their heads (ls-remote at 17:42 BST), so P1–P6 and P11–P14 stand as counted.
 
 ## Pre-mint note, 2026-10-05 18:45 BST: P2, P7 and P11's find strings re-quoted as fenced lines (extended 18:47 BST: P7 and P11's replace strings)
@@ -357,7 +357,7 @@ unchanged at their heads (ls-remote at 17:42 BST), so P1–P6 and P11–P14 stan
 Presentation only; nothing ruled or applied changes (decision-maker, on the maintainer's (by
 delegation) entry of 2026-10-05 18:43:10 BST in the lead's channel: "P2, P7 and P11's find
 strings count 0 when read LITERALLY and 1 only under CommonMark code-span padding removal …
-Or RL-1554 re-quotes those three without the padding; the DM picks one form"). The three were
+Or RL-1555 re-quotes those three without the padding; the DM picks one form"). The three were
 code spans padded with a space so that they could open with a backtick or a pipe; read
 literally the padding is part of the string, and the count is 0. P7 and P11 carried a leading
 space only, which CommonMark itself does not strip, so a padding-rule sentence would not have
@@ -367,9 +367,9 @@ two-space list indentation every continuation line in this list carries. Counted
 `800d3a7082b1aa4ab51019cc2a8993c9510129ff`, P7 in PL 9578 at
 `c5d1d03acdb292e34ff30ebaf58ff87ab3f918d3`, P11 in PL 9576 at
 `06fb5ca3745e12379d0763cdfe63359155c9acce`. The planner applied them in this reading (PL 9582
-#1187 at `3b15a829`, PL-1555 #1186 at `aea4b634`, PL 9576 #1185 at `0857c5e1`).
+#1187 at `3b15a829`, PL-1556 #1186 at `aea4b634`, PL 9576 #1185 at `0857c5e1`).
 
 **Extended 2026-10-05 18:47 BST** (on the lead's order): P7 and P11's replace strings carried
 the same leading-only space and are fenced the same way, so a reader re-deriving the plans gets
 the applied bytes, which have no leading space. Counted with Python `str.count` on the applied
-plan, each is **1**: P7 in PL-1555 at `aea4b634`, P11 in PL 9576 at `0857c5e1`.
+plan, each is **1**: P7 in PL-1556 at `aea4b634`, P11 in PL 9576 at `0857c5e1`.

@@ -1,5 +1,5 @@
 ---
-id: PL-1557
+id: PL-1558
 family: plan
 kind: leaf
 title: WK-675 Slice 4 — Editor I, the rate table grid and manual edit (FR-228, FR-229, FR-231, FR-232, FR-234, FR-1186, FR-10, FR-21, FR-25): leaf plan
@@ -15,13 +15,13 @@ corrected_by: []
 relates: [PL-1286, PL-1371, SL-1369, RL-1184, RL-1263, FD-1366, PL-1364, SL-1367, SL-1391, PL-1419]
 ---
 
-# PL-1557 — WK-675 Slice 4: Editor I, the rate table grid and manual edit, leaf plan
+# PL-1558 — WK-675 Slice 4: Editor I, the rate table grid and manual edit, leaf plan
 
-*(Minted 2026-10-09 as PL-1557 from working id 9582, in the D3 batch mint; citations of the ids minted in this batch, and of ids already minted on main (RL-1474, RL-1475, RL-1473, RL-1445, PL-1476, SL-1477, FD-1437, RL-1438), are re-pointed outside quotes, quoted text and quoted channel entries stay as quoted, and cites of PL 9576, PL 9574, SL 9577 and SL 9575 stay working ids.)*
+*(Minted 2026-10-09 as PL-1558 from working id 9582, in the D3 batch mint; citations of the ids minted in this batch, and of ids already minted on main (RL-1474, RL-1475, RL-1473, RL-1445, PL-1476, SL-1477, FD-1437, RL-1438), are re-pointed outside quotes, quoted text and quoted channel entries stay as quoted, and cites of PL 9576, PL 9574, SL 9577 and SL 9575 stay working ids. (Re-minted +1 on 2026-10-09 by the minting rewrite, on the lead's 13:09:28 BST ruling (1): first minted as PL 1557, before the D1 mint moved the allocation.))*
 
 This plan is filed under working id 9582. Its `SL-` row under WK-675 in
 [`../roadmap.md`](../roadmap.md) is slice working id 9583, `draft`. The lead reserved both on
-2026-10-05, with the rows and leaf plans of S3 (SL-1556, PL-1555), S13 (SL 9577, PL 9576) and
+2026-10-05, with the rows and leaf plans of S3 (SL-1557, PL-1556), S13 (SL 9577, PL 9576) and
 S14 (SL 9575, PL 9574), and mints them at the merge turn. This PR carries all four rows. The
 plan was written by the planner (planner-675) on the lead's prep-wave brief of 2026-10-05,
 section AW. Evidence was read at origin/main `137bc817`, tree `94894053`, on 2026-10-05
@@ -113,14 +113,14 @@ plan: `PL-1286` S4 (`:306`).
 
 `draft`. It goes `active` only through its Activation needs, in a separate activation PR.
 
-*Dated note, 2026-10-05 (written 18:40:25 BST, pre-mint): P-texts of RL-1554
-applied 2026-10-05. RL-1554 (working id; #1198 at `0e872448d7dde4d652ae15bafa097983909441bc`), §"The plan texts" lines 204–230, gives P1–P6 for this plan; each is
+*Dated note, 2026-10-05 (written 18:40:25 BST, pre-mint): P-texts of RL-1555
+applied 2026-10-05. RL-1555 (working id; #1198 at `0e872448d7dde4d652ae15bafa097983909441bc`), §"The plan texts" lines 204–230, gives P1–P6 for this plan; each is
 applied byte for byte and nothing else changed. Counts (Python `str.count` over this file):
 every find string 1 before and 0 after, every new text 0 before and 1 after — P1 (after the
 DP-S4-4 row of the decision-point table; that anchor stays, by design), P2 (the write-set row replaced, and the
 `model_schema/__init__.py` row inserted after it; that anchor stays, by design), P3 (Acceptance
 7, appended), P4 (Acceptance 8), P5 (the test's assert), P6 (Task 3 Step 3, two finds). The
-rulings of activation need 2 are RL-1554 items 1–3; need 2 is met when RL-1554 mints. RL-1554
+rulings of activation need 2 are RL-1555 items 1–3; need 2 is met when RL-1555 mints. RL-1555
 item 4 (serialise with `SL-1391`) is need 4 already.*
 
 ### Activation needs, in order
@@ -166,11 +166,11 @@ carries `@pytest.mark.req("<FR>")` (backend) or names its FR in the `describe` t
 7. **Manual edit, confirm.** `-k manual_edit_confirm` passes: the same body with
    `confirm: true` answers 201; the new version is `base + 1`, carries the change note, and
    its cells equal the base's cells with the edited values. A second confirm against the same
-   base answers 409 (the existing `_persist_new_version` refusal). The new version carries `created_by_edit` `{applied_to: <the base>, edited_cells: <the number of edits>}`, and a seeded version carries none (red first, RL-1554 item 2).
+   base answers 409 (the existing `_persist_new_version` refusal). The new version carries `created_by_edit` `{applied_to: <the base>, edited_cells: <the number of edits>}`, and a seeded version carries none (red first, RL-1555 item 2).
 8. **Manual edit refusals (FR-229, FR-234).** `-k manual_edit_refusals` passes, one test per
    case: an empty or whitespace change note → 422; an edit whose key is not in the base → 422;
    a duplicated key in the edits → 422; a value out of the declared bounds → 422 whose located
-   errors are `FieldError`s with `field` `edits.<i>.<value name>` (RL-1554 item 3); an unknown-key edit → 422 with a `FieldError` coded `UNKNOWN_KEY`, never 500; a float-typed JSON value → 422 (FR-21); an unknown
+   errors are `FieldError`s with `field` `edits.<i>.<value name>` (RL-1555 item 3); an unknown-key edit → 422 with a `FieldError` coded `UNKNOWN_KEY`, never 500; a float-typed JSON value → 422 (FR-21); an unknown
    field → 422 (`extra="forbid"`).
 9. **Contract.** `uv run python scripts/generate-contracts.py --check` exits 0. In
    `docs/contracts/` the cells read's 200 is a `$ref` to `Page_RateTableCell_`, the
@@ -255,8 +255,8 @@ are S5's (`PL-1286` `:307`).
 | Path | Symbol | Change |
 |---|---|---|
 | `packages/model-schema/src/model_schema/rating.py` | `RateTable.default_row` (`:718`), `RateTableVersion.default_row` (`:918`), `RateTableVersion.rows` (`:919`) | retyped to `RateTableCell` |
-| same | new `RateTableCell`, `RateTableManualEdit` and `ManualEdit`; `RateTableVersion.created_by_edit` and `_one_creation_path` widened (RL-1554) | added |
-| `packages/model-schema/src/model_schema/__init__.py` | the new types' exports (RL-1554 item 4) | changed |
+| same | new `RateTableCell`, `RateTableManualEdit` and `ManualEdit`; `RateTableVersion.created_by_edit` and `_one_creation_path` widened (RL-1555) | added |
+| `packages/model-schema/src/model_schema/__init__.py` | the new types' exports (RL-1555 item 4) | changed |
 | `backend/src/app/api/rate_tables.py` | three new handlers | added |
 | `backend/src/app/platform/rate_tables.py` | `_wire_rows` (`:238`) retyped; new `cells_page`, `_cells_in_key_order`, `read_definition`, `manual_edit_preview`, `manual_edit_confirmed` | added beside `import_preview` (`:391`) and `import_confirmed` (`:419`) |
 | `packages/pricing-core/src/pricing_core/rate_tables/operations.py` | new `apply_cell_edits`; `validate_rate_table` (`:323`) reused unchanged | added |
@@ -305,7 +305,7 @@ slice.
 | **DP-S4-3** | S4 needs the Rating Version by `slug@version` (RL-1473) and its `pins.rate_tables` (RL-1475 item 3). S2 builds that read. `PL-1371` §3.3 lists S4 as depending on S1 and DP-4 only | (a) **S4 after S2 merges**, and consumes it; (b) S4 builds the read itself if it dispatches first | **(a).** PL-1371's own order is S2 then S4 (§5, week of 10 Oct). (b) would make two slices own one route. This is a sequencing fact; it narrows no scope | no: recorded for the lead's dispatch |
 | **DP-S4-4** | Split S4 under DP-4 (a′)? | (a) one slice; (b) a backend read-and-edit slice, then the view | **(a).** The view is the only consumer, and its tests are what prove the routes' shapes serve it. Re-open only if Task 0 measures the band above 2 days | no |
 
-**Ruled 2026-10-05 (RL-1554, working id):** DP-S4-1 (a), its 200 a bare `RateTableDiff` and a 409 for a base that is not the latest; DP-S4-1c (ii), `created_by_edit`; DP-S4-2 (d), every failure a `FieldError` in the problem's existing `errors`; DP-S4-3 and DP-S4-4 as recommended.
+**Ruled 2026-10-05 (RL-1555, working id):** DP-S4-1 (a), its 200 a bare `RateTableDiff` and a 409 for a base that is not the latest; DP-S4-1c (ii), `created_by_edit`; DP-S4-2 (d), every failure a `FieldError` in the problem's existing `errors`; DP-S4-3 and DP-S4-4 as recommended.
 
 ## Tasks
 
@@ -560,7 +560,7 @@ async def test_manual_edit_out_of_bounds_names_the_cell(client, table_ref) -> No
   of the would-be version, with nothing persisted; confirm builds the `RateTableVersion` at
   `base + 1` with the body's `change_note` and `seeded_from` inherited, calls
   `_guard_seed_lineage`, resolves the threshold, and calls `_persist_new_version`. FR-234
-  runs through `validate_rate_table` (`:323`); every issue becomes one `FieldError` (RL-1554 item 3),
+  runs through `validate_rate_table` (`:323`); every issue becomes one `FieldError` (RL-1555 item 3),
   `field` `edits.<i>.<value name>`; `UNKNOWN_KEY` and `DUPLICATE_KEY` are collected the same way under `VALIDATION_FAILED` and never reach `_map_operation_error`, which would raise a 500 (`UNKNOWN_KEY` is not in `_KNOWN_CODES`); the confirmed version sets `created_by_edit`. The handler is typed `-> RateTableDiff` and sets 201 on confirm with a
   `RateTableVersion` body, declared in `responses=`. Apply the DM's `03` texts byte for byte.
 - [ ] **Step 4:** the tests pass; `generate-contracts.py --check` exits 0 after regeneration.
@@ -767,7 +767,7 @@ const grid = useTable({ features, columns, data });
 
 The executor reports to the lead the branch range `origin/main...<branch>`, the gate table,
 and the ledger. The slice auditor checks the acceptance list against that range
-(`CLAUDE.md` §13). F-W10-3's register discharge and SL-1558's close are the auditor's and the
+(`CLAUDE.md` §13). F-W10-3's register discharge and SL-1559's close are the auditor's and the
 lead's.
 
 ## Self-review

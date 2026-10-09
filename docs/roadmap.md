@@ -1205,10 +1205,10 @@ the third build lane's candidate.
 
 (Activated 2026-10-08 as WK-675 Slice 2, in lane C, on the maintainer's (by delegation) GO, "2026-10-08 10:55:30 BST — MERGE-ACK #1237 (security, source-map-js 1.2.1 → 1.2.2) @bf511269898baecf938b3fe37e6cb46f382b289b; LANE C DISPATCH GO (conditional) for WK-675 S2 (PL-1476 / SL-1477)"; its conditions: #1233 merged with a verified read-back (c896d6c3; RL-1473, RL-1474, RL-1475, PL-1476 and SL-1477 on main); this activation PR quotes the GO header; the lane A dispatch record (SL-1448) carries a dated Delta naming this slice's `03` hunks; Task 0 at dispatch confirms the preview and lists the line moves.)
 
-#### SL-1558 — Slice 4: Editor I — the rate table grid and manual edit; RL 9753's definition and cell-page reads; the manual-edit route (F-W10-3)
+#### SL-1559 — Slice 4: Editor I — the rate table grid and manual edit; RL 9753's definition and cell-page reads; the manual-edit route (F-W10-3)
 
 ```yaml
-id: SL-1558
+id: SL-1559
 family: slice
 title: Slice 4: Editor I — the rate table grid and manual edit; RL 9753's definition and cell-page reads; the manual-edit route (F-W10-3)
 status: draft                  # draft → active → closed | retired (§1.2a)
@@ -1221,7 +1221,7 @@ corrected_by: []
 relates: [PL-1286, PL-1371, RL-1184, RL-1263, FD-1366, SL-1369, SL-1391, SL-1367]
 ```
 
-`PL-1286` S4 (`:306`), cut as a draft row for its leaf plan, PL-1557
+`PL-1286` S4 (`:306`), cut as a draft row for its leaf plan, PL-1558
 (`docs/plans/PL-01557-wk-675-slice-4-editor-i-grid-and-manual-edit-leaf-plan.md`). The rate
 table editor's first slice. **Backend first, spec first:**
 - RL 9753 (working id, #1067)'s two reads, `GET /api/v1/rate-tables/{slug}@{version}` and
@@ -1245,12 +1245,12 @@ agreement and the lead's go.
 
 *(Filed 2026-10-05 under working ids 9583 (this row) and 9582 (the plan), reserved by the lead.)*
 
-*(Minted 2026-10-09 as SL-1558 from working id 9583, with its plan PL-1557 from working id 9582, in the D3 batch mint.)*
+*(Minted 2026-10-09 as SL-1559 from working id 9583, with its plan PL-1558 from working id 9582, in the D3 batch mint.)*
 
-#### SL-1556 — Slice 3: Designer II — live validation through the validate route (DP-6), and the structural diff overlay
+#### SL-1557 — Slice 3: Designer II — live validation through the validate route (DP-6), and the structural diff overlay
 
 ```yaml
-id: SL-1556
+id: SL-1557
 family: slice
 title: Slice 3: Designer II — live validation through the validate route (DP-6), and the structural diff overlay
 status: draft                  # draft → active → closed | retired (§1.2a)
@@ -1263,7 +1263,7 @@ corrected_by: []
 relates: [PL-1286, PL-1371, RL-1263, SL-1387]
 ```
 
-`PL-1286` S3 (`:305`), cut as a draft row for its leaf plan, PL-1555 (the plan's
+`PL-1286` S3 (`:305`), cut as a draft row for its leaf plan, PL-1556 (the plan's
 own PR). DP-6's discharge as RL 9767 (working id, #1055) rules it: the numbered FR and the
 validate-only route, with errors on the node before save (FR-212, FR-223, FR-227), including
 `expression` steps' grammar (FR-244) and closed inputs (FR-246); and the structural diff
@@ -1276,7 +1276,7 @@ maintainer's agreement and the lead's go.
 
 *(Filed 2026-10-05 under working ids 9581 (this row) and 9578 (the plan), reserved by the lead.)*
 
-*(Minted 2026-10-09 as SL-1556 from working id 9581, with its plan PL-1555 from working id 9578, in the D3 batch mint.)*
+*(Minted 2026-10-09 as SL-1557 from working id 9581, with its plan PL-1556 from working id 9578, in the D3 batch mint.)*
 
 #### SL 9577 (working id) — Slice 13: Jobs — the filterable list, live over the SSE stream (`FD-1284`, option D)
 
