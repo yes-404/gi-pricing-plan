@@ -86,8 +86,8 @@ inliner's order.
 - [x] Task 4 — the diff limb (`diff_algorithms`)
 - [x] Task 5 — `compile_bundle` and `load_bundle` inline (C1)
 - [x] Task 6 — backend: the resolver `sub_graph` branch, G1 objective clause, G2, G4 (c)
-- [ ] Task 7 — the trace (FR-258), order (b)
-- [ ] Task 8 — `RL-1242` stays, stated
+- [x] Task 7 — the trace (FR-258), order (b)
+- [x] Task 8 — `RL-1242` stays, stated
 - [ ] Task 9 — the gate (owed after the Task 7 measurement; not run by the authoring seat)
 
 ### Gate
@@ -141,6 +141,11 @@ lines listed in Scope.
 - **G2 enumeration** at `61e2a8d9`, `git grep -nE '\.pins\s*=[^=]|pins=' -- backend/src`: `backend/src/app/api/models.py:1204` (`pins=body.pins`, the create route forwarding), `backend/src/app/platform/rating_versions.py:117` (`pins=Pins.model_validate(row.pins)`, a READ in `to_schema`) and `:283` (`pins=pins.model_dump(mode="json")`, the WRITE in `create_rating_version`, which inserts a new `draft` row). No path reaches an existing row, so no refusal is added; none exists to test red. The tripwire `test_g2_every_pin_write_path_is_enumerated` (backend, no database) fails on a new writer: proof with a comment line `x.pins = 1` appended to `rating_versions.py` locally: `{'app/platform/rating_versions.py': 3} != {...: 2}` (restored, never committed). PL 9683 (FD 9708), which adds `algorithm_ref`/`pins` writers to the create path, has not merged at this tree; whoever merges second re-runs the enumeration (plan Task 0).
 - **G4 (c)**: `test_sub_graph_version_row_has_no_status_column` (backend, no database), in the form of `test_rate_table_version_row_has_no_status_column`; like its siblings it passes at birth. The two sync tripwires ran: `-k 'no_status_column or g2_every'` 4 passed (3 tripwires and the enumerator).
 - **NOT RUN, owed after Task 7 (needs Postgres, so outside the small-test rule)**: `test_a_version_mounting_a_stored_sub_graph_compiles_over_http` and `test_a_mount_whose_sub_graph_is_not_pinned_fails_the_compile_job` (acceptance 11), authored by mirroring `test_a_pinned_version_compiles_over_http`'s helpers. They have never run: expect to correct fixtures at the first database run.
+
+**2026-10-09, Tasks 7 and 8 (the trace; `RL-1242` stays).** PL 9776 (PL-1520, the `TraceStep` ruling's delivery) has not merged at `61e2a8d9` (`grep -rn _check_declared_reads packages/pricing-core/src` prints nothing), so order (b) runs: tests only, `TraceStep` and `_build_trace` not edited.
+- **Trace test** `test_the_trace_shows_each_inlined_step_attributed_to_its_mount_point` (`test_rating_score.py`, appended): `score_one(trace=True)` on the score fixture with an NCD mount returns a `TraceStep` per inlined step, ids `m_ncd__s_ladder` and `m_ncd__s_cap`, ordered before `s_office`; the premium is the unmounted golden 1_507 (the fragment yields 1); tracing does not change the result. **Red** (premise h confirmed), with `runtime.py` swapped for the Task 4 commit `7ea29503`'s copy for the run and put back by copy and `cmp`: `assert {'m_ncd__s_cap', 'm_ncd__s_ladder'} <= {'s_clamp', ..., 's_office', ...}`, "Extra items in the left set: 'm_ncd__s_cap' 'm_ncd__s_ladder'" (the inlined nodes dropped, as `_build_trace` reads `algorithm.steps`). **Green** with Task 5's `load_bundle`: 1 passed.
+- **Plan premise that does not hold**: PL 9610 Task 7 asks for "a batch trace test [that] mirrors the existing one". There is no batch trace: `score_batch` takes no `trace` argument and `grep trace` over its body prints nothing, and no batch trace test exists. None is written; FR-258's "same structure in real-time and batch" has no batch trace to compare at this tree. Reported to the lead.
+- **Task 8**: the existing FR-218 interim tests (`test_rating_score.py`, the `test_a_purpose_needing_a_sub_graph...` family) pass unmodified. Appended: `test_a_version_that_mounts_a_sub_graph_still_refuses_mta_and_cancellation` (both purposes, `INPUT_CONTRACT_VIOLATION`, "interim"; it holds because `CompiledBundle.algorithm` is the inlined algorithm, whose `sub_graphs` is empty) and `test_an_unconditional_mount_prices_a_new_business_quote_with_the_fragment` (`new_business` and `renewal`: factor 1 gives 1_507, factor 2 gives more). They pass at birth (Task 5 is in the tree); Slice 3 changes the first on purpose. `test_rating_score.py`: 45 passed (40 existing, unmodified, plus 5 new). `ruff check packages`: clean.
 
 ## PRs
 
