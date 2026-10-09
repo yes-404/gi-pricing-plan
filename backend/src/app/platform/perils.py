@@ -35,6 +35,7 @@ from app.platform import approvals, audit, rbac
 from model_schema import (
     SCOREABLE_MODEL_STATUSES,
     VALID_PERIL_STRUCTURE_TRANSITIONS,
+    ApprovalStatus,
     ArtifactRef,
     JobSource,
     LargeLossKind,
@@ -49,9 +50,12 @@ from model_schema import (
 )
 
 __all__ = [
+    "APPROVED_COMPONENT_STATUSES",
+    "apply_approval_decision",
     "create_structure",
     "list_peril_structures",
     "load_structure",
+    "load_structure_by_ref",
     "reconcile_payload",
     "record_reconciliation",
     "request_reconciliation",
@@ -59,6 +63,12 @@ __all__ = [
     "submit_for_review",
     "to_structure",
 ]
+
+
+#: The component-model statuses that satisfy `06` FR-363's "per-peril model approvals" (RL-1457
+#: item 1): `ModelStatus`'s own approved set. Not compile's cross-type `_APPROVED_OR_BETTER`,
+#: whose `live` and `retired` are not model statuses; `superseded` is refused.
+APPROVED_COMPONENT_STATUSES: frozenset[ModelStatus] = frozenset({ModelStatus.APPROVED})
 
 
 def to_structure(row: PerilStructureRow) -> PerilStructure:
@@ -466,6 +476,104 @@ async def resolve_artifact_ref(
     return True
 
 
+async def load_structure_by_ref(
+    session: AsyncSession, *, workspace_id: UUID, slug: str, version: int
+) -> PerilStructureRow | None:
+    """The row a `peril_structure:<slug>@<version>` reference names, or `None` (FR-237).
+
+    The compile resolver's read: a reference is a slug and a version (ID-3), and
+    `uq_peril_structures_slug_version` makes the pair identify one row.
+    """
+    return (
+        await session.execute(
+            select(PerilStructureRow).where(
+                PerilStructureRow.workspace_id == workspace_id,
+                PerilStructureRow.slug == slug,
+                PerilStructureRow.version == version,
+            )
+        )
+    ).scalar_one_or_none()
+
+
+async def apply_approval_decision(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    actor: Principal,
+    request: ApprovalRequestRow,
+) -> PerilStructureRow | None:
+    """Carry a governance decision into the Peril Structure (FR-191, `06` FR-351, FR-355).
+
+    Returns `None` for a request about anything else, so `_carry_to_the_artifact` drives every
+    artifact type through one call. Same transaction as the decision, for the reason a Model's
+    is: a structure left in `review` after its request reached `approved` is one no Rating
+    Version may pin and no screen can explain. The only writer of `approved` on this table,
+    inside `approval_decision()` (`approval_guard()` refuses it elsewhere).
+
+    A non-approval returns the structure to **`reconciled`**, never `draft`: `review →
+    reconciled` is the one backward edge of `VALID_PERIL_STRUCTURE_TRANSITIONS`, and what was
+    questioned is the composition the reconciliation measured, so the reconciliation stays on
+    the row. `approved` is refused (`422 EVIDENCE_INCOMPLETE`, the decision rolled back) while
+    any component model is not `ModelStatus.APPROVED` (DP-1 (a), RL-1457), and supersedes every
+    earlier approved version of the structure (DP-2 (a)).
+    """
+    if request.artifact_type != "peril_structure":
+        return None
+
+    ref = ArtifactRef.model_validate(request.artifact_ref)
+    row = (
+        await session.execute(
+            select(PerilStructureRow)
+            .where(
+                PerilStructureRow.workspace_id == workspace_id,
+                PerilStructureRow.slug == ref.slug,
+                PerilStructureRow.version == ref.version,
+            )
+            .with_for_update()
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        # Tolerated for the reason a Model's is: `POST /approval-requests` accepts any
+        # well-formed ref, and a request naming a structure that was never created must still
+        # be decidable rather than sitting open for ever (`06` FR-386).
+        return None
+
+    target = _target_status(ApprovalStatus(request.status))
+    if target is None or PerilStructureStatus(row.status) is target:
+        # A partial approval: the policy wants another approver and nothing has moved.
+        return row
+
+    before = PerilStructureStatus(row.status)
+    if target not in VALID_PERIL_STRUCTURE_TRANSITIONS[before]:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "Invalid peril structure lifecycle transition",
+            409,
+            f"{ref} is {before.value} and the decision would move it to {target.value}, "
+            "which FR-191 does not allow.",
+        )
+    if target is PerilStructureStatus.APPROVED:
+        await _require_approved_components(session, workspace_id=workspace_id, row=row)
+    row.status = target.value
+    await session.flush()
+
+    await audit.record(
+        session,
+        workspace_id=workspace_id,
+        actor=actor,
+        source=JobSource.API,
+        action=f"peril_structure.{target.value}",
+        entity_ref=str(ref),
+        before={"status": before.value},
+        after={"status": target.value, "approval_request_id": str(request.id)},
+    )
+    if target is PerilStructureStatus.APPROVED:
+        await _supersede_earlier_versions(
+            session, workspace_id=workspace_id, actor=actor, approved=row
+        )
+    return row
+
+
 # -- internals -----------------------------------------------------------------------------
 
 
@@ -581,3 +689,98 @@ def _model_refs(peril: PerilComponent) -> list[ArtifactRef]:
         for ref in (peril.frequency_model, peril.severity_model, peril.burning_cost_model)
         if ref is not None
     ]
+
+
+def _target_status(request_status: ApprovalStatus) -> PerilStructureStatus | None:
+    """What a request's status means for the structure behind it.
+
+    The three non-approvals return it to **`reconciled`**, not to `draft` (`06` FR-355's
+    pre-submission state, for a structure, is the one that holds its reconciliation).
+    """
+    return {
+        ApprovalStatus.APPROVED: PerilStructureStatus.APPROVED,
+        ApprovalStatus.CHANGES_REQUESTED: PerilStructureStatus.RECONCILED,
+        ApprovalStatus.REJECTED: PerilStructureStatus.RECONCILED,
+        ApprovalStatus.WITHDRAWN: PerilStructureStatus.RECONCILED,
+    }.get(request_status)
+
+
+async def _require_approved_components(
+    session: AsyncSession, *, workspace_id: UUID, row: PerilStructureRow
+) -> None:
+    """`06` FR-363's "per-peril model approvals", enforced at approval (DP-1 (a), RL-1457).
+
+    Every component model of every peril must be in `APPROVED_COMPONENT_STATUSES`; the first
+    shortfall refuses `422 EVIDENCE_INCOMPLETE` naming each such ref, and the raise rolls the
+    decision back with the carry. The `separate_model` treatment's `excess_model` is a
+    component too. A ref that resolves to no model is refused for the same reason: nothing
+    says it is approved. Read from the stored `perils` alone, not `to_structure(row)`, so the
+    check does not depend on the reconciliation payload validating.
+    """
+    refs: list[ArtifactRef] = []
+    for raw in row.perils:
+        peril = PerilComponent.model_validate(raw)
+        refs.extend(_model_refs(peril))
+        if peril.large_loss.excess_model is not None:
+            refs.append(peril.large_loss.excess_model)
+
+    short: list[str] = []
+    for ref in dict.fromkeys(refs):
+        status = (
+            await session.execute(
+                select(ModelRow.status).where(
+                    ModelRow.workspace_id == workspace_id,
+                    ModelRow.model_family_slug == ref.slug,
+                    ModelRow.version == ref.version,
+                )
+            )
+        ).scalar_one_or_none()
+        if status is None or ModelStatus(status) not in APPROVED_COMPONENT_STATUSES:
+            short.append(f"{ref} ({status or 'not found'})")
+    if short:
+        raise PlatformError(
+            "EVIDENCE_INCOMPLETE",
+            "Required evidence is missing",
+            422,
+            f"peril_structure:{row.slug}@{row.version}: component model(s) not approved: "
+            f"{', '.join(short)}. `06` FR-363 requires per-peril model approvals.",
+        )
+
+
+async def _supersede_earlier_versions(
+    session: AsyncSession, *, workspace_id: UUID, actor: Principal, approved: PerilStructureRow
+) -> None:
+    """`approved → superseded` for every earlier approved version of the structure (DP-2 (a)).
+
+    The shape of a Model's: two approved versions leave nothing to say which one a Rating
+    Version means. Only `approved` rows move.
+    """
+    earlier = (
+        await session.execute(
+            select(PerilStructureRow)
+            .where(
+                PerilStructureRow.workspace_id == workspace_id,
+                PerilStructureRow.slug == approved.slug,
+                PerilStructureRow.version < approved.version,
+                PerilStructureRow.status == PerilStructureStatus.APPROVED.value,
+            )
+            .with_for_update()
+        )
+    ).scalars().all()
+
+    for row in earlier:
+        row.status = PerilStructureStatus.SUPERSEDED.value
+        await session.flush()
+        await audit.record(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            source=JobSource.API,
+            action="peril_structure.superseded",
+            entity_ref=f"peril_structure:{row.slug}@{row.version}",
+            before={"status": PerilStructureStatus.APPROVED.value},
+            after={
+                "status": PerilStructureStatus.SUPERSEDED.value,
+                "superseded_by": f"peril_structure:{approved.slug}@{approved.version}",
+            },
+        )
