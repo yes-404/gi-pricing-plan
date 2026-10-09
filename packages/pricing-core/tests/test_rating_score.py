@@ -26,13 +26,14 @@ import pytest
 
 # Reuse Task 1.3's own fixtures rather than duplicating them — an established convention
 # in this test suite (e.g. `test_transparency.py` imports from `test_gbm`/`test_ebm`).
+from test_rating_glm_model_call import age_glm
 from test_rating_runtime import (
     _gbm_model_payload,
-    _glm_model_payload,
     _rate_table_payload,
     _train_tiny_booster,
 )
 
+from model_schema import OffsetSpec
 from model_schema.rating import RatingVersion, SubGraphRef
 from model_schema.refs import ArtifactRef
 from model_schema.scoring import QuoteContext, QuoteContextOptions
@@ -101,17 +102,24 @@ def _algorithm_payload(*, model_ref: str = "model:motor-freq@1") -> dict[str, An
 
 
 class _FakeResolver:
-    def __init__(self, *, glm: bool = False) -> None:
+    def __init__(self, *, glm: bool = False, glm_offset: OffsetSpec | None = None) -> None:
         booster = _train_tiny_booster()
+        self._glm = age_glm(offset=glm_offset)
         model_ref = "model:motor-freq-glm@1" if glm else "model:motor-freq@1"
         self._payloads: dict[str, dict[str, Any]] = {
             "rating_algorithm:score-fixture@1": _algorithm_payload(model_ref=model_ref),
             "rate_table:motor-expense@1": _rate_table_payload(),
             "model:motor-freq@1": _gbm_model_payload(booster),
-            "model:motor-freq-glm@1": _glm_model_payload(),
+            "model:motor-freq-glm@1": self._glm.model_payload(),
         }
 
     async def resolve(self, ref: ArtifactRef) -> ResolvedArtifact:
+        if str(ref) == "model:motor-freq-glm@1":
+            return ResolvedArtifact(
+                status="approved", payload=self._payloads[str(ref)],
+                factors=self._glm.factors, bandings=self._glm.bandings,
+                groupings=self._glm.groupings,
+            )
         return ResolvedArtifact(status="approved", payload=self._payloads[str(ref)])
 
 
@@ -134,8 +142,10 @@ def _version(*, glm: bool = False) -> RatingVersion:
     )
 
 
-async def _compiled(*, glm: bool = False) -> CompiledBundle:
-    resolver: ArtifactResolver = _FakeResolver(glm=glm)
+async def _compiled(
+    *, glm: bool = False, glm_offset: OffsetSpec | None = None
+) -> CompiledBundle:
+    resolver: ArtifactResolver = _FakeResolver(glm=glm, glm_offset=glm_offset)
     bundle = await compile_bundle(_version(glm=glm), resolver)
     return load_bundle(bundle)
 
@@ -435,11 +445,14 @@ async def test_a_reference_lookup_miss_is_refused() -> None:
 
 @pytest.mark.req("FR-255")
 async def test_a_model_call_failure_is_refused_with_the_real_message() -> None:
-    """`MODEL_CALL_FAILED` — via the GLM refusal `runtime.py` already establishes, now
-    surfaced by `score_one` reading the sentinel rather than the engine's own generic
-    wrapper (see `score.py`'s module docstring)."""
-    compiled = await _compiled(glm=True)
-    with pytest.raises(ValueError, match="MODEL_CALL_FAILED"):
+    """`MODEL_CALL_FAILED` carries the real reason, read by `score_one` from the sentinel
+    (see `score.py`'s module docstring). The vehicle was the GLM refusal; a GLM now scores,
+    so it is a GLM whose `log_column` offset the step's `feature_map` does not supply:
+    `predict_glm` raises `MODEL_OFFSET_MISSING` (FD-1458, PL-1464 item 3)."""
+    compiled = await _compiled(
+        glm=True, glm_offset=OffsetSpec(kind="log_column", column="exposure_years")
+    )
+    with pytest.raises(ValueError, match="MODEL_CALL_FAILED.*MODEL_OFFSET_MISSING"):
         await score_one(compiled, _ctx())
 
 

@@ -91,6 +91,7 @@ def _book(n: int = 6_000, seed: int = 20261010) -> pl.DataFrame:
             "region": region,
             "exposure_years": exposure,
             "claim_count": rng.poisson(base * exposure).astype(float),
+            "severity_minor": rng.gamma(20.0, 75.0 * (1 + base * 4), n),
         }
     )
 
@@ -127,6 +128,30 @@ def glm_world(*, boundaries: tuple[float, ...] = (18.0, 38.0, 58.0, 78.0)) -> Gl
         bandings={banding.id: banding}, groupings={grouping.id: grouping},
     )
     return GlmWorld(spec, fit.result, (age, region), (banding,), (grouping,))
+
+
+def age_glm(*, offset: OffsetSpec | None = None) -> GlmWorld:
+    """The smallest real GLM: one banded Factor, slug `age_years`. With no offset it is a
+    gamma severity model on the money-minor scale; with one, a Poisson frequency model.
+    `test_rating_runtime.py` and `test_rating_score.py` serve it where they used to serve an
+    unscoreable stub."""
+    banding = Banding(
+        id=uuid4(), slug="age-steps", dataset_id=DATASET, version=1, column="driver_age",
+        method=BandingMethod.MANUAL, boundaries=(17.0, 38.0, 58.0, 100.0),
+        labels=("17-37", "38-57", "58+"),
+    )
+    age = Factor(
+        id=uuid4(), slug="age_years", dataset_id=DATASET, version=1, type=FactorType.BANDING,
+        source_columns=("driver_age",), banding_id=banding.id,
+    )
+    spec = GlmSpec(
+        model_family_slug="motor-freq-glm", dataset_version_id=DATASET,
+        response_column="claim_count" if offset else "severity_minor",
+        offset=offset or OffsetSpec(), factors=(age.id,),
+        family="poisson" if offset else "gamma", link="log",
+    )
+    fit = fit_glm(_book(), spec, [age], bandings={banding.id: banding})
+    return GlmWorld(spec, fit.result, (age,), (banding,), ())
 
 
 #: The graph's input names are not the Factor slugs: `feature_map` maps a graph name to the
