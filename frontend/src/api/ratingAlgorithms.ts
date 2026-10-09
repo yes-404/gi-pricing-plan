@@ -27,3 +27,18 @@ export type InputContractField = RatingAlgorithmDraft["input_contract"][number];
 export type RatingInputType = InputContractField["type"];
 export type RoundMode = Extract<RatingStep, { type: "output" }>["rounding"]["mode"];
 export type ModelReferenceMode = Extract<RatingStep, { type: "model_call" }>["mode"];
+
+export type AlgorithmValidationReport = components["schemas"]["AlgorithmValidationReport"];
+export type ValidationIssue = components["schemas"]["ValidationIssue"];
+
+/** Validate an unsaved draft without saving it (03 FR 9445); every issue comes back located. */
+export function validateRatingAlgorithm(
+  body: RatingAlgorithmDraft,
+  signal?: AbortSignal,
+): Promise<AlgorithmValidationReport> {
+  return request<AlgorithmValidationReport>("/rating-algorithms/validate", {
+    method: "POST",
+    body,
+    ...(signal ? { signal } : {}),
+  });
+}

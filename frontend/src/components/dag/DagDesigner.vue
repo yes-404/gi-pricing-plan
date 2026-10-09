@@ -18,9 +18,11 @@ import type {
 } from "@/api/ratingAlgorithms";
 
 import { edgesOf, layout } from "./graph";
+import GraphIssues from "./GraphIssues.vue";
 import NodeNavigator from "./NodeNavigator.vue";
 import StepInspector from "./StepInspector.vue";
 import StepNode from "./StepNode.vue";
+import { useGraphValidation } from "./useGraphValidation";
 
 const props = defineProps<{
   draft: RatingAlgorithmDraft;
@@ -45,6 +47,15 @@ const selected = ref<string | null>(null);
 const added = ref(new Set<string>());
 const nextType = ref<(typeof STEP_TYPES)[number]>("expression");
 
+const { issues, pending, byStep, graphLevel } = useGraphValidation(() => props.draft);
+const issueCounts = computed(
+  () => new Map([...byStep.value].map(([id, list]) => [id, list.length] as const)),
+);
+const issueSummary = computed(() => {
+  const n = issues.value.length;
+  return `${n} ${n === 1 ? "issue" : "issues"}`;
+});
+
 const steps = computed(() => props.draft.steps);
 const current = computed(() => steps.value.find((s) => s.step_id === selected.value));
 const nodes = computed(() => {
@@ -53,7 +64,7 @@ const nodes = computed(() => {
     id: step.step_id,
     type: "step",
     position: at[step.step_id] ?? { x: 0, y: 0 },
-    data: { step },
+    data: { step, issues: byStep.value.get(step.step_id) ?? [] },
     draggable: false,
   }));
 });
@@ -149,6 +160,16 @@ function replaceContract(contract: RatingAlgorithmDraft["input_contract"]): void
           </template>
         </VueFlow>
       </div>
+      <p
+        aria-live="polite"
+        class="mt-2 text-sm text-slate-700"
+      >
+        {{ issueSummary }}
+      </p>
+      <GraphIssues
+        :issues="graphLevel"
+        :pending="pending"
+      />
       <section
         class="mt-4"
         aria-labelledby="dd-outputs"
@@ -174,6 +195,7 @@ function replaceContract(contract: RatingAlgorithmDraft["input_contract"]): void
       <NodeNavigator
         :steps="steps"
         :selected="selected"
+        :issue-counts="issueCounts"
         @select="select"
         @remove="remove"
       />
