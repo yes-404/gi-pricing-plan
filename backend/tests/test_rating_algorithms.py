@@ -554,11 +554,12 @@ async def test_a_feature_map_naming_a_raw_column_is_refused_at_save(
 
 
 @pytest.mark.req("FR-227")
-async def test_a_stored_model_call_without_result_type_reads_back_as_decimal(
+async def test_a_stored_model_call_without_result_type_reads_back_as_the_legacy_default(
     api_client, workspace_id, principal, grant
 ) -> None:
     """Item 16: an algorithm stored before the field (`valid_algorithm` declares none) reads
-    back through the service with its `model_call` step `decimal`. No migration is written:
+    back through the service with its `model_call` step's `result_type` null: the legacy
+    default, not `decimal` (the 2026-10-10 00:40:31 BST ruling). No migration is written:
     the algorithm is its JSON payload and the default is the model's."""
     await grant("analyst")
     headers = _headers(principal, workspace_id)
@@ -568,7 +569,7 @@ async def test_a_stored_model_call_without_result_type_reads_back_as_decimal(
     read = api_client.get("/api/v1/rating-algorithms/motor-gb@1", headers=headers)
     assert read.status_code == 200, read.text
     call = next(s for s in read.json()["steps"] if s["type"] == "model_call")
-    assert call["result_type"] == "decimal"
+    assert call["result_type"] is None
 
 
 @pytest.mark.req("FR-222")

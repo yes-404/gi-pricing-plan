@@ -582,10 +582,13 @@ def _model_call_handler(
     Groupings the Bundle carries beside the Model (FD-1458; FR-222, FR-239, NFR-491), and
     `predict_glm` per quote.
 
-    **A `model_call`'s value is the model's exact prediction, never rounded here.** Only an
-    `output` step rounds, once (FR-226; the maintainer's (by delegation) entry headed
-    "2026-10-05 17:12:40 BST — CORRECTION to my 17:02:50 rounding ruling: OPTION (B)", DP-4).
-    The step's `result_type` is a type for FR-227's checks, not a rounding.
+    **Rounding is the step's `result_type`'s to decide (the maintainer's (by delegation) entry
+    headed "2026-10-10 00:40:31 BST — RULING: A-2 item 15. NEITHER (i) nor (ii)…").** A GBM
+    step without `result_type` keeps the legacy `round(prediction)`, so a bundle compiled
+    before the field hashes and prices as it always did (FR-239). A step that writes
+    `result_type` (`decimal` or `money_minor`) carries the unrounded value to FR-244's
+    boundary, where an `output` step rounds it once (FR-226). A GLM, which no bundle scored
+    before FD-1458, is never rounded at the step (a frequency's mean would round to 0).
     """
     glm_scorers = scorers if scorers is not None else _load_glm_scorers(algorithm, payloads)
     steps_by_id = {
@@ -640,7 +643,9 @@ def _model_call_handler(
             prediction = float(
                 predict_gbm(gbm_result, booster, frame, factors=(), nthread=1)[0]
             )
-            value: float = prediction
+            value: float = (
+                round(prediction) if step.result_type is None else prediction
+            )
         elif model_type == "glm":
             try:
                 value = glm_scorers[ref_str].predict(feature_row)

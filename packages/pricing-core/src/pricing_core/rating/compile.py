@@ -114,8 +114,10 @@ def producer_types(
                 for name in _as_list(step.produces):
                     types[name] = declared
         elif isinstance(step, (RatingExpressionStep, RatingModelCallStep)):
-            for name in _as_list(step.produces):
-                types[name] = step.result_type
+            declared_type = step.result_type
+            if declared_type is not None:  # a model_call's None is the legacy default
+                for name in _as_list(step.produces):
+                    types[name] = declared_type
     return types
 
 
@@ -578,6 +580,10 @@ def to_jdm(algo: RatingAlgorithm) -> JdmGraph:
     nodes: dict[str, dict[str, Any]] = {}
     for step in algo.steps:
         step_dump = step.model_dump()
+        if step_dump.get("type") == "model_call" and step_dump.get("result_type") is None:
+            # The legacy default is not part of the graph: a bundle compiled before the field
+            # existed keeps its bytes, its hash and its prices (FR-239; 2026-10-10 00:40:31).
+            del step_dump["result_type"]
         nodes[step.step_id] = {
             "type": step.type,
             "label": step.label,

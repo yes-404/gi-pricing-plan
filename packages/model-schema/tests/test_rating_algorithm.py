@@ -331,12 +331,14 @@ def test_diff_algorithms_reports_contract_and_output_deltas() -> None:
 
 
 @pytest.mark.req("FR-227")
-def test_a_stored_model_call_without_result_type_loads_as_decimal() -> None:
-    """A payload written before the field validates and means `decimal` (PL-1464 item 16)."""
+def test_a_stored_model_call_without_result_type_loads_as_the_legacy_default() -> None:
+    """A payload written before the field validates and keeps its legacy meaning: `None`, a GBM
+    prediction rounded at the step as before (PL-1464 item 16; the 2026-10-10 00:40:31 BST
+    ruling). It does not become `decimal`, which is the opt-in."""
     data = valid_algorithm()
     assert "result_type" not in data["steps"][4]
     algorithm = RatingAlgorithm.model_validate(data)
-    assert algorithm.steps[4].result_type == "decimal"  # type: ignore[union-attr]
+    assert algorithm.steps[4].result_type is None  # type: ignore[union-attr]
 
 
 @pytest.mark.req("FR-227")

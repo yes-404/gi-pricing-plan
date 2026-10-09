@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from decimal import ROUND_HALF_EVEN, Decimal
 from typing import Any
 from uuid import uuid4
 
@@ -45,6 +46,7 @@ from pricing_core.rating.compile import (
     validate_algorithm,
 )
 from pricing_core.rating.runtime import MODEL_CALL_ERROR_KEY, load_bundle
+from pricing_core.rating.score import score_one
 
 DATASET = uuid4()
 MODEL_REF = "model:motor-freq-glm@1"
@@ -169,7 +171,7 @@ FEATURE_MAP = {
 def algorithm_payload(
     *,
     feature_map: dict[str, str] | None = None,
-    result_type: str | None = None,
+    result_type: str | None = "decimal",
     model_ref: str = MODEL_REF,
 ) -> dict[str, Any]:
     call: dict[str, Any] = {
@@ -477,8 +479,6 @@ async def test_the_output_step_rounds_a_model_call_once() -> None:
     """The step hands a `money_minor` severity on unrounded, so `value * factor` carries the
     prediction's fraction and the `output` rounds once. The test first proves its inputs can
     tell rounding twice from once, so it cannot pass vacuously."""
-    from decimal import ROUND_HALF_EVEN, Decimal
-
     world = age_glm()
     prediction = world.predict(driver_age=45.0)
     factor = next(
@@ -517,11 +517,100 @@ async def test_a_glm_quote_scored_twice_gives_identical_outputs(world: GlmWorld)
     """Item 15 check (3): the engine (`zen-engine` 0.53.0, uv.lock) is deterministic for a GLM
     `model_call`: the same input run twice returns identical results, compared as Decimals
     through `Decimal(repr(x))` (FR-244's boundary), not as floats."""
-    from decimal import Decimal
-
     compiled = load_bundle(await compiled_bundle(world))
     for quote in QUOTES:
         first = await _value(compiled, **quote)
         second = await _value(compiled, **quote)
         assert Decimal(repr(first["risk"])) == Decimal(repr(second["risk"]))
         assert first == second
+
+
+# -- The 2026-10-10 00:40:31 BST ruling: the unrounded path is OPT-IN -----------------------
+#
+# A `model_call` without `result_type` is the LEGACY behaviour (a GBM prediction is rounded at
+# the step); `result_type` written explicitly carries the value unrounded to FR-244's boundary,
+# rounded once there. The GBM tests import their fixtures inside the function: those modules
+# import this one, so a module-level import would be circular.
+
+_CLAMP_INPUTS = {
+    "driver_age": 34, "channel": "direct", "min_premium_minor": 5000,
+    "sanity_cap_minor": 999_999_999, "sanity_floor_minor": 0,
+}
+
+
+def _legacy_and_opt_in_payloads() -> tuple[dict[str, Any], dict[str, Any]]:
+    from test_rating_score import _algorithm_payload
+
+    legacy = _algorithm_payload()
+    opt_in = _algorithm_payload()
+    call = next(s for s in opt_in["steps"] if s["type"] == "model_call")
+    call["result_type"] = "decimal"
+    assert "result_type" not in next(s for s in legacy["steps"] if s["type"] == "model_call")
+    return legacy, opt_in
+
+
+@pytest.mark.req("FR-239")
+async def test_an_old_model_call_recompiles_byte_identically() -> None:
+    """(a) The graph of an algorithm without `result_type` carries no such key, so its Bundle
+    is byte-identical with one compiled before the field existed, and it recompiles to the
+    same hash. Writing `decimal` explicitly changes the hash (it enters the bundle)."""
+    from test_rating_ladder_exact import _compile_payload  # noqa: F401
+    from test_rating_score import _FakeResolver, _version
+
+    legacy, opt_in = _legacy_and_opt_in_payloads()
+
+    async def bundle(payload: dict[str, Any]) -> Bundle:
+        resolver = _FakeResolver()
+        resolver._payloads["rating_algorithm:score-fixture@1"] = payload
+        return await compile_bundle(_version(), resolver)
+
+    first, second, explicit = await bundle(legacy), await bundle(legacy), await bundle(opt_in)
+    assert "result_type" not in first.graph.nodes["s_risk"]
+    assert first.content_hash == second.content_hash
+    assert first.model_dump(exclude={"compiled_at"}) == second.model_dump(exclude={"compiled_at"})
+    assert explicit.graph.nodes["s_risk"]["result_type"] == "decimal"
+    assert explicit.content_hash != first.content_hash
+
+
+@pytest.mark.req("FR-226")
+async def test_the_same_algorithm_prices_by_single_rounding_only_when_it_opts_in() -> None:
+    """(b) and (c). The score fixture's booster predicts 1304.8000488 for age 34 and the
+    `direct` expense factor is 1.1.
+
+    Legacy: the step returns round(1304.8000488) = 1305; 1305 x 1.1 = 1435.5; the output
+    rounds half-even to **1436** (two roundings: FR-226 "never happens twice", NFR-496).
+    Opt-in: the step returns 1304.8000488; x 1.1 = 1435.2800537; one rounding gives **1435**.
+    The legacy price is the existing fixture's, unchanged; the opt-in price is the spec's."""
+    from test_rating_ladder_exact import _compile_payload, _context
+
+    legacy, opt_in = _legacy_and_opt_in_payloads()
+    prices = {}
+    for label, payload in (("legacy", legacy), ("opt_in", opt_in)):
+        result = await score_one(
+            await _compile_payload(payload), _context(**_CLAMP_INPUTS), trace=True
+        )
+        prices[label] = {r.rung: r for r in result.premium_ladder}["office_premium"]
+    assert prices["legacy"].value_minor == 1436
+    assert prices["opt_in"].value_minor == 1435
+    unrounded = prices["opt_in"].unrounded_minor
+    assert Decimal("1435.28") < unrounded < Decimal("1435.29")
+    assert unrounded.quantize(Decimal(1), ROUND_HALF_EVEN) == Decimal(1435)
+
+
+@pytest.mark.req("NFR-495")
+async def test_the_opt_in_path_is_deterministic_and_its_money_is_decimal_exact() -> None:
+    """(d) on the opt-in path: the same quote twice gives identical Decimal money, and the
+    rung's rounded value is exactly the single half-even rounding of its unrounded Decimal
+    (no value moves because of the 15-digit carriage; the analytic bound is in LG-9449)."""
+    from test_rating_ladder_exact import _compile_payload, _context
+
+    _, opt_in = _legacy_and_opt_in_payloads()
+    compiled = await _compile_payload(opt_in)
+    first = await score_one(compiled, _context(**_CLAMP_INPUTS), trace=True)
+    second = await score_one(compiled, _context(**_CLAMP_INPUTS), trace=True)
+    assert [(r.rung, r.value_minor, r.unrounded_minor) for r in first.premium_ladder] == [
+        (r.rung, r.value_minor, r.unrounded_minor) for r in second.premium_ladder
+    ]
+    for rung in first.premium_ladder:
+        if rung.unrounded_minor is not None and rung.rounding is not None:
+            assert rung.value_minor == rung.unrounded_minor.quantize(Decimal(1), ROUND_HALF_EVEN)
