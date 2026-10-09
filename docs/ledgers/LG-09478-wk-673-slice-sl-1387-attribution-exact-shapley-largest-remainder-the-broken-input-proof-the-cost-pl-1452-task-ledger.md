@@ -329,6 +329,29 @@ The rate is flat from 200,000 to 400,000 (3% below the 50,000 figure); peak RSS 
 
 **Not decided here.** K = 4 does fit a 20,000-policy attribution (12 min); whether it fits a full portfolio is not measured, and the figure above (derived, 678,013 policies, K = 3, 3.1 to 3.7 h; K = 4 twice that) goes to the decision-maker before any fallback is built (Task 7 Step 4). The score_batch rate (FD 9446) is a separate finding and is not an attribution NFR.
 
+## Acceptance 20 — the six F3 sets on ZEN, beside RS-1201's table (2026-10-10, executor-s3f)
+
+**Run.** `sets --policies 20000` (`70-sets`, N = 1, via `inv-rss.sh`, alone in the gate-1 slot), 22:25:54 to 00:18:04 BST, rc 0, peak RSS 18,300,108 KiB (17.45 GiB), tree `8d026a7e` (the script's last edit is `088a0c23`, before every run in this ledger; no edit by me). `replay --policies 2000` (`71-replay`, N = 1), ended 00:24:02 BST, rc 0, peak RSS 799,596 KiB. **load1 disclosure:** the per-set load1 in the lines was 2.68, 2.50, 1.80, 1.57, 6.86 and 2.89; the replay lines show 7.01 and 5.00. Nothing of mine ran beside them, and the source of the 6.86 and 7.01 was not identified; both are under the 12 stop, and timings on those lines are contestable.
+
+**Both fixture departures are stated here, ON the table** (accepted 12:43:50 BST): (1) the cap is an expression before the clamp rung, so it caps the premium before the age adjustment, not after the floor as RS-1201 did; (2) the age relativity is its own `profit_loading` rung. The table values are rounded and the arithmetic is exact minor units, so ZEN's v(S) is a different number from RS-1201's float `rate()`. A difference below is therefore possibly structural, and is **not an attribution finding**; this table is beside RS-1201's, never a reproduction of it.
+
+**Definitions (RS-1201).** D = Σ|isolated|; R = |total − Σ isolated| / D; S = max over all K! orders of |cumulative(order) − cumulative(declared)| / D. All six sets ran `method: shapley`, because K ≤ 6, so the engine's own `order_sensitivity_lower_bound` and `residual_share` are null; R is computed here from the emitted `residual_minor` and `isolated`. **S is not measured**: `cmd_sets` emits no cumulative contributions, and the script is not edited. N = 1 for every row; the amounts are minor units summed over the first 20,000 policies by `quote_id`. RS-1201's R is of the whole 678,013-policy book and its D is of the mean_change_pct, so the ratios are comparable in kind, not in book.
+
+| K | Set | ZEN total (minor) | ZEN D (minor) | ZEN R | ZEN S | method | seconds | RS-1201 R | RS-1201 S |
+|---|---|---|---|---|---|---|---|---|---|
+| 3 | 0,1,2 | 62,554,158 | 61,141,713 | 0.0231 | not measured | shapley | 379 | 0.0031 | 0.0096 |
+| 3 | 1,2,4 | 39,870,234 | 40,954,587 | 0.0265 | not measured | shapley | 420 | 0.0324 | 0.0618 |
+| 4 | 0,1,2,3 | 76,112,980 | 73,330,025 | 0.0380 | not measured | shapley | 719 | 0.0149 | 0.0210 |
+| 4 | 0,1,4,5 | 45,202,480 | 50,148,005 | 0.0986 | not measured | shapley | 784 | 0.2163 | 0.3642 |
+| 5 | 0,1,2,3,4 | 84,761,300 | 82,699,664 | 0.0249 | not measured | shapley | 1,453 | 0.0195 | 0.0627 |
+| 6 | 0,1,2,3,4,5 | 71,632,451 | 82,699,664 | 0.1338 | not measured | shapley | 2,881 | 0.2684 | 0.2879 |
+
+On ZEN R is above RS-1201's 0.10 line only for the full set (0.1338), and 0,1,4,5 sits just under it (0.0986); in RS-1201 both were above it (0.2163, 0.2684). The direction is the same (the two sets holding the cap carry the largest R), the size is not. The cap has no isolated effect in either set (isolated 0, `iso[5]` = 0 in the full set), as in RS-1201. This could come from the departures (the cap now acts before the age adjustment), the rounded tables, or the 20,000-policy sample; it is not separated here. Shapley parts per member are in `out/70-sets.jsonl` (local); in the full set the cap's Shapley part is −5,512,697 minor and the others are positive.
+
+**Replay per set (Acceptance 20, `71-replay`, 2,000 policies, N = 1).** Only 0,1,4,5 and 1,2,4 are step-aligned (the other four are not: members 0 and 2 feed one rung) and only they were replayed. 0,1,4,5: 16 subsets, replay 0.253 s against re-rates 196.93 s, **270 mismatching policy-subsets, largest gap 6,786 minor units**. 1,2,4: 8 subsets, replay 0.290 s against re-rates 89.14 s, **30 mismatching policy-subsets, largest gap 1,081 minor**. The replay does not agree with true re-rates on these two sets; it stays in the harness (DP-S3-3 (b)) and `attribute` never calls it, so no production figure depends on it. The disagreement matches the earlier Task 7 preparation finding (replay differs on subsets holding the minimum premium without the age change).
+
+**The 690 and 976 per-policy maxima: UNEVIDENCED.** RS-1201's maxima (S_i 690.0 on 0,1,2 and 976.0 on 0,1,2,3) are per-policy. `attribute` returns portfolio-level results only, so this run cannot show, per policy, the interaction behind them: it neither explains them nor shows them absent, and under the ruling of 12:44:19 BST (2) "shown not to recur" may not be concluded from this fixture in any case. The clause carries to the §13 verdict at S3's audit, with an owner, which is the lead's to give; I draw none. "No public second portfolio in the repository" is recorded: `examples/` holds only `fremtpl2/`, whose `data/` holds the two public freMTPL2 files.
+
 ## PRs
 
 #1243, a draft. The branch `sl-1387-attribution-exact-shapley-largest-remainder` is pushed; the PR is not merged by the executor.
