@@ -209,6 +209,10 @@ Gate at d15b8ecf, 11:00:16 to 11:44:30 BST: pytest 16 failed, 5167 passed, 3 ski
 - `backend/tests/test_error_sinks.py::test_every_failure_sink_on_a_quote_input_path_is_accounted_for`: `analysis.py` `attribute` put `{exc}` of a compile `ValueError` into `AttributionError`'s message, and a validation error's text can carry input values (NFR-499). Fix: `safe_error_text(exc)` from `pricing_core.safe_error` (the allow-list: our coded errors keep their text, a validation error is rebuilt from declared parts, anything else is its type name). `safe_error_text` and not `safe_error_detail` because it returns the type name when the detail is empty, so a non-coded error still names its class. No `_SINKS` line was needed.
 After both fixes: the three tests and `test_rating_attribution.py`, `test_fremtpl2_rate_fixture.py`, `test_quote_input_raise_sites.py` pass (57 passed together; 36 passed after the final rename for the three most affected files); ruff, ruff format, mypy and lint-imports are green. Not pushed; re-gate follows the lead's slot grant.
 
+## Task 8 — full gate at dc99d377 (2026-10-09)
+
+GATE START 12:02:07 BST, GATE END 12:45:45 BST, under the `/tmp/slots/gate-1` flock, head dc99d377 (the merge of origin/main 2e766906, P1, the three red fixes). Per-command rc: ruff 0, mypy 0, lint-imports 0, audit-docs 1 (check 31 only: gap between 1533 and 9478), req-coverage 0, generate-contracts --check 0, pytest 1 (13 failed, 5170 passed, 3 skipped, 41m51s; the 13 are the check-31 set), frontend install, generate:api, lint, type-check, test (102 files, 653 tests) and build all 0. The first gate at d15b8ecf had 16 failures; the three extra are the reds fixed above.
+
 ## PRs
 
 #1243, a draft. The branch `sl-1387-attribution-exact-shapley-largest-remainder` is pushed; the PR is not merged by the executor.
