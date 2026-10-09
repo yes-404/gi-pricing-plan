@@ -35,6 +35,7 @@ def valid_algorithm() -> dict:
             {"name": "driver_age", "type": "int", "nullable": False, "min": 17, "max": 99},
             {"name": "effective_date", "type": "date", "nullable": False},
             {"name": "channel", "type": "enum", "domain": ["direct", "broker"], "nullable": False},
+            {"name": "min_premium_minor", "type": "int", "nullable": False},
         ],
         "outputs": [
             {"name": "payable_premium_minor", "type": "money_minor", "required": True},
@@ -46,6 +47,9 @@ def valid_algorithm() -> dict:
              "input_name": "effective_date", "on_missing": "error", "produces": "effective_date"},
             {"step_id": "s_in_channel", "type": "input", "label": "Channel",
              "input_name": "channel", "on_missing": "error", "produces": "channel"},
+            {"step_id": "s_in_min_premium", "type": "input", "label": "Minimum premium",
+             "input_name": "min_premium_minor", "on_missing": "error",
+             "produces": "min_premium_minor"},
             {"step_id": "s_area", "type": "lookup", "label": "Area",
              "reference_table_ref": "reference_table:ons-postcode-directory@7",
              "key_expr": ["channel"], "as_at": "effective_date", "on_miss": "error",
@@ -66,7 +70,8 @@ def valid_algorithm() -> dict:
              "condition": "office_premium_minor >= min_premium_minor",
              "on_violation": "clamp", "clamp_bounds": {"min": "min_premium_minor"},
              "reason_code": "MIN_PREMIUM_APPLIED",
-             "consumes": ["office_premium_minor"], "produces": "office_premium_minor"},
+             "consumes": ["office_premium_minor", "min_premium_minor"],
+             "produces": "office_premium_minor"},
             {"step_id": "s_out", "type": "output", "label": "Payable premium",
              "output_name": "payable_premium_minor", "rounding": {"mode": "half_even", "dp": 0},
              "consumes": ["office_premium_minor"]},
@@ -89,7 +94,7 @@ def test_a_valid_algorithm_parses() -> None:
     algorithm = RatingAlgorithm.model_validate(valid_algorithm())
     assert algorithm.slug == "motor-gb"
     assert algorithm.version == 14
-    assert len(algorithm.steps) == 9
+    assert len(algorithm.steps) == 10
     assert algorithm.sub_graphs[0].ref.type == "sub_graph"
     assert algorithm.sub_graphs[0].mount_point == "s_ncd"
     types = {type(step).__name__ for step in algorithm.steps}
