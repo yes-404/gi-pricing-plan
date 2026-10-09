@@ -1,9 +1,9 @@
 ---
-id: LG-9478
+id: LG-1545
 family: ledger
 title: WK-673 slice SL-1387 — attribution, exact Shapley, largest remainder, the broken-input proof, the cost (PL-1452), task ledger
-status: active
-created: 2026-10-08
+status: closed
+created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
 owner: executor
 tree: 8b0256fdb5f000c11817838c129e1f9a4f8d8e10
 phase: P2
@@ -15,6 +15,8 @@ relates: [RL-1445, RL-1449, RL-1451, RL-1263, FR-266, FR-1397, FR-1398, FR-1399,
 ---
 
 # WK-673 slice SL-1387 — attribution: exact Shapley, largest remainder, the broken-input proof, the cost
+
+*Disclosure: drafted under working id 9478; minted as LG-1545 on 2026-10-10, in the S3 merge-turn commit of PR #1243. FD 9446 below stays a working id (forward cite; it mints in a later batch).*
 
 Executed from `PL-1452` by `executor-s3` (sonnet). Branch `sl-1387-attribution-exact-shapley-largest-remainder`, worktree
 `.claude/worktrees/sl-1387`, from `origin/main` `8b0256fdb5f000c11817838c129e1f9a4f8d8e10` (#1238, the activation). The dispatch
@@ -205,7 +207,7 @@ on that book), the other four are not (members 0 and 2 feed one rung).
 
 Gate at d15b8ecf, 11:00:16 to 11:44:30 BST: pytest 16 failed, 5167 passed, 3 skipped; 13 failures are the check-31 set (audit-docs and its dependants). The other three, each reproduced alone, and the lead's rulings (to-lead relay, 2026-10-09):
 - `examples/fremtpl2/test_seed.py::test_the_seed_reruns_against_a_seeded_database`: environmental. This worktree's `examples/fremtpl2/data/` lacked `freMTPL2sev.arff` (the root checkout has it); `git check-ignore -v` shows `.gitignore:61 examples/fremtpl2/data/` ignores it. Cause: the data dir is untracked and was fetched only partly in this worktree. Fix: `cp` of the file from the root checkout's data dir, left untracked. Re-run alone: 8 passed.
-- `packages/pricing-core/tests/test_rating_committed_strings.py::test_every_committed_string_is_accepted_or_a_declared_negative`: the extractor's line regex read `expr = " * ".join(...)` in `scripts/measure-attribution-cost.py` as an expression string `' * '`. Fix, a WORKAROUND for an extractor false positive and not a root-cause fix: the local variable is renamed `prod` (rename only; the joined expression and the step dict are unchanged). The `" * "` literal is still committed. It passes only because the extractor's line regex `_KEY` (`packages/pricing-core/tests/test_rating_committed_strings.py:43-46`) keys on the names `condition`, `expr` and `key_expr`, so it reads any line of the form `expr = "<literal>"` as an expression string and a join separator on such a line is a false positive. The limitation is the class of FD 9460 (working id, filed in D1: the extractor's handling of non-expression literals); the lead routes it. Neither test file is in PL-1452's write set, so neither was touched.
+- `packages/pricing-core/tests/test_rating_committed_strings.py::test_every_committed_string_is_accepted_or_a_declared_negative`: the extractor's line regex read `expr = " * ".join(...)` in `scripts/measure-attribution-cost.py` as an expression string `' * '`. Fix, a WORKAROUND for an extractor false positive and not a root-cause fix: the local variable is renamed `prod` (rename only; the joined expression and the step dict are unchanged). The `" * "` literal is still committed. It passes only because the extractor's line regex `_KEY` (`packages/pricing-core/tests/test_rating_committed_strings.py:43-46`) keys on the names `condition`, `expr` and `key_expr`, so it reads any line of the form `expr = "<literal>"` as an expression string and a join separator on such a line is a false positive. The limitation is the class of FD-1534 (minted from working id 9460, filed in D1: the extractor's handling of non-expression literals); the lead routes it. Neither test file is in PL-1452's write set, so neither was touched.
 - `backend/tests/test_error_sinks.py::test_every_failure_sink_on_a_quote_input_path_is_accounted_for`: `analysis.py` `attribute` put `{exc}` of a compile `ValueError` into `AttributionError`'s message, and a validation error's text can carry input values (NFR-499). Fix: `safe_error_text(exc)` from `pricing_core.safe_error` (the allow-list: our coded errors keep their text, a validation error is rebuilt from declared parts, anything else is its type name). `safe_error_text` and not `safe_error_detail` because it returns the type name when the detail is empty, so a non-coded error still names its class. No `_SINKS` line was needed.
 After both fixes: the three tests and `test_rating_attribution.py`, `test_fremtpl2_rate_fixture.py`, `test_quote_input_raise_sites.py` pass (57 passed together; 36 passed after the final rename for the three most affected files); ruff, ruff format, mypy and lint-imports are green. Not pushed; re-gate follows the lead's slot grant.
 
