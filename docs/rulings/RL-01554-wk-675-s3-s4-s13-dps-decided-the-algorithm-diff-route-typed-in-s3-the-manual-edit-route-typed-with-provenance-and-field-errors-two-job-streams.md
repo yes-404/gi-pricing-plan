@@ -17,7 +17,7 @@ relates: [PL-1286, PL-1364, FR-219, FR-229, FR-231, FR-234, FD-1335, FD-1366, RL
 
 # RL-1554 — WK-675 S3, S4 and S13: the decision points that block activation, decided
 
-*(Minted 2026-10-09 as RL-1554 from working id 9543, in the D3 batch mint; citations of the ids minted in this batch are re-pointed, quoted text and quoted channel entries stay as quoted, and cites of PL 9576, PL 9574, SL 9577 and SL 9575 stay working ids.)*
+*(Minted 2026-10-09 as RL-1554 from working id 9543, in the D3 batch mint; citations of the ids minted in this batch, and of ids already minted on main (RL-1474, RL-1475, RL-1473, RL-1445, PL-1476, SL-1477, FD-1437, RL-1438), are re-pointed outside quotes, quoted text and quoted channel entries stay as quoted, and cites of PL 9576, PL 9574, SL 9577 and SL 9575 stay working ids.)*
 
 ## How this was ruled
 
@@ -100,7 +100,7 @@ relates: [PL-1286, PL-1364, FR-219, FR-229, FR-231, FR-234, FD-1335, FD-1366, RL
    **200** is a **bare** `RateTableDiff` (not the import route's `ImportPreview`), and nothing
    is created. **201** is the `RateTableVersion` at `base_version + 1`. **409**
    `VALIDATION_FAILED` where `base_version + 1` already exists, that is, the base is not the
-   latest version (`_persist_new_version`'s existing refusal). `RateTableCell` is RL 9753 T5's
+   latest version (`_persist_new_version`'s existing refusal). `RateTableCell` is RL-1475 T5's
    type (working id, #1067).
 2. **DP-S4-1c: (ii), provenance.** `RateTableVersion` gains `created_by_edit: ManualEdit |
    None`, `ManualEdit` being `{applied_to: ArtifactRef, edited_cells: int ≥ 1}` (`applied_to`
@@ -117,7 +117,7 @@ relates: [PL-1286, PL-1364, FR-219, FR-229, FR-231, FR-234, FD-1335, FD-1366, RL
    to `_map_operation_error`. An unknown-key edit answers **422** with a `FieldError`, never 500.
 4. **S4 serialises with WK-673 S7** (`SL-1391`) on the shared paths, and
    `packages/model-schema/src/model_schema/__init__.py` joins PL 9582's write set.
-5. **RL 9753 T4's anchor** was re-set before mint on #1067 itself (head `511af512`, the
+5. **RL-1475 T4's anchor** was re-set before mint on #1067 itself (head `511af512`, the
    amendment "2026-10-05 17:29 BST"), on the 17:26:46 entry's order. It is recorded here and not
    repeated: the find string is `` | `GET` | `/api/v1/rate-tables/{slug}@{version}/diff?against= ``.
 
@@ -293,7 +293,7 @@ Each find string is counted with `grep -cF` over the plan file at the PR head na
   **WK-675 S13** builds the two-stream rule.
 - **The dispatch records**: S4's names its serialisation with `SL-1391`; S3's and `SL-1367`'s
   each name `backend/tests/test_contracts.py`, and the second carries the pending-list delta.
-- **At the mint:** `RL-<this>` resolves; the working ids RL 9753, RL 9907, PL-1557, PL-1555 and
+- **At the mint:** `RL-<this>` resolves; the working ids RL-1475, RL 9907, PL-1557, PL-1555 and
   PL 9576 are re-pointed to their minted ids in the same run where they have minted.
 
 ## Acceptance — the violation that must become detectable

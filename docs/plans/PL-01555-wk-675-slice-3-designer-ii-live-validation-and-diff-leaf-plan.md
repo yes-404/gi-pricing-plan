@@ -17,7 +17,7 @@ relates: [PL-1286, PL-1371, PL-1364, SL-1367, FD-1335, FD-1366, FD-1374, RL-1263
 
 # PL-1555 — WK-675 Slice 3: Designer II, live validation and diff, leaf plan
 
-*(Minted 2026-10-09 as PL-1555 from working id 9578, in the D3 batch mint; citations of the ids minted in this batch are re-pointed, quoted text and quoted channel entries stay as quoted, and cites of PL 9576, PL 9574, SL 9577 and SL 9575 stay working ids.)*
+*(Minted 2026-10-09 as PL-1555 from working id 9578, in the D3 batch mint; citations of the ids minted in this batch, and of ids already minted on main (RL-1474, RL-1475, RL-1473, RL-1445, PL-1476, SL-1477, FD-1437, RL-1438), are re-pointed outside quotes, quoted text and quoted channel entries stay as quoted, and cites of PL 9576, PL 9574, SL 9577 and SL 9575 stay working ids.)*
 
 This plan is filed under working id 9578. Its `SL-` row under WK-675 in
 [`../roadmap.md`](../roadmap.md) is slice working id 9581, `draft`. That row is filed in the
@@ -60,11 +60,11 @@ defined once, on the server; the frontend re-implements none of them.
 - `RatingAlgorithm`'s graph invariants become one function, `graph_invariant_issues`, that
   returns every breach detectable on the graph as it stands, located, in today's order. The
   model validator calls it and raises on the first, with today's exception classes, so save
-  is unchanged (RL 9767 item 2).
+  is unchanged (RL-1474 item 2).
 - `POST /api/v1/rating-algorithms/validate` takes a `RatingAlgorithmDraft` (built in S2) and
-  answers 200 with the report (RL 9767 items 3, 5 and 6). `03` gains its FR, its §5.1 row and
-  a §4.1 paragraph, and `00` FR-24 records the discharge (RL 9767 T1–T4).
-- FD 9759 limbs (2) and (3): a mode mismatch at compile is refused as
+  answers 200 with the report (RL-1474 items 3, 5 and 6). `03` gains its FR, its §5.1 row and
+  a §4.1 paragraph, and `00` FR-24 records the discharge (RL-1474 T1–T4).
+- FD-1437 limbs (2) and (3): a mode mismatch at compile is refused as
   `MODEL_REFERENCE_MODE_INCONSISTENT`, not `BUNDLE_COMPILE_FAILED`, with RL 9758 T1 applied;
   and a listed, counted sweep of the bare `ValueError`s that reach compile's generic fallback.
 - `GET /api/v1/rating-algorithms/{slug}@{version}/diff` gets the response model it already
@@ -92,23 +92,23 @@ Vite, Vitest with happy-dom, `@vue-flow/core` (added by S2), and the generated c
 - `PL-1371` §3.3 (S3: "RL 9767 to mint; carries FD 9759; never concurrent with a
   `compile.py` editor") and §5 rule 4;
 - the rulings and finding, all unminted, with their working ids, each read to its last dated
-  amendment at the head named: RL 9767 (DP-6; #1055 @`07d9d230`); RL 9758 (FR-223's check
-  point; #1061 @`2e7eff8c`); FD 9759 (#1059 @`3621fe7b`); RL 9620 (RL-1263 amended; #1162
+  amendment at the head named: RL-1474 (DP-6; #1055 @`07d9d230`); RL-1438 (FR-223's check
+  point; #1061 @`2e7eff8c`); FD-1437 (#1059 @`3621fe7b`); RL-1445 (RL-1263 amended; #1162
   @`381254c3`);
-- S2's leaf plan, PL 9713 (working id; #1131 @`c66300e5`): the files S3 builds on and its
+- S2's leaf plan, PL-1476 (#1131 @`c66300e5`): the files S3 builds on and its
   Hand-off item 1;
 - `FD-1335` *Disposition* item 5 (the per-route hold); `PL-1364`'s
   `UNTYPED_2XX_PENDING_PART_B` list, which names the diff route.
 
 ## The decisions this plan rests on, quoted
 
-1. **DP-6, RL 9767 (working id), Ruled:** *"(a), with the body the plan did not name."* The
-   route, its body, its response and its permission are those of RL 9767's table, quoted in
+1. **DP-6, RL-1474, Ruled:** *"(a), with the body the plan did not name."* The
+   route, its body, its response and its permission are those of RL-1474's table, quoted in
    Task 4.
 2. **FD 9759's owner and discharge** (the maintainer's entry headed "2026-10-01 10:22:24 BST",
    as FD 9759 quotes it): *"Owner: the WK-675 slice that builds RL 9767's validate route (S3's
    leaf), NOT WK-1178."* Limb (2) as amended by the entry headed "2026-10-01 10:30:00 BST —
-   ACCEPTANCE: RL 9770 (NFR-490's statistic = p99) as the spec interpretation; FD 9759 limb (2)
+   ACCEPTANCE: RL 9770 (NFR-490's statistic = p99) as the spec interpretation; FD-1437 limb (2)
    discharged at the compile site alone; #1060 audit noted": *"limb (2) is discharged by the
    compile-site typed error alone; the validate-route clause falls away"*. The lead's holds
    register, under *WK-675 S3 dispatch-record lines*, now reads the same: "(2) a typed error
@@ -122,15 +122,15 @@ Vite, Vitest with happy-dom, `@vue-flow/core` (added by S2), and the generated c
    DP-S13-1 (a′)", item 6: "PL 9578 :111-113 stale "compile AND validate": the planner fixes
    it pre-mint. Yes.")*
 3. **RL 9758 (working id), Ruled, item 3:** *"Algorithm save (`POST
-   /api/v1/rating-algorithms`) and RL 9767 (working id)'s validate route do not check
+   /api/v1/rating-algorithms`) and RL-1474's validate route do not check
    FR-223."*
 4. **The S3 dispatch-record lines in the lead's holds register** (the maintainer, 2026-10-01):
    *"No concurrency on pricing_core/rating/compile.py's import block … S3 is never concurrent
    with a slice editing compile.py."* And: *"RL 9767's C: SubGraphBody's parallel
    _graph_invariants (sub_graphs.py:62-151); the statics stay reachable."*
-5. **S2's Hand-off item 1** (PL 9713, working id), which this plan carries: *"`RatingAlgorithmDraft`
-   (RL 9767 item 1's type limb) was built in WK-675 S2 (PL 9713), with `RatingAlgorithm` as
-   its subclass and the save route typed by it. S3 does not re-add it. S3 still owns RL 9767
+5. **S2's Hand-off item 1** (PL-1476), which this plan carries: *"`RatingAlgorithmDraft`
+   (RL-1474 item 1's type limb) was built in WK-675 S2 (PL-1476), with `RatingAlgorithm` as
+   its subclass and the save route typed by it. S3 does not re-add it. S3 still owns RL-1474
    items 2–7 (the breach-returning invariant function, `ValidationIssue`'s move,
    `AlgorithmValidationReport`, and the validate route) and T1–T4, including T3's §4.1
    paragraph that names the type."*
@@ -152,12 +152,12 @@ dispatch carries the delta.*
 
 ### Activation needs, in order
 
-1. **RL 9767 (working id, #1055) minted.** S3 applies its T1–T4 byte for byte, and each text
+1. **RL-1474 minted.** S3 applies its T1–T4 byte for byte, and each text
    cites `RL-<this>`. An unminted text is a stop.
-2. **RL 9758 (working id, #1061) and FD 9759 (working id, #1059) minted.** S3 applies RL 9758
-   T1 byte for byte and discharges FD 9759 limbs (2) and (3).
-3. **S2 (SL 9711, PL 9713) merged.** S3 consumes S2's output: `RatingAlgorithmDraft`, the
-   designer components and `ratingAlgorithms.ts`. So under RL 9620 condition (b), S2 and S3
+2. **RL-1438 and FD-1437 minted.** S3 applies RL-1438
+   T1 byte for byte and discharges FD-1437 limbs (2) and (3).
+3. **S2 (SL-1477, PL-1476) merged.** S3 consumes S2's output: `RatingAlgorithmDraft`, the
+   designer components and `ratingAlgorithms.ts`. So under RL-1445 condition (b), S2 and S3
    never run at the same time.
 4. **DP-S3-1 and DP-S3-2 decided**, each by a dated line. Decided (RL-1554). The dispatch record names `backend/tests/test_contracts.py` as shared with `SL-1367`; whichever of S3 and `SL-1367` dispatches second carries the pending-list delta (11 entries if S3 is first; RL-1554 item 7).
 5. **No slice editing `compile.py` in flight** (decision 4; `PL-1371` §5 rule 4): WK-673 S3
@@ -178,49 +178,49 @@ Each item is checked by a command run from the repository root on the slice's me
 - every red is recorded in the slice's ledger, with the failure line as printed.
 
 Every backend test of the validate route carries `@pytest.mark.req("FR-<new>")`, the id T1
-takes when applied. Items 1–11 are RL 9767's own acceptance items, in its numbering.
+takes when applied. Items 1–11 are RL-1474's own acceptance items, in its numbering.
 
-1. **Cycle, located** (RL 9767 acceptance 1). A two-step cycle with a third step downstream
+1. **Cycle, located** (RL-1474 acceptance 1). A two-step cycle with a third step downstream
    answers 200, and the set of `RATING_GRAPH_CYCLIC` issues' `step_id`s is exactly the two
    cycle steps. The test asserts that set, never the list's length. **Broken input:** (i) the
    handler body typed `RatingAlgorithm`, and the request answers 422; (ii) the cycle set
    computed as every step Kahn's sort leaves unordered, and the downstream step appears.
    Command: `uv run pytest backend/tests/test_rating_algorithm_validate.py -q`.
-2. **The check order and its skips** (RL 9767 acceptance 1a). A duplicated `step_id` yields
+2. **The check order and its skips** (RL-1474 acceptance 1a). A duplicated `step_id` yields
    that one issue only (`VALIDATION_FAILED`, carrying the duplicated id), even when the draft
    also has a cycle. A cycle plus two non-chained producers of one name yields no
    ambiguous-producer issue. **Broken input:** run every check unconditionally; both cases go
    red. Command: `uv run pytest packages/model-schema/tests/test_graph_invariant_issues.py -q`.
-3. **Unresolved reference, located** (RL 9767 acceptance 2). 200, code
+3. **Unresolved reference, located** (RL-1474 acceptance 2). 200, code
    `RATING_GRAPH_UNRESOLVED_REF`, the consuming step's `step_id`. Command as item 1.
-4. **All, not the first** (RL 9767 acceptance 3). A draft with an unresolved reference and an
+4. **All, not the first** (RL-1474 acceptance 3). A draft with an unresolved reference and an
    orphan step reports both. **Broken input:** return after the first breach. Command as
    item 2.
-5. **Deeper check, located** (RL 9767 acceptance 4). The `RATING_TYPE_MISMATCH` fixture of
+5. **Deeper check, located** (RL-1474 acceptance 4). The `RATING_TYPE_MISMATCH` fixture of
    `packages/pricing-core/tests/test_rating_compile.py` (the `s_clamp` case) is reported on
    `s_clamp` through the route. Command as item 1.
-6. **One definition (parity)** (RL 9767 acceptance 5). For every invalid-algorithm fixture
+6. **One definition (parity)** (RL-1474 acceptance 5). For every invalid-algorithm fixture
    in `backend/tests/test_rating_algorithms.py`, the report's first issue has the code that
    `POST /api/v1/rating-algorithms` refuses the same body with. A valid fixture gives an empty
    list and then saves with 201. The test is parametrized over the fixtures by name, so a new
    save fixture is picked up. Command as item 1.
-7. **Save unchanged** (RL 9767 acceptance 6). `test_rating_algorithms.py`,
+7. **Save unchanged** (RL-1474 acceptance 6). `test_rating_algorithms.py`,
    `packages/model-schema/tests/test_rating_algorithm.py` and the sub-graph tests pass
    **unmodified** (`git diff --stat origin/main...HEAD` shows no line removed from them).
    Command: `uv run pytest backend/tests/test_rating_algorithms.py backend/tests/test_sub_graphs.py packages/model-schema/tests/test_rating_algorithm.py -q`.
-8. **Nothing persisted** (RL 9767 acceptance 7). The `rating_algorithms` row count and the
+8. **Nothing persisted** (RL-1474 acceptance 7). The `rating_algorithms` row count and the
    audit-event count are the same before and after a validate call. Command as item 1.
-9. **Permission** (RL 9767 acceptance 8). A principal with `rating:read` and not
+9. **Permission** (RL-1474 acceptance 8). A principal with `rating:read` and not
    `rating:write` gets 403. **Broken input:** the dependency `RatingReadDep`. Command as
    item 1.
-10. **Malformed body** (RL 9767 acceptance 9). A step missing a required field answers 422
+10. **Malformed body** (RL-1474 acceptance 9). A step missing a required field answers 422
     `VALIDATION_FAILED`, with a field error whose location begins `steps.<index>.`. Command
     as item 1.
-11. **Contract** (RL 9767 acceptance 10). In `docs/contracts/openapi/generated.json`, the
+11. **Contract** (RL-1474 acceptance 10). In `docs/contracts/openapi/generated.json`, the
     validate operation's request body and 200 response are `$ref`s to `RatingAlgorithmDraft`
     and `AlgorithmValidationReport`, and `uv run python scripts/generate-contracts.py --check`
     exits 0. *(Checked at Task 4's commit, Step 5a; dated note, 2026-10-05.)*
-12. **Frontend, before save** (RL 9767 acceptance 11). A designer test whose name contains
+12. **Frontend, before save** (RL-1474 acceptance 11). A designer test whose name contains
     `FR-<new>` asserts that an unresolved reference is rendered on its node, and that no
     save call was made. **Broken input:** render issues only from a save refusal; the test
     goes red. Command: `pnpm --dir frontend test -- DagDesigner`.
@@ -234,7 +234,7 @@ takes when applied. Items 1–11 are RL 9767's own acceptance items, in its numb
 15. **Frontend, stale calls.** Three draft changes within the debounce window make one
     request; a change while a request is in flight aborts it, and the older response never
     overwrites the newer report. Command: `pnpm --dir frontend test -- useGraphValidation`.
-16. **FD 9759 limb (2): compile names the code** (RL 9758 acceptance 1). An `approximation`
+16. **FD-1437 limb (2): compile names the code** (RL-1438 acceptance 1). An `approximation`
     version pinning an algorithm with an `exact` `model_call` step fails compilation with
     `MODEL_REFERENCE_MODE_INCONSISTENT`, and the message names the step. At the pure level,
     `test_a_mode_mismatch_is_refused_at_compile`
@@ -246,16 +246,16 @@ takes when applied. Items 1–11 are RL 9767's own acceptance items, in its numb
     `BUNDLE_COMPILE_FAILED`. Commands:
     `uv run pytest packages/pricing-core/tests/test_rating_compile_bundle.py -q` and
     `uv run pytest backend/tests/test_rating_mode_mismatch_api.py -q`.
-17. **Compile, agreeing** (RL 9758 acceptance 2). The same version with a matching step
+17. **Compile, agreeing** (RL-1438 acceptance 2). The same version with a matching step
     compiles. Command as item 16.
-18. **Spec and code agree** (RL 9758 acceptance 3). A test reads `03` §5.1's owned-code list
+18. **Spec and code agree** (RL-1438 acceptance 3). A test reads `03` §5.1's owned-code list
     (the paragraph beginning `**Error codes owned by this module:**`) and imports
     `RATING_ERROR_CODES`, and asserts `MODEL_REFERENCE_MODE_INCONSISTENT` is in both. **Red on
     main:** the code is absent from `RATING_ERROR_CODES`. Command:
     `uv run pytest backend/tests/test_errors.py -q`.
-19. **No save-time mode check** (RL 9758 acceptance 4). Saving the mismatching algorithm
+19. **No save-time mode check** (RL-1438 acceptance 4). Saving the mismatching algorithm
     through `POST /api/v1/rating-algorithms` answers 201. Command as item 16's second.
-20. **FD 9759 limb (3): the sweep is listed and counted.** The ledger carries a table: one
+20. **FD-1437 limb (3): the sweep is listed and counted.** The ledger carries a table: one
     row per raise site that can reach `compile_rating_version`'s generic fallback
     (`backend/src/app/platform/rating_versions.py`, the `except ValueError` in
     `compile_rating_version`), each with its file and symbol, and either the named code it now
@@ -288,18 +288,18 @@ takes when applied. Items 1–11 are RL 9767's own acceptance items, in its numb
   `@/api/generated/schema`.
 - **Nobody hand-writes a shape that already exists in `model-schema`** (`CLAUDE.md` §2).
   `ValidationIssue` moves; it is not copied. `pricing_core.rating.compile` keeps the name
-  importable (RL 9767, *What it obliges*), so
+  importable (RL-1474, *What it obliges*), so
   `packages/pricing-core/src/pricing_core/rate_tables/operations.py:57` does not break.
 - **No rule is re-implemented in the frontend** (RL 9767 item 2, T1: "the frontend
   re-implements none of them").
 - **`pricing-core` stays importable standalone** with zero FastAPI, SQLAlchemy or Redis
   dependencies (`CLAUDE.md` §2). The new model-schema function imports nothing from
   `pricing-core`.
-- **The decision-maker's texts are applied byte for byte** (RL 9767 and RL 9758, *Spec
+- **The decision-maker's texts are applied byte for byte** (RL-1474 and RL-1438, *Spec
   changes*): any executor wording is a stop, and an anchor not found exactly once is a stop.
 - **WCAG 2.2 AA** (`00` NFR-463): no state is shown by colour alone.
-- **Concurrency** (`RL-1263` as amended by RL 9620, working id): at most three build slices;
-  **one full gate at a time on this VM**; same-Work concurrency only under RL 9620 conditions
+- **Concurrency** (`RL-1263` as amended by RL-1445): at most three build slices;
+  **one full gate at a time on this VM**; same-Work concurrency only under RL-1445 conditions
   (a) and (b); never concurrent with a `compile.py` editor (decision 4).
 
 ## Scope
@@ -308,22 +308,22 @@ takes when applied. Items 1–11 are RL 9767's own acceptance items, in its numb
 
 | Id | What S3 does with it |
 |---|---|
-| FR-<new> | created by RL 9767 T1 and delivered: the validate route and the designer's on-node rendering (Acceptance 1–15) |
-| FR-24 | the `03` DAG designer's on-node live validation exception is discharged (RL 9767 T4) |
+| FR-<new> | created by RL-1474 T1 and delivered: the validate route and the designer's on-node rendering (Acceptance 1–15) |
+| FR-24 | the `03` DAG designer's on-node live validation exception is discharged (RL-1474 T4) |
 | FR-212 | cycles, unresolved references, ambiguous producers and orphans, each located (Acceptance 1–4) |
 | FR-214 | a declared output with no output step, reported with no `step_id` and shown on the graph (Acceptance 2, 13) |
 | FR-215 | a duplicated `step_id`, reported first and alone (Acceptance 2) |
 | FR-219 | the structural diff overlay over the existing route (Acceptance 21, 22) |
-| FR-223 | not in the validate route (RL 9758 item 3); compile names `MODEL_REFERENCE_MODE_INCONSISTENT` (Acceptance 16–19); RL 9758 T1 applied |
+| FR-223 | not in the validate route (RL-1438 item 3); compile names `MODEL_REFERENCE_MODE_INCONSISTENT` (Acceptance 16–19); RL-1438 T1 applied |
 | FR-227 | type mismatches, through `validate_algorithm`, located (Acceptance 5) |
 | FR-244 | the expression checks `validate_algorithm` runs (the `STRING_CHECKS` over every authored string), reported through the route |
-| FR-246 | **not delivered here.** The route reports what `validate_algorithm` checks; FR-246's declared-inputs rule is unenforced there (`FD-1374`, MEDIUM, owner WK-1178, remedy PL 9776). When that remedy lands, the route reports it with no change here (RL 9767, *Not decided here*). `PL-1286`'s S3 row names FR-246; this is the ruling's narrowing, recorded for the auditor |
+| FR-246 | **not delivered here.** The route reports what `validate_algorithm` checks; FR-246's declared-inputs rule is unenforced there (`FD-1374`, MEDIUM, owner WK-1178, remedy PL 9776). When that remedy lands, the route reports it with no change here (RL-1474, *Not decided here*). `PL-1286`'s S3 row names FR-246; this is the ruling's narrowing, recorded for the auditor |
 | FR-240 | compile's check of FR-223 now refuses with the named code |
 | FR-403 | the `rating.compile` Job's error code carries `MODEL_REFERENCE_MODE_INCONSISTENT` |
 | NFR-463 | text channels for issues and diff markers; the live count (Acceptance 23) |
 
 **Out of S3, named so nothing is assumed:**
-- sub-graph validation (`SubGraphBody` keeps its own `_graph_invariants`; RL 9767 item 2,
+- sub-graph validation (`SubGraphBody` keeps its own `_graph_invariants`; RL-1474 item 2,
   finding C) and sub-graph mounting (S9);
 - the structural diff attached to an approval request (FR-219's second clause): WK-673 S5
   (`SL-1389`);
@@ -347,7 +347,7 @@ can only be re-run after S2 merges.
 | 0.7 | the code is not in the registry | `grep -c MODEL_REFERENCE_MODE_INCONSISTENT backend/src/app/errors.py` | `0` |
 | 0.8 | the code is in `03`'s owned list | `grep -n MODEL_REFERENCE_MODE_INCONSISTENT docs/specs/03-rating-engine.md` | `:109` (FR-223) and `:936` (owned list from `:928`) |
 | 0.9 | the diff route is untyped | `sed -n 53,68p backend/src/app/api/rating_algorithms.py` | `-> dict[str, Any]`; `diff_between` returns `.model_dump()` (`platform/rating_algorithms.py:163`) |
-| 0.10 | the RL texts' anchors, each once | `grep -cF` on each anchor (RL 9767 T1–T4, RL 9758 T1) | 1 each (`03:88`, `:896`, `:289`, `00:235`, `03:109`) |
+| 0.10 | the RL texts' anchors, each once | `grep -cF` on each anchor (RL-1474 T1–T4, RL-1438 T1) | 1 each (`03:88`, `:896`, `:289`, `00:235`, `03:109`) |
 | 0.11 | `03` §5.1's header has no `Permission` column | `grep -c '^\| Method \| Path \| Purpose \|$' docs/specs/03-rating-engine.md` | `1`: T2's three-cell form applies |
 | 0.12 | S2 has merged | `git log --oneline origin/main -- frontend/src/components/dag/DagDesigner.vue` | **no commit** (S2 is #1131, open): activation need 3 |
 | 0.13 | the untyped-2xx guard list | `grep -n UNTYPED_2XX_PENDING_PART_B backend/tests/test_contracts.py` | no hit (`SL-1367` is `draft`) |
@@ -371,8 +371,8 @@ ledger before Task 1.
 | `backend/tests/test_rating_algorithm_validate.py` | new | Acceptance 1, 3, 5, 6, 8–10 |
 | `backend/tests/test_rating_mode_mismatch_api.py` | new | Acceptance 16, 19 |
 | `backend/tests/test_contracts.py` | `UNTYPED_2XX_PENDING_PART_B`, only if it exists | the diff entry removed |
-| `docs/specs/03-rating-engine.md` | §3.1 after FR-219; §3.2 FR-223's cell; §4.1 after `:289`; §5.1 after `:896` | RL 9767 T1–T3 and RL 9758 T1, verbatim |
-| `docs/specs/00-overview.md` | FR-24's second cell (`:235`) | RL 9767 T4, verbatim |
+| `docs/specs/03-rating-engine.md` | §3.1 after FR-219; §3.2 FR-223's cell; §4.1 after `:289`; §5.1 after `:896` | RL-1474 T1–T3 and RL-1438 T1, verbatim |
+| `docs/specs/00-overview.md` | FR-24's second cell (`:235`) | RL-1474 T4, verbatim |
 | `docs/contracts/openapi/generated.json` | generated | regenerated |
 | `frontend/src/api/ratingAlgorithms.ts` | S2's module | `validateRatingAlgorithm`, `getAlgorithmDiff` |
 | `frontend/src/components/dag/useGraphValidation.ts` and its test | new | Task 6 |
@@ -380,11 +380,11 @@ ledger before Task 1.
 | `frontend/src/components/dag/GraphIssues.vue`, `DiffOverlay.vue` and their tests | new | Tasks 6 and 7 |
 | the ledger `docs/ledgers/LG-<n>`; `docs/INDEX.md` | added; regenerated | registry |
 
-**No `GENERATED_SHAPES` slug is added** (RL 9767 leaves it to this plan). The three shapes
+**No `GENERATED_SHAPES` slug is added** (RL-1474 leaves it to this plan). The three shapes
 reach `generated.json` through the routes, and no client needs a standalone schema file, as
 in S2.
 
-### Write set, and its contention (`RL-1263`, as amended by RL 9620)
+### Write set, and its contention (`RL-1263`, as amended by RL-1445)
 
 Classes are those of `docs/process/delivery-process.core.json`
 `guards.parallelism.build_slices_across_works.no_shared_files`.
@@ -406,7 +406,7 @@ Classes are those of `docs/process/delivery-process.core.json`
 | `model_schema/__init__.py` `__all__` | any | name-disjoint (the 2026-10-05 09:44:39 BST amendment) |
 | `backend/tests/test_contracts.py` `UNTYPED_2XX_PENDING_PART_B` | FD-1335 Part B's slices | not registry-exempt: **SERIALISES** with a slice editing that list |
 
-**Same-Work pairs** (RL 9620 condition (b)): S3 consumes S2's output, so S2 → S3 serialise.
+**Same-Work pairs** (RL-1445 condition (b)): S3 consumes S2's output, so S2 → S3 serialise.
 S3 and S4 (PL-1557, working id) share no source file named here except `03` §5.1, and
 neither consumes the other's output. They may overlap only if the dispatch record names both
 §5.1 hunks and their anchors. The second to merge merges `origin/main`, reads
@@ -443,7 +443,7 @@ leaf plan):
 - **The mode-check typing:** `compile_bundle` catches the `ValueError` from
   `check_model_reference_mode` and re-raises it through `_raise_named`
   (`compile.py:538`), the mechanism every other compile refusal already uses. The
-  model-schema function is not edited, so its other callers are unaffected. RL 9758 leaves the
+  model-schema function is not edited, so its other callers are unaffected. RL-1438 leaves the
   design to the build; this is the smallest that uses the existing path.
 
 ## Tasks
@@ -452,7 +452,7 @@ leaf plan):
 
 - [ ] **Step 1:** Re-run every Task 0 row at the dispatch tree; record each result in the
   ledger.
-- [ ] **Step 2:** Read the minted RL 9767, RL 9758 and FD 9759. Replace `RL-<9767>`,
+- [ ] **Step 2:** Read the minted RL-1474, RL-1438 and FD-1437. Replace `RL-<9767>`,
   `RL-<9758>` and `FD-<9759>` in this plan's commands with the minted ids in the ledger. If a
   minted text differs from the heads cited above, the minted text governs; name each
   difference.
@@ -588,7 +588,7 @@ def test_a_declared_output_without_an_output_step_has_no_step_id() -> None:
   the all-breaches test red; restore. Record the three reds.
 - [ ] **Step 6: Commit** `feat(model-schema): graph_invariant_issues, ValidationIssue and AlgorithmValidationReport (RL-<9767> items 2 and 4)`.
 
-### Task 2: pricing-core imports `ValidationIssue`; the mode mismatch is named at compile (FD 9759 limb 2; RL 9758 T1)
+### Task 2: pricing-core imports `ValidationIssue`; the mode mismatch is named at compile (FD-1437 limb 2; RL-1438 T1)
 
 **Files:**
 - Modify: `packages/pricing-core/src/pricing_core/rating/compile.py` (import block; `:60-72`; `compile_bundle` `:614`)
@@ -614,7 +614,7 @@ async def test_a_mode_mismatch_is_refused_at_compile() -> None:
   `test_a_step_ref_the_pins_do_not_carry_is_refused_over_http`
   (`backend/tests/test_rating_pin_membership_api.py:36`), importing `_handlers` and
   `_run_compile_job` by name as that module does. No route writes `model_reference_mode`
-  (RL 9758 item 2), so the test sets it on the row before compiling, then asserts
+  (RL-1438 item 2), so the test sets it on the row before compiling, then asserts
   `job_row.status is JobStatus.FAILED` and
   `job_row.error["code"] == "MODEL_REFERENCE_MODE_INCONSISTENT"`. A second test saves the
   mismatching algorithm and asserts 201 (Acceptance 19). In `test_errors.py`:
@@ -644,14 +644,14 @@ def test_the_mode_code_is_owned_in_the_spec_and_registered() -> None:
 
   Add `"MODEL_REFERENCE_MODE_INCONSISTENT"` to `RATING_ERROR_CODES` beside
   `"BUNDLE_COMPILE_FAILED"`, under the existing `# Bundle compilation (W9-3).` comment. Apply
-  RL 9758 T1 to FR-223's cell byte for byte: the find string `(`02` OQ-575, decided
+  RL-1438 T1 to FR-223's cell byte for byte: the find string `(`02` OQ-575, decided
   2026-08-17.) |` is replaced by `(`02` OQ-575, decided 2026-08-17.) ` followed by T1's block,
   with `<date>` and `RL-<this>` filled.
 - [ ] **Step 4: Green.** Run the three files named in Step 1, and
   `uv run pytest packages/pricing-core/tests/test_rating_compile.py packages/pricing-core/tests/test_rating_compile_bundle.py -q`.
 - [ ] **Step 5: Commit** `fix(rating): name MODEL_REFERENCE_MODE_INCONSISTENT at compile (FD-<9759> limb 2; RL-<9758> T1)`.
 
-### Task 3: The bare-`ValueError` sweep (FD 9759 limb 3)
+### Task 3: The bare-`ValueError` sweep (FD-1437 limb 3)
 
 - [ ] **Step 1: List the candidates.** At the slice's tree, run and paste verbatim into the
   ledger:
@@ -676,7 +676,7 @@ git grep -n -E 'raise (ValueError|[A-Za-z]*Error)\(|_raise_named\(' -- \
 - [ ] **Step 3:** No code change unless Step 2 names one that maps to an existing owned code.
   Any such change gets a red-first test in `test_rating_compile_bundle.py`.
 
-### Task 4: The validate route, spec first (RL 9767 T1–T4; items 3, 5, 6)
+### Task 4: The validate route, spec first (RL-1474 T1–T4; items 3, 5, 6)
 
 **Files:**
 - Modify: `docs/specs/03-rating-engine.md` (§3.1 after `| **FR-219** |`; §4.1 after the paragraph ending `and unreferenced by an `output` (FR-212).`; §5.1 after the `…/diff?against=` row)
@@ -684,7 +684,7 @@ git grep -n -E 'raise (ValueError|[A-Za-z]*Error)\(|_raise_named\(' -- \
 - Modify: `backend/src/app/api/rating_algorithms.py`; `backend/src/app/platform/rating_algorithms.py`
 - Create: `backend/tests/test_rating_algorithm_validate.py`
 
-**The route, as RL 9767 rules it:**
+**The route, as RL-1474 rules it:**
 
 | Method, path | Request body | 2xx response | Permission |
 |---|---|---|---|
@@ -692,7 +692,7 @@ git grep -n -E 'raise (ValueError|[A-Za-z]*Error)\(|_raise_named\(' -- \
 
 - [ ] **Step 1: Apply T1–T4 byte for byte.** T1 takes the next free requirement id in `03`;
   record it in the ledger and use it for `FR-<new>` everywhere below. Use T2's three-cell form
-  if Task 0.11 still reads `1`, else the four-cell form. If S2's RL 9753 T1 row now follows
+  if Task 0.11 still reads `1`, else the four-cell form. If S2's RL-1475 T1 row now follows
   FR-219, T1 still goes **immediately after** the FR-219 row, as its anchor says; record that
   the row is then not the table's last (T1's "as the last row" is placement prose, not the
   anchor).
@@ -877,25 +877,25 @@ export function getAlgorithmDiff(slug: string, version: number, against: number)
 ### Task 9: The gate and the ledger
 
 - [ ] **Step 1: The full gate, both halves** (`CLAUDE.md` §11), delegated to `gate-runner`,
-  in the single gate window (RL 9620: one full gate at a time). Every command has rc 0.
+  in the single gate window (RL-1445: one full gate at a time). Every command has rc 0.
   Record the per-command table and the tree.
 - [ ] **Step 2: Self-check Acceptance 1–24**, command by command, pasting each output into the
   ledger.
-- [ ] **Step 3: Open the PR**, naming the range `origin/main...HEAD`, FD 9759's sweep count,
+- [ ] **Step 3: Open the PR**, naming the range `origin/main...HEAD`, FD-1437's sweep count,
   DP-S3-1's applied option, and whether `UNTYPED_2XX_PENDING_PART_B` existed.
 
 ## Hand-off
 
-1. **To the lead, for `PL-1286`:** DP-6's *Resolved by* cell cites RL 9767 once minted.
+1. **To the lead, for `PL-1286`:** DP-6's *Resolved by* cell cites RL-1474 once minted.
    `PL-1286` is the planner's file and is not edited here.
-2. **To the auditor at slice close:** FD 9759 limbs (2) and (3) are discharged here (limb (1)
-   is RL 9758); its register row names the S3 PR. `FD-1335`'s diff-route entry is discharged
+2. **To the auditor at slice close:** FD-1437 limbs (2) and (3) are discharged here (limb (1)
+   is RL-1438); its register row names the S3 PR. `FD-1335`'s diff-route entry is discharged
    if DP-S3-1 is (a), by Task 0A, the slice's first commit (dated note, 2026-10-05). FR-246 is **not** delivered by S3 (*Scope*): its verdict is "deferred
    with an owner", `FD-1374`'s WK-1178 remedy.
 3. **To S9 (sub-graph mounting):** the validate route checks algorithms only; sub-graph
-   validation keeps `SubGraphBody`'s own invariants (RL 9767 finding C).
+   validation keeps `SubGraphBody`'s own invariants (RL-1474 finding C).
 4. **To the lead, a record line:** S3's dispatch record quotes the maintainer's entry of
-   2026-10-01 10:30:00 BST for FD 9759 limb (2) (at the compile site alone). The holds
+   2026-10-01 10:30:00 BST for FD-1437 limb (2) (at the compile site alone). The holds
    register's *WK-675 S3 dispatch-record lines* already agree, corrected at 2026-10-05
    17:22:00 BST. *(Dated note, 2026-10-05, pre-mint: this item said the register "still
    say[s] 'at compile AND in the validate route'". It no longer does. The fix is the same
@@ -905,14 +905,14 @@ export function getAlgorithmDiff(slug: string, version: number, against: number)
 
 - **Ruling coverage, by site class** (`README.md` convention 5). Each ruling appears in the
   narrative, Files, Steps and Acceptance:
-  - RL 9767 items 1–7 and T1–T4: *Architecture*; item 1 as S2's (decision 5); items 2 and 4:
+  - RL-1474 items 1–7 and T1–T4: *Architecture*; item 1 as S2's (decision 5); items 2 and 4:
     Task 1; items 3, 5, 6: Task 4; item 7: *Scope* FR-223 row; T1–T4: Task 4 Step 1;
     acceptance 1–11: Acceptance 1–12;
-  - RL 9767 finding C: Task 1 Step 3; *Out of S3*; Hand-off 3;
-  - RL 9758 items 1–4, T1 and acceptance 1–4: Task 2; Acceptance 16–19;
-  - FD 9759 limbs (2) and (3), with the 10:30:00 amendment: decision 2; Tasks 2 and 3;
+  - RL-1474 finding C: Task 1 Step 3; *Out of S3*; Hand-off 3;
+  - RL-1438 items 1–4, T1 and acceptance 1–4: Task 2; Acceptance 16–19;
+  - FD-1437 limbs (2) and (3), with the 10:30:00 amendment: decision 2; Tasks 2 and 3;
     Acceptance 16–20; Hand-off 2 and 4;
-  - RL 9620: Global Constraints; *Contention*; Activation need 3; Task 9;
+  - RL-1445: Global Constraints; *Contention*; Activation need 3; Task 9;
   - `FD-1335` item 5: DP-S3-1; Task 0A (the first commit; was Task 5, dated note
     2026-10-05); Acceptance 21.
 - **Literals verified at `137bc817`:** `ValidationIssue` (`compile.py:60-72`), its importers
@@ -938,6 +938,6 @@ export function getAlgorithmDiff(slug: string, version: number, against: number)
   `RL-<9767>`, `RL-<9758>` and `FD-<9759>` (minted ids). Each is filled in Task 0 Step 2 or
   Task 4 Step 1. No other placeholder remains.
 - **Rulings re-checked before the PR:** open PRs on 2026-10-05, read for this plan's subject:
-  #1055 @`07d9d230` (RL 9767), #1061 @`2e7eff8c` (RL 9758), #1059 @`3621fe7b` (FD 9759),
-  #1162 @`381254c3` (RL 9620), #1131 @`c66300e5` (S2). Nothing else found rules on the
+  #1055 @`07d9d230` (RL-1474), #1061 @`2e7eff8c` (RL-1438), #1059 @`3621fe7b` (FD-1437),
+  #1162 @`381254c3` (RL-1445), #1131 @`c66300e5` (S2). Nothing else found rules on the
   validate route, the diff route or the designer's validation.

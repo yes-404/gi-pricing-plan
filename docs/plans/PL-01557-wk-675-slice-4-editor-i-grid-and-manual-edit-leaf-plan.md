@@ -17,7 +17,7 @@ relates: [PL-1286, PL-1371, SL-1369, RL-1184, RL-1263, FD-1366, PL-1364, SL-1367
 
 # PL-1557 — WK-675 Slice 4: Editor I, the rate table grid and manual edit, leaf plan
 
-*(Minted 2026-10-09 as PL-1557 from working id 9582, in the D3 batch mint; citations of the ids minted in this batch are re-pointed, quoted text and quoted channel entries stay as quoted, and cites of PL 9576, PL 9574, SL 9577 and SL 9575 stay working ids.)*
+*(Minted 2026-10-09 as PL-1557 from working id 9582, in the D3 batch mint; citations of the ids minted in this batch, and of ids already minted on main (RL-1474, RL-1475, RL-1473, RL-1445, PL-1476, SL-1477, FD-1437, RL-1438), are re-pointed outside quotes, quoted text and quoted channel entries stay as quoted, and cites of PL 9576, PL 9574, SL 9577 and SL 9575 stay working ids.)*
 
 This plan is filed under working id 9582. Its `SL-` row under WK-675 in
 [`../roadmap.md`](../roadmap.md) is slice working id 9583, `draft`. The lead reserved both on
@@ -28,8 +28,8 @@ section AW. Evidence was read at origin/main `137bc817`, tree `94894053`, on 202
 16:44–17:10 BST, and re-checked at `4d3be141` (17:14:42 BST), which adds only `PL-1419` (#1127)
 over `137bc817`: no file this plan cites changed.
 
-The rulings this plan rests on are still working ids on unmerged PRs: RL 9753 (#1067), RL 9766
-(#1055), and RL 9620 (#1162). Each is cited by its working id and PR, and each is re-anchored
+The rulings this plan rests on are still working ids on unmerged PRs: RL-1475 (#1067), RL-1473
+(#1055), and RL-1445 (#1162). Each is cited by its working id and PR, and each is re-anchored
 at the mint.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended)
@@ -60,7 +60,7 @@ FR-234's errors, each shown on the cell it names. A Rate Table Version shows no 
 state (FR-1186).
 
 **Architecture.** The backend comes first, spec-first:
-- RL 9753's two reads: the definition `GET /api/v1/rate-tables/{slug}@{version}` → `RateTable`,
+- RL-1475's two reads: the definition `GET /api/v1/rate-tables/{slug}@{version}` → `RateTable`,
   and `GET /api/v1/rate-tables/{slug}@{version}/cells` → `Page[RateTableCell]`, ordered by key
   in one Python function for both storages;
 - the new model-schema type `RateTableCell`, with `rows` and both `default_row` fields
@@ -91,13 +91,13 @@ plan: `PL-1286` S4 (`:306`).
    S4's leaf plan must split, the split, or one read-routes slice before S2, needs no further
    scope call; the planner records it at that leaf plan's ACK". This plan does not split
    (DP-S4-4).
-2. **RL 9753** (working id, #1067, head `15e1bfde`), *Ruled* item 2 and item 3, and T3, T4 and
+2. **RL-1475** (#1067, head `15e1bfde`), *Ruled* item 2 and item 3, and T3, T4 and
    T5. Item 3: "**No route for a version's table list.** It is `pins.rate_tables` on the
    Rating Version, which RL 9766's read returns."
-3. **RL 9766** (working id, #1055, head `07d9d230`), DP-5 (a): "A Rating Version is
+3. **RL-1473** (#1055, head `07d9d230`), DP-5 (a): "A Rating Version is
    **addressed** by its `slug@version` and read by it. … In `/rating/:slug/v/:version/…`,
    the slug and version are the **Rating Version's own**, never its algorithm's." S2 builds
-   that read (SL 9711, PL 9713, #1131).
+   that read (SL-1477, PL-1476, #1131).
 4. **RL-1184 E5** (`docs/rulings/RL-01184-*.md:122-127`): the manual-edit row "now carries a
    request shape that follows the import route (edited cells against a named base, a diff for
    confirmation, `confirm: true` creates), the FR-229 change note, and the owner." The row is
@@ -105,7 +105,7 @@ plan: `PL-1286` S4 (`:306`).
 5. **FD-1366** *Disposition*: "**Dispatch-record template line for WK-1178:** 'every new or
    changed JSON route has typed request and 2xx response schemas.'" This slice adds three JSON
    routes, and holds itself to that line.
-6. **RL-1263** item 4 and **RL 9620** (working id, #1162, head `381254c3`) items 1–2: at most
+6. **RL-1263** item 4 and **RL-1445** (#1162, head `381254c3`) items 1–2: at most
    one full gate at a time; two slices from the same Work run at once only when the dispatch
    record shows (a) the file sets resolved and (b) no plan dependency either way.
 
@@ -125,12 +125,12 @@ item 4 (serialise with `SL-1391`) is need 4 already.*
 
 ### Activation needs, in order
 
-1. **RL 9753 minted** (#1067), so FR-<b> and T3–T5 have their minted ids.
+1. **RL-1475 minted** (#1067), so FR-<b> and T3–T5 have their minted ids.
 2. **DP-S4-1 and DP-S4-2 ruled** by the decision-maker, with the spec texts for the
    manual-edit row's request and response types and its located-error extension. This is a
    new `RL-`. No working id is reserved for it yet: the lead reserves one and spawns the DM.
-3. **S2 (SL 9711) merged.** This slice consumes S2's `GET /api/v1/rating-versions/{slug}@{version}`
-   and its `/rating/:slug/v/:version` route form (DP-S4-3). Under RL 9620 item 2(b), S2 and S4
+3. **S2 (SL-1477) merged.** This slice consumes S2's `GET /api/v1/rating-versions/{slug}@{version}`
+   and its `/rating/:slug/v/:version` route form (DP-S4-3). Under RL-1445 item 2(b), S2 and S4
    cannot run at once.
 4. **`SL-1391` (WK-673 S7) not running.** It edits the same files (*Write set*). The two
    serialise; whichever merges second merges main and re-gates.
@@ -178,7 +178,7 @@ carries `@pytest.mark.req("<FR>")` (backend) or names its FR in the `describe` t
    200 and 201 responses are `$ref`s to the DP-S4-1 types, and `RateTable.default_row` is no
    longer `additionalProperties: true`. If `SL-1367`'s guard is on main by then, the guard
    passes with no new exclusion entry.
-10. **The stored-data stop (RL 9753 *What it obliges*).** Task 0 step 4's query output is
+10. **The stored-data stop (RL-1475 *What it obliges*).** Task 0 step 4's query output is
     pasted in the ledger. It shows no persisted non-`str` row or `default_row` value.
 11. **Grid (FR-228, FR-232).** `pnpm --dir frontend test -- RateTableEditorView` passes:
     the columns are the table's key columns then its value column, in declared order, with
@@ -195,7 +195,7 @@ carries `@pytest.mark.req("<FR>")` (backend) or names its FR in the `describe` t
 14. **No approval state (FR-1186).** The editor test asserts that no status, approval or
     lifecycle text renders, and the view's source holds no `status` read
     (`git grep -n 'status' -- frontend/src/views/RateTableEditorView.vue` prints nothing).
-15. **Table list from the pins (RL 9753 item 3).** The Rating Version view test asserts one
+15. **Table list from the pins (RL-1475 item 3).** The Rating Version view test asserts one
     link per `pins.rate_tables` entry, and no list call is made (the mocked client records
     exactly one `GET /rating-versions/{slug}@{version}` and nothing else).
 16. **Reachability (FR-25).** `pnpm --dir frontend test -- reachability` passes with the new
@@ -205,7 +205,7 @@ carries `@pytest.mark.req("<FR>")` (backend) or names its FR in the `describe` t
     `03` §8's row (`:1316`); `git show --stat <that commit>` lists all four paths
     (`package.json`, `pnpm-lock.yaml`, `skills-map.md`, `03-rating-engine.md`).
 18. **Gate.** Both halves of `CLAUDE.md` §11 pass on the slice tree, run once, in the single
-    gate slot (RL 9620 item 1), and `python3 scripts/audit-docs.py` fails nothing but the
+    gate slot (RL-1445 item 1), and `python3 scripts/audit-docs.py` fails nothing but the
     working-id check until the mint.
 
 ## Global Constraints
@@ -221,12 +221,12 @@ carries `@pytest.mark.req("<FR>")` (backend) or names its FR in the `describe` t
 - **No pandas** in new code (`CLAUDE.md` §3).
 - **Spec first:** each new route's FR and §5.1 row land in the same commit as its code
   (`CLAUDE.md` §2). The texts are the decision-maker's, applied byte for byte; any executor
-  wording is a stop (RL 9753, after T5).
-- **Paging is never a Job** (FR-232; RL 9753 item 2).
+  wording is a stop (RL-1475, after T5).
+- **Paging is never a Job** (FR-232; RL-1475 item 2).
 - **Typed routes:** "every new or changed JSON route has typed request and 2xx response
   schemas" (FD-1366 *Disposition*).
 - **Contention:** one full gate at a time; no shared file with a running slice (RL-1263
-  item 4; RL 9620 items 1–2).
+  item 4; RL-1445 items 1–2).
 
 ## Scope
 
@@ -243,7 +243,7 @@ carries `@pytest.mark.req("<FR>")` (backend) or names its FR in the `describe` t
 | FR-10 | Values stay exact decimal strings end to end | — |
 | FR-21 | A float-typed value is refused at the route | — |
 | FR-25 | The editor is reachable from the entry by links | — |
-| FR-<b> | RL 9753's new FR (`03` §3.3): both reads | — |
+| FR-<b> | RL-1475's new FR (`03` §3.3): both reads | — |
 | F-W10-3 | The manual-edit route, built (register row `:67`) | — |
 
 **Out of scope, owned elsewhere:** diff-vs-previous and diff-vs-seed shading (FR-230,
@@ -271,7 +271,7 @@ are S5's (`PL-1286` `:307`).
 | `frontend/src/views/RatingVersionView.vue` | the pinned-tables links (FR-25) | changed |
 | `backend/tests/test_api_rate_tables.py`, `packages/pricing-core/tests/…`, `frontend/src/**/__tests__/…` | the tests above | added |
 
-### Write set, and its contention (`RL-1263`, RL 9620)
+### Write set, and its contention (`RL-1263`, RL-1445)
 
 - **`SL-1391` (WK-673 S7, lane A, leaf `PL-1419`): serialise.** `PL-1419` names
   `backend/src/app/api/rate_tables.py`, `backend/src/app/platform/rate_tables.py`,
@@ -281,7 +281,7 @@ are S5's (`PL-1286` `:307`).
   `03` §5.1 diff row. That diff row is RL 9753 T4's anchor. If `SL-1391` merges first and the row no
   longer begins `` | `GET` | `/api/v1/rate-tables/{slug}@{version}/diff?against=` | ``, that
   is a stop for the decision-maker, not an executor re-anchor.
-- **S2 (SL 9711): serialise, and S4 consumes its output** (DP-S4-3). S2 also edits
+- **S2 (SL-1477): serialise, and S4 consumes its output** (DP-S4-3). S2 also edits
   `RatingVersionView.vue`, `router/index.ts` and `03` §5.1.
 - **S5: after S4** (`PL-1286` `:307`): it extends the same view and module.
 - **`SL-1367` (FD-1335 Part A, draft): file-disjoint.** It edits `score.py` and
@@ -302,7 +302,7 @@ slice.
 |---|---|---|---|---|
 | **DP-S4-1** | The manual-edit route's request and response types. `03:901` describes them in prose only (RL-1184 E5), and FD-1366's template line needs them typed | (a) **Edits only:** `RateTableManualEdit { base_version: int ≥ 1, edits: list[RateTableCell] (1 or more, each an existing key's full row), change_note: str (non-blank), confirm: bool = false }`, `extra="forbid"`; **200** → `RateTableDiff` (the existing diff type, `rating.py:735`); **201** → `RateTableVersion`. (b) **The full cell set**, as an import file carries it: same envelope with `cells` in place of `edits`. (c) **Address the base in the path**, `POST /rate-tables/{slug}@{version}/edit`, matching the import route's path | **(a).** The editor holds a handful of edits, and the base can exceed the 250 000-cell threshold (FR-232), so (b) would send the whole table back for one changed cell. (a) still "follows the import route" (E5): named base, diff for confirmation, `confirm: true` creates. (c) moves a declared route, which E5 kept | yes: the DM rules it, with the `03` §5.1 text |
 | **DP-S4-2** | How FR-234's failures reach the cell ("validation errors shown on the cell", `PL-1286` `:306`). Today `_validate_result` (`operations.py:483`) raises only the first issue, as text | (a) **A typed extension on the 422 problem:** `errors: list[RateTableIssue { code, message, key: RateTableCell \| null }]`, carrying every issue `validate_rate_table` returns, each located by its key columns; (b) the first issue only, parsed from `detail`; (c) the client re-validates bounds and coverage | **(a).** (b) parses prose and shows one error at a time. (c) defines FR-234 twice, which `CLAUDE.md` §2 forbids. RL 9767 (DP-6) rules the same shape of answer for the designer: every located issue, through the server's own checks | yes: the DM rules it, with the text |
-| **DP-S4-3** | S4 needs the Rating Version by `slug@version` (RL 9766) and its `pins.rate_tables` (RL 9753 item 3). S2 builds that read. `PL-1371` §3.3 lists S4 as depending on S1 and DP-4 only | (a) **S4 after S2 merges**, and consumes it; (b) S4 builds the read itself if it dispatches first | **(a).** PL-1371's own order is S2 then S4 (§5, week of 10 Oct). (b) would make two slices own one route. This is a sequencing fact; it narrows no scope | no: recorded for the lead's dispatch |
+| **DP-S4-3** | S4 needs the Rating Version by `slug@version` (RL-1473) and its `pins.rate_tables` (RL-1475 item 3). S2 builds that read. `PL-1371` §3.3 lists S4 as depending on S1 and DP-4 only | (a) **S4 after S2 merges**, and consumes it; (b) S4 builds the read itself if it dispatches first | **(a).** PL-1371's own order is S2 then S4 (§5, week of 10 Oct). (b) would make two slices own one route. This is a sequencing fact; it narrows no scope | no: recorded for the lead's dispatch |
 | **DP-S4-4** | Split S4 under DP-4 (a′)? | (a) one slice; (b) a backend read-and-edit slice, then the view | **(a).** The view is the only consumer, and its tests are what prove the routes' shapes serve it. Re-open only if Task 0 measures the band above 2 days | no |
 
 **Ruled 2026-10-05 (RL-1554, working id):** DP-S4-1 (a), its 200 a bare `RateTableDiff` and a 409 for a base that is not the latest; DP-S4-1c (ii), `created_by_edit`; DP-S4-2 (d), every failure a `FieldError` in the problem's existing `errors`; DP-S4-3 and DP-S4-4 as recommended.
@@ -314,13 +314,13 @@ slice.
 **Files:** none.
 
 - [ ] **Step 1:** `git fetch origin && git log -1 --format='%H %aI' origin/main`. Record it.
-- [ ] **Step 2:** confirm the activation needs: RL 9753 and the DP-S4-1/2 ruling are minted
+- [ ] **Step 2:** confirm the activation needs: RL-1475 and the DP-S4-1/2 ruling are minted
   on main (`git -C <wt> ls-tree --name-only origin/main docs/rulings/ | grep -c <slug>`), and
-  SL 9711 is `closed` in `docs/roadmap.md`.
-- [ ] **Step 3:** re-find every anchor: each of RL 9753 T3, T4 and T5 is found exactly once
+  SL-1477 is `closed` in `docs/roadmap.md`.
+- [ ] **Step 3:** re-find every anchor: each of RL-1475 T3, T4 and T5 is found exactly once
   (`grep -c -F` on the anchor string prints `1`), and the *Write set* symbols resolve
   (`grep -n 'default_row\|rows:' packages/model-schema/src/model_schema/rating.py`).
-- [ ] **Step 4 (the stop in RL 9753):** on the test database after `alembic upgrade head`
+- [ ] **Step 4 (the stop in RL-1475):** on the test database after `alembic upgrade head`
   and the seed, run
   ```sql
   SELECT count(*) FROM rate_table_versions
@@ -333,7 +333,7 @@ slice.
 - [ ] **Step 5:** `pnpm view @tanstack/vue-table@9.2.6 license` prints `MIT`; the peer is
   `vue >=3.2`.
 
-### Task 1: `RateTableCell` and the retype (model-schema; RL 9753 T5)
+### Task 1: `RateTableCell` and the retype (model-schema; RL-1475 T5)
 
 **Files:** Modify `packages/model-schema/src/model_schema/rating.py`; Modify
 `docs/specs/03-rating-engine.md` (T5); Test `packages/model-schema/tests/test_rate_tables.py`.
@@ -367,7 +367,7 @@ def test_default_row_is_typed_as_a_cell() -> None:
 ```python
 class RateTableCell(RootModel[dict[str, str]]):
     """One rate table row in §4.2's form: key columns and the value column, every value a
-    string (a key level or a decimal string). RL 9753 item 2; FR-228's columns are data,
+    string (a key level or a decimal string). RL-1475 item 2; FR-228's columns are data,
     so the keys are open and the value type is closed."""
 ```
 
@@ -378,7 +378,7 @@ class RateTableCell(RootModel[dict[str, str]]):
 - [ ] **Step 4:** the test passes; `uv run mypy` passes on the package.
 - [ ] **Step 5:** commit `feat(model-schema): RateTableCell, and the rate table rows typed as it (RL-<9753>)`.
 
-### Task 2: The two reads (RL 9753 T3, T4; FR-<b>, FR-232)
+### Task 2: The two reads (RL-1475 T3, T4; FR-<b>, FR-232)
 
 **Files:** Modify `backend/src/app/platform/rate_tables.py`, `backend/src/app/api/rate_tables.py`,
 `docs/specs/03-rating-engine.md` (T3, T4); Test `backend/tests/test_api_rate_tables.py`.
@@ -433,7 +433,7 @@ async def test_definition_read_carries_no_cells(client, make_table) -> None:
 def _cells_in_key_order(
     cells: Sequence[dict[str, str]], key_names: Sequence[str]
 ) -> list[dict[str, str]]:
-    """RL 9753 item 2: code-point order per key column in declared order, compared as
+    """RL-1475 item 2: code-point order per key column in declared order, compared as
     strings, for both storages. The one place cells are sorted; never a SQL ORDER BY,
     whose collation could differ from the parquet path's."""
     return sorted(cells, key=lambda row: tuple(row[name] for name in key_names))
@@ -490,7 +490,7 @@ async def read_rate_table_cells(
     )
 ```
 
-  Apply T3 and T4 byte for byte, in the three-cell or four-cell form RL 9753 names for the
+  Apply T3 and T4 byte for byte, in the three-cell or four-cell form RL-1475 names for the
   §5.1 header found at Task 0.
 - [ ] **Step 4:** the five tests pass.
 - [ ] **Step 5:** `uv run python scripts/generate-contracts.py`; commit
@@ -736,7 +736,7 @@ const grid = useTable({ features, columns, data });
 `frontend/src/router/__tests__/reachability.test.ts`.
 
 **Interfaces:** Consumes Task 5 and Task 6, and S2's `getRatingVersionBySlug(slug, version)`
-(the RL 9766 read; take its name from S2's merged code at Task 0).
+(the RL-1473 read; take its name from S2's merged code at Task 0).
 
 - [ ] **Step 1: Write the failing tests:** the route resolves `:tableSlug` through the
   Rating Version's `pins.rate_tables` (no list call); Next/Previous follow `next_cursor`
@@ -757,7 +757,7 @@ const grid = useTable({ features, columns, data });
 
 ### Task 8: The gate and the ledger
 
-- [ ] **Step 1:** check that no gate is held (`flock -n` on the gate slot, per RL 9620
+- [ ] **Step 1:** check that no gate is held (`flock -n` on the gate slot, per RL-1445
   item 1), then run both halves of `CLAUDE.md` §11 once, through `gate-runner`.
 - [ ] **Step 2:** `python3 scripts/audit-docs.py` and `uv run python scripts/req-coverage.py`.
 - [ ] **Step 3:** the slice ledger records every acceptance item with its red-then-green
@@ -781,7 +781,7 @@ lead's.
    `RL-<this>` are RL 9753's own placeholders, filled at its mint.
 3. **Type consistency.** `RateTableCell`, `RateTableManualEdit`, `RateTableDiff` and
    `RateTableVersion` are the same names in Tasks 1, 3, 5, 6 and 7. `Page_RateTableCell_`
-   is the generated name RL 9753 gives.
-4. **Dependencies named both ways (RL 9620 item 2(b)).** S4 consumes S2's Rating Version
+   is the generated name RL-1475 gives.
+4. **Dependencies named both ways (RL-1445 item 2(b)).** S4 consumes S2's Rating Version
    read; S2 does not consume S4. S4 consumes nothing of `SL-1391`, and `SL-1391` consumes
    nothing of S4, but they share files, so they serialise under item 2(a).
