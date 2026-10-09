@@ -25,7 +25,7 @@ from typing import Any, NoReturn, Protocol
 import zen
 from pydantic import BaseModel, ConfigDict
 
-from model_schema.modelling import Factor, FactorIntent
+from model_schema.modelling import Banding, Factor, FactorIntent, Grouping
 from model_schema.rating import (
     AlgorithmOutput,
     Pins,
@@ -482,6 +482,14 @@ class ResolvedArtifact(BaseModel):
     #: A pinned model's Factors, read at compile and not carried into the Bundle (`PL-1471`
     #: DP-7); a resolver that has none leaves the default.
     factors: tuple[Factor, ...] = ()
+    #: A GLM pin's Bandings and Groupings (`PL-1464` DP-1 (a)), loaded beside its Factors.
+    #: Unlike `factors` these are written into the Bundle, with the Factors, for a GLM pin
+    #: only (FR-239, NFR-491): `predict_glm` needs all three and the runtime has no database.
+    bandings: tuple[Banding, ...] = ()
+    groupings: tuple[Grouping, ...] = ()
+    #: The Model a GLM's `offset.kind == "model"` reads (FR-116, `PL-1464` DP-3 (a)), resolved
+    #: the same way, so the runtime computes its linear predictor per quote as `/predict` does.
+    offset_source: ResolvedArtifact | None = None
 
 
 class ArtifactResolver(Protocol):
@@ -691,6 +699,32 @@ def _refuse_control_factor_model_calls(
                 )
 
 
+def _carry_glm_inputs(payloads: dict[str, Any], resolved: ResolvedArtifact) -> None:
+    """Write a GLM pin's Factors, Bandings and Groupings into the Bundle (`PL-1464` DP-1 (a)).
+
+    Each travels under its own `ArtifactRef` string as its `model-schema` class's dump, so the
+    Bundle's shape and `bundle_hash` are unchanged: the inputs are fixed by the pinned model
+    version. A GBM pin adds nothing (`predict_gbm` reads its features off the frame). A model
+    offset's source model is carried the same way, under its own ref (DP-3 (a)).
+    """
+    if (resolved.payload.get("fit_result") or {}).get("model_type") != "glm":
+        return
+    for kind, items in (
+        ("factor", resolved.factors),
+        ("banding", resolved.bandings),
+        ("grouping", resolved.groupings),
+    ):
+        for item in items:
+            payloads[str(ArtifactRef(type=kind, slug=item.slug, version=item.version))] = (
+                item.model_dump(mode="json")
+            )
+    source = resolved.offset_source
+    if source is not None:
+        offset = resolved.payload["spec"]["offset"]
+        payloads[str(offset["offset_model_ref"])] = source.payload
+        _carry_glm_inputs(payloads, source)
+
+
 async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> Bundle:
     """Compile a pinned `RatingVersion` to a self-contained Bundle (FR-239/240).
 
@@ -753,6 +787,7 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
                 f"{ref} is {resolved.status!r}, not approved or better (FR-20)",
             )
         payloads[str(ref)] = resolved.payload
+        _carry_glm_inputs(payloads, resolved)
         resolved_pins[str(ref)] = resolved
     await _refuse_unapproved_objectives(version, payloads, resolver)
     await _refuse_control_factor_keys(version, payloads, resolver)

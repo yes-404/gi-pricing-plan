@@ -259,7 +259,14 @@ async def test_a_frequency_glm_model_call_returns_its_exact_rate(world: GlmWorld
 
 @pytest.mark.req("FR-226")
 async def test_a_model_call_equals_predict_glm_at_full_precision(world: GlmWorld) -> None:
-    """No quantize and no `round()` at the step, whichever `result_type` it declares."""
+    """No quantize and no `round()` at the step, whichever `result_type` it declares.
+
+    **Deviation from item 15's "exact Decimal of the float", reported to the lead.** The
+    engine carries a handler's float at 15 significant digits (`0.0588198259273704` for
+    `0.058819825927370374`, probed live; a `str` value cannot enter `v * 2`), so no form
+    crosses the binding bit-exactly. The assertion is therefore 1e-14 relative: tight enough
+    that any rounding to the unit, cent or `dp` would fail it.
+    """
     quote = QUOTES[1]
     expected = world.predict(
         driver_age=float(quote["driver_age"]), region=quote["region"],
@@ -269,7 +276,7 @@ async def test_a_model_call_equals_predict_glm_at_full_precision(world: GlmWorld
     for result_type in (None, "decimal", "money_minor"):
         algorithm = algorithm_payload(result_type=result_type)
         compiled = load_bundle(await compiled_bundle(world, algorithm))
-        assert (await _value(compiled, **quote))["risk"] == expected
+        assert (await _value(compiled, **quote))["risk"] == pytest.approx(expected, rel=1e-14)
 
 
 @pytest.mark.req("FR-239")
