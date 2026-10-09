@@ -331,6 +331,8 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "RATING_EVALUATION_FAILED",
         # FR-240 (RL-1329): a clamp the premium ladder cannot place, refused at save and at compile.
         "LADDER_CLAMP_UNPLACEABLE",
+        # FR-246 (RL-1519): a step reads a name it does not declare, refused at save and at compile.
+        "RATING_STEP_UNDECLARED_READ",
         "RATE_TABLE_INCOMPLETE",
         "RATE_TABLE_KEY_DUPLICATE",
         "PIN_NOT_APPROVED",
