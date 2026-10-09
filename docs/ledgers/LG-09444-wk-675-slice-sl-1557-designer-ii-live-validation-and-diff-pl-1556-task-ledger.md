@@ -42,7 +42,7 @@ FR-240, FR-244, FR-403, NFR-463, and the FR that RL-1474 T1 creates. FR-246 is n
 | 0A | diff route typed, contract regenerated | Acceptance 21 | done, commit 2 |
 | 1 | `graph_invariant_issues` and types in model-schema | Acceptance 2, 4 | done, commit 3 |
 | 2 | mode mismatch named at compile | Acceptance 16, 17, 19 (18 already on main) | pure level done, commit 4; HTTP test authored, unrun (DB) |
-| 3 | bare-`ValueError` sweep | Acceptance 20 | open |
+| 3 | bare-`ValueError` sweep | Acceptance 20 | done, commit 5 (no code change) |
 | 4 | validate route and spec texts | Acceptance 1, 3, 5–11 | open |
 | 6 | live validation in the designer | Acceptance 12–15, 23 | open |
 | 7 | diff overlay | Acceptance 22 | open |
@@ -113,6 +113,23 @@ Not yet. The auditor writes it.
 - GREEN: `test_rating_compile_bundle.py` `10 passed`; `test_rating_compile.py` `45 passed`. `ruff check packages/pricing-core` clean.
 - `backend/tests/test_rating_mode_mismatch_api.py` is authored (Acceptance 16 over HTTP and the 201 save of the same algorithm, 19). It imports clean but is **not run**: it needs the Postgres fixtures, which the small-test rule bars. Owed in the heavy-run phase; its red on main (`BUNDLE_COMPILE_FAILED`) is to be shown then, by running it at `origin/main`'s `compile.py`. The `s_model` step shape is written from the valid-algorithm fixture and unverified against `validate_algorithm` until that run.
 - Acceptance 17 (the matching version compiles) is covered by the existing compile-bundle tests that use `_version()` unchanged.
+
+#### 2026-10-09 16:25 BST — Task 3, the FD-1437 limb (3) sweep (Acceptance 20; no code change)
+
+Predicate, verbatim, run at tree `893d8161` (`git -C <wt> grep -n -E 'raise (ValueError|[A-Za-z]*Error)\(|_raise_named\(' -- packages/pricing-core/src/pricing_core/rating/compile.py packages/model-schema/src/model_schema/rating.py`): **27 lines** (rating.py 15 `raise …Error(` sites, 3 of them in `_graph_invariants`' mapping; compile.py 1 `raise CodedError(` inside `_raise_named`, plus 11 `_raise_named(` call/def lines). Only the ones that can reach `compile_rating_version`'s `except ValueError` (`backend/src/app/platform/rating_versions.py:622`) with a non-`CodedError` are rows below; that handler maps a `CODE: detail` message to its code and everything else to `BUNDLE_COMPILE_FAILED`.
+
+| # | Site (file, symbol) | Raises | Outcome today | Verdict |
+|---|---|---|---|---|
+| 1 | `compile.py` `compile_bundle`: `RatingAlgorithm.model_validate(resolved_algorithm.payload)` (`:704`) | pydantic `ValidationError` (a `ValueError`), incl. `rating.py`'s validators and `_graph_invariants` messages | `BUNDLE_COMPILE_FAILED` | right: a stored payload that no longer validates is a corrupt artifact; `03` §5.1 owns no code for it. Finding candidate for the auditor, not fixed here |
+| 2 | `compile.py` `_refuse_unapproved_objectives`: `ArtifactRef.model_validate(objective["ref"])` (`:619`) | `ValidationError` | `BUNDLE_COMPILE_FAILED` | right: a malformed `spec.objective.ref` inside a pinned model payload; no owned code |
+| 3 | `compile.py` `_refuse_control_factor_keys`: `ArtifactRef.model_validate(factor_ref)` (`:643`) | `ValidationError` | `BUNDLE_COMPILE_FAILED` | right, as row 2 |
+| 4 | `compile.py` `compile_bundle`: `Bundle(...)` construction | `ValidationError` | `BUNDLE_COMPILE_FAILED` | right: an internal-shape failure, not a user-correctable refusal |
+| 5 | `rating.py` `check_model_reference_mode` (`:221`) | bare `ValueError` | **now `MODEL_REFERENCE_MODE_INCONSISTENT`** (Task 2) | named |
+| 6 | `compile.py` `validate_algorithm` issues (`:721`) | `_raise_named(issues[0].code, …)` | named | named |
+| 7 | the platform `_Resolver.resolve` | `PlatformError` (not a `ValueError`, `errors.py:423`) | passes through | outside the handler |
+| 8 | `to_jdm`, `bundle_hash` | no `raise` in `compile.py` | none | none |
+
+Count: **4** sites keep `BUNDLE_COMPILE_FAILED` with a reason (rows 1–4), **1** is now named (row 5). A site that should carry a named code and has none in `03` §5.1: rows 1–3 are recorded for the auditor as a finding candidate (no spec code for "a pinned artifact's stored payload is malformed"). Nothing mapped to an existing owned code, so no code change (plan Task 3 Step 3).
 
 ## PRs
 
