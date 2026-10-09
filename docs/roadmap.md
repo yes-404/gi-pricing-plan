@@ -1106,6 +1106,8 @@ From “Workstreams” (line 385): Frontend: **DAG designer (Vue Flow)**, rate t
 
 **2026-10-03 — Slice 12 (the Deployments view) moves to Phase 3** (`PL-1371` §9 DP-2 (a), the maintainer's acceptance by delegation in the entry "2026-10-03 14:56:08 BST — PL 9746 (#1076 @ee0ea8d2): ACCEPTED with your four amendments; DP-1 (a), DP-2 (a), DP-3 (a); amendment 4 answered; DP-4 to the user; no separate audit"). Deferred with an owner: the maintainer; event: the P2 phase closure record, for Phase 3's first plan. DP-7 (OQ-1285) moves with it. The rest of this Work stays in P2; the conditional cuts (S13 and S14, then S9) are `PL-1371` DP-3's trigger, each brought to the maintainer when it fires, never applied automatically.
 
+**2026-10-08 — Slices 13 and 14 move to Phase 3** (G1's moved-out-of-P2 clause; `PL-1371` §9 DP-3's trigger, fired; F-2 (b) of the maintainer's (by delegation) entry "2026-10-08 12:55:22 BST — P2 RE-PLAN RULED on the inventory (handover/p2-inventory-2026-10-09.md, at 60e9254c): F-1 (a), F-2 (b), F-3 (b), F-4 (a)+(b), F-5 (a)/(b), F-6 (a)" in `~/gi-pricing-plan.local/channel/to-lead.md`). Deferred with an owner: the maintainer; event: the P2 phase closure record, for Phase 3's first plan, as for Slice 12 above. S9 is the next cut if the 16 Oct 2026 re-baseline is short; it is decided then, not now. The rest of this Work stays in P2. Recorded in the docs batch D1, 2026-10-09.
+
 #### SL-1369 — Slice 1: chart foundation — ChartFigure's column descriptors per RL-1307, its 13 call sites migrated, and register F39's socket diagnosis (NFR-463)
 
 ```yaml
@@ -1411,6 +1413,8 @@ Minted 2026-09-28 by `CR-1167` Proposal 5.1 (plan review 14, accepted by delegat
 
 **2026-09-28:** also carries RFC-897 §5 (Stage 3, the ownership map), transferred at WK-695's close (`CR-1183`), 2026-09-28.
 
+**2026-10-08 — WK-1169 moves out of Phase 2 to Phase 3** (G1's moved-out-of-P2 clause; F-1 (a) of the maintainer's (by delegation) entry "2026-10-08 12:55:22 BST — P2 RE-PLAN RULED on the inventory (handover/p2-inventory-2026-10-09.md, at 60e9254c): F-1 (a), F-2 (b), F-3 (b), F-4 (a)+(b), F-5 (a)/(b), F-6 (a)" in `~/gi-pricing-plan.local/channel/to-lead.md`). Obligations carried with WK-1170's (above): owner: the maintainer, event: Phase 3's first plan. Recorded in the docs batch D1, 2026-10-09; the section's `phase:` field is left as filed.
+
 ### WK-1170 — The create-read-retire audit — RFC-937's transition steps
 
 ```yaml
@@ -1428,6 +1432,8 @@ Minted 2026-09-28 by `CR-1167` Proposal 5.1 (plan review 14, accepted by delegat
 **2026-09-28:** also carries RFC-897 §6 (Stage 4, the create-read-retire verdicts, including the unreferenced-plans decomposition), transferred at WK-695's close (`CR-1183`), 2026-09-28.
 
 **2026-09-30:** also owns FD-1280's draft-RL guard and FD-1282's frozen-file enforcement, 2026-09-30, the maintainer's entry 06:00:41. *(Amended 2026-09-30 by the lead, on the maintainer's entries "2026-09-30 06:00:41 BST — MERGE-ACK #947 (FD-1280..1282, the F-W10-2 owner); DECISIONS on FD-1280 and FD-1282" and "2026-09-30 06:19:28 BST — MERGE-ACK #921 (FD-1283); WK-1170 confirmed as owner of the FD-1280/1282 checks", which gives this line's wording. PL-1276 takes them into its scope at activation.)*
+
+**2026-10-08 — WK-1170 moves out of Phase 2 to Phase 3** (G1's moved-out-of-P2 clause; F-1 (a) of the maintainer's (by delegation) entry "2026-10-08 12:55:22 BST — P2 RE-PLAN RULED on the inventory (handover/p2-inventory-2026-10-09.md, at 60e9254c): F-1 (a), F-2 (b), F-3 (b), F-4 (a)+(b), F-5 (a)/(b), F-6 (a)" in `~/gi-pricing-plan.local/channel/to-lead.md`, taken on the inventory's flags, with F-6 (a)'s load plan). Its FD-1280 (the draft-RL guard) and FD-1282 (frozen-file enforcement) obligations are carried, owner: the maintainer, event: Phase 3's first plan. Frozen-file enforcement (check 34) stays inactive until Phase 3; the lead keeps enforcing it at ACK by `-U0`. Recorded in the docs batch D1, 2026-10-09; the section's `phase:` field is left as filed.
 
 ### WK-1178 — P2 standing maintenance: hotfixes, dependency bumps and security findings
 
