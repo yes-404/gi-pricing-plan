@@ -11,10 +11,14 @@ default; these tests pass `dislocation=False` and record, or withhold, the run t
 
 from __future__ import annotations
 
+import hashlib
+from typing import Any
 from uuid import UUID
 
 import pytest
+from backend.tests.test_rating_version_compile import _minimal_algorithm
 from backend.tests.test_rating_versions import (
+    _algorithm,
     _approved_baseline,
     _Gate,
     _gate,
@@ -27,6 +31,8 @@ from backend.tests.test_rating_versions import (
 from app.db.models import DeploymentRow, EnvironmentRow
 from app.db.session import Database
 from app.errors import PlatformError
+from app.platform import rating_versions as rating_versions_service
+from model_schema import RatingAlgorithm, diff_algorithms
 
 _STALE_HASH = "sha256:" + "0" * 64
 
@@ -187,3 +193,85 @@ async def test_limb_2_prefers_the_version_live_in_the_baseline_environment(
     )
     await gate.submit(rv_c, dislocation=False)
     assert (await gate.row(rv_c)).evidence["dislocation_run_id"] == str(run_id)  # type: ignore[index]
+
+
+# ---- Task 2: structural_diff (FR-364 E4, FR-219) -----------------------------------
+
+
+@pytest.mark.req("FR-219")
+def test_a_first_versions_diff_is_taken_against_an_empty_algorithm() -> None:
+    """DP-S5-1 (a): with no baseline the diff is against an empty algorithm, so every step is
+    an addition. DB-free: the empty algorithm must itself validate as a `RatingAlgorithm`."""
+    candidate = RatingAlgorithm.model_validate(_minimal_algorithm())
+    empty = rating_versions_service._empty_algorithm(like=candidate)
+    diff = diff_algorithms(empty, candidate)
+    assert diff.added_steps == sorted(step.step_id for step in candidate.steps)
+    assert diff.removed_steps == []
+    assert diff.changed_steps == []
+
+
+def _expected_diff(old: dict[str, Any] | None, new: dict[str, Any]) -> bytes:
+    candidate = RatingAlgorithm.model_validate(new)
+    previous = (
+        RatingAlgorithm.model_validate(old)
+        if old is not None
+        else rating_versions_service._empty_algorithm(like=candidate)
+    )
+    return diff_algorithms(previous, candidate).model_dump_json().encode()
+
+
+@pytest.mark.req("FR-364")
+@pytest.mark.req("FR-219")
+async def test_submission_persists_the_structural_diff_as_a_blob(
+    database: Database, workspace_id
+) -> None:
+    """A first version: the diff is against an empty algorithm; the evidence names the blob,
+    whose bytes are `AlgorithmDiff.model_dump_json()`, and the verifier accepts the row."""
+    gate = await _gate(database, workspace_id)
+    await gate.suite(gate.analyst, _suite(_quote()))
+    rv_id = await gate.version()
+    assert not rating_versions_service.structural_diff_verified(await gate.row(rv_id))
+
+    await gate.submit(rv_id)
+
+    row = await gate.row(rv_id)
+    digest = row.evidence["structural_diff_blob"]  # type: ignore[index]
+    assert gate.blob_store.objects[digest] == _expected_diff(None, _algorithm(1))
+    assert hashlib.sha256(gate.blob_store.objects[digest]).hexdigest() == digest
+    assert rating_versions_service.structural_diff_verified(row)
+
+
+@pytest.mark.req("FR-364")
+@pytest.mark.req("FR-219")
+async def test_the_structural_diff_is_taken_against_the_baseline_algorithm(
+    database: Database, workspace_id
+) -> None:
+    """A second version on `minimal@2` against the approved `minimal@1`: the diff names the
+    changed step, not an all-additions diff against nothing."""
+    gate = await _gate(database, workspace_id)
+    # tolerance 1: `minimal@2` prices one minor unit above `minimal@1`, and the golden-quote
+    # gate (FR-260) must pass for both.
+    await _approved_baseline(gate, _suite(_quote(tolerance=1)))
+    rv_id = await gate.version(algorithm="rating_algorithm:minimal@2")
+
+    await gate.submit(rv_id)
+
+    digest = (await gate.row(rv_id)).evidence["structural_diff_blob"]  # type: ignore[index]
+    stored = gate.blob_store.objects[digest]
+    assert stored == _expected_diff(_algorithm(1), _algorithm(2, plus=1))
+    assert stored != _expected_diff(None, _algorithm(2, plus=1))
+
+
+@pytest.mark.req("FR-364")
+async def test_a_blob_store_is_required_to_submit(database: Database, workspace_id) -> None:
+    """Fail closed: `submit_for_review` takes the store as a required keyword, so a caller that
+    forgets it fails at once (`TypeError`), before anything is written."""
+    gate = await _gate(database, workspace_id)
+    await gate.suite(gate.analyst, _suite(_quote()))
+    rv_id = await gate.version()
+    async with database.unit_of_work() as session:
+        with pytest.raises(TypeError, match="blob_store"):
+            await rating_versions_service.submit_for_review(  # type: ignore[call-arg]
+                session, workspace_id=workspace_id, actor=gate.actuary,
+                rating_version_id=rv_id, change_summary="no store",
+            )

@@ -10,6 +10,7 @@ reference (FR-386) and refuse one that does not exist.
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -23,6 +24,7 @@ from app.db.models import (
     ApprovalDecisionRow,
     ApprovalRequestRow,
     AuditEventRow,
+    BlobRow,
     RatingVersionRow,
     RegressionSuiteRow,
     RegressionSuiteVersionRow,
@@ -38,9 +40,11 @@ from app.platform import rating_versions as rating_service
 from app.platform import rbac
 from app.platform import regression_runs as run_service
 from app.platform import regression_suites as suite_service
+from app.platform.blobs import BlobStore
 from model_schema import (
     ActorKind,
     ArtifactRef,
+    BlobRef,
     DecisionKind,
     Principal,
     RatingVersionStatus,
@@ -111,7 +115,7 @@ async def test_create_submit_approve_a_rating_version(
         _, request = await rating_service.submit_for_review(
             session, workspace_id=workspace_id, actor=actuary,
             rating_version_id=rating_id, change_summary="demo rating version",
-            load_compiled=gate.load,
+            blob_store=gate.blob_store, load_compiled=gate.load,
         )
         request_id = request.id
     async with database.session() as session:
@@ -178,7 +182,7 @@ async def test_a_rating_version_reference_resolves_in_the_approvals_fanout(
         await rating_service.submit_for_review(
             session, workspace_id=workspace_id, actor=actuary,
             rating_version_id=rating_id, change_summary="into review",
-            load_compiled=gate.load,
+            blob_store=gate.blob_store, load_compiled=gate.load,
         )
     async with database.session() as session:
         assert await _resolve_rating_version(
@@ -606,7 +610,7 @@ async def test_one_of_two_approvals_leaves_the_rating_version_in_review(
         _, request = await rating_service.submit_for_review(
             session, workspace_id=workspace_id, actor=actuary,
             rating_version_id=rating_id, change_summary="two approvals needed",
-            load_compiled=gate.load,
+            blob_store=gate.blob_store, load_compiled=gate.load,
         )
         request_id = request.id
     async with database.unit_of_work() as session:
@@ -640,7 +644,7 @@ async def test_a_rejected_rating_version_returns_to_draft_with_a_true_audit_befo
         row, request = await rating_service.submit_for_review(
             session, workspace_id=workspace_id, actor=actuary,
             rating_version_id=rating_id, change_summary="to be rejected",
-            load_compiled=gate.load,
+            blob_store=gate.blob_store, load_compiled=gate.load,
         )
         request_id, ref = request.id, f"rating_version:{row.slug}@{row.version}"
     async with database.unit_of_work() as session:
@@ -725,7 +729,7 @@ async def test_a_stale_request_on_a_draft_rating_version_can_still_be_closed(
         row, _ = await rating_service.submit_for_review(
             session, workspace_id=workspace_id, actor=actuary,
             rating_version_id=rating_id, change_summary="submitted properly",
-            load_compiled=gate.load,
+            blob_store=gate.blob_store, load_compiled=gate.load,
         )
     assert row.status == "review"
 
@@ -776,6 +780,31 @@ def _suite(*quotes: dict[str, Any], algorithm_slug: str = "minimal") -> Regressi
             "generation": {"cases": 10, "seed": 1, "strategy": "input_contract_sampling"},
         }
     )
+
+
+class AccountingBlobStore(BlobStore):
+    """A `BlobStore` whose `put` keeps the accounting row and the bytes in memory.
+
+    The submit tests need a store that accepts a blob and counts it, not MinIO: the structural
+    diff is stored at submission (PL-1500 Task 2), and `read` here returns what `put` was given.
+    """
+
+    def __init__(self) -> None:  # no S3 client: only `put` and `read` are used
+        self.objects: dict[str, bytes] = {}
+
+    async def put(self, session: Any, content: Any, media_type: str) -> BlobRef:
+        body = content if isinstance(content, bytes) else b"".join(content)
+        digest = hashlib.sha256(body).hexdigest()
+        if await session.get(BlobRow, digest) is None:
+            session.add(
+                BlobRow(sha256=digest, bytes_=len(body), media_type=media_type, ref_count=0)
+            )
+            await session.flush()
+        self.objects[digest] = body
+        return BlobRef(sha256=digest, bytes=len(body), media_type=media_type)
+
+    async def read(self, ref: BlobRef) -> bytes:
+        return self.objects[ref.sha256]
 
 
 async def record_dislocation_run(
@@ -831,6 +860,7 @@ class _Gate:
         self.workspace_id = workspace_id
         self.bundles: dict[str, Bundle] = {}
         self.next_version = 1
+        self.blob_store = AccountingBlobStore()
 
     async def setup(self) -> _Gate:
         self.analyst = await _principal(self.database, self.workspace_id, "analyst")
@@ -1011,7 +1041,7 @@ class _Gate:
             _, request = await rating_service.submit_for_review(
                 session, workspace_id=self.workspace_id, actor=self.actuary,
                 rating_version_id=rating_id, change_summary="golden",
-                load_compiled=loader or self.load,
+                blob_store=self.blob_store, load_compiled=loader or self.load,
             )
             return request
 

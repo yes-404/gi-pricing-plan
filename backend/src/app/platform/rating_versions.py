@@ -28,7 +28,7 @@ from app.db.models import (
     RegressionSuiteVersionRow,
 )
 from app.errors import PlatformError
-from app.platform import approvals, audit, rbac
+from app.platform import approvals, audit, blobs, rbac
 from app.platform import environments as environments_service
 from app.platform import objectives as objectives_service
 from app.platform import rate_tables as rate_tables_service
@@ -61,6 +61,7 @@ from model_schema import (
     RegressionSuiteContent,
     check_model_reference_mode,
     context_hash,
+    diff_algorithms,
 )
 from model_schema.approvals import DEFAULT_DISLOCATION_BASELINE_ENVIRONMENT
 from pricing_core.rating.compile import Bundle, ResolvedArtifact, compile_bundle
@@ -94,6 +95,7 @@ __all__ = [
     "dislocation_run_verified",
     "golden_quote_delta_authors",
     "load_rating_version",
+    "structural_diff_verified",
     "submit_for_review",
     "to_schema",
 ]
@@ -329,6 +331,7 @@ async def submit_for_review(
     actor: Principal,
     rating_version_id: UUID,
     change_summary: str,
+    blob_store: BlobStore,
     load_compiled: BundleLoader | None = None,
 ) -> tuple[RatingVersionRow, ApprovalRequestRow]:
     """`draft → review`, creating the approval request through governance.
@@ -340,6 +343,10 @@ async def submit_for_review(
     same algorithm — is pinned into `evidence.golden_quotes`. `load_compiled` loads the
     bundle for a ref; the route supplies one that refuses rather than degrades when
     metadata storage is down (audit finding F5). It is needed only when a suite exists.
+
+    `blob_store` is required, with no default: FR-219's structural diff is stored as a blob
+    (`06` FR-364 E4), and a caller that forgets the store fails at once rather than submitting
+    a version whose diff was never kept.
     """
     await rbac.require_permission(
         session,
@@ -371,12 +378,17 @@ async def submit_for_review(
     dislocation_run_id = await _dislocation_gate(
         session, workspace_id=workspace_id, row=row, ref=ref, baseline=baseline
     )
+    structural_diff_blob = await _structural_diff_gate(
+        session, workspace_id=workspace_id, row=row, ref=ref, baseline=baseline,
+        blob_store=blob_store,
+    )
     # Written once, here, and never edited after (`03` §4.3's invariant). The ids are the
     # only other keys these gates write; `golden_quotes` is exactly what the gate returned.
     row.evidence = {
         **(row.evidence or {}),
         "golden_quotes": golden_quotes,
         "regression_suite_run_id": str(run_id),
+        "structural_diff_blob": structural_diff_blob,
         **(
             {"dislocation_run_id": str(dislocation_run_id)}
             if dislocation_run_id is not None
@@ -873,6 +885,75 @@ async def _dislocation_gate(
             "current live version, as its baseline"
         )
     raise _evidence_incomplete(ref, f"FR-257 limb (2): {why}")
+
+
+def _empty_algorithm(*, like: RatingAlgorithm) -> RatingAlgorithm:
+    """The algorithm a first version is diffed against (DP-S5-1 (a)): the same slug, no inputs,
+    no outputs, no steps, so every step of the first version is an addition."""
+    return RatingAlgorithm(
+        slug=like.slug, version=like.version, input_contract=[], outputs=[], steps=[]
+    )
+
+
+async def _algorithm_of(
+    session: AsyncSession, *, workspace_id: UUID, rating_version: RatingVersionRow
+) -> RatingAlgorithm | None:
+    """The saved Rating Algorithm a version points at, or `None` for a version without one."""
+    if rating_version.algorithm_ref is None:
+        return None
+    algorithm_ref = ArtifactRef.model_validate(rating_version.algorithm_ref)
+    saved = await session.scalar(
+        select(RatingAlgorithmRow).where(
+            RatingAlgorithmRow.workspace_id == workspace_id,
+            RatingAlgorithmRow.slug == algorithm_ref.slug,
+            RatingAlgorithmRow.version == algorithm_ref.version,
+        )
+    )
+    return None if saved is None else RatingAlgorithm.model_validate(saved.content)
+
+
+async def _structural_diff_gate(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    row: RatingVersionRow,
+    ref: ArtifactRef,
+    baseline: ArtifactRef | None,
+    blob_store: BlobStore,
+) -> str:
+    """FR-219's diff, computed at submission and stored: the blob's sha256 to record.
+
+    The bytes are `AlgorithmDiff.model_dump_json()` of the baseline's algorithm (DP-S5-1:
+    the same baseline limb (2) uses; an empty algorithm for a first version) against this
+    version's. A version with no algorithm has nothing to diff and fails closed (R4).
+    """
+    candidate = await _algorithm_of(session, workspace_id=workspace_id, rating_version=row)
+    if candidate is None:
+        raise _evidence_incomplete(
+            ref, "FR-219: a version with no saved Rating Algorithm has no structural diff"
+        )
+    previous = None
+    if baseline is not None:
+        baseline_row = await resolve_rating_version_ref(
+            session, workspace_id=workspace_id, ref=baseline
+        )
+        previous = await _algorithm_of(
+            session, workspace_id=workspace_id, rating_version=baseline_row
+        )
+    diff = diff_algorithms(
+        previous if previous is not None else _empty_algorithm(like=candidate), candidate
+    )
+    stored = await blob_store.put(session, diff.model_dump_json().encode(), "application/json")
+    # The row holds a reference to the blob for as long as the version exists, so FR-420's
+    # collector (`ref_count == 0`) can never take it (the pattern `traces.write_trace` uses).
+    await blobs.retain(session, stored.sha256)
+    return stored.sha256
+
+
+def structural_diff_verified(row: RatingVersionRow) -> bool:
+    """Whether the evidence names a stored structural diff: Slice 6's `verifiable` entry for
+    `structural_diff` (`06` FR-364's 2026-09-28 amendment, RL-1184 E4)."""
+    return bool((row.evidence or {}).get("structural_diff_blob"))
 
 
 def dislocation_run_verified(row: RatingVersionRow) -> bool:
