@@ -30,6 +30,7 @@ from app.db.models import (
 from app.errors import PlatformError
 from app.platform import approvals, audit, rbac
 from app.platform import objectives as objectives_service
+from app.platform import perils as perils_service
 from app.platform import rate_tables as rate_tables_service
 from app.platform import reference as reference_service
 from app.platform import regression_runs as regression_runs_service
@@ -604,11 +605,24 @@ class WorkspaceResolver:
                 status="no_maturity_concept",
                 payload=to_factor(factor).model_dump(mode="json"),
             )
+        if ref.type == "peril_structure":
+            structure_row = await perils_service.load_structure_by_ref(
+                session, workspace_id=workspace_id, slug=ref.slug, version=ref.version
+            )
+            if structure_row is None:
+                raise PlatformError("NOT_FOUND", "Peril Structure not found", 404, f"{ref}")
+            # Its status is read as the row holds it, so `compile_bundle`'s maturity loop
+            # (FR-20) refuses a structure that is not `approved` (FD-1456).
+            return ResolvedArtifact(
+                status=structure_row.status,
+                payload=perils_service.to_structure(structure_row).model_dump(mode="json"),
+            )
         raise PlatformError(
             "NOT_FOUND",
             "Pinned artifact cannot be resolved yet",
             404,
-            f"{ref} has no backend table yet (Phase 2); a compile cannot embed it.",
+            f"{ref}: the compile resolver has no branch for artifact type {ref.type!r}; "
+            "a compile cannot embed it.",
         )
 
 
