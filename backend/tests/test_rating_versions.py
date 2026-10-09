@@ -816,6 +816,7 @@ async def record_dislocation_run(
     baseline_ref: str,
     actor_id: UUID,
     quantiles: dict[str, str | None] | None = None,
+    baseline_hash: str | None = None,
 ) -> UUID:
     """Persist a Dislocation Run naming `candidate_ref` at `candidate_hash` against
     `baseline_ref` (FR-257 limb (2)'s evidence), through the one writer `persist_run`.
@@ -846,7 +847,8 @@ async def record_dislocation_run(
     async with database.unit_of_work() as session:
         row = await dislocation_service.persist_run(
             session, workspace_id=workspace_id, run=run,
-            baseline_bundle_hash=candidate_hash, candidate_bundle_hash=candidate_hash,
+            baseline_bundle_hash=baseline_hash or candidate_hash,
+            candidate_bundle_hash=candidate_hash,
             actor_id=actor_id,
         )
         return row.id

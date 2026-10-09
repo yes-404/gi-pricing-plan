@@ -11,6 +11,7 @@ approver's decision reaches the row through `apply_approval_decision`, the seam
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
+from decimal import Decimal
 from typing import Any, Literal, cast
 from uuid import UUID
 
@@ -65,7 +66,12 @@ from model_schema import (
     context_hash,
     diff_algorithms,
 )
-from model_schema.approvals import DEFAULT_DISLOCATION_BASELINE_ENVIRONMENT
+from model_schema.approvals import (
+    DEFAULT_APPROXIMATION_DEVIATION,
+    DEFAULT_DISLOCATION_BASELINE_ENVIRONMENT,
+)
+from model_schema.dislocation import DislocationRun
+from model_schema.rating import ApproximationCheck
 from pricing_core.rating.compile import Bundle, ResolvedArtifact, compile_bundle
 from pricing_core.rating.runtime import CompiledBundle
 from pricing_core.rating.testing import evaluate_golden_quotes
@@ -381,6 +387,9 @@ async def submit_for_review(
     dislocation_run_id = await _dislocation_gate(
         session, workspace_id=workspace_id, row=row, ref=ref, baseline=baseline
     )
+    approximation_check = await _approximation_gate(
+        session, workspace_id=workspace_id, row=row, ref=ref, policy=policy
+    )
     structural_diff_blob = await _structural_diff_gate(
         session, workspace_id=workspace_id, row=row, ref=ref, baseline=baseline,
         blob_store=blob_store,
@@ -392,6 +401,11 @@ async def submit_for_review(
         "golden_quotes": golden_quotes,
         "regression_suite_run_id": str(run_id),
         "structural_diff_blob": structural_diff_blob,
+        **(
+            {"approximation_check": approximation_check.model_dump(mode="json")}
+            if approximation_check is not None
+            else {}
+        ),
         **(
             {"dislocation_run_id": str(dislocation_run_id)}
             if dislocation_run_id is not None
@@ -948,6 +962,89 @@ async def approximation_fidelity_statements(
             )
         statements.append(f"{model_ref}: {artifact.fidelity_statement}")
     return statements
+
+
+async def _approximation_gate(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    row: RatingVersionRow,
+    ref: ArtifactRef,
+    policy: ApprovalPolicy,
+) -> ApproximationCheck | None:
+    """FR-224: an `approximation`-mode version is held to the policy's threshold (DP-S5-2).
+
+    `None` for an `exact`-mode version, which the gate does not touch. Otherwise, in order:
+    FR-136's pre-check (cheap, ahead of any figure), the latest Dislocation Run whose spec
+    named this version at its current bundle hash as both baseline and candidate, and whose
+    baseline bundle is not the candidate's own (a twin identical to the version compares
+    nothing and would pass vacuously); then that run's observed `abs_change_pct_quantiles` at
+    the declared quantile against the maximum. A run with no figure (an empty banded set, or
+    one made before the field) is refused, never read as zero (RL-1504 T7 choice (3)).
+
+    The threshold is read **only** from the `rating_version` policy entry, falling back to
+    `DEFAULT_APPROXIMATION_DEVIATION` when the entry leaves it unset: no value switches the
+    gate off, and nothing here reaches `Settings` or the environment (`RL-1264` DP-3 (b)).
+    """
+    if row.model_reference_mode != "approximation":
+        return None
+    from app.platform import dislocation_runs as dislocation_runs_service  # cycle, as limb (2)
+
+    statements = await approximation_fidelity_statements(
+        session, workspace_id=workspace_id, row=row
+    )
+    entry = policy.entry_for("rating_version")
+    threshold = (
+        entry.approximation_deviation
+        if entry is not None and entry.approximation_deviation is not None
+        else DEFAULT_APPROXIMATION_DEVIATION
+    )
+    bundle_hash = (row.bundle or {}).get("content_hash")
+    latest = (
+        None
+        if bundle_hash is None
+        else await dislocation_runs_service.latest_run_for(
+            session,
+            workspace_id=workspace_id,
+            candidate_ref=str(ref),
+            candidate_bundle_hash=str(bundle_hash),
+            baseline_ref=str(ref),
+        )
+    )
+    if latest is None:
+        raise _evidence_incomplete(
+            ref,
+            "FR-224: an approximation-mode version needs a Dislocation Run against its own "
+            "exact-mode twin at its current bundle hash, and there is none",
+        )
+    if latest.baseline_bundle_hash == latest.candidate_bundle_hash:
+        raise _evidence_incomplete(
+            ref,
+            f"FR-224: the Dislocation Run {latest.id} compared the version with an identical "
+            "bundle, not with its exact-mode twin",
+        )
+    figures = DislocationRun.model_validate(latest.run).abs_change_pct_quantiles
+    observed = None if figures is None else figures.get(threshold.quantile_key)
+    if observed is None:
+        raise _evidence_incomplete(
+            ref,
+            f"FR-224: the Dislocation Run {latest.id} has no figure at quantile "
+            f"{threshold.quantile_key} (an empty banded set, or a run made before the field)",
+        )
+    if Decimal(observed) > threshold.max_abs_change_pct:
+        raise _evidence_incomplete(
+            ref,
+            f"FR-224: the absolute percentage change at the {threshold.quantile_key} quantile "
+            f"is {observed}%, above the policy's maximum of {threshold.max_abs_change_pct}% "
+            f"(Dislocation Run {latest.id})",
+        )
+    return ApproximationCheck(
+        dislocation_run_id=latest.id,
+        quantile=Decimal(threshold.quantile_key),
+        observed_abs_change_pct=Decimal(observed),
+        max_abs_change_pct=threshold.max_abs_change_pct,
+        fidelity_statements=tuple(statements),
+    )
 
 
 def _empty_algorithm(*, like: RatingAlgorithm) -> RatingAlgorithm:
