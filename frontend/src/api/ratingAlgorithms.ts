@@ -42,3 +42,12 @@ export function validateRatingAlgorithm(
     ...(signal ? { signal } : {}),
   });
 }
+
+export type AlgorithmDiff = components["schemas"]["AlgorithmDiff"];
+
+/** The structural diff of `version` against `against` (FR-219). */
+export function getAlgorithmDiff(slug: string, version: number, against: number): Promise<AlgorithmDiff> {
+  return request<AlgorithmDiff>(
+    `/rating-algorithms/${encodeURIComponent(slug)}@${version}/diff?against=${against}`,
+  );
+}

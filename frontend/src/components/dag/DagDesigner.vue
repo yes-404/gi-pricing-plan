@@ -12,12 +12,14 @@ import { VueFlow, useVueFlow } from "@vue-flow/core";
 import { computed, ref } from "vue";
 
 import type {
+  AlgorithmDiff,
   ModelReferenceMode,
   RatingAlgorithmDraft,
   RatingStep,
 } from "@/api/ratingAlgorithms";
 
 import { edgesOf, layout } from "./graph";
+import DiffOverlay from "./DiffOverlay.vue";
 import GraphIssues from "./GraphIssues.vue";
 import NodeNavigator from "./NodeNavigator.vue";
 import StepInspector from "./StepInspector.vue";
@@ -56,6 +58,16 @@ const issueSummary = computed(() => {
   return `${n} ${n === 1 ? "issue" : "issues"}`;
 });
 
+const diff = ref<AlgorithmDiff | null>(null);
+const diffMarks = computed(() => {
+  const marks = new Map<string, "added" | "changed">();
+  if (diff.value === null) return marks;
+  for (const id of diff.value.added_steps) marks.set(id, "added");
+  for (const c of diff.value.changed_steps) marks.set(c.step_id, "changed");
+  for (const r of diff.value.repointed_tables) marks.set(r.step_id, "changed");
+  return marks;
+});
+
 const steps = computed(() => props.draft.steps);
 const current = computed(() => steps.value.find((s) => s.step_id === selected.value));
 const nodes = computed(() => {
@@ -64,7 +76,11 @@ const nodes = computed(() => {
     id: step.step_id,
     type: "step",
     position: at[step.step_id] ?? { x: 0, y: 0 },
-    data: { step, issues: byStep.value.get(step.step_id) ?? [] },
+    data: {
+      step,
+      issues: byStep.value.get(step.step_id) ?? [],
+      diffMark: diffMarks.value.get(step.step_id) ?? null,
+    },
     draggable: false,
   }));
 });
@@ -198,6 +214,11 @@ function replaceContract(contract: RatingAlgorithmDraft["input_contract"]): void
         :issue-counts="issueCounts"
         @select="select"
         @remove="remove"
+      />
+      <DiffOverlay
+        :slug="draft.slug"
+        :version="draft.version"
+        @diff="diff = $event"
       />
       <div class="flex items-end gap-2">
         <div class="flex-1">

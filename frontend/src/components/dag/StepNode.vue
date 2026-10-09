@@ -6,7 +6,7 @@ import type { RatingStep, ValidationIssue } from "@/api/ratingAlgorithms";
 
 import { names } from "./graph";
 
-const props = defineProps<{ data: { step: RatingStep; issues: ValidationIssue[] } }>();
+const props = defineProps<{ data: { step: RatingStep; issues: ValidationIssue[]; diffMark?: "added" | "changed" | null } }>();
 
 const step = computed(() => props.data.step);
 const issues = computed(() => props.data.issues);
@@ -34,6 +34,10 @@ const label = computed(() => {
     </p>
     <p class="font-medium text-slate-900">
       {{ step.label }}
+      <span
+        v-if="data.diffMark"
+        class="ml-1 rounded border border-slate-700 px-1 text-xs font-semibold text-slate-900"
+      >{{ data.diffMark }}</span>
     </p>
     <p class="font-mono text-xs text-slate-500">
       {{ step.step_id }}
