@@ -35,8 +35,11 @@ read at `origin/main` `61e2a8d9d06087cadd3760e9668b3caff881b85c` (#1253,
 was run at planning time.** Every figure below is either quoted from a log with its file, or
 labelled *derived*.
 
-**Draft, not frozen.** Three decision points are open (DP-1 to DP-3). The plan does not
-activate until they are ruled and FD 9446 (working id) carries its severity.
+**Draft, not frozen.** The three decision points (DP-1 to DP-3) are ruled, by the maintainer's
+entry "2026-10-10 00:20:03 BST — RULINGS on the FD 9446 remedy plan (PL 9447 + SL 9448
+@5921b3dc): DP-1 (a), DP-2 (a) as a PLAN TARGET, DP-3 (a); …" in `channel/to-lead.md`. Each
+ruling is quoted under its DP below. The plan does not activate until FD 9446 (working id)
+carries its severity and the R6 size (DP-2) is quoted.
 
 ## Authority
 
@@ -103,12 +106,15 @@ lazy, spec)` at `backend/src/app/worker/dislocation_handlers.py:223`, then `attr
 jobs.py:80`) but no handler. **So the demo's dislocation step runs `dislocation_frame`, which
 contains `score_batch` twice: one profile of `dislocation_frame` covers both paths the lead's
 correction names.** Whether the demo's portfolio is the full 678,013-policy book or a subset is
-FD 9446's G2 quote (auditor-fd9446b), not this plan's; DP-1 depends on it.
+the R6 size, which the 00:20:03 BST entry makes URGENT. It is not this plan's to fix. At
+`origin/main` `61e2a8d9` and S4's `8af8a9b4`, no text names the D6 portfolio Dataset Version
+(the planner's quote file `~/gi-pricing-plan.local/handover/r6-portfolio-size-2026-10-10.md`,
+2026-10-10 00:21:59 BST). So the R6 size is **pending**.
 
 ## Goal
 
-Make the `WF-699` D6 dislocation run complete on the exit demo's portfolio within a memory and
-time budget the maintainer rules (DP-2), by removing the cause the spike measures, without
+Make the `WF-699` D6 dislocation run complete on the exit demo's portfolio within DP-2's ruled
+target (a plan acceptance target, not an NFR), by removing the cause the spike measures, without
 changing one value of `dislocation_frame`'s output. Done when SL 9448 closes on its `LG-` with
 the after-measurement beside the before-measurement, and FD 9446's register row carries the
 fix's merge sha.
@@ -132,14 +138,16 @@ read from the `LG-`, which quotes the command and its printed lines.
    `unrounded_minor` and seeing it fail.
 3. **Memory is measured, not asserted**: Task 0's harness re-run at 200,000 on the merge tree,
    alone in a gate slot, N=1; the `LG-` tables before (Task 0) and after, per stage, VmHWM and
-   seconds. The after VmHWM per policy is at or below DP-2's ruled ceiling divided by 678,013.
+   seconds. The after VmHWM per policy is at or below DP-2's ruled ceiling (15.5 GiB) divided by
+   the R6 size (pending; see Authority).
 4. **Time is measured, not asserted**: the same run's `dislocation_frame` wall time at 200,000
    is no more than Task 0's (a slower fix fails this item).
-5. **The full book, once, if DP-1 rules it in scope**: `measure-attribution-cost.py cost
-   --policies 678013 --ks "" --runs 1` under `inv-rss.sh`, alone, completes within its inner
-   timeout; the `LG-` quotes its `progress.log` START and END lines and `ru_maxrss_KiB`, read
-   against DP-2's ceiling. If DP-1 rules the demo uses a subset, this item runs at the subset's
-   size instead, and the `LG-` says which.
+5. **The R6 size, once**: `measure-attribution-cost.py cost --policies <R6 size> --ks ""
+   --runs 1` under `inv-rss.sh`, alone, completes within its inner timeout. The `LG-` quotes
+   its `progress.log` START and END lines and `ru_maxrss_KiB`, read against DP-2's target
+   (peak RSS ≤ 15.5 GiB, ≤ 60 min). `<R6 size>` is the quoted R6 size: 678,013 if the R6
+   ruling names the full book, or the subset's size otherwise. The `LG-` cites the R6 text it
+   used.
 6. **The gate is green**: the `CLAUDE.md` §11 commands, both halves, each exit 0, against
    `origin/main...<slice branch>`, in a gate slot.
 
@@ -156,7 +164,8 @@ read from the `LG-`, which quotes the command and its printed lines.
   green.
 - **`pricing-core` stays importable standalone** (`CLAUDE.md` §2; `.importlinter`): every
   change is inside `pricing_core.rating.analysis`.
-- **No new dependency without a ruling** (DP-3 of the tool; `CLAUDE.md` §10 and §3): neither
+- **No new dependency: standard library only** (DP-3 (a), ruled 2026-10-10 00:20:03 BST;
+  `CLAUDE.md` §10 and §3): neither
   py-spy nor memray is in `pyproject.toml`, `uv.lock` or `docs/skills-map.md` at `origin/main`,
   and `which py-spy memray` finds neither on the box (exit 1, checked 2026-10-10 00:17:57 BST). Task 0 as
   written uses the standard library only.
@@ -467,7 +476,7 @@ def _origin_rung(baseline: Sequence[LadderRung], candidate: Sequence[LadderRung]
 ### Task 2: the after-measurement and the gate
 
 - [ ] **Step 1:** Task 0's harness at 200,000 on the slice's head, as one slot job, alone; then,
-  per DP-1, the full-book (or subset) `cost` run under `inv-rss.sh` (Acceptance 5).
+  the `cost` run at the R6 size under `inv-rss.sh` (Acceptance 5; DP-1 (a), DP-2 (a)).
   Before-and-after tables in the `LG-` (Acceptance 3–5).
 - [ ] **Step 2:** the `CLAUDE.md` §11 gate, both halves, in a gate slot (Acceptance 6). Then
   SL 9448's status line and the `LG-` closed at the head (the 13:29:49 standing rule (3)).
@@ -516,6 +525,14 @@ the slice ends after Task 0 (≈ 0.2 lane-days) and the delta is sized from the 
 risk. It needs its own FD and owner, which the lead raises; folding it in would double this
 slice and couple it to S3's Acceptance 20.
 
+**Ruled 2026-10-10 00:20:03 BST: (a)**, in the entry's words: *"DP-1 ADOPTED: the remedy
+covers dislocation_frame's memory and time only. The spike's pre-registered H1/H2/H3 rule, and
+the stop on falsification (fix becomes a dated delta), are approved as drafted."* The scope is
+`dislocation_frame`'s memory and time only, and (c) is not in this slice. The entry adopts the
+`attribute` full-book cost *"as a separate FD now … Not folded into PL 9447."* The size this
+plan measures at is the R6 size (DP-2). That size replaces the option text's "678,013" until R6
+is quoted.
+
 **DP-2 — the budget Acceptance 3 and 5 are read against.** No spec NFR covers dislocation's
 memory. NFR-493 (`03` §8: *"Batch scoring ≥ 1 M risks/hour per worker (NFR-455), linear in
 workers."*) is a scoring rate. Which path it governs is FD 9446's to state.
@@ -529,6 +546,11 @@ workers."*) is a scoring rate. Which path it governs is FD 9446's to state.
 time half is likely already met (two passes at 471 pol/s on 678,013 ≈ 48 min, *derived*);
 memory (≈ 20.3 GiB *derived*) is what fails it. Note that D6 runs twice in the journey (E3
 rejects a stale run; E4 *"Re-runs dislocation"*, `WF-00699` :97-98).
+
+**Ruled 2026-10-10 00:20:03 BST: (a)**, *"ADOPTED as a PLAN ACCEPTANCE TARGET, not an NFR"*.
+The target is a plan acceptance target, not an NFR: peak RSS ≤ 15.5 GiB and ≤ 60 min per
+dislocation run at the R6 size, pending. No spec text changes. (c) stays out: the entry says
+it *"would be a spec change (an OQ for P3, not now)"*.
 
 **DP-3 — the profiling tool.** The 00:08:17 entry names *"py-spy or memray"*. Neither is
 installed, and adding either is a dependency choice (`CLAUDE.md` §10: `skills-map.md` is
@@ -546,12 +568,18 @@ measures exactly, and RSS per stage separates the rest. (b) or (c) is worth a ru
 Step 4 reads H2 or H3 and the next question is *where in native code*. In that case it goes in
 the dated delta, not in this slice.
 
+**Ruled 2026-10-10 00:20:03 BST: (a)**, *"DP-3 ADOPTED: standard library only (no new
+dependency, no skills-map row)."*
+
 ## Hand-off (not this plan's writes)
 
 - The lead lists this plan on WK-1178's roadmap row (L5) at mint, and adds the dated line that
-  makes SL 9448's merge an activation need of `SL-1526`, if the maintainer rules it so.
+  makes SL 9448's merge an activation need of `SL-1526`. The 00:20:03 BST entry rules it:
+  *"SL 9448 becomes an activation need of SL-1526 by a dated line at the mint."*
 - The minter cuts the ids in the batch the lead names; FD 9446 mints first, with its severity.
-- If DP-1 (c) is declined, the lead raises the `attribute` full-book cost as its own finding.
+  The entry says *"PL 9447 rides D5 or the next batch."*
+- DP-1 (c) is declined. The `attribute` full-book cost is its own FD (the auditor's, on a
+  `draft/` branch), as the 00:20:03 BST entry adopts.
 
 ## Self-review
 
@@ -569,6 +597,7 @@ the dated delta, not in this slice.
   `FACTORS_V2_ONLY`, `load_fixture`, `load_portfolio`, `versions_for` and `_spec` were read at
   `f59b546e`. `dislocation_handlers.py:223,231` were read at `8af8a9b4`. The harness's
   `_spec(base_v, base_v)` call mirrors `portfolio_for`'s at :493.
-- **Rulings since the sweep.** Re-check `channel/to-lead.md` after 00:10:36 BST and FD 9446's
+- **Rulings since the sweep.** The 00:20:03 BST entry is applied, quoted under each DP
+  (planner-r6, 2026-10-10 00:23:42 BST, read in `channel/to-lead.md` from its line 20626). Re-check `channel/to-lead.md` after 00:10:36 BST and FD 9446's
   branch head (`draft/fd-9446`, `08f50d11` at writing; the rewrite is pending) before the plan
   is minted.
