@@ -84,7 +84,7 @@ inliner's order.
 - [x] Task 2 — `model-schema`: `Pins.sub_graphs`, the port map, the mount as a node, the two contracts
 - [x] Task 3 — `pricing-core/rating/inline.py` and the `vocabulary.py` token helper
 - [x] Task 4 — the diff limb (`diff_algorithms`)
-- [ ] Task 5 — `compile_bundle` and `load_bundle` inline (C1)
+- [x] Task 5 — `compile_bundle` and `load_bundle` inline (C1)
 - [ ] Task 6 — backend: the resolver `sub_graph` branch, G1 objective clause, G2, G4 (c)
 - [ ] Task 7 — the trace (FR-258), order (b)
 - [ ] Task 8 — `RL-1242` stays, stated
@@ -126,6 +126,14 @@ lines listed in Scope.
 - **Green**: `AlgorithmSubGraphChange` (`mount_point`, `before`, `after`, `ports_changed`, `steps`) and `AlgorithmDiff.sub_graph_mounts`; `diff_algorithms(old, new, *, fragments=None)`. The step walk was extracted unchanged into `_diff_steps` and the inner fragment diff calls the same helper (no second walk); the fragment is read through a `_FragmentLike` protocol because `sub_graphs.py` imports `rating.py`. One test fixed after a red of its own (the base fixture already mounts `ncd-ladder@4`). `test_rating_algorithm.py`: 24 passed (existing diff tests unmodified). `generate-contracts.py --check`: 46 match (the diff shape is not a generated contract). `ruff check packages`: clean.
 - **Broken-input proof** (local edit, restored from a saved copy, never committed): `sub_graph_mounts=[]` in `diff_algorithms` made the limb tests fail (`assert 0 == 1`, `assert [] == ['sub_graph:ncd-ladder@5']`).
 - **Acceptance 7's second test** (the persisted `structural_diff`): not run, WK-673's persistence has not merged at `61e2a8d9` (`grep -rln structural_diff backend/src` prints nothing). The limb is therefore carried in this slice by the unit tests; WK-673 owns the re-point case.
+
+**2026-10-09, Task 5 (`compile_bundle` and `load_bundle` inline).**
+- **Red (compile)**, `test_rating_compile_bundle.py` appended cases, before any compile code: 15 failed, by the predicted cause (premise c): the mount was silently not inlined (`assert 'm_ncd__s_ladder' in {...parent nodes...}`), every G1/port/type/DP-4/DP-S1-4 case `Failed: DID NOT RAISE ValueError`, and the no-sub-graph hash test `sha256:370a6c… == sha256:a41bf2…` (the new empty `sub_graphs` key changed every bundle's hash).
+- **Red (load)**: with `runtime.py` restored to `HEAD` for the run (copy kept, put back; `cmp` equal): `test_a_mounted_fragment_is_scored_into_the_mapped_parent_name_in_isolation` `assert 'm_ncd__s_a' in {'s_in_base', ...}` and `test_c1_a_bundle_whose_graph_and_reinlined_algorithm_disagree_is_refused` `DID NOT RAISE ValueError`.
+- **Green**: `inline.mounted_fragments` (type, G1 pin, payload to `SubGraph`; a payload with `sub_graphs` is refused here, DP-4); `compile_bundle` resolves each pinned mount once, inlines, runs `_refuse_mount_port_type_mismatch` (`producer_types` and `_compatible`, no second table), then every existing check over the INLINED algorithm; `*pins.sub_graphs` joins `all_refs` and reuses the mount resolutions; `sub_graph` joins `_MATURITY_CHECK_EXEMPT`; `bundle_hash` drops an empty `sub_graphs` so a version that pins none hashes as before (acceptance 5; independently recomputed by the pre-Slice-2 formula in a test); `load_bundle` re-inlines from `resolved_payloads` and applies C1 (`BUNDLE_COMPILE_FAILED`). `compile_bundle`'s own raise count stays 5. `test_rating_compile_bundle.py` 29, `test_rating_inline.py` 23, `test_rating_runtime.py` 14, `test_rating_compile.py` 45, `test_rating_score.py` 40, `test_rating_authored_fields.py` 40, `test_rating_committed_strings.py` 4, `test_quote_input_raise_sites.py` 19: all passed, no existing test edited.
+- **Broken-input proofs**, local edits restored by copy and `cmp` or by the reverse `sed`, never committed: dropping `*pins.sub_graphs` from `all_refs` reds the bundle-carries-the-fragment and G4 tests; `bundle_hash` ignoring `sub_graphs` reds `test_the_hash_covers_the_pinned_fragment`; treating every mount as pinned reds both G1 tests. The G4 (b) exemption proof is the in-test `monkeypatch` of `_MATURITY_CHECK_EXEMPT` (`PIN_NOT_APPROVED`).
+- **Findings in flight**: (1) the first inliner refused a text outside FR-244's allow-list itself, which pre-empted the save-time checks' own codes (`now()` gave `VALIDATION_FAILED`, not `EXPRESSION_NON_DETERMINISTIC`); seen red and fixed: `rename_tokens` now returns such a text unchanged and the checks over the inlined algorithm name it. (2) A helper first named `_check_*` was caught by `test_rating_authored_fields.py` (its `_check_` prefix means a registered save-time check); renamed `_refuse_mount_port_type_mismatch`, as the other compile-time helpers are named.
+- Not run: whole-tree mypy and `lint-imports` (gate slot).
 
 ## PRs
 

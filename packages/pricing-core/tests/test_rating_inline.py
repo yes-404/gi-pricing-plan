@@ -234,3 +234,9 @@ def test_a_fragment_that_re_produces_its_input_port_is_refused() -> None:
 def test_a_mount_with_no_fragment_is_refused_as_unpinned() -> None:
     with pytest.raises(CodedError, match=r"^RATING_VERSION_UNPINNED"):
         inline_mounts(_parent(), {})
+
+
+@pytest.mark.req("FR-244")
+def test_rename_tokens_returns_a_refused_text_unchanged_for_the_save_time_checks_to_name() -> None:
+    assert rename_tokens("a + now()", {"a": "z"}) == "a + now()"
+    assert rename_tokens("a % 2", {"a": "z"}) == "a % 2"

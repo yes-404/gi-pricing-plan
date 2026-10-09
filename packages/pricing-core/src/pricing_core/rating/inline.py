@@ -33,6 +33,7 @@ from pydantic import ValidationError
 
 from model_schema.graph_errors import GraphUnresolvedRefError
 from model_schema.rating import (
+    Pins,
     RatingAlgorithm,
     RatingConstraintStep,
     RatingExpressionStep,
@@ -71,16 +72,6 @@ def _rename_names(value: str | list[str], mapping: Mapping[str, str]) -> str | l
     if isinstance(value, list):
         return [mapping.get(name, name) for name in value]
     return mapping.get(value, value)
-
-
-def _rename_text(text: str, mapping: Mapping[str, str], step_id: str) -> str:
-    try:
-        return rename_tokens(text, mapping)
-    except ValueError:
-        _raise_named(
-            "VALIDATION_FAILED",
-            f"step {step_id!r} of the sub-graph has an authored string outside FR-244's allow-list",
-        )
 
 
 def _port_mapping(mount: SubGraphRef, fragment: SubGraph) -> dict[str, str]:
@@ -144,17 +135,17 @@ def _inline_one(mount: SubGraphRef, fragment: SubGraph) -> tuple[list[RatingStep
             "produces": _rename_names(step.produces, mapping),
         }
         if isinstance(step, RatingLookupStep):
-            update["key_expr"] = [_rename_text(t, mapping, step.step_id) for t in step.key_expr]
-            update["as_at"] = _rename_text(step.as_at, mapping, step.step_id)
+            update["key_expr"] = [rename_tokens(t, mapping) for t in step.key_expr]
+            update["as_at"] = rename_tokens(step.as_at, mapping)
         elif isinstance(step, RatingTableStep):
-            update["key_expr"] = [_rename_text(t, mapping, step.step_id) for t in step.key_expr]
+            update["key_expr"] = [rename_tokens(t, mapping) for t in step.key_expr]
         elif isinstance(step, RatingExpressionStep):
-            update["expr"] = _rename_text(step.expr, mapping, step.step_id)
+            update["expr"] = rename_tokens(step.expr, mapping)
         elif isinstance(step, RatingConstraintStep):
-            update["condition"] = _rename_text(step.condition, mapping, step.step_id)
+            update["condition"] = rename_tokens(step.condition, mapping)
             if step.clamp_bounds is not None:
                 update["clamp_bounds"] = {
-                    key: _rename_text(text, mapping, step.step_id)
+                    key: rename_tokens(text, mapping)
                     for key, text in step.clamp_bounds.items()
                 }
         elif isinstance(step, RatingModelCallStep):
@@ -192,6 +183,45 @@ def _stable_topological(steps: Sequence[RatingStep]) -> list[RatingStep]:
                 if waiting[other] == 0:
                     heapq.heappush(ready, other)
     return [steps[i] for i in order] if len(order) == len(steps) else list(steps)
+
+
+def mounted_fragments(
+    algorithm: RatingAlgorithm, pins: Pins, payloads: Mapping[str, Any]
+) -> dict[str, SubGraph]:
+    """The fragment each mount names, read from `payloads` (keyed by `str(ArtifactRef)`).
+
+    Refuses a mount whose ref is not a `sub_graph`, or is not among the Rating Version's pins at
+    that exact version (`RL-1309` G1, `RATING_VERSION_UNPINNED`), or whose payload is not a valid
+    Sub-graph Version (`VALIDATION_FAILED`: this is also how a payload that mounts another, which
+    the shape has no field for, is refused, `RL-1309` DP-4). `compile_bundle` calls it on the
+    resolver's payloads and `load_bundle` on the bundle's, so both read the same fragment.
+    """
+    pinned = {str(ref) for ref in pins.sub_graphs}
+    fragments: dict[str, SubGraph] = {}
+    for mount in algorithm.sub_graphs:
+        key = str(mount.ref)
+        if mount.ref.type != "sub_graph":
+            _raise_named(
+                "VALIDATION_FAILED",
+                f"mount {mount.mount_point!r} names {mount.ref}, which is not a sub-graph (FR-217)",
+            )
+        if key not in pinned:
+            _raise_named(
+                "RATING_VERSION_UNPINNED",
+                f"mount {mount.mount_point!r} names {mount.ref}, which the rating version's pins "
+                "do not carry at that exact version (FR-237, RL-1309 G1)",
+            )
+        if key in fragments:
+            continue
+        try:
+            fragments[key] = SubGraph.model_validate(payloads[key])
+        except (KeyError, ValidationError):
+            _raise_named(
+                "VALIDATION_FAILED",
+                f"{mount.ref} is not a valid Sub-graph Version: its shape holds no sub-graphs "
+                "of its own, so depth is 1 (FR-217, RL-1309 DP-4)",
+            )
+    return fragments
 
 
 def inline_mounts(

@@ -78,6 +78,7 @@ _INPUT_FREE = {
     # static sentence built in `runtime.py`, never a model's or the engine's own error text.
     ("rating/score.py", "_check_model_call_sentinel"): 1,
     ("rating/runtime.py", "_load_boosters"): 1,  # step id and ref string, no quote
+    ("rating/runtime.py", "_check_graph_matches_inlined_algorithm"): 1,  # a node id
     ("rating/runtime.py", "handler"): 2,  # `_model_call_failure`: step id and the pinned model_type
     ("rating/compile.py", "check_step_refs_pinned"): 1,  # step id and ref string, no quote
     ("rating/compile.py", "compile_bundle"): 5,  # artifact-level (compile time), no quote
@@ -88,14 +89,16 @@ _INPUT_FREE = {
     ("rating/compile.py", "_refuse_control_factor_keys"): 1,
     # model ref, a fitted feature name and the Factor's slug@version
     ("rating/compile.py", "_refuse_control_factor_model_calls"): 1,
+    # mount point, port and value names (WK-1250 Slice 2)
+    ("rating/compile.py", "_refuse_mount_port_type_mismatch"): 1,
     ("rating/compile.py", "_raise_named"): 1,  # the constructor helper itself (`from None`)
     # WK-1250 Slice 2 (SL-1340), `inline.py`: each at compile and load time over pinned artifacts,
     # never a quote. The text names a mount point, a port or a step id (authored identifiers), an
     # artifact ref, or the first graph-invariant message (step ids and value names).
     ("rating/inline.py", "_raise_named"): 1,  # the constructor helper itself (`from None`)
-    ("rating/inline.py", "_rename_text"): 1,  # a step id
     ("rating/inline.py", "_port_mapping"): 4,  # mount point and port names
     ("rating/inline.py", "_inline_one"): 1,  # mount point and port names
+    ("rating/inline.py", "mounted_fragments"): 3,  # mount point, artifact ref
     ("rating/inline.py", "inline_mounts"): 3,  # mount point, artifact ref, namespaced names
 }
 #: The functions holding the quote-input sites, whose count must equal the cases.

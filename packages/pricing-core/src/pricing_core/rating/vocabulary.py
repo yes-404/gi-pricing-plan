@@ -93,12 +93,13 @@ def rename_tokens(text: str, mapping: Mapping[str, str]) -> str:
     Renaming is by token, never by substring (RL 9586 DP-S2-2): `ncd` is renamed and `ncd_years`
     is not. A function, a word operator and a literal word (`min`, `and`, `true`) are never
     renamed, and a string literal is one token that is not a name. Everything between tokens,
-    whitespace included, is kept as written. Raises `ValueError` on a construct the allow-list
-    refuses, since there is no token boundary to rename at.
+    whitespace included, is kept as written. A text holding a construct the allow-list refuses is
+    returned unchanged: there is no token boundary to rename at, and the save-time checks over the
+    inlined algorithm name the construct under its own code (FR-244, FR-216, FR-276).
     """
     spans, refused = _scan(text)
     if refused is not None:
-        raise ValueError(refused)
+        return text
     keep = set(FUNCTIONS) | set(LITERAL_WORDS) | _WORD_OPERATORS
     out: list[str] = []
     cursor = 0
