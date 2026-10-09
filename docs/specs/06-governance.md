@@ -404,7 +404,7 @@ Notably absent from Pricing Actuary: ~~every `*:approve` permission~~ `approval:
 > `regression_run` and `dislocation_run`; `deployment` — `rating_version_approval` and
 > `uat_deployment`. `peril_structure` has an **empty** floor — not for want of a §3.3 row, which it
 > has had since 2026-08-14, but because its reconciliation half is enforced structurally and its
-> per-peril approvals half is unqueryable. Submission checks the union of the floor and the entry,
+> per-peril approvals half is enforced at approval *(amended 2026-10-09, RL-1457: it read "is unqueryable" until A-1 built the approval carry; deciding `approve` on a Peril Structure now refuses `422 EVIDENCE_INCOMPLETE`, naming each component model — `frequency_model`, `severity_model`, `burning_cost_model`, or a `separate_model` treatment's `excess_model` — whose status is not `approved`, and rolls the decision back. Neither half is an evidence kind a policy entry stores, so the floor stays empty)*. Submission checks the union of the floor and the entry,
 > so an older stored policy cannot sit below it either.
 >
 > *(Corrected 2026-08-29, WK-671 Slice 2. This restatement named four artifact types while the
