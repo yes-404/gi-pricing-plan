@@ -34,11 +34,16 @@ from model_schema import (
     OffsetSpec,
     UnseenLevelBehaviour,
 )
-from model_schema.rating import RatingVersion
+from model_schema.rating import RatingAlgorithm, RatingVersion
 from model_schema.refs import ArtifactRef
 from pricing_core.modelling import fit_glm
 from pricing_core.modelling.predict import predict_glm
-from pricing_core.rating.compile import Bundle, ResolvedArtifact, compile_bundle
+from pricing_core.rating.compile import (
+    Bundle,
+    ResolvedArtifact,
+    compile_bundle,
+    validate_algorithm,
+)
 from pricing_core.rating.runtime import MODEL_CALL_ERROR_KEY, load_bundle
 
 DATASET = uuid4()
@@ -432,3 +437,72 @@ class _OffsetResolver:
             factors=self._residual.factors, bandings=self._residual.bandings,
             groupings=self._residual.groupings, offset_source=source,
         )
+
+
+def _typed_outputs_algorithm(call_type: str, output_type: str) -> dict[str, Any]:
+    algorithm = algorithm_payload(result_type=call_type)
+    algorithm["outputs"][0]["type"] = output_type
+    return algorithm
+
+
+@pytest.mark.req("FR-227")
+@pytest.mark.parametrize("declared", ["relativity", "percentage", "int"])
+def test_a_money_minor_model_call_feeding_a_non_money_output_is_refused(declared: str) -> None:
+    """Item 15: refused by `validate_algorithm` with `RATING_TYPE_MISMATCH`, because the
+    producer is a `money_minor` `model_call` (`_compatible` itself is unchanged)."""
+    algorithm = RatingAlgorithm.model_validate(_typed_outputs_algorithm("money_minor", declared))
+    issues = validate_algorithm(algorithm)
+    assert [issue.code for issue in issues] == ["RATING_TYPE_MISMATCH"]
+    assert "model_call" in issues[0].message
+
+
+@pytest.mark.req("FR-227")
+@pytest.mark.parametrize(
+    ("call_type", "declared"),
+    [("decimal", "decimal"), ("money_minor", "money_minor"), ("money_minor", "decimal")],
+)
+def test_a_legal_model_call_to_output_pairing_saves(call_type: str, declared: str) -> None:
+    """The control: the refusal comes from the `money_minor` declaration into a non-money
+    output, not from the `model_call` itself."""
+    algorithm = RatingAlgorithm.model_validate(_typed_outputs_algorithm(call_type, declared))
+    assert validate_algorithm(algorithm) == []
+
+
+@pytest.mark.req("FR-226")
+async def test_the_output_step_rounds_a_model_call_once() -> None:
+    """The step hands a `money_minor` severity on unrounded, so `value * factor` carries the
+    prediction's fraction and the `output` rounds once. The test first proves its inputs can
+    tell rounding twice from once, so it cannot pass vacuously."""
+    from decimal import ROUND_HALF_EVEN, Decimal
+
+    world = age_glm()
+    prediction = world.predict(driver_age=45.0)
+    factor = next(
+        f for f in (1.1, 1.3, 1.7, 2.9, 3.7, 0.9, 0.7)
+        if round(round(prediction) * f) != round(prediction * f)
+    )
+    once = Decimal(repr(prediction * factor)).quantize(Decimal(1), ROUND_HALF_EVEN)
+    twice = Decimal(round(round(prediction) * factor))
+    assert once != twice
+
+    algorithm = algorithm_payload(
+        feature_map={"driver_age": "age_years"}, result_type="money_minor"
+    )
+    algorithm["input_contract"] = [algorithm["input_contract"][0]]
+    algorithm["outputs"] = [{"name": "office_out", "type": "money_minor", "required": True}]
+    call_index = next(i for i, s in enumerate(algorithm["steps"]) if s["type"] == "model_call")
+    algorithm["steps"][call_index]["consumes"] = ["driver_age"]
+    algorithm["steps"] = [
+        algorithm["steps"][0],
+        algorithm["steps"][call_index],
+        {"step_id": "s_office", "type": "expression", "label": "Office",
+         "expr": f"risk * {factor}", "result_type": "money_minor", "consumes": ["risk"],
+         "produces": "office"},
+        {"step_id": "s_out", "type": "output", "label": "Office", "output_name": "office_out",
+         "rounding": {"mode": "half_even", "dp": 0}, "consumes": ["office"]},
+    ]
+    compiled = load_bundle(await compiled_bundle(world, algorithm))
+    result = await _value(compiled, driver_age=45)
+    assert result["risk"] == pytest.approx(prediction, rel=1e-14)  # not rounded by the step
+    assert result["office"] == pytest.approx(prediction * factor, rel=1e-12)
+    assert Decimal(repr(result["office"])).quantize(Decimal(1), ROUND_HALF_EVEN) == once

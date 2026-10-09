@@ -100,8 +100,9 @@ def producer_types(
     """The statically-known result type of each produced value.
 
     `input` steps take their type from `typed_names`, keyed by the input's name (an
-    algorithm's input contract); `expression` steps from their declared `result_type`.
-    Lookup/table/model_call outputs depend on the pinned artifacts, which save-time
+    algorithm's input contract); `expression` and `model_call` steps from their declared
+    `result_type` (a `model_call`'s is `decimal` or `money_minor`, FD-1458 / `PL-1464`
+    item 15). Lookup and table outputs depend on the pinned artifacts, which save-time
     validation cannot resolve — those stay unknown here and are checked at bundle time
     (W9-3). A later producer of a name overrides an earlier one.
     """
@@ -112,10 +113,50 @@ def producer_types(
             if declared is not None:
                 for name in _as_list(step.produces):
                     types[name] = declared
-        elif isinstance(step, RatingExpressionStep):
+        elif isinstance(step, (RatingExpressionStep, RatingModelCallStep)):
             for name in _as_list(step.produces):
                 types[name] = step.result_type
     return types
+
+
+def _money_model_call_names(steps: Sequence[RatingStep]) -> set[str]:
+    """Names whose latest producer is a `money_minor` `model_call` (a later producer wins)."""
+    money: set[str] = set()
+    for step in steps:
+        is_money_call = isinstance(step, RatingModelCallStep) and step.result_type == "money_minor"
+        for name in _as_list(step.produces):
+            if is_money_call:
+                money.add(name)
+            else:
+                money.discard(name)
+    return money
+
+
+def model_call_money_issues(
+    steps: Sequence[RatingStep], outputs: Sequence[tuple[str, str, str, str]]
+) -> list[ValidationIssue]:
+    """FR-227 (`PL-1464` item 15): a `money_minor` value produced by a `model_call` that feeds
+    an output declared other than `decimal` or `money_minor` is refused.
+
+    Scoped to the `model_call` producer on purpose: `_compatible` still treats every numeric
+    type as interchangeable, so an `expression` producer keeps today's behaviour. Same
+    `(step_id, output name, declared type, feeding name)` rows as `output_type_issues`.
+    """
+    money = _money_model_call_names(steps)
+    return [
+        ValidationIssue(
+            code="RATING_TYPE_MISMATCH",
+            message=(
+                f"output {output_name!r} is declared {declared_type!r} but its producing "
+                "step is a model_call declared money_minor; a money_minor model_call feeds "
+                "a decimal or money_minor output (FR-227)"
+            ),
+            step_id=step_id,
+            field="outputs",
+        )
+        for step_id, output_name, declared_type, fed_by in outputs
+        if fed_by in money and declared_type not in ("decimal", "money_minor")
+    ]
 
 
 def _producer_types(algo: RatingAlgorithm) -> dict[str, str]:
@@ -169,7 +210,10 @@ def _check_result_types(algo: RatingAlgorithm) -> list[ValidationIssue]:
         if declared is None or not consumed:
             continue
         outputs.append((step.step_id, step.output_name, declared.type, consumed[0]))
-    return output_type_issues(_producer_types(algo), outputs)
+    return [
+        *output_type_issues(_producer_types(algo), outputs),
+        *model_call_money_issues(algo.steps, outputs),
+    ]
 
 
 def fragment_output_type_issues(
@@ -198,7 +242,7 @@ def fragment_output_type_issues(
         for port in output_ports
         if port.name in produced_by
     ]
-    return output_type_issues(types, outputs)
+    return [*output_type_issues(types, outputs), *model_call_money_issues(steps, outputs)]
 
 
 def _check_clamp_placement(algo: RatingAlgorithm) -> list[ValidationIssue]:
