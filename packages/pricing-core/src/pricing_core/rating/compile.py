@@ -46,6 +46,7 @@ from model_schema.refs import ArtifactRef
 from model_schema.sub_graphs import SubGraphInputPort
 from pricing_core.rating.authored import authored_expression_fields
 from pricing_core.rating.ladder import RUNG_ORDER, output_steps_by_name, rung_output_name
+from pricing_core.rating.references import referenced_names
 from pricing_core.rating.vocabulary import check_allow_list
 from pricing_core.safe_error import CodedError
 
@@ -386,6 +387,36 @@ def _check_lookup_as_at(algo: RatingAlgorithm) -> list[ValidationIssue]:
     return issues
 
 
+#: FR-246's scope as RL-1519 DP-F35-1 (ii) ruled it: every step type that evaluates a field.
+_DECLARED_READ_STEP_TYPES = frozenset({"expression", "table", "lookup", "model_call", "constraint"})
+
+
+def _check_declared_reads(algo: RatingAlgorithm) -> list[ValidationIssue]:
+    """FR-246 (FD-1374, RL-1519): a step reads only names it declares in `consumes`.
+
+    The message names the step and the names, never a quote input. A bundle compiled before
+    this check is not re-checked at load (`load_bundle` runs no validation), only at its next
+    compile (RL-1519 (iii-b))."""
+    issues: list[ValidationIssue] = []
+    for step in algo.steps:
+        if step.type not in _DECLARED_READ_STEP_TYPES:
+            continue
+        undeclared = sorted(referenced_names(step.model_dump()) - set(_as_list(step.consumes)))
+        if undeclared:
+            issues.append(
+                ValidationIssue(
+                    code="RATING_STEP_UNDECLARED_READ",
+                    message=(
+                        f"step {step.step_id!r} reads {undeclared} without declaring them in "
+                        "consumes (FR-246)"
+                    ),
+                    step_id=step.step_id,
+                    field="consumes",
+                )
+            )
+    return issues
+
+
 #: Each check is a function of ONE string, so it cannot choose which fields it reads
 #: (FD-1317). `validate_algorithm` applies every one of these to every authored string.
 STRING_CHECKS: tuple[Callable[[str], tuple[str, str] | None], ...] = (
@@ -401,6 +432,7 @@ ALGORITHM_CHECKS: tuple[Callable[[RatingAlgorithm], list[ValidationIssue]], ...]
     _check_input_bound_scale,
     _check_clamp_placement,
     _check_lookup_as_at,
+    _check_declared_reads,
 )
 
 
