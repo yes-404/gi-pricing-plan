@@ -1,5 +1,5 @@
 ---
-id: PL-1545
+id: PL-1546
 family: plan
 kind: map
 title: WK-675 — Slices 5 to 11 (editor II, sandbox, compare, rating version list, regression suite view, dislocation views, sub-graph mounting) as rows, after the 2026-10-08 re-plan: Work-plan delta
@@ -15,7 +15,7 @@ corrected_by: []
 relates: [PL-1286, PL-1371, PL-1364, PL-1267, PL-1254, PL-1419, RL-1261, RL-1263, RL-1307, RL-1418, RL-1459, RL-1473, RL-1474, RL-1483, OQ-1223, OQ-1440, OQ-1460, FD-1283, FD-1335, FD-1366, SL-1367, SL-1388, SL-1341, SL-1256]
 ---
 
-# PL-1545 — WK-675 Slices 5 to 11 as rows: Work-plan delta
+# PL-1546 — WK-675 Slices 5 to 11 as rows: Work-plan delta
 
 > **For agentic workers:** this is a **Work-plan delta** under Lean P2 L5. It does not replace
 > [`PL-1286`](PL-01286-wk-675-frontend-dag-designer-rate-table-editor-quote-sandbox-and-dislocation-views-map-plan.md)
@@ -32,7 +32,7 @@ relates: [PL-1286, PL-1371, PL-1364, PL-1267, PL-1254, PL-1419, RL-1261, RL-1263
 > `accessibility-tester` verify it. Each reads [`README.md`](README.md)'s five unchecked
 > conventions and is spawned from `.claude/roles/executor.md`.
 
-Drafted under working id 9471, reserved by the lead; minted 2026-10-09 as PL-1545, with its eight SL rows (SL-1546 … SL-1553), in the D2 batch mint. Written 2026-10-08 by the planner
+Drafted under working id 9471, reserved by the lead; minted 2026-10-09 as PL-1546, with its eight SL rows (SL-1547 … SL-1554), in the D2 batch mint (re-minted +1 on 2026-10-09 by the minting rewrite, on the lead's 13:09:28 BST ruling (1): first minted as PL-1545 and SL-1546 … SL-1553, before D1's PL-1535 and PL-1537 took their ids). Written 2026-10-08 by the planner
 (planner-replan) on the lead's brief `brief-planner-replan-2026-10-08.md`, deliverable 2. Evidence
 read at `origin/main` `60e9254c` (#1242, 2026-10-08T12:40:57+01:00), by a full-class sweep over
 `docs/` for every later statement on these slices (predicates, verbatim:
@@ -143,14 +143,14 @@ If exit demo (b)'s served page is S8's view (the #1164 pass), S8 is a demo need 
 
 | Order | Slice | Scope (what the `LG-` quotes) | Requirements, each id | Depends on | Lane | Size | Ladder |
 |---|---|---|---|---|---|---|---|
-| 1 | SL-1546 — S5: Editor II: diff shading, bulk, import, export | `PL-1286` S5 row, plus R5.1–R5.3 | `03` §3.3: FR-230, FR-231, FR-232, FR-233, FR-235; `00`: FR-25; NFR-463; register F-W10-1, F-W10-2 (view limb) | S4 closed; **OQ-1223 decided** (DP-3); `SL-1391` (closed, met); the FD-1366 bulk-operation typing slice (WK-1178) merged | at GO | 1 | no |
-| 2 | SL-1547 — S6: Sandbox: form, waterfall, trace | `PL-1286` S6 row, plus R6.1–R6.2 | `03` §3.1: FR-213; §3.6: FR-247, FR-248, FR-249 (shown absent, R6.1); §3.7: FR-251, FR-252, FR-255, FR-256; §3.8: FR-258; FR-25; NFR-463 | S1 (closed, met); **`SL-1367` merged** (FD-1335 hold) | at GO | 1 | no |
-| 3 | SL-1548 — S7b: Compare backend | `PL-1286` S7b row, plus R7b.1 | `03` §4.10 `StepChange.own_change`; §3.8: FR-262 (backend limb) | `RL-1261` (met); **`SL-1367` merged first** (both edit `score_compare`) | at GO | 1 | not on the automatic ladder (rung 9 is OFF; to the maintainer if rungs 1–7 are spent) |
-| 4 | SL-1549 — S7: Sandbox compare | `PL-1286` S7 row | `03` §3.8: FR-262 (view limb); §4.10's `own_change` rendering rule | S6, S7b closed; `SL-1367` merged | at GO | 1 | not on the automatic ladder (rung 9 is OFF; to the maintainer if rungs 1–7 are spent) |
-| 5 | SL-1550 — S8: Dislocation views | `PL-1286` S8 row, plus R8.1 | `03` §3.9: FR-263, FR-264, FR-265, FR-266; NFR-463 | S1 (met); **`SL-1388`** (WK-673 S4) closed | at GO | 1 | **rung 7 (conditional on #1164's served page)**: void if exit demo (b)'s served page is this view |
-| 6 | SL-1551 — S10: Rating version list | `PL-1286` S10 row, as changed by R10.1 | `03` §3.4: one new FR (spec first, R10.1); FR-25; `FD-1283` option A | S8 (order, item D); DP-5 (`RL-1473`, met); `SL-1256` (closed, met); **`03` §3.4 serialised with WK-674 S6** (`SL-1260`, R10.2) | at GO | 1 | **candidate, rung 2** (with S11) |
-| 7 | SL-1552 — S11: Regression suite view | `PL-1286` S11 row | `03` §3.8: FR-260, FR-261, FR-1221; `FD-1283` option A; a run-list read route under DP-4 (a) only if the version's evidence gives no run id | S10 (order); DP-5 (met) | at GO | 1 | **candidate, rung 2** (with S10) |
-| 8 | SL-1553 — S9: Designer III: sub-graph mounting | `PL-1286` S9 row | `03` §3.1: FR-217 (the mount), FR-218 (authoring view) | S3 closed; **`SL-1341`** (WK-1250 S3) closed | at GO | 1 | **candidate, rung 1** |
+| 1 | SL-1547 — S5: Editor II: diff shading, bulk, import, export | `PL-1286` S5 row, plus R5.1–R5.3 | `03` §3.3: FR-230, FR-231, FR-232, FR-233, FR-235; `00`: FR-25; NFR-463; register F-W10-1, F-W10-2 (view limb) | S4 closed; **OQ-1223 decided** (DP-3); `SL-1391` (closed, met); the FD-1366 bulk-operation typing slice (WK-1178) merged | at GO | 1 | no |
+| 2 | SL-1548 — S6: Sandbox: form, waterfall, trace | `PL-1286` S6 row, plus R6.1–R6.2 | `03` §3.1: FR-213; §3.6: FR-247, FR-248, FR-249 (shown absent, R6.1); §3.7: FR-251, FR-252, FR-255, FR-256; §3.8: FR-258; FR-25; NFR-463 | S1 (closed, met); **`SL-1367` merged** (FD-1335 hold) | at GO | 1 | no |
+| 3 | SL-1549 — S7b: Compare backend | `PL-1286` S7b row, plus R7b.1 | `03` §4.10 `StepChange.own_change`; §3.8: FR-262 (backend limb) | `RL-1261` (met); **`SL-1367` merged first** (both edit `score_compare`) | at GO | 1 | not on the automatic ladder (rung 9 is OFF; to the maintainer if rungs 1–7 are spent) |
+| 4 | SL-1550 — S7: Sandbox compare | `PL-1286` S7 row | `03` §3.8: FR-262 (view limb); §4.10's `own_change` rendering rule | S6, S7b closed; `SL-1367` merged | at GO | 1 | not on the automatic ladder (rung 9 is OFF; to the maintainer if rungs 1–7 are spent) |
+| 5 | SL-1551 — S8: Dislocation views | `PL-1286` S8 row, plus R8.1 | `03` §3.9: FR-263, FR-264, FR-265, FR-266; NFR-463 | S1 (met); **`SL-1388`** (WK-673 S4) closed | at GO | 1 | **rung 7 (conditional on #1164's served page)**: void if exit demo (b)'s served page is this view |
+| 6 | SL-1552 — S10: Rating version list | `PL-1286` S10 row, as changed by R10.1 | `03` §3.4: one new FR (spec first, R10.1); FR-25; `FD-1283` option A | S8 (order, item D); DP-5 (`RL-1473`, met); `SL-1256` (closed, met); **`03` §3.4 serialised with WK-674 S6** (`SL-1260`, R10.2) | at GO | 1 | **candidate, rung 2** (with S11) |
+| 7 | SL-1553 — S11: Regression suite view | `PL-1286` S11 row | `03` §3.8: FR-260, FR-261, FR-1221; `FD-1283` option A; a run-list read route under DP-4 (a) only if the version's evidence gives no run id | S10 (order); DP-5 (met) | at GO | 1 | **candidate, rung 2** (with S10) |
+| 8 | SL-1554 — S9: Designer III: sub-graph mounting | `PL-1286` S9 row | `03` §3.1: FR-217 (the mount), FR-218 (authoring view) | S3 closed; **`SL-1341`** (WK-1250 S3) closed | at GO | 1 | **candidate, rung 1** |
 
 ### Changes since `PL-1286`, per slice
 
@@ -217,8 +217,8 @@ last.
 - The lead lists this delta on WK-675's roadmap row (L5) and sets `PL-1286` `active` by its status
   line in the mint batch (F-2 (b)).
 - **SL rows.** S5, S6, S7b, S7, S10, S11, S8 and S9 had no `SL-` rows on main (`PL-1371:550`). The lead
-  reserved SL-1546 (S5), SL-1547 (S6), SL-1548 (S7b), SL-1549 (S7), SL-1550 (S8), SL-1553 (S9), SL-1551 (S10)
-  and SL-1552 (S11); their planner-cut `draft` rows are in `docs/roadmap.md` under WK-675, on this branch.
+  reserved SL-1547 (S5), SL-1548 (S6), SL-1549 (S7b), SL-1550 (S7), SL-1551 (S8), SL-1554 (S9), SL-1552 (S10)
+  and SL-1553 (S11); their planner-cut `draft` rows are in `docs/roadmap.md` under WK-675, on this branch.
 - `PL-1286` Acceptance item 2 counts "nine views' routes"; with S12, S13 and S14 in Phase 3 the
   closing auditor reads it against the views still in P2, and records the three as moved, not missing.
 - `PL-1286`'s locator for `03` §5.3 (`03:1041-1058`) has drifted to `03:1277-1286` at this tree; a
