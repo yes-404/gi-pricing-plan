@@ -49,6 +49,7 @@ Order and acceptance checks are `PL-1501` §"Tasks" and §"Acceptance Standard" 
 
 - Commit 1: `PL-1501`'s `status:` line `draft` to `active` (the Q1 ruling, `L1 (a')`), and this file.
 - **Red-first proof is OWED.** Every test is written before its code, as `PL-1501` §"Tasks" orders, but no test is run while S3's Task 7 holds gate-1. Each task entry below names the tests whose red (by cause, not status) has not yet been shown; the proof is made at the first test window after Task 7 by running the tests against the tree with the task's code absent (or the broken input of the plan's Step 4) and quoting the cause here.
+- **Task 1 (PL-1501 Task 1), 2026-10-09.** `ATTRIBUTION_RECONCILIATION_FAILED` appended as the tail of `RATING_ERROR_CODES` (`backend/src/app/errors.py`; S4 appends first, the Q3 order); `03` §5.1's two dislocation rows replaced by RL-1504 T1's four rows and `03` §5.2's `select_movers` note by T2, dated 2026-10-09 and citing RL-1504, each find string counted once before the edit (`grep -cF`). Test `test_the_reconciliation_failure_code_is_registered` (FR-1397) written. Spec note: `03` already names the code in the owned-codes list (Slice 3's P1), so Task 1 adds no list entry. **Red-first proof OWED**: the test is expected to fail on the assert with the name absent from the set, to be shown by running it against `errors.py` at `5d6f71c7`. `ruff check` and `ruff format --check` clean on the two Python files; no pytest or audit-docs run (S3 Task 7 holds gate-1).
 
 ## PRs
 
