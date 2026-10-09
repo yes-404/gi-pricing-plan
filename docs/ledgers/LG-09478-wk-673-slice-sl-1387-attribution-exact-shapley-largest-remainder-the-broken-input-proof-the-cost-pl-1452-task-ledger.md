@@ -278,6 +278,40 @@ log "DRIVER DONE"
 
 **K = 4 block result.** Five invocations `cost --policies 20000 --ks 4 --runs 1 --rate 485.7552475841824`, 17:01:57 to 18:11:14 BST, all rc 0, load1 at END 1.96, 1.55, 2.72, 1.85, 2.07: 742.40, 768.35, 702.56, 734.73, 733.90 s; **median 734.73 s** (`out/24-k4-r1..r5.jsonl`). K=4 / K=3 = 2.00 (the expected 2^K ratio is 2.0).
 
+## Task 7 run — K = 5, K = 6, the full-book score_batch, the scaling curve, the linearity check (2026-10-09, executor-s3f)
+
+**Seat change and N, disclosed.** executor-s3e was replaced by executor-s3f at about 18:13 BST (the lead's brief, under the maintainer's 18:12:40 authority, items 3 to 5). The loop `loop-k.sh 5 5` was ended by the lead at 18:12:56 BST, so K = 5 has **N = 1** (`25-k5-r1`), not 5. K = 3 and K = 4 ran at **N = 5** (above R2's N = 1) and are reported as N = 5. Every figure below carries its N, load1 and tree `f59b546e`. All runs were alone in the gate-1 slot; no small test ran beside them (ruling 16:12:53 item 2). Raw files: `~/gi-pricing-plan.local/task7-s3e/out/*.jsonl`, `progress.log` (local, not in the repository).
+
+**Harness copies (not the measured script; `scripts/measure-attribution-cost.py` is unedited).** `inv-long.sh` = `inv.sh` with `timeout 7200` instead of `3600`. `inv-rss.sh` = `inv-long.sh` run through `python3 -I -c 'subprocess.run(["timeout","7200","uv","run",…])'`, which prints `resource.getrusage(RUSAGE_CHILDREN).ru_maxrss` (KiB) beside the END line; `timeout` and `uv` wait for the python grandchild, so Linux folds its maximum in (the number is plausible: 6.2 GiB for 200,000 policies, 11.9 GiB for 400,000). `/usr/bin/time` is not installed. Peak RSS was not captured for the 20,000 and 50,000 runs.
+
+**K = 5 and K = 6 (attribute, first 20,000 policies by `quote_id`, N = 1 each).**
+
+| K | N | seconds | load1 at END | ratio to previous K |
+|---|---|---|---|---|
+| 3 | 5 | 366.85 (median; 351.89 to 400.11) | 1.80 to 2.85 | |
+| 4 | 5 | 734.73 (median; 702.56 to 768.35) | 1.55 to 2.72 | 2.00 |
+| 5 | 1 | 1,527.04 (`25-k5-r1`, 18:11:26 to 18:38:36 BST) | 2.41 | 2.08 |
+| 6 | 1 | 3,024.77 (`26-k6-r1`, 19:39:30 to 20:31:37 BST) | 1.78 | 1.98 |
+
+The ratios agree with the expected 2.0 per extra group. N = 1 shows no spread; the K = 3 spread (N = 5) is 351.89 to 400.11 s, ±7%.
+
+**Linearity check (100,000 policies, K = 3, N = 1).** `40-lin-r1`, 20:31:44 to 21:12:27 BST, rc 0, load1 2.29: **1,983.42 s**. Against K = 3 on 20,000 (median 366.85 s, N = 5): 5.00x the policies took 5.41x the time, 8% above linear. Inside the K = 3 N = 5 band scaled by 5 (1,759 to 2,001 s). N = 1: no spread at 100,000.
+
+**score_batch alone (`cost --policies 1000 --score-policies <N> --ks "" --runs 1`; `--ks ""` runs no attribute; the `--policies 1000` book is built and unused).**
+
+| policies | N | seconds | policies/s | peak RSS | load1 | invocation wall |
+|---|---|---|---|---|---|---|
+| 20,000 | 1 | 41.17 | 485.76 | not captured | | |
+| 50,000 | 1 | 104.03 | 480.65 | not captured | | |
+| 200,000 | 1 | 424.86 | 470.74 | 6,513,848 KiB (6.21 GiB) | 2.45 | 24.2 min |
+| 400,000 | 1 | 848.41 | 471.47 | 12,515,908 KiB (11.94 GiB) | 2.80 | 45.9 min |
+
+The rate is flat from 200,000 to 400,000 (3% below the 50,000 figure); peak RSS is about 31 KiB per policy. The invocation wall time exceeds the scoring time by 17 min at 200,000 and 31.8 min at 400,000: book build and compile, untimed by `cost`, about 4.8 min per 100,000 policies.
+
+**The full book (678,013 policies) was not completed within 60 min (two runs).** (1) `01-k3-score`, `--score-policies 678013 --ks 3 --runs 5`: stopped by the lead at 114 min, no output. (2) `30-score-r1`, `--score-policies 678013 --ks 3 --runs 1`, started 18:38:57 BST: killed by `inv.sh`'s inner `timeout 3600` at 19:38:57 BST (18:38:57 UTC), no output (both files 0 bytes). DERIVED, not measured: build about 54 min plus scoring 678,013 / 471.47 = 1,438 s (24.0 min) is about 78 min, which fits both runs; peak RSS about 20.3 GiB by linear scaling of the 400,000 figure, on a 31 GiB box. The earlier 23.5 min projection (rate probe) counted scoring only. The rate finding is FD 9446 (draft `draft/fd-9446` at `08f50d11`).
+
+**An error of mine, disclosed.** I ran `30-score-r1` under an outer `timeout 3000` of my own, on top of `inv.sh`'s inner 3600. At about 19:29 BST (18:29 UTC) it killed `inv.sh` and its flock but not the python grandchild, which ran on holding the slot until the inner timeout killed it at 19:38:57 BST. There is no END line for `30-score-r1` in `progress.log`; this entry is its record. No other run used an outer timeout.
+
 ## PRs
 
 #1243, a draft. The branch `sl-1387-attribution-exact-shapley-largest-remainder` is pushed; the PR is not merged by the executor.
