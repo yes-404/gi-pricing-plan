@@ -1009,7 +1009,9 @@ orphaning a blob. `app.platform.traces.complete_pending_trace` is the only raise
 *(added 2026-10-05, `RL-1361` — **409** from
 `GET /api/v1/rate-tables/{slug}@{version}/diff` when the named `portfolio` is not
 `validated`, and the failure of its `rate_table.diff` Job when the portfolio is archived
-between submit and run; the detail names the diff)*.
+between submit and run; the detail names the diff)*,
+`ATTRIBUTION_RECONCILIATION_FAILED`
+*(added 2026-10-09, WK-673 Slice 3, FR-1397, FR-1398, `RL-1394` DP-S1-6, RL-1451 — a Dislocation Run's attribution does not reconcile: for some compared policy the Shapley parts do not sum to its candidate minus baseline payable premium, or its isolated figures plus the residual line do not, as integers; or a compared policy has no premium under some subset bundle (FR-1398). The run fails naming the first such `quote_id`, and in the second case the ids of the changes in that subset, and persists nothing. Raised by `pricing_core.rating.analysis.attribute`; the platform maps it with Slice 4's route)*.
 
 > **`RATING_VERSION_UNPINNED` (meaning added 2026-09-30, on FD-1297, FR-237).** The Rating
 > Version cannot be compiled, or a compiled bundle cannot be loaded: it has no `algorithm_ref`,
