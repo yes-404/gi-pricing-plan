@@ -213,6 +213,47 @@ After both fixes: the three tests and `test_rating_attribution.py`, `test_fremtp
 
 GATE START 12:02:07 BST, GATE END 12:45:45 BST, under the `/tmp/slots/gate-1` flock, head dc99d377 (the merge of origin/main 2e766906, P1, the three red fixes). Per-command rc: ruff 0, mypy 0, lint-imports 0, audit-docs 1 (check 31 only: gap between 1533 and 9478), req-coverage 0, generate-contracts --check 0, pytest 1 (13 failed, 5170 passed, 3 skipped, 41m51s; the 13 are the check-31 set), frontend install, generate:api, lint, type-check, test (102 files, 653 tests) and build all 0. The first gate at d15b8ecf had 16 failures; the three extra are the reds fixed above.
 
+## Task 7 run — where the output lands (written before the run, 2026-10-09, executor-s3e)
+
+**Script change before the run.** `scripts/measure-attribution-cost.py cost` gained `--score-policies N` (score_batch N-run median on the first N policies; 0 skips), `--ks 3,4,5,6` and `--rate` (policies per second for the DERIVED lines when score_batch is not run in the call); and a bug in it is fixed (`f["name"]` on an `InputContractField` raised `TypeError`; now `f.name`), found by a 400-policy smoke run before the measurement (not a timing). No other file changed.
+
+**The run.** One driver, `/home/puzhenhao1989/gi-pricing-plan.local/task7-s3e/run-task7.sh` (local, not in the repository; its text is below), started detached (`setsid nohup`) inside the gate-1 flock, so it keeps running if this seat stops:
+
+```
+flock -w 60 /tmp/slots/gate-1 setsid nohup /home/puzhenhao1989/gi-pricing-plan.local/task7-s3e/run-task7.sh > /home/puzhenhao1989/gi-pricing-plan.local/task7-s3e/out/driver.log 2>&1
+```
+
+Blocks in order, each writing its own file under `/home/puzhenhao1989/gi-pricing-plan.local/task7-s3e/out/`: `01-k3-score.jsonl` (score_batch N=5 on all 678,013 policies, then K=3 re-rates N=5 on the first 20,000; the K=3 timing reported first), `02-k4`, `03-k5`, `04-k6` (N=5 each on 20,000, DERIVED lines from the block-1 rate), `05-sets.jsonl` (the six sets, S and R, 20,000 policies), `06-replay.jsonl` (2,000 policies), `07-full-k3.jsonl` (K=3 on all 678,013, N=1, the linearity check). `*.err` holds stderr. Progress and per-block load1 and start/end stamps (UTC and BST): `out/progress.log`; `DRIVER DONE` is its last line on success, `STOP load1=…` or `END <block> rc=<nonzero>` on a stop. The driver refuses to start a block when load1 >= 12 (exit 3) and each block has `timeout 14400`.
+
+**How to read.** One JSON object per line: `what` (`score_batch`, `attribute`, `derived`, `set`, `replay`), `k`, `policies`, `seconds` (median of `runs`), `load1`, `tree`, `stamp`. A `derived` line is DERIVED (2^K x 678013 / rate), never measured, and draws no NFR verdict.
+
+**If this seat stops mid-run.** The driver is not tied to it: `tail out/progress.log`, `flock -n /tmp/slots/gate-1 true` (rc 1 = the run still holds the slot), `pgrep -f '[r]un-task7.sh'`. Do not start a second run, a gate or a sweep while it holds the slot. When `DRIVER DONE` is the last progress line, collect the figures from the `.jsonl` files into this ledger's Task 7 entry (Step 4: the NFR text with the three under-statements of the dispatch record §(2), both fixture departures beside the figure, Acceptance 20 as narrowed at 12:44:19), commit, and push once. A block that stopped with a nonzero rc is re-run alone by hand with the command line in its `START` progress line.
+
+Driver text:
+
+```bash
+#!/bin/bash
+# WK-673 S3 Task 7 measurement driver. Run under the gate-1 flock. Output: out/*.jsonl, out/progress.log.
+W=/home/puzhenhao1989/gi-pricing-plan/.claude/worktrees/sl-1387
+O=/home/puzhenhao1989/gi-pricing-plan.local/task7-s3e/out
+M="uv run --directory $W python $W/scripts/measure-attribution-cost.py"
+log() { echo "$(date -u +%FT%TZ) $(TZ=Europe/London date +%T) BST load1=$(cut -d' ' -f1 /proc/loadavg) $*" >> $O/progress.log; }
+guard() { l=$(cut -d' ' -f1 /proc/loadavg); if awk "BEGIN{exit !($l>=12)}"; then log "STOP load1=$l >= 12 before $1"; exit 3; fi; }
+blk() { name=$1; shift; guard $name; log "START $name: $M $*"; timeout 14400 $M "$@" > $O/$name.jsonl 2> $O/$name.err; rc=$?; log "END $name rc=$rc"; [ $rc -eq 0 ] || exit $rc; }
+log "DRIVER START"
+blk 01-k3-score $(echo cost --policies 20000 --score-policies 678013 --ks 3 --runs 5)
+log "BLOCK1_DONE"
+RATE=$(python3 -I -c "import json,sys;print([json.loads(l) for l in open('$O/01-k3-score.jsonl') if '\"score_batch\"' in l][0]['policies_per_s'])")
+log "rate=$RATE"
+blk 02-k4 cost --policies 20000 --ks 4 --runs 5 --rate $RATE
+blk 03-k5 cost --policies 20000 --ks 5 --runs 5 --rate $RATE
+blk 04-k6 cost --policies 20000 --ks 6 --runs 5 --rate $RATE
+blk 05-sets sets --policies 20000
+blk 06-replay replay --policies 2000
+blk 07-full-k3 cost --policies 678013 --ks 3 --runs 1 --rate $RATE
+log "DRIVER DONE"
+```
+
 ## PRs
 
 #1243, a draft. The branch `sl-1387-attribution-exact-shapley-largest-remainder` is pushed; the PR is not merged by the executor.
