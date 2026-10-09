@@ -468,6 +468,11 @@
           ],
           "title": "Produces"
         },
+        "result_type": {
+          "default": "decimal",
+          "title": "Result Type",
+          "type": "string"
+        },
         "step_id": {
           "minLength": 1,
           "title": "Step Id",

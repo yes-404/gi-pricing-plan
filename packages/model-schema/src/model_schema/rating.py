@@ -351,6 +351,21 @@ class RatingModelCallStep(RatingStepBase):
     peril_structure_ref: ArtifactRef | None = None
     mode: Literal["exact", "approximation"]
     feature_map: dict[str, str] = Field(default_factory=dict)
+    #: A type for FR-227's checks, never a rounding: a `model_call`'s value is the model's
+    #: exact prediction and only an `output` step rounds (FR-226). `decimal` unless the step
+    #: says otherwise, so a step stored before the field loads as it always meant
+    #: (PL-1464 item 16; the maintainer's (by delegation) entry headed "2026-10-05 17:12:40
+    #: BST — CORRECTION to my 17:02:50 rounding ruling: OPTION (B)").
+    result_type: str = "decimal"
+
+    @field_validator("result_type")
+    @classmethod
+    def _decimal_or_money_minor(cls, value: str) -> str:
+        if value not in ("decimal", "money_minor"):
+            raise ValueError(
+                f"a model_call's result_type is decimal or money_minor, not {value!r} (FR-227)"
+            )
+        return value
 
     @model_validator(mode="after")
     def _exactly_one_ref(self) -> RatingModelCallStep:

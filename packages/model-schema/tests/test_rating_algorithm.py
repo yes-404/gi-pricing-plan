@@ -328,3 +328,29 @@ def test_diff_algorithms_reports_contract_and_output_deltas() -> None:
     ]
     assert diff.input_contract_changed is True
     assert diff.outputs_changed is True
+
+
+@pytest.mark.req("FR-227")
+def test_a_stored_model_call_without_result_type_loads_as_decimal() -> None:
+    """A payload written before the field validates and means `decimal` (PL-1464 item 16)."""
+    data = valid_algorithm()
+    assert "result_type" not in data["steps"][4]
+    algorithm = RatingAlgorithm.model_validate(data)
+    assert algorithm.steps[4].result_type == "decimal"  # type: ignore[union-attr]
+
+
+@pytest.mark.req("FR-227")
+@pytest.mark.parametrize("declared", ["decimal", "money_minor"])
+def test_a_model_call_accepts_decimal_or_money_minor(declared: str) -> None:
+    data = valid_algorithm()
+    data["steps"][4] = {**data["steps"][4], "result_type": declared}
+    assert RatingAlgorithm.model_validate(data).steps[4].result_type == declared  # type: ignore[union-attr]
+
+
+@pytest.mark.req("FR-227")
+@pytest.mark.parametrize("declared", ["relativity", "float", "string"])
+def test_a_model_call_refuses_any_other_result_type(declared: str) -> None:
+    data = valid_algorithm()
+    data["steps"][4] = {**data["steps"][4], "result_type": declared}
+    with pytest.raises(ValidationError, match="decimal or money_minor.*FR-227"):
+        RatingAlgorithm.model_validate(data)
