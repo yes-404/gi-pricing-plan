@@ -1769,6 +1769,24 @@ relates: [FD-1416, FD-1335, SL-1409, PL-1408, SL-1367, PL-1371]
 
 `FD-1416`'s fix (MEDIUM, deadline before the P2 exit demo): the `model-schema` `ApprovalRequest` becomes the one definition. A decision-maker rules each disagreeing field first, the decision enum first, which lifts `FD-1416`'s HOLD. The four `to_dict` routes (`GET …/{request_id}`, `POST /approval-requests`, `…/decide`, `…/withdraw`) return it as a typed 2xx, published by `$ref`, and leave `FD-1335` Part B's open-object list. The hand-authored `approval-request.schema.json` is retired ("generated wins"), and `06` §4.3's example is amended verbatim from the ruling. A guard fails when an authored-only `ONE_SIDED_SLUGS` slug has an uncompared `model-schema` class, proven on broken input. Leaf plan PL-1528 (working id). It follows `SL-1409` (`approvals.py`; merged at `cdaaa573`); it serialises with PL-1429 (`GENERATED_SHAPES`), and PL 9629's journey (its activation need 13) waits for it.
 
+#### SL-9495 — WK-1178 slice — compile refuses a `model_call` whose `feature_map` misses the pinned model's required inputs
+
+```yaml
+id: SL-9495
+family: slice
+title: WK-1178 slice — compile refuses a model_call whose feature_map misses the pinned model's required inputs, per component for a Peril Structure (FR-240)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-05
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: ecbd1954d90b1faf0bd197174d720d90ad8f6c6d
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1371, RL-1263]
+```
+
+The maintainer's (by delegation) decision "2026-10-05 18:51:33 BST — Save-time completeness: DECIDED NOW as (b), completeness at COMPILE" (`channel/to-lead.md`), ruled as RL 9491 (working id). `compile_bundle` refuses a `model_call` step whose `feature_map` does not cover the pinned model's required Factors, or its `feature_order` when it has none, and for a `peril_structure_ref` step each component model's, with `MODEL_CALL_FEATURE_MAP_INVALID` (A-2's code, reused) naming the step and the missing features; the offset column is not a required input. Today such a version compiles and fails on every quote as `MODEL_CALL_FAILED`. Leaf plan PL 9494 (working id). It follows A-2 (SL 9598) and A-3 (SL 9596), and precedes A-4 (SL 9594); it serialises with PL 9578, PL 9610, PL 9609 and PL 9689 on `compile_bundle`.
+
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
