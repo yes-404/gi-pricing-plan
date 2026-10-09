@@ -1894,7 +1894,7 @@ corrected_by: []
 relates: [PL-1254]
 ```
 
-`PL-1254` Task 2. ~~Blocked on DP-2 (open).~~ *DP-2 ruled 2026-09-30 by `RL-1344` (mint batch 12); still waits on the slices before it.* Minted as `SL-1340` at this PR's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `8cef871d` (1339 onward).
+`PL-1254` Task 2. ~~Blocked on DP-2 (open).~~ *DP-2 ruled 2026-09-30 by `RL-1344` (mint batch 12); still waits on the slices before it.* Minted as `SL-1340` at this PR's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `8cef871d` (1339 onward). Leaf plan: `PL-1571` (minted 2026-10-10, D5).
 
 #### SL-1341 — Slice 3: FR-218's purpose mount and the real check (retires `RL-1242`)
 

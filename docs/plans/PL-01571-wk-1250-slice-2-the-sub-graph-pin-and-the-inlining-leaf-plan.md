@@ -22,7 +22,7 @@ relates: [PL-1254, PL-1325, RL-1309, RL-1344, FD-1241, FD-1246, RL-1242, RL-1263
 
 Filed under working id 9610. It is the leaf plan for `SL-1340` (`draft`, minted 2026-09-30, in
 [`../roadmap.md`](../roadmap.md) under `### WK-1250`), which is `PL-1254` Task 2. The lead
-re-issued the id (`~/gi-pricing-plan.local/handover/eta.md`, row "PL-1571", "RE-ISSUED: WK-1250
+re-issued the id (`~/gi-pricing-plan.local/handover/eta.md`, row "PL 9610", "RE-ISSUED: WK-1250
 S2 leaf plan on SL-1340", 5 Oct 15:34:40). The row is not edited here; its "leaf plan" note is
 added at the mint. Everything below was read at `origin/main`
 `cdaaa57345cb765f96034ce1ec2733c338f1c3cd` on 2026-10-05, unless a line names a branch. **No test
@@ -82,13 +82,13 @@ recorded in the dispatch record and quoted in the ledger's Task 0, never added h
 1. **`SL-1339` closed.** **Met:** `closed` 2026-10-01 (`LG-1355`).
 2. **DP-S2-1 and DP-S2-2 ruled by an `RL-`.** Open.
 3. **The `TraceStep` ruling (FD-1246) minted.** `PL-1254:176` and `:301`, and `PL-1371:217`,
-   make "the FD-1246 trace ruling" a dependency of this slice. **It exists, unminted:** RL-1519
-   (working id, #1060, branch `dm-f35-rulings` at `758336a1`, `status: draft`), DP-F35-2, *"Ruled
+   make "the FD-1246 trace ruling" a dependency of this slice. **It existed, unminted, at `cdaaa573`:** RL 9771 (then a working id, minted since as RL-1519, 2026-10-08;
+   #1060, branch `dm-f35-rulings` at `758336a1`, `status: draft`), DP-F35-2, *"Ruled
    (b): yes"*, input and output steps are traced. It says: *"`SL-1340`'s inlined ports are then
    traceable without a second ruling … `FD-1246`'s disposition, the decision-maker's ruling, is
    this paragraph. Its delivery is PL-1520 Task 3."* Nothing rules on FD-1246 on `main`
    (`git grep -n 'FD-1246' cdaaa573 -- docs/rulings` prints only `RL-1263`'s line, which states
-   the dependency). **Open until RL-1519 mints.** The order against PL-1520, which delivers it,
+   the dependency). **Open at `cdaaa573` until RL-1519 minted (it has, 2026-10-08).** The order against PL-1520, which delivers it,
    is **Sequencing for the lead** below.
 4. **`RL-1309` DP-1 item 3's condition** (`RL-1309:309-310`): *"Before Slice 2 is dispatched, both
    WK-673's plan and PL-1254 Task 2 carry this limb."* The maintainer then ruled that **a local
@@ -408,7 +408,7 @@ content. The lead decides."*
   `Pins`, `diff_algorithms`, `03` §4 or §5.2, `compile.py`, `runtime.py` or `TraceStep`
   ([`README.md`](README.md) convention 4). Name the SHA read.
 - [ ] Confirm the resolutions **by record id**: `RL-1309` for its items; the `RL-` for DP-S2-1 to
-  DP-S2-2; RL-1519 for FD-1246, once minted. Stop if any differs from **Decision points**.
+  DP-S2-2; RL-1519 for FD-1246. Stop if any differs from **Decision points**.
 - [ ] **PL-1520.** Record whether it has merged. That decides which branch of Task 7 runs.
 - [ ] **PL-1471.** Confirm it has merged, and record the symbol and file of the transitive
   objective check (`_check_reachable_objectives` in its plan). If it has not merged, stop and

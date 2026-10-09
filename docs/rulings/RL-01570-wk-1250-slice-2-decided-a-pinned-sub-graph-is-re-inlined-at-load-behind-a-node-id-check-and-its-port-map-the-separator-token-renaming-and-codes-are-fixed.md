@@ -36,8 +36,8 @@ relates: [RL-1309, RL-1344, PL-1254, SL-1340, FR-212, FR-217, FR-244, FR-258, FR
   names is `~/gi-pricing-plan.local/handover/dp-memo-wk1250-s2-2026-10-05.md` (a local file).
 - **Written 2026-10-05 17:02 BST (by `date`)**, by the decision-maker session `dm-finals2`, on
   the lead's order. Every fact below was read at `origin/main`
-  `137bc817ef1fb40ea57e9053e0ad40b73bdff3a8`, by symbol with its line at that tree. PL-1571 is
-  unminted, so it is cited in working-id form and kept out of `relates:` (check 32).
+  `137bc817ef1fb40ea57e9053e0ad40b73bdff3a8`, by symbol with its line at that tree. PL 9610 (now PL-1571)
+  was unminted when this was written, so it was cited in working-id form and kept out of `relates:` (check 32).
 - **This record rules a plan's decision points and never edits the plan** (`document-ids.md`
   §1.6, PL row). Its texts for PL-1571 (P1 to P5) are applied by the planner as a pre-mint edit,
   or carried by the dispatch record if the plan is minted first. P5 was proposed by the DM outside
