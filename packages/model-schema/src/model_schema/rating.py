@@ -8,6 +8,8 @@ version can be approved against and the demo can display.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
@@ -76,6 +78,8 @@ class Pins(BaseModel):
     models: list[ArtifactRef] = Field(default_factory=list)
     reference_tables: list[ArtifactRef] = Field(default_factory=list)
     custom_objectives: list[ArtifactRef] = Field(default_factory=list)
+    # WK-1250 Slice 2 (FR-217): the exact sub-graph versions an algorithm's mounts name.
+    sub_graphs: list[ArtifactRef] = Field(default_factory=list)
 
 
 class BundleMetadata(BaseModel):
@@ -387,24 +391,54 @@ RatingStep = Annotated[
 ]
 
 
+# RL 9586 DP-S2-2: a mount point is a plain identifier, so a namespaced name `<mount>__<name>` is
+# unambiguous. `__` is excluded by the validator on `SubGraphRef.mount_point`.
+_MOUNT_POINT: Final = r"^[A-Za-z][A-Za-z0-9_]*$"
+
+
 class SubGraphRef(BaseModel):
     """A versioned sub-graph referenced by a parent algorithm (FR-217).
 
     The sub-graph is a versioned artifact (`sub_graph:slug@version`) mounted at a named
-    point in the parent's DAG; it is inlined at bundle time (W9-3).
+    point in the parent's DAG; it is inlined at bundle time (W9-3). The mount is a node of
+    the parent's graph: it consumes the parent values `inputs` maps its input ports to, and
+    produces the parent names `outputs` maps its output ports to (`RL-1309` DP-3; RL 9586).
+    Whether the maps are complete against the pinned version's ports is compile's to check.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     ref: ArtifactRef
-    mount_point: str
+    mount_point: str = Field(pattern=_MOUNT_POINT)
+    inputs: dict[str, str] = Field(default_factory=dict)
+    outputs: dict[str, str] = Field(default_factory=dict)
+
+    @field_validator("mount_point")
+    @classmethod
+    def _no_namespace_separator(cls, value: str) -> str:
+        if "__" in value:
+            raise ValueError("mount_point must not contain the namespace separator '__'")
+        return value
+
+
+@dataclass(frozen=True)
+class _MountNode:
+    """A sub-graph mount seen as a graph node (`RL-1309` DP-3 item 4): it consumes its mapped
+    input values and produces its mapped output names, like a step."""
+
+    step_id: str
+    consumes: list[str]
+    produces: list[str]
+
+
+_Node = RatingStep | _MountNode
 
 
 def _as_list(value: str | list[str]) -> list[str]:
     return value if isinstance(value, list) else [value]
 
 
-def _produced_by(steps: list[RatingStep]) -> dict[str, list[str]]:
+def _produced_by(steps: Sequence[_Node]) -> dict[str, list[str]]:
     produced: dict[str, list[str]] = {}
     for step in steps:
         for name in _as_list(step.produces):
@@ -412,7 +446,7 @@ def _produced_by(steps: list[RatingStep]) -> dict[str, list[str]]:
     return produced
 
 
-def _consumed_by(steps: list[RatingStep]) -> dict[str, list[str]]:
+def _consumed_by(steps: Sequence[_Node]) -> dict[str, list[str]]:
     consumed: dict[str, list[str]] = {}
     for step in steps:
         for name in _as_list(step.consumes):
@@ -465,8 +499,23 @@ class RatingAlgorithm(RatingAlgorithmDraft):
         if len(ids) != len(set(ids)):
             raise ValueError("every step_id is unique (FR-215)")
 
-        produced = _produced_by(steps)
-        consumed = _consumed_by(steps)
+        # A mount is a node (RL-1309 DP-3 items 2 to 4): its `mount_point` is unique among the
+        # step_ids and the other mounts, it consumes its mapped inputs and produces its mapped
+        # outputs, and the checks below count it. The orphan check stays on real steps.
+        mounts = [
+            _MountNode(m.mount_point, list(m.inputs.values()), list(m.outputs.values()))
+            for m in self.sub_graphs
+        ]
+        mount_points = [m.step_id for m in mounts]
+        if len(mount_points) != len(set(mount_points)) or set(mount_points) & set(ids):
+            raise ValueError(
+                "every mount_point is unique among the step_ids and the other mounts "
+                "(FR-215, RL-1309 DP-3)"
+            )
+        nodes: list[_Node] = [*steps, *mounts]
+
+        produced = _produced_by(nodes)
+        consumed = _consumed_by(nodes)
 
         # FR-214: every declared output has an output step.
         output_steps = {s.output_name for s in steps if isinstance(s, RatingOutputStep)}
@@ -479,8 +528,8 @@ class RatingAlgorithm(RatingAlgorithmDraft):
         # Build the dependency graph: edge A -> B when B consumes a name A produces.
         # A step never depends on itself, even when it re-produces a name it consumed
         # (the clamp pattern) — the self-edge is excluded.
-        dependencies: dict[str, set[str]] = {s.step_id: set() for s in steps}
-        for step in steps:
+        dependencies: dict[str, set[str]] = {s.step_id: set() for s in nodes}
+        for step in nodes:
             for name in _as_list(step.consumes):
                 producers = produced.get(name)
                 if not producers:
@@ -494,20 +543,20 @@ class RatingAlgorithm(RatingAlgorithmDraft):
 
         # Kahn's algorithm — a cycle fails (FR-212).
         order: list[str] = []
-        pending = {s.step_id: len(dependencies[s.step_id]) for s in steps}
+        pending = {s.step_id: len(dependencies[s.step_id]) for s in nodes}
         ready = [sid for sid, n in pending.items() if n == 0]
         while ready:
             sid = ready.pop()
             order.append(sid)
-            for other in steps:
+            for other in nodes:
                 if sid in dependencies[other.step_id]:
                     pending[other.step_id] -= 1
                     if pending[other.step_id] == 0:
                         ready.append(other.step_id)
-        if len(order) != len(steps):
+        if len(order) != len(nodes):
             raise GraphCycleError("the rating DAG contains a cycle (FR-212)")
         position = {sid: i for i, sid in enumerate(order)}
-        step_by_id = {s.step_id: s for s in steps}
+        step_by_id: dict[str, _Node] = {s.step_id: s for s in nodes}
 
         # A value may be re-produced only as a chain: each producer after the first
         # consumes the name, so the value has exactly one *effective* producer (the last
@@ -545,7 +594,7 @@ class RatingAlgorithm(RatingAlgorithmDraft):
     @staticmethod
     def _reachable(
         start: set[str],
-        step_by_id: dict[str, RatingStep],
+        step_by_id: dict[str, _Node],
         produced: dict[str, list[str]],
         consumed: dict[str, list[str]],
     ) -> set[str]:
@@ -565,7 +614,7 @@ class RatingAlgorithm(RatingAlgorithmDraft):
     @staticmethod
     def _reaches_output(
         start: set[str],
-        step_by_id: dict[str, RatingStep],
+        step_by_id: dict[str, _Node],
         produced: dict[str, list[str]],
         consumed: dict[str, list[str]],
     ) -> set[str]:

@@ -298,3 +298,100 @@ def test_the_diff_names_a_repointed_table() -> None:
     assert repoint.field == "rate_table_ref"
     assert str(repoint.before) == "rate_table:motor-expense@3"
     assert str(repoint.after) == "rate_table:motor-expense@4"
+
+
+# --- WK-1250 Slice 2 (SL-1340): a sub-graph mount is a node of the parent's graph ---------------
+# (RL-1309 DP-3 items 2 to 4; RL 9586 (working id) DP-S2-2: the port map, `mount_point` pattern)
+
+from model_schema.graph_errors import GraphUnresolvedRefError  # noqa: E402
+from model_schema.rating import Pins  # noqa: E402
+
+
+def _mounted(*, consumer: str = "ncd_factor", outputs: dict | None = None) -> dict:
+    """`valid_algorithm()` with the mount mapped, and a new step consuming `consumer`."""
+    data = valid_algorithm()
+    data["input_contract"].append(
+        {"name": "ncd_years", "type": "int", "nullable": False, "min": 0, "max": 9}
+    )
+    data["steps"].insert(
+        0,
+        {"step_id": "s_in_ncd", "type": "input", "label": "NCD years",
+         "input_name": "ncd_years", "on_missing": "error", "produces": "ncd_years"},
+    )
+    data["sub_graphs"] = [
+        {"ref": "sub_graph:ncd-ladder@4", "mount_point": "s_ncd",
+         "inputs": {"ncd_years": "ncd_years"},
+         "outputs": {"ncd_factor": "ncd_factor"} if outputs is None else outputs}
+    ]
+    for step in data["steps"]:
+        if step["step_id"] == "s_office":
+            step["expr"] = f"risk_premium_minor * expense_factor * {consumer}"
+            step["consumes"] = ["risk_premium_minor", "expense_factor", consumer]
+    return data
+
+
+@pytest.mark.req("FR-212")
+@pytest.mark.req("FR-217")
+def test_a_consumer_of_a_mapped_mount_output_is_accepted() -> None:
+    algorithm = RatingAlgorithm.model_validate(_mounted())
+    assert algorithm.sub_graphs[0].outputs == {"ncd_factor": "ncd_factor"}
+    assert algorithm.sub_graphs[0].inputs == {"ncd_years": "ncd_years"}
+
+
+@pytest.mark.req("FR-212")
+@pytest.mark.req("FR-217")
+def test_a_consumer_of_an_unmapped_port_is_refused_as_unresolved() -> None:
+    """The name only an UNMAPPED output port would produce is produced by nothing."""
+    with pytest.raises(ValidationError) as raised:
+        RatingAlgorithm.model_validate(_mounted(outputs={"other_port": "other_value"}))
+    errors = [e["ctx"]["error"] for e in raised.value.errors() if "ctx" in e]
+    assert any(isinstance(e, GraphUnresolvedRefError) for e in errors)
+
+
+@pytest.mark.req("FR-212")
+@pytest.mark.req("FR-217")
+def test_a_mount_that_consumes_a_value_no_step_produces_is_refused_as_unresolved() -> None:
+    data = _mounted()
+    data["sub_graphs"][0]["inputs"] = {"ncd_years": "never_produced"}
+    with pytest.raises(ValidationError) as raised:
+        RatingAlgorithm.model_validate(data)
+    errors = [e["ctx"]["error"] for e in raised.value.errors() if "ctx" in e]
+    assert any(isinstance(e, GraphUnresolvedRefError) for e in errors)
+
+
+@pytest.mark.req("FR-212")
+@pytest.mark.req("FR-217")
+def test_a_mount_point_equal_to_a_step_id_is_refused() -> None:
+    data = _mounted()
+    data["sub_graphs"][0]["mount_point"] = "s_office"
+    with pytest.raises(ValidationError, match="mount_point"):
+        RatingAlgorithm.model_validate(data)
+
+
+@pytest.mark.req("FR-212")
+@pytest.mark.req("FR-217")
+def test_two_mounts_may_not_share_a_mount_point() -> None:
+    data = _mounted()
+    data["sub_graphs"].append(
+        {"ref": "sub_graph:other@1", "mount_point": "s_ncd", "inputs": {}, "outputs": {"o": "o"}}
+    )
+    with pytest.raises(ValidationError, match="mount_point"):
+        RatingAlgorithm.model_validate(data)
+
+
+@pytest.mark.req("FR-217")
+@pytest.mark.parametrize("bad", ["a__b", "9x", "has space", "", "x-y"])
+def test_a_mount_point_that_breaks_the_pattern_is_refused(bad: str) -> None:
+    data = _mounted()
+    data["sub_graphs"][0]["mount_point"] = bad
+    with pytest.raises(ValidationError, match="mount_point"):
+        RatingAlgorithm.model_validate(data)
+
+
+@pytest.mark.req("FR-217")
+def test_pins_default_has_no_sub_graphs_and_a_stored_four_list_dict_validates() -> None:
+    assert Pins().sub_graphs == []
+    stored = {"rate_tables": [], "models": [], "reference_tables": [], "custom_objectives": []}
+    assert Pins.model_validate(stored).sub_graphs == []
+    pinned = Pins.model_validate({"sub_graphs": ["sub_graph:ncd-ladder@4"]})
+    assert str(pinned.sub_graphs[0]) == "sub_graph:ncd-ladder@4"
