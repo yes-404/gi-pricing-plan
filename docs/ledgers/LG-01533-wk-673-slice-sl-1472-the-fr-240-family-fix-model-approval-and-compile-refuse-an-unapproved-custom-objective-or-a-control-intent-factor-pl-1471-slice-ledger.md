@@ -2,7 +2,7 @@
 id: LG-1533
 family: ledger
 title: WK-673 slice SL-1472 — the FR-240 family fix, model approval and compile refuse an unapproved custom objective or a control-intent factor (PL-1471), slice ledger
-status: active
+status: closed
 created: 2026-10-08
 owner: executor
 tree: 680fb9acd4538de2a74b7a49687aad4fa76e02d3
