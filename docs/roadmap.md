@@ -1288,7 +1288,7 @@ status: draft                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-05
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 9489405370a1ce06c2b985ad88c7d471438febb1
-phase: P2
+phase: P3
 work: WK-675
 corrected_by: []
 relates: [PL-1286, PL-1371, FD-1284, RL-1263]
@@ -1307,6 +1307,8 @@ maintainer's agreement and the lead's go.
 
 *(Filed 2026-10-05 under working ids 9577 (this row) and 9576 (the plan), reserved by the lead.)*
 
+*(P3 note, 2026-10-09: phase line moved from P2 to P3 and the row stays a working id, SL 9577, not minted in the D3 batch, per to-lead "2026-10-09 11:48:22 BST — Rulings …" item 2, option (B).)*
+
 #### SL 9575 (working id) — Slice 14: Job detail — parameters, stages, logs with trace_id, result link, cancel (`FD-1284`, option D)
 
 ```yaml
@@ -1317,7 +1319,7 @@ status: draft                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-05
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 9489405370a1ce06c2b985ad88c7d471438febb1
-phase: P2
+phase: P3
 work: WK-675
 corrected_by: []
 relates: [PL-1286, PL-1371, FD-1284, RL-1263]
@@ -1333,6 +1335,8 @@ own PR). `07` §5.3's `/jobs/:id` view (`07:399` at `4d3be141`; `PL-1286` cites 
 maintainer's agreement and the lead's go.
 
 *(Filed 2026-10-05 under working ids 9575 (this row) and 9574 (the plan), reserved by the lead.)*
+
+*(P3 note, 2026-10-09: phase line moved from P2 to P3 and the row stays a working id, SL 9575, not minted in the D3 batch, per to-lead "2026-10-09 11:48:22 BST — Rulings …" item 2, option (B).)*
 
 
 
