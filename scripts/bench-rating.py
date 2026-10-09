@@ -275,6 +275,7 @@ def _algorithm_payload(*, with_gbm: bool, n_expr: int, glm: bool = False) -> dic
             "model_ref": "model:bench-glm@1" if glm else "model:bench-freq@1", "mode": "exact",
             "feature_map": {name: name for name in FEATURE_ORDER},
             "consumes": list(FEATURE_ORDER), "produces": ["risk_premium_minor"],
+            **({"result_type": "decimal"} if glm else {}),
         })
         seed_expr = "(risk_premium_minor * expense_factor) + driver_age"
         seed_consumes = ["risk_premium_minor", "expense_factor", "driver_age"]

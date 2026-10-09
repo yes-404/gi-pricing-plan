@@ -291,7 +291,8 @@ async def test_a_frequency_glm_model_call_returns_its_exact_rate(world: GlmWorld
 
 @pytest.mark.req("FR-226")
 async def test_a_model_call_equals_predict_glm_at_full_precision(world: GlmWorld) -> None:
-    """No quantize and no `round()` at the step, whichever `result_type` it declares.
+    """No quantize and no `round()` at the step, whichever `result_type` it declares (a GLM
+    step without one rounds like any other `model_call`: one rule, 2026-10-10 00:44:31).
 
     **Item 15 is STOPPED / RULED in part (see LG-9449): this 1e-14 assertion is a DRAFT, not
     the item's evidence.** The lead's ruling of 2026-10-10 00:23:38 BST makes the evidence the
@@ -309,7 +310,7 @@ async def test_a_model_call_equals_predict_glm_at_full_precision(world: GlmWorld
         exposure_years=quote["exposure_years"],
     )
     assert expected != round(expected, 6)  # the comparison below cannot pass by rounding
-    for result_type in (None, "decimal", "money_minor"):
+    for result_type in ("decimal", "money_minor"):
         algorithm = algorithm_payload(result_type=result_type)
         compiled = load_bundle(await compiled_bundle(world, algorithm))
         assert (await _value(compiled, **quote))["risk"] == pytest.approx(expected, rel=1e-14)

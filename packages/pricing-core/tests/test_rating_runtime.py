@@ -174,6 +174,8 @@ class _FakeResolver:
             if with_constraint
             else _algorithm_payload(model_ref=model_ref)
         )
+        if glm:  # a GLM step is compiled with an explicit result_type (2026-10-10 00:44:31)
+            next(s for s in algo["steps"] if s["type"] == "model_call")["result_type"] = "decimal"
         self._payloads: dict[str, dict[str, Any]] = {
             "rating_algorithm:motor-runtime-test@1": algo,
             "rate_table:motor-expense@1": _rate_table_payload(),

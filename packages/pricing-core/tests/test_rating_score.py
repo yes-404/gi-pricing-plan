@@ -106,8 +106,11 @@ class _FakeResolver:
         booster = _train_tiny_booster()
         self._glm = age_glm(offset=glm_offset)
         model_ref = "model:motor-freq-glm@1" if glm else "model:motor-freq@1"
+        algo = _algorithm_payload(model_ref=model_ref)
+        if glm:  # a GLM step is compiled with an explicit result_type (2026-10-10 00:44:31)
+            next(s for s in algo["steps"] if s["type"] == "model_call")["result_type"] = "decimal"
         self._payloads: dict[str, dict[str, Any]] = {
-            "rating_algorithm:score-fixture@1": _algorithm_payload(model_ref=model_ref),
+            "rating_algorithm:score-fixture@1": algo,
             "rate_table:motor-expense@1": _rate_table_payload(),
             "model:motor-freq@1": _gbm_model_payload(booster),
             "model:motor-freq-glm@1": self._glm.model_payload(),

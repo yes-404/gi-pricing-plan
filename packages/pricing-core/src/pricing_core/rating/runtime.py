@@ -587,8 +587,10 @@ def _model_call_handler(
     step without `result_type` keeps the legacy `round(prediction)`, so a bundle compiled
     before the field hashes and prices as it always did (FR-239). A step that writes
     `result_type` (`decimal` or `money_minor`) carries the unrounded value to FR-244's
-    boundary, where an `output` step rounds it once (FR-226). A GLM, which no bundle scored
-    before FD-1458, is never rounded at the step (a frequency's mean would round to 0).
+    boundary, where an `output` step rounds it once (FR-226). One rule for every
+    `model_call` (the maintainer's (by delegation) entry "2026-10-10 00:44:31 BST"): a GLM
+    step is compiled with an explicit `result_type`, so its unrounded behaviour is in its
+    bytes and hash; a GLM step without one rounds like any other.
     """
     glm_scorers = scorers if scorers is not None else _load_glm_scorers(algorithm, payloads)
     steps_by_id = {
@@ -648,9 +650,10 @@ def _model_call_handler(
             )
         elif model_type == "glm":
             try:
-                value = glm_scorers[ref_str].predict(feature_row)
+                glm_prediction = glm_scorers[ref_str].predict(feature_row)
             except (ModellingError, PredictionError) as exc:
                 return _model_call_failure(step, f"{exc.code}: {exc}", context)
+            value = round(glm_prediction) if step.result_type is None else glm_prediction
         else:
             return _model_call_failure(
                 step,

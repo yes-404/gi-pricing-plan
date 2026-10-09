@@ -53,7 +53,7 @@ def _algorithm(model_ref: str, feature_map: dict[str, str]) -> dict[str, Any]:
              "input_name": "exposure_years", "on_missing": "error",
              "produces": "exposure_years"},
             {"step_id": "s_risk", "type": "model_call", "label": "Risk", "model_ref": model_ref,
-             "mode": "exact", "feature_map": feature_map,
+             "mode": "exact", "feature_map": feature_map, "result_type": "decimal",
              "consumes": ["area", "exposure_years"], "produces": ["risk"]},
             {"step_id": "s_out", "type": "output", "label": "Risk", "output_name": "risk_out",
              "rounding": {"mode": "half_even", "dp": 9}, "consumes": ["risk"]},
