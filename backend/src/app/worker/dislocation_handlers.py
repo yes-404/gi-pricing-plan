@@ -29,15 +29,16 @@ from uuid import UUID
 
 import polars as pl
 
-from app.db.models import BlobRow, DatasetVersionRow, RatingVersionRow
+from app.db.models import RatingVersionRow
 from app.errors import PlatformError
 from app.platform import datasets as dataset_service
 from app.platform import rating_versions as rating_versions_service
-from app.platform.blobs import to_ref
 from app.platform.dislocation_runs import (
     DISLOCATION_RATINGS_PER_WORKER_HOUR,
     DISLOCATION_SINGLE_JOB_MAX_HOURS,
     MOVERS_BLOB_PREFIX,
+    portfolio_table,
+    read_stored_blob,
 )
 from app.platform.dislocation_runs import persist_run as persist_dislocation_run
 from app.platform.rating_versions import WorkspaceResolver
@@ -145,27 +146,6 @@ def _rating_version_ref(ref: ArtifactRef) -> ArtifactRef:
     return ref
 
 
-def _portfolio_entry(version: DatasetVersionRow) -> dict[str, Any]:
-    """The portfolio's table: the first not starting with `_` (`_rejected` is the quarantine)."""
-    entry = next((t for t in version.tables if not t["name"].startswith("_")), None)
-    if entry is None:
-        raise PlatformError(
-            "NOT_FOUND", "Portfolio table not found", 404,
-            f"Dataset Version {version.id} has no table to rate.",
-        )
-    return entry
-
-
-async def _read_blob(progress: JobProgress, session: Any, sha256: str, what: str) -> bytes:
-    row = await session.get(BlobRow, sha256)
-    if row is None:
-        raise PlatformError(
-            "NOT_FOUND", f"{what} blob is missing", 404, f"{what} names blob {sha256}, "
-            "which is not in the store.",
-        )
-    return await progress.blob_store.read(to_ref(row))
-
-
 async def _compiled(
     progress: JobProgress, session: Any, row: RatingVersionRow, ref: ArtifactRef
 ) -> tuple[CompiledBundle, str]:
@@ -177,7 +157,9 @@ async def _compiled(
             "BUNDLE_COMPILE_FAILED", "Rating version is not compiled", 409,
             f"{ref} has no compiled bundle to run a dislocation against.",
         )
-    payload = await _read_blob(progress, session, sha256, f"{ref}'s compiled bundle")
+    payload = await read_stored_blob(
+        session, progress.blob_store, sha256, f"{ref}'s compiled bundle"
+    )
     bundle = Bundle.model_validate_json(payload)
     return load_bundle(bundle), bundle.content_hash
 
@@ -216,9 +198,13 @@ def _dislocation_run(parameters: dict[str, Any], callback: ProgressCallback) -> 
             version = await dataset_service.read_version(
                 session, workspace_id=workspace_id, version_id=spec.portfolio_dataset_version_id
             )
-            sha256 = _portfolio_entry(version)["blob"]["sha256"]
+            sha256 = portfolio_table(version)["blob"]["sha256"]
             portfolio = pl.read_parquet(
-                io.BytesIO(await _read_blob(progress, session, sha256, "The portfolio's table"))
+                io.BytesIO(
+                    await read_stored_blob(
+                        session, progress.blob_store, sha256, "The portfolio's table"
+                    )
+                )
             )
             baseline, candidate = (rating_versions_service.to_schema(r) for r in rows)
             resolver = await preload(

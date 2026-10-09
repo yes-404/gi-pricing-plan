@@ -32,6 +32,9 @@ from app.db.models import (
     DislocationRunRow,
     JobRow,
     RatingVersionRow,
+    RoleAssignmentRow,
+    RoleRow,
+    WorkspaceMemberRow,
 )
 from app.db.session import Database
 from app.errors import RATING_ERROR_CODES, PlatformError
@@ -50,7 +53,7 @@ from app.worker.dislocation_handlers import (
 )
 from app.worker.rating_handlers import register_rating_handlers
 from app.worker.tasks import execute_job
-from model_schema import ArtifactRef, JobKind, JobStatus, new_uuid7
+from model_schema import ArtifactRef, JobKind, JobStatus, ScopeType, new_uuid7
 from model_schema.dislocation import DislocationRun
 from pricing_core.rating.analysis import AttributionError
 from pricing_core.rating.compile import ResolvedArtifact
@@ -520,3 +523,173 @@ async def test_a_second_delivery_for_a_running_dislocation_job_does_nothing(
     assert row is not None
     assert (row.status, row.result) == (JobStatus.RUNNING, None)
 
+
+
+# ---- Task 5: the routes --------------------------------------------------------------
+
+
+async def _caller_with(
+    database: Database, workspace_id: UUID, permissions: list[str]
+) -> dict[str, str]:
+    """Headers for a member holding exactly `permissions` (a stored custom role: no built-in
+    role is narrow enough for the refusals below)."""
+    caller = uuid4()
+    async with database.unit_of_work() as session:
+        role = RoleRow(
+            workspace_id=workspace_id, slug=f"narrow-{uuid4().hex[:6]}",
+            description=", ".join(permissions), permissions=permissions, builtin=False,
+        )
+        session.add(role)
+        await session.flush()
+        session.add(RoleAssignmentRow(
+            workspace_id=workspace_id, principal_kind="user", principal_id=caller,
+            role_id=role.id, scope_type=ScopeType.WORKSPACE.value,
+        ))
+        session.add(WorkspaceMemberRow(user_id=caller, workspace_id=workspace_id))
+    return _headers(caller, workspace_id)
+
+
+async def _dislocation_jobs(database: Database, workspace_id: UUID) -> int:
+    async with database.session() as session:
+        return (await session.execute(
+            select(func.count()).select_from(JobRow).where(
+                JobRow.workspace_id == workspace_id, JobRow.kind == JobKind.DISLOCATION_RUN
+            )
+        )).scalar_one()
+
+
+@pytest.mark.req("FR-263")
+async def test_post_answers_202_with_a_job_and_the_job_persists_the_run(
+    api_client: TestClient, database: Database, blob_store: BlobStore, world: _World
+) -> None:
+    response = api_client.post("/api/v1/dislocation-runs", json=world.spec(), headers=world.headers)
+    assert response.status_code == 202, response.text
+    job = response.json()
+    assert response.headers["Location"] == f"/api/v1/jobs/{job['id']}"
+    assert await execute_job(database, UUID(job["id"]), blob_store) is JobStatus.SUCCEEDED
+    (row,) = await _runs(database, world.workspace_id)
+    fetched = api_client.get(f"/api/v1/dislocation-runs/{row.id}", headers=world.headers)
+    assert fetched.status_code == 200, fetched.text
+    assert DislocationRun.model_validate(fetched.json()) == DislocationRun.model_validate(row.run)
+
+
+@pytest.mark.req("FR-1399")
+async def test_post_refuses_groups_that_do_not_partition_the_derived_changes(
+    api_client: TestClient, database: Database, world: _World
+) -> None:
+    spec = world.spec(change_groups=[{"name": "g1", "changes": ["c1", "c3"]}])  # c2 left out
+    response = api_client.post("/api/v1/dislocation-runs", json=spec, headers=world.headers)
+    assert response.status_code == 422, response.text
+    body = response.json()
+    assert body["code"] == "VALIDATION_FAILED"
+    assert "c2" in body["detail"]
+    assert await _dislocation_jobs(database, world.workspace_id) == 0
+
+
+@pytest.mark.req("FR-263")
+async def test_post_needs_rating_compile_and_dataset_read(
+    api_client: TestClient, database: Database, world: _World, grant: Any
+) -> None:
+    """DP-S4-2 (b): `rating:compile` (the analyst's, WF-699 D6's actor) and `dataset:read` on
+    the portfolio. An auditor cannot start a run; a compile-only caller is refused too."""
+    actuary = uuid4()
+    await grant("pricing_actuary", principal_id=actuary)
+    auditor = uuid4()
+    await grant("auditor", principal_id=auditor)
+    compile_only = await _caller_with(database, world.workspace_id, ["rating:compile"])
+    outcomes = {}
+    for name, headers in (
+        ("actuary", _headers(actuary, world.workspace_id)),
+        ("auditor", _headers(auditor, world.workspace_id)),
+        ("compile_only", compile_only),
+    ):
+        response = api_client.post("/api/v1/dislocation-runs", json=world.spec(), headers=headers)
+        outcomes[name] = (response.status_code, response.json().get("code"))
+    assert outcomes == {
+        "actuary": (202, None),
+        "auditor": (403, "PERMISSION_DENIED"),
+        "compile_only": (403, "PERMISSION_DENIED"),
+    }
+
+
+@pytest.mark.req("FR-265")
+async def test_get_needs_rating_read_and_scopes_to_the_workspace(
+    api_client: TestClient, database: Database, blob_store: BlobStore, world: _World
+) -> None:
+    await _run_job(database, blob_store, world, world.spec())
+    (row,) = await _runs(database, world.workspace_id)
+    url = f"/api/v1/dislocation-runs/{row.id}"
+    no_rating = await _caller_with(database, world.workspace_id, ["dataset:read"])
+    refused = api_client.get(url, headers=no_rating)
+    assert (refused.status_code, refused.json()["code"]) == (403, "PERMISSION_DENIED")
+    unknown = api_client.get(f"/api/v1/dislocation-runs/{new_uuid7()}", headers=world.headers)
+    assert (unknown.status_code, unknown.json()["code"]) == (404, "NOT_FOUND")
+    elsewhere = await _persist(database, new_uuid7(), _run())  # another workspace's run
+    cross = api_client.get(f"/api/v1/dislocation-runs/{elsewhere}", headers=world.headers)
+    assert (cross.status_code, cross.json()["code"]) == (404, "NOT_FOUND")
+
+
+@pytest.mark.req("FR-263")
+async def test_the_estimate_is_returned_before_any_job(
+    api_client: TestClient, database: Database, world: _World
+) -> None:
+    from pricing_core.rating.analysis import estimate_attribution_ratings
+
+    response = api_client.post(
+        "/api/v1/dislocation-runs/estimate", json=world.spec(), headers=world.headers
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    expected = estimate_attribution_ratings(3, 12, grouped=False)
+    assert (body["derived_changes"], body["policies"]) == (3, 12)
+    assert body["estimated_ratings"] == expected
+    rate = service.DISLOCATION_RATINGS_PER_WORKER_HOUR
+    assert body["estimated_worker_hours"] == expected / rate
+    assert body["method"] == "shapley"
+    assert await _dislocation_jobs(database, world.workspace_id) == 0
+
+
+@pytest.mark.req("FR-263")
+async def test_a_run_estimated_over_the_single_job_bound_is_refused_before_any_job(
+    api_client: TestClient, database: Database, world: _World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """RL-1504 item 1. The fixture's 96 ratings cannot exceed the real 4-hour bound, so the
+    bound is lowered to zero; the refusal and the estimate are the production code paths."""
+    monkeypatch.setattr(service, "DISLOCATION_SINGLE_JOB_MAX_HOURS", 0)
+    response = api_client.post("/api/v1/dislocation-runs", json=world.spec(), headers=world.headers)
+    assert response.status_code == 422, response.text
+    body = response.json()
+    assert body["code"] == "VALIDATION_FAILED"
+    for named in ("K = 3", "12 policies", "96 ratings"):
+        assert named in body["detail"], body["detail"]
+    assert await _dislocation_jobs(database, world.workspace_id) == 0
+    estimate = api_client.post(
+        "/api/v1/dislocation-runs/estimate", json=world.spec(), headers=world.headers
+    )
+    assert estimate.status_code == 200, estimate.text
+    assert estimate.json()["estimated_ratings"] == 96
+
+
+@pytest.mark.req("FR-263")
+@pytest.mark.req("NFR-499")
+async def test_movers_route_joins_the_portfolio_columns_at_read(
+    api_client: TestClient, database: Database, blob_store: BlobStore, world: _World
+) -> None:
+    await _run_job(database, blob_store, world, world.spec())
+    (row,) = await _runs(database, world.workspace_id)
+    url = f"/api/v1/dislocation-runs/{row.id}/movers"
+    response = api_client.get(url, headers=world.headers)
+    assert response.status_code == 200, response.text
+    served = response.json()
+    stored = pl.read_parquet(io.BytesIO(await _blob(database, blob_store, row.movers_blob_sha256)))
+    portfolio = _portfolio()
+    assert [r["quote_id"] for r in served] == stored["quote_id"].to_list()  # §4.6's mover order
+    assert served, "a threshold of 1% moves every policy of this fixture"
+    for r in served:
+        source = portfolio.filter(pl.col("quote_id") == r["quote_id"]).row(0, named=True)
+        assert (r["premium_in"], r["channel"]) == (source["premium_in"], source["channel"])
+        assert set(r) == {*MOVERS_COLUMNS, "exposure_years", "premium_in", "channel"}
+    # `dataset:read` is a separate permission from `rating:read` (RL-1504 item 5).
+    rating_only = await _caller_with(database, world.workspace_id, ["rating:read"])
+    refused = api_client.get(url, headers=rating_only)
+    assert (refused.status_code, refused.json()["code"]) == (403, "PERMISSION_DENIED")
