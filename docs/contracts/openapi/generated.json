@@ -29326,7 +29326,7 @@
     },
     "/api/v1/rating-algorithms/validate": {
       "post": {
-        "description": "**200** with every located issue (FR-WKNEW); nothing is persisted or audited.",
+        "description": "**200** with every located issue (FR 9445); nothing is persisted or audited.",
         "operationId": "validate_rating_algorithm_api_v1_rating_algorithms_validate_post",
         "parameters": [
           {
