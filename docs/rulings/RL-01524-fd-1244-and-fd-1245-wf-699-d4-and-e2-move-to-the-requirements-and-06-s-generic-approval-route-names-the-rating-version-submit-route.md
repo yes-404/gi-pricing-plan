@@ -11,7 +11,7 @@ work: WK-1178
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [FD-1244, FD-1245, WF-699, FR-257, FR-260, FR-261, FR-351, FR-352, OQ-1224]   # at the mint, add PL 9629's minted id
+relates: [FD-1244, FD-1245, WF-699, FR-257, FR-260, FR-261, FR-351, FR-352, OQ-1224, PL-1544]   # PL-1544 is PL 9629's minted id
 ---
 
 # RL-1524 — FD-1244 and FD-1245: WF-699 D4 and E2 move, and 06's generic route names the submit route
