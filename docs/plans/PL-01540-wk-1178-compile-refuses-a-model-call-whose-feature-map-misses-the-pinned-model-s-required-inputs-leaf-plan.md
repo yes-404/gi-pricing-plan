@@ -1,10 +1,10 @@
 ---
-id: PL-9494
+id: PL-1540
 family: plan
 kind: leaf
 title: WK-1178 — compile refuses a model_call whose feature_map misses the pinned model's required inputs, per component for a Peril Structure (FR-240): leaf plan
 status: draft                  # draft → active → superseded | retired (§1.2a)
-created: 2026-10-05            # working id; the mint date will replace this (check 31)
+created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
 owner: planner
 tree: ecbd1954d90b1faf0bd197174d720d90ad8f6c6d
 phase: P2
@@ -15,20 +15,23 @@ corrected_by: []
 relates: [RL-1263, PL-1371]
 ---
 
-# PL 9494 (working id) — WK-1178: compile refuses a `model_call` whose `feature_map` misses the pinned model's required inputs, leaf plan
+# PL-1540 — WK-1178: compile refuses a `model_call` whose `feature_map` misses the pinned model's required inputs, leaf plan
+
+*(Minted 2026-10-09 as PL-1540 from working id 9494, with its slice SL-1541 from working id 9495, in the G2-b batch mint PR; every citation of a minted id in this record is re-pointed, and quoted entries stay as quoted.)*
 
 Filed under working id 9494 (this plan) and slice working id 9495 (its `SL-` row under
 WK-1178 in [`../roadmap.md`](../roadmap.md), `draft`, added by this PR). Both were reserved
 by the lead in `~/gi-pricing-plan.local/handover/eta.md` (row "SL 9495 / PL 9494", 5 Oct
-18:52:06). The ruling this plan applies is **RL 9491** (working id, the decision-maker's,
-drafted in parallel on branch `dm-9491-fr240-compile-completeness`). Nothing here is minted.
+18:52:06). The ruling this plan applies is **RL-1523** (working id 9491, the decision-maker's,
+drafted in parallel on branch `dm-9491-fr240-compile-completeness`; minted in G2-a). The ids this plan
+still cites as working ids are listed in the batch PR body.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use subagent-driven-development (recommended)
 > or executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`)
 > syntax for tracking. The executor also binds `python-test` (the `req` marker, negative
 > tests), `test-driven-development` (every red is seen failing, by its cause, before the
 > code that turns it green), `python-package` (`pricing-core` stays standalone),
-> `spec-change` (Task 4, RL 9491's text only), `dev-commands` (the two-half gate) and
+> `spec-change` (Task 4, RL-1523's text only), `dev-commands` (the two-half gate) and
 > `git-hygiene`. Read [`README.md`](README.md)'s five unchecked conventions before the first
 > step. The executor is spawned from `.claude/roles/executor.md`.
 
@@ -43,14 +46,14 @@ every quote at score time as `MODEL_CALL_FAILED`.
 
 **Architecture:** one pure check in `pricing_core/rating/compile.py`, called by
 `compile_bundle` after every pinned model and every Peril Structure component has been
-resolved (the pin loop, PL 9649's `ResolvedArtifact.factors`, A-3's
+resolved (the pin loop, PL-1471's `ResolvedArtifact.factors`, A-3's
 `_resolve_peril_components`). No database, no new code, no new shape. The backend reaches it
 through the existing compile route's `ValueError` mapping (`rating_versions.py:558-565`).
 
 **Tech Stack:** Python 3.12, Pydantic v2, pytest (pricing-core and backend suites).
 
 **Spec:** [`../specs/03-rating-engine.md`](../specs/03-rating-engine.md) FR-240 (`:137`),
-amended by RL 9491's dated T-text; FR-222 (`:108`, the `model_call` step); FR-255 (the
+amended by RL-1523's dated T-text; FR-222 (`:108`, the `model_call` step); FR-255 (the
 `MODEL_CALL_FAILED` category this moves earlier); `02` FR-188 (the Peril Structure).
 
 ## The decision this plan rests on, quoted
@@ -67,7 +70,7 @@ COMPILE; no OQ; an RL with the FR-240 T-text; A-2's code reused", verbatim:
 
 **The code's home.** At `ecbd1954`, `MODEL_CALL_FEATURE_MAP_INVALID` is not in `03` (`git
 grep -c MODEL_CALL_FEATURE_MAP_INVALID origin/main -- docs/specs/03-rating-engine.md` prints
-nothing) nor in `backend/src/app/errors.py`. A-2 (PL 9597, #1178 @`176a6a75`) appends it to
+nothing) nor in `backend/src/app/errors.py`. A-2 (PL-1464, #1178 @`176a6a75`) appends it to
 `03` §5.1's owned-codes list (its T3) and to `RATING_ERROR_CODES` (its write set). This slice
 adds the code to neither: it raises the same string through `_raise_named`, and the backend's
 compile mapping turns it into a 422 `PlatformError` carrying that code.
@@ -90,7 +93,7 @@ this planner. Verbatim:
 
 What this delta changed:
 
-1. **DP-1 ruled: reuse A-2's helper.** A-2 (PL 9597 #1178 @`65edaa74`, Task 1b, items 20
+1. **DP-1 ruled: reuse A-2's helper.** A-2 (PL-1464 #1178 @`65edaa74`, Task 1b, items 20
    and 21) creates `required_model_inputs(factors: Sequence[Factor], feature_order:
    Sequence[str]) -> tuple[str, ...]` in `packages/pricing-core/src/pricing_core/modelling/factors.py`,
    after `rateable` (`:323-329` at `ecbd1954`). This slice imports it into `rating/compile.py`
@@ -106,8 +109,8 @@ What this delta changed:
    gbm_result.feature_order})` arm) is named **DEAD-THROUGH-COMPILE**. It is not removed in
    this slice (`runtime.py` stays under "Not written"); its removal is a later cleanup
    decision, and the ledger records it.
-4. **The order A-2 → A-3 → SL 9495 → A-4 is confirmed** (needs 3 to 5). A-4's need is
-   carried: PL 9593 #1175 @`133fc13a` gained activation need 4a, "SL 9495 merged".
+4. **The order A-2 → A-3 → SL-1541 → A-4 is confirmed** (needs 3 to 5). A-4's need is
+   carried: PL-1542 #1175 @`133fc13a` gained activation need 4a, "SL-1541 merged".
 5. **Write set:** `compile.py`'s row is re-pointed (import, not add), and
    `backend/tests/test_rating_algorithms.py` is appended for Acceptance 13.
 
@@ -118,32 +121,32 @@ every activation need below holds.
 
 ### Activation needs, in order
 
-1. **RL 9491 minted**, carrying the FR-240 T-text and its `grep -cF` anchor. Task 4 applies
+1. **RL-1523 minted**, carrying the FR-240 T-text and its `grep -cF` anchor. Task 4 applies
    that text verbatim; nothing in this plan words it.
-2. **PL 9649's slice merged** (#1152, the FR-240 family fix). It adds
+2. **PL-1471's slice merged** (#1152, the FR-240 family fix). It adds
    `ResolvedArtifact.factors: tuple[Factor, ...] = ()` and fills it in the backend
    `_Resolver.resolve`'s `model` branch. Without it a GLM's required Factors are invisible at
    compile (the Model's spec names them only by UUID, `model_schema/modelling.py:842`), and
    the check would pass every GLM vacuously. A-2 already needs it, so this holds through
    need 3.
-3. **A-2 merged** (SL 9598 / PL 9597, working ids): the code is in `03`'s owned list and in
+3. **A-2 merged** (SL-1463 / PL-1464, working ids): the code is in `03`'s owned list and in
    `RATING_ERROR_CODES`, and a GLM `model_call` scores, so the end-to-end red (Acceptance 7)
    has a GLM to refuse. Serialisation: **after A-2**, the maintainer's "after A-2 (the same
    function family)".
-4. **A-3 merged** (SL 9596 / PL 9595, working ids). The per-component limb (Acceptance 3)
+4. **A-3 merged** (SL-1466 / PL-1465, working ids). The per-component limb (Acceptance 3)
    reads each component model's `ResolvedArtifact`, and only A-3's
-   `_resolve_peril_components` (PL 9595 Task 2 Step 1, `compile.py`) resolves them. *The
-   planner's sequencing:* A-2 → A-3 → **SL 9495** → A-4. It keeps the maintainer's order
+   `_resolve_peril_components` (PL-1465 Task 2 Step 1, `compile.py`) resolves them. *The
+   planner's sequencing:* A-2 → A-3 → **SL-1541** → A-4. It keeps the maintainer's order
    ("after A-2 … before A-4's demo path") and adds A-3 between them, because A-3 is already
-   ahead of A-4 (PL 9593 activation need 4). The alternative, SL 9495 between A-2 and A-3
+   ahead of A-4 (PL-1542 activation need 4). The alternative, SL-1541 between A-2 and A-3
    with A-3 taking the per-component limb, splits one ruled check over two slices and edits
    A-3's frozen-at-merge plan; not proposed. *(Pre-mint delta, 2026-10-05, the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", item 1: the order is
    **accepted**.)*
-5. **Before A-4's dispatch.** A-4 (SL 9594 / PL 9593) does not yet name this slice as a need.
-   *Proposal for the lead:* A-4's activation needs gain "SL 9495 merged", so the exit demo's
+5. **Before A-4's dispatch.** A-4 (SL-1543 / PL-1542) does not yet name this slice as a need.
+   *Proposal for the lead:* A-4's activation needs gain "SL-1541 merged", so the exit demo's
    B4 `model_call` compiles against the completeness check, as the ruling intends (G2's peril
    path is "exactly where a short-mapped GBM would fail per quote after deploy").
-   *(Pre-mint delta, 2026-10-05, the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", item 2: **accepted and carried.** PL 9593 #1175 @`133fc13a` names it as
+   *(Pre-mint delta, 2026-10-05, the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", item 2: **accepted and carried.** PL-1542 #1175 @`133fc13a` names it as
    activation need 4a.)*
 6. **The lane and the dispatch GO**; `active` by a dated line.
 
@@ -187,7 +190,7 @@ failure line as printed. The pricing-core tests are in
    `test_an_unmapped_offset_column_is_not_a_completeness_failure`: a GLM whose spec declares
    a `log_column` offset on `exposure`, every Factor mapped, `exposure` not in the map.
    `compile_bundle` returns a Bundle. (The missing offset is still refused at score, as
-   `MODEL_OFFSET_MISSING` inside `MODEL_CALL_FAILED`, PL 9597 item 3; the ruling covers
+   `MODEL_OFFSET_MISSING` inside `MODEL_CALL_FAILED`, PL-1464 item 3; the ruling covers
    Factors and `feature_order` only.) This test is green at the base and stays green; it
    guards against the implementation reading the offset as a required input.
 6. **(vi) An empty `feature_map` is not an identity map** *(reading R-a below; held for the
@@ -206,13 +209,13 @@ failure line as printed. The pricing-core tests are in
    the Factor; no Bundle is written. Red first: at the base the version compiles. This is the
    check that the backend resolver really fills `factors`: a vacuous pass in pricing-core
    would survive items 1–6, not this one.
-8. **The FR-240 text is RL 9491's, verbatim.** `grep -cF '<RL 9491's anchor>'
+8. **The FR-240 text is RL-1523's, verbatim.** `grep -cF '<RL-1523's anchor>'
    docs/specs/03-rating-engine.md` prints `1`, with the anchor copied from the minted RL;
    `python3 scripts/audit-docs.py` exits with no new FAILED line. *(Dated note, 2026-10-05,
    pre-mint: before applying, the find string is re-counted at this slice's own base under
-   the FR-240 anchor rule (§"Write set", the SL 9647 row). The ledger records that count;
+   the FR-240 anchor rule (§"Write set", the SL-1472 row). The ledger records that count;
    any count other than 1 is a STOP to the maintainer. After applying, a distinctive
-   phrase of RL 9491's own text counts 1.)*
+   phrase of RL-1523's own text counts 1.)*
 9. **One fault, one code.** `git diff origin/main...HEAD -- backend/src/app/errors.py`
    is empty (the code is A-2's), and `git grep -c MODEL_CALL_FEATURE_MAP_INVALID --
    packages/pricing-core/src/pricing_core/rating/compile.py` prints `1` or more.
@@ -220,7 +223,7 @@ failure line as printed. The pricing-core tests are in
 11. **Existing compile and score tests still pass, with every fixture edit named.** Each
     module that compiles a `model_call` is run on its own:
     `test_rating_compile_bundle.py`, `test_rating_runtime.py`, `test_rating_score.py`,
-    PL 9649's `test_rating_compile_fr240.py`, A-2's and A-3's modules, and
+    PL-1471's `test_rating_compile_fr240.py`, A-2's and A-3's modules, and
     `backend/tests/test_rating_version_compile.py`. A fixture whose map does not cover its
     model is a fixture the ruling now refuses: it is completed, never the check weakened, and
     the ledger lists each such edit with its file and line. At `ecbd1954` every committed
@@ -239,7 +242,7 @@ failure line as printed. The pricing-core tests are in
       `pricing_core.rating.compile.required_model_inputs` are both the same object as
       `pricing_core.modelling.factors.required_model_inputs`.
 
-    A-2's `test_required_model_inputs_is_defined_once` (PL 9597 item 21) stays green: exactly
+    A-2's `test_required_model_inputs_is_defined_once` (PL-1464 item 21) stays green: exactly
     one `def required_model_inputs(` remains under `packages/*/src` and `backend/src`.
     **Red first:** at the base both tests fail with `AttributeError: module
     'pricing_core.rating.compile' has no attribute 'required_model_inputs'`.
@@ -262,12 +265,12 @@ failure line as printed. The pricing-core tests are in
 
 | Spec | Id | Where |
 |---|---|---|
-| `03` | FR-240 (as RL 9491 amends it) | Acceptance 1–8 |
+| `03` | FR-240 (as RL-1523 amends it) | Acceptance 1–8 |
 | `03` | FR-222 (the `model_call` step: `model_ref` or `peril_structure_ref`, `feature_map`) | Acceptance 1–3, 6 |
 | `03` | FR-255 (`MODEL_CALL_FAILED`, which these faults no longer reach) | Acceptance 5 (the one case that still reaches it) |
 | `02` | FR-188 (the Peril Structure's components) | Acceptance 3 |
 
-### Readings for the decision-maker (to confirm in RL 9491 or at the dispatch)
+### Readings for the decision-maker (to confirm in RL-1523 or at the dispatch)
 
 - **(R-a) An empty `feature_map`.** `runtime.py:553-555` gives a GBM an empty-map fallback:
   `pl.DataFrame({slug: [context.get(slug)] for slug in gbm_result.feature_order})`, reading
@@ -287,7 +290,7 @@ failure line as printed. The pricing-core tests are in
   `test_rating_compile_bundle.py:107-121`, which has no `fit_result`) has no required input
   and passes. *Recommendation: as written.* *(Pre-mint delta, 2026-10-05, the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", item 3: this pair is computed by
   A-2's `required_model_inputs`, called with `ResolvedArtifact.factors` and the payload's
-  `fit_result.feature_order`. The "neither" case returns `()`, as PL 9597 item 20's third
+  `fit_result.feature_order`. The "neither" case returns `()`, as PL-1464 item 20's third
   test asserts.)*
 
 ### Task 0 at planning time (read, not run)
@@ -297,14 +300,14 @@ At `ecbd1954` (origin/main, read 2026-10-05 18:40–18:56 BST):
 | Row | Fact | Where |
 |---|---|---|
 | 0.1 | `compile_bundle` resolves each pin in one loop and keeps only `payloads[str(ref)] = resolved.payload` | `compile.py:624-632` |
-| 0.2 | `ResolvedArtifact` has `status` and `payload` only; `factors` is PL 9649's | `compile.py:434-440` |
+| 0.2 | `ResolvedArtifact` has `status` and `payload` only; `factors` is PL-1471's | `compile.py:434-440` |
 | 0.3 | the handler builds `feature_row` from `step.feature_map.items()`, keyed by Factor slug | `runtime.py:542-546` |
 | 0.4 | a GBM missing a column fails `SCORING_FEATURES_MISMATCH` inside `predict_gbm` | `modelling/gbm.py:1290-1296` |
 | 0.5 | `PerilComponent` has `peril`, `method`, and `frequency_model`, `severity_model`, `burning_cost_model` refs | `model_schema/perils.py:214-229` |
 | 0.6 | the backend compile route maps a coded `ValueError` to a 422 `PlatformError` with that code | `backend/src/app/platform/rating_versions.py:558-565` |
 | 0.7 | every committed `model_call` literal carries a `feature_map` (per-file counts: `test_rating_algorithms.py` 2/2, `test_rating_algorithm.py` 1/2, `test_rating_version.py` 1/1, `test_rating_compile.py` 2/2, `test_rating_compile_bundle.py` 1/2, `test_rating_runtime.py` 1/1, `test_rating_score.py` 1/1, `bench-rating.py` 1/1, as `model_call`-literal count / `feature_map` line count) | `git grep -c` per file |
 
-### Write set, and its contention (`RL-1263`, `RL 9620`)
+### Write set, and its contention (`RL-1263`, `RL-1445`)
 
 | Path | Change |
 |---|---|
@@ -312,7 +315,7 @@ At `ecbd1954` (origin/main, read 2026-10-05 18:40–18:56 BST):
 | `packages/pricing-core/tests/test_rating_compile_completeness.py` | added (Acceptance 1–6) |
 | `backend/tests/test_rating_glm_model_call.py` | appended (Acceptance 7; A-2's module) |
 | existing test fixtures | only if Acceptance 11 finds an incomplete map; each named in the ledger |
-| `docs/specs/03-rating-engine.md` | the FR-240 row (`:137`): RL 9491's T-text, verbatim |
+| `docs/specs/03-rating-engine.md` | the FR-240 row (`:137`): RL-1523's T-text, verbatim |
 | `packages/pricing-core/src/pricing_core/rating/compile.py` | *(Pre-mint delta, 2026-10-05, the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", item 3; it supersedes the first row's "added: `required_model_inputs`".)* `required_model_inputs` is **imported** from `pricing_core.modelling.factors`, not defined; added: `check_model_call_coverage` only, and only it enters `__all__` |
 | `backend/tests/test_rating_algorithms.py` | appended *(same delta)*: Acceptance 13's import assertion |
 | `packages/pricing-core/src/pricing_core/modelling/factors.py`, `backend/src/app/platform/rating_algorithms.py` | *(same delta)* **only under Task 0a** (A-2 merged without the helper): the helper is extracted into `factors.py`, and A-2's save check calls it, with no behaviour change |
@@ -327,29 +330,29 @@ named.** `PL-1371` §5 rule 4 serialises `compile_bundle` outright.
 
 | Other slice (Work; PR @ head read) | Shared path | Them | Us | Class → consequence |
 |---|---|---|---|---|
-| **A-2**, PL 9597 (WK-1178; #1178 @`176a6a75`) | `compile.py` `ResolvedArtifact`, `compile_bundle`'s pin loop, `_check_result_types`; `03` §5.1 owned list; `errors.py`; `backend/tests/test_rating_glm_model_call.py` | `bandings`, `groupings`; GLM inputs written; the code appended; the module added | reads the code and the module; one call in `compile_bundle` | **plan dependency** (need 3) → after A-2, never concurrent |
-| **A-3**, PL 9595 (WK-1178; #1174 @`2404ac86`) | `compile.py` `compile_bundle`, `_resolve_peril_components`; `03` FR-240 cell (`:137`) | adds the component resolution and `_check_peril_model_calls`; T-texts on FR-240 | reads the components; RL 9491's text on the same cell | **plan dependency** (need 4) → after A-3; the FR-240 cell edited by both → **SERIALISE** (already serial) |
-| **SL 9568**, PL 9567 (WK-673; #1193 @`42d8be16`) | `docs/roadmap.md` | its SL row (in WK-673) | the SL 9495 row (WK-1178) | registry, distinct rows → ALLOWED; `compile.py` is not in its write set ("`compile.py` is not in the write set", its `:592`) |
-| **PL 9521**, the FD 9549 fix (WK-1178; #1202 @`9396bdb3`) | `compile.py` | `_compatible`, `output_type_issues`, `_check_result_types` | `compile_bundle`, two new functions, `__all__` | different definitions in one file, **same Work** → ALLOWED one-sided only with the dispatch record naming each definition, `RL 9620` (a)/(b) written ((b): neither consumes the other's output). FD 9549's fix **is** PL 9521 (its `:23`, FD 9549 → FD-1424, #1197 merged); no separate plan exists |
+| **A-2**, PL-1464 (WK-1178; #1178 @`176a6a75`) | `compile.py` `ResolvedArtifact`, `compile_bundle`'s pin loop, `_check_result_types`; `03` §5.1 owned list; `errors.py`; `backend/tests/test_rating_glm_model_call.py` | `bandings`, `groupings`; GLM inputs written; the code appended; the module added | reads the code and the module; one call in `compile_bundle` | **plan dependency** (need 3) → after A-2, never concurrent |
+| **A-3**, PL-1465 (WK-1178; #1174 @`2404ac86`) | `compile.py` `compile_bundle`, `_resolve_peril_components`; `03` FR-240 cell (`:137`) | adds the component resolution and `_check_peril_model_calls`; T-texts on FR-240 | reads the components; RL-1523's text on the same cell | **plan dependency** (need 4) → after A-3; the FR-240 cell edited by both → **SERIALISE** (already serial) |
+| **SL-1436**, PL-1435 (WK-673; #1193 @`42d8be16`) | `docs/roadmap.md` | its SL row (in WK-673) | the SL-1541 row (WK-1178) | registry, distinct rows → ALLOWED; `compile.py` is not in its write set ("`compile.py` is not in the write set", its `:592`) |
+| **PL 9521**, the FD-1424 fix (WK-1178; #1202 @`9396bdb3`) | `compile.py` | `_compatible`, `output_type_issues`, `_check_result_types` | `compile_bundle`, two new functions, `__all__` | different definitions in one file, **same Work** → ALLOWED one-sided only with the dispatch record naming each definition, `RL-1445` (a)/(b) written ((b): neither consumes the other's output). FD-1424's fix **is** PL 9521 (its `:23`, FD 9549 → FD-1424, #1197 merged); no separate plan exists |
 | **PL 9578**, WK-675 S3 (#1186 @`aea4b634`) | `compile.py` | import block, `ValidationIssue`, `compile_bundle` (`:614`, the mode check wrapped), `__all__` | `compile_bundle`, `__all__` | `compile_bundle`: **SERIALISE** (rule 4, PL 9578's own `:392`) |
-| **PL 9649**, FR-240 family fix (WK-673; #1152 @`df8ba756`) | `compile.py` `ResolvedArtifact`, `compile_bundle`; `03` FR-240 cell | `factors`; three checks; T1/T5 on FR-240 | reads `factors`; the same cell | **plan dependency** (need 2) → never concurrent |
-| **PL 9610**, **PL 9609** (WK-1250 S2/S3; #1170, #1173) and **PL 9689** (WK-673 S3; #1138) | `compile.py` `compile_bundle` | as A-2's table records | one call | **SERIALISE** (rule 4) |
-| **A-4**, PL 9593 (WK-1178; #1175 @`24eca966`) | none (`examples/`, backend tests) | B4's `model_call` over the AD structure | the check A-4's map must pass | **plan dependency, reversed**: A-4 follows this slice (need 5's proposal) |
-| `docs/roadmap.md` WK-1178 tail | — | A-3 (SL 9596) and A-4 (SL 9594) append at the same place | the SL 9495 row | registry append, distinct rows → the second to merge re-reads |
-| **SL 9647**, PL 9649 applying RL 9633's T1 (WK-673; #1152 @`df8ba756`; RL 9633 #1155 @`95590c87`) *(row added 2026-10-05, pre-mint)* | `03` FR-240 row (`:137`), its second cell | T1 appended with the find string `The message names the step and the rung.)* \|` | RL 9491's T-text appended with the **same** find string (RL 9491 #1214 @`b900e008`) | the same anchor: whichever slice applies second counts 0 → **SERIALISE** on the FR-240 row, under the anchor rule below |
+| **PL-1471**, FR-240 family fix (WK-673; #1152 @`df8ba756`) | `compile.py` `ResolvedArtifact`, `compile_bundle`; `03` FR-240 cell | `factors`; three checks; T1/T5 on FR-240 | reads `factors`; the same cell | **plan dependency** (need 2) → never concurrent |
+| **PL 9610**, **PL 9609** (WK-1250 S2/S3; #1170, #1173) and **PL-1452** (WK-673 S3; #1138) | `compile.py` `compile_bundle` | as A-2's table records | one call | **SERIALISE** (rule 4) |
+| **A-4**, PL-1542 (WK-1178; #1175 @`24eca966`) | none (`examples/`, backend tests) | B4's `model_call` over the AD structure | the check A-4's map must pass | **plan dependency, reversed**: A-4 follows this slice (need 5's proposal) |
+| `docs/roadmap.md` WK-1178 tail | — | A-3 (SL-1466) and A-4 (SL-1543) append at the same place | the SL-1541 row | registry append, distinct rows → the second to merge re-reads |
+| **SL-1472**, PL-1471 applying RL-1470's T1 (WK-673; #1152 @`df8ba756`; RL-1470 #1155 @`95590c87`) *(row added 2026-10-05, pre-mint)* | `03` FR-240 row (`:137`), its second cell | T1 appended with the find string `The message names the step and the rung.)* \|` | RL-1523's T-text appended with the **same** find string (RL-1523 #1214 @`b900e008`) | the same anchor: whichever slice applies second counts 0 → **SERIALISE** on the FR-240 row, under the anchor rule below |
 
 *Dated note, 2026-10-05 (pre-mint): **the FR-240 anchor rule**, accepted by the maintainer (by
 delegation) in the entry "2026-10-05 18:58:28 BST — S7 gate 1: (a) _SINKS entries ADOPTED;
 the re-gate plan CONFIRMED, with an explicit allowed-failure set; the measurement re-run in
-the slot" (`channel/to-lead.md`), item 4, verbatim: "RL 9491 #1214 @b900e008 and the FR-240
-anchor collision with RL 9633 T1: the rule (append after the last amendment then present,
-re-counted at its own base, ≠1 is a STOP to me) is ACCEPTED, and it is named in BOTH RL 9491
-and PL 9649's contention." SL 9495 and SL 9647 serialise on the FR-240 row. The slice that
+the slot" (`channel/to-lead.md`), item 4, verbatim: "RL-1523 #1214 @b900e008 and the FR-240
+anchor collision with RL-1470 T1: the rule (append after the last amendment then present,
+re-counted at its own base, ≠1 is a STOP to me) is ACCEPTED, and it is named in BOTH RL-1523
+and PL-1471's contention." SL-1541 and SL-1472 serialise on the FR-240 row. The slice that
 applies second appends its text at the end of FR-240's second cell, after the last amendment
 then present; it re-counts its find string at its own base; any count other than 1 is a STOP
-to the maintainer. This slice follows PL 9649 (need 2), so SL 9495 is expected to apply
+to the maintainer. This slice follows PL-1471 (need 2), so SL-1541 is expected to apply
 second. The code's home is unchanged: `MODEL_CALL_FEATURE_MAP_INVALID` is not yet in `03`'s
-owned list (A-2's T3 homes it), so SL 9495 serialises after A-2 (need 3).*
+owned list (A-2's T3 homes it), so SL-1541 serialises after A-2 (need 3).*
 
 ### Size
 
@@ -370,7 +373,7 @@ backend test appended to a module that already builds a persisted GLM, one spec 
   - *Recommendation: (b).* A definition written twice diverges (`CLAUDE.md` §2), and the two
     checks are the ruling's "one fault, one code". If A-2's merged function does not compute
     the pair (Task 0 Step 2 reads it), (a) is moot and (b) applies trivially.
-  - *(Pre-mint delta, 2026-10-05, the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", item 3: **ruled, beyond (b).** The one helper is **born in A-2** (PL 9597 Task
+  - *(Pre-mint delta, 2026-10-05, the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", item 3: **ruled, beyond (b).** The one helper is **born in A-2** (PL-1464 Task
     1b) in `pricing_core/modelling/factors.py`, and this slice reuses it. If A-2 merged
     without it, Task 0a extracts it first. Acceptance 13 proves both callers.)*
 
@@ -378,9 +381,9 @@ backend test appended to a module that already builds a persisted GLM, one spec 
 
 ### Task 0: Preconditions (no code)
 
-- [ ] **Step 1:** Confirm each activation need at `origin/main`: RL 9491 minted (`ls
+- [ ] **Step 1:** Confirm each activation need at `origin/main`: RL-1523 minted (`ls
   docs/rulings | grep -i fr-240` and read its T-text and anchor); `git grep -n "factors:"
-  -- packages/pricing-core/src/pricing_core/rating/compile.py` shows PL 9649's field;
+  -- packages/pricing-core/src/pricing_core/rating/compile.py` shows PL-1471's field;
   `git grep -c MODEL_CALL_FEATURE_MAP_INVALID -- docs/specs/03-rating-engine.md
   backend/src/app/errors.py` prints a count for each; `git grep -n
   "_resolve_peril_components" -- packages/pricing-core/src` shows A-3's function.
@@ -390,7 +393,7 @@ backend test appended to a module that already builds a persisted GLM, one spec 
   `git grep -n "def required_model_inputs(" -- packages backend/src`. One hit in
   `pricing_core/modelling/factors.py` means skip Task 0a. No hit means run Task 0a before
   Task 1. Any other count is a STOP to the lead.)*
-- [ ] **Step 3:** Re-read `compile_bundle` at the merge base and record where PL 9649 keeps
+- [ ] **Step 3:** Re-read `compile_bundle` at the merge base and record where PL-1471 keeps
   the resolved model artifacts after the pin loop. Reuse that mapping; do not resolve again.
 
 ### Task 0a: Extract the helper, only if A-2 merged without it
@@ -401,7 +404,7 @@ backend test appended to a module that already builds a persisted GLM, one spec 
 **Files:** Modify `packages/pricing-core/src/pricing_core/modelling/factors.py`,
 `backend/src/app/platform/rating_algorithms.py`.
 
-- [ ] **Step 1:** Add PL 9597 Task 1b Step 3's `required_model_inputs` to `factors.py`, after
+- [ ] **Step 1:** Add PL-1464 Task 1b Step 3's `required_model_inputs` to `factors.py`, after
   `rateable`, and add it to `__all__`. Its body is the "Factors, else `feature_order`"
   choice, moved out of A-2's save check unchanged.
 - [ ] **Step 2:** In A-2's save check, replace that inline choice with
@@ -410,14 +413,14 @@ backend test appended to a module that already builds a persisted GLM, one spec 
 - [ ] **Step 3:** Run A-2's items 13, 18 and 19 (`backend/tests/test_rating_algorithms.py`,
   then `backend/tests/test_sub_graphs_api.py`, one file per run). All pass, unchanged, with
   no test edited. Commit: `refactor: extract required_model_inputs into pricing-core, no
-  behaviour change (PL 9494 DP-1)`.
+  behaviour change (PL-1540 DP-1)`.
 
 ### Task 1: The reds (Acceptance 1–3, 6)
 
 **Files:** Create `packages/pricing-core/tests/test_rating_compile_completeness.py`.
 
-**Interfaces:** Consumes `compile_bundle`, `ResolvedArtifact` (with PL 9649's `factors`),
-`RatingVersion`. Build each `Factor` the way PL 9649's `test_rating_compile_fr240.py` does,
+**Interfaces:** Consumes `compile_bundle`, `ResolvedArtifact` (with PL-1471's `factors`),
+`RatingVersion`. Build each `Factor` the way PL-1471's `test_rating_compile_fr240.py` does,
 and each GBM payload from `test_rating_runtime.py`'s `_gbm_model_payload`
 (`:42`) with `feature_order` replaced; mirror those modules' fixtures rather than this plan's
 names, and do not reinvent them ([`README.md`](README.md) rule 3). The algorithm is
@@ -459,7 +462,7 @@ Structure component, keyed by `str(ref)`.
 ```python
 def required_model_inputs(resolved: ResolvedArtifact) -> tuple[str, ...]:
     """A pinned model's required inputs: its Factors' slugs, or its `feature_order`
-    when it has no Factors (RL 9491, FR-240). The offset column is not one (A-2's R2)."""
+    when it has no Factors (RL-1523, FR-240). The offset column is not one (A-2's R2)."""
     if resolved.factors:
         return tuple(factor.slug for factor in resolved.factors)
     fit_result = resolved.payload.get("fit_result") or {}
@@ -470,7 +473,7 @@ def check_model_call_coverage(
     algorithm: RatingAlgorithm, resolved: Mapping[str, ResolvedArtifact]
 ) -> None:
     """Refuse a `model_call` whose `feature_map` misses an input its pinned model needs
-    (FR-240, RL 9491). Per component for a `peril_structure_ref`. Membership is the
+    (FR-240, RL-1523). Per component for a `peril_structure_ref`. Membership is the
     save check's (A-2); this is completeness only."""
     for step in algorithm.steps:
         if not isinstance(step, RatingModelCallStep):
@@ -525,7 +528,7 @@ def check_model_call_coverage(
   `check_model_call_coverage(algorithm, resolved)`. Add one docstring sentence and both names
   to `__all__`.
 - [ ] **Step 3:** Run the new module: all green. *(Pre-mint delta, 2026-10-05, the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", item 3: A-2's function already
-  calls the helper, from PL 9597 Task 1b or this plan's Task 0a. The sentence "Under DP-1 (b),
+  calls the helper, from PL-1464 Task 1b or this plan's Task 0a. The sentence "Under DP-1 (b),
   point A-2's backend function at `required_model_inputs`" is void. The runs stay, plus
   Acceptance 13's backend test.)* Under DP-1 (b), point A-2's backend function
   at `required_model_inputs` and run `backend/tests/test_rating_algorithms.py` and
@@ -544,15 +547,15 @@ def check_model_call_coverage(
 
 ### Task 4: The spec text (Acceptance 8)
 
-- [ ] **Step 1:** Apply RL 9491's FR-240 T-text to `docs/specs/03-rating-engine.md`'s FR-240
+- [ ] **Step 1:** Apply RL-1523's FR-240 T-text to `docs/specs/03-rating-engine.md`'s FR-240
   row, verbatim, at the position the RL names. Run the RL's `grep -cF` anchor (prints `1`)
   and `python3 scripts/audit-docs.py`. *(Dated note, 2026-10-05, pre-mint: under the FR-240
-  anchor rule (§"Write set", the SL 9647 row), re-count the find string at this slice's own
-  base first. If SL 9647's T1 is already applied, append at the end of FR-240's second cell,
+  anchor rule (§"Write set", the SL-1472 row), re-count the find string at this slice's own
+  base first. If SL-1472's T1 is already applied, append at the end of FR-240's second cell,
   after the last amendment then present. Any count other than 1 is a STOP to the
   maintainer, never a re-anchoring by the executor.)*
 - [ ] **Step 2:** Commit: `docs(specs): FR-240 — compile refuses a model_call's incomplete
-  feature_map (RL 9491)`.
+  feature_map (RL-1523)`.
 
 ### Task 5: The gate and the ledger (Acceptance 9, 10, 12)
 
@@ -561,12 +564,12 @@ def check_model_call_coverage(
 
 ## Hand-off
 
-1. The lead mints PL 9494 and SL 9495 at the merge turn and dispatches only after every
+1. The lead mints PL-1540 and SL-1541 at the merge turn and dispatches only after every
    activation need holds.
-2. The lead's proposal (need 5): A-4's activation needs gain "SL 9495 merged".
-3. When this slice merges, PL 9597's pre-mint note ("its feature_map check is
+2. The lead's proposal (need 5): A-4's activation needs gain "SL-1541 merged".
+3. When this slice merges, PL-1464's pre-mint note ("its feature_map check is
    membership-only") is discharged by the code it points to.
-4. *(Pre-mint delta, 2026-10-05, the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", items 2 and 4.)* Item 2 is done: PL 9593 #1175 @`133fc13a`, need 4a.
+4. *(Pre-mint delta, 2026-10-05, the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2", items 2 and 4.)* Item 2 is done: PL-1542 #1175 @`133fc13a`, need 4a.
    **For a later cleanup decision:** the GBM empty-map fallback (`runtime.py:553-555` at
    `ecbd1954`) is DEAD-THROUGH-COMPILE once this slice merges. It is kept, and the ledger
    names it.
@@ -581,18 +584,18 @@ def check_model_call_coverage(
    MODEL_CALL_FEATURE_MAP_INVALID … naming the step and the missing features": Acceptance 1–3,
    9. "after A-2 … before A-4's demo path": needs 3 and 5. The brief's five reds are
    Acceptance 1, 2, 3, 4 and 5.
-2. **Placeholders.** The one deferred literal is RL 9491's anchor (Acceptance 8), which is
+2. **Placeholders.** The one deferred literal is RL-1523's anchor (Acceptance 8), which is
    that ruling's to write; the plan names where it comes from.
 3. **Type consistency.** `required_model_inputs` and `check_model_call_coverage` are named
    the same in Task 2, the write set, and DP-1.
 4. **Repository literals read at `ecbd1954`:** every row in §"Task 0 at planning time". The
-   `ResolvedArtifact.factors` type is PL 9649's plan (#1152 @`df8ba756`, its `:674`), and
+   `ResolvedArtifact.factors` type is PL-1471's plan (#1152 @`df8ba756`, its `:674`), and
    `_resolve_peril_components`'s return type is A-3's plan (#1174 @`2404ac86`, Task 2
    Step 1); both are re-read at Task 0, merged.
 5. **What was not executed.** No test or code was run. The sketches are against names quoted
    above; each red is seen failing before its code.
 6. *(Pre-mint delta, 2026-10-05, the entry headed "2026-10-05 19:03:24 BST — PL 9494 (#1216 @b4e4fdf5): the order change, A-4's need, DP-1 and R-a all ACCEPTED; DP-1's helper is BORN IN A-2".)* **Type consistency, after DP-1.** `required_model_inputs(factors,
-   feature_order)` is the signature in PL 9597 Task 1b (#1178 @`65edaa74`), in this plan's
+   feature_order)` is the signature in PL-1464 Task 1b (#1178 @`65edaa74`), in this plan's
    Task 0a and Task 2 note, and in Acceptance 13. Self-review 3's "named the same in Task 2"
    holds for the name. The sketch's `ResolvedArtifact` parameter is superseded by the Task 2
    note. `runtime.py:553-555` was read at `ecbd1954` (`git show

@@ -1,9 +1,9 @@
 ---
-id: RL-9588
+id: RL-1538
 family: ruling
-title: The double count between WF-699 A1's seeded rate tables and B4's model_call — the model is the price and each seeded table enters as its ratio to its seed origin (Option B, built as B1); B2's enforced form raised as OQ 9587
+title: The double count between WF-699 A1's seeded rate tables and B4's model_call — the model is the price and each seeded table enters as its ratio to its seed origin (Option B, built as B1); B2's enforced form raised as OQ-1539
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
-created: 2026-10-05              # the mint date (check 31); ruled 2026-10-05
+created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
 owner: decision-maker
 tree: 137bc817ef1fb40ea57e9053e0ad40b73bdff3a8
 phase: P2
@@ -14,14 +14,16 @@ corrected_by: []
 relates: [WF-699, FR-222, FR-230, FR-237, FR-247, FR-266, RL-1375, RL-1329]
 ---
 
-# RL 9588 (working id) — the double count: seeded rate tables enter a Peril Structure's price as their ratio to the seed
+# RL-1538 — the double count: seeded rate tables enter a Peril Structure's price as their ratio to the seed
+
+*(Minted 2026-10-09 as RL-1538 from working id 9588, with its OQ-1539 minted as OQ-1539, in the G2-b batch mint PR; every citation of a minted id in this record is re-pointed, and quoted entries stay as quoted.)*
 
 ## How this was ruled
 
 - **Filed under working id 9588, reserved by the lead (team-lead) on 2026-10-05; the new
   question it raises is working id OQ 9587, reserved with it.** At the mint, `RL 9588` and
-  `OQ-9587` / `OQ 9587` in this record and in the three rows this commit adds are re-pointed
-  to their minted ids. Nothing else in the texts below is a placeholder.
+  `OQ-9587` / `OQ 9587` in this record and in the three rows this commit adds were re-pointed
+  to `RL-1538` and `OQ-1539`. Nothing else in the texts below is a placeholder.
 - **The decision is not this record's.** It is the maintainer's (by delegation), in the entry
   "2026-10-05 16:54:17 BST — CLEANUP NOW (the maintainer chose "now, before lane A starts",
   window to ~17:20 BST); the missing 16:47 slot order; WK-1250 S2 DPs and the DOUBLE-COUNT DP
@@ -37,7 +39,7 @@ DOUBLE COUNT (handover/dp-memo-doublecount-2026-10-05.md; the WF-699 B5 gap; SIL
 
 - **The decision point was raised** by the maintainer's entry "2026-10-05 16:43:31 BST — THE
   MAINTAINER'S DECISION (asked live): G2 takes OPTION A, WF-699's literal Peril Structure
-  path is BUILT IN P2; and the FD 9605 approval, now on the record", item 4: "The DOUBLE-COUNT
+  path is BUILT IN P2; and the FD-1458 approval, now on the record", item 4: "The DOUBLE-COUNT
   design point (A1 seeds tables from the AD frequency model while B4's model_call scores a
   Peril Structure containing it, so the factor effects may count twice; WF-699 does not say
   how they combine) needs a DM's options and a recommendation, ruled BEFORE A-4's plan
@@ -81,7 +83,7 @@ git grep -n -i -E 'duplicate|same slug|one version per|by_slug' origin/main -- p
    result type, not worked around in A-3", `channel/to-lead.md`)*. At `137bc817`,
    `pricing_core/rating/runtime.py:567` reads `value: int = round(prediction)`, which would
    round a frequency prediction (about 0.07) to 0 before any ratio applied. That entry
-   rules it fixed at the root by A-2 (PL 9597, #1178), verbatim:
+   rules it fixed at the root by A-2 (PL-1464, #1178), verbatim:
 
 ```text
 RULING: A-2 (#1178 PL 9597) settles it at the ROOT, not A-3 by composing before rounding (that would leave every other model_call wrong). A model_call's output follows its step's DECLARED result type (03 FR-227): \`decimal\` → an exact Decimal, no integer rounding; \`money_minor\` → the step's declared rounding (FR-226); any other declared type → refused at save as a type mismatch. Red first: a frequency GLM model_call declared \`decimal\` returns ~0.07 (today: 0). A golden test against predict_glm at full precision. The docstring's "provisional" note is removed, citing this entry. A-3 composes frequency × severity on Decimals and rounds once, at the money step. dm-doublecount and dm-a34 are told: B1's ratio and A-3's composition sit on Decimal model outputs. If the planner finds a G2-independent reason to defer this, it comes to me; otherwise it is in A-2.
@@ -91,28 +93,28 @@ RULING: A-2 (#1178 PL 9597) settles it at the ROOT, not A-3 by composing before 
    Decimal; the seed ratios (edited / seed, each cell a decimal string, FR-228) multiply it
    as Decimals; and the product is rounded **once**, at the step that declares
    `money_minor` with FR-226's rounding. No integer rounding happens before the ratios
-   apply. B1 therefore depends on A-2's change landing first; A-4 (PL 9593) states the
+   apply. B1 therefore depends on A-2's change landing first; A-4 (PL-1542) states the
    dependency.
 2. **Options A, C and D are refused**, for the reasons the decision gives: A breaks FR-247
    (a refit could never move the price; D7/D8 die); C is wrong for a GBM or a severity model;
    D is a silent mispricing.
-3. **Two points are unverified and are A-4's Task 0, red first** (PL 9593): (i) two versions
+3. **Two points are unverified and are A-4's Task 0, red first** (PL-1542): (i) two versions
    of one table slug pinned and scored end to end (backend create path, JDM table node, the
    engine's decimal division under FR-276); (ii) a non-terminating ratio under `RL-1329`'s
    exact replay. **Either failing is a STOP to the maintainer (by delegation), and B2 becomes
    required.**
-4. **B2 is raised as a new `03` open question, `OQ-9587`** (working id), owner WK-1178,
+4. **B2 is raised as a new `03` open question, `OQ-1539`** (working id 9587), owner WK-1178,
    decided after G2: a `relative_to: seed` field on the `table` step plus a compile refusal
    (+0.5–1 executor-day). It is placed at roadmap §10's **Before Phase 3** gate, as `OQ-1321`
    (owner WK-1178, post-P2) was. The rows are T5–T7, applied in this commit.
-5. **PL 9624's DP-a2 base premium and its check no longer describe the price path under B**
-   (PL 9624, #1161, `:119` and `:265` at its head `33f7ba0bdfac144290ebdd071cca6a2d9872b452`):
-   A-4 (PL 9593) re-states them and flags it. That plan is not edited by this record.
+5. **PL-1525's DP-a2 base premium and its check no longer describe the price path under B**
+   (PL-1525, #1161, `:119` and `:265` at its head `33f7ba0bdfac144290ebdd071cca6a2d9872b452`):
+   A-4 (PL-1542) re-states them and flags it. That plan is not edited by this record.
 
 ## The spec texts
 
 Each text gives the file, the find string (each occurs **exactly once** at `137bc817`, by
-`grep -c -F`), and the bytes. T1–T4 are applied by **A-4 (SL 9594 / PL 9593, WK-1178)** in
+`grep -c -F`), and the bytes. T1–T4 are applied by **A-4 (SL-1543 / PL-1542, WK-1178)** in
 one commit with its algorithm, per `CLAUDE.md` §2. T5–T7 are applied **in this commit**.
 
 **T1 — `WF-699` row B4.** Find:
@@ -136,7 +138,7 @@ Replace with:
 Replace with:
 
 ```text
-| B5 | Pricing Actuary | Adds `table` steps for each rate table — a table seeded from a model inside the Peril Structure enters as its ratio to its seed origin, so each model effect counts once (`RL 9588`) — `expression` steps for the loading chain
+| B5 | Pricing Actuary | Adds `table` steps for each rate table — a table seeded from a model inside the Peril Structure enters as its ratio to its seed origin, so each model effect counts once (`RL-1538`) — `expression` steps for the loading chain
 ```
 
 **T3 — `03` FR-230.** Find:
@@ -148,7 +150,7 @@ A hand-authored table may still have several keys (FR-228). |
 Replace with:
 
 ```text
-A hand-authored table may still have several keys (FR-228). *(Clarified 2026-10-05, `RL 9588`: where a Rating Version also calls a model or Peril Structure containing the seed's source model (FR-222), the seeded table enters the premium as the ratio of its pinned version's cell to its seed origin's cell (§4.2, `RL-1375` DP-1), multiplying the `model_call` output. Applied as an absolute relativity it would count the source model's effect twice. In a multi-peril structure the ratio scales the seed model's peril component only.)* |
+A hand-authored table may still have several keys (FR-228). *(Clarified 2026-10-05, `RL-1538`: where a Rating Version also calls a model or Peril Structure containing the seed's source model (FR-222), the seeded table enters the premium as the ratio of its pinned version's cell to its seed origin's cell (§4.2, `RL-1375` DP-1), multiplying the `model_call` output. Applied as an absolute relativity it would count the source model's effect twice. In a multi-peril structure the ratio scales the seed model's peril component only.)* |
 ```
 
 **T4 — `03` FR-247.** Find:
@@ -165,7 +167,7 @@ Replace with:
 
 **T5 — `03` §10, the new row**, appended after the `OQ-1373` row (the last row of the table).
 **T6 — `docs/open-questions.md`, RATE section**, appended after its `OQ-1373` row. **T7 —
-`docs/roadmap.md` §10**, `OQ-9587` added to the Before Phase 3 row, its count recounted from
+`docs/roadmap.md` §10**, `OQ-1539` added to the Before Phase 3 row, its count recounted from
 the row's ids (11 (2 open) → 12 (3 open)), and a dated note under the table. The bytes are
 this commit's diff of those three files.
 
@@ -173,10 +175,10 @@ this commit's diff of those three files.
 
 - **This commit:** this record, T5–T7, and the regenerated `docs/INDEX.md`. No WF-699 text,
   no FR text, no plan, `model-schema` or code file is edited here.
-- **A-4 (SL 9594 / PL 9593)** cites this record, applies T1–T4, builds the demo algorithm in
+- **A-4 (SL-1543 / PL-1542)** cites this record, applies T1–T4, builds the demo algorithm in
   form B1, and runs Task 0's two probes red first before anything else. The ruling mints
-  before PL 9593.
-- **`OQ-9587`** is ruled by the decision-maker after G2, owner WK-1178.
+  before PL-1542.
+- **`OQ-1539`** is ruled by the decision-maker after G2, owner WK-1178.
 
 ## Acceptance — the violation that must become detectable
 
