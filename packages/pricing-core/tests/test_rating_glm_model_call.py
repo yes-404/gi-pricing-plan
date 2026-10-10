@@ -636,3 +636,22 @@ async def test_a_glm_failure_reports_its_code_and_never_the_models_text(
     message = (await _value(compiled, **QUOTES[0]))[MODEL_CALL_ERROR_KEY]
     assert "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED" in message
     assert "SENTINEL" not in message
+
+
+@pytest.mark.req("FR-226", "FR-239")
+async def test_a_glm_model_call_without_result_type_rounds_like_any_other(
+    world: GlmWorld,
+) -> None:
+    """One rule for every `model_call` (the 2026-10-10 00:44:31 BST ruling; RL-1580's gap): an
+    absent `result_type` rounds the prediction as it always did, whatever the model type. The
+    frequency GLM's mean is about 0.07, so the legacy round is 0 and the unrounded value is not."""
+    compiled = load_bundle(await compiled_bundle(world, algorithm_payload(result_type=None)))
+    for quote in QUOTES:
+        result = await _value(compiled, **quote)
+        assert MODEL_CALL_ERROR_KEY not in result
+        exact = world.predict(
+            driver_age=float(quote["driver_age"]), region=quote["region"],
+            exposure_years=quote["exposure_years"],
+        )
+        assert exact != round(exact)
+        assert result["risk"] == round(exact)
