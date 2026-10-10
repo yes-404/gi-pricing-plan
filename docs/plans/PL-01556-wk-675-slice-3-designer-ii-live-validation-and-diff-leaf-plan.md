@@ -4,7 +4,7 @@ family: plan
 kind: leaf
 title: WK-675 Slice 3 — Designer II, live validation and diff (FR-212, FR-214, FR-215, FR-219, FR-223, FR-227, FR-244, FR-246, FR-24): leaf plan
 status: draft                  # draft → active → superseded | retired (§1.2a)
-created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
+created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
 owner: planner
 tree: 9489405370a1ce06c2b985ad88c7d471438febb1
 phase: P2
@@ -17,7 +17,7 @@ relates: [PL-1286, PL-1371, PL-1364, SL-1367, FD-1335, FD-1366, FD-1374, RL-1263
 
 # PL-1556 — WK-675 Slice 3: Designer II, live validation and diff, leaf plan
 
-*(Minted 2026-10-09 as PL-1556 from working id 9578, in the D3 batch mint; citations of the ids minted in this batch, and of ids already minted on main (RL-1474, RL-1475, RL-1473, RL-1445, PL-1476, SL-1477, FD-1437, RL-1438), are re-pointed outside quotes, quoted text and quoted channel entries stay as quoted, and cites of PL 9576, PL 9574, SL 9577 and SL 9575 stay working ids. (Re-minted +1 on 2026-10-09 by the minting rewrite, on the lead's 13:09:28 BST ruling (1): first minted as PL 1555, before the D1 mint moved the allocation.))*
+*(Minted 2026-10-10 as PL-1556 from working id 9578, in the D3 batch mint; citations of the ids minted in this batch, and of ids already minted on main (RL-1474, RL-1475, RL-1473, RL-1445, PL-1476, SL-1477, FD-1437, RL-1438), are re-pointed outside quotes, quoted text and quoted channel entries stay as quoted, and cites of PL 9576, PL 9574, SL 9577 and SL 9575 stay working ids. (Re-minted +1 on 2026-10-09 by the minting rewrite, on the lead's 13:09:28 BST ruling (1): first minted as PL 1555, before the D1 mint moved the allocation.))*
 
 This plan is filed under working id 9578. Its `SL-` row under WK-675 in
 [`../roadmap.md`](../roadmap.md) is slice working id 9581, `draft`. That row is filed in the

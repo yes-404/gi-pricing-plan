@@ -1214,7 +1214,7 @@ id: SL-1559
 family: slice
 title: Slice 4: Editor I — the rate table grid and manual edit; RL 9753's definition and cell-page reads; the manual-edit route (F-W10-3)
 status: draft                  # draft → active → closed | retired (§1.2a)
-created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
+created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 9489405370a1ce06c2b985ad88c7d471438febb1
 phase: P2
@@ -1247,7 +1247,7 @@ agreement and the lead's go.
 
 *(Filed 2026-10-05 under working ids 9583 (this row) and 9582 (the plan), reserved by the lead.)*
 
-*(Minted 2026-10-09 as SL-1559 from working id 9583, with its plan PL-1558 from working id 9582, in the D3 batch mint.)*
+*(Minted 2026-10-10 as SL-1559 from working id 9583, with its plan PL-1558 from working id 9582, in the D3 batch mint.)*
 
 #### SL-1557 — Slice 3: Designer II — live validation through the validate route (DP-6), and the structural diff overlay
 
@@ -1256,7 +1256,7 @@ id: SL-1557
 family: slice
 title: Slice 3: Designer II — live validation through the validate route (DP-6), and the structural diff overlay
 status: draft                  # draft → active → closed | retired (§1.2a)
-created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
+created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 9489405370a1ce06c2b985ad88c7d471438febb1
 phase: P2
@@ -1278,7 +1278,7 @@ maintainer's agreement and the lead's go.
 
 *(Filed 2026-10-05 under working ids 9581 (this row) and 9578 (the plan), reserved by the lead.)*
 
-*(Minted 2026-10-09 as SL-1557 from working id 9581, with its plan PL-1556 from working id 9578, in the D3 batch mint.)*
+*(Minted 2026-10-10 as SL-1557 from working id 9581, with its plan PL-1556 from working id 9578, in the D3 batch mint.)*
 
 #### SL 9577 (working id) — Slice 13: Jobs — the filterable list, live over the SSE stream (`FD-1284`, option D)
 
