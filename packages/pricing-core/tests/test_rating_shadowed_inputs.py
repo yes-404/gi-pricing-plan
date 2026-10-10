@@ -69,7 +69,9 @@ async def test_an_undeclared_key_naming_a_produced_value_is_refused_in_a_batch(
 
 #: Recorded at the slice's base commit (4f9c19c2) in Task 1 Step 4, before any code change;
 #: two runs gave the same value.
-_SCORE_FIXTURE_HASH = "sha256:86abdb81dc16d2075956aa11e05f2e9c87fe191d4a3397574e5a82520039073d"
+#: Re-recorded 2026-10-10 (FD-1374, RL-1519): was sha256:86abdb81…039073d; the fixture graph gained
+#: its FR-246 declarations (consumes, input steps), so its content hash moved; no price changed.
+_SCORE_FIXTURE_HASH = "sha256:6458c7c80627d20602a8d82821a80e3fb7500c75c1d3bf9bc1033ba74f7a918e"
 
 
 @pytest.mark.req("FR-213")
