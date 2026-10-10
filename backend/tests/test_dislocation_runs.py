@@ -461,19 +461,28 @@ async def test_dislocation_subset_bundles_never_become_rating_versions(
 
 @pytest.mark.req("FR-1397")
 async def test_a_run_that_does_not_reconcile_fails_with_attribution_reconciliation_failed(
-    database: Database, blob_store: BlobStore, world: _World, monkeypatch: pytest.MonkeyPatch
+    api_client: TestClient, database: Database, blob_store: BlobStore, world: _World,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     async def refuse(*_: Any, **__: Any) -> Any:
+        # the text `attribute` raises when a compared policy has no premium under a subset
+        # bundle (`pricing_core.rating.analysis`): it names the policy's quote id
         raise AttributionError(
-            "ATTRIBUTION_RECONCILIATION_FAILED", "policy Q000 does not reconcile"
+            "ATTRIBUTION_RECONCILIATION_FAILED",
+            "policy Q000 is quoted in the baseline and the candidate but has no premium "
+            "under the subset bundle for changes [c1]",
         )
 
     monkeypatch.setattr(dislocation_handlers, "attribute", refuse)
-    _, job = await _run_job(database, blob_store, world, world.spec())
+    job_id, job = await _run_job(database, blob_store, world, world.spec())
     assert job.status is JobStatus.FAILED
     assert job.error is not None
     assert job.error["code"] == "ATTRIBUTION_RECONCILIATION_FAILED"
-    assert "Q000" not in str(job.error)  # NFR-499: the quote id in the raised text is not kept
+    # NFR-499 (02:47:13): the stored error and the API body carry no quote id
+    assert "Q000" not in str(job.error)
+    served = api_client.get(f"/api/v1/jobs/{job_id}", headers=world.headers)
+    assert served.status_code == 200, served.text
+    assert "Q000" not in served.text
     assert await _runs(database, world.workspace_id) == []
 
 
