@@ -2,7 +2,7 @@
 id: FD-1598
 family: finding
 title: The stray cd by team seats recurs despite the charter rule (15 recorded instances 8–10 Oct), and the fix is the root cause, the hook's relative path
-status: active
+status: closed
 created: 2026-10-10            # original date 2026-10-10, set at the draft; minted 2026-10-10
 owner: auditor
 tree: fe0b0627590307259ec6d56be7f73115cf245092
