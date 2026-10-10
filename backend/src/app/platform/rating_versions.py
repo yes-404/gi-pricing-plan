@@ -37,6 +37,7 @@ from app.platform import rate_tables as rate_tables_service
 from app.platform import reference as reference_service
 from app.platform import regression_runs as regression_runs_service
 from app.platform import regression_suites as regression_suites_service
+from app.platform import sub_graphs as sub_graphs_service
 from app.platform import transformations as transform_service
 from app.platform import transparency as transparency_service
 from app.platform.blobs import BlobStore
@@ -79,6 +80,7 @@ from model_schema.rating import ApproximationCheck
 from pricing_core.rating.compile import Bundle, ResolvedArtifact, compile_bundle
 from pricing_core.rating.runtime import CompiledBundle
 from pricing_core.rating.testing import evaluate_golden_quotes
+from pricing_core.safe_error import safe_error_detail
 
 #: `reference.rows_as_at`'s default `limit` (200) is a UI page size. A compiled Bundle
 #: must be self-contained (FR-239) and embed a pinned reference table's rows in full —
@@ -516,6 +518,26 @@ _ACTION = {
 }
 
 
+async def _resolve_sub_graph_pin(
+    session: AsyncSession, workspace_id: UUID, ref: ArtifactRef
+) -> ResolvedArtifact:
+    """The compile resolver's `sub_graph` branch (WK-1250 Slice 2; RL-1309 DP-1 item 5, G4).
+
+    A Sub-graph Version has no status and no approval lifecycle of its own
+    (`SubGraphVersionRow` has no status column), so there is no real maturity to read. The
+    sentinel is deliberately not a member of `_APPROVED_OR_BETTER`: `_MATURITY_CHECK_EXEMPT` is
+    what admits the pin, as for `rate_table` (RL-856), and the pin fails closed if the
+    exemption is ever removed. `test_sub_graph_version_row_has_no_status_column` is the
+    tripwire. A free function so the resolver's branch is two lines wherever the resolver lives.
+    """
+    sub_graph = await sub_graphs_service.resolve_ref(
+        session, workspace_id=workspace_id, ref=ref
+    )
+    return ResolvedArtifact(
+        status="no_maturity_concept", payload=sub_graph.model_dump(mode="json")
+    )
+
+
 class WorkspaceResolver:
     """The workspace's own `ArtifactResolver` (DP-S4-4): resolves an algorithm or a pin
     through the workspace's tables, embedding each artifact's real content (RL-873).
@@ -550,6 +572,8 @@ class WorkspaceResolver:
             # `pricing_core.rating.compile._MATURITY_CHECK_EXEMPT` reads for a pin kind with
             # nothing to report.
             return ResolvedArtifact(status="no_maturity_concept", payload=algo.content)
+        if ref.type == "sub_graph":
+            return await _resolve_sub_graph_pin(session, workspace_id, ref)
         if ref.type == "model":
             model = await session.scalar(
                 select(ModelRow).where(
@@ -743,7 +767,11 @@ async def compile_rating_version(
             schema, WorkspaceResolver(session, workspace_id, blob_store)
         )
     except ValueError as exc:
-        text = str(exc)
+        # FD 9952 row 1 (NFR-499): `str(exc)` of a pydantic `ValidationError` prints the failing
+        # input, and this detail is stored in the Job error that `GET /jobs/{id}` serves. The
+        # allow-list renders a `CodedError` as `CODE: message` (the form partitioned below) and a
+        # `ValidationError` input-free; any other `ValueError` keeps only its type name.
+        text = safe_error_detail(exc) or type(exc).__name__
         code, _, detail = text.partition(": ")
         if not (code.isupper() and "_" in code):
             code, detail = "BUNDLE_COMPILE_FAILED", text

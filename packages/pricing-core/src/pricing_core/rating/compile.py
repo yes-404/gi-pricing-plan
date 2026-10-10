@@ -23,7 +23,7 @@ from decimal import Decimal
 from typing import Any, NoReturn, Protocol
 
 import zen
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, SerializationInfo, field_serializer
 
 from model_schema.modelling import Banding, Factor, FactorIntent, Grouping
 from model_schema.rating import (
@@ -43,8 +43,9 @@ from model_schema.rating import (
     check_model_reference_mode,
 )
 from model_schema.refs import ArtifactRef
-from model_schema.sub_graphs import SubGraphInputPort
+from model_schema.sub_graphs import SubGraph, SubGraphInputPort
 from pricing_core.rating.authored import authored_expression_fields
+from pricing_core.rating.inline import inline_mounts, mounted_fragments
 from pricing_core.rating.ladder import RUNG_ORDER, output_steps_by_name, rung_output_name
 from pricing_core.rating.vocabulary import check_allow_list
 from pricing_core.safe_error import CodedError
@@ -515,7 +516,12 @@ _APPROVED_OR_BETTER = frozenset({"approved", "live", "retired"})
 # `test_rating_algorithm_row_has_no_status_column`
 # (`backend/tests/test_rating_version_compile.py`) is the tripwire: it fails the day a
 # `status` column is added to `rating_algorithms`, and names this record for revisiting.
-_MATURITY_CHECK_EXEMPT = frozenset({"rate_table", "rating_algorithm"})
+# RL-1309 DP-1 item 5 (2026-10-09, WK-1250 Slice 2): `sub_graph` joins the exemption. A Sub-graph
+# Version has no status and no approval lifecycle of its own; its change reaches approval inside
+# the Rating Version that pins it. `test_sub_graph_version_row_has_no_status_column`
+# (`backend/tests/test_rating_version_compile.py`) fails the day a `status` column is added to
+# `sub_graph_versions`, and names `RL-1309` for revisiting.
+_MATURITY_CHECK_EXEMPT = frozenset({"rate_table", "rating_algorithm", "sub_graph"})
 
 
 class ResolvedArtifact(BaseModel):
@@ -620,6 +626,18 @@ class Bundle(BaseModel):
     content_hash: str
     compiled_at: datetime
 
+    @field_serializer("pins")
+    def _pins_without_an_empty_sub_graphs(
+        self, pins: Pins, info: SerializationInfo
+    ) -> dict[str, Any]:
+        """`Pins` had four lists before WK-1250 Slice 2. A version that pins no sub-graph
+        serialises as it always did, so recompiling an existing algorithm gives byte-identical
+        bundle bytes, as `bundle_hash` already gives an identical hash (FR-239, ruling X)."""
+        dumped = pins.model_dump(mode=info.mode)
+        if not dumped["sub_graphs"]:
+            del dumped["sub_graphs"]
+        return dumped
+
 
 def bundle_hash(graph: JdmGraph, pins: Pins) -> str:
     """A reproducible content hash from the graph and the pins (FR-239).
@@ -629,8 +647,13 @@ def bundle_hash(graph: JdmGraph, pins: Pins) -> str:
     DP1 and FR-239, the hash is reproducible from the pins and the graph (03 §5.2,
     corrected 2026-08-27, F-W9-3-2).
     """
+    pins_dump = pins.model_dump()
+    if not pins_dump["sub_graphs"]:
+        # `Pins` had four lists before WK-1250 Slice 2. A version that pins no sub-graph hashes
+        # as it always did, so every stored `content_hash` stays reproducible from its pins.
+        del pins_dump["sub_graphs"]
     canonical = json.dumps(
-        {"graph": graph.model_dump(), "pins": pins.model_dump()},
+        {"graph": graph.model_dump(), "pins": pins_dump},
         sort_keys=True,
         separators=(",", ":"),
     )
@@ -639,6 +662,30 @@ def bundle_hash(graph: JdmGraph, pins: Pins) -> str:
 
 def _raise_named(code: str, message: str) -> NoReturn:
     raise CodedError(f"{code}: {message}") from None
+
+
+def _refuse_mount_port_type_mismatch(
+    algorithm: RatingAlgorithm, fragments: Mapping[str, SubGraph]
+) -> None:
+    """FR-227 at compile (`RL-1309` DP-3 item 5): each mapped input port against its producer.
+
+    The parent value a port is mapped to has a statically-known result type only where its
+    producer is an `input` or an `expression` step (`producer_types`); any other producer is
+    not checked here, as for an output. A port the fragment does not declare is `inline_mounts`'.
+    """
+    types = _producer_types(algorithm)
+    for mount in algorithm.sub_graphs:
+        ports = {port.name: port.type for port in fragments[str(mount.ref)].inputs}
+        for port, value in mount.inputs.items():
+            declared, produced = ports.get(port), types.get(value)
+            if declared is None or produced is None:
+                continue
+            if not _compatible(produced, declared):
+                _raise_named(
+                    "RATING_TYPE_MISMATCH",
+                    f"mount {mount.mount_point!r} maps {value!r}, which yields {produced!r}, to "
+                    f"input port {port!r}, declared {declared!r} (FR-227)",
+                )
 
 
 def check_step_refs_pinned(algorithm: RatingAlgorithm, pins: Pins) -> None:
@@ -785,6 +832,9 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
     reached through a pinned model (FR-240).
     Every `table`, `lookup` and `model_call` step's ref is pinned at its exact version
     (FR-237, `check_step_refs_pinned`).
+    Each sub-graph mount is resolved from the version's pins (`RL-1309` G1) and inlined at its
+    mount point (FR-217, `inline_mounts`), and every check above runs over the **inlined**
+    algorithm, so a fragment's steps, references and expressions are checked as the parent's.
     Raises `ValueError` named with the first failure's code.
     """
     if version.algorithm_ref is None:
@@ -814,22 +864,37 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
             "better (FR-20)",
         )
 
-    issues = validate_algorithm(algorithm)
+    # Each mounted sub-graph is resolved once, here, and kept for the pin loop below (the same
+    # reason as above). A mount whose ref is not pinned is not resolved: `mounted_fragments`
+    # refuses it (`RL-1309` G1).
+    pins = version.pins
+    mounted: dict[str, ResolvedArtifact] = {}
+    for mount in algorithm.sub_graphs:
+        if mount.ref in pins.sub_graphs and str(mount.ref) not in mounted:
+            mounted[str(mount.ref)] = await resolver.resolve(mount.ref)
+    fragments = mounted_fragments(
+        algorithm, pins, {key: artifact.payload for key, artifact in mounted.items()}
+    )
+    inlined = inline_mounts(algorithm, fragments)
+    _refuse_mount_port_type_mismatch(algorithm, fragments)
+
+    issues = validate_algorithm(inlined)
     if issues:
         _raise_named(issues[0].code, issues[0].message)
-    check_model_reference_mode(version, algorithm)
-    check_step_refs_pinned(algorithm, version.pins)
+    check_model_reference_mode(version, inlined)
+    check_step_refs_pinned(inlined, pins)
 
     payloads: dict[str, Any] = {str(version.algorithm_ref): resolved_algorithm.payload}
     all_refs: list[ArtifactRef] = [
-        *version.pins.rate_tables,
-        *version.pins.models,
-        *version.pins.reference_tables,
-        *version.pins.custom_objectives,
+        *pins.rate_tables,
+        *pins.models,
+        *pins.reference_tables,
+        *pins.custom_objectives,
+        *pins.sub_graphs,
     ]
     resolved_pins: dict[str, ResolvedArtifact] = {}
     for ref in all_refs:
-        resolved = await resolver.resolve(ref)
+        resolved = mounted.get(str(ref)) or await resolver.resolve(ref)
         exempt = ref.type in _MATURITY_CHECK_EXEMPT
         if not exempt and resolved.status not in _APPROVED_OR_BETTER:
             _raise_named(
@@ -841,10 +906,9 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
         resolved_pins[str(ref)] = resolved
     await _refuse_unapproved_objectives(version, payloads, resolver)
     await _refuse_control_factor_keys(version, payloads, resolver)
-    _refuse_control_factor_model_calls(algorithm, resolved_pins)
+    _refuse_control_factor_model_calls(inlined, resolved_pins)
 
-    graph = to_jdm(algorithm)
-    pins = version.pins
+    graph = to_jdm(inlined)
     return Bundle(
         algorithm_ref=str(version.algorithm_ref),
         graph=graph,

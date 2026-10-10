@@ -528,3 +528,111 @@ async def test_a_peril_structure_model_call_is_refused_with_a_named_reason() -> 
     })
     with pytest.raises(ValueError, match="MODEL_CALL_FAILED"):
         await score_one(compiled, ctx)
+
+
+# --- WK-1250 Slice 2 (SL-1340): a pinned sub-graph is re-inlined at load (RL 9586 DP-S2-1) -------
+
+_MOUNT_NCD = "sub_graph:ncd-ladder@4"
+
+
+def _mounted_payloads() -> dict[str, dict[str, Any]]:
+    """A parent that consumes the mount's output in a step listed BEFORE the fragment's steps,
+    and owns a value `ladder` that the fragment also uses internally (the deliberate clash)."""
+    algorithm = {
+        "slug": "mounted", "version": 1,
+        "input_contract": [
+            {"name": "ncd_years", "type": "int", "nullable": False},
+            {"name": "base_minor", "type": "int", "nullable": False},
+            {"name": "ladder", "type": "int", "nullable": False},
+        ],
+        "outputs": [{"name": "premium_minor", "type": "money_minor", "required": True}],
+        "steps": [
+            {"step_id": "s_in_years", "type": "input", "label": "y", "input_name": "ncd_years",
+             "on_missing": "error", "produces": "ncd_years"},
+            {"step_id": "s_in_base", "type": "input", "label": "b", "input_name": "base_minor",
+             "on_missing": "error", "produces": "base_minor"},
+            {"step_id": "s_in_ladder", "type": "input", "label": "l", "input_name": "ladder",
+             "on_missing": "error", "produces": "ladder"},
+            {"step_id": "s_prem", "type": "expression", "label": "p",
+             "expr": "base_minor * ncd_factor + ladder", "result_type": "money_minor",
+             "consumes": ["base_minor", "ncd_factor", "ladder"], "produces": "premium_pre"},
+            {"step_id": "s_out", "type": "output", "label": "o", "output_name": "premium_minor",
+             "rounding": {"mode": "half_even", "dp": 0}, "consumes": ["premium_pre"]},
+        ],
+        "sub_graphs": [{"ref": _MOUNT_NCD, "mount_point": "m_ncd",
+                        "inputs": {"ncd_years": "ncd_years"},
+                        "outputs": {"ncd_factor": "ncd_factor"}}],
+    }
+    fragment = {
+        "slug": "ncd-ladder", "version": 4,
+        "inputs": [{"name": "ncd_years", "type": "int"}],
+        "outputs": [{"name": "ncd_factor", "type": "decimal", "required": True}],
+        "steps": [
+            {"step_id": "s_a", "type": "expression", "label": "a", "expr": "ncd_years * 10",
+             "result_type": "int", "consumes": ["ncd_years"], "produces": "ladder"},
+            {"step_id": "s_b", "type": "expression", "label": "b", "expr": "ladder + 1",
+             "result_type": "decimal", "consumes": ["ladder"], "produces": "ncd_factor"},
+        ],
+        "change_note": "first cut",
+    }
+    return {"rating_algorithm:mounted@1": algorithm, _MOUNT_NCD: fragment}
+
+
+class _MountedResolver:
+    async def resolve(self, ref: ArtifactRef) -> ResolvedArtifact:
+        exempt = ref.type in {"rating_algorithm", "sub_graph"}
+        return ResolvedArtifact(
+            status="no_maturity_concept" if exempt else "approved",
+            payload=_mounted_payloads()[str(ref)],
+        )
+
+
+def _mounted_version() -> RatingVersion:
+    return RatingVersion.model_validate({
+        "id": str(uuid4()), "workspace_id": str(uuid4()), "slug": "mounted", "version": 1,
+        "status": "draft", "dataset_version_id": str(uuid4()), "model_ref": "model:unused@1",
+        "created_at": "2026-10-09T12:00:00Z", "created_by": str(uuid4()),
+        "updated_at": "2026-10-09T12:00:00Z", "algorithm_ref": "rating_algorithm:mounted@1",
+        "pins": {"rate_tables": [], "models": [], "reference_tables": [],
+                 "custom_objectives": [], "sub_graphs": [_MOUNT_NCD]},
+        "model_reference_mode": "exact",
+    })
+
+
+@pytest.mark.req("FR-217")
+@pytest.mark.req("FR-243")
+async def test_a_mounted_fragment_is_scored_into_the_mapped_parent_name_in_isolation() -> None:
+    bundle = await compile_bundle(_mounted_version(), _MountedResolver())
+    compiled = load_bundle(bundle)
+    assert "m_ncd__s_a" in {s.step_id for s in compiled.algorithm.steps}
+    out = await compiled.decision.async_evaluate({"ncd_years": 3, "base_minor": 100, "ladder": 7})
+    result = out["result"]
+    # The fragment's `ladder` (3 * 10) is its own; the parent's `ladder` (7) is untouched.
+    assert result["m_ncd__ladder"] == 30
+    assert result["ladder"] == 7
+    # `ncd_factor` is the mapped output (30 + 1), and the parent step that consumes it, listed
+    # before the fragment's steps, reads it: 100 * 31 + 7.
+    assert result["ncd_factor"] == 31
+    assert result["premium_pre"] == 3107
+
+
+@pytest.mark.req("FR-217")
+@pytest.mark.req("FR-243")
+async def test_c1_a_bundle_whose_graph_and_reinlined_algorithm_disagree_is_refused() -> None:
+    """RL 9586 C1: one graph node renamed, so the stored graph is not what the pins inline to."""
+    bundle = await compile_bundle(_mounted_version(), _MountedResolver())
+    nodes = dict(bundle.graph.nodes)
+    nodes["m_ncd__renamed"] = nodes.pop("m_ncd__s_a")
+    tampered = bundle.model_copy(
+        update={"graph": bundle.graph.model_copy(update={"nodes": nodes})}
+    )
+    with pytest.raises(ValueError, match="BUNDLE_COMPILE_FAILED") as raised:
+        load_bundle(tampered)
+    assert "m_ncd__" in str(raised.value)
+
+
+@pytest.mark.req("FR-217")
+@pytest.mark.req("FR-243")
+async def test_a_bundle_with_no_mounts_re_inlines_to_itself() -> None:
+    compiled = await _compiled()
+    assert [s.step_id for s in compiled.algorithm.steps][:2] == ["s_in_age", "s_in_channel"]

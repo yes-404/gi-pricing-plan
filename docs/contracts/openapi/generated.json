@@ -187,6 +187,13 @@
             },
             "title": "Repointed Tables",
             "type": "array"
+          },
+          "sub_graph_mounts": {
+            "items": {
+              "$ref": "#/components/schemas/AlgorithmSubGraphChange"
+            },
+            "title": "Sub Graph Mounts",
+            "type": "array"
           }
         },
         "title": "AlgorithmDiff",
@@ -241,6 +248,56 @@
           "field"
         ],
         "title": "AlgorithmStepChange",
+        "type": "object"
+      },
+      "AlgorithmSubGraphChange": {
+        "additionalProperties": false,
+        "description": "One sub-graph mount that differs between two versions (FR-219; `RL-1309` DP-1 item 3).\n\n`before` / `after` are the mounted versions (`None` where the mount is absent on that side),\n`ports_changed` says the port map differs, and `steps` is the inner step diff of the two\npinned fragments, present only when the caller supplied both and the version moved.",
+        "properties": {
+          "after": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "before": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mount_point": {
+            "title": "Mount Point",
+            "type": "string"
+          },
+          "ports_changed": {
+            "default": false,
+            "title": "Ports Changed",
+            "type": "boolean"
+          },
+          "steps": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AlgorithmDiff"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "mount_point"
+        ],
+        "title": "AlgorithmSubGraphChange",
         "type": "object"
       },
       "AlgorithmTableRepoint": {
@@ -11011,6 +11068,13 @@
             },
             "title": "Reference Tables",
             "type": "array"
+          },
+          "sub_graphs": {
+            "items": {
+              "$ref": "#/components/schemas/ArtifactRef"
+            },
+            "title": "Sub Graphs",
+            "type": "array"
           }
         },
         "title": "Pins",
@@ -15707,11 +15771,26 @@
       },
       "SubGraphRef": {
         "additionalProperties": false,
-        "description": "A versioned sub-graph referenced by a parent algorithm (FR-217).\n\nThe sub-graph is a versioned artifact (`sub_graph:slug@version`) mounted at a named\npoint in the parent's DAG; it is inlined at bundle time (W9-3).",
+        "description": "A versioned sub-graph referenced by a parent algorithm (FR-217).\n\nThe sub-graph is a versioned artifact (`sub_graph:slug@version`) mounted at a named\npoint in the parent's DAG; it is inlined at bundle time (W9-3). The mount is a node of\nthe parent's graph: it consumes the parent values `inputs` maps its input ports to, and\nproduces the parent names `outputs` maps its output ports to (`RL-1309` DP-3; RL 9586).\nWhether the maps are complete against the pinned version's ports is compile's to check.",
         "properties": {
+          "inputs": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Inputs",
+            "type": "object"
+          },
           "mount_point": {
+            "pattern": "^[A-Za-z][A-Za-z0-9_]*$",
             "title": "Mount Point",
             "type": "string"
+          },
+          "outputs": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Outputs",
+            "type": "object"
           },
           "ref": {
             "$ref": "#/components/schemas/ArtifactRef"

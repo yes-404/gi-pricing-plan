@@ -62,6 +62,7 @@ from pricing_core.modelling.errors import ModellingError
 from pricing_core.modelling.gbm import load_gbm_booster, predict_gbm
 from pricing_core.modelling.predict import PredictionError, linear_predictor, predict_glm
 from pricing_core.rating.compile import Bundle, JdmGraph, check_step_refs_pinned
+from pricing_core.rating.inline import inline_mounts, mounted_fragments
 from pricing_core.safe_error import CodedError
 
 __all__ = [
@@ -841,6 +842,18 @@ class CompiledBundle:
     boosters: Mapping[str, object]
 
 
+def _check_graph_matches_inlined_algorithm(graph: JdmGraph, algorithm: RatingAlgorithm) -> None:
+    """C1 (RL 9586 DP-S2-1): the stored graph's node ids are the inlined algorithm's step ids."""
+    in_graph = set(graph.nodes)
+    in_algorithm = {step.step_id for step in algorithm.steps}
+    if in_graph != in_algorithm:
+        first = sorted(in_graph ^ in_algorithm)[0]
+        raise CodedError(
+            f"BUNDLE_COMPILE_FAILED: the bundle's graph and its re-inlined algorithm disagree "
+            f"on node {first!r}"
+        ) from None
+
+
 def load_bundle(bundle: Bundle) -> CompiledBundle:
     """Hydrate a `Bundle` into a `CompiledBundle` (FR-243, RL-873).
 
@@ -856,8 +869,19 @@ def load_bundle(bundle: Bundle) -> CompiledBundle:
 
     Refuses with `RATING_VERSION_UNPINNED` a bundle whose step ref is not pinned at its exact
     version, so a bundle compiled before that check existed cannot price silently (FR-237).
+
+    **Re-inlines each pinned sub-graph** (FR-217; RL 9586 DP-S2-1 (a)) with the same pure
+    `inline_mounts` that `compile_bundle` used, from the payloads already in the bundle. The
+    stored algorithm artifact stays what its ref names (RL-873), `Bundle`'s shape is unchanged,
+    and the `CompiledBundle.algorithm` that scoring, the model-call handler and the trace read
+    is the inlined one. A bundle with no mounts re-inlines to itself. Refuses with
+    `BUNDLE_COMPILE_FAILED` a bundle whose graph and re-inlined algorithm disagree on their
+    nodes (RL 9586 C1), before the engine is built.
     """
-    algorithm = RatingAlgorithm.model_validate(bundle.resolved_payloads[bundle.algorithm_ref])
+    stored = RatingAlgorithm.model_validate(bundle.resolved_payloads[bundle.algorithm_ref])
+    fragments = mounted_fragments(stored, bundle.pins, bundle.resolved_payloads)
+    algorithm = inline_mounts(stored, fragments)
+    _check_graph_matches_inlined_algorithm(bundle.graph, algorithm)
     check_step_refs_pinned(algorithm, bundle.pins)
     boosters = _load_boosters(algorithm, bundle.resolved_payloads)
     handler = _model_call_handler(algorithm, bundle.resolved_payloads, boosters)

@@ -19,7 +19,7 @@ from uuid import UUID
 
 import polars as pl
 import pytest
-from backend.tests.test_rating_version_compile import _minimal_algorithm
+from backend.tests.test_rating_version_compile import _minimal_algorithm, _mounting_algorithm
 from backend.tests.test_rating_versions import (
     _algorithm,
     _approved_baseline,
@@ -43,10 +43,12 @@ from app.db.models import (
 )
 from app.db.session import Database
 from app.errors import PlatformError
+from app.platform import rating_algorithms as algorithm_service
 from app.platform import rating_versions as rating_versions_service
 from app.worker.dislocation_handlers import _ExactModeResolver, abs_change_pct_quantiles
 from model_schema import (
     DEFAULT_POLICY,
+    AlgorithmDiff,
     ApprovalPolicy,
     ArtifactRef,
     RatingAlgorithm,
@@ -281,6 +283,48 @@ async def test_the_structural_diff_is_taken_against_the_baseline_algorithm(
     stored = gate.blob_store.objects[digest]
     assert stored == _expected_diff(_algorithm(1), _algorithm(2, plus=1))
     assert stored != _expected_diff(None, _algorithm(2, plus=1))
+
+
+@pytest.mark.req("FR-219")
+@pytest.mark.req("FR-364")
+async def test_the_persisted_structural_diff_carries_a_sub_graph_re_point(
+    database: Database, workspace_id
+) -> None:
+    """`RL-1309` DP-1 item 3, second bullet (SL-1340): a version whose only change is a
+    sub-graph mount re-point has that re-point in the persisted `structural_diff` blob.
+    The gate stores `diff_algorithms` with no `fragments`, so what is persisted is the mount
+    change (mount point, before and after refs), not the fragments' inner steps."""
+    gate = await _gate(database, workspace_id)
+    first = _mounting_algorithm()
+    second = _mounting_algorithm()
+    second["version"] = 2
+    second["sub_graphs"][0]["ref"] = "sub_graph:ncd-ladder@2"
+    for body in (first, second):
+        await algorithm_service.create_algorithm(
+            database, workspace_id, gate.analyst.id, body
+        )
+    await gate.version(algorithm="rating_algorithm:mounting@1", slug="mnt-rv", compile_it=False)
+    candidate_id = await gate.version(
+        algorithm="rating_algorithm:mounting@2", slug="mnt-rv", compile_it=False
+    )
+    candidate = await gate.row(candidate_id)
+
+    async with database.unit_of_work() as session:
+        digest = await rating_versions_service._structural_diff_gate(
+            session,
+            workspace_id=workspace_id,
+            row=candidate,
+            ref=ArtifactRef.model_validate("rating_version:mnt-rv@2"),
+            baseline=ArtifactRef.model_validate("rating_version:mnt-rv@1"),
+            blob_store=gate.blob_store,
+        )
+
+    persisted = AlgorithmDiff.model_validate_json(gate.blob_store.objects[digest])
+    assert [
+        (c.mount_point, str(c.before), str(c.after)) for c in persisted.sub_graph_mounts
+    ] == [("m_ncd", "sub_graph:ncd-ladder@1", "sub_graph:ncd-ladder@2")]
+    assert persisted.added_steps == persisted.removed_steps == []
+    assert persisted.changed_steps == []
 
 
 @pytest.mark.req("FR-364")

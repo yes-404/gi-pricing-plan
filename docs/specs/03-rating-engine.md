@@ -282,13 +282,14 @@ engine is exact; the binding is not, and the binding is what the platform talks 
      "output_name": "payable_premium_minor",
      "rounding": {"mode": "half_even", "dp": 0}, "consumes": "payable_premium_pre_round"}
   ],
-  "sub_graphs": [{"ref": "sub_graph:ncd-ladder@4", "mount_point": "s_ncd"}]
+  "sub_graphs": [{"ref": "sub_graph:ncd-ladder@4", "mount_point": "s_ncd",
+                  "inputs": {"ncd_years": "ncd_years"}, "outputs": {"ncd_factor": "ncd_factor"}}]
 }
 ```
 
 **Invariants** — DAG acyclic; every `consumes` name is `produced` by exactly one upstream
 step; every declared output has an `output` step; no step is unreachable from an `input`
-and unreferenced by an `output` (FR-212).
+and unreferenced by an `output` (FR-212). *(Amended 2026-10-09, WK-1250 Slice 2, `RL-1309` DP-3 items 2 to 4: a mount is a node. Its mapped outputs are produced by it and its mapped inputs are consumed by it, and acyclicity and "produced by exactly one upstream step" count it. `mount_point` matches `^[A-Za-z][A-Za-z0-9_]*$`, contains no `__`, and is unique among the parent's `step_id`s and its other mounts. Every input port of the mounted sub-graph is mapped exactly once, and the mapped output ports are a non-empty subset; an unmapped output port is legal, and a parent step that consumes one is refused by FR-212.)*
 
 ### 4.2 `RateTable` / `RateTableVersion`
 
@@ -408,7 +409,8 @@ Values are stored as decimal strings, never JSON floats (R2).
     "rate_tables": ["rate_table:motor-driver-age-relativity@6", "rate_table:motor-expense@3"],
     "models": ["peril_structure:motor-gb-2026h2@2"],
     "reference_tables": ["reference_table:ons-postcode-directory@7", "reference_table:abi-vehicle-group@12"],
-    "custom_objectives": ["custom_objective:capped-gamma@3"]
+    "custom_objectives": ["custom_objective:capped-gamma@3"],
+    "sub_graphs": ["sub_graph:ncd-ladder@4"]
   },
   "model_reference_mode": "exact",
   "effective_from": "2026-10-01", "effective_to": null,
@@ -451,8 +453,8 @@ not-checked form instead, never an empty result list that reads as "0 mismatches
 ```
 
 **Invariants** — `status ≥ approved` ⟹ every `evidence` field required by the workspace
-policy is present and passing (R4, FR-257); every pin resolves to an artifact whose
-status is `approved` or better (FR-20); `bundle.content_hash` is reproducible from the
+policy is present and passing (R4, FR-257); every ~~pin resolves to an artifact whose
+status is `approved` or better (FR-20)~~ *(restated by class 2026-10-09, WK-1250 Slice 2, `RL-1309` DP-1 item 5)* every pin to an artifact that has an approval lifecycle resolves to `approved` or better (FR-20); a pin to an artifact that has none (Rate Table Version, Rating Algorithm, Sub-graph Version) is governed by the pinning Rating Version's own approval; `bundle.content_hash` is reproducible from the
 pins; every `model_call` step's `mode` equals `model_reference_mode`
 (FR-223). *(Added 2026-09-28, `PL-1189`.)* `evidence.golden_quotes` is written only by the
 submit gate (FR-260) and never edited after.
@@ -857,7 +859,7 @@ evidence reads the run whose `bundle_hash` equals the version's current bundle h
 
 ### 4.11 `SubGraph`
 
-*(Added 2026-10-01, WK-1250 Slice 1, `PL-1325`; FR-217's artifact limb, FR-227 at create. Ruled by `RL-1309`. The shapes are `model-schema`'s: `SubGraphInputPort`, `SubGraphBody`, `SubGraphCreate` and `SubGraph`, generated as `sub-graph.schema.json`, `sub-graph-create.schema.json` and `sub-graph-body.schema.json`. The pin, the inlining and the mount port map are Slice 2's; FR-218's purpose mount is Slice 3's.)*
+*(Added 2026-10-01, WK-1250 Slice 1, `PL-1325`; FR-217's artifact limb, FR-227 at create. Ruled by `RL-1309`. The shapes are `model-schema`'s: `SubGraphInputPort`, `SubGraphBody`, `SubGraphCreate` and `SubGraph`, generated as `sub-graph.schema.json`, `sub-graph-create.schema.json` and `sub-graph-body.schema.json`. The pin, the inlining and the mount port map are Slice 2's; FR-218's purpose mount is Slice 3's.)* *(Amended 2026-10-09, WK-1250 Slice 2, `SL-1340`, `RL-1309` and WK-1250 Slice 2's decisions: the pin (`Pins.sub_graphs`), the port map and the inlining landed; FR-218's purpose mount is still Slice 3's, and `RL-1242`'s interim refusal stands. Compile refuses a mount whose sub-graph is not pinned (`RATING_VERSION_UNPINNED`), a fragment reference that is not among the Rating Version's pins (`RATING_VERSION_UNPINNED`), an unmapped or undeclared port (`RATING_GRAPH_UNRESOLVED_REF`), an incompatible input type (`RATING_TYPE_MISMATCH`), and a nested mount, a `mount_point` that breaks its pattern or clashes, or a namespaced name equal to a parent name (`VALIDATION_FAILED`). FR-216, FR-274, FR-275 and FR-276 run over the inlined algorithm.)*
 
 A Sub-graph Version is a stored, immutable fragment of a Rating Algorithm, addressed as `sub_graph:<slug>@<version>`. It is **not a Governed Artifact** (`RL-1309` DP-1): it has no status and no approval lifecycle of its own. Its change reaches approval inside the Rating Version that pins it, and every version carries a required, non-empty `change_note`.
 
@@ -879,6 +881,7 @@ A Sub-graph Version is a stored, immutable fragment of a Rating Algorithm, addre
 - **Typed ports** (`RL-1309` DP-3). An input port is a `name` and a `type` (a result type, never `float`, FR-227). An output port is an `AlgorithmOutput` (`name`, `type`, `required`): the same shape and result-type vocabulary as a Rating Algorithm's outputs, with no second vocabulary. The fragment's own names are namespaced when a parent inlines it (Slice 2).
 - **No `input` or `output` steps.** The ports replace them. A fragment carrying either step type is refused.
 - **Mounts nothing** (`RL-1309` DP-4). The shape has no `sub_graphs` field and is `extra="forbid"`, so a fragment cannot mount another: depth is 1.
+- **Inlining and namespacing** *(added 2026-10-09, WK-1250 Slice 2, RL 9586 (working id))*. At compile, a pinned mount is inlined at its `mount_point` (FR-217). Every fragment `step_id`, and every fragment name that is not a mapped port, becomes `<mount_point>__<name>`: `__`, not `/`, because `/` is FR-244's division operator. A mapped input port's name becomes the parent value it is mapped to, and a mapped output port's name becomes the parent name it is mapped to. Names are renamed by FR-244 token in every field that holds one (`consumes`, `produces`, `key_expr`, `expr`, `condition`, the values of `clamp_bounds` and `feature_map`), never by substring. A `mount_point` matches `^[A-Za-z][A-Za-z0-9_]*$` and contains no `__`. Mounted under §4.1's example, this fragment's step `s_ncd` becomes `s_ncd__s_ncd`; it consumes the parent's `ncd_years` and produces the parent's `ncd_factor`. Compile refuses an unmapped or undeclared port (`RATING_GRAPH_UNRESOLVED_REF`), an incompatible input type (`RATING_TYPE_MISMATCH`), a mount whose sub-graph is not pinned (`RATING_VERSION_UNPINNED`), and a `mount_point` that breaks the pattern, clashes, or produces a namespaced name equal to a parent name, step id or engine-derived key (`VALIDATION_FAILED`). A mount whose fragment writes its own input port is refused (`VALIDATION_FAILED`); revisit if an algorithm needs it *(ruled 2026-10-09, WK-1250 Slice 2)*.
 - **Graph invariants** (FR-212, restated for ports). Every name a step consumes is an input port or is produced by a step (`RATING_GRAPH_UNRESOLVED_REF`). Every output port is produced by a step (`RATING_GRAPH_UNRESOLVED_REF`: a port is a reference to a named value). An input port is the first producer of its name; a step that produces it without consuming it is refused, while a step that consumes it and re-produces it (a clamp chain) is accepted. A step reachable from no input port and contributing to no output port is refused. A cycle is refused (`RATING_GRAPH_CYCLIC`). A duplicate `step_id` is refused. These other refusals are `VALIDATION_FAILED`.
 - **Result types at create** (FR-227; `RL-1309` DP-S1-4). An output port whose declared type is incompatible with its producing step's result type is refused with `RATING_TYPE_MISMATCH`, naming the producing step and the port. Only producers whose type is known at save are checked: an `expression` step's `result_type` and an input port's declared type. An output produced by a `table`, `lookup` or `model_call` step is not checked at create, as for an algorithm today; its type is known only against the pinned artifact, at compile.
 - **Versions are immutable** (`00` FR-4). The server numbers versions: the current maximum plus one. There is no update and no delete. Every write records an Audit Event `sub_graph.created` with `entity_ref` `sub_graph:<slug>@<version>`, in the same transaction (`06` FR-368).
@@ -1078,10 +1081,14 @@ between submit and run; the detail names the diff)*,
 ```python
 # pricing_core/rating/compile.py
 def validate_algorithm(algo: RatingAlgorithm) -> list[ValidationIssue]
-async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> Bundle
+async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> Bundle  # inlines each pinned sub-graph mount (FR-217), validates the inlined algorithm; amended 2026-10-09 (WK-1250 Slice 2)
 def to_jdm(algo: RatingAlgorithm) -> JdmGraph          # ADR-706 translation layer
 def bundle_hash(graph: JdmGraph, pins: Pins) -> str    # corrected 2026-08-27 (F-W9-3-2)
 def assert_integer_minor_round_trip() -> None          # FR-273's startup self-check; added 2026-09-28 (F60 (3), RL-1172)
+
+# pricing_core/rating/inline.py                      # added 2026-10-09 (WK-1250 Slice 2, FR-217)
+def inline_mounts(algorithm: RatingAlgorithm,         # pure; the one inliner compile_bundle and load_bundle both call
+                  fragments: Mapping[str, SubGraph]) -> RatingAlgorithm
 
 # pricing_core/rating/runtime.py                      # added 2026-08-29 (WK-671 Slice 1)
 def load_bundle(bundle: Bundle) -> CompiledBundle     # FR-243's hydration step

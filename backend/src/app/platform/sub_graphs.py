@@ -208,7 +208,8 @@ async def list_versions(
 async def resolve_ref(
     session: AsyncSession, *, workspace_id: UUID, ref: ArtifactRef
 ) -> SubGraph:
-    """`sub_graph:<slug>@<version>` → exactly that version. Not wired into compile (Slice 2)."""
+    """`sub_graph:<slug>@<version>` → exactly that version (WK-1250 Slice 2: the compile resolver's
+    `sub_graph` branch calls this)."""
     if ref.type != "sub_graph":
         raise PlatformError(
             "VALIDATION_FAILED",
