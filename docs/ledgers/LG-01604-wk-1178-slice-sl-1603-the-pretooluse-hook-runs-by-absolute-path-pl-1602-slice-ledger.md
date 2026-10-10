@@ -1,0 +1,60 @@
+---
+id: LG-1604
+family: ledger
+title: WK-1178 slice SL-1603 — the PreToolUse hook runs by absolute path (PL-1602, FD-9959's root-cause fix)
+status: active                 # active → closed (§1.2a) — set `closed` only at slice close
+created: 2026-10-10
+owner: executor
+tree: 10160a3dab254208c8acbf2d274ce639dd4defed
+phase: P2
+work: WK-1178
+slice: SL-1603
+plans: [PL-1602]
+corrected_by: []
+relates: [RL-920, RL-1263, RL-1445]
+---
+
+# LG-1604 — WK-1178 slice SL-1603, the PreToolUse hook runs by absolute path
+
+Executed from PL 9617 (working id; minted PL-1602 at the merge turn) by `executor-pl9617`. Working ids: plan 9617,
+slice 9618, this ledger "LG-1604" (tentative until the lead confirms at the merge turn). Stamps are UTC unless marked.
+
+**GO:** `to-lead.md` "2026-10-10 16:40:33 BST — DISPATCH GO: PL 9617 / SL 9618 (absolute hook path, @10160a3d, ≈0.5 lane-day), effective at the FD-1374 slice's merge read-back, minted in D8b. DP-3 and DP-4 as recommended; NO fast-forward of the root checkout". The FD-1374 slice merged as main `e4753e47` (18:07:32 BST).
+**MERGE-ACK:** added at merge.
+
+## Tasks
+
+### Scope
+
+The slice's row is `SL 9618 (working id) — WK-1178 slice — the PreToolUse hook runs by absolute path, so a changed working directory cannot block every Bash call` in `docs/roadmap.md`. No FR-/NFR- id. DP-1 (c), DP-2 (a), DP-3 (a) shell form, DP-4 (a) fail-closed.
+
+### Task list
+
+- Task 0 — probes and the red-first proof (below).
+- Task 1 — `tests/test_hook_registration.py`, red first.
+- Task 2 — `.claude/settings.json` command, DP-3 (a).
+- Task 3 — live seat proof (i).
+- Task 4 — one gate slot (skill loop, `conftest.py`, `tests/test_root_conftest.py`, one commit).
+- Task 5 — skill reason clauses, the gate, closing acts.
+
+### Gate
+
+Recorded at the PR head.
+
+### Audit
+
+Written by the auditor.
+
+### Build log
+
+**2026-10-10 17:09 UTC — Task 0, probes (all in a throwaway worktree `probe-9618` on `origin/main` `e4753e47`, run as a child process by `env -C`; never in the executor's own seat).**
+
+- Red, command level (Acceptance 5r, part): `env -u CLAUDE_PROJECT_DIR -C <probe>/docs sh -c 'python3 scripts/hooks/retry_cap_hook.py hook < payload'` → rc=2, stderr `python3: can't open file '<probe>/docs/scripts/hooks/retry_cap_hook.py': [Errno 2] No such file or directory`.
+- Red, live (Acceptance 5r), `claude --version` 2.1.296, `claude -p --permission-mode bypassPermissions` started in the probe worktree with `main`'s settings and a scratch logging hook in the probe's own `.claude/settings.local.json`: call 1 `cd docs` ran; call 2 `echo "$(pwd)" | cat` was REFUSED: `PreToolUse:Bash hook error: [python3 scripts/hooks/retry_cap_hook.py hook]: python3: can't open file '…/probe-9618/docs/scripts/hooks/retry_cap_hook.py': [Errno 2] No such file or directory`; call 3 `pwd` ran (parseable, skipped by the `if` filter, as the plan predicts).
+- Step 1 (variable in a hook process, top-level session started in a worktree): the scratch hook logged `CPD=<the worktree the session started in>` on all three calls, including after the `cd docs` (pwd=…/docs). So `CLAUDE_PROJECT_DIR` is set and stays at the start directory. DP-2 (a) premise holds for a worktree-started top-level session.
+- Steps 2 (teammate and subagent hook processes), 3 (`EnterWorktree` and a teammate spawned in a worktree), 6 (whether a running session re-reads a changed settings file): NOT measured. The executor cannot start a teammate seat. DP-1's fallback is required either way (the plan). For Step 6 the plan's assumption stands: a running session keeps the old command until it restarts.
+
+**2026-10-10 17:10 UTC — Task 1, red (Acceptance 1, 2, 3, 10).** `tests/test_hook_registration.py` at `main`'s settings:
+`nice -n 19 uv run pytest -q tests/test_hook_registration.py` → `6 failed, 3 passed`. The five from-docs cases fail with rc 2 and `can't open file '…/docs/scripts/hooks/retry_cap_hook.py'`, including the `deny` case; `test_no_registered_command_names_a_repository_path_relatively` fails on `python3 scripts/hooks/retry_cap_hook.py hook`. The from-root cases (negative control) pass.
+
+**2026-10-10 17:11 UTC — Task 2, green.** Command: `python3 "${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}"/scripts/hooks/retry_cap_hook.py hook`. `pytest -q tests/test_hook_registration.py tests/test_retry_cap_hook.py` → `20 passed`. The broken-input proof (Acceptance 3) is `test_the_anchoring_check_fails_on_the_old_relative_form`: a scratch settings file with the old command is flagged.

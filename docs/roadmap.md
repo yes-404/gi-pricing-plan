@@ -2161,7 +2161,7 @@ The FD-1573 remedy, proposed on the maintainer's entry "2026-10-10 00:08:17 BST 
 id: SL-9618
 family: slice
 title: WK-1178 slice — the PreToolUse hook runs by absolute path, so a changed working directory cannot block every Bash call
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-05
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: fe0b0627590307259ec6d56be7f73115cf245092
