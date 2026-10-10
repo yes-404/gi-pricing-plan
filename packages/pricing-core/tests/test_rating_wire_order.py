@@ -192,7 +192,7 @@ _NL_A = {"step_id": "s_a", "type": "expression", "label": "base = x*100", "expr"
 _NL_CLAMP = {"step_id": "s_clamp", "type": "constraint", "label": "Floor",
              "condition": "base >= floor", "on_violation": "clamp",
              "clamp_bounds": {"min": "floor"}, "reason_code": "FLOOR",
-             "consumes": ["base"], "produces": ["base"]}
+             "consumes": ["base", "floor"], "produces": ["base"]}
 _NL_OUT = {"step_id": "s_out", "type": "output", "label": "out", "output_name": "base_out",
            "rounding": {"mode": "half_even", "dp": 0}, "consumes": ["base"]}
 # Limit (i): produce-nothing or terminal side branches other than a decline constraint.
