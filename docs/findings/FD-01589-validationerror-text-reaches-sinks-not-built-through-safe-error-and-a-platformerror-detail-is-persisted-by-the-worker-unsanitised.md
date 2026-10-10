@@ -1,18 +1,20 @@
 ---
-id: FD-9952
+id: FD-1589
 family: finding
 title: A ValidationError's text reaches sinks not built through pricing_core.safe_error, and the worker persists a PlatformError's detail as given, so the compile Job stores a stored model's field values in its error
-status: draft
-created: 2026-10-10
+status: active
+created: 2026-10-10            # original date 2026-10-10, set at the draft; minted 2026-10-10
 owner: auditor
 tree: 42e5d67f0e36264d7f7db0aa2d14476ddb4fb72c
 corrected_by: []
 relates: [WK-1178, FD-1578, NFR-499, RL-917, FR-119]
 ---
 
-# FD-9952 — ValidationError sinks outside `pricing_core.safe_error`
+# FD-1589 — ValidationError sinks outside `pricing_core.safe_error`
 
-**DRAFT**, filed on `draft/fd-9952-ve-sinks`, no PR, at the maintainer's ruling (`to-lead.md`,
+*Disclosure: drafted under working id 9952; minted as FD-1589 on 2026-10-10, in the D7 batch mint PR.*
+
+**Filed** (drafted on `draft/fd-9952-ve-sinks`) at the maintainer's ruling (`to-lead.md`,
 "2026-10-10 09:33:03 BST — Premise correction ACCEPTED (my 09:15:25 premise was wrong). Ruling
 (B) for A-2: no code change; the leak question becomes a scoped AUDIT, not an A-2 edit"):
 *"An AUDITOR task (not A-2): list every sink on main (API problem responses, Job error fields,
@@ -131,3 +133,9 @@ paths and types. (c) Rows 8–11: accept or carry forward, at the lead's choice.
 **Owner: WK-1178** (the ruling). Event that next confirms or discharges it: the remedy PR for
 row 1 with its red-first test; or the next slice that adds a `PlatformError(…, str(exc))` in a
 worker path.
+
+## Dispositions recorded at the mint (2026-10-10)
+
+- **Accepted** (2026-10-10, `to-lead.md` "2026-10-10 09:42:06 BST — FD 9952 (11 ValidationError sinks) ACCEPTED. Row 1 (MEDIUM, a live leak on main) is FIXED in SL-1340, the next slice touching rating_versions.py; rows 2–11 (LOW) are owned by WK-1178" [FD 9952 is minted as FD-1589]): row 1 MEDIUM; rows 2–11 LOW, owner WK-1178, each discharged before WK-1178's Work close, as one small fix slice or carried by the next slice touching each file. The FD closes only when all 11 rows are fixed or carried by name.
+- **Row 1: fixed in SL-1340** (2026-10-10, 09:42:06 item 3; form confirmed 10:14:29): #1263, squash `a3572d1a9182fea68d1322267e3866bdd2ed0dee`; the fix commit `cc32ded6` is recorded in `LG-1588`. The detail is built as `safe_error_detail(exc) or type(exc).__name__` (`rating_versions.py:774` at that squash), not `safe_error_text`, as the 10:14:29 entry corrects.
+- **Rows 2–11: open**, owner WK-1178. This FD stays `active`.
