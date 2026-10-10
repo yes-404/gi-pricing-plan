@@ -21,7 +21,7 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ValidationError, field_validator
 
 _ROOT = Path(__file__).resolve().parents[2]
 #: The scope is DERIVED by glob, so a new file is covered by default (maintainer, 2026-09-29,
@@ -313,3 +313,32 @@ def test_an_unexpected_request_failure_logs_no_input(
     record = next(r for r in caplog.records if r.getMessage() == "request failed")
     assert record.exc_info is not None
     assert ValidationError.__name__ in str(record.exc_info[1])
+
+
+class _SentinelBody(BaseModel):
+    driver_age: int
+
+    @field_validator("driver_age", mode="before")
+    @classmethod
+    def _refuse_with_the_value(cls, value: object) -> object:
+        if value == _SENTINEL:
+            # A custom validator that interpolates what it was given: the shape of every
+            # `value_error` and `assertion_error` a request model can raise.
+            raise ValueError(f"unacceptable value {value}")
+        return value
+
+
+@pytest.mark.req("NFR-499")
+def test_a_request_validation_422_carries_no_submitted_value(api_client: TestClient) -> None:
+    """FD-1589 row 8: `_handle_validation_error` copied pydantic's `msg` into the 422's
+    `FieldError.message`, and a custom validator's `msg` carries the submitted value."""
+
+    async def intake(body: _SentinelBody) -> None:
+        return None
+
+    api_client.app.add_api_route("/__nfr499_422", intake, methods=["POST"])  # type: ignore[attr-defined]
+    response = api_client.post("/__nfr499_422", json={"driver_age": _SENTINEL})
+
+    assert response.status_code == 422
+    assert response.json()["errors"][0]["code"] == "VALUE_ERROR"
+    assert _SENTINEL not in response.text

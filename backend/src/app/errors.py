@@ -11,7 +11,8 @@ Two rules hold this together:
 
 from __future__ import annotations
 
-from typing import Final
+from collections.abc import Mapping
+from typing import Any, Final
 
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -484,6 +485,24 @@ async def _handle_platform_error(request: Request, exc: PlatformError) -> JSONRe
     return problem_response(exc.to_problem(instance=request.url.path))
 
 
+#: Pydantic error types whose `msg` is text a validator wrote, or names the tag it was given, so it
+#: can carry the submitted value (`pricing_core.safe_error` lists the same three as not fixed text).
+_INPUT_BEARING_ERROR_TYPES: Final = frozenset(
+    {"value_error", "assertion_error", "union_tag_invalid"}
+)
+
+
+def _field_error_message(err: Mapping[str, Any]) -> str:
+    """The `FieldError.message` for one pydantic error, with no submitted value in it (NFR-499).
+
+    A built-in type's `msg` is fixed text; a validator's own `msg` (`value_error`,
+    `assertion_error`) interpolates whatever it was given, so those keep the code alone.
+    """
+    if err["type"] in _INPUT_BEARING_ERROR_TYPES:
+        return f"The value is not valid ({str(err['type']).upper()})."
+    return str(err["msg"])
+
+
 async def _handle_validation_error(
     request: Request, exc: RequestValidationError
 ) -> JSONResponse:
@@ -498,7 +517,7 @@ async def _handle_validation_error(
             # document and does not need our parser's internal framing.
             field=".".join(str(part) for part in err["loc"][1:]) or str(err["loc"][0]),
             code=str(err["type"]).upper().replace(".", "_"),
-            message=str(err["msg"]),
+            message=_field_error_message(err),
         )
         for err in exc.errors()
     )
