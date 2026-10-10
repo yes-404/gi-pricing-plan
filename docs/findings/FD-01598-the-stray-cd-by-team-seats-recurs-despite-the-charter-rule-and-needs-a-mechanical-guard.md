@@ -1,7 +1,7 @@
 ---
 id: FD-1598
 family: finding
-title: The stray cd by team seats recurs despite the charter rule (14 recorded instances 8–10 Oct), and the fix is the root cause, the hook's relative path
+title: The stray cd by team seats recurs despite the charter rule (15 recorded instances 8–10 Oct), and the fix is the root cause, the hook's relative path
 status: active
 created: 2026-10-10            # original date 2026-10-10, set at the draft; minted 2026-10-10
 owner: auditor
@@ -18,7 +18,7 @@ relates: [WK-1178, RFC-895, FD-1374]
 
 The charter rule "Never `cd`" (`.claude/roles/auditor.md`, and the same line in every role that runs commands; amended 2026-10-05 by the maintainer after three slips in one day) does not hold. The maintainer's count at the entry "2026-10-10 16:23:12 BST" in `to-lead.md` is **13** (the count this finding was first drafted against; the ruling at "2026-10-10 16:28:30 BST" counts **14**, see the reconciliation below), past the threshold the maintainer set at "2026-10-09 11:48:22 BST" ("at ten or more the valve applies and it becomes an FD with a mechanical fix"). That entry says a briefing line alone is not a remedy: it has failed 13 times. This finding is the FD that ruling asks for, with a mechanical remedy proposal.
 
-No instance of the 14 wrote anything outside its worktree, by each seat's own disclosure. The harm that did occur is earlier and is the reason the rule exists: on 2026-09-30 a persisted `cd frontend` made the project's `PreToolUse` hook refuse every later Bash call (twice that day); on 2026-10-05 two teammate sessions were locked the same way ("2026-10-05 16:46:42 BST" and "2026-10-05 15:24:59 BST" in `to-lead.md`); on 2026-09-26 a lead `cd` moved the cwd every later spawn inherited and a harness lock file landed in the tree under gate (memory `a-lead-cd-contaminates-every-later-spawn`).
+No instance of the 15 wrote anything outside its worktree, by each seat's own disclosure. The harm that did occur is earlier and is the reason the rule exists: on 2026-09-30 a persisted `cd frontend` made the project's `PreToolUse` hook refuse every later Bash call (twice that day); on 2026-10-05 two teammate sessions were locked the same way ("2026-10-05 16:46:42 BST" and "2026-10-05 15:24:59 BST" in `to-lead.md`); on 2026-09-26 a lead `cd` moved the cwd every later spawn inherited and a harness lock file landed in the tree under gate (memory `a-lead-cd-contaminates-every-later-spawn`).
 
 ## Evidence
 
@@ -50,14 +50,15 @@ Source for the numbered rows: the process-backlog rows "2026-10-09 10:54:55 BST"
 | 12 | executor-fd1374g | 10 Oct, `eta.md` 14:45:39 | subshell `cd /dev/null`, failed | no effect | `eta.md` 14:45:39 |
 | 13 | planner-remedy-c2 | 10 Oct, entry 16:07:24 | one `cd /tmp/…`, "no-op" | nothing | `from-lead-2026-10-09.md` "2026-10-10 16:07:24 BST" (Disclosures (planner)) |
 | 14 | planner-remedy-c3 | 10 Oct, final report (lead's count at "2026-10-10 16:28:06 BST" in `from-lead-2026-10-09.md`) | one command that began `cd /tmp/planner-remedy-c3`: the final report says "One command I ran started with `cd /tmp/planner-remedy-c3`" | nothing (by disclosure) | `from-lead-2026-10-09.md` "2026-10-10 16:22:55 BST", "Process:" line |
+| 15 | executor-pl9617 | 10 Oct, about 18:1x BST (the lead's report; exact minute not recorded) | first Bash call began `cd /tmp` on a read-only `git show` piped to `wc` | nothing | self-disclosed to the lead; reported by the lead after the first draft of this finding (the lead's message to the minter, 2026-10-10) |
 
 **Reconciliation to the maintainer's 13.** The maintainer's arithmetic is 9 (by 9 Oct 11:48:22) plus 4 on 10 Oct (minter-d7, executor-fd1374g, planner-remedy-c2, planner-remedy-c3). The record gives a different composition with the same total: the nine are rows 1 to 9; row 10 (planner-674s3, also 10 Oct, 03:20) was logged as "the tenth" in the backlog but is not in the maintainer's four; and the 16:22:55 entry lists "planner-remedy-c2/c3" as one planner-side disclosure ("third seat today", naming four seats), so I find one slip evidenced for c2/c3, not two. Rows 1 to 13 are therefore 13 instances found in the first reading. **Correction at the ruling ("2026-10-10 16:28:30 BST"):** the lead then read planner-remedy-c3's own final report, which discloses a separate `cd` ("One command I ran started with `cd /tmp/planner-remedy-c3`"), so the count is **14** (row 14). The first reading found no separate c3 disclosure; the final report is where it is. The headline (past ten) holds at 13 and at 14.
 
-**Count and predicate.** 14 = self-disclosed `cd` slips by a team seat, 8–10 Oct 2026, each read at the source named in its row (rows 1 to 14 of the table). Adding the 6 before 8 Oct (next paragraph) gives 20 by that sum; the ruling's title and the lead's entry at "2026-10-10 16:28:06 BST" give "19 since 3 Oct", which is 13 + 6, written before row 14 was added. The two figures differ by exactly row 14; this finding keeps both visible rather than choosing silently, and the lead may correct the 19. Count at tree `e4753e47`; predicate: disclosure in a channel entry, `eta.md` row or final report, by a seat, of a command that began with `cd`.
+**Count and predicate.** 15 = self-disclosed `cd` slips by a team seat, 8–10 Oct 2026, each read at the source named in its row (rows 1 to 15 of the table; row 15 was added after the batch's first head, on the lead's report). Adding the 6 before 8 Oct (next paragraph) gives 21 by that sum. The ruling's title and the lead's entry at "2026-10-10 16:28:06 BST" give "19 since 3 Oct" (13 + 6, before rows 14 and 15), and the lead's later report gives 20 since 3 Oct for 15 today; neither equals 21, and this finding keeps all the figures visible rather than choosing silently. Predicate: disclosure in a channel entry, `eta.md` row, final report or lead report, by a seat, of a command that began with `cd`. Count at tree `e4753e47`; it is a floor.
 
-**Instances before 8 Oct, outside the maintainer's series** (found by grep; each read): 3 Oct, one `cd` by the SL-1369 executor (seat not named; "2026-10-03 17:51:16 BST", `to-lead.md`); 5 Oct, planner-rb, planner-9529 (`cd` into its own worktree) and dm-s46 (`cd /tmp`) ("2026-10-05 18:01:45 BST" and "2026-10-05 18:07:10 BST" — the third slip of that day, which produced the charter amendment); 6 Oct, minter-b1 (`cd /tmp/b1`) and minter-chain (`cd /tmp`) ("2026-10-06 01:51:00 BST", `from-lead-2026-10-06.md`). That is 6 more, so 20 evidenced seat slips since 3 Oct by the table's sum (19 in the ruling's title, before row 14), plus the lock-outs and the lead's own 26 Sep and 30 Sep slips above.
+**Instances before 8 Oct, outside the maintainer's series** (found by grep; each read): 3 Oct, one `cd` by the SL-1369 executor (seat not named; "2026-10-03 17:51:16 BST", `to-lead.md`); 5 Oct, planner-rb, planner-9529 (`cd` into its own worktree) and dm-s46 (`cd /tmp`) ("2026-10-05 18:01:45 BST" and "2026-10-05 18:07:10 BST" — the third slip of that day, which produced the charter amendment); 6 Oct, minter-b1 (`cd /tmp/b1`) and minter-chain (`cd /tmp`) ("2026-10-06 01:51:00 BST", `from-lead-2026-10-06.md`). That is 6 more, so 21 evidenced seat slips since 3 Oct by the table's sum (19 in the ruling's title, before rows 14 and 15), plus the lock-outs and the lead's own 26 Sep and 30 Sep slips above.
 
-**Limit of this evidence.** Every row is a self-disclosure. Nothing detects an undisclosed `cd`, so 14 is a floor. A mechanical guard also fixes this: it can count refusals.
+**Limit of this evidence.** Every row is a self-disclosure. Nothing detects an undisclosed `cd`, so 15 is a floor. A mechanical guard also fixes this: it can count refusals.
 
 ## Ruled (2026-10-10 16:28:30 BST) — the remedy is PL-1602; the `cd` guard is not built
 
@@ -99,7 +100,7 @@ Removes the total lock-out, the worst consequence. It leaves the habit, the spaw
 
 ### Option (c) — a brief template or checklist line only — **rejected**
 
-The no-`cd` line has been the first checklist item since 8 Oct and a charter rule since 5 Oct; 14 slips followed (13 by the first reading). The maintainer has ruled that a briefing line is not a remedy.
+The no-`cd` line has been the first checklist item since 8 Oct and a charter rule since 5 Oct; 15 slips followed (13 by the first reading). The maintainer has ruled that a briefing line is not a remedy.
 
 ### Recommendation
 
@@ -107,4 +108,4 @@ Option (b), as one slice under WK-1178 that absorbs PL-1602 (it already carries 
 
 ## Disposition
 
-Register decision: **fix before close with an owner**. Owner of the finding: the lead's process (WK-1178 carries the hook limb through PL-1602). Severity proposed MEDIUM: none of the 14 caused harm, but the rule fails at a steady rate, the failure it guards against has already locked sessions and failed a gate, and a prose rule has been shown not to hold. Event that discharges it, as ruled at "2026-10-10 16:28:30 BST": the merge of PL-1602's slice (SL-1603) with proof (i), the positive control, green. The guard is not part of it; the revisit condition above is the only route back to one. The lead gives the verdict.
+Register decision: **fix before close with an owner**. Owner of the finding: the lead's process (WK-1178 carries the hook limb through PL-1602). Severity proposed MEDIUM: none of the 15 caused harm, but the rule fails at a steady rate, the failure it guards against has already locked sessions and failed a gate, and a prose rule has been shown not to hold. Event that discharges it, as ruled at "2026-10-10 16:28:30 BST": the merge of PL-1602's slice (SL-1603) with proof (i), the positive control, green. The guard is not part of it; the revisit condition above is the only route back to one. The lead gives the verdict.
