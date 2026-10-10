@@ -43,7 +43,7 @@ column, diff shading, bulk operations, import and export (S5).
 | Task | Plan step | Acceptance | Status |
 |---|---|---|---|
 | 0 | preconditions | Acceptance 10 (stored-data query) | steps 1, 2, 3, 5 done; step 4 OWED (no database on the box) |
-| 1 | `RateTableCell`, retype, `ManualEdit`, `created_by_edit` | Acceptance 7 (provenance limb) | open |
+| 1 | `RateTableCell`, retype, `ManualEdit`, `RateTableManualEdit`, `created_by_edit` | Acceptance 7 (provenance limb, model level) | done, commit 2 |
 | 2 | the two reads, RL-1475 T3 and T4 | 1–5 | open |
 | 3 | the manual-edit route, RL-1555 T1 to T4 | 6–8 | open |
 | 4 | the dependency and its records | 17 | open |
@@ -113,6 +113,37 @@ lead.
 
 **Open for the lead.** The FR id for RL-1475 T3 (`FR-<b>`) is minted by the lead, who is the sole
 allocator of ids; Task 2 needs it before its spec commit.
+
+#### Task 1 — `RateTableCell`, the retype, `ManualEdit`, `created_by_edit` (2026-10-10, 03:07–03:12 BST)
+
+**Red first** (`nice -n 19 flock -w 300 /tmp/slots/small-test -c "timeout 150 uv run --directory <wt> pytest -q
+-p no:xdist packages/model-schema/tests/test_rate_tables.py -k 'cell or ManualEdit' -x"`, load 5.41 at that run, above the
+4.0 line; later runs waited for load <= 4.0): rc 1, `ImportError: cannot import name 'RateTableCell' from
+'model_schema.rating'` at `test_rate_table_cell_refuses_a_non_string_value`. (`-x` stopped the run there; the other new tests
+import `ManualEdit` and `RateTableManualEdit`, absent for the same cause.)
+
+**Green:** `pytest -q -p no:xdist packages/model-schema/tests/test_rate_tables.py` → `61 passed`. New tests: the cell refuses
+a float and an int value (FR-10); `default_row` (both models) and `rows` carry `#/$defs/RateTableCell` in their JSON
+Schema; `RateTableManualEdit` parses and defaults `confirm` false, and refuses a blank note, empty edits, `base_version` 0,
+a float value, an unknown field; `ManualEdit` needs `edited_cells >= 1` and forbids extras; a version carries
+`created_by_edit` and a seeded one none; `created_by_edit` with `created_by_import` or with `created_by_operation` is
+refused.
+
+**Ripple of the retype** (the plan's write set names `rating.py`, `__init__.py` and `_wire_rows`; these follow from the
+retype and are listed here): `pricing_core/rate_tables/operations.py` `_rows_of`, `_new_version` (`model_copy` skips
+validation, so it now wraps each row in `RateTableCell`), and a `_default_row_of` helper for the two `default_row`
+arguments to `validate_rate_table`; `backend/src/app/platform/rate_tables.py` `_wire_rows` and the `cast` in
+`_persist_new_version`; tests `test_rate_table_bulk_ops.py` (a `_cells` helper for 8 row comparisons) and
+`backend/tests/test_rate_tables_service.py` (two `row.root[...]` reads; DB test, UNRUN). Green: 109 passed over
+`test_rate_table_bulk_ops.py`, `test_rate_table_operations.py`, `test_rating_pin_membership.py`,
+`test_rating_runtime.py`; `ruff check packages backend/src` clean; `mypy` over the three changed source files clean.
+
+**Spec:** RL-1475 T5 applied byte for byte before `### 4.3` with `<date>` = 2026-10-10, `RL-<this>` = `RL-1475` and
+`FR-<b>` = the working id `FR 9940` (the lead's ruling of this date). `scripts/generate-contracts.py` run: `generated.json`
+and `rate-table-version.schema.json` changed. `RateTableManualEdit` reaches the contract only when Task 3's route uses it.
+
+**Observation, not acted on.** T5's list of what `RateTable` lacks does not name `created_by_edit`; the text is the
+decision-maker's, byte for byte, and `created_by_edit` is RL-1555's addition. Reported to the lead.
 
 ## PRs
 

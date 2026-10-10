@@ -38,6 +38,7 @@ from model_schema.rating import (
     ImportVerdict,
     KeyFilter,
     RateTable,
+    RateTableCell,
     RateTableDiff,
     RateTableDiffCell,
     RateTableKey,
@@ -532,7 +533,11 @@ def _rows_of(table: RateTableVersion) -> list[CellRow]:
             f"{PARQUET_CELLS_UNAVAILABLE}: rate_table:{table.slug}@{table.version} "
             "stores its cells as a blob; the pricing core works on inline rows"
         )
-    return [{key: str(value) for key, value in row.items()} for row in table.rows]
+    return [dict(row.root) for row in table.rows]
+
+
+def _default_row_of(table: RateTableVersion) -> CellRow | None:
+    return None if table.default_row is None else dict(table.default_row.root)
 
 
 def _key_domains_of_version(
@@ -548,7 +553,7 @@ def _validate_result(rows: Cells, table: RateTableVersion) -> None:
         table.keys,
         table.value,
         key_domains=_key_domains_of_version(table, rows),
-        default_row=table.default_row,
+        default_row=_default_row_of(table),
     )
     if issues:
         raise ValueError(f"{issues[0].code}: {issues[0].message}")
@@ -571,7 +576,7 @@ def _new_version(
     return table.model_copy(
         update={
             "version": table.version + 1,
-            "rows": rows,
+            "rows": [RateTableCell(row) for row in rows],
             "change_note": change_note,
             "created_by_operation": operation,
             "seeded_from": table.seeded_from,
@@ -880,7 +885,7 @@ def _checked_import(
         key_domains={
             key.name: frozenset(row[key.name] for row in rows) for key in version.keys
         },
-        default_row=version.default_row,
+        default_row=_default_row_of(version),
     )
     if issues:
         raise ValueError(f"{issues[0].code}: {issues[0].message}")

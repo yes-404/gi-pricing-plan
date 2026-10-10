@@ -8056,6 +8056,26 @@
         "title": "LossTreatment",
         "type": "object"
       },
+      "ManualEdit": {
+        "additionalProperties": false,
+        "description": "The provenance of a version created by the manual-edit route (03 §4.2, RL-1555 item 2).\n\n`applied_to` names the base version edited, in `ImportVerdict.applied_to`'s form;\n`edited_cells` is the number of edits applied. It is what tells a hand-edited version\nfrom a re-seed.",
+        "properties": {
+          "applied_to": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "edited_cells": {
+            "minimum": 1.0,
+            "title": "Edited Cells",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "applied_to",
+          "edited_cells"
+        ],
+        "title": "ManualEdit",
+        "type": "object"
+      },
       "Me": {
         "additionalProperties": false,
         "description": "The current principal, its roles, and its effective permissions.",
@@ -10880,6 +10900,14 @@
         "title": "QuoteContextOptions",
         "type": "object"
       },
+      "RateTableCell": {
+        "additionalProperties": {
+          "type": "string"
+        },
+        "description": "One rate table row in §4.2's form: key columns and the value column, every value a\nstring (a key level or a decimal string). RL-1475 item 2; FR-228's columns are data,\nso the keys are open and the value type is closed.",
+        "title": "RateTableCell",
+        "type": "object"
+      },
       "RateTableDiff": {
         "additionalProperties": false,
         "description": "A cell-level diff between two rate table versions (03 §4.2, FR-231).\n\n`changed_cells` is the number of cells whose value differs. The two percentages are\n`None` where there is nothing to compare (no cells, or no cell has a non-zero\nbaseline); percentages are Decimals, serialised as strings, never JSON floats (R2).\n\n`portfolio_exposure` and `matched_exposure` (`RL-1361` item 4) are the named portfolio's\ntotal exposure and the exposure that mapped to a cell of the current version. Both are\n`None` when no portfolio is named, which tells an unweighted diff from a weighted one\nwhose mean is `None` (no weight on a changed cell, or only zero-weight cells).",
@@ -11174,6 +11202,16 @@
             "title": "Change Note",
             "type": "string"
           },
+          "created_by_edit": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ManualEdit"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "created_by_import": {
             "anyOf": [
               {
@@ -11220,14 +11258,12 @@
           "default_row": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "#/components/schemas/RateTableCell"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Default Row"
+            ]
           },
           "keys": {
             "items": {
@@ -11244,17 +11280,7 @@
             "anyOf": [
               {
                 "items": {
-                  "additionalProperties": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "integer"
-                      }
-                    ]
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/RateTableCell"
                 },
                 "type": "array"
               },

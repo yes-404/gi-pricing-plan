@@ -53,6 +53,7 @@ from model_schema.rating import (
     FloorAndCapParameters,
     ImportPreview,
     RateTable,
+    RateTableCell,
     RateTableDiff,
     RateTableDiffCell,
     RateTableKey,
@@ -260,9 +261,9 @@ def _cells_for_rows(
     return [([row[name] for name in key_names], row[value_name]) for row in cells]
 
 
-def _wire_rows(cells: Sequence[dict[str, str]]) -> list[dict[str, str | int]]:
+def _wire_rows(cells: Sequence[dict[str, str]]) -> list[RateTableCell]:
     """Cells → the wire form's row type (§4.2): every value is a decimal string."""
-    return cast(list[dict[str, str | int]], list(cells))
+    return [RateTableCell(row) for row in cells]
 
 
 async def _load_table(
@@ -1155,7 +1156,8 @@ async def _persist_new_version(
     to a content-addressed parquet blob addressed by `cells`. Returns the version in
     its §4.2 wire form.
     """
-    cells = cast(list[dict[str, str]], derived.rows)
+    assert derived.rows is not None  # `_persist_new_version`'s input is a rows-form version
+    cells = [dict(row.root) for row in derived.rows]
     storage_mode = decide_storage_mode(len(cells), threshold)
     definition = RateTable(
         slug=derived.slug,

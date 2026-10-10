@@ -70,6 +70,12 @@ _DEFAULT_ROWS = [
 ]
 
 
+def _cells(version: RateTableVersion) -> list[dict[str, str]]:
+    """The version's rows as plain dicts (`rows` is typed `RateTableCell`, RL-1475)."""
+    assert version.rows is not None
+    return [row.root for row in version.rows]
+
+
 def _version(
     *,
     version: int = 6,
@@ -131,7 +137,7 @@ class TestUpliftTable:
     @pytest.mark.req("FR-233")
     def test_uplifts_every_cell_by_the_percentage(self) -> None:
         result = uplift_table(_version(), percentage=Decimal("0.10"))
-        assert result.rows == [
+        assert _cells(result) == [
             {"driver_age_band": "17-20", "relativity": "2.024"},
             {"driver_age_band": "21-24", "relativity": "1.551"},
             {"driver_age_band": "25-29", "relativity": "1.232"},
@@ -147,7 +153,7 @@ class TestUpliftTable:
         assert result.rateable is True
         assert result.change_note == "uplift_table: percentage=0.10"
         assert baseline.version == 6
-        assert baseline.rows == _DEFAULT_ROWS
+        assert _cells(baseline) == _DEFAULT_ROWS
 
     @pytest.mark.req("FR-233")
     def test_records_the_operation_with_parameters_and_result(self) -> None:
@@ -164,7 +170,7 @@ class TestUpliftTable:
     @pytest.mark.req("FR-233")
     def test_zero_percentage_changes_nothing(self) -> None:
         result = uplift_table(_version(), percentage=Decimal("0"))
-        assert result.rows == _DEFAULT_ROWS
+        assert _cells(result) == _DEFAULT_ROWS
         assert result.created_by_operation is not None
         assert result.created_by_operation.result.changed_cells == 0
 
@@ -187,7 +193,7 @@ class TestUpliftByFilter:
             percentage=Decimal("0.10"),
             filter={"driver_age_band": ["17-20"]},
         )
-        assert result.rows == [
+        assert _cells(result) == [
             {"driver_age_band": "17-20", "relativity": "2.024"},
             {"driver_age_band": "21-24", "relativity": "1.4100"},
             {"driver_age_band": "25-29", "relativity": "1.1200"},
@@ -202,7 +208,7 @@ class TestUpliftByFilter:
             percentage=Decimal("0.10"),
             filter={"driver_age_band": ["60+"]},
         )
-        assert result.rows == _DEFAULT_ROWS
+        assert _cells(result) == _DEFAULT_ROWS
         assert result.created_by_operation is not None
         assert result.created_by_operation.result.changed_cells == 0
 
@@ -235,7 +241,7 @@ class TestFloorAndCap:
             floor=Decimal("0.5"),
             cap=Decimal("2.0"),
         )
-        assert result.rows == [
+        assert _cells(result) == [
             {"driver_age_band": "17-20", "relativity": "0.5"},
             {"driver_age_band": "21-24", "relativity": "2"},
             {"driver_age_band": "25-29", "relativity": "1.0000"},
@@ -248,7 +254,7 @@ class TestFloorAndCap:
         result = floor_and_cap(
             _version(), floor=Decimal("0.5"), cap=Decimal("2.0")
         )
-        assert result.rows == _DEFAULT_ROWS
+        assert _cells(result) == _DEFAULT_ROWS
         assert result.created_by_operation is not None
         assert result.created_by_operation.result.changed_cells == 0
 
@@ -271,7 +277,7 @@ class TestRebaseToLevel:
             _version(rows=self._ROWS, value=_value(min=None, max=None)),
             base_level={"driver_age_band": ["25-29"]},
         )
-        assert result.rows == [
+        assert _cells(result) == [
             {"driver_age_band": "17-20", "relativity": "2"},
             {"driver_age_band": "21-24", "relativity": "1.5"},
             {"driver_age_band": "25-29", "relativity": "1"},

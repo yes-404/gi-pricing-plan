@@ -141,7 +141,7 @@ async def test_bulk_uplift_records_the_operation_and_inherits_seed_lineage(
 
     assert wire.version == 2
     assert wire.storage == "rows"
-    assert {row["driver_age_band"]: row["relativity"] for row in wire.rows or []} == {
+    assert {row.root["driver_age_band"]: row.root["relativity"] for row in wire.rows or []} == {
         "17-20": "2.112",
         "21-24": "1.551",
         "25-29": "1.232",
@@ -446,7 +446,7 @@ async def test_import_confirmed_persists_the_verdict_and_inherits_lineage(
 
     assert wire.version == 2
     assert wire.storage == "rows"
-    assert {row["driver_age_band"]: row["relativity"] for row in wire.rows or []} == {
+    assert {row.root["driver_age_band"]: row.root["relativity"] for row in wire.rows or []} == {
         "17-20": "1.9200",
         "21-24": "1.4500",
         "25-29": "1.1200",

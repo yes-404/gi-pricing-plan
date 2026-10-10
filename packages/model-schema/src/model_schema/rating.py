@@ -21,6 +21,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    RootModel,
     TypeAdapter,
     field_validator,
     model_validator,
@@ -797,6 +798,12 @@ class RateTableValue(BaseModel):
     max: Decimal | int | None = None
 
 
+class RateTableCell(RootModel[dict[str, str]]):
+    """One rate table row in §4.2's form: key columns and the value column, every value a
+    string (a key level or a decimal string). RL-1475 item 2; FR-228's columns are data,
+    so the keys are open and the value type is closed."""
+
+
 class RateTable(BaseModel):
     """A Rate Table definition (FR-228, FR-236, 03 §3.3).
 
@@ -813,7 +820,7 @@ class RateTable(BaseModel):
     storage: RateTableStorageMode
     keys: list[RateTableKey]
     value: RateTableValue
-    default_row: dict[str, Any] | None = None
+    default_row: RateTableCell | None = None
 
 
 class SeededFrom(BaseModel):
@@ -995,6 +1002,43 @@ class ImportPreview(BaseModel):
     created_by_import: ImportVerdict
 
 
+class ManualEdit(BaseModel):
+    """The provenance of a version created by the manual-edit route (03 §4.2, RL-1555 item 2).
+
+    `applied_to` names the base version edited, in `ImportVerdict.applied_to`'s form;
+    `edited_cells` is the number of edits applied. It is what tells a hand-edited version
+    from a re-seed.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    applied_to: ArtifactRef
+    edited_cells: int = Field(ge=1)
+
+
+class RateTableManualEdit(BaseModel):
+    """`POST /api/v1/rate-tables/{slug}/versions` body (FR-229, `03` §5.1, RL-1555 item 1).
+
+    `edits` are full rows of keys that `base_version` has, a key at most once (checked
+    against the base, which the route holds). `confirm: false` previews; `true` creates.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    base_version: int = Field(ge=1)
+    edits: list[RateTableCell] = Field(min_length=1)
+    change_note: str
+    confirm: bool = False
+
+    @field_validator("change_note")
+    @classmethod
+    def _change_note_is_required(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("change_note is required and must be non-empty (FR-229)")
+        return stripped
+
+
 class SeedFromModelRequest(BaseModel):
     """`POST /api/v1/rate-tables/{slug}/seed-from-model` body (FR-230, `03` §5.1).
 
@@ -1044,13 +1088,14 @@ class RateTableVersion(BaseModel):
     storage: RateTableStorageMode
     keys: list[RateTableKey]
     value: RateTableValue
-    default_row: dict[str, Any] | None = None
-    rows: list[dict[str, str | int]] | None = None
+    default_row: RateTableCell | None = None
+    rows: list[RateTableCell] | None = None
     cells: BlobRef | None = None
     change_note: str
     seeded_from: SeededFrom | None = None
     created_by_operation: BulkOperation | None = None
     created_by_import: ImportVerdict | None = None
+    created_by_edit: ManualEdit | None = None
 
     @model_validator(mode="after")
     def _cells_match_storage_mode(self) -> RateTableVersion:
@@ -1069,9 +1114,10 @@ class RateTableVersion(BaseModel):
 
     @model_validator(mode="after")
     def _one_creation_path(self) -> RateTableVersion:
-        if self.created_by_operation is not None and self.created_by_import is not None:
+        paths = (self.created_by_operation, self.created_by_import, self.created_by_edit)
+        if sum(path is not None for path in paths) > 1:
             raise ValueError(
-                "a version is created by an operation or by an import, never both "
-                "(03 §4.2)"
+                "a version is created by an operation, an import or a manual edit, "
+                "never more than one (03 §4.2)"
             )
         return self

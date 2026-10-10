@@ -396,6 +396,8 @@ Values are stored as decimal strings, never JSON floats (R2).
 > `factor_ref`. Any other existing table refuses the seed with **422**
 > `VALIDATION_FAILED`, naming the table and its keys; seed a new table slug instead.
 
+*(Added 2026-10-10, `RL-1475`.)* **`RateTableCell`** is one row in the form `rows` uses above: an object whose members are the table's key columns and its value column, each value a string (a key level or a decimal string). A Rate Table Version's `rows` and `default_row` are typed as `RateTableCell`, and the cells read (§5.1, FR 9940) returns pages of it. The definition read returns a `RateTable`, which carries every field above except `rows`, `cells`, `change_note`, `seeded_from`, `created_by_operation`, `created_by_import`, `diff_vs_previous` and `diff_vs_seed`.
+
 ### 4.3 `RatingVersion`
 
 ```json
