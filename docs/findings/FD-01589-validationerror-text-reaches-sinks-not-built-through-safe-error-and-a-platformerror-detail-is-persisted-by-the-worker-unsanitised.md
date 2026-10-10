@@ -47,7 +47,9 @@ inside a worker handler whose `detail` was built from `str(exc)` is written to t
 unsanitised and served by `GET /api/v1/jobs/{id}` (`backend/src/app/api/jobs.py:159-164`). The
 allow-list of RL-917 holds for the generic clause and is bypassed by the coded one.
 
-## Predicates (run at the tree above, read-only)
+## Evidence
+
+Predicates, run at the tree above, read-only.
 
 - P1 `git grep -n 'to_model(' 42e5d67f -- backend packages` → 42 hits (18 outside `tests/`;
   the `environments.py` and `sub_graphs.py` hits are local `_to_model` helpers, not
@@ -62,7 +64,7 @@ allow-list of RL-917 holds for the generic clause and is bypassed by the coded o
 Every hit was mapped to its enclosing `except` clause and the owning function read; a grep hit
 was a candidate, not a row.
 
-## Sinks
+## Finding
 
 | # | Sink (file:line at `42e5d67f`) | Kind | How a ValidationError (or input-bearing text) reaches it | Expression | Proposed severity |
 |---|---|---|---|---|---|
