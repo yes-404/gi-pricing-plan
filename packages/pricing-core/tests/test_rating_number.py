@@ -26,13 +26,17 @@ from pricing_core.rating.runtime import load_bundle
 from pricing_core.rating.score import score_one
 
 
-async def _price(payload_value: str | None, expr: str | None = None) -> int:
+async def _price(
+    payload_value: str | None, expr: str | None = None, *, table: dict | None = None
+) -> int:
     algo = _lookup_algo()
     if expr is not None:
         next(s for s in algo["steps"] if s["step_id"] == "s_office")["expr"] = expr
     extra = dict(_EXTRA)
     if payload_value is not None:
         extra["reference_table:expense@1"] = _ref_table_payload(payload_value, payload_value)
+    if table is not None:
+        extra["reference_table:expense@1"] = table
     version = _with_pins(rate_tables=[], reference_tables=_LOOKUP_1)
     bundle = await compile_bundle(version, _resolver(extra, algo))
     result = await score_one(load_bundle(bundle), _ctx())
@@ -70,8 +74,15 @@ async def test_a_numeric_string_converts_to_the_ruled_exact_decimal(
 
 @pytest.mark.req("FR-244")
 async def test_a_missing_lookup_row_takes_the_default() -> None:
-    """`number(v ?? '1.0')` defaults a missing value; no row means the output is null."""
-    assert await _price(None, expr="risk_premium_minor * number(missing_value ?? '1.0')") == 1_370
+    """`number(v ?? '1.0')` defaults a missing value; no row means the output is null.
+
+    The value is the lookup's own DECLARED output, with no row for the quote's channel. (It was
+    an undeclared name; FR-246 now refuses that at compile, covered by
+    `test_rating_declared_reads.py`.)"""
+    broker_only = {"rows": [{"key": "broker", "payload": {"expense_factor": "1.5"},
+                             "effective_from": "2020-01-01", "effective_to": None}]}
+    expr = "risk_premium_minor * number(expense_factor ?? '1.0')"
+    assert await _price(None, expr=expr, table=broker_only) == 1_370
 
 
 @pytest.mark.req("FR-244")
