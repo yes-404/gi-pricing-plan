@@ -953,8 +953,10 @@ def _edit_failure(issues: Sequence[EditIssue], value_name: str) -> PlatformError
     `errors`, `field` `edits.<index>.<value name>`, `code` the failure's own (`UNKNOWN_KEY`,
     `DUPLICATE_KEY`, `EDIT_COLUMNS`, `NULL_VALUE`, `OUT_OF_BOUNDS`). The problem's code is
     `RATE_TABLE_INCOMPLETE` when every failure is an FR-234 value issue and
-    `VALIDATION_FAILED` otherwise. The messages name the constraint, never a stored
-    value (`pricing_core.safe_error`); nothing here reads an exception's text."""
+    `VALIDATION_FAILED` otherwise. FR-234's value issues name the table key and
+    the submitted value (pricing configuration, the caller's own edit, not a quote input under
+    NFR-499; ruled in the maintainer's entry "2026-10-10 22:16:18 BST" in `to-lead.md`); the
+    count message interpolates only `len(errors)`. Nothing here reads an exception's text."""
     errors = tuple(
         FieldError(
             field=f"edits.{issue.index}.{value_name}", code=issue.code, message=issue.message

@@ -354,6 +354,15 @@ owed to the gate (the :1332 test still covers the helper). `ruff check` passed.
 (`assert cache is not None`, in the diff-cells path) and `:736` (`assert start is not None`, after
 `decode_int_cursor`). The lead raises them at the ACK.
 
+**Gate-1 run, 2026-10-10 (head 56ffdbdb), recorded.** (a) `fe7fd56e`'s `test_rate_table_isolation_another_workspace_answers_404`
+is a GUARD, not a red-first: the 404 held on the parent (maintainer's "2026-10-10 22:16:18 BST" entry, item 4). (b) `3372f5ce` and
+`20a220fd` were UNPROVEN in that run (collection errors on the reverted files); they are re-run red on the revert (backend src
+only, the DB files alone) in the next slot. (c) BREACH: an `audit-docs` run on a detached `origin/main` tree while another seat
+held gate-1, a sweep-pause breach (same entry, item 5). (d) The census row for `_edit_failure` and the docstrings state what the
+messages carry: FR-234's value issues name the table key and the submitted value, which is pricing configuration and not a quote
+input under NFR-499 (same entry, item 1); the count message interpolates only `len(errors)`. (e) The 13 audit-docs-driven pytest
+reds at 56ffdbdb are a hypothesis (working ids unminted); proof is CI on the minted head with those 13 named and green.
+
 ## PRs
 
 None yet.

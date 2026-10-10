@@ -568,8 +568,10 @@ def _validate_result(rows: Cells, table: RateTableVersion) -> None:
 class EditIssue:
     """One failure of a manual edit, located by the index of the edit it concerns.
 
-    `message` names the constraint and never the submitted value, so it is safe to emit and
-    store (`pricing_core.safe_error`); FR-234's value issues keep the text of the shared check.
+    `message` for the structural failures names the constraint only; FR-234's value issues keep
+    the text of the shared check, which names the table key and the submitted value (pricing
+    configuration, not a quote input under NFR-499; the maintainer's 2026-10-10 22:16:18 BST
+    entry in `to-lead.md`).
     """
 
     index: int
