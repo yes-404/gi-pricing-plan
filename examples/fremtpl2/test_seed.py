@@ -15,7 +15,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent))
 
 from arff import to_csv
-from seed import DICTIONARY, RENAMES, RULES, recipe
+from seed import DICTIONARY, PORTFOLIO_ROWS, RENAMES, RULES, build_csv, recipe
 
 SAMPLE = """% a comment, ignored
 @relation freMTPL2freq
@@ -170,3 +170,51 @@ def test_the_seed_reruns_against_a_seeded_database(
         assert second["analyst_id"] == first["analyst_id"]
     finally:
         asyncio.run(admin_sql(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
+
+
+def _write_book(directory: Path, policies: int) -> None:
+    """A synthetic freMTPL2 pair ordered by claim count, as the real file is."""
+    freq = ["@relation freMTPL2freq", "@attribute IDpol numeric", "@attribute ClaimNb numeric",
+            "@data"]
+    sev = ["@relation freMTPL2sev", "@attribute IDpol numeric", "@attribute ClaimAmount numeric",
+           "@data"]
+    claiming = policies // 20
+    for index in range(policies):
+        claims = 1 if index >= policies - claiming else 0
+        freq.append(f"{index + 1},{claims}")
+        if claims:
+            sev.append(f"{index + 1},{1000 + index}.50")
+    (directory / "freMTPL2freq.arff").write_text("\n".join(freq) + "\n", encoding="utf-8")
+    (directory / "freMTPL2sev.arff").write_text("\n".join(sev) + "\n", encoding="utf-8")
+
+
+@pytest.mark.req("FR-439")
+def test_the_portfolio_sample_is_the_same_policies_every_run(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """PL-1577 DP-2/DP-3: the 20,000-policy sample is reproducible because its size is fixed and
+    its rule is the sampler's deterministic every-nth-row over a pinned input, not because it
+    has a random seed. The same input gives the same `IDpol` set on two calls, of exactly
+    `PORTFOLIO_ROWS` policies, spread over the ordered file (not its head)."""
+    import io
+
+    import polars as pl
+    import seed
+
+    assert PORTFOLIO_ROWS == 20_000
+    _write_book(tmp_path, 50_001)
+    monkeypatch.setattr(seed, "DATA_DIR", tmp_path)
+
+    first = build_csv(PORTFOLIO_ROWS)
+    second = build_csv(PORTFOLIO_ROWS)
+    assert first == second
+
+    ids = pl.read_csv(io.BytesIO(first), infer_schema=False)["IDpol"].to_list()
+    assert len(ids) == PORTFOLIO_ROWS
+    assert len(set(ids)) == PORTFOLIO_ROWS
+    # `step = height // rows` = 2 here: policies 1, 3, 5, ... The rule takes `rows` rows at that
+    # step, so it ends at policy 39 999 and never reaches the last 10 002 rows of the file. That is
+    # the sampler's own property and it is asserted, not hidden (the real book: step 33, so the
+    # sample ends at row 660 000 of 678 013; LG-9966 records the comparison).
+    assert ids[:3] == ["1", "3", "5"]
+    assert ids[-1] == "39999"

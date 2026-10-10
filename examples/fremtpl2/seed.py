@@ -24,7 +24,7 @@ import json
 import sys
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 from uuid import UUID
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -65,6 +65,11 @@ NUMERIC = {
 
 #: VR-ACT-2's bound. An annual motor policy cannot be on risk for two years.
 MAX_EXPOSURE = 1.05
+
+#: The demo portfolio (PL-1577, R6 = (A1)): a 20,000-row sample of the book, named as a sample
+#: everywhere it is shown. Reproducible without a random seed: the size is fixed, the rule is
+#: `build_csv`'s deterministic every-nth-row, and the input is sha256-pinned (`fetch.py`).
+PORTFOLIO_ROWS: Final = 20_000
 
 
 def recipe(*, drop_implausible_exposure: bool) -> list[dict[str, Any]]:
