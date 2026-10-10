@@ -1207,6 +1207,81 @@ the third build lane's candidate.
 
 (Activated 2026-10-08 as WK-675 Slice 2, in lane C, on the maintainer's (by delegation) GO, "2026-10-08 10:55:30 BST — MERGE-ACK #1237 (security, source-map-js 1.2.1 → 1.2.2) @bf511269898baecf938b3fe37e6cb46f382b289b; LANE C DISPATCH GO (conditional) for WK-675 S2 (PL-1476 / SL-1477)"; its conditions: #1233 merged with a verified read-back (c896d6c3; RL-1473, RL-1474, RL-1475, PL-1476 and SL-1477 on main); this activation PR quotes the GO header; the lane A dispatch record (SL-1448) carries a dated Delta naming this slice's `03` hunks; Task 0 at dispatch confirms the preview and lists the line moves.)
 
+#### SL-1559 — Slice 4: Editor I — the rate table grid and manual edit; RL 9753's definition and cell-page reads; the manual-edit route (F-W10-3)
+
+```yaml
+id: SL-1559
+family: slice
+title: Slice 4: Editor I — the rate table grid and manual edit; RL 9753's definition and cell-page reads; the manual-edit route (F-W10-3)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 9489405370a1ce06c2b985ad88c7d471438febb1
+phase: P2
+work: WK-675
+corrected_by: []
+relates: [PL-1286, PL-1371, RL-1184, RL-1263, FD-1366, SL-1369, SL-1391, SL-1367]
+```
+
+`PL-1286` S4 (`:306`), cut as a draft row for its leaf plan, PL-1558
+(`docs/plans/PL-01558-wk-675-slice-4-editor-i-grid-and-manual-edit-leaf-plan.md`). The rate
+table editor's first slice. **Backend first, spec first:**
+- RL 9753 (working id, #1067)'s two reads, `GET /api/v1/rate-tables/{slug}@{version}` and
+  `.../cells`, with `RateTableCell` and the cells sorted by key in one place for both
+  storages, never a Job (FR-232);
+- the manual-edit route `POST /api/v1/rate-tables/{slug}/versions` (register F-W10-3),
+  typed in both directions, preview then confirm, as the import route does (`RL-1184` E5).
+
+**Then the view:** `@tanstack/vue-table` 9.2.6 (MIT), with `skills-map.md` and `03` §8 in the
+same commit; the typed grid (FR-228), paged by the server cursor; inline exact-decimal
+editing (FR-10, FR-21); the change note (FR-229), the confirmation diff (FR-231) and FR-234's
+errors on the cell; no approval state (FR-1186); the FR-25 link from the Rating Version's
+pinned tables (RL 9753 item 3). **Holds:** the leaf plan's DP-S4-1 (the manual-edit types)
+and DP-S4-2 (FR-234's located errors) go to the decision-maker. S4 consumes S2's Rating
+Version read (RL 9766), so it runs after S2 (DP-S4-3). It serialises with `SL-1391` on the
+rate-table route and service files.
+
+**Gate:** the leaf plan's Activation needs, in a separate activation PR: RL 9753 minted;
+DP-S4-1 and DP-S4-2 ruled; S2 merged; `SL-1391` not running; Task 0 re-run; the maintainer's
+agreement and the lead's go.
+
+*(Filed 2026-10-05 under working ids 9583 (this row) and 9582 (the plan), reserved by the lead.)*
+
+*(Minted 2026-10-10 as SL-1559 from working id 9583, with its plan PL-1558 from working id 9582, in the D3 batch mint.)*
+
+#### SL-1557 — Slice 3: Designer II — live validation through the validate route (DP-6), and the structural diff overlay
+
+```yaml
+id: SL-1557
+family: slice
+title: Slice 3: Designer II — live validation through the validate route (DP-6), and the structural diff overlay
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 9489405370a1ce06c2b985ad88c7d471438febb1
+phase: P2
+work: WK-675
+corrected_by: []
+relates: [PL-1286, PL-1371, RL-1263, SL-1387]
+```
+
+`PL-1286` S3 (`:305`), cut as a draft row for its leaf plan, PL-1556 (the plan's
+own PR). DP-6's discharge as RL 9767 (working id, #1055) rules it: the numbered FR and the
+validate-only route, with errors on the node before save (FR-212, FR-223, FR-227), including
+`expression` steps' grammar (FR-244) and closed inputs (FR-246); and the structural diff
+overlay (FR-219). It carries FD 9759 (`PL-1371` §8 (iii)). **Holds:** after S2 (SL 9711); RL
+9767 minted. **Serialised outright** with WK-673 S3 (`SL-1387`), WK-1250 S2 and WK-1250 S3
+on `compile.py` / `compile_bundle` (`PL-1371` §5 rule 4).
+
+**Gate:** the leaf plan's Activation needs, in a separate activation PR, including the
+maintainer's agreement and the lead's go.
+
+*(Filed 2026-10-05 under working ids 9581 (this row) and 9578 (the plan), reserved by the lead.)*
+
+*(Minted 2026-10-10 as SL-1557 from working id 9581, with its plan PL-1556 from working id 9578, in the D3 batch mint.)*
+
+*(P3 note, 2026-10-09: WK-675 Slice 13 (SL 9577, Jobs: the filterable list, live over the SSE stream) and Slice 14 (SL 9575, Job detail) moved from P2 to P3. Both stay working ids, unminted and off the D3 id list, and their row blocks stay on the draft branch `pl-9582-wk675-s4-leaf` (#1187 @3b15a829), per to-lead "2026-10-09 11:48:22 BST — Rulings …" item 2, option (B).)*
+
 
 
 **2026-10-09 — the Work-plan delta for Slices 5 to 11 is `PL-1546`** (Lean P2 L5), cut as eight `SL-` rows below (`SL-1547` S5, `SL-1548` S6, `SL-1549` S7b, `SL-1550` S7, `SL-1551` S8, `SL-1552` S10, `SL-1553` S11, `SL-1554` S9: the reverse ladder order, DP D of the maintainer's (by delegation) entry "2026-10-08 14:32:33 BST — DELTAS AUDIT (handover/audit-deltas-2026-10-08.md) noted; fixes proceed; DP A, B (c), C confirmed, D AMENDED (build in reverse ladder order)"). `PL-1286` (WK-675's map plan) is `active` from this batch, its status line only, on the maintainer's (by delegation) entry "2026-10-08 12:55:22 BST — P2 RE-PLAN RULED on the inventory (handover/p2-inventory-2026-10-09.md, at 60e9254c): F-1 (a), F-2 (b), F-3 (b), F-4 (a)+(b), F-5 (a)/(b), F-6 (a)" (F-2 (b)).
