@@ -53,6 +53,7 @@ from app.observability.logging import configure_logging, get_logger
 from app.observability.middleware import TraceMiddleware
 from app.platform.blobs import BlobStore, blob_probe
 from app.platform.bundle_slot import BundleSlot
+from app.platform.settings import validate_setting_overrides
 from app.platform.tenancy import require_tenant_binding
 from model_schema import OidcAuthConfig
 from pricing_core.rating.compile import assert_integer_minor_round_trip
@@ -86,6 +87,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # (WK-671 Task 1.4, F-W11-1-3 — the function has existed since W9-2 with no
         # production caller; this is the first one).
         assert_integer_minor_round_trip()
+        # FR-447 (FD-1320): a `GIP_SETTING_*` variable the registry cannot honour — unknown,
+        # ill-typed, out of range, or for an Environment-only key (`RL-1311` item 3a) —
+        # stops the process here, with the variable named, rather than failing at first use.
+        validate_setting_overrides(settings)
         # FR-436: every store must be bound to this deployment's tenant, or the process
         # does not start. Before the probes and before any write to a store, and the check
         # itself orders the stores so that the read-only database check comes first. It also
