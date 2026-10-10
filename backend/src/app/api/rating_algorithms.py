@@ -16,12 +16,13 @@ from app.api.deps import Caller, DatabaseDep
 from app.api.responses import problems
 from app.platform import rating_algorithms as service
 from model_schema import (
+    AlgorithmDiff,
+    AlgorithmValidationReport,
     Permission,
     RatingAlgorithm,
     RatingAlgorithmDraft,
     RatingAlgorithmSaved,
 )
-from model_schema.rating import AlgorithmDiff
 
 __all__ = ["router"]
 
@@ -58,6 +59,19 @@ async def create_rating_algorithm(
         body.model_dump(mode="json", exclude_unset=True),
     )
     return RatingAlgorithmSaved(id=row.id, slug=row.slug, version=row.version)
+
+
+@router.post(
+    "/rating-algorithms/validate",
+    summary="Validate an unsaved Rating Algorithm without saving it",
+    responses=problems(401, 403, 422),
+)
+async def validate_rating_algorithm(
+    body: RatingAlgorithmDraft,
+    caller: RatingWriteDep,
+) -> AlgorithmValidationReport:
+    """**200** with every located issue (FR-1607); nothing is persisted or audited."""
+    return service.validate_draft(body)
 
 
 @router.get(

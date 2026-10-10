@@ -10,7 +10,16 @@ import type { RatingStep } from "@/api/ratingAlgorithms";
 
 import { graphOrder } from "./graph";
 
-const props = defineProps<{ steps: RatingStep[]; selected: string | null }>();
+const props = withDefaults(
+  defineProps<{ steps: RatingStep[]; selected: string | null; issueCounts?: ReadonlyMap<string, number> }>(),
+  { issueCounts: () => new Map<string, number>() },
+);
+
+function optionName(step: RatingStep): string {
+  const n = props.issueCounts.get(step.step_id) ?? 0;
+  const base = `${step.step_id} ${step.label}`;
+  return n === 0 ? base : `${base}, ${n} ${n === 1 ? "issue" : "issues"}`;
+}
 const emit = defineEmits<{ select: [stepId: string]; remove: [stepId: string] }>();
 
 const TYPEAHEAD_MS = 500;
@@ -142,6 +151,7 @@ function onKeydown(event: KeyboardEvent): void {
         :id="`nav-${step.step_id}`"
         :key="step.step_id"
         role="option"
+        :aria-label="optionName(step)"
         :aria-selected="step.step_id === selected"
         class="cursor-pointer rounded border-l-4 px-2 py-1"
         :class="[

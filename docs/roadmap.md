@@ -1265,7 +1265,7 @@ agreement and the lead's go.
 id: SL-1557
 family: slice
 title: Slice 3: Designer II — live validation through the validate route (DP-6), and the structural diff overlay
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 9489405370a1ce06c2b985ad88c7d471438febb1
@@ -1289,6 +1289,8 @@ maintainer's agreement and the lead's go.
 *(Filed 2026-10-05 under working ids 9581 (this row) and 9578 (the plan), reserved by the lead.)*
 
 *(Minted 2026-10-10 as SL-1557 from working id 9581, with its plan PL-1556 from working id 9578, in the D3 batch mint.)*
+
+*(Dispatched 2026-10-10 on `to-lead.md` "2026-10-10 21:12:25 BST — DISPATCH GO: WK-675 S3"; closed 2026-10-10 in the slice PR, ledger LG-1606.)*
 
 *(P3 note, 2026-10-09: WK-675 Slice 13 (SL 9577, Jobs: the filterable list, live over the SSE stream) and Slice 14 (SL 9575, Job detail) moved from P2 to P3. Both stay working ids, unminted and off the D3 id list, and their row blocks stay on the draft branch `pl-9582-wk675-s4-leaf` (#1187 @3b15a829), per to-lead "2026-10-09 11:48:22 BST — Rulings …" item 2, option (B).)*
 

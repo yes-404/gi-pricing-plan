@@ -27,3 +27,27 @@ export type InputContractField = RatingAlgorithmDraft["input_contract"][number];
 export type RatingInputType = InputContractField["type"];
 export type RoundMode = Extract<RatingStep, { type: "output" }>["rounding"]["mode"];
 export type ModelReferenceMode = Extract<RatingStep, { type: "model_call" }>["mode"];
+
+export type AlgorithmValidationReport = components["schemas"]["AlgorithmValidationReport"];
+export type ValidationIssue = components["schemas"]["ValidationIssue"];
+
+/** Validate an unsaved draft without saving it (03 FR-1607); every issue comes back located. */
+export function validateRatingAlgorithm(
+  body: RatingAlgorithmDraft,
+  signal?: AbortSignal,
+): Promise<AlgorithmValidationReport> {
+  return request<AlgorithmValidationReport>("/rating-algorithms/validate", {
+    method: "POST",
+    body,
+    ...(signal ? { signal } : {}),
+  });
+}
+
+export type AlgorithmDiff = components["schemas"]["AlgorithmDiff"];
+
+/** The structural diff of `version` against `against` (FR-219). */
+export function getAlgorithmDiff(slug: string, version: number, against: number): Promise<AlgorithmDiff> {
+  return request<AlgorithmDiff>(
+    `/rating-algorithms/${encodeURIComponent(slug)}@${version}/diff?against=${against}`,
+  );
+}
