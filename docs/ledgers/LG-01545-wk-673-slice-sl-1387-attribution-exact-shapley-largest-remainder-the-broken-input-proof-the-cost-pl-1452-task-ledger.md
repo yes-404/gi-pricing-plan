@@ -357,3 +357,8 @@ On ZEN R is above RS-1201's 0.10 line only for the full set (0.1338), and 0,1,4,
 ## PRs
 
 #1243, a draft. The branch `sl-1387-attribution-exact-shapley-largest-remainder` is pushed; the PR is not merged by the executor.
+
+## §13 verdicts (the lead, 2026-10-10 01:15:46 BST)
+
+1. S (Acceptance 20): deferred with an owner. Owner WK-673; discharged before WK-673's Work close, by the first WK-673 slice whose write set takes measure-attribution-cost.py to emit subset values (to-lead 2026-10-09 22:56:40 BST).
+2. 690/976 per-policy maxima: deferred with an owner. Owner WK-673; same discharge point and the same harness change, which also emits per-policy contributions for the two sets; until then "shown not to recur" is not concluded (to-lead 2026-10-08 12:44:19 BST (2)).
