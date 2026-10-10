@@ -1,0 +1,55 @@
+{
+ "slug": "fremtpl2-rel-age-band",
+ "version": 2,
+ "rateable": true,
+ "storage": "rows",
+ "keys": [
+  {
+   "name": "age_band",
+   "type": "string",
+   "banding_ref": null
+  }
+ ],
+ "value": {
+  "name": "rel_age_band",
+  "type": "relativity",
+  "unit": "factor",
+  "min": null,
+  "max": null
+ },
+ "default_row": null,
+ "rows": [
+  {
+   "age_band": "18-20",
+   "rel_age_band": "1.00000000"
+  },
+  {
+   "age_band": "21-25",
+   "rel_age_band": "0.70394572"
+  },
+  {
+   "age_band": "26-30",
+   "rel_age_band": "0.61598134"
+  },
+  {
+   "age_band": "31-40",
+   "rel_age_band": "0.70695186"
+  },
+  {
+   "age_band": "41-50",
+   "rel_age_band": "0.94754336"
+  },
+  {
+   "age_band": "51-60",
+   "rel_age_band": "0.89360260"
+  },
+  {
+   "age_band": "61-70",
+   "rel_age_band": "0.87308223"
+  },
+  {
+   "age_band": "71+",
+   "rel_age_band": "0.95104991"
+  }
+ ]
+}
