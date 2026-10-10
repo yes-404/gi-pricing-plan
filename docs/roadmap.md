@@ -2032,7 +2032,7 @@ The Exit demo row's journey: ONE command runs `WF-699` Phases A to E and its dep
 id: SL-1529
 family: slice
 title: WK-1178 fix slice — FD-1416, one ApprovalRequest shape, generated and typed on every approval route
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-08            # original date 2026-10-05, set at the draft; minted 2026-10-08
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: cdaaa57345cb765f96034ce1ec2733c338f1c3cd
