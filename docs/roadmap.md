@@ -2201,7 +2201,7 @@ relates: [PL-1254]
 id: SL-1340
 family: slice
 title: Slice 2: the pin and the inlining (FR-217's pin and inlining limbs; FR-258's inlined steps)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                  # draft → active → closed | retired (§1.2a)
 created: 2026-09-30
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 8cef871d4ec30869dc3ef20559f3cac64e239a5c
@@ -2212,6 +2212,8 @@ relates: [PL-1254]
 ```
 
 `PL-1254` Task 2. ~~Blocked on DP-2 (open).~~ *DP-2 ruled 2026-09-30 by `RL-1344` (mint batch 12); still waits on the slices before it.* Minted as `SL-1340` at this PR's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `8cef871d` (1339 onward). Leaf plan: `PL-1572` (minted 2026-10-10, D5).
+
+(Activated 2026-10-10 as WK-1250 Slice 2, on the dispatch GO "2026-10-10 08:57:14 BST — DISPATCH GO: SL-1340 (PL-1572), sequenced after A-2; its four decisions ruled", with FD 9952 row 1 added by "2026-10-10 09:42:06 BST — FD 9952 (11 ValidationError sinks) ACCEPTED …"; `PL-1572` set `active` in the slice branch's activation commit.)
 
 #### SL-1341 — Slice 3: FR-218's purpose mount and the real check (retires `RL-1242`)
 
