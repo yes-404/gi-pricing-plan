@@ -2159,6 +2159,24 @@ relates: [PL-1371, SL-1387, SL-1388, SL-1526]
 
 The FD-1573 remedy, proposed on the maintainer's entry "2026-10-10 00:08:17 BST — USER: go ahead. FD 9446 on the measured curve, a remedy-slice proposal, and the Friday re-baseline (after S3's merge, in W3)" [FD 9446 is minted as FD-1573], item 2: owner the lead, placed before `SL-1526` in the exit-demo chain. `WF-699` D6's dislocation run goes through `dislocation_frame` (WK-673 S4's handler), which scores the book twice and retains every policy's validated ladder from both passes; peak RSS was logged linear at about 31 KiB per policy (`50-sb-200k`, `60-sb-400k`, tree `f59b546e`), so about 20.3 GiB is derived for the 678,013-policy book. Task 0 is a 1-hour profiling spike at 20,000 and 200,000 policies, using the standard library only, with a decision rule stated in advance. Only if it confirms retention (H1) does Task 1 make `_score_pass` keep rung values instead of `LadderRung` objects, with the frame unchanged value for value. Task 2 is the after-measurement. Single-row Work plan PL-1574, `draft`. It is not in the `compile.py` serial set; its serial set is `analysis.py`, after S3 (`SL-1387`). **Activation needs:** FD-1573 minted HIGH; PL-1574's DP-1 to DP-3 ruled; `SL-1387` merged; the lead's go. *(Cut 2026-10-10 by the planner (planner-remedy) under working id 9448, reserved by the lead.)*
 
+#### SL-9956 — WK-1178 fix slice — FD-1589 row 8, remedy (c), slice A: an input-free marker for authored model-schema validator messages
+
+```yaml
+id: SL-9956
+family: slice
+title: WK-1178 fix slice — FD-1589 row 8, remedy (c), slice A — an input-free marker for model-schema validator messages, the request-reachable ones adopted or rewritten input-free, allow-listed by pricing_core.safe_error (B1 and B2 in P3)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-10            # working id; the mint date will replace this (check 31)
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: fe0b0627590307259ec6d56be7f73115cf245092
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1589, PL-1535, SL-1536, SL-1557, SL-1559]
+```
+
+FD-1589 row 8's remedy (c), on the lead's entries "2026-10-10 15:37:31 BST — RULING: DP-M2 WITHDRAWN (my 14:37:13). FD-1589 row 8 (errors.py:490) is NOT changed in the FD-1374 slice; remedy (c) in its own slice, owner WK-1178, before the exit demo. Neither (a) nor (b)", item 2, and "2026-10-10 15:52:31 BST — RULINGS on PL 9955 / SL 9956 …" (DP-1 (a), DP-2 (c), DP-3 (a), DP-4 (a), DP-5 (b), DP-6 (a), DP-7 (a)), and "2026-10-10 16:07:46 BST — RULINGS on PL 9955 re-sized (@688d639e, ≈4.8 lane-days): DP-9 = A in P2, B1/B2 to P3; DP-8 (b) with an identifier-pattern constraint; DP-5 extension YES". `InputFreeError`, a `ValueError` subclass in `model_schema/input_free.py`, whose every raise site is a literal or a constant-only f-string, held so by an AST guard that also fails when any request-reachable model-schema raise path would render the fixed text in a 422. **Scope: slice A only** (dated 2026-10-10, on the 16:07:46 ruling): the 96 input-free `raise ValueError` sites adopt it unchanged, and the 15 closed-vocabulary and 54 request-reachable interpolating ones are rewritten to input-free text that names the field and the rule, never the submitted value. A message may name an identifier of the submitted artifact's own structure only when it matches the schema's pattern, which the marker's constructor checks (DP-8 (b)). B1 (41 handler-built messages and the 5 graph signals) and B2 (47 system-produced messages) moved to P3 by the 16:07:46 ruling; the guard's exact-count `_RESIDUAL` lists them until P3 shrinks it, and PL 9955's Appendix A keeps their sites. One `pricing_core.safe_error` allow-list, read by `_validation_detail` and the request-validation 422 (`backend/src/app/errors.py` `_handle_validation_error`); the request-common pydantic error types get fixed authored texts (DP-5's extension, 10 types); anything else it does not keep renders "The value is not valid (<TYPE>)."; one dated paragraph in `00` §5.3. Re-sized for the 16:07:46 additions at ≈3.0 lane-days (≈2.5 as ruled, plus ≈0.5 for DP-8 (b) and DP-5's extension). Starting tests: `origin/draft/fd1589-row8-tests` @`cfe8e15f`. Single-row Work plan PL 9955 (working id), `draft`. Not in the `compile.py` serial set; touches no `pricing_core/rating/**` file; contends with `SL-1557` and `SL-1559` only where a validator in `model_schema/rating.py` is changed by both. **Scheduling:** after the FD-1374 slice (`SL-1536`) merges; off the G2 critical path; before the 4 Nov freeze. **Activation needs:** `SL-1536` merged; PL 9955's DP-1 to DP-9 ruled (done); PL 9955 and this row minted; the dispatch record's function-level check against every open model-schema slice; the lead's GO. *(Cut 2026-10-10 by the planner (planner-remedy-c) under working id 9956, reserved by the lead; amended the same day, before any merge, by the planner (planner-remedy-c2) to the 15:52:31 rulings, and again by the planner (planner-remedy-c3) to the 16:07:46 rulings: scope amended to slice A.)*
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
@@ -2490,6 +2508,24 @@ Opened `draft` 2026-09-30 on the maintainer's entry "2026-09-30 07:07:58 BST —
 - **`07` FR-446** (settings precedence, the effective value and its source inspectable by an Admin), and **FR-443** and **FR-444** (metrics and health, which the System status view surfaces).
 
 It is a P3 roadmap row only: **nothing is built ahead of P3** (`CLAUDE.md` §0), and it is **not a P2 scope addition**. Its map plan comes in P3; its activation is the maintainer's. (Amended 2026-09-30 by the lead, on the maintainer's entries 07:07:58 and 05:35:06. Minted as WK-1288 at #952's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `df0d4635` printing 1288 (working id 9985 before the mint).)
+
+#### SL-9958 — WK-1178 P3 carry — FD-1589 row 8, remedy (c), B1 and B2: the model-schema validator messages no request reaches, rewritten input-free
+
+```yaml
+id: SL-9958
+family: slice
+title: WK-1178 P3 carry — FD-1589 row 8, remedy (c), B1 and B2 — the 41 handler-built and 47 system-produced model-schema validator messages rewritten input-free, with the 5 graph signals pending DP-10
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-10            # working id; the mint date will replace this (check 31)
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: fe0b0627590307259ec6d56be7f73115cf245092
+phase: P3
+work: WK-1178
+corrected_by: []
+relates: [FD-1589, SL-9956]
+```
+
+Moved to P3 by the lead's entry "2026-10-10 16:07:46 BST — RULINGS on PL 9955 re-sized (@688d639e, ≈4.8 lane-days): DP-9 = A in P2, B1/B2 to P3; DP-8 (b) with an identifier-pattern constraint; DP-5 extension YES", DP-9: *"B1/B2 (≈2.7 lane-days, messages no request reaches) MOVE TO P3 … A dated P3 row (owner WK-1178) records them by count with the planner's list"*. **It records, by count at `fe0b0627`:** **B1**, 41 free messages in 19 validators of classes built in a handler from a user's create body; **B2**, 47 free messages in 27 validators of system-produced models; and the **5 graph signals** (`GraphUnresolvedRefError` ×3, `GraphCycleError` ×2), pending PL 9955's DP-10, which is open (`step_id` carries no schema pattern, so DP-8 (b) cannot name a step). The site lists, by `file:Class.validator`, are PL 9955's Appendix A (working id); P3 plans from them and re-derives them at its own base. Until this row's work lands, slice A's guard holds these sites by exact count in `_RESIDUAL`, and DP-5's allow-list already gives any stored refusal from them input-free fixed text. Each is rewritten to field and rule only, raised as `InputFreeError`; the last P3 slice deletes `_RESIDUAL`. ≈2.7 lane-days as ruled (B1 ≈1.3, B2 ≈1.4). **Not a cut-ladder rung:** it was never in the P2 baseline. **Activation needs:** `SL-9956` (slice A) merged, because both change `_RESIDUAL` (RL-1263); DP-10 decided before the graph signals; a P3 plan; the maintainer's activation of P3 work. *(Cut 2026-10-10 by the planner (planner-remedy-c3) under working id 9958, reserved by the lead in its message to planner-remedy-c3 on 2026-10-10, free-checked on all origin refs and eta.)*
 
 
 **Goal:** RBAC, approvals, audit UI, model documentation generation.
