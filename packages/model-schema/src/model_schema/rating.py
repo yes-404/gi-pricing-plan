@@ -243,15 +243,21 @@ class RatingVersionCreate(BaseModel):
         return pins
 
 
+class ModelReferenceModeError(ValueError):
+    """FR-223's refusal. Its text is authored here from the step id and the two declared modes
+    (the algorithm's own structure, no quote input), so a caller may keep it: the class is the
+    allow-list's marker, as `CodedError` is one layer up."""
+
+
 def check_model_reference_mode(version: RatingVersion, algorithm: RatingAlgorithm) -> None:
     """FR-223: every `model_call` step's `mode` equals the version's declared mode.
 
-    Raises `ValueError` on the first mismatch, so a version whose steps disagree with its
-    `model_reference_mode` is refused before it can compile.
+    Raises `ModelReferenceModeError` (a `ValueError`) on the first mismatch, so a version whose
+    steps disagree with its `model_reference_mode` is refused before it can compile.
     """
     for step in algorithm.steps:
         if isinstance(step, RatingModelCallStep) and step.mode != version.model_reference_mode:
-            raise ValueError(
+            raise ModelReferenceModeError(
                 f"model_call step {step.step_id!r} declares mode {step.mode!r}, but the "
                 f"version declares {version.model_reference_mode!r} (FR-223)"
             )
@@ -493,6 +499,29 @@ def _consumed_by(steps: Sequence[_Node]) -> dict[str, list[str]]:
     return consumed
 
 
+class ValidationIssue(BaseModel):
+    """One named problem found in a Rating Algorithm.
+
+    `code` is the stable machine code the API maps to a problem response; `step_id` and
+    `field` locate the offending part of the algorithm.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    code: str
+    message: str
+    step_id: str | None = None
+    field: str | None = None
+
+
+class AlgorithmValidationReport(BaseModel):
+    """The 200 of `POST /rating-algorithms/validate`: every issue, located (RL-1474 item 4)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    issues: list[ValidationIssue]
+
+
 class RatingAlgorithmDraft(BaseModel):
     """A Rating Algorithm's field set, without its graph invariants (03 §4.1; RL-1474 item 1).
 
@@ -533,102 +562,15 @@ class RatingAlgorithm(RatingAlgorithmDraft):
 
     @model_validator(mode="after")
     def _graph_invariants(self) -> RatingAlgorithm:
-        steps = self.steps
-        ids = [s.step_id for s in steps]
-        if len(ids) != len(set(ids)):
-            raise ValueError("every step_id is unique (FR-215)")
-
-        # A mount is a node (RL-1309 DP-3 items 2 to 4): its `mount_point` is unique among the
-        # step_ids and the other mounts, it consumes its mapped inputs and produces its mapped
-        # outputs, and the checks below count it. The orphan check stays on real steps.
-        mounts = [
-            _MountNode(m.mount_point, list(m.inputs.values()), list(m.outputs.values()))
-            for m in self.sub_graphs
-        ]
-        mount_points = [m.step_id for m in mounts]
-        if len(mount_points) != len(set(mount_points)) or set(mount_points) & set(ids):
-            raise ValueError(
-                "every mount_point is unique among the step_ids and the other mounts "
-                "(FR-215, RL-1309 DP-3)"
-            )
-        nodes: list[_Node] = [*steps, *mounts]
-
-        produced = _produced_by(nodes)
-        consumed = _consumed_by(nodes)
-
-        # FR-214: every declared output has an output step.
-        output_steps = {s.output_name for s in steps if isinstance(s, RatingOutputStep)}
-        for out in self.outputs:
-            if out.name not in output_steps:
-                raise ValueError(
-                    f"declared output {out.name!r} has no output step (FR-214)"
-                )
-
-        # Build the dependency graph: edge A -> B when B consumes a name A produces.
-        # A step never depends on itself, even when it re-produces a name it consumed
-        # (the clamp pattern) — the self-edge is excluded.
-        dependencies: dict[str, set[str]] = {s.step_id: set() for s in nodes}
-        for step in nodes:
-            for name in _as_list(step.consumes):
-                producers = produced.get(name)
-                if not producers:
-                    raise GraphUnresolvedRefError(
-                        f"step {step.step_id!r} consumes undefined value {name!r} "
-                        "(FR-212)"
-                    )
-                dependencies[step.step_id].update(
-                    pid for pid in producers if pid != step.step_id
-                )
-
-        # Kahn's algorithm — a cycle fails (FR-212).
-        order: list[str] = []
-        pending = {s.step_id: len(dependencies[s.step_id]) for s in nodes}
-        ready = [sid for sid, n in pending.items() if n == 0]
-        while ready:
-            sid = ready.pop()
-            order.append(sid)
-            for other in nodes:
-                if sid in dependencies[other.step_id]:
-                    pending[other.step_id] -= 1
-                    if pending[other.step_id] == 0:
-                        ready.append(other.step_id)
-        if len(order) != len(nodes):
+        issues = graph_invariant_issues(self)
+        if not issues:
+            return self
+        first = issues[0]
+        if first.code == "RATING_GRAPH_CYCLIC":
             raise GraphCycleError("the rating DAG contains a cycle (FR-212)")
-        position = {sid: i for i, sid in enumerate(order)}
-        step_by_id: dict[str, _Node] = {s.step_id: s for s in nodes}
-
-        # A value may be re-produced only as a chain: each producer after the first
-        # consumes the name, so the value has exactly one *effective* producer (the last
-        # in topological order). Two unrelated producers of the same name are ambiguous
-        # (FR-212). This is what lets a `constraint` clamp a value in place: it
-        # consumes the value and re-produces it, ordered after the original producer.
-        for name, producers in produced.items():
-            if len(producers) < 2:
-                continue
-            ordered = sorted(producers, key=lambda pid: position[pid])
-            for _prev, nxt in pairwise(ordered):
-                if name not in _as_list(step_by_id[nxt].consumes):
-                    raise ValueError(
-                        f"value {name!r} is produced by {len(producers)} steps that do "
-                        "not form a single re-production chain (FR-212)"
-                    )
-
-        # No orphan: a step unreachable from an `input` AND unreferenced by an `output`.
-        reachable_from_input = self._reachable(
-            {s.step_id for s in steps if isinstance(s, RatingInputStep)},
-            step_by_id, produced, consumed,
-        )
-        feeds_output = self._reaches_output(
-            {s.step_id for s in steps if isinstance(s, RatingOutputStep)},
-            step_by_id, produced, consumed,
-        )
-        for step in steps:
-            if step.step_id not in reachable_from_input and step.step_id not in feeds_output:
-                raise ValueError(
-                    f"step {step.step_id!r} is unreachable from any input and referenced "
-                    "by no output (FR-212)"
-                )
-        return self
+        if first.code == "RATING_GRAPH_UNRESOLVED_REF":
+            raise GraphUnresolvedRefError(first.message)
+        raise ValueError(first.message)
 
     @staticmethod
     def _reachable(
@@ -669,6 +611,171 @@ class RatingAlgorithm(RatingAlgorithmDraft):
                 for producer in produced.get(name, []):
                     queue.append(producer)
         return seen
+
+
+def graph_invariant_issues(draft: RatingAlgorithmDraft) -> list[ValidationIssue]:
+    """Every graph-invariant breach of `draft`, located, in the order saving checks them.
+
+    The one definition of FR-212/214/215's graph rules: `RatingAlgorithm` raises on the
+    first issue returned, and the validate route (RL-1474) reports all of them. A
+    duplicated `step_id` ends the check (the graph cannot be indexed); an ambiguous
+    producer is only reported when there is no cycle (no topological order exists).
+    """
+    steps = draft.steps
+    issues: list[ValidationIssue] = []
+
+    seen: set[str] = set()
+    for step in steps:
+        if step.step_id in seen:
+            issues.append(
+                ValidationIssue(
+                    code="VALIDATION_FAILED",
+                    message="every step_id is unique (FR-215)",
+                    step_id=step.step_id,
+                )
+            )
+        seen.add(step.step_id)
+
+    # A mount is a node (RL-1309 DP-3 items 2 to 4): its `mount_point` is unique among the
+    # step_ids and the other mounts, it consumes its mapped inputs and produces its mapped
+    # outputs, and the checks below count it. The orphan check stays on real steps.
+    mounts = [
+        _MountNode(m.mount_point, list(m.inputs.values()), list(m.outputs.values()))
+        for m in draft.sub_graphs
+    ]
+    mount_points = [m.step_id for m in mounts]
+    if len(mount_points) != len(set(mount_points)) or set(mount_points) & seen:
+        issues.append(
+            ValidationIssue(
+                code="VALIDATION_FAILED",
+                message=(
+                    "every mount_point is unique among the step_ids and the other mounts "
+                    "(FR-215, RL-1309 DP-3)"
+                ),
+            )
+        )
+    if issues:
+        return issues
+    nodes: list[_Node] = [*steps, *mounts]
+
+    produced = _produced_by(nodes)
+    consumed = _consumed_by(nodes)
+
+    # FR-214: every declared output has an output step.
+    output_steps = {s.output_name for s in steps if isinstance(s, RatingOutputStep)}
+    for out in draft.outputs:
+        if out.name not in output_steps:
+            issues.append(
+                ValidationIssue(
+                    code="VALIDATION_FAILED",
+                    message=f"declared output {out.name!r} has no output step (FR-214)",
+                )
+            )
+
+    # Build the dependency graph: edge A -> B when B consumes a name A produces.
+    # A step never depends on itself, even when it re-produces a name it consumed
+    # (the clamp pattern) - the self-edge is excluded.
+    dependencies: dict[str, set[str]] = {s.step_id: set() for s in nodes}
+    for node in nodes:
+        for name in _as_list(node.consumes):
+            producers = produced.get(name)
+            if not producers:
+                issues.append(
+                    ValidationIssue(
+                        code="RATING_GRAPH_UNRESOLVED_REF",
+                        message=(
+                            f"step {node.step_id!r} consumes undefined value {name!r} "
+                            "(FR-212)"
+                        ),
+                        step_id=node.step_id,
+                    )
+                )
+                continue
+            dependencies[node.step_id].update(pid for pid in producers if pid != node.step_id)
+
+    # Kahn's algorithm - a cycle fails (FR-212). Steps Kahn leaves unordered are on a
+    # cycle or downstream of one; only a step that reaches itself is ON a cycle.
+    order: list[str] = []
+    pending = {s.step_id: len(dependencies[s.step_id]) for s in nodes}
+    ready = [sid for sid, n in pending.items() if n == 0]
+    while ready:
+        sid = ready.pop()
+        order.append(sid)
+        for other in nodes:
+            if sid in dependencies[other.step_id]:
+                pending[other.step_id] -= 1
+                if pending[other.step_id] == 0:
+                    ready.append(other.step_id)
+    ordered = set(order)
+    has_cycle = len(order) != len(nodes)
+    if has_cycle:
+        for node in nodes:
+            if node.step_id in ordered:
+                continue
+            reach: set[str] = set()
+            queue = list(dependencies[node.step_id])
+            while queue:
+                sid = queue.pop()
+                if sid not in reach:
+                    reach.add(sid)
+                    queue.extend(dependencies[sid])
+            if node.step_id in reach:
+                issues.append(
+                    ValidationIssue(
+                        code="RATING_GRAPH_CYCLIC",
+                        message=f"step {node.step_id!r} lies on a cycle (FR-212)",
+                        step_id=node.step_id,
+                    )
+                )
+
+    step_by_id: dict[str, _Node] = {s.step_id: s for s in nodes}
+
+    # A value may be re-produced only as a chain: each producer after the first
+    # consumes the name, so the value has exactly one *effective* producer (the last
+    # in topological order). Two unrelated producers of the same name are ambiguous
+    # (FR-212). This is what lets a `constraint` clamp a value in place: it
+    # consumes the value and re-produces it, ordered after the original producer.
+    if not has_cycle:
+        position = {sid: i for i, sid in enumerate(order)}
+        for name, producers in produced.items():
+            if len(producers) < 2:
+                continue
+            by_position = sorted(producers, key=lambda pid: position[pid])
+            for _prev, nxt in pairwise(by_position):
+                if name not in _as_list(step_by_id[nxt].consumes):
+                    issues.append(
+                        ValidationIssue(
+                            code="VALIDATION_FAILED",
+                            message=(
+                                f"value {name!r} is produced by {len(producers)} steps "
+                                "that do not form a single re-production chain (FR-212)"
+                            ),
+                            step_id=nxt,
+                        )
+                    )
+
+    # No orphan: a step unreachable from an `input` AND unreferenced by an `output`.
+    reachable_from_input = RatingAlgorithm._reachable(
+        {s.step_id for s in steps if isinstance(s, RatingInputStep)},
+        step_by_id, produced, consumed,
+    )
+    feeds_output = RatingAlgorithm._reaches_output(
+        {s.step_id for s in steps if isinstance(s, RatingOutputStep)},
+        step_by_id, produced, consumed,
+    )
+    for step in steps:
+        if step.step_id not in reachable_from_input and step.step_id not in feeds_output:
+            issues.append(
+                ValidationIssue(
+                    code="VALIDATION_FAILED",
+                    message=(
+                        f"step {step.step_id!r} is unreachable from any input and "
+                        "referenced by no output (FR-212)"
+                    ),
+                    step_id=step.step_id,
+                )
+            )
+    return issues
 
 
 class AlgorithmStepChange(BaseModel):

@@ -21,6 +21,7 @@ from pricing_core.rating.compile import (
     compile_bundle,
     to_jdm,
 )
+from pricing_core.safe_error import CodedError
 
 
 def valid_algorithm_payload() -> dict:
@@ -234,10 +235,29 @@ async def test_the_algorithm_maturity_check_would_be_caught_if_removed(
 
 @pytest.mark.req("FR-223")
 async def test_a_mode_mismatch_is_refused_at_compile() -> None:
-    """FR-223: a model_call mode disagreeing with the version fails compilation."""
+    """FR-223: a model_call mode disagreeing with the version fails compilation, named."""
     version = _version().model_copy(update={"model_reference_mode": "approximation"})
-    with pytest.raises(ValueError, match="FR-223"):
+    with pytest.raises(CodedError, match=r"^MODEL_REFERENCE_MODE_INCONSISTENT: .*'s_rp'"):
         await compile_bundle(version, _resolver())
+
+
+@pytest.mark.req("FR-223")
+async def test_a_foreign_value_error_is_not_given_the_mode_code(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """NFR-499: only `ModelReferenceModeError` (our authored, input-free text) is named; any other
+    `ValueError` falls through uncoded, and the safe text of it carries no sentinel."""
+    import pricing_core.rating.compile as compile_module
+    from pricing_core.safe_error import safe_error_text
+
+    def boom(*_args: object) -> None:
+        raise ValueError("SENTINEL-quote-value-731")
+
+    monkeypatch.setattr(compile_module, "check_model_reference_mode", boom)
+    with pytest.raises(ValueError, match="SENTINEL") as caught:
+        await compile_bundle(_version(), _resolver())
+    assert not isinstance(caught.value, CodedError)
+    assert "SENTINEL" not in safe_error_text(caught.value)
 
 
 @pytest.mark.req("FR-240")
