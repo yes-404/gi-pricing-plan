@@ -1,9 +1,9 @@
 ---
-id: RL-9960
+id: RL-1593
 family: ruling
 title: FR-246 does not count FR-221's stamped date — a lookup's as_at "effective_date" is exempt; any other as_at is a read and must be declared
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
-created: 2026-10-10
+created: 2026-10-10            # original date 2026-10-10, set at the draft; minted 2026-10-10
 owner: decision-maker
 tree: fe0b0627590307259ec6d56be7f73115cf245092
 phase: P2
@@ -15,11 +15,9 @@ corrects: RL-1519
 relates: [FR-246, FR-221, RL-1446, RL-1519]
 ---
 
-# RL-9960 — FR-246 does not count FR-221's stamped date: a lookup's `as_at: "effective_date"` is exempt
+# RL-1593 — FR-246 does not count FR-221's stamped date: a lookup's `as_at: "effective_date"` is exempt
 
-*Disclosure: drafted under working id 9960, reserved by the lead (team-lead) on 2026-10-10;
-the id is minted in a later batch mint PR. When it is minted, the working id in this record
-is replaced by the minted id.*
+*Disclosure: drafted under working id 9960; minted as RL-1593 on 2026-10-10, in the D8a batch mint PR.*
 
 ## Ruled
 
