@@ -41,10 +41,6 @@ class AuthoredString:
 
 
 #: Every field whose text the engine evaluates, as (the class that defines it, the field name).
-#: The date `score_one` and `score_batch` stamp into every engine context (`score.py`). A lookup's
-#: `as_at` naming it is not a declared read (FR-221; FR-246's clarification, 2026-10-10).
-STAMPED_DATE = "effective_date"
-
 EXPRESSION_FIELDS: tuple[tuple[type, str], ...] = (
     (RatingLookupStep, "key_expr"),
     (RatingLookupStep, "as_at"),

@@ -12,13 +12,16 @@ import re
 from collections.abc import Mapping
 from typing import Any
 
-from pricing_core.rating.authored import EXPRESSION_FIELDS, STAMPED_DATE
+from pricing_core.rating.authored import EXPRESSION_FIELDS
 
 #: A ZEN expression's string literals, removed before identifiers are read.
 _STRING = re.compile(r"'(?:[^'\\]|\\.)*'|\"(?:[^\"\\]|\\.)*\"")
 #: An identifier not followed by `(` (a call) and not preceded by `.` or `$` (a member).
 _NAME = re.compile(r"(?<![\w.$])([A-Za-z_][A-Za-z0-9_]*)\b(?!\s*\()")
 _KEYWORDS = frozenset({"true", "false", "null", "and", "or", "not", "in"})
+#: The date `score_one` and `score_batch` stamp into every engine context (`score.py`). A lookup's
+#: `as_at` naming it is not a declared read (FR-221; FR-246's clarification, 2026-10-10).
+STAMPED_DATE = "effective_date"
 _EVALUATED = frozenset(name for _, name in EXPRESSION_FIELDS)
 
 
