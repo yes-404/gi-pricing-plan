@@ -340,6 +340,8 @@ def test_algorithm_diff_route_is_typed_and_keeps_its_keys(
         # the two it adds
         "input_contract_deltas",
         "output_deltas",
+        # the one SL-1340 adds (RL-1309 DP-1 item 3)
+        "sub_graph_mounts",
     }
 
 

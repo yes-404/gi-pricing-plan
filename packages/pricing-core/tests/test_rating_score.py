@@ -925,3 +925,111 @@ def test_an_engine_error_text_never_reaches_the_raised_message() -> None:
         with pytest.raises(ValueError, match=r"^RATING_EVALUATION_FAILED:") as raised:
             _reraise_engine_failure(algorithm, RuntimeError(engine_error))
         assert sentinel not in str(raised.value)
+
+
+# ---------------------------------------------------------------------------
+# WK-1250 Slice 2 (SL-1340): the inlined steps of a pinned sub-graph, in the trace (FR-258).
+# Order (b) of PL 9610 "Sequencing for the lead": `TraceStep` and `_build_trace` are not edited.
+# ---------------------------------------------------------------------------
+
+_NCD_REF = "sub_graph:ncd-ladder@4"
+
+
+async def _compiled_with_a_mounted_sub_graph(factor: int = 1) -> CompiledBundle:
+    """The fixture's algorithm with an NCD mount feeding `s_office`; the fragment yields `factor`.
+    """
+    resolver = _FakeResolver()
+    algorithm = resolver._payloads["rating_algorithm:score-fixture@1"]
+    algorithm["input_contract"].append(
+        {"name": "ncd_years", "type": "int", "nullable": False, "min": 0, "max": 9}
+    )
+    algorithm["steps"].insert(
+        0,
+        {"step_id": "s_in_ncd", "type": "input", "label": "NCD years",
+         "input_name": "ncd_years", "on_missing": "error", "produces": "ncd_years"},
+    )
+    office = next(s for s in algorithm["steps"] if s["step_id"] == "s_office")
+    office["expr"] = "risk_premium_minor * expense_factor * ncd_factor"
+    office["consumes"] = ["risk_premium_minor", "expense_factor", "ncd_factor"]
+    algorithm["sub_graphs"] = [{
+        "ref": _NCD_REF, "mount_point": "m_ncd",
+        "inputs": {"ncd_years": "ncd_years"}, "outputs": {"ncd_factor": "ncd_factor"},
+    }]
+    resolver._payloads[_NCD_REF] = {
+        "slug": "ncd-ladder", "version": 4,
+        "inputs": [{"name": "ncd_years", "type": "int"}],
+        "outputs": [{"name": "ncd_factor", "type": "decimal", "required": True}],
+        "steps": [
+            {"step_id": "s_ladder", "type": "expression", "label": "Ladder",
+             "expr": f"ncd_years * 0 + {factor}", "result_type": "decimal",
+             "consumes": ["ncd_years"], "produces": "ncd_raw"},
+            {"step_id": "s_cap", "type": "expression", "label": "Cap",
+             "expr": "min([ncd_raw, 5])", "result_type": "decimal",
+             "consumes": ["ncd_raw"], "produces": "ncd_factor"},
+        ],
+        "change_note": "first cut",
+    }
+    version = _version()
+    pins = version.pins
+    assert pins is not None
+    version = version.model_copy(update={
+        "pins": pins.model_copy(update={"sub_graphs": [ArtifactRef.parse(_NCD_REF)]}),
+    })
+    return load_bundle(await compile_bundle(version, resolver))
+
+
+@pytest.mark.req("FR-217")
+@pytest.mark.req("FR-258")
+async def test_the_trace_shows_each_inlined_step_attributed_to_its_mount_point() -> None:
+    compiled = await _compiled_with_a_mounted_sub_graph()
+    ctx = _ctx(inputs={**_ctx().inputs, "ncd_years": 3})
+    traced = await score_one(compiled, ctx, trace=True)
+    untraced = await score_one(compiled, ctx, trace=False)
+
+    assert traced.trace is not None
+    ids = [s.step_id for s in traced.trace.steps]
+    # One TraceStep per inlined step, its id the namespaced `<mount_point>__<step_id>`.
+    assert {"m_ncd__s_ladder", "m_ncd__s_cap"} <= set(ids)
+    assert ids.index("m_ncd__s_ladder") < ids.index("m_ncd__s_cap") < ids.index("s_office")
+    assert traced.trace.ladder_reconciled is True
+    # The fragment yields 1, so the premium is the unmounted fixture's golden 1_507, and tracing
+    # does not change the result (NFR-490).
+    assert traced.outputs["payable_premium_minor"] == 1_507
+    assert traced.model_copy(update={"trace": None, "timing_ms": {}}) == untraced.model_copy(
+        update={"timing_ms": {}}
+    )
+
+
+# ---------------------------------------------------------------------------
+# Task 8 (PL 9610): `RL-1242`'s interim refusal stays, and its consequence is pinned so that
+# WK-1250 Slice 3 changes it on purpose (`RL-1344` §4).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.req("FR-218")
+@pytest.mark.parametrize("purpose", ["mid_term_adjustment", "cancellation"])
+async def test_a_version_that_mounts_a_sub_graph_still_refuses_mta_and_cancellation(
+    purpose: str,
+) -> None:
+    """No `purposes` selector exists yet, so a mount does not satisfy the purpose guard."""
+    compiled = await _compiled_with_a_mounted_sub_graph()
+    with pytest.raises(ValueError, match="INPUT_CONTRACT_VIOLATION") as refused:
+        await score_one(compiled, _ctx(purpose=purpose, inputs={**_ctx().inputs, "ncd_years": 3}))
+    assert "interim" in str(refused.value)
+
+
+@pytest.mark.req("FR-218")
+@pytest.mark.req("FR-217")
+@pytest.mark.parametrize("purpose", ["new_business", "renewal"])
+async def test_an_unconditional_mount_prices_a_new_business_quote_with_the_fragment(
+    purpose: str,
+) -> None:
+    """The consequence PL 9610 states: with no selector, every mount is for every purpose, so a
+    `new_business` or `renewal` quote on a version that mounts a fragment is priced WITH it."""
+    inputs = {**_ctx().inputs, "ncd_years": 3}
+    ctx = _ctx(purpose=purpose, inputs=inputs)
+    plain = await score_one(await _compiled_with_a_mounted_sub_graph(1), ctx)
+    doubled = await score_one(await _compiled_with_a_mounted_sub_graph(2), ctx)
+    assert plain.outcome == doubled.outcome == "quoted"
+    assert plain.outputs["payable_premium_minor"] == 1_507
+    assert doubled.outputs["payable_premium_minor"] > plain.outputs["payable_premium_minor"]
