@@ -158,7 +158,7 @@ fi
 '
 got=0
 final=1
-for i in 1 2; do
+for i in 1; do
   flock -n -E 99 /tmp/slots/gate-$i -c "export GIP_GATE_SLOT=/tmp/slots/gate-$i; $gate_body"
   final=$?
   if [ "$final" -ne 99 ]; then got=1; break; fi
@@ -178,9 +178,9 @@ another stage's output, so there is no ordering to preserve — the old `&&` cha
 sequencing them for no reason beyond it being the obvious way to type a list.
 
 **The slot count did not change, and neither did the lock.** There is still one
-`flock` — two non-blocking attempts, then a single blocking wait on slot 1 — and it
+`flock` — one non-blocking attempt, then a single blocking wait on slot 1 — and it
 still wraps the whole body. The parallelism is *inside* the slot, so the box still runs at
-most two gates at once and the thread caps still hold each stage to 4. **Do not give
+most one gate at once (`RL-1445`) and the thread caps still hold each stage to 4. **Do not give
 each stage its own `flock`**: that is seven locks where the budget assumed one, and it
 reinstates exactly the double-lock deadlock `GIP_GATE_SLOT` exists to prevent.
 
@@ -188,6 +188,10 @@ reinstates exactly the double-lock deadlock `GIP_GATE_SLOT` exists to prevent.
 by their own pids before release; check with `fuser <lockfile>` that only your pid holds
 it.** Why: on 2026-10-08 (S2) a pnpm/vite wrapper started inside `flock -c` inherited the
 lock fd and held gate-1 for about 17 minutes after the run ended.
+
+**Gate-2 standing rule: one docs check beside one code gate, and nothing else.** From the entry "2026-10-10 03:41:56 BST — RULINGS: S4's test_audit_docs_ids.py 82→83 YES; evidence form accepted; GATE-2 pairing becomes STANDING (docs ∥ one code gate only)" in `~/gi-pricing-plan.local/channel/to-lead.md`, item 3, verbatim: *"From now on, gate-2 may run ONE DOCS check (audit-docs, doc-index, register-lint, migrate --verify, the docs pytest subset) concurrently with ONE code full gate on gate-1, never beside a measurement. Two concurrent code gates remain NOT allowed (untested). Any timing-sensitive failure while gate-2 is busy is re-run ALONE before it counts."* The rule rests on three clean pairs, and is limited to exactly what they tested: pair 1, #1250's gate beside finisher-s3's docs checks (00:24–01:10); pair 2, S4's gate beside D2's checks (01:53–02:40); pair 3, S4's re-gate beside D3's checks (02:54–03:40), all on 2026-10-10 BST.
+
+**The PreToolUse hook command works from any working directory, and a rename of its script changes `.claude/settings.json` in the same commit.** The `if` filter on `.claude/settings.json`'s retry-cap hook is best-effort **by documented design** (the [hooks reference](https://code.claude.com/docs/en/hooks#bash-if-matching)): a Bash call Claude Code cannot parse statically (a pipe, `$(…)`, a heredoc) runs the hook whatever the pattern says. So the registered command names `scripts/hooks/retry_cap_hook.py` by `"${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}"/…`, not relative to the cwd; a relative path exited 2 (a blocking exit) on every such call after a `cd`. This is documented behaviour, not a Claude Code bug (measured on 2.1.296 for PL 9617). Every session runs the checkout's copy of the script by that path, so moving or renaming it without editing the settings in the same commit locks every Bash call; `tests/test_hook_registration.py` reds the gate if the script named is missing.
 
 **Read the table, not the exit code alone.** The body's last statement is
 `[ "$nfail" = "0" ]`, so a failing gate exits 1 and a passing one 0 — and 1 is
@@ -233,8 +237,8 @@ that.
 
 **`GIP_GATE_SLOT` is the announcement, not a second lock.** The repository-root
 `conftest.py` (W37-6) enforces the same budget for a *bare* `uv run pytest -q` — thread
-caps by `os.environ.setdefault` and a `flock` on the identical `/tmp/slots/gate-{1,2}`
-files this wrapper uses — because the wrapped form above was typed wrong three times in
+caps by `os.environ.setdefault` and a `flock` on the identical `/tmp/slots/gate-1`
+file this wrapper uses — because the wrapped form above was typed wrong three times in
 one day and a bare invocation should still be safe. `export GIP_GATE_SLOT=/tmp/slots/gate-$i`
 before the `&&`-chain is what stops that conftest hook from taking a *second* lock on a
 file its own ancestor process (this `flock`) already holds: `pytest_configure` checks the
@@ -358,7 +362,7 @@ wrapper's own argv) must resolve to a `flock` process, and `/proc/<pid>/environ`
 the six thread-cap variables. A gate whose parent is `uv run pytest -q` directly is a
 violation, full stop — the dispatch brief's prose is not evidence it ran.
 
-**Concurrency budget on a shared box (multiple executors/worktrees at once): 2 gate slots,
+**Concurrency budget on a shared box (multiple executors/worktrees at once): 1 gate slot (`RL-1445`),
 2 verify slots.** *(Was 3 gate slots until 2026-09-29, when the box was resized to 8 vCPU.)* Read load as **CPU demand**, not the load-average number alone: 150+
 Python test threads plus Polars/DuckDB's `tokio-rt-worker`/`async-executor-` pools (sized to
 `nproc` by default, hence the cap above) make the load average count runnable/blocked
@@ -1101,7 +1105,7 @@ build log showing no actual build (wrong cwd), one tmpdir ls -i showing identica
 (collision). This section drafted by executor-h; verified by deputy as measured. Reference: 
 to-lead.md entries 10:55:17, 11:02:41, 11:48:50, 14:33:28 (maintainer instruction).
 
-Verified: 2026-10-08 against main d85cf854 (new rule: no background process inside a held slot, `fuser` check); previously 2026-10-06 against main a9ef6777 (new section: a slot probe that gates a check); previously 2026-09-29 against main 4819ec88 (gate slot budget 3 → 2 for the 8-vCPU box, WK-1178; the wrapper loop and `conftest.py` `_SLOT_COUNT` re-read together)
+Verified: 2026-10-10 against the PL 9617 slice branch (based on main fe0b0627; gate wrapper and bare-pytest lock take gate-1 only, RL-1445); previously 2026-10-10 against main db0642c4 (new paragraph: the gate-2 standing rule, one docs check beside one code gate); previously 2026-10-08 against main d85cf854 (new rule: no background process inside a held slot, `fuser` check); previously 2026-10-06 against main a9ef6777 (new section: a slot probe that gates a check); previously 2026-09-29 against main 4819ec88 (gate slot budget 3 → 2 for the 8-vCPU box, WK-1178; the wrapper loop and `conftest.py` `_SLOT_COUNT` re-read together)
 Prior: 2026-09-17 against main 71f5a2208c7a92bad486ae128775a4a42c7ebc63
 
 2026-09-06 — the gate body's seven stages now run in parallel inside one slot, each

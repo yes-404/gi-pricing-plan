@@ -723,6 +723,19 @@ def test_attribute_undeclared_column_never_reaches_the_engine(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """RL-1394 Acceptance, Slice 3's half: every subset's premium ignores the secret column."""
+    # Two layers: compile now refuses a step that reads an undeclared name (FR-246, tested in
+    # test_rating_declared_reads.py). This test proves the RUNTIME guard on its own, so the
+    # declared-reads check alone is switched off here, test-only (the analogue of the
+    # dislocation sibling's `_hand_compiled`); no production path gains a way around compile.
+    from pricing_core.rating import compile as compile_module
+
+    monkeypatch.setattr(
+        compile_module,
+        "ALGORITHM_CHECKS",
+        tuple(
+            c for c in compile_module.ALGORITHM_CHECKS if c.__name__ != "_check_declared_reads"
+        ),
+    )
     base = _with_secret_step()
     cand = copy.deepcopy(base)
     cand["version"] = 2

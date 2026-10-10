@@ -3,7 +3,7 @@ id: PL-1464
 family: plan
 kind: leaf
 title: WK-1178 — Option A slice A-2, the FD-1458 fix, a GLM scores through model_call (FR-222, FR-193, FR-255, FR-239, NFR-489, NFR-491): leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-06            # original date 2026-10-05, set at the draft; minted 2026-10-06
 owner: planner
 tree: 137bc817ef1fb40ea57e9053e0ad40b73bdff3a8

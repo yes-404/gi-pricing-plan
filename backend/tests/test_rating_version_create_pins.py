@@ -95,7 +95,7 @@ def test_a_version_created_with_its_algorithm_and_pins_compiles_over_http(
         f"/api/v1/rating-versions/{created.json()['id']}", headers=headers
     ).json()
     assert version["algorithm_ref"] == algorithm_ref
-    assert version["pins"] == pins
+    assert version["pins"] == {**pins, "sub_graphs": []}  # Pins.sub_graphs defaults to []
 
     job_row = _run_compile_job(api_client, headers, database, blob_store, version["id"])
     assert job_row.status is JobStatus.SUCCEEDED, job_row.error
@@ -370,5 +370,5 @@ def test_the_creation_event_records_the_declared_pins(
 
     after = _LOOP().run_until_complete(_after())
     assert after["algorithm_ref"] == algorithm_ref
-    assert after["pins"] == _empty_pins()
+    assert after["pins"] == {**_empty_pins(), "sub_graphs": []}
     assert after["model_reference_mode"] == "exact"

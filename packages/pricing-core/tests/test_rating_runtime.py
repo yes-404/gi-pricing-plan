@@ -19,6 +19,7 @@ from uuid import uuid4
 import pytest
 import xgboost as xgb
 from pydantic import BaseModel
+from test_rating_glm_model_call import age_glm
 
 from model_schema.rating import RatingVersion
 from model_schema.refs import ArtifactRef
@@ -69,16 +70,12 @@ def _gbm_model_payload(booster_bytes: bytes, *, model_type: str = "xgboost") -> 
     }
 
 
+_GLM = age_glm()
+
+
 def _glm_model_payload() -> dict[str, Any]:
-    """A GLM `model:...` payload — enough to reach the dispatch, not enough (deliberately;
-    see `runtime.py`'s `_raise_model_call_failed`) to be scored."""
-    return {
-        "model_family_slug": "motor-freq-glm",
-        "version": 1,
-        "status": "approved",
-        "fit_result": {"model_type": "glm", "converged": True, "iterations": 5, "fit_seconds": 0.01,
-                       "coefficients": []},
-    }
+    """A real fitted GLM's `Model` dump (FD-1458): scoreable from the Bundle alone."""
+    return _GLM.model_payload()
 
 
 def _rate_table_payload() -> dict[str, Any]:
@@ -177,6 +174,8 @@ class _FakeResolver:
             if with_constraint
             else _algorithm_payload(model_ref=model_ref)
         )
+        if glm:  # a GLM step is compiled with an explicit result_type (2026-10-10 00:44:31)
+            next(s for s in algo["steps"] if s["type"] == "model_call")["result_type"] = "decimal"
         self._payloads: dict[str, dict[str, Any]] = {
             "rating_algorithm:motor-runtime-test@1": algo,
             "rate_table:motor-expense@1": _rate_table_payload(),
@@ -185,6 +184,11 @@ class _FakeResolver:
         }
 
     async def resolve(self, ref: ArtifactRef) -> ResolvedArtifact:
+        if str(ref) == "model:motor-freq-glm@1":
+            return ResolvedArtifact(
+                status="approved", payload=self._payloads[str(ref)],
+                factors=_GLM.factors, bandings=_GLM.bandings, groupings=_GLM.groupings,
+            )
         return ResolvedArtifact(status="approved", payload=self._payloads[str(ref)])
 
 
@@ -373,21 +377,13 @@ def test_to_wire_refuses_a_clamp_constraint_with_nothing_to_clamp() -> None:
         to_wire(graph, {"rate_table:motor-expense@1": _rate_table_payload()})
 
 
-@pytest.mark.req("FR-243")
-async def test_a_glm_model_call_is_refused_with_a_named_code() -> None:
-    """`predict_glm` needs real Factor objects the Bundle does not carry (see
-    `runtime.py`'s `_model_call_failure` docstring) — refused loudly, not silently
-    mis-scored.
+@pytest.mark.req("FR-222")
+async def test_a_glm_model_call_scores() -> None:
+    """FD-1458: a real GLM, with the Factors and Banding the Bundle carries, scores.
 
-    **Behaviour corrected by WK-671 Task 1.4.** Task 1.3 verified that a `customHandler`'s
-    raised exception is swallowed by the `zen` binding (the finding `_model_call_failure`'s
-    docstring records) and had this handler raise anyway, matching-but-losing that
-    exception. Task 1.4 replaced the raise with a sentinel in the handler's own returned
-    `output` (`MODEL_CALL_ERROR_KEY`) specifically so this information survives the engine
-    boundary — so `async_evaluate()` no longer raises for this case at all; the failure
-    surfaces as data in the normal `result`, which `score_one` (`pricing_core.rating.score`)
-    reads and turns into a `MODEL_CALL_FAILED` refusal. This test asserts the new contract:
-    no exception from the engine, and the sentinel's message intact.
+    Was `test_a_glm_model_call_is_refused_with_a_named_code`, which pinned the old GLM
+    refusal. The handler now returns the model's value and no
+    `MODEL_CALL_ERROR_KEY`, through the engine and called directly.
     """
     resolver = _FakeResolver(glm=True)
     bundle = await compile_bundle(_version(glm=True), resolver)
@@ -396,8 +392,8 @@ async def test_a_glm_model_call_is_refused_with_a_named_code() -> None:
     from pricing_core.rating.runtime import MODEL_CALL_ERROR_KEY
 
     out = await compiled.decision.async_evaluate({"driver_age": 34, "channel": "direct"})
-    assert MODEL_CALL_ERROR_KEY in out["result"], "a GLM model_call failure must not vanish"
-    assert "MODEL_CALL_FAILED" in out["result"][MODEL_CALL_ERROR_KEY]
+    assert MODEL_CALL_ERROR_KEY not in out["result"]
+    assert "risk_premium_minor" in out["result"]
 
     from pricing_core.rating.runtime import _model_call_handler
 
@@ -405,7 +401,10 @@ async def test_a_glm_model_call_is_refused_with_a_named_code() -> None:
     fake_request = SimpleNamespace(node={"id": "s_risk"}, input={"driver_age": 34, "$nodes": {}})
 
     direct = handler(fake_request)
-    assert "MODEL_CALL_FAILED" in direct["output"][MODEL_CALL_ERROR_KEY]
+    assert MODEL_CALL_ERROR_KEY not in direct["output"]
+    assert direct["output"]["risk_premium_minor"] == pytest.approx(
+        _GLM.predict(driver_age=34.0), rel=1e-12
+    )
 
 
 @pytest.mark.req("FR-243")
@@ -479,53 +478,109 @@ def test_lookup_step_wire_translation_matches_by_key() -> None:
     ] == "MAN"
 
 
-_PERIL_REF = "peril_structure:motor-perils@1"
+# --- WK-1250 Slice 2 (SL-1340): a pinned sub-graph is re-inlined at load (RL 9586 DP-S2-1) -------
+
+_MOUNT_NCD = "sub_graph:ncd-ladder@4"
 
 
-@pytest.mark.req("FR-255")
-async def test_a_peril_structure_model_call_is_refused_with_a_named_reason() -> None:
-    """DP-3 (b) of RL-1457: until A-3 (PL-1465), scoring a Peril Structure is a named refusal.
-
-    A resolved Peril Structure payload carries no `fit_result`, so the handler's read of
-    `payload["fit_result"]` raised `KeyError`, which the `zen` binding reports only as a
-    generic node error (`_model_call_failure`'s docstring). The handler now returns the
-    `MODEL_CALL_ERROR_KEY` sentinel naming the ref and A-3, and `score_one` turns it into
-    `MODEL_CALL_FAILED`. **A-3 replaces this branch and this test.**
-    """
-    from datetime import UTC, date, datetime
-
-    from model_schema.scoring import QuoteContext, QuoteContextOptions
-    from pricing_core.rating.runtime import MODEL_CALL_ERROR_KEY, _model_call_handler
-    from pricing_core.rating.score import score_one
-
-    resolver = _FakeResolver()
-    step = next(s for s in resolver._payloads["rating_algorithm:motor-runtime-test@1"]["steps"]
-                if s["step_id"] == "s_risk")
-    del step["model_ref"]
-    step["peril_structure_ref"] = _PERIL_REF
-    resolver._payloads[_PERIL_REF] = {
-        "slug": "motor-perils", "version": 1, "status": "approved",
-        "perils": [], "excluded_perils": [], "reconciliation": None,
+def _mounted_payloads() -> dict[str, dict[str, Any]]:
+    """A parent that consumes the mount's output in a step listed BEFORE the fragment's steps,
+    and owns a value `ladder` that the fragment also uses internally (the deliberate clash)."""
+    algorithm = {
+        "slug": "mounted", "version": 1,
+        "input_contract": [
+            {"name": "ncd_years", "type": "int", "nullable": False},
+            {"name": "base_minor", "type": "int", "nullable": False},
+            {"name": "ladder", "type": "int", "nullable": False},
+        ],
+        "outputs": [{"name": "premium_minor", "type": "money_minor", "required": True}],
+        "steps": [
+            {"step_id": "s_in_years", "type": "input", "label": "y", "input_name": "ncd_years",
+             "on_missing": "error", "produces": "ncd_years"},
+            {"step_id": "s_in_base", "type": "input", "label": "b", "input_name": "base_minor",
+             "on_missing": "error", "produces": "base_minor"},
+            {"step_id": "s_in_ladder", "type": "input", "label": "l", "input_name": "ladder",
+             "on_missing": "error", "produces": "ladder"},
+            {"step_id": "s_prem", "type": "expression", "label": "p",
+             "expr": "base_minor * ncd_factor + ladder", "result_type": "money_minor",
+             "consumes": ["base_minor", "ncd_factor", "ladder"], "produces": "premium_pre"},
+            {"step_id": "s_out", "type": "output", "label": "o", "output_name": "premium_minor",
+             "rounding": {"mode": "half_even", "dp": 0}, "consumes": ["premium_pre"]},
+        ],
+        "sub_graphs": [{"ref": _MOUNT_NCD, "mount_point": "m_ncd",
+                        "inputs": {"ncd_years": "ncd_years"},
+                        "outputs": {"ncd_factor": "ncd_factor"}}],
     }
-    version = _version().model_dump(mode="json")
-    version["pins"]["models"] = [_PERIL_REF]
-    bundle = await compile_bundle(RatingVersion.model_validate(version), resolver)
-    compiled = load_bundle(bundle)
+    fragment = {
+        "slug": "ncd-ladder", "version": 4,
+        "inputs": [{"name": "ncd_years", "type": "int"}],
+        "outputs": [{"name": "ncd_factor", "type": "decimal", "required": True}],
+        "steps": [
+            {"step_id": "s_a", "type": "expression", "label": "a", "expr": "ncd_years * 10",
+             "result_type": "int", "consumes": ["ncd_years"], "produces": "ladder"},
+            {"step_id": "s_b", "type": "expression", "label": "b", "expr": "ladder + 1",
+             "result_type": "decimal", "consumes": ["ladder"], "produces": "ncd_factor"},
+        ],
+        "change_note": "first cut",
+    }
+    return {"rating_algorithm:mounted@1": algorithm, _MOUNT_NCD: fragment}
 
-    handler = _model_call_handler(compiled.algorithm, bundle.resolved_payloads, compiled.boosters)
-    direct = handler(SimpleNamespace(node={"id": "s_risk"}, input={"driver_age": 34, "$nodes": {}}))
-    message = direct["output"][MODEL_CALL_ERROR_KEY]
-    assert _PERIL_REF in message
-    assert "A-3" in message
 
-    ctx = QuoteContext.model_validate({
-        "purpose": "new_business",
-        "quoted_at": datetime(2026, 8, 29, 12, 0, 0, tzinfo=UTC).replace(tzinfo=None),
-        "effective_date": date(2026, 9, 1),
-        "inputs": {"driver_age": 34, "channel": "direct"},
-        "options": QuoteContextOptions(
-            rating_version_ref="rating_version:motor-runtime-test@1"
-        ),
+class _MountedResolver:
+    async def resolve(self, ref: ArtifactRef) -> ResolvedArtifact:
+        exempt = ref.type in {"rating_algorithm", "sub_graph"}
+        return ResolvedArtifact(
+            status="no_maturity_concept" if exempt else "approved",
+            payload=_mounted_payloads()[str(ref)],
+        )
+
+
+def _mounted_version() -> RatingVersion:
+    return RatingVersion.model_validate({
+        "id": str(uuid4()), "workspace_id": str(uuid4()), "slug": "mounted", "version": 1,
+        "status": "draft", "dataset_version_id": str(uuid4()), "model_ref": "model:unused@1",
+        "created_at": "2026-10-09T12:00:00Z", "created_by": str(uuid4()),
+        "updated_at": "2026-10-09T12:00:00Z", "algorithm_ref": "rating_algorithm:mounted@1",
+        "pins": {"rate_tables": [], "models": [], "reference_tables": [],
+                 "custom_objectives": [], "sub_graphs": [_MOUNT_NCD]},
+        "model_reference_mode": "exact",
     })
-    with pytest.raises(ValueError, match="MODEL_CALL_FAILED"):
-        await score_one(compiled, ctx)
+
+
+@pytest.mark.req("FR-217")
+@pytest.mark.req("FR-243")
+async def test_a_mounted_fragment_is_scored_into_the_mapped_parent_name_in_isolation() -> None:
+    bundle = await compile_bundle(_mounted_version(), _MountedResolver())
+    compiled = load_bundle(bundle)
+    assert "m_ncd__s_a" in {s.step_id for s in compiled.algorithm.steps}
+    out = await compiled.decision.async_evaluate({"ncd_years": 3, "base_minor": 100, "ladder": 7})
+    result = out["result"]
+    # The fragment's `ladder` (3 * 10) is its own; the parent's `ladder` (7) is untouched.
+    assert result["m_ncd__ladder"] == 30
+    assert result["ladder"] == 7
+    # `ncd_factor` is the mapped output (30 + 1), and the parent step that consumes it, listed
+    # before the fragment's steps, reads it: 100 * 31 + 7.
+    assert result["ncd_factor"] == 31
+    assert result["premium_pre"] == 3107
+
+
+@pytest.mark.req("FR-217")
+@pytest.mark.req("FR-243")
+async def test_c1_a_bundle_whose_graph_and_reinlined_algorithm_disagree_is_refused() -> None:
+    """RL 9586 C1: one graph node renamed, so the stored graph is not what the pins inline to."""
+    bundle = await compile_bundle(_mounted_version(), _MountedResolver())
+    nodes = dict(bundle.graph.nodes)
+    nodes["m_ncd__renamed"] = nodes.pop("m_ncd__s_a")
+    tampered = bundle.model_copy(
+        update={"graph": bundle.graph.model_copy(update={"nodes": nodes})}
+    )
+    with pytest.raises(ValueError, match="BUNDLE_COMPILE_FAILED") as raised:
+        load_bundle(tampered)
+    assert "m_ncd__" in str(raised.value)
+
+
+@pytest.mark.req("FR-217")
+@pytest.mark.req("FR-243")
+async def test_a_bundle_with_no_mounts_re_inlines_to_itself() -> None:
+    compiled = await _compiled()
+    assert [s.step_id for s in compiled.algorithm.steps][:2] == ["s_in_age", "s_in_channel"]

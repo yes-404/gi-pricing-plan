@@ -3,7 +3,7 @@ id: PL-1465
 family: plan
 kind: leaf
 title: WK-1178 — Option A, A-3, Peril Structure scoring, compile resolves and maturity-checks the component models and the runtime assembles the risk premium (FR-188, FR-189, FR-191, FR-222, FR-237, FR-240, FR-20, NFR-491): leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-06            # original date 2026-10-05, set at the draft; minted 2026-10-06
 owner: planner
 tree: 137bc817ef1fb40ea57e9053e0ad40b73bdff3a8

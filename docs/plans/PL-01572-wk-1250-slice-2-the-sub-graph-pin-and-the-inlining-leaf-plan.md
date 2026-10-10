@@ -3,7 +3,7 @@ id: PL-1572
 family: plan
 kind: leaf
 title: WK-1250 Slice 2 — the sub-graph pin and the inlining (FR-217's pin and inlining limbs; FR-258's inlined steps): leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-10            # original date 2026-10-05, set at the draft; minted 2026-10-10
 owner: planner
 tree: cdaaa57345cb765f96034ce1ec2733c338f1c3cd

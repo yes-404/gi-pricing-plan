@@ -47,16 +47,26 @@ import statistics
 import sys
 import time
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+import numpy as np
+import polars as pl
 import xgboost as xgb
 
 _PACKAGES = Path(__file__).resolve().parent.parent / "packages"
 sys.path.insert(0, str(_PACKAGES / "pricing-core" / "src"))
 sys.path.insert(0, str(_PACKAGES / "model-schema" / "src"))
 
+from model_schema import PerilStructure  # noqa: E402
+from model_schema.perils import (  # noqa: E402
+    LargeLossKind,
+    LargeLossTreatment,
+    PerilComponent,
+    PerilMethod,
+)
 from model_schema.rating import RatingVersion  # noqa: E402
 from model_schema.refs import ArtifactRef  # noqa: E402
 from model_schema.scoring import QuoteContext, QuoteContextOptions  # noqa: E402
@@ -178,6 +188,43 @@ def _gbm_model_payload(booster_bytes: bytes, *, rounds: int, rows: int) -> dict[
     }
 
 
+def _glm_world(
+    *, rows: int = 5_000, seed: int = 20260829
+) -> tuple[dict[str, Any], tuple[Any, ...]]:
+    """A real fitted GLM over `FEATURE_ORDER` for the NFR-489 GLM scenario (FD-1458,
+    `PL-1464` item 9): one identity Factor per feature, a gamma severity on the money-minor
+    scale, no offset. Returns its `Model` dump and its Factors, as the compile resolver
+    serves them."""
+    from model_schema import Factor, FactorType, GlmSpec, Model, ModelStatus
+    from pricing_core.modelling import fit_glm
+
+    dataset = uuid4()
+    factors = tuple(
+        Factor(
+            id=uuid4(), slug=name, dataset_id=dataset, version=1, type=FactorType.IDENTITY,
+            source_columns=(name,),
+        )
+        for name in FEATURE_ORDER
+    )
+    rng = np.random.default_rng(seed)
+    frame = pl.DataFrame({name: rng.uniform(0.0, 1.0, rows) for name in FEATURE_ORDER})
+    signal = sum((i + 1) * 0.05 * frame[name] for i, name in enumerate(FEATURE_ORDER))
+    frame = frame.with_columns(
+        severity_minor=pl.Series(rng.gamma(20.0, 75.0 * np.exp(signal.to_numpy()) / 20.0))
+    )
+    spec = GlmSpec(
+        model_family_slug="bench-glm", dataset_version_id=dataset,
+        response_column="severity_minor", factors=tuple(f.id for f in factors),
+        family="gamma", link="log",
+    )
+    fit = fit_glm(frame, spec, list(factors))
+    model = Model.model_construct(
+        id=uuid4(), model_family_slug="bench-glm", version=1, status=ModelStatus.APPROVED,
+        spec=spec, spec_hash="0" * 64, fit_result=fit.result, dataset_version_id=dataset,
+    )
+    return model.model_dump(mode="json"), factors
+
+
 def _rate_table_payload() -> dict[str, Any]:
     return {
         "slug": "bench-expense", "version": 1, "rateable": True, "storage": "rows",
@@ -194,7 +241,7 @@ def _rate_table_payload() -> dict[str, Any]:
     }
 
 
-def _algorithm_payload(*, with_gbm: bool, n_expr: int) -> dict[str, Any]:
+def _algorithm_payload(*, with_gbm: bool, n_expr: int, glm: bool = False) -> dict[str, Any]:
     """A ~200-step motor structure. See the module-level constants' docstring for the
     step-count accounting.
 
@@ -204,7 +251,7 @@ def _algorithm_payload(*, with_gbm: bool, n_expr: int) -> dict[str, Any]:
     trivially "reachable from an input" by being one), but a benchmark fixture claiming to
     be a "motor structure" should not have inputs nothing downstream ever reads.
     """
-    slug = "bench-rating-gbm" if with_gbm else "bench-rating-no-gbm"
+    slug = _slug(with_gbm=with_gbm, glm=glm)
     input_contract: list[dict[str, Any]] = [
         {"name": "driver_age", "type": "int", "nullable": False, "min": 17, "max": 99},
         {"name": "channel", "type": "enum", "domain": ["direct", "broker"], "nullable": False},
@@ -233,9 +280,10 @@ def _algorithm_payload(*, with_gbm: bool, n_expr: int) -> dict[str, Any]:
     if with_gbm:
         steps.append({
             "step_id": "s_risk", "type": "model_call", "label": "Risk premium",
-            "model_ref": "model:bench-freq@1", "mode": "exact",
+            "model_ref": "model:bench-glm@1" if glm else "model:bench-freq@1", "mode": "exact",
             "feature_map": {name: name for name in FEATURE_ORDER},
             "consumes": list(FEATURE_ORDER), "produces": ["risk_premium_minor"],
+            **({"result_type": "decimal"} if glm else {}),
         })
         seed_expr = "(risk_premium_minor * expense_factor) + driver_age"
         seed_consumes = ["risk_premium_minor", "expense_factor", "driver_age"]
@@ -270,28 +318,46 @@ def _algorithm_payload(*, with_gbm: bool, n_expr: int) -> dict[str, Any]:
     }
 
 
+def _slug(*, with_gbm: bool, glm: bool = False) -> str:
+    if glm:
+        return "bench-rating-glm"
+    return "bench-rating-gbm" if with_gbm else "bench-rating-no-gbm"
+
+
 class _FakeResolver:
     """In-process resolver, shaped like `test_rating_score.py`'s own `_FakeResolver` —
     every pin is `"approved"`; this harness measures `score_one`, not the maturity gate."""
 
-    def __init__(self, *, with_gbm: bool, n_expr: int, rounds: int, rows: int) -> None:
-        slug = "bench-rating-gbm" if with_gbm else "bench-rating-no-gbm"
+    def __init__(
+        self, *, with_gbm: bool, n_expr: int, rounds: int, rows: int, glm: bool = False
+    ) -> None:
+        slug = _slug(with_gbm=with_gbm, glm=glm)
+        self._glm_factors: tuple[Any, ...] = ()
         self._payloads: dict[str, dict[str, Any]] = {
-            f"rating_algorithm:{slug}@1": _algorithm_payload(with_gbm=with_gbm, n_expr=n_expr),
+            f"rating_algorithm:{slug}@1": _algorithm_payload(
+                with_gbm=with_gbm, n_expr=n_expr, glm=glm
+            ),
             "rate_table:bench-expense@1": _rate_table_payload(),
         }
-        if with_gbm:
+        if glm:
+            self._payloads["model:bench-glm@1"], self._glm_factors = _glm_world(rows=rows)
+        elif with_gbm:
             booster_bytes = _train_booster(rows=rows, rounds=rounds)
             self._payloads["model:bench-freq@1"] = _gbm_model_payload(
                 booster_bytes, rounds=rounds, rows=rows
             )
 
     async def resolve(self, ref: ArtifactRef) -> ResolvedArtifact:
+        if str(ref) == "model:bench-glm@1":
+            return ResolvedArtifact(
+                status="approved", payload=self._payloads[str(ref)], factors=self._glm_factors
+            )
         return ResolvedArtifact(status="approved", payload=self._payloads[str(ref)])
 
 
-def _version(*, with_gbm: bool) -> RatingVersion:
-    slug = "bench-rating-gbm" if with_gbm else "bench-rating-no-gbm"
+def _version(*, with_gbm: bool, glm: bool = False) -> RatingVersion:
+    slug = _slug(with_gbm=with_gbm, glm=glm)
+    model_ref = "model:bench-glm@1" if glm else "model:bench-freq@1"
     return RatingVersion.model_validate({
         "id": str(uuid4()), "workspace_id": str(uuid4()), "slug": slug, "version": 1,
         "status": "draft", "dataset_version_id": str(uuid4()),
@@ -299,20 +365,22 @@ def _version(*, with_gbm: bool) -> RatingVersion:
         # verified live in `packages/pricing-core/src/pricing_core/rating/compile.py`);
         # required by the schema regardless, so it is set to a well-formed ref even when
         # the algorithm itself has no `model_call` step.
-        "model_ref": "model:bench-freq@1",
+        "model_ref": model_ref,
         "created_at": "2026-08-29T12:00:00Z", "created_by": str(uuid4()),
         "updated_at": "2026-08-29T12:00:00Z",
         "algorithm_ref": f"rating_algorithm:{slug}@1",
         "pins": {
             "rate_tables": ["rate_table:bench-expense@1"],
-            "models": ["model:bench-freq@1"] if with_gbm else [],
+            "models": [model_ref] if with_gbm else [],
             "reference_tables": [], "custom_objectives": [],
         },
         "model_reference_mode": "exact",
     })
 
 
-async def _serialisable(*, with_gbm: bool, n_expr: int, rounds: int, rows: int) -> Bundle:
+async def _serialisable(
+    *, with_gbm: bool, n_expr: int, rounds: int, rows: int, glm: bool = False
+) -> Bundle:
     """The `Bundle` *before* `load_bundle` — the artifact the blob store holds.
 
     Split out of `_compiled` for Task 2D: the full-path measurement must score the **same**
@@ -321,16 +389,85 @@ async def _serialisable(*, with_gbm: bool, n_expr: int, rounds: int, rows: int) 
     taken on four different fixtures.
     """
     resolver: ArtifactResolver = _FakeResolver(
-        with_gbm=with_gbm, n_expr=n_expr, rounds=rounds, rows=rows
+        with_gbm=with_gbm, n_expr=n_expr, rounds=rounds, rows=rows, glm=glm
     )
-    return await compile_bundle(_version(with_gbm=with_gbm), resolver)
+    return await compile_bundle(_version(with_gbm=with_gbm, glm=glm), resolver)
 
 
-async def _compiled(*, with_gbm: bool, n_expr: int, rounds: int, rows: int) -> CompiledBundle:
+async def _compiled(
+    *, with_gbm: bool, n_expr: int, rounds: int, rows: int, glm: bool = False
+) -> CompiledBundle:
     bundle = await _serialisable(
-        with_gbm=with_gbm, n_expr=n_expr, rounds=rounds, rows=rows
+        with_gbm=with_gbm, n_expr=n_expr, rounds=rounds, rows=rows, glm=glm
     )
     return load_bundle(bundle)
+
+
+# -- A-3 (PL-1465, DP-A3-6 (a)): a Peril Structure `model_call` --------------------------------
+
+PERIL_STRUCTURE = "peril_structure:bench-perils@1"
+PERIL_MODELS = ("model:bench-ad-freq@1", "model:bench-ad-sev@1", "model:bench-ws-bc@1")
+
+
+def _peril_structure_payload() -> dict[str, Any]:
+    """Two `frequency_severity` perils and one `burning_cost` peril: five predictions a quote
+    (DP-A3-6), no large-loss treatment, so the figure is the composition alone."""
+    none = LargeLossTreatment(kind=LargeLossKind.NONE)
+    ref = ArtifactRef.model_validate
+    structure = PerilStructure(
+        id=uuid4(), slug="bench-perils", version=1, created_at=datetime(2026, 10, 1, tzinfo=UTC),
+        perils=(
+            PerilComponent(
+                peril="AD", method=PerilMethod.FREQUENCY_SEVERITY, large_loss=none,
+                frequency_model=ref(PERIL_MODELS[0]), severity_model=ref(PERIL_MODELS[1]),
+            ),
+            PerilComponent(
+                peril="TP", method=PerilMethod.FREQUENCY_SEVERITY, large_loss=none,
+                frequency_model=ref(PERIL_MODELS[0]), severity_model=ref(PERIL_MODELS[1]),
+            ),
+            PerilComponent(
+                peril="WS", method=PerilMethod.BURNING_COST, large_loss=none,
+                burning_cost_model=ref(PERIL_MODELS[2]),
+            ),
+        ),
+    )
+    return structure.model_dump(mode="json")
+
+
+class _PerilResolver:
+    """Serves the structure, three real boosters and the usual rate table."""
+
+    def __init__(self, *, n_expr: int, rounds: int, rows: int) -> None:
+        algorithm = _algorithm_payload(with_gbm=True, n_expr=n_expr)
+        algorithm["slug"] = "bench-rating-peril"
+        call = next(step for step in algorithm["steps"] if step["step_id"] == "s_risk")
+        del call["model_ref"]
+        call["peril_structure_ref"] = PERIL_STRUCTURE
+        call["result_type"] = "decimal"
+        self._payloads: dict[str, dict[str, Any]] = {
+            "rating_algorithm:bench-rating-peril@1": algorithm,
+            "rate_table:bench-expense@1": _rate_table_payload(),
+            PERIL_STRUCTURE: _peril_structure_payload(),
+        }
+        for index, model in enumerate(PERIL_MODELS):
+            booster = _train_booster(rows=rows, rounds=rounds, seed=20260829 + index)
+            self._payloads[model] = _gbm_model_payload(booster, rounds=rounds, rows=rows)
+
+    async def resolve(self, ref: ArtifactRef) -> ResolvedArtifact:
+        return ResolvedArtifact(status="approved", payload=self._payloads[str(ref)])
+
+
+async def _peril_compiled(*, n_expr: int, rounds: int, rows: int) -> CompiledBundle:
+    version = _version(with_gbm=True)
+    assert version.pins is not None
+    version = version.model_copy(update={
+        "algorithm_ref": ArtifactRef.model_validate("rating_algorithm:bench-rating-peril@1"),
+        "pins": version.pins.model_copy(
+            update={"models": [ArtifactRef.model_validate(PERIL_STRUCTURE)]}
+        ),
+    })
+    resolver: ArtifactResolver = _PerilResolver(n_expr=n_expr, rounds=rounds, rows=rows)
+    return load_bundle(await compile_bundle(version, resolver))
 
 
 def _ctx() -> QuoteContext:
@@ -890,6 +1027,12 @@ def main() -> int:
     )
     parser.add_argument("--rows", type=int, default=5_000, help="Synthetic training rows")
     parser.add_argument(
+        "--peril-structure", action="store_true",
+        help="A-3 (DP-A3-6 (a)): also record p50/p99 for a Peril Structure model_call (two "
+             "frequency_severity perils and one burning_cost peril). No budget is asserted. "
+             "Run only when no gate slot is held.",
+    )
+    parser.add_argument(
         "--abc-iterations", type=int, default=200,
         help="Rounds for the A/B/C decomposition. Each round runs all three "
              "configurations, so this costs roughly 3x its own count in calls; 200 is "
@@ -963,6 +1106,41 @@ def main() -> int:
         f"NFR-489 without GBM ({step_count_no_gbm} steps, trace=False)",
         run_no_gbm, budget_ms=BUDGET_WITHOUT_GBM_P99_MS,
     )
+
+    # FD-1458 (PL-1464 item 9): the same structure with the `model_call` pinning a fitted GLM,
+    # measured back to back with the GBM run above at the same sample size, against the same
+    # NFR-489 budget. A p99 at or above it is a finding, not something to tune here.
+    print("\ncompiling the with-GLM bundle (~200 steps, one exact GLM model_call)...")
+    bundle_glm = asyncio.run(
+        _compiled(
+            with_gbm=True, n_expr=args.expr_steps, rounds=args.rounds, rows=args.rows, glm=True
+        )
+    )
+    run_glm = asyncio.run(
+        _measure(bundle_glm, ctx, trace=False, warmup=args.warmup, iterations=args.iterations)
+    )
+    _report(
+        f"NFR-489 with GLM ({len(bundle_glm.algorithm.steps)} steps, one exact model_call, "
+        "trace=False)",
+        run_glm, budget_ms=BUDGET_WITH_GBM_P99_MS,
+    )
+
+    if args.peril_structure:
+        print("\ncompiling the Peril Structure bundle (~200 steps, five component predictions)...")
+        bundle_peril = asyncio.run(
+            _peril_compiled(n_expr=args.expr_steps, rounds=args.rounds, rows=args.rows)
+        )
+        run_peril = asyncio.run(
+            _measure(
+                bundle_peril, ctx, trace=False, warmup=args.warmup, iterations=args.iterations
+            )
+        )
+        _report(
+            f"Peril Structure model_call ({len(bundle_peril.algorithm.steps)} steps, "
+            "two frequency_severity perils and one burning_cost peril, trace=False; "
+            "recorded, no budget: DP-A3-6)",
+            run_peril, budget_ms=None,
+        )
 
     run_traced = asyncio.run(
         _measure(bundle_gbm, ctx, trace=True, warmup=args.warmup, iterations=args.iterations)

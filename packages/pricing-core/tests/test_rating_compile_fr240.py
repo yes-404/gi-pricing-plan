@@ -13,6 +13,14 @@ import pytest
 from test_rate_table_operations import _factor, _glm_model
 from test_rating_compile_bundle import FakeResolver, _resolver, _version
 
+# isort: split
+from test_rating_compile_bundle import (
+    NCD,
+    _fragment_payload,
+    _mounted_resolver,
+    _mounted_version,
+)
+
 from model_schema.modelling import Factor, FactorIntent, ModelStatus
 from model_schema.rating import (
     RateTable,
@@ -20,6 +28,7 @@ from model_schema.rating import (
     RateTableStorageMode,
     RateTableValue,
     RateTableValueType,
+    RatingVersion,
 )
 from model_schema.refs import ArtifactRef
 from pricing_core.rate_tables.operations import seed_from_model
@@ -191,3 +200,53 @@ async def test_a_model_call_over_a_gbm_fitted_on_a_control_factor_is_refused() -
 @pytest.mark.req("FR-240")
 async def test_a_model_call_over_risk_factors_compiles() -> None:
     await compile_bundle(_version(), _model_fitted_on(FactorIntent.RISK))
+
+
+# -- G1's objective clause through a pinned sub-graph (WK-1250 Slice 2, RL-1309 G1) ----------
+
+PLANTED = "model:planted@1"
+
+
+def _planted_in_a_sub_graph(objective_status: str) -> tuple[RatingVersion, FakeResolver]:
+    """A fragment whose `model_call` names a model that is pinned and whose custom objective has
+    `objective_status`. The parent algorithm has no `model_call` of its own to that model."""
+    step = {
+        "step_id": "s_rp", "type": "model_call", "label": "m", "model_ref": PLANTED,
+        "mode": "exact", "feature_map": {"ncd_years": "ncd_years"},
+        "consumes": ["ncd_years"], "produces": "ncd_factor",
+    }
+    version = _mounted_version()
+    pins = version.pins
+    assert pins is not None
+    version = version.model_copy(update={
+        "pins": pins.model_copy(update={"models": [*pins.models, ArtifactRef.parse(PLANTED)]}),
+    })
+    resolver = _mounted_resolver(fragments={NCD: _fragment_payload(steps=[step])})
+    resolver._payloads[PLANTED] = {
+        "model_type": "gbm", "status": "approved", "feature_map": {"ncd_years": "ncd_years"},
+        "spec": {"model_type": "gbm", "objective": {"kind": "custom", "ref": OBJ}},
+    }
+    resolver._payloads[OBJ] = {"slug": "asym-loss", "version": 1}
+    resolver._statuses[OBJ] = objective_status
+    return version, resolver
+
+
+@pytest.mark.req("FR-240")
+@pytest.mark.req("FR-217")
+@pytest.mark.parametrize("status", ["certified", "review", "deprecated"])
+async def test_g1_an_unapproved_objective_planted_in_a_pinned_sub_graph_is_refused(
+    status: str,
+) -> None:
+    version, resolver = _planted_in_a_sub_graph(status)
+    with pytest.raises(ValueError, match="PIN_NOT_APPROVED") as refused:
+        await compile_bundle(version, resolver)
+    assert PLANTED in str(refused.value)
+    assert OBJ in str(refused.value)
+
+
+@pytest.mark.req("FR-240")
+@pytest.mark.req("FR-217")
+async def test_g1_an_approved_objective_in_a_pinned_sub_graph_compiles() -> None:
+    version, resolver = _planted_in_a_sub_graph("approved")
+    bundle = await compile_bundle(version, resolver)
+    assert "m_ncd__s_rp" in bundle.graph.nodes

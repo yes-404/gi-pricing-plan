@@ -1027,6 +1027,8 @@ Per-environment keys, rate limits and monitoring configuration, and environment 
 
 *Annotated 2026-10-09, in the docs batch D1: FR-452's management-API limb is placed in WK-674 Slice 4 (`SL-1258`), as R4.1 of PL-1537, on the maintainer's (by delegation) entry "2026-10-08 14:32:33 BST — DELTAS AUDIT (handover/audit-deltas-2026-10-08.md) noted; fixes proceed; DP A, B (c), C confirmed, D AMENDED (build in reverse ladder order)", item A. That is the annotation this paragraph promised "when named".*
 
+*Dated 2026-10-10, in the docs batch D6: this slice's leaf plan is `PL-1583` (minted 2026-10-10 from working id 9456; it supersedes `PL-1342`, which is now `superseded`). The title's "NFR-496 prod-sampling limb" was delivered by `SL-1345`, whose `PL-1348` amended NFR-496's row in `03` §9 (the "sampled in prod" clause), so `PL-1583` does not carry it. The title is not edited. This is the dated line `PL-1583`'s Hand-off proposes.*
+
 #### SL-1345 — Slice 3L: the premium ladder — exact unrounded rungs, true operations, one rounding (FR-247, FR-248, NFR-496, FD-1336, FD-1330; RL-1329)
 
 ```yaml
@@ -1931,7 +1933,7 @@ FD-1456's fix (HIGH, a G2 blocker before the P2 exit demo, by the maintainer's e
 id: SL-1463
 family: slice
 title: WK-1178 fix slice — Option A A-2, FD-1458, a GLM scores through model_call
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-05
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 137bc817ef1fb40ea57e9053e0ad40b73bdff3a8
@@ -1943,13 +1945,17 @@ relates: [RL-1263, PL-1371, CR-1212]
 
 FD-1458's fix (HIGH, a G2 blocker before the P2 exit demo, the same entry, item 2). `03` FR-222's `exact` mode and `02` FR-193 say any persisted Model scores, but `_model_call_handler` refuses a GLM (`runtime.py:568-579`) because the Bundle does not carry the Factor, Banding and Grouping versions `predict_glm` needs. Compile carries them into `Bundle.resolved_payloads` (DP-1), and the runtime rebuilds them and calls `predict_glm` on the quote's row, with the offset the spec declares (DP-3). A golden test holds the `model_call` value equal to `predict_glm` on the same row. The two tests that pin the refusal (`test_rating_runtime.py:377`, `test_rating_score.py:429`) are flipped deliberately, on the maintainer's approval, and FR-255's `MODEL_CALL_FAILED` keeps a test through another real failure. NFR-489's p99 is measured for a GLM `model_call`. Open for the decision-maker: how the GLM's inputs travel in the Bundle (DP-1), what `feature_map` names for a GLM (DP-2), a model-offset GLM (DP-3), and the provisional money rounding of a `model_call` output (DP-4). Leaf plan PL-1464 (`draft`, its own PR). **Activation needs:** FD-1458 minted at HIGH; PL-1471's slice merged (its `ResolvedArtifact.factors` and `model`-branch Factors are reused); A-1 (SL-1462) merged, as the maintainer orders the chain; DP-1 to DP-4 ruled; the lead's go in an activation PR. *(Filed 2026-10-05 under working ids 9598 (this row) and 9597 (the plan), reserved by the lead; minted 2026-10-06 as SL-1463 and PL-1464.)* *(Dated note, 2026-10-05, pre-mint: DP-1 (a), DP-2 (b) and DP-3 (a) ruled at 17:03:45 BST; DP-4 ruled at 17:02:50 and corrected to option (B) at 17:12:40 BST: a `model_call`'s value is always an exact Decimal, `RatingModelCallStep` gains a type-only `result_type` (`decimal` by default), and only the `output` step rounds. The slice now carries that `model-schema` field and the regenerated contracts. DP-5 (ii) is ruled (a) at 17:14:54 BST: the backend algorithm save refuses a non-Factor `feature_map` with a new `03` code.)*
 
+(Activated 2026-10-10 as WK-1178 Option A, A-2, on the dispatch GO "2026-10-10 08:06:08 BST — DISPATCH GO: A-2 (PL-1464 / SL-1463 @98bdb7c1) …" with its conditions 1–5; `PL-1464` set `active` in the slice branch's activation commit.)
+
+(Closed 2026-10-10 as a Slice, closing acts in the slice PR's last commit, on the lead's merge; ledger LG-1587, minted 2026-10-10 from working id 9449 in the SL-1463 merge-turn commit.)
+
 #### SL-1466 — WK-1178 slice — Option A, A-3: Peril Structure scoring
 
 ```yaml
 id: SL-1466
 family: slice
 title: WK-1178 slice — Option A, A-3, Peril Structure scoring (compile resolves and maturity-checks the component models; the runtime assembles the risk premium)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-05
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 137bc817ef1fb40ea57e9053e0ad40b73bdff3a8
@@ -1960,6 +1966,10 @@ relates: [PL-1371, CR-1212, RL-1263]
 ```
 
 The third of Option A's four serial slices (the maintainer, "2026-10-05 16:43:31 BST — THE MAINTAINER'S DECISION (asked live): G2 takes OPTION A, WF-699's literal Peril Structure path is BUILT IN P2; and the FD 9605 approval, now on the record", item 1). A `model_call` step naming a Peril Structure compiles and scores: `compile_bundle` resolves each component model of the pinned structure, refuses one below `approved` with `PIN_NOT_APPROVED` (FR-20, FR-240) and embeds its payload, so the Bundle stays self-contained (NFR-491); the handler predicts each component and calls `assemble_risk_premium` (FR-188, FR-189), replacing today's custom-node failure on `payload["fit_result"]`. Six decision points for a ruling (the outputs rule and FR-249, `separate_model`, PL-1471's peril gap, WF-699 C4's reachability, the component unit, a recorded latency). Leaf plan PL-1465. It follows PL-1429, PL-1471, A-1 (SL-1462) and A-2 (SL-1463); it serialises with PL-1572 and PL 9609 on `compile_bundle`; A-4 (the exit-demo scope) follows it.
+
+(Activated 2026-10-10 as WK-1178 Option A, A-3, on the dispatch GO "2026-10-10 10:15:41 BST — DISPATCH GO: A-3 (PL-1465 / SL-1466), EFFECTIVE when SL-1340 merges; OP-A3-M1 = (a), inlined; a hard condition on runtime.py's \"take A-3's side whole\"" with its conditions; `PL-1465` set `active` in the slice branch's activation commit.)
+
+(Closed 2026-10-10 as a Slice, closing acts in the slice PR's last commit, on the lead's merge; ledger LG-1592, minted 2026-10-10 from working id 9455 in the SL-1466 merge-turn commit.)
 
 #### WK-1178 fix slice — NFR-498 Audit Events on rate table version and rating algorithm writes
 
@@ -2077,7 +2087,7 @@ Option A's fourth build slice (the maintainer's entry "2026-10-05 16:43:31 BST �
 id: SL-1536
 family: slice
 title: WK-1178 fix slice — FD-1374, a rating step reads only the names it declares (FR-246 enforced)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-08
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
@@ -2088,6 +2098,10 @@ relates: [FD-1374, PL-1371]
 ```
 
 `FD-1374`'s fix (MEDIUM, a silent mispricing path), split out of the F35 plan and kept in P2 by the maintainer's entry "2026-10-08 13:00:11 BST — FD-1374 (silent mispricing) STAYS IN P2: DP-F35-1 split out as a P2 WK-1178 slice; F35's performance remainder carries; and fewer, consolidated status messages". FR-246 enforced at save and compile on every evaluating field (`as_at` included), `consumes` mandatory, an undeclared read refused with `RATING_STEP_UNDECLARED_READ` (422), compiled bundles grandfathered at reload; `03`'s FR-246 row and corrected §4.1 example applied verbatim from the ruling; the four under-declaring fixtures fixed. Its row and tasks are PL-1535 (the single-row WK-1178 Work plan), which quotes PL-1520 Task 1A as ruled by RL-1519. Money and contract group, never on the cut ladder. **Activation needs:** RL-1519 and PL-1520 minted (done, batch B4); the `compile.py` serial set free, a ready G2 compile-set slice taking it first; the maintainer's GO under L1 (a'). *(Cut 2026-10-08 by the planner under working id 9469, reserved by the lead; minted 2026-10-09 as SL-1536, in the docs batch D1.)*
+
+(Activated 2026-10-10 as WK-1178's FD-1374 slice, on the dispatch GO "2026-10-10 14:37:13 BST — DISPATCH GO: the FD-1374 slice (PL-1535 / SL-1536) …" with DP-FD1374-M1 (a) and its hash condition; `PL-1535` was `active` from the slice branch's activation commit.)
+
+(Closed 2026-10-10 as a Slice, closing acts in the slice PR's last commit, on the lead's merge; ledger LG-1594, minted 2026-10-10 from working id 9441 in the SL-1536 mint commit (first minted as LG 1593, re-minted because RL-1593 took the id).)
 
 #### SL-1566 — WK-1178 fix slice — batch scoring serialises every declared output type and never aborts on one row
 
@@ -2145,6 +2159,46 @@ relates: [PL-1371, SL-1387, SL-1388, SL-1526]
 
 The FD-1573 remedy, proposed on the maintainer's entry "2026-10-10 00:08:17 BST — USER: go ahead. FD 9446 on the measured curve, a remedy-slice proposal, and the Friday re-baseline (after S3's merge, in W3)" [FD 9446 is minted as FD-1573], item 2: owner the lead, placed before `SL-1526` in the exit-demo chain. `WF-699` D6's dislocation run goes through `dislocation_frame` (WK-673 S4's handler), which scores the book twice and retains every policy's validated ladder from both passes; peak RSS was logged linear at about 31 KiB per policy (`50-sb-200k`, `60-sb-400k`, tree `f59b546e`), so about 20.3 GiB is derived for the 678,013-policy book. Task 0 is a 1-hour profiling spike at 20,000 and 200,000 policies, using the standard library only, with a decision rule stated in advance. Only if it confirms retention (H1) does Task 1 make `_score_pass` keep rung values instead of `LadderRung` objects, with the frame unchanged value for value. Task 2 is the after-measurement. Single-row Work plan PL-1574, `draft`. It is not in the `compile.py` serial set; its serial set is `analysis.py`, after S3 (`SL-1387`). **Activation needs:** FD-1573 minted HIGH; PL-1574's DP-1 to DP-3 ruled; `SL-1387` merged; the lead's go. *(Cut 2026-10-10 by the planner (planner-remedy) under working id 9448, reserved by the lead.)*
 
+#### SL-1600 — WK-1178 fix slice — FD-1589 row 8, remedy (c), slice A: an input-free marker for authored model-schema validator messages
+
+```yaml
+id: SL-1600
+family: slice
+title: WK-1178 fix slice — FD-1589 row 8, remedy (c), slice A — an input-free marker for model-schema validator messages, the request-reachable ones adopted or rewritten input-free, allow-listed by pricing_core.safe_error (B1 and B2 in P3)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-10            # original date 2026-10-10, set at the draft; minted 2026-10-10
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: fe0b0627590307259ec6d56be7f73115cf245092
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1589, PL-1535, SL-1536, SL-1557, SL-1559]
+```
+
+FD-1589 row 8's remedy (c), on the lead's entries "2026-10-10 15:37:31 BST — RULING: DP-M2 WITHDRAWN (my 14:37:13). FD-1589 row 8 (errors.py:490) is NOT changed in the FD-1374 slice; remedy (c) in its own slice, owner WK-1178, before the exit demo. Neither (a) nor (b)", item 2, and "2026-10-10 15:52:31 BST — RULINGS on PL 9955 / SL 9956 …" (DP-1 (a), DP-2 (c), DP-3 (a), DP-4 (a), DP-5 (b), DP-6 (a), DP-7 (a)), and "2026-10-10 16:07:46 BST — RULINGS on PL 9955 re-sized (@688d639e, ≈4.8 lane-days): DP-9 = A in P2, B1/B2 to P3; DP-8 (b) with an identifier-pattern constraint; DP-5 extension YES". `InputFreeError`, a `ValueError` subclass in `model_schema/input_free.py`, whose every raise site is a literal or a constant-only f-string, held so by an AST guard that also fails when any request-reachable model-schema raise path would render the fixed text in a 422. **Scope: slice A only** (dated 2026-10-10, on the 16:07:46 ruling): the 96 input-free `raise ValueError` sites adopt it unchanged, and the 15 closed-vocabulary and 54 request-reachable interpolating ones are rewritten to input-free text that names the field and the rule, never the submitted value. A message may name an identifier of the submitted artifact's own structure only when it matches the schema's pattern, which the marker's constructor checks (DP-8 (b)). B1 (41 handler-built messages and the 5 graph signals) and B2 (47 system-produced messages) moved to P3 by the 16:07:46 ruling; the guard's exact-count `_RESIDUAL` lists them until P3 shrinks it, and PL-1599's Appendix A keeps their sites. One `pricing_core.safe_error` allow-list, read by `_validation_detail` and the request-validation 422 (`backend/src/app/errors.py` `_handle_validation_error`); the request-common pydantic error types get fixed authored texts (DP-5's extension, 10 types); anything else it does not keep renders "The value is not valid (<TYPE>)."; one dated paragraph in `00` §5.3. Re-sized for the 16:07:46 additions at ≈3.0 lane-days (≈2.5 as ruled, plus ≈0.5 for DP-8 (b) and DP-5's extension). Starting tests: `origin/draft/fd1589-row8-tests` @`cfe8e15f`. Single-row Work plan PL-1599, `draft`. Not in the `compile.py` serial set; touches no `pricing_core/rating/**` file; contends with `SL-1557` and `SL-1559` only where a validator in `model_schema/rating.py` is changed by both. **Scheduling:** after the FD-1374 slice (`SL-1536`) merges; off the G2 critical path; before the 4 Nov freeze. **Activation needs:** `SL-1536` merged; PL-1599's DP-1 to DP-9 ruled (done); PL-1599 and this row minted; the dispatch record's function-level check against every open model-schema slice; the lead's GO. *(Cut 2026-10-10 by the planner (planner-remedy-c) under working id 9956, reserved by the lead; amended the same day, before any merge, by the planner (planner-remedy-c2) to the 15:52:31 rulings, and again by the planner (planner-remedy-c3) to the 16:07:46 rulings: scope amended to slice A.)*
+
+#### SL-1603 — WK-1178 slice — the PreToolUse hook runs by absolute path, so a changed working directory cannot block every Bash call
+
+```yaml
+id: SL-1603
+family: slice
+title: WK-1178 slice — the PreToolUse hook runs by absolute path, so a changed working directory cannot block every Bash call
+status: closed                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-10            # original date 2026-10-05, set at the draft; minted 2026-10-10
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: fe0b0627590307259ec6d56be7f73115cf245092
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [RL-920, RL-1263, RL-1445]
+```
+
+`.claude/settings.json:9` registers the retry-cap hook as `python3 scripts/hooks/retry_cap_hook.py hook`, a path relative to the session's working directory. After a `cd` into a subdirectory, `python3` exits 2, the blocking exit for a `PreToolUse` hook, and every later Bash call is refused, `cd` back included. This has locked a session twice (the `to-lead.md` entries headed "2026-09-30 14:54:23 BST — shell restored; one WK-1178 backlog item (the hook path)" and "2026-10-05 15:24:59 BST — … the cd-lock hook fix moves up", item 4). The fix anchors the path on `$CLAUDE_PROJECT_DIR`, with a `git rev-parse --show-toplevel` fallback (DP-1), and accepts that a worktree session runs the root checkout's copy of the script (DP-2). A new test reads the registered command from `settings.json` and runs it from `docs/`, red first on `main`. The hook's decision logic, its `if` filter and its fail-closed behaviour are unchanged. Task 0 measures what the docs leave open: the variable in teammate and subagent hooks, and in worktree sessions. The slice also makes a bare `uv run pytest -q` and the dev-commands gate wrapper take the gate-1 lock only: the skill's gate loop, the repository-root `conftest.py`'s `_SLOT_COUNT` (2 → 1) and `tests/test_root_conftest.py` change in one commit, red first, so a second gate waits rather than taking gate-2 (`RL 9620`, working id); the verify wrapper keeps 2 slots. Until it lands, the skill's 2-slot gate wrapper is a known gap recorded in the plan, and the one-gate rule holds by the lead's dispatch. Leaf plan PL-1602 (`draft`). **Activation needs:** the decision-maker's ruling on DP-1 and DP-2; the lead's go and a dispatch record; no in-flight branch touches its write set at planning time (`809a3794`). *(Filed 2026-10-05 under working ids 9618 (this row) and 9617 (the plan), reserved by the lead.)* *(Pre-mint edit 2026-10-05 15:37:00 BST, on the `to-lead.md` entry headed "2026-10-05 15:33:57 BST — #1162 amended (noted); ROUTING (a) and (b) ACCEPTED; …": the conftest task added (routing (b)); DP-1 and DP-2 accepted as recommended there, so that activation need is met; the slice runs after #1162, which touches the dev-commands skill.)* *(Pre-mint edit 2026-10-05 15:42:01 BST, on the entry headed "2026-10-05 15:37:35 BST — CORRECTION to my 15:33:57 routing (a): REVERSED; …": the skill's gate loop moves into the slice with conftest and the test; #1162 reverted its fold, so the ordering note above no longer applies.)* *(Pre-mint edit 2026-10-05 16:49:10 BST, on the entry headed "2026-10-05 16:47:09 BST — CORRECTION to my 16:46:42 hypothesis: the `if` filter is BEST-EFFORT by design; the absolute path is the fix": the hook's `if` filter is best-effort by documented design (the [hooks reference](https://code.claude.com/docs/en/hooks#bash-if-matching)), so after a `cd` any Bash call Claude Code cannot parse statically runs the hook; the absolute path is the fix; DP-1's `git rev-parse` fallback is required; Task 0's red probe and the live check use a non-parseable command.)* *(Pre-mint edit 2026-10-10 by planner-pl9617, on the entry headed "2026-10-10 16:28:30 BST — RULING: FD 9959 (cd slips, MEDIUM, 14 today / 19 since 3 Oct). Fix the ROOT CAUSE: build PL 9617 (absolute hook path) NOW; the cd guard is NOT built (deferred, conditional)": the build is ordered right after the FD-1374 slice (`SL-1536`) frees gate-1 and before PL-1599's slice A, with three proofs: (i) a seat `cd`s into a worktree subdirectory and a guarded command still runs, (ii) the same on `main` is refused with exit 2, red first, (iii) the hook still refuses what it refused before. The `cd` guard is out of scope; FD-1598 closes when this slice merges with (i) green. Facts re-read at `fe0b0627` (`RL 9620` is `RL-1445`; `settings.json` unchanged; the dev-commands skill's gate-slot lines moved and gained the gate-2 standing rule; `.claude/skills/mint-and-finish/SKILL.md`'s reason clause joins the write set). Two new decision points: DP-3 (shell or exec form) and DP-4 (fail-closed or fail-open). **Activation needs, now:** DP-3 and DP-4 ruled; PL-1602 and SL-1603 minted in D8; `SL-1536` merged and gate-1 free; the re-read at dispatch; the root checkout carries `scripts/hooks/retry_cap_hook.py`; the maintainer's GO under L1 (a'), which also authorises the probe `cd`s in throwaway seats. Size about 0.5 lane-day; no serial set.)*
+
+(Activated 2026-10-10 as WK-1178's hook-path slice, on the dispatch GO "2026-10-10 16:40:33 BST — DISPATCH GO: PL 9617 / SL 9618 (absolute hook path, @10160a3d, ≈0.5 lane-day), effective at the FD-1374 slice's merge read-back, minted in D8b" (PL-1602 and SL-1603 in the minted ids); `PL-1602` is `active` from the slice branch's first commit.)
+
+(Closed 2026-10-10 as a Slice, closing acts in the slice PR's last commit, on the lead's merge; ledger LG-1604, plan PL-1602.)
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
@@ -2195,7 +2249,7 @@ relates: [PL-1254]
 id: SL-1340
 family: slice
 title: Slice 2: the pin and the inlining (FR-217's pin and inlining limbs; FR-258's inlined steps)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                  # draft → active → closed | retired (§1.2a)
 created: 2026-09-30
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 8cef871d4ec30869dc3ef20559f3cac64e239a5c
@@ -2206,6 +2260,10 @@ relates: [PL-1254]
 ```
 
 `PL-1254` Task 2. ~~Blocked on DP-2 (open).~~ *DP-2 ruled 2026-09-30 by `RL-1344` (mint batch 12); still waits on the slices before it.* Minted as `SL-1340` at this PR's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `8cef871d` (1339 onward). Leaf plan: `PL-1572` (minted 2026-10-10, D5).
+
+(Activated 2026-10-10 as WK-1250 Slice 2, on the dispatch GO "2026-10-10 08:57:14 BST — DISPATCH GO: SL-1340 (PL-1572), sequenced after A-2; its four decisions ruled", with FD 9952 row 1 added by "2026-10-10 09:42:06 BST — FD 9952 (11 ValidationError sinks) ACCEPTED …"; `PL-1572` set `active` in the slice branch's activation commit.)
+
+(Closed 2026-10-10 as a Slice, closing acts in the slice PR's last commit, on the lead's merge; ledger LG-1588, minted 2026-10-10 from working id 9443 in the SL-1340 mint commit.)
 
 #### SL-1341 — Slice 3: FR-218's purpose mount and the real check (retires `RL-1242`)
 
@@ -2472,6 +2530,24 @@ Opened `draft` 2026-09-30 on the maintainer's entry "2026-09-30 07:07:58 BST —
 - **`07` FR-446** (settings precedence, the effective value and its source inspectable by an Admin), and **FR-443** and **FR-444** (metrics and health, which the System status view surfaces).
 
 It is a P3 roadmap row only: **nothing is built ahead of P3** (`CLAUDE.md` §0), and it is **not a P2 scope addition**. Its map plan comes in P3; its activation is the maintainer's. (Amended 2026-09-30 by the lead, on the maintainer's entries 07:07:58 and 05:35:06. Minted as WK-1288 at #952's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `df0d4635` printing 1288 (working id 9985 before the mint).)
+
+#### SL-1601 — WK-1178 P3 carry — FD-1589 row 8, remedy (c), B1 and B2: the model-schema validator messages no request reaches, rewritten input-free
+
+```yaml
+id: SL-1601
+family: slice
+title: WK-1178 P3 carry — FD-1589 row 8, remedy (c), B1 and B2 — the 41 handler-built and 47 system-produced model-schema validator messages rewritten input-free, with the 5 graph signals pending the FR-215 step_id pattern (DP-10, ruled P3)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-10            # original date 2026-10-10, set at the draft; minted 2026-10-10
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: fe0b0627590307259ec6d56be7f73115cf245092
+phase: P3
+work: WK-1178
+corrected_by: []
+relates: [FD-1589, SL-1600]
+```
+
+Moved to P3 by the lead's entry "2026-10-10 16:07:46 BST — RULINGS on PL 9955 re-sized (@688d639e, ≈4.8 lane-days): DP-9 = A in P2, B1/B2 to P3; DP-8 (b) with an identifier-pattern constraint; DP-5 extension YES", DP-9: *"B1/B2 (≈2.7 lane-days, messages no request reaches) MOVE TO P3 … A dated P3 row (owner WK-1178) records them by count with the planner's list"*. **It records, by count at `fe0b0627`:** **B1**, 41 free messages in 19 validators of classes built in a handler from a user's create body; **B2**, 47 free messages in 27 validators of system-produced models; and the **5 graph signals** (`GraphUnresolvedRefError` ×3, `GraphCycleError` ×2), pending the FR-215 `step_id` pattern, which PL-1599's DP-10 asked for and the lead ruled at "2026-10-10 16:23:12 BST" a P3 spec change (`step_id` carries no schema pattern, so DP-8 (b) cannot name a step until it lands; graph messages name no step meanwhile, which is correct behaviour). The site lists, by `file:Class.validator`, are PL-1599's Appendix A; P3 plans from them and re-derives them at its own base. Until this row's work lands, slice A's guard holds these sites by exact count in `_RESIDUAL`, and DP-5's allow-list already gives any stored refusal from them input-free fixed text. Each is rewritten to field and rule only, raised as `InputFreeError`; the last P3 slice deletes `_RESIDUAL`. ≈2.7 lane-days as ruled (B1 ≈1.3, B2 ≈1.4). **Not a cut-ladder rung:** it was never in the P2 baseline. **Activation needs:** `SL-1600` (slice A) merged, because both change `_RESIDUAL` (RL-1263); the FR-215 `step_id` pattern (DP-10, a P3 spec change) landed before the graph signals; a P3 plan; the maintainer's activation of P3 work. *(Cut 2026-10-10 by the planner (planner-remedy-c3) under working id 9958, reserved by the lead in its message to planner-remedy-c3 on 2026-10-10, free-checked on all origin refs and eta.)*
 
 
 **Goal:** RBAC, approvals, audit UI, model documentation generation.
