@@ -139,16 +139,22 @@ def _example_version(example: dict[str, Any]) -> RatingVersion:
     })
 
 
-def _one_name_example() -> dict[str, Any]:
-    """The example with the Peril Structure step reduced to the one produced name P2 allows, and
-    the output step that consumed the dropped per-peril name removed with it."""
+def _example_with_s_rp_producing(names: list[str]) -> dict[str, Any]:
+    """The example with its Peril Structure step `s_rp` set to exactly `names`, whatever 03 §4.1
+    declares for it at run time (the text is known-wrong, FD 9953 (working id), and a correction
+    must not change this test). The per-peril output step and output go, as nothing produces
+    their name in the one-name form."""
     example = copy.deepcopy(_spec_example())
     for step in example["steps"]:
         if step["step_id"] == "s_rp":
-            step["produces"] = ["risk_premium_minor"]
+            step["produces"] = names
     example["steps"] = [s for s in example["steps"] if s["step_id"] != "s_out_peril"]
     example["outputs"] = [o for o in example["outputs"] if o["name"] != "peril_risk_premium"]
     return example
+
+
+def _one_name_example() -> dict[str, Any]:
+    return _example_with_s_rp_producing(["risk_premium_minor"])
 
 
 async def _compile(example: dict[str, Any]) -> Any:
@@ -177,9 +183,13 @@ async def test_a_peril_structure_model_call_producing_two_names_is_refused_at_co
     Structure `model_call` produces one name; two are refused with BUNDLE_COMPILE_FAILED naming
     the step. `03` §4.1's example (03:295-299, `s_rp`, as RL-1519 ruled it) declares two and is
     KNOWN-WRONG text pending a correcting RL (FD 9953 (working id)): do not read it as valid.
-    Red before the rework: the old test compiled that example and failed with this very code."""
-    with pytest.raises(CodedError, match=r"BUNDLE_COMPILE_FAILED: step 's_rp'"):
-        await _compile(_spec_example())
+    The two-name step is built here, not read from 03, so a correction of the text leaves this
+    test green. Red before the rework: the old test compiled that example and failed with this
+    very code."""
+    two = _example_with_s_rp_producing(["risk_premium_minor", "peril_risk_premium"])
+    with pytest.raises(CodedError, match=r"BUNDLE_COMPILE_FAILED: step 's_rp'.*2 produced names"):
+        await _compile(two)
+    assert (await _compile(_one_name_example())).content_hash.startswith("sha256:")
 
 
 def _as_list(value: Any) -> list[str]:
