@@ -26,6 +26,7 @@ from app.api import (
     datasets,
     demo,
     deployments,
+    dislocation_runs,
     environments,
     health,
     jobs,
@@ -142,6 +143,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(sub_graphs.router, prefix=API_PREFIX)
     app.include_router(rate_tables.router, prefix=API_PREFIX)
     app.include_router(regression_suites.router, prefix=API_PREFIX)
+    app.include_router(dislocation_runs.router, prefix=API_PREFIX)
     app.include_router(peril_structures.router, prefix=API_PREFIX)
     app.include_router(custom_objectives.router, prefix=API_PREFIX)
     app.include_router(custom_metrics.router, prefix=API_PREFIX)

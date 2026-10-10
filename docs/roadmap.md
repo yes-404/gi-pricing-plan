@@ -765,7 +765,7 @@ relates: [PL-1267, RL-1264]
 id: SL-1388
 family: slice
 title: Slice 4: backend — the Job, the routes, the persisted artifact, the generated contract
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-03
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: d672f991bdc59008e09cf3f464cd7cffe5699553
@@ -776,6 +776,10 @@ relates: [PL-1267, RL-1236]
 ```
 
 The `dislocation.run` handler owning the Job identity, output location and resumability; `POST /api/v1/dislocation-runs` (202 plus a Job) and `GET /api/v1/dislocation-runs/{id}` with RBAC and RFC 9457 errors; the artifact persisted as a citable row with content-addressed blobs (FR-265); `DislocationRun` registered for generation, `docs/contracts/` regenerated and the slug moved to `COMPARED_SLUGS`. Route permissions picked from `RL-1236`'s catalogue, citing FD-1197. `PL-1267` Slice 4. Starts after Slice 3 closes. Leaf plan PL-1501 (`draft`; filed 2026-10-05). **Activation needs:** the plan made `active` by a dated line; `SL-1387` closed; a ruling on its DP-S4-1, DP-S4-2, DP-S4-3 and DP-S4-5 merged and minted; the lane free under `RL-1263` as amended, with the same-Work conditions in the dispatch record (its `_Resolver` move serialises with PL-1471, PL 9610 and A-1 to A-3); the maintainer's dispatch GO and the lead's go in a separate activation PR. *(Plan cite added 2026-10-05 by the planner; working id 9591 reserved by the lead.)*
+
+(Activated 2026-10-10 as WK-673 Slice 4 on the dispatch GO "2026-10-10 01:45:01 BST — DISPATCH GO: WK-673 S4 (PL-1501 / SL-1388 …" with its conditions; `PL-1501` set `active` in the slice PR's first commit.)
+
+(Closed 2026-10-10 as a Slice, closing acts in the slice PR's last commit, on the lead's merge; ledger LG-1570, minted 2026-10-10 from working id 9440 in the SL-1388 merge-turn commit.)
 
 #### SL-1389 — Slice 5: the approval gate, part one — structural_diff, FR-257 limb (2), FR-224
 
