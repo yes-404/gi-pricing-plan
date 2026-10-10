@@ -80,3 +80,4 @@ Order and acceptance checks are `PL-1465` §"Tasks" and §"Acceptance Standard".
 **2026-10-10, authoring phase.** Branch `sl-1466-a3-peril-scoring`, from `e0e12dd834318294a5e0932618ca177c71a7bf46`. Stamps are BST.
 
 - Commit 1: `PL-1465`'s `status:` line `draft` to `active` and this file.
+- **Task 1, compile-side reds (items 1, 2, 7, 8, 9), 2026-10-10.** New `packages/pricing-core/tests/test_rating_peril_scoring.py`: an AD `frequency_severity` and a WS `burning_cost` peril over three GBM payloads, a `FakeResolver`, an algorithm whose `s_rp` names the structure. **Authored, not run**: small tests are paused by the lead; the expected causes are item 1 `AssertionError` (a component ref missing from `resolved_payloads`), items 2, 8, 9 `Failed: DID NOT RAISE`. Red-by-cause is owed after "small tests RESUME". The runtime items (3 to 6) wait on OP-1 and OP-2.
