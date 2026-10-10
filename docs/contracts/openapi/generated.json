@@ -1794,6 +1794,48 @@
         "title": "ChangeGroup",
         "type": "object"
       },
+      "ChangeSummaryDraft": {
+        "additionalProperties": false,
+        "description": "The drafted change summary of a Rating Version (03 FR-242; WF-699 E1; `RL-1498`).\n\nDrafted from the structural diff (FR-219) and the rate-table diffs (FR-231) against\n`baseline`, the most recently approved other version of the same algorithm. `baseline` is\n`None` when there is none; `structural_diff` is `None` when there is no baseline or the\nbaseline has no algorithm. `text` states *what* changed and ends with the empty `Why:` and\n`Expected impact:` labels for the actuary. Nothing is stored.",
+        "properties": {
+          "baseline": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rate_tables": {
+            "items": {
+              "$ref": "#/components/schemas/RateTableChange"
+            },
+            "title": "Rate Tables",
+            "type": "array"
+          },
+          "structural_diff": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AlgorithmDiff"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "ChangeSummaryDraft",
+        "type": "object"
+      },
       "CheckStatus": {
         "description": "One certificate check's verdict.\n\n§4.7's example shows `pass`, `warn` and `violated`. `failed` is the fourth, and the\ndistinction it draws is the one FR-152 turns on: `violated` is a *stated property\nbreach the platform tolerates with a declared mitigation* — a non-convex loss is a\nlegitimate pricing loss — where `failed` is a check that cannot pass at all, and an\nobjective whose derivatives disagree with the numeric ones is not usable at any\napproval level. `02` §4.7 carries a dated note adding it to the vocabulary.",
         "enum": [
@@ -11766,6 +11808,56 @@
           }
         },
         "title": "QuoteContextOptions",
+        "type": "object"
+      },
+      "RateTableChange": {
+        "additionalProperties": false,
+        "description": "One rate table whose pinned version differs between the baseline and a version\n(FR-242's drafted change summary; `RL-1498` DP-E1-5).\n\n`from_ref` / `to_ref` are the pins on the baseline and on the version; `None` marks a\ntable pinned on one side only. `diff` is the unweighted cell diff (FR-231); it is `None`\nwhen `pending` (a `storage: parquet` side is not computed here, FR-232) or when the table\nis on one side only.",
+        "properties": {
+          "diff": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RateTableDiff"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "from_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pending": {
+            "default": false,
+            "title": "Pending",
+            "type": "boolean"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "to_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "slug"
+        ],
+        "title": "RateTableChange",
         "type": "object"
       },
       "RateTableDiff": {
@@ -31440,6 +31532,133 @@
           }
         },
         "summary": "Get a rating version",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/rating-versions/{rating_version_id}/change-summary-draft": {
+      "get": {
+        "description": "**200** with the drafted change summary (03 §5.1, FR-242; WF-699 E1; `RL-1498`).\n\nBuilt from the structural diff and each re-pinned rate table's diff against the most\nrecently approved other version of the same algorithm. Read-only: the actuary edits the\n`text` and sends it as `change_summary` on the submit route. **409**\n`RATING_VERSION_UNPINNED` for a version without an algorithm or pins.",
+        "operationId": "draft_rating_version_change_summary_api_v1_rating_versions__rating_version_id__change_summary_draft_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rating_version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rating Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeSummaryDraft"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Draft a rating version's change summary",
         "tags": [
           "modelling"
         ]

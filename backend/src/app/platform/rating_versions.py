@@ -28,6 +28,7 @@ from app.db.models import (
     RegressionSuiteRow,
     RegressionSuiteVersionRow,
 )
+from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import approvals, audit, blobs, rbac
 from app.platform import environments as environments_service
@@ -41,6 +42,7 @@ from app.platform import sub_graphs as sub_graphs_service
 from app.platform import transformations as transform_service
 from app.platform import transparency as transparency_service
 from app.platform.blobs import BlobStore
+from app.platform.change_summary import draft_change_summary
 from app.platform.modelling import load_factors, resolve_offset_model, to_factor, to_model
 from model_schema import (
     ApprovalPolicy,
@@ -76,7 +78,7 @@ from model_schema.approvals import (
     DEFAULT_DISLOCATION_BASELINE_ENVIRONMENT,
 )
 from model_schema.dislocation import DislocationRun
-from model_schema.rating import ApproximationCheck
+from model_schema.rating import ApproximationCheck, ChangeSummaryDraft, RateTableChange
 from pricing_core.rating.compile import Bundle, ResolvedArtifact, compile_bundle
 from pricing_core.rating.runtime import CompiledBundle
 from pricing_core.rating.testing import evaluate_golden_quotes
@@ -1270,6 +1272,88 @@ async def _baseline(
         else None
     )
     return baseline, check
+
+
+async def draft_change_summary_for(
+    database: Database, *, blob_store: BlobStore, workspace_id: UUID, rating_version_id: UUID
+) -> ChangeSummaryDraft:
+    """FR-242's drafted change summary for a version, against the most recently approved
+    other version of its algorithm (`_baseline`); `RL-1498`. Writes nothing.
+
+    A version without an `algorithm_ref` or `pins` has nothing to diff: 409
+    `RATING_VERSION_UNPINNED`. Rate tables are paired by slug across the two versions'
+    pins. A pair with a `storage: parquet` side is returned `pending`, not computed, so no
+    Job is created (FR-232); the rest are the unweighted diff of `rate_tables.diff`.
+    """
+    async with database.session() as session:
+        row = await load_rating_version(
+            session, workspace_id=workspace_id, rating_version_id=rating_version_id
+        )
+        if row.algorithm_ref is None or row.pins is None:
+            missing = "algorithm_ref" if row.algorithm_ref is None else "pins"
+            raise PlatformError(
+                "RATING_VERSION_UNPINNED",
+                "Rating version is not pinned",
+                409,
+                f"The rating version has no {missing}, so there is nothing to diff.",
+            )
+        algorithm_ref = ArtifactRef.model_validate(row.algorithm_ref)
+        candidate = await _algorithm_of(session, workspace_id=workspace_id, rating_version=row)
+        if candidate is None:
+            raise PlatformError(
+                "NOT_FOUND",
+                "Rating algorithm not found",
+                404,
+                f"No rating algorithm {algorithm_ref} in this workspace.",
+            )
+        found = await _baseline(
+            session,
+            workspace_id=workspace_id,
+            algorithm_slug=algorithm_ref.slug,
+            exclude_id=row.id,
+        )
+        if found is None:
+            return draft_change_summary(None, None, [])
+        baseline_row, _ = found
+        baseline_ref = ArtifactRef(
+            type="rating_version", slug=baseline_row.slug, version=baseline_row.version
+        )
+        previous = await _algorithm_of(
+            session, workspace_id=workspace_id, rating_version=baseline_row
+        )
+        structural = None if previous is None else diff_algorithms(previous, candidate)
+        before = _pins_by_slug(baseline_row.pins)
+        after = _pins_by_slug(row.pins)
+    changes: list[RateTableChange] = []
+    for slug in sorted(before.keys() | after.keys()):
+        old, new = before.get(slug), after.get(slug)
+        if old == new:
+            continue
+        if old is None or new is None:
+            changes.append(RateTableChange(slug=slug, from_ref=old, to_ref=new))
+        elif await rate_tables_service.diff_needs_job(
+            database, workspace_id, slug, new.version, old.version
+        ):
+            changes.append(RateTableChange(slug=slug, from_ref=old, to_ref=new, pending=True))
+        else:
+            diff = await rate_tables_service.diff(
+                database,
+                workspace_id,
+                slug,
+                new.version,
+                old.version,
+                blob_store=blob_store,
+                cache=None,
+            )
+            changes.append(RateTableChange(slug=slug, from_ref=old, to_ref=new, diff=diff))
+    return draft_change_summary(baseline_ref, structural, changes)
+
+
+def _pins_by_slug(pins: dict[str, Any] | None) -> dict[str, ArtifactRef]:
+    """A version's pinned rate tables by slug; a version without pins pins none."""
+    if pins is None:
+        return {}
+    return {ref.slug: ref for ref in Pins.model_validate(pins).rate_tables}
 
 
 def _compared(quote: GoldenQuote) -> dict[str, Any]:

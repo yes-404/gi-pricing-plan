@@ -30,8 +30,8 @@ Times are BST (`TZ=Europe/London date`) unless marked.
 | 0 | preconditions | — | done (below) |
 | 1 | `03` §5.1 T1, T2 | 17 | HELD: applied only after WK-675 S4 merges (WK-675 S3 has: `99f22479`) |
 | 2 | shape and pure draft | 1–9, 20 | done |
-| 3 | service and route | 10–15 | open |
-| 4 | contract, gate, ledger | 16–19 | open |
+| 3 | service and route | 10–15 | authored; H tests UNRUN (DB: they wait for the gate slot), red owed |
+| 4 | contract, gate, ledger | 16–19 | contract regenerated and `--check` green; `generate:api`, gate, audit-docs, INDEX open |
 
 ### Gate
 
@@ -74,3 +74,12 @@ Not yet. The auditor writes it.
 - Code: `ChangeSummaryDraft` and `RateTableChange` in `model_schema/rating.py`; `backend/src/app/platform/change_summary.py`.
 - **First green run: 8 passed, 2 failed, both mine, neither a hidden defect in the other:** `test_a_percentage_is_never_rendered_through_float` asserted `str(float(pct)) not in text`, but `float` renders `0.1`, a substring of the exact string, so the test could not pass; replaced by an assertion on the full digits (`change <pct>%`). `test_no_change_says_so` found two lines, not the plan's one sentence "No structural change. No rate-table change."; the code now writes the sentence as one line when both are empty.
 - **Green:** same command → `10 passed`; `ruff check` and `ruff format --check` clean on the three files.
+
+#### 2026-10-11 00:05 BST — Task 3 authored (service, route, H tests) and contract regenerated
+
+- `rating_versions.draft_change_summary_for(database, *, blob_store, workspace_id, rating_version_id)` after `_baseline`; the pure draft is `change_summary.draft_change_summary`. It reuses `_baseline`, `_algorithm_of`, `diff_algorithms`, `rate_tables.diff_needs_job` and `rate_tables.diff(..., blob_store=, cache=None)`; no existing definition edited. Refusals are `PlatformError` with fixed authored text (`RATING_VERSION_UNPINNED` 409 naming `algorithm_ref` or `pins`; `NOT_FOUND` 404 for a saved-algorithm miss); no `str(exc)` in any message. SL-1600's `InputFreeError` is not on main, so the plain form stands.
+- Handler `draft_rating_version_change_summary` in `api/models.py` after the submit handler, `requires(Perm.RATING_READ)`, `responses=problems(401, 403, 404, 409, 422)`, return type `ChangeSummaryDraft`.
+- A baseline with no pins is treated as pinning no tables (every pinned table reads `added`); a baseline with no approved earlier version gives no tables and no diff.
+- `backend/tests/test_rating_version_change_summary_route.py`: Acceptance 10–15 (the 12th parametrised over both missing fields). **They did not run**: DB-backed, so they wait for the gate slot, and this worktree's database does not exist yet. **Red-first for H is OWED, not shown:** the code was written before any run. In the slot window the red is produced by running the file on the tree with `backend/src` reverted to the base (`git -C <wt> diff origin/main -- backend/src` applied in reverse in a scratch copy, never by stash), expecting item 10's router 404, and the line is recorded here.
+- `uv run python scripts/generate-contracts.py` → wrote `docs/contracts/openapi/generated.json` (+219 lines, the route and `ChangeSummaryDraft`/`RateTableChange` by `$ref`); `--check` rc 0 ("47 generated contracts match the models"); `backend/tests/test_contracts.py` 157 passed, 2 skipped (small-test slot).
+- ruff check clean on every file touched. `ruff format --check` on `rating_versions.py` fails on lines this slice did not write (the file was not formatted upstream), so the formatter was not run on it.
