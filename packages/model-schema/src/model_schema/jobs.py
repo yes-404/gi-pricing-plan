@@ -141,7 +141,7 @@ class Principal(BaseModel):
     @model_validator(mode="after")
     def _non_system_principals_are_identified(self) -> Principal:
         if self.kind is not ActorKind.SYSTEM and self.id is None:
-            raise ValueError(f"a {self.kind.value} principal must carry an id")
+            raise InputFreeError("a principal that is not a system principal must carry an id")
         return self
 
 
@@ -262,9 +262,9 @@ class Job(BaseModel):
         invisible to both.
         """
         if self.status in TERMINAL_STATUSES and self.finished_at is None:
-            raise ValueError(f"a {self.status.value} job must have finished_at set")
+            raise InputFreeError("a job in a terminal status must have finished_at set")
         if self.status not in TERMINAL_STATUSES and self.finished_at is not None:
-            raise ValueError(f"a {self.status.value} job must not have finished_at set")
+            raise InputFreeError("a job not in a terminal status must not have finished_at set")
         if self.status is JobStatus.QUEUED and self.started_at is not None:
             raise InputFreeError("a queued job must not have started_at set")
         if (

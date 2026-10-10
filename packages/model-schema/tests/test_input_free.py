@@ -49,3 +49,34 @@ def test_a_pattern_must_match_the_whole_value() -> None:
     with pytest.raises(ValueError, match="did not match its pattern") as caught:
         InputFreeError("band {name} is empty", name=identifier("ok-then ??? SENTINEL", _SLUG))
     assert "SENTINEL" not in str(caught.value)
+
+
+@pytest.mark.req("NFR-499")
+@pytest.mark.parametrize(
+    "bad",
+    [_SENTINEL, f"{_SENTINEL}:motor-ad@1", f"model:{_SENTINEL}@1", f"model:motor-ad@{_SENTINEL}"],
+)
+def test_a_refused_artifact_reference_does_not_echo_what_was_submitted(bad: str) -> None:
+    """The rewritten `ArtifactRef` messages name the rule, not the value (PL-1599 Task 3)."""
+    from pydantic import TypeAdapter, ValidationError
+
+    from model_schema import ArtifactRef
+
+    with pytest.raises(ValueError, match="artifact") as parsed:
+        ArtifactRef.parse(bad)
+    assert _SENTINEL not in str(parsed.value)
+    with pytest.raises(ValidationError) as validated:
+        TypeAdapter(ArtifactRef).validate_python(bad)
+    for error in validated.value.errors():
+        assert _SENTINEL not in error["msg"]
+        assert isinstance(error.get("ctx", {}).get("error", InputFreeError("x")), InputFreeError)
+
+
+@pytest.mark.req("NFR-499")
+def test_the_module_level_helpers_do_not_echo_their_argument() -> None:
+    from model_schema import builtin_rule, role_permissions
+
+    for refuse in (builtin_rule, role_permissions):
+        with pytest.raises(InputFreeError) as raised:
+            refuse(_SENTINEL)  # type: ignore[operator]
+        assert _SENTINEL not in str(raised.value)

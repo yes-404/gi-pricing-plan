@@ -22,6 +22,8 @@ from __future__ import annotations
 import enum
 from typing import Final
 
+from model_schema.input_free import InputFreeError
+
 __all__ = ["BUILTIN_ROLES", "READ_PERMISSIONS", "Permission", "ScopeType", "role_permissions"]
 
 
@@ -159,6 +161,6 @@ def role_permissions(role: str) -> frozenset[Permission]:
     try:
         return BUILTIN_ROLES[role]
     except KeyError:
-        raise ValueError(
-            f"unknown built-in role {role!r}; custom roles are stored, not defined here"
+        raise InputFreeError(
+            "unknown built-in role; custom roles are stored, not defined here"
         ) from None

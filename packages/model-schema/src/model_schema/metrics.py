@@ -187,10 +187,9 @@ class CustomMetric(BaseModel):
         """
         refused = {MetricDirection.CLOSER_TO_ONE_IS_BETTER, MetricDirection.NOT_ORDERED}
         if self.direction in refused:
-            raise ValueError(
-                f"metric direction {self.direction.value!r} is not usable for early "
-                "stopping (FR-156); only lower_is_better and higher_is_better compare "
-                "successive values monotonically."
+            raise InputFreeError(
+                "this metric's direction is not usable for early stopping (FR-156); only "
+                "lower_is_better and higher_is_better compare successive values monotonically."
             )
         return self
 
@@ -206,10 +205,9 @@ class CustomMetric(BaseModel):
         """
         past_draft = self.status not in {MetricStatus.DRAFT, MetricStatus.DEPRECATED}
         if past_draft and self.certificate_id is None:
-            raise ValueError(
-                f"metric status {self.status.value!r} without a certificate_id; every "
-                "status past `draft` (other than `deprecated` reached directly from it) "
-                "rests on one (FR-157)."
+            raise InputFreeError(
+                "a metric status past `draft` needs a certificate_id; every status past `draft` "
+                "(other than `deprecated` reached directly from it) rests on one (FR-157)."
             )
         return self
 

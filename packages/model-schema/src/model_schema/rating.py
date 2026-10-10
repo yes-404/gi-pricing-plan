@@ -228,7 +228,9 @@ class RatingVersionCreate(BaseModel):
     @classmethod
     def _an_algorithm(cls, ref: ArtifactRef | None) -> ArtifactRef | None:
         if ref is not None and ref.type != "rating_algorithm":
-            raise ValueError(f"{ref} is not a rating_algorithm reference")
+            raise InputFreeError(
+                "a rating version's algorithm must be a rating_algorithm reference"
+            )
         return ref
 
     @field_validator("pins")
@@ -237,9 +239,9 @@ class RatingVersionCreate(BaseModel):
         for name, admitted in _PIN_TYPES.items():
             for ref in getattr(pins, name, ()):
                 if ref.type not in admitted:
-                    raise ValueError(
-                        f"pins.{name} holds {ref}, which is not a "
-                        f"{' or '.join(sorted(admitted))} reference"
+                    raise InputFreeError(
+                        "a rating version's pin list holds a reference of an artifact type that "
+                        "list does not admit"
                     )
         return pins
 
@@ -252,9 +254,8 @@ def check_model_reference_mode(version: RatingVersion, algorithm: RatingAlgorith
     """
     for step in algorithm.steps:
         if isinstance(step, RatingModelCallStep) and step.mode != version.model_reference_mode:
-            raise ValueError(
-                f"model_call step {step.step_id!r} declares mode {step.mode!r}, but the "
-                f"version declares {version.model_reference_mode!r} (FR-223)"
+            raise InputFreeError(
+                "a model_call step's mode must equal the version's model_reference_mode (FR-223)"
             )
 
 
@@ -300,9 +301,9 @@ def _reject_float_type(value: str) -> str:
     `float` is refused in every declared result type, not just the monetary ones.
     """
     if "float" in value:
-        raise ValueError(
-            "a rating result type is never float (FR-227); a monetary result is "
-            f"decimal or money_minor (got {value!r})"
+        raise InputFreeError(
+            "a rating result type is never float (FR-227); a monetary result is decimal or "
+            "money_minor"
         )
     return value
 
@@ -390,9 +391,7 @@ class RatingModelCallStep(RatingStepBase):
     @classmethod
     def _decimal_or_money_minor(cls, value: str | None) -> str | None:
         if value is not None and value not in ("decimal", "money_minor"):
-            raise ValueError(
-                f"a model_call's result_type is decimal or money_minor, not {value!r} (FR-227)"
-            )
+            raise InputFreeError("a model_call's result_type is decimal or money_minor (FR-227)")
         return value
 
     @model_validator(mode="after")

@@ -386,30 +386,27 @@ class Banding(BaseModel):
             later <= earlier
             for earlier, later in zip(self.boundaries, self.boundaries[1:], strict=False)
         ):
-            raise ValueError(
-                f"banding {self.slug!r} has boundaries {list(self.boundaries)}, which do "
-                "not strictly increase (`02` §4.2). Equal cut points make an empty band and "
-                "a decreasing pair makes an overlapping one; both send rows to a band the "
-                "reader cannot predict."
+            raise InputFreeError(
+                "a banding's boundaries must strictly increase (`02` §4.2). Equal cut points make "
+                "an empty band and a decreasing pair makes an overlapping one; both send rows to a"
+                " band the reader cannot predict."
             )
         expected = len(self.boundaries) - 1
         if len(self.labels) != expected:
-            raise ValueError(
-                f"banding {self.slug!r} has {len(self.labels)} labels for {expected} bands "
-                "(`02` §4.2). A label list one short does not drop the last band — it "
-                "renames every band after the gap."
+            raise InputFreeError(
+                "a banding needs one label per band, and the bands are the boundaries plus one "
+                "(`02` §4.2). A label list one short does not drop the last band — it renames "
+                "every band after the gap."
             )
         if len(set(self.labels)) != len(self.labels):
-            raise ValueError(
-                f"banding {self.slug!r} repeats a label. Two bands sharing a name are one "
-                "level to every fit, table and chart downstream, which is a grouping nobody "
-                "declared."
+            raise InputFreeError(
+                "a banding repeats a label. Two bands sharing a name are one level to every fit, "
+                "table and chart downstream, which is a grouping nobody declared."
             )
         if self.null_level is not None and self.null_level in self.labels:
-            raise ValueError(
-                f"banding {self.slug!r} sends nulls to {self.null_level!r}, which is also a "
-                "band. 'Missing' and 'in this range' would then be indistinguishable in "
-                "every relativity table."
+            raise InputFreeError(
+                "a banding's null_level is also a band. 'Missing' and 'in this range' would then "
+                "be indistinguishable in every relativity table."
             )
         return self
 
@@ -535,35 +532,30 @@ class Grouping(BaseModel):
         targets = set(self.mapping.values())
         if self.unseen_level_behaviour is UnseenLevelBehaviour.MAP_TO_DEFAULT:
             if not self.default_target_level:
-                raise ValueError(
-                    f"grouping {self.slug!r} maps unseen levels to a default and names no "
-                    "default (FR-104). The behaviour is mandatory precisely so it "
-                    "cannot be half-declared."
+                raise InputFreeError(
+                    "a grouping that maps unseen levels to a default must name that default "
+                    "(FR-104). The behaviour is mandatory precisely so it cannot be half-declared."
                 )
             if self.default_target_level not in targets:
-                raise ValueError(
-                    f"grouping {self.slug!r} defaults unseen levels to "
-                    f"{self.default_target_level!r}, which is not one of its target levels. "
-                    "An unseen level would land on a level no fitted model has a "
-                    "coefficient for."
+                raise InputFreeError(
+                    "a grouping's default target level must be one of its target levels. An unseen"
+                    " level would land on a level no fitted model has a coefficient for."
                 )
         elif self.default_target_level is not None:
-            raise ValueError(
-                f"grouping {self.slug!r} names a default target level while its unseen "
-                f"behaviour is {self.unseen_level_behaviour.value!r}. A default nothing "
-                "consults reads as protection that is not there."
+            raise InputFreeError(
+                "a grouping names a default target level although its unseen-level behaviour does "
+                "not use one. A default nothing consults reads as protection that is not there."
             )
         declared = self.method_params.get("credibility_model")
         if declared is not None:
             if self.method is not GroupingMethod.CREDIBILITY_WEIGHTED:
-                raise ValueError(
-                    f"grouping {self.slug!r} names a credibility model with method "
-                    f"{self.method.value!r}, which does not use one."
+                raise InputFreeError(
+                    "a grouping names a credibility model although its method does not use one."
                 )
             if declared not in tuple(CredibilityModel):
-                raise ValueError(
-                    f"grouping {self.slug!r} names credibility model {declared!r}, which "
-                    f"is not one of {[m.value for m in CredibilityModel]} (FR-106)."
+                raise InputFreeError(
+                    "a grouping's credibility model must be one of the supported credibility "
+                    "models (FR-106)."
                 )
         return self
 
@@ -688,7 +680,7 @@ class OffsetSpec(BaseModel):
     @model_validator(mode="after")
     def _a_column_offset_names_its_column(self) -> OffsetSpec:
         if self.kind in {"log_column", "column"} and not self.column:
-            raise ValueError(f"offset kind {self.kind!r} requires a column")
+            raise InputFreeError("this offset kind requires a column")
         return self
 
     @model_validator(mode="after")
@@ -722,10 +714,10 @@ class SplitRef(BaseModel):
     @model_validator(mode="after")
     def _the_holdout_is_not_the_training_set(self) -> SplitRef:
         if self.train_part == self.holdout_part:
-            raise ValueError(
-                f"train and holdout are both {self.train_part!r}. A model measured on the "
-                "rows it was fitted on reports its own memory, and FR-183's "
-                "side-by-side comparison would then show two copies of one number."
+            raise InputFreeError(
+                "train and holdout must be different parts. A model measured on the rows it was "
+                "fitted on reports its own memory, and FR-183's side-by-side comparison would then"
+                " show two copies of one number."
             )
         return self
 
@@ -782,7 +774,7 @@ class LossTreatment(BaseModel):
                 "inside `spec_hash` for ever."
             )
         if self.kind != "none" and self.cap_minor is None:
-            raise ValueError(f"loss treatment {self.kind!r} requires cap_minor")
+            raise InputFreeError("this loss treatment kind requires cap_minor")
         if self.kind == "capped" and self.restoration_loading is None:
             raise InputFreeError(
                 "a capped response requires restoration_loading (FR-128: the "
@@ -871,16 +863,16 @@ class GlmCvSpec(BaseModel):
     @model_validator(mode="after")
     def _the_path_has_at_least_two_distinct_points(self) -> GlmCvSpec:
         if len(self.alphas) < 2:
-            raise ValueError(
-                f"cv.alphas has {len(self.alphas)} point(s); at least 2 are needed for a "
-                "path to select from — one alpha is a fixed fit, not a cross-validation."
+            raise InputFreeError(
+                "cv.alphas needs at least 2 points for a path to select from — one alpha is a "
+                "fixed fit, not a cross-validation."
             )
         if any(a < 0.0 for a in self.alphas):
             raise InputFreeError("cv.alphas contains a negative penalty strength")
         if not all(math.isfinite(a) for a in self.alphas):
             raise InputFreeError("cv.alphas contains a non-finite value")
         if len(set(self.alphas)) != len(self.alphas):
-            raise ValueError(f"cv.alphas repeats a value: {self.alphas}")
+            raise InputFreeError("cv.alphas must not repeat a value")
         return self
 
     @model_validator(mode="after")
@@ -918,17 +910,16 @@ class TweediePowerSpec(BaseModel):
     @model_validator(mode="after")
     def _the_grid_has_at_least_two_points_strictly_inside_the_family(self) -> TweediePowerSpec:
         if len(self.p_grid) < 2:
-            raise ValueError(
-                f"p_grid has {len(self.p_grid)} point(s); at least 2 are needed for a "
-                "profile to have a maximum — one point is a fixed fit, not an estimate."
+            raise InputFreeError(
+                "p_grid needs at least 2 points for a profile to have a maximum — one point is a "
+                "fixed fit, not an estimate."
             )
         if not all(math.isfinite(p) for p in self.p_grid):
             raise InputFreeError("p_grid contains a non-finite value")
         if not all(1.0 < p < 2.0 for p in self.p_grid):
-            raise ValueError(
-                f"p_grid must lie inside (1, 2), got {self.p_grid} — at 1 the family is "
-                "Poisson and at 2 it is Gamma; the scan stays inside the family "
-                "FR-114 estimates."
+            raise InputFreeError(
+                "p_grid must lie inside (1, 2) — at 1 the family is Poisson and at 2 it is Gamma; "
+                "the scan stays inside the family FR-114 estimates."
             )
         if any(b <= a for a, b in zip(self.p_grid, self.p_grid[1:], strict=False)):
             raise InputFreeError(
@@ -1102,10 +1093,9 @@ class GlmSpec(ModelSpecCommon):
         if self.family == "tweedie":
             power = float(self.family_params.get("power", 1.5))
             if not 1.0 < power < 2.0:
-                raise ValueError(
-                    f"tweedie power {power} is outside (1, 2). At 1 it is Poisson and at 2 "
-                    "it is Gamma; between them it is the compound-Poisson-Gamma that "
-                    "burning cost needs."
+                raise InputFreeError(
+                    "a tweedie power must lie inside (1, 2). At 1 it is Poisson and at 2 it is "
+                    "Gamma; between them it is the compound-Poisson-Gamma that burning cost needs."
                 )
         return self
 
@@ -1146,11 +1136,10 @@ class GlmSpec(ModelSpecCommon):
                 "A model of a prediction must say whose prediction it is."
             )
         if self.approximates_model_id is not None and not surrogate_column:
-            raise ValueError(
-                f"approximates_model_id is set and response_column is "
-                f"{self.response_column!r}, not {SURROGATE_RESPONSE_COLUMN!r} "
-                "(FR-141). A surrogate is fitted to another model's predictions; a "
-                "spec fitted to an observed column is a model in its own right."
+            raise InputFreeError(
+                f"approximates_model_id is set, so response_column must be "
+                f"{SURROGATE_RESPONSE_COLUMN!r} (FR-141). A surrogate is fitted to another model's"
+                f" predictions; a spec fitted to an observed column is a model in its own right."
             )
         return self
 
@@ -1215,10 +1204,9 @@ class GlmSpec(ModelSpecCommon):
         if self.tweedie is None:
             return self
         if self.family != "tweedie":
-            raise ValueError(
-                f"tweedie estimation is set but family is {self.family!r}, not 'tweedie' "
-                "(FR-114): the grid estimates the Tweedie power, and a non-Tweedie "
-                "family has no power to estimate."
+            raise InputFreeError(
+                "tweedie estimation is set, so family must be 'tweedie' (FR-114): the grid "
+                "estimates the Tweedie power, and a non-Tweedie family has no power to estimate."
             )
         if "power" in self.family_params:
             raise InputFreeError(
@@ -1405,10 +1393,9 @@ class GbmSpec(ModelSpecCommon):
             self.objective.name or ""
         ).startswith(("count:", "reg:tweedie"))
         if counting and self.offset.kind == "none" and not self.offset_acknowledgement:
-            raise ValueError(
-                f"objective {self.objective.name!r} counts events but the spec declares no "
-                "offset (FR-121). Set offset to log(exposure), or say in "
-                "offset_acknowledgement why this data needs none."
+            raise InputFreeError(
+                "a counting objective needs an offset (FR-121). Set offset to log(exposure), or "
+                "say in offset_acknowledgement why this data needs none."
             )
         return self
 
@@ -1433,9 +1420,9 @@ class GbmSpec(ModelSpecCommon):
         """
         for group in self.interaction_constraints:
             if len(group) < 2:
-                raise ValueError(
-                    f"interaction group {list(group)} names fewer than two features. A "
-                    "group of one constrains nothing, and reads as though it did."
+                raise InputFreeError(
+                    "an interaction group must name at least two features. A group of one "
+                    "constrains nothing, and reads as though it did."
                 )
         return self
 
@@ -1485,20 +1472,19 @@ class EbmSpec(ModelSpecCommon):
     @classmethod
     def _max_bins_is_a_power_of_two(cls, value: int) -> int:
         if value.bit_count() != 1:
-            raise ValueError(
-                f"max_bins must be a power of two (got {value}): `interpret` binning "
-                "works on a dyadic grid, and anything else is the library's own refusal "
-                "translated to a spec problem (FR-140)."
+            raise InputFreeError(
+                "max_bins must be a power of two: `interpret` binning works on a dyadic grid, and "
+                "anything else is the library's own refusal translated to a spec problem (FR-140)."
             )
         return value
 
     @model_validator(mode="after")
     def _the_interaction_grid_stays_in_the_jsonb_envelope(self) -> EbmSpec:
         if self.interactions > 0 and self.max_bins > 256:
-            raise ValueError(
-                f"interactions={self.interactions} with max_bins={self.max_bins}: a "
-                "grid of that size is ~8 MB per pair inside the fit result's JSONB "
-                "envelope. Cap max_bins at 256 with interactions, or use 0 (FR-140)."
+            raise InputFreeError(
+                "interactions with this max_bins: a grid of that size is ~8 MB per pair inside the"
+                " fit result's JSONB envelope. Cap max_bins at 256 with interactions, or use 0 "
+                "(FR-140)."
             )
         return self
 
@@ -1509,21 +1495,21 @@ class EbmSpec(ModelSpecCommon):
     ) -> dict[str, int] | None:
         if value is None:
             return None
-        for slug, direction in value.items():
+        for direction in value.values():
             if direction not in (-1, 0, 1):
-                raise ValueError(
-                    f"monotone constraint on {slug!r} has direction {direction}; only "
-                    "-1 (decreasing), 0 (none) and 1 (increasing) exist (FR-122)."
+                raise InputFreeError(
+                    "a monotone constraint's direction must be -1 (decreasing), 0 (none) or 1 "
+                    "(increasing) (FR-122)."
                 )
         return value
 
     @model_validator(mode="after")
     def _an_ebm_has_no_offset(self) -> EbmSpec:
         if self.offset.kind != "none":
-            raise ValueError(
-                f"offset kind {self.offset.kind!r} is GLM-only (FR-140): an EBM's "
-                "lookups are additive on the identity link and `interpret` has no offset "
-                "path — declaring one and ignoring it would be a silent model change."
+            raise InputFreeError(
+                "an EBM declares an offset kind, which is GLM-only (FR-140): an EBM's lookups are "
+                "additive on the identity link and `interpret` has no offset path — declaring one "
+                "and ignoring it would be a silent model change."
             )
         return self
 
@@ -1717,9 +1703,8 @@ class GbmFitResult(BaseModel):
         is monotone in the wrong thing, which reads as correct on every screen.
         """
         if self.monotone_constraints and len(self.monotone_constraints) != len(self.feature_order):
-            raise ValueError(
-                f"{len(self.monotone_constraints)} monotone constraints for "
-                f"{len(self.feature_order)} features in feature_order. The vector is "
+            raise InputFreeError(
+                "monotone_constraints and feature_order must have the same length. The vector is "
                 "positional; a mismatch silently constrains the wrong column."
             )
         return self
@@ -1842,10 +1827,9 @@ class EbmFitResult(BaseModel):
         reasoning as `GbmFitResult`'s constraint-vector check.
         """
         if len(self.bins) != len(self.feature_order):
-            raise ValueError(
-                f"{len(self.bins)} bin definitions for {len(self.feature_order)} "
-                "features in feature_order. The bins are positional; a mismatch "
-                "silently reads the wrong feature's cuts at scoring time."
+            raise InputFreeError(
+                "bins and feature_order must have the same length. The bins are positional; a "
+                "mismatch silently reads the wrong feature's cuts at scoring time."
             )
         return self
 

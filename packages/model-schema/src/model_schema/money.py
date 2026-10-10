@@ -40,6 +40,8 @@ from pydantic import BeforeValidator, Field, GetJsonSchemaHandler, PlainSerializ
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
 
+from model_schema.input_free import InputFreeError
+
 __all__ = [
     "Currency",
     "DecimalStr",
@@ -80,10 +82,10 @@ def _reject_float(value: Any) -> Any:
     and Pydantic rejects a bool for a `Decimal` field on its own.
     """
     if isinstance(value, float):
-        raise ValueError(
-            f"{value!r} is a float, and a float has already lost the precision an exact "
-            "decimal is for (FR-10). Pass a string, an int or a Decimal — quantising "
-            "explicitly first if the value was computed in float."
+        raise InputFreeError(
+            "a float has already lost the precision an exact decimal is for (FR-10). Pass a "
+            "string, an int or a Decimal — quantising explicitly first if the value was computed "
+            "in float."
         )
     return value
 
@@ -134,8 +136,8 @@ def to_minor(value: Decimal, *, places: int = 2) -> int:
     """
     scaled = value.scaleb(places)
     if scaled != scaled.to_integral_value():
-        raise ValueError(
-            f"{value} is not exact to {places} decimal places; round explicitly before "
+        raise InputFreeError(
+            "the value is not exact to the requested decimal places; round explicitly before "
             "converting to minor units (FR-226: rounding is never implicit)"
         )
     return int(scaled)

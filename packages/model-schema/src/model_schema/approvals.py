@@ -159,9 +159,9 @@ class ApproximationDeviation(BaseModel):
     @model_validator(mode="after")
     def _within_bounds(self) -> ApproximationDeviation:
         if self.quantile_key not in ABS_CHANGE_PCT_QUANTILE_KEYS:
-            raise ValueError(
-                f"quantile must be one of {list(ABS_CHANGE_PCT_QUANTILE_KEYS)} "
-                "(03 §4.6, the run's fixed set)"
+            raise InputFreeError(
+                f"quantile must be one of {ABS_CHANGE_PCT_QUANTILE_KEYS} (03 §4.6, the run's fixed"
+                f" set)"
             )
         if self.max_abs_change_pct < 0:
             raise InputFreeError("max_abs_change_pct must be at least 0")
@@ -221,8 +221,9 @@ class ApprovalPolicyEntry(BaseModel):
         if self.artifact_type != "rating_version":
             for name in ("dislocation_baseline_environment", "approximation_deviation"):
                 if getattr(self, name) is not None:
-                    raise ValueError(
-                        f"{name} is valid only on a `rating_version` entry (`06` §4.2, RL-1504 T5)"
+                    raise InputFreeError(
+                        "dislocation_baseline_environment and approximation_deviation are valid "
+                        "only on a `rating_version` entry (`06` §4.2, RL-1504 T5)"
                     )
         return self
 

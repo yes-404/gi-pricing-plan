@@ -19,6 +19,8 @@ import os
 import time
 from uuid import UUID
 
+from model_schema.input_free import InputFreeError
+
 __all__ = ["new_uuid7", "uuid7_timestamp_ms"]
 
 _UNIX_TS_MS_BITS = 48
@@ -40,7 +42,7 @@ def new_uuid7(*, timestamp_ms: int | None = None) -> UUID:
     """
     ts = int(time.time() * 1000) if timestamp_ms is None else timestamp_ms
     if not 0 <= ts < (1 << _UNIX_TS_MS_BITS):
-        raise ValueError(f"timestamp_ms out of range for UUIDv7: {ts}")
+        raise InputFreeError("timestamp_ms is out of range for a UUIDv7")
 
     rand = int.from_bytes(os.urandom(10), "big")  # 80 bits, 74 of which are used
     rand_a = (rand >> 62) & 0xFFF
@@ -61,5 +63,5 @@ def uuid7_timestamp_ms(value: UUID) -> int:
     row is readable from its key without a column or an index.
     """
     if value.version != _VERSION:
-        raise ValueError(f"not a UUIDv7 (version {value.version})")
+        raise InputFreeError("the value is not a UUIDv7")
     return value.int >> 80

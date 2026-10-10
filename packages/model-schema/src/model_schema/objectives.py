@@ -453,10 +453,7 @@ class ObjectiveParameter(BaseModel):
     @model_validator(mode="after")
     def _the_default_is_inside_the_range(self) -> Self:
         if not self.min <= self.default <= self.max:
-            raise ValueError(
-                f"parameter {self.name!r} must satisfy min <= default <= max, "
-                f"got {self.min} <= {self.default} <= {self.max}."
-            )
+            raise InputFreeError("a parameter must satisfy min <= default <= max.")
         return self
 
 
@@ -716,12 +713,21 @@ def battery_is_exactly(
     missing = [name for name in required if name not in present]
     unexpected = sorted({name for name in present if name not in required})
     duplicated = sorted({name for name in present if present.count(name) > 1})
-    if missing or unexpected or duplicated:
-        raise ValueError(
-            f"{artifact} carries {len(checks)} checks against the {len(required)} required "
-            f"(FR-158): missing {missing or 'nothing'}, unexpected "
-            f"{unexpected or 'nothing'}, duplicated {duplicated or 'nothing'}. A short "
-            "battery is a failure of the run, never a silently smaller certificate."
+    if unexpected:
+        raise InputFreeError(
+            "a certificate must carry only the required checks (FR-158): it carries a check "
+            "outside its battery. The two batteries share a vocabulary and are not "
+            "interchangeable."
+        )
+    if missing:
+        raise InputFreeError(
+            "a certificate must carry every required check (FR-158): one or more is missing. "
+            "A short battery is a failure of the run, never a silently smaller certificate."
+        )
+    if duplicated:
+        raise InputFreeError(
+            "a certificate must carry each required check once (FR-158): a check is run "
+            "twice. A count-only floor would wave through a battery with one check missing."
         )
 
 
@@ -751,15 +757,11 @@ class SamplingSpec(BaseModel):
 
     @model_validator(mode="after")
     def _every_range_is_ordered_and_non_empty(self) -> Self:
-        for name, (low, high) in (
-            ("y_range", self.y_range),
-            ("f_range", self.f_range),
-            ("w_range", self.w_range),
-        ):
+        for low, high in (self.y_range, self.f_range, self.w_range):
             if low >= high:
-                raise ValueError(
-                    f"{name} is [{low}, {high}], which samples nothing. A certificate over "
-                    "an empty grid passes every check."
+                raise InputFreeError(
+                    "y_range, f_range and w_range must each have low < high; a range with low >= "
+                    "high samples nothing. A certificate over an empty grid passes every check."
                 )
         return self
 
@@ -804,10 +806,10 @@ class CertificateResult(BaseModel):
     def _the_verdict_is_the_one_the_checks_imply(self) -> Self:
         implied = self.outcome_of(self.checks)
         if self.overall is not implied:
-            raise ValueError(
-                f"certificate reports overall={self.overall.value!r} over checks implying "
-                f"{implied.value!r}. Submission reads the verdict and an approver reads the "
-                "checks; they cannot be allowed to say different things."
+            raise InputFreeError(
+                "a certificate's overall verdict must be the one its checks imply. Submission "
+                "reads the verdict and an approver reads the checks; they cannot be allowed to say"
+                " different things."
             )
         return self
 

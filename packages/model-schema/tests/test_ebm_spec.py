@@ -205,7 +205,7 @@ def test_the_bins_align_with_the_feature_order() -> None:
     feature's cuts, silently."""
     fit = _fit()
     assert len(fit.bins) == len(fit.feature_order)
-    with pytest.raises(pydantic.ValidationError, match="bin definitions"):
+    with pytest.raises(pydantic.ValidationError, match="bins and feature_order must have the same length"):
         _fit(feature_order=("speed", "age_band"))
 
 

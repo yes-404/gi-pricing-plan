@@ -42,7 +42,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
-from model_schema.input_free import InputFreeError
+from model_schema.input_free import InputFreeError, identifier
 from model_schema.money import DecimalStr, MoneyMinor
 from model_schema.refs import ArtifactRef, BlobRef, Slug
 
@@ -68,7 +68,8 @@ TOLERANCE_QUANTUM: Final[Decimal] = Decimal("0.000001")
 
 #: A peril code as it appears in the dataset. Upper snake case rather than a slug: these are
 #: the dataset's own column values (`AD`, `TP_BI`, `WINDSCREEN`), not platform artifacts.
-PerilCode = Annotated[str, Field(pattern=r"^[A-Z][A-Z0-9_]{0,31}$")]
+PERIL_CODE_PATTERN = r"^[A-Z][A-Z0-9_]{0,31}$"
+PerilCode = Annotated[str, Field(pattern=PERIL_CODE_PATTERN)]
 
 
 class PerilMethod(enum.StrEnum):
@@ -192,20 +193,22 @@ class LargeLossTreatment(BaseModel):
         needed = required[self.kind]
         for name in needed:
             if getattr(self, name) is None:
-                raise ValueError(
-                    f"a {self.kind.value!r} large-loss treatment requires {name!r} "
-                    "(FR-189)"
+                raise InputFreeError(
+                    "a large-loss treatment requires the parameters its kind names (FR-189); one "
+                    "of cap_minor, restoration_loading, excess_model, attachment_minor, "
+                    "loading_factor or evidence_blob is unset"
                 )
         for name in parameters:
             if name not in needed and getattr(self, name) is not None:
-                raise ValueError(
-                    f"{name!r} has no meaning for a {self.kind.value!r} large-loss "
-                    "treatment; a parameter that is read by nothing reads as one that is"
+                raise InputFreeError(
+                    "a large-loss treatment sets a parameter its kind does not read (cap_minor, "
+                    "restoration_loading, excess_model, attachment_minor, loading_factor or "
+                    "evidence_blob); a parameter that is read by nothing reads as one that is"
                 )
         if self.restoration_loading is not None and self.restoration_loading < 1:
-            raise ValueError(
-                f"restoration_loading {self.restoration_loading} is below 1. Restoration "
-                "puts the capped mean back (FR-189); below 1 it caps a second time"
+            raise InputFreeError(
+                "restoration_loading is below 1. Restoration puts the capped mean back (FR-189); "
+                "below 1 it caps a second time"
             )
         if self.loading_factor is not None and self.loading_factor <= 0:
             raise InputFreeError("loading_factor must be positive (FR-189)")
@@ -238,22 +241,26 @@ class PerilComponent(BaseModel):
         needed = required[self.method]
         for name in needed:
             if getattr(self, name) is None:
-                raise ValueError(
-                    f"peril {self.peril}: a {self.method.value!r} peril requires "
-                    f"{name!r} (FR-188)"
+                raise InputFreeError(
+                    "peril {peril}: a peril's method requires its models (frequency_model and "
+                    "severity_model, or burning_cost_model; FR-188)",
+                    peril=identifier(self.peril, PERIL_CODE_PATTERN),
                 )
         for name in ("frequency_model", "severity_model", "burning_cost_model"):
             if name not in needed and getattr(self, name) is not None:
-                raise ValueError(
-                    f"peril {self.peril}: {name!r} has no meaning for a "
-                    f"{self.method.value!r} peril. Two routes to one peril's cost is two "
-                    "answers to what it costs"
+                raise InputFreeError(
+                    "peril {peril}: a model is set that this peril's method does not use "
+                    "(frequency_model, severity_model or burning_cost_model). Two routes to one "
+                    "peril's cost is two answers to what it costs",
+                    peril=identifier(self.peril, PERIL_CODE_PATTERN),
                 )
         for name in needed:
             ref: ArtifactRef = getattr(self, name)
             if ref.type != "model":
-                raise ValueError(
-                    f"peril {self.peril}: {name!r} references a {ref.type!r}, not a model"
+                raise InputFreeError(
+                    "peril {peril}: a peril's model reference must be a model, not another "
+                    "artifact type",
+                    peril=identifier(self.peril, PERIL_CODE_PATTERN),
                 )
         return self
 
@@ -274,9 +281,10 @@ class ExcludedPeril(BaseModel):
     @model_validator(mode="after")
     def _reason_is_not_blank(self) -> Self:
         if not self.reason.strip():
-            raise ValueError(
-                f"peril {self.peril}: an exclusion reason of whitespace is an exclusion "
-                "with no reason (FR-190)"
+            raise InputFreeError(
+                "peril {peril}: an exclusion reason of whitespace is an exclusion with no reason "
+                "(FR-190)",
+                peril=identifier(self.peril, PERIL_CODE_PATTERN),
             )
         return self
 
@@ -423,9 +431,9 @@ class PerilStructure(BaseModel):
             }
             and self.reconciliation is None
         ):
-            raise ValueError(
-                f"a {self.status.value!r} structure carries its reconciliation "
-                "(FR-190). It is the evidence the approval policy names, so a "
-                "structure in review without one is an approval with nothing to read"
+            raise InputFreeError(
+                "a structure in this status carries its reconciliation (FR-190). It is the "
+                "evidence the approval policy names, so a structure in review without one is an "
+                "approval with nothing to read"
             )
         return self

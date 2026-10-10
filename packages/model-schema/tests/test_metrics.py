@@ -226,8 +226,8 @@ def test_four_checks_with_direction_holds_replaced_is_refused() -> None:
     assert len(names) == 4
     with pytest.raises(ValidationError) as raised:
         _certificate(_battery(names))
-    assert "direction_holds" in str(raised.value)
-    assert "duplicated ['finiteness']" in str(raised.value)
+    assert "must carry every required check" in str(raised.value)
+    assert "direction_holds" not in str(raised.value), "the message names no submitted value"
 
 
 @pytest.mark.req("FR-158")
@@ -238,5 +238,13 @@ def test_an_objective_check_name_does_not_belong_in_a_metric_battery() -> None:
     than fits. Four checks, one of them from the wrong artifact.
     """
     names = (*METRIC_CERTIFICATE_CHECKS[:3], "smoke_fit")
-    with pytest.raises(ValidationError, match=r"unexpected \['smoke_fit'\]"):
+    with pytest.raises(ValidationError, match="carries a check outside its battery"):
+        _certificate(_battery(names))
+
+
+@pytest.mark.req("FR-158")
+def test_a_check_run_twice_beside_the_full_battery_is_refused() -> None:
+    """Every required check is present and one runs twice: the duplicate alone is the refusal."""
+    names = (*METRIC_CERTIFICATE_CHECKS, "finiteness")
+    with pytest.raises(ValidationError, match="must carry each required check once"):
         _certificate(_battery(names))
