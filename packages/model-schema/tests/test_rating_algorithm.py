@@ -168,8 +168,8 @@ def test_a_monetary_result_typed_as_float_is_refused() -> None:
         RatingAlgorithm.model_validate(data)
 
     data = valid_algorithm()
-    data["steps"][6] = {
-        **data["steps"][6], "result_type": "float",
+    data["steps"][7] = {
+        **data["steps"][7], "result_type": "float",
     }
     with pytest.raises(ValidationError, match="never float"):
         RatingAlgorithm.model_validate(data)
@@ -179,8 +179,8 @@ def test_a_monetary_result_typed_as_float_is_refused() -> None:
 def test_a_model_call_declares_exactly_one_reference() -> None:
     """T1: FR-222 — a model_call pins a model or a peril structure, not both."""
     data = valid_algorithm()
-    data["steps"][4] = {
-        **data["steps"][4],
+    data["steps"][5] = {
+        **data["steps"][5],
         "model_ref": "model:motor-ad-frequency@7",
         "peril_structure_ref": "peril_structure:motor-gb-2026h2@2",
     }
@@ -204,13 +204,13 @@ def test_a_cycle_is_refused() -> None:
     # s_office consumes cycle_val (produced by the constraint) while the constraint
     # consumes office_premium_minor (produced by s_office): a genuine two-step cycle
     # that still leaves the declared output reachable.
-    data["steps"][6] = {
-        **data["steps"][6],
+    data["steps"][7] = {
+        **data["steps"][7],
         "consumes": ["risk_premium_minor", "expense_factor", "cycle_val"],
         "produces": "office_premium_minor",
     }
-    data["steps"][7] = {
-        **data["steps"][7],
+    data["steps"][8] = {
+        **data["steps"][8],
         "consumes": ["office_premium_minor"],
         "produces": "cycle_val",
     }
@@ -222,8 +222,8 @@ def test_a_cycle_is_refused() -> None:
 def test_an_undefined_reference_is_refused() -> None:
     """T2: FR-212 — a consumed name no step produces fails."""
     data = valid_algorithm()
-    data["steps"][6] = {
-        **data["steps"][6],
+    data["steps"][7] = {
+        **data["steps"][7],
         "consumes": ["no_such_value"], "produces": "office_premium_minor",
     }
     with pytest.raises(ValidationError, match="undefined value"):
@@ -341,24 +341,24 @@ def test_a_stored_model_call_without_result_type_loads_as_the_legacy_default() -
     prediction rounded at the step as before (PL-1464 item 16; the 2026-10-10 00:40:31 BST
     ruling). It does not become `decimal`, which is the opt-in."""
     data = valid_algorithm()
-    assert "result_type" not in data["steps"][4]
+    assert "result_type" not in data["steps"][5]
     algorithm = RatingAlgorithm.model_validate(data)
-    assert algorithm.steps[4].result_type is None  # type: ignore[union-attr]
+    assert algorithm.steps[5].result_type is None  # type: ignore[union-attr]
 
 
 @pytest.mark.req("FR-227")
 @pytest.mark.parametrize("declared", ["decimal", "money_minor"])
 def test_a_model_call_accepts_decimal_or_money_minor(declared: str) -> None:
     data = valid_algorithm()
-    data["steps"][4] = {**data["steps"][4], "result_type": declared}
-    assert RatingAlgorithm.model_validate(data).steps[4].result_type == declared  # type: ignore[union-attr]
+    data["steps"][5] = {**data["steps"][5], "result_type": declared}
+    assert RatingAlgorithm.model_validate(data).steps[5].result_type == declared  # type: ignore[union-attr]
 
 
 @pytest.mark.req("FR-227")
 @pytest.mark.parametrize("declared", ["relativity", "float", "string"])
 def test_a_model_call_refuses_any_other_result_type(declared: str) -> None:
     data = valid_algorithm()
-    data["steps"][4] = {**data["steps"][4], "result_type": declared}
+    data["steps"][5] = {**data["steps"][5], "result_type": declared}
     with pytest.raises(ValidationError, match=r"decimal or money_minor.*FR-227"):
         RatingAlgorithm.model_validate(data)
 
