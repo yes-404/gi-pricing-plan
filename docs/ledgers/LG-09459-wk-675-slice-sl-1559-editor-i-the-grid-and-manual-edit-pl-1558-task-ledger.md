@@ -49,7 +49,7 @@ column, diff shading, bulk operations, import and export (S5).
 | 4 | the dependency and its records | 17 | done, commit 5 (`e92ce26d`) |
 | 5 | `rateTables.ts` | — | done, commit 6 |
 | 6 | `DecimalCellInput.vue`, `RateTableGrid.vue` | 11, 12 | done, commit 8 |
-| 7 | `RateTableEditorView.vue`, route, FR-25 link | 11, 13–16 | open |
+| 7 | `RateTableEditorView.vue`, route, FR-25 link | 11, 13–16 | done, commit 11 |
 | 8 | gate and ledger | 18 | waits for the GO and the gate slot |
 
 ### Gate
@@ -272,6 +272,32 @@ T3 and T4).
 `assert ('RATE_TABLE_MISS', 404) == ('NOT_FOUND', 404)`; with them on, `4 passed`. (A first red run failed for a wrong cause,
 a `None` caller, and was discarded.) The DB route tests read `_READ_MISS_CODE` and `_EDIT_MISS_CODE`, both `NOT_FOUND`: OWED
 at the gate.
+
+#### Task 7 — `RateTableEditorView.vue`, the route, the FR-25 link (2026-10-10)
+
+**Red first.** With the route added and the view absent: `vitest run src/router/__tests__/reachability.test.ts` →
+2 failed (`/rating/:slug/v/:version/tables/:tableSlug` named unreachable; and a dead-link check), the editor test file
+failing to load (load 1.38). With the view written, the pinned-table link test in `RatingVersionView.test.ts` was red
+(`Unable to find role="link" and name "area@3"`) before the view's links. **Green:** `RateTableEditorView.test.ts` 8 passed;
+`RatingVersionView.test.ts` and `src/router` 29 passed (5 files).
+**Coverage of the plan's acceptance.** 11: columns and unit (grid tests), Next/Previous follow the cursor, one page read on
+mount, no `pageThrough`. 13: save disabled until a non-blank note and an edit; Review posts the full edited row and shows the
+diff with each old → new value; Confirm posts `confirm: true` and loads `area@4`; a 422's `edits.<i>.<value>` marks the
+cell it names (kept edit), and a refusal naming no cell is an alert. 14: no approval, lifecycle or status text renders, and
+`git grep -n -i status -- frontend/src/views/RateTableEditorView.vue` prints nothing (the created-notice uses
+`aria-live`, not a `role` with that word). 15: `RatingVersionView` renders one link per `pins.rate_tables` entry and makes
+the one read (`getRatingVersion` once; no list call). 16: reachability passes with the new route reached by that link and no
+exception added.
+**Deviations.** (1) The Rating Version page is routed by id (`/rating-versions/:id`), so Acceptance 15's "exactly one
+`GET /rating-versions/{slug}@{version}`" is, there, its one by-id read, which returns the same `RatingVersion` with `pins`.
+The editor itself reads `getRatingVersionByRef` (S2's name) once. (2) The view gates Review on an edit and a non-blank note,
+not on decimal syntax: the cell flags a bad entry, and the server's FieldError (FR-234) marks it on save, so the syntax
+rule is not defined a third time. (3) The confirm diff shows the server's summary (`changed_cells`, largest relative
+change) and each edited cell's old → new strings; no per-cell absolute or relative arithmetic is done in the browser, which
+would need decimal arithmetic the platform does not yet ship to the client. (4) After a confirm the view loads the new
+version (`area@4`) though the Rating Version still pins `area@3` (versions are immutable pins).
+**Not run:** whole-tree `vue-tsc`, `eslint`, `pnpm build`, `generate-contracts --check`, `audit-docs`, `req-coverage`, the
+full `pytest`, `migrate --verify` and the DB tests wait for the GO and the gate slot.
 
 ## PRs
 

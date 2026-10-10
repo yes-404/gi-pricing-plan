@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 
 import { ProblemError } from "@/api/problem";
@@ -10,6 +10,14 @@ const props = defineProps<{ id: string }>();
 const rating = ref<RatingVersion | null>(null);
 const loading = ref(true);
 const problem = ref<ProblemError | null>(null);
+
+/** The tables this version pins (RL-1475 item 3): they come with the read, so no list call. */
+const pinnedTables = computed(() =>
+  (rating.value?.pins?.rate_tables ?? []).flatMap((ref_) => {
+    const match = /^rate_table:([^@]+)@(\d+)$/.exec(ref_);
+    return match ? [{ slug: match[1]!, label: `${match[1]}@${match[2]}` }] : [];
+  }),
+);
 
 onMounted(async () => {
   try {
@@ -105,6 +113,27 @@ onMounted(async () => {
           <dd>{{ new Date(rating.created_at).toLocaleString() }}</dd>
         </div>
       </dl>
+      <div
+        v-if="pinnedTables.length > 0"
+        class="mt-6"
+      >
+        <h2 class="text-sm font-medium text-slate-500">
+          Rate tables
+        </h2>
+        <ul class="mt-1 space-y-1 text-sm">
+          <li
+            v-for="table in pinnedTables"
+            :key="table.label"
+          >
+            <RouterLink
+              :to="`/rating/${rating.slug}/v/${rating.version}/tables/${table.slug}`"
+              class="font-mono text-sky-700 underline"
+            >
+              {{ table.label }}
+            </RouterLink>
+          </li>
+        </ul>
+      </div>
       <p class="mt-6 text-xs text-slate-500">
         The Phase 1b rating version (FR-440). Compile, score, rate tables and deployment
         stay Phase 2.

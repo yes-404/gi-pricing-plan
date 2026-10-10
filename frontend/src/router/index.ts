@@ -251,6 +251,19 @@ export const routes: RouteRecordRaw[] = [
     }),
   },
   {
+    // `03` §5.3's rate table editor. `:slug` and `:version` are the Rating Version's own
+    // (RL-1473); `:tableSlug` is one of its `pins.rate_tables` (RL-1475 item 3).
+    path: "/rating/:slug/v/:version/tables/:tableSlug",
+    name: "rate-table-editor",
+    meta: { requiresAuth: true },
+    component: () => import("@/views/RateTableEditorView.vue"),
+    props: (route) => ({
+      slug: String(route.params.slug),
+      version: String(route.params.version),
+      tableSlug: String(route.params.tableSlug),
+    }),
+  },
+  {
     // `02` §5.3 and `00` §5.6, both of which name this path exactly. Routed on the version
     // **id** rather than slug-and-number, because a banding is derived against one specific
     // version and the id is what every `/dataset-versions/{id}/…` route already takes.
