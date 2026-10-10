@@ -26,6 +26,7 @@ import zen
 from pydantic import BaseModel, ConfigDict
 
 from model_schema.modelling import Banding, Factor, FactorIntent, Grouping
+from model_schema.perils import LargeLossKind, PerilStructure
 from model_schema.rating import (
     AlgorithmOutput,
     Pins,
@@ -775,6 +776,63 @@ def _carry_glm_inputs(payloads: dict[str, Any], resolved: ResolvedArtifact) -> N
         _carry_glm_inputs(payloads, source)
 
 
+def _check_peril_model_calls(algorithm: RatingAlgorithm) -> None:
+    """A Peril Structure `model_call` declares exactly one produced name (`RL-1459` DP-A3-1 (c)).
+
+    The step yields the structure's risk premium, one value (FR-188). A second name would
+    receive the same value although `03` §4's example declares it a per-peril map, which no
+    runtime serves yet (FR-249 is `OQ-1460`), so the step is refused rather than served wrong.
+    """
+    for step in algorithm.steps:
+        if not isinstance(step, RatingModelCallStep) or step.peril_structure_ref is None:
+            continue
+        names = [step.produces] if isinstance(step.produces, str) else list(step.produces)
+        if len(names) > 1:
+            _raise_named(
+                "BUNDLE_COMPILE_FAILED",
+                f"step {step.step_id!r} on {step.peril_structure_ref} declares {len(names)} "
+                f"produced names {names}; a Peril Structure model_call yields one value, "
+                "the risk premium (FR-222, FR-249)",
+            )
+
+
+async def _resolve_peril_components(
+    structure_ref: ArtifactRef,
+    payload: dict[str, Any],
+    resolver: ArtifactResolver,
+    resolved_pins: Mapping[str, ResolvedArtifact],
+) -> dict[str, ResolvedArtifact]:
+    """Resolve and maturity-check a pinned Peril Structure's component models (FR-240, FR-20).
+
+    Each distinct component ref of `frequency_model`, `severity_model` and
+    `burning_cost_model` is resolved once, in peril order, and returned under `str(ref)`; a
+    component that is also pinned directly reuses the pin loop's result. A `separate_model`
+    peril is refused first (`RL-1459` DP-A3-2 (a)): `assemble_risk_premium` cannot restore it.
+    """
+    structure = PerilStructure.model_validate(payload)
+    for peril in structure.perils:
+        if peril.large_loss.kind is LargeLossKind.SEPARATE_MODEL:
+            _raise_named(
+                "LOSS_TREATMENT_UNIMPLEMENTED",
+                f"{structure_ref} peril {peril.peril!r} uses a `separate_model` large-loss "
+                "treatment, which no scorer applies yet (FR-189, FR-240)",
+            )
+    components: dict[str, ResolvedArtifact] = {}
+    for peril in structure.perils:
+        for ref in (peril.frequency_model, peril.severity_model, peril.burning_cost_model):
+            if ref is None or str(ref) in components:
+                continue
+            resolved = resolved_pins.get(str(ref)) or await resolver.resolve(ref)
+            if resolved.status not in _APPROVED_OR_BETTER:
+                _raise_named(
+                    "PIN_NOT_APPROVED",
+                    f"{ref}, the component of peril {peril.peril!r} in {structure_ref}, is "
+                    f"{resolved.status!r}, not approved or better (FR-20, FR-240)",
+                )
+            components[str(ref)] = resolved
+    return components
+
+
 async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> Bundle:
     """Compile a pinned `RatingVersion` to a self-contained Bundle (FR-239/240).
 
@@ -819,6 +877,7 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
         _raise_named(issues[0].code, issues[0].message)
     check_model_reference_mode(version, algorithm)
     check_step_refs_pinned(algorithm, version.pins)
+    _check_peril_model_calls(algorithm)
 
     payloads: dict[str, Any] = {str(version.algorithm_ref): resolved_algorithm.payload}
     all_refs: list[ArtifactRef] = [
@@ -839,6 +898,16 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
         payloads[str(ref)] = resolved.payload
         _carry_glm_inputs(payloads, resolved)
         resolved_pins[str(ref)] = resolved
+    for ref in version.pins.models:
+        if ref.type != "peril_structure":
+            continue
+        components = await _resolve_peril_components(
+            ref, resolved_pins[str(ref)].payload, resolver, resolved_pins
+        )
+        for component_ref, component in components.items():
+            payloads[component_ref] = component.payload
+            _carry_glm_inputs(payloads, component)
+            resolved_pins.setdefault(component_ref, component)
     await _refuse_unapproved_objectives(version, payloads, resolver)
     await _refuse_control_factor_keys(version, payloads, resolver)
     _refuse_control_factor_model_calls(algorithm, resolved_pins)
