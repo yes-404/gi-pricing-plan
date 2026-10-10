@@ -1,10 +1,10 @@
 ---
-id: PL-9955
+id: PL-1599
 family: plan
 kind: map
 title: WK-1178 — FD-1589 row 8, remedy (c), slice A: an input-free marker for authored model-schema validator messages, the 96 input-free messages adopted and the 15 closed-vocabulary and 54 request-reachable interpolating messages rewritten input-free, allow-listed by pricing_core.safe_error, so the request-validation 422 keeps authored guidance and drops anything else (B1 and B2 carried to P3): single-row Work plan
 status: draft                  # draft → active → superseded | retired (§1.2a)
-created: 2026-10-10            # working id; the mint date will replace this (check 31)
+created: 2026-10-10            # original date 2026-10-10, set at the draft; minted 2026-10-10
 owner: planner
 tree: fe0b0627590307259ec6d56be7f73115cf245092
 phase: P2
@@ -15,12 +15,12 @@ corrected_by: []
 relates: [FD-1589, PL-1535, SL-1536, SL-1340, SL-1557, SL-1559]
 ---
 
-# PL 9955 (working id) — WK-1178: FD-1589 row 8, remedy (c), single-row Work plan
+# PL-1599 — WK-1178: FD-1589 row 8, remedy (c), single-row Work plan
 
 > **For agentic workers:** this is a **single-row WK-1178 Work plan** under Lean P2 L5, in the
 > form of `PL-1535` and `PL-1574`: WK-1178 has no map plan, so this is one row, the slice
-> SL 9956 (working id), cut on this file's branch. Its `LG-` quotes the row as its scope.
-> **DP-9 is ruled: SL 9956 is slice A, and this plan's scope is slice A only.** B1 and B2 are
+> SL-1600, cut on this file's branch. Its `LG-` quotes the row as its scope.
+> **DP-9 is ruled: SL-1600 is slice A, and this plan's scope is slice A only.** B1 and B2 are
 > carried to P3 (§"Scope"; their site lists are in Appendix A). REQUIRED SUB-SKILL for the executor:
 > subagent-driven-development (recommended) or executing-plans. The executor also binds
 > `python-test` (the `req` marker, broken-input proofs), `test-driven-development` (every red
@@ -30,7 +30,7 @@ relates: [FD-1589, PL-1535, SL-1536, SL-1340, SL-1557, SL-1559]
 > [`README.md`](README.md)'s five unchecked conventions; and is spawned from
 > `.claude/roles/executor.md`.
 
-*Disclosure: drafted under working ids 9955 (this plan) and 9956 (its slice row), both reserved
+*Disclosure: drafted under working ids 9955 (this plan) and 9956 (its slice row), minted as PL-1599 and SL-1600 on 2026-10-10 in the D8b batch mint PR; reserved
 by the lead in `~/gi-pricing-plan.local/handover/brief-planner-remedy-c-2026-10-10.md`. The
 brief asks for "a LEAF PLAN"; this file is `kind: map`, a single-row Work plan, because
 `document-ids.md` §1.6's PL row reads "from Lean P2 L5 **one plan per Work**, slices as rows,
@@ -100,7 +100,7 @@ have. It does not block slice A: it governs the graph signals, and they go to P3
 
 ## Scope (dated 2026-10-10, on the lead's ruling of 16:07:46 BST)
 
-**This plan's scope is slice A only** (SL 9956, ≈3.0 lane-days with the 16:07:46 additions,
+**This plan's scope is slice A only** (SL-1600, ≈3.0 lane-days with the 16:07:46 additions,
 §"Size and the split"). Slice A is the infrastructure (the marker, the guards, the allow-list,
 the 422 sink, the spec paragraph), the 96 input-free messages adopted unchanged, the 15
 closed-vocabulary messages, and all 54 request-reachable free messages rewritten. **B1** is the
@@ -108,7 +108,7 @@ closed-vocabulary messages, and all 54 request-reachable free messages rewritten
 in system-produced models. **B1 and B2 moved to P3 by the lead's ruling of 2026-10-10 16:07:46
 BST** (DP-9). Their site lists are kept in Appendix A, by `file:Class.validator`, so P3 can plan
 from them. The five graph signals go with B1 (DP-8, DP-10). A dated P3 row owned by WK-1178,
-SL 9958 (working id, reserved by the lead), records B1 and B2 on the roadmap. It is not a cut-ladder rung: B1 and B2 were never in the P2
+SL-1601 (drafted as working id 9958, minted in the same batch), records B1 and B2 on the roadmap. It is not a cut-ladder rung: B1 and B2 were never in the P2
 baseline. Until P3 rewrites them, the guard's exact-count `_RESIDUAL` lists their sites, and P3
 shrinks it. A stored refusal from one of them already gets input-free fixed text through DP-5's
 allow-list (`_validation_detail`). Acceptance (i), that no request-reachable raise renders
@@ -267,7 +267,7 @@ the LG; a slice that merged in between can move them.
 
 ## Acceptance Standard
 
-Every item binds slice A (SL 9956), this plan's scope (DP-9, ruled). Where an item names B1, B2
+Every item binds slice A (SL-1600), this plan's scope (DP-9, ruled). Where an item names B1, B2
 or P3, that part belongs to the P3 row. It is recorded here so P3 can plan from it, and it binds
 nothing in P2.
 
@@ -418,7 +418,7 @@ and slice A does not touch the graph signals); the frontend.
   FR-403's form-marking), so it stays out (§"Hand-off").
 
 **DP-8, DP-9 and DP-5's extension are RULED.** The source is `to-lead.md` "2026-10-10 16:07:46
-BST — RULINGS on PL 9955 re-sized (@688d639e, ≈4.8 lane-days): DP-9 = A in P2, B1/B2 to P3; DP-8
+BST — RULINGS on PL-1599 re-sized (@688d639e, ≈4.8 lane-days): DP-9 = A in P2, B1/B2 to P3; DP-8
 (b) with an identifier-pattern constraint; DP-5 extension YES". Each is quoted verbatim:
 
 - **DP-9 — RULED: A in P2, B1/B2 to P3.** *"DP-9: build A (≈2.5 lane-days: all 54
@@ -427,7 +427,7 @@ BST — RULINGS on PL 9955 re-sized (@688d639e, ≈4.8 lane-days): DP-9 = A in P
   request reaches) MOVE TO P3: they never render in a 422, and where they could surface (stored
   Job errors via _validation_detail) the DP-5 allow-list already gives them input-free fixed
   text. Their P2 value is low against P2's remaining capacity. A dated P3 row (owner WK-1178)
-  records them by count with the planner's list; PL 9955 carries a dated scope line. Not a
+  records them by count with the planner's list; PL-1599 carries a dated scope line. Not a
   cut-ladder rung (it was never in the P2 baseline)."* Scheduling, verbatim: *"A is scheduled
   after FD-1374 merges, off G2's path, before 4 Nov."* Planned in §"Scope". Appendix A is the
   planner's list.
@@ -639,7 +639,7 @@ _CONST = re.compile(r"_?[A-Z][A-Z0-9_]*")
 
 #: Plain raises still to rewrite, by (file, "Class.function"): an EXACT count. A slice that
 #: rewrites one decrements it; a new plain raise fails. Holds only sites no request body
-#: reaches (PL 9955 §"Where each of the 157 can be read"). Emptied and deleted by the last slice.
+#: reaches (PL-1599 §"Where each of the 157 can be read"). Emptied and deleted by the last slice.
 _RESIDUAL: dict[tuple[str, str], int] = {
     # filled at Task 1 Step 4 from the census, B1 and B2 entries only
 }
@@ -1228,7 +1228,7 @@ and it is reported here, not absorbed.
 (two more gates). DP-9 (d): A′ 13.9 h ≈ 2.0 · B′ 21.0 h ≈ 3.0. At half the authoring rates the
 one-slice total is still 25.8 h ≈ 3.7 lane-days, over ~2: the split does not rest on the rates.
 
-**Slice A (SL 9956)** — the marker, guards (i) and (ii) with `_RESIDUAL`, the allow-list, the
+**Slice A (SL-1600)** — the marker, guards (i) and (ii) with `_RESIDUAL`, the allow-list, the
 422, the spec paragraph, the 96, the 15 closed, the 54 422-reachable free, DP-8 (b)'s constructor and DP-5's extension.
 Acceptance 1–12; at its merge (i) holds for every 422-reachable path and `_RESIDUAL` holds the
 41 + 5 + 47 others. Its validators, by class: `Banding` 4, `Grouping` 5, `OffsetSpec`, `SplitRef`,
@@ -1269,7 +1269,7 @@ signals (DP-10 first). Acceptance 1 (shrunk `_RESIDUAL`), 2, 3, 8–10, in P3's 
 1. The FD-1374 slice (`SL-1536`, `PL-1535`) merged (it touches `errors.py`'s registry line and
    carries the row-8 revert `8842b7c5`).
 2. DP-1 to DP-7 ruled (done, 15:52:31); DP-8, DP-9 and DP-5's extension ruled (done, 16:07:46);
-   PL 9955 and SL 9956 minted; this plan `active`. DP-10 is P3's and does not gate A.
+   PL-1599 and SL-1600 minted; this plan `active`. DP-10 is P3's and does not gate A.
 3. The dispatch record carries Task 0 Step 3's check against every open model-schema slice
    (today `SL-1557`, `SL-1559`).
 4. The lead's GO.

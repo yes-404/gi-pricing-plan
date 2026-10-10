@@ -1,18 +1,20 @@
 ---
-id: FD-9957
+id: FD-1597
 family: finding
 title: The 422 FieldError field echoes a submitted dict KEY, where pricing_core.safe_error masks the same key as <key> in every stored or logged sink
-status: draft
-created: 2026-10-10
+status: active
+created: 2026-10-10            # original date 2026-10-10, set at the draft; minted 2026-10-10
 owner: auditor
 tree: fe0b0627
 corrected_by: []
 relates: [WK-1178, FD-1589, NFR-499, RL-917, FR-403]
 ---
 
-# FD-9957 — the 422 `field` echoes a submitted dict KEY
+# FD-1597 — the 422 `field` echoes a submitted dict KEY
 
-**DRAFT**, filed on `draft/fd-9957-key-echo`, no PR, at the maintainer's ruling (`to-lead.md`,
+*Disclosure: drafted under working id 9957 on `draft/fd-9957-key-echo`; minted as FD-1597 on 2026-10-10, in the D8b batch mint PR.*
+
+Filed at the maintainer's ruling (`to-lead.md`,
 "2026-10-10 15:52:31 BST — RULINGS on PL 9955 / SL 9956 (FD-1589 row 8 remedy (c),
 draft/pl-remedy-c @a8e465be) …", last paragraph): *"The 422 `field` echoing a submitted dict
 KEY: YES, one FD row in D8 (owner WK-1178), proposed severity, remedy named. Not in this slice
@@ -21,7 +23,7 @@ unless trivially inside its write set."* The weighing it rests on is the entry "
 Every line number is at `origin/main` `fe0b0627`.
 
 This is a sibling of FD-1589 row 8 (`_handle_validation_error`), not a restatement. Row 8 is about
-the `message` (`err["msg"]`) and is the subject of PL 9955 / SL 9956. This finding is about the
+the `message` (`err["msg"]`) and is the subject of PL-1599 / SL-1600. This finding is about the
 `field`, which row 8's essay does not mention and remedy (c) does not touch: the DP-5 allow-list
 governs which error TYPES render a message, not what the location string contains.
 
@@ -89,10 +91,10 @@ planner must settle, none open to a silent pick:
    15:52:31 entries refuse to ship for `msg`, at smaller scale (the location, not the message).
    Whether to accept it, or to keep the key and drop only keys the caller did not declare
    elsewhere, is the lead's DP, to come with the plan.
-3. **Placement.** Not in PL 9955's slice. The 422 helper (`errors.py`) is inside its write set,
+3. **Placement.** Not in PL-1599's slice. The 422 helper (`errors.py`) is inside its write set,
    but the change alters a rendering the slice's red-first tests and the `ModelSpecBuilderView`
    mock do not cover (DP-4 keeps `msg` byte-identical, not `field`), and point 2 needs a ruling,
-   so it is not trivial. Recommend its own row in a later WK-1178 slice, after PL 9955 / SL 9956
+   so it is not trivial. Recommend its own row in a later WK-1178 slice, after PL-1599 / SL-1600
    merges, sharing that slice's `errors.py` edit-order.
 
 ## The remedy decision — OPEN
@@ -110,7 +112,7 @@ in that entry's words:
 
 **The lead leans (c)**, because it keeps the name an actuary reads when it is one the dataset
 declared and masks the free text that is the exposure. Placement is ruled: its own later WK-1178
-slice, after SL 9956 (PL 9955's slice A) merges, per the 15:52:31 entry's "not in this slice unless
+slice, after SL-1600 (PL-1599's slice A) merges, per the 15:52:31 entry's "not in this slice unless
 trivially inside its write set". The slice's plan comes to the lead with the choice named as a
 decision point; the planner does not pick it.
 

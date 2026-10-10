@@ -1,9 +1,9 @@
 ---
-id: RL-9954
+id: RL-1596
 family: ruling
 title: RL-1519 corrected — the 03 §4.1 worked example's Peril Structure model_call declares one produced name; the per-peril output and its output step leave the example
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
-created: 2026-10-10
+created: 2026-10-10            # original date 2026-10-10, set at the draft; minted 2026-10-10
 owner: decision-maker
 tree: fe0b0627590307259ec6d56be7f73115cf245092
 phase: P2
@@ -12,16 +12,17 @@ supersedes: []
 superseded_by: ~
 corrected_by: []
 corrects: RL-1519
-relates: [RL-1519, RL-1459, FR-212, FR-249, OQ-1460, FD-9953, FD-1374, WK-1178]
+relates: [RL-1519, RL-1459, FR-212, FR-249, OQ-1460, FD-1595, FD-1374, WK-1178]
 ---
 
-# RL-9954 — RL-1519 corrected: the `03` §4.1 worked example's `s_rp` declares one produced name
+# RL-1596 — RL-1519 corrected: the `03` §4.1 worked example's `s_rp` declares one produced name
 
 *Disclosure: drafted under working id 9954, reserved by the lead (team-lead) on 2026-10-10;
-the id is minted in a later batch mint PR. `FD-9953` is cited by its working id too: it is a
-draft on `origin/draft/fd-9953-example` at `037f98498dd101f862dd15681ca3ebbdf2cf22bd`. When
-each is minted, the working id in this record, in `RL-1519`'s header and in `relates:` is
-replaced by the minted id.*
+minted as RL-1596 on 2026-10-10, in the D8b batch mint PR. `FD-1595` is minted in the same
+batch from working id 9953 (drafted on `origin/draft/fd-9953-example` at
+`037f98498dd101f862dd15681ca3ebbdf2cf22bd`). The working ids in this record, in `RL-1519`'s
+header and in `relates:` are replaced by the minted ids; the 03 §4.1 change this record
+rules is applied in the same batch (see the batch PR).*
 
 ## Ruled
 
@@ -43,10 +44,10 @@ replaced by the minted id.*
   displaces the other; `corrects: RL-1519` stays on this record. With both, `RL-1519`'s
   header reads `corrected_by: [RL-1593, <this record's minted id>]`, in that order (the
   order the two merged in).
-- **In the same commit, `RL-1519`'s header gains `corrected_by: [RL-9954]`**, the append
+- **In the same commit, `RL-1519`'s header gains `corrected_by: [RL-1596]`**, the append
   check 34 allows (`docs/process/document-ids.md` §1, the `corrected_by:` / `corrects:` lines
   of the front-matter block). Not one byte of `RL-1519`'s body changes.
-- **This discharges `FD-9953`** (working id), item 3 of the entry: "ONE FD (owner WK-1178,
+- **This discharges `FD-1595`** (working id), item 3 of the entry: "ONE FD (owner WK-1178,
   LOW: example text, no behaviour), remedy (A)". The record is the remedy (A) it names; the
   finding is discharged when this record is minted and the `03` change below is applied.
 
@@ -222,7 +223,7 @@ The violation: a `model_call` example in `docs/specs/` declares more than one pr
 1. **Applied in the docs batch D8, which merges after the FD-1374 slice** (the entry, item
    3). D8 replaces `03` §4.1's ```` ```json ```` fence, then T2 as the slice carried it, with
    the corrected example above, and adds a dated note citing this record after the fence,
-   in the house form: *(Corrected {DATE}, `RL-9954` (`FD-9953`): `s_rp`, a Peril Structure
+   in the house form: *(Corrected {DATE}, `RL-1596` (`FD-1595`): `s_rp`, a Peril Structure
    `model_call`, declared two produced names, which `RL-1459` DP-A3-1 (c) refuses; it
    declares one, and the per-peril output `peril_risk_premium` and its output step
    `s_out_peril` are removed until `OQ-1460` is decided (FR-249).)* `03` is not edited by
@@ -239,7 +240,7 @@ The violation: a `model_call` example in `docs/specs/` declares more than one pr
    `"produces": ["risk_premium_minor", "peril_risk_premium"]},` — the pre-T2 example's
    `s_rp`. The corrected `s_rp` (`["risk_premium_minor"]`, one element, no comma) does not
    match. *Violation: any hit on a `model_call` step.*
-4. **The other examples** (the entry, item 4) are `FD-9953`'s *Item 4* section: at
+4. **The other examples** (the entry, item 4) are `FD-1595`'s *Item 4* section: at
    `fe0b0627` no other two-name `model_call` example is in `docs/specs` or
    `docs/workflows`, outside `RL-1459`'s own quotation (`:94`) and `RL-1519:351`, which this
    record corrects.
@@ -259,6 +260,6 @@ The violation: a `model_call` example in `docs/specs/` declares more than one pr
   when, is the lead's; this record does not decide it. Read at that head only; if the slice
   is reworked or squash-merged, re-read before acting.
 - **The working-id form in `RL-1519`'s header.** The brief wrote `corrected_by: [RL 9954]`.
-  This record writes `[RL-9954]`, the form the precedent used and the mint turned into the
-  minted id: `origin/draft/rl-9942-corrects-rl1475` wrote `corrected_by: [RL-9942]` in
+  The draft of this record wrote `[RL-9954]`, the form the precedent used and the mint turned into the
+  minted id (here `[RL-1593, RL-1596]`, with `RL-1593` already on `main`): `origin/draft/rl-9942-corrects-rl1475` wrote `corrected_by: [RL-9942]` in
   `RL-1475`'s header (commit `634706e3`), minted as `RL-1584`.

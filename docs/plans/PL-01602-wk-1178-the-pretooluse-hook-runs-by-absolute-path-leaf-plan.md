@@ -1,10 +1,10 @@
 ---
-id: PL-9617
+id: PL-1602
 family: plan
 kind: leaf
 title: WK-1178 — the PreToolUse hook runs by absolute path, so a changed working directory cannot block every Bash call: leaf plan
 status: draft                  # draft → active → superseded | retired (§1.2a)
-created: 2026-10-05
+created: 2026-10-10            # original date 2026-10-05, set at the draft; minted 2026-10-10
 owner: planner
 tree: fe0b0627590307259ec6d56be7f73115cf245092
 phase: P2
@@ -15,11 +15,12 @@ corrected_by: []
 relates: [RL-920, RL-1263, RL-1445]
 ---
 
-# PL 9617 (working id) — WK-1178: the PreToolUse hook runs by absolute path, leaf plan
+# PL-1602 — WK-1178: the PreToolUse hook runs by absolute path, leaf plan
 
 Filed under working id 9617 (this plan) and slice working id 9618 (its `SL-` row under WK-1178 in
-[`../roadmap.md`](../roadmap.md), `draft`), both reserved by the lead. The lead mints both at the merge
-turn.
+[`../roadmap.md`](../roadmap.md), `draft`), both reserved by the lead; minted as PL-1602 and SL-1603
+on 2026-10-10 in the D8b batch mint PR (the body below was written under the working ids; where it
+says "working id" for either, read the minted id).
 
 **The backlog entry this plan discharges.** `to-lead.md` entry headed *"2026-09-30 14:54:23 BST — shell
 restored; one WK-1178 backlog item (the hook path)"*, verbatim: *"My session was locked for about 5
@@ -40,7 +41,7 @@ use -C, --dir or absolute paths"."*
 
 **Widened by** the entry headed *"2026-10-05 15:33:57 BST — #1162 amended (noted); ROUTING (a) and (b)
 ACCEPTED; the \`__all__\` wording; FILL the slots"*, routing item (b), verbatim: *"(b) ACCEPTED: the
-repository-root conftest.py (:20, :31; a bare pytest locks gate-{1,2}) goes into PL 9617's hook slice
+repository-root conftest.py (:20, :31; a bare pytest locks gate-{1,2}) goes into PL-1602's hook slice
 (#1165, WK-1178) as one added task: the bare-pytest lock takes gate-1 only, red first (a test showing a
 second bare pytest waits)."* The same entry accepts DP-1 and DP-2 (§"Decision points", "Accepted") and
 routes the `if`-filter side finding (Hand-off item 3). *(Pre-mint edit, 2026-10-05 15:37:00 BST, by the
@@ -56,7 +57,7 @@ flock -n -E 99 /tmp/slots/gate-$i\` loop names the same budget as conftest.py's 
 must name the same budget"). The skill alone would turn #1162's python CI red. The three files change
 together."* and *"DECIDED: (1) #1162 gets a plain REVERT commit of the skill fold (no force-push), so
 the skill is back to main's text, including the migrate --verify wrapper (:276, :289), which RL 9620
-:201 keeps at 2 verify slots: the executor's cut of it went past the ruling. (2) PL 9617's slice (#1165,
+:201 keeps at 2 verify slots: the executor's cut of it went past the ruling. (2) PL-1602's slice (#1165,
 WK-1178) changes the skill's GATE loop, conftest \`_SLOT_COUNT\` 2→1 and test_root_conftest together, red
 first; the gate slot only, verify untouched. (3) Until it lands, the one-gate rule holds by the lead's
 dispatch (RL 9620's obligation 5). CLAUDE.md §12's "fix a wrong skill in the same session" is met by
@@ -78,7 +79,7 @@ statically (pipes, $(…), heredocs, compound or dynamic forms, which teammates 
 anyway, and the relative path exits 2 (blocking). My own next call was a simple \`cd … && pwd\`, parsed
 and skipped. This is DOCUMENTED behaviour, not a reported bug: nothing in the docs or changelog reports
 \`if\` being ignored.
-Consequences for PL 9617 (#1165): (1) the absolute path is THE fix, and the docs' own pattern is
+Consequences for PL-1602 (#1165): (1) the absolute path is THE fix, and the docs' own pattern is
 \`"$CLAUDE_PROJECT_DIR"/…\`; (2) whether CLAUDE_PROJECT_DIR is set in TEAMMATE sessions is
 UNDOCUMENTED, so the plan's \`git rev-parse --show-toplevel\` fallback (DP-1) is required, not optional;
 (3) Task 0's probe is reframed: show a non-parseable command from a subdirectory cwd running the hook
@@ -97,7 +98,7 @@ changed.)*
 today / 19 since 3 Oct). Fix the ROOT CAUSE: build PL 9617 (absolute hook path) NOW; the cd guard is NOT
 built (deferred, conditional)"*, verbatim:
 
-> Your diagnosis: the only PreToolUse hook is invoked by a RELATIVE path. After a persisting `cd`, python exits 2 and the session locks out. That is the defect; the cd is only its trigger. PL 9617 (the absolute path, already accepted) removes it: with an absolute path, a cd no longer breaks the hook at all.
+> Your diagnosis: the only PreToolUse hook is invoked by a RELATIVE path. After a persisting `cd`, python exits 2 and the session locks out. That is the defect; the cd is only its trigger. PL-1602 (the absolute path, already accepted) removes it: with an absolute path, a cd no longer breaks the hook at all.
 > 1. BUILD PL 9617 NOW, right after the FD-1374 slice frees gate-1 and before PL 9955 A. Proof:
 >    (i) a positive control: from a seat, `cd` into a worktree subdirectory, then run a guarded command; the hook still runs (no exit 2, no lock-out);
 >    (ii) the same at main without the fix reproduces the exit 2 (red-first);
@@ -107,13 +108,13 @@ built (deferred, conditional)"*, verbatim:
 >    - It would also apply to EVERY Claude session in this repo, including the user's own: refusing cd is a tooling change the user did not ask for.
 >    - The subshell form `(cd x && cmd)` does not move the session's cwd, so refusing it would be wrong on the facts.
 >    CONDITION to revisit: if, after PL 9617 lands, a slip still WRITES OUTSIDE its worktree (the remaining harm), bring the evidence and a guard proposal, and I put it to the user.
-> 3. FD 9959 records the mechanism, the 14/19 count with its predicate, each instance, and remedy (1). It rides D8, and closes when PL 9617's slice merges with the positive control green.
+> 3. FD 9959 records the mechanism, the 14/19 count with its predicate, each instance, and remedy (1). It rides D8, and closes when PL-1602's slice merges with the positive control green.
 
-So: proofs (i), (ii) and (iii) are Acceptance 5, 5r and 10 below; **FD 9959 (working id) closes when this
-slice merges with proof (i) green** (Hand-off item 4). **Out of scope:** the `no_cd_hook.py` guard (FD 9959
+So: proofs (i), (ii) and (iii) are Acceptance 5, 5r and 10 below; **FD-1598 closes when this
+slice merges with proof (i) green** (Hand-off item 4). **Out of scope:** the `no_cd_hook.py` guard (FD-1598
 option (b)'s second half) and any refusal of `cd`; the charter no-`cd` rule in `.claude/roles/*.md` is
 untouched. **Revisit condition**, the ruling's own: a slip that still writes outside its worktree after this
-slice lands goes to the lead with the evidence and a guard proposal. FD 9959 is the draft at
+slice lands goes to the lead with the evidence and a guard proposal. FD-1598 is the draft at
 `origin/draft/fd-9959-cd-slips` @`6af324b2` (its §"The mechanism", read for this refresh, matches
 §"What happens today" below). *(Refresh 2026-10-10 by planner-pl9617, read 16:28–16:38 BST, on that entry: this
 paragraph added; the Status, Activation needs, Acceptance 5 and 10, Tasks 0, 1, 3 and 5, DP-3 and DP-4,
@@ -171,9 +172,9 @@ no test, hook, check or Claude Code session was run. Each changed fact is also m
    of 5 Oct was **not** re-run: both gate slots were held (`flock -n -E 75` rc 75 on gate-1 and gate-2 at 16:32 and again
    16:34:34 BST), and the sweep-pause rule (`planner.md`) pauses any batch. Activation need 5 re-reads at
    dispatch.
-10. **The fail-closed constraint meets FD 9959's fail-open proposal**: FD 9959 option (b) item 1 asks for
+10. **The fail-closed constraint meets FD-1598's fail-open proposal**: FD-1598 option (b) item 1 asks for
     a fail-open wrapper ("if the file is not found, exit 0, never 2"); this plan's Global Constraints say
-    fail-closed, no `[ -f … ] || exit 0`. The 16:28:30 ruling names PL 9617 ("already accepted") and does
+    fail-closed, no `[ -f … ] || exit 0`. The 16:28:30 ruling names PL-1602 ("already accepted") and does
     not rule this. New DP-4.
 
 Planned read-only: no test, no hook and no Claude Code session was run to produce this plan. Every
@@ -280,11 +281,11 @@ ruling and the lead's go with a dispatch record; 2 a lane, "disjoint from every 
 
 1. **DP-1 and DP-2 ruled — MET** (the 15:33:57 BST entry of 2026-10-05, "accepted as recommended").
 2. **DP-3 and DP-4 ruled** (new 2026-10-10; §"Decision points"). OPEN.
-3. **PL 9617 and SL 9618 minted** in D8 (the 16:28:30 entry, item 3: FD 9959 "rides D8"). By the
+3. **PL-1602 and SL-1603 minted** in D8 (the 16:28:30 entry, item 3: FD-1598 "rides D8"). By the
    16:29:07 BST split, D8a is `RL 9960` alone, so these mint in **D8b**, unless the lead assembles them
    otherwise; the plan's front matter keeps `status: draft` until the slice PR flips it.
 4. **The FD-1374 slice (SL-1536) has merged and gate-1 is free** (the 16:28:30 entry, item 1: "right after
-   the FD-1374 slice frees gate-1 and before PL 9955 A").
+   the FD-1374 slice frees gate-1 and before PL-1599 A").
 5. **Re-read at dispatch** (`docs/plans/README.md` convention 4):
    `git diff --name-only fe0b0627 origin/main -- .claude/settings.json scripts/hooks/ tests/test_retry_cap_hook.py conftest.py tests/test_root_conftest.py .claude/skills/dev-commands/SKILL.md .claude/skills/mint-and-finish/SKILL.md`.
    Any output re-derives §"What happens today" and Task 4's line numbers before Task 1. And the in-flight
@@ -295,7 +296,7 @@ ruling and the lead's go with a dispatch record; 2 a lane, "disjoint from every 
    `git -C /home/puzhenhao1989/gi-pricing-plan cat-file -e HEAD:scripts/hooks/retry_cap_hook.py` exits 0
    (§"The root checkout and the settings change").
 7. **The GO.** The maintainer's, on `handover/go-request-pl9617-2026-10-10.md`; the slice runs under L1
-   (a') (one PR: code, tests, skill clauses, the `SL 9618` status line, one `LG-`; no activation PR; this
+   (a') (one PR: code, tests, skill clauses, the `SL-1603` status line, one `LG-`; no activation PR; this
    plan was created 2026-10-05, before 8 Oct 11:51:58, so it mints as is). **The GO must also authorise
    the probe `cd`s** of Task 0 Step 4 and Task 3, each in a throwaway seat, never the executor's own
    session: they are the proof the ruling asks for, and every charter forbids a `cd` otherwise.
@@ -380,7 +381,7 @@ the named test ran and failed **for the stated cause** before the change that tu
 - **Fail-closed is kept.** A hook that cannot run still blocks; this slice removes the cause (a
   cwd-relative path), and adds no `[ -f … ] || exit 0` bypass. `F61` (`docs/findings/register.md:102`) already
   records that the layer can be bypassed; this slice adds no new way to bypass it.
-  *(2026-10-10: this constraint is DP-4's option (a); FD 9959's option (b) proposes the opposite
+  *(2026-10-10: this constraint is DP-4's option (a); FD-1598's option (b) proposes the opposite
   (fail-open). It holds unless DP-4 is ruled (b).)*
 - **No `cd` in any step**, the executor's own included.
 
@@ -462,7 +463,7 @@ two gates may run at once. `RL-1445` allows one full gate at a time. Until Task 
 | `tests/test_root_conftest.py` | `:255`, `:270-311` (rewritten in place) and `:314-325` (Task 4) | none in flight | none |
 | `.claude/skills/dev-commands/SKILL.md` | the gate loop `:161` and the gate-slot text `:180-184`, `:236-240`, `:363-364`, `Verified` refreshed (Task 4); a note of the `if` filter's documented best-effort semantics, with the link (Task 5 Step 1). Never the verify wrapper `:283`, `:296` | none in flight (#1162 reverted its fold, `381254c3`) | none |
 | `.claude/skills/mint-and-finish/SKILL.md` | `:29-30`, the reason clause "Why: the hook path is relative; a `cd` moves the guard …" only: the lock-out half is removed by this slice, the spawn-cwd half stays; the rule "Never `cd`" (`:28`) is unchanged (16:28:30 item 2); `Verified` refreshed (Task 5 Step 1). *(Row added 2026-10-10.)* | not re-swept (§"Refresh 2026-10-10" item 9) | re-read at dispatch (need 5) |
-| the slice's ledger `docs/ledgers/LG-<n>`; `docs/INDEX.md`; the `SL 9618` row's status line in `docs/roadmap.md` | added; regenerated; one line (L1 (a')) | every PR | registry, exempt |
+| the slice's ledger `docs/ledgers/LG-<n>`; `docs/INDEX.md`; the `SL-1603` row's status line in `docs/roadmap.md` | added; regenerated; one line (L1 (a')) | every PR | registry, exempt |
 
 **Re-read 2026-10-10 (planner-pl9617).** Open PRs: **0** (`gh pr list --state open`, 16:32 BST). The
 branch sweep was not re-run: both gate slots were held (§"Refresh 2026-10-10" item 9); it runs at dispatch
@@ -529,7 +530,7 @@ or reverts `.claude/settings.json` in the root from a shell outside Claude Code.
 | DP-1 | What anchors the path? | (a) `python3 "$CLAUDE_PROJECT_DIR"/scripts/hooks/retry_cap_hook.py hook`, as the backlog entry names. (b) `python3 "$(git rev-parse --show-toplevel)"/scripts/hooks/retry_cap_hook.py hook`: the checkout the cwd is in. Fails if the cwd is outside any repository (`cd /tmp`), the same lock again. (c) (a) with (b) as a fallback: `"${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}"`. | **(c)**. (a) is the form the docs give for project hook scripts, and the form this repository already uses (`planning-with-files`). But the docs do not say that a teammate's or a subagent's hook process gets the variable, and this team runs mostly as teammates. The fallback costs one expansion and covers that gap. **The fallback is required, not optional** (the 16:47:09 BST entry, consequence (2)): a Task 0 reading that the variable is set in every process kind today does not remove it, because the docs do not promise it for teammates. Under (c) the test (Acceptance 1) also runs one case with `CLAUDE_PROJECT_DIR` unset. |
 | DP-2 | **Which copy runs in a worktree?** Today the relative path resolves in the cwd, so a session working in `.claude/worktrees/<x>` runs **that worktree's** `retry_cap_hook.py`. The docs say `CLAUDE_PROJECT_DIR` "stays put" at "the project root where the session started", so a session started in the root checkout that then enters a worktree runs the **root checkout's** copy under DP-1 (a). A teammate whose process *starts* in a worktree may get the worktree as its project root (not documented; Task 0 Step 3). The root checkout is not kept on `main` (it was on `main` at `809a3794` when read today, but it has been pinned to old branches before). | (a) Accept it: the root checkout's copy runs. The script changes rarely (last changed by `71f5a220`, 2026-09-17), and both copies read the same state file (`DEFAULT_STATE_FILE` is under `~`, `:77`). (b) Anchor on the cwd's checkout first (`git rev-parse --show-toplevel`), and use `CLAUDE_PROJECT_DIR` only when that fails: the worktree's copy runs, as today, but a `cd /tmp` would then fall back. (c) Keep (a)'s command, and have the script hand off to the cwd's checkout's copy when one exists (edits the script). | **(a)**, recorded in the ledger. The hook's behaviour is one decision function; a copy that differs between checkouts is a slice changing the hook, and that slice's executor tests by absolute path (`tests/test_retry_cap_hook.py:31`), which is not affected. (b) puts the old dependence on the cwd back in, the defect this slice removes. (c) adds code for a case with no recorded failure. Task 0 records which directory `CLAUDE_PROJECT_DIR` holds in each kind of worktree session; where it is the worktree, DP-2 does not arise for that kind, and the ledger says so. |
 | DP-3 | *(New 2026-10-10.)* **Shell form or exec form?** The hooks reference now says "Prefer exec form for any hook that references a path placeholder", and exec form (`args`) has no shell. | (a) **Shell form**, as DP-1 (c) was ruled: `"command": "python3 \"${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}\"/scripts/hooks/retry_cap_hook.py hook"`, the placeholder double-quoted as the page requires for shell form. (b) **Exec form**: `"command": "python3", "args": ["${CLAUDE_PROJECT_DIR}/scripts/hooks/retry_cap_hook.py", "hook"]`. No quoting risk, but no fallback: if the variable is unset in a teammate's hook process, the path is literal or empty and every call exits 2. | **(a)**. The fallback is ruled required (the 16:47:09 BST entry, consequence (2)), exec form cannot express it, and the page still allows shell form with the placeholder quoted. Under (a) the unset-variable case is Acceptance 1's extra case. If Task 0 Step 2 shows the variable set in every process kind, (b) becomes possible later; that is not a reason to change the ruled form now. |
-| DP-4 | *(New 2026-10-10.)* **Fail-closed or fail-open when the resolved script is missing?** FD 9959 option (b) item 1 proposes fail-open ("if the file is not found, exit 0, never 2"); this plan's Global Constraints say fail-closed; the 16:28:30 ruling names PL 9617 "already accepted" and does not rule it. | (a) **Fail-closed** (as planned): a missing script blocks every Bash call, mitigated by activation need 6, Acceptance 3's existence assert and Hand-off item 6 (§"The root checkout and the settings change"). The C2 retry cap (`F61`) cannot be switched off by a missing file. (b) **Fail-open**: `P=…; [ -f "$P" ] \|\| exit 0; python3 "$P" hook`. No lock-out from a missing script; but a missing or renamed script silently turns the C2 retry-cap layer off, a new way to bypass a layer `F61` already calls bypassable, and the hook's refusals (proof (iii)) stop without any signal. | **(a)**, with the four mitigations. The failure (b) prevents has no recorded instance and needs a rename or a broken checkout; the failure (b) causes is silent. If (b) is ruled, the plan adds a stderr line on the exit-0 path and an Acceptance item proving it, and the Global Constraint changes. **Open: the lead's or the maintainer's.** |
+| DP-4 | *(New 2026-10-10.)* **Fail-closed or fail-open when the resolved script is missing?** FD-1598 option (b) item 1 proposes fail-open ("if the file is not found, exit 0, never 2"); this plan's Global Constraints say fail-closed; the 16:28:30 ruling names PL-1602 "already accepted" and does not rule it. | (a) **Fail-closed** (as planned): a missing script blocks every Bash call, mitigated by activation need 6, Acceptance 3's existence assert and Hand-off item 6 (§"The root checkout and the settings change"). The C2 retry cap (`F61`) cannot be switched off by a missing file. (b) **Fail-open**: `P=…; [ -f "$P" ] \|\| exit 0; python3 "$P" hook`. No lock-out from a missing script; but a missing or renamed script silently turns the C2 retry-cap layer off, a new way to bypass a layer `F61` already calls bypassable, and the hook's refusals (proof (iii)) stop without any signal. | **(a)**, with the four mitigations. The failure (b) prevents has no recorded instance and needs a rename or a broken checkout; the failure (b) causes is silent. If (b) is ruled, the plan adds a stderr line on the exit-0 path and an Acceptance item proving it, and the Global Constraint changes. **Open: the lead's or the maintainer's.** |
 
 **Accepted.** The entry headed *"2026-10-05 15:33:57 BST — #1162 amended (noted); ROUTING (a) and (b)
 ACCEPTED; …"*, verbatim: *"#1165 PL 9617 @fa5f4dfb: DP-1 ($CLAUDE_PROJECT_DIR with a \`git rev-parse
@@ -615,7 +616,7 @@ answer goes to the lead (Task 0 Step 5).
   copy ran (Task 0 Step 3's answer). The seat is ended from outside when done; it never writes.
 - [ ] **Step 2.** *(Added 2026-10-10.)* After the merge and the root fast-forward (Hand-off item 6), the
   same three calls in a session started from the root checkout; recorded as a dated line in the
-  ledger's build log. This is the line FD 9959's close reads (Hand-off item 4).
+  ledger's build log. This is the line FD-1598's close reads (Hand-off item 4).
 
 ### Task 4: One gate slot — the skill's gate loop, `conftest.py` and the test together, red first (Acceptance 8, 9)
 
@@ -676,7 +677,7 @@ numbers are at `fe0b0627` (refreshed 2026-10-10 from `cdaaa573`; the gate-2 stan
 
 ## Hand-off
 
-1. The lead mints PL 9617 and SL 9618 (working ids) in D8 (activation need 3), and dispatches after
+1. The lead minted PL-1602 and SL-1603 in D8b (activation need 3), and dispatches after
    activation needs 1 to 7. *(Amended 2026-10-10: was "at the merge turn … needs 1 to 3".)*
 2. ~~On merge, the "never `cd`" line that every brief carries since the 15:24:59 BST entry can be lifted.
    That is the maintainer's (by delegation) call, on the ledger's Acceptance 5 line.~~ *(Struck
@@ -694,9 +695,9 @@ numbers are at `fe0b0627` (refreshed 2026-10-10 from `cdaaa573`; the gate-2 stan
    *(Earlier pre-mint edit 2026-10-05, on the 15:33:57 BST entry: "Task 0 measures it. If it
    is a Claude Code behaviour, record it in the plan and the dev-commands skill; it is not ours to fix."
    The earlier text routed it to WK-1178 as a separate item.)*
-4. *(Added 2026-10-10.)* **FD 9959 closes when this slice merges with proof (i) green** (16:28:30 BST
+4. *(Added 2026-10-10.)* **FD-1598 closes when this slice merges with proof (i) green** (16:28:30 BST
    item 3). The slice's ledger carries Acceptance 5's seat line (Task 3 Step 1) and, after the root
-   fast-forward, Task 3 Step 2's root-started line; the lead closes FD 9959 citing both. The **revisit
+   fast-forward, Task 3 Step 2's root-started line; the lead closes FD-1598 citing both. The **revisit
    condition** (16:28:30 item 2): if, after this slice lands, a slip still writes outside its worktree,
    the lead brings the evidence and a guard proposal to the maintainer. This plan builds no guard.
 5. *(Added 2026-10-10.)* **The role files' reason clause.** Seven role files give "the session's hook path
@@ -721,7 +722,7 @@ numbers are at `fe0b0627` (refreshed 2026-10-10 from `cdaaa573`; the gate-2 stan
    someone reverts `settings.json`. Acceptance 1 forbids the copy.
 3. **Placeholders.** The command form is fixed by DP-1's ruling, stated as such. No other value is open.
 4. **Ids.** No `FR-`/`NFR-` id is cited. `RL-920`, `RL-1263` and `F61` are on `main`. This plan's own
-   ids are written as working ids, never hyphenated in prose.
+   ids were written as working ids, never hyphenated in prose, until the mint of 2026-10-10.
 5. **The added task, against routing (b) and the 15:37:35 BST DECIDED (2)–(3).** "the bare-pytest lock
    takes gate-1 only": Task 4 Step 4. "red first (a test showing a second bare pytest waits)": Task 4
    Steps 1–2, Acceptance 8, red by its cause. "changes the skill's GATE loop, conftest `_SLOT_COUNT`
@@ -737,13 +738,13 @@ numbers are at `fe0b0627` (refreshed 2026-10-10 from `cdaaa573`; the gate-2 stan
    Acceptance 5. "No "Claude Code bug" note in the skill … the skill should say so with the link":
    Task 5 Step 1, the Write set row and Hand-off item 3. The withdrawn "teammates ignore \`if\`"
    reading appears nowhere as a premise.
-7. *(Added 2026-10-10.)* **Against the 16:28:30 BST entry, item by item.** 1 "BUILD PL 9617 NOW, right
-   after the FD-1374 slice frees gate-1 and before PL 9955 A": activation need 4, and the GO request's
+7. *(Added 2026-10-10.)* **Against the 16:28:30 BST entry, item by item.** 1 "BUILD PL-1602 NOW, right
+   after the FD-1374 slice frees gate-1 and before PL-1599 A": activation need 4, and the GO request's
    order. (i) "from a seat, `cd` into a worktree subdirectory, then run a guarded command; the hook
    still runs": Acceptance 5, Task 3 Step 1. (ii) "the same at main without the fix reproduces the exit
    2 (red-first)": Acceptance 5r, Task 0 Step 4, and Task 1 Step 2's test red. (iii) "the hook still
    refuses what it refused before (its own tables unchanged)": Acceptance 10 and Acceptance 4's empty
    diff. 2 "The no_cd_hook.py guard is NOT built now": the scope paragraph at the top; no guard file is in
-   §"Write set"; the "CONDITION to revisit" is Hand-off item 4. 3 "closes when PL 9617's slice merges with
+   §"Write set"; the "CONDITION to revisit" is Hand-off item 4. 3 "closes when PL-1602's slice merges with
    the positive control green": Hand-off item 4. Every fact changed since 5 Oct carries a dated note
    where it sits, and §"Refresh 2026-10-10" lists them.

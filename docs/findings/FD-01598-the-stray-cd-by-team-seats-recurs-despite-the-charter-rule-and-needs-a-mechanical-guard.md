@@ -1,18 +1,18 @@
 ---
-id: FD-9959
+id: FD-1598
 family: finding
 title: The stray cd by team seats recurs despite the charter rule (14 recorded instances 8–10 Oct), and the fix is the root cause, the hook's relative path
-status: draft
-created: 2026-10-10
+status: active
+created: 2026-10-10            # original date 2026-10-10, set at the draft; minted 2026-10-10
 owner: auditor
 tree: fe0b0627590307259ec6d56be7f73115cf245092
 corrected_by: []
 relates: [WK-1178, RFC-895, FD-1374]
 ---
 
-# FD-9959 — the stray cd by team seats recurs; the rule is prose, so it needs a mechanism
+# FD-1598 — the stray cd by team seats recurs; the rule is prose, so it needs a mechanism
 
-*Disclosure: drafted under working id 9959; the id is minted in a later batch mint PR. Written without running any check, test or slot (auditor-fd9959's brief).*
+*Disclosure: drafted under working id 9959; minted as FD-1598 on 2026-10-10, in the D8b batch mint PR. Written without running any check, test or slot (auditor-fd9959's brief).*
 
 ## Finding
 
@@ -27,7 +27,7 @@ No instance of the 14 wrote anything outside its worktree, by each seat's own di
 - `.claude/settings.json` registers one `PreToolUse` hook, matcher `Bash`: `"command": "python3 scripts/hooks/retry_cap_hook.py hook"`, with `"if": "Bash(python3 scripts/hooks/retry_cap_hook.py record*)"`. The script path is **relative to the working directory**. `.claude/settings.local.json` holds only `"permissions": {"deny": []}`.
 - After any `cd` out of the repository root, `python3` cannot open that relative path and exits 2, which is the blocking exit code for a `PreToolUse` hook. The maintainer measured it: `cd /tmp && python3 scripts/hooks/retry_cap_hook.py hook` printed "can't open file … [Errno 2]", exit 2 ("2026-10-05 16:46:42 BST" in `to-lead.md`).
 - The `if` filter does not save a session: it is evaluated before the hook starts, but matching is best-effort, and a command Claude Code cannot parse statically (pipes, `$(...)`, heredocs, compound forms) runs the hook regardless ("2026-10-05 16:47:09 BST" in `to-lead.md`, citing the hooks reference). So after one `cd`, the next unparseable Bash call is refused, and so is the `cd` that would undo it. The only way out was the user typing `! cd <root>` (memory `never-cd-into-a-subdir-the-hook-path-is-relative`).
-- The planned root-cause fix exists and is unbuilt: PL 9617 (working id, branch `origin/pl-9617-hook-abs-path` @ `d862c5a6`, not on `main`) with DP-1 (c) `$CLAUDE_PROJECT_DIR` plus a `git rev-parse --show-toplevel` fallback and DP-2 (a), both accepted at "2026-10-05 15:33:57 BST". It sits in the process backlog (row "2026-10-09 10:54:55 BST", "The `PreToolUse` retry-cap hook is registered by a path relative to the working directory…"). `settings.json` on `main` is still relative.
+- The planned root-cause fix exists and is unbuilt: PL-1602 (minted in the same batch as this finding from working id 9617; at the time of the first reading its plan was on branch `origin/pl-9617-hook-abs-path` @ `d862c5a6`, not on `main`) with DP-1 (c) `$CLAUDE_PROJECT_DIR` plus a `git rev-parse --show-toplevel` fallback and DP-2 (a), both accepted at "2026-10-05 15:33:57 BST". It sits in the process backlog (row "2026-10-09 10:54:55 BST", "The `PreToolUse` retry-cap hook is registered by a path relative to the working directory…"). `settings.json` on `main` is still relative.
 - Absolute path alone removes the lock-out. It does not remove the habit: a `cd` still moves the cwd that later spawns inherit (the 26 Sep failure), and a seat still ends up running git writes from the wrong tree.
 
 ### The instances (every one read in its source; stamps are BST from the record)
@@ -59,7 +59,7 @@ Source for the numbered rows: the process-backlog rows "2026-10-09 10:54:55 BST"
 
 **Limit of this evidence.** Every row is a self-disclosure. Nothing detects an undisclosed `cd`, so 14 is a floor. A mechanical guard also fixes this: it can count refusals.
 
-## Ruled (2026-10-10 16:28:30 BST) — the remedy is PL 9617; the `cd` guard is not built
+## Ruled (2026-10-10 16:28:30 BST) — the remedy is PL-1602; the `cd` guard is not built
 
 The lead's entry "2026-10-10 16:28:30 BST — RULING: FD 9959 (cd slips, MEDIUM, 14 today / 19 since 3 Oct). Fix the ROOT CAUSE: build PL 9617 (absolute hook path) NOW; the cd guard is NOT built (deferred, conditional)" in `to-lead.md` rules, in its words:
 
@@ -68,7 +68,7 @@ The lead's entry "2026-10-10 16:28:30 BST — RULING: FD 9959 (cd slips, MEDIUM,
 - "CONDITION to revisit: if, after PL 9617 lands, a slip still WRITES OUTSIDE its worktree (the remaining harm), bring the evidence and a guard proposal, and I put it to the user."
 - "FD 9959 records the mechanism, the 14/19 count with its predicate, each instance, and remedy (1). It rides D8, and closes when PL 9617's slice merges with the positive control green."
 
-So the remedy is option (b0) below, built as PL 9617 / SL 9618 (minted in the same batch as this finding); options (a) and (b)'s guard are not built, and the "Remedy" section that follows is kept as the proposal the ruling answered. The three sub-rulings it asked for (subshell, no `if` filter, fail-open) fall with the guard, except the fail-open wrapper, which PL 9617's DP-3 (adopted at "2026-10-10 16:40:33 BST", the shell form with a `$CLAUDE_PROJECT_DIR`-or-`git rev-parse --show-toplevel` fallback) carries.
+So the remedy is option (b0) below, built as PL-1602 / SL-1603 (minted in the same batch as this finding); options (a) and (b)'s guard are not built, and the "Remedy" section that follows is kept as the proposal the ruling answered. The three sub-rulings it asked for (subshell, no `if` filter, fail-open) fall with the guard, except the fail-open wrapper, which PL-1602's DP-3 (adopted at "2026-10-10 16:40:33 BST", the shell form with a `$CLAUDE_PROJECT_DIR`-or-`git rev-parse --show-toplevel` fallback) carries.
 
 ## Remedy — a proposal for the maintainer's ruling (answered by the ruling above)
 
@@ -81,9 +81,9 @@ A second `PreToolUse` entry, matcher `Bash`, running a new `scripts/hooks/no_cd_
 - Misses: everything below, and it is itself a relative-path hook, so one `cd` that reaches the shell by a form it misses leaves the same total lock-out as today.
 - Verdict: not enough alone.
 
-### Option (b) — absolute hook paths (PL 9617) plus the guard — **recommended**
+### Option (b) — absolute hook paths (PL-1602) plus the guard — **recommended**
 
-1. Both hook commands become cwd-independent: `python3 "${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}/scripts/hooks/<hook>.py"`, which is PL 9617's accepted DP-1 (c). Wrap it fail-open: if the file is not found, exit 0, never 2. Reason: DP-2 (a) runs the root checkout's copy in a worktree, the root checkout is pinned to an older branch (memory `the-root-checkout-is-pinned-to-an-old-branch`), and a missing new script must not brick every session. `CLAUDE_PROJECT_DIR` in teammate sessions is undocumented (PL 9617 Task 0 measures it); the fallback fails outside any repository, so the fail-open wrapper is required, not optional.
+1. Both hook commands become cwd-independent: `python3 "${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}/scripts/hooks/<hook>.py"`, which is PL-1602's accepted DP-1 (c). Wrap it fail-open: if the file is not found, exit 0, never 2. Reason: DP-2 (a) runs the root checkout's copy in a worktree, the root checkout is pinned to an older branch (memory `the-root-checkout-is-pinned-to-an-old-branch`), and a missing new script must not brick every session. `CLAUDE_PROJECT_DIR` in teammate sessions is undocumented (PL-1602 Task 0 measures it); the fallback fails outside any repository, so the fail-open wrapper is required, not optional.
 2. The guard registers with **no `if` filter**. The filter is best-effort and a refusal rule wants to run on every Bash call; the cost is one short Python start per call.
 3. Detection, in `no_cd_hook.py`: read `tool_input.command`; drop heredoc bodies; tokenise with `shlex` using `punctuation_chars=True`; split into simple commands at `;`, `&`, `|`, newline, `(`, `)`, `{`, `}`; in each, skip leading `NAME=value` words and the words `builtin`, `command`, `exec`, `time`; refuse if the next word is `cd`, `pushd` or `popd`. Exit 2 with a stderr message naming the replacements (`git -C <path>`, `uv run --directory <path>`, `pnpm --dir <path>`, `env -C <path> <cmd>`, absolute paths). On any internal error or unparseable input: exit 0.
 4. Subshells are refused too: `( cd x && cmd )` does not persist, but the charter says "never `cd` in any form" and row 12 was a subshell. A subshell `cd` costs a rewrite to `-C`; refusing it keeps the rule one sentence long. The maintainer may rule the other way (allow `( cd … )`), which removes only the paren case from the split list.
@@ -93,7 +93,7 @@ A second `PreToolUse` entry, matcher `Bash`, running a new `scripts/hooks/no_cd_
 - Lives in: `scripts/hooks/no_cd_hook.py` (new), `.claude/settings.json` (both command strings and the new entry), `tests/test_no_cd_hook.py` (new), a skills note in `.claude/skills/dev-commands` replacing the prose caution. Applies to every session in the project, lead and user included, because project settings cannot tell a seat from a lead; the lead's own rule is the same.
 - Proof on deliberately broken input, in the style of `tests/test_retry_cap_hook.py`: (i) run the real script as a subprocess, with the subprocess `cwd=` set to `/tmp` and to `docs/` (no shell `cd` anywhere), feeding fixture JSON — red first, against `main`'s relative registration, to show the lock-out; (ii) a refuse table of at least 25 command strings built from the recorded shapes plus the variants above, each asserted exit 2; (iii) an allow table of at least 15 near-misses (`git -C x status`, `uv run --directory x pytest`, `pnpm --dir frontend test`, `env -C x ls`, `echo cd x`, `grep -n 'cd ' f`, `git commit -m "cd x"`, `abcd x`, a heredoc whose body has a line `cd x`), each asserted exit 0; (iv) malformed JSON, empty command and a missing script file each exit 0; (v) a positive control that deletes the refusal branch and confirms (ii) fails, so the table is shown to bite; (vi) a registration test that reads `.claude/settings.json` and asserts every hook command string is absolute or `$CLAUDE_PROJECT_DIR`-anchored.
 
-### Option (b0) — PL 9617 alone (absolute path, no guard)
+### Option (b0) — PL-1602 alone (absolute path, no guard)
 
 Removes the total lock-out, the worst consequence. It leaves the habit, the spawn-cwd contamination (26 Sep) and the cwd confusion in git writes. It is already ruled and unbuilt. Keep it as the fallback if the maintainer declines the guard; it is also the first half of (b), so it is not wasted.
 
@@ -103,8 +103,8 @@ The no-`cd` line has been the first checklist item since 8 Oct and a charter rul
 
 ### Recommendation
 
-Option (b), as one slice under WK-1178 that absorbs PL 9617 (it already carries the ruled DP-1 and DP-2) and adds the guard, with the (i)–(vi) proof above. For the maintainer's ruling: (1) refuse subshell `cd` too (recommended yes); (2) no `if` filter on the guard (recommended yes); (3) fail-open wrapper (recommended yes). Not measured by this audit, to be settled by PL 9617's Task 0 and the red-first probe: whether `CLAUDE_PROJECT_DIR` is set in teammate sessions, and whether `!` bypasses the hook.
+Option (b), as one slice under WK-1178 that absorbs PL-1602 (it already carries the ruled DP-1 and DP-2) and adds the guard, with the (i)–(vi) proof above. For the maintainer's ruling: (1) refuse subshell `cd` too (recommended yes); (2) no `if` filter on the guard (recommended yes); (3) fail-open wrapper (recommended yes). Not measured by this audit, to be settled by PL-1602's Task 0 and the red-first probe: whether `CLAUDE_PROJECT_DIR` is set in teammate sessions, and whether `!` bypasses the hook.
 
 ## Disposition
 
-Register decision: **fix before close with an owner**. Owner of the finding: the lead's process (WK-1178 carries the hook limb through PL 9617). Severity proposed MEDIUM: none of the 14 caused harm, but the rule fails at a steady rate, the failure it guards against has already locked sessions and failed a gate, and a prose rule has been shown not to hold. Event that discharges it, as ruled at "2026-10-10 16:28:30 BST": the merge of PL 9617's slice (SL 9618) with proof (i), the positive control, green. The guard is not part of it; the revisit condition above is the only route back to one. The lead gives the verdict.
+Register decision: **fix before close with an owner**. Owner of the finding: the lead's process (WK-1178 carries the hook limb through PL-1602). Severity proposed MEDIUM: none of the 14 caused harm, but the rule fails at a steady rate, the failure it guards against has already locked sessions and failed a gate, and a prose rule has been shown not to hold. Event that discharges it, as ruled at "2026-10-10 16:28:30 BST": the merge of PL-1602's slice (SL-1603) with proof (i), the positive control, green. The guard is not part of it; the revisit condition above is the only route back to one. The lead gives the verdict.

@@ -1,18 +1,18 @@
 ---
-id: FD-9953
+id: FD-1595
 family: finding
 title: 03 §4.1's worked example gives a Peril Structure model_call two produced names, which RL-1459 DP-A3-1 (c) refuses at compile
-status: draft
-created: 2026-10-10
+status: active
+created: 2026-10-10            # original date 2026-10-10, set at the draft; minted 2026-10-10
 owner: auditor
 tree: fe0b0627590307259ec6d56be7f73115cf245092
 corrected_by: []
 relates: [WK-1178, RL-1459, RL-1519, FR-222, FR-249, OQ-1460, FD-1374]
 ---
 
-# FD-9953 — 03 §4.1's example contradicts DP-A3-1 (c)
+# FD-1595 — 03 §4.1's example contradicts DP-A3-1 (c)
 
-*Disclosure: drafted under working id 9953; the id is minted in a later batch mint PR.*
+*Disclosure: drafted under working id 9953; minted as FD-1595 on 2026-10-10, in the D8b batch mint PR. Its correcting record, drafted as working id 9954, is minted as RL-1596 in the same batch.*
 
 **Filed** (drafted on `draft/fd-9953-example`) at the ruling entry in `to-lead.md`, "2026-10-10
 14:43:15 BST — RULING: 03 §4.1 worked example vs A-3's compile. The SPEC EXAMPLE is wrong;
@@ -49,7 +49,7 @@ two names with `consumes`, plus `s_out_peril`. It was written before A-3 merged 
 ## How found
 
 The FD-1374 slice (`origin/sl-1536-fd1374-dp-f35-1`, tip `4b53b62a94ed6b5ff328ea1f6172c1bd3a381c8c`,
-ledger `LG-9441` at `docs/ledgers/LG-09441-…` on that branch) adds
+ledger drafted under working id 9441 on that branch, minted as `LG-1594` and now on `main` at `e4753e47`) adds
 `packages/pricing-core/tests/test_rating_declared_reads.py::test_the_03_example_validates_in_full_and_compiles`,
 which runs the first JSON block after `### 4.1 ` through `compile_bundle`. On that branch the
 `s_rp` names are at `docs/specs/03-rating-engine.md:299` and `s_out_peril` at `:329`.
@@ -60,7 +60,7 @@ known-wrong text pending this FD.
 ## Severity and remedy
 
 **LOW**: example text, no behaviour (the ruling entry, item 3). Remedy (A): a correcting RL
-(working id RL 9954; not written here) with `corrects: RL-1519`, the worked example only, that
+(`RL-1596`, minted in the same batch as this finding) with `corrects: RL-1519`, the worked example only, that
 re-states the example with one produced name on `s_rp`, citing `RL-1459` DP-A3-1 (c) and FR-249.
 `RL-1519` gains `corrected_by:` in its front matter only. The `peril_risk_premium` declared
 output, and `s_out_peril` on the carrying text, are for that RL to settle against `OQ-1460`
