@@ -151,13 +151,9 @@ async def test_bulk_uplift_records_the_operation_and_inherits_seed_lineage(
     assert operation is not None
     assert operation.kind == "uplift_table"
     assert operation.parameters.percentage == Decimal("0.10")
-    assert operation.applied_to == ArtifactRef(
-        type="rate_table", slug=slug, version=1
-    )
+    assert operation.applied_to == ArtifactRef(type="rate_table", slug=slug, version=1)
     assert operation.result.changed_cells == 3
-    assert operation.result.new_version == ArtifactRef(
-        type="rate_table", slug=slug, version=2
-    )
+    assert operation.result.new_version == ArtifactRef(type="rate_table", slug=slug, version=2)
     assert wire.seeded_from is not None
     assert wire.seeded_from.model_dump(mode="json") == baseline
 
@@ -203,9 +199,7 @@ async def test_cells_spill_to_parquet_above_the_workspace_threshold(
 
     content = await blob_store.read(BlobRef.model_validate(version_row.cells))
     frame = pl.read_parquet(io.BytesIO(content))
-    cells = {
-        row["driver_age_band"]: row["relativity"] for row in frame.to_dicts()
-    }
+    cells = {row["driver_age_band"]: row["relativity"] for row in frame.to_dicts()}
     assert cells == {
         "17-20": "2.112",
         "21-24": "1.551",
@@ -272,9 +266,7 @@ async def test_a_parquet_baseline_feeds_a_bulk_operation(
     version_row = await _version_row(database, workspace_id, slug, 3)
     content = await blob_store.read(BlobRef.model_validate(version_row.cells))
     frame = pl.read_parquet(io.BytesIO(content))
-    cells = {
-        row["driver_age_band"]: row["relativity"] for row in frame.to_dicts()
-    }
+    cells = {row["driver_age_band"]: row["relativity"] for row in frame.to_dicts()}
     assert cells == {"17-20": "2", "21-24": "1.551", "25-29": "1.232"}
 
 
@@ -426,12 +418,7 @@ async def test_import_confirmed_persists_the_verdict_and_inherits_lineage(
     slug = _table_slug()
     seeded = await _seed(database, workspace_id, principal, family, slug, blob_store)
     baseline = seeded.seeded_from.model_dump(mode="json")
-    content = (
-        b"driver_age_band,relativity\n"
-        b"17-20,1.9200\n"
-        b"21-24,1.4500\n"
-        b"25-29,1.1200\n"
-    )
+    content = b"driver_age_band,relativity\n17-20,1.9200\n21-24,1.4500\n25-29,1.1200\n"
 
     wire = await svc.import_confirmed(
         database,
@@ -458,9 +445,7 @@ async def test_import_confirmed_persists_the_verdict_and_inherits_lineage(
     assert verdict.filename == "rate-change-2026-08.csv"
     assert verdict.content_sha256 == hashlib.sha256(content).hexdigest()
     assert verdict.round_trip == "passed"
-    assert verdict.applied_to == ArtifactRef(
-        type="rate_table", slug=slug, version=1
-    )
+    assert verdict.applied_to == ArtifactRef(type="rate_table", slug=slug, version=1)
     assert wire.seeded_from is not None
     assert wire.seeded_from.model_dump(mode="json") == baseline
 
@@ -479,12 +464,7 @@ async def test_import_confirmed_obeys_the_threshold(
     family = f"mf-{uuid4().hex[:8]}"
     slug = _table_slug()
     await _seed(database, workspace_id, principal, family, slug, blob_store)
-    content = (
-        b"driver_age_band,relativity\n"
-        b"17-20,1.9200\n"
-        b"21-24,1.4500\n"
-        b"25-29,1.1200\n"
-    )
+    content = b"driver_age_band,relativity\n17-20,1.9200\n21-24,1.4500\n25-29,1.1200\n"
 
     wire = await svc.import_confirmed(
         database,
@@ -514,12 +494,7 @@ async def test_diff_needs_job_flags_a_diff_touching_parquet(
     slug = _table_slug()
     await _seed(database, workspace_id, principal, family, slug, blob_store)
     await _set_threshold(database, workspace_id, 2)
-    content = (
-        b"driver_age_band,relativity\n"
-        b"17-20,1.9200\n"
-        b"21-24,1.4500\n"
-        b"25-29,1.1200\n"
-    )
+    content = b"driver_age_band,relativity\n17-20,1.9200\n21-24,1.4500\n25-29,1.1200\n"
     await svc.import_confirmed(
         database,
         workspace_id,
@@ -546,22 +521,15 @@ async def test_diff_needs_job_flags_a_diff_touching_parquet(
 
     # version 2 is parquet, version 3 is rows again.
     assert (
-        await svc.diff_needs_job(
-            database, workspace_id, slug, version=2, against="previous"
-        )
+        await svc.diff_needs_job(database, workspace_id, slug, version=2, against="previous")
         is True
     )
     assert (
-        await svc.diff_needs_job(
-            database, workspace_id, slug, version=3, against="previous"
-        )
+        await svc.diff_needs_job(database, workspace_id, slug, version=3, against="previous")
         is True
     )
     assert (
-        await svc.diff_needs_job(
-            database, workspace_id, slug, version=3, against="seed"
-        )
-        is False
+        await svc.diff_needs_job(database, workspace_id, slug, version=3, against="seed") is False
     )
 
 
@@ -572,12 +540,7 @@ async def test_diff_materialises_parquet_cells_to_the_same_artifact(
     """The Job's compute answers the same artifact as the row-backed 200 — storage
     decides latency and status, never the maths (FR-232's 'same API')."""
     family = f"mf-{uuid4().hex[:8]}"
-    content = (
-        b"driver_age_band,relativity\n"
-        b"17-20,1.9200\n"
-        b"21-24,1.4500\n"
-        b"25-29,1.1200\n"
-    )
+    content = b"driver_age_band,relativity\n17-20,1.9200\n21-24,1.4500\n25-29,1.1200\n"
 
     rows_slug = _table_slug()
     await _seed(database, workspace_id, principal, family, rows_slug, blob_store)
@@ -648,3 +611,46 @@ async def test_persisting_a_derived_version_without_rows_is_an_internal_error() 
         )
     assert exc.value.code == "INTERNAL_ERROR"
     assert exc.value.status_code == 500
+
+
+@pytest.mark.req("FR-229")
+async def test_manual_edit_preview_without_rows_is_an_internal_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`manual_edit_preview` derives a rows-form version from a rows-form base. When
+    `_edit_derived` hands back a version without `rows`, the guard is an explicit
+    PlatformError with static text (NFR-499), not an `assert` that `python -O` removes."""
+    parquet = RateTableVersion(
+        slug=_table_slug(),
+        version=2,
+        rateable=True,
+        storage="parquet",
+        keys=[{"name": "driver_age_band", "type": "string"}],
+        value={"name": "relativity", "type": "relativity", "unit": "ratio"},
+        cells=BlobRef(sha256="a" * 64, bytes=1, media_type="application/parquet"),
+        change_note="crafted",
+    )
+
+    async def _no_rows(*_args: Any, **_kwargs: Any) -> tuple[Any, Any, Any, Any]:
+        return None, None, parquet, parquet
+
+    class _Uow:
+        async def __aenter__(self) -> None:
+            return None
+
+        async def __aexit__(self, *_exc: object) -> None:
+            return None
+
+    class _Database:
+        def unit_of_work(self) -> _Uow:
+            return _Uow()
+
+    monkeypatch.setattr(svc, "_edit_derived", _no_rows)
+
+    with pytest.raises(PlatformError) as exc:
+        await svc.manual_edit_preview(
+            cast(Any, _Database()), uuid4(), "any", cast(Any, None), cast(Any, None)
+        )
+    assert exc.value.code == "INTERNAL_ERROR"
+    assert exc.value.status_code == 500
+    assert "rows-only step" in exc.value.detail
