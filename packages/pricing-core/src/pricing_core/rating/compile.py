@@ -45,7 +45,7 @@ from model_schema.rating import (
 )
 from model_schema.refs import ArtifactRef
 from model_schema.sub_graphs import SubGraph, SubGraphInputPort
-from pricing_core.rating.authored import authored_expression_fields
+from pricing_core.rating.authored import STAMPED_DATE, authored_expression_fields
 from pricing_core.rating.inline import inline_mounts, mounted_fragments
 from pricing_core.rating.ladder import RUNG_ORDER, output_steps_by_name, rung_output_name
 from pricing_core.rating.references import referenced_names
@@ -397,8 +397,6 @@ def _check_input_bound_scale(algo: RatingAlgorithm) -> list[ValidationIssue]:
     return issues
 
 
-#: The date `score_one` and `score_batch` stamp into every engine context (`score.py`).
-STAMPED_DATE = "effective_date"
 
 
 def _check_lookup_as_at(algo: RatingAlgorithm) -> list[ValidationIssue]:

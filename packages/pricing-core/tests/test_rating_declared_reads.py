@@ -44,7 +44,10 @@ def test_referenced_names_reads_every_field_a_step_evaluates() -> None:
     assert referenced_names(quoted) == {"channel"}
     lookup = {"type": "lookup", "consumes": ["postcode_outcode"], "produces": "area",
               "key_expr": ["postcode_outcode"], "as_at": "effective_date"}
-    assert referenced_names(lookup) == {"postcode_outcode", "effective_date"}
+    # `as_at: "effective_date"` is the stamped date, not a counted read (ruling 15:40:36 BST) ...
+    assert referenced_names(lookup) == {"postcode_outcode"}
+    # ... any other `as_at` is.
+    assert referenced_names({**lookup, "as_at": "inception"}) == {"postcode_outcode", "inception"}
 
 
 def _undeclared_clamp_payload() -> dict[str, Any]:
@@ -238,3 +241,32 @@ def test_a_mounted_fragment_passes_the_declared_reads_check_once_inlined() -> No
     flagged = [i for i in validate_algorithm(inline_mounts(_parent(), {ref: broken}))
                if i.code == UNDECLARED_READ_CODE]
     assert [i.step_id for i in flagged] == ["m_ncd__s_ladder"]
+
+
+def _undeclared_issue_steps(as_at: str) -> list[str]:
+    from test_rating_lookup_as_at import _algo
+
+    algorithm = RatingAlgorithm.model_validate(_algo(as_at=as_at))
+    return [i.step_id for i in validate_algorithm(algorithm) if i.code == UNDECLARED_READ_CODE]
+
+
+@pytest.mark.req("FR-246")
+def test_a_lookup_as_at_the_stamped_date_declares_nothing() -> None:
+    """Ruling 2026-10-10 15:40:36 BST: `as_at: "effective_date"` is the quote's stamped date
+    (FR-221, RL-1446), not a read FR-246 counts. Red before the exemption (s_area flagged)."""
+    assert _undeclared_issue_steps("effective_date") == []
+
+
+@pytest.mark.req("FR-246")
+def test_a_lookup_as_at_any_other_undeclared_name_is_still_refused() -> None:
+    """The guard on the exemption's width: any other `as_at` is a read and must be declared.
+    Green before and after the exemption."""
+    assert _undeclared_issue_steps("inception") == ["s_area"]
+
+
+@pytest.mark.req("FR-246")
+def test_an_expression_reading_the_stamped_date_as_a_value_still_declares_it() -> None:
+    """The narrowing: only the lookup's `as_at` is exempt; an expression reading
+    `effective_date` as a value is a read."""
+    expr = {"type": "expression", "consumes": [], "produces": "c", "expr": "effective_date"}
+    assert referenced_names(expr) == {"effective_date"}

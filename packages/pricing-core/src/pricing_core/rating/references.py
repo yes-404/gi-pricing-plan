@@ -12,7 +12,7 @@ import re
 from collections.abc import Mapping
 from typing import Any
 
-from pricing_core.rating.authored import EXPRESSION_FIELDS
+from pricing_core.rating.authored import EXPRESSION_FIELDS, STAMPED_DATE
 
 #: A ZEN expression's string literals, removed before identifiers are read.
 _STRING = re.compile(r"'(?:[^'\\]|\\.)*'|\"(?:[^\"\\]|\\.)*\"")
@@ -40,7 +40,10 @@ def referenced_names(node: Mapping[str, Any]) -> frozenset[str]:
         if isinstance(value, Mapping):
             value = list(value.values())
         for text in [value] if isinstance(value, str) else value or []:
-            if isinstance(text, str):  # an absent clamp bound is None
-                names |= _names_in(text)
+            if not isinstance(text, str):  # an absent clamp bound is None
+                continue
+            if field == "as_at" and text == STAMPED_DATE:
+                continue  # the quote's stamped date: FR-221 declares no one (FR-246 clarified)
+            names |= _names_in(text)
     names |= set((node.get("feature_map") or {}).keys())
     return frozenset(names)
