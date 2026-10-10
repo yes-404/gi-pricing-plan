@@ -171,12 +171,15 @@ def test_a_rating_version_pinning_an_approved_peril_structure_compiles_and_score
     approver = loop.run_until_complete(_approver(grant, workspace_id))
     assert _decide(client, request_id, approver).status_code == 200
 
-    body = _glm_algorithm("model:placeholder@1", {"area": "area"})
+    # The component is a log-exposure GLM: its offset column travels in the `feature_map` too
+    # (`PL-1464` DP-2 (b)), or the scorer reports `MODEL_OFFSET_MISSING`.
+    body = _glm_algorithm(
+        "model:placeholder@1", {"area": "area", "exposure_years": "exposure_years"}
+    )
     for step in body["steps"]:
         if step["type"] == "model_call":
             step.pop("model_ref")
             step["peril_structure_ref"] = structure_ref
-            step["consumes"] = ["area"]
     created = client.post("/api/v1/rating-algorithms", json=body, headers=admin_headers)
     assert created.status_code == 201, created.text
     row = loop.run_until_complete(

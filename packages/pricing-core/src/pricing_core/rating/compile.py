@@ -847,7 +847,7 @@ def peril_component_refs(structure: PerilStructure) -> list[ArtifactRef]:
     return refs
 
 
-def _check_peril_model_calls(algorithm: RatingAlgorithm) -> None:
+def _refuse_peril_model_calls(algorithm: RatingAlgorithm) -> None:
     """A Peril Structure `model_call` declares exactly one produced name (`RL-1459` DP-A3-1 (c)).
 
     The step yields the structure's risk premium, one value (FR-188). A second name would
@@ -965,7 +965,7 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
         _raise_named(issues[0].code, issues[0].message)
     check_model_reference_mode(version, inlined)
     check_step_refs_pinned(inlined, pins)
-    _check_peril_model_calls(inlined)
+    _refuse_peril_model_calls(inlined)
 
     payloads: dict[str, Any] = {str(version.algorithm_ref): resolved_algorithm.payload}
     all_refs: list[ArtifactRef] = [
