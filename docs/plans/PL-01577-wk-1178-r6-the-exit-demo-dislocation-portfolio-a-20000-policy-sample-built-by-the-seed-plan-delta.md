@@ -12,7 +12,7 @@ work: WK-1178
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [PL-1544, PL-1525, PL-1371, SL-1526, SL-1527, WF-699, FR-263, FR-266, RL-1521, LG-1417, PL-1574, FD-9446, FD-1576]
+relates: [PL-1544, PL-1525, PL-1371, SL-1526, SL-1527, WF-699, FR-263, FR-266, RL-1521, LG-1417, PL-1574, FD-1573, FD-1576]
 ---
 
 # PL-1577 — WK-1178, R6: the dislocation portfolio is a 20,000-policy sample (delta to PL-1544)
@@ -127,7 +127,7 @@ and D7 output and `examples/fremtpl2/README.md` say "20,000-policy sample" and p
 `PL-1574` (full-book dislocation cost) and `FD-1576` (full-book attribution cost). No demo text
 states or implies a full-book rate.
 
-**Task 4 — the re-rates (condition 5), the auditors' and the lead's.** `FD-9446` → LOW,
+**Task 4 — the re-rates (condition 5), the auditors' and the lead's.** `FD-1573` → LOW,
 `FD-1576` → MEDIUM. The full-book costs stay owned, measured targets: dislocation by `PL-1574`;
 attribution by `FD-1576`'s owner, **to be named by the lead** (open). Neither is a demo-day step.
 
@@ -142,5 +142,5 @@ attribution by `FD-1576`'s owner, **to be named by the lead** (open). Neither is
    portfolio version's validated row count.
 4. `git grep -n -i 'sample' -- examples/fremtpl2/README.md examples/fremtpl2/journey.py` shows
    the condition 2 text naming `PL-1574` and `FD-1576`.
-5. `FD-9446` and `FD-1576` carry the re-rates, and `FD-1576`'s full-book target names an owner.
+5. `FD-1573` and `FD-1576` carry the re-rates, and `FD-1576`'s full-book target names an owner.
 6. `python3 scripts/audit-docs.py` passes on the batch tree that carries this file.

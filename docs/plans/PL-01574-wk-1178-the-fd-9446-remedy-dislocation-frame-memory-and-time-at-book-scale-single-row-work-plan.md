@@ -2,7 +2,7 @@
 id: PL-1574
 family: plan
 kind: map
-title: WK-1178 — the FD 9446 remedy, dislocation_frame's memory and time at book scale (a profiling spike first, then the measured fix): single-row Work plan
+title: WK-1178 — the FD-1573 remedy, dislocation_frame's memory and time at book scale (a profiling spike first, then the measured fix): single-row Work plan
 status: draft                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-10            # original date 2026-10-10, set at the draft; minted 2026-10-10
 owner: planner
@@ -15,7 +15,7 @@ corrected_by: []
 relates: [PL-1371, PL-1535, SL-1387, SL-1388, SL-1526, SL-1527]
 ---
 
-# PL-1574 — WK-1178: the FD 9446 remedy, single-row Work plan
+# PL-1574 — WK-1178: the FD-1573 remedy, single-row Work plan
 
 *Disclosure: drafted under working ids 9447 (this plan) and 9448 (its slice row); minted as PL-1574 and SL-1575 on 2026-10-10, in the D5 batch mint PR.*
 
@@ -40,14 +40,14 @@ labelled *derived*.
 **Draft, not frozen.** The three decision points (DP-1 to DP-3) are ruled, by the maintainer's
 entry "2026-10-10 00:20:03 BST — RULINGS on the FD 9446 remedy plan (PL 9447 + SL 9448
 @5921b3dc): DP-1 (a), DP-2 (a) as a PLAN TARGET, DP-3 (a); …" [PL 9447 is minted as PL-1574, SL 9448 as SL-1575, FD 9446 as FD-1573] in `channel/to-lead.md`. Each
-ruling is quoted under its DP below. The plan does not activate until FD 9446 (working id)
+ruling is quoted under its DP below. The plan does not activate until FD-1573
 carries its severity and the R6 size (DP-2) is quoted.
 
 ## Authority
 
 - **The order**: the maintainer's entry "2026-10-10 00:08:17 BST — USER: go ahead. FD 9446 on
   the measured curve, a remedy-slice proposal, and the Friday re-baseline (after S3's merge, in
-  W3)" in `channel/to-lead.md`, item 2: *"REMEDY-SLICE PROPOSAL (for my ruling): WK-1178, owner
+  W3)" [FD 9446 is minted as FD-1573] in `channel/to-lead.md`, item 2: *"REMEDY-SLICE PROPOSAL (for my ruling): WK-1178, owner
   the lead, placed before SL-1526 in the exit-demo chain. The hypothesis to test first is memory
   per policy in score_batch (`.collect()` materialisation, frame width). Its plan opens with a
   1-hour profiling spike (py-spy or memray on 200k), not a redesign. Lane choice and the
@@ -118,7 +118,7 @@ the R6 size, which the 00:20:03 BST entry makes URGENT. It is not this plan's to
 Make the `WF-699` D6 dislocation run complete on the exit demo's portfolio within DP-2's ruled
 target (a plan acceptance target, not an NFR), by removing the cause the spike measures, without
 changing one value of `dislocation_frame`'s output. Done when SL-1575 closes on its `LG-` with
-the after-measurement beside the before-measurement, and FD 9446's register row carries the
+the after-measurement beside the before-measurement, and FD-1573's register row carries the
 fix's merge sha.
 
 ## Acceptance Standard
@@ -182,7 +182,7 @@ Under L5 a Work plan's tasks are its slice rows; this row's steps follow the tab
 
 | Order | Slice | Scope (what the `LG-` quotes) | Requirements, each id | Depends on | Lane | Size |
 |---|---|---|---|---|---|---|
-| 1 | SL-1575 — WK-1178 fix slice — FD 9446: `dislocation_frame`'s memory and time at book scale | Task 0, the 1-hour profiling spike of `dislocation_frame` at 20,000 (Python heap) and 200,000 (RSS and time), with the H1 decision rule; then, only if H1 is confirmed, Task 1: `_score_pass` retains each rung's `(value_minor, unrounded_minor)` instead of the validated `LadderRung` objects; then Task 2, the after-measurement. **Out of scope:** `score_batch`'s per-row engine evaluation (its docstring: *"This is not genuine polars streaming"*, `score.py:1186-1234`); `attribute`'s 2^K re-rates (S3's code; see DP-1); any change to `03` text | `03` §8: NFR-493 (rated, not changed); `03` §3: FR-263 (output unchanged); `03` §8: NFR-495, NFR-496 (held) | WK-673 S3 (`SL-1387`) merged, because `analysis.py` and `measure-attribution-cost.py` are its write set; FD 9446 minted with HIGH; DP-1 to DP-3 ruled | B (recommended; see Sequencing) | ≈ 1.5 lane-days, derived (see Size) |
+| 1 | SL-1575 — WK-1178 fix slice — FD-1573: `dislocation_frame`'s memory and time at book scale | Task 0, the 1-hour profiling spike of `dislocation_frame` at 20,000 (Python heap) and 200,000 (RSS and time), with the H1 decision rule; then, only if H1 is confirmed, Task 1: `_score_pass` retains each rung's `(value_minor, unrounded_minor)` instead of the validated `LadderRung` objects; then Task 2, the after-measurement. **Out of scope:** `score_batch`'s per-row engine evaluation (its docstring: *"This is not genuine polars streaming"*, `score.py:1186-1234`); `attribute`'s 2^K re-rates (S3's code; see DP-1); any change to `03` text | `03` §8: NFR-493 (rated, not changed); `03` §3: FR-263 (output unchanged); `03` §8: NFR-495, NFR-496 (held) | WK-673 S3 (`SL-1387`) merged, because `analysis.py` and `measure-attribution-cost.py` are its write set; FD-1573 minted with HIGH; DP-1 to DP-3 ruled | B (recommended; see Sequencing) | ≈ 1.5 lane-days, derived (see Size) |
 
 ### Task 0: the profiling spike (1 hour; the run is a slot job)
 
@@ -473,7 +473,7 @@ def _origin_rung(baseline: Sequence[LadderRung], candidate: Sequence[LadderRung]
   quotes the red line.
 
 - [ ] **Step 6: Commit** `fix(pricing-core): dislocation_frame retains rung values, not ladder
-  objects (FD 9446)`, with `git add` of the two files only.
+  objects (FD-1573)`, with `git add` of the two files only.
 
 ### Task 2: the after-measurement and the gate
 
@@ -522,7 +522,7 @@ the slice ends after Task 0 (≈ 0.2 lane-days) and the delta is sized from the 
   when attribution is requested: the lead's 21:41:09 status derives K=3 on the full book at
   3.1–3.7 h.
 
-**Recommendation: (a) or (b) as FD 9446's G2 quote decides, and NOT (c) in this slice.**
+**Recommendation: (a) or (b) as FD-1573's G2 quote decides, and NOT (c) in this slice.**
 `attribute` is S3's code, measured under PL-1452. Its full-book cost is a separate exit-demo
 risk. It needs its own FD and owner, which the lead raises; folding it in would double this
 slice and couple it to S3's Acceptance 20.
@@ -537,7 +537,7 @@ is quoted.
 
 **DP-2 — the budget Acceptance 3 and 5 are read against.** No spec NFR covers dislocation's
 memory. NFR-493 (`03` §8: *"Batch scoring ≥ 1 M risks/hour per worker (NFR-455), linear in
-workers."*) is a scoring rate. Which path it governs is FD 9446's to state.
+workers."*) is a scoring rate. Which path it governs is FD-1573's to state.
 - (a) Peak RSS ≤ 15.5 GiB at the demo's size (half the 31 GiB box), and wall time ≤ 60 min
   (`WF-699`'s phase table, *"D — Regression + dislocation | 30–60 min compute"*, `WF-00699`
   :150; an elapsed estimate, not an NFR).
@@ -578,7 +578,7 @@ dependency, no skills-map row)."*
 - The lead lists this plan on WK-1178's roadmap row (L5) at mint, and adds the dated line that
   makes SL-1575's merge an activation need of `SL-1526`. The 00:20:03 BST entry rules it:
   *"SL 9448 becomes an activation need of SL-1526 by a dated line at the mint."* [SL 9448 is minted as SL-1575]
-- The minter cuts the ids in the batch the lead names; FD 9446 mints first, with its severity.
+- The minter cuts the ids in the batch the lead names; FD-1573 mints first, with its severity.
   The entry says *"PL 9447 rides D5 or the next batch."* [PL 9447 is minted as PL-1574]
 - DP-1 (c) is declined. The `attribute` full-book cost is its own FD (the auditor's, on a
   `draft/` branch), as the 00:20:03 BST entry adopts.
@@ -586,7 +586,7 @@ dependency, no skills-map row)."*
 ## Self-review
 
 - **Spec coverage.** FR-263 (the dislocation run whose output must not change), NFR-495 and
-  NFR-496 (held, evidenced by Acceptance 2), and NFR-493 (rated in FD 9446, not changed here). No
+  NFR-496 (held, evidenced by Acceptance 2), and NFR-493 (rated in FD-1573, not changed here). No
   requirement is added. A memory NFR is DP-2 (c), a spec change and not this plan's.
 - **Placeholders.** None. `<tree>` and `<slice branch>` are run-time values that Task 0 and
   Acceptance 6 define. `_book_2000()` is specified against the module's existing builder, which
@@ -600,6 +600,6 @@ dependency, no skills-map row)."*
   `f59b546e`. `dislocation_handlers.py:223,231` were read at `8af8a9b4`. The harness's
   `_spec(base_v, base_v)` call mirrors `portfolio_for`'s at :493.
 - **Rulings since the sweep.** The 00:20:03 BST entry is applied, quoted under each DP
-  (planner-r6, 2026-10-10 00:23:42 BST, read in `channel/to-lead.md` from its line 20626). Re-check `channel/to-lead.md` after 00:10:36 BST and FD 9446's
+  (planner-r6, 2026-10-10 00:23:42 BST, read in `channel/to-lead.md` from its line 20626). Re-check `channel/to-lead.md` after 00:10:36 BST and FD-1573's
   branch head (`draft/fd-9446`, `08f50d11` at writing; the rewrite is pending) before the plan
   is minted.
