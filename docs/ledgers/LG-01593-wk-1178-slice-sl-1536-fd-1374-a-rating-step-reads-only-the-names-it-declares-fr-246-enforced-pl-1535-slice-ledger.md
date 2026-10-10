@@ -1,9 +1,9 @@
 ---
-id: LG-9441
+id: LG-1593
 family: ledger
 title: WK-1178 slice SL-1536 — FD-1374, a rating step reads only the names it declares, FR-246 enforced (PL-1535), slice ledger
-status: active
-created: 2026-10-09
+status: closed
+created: 2026-10-10  # original date 2026-10-09, set at the draft; minted 2026-10-10
 owner: executor
 tree: d471a43bdc4ed123258a7398bbcf30c62605aa27
 phase: P2
@@ -14,7 +14,9 @@ corrected_by: []
 relates: [PL-1535, PL-1520, RL-1519, FD-1374, FD-1534, FR-246, FR-212, WK-1178]
 ---
 
-# LG-9441 — WK-1178 slice SL-1536: FD-1374, FR-246 enforced
+# LG-1593 — WK-1178 slice SL-1536: FD-1374, FR-246 enforced
+
+*Disclosure: drafted under working id 9441; minted as LG-1593 on 2026-10-10, in the SL-1536 mint commit (the lead's allocation in `to-lead.md`, "2026-10-10 14:39:49 BST" read-back and the dispatch brief).*
 
 **GO:** not yet given. Authoring ahead of the GO at the user's order ("2026-10-09 13:17:43 BST — USER: parallel …" item 2, in `to-lead.md`, a local file): code and tests are written on a branch from `origin/main` `d471a43bdc4ed123258a7398bbcf30c62605aa27`; no heavy run while S3's Task 7 holds gate-1; nothing merges before the GO and the gate.
 **MERGE-ACK:** not yet given.

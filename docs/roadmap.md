@@ -2087,7 +2087,7 @@ Option A's fourth build slice (the maintainer's entry "2026-10-05 16:43:31 BST �
 id: SL-1536
 family: slice
 title: WK-1178 fix slice — FD-1374, a rating step reads only the names it declares (FR-246 enforced)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-08
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
@@ -2098,6 +2098,10 @@ relates: [FD-1374, PL-1371]
 ```
 
 `FD-1374`'s fix (MEDIUM, a silent mispricing path), split out of the F35 plan and kept in P2 by the maintainer's entry "2026-10-08 13:00:11 BST — FD-1374 (silent mispricing) STAYS IN P2: DP-F35-1 split out as a P2 WK-1178 slice; F35's performance remainder carries; and fewer, consolidated status messages". FR-246 enforced at save and compile on every evaluating field (`as_at` included), `consumes` mandatory, an undeclared read refused with `RATING_STEP_UNDECLARED_READ` (422), compiled bundles grandfathered at reload; `03`'s FR-246 row and corrected §4.1 example applied verbatim from the ruling; the four under-declaring fixtures fixed. Its row and tasks are PL-1535 (the single-row WK-1178 Work plan), which quotes PL-1520 Task 1A as ruled by RL-1519. Money and contract group, never on the cut ladder. **Activation needs:** RL-1519 and PL-1520 minted (done, batch B4); the `compile.py` serial set free, a ready G2 compile-set slice taking it first; the maintainer's GO under L1 (a'). *(Cut 2026-10-08 by the planner under working id 9469, reserved by the lead; minted 2026-10-09 as SL-1536, in the docs batch D1.)*
+
+(Activated 2026-10-10 as WK-1178's FD-1374 slice, on the dispatch GO "2026-10-10 14:37:13 BST — DISPATCH GO: the FD-1374 slice (PL-1535 / SL-1536) …" with DP-FD1374-M1 (a) and its hash condition; `PL-1535` was `active` from the slice branch's activation commit.)
+
+(Closed 2026-10-10 as a Slice, closing acts in the slice PR's last commit, on the lead's merge; ledger LG-1593, minted 2026-10-10 from working id 9441 in the SL-1536 mint commit.)
 
 #### SL-1566 — WK-1178 fix slice — batch scoring serialises every declared output type and never aborts on one row
 
