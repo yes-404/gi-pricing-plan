@@ -1,11 +1,11 @@
 ---
-id: LG-9443
+id: LG-1588
 family: ledger
 title: WK-1250 slice SL-1340 — the sub-graph pin and the inlining (FR-217's pin and inlining limbs; FR-258's inlined steps), PL-1572 slice ledger
-status: active
-created: 2026-10-09            # working id; the mint date will replace this (check 31)
+status: closed
+created: 2026-10-10
 owner: executor
-tree: 61e2a8d9d06087cadd3760e9668b3caff881b85c
+tree: 2edc4d89fafdb48b81234542f98538f401146aa9
 phase: P2
 work: WK-1250
 slice: SL-1340
@@ -14,7 +14,7 @@ corrected_by: []
 relates: [RL-1571, PL-1572, RL-1309, RL-1344, PL-1254, PL-1325, LG-1355, SL-1340, FR-217, FR-258]
 ---
 
-# LG-9443 (working id) — SL-1340: the sub-graph pin and the inlining
+# LG-1588 — SL-1340: the sub-graph pin and the inlining
 
 Executed by `executor-sl1340` (sonnet) from **PL-1572** (minted 2026-10-10 from working id 9610; drafted at
 `origin/pl-9610-wk1250-s2-leaf` `202d67774c409a9981dcced60e2f97d94955643d`) and **RL-1571** (minted from working id 9586;
@@ -24,7 +24,7 @@ are in `plans:` and `relates:`; the working ids 9610 and 9586 survive only in th
 one PR, this one ledger, no activation PR.
 
 **GO:** `to-lead.md` "2026-10-10 08:57:14 BST — DISPATCH GO: SL-1340 (PL-1572), sequenced after A-2" (authoring first; tests and the merge of `main` wait for A-2 and the lead's word).
-**MERGE-ACK:** none yet.
+**MERGE-ACK:** at the lead's merge turn (not yet).
 
 ## Tasks
 
@@ -78,7 +78,7 @@ inliner's order.
 
 ### Task list
 
-- [ ] Task 0 — preconditions and premises a–n at `61e2a8d9` (this entry: partial; pending items listed in Scope)
+- [x] Task 0 — preconditions and premises a–n at `61e2a8d9`, then at the merged tree `2edc4d89` (see "Task 0 at the merged tree")
 - [x] Task 1 — spec: `03` §4.1, §4.3, §4.11, §5.2 (T1, T2 verbatim from RL-1571)
 - [x] Task 2 — `model-schema`: `Pins.sub_graphs`, the port map, the mount as a node, the two contracts
 - [x] Task 3 — `pricing-core/rating/inline.py` and the `vocabulary.py` token helper
@@ -87,16 +87,15 @@ inliner's order.
 - [x] Task 6 — backend: the resolver `sub_graph` branch, G1 objective clause, G2, G4 (c)
 - [x] Task 7 — the trace (FR-258), order (b)
 - [x] Task 8 — `RL-1242` stays, stated
-- [ ] Task 9 — the gate (owed after the Task 7 measurement; not run by the authoring seat)
+- [x] Task 9 — the gate: gate 1 red for four stale expectations and one mypy error, fixed and re-gated in the A-2 form (see "Gate 1 at `806740ef`")
 
 ### Gate
 
-Not run. The authoring seat runs small tests only (one file, `nice -n 19`, `/tmp/slots/small-test`).
-The full two-half gate waits for the gate slot and the lead's "gate slot granted" for the head.
+Gate 1 at `806740ef` and its fixes are in "Gate 1 at `806740ef`, its reds, and the fixes" below; the re-gate form is the lead's 11:07:35 ruling (targeted red→green, this mint on gate-2 with audit-docs and the docs-suite pytest, CI as the full Python run). The post-mint gate-2 result and CI are in the PR.
 
 ### Audit
 
-Not yet run.
+The slice audit is the auditor's, run on the PR; this ledger is closed at the lead's merge per `document-ids.md` §1.6.
 
 ### Build log
 
@@ -194,8 +193,26 @@ Read at the merged tree (`git grep` over `backend/src` and `packages/pricing-cor
 - **The in-repo carrier (need 4).** `docs/plans/PL-01419-wk-673-slice-7-fr-231-s-exposure-weights-through-the-portfolio-frame-leaf-plan.md` at `origin/main` `2edc4d89`, lines 797–819 (see the quote below).
 - **G2's pin-write enumeration re-run at the merged tree**, `git grep -nE '\.pins\s*=[^=]|pins=' -- backend/src`: `backend/src/app/api/models.py:1204` (`pins=body.pins`, the create route forwarding), `backend/src/app/platform/rating_versions.py:139` (`pins=Pins.model_validate(row.pins)`, a READ in `to_schema`) and `:305` (`pins=pins.model_dump(mode="json")`, the WRITE in `create_rating_version`, which inserts a new `draft` row). The same three sites as at `61e2a8d9` (their lines moved by +22 in `rating_versions.py`). No writer reaches an existing row; the tripwire `test_g2_every_pin_write_path_is_enumerated` runs in the gate.
 - **`gh pr list --state open`** printed an empty list at this time (the lead holds the PR list; D7 and the FD-1374 slice are not PRs yet).
-- The `to_wire` dependency-order wiring (SL-1436 / PL-1435) is on `main` (the log shows #1226 activating it), so `to_wire` wires by dependency order.
+- The `to_wire` dependency-order wiring (SL-1436 / PL-1435) is on `main` (`2b83e089`, #1228, SL-1436 closed), so `to_wire` wires by dependency order.
+
+## Gate 1 at `806740ef`, its reds, and the fixes (2026-10-10)
+
+**Gate 1** (gate-1, one slot, 09:16:13Z to 10:06:10Z, head `806740efaeee0cb1583586544e0e45d8eceabecd`, tree `c454413f7a8ada0388c65db952f6bd898b1abb0d`; scratch `/tmp/tmp.WkZFCUBjUX`; the audit-docs stage ran with the working-id ledger still in the tree). Python half: ruff 0, mypy 1, lint-imports 0, audit-docs 1, req-coverage 0, generate-contracts --check 0, pytest 1 ("17 failed, 5355 passed, 4 skipped in 2881.14s"). Frontend half: install, generate:api, lint, type-check, test, build, all rc 0. GATE line: "GATE: FAIL — 3 of 7 stages failed: mypy audit_docs pytest".
+
+| Red | Class | Cause, at main `2edc4d89` | Fix and proof |
+|---|---|---|---|
+| mypy `model_schema/sub_graphs.py:120` and `:124` | (a) this slice | `_reachable` and `_reaches_output` took `dict[str, RatingStep]` at main (`rating.py:588`, `:608`); the mount node widened the value type and `dict` is invariant | `4d8ff927`: both take `Mapping[str, _Node]`. Whole-tree `mypy` rc 0, "no issues found in 231 source files" (small-test slot); `ruff check .` clean |
+| `test_error_sinks.py::test_every_failure_sink_on_a_quote_input_path_is_accounted_for` | (c) FD 9952 row 1 | the `_SINKS` row for `compile_rating_version` `str(exc)` listed a sink the fix removed | row deleted (`66722f92`). **Guard not disarmed:** with `text = str(exc)` put back locally (restored by `cp` and `cmp`, never committed) the same test fails: "Left contains 1 more item: {('backend/src/app/platform/rating_versions.py', 'compile_rating_version', 'str(exc)'): 1}", and the sentinel test fails too (`'SENTINEL-INPUT-9952' is contained here`); restored, `test_error_sinks.py` 4 passed |
+| `test_rating_algorithms.py` diff route key set | (a) | `AlgorithmDiff.sub_graph_mounts` (`rating.py:751`) exists on the branch only (`git grep -c sub_graph_mounts origin/main -- packages backend/src` = 0) | one member added, `-U0` confined |
+| `test_rating_version_create_pins.py` served pins, and the creation event | (a) | `Pins.sub_graphs` (`rating.py:83`) exists on the branch only | expected values become `{**pins, "sub_graphs": []}` and `{**_empty_pins(), "sub_graphs": []}` |
+| 13 docs-suite tests (`tests/test_audit_docs_*`, `test_register_lint`, `test_register_owed`, `test_repository_invariants`) | (d) depend on audit-docs | audit-docs failed on checks 31, 32, 39 for the working id | re-run after this mint, on gate-2 (below) |
+
+**Write-set deltas, 2026-10-10.** The maintainer's confirmation of the FD 9952 form: `to-lead.md` "2026-10-10 10:14:29 BST" (the lead's relay): `safe_error_detail(exc) or type(exc).__name__` (`cc32ded6`) is the 09:42:06 item 1 form; no re-gate. The three test files (`test_error_sinks.py`, `test_rating_algorithms.py`, `test_rating_version_create_pins.py`) join the write set for those lines only by "2026-10-10 11:07:35 BST — RULING: SL-1340's 4 stale-expectation reds: YES, with two guard conditions; re-gate form ACCEPTED".
+
+**The reproducibility condition (11:07:35 item 3).** `Pins.sub_graphs` reached the compiled bundle's bytes: `Bundle.pins` is a `Pins`, so `bundle.model_dump_json()` carried `"sub_graphs": []` for an algorithm with no sub-graph (only `bundle_hash` dropped it). **Red first** (`test_rating_compile_bundle.py::test_a_bundle_that_pins_no_sub_graph_serialises_without_the_key`): `assert 'sub_graphs' not in {'rate_tables': [...], 'models': [...], 'reference_tables': [...], 'custom_objectives': [], ...}`. **Fix** (`66722f92`, `compile.py`, in the write set): a `field_serializer("pins")` on `Bundle` omits an empty `sub_graphs`; a mounting bundle still serialises `["sub_graph:ncd-ladder@4"]` (asserted), and a bundle round-trips. **Green:** `test_rating_compile_bundle.py` 30 passed; `test_rating_wire_order.py` 14 passed **unchanged**, including `test_the_bundle_hash_is_unchanged`; `test_rating_runtime.py` 15 passed. So `"sub_graphs": []` lives in the API response, the stored `pins` column and the creation audit event, and NOT in the bundle bytes or its hash.
+
+**Targeted re-gate (11:07:35 re-gate form), small-test slot, one file at a time:** `test_error_sinks.py` + `test_rating_algorithms.py` + `test_rating_version_create_pins.py`: 42 passed; `test_rating_version_compile.py -k 'validation_error or unpinned or not_pinned or stored_sub_graph'` green earlier; whole-tree `mypy` rc 0; `generate-contracts.py --check`: "47 generated contracts match the models". The DB-backed targeted runs on the small-test slot were disclosed to the maintainer by the lead; the lead's 11:07:35 ruling accepts the targeted form.
 
 ## PRs
 
-- [ ] (no PR yet)
+- [x] this slice's PR (`sl-1340-wk1250-s2` into `main`); its number and head are in the PR and the MERGE-ACK request, not restated here.
