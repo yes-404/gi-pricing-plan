@@ -469,9 +469,16 @@
           "title": "Produces"
         },
         "result_type": {
-          "default": "decimal",
-          "title": "Result Type",
-          "type": "string"
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Result Type"
         },
         "step_id": {
           "minLength": 1,
