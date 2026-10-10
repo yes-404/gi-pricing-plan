@@ -23,9 +23,10 @@ from decimal import Decimal
 from typing import Any, NoReturn, Protocol
 
 import zen
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, SerializationInfo, ValidationError, field_serializer
 
-from model_schema.modelling import Factor, FactorIntent
+from model_schema.modelling import Banding, Factor, FactorIntent, Grouping
+from model_schema.perils import LargeLossKind, PerilStructure
 from model_schema.rating import (
     AlgorithmOutput,
     Pins,
@@ -44,11 +45,13 @@ from model_schema.rating import (
     check_model_reference_mode,
 )
 from model_schema.refs import ArtifactRef
-from model_schema.sub_graphs import SubGraphInputPort
+from model_schema.sub_graphs import SubGraph, SubGraphInputPort
 from pricing_core.rating.authored import authored_expression_fields
+from pricing_core.rating.inline import inline_mounts, mounted_fragments
 from pricing_core.rating.ladder import RUNG_ORDER, output_steps_by_name, rung_output_name
+from pricing_core.rating.references import STAMPED_DATE, referenced_names
 from pricing_core.rating.vocabulary import check_allow_list
-from pricing_core.safe_error import CodedError
+from pricing_core.safe_error import CodedError, safe_error_detail
 
 _NON_DETERMINISTIC: tuple[str, ...] = ("now(", "random(", "rand(", "today(", "clock(")
 #: FR-246: a quote timestamp is an input; `now()` does not exist.
@@ -86,8 +89,9 @@ def producer_types(
     """The statically-known result type of each produced value.
 
     `input` steps take their type from `typed_names`, keyed by the input's name (an
-    algorithm's input contract); `expression` steps from their declared `result_type`.
-    Lookup/table/model_call outputs depend on the pinned artifacts, which save-time
+    algorithm's input contract); `expression` and `model_call` steps from their declared
+    `result_type` (a `model_call`'s is `decimal` or `money_minor`, FD-1458 / `PL-1464`
+    item 15). Lookup and table outputs depend on the pinned artifacts, which save-time
     validation cannot resolve — those stay unknown here and are checked at bundle time
     (W9-3). A later producer of a name overrides an earlier one.
     """
@@ -98,10 +102,52 @@ def producer_types(
             if declared is not None:
                 for name in _as_list(step.produces):
                     types[name] = declared
-        elif isinstance(step, RatingExpressionStep):
-            for name in _as_list(step.produces):
-                types[name] = step.result_type
+        elif isinstance(step, (RatingExpressionStep, RatingModelCallStep)):
+            declared_type = step.result_type
+            if declared_type is not None:  # a model_call's None is the legacy default
+                for name in _as_list(step.produces):
+                    types[name] = declared_type
     return types
+
+
+def _money_model_call_names(steps: Sequence[RatingStep]) -> set[str]:
+    """Names whose latest producer is a `money_minor` `model_call` (a later producer wins)."""
+    money: set[str] = set()
+    for step in steps:
+        is_money_call = isinstance(step, RatingModelCallStep) and step.result_type == "money_minor"
+        for name in _as_list(step.produces):
+            if is_money_call:
+                money.add(name)
+            else:
+                money.discard(name)
+    return money
+
+
+def model_call_money_issues(
+    steps: Sequence[RatingStep], outputs: Sequence[tuple[str, str, str, str]]
+) -> list[ValidationIssue]:
+    """FR-227 (`PL-1464` item 15): a `money_minor` value produced by a `model_call` that feeds
+    an output declared other than `decimal` or `money_minor` is refused.
+
+    Scoped to the `model_call` producer on purpose: `_compatible` still treats every numeric
+    type as interchangeable, so an `expression` producer keeps today's behaviour. Same
+    `(step_id, output name, declared type, feeding name)` rows as `output_type_issues`.
+    """
+    money = _money_model_call_names(steps)
+    return [
+        ValidationIssue(
+            code="RATING_TYPE_MISMATCH",
+            message=(
+                f"output {output_name!r} is declared {declared_type!r} but its producing "
+                "step is a model_call declared money_minor; a money_minor model_call feeds "
+                "a decimal or money_minor output (FR-227)"
+            ),
+            step_id=step_id,
+            field="outputs",
+        )
+        for step_id, output_name, declared_type, fed_by in outputs
+        if fed_by in money and declared_type not in ("decimal", "money_minor")
+    ]
 
 
 def _producer_types(algo: RatingAlgorithm) -> dict[str, str]:
@@ -155,7 +201,10 @@ def _check_result_types(algo: RatingAlgorithm) -> list[ValidationIssue]:
         if declared is None or not consumed:
             continue
         outputs.append((step.step_id, step.output_name, declared.type, consumed[0]))
-    return output_type_issues(_producer_types(algo), outputs)
+    return [
+        *output_type_issues(_producer_types(algo), outputs),
+        *model_call_money_issues(algo.steps, outputs),
+    ]
 
 
 def fragment_output_type_issues(
@@ -184,7 +233,7 @@ def fragment_output_type_issues(
         for port in output_ports
         if port.name in produced_by
     ]
-    return output_type_issues(types, outputs)
+    return [*output_type_issues(types, outputs), *model_call_money_issues(steps, outputs)]
 
 
 def _check_clamp_placement(algo: RatingAlgorithm) -> list[ValidationIssue]:
@@ -334,8 +383,6 @@ def _check_input_bound_scale(algo: RatingAlgorithm) -> list[ValidationIssue]:
     return issues
 
 
-#: The date `score_one` and `score_batch` stamp into every engine context (`score.py`).
-STAMPED_DATE = "effective_date"
 
 
 def _check_lookup_as_at(algo: RatingAlgorithm) -> list[ValidationIssue]:
@@ -372,6 +419,36 @@ def _check_lookup_as_at(algo: RatingAlgorithm) -> list[ValidationIssue]:
     return issues
 
 
+#: FR-246's scope as RL-1519 DP-F35-1 (ii) ruled it: every step type that evaluates a field.
+_DECLARED_READ_STEP_TYPES = frozenset({"expression", "table", "lookup", "model_call", "constraint"})
+
+
+def _check_declared_reads(algo: RatingAlgorithm) -> list[ValidationIssue]:
+    """FR-246 (FD-1374, RL-1519): a step reads only names it declares in `consumes`.
+
+    The message names the step and the names, never a quote input. A bundle compiled before
+    this check is not re-checked at load (`load_bundle` runs no validation), only at its next
+    compile (RL-1519 (iii-b))."""
+    issues: list[ValidationIssue] = []
+    for step in algo.steps:
+        if step.type not in _DECLARED_READ_STEP_TYPES:
+            continue
+        undeclared = sorted(referenced_names(step.model_dump()) - set(_as_list(step.consumes)))
+        if undeclared:
+            issues.append(
+                ValidationIssue(
+                    code="RATING_STEP_UNDECLARED_READ",
+                    message=(
+                        f"step {step.step_id!r} reads {undeclared} without declaring them in "
+                        "consumes (FR-246)"
+                    ),
+                    step_id=step.step_id,
+                    field="consumes",
+                )
+            )
+    return issues
+
+
 #: Each check is a function of ONE string, so it cannot choose which fields it reads
 #: (FD-1317). `validate_algorithm` applies every one of these to every authored string.
 STRING_CHECKS: tuple[Callable[[str], tuple[str, str] | None], ...] = (
@@ -387,6 +464,7 @@ ALGORITHM_CHECKS: tuple[Callable[[RatingAlgorithm], list[ValidationIssue]], ...]
     _check_input_bound_scale,
     _check_clamp_placement,
     _check_lookup_as_at,
+    _check_declared_reads,
 )
 
 
@@ -455,7 +533,12 @@ _APPROVED_OR_BETTER = frozenset({"approved", "live", "retired"})
 # `test_rating_algorithm_row_has_no_status_column`
 # (`backend/tests/test_rating_version_compile.py`) is the tripwire: it fails the day a
 # `status` column is added to `rating_algorithms`, and names this record for revisiting.
-_MATURITY_CHECK_EXEMPT = frozenset({"rate_table", "rating_algorithm"})
+# RL-1309 DP-1 item 5 (2026-10-09, WK-1250 Slice 2): `sub_graph` joins the exemption. A Sub-graph
+# Version has no status and no approval lifecycle of its own; its change reaches approval inside
+# the Rating Version that pins it. `test_sub_graph_version_row_has_no_status_column`
+# (`backend/tests/test_rating_version_compile.py`) fails the day a `status` column is added to
+# `sub_graph_versions`, and names `RL-1309` for revisiting.
+_MATURITY_CHECK_EXEMPT = frozenset({"rate_table", "rating_algorithm", "sub_graph"})
 
 
 class ResolvedArtifact(BaseModel):
@@ -468,6 +551,14 @@ class ResolvedArtifact(BaseModel):
     #: A pinned model's Factors, read at compile and not carried into the Bundle (`PL-1471`
     #: DP-7); a resolver that has none leaves the default.
     factors: tuple[Factor, ...] = ()
+    #: A GLM pin's Bandings and Groupings (`PL-1464` DP-1 (a)), loaded beside its Factors.
+    #: Unlike `factors` these are written into the Bundle, with the Factors, for a GLM pin
+    #: only (FR-239, NFR-491): `predict_glm` needs all three and the runtime has no database.
+    bandings: tuple[Banding, ...] = ()
+    groupings: tuple[Grouping, ...] = ()
+    #: The Model a GLM's `offset.kind == "model"` reads (FR-116, `PL-1464` DP-3 (a)), resolved
+    #: the same way, so the runtime computes its linear predictor per quote as `/predict` does.
+    offset_source: ResolvedArtifact | None = None
 
 
 class ArtifactResolver(Protocol):
@@ -512,6 +603,10 @@ def to_jdm(algo: RatingAlgorithm) -> JdmGraph:
     nodes: dict[str, dict[str, Any]] = {}
     for step in algo.steps:
         step_dump = step.model_dump()
+        if step_dump.get("type") == "model_call" and step_dump.get("result_type") is None:
+            # The legacy default is not part of the graph: a bundle compiled before the field
+            # existed keeps its bytes, its hash and its prices (FR-239; 2026-10-10 00:40:31).
+            del step_dump["result_type"]
         nodes[step.step_id] = {
             "type": step.type,
             "label": step.label,
@@ -548,6 +643,18 @@ class Bundle(BaseModel):
     content_hash: str
     compiled_at: datetime
 
+    @field_serializer("pins")
+    def _pins_without_an_empty_sub_graphs(
+        self, pins: Pins, info: SerializationInfo
+    ) -> dict[str, Any]:
+        """`Pins` had four lists before WK-1250 Slice 2. A version that pins no sub-graph
+        serialises as it always did, so recompiling an existing algorithm gives byte-identical
+        bundle bytes, as `bundle_hash` already gives an identical hash (FR-239, ruling X)."""
+        dumped = pins.model_dump(mode=info.mode)
+        if not dumped["sub_graphs"]:
+            del dumped["sub_graphs"]
+        return dumped
+
 
 def bundle_hash(graph: JdmGraph, pins: Pins) -> str:
     """A reproducible content hash from the graph and the pins (FR-239).
@@ -557,8 +664,13 @@ def bundle_hash(graph: JdmGraph, pins: Pins) -> str:
     DP1 and FR-239, the hash is reproducible from the pins and the graph (03 §5.2,
     corrected 2026-08-27, F-W9-3-2).
     """
+    pins_dump = pins.model_dump()
+    if not pins_dump["sub_graphs"]:
+        # `Pins` had four lists before WK-1250 Slice 2. A version that pins no sub-graph hashes
+        # as it always did, so every stored `content_hash` stays reproducible from its pins.
+        del pins_dump["sub_graphs"]
     canonical = json.dumps(
-        {"graph": graph.model_dump(), "pins": pins.model_dump()},
+        {"graph": graph.model_dump(), "pins": pins_dump},
         sort_keys=True,
         separators=(",", ":"),
     )
@@ -567,6 +679,30 @@ def bundle_hash(graph: JdmGraph, pins: Pins) -> str:
 
 def _raise_named(code: str, message: str) -> NoReturn:
     raise CodedError(f"{code}: {message}") from None
+
+
+def _refuse_mount_port_type_mismatch(
+    algorithm: RatingAlgorithm, fragments: Mapping[str, SubGraph]
+) -> None:
+    """FR-227 at compile (`RL-1309` DP-3 item 5): each mapped input port against its producer.
+
+    The parent value a port is mapped to has a statically-known result type only where its
+    producer is an `input` or an `expression` step (`producer_types`); any other producer is
+    not checked here, as for an output. A port the fragment does not declare is `inline_mounts`'.
+    """
+    types = _producer_types(algorithm)
+    for mount in algorithm.sub_graphs:
+        ports = {port.name: port.type for port in fragments[str(mount.ref)].inputs}
+        for port, value in mount.inputs.items():
+            declared, produced = ports.get(port), types.get(value)
+            if declared is None or produced is None:
+                continue
+            if not _compatible(produced, declared):
+                _raise_named(
+                    "RATING_TYPE_MISMATCH",
+                    f"mount {mount.mount_point!r} maps {value!r}, which yields {produced!r}, to "
+                    f"input port {port!r}, declared {declared!r} (FR-227)",
+                )
 
 
 def check_step_refs_pinned(algorithm: RatingAlgorithm, pins: Pins) -> None:
@@ -601,17 +737,21 @@ def check_step_refs_pinned(algorithm: RatingAlgorithm, pins: Pins) -> None:
 
 
 async def _refuse_unapproved_objectives(
-    version: RatingVersion, payloads: dict[str, Any], resolver: ArtifactResolver
+    version: RatingVersion,
+    payloads: dict[str, Any],
+    resolver: ArtifactResolver,
+    component_refs: Sequence[ArtifactRef] = (),
 ) -> None:
     """FR-240's "transitively reachable": a pinned model's own custom objective (`PL-1471`).
 
     One hop: a GBM's `spec.objective` with `kind: custom` is resolved and held to the same
     floor as a direct pin, `deprecated` included (`02` OQ-609, DP-5). A payload with no
     `spec` names no objective. The objective is checked and not embedded, so `bundle_hash`
-    is unchanged (FR-239).
+    is unchanged (FR-239). A pinned Peril Structure's component models are walked as a pinned
+    model is (`component_refs`, `RL-1459` DP-A3-3 (a)); the structure itself has no `spec`.
     """
     assert version.pins is not None
-    for model_ref in version.pins.models:
+    for model_ref in (*version.pins.models, *component_refs):
         spec = payloads[str(model_ref)].get("spec")
         objective = spec.get("objective") if isinstance(spec, dict) else None
         if not isinstance(objective, dict) or objective.get("kind") != "custom":
@@ -657,24 +797,135 @@ def _refuse_control_factor_model_calls(
     Scoring applies every fitted feature's effect and `02` FR-88 lets Rating Versions use
     only `risk` factors, so a pinned model whose `feature_order` holds a `control` Factor's
     slug is refused. A payload with no `fit_result` or `feature_order` binds no factor. A
-    `peril_structure_ref` step is FD-1456's known gap (FR-240).
+    `peril_structure_ref` step is checked on each of its component models (`RL-1459`
+    DP-A3-3 (a)), which `resolved_pins` holds beside the pins once compile has resolved them.
     """
     for step in algorithm.steps:
-        if not isinstance(step, RatingModelCallStep) or step.model_ref is None:
+        if not isinstance(step, RatingModelCallStep):
             continue
-        pin = resolved_pins[str(step.model_ref)]
-        fit_result = pin.payload.get("fit_result")
-        features = fit_result.get("feature_order", ()) if isinstance(fit_result, dict) else ()
-        by_slug = {factor.slug: factor for factor in pin.factors}
-        for feature in features:
-            factor = by_slug.get(feature)
-            if factor is not None and factor.intent is FactorIntent.CONTROL:
+        if step.model_ref is not None:
+            models = [step.model_ref]
+        else:
+            assert step.peril_structure_ref is not None  # exactly one is set (FR-222)
+            structure = PerilStructure.model_validate(
+                resolved_pins[str(step.peril_structure_ref)].payload
+            )
+            models = peril_component_refs(structure)
+        for model_ref in models:
+            pin = resolved_pins[str(model_ref)]
+            fit_result = pin.payload.get("fit_result")
+            features = fit_result.get("feature_order", ()) if isinstance(fit_result, dict) else ()
+            by_slug = {factor.slug: factor for factor in pin.factors}
+            for feature in features:
+                factor = by_slug.get(feature)
+                if factor is not None and factor.intent is FactorIntent.CONTROL:
+                    _raise_named(
+                        "CONTROL_FACTOR_IN_RATEABLE_PATH",
+                        f"{model_ref} was fitted on feature {feature!r}, the "
+                        f"`control`-intent Factor {factor.slug}@{factor.version}, which "
+                        "cannot be rated on (FR-88, FR-240)",
+                    )
+
+
+def _carry_glm_inputs(payloads: dict[str, Any], resolved: ResolvedArtifact) -> None:
+    """Write a GLM pin's Factors, Bandings and Groupings into the Bundle (`PL-1464` DP-1 (a)).
+
+    Each travels under its own `ArtifactRef` string as its `model-schema` class's dump, so the
+    Bundle's shape and `bundle_hash` are unchanged: the inputs are fixed by the pinned model
+    version. A GBM pin adds nothing (`predict_gbm` reads its features off the frame). A model
+    offset's source model is carried the same way, under its own ref (DP-3 (a)).
+    """
+    if (resolved.payload.get("fit_result") or {}).get("model_type") != "glm":
+        return
+    for kind, items in (
+        ("factor", resolved.factors),
+        ("banding", resolved.bandings),
+        ("grouping", resolved.groupings),
+    ):
+        for item in items:
+            payloads[str(ArtifactRef(type=kind, slug=item.slug, version=item.version))] = (
+                item.model_dump(mode="json")
+            )
+    source = resolved.offset_source
+    if source is not None:
+        offset = resolved.payload["spec"]["offset"]
+        payloads[str(offset["offset_model_ref"])] = source.payload
+        _carry_glm_inputs(payloads, source)
+
+
+def peril_component_refs(structure: PerilStructure) -> list[ArtifactRef]:
+    """A structure's distinct component model refs, in peril order (FR-188)."""
+    refs: list[ArtifactRef] = []
+    for peril in structure.perils:
+        for ref in (peril.frequency_model, peril.severity_model, peril.burning_cost_model):
+            if ref is not None and ref not in refs:
+                refs.append(ref)
+    return refs
+
+
+def _refuse_peril_model_calls(algorithm: RatingAlgorithm) -> None:
+    """A Peril Structure `model_call` declares exactly one produced name (`RL-1459` DP-A3-1 (c)).
+
+    The step yields the structure's risk premium, one value (FR-188). A second name would
+    receive the same value although `03` §4's example declares it a per-peril map, which no
+    runtime serves yet (FR-249 is `OQ-1460`), so the step is refused rather than served wrong.
+    """
+    for step in algorithm.steps:
+        if not isinstance(step, RatingModelCallStep) or step.peril_structure_ref is None:
+            continue
+        names = [step.produces] if isinstance(step.produces, str) else list(step.produces)
+        if len(names) > 1:
+            _raise_named(
+                "BUNDLE_COMPILE_FAILED",
+                f"step {step.step_id!r} on {step.peril_structure_ref} declares {len(names)} "
+                f"produced names {names}; a Peril Structure model_call yields one value, "
+                "the risk premium (FR-222, FR-249)",
+            )
+
+
+async def _resolve_peril_components(
+    structure_ref: ArtifactRef,
+    payload: dict[str, Any],
+    resolver: ArtifactResolver,
+    resolved_pins: Mapping[str, ResolvedArtifact],
+) -> dict[str, ResolvedArtifact]:
+    """Resolve and maturity-check a pinned Peril Structure's component models (FR-240, FR-20).
+
+    Each distinct component ref of `frequency_model`, `severity_model` and
+    `burning_cost_model` is resolved once, in peril order, and returned under `str(ref)`; a
+    component that is also pinned directly reuses the pin loop's result. A `separate_model`
+    peril is refused first (`RL-1459` DP-A3-2 (a)): `assemble_risk_premium` cannot restore it.
+    """
+    try:
+        structure = PerilStructure.model_validate(payload)
+    except ValidationError as exc:
+        # A raw pydantic error carries the offending input (NFR-499): name the ref and the
+        # fields at fault only.
+        _raise_named(
+            "BUNDLE_COMPILE_FAILED",
+            f"{structure_ref} is not a valid Peril Structure: {safe_error_detail(exc)} (FR-188)",
+        )
+    for peril in structure.perils:
+        if peril.large_loss.kind is LargeLossKind.SEPARATE_MODEL:
+            _raise_named(
+                "LOSS_TREATMENT_UNIMPLEMENTED",
+                f"{structure_ref} peril {peril.peril!r} uses a `separate_model` large-loss "
+                "treatment, which no scorer applies yet (FR-189, FR-240)",
+            )
+    components: dict[str, ResolvedArtifact] = {}
+    for peril in structure.perils:
+        for ref in (peril.frequency_model, peril.severity_model, peril.burning_cost_model):
+            if ref is None or str(ref) in components:
+                continue
+            resolved = resolved_pins.get(str(ref)) or await resolver.resolve(ref)
+            if resolved.status not in _APPROVED_OR_BETTER:
                 _raise_named(
-                    "CONTROL_FACTOR_IN_RATEABLE_PATH",
-                    f"{step.model_ref} was fitted on feature {feature!r}, the "
-                    f"`control`-intent Factor {factor.slug}@{factor.version}, which cannot be "
-                    "rated on (FR-88, FR-240)",
+                    "PIN_NOT_APPROVED",
+                    f"{ref}, the component of peril {peril.peril!r} in {structure_ref}, is "
+                    f"{resolved.status!r}, not approved or better (FR-20, FR-240)",
                 )
+            components[str(ref)] = resolved
+    return components
 
 
 async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> Bundle:
@@ -687,6 +938,9 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
     reached through a pinned model (FR-240).
     Every `table`, `lookup` and `model_call` step's ref is pinned at its exact version
     (FR-237, `check_step_refs_pinned`).
+    Each sub-graph mount is resolved from the version's pins (`RL-1309` G1) and inlined at its
+    mount point (FR-217, `inline_mounts`), and every check above runs over the **inlined**
+    algorithm, so a fragment's steps, references and expressions are checked as the parent's.
     Raises `ValueError` named with the first failure's code.
     """
     if version.algorithm_ref is None:
@@ -716,25 +970,44 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
             "better (FR-20)",
         )
 
-    issues = validate_algorithm(algorithm)
+    # Each mounted sub-graph is resolved once, here, and kept for the pin loop below (the same
+    # reason as above). A mount whose ref is not pinned is not resolved: `mounted_fragments`
+    # refuses it (`RL-1309` G1).
+    pins = version.pins
+    mounted: dict[str, ResolvedArtifact] = {}
+    for mount in algorithm.sub_graphs:
+        if mount.ref in pins.sub_graphs and str(mount.ref) not in mounted:
+            mounted[str(mount.ref)] = await resolver.resolve(mount.ref)
+    fragments = mounted_fragments(
+        algorithm, pins, {key: artifact.payload for key, artifact in mounted.items()}
+    )
+    inlined = inline_mounts(algorithm, fragments)
+    _refuse_mount_port_type_mismatch(algorithm, fragments)
+
+    issues = validate_algorithm(inlined)
     if issues:
         _raise_named(issues[0].code, issues[0].message)
     try:
-        check_model_reference_mode(version, algorithm)
+        check_model_reference_mode(version, inlined)
     except ValueError as exc:
-        _raise_named("MODEL_REFERENCE_MODE_INCONSISTENT", str(exc))
-    check_step_refs_pinned(algorithm, version.pins)
+        # NFR-499: the code and the exception's input-free text, never the raw message.
+        _raise_named(
+            "MODEL_REFERENCE_MODE_INCONSISTENT", safe_error_detail(exc) or type(exc).__name__
+        )
+    check_step_refs_pinned(inlined, pins)
+    _refuse_peril_model_calls(inlined)
 
     payloads: dict[str, Any] = {str(version.algorithm_ref): resolved_algorithm.payload}
     all_refs: list[ArtifactRef] = [
-        *version.pins.rate_tables,
-        *version.pins.models,
-        *version.pins.reference_tables,
-        *version.pins.custom_objectives,
+        *pins.rate_tables,
+        *pins.models,
+        *pins.reference_tables,
+        *pins.custom_objectives,
+        *pins.sub_graphs,
     ]
     resolved_pins: dict[str, ResolvedArtifact] = {}
     for ref in all_refs:
-        resolved = await resolver.resolve(ref)
+        resolved = mounted.get(str(ref)) or await resolver.resolve(ref)
         exempt = ref.type in _MATURITY_CHECK_EXEMPT
         if not exempt and resolved.status not in _APPROVED_OR_BETTER:
             _raise_named(
@@ -742,13 +1015,25 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
                 f"{ref} is {resolved.status!r}, not approved or better (FR-20)",
             )
         payloads[str(ref)] = resolved.payload
+        _carry_glm_inputs(payloads, resolved)
         resolved_pins[str(ref)] = resolved
-    await _refuse_unapproved_objectives(version, payloads, resolver)
+    component_refs: list[ArtifactRef] = []
+    for ref in version.pins.models:
+        if ref.type != "peril_structure":
+            continue
+        components = await _resolve_peril_components(
+            ref, resolved_pins[str(ref)].payload, resolver, resolved_pins
+        )
+        for component_ref, component in components.items():
+            payloads[component_ref] = component.payload
+            _carry_glm_inputs(payloads, component)
+            resolved_pins.setdefault(component_ref, component)
+            component_refs.append(ArtifactRef.model_validate(component_ref))
+    await _refuse_unapproved_objectives(version, payloads, resolver, component_refs)
     await _refuse_control_factor_keys(version, payloads, resolver)
-    _refuse_control_factor_model_calls(algorithm, resolved_pins)
+    _refuse_control_factor_model_calls(inlined, resolved_pins)
 
-    graph = to_jdm(algorithm)
-    pins = version.pins
+    graph = to_jdm(inlined)
     return Bundle(
         algorithm_ref=str(version.algorithm_ref),
         graph=graph,
@@ -773,6 +1058,7 @@ __all__ = [
     "compile_bundle",
     "fragment_output_type_issues",
     "output_type_issues",
+    "peril_component_refs",
     "producer_types",
     "to_jdm",
     "validate_algorithm",

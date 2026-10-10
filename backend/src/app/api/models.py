@@ -1245,6 +1245,7 @@ async def submit_rating_version(
             actor=caller.principal,
             rating_version_id=rating_version_id,
             change_summary=body.change_summary,
+            blob_store=blob_store,
             load_compiled=load_compiled,
         )
         await session.refresh(row)

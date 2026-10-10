@@ -3,7 +3,7 @@ id: PL-1535
 family: plan
 kind: map
 title: WK-1178 — the FD-1374 fix slice, FR-246 enforced (DP-F35-1's limb split out of the F35 plan and kept in P2): single-row Work plan
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                   # draft → active → superseded | retired (§1.2a)
 created: 2026-10-09  # original date 2026-10-08, set at the draft; minted 2026-10-09
 owner: planner
 tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9

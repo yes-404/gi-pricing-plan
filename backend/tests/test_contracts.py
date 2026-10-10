@@ -44,6 +44,7 @@ COMPARED_SLUGS: Final[tuple[str, ...]] = (
     "custom-objective",
     "dataset-version",
     "diagnostics",
+    "dislocation-run",
     "grouping",
     "job",
     "model",
@@ -96,7 +97,6 @@ ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     # authored-only — later-phase shapes, shared common/ defs, or (F27) shapes that
     # have since shipped in model-schema and are excluded by omission rather than by plan
     "approval-request": "later-phase — 06 governance",
-    "dislocation-run": "03 §4.6 — hand-authored until WK-673 Slice 4 generates and compares it (PL-1267)",  # noqa: E501
     "dossier": "later-phase — 06 governance",
     "gipp-check": "later-phase — 06 governance",
     "monitoring": "later-phase — 05 monitoring",

@@ -26,8 +26,9 @@ Git mechanics are [`git-hygiene`](../git-hygiene/SKILL.md); commands and gate sl
   the one the lead verified; a different one means someone pushed, and every later proof
   would be about the wrong object.
 - **Never `cd`** — `git -C`, absolute paths, `uv run --directory`, `/usr/bin/git -C` if the
-  guard refuses. Why: the hook path is relative; a `cd` moves the guard for you and for every
-  agent spawned after you (executor.md).
+  guard refuses. Why: a `cd` moves the working directory for you and for every agent spawned after you
+  (executor.md). The retry-cap hook runs by absolute path since PL 9617, so a `cd` no longer
+  locks the session; the rule stands.
 - **Every check behind the slot probe that exits**, never beside someone else's held gate:
   ```bash
   mkdir -p /tmp/slots; for s in /tmp/slots/gate-1 /tmp/slots/gate-2; do flock -n -E 75 "$s" true || { echo "SLOT HELD: $s"; exit 75; }; done && <check>
@@ -163,6 +164,8 @@ Which evidence each case needs is lead.md rule 4 (1E, E2 (a)–(d), the code-PR 
   (draft/close-sl1472-sl1477), and the maintainer's ACKs check it from then on
   (to-lead.md "2026-10-08 … The missed slice closing acts …").
 
+- **Every L1 (a') slice whose plan is still draft sets the plan's status line to active in the slice PR's FIRST commit and closes its own LG and SL at the head** (to-lead "2026-10-09 13:29:49 BST — RULINGS …" item 3).
+
 ## 6. Never
 
 - `cd`; `git stash`; checkout outside your worktree; rebase; force-push.
@@ -175,7 +178,7 @@ Which evidence each case needs is lead.md rule 4 (1E, E2 (a)–(d), the code-PR 
 
 ## Verified
 
-2026-10-08 against main `42e56bd3` (RFC-1506 merged, #1240). Procedure taken from that
+2026-10-10 against the PL 9617 slice branch (based on main `fe0b0627`): the `Never cd` reason clause only, after the hook moved to an absolute path. Previously 2026-10-08 against main `42e56bd3` (RFC-1506 merged, #1240). Procedure taken from that
 day's executed briefs (T1 #1242, T2 #1239, T8 #1244, B3 #1246, SL-1448 #1236, #1240) and
 the lead's recorded slips: the T1 register duplicate rows, the T1 cancelled python run
 37766410964, #1240's zero check-suites while conflicting. The DB-module ERROR was re-read in

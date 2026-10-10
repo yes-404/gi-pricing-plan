@@ -3,7 +3,7 @@ id: PL-1286
 family: plan
 kind: map
 title: WK-675 — Frontend: DAG designer, rate table editor, quote sandbox and dislocation views: map plan
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                   # draft → active → superseded | retired (§1.2a)
 created: 2026-09-30
 owner: planner
 tree: 880feb499eddb9e854c525770e95fb19373a2311

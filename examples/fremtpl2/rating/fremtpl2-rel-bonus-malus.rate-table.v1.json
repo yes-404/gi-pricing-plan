@@ -1,0 +1,427 @@
+{
+ "slug": "fremtpl2-rel-bonus-malus",
+ "version": 1,
+ "rateable": true,
+ "storage": "rows",
+ "keys": [
+  {
+   "name": "bonus_malus",
+   "type": "int",
+   "banding_ref": null
+  }
+ ],
+ "value": {
+  "name": "rel_bonus_malus",
+  "type": "relativity",
+  "unit": "factor",
+  "min": null,
+  "max": null
+ },
+ "default_row": null,
+ "rows": [
+  {
+   "bonus_malus": "50",
+   "rel_bonus_malus": "3.04453212"
+  },
+  {
+   "bonus_malus": "51",
+   "rel_bonus_malus": "3.11308494"
+  },
+  {
+   "bonus_malus": "52",
+   "rel_bonus_malus": "3.18318136"
+  },
+  {
+   "bonus_malus": "53",
+   "rel_bonus_malus": "3.25485611"
+  },
+  {
+   "bonus_malus": "54",
+   "rel_bonus_malus": "3.32814474"
+  },
+  {
+   "bonus_malus": "55",
+   "rel_bonus_malus": "3.40308358"
+  },
+  {
+   "bonus_malus": "56",
+   "rel_bonus_malus": "3.47970981"
+  },
+  {
+   "bonus_malus": "57",
+   "rel_bonus_malus": "3.55806140"
+  },
+  {
+   "bonus_malus": "58",
+   "rel_bonus_malus": "3.63817721"
+  },
+  {
+   "bonus_malus": "59",
+   "rel_bonus_malus": "3.72009697"
+  },
+  {
+   "bonus_malus": "60",
+   "rel_bonus_malus": "3.80386129"
+  },
+  {
+   "bonus_malus": "61",
+   "rel_bonus_malus": "3.88951171"
+  },
+  {
+   "bonus_malus": "62",
+   "rel_bonus_malus": "3.97709069"
+  },
+  {
+   "bonus_malus": "63",
+   "rel_bonus_malus": "4.06664166"
+  },
+  {
+   "bonus_malus": "64",
+   "rel_bonus_malus": "4.15820903"
+  },
+  {
+   "bonus_malus": "65",
+   "rel_bonus_malus": "4.25183819"
+  },
+  {
+   "bonus_malus": "66",
+   "rel_bonus_malus": "4.34757556"
+  },
+  {
+   "bonus_malus": "67",
+   "rel_bonus_malus": "4.44546863"
+  },
+  {
+   "bonus_malus": "68",
+   "rel_bonus_malus": "4.54556593"
+  },
+  {
+   "bonus_malus": "69",
+   "rel_bonus_malus": "4.64791709"
+  },
+  {
+   "bonus_malus": "70",
+   "rel_bonus_malus": "4.75257286"
+  },
+  {
+   "bonus_malus": "71",
+   "rel_bonus_malus": "4.85958514"
+  },
+  {
+   "bonus_malus": "72",
+   "rel_bonus_malus": "4.96900697"
+  },
+  {
+   "bonus_malus": "73",
+   "rel_bonus_malus": "5.08089263"
+  },
+  {
+   "bonus_malus": "74",
+   "rel_bonus_malus": "5.19529758"
+  },
+  {
+   "bonus_malus": "75",
+   "rel_bonus_malus": "5.31227856"
+  },
+  {
+   "bonus_malus": "76",
+   "rel_bonus_malus": "5.43189356"
+  },
+  {
+   "bonus_malus": "77",
+   "rel_bonus_malus": "5.55420190"
+  },
+  {
+   "bonus_malus": "78",
+   "rel_bonus_malus": "5.67926421"
+  },
+  {
+   "bonus_malus": "79",
+   "rel_bonus_malus": "5.80714252"
+  },
+  {
+   "bonus_malus": "80",
+   "rel_bonus_malus": "5.93790023"
+  },
+  {
+   "bonus_malus": "81",
+   "rel_bonus_malus": "6.07160216"
+  },
+  {
+   "bonus_malus": "82",
+   "rel_bonus_malus": "6.20831463"
+  },
+  {
+   "bonus_malus": "83",
+   "rel_bonus_malus": "6.34810541"
+  },
+  {
+   "bonus_malus": "84",
+   "rel_bonus_malus": "6.49104382"
+  },
+  {
+   "bonus_malus": "85",
+   "rel_bonus_malus": "6.63720072"
+  },
+  {
+   "bonus_malus": "86",
+   "rel_bonus_malus": "6.78664861"
+  },
+  {
+   "bonus_malus": "87",
+   "rel_bonus_malus": "6.93946156"
+  },
+  {
+   "bonus_malus": "88",
+   "rel_bonus_malus": "7.09571536"
+  },
+  {
+   "bonus_malus": "89",
+   "rel_bonus_malus": "7.25548748"
+  },
+  {
+   "bonus_malus": "90",
+   "rel_bonus_malus": "7.41885713"
+  },
+  {
+   "bonus_malus": "91",
+   "rel_bonus_malus": "7.58590534"
+  },
+  {
+   "bonus_malus": "92",
+   "rel_bonus_malus": "7.75671492"
+  },
+  {
+   "bonus_malus": "93",
+   "rel_bonus_malus": "7.93137057"
+  },
+  {
+   "bonus_malus": "94",
+   "rel_bonus_malus": "8.10995889"
+  },
+  {
+   "bonus_malus": "95",
+   "rel_bonus_malus": "8.29256843"
+  },
+  {
+   "bonus_malus": "96",
+   "rel_bonus_malus": "8.47928973"
+  },
+  {
+   "bonus_malus": "97",
+   "rel_bonus_malus": "8.67021539"
+  },
+  {
+   "bonus_malus": "98",
+   "rel_bonus_malus": "8.86544005"
+  },
+  {
+   "bonus_malus": "99",
+   "rel_bonus_malus": "9.06506054"
+  },
+  {
+   "bonus_malus": "100",
+   "rel_bonus_malus": "9.26917582"
+  },
+  {
+   "bonus_malus": "101",
+   "rel_bonus_malus": "9.47788710"
+  },
+  {
+   "bonus_malus": "102",
+   "rel_bonus_malus": "9.69129787"
+  },
+  {
+   "bonus_malus": "103",
+   "rel_bonus_malus": "9.90951395"
+  },
+  {
+   "bonus_malus": "104",
+   "rel_bonus_malus": "10.13264354"
+  },
+  {
+   "bonus_malus": "105",
+   "rel_bonus_malus": "10.36079727"
+  },
+  {
+   "bonus_malus": "106",
+   "rel_bonus_malus": "10.59408827"
+  },
+  {
+   "bonus_malus": "107",
+   "rel_bonus_malus": "10.83263221"
+  },
+  {
+   "bonus_malus": "108",
+   "rel_bonus_malus": "11.07654738"
+  },
+  {
+   "bonus_malus": "109",
+   "rel_bonus_malus": "11.32595471"
+  },
+  {
+   "bonus_malus": "110",
+   "rel_bonus_malus": "11.58097788"
+  },
+  {
+   "bonus_malus": "111",
+   "rel_bonus_malus": "11.84174332"
+  },
+  {
+   "bonus_malus": "112",
+   "rel_bonus_malus": "12.10838034"
+  },
+  {
+   "bonus_malus": "113",
+   "rel_bonus_malus": "12.38102115"
+  },
+  {
+   "bonus_malus": "114",
+   "rel_bonus_malus": "12.65980093"
+  },
+  {
+   "bonus_malus": "115",
+   "rel_bonus_malus": "12.94485792"
+  },
+  {
+   "bonus_malus": "116",
+   "rel_bonus_malus": "13.23633344"
+  },
+  {
+   "bonus_malus": "117",
+   "rel_bonus_malus": "13.53437204"
+  },
+  {
+   "bonus_malus": "118",
+   "rel_bonus_malus": "13.83912148"
+  },
+  {
+   "bonus_malus": "119",
+   "rel_bonus_malus": "14.15073287"
+  },
+  {
+   "bonus_malus": "120",
+   "rel_bonus_malus": "14.46936073"
+  },
+  {
+   "bonus_malus": "121",
+   "rel_bonus_malus": "14.79516303"
+  },
+  {
+   "bonus_malus": "122",
+   "rel_bonus_malus": "15.12830133"
+  },
+  {
+   "bonus_malus": "123",
+   "rel_bonus_malus": "15.46894080"
+  },
+  {
+   "bonus_malus": "124",
+   "rel_bonus_malus": "15.81725036"
+  },
+  {
+   "bonus_malus": "125",
+   "rel_bonus_malus": "16.17340269"
+  },
+  {
+   "bonus_malus": "126",
+   "rel_bonus_malus": "16.53757440"
+  },
+  {
+   "bonus_malus": "127",
+   "rel_bonus_malus": "16.90994606"
+  },
+  {
+   "bonus_malus": "128",
+   "rel_bonus_malus": "17.29070230"
+  },
+  {
+   "bonus_malus": "129",
+   "rel_bonus_malus": "17.68003192"
+  },
+  {
+   "bonus_malus": "130",
+   "rel_bonus_malus": "18.07812795"
+  },
+  {
+   "bonus_malus": "131",
+   "rel_bonus_malus": "18.48518780"
+  },
+  {
+   "bonus_malus": "132",
+   "rel_bonus_malus": "18.90141329"
+  },
+  {
+   "bonus_malus": "133",
+   "rel_bonus_malus": "19.32701081"
+  },
+  {
+   "bonus_malus": "134",
+   "rel_bonus_malus": "19.76219138"
+  },
+  {
+   "bonus_malus": "135",
+   "rel_bonus_malus": "20.20717078"
+  },
+  {
+   "bonus_malus": "136",
+   "rel_bonus_malus": "20.66216965"
+  },
+  {
+   "bonus_malus": "137",
+   "rel_bonus_malus": "21.12741360"
+  },
+  {
+   "bonus_malus": "138",
+   "rel_bonus_malus": "21.60313331"
+  },
+  {
+   "bonus_malus": "139",
+   "rel_bonus_malus": "22.08956465"
+  },
+  {
+   "bonus_malus": "140",
+   "rel_bonus_malus": "22.58694883"
+  },
+  {
+   "bonus_malus": "141",
+   "rel_bonus_malus": "23.09553245"
+  },
+  {
+   "bonus_malus": "142",
+   "rel_bonus_malus": "23.61556771"
+  },
+  {
+   "bonus_malus": "143",
+   "rel_bonus_malus": "24.14731244"
+  },
+  {
+   "bonus_malus": "144",
+   "rel_bonus_malus": "24.69103032"
+  },
+  {
+   "bonus_malus": "145",
+   "rel_bonus_malus": "25.24699092"
+  },
+  {
+   "bonus_malus": "146",
+   "rel_bonus_malus": "25.81546993"
+  },
+  {
+   "bonus_malus": "147",
+   "rel_bonus_malus": "26.39674921"
+  },
+  {
+   "bonus_malus": "148",
+   "rel_bonus_malus": "26.99111698"
+  },
+  {
+   "bonus_malus": "149",
+   "rel_bonus_malus": "27.59886796"
+  },
+  {
+   "bonus_malus": "150",
+   "rel_bonus_malus": "28.22030349"
+  }
+ ]
+}

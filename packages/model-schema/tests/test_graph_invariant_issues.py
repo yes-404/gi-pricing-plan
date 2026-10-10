@@ -124,3 +124,47 @@ def test_a_declared_output_without_an_output_step_has_no_step_id() -> None:
     issues = graph_invariant_issues(_draft(_valid_steps(), outputs=["out", "missing"]))
     assert [(i.code, i.step_id) for i in issues] == [("VALIDATION_FAILED", None)]
     assert "FR-214" in issues[0].message
+
+
+def _mount_draft(
+    steps: list[dict[str, Any]], mounts: list[dict[str, Any]], outputs: list[str] | None = None
+) -> RatingAlgorithmDraft:
+    base = _draft(steps, outputs)
+    data = base.model_dump(mode="json")
+    data["sub_graphs"] = mounts
+    return RatingAlgorithmDraft.model_validate(data)
+
+
+def _mount(point: str, inputs: dict[str, str], outputs: dict[str, str]) -> dict[str, Any]:
+    return {
+        "ref": "sub_graph:ncd-ladder@4",
+        "mount_point": point,
+        "inputs": inputs,
+        "outputs": outputs,
+    }
+
+
+@pytest.mark.req("FR-215")
+def test_a_pinned_mount_is_a_node_its_outputs_resolve() -> None:
+    # `s_out` consumes `ncd`, which only the mount produces: without the mount as a node it
+    # reads as an undefined value (RL-1309 DP-3 item 4).
+    steps = [_input("s_in", "x"), _output("s_out", "out", "ncd")]
+    draft = _mount_draft(steps, [_mount("s_ncd", {"claims": "x"}, {"factor": "ncd"})])
+    assert graph_invariant_issues(draft) == []
+
+
+@pytest.mark.req("FR-212")
+def test_a_broken_mount_is_refused_by_the_invariants() -> None:
+    steps = [_input("s_in", "x"), _output("s_out", "out", "ncd")]
+    draft = _mount_draft(steps, [_mount("s_ncd", {"claims": "ghost"}, {"factor": "ncd"})])
+    issues = graph_invariant_issues(draft)
+    assert [(i.code, i.step_id) for i in issues] == [("RATING_GRAPH_UNRESOLVED_REF", "s_ncd")]
+
+
+@pytest.mark.req("FR-215")
+def test_a_mount_point_equal_to_a_step_id_is_an_issue() -> None:
+    steps = [_input("s_in", "x"), _output("s_out", "out", "ncd")]
+    draft = _mount_draft(steps, [_mount("s_in", {"claims": "x"}, {"factor": "ncd"})])
+    issues = graph_invariant_issues(draft)
+    assert len(issues) == 1
+    assert "mount_point is unique" in issues[0].message

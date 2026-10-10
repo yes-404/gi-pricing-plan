@@ -30,16 +30,12 @@ failing `model_call` at once, and nothing in this codebase has verified which OS
 `customHandler` callback actually runs on. The sentinel travels through the same
 per-call-isolated mechanism every other produced value already uses.
 
-**2. `predict_glm` is not called from a real Bundle today, and that is confirmed correct,
-not a bug this task fixes.** `Bundle.resolved_payloads` carries a GLM's own dump but not
-the `Factor`/`Banding`/`Grouping` objects `predict_glm` structurally requires — a genuine
-gap `runtime.py`'s `_model_call_failure` docstring already names, refusing the quote with
-`MODEL_CALL_FAILED` rather than silently mis-scoring it. Building real `Factor` resolution
-into `Bundle.resolved_payloads` is a resolver-level (Task 1.2) or Bundle-shape change, out
-of Task 1.4's scope (`score_one` takes an already-compiled `CompiledBundle` and cannot
-retroactively enrich what it was built from) — this module's own tests exercise the GBM
-path and rely on the already-tested GLM refusal (`test_rating_runtime.py`), rather than
-re-proving it.
+**2. A GLM `model_call` scores from the Bundle alone (FD-1458).** Compile carries a GLM pin's
+`Factor`, `Banding` and `Grouping` versions in `Bundle.resolved_payloads`, `load_bundle` rebuilds
+them once, and `predict_glm` runs per quote (FR-222, FR-239, NFR-491). A failure inside it
+(`MODEL_OFFSET_MISSING`, an unseen level) still surfaces as `MODEL_CALL_FAILED` with its error
+code, through the sentinel of item 1; the model's own text is not passed on (NFR-499). This item
+used to say a GLM was refused here.
 
 **3. A `set_param`/`predict()` race inside XGBoost, found by this task's own concurrency
 smoke test, not assumed away.** `predict_gbm`'s first cut (this task) called

@@ -3,7 +3,7 @@ id: RL-1555
 family: ruling
 title: WK-675 S3, S4 and S13 decision points decided — the algorithm diff route typed in S3's first commit, the manual-edit route typed with a created_by_edit record and FR-234's failures as field errors, and the Jobs list holding at most two event streams
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
+created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
 owner: decision-maker
 tree: 4d3be1414ad4dacdaa0c14ef49fb21853adbaed6
 phase: P2
@@ -17,7 +17,7 @@ relates: [PL-1286, PL-1364, FR-219, FR-229, FR-231, FR-234, FD-1335, FD-1366, RL
 
 # RL-1555 — WK-675 S3, S4 and S13: the decision points that block activation, decided
 
-*(Minted 2026-10-09 as RL-1555 from working id 9543, in the D3 batch mint; citations of the ids minted in this batch, and of ids already minted on main (RL-1474, RL-1475, RL-1473, RL-1445, PL-1476, SL-1477, FD-1437, RL-1438), are re-pointed outside quotes, quoted text and quoted channel entries stay as quoted, and cites of PL 9576, PL 9574, SL 9577 and SL 9575 stay working ids. (Re-minted +1 on 2026-10-09 by the minting rewrite, on the lead's 13:09:28 BST ruling (1): first minted as RL 1554, before the D1 mint moved the allocation.))*
+*(Minted 2026-10-10 as RL-1555 from working id 9543, in the D3 batch mint; citations of the ids minted in this batch, and of ids already minted on main (RL-1474, RL-1475, RL-1473, RL-1445, PL-1476, SL-1477, FD-1437, RL-1438), are re-pointed outside quotes, quoted text and quoted channel entries stay as quoted, and cites of PL 9576, PL 9574, SL 9577 and SL 9575 stay working ids. (Re-minted +1 on 2026-10-09 by the minting rewrite, on the lead's 13:09:28 BST ruling (1): first minted as RL 1554, before the D1 mint moved the allocation.))*
 
 ## How this was ruled
 

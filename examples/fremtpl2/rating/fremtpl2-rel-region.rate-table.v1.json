@@ -1,0 +1,111 @@
+{
+ "slug": "fremtpl2-rel-region",
+ "version": 1,
+ "rateable": true,
+ "storage": "rows",
+ "keys": [
+  {
+   "name": "region",
+   "type": "string",
+   "banding_ref": null
+  }
+ ],
+ "value": {
+  "name": "rel_region",
+  "type": "relativity",
+  "unit": "factor",
+  "min": null,
+  "max": null
+ },
+ "default_row": null,
+ "rows": [
+  {
+   "region": "R11",
+   "rel_region": "1.00000000"
+  },
+  {
+   "region": "R21",
+   "rel_region": "1.16130012"
+  },
+  {
+   "region": "R22",
+   "rel_region": "1.07520431"
+  },
+  {
+   "region": "R23",
+   "rel_region": "0.93810787"
+  },
+  {
+   "region": "R24",
+   "rel_region": "1.02656679"
+  },
+  {
+   "region": "R25",
+   "rel_region": "0.99576854"
+  },
+  {
+   "region": "R26",
+   "rel_region": "1.00346975"
+  },
+  {
+   "region": "R31",
+   "rel_region": "0.89583278"
+  },
+  {
+   "region": "R41",
+   "rel_region": "0.76636710"
+  },
+  {
+   "region": "R42",
+   "rel_region": "0.98237384"
+  },
+  {
+   "region": "R43",
+   "rel_region": "0.89701880"
+  },
+  {
+   "region": "R52",
+   "rel_region": "0.94488843"
+  },
+  {
+   "region": "R53",
+   "rel_region": "1.06931114"
+  },
+  {
+   "region": "R54",
+   "rel_region": "0.91246875"
+  },
+  {
+   "region": "R72",
+   "rel_region": "0.91241461"
+  },
+  {
+   "region": "R73",
+   "rel_region": "0.89493241"
+  },
+  {
+   "region": "R74",
+   "rel_region": "1.16494023"
+  },
+  {
+   "region": "R82",
+   "rel_region": "1.05862309"
+  },
+  {
+   "region": "R83",
+   "rel_region": "0.75474268"
+  },
+  {
+   "region": "R91",
+   "rel_region": "0.97782867"
+  },
+  {
+   "region": "R93",
+   "rel_region": "0.99351702"
+  },
+  {
+   "region": "R94",
+   "rel_region": "1.15746837"
+  }
+ ]
+}
