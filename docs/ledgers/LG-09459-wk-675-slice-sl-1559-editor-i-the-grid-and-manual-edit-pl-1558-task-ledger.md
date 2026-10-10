@@ -299,6 +299,49 @@ version (`area@4`) though the Rating Version still pins `area@3` (versions are i
 **Not run:** whole-tree `vue-tsc`, `eslint`, `pnpm build`, `generate-contracts --check`, `audit-docs`, `req-coverage`, the
 full `pytest`, `migrate --verify` and the DB tests wait for the GO and the gate slot.
 
+#### Task 0 re-run and the C-conditions as authoring (2026-10-10, 08:52 BST, 07:52 UTC)
+
+**Task 0, re-run.** `git fetch origin`; `origin/main` is `db0642c4b4f87e71dceff36d1ebd7c7ba4ef68f9`,
+`2026-10-10T08:41:02+01:00`. The branch is not merged with it (the merge is the merge turn's). Each RL-1555
+T1/T3/T4 find string and RL-1475 T4/T5 anchor of the table above was counted with
+`grep -cF -- '<string>'` on `git show origin/main:docs/specs/03-rating-engine.md`: **each is 1**. The same
+strings on the branch's `03` print 0 for the five this branch's commits consumed (T1 `Owner: WK-675's editor
+slice. |`, T3 ``hand, so both are `null`.``, T4 (a) and (b)) and 1 for the rest (RL-1555 T2, RL-1475 T4, T5
+and T3 anchors, `**FR-1186**`): a consumed anchor reads 0 on the branch because the edit landed, not because it
+is missing. Step 4 (the two `jsonb_typeof` counts) stays owed to the gate (no Postgres here; unchanged).
+
+**Plan delta, 2026-10-10: the production `assert` (the maintainer's ruling "2026-10-10 08:49:39 BST", (C),
+relayed by the lead).** `_persist_new_version`'s bare `assert derived.rows is not None` is replaced by an explicit
+`if derived.rows is None: raise PlatformError("INTERNAL_ERROR", "Internal server error", 500, <static text>)`
+at `backend/src/app/platform/rate_tables.py:1332`. `INTERNAL_ERROR` is in the catalogue already
+(`backend/src/app/errors.py`, `_GENERIC_ERROR_CODES`, a code of the shared request machinery), so no new code and
+no spec change. The text is static (NFR-499). Red-first test:
+`test_persisting_a_derived_version_without_rows_is_an_internal_error` (`backend/tests/test_rate_tables_service.py:624`,
+DB-free: a `storage="parquet"` version carries `rows=None`, and the check fires before the session or table row is
+touched). **Red/green not run:** gate-1 was held, so no test ran. Under the old `assert` that call raises
+`AssertionError`, not `PlatformError`, so the `pytest.raises(PlatformError)` could not pass; the run is owed to the
+gate. `ruff check` on the two files: passed.
+
+**Plan delta, 2026-10-10: the retype ripple edits (the same ruling, (C) 2nd bullet: accepted).** RL-1475 T5 types
+`default_row` and `rows` as `RateTableCell`, which breaks every site that read them as a bare `dict`. Each edit
+below is that retype and nothing else; the line is the branch head's, and `git diff -U0 26f93be0` per file
+(`26f93be0` the merge-base) shows no hunk of the retype outside this list.
+
+| File:line | Edit | Reason |
+|---|---|---|
+| `backend/src/app/platform/rate_tables.py:1332` | `cells = cast(list[dict[str, str]], derived.rows)` → the explicit check above, then `cells = [dict(row.root) for row in derived.rows]` | `rows` is `list[RateTableCell] \| None`; a cast no longer describes it |
+| `packages/pricing-core/src/pricing_core/rate_tables/operations.py:541` | `_rows_of` → `[dict(row.root) for row in table.rows]` (was `{key: str(value) …}` per row) | a `RateTableCell` is a `RootModel`, read by `.root`; the `str()` coercion is what the retype retires |
+| `…/operations.py:544` | new `_default_row_of(table)` | `default_row` is a `RateTableCell`, so the callers below need a dict form |
+| `…/operations.py:561` | `default_row=table.default_row` → `default_row=_default_row_of(table)` in `_validate_result` | as :544 |
+| `…/operations.py:649` | `"rows": rows` → `"rows": [RateTableCell(row) for row in rows]` in `_new_version` | the new version's `rows` must be cells |
+| `…/operations.py:958` | `default_row=version.default_row` → `default_row=_default_row_of(version)` in `_checked_import` | as :544 |
+| `backend/src/app/platform/rate_tables.py:271`, `:273` | `_wire_rows` returns `list[RateTableCell]`: `[RateTableCell(row) for row in cells]` (was a `cast`) | the wire rows are cells. **Not on the lead's list of six; added here as a seventh the diff shows, for the lead to accept or strike.** |
+| `backend/tests/test_rate_tables_service.py:145`, `:450` | `row["driver_age_band"]: row["relativity"]` → `row.root[…]: row.root[…]` | the test reads the wire rows, now cells |
+| `packages/pricing-core/tests/test_rate_table_bulk_ops.py:142, 158, 175, 198, 213, 246, 259, 282` | `result.rows ==` / `baseline.rows ==` → `_cells(result) ==` / `_cells(baseline) ==` (eight lines; `:75` adds the helper `_cells`, which returns `[row.root for row in version.rows]`) | `rows` holds cells, which do not compare equal to a dict. **The expected value on each right-hand side is unchanged** (`-U0` shows only the left-hand side edited). |
+
+The other hunks of these files (the manual-edit route, `apply_cell_edits`, `EditIssue`, the imports, `created_by_edit`
+persistence) are Task 3's feature code, not ripple.
+
 ## PRs
 
 None yet.

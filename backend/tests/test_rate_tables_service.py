@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import io
 from decimal import Decimal
+from typing import Any, cast
 from uuid import uuid4
 
 import polars as pl
@@ -617,3 +618,33 @@ async def test_diff_materialises_parquet_cells_to_the_same_artifact(
 
     assert parquet_diff == rows_diff
     assert parquet_diff.changed_cells == 1
+
+
+@pytest.mark.req("FR-232")
+async def test_persisting_a_derived_version_without_rows_is_an_internal_error() -> None:
+    """The guard on `_persist_new_version`'s input is an explicit PlatformError, not an
+    `assert` that `python -O` removes. A parquet-form version carries no `rows`; it is
+    refused before the session or the table row is touched, so no database is needed."""
+    derived = RateTableVersion(
+        slug=_table_slug(),
+        version=2,
+        rateable=True,
+        storage="parquet",
+        keys=[{"name": "driver_age_band", "type": "string"}],
+        value={"name": "relativity", "type": "relativity", "unit": "ratio"},
+        cells=BlobRef(sha256="a" * 64, bytes=1, media_type="application/parquet"),
+        change_note="crafted",
+    )
+
+    with pytest.raises(PlatformError) as exc:
+        await svc._persist_new_version(
+            cast(Any, None),
+            table_row=cast(Any, None),
+            derived=derived,
+            version_number=2,
+            created_by=uuid4(),
+            threshold=1,
+            blob_store=cast(Any, None),
+        )
+    assert exc.value.code == "INTERNAL_ERROR"
+    assert exc.value.status_code == 500

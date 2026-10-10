@@ -1329,7 +1329,15 @@ async def _persist_new_version(
     to a content-addressed parquet blob addressed by `cells`. Returns the version in
     its §4.2 wire form.
     """
-    assert derived.rows is not None  # `_persist_new_version`'s input is a rows-form version
+    if derived.rows is None:
+        # An internal invariant, not a caller error: every caller derives a rows-form version.
+        # Static text only (NFR-499); a bare `assert` would vanish under `python -O`.
+        raise PlatformError(
+            "INTERNAL_ERROR",
+            "Internal server error",
+            500,
+            "A derived rate table version reached storage without its cells.",
+        )
     cells = [dict(row.root) for row in derived.rows]
     storage_mode = decide_storage_mode(len(cells), threshold)
     definition = RateTable(
