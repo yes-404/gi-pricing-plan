@@ -2584,15 +2584,29 @@
       },
       "CreatedServiceAccount": {
         "additionalProperties": false,
-        "description": "The one response that carries a key value (FR-389).",
+        "description": "The one response that carries key values (FR-389).\n\n`keys` always lists what was issued, one per Environment. `key` is the secret when\nexactly one key was issued and `None` otherwise (DP-S3E-1 (b)): a caller granted\nseveral Environments has no \"first\" secret to take.",
         "properties": {
           "account": {
             "$ref": "#/components/schemas/ServiceAccountView"
           },
           "key": {
-            "description": "The full key. Shown once and never recoverable — nothing stores it.",
-            "title": "Key",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The secret of the one key issued, when exactly one was; otherwise null.",
+            "title": "Key"
+          },
+          "keys": {
+            "items": {
+              "$ref": "#/components/schemas/IssuedKey"
+            },
+            "title": "Keys",
+            "type": "array"
           },
           "warning": {
             "default": "Store this now. It cannot be retrieved again.",
@@ -2602,6 +2616,7 @@
         },
         "required": [
           "account",
+          "keys",
           "key"
         ],
         "title": "CreatedServiceAccount",
@@ -8127,6 +8142,32 @@
           "upper_alpha"
         ],
         "title": "IntervalModels",
+        "type": "object"
+      },
+      "IssuedKey": {
+        "additionalProperties": false,
+        "description": "One key's secret, for the Environment it was issued for (FR-430).",
+        "properties": {
+          "environment": {
+            "title": "Environment",
+            "type": "string"
+          },
+          "key": {
+            "description": "The full key. Shown once and never recoverable — nothing stores it.",
+            "title": "Key",
+            "type": "string"
+          },
+          "prefix": {
+            "title": "Prefix",
+            "type": "string"
+          }
+        },
+        "required": [
+          "environment",
+          "prefix",
+          "key"
+        ],
+        "title": "IssuedKey",
         "type": "object"
       },
       "Job": {
@@ -14468,6 +14509,21 @@
           "scope_type"
         ],
         "title": "RoleAssignmentView",
+        "type": "object"
+      },
+      "RotateKey": {
+        "additionalProperties": false,
+        "description": "FR-430: rotation acts on the key of one named Environment (DP-S3E-2 (a)).",
+        "properties": {
+          "environment": {
+            "title": "Environment",
+            "type": "string"
+          }
+        },
+        "required": [
+          "environment"
+        ],
+        "title": "RotateKey",
         "type": "object"
       },
       "RoundSpec": {
@@ -25536,6 +25592,228 @@
         ]
       }
     },
+    "/api/v1/environments/{slug}/settings": {
+      "get": {
+        "operationId": "get_environment_settings_api_v1_environments__slug__settings_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SettingResolution"
+                  },
+                  "title": "Response Get Environment Settings Api V1 Environments  Slug  Settings Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          }
+        },
+        "summary": "Effective settings for one environment with every layer's candidate",
+        "tags": [
+          "platform"
+        ]
+      },
+      "put": {
+        "description": "Validate, write and audit each change in one transaction (FR-431).",
+        "operationId": "update_environment_settings_api_v1_environments__slug__settings_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSettings"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SettingResolution"
+                  },
+                  "title": "Response Update Environment Settings Api V1 Environments  Slug  Settings Put",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Update environment settings",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
     "/api/v1/factors": {
       "get": {
         "description": "Filtered by Dataset (FR-87), or the workspace's factors when unfiltered.\n\n`?dataset_id=` and nothing else: an unrecognised parameter is a `422`, not a silently\nunfiltered list — see `DatasetFilter`.",
@@ -33258,6 +33536,21 @@
             },
             "description": "Request validation failed"
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
+          },
           "500": {
             "content": {
               "application/json": {
@@ -33549,7 +33842,7 @@
     },
     "/api/v1/service-accounts": {
       "post": {
-        "description": "Create the account and its first key. The key is in this response and nowhere else.",
+        "description": "Create the account and one key per granted Environment (FR-430).\n\nThe keys are in this response and nowhere else.",
         "operationId": "create_service_account_api_v1_service_accounts_post",
         "parameters": [
           {
@@ -33781,7 +34074,7 @@
     },
     "/api/v1/service-accounts/{account_id}/rotate": {
       "post": {
-        "description": "Issue a new key and give the old one a deadline (FR-389).\n\nThe old key keeps working for the overlap window rather than dying immediately. A\nrotation that breaks production the instant it is requested is a rotation nobody\nperforms, and an unrotated key is the failure this exists to prevent.",
+        "description": "Issue a new key for one Environment and give that Environment's old one a deadline.\n\nThe old key keeps working for the overlap window rather than dying immediately. A\nrotation that breaks production the instant it is requested is a rotation nobody\nperforms, and an unrotated key is the failure this exists to prevent.",
         "operationId": "rotate_key_api_v1_service_accounts__account_id__rotate_post",
         "parameters": [
           {
@@ -33825,6 +34118,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RotateKey"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "content": {
