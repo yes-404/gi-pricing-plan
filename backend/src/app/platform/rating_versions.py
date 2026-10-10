@@ -819,7 +819,7 @@ async def compile_rating_version(
             schema, WorkspaceResolver(session, workspace_id, blob_store)
         )
     except ValueError as exc:
-        # FD 9952 row 1 (NFR-499): `str(exc)` of a pydantic `ValidationError` prints the failing
+        # FD-1589 row 1 (NFR-499): `str(exc)` of a pydantic `ValidationError` prints the failing
         # input, and this detail is stored in the Job error that `GET /jobs/{id}` serves. The
         # allow-list renders a `CodedError` as `CODE: message` (the form partitioned below) and a
         # `ValidationError` input-free; any other `ValueError` keeps only its type name.
