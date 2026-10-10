@@ -70,7 +70,7 @@ _RESIDUAL: dict[tuple[str, str], int] = {
     ("perils.py", "PerilStructure._coherent"): 3,  # owner: SL-1601
     ("perils.py", "Reconciliation._coherent"): 1,  # owner: SL-1601
     ("prediction.py", "PredictedRow._the_bounds_are_a_pair_and_ordered"): 2,  # owner: SL-1601
-    ("prediction.py", "Prediction._every_row_matches_the_declared_uncertainty"): 1,  # owner: SL-1601
+    ("prediction.py", "Prediction._every_row_matches_the_declared_uncertainty"): 1,  # owner: SL-1601  # noqa: E501
     ("prediction.py", "Uncertainty._the_kind_and_its_evidence_agree"): 8,  # owner: SL-1601
     ("rating.py", "RatingAlgorithm._graph_invariants"): 3,  # owner: SL-1601
     ("regression.py", "RegressionSuiteContent._unique_names"): 1,  # owner: SL-1601
