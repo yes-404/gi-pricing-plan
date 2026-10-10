@@ -2,7 +2,7 @@
 id: FD-1534
 family: finding
 title: An empty double-quoted literal in any tracked file crashes test_rating_committed_strings instead of being checked (group(2) or group(3) turns "" into None)
-status: active
+status: closed
 created: 2026-10-09  # original date 2026-10-08, set at the draft; minted 2026-10-09
 owner: auditor
 tree: d85cf85455fcb7ddc6d9c207ee5e5002ed667719

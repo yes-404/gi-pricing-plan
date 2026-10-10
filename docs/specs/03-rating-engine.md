@@ -266,8 +266,7 @@ engine is exact; the binding is not, and the binding is what the platform talks 
     {"name": "payable_premium_minor", "type": "money_minor", "required": true},
     {"name": "risk_premium_minor", "type": "money_minor", "required": true},
     {"name": "office_premium_minor", "type": "money_minor", "required": true},
-    {"name": "ipt_and_fees_minor", "type": "money_minor", "required": true},
-    {"name": "peril_risk_premium", "type": "map<string, money_minor>", "required": false}
+    {"name": "ipt_and_fees_minor", "type": "money_minor", "required": true}
   ],
   "steps": [
     {"step_id": "s_input_age", "type": "input", "label": "Driver age",
@@ -296,7 +295,7 @@ engine is exact; the binding is not, and the binding is what the platform talks 
      "peril_structure_ref": "peril_structure:motor-gb-2026h2@2", "mode": "exact",
      "feature_map": {"driver_age": "driver_age", "rating_area": "rating_area"},
      "consumes": ["driver_age", "rating_area"],
-     "produces": ["risk_premium_minor", "peril_risk_premium"]},
+     "produces": ["risk_premium_minor"]},
     {"step_id": "s_expense", "type": "table", "label": "Expense loading",
      "rate_table_ref": "rate_table:motor-expense@3", "key_expr": ["distribution_channel"],
      "on_miss": "default", "consumes": ["distribution_channel"], "produces": "expense_factor"},
@@ -325,14 +324,13 @@ engine is exact; the binding is not, and the binding is what the platform talks 
      "rounding": {"mode": "half_even", "dp": 0}, "consumes": "payable_premium_pre_round"},
     {"step_id": "s_out", "type": "output", "label": "Payable premium",
      "output_name": "payable_premium_minor",
-     "rounding": {"mode": "half_even", "dp": 0}, "consumes": "payable_premium_pre_round"},
-    {"step_id": "s_out_peril", "type": "output", "label": "Per-peril risk premium",
-     "output_name": "peril_risk_premium",
-     "rounding": {"mode": "half_even", "dp": 0}, "consumes": "peril_risk_premium"}
+     "rounding": {"mode": "half_even", "dp": 0}, "consumes": "payable_premium_pre_round"}
   ],
   "sub_graphs": []
 }
 ```
+
+*(Corrected 2026-10-10, `RL-1596` (`FD-1595`): `s_rp`, a Peril Structure `model_call`, declared two produced names, which `RL-1459` DP-A3-1 (c) refuses; it declares one, and the per-peril output `peril_risk_premium` and its output step `s_out_peril` are removed until `OQ-1460` is decided (FR-249).)*
 
 **Invariants** — DAG acyclic; every `consumes` name is `produced` by an upstream step, and a
 name produced by more than one step is a re-production chain, each later producer consuming
