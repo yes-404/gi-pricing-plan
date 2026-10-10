@@ -3,7 +3,7 @@ id: FD-1561
 family: finding
 title: Batch scoring refuses any declared output type outside five that real-time scoring serves, and the refusal escapes the per-row error handler
 status: active
-created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
+created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
 owner: auditor
 tree: 5fe56b87e55b0a29399f96f0af2e7c2e2ef9b72a
 corrected_by: []
@@ -12,7 +12,7 @@ relates: [WK-1178, FR-214, FR-227, FR-253, FR-254, FR-255, FD-1333, RL-1343, RL-
 
 # FD-1561 — `_coerce_output_value` raises for `int`, `count`, `relativity` and `percentage`, which `/score` serves
 
-*(Minted 2026-10-09 as FD-1561 from working id 9513, in the D4 batch mint; citations of the ids minted in this batch, and of ids already minted on main, are re-pointed outside quoted text, quoted channel entries and code blocks, which stay as quoted.)*
+*(Minted 2026-10-10 as FD-1561 from working id 9513, in the D4 batch mint; citations of the ids minted in this batch, and of ids already minted on main, are re-pointed outside quoted text, quoted channel entries and code blocks, which stay as quoted.)*
 
 **Filed** by the auditor on the lead's brief of 2026-10-05, working id 9513 (reserved in the lead's `eta.md`). The claim
 came from planner-a12fold's planning-time reading and was **not verified when made**. The maintainer (by delegation)

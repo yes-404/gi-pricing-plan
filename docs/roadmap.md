@@ -1803,7 +1803,7 @@ id: SL-1563
 family: slice
 title: WK-1178 fix slice — money_minor closed both ways at save, the numeric type check
 status: draft                  # draft → active → closed | retired (§1.2a)
-created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
+created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 4d3be1414ad4dacdaa0c14ef49fb21853adbaed6
 phase: P2
@@ -2082,7 +2082,7 @@ id: SL-1566
 family: slice
 title: WK-1178 fix slice — batch scoring serialises every declared output type and never aborts on one row
 status: draft                  # draft → active → closed | retired (§1.2a)
-created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
+created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 5fe56b87e55b0a29399f96f0af2e7c2e2ef9b72a
 phase: P2
@@ -2100,7 +2100,7 @@ id: SL-1569
 family: slice
 title: WK-1178 fix slice — a declared decimal output is served as an exact JSON string on every scoring path
 status: draft                  # draft → active → closed | retired (§1.2a)
-created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
+created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: fb178c360f6fd5b2fdb7ae60eea924811a65492f
 phase: P2

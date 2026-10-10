@@ -3,7 +3,7 @@ id: RL-1567
 family: ruling
 title: PL-1565 decided — every declared output type has one JSON form on every scoring path; int and count are JSON integers, relativity and percentage take the decimal string form, a mismatched value is that row's error coded by class name (03 outputs_json row, FR-214)
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
+created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
 owner: decision-maker
 tree: fb178c360f6fd5b2fdb7ae60eea924811a65492f
 phase: P2
@@ -17,7 +17,7 @@ relates: [FR-214, FR-254, FR-255, RL-1343, RL-923, RL-1329, FD-1333]
 
 # PL-1565 decided: one JSON form per declared output type, on every scoring path
 
-*(Minted 2026-10-09 as RL-1567 from working id 9498, in the D4 batch mint; citations of the ids minted in this batch, and of ids already minted on main, are re-pointed outside quoted text, quoted channel entries and code blocks, which stay as quoted.)*
+*(Minted 2026-10-10 as RL-1567 from working id 9498, in the D4 batch mint; citations of the ids minted in this batch, and of ids already minted on main, are re-pointed outside quoted text, quoted channel entries and code blocks, which stay as quoted.)*
 
 ## How this was ruled
 

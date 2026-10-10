@@ -4,7 +4,7 @@ family: plan
 kind: leaf
 title: WK-1178 — money_minor closed both ways at save, the numeric type-check fix (FR-227, FR-226): leaf plan
 status: draft                  # draft → active → superseded | retired (§1.2a)
-created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
+created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
 owner: planner
 tree: 4d3be1414ad4dacdaa0c14ef49fb21853adbaed6
 phase: P2
@@ -17,7 +17,7 @@ relates: [RL-1263, PL-1371]
 
 # WK-1178 — money_minor closed both ways at save: the numeric type-check fix, leaf plan
 
-*(Minted 2026-10-09 as PL-1562 from working id 9521, in the D4 batch mint; citations of the ids minted in this batch, and of ids already minted on main, are re-pointed outside quoted text, quoted channel entries and code blocks, which stay as quoted; PL-1556 (the D3 batch) are forward cites into batches not yet merged; PL 9610 are working ids not minted by any batch and stay working ids.)*
+*(Minted 2026-10-10 as PL-1562 from working id 9521, in the D4 batch mint; citations of the ids minted in this batch, and of ids already minted on main, are re-pointed outside quoted text, quoted channel entries and code blocks, which stay as quoted; PL-1556 (the D3 batch) are forward cites into batches not yet merged; PL 9610 are working ids not minted by any batch and stay working ids.)*
 
 Filed under working id 9521 (this plan) and slice working id 9522 (its `SL-` row under WK-1178
 in [`../roadmap.md`](../roadmap.md), `draft`). The lead reserved both in

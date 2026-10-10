@@ -4,7 +4,7 @@ family: plan
 kind: leaf
 title: WK-1178 — batch scoring serialises every declared output type and never aborts on one row (FR-254, FR-255): leaf plan
 status: draft                  # draft → active → superseded | retired (§1.2a)
-created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
+created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
 owner: planner
 tree: 5fe56b87e55b0a29399f96f0af2e7c2e2ef9b72a
 phase: P2
@@ -17,7 +17,7 @@ relates: [FD-1333, RL-1343, RL-923, RL-1263, PL-1371, PL-1364]
 
 # WK-1178 — batch scoring serialises every declared output type and never aborts on one row, leaf plan
 
-*(Minted 2026-10-09 as PL-1565 from working id 9509, in the D4 batch mint; citations of the ids minted in this batch, and of ids already minted on main, are re-pointed outside quoted text, quoted channel entries and code blocks, which stay as quoted; PL-1544 (the G2-b batch) are forward cites into batches not yet merged; PL 9574, PL 9593, PL 9609, PL 9610 are working ids not minted by any batch and stay working ids.)*
+*(Minted 2026-10-10 as PL-1565 from working id 9509, in the D4 batch mint; citations of the ids minted in this batch, and of ids already minted on main, are re-pointed outside quoted text, quoted channel entries and code blocks, which stay as quoted; PL-1544 (the G2-b batch) are forward cites into batches not yet merged; PL 9574, PL 9593, PL 9609, PL 9610 are working ids not minted by any batch and stay working ids.)*
 
 Filed under working id 9509 (this plan) and slice working id 9511 (its `SL-` row under WK-1178
 in [`../roadmap.md`](../roadmap.md), `draft`). The lead reserved both in

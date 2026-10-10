@@ -3,7 +3,7 @@ id: RL-1564
 family: ruling
 title: The money_minor type-check fix decided — money_minor is closed both ways at save, other numeric pairs widen only, a sub-graph port carries money as decimal, and money_minor on an expression is a fractional unit until an output step rounds it; FR-227 takes T1 to T4
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
+created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
 owner: decision-maker
 tree: 5fe56b87e55b0a29399f96f0af2e7c2e2ef9b72a
 phase: P2
@@ -17,7 +17,7 @@ relates: [FR-227, FR-226, FR-248, FR-214, RL-1329, RL-1309]
 
 # The FD-1424 fix: money_minor closed both ways at save; ports carry decimal; FR-227 texts
 
-*(Minted 2026-10-09 as RL-1564 from working id 9512, in the D4 batch mint; citations of the ids minted in this batch, and of ids already minted on main, are re-pointed outside quoted text, quoted channel entries and code blocks, which stay as quoted.)*
+*(Minted 2026-10-10 as RL-1564 from working id 9512, in the D4 batch mint; citations of the ids minted in this batch, and of ids already minted on main, are re-pointed outside quoted text, quoted channel entries and code blocks, which stay as quoted.)*
 
 ## How this was ruled
 

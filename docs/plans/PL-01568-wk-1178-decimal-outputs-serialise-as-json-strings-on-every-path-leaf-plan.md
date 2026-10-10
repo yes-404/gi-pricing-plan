@@ -4,7 +4,7 @@ family: plan
 kind: leaf
 title: WK-1178 — a declared decimal output is served as an exact JSON string on every scoring path, rounded once (FR-214, FR-226, FR-273, NFR-502; RL-1343): leaf plan
 status: draft                  # draft → active → superseded | retired (§1.2a)
-created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
+created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
 owner: planner
 tree: fb178c360f6fd5b2fdb7ae60eea924811a65492f
 phase: P2
@@ -17,7 +17,7 @@ relates: [RL-1343, FD-1333, RL-1329, RL-1365, PL-1364, PL-1371, SL-1367, SL-1345
 
 # WK-1178 — a declared decimal output is served as an exact JSON string on every scoring path, leaf plan
 
-*(Minted 2026-10-09 as PL-1568 from working id 9499, in the D4 batch mint; citations of the ids minted in this batch, and of ids already minted on main, are re-pointed outside quoted text, quoted channel entries and code blocks, which stay as quoted; PL-1544 (the G2-b batch) are forward cites into batches not yet merged; PL 9609, PL 9610 are working ids not minted by any batch and stay working ids.)*
+*(Minted 2026-10-10 as PL-1568 from working id 9499, in the D4 batch mint; citations of the ids minted in this batch, and of ids already minted on main, are re-pointed outside quoted text, quoted channel entries and code blocks, which stay as quoted; PL-1544 (the G2-b batch) are forward cites into batches not yet merged; PL 9609, PL 9610 are working ids not minted by any batch and stay working ids.)*
 
 Filed under working id 9499 (this plan) and slice working id 9500 (its `SL-` row under WK-1178
 in [`../roadmap.md`](../roadmap.md), `draft`). The lead reserved both and named them in the brief
