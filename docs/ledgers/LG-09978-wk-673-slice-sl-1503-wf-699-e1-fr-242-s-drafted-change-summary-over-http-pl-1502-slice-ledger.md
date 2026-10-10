@@ -56,7 +56,7 @@ Not yet. The auditor writes it.
 |---|---|
 | `RateTableDiff` `rating.py:735-747` | `rating.py:1120`; `RateTableDiffCell` follows at `:1142` (SL-1391 merged). The two new classes go after `RateTableDiffCell`, not between the two: the adjacent classes stay together |
 | `diff_algorithms` `rating.py:571` | `:976` |
-| `_baseline` `rating_versions.py:704-751` | `:1225` (returns `tuple[RatingVersionRow, GoldenQuoteCheck | None] | None`) |
+| `_baseline` `rating_versions.py:704-751` | `:1225` (returns a `(row, check)` pair or `None`) |
 | `load_rating_version` `:126-150` | `:152` |
 | `rate_tables.diff` `:291` | `:438`, still `blob_store` required keyword, `cache`, `portfolio_dataset_version_id` optional; `diff_needs_job` `:400` takes `(database, workspace_id, slug, version, against)` |
 | submit handler `api/models.py:1188-1229` | `:1210`; `blob_store: score_api.BlobStoreDep` is at `:1225` |
@@ -83,3 +83,11 @@ Not yet. The auditor writes it.
 - `backend/tests/test_rating_version_change_summary_route.py`: Acceptance 10–15 (the 12th parametrised over both missing fields). **They did not run**: DB-backed, so they wait for the gate slot, and this worktree's database does not exist yet. **Red-first for H is OWED, not shown:** the code was written before any run. In the slot window the red is produced by running the file on the tree with `backend/src` reverted to the base (`git -C <wt> diff origin/main -- backend/src` applied in reverse in a scratch copy, never by stash), expecting item 10's router 404, and the line is recorded here.
 - `uv run python scripts/generate-contracts.py` → wrote `docs/contracts/openapi/generated.json` (+219 lines, the route and `ChangeSummaryDraft`/`RateTableChange` by `$ref`); `--check` rc 0 ("47 generated contracts match the models"); `backend/tests/test_contracts.py` 157 passed, 2 skipped (small-test slot).
 - ruff check clean on every file touched. `ruff format --check` on `rating_versions.py` fails on lines this slice did not write (the file was not formatted upstream), so the formatter was not run on it.
+
+#### 2026-10-11 00:20 BST — audit-docs and INDEX
+
+`doc-index.py` regenerated `docs/INDEX.md`; `audit-docs.py` (under `gate-2`, per the lead) fails only check 31 ("gap in the full allocation between 1607 and 9978"), the expected red of a working id until the mint. Two earlier reds were mine and fixed: check 22 (a pipe inside a table cell) and check 37 (the missing `PRs` section).
+
+## PRs
+
+None yet.
