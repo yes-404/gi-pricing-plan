@@ -77,6 +77,18 @@ ENVIRONMENT_ROWS: tuple[Row, ...] = tuple(
 )
 
 
+#: WK-674 Slice 3's two routes, held apart from the Route table above: they are `PL-1583`'s
+#: (Acceptance 5), not `PL-1392`'s. `PL-1583` :68 amends `{name}` to `{slug}` and appends the
+#: `GET`; `07` §5.1 carries both as dated changes. Their bodies are `api/settings.py`'s
+#: `UpdateSettings` and `SettingResolution`, so they are not rows of the typing checks.
+SETTINGS_ROUTES: frozenset[tuple[str, str]] = frozenset(
+    {
+        ("GET", "/api/v1/environments/{slug}/settings"),
+        ("PUT", "/api/v1/environments/{slug}/settings"),
+    }
+)
+
+
 def _published_names() -> set[str]:
     """The class names `scripts/generate-contracts.py` publishes (its `GENERATED_SHAPES`)."""
     spec = importlib.util.spec_from_file_location(
@@ -297,15 +309,18 @@ def _environment_operations(document: dict[str, Any]) -> set[tuple[str, str]]:
 
 @pytest.mark.req("FR-428")
 def test_the_route_set_is_pinned(document: dict[str, Any]) -> None:
-    """The operations under `/api/v1/environments` equal the Route table's seven rows, exactly.
+    """The operations under `/api/v1/environments` equal the Route table's seven rows plus
+    `SETTINGS_ROUTES`' two, exactly.
 
     A route added or removed unchecked fails here naming it.
     """
     live = _environment_operations(document)
     expected = {(row.method, row.path) for row in ENVIRONMENT_ROWS}
     assert len(expected) == 7
-    assert live == expected, (
-        f"extra: {sorted(live - expected)}; missing: {sorted(expected - live)}"
+    union = expected | SETTINGS_ROUTES
+    assert len(union) == 9
+    assert live == union, (
+        f"extra: {sorted(live - union)}; missing: {sorted(union - live)}"
     )
 
 

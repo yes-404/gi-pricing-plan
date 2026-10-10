@@ -57,7 +57,7 @@ Premise i (Alembic head) re-derived at base `14fa6fb3`: one head, `b8d2f4a6c0e1`
 1. Tasks 4 and 5: the production code for the key set, the header carrier and the limiter was written before its DB/Redis-backed test, and those tests are not yet run. The red proofs are owed in the slot: run each new test file at the parent version of the touched source file (`git show origin/main:<path>`), quote the failing assertion, restore.
 2. `scoring.default_client_rate_limit_rps` is declared in Task 3's commit, not Task 5's, so the scope assertion (exactly two workspace-or-Environment keys) is green at one commit.
 3. `ConfigInvalidError` (existing) is the startup refusal; the `_parse_env` detail no longer echoes the raw value or `str(exc)`.
-4. **STOP:** `backend/tests/test_deployment_route_types.py::test_the_route_set_is_pinned` (WK-674 S2's pin, `len(expected) == 7`) fails on the two new settings routes; the file is outside PL-1583's write set. Reported to the lead with options; untouched.
+4. **Route pin, resolved (A)** by the maintainer, `to-lead.md` "2026-10-10 23:55:18 BST — WK-674 S3 @9e14e79f: (A) ADOPTED for the route pin; the red proofs owed in the slot". `backend/tests/test_deployment_route_types.py` joined the write set for the pin only: the seven S2 rows stay exact, `SETTINGS_ROUTES` holds the two settings routes (citing PL-1583 :68 and `07` :319–320), and the assert is `live == union` with `len(union) == 9`. Red once, planted: with the `GET` row deleted from `SETTINGS_ROUTES` the pin fails (`assert 8 == 9`, rc 1); restored, rc 0 (`-k route_set_is_pinned`, small-test slot).
 
 ### Gate
 
