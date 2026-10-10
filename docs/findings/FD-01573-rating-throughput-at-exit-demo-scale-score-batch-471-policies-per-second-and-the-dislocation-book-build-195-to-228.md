@@ -1,5 +1,5 @@
 ---
-id: FD-1572
+id: FD-1573
 family: finding
 title: Rating throughput at exit-demo scale — score_batch runs at 471 policies per second (flat 50k to 400k) and the dislocation book build at 195 to 228 policies per second, so a full 678,013-row book is derived at 76 to 82 minutes and about 20 GiB, against a planning rate of 1,415 policies per second
 status: active
@@ -10,9 +10,9 @@ corrected_by: []
 relates: [WK-673, WK-1178, SL-1387, PL-1452, PL-1544, CR-927, CR-1212, RL-1521, NFR-493, NFR-504]
 ---
 
-# FD-1572 — Two rating paths, two measured rates, one derived full-book cost
+# FD-1573 — Two rating paths, two measured rates, one derived full-book cost
 
-*Disclosure: drafted under working id 9446; minted as FD-1572 on 2026-10-10, in the D5 batch mint PR. `LG 9478` (the S3 ledger, unminted) is cited in space form, "LG 9478", and left out of `relates:`.*
+*Disclosure: drafted under working id 9446; minted as FD-1573 on 2026-10-10, in the D5 batch mint PR. `LG 9478` (the S3 ledger, unminted) is cited in space form, "LG 9478", and left out of `relates:`.*
 
 **DRAFT, rewritten 2026-10-10 on the logged figures only** (the first draft read one 50,000-policy probe and a wrong path split). Filed on `draft/fd-9446`, no PR, at the lead's ruling (`to-lead.md`, "2026-10-09 16:12:53 BST — RULING: Task 7 reduced design = R2 …", item 4), re-opened by the entries "2026-10-10 00:08:17 BST" and "2026-10-10 00:08:46 BST" (the correction of the 00:08:17 curve to two rating paths; `channel/from-lead-2026-10-09.md`). **Every figure marked "measured" is a line in `~/gi-pricing-plan.local/task7-s3e/out/` (named below). Every figure marked "derived" is the auditor's arithmetic and is not a measurement; per `PL-1452` DP-S3-10 (b), "no NFR verdict from a derived figure".** No full-book run completed.
 

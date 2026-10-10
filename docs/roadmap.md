@@ -775,7 +775,7 @@ corrected_by: []
 relates: [PL-1267, RL-1236]
 ```
 
-The `dislocation.run` handler owning the Job identity, output location and resumability; `POST /api/v1/dislocation-runs` (202 plus a Job) and `GET /api/v1/dislocation-runs/{id}` with RBAC and RFC 9457 errors; the artifact persisted as a citable row with content-addressed blobs (FR-265); `DislocationRun` registered for generation, `docs/contracts/` regenerated and the slug moved to `COMPARED_SLUGS`. Route permissions picked from `RL-1236`'s catalogue, citing FD-1197. `PL-1267` Slice 4. Starts after Slice 3 closes. Leaf plan PL-1501 (`draft`; filed 2026-10-05). **Activation needs:** the plan made `active` by a dated line; `SL-1387` closed; a ruling on its DP-S4-1, DP-S4-2, DP-S4-3 and DP-S4-5 merged and minted; the lane free under `RL-1263` as amended, with the same-Work conditions in the dispatch record (its `_Resolver` move serialises with PL-1471, PL-1571 and A-1 to A-3); the maintainer's dispatch GO and the lead's go in a separate activation PR. *(Plan cite added 2026-10-05 by the planner; working id 9591 reserved by the lead.)*
+The `dislocation.run` handler owning the Job identity, output location and resumability; `POST /api/v1/dislocation-runs` (202 plus a Job) and `GET /api/v1/dislocation-runs/{id}` with RBAC and RFC 9457 errors; the artifact persisted as a citable row with content-addressed blobs (FR-265); `DislocationRun` registered for generation, `docs/contracts/` regenerated and the slug moved to `COMPARED_SLUGS`. Route permissions picked from `RL-1236`'s catalogue, citing FD-1197. `PL-1267` Slice 4. Starts after Slice 3 closes. Leaf plan PL-1501 (`draft`; filed 2026-10-05). **Activation needs:** the plan made `active` by a dated line; `SL-1387` closed; a ruling on its DP-S4-1, DP-S4-2, DP-S4-3 and DP-S4-5 merged and minted; the lane free under `RL-1263` as amended, with the same-Work conditions in the dispatch record (its `_Resolver` move serialises with PL-1471, PL-1572 and A-1 to A-3); the maintainer's dispatch GO and the lead's go in a separate activation PR. *(Plan cite added 2026-10-05 by the planner; working id 9591 reserved by the lead.)*
 
 #### SL-1389 — Slice 5: the approval gate, part one — structural_diff, FR-257 limb (2), FR-224
 
@@ -1852,7 +1852,7 @@ corrected_by: []
 relates: [PL-1371, CR-1212, RL-1263]
 ```
 
-The third of Option A's four serial slices (the maintainer, "2026-10-05 16:43:31 BST — THE MAINTAINER'S DECISION (asked live): G2 takes OPTION A, WF-699's literal Peril Structure path is BUILT IN P2; and the FD 9605 approval, now on the record", item 1). A `model_call` step naming a Peril Structure compiles and scores: `compile_bundle` resolves each component model of the pinned structure, refuses one below `approved` with `PIN_NOT_APPROVED` (FR-20, FR-240) and embeds its payload, so the Bundle stays self-contained (NFR-491); the handler predicts each component and calls `assemble_risk_premium` (FR-188, FR-189), replacing today's custom-node failure on `payload["fit_result"]`. Six decision points for a ruling (the outputs rule and FR-249, `separate_model`, PL-1471's peril gap, WF-699 C4's reachability, the component unit, a recorded latency). Leaf plan PL-1465. It follows PL-1429, PL-1471, A-1 (SL-1462) and A-2 (SL-1463); it serialises with PL-1571 and PL 9609 on `compile_bundle`; A-4 (the exit-demo scope) follows it.
+The third of Option A's four serial slices (the maintainer, "2026-10-05 16:43:31 BST — THE MAINTAINER'S DECISION (asked live): G2 takes OPTION A, WF-699's literal Peril Structure path is BUILT IN P2; and the FD 9605 approval, now on the record", item 1). A `model_call` step naming a Peril Structure compiles and scores: `compile_bundle` resolves each component model of the pinned structure, refuses one below `approved` with `PIN_NOT_APPROVED` (FR-20, FR-240) and embeds its payload, so the Bundle stays self-contained (NFR-491); the handler predicts each component and calls `assemble_risk_premium` (FR-188, FR-189), replacing today's custom-node failure on `payload["fit_result"]`. Six decision points for a ruling (the outputs rule and FR-249, `separate_model`, PL-1471's peril gap, WF-699 C4's reachability, the component unit, a recorded latency). Leaf plan PL-1465. It follows PL-1429, PL-1471, A-1 (SL-1462) and A-2 (SL-1463); it serialises with PL-1572 and PL 9609 on `compile_bundle`; A-4 (the exit-demo scope) follows it.
 
 #### WK-1178 fix slice — NFR-498 Audit Events on rate table version and rating algorithm writes
 
@@ -1943,7 +1943,7 @@ corrected_by: []
 relates: [PL-1371, RL-1263]
 ```
 
-The maintainer's (by delegation) decision "2026-10-05 18:51:33 BST — Save-time completeness: DECIDED NOW as (b), completeness at COMPILE" (`channel/to-lead.md`), ruled as RL-1523. `compile_bundle` refuses a `model_call` step whose `feature_map` does not cover the pinned model's required Factors, or its `feature_order` when it has none, and for a `peril_structure_ref` step each component model's, with `MODEL_CALL_FEATURE_MAP_INVALID` (A-2's code, reused) naming the step and the missing features; the offset column is not a required input. Today such a version compiles and fails on every quote as `MODEL_CALL_FAILED`. Leaf plan PL-1540. It follows A-2 (SL-1463) and A-3 (SL-1466), and precedes A-4 (SL-1543); it serialises with PL 9578, PL-1571, PL 9609 and PL-1452 on `compile_bundle`.
+The maintainer's (by delegation) decision "2026-10-05 18:51:33 BST — Save-time completeness: DECIDED NOW as (b), completeness at COMPILE" (`channel/to-lead.md`), ruled as RL-1523. `compile_bundle` refuses a `model_call` step whose `feature_map` does not cover the pinned model's required Factors, or its `feature_order` when it has none, and for a `peril_structure_ref` step each component model's, with `MODEL_CALL_FEATURE_MAP_INVALID` (A-2's code, reused) naming the step and the missing features; the offset column is not a required input. Today such a version compiles and fails on every quote as `MODEL_CALL_FAILED`. Leaf plan PL-1540. It follows A-2 (SL-1463) and A-3 (SL-1466), and precedes A-4 (SL-1543); it serialises with PL 9578, PL-1572, PL 9609 and PL-1452 on `compile_bundle`.
 
 
 #### SL-1543 — WK-1178 A-4 — the exit demo walks `WF-699`'s Peril Structure path
@@ -2042,7 +2042,7 @@ corrected_by: []
 relates: [PL-1254]
 ```
 
-`PL-1254` Task 2. ~~Blocked on DP-2 (open).~~ *DP-2 ruled 2026-09-30 by `RL-1344` (mint batch 12); still waits on the slices before it.* Minted as `SL-1340` at this PR's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `8cef871d` (1339 onward). Leaf plan: `PL-1571` (minted 2026-10-10, D5).
+`PL-1254` Task 2. ~~Blocked on DP-2 (open).~~ *DP-2 ruled 2026-09-30 by `RL-1344` (mint batch 12); still waits on the slices before it.* Minted as `SL-1340` at this PR's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `8cef871d` (1339 onward). Leaf plan: `PL-1572` (minted 2026-10-10, D5).
 
 #### SL-1341 — Slice 3: FR-218's purpose mount and the real check (retires `RL-1242`)
 

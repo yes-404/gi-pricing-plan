@@ -1,5 +1,5 @@
 ---
-id: PL-1571
+id: PL-1572
 family: plan
 kind: leaf
 title: WK-1250 Slice 2 — the sub-graph pin and the inlining (FR-217's pin and inlining limbs; FR-258's inlined steps): leaf plan
@@ -13,12 +13,12 @@ slice: SL-1340
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [PL-1254, PL-1325, RL-1309, RL-1344, FD-1241, FD-1246, RL-1242, RL-1263, FD-1297, PL-1371, LG-1355, RL-1570]
+relates: [PL-1254, PL-1325, RL-1309, RL-1344, FD-1241, FD-1246, RL-1242, RL-1263, FD-1297, PL-1371, LG-1355, RL-1571]
 ---
 
-# PL-1571 — WK-1250 Slice 2: the sub-graph pin and the inlining, leaf plan
+# PL-1572 — WK-1250 Slice 2: the sub-graph pin and the inlining, leaf plan
 
-*(Minted 2026-10-10 as PL-1571 from working id 9610, in the D5 batch mint PR with RL-1570 (from RL 9586); RL 9586's P1 to P5 were applied to this plan before the mint; every citation of a minted id in this record is re-pointed, and quoted entries stay as quoted.)*
+*(Minted 2026-10-10 as PL-1572 from working id 9610, in the D5 batch mint PR with RL-1571 (from RL 9586); RL 9586's P1 to P5 were applied to this plan before the mint; every citation of a minted id in this record is re-pointed, and quoted entries stay as quoted.)*
 
 Filed under working id 9610. It is the leaf plan for `SL-1340` (`draft`, minted 2026-09-30, in
 [`../roadmap.md`](../roadmap.md) under `### WK-1250`), which is `PL-1254` Task 2. The lead
@@ -159,7 +159,7 @@ run together**.
 |---|---|---|---|
 | `packages/pricing-core/src/pricing_core/rating/compile.py` | `compile_bundle` (`:573-643`): G1, mount resolution, the inlined validation, `all_refs`; `_MATURITY_CHECK_EXEMPT` (`:431`) | PL-1471 (#1152; `compile_bundle` and `ResolvedArtifact` `:434`); the FD-1420 fix (PL-1447, #1145); WK-673 S3 (PL-1452, #1138: called, not edited, at its `:386-387`); WK-675 S3 (no leaf plan); **PL-1520** (#1051) appends `_check_declared_reads` to `ALGORITHM_CHECKS` and its import block (its `:534`) | **Serialised outright** (`PL-1371:291-294`); PL-1520's append is in a different definition, and the dispatch record names it |
 | `packages/pricing-core/src/pricing_core/rating/inline.py` | **new**: the pure inliner (Task 3) | none | Not shared |
-| `packages/pricing-core/src/pricing_core/rating/vocabulary.py` | the shared tokenizer helper the inliner renames with (RL-1570) | the dispatch record checks in-flight plans for `vocabulary.py` | An existing-module edit. The dispatch record names it |
+| `packages/pricing-core/src/pricing_core/rating/vocabulary.py` | the shared tokenizer helper the inliner renames with (RL-1571) | the dispatch record checks in-flight plans for `vocabulary.py` | An existing-module edit. The dispatch record names it |
 | `packages/pricing-core/src/pricing_core/rating/runtime.py` | `load_bundle` (`:646`): it inlines with the same function (DP-S2-1) | **PL-1520** (#1051) edits `load_bundle` and `CompiledBundle`; the FD-1420 fix (PL-1447) edits `_decision_table_node`; PL-1452 calls it and does not edit it | **Serialises with PL-1520**: the same function. With PL-1447 it is a different definition, so the dispatch record names it |
 | `packages/model-schema/src/model_schema/rating.py` | `Pins` (`:65-78`) gains `sub_graphs`; `SubGraphRef` (`:342-352`) gains the port map; `RatingAlgorithm._graph_invariants` (`:394`) sees a mount as a node; `AlgorithmDiff` (`:541`) and `diff_algorithms` (`:571`) gain the sub-graph limb | **PL-1452** edits `AlgorithmDiff` and `diff_algorithms` (its DP-S3-2 (a)). **PL-1476** (WK-675 S2, #1131) moves `RatingAlgorithm`'s fields to a new `RatingAlgorithmDraft` (its write-set row for `rating.py:375`). PL-1429 adds `RatingVersionCreate` | **Serialises** with PL-1452 and PL-1476: the same existing classes. The second to merge re-derives these edits on the first's names (Task 0) |
 | `docs/specs/03-rating-engine.md` §4.1, §4.3, §4.11 and §5.2 | Task 1 | any slice editing those sections | **Serialises** (`RL-1263:89`), unless the dispatch record names the path with the check that no definition is edited by both |
@@ -444,7 +444,7 @@ term is used (grep first; `spec-change`).
   Algorithm, Sub-graph Version) is governed by the pinning Rating Version's own approval."* Add a
   dated note citing `RL-1309` DP-1 item 5. The struck clause stays visible.
 - [ ] **§4.11, the Slice note** (`03:822`). Append a dated line: the pin, the inlining and the
-  port map landed in WK-1250 Slice 2 (this plan, PL-1571), and FR-218's purpose mount is
+  port map landed in WK-1250 Slice 2 (this plan, PL-1572), and FR-218's purpose mount is
   still Slice 3's. Add one bullet on namespacing (DP-S2-2's separator), and one on what compile
   refuses (acceptance 4's list, with the codes).
 - [ ] **§5.2** (`03:1028`). The `compile_bundle` line's comment says that it inlines each pinned
@@ -505,13 +505,13 @@ term is used (grep first; `spec-change`).
 **Interfaces:**
 - Produces: `inline_mounts(algorithm: RatingAlgorithm, fragments: Mapping[str, SubGraph]) -> RatingAlgorithm`.
   `fragments` is keyed by `str(ArtifactRef)`, the key form `resolved_payloads` uses. The result
-  has `sub_graphs == []`, and its steps in a stable topological order computed from the dependency edges: Kahn's algorithm with list order as the tie-break (the parent's steps, then each mount's namespaced steps), the rule the maintainer, by delegation, ruled for `to_wire` (RL-1570, P5). It is a proposal name, recorded in the ledger if it differs.
+  has `sub_graphs == []`, and its steps in a stable topological order computed from the dependency edges: Kahn's algorithm with list order as the tie-break (the parent's steps, then each mount's namespaced steps), the rule the maintainer, by delegation, ruled for `to_wire` (RL-1571, P5). It is a proposal name, recorded in the ledger if it differs.
   A red test scores `03` §4.1's shape through `load_bundle` and asserts that the parent step consuming `ncd_factor` reads the fragment's value.
 
 - [ ] **Step 1: Write the failing tests:**
   - **identity:** an algorithm with no mounts is returned equal to itself;
   - **namespacing:** every fragment `step_id`, and every name that is not a mapped port, becomes
-    `f"{mount_point}__{name}"` (RL-1570, the separator `__`), renamed by FR-244 token in every name-bearing field, never by substring;
+    `f"{mount_point}__{name}"` (RL-1571, the separator `__`), renamed by FR-244 token in every name-bearing field, never by substring;
   - **ports:** a mapped input port's name is replaced by its parent value, and a mapped output
     port's name by its parent name;
   - **the deliberate clash:** a fragment internal name equal to a parent name stays namespaced,
@@ -519,7 +519,7 @@ term is used (grep first; `spec-change`).
   - **a nested mount:** a fragment payload carrying `sub_graphs` → refused (`SubGraph`'s own
     `extra="forbid"`, re-raised by cause, DP-4);
   - **collisions:** a namespaced name equal to a parent name → refused (DP-S2-2);
-  - **token renaming** (RL-1570): an internal name inside an `expr` is renamed and the expression passes `_check_division_guards`; with `ncd` and `ncd_years` both present, only the exact token `ncd` is renamed;
+  - **token renaming** (RL-1571): an internal name inside an `expr` is renamed and the expression passes `_check_division_guards`; with `ncd` and `ncd_years` both present, only the exact token `ncd` is renamed;
   - **port checks (names only):** an undeclared port, and an unmapped input port. The
     input-port **type** check is not here; it is Task 5's, in `compile.py`.
 - [ ] **Step 2: Run** `uv run pytest packages/pricing-core/tests/test_rating_inline.py -q`.
@@ -601,7 +601,7 @@ term is used (grep first; `spec-change`).
 - [ ] **Step 4: `load_bundle`** (DP-S2-1 (a)): rebuild `fragments` from
   `bundle.resolved_payloads` for each `bundle.pins.sub_graphs` ref, then
   `algorithm = inline_mounts(algorithm, fragments)` **before** `check_step_refs_pinned` and
-  `_load_boosters`. Then C1 (RL-1570): refuse with `BUNDLE_COMPILE_FAILED` when the set of `bundle.graph` node ids differs from the set of the inlined algorithm's `step_id`s, naming the first difference, before the engine is built; red first, on a bundle whose graph has one node renamed. Update its docstring.
+  `_load_boosters`. Then C1 (RL-1571): refuse with `BUNDLE_COMPILE_FAILED` when the set of `bundle.graph` node ids differs from the set of the inlined algorithm's `step_id`s, naming the first difference, before the engine is built; red first, on a bundle whose graph has one node renamed. Update its docstring.
 - [ ] **Step 5: Run** `uv run pytest packages/pricing-core/tests/test_rating_compile_bundle.py packages/pricing-core/tests/test_rating_runtime.py packages/pricing-core/tests/test_rating_compile.py packages/pricing-core/tests/test_quote_input_raise_sites.py -q`.
   Expected: all pass, the existing tests unmodified (acceptance 10).
 - [ ] **Step 6: Broken-input proofs**, each a local edit that is never committed: remove `sub_graph`
