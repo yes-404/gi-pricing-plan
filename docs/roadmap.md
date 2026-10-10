@@ -787,7 +787,7 @@ The `dislocation.run` handler owning the Job identity, output location and resum
 id: SL-1389
 family: slice
 title: Slice 5: the approval gate, part one — structural_diff, FR-257 limb (2), FR-224
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-03
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: d672f991bdc59008e09cf3f464cd7cffe5699553
@@ -798,6 +798,10 @@ relates: [PL-1267, RL-1264]
 ```
 
 `06` FR-364's `structural_diff` persisted at submission with a verifier registered; FR-257 limb (2) on `submit_for_review` (refused with `EVIDENCE_INCOMPLETE` without a Dislocation Run on the current bundle hash against the current live version); FR-224's exact-mode comparison for an `approximation`-mode version, its threshold a new `ApprovalPolicyEntry` field and never read from Settings. `PL-1267` Slice 5. Starts after Slice 4 closes and after WK-674 Slice 2 (`SL-1256`) has merged; serialised against `SL-1256` on `approvals.py` and `06` §4.2. Leaf plan PL-1500 (`draft`; filed 2026-10-05). **Activation needs:** the plan made `active` by a dated line; `SL-1388` closed; `SL-1256` closed (met); a ruling on its DP-S5-1 to DP-S5-5 merged and minted; RL-1524 minted (FR-257's gate stays at the submit route); the lane free under `RL-1263` as amended, with the same-Work conditions in the dispatch record (its FR-224 edit in `03` §3.2 serialises with PL-1447, PL-1429 and A-3); the maintainer's dispatch GO and the lead's go in a separate activation PR. *(Plan cite added 2026-10-05 by the planner; working id 9590 reserved by the lead.)*
+
+(Activated 2026-10-10 as WK-673 Slice 5 on the dispatch GO "2026-10-10 05:19:53 BST — DISPATCH GOs …" with its conditions a–d; `PL-1500` set `active` in the slice PR's first commit.)
+
+(Closed 2026-10-10 as a Slice, closing acts in the slice PR's mint commit, on the lead's merge; ledger `LG-1582`, minted 2026-10-10 from working id 9450.)
 
 #### SL-1390 — Slice 6: the approval gate, part two — the floor wiring
 
