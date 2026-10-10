@@ -499,7 +499,12 @@ def _float_assembly_uses(source: str) -> list[int]:
         if isinstance(node, ast.ImportFrom | ast.Import):
             module = getattr(node, "module", "") or ""
             names = [alias.name for alias in node.names]
-            if "assemble_risk_premium" in names or module.endswith("modelling.perils"):
+            # `import a.b.c` has no `.module`; the dotted name is in the alias.
+            if (
+                "assemble_risk_premium" in names
+                or module.endswith("modelling.perils")
+                or any(name.endswith("modelling.perils") for name in names)
+            ):
                 lines.append(node.lineno)
         elif isinstance(node, ast.Name | ast.Attribute) and "assemble_risk_premium" in (
             ast.unparse(node)
