@@ -23,6 +23,8 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import BaseModel, ValidationError, field_validator
 
+from pricing_core.safe_error import CodedError
+
 _ROOT = Path(__file__).resolve().parents[2]
 #: The scope is DERIVED by glob, so a new file is covered by default (maintainer, 2026-09-29,
 #: Q889-a, widened by Q889-c to all of `app`): a list of files omitted four handlers and the
@@ -315,6 +317,9 @@ def test_an_unexpected_request_failure_logs_no_input(
     assert ValidationError.__name__ in str(record.exc_info[1])
 
 
+_CODED = "coded-trigger"
+
+
 class _SentinelBody(BaseModel):
     driver_age: int
 
@@ -325,6 +330,8 @@ class _SentinelBody(BaseModel):
             # A custom validator that interpolates what it was given: the shape of every
             # `value_error` and `assertion_error` a request model can raise.
             raise ValueError(f"unacceptable value {value}")
+        if value == _CODED:
+            raise CodedError("AUTHORED_CODE: an authored, input-free message")
         return value
 
 
@@ -342,3 +349,17 @@ def test_a_request_validation_422_carries_no_submitted_value(api_client: TestCli
     assert response.status_code == 422
     assert response.json()["errors"][0]["code"] == "VALUE_ERROR"
     assert _SENTINEL not in response.text
+
+
+@pytest.mark.req("NFR-499")
+def test_a_coded_validator_message_survives_the_422_sink(api_client: TestClient) -> None:
+    """A `CodedError` is input-free by construction, so its authored message is kept."""
+
+    async def intake(body: _SentinelBody) -> None:
+        return None
+
+    api_client.app.add_api_route("/__nfr499_coded", intake, methods=["POST"])  # type: ignore[attr-defined]
+    response = api_client.post("/__nfr499_coded", json={"driver_age": _CODED})
+
+    assert response.status_code == 422
+    assert "an authored, input-free message" in response.json()["errors"][0]["message"]
