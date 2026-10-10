@@ -123,7 +123,7 @@ def test_registered_command_allows_an_unrelated_call_from_any_cwd(
 def test_registered_command_still_denies_a_cap_breaching_record_from_docs(
     tmp_path: pathlib.Path, project_dir: str | None
 ) -> None:
-    """Proof (iii): the hook still refuses what it refused before, through the registered command."""
+    """Proof (iii): the hook still refuses what it refused before, via the registered command."""
     state_file = tmp_path / "state.json"
     _seed(state_file, count=1)
     for command in _registered_commands():
