@@ -136,7 +136,7 @@ A-2's branch is `sl-1463-a2-glm-model-call`, read at its head
   on that branch.
 - **The field is optional**: `packages/model-schema/src/model_schema/rating.py:362`,
   `result_type: str | None = None`, on that branch.
-- **The ledger**: SL-1463's ledger on A-2's branch `sl-1463-a2-glm-model-call` (not yet minted), records the 00:40:31 plan delta to `PL-1464` item 15 and the opt-in
+- **The ledger**: SL-1463's slice ledger on A-2's branch `sl-1463-a2-glm-model-call` (not yet minted), records the 00:40:31 plan delta to `PL-1464` item 15 and the opt-in
   derivation.
 - **A-3's peril nodes** follow rule 3 in A-3's code (`PL-1465`); 03:13:06 says "A-3's GO does
   not wait on it: the code follows X now". This record names no A-3 locator, because none was
@@ -175,7 +175,7 @@ the merged result.
   `…::test_the_opt_in_path_is_deterministic_and_its_money_is_decimal_exact`.
 - *Violation: a GLM step that declares `result_type` (`decimal` or `money_minor`) is rounded at the step* (rule 3).
   `…::test_a_model_call_equals_predict_glm_at_full_precision` asserts the step's value against `predict_glm` within
-  1e-14 (relative) for both types. Its docstring marks this as a draft, not item 15's evidence. LG 9449 holds that
+  1e-14 (relative) for both types. Its docstring marks this as a draft, not item 15's evidence. SL-1463's slice ledger on A-2's branch `sl-1463-a2-glm-model-call` (not yet minted) holds that
   evidence.
 - *Violation: a stored payload without `result_type` loads as `decimal`, or a type other than `decimal` /
   `money_minor` is accepted* (rule 1; FR-227).
