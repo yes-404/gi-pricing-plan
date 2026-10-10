@@ -44,7 +44,7 @@ Order and acceptance checks are `PL-1461` §"Tasks" and §"Acceptance Standard" 
 | `uv run ruff check .` | 0 | |
 | `uv run mypy` | 0 | |
 | `uv run lint-imports` | 0 | |
-| `python3 scripts/audit-docs.py` | 1 | FAILED (4) at this tree: check 31 gap `1570`..`9442`; check 31 `created` order (9442 is 2026-10-09, 1570 is 2026-10-10) (both clear at the mint of this ledger); check 32 twice, `LG-9440`/`LG-9478` named in this ledger's own text (fixed in the next commit; audit-docs then prints FAILED (2), the two check-31 lines) |
+| `python3 scripts/audit-docs.py` | 1 | FAILED (4) at this tree: check 31 gap `1570`..`9442`; check 31 `created` order (9442 is 2026-10-09, 1570 is 2026-10-10) (both clear at the mint of this ledger); check 32 twice, two removed pre-mint ledgers named by working id in this ledger's own text (fixed in the next commit; audit-docs then prints FAILED (2), the two check-31 lines) |
 | `uv run python scripts/req-coverage.py` | 0 | |
 | `uv run python scripts/generate-contracts.py --check` | 0 | |
 | `uv run pytest -q` | 1 | 15 failed, 5208 passed, 4 skipped in 2689.44 s (44:49) |
