@@ -44,6 +44,7 @@ from model_schema import (
     BundleMetadata,
     GbmFitResult,
     GlmFitResult,
+    GlmSpec,
     GoldenQuote,
     GoldenQuoteChange,
     GoldenQuoteChangeStep,
@@ -524,7 +525,10 @@ class WorkspaceResolver:
             factors = await load_factors(
                 session, workspace_id=workspace_id, factor_ids=list(model_obj.spec.factors)
             )
-            if not isinstance(model_obj.fit_result, GlmFitResult):
+            if not (
+                isinstance(model_obj.fit_result, GlmFitResult)
+                and isinstance(model_obj.spec, GlmSpec)
+            ):
                 return ResolvedArtifact(
                     status=model.status, payload=payload, factors=tuple(factors)
                 )

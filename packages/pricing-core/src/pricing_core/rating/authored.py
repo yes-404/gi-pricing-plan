@@ -63,6 +63,10 @@ NON_EXPRESSION_FIELDS: dict[tuple[type, str], str] = {
         "evaluated by the engine"
     ),
     (RatingModelCallStep, "feature_map"): "graph value names mapped to model feature names",
+    (RatingModelCallStep, "result_type"): (
+        "the step's declared result type (FR-227), read by the result-type check and never "
+        "evaluated by the engine"
+    ),
     (RatingConstraintStep, "reason_code"): "a code recorded on violation",
     (RatingOutputStep, "output_name"): "names a declared output",
 }

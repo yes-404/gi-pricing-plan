@@ -34,7 +34,8 @@ per-call-isolated mechanism every other produced value already uses.
 `Factor`, `Banding` and `Grouping` versions in `Bundle.resolved_payloads`, `load_bundle` rebuilds
 them once, and `predict_glm` runs per quote (FR-222, FR-239, NFR-491). A failure inside it
 (`MODEL_OFFSET_MISSING`, an unseen level) still surfaces as `MODEL_CALL_FAILED` with its error
-code, through the sentinel of item 1; the model's own text is not passed on (NFR-499). This item used to say a GLM was refused here.
+code, through the sentinel of item 1; the model's own text is not passed on (NFR-499). This item
+used to say a GLM was refused here.
 
 **3. A `set_param`/`predict()` race inside XGBoost, found by this task's own concurrency
 smoke test, not assumed away.** `predict_gbm`'s first cut (this task) called
