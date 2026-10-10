@@ -1982,6 +1982,24 @@ relates: [FD-1374, PL-1371]
 
 `FD-1374`'s fix (MEDIUM, a silent mispricing path), split out of the F35 plan and kept in P2 by the maintainer's entry "2026-10-08 13:00:11 BST — FD-1374 (silent mispricing) STAYS IN P2: DP-F35-1 split out as a P2 WK-1178 slice; F35's performance remainder carries; and fewer, consolidated status messages". FR-246 enforced at save and compile on every evaluating field (`as_at` included), `consumes` mandatory, an undeclared read refused with `RATING_STEP_UNDECLARED_READ` (422), compiled bundles grandfathered at reload; `03`'s FR-246 row and corrected §4.1 example applied verbatim from the ruling; the four under-declaring fixtures fixed. Its row and tasks are PL-1535 (the single-row WK-1178 Work plan), which quotes PL-1520 Task 1A as ruled by RL-1519. Money and contract group, never on the cut ladder. **Activation needs:** RL-1519 and PL-1520 minted (done, batch B4); the `compile.py` serial set free, a ready G2 compile-set slice taking it first; the maintainer's GO under L1 (a'). *(Cut 2026-10-08 by the planner under working id 9469, reserved by the lead; minted 2026-10-09 as SL-1536, in the docs batch D1.)*
 
+#### SL-9448 — WK-1178 fix slice — FD 9446: dislocation_frame's memory and time at book scale
+
+```yaml
+id: SL-9448
+family: slice
+title: WK-1178 fix slice — FD 9446, dislocation_frame's memory and time at book scale (a profiling spike first, then the measured fix)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-10            # working id; the mint date will replace this (check 31)
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 61e2a8d9d06087cadd3760e9668b3caff881b85c
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1371, SL-1387, SL-1388, SL-1526]
+```
+
+The FD 9446 (working id) remedy, proposed on the maintainer's entry "2026-10-10 00:08:17 BST — USER: go ahead. FD 9446 on the measured curve, a remedy-slice proposal, and the Friday re-baseline (after S3's merge, in W3)", item 2: owner the lead, placed before `SL-1526` in the exit-demo chain. `WF-699` D6's dislocation run goes through `dislocation_frame` (WK-673 S4's handler), which scores the book twice and retains every policy's validated ladder from both passes; peak RSS was logged linear at about 31 KiB per policy (`50-sb-200k`, `60-sb-400k`, tree `f59b546e`), so about 20.3 GiB is derived for the 678,013-policy book. Task 0 is a 1-hour profiling spike at 20,000 and 200,000 policies, using the standard library only, with a decision rule stated in advance. Only if it confirms retention (H1) does Task 1 make `_score_pass` keep rung values instead of `LadderRung` objects, with the frame unchanged value for value. Task 2 is the after-measurement. Single-row Work plan PL 9447 (working id), `draft`. It is not in the `compile.py` serial set; its serial set is `analysis.py`, after S3 (`SL-1387`). **Activation needs:** FD 9446 minted HIGH; PL 9447's DP-1 to DP-3 ruled; `SL-1387` merged; the lead's go. *(Cut 2026-10-10 by the planner (planner-remedy) under working id 9448, reserved by the lead.)*
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
