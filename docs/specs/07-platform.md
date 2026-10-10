@@ -180,7 +180,7 @@ The substrate every other module stands on:
 |---|---|
 | **FR-450** | The API implements `00` §5 exactly: `/api/v1`, cursor pagination, RFC 9457 problem responses with stable `code`s, `If-Match` optimistic concurrency, and `Idempotency-Key` support. |
 | **FR-451** | OpenAPI 3.1 is generated from the Pydantic models (ADR-704) and published at `/openapi.json`; the committed copy in `docs/contracts/openapi/` is regenerated in CI and a drift fails the build. |
-| **FR-452** | Rate limiting is applied per Principal and per environment, with scoring limits configured separately from management-API limits, and `429` responses carrying `Retry-After`. **Amended 2026-09-30 (`RL-1347`, PL-1342 DP-S3-2): the scoring limit.** `POST /api/v1/score` counts requests in a shared Redis counter, one per (Environment, Principal) per fixed one-second window. The Environment is the one the presented key was verified for, and it is empty for a bearer caller. The counter is shared by every replica, so an in-process count does not meet this requirement (register F48). The limit is the Service Account's own `rate_limit_rps` when it is set. Otherwise it is the Setting `scoring.default_client_rate_limit_rps`, resolved by §3.8 with the caller's Environment and declared for workspace or Environment scope (FR-446; FR-431). That Setting is unset by default. With no limit, the request is admitted without a counter call. Over the limit, the request is refused with `429 RATE_LIMITED` and `Retry-After: 1`, after authentication and authorisation and before any scoring. If the counter is unavailable, the request is admitted (fail open), logged, and counted on `gip_rate_limit_unenforced_total` by Environment. `/score/batch` and `/score/compare` are not counted. The management-API limit is not delivered by this clause and has no owner yet. `RL-1347` lists it for the lead. |
+| **FR-452** | Rate limiting is applied per Principal and per environment, with scoring limits configured separately from management-API limits, and `429` responses carrying `Retry-After`. **Amended 2026-09-30 (`RL-1347`, PL-1342 DP-S3-2): the scoring limit.** `POST /api/v1/score` counts requests in a shared Redis counter, one per (Environment, Principal) per fixed one-second window. The Environment is the one the presented key was verified for, and it is empty for a bearer caller. The counter is shared by every replica, so an in-process count does not meet this requirement (register F48). The limit is the Service Account's own `rate_limit_rps` when it is set. Otherwise it is the Setting `scoring.default_client_rate_limit_rps`, resolved by §3.8 with the caller's Environment and declared for workspace or Environment scope (FR-446; FR-431). That Setting is unset by default. With no limit, the request is admitted without a counter call. Over the limit, the request is refused with `429 RATE_LIMITED` and `Retry-After: 1`, after authentication and authorisation and before any scoring. If the counter is unavailable, the request is admitted (fail open), logged, and counted on `gip_rate_limit_unenforced_total` by Environment. `/score/batch` and `/score/compare` are not counted. The management-API limit is not delivered by this clause and has no owner yet. *(Amended 2026-10-10, WK-674 Slice 3, `PL-1583`, DP-S3E-3 (a): the management-API limb is placed in WK-674 Slice 4 (`SL-1258`), `PL-1537` R4.1; the owner named on 2026-10-09 is that slice's.)* `RL-1347` lists it for the lead. |
 | **FR-453** | Webhooks (alert routing, deployment notifications) are signed with an HMAC over the payload, delivered with retries and exponential backoff, and their delivery status is observable. **Noted 2026-09-29 (`RL-1232` DP-4, the maintainer's answer Q848-1):** these webhooks are the channel `03` FR-272's deployment notification uses. No Work owns the deployment-notification limb yet; §10's `OQ-1233` asks which. *(Amended 2026-09-29, `RL-1252`: `OQ-1233` is decided (b). Both limbs, alert routing and deployment notifications, are WK-688's, in Phase 4. The sentence above saying no Work owns the deployment-notification limb is superseded.)* |
 
 ---
@@ -263,6 +263,8 @@ Failure shape:
 > - **`live_deployments` is derived.** It is read from the Deployment rows of `03` §4.12 and is never stored a second time. The Deployment's shape is declared once, in `03`.
 > - **`slug` beside `name`** (`RL-1301` A.6). Every Environment has an immutable `slug` (the grammar of a reference slug; the seeds are `dev`, `uat` and `prod`) and a mutable display `name`. The slug is what the Approval Policy's `environment`, an approval request's `environment`, every `{env}` path parameter and every Environment reference name, and FR-428's rename changes the `name` only. A change of slug is refused, and a slug is never reissued, so a retired Environment keeps its row and its slug. Environments are deployment-wide, not per workspace (ADR-710).
 > - **`settings` is not in this slice's shape.** The `settings` object lands with WK-674 Slice 3 (`OQ-1235`, decided by `RL-1311`). `requires_prior_environment` is the predecessor that FR-429's predicate reads; the seeds carry `null`, `dev` and `uat`.
+>
+> **Amended 2026-10-10 (WK-674 Slice 3, `PL-1583`): the `settings` object is replaced by a pointer.** The example above is not rewritten. An Environment's settings are the Environment-setting rows of §4.4, one row per (Environment, key), written by `PUT /api/v1/environments/{slug}/settings` and read with every layer's candidate by `GET`. The example's keys `trace_sampling_rate`, `rate_limit_rps` and `shadow` were example names. The contract is the registry's names: `rating.trace_sample_rate` and `scoring.default_client_rate_limit_rps`. There is no `settings` object inside the Environment.
 
 ### 4.3 `ServiceAccount` / API key
 
@@ -280,6 +282,8 @@ Failure shape:
 
 The key value itself appears exactly once, in the creation response (FR-389).
 
+> **Amended 2026-10-10 (WK-674 Slice 3, `PL-1583`; FR-430 as `RL-1184` E7 amends it; `RL-1311`; the maintainer's (by delegation) ruling DP-S3E-1 (b), "2026-10-10 03:23:31 BST").** The example above is not rewritten. A Service Account carries a **key set, one key per granted Environment**. Each key has its own `environment`, its dates and its rotation state. The creation response carries `keys`, a list of `{environment, prefix, key}`, always. It also carries `key` when exactly one Environment is granted (the secret of that one key), so a one-Environment caller is unchanged. For an account granted several Environments `key` is `null`: there is no "first" secret. Each secret appears once. Keys issued before this slice are not backfilled, because a secret is shown once (FR-389). An account granted several Environments before this slice keeps its one key and gets the others at its next rotation of each Environment. Rotation always names the Environment it rotates (DP-S3E-2 (a)): the rotate body carries a required `environment`, and only that key changes.
+
 ### 4.4 `Setting` resolution
 
 ```json
@@ -296,6 +300,8 @@ The key value itself appears exactly once, in the creation response (FR-389).
 }
 ```
 
+> **Amended 2026-10-10 (WK-674 Slice 3, `PL-1583`; `RL-1311` item 2).** The example above is not rewritten. The resolution's `candidates` gain an `environment_setting` source, between `env` and `workspace`. The request takes an optional Environment (its slug). With none, the Environment layer is skipped and no `environment_setting` candidate is reported. With one, every layer's candidate is reported, the Environment setting included. An Environment setting is stored one row per (Environment, key): `environment_id`, `key`, `value`, `updated_by`, `updated_at`; the pair is unique.
+
 ---
 
 ## 5. Interfaces
@@ -310,11 +316,12 @@ The key value itself appears exactly once, in the creation response (FR-389).
 | `POST` | `/api/v1/jobs/{id}/cancel` | Cooperative cancellation (FR-401) |
 | `GET` | `/api/v1/jobs/{id}/events` | SSE stream of progress updates |
 | `GET`/`POST` | `/api/v1/environments` | List / create environments |
-| `PUT` | `/api/v1/environments/{name}/settings` | Update environment settings (audited) |
+| `PUT` | `/api/v1/environments/{slug}/settings` | Update environment settings (audited; `admin:manage_settings`) *(amended 2026-10-10, WK-674 Slice 3: `{name}` is the slug, §4.2's 2026-10-03 note)* |
+| `GET` | `/api/v1/environments/{slug}/settings` | Effective environment settings with every layer's candidate *(appended 2026-10-10, WK-674 Slice 3)* |
 | `PATCH` | `/api/v1/environments/{slug}` | Change an environment's display name or description; the slug is immutable (`admin:manage_environments`) |
 | `POST` | `/api/v1/environments/{slug}/retire` | Retire an environment; refused 409 `VALIDATION_FAILED` while a Deployment is live in it, a `deployment` approval policy entry names it (for a workspace with no stored policy, `DEFAULT_POLICY`'s `prod` entry), or an unrevoked Service Account key names it; the row and its slug are kept *(amended 2026-10-04, WK-674 Slice 2: the unrevoked-key refusal named)* |
 | `POST` | `/api/v1/service-accounts` | Create a service account + key (key shown once) |
-| `POST` | `/api/v1/service-accounts/{id}/rotate` | Rotate with an overlap window |
+| `POST` | `/api/v1/service-accounts/{id}/rotate` | Rotate with an overlap window; the body names the Environment whose key is rotated *(amended 2026-10-10, WK-674 Slice 3, DP-S3E-2 (a))* |
 | `DELETE` | `/api/v1/service-accounts/{id}/keys/{prefix}` | Revoke |
 | `GET`/`PUT` | `/api/v1/settings` | Read effective settings with sources; update workspace settings |
 | `POST` | `/api/v1/blobs/upload-url` | Presigned multipart upload (FR-421). **Amended 2026-09-28 (WK-1178, #869's ingest finding):** the object lands on a staging key, and nothing yet moves it to its content address or creates its `blobs` row: the completion step FR-421 implies has no endpoint. So an upload made through this URL cannot yet be ingested or downloaded as a blob. The completion step, and the owner it would record, are unbuilt and are a spec change of their own. |
@@ -388,7 +395,7 @@ async def open(ref: BlobRef) -> AsyncIterator[bytes]
 async def resolve(ref: str) -> SecretValue        # never logged, never returned (R3)
 
 # backend/app/platform/settings.py
-def get(key: str, workspace_id: UUID) -> SettingResolution
+def get(key: str, workspace_id: UUID, environment: str | None = None) -> SettingResolution
 ```
 
 ### 5.3 Frontend views
