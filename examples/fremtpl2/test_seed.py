@@ -193,7 +193,7 @@ def test_the_portfolio_sample_is_the_same_policies_every_run(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """PL-1577 DP-2/DP-3: the 20,000-policy sample is reproducible because its size is fixed and
-    its rule is the sampler's deterministic every-nth-row over a pinned input, not because it
+    its rule is the sampler's evenly spaced integer indices over a pinned input, not because it
     has a random seed. The same input gives the same `IDpol` set on two calls, of exactly
     `PORTFOLIO_ROWS` policies, spread over the ordered file (not its head)."""
     import io
@@ -208,13 +208,18 @@ def test_the_portfolio_sample_is_the_same_policies_every_run(
     first = build_csv(PORTFOLIO_ROWS)
     second = build_csv(PORTFOLIO_ROWS)
     assert first == second
+    # a request for at least as many rows as the book is the whole book, each row once
+    assert pl.read_csv(io.BytesIO(build_csv(60_000)), infer_schema=False).height == 50_001
 
     ids = pl.read_csv(io.BytesIO(first), infer_schema=False)["IDpol"].to_list()
     assert len(ids) == PORTFOLIO_ROWS
     assert len(set(ids)) == PORTFOLIO_ROWS
-    # `step = height // rows` = 2 here: policies 1, 3, 5, ... The rule takes `rows` rows at that
-    # step, so it ends at policy 39 999 and never reaches the last 10 002 rows of the file. That is
-    # the sampler's own property and it is asserted, not hidden (the real book: step 33, so the
-    # sample ends at row 660 000 of 678 013; LG-9966 records the comparison).
-    assert ids[:3] == ["1", "3", "5"]
-    assert ids[-1] == "39999"
+    # Evenly spaced integer indices `i * N // n` (the maintainer's ruling, 2026-10-10 21:55:37):
+    # the sample spans the whole file. The earlier `step = height // rows` stride took `rows` rows
+    # at that step, so it ended at policy 39 999 of 50 001 and never saw the file's tail, which in
+    # the real book is a distinct block (the last 18 013 rows, claim frequency 0.0613 against
+    # 0.1007). Pure integer arithmetic keeps the sample bit-reproducible.
+    expected = [str(i * 50_001 // PORTFOLIO_ROWS + 1) for i in range(PORTFOLIO_ROWS)]
+    assert ids == expected
+    assert ids[0] == "1"
+    assert int(ids[-1]) > 49_990

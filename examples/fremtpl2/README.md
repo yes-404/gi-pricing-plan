@@ -51,11 +51,14 @@ cost, not a modelled pure premium. Its golden quotes are the GLM's own premiums,
 fitted coefficients and not from the scored bundle.
 
 **The dislocation and attribution runs go over a 20,000-policy sample, never the full book.**
-The seed builds the sample with its every-nth-row sampler over the checksum-pinned file (a fixed
-size, a fixed rule, no random seed: the same 20,000 policies every run), ingests it as its own
+The seed builds the sample with evenly spaced integer indices `i * N // n` over the
+checksum-pinned file (a fixed size, a fixed rule, no random seed: the same 20,000 policies every
+run, spanning the whole book), ingests it as its own
 Dataset Version through the same recipe, and records its id in `data/last-seed.json`. The model
-is still fitted on the full book. The sample holds 19,979 policies after the recipe drops the 21
-above exposure 1.05. Nothing the demo shows over it is a full-book rate or a full-book timing. The
+is still fitted on the full book. The sample holds 19,985 policies after the recipe drops the 15
+above exposure 1.05. It is a 20,000-policy deterministic sample spanning the book; its claim
+frequency is within sampling error of the book's (measured -5.1%, 1.6 standard errors on 1,009
+claims). Nothing the demo shows over it is a full-book rate or a full-book timing. The
 cost of a full-book dislocation run is the owned, measured target `PL-1574`; the cost of
 full-book attribution is `FD-1576`.
 

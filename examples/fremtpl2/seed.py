@@ -70,11 +70,11 @@ MAX_EXPOSURE = 1.05
 #: everywhere it is shown. Reproducible without a random seed: the size is fixed, the rule is
 #: `build_csv`'s deterministic every-nth-row, and the input is sha256-pinned (`fetch.py`).
 PORTFOLIO_ROWS: Final = 20_000
-#: What the sample holds after the v2 recipe drops the 21 policies above `MAX_EXPOSURE`
-#: (19 979 of 20 000). **Measured, not derived** (PL-1577 DP-3): `build_csv(PORTFOLIO_ROWS)` over
+#: What the sample holds after the v2 recipe drops the 15 policies above `MAX_EXPOSURE`
+#: (19 985 of 20 000). **Measured, not derived** (PL-1577 DP-3): `build_csv(PORTFOLIO_ROWS)` over
 #: the sha256-pinned book, then `exposure_years <= MAX_EXPOSURE`; the seed asserts the ingested
 #: version's profile row count against it, so a changed input or sampler stops the seed.
-PORTFOLIO_VALIDATED_ROWS: Final = 19_979
+PORTFOLIO_VALIDATED_ROWS: Final = 19_985
 
 
 def recipe(*, drop_implausible_exposure: bool) -> list[dict[str, Any]]:
@@ -137,9 +137,14 @@ def build_csv(rows: int | None) -> bytes:
         # **Not `head`.** The file is ordered by claim count, so the first 50 000 rows are
         # very nearly every claiming policy and almost nothing else — a sample whose
         # frequency is 0.42 against the book's 0.05, which fails a plausibility rule for a
-        # reason that is entirely the sampler's fault. Every nth row preserves the mix.
-        step = max(joined.height // rows, 1)
-        joined = joined.gather_every(step).head(rows)
+        # reason that is entirely the sampler's fault. **Nor a stride** (`gather_every(N // n)`):
+        # `n` rows at that stride end before the file does (row 660 000 of 678 013 here), and
+        # the tail of an ordered file is a distinct block that the sample could then never hold.
+        # Evenly spaced integer indices `i * N // n` span the whole book, and integer arithmetic
+        # keeps the sample bit-reproducible (the maintainer's ruling, 2026-10-10 21:55:37 BST).
+        height = joined.height
+        if rows < height:
+            joined = joined[[i * height // rows for i in range(rows)]]
 
     buffer = io.BytesIO()
     joined.write_csv(buffer)
