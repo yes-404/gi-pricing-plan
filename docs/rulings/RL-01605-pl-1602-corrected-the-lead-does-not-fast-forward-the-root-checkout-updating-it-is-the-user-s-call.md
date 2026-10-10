@@ -1,9 +1,9 @@
 ---
-id: RL-9961
+id: RL-1605
 family: ruling
 title: PL-1602 corrected — the lead does not fast-forward or change the root checkout; updating it is the user's call, and it is not needed for safety
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
-created: 2026-10-10
+created: 2026-10-10            # original date 2026-10-10, set at the draft; minted 2026-10-10
 owner: decision-maker
 tree: 31b88780aa52894624a5e08454ce2d5925d04b37
 phase: P2
@@ -15,11 +15,11 @@ corrects: PL-1602
 relates: [PL-1602, SL-1603, LG-1604, FD-1598]
 ---
 
-# RL-9961 — PL-1602 corrected: the lead does not fast-forward or change the root checkout
+# RL-1605 — PL-1602 corrected: the lead does not fast-forward or change the root checkout
 
 *Disclosure: drafted under working id 9961, reserved by the lead (team-lead) on 2026-10-10;
-the id is minted in a later batch mint PR. When it is minted, the working id in this record
-is replaced by the minted id.*
+minted as RL-1605 on 2026-10-10, in the D9 batch mint PR. The working id still appears in
+verbatim quotes of channel entry headers and bodies, which keep it as written.*
 
 ## Ruled
 
