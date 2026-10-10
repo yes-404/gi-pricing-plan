@@ -58,8 +58,7 @@ __all__ = [
 _FIXED_TEXT_TYPES = frozenset({
     "missing", "extra_forbidden", "int_type", "int_parsing", "float_type", "float_parsing",
     "string_type", "bool_type", "bool_parsing", "decimal_type", "decimal_parsing",
-    "decimal_max_digits", "date_type", "date_from_datetime_parsing", "datetime_type",
-    "datetime_from_date_parsing",
+    "decimal_max_digits", "date_type", "datetime_type",
     "literal_error", "enum", "string_pattern_mismatch", "string_too_long", "string_too_short",
     "greater_than", "greater_than_equal", "less_than", "less_than_equal", "too_short",
     "too_long", "list_type", "dict_type", "model_type",
@@ -73,6 +72,13 @@ _FIXED_TEXT_TYPES = frozenset({
 _AUTHORED_TEXT: Mapping[str, str] = {
     "json_invalid": "The request body is not valid JSON.",
     "date_parsing": "The value should be a valid date in the format YYYY-MM-DD.",
+    "date_from_datetime_parsing": (
+        "The value should be a valid date or date-time: use YYYY-MM-DD or an ISO 8601 date-time."
+    ),
+    "datetime_from_date_parsing": (
+        "The value should be a valid date or date-time in ISO 8601 format, for example "
+        "2026-01-31 or 2026-01-31T09:30:00Z."
+    ),
     "date_from_datetime_inexact": (
         "The value should be a date with no time part, in the format YYYY-MM-DD."
     ),

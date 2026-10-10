@@ -10,7 +10,9 @@ absent; the controls check what an operator needs (the field, the type, the boun
 from __future__ import annotations
 
 import enum
+import json
 import logging
+from collections.abc import Callable
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated, Any, Literal
@@ -82,9 +84,7 @@ def _cases() -> dict[str, tuple[type[BaseModel], dict[str, Any]]]:
             {"a": "99999"},
         ),
         "date_type": (model(a=(date, ...)), {"a": [_SENTINEL]}),
-        "date_from_datetime_parsing": (model(a=(date, ...)), {"a": _SENTINEL}),
         "datetime_type": (model(a=(datetime, ...)), {"a": [_SENTINEL]}),
-        "datetime_from_date_parsing": (model(a=(datetime, ...)), {"a": _SENTINEL}),
         "literal_error": (model(a=(Literal["x", "y"], ...)), {"a": _SENTINEL}),
         "enum": (model(a=(_Colour, ...)), {"a": _SENTINEL}),
         "string_pattern_mismatch": (
@@ -276,6 +276,13 @@ def _authored_cases() -> dict[str, tuple[type[BaseModel], str | bytes, bool]]:
 
     return {
         "json_invalid": (one(a=(int, ...)), b'{"a": "' + _SENTINEL.encode(), True),
+        # A lax body (what FastAPI validates) gives these two for a bad date or date-time.
+        "date_from_datetime_parsing": (one(a=(date_, ...)), '{"a": "' + _SENTINEL + '"}', False),
+        "datetime_from_date_parsing": (
+            one(a=(datetime_, ...)),
+            '{"a": "' + _SENTINEL + '"}',
+            False,
+        ),
         # `date_parsing` and `datetime_parsing` arise only from strict JSON validation
         # (`validate_json`); a lax body, which is what FastAPI validates, gives
         # `date_from_datetime_parsing` / `datetime_from_date_parsing`, already fixed-text types.
@@ -299,14 +306,20 @@ def _authored_cases() -> dict[str, tuple[type[BaseModel], str | bytes, bool]]:
     }
 
 
+def _validate_parsed(model: type[BaseModel]) -> Callable[[str | bytes], object]:
+    return lambda data: model.model_validate(json.loads(data))
+
+
 @pytest.mark.req("NFR-499")
 def test_every_authored_text_type_has_a_case_and_leaks_no_input() -> None:
     cases = _authored_cases()
     assert set(cases) == set(_AUTHORED_TEXT), "a listed type without a case, or a case unlisted"
     assert not set(_AUTHORED_TEXT) & _FIXED_TEXT_TYPES, "one allow-list entry per type"
-    for error_type, (model, data, _) in cases.items():
+    for error_type, (model, data, from_json) in cases.items():
+        # a lax body: parsed JSON handed to python-mode validation, as FastAPI does
+        validate = model.model_validate_json if from_json else _validate_parsed(model)
         with pytest.raises(ValidationError) as caught:
-            model.model_validate_json(data)
+            validate(data)
         exc = caught.value
         assert error_type in {e["type"] for e in exc.errors()}, f"{error_type}: not produced"
         detail = safe_error_detail(exc)
