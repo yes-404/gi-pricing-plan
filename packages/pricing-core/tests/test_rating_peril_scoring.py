@@ -4,7 +4,7 @@ Compile resolves each component model of the pinned structure, refuses one below
 `approved` and embeds its payload, so the Bundle stays self-contained; the runtime then
 assembles the risk premium. Covers FR-188, FR-189, FR-20, FR-237, FR-239, FR-240, NFR-491.
 
-Every refusal test is red first by cause (PL-1465 §"Acceptance Standard"): see LG-9455.
+Every refusal test is red first by cause (PL-1465 §"Acceptance Standard"): see LG-1592.
 """
 
 from __future__ import annotations

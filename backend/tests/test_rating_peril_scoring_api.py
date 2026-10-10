@@ -5,7 +5,7 @@ paths, against the UNION of the component models (item 16, `RL-1459` DP-A3-7 (a)
 Version pinning an approved structure compiles and scores (item 11, FR-188, FR-191).
 
 **Authored ahead of a database run** (the small-test rule bars Postgres): every test here needs
-`GIP_TEST_DATABASE_URL`, and its red-by-cause is owed to the first gate-slot window (LG-9455).
+`GIP_TEST_DATABASE_URL`, and its red-by-cause is owed to the first gate-slot window (LG-1592).
 The fixtures are A-1's and A-2's own (`test_peril_structure_approval.py`,
 `test_rating_glm_model_call.py`), imported rather than rebuilt.
 """
