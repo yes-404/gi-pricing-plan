@@ -110,6 +110,13 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         "RL-1361 item 3 and RL-1418 T5 "
         "(test_rate_table_diff_portfolio.py::"
         "test_a_resolution_error_reaches_the_failed_job_with_its_count_and_example)"),
+    ("packages/pricing-core/src/pricing_core/rating/compile.py", "compile_bundle",
+     "str(exc)"): (
+        1, "FR-223 MODEL_REFERENCE_MODE_INCONSISTENT at compile: caught BY CLASS "
+        "(`ModelReferenceModeError`), whose text is authored from the step id and the two "
+        "declared modes; no quote is involved; any other `ValueError` falls through uncoded "
+        "(test_rating_compile_bundle.py::"
+        "test_a_foreign_value_error_is_not_given_the_mode_code)"),
     ("packages/pricing-core/src/pricing_core/rate_tables/weights.py", "_resolved_series",
      "str(exc)"): (
         1, "re-wraps a `FactorResolutionError` as a `WeightJoinError` with its message kept, as "
