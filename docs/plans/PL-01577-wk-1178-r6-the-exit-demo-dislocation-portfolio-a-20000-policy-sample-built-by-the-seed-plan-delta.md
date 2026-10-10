@@ -1,10 +1,10 @@
 ---
-id: PL-9452
+id: PL-1577
 family: plan
 kind: map
 title: WK-1178 — R6, the exit demo's dislocation portfolio is a 20,000-policy sample of the freMTPL2 book built by the seed's existing sampler: a dated delta to PL-1544
 status: draft                  # draft → active → superseded | retired (§1.2a)
-created: 2026-10-10
+created: 2026-10-10            # original date 2026-10-10, set at the draft; minted 2026-10-10
 owner: planner
 tree: 61e2a8d9d06087cadd3760e9668b3caff881b85c
 phase: P2
@@ -12,10 +12,12 @@ work: WK-1178
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [PL-1544, PL-1525, PL-1371, SL-1526, SL-1527, WF-699, FR-263, FR-266, RL-1521, LG-1417, PL-9447, FD-9446, FD-9451]
+relates: [PL-1544, PL-1525, PL-1371, SL-1526, SL-1527, WF-699, FR-263, FR-266, RL-1521, LG-1417, PL-1574, FD-9446, FD-1576]
 ---
 
-# PL-9452 — WK-1178, R6: the dislocation portfolio is a 20,000-policy sample (delta to PL-1544)
+# PL-1577 — WK-1178, R6: the dislocation portfolio is a 20,000-policy sample (delta to PL-1544)
+
+*Disclosure: drafted under working id 9452; minted as PL-1577 on 2026-10-10, in the D5 batch mint PR.*
 
 > **For agentic workers:** this is a **dated delta** under Lean P2 L5 (`document-ids.md` §1.6,
 > PL row: *"a change is one dated Work-plan delta, a new `PL-` that `relates:` the Work's
@@ -28,7 +30,7 @@ relates: [PL-1544, PL-1525, PL-1371, SL-1526, SL-1527, WF-699, FR-263, FR-266, R
 > executor of the carrying slice binds `python-test`, `test-driven-development`, `dev-commands`
 > and `git-hygiene`, and is spawned from `.claude/roles/executor.md`.
 
-Filed under working id 9452, reserved by the lead. Written 2026-10-10 by the planner
+Filed under the working id named in the disclosure line above, reserved by the lead. Written 2026-10-10 by the planner
 (planner-r6a1) on the lead's brief `brief-planner-r6-a1-spec-2026-10-10.md`, deliverable 2.
 Evidence read at `origin/main` `61e2a8d9` (2026-10-10 00:31 BST).
 
@@ -55,6 +57,8 @@ the named fallback; (B) and (C) rejected"**. A repository reader cannot resolve 
 > position if any.
 > 5. FD 9446 → LOW and FD 9451 → MEDIUM, as the auditors' conditional re-rates. The full-book
 > costs stay OWNED, measured targets (PL 9447; FD 9451's owner named), not demo-day steps.
+
+[Bracketed note on the quoted block: PL 9447 is minted as PL-1574, FD 9451 as FD-1576, FD 9446 as FD-1573.]
 
 And its fallback, verbatim: *"(D) is the named FALLBACK if (A1) fails at its proving run:
 pre-run the full book and show the persisted run. It would need its own dated line (RL-1521 is
@@ -95,7 +99,7 @@ no parameter to name on the existing function — DP-2.
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-1 | Which Dataset Version is the sample? | (a) `--rows 20000` for the whole seed: no new code, but the 7-factor GLM that WF-699 A1–A2 seeds from is then fitted on 20,000 rows too, and v2 holds 20,000 less the sampled rows above exposure 1.0. (b) the seed ingests the full book as today (v1 fails, v2 validated, models fitted on v2) **and** ingests one more Dataset Version, the portfolio, from `build_csv(20000)` through the v2 recipe, recording its id for D6 | **(b).** The ruling names the sample as the *demo portfolio*, not the modelling data; `FD-9451`'s handler reads exactly `spec.portfolio_dataset_version_id` (its `:29`), so a separate version is the seam the code already has. (a) silently shrinks the model the demo shows | scope | yes — the carrying slice | — |
+| DP-1 | Which Dataset Version is the sample? | (a) `--rows 20000` for the whole seed: no new code, but the 7-factor GLM that WF-699 A1–A2 seeds from is then fitted on 20,000 rows too, and v2 holds 20,000 less the sampled rows above exposure 1.0. (b) the seed ingests the full book as today (v1 fails, v2 validated, models fitted on v2) **and** ingests one more Dataset Version, the portfolio, from `build_csv(20000)` through the v2 recipe, recording its id for D6 | **(b).** The ruling names the sample as the *demo portfolio*, not the modelling data; `FD-1576`'s handler reads exactly `spec.portfolio_dataset_version_id` (its `:29`), so a separate version is the seam the code already has. (a) silently shrinks the model the demo shows | scope | yes — the carrying slice | — |
 | DP-2 | What is condition 3's "FIXED seed" on a sampler that has none? | (a) the reproducibility is the existing sampler's determinism: fixed size 20,000, `step = max(height // rows, 1)`, over the sha256-pinned input; WF-699 names those, and the seed asserts the same `IDpol` set every run. (b) a seeded random draw (`DataFrame.sample(n=20000, seed=<k>)`): has a seed to name, but it is not "the seed's existing sampler" the ruling adopts | **(a)**, with a dated line from the lead confirming that "FIXED seed" reads as the fixed size plus the pinned input. The ruling's text and the function disagree; that is not the planner's to settle | decision point | yes — the WF-699 text | — |
 | DP-3 | The size: 20,000 sampled rows, or 20,000 validated policies? `build_csv` samples before the v2 recipe drops exposure above 1.0, so the portfolio version may hold fewer than 20,000 | (a) the label says "20,000-policy sample" and the seed asserts the portfolio version's validated row count against a constant measured at the proving run; every demo text that gives a count quotes that constant. (b) sample from the filtered book so the count is exactly 20,000 (moves the filter into `build_csv`, against the seed's story that the platform's recipe fixes it, `seed.py:12-15`) | **(a).** Measured, not derived; no demo text claims a count the seed did not assert | fact | no — Task 2 measures it; default (a) | the proving run's ledger line |
 | DP-4 | Which slice carries the seed change (condition 4)? | (a) **SL-1526** (slice (a), leaf plan `PL-1525`). (b) a new single-row WK-1178 slice | **(a).** `PL-1544` assigns the file to slice (a), `:455-457`: *"`examples/fremtpl2/model.py`, `seed.py` and `algorithm.py` (slice (a)'s)"*; `PL-1525`'s file table already edits `seed.py:run` (its `:486`). A separate slice would be serial with SL-1526 on `seed.py:run` anyway. **compile.py position: none** — `PL-1525`'s file table edits no `compile.py` (its only `compile.py` mentions, `:236` and `:769`, are about `import zen`), and the lead's inventory lists the `compile.py` serial set without demo (a) (`~/gi-pricing-plan.local/handover/p2-inventory-2026-10-09.md:180`, local). SL-1526's own row scopes "the real freMTPL2 rating algorithm in the seed"; this delta adds the portfolio to it | the lead (condition 4: "The lead names which in the dispatch") | yes — Task 2 | — |
@@ -120,12 +124,12 @@ this file, before Task 2.
 
 **Task 3 — honesty (condition 2), in slice (b) (`SL-1527`) and the README.** The journey's D6
 and D7 output and `examples/fremtpl2/README.md` say "20,000-policy sample" and point to
-`PL-9447` (full-book dislocation cost) and `FD-9451` (full-book attribution cost). No demo text
+`PL-1574` (full-book dislocation cost) and `FD-1576` (full-book attribution cost). No demo text
 states or implies a full-book rate.
 
 **Task 4 — the re-rates (condition 5), the auditors' and the lead's.** `FD-9446` → LOW,
-`FD-9451` → MEDIUM. The full-book costs stay owned, measured targets: dislocation by `PL-9447`;
-attribution by `FD-9451`'s owner, **to be named by the lead** (open). Neither is a demo-day step.
+`FD-1576` → MEDIUM. The full-book costs stay owned, measured targets: dislocation by `PL-1574`;
+attribution by `FD-1576`'s owner, **to be named by the lead** (open). Neither is a demo-day step.
 
 ## Acceptance Standard
 
@@ -137,6 +141,6 @@ attribution by `FD-9451`'s owner, **to be named by the lead** (open). Neither is
 3. The carrying slice's ledger records the proving run's command, wall time, exit code and the
    portfolio version's validated row count.
 4. `git grep -n -i 'sample' -- examples/fremtpl2/README.md examples/fremtpl2/journey.py` shows
-   the condition 2 text naming `PL-9447` and `FD-9451`.
-5. `FD-9446` and `FD-9451` carry the re-rates, and `FD-9451`'s full-book target names an owner.
+   the condition 2 text naming `PL-1574` and `FD-1576`.
+5. `FD-9446` and `FD-1576` carry the re-rates, and `FD-1576`'s full-book target names an owner.
 6. `python3 scripts/audit-docs.py` passes on the batch tree that carries this file.

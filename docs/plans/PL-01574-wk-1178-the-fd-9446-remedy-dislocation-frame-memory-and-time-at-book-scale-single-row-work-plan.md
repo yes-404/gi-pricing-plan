@@ -1,10 +1,10 @@
 ---
-id: PL-9447
+id: PL-1574
 family: plan
 kind: map
 title: WK-1178 — the FD 9446 remedy, dislocation_frame's memory and time at book scale (a profiling spike first, then the measured fix): single-row Work plan
 status: draft                  # draft → active → superseded | retired (§1.2a)
-created: 2026-10-10            # working id; the mint date will replace this (check 31)
+created: 2026-10-10            # original date 2026-10-10, set at the draft; minted 2026-10-10
 owner: planner
 tree: 61e2a8d9d06087cadd3760e9668b3caff881b85c
 phase: P2
@@ -15,10 +15,12 @@ corrected_by: []
 relates: [PL-1371, PL-1535, SL-1387, SL-1388, SL-1526, SL-1527]
 ---
 
-# PL 9447 (working id) — WK-1178: the FD 9446 remedy, single-row Work plan
+# PL-1574 — WK-1178: the FD 9446 remedy, single-row Work plan
+
+*Disclosure: drafted under working ids 9447 (this plan) and 9448 (its slice row); minted as PL-1574 and SL-1575 on 2026-10-10, in the D5 batch mint PR.*
 
 > **For agentic workers:** this is a **single-row WK-1178 Work plan** under Lean P2 L5, in the
-> form of `PL-1535`: WK-1178 has no map plan, so this is one row, the slice SL 9448 (working
+> form of `PL-1535`: WK-1178 has no map plan, so this is one row, the slice SL-1575 (working
 > id), cut on this file's branch. Its `LG-` quotes the row below as its scope. REQUIRED
 > SUB-SKILL for the executor: subagent-driven-development (recommended) or executing-plans.
 > The executor also binds `python-test` (the `req` marker, broken-input proofs),
@@ -27,7 +29,7 @@ relates: [PL-1371, PL-1535, SL-1387, SL-1388, SL-1526, SL-1527]
 > reads [`README.md`](README.md)'s five unchecked conventions; and is spawned from
 > `.claude/roles/executor.md`.
 
-Filed under working id 9447; the slice row is working id 9448; both reserved by the lead in
+Filed under the working ids named in the disclosure line above, both reserved by the lead in
 `~/gi-pricing-plan.local/handover/brief-w3-quartet-2026-10-10.md` Section C. Written by the
 planner (planner-remedy) on 2026-10-10 from 00:14:41 BST (`TZ=Europe/London date`). Evidence
 read at `origin/main` `61e2a8d9d06087cadd3760e9668b3caff881b85c` (#1253,
@@ -37,7 +39,7 @@ labelled *derived*.
 
 **Draft, not frozen.** The three decision points (DP-1 to DP-3) are ruled, by the maintainer's
 entry "2026-10-10 00:20:03 BST — RULINGS on the FD 9446 remedy plan (PL 9447 + SL 9448
-@5921b3dc): DP-1 (a), DP-2 (a) as a PLAN TARGET, DP-3 (a); …" in `channel/to-lead.md`. Each
+@5921b3dc): DP-1 (a), DP-2 (a) as a PLAN TARGET, DP-3 (a); …" [PL 9447 is minted as PL-1574, SL 9448 as SL-1575, FD 9446 as FD-1573] in `channel/to-lead.md`. Each
 ruling is quoted under its DP below. The plan does not activate until FD 9446 (working id)
 carries its severity and the R6 size (DP-2) is quoted.
 
@@ -115,7 +117,7 @@ the R6 size, which the 00:20:03 BST entry makes URGENT. It is not this plan's to
 
 Make the `WF-699` D6 dislocation run complete on the exit demo's portfolio within DP-2's ruled
 target (a plan acceptance target, not an NFR), by removing the cause the spike measures, without
-changing one value of `dislocation_frame`'s output. Done when SL 9448 closes on its `LG-` with
+changing one value of `dislocation_frame`'s output. Done when SL-1575 closes on its `LG-` with
 the after-measurement beside the before-measurement, and FD 9446's register row carries the
 fix's merge sha.
 
@@ -172,7 +174,7 @@ read from the `LG-`, which quotes the command and its printed lines.
 - **A spike or measurement run is a slot job**: queued by the lead, alone, never beside a gate
   or another measurement (the 00:08:41 entry, item 3; the sweep-pause rule in
   `.claude/roles/executor.md`).
-- **One PR per slice** (L1 (a')): code, tests, SL 9448's status line and one `LG-`.
+- **One PR per slice** (L1 (a')): code, tests, SL-1575's status line and one `LG-`.
 
 ## Tasks
 
@@ -180,7 +182,7 @@ Under L5 a Work plan's tasks are its slice rows; this row's steps follow the tab
 
 | Order | Slice | Scope (what the `LG-` quotes) | Requirements, each id | Depends on | Lane | Size |
 |---|---|---|---|---|---|---|
-| 1 | SL 9448 (working id) — WK-1178 fix slice — FD 9446: `dislocation_frame`'s memory and time at book scale | Task 0, the 1-hour profiling spike of `dislocation_frame` at 20,000 (Python heap) and 200,000 (RSS and time), with the H1 decision rule; then, only if H1 is confirmed, Task 1: `_score_pass` retains each rung's `(value_minor, unrounded_minor)` instead of the validated `LadderRung` objects; then Task 2, the after-measurement. **Out of scope:** `score_batch`'s per-row engine evaluation (its docstring: *"This is not genuine polars streaming"*, `score.py:1186-1234`); `attribute`'s 2^K re-rates (S3's code; see DP-1); any change to `03` text | `03` §8: NFR-493 (rated, not changed); `03` §3: FR-263 (output unchanged); `03` §8: NFR-495, NFR-496 (held) | WK-673 S3 (`SL-1387`) merged, because `analysis.py` and `measure-attribution-cost.py` are its write set; FD 9446 minted with HIGH; DP-1 to DP-3 ruled | B (recommended; see Sequencing) | ≈ 1.5 lane-days, derived (see Size) |
+| 1 | SL-1575 — WK-1178 fix slice — FD 9446: `dislocation_frame`'s memory and time at book scale | Task 0, the 1-hour profiling spike of `dislocation_frame` at 20,000 (Python heap) and 200,000 (RSS and time), with the H1 decision rule; then, only if H1 is confirmed, Task 1: `_score_pass` retains each rung's `(value_minor, unrounded_minor)` instead of the validated `LadderRung` objects; then Task 2, the after-measurement. **Out of scope:** `score_batch`'s per-row engine evaluation (its docstring: *"This is not genuine polars streaming"*, `score.py:1186-1234`); `attribute`'s 2^K re-rates (S3's code; see DP-1); any change to `03` text | `03` §8: NFR-493 (rated, not changed); `03` §3: FR-263 (output unchanged); `03` §8: NFR-495, NFR-496 (held) | WK-673 S3 (`SL-1387`) merged, because `analysis.py` and `measure-attribution-cost.py` are its write set; FD 9446 minted with HIGH; DP-1 to DP-3 ruled | B (recommended; see Sequencing) | ≈ 1.5 lane-days, derived (see Size) |
 
 ### Task 0: the profiling spike (1 hour; the run is a slot job)
 
@@ -207,7 +209,7 @@ materialisation, frame width", made specific to the code read above):
   call time, so the real function runs once and each stage is stamped.
 
 ```python
-"""PL 9447 Task 0: dislocation_frame's stages at N policies — time, RSS, Python heap."""
+"""PL-1574 Task 0: dislocation_frame's stages at N policies — time, RSS, Python heap."""
 from __future__ import annotations
 
 import argparse
@@ -479,7 +481,7 @@ def _origin_rung(baseline: Sequence[LadderRung], candidate: Sequence[LadderRung]
   the `cost` run at the R6 size under `inv-rss.sh` (Acceptance 5; DP-1 (a), DP-2 (a)).
   Before-and-after tables in the `LG-` (Acceptance 3–5).
 - [ ] **Step 2:** the `CLAUDE.md` §11 gate, both halves, in a gate slot (Acceptance 6). Then
-  SL 9448's status line and the `LG-` closed at the head (the 13:29:49 standing rule (3)).
+  SL-1575's status line and the `LG-` closed at the head (the 13:29:49 standing rule (3)).
 
 ## Sequencing, lane and merge-order slot
 
@@ -529,7 +531,7 @@ slice and couple it to S3's Acceptance 20.
 covers dislocation_frame's memory and time only. The spike's pre-registered H1/H2/H3 rule, and
 the stop on falsification (fix becomes a dated delta), are approved as drafted."* The scope is
 `dislocation_frame`'s memory and time only, and (c) is not in this slice. The entry adopts the
-`attribute` full-book cost *"as a separate FD now … Not folded into PL 9447."* The size this
+`attribute` full-book cost *"as a separate FD now … Not folded into PL 9447."* [PL 9447 is minted as PL-1574] The size this
 plan measures at is the R6 size (DP-2). That size replaces the option text's "678,013" until R6
 is quoted.
 
@@ -574,10 +576,10 @@ dependency, no skills-map row)."*
 ## Hand-off (not this plan's writes)
 
 - The lead lists this plan on WK-1178's roadmap row (L5) at mint, and adds the dated line that
-  makes SL 9448's merge an activation need of `SL-1526`. The 00:20:03 BST entry rules it:
-  *"SL 9448 becomes an activation need of SL-1526 by a dated line at the mint."*
+  makes SL-1575's merge an activation need of `SL-1526`. The 00:20:03 BST entry rules it:
+  *"SL 9448 becomes an activation need of SL-1526 by a dated line at the mint."* [SL 9448 is minted as SL-1575]
 - The minter cuts the ids in the batch the lead names; FD 9446 mints first, with its severity.
-  The entry says *"PL 9447 rides D5 or the next batch."*
+  The entry says *"PL 9447 rides D5 or the next batch."* [PL 9447 is minted as PL-1574]
 - DP-1 (c) is declined. The `attribute` full-book cost is its own FD (the auditor's, on a
   `draft/` branch), as the 00:20:03 BST entry adopts.
 

@@ -1,18 +1,20 @@
 ---
-id: FD-9451
+id: FD-1576
 family: finding
 title: Full-book attribution in the exit demo's dislocation run is derived at 3.1 to 3.7 hours at K = 3 (doubling per extra change group), with no budget in any spec and the handler attributing the whole portfolio synchronously
 status: draft
-created: 2026-10-10
+created: 2026-10-10            # original date 2026-10-10, set at the draft; minted 2026-10-10
 owner: auditor
 tree: 61e2a8d9d06087cadd3760e9668b3caff881b85c
 corrected_by: []
 relates: [WK-673, WK-1178, SL-1387, SL-1388, PL-1452, PL-1544, FD-9446, LG-9478, FR-263, FR-266, FR-1397, FR-1399]
 ---
 
-# FD-9451 — Attribution over the full book: measured on 20,000 and 100,000 policies, derived for 678,013
+# FD-1576 — Attribution over the full book: measured on 20,000 and 100,000 policies, derived for 678,013
 
-**DRAFT.** Filed on `draft/fd-9451`, no PR, at the lead's ruling (`to-lead.md`, "2026-10-10 00:20:03 BST — RULINGS on the FD 9446 remedy plan …", the NEW RISK item: a separate FD, not folded into `PL 9447`). **Every figure marked "measured" is a line in `~/gi-pricing-plan.local/task7-s3e/out/` (local, named below) or in `LG-9478` on `origin/sl-1387-attribution-exact-shapley-largest-remainder`. Every figure marked "derived" is the auditor's arithmetic from those lines and is not a measurement; per `PL-1452` DP-S3-10 (b) there is no NFR verdict from a derived figure.** No full-book attribution run was made.
+*Disclosure: drafted under working id 9451; minted as FD-1576 on 2026-10-10, in the D5 batch mint PR.*
+
+**DRAFT.** Filed on `draft/fd-9451`, no PR, at the lead's ruling (`to-lead.md`, "2026-10-10 00:20:03 BST — RULINGS on the FD 9446 remedy plan …", the NEW RISK item: a separate FD, not folded into `PL-1574`). **Every figure marked "measured" is a line in `~/gi-pricing-plan.local/task7-s3e/out/` (local, named below) or in `LG-9478` on `origin/sl-1387-attribution-exact-shapley-largest-remainder`. Every figure marked "derived" is the auditor's arithmetic from those lines and is not a measurement; per `PL-1452` DP-S3-10 (b) there is no NFR verdict from a derived figure.** No full-book attribution run was made.
 
 ## Finding
 
@@ -82,7 +84,7 @@ The dislocation step itself (`dislocation_frame` at `:223`) is `FD-9446`'s book 
 
 **Severity: HIGH, proposed.** Reasons: (1) the demo's own texts put the full book on demo day (`PL-1544`), the handler has no bound, and the derived cost (3.1 to 3.7 h, 6.9 to 7.5 h with E4's re-run) is a multiple of the only time the workflows give (30 to 60 min), so the scripted journey as written cannot finish in a demo-sized window; (2) it lands on a dated gate (G2) and the rehearsal size hides it; (3) no requirement bounds it, so nothing would make a slow run a defect by the specs; (4) it grows 2x per group, so a K = 4 or 5 demo fixture is worse. Not misclassed as pricing-incorrect: attribution is exact and nothing misprices. It falls to **MEDIUM** if the maintainer rules that the demo's portfolio Dataset Version is a subset or the run is precomputed (the texts then bound it), and it stays HIGH if the demo attributes the whole seed live. **The derived figures are not an NFR verdict**; the first measured full-book (or 100,000-policy-scaled) end-to-end run is what would settle it, and `FD-9446` notes that a measured full-book score pass did not finish within 60 minutes.
 
-**Owner: WK-673, proposed** (S3 delivered `attribute` and its cost-bound decision, `LG-9478` Task 7 Step 4; S4 owns the handler that calls it unbounded). The demo-size decision (R6) and the demo script are `WK-1178`'s (`PL-1544`), so the remedy plan `PL 9447` is where the choice is made; this record is not folded into it (the lead's ruling). **Event that next confirms or discharges it:** the maintainer's ruling on the demo's portfolio size and attribution mode (recorded as an `RL-`), then a measured attribution run at the chosen size and K on the demo box.
+**Owner: WK-673, proposed** (S3 delivered `attribute` and its cost-bound decision, `LG-9478` Task 7 Step 4; S4 owns the handler that calls it unbounded). The demo-size decision (R6) and the demo script are `WK-1178`'s (`PL-1544`), so the remedy plan `PL-1574` is where the choice is made; this record is not folded into it (the lead's ruling). **Event that next confirms or discharges it:** the maintainer's ruling on the demo's portfolio size and attribution mode (recorded as an `RL-`), then a measured attribution run at the chosen size and K on the demo box.
 
 **Remedy: none applied; none proposed in code here.** Options belong in `docs/open-questions.md` or the remedy plan, not in a silent pick.
 
