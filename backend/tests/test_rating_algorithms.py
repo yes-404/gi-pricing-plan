@@ -460,7 +460,7 @@ def test_the_algorithm_read_publishes_rating_algorithm(app) -> None:
 # -- FD-1458 (PL-1464): the feature_map save check ----------------------------------------
 #
 # **Authored ahead of a database run** (items 13, 16, 21 need a fitted GLM): their
-# red-by-cause is owed to the first gate-slot window (LG-9449).
+# red-by-cause is owed to the first gate-slot window (LG-1587).
 
 from pathlib import Path  # noqa: E402
 

@@ -294,9 +294,9 @@ async def test_a_model_call_equals_predict_glm_at_full_precision(world: GlmWorld
     """No quantize and no `round()` at the step, whichever `result_type` it declares (a GLM
     step without one rounds like any other `model_call`: one rule, 2026-10-10 00:44:31).
 
-    **Item 15 is STOPPED / RULED in part (see LG-9449): this 1e-14 assertion is a DRAFT, not
+    **Item 15 is STOPPED / RULED in part (see LG-1587): this 1e-14 assertion is a DRAFT, not
     the item's evidence.** The lead's ruling of 2026-10-10 00:23:38 BST makes the evidence the
-    four checks recorded in LG-9449 (bit-exact money downstream, the analytic bound, a
+    four checks recorded in LG-1587 (bit-exact money downstream, the analytic bound, a
     deterministic pinned engine, the spec grep); this test only documents the carriage.
     **Deviation from item 15's "exact Decimal of the float", reported to the lead.** The
     engine carries a handler's float at 15 significant digits (`0.0588198259273704` for
@@ -602,7 +602,7 @@ async def test_the_same_algorithm_prices_by_single_rounding_only_when_it_opts_in
 async def test_the_opt_in_path_is_deterministic_and_its_money_is_decimal_exact() -> None:
     """(d) on the opt-in path: the same quote twice gives identical Decimal money, and the
     rung's rounded value is exactly the single half-even rounding of its unrounded Decimal
-    (no value moves because of the 15-digit carriage; the analytic bound is in LG-9449)."""
+    (no value moves because of the 15-digit carriage; the analytic bound is in LG-1587)."""
     from test_rating_ladder_exact import _compile_payload, _context
 
     _, opt_in = _legacy_and_opt_in_payloads()
