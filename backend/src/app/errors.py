@@ -23,6 +23,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.observability.logging import get_logger
 from app.observability.trace import current_trace_id
 from model_schema import FieldError, ProblemDetail
+from pricing_core.safe_error import safe_error_detail
 
 __all__ = [
     "DATA_ERROR_CODES",
@@ -493,12 +494,19 @@ _INPUT_BEARING_ERROR_TYPES: Final = frozenset(
 def _field_error_message(err: Mapping[str, Any]) -> str:
     """The `FieldError.message` for one pydantic error, with no submitted value in it (NFR-499).
 
-    A built-in type's `msg` is fixed text; a validator's own `msg` (`value_error`,
-    `assertion_error`) interpolates whatever it was given, so those keep the code alone.
+    A built-in type's `msg` is fixed text. A validator's own `msg` (`value_error`,
+    `assertion_error`) interpolates whatever it was given, so it is rebuilt from the underlying
+    exception through `safe_error_detail`: a `CodedError` keeps its authored message (input-free
+    by construction), anything else gives `""` and falls back to the code alone.
     """
-    if err["type"] in _INPUT_BEARING_ERROR_TYPES:
-        return f"The value is not valid ({str(err['type']).upper()})."
-    return str(err["msg"])
+    if err["type"] not in _INPUT_BEARING_ERROR_TYPES:
+        return str(err["msg"])
+    underlying = (err.get("ctx") or {}).get("error")
+    if isinstance(underlying, BaseException):
+        detail = safe_error_detail(underlying)
+        if detail:
+            return detail
+    return f"The value is not valid ({str(err['type']).upper()})."
 
 
 async def _handle_validation_error(
