@@ -90,8 +90,7 @@ def _algo(
                 "key_expr": ["postcode"],
                 "as_at": as_at,
                 "on_miss": "error",
-                "consumes": ["postcode", *(i["produces"] for i in as_at_input)]
-,
+                "consumes": ["postcode", *(i["produces"] for i in as_at_input)],
                 "produces": "area_loading",
             },
             {
