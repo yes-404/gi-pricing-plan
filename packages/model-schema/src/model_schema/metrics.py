@@ -22,6 +22,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from model_schema.comparison import MetricDirection
+from model_schema.input_free import InputFreeError
 from model_schema.objectives import (
     TEMPLATE_APPLICABILITY,
     TEMPLATE_PARAMETERS,
@@ -113,7 +114,7 @@ class CustomMetric(BaseModel):
     def _only_templates_are_built(self) -> Self:
         """FR-150's rule, at the type — the second door behind the API's refusal."""
         if self.kind is not ObjectiveKind.TEMPLATE or self.template is None:
-            raise ValueError(
+            raise InputFreeError(
                 "Phase 1 admits only `kind: template` metrics, and a template metric needs "
                 "a `template` (FR-155)."
             )

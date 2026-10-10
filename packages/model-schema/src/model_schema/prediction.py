@@ -40,6 +40,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from model_schema.input_free import InputFreeError
+
 __all__ = [
     "IntervalModels",
     "PredictedRow",
@@ -204,7 +206,7 @@ class Uncertainty(BaseModel):
         """
         if self.kind is UncertaintyKind.UNAVAILABLE:
             if self.reason is None:
-                raise ValueError(
+                raise InputFreeError(
                     "uncertainty is 'unavailable' with no reason. `02` R5 is satisfied by "
                     "an explicit statement of why an interval is absent, never by its "
                     "absence."
@@ -222,7 +224,7 @@ class Uncertainty(BaseModel):
                     "interval here."
                 )
             if self.interval_models is not None:
-                raise ValueError(
+                raise InputFreeError(
                     "uncertainty is 'unavailable' and names interval models. If two bounds "
                     "were found and scored, this is not an absence."
                 )
@@ -248,7 +250,7 @@ class Uncertainty(BaseModel):
                     "interval did not do (FR-201)."
                 )
             if self.interval_models is None:
-                raise ValueError(
+                raise InputFreeError(
                     "a quantile-pair interval names no models. The bounds cost two extra "
                     "fits and are Models in their own right, so a reader must be able to "
                     "reach them (FR-199)."

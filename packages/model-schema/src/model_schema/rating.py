@@ -28,6 +28,7 @@ from pydantic import (
 )
 
 from model_schema.graph_errors import GraphCycleError, GraphUnresolvedRefError
+from model_schema.input_free import InputFreeError
 from model_schema.money import DecimalStr
 from model_schema.refs import ArtifactRef, BlobRef, Slug
 from model_schema.regression import GoldenQuoteEvidence
@@ -397,7 +398,7 @@ class RatingModelCallStep(RatingStepBase):
     @model_validator(mode="after")
     def _exactly_one_ref(self) -> RatingModelCallStep:
         if (self.model_ref is None) == (self.peril_structure_ref is None):
-            raise ValueError(
+            raise InputFreeError(
                 "a model_call step declares exactly one of model_ref or "
                 "peril_structure_ref (FR-222)"
             )
@@ -456,7 +457,7 @@ class SubGraphRef(BaseModel):
     @classmethod
     def _no_namespace_separator(cls, value: str) -> str:
         if "__" in value:
-            raise ValueError("mount_point must not contain the namespace separator '__'")
+            raise InputFreeError("mount_point must not contain the namespace separator '__'")
         return value
 
 
@@ -536,7 +537,7 @@ class RatingAlgorithm(RatingAlgorithmDraft):
         steps = self.steps
         ids = [s.step_id for s in steps]
         if len(ids) != len(set(ids)):
-            raise ValueError("every step_id is unique (FR-215)")
+            raise InputFreeError("every step_id is unique (FR-215)")
 
         # A mount is a node (RL-1309 DP-3 items 2 to 4): its `mount_point` is unique among the
         # step_ids and the other mounts, it consumes its mapped inputs and produces its mapped
@@ -547,7 +548,7 @@ class RatingAlgorithm(RatingAlgorithmDraft):
         ]
         mount_points = [m.step_id for m in mounts]
         if len(mount_points) != len(set(mount_points)) or set(mount_points) & set(ids):
-            raise ValueError(
+            raise InputFreeError(
                 "every mount_point is unique among the step_ids and the other mounts "
                 "(FR-215, RL-1309 DP-3)"
             )
@@ -957,9 +958,9 @@ class RateTableKey(BaseModel):
     def _one_binding(self) -> RateTableKey:
         """`RL-1361` Ruled item 9: `factor_ref` is of type `factor`, and never with a Banding."""
         if self.factor_ref is not None and self.factor_ref.type != "factor":
-            raise ValueError("factor_ref must reference a factor artifact")
+            raise InputFreeError("factor_ref must reference a factor artifact")
         if self.factor_ref is not None and self.banding_ref is not None:
-            raise ValueError(
+            raise InputFreeError(
                 "a key carries at most one of factor_ref and banding_ref (FR-228)"
             )
         return self
@@ -1193,7 +1194,7 @@ class SeedFromModelRequest(BaseModel):
     @classmethod
     def _model_ref_is_a_model(cls, value: ArtifactRef) -> ArtifactRef:
         if value.type != "model":
-            raise ValueError("model_ref must reference a model artifact")
+            raise InputFreeError("model_ref must reference a model artifact")
         return value
 
     @field_validator("change_note")
@@ -1201,7 +1202,7 @@ class SeedFromModelRequest(BaseModel):
     def _change_note_is_required(cls, value: str) -> str:
         stripped = value.strip()
         if not stripped:
-            raise ValueError("change_note is required and must be non-empty (FR-229)")
+            raise InputFreeError("change_note is required and must be non-empty (FR-229)")
         return stripped
 
 
@@ -1237,11 +1238,11 @@ class RateTableVersion(BaseModel):
         """Cells are inline rows under the threshold, a parquet BlobRef above it."""
         if self.storage == RateTableStorageMode.ROWS:
             if self.rows is None or self.cells is not None:
-                raise ValueError(
+                raise InputFreeError(
                     "a rows-stored version carries inline rows and no blob (FR-232)"
                 )
         elif self.rows is not None or self.cells is None:
-            raise ValueError(
+            raise InputFreeError(
                 "a parquet version addresses its cells by a BlobRef, never inline "
                 "rows (FR-232)"
             )
@@ -1250,7 +1251,7 @@ class RateTableVersion(BaseModel):
     @model_validator(mode="after")
     def _one_creation_path(self) -> RateTableVersion:
         if self.created_by_operation is not None and self.created_by_import is not None:
-            raise ValueError(
+            raise InputFreeError(
                 "a version is created by an operation or by an import, never both "
                 "(03 §4.2)"
             )

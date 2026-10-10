@@ -42,6 +42,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
+from model_schema.input_free import InputFreeError
 from model_schema.money import DecimalStr, MoneyMinor
 from model_schema.refs import ArtifactRef, BlobRef, Slug
 
@@ -207,7 +208,7 @@ class LargeLossTreatment(BaseModel):
                 "puts the capped mean back (FR-189); below 1 it caps a second time"
             )
         if self.loading_factor is not None and self.loading_factor <= 0:
-            raise ValueError("loading_factor must be positive (FR-189)")
+            raise InputFreeError("loading_factor must be positive (FR-189)")
         return self
 
 
@@ -351,13 +352,13 @@ class Reconciliation(BaseModel):
     @model_validator(mode="after")
     def _coherent(self) -> Self:
         if self.observed_burning_cost <= 0:
-            raise ValueError(
+            raise InputFreeError(
                 "observed_burning_cost must be positive: a ratio needs a "
                 "denominator, and a holdout with no observed cost reconciles nothing "
                 "(FR-190)"
             )
         if self.tolerance <= 0:
-            raise ValueError(
+            raise InputFreeError(
                 "tolerance must be positive; a tolerance of zero passes only an exact "
                 "match, which no fitted model produces (FR-190)"
             )
@@ -370,7 +371,7 @@ class Reconciliation(BaseModel):
             )
         seen = {p.peril for p in self.perils}
         if len(seen) != len(self.perils):
-            raise ValueError("a peril appears twice in the reconciliation")
+            raise InputFreeError("a peril appears twice in the reconciliation")
         return self
 
 

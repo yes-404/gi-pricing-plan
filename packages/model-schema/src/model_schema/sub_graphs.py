@@ -14,6 +14,7 @@ from itertools import pairwise
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from model_schema.graph_errors import GraphCycleError, GraphUnresolvedRefError
+from model_schema.input_free import InputFreeError
 from model_schema.rating import (
     AlgorithmOutput,
     RatingAlgorithm,
@@ -55,7 +56,7 @@ class SubGraphBody(BaseModel):
     @classmethod
     def _change_note_not_blank(cls, value: str) -> str:
         if not value.strip():
-            raise ValueError("a change note is required and is not blank (RL-1309 DP-1)")
+            raise InputFreeError("a change note is required and is not blank (RL-1309 DP-1)")
         return value
 
     @model_validator(mode="after")
@@ -63,15 +64,15 @@ class SubGraphBody(BaseModel):
         steps = self.steps
         ids = [s.step_id for s in steps]
         if len(ids) != len(set(ids)):
-            raise ValueError("every step_id is unique (FR-215)")
+            raise InputFreeError("every step_id is unique (FR-215)")
         if any(isinstance(s, RatingInputStep | RatingOutputStep) for s in steps):
-            raise ValueError("a sub-graph has no input or output steps: the ports replace them")
+            raise InputFreeError("a sub-graph has no input or output steps: the ports replace them")
         ports = [p.name for p in self.inputs]
         if len(ports) != len(set(ports)):
-            raise ValueError("every input port name is unique")
+            raise InputFreeError("every input port name is unique")
         outs = [o.name for o in self.outputs]
         if len(outs) != len(set(outs)):
-            raise ValueError("every output port name is unique")
+            raise InputFreeError("every output port name is unique")
 
         produced = _produced_by(steps)
         consumed = _consumed_by(steps)

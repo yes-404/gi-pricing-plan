@@ -17,6 +17,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from model_schema.input_free import InputFreeError
+
 __all__ = [
     "TERMINAL_STATUSES",
     "VALID_TRANSITIONS",
@@ -264,11 +266,11 @@ class Job(BaseModel):
         if self.status not in TERMINAL_STATUSES and self.finished_at is not None:
             raise ValueError(f"a {self.status.value} job must not have finished_at set")
         if self.status is JobStatus.QUEUED and self.started_at is not None:
-            raise ValueError("a queued job must not have started_at set")
+            raise InputFreeError("a queued job must not have started_at set")
         if (
             self.finished_at is not None
             and self.started_at is not None
             and self.finished_at < self.started_at
         ):
-            raise ValueError("finished_at precedes started_at")
+            raise InputFreeError("finished_at precedes started_at")
         return self

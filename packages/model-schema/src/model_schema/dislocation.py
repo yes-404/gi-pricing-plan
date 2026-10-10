@@ -15,6 +15,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from model_schema.input_free import InputFreeError
 from model_schema.money import DecimalStr, MoneyMinor
 from model_schema.refs import ArtifactRef
 from model_schema.scoring import LadderRungName
@@ -58,7 +59,7 @@ class DislocationSpec(BaseModel):
     @model_validator(mode="after")
     def _exact_override_names_one_version(self) -> Self:
         if self.baseline_mode_override is not None and self.baseline_ref != self.candidate_ref:
-            raise ValueError(
+            raise InputFreeError(
                 "baseline_mode_override applies to one version: baseline_ref and candidate_ref "
                 "must be equal (FR-224, RL-1504 item 8)"
             )
@@ -67,12 +68,12 @@ class DislocationSpec(BaseModel):
     @model_validator(mode="after")
     def _edges_increase_and_threshold_positive(self) -> Self:
         if len(set(self.segments)) != len(self.segments):
-            raise ValueError("segments must be distinct")  # DP-S2-6
+            raise InputFreeError("segments must be distinct")  # DP-S2-6
         edges = self.band_edges_pct
         if any(b <= a for a, b in pairwise(edges)):
-            raise ValueError("band_edges_pct must be strictly increasing")
+            raise InputFreeError("band_edges_pct must be strictly increasing")
         if self.mover_threshold_pct <= 0:
-            raise ValueError("mover_threshold_pct must be positive")
+            raise InputFreeError("mover_threshold_pct must be positive")
         return self
 
 
@@ -237,7 +238,7 @@ class DislocationRun(BaseModel):
             self.attribution_summary,
         )
         if any(f is None for f in four) and any(f is not None for f in four):
-            raise ValueError(
+            raise InputFreeError(
                 "attribution fields must be present together: derived_changes, "
                 "change_groups, attribution, attribution_summary"
             )
@@ -250,12 +251,12 @@ class DislocationRun(BaseModel):
             o.quoted_both + o.quoted_to_declined + o.declined_to_quoted + o.declined_both + o.error
         )
         if five != self.policy_count:
-            raise ValueError("outcomes must sum to policy_count")
+            raise InputFreeError("outcomes must sum to policy_count")
         if sum(e.count for e in self.errors) != o.error:
-            raise ValueError("errors counts must sum to outcomes.error")
+            raise InputFreeError("errors counts must sum to outcomes.error")
         banded = o.quoted_both - o.zero_baseline - o.negative_baseline
         if sum(b.policies for b in self.distribution) != banded:
-            raise ValueError(
+            raise InputFreeError(
                 "distribution policies must equal quoted_both - zero_baseline - negative_baseline"
             )
         return self

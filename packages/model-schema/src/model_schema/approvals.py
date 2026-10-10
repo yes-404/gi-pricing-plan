@@ -25,6 +25,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from model_schema.dislocation import ABS_CHANGE_PCT_QUANTILE_KEYS
+from model_schema.input_free import InputFreeError
 from model_schema.money import DecimalStr
 from model_schema.refs import ArtifactRef
 
@@ -163,7 +164,7 @@ class ApproximationDeviation(BaseModel):
                 "(03 §4.6, the run's fixed set)"
             )
         if self.max_abs_change_pct < 0:
-            raise ValueError("max_abs_change_pct must be at least 0")
+            raise InputFreeError("max_abs_change_pct must be at least 0")
         return self
 
 
@@ -238,7 +239,7 @@ class ApprovalPolicyEntry(BaseModel):
         if self.skippable_predecessors and (
             self.artifact_type != "deployment" or self.environment is None
         ):
-            raise ValueError(
+            raise InputFreeError(
                 "skippable_predecessors is valid only on a `deployment` entry that names an "
                 "environment (`06` §4.2, RL-1296)"
             )
@@ -260,7 +261,7 @@ class ApprovalPolicy(BaseModel):
     @model_validator(mode="after")
     def _separation_of_duties_is_not_configurable(self) -> ApprovalPolicy:
         if self.submitter_may_approve:
-            raise ValueError(
+            raise InputFreeError(
                 "submitter_may_approve cannot be true: `06` R1 makes separation of duties "
                 "non-configurable, and a rule that configuration can disable is not one"
             )
@@ -333,7 +334,7 @@ class PromotionSkip(BaseModel):
     @classmethod
     def _reason_is_not_blank(cls, value: str) -> str:
         if not value.strip():
-            raise ValueError("a promotion skip needs a reason that is not empty after trimming")
+            raise InputFreeError("a promotion skip needs a reason that is not empty after trimming")
         return value
 
 

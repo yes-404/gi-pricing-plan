@@ -29,6 +29,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from model_schema.input_free import InputFreeError
 from model_schema.modelling import Coefficient, RelativityLevel
 from model_schema.refs import BlobRef
 
@@ -113,7 +114,7 @@ class GlmApproximation(BaseModel):
         """
         inline = bool(self.coefficients) or bool(self.relativities)
         if inline == (self.approximating_model_id is not None):
-            raise ValueError(
+            raise InputFreeError(
                 "a GLM approximation carries exactly one table: `approximating_model_id` "
                 "naming the Model that holds it (FR-137), or the inline "
                 "`coefficients`/`relativities` of an artifact written before 2026-08-19."
@@ -234,7 +235,7 @@ class TransparencyArtifact(BaseModel):
         """FR-132: *at least one* form. An artifact with no block is a
         fidelity statement about nothing — and it would satisfy R3."""
         if not self.kinds:
-            raise ValueError(
+            raise InputFreeError(
                 "a transparency artifact carries neither a GLM approximation, a SHAP "
                 "summary nor an EBM shape-functions export (FR-132). It would "
                 "satisfy R3 while explaining nothing."

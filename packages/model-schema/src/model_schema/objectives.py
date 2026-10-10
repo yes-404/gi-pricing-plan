@@ -43,6 +43,7 @@ from uuid import UUID
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
+from model_schema.input_free import InputFreeError
 from model_schema.modelling import ResponseKind
 from model_schema.refs import Slug
 
@@ -244,9 +245,9 @@ class YDomain(BaseModel):
     @model_validator(mode="after")
     def _one_bound_per_side(self) -> Self:
         if self.min_inclusive is not None and self.min_exclusive is not None:
-            raise ValueError("y_domain declares both min_inclusive and min_exclusive")
+            raise InputFreeError("y_domain declares both min_inclusive and min_exclusive")
         if self.max_inclusive is not None and self.max_exclusive is not None:
-            raise ValueError("y_domain declares both max_inclusive and max_exclusive")
+            raise InputFreeError("y_domain declares both max_inclusive and max_exclusive")
         return self
 
     @property
@@ -311,9 +312,9 @@ class Applicability(BaseModel):
     @model_validator(mode="after")
     def _an_objective_applies_somewhere(self) -> Self:
         if not self.responses:
-            raise ValueError("applicability names no responses, so nothing may use it")
+            raise InputFreeError("applicability names no responses, so nothing may use it")
         if not self.backends:
-            raise ValueError("applicability names no backends, so nothing may fit it")
+            raise InputFreeError("applicability names no backends, so nothing may fit it")
         return self
 
     def is_within(self, template: Applicability) -> bool:

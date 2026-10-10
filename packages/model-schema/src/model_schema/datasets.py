@@ -23,6 +23,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from model_schema.input_free import InputFreeError
 from model_schema.money import Currency, DecimalStr, MoneyMinor
 from model_schema.profiles import SemanticType
 from model_schema.refs import BlobRef, Slug
@@ -221,7 +222,7 @@ class Dataset(BaseModel):
     @model_validator(mode="after")
     def _the_latest_version_and_its_status_travel_together(self) -> Dataset:
         if (self.latest_version is None) != (self.latest_version_status is None):
-            raise ValueError(
+            raise InputFreeError(
                 "latest_version and latest_version_status are one fact: a version with no "
                 "status renders a blank badge, and a status with no version describes "
                 "nothing"
@@ -231,7 +232,7 @@ class Dataset(BaseModel):
     @model_validator(mode="after")
     def _the_validation_date_and_its_version_travel_together(self) -> Dataset:
         if (self.last_validated_at is None) != (self.last_validated_version is None):
-            raise ValueError(
+            raise InputFreeError(
                 "last_validated_at and last_validated_version are one fact (FR-55): a "
                 "date with no version cannot be distinguished from the latest version's"
             )
@@ -385,7 +386,7 @@ class DatasetVersion(BaseModel):
         with no report at all is refused here, at the cheapest possible point.
         """
         if self.status is DatasetStatus.VALIDATED and self.validation_report_id is None:
-            raise ValueError(
+            raise InputFreeError(
                 "a validated dataset version must name its validation report "
                 "(`01` §4.2, FR-46)"
             )
@@ -394,13 +395,13 @@ class DatasetVersion(BaseModel):
     @model_validator(mode="after")
     def _derived_versions_name_their_parent(self) -> DatasetVersion:
         if self.kind is DatasetKind.DERIVED and not self.derived_from:
-            raise ValueError("a derived version must set derived_from (`01` §4.2)")
+            raise InputFreeError("a derived version must set derived_from (`01` §4.2)")
         return self
 
     @model_validator(mode="after")
     def _period_is_ordered(self) -> DatasetVersion:
         if self.period_covered and self.period_covered.to < self.period_covered.from_:
-            raise ValueError("period_covered.to precedes period_covered.from")
+            raise InputFreeError("period_covered.to precedes period_covered.from")
         return self
 
     @property

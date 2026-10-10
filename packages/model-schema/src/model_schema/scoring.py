@@ -23,6 +23,7 @@ from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from model_schema.input_free import InputFreeError
 from model_schema.money import MoneyMinor, PositionalDecimalStr
 from model_schema.refs import ArtifactRef
 
@@ -272,7 +273,7 @@ class ScoreCompareRequest(BaseModel):
     def _context_names_no_version(self) -> Self:
         options = self.context.options
         if options is not None and options.rating_version_ref is not None:
-            raise ValueError(
+            raise InputFreeError(
                 "context.options.rating_version_ref must be omitted: "
                 "`base` and `comparison` name the two versions"
             )

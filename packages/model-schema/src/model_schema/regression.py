@@ -23,6 +23,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from model_schema.input_free import InputFreeError
 from model_schema.money import DecimalStr, MoneyMinor
 from model_schema.refs import ArtifactRef, BlobRef, Slug
 from model_schema.scoring import QuoteContext, ScoringOutcome
@@ -58,7 +59,7 @@ class GoldenQuoteExpected(BaseModel):
     @model_validator(mode="after")
     def _premium_exactly_when_quoted(self) -> Self:
         if (self.outcome == "quoted") != (self.payable_premium_minor is not None):
-            raise ValueError(
+            raise InputFreeError(
                 "payable_premium_minor is set exactly when outcome is 'quoted'"
             )
         return self
@@ -106,7 +107,7 @@ class MonotoneInInput(BaseModel):
     @model_validator(mode="after")
     def _ordered_range(self) -> Self:
         if self.lower is not None and self.upper is not None and self.lower > self.upper:
-            raise ValueError("monotone: lower must not exceed upper")
+            raise InputFreeError("monotone: lower must not exceed upper")
         return self
 
 
@@ -136,13 +137,13 @@ class PremiumBounded(BaseModel):
     @model_validator(mode="after")
     def _at_least_one_ordered_bound(self) -> Self:
         if self.lower_minor is None and self.upper_minor is None:
-            raise ValueError("premium_bounded needs lower_minor, upper_minor, or both")
+            raise InputFreeError("premium_bounded needs lower_minor, upper_minor, or both")
         if (
             self.lower_minor is not None
             and self.upper_minor is not None
             and self.lower_minor > self.upper_minor
         ):
-            raise ValueError("premium_bounded: lower_minor must not exceed upper_minor")
+            raise InputFreeError("premium_bounded: lower_minor must not exceed upper_minor")
         return self
 
 
@@ -305,11 +306,11 @@ class PropertyResult(BaseModel):
     @model_validator(mode="after")
     def _shrink_iff_failed(self) -> Self:
         if (self.status == "fail") != (self.shrink is not None):
-            raise ValueError("`shrink` is recorded exactly when the property failed")
+            raise InputFreeError("`shrink` is recorded exactly when the property failed")
         if self.status == "pass" and (self.counterexample is not None or self.error_code):
-            raise ValueError("a passing property carries no counterexample or error_code")
+            raise InputFreeError("a passing property carries no counterexample or error_code")
         if self.counterexample_minimal and self.shrink != "completed":
-            raise ValueError("a counterexample is minimal only when its shrink completed")
+            raise InputFreeError("a counterexample is minimal only when its shrink completed")
         return self
 
 
@@ -370,10 +371,10 @@ class GoldenQuoteChange(BaseModel):
     @model_validator(mode="after")
     def _consistent(self) -> Self:
         if (self.change == "changed") != bool(self.changed_fields):
-            raise ValueError("changed_fields is non-empty exactly when change is 'changed'")
+            raise InputFreeError("changed_fields is non-empty exactly when change is 'changed'")
         versions = [step.version for step in self.steps]
         if versions != sorted(set(versions)):
-            raise ValueError("steps are in strictly ascending version order")
+            raise InputFreeError("steps are in strictly ascending version order")
         return self
 
 
