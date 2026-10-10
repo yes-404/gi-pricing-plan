@@ -2,7 +2,7 @@
 id: PL-9955
 family: plan
 kind: map
-title: WK-1178 — FD-1589 row 8, remedy (c): an input-free marker for authored model-schema validator messages, all 253 adopted and the 157 interpolating messages rewritten input-free, allow-listed by pricing_core.safe_error, so the request-validation 422 keeps authored guidance and drops anything else: single-row Work plan
+title: WK-1178 — FD-1589 row 8, remedy (c), slice A: an input-free marker for authored model-schema validator messages, the 96 input-free messages adopted and the 15 closed-vocabulary and 54 request-reachable interpolating messages rewritten input-free, allow-listed by pricing_core.safe_error, so the request-validation 422 keeps authored guidance and drops anything else (B1 and B2 carried to P3): single-row Work plan
 status: draft                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-10            # working id; the mint date will replace this (check 31)
 owner: planner
@@ -20,8 +20,8 @@ relates: [FD-1589, PL-1535, SL-1536, SL-1340, SL-1557, SL-1559]
 > **For agentic workers:** this is a **single-row WK-1178 Work plan** under Lean P2 L5, in the
 > form of `PL-1535` and `PL-1574`: WK-1178 has no map plan, so this is one row, the slice
 > SL 9956 (working id), cut on this file's branch. Its `LG-` quotes the row as its scope.
-> **If the lead takes DP-9's split, SL 9956 is slice A and the further rows are cut under ids
-> the lead reserves** (§"Size and the split"). REQUIRED SUB-SKILL for the executor:
+> **DP-9 is ruled: SL 9956 is slice A, and this plan's scope is slice A only.** B1 and B2 are
+> carried to P3 (§"Scope"; their site lists are in Appendix A). REQUIRED SUB-SKILL for the executor:
 > subagent-driven-development (recommended) or executing-plans. The executor also binds
 > `python-test` (the `req` marker, broken-input proofs), `test-driven-development` (every red
 > seen first, by its cause), `python-package` (the import-linter layers), `dev-commands` (the
@@ -43,21 +43,32 @@ Written by the planner (`planner-remedy-c`) on 2026-10-10 from 15:46:41 BST; **a
 (`TZ=Europe/London date`) to the lead's rulings of 15:52:31 BST: DP-1 to DP-7 recorded as
 ruled, DP-2 (c) planned (all 157 interpolating messages rewritten input-free, all 253 adopt the
 marker), the slice re-sized, the parked row-8 tests cited, and two new decision points (DP-8,
-DP-9) brought to the lead. Evidence read at `origin/main`
+DP-9) brought to the lead; **amended in place again (still a draft, not merged) by the planner
+`planner-remedy-c3` on 2026-10-10 from 16:13:07 BST** to the lead's rulings of 16:07:46 BST:
+DP-9 recorded as ruled (slice A only; B1 and B2 carried to P3, their site lists in Appendix A),
+DP-8 (b) planned in the marker's constructor, DP-5's extension planned, slice A re-sized, and one
+new decision point (DP-10) brought to the lead. Evidence read at `origin/main`
 `fe0b0627590307259ec6d56be7f73115cf245092` (#1265, 2026-10-10T14:39:26+01:00; `origin/main`
 still there at 15:59 BST) unless a line names another commit. **No test, check or gate was run
 at planning time.** The amendment's counts come from three read-only Python AST passes over the
 tree, run once each under `nice -n 19` (sub-second, not a check), whose predicates are stated in
 words at each count below; the scripts were scratch files, so the executor re-derives every
-number at its base (Task 0) from the guard's own census.
+number at its base (Task 0) from the guard's own census. `planner-remedy-c3` ran two more
+read-only passes in the same way (`nice -n 19`, sub-second, scratch files, not a check). The
+first is an AST pass with the predicates of §"Where each of the 157 can be read". It reproduced
+the 54 / 41 / 47 / 15 split and printed Appendix A. The second is a JSON pass over
+`docs/contracts/openapi/generated.json` at `fe0b0627` for §"DP-5's changed types".
 
-**Draft, not frozen.** DP-1 to DP-7 are **ruled** (§"Decision points"). **DP-8** (the graph
-signals) and **DP-9** (the split, because the honest size exceeds ~2 lane-days) are open for the
-lead; the tasks are written against the recommendation of each, and say where another option
-changes them.
+**Draft, not frozen.** DP-1 to DP-9 and DP-5's extension are **ruled** (§"Decision points").
+**DP-10** is open for the lead. It asks whether a step id may be named, now that DP-8 (b) needs a
+schema pattern that a step id does not have. It does not block slice A: it governs the graph
+signals, and they go to P3 with B1.
 
 ## Authority
 
+- `to-lead.md` "2026-10-10 16:07:46 BST — RULINGS on PL 9955 re-sized (@688d639e, ≈4.8
+  lane-days): DP-9 = A in P2, B1/B2 to P3; DP-8 (b) with an identifier-pattern constraint; DP-5
+  extension YES". Quoted per item in §"Decision points" and §"DP-5's changed types".
 - `to-lead.md` "2026-10-10 15:52:31 BST — RULINGS on PL 9955 / SL 9956 (FD-1589 row 8 remedy
   (c), draft/pl-remedy-c @a8e465be): DP-1 (a), DP-2 (c), DP-3 (a), DP-4 (a), DP-5 (b), DP-6
   (a), DP-7 (a); the dict-KEY echo FD row YES". Quoted per DP in §"Decision points".
@@ -86,6 +97,22 @@ changes them.
   row 8 (`:78`): *"`FieldError(message=str(err["msg"]))`; `input` is never read, but a
   `value_error` `msg` carries whatever a custom validator interpolated"*, LOW.
 
+## Scope (dated 2026-10-10, on the lead's ruling of 16:07:46 BST)
+
+**This plan's scope is slice A only** (SL 9956, ≈3.0 lane-days with the 16:07:46 additions,
+§"Size and the split"). Slice A is the infrastructure (the marker, the guards, the allow-list,
+the 422 sink, the spec paragraph), the 96 input-free messages adopted unchanged, the 15
+closed-vocabulary messages, and all 54 request-reachable free messages rewritten. **B1** is the
+41 free messages built in a handler from a user's create body. **B2** is the 47 free messages
+in system-produced models. **B1 and B2 moved to P3 by the lead's ruling of 2026-10-10 16:07:46
+BST** (DP-9). Their site lists are kept in Appendix A, by `file:Class.validator`, so P3 can plan
+from them. The five graph signals go with B1 (DP-8, DP-10). A dated P3 row owned by WK-1178
+records B1 and B2 on the roadmap. It is not a cut-ladder rung: B1 and B2 were never in the P2
+baseline. Until P3 rewrites them, the guard's exact-count `_RESIDUAL` lists their sites, and P3
+shrinks it. A stored refusal from one of them already gets input-free fixed text through DP-5's
+allow-list (`_validation_detail`). Acceptance (i), that no request-reachable raise renders
+generic text, applies to A's scope.
+
 ## Goal
 
 A request-validation 422 (`backend/src/app/errors.py` `_handle_validation_error`) shows a
@@ -93,14 +120,19 @@ validator's message only when that message is input-free by construction, and sh
 `The value is not valid (<TYPE>).` otherwise (DP-7 (a)). "Input-free by construction" is a
 class: `InputFreeError`, a `ValueError` subclass in `model_schema/input_free.py` (DP-1 (a)),
 whose every raise site is a string literal or an f-string over upper-case module constants
-alone, held so by an AST guard. **Every** `raise ValueError` in `packages/model-schema/src` (253
-at `fe0b0627`) adopts it (DP-2 (c)): the 96 input-free messages unchanged, the 157 interpolating
-ones **rewritten to input-free authored text that keeps the guidance — naming the FIELD and the
+alone, held so by an AST guard. In slice A (§"Scope"), every request-reachable `raise
+ValueError` in `packages/model-schema/src` adopts it (DP-2 (c); all 253 at `fe0b0627` once P3's
+B1 and B2 land): the 96 input-free messages unchanged, the 15 closed-vocabulary and the 54
+request-reachable interpolating ones **rewritten to input-free authored text that keeps the guidance — naming the FIELD and the
 RULE, never the submitted VALUE**. So an actuary still reads (for example) *"a Poisson model must
 declare an offset (FR-111 …)"* byte for byte as on `main` (DP-4 (a)), and reads the rule instead
 of a fixed text for every rewritten message. The same allow-list function is read by
 `pricing_core.safe_error._validation_detail` (DP-5 (b)), so a stored sink and the 422 cannot
-disagree. The rule is one dated paragraph in `00-overview.md` §5.3 (DP-6 (a)).
+disagree. The rule is one dated paragraph in `00-overview.md` §5.3 (DP-6 (a)). The
+request-common pydantic error types get fixed authored texts that keep their guidance (DP-5's
+extension, §"DP-5's changed types"). A message may name an identifier of the submitted
+artifact's own structure only when that identifier matches the schema's pattern, and the
+marker's constructor checks it (DP-8 (b), Task 1).
 
 ## What the code says today (at `fe0b0627`)
 
@@ -234,10 +266,11 @@ the LG; a slice that merged in between can move them.
 
 ## Acceptance Standard
 
-Each item names the slice it binds under DP-9 (c), the recommended split (A = SL 9956, B1, B2).
-With DP-9 (a), all items bind the one slice.
+Every item binds slice A (SL 9956), this plan's scope (DP-9, ruled). Where an item names B1, B2
+or P3, that part belongs to the P3 row. It is recorded here so P3 can plan from it, and it binds
+nothing in P2.
 
-1. **(i), the ruling's first test** (A; final form at B2). `uv run pytest -q
+1. **(i), the ruling's first test** (A; its final form is P3's). `uv run pytest -q
    packages/model-schema/tests/test_input_free_raises.py` passes. Its census enumerates every
    `ast.Raise` in `packages/model-schema/src/model_schema/*.py` whose callee resolves (by
    importing the module) to `ValueError` or a subclass, plus every `assert` statement and every
@@ -246,22 +279,25 @@ With DP-9 (a), all items bind the one slice.
    `_RESIDUAL`, an exact per-`(file, Class.function)` count of the plain raises still to rewrite:
    the census must equal it (a new plain raise fails; a rewritten one fails until its entry is
    decremented); `_RESIDUAL` holds only B1/B2 entries, so at A's merge **no 422-reachable raise
-   path renders generic text**; at B2's merge `_RESIDUAL` is deleted and the test asserts zero.
+   path renders generic text**. P3 shrinks `_RESIDUAL`; the last P3 slice deletes it, and the
+   test then asserts zero.
    Its broken-input case reports a planted plain `ValueError`, a planted interpolating
    `InputFreeError` and a planted `assert`.
-2. **(ii), the ruling's census test** (A, B1, B2). The same file asserts every `InputFreeError`
-   raise takes a literal or a constant-only f-string — no rewritten message interpolates an
+2. **(ii), the ruling's census test** (A). The same file asserts that every `InputFreeError`
+   raise takes a literal or a constant-only f-string as its message. A raise may pass a value
+   only as a DP-8 (b) identifier: a keyword argument built by `identifier(value, PATTERN)`,
+   where `PATTERN` is an upper-case module constant. So no rewritten message interpolates an
    input value. The LG records, per slice, the sites adopted unchanged and the sites rewritten
    by `file:line` at its base, with each rewritten message's before and after text.
-3. **The rewrite keeps the guidance** (A, B1, B2). Every rewritten message names the field (by
+3. **The rewrite keeps the guidance** (A). Every rewritten message names the field (by
    its declared name) and the rule, keeps any requirement citation the old text carried
    (`FR-…`, `` `02` §… ``), and keeps the old text's remedy sentence where it had one. The LG's
    before/after table is what the reviewer reads; a rewrite that drops a rule or a citation is
    a NOT-ACK.
 4. `uv run pytest -q packages/pricing-core/tests/test_safe_error.py` passes (A), including: a
    `ValidationError` from an `InputFreeError` keeps the authored text in `safe_error_detail`;
-   one from a plain `ValueError` interpolating `_SENTINEL` does not carry it; and (DP-8 (a)) a
-   `GraphUnresolvedRefError` keeps its now-literal text.
+   one from a plain `ValueError` interpolating `_SENTINEL` does not carry it. (The draft's
+   graph-signal case was DP-8 (a)'s. It goes to P3 with B1.)
 5. `uv run pytest -q backend/tests/test_errors.py backend/tests/test_error_sinks.py` passes (A),
    including: (a) a request model's `InputFreeError` reaches the 422 as `"Value error, <text>"`
    exactly (DP-4 (a)); (b) a plain `ValueError(f"… {value}")` with a sentinel reaches it as
@@ -269,14 +305,18 @@ With DP-9 (a), all items bind the one slice.
    (DP-7 (a)); (c) the real `GlmSpec` Poisson refusal reaches it with
    `"a Poisson model must declare an offset"` in the message; (d) an `int_parsing` control keeps
    pydantic's fixed text; (e) the parked row-8 tests (item 5 above), the first unchanged, the
-   second retargeted. Each red seen first by its cause (Task 4 Step 2).
+   second retargeted; (f) a malformed JSON body that carries a sentinel renders `json_invalid`'s
+   authored text (§"DP-5's changed types"), with the sentinel absent from the whole body. Each
+   red seen first by its cause (Task 4 Step 2).
 6. **DP-5's ACK line** (A): the slice's MERGE-ACK request lists every pydantic error type whose
    422 rendering changes against `main`, re-derived at the base by the predicate *"every member
    of `pydantic_core.core_schema.ErrorType` (pydantic-core 2.46.5, `uv.lock:1860-1861`) not in
    `_FIXED_TEXT_TYPES`; `value_error` changes only when `ctx["error"]` is not an
-   `InputFreeError`"*. At `fe0b0627` that is **74**: `value_error` (non-marker) and the 73 types
-   listed in §"DP-5's changed types". It also states the ones a request body reaches today
-   (Task 0 Step 4).
+   `InputFreeError`"*. At `fe0b0627` that is still **74**: `value_error` (non-marker) and the
+   73 types listed in §"DP-5's changed types". Of the 73, 10 now render an authored fixed text
+   (DP-5's extension) and 63 render the DP-7 text. The ACK states which text each type gets.
+   In the predicate, `_FIXED_TEXT_TYPES` means the 30 types whose pydantic `msg` is kept, not the
+   10 in `_AUTHORED_TEXT`. It also states the ones a request body reaches today (Task 0 Step 4).
 7. `uv run lint-imports` passes (A; the new `pricing_core.safe_error → model_schema.input_free`
    edge is inside the `layering` contract).
 8. `00-overview.md` §5.3 carries one dated paragraph stating the rule (A, Task 6), and
@@ -285,6 +325,17 @@ With DP-9 (a), all items bind the one slice.
    the tree named; `ModelSpecBuilderView.test.ts` is unchanged and passes.
 10. Each slice's diff touches no file outside its write set below;
     `git diff --stat origin/main...HEAD` is in its LG.
+11. **DP-5's extension** (A). `uv run pytest -q packages/pricing-core/tests/test_safe_error.py`
+    passes one case per type in `_AUTHORED_TEXT`. Each case produces that type from an input
+    that carries `_SENTINEL`, or the module's sentinel numbers where the type cannot carry a
+    string. It asserts that the rendered text is the authored text and that the sentinel is
+    ABSENT. A set test fails when a listed type has no case, or a case names an unlisted type.
+12. **DP-8 (b)** (A). `uv run pytest -q packages/model-schema/tests/test_input_free.py` passes:
+    an identifier that matches its pattern appears in the message; the constructor refuses an
+    identifier that does not match, and raises a plain `ValueError` with a literal message
+    instead. `test_safe_error.py` passes the third case: through a model and through
+    `safe_validation_message`, the non-matching string is NOT echoed. The census's planted case includes a keyword whose pattern is not an upper-case
+    constant, and the census reports it.
 
 ## Global Constraints
 
@@ -313,24 +364,25 @@ With DP-9 (a), all items bind the one slice.
 
 | File | Change | Slice · Task |
 |---|---|---|
-| `packages/model-schema/src/model_schema/input_free.py` | **new**: `class InputFreeError(ValueError)` | A · 1 |
-| `packages/model-schema/tests/test_input_free_raises.py` | **new**: guards (i) and (ii), `_RESIDUAL`, broken-input case | A · 1; B1, B2 shrink `_RESIDUAL` |
+| `packages/model-schema/src/model_schema/input_free.py` | **new**: `class InputFreeError(ValueError)` with the DP-8 (b) identifier check, and `identifier(value, pattern)` | A · 1 |
+| `packages/model-schema/tests/test_input_free_raises.py` | **new**: guards (i) and (ii), `_RESIDUAL`, broken-input case | A · 1; P3 shrinks `_RESIDUAL` |
+| `packages/model-schema/tests/test_input_free.py` | **new**: the DP-8 (b) constructor cases (acceptance 12) | A · 1 |
 | the 17 model-schema files of the 96 | `raise ValueError(` → `raise InputFreeError(`; one import line each | A · 2 |
-| model-schema files of the slice's rewrite set (§"Size and the split") | the message rewritten input-free and raised as `InputFreeError`; import line where new | A · 3, B1 · 1, B2 · 1 |
-| `packages/model-schema/src/model_schema/graph_errors.py` | DP-8 (a): both signals subclass `InputFreeError`; docstring | B1 · 1 |
+| model-schema files of slice A's rewrite set (§"Size and the split") | the message rewritten input-free and raised as `InputFreeError`; import line where new | A · 3 (B1, B2: P3) |
 | model-schema test files whose `match=`/message asserts a rewritten text | the assert follows the new text (never loosened to a bare type) | with each rewrite |
-| `packages/pricing-core/src/pricing_core/safe_error.py` | `safe_validation_message`; `_validation_detail` uses it; docstring | A · 4 |
-| `packages/pricing-core/tests/test_safe_error.py` | three cases | A · 4 (third at B1) |
+| `packages/pricing-core/src/pricing_core/safe_error.py` | `safe_validation_message`; `_AUTHORED_TEXT` (DP-5's extension); `_validation_detail` uses it; docstring | A · 4 |
+| `packages/pricing-core/tests/test_safe_error.py` | the marker cases; the DP-8 (b) not-echoed case; one sentinel case per `_AUTHORED_TEXT` type and its set test | A · 4 |
 | `backend/src/app/errors.py` | `_field_error_message`; `:499` uses it | A · 5 |
-| `backend/tests/test_errors.py`, `backend/tests/test_error_sinks.py` | four cases; the parked row-8 tests | A · 5 |
+| `backend/tests/test_errors.py`, `backend/tests/test_error_sinks.py` | five cases (the fifth is `json_invalid`); the parked row-8 tests | A · 5 |
 | `docs/specs/00-overview.md` | one dated paragraph in §5.3 | A · 6 |
-| `docs/ledgers/LG-…md`, `docs/roadmap.md` (the slice's SL status), `docs/INDEX.md` (generated) | closing acts | each slice |
+| `docs/ledgers/LG-…md`, `docs/roadmap.md` (the slice's SL status), `docs/INDEX.md` (generated) | closing acts | slice A |
 
-**Not in any write set:** `model_schema/__init__.py` (the marker is imported by module path, the
+**Not in any write set:** `model_schema/graph_errors.py` (the graph signals go to P3 with B1;
+DP-8, DP-10); `model_schema/__init__.py` (the marker is imported by module path, the
 `graph_errors` precedent, which also keeps these slices off the `__init__.py` hunks of SL-1557
 and SL-1559); `pricing_core/rating/**` (the graph-signal consumers `inline.py:280`,
 `runtime.py:496` and `backend/src/app/platform/rating_algorithms.py:63 :70` match by `isinstance`
-and are unchanged by DP-8 (a)); the frontend.
+and slice A does not touch the graph signals); the frontend.
 
 ## Decision points
 
@@ -364,44 +416,64 @@ and are unchanged by DP-8 (a)); the frontend.
   slice unless trivially inside its write set."* It is not trivially inside it (`errors.py:497`,
   FR-403's form-marking), so it stays out (§"Hand-off").
 
+**DP-8, DP-9 and DP-5's extension are RULED.** The source is `to-lead.md` "2026-10-10 16:07:46
+BST — RULINGS on PL 9955 re-sized (@688d639e, ≈4.8 lane-days): DP-9 = A in P2, B1/B2 to P3; DP-8
+(b) with an identifier-pattern constraint; DP-5 extension YES". Each is quoted verbatim:
+
+- **DP-9 — RULED: A in P2, B1/B2 to P3.** *"DP-9: build A (≈2.5 lane-days: all 54
+  REQUEST-REACHABLE messages) in P2. That closes FD-1589 row 8 for everything a user can see in a
+  422, which is where both the usability and the exposure are. B1/B2 (≈2.7 lane-days, messages no
+  request reaches) MOVE TO P3: they never render in a 422, and where they could surface (stored
+  Job errors via _validation_detail) the DP-5 allow-list already gives them input-free fixed
+  text. Their P2 value is low against P2's remaining capacity. A dated P3 row (owner WK-1178)
+  records them by count with the planner's list; PL 9955 carries a dated scope line. Not a
+  cut-ladder rung (it was never in the P2 baseline)."* Scheduling, verbatim: *"A is scheduled
+  after FD-1374 merges, off G2's path, before 4 Nov."* Planned in §"Scope". Appendix A is the
+  planner's list.
+- **DP-8 — RULED (b), with an identifier-pattern constraint.** *"DP-8 (b): a marker message MAY
+  name an identifier of the submitted ARTIFACT's own structure (a step id, a node id), because
+  the author wrote it as structure and it is not quote/policy data. Condition: only an
+  identifier that has ALREADY passed the schema's identifier validation (its slug/id pattern)
+  may be interpolated. The marker's constructor enforces it (rejects a non-matching string),
+  with a test that an identifier failing the pattern is NOT echoed. Quote/policy values stay
+  forbidden."* **Read with care:** the draft's option (b) was to allow-list the two graph-signal
+  classes by `isinstance`. The ruling's (b) is a different mechanism, and this plan follows the
+  ruling's words: a rule on what a marker message may name, enforced in `InputFreeError`'s
+  constructor (Task 1, acceptance 12). The graph signals themselves belong to B1, because their
+  classes (`RatingAlgorithm` and `SubGraphBody`) are built in a handler. So they go to P3 with
+  B1, and DP-10 is what P3 needs decided first.
+- **DP-5's extension — RULED YES.** *"DP-5 extension YES: the fixed-text list gains the
+  request-common pydantic types (json_invalid, date_parsing, decimal_max_places, and the others
+  the planner lists), each with a FIXED, input-free text that keeps its guidance, and each with
+  a sentinel test (a submitted value that would appear if echoed must be ABSENT). The ACK still
+  lists every type whose rendering changes vs main."* Planned in §"DP-5's changed types",
+  Task 4 and acceptance 11.
+
 **Open for the lead:**
 
-**DP-8 — the five graph-signal raises (new; acceptance (i) reaches them).**
-`GraphUnresolvedRefError` ×3 (interpolating a step id or a value name) and `GraphCycleError` ×2
-are `ValueError` subclasses raised in validators; under DP-5 (b) they would render the fixed
-text, which acceptance (i) forbids for "any raise path".
-(a) Both classes subclass `InputFreeError` (keeping `ValueError` ancestry, so every
-`isinstance` consumer is unchanged) and the 3 interpolating messages are rewritten input-free
-like the 157; the guard then covers them by subclass.
-(b) `safe_validation_message` also allow-lists the two classes by `isinstance`, and the guard
-exempts them by name with their 3 messages rewritten — two mechanisms for one property.
-(c) Leave them, and narrow acceptance (i) to `raise ValueError` sites — a ruling change.
-**Recommend (a).** One class carries the property; `graph_errors.py`'s docstring already says
-the class, not the text, is the contract. Cost: 0.5 h in B1 (their classes, `RatingAlgorithm`
-and `SubGraphBody`, are built in a handler, not 422-reachable). Note the guidance cost the
-ruling's rule implies here, stated for the lead: *"step 'x' consumes undefined value 'y'"*
-becomes *"a step consumes a value that no step produces (FR-212)"*, and a model-level
-validator's 422 `field` is the model's own location, so the reader loses *which* step. The
-same holds for any message whose value identifies an element (a column, a feature, a band).
-
-**DP-9 — the split (the honest size exceeds ~2 lane-days; §"Size and the split").**
-(a) One slice, all 157 + DP-8: ≈4.8 lane-days.
-(b) Two slices: A = the marker, guards, allow-list, 422, spec, the 96, the 15 closed and the 54
-422-reachable free (≈2.5); B = the 88 others + DP-8 (≈2.5).
-(c) Three slices: A as (b) (≈2.5); **B1** = the 41 user-authored, handler-built free messages +
-DP-8 (≈1.3); **B2** = the 47 system-produced free messages (≈1.4).
-(d) The brief's example cut: A′ = infrastructure + the 96 + the 15 closed + only the 32
-UI-form-reachable free (≈2.0); B′ = the other 110 + DP-8 (≈3.0, or split again).
-**Recommend (c).** A is the whole of FD-1589 row 8: at its merge no 422-reachable raise path
-renders generic text, and the demo forms (`/model-specs/validate`, `/bandings`, `/groupings`,
-`/rating-algorithms`) keep their guidance. It runs 0.5 lane-days over the ~2 mark, which is the
-22 request-reachable messages (13 behind non-UI routes, 9 in module-level helpers such as
-`money.py:83`'s `_reject_float`) that (d) would leave rendering the fixed text in a 422 until
-B′ — the regression the 15:37:31 entry withdrew, at smaller scale. B1 then restores guidance on
-the handler-built sinks before FD-1589 rows 2–11 route them through `_validation_detail`; B2 is
-the system-produced remainder. Each is under ~2 lane-days, and they run in sequence because all
-three edit `_RESIDUAL`. **Not a fallback to DP-2 (a):** every slice rewrites; none drops a
-message to fixed text by design.
+**DP-10 — a step id has no schema pattern, so DP-8 (b) cannot name one (new; P3's, not A's).**
+At `fe0b0627`, `RatingStepBase.step_id` is `str = Field(min_length=1)`
+(`model_schema/rating.py:337`). The graph's `_MountNode.step_id` is a plain `str` (`:468`); it
+is filled from `mount_point`, which does carry `_MOUNT_POINT` (`:451`). The value names in a
+`consumes` list are plain `str`. DP-8 (b)'s condition is *"only an identifier that has ALREADY
+passed the schema's identifier validation (its slug/id pattern) may be interpolated"*. So, as the
+code stands, none of the three interpolating graph signals (`rating.py:575`,
+`sub_graphs.py:82 :91`) can keep naming its step or its value. The lead's brief
+(`~/gi-pricing-plan.local/handover/brief-planner-remedy-c3-2026-10-10.md`, item 2) says *"The 5
+graph-signal raises keep naming the step"*. That cannot be met without a decision. (The two `GraphCycleError`
+raises, `rating.py:596` and `sub_graphs.py:151`, are literals and name nothing.)
+(a) P3 adds an identifier pattern to `step_id`: a spec change to `03` FR-215 first, then the
+model and the contract. Then the signals name the step under DP-8 (b). Risk: a stored rating
+algorithm whose step ids fail the new pattern stops loading, so P3 needs a data check or a
+migration step.
+(b) The signals name nothing. Their 3 messages are rewritten to field and rule only, like the
+157, and the reader loses which step (the guidance cost the draft stated under DP-8).
+(c) A step-id pattern local to `input_free`. This is a ruling change, because it is not "the
+schema's identifier validation".
+**Recommend (a), decided in P3 with B1.** The step id is the identifier a rating author most
+needs to see, and `RatingStepBase`'s docstring already calls it a "stable id" (FR-215). Slice A
+does not depend on DP-10. Task 0 Step 5 lists the A sites where DP-8 (b) applies at the base. A
+site whose identifier has no schema pattern is rewritten to field and rule only.
 
 ## DP-5's changed types
 
@@ -424,18 +496,71 @@ uuid_version decimal_max_places decimal_whole_digits complex_type complex_str_pa
 `value_error` when `ctx["error"]` is not an `InputFreeError` (after B2, only a validator outside
 model-schema). Predicate: the `Literal` arguments of `ErrorType = Literal[...]` in
 `pydantic_core/core_schema.py` (104 members), minus the 30 of `safe_error.py:50-58` (all 30 are
-members). **Observed for the lead, not a change:** several of these carry fixed, useful text a
-request body can reach — `json_invalid` (a malformed body), `date_parsing`, `datetime_parsing`,
-`uuid_parsing`, `decimal_max_places`, `decimal_whole_digits`, `union_tag_invalid`,
-`union_tag_not_found`, `multiple_of`, `int_from_float`, `finite_number`, `timezone_naive` /
-`timezone_aware`. Under the ruled mechanism a type joins `_FIXED_TEXT_TYPES` only with its own
-sentinel case (`test_safe_error.py:127`); adding the input-free ones is a later, separate
-choice, not this plan's.
+members).
+
+**DP-5's extension (RULED YES at 16:07:46).** Ten of the 73 render an authored, fixed,
+input-free text instead of the DP-7 text. They live in `_AUTHORED_TEXT: Mapping[str, str]` in
+`safe_error.py`, and the one `safe_validation_message` reads it (DP-5 (b)'s one allow-list).
+`_FIXED_TEXT_TYPES` keeps pydantic's own `msg` for its 30 types. These 10 cannot be kept that
+way, because their `msg` can carry input: `union_tag_invalid` echoes the submitted tag,
+`uuid_parsing` echoes input characters, and pydantic's own `json_invalid` carries its parser's
+detail. So each needs its own text, and a frozenset cannot hold one; that is why it is a mapping
+beside the set, read by the same function.
+
+**The measure ("request bodies hit it").** A type is listed when, at `fe0b0627`, a JSON request
+body can produce it. The predicate has two parts. `json_invalid` is listed for every operation
+with an `application/json` request body: 64 of the 66 operations with a body in
+`docs/contracts/openapi/generated.json`. FastAPI reports a malformed body as `type:
+"json_invalid"` (`fastapi/routing.py`, the dict with `"msg": "JSON decode error"`; Task 0 Step 4
+re-reads it at the base's FastAPI). Each other type is listed when a schema in the `$ref`
+closure of some operation's `requestBody` (143 schemas) carries the JSON-Schema feature that
+pydantic validates with that type: `format: date` (3 schemas: `DislocationSpec`,
+`QuoteContext`, `ReferenceRowIn`), `format: date-time` (1: `QuoteContext`), `format: uuid` (26),
+a `discriminator` (4: `ModelCreate`, `ModelSpecValidate`, `RatingAlgorithmDraft`,
+`RegressionProperty`), and `type: integer` (34). One type is listed because the ruling names it,
+not because of the measure: `decimal_max_places`. No model-schema or backend field declares
+`decimal_places` or `max_digits` at `fe0b0627` (`git grep -nE 'decimal_places|max_digits'
+origin/main -- packages/model-schema/src backend/src/app` prints nothing), so no request reaches
+it today.
+
+| Type | Feature that reaches it | Authored text (fixed, input-free) |
+|---|---|---|
+| `json_invalid` | every JSON body | `The request body is not valid JSON.` |
+| `date_parsing` | `format: date` | `The value should be a valid date in the format YYYY-MM-DD.` |
+| `date_from_datetime_inexact` | `format: date` | `The value should be a date with no time part, in the format YYYY-MM-DD.` |
+| `datetime_parsing` | `format: date-time` | `The value should be a valid date-time in ISO 8601 format, for example 2026-01-31T09:30:00Z.` |
+| `uuid_parsing` | `format: uuid` | `The value should be a valid UUID: 32 hexadecimal digits in the form 8-4-4-4-12.` |
+| `uuid_type` | `format: uuid` | `The value should be a UUID given as a string.` |
+| `union_tag_invalid` | `discriminator` | `The discriminator field's value is not one of the expected tags.` |
+| `union_tag_not_found` | `discriminator` | `The discriminator field is missing; it selects which kind of object this is.` |
+| `int_from_float` | `type: integer` | `The value should be a whole number, with no fractional part.` |
+| `decimal_max_places` | none today (the ruling names it) | `The value has more decimal places than this field allows.` |
+
+The texts are the planner's wording. The reviewer may amend any of them, but each stays fixed
+and names no input.
+
+**Left out by the same measure:**
+- `missing_argument` and the other argument types (`arguments_type`,
+  `unexpected_keyword_argument` and the rest) come from a validated function call, never from a
+  request body.
+- `multiple_of`: there is no `multipleOf` in the closure.
+- `time_parsing` and `time_delta_parsing`: there is no `format: time` or `duration`.
+- `timezone_naive` and `timezone_aware`: the only `AwareDatetime` field (`objectives.py:475`
+  `derived_at`) is in no request-body schema, and `QuoteContext.quoted_at` is a plain
+  `datetime` (`scoring.py:99` class).
+- `uuid_version`: there is no versioned UUID type in the closure.
+- `finite_number`: no field sets `allow_inf_nan=False`.
+- `decimal_whole_digits`: as `decimal_max_places`, but no ruling names it.
+- `int_parsing_size`: a JSON integer beyond pydantic's range is possible, but it is not
+  request-common.
+
+A type joins later only with its own text and its own sentinel case (`test_safe_error.py:127`
+is the form).
 
 ## Tasks
 
-The task list is slice A's. B1 and B2 (under DP-9 (c)) are Task 0 + Task 3 over their own sets
-+ Task 7, each a slice of its own (§"Size and the split").
+The task list is slice A's. B1 and B2 are P3's (§"Scope"). P3 plans them from Appendix A; in
+form they are Task 0, Task 3 over their own sets, and Task 7.
 
 ### Task 0: Preconditions (no code)
 
@@ -458,15 +583,28 @@ The task list is slice A's. B1 and B2 (under DP-9 (c)) are Task 0 + Task 3 over 
   `backend/src/app/api/approvals.py:114`, `deps.py:165 :216`, `dislocation_runs.py:192` render
   a fixed text or `safe_error_text`). A handler that parses a message the slice rewrites is a
   plan defect: stop. Also list which of §"DP-5's changed types" a request body reaches, for
-  acceptance 6.
+  acceptance 6, by the measure stated there; a type the measure adds or drops at the base is
+  reported to the lead before Task 4, never added or dropped silently.
+- [ ] **Step 5: List the A sites where DP-8 (b) applies.** For each of A's 69 rewrite sites,
+  record whether an interpolated value is an identifier of the submitted artifact's own
+  structure (a step id, a node id, a band or level name the author declared), and whether the
+  field that holds it is declared with a schema pattern (`Field(pattern=…)` or a patterned type
+  such as `refs.Slug`). Only a site that meets both may keep that identifier, through
+  `identifier(value, PATTERN)` with the field's own pattern constant. Every other site is
+  rewritten to field and rule only. At `fe0b0627`, `RatingStepBase.step_id` (`rating.py:337`)
+  and `Banding.slug` (`modelling.py`, `slug: str`) carry no pattern, so neither qualifies
+  (DP-10). The LG records the list.
 
 ### Task 1: The marker and its guards (red first)
 
 **Files:** Create `packages/model-schema/src/model_schema/input_free.py`,
-`packages/model-schema/tests/test_input_free_raises.py`.
+`packages/model-schema/tests/test_input_free_raises.py`,
+`packages/model-schema/tests/test_input_free.py`.
 
 **Interfaces:** Produces `model_schema.input_free.InputFreeError` (a `ValueError` subclass, no
-new attributes) and, test-local, `_census(module) -> _Census` with three lists of
+new attributes) with the constructor `InputFreeError(message: str, /, **identifiers:
+Identifier)`, and `identifier(value: str, pattern: str) -> Identifier` (DP-8 (b)). It also
+produces, test-local, `_census(module) -> _Census` with three lists of
 `(file, "Class.function", line)`: plain (a `ValueError`-family raise not of the marker family,
 an `assert`, a `PydanticCustomError`), and interpolating-marker (an `InputFreeError`-family
 raise whose message is not a literal or constant-only f-string).
@@ -520,6 +658,18 @@ def _input_free(arg: ast.expr) -> bool:
     return False
 
 
+def _identifier_keyword(value: ast.expr) -> bool:
+    """A DP-8 (b) keyword: `identifier(<expr>, PATTERN)`, the pattern an upper-case constant."""
+    return (
+        isinstance(value, ast.Call)
+        and isinstance(value.func, ast.Name)
+        and value.func.id == "identifier"
+        and len(value.args) == 2
+        and isinstance(value.args[1], ast.Name)
+        and bool(_CONST.fullmatch(value.args[1].id))
+    )
+
+
 def _census(source: str, namespace: dict[str, object], filename: str):
     from model_schema.input_free import InputFreeError
 
@@ -547,7 +697,11 @@ def _census(source: str, namespace: dict[str, object], filename: str):
                     args = child.exc.args
                     if not issubclass(cls, InputFreeError):
                         plain.append(where)
-                    elif not (len(args) == 1 and _input_free(args[0])):
+                    elif not (
+                        len(args) == 1
+                        and _input_free(args[0])
+                        and all(_identifier_keyword(k.value) for k in child.exc.keywords)
+                    ):
                         interpolating.append(where)
             visit(child, inner)
 
@@ -592,15 +746,19 @@ def test_the_census_reports_planted_violations() -> None:
         "    raise InputFreeError(f'bad {value}')\n"
         "    raise InputFreeError(f'ok {_LIMIT}')\n"
         "    assert value\n"
+        "    raise InputFreeError('step {step} is refused', step=identifier(value, _STEP_ID))\n"
+        "    raise InputFreeError('step {step} is refused', step=identifier(value, '^x$'))\n"
+        "    raise InputFreeError('step {step} is refused', step=value)\n"
     )
     plain, interpolating = _census(planted, {"InputFreeError": InputFreeError}, "planted.py")
     assert [line for *_, line in plain] == [2, 5]
-    assert [line for *_, line in interpolating] == [3]
+    assert [line for *_, line in interpolating] == [3, 7, 8]
 ```
 
   The sketch is the shape; the executor may restructure it (for example, one walk shared by
   the three tests) but keeps: resolution by `issubclass` in the module's namespace, `assert`
-  and `PydanticCustomError` counted as plain, the exact-count `_RESIDUAL`, and the planted case.
+  and `PydanticCustomError` counted as plain, the exact-count `_RESIDUAL`, the DP-8 (b) keyword
+  form as the only way a value enters a marker raise, and the planted case.
 - [ ] **Step 2: Run it and see the red by its cause.**
   `uv run pytest -q packages/model-schema/tests/test_input_free_raises.py`. Expected: collection
   or the tests fail on `ModuleNotFoundError: model_schema.input_free` — the only cause. A
@@ -622,15 +780,58 @@ never the value it was given. Raised inside a pydantic validator, it is reported
 
 from __future__ import annotations
 
+import re
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class Identifier:
+    """A structural identifier of the submitted artifact (a step id, a node id), with the schema
+    pattern its field declares (DP-8 (b), the lead's ruling of 2026-10-10 16:07:46 BST)."""
+
+    value: str
+    pattern: str
+
+
+def identifier(value: str, pattern: str) -> Identifier:
+    return Identifier(value, pattern)
+
 
 class InputFreeError(ValueError):
-    """A `ValueError` whose message is a literal: it names the field and the rule, never the value."""
+    """A `ValueError` whose message is a literal: it names the field and the rule, never the value.
+
+    It may name an identifier of the artifact's own structure, passed as a keyword built by
+    `identifier(value, PATTERN)` with the field's own schema pattern. The constructor checks it:
+    a value that does not match is refused, and a plain `ValueError` with a literal message is
+    raised in its place, so the value is never echoed. Quote and policy values are never passed.
+    """
+
+    def __init__(self, message: str, /, **identifiers: Identifier) -> None:
+        for named in identifiers.values():
+            if not (isinstance(named.value, str) and re.fullmatch(named.pattern, named.value)):
+                raise ValueError("an identifier in a validator message did not match its pattern")
+        text = message.format(**{k: repr(v.value) for k, v in identifiers.items()}) if identifiers else message
+        super().__init__(text)
 ```
+
+  The message is formatted only when identifiers are given. A literal with braces in it, such
+  as `refs.py`'s `{type}:{slug}@{version}`, therefore stays as written. The refusal
+  `ValueError` is not an `InputFreeError`, so DP-5's allow-list renders the DP-7 fixed text for
+  it, in both sinks.
+
+  `test_input_free.py` (acceptance 12) holds two cases. A matching identifier appears quoted in
+  `str(exc)`. A non-matching one (`_SENTINEL`, against the pattern) makes the constructor raise
+  a plain `ValueError` whose text does not contain `_SENTINEL`. The third case of acceptance 12
+  sits in `packages/pricing-core/tests/test_safe_error.py` (Task 4), because model-schema may
+  not import `pricing_core`: through a small model whose validator raises the refused marker,
+  `safe_validation_message` of the error is `None`, and `safe_error_detail` does not contain
+  `_SENTINEL`.
 
 - [ ] **Step 4: Re-run; see the second red.** The planted case and (ii) PASS (no marker raise
   exists yet); (i) FAILS listing every plain raise (253 + 5 graph signals at `fe0b0627`).
-  Fill `_RESIDUAL` with exactly the B1 and B2 entries of that list (under DP-9 (a), leave it
-  empty); (i) then fails on slice A's sites alone, which Tasks 2 and 3 clear.
+  Fill `_RESIDUAL` with exactly the B1 and B2 entries of that list, the 5 graph signals
+  included (Appendix A; P3 shrinks it). (i) then fails on slice A's sites alone, which Tasks 2
+  and 3 clear.
 - [ ] **Step 5: Commit** (the guard stays red until Task 3; commit with Task 2 if the executor's
   workflow forbids a red commit, and say so in the LG).
 
@@ -664,6 +865,10 @@ VALUE"*):
    member's value — the closed-vocabulary 15 included (*"cv.alphas has {len(...)} point(s); at
    least 2 are needed …"* → *"cv.alphas needs at least 2 points for a path to select from — one
    alpha is a fixed fit, not a cross-validation."*).
+   **The one exception is DP-8 (b).** A site that Task 0 Step 5 lists may keep a structural
+   identifier, as `{name}` in a literal message with `name=identifier(value, PATTERN)`, where
+   `PATTERN` is the constant the field's own declaration uses. A quote or policy value is never
+   kept.
 3. Raise `InputFreeError`; the message passes guard (ii).
 4. Worked examples at `fe0b0627`:
    - `modelling.py:388` (`Banding`): *"banding {slug!r} has boundaries {list(...)}, which do not
@@ -736,11 +941,22 @@ def test_safe_validation_message_keeps_fixed_text_and_the_marker_only() -> None:
     assert safe_validation_message({"type": "int_parsing", "msg": "Input should be a valid integer"}) == (
         "Input should be a valid integer"
     )
-    assert safe_validation_message({"type": "union_tag_invalid", "msg": _SENTINEL}) is None
+    assert safe_validation_message({"type": "recursion_loop", "msg": _SENTINEL}) is None
+    assert safe_validation_message({"type": "union_tag_invalid", "msg": _SENTINEL}) == (
+        _AUTHORED_TEXT["union_tag_invalid"]
+    )
 ```
 
-  (Under DP-8 (a), B1 adds a third case: a `GraphUnresolvedRefError` raised in a validator is
-  kept.)
+  Beside these, Step 1 writes the DP-8 (b) not-echoed case (acceptance 12, Task 1 Step 3) and
+  DP-5's extension cases (acceptance 11). The extension cases are one `_authored_cases()`
+  mapping, in the form of `_cases()` at `:127`, from each `_AUTHORED_TEXT` type to a model and an
+  input that produces it with `_SENTINEL` in the input where the type can carry a string (a
+  discriminated union for the two `union_tag_*` types; `date`, `datetime` and `UUID` fields for
+  the parsing types; an `int` field given `1.5` for `int_from_float`; `model_validate_json` on a
+  malformed document for `json_invalid`; a `Decimal` field with `decimal_places=2` for
+  `decimal_max_places`). One test asserts `set(_authored_cases()) == set(_AUTHORED_TEXT)`, that
+  each case produces its type, that `safe_error_detail` carries the authored text, and that
+  `_SENTINEL` and the module's sentinel numbers are absent.
 - [ ] **Step 2: Run them; see the red by its cause.**
   `uv run pytest -q packages/pricing-core/tests/test_safe_error.py -k "input_free or safe_validation_message"`.
   Expected: collection fails with `ImportError` on `safe_validation_message`. Add the import of
@@ -759,11 +975,14 @@ def safe_validation_message(error: Mapping[str, Any]) -> str | None:
     """The `msg` of one pydantic error when it carries no input, else `None`.
 
     Kept for an error type in `_FIXED_TEXT_TYPES`, and for a `value_error` raised as an
-    `InputFreeError` (whose every raise site is a literal). One rule for every sink: the
+    `InputFreeError` (whose every raise site is a literal). A type in `_AUTHORED_TEXT` gets its
+    fixed authored text in place of pydantic's `msg`. One rule for every sink: the
     request-validation 422 and `_validation_detail` both read it.
     """
     if error["type"] in _FIXED_TEXT_TYPES:
         return str(error["msg"])
+    if error["type"] in _AUTHORED_TEXT:
+        return _AUTHORED_TEXT[error["type"]]
     underlying = (error.get("ctx") or {}).get("error")
     if error["type"] == "value_error" and isinstance(underlying, InputFreeError):
         return str(error["msg"])
@@ -778,7 +997,9 @@ def safe_validation_message(error: Mapping[str, Any]) -> str | None:
             text += f" {message}"
 ```
 
-  Add `"safe_validation_message"` to `__all__`, and amend the module docstring's second bullet
+  Define `_AUTHORED_TEXT` beside `_FIXED_TEXT_TYPES`, holding the 10 texts of §"DP-5's changed
+  types" verbatim, with a comment that names its sentinel test. Add `"safe_validation_message"`
+  to `__all__`, and amend the module docstring's second bullet
   (`:18-23`) to name the marker: *"…and the `msg` only for an error type in `_FIXED_TEXT_TYPES`,
   each verified to carry no input, or for a `value_error` raised as `model_schema`'s
   `InputFreeError`, whose raise sites are literals."*
@@ -921,6 +1142,11 @@ def _field_error_message(err: Mapping[str, Any]) -> str:
 ```
 
   and `:499` becomes `message=_field_error_message(err),`.
+- [ ] **Step 4b (DP-5's extension, acceptance 5 (f)):** in `test_errors.py`, post a malformed
+  JSON body that carries `_SENTINEL` (for example `b'{"family": "SENTINEL-422-input-5e0c2b91'`,
+  unterminated) to `validating_client`. Assert the 422's message is
+  `_AUTHORED_TEXT["json_invalid"]` and `_SENTINEL` is absent from the whole body. See it red
+  first: on `main`'s sink the message is FastAPI's `"JSON decode error"`.
 - [ ] **Step 5:** the two test files: PASS; `uv run lint-imports` and `uv run mypy`: PASS. Commit.
 
 ### Task 6: The spec line (DP-6 (a))
@@ -930,11 +1156,15 @@ def _field_error_message(err: Mapping[str, Any]) -> str:
   `spec-change` (no new id):
 
   *(Clarified 2026-10-XX, WK-1178, FD-1589 row 8 remedy (c), on the lead's entries "2026-10-10
-  15:37:31 BST — RULING: DP-M2 WITHDRAWN …" and "2026-10-10 15:52:31 BST — RULINGS on PL 9955 /
-  SL 9956 …".)* A request-validation `422`'s `errors[].message` carries no submitted value (`03`
-  NFR-499). Authored validator messages are input-free — they name the field and the rule,
-  never the value — and are shown: a refusal raised as `model-schema`'s `InputFreeError`, whose
-  every raise site is a literal, and a fixed-text error type. Any other message is
+  15:37:31 BST — RULING: DP-M2 WITHDRAWN …", "2026-10-10 15:52:31 BST — RULINGS on PL 9955 /
+  SL 9956 …" and "2026-10-10 16:07:46 BST — RULINGS on PL 9955 re-sized …".)* A
+  request-validation `422`'s `errors[].message` carries no submitted value (`03` NFR-499).
+  Authored validator messages are input-free — they name the field and the rule, never the
+  value — and are shown. Three kinds are shown: a refusal raised as `model-schema`'s
+  `InputFreeError`, whose every raise site is a literal, and which may name an identifier of
+  the submitted artifact's own structure only when that identifier matches the schema's
+  pattern; a fixed-text error type; and an error type given its own fixed authored text. Any
+  other message is
   `The value is not valid (<TYPE>).` `errors[].code` and `errors[].field` are unchanged.
 
   (`XX` is the executor's commit date, from `date`.)
@@ -961,12 +1191,14 @@ closing acts 1.5 h per slice. A lane-day is 7 executor-seat hours.
 | Class | Sites | Lines spanned | `match=` asserts | Validators | Hours | Lane-days |
 |---|---|---|---|---|---|---|
 | Infrastructure (Tasks 1, 4, 5, 6) | — | — | — | — | 3.0 | 0.43 |
+| **DP-8 (b), added 16:07:46** (constructor and `identifier` 0.5 h; census keyword form 0.3 h; three cases 0.5 h; Task 0 Step 5 over 69 sites 0.3 h) | — | — | — | — | 1.6 | 0.23 |
+| **DP-5's extension, added 16:07:46** (10 texts 0.3 h; 10 sentinel cases and the set test at 8 min each, 1.3 h; the `json_invalid` 422 case 0.3 h; the two-text ACK list 0.1 h) | 10 types | — | — | — | 2.0 | 0.29 |
 | Input-free, adopted unchanged (Task 2) | 96 | — | — | 17 files | 1.0 | 0.14 |
 | Closed-vocabulary (enum `.value` / `len()`) | 15 | 58 | 15 | 13 in 7 files | 2.5 | 0.36 |
 | Free, 422-reachable (32 via a UI form, 13 other routes, 9 module-level helpers) | 54 | 213 | 36 | 38 in 10 files | 9.6 | 1.37 |
-| Free, user-authored, handler-built (B1) | 41 | 158 | 27 | 19 in 9 files | 7.3 | 1.04 |
-| Graph signals, DP-8 (a) (B1) | 5 (3 rewritten) | — | — | 2 | 0.5 | 0.07 |
-| Free, system-produced (B2) | 47 | 214 | 26 | 27 in 8 files | 8.0 | 1.14 |
+| Free, user-authored, handler-built (B1, **P3**) | 41 | 158 | 27 | 19 in 9 files | 7.3 | 1.04 |
+| Graph signals (B1, **P3**; the draft's DP-8 (a) estimate, before DP-10) | 5 (3 rewritten) | — | — | 2 | 0.5 | 0.07 |
+| Free, system-produced (B2, **P3**) | 47 | 214 | 26 | 27 in 8 files | 8.0 | 1.14 |
 | Gate + closing acts | per slice | | | | 1.5 | 0.21 |
 
 Per file, the 157 (closed + free): `modelling.py` 55 (4 + 51), `objectives.py` 18 (1 + 17),
@@ -979,15 +1211,25 @@ each. The densest validators: `CustomObjective._each_field_belongs_to_one_arm` 6
 5, `ComparisonSummary._every_reference_belongs_to_this_comparison` 5,
 `Uncertainty._the_kind_and_its_evidence_agree` 8.
 
-**Totals.** One slice (DP-9 (a)): **33.4 h ≈ 4.8 lane-days.** DP-9 (b): A 17.6 h ≈ 2.5, B 17.3 h
+**Re-size for the 16:07:46 rulings (dated 2026-10-10, `planner-remedy-c3`).** Slice A was
+17.6 h ≈ 2.5 lane-days. DP-8 (b) adds 1.6 h and DP-5's extension adds 2.0 h, so the **delta is
++3.6 h ≈ +0.5 lane-days**, and **slice A is now 21.2 h ≈ 3.0 lane-days**: infrastructure 3.0 h,
+DP-8 (b) 1.6 h, DP-5's extension 2.0 h, the 96 adopted 1.0 h, the 15 closed 2.5 h, the 54
+request-reachable free 9.6 h, gate and closing acts 1.5 h. The new rates are estimates, like
+the old ones. B1 and B2 (9.3 h + 9.5 h ≈ 2.7 lane-days, as ruled) are P3's and are not in this
+plan's size. The lead ruled A at ≈2.5; the +0.5 is the cost of the two 16:07:46 additions,
+and it is reported here, not absorbed.
+
+**The draft's totals, before DP-9 was ruled (kept for the record).** One slice (DP-9 (a)):
+**33.4 h ≈ 4.8 lane-days.** DP-9 (b): A 17.6 h ≈ 2.5, B 17.3 h
 ≈ 2.5. **DP-9 (c), recommended: A 17.6 h ≈ 2.5 · B1 9.3 h ≈ 1.3 · B2 9.5 h ≈ 1.4; total ≈ 5.2**
 (two more gates). DP-9 (d): A′ 13.9 h ≈ 2.0 · B′ 21.0 h ≈ 3.0. At half the authoring rates the
 one-slice total is still 25.8 h ≈ 3.7 lane-days, over ~2: the split does not rest on the rates.
 
 **Slice A (SL 9956)** — the marker, guards (i) and (ii) with `_RESIDUAL`, the allow-list, the
-422, the spec paragraph, the 96, the 15 closed, the 54 422-reachable free. Acceptance 1–10;
-at its merge (i) holds for every 422-reachable path and `_RESIDUAL` holds the 41 + 5 + 47
-others. Its validators, by class: `Banding` 4, `Grouping` 5, `OffsetSpec`, `SplitRef`,
+422, the spec paragraph, the 96, the 15 closed, the 54 422-reachable free, DP-8 (b)'s constructor and DP-5's extension.
+Acceptance 1–12; at its merge (i) holds for every 422-reachable path and `_RESIDUAL` holds the
+41 + 5 + 47 others. Its validators, by class: `Banding` 4, `Grouping` 5, `OffsetSpec`, `SplitRef`,
 `LossTreatment` 1 each, `GlmCvSpec` 1, `TweediePowerSpec` 1, `GlmSpec` 3, `GbmSpec` 2,
 `EbmSpec` 4, `RatingModelCallStep` 1, `ArtifactRef` 8, `ApproximationDeviation`,
 `ApprovalPolicyEntry` 1 each, `ObjectiveParameter`, `SamplingSpec` 1 each, `LargeLossTreatment`
@@ -995,17 +1237,17 @@ others. Its validators, by class: `Banding` 4, `Grouping` 5, `OffsetSpec`, `Spli
 helpers `ids.py` 2, `money.py` 2, `permissions.py` 1, `rating.py` 2, `validation.py` 1,
 `objectives.py` `battery_is_exactly` 1. (`TemplateParameter.check`'s 4 are a method of a
 handler-built class, so B1; Task 0 moves any site to A whose class it finds request-reachable.)
-**Slice B1** — the 41 handler-built free messages and DP-8. Acceptance 1 (shrunk `_RESIDUAL`),
-2, 3, 4 (third case), 8–10.
-**Slice B2** — the 47 system-produced free messages; deletes `_RESIDUAL`. Acceptance 1 (final
-form), 2, 3, 8–10.
+**B1 (P3, by the 16:07:46 ruling)** — the 41 handler-built free messages and the 5 graph
+signals (DP-10 first). Acceptance 1 (shrunk `_RESIDUAL`), 2, 3, 8–10, in P3's own plan.
+**B2 (P3, by the 16:07:46 ruling)** — the 47 system-produced free messages; deletes
+`_RESIDUAL`. Acceptance 1 (final form), 2, 3, 8–10, in P3's own plan. Appendix A lists both.
 
 ## Sequencing, lane and merge-order slot
 
-- **Scheduling (the 15:52:31 ruling):** after the FD-1374 slice (`SL-1536`) merges; off the G2
-  critical path; before the 4 Nov freeze. Under DP-9 (c), A first (before the exit demo if the
-  lanes allow, the 15:37:31 entry's "if the lanes allow"), then B1, then B2 — in sequence,
-  because all three change `_RESIDUAL` (RL-1263).
+- **Scheduling (the 15:52:31 ruling, restated at 16:07:46):** *"A is scheduled after FD-1374
+  merges, off G2's path, before 4 Nov."* A is P2's only slice in this plan, before the exit
+  demo if the lanes allow (the 15:37:31 entry's "if the lanes allow"). B1 and B2 come in P3,
+  in sequence after A, because each changes `_RESIDUAL` (RL-1263).
 - **Lane:** a WK-1178 fix slice, **not** in the `compile.py` serial set and touching no
   `pricing_core/rating/**` file. It touches `backend/src/app/errors.py` in a function
   (`_handle_validation_error`, `:485-510`) different from the FD-1374 slice's registry line
@@ -1013,7 +1255,7 @@ form), 2, 3, 8–10.
 - **Contention:** the rewrite sets sit inside existing validators in many model-schema files.
   `SL-1557` and `SL-1559` (WK-675, `draft`) change `model_schema/rating.py` and `__init__.py`;
   A changes `rating.py`'s 11 literal sites and 5 free ones (`RatingModelCallStep`,
-  `RatingVersionCreate`, two helpers), B1 its 3 graph-signal sites. Task 0 Step 3 names any
+  `RatingVersionCreate`, two helpers). The 3 graph-signal sites are P3's, with B1. Task 0 Step 3 names any
   shared function; RL-1263 serialises the pair where one exists.
 - **Plan dependency, named:** after A merges, any slice that adds a plain `raise ValueError` (or
   an `assert`) in `packages/model-schema/src` fails guard (i) until it raises `InputFreeError`
@@ -1024,9 +1266,8 @@ form), 2, 3, 8–10.
 
 1. The FD-1374 slice (`SL-1536`, `PL-1535`) merged (it touches `errors.py`'s registry line and
    carries the row-8 revert `8842b7c5`).
-2. DP-1 to DP-7 ruled (done, 15:52:31); **DP-8 and DP-9 ruled**; PL 9955 and SL 9956 minted
-   (and, under DP-9 (b) or (c), the further SL rows cut under ids the lead reserves); this plan
-   `active`.
+2. DP-1 to DP-7 ruled (done, 15:52:31); DP-8, DP-9 and DP-5's extension ruled (done, 16:07:46);
+   PL 9955 and SL 9956 minted; this plan `active`. DP-10 is P3's and does not gate A.
 3. The dispatch record carries Task 0 Step 3's check against every open model-schema slice
    (today `SL-1557`, `SL-1559`).
 4. The lead's GO.
@@ -1049,16 +1290,97 @@ form), 2, 3, 8–10.
    control). Every limb of the 15:37:31 item 2 has a task: marker in model-schema (1), adopted
    by the authored validators (2, 3), allow-listed in `pricing_core.safe_error` (4), row 8
    renders authored messages and drops the rest (5). Every limb of the 15:52:31 DP-2 (c): all
-   157 rewritten (Task 3 over A, B1, B2), all 253 adopt (guard (i) at B2), test (i) and test (ii)
+   157 rewritten (Task 3 over A in P2; B1 and B2 in P3), all 253 adopt (guard (i) at P3's last
+   slice), test (i) and test (ii)
    (Task 1), the re-size and the split (§"Size and the split", DP-9), the scheduling line
    (§"Sequencing"); DP-5's ACK list (§"DP-5's changed types", acceptance 6).
 2. **Placeholders:** Task 6's `XX` (a date the executor writes) and `_RESIDUAL`'s entries (filled
    from the census at Task 1 Step 4, by design).
 3. **Names:** `InputFreeError`, `safe_validation_message`, `_field_error_message`,
-   `_validation_detail`, `_FIXED_TEXT_TYPES`, `_RESIDUAL`, `failing_client`, `create_app`,
+   `_validation_detail`, `_FIXED_TEXT_TYPES`, `_AUTHORED_TEXT`, `Identifier`, `identifier`,
+   `_RESIDUAL`, `failing_client`, `create_app`,
    `GlmSpec`, `new_uuid7`, `GraphCycleError`, `GraphUnresolvedRefError`, `CodedError` are each
    grepped at `fe0b0627`, at `cfe8e15f`, or defined in a task above; the test helpers
    `_SENTINEL` and `_failure` in `test_safe_error.py` exist at `:40` and `:120`.
-4. **Ruled vs open:** no task depends on an unruled choice except where it says so (DP-8 in B1;
-   DP-9 in the slice boundaries). No option is silently picked: DP-9's recommendation is not a
-   fallback to DP-2 (a).
+4. **Ruled vs open:** no task in slice A depends on an unruled choice. DP-10 is open and is
+   P3's (the graph signals). No option is silently picked: DP-9 as ruled is not a fallback to
+   DP-2 (a), because A rewrites every request-reachable message and B1 and B2 are rewritten in
+   P3, not dropped to fixed text.
+5. **The 16:07:46 limbs (amendment by `planner-remedy-c3`):** DP-9's dated scope line
+   (§"Scope"), the B1 and B2 lists by `file:validator` (Appendix A), acceptance (i) bound to A's
+   scope (acceptance 1), `_RESIDUAL` listing B1 and B2 (Task 1 Step 4); DP-8 (b)'s constructor
+   check and its not-echoed test (Task 1 Step 3, acceptance 12), quote and policy values still
+   forbidden (Task 3 rule 2); DP-5's extension list with its measure, fixed texts and sentinel
+   tests (§"DP-5's changed types", Task 4, acceptance 11), and the ACK still listing every type
+   whose rendering changes (acceptance 6); the re-size and its delta (§"Size and the split").
+   One limb is not met: the brief's line that the graph signals keep naming the step, which
+   DP-10 brings to the lead.
+
+## Appendix A — the B1 and B2 sites, carried to P3 (dated 2026-10-10, on the 16:07:46 ruling)
+
+Listed so P3 can plan from them (DP-9). Read at `fe0b0627` by `planner-remedy-c3`'s AST pass,
+which uses the predicates of §"Where each of the 157 can be read": a `raise ValueError` whose
+message is an f-string that interpolates a runtime value; not closed-vocabulary; enclosing class
+outside every request body's `$ref` closure and not module-level. B1 is the classes built in a
+handler from a user's create body (the draft's class list); B2 is the rest. The pass reproduced
+the draft's counts: 54 A, 41 B1, 47 B2, 15 closed. Each row is
+`file:Class.validator count (lines)`. P3 re-derives at its own base; a line number here is
+`fe0b0627`'s.
+
+**B1 — user-authored, built in a handler: 41 sites in 19 validators.**
+
+- `datasets.py:DatasetSplit._a_split_has_at_least_two_parts` 1 (:507)
+- `metrics.py:CustomMetric._applicability_is_within_the_template` 1 (:169)
+- `metrics.py:CustomMetric._the_parameters_are_the_templates_own` 2 (:139 :146)
+- `modelling.py:Factor._columns_match_the_type` 2 (:253 :260)
+- `modelling.py:Factor._reasons_accompany_their_flags` 2 (:268 :275)
+- `modelling.py:Factor._the_interaction_arm` 4 (:217 :225 :233 :238)
+- `modelling.py:Factor._the_type_and_its_transformation_agree` 2 (:181 :191)
+- `objectives.py:CustomObjective._a_status_past_draft_rests_on_a_certificate` 1 (:624)
+- `objectives.py:CustomObjective._applicability_is_within_the_template` 1 (:607)
+- `objectives.py:CustomObjective._each_field_belongs_to_one_arm` 6 (:536 :543 :549 :554 :559 :561)
+- `objectives.py:CustomObjective._the_parameters_are_the_templates_own` 2 (:581 :588)
+- `objectives.py:TemplateParameter.check` 4 (:214 :216 :223 :226)
+- `perils.py:PerilStructure._coherent` 3 (:401 :408 :411)
+- `perils.py:Reconciliation._coherent` 1 (:366)
+- `rating.py:RatingAlgorithm._graph_invariants` 3 (:563 :611 :627)
+- `regression.py:RegressionSuiteContent._unique_names` 1 (:188)
+- `sub_graphs.py:SubGraphBody._graph_invariants` 3 (:107 :113 :128)
+- `validation.py:RuleSetEntry._an_override_may_only_raise` 1 (:135)
+- `validation.py:ValidationRule._catalogue_id_names_a_catalogue_entry` 1 (:107)
+
+**B2 — system-produced: 47 sites in 27 validators.**
+
+- `approvals.py:ApprovalRequest._recorded_matches_decisions` 1 (:510)
+- `backtests.py:BacktestSummary._a_backtest_is_not_run_on_the_data_it_learned_on` 1 (:77)
+- `backtests.py:BacktestSummary._the_period_is_ordered` 1 (:92)
+- `comparison.py:ComparisonMetric._an_unordered_metric_has_no_leader` 1 (:112)
+- `comparison.py:ComparisonMetric._the_leader_is_one_of_the_models_measured` 1 (:102)
+- `comparison.py:ComparisonSummary._every_reference_belongs_to_this_comparison` 5 (:202 :207 :215 :223 :228)
+- `comparison.py:DoubleLift._a_model_is_not_its_own_challenger` 1 (:152)
+- `diagnostics.py:AeCell._the_interval_is_ordered` 1 (:98)
+- `diagnostics.py:CrossValidationDiagnostics._every_fold_is_represented_at_the_selected_alpha` 1 (:643)
+- `diagnostics.py:CrossValidationDiagnostics._the_selected_alpha_is_a_point_on_the_path` 1 (:632)
+- `diagnostics.py:QuantileCrossing._the_two_numbers_describe_the_same_comparison` 2 (:557 :561)
+- `dislocation.py:DislocationRun._quantile_keys_are_the_fixed_set` 1 (:225)
+- `jobs.py:JobResult._reference_required_unless_none` 1 (:167)
+- `modelling.py:Coefficient._the_interval_contains_the_estimate` 1 (:1566)
+- `modelling.py:EbmFitResult._every_term_names_existing_features` 2 (:1860 :1867)
+- `modelling.py:EbmFitResult._the_base_slot_is_never_a_real_bin` 1 (:1945)
+- `modelling.py:EbmFitResult._the_lookup_shapes_match_the_bins` 5 (:1895 :1904 :1913 :1920 :1926)
+- `modelling.py:GbmFitResult._a_dropped_metric_is_named_once` 1 (:1747)
+- `modelling.py:GbmFitResult._every_feature_declares_its_dtype` 1 (:1736)
+- `modelling.py:Model._a_fitted_model_has_a_fit` 1 (:2103)
+- `modelling.py:Model._a_fitted_model_has_its_diagnostics` 1 (:2139)
+- `modelling.py:Model._the_fit_matches_the_specification` 1 (:2118)
+- `modelling.py:SpecValidation._ok_means_no_problems` 1 (:2214)
+- `modelling.py:TweediePowerFit._the_estimate_is_the_curves_argmax_and_the_interval_brackets_it` 3 (:988 :994 :1004)
+- `prediction.py:PredictedRow._the_bounds_are_a_pair_and_ordered` 2 (:307 :312)
+- `prediction.py:Prediction._every_row_matches_the_declared_uncertainty` 1 (:349)
+- `prediction.py:Uncertainty._the_kind_and_its_evidence_agree` 8 (:213 :219 :232 :237 :244 :258 :268 :275)
+
+**The graph signals (with B1; DP-10 first): 5 raises.**
+
+- `rating.py:RatingAlgorithm._graph_invariants` 2 (:575 `GraphUnresolvedRefError`, interpolating; :596 `GraphCycleError`, literal)
+- `sub_graphs.py:SubGraphBody._graph_invariants` 2 (:82 :91 `GraphUnresolvedRefError`, interpolating)
+- `sub_graphs.py:<module>._topological_order` 1 (:151 `GraphCycleError`, literal)
