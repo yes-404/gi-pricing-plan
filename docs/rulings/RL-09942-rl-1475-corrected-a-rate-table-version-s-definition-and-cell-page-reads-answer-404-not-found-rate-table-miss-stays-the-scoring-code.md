@@ -107,22 +107,25 @@ every other word of the clause stands.
 - **FD 9941 keeps its scope**: the existing diff routes on main (04:23:36 item 4). It is a
   separate record; at the time of writing it is a reserved working id on no origin ref.
 
-## Where the code carries it — on WK-675 S4's branch, pending
+## Where the code carries it — on WK-675 S4's branch, not on main
 
 WK-675 S4's branch is `sl-1559-wk675-s4`, read at its head
-`b19a97fc820372eeb450154d107d4a0eacdf687b`. None of what follows is on `main` at `26f93be0`.
+`918b9933210db03734c9b3d267c0031f0dda1fb2`. None of what follows is on `main` at `26f93be0`.
 
-- **The route-layer mapping exists** for the manual-edit route:
-  `backend/src/app/api/rate_tables.py:69` on that branch, `spec_not_found()`, which re-raises
-  a `RATE_TABLE_MISS` as `PlatformError("NOT_FOUND", "Not Found", 404, …)`, added by
-  `20a220fd` and used at `:165` and `:170`.
-- **The two reads do not yet use it**: `read_rate_table` (`:438`) and
-  `read_rate_table_cells` (`:450`) on that branch, added by `fe7fd56e`, call the service
-  without `spec_not_found()`. The commit that maps them, with the red-first tests on both
-  reads (04:23:36 item 3), is **pending**; this record names no SHA for it.
+- **The route-layer mapping**: `backend/src/app/api/rate_tables.py:69` on that branch,
+  `spec_not_found()`, which re-raises a `RATE_TABLE_MISS` as
+  `PlatformError("NOT_FOUND", "Not Found", 404, …)`. It was added by `20a220fd` for the
+  manual-edit route (used at `:166` and `:171`).
+- **The two reads use it**: `918b9933` ("fix(rating): the two rate-table reads answer 404
+  NOT_FOUND, like the edit route (FR 9940)") wraps `read_rate_table` (`:439`, the wrap at
+  `:443`) and `read_rate_table_cells` (`:452`, the wrap at `:464`) in `spec_not_found()`.
+- **The test**: `backend/tests/test_rate_table_route_codes.py` on that branch,
+  `test_the_two_reads_answer_404_not_found_for_an_unknown_table`, added by `918b9933`
+  (04:23:36 item 3). This record does not assert that it was seen red first; S4's ledger
+  records that.
 
 If S4's branch is rebased or squash-merged, these SHAs and line numbers name that branch at
-`b19a97fc`, not the merged result.
+`918b9933`, not the merged result.
 
 ## What it obliges
 
