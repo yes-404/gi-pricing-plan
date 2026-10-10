@@ -4,17 +4,22 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, get_args
 
 import pytest
 from pydantic import ValidationError
 
-from model_schema.dislocation import DislocationOutcomes, DislocationRun, DislocationSpec
+from model_schema.dislocation import (
+    DeltaKind,
+    DislocationOutcomes,
+    DislocationRun,
+    DislocationSpec,
+)
 
 _CONTRACT = (
     Path(__file__).resolve().parents[3] / "docs/contracts/schemas/dislocation-run.schema.json"
 )
-_SLICE_3_FIELDS = {"attribution", "derived_changes", "change_groups", "attribution_summary"}
+_SLICE_3_FIELDS: set[str] = set()  # every contract property is emitted since Slice 3 (SL-1387)
 _NULLABLE = {
     ("totals", "change_pct"),
     ("distribution", "exposure_share"),
@@ -23,6 +28,12 @@ _NULLABLE = {
     ("by_segment", "mean_change_pct"),
     ("by_segment", "exposure_share"),
     ("by_ladder_rung", "contribution_pct"),
+    ("attribution", "shapley_minor"),
+    ("attribution", "mean_change_pct"),
+    ("attribution", "cumulative_change_pct"),
+    ("attribution_summary", "order_sensitivity_lower_bound"),
+    ("attribution_summary", "residual_share"),
+    ("attribution_summary", "orders_sampled"),
 }
 
 
@@ -140,7 +151,7 @@ def test_error_counts_must_sum_to_outcomes_error() -> None:
 @pytest.mark.req("FR-263")
 def test_run_refuses_an_unknown_field() -> None:
     with pytest.raises(ValidationError, match="extra"):
-        DislocationRun.model_validate(_run_body(attribution=[]))
+        DislocationRun.model_validate(_run_body(unknown_field=[]))
 
 
 def _resolve(node: dict[str, Any], defs: dict[str, Any]) -> dict[str, Any]:
@@ -151,6 +162,13 @@ def _resolve(node: dict[str, Any], defs: dict[str, Any]) -> dict[str, Any]:
         if branch.get("type") != "null":
             return _resolve(branch, defs)
     return node
+
+
+def _array_items(node: dict[str, Any]) -> dict[str, Any]:
+    """The `items` of an array schema, or of the array arm of an `anyOf` with null."""
+    if "items" in node:
+        return node["items"]  # type: ignore[no-any-return]
+    return next(b["items"] for b in node["anyOf"] if b.get("type") == "array")  # type: ignore[no-any-return]
 
 
 def _admits_null(node: dict[str, Any]) -> bool:
@@ -174,6 +192,15 @@ def test_dislocation_run_fields_match_the_hand_authored_contract() -> None:
             contract["properties"][key]["items"],
             _resolve(emitted["properties"][key]["items"], defs),
         )
+    for key in ("attribution", "derived_changes", "change_groups"):
+        objects[key] = (
+            contract["properties"][key]["items"],
+            _resolve(_array_items(emitted["properties"][key]), defs),
+        )
+    objects["attribution_summary"] = (
+        contract["properties"]["attribution_summary"],
+        _resolve(emitted["properties"]["attribution_summary"], defs),
+    )
     err_c = contract["properties"]["errors"]["items"]["properties"]["sample"]["items"]
     err_e = _resolve(
         _resolve(emitted["properties"]["errors"]["items"], defs)["properties"]["sample"], defs
@@ -186,3 +213,71 @@ def test_dislocation_run_fields_match_the_hand_authored_contract() -> None:
         for prop in e["properties"]:
             if (name, prop) in _NULLABLE:
                 assert _admits_null(e["properties"][prop]), (name, prop)
+
+
+def _contract_admits_null(node: dict[str, Any]) -> bool:
+    t = node.get("type")
+    return (isinstance(t, list) and "null" in t) or any(
+        b.get("type") == "null" for b in node.get("anyOf", [])
+    )
+
+
+@pytest.mark.req("FR-1397")
+def test_attribution_ratio_with_zero_denominator_validates_against_the_contract() -> None:
+    """DP-S3-1 (a): the authored contract admits the null a zero-denominator ratio gives."""
+    contract = json.loads(_CONTRACT.read_text())["properties"]
+    items = contract["attribution"]["items"]["properties"]
+    for prop in ("mean_change_pct", "cumulative_change_pct", "shapley_minor"):
+        assert _contract_admits_null(items[prop]), prop
+
+
+@pytest.mark.req("FR-1399")
+def test_delta_kinds_equal_the_contract_enum() -> None:
+    contract = json.loads(_CONTRACT.read_text())["properties"]
+    enum = contract["derived_changes"]["items"]["properties"]["kind"]["enum"]
+    assert sorted(get_args(DeltaKind)) == sorted(enum)
+
+
+@pytest.mark.req("FR-1399")
+def test_dislocation_run_attribution_is_all_or_none() -> None:
+    """The schema's `dependentRequired` (`:9`): the four attribution fields come together."""
+    with pytest.raises(ValidationError, match="attribution"):
+        DislocationRun.model_validate(_run_body(derived_changes=[]))
+
+
+# ---- WK-673 Slice 5 (PL-1500 Task 4): FR-224's exact-mode run and its quantiles -----------
+
+
+@pytest.mark.req("FR-224")
+def test_spec_refuses_an_exact_override_naming_two_versions() -> None:
+    """DP-S5-3 (a): `baseline_mode_override` is one version compared with its own exact twin."""
+    with pytest.raises(ValidationError, match="baseline_mode_override"):
+        _spec(baseline_mode_override="exact")  # baseline@26 against candidate@27
+    spec = _spec(
+        baseline_mode_override="exact",
+        baseline_ref="rating_version:motor-gb@27",
+        candidate_ref="rating_version:motor-gb@27",
+    )
+    assert spec.baseline_mode_override == "exact"
+    assert _spec().baseline_mode_override is None
+
+
+@pytest.mark.req("FR-224")
+def test_run_quantiles_are_exactly_the_six_keys_or_absent() -> None:
+    """03 §4.6 (RL-1504 T7): all six keys, in any order (JSONB returns them shortest first),
+    each a decimal string or null; a run without the field still validates (a run made
+    before it)."""
+    keys = ["0.5", "0.9", "0.95", "0.99", "0.999", "1"]
+    assert DislocationRun.model_validate(_run_body()).abs_change_pct_quantiles is None
+    nulls = DislocationRun.model_validate(
+        _run_body(abs_change_pct_quantiles=dict.fromkeys(keys))
+    )
+    assert nulls.abs_change_pct_quantiles == dict.fromkeys(keys)
+    jsonb_order = ["1", "0.5", "0.9", "0.95", "0.99", "0.999"]
+    DislocationRun.model_validate(_run_body(abs_change_pct_quantiles=dict.fromkeys(jsonb_order)))
+    with pytest.raises(ValidationError, match="abs_change_pct_quantiles"):
+        DislocationRun.model_validate(_run_body(abs_change_pct_quantiles={"0.5": "1.000000"}))
+    with pytest.raises(ValidationError, match="abs_change_pct_quantiles"):
+        DislocationRun.model_validate(
+            _run_body(abs_change_pct_quantiles={**dict.fromkeys(keys), "0.75": "1.000000"})
+        )

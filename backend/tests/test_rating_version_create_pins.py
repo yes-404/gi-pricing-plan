@@ -95,7 +95,7 @@ def test_a_version_created_with_its_algorithm_and_pins_compiles_over_http(
         f"/api/v1/rating-versions/{created.json()['id']}", headers=headers
     ).json()
     assert version["algorithm_ref"] == algorithm_ref
-    assert version["pins"] == pins
+    assert version["pins"] == {**pins, "sub_graphs": []}  # Pins.sub_graphs defaults to []
 
     job_row = _run_compile_job(api_client, headers, database, blob_store, version["id"])
     assert job_row.status is JobStatus.SUCCEEDED, job_row.error
@@ -216,14 +216,16 @@ def test_an_unapproved_model_pin_is_refused_at_compile_and_compiles_after_approv
 
 
 @pytest.mark.req("FR-237")
-def test_a_peril_structure_pin_is_stored_and_compile_reports_no_resolver(
+def test_a_peril_structure_pin_is_stored_and_compile_names_the_missing_structure(
     api_client, workspace_id, principal, grant, database, blob_store
 ) -> None:
-    """FD 9995's tripwire (PL-1429 DP-5 (a)), NOT the intended behaviour.
+    """A peril structure pin is stored; compile resolves it, and a missing one is named.
 
-    A peril structure pin should compile; today the resolver has no `peril_structure` branch
-    (FD 9995), so compile fails NOT_FOUND. This assertion is expected to flip to `succeeded`
-    when FD 9995 is fixed, in the commit that adds the branch.
+    This was FD-1456's tripwire (PL-1429 DP-5 (a)): the resolver had no `peril_structure`
+    branch, so compile said "has no backend table yet". PL-1461 (SL-1462) adds the branch in
+    the commit that rewrote this test. The positive test FD-1456's Disposition asks for, an
+    unapproved structure refused and an approved one compiled, is
+    `test_peril_structure_approval.py`; this one holds the pin write and the not-found path.
     """
     _LOOP().run_until_complete(grant("analyst"))
     headers = _headers(principal, workspace_id)
@@ -242,7 +244,8 @@ def test_a_peril_structure_pin_is_stored_and_compile_reports_no_resolver(
     assert job_row.status is JobStatus.FAILED
     assert job_row.error["code"] == "NOT_FOUND"
     # `execute_job` carries a PlatformError's detail as JobError.message (worker/tasks.py:227).
-    assert "has no backend table yet" in job_row.error["message"]
+    assert "peril_structure:motor-perils@1" in job_row.error["message"]
+    assert "has no backend table yet" not in job_row.error["message"]
 
 
 @pytest.mark.req("FR-223")
@@ -367,5 +370,5 @@ def test_the_creation_event_records_the_declared_pins(
 
     after = _LOOP().run_until_complete(_after())
     assert after["algorithm_ref"] == algorithm_ref
-    assert after["pins"] == _empty_pins()
+    assert after["pins"] == {**_empty_pins(), "sub_graphs": []}
     assert after["model_reference_mode"] == "exact"

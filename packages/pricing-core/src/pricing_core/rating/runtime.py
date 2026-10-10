@@ -41,16 +41,35 @@ import json
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
+from decimal import Decimal
 from typing import Any
 
 import polars as pl
 import zen
 
 from model_schema.graph_errors import GraphCycleError
-from model_schema.modelling import GbmFitResult
+from model_schema.modelling import (
+    FIT_RESULT_ADAPTER,
+    MODEL_SPEC_ADAPTER,
+    Banding,
+    Factor,
+    GbmFitResult,
+    GlmFitResult,
+    GlmSpec,
+    Grouping,
+)
+from model_schema.perils import LargeLossKind, PerilMethod, PerilStructure
 from model_schema.rating import RatingAlgorithm, RatingModelCallStep
+from pricing_core.modelling.errors import ModellingError
 from pricing_core.modelling.gbm import load_gbm_booster, predict_gbm
-from pricing_core.rating.compile import Bundle, JdmGraph, check_step_refs_pinned
+from pricing_core.modelling.predict import PredictionError, linear_predictor, predict_glm
+from pricing_core.rating.compile import (
+    Bundle,
+    JdmGraph,
+    check_step_refs_pinned,
+    peril_component_refs,
+)
+from pricing_core.rating.inline import inline_mounts, mounted_fragments
 from pricing_core.safe_error import CodedError
 
 __all__ = [
@@ -555,8 +574,146 @@ def to_wire(graph: JdmGraph, payloads: Mapping[str, Any] | None = None) -> dict[
     return {"nodes": wire_nodes, "edges": edges}
 
 
+class _ModelCallRefusal(Exception):  # noqa: N818 — a control-flow carrier, never escapes
+    """A `model_call` that cannot be scored; the handler turns it into `_model_call_failure`."""
+
+
+def _step_model_refs(step: RatingModelCallStep, payloads: Mapping[str, Any]) -> list[str]:
+    """The model refs a step scores through: its one model, or a Peril Structure's components.
+
+    A structure's components are read from the structure's own payload, which the Bundle
+    carries (`RL-1459` DP-A3-3; NFR-491), in peril order and without repeats.
+    """
+    if step.model_ref is not None:
+        return [str(step.model_ref)]
+    assert step.peril_structure_ref is not None  # exactly one is set (FR-222)
+    structure = PerilStructure.model_validate(payloads[str(step.peril_structure_ref)])
+    return [str(ref) for ref in peril_component_refs(structure)]
+
+
+def _predict_model(
+    step: RatingModelCallStep,
+    ref_str: str,
+    payloads: Mapping[str, Any],
+    boosters: Mapping[str, object],
+    glm_scorers: Mapping[str, _GlmScorer],
+    feature_row: Mapping[str, Any],
+    context: Mapping[str, Any],
+) -> float:
+    """One pinned model's unrounded prediction on the quote's one-row frame (FR-222, FR-193).
+
+    The one per-kind dispatch: a direct `model_call` and every component of a Peril Structure
+    go through it, so the kinds cannot diverge between the two (`predict.py`'s `score_fitted`
+    makes the same point for the modelling side).
+    """
+    fit_result = dict(payloads[ref_str]["fit_result"])
+    model_type = fit_result.get("model_type")
+    if model_type in ("xgboost", "lightgbm"):
+        fit_result.pop("booster_content", None)
+        gbm_result = GbmFitResult.model_validate(fit_result)
+        booster = boosters[ref_str]
+        frame = pl.DataFrame([dict(feature_row)]) if feature_row else pl.DataFrame(
+            {slug: [context.get(slug)] for slug in gbm_result.feature_order}
+        )
+        # NFR-501: nthread=1 per request (F-W11-1-2). For LightGBM this is a
+        # genuine per-call argument (safe under concurrency). For XGBoost this call is
+        # a no-op by design — `booster` is already loaded (RL-874), and
+        # `predict_gbm` refuses to `set_param` a shared, already-loaded `Booster` on
+        # every call because that races a concurrent `predict()` on the same object
+        # and crashes (verified live — see `predict_gbm`'s own docstring).
+        # `_load_boosters`, below, is where nthread=1 is actually baked in for
+        # XGBoost, once, before any concurrent scoring begins.
+        return float(predict_gbm(gbm_result, booster, frame, factors=(), nthread=1)[0])
+    if model_type == "glm":
+        return glm_scorers[ref_str].predict(feature_row)
+    raise _ModelCallRefusal(
+        f"model_call step {step.step_id!r} pins a {model_type!r} model, which no "
+        "scorer is written for (FR-222)."
+    )
+
+
+def _decimal(value: float, peril: str) -> Decimal:
+    """A prediction as an exact `Decimal` (`repr`, as FR-244's boundary reads a float)."""
+    exact = Decimal(repr(value))
+    if not exact.is_finite():
+        raise ModellingError(
+            "PERIL_STRUCTURE_RECONCILIATION_FAILED",
+            f"peril {peril} predicts a non-finite value (FR-188)",
+        )
+    return exact
+
+
+def _score_peril_structure(
+    step: RatingModelCallStep,
+    structure: PerilStructure,
+    payloads: Mapping[str, Any],
+    boosters: Mapping[str, object],
+    glm_scorers: Mapping[str, _GlmScorer],
+    feature_row: Mapping[str, Any],
+    context: Mapping[str, Any],
+) -> Decimal:
+    """A Peril Structure's risk premium for one quote, composed on `Decimal` (FR-188, FR-189).
+
+    Each peril's cost is `frequency * severity` or `burning_cost`, its large-loss treatment
+    is applied to that peril alone, and the restored costs are summed — never restored after
+    the sum (FR-189). Nothing is rounded here: the caller decides (`result_type`, `RL-1459`
+    DP-A3-5 and the maintainer's (by delegation) entry "2026-10-10 03:13:06 BST — RULINGS on
+    A-3"). This is the rating path's own arithmetic (`CLAUDE.md` §7: Decimal, never float);
+    `modelling.perils.assemble_risk_premium` is float64 and stays outside it, and
+    `test_rating_peril_scoring.py` holds the two to `TOLERANCE_QUANTUM` on one golden.
+
+    A peril the structure cannot price raises `ModellingError`; the handler reports it as a
+    `model_call` failure (FR-255). The unit of a component is the handler's convention:
+    severity and burning cost predict minor units, a frequency an expected count for the
+    quote's own exposure (`RL-1459` DP-A3-5 (a)).
+    """
+    predicted = {
+        ref: _decimal(
+            _predict_model(step, ref, payloads, boosters, glm_scorers, feature_row, context),
+            ref,
+        )
+        for ref in {str(r) for r in peril_component_refs(structure)}
+    }
+    total = Decimal(0)
+    for peril in structure.perils:
+        if peril.method is PerilMethod.FREQUENCY_SEVERITY:
+            assert peril.frequency_model is not None  # contract invariant
+            assert peril.severity_model is not None
+            cost = predicted[str(peril.frequency_model)] * predicted[str(peril.severity_model)]
+        else:
+            assert peril.burning_cost_model is not None
+            cost = predicted[str(peril.burning_cost_model)]
+        treatment = peril.large_loss
+        match treatment.kind:
+            case LargeLossKind.NONE:
+                pass
+            case LargeLossKind.CAPPED:
+                assert treatment.restoration_loading is not None  # contract invariant
+                cost *= treatment.restoration_loading
+            case LargeLossKind.FLAT_LOADING:
+                assert treatment.loading_factor is not None  # contract invariant
+                cost *= treatment.loading_factor
+            case LargeLossKind.SEPARATE_MODEL:
+                raise ModellingError(
+                    "LOSS_TREATMENT_UNIMPLEMENTED",
+                    f"peril {peril.peril}: the 'separate_model' large-loss treatment is "
+                    "computed by nothing yet (FR-189)",
+                )
+        if cost < 0:
+            raise ModellingError(
+                "PERIL_STRUCTURE_RECONCILIATION_FAILED",
+                f"peril {peril.peril} predicts a negative cost, which summed with positives "
+                "would disappear (FR-188)",
+            )
+        total += cost
+    return total
+
+
 def _model_call_handler(
-    algorithm: RatingAlgorithm, payloads: Mapping[str, Any], boosters: Mapping[str, object]
+    algorithm: RatingAlgorithm,
+    payloads: Mapping[str, Any],
+    boosters: Mapping[str, object],
+    scorers: Mapping[str, _GlmScorer] | None = None,
 ) -> Callable[[Any], dict[str, Any]]:
     """Build the `customHandler` `load_bundle` wires into the `ZenEngine` it constructs.
 
@@ -564,12 +721,21 @@ def _model_call_handler(
     algorithm and the resolved payloads already inside the `Bundle` — no I/O, no resolver.
     RL-874: a GBM pin scores through the pre-loaded `boosters[ref]` object, never through
     raw bytes, so N quotes against one `CompiledBundle` deserialise the booster once, not N
-    times. Money-minor rounding here is a documented, provisional convention (`round()` to
-    the nearest whole unit, on the assumption the pinned model was itself fitted to predict
-    on the money-minor scale already) — Task 1.4's FR-250 golden test is where the
-    actual monetary contract for a `model_call` output gets fixed; flagged in the PR
-    description rather than asserted here as settled.
+    times. A GLM pin scores through `scorers[ref]`, rebuilt once from the Factors, Bandings and
+    Groupings the Bundle carries beside the Model (FD-1458; FR-222, FR-239, NFR-491), and
+    `predict_glm` per quote.
+
+    **Rounding is the step's `result_type`'s to decide (the maintainer's (by delegation) entry
+    headed "2026-10-10 00:40:31 BST — RULING: A-2 item 15. NEITHER (i) nor (ii)…").** A GBM
+    step without `result_type` keeps the legacy `round(prediction)`, so a bundle compiled
+    before the field hashes and prices as it always did (FR-239). A step that writes
+    `result_type` (`decimal` or `money_minor`) carries the unrounded value to FR-244's
+    boundary, where an `output` step rounds it once (FR-226). One rule for every
+    `model_call` (the maintainer's (by delegation) entry "2026-10-10 00:44:31 BST"): a GLM
+    step is compiled with an explicit `result_type`, so its unrounded behaviour is in its
+    bytes and hash; a GLM step without one rounds like any other.
     """
+    glm_scorers = scorers if scorers is not None else _load_glm_scorers(algorithm, payloads)
     steps_by_id = {
         step.step_id: step
         for step in algorithm.steps
@@ -585,47 +751,38 @@ def _model_call_handler(
                 step, f"model_call step {step.step_id!r} pins nothing.", context
             )
         ref_str = str(ref)
-        payload = payloads[ref_str]
-        fit_result = dict(payload["fit_result"])
         feature_row = {
             feature_slug: context[graph_name]
             for graph_name, feature_slug in step.feature_map.items()
             if graph_name in context
         }
-
-        model_type = fit_result.get("model_type")
-        if model_type in ("xgboost", "lightgbm"):
-            fit_result.pop("booster_content", None)
-            gbm_result = GbmFitResult.model_validate(fit_result)
-            booster = boosters[ref_str]
-            frame = pl.DataFrame([feature_row]) if feature_row else pl.DataFrame(
-                {slug: [context.get(slug)] for slug in gbm_result.feature_order}
-            )
-            # NFR-501: nthread=1 per request (F-W11-1-2). For LightGBM this is a
-            # genuine per-call argument (safe under concurrency). For XGBoost this call is
-            # a no-op by design — `booster` is already loaded (RL-874), and
-            # `predict_gbm` refuses to `set_param` a shared, already-loaded `Booster` on
-            # every call because that races a concurrent `predict()` on the same object
-            # and crashes (verified live — see `predict_gbm`'s own docstring).
-            # `_load_boosters`, below, is where nthread=1 is actually baked in for
-            # XGBoost, once, before any concurrent scoring begins.
-            prediction = float(
-                predict_gbm(gbm_result, booster, frame, factors=(), nthread=1)[0]
-            )
-            value: int = round(prediction)
-        else:
+        try:
+            if step.peril_structure_ref is not None:
+                structure = PerilStructure.model_validate(payloads[ref_str])
+                composed: float | Decimal = _score_peril_structure(
+                    step, structure, payloads, boosters, glm_scorers, feature_row, context
+                )
+            else:
+                composed = _predict_model(
+                    step, ref_str, payloads, boosters, glm_scorers, feature_row, context
+                )
+        except _ModelCallRefusal as refusal:
+            return _model_call_failure(step, str(refusal), context)
+        except (ModellingError, PredictionError) as exc:
+            # The code only: a `PredictionError`'s own text can carry a quote's value (an unseen
+            # factor level, `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`), and a coded error keeps its text
+            # as it stands (NFR-499, RL-917), so the model's text is never passed on.
             return _model_call_failure(
                 step,
-                f"model_call step {step.step_id!r} pins a {model_type!r} model. "
-                "Bundle.resolved_payloads carries the Model's own dump but not the "
-                "Factor/Banding/Grouping objects predict_glm requires (ModelSpecCommon."
-                "factors is bare UUIDs — resolve_factors builds zero design columns from "
-                "an empty sequence, so every non-intercept coefficient's term goes "
-                "unresolved). Scoring a GBM works because predict_gbm has a documented "
-                "fallback for factors=() that reads each feature off the frame directly; "
-                "predict_glm has no such fallback.",
+                f"{exc.code}: {ref_str} could not be scored for this quote (FR-255)",
                 context,
             )
+        # One rule for every `model_call` (the 00:44:31 ruling): no `result_type` rounds, as it
+        # always did; a written one carries the value unrounded to FR-244's boundary. A
+        # Decimal crosses the engine as the float it rounds to, as a GBM's or GLM's does.
+        value: float | int = (
+            round(composed) if step.result_type is None else float(composed)
+        )
 
         # The one success return: the context passes through (FD-1425), because on the
         # ordered chain a node that drops it drops it for every later step. A branch added
@@ -633,6 +790,113 @@ def _model_call_handler(
         return {"output": {**context, **{str(name): value for name in _as_list(step.produces)}}}
 
     return handler
+
+
+@dataclass(frozen=True)
+class _GlmScorer:
+    """One pinned GLM, rebuilt once from the Bundle (FD-1458; NFR-491: no I/O at score).
+
+    `columns` renames what `feature_map` names — a Factor slug (DP-2 (b)) or the offset
+    column — to the frame column `predict_glm` reads (the Factor's `source_columns`).
+    """
+
+    fit: GlmFitResult
+    spec: GlmSpec
+    factors: tuple[Factor, ...]
+    bandings: Mapping[Any, Banding]
+    groupings: Mapping[Any, Grouping]
+    columns: Mapping[str, str]
+    offset_source: _GlmScorer | None
+
+    def linear_predictor(self, frame: pl.DataFrame) -> Any:
+        return linear_predictor(
+            self.fit, frame, self.factors, self.spec, bandings=self.bandings,
+            groupings=self.groupings,
+        )
+
+    def predict(self, feature_row: Mapping[str, Any]) -> float:
+        frame = pl.DataFrame([{self.columns.get(k, k): v for k, v in feature_row.items()}])
+        model_offset = (
+            self.offset_source.linear_predictor(frame) if self.offset_source else None
+        )
+        return float(
+            predict_glm(
+                self.fit, frame, self.factors, self.spec, model_offset=model_offset,
+                bandings=self.bandings, groupings=self.groupings,
+            )[0]
+        )
+
+
+def _carried(payloads: Mapping[str, Any], kind: str, model: type[Any]) -> dict[Any, Any]:
+    """Every `<kind>:…` payload the Bundle carries, validated as its `model-schema` class."""
+    prefix = f"{kind}:"
+    return {
+        item.id: item
+        for key, raw in payloads.items()
+        if key.startswith(prefix)
+        for item in (model.model_validate(raw),)
+    }
+
+
+def _glm_scorer(ref: str, payloads: Mapping[str, Any]) -> _GlmScorer:
+    payload = payloads[ref]
+    fit = FIT_RESULT_ADAPTER.validate_python(payload["fit_result"])
+    spec = MODEL_SPEC_ADAPTER.validate_python(payload["spec"])
+    if not isinstance(fit, GlmFitResult) or not isinstance(spec, GlmSpec):
+        raise ValueError(f"{ref} is not a GLM with a GLM spec (FR-193)")
+    carried = _carried(payloads, "factor", Factor)
+    bandings = _carried(payloads, "banding", Banding)
+    groupings = _carried(payloads, "grouping", Grouping)
+    missing = [str(i) for i in spec.factors if i not in carried]
+    if missing:
+        raise ValueError(
+            f"RATING_VERSION_UNPINNED: the bundle carries {ref} but not its Factor(s) "
+            f"{missing} — a malformed Bundle (FR-239, NFR-491)"
+        )
+    factors = tuple(carried[i] for i in spec.factors)
+    for factor in factors:
+        if factor.banding_id is not None and factor.banding_id not in bandings:
+            raise ValueError(
+                f"RATING_VERSION_UNPINNED: {ref}'s Factor {factor.slug!r} pins a Banding the "
+                "bundle does not carry (FR-239)"
+            )
+        if factor.grouping_id is not None and factor.grouping_id not in groupings:
+            raise ValueError(
+                f"RATING_VERSION_UNPINNED: {ref}'s Factor {factor.slug!r} pins a Grouping the "
+                "bundle does not carry (FR-239)"
+            )
+    source: _GlmScorer | None = None
+    if spec.offset.kind == "model":
+        offset_ref = str(spec.offset.offset_model_ref)
+        if offset_ref not in payloads:
+            raise ValueError(
+                f"RATING_VERSION_UNPINNED: {ref}'s offset model {offset_ref} is not in the "
+                "bundle (FR-116, FR-239)"
+            )
+        source = _glm_scorer(offset_ref, payloads)
+    columns = {f.slug: f.source_columns[0] for f in factors if len(f.source_columns) == 1}
+    if source is not None:
+        columns = {**source.columns, **columns}
+    return _GlmScorer(fit, spec, factors, bandings, groupings, columns, source)
+
+
+def _load_glm_scorers(
+    algorithm: RatingAlgorithm, payloads: Mapping[str, Any]
+) -> dict[str, _GlmScorer]:
+    """Rebuild every pinned GLM once per loaded bundle (the `_load_boosters` of the GLM arm)."""
+    scorers: dict[str, _GlmScorer] = {}
+    for step in algorithm.steps:
+        if not isinstance(step, RatingModelCallStep):
+            continue
+        ref_of_step = step.model_ref or step.peril_structure_ref
+        if ref_of_step is None or str(ref_of_step) not in payloads:
+            continue
+        for ref in _step_model_refs(step, payloads):
+            if ref in scorers or ref not in payloads:
+                continue
+            if (payloads[ref].get("fit_result") or {}).get("model_type") == "glm":
+                scorers[ref] = _glm_scorer(ref, payloads)
+    return scorers
 
 
 def _load_boosters(
@@ -652,24 +916,24 @@ def _load_boosters(
     for step in algorithm.steps:
         if not isinstance(step, RatingModelCallStep):
             continue
-        ref = step.model_ref if step.model_ref is not None else step.peril_structure_ref
-        if ref is None:
+        step_ref = step.model_ref if step.model_ref is not None else step.peril_structure_ref
+        if step_ref is None:
             continue
-        ref_str = str(ref)
-        if ref_str in boosters:
-            continue
-        if ref_str not in payloads:
+        if str(step_ref) not in payloads:
             raise CodedError(
-                f"RATING_VERSION_UNPINNED: model_call step {step.step_id!r} names {ref_str}, "
+                f"RATING_VERSION_UNPINNED: model_call step {step.step_id!r} names {step_ref}, "
                 "which the bundle does not carry (FR-237)"
             )
-        fit_result = payloads[ref_str].get("fit_result", {})
-        model_type = fit_result.get("model_type")
-        if model_type in ("xgboost", "lightgbm"):
-            booster_text = fit_result["booster_content"]
-            boosters[ref_str] = load_gbm_booster(
-                model_type, booster_text.encode("utf-8"), nthread=1
-            )
+        for ref_str in _step_model_refs(step, payloads):
+            if ref_str in boosters:
+                continue
+            fit_result = payloads[ref_str].get("fit_result", {})
+            model_type = fit_result.get("model_type")
+            if model_type in ("xgboost", "lightgbm"):
+                booster_text = fit_result["booster_content"]
+                boosters[ref_str] = load_gbm_booster(
+                    model_type, booster_text.encode("utf-8"), nthread=1
+                )
     return boosters
 
 
@@ -695,6 +959,18 @@ class CompiledBundle:
     boosters: Mapping[str, object]
 
 
+def _check_graph_matches_inlined_algorithm(graph: JdmGraph, algorithm: RatingAlgorithm) -> None:
+    """C1 (RL-1571 DP-S2-1): the stored graph's node ids are the inlined algorithm's step ids."""
+    in_graph = set(graph.nodes)
+    in_algorithm = {step.step_id for step in algorithm.steps}
+    if in_graph != in_algorithm:
+        first = sorted(in_graph ^ in_algorithm)[0]
+        raise CodedError(
+            f"BUNDLE_COMPILE_FAILED: the bundle's graph and its re-inlined algorithm disagree "
+            f"on node {first!r}"
+        ) from None
+
+
 def load_bundle(bundle: Bundle) -> CompiledBundle:
     """Hydrate a `Bundle` into a `CompiledBundle` (FR-243, RL-873).
 
@@ -710,8 +986,19 @@ def load_bundle(bundle: Bundle) -> CompiledBundle:
 
     Refuses with `RATING_VERSION_UNPINNED` a bundle whose step ref is not pinned at its exact
     version, so a bundle compiled before that check existed cannot price silently (FR-237).
+
+    **Re-inlines each pinned sub-graph** (FR-217; RL-1571 DP-S2-1 (a)) with the same pure
+    `inline_mounts` that `compile_bundle` used, from the payloads already in the bundle. The
+    stored algorithm artifact stays what its ref names (RL-873), `Bundle`'s shape is unchanged,
+    and the `CompiledBundle.algorithm` that scoring, the model-call handler and the trace read
+    is the inlined one. A bundle with no mounts re-inlines to itself. Refuses with
+    `BUNDLE_COMPILE_FAILED` a bundle whose graph and re-inlined algorithm disagree on their
+    nodes (RL-1571 C1), before the engine is built.
     """
-    algorithm = RatingAlgorithm.model_validate(bundle.resolved_payloads[bundle.algorithm_ref])
+    stored = RatingAlgorithm.model_validate(bundle.resolved_payloads[bundle.algorithm_ref])
+    fragments = mounted_fragments(stored, bundle.pins, bundle.resolved_payloads)
+    algorithm = inline_mounts(stored, fragments)
+    _check_graph_matches_inlined_algorithm(bundle.graph, algorithm)
     check_step_refs_pinned(algorithm, bundle.pins)
     boosters = _load_boosters(algorithm, bundle.resolved_payloads)
     handler = _model_call_handler(algorithm, bundle.resolved_payloads, boosters)

@@ -15,6 +15,7 @@ from model_schema.rating import RatingVersion
 from model_schema.refs import ArtifactRef
 from pricing_core.rating.compile import (
     ArtifactResolver,
+    Bundle,
     ResolvedArtifact,
     bundle_hash,
     compile_bundle,
@@ -269,3 +270,242 @@ def test_to_jdm_translates_the_steps() -> None:
     assert len(graph.nodes) == 8
     assert graph.nodes["s_office"]["type"] == "expression"
     assert graph.nodes["s_office"]["consumes"] == ["risk_premium_minor", "expense_factor"]
+
+
+# --- WK-1250 Slice 2 (SL-1340): a pinned sub-graph is resolved, checked and inlined -------------
+# (FR-217; RL-1309 G1, G4, DP-3 item 5, DP-4, DP-S1-4 item 6; RL 9586 DP-S2-2)
+
+import copy  # noqa: E402
+import hashlib  # noqa: E402
+import json  # noqa: E402
+from typing import Any  # noqa: E402
+
+from pricing_core.rating import compile as compile_module  # noqa: E402
+
+NCD = "sub_graph:ncd-ladder@4"
+NCD5 = "sub_graph:ncd-ladder@5"
+
+
+def _fragment_payload(version: int = 4, **overrides: Any) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "slug": "ncd-ladder", "version": version,
+        "inputs": [{"name": "ncd_years", "type": "int"}],
+        "outputs": [{"name": "ncd_factor", "type": "decimal", "required": True}],
+        "steps": [
+            {"step_id": "s_ladder", "type": "expression", "label": "Ladder",
+             "expr": "ncd_years * 10", "result_type": "decimal",
+             "consumes": ["ncd_years"], "produces": "ncd_factor"},
+        ],
+        "change_note": "first cut",
+    }
+    payload.update(overrides)
+    return payload
+
+
+def _mounted_payload(**mount_edit: Any) -> dict[str, Any]:
+    """`valid_algorithm_payload()` with an NCD input, the mount, and `s_office` consuming it."""
+    payload = copy.deepcopy(valid_algorithm_payload())
+    payload["input_contract"].append(
+        {"name": "ncd_years", "type": "int", "nullable": False, "min": 0, "max": 9}
+    )
+    payload["steps"].insert(
+        0,
+        {"step_id": "s_in_ncd", "type": "input", "label": "NCD years",
+         "input_name": "ncd_years", "on_missing": "error", "produces": "ncd_years"},
+    )
+    for step in payload["steps"]:
+        if step["step_id"] == "s_office":
+            step["expr"] = "risk_premium_minor * expense_factor * ncd_factor"
+            step["consumes"] = ["risk_premium_minor", "expense_factor", "ncd_factor"]
+    payload["sub_graphs"] = [{
+        "ref": NCD, "mount_point": "m_ncd",
+        "inputs": {"ncd_years": "ncd_years"}, "outputs": {"ncd_factor": "ncd_factor"},
+        **mount_edit,
+    }]
+    return payload
+
+
+def _mounted_version(pinned: tuple[str, ...] = (NCD,)) -> RatingVersion:
+    version = _version()
+    pins = version.pins
+    assert pins is not None
+    return version.model_copy(update={
+        "pins": pins.model_copy(update={"sub_graphs": [ArtifactRef.parse(r) for r in pinned]}),
+    })
+
+
+def _mounted_resolver(
+    algorithm: dict[str, Any] | None = None,
+    fragments: dict[str, dict[str, Any]] | None = None,
+) -> FakeResolver:
+    base = _resolver()
+    assert isinstance(base, FakeResolver)
+    payloads = dict(base._payloads)
+    payloads["rating_algorithm:motor-gb@14"] = algorithm or _mounted_payload()
+    for ref, payload in (fragments or {NCD: _fragment_payload()}).items():
+        payloads[ref] = payload
+    return FakeResolver(payloads, {ref: "no_maturity_concept" for ref in (NCD, NCD5)})
+
+
+@pytest.mark.req("FR-217")
+async def test_a_pinned_mount_is_inlined_namespaced_and_carried_in_the_bundle() -> None:
+    bundle = await compile_bundle(_mounted_version(), _mounted_resolver())
+    assert "m_ncd__s_ladder" in bundle.graph.nodes
+    assert bundle.graph.nodes["m_ncd__s_ladder"]["produces"] == ["ncd_factor"]
+    assert bundle.resolved_payloads[NCD]["slug"] == "ncd-ladder"
+    # The stored algorithm artifact is the un-inlined payload the ref names (RL-873).
+    assert bundle.resolved_payloads["rating_algorithm:motor-gb@14"]["sub_graphs"]
+    assert bundle.pins.sub_graphs == [ArtifactRef.parse(NCD)]
+
+
+@pytest.mark.req("FR-217")
+@pytest.mark.req("FR-237")
+async def test_g1_a_mount_whose_version_is_not_pinned_is_refused_with_no_steps() -> None:
+    with pytest.raises(ValueError, match="RATING_VERSION_UNPINNED") as raised:
+        await compile_bundle(_mounted_version(pinned=()), _mounted_resolver())
+    assert "m_ncd" in str(raised.value)
+
+
+@pytest.mark.req("FR-217")
+@pytest.mark.req("FR-237")
+async def test_g1_a_mount_pinned_at_another_version_is_refused() -> None:
+    with pytest.raises(ValueError, match="RATING_VERSION_UNPINNED"):
+        await compile_bundle(
+            _mounted_version(pinned=(NCD5,)),
+            _mounted_resolver(fragments={NCD: _fragment_payload(), NCD5: _fragment_payload(5)}),
+        )
+
+
+@pytest.mark.req("FR-217")
+@pytest.mark.req("FR-237")
+@pytest.mark.parametrize("step", [
+    {"step_id": "s_tab", "type": "table", "label": "t", "rate_table_ref": "rate_table:other@1",
+     "key_expr": ["ncd_years"], "consumes": ["ncd_years"], "produces": "ncd_factor"},
+    {"step_id": "s_tab", "type": "lookup", "label": "l",
+     "reference_table_ref": "reference_table:other@1", "key_expr": ["ncd_years"],
+     "as_at": "effective_date", "on_miss": "error", "consumes": ["ncd_years"],
+     "produces": "ncd_factor"},
+    {"step_id": "s_tab", "type": "model_call", "label": "m", "model_ref": "model:other@1",
+     "mode": "exact", "feature_map": {}, "consumes": ["ncd_years"], "produces": "ncd_factor"},
+])
+async def test_g1_a_fragment_reference_the_version_does_not_pin_is_refused(
+    step: dict[str, Any],
+) -> None:
+    fragment = _fragment_payload(steps=[step])
+    with pytest.raises(ValueError, match="RATING_VERSION_UNPINNED") as raised:
+        await compile_bundle(_mounted_version(), _mounted_resolver(fragments={NCD: fragment}))
+    assert "m_ncd__s_tab" in str(raised.value)
+
+
+@pytest.mark.req("FR-217")
+@pytest.mark.parametrize(("mount_edit", "code"), [
+    ({"inputs": {}}, "RATING_GRAPH_UNRESOLVED_REF"),
+    ({"inputs": {"ncd_years": "ncd_years", "ghost": "ncd_years"}}, "RATING_GRAPH_UNRESOLVED_REF"),
+    ({"outputs": {"ghost": "ncd_factor"}}, "RATING_GRAPH_UNRESOLVED_REF"),
+    ({"inputs": {"ncd_years": "channel"}}, "RATING_TYPE_MISMATCH"),
+])
+async def test_the_port_map_is_checked_against_the_pinned_versions_ports(
+    mount_edit: dict[str, Any], code: str
+) -> None:
+    payload = _mounted_payload(**mount_edit)
+    with pytest.raises(ValueError, match=code):
+        await compile_bundle(_mounted_version(), _mounted_resolver(algorithm=payload))
+
+
+@pytest.mark.req("FR-217")
+async def test_dp4_a_pinned_payload_that_mounts_another_is_refused_by_cause() -> None:
+    nested = _fragment_payload(sub_graphs=[{"ref": NCD5, "mount_point": "m_inner"}])
+    with pytest.raises(ValueError, match="VALIDATION_FAILED"):
+        await compile_bundle(_mounted_version(), _mounted_resolver(fragments={NCD: nested}))
+
+
+@pytest.mark.req("FR-216")
+@pytest.mark.req("FR-274")
+@pytest.mark.req("FR-275")
+@pytest.mark.req("FR-276")
+@pytest.mark.parametrize(("expr", "code"), [
+    ("ncd_years * 10 + now()", "EXPRESSION_NON_DETERMINISTIC"),
+    ("ncd_years / 2", "EXPRESSION_UNGUARDED_DIVISION"),
+    ("ncd_years * 0.12345678901234567890123456789", "EXPRESSION_SCALE_OVERFLOW"),
+    ("ncd_years % 2", "EXPRESSION_INVALID_VOCABULARY"),
+])
+async def test_the_save_time_checks_run_over_the_inlined_algorithm(expr: str, code: str) -> None:
+    """DP-S1-4 item 6: a fragment saved at create is refused when a mounting algorithm compiles."""
+    step = {"step_id": "s_ladder", "type": "expression", "label": "Ladder", "expr": expr,
+            "result_type": "decimal", "consumes": ["ncd_years"], "produces": "ncd_factor"}
+    fragment = _fragment_payload(steps=[step])
+    with pytest.raises(ValueError, match=code):
+        await compile_bundle(_mounted_version(), _mounted_resolver(fragments={NCD: fragment}))
+
+
+@pytest.mark.req("FR-217")
+async def test_a_namespacing_collision_is_refused_never_merged() -> None:
+    payload = _mounted_payload()
+    payload["input_contract"].append({"name": "m_ncd__s_ladder", "type": "int", "nullable": False})
+    payload["steps"].insert(
+        0,
+        {"step_id": "s_in_clash", "type": "input", "label": "x", "input_name": "m_ncd__s_ladder",
+         "on_missing": "error", "produces": "m_ncd__s_ladder"},
+    )
+    with pytest.raises(ValueError, match="VALIDATION_FAILED"):
+        await compile_bundle(_mounted_version(), _mounted_resolver(algorithm=payload))
+
+
+@pytest.mark.req("FR-239")
+@pytest.mark.req("FR-217")
+async def test_the_hash_covers_the_pinned_fragment() -> None:
+    """Move only the pinned sub-graph version (the mount's ref and the pin together)."""
+    fragments = {NCD: _fragment_payload(), NCD5: _fragment_payload(5)}
+    first = await compile_bundle(_mounted_version(), _mounted_resolver(fragments=fragments))
+    again = await compile_bundle(_mounted_version(), _mounted_resolver(fragments=fragments))
+    moved = await compile_bundle(
+        _mounted_version(pinned=(NCD5,)),
+        _mounted_resolver(algorithm=_mounted_payload(ref=NCD5), fragments=fragments),
+    )
+    assert first.content_hash == again.content_hash
+    assert moved.content_hash != first.content_hash
+
+
+@pytest.mark.req("FR-239")
+async def test_a_version_that_pins_no_sub_graph_hashes_exactly_as_before() -> None:
+    """The pre-Slice-2 formula: `Pins` had four lists, so `sub_graphs` is not in the hash when
+    empty and every existing bundle's `content_hash` stays reproducible from its pins."""
+    bundle = await compile_bundle(_version(), _resolver())
+    pins = bundle.pins.model_dump()
+    assert pins.pop("sub_graphs") == []
+    canonical = json.dumps(
+        {"graph": bundle.graph.model_dump(), "pins": pins},
+        sort_keys=True, separators=(",", ":"),
+    )
+    assert bundle.content_hash == "sha256:" + hashlib.sha256(canonical.encode()).hexdigest()
+
+
+@pytest.mark.req("FR-239")
+async def test_a_bundle_that_pins_no_sub_graph_serialises_without_the_key() -> None:
+    """Reproducibility (ruling X, 2026-10-10 11:07:35): the stored bundle bytes of a version that
+    pins no sub-graph are those of a four-list `Pins`, so a recompile of an existing algorithm is
+    byte-identical. The key is omitted when empty and a bundle still loads and round-trips."""
+    bundle = await compile_bundle(_version(), _resolver())
+    assert bundle.pins.sub_graphs == []
+    assert "sub_graphs" not in json.loads(bundle.model_dump_json())["pins"]
+    assert Bundle.model_validate_json(bundle.model_dump_json()) == bundle
+    mounted = await compile_bundle(_mounted_version(), _mounted_resolver())
+    assert json.loads(mounted.model_dump_json())["pins"]["sub_graphs"] == [NCD]
+
+
+@pytest.mark.req("FR-20")
+@pytest.mark.req("FR-240")
+async def test_g4_a_sub_graph_pin_compiles_regardless_of_status_and_the_exemption_is_declared(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """RL-1309 DP-1 item 5: a Sub-graph Version has no approval lifecycle, so `sub_graph` joins
+    `_MATURITY_CHECK_EXEMPT`; remove it and the same pin is refused with `PIN_NOT_APPROVED`."""
+    resolver = _mounted_resolver()
+    bundle = await compile_bundle(_mounted_version(), resolver)
+    assert NCD in bundle.resolved_payloads
+    assert "sub_graph" in compile_module._MATURITY_CHECK_EXEMPT
+    monkeypatch.setattr(
+        compile_module, "_MATURITY_CHECK_EXEMPT", frozenset({"rate_table", "rating_algorithm"})
+    )
+    with pytest.raises(ValueError, match="PIN_NOT_APPROVED"):
+        await compile_bundle(_mounted_version(), resolver)

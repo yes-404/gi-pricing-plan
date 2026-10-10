@@ -188,6 +188,9 @@ _PATTERN_VALUES: dict[str, str] = {
     "^[a-z0-9][a-z0-9-]{1,62}$": "sweep-slug",
     "^[0-9a-f]{64}$": "0" * 64,
     "^[A-Z][A-Z0-9_]{0,31}$": "SWEEP",  # a peril code
+    # `DecimalStr` (model_schema.money): `DislocationSpec`'s band edges and mover threshold, a
+    # fourth pattern ruled added by the maintainer's 2026-10-10 02:43:18 entry (WK-673 Slice 4).
+    "^-?[0-9]+(\\.[0-9]+)?$": "1",
 }
 
 
