@@ -10,6 +10,7 @@ import pytest
 
 from model_schema.rating import RatingAlgorithm
 from pricing_core.rating.compile import assert_integer_minor_round_trip, validate_algorithm
+from pricing_core.rating.references import referenced_names
 
 #: The pre-edit `valid_algorithm` body, verbatim (SL-1345, RL-1329 §2 step 5): its clamp is on the
 #: source of the payable's rung, so the placement check refuses it with LADDER_CLAMP_UNPLACEABLE.
@@ -224,6 +225,11 @@ def _with(step_id: str, **fields: object) -> RatingAlgorithm:
     for step in data["steps"]:
         if step["step_id"] == step_id:
             step.update(fields)
+            # FR-246 (FD-1374): a step declares what it reads, so an edited field's reads are
+            # re-declared from the reference reader, not hand-picked.
+            # The first consumed name stays first: FR-240's clamp placement reads it.
+            first = list(step.get("consumes") or [])[:1]
+            step["consumes"] = first + sorted(referenced_names(step) - set(first))
     return RatingAlgorithm.model_validate(data)
 
 

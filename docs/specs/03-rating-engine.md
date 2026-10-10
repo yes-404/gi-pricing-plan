@@ -147,7 +147,7 @@ Exactly seven step types exist. Adding an eighth requires a spec change and an A
 |---|---|
 | **FR-244** | `expression` steps use the same restricted grammar as `02` §4.6, extended with decimal-safe operators and these rating-specific functions: `round(x, mode, dp)`, `band(x, banding_ref)`, `coalesce(a, b)`, `date_diff_years(a, b)`, `min`, `max`, `clip`. No other functions. **Availability is verified against the engine at compile time (FR-276)** — S1 found the two-argument `min`/`max` forms are not valid ZEN calls, so this list states intent, not a guarantee. **Amended 2026-09-30, `RL-1265` DP-5 (in part; one sentence held for #967):** the rating grammar is verified against the engine by FR-276. It shares function names with `02` §4.6 where they coincide, but it is not one of §4.6's profiles, and `pricing_core.data.expressions` never parses it. "The same restricted grammar as `02` §4.6" is superseded by this amendment. Nothing is struck. The sentence that defines the rating grammar itself was held until the FR-244 ruling was minted; it is released below (2026-09-30, `RL-1312`, `RL-1313` DP-G1 (b): the WK-1178 code slice writes it, spec first, from `RL-1312`'s text). **Amended 2026-09-30, `RL-1265` DP-5 and `RL-1312`:** the rating grammar is FR-244's own: ZEN's expression language, **restricted to an enforced allow-list of operators and functions** and verified against the engine by FR-276. It shares function names with `02` §4.6 where they coincide, but it is not one of §4.6's profiles, and `pricing_core.data.expressions` never parses it. **Operators:** `+ - * /` (and unary `-`), parentheses, `== != < <= > >=`, `and or not`, the ternary `c ? a : b`, and `??`, which returns its right operand when its left is null. It is the coalescing form the function list above names `coalesce(a, b)`, and it is never a division guard (FR-274). **Literals:** numbers, `true`, `false`, `null` and single-quoted strings. **Functions:** `min([…])`, `max([…])`, `abs` and `number(x)`. `number(x)` exists because a `lookup` step's output is always a string. It converts a numeric string (surrounding spaces and exponent form such as `1e3` are accepted) to an exact decimal inside the engine, returns a number unchanged, and converts a boolean to `1` or `0`. Any other string (for example `abc`, an empty string, or `1,07`) and null fail the quote with `RATING_EVALUATION_FAILED`. Write `number(v ?? '1.0')` to default a missing value (`RL-1322`, correcting `RL-1312`). **No rounding function** (`round`, `floor`, `ceil`): money is rounded only by an `output` step's declared rounding (FR-226), never twice (NFR-496). Whether rounding is offered anywhere else is an open question (`03` §10, `OQ-1316`). The list above states intent that the engine does not meet. `coalesce(a, b)` is written `a ?? b`, `clip(x, lo, hi)` is `min([max([x, lo]), hi])`, `round(x, mode, dp)` is the output step's rounding, `band` is a `table` step with a banded key (FR-228), and `date_diff_years` is an input (FR-246). The allow-list binds every authored rating string (`expr`, `condition`, clamp bounds, `key_expr`), and anything outside it is refused at save with `EXPRESSION_INVALID_VOCABULARY`. **Numbers at the engine boundary:** inside ZEN, arithmetic is exact decimal (`0.1 + 0.2 == 0.3`). Callers pass money as integer minor units (FR-273). The binding refuses a `Decimal` input, and takes a `str` input as a string, never a number. Outputs return as floats and are taken through `_round_minor` (`Decimal(repr(x))`, quantized with the output step's declared mode). Integers above 2^53 at the boundary are untested. "The same restricted grammar as `02` §4.6" is superseded by this sentence. |
 | **FR-245** | Arithmetic on monetary values is evaluated in `Decimal` with an explicit context (28 significant digits, `ROUND_HALF_EVEN`), never in binary floating point (R2). Mixing a monetary value and a float-typed value in one expression is a compile-time error. |
-| **FR-246** | Expression steps cannot reference anything outside their declared inputs — no globals, no environment, no time-of-day. `now()` does not exist; a quote timestamp is an input. |
+| **FR-246** | Expression steps cannot reference anything outside their declared inputs — no globals, no environment, no time-of-day. `now()` does not exist; a quote timestamp is an input. *(Amended 2026-10-09, RL-1519 (FD-1374): a step's declared inputs are its `consumes` (FR-215), and the rule binds every step that evaluates a field, not only `expression` steps: an `expression`'s `expr`, a `table`'s or `lookup`'s `key_expr`, a `lookup`'s `as_at` (FR-221), a `model_call`'s `feature_map` keys, and a `constraint`'s `condition` and `clamp_bounds`. Every name such a field reads is declared in the step's `consumes`, and a raw input reaches the graph through an `input` step. Saving an algorithm and compiling a bundle refuse a step that reads a name it does not declare, with `RATING_STEP_UNDECLARED_READ` (422); the message names the step and each undeclared name, and carries no quote input. Loading a stored bundle does not run the check: a bundle compiled before it keeps loading and scoring unchanged, and is refused only if it is compiled again.)* *(Clarified 2026-10-10 by the maintainer (by delegation): a lookup's `as_at: "effective_date"` reads the quote's stamped date (FR-221, RL-1446) and is not a read FR-246 counts; any other `as_at` value is a read and must be declared.)* |
 
 ### 3.6 Premium ladder
 
@@ -246,50 +246,108 @@ engine is exact; the binding is not, and the binding is what the platform talks 
   "input_contract": [
     {"name": "driver_age", "type": "int", "nullable": false, "min": 17, "max": 99,
      "description": "Age of main driver at policy inception"},
-    {"name": "postcode_outcode", "type": "string", "nullable": false, "pattern": "^[A-Z]{1,2}[0-9][A-Z0-9]?$"},
-    {"name": "effective_date", "type": "date", "nullable": false},
-    {"name": "purpose", "type": "enum",
-     "domain": ["new_business", "renewal", "mid_term_adjustment", "cancellation", "what_if"]}
+    {"name": "postcode_outcode", "type": "string", "nullable": false, "pattern": "^[A-Z]{1,2}[0-9][A-Z0-9]?$",
+     "description": "Outward code of the garaging postcode"},
+    {"name": "effective_date", "type": "date", "nullable": false,
+     "description": "Policy effective date; the area lookup's as-at date (FR-221)"},
+    {"name": "distribution_channel", "type": "enum", "nullable": false,
+     "domain": ["direct", "aggregator", "broker"],
+     "description": "Channel the quote arrived through"},
+    {"name": "commission_factor", "type": "decimal", "nullable": false, "min": 1,
+     "description": "1 + the channel's commission rate"},
+    {"name": "profit_factor", "type": "decimal", "nullable": false, "min": 1,
+     "description": "1 + the profit loading"},
+    {"name": "min_premium_minor", "type": "int", "nullable": false, "min": 0,
+     "description": "Minimum office premium, in pence"},
+    {"name": "ipt_factor", "type": "decimal", "nullable": false, "min": 1,
+     "description": "1 + the Insurance Premium Tax rate in force at effective_date"}
   ],
   "outputs": [
     {"name": "payable_premium_minor", "type": "money_minor", "required": true},
-    {"name": "premium_ladder", "type": "ladder", "required": true},
-    {"name": "peril_risk_premium", "type": "map<string, money_minor>", "required": false},
-    {"name": "decline_reasons", "type": "array<string>", "required": false}
+    {"name": "risk_premium_minor", "type": "money_minor", "required": true},
+    {"name": "office_premium_minor", "type": "money_minor", "required": true},
+    {"name": "ipt_and_fees_minor", "type": "money_minor", "required": true},
+    {"name": "peril_risk_premium", "type": "map<string, money_minor>", "required": false}
   ],
   "steps": [
     {"step_id": "s_input_age", "type": "input", "label": "Driver age",
      "input_name": "driver_age", "on_missing": "error", "produces": "driver_age"},
+    {"step_id": "s_input_outcode", "type": "input", "label": "Postcode outcode",
+     "input_name": "postcode_outcode", "on_missing": "error", "produces": "postcode_outcode"},
+    {"step_id": "s_input_effective_date", "type": "input", "label": "Effective date",
+     "input_name": "effective_date", "on_missing": "error", "produces": "effective_date"},
+    {"step_id": "s_input_channel", "type": "input", "label": "Distribution channel",
+     "input_name": "distribution_channel", "on_missing": "error",
+     "produces": "distribution_channel"},
+    {"step_id": "s_input_commission", "type": "input", "label": "Commission factor",
+     "input_name": "commission_factor", "on_missing": "error", "produces": "commission_factor"},
+    {"step_id": "s_input_profit", "type": "input", "label": "Profit factor",
+     "input_name": "profit_factor", "on_missing": "error", "produces": "profit_factor"},
+    {"step_id": "s_input_min_premium", "type": "input", "label": "Minimum premium",
+     "input_name": "min_premium_minor", "on_missing": "error", "produces": "min_premium_minor"},
+    {"step_id": "s_input_ipt", "type": "input", "label": "IPT factor",
+     "input_name": "ipt_factor", "on_missing": "error", "produces": "ipt_factor"},
     {"step_id": "s_area", "type": "lookup", "label": "Rating area from outcode",
      "reference_table_ref": "reference_table:ons-postcode-directory@7",
      "key_expr": ["postcode_outcode"], "as_at": "effective_date",
-     "on_miss": "error", "produces": "rating_area"},
+     "on_miss": "error", "consumes": ["postcode_outcode", "effective_date"],
+     "produces": "rating_area"},
     {"step_id": "s_rp", "type": "model_call", "label": "Technical risk premium",
      "peril_structure_ref": "peril_structure:motor-gb-2026h2@2", "mode": "exact",
      "feature_map": {"driver_age": "driver_age", "rating_area": "rating_area"},
+     "consumes": ["driver_age", "rating_area"],
      "produces": ["risk_premium_minor", "peril_risk_premium"]},
     {"step_id": "s_expense", "type": "table", "label": "Expense loading",
      "rate_table_ref": "rate_table:motor-expense@3", "key_expr": ["distribution_channel"],
-     "on_miss": "default", "produces": "expense_factor"},
+     "on_miss": "default", "consumes": ["distribution_channel"], "produces": "expense_factor"},
     {"step_id": "s_office", "type": "expression", "label": "Office premium",
      "expr": "risk_premium_minor * expense_factor * commission_factor * profit_factor",
-     "result_type": "money_minor", "produces": "office_premium_minor"},
+     "result_type": "money_minor",
+     "consumes": ["risk_premium_minor", "expense_factor", "commission_factor", "profit_factor"],
+     "produces": "office_premium_minor"},
     {"step_id": "s_minprem", "type": "constraint", "label": "Minimum premium",
      "condition": "office_premium_minor >= min_premium_minor",
      "on_violation": "clamp", "clamp_bounds": {"min": "min_premium_minor"},
-     "reason_code": "MIN_PREMIUM_APPLIED", "produces": "office_premium_minor"},
+     "reason_code": "MIN_PREMIUM_APPLIED",
+     "consumes": ["office_premium_minor", "min_premium_minor"],
+     "produces": "office_premium_minor"},
+    {"step_id": "s_ipt", "type": "expression", "label": "Insurance Premium Tax",
+     "expr": "office_premium_minor * ipt_factor", "result_type": "money_minor",
+     "consumes": ["office_premium_minor", "ipt_factor"], "produces": "payable_premium_pre_round"},
+    {"step_id": "s_out_risk", "type": "output", "label": "Risk premium (ladder)",
+     "output_name": "risk_premium_minor",
+     "rounding": {"mode": "half_even", "dp": 0}, "consumes": "risk_premium_minor"},
+    {"step_id": "s_out_office", "type": "output", "label": "Office premium (ladder)",
+     "output_name": "office_premium_minor",
+     "rounding": {"mode": "half_even", "dp": 0}, "consumes": "office_premium_minor"},
+    {"step_id": "s_out_ipt", "type": "output", "label": "IPT and fees (ladder)",
+     "output_name": "ipt_and_fees_minor",
+     "rounding": {"mode": "half_even", "dp": 0}, "consumes": "payable_premium_pre_round"},
     {"step_id": "s_out", "type": "output", "label": "Payable premium",
      "output_name": "payable_premium_minor",
-     "rounding": {"mode": "half_even", "dp": 0}, "consumes": "payable_premium_pre_round"}
+     "rounding": {"mode": "half_even", "dp": 0}, "consumes": "payable_premium_pre_round"},
+    {"step_id": "s_out_peril", "type": "output", "label": "Per-peril risk premium",
+     "output_name": "peril_risk_premium",
+     "rounding": {"mode": "half_even", "dp": 0}, "consumes": "peril_risk_premium"}
   ],
-  "sub_graphs": [{"ref": "sub_graph:ncd-ladder@4", "mount_point": "s_ncd",
-                  "inputs": {"ncd_years": "ncd_years"}, "outputs": {"ncd_factor": "ncd_factor"}}]
+  "sub_graphs": []
 }
 ```
 
-**Invariants** — DAG acyclic; every `consumes` name is `produced` by exactly one upstream
-step; every declared output has an `output` step; no step is unreachable from an `input`
-and unreferenced by an `output` (FR-212). *(Amended 2026-10-09, WK-1250 Slice 2, `RL-1309` DP-3 items 2 to 4: a mount is a node. Its mapped outputs are produced by it and its mapped inputs are consumed by it, and acyclicity and "produced by exactly one upstream step" count it. `mount_point` matches `^[A-Za-z][A-Za-z0-9_]*$`, contains no `__`, and is unique among the parent's `step_id`s and its other mounts. Every input port of the mounted sub-graph is mapped exactly once, and the mapped output ports are a non-empty subset; an unmapped output port is legal, and a parent step that consumes one is refused by FR-212.)*
+**Invariants** — DAG acyclic; every `consumes` name is `produced` by an upstream step, and a
+name produced by more than one step is a re-production chain, each later producer consuming
+it (here `s_minprem` clamps `office_premium_minor` in place), so it has one effective
+producer; every declared output has an `output` step; no step is unreachable from an
+`input` and unreferenced by an `output` (FR-212). Every name a step reads is declared in its
+`consumes`, and each raw input enters through an `input` step (FR-246, FR-215). The Premium
+Ladder is declared as its rung outputs, each an `output` step named `<rung>_minor` (FR-214,
+FR-247); the ladder itself and `decline_reasons` are fields of the `ScoringResult` (§4.4),
+not declared outputs. The example mounts no sub-graph: a mount's port map is WK-1250
+Slice 2's (§4.11). *(Corrected 2026-10-09, RL-1519 (FD-1374): the example declared no
+`consumes` on five evaluating steps, consumed a name no step produced, declared three outputs
+no step produced, and mounted a sub-graph at a step it did not define.)*
+
+*(Amended 2026-10-09, WK-1250 Slice 2, `RL-1309` DP-3 items 2 to 4: a mount is a node. Its mapped outputs are produced by it and its mapped inputs are consumed by it, and acyclicity and "produced by exactly one upstream step" count it. `mount_point` matches `^[A-Za-z][A-Za-z0-9_]*$`, contains no `__`, and is unique among the parent's `step_id`s and its other mounts. Every input port of the mounted sub-graph is mapped exactly once, and the mapped output ports are a non-empty subset; an unmapped output port is legal, and a parent step that consumes one is refused by FR-212.)*
 
 ### 4.2 `RateTable` / `RateTableVersion`
 
@@ -980,7 +1038,7 @@ An Environment may be gated by a `deployment` entry in the Approval Policy (`06`
 `RATE_TABLE_KEY_DUPLICATE`, `CONTROL_FACTOR_IN_RATEABLE_PATH` *(registered 2026-10-08, `RL-1470`, FD-1422 and FD 9639: **422** at `seed-from-model` (FR-230) and at bundle compile (FR-240); the message names the table, the key and the Factor, or for a `model_call` the model, the feature and the Factor)*, `PIN_NOT_APPROVED`,
 `BUNDLE_COMPILE_FAILED`, `EVIDENCE_INCOMPLETE` (re-raised from `06`), `LOSS_TREATMENT_UNIMPLEMENTED` (re-raised from `02`) *(amended 2026-10-10, `RL-1459`: **422** at bundle compile (FR-240) for a pinned Peril Structure with a `separate_model` peril, naming the structure and the peril. The platform refuses such a structure earlier, 409 at reconcile (`02` FR-190), so this refusal reaches only a `pricing-core` caller with its own resolver)*, `GOLDEN_QUOTE_MISMATCH`,
 `PROPERTY_ASSERTION_FAILED`, `REGRESSION_PROPERTY_INVALID` *(added 2026-09-28, WK-672 Slice 3: 422 at `POST /api/v1/regression-suites/{slug}/versions` and from the `rating.regression` Job, naming the `monotone` property whose input is absent, not orderable, has no range, has a range empty after the contract's own bounds, or has no two-place decimal value)*, `DEPLOY_REQUIRES_APPROVAL`, `DEPLOY_DATE_RANGE_OVERLAP`,
-`LADDER_RECONCILIATION_FAILED` *(status added 2026-09-30, `RL-1346`: **500** from `POST /api/v1/score` when a scored quote's Premium Ladder does not reconcile (FR-248), and 500 naming the failing side from `/score/compare`; an `"error"` row in batch scoring, counted by type (FR-255). A platform fault, not a per-quote 422: the input is valid, and the failure is deterministic, so the response carries no `Retry-After`. The message names the failed clause, the rungs and the minor-unit difference, and carries no quote input)*, `LADDER_CLAMP_UNPLACEABLE` *(added 2026-09-30, `RL-1329`: 422 at algorithm save and at bundle compile, FR-240's clamp-placement check; the message names the step and the rung and carries no quote input)*, `MODEL_REFERENCE_MODE_INCONSISTENT`,
+`LADDER_RECONCILIATION_FAILED` *(status added 2026-09-30, `RL-1346`: **500** from `POST /api/v1/score` when a scored quote's Premium Ladder does not reconcile (FR-248), and 500 naming the failing side from `/score/compare`; an `"error"` row in batch scoring, counted by type (FR-255). A platform fault, not a per-quote 422: the input is valid, and the failure is deterministic, so the response carries no `Retry-After`. The message names the failed clause, the rungs and the minor-unit difference, and carries no quote input)*, `LADDER_CLAMP_UNPLACEABLE` *(added 2026-09-30, `RL-1329`: 422 at algorithm save and at bundle compile, FR-240's clamp-placement check; the message names the step and the rung and carries no quote input)*, `RATING_STEP_UNDECLARED_READ` *(added 2026-10-09, RL-1519: 422 at algorithm save and at bundle compile, FR-246's declared-reads check; the message names the step and each undeclared name and carries no quote input)*, `MODEL_REFERENCE_MODE_INCONSISTENT`,
 `RATE_TABLE_SEED_MISMATCH`
 *(added 2026-08-28, W10-3C)*, `NO_RELATIVITIES`, `FILTER_UNKNOWN_KEY`,
 `FLOOR_ABOVE_CAP`, `REBASE_NO_MATCH`, `REBASE_AMBIGUOUS`, `REBASE_ZERO_REFERENCE`,
