@@ -140,7 +140,9 @@ async def test_a_topologically_listed_algorithm_wires_exactly_as_listed() -> Non
 
 
 #: Recorded at the slice's base commit, before any code change (two runs, equal).
-_SCORE_FIXTURE_HASH = "sha256:86abdb81dc16d2075956aa11e05f2e9c87fe191d4a3397574e5a82520039073d"
+#: Re-recorded 2026-10-10 (FD-1374, RL-1519): was sha256:86abdb81…039073d; the fixture graph gained
+#: its FR-246 declarations (consumes, input steps), so its content hash moved; no price changed.
+_SCORE_FIXTURE_HASH = "sha256:6458c7c80627d20602a8d82821a80e3fb7500c75c1d3bf9bc1033ba74f7a918e"
 
 
 @pytest.mark.req("FR-212")
@@ -192,7 +194,7 @@ _NL_A = {"step_id": "s_a", "type": "expression", "label": "base = x*100", "expr"
 _NL_CLAMP = {"step_id": "s_clamp", "type": "constraint", "label": "Floor",
              "condition": "base >= floor", "on_violation": "clamp",
              "clamp_bounds": {"min": "floor"}, "reason_code": "FLOOR",
-             "consumes": ["base"], "produces": ["base"]}
+             "consumes": ["base", "floor"], "produces": ["base"]}
 _NL_OUT = {"step_id": "s_out", "type": "output", "label": "out", "output_name": "base_out",
            "rounding": {"mode": "half_even", "dp": 0}, "consumes": ["base"]}
 # Limit (i): produce-nothing or terminal side branches other than a decline constraint.

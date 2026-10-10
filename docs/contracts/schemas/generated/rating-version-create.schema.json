@@ -41,6 +41,13 @@
           },
           "title": "Reference Tables",
           "type": "array"
+        },
+        "sub_graphs": {
+          "items": {
+            "$ref": "#/$defs/ArtifactRef"
+          },
+          "title": "Sub Graphs",
+          "type": "array"
         }
       },
       "title": "Pins",

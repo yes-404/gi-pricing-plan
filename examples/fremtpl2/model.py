@@ -463,6 +463,9 @@ async def submit_and_approve_demo(
 
     The gate re-scores the golden quote, pins the suite and reads the executed run
     (FR-257 limb (1)); `06` §4.2's default policy asks two approvers for a rating version.
+    The store is the submission's (FR-219's structural diff is kept as a blob). The seeded
+    version is the algorithm's first with nothing live, so limb (2) needs no Dislocation Run
+    and the evidence records `no_baseline`; a later version would need one (`03` FR-257).
     """
     async def load_compiled(_ref: ArtifactRef) -> CompiledBundle:
         return await _load_compiled(database, blob_store, workspace_id, rating_id)
@@ -472,7 +475,7 @@ async def submit_and_approve_demo(
             session, workspace_id=workspace_id, actor=actuary,
             rating_version_id=rating_id,
             change_summary="Phase 1b demo rating version pinning the approved GLM",
-            load_compiled=load_compiled,
+            blob_store=blob_store, load_compiled=load_compiled,
         )
         request_id = request.id
 

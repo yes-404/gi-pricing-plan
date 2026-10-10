@@ -331,6 +331,8 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "RATING_EVALUATION_FAILED",
         # FR-240 (RL-1329): a clamp the premium ladder cannot place, refused at save and at compile.
         "LADDER_CLAMP_UNPLACEABLE",
+        # FR-246 (RL-1519): a step reads a name it does not declare, refused at save and at compile.
+        "RATING_STEP_UNDECLARED_READ",
         "RATE_TABLE_INCOMPLETE",
         "RATE_TABLE_KEY_DUPLICATE",
         "PIN_NOT_APPROVED",
@@ -339,6 +341,9 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "CONTROL_FACTOR_IN_RATEABLE_PATH",
         # FR-223 at the pin write (RL 9758 item 2) and at compile (limb 2).
         "MODEL_REFERENCE_MODE_INCONSISTENT",
+        # FR-222 as amended (WK-1178 A-2, PL-1464): a `model_call`'s `feature_map` names
+        # something other than its Model's Factor slugs or offset column, refused at save.
+        "MODEL_CALL_FEATURE_MAP_INVALID",
         # W10-3C: the save-time seed-lineage equality proof (03 §4.2, FR-234) and
         # the named refusals of the bulk-operation and import operations (03 §5.1).
         "RATE_TABLE_SEED_MISMATCH",
@@ -398,6 +403,11 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # decimal value) is refused 422 at declaration, and again by the Job handler, so it
         # never reaches a running Job as a raw exception.
         "REGRESSION_PROPERTY_INVALID",
+        # Dislocation attribution (WK-673 Slice 4, FR-1397): the Shapley parts of a
+        # Dislocation Run do not reconcile to a compared policy's change. Raised by the
+        # `dislocation.run` handler from `pricing_core`'s `AttributionError`, which cannot
+        # import `PlatformError`. Owned by `03` §5.1.
+        "ATTRIBUTION_RECONCILIATION_FAILED",
     }
 )
 

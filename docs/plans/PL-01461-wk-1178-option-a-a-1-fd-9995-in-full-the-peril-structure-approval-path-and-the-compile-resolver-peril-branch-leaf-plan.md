@@ -3,7 +3,7 @@ id: PL-1461
 family: plan
 kind: leaf
 title: WK-1178 — Option A slice A-1, FD-1456 in full, the Peril Structure approval path and the compile resolver's peril branch (FR-191, FR-351, FR-355, FR-363, FR-237, FR-20): leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-06            # original date 2026-10-05, set at the draft; minted 2026-10-06
 owner: planner
 tree: 137bc817ef1fb40ea57e9053e0ad40b73bdff3a8

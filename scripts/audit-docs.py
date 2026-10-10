@@ -2645,6 +2645,7 @@ _CONTRACT_ARTIFACT_PATHS: Final = (
     "docs/contracts/schemas/generated/dataset-split.schema.json",
     "docs/contracts/schemas/generated/dataset-version.schema.json",
     "docs/contracts/schemas/generated/diagnostics.schema.json",
+    "docs/contracts/schemas/generated/dislocation-run.schema.json",
     "docs/contracts/schemas/generated/grouping.schema.json",
     "docs/contracts/schemas/generated/job.schema.json",
     "docs/contracts/schemas/generated/metric-certificate.schema.json",
