@@ -19,8 +19,12 @@ What is kept, and why each is input-free:
   kept only for the parts that are field names a model declares (a dict key or an extra key
   becomes `<key>`; a list index is kept), the error `type`, the declared constraint bounds in its
   `ctx` (`ge`, `gt`, `le`, `lt`, `min_length`, `max_length`, `pattern`), and the `msg` only for an
-  error type in `_FIXED_TEXT_TYPES`, each verified to carry no input. `value_error`,
-  `assertion_error`, `union_tag_invalid` and any type not listed keep the type only.
+  error type in `_FIXED_TEXT_TYPES`, each verified to carry no input, or for a `value_error`
+  raised as `model_schema`'s `InputFreeError`, whose raise sites are literals. A type in
+  `_AUTHORED_TEXT` (the request-common types whose own `msg` can echo input) renders a fixed
+  text of ours instead. `assertion_error`, a plain `value_error` and any type not listed keep
+  the type only. `safe_validation_message` is the one function that decides this, read by the
+  request-validation 422 as well (FD-1589 row 8, DP-5 (b)).
 
 Everything else is `Type` alone: an operator still has the type, the Job id, the trace id and the
 frames of the logged traceback. A layer that knows more input-free types adds them on top of this
@@ -32,9 +36,12 @@ Standalone by design (ADR-703): this package imports no database or web library.
 from __future__ import annotations
 
 import types
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from typing import Any
 
 from pydantic import BaseModel, ValidationError
+
+from model_schema.input_free import InputFreeError
 
 __all__ = [
     "CodedError",
@@ -42,6 +49,7 @@ __all__ = [
     "safe_error_detail",
     "safe_error_text",
     "safe_exc_info",
+    "safe_validation_message",
 ]
 
 #: Pydantic error types whose `msg` is fixed text or names only the declared constraint. Each has
@@ -56,6 +64,33 @@ _FIXED_TEXT_TYPES = frozenset({
     "greater_than", "greater_than_equal", "less_than", "less_than_equal", "too_short",
     "too_long", "list_type", "dict_type", "model_type",
 })
+
+#: Pydantic error types whose own `msg` can carry input (`union_tag_invalid` echoes the submitted
+#: tag, `uuid_parsing` input characters, `json_invalid` the parser's detail), each given a FIXED
+#: text of ours that keeps the guidance. Request-common types only (PL-1599 DP-5's extension);
+#: each has a sentinel case in `packages/pricing-core/tests/test_safe_error.py`, and a set test
+#: fails when a type here has no case.
+_AUTHORED_TEXT: Mapping[str, str] = {
+    "json_invalid": "The request body is not valid JSON.",
+    "date_parsing": "The value should be a valid date in the format YYYY-MM-DD.",
+    "date_from_datetime_inexact": (
+        "The value should be a date with no time part, in the format YYYY-MM-DD."
+    ),
+    "datetime_parsing": (
+        "The value should be a valid date-time in ISO 8601 format, for example "
+        "2026-01-31T09:30:00Z."
+    ),
+    "uuid_parsing": (
+        "The value should be a valid UUID: 32 hexadecimal digits in the form 8-4-4-4-12."
+    ),
+    "uuid_type": "The value should be a UUID given as a string.",
+    "union_tag_invalid": "The discriminator field's value is not one of the expected tags.",
+    "union_tag_not_found": (
+        "The discriminator field is missing; it selects which kind of object this is."
+    ),
+    "int_from_float": "The value should be a whole number, with no fractional part.",
+    "decimal_max_places": "The value has more decimal places than this field allows.",
+}
 
 #: Constraint bounds a validation error's `ctx` may carry: what the model declares, not the input.
 _CONSTRAINT_KEYS = ("ge", "gt", "le", "lt", "min_length", "max_length", "pattern")
@@ -101,6 +136,25 @@ def _safe_location(loc: tuple[int | str, ...], declared: frozenset[str]) -> str:
     return ".".join(parts).replace(".[", "[") or "<root>"
 
 
+def safe_validation_message(error: Mapping[str, Any]) -> str | None:
+    """The `msg` of one pydantic error when it carries no input, else `None`.
+
+    Kept for an error type in `_FIXED_TEXT_TYPES`, and for a `value_error` raised as an
+    `InputFreeError` (whose every raise site is a literal). A type in `_AUTHORED_TEXT` gets its
+    fixed authored text in place of pydantic's `msg`. One rule for every sink: the
+    request-validation 422 and `_validation_detail` both read it.
+    """
+    error_type = error["type"]
+    if error_type in _FIXED_TEXT_TYPES:
+        return str(error["msg"])
+    if error_type in _AUTHORED_TEXT:
+        return _AUTHORED_TEXT[error_type]
+    underlying = (error.get("ctx") or {}).get("error")
+    if error_type == "value_error" and isinstance(underlying, InputFreeError):
+        return str(error["msg"])
+    return None
+
+
 def _validation_detail(exc: ValidationError) -> str:
     declared = _declared_field_names()
     problems: list[str] = []
@@ -110,8 +164,9 @@ def _validation_detail(exc: ValidationError) -> str:
         bounds = {k: v for k, v in (error.get("ctx") or {}).items() if k in _CONSTRAINT_KEYS}
         if bounds:
             text += " " + ", ".join(f"{k}={v!r}" for k, v in sorted(bounds.items()))
-        if error_type in _FIXED_TEXT_TYPES:
-            text += f" {error['msg']}"
+        message = safe_validation_message(error)
+        if message is not None:
+            text += f" {message}"
         problems.append(text)
     return f"{exc.error_count()} validation error(s) for {exc.title}: " + "; ".join(problems)
 
