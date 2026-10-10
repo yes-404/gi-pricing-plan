@@ -173,3 +173,217 @@ def test_the_demo_algorithm_declares_no_decimal_output() -> None:
     algorithm = RatingAlgorithm.model_validate(_fixture_algorithm())
     assert [output.type for output in algorithm.outputs] == ["money_minor"]
     assert [output.name for output in algorithm.outputs] == ["payable_premium_minor"]
+
+
+# ---------------------------------------------------------------------------------------------
+# FR-246's reads rule on the built algorithm (PL-1525 Acceptance 4 and 7; FD-1374's guard)
+# ---------------------------------------------------------------------------------------------
+
+_BANDED = {
+    "driv_age_band": _banding("driv_age", (18.0, 25.0, 40.0, 99.0), ("18-24", "25-39", "40+")),
+    "veh_age_band": _banding("veh_age", (0.0, 3.0, 10.0, 30.0), ("0-2", "3-9", "10+")),
+    "veh_power_band": _banding("veh_power", (4.0, 6.0, 8.0, 15.0), ("4-5", "6-7", "8+")),
+}
+_DOMAINS = {
+    "veh_brand": ["B1", "B2"],
+    "veh_gas": ["Diesel", "Regular"],
+    "area": ["A", "B"],
+    "region": ["R11", "R24"],
+}
+_FACTORS = ("driv_age_band", "veh_age_band", "veh_power_band", "veh_brand", "veh_gas", "area",
+            "region")
+
+
+def _full_algorithm() -> dict[str, Any]:
+    """The seven-Factor algorithm the seed builds, over fixed refs, bandings and domains."""
+    tables = {
+        factor: ArtifactRef(
+            type="rate_table", slug=f"fremtpl2-{factor.replace('_', '-')}", version=1
+        )
+        for factor in _FACTORS
+    }
+    return demo_algorithm.build_fremtpl2_algorithm(
+        tables=tables, bandings=_BANDED, base_minor=25000, domains=_DOMAINS
+    )
+
+
+def _reads(step: dict[str, Any]) -> frozenset[str]:
+    """What a step reads: `referenced_names` (the shipped extractor, `PL-1520` Task 1A) on the
+    step with its declaration removed. It returns `consumes` plus the reads, so the
+    declaration is dropped first to leave the reads alone."""
+    from pricing_core.rating.references import referenced_names
+
+    return referenced_names({key: value for key, value in step.items() if key != "consumes"})
+
+
+def _undeclared_reads(algorithm: dict[str, Any]) -> dict[str, frozenset[str]]:
+    found: dict[str, frozenset[str]] = {}
+    for step in algorithm["steps"]:
+        extra = _reads(step) - set(
+            [step["consumes"]] if isinstance(step.get("consumes"), str)
+            else step.get("consumes", [])
+        )
+        if extra:
+            found[step["step_id"]] = extra
+    return found
+
+
+def _edges(algorithm: dict[str, Any], *, by: str) -> set[tuple[str, str]]:
+    """(producing step, reading step) pairs, with the names read taken from `consumes` or from
+    the step's read set."""
+    produced_by = {
+        name: step["step_id"]
+        for step in algorithm["steps"]
+        for name in ([step["produces"]] if isinstance(step.get("produces"), str)
+                     else step.get("produces", []))
+    }
+    edges = set()
+    for step in algorithm["steps"]:
+        names = _reads(step) if by == "reads" else set(step.get("consumes", []))
+        edges |= {(produced_by[name], step["step_id"]) for name in names}
+    return edges
+
+
+@pytest.mark.req("FR-246")
+def test_the_demo_algorithm_reads_only_what_it_declares() -> None:
+    """Every step's reads are inside its declared `consumes` (0 undeclared reads), and so the
+    graph built from the reads has no edge the graph built from `consumes` lacks
+    (0 added edges, hence 0 added cycles once the algorithm compiles as a DAG)."""
+    algorithm = _full_algorithm()
+    RatingAlgorithm.model_validate(algorithm)
+    for step in algorithm["steps"]:
+        print(step["step_id"], sorted(_reads(step)))
+    assert _undeclared_reads(algorithm) == {}
+    # An `output` step reads nothing the engine evaluates and only declares its `consumes`, so
+    # the claim is "no edge the reads add", not equality.
+    assert _edges(algorithm, by="reads") - _edges(algorithm, by="consumes") == set()
+
+
+@pytest.mark.req("FR-246")
+def test_a_predicate_that_agrees_with_itself_is_not_the_oracle() -> None:
+    """The independence condition: three steps' reads are written out by hand here, so a wrong
+    extractor cannot pass by agreeing with itself."""
+    steps = {step["step_id"]: step for step in _full_algorithm()["steps"]}
+    assert _reads(steps["s_premium"]) == {
+        "base_premium_minor", "rel_driv_age_band", "rel_veh_age_band", "rel_veh_power_band",
+        "rel_veh_brand", "rel_veh_gas", "rel_area", "rel_region",
+    }
+    assert _reads(steps["s_band_driv_age_band"]) == {"driv_age"}
+    assert _reads(steps["s_t_veh_gas"]) == {"veh_gas"}
+    assert _reads(steps["s_base"]) == frozenset()
+
+
+@pytest.mark.req("FR-246")
+def test_the_reads_check_refuses_an_undeclared_read() -> None:
+    """Broken input: one name dropped from one step's `consumes` is exactly one undeclared read,
+    naming that step and that name."""
+    algorithm = _full_algorithm()
+    premium = next(step for step in algorithm["steps"] if step["step_id"] == "s_premium")
+    premium["consumes"] = [name for name in premium["consumes"] if name != "rel_veh_gas"]
+    assert _undeclared_reads(algorithm) == {"s_premium": frozenset({"rel_veh_gas"})}
+
+
+# -- the extractor against the engine (PL-1520 Spike S1 step 1; the ruling's condition) ---------
+
+_RAW = (
+    {"driv_age": 20, "veh_age": 1, "veh_power": 5, "veh_brand": "B1", "veh_gas": "Diesel",
+     "area": "A", "region": "R11", "bonus_malus": 50},
+    {"driv_age": 30, "veh_age": 5, "veh_power": 7, "veh_brand": "B2", "veh_gas": "Regular",
+     "area": "B", "region": "R24", "bonus_malus": 100},
+    {"driv_age": 60, "veh_age": 12, "veh_power": 10, "veh_brand": "B1", "veh_gas": "Regular",
+     "area": "A", "region": "R24", "bonus_malus": 230},
+)
+
+
+def _produced(index: int) -> dict[str, Any]:
+    """One fixed non-null value, of the declared type, for every produced name."""
+    out: dict[str, Any] = {factor: _BANDED[factor].labels[index % 3] for factor in _BANDED}
+    out.update({f"rel_{factor}": 1.0 + (i + 1) / 10 + index / 100
+                for i, factor in enumerate(_FACTORS)})
+    out.update({"base_premium_minor": 25000, "premium_unrounded": 31234.5})
+    return out
+
+
+def _contexts() -> list[dict[str, Any]]:
+    """The three raw contexts with the produced names, and one context per band of every banded
+    step (a value inside that band), so every ternary branch is evaluated."""
+    contexts = [{**raw, **_produced(i), "zz_unused": 7} for i, raw in enumerate(_RAW)]
+    for banding in _BANDED.values():
+        for low, high in zip(banding.boundaries, banding.boundaries[1:], strict=False):
+            contexts.append({**_RAW[0], **_produced(0), "zz_unused": 7,
+                             banding.column: int((low + high) // 2)})
+    return contexts
+
+
+def _engine_reads(text: str, context: dict[str, Any]) -> set[str]:
+    """The names the engine reads in `text` under `context`: removing one raises or changes the
+    result. (A missing name can evaluate to `null` without an error, so "no error" alone is not
+    "not read".)"""
+    full = zen.evaluate_expression(text, context)
+    read = set()
+    for name in context:
+        cut = {key: value for key, value in context.items() if key != name}
+        try:
+            changed = zen.evaluate_expression(text, cut) != full
+        except RuntimeError:
+            changed = True
+        if changed:
+            read.add(name)
+    return read
+
+
+def _extractor_vs_engine(
+    text: str, reference_set: frozenset[str], contexts: list[dict[str, Any]]
+) -> list[tuple[str, str, str]]:
+    """Failures as (string, name, kind). `outside`: the engine reads a name the extractor does
+    not report. `unread`: the extractor reports a name the engine reads under no context."""
+    engine: set[str] = set()
+    failures = []
+    for context in contexts:
+        read = _engine_reads(text, context)
+        engine |= read
+        failures += [(text, name, "engine reads outside the set")
+                     for name in sorted(read - reference_set)]
+    failures += [(text, name, "extractor claims a read the engine does not make")
+                 for name in sorted(reference_set - engine)]
+    return list(dict.fromkeys(failures))
+
+
+def _extractor_set(field: str, text: str) -> frozenset[str]:
+    from pricing_core.rating.references import referenced_names
+
+    base = field.split("[")[0].split(".")[0]
+    node: dict[str, Any] = {"key_expr": [text]} if base == "key_expr" else {base: text}
+    return referenced_names(node)
+
+
+@pytest.mark.req("FR-246")
+def test_the_reads_extractor_agrees_with_the_engine() -> None:
+    """For every string `authored_expression_fields` returns, the shipped extractor's reference
+    set equals what `zen.evaluate_expression` reads (both computed, then compared)."""
+    from pricing_core.rating.authored import authored_expression_fields
+
+    algorithm = RatingAlgorithm.model_validate(_full_algorithm())
+    contexts = _contexts()
+    strings = authored_expression_fields(algorithm)
+    assert strings
+    for authored in strings:
+        reference = _extractor_set(authored.field, authored.text)
+        failures = _extractor_vs_engine(authored.text, reference, contexts)
+        print(authored.step_id, authored.field, sorted(reference), failures)
+        assert failures == []
+
+
+@pytest.mark.req("FR-246")
+def test_the_cross_check_refuses_a_planted_mismatch() -> None:
+    """Red on a planted mismatch, in both directions, on one real string of the algorithm."""
+    from pricing_core.rating.authored import authored_expression_fields
+
+    algorithm = RatingAlgorithm.model_validate(_full_algorithm())
+    text = next(a.text for a in authored_expression_fields(algorithm) if a.step_id == "s_premium")
+    truth = _extractor_set("expr", text)
+    contexts = _contexts()
+    under = _extractor_vs_engine(text, truth - {"rel_area"}, contexts)
+    assert under == [(text, "rel_area", "engine reads outside the set")]
+    over = _extractor_vs_engine(text, truth | {"zz_unused"}, contexts)
+    assert over == [(text, "zz_unused", "extractor claims a read the engine does not make")]
