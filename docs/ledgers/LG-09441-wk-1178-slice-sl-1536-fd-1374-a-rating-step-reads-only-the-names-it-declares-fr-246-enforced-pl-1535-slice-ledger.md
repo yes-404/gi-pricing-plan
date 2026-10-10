@@ -88,6 +88,44 @@ Single test file per run, `flock -w 300 /tmp/slots/small-test -c "timeout 150 ni
 - **03 §4.1 example vs A-3** (`017d998a`): the slice's own compile test failed `BUNDLE_COMPILE_FAILED` naming `s_rp`: the example (03:295-299) produces two names, A-3's rule (RL-1459 DP-A3-1 (c)) allows one for a Peril Structure `model_call`. Ruling "2026-10-10 14:43:15 BST — RULING: 03 §4.1 worked example vs A-3's compile …" (`to-lead.md`): the code is right; 03 §4.1 stays byte-for-byte as RL-1519 ruled it (Acceptance 4); the test pins the RULE (two names refused, the one-name form compiles); the example is known-wrong text pending a correcting RL, filed as FD 9953 (working id), which rides the next docs batch. The old failure is the red; green is 9 passed in `test_rating_declared_reads.py`.
 - **FR-239.** Approved versions are never recompiled, so no stored bundle changes with this slice; a bundle compiled before the check keeps loading and scoring (RL-1519 (iii-b)).
 
+**2026-10-10, the red gate and its repairs** (first full gate at `0e7c4d5c`: 74 failed, 7 errors; rulings in `to-lead.md`: "15:36:02 BST" write set, "15:37:31 BST" DP-M2, "15:40:36 BST" FR-246 vs FR-221, "15:42:57 BST" two purpose-tests and the hash).
+
+- **DP-M2 WITHDRAWN (15:37:31 BST), reverted** (`8842b7c5`): `errors.py` keeps only the RL-1519 registry line; `test_error_sinks.py` has no diff against main. The row-8 fix and its tests are parked on `draft/fd1589-row8-tests` @ `cfe8e15f03171ed54bdee6e27bb783a6cc83bfbc` (no PR). The CodedError survey (no request-model validator raises `CodedError`; `model-schema` has 253 `raise ValueError`, 0 `CodedError`) belongs to that branch's slice.
+- **FR-246 vs FR-221, ruling 15:40:36 BST** (`2838df55`, spec and code in one commit): `references.py` exempts only a lookup's `as_at == STAMPED_DATE` (the constant moved to `authored.py`; `compile.py` imports it); 03's FR-246 row carries the ruled dated line verbatim; §4.1 untouched. Red first: a lookup `as_at: effective_date` with no input step was flagged (`s_area`); guards green before and after: any other undeclared `as_at` is still refused, an expression reading `effective_date` as a value still declares it. **The roughly 47 `effective_date` reds needed no fixture change.**
+- **Fixture declarations (declaration-only, no expected value changed).** Names derived with the slice's `references.py`, via an out-of-repo harness (below), never hand-picked:
+  - `test_rating_algorithm.py` (B): step indices +1 after `valid_algorithm` gained `s_in_min_premium` (`69d27c2d`).
+  - `test_rating_wire_order.py::_NL_CLAMP`: `s_clamp` consumes `floor`.
+  - `test_rating_ladder_exact.py::_clamp_variant` (4 callers): `s_clamp` consumes `sanity_floor_minor` (max variant), `min_premium_minor` and `sanity_floor_minor` (both variant), `min_premium_minor` (always_ok, never_ok).
+  - `test_rating_compile.py::_with`: an edited step's consumes is re-derived from `referenced_names` (first consumed name kept first for FR-240).
+  - `test_rating_lookup_as_at.py::_algo`: for an `as_at` naming a declared date input (`inception`), an input step and a consumes entry (8 tests); the stamped `effective_date` needed none.
+  - `test_rating_score.py::_algorithm_payload` (the slice's earlier edit): `s_in_min_premium`, `s_in_sanity_cap`, `s_in_sanity_floor` and the consumes of `s_clamp`, `s_decl_cap`, `s_decl_floor`.
+  - `examples/fremtpl2` seed algorithms v1 and v2: no undeclared read by the derivation; unchanged. `examples/fremtpl2` tests: 7 passed, 1 skipped.
+- **The two purpose-tests (ruling 15:42:57 BST).** `test_rating_attribution.py::test_attribute_undeclared_column_never_reaches_the_engine` deliberately reads an undeclared column (`secret_loading`); it now proves the RUNTIME guard with the declared-reads check switched off by a test-only `monkeypatch` of `compile.ALGORITHM_CHECKS` (no production path gains a way around compile). Two layers: compile refuses an undeclared read (the FR-246 tests in `test_rating_declared_reads.py`); the runtime still guards (this test). `test_rating_number.py::test_a_missing_lookup_row_takes_the_default` read the undeclared `missing_value`; it now reads the lookup's own declared `expense_factor` with a table that has no row for the quote's channel (same expected 1370). The undeclared-read case it used to exercise is covered by `test_rating_declared_reads.py::test_a_constraint_reading_an_undeclared_name_is_refused` and `::test_an_expression_reading_an_undeclared_name_is_refused`.
+- **Pinned hash re-recorded** (separate commit `60b6d08f`): `test_rating_wire_order.py` and `test_rating_shadowed_inputs.py`, before `sha256:86abdb81dc16d2075956aa11e05f2e9c87fe191d4a3397574e5a82520039073d`, after `sha256:6458c7c80627d20602a8d82821a80e3fb7500c75c1d3bf9bc1033ba74f7a918e`. Cause: the fixture algorithm gained its FR-246 declarations (the safe direction: the hash moves, the price does not). Every money/scoring golden is unchanged (`test_rating_ladder_exact.py`'s diff against `origin/main` is consumes edits only; no expected value changed anywhere).
+- **FR-239.** Approved versions are never recompiled, so FR-246 refuses only NEW compiles; a bundle compiled before the check keeps loading and scoring (RL-1519 (iii-b)); no stored bundle changes with this slice.
+- **Derivation harness (out of repo, source recorded here):** it wraps the slice's own FR-246 reader in `compile.ALGORITHM_CHECKS` and logs every undeclared read against the running test id.
+
+```python
+"""Out-of-repo derivation harness: wraps the slice's own FR-246 reader and logs every undeclared
+read (all steps, not just the first) against the running test's node id."""
+import json, os, re
+import pytest
+from pricing_core.rating import compile as c
+_orig = c._check_declared_reads
+_cur = {"id": "?"}
+def _wrapped(algo):
+    issues = _orig(algo)
+    with open(os.environ["DERIVE_OUT"], "a") as f:
+        for i in issues:
+            f.write(json.dumps({"test": _cur["id"], "step": i.step_id, "msg": i.message}) + "\n")
+    return issues
+c.ALGORITHM_CHECKS = tuple(_wrapped if f is _orig else f for f in c.ALGORITHM_CHECKS)
+@pytest.hookimpl(tryfirst=True)
+def pytest_runtest_setup(item): _cur["id"] = item.nodeid
+@pytest.hookimpl(tryfirst=True)
+def pytest_runtest_call(item): _cur["id"] = item.nodeid
+```
+
 ## PRs
 
 (none yet)
