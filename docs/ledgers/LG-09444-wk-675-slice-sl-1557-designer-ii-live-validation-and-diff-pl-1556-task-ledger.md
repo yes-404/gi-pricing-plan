@@ -182,6 +182,12 @@ Neither `useGraphValidation.ts` nor `GraphIssues.vue` contains any of the four t
 - DB red-firsts: `test_rating_algorithm_validate.py` at `origin/main`'s `backend/src` (`app.__file__` checked): 15 failed, 2 passed; at the branch 17 passed. The 2 tests of `test_rating_mode_mismatch_api.py` are **GUARDS**: they pass on main (the create-time check is already there, SL-1430), so no red exists for them.
 - Full gate: ruff, mypy, import-linter, req-coverage, contracts pass; `audit_docs` failed 7 and pytest 14 (5439 passed, 2820 s). Cause: four pre-mint working-id lines (checks 31 and 32 on `LG-9444`, `FR-9445`), the stale INDEX and the padded `RL-01474` (the last two fixed in the next commit), and 13 pytest cases that run `audit-docs` on the real tree. One case is the slice's: `test_quote_input_raise_sites` counts 6 `compile_bundle` raise sites against the 5 listed (the FR-223 `_raise_named`); its one-number edit awaits the maintainer's ruling (write-set delta). The compile site's `str(exc)` form of `ModelReferenceModeError` awaits the same ruling.
 
+#### 2026-10-10 23:04 BST — the maintainer's rulings of "2026-10-10 23:03:19 BST" applied
+
+- `str(ModelReferenceModeError)` at the `compile_bundle` site is ACCEPTED (step id kept via `!r`, RL-1438 item 1). If this slice merges after SL-1600 and `InputFreeError` refuses the unpatterned step id, the raise STAYS `ModelReferenceModeError` as the ONE recorded exception.
+- `test_quote_input_raise_sites.py` joins the write set for one number: `("rating/compile.py", "compile_bundle")` 5 → 6, with its reason as a comment. Red first (the gate run's failure, re-run alone: 1 failed), green after (19 passed), on the small-test slot.
+- Audit findings of the gate run, for the ACK: 7 in all. Mint-expected: check 31 gap and check 31 `created` order (working id `9444`), check 32 `LG-9444` x3 and `FR-9445` (the last of the 3+1 vanished after the INDEX regeneration, so only the two check-31 lines remain until the mint). Fixed: check 32 padded `RL-01474`, check 39 stale INDEX.
+
 ## PRs
 
 None yet.
