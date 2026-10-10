@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 scripts/hooks/retry_cap_hook.py hook",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}\"/scripts/hooks/retry_cap_hook.py hook",
             "if": "Bash(python3 scripts/hooks/retry_cap_hook.py record*)",
             "timeout": 15,
             "statusMessage": "Checking retry cap (RFC-895 C2)..."
