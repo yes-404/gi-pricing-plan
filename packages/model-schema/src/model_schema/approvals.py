@@ -110,8 +110,12 @@ VALID_APPROVAL_TRANSITIONS: Final[dict[ApprovalStatus, frozenset[ApprovalStatus]
 #: **reconciliation** is enforced structurally, since `review` is reachable only from
 #: `reconciled` and a `fail` verdict is refused at submission, so a floor entry here would
 #: restate a lifecycle edge. The row's other half — **per-peril model approvals** — is
-#: enforced nowhere, and is FR-364's uncheckable remainder rather than something this
-#: floor's silence permits.
+#: enforced nowhere until 2026-10-10, and was FR-364's uncheckable remainder rather than
+#: something this floor's silence permits. **Corrected 2026-10-10 (WK-1178, SL-1462, FD-1456):**
+#: it is enforced now, at approval, by `backend/src/app/platform/perils.py:708`
+#: (`_require_approved_components`), which reads the stored `perils` and refuses a structure
+#: whose component model is not approved (the maintainer's (by delegation) entry
+#: "2026-10-10 06:15:34 BST" in `to-lead.md`, a local file).
 EVIDENCE_FLOOR: Final[dict[str, tuple[str, ...]]] = {
     "validation_rule": ("dry_run_result",),
     "custom_objective": ("objective_certificate",),

@@ -2,7 +2,7 @@
 id: FD-1469
 family: finding
 title: FR-240's transitive custom-objective clause stops at the pin, so a model fitted on a non-approved objective compiles, and the direct-pin refusal has no custom-objective test
-status: active
+status: closed
 created: 2026-10-06            # original date 2026-10-05, set at the draft; minted 2026-10-06
 owner: auditor
 tree: caa4e411a9c07a389cf47092a923c7761b2b92dc

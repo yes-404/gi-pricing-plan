@@ -30,7 +30,7 @@ from backend.tests.test_peril_structures import (
 )
 from backend.tests.test_rating_version_compile import (
     _empty_pins,
-    _row_bundle,
+    _read_blob,
     _run_compile_job,
 )
 from backend.tests.test_rating_version_create_pins import _algorithm, _body
@@ -50,10 +50,12 @@ from app.worker.tasks import execute_job
 from model_schema import (
     JobKind,
     JobStatus,
+    LargeLossTreatment,
     ModelStatus,
     Principal,
     new_uuid7,
 )
+from pricing_core.rating.compile import Bundle
 
 _LOOP = asyncio.get_event_loop
 
@@ -223,7 +225,12 @@ async def test_approving_a_peril_structure_supersedes_the_earlier_approved_versi
 
     assert await _status(database, second.id) == "approved"
     assert await _status(database, first.id) == "superseded"
-    assert await _peril_events(database, f"peril_structure:{slug}@1") == [
+    decided = [
+        event
+        for event in await _peril_events(database, f"peril_structure:{slug}@1")
+        if event[0] in {"peril_structure.approved", "peril_structure.superseded"}
+    ]
+    assert decided == [
         ("peril_structure.approved", "review", "approved"),
         ("peril_structure.superseded", "approved", "superseded"),
     ]
@@ -353,8 +360,8 @@ async def test_a_separate_model_excess_model_is_checked_at_approve(
     excess_ref = str(excess_peril.burning_cost_model)
     separate = peril.model_copy(
         update={
-            "large_loss": peril.large_loss.model_copy(
-                update={
+            "large_loss": LargeLossTreatment.model_validate(
+                {
                     "kind": "separate_model",
                     "excess_model": excess_ref,
                     "attachment_minor": 100_000_000,
@@ -369,15 +376,18 @@ async def test_a_separate_model_excess_model_is_checked_at_approve(
     )
     slug = f"ps-{uuid4().hex[-6:]}"
     async with database.unit_of_work() as session:
-        row = PerilStructureRow(
+        # Created through the service so the structure has its creation Audit Event (FR-353
+        # refuses an approval whose author cannot be established); then placed in `review`.
+        row = await service.create_structure(
+            session,
             workspace_id=workspace_id,
+            actor=actor,
             slug=slug,
-            version=1,
-            status="review",
-            perils=[separate.model_dump(mode="json")],
+            perils=[separate],
             excluded_perils=[],
         )
-        session.add(row)
+        row.status = "review"
+        row.reconciliation = {"status": "pass"}
         await session.flush()
         structure_id = row.id
     created = api_client.post(
@@ -482,6 +492,5 @@ def test_an_approved_peril_structure_pin_compiles_and_the_bundle_carries_its_pay
 
     second = _run_compile_job(api_client, headers, database, blob_store, version_id)
     assert second.status is JobStatus.SUCCEEDED, second.error
-    bundle = _row_bundle(database, version_id)
-    assert bundle is not None
-    assert bundle["resolved_payloads"][ref]["status"] == "approved"
+    bundle = Bundle.model_validate_json(_read_blob(database, blob_store, second.result["ref"]))
+    assert bundle.resolved_payloads[ref]["status"] == "approved"

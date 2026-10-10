@@ -30,6 +30,7 @@ from model_schema import JobKind, Permission
 from model_schema.dislocation import DislocationEstimate, DislocationRun, DislocationSpec
 from model_schema.jobs import Job
 from pricing_core.rating.analysis import read_portfolio
+from pricing_core.safe_error import safe_error_text
 
 router = APIRouter(tags=["rating"])
 
@@ -179,7 +180,7 @@ async def get_dislocation_run_movers(
         checked = read_portfolio(portfolio.lazy()).collect()
     except ValueError as exc:  # the portfolio no longer reads as §4.8's frame
         raise PlatformError(
-            "VALIDATION_FAILED", "Portfolio does not read as a frame", 422, str(exc)
+            "VALIDATION_FAILED", "Portfolio does not read as a frame", 422, safe_error_text(exc)
         ) from exc
     joined = movers.join(checked, on="quote_id", how="left", maintain_order="left")
     return [{k: _json_value(v) for k, v in r.items()} for r in joined.iter_rows(named=True)]
