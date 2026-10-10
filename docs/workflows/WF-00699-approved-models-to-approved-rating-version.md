@@ -27,7 +27,7 @@ was: docs/workflows/wf-02-model-to-rating-version.md
 |---|---|
 | An `approved` Peril Structure with a passing reconciliation | `02` FR-190/191 |
 | Reference Table Versions for every `lookup` are `approved` and cover the effective period | `01` FR-70, VR-REF-3 |
-| A portfolio Dataset Version exists for dislocation | `01` §7.2 |
+| A portfolio Dataset Version exists for dislocation. *(Amended 2026-10-10, the maintainer's (by delegation) rulings of 00:27:18 and 00:34:03 BST, recorded in `PL-9452` DP-1 to DP-3: in the freMTPL2 demo the portfolio is a **20,000-policy sample** of the book, built by the seed and labelled as a sample. It is a **separate** portfolio Dataset Version; the GLM stays fitted on the full book. The seed builds it with `examples/fremtpl2/seed.py` `build_csv(20000)`: a fixed size, and the deterministic every-n-th-row rule `step = max(joined.height // rows, 1)` (`seed.py:131-132` at `61e2a8d9`) over the sha256-pinned input (`fetch.py:10`), so every run gives the same rows, and the seed asserts that. The sample goes through the v2 recipe, and the seed asserts exactly the policy count that recipe keeps, as measured.)* | `01` §7.2 |
 | The actor holds `rating_algorithm:write`, `rate_table:write`, `rating_version:submit` | `06` FR-345 |
 
 ---
@@ -83,8 +83,8 @@ committee and is normally the one nobody can answer.
 | D3 | Analyst | Confirms the two failures are intended, updates their expected values, and records why in the golden quote's note. **A golden quote is only updated deliberately.** | `03` FR-260 |
 | D4 | Worker | A property assertion fails: `monotone_in_age` breaks between two adjacent grid ages, because two rate tables band age differently and the inverted band is wider than the grid spacing. Hypothesis shrinks the base context; the counterexample is that base context and the two grid ages (`grid: uniform+sampled`). An inversion narrower than the grid spacing may not be detected until `OQ-1224` lands. *(Amended 2026-10-05, `RL-1524` DP-1.)* | `03` FR-261 |
 | D5 | Pricing Actuary | Fixes the banding mismatch — a genuine defect that a golden-quote suite alone would have missed. | `03` FR-261 |
-| D6 | Analyst | `POST /dislocation-runs` against the current live version over the portfolio. | `03` FR-263 |
-| D7 | Worker → pricing-core | Re-rates 1.28 M policies under both bundles: change distribution, per-segment breakdown, largest movers, and **attribution** decomposing the change into peril-structure, rate-table, and minimum-premium effects. | `03` FR-263/264/266 |
+| D6 | Analyst | `POST /dislocation-runs` against the current live version over the portfolio. *(Amended 2026-10-10, the same rulings, `PL-9452` DP-1: in the freMTPL2 demo the run is over the 20,000-policy sample portfolio Dataset Version of the precondition above, never over the full book.)* | `03` FR-263 |
+| D7 | Worker → pricing-core | Re-rates 1.28 M policies under both bundles: change distribution, per-segment breakdown, largest movers, and **attribution** decomposing the change into peril-structure, rate-table, and minimum-premium effects. *(Amended 2026-10-10, a correction on the 00:27:18 BST ruling, condition 1b, `PL-9452`: "1.28 M" is not the demo's book. It is `03` §4.6's `motor-gb` example, `policy_count` 1,284,902 (`03-rating-engine.md:560` at `61e2a8d9`). The demo's book is the freMTPL2 seed, 678,013 rows (`examples/fremtpl2/seed.py:5`); version 2 holds 677,442 rows, measured (`LG-1417`, its `:533`). The demo's D7 runs over the 20,000-policy sample of D6.)* | `03` FR-263/264/266 |
 | D8 | Pricing Actuary | Reviews. Total +1.95 %, but 2.9 % of policies move more than +10 % — driven by the minimum premium, not by the model refit. The attribution says so directly. | `03` FR-266 |
 | D9 | Pricing Actuary | Runs a GIPP check where enabled (detailed in WF-700). | `04` FR-294 |
 
