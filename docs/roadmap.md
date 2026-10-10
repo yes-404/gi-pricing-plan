@@ -743,7 +743,7 @@ relates: [PL-1267, PL-1403]
 id: SL-1387
 family: slice
 title: Slice 3: attribution — exact Shapley, largest remainder, the broken-input proof, the cost
-status: active                 # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-03
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: d672f991bdc59008e09cf3f464cd7cffe5699553
@@ -757,13 +757,15 @@ relates: [PL-1267, RL-1264]
 
 (Activated 2026-10-08 as WK-673 Slice 3, in lane B, on the maintainer's (by delegation) GO, "2026-10-08 10:54:33 BST — LANE B: [R]uling 1 = (b'), else (c); [R]uling 2 = (iii'); DISPATCH GO (conditional) for WK-673 Slice 3 (PL-1452 / SL-1387)" (the two bracketed letters are added: the header's unbracketed ruling word followed by a number is a legacy form that `audit-docs.py` check 36 reds, `_docid.LEGACY_FORM_PATTERNS` "ruling reference"); the dispatch record carries both rulings and the GO's conditions. The first: Task 7's fixture as relativity tables with no `model_call` if the decision-maker confirms in writing, in the dispatch record and before Task 7, that set member 0's model swap is expressible as rate-table changes, else the smallest faithful algorithm with the carried items owned elsewhere. The second: this slice builds now, writes its P1 owned-codes hunk only after the FR-240 fix plan merges, and gates after that plan's gate. Activation needs 2 to 5 met at c0aab813: RL-1449 and RL-1451 `active`, `SL-1391` closed, `SL-1340` and `SL-1341` `draft`; need 6 is re-checked at dispatch.)
 
+(Closed 2026-10-10 as a Slice, closing acts in the PR #1243 merge-turn commit, on the lead's merge; ledger `LG-1545`, minted from working id 9478.)
+
 #### SL-1388 — Slice 4: backend — the Job, the routes, the persisted artifact, the generated contract
 
 ```yaml
 id: SL-1388
 family: slice
 title: Slice 4: backend — the Job, the routes, the persisted artifact, the generated contract
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-03
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: d672f991bdc59008e09cf3f464cd7cffe5699553
@@ -773,7 +775,11 @@ corrected_by: []
 relates: [PL-1267, RL-1236]
 ```
 
-The `dislocation.run` handler owning the Job identity, output location and resumability; `POST /api/v1/dislocation-runs` (202 plus a Job) and `GET /api/v1/dislocation-runs/{id}` with RBAC and RFC 9457 errors; the artifact persisted as a citable row with content-addressed blobs (FR-265); `DislocationRun` registered for generation, `docs/contracts/` regenerated and the slug moved to `COMPARED_SLUGS`. Route permissions picked from `RL-1236`'s catalogue, citing FD-1197. `PL-1267` Slice 4. Starts after Slice 3 closes. Leaf plan PL-1501 (`draft`; filed 2026-10-05). **Activation needs:** the plan made `active` by a dated line; `SL-1387` closed; a ruling on its DP-S4-1, DP-S4-2, DP-S4-3 and DP-S4-5 merged and minted; the lane free under `RL-1263` as amended, with the same-Work conditions in the dispatch record (its `_Resolver` move serialises with PL-1471, PL 9610 and A-1 to A-3); the maintainer's dispatch GO and the lead's go in a separate activation PR. *(Plan cite added 2026-10-05 by the planner; working id 9591 reserved by the lead.)*
+The `dislocation.run` handler owning the Job identity, output location and resumability; `POST /api/v1/dislocation-runs` (202 plus a Job) and `GET /api/v1/dislocation-runs/{id}` with RBAC and RFC 9457 errors; the artifact persisted as a citable row with content-addressed blobs (FR-265); `DislocationRun` registered for generation, `docs/contracts/` regenerated and the slug moved to `COMPARED_SLUGS`. Route permissions picked from `RL-1236`'s catalogue, citing FD-1197. `PL-1267` Slice 4. Starts after Slice 3 closes. Leaf plan PL-1501 (`draft`; filed 2026-10-05). **Activation needs:** the plan made `active` by a dated line; `SL-1387` closed; a ruling on its DP-S4-1, DP-S4-2, DP-S4-3 and DP-S4-5 merged and minted; the lane free under `RL-1263` as amended, with the same-Work conditions in the dispatch record (its `_Resolver` move serialises with PL-1471, PL-1572 and A-1 to A-3); the maintainer's dispatch GO and the lead's go in a separate activation PR. *(Plan cite added 2026-10-05 by the planner; working id 9591 reserved by the lead.)*
+
+(Activated 2026-10-10 as WK-673 Slice 4 on the dispatch GO "2026-10-10 01:45:01 BST — DISPATCH GO: WK-673 S4 (PL-1501 / SL-1388 …" with its conditions; `PL-1501` set `active` in the slice PR's first commit.)
+
+(Closed 2026-10-10 as a Slice, closing acts in the slice PR's last commit, on the lead's merge; ledger LG-1570, minted 2026-10-10 from working id 9440 in the SL-1388 merge-turn commit.)
 
 #### SL-1389 — Slice 5: the approval gate, part one — structural_diff, FR-257 limb (2), FR-224
 
@@ -781,7 +787,7 @@ The `dislocation.run` handler owning the Job identity, output location and resum
 id: SL-1389
 family: slice
 title: Slice 5: the approval gate, part one — structural_diff, FR-257 limb (2), FR-224
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-03
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: d672f991bdc59008e09cf3f464cd7cffe5699553
@@ -792,6 +798,10 @@ relates: [PL-1267, RL-1264]
 ```
 
 `06` FR-364's `structural_diff` persisted at submission with a verifier registered; FR-257 limb (2) on `submit_for_review` (refused with `EVIDENCE_INCOMPLETE` without a Dislocation Run on the current bundle hash against the current live version); FR-224's exact-mode comparison for an `approximation`-mode version, its threshold a new `ApprovalPolicyEntry` field and never read from Settings. `PL-1267` Slice 5. Starts after Slice 4 closes and after WK-674 Slice 2 (`SL-1256`) has merged; serialised against `SL-1256` on `approvals.py` and `06` §4.2. Leaf plan PL-1500 (`draft`; filed 2026-10-05). **Activation needs:** the plan made `active` by a dated line; `SL-1388` closed; `SL-1256` closed (met); a ruling on its DP-S5-1 to DP-S5-5 merged and minted; RL-1524 minted (FR-257's gate stays at the submit route); the lane free under `RL-1263` as amended, with the same-Work conditions in the dispatch record (its FR-224 edit in `03` §3.2 serialises with PL-1447, PL-1429 and A-3); the maintainer's dispatch GO and the lead's go in a separate activation PR. *(Plan cite added 2026-10-05 by the planner; working id 9590 reserved by the lead.)*
+
+(Activated 2026-10-10 as WK-673 Slice 5 on the dispatch GO "2026-10-10 05:19:53 BST — DISPATCH GOs …" with its conditions a–d; `PL-1500` set `active` in the slice PR's first commit.)
+
+(Closed 2026-10-10 as a Slice, closing acts in the slice PR's mint commit, on the lead's merge; ledger `LG-1582`, minted 2026-10-10 from working id 9450.)
 
 #### SL-1390 — Slice 6: the approval gate, part two — the floor wiring
 
@@ -1017,6 +1027,8 @@ Per-environment keys, rate limits and monitoring configuration, and environment 
 
 *Annotated 2026-10-09, in the docs batch D1: FR-452's management-API limb is placed in WK-674 Slice 4 (`SL-1258`), as R4.1 of PL-1537, on the maintainer's (by delegation) entry "2026-10-08 14:32:33 BST — DELTAS AUDIT (handover/audit-deltas-2026-10-08.md) noted; fixes proceed; DP A, B (c), C confirmed, D AMENDED (build in reverse ladder order)", item A. That is the annotation this paragraph promised "when named".*
 
+*Dated 2026-10-10, in the docs batch D6: this slice's leaf plan is `PL-1583` (minted 2026-10-10 from working id 9456; it supersedes `PL-1342`, which is now `superseded`). The title's "NFR-496 prod-sampling limb" was delivered by `SL-1345`, whose `PL-1348` amended NFR-496's row in `03` §9 (the "sampled in prod" clause), so `PL-1583` does not carry it. The title is not edited. This is the dated line `PL-1583`'s Hand-off proposes.*
+
 #### SL-1345 — Slice 3L: the premium ladder — exact unrounded rungs, true operations, one rounding (FR-247, FR-248, NFR-496, FD-1336, FD-1330; RL-1329)
 
 ```yaml
@@ -1205,7 +1217,230 @@ the third build lane's candidate.
 
 (Activated 2026-10-08 as WK-675 Slice 2, in lane C, on the maintainer's (by delegation) GO, "2026-10-08 10:55:30 BST — MERGE-ACK #1237 (security, source-map-js 1.2.1 → 1.2.2) @bf511269898baecf938b3fe37e6cb46f382b289b; LANE C DISPATCH GO (conditional) for WK-675 S2 (PL-1476 / SL-1477)"; its conditions: #1233 merged with a verified read-back (c896d6c3; RL-1473, RL-1474, RL-1475, PL-1476 and SL-1477 on main); this activation PR quotes the GO header; the lane A dispatch record (SL-1448) carries a dated Delta naming this slice's `03` hunks; Task 0 at dispatch confirms the preview and lists the line moves.)
 
+#### SL-1559 — Slice 4: Editor I — the rate table grid and manual edit; RL 9753's definition and cell-page reads; the manual-edit route (F-W10-3)
 
+```yaml
+id: SL-1559
+family: slice
+title: Slice 4: Editor I — the rate table grid and manual edit; RL 9753's definition and cell-page reads; the manual-edit route (F-W10-3)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 9489405370a1ce06c2b985ad88c7d471438febb1
+phase: P2
+work: WK-675
+corrected_by: []
+relates: [PL-1286, PL-1371, RL-1184, RL-1263, FD-1366, SL-1369, SL-1391, SL-1367]
+```
+
+`PL-1286` S4 (`:306`), cut as a draft row for its leaf plan, PL-1558
+(`docs/plans/PL-01558-wk-675-slice-4-editor-i-grid-and-manual-edit-leaf-plan.md`). The rate
+table editor's first slice. **Backend first, spec first:**
+- RL 9753 (working id, #1067)'s two reads, `GET /api/v1/rate-tables/{slug}@{version}` and
+  `.../cells`, with `RateTableCell` and the cells sorted by key in one place for both
+  storages, never a Job (FR-232);
+- the manual-edit route `POST /api/v1/rate-tables/{slug}/versions` (register F-W10-3),
+  typed in both directions, preview then confirm, as the import route does (`RL-1184` E5).
+
+**Then the view:** `@tanstack/vue-table` 9.2.6 (MIT), with `skills-map.md` and `03` §8 in the
+same commit; the typed grid (FR-228), paged by the server cursor; inline exact-decimal
+editing (FR-10, FR-21); the change note (FR-229), the confirmation diff (FR-231) and FR-234's
+errors on the cell; no approval state (FR-1186); the FR-25 link from the Rating Version's
+pinned tables (RL 9753 item 3). **Holds:** the leaf plan's DP-S4-1 (the manual-edit types)
+and DP-S4-2 (FR-234's located errors) go to the decision-maker. S4 consumes S2's Rating
+Version read (RL 9766), so it runs after S2 (DP-S4-3). It serialises with `SL-1391` on the
+rate-table route and service files.
+
+**Gate:** the leaf plan's Activation needs, in a separate activation PR: RL 9753 minted;
+DP-S4-1 and DP-S4-2 ruled; S2 merged; `SL-1391` not running; Task 0 re-run; the maintainer's
+agreement and the lead's go.
+
+*(Filed 2026-10-05 under working ids 9583 (this row) and 9582 (the plan), reserved by the lead.)*
+
+*(Minted 2026-10-10 as SL-1559 from working id 9583, with its plan PL-1558 from working id 9582, in the D3 batch mint.)*
+
+#### SL-1557 — Slice 3: Designer II — live validation through the validate route (DP-6), and the structural diff overlay
+
+```yaml
+id: SL-1557
+family: slice
+title: Slice 3: Designer II — live validation through the validate route (DP-6), and the structural diff overlay
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 9489405370a1ce06c2b985ad88c7d471438febb1
+phase: P2
+work: WK-675
+corrected_by: []
+relates: [PL-1286, PL-1371, RL-1263, SL-1387]
+```
+
+`PL-1286` S3 (`:305`), cut as a draft row for its leaf plan, PL-1556 (the plan's
+own PR). DP-6's discharge as RL 9767 (working id, #1055) rules it: the numbered FR and the
+validate-only route, with errors on the node before save (FR-212, FR-223, FR-227), including
+`expression` steps' grammar (FR-244) and closed inputs (FR-246); and the structural diff
+overlay (FR-219). It carries FD 9759 (`PL-1371` §8 (iii)). **Holds:** after S2 (SL 9711); RL
+9767 minted. **Serialised outright** with WK-673 S3 (`SL-1387`), WK-1250 S2 and WK-1250 S3
+on `compile.py` / `compile_bundle` (`PL-1371` §5 rule 4).
+
+**Gate:** the leaf plan's Activation needs, in a separate activation PR, including the
+maintainer's agreement and the lead's go.
+
+*(Filed 2026-10-05 under working ids 9581 (this row) and 9578 (the plan), reserved by the lead.)*
+
+*(Minted 2026-10-10 as SL-1557 from working id 9581, with its plan PL-1556 from working id 9578, in the D3 batch mint.)*
+
+*(P3 note, 2026-10-09: WK-675 Slice 13 (SL 9577, Jobs: the filterable list, live over the SSE stream) and Slice 14 (SL 9575, Job detail) moved from P2 to P3. Both stay working ids, unminted and off the D3 id list, and their row blocks stay on the draft branch `pl-9582-wk675-s4-leaf` (#1187 @3b15a829), per to-lead "2026-10-09 11:48:22 BST — Rulings …" item 2, option (B).)*
+
+
+
+**2026-10-09 — the Work-plan delta for Slices 5 to 11 is `PL-1546`** (Lean P2 L5), cut as eight `SL-` rows below (`SL-1547` S5, `SL-1548` S6, `SL-1549` S7b, `SL-1550` S7, `SL-1551` S8, `SL-1552` S10, `SL-1553` S11, `SL-1554` S9: the reverse ladder order, DP D of the maintainer's (by delegation) entry "2026-10-08 14:32:33 BST — DELTAS AUDIT (handover/audit-deltas-2026-10-08.md) noted; fixes proceed; DP A, B (c), C confirmed, D AMENDED (build in reverse ladder order)"). `PL-1286` (WK-675's map plan) is `active` from this batch, its status line only, on the maintainer's (by delegation) entry "2026-10-08 12:55:22 BST — P2 RE-PLAN RULED on the inventory (handover/p2-inventory-2026-10-09.md, at 60e9254c): F-1 (a), F-2 (b), F-3 (b), F-4 (a)+(b), F-5 (a)/(b), F-6 (a)" (F-2 (b)).
+
+#### SL-1547 — Slice 5: Editor II — diff shading, bulk operations, CSV import and export (FR-230, FR-231, FR-232, FR-233, FR-235)
+
+```yaml
+id: SL-1547
+family: slice
+title: Slice 5: Editor II — diff shading, bulk operations, CSV import and export (FR-230, FR-231, FR-232, FR-233, FR-235)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
+phase: P2
+work: WK-675
+corrected_by: []
+relates: [PL-1286, PL-1371]
+```
+
+`PL-1286` S5, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. Diff-vs-previous and diff-vs-seed shading through the paged cells route, the exposure-weight column, the bulk-operation dialog, CSV import confirmation and export, and DP-3's order. **Activation needs:** S4 closed; OQ-1223 decided (DP-3); the FD-1366 bulk-operation typing slice merged. Lane or team fixed at GO. *(Cut 2026-10-08 by the planner under working id 9468, reserved by the lead; minted 2026-10-10 as SL-1547 in the D2 batch mint.)*
+
+#### SL-1548 — Slice 6: Sandbox — quote form, ladder waterfall and trace (FR-213, FR-247, FR-248, FR-249, FR-251, FR-252, FR-255, FR-256, FR-258)
+
+```yaml
+id: SL-1548
+family: slice
+title: Slice 6: Sandbox — quote form, ladder waterfall and trace (FR-213, FR-247, FR-248, FR-249, FR-251, FR-252, FR-255, FR-256, FR-258)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
+phase: P2
+work: WK-675
+corrected_by: []
+relates: [PL-1286, PL-1371]
+```
+
+`PL-1286` S6, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. The quote form from the input contract, the ladder waterfall with its table, declined quotes and typed errors, the trace timeline; FR-249's per-peril components shown absent under RL-1459 (OQ-1460). **Activation needs:** `SL-1367` merged (FD-1335 hold). Lane or team fixed at GO. *(Cut 2026-10-08 by the planner under working id 9467, reserved by the lead; minted 2026-10-10 as SL-1548 in the D2 batch mint.)*
+
+#### SL-1549 — Slice 7b: compare backend — StepChange.own_change from step-definition equality (RL-1261; FR-262 backend limb)
+
+```yaml
+id: SL-1549
+family: slice
+title: Slice 7b: compare backend — StepChange.own_change from step-definition equality (RL-1261; FR-262 backend limb)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
+phase: P2
+work: WK-675
+corrected_by: []
+relates: [PL-1286, PL-1371]
+```
+
+`PL-1286` S7b, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. `diff_traces` derives `own_change` from step-definition equality by `step_id`, with `RL-1261`'s five negative tests. **Activation needs:** `SL-1367` merged first (both edit `score_compare`). Lane or team fixed at GO. **Not on the automatic cut ladder** (rung 9 is OFF; to the maintainer if rungs 1–7 are spent). *(Cut 2026-10-08 by the planner under working id 9466, reserved by the lead; minted 2026-10-10 as SL-1549 in the D2 batch mint.)*
+
+#### SL-1550 — Slice 7: Sandbox compare — FR-262's view limb and the own_change rendering rule
+
+```yaml
+id: SL-1550
+family: slice
+title: Slice 7: Sandbox compare — FR-262's view limb and the own_change rendering rule
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
+phase: P2
+work: WK-675
+corrected_by: []
+relates: [PL-1286, PL-1371]
+```
+
+`PL-1286` S7, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. The compare view over `POST /score/compare`; `own_change: false` never rendered as "unchanged". **Activation needs:** S6 and S7b closed; `SL-1367` merged. Lane or team fixed at GO. **Not on the automatic cut ladder** (rung 9 is OFF; to the maintainer if rungs 1–7 are spent). *(Cut 2026-10-08 by the planner under working id 9465, reserved by the lead; minted 2026-10-10 as SL-1550 in the D2 batch mint.)*
+
+#### SL-1551 — Slice 8: Dislocation views (FR-263, FR-264, FR-265, FR-266)
+
+```yaml
+id: SL-1551
+family: slice
+title: Slice 8: Dislocation views (FR-263, FR-264, FR-265, FR-266)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
+phase: P2
+work: WK-675
+corrected_by: []
+relates: [PL-1286, PL-1371]
+```
+
+`PL-1286` S8, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. The change histogram, segment grid, attribution waterfall and largest movers, each chart with its table, the run cited by id. **Activation needs:** `SL-1388` (WK-673 S4) closed. Lane or team fixed at GO. **Cut-ladder rung 7** (conditional on #1164's served page: void if exit demo (b)'s served page is this view); not pre-cut. *(Cut 2026-10-08 by the planner under working id 9464, reserved by the lead; minted 2026-10-10 as SL-1551 in the D2 batch mint.)*
+
+**Activation need added 2026-10-10 (draft, for the lead's batch): the typed movers row in `model-schema` is merged.** The lead's ruling, the entry "2026-10-10 01:54:02 BST — RULINGS on S4 @04eaed4a: (1) red-first on parent commits ACCEPTED; (2) untyped movers ACCEPTED FOR S4 ONLY as an owned gap with a hard gate. Not an OQ: it is decided", item (2), read at `docs/contracts/openapi/generated.json` at `04eaed4a`: `GET /api/v1/dislocation-runs/{run_id}/movers` returns `{"type":"array","items":{"type":"object","additionalProperties":true}}`, "Fully untyped: no typed identifier and no typed money". The typed shape, verbatim: "a row model in model-schema with the known fields typed (the policy/quote identifier; before/after/change in integer minor units; change_pct as the repo's decimal form), plus ONE named open field for the portfolio's own columns (e.g. `columns: dict[str, JsonScalar]`), never a bare open object." The hard gate, verbatim: "the typed row is an ACTIVATION NEED of the first slice that consumes /movers (WK-675's movers view). Its plan gets a dated need line (via D3's or its own delta), and no frontend code may read /movers before the typed row is merged. Owner WK-675. If no consumer exists by WK-673's Work close, it is carried by name at P2's close." This slice's "largest movers" is that consumer. The ACK of the slice that adds the typed row checks the response shape and the regenerated client, per the same item.
+
+#### SL-1552 — Slice 10: Rating version list (FD-1283 option A; a new `03` §3.4 FR, spec first)
+
+```yaml
+id: SL-1552
+family: slice
+title: Slice 10: Rating version list (FD-1283 option A; a new `03` §3.4 FR, spec first)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
+phase: P2
+work: WK-675
+corrected_by: []
+relates: [PL-1286, PL-1371]
+```
+
+`PL-1286` S10, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. The `/rating` list: versions by status, live badges, effective dates, rows linking to `:slug/v/:version`; spec first, amending the existing `GET /api/v1/rating-versions` §5.1 row per `RL-1483`. **Activation needs:** S8 (order: reverse ladder order, ruled 2026-10-08 14:32:33 BST, item D); `SL-1256` (met); `03` §3.4 serialised with WK-674 S6 (`SL-1260`, `PL-1286:398`). Lane or team fixed at GO. **Cut-ladder rung 2**, with S11 (`handover/cut-ladder-2026-10-08.md`, ruled 2026-10-08 13:21:00 BST); not pre-cut. *(Cut 2026-10-08 by the planner under working id 9462, reserved by the lead; minted 2026-10-10 as SL-1552 in the D2 batch mint.)*
+
+#### SL-1553 — Slice 11: Regression suite view (FR-260, FR-261, FR-1221; FD-1283 option A)
+
+```yaml
+id: SL-1553
+family: slice
+title: Slice 11: Regression suite view (FR-260, FR-261, FR-1221; FD-1283 option A)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
+phase: P2
+work: WK-675
+corrected_by: []
+relates: [PL-1286, PL-1371]
+```
+
+`PL-1286` S11, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. Golden quotes and property results over WK-672's routes; a run-list read route only if the version's evidence gives no run id (DP-4 (a), spec first). **Activation needs:** S10 (order). Lane or team fixed at GO. **Cut-ladder rung 2**, with S10 (`handover/cut-ladder-2026-10-08.md`, ruled 2026-10-08 13:21:00 BST); not pre-cut. *(Cut 2026-10-08 by the planner under working id 9461, reserved by the lead; minted 2026-10-10 as SL-1553 in the D2 batch mint.)*
+
+#### SL-1554 — Slice 9: Designer III — sub-graph mounting (FR-217, FR-218 authoring view)
+
+```yaml
+id: SL-1554
+family: slice
+title: Slice 9: Designer III — sub-graph mounting (FR-217, FR-218 authoring view)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
+phase: P2
+work: WK-675
+corrected_by: []
+relates: [PL-1286, PL-1371]
+```
+
+`PL-1286` S9, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. Mounting a pinned sub-graph in the designer. **Activation needs:** S3 closed; `SL-1341` (WK-1250 S3) closed. Lane or team fixed at GO. **Cut-ladder rung 1** (`handover/cut-ladder-2026-10-08.md`, ruled 2026-10-08 13:21:00 BST); not pre-cut. *(Cut 2026-10-08 by the planner under working id 9463, reserved by the lead; minted 2026-10-10 as SL-1554 in the D2 batch mint.)*
 
 ### WK-690 — **`expression` custom objectives** — SymPy derivation, the gradient/hessian compilation target, the authoring UI, and lifting `expression_objectives_enabled` **plus `custom_objective:author` and its check, which `06` FR-367 requires the `expression` kind to arrive with**
 
@@ -1573,6 +1808,24 @@ relates: [FD-1357, RL-1361, PL-1267]
 `seed_from_model` seeds a GLM with two or more factors: one seed request names one Factor and gives one table with one key, bound by `factor_ref` to the Factor version the model pins (`RL-1361` sections A and D; FD-1357, HIGH, on G2's path). The seed route's request body becomes a typed `model-schema` request and its 201 a typed response, both published under `docs/contracts/schemas/generated/` (the maintainer's rules (i) and (ii); the seed-from-model entry of `FD-1366`). The `[seeding]` texts of `RL-1361` are applied byte for byte. Leaf plan `PL-1376`, `active`. **Order:** lane B, after `SL-1360` and before the FD-1356 fix, the RL-1343 decimal-output fix and `PL-1364` (the maintainer, 2026-10-01, about 10:10 BST). *(Filed 2026-10-01 under working id 9763, reserved by the lead. Minted 2026-10-03 as SL-1377; its plan is PL-1376, the FD-1357 batch.)*
 (Activated 2026-10-03 as the FD-1357 fix (WK-1178), on the maintainer's GO check, "2026-10-03 16:59:11 BST — DISPATCH GO: the FD-1357 fix (SL-1377, PL-1376; WK-1178) on lane B; this entry is PL-1376 activation need 7's maintainer agreement"; dispatch record DISPATCH-WK-1178-SL1377-2026-10-03.)
 
+#### SL-1563 — WK-1178 fix slice — money_minor closed both ways at save, the numeric type check
+
+```yaml
+id: SL-1563
+family: slice
+title: WK-1178 fix slice — money_minor closed both ways at save, the numeric type check
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 4d3be1414ad4dacdaa0c14ef49fb21853adbaed6
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [RL-1263, PL-1371]
+```
+
+The FD-1424 fix (MEDIUM, LATENT; owner WK-1178), on the maintainer's (by delegation) entry "2026-10-05 17:36:28 BST — FD 9549 (#1197 @9c8a52c6): MEDIUM LATENT confirmed; disposition (a) narrowed, with money_minor CLOSED both ways; batch 2 agreed". FR-227's save-time check treats every pair of `_NUMERIC` types as interchangeable (`compile.py:124-129`), so a `money_minor` value can be declared into `decimal`, `relativity`, `percentage`, `count` or `int`, and the reverse. This slice closes `money_minor` in both directions: out only into `money_minor`, for every producer; in only from `money_minor`, or from `decimal` at an output step (FR-226). Red first, one red per refused direction on `output_type_issues`, `_check_result_types` and `fragment_output_type_issues`, plus a sweep showing that no committed algorithm or fixture newly fails (a STOP if one does). `int`→`money_minor` and the non-money pairs were OQ-1560's. *(Dated note, 2026-10-05: OQ-1560 was decided at 17:42:06 BST as A1 + B3: `int`→`money_minor` is refused, and only the widenings `int`/`count`/`relativity`/`percentage`→`decimal` and `count`→`int` are allowed. The sweep runs before the reds, and a hit is a STOP to the maintainer.)* A-2's `model_call` refusal (#1178 item 15) is the overlap: whichever lands second leaves one refusal. Open: DP-1, `decimal` into a `money_minor` sub-graph output port, the maintainer's (by delegation). Leaf plan PL-1562 (`draft`). **Activation needs:** FD-1424 minted; OQ-1560 decided on main (#1200); DP-1 ruled; the emergency slice (SL-1427) merged, then lane B's order (the FD-1420 fix, then this, unless PL-1454 is ready first); the lead's go in an activation PR. *(Filed 2026-10-05 under working ids 9522 (this row) and 9521 (the plan), reserved by the lead.)*
+
 #### SL-1409 — WK-1178 fix slice — FD-1356: a validation rule is approved only through the approval workflow
 
 ```yaml
@@ -1589,7 +1842,7 @@ corrected_by: []
 relates: [FD-1356, RL-1301, PL-1306, SL-1256, RL-1407, PL-1408]
 ```
 
-`FD-1356`'s fix (HIGH): rule approval goes through `approvals.submit` and `approvals.decide`, `_carry_to_the_artifact` gains the validation-rule branch, and the direct approve route becomes a thin client of the decide path or is removed (DP-1). A quorum of 2 leaves the rule in `review` after one approval. A dry-run whose outcome is `error` is refused at submit and at approve, one red-first case per cause (missing column, unknown check, missing table), and a `fail` outcome stays accepted. `RL-1301` A.4.5's temporary `approve_rule` allowance is removed red first. Rule approvals that no approval request backs are reset to `review`, with the count recorded (follow-on 2). Task 0 is the maintainer's containment query over every `gipricing*` database, with a STOP on a non-zero result; it printed 5 at planning time. The maintainer decided DP-0 as (c): export the rows, drop the scratch database, re-run. The re-run printed 0 on 2026-10-01, to be re-confirmed at dispatch. The remedies of FD-1415 (an approved rule's dry run cannot be replaced) and FD-1414 (a Rule Set runs only approved, existing members) also ride in this slice, as the maintainer decided. RL-1407 rules the plan's decision points and these remedies. Leaf plan PL-1408 (`active`). **Activation needs:** WK-674 S2 (`SL-1256`) merged (the maintainer, 2026-10-01 ~10:10 BST, order (b) S2 → this fix); lane B order `SL-1360` → the FD-1357 fix → this slice → the `RL-1343` decimal fix → FD-1335 Part A; the plan's decision points ruled; the maintainer's agreement and the lead's go in a separate activation PR. *(Filed 2026-10-01 under working ids 9761 (this row) and 9762 (the plan), reserved by the lead. Minted 2026-10-04 as SL-1409; its plan is PL-1408 and its ruling RL-1407.)*
+`FD-1356`'s fix (HIGH): rule approval goes through `approvals.submit` and `approvals.decide`, `_carry_to_the_artifact` gains the validation-rule branch, and the direct approve route becomes a thin client of the decide path or is removed (DP-1). A quorum of 2 leaves the rule in `review` after one approval. A dry-run whose outcome is `error` is refused at submit and at approve, one red-first case per cause (missing column, unknown check, missing table), and a `fail` outcome stays accepted. `RL-1301` A.4.5's temporary `approve_rule` allowance is removed red first. Rule approvals that no approval request backs are reset to `review`, with the count recorded (follow-on 2). Task 0 is the maintainer's containment query over every `gipricing*` database, with a STOP on a non-zero result; it printed 5 at planning time. The maintainer decided DP-0 as (c): export the rows, drop the scratch database, re-run. The re-run printed 0 on 2026-10-01, to be re-confirmed at dispatch. The remedies of FD-1415 (an approved rule's dry run cannot be replaced) and FD-1414 (a Rule Set runs only approved, existing members) also ride in this slice, as the maintainer decided. RL-1407 rules the plan's decision points and these remedies. Leaf plan PL-1408 (`active`). **Activation needs:** WK-674 S2 (`SL-1256`) merged (the maintainer, 2026-10-01 ~10:10 BST, order (b) S2 → this fix); lane B order `SL-1360` → the FD-1357 fix → this slice → the `RL-1343` decimal fix → FD-1335 Part A *(order superseded 2026-10-05 for its last two steps, on the maintainer's (by delegation) entry "2026-10-05 18:25:42 BST — PL 9499 (#1213 @b342ae09): DP-3 = SL-1367 FIRST, CONFIRMED; DP-1 correction noted; the test inversions accepted with one condition": FD-1335 Part A (`SL-1367`) comes before the `RL-1343` decimal fix (SL-1569); `PL-1364` DP-A3 is answered by that entry)*; the plan's decision points ruled; the maintainer's agreement and the lead's go in a separate activation PR. *(Filed 2026-10-01 under working ids 9761 (this row) and 9762 (the plan), reserved by the lead. Minted 2026-10-04 as SL-1409; its plan is PL-1408 and its ruling RL-1407.)*
 **Closed 2026-10-05** on the slice audit (LG-1417 §"Closing note"; local working copy: `handover/audit-sl1409-2026-10-05.md`) and its re-check, at the mint of ledger `LG-1417` (the executor's closing acts, `executor.md` mint step; `document-ids.md` §1.6).
 (Activated 2026-10-05 as the WK-1178 FD-1356 fix slice, on the maintainer's GO check, "2026-10-05 09:44:39 BST — DISPATCH GO: FD-1356 fix (SL-1409 / PL-1408) on lane B, option (b); executor-1409 starts once the `__all__` registry amendment merges (or once WK-690 S3 merges, if that comes first)"; dispatch record DISPATCH-WK-1178-SL1409-2026-10-04.)
 
@@ -1658,7 +1911,7 @@ The remedy for FD-1411 (HIGH): `POST /api/v1/score` misses NFR-489 at every rate
 id: SL-1462
 family: slice
 title: WK-1178 fix slice — Option A A-1, FD-1456 in full, the Peril Structure approval path and the compile resolver's peril branch
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-05
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 137bc817ef1fb40ea57e9053e0ad40b73bdff3a8
@@ -1670,13 +1923,17 @@ relates: [RL-1263, PL-1371, CR-1212]
 
 FD-1456's fix (HIGH, a G2 blocker before the P2 exit demo, by the maintainer's entry "2026-10-05 16:43:31 BST — THE MAINTAINER'S DECISION (asked live): G2 takes OPTION A, WF-699's literal Peril Structure path is BUILT IN P2; and the FD 9605 approval, now on the record", item 2). `_carry_to_the_artifact` gains the Peril Structure call and `perils.py` gains `apply_approval_decision`, the only writer of `approved`, inside the approval guard's decision block: approval moves `review → approved`, a non-approval returns the structure to `reconciled`. The compile resolver gains a `peril_structure` branch, so `compile_bundle`'s existing maturity loop refuses a pin that is not approved (the positive test FD-1456's Disposition asks for), and the stale "has no backend table yet (Phase 2)" message goes. PL-1429's Acceptance 7, FD-1456's tripwire, is flipped in the commit that adds the branch. Open for the decision-maker: per-peril model approvals enforced at approval (DP-1, `06` FR-363), supersession of an earlier approved version (DP-2), and a named interim refusal for a Peril Structure `model_call` until A-3 (DP-3). Leaf plan PL-1461 (`draft`). **Activation needs:** FD-1456 minted at HIGH; PL-1429's slice (the FD-1421 fix) and PL-1471's slice (the FR-240 family fix) merged, as the maintainer orders the chain; DP-1 to DP-3 ruled; the lead's go in an activation PR, with `RL 9620`'s same-Work conditions written for every WK-1178 slice beside it. First of the serial chain A-1 → A-2 → A-3 → A-4. *(Filed 2026-10-05 under working ids 9600 (this row) and 9599 (the plan), reserved by the lead; minted 2026-10-06 as SL-1462 and PL-1461.)* *(Dated note, 2026-10-05, pre-mint: DP-1 (a), DP-2 (a) and DP-3 (b) were accepted by the maintainer (by delegation) at the plan's recommendations in the channel entry headed `2026-10-05 17:02:50 BST`, with no decision-maker; the component check is corrected to `ModelStatus.APPROVED` (17:08:35 BST). The `06` §4.2 note's dated amendment is drafted by a decision-maker and adopted in A-1's ruling (17:14:54 BST item 6).)*
 
+(Activated 2026-10-10 as WK-1178 Option A, A-1, on the dispatch GO "2026-10-10 05:19:53 BST — DISPATCH GOs at main 84ff9f0b: A-1 (PL-1461/SL-1462) GO NOW on gate-1 …" with its conditions a–d; `PL-1461` set `active` in the slice PR's first commit.)
+
+(Closed 2026-10-10 as a Slice, closing acts in the slice PR's last commit, on the lead's merge; ledger LG-1581, minted 2026-10-10 from working id 9442 in the SL-1462 merge-turn commit.)
+
 #### SL-1463 — WK-1178 fix slice — Option A A-2: FD-1458, a GLM scores through `model_call`
 
 ```yaml
 id: SL-1463
 family: slice
 title: WK-1178 fix slice — Option A A-2, FD-1458, a GLM scores through model_call
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-05
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 137bc817ef1fb40ea57e9053e0ad40b73bdff3a8
@@ -1687,6 +1944,10 @@ relates: [RL-1263, PL-1371, CR-1212]
 ```
 
 FD-1458's fix (HIGH, a G2 blocker before the P2 exit demo, the same entry, item 2). `03` FR-222's `exact` mode and `02` FR-193 say any persisted Model scores, but `_model_call_handler` refuses a GLM (`runtime.py:568-579`) because the Bundle does not carry the Factor, Banding and Grouping versions `predict_glm` needs. Compile carries them into `Bundle.resolved_payloads` (DP-1), and the runtime rebuilds them and calls `predict_glm` on the quote's row, with the offset the spec declares (DP-3). A golden test holds the `model_call` value equal to `predict_glm` on the same row. The two tests that pin the refusal (`test_rating_runtime.py:377`, `test_rating_score.py:429`) are flipped deliberately, on the maintainer's approval, and FR-255's `MODEL_CALL_FAILED` keeps a test through another real failure. NFR-489's p99 is measured for a GLM `model_call`. Open for the decision-maker: how the GLM's inputs travel in the Bundle (DP-1), what `feature_map` names for a GLM (DP-2), a model-offset GLM (DP-3), and the provisional money rounding of a `model_call` output (DP-4). Leaf plan PL-1464 (`draft`, its own PR). **Activation needs:** FD-1458 minted at HIGH; PL-1471's slice merged (its `ResolvedArtifact.factors` and `model`-branch Factors are reused); A-1 (SL-1462) merged, as the maintainer orders the chain; DP-1 to DP-4 ruled; the lead's go in an activation PR. *(Filed 2026-10-05 under working ids 9598 (this row) and 9597 (the plan), reserved by the lead; minted 2026-10-06 as SL-1463 and PL-1464.)* *(Dated note, 2026-10-05, pre-mint: DP-1 (a), DP-2 (b) and DP-3 (a) ruled at 17:03:45 BST; DP-4 ruled at 17:02:50 and corrected to option (B) at 17:12:40 BST: a `model_call`'s value is always an exact Decimal, `RatingModelCallStep` gains a type-only `result_type` (`decimal` by default), and only the `output` step rounds. The slice now carries that `model-schema` field and the regenerated contracts. DP-5 (ii) is ruled (a) at 17:14:54 BST: the backend algorithm save refuses a non-Factor `feature_map` with a new `03` code.)*
+
+(Activated 2026-10-10 as WK-1178 Option A, A-2, on the dispatch GO "2026-10-10 08:06:08 BST — DISPATCH GO: A-2 (PL-1464 / SL-1463 @98bdb7c1) …" with its conditions 1–5; `PL-1464` set `active` in the slice branch's activation commit.)
+
+(Closed 2026-10-10 as a Slice, closing acts in the slice PR's last commit, on the lead's merge; ledger LG-1587, minted 2026-10-10 from working id 9449 in the SL-1463 merge-turn commit.)
 
 #### SL-1466 — WK-1178 slice — Option A, A-3: Peril Structure scoring
 
@@ -1704,7 +1965,7 @@ corrected_by: []
 relates: [PL-1371, CR-1212, RL-1263]
 ```
 
-The third of Option A's four serial slices (the maintainer, "2026-10-05 16:43:31 BST — THE MAINTAINER'S DECISION (asked live): G2 takes OPTION A, WF-699's literal Peril Structure path is BUILT IN P2; and the FD 9605 approval, now on the record", item 1). A `model_call` step naming a Peril Structure compiles and scores: `compile_bundle` resolves each component model of the pinned structure, refuses one below `approved` with `PIN_NOT_APPROVED` (FR-20, FR-240) and embeds its payload, so the Bundle stays self-contained (NFR-491); the handler predicts each component and calls `assemble_risk_premium` (FR-188, FR-189), replacing today's custom-node failure on `payload["fit_result"]`. Six decision points for a ruling (the outputs rule and FR-249, `separate_model`, PL-1471's peril gap, WF-699 C4's reachability, the component unit, a recorded latency). Leaf plan PL-1465. It follows PL-1429, PL-1471, A-1 (SL-1462) and A-2 (SL-1463); it serialises with PL 9610 and PL 9609 on `compile_bundle`; A-4 (the exit-demo scope) follows it.
+The third of Option A's four serial slices (the maintainer, "2026-10-05 16:43:31 BST — THE MAINTAINER'S DECISION (asked live): G2 takes OPTION A, WF-699's literal Peril Structure path is BUILT IN P2; and the FD 9605 approval, now on the record", item 1). A `model_call` step naming a Peril Structure compiles and scores: `compile_bundle` resolves each component model of the pinned structure, refuses one below `approved` with `PIN_NOT_APPROVED` (FR-20, FR-240) and embeds its payload, so the Bundle stays self-contained (NFR-491); the handler predicts each component and calls `assemble_risk_premium` (FR-188, FR-189), replacing today's custom-node failure on `payload["fit_result"]`. Six decision points for a ruling (the outputs rule and FR-249, `separate_model`, PL-1471's peril gap, WF-699 C4's reachability, the component unit, a recorded latency). Leaf plan PL-1465. It follows PL-1429, PL-1471, A-1 (SL-1462) and A-2 (SL-1463); it serialises with PL-1572 and PL 9609 on `compile_bundle`; A-4 (the exit-demo scope) follows it.
 
 #### WK-1178 fix slice — NFR-498 Audit Events on rate table version and rating algorithm writes
 
@@ -1741,7 +2002,7 @@ corrected_by: []
 relates: [PL-1371, FD-1209, FD-1357, SL-1377, FD-1374, RL-1343, RL-1361]
 ```
 
-The Exit demo row's first scope item, "the real freMTPL2 rating algorithm in the seed": the seed's Rating Version is priced from the approved freMTPL2 GLM through its seeded rate tables, replacing the `demo-fixture-motor` algorithm (`payable = premium_in * 2`, `examples/fremtpl2/model.py:_demo_algorithm`). One algorithm definition serves the seed and exit-demo slice (b). Every declared output is `money_minor` (no decimal output until the `RL-1343` fix merges). Acceptance includes "every step's reads ⊆ its declared consumes" (FD-1374's interim guard) and the re-run of PL-1520's Spike S1 harness on the algorithm. It discharges FD-1209's algorithm half. PL-1371 §3.8 row 6 and §7; WK-1178 by `PL-1371` DP-1 (a). Leaf plan PL-1525 (working id), `draft`: three decision points are open (how the three continuous factors are rated, the base rate, and how the reads check is instrumented). **Activation needs:** the FD-1357 fix (`SL-1377`) closed, which it is; PL-1525's decision points ruled; PL-1520's Spike S1 filed; the lead's go. *(Cut 2026-10-05 by the planner under `PL-1371` Task 3, on the lead's order, under working id 9626, reserved by the lead.)*
+The Exit demo row's first scope item, "the real freMTPL2 rating algorithm in the seed": the seed's Rating Version is priced from the approved freMTPL2 GLM through its seeded rate tables, replacing the `demo-fixture-motor` algorithm (`payable = premium_in * 2`, `examples/fremtpl2/model.py:_demo_algorithm`). One algorithm definition serves the seed and exit-demo slice (b). Every declared output is `money_minor` (no decimal output until the `RL-1343` fix merges). Acceptance includes "every step's reads ⊆ its declared consumes" (FD-1374's interim guard) and the re-run of PL-1520's Spike S1 harness on the algorithm. It discharges FD-1209's algorithm half. PL-1371 §3.8 row 6 and §7; WK-1178 by `PL-1371` DP-1 (a). Leaf plan PL-1525 (working id), `draft`: three decision points are open (how the three continuous factors are rated, the base rate, and how the reads check is instrumented). **Activation needs:** the FD-1357 fix (`SL-1377`) closed, which it is; PL-1525's decision points ruled; PL-1520's Spike S1 filed; the lead's go. *(Cut 2026-10-05 by the planner under `PL-1371` Task 3, on the lead's order, under working id 9626, reserved by the lead.)* *(Dated 2026-10-10, at the D5 mint, on the maintainer's (by delegation) ruling in the `to-lead.md` entry of 2026-10-10 00:20:03 BST: `SL-1575` is an activation need of this slice; it must merge before this slice is activated.)*
 
 #### SL-1527 — WK-1178 exit-demo slice (b) — the scripted `WF-699` journey over HTTP, ending in a served page
 
@@ -1795,7 +2056,7 @@ corrected_by: []
 relates: [PL-1371, RL-1263]
 ```
 
-The maintainer's (by delegation) decision "2026-10-05 18:51:33 BST — Save-time completeness: DECIDED NOW as (b), completeness at COMPILE" (`channel/to-lead.md`), ruled as RL-1523. `compile_bundle` refuses a `model_call` step whose `feature_map` does not cover the pinned model's required Factors, or its `feature_order` when it has none, and for a `peril_structure_ref` step each component model's, with `MODEL_CALL_FEATURE_MAP_INVALID` (A-2's code, reused) naming the step and the missing features; the offset column is not a required input. Today such a version compiles and fails on every quote as `MODEL_CALL_FAILED`. Leaf plan PL-1540. It follows A-2 (SL-1463) and A-3 (SL-1466), and precedes A-4 (SL-1543); it serialises with PL 9578, PL 9610, PL 9609 and PL-1452 on `compile_bundle`.
+The maintainer's (by delegation) decision "2026-10-05 18:51:33 BST — Save-time completeness: DECIDED NOW as (b), completeness at COMPILE" (`channel/to-lead.md`), ruled as RL-1523. `compile_bundle` refuses a `model_call` step whose `feature_map` does not cover the pinned model's required Factors, or its `feature_order` when it has none, and for a `peril_structure_ref` step each component model's, with `MODEL_CALL_FEATURE_MAP_INVALID` (A-2's code, reused) naming the step and the missing features; the offset column is not a required input. Today such a version compiles and fails on every quote as `MODEL_CALL_FAILED`. Leaf plan PL-1540. It follows A-2 (SL-1463) and A-3 (SL-1466), and precedes A-4 (SL-1543); it serialises with PL 9578, PL-1572, PL 9609 and PL-1452 on `compile_bundle`.
 
 
 #### SL-1543 — WK-1178 A-4 — the exit demo walks `WF-699`'s Peril Structure path
@@ -1833,6 +2094,62 @@ relates: [FD-1374, PL-1371]
 ```
 
 `FD-1374`'s fix (MEDIUM, a silent mispricing path), split out of the F35 plan and kept in P2 by the maintainer's entry "2026-10-08 13:00:11 BST — FD-1374 (silent mispricing) STAYS IN P2: DP-F35-1 split out as a P2 WK-1178 slice; F35's performance remainder carries; and fewer, consolidated status messages". FR-246 enforced at save and compile on every evaluating field (`as_at` included), `consumes` mandatory, an undeclared read refused with `RATING_STEP_UNDECLARED_READ` (422), compiled bundles grandfathered at reload; `03`'s FR-246 row and corrected §4.1 example applied verbatim from the ruling; the four under-declaring fixtures fixed. Its row and tasks are PL-1535 (the single-row WK-1178 Work plan), which quotes PL-1520 Task 1A as ruled by RL-1519. Money and contract group, never on the cut ladder. **Activation needs:** RL-1519 and PL-1520 minted (done, batch B4); the `compile.py` serial set free, a ready G2 compile-set slice taking it first; the maintainer's GO under L1 (a'). *(Cut 2026-10-08 by the planner under working id 9469, reserved by the lead; minted 2026-10-09 as SL-1536, in the docs batch D1.)*
+
+#### SL-1566 — WK-1178 fix slice — batch scoring serialises every declared output type and never aborts on one row
+
+```yaml
+id: SL-1566
+family: slice
+title: WK-1178 fix slice — batch scoring serialises every declared output type and never aborts on one row
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 5fe56b87e55b0a29399f96f0af2e7c2e2ef9b72a
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1333, RL-1343, RL-923, RL-1263]
+```
+
+The FD-1561 fix (MEDIUM, LATENT; owner WK-1178), on the maintainer's (by delegation) entry "2026-10-05 17:58:45 BST — FD 9513 (#1204 @0303d0bf): your decision ACCEPTED (MEDIUM, LATENT, WK-1178, its own fix slice after SL 9561); the row escape is the first red". Two reds, in order. **(1) The row escape first:** `_score_batch_row` (`score.py:1081`) runs `_ladder_json` (`:1122`) and `_outputs_json` (`:1123`) after its `try` (`:1096-1103`), so anything they raise ends the whole batch run and the Job (FR-255). Any exception there becomes that row's `"error"` row and the run continues; this does not wait for the type DP. **(2) The four declared types:** `_coerce_output_value` refuses `int`, `count`, `relativity` and `percentage` (`:947`, `:964-965`), which `/score` serves (FR-254). Their JSON form is DP-1, **ruled (b)** by the maintainer (by delegation), 2026-10-05 18:10:57 BST: `int`/`count` a JSON integer on both paths, with a non-integral value made that row's error, and `relativity`/`percentage` the `decimal` string form. DP-2 is **ruled (ii)**: the `/score` half belongs to the `RL-1343` slice, SL-1569 / PL-1568, which must cover a whole-valued `decimal` (a JSON integer on `/score` today) as well as a fractional one, and which serialises with this slice on `_coerce_output_value`. DP-3 is **ruled**: the error code is the exception class name. An `RL-` owes T1 (the `03:692` row) and T2 (FR-214's dated clause). Leaf plan PL-1565 (`draft`). **Activation needs:** FD-1561 minted; SL-1427 (the emergency slice) merged; the `RL-` carrying T1/T2 minted; Task 1 is dispatchable before the rest, but still after SL-1427; the maintainer's GO; active by a dated line in a separate activation PR. *(Filed 2026-10-05 under working ids 9511 (this row) and 9509 (the plan), reserved by the lead.)*
+
+#### SL-1569 — WK-1178 fix slice — a declared decimal output is served as an exact JSON string on every scoring path
+
+```yaml
+id: SL-1569
+family: slice
+title: WK-1178 fix slice — a declared decimal output is served as an exact JSON string on every scoring path
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: fb178c360f6fd5b2fdb7ae60eea924811a65492f
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [RL-1343, FD-1333, RL-1329, RL-1365, SL-1367]
+```
+
+`RL-1343`'s discharge (`OQ-1334` decided (a); `FD-1333`), on the maintainer's (by delegation) entry "2026-10-05 18:10:57 BST — PL 9509 (#1210 @dc4f9c50) DPs RULED: DP-1 (b), DP-2 (ii), DP-3 the class name; the RL-1343 leaf plan is reserved NOW", and on `RL-1567`'s two rulings (the entries of 18:20:06 and 18:20:40 BST): a declared `int`/`count` output is a JSON integer on `/score` and `/score/compare` when integral by exact equality (`3.0` → `3`), and a non-integral value (`2.9999999999`) refuses the quote with 422 `RATING_TYPE_MISMATCH`, added to `_PER_QUOTE_CODES`, with `RL-1567`'s T3 note on `03:929`; batch codes that fault `RATING_TYPE_MISMATCH` too once this slice merges (DP-4 ruled (a), entry of 18:27:10 BST), re-expecting SL-1566's class-name reds. `_build_outputs` (`score.py:729-758`) serves every declared `decimal`, `relativity` and `percentage` output as the engine's exact `string()` read, rounded once with its output step's `RoundSpec` and written positionally with exactly `dp` digits, on `/score`, both results of `/score/compare`, batch `outputs_json` and the sampled trace summary. **Both forms are red first:** a whole-valued `decimal`, a JSON integer on `/score` today (27 → `"27.00"` at dp 2), which `RL-1343` rule 4's float refusal cannot catch, and a fractional one, a float today (19.8 → `"19.80"`). `ScoringResult` refuses a float anywhere in `outputs`; batch checks the producer's string and converts nothing; the hand-authored and generated contracts admit no non-integer number there, held by a new guard; `NFR-502` is re-measured by `RL-1365`'s method in a solo window; a breaking wire change, so the frontend half of the gate runs. Leaf plan PL-1568 (`draft`): DP-1 and DP-4 are ruled by `RL-1567` and the maintainer's entries of 18:20 and 18:27 BST; DP-3 is ruled `SL-1367` first (entry of 18:25:42 BST); no decision point is open. **Activation needs:** SL-1427 merged; serialised with SL-1566 on `_coerce_output_value` (either order; planned for SL-1566 first); `RL-1567` (T2, T3) minted; `SL-1367` merged; the maintainer's GO and a solo window; active by a dated line in a separate activation PR. *(Filed 2026-10-05 under working ids 9500 (this row) and 9499 (the plan), reserved by the lead.)*
+
+#### SL-1575 — WK-1178 fix slice — FD-1573: dislocation_frame's memory and time at book scale
+
+```yaml
+id: SL-1575
+family: slice
+title: WK-1178 fix slice — FD-1573, dislocation_frame's memory and time at book scale (a profiling spike first, then the measured fix)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-10            # original date 2026-10-10, set at the draft; minted 2026-10-10
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 61e2a8d9d06087cadd3760e9668b3caff881b85c
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1371, SL-1387, SL-1388, SL-1526]
+```
+
+*Disclosure: cut under working id 9448; minted as SL-1575 on 2026-10-10, in the D5 batch mint PR.*
+
+The FD-1573 remedy, proposed on the maintainer's entry "2026-10-10 00:08:17 BST — USER: go ahead. FD 9446 on the measured curve, a remedy-slice proposal, and the Friday re-baseline (after S3's merge, in W3)" [FD 9446 is minted as FD-1573], item 2: owner the lead, placed before `SL-1526` in the exit-demo chain. `WF-699` D6's dislocation run goes through `dislocation_frame` (WK-673 S4's handler), which scores the book twice and retains every policy's validated ladder from both passes; peak RSS was logged linear at about 31 KiB per policy (`50-sb-200k`, `60-sb-400k`, tree `f59b546e`), so about 20.3 GiB is derived for the 678,013-policy book. Task 0 is a 1-hour profiling spike at 20,000 and 200,000 policies, using the standard library only, with a decision rule stated in advance. Only if it confirms retention (H1) does Task 1 make `_score_pass` keep rung values instead of `LadderRung` objects, with the frame unchanged value for value. Task 2 is the after-measurement. Single-row Work plan PL-1574, `draft`. It is not in the `compile.py` serial set; its serial set is `analysis.py`, after S3 (`SL-1387`). **Activation needs:** FD-1573 minted HIGH; PL-1574's DP-1 to DP-3 ruled; `SL-1387` merged; the lead's go. *(Cut 2026-10-10 by the planner (planner-remedy) under working id 9448, reserved by the lead.)*
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
@@ -1894,7 +2211,7 @@ corrected_by: []
 relates: [PL-1254]
 ```
 
-`PL-1254` Task 2. ~~Blocked on DP-2 (open).~~ *DP-2 ruled 2026-09-30 by `RL-1344` (mint batch 12); still waits on the slices before it.* Minted as `SL-1340` at this PR's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `8cef871d` (1339 onward).
+`PL-1254` Task 2. ~~Blocked on DP-2 (open).~~ *DP-2 ruled 2026-09-30 by `RL-1344` (mint batch 12); still waits on the slices before it.* Minted as `SL-1340` at this PR's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `8cef871d` (1339 onward). Leaf plan: `PL-1572` (minted 2026-10-10, D5).
 
 #### SL-1341 — Slice 3: FR-218's purpose mount and the real check (retires `RL-1242`)
 
@@ -2325,6 +2642,7 @@ you never block on a decision you have not reached.
 | **Before WK-675 S12** — *added 2026-09-30* | **OQ-1285** *raised open 2026-09-30 in PL-1286 (#920): /rating/environments vs /admin/environments (owner WK-675, for the decision-maker)* | 1 (1 open) |
 | ~~**Before the FD-1439 fix plan mints**~~ ✔ **all decided** (FD-1439; discharged by S7, SL-1391, WK-673, the maintainer's (by delegation) 22:28:33 BST entry) — *added 2026-10-05* | ~~**OQ-1440**~~ ✔ *(raised open 2026-10-05: what latency budget a rate-table cells-diff page carries below `07` §1.3 R1's 2 s, on the rows and the parquet path; owner WK-673) — decided 2026-10-05 by RL-1441: (b) plus (e), one `03` §9 route NFR, p95 ≤ 300 ms after the first request for a key, measured at stated sizes, and a page cost bounded by its `limit`, applied by SL-1391 (S7, WK-673) (the maintainer's (by delegation) entry "2026-10-05 20:58:27 BST — FD 9487 and OQ 9486 drafts: the severity path accepted; OQ 9486 DECIDED as (b)+(e)")* | 1 (0 open) — *recounted 2026-10-05 (RL-1441): decided. Before that:* 1 (1 open) |
 | **Before WK-673's declared-reference slice** — *added 2026-10-05* | ~~OQ-1496~~ ✔ *decided 2026-10-05 by `RL-1470` Ruled 9 (#1155): option (c), a model with a `control`-intent factor is scored only with each such factor held at a reference value a versioned artifact declares, and compile refuses it otherwise; a spec change to `02` FR-88 and `03` FR-240 comes first, then its own WK-673 slice, not a G2 blocker (owner WK-673); raised and decided 2026-10-05 from FD-1495* | 1 (0 open) |
+| ~~**Before the FD-1424 fix plan mints**~~ ✔ **all decided** (PL-1562; WK-1178) — *added 2026-10-05* | ~~**OQ-1560**~~ ✔ *(raised open 2026-10-05: which numeric pairs beyond `money_minor` a declared output admits) — decided 2026-10-05 by the maintainer (by delegation), the 17:42:06 BST entry: (A1) `int` → `money_minor` refused, through an explicit `money_minor` expression step; (B3) widening only; delivered by the FD-1424 fix* | 1 (0 open) — *recounted 2026-10-05 (OQ-1560 decided). Before that:* 1 (1 open) |
 | **Before the P2 exit demo** — *added 2026-09-29* | FD-1244 *(`WF-699` D4 against FR-261)*, FD-1245 *(`WF-699` E2 against FR-257)*: two findings for the decision-maker to rule, placed by `CR-1247` Proposal 12 | 2 (2 open) |
 | **Before Phase 3** — *re-opened 2026-08-29* | ~~OQ-633, OQ-634, OQ-635, OQ-636, OQ-637, OQ-638~~ ✔ *2026-08-18*, ~~OQ-540~~ ✔ *decided 2026-08-15 — ADR-710, and it changes what WK-674 builds in Phase 2 rather than waiting for Phase 3*, ~~OQ-581~~ ✔ *evidence in Phase 3 (WK-691), never a block*, ~~OQ-620~~ ✔ *(raised 2026-08-29 from WK-671 Task 1.2; decided 2026-09-28 by delegation, option (b), into `03` FR-1186. It keeps this row for its revisit: whether a Rate Table Version is pinned by more than one Rating Version)*, **OQ-1229** *(raised 2026-09-29 from FD-1227, owner WK-1178: whether NFR-481's fitting determinism must hold across processes or only within one)*, **OQ-1321** *(raised 2026-09-30 in `RL-1322`, owner WK-1178: whether a `lookup` step's output is typed from its reference table's declared column type; `number()` meanwhile)*, **OQ-1460** *(raised 2026-10-05 in `RL-1459`, owner WK-1178: whether a Peril Structure `model_call` carries per-peril risk-premium components as outputs (FR-249), and in what shape; re-decided at the 2026-10-09 checkpoint, else carried into Phase 3; WK-675 S6's FR-249 limb carried with it)*, **OQ-1539** *(raised 2026-10-05 in `RL-1538`, owner WK-1178: whether compile refuses a seeded rate table applied as an absolute relativity beside a `model_call` reaching its source model; decided after G2)* | 13 (4 open) |
 | **Before Phase 4** | ~~OQ-621, OQ-622, OQ-623, OQ-624, OQ-625~~ ✔, ~~OQ-626~~ ✔ *resolved 2026-08-14*, ~~OQ-627, OQ-628, OQ-629, OQ-630, OQ-631~~ ✔, ~~OQ-560~~ ✔ *decided 2026-08-14 — out of scope*, ~~OQ-647~~ ✔ *raised and decided 2026-08-23 out of the scheduling decision: an idempotency key naming a Job that already failed. FR-404's 24-hour window is withdrawn, keys are permanent, and a terminally failed Job releases its key so the period can be attempted again (`07` FR-414). Decided at this gate rather than deferred to it because WK-687 would otherwise build FR-413 against an unanswered question; the code delta stays WK-687's*, ~~OQ-1233~~ ✔ *moved here 2026-09-29 (`CR-1247` Proposal 5): the owner of `07` FR-453's deployment-notification limb, accepted by the maintainer as WK-688 (P4); decided 2026-09-29 by `RL-1252`, which closes it. It keeps this row, because WK-688 delivers it here* | 14 (0 open) — *recounted 2026-09-29 (`RL-1252`): OQ-1233 decided. Before that:* 14 (1 open) — *recounted 2026-09-29 (`CR-1247` Proposal 5): one id moved here. Before that:* 13 (0 open) |
@@ -2337,6 +2655,10 @@ you never block on a decision you have not reached.
 **2026-10-05 — OQ-1539 placed at Before Phase 3.** *Raised by the decision-maker in `RL-1538`, on the maintainer's (by delegation) ruling in the entry "2026-10-05 16:54:17 BST — CLEANUP NOW (the maintainer chose "now, before lane A starts", window to ~17:20 BST); the missing 16:47 slot order; WK-1250 S2 DPs and the DOUBLE-COUNT DP RULED", and mirrored in `docs/open-questions.md` and `03` §10. The ruling says "decided AFTER G2", and G2 is the P2 exit demo's criterion, so the answer is needed before Phase 3, not before Phase 2's exit; placed here as OQ-1321 was. If A-4's Task 0 fails, `RL-1538` Ruled 3 makes B2 required before G2 instead, and this placement moves with a dated line. The question is the decision-maker's to rule; this row only places it. The count is recounted from the row's ids: 13 (4 open).*
 
 **2026-10-05 — a gate row Before WK-673's declared-reference slice added, and OQ-1496 placed on it, decided.** *Raised from FD-1495 and decided the same day by the maintainer (by delegation), entry "2026-10-05 14:54:40 BST — READ-BACK VERIFIED #1144; OQ (control factor in scoring) DECIDED: option (c) with the DM's two conditions; file it as a decided row", recorded by `RL-1470` Ruled 9 and mirrored in `docs/open-questions.md` and `02` §10. Until the declared-reference capability lands, `RL-1470` Ruled 8's refusal holds. The spec change to `02` FR-88 and `03` FR-240 comes first, then its own WK-673 slice, queued after WK-673's HIGH fixes. The row keeps the appointment: that slice does not start before the spec change. The count is recounted from the row's ids: 1 (0 open).*
+
+**2026-10-05 — OQ-1560 decided, and the row Before the FD-1424 fix plan mints closed.** *Decided (A1) and (B3) by the maintainer's (by delegation) entry headed "OQ 9556 (#1200 @f46ca86f) DECIDED: A1 + B3; E1 folds noted" in `channel/to-lead.md`, timed 2026-10-05 17:42:06 BST by its body (its header's leading word is a stamp error the entry itself corrects); the register row and `03` §10 are decided in the same commit. The row is kept, struck, as decided rows are. Its count is recounted: 1 (0 open).*
+
+**2026-10-05 — a gate row Before the FD-1424 fix plan mints added, and OQ-1560 placed on it.** *Raised by the decision-maker on the maintainer's (by delegation) ruling in the entry "2026-10-05 17:36:28 BST — FD 9549 (#1197 @9c8a52c6): MEDIUM LATENT confirmed; disposition (a) narrowed, with money_minor CLOSED both ways; batch 2 agreed", item 2: "int→money_minor and the non-money pairs among themselves (relativity/percentage/count/int/decimal) go to ONE OQ, owner WK-1178, decided before the fix slice's plan mints." Mirrored in `docs/open-questions.md` and `03` §10. The fix slice (WK-1178, plan PL-1562) applies the decided pairs in `_compatible`, so the question gates that plan's mint, not Phase 2's exit; a per-plan row, as Before WK-675 S12 is. The question is the maintainer's (by delegation) to decide; this row only places it. The count is this row's one id: 1 (1 open).*
 
 **2026-09-30 — a gate row Before WK-674 Slice 3 merges added, and OQ-1334 placed on it.** *Raised in `FD-1333` (a declared `decimal` output is served on `/score` as a float) and mirrored in `docs/open-questions.md` and `03` §10. This row gates Slice 3's MERGE, not its start: `decimal` outputs are out of Slice 3's scope (`RL-1329`), and the question's own trigger is "(d) is the interim if (a) is not ready when Slice 3 merges." (OQ-1334's row, verbatim). Slice 3's dispatch record carries that Slice 3 does not merge until OQ-1334 is ruled (a), or (d) is ruled as the interim. The question is the maintainer's (it changes a served JSON type); this row only places it. The count is recounted from the row's ids: 1 (1 open). The row Before WK-674 Slice 3 keeps its own count, 1 (0 open). (Amended 2026-09-30 by the lead, on the maintainer's P1 ruling on batch 10, option (i); this replaces an earlier placement of OQ-1334 on the row Before WK-674 Slice 3 in the same batch, which would have held Slice 3's start on an out-of-scope question.)*
 

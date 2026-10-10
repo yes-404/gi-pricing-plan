@@ -79,7 +79,12 @@ _INPUT_FREE = {
     ("rating/score.py", "_check_model_call_sentinel"): 1,
     ("rating/runtime.py", "_load_boosters"): 1,  # step id and ref string, no quote
     ("rating/runtime.py", "_check_graph_matches_inlined_algorithm"): 1,  # a node id
-    ("rating/runtime.py", "handler"): 2,  # `_model_call_failure`: step id and the pinned model_type
+    # `_model_call_failure`: step id and the pinned model_type; and, for a Peril Structure pin
+    # (PL-1461 Task 4), step id and ref string, no quote; and, for a GLM scorer failure
+    # (PL-1464, the 2026-10-10 03:20:34 BST ruling), the error code and the ref string only:
+    # f"{exc.code}: {ref_str} could not be scored for this quote (FR-255)", never the model's
+    # text (`test_a_glm_failure_reports_its_code_and_never_the_models_text` drives it).
+    ("rating/runtime.py", "handler"): 4,
     ("rating/compile.py", "check_step_refs_pinned"): 1,  # step id and ref string, no quote
     ("rating/compile.py", "compile_bundle"): 5,  # artifact-level (compile time), no quote
     # PL-1471 (SL-1472), each at compile time over pinned artifacts, never a quote:

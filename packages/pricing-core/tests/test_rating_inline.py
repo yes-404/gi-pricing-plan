@@ -216,7 +216,7 @@ def test_a_namespaced_name_equal_to_a_parent_name_is_refused_never_merged(parent
 
 @pytest.mark.req("FR-217")
 def test_a_fragment_that_re_produces_its_input_port_is_refused() -> None:
-    """It would overwrite the parent's value the port maps to (ruled: refused, VALIDATION_FAILED)."""
+    """It would overwrite the parent's mapped value (ruled: refused, VALIDATION_FAILED)."""
     fragment = _fragment(
         steps=[
             {"step_id": "s_clamp", "type": "expression", "label": "c",

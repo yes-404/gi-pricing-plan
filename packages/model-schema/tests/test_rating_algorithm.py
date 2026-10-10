@@ -300,6 +300,64 @@ def test_the_diff_names_a_repointed_table() -> None:
     assert str(repoint.after) == "rate_table:motor-expense@4"
 
 
+@pytest.mark.req("FR-1399")
+def test_diff_algorithms_reports_contract_and_output_deltas() -> None:
+    """DP-S3-2 (a): added, removed and changed contract fields and outputs, by name."""
+    old = RatingAlgorithm.model_validate(valid_algorithm())
+    new_data = valid_algorithm()
+    contract = [f for f in new_data["input_contract"] if f["name"] != "channel"]
+    for f in contract:
+        if f["name"] == "driver_age":
+            f["max"] = 90
+    contract.append({"name": "ncd", "type": "int", "nullable": False})
+    new_data["input_contract"] = contract
+    new_data["outputs"] = [
+        {**o, "required": False} if o["name"] == "payable_premium_minor" else o
+        for o in new_data["outputs"]
+    ]
+    new = RatingAlgorithm.model_validate(new_data)
+
+    diff = diff_algorithms(old, new)
+    assert [(d.name, d.change) for d in diff.input_contract_deltas] == [
+        ("channel", "removed"),
+        ("driver_age", "changed"),
+        ("ncd", "added"),
+    ]
+    assert [(d.name, d.change) for d in diff.output_deltas] == [
+        ("payable_premium_minor", "changed")
+    ]
+    assert diff.input_contract_changed is True
+    assert diff.outputs_changed is True
+
+
+@pytest.mark.req("FR-227")
+def test_a_stored_model_call_without_result_type_loads_as_the_legacy_default() -> None:
+    """A payload written before the field validates and keeps its legacy meaning: `None`, a GBM
+    prediction rounded at the step as before (PL-1464 item 16; the 2026-10-10 00:40:31 BST
+    ruling). It does not become `decimal`, which is the opt-in."""
+    data = valid_algorithm()
+    assert "result_type" not in data["steps"][4]
+    algorithm = RatingAlgorithm.model_validate(data)
+    assert algorithm.steps[4].result_type is None  # type: ignore[union-attr]
+
+
+@pytest.mark.req("FR-227")
+@pytest.mark.parametrize("declared", ["decimal", "money_minor"])
+def test_a_model_call_accepts_decimal_or_money_minor(declared: str) -> None:
+    data = valid_algorithm()
+    data["steps"][4] = {**data["steps"][4], "result_type": declared}
+    assert RatingAlgorithm.model_validate(data).steps[4].result_type == declared  # type: ignore[union-attr]
+
+
+@pytest.mark.req("FR-227")
+@pytest.mark.parametrize("declared", ["relativity", "float", "string"])
+def test_a_model_call_refuses_any_other_result_type(declared: str) -> None:
+    data = valid_algorithm()
+    data["steps"][4] = {**data["steps"][4], "result_type": declared}
+    with pytest.raises(ValidationError, match=r"decimal or money_minor.*FR-227"):
+        RatingAlgorithm.model_validate(data)
+
+
 # --- WK-1250 Slice 2 (SL-1340): a sub-graph mount is a node of the parent's graph ---------------
 # (RL-1309 DP-3 items 2 to 4; RL 9586 (working id) DP-S2-2: the port map, `mount_point` pattern)
 

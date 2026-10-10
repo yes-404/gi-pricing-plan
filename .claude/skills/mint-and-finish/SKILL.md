@@ -163,6 +163,8 @@ Which evidence each case needs is lead.md rule 4 (1E, E2 (a)–(d), the code-PR 
   (draft/close-sl1472-sl1477), and the maintainer's ACKs check it from then on
   (to-lead.md "2026-10-08 … The missed slice closing acts …").
 
+- **Every L1 (a') slice whose plan is still draft sets the plan's status line to active in the slice PR's FIRST commit and closes its own LG and SL at the head** (to-lead "2026-10-09 13:29:49 BST — RULINGS …" item 3).
+
 ## 6. Never
 
 - `cd`; `git stash`; checkout outside your worktree; rebase; force-push.
