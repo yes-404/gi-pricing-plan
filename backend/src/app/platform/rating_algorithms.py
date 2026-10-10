@@ -19,12 +19,14 @@ from app.db.models import ModelRow, RatingAlgorithmRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform.modelling import load_factors
+from app.platform.perils import load_structure_by_ref
 from model_schema import (
     MODEL_SPEC_ADAPTER,
     ArtifactRef,
     GraphCycleError,
     GraphUnresolvedRefError,
 )
+from model_schema.perils import PerilComponent
 from model_schema.rating import (
     AlgorithmDiff,
     RatingAlgorithm,
@@ -141,6 +143,36 @@ async def _accepted_feature_map_values(
     return accepted
 
 
+async def _accepted_by_a_component(
+    session: AsyncSession, workspace_id: UUID, ref: ArtifactRef
+) -> set[str] | None:
+    """What a `peril_structure_ref` step's `feature_map` may name: the UNION of what each
+    component model accepts (`RL-1459` DP-A3-7 (a)). One map feeds every component, and the
+    frequency GLM's offset column is not a severity input, so a value passes when at least one
+    component accepts it. `None` when the structure, or any of its components, does not exist
+    yet (R1): then no value can be judged, and compile refuses a missing pin.
+    """
+    row = await load_structure_by_ref(
+        session, workspace_id=workspace_id, slug=ref.slug, version=ref.version
+    )
+    if row is None:
+        return None
+    components: list[ArtifactRef] = []
+    for raw in row.perils:
+        peril = PerilComponent.model_validate(raw)
+        for model_ref in (peril.frequency_model, peril.severity_model, peril.burning_cost_model):
+            if model_ref is not None and model_ref not in components:
+                components.append(model_ref)
+    seen: set[str] = set()
+    accepted: set[str] = set()
+    for model_ref in components:
+        values = await _accepted_feature_map_values(session, workspace_id, model_ref, seen)
+        if values is None:
+            return None
+        accepted |= values
+    return accepted
+
+
 async def check_model_call_feature_maps(
     session: AsyncSession, workspace_id: UUID, steps: Sequence[RatingStepBase]
 ) -> None:
@@ -148,15 +180,22 @@ async def check_model_call_feature_maps(
     pinned Model's required input nor its offset column is refused with
     `MODEL_CALL_FEATURE_MAP_INVALID` (422) before anything is written.
 
+    A `peril_structure_ref` step is checked against the union of its component models
+    (`PL-1465` item 16, `RL-1459` DP-A3-7 (a)).
+
     **Membership only, not completeness**: an unmapped Factor is compile's to refuse (PL 9494).
-    A `peril_structure_ref` step is not checked (R4): it has no single Model.
     """
     for step in steps:
-        if not isinstance(step, RatingModelCallStep) or step.model_ref is None:
+        if not isinstance(step, RatingModelCallStep):
             continue
-        accepted = await _accepted_feature_map_values(
-            session, workspace_id, step.model_ref, set()
-        )
+        if step.model_ref is not None:
+            subject, whose = step.model_ref, "Factor slugs or its offset column"
+            accepted = await _accepted_feature_map_values(session, workspace_id, subject, set())
+        else:
+            assert step.peril_structure_ref is not None  # exactly one is set (FR-222)
+            subject = step.peril_structure_ref
+            whose = "component models' Factor slugs or offset columns"
+            accepted = await _accepted_by_a_component(session, workspace_id, subject)
         if accepted is None:
             continue
         for graph_name, value in step.feature_map.items():
@@ -166,7 +205,7 @@ async def check_model_call_feature_maps(
                     "A model_call feature_map names something its model does not take",
                     422,
                     f"Step {step.step_id!r} maps {graph_name!r} to {value!r}, which is not one "
-                    f"of {step.model_ref}'s Factor slugs or its offset column "
+                    f"of {subject}'s {whose} "
                     f"({sorted(accepted)}). A feature_map names the model's own vocabulary, "
                     "not a raw dataset column (FR-222).",
                 )
