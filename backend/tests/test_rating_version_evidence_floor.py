@@ -123,6 +123,41 @@ async def test_a_policy_at_the_floor_refuses_each_missing_kind(
 
 
 @pytest.mark.req("FR-364")
+async def test_the_floor_is_checked_in_floor_order_and_the_diff_blob_is_stored_first(
+    database: Database, workspace_id
+) -> None:
+    """PL-1499 §"Risks" (the loop runs floor order, `structural_diff` first): with several
+    kinds missing, the first refusal is the earliest of `structural_diff`, `regression_run`,
+    `dislocation_run`; and the structural-diff blob is stored before a later kind refuses (the
+    transaction rolls back, so only the store's own record shows it). The LG-9946 record of
+    the maintainer's 2026-10-10 21:35:23 BST ruling 3."""
+    gate = await _gate(database, workspace_id)
+    await _approved_baseline(gate, _suite(_quote()))
+    rv_id = await gate.version()
+    await gate.ensure_suite(rv_id)  # no Regression Run, no Dislocation Run: both later kinds fail
+
+    with pytest.raises(PlatformError) as refused:
+        await _submit(gate, rv_id)
+
+    _assert_incomplete(refused.value, "no Regression Run exists")
+    assert "FR-257 limb (2)" not in (refused.value.detail or ""), (
+        "regression_run precedes dislocation_run"
+    )
+    assert gate.blob_store.objects, (
+        "structural_diff ran, and stored its blob, before regression_run refused"
+    )
+
+    async with database.unit_of_work() as session:
+        row = await rating_versions_service.load_rating_version(
+            session, workspace_id=workspace_id, rating_version_id=rv_id
+        )
+        row.algorithm_ref = None
+    with pytest.raises(PlatformError) as refused:
+        await _submit(gate, rv_id)
+    _assert_incomplete(refused.value, "FR-219: a version with no saved Rating Algorithm")
+
+
+@pytest.mark.req("FR-364")
 async def test_a_stored_policy_below_the_floor_is_still_held_to_it(
     database: Database, workspace_id
 ) -> None:
