@@ -45,13 +45,19 @@ The slice's row is `#### SL-1257 — Slice 3: environment isolation (FR-430, FR-
 
 Premise i (Alembic head) re-derived at base `14fa6fb3`: one head, `b8d2f4a6c0e1` (54 revisions; the revision no `down_revision` names).
 
-- [ ] Task 0: preconditions, premises a–j at this tree
-- [ ] Task 1: spec (`07` §4.2–§4.4, §5.1, §5.2, FR-452 pointer)
-- [ ] Task 2: `model-schema` `SettingSource.ENVIRONMENT_SETTING`
-- [ ] Task 3: migration, scope, startup override check (FD-1320)
-- [ ] Task 4: Environment-setting layer, keys per Environment
-- [ ] Task 5: scoring rate limit (RL-1347 cases 1–9)
-- [ ] Task 6: gate and close
+- [x] Task 0: preconditions, premises a–j at this tree (a–i hold at `14fa6fb3`; head `b8d2f4a6c0e1`) — `cfa62a66`
+- [x] Task 1: spec (`07` §4.2–§4.4, §5.1, §5.2, FR-452 pointer) — `1586b7db`
+- [x] Task 2: `SettingSource.ENVIRONMENT_SETTING` — `c2b9dc8f`. Red: `AttributeError: type object 'SettingSource' has no attribute 'ENVIRONMENT_SETTING'` (`packages/model-schema/tests/test_settings.py`, rc 1); green rc 0; `generate-contracts.py --check` rc 0; `backend/tests/test_contracts.py` 156 passed.
+- [~] Task 3: migration `c5a91e7d3b26` (down_revision `b8d2f4a6c0e1`), `SettingScope`, `validate_setting_overrides`, lifespan hook — `87dc0fc3`. Non-DB tests red (collection `ImportError: cannot import name 'SettingScope'`), then green (7 passed). **Owed for the slot:** the three lifespan tests, migration round trip, `api_keys` unchanged.
+- [~] Task 4: key set per Environment — `7e7a2928`; Environment-setting PUT/GET, audit, trace-sampling call site — `37fd9e90`. **Owed for the slot:** everything DB-backed in `test_settings_environment.py`, `test_api_service_accounts.py` (new cases + the 3 edited rotate calls), `test_score.py` (edited multi-environment test, new parametrised sampling test), `test_environments.py` (edited rotate call).
+- [~] Task 5: `platform/rate_limit.py`, `RateLimiter`, header carrier on `PlatformError`, `gip_rate_limit_unenforced_total`, lifespan Redis client (50 ms timeouts), `rate_limit_rps` on identity and `Caller`, 429 in `/score` OpenAPI, contracts regenerated — `aafa2b36`, contracts commit after. **Owed for the slot:** `backend/tests/test_score_rate_limit.py` (cases 1–8; case 9 with `GIP_MEASURE_RATE_LIMIT=1`).
+- [ ] Task 6: gate and close.
+
+**Deviations (named, not silent).**
+1. Tasks 4 and 5: the production code for the key set, the header carrier and the limiter was written before its DB/Redis-backed test, and those tests are not yet run. The red proofs are owed in the slot: run each new test file at the parent version of the touched source file (`git show origin/main:<path>`), quote the failing assertion, restore.
+2. `scoring.default_client_rate_limit_rps` is declared in Task 3's commit, not Task 5's, so the scope assertion (exactly two workspace-or-Environment keys) is green at one commit.
+3. `ConfigInvalidError` (existing) is the startup refusal; the `_parse_env` detail no longer echoes the raw value or `str(exc)`.
+4. **STOP:** `backend/tests/test_deployment_route_types.py::test_the_route_set_is_pinned` (WK-674 S2's pin, `len(expected) == 7`) fails on the two new settings routes; the file is outside PL-1583's write set. Reported to the lead with options; untouched.
 
 ### Gate
 
