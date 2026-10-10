@@ -14,10 +14,13 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
+from test_rate_table_operations import _factor
 from test_rating_compile_bundle import FakeResolver, _version, valid_algorithm_payload
+from test_rating_compile_fr240 import _FactorsResolver
 from test_rating_runtime import _gbm_model_payload, _train_tiny_booster
 
 from model_schema import PerilStructure
+from model_schema.modelling import FactorIntent
 from model_schema.perils import LargeLossKind, LargeLossTreatment, PerilComponent, PerilMethod
 from model_schema.rating import RatingVersion
 from model_schema.refs import ArtifactRef
@@ -168,3 +171,44 @@ async def test_a_separate_model_large_loss_is_refused_at_compile() -> None:
     message = str(caught.value)
     assert STRUCTURE in message
     assert "AD" in message
+
+
+OBJECTIVE = "custom_objective:asym-loss@1"
+
+
+@pytest.mark.req("FR-88", "FR-240")
+async def test_a_control_factor_in_a_peril_component_is_refused() -> None:
+    """Item 10 (DP-A3-3 (a)): PL-1471's control-factor clause reaches a component."""
+    resolver = _resolver()
+    controlled = _factor("age_years").model_copy(update={"intent": FactorIntent.CONTROL})
+    reaching = _FactorsResolver(resolver, {AD_SEV: (controlled,)})
+    with pytest.raises(ValueError, match="CONTROL_FACTOR_IN_RATEABLE_PATH") as caught:
+        await compile_bundle(_peril_version(), reaching)
+    message = str(caught.value)
+    assert AD_SEV in message
+    assert "age_years" in message
+    assert "age_years@1" in message
+
+
+@pytest.mark.req("FR-88", "FR-240")
+async def test_a_peril_component_over_a_risk_factor_compiles() -> None:
+    """Item 10's control: the same component with a `risk` Factor compiles."""
+    resolver = _resolver()
+    risk = _factor("age_years").model_copy(update={"intent": FactorIntent.RISK})
+    await compile_bundle(_peril_version(), _FactorsResolver(resolver, {AD_SEV: (risk,)}))
+
+
+@pytest.mark.req("FR-240", "FR-20")
+async def test_an_unapproved_custom_objective_under_a_peril_component_is_refused() -> None:
+    """Item 10 (DP-A3-3 (a)): PL-1471's objective clause reaches a component."""
+    resolver = _resolver(statuses={OBJECTIVE: "review"})
+    resolver._payloads[AD_FREQ]["spec"] = {
+        "model_type": "gbm",
+        "objective": {"kind": "custom", "ref": OBJECTIVE},
+    }
+    resolver._payloads[OBJECTIVE] = {"slug": "asym-loss", "version": 1}
+    with pytest.raises(ValueError, match="PIN_NOT_APPROVED") as caught:
+        await compile_bundle(_peril_version(), resolver)
+    message = str(caught.value)
+    assert AD_FREQ in message
+    assert OBJECTIVE in message

@@ -674,17 +674,21 @@ def check_step_refs_pinned(algorithm: RatingAlgorithm, pins: Pins) -> None:
 
 
 async def _refuse_unapproved_objectives(
-    version: RatingVersion, payloads: dict[str, Any], resolver: ArtifactResolver
+    version: RatingVersion,
+    payloads: dict[str, Any],
+    resolver: ArtifactResolver,
+    component_refs: Sequence[ArtifactRef] = (),
 ) -> None:
     """FR-240's "transitively reachable": a pinned model's own custom objective (`PL-1471`).
 
     One hop: a GBM's `spec.objective` with `kind: custom` is resolved and held to the same
     floor as a direct pin, `deprecated` included (`02` OQ-609, DP-5). A payload with no
     `spec` names no objective. The objective is checked and not embedded, so `bundle_hash`
-    is unchanged (FR-239).
+    is unchanged (FR-239). A pinned Peril Structure's component models are walked as a pinned
+    model is (`component_refs`, `RL-1459` DP-A3-3 (a)); the structure itself has no `spec`.
     """
     assert version.pins is not None
-    for model_ref in version.pins.models:
+    for model_ref in (*version.pins.models, *component_refs):
         spec = payloads[str(model_ref)].get("spec")
         objective = spec.get("objective") if isinstance(spec, dict) else None
         if not isinstance(objective, dict) or objective.get("kind") != "custom":
@@ -730,24 +734,34 @@ def _refuse_control_factor_model_calls(
     Scoring applies every fitted feature's effect and `02` FR-88 lets Rating Versions use
     only `risk` factors, so a pinned model whose `feature_order` holds a `control` Factor's
     slug is refused. A payload with no `fit_result` or `feature_order` binds no factor. A
-    `peril_structure_ref` step is FD-1456's known gap (FR-240).
+    `peril_structure_ref` step is checked on each of its component models (`RL-1459`
+    DP-A3-3 (a)), which `resolved_pins` holds beside the pins once compile has resolved them.
     """
     for step in algorithm.steps:
-        if not isinstance(step, RatingModelCallStep) or step.model_ref is None:
+        if not isinstance(step, RatingModelCallStep):
             continue
-        pin = resolved_pins[str(step.model_ref)]
-        fit_result = pin.payload.get("fit_result")
-        features = fit_result.get("feature_order", ()) if isinstance(fit_result, dict) else ()
-        by_slug = {factor.slug: factor for factor in pin.factors}
-        for feature in features:
-            factor = by_slug.get(feature)
-            if factor is not None and factor.intent is FactorIntent.CONTROL:
-                _raise_named(
-                    "CONTROL_FACTOR_IN_RATEABLE_PATH",
-                    f"{step.model_ref} was fitted on feature {feature!r}, the "
-                    f"`control`-intent Factor {factor.slug}@{factor.version}, which cannot be "
-                    "rated on (FR-88, FR-240)",
-                )
+        if step.model_ref is not None:
+            models = [step.model_ref]
+        else:
+            assert step.peril_structure_ref is not None  # exactly one is set (FR-222)
+            structure = PerilStructure.model_validate(
+                resolved_pins[str(step.peril_structure_ref)].payload
+            )
+            models = _component_refs(structure)
+        for model_ref in models:
+            pin = resolved_pins[str(model_ref)]
+            fit_result = pin.payload.get("fit_result")
+            features = fit_result.get("feature_order", ()) if isinstance(fit_result, dict) else ()
+            by_slug = {factor.slug: factor for factor in pin.factors}
+            for feature in features:
+                factor = by_slug.get(feature)
+                if factor is not None and factor.intent is FactorIntent.CONTROL:
+                    _raise_named(
+                        "CONTROL_FACTOR_IN_RATEABLE_PATH",
+                        f"{model_ref} was fitted on feature {feature!r}, the "
+                        f"`control`-intent Factor {factor.slug}@{factor.version}, which "
+                        "cannot be rated on (FR-88, FR-240)",
+                    )
 
 
 def _carry_glm_inputs(payloads: dict[str, Any], resolved: ResolvedArtifact) -> None:
@@ -774,6 +788,16 @@ def _carry_glm_inputs(payloads: dict[str, Any], resolved: ResolvedArtifact) -> N
         offset = resolved.payload["spec"]["offset"]
         payloads[str(offset["offset_model_ref"])] = source.payload
         _carry_glm_inputs(payloads, source)
+
+
+def _component_refs(structure: PerilStructure) -> list[ArtifactRef]:
+    """A structure's distinct component model refs, in peril order (FR-188)."""
+    refs: list[ArtifactRef] = []
+    for peril in structure.perils:
+        for ref in (peril.frequency_model, peril.severity_model, peril.burning_cost_model):
+            if ref is not None and ref not in refs:
+                refs.append(ref)
+    return refs
 
 
 def _check_peril_model_calls(algorithm: RatingAlgorithm) -> None:
@@ -898,6 +922,7 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
         payloads[str(ref)] = resolved.payload
         _carry_glm_inputs(payloads, resolved)
         resolved_pins[str(ref)] = resolved
+    component_refs: list[ArtifactRef] = []
     for ref in version.pins.models:
         if ref.type != "peril_structure":
             continue
@@ -908,7 +933,8 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
             payloads[component_ref] = component.payload
             _carry_glm_inputs(payloads, component)
             resolved_pins.setdefault(component_ref, component)
-    await _refuse_unapproved_objectives(version, payloads, resolver)
+            component_refs.append(ArtifactRef.model_validate(component_ref))
+    await _refuse_unapproved_objectives(version, payloads, resolver, component_refs)
     await _refuse_control_factor_keys(version, payloads, resolver)
     _refuse_control_factor_model_calls(algorithm, resolved_pins)
 
