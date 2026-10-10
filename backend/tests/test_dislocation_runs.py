@@ -531,6 +531,11 @@ async def test_a_second_delivery_for_a_running_dislocation_job_does_nothing(
 # ---- Task 5: the routes --------------------------------------------------------------
 
 
+def _headers_of(user_id: UUID, workspace_id: UUID) -> dict[str, str]:
+    """`_headers` for a bare user id (a caller with no `Principal` object)."""
+    return {DEV_PRINCIPAL_HEADER: str(user_id), "Workspace-Id": str(workspace_id)}
+
+
 async def _caller_with(
     database: Database, workspace_id: UUID, permissions: list[str]
 ) -> dict[str, str]:
@@ -549,7 +554,7 @@ async def _caller_with(
             role_id=role.id, scope_type=ScopeType.WORKSPACE.value,
         ))
         session.add(WorkspaceMemberRow(user_id=caller, workspace_id=workspace_id))
-    return _headers(caller, workspace_id)
+    return _headers_of(caller, workspace_id)
 
 
 async def _dislocation_jobs(database: Database, workspace_id: UUID) -> int:
@@ -602,8 +607,8 @@ async def test_post_needs_rating_compile_and_dataset_read(
     compile_only = await _caller_with(database, world.workspace_id, ["rating:compile"])
     outcomes = {}
     for name, headers in (
-        ("actuary", _headers(actuary, world.workspace_id)),
-        ("auditor", _headers(auditor, world.workspace_id)),
+        ("actuary", _headers_of(actuary, world.workspace_id)),
+        ("auditor", _headers_of(auditor, world.workspace_id)),
         ("compile_only", compile_only),
     ):
         response = api_client.post("/api/v1/dislocation-runs", json=world.spec(), headers=headers)
