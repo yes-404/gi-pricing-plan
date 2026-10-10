@@ -1224,7 +1224,7 @@ relates: [PL-1286, PL-1371, RL-1184, RL-1263, FD-1366, SL-1369, SL-1391, SL-1367
 ```
 
 `PL-1286` S4 (`:306`), cut as a draft row for its leaf plan, PL-1558
-(`docs/plans/PL-01557-wk-675-slice-4-editor-i-grid-and-manual-edit-leaf-plan.md`). The rate
+(`docs/plans/PL-01558-wk-675-slice-4-editor-i-grid-and-manual-edit-leaf-plan.md`). The rate
 table editor's first slice. **Backend first, spec first:**
 - RL 9753 (working id, #1067)'s two reads, `GET /api/v1/rate-tables/{slug}@{version}` and
   `.../cells`, with `RateTableCell` and the cells sorted by key in one place for both
