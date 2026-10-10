@@ -45,7 +45,9 @@ from app.platform import audit, environments, rbac
 from model_schema import (
     DEFAULT_POLICY,
     VALID_APPROVAL_TRANSITIONS,
+    ApprovalDecision,
     ApprovalPolicy,
+    ApprovalRequest,
     ApprovalStatus,
     ArtifactRef,
     DecisionKind,
@@ -64,7 +66,7 @@ __all__ = [
     "require_in_review",
     "set_policy",
     "submit",
-    "to_dict",
+    "to_approval_request",
     "withdraw",
 ]
 
@@ -669,29 +671,30 @@ async def _roles_of(
     }
 
 
-def to_dict(row: ApprovalRequestRow, decisions: list[ApprovalDecisionRow]) -> dict[str, Any]:
-    """Serialise for the API."""
-    return {
-        "id": str(row.id),
-        "artifact_ref": row.artifact_ref,
-        "artifact_type": row.artifact_type,
-        "environment": row.environment,
-        "submitted_by": str(row.submitted_by),
-        "submitted_at": row.submitted_at.isoformat(),
-        "change_summary": row.change_summary,
-        "status": row.status,
-        "approvers_required": row.approvers_required,
-        "approvers_recorded": sum(
-            1 for d in decisions if d.decision == DecisionKind.APPROVE.value
-        ),
-        "decisions": [
-            {
-                "approver_id": str(d.approver_id),
-                "decision": d.decision,
-                "at": d.at.isoformat(),
-                "comment": d.comment,
-            }
+def to_approval_request(
+    row: ApprovalRequestRow, decisions: list[ApprovalDecisionRow]
+) -> ApprovalRequest:
+    """The one place an approval request becomes its published shape (FD-1416)."""
+    return ApprovalRequest(
+        id=row.id,
+        workspace_id=row.workspace_id,
+        artifact_ref=ArtifactRef.parse(row.artifact_ref),
+        artifact_type=row.artifact_type,
+        environment=row.environment,
+        submitted_by=row.submitted_by,
+        submitted_at=row.submitted_at,
+        change_summary=row.change_summary,
+        status=ApprovalStatus(row.status),
+        approvers_required=row.approvers_required,
+        approvers_recorded=sum(1 for d in decisions if d.decision == DecisionKind.APPROVE.value),
+        decisions=tuple(
+            ApprovalDecision(
+                approver_id=d.approver_id,
+                decision=DecisionKind(d.decision),
+                at=d.at,
+                comment=d.comment,
+            )
             for d in decisions
-        ],
-        "withdrawn_reason": row.withdrawn_reason,
-    }
+        ),
+        withdrawn_reason=row.withdrawn_reason,
+    )
