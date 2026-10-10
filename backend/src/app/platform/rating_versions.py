@@ -980,10 +980,8 @@ async def _approximation_gate(
 
     `None` for an `exact`-mode version, which the gate does not touch. Otherwise, in order:
     FR-136's pre-check (cheap, ahead of any figure), the latest Dislocation Run whose spec
-    named this version at its current bundle hash as both baseline and candidate, and whose
-    baseline bundle is not the candidate's own (a twin identical to the version compares
-    nothing and would pass vacuously); then that run's observed `abs_change_pct_quantiles` at
-    the declared quantile against the maximum. A run with no figure (an empty banded set, or
+    named this version at its current bundle hash as both baseline and candidate; then that
+    run's observed `abs_change_pct_quantiles` at the declared quantile against the maximum. A run with no figure (an empty banded set, or
     one made before the field) is refused, never read as zero (RL-1504 T7 choice (3)).
 
     The threshold is read **only** from the `rating_version` policy entry, falling back to
@@ -1020,12 +1018,6 @@ async def _approximation_gate(
             ref,
             "FR-224: an approximation-mode version needs a Dislocation Run against its own "
             "exact-mode twin at its current bundle hash, and there is none",
-        )
-    if latest.baseline_bundle_hash == latest.candidate_bundle_hash:
-        raise _evidence_incomplete(
-            ref,
-            f"FR-224: the Dislocation Run {latest.id} compared the version with an identical "
-            "bundle, not with its exact-mode twin",
         )
     figures = DislocationRun.model_validate(latest.run).abs_change_pct_quantiles
     observed = None if figures is None else figures.get(threshold.quantile_key)

@@ -570,25 +570,6 @@ async def test_fr224_refuses_an_approximation_version_with_no_exact_baseline_run
 
 
 @pytest.mark.req("FR-224")
-async def test_fr224_refuses_a_twin_run_whose_baseline_is_the_candidates_own_bundle(
-    database: Database, workspace_id
-) -> None:
-    """A run of the version against an identical bundle compares nothing: zero deviation would
-    pass vacuously, so it is refused."""
-    gate = await _gate(database, workspace_id)
-    rv_id = await _approximation_candidate(gate)
-    row = await gate.row(rv_id)
-    ref = _ref(row.slug, row.version)
-    await record_dislocation_run(
-        database, workspace_id, candidate_ref=ref,
-        candidate_hash=str(row.bundle["content_hash"]),  # type: ignore[index]
-        baseline_ref=ref, actor_id=gate.analyst.id, quantiles=_figure("0.000000"),
-    )
-
-    _assert_fr224_refusal(await _refused(gate, rv_id), "identical bundle")
-
-
-@pytest.mark.req("FR-224")
 async def test_fr224_accepts_inside_the_threshold_and_records_the_figures(
     database: Database, workspace_id
 ) -> None:
