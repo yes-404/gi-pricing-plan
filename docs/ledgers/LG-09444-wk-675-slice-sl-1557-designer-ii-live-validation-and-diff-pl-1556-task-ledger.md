@@ -170,6 +170,13 @@ Neither `useGraphValidation.ts` nor `GraphIssues.vue` contains any of the four t
 - **Mock line:** `RatingDesignView.test.ts` +1 (`validateRatingAlgorithm: () => Promise.resolve({ issues: [] }),`), 0 assertions changed. **No red was observed for it:** the file without the line passes 7 of 7 three times in a row here; one cold first run failed `findByLabelText` at 1017 ms, a 1 s timing limit, with and without the line. The line is precautionary, as the ruling allowed.
 - **Frontend:** the 12 tests pass singly (`useGraphValidation` 4, `DagDesignerValidation` 3, `DiffOverlay` 5). `type-check` was red with 9 `TS18048` errors (the generated `AlgorithmDiff` marks its four list fields optional); fixed with `?? []` at the nine reads in `DagDesigner.vue` and `DiffOverlay.vue`; `lint` and `type-check` clean.
 
+#### 2026-10-10 21:27 BST — FR-223 compile refusal, corrected on the lead's rulings (the entry above, bullet 1, is superseded on this point)
+
+- The `safe_error_detail(exc) or type(exc).__name__` form in the merge-turn entry lost the step id. The lead ruled (A) on the 21:3x entries of `to-lead.md`: `check_model_reference_mode` raises `ModelReferenceModeError(ValueError)` (new, `model_schema/rating.py`, exported), with today's text (the step id and the two declared modes; artifact structure, no quote input). `CodedError` could not be raised at the source: `pricing-core` depends on `model-schema`, not the reverse. `compile.py` catches that class by name and calls `_raise_named("MODEL_REFERENCE_MODE_INCONSISTENT", str(exc))`; any other `ValueError` falls through uncoded. Red-first on the small-test slot: the restored `'s_rp'` assertion and a foreign-`ValueError` sentinel test (`test_a_foreign_value_error_is_not_given_the_mode_code`) both failed, a class-text test in `test_rating_version.py` failed at collection; all green after.
+- `backend/tests/test_error_sinks.py` gains one `_SINKS` row for the new `str(exc)` in `compile_bundle` (the census test failed without it: a sink added). One row, no other change.
+- **For the merge turn:** if SL-1600 (`InputFreeError`) has merged by then, `ModelReferenceModeError` subclasses `InputFreeError` (`to-lead.md` "2026-10-10 21:05:35 BST" item 2): its text is authored and input-free.
+- The `?? []` fixes (nine reads in `DagDesigner.vue` and `DiffOverlay.vue`) are the slice's own code, inside the write set. The mock line is precautionary under "2026-10-10 00:21:33 BST" (1), not a red-first.
+
 ## PRs
 
 None yet.

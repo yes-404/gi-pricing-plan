@@ -11,6 +11,7 @@ from uuid import uuid4
 import pytest
 
 from model_schema.rating import (
+    ModelReferenceModeError,
     RatingAlgorithm,
     RatingVersion,
     RatingVersionStatus,
@@ -122,8 +123,14 @@ def test_a_model_reference_mode_mismatch_is_refused() -> None:
     version = RatingVersion.model_validate(_base())
     assert version.model_reference_mode == "exact"
     algorithm = _algorithm_with_mode("approximation")
-    with pytest.raises(ValueError, match="FR-223"):
+    with pytest.raises(ModelReferenceModeError) as caught:
         check_model_reference_mode(version, algorithm)
+    # Authored, input-free text: the step id and the two declared modes (NFR-499).
+    text = str(caught.value)
+    assert "FR-223" in text
+    assert "'approximation'" in text
+    assert "'exact'" in text
+    assert "s_rp" in text
 
 
 @pytest.mark.req("FR-223")

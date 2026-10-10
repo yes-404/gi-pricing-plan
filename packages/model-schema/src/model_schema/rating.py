@@ -243,15 +243,21 @@ class RatingVersionCreate(BaseModel):
         return pins
 
 
+class ModelReferenceModeError(ValueError):
+    """FR-223's refusal. Its text is authored here from the step id and the two declared modes
+    (the algorithm's own structure, no quote input), so a caller may keep it: the class is the
+    allow-list's marker, as `CodedError` is one layer up."""
+
+
 def check_model_reference_mode(version: RatingVersion, algorithm: RatingAlgorithm) -> None:
     """FR-223: every `model_call` step's `mode` equals the version's declared mode.
 
-    Raises `ValueError` on the first mismatch, so a version whose steps disagree with its
-    `model_reference_mode` is refused before it can compile.
+    Raises `ModelReferenceModeError` (a `ValueError`) on the first mismatch, so a version whose
+    steps disagree with its `model_reference_mode` is refused before it can compile.
     """
     for step in algorithm.steps:
         if isinstance(step, RatingModelCallStep) and step.mode != version.model_reference_mode:
-            raise ValueError(
+            raise ModelReferenceModeError(
                 f"model_call step {step.step_id!r} declares mode {step.mode!r}, but the "
                 f"version declares {version.model_reference_mode!r} (FR-223)"
             )

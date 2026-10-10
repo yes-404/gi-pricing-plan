@@ -29,6 +29,7 @@ from model_schema.modelling import Banding, Factor, FactorIntent, Grouping
 from model_schema.perils import LargeLossKind, PerilStructure
 from model_schema.rating import (
     AlgorithmOutput,
+    ModelReferenceModeError,
     Pins,
     RatingAlgorithm,
     RatingConstraintStep,
@@ -989,11 +990,9 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
         _raise_named(issues[0].code, issues[0].message)
     try:
         check_model_reference_mode(version, inlined)
-    except ValueError as exc:
-        # NFR-499: the code and the exception's input-free text, never the raw message.
-        _raise_named(
-            "MODEL_REFERENCE_MODE_INCONSISTENT", safe_error_detail(exc) or type(exc).__name__
-        )
+    except ModelReferenceModeError as exc:
+        # NFR-499: kept by class, not by shape; its text is the step id and the two modes.
+        _raise_named("MODEL_REFERENCE_MODE_INCONSISTENT", str(exc))
     check_step_refs_pinned(inlined, pins)
     _refuse_peril_model_calls(inlined)
 
