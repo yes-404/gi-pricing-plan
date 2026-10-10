@@ -260,7 +260,7 @@ def _handlers() -> None:
     register_dislocation_handlers()
 
 
-def _algorithm(a: str, b: str, c: str) -> dict[str, Any]:
+def _algorithm(a: str, b: str, c: str, version: int = 1) -> dict[str, Any]:
     """Three independent expression branches summed: editing a branch is one derived change."""
     def branch(step_id: str, expr: str, produces: str) -> dict[str, Any]:
         return {"step_id": step_id, "type": "expression", "label": step_id, "expr": expr,
@@ -268,7 +268,7 @@ def _algorithm(a: str, b: str, c: str) -> dict[str, Any]:
 
     return {
         "slug": "dislocation-fixture",
-        "version": 1,
+        "version": version,
         "input_contract": [{"name": "premium_in", "type": "int", "nullable": False}],
         "outputs": [{"name": "payable_premium_minor", "type": "money_minor", "required": True}],
         "steps": [
@@ -341,7 +341,8 @@ async def world(
     refs = []
     for branches in (_BASE_BRANCHES, _CAND_BRANCHES):
         created = api_client.post(
-            "/api/v1/rating-algorithms", json=_algorithm(*branches), headers=headers
+            "/api/v1/rating-algorithms",
+            json=_algorithm(*branches, version=len(refs) + 1), headers=headers,
         )
         assert created.status_code in (200, 201), created.text
         row = await _insert_version(
@@ -358,7 +359,8 @@ async def world(
         blob = await blob_store.put(session, buffer.getvalue(), "application/vnd.apache.parquet")
         version = DatasetVersionRow(
             slug="dislocation-portfolio", workspace_id=workspace_id, dataset_id=uuid4(),
-            version=1, status="validated", created_by=principal.id, currency="GBP",
+            version=1, status="validated", validation_report_id=new_uuid7(),
+            created_by=principal.id, currency="GBP",
             tables=[{"name": "portfolio", "row_count": frame.height,
                      "blob": {"sha256": blob.sha256}}],
         )
@@ -459,18 +461,28 @@ async def test_dislocation_subset_bundles_never_become_rating_versions(
 
 @pytest.mark.req("FR-1397")
 async def test_a_run_that_does_not_reconcile_fails_with_attribution_reconciliation_failed(
-    database: Database, blob_store: BlobStore, world: _World, monkeypatch: pytest.MonkeyPatch
+    api_client: TestClient, database: Database, blob_store: BlobStore, world: _World,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     async def refuse(*_: Any, **__: Any) -> Any:
+        # the text `attribute` raises when a compared policy has no premium under a subset
+        # bundle (`pricing_core.rating.analysis`): it names the policy's quote id
         raise AttributionError(
-            "ATTRIBUTION_RECONCILIATION_FAILED", "policy Q000 does not reconcile"
+            "ATTRIBUTION_RECONCILIATION_FAILED",
+            "policy Q000 is quoted in the baseline and the candidate but has no premium "
+            "under the subset bundle for changes [c1]",
         )
 
     monkeypatch.setattr(dislocation_handlers, "attribute", refuse)
-    _, job = await _run_job(database, blob_store, world, world.spec())
+    job_id, job = await _run_job(database, blob_store, world, world.spec())
     assert job.status is JobStatus.FAILED
     assert job.error is not None
     assert job.error["code"] == "ATTRIBUTION_RECONCILIATION_FAILED"
+    # NFR-499 (02:47:13): the stored error and the API body carry no quote id
+    assert "Q000" not in str(job.error)
+    served = api_client.get(f"/api/v1/jobs/{job_id}", headers=world.headers)
+    assert served.status_code == 200, served.text
+    assert "Q000" not in served.text
     assert await _runs(database, world.workspace_id) == []
 
 
@@ -528,6 +540,11 @@ async def test_a_second_delivery_for_a_running_dislocation_job_does_nothing(
 # ---- Task 5: the routes --------------------------------------------------------------
 
 
+def _headers_of(user_id: UUID, workspace_id: UUID) -> dict[str, str]:
+    """`_headers` for a bare user id (a caller with no `Principal` object)."""
+    return {DEV_PRINCIPAL_HEADER: str(user_id), "Workspace-Id": str(workspace_id)}
+
+
 async def _caller_with(
     database: Database, workspace_id: UUID, permissions: list[str]
 ) -> dict[str, str]:
@@ -546,7 +563,7 @@ async def _caller_with(
             role_id=role.id, scope_type=ScopeType.WORKSPACE.value,
         ))
         session.add(WorkspaceMemberRow(user_id=caller, workspace_id=workspace_id))
-    return _headers(caller, workspace_id)
+    return _headers_of(caller, workspace_id)
 
 
 async def _dislocation_jobs(database: Database, workspace_id: UUID) -> int:
@@ -599,8 +616,8 @@ async def test_post_needs_rating_compile_and_dataset_read(
     compile_only = await _caller_with(database, world.workspace_id, ["rating:compile"])
     outcomes = {}
     for name, headers in (
-        ("actuary", _headers(actuary, world.workspace_id)),
-        ("auditor", _headers(auditor, world.workspace_id)),
+        ("actuary", _headers_of(actuary, world.workspace_id)),
+        ("auditor", _headers_of(auditor, world.workspace_id)),
         ("compile_only", compile_only),
     ):
         response = api_client.post("/api/v1/dislocation-runs", json=world.spec(), headers=headers)
