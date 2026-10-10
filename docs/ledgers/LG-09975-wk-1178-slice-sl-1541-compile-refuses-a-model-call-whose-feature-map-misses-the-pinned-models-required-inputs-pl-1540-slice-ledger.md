@@ -67,7 +67,15 @@ Each: `flock -w 300 /tmp/slots/small-test -c "timeout 150 nice -n 19 uv run --di
 
 Acceptance 11 at `54b79c67`+: `test_rating_compile_bundle` 30 passed; `_runtime` 14; `_score` 46; `_glm_model_call` 22; `_pin_membership` 26; `_inline` 24; `_declared_reads` 12; `_attribution` 28; `_dislocation` 40; `_ladder_exact` 26; `_lookup_as_at` 19; `_number` 14; `_score_batch` 11; `_shadowed_inputs` 12; `_wire_order` 14; `_committed_strings` 6; `test_fremtpl2_rate_fixture` 2; `test_testing` 35 (all passed).
 
-Fixture edits (completed, never the check weakened): `test_rating_compile_fr240.py::test_a_model_call_over_risk_factors_compiles` now maps `year_of_account` (the model was fitted on it). OPEN: `test_rating_peril_scoring.py::test_a_peril_model_call_inside_a_mounted_sub_graph_is_checked_at_compile` is red at `54b79c67`: `inline.py` renames feature_map VALUES (model features) as graph names, so the inlined map is `m_peril__age_years`; escalated to the lead, standing by.
+Fixture edits (completed, never the check weakened): `test_rating_compile_fr240.py::test_a_model_call_over_risk_factors_compiles` now maps `year_of_account` (the model was fitted on it). `test_rating_peril_scoring.py::test_a_peril_model_call_inside_a_mounted_sub_graph_is_checked_at_compile` was red at `54b79c67` (see the inliner fix below).
+
+#### The inliner fix (write set + `inline.py`, `test_rating_inline.py`, `test_rating_mounted_model_call.py`)
+
+Authority: `to-lead.md` "2026-10-10 23:46:57 BST — RULING (mispricing): the inliner renames feature_map KEYS, never values — option (A), fixed INSIDE SL-1541; 03 :943 corrected by dated line; an FD at D10; the exposure query owed before SL-1541's ACK" (cited here because `RL-1571` is frozen). Found by the new check run over the inlined algorithm: `inline.py` `_inline_one` collected and renamed `feature_map` VALUES as graph names.
+
+Red at base (`bca00b9b` merge head, tests only, single files): `test_rating_inline.py` `1 failed` x2 — `assert {'ncd_raw': 'm_ncd__f'} == {'m_ncd__ncd_raw': 'f'}` and `assert {'ncd_years': 'm_ncd__ncd_raw'} == {'years_clean': 'ncd_raw'}` (the value-not-renamed test); `test_rating_mounted_model_call.py` `3 failed`, each `CodedError: RATING_STEP_UNDECLARED_READ: step 'm_call__s_risk' reads ['power'] without declaring them in consumes (FR-246)` (the unrenamed internal key; the cause is the same inversion). Green after: `3 passed`, `25 passed`, and `test_rating_peril_scoring` 25 passed, `test_rating_compile_bundle` 31, `test_rating_runtime` 14. 03 inlining paragraph (row :943) carries the dated, struck correction in the same commit; commit `29b460f9`.
+
+Exposure query (item 4): owed before the ACK; recorded below when run.
 
 ## PRs
 
