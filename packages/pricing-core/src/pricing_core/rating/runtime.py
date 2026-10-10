@@ -47,9 +47,20 @@ import polars as pl
 import zen
 
 from model_schema.graph_errors import GraphCycleError
-from model_schema.modelling import GbmFitResult
+from model_schema.modelling import (
+    FIT_RESULT_ADAPTER,
+    MODEL_SPEC_ADAPTER,
+    Banding,
+    Factor,
+    GbmFitResult,
+    GlmFitResult,
+    GlmSpec,
+    Grouping,
+)
 from model_schema.rating import RatingAlgorithm, RatingModelCallStep
+from pricing_core.modelling.errors import ModellingError
 from pricing_core.modelling.gbm import load_gbm_booster, predict_gbm
+from pricing_core.modelling.predict import PredictionError, linear_predictor, predict_glm
 from pricing_core.rating.compile import Bundle, JdmGraph, check_step_refs_pinned
 from pricing_core.safe_error import CodedError
 
@@ -556,7 +567,10 @@ def to_wire(graph: JdmGraph, payloads: Mapping[str, Any] | None = None) -> dict[
 
 
 def _model_call_handler(
-    algorithm: RatingAlgorithm, payloads: Mapping[str, Any], boosters: Mapping[str, object]
+    algorithm: RatingAlgorithm,
+    payloads: Mapping[str, Any],
+    boosters: Mapping[str, object],
+    scorers: Mapping[str, _GlmScorer] | None = None,
 ) -> Callable[[Any], dict[str, Any]]:
     """Build the `customHandler` `load_bundle` wires into the `ZenEngine` it constructs.
 
@@ -564,12 +578,21 @@ def _model_call_handler(
     algorithm and the resolved payloads already inside the `Bundle` — no I/O, no resolver.
     RL-874: a GBM pin scores through the pre-loaded `boosters[ref]` object, never through
     raw bytes, so N quotes against one `CompiledBundle` deserialise the booster once, not N
-    times. Money-minor rounding here is a documented, provisional convention (`round()` to
-    the nearest whole unit, on the assumption the pinned model was itself fitted to predict
-    on the money-minor scale already) — Task 1.4's FR-250 golden test is where the
-    actual monetary contract for a `model_call` output gets fixed; flagged in the PR
-    description rather than asserted here as settled.
+    times. A GLM pin scores through `scorers[ref]`, rebuilt once from the Factors, Bandings and
+    Groupings the Bundle carries beside the Model (FD-1458; FR-222, FR-239, NFR-491), and
+    `predict_glm` per quote.
+
+    **Rounding is the step's `result_type`'s to decide (the maintainer's (by delegation) entry
+    headed "2026-10-10 00:40:31 BST — RULING: A-2 item 15. NEITHER (i) nor (ii)…").** A GBM
+    step without `result_type` keeps the legacy `round(prediction)`, so a bundle compiled
+    before the field hashes and prices as it always did (FR-239). A step that writes
+    `result_type` (`decimal` or `money_minor`) carries the unrounded value to FR-244's
+    boundary, where an `output` step rounds it once (FR-226). One rule for every
+    `model_call` (the maintainer's (by delegation) entry "2026-10-10 00:44:31 BST"): a GLM
+    step is compiled with an explicit `result_type`, so its unrounded behaviour is in its
+    bytes and hash; a GLM step without one rounds like any other.
     """
+    glm_scorers = scorers if scorers is not None else _load_glm_scorers(algorithm, payloads)
     steps_by_id = {
         step.step_id: step
         for step in algorithm.steps
@@ -622,18 +645,27 @@ def _model_call_handler(
             prediction = float(
                 predict_gbm(gbm_result, booster, frame, factors=(), nthread=1)[0]
             )
-            value: int = round(prediction)
+            value: float = (
+                round(prediction) if step.result_type is None else prediction
+            )
+        elif model_type == "glm":
+            try:
+                glm_prediction = glm_scorers[ref_str].predict(feature_row)
+            except (ModellingError, PredictionError) as exc:
+                # The code only: a `PredictionError`'s own text can carry a quote's value (an unseen
+                # factor level, `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`), and a coded error keeps its text
+                # as it stands (NFR-499, RL-917), so the model's text is never passed on.
+                return _model_call_failure(
+                    step,
+                    f"{exc.code}: {ref_str} could not be scored for this quote (FR-255)",
+                    context,
+                )
+            value = round(glm_prediction) if step.result_type is None else glm_prediction
         else:
             return _model_call_failure(
                 step,
-                f"model_call step {step.step_id!r} pins a {model_type!r} model. "
-                "Bundle.resolved_payloads carries the Model's own dump but not the "
-                "Factor/Banding/Grouping objects predict_glm requires (ModelSpecCommon."
-                "factors is bare UUIDs — resolve_factors builds zero design columns from "
-                "an empty sequence, so every non-intercept coefficient's term goes "
-                "unresolved). Scoring a GBM works because predict_gbm has a documented "
-                "fallback for factors=() that reads each feature off the frame directly; "
-                "predict_glm has no such fallback.",
+                f"model_call step {step.step_id!r} pins a {model_type!r} model, which no "
+                "scorer is written for (FR-222).",
                 context,
             )
 
@@ -643,6 +675,110 @@ def _model_call_handler(
         return {"output": {**context, **{str(name): value for name in _as_list(step.produces)}}}
 
     return handler
+
+
+@dataclass(frozen=True)
+class _GlmScorer:
+    """One pinned GLM, rebuilt once from the Bundle (FD-1458; NFR-491: no I/O at score).
+
+    `columns` renames what `feature_map` names — a Factor slug (DP-2 (b)) or the offset
+    column — to the frame column `predict_glm` reads (the Factor's `source_columns`).
+    """
+
+    fit: GlmFitResult
+    spec: GlmSpec
+    factors: tuple[Factor, ...]
+    bandings: Mapping[Any, Banding]
+    groupings: Mapping[Any, Grouping]
+    columns: Mapping[str, str]
+    offset_source: _GlmScorer | None
+
+    def linear_predictor(self, frame: pl.DataFrame) -> Any:
+        return linear_predictor(
+            self.fit, frame, self.factors, self.spec, bandings=self.bandings,
+            groupings=self.groupings,
+        )
+
+    def predict(self, feature_row: Mapping[str, Any]) -> float:
+        frame = pl.DataFrame([{self.columns.get(k, k): v for k, v in feature_row.items()}])
+        model_offset = (
+            self.offset_source.linear_predictor(frame) if self.offset_source else None
+        )
+        return float(
+            predict_glm(
+                self.fit, frame, self.factors, self.spec, model_offset=model_offset,
+                bandings=self.bandings, groupings=self.groupings,
+            )[0]
+        )
+
+
+def _carried(payloads: Mapping[str, Any], kind: str, model: type[Any]) -> dict[Any, Any]:
+    """Every `<kind>:…` payload the Bundle carries, validated as its `model-schema` class."""
+    prefix = f"{kind}:"
+    return {
+        item.id: item
+        for key, raw in payloads.items()
+        if key.startswith(prefix)
+        for item in (model.model_validate(raw),)
+    }
+
+
+def _glm_scorer(ref: str, payloads: Mapping[str, Any]) -> _GlmScorer:
+    payload = payloads[ref]
+    fit = FIT_RESULT_ADAPTER.validate_python(payload["fit_result"])
+    spec = MODEL_SPEC_ADAPTER.validate_python(payload["spec"])
+    if not isinstance(fit, GlmFitResult) or not isinstance(spec, GlmSpec):
+        raise ValueError(f"{ref} is not a GLM with a GLM spec (FR-193)")
+    carried = _carried(payloads, "factor", Factor)
+    bandings = _carried(payloads, "banding", Banding)
+    groupings = _carried(payloads, "grouping", Grouping)
+    missing = [str(i) for i in spec.factors if i not in carried]
+    if missing:
+        raise ValueError(
+            f"RATING_VERSION_UNPINNED: the bundle carries {ref} but not its Factor(s) "
+            f"{missing} — a malformed Bundle (FR-239, NFR-491)"
+        )
+    factors = tuple(carried[i] for i in spec.factors)
+    for factor in factors:
+        if factor.banding_id is not None and factor.banding_id not in bandings:
+            raise ValueError(
+                f"RATING_VERSION_UNPINNED: {ref}'s Factor {factor.slug!r} pins a Banding the "
+                "bundle does not carry (FR-239)"
+            )
+        if factor.grouping_id is not None and factor.grouping_id not in groupings:
+            raise ValueError(
+                f"RATING_VERSION_UNPINNED: {ref}'s Factor {factor.slug!r} pins a Grouping the "
+                "bundle does not carry (FR-239)"
+            )
+    source: _GlmScorer | None = None
+    if spec.offset.kind == "model":
+        offset_ref = str(spec.offset.offset_model_ref)
+        if offset_ref not in payloads:
+            raise ValueError(
+                f"RATING_VERSION_UNPINNED: {ref}'s offset model {offset_ref} is not in the "
+                "bundle (FR-116, FR-239)"
+            )
+        source = _glm_scorer(offset_ref, payloads)
+    columns = {f.slug: f.source_columns[0] for f in factors if len(f.source_columns) == 1}
+    if source is not None:
+        columns = {**source.columns, **columns}
+    return _GlmScorer(fit, spec, factors, bandings, groupings, columns, source)
+
+
+def _load_glm_scorers(
+    algorithm: RatingAlgorithm, payloads: Mapping[str, Any]
+) -> dict[str, _GlmScorer]:
+    """Rebuild every pinned GLM once per loaded bundle (the `_load_boosters` of the GLM arm)."""
+    scorers: dict[str, _GlmScorer] = {}
+    for step in algorithm.steps:
+        if not isinstance(step, RatingModelCallStep) or step.model_ref is None:
+            continue
+        ref = str(step.model_ref)
+        if ref in scorers or ref not in payloads:
+            continue
+        if (payloads[ref].get("fit_result") or {}).get("model_type") == "glm":
+            scorers[ref] = _glm_scorer(ref, payloads)
+    return scorers
 
 
 def _load_boosters(

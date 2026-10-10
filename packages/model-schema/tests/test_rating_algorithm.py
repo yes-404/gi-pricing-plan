@@ -328,3 +328,31 @@ def test_diff_algorithms_reports_contract_and_output_deltas() -> None:
     ]
     assert diff.input_contract_changed is True
     assert diff.outputs_changed is True
+
+
+@pytest.mark.req("FR-227")
+def test_a_stored_model_call_without_result_type_loads_as_the_legacy_default() -> None:
+    """A payload written before the field validates and keeps its legacy meaning: `None`, a GBM
+    prediction rounded at the step as before (PL-1464 item 16; the 2026-10-10 00:40:31 BST
+    ruling). It does not become `decimal`, which is the opt-in."""
+    data = valid_algorithm()
+    assert "result_type" not in data["steps"][4]
+    algorithm = RatingAlgorithm.model_validate(data)
+    assert algorithm.steps[4].result_type is None  # type: ignore[union-attr]
+
+
+@pytest.mark.req("FR-227")
+@pytest.mark.parametrize("declared", ["decimal", "money_minor"])
+def test_a_model_call_accepts_decimal_or_money_minor(declared: str) -> None:
+    data = valid_algorithm()
+    data["steps"][4] = {**data["steps"][4], "result_type": declared}
+    assert RatingAlgorithm.model_validate(data).steps[4].result_type == declared  # type: ignore[union-attr]
+
+
+@pytest.mark.req("FR-227")
+@pytest.mark.parametrize("declared", ["relativity", "float", "string"])
+def test_a_model_call_refuses_any_other_result_type(declared: str) -> None:
+    data = valid_algorithm()
+    data["steps"][4] = {**data["steps"][4], "result_type": declared}
+    with pytest.raises(ValidationError, match=r"decimal or money_minor.*FR-227"):
+        RatingAlgorithm.model_validate(data)

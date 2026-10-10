@@ -19,6 +19,7 @@ from uuid import uuid4
 import pytest
 import xgboost as xgb
 from pydantic import BaseModel
+from test_rating_glm_model_call import age_glm
 
 from model_schema.rating import RatingVersion
 from model_schema.refs import ArtifactRef
@@ -69,16 +70,12 @@ def _gbm_model_payload(booster_bytes: bytes, *, model_type: str = "xgboost") -> 
     }
 
 
+_GLM = age_glm()
+
+
 def _glm_model_payload() -> dict[str, Any]:
-    """A GLM `model:...` payload — enough to reach the dispatch, not enough (deliberately;
-    see `runtime.py`'s `_raise_model_call_failed`) to be scored."""
-    return {
-        "model_family_slug": "motor-freq-glm",
-        "version": 1,
-        "status": "approved",
-        "fit_result": {"model_type": "glm", "converged": True, "iterations": 5, "fit_seconds": 0.01,
-                       "coefficients": []},
-    }
+    """A real fitted GLM's `Model` dump (FD-1458): scoreable from the Bundle alone."""
+    return _GLM.model_payload()
 
 
 def _rate_table_payload() -> dict[str, Any]:
@@ -177,6 +174,8 @@ class _FakeResolver:
             if with_constraint
             else _algorithm_payload(model_ref=model_ref)
         )
+        if glm:  # a GLM step is compiled with an explicit result_type (2026-10-10 00:44:31)
+            next(s for s in algo["steps"] if s["type"] == "model_call")["result_type"] = "decimal"
         self._payloads: dict[str, dict[str, Any]] = {
             "rating_algorithm:motor-runtime-test@1": algo,
             "rate_table:motor-expense@1": _rate_table_payload(),
@@ -185,6 +184,11 @@ class _FakeResolver:
         }
 
     async def resolve(self, ref: ArtifactRef) -> ResolvedArtifact:
+        if str(ref) == "model:motor-freq-glm@1":
+            return ResolvedArtifact(
+                status="approved", payload=self._payloads[str(ref)],
+                factors=_GLM.factors, bandings=_GLM.bandings, groupings=_GLM.groupings,
+            )
         return ResolvedArtifact(status="approved", payload=self._payloads[str(ref)])
 
 
@@ -373,21 +377,13 @@ def test_to_wire_refuses_a_clamp_constraint_with_nothing_to_clamp() -> None:
         to_wire(graph, {"rate_table:motor-expense@1": _rate_table_payload()})
 
 
-@pytest.mark.req("FR-243")
-async def test_a_glm_model_call_is_refused_with_a_named_code() -> None:
-    """`predict_glm` needs real Factor objects the Bundle does not carry (see
-    `runtime.py`'s `_model_call_failure` docstring) — refused loudly, not silently
-    mis-scored.
+@pytest.mark.req("FR-222")
+async def test_a_glm_model_call_scores() -> None:
+    """FD-1458: a real GLM, with the Factors and Banding the Bundle carries, scores.
 
-    **Behaviour corrected by WK-671 Task 1.4.** Task 1.3 verified that a `customHandler`'s
-    raised exception is swallowed by the `zen` binding (the finding `_model_call_failure`'s
-    docstring records) and had this handler raise anyway, matching-but-losing that
-    exception. Task 1.4 replaced the raise with a sentinel in the handler's own returned
-    `output` (`MODEL_CALL_ERROR_KEY`) specifically so this information survives the engine
-    boundary — so `async_evaluate()` no longer raises for this case at all; the failure
-    surfaces as data in the normal `result`, which `score_one` (`pricing_core.rating.score`)
-    reads and turns into a `MODEL_CALL_FAILED` refusal. This test asserts the new contract:
-    no exception from the engine, and the sentinel's message intact.
+    Was `test_a_glm_model_call_is_refused_with_a_named_code`, which pinned the old GLM
+    refusal. The handler now returns the model's value and no
+    `MODEL_CALL_ERROR_KEY`, through the engine and called directly.
     """
     resolver = _FakeResolver(glm=True)
     bundle = await compile_bundle(_version(glm=True), resolver)
@@ -396,8 +392,8 @@ async def test_a_glm_model_call_is_refused_with_a_named_code() -> None:
     from pricing_core.rating.runtime import MODEL_CALL_ERROR_KEY
 
     out = await compiled.decision.async_evaluate({"driver_age": 34, "channel": "direct"})
-    assert MODEL_CALL_ERROR_KEY in out["result"], "a GLM model_call failure must not vanish"
-    assert "MODEL_CALL_FAILED" in out["result"][MODEL_CALL_ERROR_KEY]
+    assert MODEL_CALL_ERROR_KEY not in out["result"]
+    assert "risk_premium_minor" in out["result"]
 
     from pricing_core.rating.runtime import _model_call_handler
 
@@ -405,7 +401,10 @@ async def test_a_glm_model_call_is_refused_with_a_named_code() -> None:
     fake_request = SimpleNamespace(node={"id": "s_risk"}, input={"driver_age": 34, "$nodes": {}})
 
     direct = handler(fake_request)
-    assert "MODEL_CALL_FAILED" in direct["output"][MODEL_CALL_ERROR_KEY]
+    assert MODEL_CALL_ERROR_KEY not in direct["output"]
+    assert direct["output"]["risk_premium_minor"] == pytest.approx(
+        _GLM.predict(driver_age=34.0), rel=1e-12
+    )
 
 
 @pytest.mark.req("FR-243")

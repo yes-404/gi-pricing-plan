@@ -1933,7 +1933,7 @@ FD-1456's fix (HIGH, a G2 blocker before the P2 exit demo, by the maintainer's e
 id: SL-1463
 family: slice
 title: WK-1178 fix slice — Option A A-2, FD-1458, a GLM scores through model_call
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-05
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 137bc817ef1fb40ea57e9053e0ad40b73bdff3a8
@@ -1944,6 +1944,10 @@ relates: [RL-1263, PL-1371, CR-1212]
 ```
 
 FD-1458's fix (HIGH, a G2 blocker before the P2 exit demo, the same entry, item 2). `03` FR-222's `exact` mode and `02` FR-193 say any persisted Model scores, but `_model_call_handler` refuses a GLM (`runtime.py:568-579`) because the Bundle does not carry the Factor, Banding and Grouping versions `predict_glm` needs. Compile carries them into `Bundle.resolved_payloads` (DP-1), and the runtime rebuilds them and calls `predict_glm` on the quote's row, with the offset the spec declares (DP-3). A golden test holds the `model_call` value equal to `predict_glm` on the same row. The two tests that pin the refusal (`test_rating_runtime.py:377`, `test_rating_score.py:429`) are flipped deliberately, on the maintainer's approval, and FR-255's `MODEL_CALL_FAILED` keeps a test through another real failure. NFR-489's p99 is measured for a GLM `model_call`. Open for the decision-maker: how the GLM's inputs travel in the Bundle (DP-1), what `feature_map` names for a GLM (DP-2), a model-offset GLM (DP-3), and the provisional money rounding of a `model_call` output (DP-4). Leaf plan PL-1464 (`draft`, its own PR). **Activation needs:** FD-1458 minted at HIGH; PL-1471's slice merged (its `ResolvedArtifact.factors` and `model`-branch Factors are reused); A-1 (SL-1462) merged, as the maintainer orders the chain; DP-1 to DP-4 ruled; the lead's go in an activation PR. *(Filed 2026-10-05 under working ids 9598 (this row) and 9597 (the plan), reserved by the lead; minted 2026-10-06 as SL-1463 and PL-1464.)* *(Dated note, 2026-10-05, pre-mint: DP-1 (a), DP-2 (b) and DP-3 (a) ruled at 17:03:45 BST; DP-4 ruled at 17:02:50 and corrected to option (B) at 17:12:40 BST: a `model_call`'s value is always an exact Decimal, `RatingModelCallStep` gains a type-only `result_type` (`decimal` by default), and only the `output` step rounds. The slice now carries that `model-schema` field and the regenerated contracts. DP-5 (ii) is ruled (a) at 17:14:54 BST: the backend algorithm save refuses a non-Factor `feature_map` with a new `03` code.)*
+
+(Activated 2026-10-10 as WK-1178 Option A, A-2, on the dispatch GO "2026-10-10 08:06:08 BST — DISPATCH GO: A-2 (PL-1464 / SL-1463 @98bdb7c1) …" with its conditions 1–5; `PL-1464` set `active` in the slice branch's activation commit.)
+
+(Closed 2026-10-10 as a Slice, closing acts in the slice PR's last commit, on the lead's merge; ledger LG-1587, minted 2026-10-10 from working id 9449 in the SL-1463 merge-turn commit.)
 
 #### SL-1466 — WK-1178 slice — Option A, A-3: Peril Structure scoring
 

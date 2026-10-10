@@ -372,6 +372,24 @@ class RatingModelCallStep(RatingStepBase):
     peril_structure_ref: ArtifactRef | None = None
     mode: Literal["exact", "approximation"]
     feature_map: dict[str, str] = Field(default_factory=dict)
+    #: `None` (the default) is the LEGACY behaviour: a GBM prediction is rounded to a whole
+    #: unit at the step, as before the field existed, so every stored algorithm hashes and
+    #: prices exactly as it did (FR-239; the maintainer's (by delegation) entry headed
+    #: "2026-10-10 00:40:31 BST — RULING: A-2 item 15. NEITHER (i) nor (ii)…"). Written
+    #: explicitly (`decimal` or `money_minor`) it opts in: the value is carried unrounded to
+    #: FR-244's boundary and an `output` step rounds it once (FR-226); the field is then also
+    #: the type FR-227's checks read. `to_jdm` omits it when `None`, so it enters the bundle
+    #: hash only when written.
+    result_type: str | None = None
+
+    @field_validator("result_type")
+    @classmethod
+    def _decimal_or_money_minor(cls, value: str | None) -> str | None:
+        if value is not None and value not in ("decimal", "money_minor"):
+            raise ValueError(
+                f"a model_call's result_type is decimal or money_minor, not {value!r} (FR-227)"
+            )
+        return value
 
     @model_validator(mode="after")
     def _exactly_one_ref(self) -> RatingModelCallStep:

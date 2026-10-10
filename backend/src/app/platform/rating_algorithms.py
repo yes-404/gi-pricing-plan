@@ -7,17 +7,32 @@ in `pricing_core.rating.compile.validate_algorithm` (FR-216/227/273/274/275/276)
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
 from pydantic import ValidationError
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import RatingAlgorithmRow
+from app.db.models import ModelRow, RatingAlgorithmRow
 from app.db.session import Database
 from app.errors import PlatformError
-from model_schema import GraphCycleError, GraphUnresolvedRefError
-from model_schema.rating import AlgorithmDiff, RatingAlgorithm, diff_algorithms
+from app.platform.modelling import load_factors
+from model_schema import (
+    MODEL_SPEC_ADAPTER,
+    ArtifactRef,
+    GraphCycleError,
+    GraphUnresolvedRefError,
+)
+from model_schema.rating import (
+    AlgorithmDiff,
+    RatingAlgorithm,
+    RatingModelCallStep,
+    RatingStepBase,
+    diff_algorithms,
+)
+from pricing_core.modelling.factors import required_model_inputs
 from pricing_core.rating.compile import ValidationIssue, validate_algorithm
 
 __all__ = [
@@ -91,6 +106,72 @@ def _issues_to_error(algorithm: RatingAlgorithm) -> None:
     raise_first_issue(validate_algorithm(algorithm))
 
 
+async def _accepted_feature_map_values(
+    session: AsyncSession, workspace_id: UUID, ref: ArtifactRef, seen: set[str]
+) -> set[str] | None:
+    """What a `model_call`'s `feature_map` may name for `ref`: its Model's required inputs
+    (`required_model_inputs`, FR-222 as amended) plus the column its spec declares as the
+    offset (R2), plus a model-offset source's own (DP-3 (a)). `None` when the Model does not
+    exist yet (R1): an algorithm saves before its models do, and compile refuses a missing pin.
+    """
+    if str(ref) in seen:
+        return set()
+    seen.add(str(ref))
+    row = await session.scalar(
+        select(ModelRow).where(
+            ModelRow.workspace_id == workspace_id,
+            ModelRow.model_family_slug == ref.slug,
+            ModelRow.version == ref.version,
+        )
+    )
+    if row is None:
+        return None
+    spec = MODEL_SPEC_ADAPTER.validate_python(row.spec)
+    factors = await load_factors(session, workspace_id=workspace_id, factor_ids=list(spec.factors))
+    feature_order = (row.fit_result or {}).get("feature_order", ())
+    accepted = set(required_model_inputs(factors, feature_order))
+    offset = spec.offset
+    if offset.kind in ("log_column", "column") and offset.column is not None:
+        accepted.add(offset.column)
+    if offset.kind == "model" and offset.offset_model_ref is not None:
+        source = await _accepted_feature_map_values(
+            session, workspace_id, ArtifactRef.model_validate(offset.offset_model_ref), seen
+        )
+        accepted |= source or set()
+    return accepted
+
+
+async def check_model_call_feature_maps(
+    session: AsyncSession, workspace_id: UUID, steps: Sequence[RatingStepBase]
+) -> None:
+    """FR-222 as amended (PL-1464 item 13, R1 to R5): a `feature_map` value that is neither a
+    pinned Model's required input nor its offset column is refused with
+    `MODEL_CALL_FEATURE_MAP_INVALID` (422) before anything is written.
+
+    **Membership only, not completeness**: an unmapped Factor is compile's to refuse (PL 9494).
+    A `peril_structure_ref` step is not checked (R4): it has no single Model.
+    """
+    for step in steps:
+        if not isinstance(step, RatingModelCallStep) or step.model_ref is None:
+            continue
+        accepted = await _accepted_feature_map_values(
+            session, workspace_id, step.model_ref, set()
+        )
+        if accepted is None:
+            continue
+        for graph_name, value in step.feature_map.items():
+            if value not in accepted:
+                raise PlatformError(
+                    "MODEL_CALL_FEATURE_MAP_INVALID",
+                    "A model_call feature_map names something its model does not take",
+                    422,
+                    f"Step {step.step_id!r} maps {graph_name!r} to {value!r}, which is not one "
+                    f"of {step.model_ref}'s Factor slugs or its offset column "
+                    f"({sorted(accepted)}). A feature_map names the model's own vocabulary, "
+                    "not a raw dataset column (FR-222).",
+                )
+
+
 async def create_algorithm(
     database: Database,
     workspace_id: UUID,
@@ -106,6 +187,7 @@ async def create_algorithm(
     _issues_to_error(algorithm)
 
     async with database.unit_of_work() as session:
+        await check_model_call_feature_maps(session, workspace_id, algorithm.steps)
         existing = await session.scalar(
             select(RatingAlgorithmRow).where(
                 RatingAlgorithmRow.workspace_id == workspace_id,
