@@ -22,7 +22,7 @@ auditor greps 03 for model_call examples producing more than one name and lists 
 in the same FD."* Every line number is at `origin/main` `fe0b0627590307259ec6d56be7f73115cf245092`
 unless a branch is named.
 
-## The contradiction
+## Finding
 
 `03` §4.1's `RatingAlgorithm` example declares the step `s_rp`, a `model_call` on a Peril
 Structure, with two produced names. `RL-1459` DP-A3-1 (c) rules that such a step declares exactly
@@ -46,7 +46,7 @@ ships; the example text is what misleads a reader, and a compile of the example 
 two names with `consumes`, plus `s_out_peril`. It was written before A-3 merged (`fe0b0627`,
 #1265), so it does not cite DP-A3-1 (c).
 
-## How found
+## Evidence
 
 The FD-1374 slice (`origin/sl-1536-fd1374-dp-f35-1`, tip `4b53b62a94ed6b5ff328ea1f6172c1bd3a381c8c`,
 ledger drafted under working id 9441 on that branch, minted as `LG-1594` and now on `main` at `e4753e47`) adds
@@ -57,7 +57,7 @@ Against a tree that has A-3, that compile meets `_refuse_peril_model_calls`. The
 (item 2) has the slice's test pin the rule, with a docstring that cites the example as
 known-wrong text pending this FD.
 
-## Severity and remedy
+## Disposition
 
 **LOW**: example text, no behaviour (the ruling entry, item 3). Remedy (A): a correcting RL
 (`RL-1596`, minted in the same batch as this finding) with `corrects: RL-1519`, the worked example only, that
@@ -72,16 +72,16 @@ which merges after the FD-1374 slice, so that slice's Acceptance 4 byte check is
 Predicates, run at `fe0b0627`, read-only. All three are runnable as written.
 
 - P1 `git grep -nP '"produces"\s*:\s*\[[^\]]*,[^\]]*\]' origin/main -- docs` → 3 hits:
-  `03-rating-engine.md:270` (this finding); `RL-01519-…:351` (the same example, above);
-  `RL-01459-…:94` (a table cell quoting the `03` example, not an example).
+  `03-rating-engine.md:270` (this finding); `RL-1519`'s body at `:351` (the same example, above);
+  `RL-1459`'s body at `:94` (a table cell quoting the `03` example, not an example).
 - P2 `git grep -nP '"produces"\s*:\s*\[\s*$' origin/main -- docs` → no output (no multi-line array).
 - P3 `git grep -nE 'peril_structure_ref' origin/main -- docs/specs docs/workflows` → `03:101`
   (prose, the step-type table) and `03:268` (the `s_rp` step). `02-modelling.md` and
   `docs/workflows/` hold no Peril Structure `model_call` example. Prose predicate
   `git grep -nEi 'produces? (two|both|2|several|multiple)|two produced names|more than one (produced )?name' origin/main -- docs/specs docs/workflows`
   → 3 hits (`02:3280`, `06:756`, `07:111`), none about a `model_call`.
-- Frozen plans also hold `"produces": [` with one entry (`PL-01426:590`, `PL-01435:1281`,
-  `PL-01520:1312`): single-name, so none contradicts DP-A3-1 (c). A frozen plan is not edited.
+- Frozen plans also hold `"produces": [` with one entry (`PL-1426:590`, `PL-1435:1281`,
+  `PL-1520:1312`): single-name, so none contradicts DP-A3-1 (c). A frozen plan is not edited.
 
 **Result: none other.** The only two-name `model_call` example outside `RL-1459`'s own quotation
 is `03:270` and its copy at `RL-1519:351`.

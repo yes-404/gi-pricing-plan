@@ -201,6 +201,14 @@ compile is that branch's test
 `test_the_one_name_form_of_the_03_example_compiles_with_its_reads_declared` (`:166-171`);
 this record ran no test and does not assert that test's result.
 
+## What it obliges
+
+- **Applied:** `03` §4.1's worked example is the corrected block of this record, with the dated
+  note after the fence (Acceptance 1). Done in the D8b batch, which merges after the FD-1374 slice.
+- **No two-name `model_call` example in `docs/specs`** (Acceptance 3, the `git grep -nP` check).
+- **`RL-1519`'s front matter** carries `corrected_by` naming this record; its body is untouched.
+- **Nothing else changes:** the scope is the worked example only (*What is not changed*).
+
 ## What is not changed
 
 - **`RL-1519`'s body.** It is frozen. The corrections above are read through this record.
@@ -216,7 +224,7 @@ this record ran no test and does not assert that test's result.
 - **Line locators and the sha256 at `RL-1519:289-291`.** They name T2 as ruled, which the
   FD-1374 slice applies; the corrected text's own are above.
 
-## Acceptance — how the `03` change is applied, and the check
+## Acceptance — the violation that must become detectable
 
 The violation: a `model_call` example in `docs/specs/` declares more than one produced name.
 
@@ -260,6 +268,6 @@ The violation: a `model_call` example in `docs/specs/` declares more than one pr
   when, is the lead's; this record does not decide it. Read at that head only; if the slice
   is reworked or squash-merged, re-read before acting.
 - **The working-id form in `RL-1519`'s header.** The brief wrote `corrected_by: [RL 9954]`.
-  The draft of this record wrote `[RL-9954]`, the form the precedent used and the mint turned into the
-  minted id (here `[RL-1593, RL-1596]`, with `RL-1593` already on `main`): `origin/draft/rl-9942-corrects-rl1475` wrote `corrected_by: [RL-9942]` in
+  The draft of this record wrote its own working id, hyphenated, the form the precedent used and the mint turned into the
+  minted id (here `[RL-1593, RL-1596]`, with `RL-1593` already on `main`): `origin/draft/rl-9942-corrects-rl1475` wrote its own working id, hyphenated, in `corrected_by:` in
   `RL-1475`'s header (commit `634706e3`), minted as `RL-1584`.
