@@ -177,6 +177,11 @@ Neither `useGraphValidation.ts` nor `GraphIssues.vue` contains any of the four t
 - **For the merge turn:** if SL-1600 (`InputFreeError`) has merged by then, `ModelReferenceModeError` subclasses `InputFreeError` (`to-lead.md` "2026-10-10 21:05:35 BST" item 2): its text is authored and input-free.
 - The `?? []` fixes (nine reads in `DagDesigner.vue` and `DiffOverlay.vue`) are the slice's own code, inside the write set. The mock line is precautionary under "2026-10-10 00:21:33 BST" (1), not a red-first.
 
+#### 2026-10-10 23:02 BST — gate-1 run at `62b8f155` (22:12:44 to 23:01), classified
+
+- DB red-firsts: `test_rating_algorithm_validate.py` at `origin/main`'s `backend/src` (`app.__file__` checked): 15 failed, 2 passed; at the branch 17 passed. The 2 tests of `test_rating_mode_mismatch_api.py` are **GUARDS**: they pass on main (the create-time check is already there, SL-1430), so no red exists for them.
+- Full gate: ruff, mypy, import-linter, req-coverage, contracts pass; `audit_docs` failed 7 and pytest 14 (5439 passed, 2820 s). Cause: four pre-mint working-id lines (checks 31 and 32 on `LG-9444`, `FR-9445`), the stale INDEX and the padded `RL-01474` (the last two fixed in the next commit), and 13 pytest cases that run `audit-docs` on the real tree. One case is the slice's: `test_quote_input_raise_sites` counts 6 `compile_bundle` raise sites against the 5 listed (the FR-223 `_raise_named`); its one-number edit awaits the maintainer's ruling (write-set delta). The compile site's `str(exc)` form of `ModelReferenceModeError` awaits the same ruling.
+
 ## PRs
 
 None yet.
