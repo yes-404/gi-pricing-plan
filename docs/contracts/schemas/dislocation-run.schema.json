@@ -85,8 +85,8 @@
           "shapley_minor": {"anyOf": [{"$ref": "common/money.schema.json#/$defs/MoneyMinor"}, {"type": "null"}]},
           "isolated_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
           "cumulative_minor": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"},
-          "mean_change_pct": {"type": "number"},
-          "cumulative_change_pct": {"type": "number"}
+          "mean_change_pct": {"type": ["number", "null"]},
+          "cumulative_change_pct": {"type": ["number", "null"]}
         }
       }
     },
@@ -98,7 +98,7 @@
         "required": ["id", "kind", "description"],
         "properties": {
           "id": {"type": "string"},
-          "kind": {"enum": ["pin", "step_added", "step_removed", "step_changed", "table_repointed"]},
+          "kind": {"enum": ["pin", "step_added", "step_removed", "step_changed", "table_repointed", "input_field", "output"]},
           "description": {"type": "string"}
         }
       }

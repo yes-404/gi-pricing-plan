@@ -113,8 +113,66 @@ class ErrorTally(BaseModel):
     sample: Annotated[list[ErrorSample], Field(max_length=10)] | None = None
 
 
+DeltaKind = Literal[
+    "pin",
+    "step_added",
+    "step_removed",
+    "step_changed",
+    "table_repointed",
+    "input_field",
+    "output",
+]
+
+
+class BundleDelta(BaseModel):
+    """One derived change between baseline and candidate (FR-1399)."""
+
+    model_config = _FROZEN
+    id: str
+    kind: DeltaKind
+    description: str
+
+
+class AttributionItem(BaseModel):
+    """One change group's Shapley part of record and its isolated and cumulative views (FR-266)."""
+
+    model_config = _FROZEN
+    group: str
+    shapley_minor: MoneyMinor | None
+    isolated_minor: MoneyMinor
+    cumulative_minor: MoneyMinor
+    mean_change_pct: float | None
+    cumulative_change_pct: float | None = None
+
+
+class AttributionSummary(BaseModel):
+    """Method, totals, S and R, and the subset bundles compiled (FR-266, FR-1397, FR-1398)."""
+
+    model_config = _FROZEN
+    method: Literal["shapley", "order_dependent"]
+    total_change_minor: MoneyMinor
+    residual_minor: MoneyMinor
+    order_sensitivity_lower_bound: DecimalStr | None
+    residual_share: DecimalStr | None
+    orders_sampled: Annotated[int, Field(ge=2)] | None
+    subset_bundle_count: _Count
+    subset_bundle_hashes: list[str]
+    subset_valuation: Literal["rerate", "ladder_replay"]
+    replay_fell_back: bool
+
+
+class Attribution(BaseModel):
+    """What `attribute` returns: the four attribution fields of a Dislocation Run (03 §5.2)."""
+
+    model_config = _FROZEN
+    derived_changes: list[BundleDelta]
+    change_groups: Annotated[list[ChangeGroup], Field(max_length=6)]
+    attribution: list[AttributionItem]
+    attribution_summary: AttributionSummary
+
+
 class DislocationRun(BaseModel):
-    """03 §4.6 without the attribution part (Slice 3)."""
+    """03 §4.6; the four attribution fields are present together or not at all."""
 
     model_config = _FROZEN
     baseline_ref: ArtifactRef
@@ -130,6 +188,25 @@ class DislocationRun(BaseModel):
     by_ladder_rung: list[RungContribution] = []
     largest_movers_blob: str | None = None
     errors: list[ErrorTally] = []
+    derived_changes: list[BundleDelta] | None = None
+    change_groups: Annotated[list[ChangeGroup], Field(max_length=6)] | None = None
+    attribution: list[AttributionItem] | None = None
+    attribution_summary: AttributionSummary | None = None
+
+    @model_validator(mode="after")
+    def _attribution_is_all_or_none(self) -> Self:
+        four = (
+            self.derived_changes,
+            self.change_groups,
+            self.attribution,
+            self.attribution_summary,
+        )
+        if any(f is None for f in four) and any(f is not None for f in four):
+            raise ValueError(
+                "attribution fields must be present together: derived_changes, "
+                "change_groups, attribution, attribution_summary"
+            )
+        return self
 
     @model_validator(mode="after")
     def _outcomes_are_consistent(self) -> Self:

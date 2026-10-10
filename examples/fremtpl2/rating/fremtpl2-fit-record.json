@@ -1,0 +1,586 @@
+{
+ "command": "uv run python scripts/measure-attribution-cost.py fit",
+ "data": {
+  "file": "freMTPL2freq.arff",
+  "sha256": "a45363e056e2ea56408b38eeb9d4d04d7f6c6982eb7a14ed5e807c7c71807cdd",
+  "rows": 678013,
+  "claims": 36102
+ },
+ "glum": "3.4.1",
+ "polars": "1.44.2",
+ "table_dp": 8,
+ "base_dp": 12,
+ "freq_v1": {
+  "base_frequency": "0.019369349543",
+  "intercept": -3.944063382782266,
+  "coef": [
+   {
+    "factor": "area",
+    "level": "B",
+    "beta": 0.025354310199037843
+   },
+   {
+    "factor": "area",
+    "level": "C",
+    "beta": 0.022368587903115973
+   },
+   {
+    "factor": "area",
+    "level": "D",
+    "beta": 0.06137938836860305
+   },
+   {
+    "factor": "area",
+    "level": "E",
+    "beta": 0.05378255117807155
+   },
+   {
+    "factor": "area",
+    "level": "F",
+    "beta": -0.0032912225243848536
+   },
+   {
+    "factor": "veh_power",
+    "level": "5",
+    "beta": 0.18834517512806456
+   },
+   {
+    "factor": "veh_power",
+    "level": "6",
+    "beta": 0.17038275581499318
+   },
+   {
+    "factor": "veh_power",
+    "level": "7",
+    "beta": 0.10538475118679001
+   },
+   {
+    "factor": "veh_power",
+    "level": "8",
+    "beta": -0.08648188124946167
+   },
+   {
+    "factor": "veh_power",
+    "level": "9",
+    "beta": 0.24212978087503892
+   },
+   {
+    "factor": "veh_power",
+    "level": "10",
+    "beta": 0.17920049400747687
+   },
+   {
+    "factor": "veh_power",
+    "level": "11",
+    "beta": 0.14228263427309412
+   },
+   {
+    "factor": "veh_power",
+    "level": "12",
+    "beta": 0.006327295666410289
+   },
+   {
+    "factor": "age_band",
+    "level": "21-25",
+    "beta": -0.31801812438177185
+   },
+   {
+    "factor": "age_band",
+    "level": "26-30",
+    "beta": -0.4531221680498251
+   },
+   {
+    "factor": "age_band",
+    "level": "31-40",
+    "beta": -0.33584775807213013
+   },
+   {
+    "factor": "age_band",
+    "level": "41-50",
+    "beta": -0.04398340939115456
+   },
+   {
+    "factor": "age_band",
+    "level": "51-60",
+    "beta": -0.09142028908355275
+   },
+   {
+    "factor": "age_band",
+    "level": "61-70",
+    "beta": -0.10677038713809646
+   },
+   {
+    "factor": "age_band",
+    "level": "71+",
+    "beta": -0.014819319914888525
+   },
+   {
+    "factor": "veh_brand",
+    "level": "B10",
+    "beta": 0.045329258534584055
+   },
+   {
+    "factor": "veh_brand",
+    "level": "B11",
+    "beta": 0.17232194466641937
+   },
+   {
+    "factor": "veh_brand",
+    "level": "B12",
+    "beta": 0.40261711587202464
+   },
+   {
+    "factor": "veh_brand",
+    "level": "B13",
+    "beta": 0.07017849921237192
+   },
+   {
+    "factor": "veh_brand",
+    "level": "B14",
+    "beta": -0.15495391528405114
+   },
+   {
+    "factor": "veh_brand",
+    "level": "B2",
+    "beta": 0.001473478515875324
+   },
+   {
+    "factor": "veh_brand",
+    "level": "B3",
+    "beta": 0.031041881196164665
+   },
+   {
+    "factor": "veh_brand",
+    "level": "B4",
+    "beta": 0.026806429816573496
+   },
+   {
+    "factor": "veh_brand",
+    "level": "B5",
+    "beta": 0.06440439597567697
+   },
+   {
+    "factor": "veh_brand",
+    "level": "B6",
+    "beta": 0.02511646579360927
+   },
+   {
+    "factor": "region",
+    "level": "R21",
+    "beta": 0.1495401679547474
+   },
+   {
+    "factor": "region",
+    "level": "R22",
+    "beta": 0.07251070148085421
+   },
+   {
+    "factor": "region",
+    "level": "R23",
+    "beta": -0.06389033718307414
+   },
+   {
+    "factor": "region",
+    "level": "R24",
+    "beta": 0.02622002521736516
+   },
+   {
+    "factor": "region",
+    "level": "R25",
+    "beta": -0.0042404333607106645
+   },
+   {
+    "factor": "region",
+    "level": "R26",
+    "beta": 0.0034637483964048217
+   },
+   {
+    "factor": "region",
+    "level": "R31",
+    "beta": -0.1100015109493721
+   },
+   {
+    "factor": "region",
+    "level": "R41",
+    "beta": -0.2660939869516735
+   },
+   {
+    "factor": "region",
+    "level": "R42",
+    "beta": -0.017783354124555
+   },
+   {
+    "factor": "region",
+    "level": "R43",
+    "beta": -0.1086784577520926
+   },
+   {
+    "factor": "region",
+    "level": "R52",
+    "beta": -0.05668842393359089
+   },
+   {
+    "factor": "region",
+    "level": "R53",
+    "beta": 0.06701464414882817
+   },
+   {
+    "factor": "region",
+    "level": "R54",
+    "beta": -0.09160143592883445
+   },
+   {
+    "factor": "region",
+    "level": "R72",
+    "beta": -0.09166077575344433
+   },
+   {
+    "factor": "region",
+    "level": "R73",
+    "beta": -0.11100708070194804
+   },
+   {
+    "factor": "region",
+    "level": "R74",
+    "beta": 0.1526697792415582
+   },
+   {
+    "factor": "region",
+    "level": "R82",
+    "beta": 0.056969090804037135
+   },
+   {
+    "factor": "region",
+    "level": "R83",
+    "beta": -0.2813784040101402
+   },
+   {
+    "factor": "region",
+    "level": "R91",
+    "beta": -0.02242081295588142
+   },
+   {
+    "factor": "region",
+    "level": "R93",
+    "beta": -0.006504085829952359
+   },
+   {
+    "factor": "region",
+    "level": "R94",
+    "beta": 0.14623517765154112
+   },
+   {
+    "factor": "bonus_malus",
+    "level": "",
+    "beta": 0.02226694467091843
+   },
+   {
+    "factor": "density",
+    "level": "",
+    "beta": 0.038484122426569574
+   }
+  ]
+ },
+ "freq_v2": {
+  "base_frequency": "0.025586326426",
+  "intercept": -3.665697194164805,
+  "coef": [
+   {
+    "factor": "area",
+    "level": "B",
+    "beta": 0.017965683218912416
+   },
+   {
+    "factor": "area",
+    "level": "C",
+    "beta": 0.014140513785249506
+   },
+   {
+    "factor": "area",
+    "level": "D",
+    "beta": 0.06190048989444764
+   },
+   {
+    "factor": "area",
+    "level": "E",
+    "beta": 0.05555452864037593
+   },
+   {
+    "factor": "area",
+    "level": "F",
+    "beta": -0.013506708947707204
+   },
+   {
+    "factor": "veh_power",
+    "level": "5",
+    "beta": 0.1706226141555716
+   },
+   {
+    "factor": "veh_power",
+    "level": "6",
+    "beta": 0.18787942373738228
+   },
+   {
+    "factor": "veh_power",
+    "level": "7",
+    "beta": 0.11613397814519531
+   },
+   {
+    "factor": "veh_power",
+    "level": "8",
+    "beta": -0.059681395265282794
+   },
+   {
+    "factor": "veh_power",
+    "level": "9",
+    "beta": 0.28173539285942023
+   },
+   {
+    "factor": "veh_power",
+    "level": "10",
+    "beta": 0.23410728052138044
+   },
+   {
+    "factor": "veh_power",
+    "level": "11",
+    "beta": 0.156815264092002
+   },
+   {
+    "factor": "veh_power",
+    "level": "12",
+    "beta": 0.023648926813768227
+   },
+   {
+    "factor": "age_band",
+    "level": "21-25",
+    "beta": -0.3510540221544809
+   },
+   {
+    "factor": "age_band",
+    "level": "26-30",
+    "beta": -0.48453860167867535
+   },
+   {
+    "factor": "age_band",
+    "level": "31-40",
+    "beta": -0.3467927120502166
+   },
+   {
+    "factor": "age_band",
+    "level": "41-50",
+    "beta": -0.05388257978031422
+   },
+   {
+    "factor": "age_band",
+    "level": "51-60",
+    "beta": -0.11249412001495018
+   },
+   {
+    "factor": "age_band",
+    "level": "61-70",
+    "beta": -0.13572553106881002
+   },
+   {
+    "factor": "age_band",
+    "level": "71+",
+    "beta": -0.05018873151622994
+   },
+   {
+    "factor": "veh_brand",
+    "level": "B10",
+    "beta": 0.039396491295116215
+   },
+   {
+    "factor": "veh_brand",
+    "level": "B11",
+    "beta": 0.13362277974942804
+   },
+   {
+    "factor": "veh_brand",
+    "level": "B12",
+    "beta": 0.19647499732187737
+   },
+   {
+    "factor": "veh_brand",
+    "level": "B13",
+    "beta": 0.04380388239778365
+   },
+   {
+    "factor": "veh_brand",
+    "level": "B14",
+    "beta": -0.13295223068602902
+   },
+   {
+    "factor": "veh_brand",
+    "level": "B2",
+    "beta": -0.003810675427223808
+   },
+   {
+    "factor": "veh_brand",
+    "level": "B3",
+    "beta": -0.0016218904570320515
+   },
+   {
+    "factor": "veh_brand",
+    "level": "B4",
+    "beta": -0.013265874501861464
+   },
+   {
+    "factor": "veh_brand",
+    "level": "B5",
+    "beta": 0.059273954306880865
+   },
+   {
+    "factor": "veh_brand",
+    "level": "B6",
+    "beta": -0.013346684585314314
+   },
+   {
+    "factor": "region",
+    "level": "R21",
+    "beta": 0.15436098383156524
+   },
+   {
+    "factor": "region",
+    "level": "R22",
+    "beta": 0.08333801136505709
+   },
+   {
+    "factor": "region",
+    "level": "R23",
+    "beta": -0.04670875482283126
+   },
+   {
+    "factor": "region",
+    "level": "R24",
+    "beta": 0.07467907641309753
+   },
+   {
+    "factor": "region",
+    "level": "R25",
+    "beta": 0.01929800612750195
+   },
+   {
+    "factor": "region",
+    "level": "R26",
+    "beta": 0.008874746822598926
+   },
+   {
+    "factor": "region",
+    "level": "R31",
+    "beta": -0.09382263791701657
+   },
+   {
+    "factor": "region",
+    "level": "R41",
+    "beta": -0.2406786155056544
+   },
+   {
+    "factor": "region",
+    "level": "R42",
+    "beta": -0.008111420771487401
+   },
+   {
+    "factor": "region",
+    "level": "R43",
+    "beta": -0.08349146792803755
+   },
+   {
+    "factor": "region",
+    "level": "R52",
+    "beta": -0.010292900465389884
+   },
+   {
+    "factor": "region",
+    "level": "R53",
+    "beta": 0.09166639278235826
+   },
+   {
+    "factor": "region",
+    "level": "R54",
+    "beta": -0.03926657887322169
+   },
+   {
+    "factor": "region",
+    "level": "R72",
+    "beta": -0.06916885270290156
+   },
+   {
+    "factor": "region",
+    "level": "R73",
+    "beta": -0.10150881876843283
+   },
+   {
+    "factor": "region",
+    "level": "R74",
+    "beta": 0.1929000024517352
+   },
+   {
+    "factor": "region",
+    "level": "R82",
+    "beta": 0.0826865024817523
+   },
+   {
+    "factor": "region",
+    "level": "R83",
+    "beta": -0.28072577834484064
+   },
+   {
+    "factor": "region",
+    "level": "R91",
+    "beta": -0.0031275332232699854
+   },
+   {
+    "factor": "region",
+    "level": "R93",
+    "beta": 0.008642931474317106
+   },
+   {
+    "factor": "region",
+    "level": "R94",
+    "beta": 0.14349256938055371
+   },
+   {
+    "factor": "bonus_malus",
+    "level": "",
+    "beta": 0.023008601403405982
+   },
+   {
+    "factor": "density",
+    "level": "",
+    "beta": 0.03329244028403285
+   },
+   {
+    "factor": "veh_gas",
+    "level": "Regular",
+    "beta": 0.0616628595879503
+   },
+   {
+    "factor": "veh_age_band",
+    "level": "1",
+    "beta": -0.3460410408582881
+   },
+   {
+    "factor": "veh_age_band",
+    "level": "2",
+    "beta": -0.27016459442226004
+   },
+   {
+    "factor": "veh_age_band",
+    "level": "3",
+    "beta": -0.32740697754946607
+   },
+   {
+    "factor": "veh_age_band",
+    "level": "4",
+    "beta": -0.4618589785851704
+   },
+   {
+    "factor": "veh_age_band",
+    "level": "5",
+    "beta": -0.6845984241028719
+   }
+  ]
+ },
+ "density_distinct_keys": 1607
+}
