@@ -1905,7 +1905,7 @@ The remedy for FD-1411 (HIGH): `POST /api/v1/score` misses NFR-489 at every rate
 id: SL-1462
 family: slice
 title: WK-1178 fix slice — Option A A-1, FD-1456 in full, the Peril Structure approval path and the compile resolver's peril branch
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-05
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 137bc817ef1fb40ea57e9053e0ad40b73bdff3a8
@@ -1916,6 +1916,10 @@ relates: [RL-1263, PL-1371, CR-1212]
 ```
 
 FD-1456's fix (HIGH, a G2 blocker before the P2 exit demo, by the maintainer's entry "2026-10-05 16:43:31 BST — THE MAINTAINER'S DECISION (asked live): G2 takes OPTION A, WF-699's literal Peril Structure path is BUILT IN P2; and the FD 9605 approval, now on the record", item 2). `_carry_to_the_artifact` gains the Peril Structure call and `perils.py` gains `apply_approval_decision`, the only writer of `approved`, inside the approval guard's decision block: approval moves `review → approved`, a non-approval returns the structure to `reconciled`. The compile resolver gains a `peril_structure` branch, so `compile_bundle`'s existing maturity loop refuses a pin that is not approved (the positive test FD-1456's Disposition asks for), and the stale "has no backend table yet (Phase 2)" message goes. PL-1429's Acceptance 7, FD-1456's tripwire, is flipped in the commit that adds the branch. Open for the decision-maker: per-peril model approvals enforced at approval (DP-1, `06` FR-363), supersession of an earlier approved version (DP-2), and a named interim refusal for a Peril Structure `model_call` until A-3 (DP-3). Leaf plan PL-1461 (`draft`). **Activation needs:** FD-1456 minted at HIGH; PL-1429's slice (the FD-1421 fix) and PL-1471's slice (the FR-240 family fix) merged, as the maintainer orders the chain; DP-1 to DP-3 ruled; the lead's go in an activation PR, with `RL 9620`'s same-Work conditions written for every WK-1178 slice beside it. First of the serial chain A-1 → A-2 → A-3 → A-4. *(Filed 2026-10-05 under working ids 9600 (this row) and 9599 (the plan), reserved by the lead; minted 2026-10-06 as SL-1462 and PL-1461.)* *(Dated note, 2026-10-05, pre-mint: DP-1 (a), DP-2 (a) and DP-3 (b) were accepted by the maintainer (by delegation) at the plan's recommendations in the channel entry headed `2026-10-05 17:02:50 BST`, with no decision-maker; the component check is corrected to `ModelStatus.APPROVED` (17:08:35 BST). The `06` §4.2 note's dated amendment is drafted by a decision-maker and adopted in A-1's ruling (17:14:54 BST item 6).)*
+
+(Activated 2026-10-10 as WK-1178 Option A, A-1, on the dispatch GO "2026-10-10 05:19:53 BST — DISPATCH GOs at main 84ff9f0b: A-1 (PL-1461/SL-1462) GO NOW on gate-1 …" with its conditions a–d; `PL-1461` set `active` in the slice PR's first commit.)
+
+(Closed 2026-10-10 as a Slice, closing acts in the slice PR's last commit, on the lead's merge; ledger LG-1581, minted 2026-10-10 from working id 9442 in the SL-1462 merge-turn commit.)
 
 #### SL-1463 — WK-1178 fix slice — Option A A-2: FD-1458, a GLM scores through `model_call`
 

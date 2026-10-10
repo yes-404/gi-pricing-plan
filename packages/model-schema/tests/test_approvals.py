@@ -100,7 +100,11 @@ def test_an_artifact_type_with_no_floor_row_requires_only_its_policy() -> None:
     justification does not. The row's **reconciliation** half is enforced structurally
     (`review` is reachable only from `reconciled`, and a `fail` verdict is refused at
     submission), so a floor entry would restate a lifecycle edge; its **per-peril model
-    approvals** half is enforced nowhere and is FR-364's uncheckable remainder.
+    approvals** half was enforced nowhere and was FR-364's uncheckable remainder.
+    **Corrected 2026-10-10 (WK-1178, SL-1462, FD-1456):** it is enforced now, at approval, by
+    `backend/src/app/platform/perils.py:708` (`_require_approved_components`), which reads the
+    stored `perils` (the maintainer's (by delegation) entry "2026-10-10 06:15:34 BST" in
+    `to-lead.md`, a local file).
 
     Inferring a floor for it here would still be this file inventing governance the
     specification does not state, which is why the assertion is unchanged.

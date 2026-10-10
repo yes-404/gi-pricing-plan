@@ -78,7 +78,9 @@ _INPUT_FREE = {
     # static sentence built in `runtime.py`, never a model's or the engine's own error text.
     ("rating/score.py", "_check_model_call_sentinel"): 1,
     ("rating/runtime.py", "_load_boosters"): 1,  # step id and ref string, no quote
-    ("rating/runtime.py", "handler"): 2,  # `_model_call_failure`: step id and the pinned model_type
+    # `_model_call_failure`: step id and the pinned model_type; and, for a Peril Structure pin
+    # (PL-1461 Task 4), step id and ref string, no quote.
+    ("rating/runtime.py", "handler"): 3,
     ("rating/compile.py", "check_step_refs_pinned"): 1,  # step id and ref string, no quote
     ("rating/compile.py", "compile_bundle"): 5,  # artifact-level (compile time), no quote
     # PL-1471 (SL-1472), each at compile time over pinned artifacts, never a quote:

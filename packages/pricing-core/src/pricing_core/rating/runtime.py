@@ -585,6 +585,16 @@ def _model_call_handler(
                 step, f"model_call step {step.step_id!r} pins nothing.", context
             )
         ref_str = str(ref)
+        if step.peril_structure_ref is not None:
+            # RL-1457 DP-3 (b): a resolved Peril Structure carries no `fit_result`, so the read
+            # below would be a bare `KeyError` that the engine reports as a generic node
+            # error. Named refusal until slice A-3 (PL-1465) scores a structure.
+            return _model_call_failure(
+                step,
+                f"model_call step {step.step_id!r} pins {ref_str}, and "
+                "scoring a Peril Structure is slice A-3 (PL-1465); it is not yet built.",
+                context,
+            )
         payload = payloads[ref_str]
         fit_result = dict(payload["fit_result"])
         feature_row = {
