@@ -42,6 +42,7 @@ from model_schema.rating import (
     RateTableCell,
     RateTableDiff,
     RateTableDiffCell,
+    RateTableManualEdit,
     RateTableVersion,
     SeedFromModelRequest,
 )
@@ -116,6 +117,44 @@ async def seed_rate_table_from_model(
         change_note=body.change_note,
     )
     return version
+
+
+@router.post(
+    "/rate-tables/{slug}/versions",
+    summary="Preview or create a Rate Table Version from manual cell edits",
+    response_model=None,
+    responses={
+        **problems(401, 403, 404, 409, 422),
+        200: {"model": RateTableDiff},
+        201: {"model": RateTableVersion},
+    },
+)
+async def edit_rate_table(
+    slug: str,
+    body: RateTableManualEdit,
+    caller: RatingWriteDep,
+    database: DatabaseDep,
+    settings: SettingsDep,
+    blob_store: BlobStoreDep,
+    response: Response,
+) -> RateTableDiff | RateTableVersion:
+    """**200** with a bare `RateTableDiff` of the would-be version against `base_version`;
+    nothing is created (FR-229, FR-231). **201** with `confirm: true`: the `RateTableVersion`
+    at `base_version + 1`, carrying `created_by_edit` (`RL-1555`). **409** where
+    `base_version + 1` already exists (the base is not the latest). **422** with every
+    failure as a field error in `errors` (FR-234).
+    """
+    if not body.confirm:
+        return await service.manual_edit_preview(
+            database, caller.workspace_id, slug, body, blob_store
+        )
+    assert caller.principal.id is not None
+    created = await service.manual_edit_confirmed(
+        database, caller.workspace_id, caller.principal.id, settings, blob_store,
+        slug=slug, body=body,
+    )
+    response.status_code = status.HTTP_201_CREATED
+    return created
 
 
 @router.post(

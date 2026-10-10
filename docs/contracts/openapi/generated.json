@@ -11199,6 +11199,41 @@
         "title": "RateTableKeyType",
         "type": "string"
       },
+      "RateTableManualEdit": {
+        "additionalProperties": false,
+        "description": "`POST /api/v1/rate-tables/{slug}/versions` body (FR-229, `03` §5.1, RL-1555 item 1).\n\n`edits` are full rows of keys that `base_version` has, a key at most once (checked\nagainst the base, which the route holds). `confirm: false` previews; `true` creates.",
+        "properties": {
+          "base_version": {
+            "minimum": 1.0,
+            "title": "Base Version",
+            "type": "integer"
+          },
+          "change_note": {
+            "title": "Change Note",
+            "type": "string"
+          },
+          "confirm": {
+            "default": false,
+            "title": "Confirm",
+            "type": "boolean"
+          },
+          "edits": {
+            "items": {
+              "$ref": "#/components/schemas/RateTableCell"
+            },
+            "minItems": 1,
+            "title": "Edits",
+            "type": "array"
+          }
+        },
+        "required": [
+          "base_version",
+          "edits",
+          "change_note"
+        ],
+        "title": "RateTableManualEdit",
+        "type": "object"
+      },
       "RateTableStorageMode": {
         "description": "Storage mode for rate table cells (FR-232, 03 §3.3).\n\n`rows` is the default for small tables (< 250k cells); `parquet` is used\nfor larger tables. Once written, the storage mode is immutable with the version.",
         "enum": [
@@ -28407,6 +28442,152 @@
           }
         },
         "summary": "Seed a rate table version from an approved model",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/v1/rate-tables/{slug}/versions": {
+      "post": {
+        "description": "**200** with a bare `RateTableDiff` of the would-be version against `base_version`;\nnothing is created (FR-229, FR-231). **201** with `confirm: true`: the `RateTableVersion`\nat `base_version + 1`, carrying `created_by_edit` (`RL-1555`). **409** where\n`base_version + 1` already exists (the base is not the latest). **422** with every\nfailure as a field error in `errors` (FR-234).",
+        "operationId": "edit_rate_table_api_v1_rate_tables__slug__versions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RateTableManualEdit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateTableDiff"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateTableVersion"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Preview or create a Rate Table Version from manual cell edits",
         "tags": [
           "rating"
         ]

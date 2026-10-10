@@ -79,6 +79,11 @@ IMPORT_KEY_MISMATCH = "IMPORT_KEY_MISMATCH"
 IMPORT_TYPE_MISMATCH = "IMPORT_TYPE_MISMATCH"
 IMPORT_PARSE_ERROR = "IMPORT_PARSE_ERROR"
 
+#: The manual edit's edit-addressing codes (RL-1555 item 3). `DUPLICATE_KEY` is shared with
+#: FR-234; the route reports both under `VALIDATION_FAILED`, on the edit they concern.
+UNKNOWN_KEY = "UNKNOWN_KEY"
+EDIT_COLUMNS = "EDIT_COLUMNS"
+
 #: One cell row: the declared key columns plus the value column, all decimal strings.
 CellRow = dict[str, str]
 Cells = Sequence[CellRow]
@@ -557,6 +562,71 @@ def _validate_result(rows: Cells, table: RateTableVersion) -> None:
     )
     if issues:
         raise ValueError(f"{issues[0].code}: {issues[0].message}")
+
+
+@dataclass(frozen=True)
+class EditIssue:
+    """One failure of a manual edit, located by the index of the edit it concerns.
+
+    `message` names the constraint and never the submitted value, so it is safe to emit and
+    store (`pricing_core.safe_error`); FR-234's value issues keep the text of the shared check.
+    """
+
+    index: int
+    code: str
+    message: str
+
+
+@dataclass(frozen=True)
+class EditResult:
+    """What applying edits yields: the new cells, or every issue and no cells."""
+
+    cells: tuple[CellRow, ...]
+    issues: tuple[EditIssue, ...]
+
+
+def apply_cell_edits(table: RateTableVersion, edits: Sequence[RateTableCell]) -> EditResult:
+    """FR-229, FR-234 (RL-1555 items 1 and 3): the base's cells with each edit's value.
+
+    An edit is the full row of a key the base has, once. Every failure is collected, none
+    raised, so the route answers one field error per failure: `EDIT_COLUMNS` (the row is not
+    exactly the declared key columns and the value column), `UNKNOWN_KEY` (no such key in the
+    base), `DUPLICATE_KEY` (a key edited twice, at its later index), and FR-234's `NULL_VALUE`
+    and `OUT_OF_BOUNDS` from the check every save runs (`_value_issue`). A key is never added
+    or removed here, so coverage cannot change; that is the import route's.
+    """
+    base = _rows_of(table)
+    key_names = [key.name for key in table.keys]
+    columns = {*key_names, table.value.name}
+    position = {tuple(row[name] for name in key_names): at for at, row in enumerate(base)}
+    replaced: dict[int, str] = {}
+    issues: list[EditIssue] = []
+    for index, edit in enumerate(edits):
+        row = edit.root
+        if set(row) != columns:
+            issues.append(
+                EditIssue(index, EDIT_COLUMNS, "an edit carries exactly the declared columns")
+            )
+            continue
+        key = tuple(row[name] for name in key_names)
+        if key not in position:
+            issues.append(EditIssue(index, UNKNOWN_KEY, "no such key in the base version"))
+        elif position[key] in replaced:
+            issues.append(EditIssue(index, DUPLICATE_KEY, "this key is edited more than once"))
+        elif (value_issue := _value_issue(row, table.value, key_names)) is not None:
+            issues.append(EditIssue(index, value_issue.code, value_issue.message))
+        else:
+            replaced[position[key]] = row[table.value.name]
+    if issues:
+        return EditResult((), tuple(issues))
+    value_name = table.value.name
+    return EditResult(
+        tuple(
+            {**row, value_name: replaced[at]} if at in replaced else row
+            for at, row in enumerate(base)
+        ),
+        (),
+    )
 
 
 def _ref(table: RateTableVersion, version: int) -> ArtifactRef:

@@ -1742,3 +1742,249 @@ def test_cells_bound_a_rows_page_loads_at_most_the_threshold(
     reads.clear()
     _all_pages(api_client, parquet_slug, actuary, 2)  # two pages
     assert len(reads) == 2
+
+
+# -- the manual-edit route (FR-229, FR-234, F-W10-3; RL-1555 items 1 to 3) --------------------
+
+
+def _edit_body(slug: str, **changes: object) -> dict[str, object]:
+    body: dict[str, object] = {
+        "base_version": 1,
+        "change_note": "area band 21-24 +5%",
+        "edits": [{"driver_age_band": "21-24", "relativity": "1.4500"}],
+    }
+    return body | changes
+
+
+def _post_edit(api_client: TestClient, slug: str, headers: dict[str, str], **changes: object):  # type: ignore[no-untyped-def]
+    return api_client.post(
+        f"/api/v1/rate-tables/{slug}/versions", json=_edit_body(slug, **changes), headers=headers
+    )
+
+
+def _version_count(slug: str) -> int:
+    counted: list[int] = []
+
+    async def _count(session: AsyncSession) -> None:
+        from sqlalchemy import func
+
+        counted.append(
+            await session.scalar(
+                select(func.count())
+                .select_from(RateTableVersionRow)
+                .join(RateTableRow, RateTableRow.id == RateTableVersionRow.rate_table_id)
+                .where(RateTableRow.slug == slug)
+            )
+            or 0
+        )
+
+    _run_with_database(_count)
+    return counted[0]
+
+
+def _stored_created_by_edit(slug: str, version: int) -> dict[str, object] | None:
+    """The `created_by_edit` column of the stored row, read back from the database."""
+    found: list[dict[str, object] | None] = []
+
+    async def _read(session: AsyncSession) -> None:
+        found.append(
+            await session.scalar(
+                select(RateTableVersionRow.created_by_edit)
+                .join(RateTableRow, RateTableRow.id == RateTableVersionRow.rate_table_id)
+                .where(RateTableRow.slug == slug, RateTableVersionRow.version_number == version)
+            )
+        )
+
+    _run_with_database(_read)
+    return found[0]
+
+
+@pytest.mark.req("FR-229")
+def test_manual_edit_preview_creates_nothing_and_is_a_bare_diff(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    from model_schema.rating import RateTableDiff
+
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+    before = _version_count(slug)
+
+    response = _post_edit(api_client, slug, actuary)
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert set(body) == set(RateTableDiff.model_fields)  # bare: no `diff` or verdict wrapper
+    assert RateTableDiff.model_validate(body).changed_cells == 1
+    assert _version_count(slug) == before
+
+
+@pytest.mark.req("FR-229")
+def test_manual_edit_confirm_creates_the_next_version_with_its_record(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+    submitted = {"applied_to": f"rate_table:{slug}@1", "edited_cells": 1}
+
+    created = _post_edit(api_client, slug, actuary, confirm=True)
+
+    assert created.status_code == 201, created.text
+    body = created.json()
+    assert body["version"] == 2
+    assert body["change_note"] == "area band 21-24 +5%"
+    assert body["created_by_edit"] == submitted
+    # The record is stored, not only returned: read it back from the row (RL-1555 item 2).
+    assert _stored_created_by_edit(slug, 2) == submitted
+    assert _stored_created_by_edit(slug, 1) is None  # a seeded version carries none
+    cells = _all_pages_of(api_client, slug, 2, actuary)
+    assert {row["driver_age_band"]: row["relativity"] for row in cells} == {
+        "17-20": "1.92",
+        "21-24": "1.4500",
+        "25-29": "1.12",
+    }
+    # A second confirm against the same, now stale, base is the existing 409.
+    again = _post_edit(api_client, slug, actuary, confirm=True)
+    assert again.status_code == 409, again.text
+    assert again.json()["code"] == "VALIDATION_FAILED"
+
+
+def _all_pages_of(
+    api_client: TestClient, slug: str, version: int, headers: dict[str, str]
+) -> list[dict[str, str]]:
+    response = api_client.get(
+        f"/api/v1/rate-tables/{slug}@{version}/cells", params={"limit": 200}, headers=headers
+    )
+    assert response.status_code == 200, response.text
+    return response.json()["items"]
+
+
+@pytest.mark.req("FR-229")
+def test_a_manual_edit_diffs_against_its_base_by_exactly_the_edited_cells(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """RL-1555 item 2 and the maintainer's 04:12:41 condition: the stored version differs from
+    its base by exactly the edited cells, their count is `edited_cells`, and each old → new
+    pair is what was submitted."""
+    from decimal import Decimal
+
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+    edits = [
+        {"driver_age_band": "17-20", "relativity": "2.0000"},
+        {"driver_age_band": "25-29", "relativity": "1.0000"},
+    ]
+    created = _post_edit(api_client, slug, actuary, confirm=True, edits=edits)
+    assert created.status_code == 201, created.text
+
+    diff = _diff_ready(
+        api_client,
+        f"/api/v1/rate-tables/{slug}@2/diff/cells",
+        {"against": "1"},
+        actuary,
+    )
+
+    assert diff.status_code == 200, diff.text
+    changed = diff.json()["items"]
+    assert len(changed) == created.json()["created_by_edit"]["edited_cells"] == 2
+    old = {row["driver_age_band"]: Decimal(row["relativity"]) for row in _all_pages_of(
+        api_client, slug, 1, actuary
+    )}
+    assert {
+        item["key"]["driver_age_band"]: (
+            Decimal(item["baseline_value"]),
+            Decimal(item["current_value"]),
+        )
+        for item in changed
+    } == {
+        edit["driver_age_band"]: (old[edit["driver_age_band"]], Decimal(edit["relativity"]))
+        for edit in edits
+    }
+    assert {item["change"] for item in changed} == {"changed"}
+
+
+@pytest.mark.req("FR-234")
+@pytest.mark.parametrize(
+    ("changes", "status", "field_errors"),
+    [
+        ({"change_note": ""}, 422, None),
+        ({"change_note": "   "}, 422, None),
+        ({"edits": []}, 422, None),
+        ({"unknown_field": 1}, 422, None),
+        ({"edits": [{"driver_age_band": "21-24", "relativity": 1.45}]}, 422, None),
+        (
+            {"edits": [{"driver_age_band": "99-99", "relativity": "1.0"}]},
+            422,
+            [("edits.0.relativity", "UNKNOWN_KEY")],
+        ),
+        (
+            {"edits": [{"driver_age_band": "21-24", "relativity": "1.0"}] * 2},
+            422,
+            [("edits.1.relativity", "DUPLICATE_KEY")],
+        ),
+        (
+            {"edits": [{"driver_age_band": "21-24", "relativity": "1.0"}, {"relativity": "1"}]},
+            422,
+            [("edits.1.relativity", "EDIT_COLUMNS")],
+        ),
+    ],
+)
+def test_manual_edit_refusals(
+    api_client: TestClient, workspace_id, actuary, changes, status, field_errors
+) -> None:
+    """One case per refusal; an unknown key is a 422 with a field error, never a 500."""
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+
+    response = _post_edit(api_client, slug, actuary, **changes)
+
+    assert response.status_code == status, response.text
+    if field_errors is not None:
+        assert [(e["field"], e["code"]) for e in response.json()["errors"]] == field_errors
+        assert response.json()["code"] == "VALIDATION_FAILED"
+
+
+@pytest.mark.req("FR-234")
+def test_manual_edit_out_of_bounds_values_each_name_their_edit(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """Two non-decimal (out-of-bounds) values answer two field errors, `edits.0.<value>` and
+    `edits.1.<value>`, both `OUT_OF_BOUNDS`, under the problem code `RATE_TABLE_INCOMPLETE`
+    (RL-1555 item 3)."""
+    # A seeded value column declares no bounds, so the shared check's other OUT_OF_BOUNDS
+    # arm is used: a value that is not a decimal at all.
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+    not_a_decimal = "not-a-number"
+
+    response = _post_edit(
+        api_client,
+        slug,
+        actuary,
+        edits=[
+            {"driver_age_band": "17-20", "relativity": not_a_decimal},
+            {"driver_age_band": "21-24", "relativity": not_a_decimal},
+        ],
+    )
+
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "RATE_TABLE_INCOMPLETE"
+    assert [(e["field"], e["code"]) for e in response.json()["errors"]] == [
+        ("edits.0.relativity", "OUT_OF_BOUNDS"),
+        ("edits.1.relativity", "OUT_OF_BOUNDS"),
+    ]
+
+
+@pytest.mark.req("FR-229")
+def test_rate_table_isolation_on_the_manual_edit_route(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    from app.platform import workspaces
+
+    foreign = uuid4()
+    slug = _table_slug()
+
+    async def _insert(session: AsyncSession) -> None:
+        await workspaces.ensure_workspace(session, workspace_id=foreign)
+
+    _run_with_database(_insert)
+    _insert_table(foreign, slug, [{"name": "driver_age_band", "type": "string"}])
+
+    response = _post_edit(api_client, slug, actuary)
+
+    assert response.status_code == 404, response.text
+    assert response.json()["code"] == "RATE_TABLE_MISS"

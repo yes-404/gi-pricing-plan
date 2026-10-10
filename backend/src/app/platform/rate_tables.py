@@ -49,14 +49,17 @@ from app.platform.modelling import (
 )
 from model_schema import Banding, DatasetStatus, Factor, Grouping, JobKind, JobStatus
 from model_schema.jobs import Job
+from model_schema.problem import FieldError
 from model_schema.rating import (
     FloorAndCapParameters,
     ImportPreview,
+    ManualEdit,
     RateTable,
     RateTableCell,
     RateTableDiff,
     RateTableDiffCell,
     RateTableKey,
+    RateTableManualEdit,
     RateTableStorageMode,
     RateTableVersion,
     RebaseToLevelParameters,
@@ -67,6 +70,10 @@ from model_schema.rating import (
 from model_schema.refs import ArtifactRef, BlobRef
 from pricing_core.modelling import FactorResolutionError
 from pricing_core.rate_tables.operations import (
+    NULL_VALUE,
+    OUT_OF_BOUNDS,
+    EditIssue,
+    apply_cell_edits,
     check_model_approved,
     decide_storage_mode,
     diff_cells,
@@ -941,6 +948,118 @@ async def import_confirmed(
         )
 
 
+def _edit_failure(issues: Sequence[EditIssue], value_name: str) -> PlatformError:
+    """RL-1555 item 3: every failure of a manual edit is one `FieldError` in the problem's
+    `errors`, `field` `edits.<index>.<value name>`, `code` the failure's own (`UNKNOWN_KEY`,
+    `DUPLICATE_KEY`, `EDIT_COLUMNS`, `NULL_VALUE`, `OUT_OF_BOUNDS`). The problem's code is
+    `RATE_TABLE_INCOMPLETE` when every failure is an FR-234 value issue and
+    `VALIDATION_FAILED` otherwise. The messages name the constraint, never a stored
+    value (`pricing_core.safe_error`); nothing here reads an exception's text."""
+    errors = tuple(
+        FieldError(
+            field=f"edits.{issue.index}.{value_name}", code=issue.code, message=issue.message
+        )
+        for issue in issues
+    )
+    values_only = all(issue.code in (NULL_VALUE, OUT_OF_BOUNDS) for issue in issues)
+    return PlatformError(
+        "RATE_TABLE_INCOMPLETE" if values_only else "VALIDATION_FAILED",
+        "Manual edit refused",
+        422,
+        f"{len(errors)} edit failure(s); each is a field error.",
+        errors=errors,
+    )
+
+
+async def _edit_derived(
+    session: Any,
+    workspace_id: UUID,
+    slug: str,
+    body: RateTableManualEdit,
+    blob_store: BlobStore,
+) -> tuple[RateTableRow, RateTableVersionRow, RateTableVersion, RateTableVersion]:
+    """The base and the version the edits would make, at `base_version + 1` (FR-229).
+
+    The base is addressed by the body's `base_version`; an unknown table or version is the
+    loaders' 404 `RATE_TABLE_MISS`. Every failure of the edits is collected (`_edit_failure`).
+    The derived version inherits the base's seed lineage and records `created_by_edit`.
+    """
+    table_row = await _load_table(session, workspace_id, slug)
+    version_row = await _load_version(session, table_row.id, body.base_version, slug)
+    base = await _to_version(session, version_row, blob_store)
+    result = apply_cell_edits(base, body.edits)
+    if result.issues:
+        raise _edit_failure(result.issues, base.value.name)
+    derived = RateTableVersion(
+        slug=slug,
+        version=body.base_version + 1,
+        rateable=base.rateable,
+        storage=RateTableStorageMode.ROWS,
+        keys=base.keys,
+        value=base.value,
+        default_row=base.default_row,
+        rows=_wire_rows(result.cells),
+        change_note=body.change_note,
+        seeded_from=base.seeded_from,
+        created_by_edit=ManualEdit(
+            applied_to=ArtifactRef(type="rate_table", slug=slug, version=body.base_version),
+            edited_cells=len(body.edits),
+        ),
+    )
+    return table_row, version_row, base, derived
+
+
+async def manual_edit_preview(
+    database: Database,
+    workspace_id: UUID,
+    slug: str,
+    body: RateTableManualEdit,
+    blob_store: BlobStore,
+) -> RateTableDiff:
+    """FR-229, FR-231 (RL-1555 item 1): the would-be version as a bare diff against its base;
+    nothing is created."""
+    async with database.unit_of_work() as session:
+        _, _, base, derived = await _edit_derived(session, workspace_id, slug, body, blob_store)
+        assert base.rows is not None
+        assert derived.rows is not None
+        return diff_vs_previous(
+            [dict(row.root) for row in base.rows],
+            [dict(row.root) for row in derived.rows],
+            base.keys,
+            base.value,
+        )
+
+
+async def manual_edit_confirmed(
+    database: Database,
+    workspace_id: UUID,
+    created_by: UUID,
+    settings: Settings,
+    blob_store: BlobStore,
+    *,
+    slug: str,
+    body: RateTableManualEdit,
+) -> RateTableVersion:
+    """FR-229 (RL-1555 items 1 and 2): create the version the preview showed, with its
+    `created_by_edit` record. A base that is not the latest is the existing 409 of
+    `_persist_new_version` (`base_version + 1` already exists)."""
+    async with database.unit_of_work() as session:
+        table_row, version_row, _, derived = await _edit_derived(
+            session, workspace_id, slug, body, blob_store
+        )
+        _guard_seed_lineage(derived, version_row)
+        threshold = await _resolve_threshold(session, settings, workspace_id)
+        return await _persist_new_version(
+            session,
+            table_row=table_row,
+            derived=derived,
+            version_number=derived.version,
+            created_by=created_by,
+            threshold=threshold,
+            blob_store=blob_store,
+        )
+
+
 async def _resolve_baseline(
     session: Any, rate_table_id: UUID, version: int, against: str | int
 ) -> int:
@@ -1245,6 +1364,11 @@ async def _persist_new_version(
             if derived.created_by_import is not None
             else None
         ),
+        created_by_edit=(
+            derived.created_by_edit.model_dump(mode="json")
+            if derived.created_by_edit is not None
+            else None
+        ),
     )
     session.add(version_row)
     try:
@@ -1287,6 +1411,7 @@ async def _persist_new_version(
         seeded_from=derived.seeded_from,
         created_by_operation=derived.created_by_operation,
         created_by_import=derived.created_by_import,
+        created_by_edit=derived.created_by_edit,
     )
 
 

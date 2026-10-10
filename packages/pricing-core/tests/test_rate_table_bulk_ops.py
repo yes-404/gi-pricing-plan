@@ -21,6 +21,7 @@ from openpyxl import load_workbook
 from model_schema.rating import (
     ImportPreview,
     ImportVerdict,
+    RateTableCell,
     RateTableKey,
     RateTableKeyType,
     RateTableStorageMode,
@@ -31,6 +32,7 @@ from model_schema.rating import (
 )
 from model_schema.refs import ArtifactRef
 from pricing_core.rate_tables.operations import (
+    apply_cell_edits,
     decide_storage_mode,
     export_to_csv,
     export_to_xlsx,
@@ -502,3 +504,58 @@ class TestSeedLineage:
         )
         with pytest.raises(ValueError, match="INCOMPLETE_KEY_DOMAIN"):
             import_from_csv(version, content, filename="import.csv")
+
+
+@pytest.mark.req("FR-234")
+class TestApplyCellEdits:
+    """`apply_cell_edits` (FR-229, FR-234; RL-1555 item 3): every failure is located by the
+    index of the edit it concerns, so the route can answer one field error per failure."""
+
+    @staticmethod
+    def _edit(band: str, relativity: str) -> RateTableCell:
+        return RateTableCell({"driver_age_band": band, "relativity": relativity})
+
+    def test_an_edit_replaces_the_value_and_keeps_the_rest_in_order(self) -> None:
+        base = _version()
+        result = apply_cell_edits(base, [self._edit("21-24", "1.5000")])
+        assert result.issues == ()
+        assert list(result.cells) == [
+            {"driver_age_band": "17-20", "relativity": "1.8400"},
+            {"driver_age_band": "21-24", "relativity": "1.5000"},
+            {"driver_age_band": "25-29", "relativity": "1.1200"},
+        ]
+        assert _cells(base) == _DEFAULT_ROWS  # the base is immutable
+
+    def test_an_unknown_key_is_a_located_issue_not_a_raise(self) -> None:
+        result = apply_cell_edits(_version(), [self._edit("99-99", "1.0")])
+        assert [(i.index, i.code) for i in result.issues] == [(0, "UNKNOWN_KEY")]
+        assert result.cells == ()
+
+    def test_a_key_edited_twice_is_a_duplicate_at_its_second_index(self) -> None:
+        edit = self._edit("17-20", "1.5")
+        result = apply_cell_edits(_version(), [edit, edit])
+        assert [(i.index, i.code) for i in result.issues] == [(1, "DUPLICATE_KEY")]
+
+    def test_every_out_of_bounds_value_is_reported(self) -> None:
+        base = _version(value=_value(min=Decimal("0"), max=Decimal("3")))
+        result = apply_cell_edits(
+            base, [self._edit("17-20", "-1"), self._edit("21-24", "4"), self._edit("25-29", "2")]
+        )
+        assert [(i.index, i.code) for i in result.issues] == [
+            (0, "OUT_OF_BOUNDS"),
+            (1, "OUT_OF_BOUNDS"),
+        ]
+
+    def test_an_edit_that_is_not_exactly_the_declared_columns_is_refused(self) -> None:
+        result = apply_cell_edits(
+            _version(),
+            [RateTableCell({"driver_age_band": "17-20"}), RateTableCell({"relativity": "1.1"})],
+        )
+        assert [(i.index, i.code) for i in result.issues] == [
+            (0, "EDIT_COLUMNS"),
+            (1, "EDIT_COLUMNS"),
+        ]
+
+    def test_a_non_decimal_value_is_out_of_bounds_by_the_shared_check(self) -> None:
+        result = apply_cell_edits(_version(), [self._edit("17-20", "abc")])
+        assert [(i.index, i.code) for i in result.issues] == [(0, "OUT_OF_BOUNDS")]

@@ -310,6 +310,7 @@ and unreferenced by an `output` (FR-212).
   "seeded_from": {"model_ref": "model:motor-ad-frequency@7", "seeded_at": "2026-07-02T10:00:00Z"},
   "created_by_operation": null,
   "created_by_import": null,
+  "created_by_edit": {"applied_to": "rate_table:motor-driver-age-relativity@5", "edited_cells": 1},
   "change_note": "Softened 17-20 from 1.92 to 1.84 following competitor review; see OPT run 2026-07-11.",
   "diff_vs_previous": {"changed_cells": 3, "max_abs_change_pct": 4.2,
                        "exposure_weighted_mean_change_pct": 0.8,
@@ -372,7 +373,13 @@ Values are stored as decimal strings, never JSON floats (R2).
 > length, never used as a path), not a format-derived constant — per FR-235. Both are
 > set at creation and immutable with the version; the before/after cells and the actor
 > belong to NFR-498's Audit Event, not here. This example's version was edited by
-> hand, so both are `null`.
+> hand, so both are `null` and it carries `created_by_edit` instead.
+>
+> **`created_by_edit` added 2026-10-10 (`RL-1555`, DP-S4-1c).** A version created by the
+> manual-edit route (§5.1) carries `{"applied_to", "edited_cells"}`: `applied_to` names the
+> base version edited, in `created_by_import.applied_to`'s form, and `edited_cells` is the
+> number of edits applied. It is set at creation and immutable with the version, and it is
+> what tells a hand-edited version from a re-seed.
 
 > **Seed lineage survives every derivation.** `seeded_from` is set only by
 > seed-from-model, ~~on the first version of a lineage~~ on every version a seed creates:
@@ -385,9 +392,9 @@ Values are stored as decimal strings, never JSON floats (R2).
 > its `seeded_from`, and FR-230's "how far have we moved from the technical rate?"
 > must stay answerable along the whole chain, so `diff_vs_seed` remains meaningful on
 > every derived version. Save-time validation (FR-234) checks the equality against
-> the resolved baseline — `BulkOperation.applied_to` or `created_by_import.applied_to` —
+> the resolved baseline — `BulkOperation.applied_to`, `created_by_import.applied_to` or `created_by_edit.applied_to` —
 > and a derived version may not invent or drop the anchor. `created_by_operation` and
-> `created_by_import` remain mutually exclusive.
+> `created_by_import` remain mutually exclusive, and `created_by_edit` with both (amended 2026-10-10, `RL-1555`).
 
 > **Re-seeding an existing table (added 2026-10-03, `RL-1375` DP-2, FR-230).** A seed
 > into an existing table is accepted only when its current version has exactly one key,
@@ -940,7 +947,7 @@ An Environment may be gated by a `deployment` entry in the Approval Policy (`06`
 | `POST` | `/api/v1/sub-graphs/{slug}/versions` | New version of an existing Sub-graph from a `SubGraphBody`; requires `rating:write`. **201**; **404** `NOT_FOUND` on an unknown slug; **409** on a lost numbering race; the same 422 codes (FR-217). **Added 2026-10-01** (`PL-1325`) |
 | `GET` | `/api/v1/sub-graphs/{slug}@{version}` | Read one Sub-graph version; requires `rating:read`; **404** `NOT_FOUND` on an unknown version or another workspace's (FR-217). **Added 2026-10-01** (`PL-1325`) |
 | `GET` | `/api/v1/sub-graphs/{slug}/versions` | List a Sub-graph's versions, cursor-paginated; requires `rating:read` (FR-217). **Added 2026-10-01** (`PL-1325`) |
-| `POST` | `/api/v1/rate-tables/{slug}/versions` | New Rate Table Version from manual cell edits, with a required change note (FR-229). This is the manual-editing path, and it follows the import route below: the request names the base version and carries the edited cells, and the response is a cell diff against that base for confirmation (FR-231). `confirm: true` re-computes the diff and creates the version. **Amended 2026-09-28** (`RL-1184` E5): this row named no request shape, and no route implements it (register F-W10-3). Owner: WK-675's editor slice. |
+| `POST` | `/api/v1/rate-tables/{slug}/versions` | New Rate Table Version from manual cell edits, with a required change note (FR-229). This is the manual-editing path, and it follows the import route below: the request names the base version and carries the edited cells, and the response is a cell diff against that base for confirmation (FR-231). `confirm: true` re-computes the diff and creates the version. **Amended 2026-09-28** (`RL-1184` E5): this row named no request shape, and no route implements it (register F-W10-3). Owner: WK-675's editor slice. **Typed 2026-10-10 (`RL-1555`, DP-S4-1, DP-S4-1c and DP-S4-2; FD-1366's template line).** The body is `RateTableManualEdit`: `base_version` (an integer ≥ 1, the version edited), `edits` (one or more `RateTableCell`s, each the full row of a key that `base_version` has; a key appears at most once), `change_note` (required, non-blank, FR-229) and `confirm` (default `false`); an unknown field is refused. Requires `rating:write`. **200** a bare `RateTableDiff` of the would-be version against `base_version`; nothing is created. **201** `RateTableVersion` with `confirm: true`: version `base_version + 1`, its cells the base's with each edit's value, `seeded_from` inherited from the base, and `created_by_edit` recording the base and the number of edits (§4.2). **409** `VALIDATION_FAILED` where `base_version + 1` already exists (the base is not the latest). **422** with every failure in the problem's `errors`, one field error per failure, its `field` `edits.<index>.<value name>` for the edit it concerns: `UNKNOWN_KEY` (no such key in the base) and `DUPLICATE_KEY` (a key edited twice) under code `VALIDATION_FAILED`; FR-234's `NULL_VALUE` and `OUT_OF_BOUNDS` under code `RATE_TABLE_INCOMPLETE`. **404** `NOT_FOUND` for an unknown table or `base_version`. A key cannot be added or removed here; that is the import route's. |
 | `POST` | `/api/v1/rate-tables/{slug}/seed-from-model` | **201** Seed one Factor's relativities from a model (FR-230). The body is `{"model_ref", "factor", "change_note"}`; `factor` is required and is the Factor's slug, a key of the model's `relativities`. The seeded table has one key, bound by `factor_ref` to the Factor version the model pins. **422** `VALIDATION_FAILED` for a `factor` that names no relativity entry of the model (a continuous factor included), for a named entry with no pinned Factor of its slug, for two pinned Factors with that slug, and for a re-seed of a lineage bound to another Factor's slug; **404** `NOT_FOUND` for a pinned Factor id that does not resolve in the caller's workspace (`load_factors`) (**amended 2026-10-03, `RL-1361` sections A and D**); **422** `CONTROL_FACTOR_IN_RATEABLE_PATH` for a `factor` that names a `control`-intent Factor (FR-230, `02` FR-88) (**amended 2026-10-08, `RL-1470`, FD-1422**) |
 | `POST` | `/api/v1/rate-tables/{slug}@{version}/bulk-operation` | Uplift / floor / cap / rebase on that version's cells → new version, operation + parameters recorded (FR-233) |
 | `GET` | `/api/v1/rate-tables/{slug}@{version}` | Read one Rate Table Version's definition, without its cells (FR 9940); requires `rating:read`. **200** with a `RateTable` (§4.2); 401; 403; **404** `RATE_TABLE_MISS` on an unknown table or version or another workspace's. **Added 2026-10-10** (`RL-1475`) |

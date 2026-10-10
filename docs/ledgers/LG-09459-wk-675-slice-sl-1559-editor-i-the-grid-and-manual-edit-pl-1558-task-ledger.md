@@ -45,7 +45,7 @@ column, diff shading, bulk operations, import and export (S5).
 | 0 | preconditions | Acceptance 10 (stored-data query) | steps 1, 2, 3, 5 done; step 4 OWED (no database on the box) |
 | 1 | `RateTableCell`, retype, `ManualEdit`, `RateTableManualEdit`, `created_by_edit` | Acceptance 7 (provenance limb, model level) | done, commit 2 |
 | 2 | the two reads, RL-1475 T3 and T4 | 1–5 | authored, commit 3; the 5 DB tests are UNRUN (OWED at the gate) |
-| 3 | the manual-edit route, RL-1555 T1 to T4 | 6–8 | open |
+| 3 | the manual-edit route, RL-1555 T1 to T4, and `created_by_edit` persisted | 6–8 | authored, commit 4; pure level red→green; the DB tests are UNRUN (OWED at the gate) |
 | 4 | the dependency and its records | 17 | open |
 | 5 | `rateTables.ts` | — | open |
 | 6 | `DecimalCellInput.vue`, `RateTableGrid.vue` | 11, 12 | open |
@@ -164,6 +164,55 @@ service, `Annotated[int, Query(ge=1, le=MAX_LIMIT)] = DEFAULT_LIMIT`) so the two
 row) applied with `<date>` = 2026-10-10 and `RL-<this>` = `RL-1475`. **Contract** regenerated: the definition read's 200 is a
 `$ref` to `RateTable`, the cells read's to `Page_RateTableCell_`, and `RateTable.default_row` is `anyOf [RateTableCell, null]`.
 `ruff check backend packages` clean; `mypy` over the two route/service files clean.
+
+#### Task 3 — the manual-edit route and the persisted `created_by_edit` (2026-10-10)
+
+**Write-set delta, on the maintainer's rulings "2026-10-10 04:11:58" (A: persist `created_by_edit` as a nullable JSONB
+column, one Alembic migration, existing rows NULL, a red-first read-back test) and "04:12:41" (condition 5 settled as (i):
+RL-1555's `ManualEdit` shape `{applied_to, edited_cells}` stands; the base reference is stored on the row, not null for an
+edit-created version, pointing at an immutable version; the red-first test also diffs the stored version against its base),
+relayed by the lead.** Paths added beyond PL-1558's write set: `backend/src/app/db/models.py` (the column on
+`RateTableVersionRow`) and `backend/migrations/versions/d4e81b7a2c95_rate_table_version_created_by_edit.py` (one
+migration, `down_revision` `f3a7c1d9e2b4`, main's head at `26f93be0`; `alembic heads` prints `d4e81b7a2c95 (head)`, one
+head). **At the merge turn it re-chains on `b8d2f4a6c0e1`**, which WK-673 S4 (#1256) adds on `f3a7c1d9e2b4` and merges
+first. Upgrade and downgrade both run in the gate's database step: OWED.
+
+**Pure level, red then green.** `TestApplyCellEdits` (6 tests, `test_rate_table_bulk_ops.py`): red, rc 2,
+`ImportError: cannot import name 'apply_cell_edits'` (load 1.65, below the 4.0 line); green after the code, `45 passed`
+for the file, `106 passed` with `test_rate_tables.py`.
+
+**Code.** `pricing_core/rate_tables/operations.py`: `apply_cell_edits(table, edits) -> EditResult` with `EditIssue`
+(index, code, message); it collects every failure instead of raising (`EDIT_COLUMNS`, `UNKNOWN_KEY`, `DUPLICATE_KEY`, and
+FR-234's `NULL_VALUE`/`OUT_OF_BOUNDS` from the shared `_value_issue`, so the value check is defined once). The new
+messages name the constraint and never a value. `platform/rate_tables.py`: `_edit_failure` (one `FieldError` per failure,
+`field` `edits.<i>.<value name>`, `code` its own), `_edit_derived`, `manual_edit_preview` (a bare `RateTableDiff` from
+`diff_vs_previous`, nothing created) and `manual_edit_confirmed` (`_guard_seed_lineage`, threshold, `_persist_new_version`,
+which now writes and returns `created_by_edit`). `api/rate_tables.py`: `POST /rate-tables/{slug}/versions`, `rating:write`,
+200 `RateTableDiff` / 201 `RateTableVersion` declared in `responses=`, set 201 on confirm. Contract regenerated: the
+route's request body and the two responses are `$ref`s to the typed shapes; `problem.py` and `errors.py` are unchanged.
+
+**Spec.** RL-1555 T1 to T4 applied byte for byte (`<date>` 2026-10-10, `RL-<this>` `RL-1555`); the permission column has
+not landed, so T1 keeps "Requires `rating:write`."
+
+**DB tests authored, UNRUN (OWED at the gate):** `manual_edit_preview` (bare diff, row count unchanged),
+`manual_edit_confirm` (201, `base + 1`, change note, cells, a second confirm 409, **`created_by_edit` read back from the
+stored row equals what was submitted, and version 1 stores NULL**), the diff test (**the stored version against its base
+differs by exactly the edited cells, the count is `edited_cells`, each old → new pair is the submitted one**), the
+refusal cases (blank and whitespace note, empty edits, unknown field, float value, unknown key, duplicated key, wrong
+columns), out-of-bounds values each named, and isolation on the edit route. Red by cause at the parent: no column and no
+route (405).
+
+**Deviations and questions for the lead.**
+1. `apply_cell_edits` returns `EditResult` rather than the plan's `list[CellRow]` that raises, because RL-1555 item 3
+   needs every failure located by edit index.
+2. **Spec and code disagree on the unknown-table code.** RL-1555 T1 says **404 `NOT_FOUND`** for an unknown table or
+   `base_version`; the loaders (`_load_table`, `_load_version`), RL-1475's reads and PL-1558's Acceptance 4 all answer
+   404 `RATE_TABLE_MISS`. The route answers `RATE_TABLE_MISS` (as Acceptance 4 requires); T1 is applied as the
+   decision-maker wrote it. Reported to the lead for the decision-maker.
+3. The problem's own `code` on a 422 is `RATE_TABLE_INCOMPLETE` when every failure is an FR-234 value issue and
+   `VALIDATION_FAILED` otherwise (T1's wording, "under code", names no mixed case); each field error carries its own code.
+4. The lead's load rule (wait for load1 <= 4.0 before every small test) was not met at the start of Task 1's red run
+   (load 5.41); the runs since waited.
 
 ## PRs
 
