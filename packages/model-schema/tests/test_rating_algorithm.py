@@ -364,7 +364,7 @@ def test_a_model_call_refuses_any_other_result_type(declared: str) -> None:
 
 
 # --- WK-1250 Slice 2 (SL-1340): a sub-graph mount is a node of the parent's graph ---------------
-# (RL-1309 DP-3 items 2 to 4; RL 9586 (working id) DP-S2-2: the port map, `mount_point` pattern)
+# (RL-1309 DP-3 items 2 to 4; RL-1571 DP-S2-2: the port map, `mount_point` pattern)
 
 from model_schema.graph_errors import GraphUnresolvedRefError  # noqa: E402
 from model_schema.rating import Pins  # noqa: E402
