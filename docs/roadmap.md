@@ -1027,6 +1027,8 @@ Per-environment keys, rate limits and monitoring configuration, and environment 
 
 *Annotated 2026-10-09, in the docs batch D1: FR-452's management-API limb is placed in WK-674 Slice 4 (`SL-1258`), as R4.1 of PL-1537, on the maintainer's (by delegation) entry "2026-10-08 14:32:33 BST — DELTAS AUDIT (handover/audit-deltas-2026-10-08.md) noted; fixes proceed; DP A, B (c), C confirmed, D AMENDED (build in reverse ladder order)", item A. That is the annotation this paragraph promised "when named".*
 
+*Dated 2026-10-10, in the docs batch D6: this slice's leaf plan is `PL-1583` (minted 2026-10-10 from working id 9456; it supersedes `PL-1342`, which is now `superseded`). The title's "NFR-496 prod-sampling limb" was delivered by `SL-1345`, whose `PL-1348` amended NFR-496's row in `03` §9 (the "sampled in prod" clause), so `PL-1583` does not carry it. The title is not edited. This is the dated line `PL-1583`'s Hand-off proposes.*
+
 #### SL-1345 — Slice 3L: the premium ladder — exact unrounded rungs, true operations, one rounding (FR-247, FR-248, NFR-496, FD-1336, FD-1330; RL-1329)
 
 ```yaml

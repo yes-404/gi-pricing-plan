@@ -189,6 +189,8 @@ by their own pids before release; check with `fuser <lockfile>` that only your p
 it.** Why: on 2026-10-08 (S2) a pnpm/vite wrapper started inside `flock -c` inherited the
 lock fd and held gate-1 for about 17 minutes after the run ended.
 
+**Gate-2 standing rule: one docs check beside one code gate, and nothing else.** From the entry "2026-10-10 03:41:56 BST — RULINGS: S4's test_audit_docs_ids.py 82→83 YES; evidence form accepted; GATE-2 pairing becomes STANDING (docs ∥ one code gate only)" in `~/gi-pricing-plan.local/channel/to-lead.md`, item 3, verbatim: *"From now on, gate-2 may run ONE DOCS check (audit-docs, doc-index, register-lint, migrate --verify, the docs pytest subset) concurrently with ONE code full gate on gate-1, never beside a measurement. Two concurrent code gates remain NOT allowed (untested). Any timing-sensitive failure while gate-2 is busy is re-run ALONE before it counts."* The rule rests on three clean pairs, and is limited to exactly what they tested: pair 1, #1250's gate beside finisher-s3's docs checks (00:24–01:10); pair 2, S4's gate beside D2's checks (01:53–02:40); pair 3, S4's re-gate beside D3's checks (02:54–03:40), all on 2026-10-10 BST.
+
 **Read the table, not the exit code alone.** The body's last statement is
 `[ "$nfail" = "0" ]`, so a failing gate exits 1 and a passing one 0 — and 1 is
 distinguishable from the wrapper's busy-slot 99, which is what the `-E 99` fix below is
@@ -1101,7 +1103,7 @@ build log showing no actual build (wrong cwd), one tmpdir ls -i showing identica
 (collision). This section drafted by executor-h; verified by deputy as measured. Reference: 
 to-lead.md entries 10:55:17, 11:02:41, 11:48:50, 14:33:28 (maintainer instruction).
 
-Verified: 2026-10-08 against main d85cf854 (new rule: no background process inside a held slot, `fuser` check); previously 2026-10-06 against main a9ef6777 (new section: a slot probe that gates a check); previously 2026-09-29 against main 4819ec88 (gate slot budget 3 → 2 for the 8-vCPU box, WK-1178; the wrapper loop and `conftest.py` `_SLOT_COUNT` re-read together)
+Verified: 2026-10-10 against main db0642c4 (new paragraph: the gate-2 standing rule, one docs check beside one code gate); previously 2026-10-08 against main d85cf854 (new rule: no background process inside a held slot, `fuser` check); previously 2026-10-06 against main a9ef6777 (new section: a slot probe that gates a check); previously 2026-09-29 against main 4819ec88 (gate slot budget 3 → 2 for the 8-vCPU box, WK-1178; the wrapper loop and `conftest.py` `_SLOT_COUNT` re-read together)
 Prior: 2026-09-17 against main 71f5a2208c7a92bad486ae128775a4a42c7ebc63
 
 2026-09-06 — the gate body's seven stages now run in parallel inside one slot, each
