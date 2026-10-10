@@ -33,6 +33,7 @@ from pricing_core.rating.analysis import (
     derive_changes,
     estimate_attribution_ratings,
 )
+from pricing_core.safe_error import safe_error_text
 
 __all__ = [
     "DISLOCATION_RATINGS_PER_WORKER_HOUR",
@@ -248,6 +249,8 @@ async def estimate_for_spec(
             versions[0], versions[1], WorkspaceResolver(session, workspace_id, blob_store)
         )
     except AttributionError as exc:
-        raise PlatformError(exc.code, exc.code.replace("_", " ").title(), 422, str(exc)) from exc
+        raise PlatformError(
+            exc.code, exc.code.replace("_", " ").title(), 422, safe_error_text(exc)
+        ) from exc
     check_partition(deltas, spec.change_groups)
     return estimate_run(deltas, spec, int(table["row_count"]))

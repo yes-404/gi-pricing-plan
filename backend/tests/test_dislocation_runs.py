@@ -473,6 +473,7 @@ async def test_a_run_that_does_not_reconcile_fails_with_attribution_reconciliati
     assert job.status is JobStatus.FAILED
     assert job.error is not None
     assert job.error["code"] == "ATTRIBUTION_RECONCILIATION_FAILED"
+    assert "Q000" not in str(job.error)  # NFR-499: the quote id in the raised text is not kept
     assert await _runs(database, world.workspace_id) == []
 
 
