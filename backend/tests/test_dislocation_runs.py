@@ -359,7 +359,8 @@ async def world(
         blob = await blob_store.put(session, buffer.getvalue(), "application/vnd.apache.parquet")
         version = DatasetVersionRow(
             slug="dislocation-portfolio", workspace_id=workspace_id, dataset_id=uuid4(),
-            version=1, status="validated", created_by=principal.id, currency="GBP",
+            version=1, status="validated", validation_report_id=new_uuid7(),
+            created_by=principal.id, currency="GBP",
             tables=[{"name": "portfolio", "row_count": frame.height,
                      "blob": {"sha256": blob.sha256}}],
         )
