@@ -32,10 +32,10 @@ relates: [PL-1540, RL-1523, RL-1445, RL-1263, FD-1424, FR-240, FR-222, NFR-499, 
 ### Task list
 
 - [x] Task 0 — preconditions (below).
-- [ ] Task 1 — the reds (Acceptance 1–3, 6, 13 first test) and WS-1's census red.
-- [ ] Task 2 — the check (Acceptance 1–6, 13).
-- [ ] Task 3 — end to end, existing suites (Acceptance 7, 11).
-- [ ] Task 4 — the FR-240 text (Acceptance 8).
+- [x] Task 1 — the reds (Acceptance 1–3, 6, 13 first test) and WS-1's census red; `041d46b5`.
+- [x] Task 2 — the check (Acceptance 1–6, 13); `54b79c67`.
+- [~] Task 3 — backend e2e test (Acceptance 7) and 13's second test authored `49d28282`, DB run owed to the gate slot; Acceptance 11 pricing-core modules run, see Build log; one red OPEN (below).
+- [x] Task 4 — the FR-240 text, `084fcba0`; phrase count 1.
 - [ ] Task 5 — Acceptance 9, 10, gate (Acceptance 12), closing acts.
 
 ### Gate
@@ -54,6 +54,20 @@ Not yet given.
 - Reuse mapping: `compile_bundle`'s `resolved_pins` (every pin, then every component by `setdefault`).
 - FR-240 anchor, `git grep -cF` in `docs/specs/03-rating-engine.md` at this base: RL-1523's original string `The message names the step and the rung.)* |` = 0; the last amendment's closing sentence `(SL-1466, FD-1456). |` = **1** (row :138). Not a STOP (RL-1523 :148–154 limb 2, the last amendment now being RL-1459's).
 - Status flips in the first commit: `PL-1540` `draft → active`, `SL-1541` `draft → active`.
+
+#### Red-by-cause runs (2026-10-10, 22:4x–23:5x BST)
+
+Each: `flock -w 300 /tmp/slots/small-test -c "timeout 150 nice -n 19 uv run --directory <wt> pytest -q -p no:cacheprovider <file>"`, load1 under 4.2, no gate held.
+
+| File, state | rc | Printed |
+|---|---|---|
+| `test_rating_compile_completeness.py`, tests only (`041d46b5`) | 1 | four `Failed: DID NOT RAISE ValueError` (GLM, GBM, peril, empty map); `AttributeError: module 'pricing_core.rating.compile' has no attribute 'required_model_inputs'` (spy test); controls green (`5 passed`) |
+| `test_quote_input_raise_sites.py`, census entry added, no code | 1 | `Right contains 1 more item: {('rating/compile.py', 'check_model_call_coverage'): 1}` |
+| both, at `54b79c67` | 0 | `10 passed`; `19 passed` |
+
+Acceptance 11 at `54b79c67`+: `test_rating_compile_bundle` 30 passed; `_runtime` 14; `_score` 46; `_glm_model_call` 22; `_pin_membership` 26; `_inline` 24; `_declared_reads` 12; `_attribution` 28; `_dislocation` 40; `_ladder_exact` 26; `_lookup_as_at` 19; `_number` 14; `_score_batch` 11; `_shadowed_inputs` 12; `_wire_order` 14; `_committed_strings` 6; `test_fremtpl2_rate_fixture` 2; `test_testing` 35 (all passed).
+
+Fixture edits (completed, never the check weakened): `test_rating_compile_fr240.py::test_a_model_call_over_risk_factors_compiles` now maps `year_of_account` (the model was fitted on it). OPEN: `test_rating_peril_scoring.py::test_a_peril_model_call_inside_a_mounted_sub_graph_is_checked_at_compile` is red at `54b79c67`: `inline.py` renames feature_map VALUES (model features) as graph names, so the inlined map is `m_peril__age_years`; escalated to the lead, standing by.
 
 ## PRs
 
