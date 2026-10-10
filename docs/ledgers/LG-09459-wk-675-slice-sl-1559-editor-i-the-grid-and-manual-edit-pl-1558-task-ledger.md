@@ -44,7 +44,7 @@ column, diff shading, bulk operations, import and export (S5).
 |---|---|---|---|
 | 0 | preconditions | Acceptance 10 (stored-data query) | steps 1, 2, 3, 5 done; step 4 OWED (no database on the box) |
 | 1 | `RateTableCell`, retype, `ManualEdit`, `RateTableManualEdit`, `created_by_edit` | Acceptance 7 (provenance limb, model level) | done, commit 2 |
-| 2 | the two reads, RL-1475 T3 and T4 | 1–5 | open |
+| 2 | the two reads, RL-1475 T3 and T4 | 1–5 | authored, commit 3; the 5 DB tests are UNRUN (OWED at the gate) |
 | 3 | the manual-edit route, RL-1555 T1 to T4 | 6–8 | open |
 | 4 | the dependency and its records | 17 | open |
 | 5 | `rateTables.ts` | — | open |
@@ -144,6 +144,26 @@ and `rate-table-version.schema.json` changed. `RateTableManualEdit` reaches the 
 
 **Observation, not acted on.** T5's list of what `RateTable` lacks does not name `created_by_edit`; the text is the
 decision-maker's, byte for byte, and `created_by_edit` is RL-1555's addition. Reported to the lead.
+
+#### Task 2 — the two reads (2026-10-10)
+
+**Authored, red not shown.** The five test groups (`definition_read`, `cell_pages`, `cell_paging`, `rate_table_isolation`,
+`cells_bound`; appended to `backend/tests/test_api_rate_tables.py`) need Postgres and the blob store, which the box lacks, so
+no red/green is possible here: **OWED at the gate**, red first by the plan's causes (the routes absent → 404/405; leave a
+path unsorted → the sequences differ). `cell_pages` writes the expected order out: `"10"`, `"9"`, `"B"`, `"a"`. They carry
+`@pytest.mark.req("FR-9940")` / `("FR-232")`.
+
+**Code.** `platform/rate_tables.py`: `read_definition`, `_cells_in_key_order` (the one sort, Python, both storages) and
+`cells_page` (a malformed cursor → 400 through `decode_int_cursor`; a cursor outside `0 < start < total` → the existing
+`_bad_cursor`, as `diff_cells_page` does). `api/rate_tables.py`: `read_rate_table` (`-> RateTable`) and
+`read_rate_table_cells` (`-> Page[RateTableCell]`, `limit` as the diff-cells route declares it), both `rating:read`. The plan's
+sketch decoded the cursor in the handler and took `limit: Limit = MAX_LIMIT`; I followed the diff-cells route (decode in the
+service, `Annotated[int, Query(ge=1, le=MAX_LIMIT)] = DEFAULT_LIMIT`) so the two cursor routes read alike.
+
+**Spec.** RL-1475 T3 (the FR row, id cell `FR-9940`, prose `FR 9940`) and T4 (two §5.1 rows, three-cell form, before the diff
+row) applied with `<date>` = 2026-10-10 and `RL-<this>` = `RL-1475`. **Contract** regenerated: the definition read's 200 is a
+`$ref` to `RateTable`, the cells read's to `Page_RateTableCell_`, and `RateTable.default_row` is `anyOf [RateTableCell, null]`.
+`ruff check backend packages` clean; `mypy` over the two route/service files clean.
 
 ## PRs
 

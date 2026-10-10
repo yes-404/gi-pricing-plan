@@ -38,6 +38,8 @@ from app.platform.blobs import BlobStore
 from model_schema import JobKind, Permission
 from model_schema.jobs import Job
 from model_schema.rating import (
+    RateTable,
+    RateTableCell,
     RateTableDiff,
     RateTableDiffCell,
     RateTableVersion,
@@ -368,6 +370,40 @@ async def rate_table_diff(
             slug=slug, version=version, against=against, portfolio=portfolio,
         )
     return answer
+
+
+@router.get(
+    "/rate-tables/{slug}@{version}",
+    summary="Read one Rate Table Version's definition, without its cells",
+    responses=problems(401, 403, 404),
+)
+async def read_rate_table(
+    slug: str, version: int, caller: RatingReadDep, database: DatabaseDep
+) -> RateTable:
+    """FR 9940: the version's keys, value, storage, flag and default row; never its cells."""
+    return await service.read_definition(database, caller.workspace_id, slug, version)
+
+
+@router.get(
+    "/rate-tables/{slug}@{version}/cells",
+    summary="Page through one Rate Table Version's cells, either storage, no Job",
+    responses=problems(400, 401, 403, 404, 422),
+)
+async def read_rate_table_cells(
+    slug: str,
+    version: int,
+    caller: RatingReadDep,
+    database: DatabaseDep,
+    blob_store: BlobStoreDep,
+    limit: Annotated[int, Query(ge=1, le=MAX_LIMIT)] = DEFAULT_LIMIT,
+    cursor: str | None = None,
+) -> Page[RateTableCell]:
+    """FR 9940, FR-232: one cursor page of `RateTableCell` rows in key order, for `rows` and
+    `parquet` storage alike, answered **200** and never as a Job. A cursor this API did not
+    issue is a **400**, a `limit` out of range a **422**."""
+    return await service.cells_page(
+        database, caller.workspace_id, slug, version, blob_store, cursor=cursor, limit=limit
+    )
 
 
 @router.get(

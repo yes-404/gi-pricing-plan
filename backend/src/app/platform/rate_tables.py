@@ -24,7 +24,7 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from app.api.pagination import COUNT_CAP, MAX_LIMIT, decode_int_cursor, encode_cursor
+from app.api.pagination import COUNT_CAP, MAX_LIMIT, Page, decode_int_cursor, encode_cursor
 from app.config import Settings
 from app.db.models import (
     BlobRow,
@@ -1078,6 +1078,60 @@ async def _load_cells_of(
         ref = BlobRef.model_validate(version_row.cells)
         return _cells_from_parquet(await blob_store.read(ref))
     return await _load_cells(session, version_row.id, table)
+
+
+async def read_definition(
+    database: Database, workspace_id: UUID, slug: str, version: int
+) -> RateTable:
+    """FR 9940: one version's definition — keys, value, storage, flag, default row — never
+    its cells. The stored `definition` is exactly a `RateTable`."""
+    async with database.session() as session:
+        table_row = await _load_table(session, workspace_id, slug)
+        version_row = await _load_version(session, table_row.id, version, slug)
+        return RateTable.model_validate(version_row.definition)
+
+
+def _cells_in_key_order(
+    cells: Sequence[dict[str, str]], key_names: Sequence[str]
+) -> list[dict[str, str]]:
+    """RL-1475 item 2: code-point order per key column in declared order, compared as
+    strings, for both storages. The one place cells are sorted; never a SQL `ORDER BY`,
+    whose collation could differ from the parquet path's."""
+    return sorted(cells, key=lambda row: tuple(row[name] for name in key_names))
+
+
+async def cells_page(
+    database: Database,
+    workspace_id: UUID,
+    slug: str,
+    version: int,
+    blob_store: BlobStore,
+    *,
+    cursor: str | None,
+    limit: int,
+) -> Page[RateTableCell]:
+    """FR 9940: one page of an immutable version's cells, never a Job (FR-232).
+
+    The cells of the version are loaded per page, then sorted and sliced. For a rows-stored
+    version that is at most the version's cell count, which is at most the workspace
+    threshold (FR-232); a parquet version reads its blob once per page.
+    """
+    async with database.session() as session:
+        table_row = await _load_table(session, workspace_id, slug)
+        version_row = await _load_version(session, table_row.id, version, slug)
+        table = RateTable.model_validate(version_row.definition)
+        cells = await _load_cells_of(session, version_row, table, blob_store)
+    ordered = _cells_in_key_order(cells, [key.name for key in table.keys])
+    total = len(ordered)
+    start = decode_int_cursor(cursor) or 0
+    if cursor is not None and not 0 < start < total:
+        raise _bad_cursor()
+    stop = min(start + limit, total)
+    return Page[RateTableCell](
+        items=_wire_rows(ordered[start:stop]),
+        next_cursor=encode_cursor(stop) if stop < total else None,
+        total_estimate=min(total, COUNT_CAP),
+    )
 
 
 async def _to_version(
