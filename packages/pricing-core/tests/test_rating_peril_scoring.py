@@ -190,6 +190,56 @@ async def test_a_peril_model_call_with_two_produced_names_is_refused_at_compile(
     assert "peril_risk_premium" in message
 
 
+FRAGMENT = "sub_graph:peril-premium@1"
+
+
+def _mounted_peril(produces: list[str]) -> tuple[RatingVersion, FakeResolver]:
+    """OP-A3-M1: `_peril_algorithm()` with its peril `model_call` moved into a mounted sub-graph.
+
+    The parent keeps the input step for `driver_age` and every consumer of `risk_premium_minor`;
+    the fragment holds the `peril_structure_ref` step, so only the INLINED algorithm shows it.
+    """
+    algorithm = _peril_algorithm()
+    step = next(s for s in algorithm["steps"] if s["step_id"] == "s_rp")
+    algorithm["steps"].remove(step)
+    algorithm["sub_graphs"] = [{
+        "ref": FRAGMENT, "mount_point": "m_peril",
+        "inputs": {"driver_age": "driver_age"},
+        "outputs": {"risk_premium_minor": "risk_premium_minor"},
+    }]
+    fragment_step = {**step, "produces": produces}
+    resolver = _resolver(algorithm=algorithm)
+    resolver._payloads[FRAGMENT] = {
+        "slug": "peril-premium", "version": 1,
+        "inputs": [{"name": "driver_age", "type": "int"}],
+        "outputs": [{"name": "risk_premium_minor", "type": "decimal", "required": True}],
+        "steps": [fragment_step],
+        "change_note": "first cut",
+    }
+    version = _peril_version()
+    pins = version.pins
+    assert pins is not None
+    version = version.model_copy(update={
+        "pins": pins.model_copy(update={"sub_graphs": [ArtifactRef.parse(FRAGMENT)]})
+    })
+    return version, resolver
+
+
+@pytest.mark.req("FR-222", "FR-217")
+async def test_a_peril_model_call_inside_a_mounted_sub_graph_is_checked_at_compile() -> None:
+    """OP-A3-M1 (a): the peril checks run over the inlined algorithm, so a step inside a pinned
+    sub-graph does not escape them. Invalid: refused naming the namespaced step; valid: the
+    component models are embedded."""
+    version, resolver = _mounted_peril(["risk_premium_minor", "peril_risk_premium"])
+    with pytest.raises(ValueError, match="BUNDLE_COMPILE_FAILED") as caught:
+        await compile_bundle(version, resolver)
+    assert "m_peril__s_rp" in str(caught.value)
+    version, resolver = _mounted_peril(["risk_premium_minor"])
+    bundle = await compile_bundle(version, resolver)
+    for ref in COMPONENTS:
+        assert ref in bundle.resolved_payloads
+
+
 @pytest.mark.req("FR-189")
 async def test_a_separate_model_large_loss_is_refused_at_compile() -> None:
     """Item 9 (DP-A3-2 (a)): `LOSS_TREATMENT_UNIMPLEMENTED` naming structure and peril."""
