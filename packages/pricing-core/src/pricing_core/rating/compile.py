@@ -747,7 +747,7 @@ def _refuse_control_factor_model_calls(
             structure = PerilStructure.model_validate(
                 resolved_pins[str(step.peril_structure_ref)].payload
             )
-            models = _component_refs(structure)
+            models = peril_component_refs(structure)
         for model_ref in models:
             pin = resolved_pins[str(model_ref)]
             fit_result = pin.payload.get("fit_result")
@@ -790,7 +790,7 @@ def _carry_glm_inputs(payloads: dict[str, Any], resolved: ResolvedArtifact) -> N
         _carry_glm_inputs(payloads, source)
 
 
-def _component_refs(structure: PerilStructure) -> list[ArtifactRef]:
+def peril_component_refs(structure: PerilStructure) -> list[ArtifactRef]:
     """A structure's distinct component model refs, in peril order (FR-188)."""
     refs: list[ArtifactRef] = []
     for peril in structure.perils:
@@ -964,6 +964,7 @@ __all__ = [
     "compile_bundle",
     "fragment_output_type_issues",
     "output_type_issues",
+    "peril_component_refs",
     "producer_types",
     "to_jdm",
     "validate_algorithm",

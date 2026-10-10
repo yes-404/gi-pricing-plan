@@ -9,28 +9,65 @@ Every refusal test is red first by cause (PL-1465 §"Acceptance Standard"): see 
 
 from __future__ import annotations
 
+import ast
 from datetime import UTC, datetime
+from decimal import Decimal
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+import numpy as np
 import pytest
+import xgboost as xgb
 from test_rate_table_operations import _factor
 from test_rating_compile_bundle import FakeResolver, _version, valid_algorithm_payload
 from test_rating_compile_fr240 import _FactorsResolver
-from test_rating_runtime import _gbm_model_payload, _train_tiny_booster
+from test_rating_glm_model_call import GlmWorld, age_glm
+from test_rating_runtime import _gbm_model_payload
 
 from model_schema import PerilStructure
 from model_schema.modelling import FactorIntent
-from model_schema.perils import LargeLossKind, LargeLossTreatment, PerilComponent, PerilMethod
+from model_schema.perils import (
+    TOLERANCE_QUANTUM,
+    LargeLossKind,
+    LargeLossTreatment,
+    PerilComponent,
+    PerilMethod,
+)
 from model_schema.rating import RatingVersion
 from model_schema.refs import ArtifactRef
-from pricing_core.rating.compile import compile_bundle
+from pricing_core.modelling import perils as modelling_perils
+from pricing_core.modelling.perils import PerilPrediction, assemble_risk_premium
+from pricing_core.rating.compile import Bundle, ResolvedArtifact, compile_bundle
+from pricing_core.rating.runtime import MODEL_CALL_ERROR_KEY, load_bundle
 
 STRUCTURE = "peril_structure:motor-perils@1"
 AD_FREQ = "model:ad-freq@1"
 AD_SEV = "model:ad-sev@1"
 WS_BC = "model:ws-bc@1"
 COMPONENTS = (AD_FREQ, AD_SEV, WS_BC)
+
+
+def _booster(scale: float) -> bytes:
+    """`test_rating_runtime._train_tiny_booster`'s data with the label scaled, so each
+    component predicts a different, known amount (age 34 -> 1304.8 * scale for `scale` 1)."""
+    x = [[20.0], [30.0], [40.0], [50.0], [60.0]]
+    y = [v * scale for v in (1000.0, 1200.0, 1500.0, 1800.0, 2000.0)]
+    dtrain = xgb.DMatrix(x, label=y, feature_names=["age_years"])
+    booster = xgb.train({"objective": "reg:squarederror", "max_depth": 2}, dtrain, 3)
+    return bytes(booster.save_raw(raw_format="json"))
+
+
+#: Frequency about 0.1 to 0.2 (a count), severity and burning cost in minor units (DP-A3-5 (a)).
+BOOSTERS = {AD_FREQ: _booster(0.0001), AD_SEV: _booster(1.0), WS_BC: _booster(0.05)}
+
+
+def _gbm_predict(ref: str, age: float) -> float:
+    """A component's prediction straight from xgboost, independent of the runtime."""
+    booster = xgb.Booster()
+    booster.load_model(bytearray(BOOSTERS[ref]))
+    frame = xgb.DMatrix(np.array([[age]]), feature_names=["age_years"])
+    return float(booster.predict(frame)[0])
 
 
 def _structure_payload(
@@ -93,7 +130,6 @@ def _resolver(
     structure: dict[str, Any] | None = None,
     algorithm: dict[str, Any] | None = None,
 ) -> FakeResolver:
-    booster = _train_tiny_booster()
     payloads: dict[str, Any] = {
         "rating_algorithm:motor-gb@14": algorithm or _peril_algorithm(),
         "rate_table:motor-expense@3": {"rateable": True, "rows": []},
@@ -101,7 +137,7 @@ def _resolver(
         STRUCTURE: structure or _structure_payload(),
     }
     for ref in COMPONENTS:
-        payloads[ref] = _gbm_model_payload(booster)
+        payloads[ref] = _gbm_model_payload(BOOSTERS[ref])
     return FakeResolver(payloads, {STRUCTURE: "approved", **(statuses or {})})
 
 
@@ -212,3 +248,251 @@ async def test_an_unapproved_custom_objective_under_a_peril_component_is_refused
     message = str(caught.value)
     assert AD_FREQ in message
     assert OBJECTIVE in message
+
+
+# -- Scoring: the runtime composes the structure's risk premium (FR-188, FR-189) -----------
+
+AGES = (25.0, 34.0, 61.0)  # N = 3 quotes in the cross-check
+_EVIDENCE = {"sha256": "b" * 64, "bytes": 10, "media_type": "application/json"}
+CAPPED_AD = LargeLossTreatment.model_validate(
+    {"kind": "capped", "cap_minor": 500000, "restoration_loading": "1.10",
+     "evidence_blob": _EVIDENCE}
+)
+FLAT_WS = LargeLossTreatment.model_validate(
+    {"kind": "flat_loading", "loading_factor": "1.25", "evidence_blob": _EVIDENCE}
+)
+
+
+def _scoring_algorithm(result_type: str | None = "decimal") -> dict[str, Any]:
+    call: dict[str, Any] = {
+        "step_id": "s_rp", "type": "model_call", "label": "Risk premium", "mode": "exact",
+        "peril_structure_ref": STRUCTURE, "feature_map": {"driver_age": "age_years"},
+        "consumes": ["driver_age"], "produces": ["risk"],
+    }
+    if result_type is not None:
+        call["result_type"] = result_type
+    return {
+        "slug": "motor-gb", "version": 14,
+        "input_contract": [
+            {"name": "driver_age", "type": "int", "nullable": False, "min": 17, "max": 99},
+        ],
+        "outputs": [{"name": "risk_out", "type": "decimal", "required": True}],
+        "steps": [
+            {"step_id": "s_age", "type": "input", "label": "Age", "input_name": "driver_age",
+             "on_missing": "error", "produces": "driver_age"},
+            call,
+            {"step_id": "s_out", "type": "output", "label": "Risk", "output_name": "risk_out",
+             "rounding": {"mode": "half_even", "dp": 6}, "consumes": ["risk"]},
+        ],
+        "sub_graphs": [],
+    }
+
+
+class _ScoringResolver:
+    """Serves the algorithm, the structure and its components; a GLM component with its Factors."""
+
+    def __init__(
+        self,
+        *,
+        structure: dict[str, Any] | None = None,
+        algorithm: dict[str, Any] | None = None,
+        glm: GlmWorld | None = None,
+    ) -> None:
+        self._glm = glm
+        self._payloads: dict[str, Any] = {
+            "rating_algorithm:motor-gb@14": algorithm or _scoring_algorithm(),
+            STRUCTURE: structure or _structure_payload(),
+            **{ref: _gbm_model_payload(BOOSTERS[ref]) for ref in COMPONENTS},
+        }
+        if glm is not None:
+            self._payloads[AD_SEV] = glm.model_payload()
+
+    async def resolve(self, ref: ArtifactRef) -> ResolvedArtifact:
+        payload = self._payloads[str(ref)]
+        if ref.type == "rating_algorithm":
+            return ResolvedArtifact(status="no_maturity_concept", payload=payload)
+        if self._glm is not None and str(ref) == AD_SEV:
+            return ResolvedArtifact(
+                status="approved", payload=payload, factors=self._glm.factors,
+                bandings=self._glm.bandings, groupings=self._glm.groupings,
+            )
+        return ResolvedArtifact(status="approved", payload=payload)
+
+
+def _scoring_version() -> RatingVersion:
+    version = _peril_version()
+    pins = version.pins
+    assert pins is not None
+    return version.model_copy(update={"pins": pins.model_copy(update={"rate_tables": [],
+                                                                      "reference_tables": []})})
+
+
+async def _bundle(resolver: _ScoringResolver) -> Bundle:
+    return await compile_bundle(_scoring_version(), resolver)  # type: ignore[arg-type]
+
+
+async def _risk(bundle: Bundle, age: float) -> Any:
+    out = await load_bundle(bundle).decision.async_evaluate({"driver_age": int(age)})
+    result = out["result"]
+    assert MODEL_CALL_ERROR_KEY not in result, result
+    return result["risk"]
+
+
+def _expected(age: float, *, severity: float | None = None) -> Decimal:
+    """The structure's risk premium, composed on `Decimal` by hand from independent
+    predictions: `AD` capped (x1.10) frequency * severity, plus `WS` flat-loaded (x1.25)."""
+    freq = Decimal(repr(_gbm_predict(AD_FREQ, age)))
+    sev = Decimal(repr(_gbm_predict(AD_SEV, age) if severity is None else severity))
+    ws = Decimal(repr(_gbm_predict(WS_BC, age)))
+    return freq * sev * Decimal("1.10") + ws * Decimal("1.25")
+
+
+def _treated() -> dict[str, Any]:
+    return _structure_payload(ad_large_loss=CAPPED_AD, ws_large_loss=FLAT_WS)
+
+
+@pytest.mark.req("FR-188", "FR-191")
+async def test_a_peril_structure_model_call_scores_its_assembled_risk_premium() -> None:
+    """Item 3: red today by cause, the `$model_call_error` sentence A-1 left ("scoring a Peril
+    Structure is slice A-3 ... not yet built"); green: the Decimal composition, carried at the
+    engine's 15 significant digits."""
+    bundle = await _bundle(_ScoringResolver(structure=_structure_payload()))
+    for age in AGES:
+        expected = (
+            Decimal(repr(_gbm_predict(AD_FREQ, age))) * Decimal(repr(_gbm_predict(AD_SEV, age)))
+            + Decimal(repr(_gbm_predict(WS_BC, age)))
+        )
+        assert await _risk(bundle, age) == pytest.approx(float(expected), rel=1e-14)
+
+
+@pytest.mark.req("FR-188", "FR-193")
+async def test_a_peril_structure_with_a_glm_component_scores() -> None:
+    """Item 4 (after A-2): the AD severity component is a real GLM; its Factors, Bandings and
+    Groupings travel in the Bundle beside it, and the value equals `predict_glm` composed."""
+    glm = age_glm()
+    bundle = await _bundle(_ScoringResolver(structure=_treated(), glm=glm))
+    assert AD_SEV in bundle.resolved_payloads
+    for age in AGES:
+        severity = glm.predict(driver_age=age)
+        assert await _risk(bundle, age) == pytest.approx(
+            float(_expected(age, severity=severity)), rel=1e-14
+        )
+
+
+@pytest.mark.req("FR-189")
+async def test_peril_scoring_restores_each_peril_before_the_sum() -> None:
+    """Item 5: AD `capped` x1.10 and WS `flat_loading` x1.25 are applied per peril; the value
+    differs from either loading applied to the total."""
+    bundle = await _bundle(_ScoringResolver(structure=_treated()))
+    age = 34.0
+    value = await _risk(bundle, age)
+    assert value == pytest.approx(float(_expected(age)), rel=1e-14)
+    ad = Decimal(repr(_gbm_predict(AD_FREQ, age))) * Decimal(repr(_gbm_predict(AD_SEV, age)))
+    ws = Decimal(repr(_gbm_predict(WS_BC, age)))
+    for wrong_loading in (Decimal("1.10"), Decimal("1.25")):
+        assert value != pytest.approx(float((ad + ws) * wrong_loading), rel=1e-9)
+
+
+@pytest.mark.req("FR-193", "NFR-491")
+async def test_a_peril_bundle_scores_after_a_json_round_trip_with_no_resolver() -> None:
+    """Item 6: the Bundle carries the structure and its components, so it scores with no
+    resolver and no database after a JSON round trip."""
+    resolver = _ScoringResolver(structure=_treated())
+    bundle = await _bundle(resolver)
+    del resolver
+    revived = Bundle.model_validate_json(bundle.model_dump_json())
+    assert revived.content_hash == bundle.content_hash
+    assert await _risk(revived, 34.0) == pytest.approx(float(_expected(34.0)), rel=1e-14)
+
+
+@pytest.mark.req("FR-226")
+async def test_a_peril_model_call_without_a_result_type_rounds_the_total_once() -> None:
+    """OP-2 (a): one rule for every `model_call` (00:44:31). No `result_type` is the legacy
+    `round()`; the explicit `decimal` of the tests above carries the value unrounded."""
+    algorithm = _scoring_algorithm(result_type=None)
+    bundle = await _bundle(_ScoringResolver(structure=_treated(), algorithm=algorithm))
+    expected = _expected(34.0)
+    assert await _risk(bundle, 34.0) == round(expected)
+    assert expected != round(expected)  # the assertion cannot pass by an exact fixture
+
+
+@pytest.mark.req("FR-188")
+async def test_the_decimal_composition_matches_assemble_risk_premium_within_the_tolerance() -> None:
+    """OP-1 (a), cross-check: on the golden of N = 3 quotes (ages 25, 34, 61) the rating
+    path's Decimal composition and the float64 `assemble_risk_premium` agree to within
+    `TOLERANCE_QUANTUM` (0.000001 minor units) absolute."""
+    bundle = await _bundle(_ScoringResolver(structure=_treated()))
+    for age in AGES:
+        frame = assemble_risk_premium([
+            PerilPrediction(
+                peril="AD", method=PerilMethod.FREQUENCY_SEVERITY,
+                frequency=np.array([_gbm_predict(AD_FREQ, age)]),
+                severity=np.array([_gbm_predict(AD_SEV, age)]), large_loss=CAPPED_AD,
+            ),
+            PerilPrediction(
+                peril="WS", method=PerilMethod.BURNING_COST,
+                burning_cost=np.array([_gbm_predict(WS_BC, age)]), large_loss=FLAT_WS,
+            ),
+        ])
+        modelling = Decimal(repr(float(frame["risk_premium"][0])))
+        scored = Decimal(repr(await _risk(bundle, age)))
+        assert abs(scored - modelling) <= TOLERANCE_QUANTUM
+
+
+_RATING_SRC = Path(__file__).resolve().parents[1] / "src" / "pricing_core" / "rating"
+
+
+def _float_assembly_uses(source: str) -> list[int]:
+    """Line numbers where `source` imports or names `assemble_risk_premium` (or its module)."""
+    lines = []
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.ImportFrom | ast.Import):
+            module = getattr(node, "module", "") or ""
+            names = [alias.name for alias in node.names]
+            if "assemble_risk_premium" in names or module.endswith("modelling.perils"):
+                lines.append(node.lineno)
+        elif isinstance(node, ast.Name | ast.Attribute) and "assemble_risk_premium" in (
+            ast.unparse(node)
+        ):
+            lines.append(node.lineno)
+    return lines
+
+
+@pytest.mark.req("FR-188")
+def test_the_float_assembly_detector_fires_on_a_deliberately_broken_module() -> None:
+    """The guard's positive control: the detector reports each way a module can reach it."""
+    for broken in (
+        "from pricing_core.modelling.perils import assemble_risk_premium\n",
+        "from pricing_core.modelling import perils\nperils.assemble_risk_premium([])\n",
+        "import pricing_core.modelling.perils as p\n",
+    ):
+        assert _float_assembly_uses(broken), broken
+    assert not _float_assembly_uses("from decimal import Decimal\n")
+
+
+@pytest.mark.req("FR-188")
+def test_no_rating_module_imports_the_float_assembly() -> None:
+    """OP-1 (a), guard 1: `assemble_risk_premium` is float64 and stays outside the rating path
+    (CLAUDE.md §7: Decimal, never float), checked by AST over every `pricing_core/rating`
+    module."""
+    offenders = {
+        path.name: lines
+        for path in sorted(_RATING_SRC.rglob("*.py"))
+        if (lines := _float_assembly_uses(path.read_text(encoding="utf-8")))
+    }
+    assert not offenders, f"the rating path reaches the float assembly: {offenders}"
+
+
+@pytest.mark.req("FR-188")
+async def test_scoring_a_peril_structure_never_calls_assemble_risk_premium(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """OP-1 (a), guard 2: a monkeypatched `assemble_risk_premium` that raises is not called
+    while a peril quote scores. Red today by cause: the step never reaches a value."""
+
+    def _forbidden(*args: Any, **kwargs: Any) -> Any:
+        raise AssertionError("the rating path called assemble_risk_premium (float64)")
+
+    monkeypatch.setattr(modelling_perils, "assemble_risk_premium", _forbidden)
+    bundle = await _bundle(_ScoringResolver(structure=_treated()))
+    assert await _risk(bundle, 34.0) == pytest.approx(float(_expected(34.0)), rel=1e-14)
