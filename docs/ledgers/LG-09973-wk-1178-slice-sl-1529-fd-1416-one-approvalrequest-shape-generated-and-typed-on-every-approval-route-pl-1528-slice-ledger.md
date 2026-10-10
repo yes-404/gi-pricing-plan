@@ -75,6 +75,27 @@ TOTAL unparseable=0
   (`gipricing_sl-1559_a21fe7ac` read 50 rows in an earlier count query, 76 at the print: another run was writing to it.) `n = 0`, so no STOP.
 - **Commit 1:** `PL-1528` `status:` `draft` to `active`, the `SL-1529` row `draft` to `active`, and this file.
 
+**Plan delta D1 (2026-10-10, accepted by the lead in `to-lead.md`-channel message to `executor-sl1529`, before the gate): `SHIPPED_NOT_COMPARED` holds 4 slugs, not PL-1528's 5.** PL-1528 Acceptance 7 and Task 5 list `dislocation-run` among the exempt slugs. At `origin/main` `31b88780aa52894624a5e08454ce2d5925d04b37` it is generated (SL-1387), so it is no longer authored-only, and the guard's own stale-check ("`SHIPPED_NOT_COMPARED` names a slug that is no longer authored-only") would refuse it. Measured at that tree with the predicate (authored-only slug; the authored file's `title` plus its `$defs` keys; a name counts when `model_schema` exports it as a `pydantic.BaseModel` subclass), by this script (kept out of the repository, run as `uv run --directory <worktree> python f27.py <worktree>`):
+
+```python
+import json, pathlib, sys
+root = pathlib.Path(sys.argv[1])
+A = root/"docs/contracts/schemas"; G = A/"generated"
+import model_schema
+from pydantic import BaseModel
+gen = {p.name.split(".")[0] for p in G.glob("*.schema.json")}
+auth = {p.name.split(".")[0]: p for p in A.rglob("*.schema.json") if G not in p.parents}
+for s in sorted(set(auth) - gen):
+    d = json.loads(auth[s].read_text())
+    names = [d.get("title",""), *d.get("$defs", {})]
+    f = [n for n in names if isinstance(getattr(model_schema, n, None), type) and issubclass(getattr(model_schema, n), BaseModel)]
+    print(s, f)
+```
+
+Output: `approval-request ['ApprovalRequest']`, `dossier []`, `gipp-check []`, `money []`, `monitoring []`, `optimisation-run []`, `provenance []`, `rate-table ['RateTableVersion']`, `rating-algorithm ['RatingAlgorithm']`, `rating-version ['RatingVersion']`, `scoring ['QuoteContext', 'LadderRung', 'ScoringResult', 'Trace']`. So the predicate finds 5 slugs; `approval-request` is fixed by this slice and the map holds the other 4.
+
+**Commits so far** (pushed): `1e0ca169` activation + this ledger; `7691b823` Task 1; `bfb14545` the tests-only red commit (Acceptance 2, 3, 4, 7); `4dc32059` Task 2; `b10b37a2` Task 3; `853cbe4d` Task 4 sources. No test has been run yet: the DB-backed reds and greens run inside this slice's gate-1 slot (the amended RL-1445 of 21:41:05, item (b)), each red at a scratch worktree of the commit that carries only the tests.
+
 ## PRs
 
 (none yet)
