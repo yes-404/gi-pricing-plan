@@ -23,7 +23,7 @@ from decimal import Decimal
 from typing import Any, NoReturn, Protocol
 
 import zen
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, SerializationInfo, field_serializer
 
 from model_schema.modelling import Banding, Factor, FactorIntent, Grouping
 from model_schema.rating import (
@@ -625,6 +625,18 @@ class Bundle(BaseModel):
     pins: Pins
     content_hash: str
     compiled_at: datetime
+
+    @field_serializer("pins")
+    def _pins_without_an_empty_sub_graphs(
+        self, pins: Pins, info: SerializationInfo
+    ) -> dict[str, Any]:
+        """`Pins` had four lists before WK-1250 Slice 2. A version that pins no sub-graph
+        serialises as it always did, so recompiling an existing algorithm gives byte-identical
+        bundle bytes, as `bundle_hash` already gives an identical hash (FR-239, ruling X)."""
+        dumped = pins.model_dump(mode=info.mode)
+        if not dumped["sub_graphs"]:
+            del dumped["sub_graphs"]
+        return dumped
 
 
 def bundle_hash(graph: JdmGraph, pins: Pins) -> str:

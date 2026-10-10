@@ -124,9 +124,6 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
     ("backend/src/app/platform/rating_versions.py", "create_rating_version", "str(exc)"): (
         1, "create time: an artifact-level refusal (FR-223 MODEL_REFERENCE_MODE_INCONSISTENT) "
         "naming the step and the two declared modes; no quote is involved"),
-    ("backend/src/app/platform/rating_versions.py", "compile_rating_version", "str(exc)"): (
-        1, "compile time: an artifact-level `ValueError` from `compile_bundle`; no quote is "
-        "involved"),
     ("backend/src/app/platform/regression_suites.py", "_validate_properties", "{exc}"): (
         1, "VERDICT (Q889-c): cannot carry a quote-input value. `UnsweepableProperty`'s text"
         " (`properties.py`, five raises) interpolates only `check.input`, "

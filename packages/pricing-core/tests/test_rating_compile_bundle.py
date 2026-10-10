@@ -15,6 +15,7 @@ from model_schema.rating import RatingVersion
 from model_schema.refs import ArtifactRef
 from pricing_core.rating.compile import (
     ArtifactResolver,
+    Bundle,
     ResolvedArtifact,
     bundle_hash,
     compile_bundle,
@@ -477,6 +478,19 @@ async def test_a_version_that_pins_no_sub_graph_hashes_exactly_as_before() -> No
         sort_keys=True, separators=(",", ":"),
     )
     assert bundle.content_hash == "sha256:" + hashlib.sha256(canonical.encode()).hexdigest()
+
+
+@pytest.mark.req("FR-239")
+async def test_a_bundle_that_pins_no_sub_graph_serialises_without_the_key() -> None:
+    """Reproducibility (ruling X, 2026-10-10 11:07:35): the stored bundle bytes of a version that
+    pins no sub-graph are those of a four-list `Pins`, so a recompile of an existing algorithm is
+    byte-identical. The key is omitted when empty and a bundle still loads and round-trips."""
+    bundle = await compile_bundle(_version(), _resolver())
+    assert bundle.pins.sub_graphs == []
+    assert "sub_graphs" not in json.loads(bundle.model_dump_json())["pins"]
+    assert Bundle.model_validate_json(bundle.model_dump_json()) == bundle
+    mounted = await compile_bundle(_mounted_version(), _mounted_resolver())
+    assert json.loads(mounted.model_dump_json())["pins"]["sub_graphs"] == [NCD]
 
 
 @pytest.mark.req("FR-20")
