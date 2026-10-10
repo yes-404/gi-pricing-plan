@@ -281,4 +281,9 @@ def test_a_stored_structure_that_no_longer_validates_fails_the_compile_job_input
     job = _run_compile_job(client, admin_headers, database, blob_store, row.id)
     assert job.status is JobStatus.FAILED
     assert job.error["code"] == "BUNDLE_COMPILE_FAILED"
+    # The CAUSE, not just the code: the draft reached `to_structure`'s re-validation (an
+    # unapproved or missing structure would be `PIN_NOT_APPROVED` or `NOT_FOUND`), and the
+    # detail names the fields at fault.
+    assert "validation error(s) for PerilStructure" in job.error["message"]
+    assert "perils[0].method" in job.error["message"]
     assert sentinel not in str(job.error)
