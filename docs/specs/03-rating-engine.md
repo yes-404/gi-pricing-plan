@@ -1389,7 +1389,7 @@ OPT → RATE and DEP-1 is respected.
 | **hypothesis** | Property assertion generation (FR-261) | Strategies derived from an input contract; shrinking counterexamples an actuary can read. **A `pricing-core` runtime dependency, pinned `==6.165.7`** *(2026-09-28, WK-672 Slice 3, `RS-1176` condition 1)*: an exact pin, because shrink-limit detection reads `hypothesis.statistics.collector`, which is internal API |
 | **Vue Flow (frontend)**: `@vue-flow/core` 1.48.2, MIT (adopted 2026-09-28, `RS-1269` F2; added in WK-675 Slice 2) | The DAG designer | Custom node types per step type, edge validation, layout, undo/redo, mapping canvas state to the `RatingAlgorithm` contract |
 | **openpyxl** | CSV/XLSX import/export with strict round-trip (FR-235) | XLSX read + write in one library; CSV is stdlib; round-trip keeps decimal strings — never float through the file |
-| **TanStack Table (frontend)** | Rate table editor | Virtualised editable grids, decimal-safe cell input, diff shading |
+| **TanStack Table (frontend)** | Rate table editor | Virtualised editable grids, decimal-safe cell input, diff shading. Pinned `@tanstack/vue-table` `9.2.6` (MIT, peer `vue >=3.2`), core-only: the server's cursor does the paging (`PL-1558`) |
 | **ECharts (frontend)** | Ladder waterfall, dislocation histogram, attribution waterfall | Waterfall chart construction; large-histogram rendering |
 | **OpenTelemetry** | Per-step timing on the latency path | Low-overhead spans; sampling so tracing does not become the bottleneck |
 

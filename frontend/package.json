@@ -17,6 +17,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@tanstack/vue-table": "9.2.6",
     "@vue-flow/core": "1.48.2",
     "echarts": "^6.1.0",
     "oidc-client-ts": "^3.5.0",
