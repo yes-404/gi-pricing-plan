@@ -159,6 +159,20 @@ Checked at 21:01 BST: `git -C /home/puzhenhao1989/gi-pricing-plan rev-parse HEAD
   batch that mints this record. No other change.
 - Nothing else. This record adds no task, no check and no edit to the root checkout.
 
+## Acceptance — the violation that must become detectable
+
+- `PL-1602`'s `corrected_by:` names a record that does not correct it. *Detected by*
+  `scripts/audit-docs.py`: every `corrected_by:` entry must be a record whose `corrects:`
+  names the file (the module docstring's DP-7 line, `scripts/audit-docs.py:83`).
+- `PL-1602`'s front matter lacks `corrected_by: [RL-1605]`. *Detected by*
+  `git -C <worktree> diff -U0 origin/main HEAD -- docs/plans/PL-01602-*`, which shows the
+  one front-matter line and nothing else; the audit does not report the absence.
+- `PL-1602`'s body changes. *Detected by* the frozen-file rule that refuses a body that is not
+  byte-identical (`scripts/audit-docs.py:2170`, "a frozen file's body never changes").
+- The lead fast-forwards or otherwise changes the root checkout. *Detected by*
+  `git -C /home/puzhenhao1989/gi-pricing-plan rev-parse HEAD`, which prints
+  `8f5a8987c3467fa9961f02b2cfd5ceeb2d31411d` until the user chooses to update it.
+
 ## What this record does not decide
 
 - **Whether and when the root is updated**: the user's.
