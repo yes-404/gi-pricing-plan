@@ -9,12 +9,14 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
+from test_rating_peril_scoring import _structure_payload
 from test_rating_score import _algorithm_payload
 
 from model_schema.rating import RatingAlgorithm, RatingVersion
 from model_schema.refs import ArtifactRef
 from pricing_core.rating.compile import ResolvedArtifact, compile_bundle, validate_algorithm
 from pricing_core.rating.references import referenced_names
+from pricing_core.safe_error import CodedError
 
 #: DP-F35-1 (iii-a)'s ruled code (RL-1519).
 UNDECLARED_READ_CODE = "RATING_STEP_UNDECLARED_READ"
@@ -108,6 +110,9 @@ class _StubResolver:
     async def resolve(self, ref: ArtifactRef) -> ResolvedArtifact:
         if str(ref) == self._algorithm_ref:
             return ResolvedArtifact(status="approved", payload=self._algorithm)
+        if ref.type == "peril_structure":
+            # A-3's compile parses the structure (RL-1459), so it needs a real one, not a stub.
+            return ResolvedArtifact(status="approved", payload=_structure_payload())
         return ResolvedArtifact(status="approved", payload={"stub_for": str(ref)})
 
 
@@ -134,16 +139,47 @@ def _example_version(example: dict[str, Any]) -> RatingVersion:
     })
 
 
-@pytest.mark.req("FR-246")
-async def test_the_03_example_validates_in_full_and_compiles() -> None:
-    """`RatingAlgorithm.model_validate` in full (FR-212, FR-214, every field), then
-    `compile_bundle`, which runs `validate_algorithm` and so the declared-reads check."""
-    example = _spec_example()
-    RatingAlgorithm.model_validate(example)
+def _one_name_example() -> dict[str, Any]:
+    """The example with the Peril Structure step reduced to the one produced name P2 allows, and
+    the output step that consumed the dropped per-peril name removed with it."""
+    example = copy.deepcopy(_spec_example())
+    for step in example["steps"]:
+        if step["step_id"] == "s_rp":
+            step["produces"] = ["risk_premium_minor"]
+    example["steps"] = [s for s in example["steps"] if s["step_id"] != "s_out_peril"]
+    example["outputs"] = [o for o in example["outputs"] if o["name"] != "peril_risk_premium"]
+    return example
+
+
+async def _compile(example: dict[str, Any]) -> Any:
     version = _example_version(example)
     assert version.algorithm_ref is not None
-    bundle = await compile_bundle(version, _StubResolver(str(version.algorithm_ref), example))
+    return await compile_bundle(version, _StubResolver(str(version.algorithm_ref), example))
+
+
+@pytest.mark.req("FR-246")
+async def test_the_03_example_validates_in_full() -> None:
+    """`RatingAlgorithm.model_validate` in full (FR-212, FR-214, every field)."""
+    RatingAlgorithm.model_validate(_spec_example())
+
+
+@pytest.mark.req("FR-246")
+async def test_the_one_name_form_of_the_03_example_compiles_with_its_reads_declared() -> None:
+    """`compile_bundle` runs `validate_algorithm`, so the declared-reads check, over the example
+    with `s_rp` producing one name (RL-1459 DP-A3-1 (c))."""
+    bundle = await _compile(_one_name_example())
     assert bundle.content_hash.startswith("sha256:")
+
+
+@pytest.mark.req("FR-249")
+async def test_a_peril_structure_model_call_producing_two_names_is_refused_at_compile() -> None:
+    """The RULE (RL-1459 DP-A3-1 (c); the lead's ruling of 2026-10-10 14:43:15 BST): a Peril
+    Structure `model_call` produces one name; two are refused with BUNDLE_COMPILE_FAILED naming
+    the step. `03` §4.1's example (03:295-299, `s_rp`, as RL-1519 ruled it) declares two and is
+    KNOWN-WRONG text pending a correcting RL (FD 9953 (working id)): do not read it as valid.
+    Red before the rework: the old test compiled that example and failed with this very code."""
+    with pytest.raises(CodedError, match=r"BUNDLE_COMPILE_FAILED: step 's_rp'"):
+        await _compile(_spec_example())
 
 
 def _as_list(value: Any) -> list[str]:
