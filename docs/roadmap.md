@@ -2050,7 +2050,7 @@ relates: [FD-1416, FD-1335, SL-1409, PL-1408, SL-1367, PL-1371]
 id: SL-1541
 family: slice
 title: WK-1178 slice — compile refuses a model_call whose feature_map misses the pinned model's required inputs, per component for a Peril Structure (FR-240)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: ecbd1954d90b1faf0bd197174d720d90ad8f6c6d
@@ -2061,6 +2061,8 @@ relates: [PL-1371, RL-1263]
 ```
 
 The maintainer's (by delegation) decision "2026-10-05 18:51:33 BST — Save-time completeness: DECIDED NOW as (b), completeness at COMPILE" (`channel/to-lead.md`), ruled as RL-1523. `compile_bundle` refuses a `model_call` step whose `feature_map` does not cover the pinned model's required Factors, or its `feature_order` when it has none, and for a `peril_structure_ref` step each component model's, with `MODEL_CALL_FEATURE_MAP_INVALID` (A-2's code, reused) naming the step and the missing features; the offset column is not a required input. Today such a version compiles and fails on every quote as `MODEL_CALL_FAILED`. Leaf plan PL-1540. It follows A-2 (SL-1463) and A-3 (SL-1466), and precedes A-4 (SL-1543); it serialises with PL 9578, PL-1572, PL 9609 and PL-1452 on `compile_bundle`.
+
+(Activated 2026-10-10 as WK-1178's compile-completeness slice (A-4's need 4a), on the dispatch GO "2026-10-10 21:41:05 BST — RL-1445 CAP: AMENDED by dated line (counting unit = gate or measurement, with guard rails); GO SL-1541 (WS-1 (a)); OP-1503-1 (a); SL-1575 noted" item 2 in `to-lead.md`; `PL-1540` set `active` in the slice branch's first commit; ledger LG-9975, a working id the lead mints at the merge turn.)
 
 
 #### SL-1543 — WK-1178 A-4 — the exit demo walks `WF-699`'s Peril Structure path
