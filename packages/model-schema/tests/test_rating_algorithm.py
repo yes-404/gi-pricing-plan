@@ -298,3 +298,33 @@ def test_the_diff_names_a_repointed_table() -> None:
     assert repoint.field == "rate_table_ref"
     assert str(repoint.before) == "rate_table:motor-expense@3"
     assert str(repoint.after) == "rate_table:motor-expense@4"
+
+
+@pytest.mark.req("FR-1399")
+def test_diff_algorithms_reports_contract_and_output_deltas() -> None:
+    """DP-S3-2 (a): added, removed and changed contract fields and outputs, by name."""
+    old = RatingAlgorithm.model_validate(valid_algorithm())
+    new_data = valid_algorithm()
+    contract = [f for f in new_data["input_contract"] if f["name"] != "channel"]
+    for f in contract:
+        if f["name"] == "driver_age":
+            f["max"] = 90
+    contract.append({"name": "ncd", "type": "int", "nullable": False})
+    new_data["input_contract"] = contract
+    new_data["outputs"] = [
+        {**o, "required": False} if o["name"] == "payable_premium_minor" else o
+        for o in new_data["outputs"]
+    ]
+    new = RatingAlgorithm.model_validate(new_data)
+
+    diff = diff_algorithms(old, new)
+    assert [(d.name, d.change) for d in diff.input_contract_deltas] == [
+        ("channel", "removed"),
+        ("driver_age", "changed"),
+        ("ncd", "added"),
+    ]
+    assert [(d.name, d.change) for d in diff.output_deltas] == [
+        ("payable_premium_minor", "changed")
+    ]
+    assert diff.input_contract_changed is True
+    assert diff.outputs_changed is True
