@@ -62,9 +62,9 @@ const diff = ref<AlgorithmDiff | null>(null);
 const diffMarks = computed(() => {
   const marks = new Map<string, "added" | "changed">();
   if (diff.value === null) return marks;
-  for (const id of diff.value.added_steps) marks.set(id, "added");
-  for (const c of diff.value.changed_steps) marks.set(c.step_id, "changed");
-  for (const r of diff.value.repointed_tables) marks.set(r.step_id, "changed");
+  for (const id of (diff.value.added_steps ?? [])) marks.set(id, "added");
+  for (const c of (diff.value.changed_steps ?? [])) marks.set(c.step_id, "changed");
+  for (const r of (diff.value.repointed_tables ?? [])) marks.set(r.step_id, "changed");
   return marks;
 });
 

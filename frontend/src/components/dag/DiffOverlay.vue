@@ -19,10 +19,10 @@ const busy = ref(false);
 const hasChanges = computed(
   () =>
     result.value !== null &&
-    (result.value.added_steps.length > 0 ||
-      result.value.removed_steps.length > 0 ||
-      result.value.changed_steps.length > 0 ||
-      result.value.repointed_tables.length > 0 ||
+    ((result.value.added_steps ?? []).length > 0 ||
+      (result.value.removed_steps ?? []).length > 0 ||
+      (result.value.changed_steps ?? []).length > 0 ||
+      (result.value.repointed_tables ?? []).length > 0 ||
       result.value.input_contract_changed ||
       result.value.outputs_changed),
 );
@@ -111,26 +111,26 @@ async function compare(): Promise<void> {
       <p v-if="!hasChanges">
         No structural differences.
       </p>
-      <template v-if="result.removed_steps.length > 0">
+      <template v-if="(result.removed_steps ?? []).length > 0">
         <h4 class="font-medium">
           Removed
         </h4>
         <ul class="list-disc pl-5">
           <li
-            v-for="id in result.removed_steps"
+            v-for="id in result.removed_steps ?? []"
             :key="id"
           >
             {{ id }}
           </li>
         </ul>
       </template>
-      <template v-if="result.repointed_tables.length > 0">
+      <template v-if="(result.repointed_tables ?? []).length > 0">
         <h4 class="font-medium">
           Re-pointed tables
         </h4>
         <ul class="list-disc pl-5">
           <li
-            v-for="r in result.repointed_tables"
+            v-for="r in result.repointed_tables ?? []"
             :key="`${r.step_id}-${r.field}`"
           >
             {{ r.step_id }}: {{ r.before }} → {{ r.after }}
