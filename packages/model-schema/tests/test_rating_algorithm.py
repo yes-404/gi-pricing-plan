@@ -35,6 +35,7 @@ def valid_algorithm() -> dict:
             {"name": "driver_age", "type": "int", "nullable": False, "min": 17, "max": 99},
             {"name": "effective_date", "type": "date", "nullable": False},
             {"name": "channel", "type": "enum", "domain": ["direct", "broker"], "nullable": False},
+            {"name": "min_premium_minor", "type": "int", "nullable": False},
         ],
         "outputs": [
             {"name": "payable_premium_minor", "type": "money_minor", "required": True},
@@ -46,6 +47,9 @@ def valid_algorithm() -> dict:
              "input_name": "effective_date", "on_missing": "error", "produces": "effective_date"},
             {"step_id": "s_in_channel", "type": "input", "label": "Channel",
              "input_name": "channel", "on_missing": "error", "produces": "channel"},
+            {"step_id": "s_in_min_premium", "type": "input", "label": "Minimum premium",
+             "input_name": "min_premium_minor", "on_missing": "error",
+             "produces": "min_premium_minor"},
             {"step_id": "s_area", "type": "lookup", "label": "Area",
              "reference_table_ref": "reference_table:ons-postcode-directory@7",
              "key_expr": ["channel"], "as_at": "effective_date", "on_miss": "error",
@@ -66,7 +70,8 @@ def valid_algorithm() -> dict:
              "condition": "office_premium_minor >= min_premium_minor",
              "on_violation": "clamp", "clamp_bounds": {"min": "min_premium_minor"},
              "reason_code": "MIN_PREMIUM_APPLIED",
-             "consumes": ["office_premium_minor"], "produces": "office_premium_minor"},
+             "consumes": ["office_premium_minor", "min_premium_minor"],
+             "produces": "office_premium_minor"},
             {"step_id": "s_out", "type": "output", "label": "Payable premium",
              "output_name": "payable_premium_minor", "rounding": {"mode": "half_even", "dp": 0},
              "consumes": ["office_premium_minor"]},
@@ -89,7 +94,7 @@ def test_a_valid_algorithm_parses() -> None:
     algorithm = RatingAlgorithm.model_validate(valid_algorithm())
     assert algorithm.slug == "motor-gb"
     assert algorithm.version == 14
-    assert len(algorithm.steps) == 9
+    assert len(algorithm.steps) == 10
     assert algorithm.sub_graphs[0].ref.type == "sub_graph"
     assert algorithm.sub_graphs[0].mount_point == "s_ncd"
     types = {type(step).__name__ for step in algorithm.steps}
@@ -163,8 +168,8 @@ def test_a_monetary_result_typed_as_float_is_refused() -> None:
         RatingAlgorithm.model_validate(data)
 
     data = valid_algorithm()
-    data["steps"][6] = {
-        **data["steps"][6], "result_type": "float",
+    data["steps"][7] = {
+        **data["steps"][7], "result_type": "float",
     }
     with pytest.raises(ValidationError, match="never float"):
         RatingAlgorithm.model_validate(data)
@@ -174,8 +179,8 @@ def test_a_monetary_result_typed_as_float_is_refused() -> None:
 def test_a_model_call_declares_exactly_one_reference() -> None:
     """T1: FR-222 — a model_call pins a model or a peril structure, not both."""
     data = valid_algorithm()
-    data["steps"][4] = {
-        **data["steps"][4],
+    data["steps"][5] = {
+        **data["steps"][5],
         "model_ref": "model:motor-ad-frequency@7",
         "peril_structure_ref": "peril_structure:motor-gb-2026h2@2",
     }
@@ -199,13 +204,13 @@ def test_a_cycle_is_refused() -> None:
     # s_office consumes cycle_val (produced by the constraint) while the constraint
     # consumes office_premium_minor (produced by s_office): a genuine two-step cycle
     # that still leaves the declared output reachable.
-    data["steps"][6] = {
-        **data["steps"][6],
+    data["steps"][7] = {
+        **data["steps"][7],
         "consumes": ["risk_premium_minor", "expense_factor", "cycle_val"],
         "produces": "office_premium_minor",
     }
-    data["steps"][7] = {
-        **data["steps"][7],
+    data["steps"][8] = {
+        **data["steps"][8],
         "consumes": ["office_premium_minor"],
         "produces": "cycle_val",
     }
@@ -217,8 +222,8 @@ def test_a_cycle_is_refused() -> None:
 def test_an_undefined_reference_is_refused() -> None:
     """T2: FR-212 — a consumed name no step produces fails."""
     data = valid_algorithm()
-    data["steps"][6] = {
-        **data["steps"][6],
+    data["steps"][7] = {
+        **data["steps"][7],
         "consumes": ["no_such_value"], "produces": "office_premium_minor",
     }
     with pytest.raises(ValidationError, match="undefined value"):
@@ -336,30 +341,30 @@ def test_a_stored_model_call_without_result_type_loads_as_the_legacy_default() -
     prediction rounded at the step as before (PL-1464 item 16; the 2026-10-10 00:40:31 BST
     ruling). It does not become `decimal`, which is the opt-in."""
     data = valid_algorithm()
-    assert "result_type" not in data["steps"][4]
+    assert "result_type" not in data["steps"][5]
     algorithm = RatingAlgorithm.model_validate(data)
-    assert algorithm.steps[4].result_type is None  # type: ignore[union-attr]
+    assert algorithm.steps[5].result_type is None  # type: ignore[union-attr]
 
 
 @pytest.mark.req("FR-227")
 @pytest.mark.parametrize("declared", ["decimal", "money_minor"])
 def test_a_model_call_accepts_decimal_or_money_minor(declared: str) -> None:
     data = valid_algorithm()
-    data["steps"][4] = {**data["steps"][4], "result_type": declared}
-    assert RatingAlgorithm.model_validate(data).steps[4].result_type == declared  # type: ignore[union-attr]
+    data["steps"][5] = {**data["steps"][5], "result_type": declared}
+    assert RatingAlgorithm.model_validate(data).steps[5].result_type == declared  # type: ignore[union-attr]
 
 
 @pytest.mark.req("FR-227")
 @pytest.mark.parametrize("declared", ["relativity", "float", "string"])
 def test_a_model_call_refuses_any_other_result_type(declared: str) -> None:
     data = valid_algorithm()
-    data["steps"][4] = {**data["steps"][4], "result_type": declared}
+    data["steps"][5] = {**data["steps"][5], "result_type": declared}
     with pytest.raises(ValidationError, match=r"decimal or money_minor.*FR-227"):
         RatingAlgorithm.model_validate(data)
 
 
 # --- WK-1250 Slice 2 (SL-1340): a sub-graph mount is a node of the parent's graph ---------------
-# (RL-1309 DP-3 items 2 to 4; RL 9586 (working id) DP-S2-2: the port map, `mount_point` pattern)
+# (RL-1309 DP-3 items 2 to 4; RL-1571 DP-S2-2: the port map, `mount_point` pattern)
 
 from model_schema.graph_errors import GraphUnresolvedRefError  # noqa: E402
 from model_schema.rating import Pins  # noqa: E402
