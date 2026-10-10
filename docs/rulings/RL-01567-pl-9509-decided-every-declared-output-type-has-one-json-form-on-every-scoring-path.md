@@ -1,0 +1,364 @@
+---
+id: RL-1567
+family: ruling
+title: PL-1565 decided — every declared output type has one JSON form on every scoring path; int and count are JSON integers, relativity and percentage take the decimal string form, a mismatched value is that row's error coded by class name (03 outputs_json row, FR-214)
+status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
+created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
+owner: decision-maker
+tree: fb178c360f6fd5b2fdb7ae60eea924811a65492f
+phase: P2
+work: WK-1178
+supersedes: []
+superseded_by: ~
+corrected_by: []
+corrects: ~
+relates: [FR-214, FR-254, FR-255, RL-1343, RL-923, RL-1329, FD-1333]
+---
+
+# PL-1565 decided: one JSON form per declared output type, on every scoring path
+
+*(Minted 2026-10-10 as RL-1567 from working id 9498, in the D4 batch mint; citations of the ids minted in this batch, and of ids already minted on main, are re-pointed outside quoted text, quoted channel entries and code blocks, which stay as quoted.)*
+
+## How this was ruled
+
+- **Filed under working id 9498, reserved by the lead.** The mint sweep replaces every
+  `RL-1567`, `PL-1565`, `SL-1566`, `FD-1561`, `PL-1568` and `SL-1569` below with its minted id.
+- **The decisions are not this record's.** They are the maintainer's, by delegation, in two
+  entries in `~/gi-pricing-plan.local/channel/to-lead.md`, quoted verbatim below.
+- **This record states those decisions as spec text and decides nothing beyond them.** Where
+  a text needs a word the entries do not give, the word is from `03` or a ruling at the tree
+  above (§"Details taken from main").
+- **The finding** is FD-1561 (#1204, head `d78f1235` when read). **The plan whose decision
+  points this rules** is PL-1565 (#1210, head `b0659358` when read), which applies T1 by its
+  slice SL-1566. **The other applier** is PL-1568 / SL-1569 (the `RL-1343` slice,
+  being drafted), which carries the `/score` half under DP-2 (ii). These heads may move; the
+  mint heads govern.
+- **Brief:** `brief-dm-9509-2026-10-05.md` (the lead, 2026-10-05).
+
+## The maintainer's entries, quoted verbatim
+
+From `~/gi-pricing-plan.local/channel/to-lead.md` (18 478 lines when read; the file is
+append-only).
+
+**Lines 18392-18397, the FD-1561 entry:**
+
+> ## 2026-10-05 17:58:45 BST — FD 9513 (#1204 @0303d0bf): your decision ACCEPTED (MEDIUM, LATENT, WK-1178, its own fix slice after SL 9561); the row escape is the first red
+>
+> Verified at origin/main (packages/pricing-core/src/pricing_core/rating/score.py): _score_batch_row's try is :1096-1103 (except NotImplementedError; except ValueError or RuntimeError), and "outputs_json": _outputs_json(algorithm, scored.outputs) is at :1123, OUTSIDE it. One bad row can abort the batch, against FR-255. The PR body has 0 session URLs and 0 "[the maintainer's (by delegation)]" [barred-word elision: the quoted entry names the word it greps for] (re-read after the PATCH).
+> 1. ACCEPTED: MEDIUM; LATENT; carry forward, owner WK-1178; its OWN fix slice editing score.py AFTER SL 9561. Reserve the SL/PL ids; a planner drafts when a seat frees.
+> 2. The fix plan's reds, in order: (1) the ROW ESCAPE first. ANY exception from _outputs_json (or anything else after the try) becomes that row's error row, and the run continues (FR-255). This does not depend on the type question, so it lands even if the type DP is still open. (2) the four types, with the JSON form of count, relativity and percentage as a DP for me in that plan (FR-254's "batch never diverges" is the reading; the plan proposes).
+> 3. The decimal half stays with FD-1333 / OQ-1334 / RL-1343, not re-filed. The new fact (a whole-valued decimal reaches /score as a JSON INTEGER, a fractional one as a float; FD-1333/RL-1343 say only "float") goes into FD 9513's text as a related observation, cited to FD-1333. Whichever plan discharges RL-1343's clause must cover BOTH forms; FD 9513's fix plan checks whether that plan exists and names it.
+> 4. The shared-tmp overwrite of the PR body: noted; fixed and re-read. That is the a-shared-job-tmp-dir hazard again, so each member writes PR bodies under its own mktemp path.
+
+**Lines 18453-18461, the PL-1565 entry:**
+
+> ## 2026-10-05 18:10:57 BST — PL 9509 (#1210 @dc4f9c50) DPs RULED: DP-1 (b), DP-2 (ii), DP-3 the class name; the RL-1343 leaf plan is reserved NOW
+>
+> The finding that _ladder_json (:1122) is ALSO outside the try, alongside _outputs_json (:1123): good. Task 1 covers anything after the try.
+> DP-1: (b). int and count are a JSON INTEGER on both paths, and a non-integral value under them becomes that ROW's error. relativity and percentage use the DECIMAL STRING form (the RL-1343 rule, and 03:692 keeps lossy floats out). (c) is NOT taken, because OQ 9556 owns the type vocabulary at save; (d) is not taken.
+> DP-2: (ii). The RL-1343 slice carries the /score half for relativity and percentage. Until it lands, FD-1333's divergence stands for those two types, and FD 9513's register cell names that residue and its discharger.
+> DP-3: the exception class name, as today.
+> RL-1343 HAS NO DISCHARGING PLAN, and its gate is met: YES, reserve the SL/PL ids now under WK-1178 and spawn a planner at the next free seat. Its scope: BOTH decimal forms (whole-valued, which today is a JSON integer, with its own red: 27 → "27.00" at dp 2; fractional, today a float), relativity and percentage on /score (DP-2 (ii)), and NFR-502's re-measure in the gate's own mode. It SERIALISES with SL 9511 on _coerce_output_value. As a breaking wire change, it runs the frontend half of the gate.
+> Task 1 (the row escape) is dispatchable before the DPs, but it edits score.py, so it still runs AFTER SL 9561 in lane B order.
+> Discrepancies: PL 9521 Step 1a citing FD 9513, and PL 9567's write-set table in delta 7: both pre-mint fixes, good.
+
+**Lines 18480-18484, the RL-1567 entry** (added by the pre-mint amendment below; the file had
+18 489 lines when read):
+
+> ## 2026-10-05 18:20:06 BST — RL 9498 (#1212 @7e71b040): both open questions RULED as recommended, with one precision each
+>
+> (1) /score with a NON-INTEGRAL int or count value: REFUSE THAT QUOTE in SL 9500, with an EXISTING per-quote code from 03's owned list, else spec first. PRECISION: the code must be in backend/src/app/api/score.py's _PER_QUOTE_CODES (:97 at my last read): an unknown code reaches the 500 branch (:332). SL 9500's red asserts the HTTP status AND the code, not just "refused". T2 names it. Both paths refuse, so FR-254 holds.
+> (2) Is a whole-valued float integral? YES. Integral means EXACT equality with its integer part (value == int(value)) with NO tolerance; it serialises as the integer (3.0 → 3). 2.9999999999 is NOT integral and is refused. T1 and T2 state it in those words, and each slice has one red for 3.0 → 3 and one for a near-integer refused.
+> The record is amended pre-mint; PL 9499 picks up (1). The ACK is at the mint head.
+
+**Lines 18486-18489, the code entry** (added by the same amendment; the file had 18 510 lines
+when read):
+
+> ## 2026-10-05 18:20:40 BST — RL 9498 precision (1), the code: (c) RATING_TYPE_MISMATCH, added to _PER_QUOTE_CODES
+>
+> (c) ADOPTED. RATING_TYPE_MISMATCH is already owned (03:929) and already means "a value does not fit its declared type". SL 9500 adds it to _PER_QUOTE_CODES (api/score.py:97-104, read by you at fb178c36) as a one-line change, and T2 plus a dated 03 note state that it is ALSO served per quote at score time. Its red asserts the per-quote refusal's status AND the code. (a) is refused (misleading); (b) is not needed.
+> ONE THING NAMED, NOT CHANGED: in BATCH the same fault's row error_code stays the exception class name (DP-3, FR-255). T2 says so explicitly, so the two paths' codes for one fault are a stated difference, not a discovered one. If the plan's batch side raises a dedicated exception class for it, the class name is stated in T1.
+
+**Lines 18529-18533, the T1 entry** (added by the second pre-mint amendment below; the file
+had 18 540 lines when read):
+
+> ## 2026-10-05 18:26:46 BST — RL 9498 @c2c70690: accepted, with ONE pre-mint fix in T1; the isinstance catch is good
+>
+> T2 and the new T3 at 03:929: accepted as drafted.
+> T1: my 18:20:40 entry said "if the plan's batch side raises a dedicated exception class for it, the class name is stated in T1". PL 9509 raises NO dedicated class and ASSERTS ValueError. So T1 STATES ValueError, in a phrase like "the row's error_code is ValueError (FR-255's class-name rule)", rather than leaving it to SL 9511. Otherwise the spec is silent on a code the tests pin, and a later class change would move the wire without a spec change. One sentence, pre-mint.
+> PL 9509 Task 3 item 6's "isinstance(value, int)" break would have refused 3.0 against the exact-equality ruling: a good catch. Its fix in planner-1343's delta must also turn the break into a red for 3.0 → 3 (the mutation that proves the exact-equality code, not isinstance, is what runs).
+
+**Lines 18535-18540, the STOP entry** (added by the same amendment). It supersedes the
+18:20:40 entry's "ONE THING NAMED, NOT CHANGED" paragraph above for the period after SL-1569
+merges; that paragraph stays quoted as it was written:
+
+> ## 2026-10-05 18:27:10 BST — RL 9498 STOP: (a) ADOPTED; my 18:20:40 "batch keeps the class name" is SUPERSEDED once SL 9500 lands
+>
+> (a). The batch path runs _build_outputs inside _score_batch_row's try (score.py:1096-1100), and _batch_error_code (:1006-1018) maps a coded "CODE: msg" ValueError to CODE. So with ONE producer (SL 9500's check in _build_outputs), batch rows code the fault RATING_TYPE_MISMATCH, the same as /score: FR-254 holds, and the codes agree. My 18:20:40 "NAMED, NOT CHANGED: batch keeps the class name" described the state BEFORE SL 9500 and is SUPERSEDED for after it; the RL quotes both entries.
+> Amendments, pre-mint, ONE DM commit: T2 and T3's batch clause = "until SL 9500 merges, batch codes it ValueError (SL 9511's _coerce_output_value, the class-name rule); after, RATING_TYPE_MISMATCH, from the single producer"; item 8 and the Acceptance to match. My 18:26:46 T1 fix ("T1 states ValueError") becomes the same time-bounded sentence in T1.
+> PL 9499 marks DP-4 ruled (a). SL 9500 RE-EXPECTS SL 9511's class-name red to RATING_TYPE_MISMATCH, citing this entry, with a batch red asserting the row's error_code is RATING_TYPE_MISMATCH and the run continues. PL 9509 marks its class-name red "until SL 9500".
+> (b) is refused (a path flag in the shared builder is the divergence FR-254 forbids).
+
+## Verified first, at `fb178c36`
+
+Each read at `fb178c360f6fd5b2fdb7ae60eea924811a65492f` (origin/main at drafting), in
+`docs/specs/03-rating-engine.md` ("03") unless named.
+
+| What | Where | Read |
+|---|---|---|
+| The `outputs_json` row | 03:692 | "pre-serialised to JSON text, total over every `AlgorithmOutput.type` this path can produce (`money_minor` as a JSON number, `decimal` as a JSON string — never a JSON number, so an exact `Decimal` and a lossy `float` cannot be confused reading the column back) and refusing, not stringifying, anything else; `null` on an `"error"` row". It names the form of two types only. |
+| FR-214 with `RL-1343`'s clause | 03:83 | The clause fixes `decimal` "as a JSON string on every scoring path (`/score`, both results of `/score/compare`, and the batch column `outputs_json`)", exactly `dp` digits, and ends "until then `/score` serves the engine's float, and neither path applies the declared rounding (`FD-1333`).)*". No text names a form for `int`, `count`, `relativity` or `percentage`. |
+| FR-254, FR-255 | 03:166, 03:167 | FR-254: the identical code path as real-time scoring, "never a separate 'batch implementation' that could diverge". FR-255: errors are typed and per quote; the run does not abort on one. |
+| `RL-923` §5(i) | `RL-923` :116-125 | The serialiser was `json.dumps(outputs, default=str)`, which stringifies what JSON cannot encode; §5(i) is the source of "refusing, not stringifying". |
+| `RL-1343` rule 3 | `RL-1343` :171-196 | The `decimal` form: positional, exactly `dp` digits, no exponent, an unsigned zero; one producer, `_build_outputs`. |
+| Batch's type set today | `score.py:947`, `:950-988` | `_KNOWN_OUTPUT_TYPES = frozenset({"money_minor", "decimal", "bool", "string", "date"})`; any other declared type raises `ValueError`. |
+| The declared-type vocabulary | `model_schema/rating.py:237`, `:246` | `AlgorithmOutput.type` is `RatingResultType`, an open `str` that refuses only `"float"`. So T1 names a form for each type the entries name and keeps a refusal for any other. |
+| PL-1565's owed text | PL-1565 @`b0659358`, §"The spec text DP-1 (b) owes", activation need 4, Task 3 | T1 on the `:692` row by SL-1566; T2 on FR-214 once, by whichever of SL-1566 and SL-1569 merges first. |
+| The anchors | 03:692, 03:83 | `grep -cF` of each find string in §"The spec texts" = **1** at this tree. |
+
+## Details taken from main (no new choice)
+
+- **"A JSON integer"** for `money_minor` is `RL-1329` §4's form; the row's existing "a JSON
+  number" is the same thing for an integral value, and T1 says integer for all three integral
+  types.
+- **"The decimal string form"** is FR-214's `RL-1343` clause, cited rather than restated.
+- **A declared type the row does not name** stays refused, as `RL-923` §5(i) ruled and
+  `_KNOWN_OUTPUT_TYPES` does today. After FD-1561's Task 1 that refusal is the row's error,
+  not the run's (FR-255).
+- **The error code** is the exception's class name, as `_batch_error_code` gives any uncoded
+  error today (DP-3: "as today").
+
+## Ruled
+
+1. **DP-1 (b).** `int` and `count` outputs are a JSON integer on both paths; a non-integral
+   value under either is that row's error. `relativity` and `percentage` take the `decimal`
+   string form (`RL-1343` rule 3) on both paths. (c) and (d) are not taken, for the reasons in
+   the entry: OQ-1560 owns the type vocabulary at save, and (d) writes integers as strings.
+2. **DP-2 (ii).** SL-1569, the `RL-1343` slice (PL-1568), carries the `/score` half for
+   `relativity` and `percentage`. Until it merges, `FD-1333`'s divergence stands for those two
+   types.
+3. **DP-3.** A row whose output does not serialise is coded with the exception's class name.
+4. **The `outputs_json` row is amended (T1)** to name every declared type's JSON form. Its
+   phrase "refusing, not stringifying, anything else" is struck by a dated amendment, because
+   after SL-1566 the column carries two more string types and the phrase reads against that.
+5. **FR-214 gains a dated clause (T2)** naming the form of the four types on every scoring
+   path and the two carriers.
+
+### Amended pre-mint, 2026-10-05 — the two open questions, ruled (the 18:20:06 and 18:20:40 entries)
+
+The two items this record left open are ruled by the maintainer (by delegation) in the
+18:20:06 BST entry quoted above, and the code in the 18:20:40 BST entry. They leave §"What this record does not decide"; T1, T2,
+§"What it obliges" and the Acceptance are amended to carry them. Verified at `fb178c36`:
+`_PER_QUOTE_CODES` is `backend/src/app/api/score.py:97-104` and holds
+`INPUT_CONTRACT_VIOLATION`, `RATE_TABLE_MISS`, `REFERENCE_LOOKUP_MISS` and
+`MODEL_CALL_FAILED`; `:332` returns no per-quote problem for a code outside it, so the error
+reaches the caller as a 500 (the comment at `:92-96`); a per-quote refusal is
+`_PER_QUOTE_STATUS`, **422** (`:114`); `/score/compare` maps a per-quote code through the same
+`_as_platform_error` (`:449`). `RATING_TYPE_MISMATCH` is in 03's owned-code list (`:929`), and
+its stated meaning (03:845) is a declared type that does not fit its producer's.
+
+6. **Integrality (entry (2)).** For `int` and `count`, a value is integral only by exact
+   equality with its integer part (`value == int(value)`), with no tolerance, and is served as
+   that integer (`3.0` → `3`). A near-integer (`2.9999999999`) is not integral and is refused.
+   T1 and T2 state it.
+7. **A non-integral `int` or `count` value on `/score` (entry (1), the code by the 18:20:40
+   entry).** SL-1569 refuses that quote with **422** `RATING_TYPE_MISMATCH`, adding it to
+   `_PER_QUOTE_CODES` (a one-line change); its red asserts the HTTP status and the code. T2
+   names it, and a dated note on 03's owned-code list (T3) states that the code is also served
+   per quote at score time. Both paths refuse, so FR-254 holds.
+8. ~~**The codes differ by path, stated, not changed (the 18:20:40 entry).** In batch, the same
+   fault's row `error_code` stays the exception's class name (DP-3, FR-255). T2 says so. PL-1565
+   at `b0659358` raises no dedicated class for it (its Task 3 item 6 asserts
+   `error_code == "ValueError"`), so T1 names "the exception class the batch serialiser raises"
+   and leaves the exact class to SL-1566.~~ **Superseded pre-mint, 2026-10-05, by item 10 (the
+   18:26:46 and 18:27:10 entries):** the codes differ by path only until SL-1569 merges, and T1
+   states the class.
+9. **`/score/compare` refuses the same way** — the lead's verdict, a mechanical consequence of
+   item 7 and not a new decision: compare refuses through the same `_as_platform_error`
+   (`api/score.py:449`), so T2 states **422** `RATING_TYPE_MISMATCH` per quote for it too, and
+   SL-1569 has a red for it.
+
+### Amended pre-mint, 2026-10-05 — the batch code over time (the 18:26:46 and 18:27:10 entries)
+
+The maintainer (by delegation) accepted T2 and T3 at `c2c70690` and ordered one fix to T1 in
+the 18:26:46 BST entry, then adopted (a) in the 18:27:10 BST entry, which supersedes the
+18:20:40 entry's batch paragraph for the period after SL-1569 merges. Both are quoted above.
+Item 8 is superseded by item 10; T1, T2, T3, §"What it obliges", §"What this record does not
+decide" and the Acceptance are amended to match. Verified at `116a0da6` (origin/main when
+amended), `packages/pricing-core/src/pricing_core/rating/score.py`: `_score_batch_row`'s try is
+`:1096-1100` and calls `_score_context_sync` (`:1100`), which returns `build_scoring_result`
+(`:1076`), which calls `_build_outputs` (`:849`); the try's `except (ValueError, RuntimeError)`
+passes the error to `_batch_error_code` (`:1006-1018`), which maps a coded
+`"CODE: message"` to `CODE` and anything else to its class name.
+
+10. **The batch code for a non-integral `int` or `count` value, over time.** Until SL-1569
+    merges, the row's `error_code` is **`ValueError`**: the class SL-1566's batch serialiser
+    raises (PL-1565 at `b0659358` raises no dedicated class; its Task 3 item 6 asserts
+    `error_code == "ValueError"`), under FR-255's class-name rule. After SL-1569 merges, it is
+    **`RATING_TYPE_MISMATCH`**: SL-1569's integrality check is in `_build_outputs`, the one
+    producer both paths run (FR-254), and in batch it runs inside `_score_batch_row`'s try, so
+    its coded `ValueError` reaches `_batch_error_code` and the row is coded as `/score` codes the
+    quote. T1, T2 and T3 each state both periods. SL-1569 re-expects SL-1566's `ValueError` red
+    to `RATING_TYPE_MISMATCH`, citing the 18:27:10 entry, and adds a batch red: the row's
+    `error_code` is `RATING_TYPE_MISMATCH` and the run's other rows complete. PL-1565 marks its
+    class-name red "until SL-1569". (b), a path flag in the shared builder, is refused (the
+    18:27:10 entry).
+
+    The superseded clauses, as drafted at `c2c70690`, kept here because the applied texts below
+    replace them:
+
+    > T1: "for a non-integral `int` or `count` value, the exception class the batch serialiser raises, not the per-quote `RATING_TYPE_MISMATCH` that `/score` serves"
+    >
+    > T2: "in batch it makes that row an `"error"` row whose `error_code` is the exception's class name, not `RATING_TYPE_MISMATCH` (FR-255)."
+    >
+    > T3: "in batch the same fault is an `"error"` row coded with the exception's class name (FR-255)"
+
+## The spec texts
+
+Placement was read at `fb178c36`. `RL-1567` in a text is replaced by this ruling's minted id,
+and `FD-1561`, `SL-1566` and `SL-1569` by theirs, at the mint. Nothing else in a text is a
+placeholder. T3 was added by the pre-mint amendment (item 7). Each is applied byte for byte; a find string not found exactly once is a stop,
+reported to the lead.
+
+**T1 — 03:692, the `outputs_json` row. Applied by SL-1566 (PL-1565 Task 3).**
+
+Find (`grep -cF` = 1 at `fb178c36`):
+
+```text
+and refusing, not stringifying, anything else; `null` on an `"error"` row
+```
+
+Replace with:
+
+```text
+~~and refusing, not stringifying, anything else~~ **Amended 2026-10-05 (`RL-1567`, FD-1561): every declared type has one JSON form — `money_minor`, `int` and `count` a JSON integer, where an `int` or `count` value is integral only by exact equality with its integer part (`value == int(value)`), with no tolerance, and is written as that integer (`3.0` → `3`), and a near-integer (`2.9999999999`) is not integral; `decimal`, `relativity` and `percentage` a JSON string, FR-214's decimal string form (`RL-1343`); `bool` a JSON boolean; `string` and `date` a JSON string. A value that does not match its declared type, or a declared type not named here, makes that row an `"error"` row whose `error_code` is the exception's class name (FR-255) — for a non-integral `int` or `count` value, until SL-1569 merges, `ValueError` (the class SL-1566's batch serialiser raises), and after it, `RATING_TYPE_MISMATCH`, the per-quote code `/score` serves, from the single producer FR-254 requires; no value is ever stringified as a fallback**; `null` on an `"error"` row
+```
+
+**T2 — 03:83, FR-214, a dated clause after `RL-1343`'s. Applied once, by whichever of SL-1566
+(PL-1565 Task 3) and SL-1569 (PL-1568) merges first; the second checks it is present and
+records the line in its ledger.**
+
+Find (`grep -cF` = 1 at `fb178c36`):
+
+```text
+neither path applies the declared rounding (`FD-1333`).)* |
+```
+
+It includes the row's closing ` |`, so the clause goes at the end of the FR-214 cell.
+
+Replace with:
+
+```text
+neither path applies the declared rounding (`FD-1333`).)* *(Amended 2026-10-05, `RL-1567` (FD-1561): a declared output of type `int` or `count` is served as a JSON integer on every scoring path. A value under it is integral only by exact equality with its integer part (`value == int(value)`), with no tolerance, and is served as that integer (`3.0` → `3`); a near-integer (`2.9999999999`) is not integral and is refused — on `/score` and each result of `/score/compare` it refuses that quote with **422** `RATING_TYPE_MISMATCH`, a per-quote code; in batch it makes that row an `"error"` row (FR-255) whose `error_code` is, until SL-1569 merges, `ValueError` (the class SL-1566's batch serialiser raises), and after it, `RATING_TYPE_MISMATCH`, the same code as `/score` (FR-254). A declared output of type `relativity` or `percentage` takes the `decimal` form above on every scoring path. Delivered for `outputs_json` by WK-1178's SL-1566, and for `/score` and both results of `/score/compare` by WK-1178's SL-1569; until SL-1569 merges, `/score` serves the engine's number for `relativity` and `percentage` (`FD-1333`'s divergence).)* |
+```
+
+**T3 — 03:929, the owned-code list, a dated note on `RATING_TYPE_MISMATCH`. Applied by SL-1569
+(PL-1568) with its code.**
+
+Find (`grep -cF` = 1 at `fb178c36`):
+
+```text
+`RATING_TYPE_MISMATCH`, `MONETARY_FLOAT_REFUSED`,
+```
+
+Replace with:
+
+```text
+`RATING_TYPE_MISMATCH` *(also served per quote, added 2026-10-05, `RL-1567`: **422** from `POST /api/v1/score` and each result of `/score/compare` when a declared `int` or `count` output's value is not integral (FR-214); in batch the same fault is an `"error"` row (FR-255) coded, until SL-1569 merges, `ValueError` (the class SL-1566's batch serialiser raises), and after it, `RATING_TYPE_MISMATCH`)*, `MONETARY_FLOAT_REFUSED`,
+```
+
+**Trial apply.** Each text was applied with Python `str.replace(find, new, 1)` to a scratch
+copy of 03 at `fb178c36`, and all three together; re-run with the pre-mint amendment's T1, T2
+and T3, and again with the second amendment's (item 10), at `116a0da6`. Counts, `grep -cF` on the scratch copy:
+
+| Text | Find before | Find after | New text before | New text after |
+|---|---|---|---|---|
+| T1 | 1 | 0 | 0 | 1 |
+| T2 | 1 | 0 | 0 | 1 |
+| T3 | 1 | 0 | 0 | 1 |
+| T1, T2 and T3 together | 1, 1, 1 | 0, 0, 0 | 0, 0, 0 | 1, 1, 1 |
+
+The script is in §"Trial-apply script", so a reader can run it again at any tree.
+
+### Trial-apply script
+
+Run from the repository root. It reads the six code blocks from this file in order (T1
+find, T1 new, T2 find, T2 new, T3 find, T3 new) and prints the counts for each text alone and
+for all three.
+
+```python
+import pathlib, re
+rl = next(pathlib.Path("docs/rulings").glob("RL-01567-*.md")).read_text()
+t1f, t1n, t2f, t2n, t3f, t3n = re.findall(r"```text\n(.*?)\n```", rl, re.S)[:6]
+spec = pathlib.Path("docs/specs/03-rating-engine.md").read_text()
+for name, pairs in (("T1", [(t1f, t1n)]), ("T2", [(t2f, t2n)]), ("T3", [(t3f, t3n)]),
+                    ("all", [(t1f, t1n), (t2f, t2n), (t3f, t3n)])):
+    out = spec
+    for f, n in pairs:
+        out = out.replace(f, n, 1)
+    print(name, [(spec.count(f), out.count(f), spec.count(n), out.count(n)) for f, n in pairs])
+```
+
+## What it obliges
+
+- **This commit:** this record only, and `docs/INDEX.md`. No spec or code file is edited here.
+- **SL-1566 (PL-1565)** applies T1 with its code, in one commit (`CLAUDE.md` §2), and applies
+  T2 unless SL-1569 merged first. In batch, an `int` or `count` value is integral only by
+  exact equality (item 6): one red for `3.0` → `3` in `outputs_json`, one for `2.9999999999`
+  making its row an `"error"` row.
+- **SL-1569 (PL-1568)** applies T2 if it merges first; otherwise it checks T2 is present. It
+  delivers the `/score` half for `relativity` and `percentage`. It adds `RATING_TYPE_MISMATCH`
+  to `_PER_QUOTE_CODES` and refuses, on `/score` and `/score/compare`, a quote whose `int` or
+  `count` value is not integral (items 7 and 9): one red for `3.0` → `3` on `/score`, one for
+  `2.9999999999` refused with **422** `RATING_TYPE_MISMATCH` (status and code both asserted),
+  and one for the same refusal on `/score/compare`. It applies T3 with that code. *(Amended
+  pre-mint, item 10:)* it re-expects SL-1566's batch `ValueError` red to
+  `RATING_TYPE_MISMATCH`, citing the 18:27:10 entry, and adds a batch red: the row's
+  `error_code` is `RATING_TYPE_MISMATCH` and the run's other rows complete.
+- **FD-1561's register cell** names the residue for `relativity` and `percentage` on `/score`
+  and its discharger SL-1569 (the 18:10:57 entry, DP-2).
+
+## What this record does not decide
+
+- ~~**The exact exception class** batch raises for a non-integral value (item 8): SL-1566's.~~
+  *Superseded pre-mint by item 10: the record states it — `ValueError` until SL-1569 merges,
+  `RATING_TYPE_MISMATCH` after.*
+- **The vocabulary at save** (OQ-1560), the row escape (FD-1561 Task 1), and anything in
+  `RL-1343`'s own scope beyond the two types DP-2 hands to SL-1569.
+
+## Acceptance — the violation that must become detectable
+
+The violation: **a declared output whose JSON form in `outputs_json` or on `/score` differs
+from the form T1 and T2 name for its type, or a mismatched value that aborts the run or is
+stringified instead of erroring its row.** Each is seen red before the code that turns it green.
+
+- *Violation: batch refuses an `int`, `count`, `relativity` or `percentage` output.* Red at
+  `fb178c36` (`score.py:964-965`). After SL-1566: `int` and `count` read back as JSON integers,
+  `relativity` and `percentage` as exact decimal strings.
+- *Violation: an `int` or `count` value that is not integral is written.* It makes its row an
+  `"error"` row ~~with the exception's class name~~ *(amended pre-mint, item 10)* whose
+  `error_code` is `ValueError` until SL-1569 merges and `RATING_TYPE_MISMATCH` after, and the
+  run's other rows complete.
+- *Violation: after SL-1569, batch and `/score` code one non-integral fault differently (item
+  10).* SL-1569 re-expects SL-1566's `ValueError` red to `RATING_TYPE_MISMATCH`, and its batch
+  red asserts the row's `error_code` is `RATING_TYPE_MISMATCH` and the run's other rows
+  complete; a class name there is red.
+- *Violation: integrality is decided with a tolerance, or a whole-valued float is not served as
+  an integer (item 6).* SL-1566: `3.0` reads back as `3` in `outputs_json`, and `2.9999999999`
+  makes its row an `"error"` row. SL-1569: `3.0` is served as `3` on `/score`, and
+  `2.9999999999` is refused. Each red before its code.
+- *Violation: `/score` serves a non-integral `int` or `count` value, or refuses it with a code
+  outside `_PER_QUOTE_CODES` (item 7).* Red at `fb178c36`: `/score` serves the engine's number.
+  SL-1569's red asserts the HTTP status **422** and the code `RATING_TYPE_MISMATCH`; a 500 or
+  any other code is red.
+- *Violation: `/score/compare` serves a non-integral `int` or `count` value, or refuses it
+  otherwise (item 9).* SL-1569's red asserts **422** and `RATING_TYPE_MISMATCH` on compare.
+- *Violation: a declared type T1 does not name is stringified.* It makes its row an `"error"`
+  row; no `default=str` fallback exists in the serialiser.
+- *Violation: `relativity` or `percentage` is a JSON number on `/score` after SL-1569.* SL-1569's
+  red, with `/score` and `outputs_json` compared byte for byte for one output.
+- *Violation: the spec text drifts from this record.* After each applier's commit, `grep -cF` of
+  T1's and T2's new text in 03 is 1, and of T1's find string is 0; after SL-1569's commit,
+  `grep -cF` of T3's new text is 1 and of its find string is 0.
+
+Drafted as working id 9498.

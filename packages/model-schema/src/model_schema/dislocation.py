@@ -224,3 +224,20 @@ class DislocationRun(BaseModel):
                 "distribution policies must equal quoted_both - zero_baseline - negative_baseline"
             )
         return self
+
+
+class DislocationEstimate(BaseModel):
+    """What a run with a `DislocationSpec` would cost, before launch (`RL-1264`'s feasibility
+    rule; `RL-1504` item 4; 03 §5.1 `POST /api/v1/dislocation-runs/estimate`).
+
+    `estimated_ratings` is `estimate_attribution_ratings` (03 §5.2); `estimated_worker_hours`
+    is that count over the worker throughput the run's guard uses, so the number shown is the
+    number the guard compares.
+    """
+
+    model_config = _FROZEN
+    derived_changes: _Count
+    policies: _Count
+    estimated_ratings: _Count
+    estimated_worker_hours: Annotated[float, Field(ge=0)]
+    method: Literal["shapley", "order_dependent"]

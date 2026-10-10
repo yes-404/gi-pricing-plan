@@ -398,6 +398,11 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # decimal value) is refused 422 at declaration, and again by the Job handler, so it
         # never reaches a running Job as a raw exception.
         "REGRESSION_PROPERTY_INVALID",
+        # Dislocation attribution (WK-673 Slice 4, FR-1397): the Shapley parts of a
+        # Dislocation Run do not reconcile to a compared policy's change. Raised by the
+        # `dislocation.run` handler from `pricing_core`'s `AttributionError`, which cannot
+        # import `PlatformError`. Owned by `03` §5.1.
+        "ATTRIBUTION_RECONCILIATION_FAILED",
     }
 )
 

@@ -84,6 +84,7 @@ _APPROVED_OR_AFTER = (
 
 __all__ = [
     "BundleLoader",
+    "WorkspaceResolver",
     "apply_approval_decision",
     "compile_rating_version",
     "create_rating_version",
@@ -462,6 +463,155 @@ _ACTION = {
 }
 
 
+class WorkspaceResolver:
+    """The workspace's own `ArtifactResolver` (DP-S4-4): resolves an algorithm or a pin
+    through the workspace's tables, embedding each artifact's real content (RL-873).
+
+    Lifted unchanged from `compile_rating_version`, where it was nested, so that a worker
+    resolves a pin exactly as a real compile does (`dislocation.run`, FR-1398).
+    """
+
+    def __init__(
+        self, session: AsyncSession, workspace_id: UUID, blob_store: BlobStore
+    ) -> None:
+        self._session = session
+        self._workspace_id = workspace_id
+        self._blob_store = blob_store
+
+    async def resolve(self, ref: ArtifactRef) -> ResolvedArtifact:
+        session, workspace_id, blob_store = self._session, self._workspace_id, self._blob_store
+        if ref.type == "rating_algorithm":
+            algo = await session.scalar(
+                select(RatingAlgorithmRow).where(
+                    RatingAlgorithmRow.workspace_id == workspace_id,
+                    RatingAlgorithmRow.slug == ref.slug,
+                    RatingAlgorithmRow.version == ref.version,
+                )
+            )
+            if algo is None:
+                raise PlatformError("NOT_FOUND", "Rating algorithm not found", 404)
+            # RL-859
+            # (docs/rulings/RL-00859-the-remainder-splits-and-the-split-is-the-answer.md):
+            # `RatingAlgorithmRow` has no `status` column, so `"approved"` was an invented
+            # maturity rather than a read one. `"no_maturity_concept"` is the sentinel
+            # `pricing_core.rating.compile._MATURITY_CHECK_EXEMPT` reads for a pin kind with
+            # nothing to report.
+            return ResolvedArtifact(status="no_maturity_concept", payload=algo.content)
+        if ref.type == "model":
+            model = await session.scalar(
+                select(ModelRow).where(
+                    ModelRow.workspace_id == workspace_id,
+                    ModelRow.model_family_slug == ref.slug,
+                    ModelRow.version == ref.version,
+                )
+            )
+            if model is None:
+                raise PlatformError("NOT_FOUND", "Model not found", 404)
+            model_obj = to_model(model)
+            payload = model_obj.model_dump(mode="json")
+            if isinstance(model_obj.fit_result, GbmFitResult):
+                # `gbm.py`'s `_fit_xgboost`/`fit_gbm` persist the booster as JSON
+                # text wrapped in bytes (`bytes(booster.save_raw(raw_format="json"))`)
+                # behind a content-addressed blob reference — the only place the
+                # actual booster content exists. Compile time is when DB/blob access
+                # is allowed (RL-874); dereference it now so the Bundle carries the
+                # booster itself, never the reference (RL-873).
+                booster_bytes = await blob_store.read(model_obj.fit_result.booster_blob)
+                payload["fit_result"]["booster_content"] = booster_bytes.decode("utf-8")
+            factors = await load_factors(
+                session, workspace_id=workspace_id, factor_ids=list(model_obj.spec.factors)
+            )
+            return ResolvedArtifact(
+                status=model.status, payload=payload, factors=tuple(factors)
+            )
+        if ref.type == "rate_table":
+            # `rate_tables.py`'s own materialiser: a version's cells are either row-
+            # or parquet-stored, and `_to_version` always returns them inline as
+            # `rows` — reused rather than re-implemented (03 §3.3, FR-232).
+            table_row = await rate_tables_service._load_table(
+                session, workspace_id, ref.slug
+            )
+            version_row = await rate_tables_service._load_version(
+                session, table_row.id, ref.version, ref.slug
+            )
+            materialised = await rate_tables_service._to_version(
+                session, version_row, blob_store
+            )
+            # `RateTableVersionRow` carries no status column at all (rate tables are
+            # immutable-on-write — seed, operation or import, never a draft phase),
+            # so there is no real maturity value to read here. RL-856
+            # (`docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-
+            # exemption-is-declared-and-self-invalidating.md`)
+            # refused inventing "approved" for it: that would put a constant where
+            # `compile_bundle`'s gate reads a discriminator, and fail open the day
+            # `RateTableVersionRow` gains a real status. `_MATURITY_CHECK_EXEMPT` is
+            # what actually admits this pin past the FR-20 floor; the sentinel
+            # below is deliberately not a member of `_APPROVED_OR_BETTER`, so a pin
+            # still fails closed if the exemption is ever removed without this
+            # branch being updated to match.
+            return ResolvedArtifact(
+                status="no_maturity_concept",
+                payload=materialised.model_dump(mode="json"),
+            )
+        if ref.type == "reference_table":
+            version = await reference_service.version_view(
+                session, workspace_id=workspace_id, slug=ref.slug, version=ref.version
+            )
+            rows = await reference_service.rows_as_at(
+                session,
+                workspace_id=workspace_id,
+                slug=ref.slug,
+                version=ref.version,
+                as_at=None,
+                limit=_ALL_REFERENCE_ROWS,
+            )
+            # FR-70's own lifecycle is `draft`/`published`, not compile.py's
+            # generic `approved`/`live`/`retired` vocabulary. "published" is that
+            # lifecycle's FR-20 maturity gate (FR-70: "independently
+            # approvable"); bridged here, deliberately and narrowly, rather than by
+            # widening `compile_bundle`'s own `_APPROVED_OR_BETTER` (out of Task
+            # 1.2's scope — see PR description). A real `draft` version still reports
+            # its own, non-mature status, so an unpublished pin is still refused.
+            status = "approved" if version.status == "published" else version.status
+            return ResolvedArtifact(
+                status=status,
+                payload={
+                    "definition": version.model_dump(mode="json"),
+                    "rows": [row_.model_dump(mode="json") for row_ in rows],
+                },
+            )
+        if ref.type == "custom_objective":
+            objective = await objectives_service.resolve_ref(
+                session, workspace_id=workspace_id, ref=str(ref)
+            )
+            return ResolvedArtifact(
+                status=objective.status.value,
+                payload=objective.model_dump(mode="json"),
+            )
+        if ref.type == "factor":
+            factor = await session.scalar(
+                select(FactorRow).where(
+                    FactorRow.workspace_id == workspace_id,
+                    FactorRow.slug == ref.slug,
+                    FactorRow.version == ref.version,
+                )
+            )
+            if factor is None:
+                raise PlatformError("NOT_FOUND", "Factor not found", 404)
+            # A Factor has no approval lifecycle (RL-856's sentinel); it is read to check
+            # its intent (FR-88) and is never a pin, so no maturity floor reads it.
+            return ResolvedArtifact(
+                status="no_maturity_concept",
+                payload=to_factor(factor).model_dump(mode="json"),
+            )
+        raise PlatformError(
+            "NOT_FOUND",
+            "Pinned artifact cannot be resolved yet",
+            404,
+            f"{ref} has no backend table yet (Phase 2); a compile cannot embed it.",
+        )
+
+
 async def compile_rating_version(
     session: AsyncSession,
     *,
@@ -484,141 +634,10 @@ async def compile_rating_version(
     require_compilable(row)
     schema = to_schema(row)
 
-    class _Resolver:
-        async def resolve(self, ref: ArtifactRef) -> ResolvedArtifact:
-            if ref.type == "rating_algorithm":
-                algo = await session.scalar(
-                    select(RatingAlgorithmRow).where(
-                        RatingAlgorithmRow.workspace_id == workspace_id,
-                        RatingAlgorithmRow.slug == ref.slug,
-                        RatingAlgorithmRow.version == ref.version,
-                    )
-                )
-                if algo is None:
-                    raise PlatformError("NOT_FOUND", "Rating algorithm not found", 404)
-                # RL-859
-                # (docs/rulings/RL-00859-the-remainder-splits-and-the-split-is-the-answer.md):
-                # `RatingAlgorithmRow` has no `status` column, so `"approved"` was an invented
-                # maturity rather than a read one. `"no_maturity_concept"` is the sentinel
-                # `pricing_core.rating.compile._MATURITY_CHECK_EXEMPT` reads for a pin kind with
-                # nothing to report.
-                return ResolvedArtifact(status="no_maturity_concept", payload=algo.content)
-            if ref.type == "model":
-                model = await session.scalar(
-                    select(ModelRow).where(
-                        ModelRow.workspace_id == workspace_id,
-                        ModelRow.model_family_slug == ref.slug,
-                        ModelRow.version == ref.version,
-                    )
-                )
-                if model is None:
-                    raise PlatformError("NOT_FOUND", "Model not found", 404)
-                model_obj = to_model(model)
-                payload = model_obj.model_dump(mode="json")
-                if isinstance(model_obj.fit_result, GbmFitResult):
-                    # `gbm.py`'s `_fit_xgboost`/`fit_gbm` persist the booster as JSON
-                    # text wrapped in bytes (`bytes(booster.save_raw(raw_format="json"))`)
-                    # behind a content-addressed blob reference — the only place the
-                    # actual booster content exists. Compile time is when DB/blob access
-                    # is allowed (RL-874); dereference it now so the Bundle carries the
-                    # booster itself, never the reference (RL-873).
-                    booster_bytes = await blob_store.read(model_obj.fit_result.booster_blob)
-                    payload["fit_result"]["booster_content"] = booster_bytes.decode("utf-8")
-                factors = await load_factors(
-                    session, workspace_id=workspace_id, factor_ids=list(model_obj.spec.factors)
-                )
-                return ResolvedArtifact(
-                    status=model.status, payload=payload, factors=tuple(factors)
-                )
-            if ref.type == "rate_table":
-                # `rate_tables.py`'s own materialiser: a version's cells are either row-
-                # or parquet-stored, and `_to_version` always returns them inline as
-                # `rows` — reused rather than re-implemented (03 §3.3, FR-232).
-                table_row = await rate_tables_service._load_table(
-                    session, workspace_id, ref.slug
-                )
-                version_row = await rate_tables_service._load_version(
-                    session, table_row.id, ref.version, ref.slug
-                )
-                materialised = await rate_tables_service._to_version(
-                    session, version_row, blob_store
-                )
-                # `RateTableVersionRow` carries no status column at all (rate tables are
-                # immutable-on-write — seed, operation or import, never a draft phase),
-                # so there is no real maturity value to read here. RL-856
-                # (`docs/rulings/RL-00856-the-resolver-reports-no-maturity-for-a-rate-table-and-the-
-                # exemption-is-declared-and-self-invalidating.md`)
-                # refused inventing "approved" for it: that would put a constant where
-                # `compile_bundle`'s gate reads a discriminator, and fail open the day
-                # `RateTableVersionRow` gains a real status. `_MATURITY_CHECK_EXEMPT` is
-                # what actually admits this pin past the FR-20 floor; the sentinel
-                # below is deliberately not a member of `_APPROVED_OR_BETTER`, so a pin
-                # still fails closed if the exemption is ever removed without this
-                # branch being updated to match.
-                return ResolvedArtifact(
-                    status="no_maturity_concept",
-                    payload=materialised.model_dump(mode="json"),
-                )
-            if ref.type == "reference_table":
-                version = await reference_service.version_view(
-                    session, workspace_id=workspace_id, slug=ref.slug, version=ref.version
-                )
-                rows = await reference_service.rows_as_at(
-                    session,
-                    workspace_id=workspace_id,
-                    slug=ref.slug,
-                    version=ref.version,
-                    as_at=None,
-                    limit=_ALL_REFERENCE_ROWS,
-                )
-                # FR-70's own lifecycle is `draft`/`published`, not compile.py's
-                # generic `approved`/`live`/`retired` vocabulary. "published" is that
-                # lifecycle's FR-20 maturity gate (FR-70: "independently
-                # approvable"); bridged here, deliberately and narrowly, rather than by
-                # widening `compile_bundle`'s own `_APPROVED_OR_BETTER` (out of Task
-                # 1.2's scope — see PR description). A real `draft` version still reports
-                # its own, non-mature status, so an unpublished pin is still refused.
-                status = "approved" if version.status == "published" else version.status
-                return ResolvedArtifact(
-                    status=status,
-                    payload={
-                        "definition": version.model_dump(mode="json"),
-                        "rows": [row_.model_dump(mode="json") for row_ in rows],
-                    },
-                )
-            if ref.type == "custom_objective":
-                objective = await objectives_service.resolve_ref(
-                    session, workspace_id=workspace_id, ref=str(ref)
-                )
-                return ResolvedArtifact(
-                    status=objective.status.value,
-                    payload=objective.model_dump(mode="json"),
-                )
-            if ref.type == "factor":
-                factor = await session.scalar(
-                    select(FactorRow).where(
-                        FactorRow.workspace_id == workspace_id,
-                        FactorRow.slug == ref.slug,
-                        FactorRow.version == ref.version,
-                    )
-                )
-                if factor is None:
-                    raise PlatformError("NOT_FOUND", "Factor not found", 404)
-                # A Factor has no approval lifecycle (RL-856's sentinel); it is read to check
-                # its intent (FR-88) and is never a pin, so no maturity floor reads it.
-                return ResolvedArtifact(
-                    status="no_maturity_concept",
-                    payload=to_factor(factor).model_dump(mode="json"),
-                )
-            raise PlatformError(
-                "NOT_FOUND",
-                "Pinned artifact cannot be resolved yet",
-                404,
-                f"{ref} has no backend table yet (Phase 2); a compile cannot embed it.",
-            )
-
     try:
-        bundle = await compile_bundle(schema, _Resolver())
+        bundle = await compile_bundle(
+            schema, WorkspaceResolver(session, workspace_id, blob_store)
+        )
     except ValueError as exc:
         text = str(exc)
         code, _, detail = text.partition(": ")
