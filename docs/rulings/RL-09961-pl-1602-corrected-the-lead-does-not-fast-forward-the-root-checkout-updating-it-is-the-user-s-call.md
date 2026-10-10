@@ -34,10 +34,26 @@ is replaced by the minted id.*
   (PL-1602 / SL-1603, absolute hook path, LG-1604) …" (`to-lead.md:21571`), verbatim:
   "PL-1602's root-FF clause gets its correcting RL next batch; the root checkout stays
   untouched."
-- **`corrects: PL-1602` is limited.** It covers two places in `PL-1602` and nothing else,
-  both read at `31b88780`: the *Mitigation* (b) of §"The root checkout and the settings
-  change" (:515–:518) and *Hand-off* item 6 (:707–:709). Both are quoted verbatim in *What
-  this record corrects*, with the plan text that depends on them. `PL-1602`'s front matter
+- **The record is widened** by the entry headed "2026-10-10 21:03:35 BST — RL 9961 scope: (1)
+  YES, the "restart running seats" clause is struck too; (2) YES, the root-started proof is not
+  owed. RL 9961 widens to those lines" (`to-lead.md:21582`), verbatim: "(1) Hand-off item 6's
+  "restart running seats" is struck. It belonged to the root fast-forward hand-off. With the
+  root untouched, no restart is needed: seats spawned from main after #1269 read the
+  absolute-path settings from their own worktree, and running seats keep their old, matching
+  relative-path settings plus script until they end naturally. A mid-work restart would only
+  disrupt live seats. (2) The "root-started proof line" (Task 3 Step 2, Acceptance 5) is NOT
+  owed. It presupposed a root on the new settings, which my 16:40:33 ruling removed. Proof (i)
+  in a throwaway seat (green) plus (ii) red at main discharge the fix, and FD-1598 closes on
+  them (20:59:04). RL 9961 (corrects: PL-1602) widens to quote and correct those lines too
+  (Hand-off item 6's restart clause; Task 3 Step 2's and Acceptance 5's root-started proof),
+  each verbatim, citing 16:40:33 and this entry."
+- **`corrects: PL-1602` is limited.** It covers the places in `PL-1602` listed in *What this
+  record corrects* and nothing else, all read at `31b88780`: *Mitigation* (b) of §"The root
+  checkout and the settings change" (:515–:518); *Hand-off* item 6 (:707–:709), including its
+  restart clause; *Acceptance* 5's root-started sentence (:334–:335); *Task 3* Step 2
+  (:617–:619); and, because their only content is the root fast-forward or the root-started
+  proof, the closing sentence of item 1 of the same section (:498–:499) and the root-started
+  clause of *Hand-off* item 4 (:699–:700). Each is quoted verbatim. `PL-1602`'s front matter
   gains `corrected_by:` naming this record, in the batch that mints it; its body does not
   change by one byte.
 - **The corrected statement**, in the words of the 16:40:33 paragraph: the lead does not
@@ -55,7 +71,7 @@ ROOT CHECKOUT, NOT TOUCHED: the lead does NOT fast-forward or otherwise change /
 The plan's "fast-forward the root at the read-back" mitigation is struck. I tell the user the root may be updated when they choose.
 ```
 
-## What this record corrects — `PL-1602`, two places, at `31b88780`
+## What this record corrects — `PL-1602`, six places, at `31b88780`
 
 File: `docs/plans/PL-01602-wk-1178-the-pretooluse-hook-runs-by-absolute-path-leaf-plan.md`.
 
@@ -63,32 +79,52 @@ File: `docs/plans/PL-01602-wk-1178-the-pretooluse-hook-runs-by-absolute-path-lea
    verbatim: "(b) Hand-off item 6: the lead fast-forwards the root to the merge commit at
    once, and discloses it in the channel (memory `the-root-checkout-is-pinned-to-an-old-branch`,
    "Face, 2026-09-28"), then runs proof (i)'s root-started line." **Corrected:** struck. The
-   lead does not fast-forward the root. Mitigations (a), (c), (d) and (e) of the same paragraph
-   are not touched.
+   lead does not fast-forward the root (16:40:33). Mitigations (a), (c), (d) and (e) of the
+   same paragraph are not touched.
 2. `PL-1602` :707–:709, *Hand-off* item 6, verbatim: "*(Added 2026-10-10.)* **The root
    checkout.** At the merge read-back, the lead fast-forwards the root checkout to the merge
    commit and discloses it in the channel; seats running at the merge are restarted if Task 0
    Step 6 showed a running session keeps the old command. Then Task 3 Step 2." **Corrected:**
-   the fast-forward and its disclosure are struck; the lead does not fast-forward or change
-   the root checkout, and tells the user the root may be updated when they choose. The rest
-   of the item is in *What this record does not decide*.
+   the fast-forward and its disclosure are struck (16:40:33); the restart clause "seats
+   running at the merge are restarted if Task 0 Step 6 showed a running session keeps the old
+   command" is struck (21:03:35 (1)); "Then Task 3 Step 2" is struck with Step 2 (item 4
+   below). The lead does not fast-forward or change the root checkout and tells the user the
+   root may be updated when they choose; no seat is restarted, because seats spawned from main
+   after #1269 read the absolute-path settings from their own worktree, and running seats keep
+   their old, matching relative-path settings and script until they end.
+3. `PL-1602` :334–:335, *Acceptance* 5, the last sentence of the clause, verbatim: "One more
+   line records the same from a session started in the root checkout after the root is
+   fast-forwarded (§"The root checkout and the settings change")." **Corrected:** not owed
+   (21:03:35 (2)). Acceptance 5's seat line, from the throwaway seat, is the whole of 5.
+4. `PL-1602` :617–:619, *Task 3* Step 2, verbatim: "*(Added 2026-10-10.)* After the merge and
+   the root fast-forward (Hand-off item 6), the same three calls in a session started from the
+   root checkout; recorded as a dated line in the ledger's build log. This is the line
+   FD-1598's close reads (Hand-off item 4)." **Corrected:** struck; not owed (21:03:35 (2)).
+   FD-1598's close does not read it; it reads proof (i) in a throwaway seat and proof (ii)
+   red at `main` (20:59:04).
+5. `PL-1602` :498–:499, §"The root checkout and the settings change", the closing sentence of
+   item 1, verbatim: "So proof (i) in a root-started session waits for the fast-forward
+   (Hand-off item 6)." **Corrected:** there is no such proof (21:03:35 (2)). The rest of item
+   1 ("Until the root is fast-forwarded, a session started there still reads the old relative
+   command. Nothing new can lock it, but nothing is fixed for it either: a `cd` still locks
+   it as today.") describes what a root-started session reads; it stays true for whoever
+   later updates the root, and is not corrected.
+6. `PL-1602` :699–:700, *Hand-off* item 4, the clause, verbatim: "and, after the root
+   fast-forward, Task 3 Step 2's root-started line; the lead closes FD-1598 citing both."
+   **Corrected:** the root-started line is not owed (21:03:35 (2)); the lead closes FD-1598
+   citing Acceptance 5's seat line (Task 3 Step 1) and proof (ii), per 20:59:04.
 
-**Plan text that names the fast-forward as its trigger.** These lines are not corrected by
-this record; they are listed so a reader of `PL-1602` knows the event they wait on is now the
-user's update of the root, not an act of the lead. All verbatim at `31b88780`:
-
-- :334–:335 (*Acceptance* 5): "One more line records the same from a session started in the root
-  checkout after the root is fast-forwarded".
-- :497–:499 (§"The root checkout and the settings change", item 1): "**Until the root is
-  fast-forwarded,** a session started there still reads the old relative command. … So proof
-  (i) in a root-started session waits for the fast-forward (Hand-off item 6)."
-- :500 (item 2): "**After the fast-forward,** the command resolves to
-  `<root>/scripts/hooks/retry_cap_hook.py`".
-- :617–:619 (Task 3 Step 2): "After the merge and the root fast-forward (Hand-off item 6), the
-  same three calls in a session started from the root checkout; recorded as a dated line in
-  the ledger's build log."
-- :699–:700 (*Hand-off* item 4): "after the root fast-forward, Task 3 Step 2's root-started
-  line; the lead closes FD-1598 citing both."
+**Plan text read and left uncorrected.** :500 (§"The root checkout and the settings change",
+item 2), verbatim: "**After the fast-forward,** the command resolves to
+`<root>/scripts/hooks/retry_cap_hook.py`, which the root has carried since #516. No lock-out."
+It states what happens whenever the root is next updated, by whoever updates it; it names no
+act of the lead and orders none, so it stays true. Two more hits of `grep -n -i -E
+'fast-forward|root-started|restart'` over the file at `31b88780` are read and left: :513
+(item 4, "assume the old command stays in force for a running session until it restarts"), a
+statement about running sessions that orders nothing; and :572 (Task 0 Step 6, whose last
+sentence says the step "fixes Hand-off item 6's instruction (restart the seats, or not)
+after the merge"). Step 6's measurement stands; its last sentence names an instruction this
+record has struck, so it is moot, not corrected. No other line of the file matches.
 
 ## Why it is unnecessary for safety — the facts, checked
 
@@ -126,9 +162,5 @@ Checked at 21:01 BST: `git -C /home/puzhenhao1989/gi-pricing-plan rev-parse HEAD
 ## What this record does not decide
 
 - **Whether and when the root is updated**: the user's.
-- **What replaces Task 3 Step 2's root-started line**, and whether FD-1598's close needs it.
-  The 20:59:04 entry says "FD-1598 (cd slips) closes on this merge with the positive control
-  green (16:28:30 item 3)". The close and its verdict are the lead's.
-- **The seat-restart clause** of Hand-off item 6 ("seats running at the merge are restarted if
-  Task 0 Step 6 showed a running session keeps the old command"). The 16:40:33 paragraph does
-  not rule it; this record strikes only the fast-forward that clause follows from.
+- **FD-1598's close and its verdict**: the lead's (20:59:04); this record only removes the
+  root-started line from what the close was to read.
