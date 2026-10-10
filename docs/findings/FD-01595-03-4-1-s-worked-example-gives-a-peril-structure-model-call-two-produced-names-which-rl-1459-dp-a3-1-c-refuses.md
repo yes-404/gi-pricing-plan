@@ -2,7 +2,7 @@
 id: FD-1595
 family: finding
 title: 03 §4.1's worked example gives a Peril Structure model_call two produced names, which RL-1459 DP-A3-1 (c) refuses at compile
-status: active
+status: closed
 created: 2026-10-10            # original date 2026-10-10, set at the draft; minted 2026-10-10
 owner: auditor
 tree: fe0b0627590307259ec6d56be7f73115cf245092
@@ -85,3 +85,13 @@ Predicates, run at `fe0b0627`, read-only. All three are runnable as written.
 
 **Result: none other.** The only two-name `model_call` example outside `RL-1459`'s own quotation
 is `03:270` and its copy at `RL-1519:351`.
+
+## Resolution (2026-10-10, D8b batch)
+
+**Closed**, discharged by `RL-1596` (the correcting record) and the `03` §4.1 change it rules, both
+in the D8b batch PR, after the FD-1374 slice merged (`e4753e47`) so that slice's Acceptance 4 byte
+check was not disturbed. Check, at the batch tree: `git grep -nP '"produces"\s*:\s*\[[^\]]*,[^\]]*\]' -- docs/specs`
+prints no hit (exit 1); the corrected example block's sha256 is the one `RL-1596` states
+(`b1c5dcd7c96a002716236320894226a8cb43c85448cf092b59da013837772596`). Event named in the
+disposition above: the merge of the correcting RL; this resolution takes effect with the PR's
+merge. The close is recorded here on the lead's brief for the batch; the lead gives the verdict.

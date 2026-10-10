@@ -2,7 +2,7 @@
 id: FD-1374
 family: finding
 title: FR-246's declared-inputs rule is unenforced for names, and 03's own canonical example declares no inputs
-status: active
+status: closed
 created: 2026-10-03
 owner: auditor
 tree: 19155b505741317da6967362707f387b39bd2cef
@@ -203,3 +203,7 @@ Corrected 2026-10-01 (pre-mint): five evaluating steps under-declare (s_area at 
 Corrected 2026-10-01 (pre-mint, 2nd): the sweep predicate now reads as_at; 03's example also fails FR-214 and a second FR-212, and has five unproduced raw names, plus a sixth (effective_date) under the widened predicate.
 
 Corrected 2026-10-01 (pre-mint, 3rd): the discharge clause is widened to model_validate in full, then compile, then the declared-reads check, on a complete valid algorithm.
+
+## Resolution (2026-10-10, D8b batch)
+
+**Closed**, fixed by `SL-1536` (`PL-1535`, ledger `LG-1594`), merged as `e4753e478ca546ecd2054994c2f6adf834add1a7` (#1267, "SL-1536: FD-1374 — a rating step reads only the names it declares (FR-246 enforced)"). `PL-1535`'s done-condition, quoted: "Done when `SL-1536` closes on its `LG-` and register row FD-1374 carries the fix's merge sha." `LG-1594` and the `SL-1536` roadmap row are both `closed` at that merge. The enforcement is `packages/pricing-core/src/pricing_core/rating/references.py` with the compile check; the corrected `03` §4.1 example and FR-246's row ride the same commit, and the two points `RL-1519` got wrong after the fact are corrected by `RL-1593` and `RL-1596`. Nothing above this section is edited.

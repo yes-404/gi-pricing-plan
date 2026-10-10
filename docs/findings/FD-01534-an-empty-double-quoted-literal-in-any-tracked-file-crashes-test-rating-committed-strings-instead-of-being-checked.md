@@ -2,7 +2,7 @@
 id: FD-1534
 family: finding
 title: An empty double-quoted literal in any tracked file crashes test_rating_committed_strings instead of being checked (group(2) or group(3) turns "" into None)
-status: active
+status: closed
 created: 2026-10-09  # original date 2026-10-08, set at the draft; minted 2026-10-09
 owner: auditor
 tree: d85cf85455fcb7ddc6d9c207ee5e5002ed667719
@@ -95,3 +95,7 @@ an empty literal, because a blank is a placeholder and not an authored expressio
 one condition, no new declared negative); or (b) declare `''` in `_NEGATIVES` with the
 `EXPRESSION_INVALID_VOCABULARY` code and the test that asserts it. The red-first tests are the
 three fixture lines of the table above, in a temporary tracked file, each required to pass.
+
+## Resolution (2026-10-10, D8b batch)
+
+**Closed**: both limbs are discharged by `SL-1536` (merged as `e4753e478ca546ecd2054994c2f6adf834add1a7`, #1267). `LG-1594` records them in its "Red-by-cause runs (2026-10-10, 14:39 BST)" table: limb (a), the extractor skipping an empty double-quoted literal, red when reverted (`assert [('expr', None)] == []`), green at the slice head; limb `_KEY`, the literal having to be the whole value, red when reverted (`assert [('expr', ' * ')] == []`), green at the slice head; the controls green. `LG-1594` states the condition this takes: FD-1534 "is closed (status, register row) only if both limbs are discharged by that run". The one residual red that run printed at `649e7e54` (the fixture string at `test_rating_declared_reads.py:33`, a separate defect the ledger reports) is not a limb of this finding; that string is not in `packages/pricing-core/tests/test_rating_declared_reads.py` at `e4753e478ca546ecd2054994c2f6adf834add1a7`. Nothing above this section is edited.

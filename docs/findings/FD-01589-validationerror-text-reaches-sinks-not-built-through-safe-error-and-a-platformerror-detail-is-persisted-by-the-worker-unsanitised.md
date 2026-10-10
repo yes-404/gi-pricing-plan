@@ -141,3 +141,7 @@ worker path.
 - **Accepted** (2026-10-10, `to-lead.md` "2026-10-10 09:42:06 BST — FD 9952 (11 ValidationError sinks) ACCEPTED. Row 1 (MEDIUM, a live leak on main) is FIXED in SL-1340, the next slice touching rating_versions.py; rows 2–11 (LOW) are owned by WK-1178" [FD 9952 is minted as FD-1589]): row 1 MEDIUM; rows 2–11 LOW, owner WK-1178, each discharged before WK-1178's Work close, as one small fix slice or carried by the next slice touching each file. The FD closes only when all 11 rows are fixed or carried by name.
 - **Row 1: fixed in SL-1340** (2026-10-10, 09:42:06 item 3; form confirmed 10:14:29): #1263, squash `a3572d1a9182fea68d1322267e3866bdd2ed0dee`; the fix commit `cc32ded6` is recorded in `LG-1588`. The detail is built as `safe_error_detail(exc) or type(exc).__name__` (`rating_versions.py:774` at that squash), not `safe_error_text`, as the 10:14:29 entry corrects.
 - **Rows 2–11: open**, owner WK-1178. This FD stays `active`.
+
+## Dispositions recorded 2026-10-10 (D8b batch)
+
+- **Row 8: remedy (c), in its own slice** (2026-10-10, 15:37:31 item 3, `to-lead.md` "2026-10-10 15:37:31 BST — RULING: DP-M2 WITHDRAWN (my 14:37:13). FD-1589 row 8 (errors.py:490) is NOT changed in the FD-1374 slice; remedy (c) in its own slice, owner WK-1178, before the exit demo. Neither (a) nor (b)"): remedy (c) in its own slice, PL-1599 / SL-1600 (slice A, P2) and SL-1601 (P3); interim: unchanged (requester-only exposure). The sibling finding for the `field` of the same 422 is `FD-1597`.
