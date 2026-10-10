@@ -11,7 +11,7 @@ work: WK-1178
 supersedes: []
 superseded_by: ~
 corrected_by: []
-corrects: ~
+corrects: RL-1519
 relates: [FR-246, FR-221, RL-1446, RL-1519]
 ---
 
@@ -34,9 +34,21 @@ is replaced by the minted id.*
   Lead: SPEC-INTERNAL CONFLICT surfaced by the FD-1374 slice — FR-246 (RL-1519) as enforced
   vs FR-221 (RL-1446): the STAMPED effective_date read by a lookup's as_at — ruling needed"
   (`from-lead-2026-10-09.md:1201`). It set out options (A), (B) and (C), quoted below.
-- **No other record's front matter changes.** This record `relates:` FR-246, FR-221,
-  `RL-1446` and `RL-1519`, as item 3 of the entry names; it `corrects:` nothing. See *Why
-  `relates:`* for what that does and does not settle.
+- **The correction is the maintainer's (by delegation) too**, in the entry headed "2026-10-10
+  16:29:07 BST — Premise correction ACCEPTED: RL 9960 CORRECTS RL-1519 (:284 and Acceptance
+  case 3, :657–658). My 15:40:36 overrode a standing ruling unread. D8 SPLITS: D8a (RL 9960)
+  BEFORE the FD-1374 slice; D8b (the §4.1 example correction) AFTER it" (`to-lead.md:21466`),
+  quoted in full below. Its item 1 gives this record `corrects: RL-1519`.
+- **`corrects: RL-1519` is limited.** It covers two places in `RL-1519` and nothing else, both
+  read at `fe0b0627`: the `as_at` clause of the `s_area` row of the worked-example *Fix* table
+  (:284, "`s_area` declares `effective_date`, its `as_at`.") and *Acceptance* case 3
+  (:657–:658, "A lookup's `as_at` is a read. `referenced_names` of a lookup with
+  `as_at: "effective_date"` contains `effective_date`"). Both are quoted verbatim in *What this
+  record corrects*. `RL-1519`'s front matter gains `corrected_by: [RL-1593]` and its body does
+  not change by one byte.
+- **The corrected rule**, in the words of the 15:40:36 entry: only `as_at == "effective_date"`
+  is exempt; any other `as_at` is a read; an expression that reads `effective_date` as a value
+  must declare it.
 
 ## The maintainer's entry, verbatim (in full)
 
@@ -61,6 +73,18 @@ The options it chose between, verbatim from the lead's 15:40:14 entry
 - (C) references.py stops counting `as_at` at all: wider — it would also exempt a declared date input named by as_at, which FR-246 should still police.
 ```
 
+The correction, verbatim (the entry's three items, in full):
+
+```text
+## 2026-10-10 16:29:07 BST — Premise correction ACCEPTED: RL 9960 CORRECTS RL-1519 (:284 and Acceptance case 3, :657–658). My 15:40:36 overrode a standing ruling unread. D8 SPLITS: D8a (RL 9960) BEFORE the FD-1374 slice; D8b (the §4.1 example correction) AFTER it
+
+Verified at origin/main: RL-1519 :284 "`s_area` declares `effective_date`, its `as_at`" and :657 "A lookup's `as_at` is a read … contains `effective_date`". My 15:40:36 reversed this without reading it (the 10 Oct premise pattern again). SUBSTANCE STANDS: following RL-1519 here would make every quote send effective_date (FR-213), against FR-221/RL-1446's stamped date, a silent API change. The instrument is a correcting record:
+1. RL 9960 takes `corrects: RL-1519`, limited to :284's `s_area` as_at clause and Acceptance case 3 (:657–658). It states the corrected rule in my 15:40:36 words (only `as_at == "effective_date"` is exempt; any other as_at is a read). RL-1519 gains `corrected_by: [RL-…]`, front matter only.
+2. ORDER (my 04:23:36 rule: code on main never contradicts a standing ruling, even for one merge): the slice's 2838df55 changes exactly RL-1519's Acceptance case 3 assertion, so RL 9960 must be ON MAIN BEFORE the FD-1374 slice merges. But the OTHER RL-1519 correction (the §4.1 two-names example, 14:43:15) must land AFTER the slice (Acceptance 4's byte check). So:
+   - D8a = RL 9960 alone (plus anything else that must precede the slice), merged FIRST.
+   - The FD-1374 slice merges.
+```
+
 ## The decision
 
 1. **Only `as_at == STAMPED_DATE` is exempt.** A `lookup` step's `as_at: "effective_date"`
@@ -71,37 +95,35 @@ The options it chose between, verbatim from the lead's 15:40:14 entry
 2. **Any other `as_at` value is a read.** It must be declared in the step's `consumes`, and
    FR-246 refuses it with `RATING_STEP_UNDECLARED_READ` when it is not.
 3. **Only the `as_at` field is exempt.** An expression, or any other evaluating field, that
-   reads `effective_date` as a value is a read and must declare it.
+   reads `effective_date` as a value is a read and must declare it. In one sentence: only
+   `as_at == "effective_date"` is exempt; any other `as_at` is a read; an expression reading
+   `effective_date` as a value must declare it.
 4. **(A) is rejected:** it ships a silent API change. Through FR-213, every quote would have
    to send `effective_date` in its inputs.
 5. **(C) is rejected:** it is too wide. It would hide real undeclared `as_at` reads, a
    declared date input named by `as_at` among them.
 
-## Why `relates:`, and what it does not settle
+## What this record corrects — `RL-1519`, two places, at `fe0b0627`
 
-The entry names `relates:` (item 3), so this record `relates:` and does not `corrects:`. Two
-facts bear on that, both read at `fe0b0627`:
+`RL-1446` left the question open. Its *What is not changed* says: "**FD-1374's question**
+(whether an input may carry a stamped name at all) stays with its owner, PL 9776. This record
+does not decide it" (`RL-1446` :164–:166). This record answers the part of it that FR-246's
+enforcement raised. `RL-1519` stated the opposite in two places, and this record corrects
+exactly those:
 
-- **`RL-1446` left the question open.** Its *What is not changed* says: "**FD-1374's
-  question** (whether an input may carry a stamped name at all) stays with its owner, PL 9776.
-  This record does not decide it" (`RL-1446` :164–:166). This record answers the part of it
-  that FR-246's enforcement raised.
-- **`RL-1519` states the opposite in two places.** This record does not assert that
-  `RL-1519`'s text is consistent with this decision, because it is not:
-  - `RL-1519` :657–:658, its *Acceptance* case 3: "**A lookup's `as_at` is a read.**
-    `referenced_names` of a lookup with `as_at: "effective_date"` contains `effective_date`
-    (Task 1A's extractor test, last assertion)." The slice commit `2838df55` changes that very
-    assertion (see *Where the code carries it*).
-  - `RL-1519` :284, its worked-example *Fix* table: "`s_area` declares `effective_date`, its
-    `as_at`." Declaring it is no longer required. This record does not say whether declaring
-    it is now wrong.
+1. `RL-1519` :284, the worked-example *Fix* table, the `s_area` row, verbatim:
+   "`s_area` declares `effective_date`, its `as_at`." **Corrected:** `s_area` does not need to
+   declare `effective_date` for its `as_at`; the stamped date is not a declared read. Whether
+   the example's `consumes` for `s_area` keeps `effective_date` is the §4.1 example
+   correction's, which is D8b and merges after the FD-1374 slice (the entry's item 2).
+2. `RL-1519` :657–:658, *Acceptance* case 3, verbatim: "**A lookup's `as_at` is a read.**
+   `referenced_names` of a lookup with `as_at: "effective_date"` contains `effective_date`
+   (Task 1A's extractor test, last assertion)." **Corrected:** `referenced_names` of such a
+   lookup does not contain `effective_date`; a lookup with any other `as_at` still contains
+   it. The slice commit `2838df55` changes that very assertion (see below).
 
-  `RL-1519`'s general scope stands as it is: "a `lookup`'s `as_at`" is one of the fields
-  FR-246 binds (`RL-1519` :138–:142), and every `as_at` other than the stamped date is still
-  a read.
-
-Whether `RL-1519`'s *Acceptance* case 3 needs a correcting record is **not decided here**.
-It is raised to the lead (*What this record does not decide*).
+`RL-1519`'s general scope stands as it is: "a `lookup`'s `as_at`" is one of the fields FR-246
+binds (`RL-1519` :138–:142), and every `as_at` other than the stamped date is still a read.
 
 ## Where the code carries it — on the FD-1374 slice's branch, not on main
 
@@ -141,12 +163,15 @@ none of the five files below differ between `2838df55` and that head. None of it
   It is byte-equal to the text in item 2 of the entry.
 
 If the slice branch is rebased or squash-merged, these SHAs and line numbers name the branch at
-`2838df55`, not the merged result.
+`2838df55`, not the merged result. `STAMPED_DATE`'s final home is set by the slice (lead
+direction: `references.py`); cite the merged location after the slice merges.
 
 ## What it obliges
 
-- **Order.** The spec line and the code merge with the FD-1374 slice (entry item 2). This
-  record rides the docs batch D8, which merges after that slice (entry item 3).
+- **Order.** This record merges BEFORE the FD-1374 slice (D8a): the slice's `2838df55` changes
+  `RL-1519`'s *Acceptance* case 3 assertion, and code on main must not contradict a standing
+  ruling, even for one merge (the 16:29:07 entry's item 2). The spec line and the code merge
+  with the slice. The §4.1 example correction is D8b and merges after the slice.
 - Nothing else. The code, the tests and the spec line are the slice's, under the entry; this
   record adds none of them.
 
@@ -164,9 +189,8 @@ If the slice branch is rebased or squash-merged, these SHAs and line numbers nam
 
 ## What this record does not decide
 
-- **Whether `RL-1519`'s *Acceptance* case 3 (:657–:658) needs a correcting record**, and
-  whether its worked example's `s_area` keeps `effective_date` in `consumes` (:284, :342–:346).
-  This record found the conflict and raises it to the lead.
+- **The §4.1 example correction** and whether the worked example's `s_area` keeps
+  `effective_date` in `consumes` (`RL-1519` :342–:346): D8b's, after the slice.
 - The roughly four remaining fixture declarations (the entry's item 4; the 15:36:02 entry), and
   the two purpose tests (the entry "2026-10-10 15:42:57 BST").
 - Whether FD-1374 is discharged. The verdict is the lead's.
