@@ -1,0 +1,47 @@
+{
+ "slug": "fremtpl2-rel-veh-age-band",
+ "version": 1,
+ "rateable": true,
+ "storage": "rows",
+ "keys": [
+  {
+   "name": "veh_age_band",
+   "type": "int",
+   "banding_ref": null
+  }
+ ],
+ "value": {
+  "name": "rel_veh_age_band",
+  "type": "relativity",
+  "unit": "factor",
+  "min": null,
+  "max": null
+ },
+ "default_row": null,
+ "rows": [
+  {
+   "veh_age_band": "0",
+   "rel_veh_age_band": "1.00000000"
+  },
+  {
+   "veh_age_band": "1",
+   "rel_veh_age_band": "0.70748345"
+  },
+  {
+   "veh_age_band": "2",
+   "rel_veh_age_band": "0.76325386"
+  },
+  {
+   "veh_age_band": "3",
+   "rel_veh_age_band": "0.72079034"
+  },
+  {
+   "veh_age_band": "4",
+   "rel_veh_age_band": "0.63011119"
+  },
+  {
+   "veh_age_band": "5",
+   "rel_veh_age_band": "0.50429270"
+  }
+ ]
+}

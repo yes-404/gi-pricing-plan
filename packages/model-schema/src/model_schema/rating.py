@@ -8,6 +8,7 @@ version can be approved against and the demo can display.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
@@ -605,6 +606,32 @@ class AlgorithmTableRepoint(BaseModel):
     after: ArtifactRef
 
 
+class InterfaceDelta(BaseModel):
+    """One input-contract field or output that differs between two versions (FR-1399)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    name: str
+    change: Literal["added", "removed", "changed"]
+
+
+def _interface_deltas(
+    old: Sequence[InputContractField] | Sequence[AlgorithmOutput],
+    new: Sequence[InputContractField] | Sequence[AlgorithmOutput],
+) -> list[InterfaceDelta]:
+    """Added, removed and changed entries by name, sorted by name."""
+    old_by = {e.name: e for e in old}
+    new_by = {e.name: e for e in new}
+    deltas = [InterfaceDelta(name=n, change="added") for n in new_by.keys() - old_by.keys()]
+    deltas += [InterfaceDelta(name=n, change="removed") for n in old_by.keys() - new_by.keys()]
+    deltas += [
+        InterfaceDelta(name=n, change="changed")
+        for n in old_by.keys() & new_by.keys()
+        if old_by[n].model_dump() != new_by[n].model_dump()
+    ]
+    return sorted(deltas, key=lambda d: d.name)
+
+
 class AlgorithmDiff(BaseModel):
     """The structural diff between two algorithm versions (FR-219)."""
 
@@ -616,6 +643,8 @@ class AlgorithmDiff(BaseModel):
     repointed_tables: list[AlgorithmTableRepoint] = Field(default_factory=list)
     input_contract_changed: bool = False
     outputs_changed: bool = False
+    input_contract_deltas: list[InterfaceDelta] = Field(default_factory=list)
+    output_deltas: list[InterfaceDelta] = Field(default_factory=list)
 
     @property
     def summary(self) -> str:
@@ -683,6 +712,8 @@ def diff_algorithms(old: RatingAlgorithm, new: RatingAlgorithm) -> AlgorithmDiff
         repointed_tables=repoints,
         input_contract_changed=old.input_contract != new.input_contract,
         outputs_changed=old.outputs != new.outputs,
+        input_contract_deltas=_interface_deltas(old.input_contract, new.input_contract),
+        output_deltas=_interface_deltas(old.outputs, new.outputs),
     )
 
 

@@ -17,7 +17,7 @@ from app.db.models import RatingAlgorithmRow
 from app.db.session import Database
 from app.errors import PlatformError
 from model_schema import GraphCycleError, GraphUnresolvedRefError
-from model_schema.rating import RatingAlgorithm, diff_algorithms
+from model_schema.rating import AlgorithmDiff, RatingAlgorithm, diff_algorithms
 from pricing_core.rating.compile import ValidationIssue, validate_algorithm
 
 __all__ = [
@@ -156,8 +156,8 @@ async def get_algorithm(
 
 async def diff_between(
     database: Database, workspace_id: UUID, slug: str, version: int, against: int
-) -> dict[str, Any]:
+) -> AlgorithmDiff:
     """The structural diff between two versions of one algorithm (FR-219)."""
     current = await get_algorithm(database, workspace_id, slug, version)
     base = await get_algorithm(database, workspace_id, slug, against)
-    return diff_algorithms(base, current).model_dump()
+    return diff_algorithms(base, current)
