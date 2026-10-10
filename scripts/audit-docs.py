@@ -2620,7 +2620,6 @@ _CONTRACTS_RULING: Final = (
 _CONTRACT_ARTIFACT_PATHS: Final = (
     "docs/contracts/openapi/generated.json",
     "docs/contracts/openapi/gi-pricing.yaml",
-    "docs/contracts/schemas/approval-request.schema.json",
     "docs/contracts/schemas/audit-event.schema.json",
     "docs/contracts/schemas/banding.schema.json",
     "docs/contracts/schemas/common/artifact-envelope.schema.json",
@@ -2633,6 +2632,7 @@ _CONTRACT_ARTIFACT_PATHS: Final = (
     "docs/contracts/schemas/diagnostics.schema.json",
     "docs/contracts/schemas/dislocation-run.schema.json",
     "docs/contracts/schemas/dossier.schema.json",
+    "docs/contracts/schemas/generated/approval-request.schema.json",
     "docs/contracts/schemas/generated/artifact-envelope.schema.json",
     "docs/contracts/schemas/generated/artifact-ref.schema.json",
     "docs/contracts/schemas/generated/audit-event.schema.json",
