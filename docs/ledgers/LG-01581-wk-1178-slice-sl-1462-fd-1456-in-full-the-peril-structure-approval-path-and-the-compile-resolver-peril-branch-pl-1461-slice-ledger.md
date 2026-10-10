@@ -1,9 +1,9 @@
 ---
-id: LG-9442
+id: LG-1581
 family: ledger
 title: WK-1178 slice SL-1462 — FD-1456 in full, the Peril Structure approval path and the compile resolver's peril branch (PL-1461), slice ledger
-status: active
-created: 2026-10-09
+status: closed
+created: 2026-10-10  # original date 2026-10-09, set at the draft; minted 2026-10-10
 owner: executor
 tree: 8af8a9b48e459c159666bd4e468d743719ade84c
 phase: P2
@@ -14,10 +14,12 @@ corrected_by: []
 relates: [PL-1461, RL-1457, FD-1456, RL-1445, RL-1263, FR-20, FR-191, FR-237, FR-255, FR-351, FR-355, FR-363, WK-1178]
 ---
 
-# LG-9442 — WK-1178 slice SL-1462: FD-1456 in full, the Peril Structure approval path and the compile resolver's peril branch
+# LG-1581 — WK-1178 slice SL-1462: FD-1456 in full, the Peril Structure approval path and the compile resolver's peril branch
+
+Disclosure: drafted under working id 9442; minted as LG-1581 on 2026-10-10, in the SL-1462 merge-turn commit. Where this ledger quotes an audit or `doc-id` output from the pre-mint tree, the quoted text keeps the working id 9442.
 
 **GO:** given — `to-lead.md` "2026-10-10 05:19:53 BST — DISPATCH GOs at main 84ff9f0b: A-1 (PL-1461/SL-1462) GO NOW on gate-1 …", conditions a–d (merge main never rebase with INDEX by script; stray pre-mint LG files removed and the merged tree equal to a clean 3-way merge tree; closing acts in the slice PR and red-first per task, NFR-499 in every new error message; one code gate on gate-1 with a docs check on gate-2). Before the GO this branch was authored at the user's order ("2026-10-09 15:22:26 BST — USER: 'worrying only one executor runs'. FILL THE VM NOW …", items 1–4, in `to-lead.md`, a local file): code and tests are written on a branch from S4's pushed head `8af8a9b4`; only small tests run (one file, no database), nothing merges before the GO, the full gate and the MERGE-ACK.
-**MERGE-ACK:** not yet given.
+**MERGE-ACK:** not yet given at this writing; the lead records it.
 
 ## Tasks
 
@@ -91,5 +93,13 @@ Head file totals: `test_peril_structure_approval.py` 14 passed (rc 0, 28.1 s); `
 
 - **Deviation: three fixtures corrected at the first database run (commit 66850d77, test file only, in the write set).** `test_peril_structure_approval.py` was authored with no database; the first run at the merged head (05:26) showed 3 of 14 failing at the head, each a test defect and none a source defect: (a) `…supersedes_the_earlier_approved_version` compared the whole `peril_structure.*` event list of `ps@1` (it also holds `created` and `submitted`); it now compares the `approved` and `superseded` events; (b) `…excess_model_is_checked_at_approve` inserted a `review` row with no `reconciliation` (CHECK `ck_peril_structures_reconciled_peril_structure_has_a_re_5529`) and no creation Audit Event (FR-353, `APPROVAL_AUTHOR_UNRESOLVED` 403); it now creates the row through `create_structure`, then sets `review` and a stub reconciliation, and builds the large-loss treatment with `LargeLossTreatment.model_validate` (the `model_copy(update={...})` of plain strings raised a Pydantic serializer warning); (c) `…approved_…_pin_compiles_…` read `resolved_payloads` from the `RatingVersionRow.bundle` summary dict; it now reads the Bundle from its blob (`_read_blob`, `Bundle.model_validate_json`) as `test_rating_version_compile.py` does. The reds above were run against the corrected file.
 - **The SL-1436 notes.** `packages/pricing-core/tests/test_rating_wire_order.py` alone: rc 0, 14 passed in 3.4 s. PL-1435 Task 2c's replay script alone: the script inline in LG-1467 (sha256 `b43d213cdd4bae7c3b6d100933ba85875421ae15925a5eccde56832ecf71cfea` verified after extraction; its one edit is the `ROOT` path, this worktree). Its `record` mode ran with `origin/main`'s `runtime.py` checked out over A-1's (rc 0, 57 s; `base.jsonl` 3603 lines, sha256 `8c1cec7b09f15a050130a479c66fd4152bf4f22841fdba66084ecefdd3c3ac4c`), its `replay` mode at A-1's head (rc 0, 152 s): every case `equal N of N`, `DIFFS 0` (for example `bench-rating-gbm` 601 of 601, `score-fixture-glm` 730 of 730). Note the base is main, not the pre-chain tree LG-1467 recorded: SL-1436's chain has merged, so this measures A-1's own `runtime.py` delta, and finds none outside a `peril_structure` `model_call`.
+
+- **The merge turn, 2026-10-10 (BST 06:3x), on the maintainer's ruling "2026-10-10 06:34:30 BST — RULING: A-1's two expected reds = (a)" (`to-lead.md`, a local file).** Gate 1 (`a93fb904`, above) was red on two test expectations, each a guard noticing A-1's intended behaviour. Both files join the write set for these lines only; no third gate (evidence below).
+  - `backend/tests/test_approval_guard.py`: `"peril_structures"` is added to the exact set of `test_the_carry_walker_reaches_the_five_artifact_tables`, and its docstring names the new member. The guard still fails for a kind that is not carried: the same assertion is an exact set equality, so it fails both ways. Measured twice. Unlisted kind carried: gate 1's red (`Extra items in the left set: 'peril_structures'`). Listed kind no longer carried: with Task 3's source delta reverse-applied (`git apply -R`, restored after), `pytest -q backend/tests/test_approval_guard.py -k five_artifact_tables` fails at `test_approval_guard.py:207` (`assert {'custom_metr...dation_rules'} == {'custom_metr...ersions', ...}`), 1 failed. The existing planted-input cases (`test_a_planted_marker_on_a_table_the_carry_writes_fails` and its neighbours) are unchanged.
+  - `packages/pricing-core/tests/test_quote_input_raise_sites.py`: `("rating/runtime.py", "handler")` goes 2 to 3 (the registry's comment names the Peril Structure refusal). **The new raise site** is Task 4's early return in `_model_call_handler`'s `handler`, `packages/pricing-core/src/pricing_core/rating/runtime.py:592` (`return _model_call_failure(step, <message>, context)`, at `if step.peril_structure_ref is not None:` `:588`). **Its message, quoted:** `f"model_call step {step.step_id!r} pins {ref_str}, and "` followed by `"scoring a Peril Structure is slice A-3 (PL-1465); it is not yet built."`. It holds the step id (a workflow name) and the pinned artifact ref (`ref_str`, an artifact ref, never a quote or an input value) and a static sentence, so it is input-free (NFR-499); the count, not the message, is what changes.
+  - Both files alone, green, in the small-test slot: `test_approval_guard.py` 11 passed; `test_quote_input_raise_sites.py` 19 passed.
+- **The after-gate comment commit (maintainer 06:15:34 and 06:16:11),** `b3495b28`: `model_schema/approvals.py` (`#:` lines only), `model_schema/tests/test_approvals.py` (docstring lines only), and one dated amendment line on `06` FR-364 (`:145`), each stating that the enforcement point is `backend/src/app/platform/perils.py:708` (`_require_approved_components`) and citing 06:15:34. `test_approvals.py` 21 passed.
+- **Merge of main (`2ef1393f`, adds D5, docs only),** merge commit `b80a1aeb`: one conflict, `docs/INDEX.md`, regenerated by script.
+- **The mint.** Highest id on main is RL-1580; this ledger is LG-1581. `SL-1462`'s roadmap row is closed with its dated lines (the SL-1388 form). Closing acts: this ledger `status: closed`, `SL-1462` `status: closed`.
 
 ## PRs
