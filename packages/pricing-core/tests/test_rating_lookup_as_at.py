@@ -50,10 +50,19 @@ _CONTRACT = [
 def _algo(
     *, as_at: str = "effective_date", contract: list[dict[str, Any]] | None = None
 ) -> dict[str, Any]:
+    contract = contract if contract is not None else _CONTRACT
+    # FR-246 (FD-1374): a lookup whose `as_at` names a declared date input reads it, so it
+    # declares it and an input step produces it. The stamped `effective_date` needs neither.
+    as_at_input = [
+        {"step_id": f"s_in_{as_at}", "type": "input", "label": as_at, "input_name": as_at,
+         "on_missing": "error", "produces": as_at}
+        for c in contract
+        if c["name"] == as_at and as_at not in ("effective_date", "base_minor", "postcode")
+    ]
     return {
         "slug": "score-fixture",
         "version": 1,
-        "input_contract": contract if contract is not None else _CONTRACT,
+        "input_contract": contract,
         "outputs": [{"name": "payable_premium_minor", "type": "money_minor", "required": True}],
         "steps": [
             {
@@ -72,6 +81,7 @@ def _algo(
                 "on_missing": "error",
                 "produces": "postcode",
             },
+            *as_at_input,
             {
                 "step_id": "s_area",
                 "type": "lookup",
@@ -80,7 +90,8 @@ def _algo(
                 "key_expr": ["postcode"],
                 "as_at": as_at,
                 "on_miss": "error",
-                "consumes": ["postcode"],
+                "consumes": ["postcode", *(i["produces"] for i in as_at_input)]
+,
                 "produces": "area_loading",
             },
             {
