@@ -11,6 +11,7 @@ Two rules hold this together:
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Final
 
 from fastapi import FastAPI, Request, status
@@ -445,6 +446,7 @@ class PlatformError(Exception):
         detail: str | None = None,
         *,
         errors: tuple[FieldError, ...] = (),
+        headers: Mapping[str, str] | None = None,
     ) -> None:
         if code not in _KNOWN_CODES:
             raise ValueError(
@@ -457,6 +459,8 @@ class PlatformError(Exception):
         self.status_code = status_code
         self.detail = detail
         self.errors = errors
+        #: Response headers the handler writes with the problem (FR-452's `Retry-After`).
+        self.headers = dict(headers) if headers else {}
 
     def to_problem(self, instance: str | None = None) -> ProblemDetail:
         return ProblemDetail(
@@ -481,7 +485,9 @@ def problem_response(problem: ProblemDetail) -> JSONResponse:
 
 
 async def _handle_platform_error(request: Request, exc: PlatformError) -> JSONResponse:
-    return problem_response(exc.to_problem(instance=request.url.path))
+    response = problem_response(exc.to_problem(instance=request.url.path))
+    response.headers.update(exc.headers)
+    return response
 
 
 async def _handle_validation_error(

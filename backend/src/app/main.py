@@ -54,6 +54,7 @@ from app.observability.logging import configure_logging, get_logger
 from app.observability.middleware import TraceMiddleware
 from app.platform.blobs import BlobStore, blob_probe
 from app.platform.bundle_slot import BundleSlot
+from app.platform.rate_limit import RateLimiter, build_redis_client
 from app.platform.settings import validate_setting_overrides
 from app.platform.tenancy import require_tenant_binding
 from model_schema import OidcAuthConfig
@@ -79,7 +80,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     oidc_verifier = OidcVerifier(settings)
 
     @asynccontextmanager
-    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    async def lifespan(running: FastAPI) -> AsyncIterator[None]:
         # FR-273: "A startup self-check asserts the round-trip; failing it prevents
         # the service starting." First, before any I/O — it is pure computation, and a
         # machine that fails it must never reach the probes or the blob bucket below.
@@ -102,8 +103,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # registry pointing at each other's engine.
         health.register_probe("database", database_probe(database))
         health.register_probe("blobs", blob_probe(blob_store))
+        # FR-452 (RL-1347 rule 5): one Redis client per process for the scoring rate limit,
+        # built here and closed below — never per request. Building it opens no connection,
+        # so an unavailable Redis does not stop startup; the limiter fails open.
+        redis_client = build_redis_client(settings.redis_url.get_secret_value())
+        running.state.rate_limiter = RateLimiter(redis_client)
         yield
         health.clear_probes()
+        await redis_client.aclose()
         await database.dispose()
 
     app = FastAPI(

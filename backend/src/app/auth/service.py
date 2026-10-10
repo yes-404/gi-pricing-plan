@@ -40,7 +40,14 @@ _UNKNOWN = Principal(kind=ActorKind.SYSTEM, display="unauthenticated")
 class AuthenticatedIdentity:
     """A verified principal and the workspaces it may act in."""
 
-    __slots__ = ("environment", "environments", "permissions", "principal", "workspaces")
+    __slots__ = (
+        "environment",
+        "environments",
+        "permissions",
+        "principal",
+        "rate_limit_rps",
+        "workspaces",
+    )
 
     def __init__(
         self,
@@ -50,6 +57,7 @@ class AuthenticatedIdentity:
         environments: frozenset[str] = frozenset(),
         environment: str | None = None,
         permissions: frozenset[str] = frozenset(),
+        rate_limit_rps: int | None = None,
     ) -> None:
         self.principal = principal
         self.workspaces = workspaces
@@ -59,6 +67,10 @@ class AuthenticatedIdentity:
         #: development caller, and for any credential type minted before this field existed.
         self.environment = environment
         self.permissions = permissions
+        #: The Service Account's own scoring rate limit (FR-452, `RL-1347` rule 2), read from
+        #: the account row this authentication already loads. `None` for every other kind of
+        #: Principal, and for an account that sets none.
+        self.rate_limit_rps = rate_limit_rps
 
 
 def _unauthenticated(code: str = "UNAUTHENTICATED") -> PlatformError:
@@ -237,4 +249,5 @@ async def authenticate_api_key(
         # meaning and use in authorisation; this is a separate, single-valued fact.
         environment=parsed.environment,
         permissions=frozenset(account.permissions),
+        rate_limit_rps=account.rate_limit_rps,
     )
