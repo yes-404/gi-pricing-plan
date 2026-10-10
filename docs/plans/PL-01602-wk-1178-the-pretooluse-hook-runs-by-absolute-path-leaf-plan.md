@@ -3,7 +3,7 @@ id: PL-1602
 family: plan
 kind: leaf
 title: WK-1178 — the PreToolUse hook runs by absolute path, so a changed working directory cannot block every Bash call: leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-10            # original date 2026-10-05, set at the draft; minted 2026-10-10
 owner: planner
 tree: fe0b0627590307259ec6d56be7f73115cf245092
