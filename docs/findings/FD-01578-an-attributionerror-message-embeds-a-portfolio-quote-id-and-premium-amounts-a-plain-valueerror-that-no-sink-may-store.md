@@ -7,7 +7,7 @@ created: 2026-10-10            # original date 2026-10-10, set at the draft; min
 owner: auditor
 tree: 3519a919e30aa6993d40b22df212dd57bbd4a685
 corrected_by: []
-relates: [WK-673, SL-1387, SL-1388, PL-1501, LG-9440, FR-1397, NFR-499]
+relates: [WK-673, SL-1387, SL-1388, PL-1501, LG-1570, FR-1397, NFR-499]
 ---
 
 # FD-1578 — AttributionError carries portfolio input in its message
@@ -37,9 +37,9 @@ The other raise sites carry no portfolio value: `:549`, `:564` (fixed text), `:7
 
 **1. No production sink stores it on `main` today.** At `3519a919` the `attribute` and `AttributionError` are named only by `packages/pricing-core/tests/test_rating_attribution.py` and `scripts/measure-attribution-cost.py` (`git grep -n -E 'AttributionError|\battribute\(' -- backend/src scripts packages '*.py'`, excluding `analysis.py` itself); nothing under `backend/src/` names either. S4 (`SL-1388`, `PL-1501`) is the first caller. So the defect is latent on `main`.
 
-**2. S4 first stored it, then did not.** On `origin/sl-1388-wk673-s4-backend-job-routes`, the three new sinks (`backend/src/app/api/dislocation_runs.py:183`, `backend/src/app/platform/dislocation_runs.py:253`, `backend/src/app/worker/dislocation_handlers.py:236`) first built the message with `str(exc)` (`2a01db1e^`, `dislocation_handlers.py:234`: `PlatformError(exc.code, …, 422, str(exc))`). Commit `2a01db1e` ("route the three error sinks through safe_error_text", ruling 02:43:18 and 02:47:13) changed all three to `safe_error_text(exc)`. `LG-9440` (commit `648ee30e`), the entry "Plan delta NFR-499, 2026-10-10", records the red-first test: `test_a_run_that_does_not_reconcile_fails_with_attribution_reconciliation_failed` (`048708c3`) raises the `:1041` text for policy `Q000` and asserts the stored Job error and the `GET /api/v1/jobs/{id}` body hold no `Q000`; RED at `6ed5da3f` (`str(exc)`), GREEN at `048708c3`.
+**2. S4 first stored it, then did not.** On `origin/sl-1388-wk673-s4-backend-job-routes`, the three new sinks (`backend/src/app/api/dislocation_runs.py:183`, `backend/src/app/platform/dislocation_runs.py:253`, `backend/src/app/worker/dislocation_handlers.py:236`) first built the message with `str(exc)` (`2a01db1e^`, `dislocation_handlers.py:234`: `PlatformError(exc.code, …, 422, str(exc))`). Commit `2a01db1e` ("route the three error sinks through safe_error_text", ruling 02:43:18 and 02:47:13) changed all three to `safe_error_text(exc)`. `LG-1570` (commit `648ee30e`), the entry "Plan delta NFR-499, 2026-10-10", records the red-first test: `test_a_run_that_does_not_reconcile_fails_with_attribution_reconciliation_failed` (`048708c3`) raises the `:1041` text for policy `Q000` and asserts the stored Job error and the `GET /api/v1/jobs/{id}` body hold no `Q000`; RED at `6ed5da3f` (`str(exc)`), GREEN at `048708c3`.
 
-**3. What that test does and does not show.** It monkeypatches `attribute` to raise the `:1041` text; it does not reach `:1041` through a constructed portfolio, because that error needs a subset bundle that drops a compared policy and no fixture builds one (`LG-9440`'s own note). The leak path (message text in the sink) is shown; the raise path (a real portfolio reaching `:1041`) is not.
+**3. What that test does and does not show.** It monkeypatches `attribute` to raise the `:1041` text; it does not reach `:1041` through a constructed portfolio, because that error needs a subset bundle that drops a compared policy and no fixture builds one (`LG-1570`'s own note). The leak path (message text in the sink) is shown; the raise path (a real portfolio reaching `:1041`) is not.
 
 **4. The guard is by caller.** Nothing in `pricing_core` prevents the next caller (S5's submission path, `SL-1547`, or a CLI) from storing `str(exc)`. The S4 fix removes three sinks; the defect stays in the exception.
 
