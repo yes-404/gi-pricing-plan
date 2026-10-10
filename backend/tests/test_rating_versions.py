@@ -1355,7 +1355,11 @@ async def test_a_passing_run_is_recorded_and_golden_evidence_is_untouched(
     assert row.status == "review"
     evidence = row.evidence or {}
     assert evidence["regression_suite_run_id"] == str(run_id)
-    assert set(evidence) == {"golden_quotes", "regression_suite_run_id"}
+    # The other keys are limb (2)'s `no_baseline` (a first version) and E4's diff blob, written
+    # by S5's gates beside the two this test is about (PL-1500 Tasks 2 and 3).
+    assert set(evidence) == {
+        "golden_quotes", "regression_suite_run_id", "structural_diff_blob", "no_baseline",
+    }
     pinned = evidence["golden_quotes"]
     assert json.dumps(pinned, sort_keys=True) == before[0]
     assert pinned["status"] == "checked"
