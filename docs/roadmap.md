@@ -1280,65 +1280,7 @@ maintainer's agreement and the lead's go.
 
 *(Minted 2026-10-10 as SL-1557 from working id 9581, with its plan PL-1556 from working id 9578, in the D3 batch mint.)*
 
-#### SL 9577 (working id) — Slice 13: Jobs — the filterable list, live over the SSE stream (`FD-1284`, option D)
-
-```yaml
-id: SL-9577
-family: slice
-title: Slice 13: Jobs — the filterable list, live over the SSE stream (FD-1284, option D)
-status: draft                  # draft → active → closed | retired (§1.2a)
-created: 2026-10-05
-owner: planner                   # cut in the map plan (draft); lead dispatches (active)
-tree: 9489405370a1ce06c2b985ad88c7d471438febb1
-phase: P3
-work: WK-675
-corrected_by: []
-relates: [PL-1286, PL-1371, FD-1284, RL-1263]
-```
-
-`PL-1286` S13 (`:316`), cut as a draft row for its leaf plan, PL 9576 (working id; the plan's
-own PR). `07` §5.3's `/jobs` view (`07:398` at `4d3be141`; `PL-1286` cites `:390`): kind, status, progress bars, submitter and
-duration, live over `GET /api/v1/jobs` and `/jobs/{id}/events`; the FR-25 link from the entry;
-the `reachability.test.ts` exception for `/models/:slug/backtests/:backtestId` removed and its
-FR-24 comment corrected. New functions in `frontend/src/api/jobs.ts`; no backend change.
-**Order:** after S4 (order only, `PL-1371` §3.3); a conditional cut under `PL-1371` §8 C2,
-brought to the maintainer when its trigger fires.
-
-**Gate:** the leaf plan's Activation needs, in a separate activation PR, including the
-maintainer's agreement and the lead's go.
-
-*(Filed 2026-10-05 under working ids 9577 (this row) and 9576 (the plan), reserved by the lead.)*
-
-*(P3 note, 2026-10-09: phase line moved from P2 to P3 and the row stays a working id, SL 9577, not minted in the D3 batch, per to-lead "2026-10-09 11:48:22 BST — Rulings …" item 2, option (B).)*
-
-#### SL 9575 (working id) — Slice 14: Job detail — parameters, stages, logs with trace_id, result link, cancel (`FD-1284`, option D)
-
-```yaml
-id: SL-9575
-family: slice
-title: Slice 14: Job detail — parameters, stages, logs with trace_id, result link, cancel (FD-1284, option D)
-status: draft                  # draft → active → closed | retired (§1.2a)
-created: 2026-10-05
-owner: planner                   # cut in the map plan (draft); lead dispatches (active)
-tree: 9489405370a1ce06c2b985ad88c7d471438febb1
-phase: P3
-work: WK-675
-corrected_by: []
-relates: [PL-1286, PL-1371, FD-1284, RL-1263]
-```
-
-`PL-1286` S14 (`:317`), cut as a draft row for its leaf plan, PL 9574 (working id; the plan's
-own PR). `07` §5.3's `/jobs/:id` view (`07:399` at `4d3be141`; `PL-1286` cites `:391`): parameters, progress stages, logs with
-`trace_id` (FR-402's UI limb, `GET /jobs/{id}/logs`), the result link, the cancel action
-(FR-401, `POST /jobs/{id}/cancel`) and error detail; the logs render nothing FR-402 excludes.
-**Order:** after S13, whose view it extends; a conditional cut with S13 under `PL-1371` §8 C2.
-
-**Gate:** the leaf plan's Activation needs, in a separate activation PR, including the
-maintainer's agreement and the lead's go.
-
-*(Filed 2026-10-05 under working ids 9575 (this row) and 9574 (the plan), reserved by the lead.)*
-
-*(P3 note, 2026-10-09: phase line moved from P2 to P3 and the row stays a working id, SL 9575, not minted in the D3 batch, per to-lead "2026-10-09 11:48:22 BST — Rulings …" item 2, option (B).)*
+*(P3 note, 2026-10-09: WK-675 Slice 13 (SL 9577, Jobs: the filterable list, live over the SSE stream) and Slice 14 (SL 9575, Job detail) moved from P2 to P3. Both stay working ids, unminted and off the D3 id list, and their row blocks stay on the draft branch `pl-9582-wk675-s4-leaf` (#1187 @3b15a829), per to-lead "2026-10-09 11:48:22 BST — Rulings …" item 2, option (B).)*
 
 
 
