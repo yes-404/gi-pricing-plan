@@ -1075,3 +1075,56 @@ def test_a_mount_whose_sub_graph_is_not_pinned_fails_the_compile_job(
     job_row = _run_compile_job(api_client, headers, database, blob_store, version_id)
     assert job_row.status is JobStatus.FAILED
     assert job_row.error["code"] == "RATING_VERSION_UNPINNED"
+
+
+# --- FD 9952 row 1 (NFR-499): a ValidationError raised under compile never reaches the Job ------
+
+_LEAK_SENTINEL = "SENTINEL-INPUT-9952"
+
+
+@pytest.mark.req("NFR-499")
+def test_a_validation_error_in_compile_never_reaches_the_job_error(
+    api_client, workspace_id, principal, grant, database, blob_store, monkeypatch
+) -> None:
+    """`compile_rating_version`'s `except ValueError` put `str(exc)` into the `PlatformError`
+    detail, which the worker stores in the Job error that `GET /jobs/{id}` serves; a pydantic
+    `ValidationError` (a `ValueError`) prints its `input_value`. The detail is now built via
+    `pricing_core.safe_error`, which renders it input-free (FD 9952 row 1)."""
+    from pydantic import BaseModel, ValidationError
+
+    class _Probe(BaseModel):
+        field: int
+
+    try:
+        _Probe.model_validate({"field": _LEAK_SENTINEL})
+    except ValidationError as raised:
+        validation_error = raised
+    assert _LEAK_SENTINEL in str(validation_error)  # the premise: pydantic prints the input
+
+    async def _raise(*_args, **_kwargs):
+        raise validation_error
+
+    monkeypatch.setattr(rating_versions, "compile_bundle", _raise)
+    asyncio.get_event_loop().run_until_complete(grant("analyst"))
+    headers = _headers(principal, workspace_id)
+    created = api_client.post(
+        "/api/v1/rating-algorithms", json=_minimal_algorithm(), headers=headers
+    )
+    assert created.status_code == 201, created.text
+    row = asyncio.get_event_loop().run_until_complete(
+        _insert_version(
+            database,
+            workspace_id,
+            principal.id,
+            algorithm_ref="rating_algorithm:minimal@1",
+            pins=_empty_pins(),
+        )
+    )
+
+    job_row = _run_compile_job(api_client, headers, database, blob_store, row.id)
+
+    assert job_row.status is JobStatus.FAILED
+    assert _LEAK_SENTINEL not in repr(job_row.error)
+    served = api_client.get(f"/api/v1/jobs/{job_row.id}", headers=headers)
+    assert served.status_code == 200, served.text
+    assert _LEAK_SENTINEL not in served.text

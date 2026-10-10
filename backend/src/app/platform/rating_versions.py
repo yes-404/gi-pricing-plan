@@ -80,6 +80,7 @@ from model_schema.rating import ApproximationCheck
 from pricing_core.rating.compile import Bundle, ResolvedArtifact, compile_bundle
 from pricing_core.rating.runtime import CompiledBundle
 from pricing_core.rating.testing import evaluate_golden_quotes
+from pricing_core.safe_error import safe_error_detail
 
 #: `reference.rows_as_at`'s default `limit` (200) is a UI page size. A compiled Bundle
 #: must be self-contained (FR-239) and embed a pinned reference table's rows in full —
@@ -766,7 +767,11 @@ async def compile_rating_version(
             schema, WorkspaceResolver(session, workspace_id, blob_store)
         )
     except ValueError as exc:
-        text = str(exc)
+        # FD 9952 row 1 (NFR-499): `str(exc)` of a pydantic `ValidationError` prints the failing
+        # input, and this detail is stored in the Job error that `GET /jobs/{id}` serves. The
+        # allow-list renders a `CodedError` as `CODE: message` (the form partitioned below) and a
+        # `ValidationError` input-free; any other `ValueError` keeps only its type name.
+        text = safe_error_detail(exc) or type(exc).__name__
         code, _, detail = text.partition(": ")
         if not (code.isupper() and "_" in code):
             code, detail = "BUNDLE_COMPILE_FAILED", text
