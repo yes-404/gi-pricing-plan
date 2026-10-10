@@ -387,14 +387,15 @@ async def test_an_unclamped_quote_is_unchanged_and_constraints_is_none() -> None
 
 
 def _clamp_variant(
-    bounds: dict[str, str], condition: str, consumes: list[str]
+    bounds: dict[str, str], condition: str, consumes: list[str] | None = None
 ) -> dict[str, Any]:
     payload = _score_fixture()
     for step in payload["steps"]:
         if step["step_id"] == "s_clamp":
             step["clamp_bounds"] = bounds
             step["condition"] = condition
-            step["consumes"] = consumes  # FR-246: the names the variant reads
+            if consumes is not None:
+                step["consumes"] = consumes  # FR-246: the names the variant reads
     return payload
 
 
