@@ -190,3 +190,26 @@ Recount: `ast`-walk `handler` in `pricing_core/rating/runtime.py` for calls name
 **4. RL-1580's Acceptance gap, commit `5d73ea13`.** `test_a_glm_model_call_without_result_type_rounds_like_any_other`: the frequency GLM compiled with `result_type=None` returns `round(prediction)` (0) for each of the three quotes, and the unrounded value is not 0. RED with the one line reverted in the worktree (`value = round(glm_prediction) if step.result_type is None else glm_prediction` became `value = glm_prediction`, the file restored after): `assert 0.0925443730103699 == 0`, `1 failed, 21 deselected in 3.75s`. GREEN at the restored line: the whole file, `22 passed in 4.26s`. `git diff` on `src/` was empty after the restore.
 
 **5. Contracts.** `uv run python scripts/generate-contracts.py` with gate-1 free (the lead's go, after S5's gate stopped for a defect): `docs/contracts/openapi/generated.json` changed by 11 added lines only, the nullable `result_type` on the model_call step (this slice's own change; S4's and A-1's drift is already on main). `--check` rc 0, 47 contracts match. `pnpm generate:api` not run: its output is VCS-ignored and `frontend/node_modules` is absent here, so there is nothing to commit; the gate's frontend half generates it.
+
+### The gate turn (2026-10-10, BST; seat executor-a2g)
+
+**Full gate at `98bdb7c1`** (slot gate-1, 08:08 to 09:01): ruff 1, mypy 1, audit-docs 1, pytest 15 failed of 5268, the rest and the frontend half 0 (653 frontend tests). Three reds were real and inside the write set; all three were fixed in `c76040bd` and re-run in a second short slot (09:02 to 09:09: ruff 0, mypy 0, lint-imports 0, pricing-core and model-schema tests 2105 passed, the six backend rating files 138 passed). The other 13 pytest failures run the docs audit on the real tree and fail on its check 31 (the unminted ledger id) with the check 36 contiguity line; they clear at the mint.
+
+**Dated plan-delta, 2026-10-10 (the maintainer's ruling "2026-10-10 09:11:14 BST", item 1):** `packages/pricing-core/src/pricing_core/rating/authored.py` joins the write set for one entry, `(RatingModelCallStep, "result_type")` in `NON_EXPRESSION_FIELDS`, because FR-274's closure test (`test_rating_authored_fields.py`) fails a step string field that is in neither registry. The reason text is the one `RatingExpressionStep.result_type` carries.
+
+**The narrowing, `rating_versions.py`, `git diff -U0 98bdb7c1 c76040bd`** (the ruling's condition: show the hunk; type-only needs no test):
+
+```diff
+@@ -46,0 +47 @@ from model_schema import (
++    GlmSpec,
+@@ -527 +528,4 @@ class WorkspaceResolver:
+-            if not isinstance(model_obj.fit_result, GlmFitResult):
++            if not (
++                isinstance(model_obj.fit_result, GlmFitResult)
++                and isinstance(model_obj.spec, GlmSpec)
++            ):
+```
+
+It is type-only: no branch, raise or return is added. It adds one conjunct to the existing early-return test, so mypy sees `model_obj.spec` as `GlmSpec` below it. The two differ only for a corrupt row (a GLM fit under a non-GLM spec: both carry `model_type == "glm"` and the spec union is discriminated on it), where the resolve takes the existing non-GLM return instead of failing on `.link`. The GLM-pin tests (`test_rating_glm_model_call.py`, green at `c76040bd`) cover the real path.
+
+**Acceptance 9 (NFR-489, measured for a GLM `model_call`)**, run alone: window 09:10:58 to 09:14:16, holding gate-1 and gate-2, load1 1.61 before and 1.50 after, `uv run python scripts/bench-rating.py` (warmup 200, N=1000, 187 chained expression steps) at tree `0d1507c229211e19e4cb4fdd69880b7c1e26a246` (head `c76040bd`). GLM component p99 11.959 ms (p50 8.529, mean 8.725, max 15.907) against the 50 ms budget: PASS. The GBM run in the same invocation: p99 14.352 ms (p50 10.401). No `model_call`: p99 12.120 ms against its 15 ms budget. The plan's "A p99 at or above 50 ms is a STOP" was not triggered. The same output's NFR-490 line (trace overhead +614.9 % at p99, OVER) is the known finding F35 (the register's NFR-490 row), a GBM-with-trace measurement this slice neither touches nor changes.
