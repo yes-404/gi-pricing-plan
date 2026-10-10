@@ -173,7 +173,7 @@ direction: `references.py`); cite the merged location after the slice merges.
 - Nothing else. The code, the tests and the spec line are the slice's, under the entry; this
   record adds none of them.
 
-## Acceptance — the violations that must become detectable
+## Acceptance — the violation that must become detectable
 
 - A lookup with `as_at: "effective_date"` and no declaration is refused by FR-246.
   *Detected by* `:254` above.
