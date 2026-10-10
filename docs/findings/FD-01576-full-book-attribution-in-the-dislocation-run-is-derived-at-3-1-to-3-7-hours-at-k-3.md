@@ -32,7 +32,9 @@ The exit demo's dislocation job (`dislocation.run`, `SL-1388`) calls `attribute(
 
 **With which K:** `k = len(groups)` (`analysis.py`, in `attribute`), where `groups = _check_groups(changes, spec.change_groups)`: the analyst's declared `change_groups` (`DislocationSpec.change_groups`, `Field(max_length=6)`, `model_schema/dislocation.py:47`) or, where none are declared, the derived changes one per group. `shapley = k <= _MAX_SHAPLEY_GROUPS`; above 6 ungrouped changes the order-dependent method runs instead (`FR-266`). `masks = _masks_to_rate(k)`: every subset bundle is compiled before any is rated, then rated. The request does not carry K as a field; it follows from the two Rating Versions and the groups. `WF-699` D7 (`:87`) names three effects for the demo: "peril-structure, rate-table, and minimum-premium effects", so **K = 3 is the demo's reading by the workflow text** (the fixture of `examples/fremtpl2/rating/` has K = 3 to 6 members by design of `LG-1545`; the demo's K is not otherwise fixed by a text I found).
 
-## Evidence — what was measured
+## Evidence
+
+*What was measured.*
 
 All runs: `scripts/measure-attribution-cost.py cost` via `~/gi-pricing-plan.local/task7-s3e/inv.sh`, alone in the gate-1 slot, **8 CPUs, 31 GiB**, fixture `examples/fremtpl2/rating/`, the **first 20,000 policies by `quote_id`** except the linearity row. Tree `f59b546e748eca464c279a77ca48e166689d5a0e` unless stated; K = 3 runs r1 to r5 ran at `7dba2d11`/`59e24c85` (per `LG-1545`), and `git diff --name-only` between those trees and `f59b546e` lists only `docs/ledgers/LG-01545-…` (the measured code is the same; `LG-1545` records the trees, I did not re-run the diff for `59e24c85`). load1 is the reading at the run's emit (`.jsonl`), the START and END readings are in `progress.log`.
 
@@ -80,7 +82,9 @@ The dislocation step itself (`dislocation_frame` at `:223`) is `FD-1573`'s book 
 - **Demo arithmetic (derived).** One attribution at K = 3 on the full book: 3.45 to 3.74 h. D6 plus E4: **6.9 to 7.5 h** of attribution compute alone, plus the dislocation build's derived 50 to 58 min each time (`FD-1573`). `WF-699` Phase D's "30–60 min" is exceeded by a factor of about 7 to 8. `PL-1544` calls the demo "one command to a served page" and its gate G2 (`CR-1212:62-69`, quoted in `FD-1573`) lists "a dislocation run with attribution" in that command; the plan has no row bounding its time. Rehearsal at `--rows 20000` runs the same attribution in 366.85 s at K = 3 (measured), so **a rehearsal passes and demo day does not**: the cost is invisible at the size the plan rehearses.
 - **Is there a way out in the texts?** The synchronous `asyncio.run(attribute(...))` is a single Job step with no sample, no portfolio cap and no K cap below 6 (the handler `PlatformError`s only on `AttributionError`). The ways out are design choices the specs leave open (a demo-day subset portfolio Dataset Version, a persisted precomputed run, fewer groups, the order-dependent method above K = 6, a faster subset valuation, parallel workers); this record picks none (`CLAUDE.md` §0, §10).
 
-## Disposition (proposed; the lead decides)
+## Disposition
+
+*Proposed; the lead decides.*
 
 **Severity: HIGH, proposed.** Reasons: (1) the demo's own texts put the full book on demo day (`PL-1544`), the handler has no bound, and the derived cost (3.1 to 3.7 h, 6.9 to 7.5 h with E4's re-run) is a multiple of the only time the workflows give (30 to 60 min), so the scripted journey as written cannot finish in a demo-sized window; (2) it lands on a dated gate (G2) and the rehearsal size hides it; (3) no requirement bounds it, so nothing would make a slow run a defect by the specs; (4) it grows 2x per group, so a K = 4 or 5 demo fixture is worse. Not misclassed as pricing-incorrect: attribution is exact and nothing misprices. It falls to **MEDIUM** if the maintainer rules that the demo's portfolio Dataset Version is a subset or the run is precomputed (the texts then bound it), and it stays HIGH if the demo attributes the whole seed live. **The derived figures are not an NFR verdict**; the first measured full-book (or 100,000-policy-scaled) end-to-end run is what would settle it, and `FD-1573` notes that a measured full-book score pass did not finish within 60 minutes.
 

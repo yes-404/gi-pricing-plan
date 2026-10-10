@@ -513,7 +513,9 @@ broken-input proof; Task 2 one 200k run (≈ 25 min), one full-book run (≈ 78 
 lead at 00:08:46 for the pre-fix code; less if the fix holds), and one gate. If H1 is falsified
 the slice ends after Task 0 (≈ 0.2 lane-days) and the delta is sized from the spike.
 
-## Decision points (for the maintainer, by delegation, through the lead)
+## Decision points
+
+*For the maintainer, by delegation, through the lead.*
 
 **DP-1 — the scope: the full book, and `attribute`.**
 - (a) The demo scores the full 678,013-policy book: Acceptance 5 runs at 678,013.

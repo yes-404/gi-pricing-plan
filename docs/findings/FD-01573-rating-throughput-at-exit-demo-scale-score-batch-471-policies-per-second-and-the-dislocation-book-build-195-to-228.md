@@ -25,7 +25,9 @@ relates: [WK-673, WK-1178, SL-1387, PL-1452, PL-1544, CR-927, CR-1212, RL-1521, 
 
 The finding does **not** say the engine regressed: the workload (`CR-927` Task 3D, handler with Postgres/MinIO I/O, a different algorithm) and the tree both differ from the planning figure, and nothing here separates them. It says the planning rate does not transfer to this workload and every size or schedule derived from it is short.
 
-## Evidence — what was measured
+## Evidence
+
+*What was measured.*
 
 All commands run through `~/gi-pricing-plan.local/task7-s3e/inv.sh` / `inv-rss.sh` (`timeout … uv run --directory <sl-1387 worktree> python scripts/measure-attribution-cost.py <args>`), output in `~/gi-pricing-plan.local/task7-s3e/out/`, stamps from `progress.log`. **Machine: 8 CPUs, 31 GiB** (`nproc`; `free -g`, 2026-10-09 23:10 UTC). **Trees:** `088a0c23` (probe), `7dba2d11` (20k probe), `f59b546e` (200k, 400k). `git diff --name-only 088a0c23 f59b546e` and `088a0c23 7dba2d11` each list only `docs/ledgers/LG-01545-…`, so the measured code is identical at all three.
 
@@ -96,7 +98,9 @@ The lead's 00:08:46 correction reads the build "below the 277.8 line IF NFR-493 
 - **G2's rehearsal arithmetic.** At the derived full-book figure, one dislocation run on the 678,013-row book is about **50 to 58 min** of build-path compute (derived), and `WF-699` E3/E4 asks for a re-run: about **100 to 116 min** of dislocation compute in one demo, each at about **20 GiB** peak on a 31 GiB box that also hosts the API, Postgres and the frontend. `WF-699`'s own "30–60 min" for Phase D is for 1.28 M policies and is not met at these rates either (1.28 M / 228 per s ≈ 94 min, derived).
 - **Not affected, by scope:** NFR-489 (the `/score` request path, `SL-1455`) is a per-request latency budget. The demo's single-quote score at deploy is that path.
 
-## Disposition (proposed; the lead decides)
+## Disposition
+
+*Proposed; the lead decides.*
 
 **Severity: MEDIUM, proposed** (the first draft proposed LOW). Reasons, each from the evidence: (1) no NFR floor is breached on the governing path (`score_batch` 1.69x above, measured), and nothing misprices, so it is not HIGH; (2) the planning input was about 3x off and the full-book cost at demo size is derived at about 50 to 58 min per dislocation pass (76 to 82 min with a `score_batch` pass) and about 20 GiB, which lands on a dated gate (G2, with a re-run step in the journey) rather than only on a plan; (3) the cause is unseparated (the build's two-pass structure is a code reading, the memory split is unmeasured), so a remedy cannot yet be sized. It falls to LOW if the maintainer rules that the exit demo's dislocation run scores a subset, and rises to HIGH if the full-book run fails on memory or exceeds the demo's window when first run end to end.
 

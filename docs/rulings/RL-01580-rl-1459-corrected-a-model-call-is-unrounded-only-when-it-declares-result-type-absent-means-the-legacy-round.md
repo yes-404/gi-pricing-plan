@@ -70,7 +70,7 @@ From "2026-10-10 03:13:06 BST — RULINGS on A-3 …", OP-2:
 OP-2 (a) ADOPTED. Peril model_call nodes are compiled with an explicit result_type "decimal", as the GLM node is (00:44:31: one rule; absent means legacy round). A correcting RL: RL-1459 is frozen, and its "model_call is never rounded" is now true only for nodes that carry an explicit result_type. The correcting RL (corrects: RL-1459; RL-1459 gains corrected_by: in the same batch, front matter only) states the qualified rule and cites my 00:40:31 and 00:44:31 entries. It rides the next docs batch (D5's tail or D6). A-3's GO does not wait on it: the code follows X now.
 ```
 
-## The qualified rule
+## Ruled
 
 **One rule for every `model_call` node, whatever the kind of model it calls:**
 
@@ -152,6 +152,48 @@ at `e0e12dd8`, not the merged result.
 - `RL-1459` gains `corrected_by: [RL-1580]` in this commit, front matter only.
 - Nothing else. The spec line, the code and the tests are A-2's and A-3's, under the
   entries above; this record adds none of them.
+
+## Acceptance — the violation that must become detectable
+
+The violation: a `model_call` that does not declare `result_type` is carried unrounded, or one that declares it is rounded
+at the step or leaves the Bundle hash unchanged. Each check below names its broken input. All are on A-2's branch
+`sl-1463-a2-glm-model-call` at `e0e12dd834318294a5e0932618ca177c71a7bf46`, not on `main`. They name that branch's tests, not
+the merged result.
+
+- *Violation: the compiler writes an absent `result_type` into the graph, so a Bundle compiled before the field existed
+  changes its bytes or its hash* (rule 1; `03` FR-239).
+  `packages/pricing-core/tests/test_rating_glm_model_call.py::test_an_old_model_call_recompiles_byte_identically`
+  asserts that `"result_type" not in first.graph.nodes["s_risk"]`, equal `content_hash` on two compiles, and an equal
+  `model_dump(exclude={"compiled_at"})`.
+- *Violation: an explicit `result_type` does not enter the hash* (rule 2). The same test asserts
+  `explicit.graph.nodes["s_risk"]["result_type"] == "decimal"` and `explicit.content_hash != first.content_hash`.
+- *Violation: a `model_call` without `result_type` is carried unrounded, or one with `result_type: "decimal"` is
+  rounded at the step* (rules 1 and 2; FR-226).
+  `…::test_the_same_algorithm_prices_by_single_rounding_only_when_it_opts_in` scores the one algorithm both ways. It
+  asserts the legacy office premium `1436` (two roundings) and the opt-in `1435` (one rounding). It also asserts that the opt-in `unrounded_minor` lies
+  in (1435.28, 1435.29). The fixture's model is a GBM booster (`test_rating_score._algorithm_payload`).
+- *Violation: the opt-in path is non-deterministic, or a rung's value is not the single half-even rounding of its
+  unrounded `Decimal`* (rule 2; NFR-495).
+  `…::test_the_opt_in_path_is_deterministic_and_its_money_is_decimal_exact`.
+- *Violation: a GLM step that declares `result_type` (`decimal` or `money_minor`) is rounded at the step* (rule 3).
+  `…::test_a_model_call_equals_predict_glm_at_full_precision` asserts the step's value against `predict_glm` within
+  1e-14 (relative) for both types. Its docstring marks this as a draft, not item 15's evidence. LG 9449 holds that
+  evidence.
+- *Violation: a stored payload without `result_type` loads as `decimal`, or a type other than `decimal` /
+  `money_minor` is accepted* (rule 1; FR-227).
+  `packages/model-schema/tests/test_rating_algorithm.py::test_a_stored_model_call_without_result_type_loads_as_the_legacy_default`,
+  `::test_a_model_call_accepts_decimal_or_money_minor`, `::test_a_model_call_refuses_any_other_result_type`.
+
+**Not yet detectable at `e0e12dd8`, disclosed:** rule 3's "a GLM step without `result_type` rounds like any other" (the
+00:44:31 entry: "No node-kind-dependent meaning of \"absent\"") has no test. The runtime carries it at
+`packages/pricing-core/src/pricing_core/rating/runtime.py:656`
+(`value = round(glm_prediction) if step.result_type is None else glm_prediction`). The helper `algorithm_payload` accepts
+`result_type=None`, but no test on the branch passes it (`git grep 'result_type=None'` over the branch's tests finds no
+match). The check that would detect it: *Violation: a GLM `model_call` compiled without `result_type` scores its unrounded
+prediction*. That means a GLM case like the legacy/opt-in pair above. This record does not order that test: the test is A-2's,
+under the entries above. Rule 4 (a GBM keeps the legacy rounding unless an algorithm opts in) is the GBM half of the
+legacy/opt-in test above. A-3's peril-structure nodes (rule 3) are A-3's to prove, and this record names no A-3 test
+because none was read for it.
 
 ## What this record does not decide
 

@@ -45,7 +45,9 @@ The other raise sites carry no portfolio value: `:549`, `:564` (fixed text), `:7
 
 *Not run:* no check was run for this draft (brief: git and file edits only). Every quote above was read from the tree named; none was executed.
 
-## Severity and remedy
+## Disposition
+
+*Severity and remedy.*
 
 **Proposed severity: MEDIUM (the auditor proposes; the lead decides).** Reason: the content is policy-level input (a quote id, a premium change) leaving through a stored Job error and an API body, which is the class NFR-499 names; it misprices nothing, and today it is reachable by no stored path, so it is not HIGH. It is not LOW because the only guard is a per-sink choice, and a sink that gets it wrong discloses silently, with no failing test unless that sink's author writes the red one S4 wrote.
 
