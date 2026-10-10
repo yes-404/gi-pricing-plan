@@ -541,7 +541,7 @@ is quoted.
 memory. NFR-493 (`03` §8: *"Batch scoring ≥ 1 M risks/hour per worker (NFR-455), linear in
 workers."*) is a scoring rate. Which path it governs is FD-1573's to state.
 - (a) Peak RSS ≤ 15.5 GiB at the demo's size (half the 31 GiB box), and wall time ≤ 60 min
-  (`WF-699`'s phase table, *"D — Regression + dislocation | 30–60 min compute"*, `WF-00699`
+  (`WF-699`'s phase table, *"D — Regression + dislocation | 30–60 min compute"*, `WF-699`
   :150; an elapsed estimate, not an NFR).
 - (b) Only "completes, with the measured figures recorded", and no ceiling.
 - (c) A new NFR in `03` §8, which is a spec change first (`CLAUDE.md` §0).
@@ -549,7 +549,7 @@ workers."*) is a scoring rate. Which path it governs is FD-1573's to state.
 **Recommendation: (a)** for this slice, with (c) proposed separately as an open question. The
 time half is likely already met (two passes at 471 pol/s on 678,013 ≈ 48 min, *derived*);
 memory (≈ 20.3 GiB *derived*) is what fails it. Note that D6 runs twice in the journey (E3
-rejects a stale run; E4 *"Re-runs dislocation"*, `WF-00699` :97-98).
+rejects a stale run; E4 *"Re-runs dislocation"*, `WF-699` :97-98).
 
 **Ruled 2026-10-10 00:20:03 BST: (a)**, *"ADOPTED as a PLAN ACCEPTANCE TARGET, not an NFR"*.
 The target is a plan acceptance target, not an NFR: peak RSS ≤ 15.5 GiB and ≤ 60 min per

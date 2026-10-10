@@ -2,7 +2,7 @@
 id: FD-1578
 family: finding
 title: An AttributionError message embeds a portfolio quote_id and premium amounts, and AttributionError is a plain ValueError — no sink may store its text, and the platform's safe-text helper renders its type only
-status: draft
+status: active
 created: 2026-10-10            # original date 2026-10-10, set at the draft; minted 2026-10-10
 owner: auditor
 tree: 3519a919e30aa6993d40b22df212dd57bbd4a685

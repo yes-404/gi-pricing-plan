@@ -2,7 +2,7 @@
 id: FD-1576
 family: finding
 title: Full-book attribution in the exit demo's dislocation run is derived at 3.1 to 3.7 hours at K = 3 (doubling per extra change group), with no budget in any spec and the handler attributing the whole portfolio synchronously
-status: draft
+status: active
 created: 2026-10-10            # original date 2026-10-10, set at the draft; minted 2026-10-10
 owner: auditor
 tree: 61e2a8d9d06087cadd3760e9668b3caff881b85c
