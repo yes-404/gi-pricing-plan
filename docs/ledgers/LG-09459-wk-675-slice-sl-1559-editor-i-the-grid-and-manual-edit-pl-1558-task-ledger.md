@@ -335,12 +335,24 @@ below is that retype and nothing else; the line is the branch head's, and `git d
 | `…/operations.py:561` | `default_row=table.default_row` → `default_row=_default_row_of(table)` in `_validate_result` | as :544 |
 | `…/operations.py:649` | `"rows": rows` → `"rows": [RateTableCell(row) for row in rows]` in `_new_version` | the new version's `rows` must be cells |
 | `…/operations.py:958` | `default_row=version.default_row` → `default_row=_default_row_of(version)` in `_checked_import` | as :544 |
-| `backend/src/app/platform/rate_tables.py:271`, `:273` | `_wire_rows` returns `list[RateTableCell]`: `[RateTableCell(row) for row in cells]` (was a `cast`) | the wire rows are cells. **Not on the lead's list of six; added here as a seventh the diff shows, for the lead to accept or strike.** |
+| `backend/src/app/platform/rate_tables.py:271`, `:273` | `_wire_rows` returns `list[RateTableCell]`: `[RateTableCell(row) for row in cells]` (was a `cast`) | the wire rows are cells. **Covered by PL-1558 :261 (in its write set), not a ripple edit; the lead ruled so on 2026-10-10.** |
 | `backend/tests/test_rate_tables_service.py:145`, `:450` | `row["driver_age_band"]: row["relativity"]` → `row.root[…]: row.root[…]` | the test reads the wire rows, now cells |
 | `packages/pricing-core/tests/test_rate_table_bulk_ops.py:142, 158, 175, 198, 213, 246, 259, 282` | `result.rows ==` / `baseline.rows ==` → `_cells(result) ==` / `_cells(baseline) ==` (eight lines; `:75` adds the helper `_cells`, which returns `[row.root for row in version.rows]`) | `rows` holds cells, which do not compare equal to a dict. **The expected value on each right-hand side is unchanged** (`-U0` shows only the left-hand side edited). |
 
 The other hunks of these files (the manual-edit route, `apply_cell_edits`, `EditIssue`, the imports, `created_by_edit`
 persistence) are Task 3's feature code, not ripple.
+
+**Plan delta, 2026-10-10: the two `assert`s in `manual_edit_preview` (the lead's ruling after 55a460db, inside the
+reason of 08:49:39 (C)).** `assert base.rows is not None` / `assert derived.rows is not None` (`rate_tables.py`,
+formerly :1023/:1024) become one `if base.rows is None or derived.rows is None: raise _rows_form_violated()`. The
+helper `_rows_form_violated` (new, above `manual_edit_preview`) returns the `INTERNAL_ERROR` 500 `PlatformError` with
+static text (NFR-499), and the :1332 guard now raises the same helper, so the text is written once. **No DB-free red
+test:** the condition is reachable only through `_edit_derived`, which reads the database, so its red-first test is
+owed to the gate (the :1332 test still covers the helper). `ruff check` passed.
+
+**Observed, not changed.** Two bare `assert`s pre-existing on main, outside S4's scope: `rate_tables.py:537`
+(`assert cache is not None`, in the diff-cells path) and `:736` (`assert start is not None`, after
+`decode_int_cursor`). The lead raises them at the ACK.
 
 ## PRs
 

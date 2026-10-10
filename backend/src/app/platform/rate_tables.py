@@ -1009,6 +1009,18 @@ async def _edit_derived(
     return table_row, version_row, base, derived
 
 
+def _rows_form_violated() -> PlatformError:
+    """An internal invariant, not a caller error: a manual edit derives a rows-form version
+    from a rows-form base. Static text only (NFR-499); an `assert` would vanish under
+    `python -O` (RL-1555 C)."""
+    return PlatformError(
+        "INTERNAL_ERROR",
+        "Internal server error",
+        500,
+        "A rate table version reached a rows-only step without its cells.",
+    )
+
+
 async def manual_edit_preview(
     database: Database,
     workspace_id: UUID,
@@ -1020,8 +1032,8 @@ async def manual_edit_preview(
     nothing is created."""
     async with database.unit_of_work() as session:
         _, _, base, derived = await _edit_derived(session, workspace_id, slug, body, blob_store)
-        assert base.rows is not None
-        assert derived.rows is not None
+        if base.rows is None or derived.rows is None:
+            raise _rows_form_violated()
         return diff_vs_previous(
             [dict(row.root) for row in base.rows],
             [dict(row.root) for row in derived.rows],
@@ -1330,14 +1342,7 @@ async def _persist_new_version(
     its §4.2 wire form.
     """
     if derived.rows is None:
-        # An internal invariant, not a caller error: every caller derives a rows-form version.
-        # Static text only (NFR-499); a bare `assert` would vanish under `python -O`.
-        raise PlatformError(
-            "INTERNAL_ERROR",
-            "Internal server error",
-            500,
-            "A derived rate table version reached storage without its cells.",
-        )
+        raise _rows_form_violated()
     cells = [dict(row.root) for row in derived.rows]
     storage_mode = decide_storage_mode(len(cells), threshold)
     definition = RateTable(
