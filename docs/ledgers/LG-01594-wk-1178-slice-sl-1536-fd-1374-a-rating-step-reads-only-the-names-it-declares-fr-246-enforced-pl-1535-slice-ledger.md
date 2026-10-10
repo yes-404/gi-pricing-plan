@@ -1,5 +1,5 @@
 ---
-id: LG-1593
+id: LG-1594
 family: ledger
 title: WK-1178 slice SL-1536 — FD-1374, a rating step reads only the names it declares, FR-246 enforced (PL-1535), slice ledger
 status: closed
@@ -14,9 +14,9 @@ corrected_by: []
 relates: [PL-1535, PL-1520, RL-1519, FD-1374, FD-1534, FR-246, FR-212, WK-1178]
 ---
 
-# LG-1593 — WK-1178 slice SL-1536: FD-1374, FR-246 enforced
+# LG-1594 — WK-1178 slice SL-1536: FD-1374, FR-246 enforced
 
-*Disclosure: drafted under working id 9441; minted as LG-1593 on 2026-10-10, in the SL-1536 mint commit (the lead's allocation in `to-lead.md`, "2026-10-10 14:39:49 BST" read-back and the dispatch brief).*
+*Disclosure: drafted under working id 9441; minted as LG 1593 on 2026-10-10 in `02b032fa`, then re-minted as LG-1594 on 2026-10-10 because RL-1593 (docs batch D8a) took the id (the lead's allocation, `to-lead.md`, "2026-10-10 16:29:07 BST"), in the SL-1536 mint commit (the lead's allocation in `to-lead.md`, "2026-10-10 14:39:49 BST" read-back and the dispatch brief).*
 
 **GO:** not yet given. Authoring ahead of the GO at the user's order ("2026-10-09 13:17:43 BST — USER: parallel …" item 2, in `to-lead.md`, a local file): code and tests are written on a branch from `origin/main` `d471a43bdc4ed123258a7398bbcf30c62605aa27`; no heavy run while S3's Task 7 holds gate-1; nothing merges before the GO and the gate.
 **MERGE-ACK:** not yet given.
@@ -88,6 +88,7 @@ Single test file per run, `flock -w 300 /tmp/slots/small-test -c "timeout 150 ni
 - **RL 9586 re-point** (`4b53b62a`): `test_rating_algorithm.py:367`, comment only, to RL-1571.
 - **Mounted-fragment guard** (`10c3e07a`): an inlined fragment passes the declared-reads check; it passed first time, so it is a guard, not a red-first; the control flags a stray read at `m_ncd__s_ladder`.
 - **03 §4.1 example vs A-3** (`017d998a`): the slice's own compile test failed `BUNDLE_COMPILE_FAILED` naming `s_rp`: the example (03:295-299) produces two names, A-3's rule (RL-1459 DP-A3-1 (c)) allows one for a Peril Structure `model_call`. Ruling "2026-10-10 14:43:15 BST — RULING: 03 §4.1 worked example vs A-3's compile …" (`to-lead.md`): the code is right; 03 §4.1 stays byte-for-byte as RL-1519 ruled it (Acceptance 4); the test pins the RULE (two names refused, the one-name form compiles); the example is known-wrong text pending a correcting RL, filed as FD 9953 (working id), which rides the next docs batch. The old failure is the red; green is 9 passed in `test_rating_declared_reads.py`.
+- **RL-1593 (D8a).** It is the clarifying RL for the FR-246 stamped-date ruling and corrects RL-1519's Acceptance case 3, which the stamped-date commit `2838df55` changes; it is on `main` before this slice (merged 695a30a6) and this branch merged it.
 - **FR-239.** Approved versions are never recompiled, so no stored bundle changes with this slice; a bundle compiled before the check keeps loading and scoring (RL-1519 (iii-b)).
 
 **2026-10-10, the red gate and its repairs** (first full gate at `0e7c4d5c`: 74 failed, 7 errors; rulings in `to-lead.md`: "15:36:02 BST" write set, "15:37:31 BST" DP-M2, "15:40:36 BST" FR-246 vs FR-221, "15:42:57 BST" two purpose-tests and the hash).

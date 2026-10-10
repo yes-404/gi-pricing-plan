@@ -2101,7 +2101,7 @@ relates: [FD-1374, PL-1371]
 
 (Activated 2026-10-10 as WK-1178's FD-1374 slice, on the dispatch GO "2026-10-10 14:37:13 BST — DISPATCH GO: the FD-1374 slice (PL-1535 / SL-1536) …" with DP-FD1374-M1 (a) and its hash condition; `PL-1535` was `active` from the slice branch's activation commit.)
 
-(Closed 2026-10-10 as a Slice, closing acts in the slice PR's last commit, on the lead's merge; ledger LG-1593, minted 2026-10-10 from working id 9441 in the SL-1536 mint commit.)
+(Closed 2026-10-10 as a Slice, closing acts in the slice PR's last commit, on the lead's merge; ledger LG-1594, minted 2026-10-10 from working id 9441 in the SL-1536 mint commit (first minted as LG 1593, re-minted because RL-1593 took the id).)
 
 #### SL-1566 — WK-1178 fix slice — batch scoring serialises every declared output type and never aborts on one row
 
