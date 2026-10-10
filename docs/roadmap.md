@@ -1955,7 +1955,7 @@ FD-1458's fix (HIGH, a G2 blocker before the P2 exit demo, the same entry, item 
 id: SL-1466
 family: slice
 title: WK-1178 slice — Option A, A-3, Peril Structure scoring (compile resolves and maturity-checks the component models; the runtime assembles the risk premium)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-05
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 137bc817ef1fb40ea57e9053e0ad40b73bdff3a8
@@ -1966,6 +1966,10 @@ relates: [PL-1371, CR-1212, RL-1263]
 ```
 
 The third of Option A's four serial slices (the maintainer, "2026-10-05 16:43:31 BST — THE MAINTAINER'S DECISION (asked live): G2 takes OPTION A, WF-699's literal Peril Structure path is BUILT IN P2; and the FD 9605 approval, now on the record", item 1). A `model_call` step naming a Peril Structure compiles and scores: `compile_bundle` resolves each component model of the pinned structure, refuses one below `approved` with `PIN_NOT_APPROVED` (FR-20, FR-240) and embeds its payload, so the Bundle stays self-contained (NFR-491); the handler predicts each component and calls `assemble_risk_premium` (FR-188, FR-189), replacing today's custom-node failure on `payload["fit_result"]`. Six decision points for a ruling (the outputs rule and FR-249, `separate_model`, PL-1471's peril gap, WF-699 C4's reachability, the component unit, a recorded latency). Leaf plan PL-1465. It follows PL-1429, PL-1471, A-1 (SL-1462) and A-2 (SL-1463); it serialises with PL-1572 and PL 9609 on `compile_bundle`; A-4 (the exit-demo scope) follows it.
+
+(Activated 2026-10-10 as WK-1178 Option A, A-3, on the dispatch GO "2026-10-10 10:15:41 BST — DISPATCH GO: A-3 (PL-1465 / SL-1466), EFFECTIVE when SL-1340 merges; OP-A3-M1 = (a), inlined; a hard condition on runtime.py's \"take A-3's side whole\"" with its conditions; `PL-1465` set `active` in the slice branch's activation commit.)
+
+(Closed 2026-10-10 as a Slice, closing acts in the slice PR's last commit, on the lead's merge; ledger LG-1592, minted 2026-10-10 from working id 9455 in the SL-1466 merge-turn commit.)
 
 #### WK-1178 fix slice — NFR-498 Audit Events on rate table version and rating algorithm writes
 

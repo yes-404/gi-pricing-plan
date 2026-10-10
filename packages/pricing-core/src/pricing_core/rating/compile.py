@@ -23,9 +23,10 @@ from decimal import Decimal
 from typing import Any, NoReturn, Protocol
 
 import zen
-from pydantic import BaseModel, ConfigDict, SerializationInfo, field_serializer
+from pydantic import BaseModel, ConfigDict, SerializationInfo, ValidationError, field_serializer
 
 from model_schema.modelling import Banding, Factor, FactorIntent, Grouping
+from model_schema.perils import LargeLossKind, PerilStructure
 from model_schema.rating import (
     AlgorithmOutput,
     Pins,
@@ -48,7 +49,7 @@ from pricing_core.rating.authored import authored_expression_fields
 from pricing_core.rating.inline import inline_mounts, mounted_fragments
 from pricing_core.rating.ladder import RUNG_ORDER, output_steps_by_name, rung_output_name
 from pricing_core.rating.vocabulary import check_allow_list
-from pricing_core.safe_error import CodedError
+from pricing_core.safe_error import CodedError, safe_error_detail
 
 _NON_DETERMINISTIC: tuple[str, ...] = ("now(", "random(", "rand(", "today(", "clock(")
 #: FR-246: a quote timestamp is an input; `now()` does not exist.
@@ -720,17 +721,21 @@ def check_step_refs_pinned(algorithm: RatingAlgorithm, pins: Pins) -> None:
 
 
 async def _refuse_unapproved_objectives(
-    version: RatingVersion, payloads: dict[str, Any], resolver: ArtifactResolver
+    version: RatingVersion,
+    payloads: dict[str, Any],
+    resolver: ArtifactResolver,
+    component_refs: Sequence[ArtifactRef] = (),
 ) -> None:
     """FR-240's "transitively reachable": a pinned model's own custom objective (`PL-1471`).
 
     One hop: a GBM's `spec.objective` with `kind: custom` is resolved and held to the same
     floor as a direct pin, `deprecated` included (`02` OQ-609, DP-5). A payload with no
     `spec` names no objective. The objective is checked and not embedded, so `bundle_hash`
-    is unchanged (FR-239).
+    is unchanged (FR-239). A pinned Peril Structure's component models are walked as a pinned
+    model is (`component_refs`, `RL-1459` DP-A3-3 (a)); the structure itself has no `spec`.
     """
     assert version.pins is not None
-    for model_ref in version.pins.models:
+    for model_ref in (*version.pins.models, *component_refs):
         spec = payloads[str(model_ref)].get("spec")
         objective = spec.get("objective") if isinstance(spec, dict) else None
         if not isinstance(objective, dict) or objective.get("kind") != "custom":
@@ -776,24 +781,34 @@ def _refuse_control_factor_model_calls(
     Scoring applies every fitted feature's effect and `02` FR-88 lets Rating Versions use
     only `risk` factors, so a pinned model whose `feature_order` holds a `control` Factor's
     slug is refused. A payload with no `fit_result` or `feature_order` binds no factor. A
-    `peril_structure_ref` step is FD-1456's known gap (FR-240).
+    `peril_structure_ref` step is checked on each of its component models (`RL-1459`
+    DP-A3-3 (a)), which `resolved_pins` holds beside the pins once compile has resolved them.
     """
     for step in algorithm.steps:
-        if not isinstance(step, RatingModelCallStep) or step.model_ref is None:
+        if not isinstance(step, RatingModelCallStep):
             continue
-        pin = resolved_pins[str(step.model_ref)]
-        fit_result = pin.payload.get("fit_result")
-        features = fit_result.get("feature_order", ()) if isinstance(fit_result, dict) else ()
-        by_slug = {factor.slug: factor for factor in pin.factors}
-        for feature in features:
-            factor = by_slug.get(feature)
-            if factor is not None and factor.intent is FactorIntent.CONTROL:
-                _raise_named(
-                    "CONTROL_FACTOR_IN_RATEABLE_PATH",
-                    f"{step.model_ref} was fitted on feature {feature!r}, the "
-                    f"`control`-intent Factor {factor.slug}@{factor.version}, which cannot be "
-                    "rated on (FR-88, FR-240)",
-                )
+        if step.model_ref is not None:
+            models = [step.model_ref]
+        else:
+            assert step.peril_structure_ref is not None  # exactly one is set (FR-222)
+            structure = PerilStructure.model_validate(
+                resolved_pins[str(step.peril_structure_ref)].payload
+            )
+            models = peril_component_refs(structure)
+        for model_ref in models:
+            pin = resolved_pins[str(model_ref)]
+            fit_result = pin.payload.get("fit_result")
+            features = fit_result.get("feature_order", ()) if isinstance(fit_result, dict) else ()
+            by_slug = {factor.slug: factor for factor in pin.factors}
+            for feature in features:
+                factor = by_slug.get(feature)
+                if factor is not None and factor.intent is FactorIntent.CONTROL:
+                    _raise_named(
+                        "CONTROL_FACTOR_IN_RATEABLE_PATH",
+                        f"{model_ref} was fitted on feature {feature!r}, the "
+                        f"`control`-intent Factor {factor.slug}@{factor.version}, which "
+                        "cannot be rated on (FR-88, FR-240)",
+                    )
 
 
 def _carry_glm_inputs(payloads: dict[str, Any], resolved: ResolvedArtifact) -> None:
@@ -820,6 +835,81 @@ def _carry_glm_inputs(payloads: dict[str, Any], resolved: ResolvedArtifact) -> N
         offset = resolved.payload["spec"]["offset"]
         payloads[str(offset["offset_model_ref"])] = source.payload
         _carry_glm_inputs(payloads, source)
+
+
+def peril_component_refs(structure: PerilStructure) -> list[ArtifactRef]:
+    """A structure's distinct component model refs, in peril order (FR-188)."""
+    refs: list[ArtifactRef] = []
+    for peril in structure.perils:
+        for ref in (peril.frequency_model, peril.severity_model, peril.burning_cost_model):
+            if ref is not None and ref not in refs:
+                refs.append(ref)
+    return refs
+
+
+def _refuse_peril_model_calls(algorithm: RatingAlgorithm) -> None:
+    """A Peril Structure `model_call` declares exactly one produced name (`RL-1459` DP-A3-1 (c)).
+
+    The step yields the structure's risk premium, one value (FR-188). A second name would
+    receive the same value although `03` §4's example declares it a per-peril map, which no
+    runtime serves yet (FR-249 is `OQ-1460`), so the step is refused rather than served wrong.
+    """
+    for step in algorithm.steps:
+        if not isinstance(step, RatingModelCallStep) or step.peril_structure_ref is None:
+            continue
+        names = [step.produces] if isinstance(step.produces, str) else list(step.produces)
+        if len(names) > 1:
+            _raise_named(
+                "BUNDLE_COMPILE_FAILED",
+                f"step {step.step_id!r} on {step.peril_structure_ref} declares {len(names)} "
+                f"produced names {names}; a Peril Structure model_call yields one value, "
+                "the risk premium (FR-222, FR-249)",
+            )
+
+
+async def _resolve_peril_components(
+    structure_ref: ArtifactRef,
+    payload: dict[str, Any],
+    resolver: ArtifactResolver,
+    resolved_pins: Mapping[str, ResolvedArtifact],
+) -> dict[str, ResolvedArtifact]:
+    """Resolve and maturity-check a pinned Peril Structure's component models (FR-240, FR-20).
+
+    Each distinct component ref of `frequency_model`, `severity_model` and
+    `burning_cost_model` is resolved once, in peril order, and returned under `str(ref)`; a
+    component that is also pinned directly reuses the pin loop's result. A `separate_model`
+    peril is refused first (`RL-1459` DP-A3-2 (a)): `assemble_risk_premium` cannot restore it.
+    """
+    try:
+        structure = PerilStructure.model_validate(payload)
+    except ValidationError as exc:
+        # A raw pydantic error carries the offending input (NFR-499): name the ref and the
+        # fields at fault only.
+        _raise_named(
+            "BUNDLE_COMPILE_FAILED",
+            f"{structure_ref} is not a valid Peril Structure: {safe_error_detail(exc)} (FR-188)",
+        )
+    for peril in structure.perils:
+        if peril.large_loss.kind is LargeLossKind.SEPARATE_MODEL:
+            _raise_named(
+                "LOSS_TREATMENT_UNIMPLEMENTED",
+                f"{structure_ref} peril {peril.peril!r} uses a `separate_model` large-loss "
+                "treatment, which no scorer applies yet (FR-189, FR-240)",
+            )
+    components: dict[str, ResolvedArtifact] = {}
+    for peril in structure.perils:
+        for ref in (peril.frequency_model, peril.severity_model, peril.burning_cost_model):
+            if ref is None or str(ref) in components:
+                continue
+            resolved = resolved_pins.get(str(ref)) or await resolver.resolve(ref)
+            if resolved.status not in _APPROVED_OR_BETTER:
+                _raise_named(
+                    "PIN_NOT_APPROVED",
+                    f"{ref}, the component of peril {peril.peril!r} in {structure_ref}, is "
+                    f"{resolved.status!r}, not approved or better (FR-20, FR-240)",
+                )
+            components[str(ref)] = resolved
+    return components
 
 
 async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> Bundle:
@@ -883,6 +973,7 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
         _raise_named(issues[0].code, issues[0].message)
     check_model_reference_mode(version, inlined)
     check_step_refs_pinned(inlined, pins)
+    _refuse_peril_model_calls(inlined)
 
     payloads: dict[str, Any] = {str(version.algorithm_ref): resolved_algorithm.payload}
     all_refs: list[ArtifactRef] = [
@@ -904,7 +995,19 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
         payloads[str(ref)] = resolved.payload
         _carry_glm_inputs(payloads, resolved)
         resolved_pins[str(ref)] = resolved
-    await _refuse_unapproved_objectives(version, payloads, resolver)
+    component_refs: list[ArtifactRef] = []
+    for ref in version.pins.models:
+        if ref.type != "peril_structure":
+            continue
+        components = await _resolve_peril_components(
+            ref, resolved_pins[str(ref)].payload, resolver, resolved_pins
+        )
+        for component_ref, component in components.items():
+            payloads[component_ref] = component.payload
+            _carry_glm_inputs(payloads, component)
+            resolved_pins.setdefault(component_ref, component)
+            component_refs.append(ArtifactRef.model_validate(component_ref))
+    await _refuse_unapproved_objectives(version, payloads, resolver, component_refs)
     await _refuse_control_factor_keys(version, payloads, resolver)
     _refuse_control_factor_model_calls(inlined, resolved_pins)
 
@@ -933,6 +1036,7 @@ __all__ = [
     "compile_bundle",
     "fragment_output_type_issues",
     "output_type_issues",
+    "peril_component_refs",
     "producer_types",
     "to_jdm",
     "validate_algorithm",
