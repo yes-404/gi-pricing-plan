@@ -217,12 +217,14 @@ class DislocationRun(BaseModel):
 
     @model_validator(mode="after")
     def _quantile_keys_are_the_fixed_set(self) -> Self:
+        # A set, not a sequence: the run is stored as JSONB, which returns an object's keys
+        # shortest first ("1" before "0.5"), and a JSON object has no key order to hold.
         if self.abs_change_pct_quantiles is not None and (
-            tuple(self.abs_change_pct_quantiles) != ABS_CHANGE_PCT_QUANTILE_KEYS
+            set(self.abs_change_pct_quantiles) != set(ABS_CHANGE_PCT_QUANTILE_KEYS)
         ):
             raise ValueError(
                 "abs_change_pct_quantiles must hold exactly the keys "
-                f"{list(ABS_CHANGE_PCT_QUANTILE_KEYS)}, in that order (03 §4.6)"
+                f"{list(ABS_CHANGE_PCT_QUANTILE_KEYS)} (03 §4.6)"
             )
         return self
 

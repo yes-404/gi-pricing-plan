@@ -734,7 +734,8 @@ async def test_the_run_holds_the_six_quantile_keys_and_one_is_the_largest_change
     (row,) = await _runs(database, world.workspace_id)
     quantiles = DislocationRun.model_validate(row.run).abs_change_pct_quantiles
     assert quantiles is not None
-    assert list(quantiles) == ["0.5", "0.9", "0.95", "0.99", "0.999", "1"]
+    # a set: the stored JSONB returns its keys shortest first, so the order is not the model's
+    assert set(quantiles) == {"0.5", "0.9", "0.95", "0.99", "0.999", "1"}
     largest = max(
         Fraction((p + 12) * 100, 4 * p + 17) for p in _portfolio()["premium_in"].to_list()
     )

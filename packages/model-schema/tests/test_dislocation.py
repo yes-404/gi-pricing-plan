@@ -264,14 +264,17 @@ def test_spec_refuses_an_exact_override_naming_two_versions() -> None:
 
 @pytest.mark.req("FR-224")
 def test_run_quantiles_are_exactly_the_six_keys_or_absent() -> None:
-    """03 §4.6 (RL-1504 T7): all six keys in order, each a decimal string or null; a run
-    without the field still validates (a run made before it)."""
+    """03 §4.6 (RL-1504 T7): all six keys, in any order (JSONB returns them shortest first),
+    each a decimal string or null; a run without the field still validates (a run made
+    before it)."""
     keys = ["0.5", "0.9", "0.95", "0.99", "0.999", "1"]
     assert DislocationRun.model_validate(_run_body()).abs_change_pct_quantiles is None
     nulls = DislocationRun.model_validate(
         _run_body(abs_change_pct_quantiles=dict.fromkeys(keys))
     )
     assert nulls.abs_change_pct_quantiles == dict.fromkeys(keys)
+    jsonb_order = ["1", "0.5", "0.9", "0.95", "0.99", "0.999"]
+    DislocationRun.model_validate(_run_body(abs_change_pct_quantiles=dict.fromkeys(jsonb_order)))
     with pytest.raises(ValidationError, match="abs_change_pct_quantiles"):
         DislocationRun.model_validate(_run_body(abs_change_pct_quantiles={"0.5": "1.000000"}))
     with pytest.raises(ValidationError, match="abs_change_pct_quantiles"):
