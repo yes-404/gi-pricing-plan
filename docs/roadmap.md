@@ -2155,6 +2155,24 @@ relates: [PL-1371, SL-1387, SL-1388, SL-1526]
 
 The FD-1573 remedy, proposed on the maintainer's entry "2026-10-10 00:08:17 BST — USER: go ahead. FD 9446 on the measured curve, a remedy-slice proposal, and the Friday re-baseline (after S3's merge, in W3)" [FD 9446 is minted as FD-1573], item 2: owner the lead, placed before `SL-1526` in the exit-demo chain. `WF-699` D6's dislocation run goes through `dislocation_frame` (WK-673 S4's handler), which scores the book twice and retains every policy's validated ladder from both passes; peak RSS was logged linear at about 31 KiB per policy (`50-sb-200k`, `60-sb-400k`, tree `f59b546e`), so about 20.3 GiB is derived for the 678,013-policy book. Task 0 is a 1-hour profiling spike at 20,000 and 200,000 policies, using the standard library only, with a decision rule stated in advance. Only if it confirms retention (H1) does Task 1 make `_score_pass` keep rung values instead of `LadderRung` objects, with the frame unchanged value for value. Task 2 is the after-measurement. Single-row Work plan PL-1574, `draft`. It is not in the `compile.py` serial set; its serial set is `analysis.py`, after S3 (`SL-1387`). **Activation needs:** FD-1573 minted HIGH; PL-1574's DP-1 to DP-3 ruled; `SL-1387` merged; the lead's go. *(Cut 2026-10-10 by the planner (planner-remedy) under working id 9448, reserved by the lead.)*
 
+#### SL-9956 — WK-1178 fix slice — FD-1589 row 8, remedy (c): an input-free marker for authored model-schema validator messages
+
+```yaml
+id: SL-9956
+family: slice
+title: WK-1178 fix slice — FD-1589 row 8, remedy (c), an input-free marker for authored model-schema validator messages, allow-listed by pricing_core.safe_error
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-10            # working id; the mint date will replace this (check 31)
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: fe0b0627590307259ec6d56be7f73115cf245092
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1589, PL-1535, SL-1536, SL-1557, SL-1559]
+```
+
+FD-1589 row 8's remedy (c), on the lead's entry "2026-10-10 15:37:31 BST — RULING: DP-M2 WITHDRAWN (my 14:37:13). FD-1589 row 8 (errors.py:490) is NOT changed in the FD-1374 slice; remedy (c) in its own slice, owner WK-1178, before the exit demo. Neither (a) nor (b)", item 2. A `ValueError` subclass in `model-schema` (`InputFreeError`, recommended name) whose every raise site is a literal, held so by an AST guard; adopted at the 96 input-free `raise ValueError` sites of `packages/model-schema/src` (95 literals and 1 constant-only f-string, of 253 at `fe0b0627`); allow-listed by one `pricing_core.safe_error` function that `_validation_detail` and the request-validation 422 (`backend/src/app/errors.py` `_handle_validation_error`) both read. The 422 then shows an authored message as on `main` and a fixed text for anything else; the 157 interpolating messages are dropped and listed in the LG as the residual. One dated paragraph in `00` §5.3. Single-row Work plan PL 9955 (working id), `draft`. Not in the `compile.py` serial set; touches no `pricing_core/rating/**` file; contends with `SL-1557` and `SL-1559` only where a validator in `model_schema/rating.py` is changed by both. **Activation needs:** the FD-1374 slice (`SL-1536`) merged; PL 9955's DP-1 to DP-7 ruled; the dispatch record's function-level check against every open model-schema slice; the lead's GO. *(Cut 2026-10-10 by the planner (planner-remedy-c) under working id 9956, reserved by the lead.)*
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
