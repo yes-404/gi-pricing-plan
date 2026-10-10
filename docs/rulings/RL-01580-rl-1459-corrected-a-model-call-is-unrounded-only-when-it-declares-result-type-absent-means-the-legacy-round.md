@@ -136,9 +136,7 @@ A-2's branch is `sl-1463-a2-glm-model-call`, read at its head
   on that branch.
 - **The field is optional**: `packages/model-schema/src/model_schema/rating.py:362`,
   `result_type: str | None = None`, on that branch.
-- **The ledger**: `LG 9449`,
-  `docs/ledgers/LG-09449-wk-1178-slice-sl-1463-fd-1458-a-glm-scores-through-model-call-pl-1464-slice-ledger.md`
-  on that branch, records the 00:40:31 plan delta to `PL-1464` item 15 and the opt-in
+- **The ledger**: SL-1463's ledger on A-2's branch `sl-1463-a2-glm-model-call` (not yet minted), records the 00:40:31 plan delta to `PL-1464` item 15 and the opt-in
   derivation.
 - **A-3's peril nodes** follow rule 3 in A-3's code (`PL-1465`); 03:13:06 says "A-3's GO does
   not wait on it: the code follows X now". This record names no A-3 locator, because none was
