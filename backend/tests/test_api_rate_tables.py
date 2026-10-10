@@ -1569,9 +1569,11 @@ def test_against_seed_resolves_to_the_versions_own_seed_origin(
     assert on_v2.json()["changed_cells"] == on_v2_vs_v1.json()["changed_cells"]
 
 
-#: The code of a 404 on an unknown table or version at the S4 routes. PL-1558 Acceptance 4 says
-#: `RATE_TABLE_MISS` (the loaders'); 03 §5.1 says `NOT_FOUND`. One constant to flip when ruled.
-_UNKNOWN_TABLE_CODE = "RATE_TABLE_MISS"
+#: The codes of a 404 on an unknown table or version. The two reads answer `RATE_TABLE_MISS`
+#: (RL-1475 T3 and T4, the loaders' code); the manual-edit route answers `NOT_FOUND`
+#: (RL-1555 T1; the maintainer's ruling of 2026-10-10 04:19:42: the spec governs).
+_READ_MISS_CODE = "RATE_TABLE_MISS"
+_EDIT_MISS_CODE = "NOT_FOUND"
 
 # -- the definition and cell-page reads (FR 9940, FR-232; RL-1475 items 2 and 3) -------------
 
@@ -1705,7 +1707,7 @@ def test_rate_table_isolation_another_workspace_answers_404(
     for path in (f"/api/v1/rate-tables/{slug}@1", f"/api/v1/rate-tables/{slug}@1/cells"):
         response = api_client.get(path, headers=actuary)
         assert response.status_code == 404, response.text
-        assert response.json()["code"] == _UNKNOWN_TABLE_CODE
+        assert response.json()["code"] == _READ_MISS_CODE
 
 
 @pytest.mark.req("FR-232")
@@ -1991,4 +1993,4 @@ def test_rate_table_isolation_on_the_manual_edit_route(
     response = _post_edit(api_client, slug, actuary)
 
     assert response.status_code == 404, response.text
-    assert response.json()["code"] == _UNKNOWN_TABLE_CODE
+    assert response.json()["code"] == _EDIT_MISS_CODE

@@ -28449,7 +28449,7 @@
     },
     "/api/v1/rate-tables/{slug}/versions": {
       "post": {
-        "description": "**200** with a bare `RateTableDiff` of the would-be version against `base_version`;\nnothing is created (FR-229, FR-231). **201** with `confirm: true`: the `RateTableVersion`\nat `base_version + 1`, carrying `created_by_edit` (`RL-1555`). **409** where\n`base_version + 1` already exists (the base is not the latest). **422** with every\nfailure as a field error in `errors` (FR-234).",
+        "description": "**200** with a bare `RateTableDiff` of the would-be version against `base_version`;\nnothing is created (FR-229, FR-231). **201** with `confirm: true`: the `RateTableVersion`\nat `base_version + 1`, carrying `created_by_edit` (`RL-1555`). **404** `NOT_FOUND` for an\nunknown table or `base_version`. **409** where\n`base_version + 1` already exists (the base is not the latest). **422** with every\nfailure as a field error in `errors` (FR-234).",
         "operationId": "edit_rate_table_api_v1_rate_tables__slug__versions_post",
         "parameters": [
           {

@@ -229,6 +229,24 @@ load 3.99. Green: `4 passed`. `frontend/src/api/rateTables.ts` follows the real 
 `./generated/schema.requests` (the permissive set, as `ratingAlgorithms.ts` does) minus `confirm`. `pnpm generate:api` was
 run; `generated/` is VCS-ignored.
 
+#### Plan delta, 2026-10-10 — the unknown-table code (the maintainer's ruling "04:19:42", relayed by the lead)
+
+**Ruling: the spec governs.** PL-1558 Acceptance 4 says the manual-edit route answers 404 `RATE_TABLE_MISS` for another
+workspace's table. RL-1555 T1 (03 §5.1) says **404 `NOT_FOUND`**. The ruling corrects the acceptance as a delta here (the
+plan body is not edited): **on the manual-edit route an unknown table, version or `base_version` is 404 `NOT_FOUND`.**
+Implemented at the route layer only: `spec_not_found()` in `api/rate_tables.py` maps the loaders' `RATE_TABLE_MISS` and
+wraps the manual-edit handler's two service calls; the shared loader (`rate_tables.py` `_load_table`/`_load_version`) is
+unchanged, because `RATE_TABLE_MISS` stays right on the scoring path.
+**Scope as I read the spec:** the two **reads** keep `RATE_TABLE_MISS`, because RL-1475 T3 and T4 (applied byte for byte)
+and RL-1475 Acceptance 5 say so; the lead's message said "your routes", and the spec text is explicit per route. If the
+maintainer meant the reads too, the change is the same wrapper on two handlers, plus the two constants below.
+**Red first:** `backend/tests/test_rate_table_route_codes.py` (DB-free): collection error, `ImportError: cannot import name
+'spec_not_found'` (load 2.78); green `2 passed`. The DB route tests read `_READ_MISS_CODE` and `_EDIT_MISS_CODE`; the edit
+isolation test asserts `NOT_FOUND` (DB, OWED at the gate).
+**The existing diff routes (`:943`/`:944`)** say `NOT_FOUND` in the spec while their loader answers `RATE_TABLE_MISS`: the
+drift is the lead's finding. Not fixed here: the fix would also change the existing diff tests that assert
+`RATE_TABLE_MISS`, so it is not a ~20-line, test-neutral change.
+
 ## PRs
 
 None yet.

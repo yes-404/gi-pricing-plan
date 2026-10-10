@@ -11,6 +11,8 @@ platform, not in pricing-core (DP1, DP3).
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -61,6 +63,20 @@ def _blob_store(request: Request) -> BlobStore:
 
 
 BlobStoreDep = Annotated[BlobStore, Depends(_blob_store)]
+
+
+@contextmanager
+def spec_not_found() -> Iterator[None]:
+    """`03` §5.1 types the manual-edit route's unknown table or `base_version` as 404
+    `NOT_FOUND` (RL-1555 T1; the maintainer's ruling of 2026-10-10 04:19:42: the spec governs).
+    The shared loaders keep `RATE_TABLE_MISS`, which the scoring path relies on, so the route
+    maps it here and nothing below it changes."""
+    try:
+        yield
+    except PlatformError as exc:
+        if exc.code != "RATE_TABLE_MISS":
+            raise
+        raise PlatformError("NOT_FOUND", "Not Found", 404, exc.detail) from exc
 
 
 def _parse_against(raw: str) -> str | int:
@@ -140,19 +156,22 @@ async def edit_rate_table(
 ) -> RateTableDiff | RateTableVersion:
     """**200** with a bare `RateTableDiff` of the would-be version against `base_version`;
     nothing is created (FR-229, FR-231). **201** with `confirm: true`: the `RateTableVersion`
-    at `base_version + 1`, carrying `created_by_edit` (`RL-1555`). **409** where
+    at `base_version + 1`, carrying `created_by_edit` (`RL-1555`). **404** `NOT_FOUND` for an
+    unknown table or `base_version`. **409** where
     `base_version + 1` already exists (the base is not the latest). **422** with every
     failure as a field error in `errors` (FR-234).
     """
     if not body.confirm:
-        return await service.manual_edit_preview(
-            database, caller.workspace_id, slug, body, blob_store
-        )
+        with spec_not_found():
+            return await service.manual_edit_preview(
+                database, caller.workspace_id, slug, body, blob_store
+            )
     assert caller.principal.id is not None
-    created = await service.manual_edit_confirmed(
-        database, caller.workspace_id, caller.principal.id, settings, blob_store,
-        slug=slug, body=body,
-    )
+    with spec_not_found():
+        created = await service.manual_edit_confirmed(
+            database, caller.workspace_id, caller.principal.id, settings, blob_store,
+            slug=slug, body=body,
+        )
     response.status_code = status.HTTP_201_CREATED
     return created
 
