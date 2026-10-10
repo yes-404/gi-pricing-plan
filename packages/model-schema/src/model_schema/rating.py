@@ -1163,6 +1163,43 @@ class RateTableDiffCell(BaseModel):
     weight: Decimal | None = None
 
 
+class RateTableChange(BaseModel):
+    """One rate table whose pinned version differs between the baseline and a version
+    (FR-242's drafted change summary; `RL-1498` DP-E1-5).
+
+    `from_ref` / `to_ref` are the pins on the baseline and on the version; `None` marks a
+    table pinned on one side only. `diff` is the unweighted cell diff (FR-231); it is `None`
+    when `pending` (a `storage: parquet` side is not computed here, FR-232) or when the table
+    is on one side only.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    slug: str
+    from_ref: ArtifactRef | None = None
+    to_ref: ArtifactRef | None = None
+    diff: RateTableDiff | None = None
+    pending: bool = False
+
+
+class ChangeSummaryDraft(BaseModel):
+    """The drafted change summary of a Rating Version (03 FR-242; WF-699 E1; `RL-1498`).
+
+    Drafted from the structural diff (FR-219) and the rate-table diffs (FR-231) against
+    `baseline`, the most recently approved other version of the same algorithm. `baseline` is
+    `None` when there is none; `structural_diff` is `None` when there is no baseline or the
+    baseline has no algorithm. `text` states *what* changed and ends with the empty `Why:` and
+    `Expected impact:` labels for the actuary. Nothing is stored.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    baseline: ArtifactRef | None = None
+    structural_diff: AlgorithmDiff | None = None
+    rate_tables: list[RateTableChange] = Field(default_factory=list)
+    text: str
+
+
 #: The key filter of 03 §5.2: exact-value match over the table's declared keys.
 KeyFilter = dict[str, list[str]]
 
