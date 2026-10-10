@@ -494,6 +494,9 @@ class ApprovalRequest(BaseModel):
     workspace_id: UUID
     artifact_ref: ArtifactRef
     artifact_type: str
+    #: The target environment of a deployment approval request; `None` for every other type
+    #: (DP-3 (a), RL-1522).
+    environment: str | None = None
     submitted_by: UUID
     submitted_at: datetime
     change_summary: str
