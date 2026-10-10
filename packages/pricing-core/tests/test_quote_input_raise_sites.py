@@ -87,7 +87,9 @@ _INPUT_FREE = {
     # text (`test_a_glm_failure_reports_its_code_and_never_the_models_text` drives it).
     ("rating/runtime.py", "handler"): 3,
     ("rating/compile.py", "check_step_refs_pinned"): 1,  # step id and ref string, no quote
-    ("rating/compile.py", "compile_bundle"): 5,  # artifact-level (compile time), no quote
+    # artifact-level (compile time), no quote; the sixth is FR-223 (mode mismatch),
+    # whose text (`ModelReferenceModeError`, caught by class) is the step id and two declared modes
+    ("rating/compile.py", "compile_bundle"): 6,
     # PL-1471 (SL-1472), each at compile time over pinned artifacts, never a quote:
     # model ref, objective ref and its status
     ("rating/compile.py", "_refuse_unapproved_objectives"): 1,

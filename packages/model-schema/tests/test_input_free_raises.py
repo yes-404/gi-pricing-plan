@@ -27,6 +27,8 @@ _Site = tuple[str, str, int]
 #: Plain raises still to rewrite, by (file, "Class.function"): an EXACT count. A slice that
 #: rewrites one decrements it; a new plain raise fails. Holds only sites no request body
 #: reaches (PL-1599 Appendix A: B1 and B2, carried to P3). Emptied and deleted by the last slice.
+# `RatingAlgorithm._graph_invariants`: WK-675 S3 moved the checks to `graph_invariant_issues`; the
+# cycle, unresolved-ref and `raise ValueError(first.message)` raises remain (B1, P3).
 _RESIDUAL: dict[tuple[str, str], int] = {
     ("approvals.py", "ApprovalRequest._recorded_matches_decisions"): 1,
     ("backtests.py", "BacktestSummary._a_backtest_is_not_run_on_the_data_it_learned_on"): 1,
@@ -69,13 +71,21 @@ _RESIDUAL: dict[tuple[str, str], int] = {
     ("prediction.py", "PredictedRow._the_bounds_are_a_pair_and_ordered"): 2,
     ("prediction.py", "Prediction._every_row_matches_the_declared_uncertainty"): 1,
     ("prediction.py", "Uncertainty._the_kind_and_its_evidence_agree"): 8,
-    ("rating.py", "RatingAlgorithm._graph_invariants"): 5,
+    ("rating.py", "RatingAlgorithm._graph_invariants"): 3,
     ("regression.py", "RegressionSuiteContent._unique_names"): 1,
     ("sub_graphs.py", "SubGraphBody._graph_invariants"): 5,
     ("sub_graphs.py", "_topological_order"): 1,
     ("validation.py", "RuleSetEntry._an_override_may_only_raise"): 1,
     ("validation.py", "ValidationRule._catalogue_id_names_a_catalogue_entry"): 1,
 }
+
+#: The ONE recorded exception, by (file, "Class.function"): a handler-rendered artifact-level text
+#: whose content a binding ruling fixes. `check_model_reference_mode` raises
+#: `ModelReferenceModeError` carrying the first mismatching step's unpatterned `step_id`
+#: (RL-1438 item 1; to-lead.md "2026-10-10 23:03:19 BST" item 2). `InputFreeError` refuses that
+#: `step_id` (DP-8 (b): no schema pattern, DP-10), so the raise stays. Ends when P3's step_id
+#: pattern lands; the entry is then deleted and the raise converted.
+_RECORDED_EXCEPTIONS: dict[tuple[str, str], int] = {("rating.py", "check_model_reference_mode"): 1}
 
 
 def _input_free(arg: ast.expr) -> bool:
@@ -182,7 +192,7 @@ def test_no_marker_raise_interpolates_a_value() -> None:  # acceptance (ii)
 def test_every_raise_path_renders_authored_text_in_a_422() -> None:  # acceptance (i)
     plain, _ = _all()
     counts = Counter((f, where) for f, where, _ in plain)
-    residual = Counter(_RESIDUAL)
+    residual = Counter(_RESIDUAL) + Counter(_RECORDED_EXCEPTIONS)
     assert counts == residual, (
         "raise InputFreeError with input-free text (a plain ValueError, an assert or a "
         "PydanticCustomError renders generic text in a 422); rewritten sites leave _RESIDUAL: "
