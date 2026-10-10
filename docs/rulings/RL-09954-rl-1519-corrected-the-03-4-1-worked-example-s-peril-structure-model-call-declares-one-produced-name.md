@@ -36,6 +36,13 @@ replaced by the minted id.*
 - **Scope: the worked example only.** This record corrects T2 (the example's JSON) and the
   one clause of the *What changed* table that justifies the removed output step. Every other
   ruled text of `RL-1519` stands, T3 included (see *What is not changed*).
+- **`RL-1519` has a second correcting record, already on `main`: `RL-1593`.** It corrects a
+  different text of `RL-1519` (`:284`'s `s_area` `as_at` clause and Acceptance case 3,
+  `:657-658`: only `as_at == "effective_date"`, the quote's stamped date, is exempt from
+  FR-246's declared-reads rule). The two corrections touch disjoint lines, so neither
+  displaces the other; `corrects: RL-1519` stays on this record. With both, `RL-1519`'s
+  header reads `corrected_by: [RL-1593, <this record's minted id>]`, in that order (the
+  order the two merged in).
 - **In the same commit, `RL-1519`'s header gains `corrected_by: [RL-9954]`**, the append
   check 34 allows (`docs/process/document-ids.md` §1, the `corrected_by:` / `corrects:` lines
   of the front-matter block). Not one byte of `RL-1519`'s body changes.

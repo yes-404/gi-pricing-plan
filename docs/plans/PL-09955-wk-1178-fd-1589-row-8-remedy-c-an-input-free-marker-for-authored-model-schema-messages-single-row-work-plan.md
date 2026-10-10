@@ -60,9 +60,10 @@ the 54 / 41 / 47 / 15 split and printed Appendix A. The second is a JSON pass ov
 `docs/contracts/openapi/generated.json` at `fe0b0627` for §"DP-5's changed types".
 
 **Draft, not frozen.** DP-1 to DP-9 and DP-5's extension are **ruled** (§"Decision points").
-**DP-10** is open for the lead. It asks whether a step id may be named, now that DP-8 (b) needs a
-schema pattern that a step id does not have. It does not block slice A: it governs the graph
-signals, and they go to P3 with B1.
+**DP-10** is **ruled** (2026-10-10 16:23:12 BST): a step-id pattern is a P3 spec change to
+FR-215, and until then graph messages name no step (correct behaviour, not a gap). It asked
+whether a step id may be named, now that DP-8 (b) needs a schema pattern that a step id does not
+have. It does not block slice A: it governs the graph signals, and they go to P3 with B1.
 
 ## Authority
 
@@ -449,9 +450,10 @@ BST — RULINGS on PL 9955 re-sized (@688d639e, ≈4.8 lane-days): DP-9 = A in P
   lists every type whose rendering changes vs main."* Planned in §"DP-5's changed types",
   Task 4 and acceptance 11.
 
-**Open for the lead:**
+**Open for the lead (DP-10 below was open when this was drafted; it is ruled, see its dated line):**
 
 **DP-10 — a step id has no schema pattern, so DP-8 (b) cannot name one (new; P3's, not A's).**
+*(Ruled 2026-10-10 16:23:12 BST, the lead's entry "PL 9955 A ≈3.0 lane-days accepted; DP-10 (step_id pattern) = P3 spec change; …" in `to-lead.md`: DP-10 is a P3 spec change to FR-215, a step_id pattern, recorded with the P3 row (a later phase's finding is a spec change only, `CLAUDE.md` §14). Until then, under DP-8 (b), graph-cycle messages name no step_id (the identifier condition is not met), which is correct behaviour, not a gap. The slice's ledger says so.)*
 At `fe0b0627`, `RatingStepBase.step_id` is `str = Field(min_length=1)`
 (`model_schema/rating.py:337`). The graph's `_MountNode.step_id` is a plain `str` (`:468`); it
 is filled from `mount_point`, which does carry `_MOUNT_POINT` (`:451`). The value names in a
@@ -1302,8 +1304,8 @@ signals (DP-10 first). Acceptance 1 (shrunk `_RESIDUAL`), 2, 3, 8–10, in P3's 
    `GlmSpec`, `new_uuid7`, `GraphCycleError`, `GraphUnresolvedRefError`, `CodedError` are each
    grepped at `fe0b0627`, at `cfe8e15f`, or defined in a task above; the test helpers
    `_SENTINEL` and `_failure` in `test_safe_error.py` exist at `:40` and `:120`.
-4. **Ruled vs open:** no task in slice A depends on an unruled choice. DP-10 is open and is
-   P3's (the graph signals). No option is silently picked: DP-9 as ruled is not a fallback to
+4. **Ruled vs open:** no task in slice A depends on an unruled choice. DP-10 is ruled (16:23:12, a P3
+   spec change to FR-215) and is P3's (the graph signals); until it lands they name no step. No option is silently picked: DP-9 as ruled is not a fallback to
    DP-2 (a), because A rewrites every request-reachable message and B1 and B2 are rewritten in
    P3, not dropped to fixed text.
 5. **The 16:07:46 limbs (amendment by `planner-remedy-c3`):** DP-9's dated scope line
@@ -1313,8 +1315,8 @@ signals (DP-10 first). Acceptance 1 (shrunk `_RESIDUAL`), 2, 3, 8–10, in P3's 
    forbidden (Task 3 rule 2); DP-5's extension list with its measure, fixed texts and sentinel
    tests (§"DP-5's changed types", Task 4, acceptance 11), and the ACK still listing every type
    whose rendering changes (acceptance 6); the re-size and its delta (§"Size and the split").
-   One limb is not met: the brief's line that the graph signals keep naming the step, which
-   DP-10 brings to the lead.
+   One limb is not met: the brief's line that the graph signals keep naming the step; DP-10
+   was brought to the lead and ruled at 16:23:12 as a P3 spec change, so until then they name no step.
 
 ## Appendix A — the B1 and B2 sites, carried to P3 (dated 2026-10-10, on the 16:07:46 ruling)
 

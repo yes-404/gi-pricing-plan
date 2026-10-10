@@ -1,7 +1,7 @@
 ---
 id: FD-9959
 family: finding
-title: The stray cd by team seats recurs despite the charter rule (13 recorded instances since 8 Oct), and only a mechanical guard will hold
+title: The stray cd by team seats recurs despite the charter rule (14 recorded instances 8–10 Oct), and the fix is the root cause, the hook's relative path
 status: draft
 created: 2026-10-10
 owner: auditor
@@ -16,9 +16,9 @@ relates: [WK-1178, RFC-895, FD-1374]
 
 ## Finding
 
-The charter rule "Never `cd`" (`.claude/roles/auditor.md`, and the same line in every role that runs commands; amended 2026-10-05 by the maintainer after three slips in one day) does not hold. The maintainer's count at the entry "2026-10-10 16:23:12 BST" in `to-lead.md` is **13**, past the threshold the maintainer set at "2026-10-09 11:48:22 BST" ("at ten or more the valve applies and it becomes an FD with a mechanical fix"). That entry says a briefing line alone is not a remedy: it has failed 13 times. This finding is the FD that ruling asks for, with a mechanical remedy proposal.
+The charter rule "Never `cd`" (`.claude/roles/auditor.md`, and the same line in every role that runs commands; amended 2026-10-05 by the maintainer after three slips in one day) does not hold. The maintainer's count at the entry "2026-10-10 16:23:12 BST" in `to-lead.md` is **13** (the count this finding was first drafted against; the ruling at "2026-10-10 16:28:30 BST" counts **14**, see the reconciliation below), past the threshold the maintainer set at "2026-10-09 11:48:22 BST" ("at ten or more the valve applies and it becomes an FD with a mechanical fix"). That entry says a briefing line alone is not a remedy: it has failed 13 times. This finding is the FD that ruling asks for, with a mechanical remedy proposal.
 
-No instance of the 13 wrote anything outside its worktree, by each seat's own disclosure. The harm that did occur is earlier and is the reason the rule exists: on 2026-09-30 a persisted `cd frontend` made the project's `PreToolUse` hook refuse every later Bash call (twice that day); on 2026-10-05 two teammate sessions were locked the same way ("2026-10-05 16:46:42 BST" and "2026-10-05 15:24:59 BST" in `to-lead.md`); on 2026-09-26 a lead `cd` moved the cwd every later spawn inherited and a harness lock file landed in the tree under gate (memory `a-lead-cd-contaminates-every-later-spawn`).
+No instance of the 14 wrote anything outside its worktree, by each seat's own disclosure. The harm that did occur is earlier and is the reason the rule exists: on 2026-09-30 a persisted `cd frontend` made the project's `PreToolUse` hook refuse every later Bash call (twice that day); on 2026-10-05 two teammate sessions were locked the same way ("2026-10-05 16:46:42 BST" and "2026-10-05 15:24:59 BST" in `to-lead.md`); on 2026-09-26 a lead `cd` moved the cwd every later spawn inherited and a harness lock file landed in the tree under gate (memory `a-lead-cd-contaminates-every-later-spawn`).
 
 ## Evidence
 
@@ -49,15 +49,28 @@ Source for the numbered rows: the process-backlog rows "2026-10-09 10:54:55 BST"
 | 11 | minter-d7 | 10 Oct, `eta.md` 11:53:24 | first Bash call `cd /home/puzhenhao1989` | no git write | `eta.md` 11:53:24; `from-lead-2026-10-09.md` "2026-10-10 13:46:31 BST" (Disclosures) |
 | 12 | executor-fd1374g | 10 Oct, `eta.md` 14:45:39 | subshell `cd /dev/null`, failed | no effect | `eta.md` 14:45:39 |
 | 13 | planner-remedy-c2 | 10 Oct, entry 16:07:24 | one `cd /tmp/…`, "no-op" | nothing | `from-lead-2026-10-09.md` "2026-10-10 16:07:24 BST" (Disclosures (planner)) |
-| ? | planner-remedy-c3 | 10 Oct, entry 16:22:55 | same disclosure text as row 13 | not separately evidenced | `from-lead-2026-10-09.md` "2026-10-10 16:22:55 BST", "Process:" line |
+| 14 | planner-remedy-c3 | 10 Oct, final report (lead's count at "2026-10-10 16:28:06 BST" in `from-lead-2026-10-09.md`) | one command that began `cd /tmp/planner-remedy-c3`: the final report says "One command I ran started with `cd /tmp/planner-remedy-c3`" | nothing (by disclosure) | `from-lead-2026-10-09.md` "2026-10-10 16:22:55 BST", "Process:" line |
 
-**Reconciliation to the maintainer's 13.** The maintainer's arithmetic is 9 (by 9 Oct 11:48:22) plus 4 on 10 Oct (minter-d7, executor-fd1374g, planner-remedy-c2, planner-remedy-c3). The record gives a different composition with the same total: the nine are rows 1 to 9; row 10 (planner-674s3, also 10 Oct, 03:20) was logged as "the tenth" in the backlog but is not in the maintainer's four; and the 16:22:55 entry lists "planner-remedy-c2/c3" as one planner-side disclosure ("third seat today", naming four seats), so I find one slip evidenced for c2/c3, not two. Rows 1 to 13 are therefore 13 evidenced instances. If c3 slipped separately the count is 14; the record does not show it. The headline (13, past ten) holds either way.
+**Reconciliation to the maintainer's 13.** The maintainer's arithmetic is 9 (by 9 Oct 11:48:22) plus 4 on 10 Oct (minter-d7, executor-fd1374g, planner-remedy-c2, planner-remedy-c3). The record gives a different composition with the same total: the nine are rows 1 to 9; row 10 (planner-674s3, also 10 Oct, 03:20) was logged as "the tenth" in the backlog but is not in the maintainer's four; and the 16:22:55 entry lists "planner-remedy-c2/c3" as one planner-side disclosure ("third seat today", naming four seats), so I find one slip evidenced for c2/c3, not two. Rows 1 to 13 are therefore 13 instances found in the first reading. **Correction at the ruling ("2026-10-10 16:28:30 BST"):** the lead then read planner-remedy-c3's own final report, which discloses a separate `cd` ("One command I ran started with `cd /tmp/planner-remedy-c3`"), so the count is **14** (row 14). The first reading found no separate c3 disclosure; the final report is where it is. The headline (past ten) holds at 13 and at 14.
 
-**Instances before 8 Oct, outside the maintainer's series** (found by grep; each read): 3 Oct, one `cd` by the SL-1369 executor (seat not named; "2026-10-03 17:51:16 BST", `to-lead.md`); 5 Oct, planner-rb, planner-9529 (`cd` into its own worktree) and dm-s46 (`cd /tmp`) ("2026-10-05 18:01:45 BST" and "2026-10-05 18:07:10 BST" — the third slip of that day, which produced the charter amendment); 6 Oct, minter-b1 (`cd /tmp/b1`) and minter-chain (`cd /tmp`) ("2026-10-06 01:51:00 BST", `from-lead-2026-10-06.md`). That is 6 more, so 19 evidenced seat slips since 3 Oct, plus the lock-outs and the lead's own 26 Sep and 30 Sep slips above.
+**Count and predicate.** 14 = self-disclosed `cd` slips by a team seat, 8–10 Oct 2026, each read at the source named in its row (rows 1 to 14 of the table). Adding the 6 before 8 Oct (next paragraph) gives 20 by that sum; the ruling's title and the lead's entry at "2026-10-10 16:28:06 BST" give "19 since 3 Oct", which is 13 + 6, written before row 14 was added. The two figures differ by exactly row 14; this finding keeps both visible rather than choosing silently, and the lead may correct the 19. Count at tree `e4753e47`; predicate: disclosure in a channel entry, `eta.md` row or final report, by a seat, of a command that began with `cd`.
 
-**Limit of this evidence.** Every row is a self-disclosure. Nothing detects an undisclosed `cd`, so 13 is a floor. A mechanical guard also fixes this: it can count refusals.
+**Instances before 8 Oct, outside the maintainer's series** (found by grep; each read): 3 Oct, one `cd` by the SL-1369 executor (seat not named; "2026-10-03 17:51:16 BST", `to-lead.md`); 5 Oct, planner-rb, planner-9529 (`cd` into its own worktree) and dm-s46 (`cd /tmp`) ("2026-10-05 18:01:45 BST" and "2026-10-05 18:07:10 BST" — the third slip of that day, which produced the charter amendment); 6 Oct, minter-b1 (`cd /tmp/b1`) and minter-chain (`cd /tmp`) ("2026-10-06 01:51:00 BST", `from-lead-2026-10-06.md`). That is 6 more, so 20 evidenced seat slips since 3 Oct by the table's sum (19 in the ruling's title, before row 14), plus the lock-outs and the lead's own 26 Sep and 30 Sep slips above.
 
-## Remedy — a proposal for the maintainer's ruling
+**Limit of this evidence.** Every row is a self-disclosure. Nothing detects an undisclosed `cd`, so 14 is a floor. A mechanical guard also fixes this: it can count refusals.
+
+## Ruled (2026-10-10 16:28:30 BST) — the remedy is PL 9617; the `cd` guard is not built
+
+The lead's entry "2026-10-10 16:28:30 BST — RULING: FD 9959 (cd slips, MEDIUM, 14 today / 19 since 3 Oct). Fix the ROOT CAUSE: build PL 9617 (absolute hook path) NOW; the cd guard is NOT built (deferred, conditional)" in `to-lead.md` rules, in its words:
+
+- "BUILD PL 9617 NOW, right after the FD-1374 slice frees gate-1 and before PL 9955 A. Proof: (i) a positive control: from a seat, `cd` into a worktree subdirectory, then run a guarded command; the hook still runs (no exit 2, no lock-out); (ii) the same at main without the fix reproduces the exit 2 (red-first); (iii) the hook still refuses what it refused before (its own tables unchanged)."
+- "The no_cd_hook.py guard is NOT built now: Once the root cause is gone, a cd causes no lock-out, so the guard would treat a symptom. It would also apply to EVERY Claude session in this repo, including the user's own: refusing cd is a tooling change the user did not ask for. The subshell form `(cd x && cmd)` does not move the session's cwd, so refusing it would be wrong on the facts."
+- "CONDITION to revisit: if, after PL 9617 lands, a slip still WRITES OUTSIDE its worktree (the remaining harm), bring the evidence and a guard proposal, and I put it to the user."
+- "FD 9959 records the mechanism, the 14/19 count with its predicate, each instance, and remedy (1). It rides D8, and closes when PL 9617's slice merges with the positive control green."
+
+So the remedy is option (b0) below, built as PL 9617 / SL 9618 (minted in the same batch as this finding); options (a) and (b)'s guard are not built, and the "Remedy" section that follows is kept as the proposal the ruling answered. The three sub-rulings it asked for (subshell, no `if` filter, fail-open) fall with the guard, except the fail-open wrapper, which PL 9617's DP-3 (adopted at "2026-10-10 16:40:33 BST", the shell form with a `$CLAUDE_PROJECT_DIR`-or-`git rev-parse --show-toplevel` fallback) carries.
+
+## Remedy — a proposal for the maintainer's ruling (answered by the ruling above)
 
 Common facts. A `PreToolUse` hook receives the tool call as JSON on stdin; exit 2 blocks it and the stderr text is shown to the model. `scripts/hooks/retry_cap_hook.py` already models the right failure posture: "a command `hook` cannot confidently parse … is allowed through unparsed — a mis-parse must never falsely block". Tests for that hook live in `tests/test_retry_cap_hook.py`.
 
@@ -86,7 +99,7 @@ Removes the total lock-out, the worst consequence. It leaves the habit, the spaw
 
 ### Option (c) — a brief template or checklist line only — **rejected**
 
-The no-`cd` line has been the first checklist item since 8 Oct and a charter rule since 5 Oct; 13 slips followed. The maintainer has ruled that a briefing line is not a remedy.
+The no-`cd` line has been the first checklist item since 8 Oct and a charter rule since 5 Oct; 14 slips followed (13 by the first reading). The maintainer has ruled that a briefing line is not a remedy.
 
 ### Recommendation
 
@@ -94,4 +107,4 @@ Option (b), as one slice under WK-1178 that absorbs PL 9617 (it already carries 
 
 ## Disposition
 
-Register decision: **fix before close with an owner**. Owner of the finding: the lead's process (WK-1178 carries the hook limb through PL 9617). Severity proposed MEDIUM: none of the 13 caused harm, but the rule fails at a steady rate, the failure it guards against has already locked sessions and failed a gate, and a prose rule has been shown not to hold. Event that next confirms or discharges it: the merge of the slice that registers the guard and the absolute-path hook commands, or the maintainer ruling out the guard, which would leave the finding with option (b0) as its discharge. The lead gives the verdict.
+Register decision: **fix before close with an owner**. Owner of the finding: the lead's process (WK-1178 carries the hook limb through PL 9617). Severity proposed MEDIUM: none of the 14 caused harm, but the rule fails at a steady rate, the failure it guards against has already locked sessions and failed a gate, and a prose rule has been shown not to hold. Event that discharges it, as ruled at "2026-10-10 16:28:30 BST": the merge of PL 9617's slice (SL 9618) with proof (i), the positive control, green. The guard is not part of it; the revisit condition above is the only route back to one. The lead gives the verdict.

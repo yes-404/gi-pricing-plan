@@ -95,9 +95,28 @@ planner must settle, none open to a silent pick:
    so it is not trivial. Recommend its own row in a later WK-1178 slice, after PL 9955 / SL 9956
    merges, sharing that slice's `errors.py` edit-order.
 
+## The remedy decision — OPEN
+
+The remedy's one open choice is point 2 above, put to the maintainer by the lead in the entry
+"2026-10-10 15:56:01 BST — Lead: FD 9957 drafted (the 422 field echoes a submitted dict key) — LOW;
+placement: its own later WK-1178 slice; one UX trade-off for your ruling at D8 (not urgent)" in
+`from-lead-2026-10-09.md`. **No ruling exists at `e4753e47`; none is assumed here.** The options,
+in that entry's words:
+
+- **(a)** mask body-dict keys in the 422 `field` (privacy; the UI loses the column name);
+- **(b)** keep the key in the 422 (requester-only exposure) and record the residual;
+- **(c)** keep the key only when it is a column the dataset already declares (known names) and mask
+  unknown keys.
+
+**The lead leans (c)**, because it keeps the name an actuary reads when it is one the dataset
+declared and masks the free text that is the exposure. Placement is ruled: its own later WK-1178
+slice, after SL 9956 (PL 9955's slice A) merges, per the 15:52:31 entry's "not in this slice unless
+trivially inside its write set". The slice's plan comes to the lead with the choice named as a
+decision point; the planner does not pick it.
+
 ## Disposition
 
 **Owner: WK-1178** (the 15:52:31 ruling). Decision: `fix before close with an owner: WK-1178`,
-severity LOW as proposed. Event that next confirms or discharges it: the lead's ruling on
-remedy point 2, or the remedy PR with a test red at its parent that submits a dict key and reads
+severity LOW as proposed. Event that next confirms or discharges it: the ruling on the remedy
+decision above (open), then the remedy PR with a test red at its parent that submits a dict key and reads
 `field` back.
