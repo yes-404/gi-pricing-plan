@@ -41,6 +41,7 @@ __all__ = [
     "REGISTRY",
     "SettingDefinition",
     "SettingScope",
+    "require_environment",
     "resolve",
     "resolve_all",
     "set_environment_setting",
@@ -552,6 +553,18 @@ async def set_workspace_setting(
     return definition
 
 
+async def require_environment(session: AsyncSession, slug: str) -> UUID:
+    """The id of the Environment with this slug, retired ones included, or a 404."""
+    environment_id = (
+        await session.execute(select(EnvironmentRow.id).where(EnvironmentRow.slug == slug))
+    ).scalar_one_or_none()
+    if environment_id is None:
+        raise PlatformError(
+            "NOT_FOUND", "Environment not found", 404, f"No environment with slug {slug!r}."
+        )
+    return environment_id
+
+
 async def set_environment_setting(
     session: AsyncSession,
     environment: str,
@@ -576,13 +589,7 @@ async def set_environment_setting(
         )
     coerced = definition.coerce(value)
 
-    environment_id = (
-        await session.execute(select(EnvironmentRow.id).where(EnvironmentRow.slug == environment))
-    ).scalar_one_or_none()
-    if environment_id is None:
-        raise PlatformError(
-            "NOT_FOUND", "Environment not found", 404, f"No Environment has slug {environment!r}."
-        )
+    environment_id = await require_environment(session, environment)
     row = (
         await session.execute(
             select(EnvironmentSettingRow).where(

@@ -482,8 +482,13 @@ async def _maybe_sample_trace(
     """
     try:
         async with database.unit_of_work() as session:
+            # FR-430/FR-431: monitoring configuration is per Environment (DP-S3-3 (a)).
             rate = await settings_service.resolve(
-                session, settings, caller.workspace_id, "rating.trace_sample_rate"
+                session,
+                settings,
+                caller.workspace_id,
+                "rating.trace_sample_rate",
+                caller.environment,
             )
             sampled, reason = traces_service.decide_sampling(
                 result.outcome, rate.effective_value, roll=random.random()
