@@ -496,3 +496,23 @@ async def test_scoring_a_peril_structure_never_calls_assemble_risk_premium(
     monkeypatch.setattr(modelling_perils, "assemble_risk_premium", _forbidden)
     bundle = await _bundle(_ScoringResolver(structure=_treated()))
     assert await _risk(bundle, 34.0) == pytest.approx(float(_expected(34.0)), rel=1e-14)
+
+
+@pytest.mark.req("FR-255", "NFR-499")
+async def test_a_component_failure_reports_its_code_and_never_the_models_text(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A `PredictionError`'s text can carry a quote value (an unseen factor level, `predict.py`);
+    the handler passes on the code and a static sentence only. Red today: the text is passed on."""
+    from pricing_core.modelling.predict import PredictionError
+    from pricing_core.rating import runtime
+
+    def _failing(*args: Any, **kwargs: Any) -> float:
+        raise PredictionError("UNSEEN_LEVEL_BEHAVIOUR_REQUIRED", "level 'SENTINEL-3c9d' unseen")
+
+    monkeypatch.setattr(runtime, "_predict_model", _failing)
+    bundle = await _bundle(_ScoringResolver(structure=_treated()))
+    out = await load_bundle(bundle).decision.async_evaluate({"driver_age": 34})
+    message = out["result"][MODEL_CALL_ERROR_KEY]
+    assert "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED" in message
+    assert "SENTINEL" not in message

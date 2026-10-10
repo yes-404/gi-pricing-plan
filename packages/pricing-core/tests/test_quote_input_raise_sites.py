@@ -78,7 +78,7 @@ _INPUT_FREE = {
     # static sentence built in `runtime.py`, never a model's or the engine's own error text.
     ("rating/score.py", "_check_model_call_sentinel"): 1,
     ("rating/runtime.py", "_load_boosters"): 1,  # step id and ref string, no quote
-    ("rating/runtime.py", "handler"): 2,  # `_model_call_failure`: step id and the pinned model_type
+    ("rating/runtime.py", "handler"): 3,  # `_model_call_failure`: step id and the pinned model_type
     ("rating/compile.py", "check_step_refs_pinned"): 1,  # step id and ref string, no quote
     ("rating/compile.py", "compile_bundle"): 5,  # artifact-level (compile time), no quote
     # PL-1471 (SL-1472), each at compile time over pinned artifacts, never a quote:
@@ -88,6 +88,8 @@ _INPUT_FREE = {
     ("rating/compile.py", "_refuse_control_factor_keys"): 1,
     # model ref, a fitted feature name and the Factor's slug@version
     ("rating/compile.py", "_refuse_control_factor_model_calls"): 1,
+    ("rating/compile.py", "_check_peril_model_calls"): 1,  # :815 step id, ref, names
+    ("rating/compile.py", "_resolve_peril_components"): 2,  # :839, :851 refs, peril, status
     ("rating/compile.py", "_raise_named"): 1,  # the constructor helper itself (`from None`)
 }
 #: The functions holding the quote-input sites, whose count must equal the cases.

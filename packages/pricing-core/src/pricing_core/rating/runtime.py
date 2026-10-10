@@ -768,7 +768,14 @@ def _model_call_handler(
         except _ModelCallRefusal as refusal:
             return _model_call_failure(step, str(refusal), context)
         except (ModellingError, PredictionError) as exc:
-            return _model_call_failure(step, f"{exc.code}: {exc}", context)
+            # The code only: a `PredictionError`'s own text can carry a quote's value (an unseen
+            # factor level, `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`), and a coded error keeps its text
+            # as it stands (NFR-499, RL-917), so the model's text is never passed on.
+            return _model_call_failure(
+                step,
+                f"{exc.code}: {ref_str} could not be scored for this quote (FR-255)",
+                context,
+            )
         # One rule for every `model_call` (the 00:44:31 ruling): no `result_type` rounds, as it
         # always did; a written one carries the value unrounded to FR-244's boundary. A
         # Decimal crosses the engine as the float it rounds to, as a GBM's or GLM's does.
