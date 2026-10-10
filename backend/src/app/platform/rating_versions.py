@@ -995,8 +995,9 @@ async def _approximation_gate(
     `None` for an `exact`-mode version, which the gate does not touch. Otherwise, in order:
     FR-136's pre-check (cheap, ahead of any figure), the latest Dislocation Run whose spec
     named this version at its current bundle hash as both baseline and candidate; then that
-    run's observed `abs_change_pct_quantiles` at the declared quantile against the maximum. A run with no figure (an empty banded set, or
-    one made before the field) is refused, never read as zero (RL-1504 T7 choice (3)).
+    run's observed `abs_change_pct_quantiles` at the declared quantile against the maximum. A
+    run with no figure (an empty banded set, or one made before the field) is refused, never
+    read as zero (RL-1504 T7 choice (3)).
 
     The threshold is read **only** from the `rating_version` policy entry, falling back to
     `DEFAULT_APPROXIMATION_DEVIATION` when the entry leaves it unset: no value switches the
