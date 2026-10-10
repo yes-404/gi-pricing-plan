@@ -820,8 +820,8 @@ def test_a_multi_environment_accounts_trace_is_stamped_with_the_served_environme
 ) -> None:
     """RL-916 part 3, test 1 — the discriminating case.
 
-    A Service Account created `["uat", "dev"]` mints a key for `environments[0]`
-    (`service_accounts.py:180`), which is `uat` — the environment the quote is actually
+    A Service Account created `["uat", "dev"]` mints one key per Environment (FR-430, WK-674
+    Slice 3). The `uat` key is the one used here — the environment the quote is actually
     served in. The old `_environment_for` stamped `min(caller.environments)` instead, which
     is `dev` (`"dev" < "uat"` lexicographically): a caller scoped to more than one
     environment discriminates the fix from the defect, where a single-environment account
@@ -838,7 +838,7 @@ def test_a_multi_environment_accounts_trace_is_stamped_with_the_served_environme
     )
     assert created.status_code == 201, created.text
     headers = {
-        "X-API-Key": created.json()["key"],
+        "X-API-Key": next(k["key"] for k in created.json()["keys"] if k["environment"] == "uat"),
         "Workspace-Id": str(workspace_id),
     }
 
