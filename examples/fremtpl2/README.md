@@ -38,6 +38,27 @@ Afterwards a model may be fitted on `@2` and still may not on `@1`.
 Nothing here is injected. freMTPL2 is a public dataset used in dozens of papers, and the
 exposure anomaly is in the file as published.
 
+## The rating algorithm, and the demo portfolio is a sample
+
+After the GLM is approved the seed prices from it. It seeds one Rate Table per Factor of the
+approved GLM (`seed_from_model`, one table each), builds the `fremtpl2-rate` algorithm over them
+(`algorithm.py`: the one definition the seed and the journey share), and creates a Rating Version
+that pins the algorithm, the model and every table. The three continuous columns (`driv_age`,
+`veh_age`, `veh_power`) are banded into five quantile bands each, so all seven Factors are
+rateable; the bands are printed as the seed runs. **The base premium is a simplification
+(frequency GLM × mean severity; no severity model):** `exp(intercept)` times the mean claim
+cost, not a modelled pure premium. Its golden quotes are the GLM's own premiums, computed from the
+fitted coefficients and not from the scored bundle.
+
+**The dislocation and attribution runs go over a 20,000-policy sample, never the full book.**
+The seed builds the sample with its every-nth-row sampler over the checksum-pinned file (a fixed
+size, a fixed rule, no random seed: the same 20,000 policies every run), ingests it as its own
+Dataset Version through the same recipe, and records its id in `data/last-seed.json`. The model
+is still fitted on the full book. The sample holds 19,979 policies after the recipe drops the 21
+above exposure 1.05. Nothing the demo shows over it is a full-book rate or a full-book timing. The
+cost of a full-book dislocation run is the owned, measured target `PL-1574`; the cost of
+full-book attribution is `FD-1576`.
+
 ## The data
 
 [OpenML 41214 / 41215](https://www.openml.org/d/41214) — French motor third-party
