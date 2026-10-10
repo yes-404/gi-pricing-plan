@@ -30,6 +30,7 @@ from backend.tests.test_rating_versions import (
     _suite,
     record_dislocation_run,
 )
+from sqlalchemy import select
 
 from app.db.models import (
     ApprovalPolicyRow,
@@ -187,11 +188,11 @@ async def test_limb_2_prefers_the_version_live_in_the_baseline_environment(
     live_ref = _ref("minimal-rv", (await gate.row(rv_a)).version)
     approved_ref = _ref("minimal-rv", (await gate.row(rv_b)).version)
     async with database.unit_of_work() as session:
-        environment = EnvironmentRow(
-            workspace_id=workspace_id, slug="prod", name="Production", promotion_order=1
+        # Environments are deployment-wide (ADR-710) and the fixture re-seeds `prod`: reuse it.
+        environment = await session.scalar(
+            select(EnvironmentRow).where(EnvironmentRow.slug == "prod")
         )
-        session.add(environment)
-        await session.flush()
+        assert environment is not None
         session.add(
             DeploymentRow(
                 workspace_id=workspace_id, environment_id=environment.id,

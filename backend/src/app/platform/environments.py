@@ -97,9 +97,7 @@ async def live_rating_version_ref(
     the one public resolution of "live", beside `_live_by_environment`, which stays private.
     """
     environment_id = await session.scalar(
-        select(EnvironmentRow.id).where(
-            EnvironmentRow.workspace_id == workspace_id, EnvironmentRow.slug == environment_slug
-        )
+        select(EnvironmentRow.id).where(EnvironmentRow.slug == environment_slug)
     )
     if environment_id is None:
         return None
