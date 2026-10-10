@@ -633,7 +633,7 @@ class RatingAlgorithm(RatingAlgorithmDraft):
     @staticmethod
     def _reachable(
         start: set[str],
-        step_by_id: dict[str, _Node],
+        step_by_id: Mapping[str, _Node],
         produced: dict[str, list[str]],
         consumed: dict[str, list[str]],
     ) -> set[str]:
@@ -653,7 +653,7 @@ class RatingAlgorithm(RatingAlgorithmDraft):
     @staticmethod
     def _reaches_output(
         start: set[str],
-        step_by_id: dict[str, _Node],
+        step_by_id: Mapping[str, _Node],
         produced: dict[str, list[str]],
         consumed: dict[str, list[str]],
     ) -> set[str]:
