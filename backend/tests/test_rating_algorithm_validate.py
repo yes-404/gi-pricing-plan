@@ -1,4 +1,4 @@
-"""`POST /rating-algorithms/validate` — FR 9445 (WK-675 S3; RL-1474 acceptance 1, 3, 5-10).
+"""`POST /rating-algorithms/validate` — FR-1607 (WK-675 S3; RL-1474 acceptance 1, 3, 5-10).
 
 The route reports, located and without saving, the issues that saving the same body would
 refuse on. Fixtures come from `test_rating_algorithms` by name; a new save-refusal fixture is
@@ -95,7 +95,7 @@ def _validate(api_client, workspace_id, principal, grant, body):
     return api_client.post(VALIDATE, json=body, headers=_headers(principal, workspace_id))
 
 
-@pytest.mark.req("FR-9445")
+@pytest.mark.req("FR-1607")
 def test_a_cycle_names_only_the_steps_on_it(api_client, workspace_id, principal, grant) -> None:
     body = _cyclic()
     # a step downstream of the cycle must not be named
@@ -111,7 +111,7 @@ def test_a_cycle_names_only_the_steps_on_it(api_client, workspace_id, principal,
     assert cyclic == {"s_office", "s_minprem"}
 
 
-@pytest.mark.req("FR-9445")
+@pytest.mark.req("FR-1607")
 def test_an_unresolved_reference_is_located_on_the_consuming_step(
     api_client, workspace_id, principal, grant
 ) -> None:
@@ -123,7 +123,7 @@ def test_an_unresolved_reference_is_located_on_the_consuming_step(
     }
 
 
-@pytest.mark.req("FR-9445")
+@pytest.mark.req("FR-1607")
 def test_a_type_mismatch_is_reported_on_its_step(
     api_client, workspace_id, principal, grant
 ) -> None:
@@ -133,7 +133,7 @@ def test_a_type_mismatch_is_reported_on_its_step(
     assert ("RATING_TYPE_MISMATCH", "s_name_out") in found
 
 
-@pytest.mark.req("FR-9445")
+@pytest.mark.req("FR-1607")
 @pytest.mark.parametrize("name", sorted(INVALID_SAVE_FIXTURES))
 def test_the_first_reported_issue_is_the_code_save_refuses_with(
     api_client, workspace_id, principal, grant, name
@@ -149,7 +149,7 @@ def test_the_first_reported_issue_is_the_code_save_refuses_with(
     assert report.json()["issues"][0]["code"] == saved.json()["code"]
 
 
-@pytest.mark.req("FR-9445")
+@pytest.mark.req("FR-1607")
 def test_a_valid_body_reports_nothing_and_then_saves(
     api_client, workspace_id, principal, grant
 ) -> None:
@@ -164,7 +164,7 @@ def test_a_valid_body_reports_nothing_and_then_saves(
     assert saved.status_code == 201, saved.text
 
 
-@pytest.mark.req("FR-9445")
+@pytest.mark.req("FR-1607")
 async def test_validate_persists_and_audits_nothing(
     api_client, workspace_id, principal, grant, database
 ) -> None:
@@ -184,7 +184,7 @@ async def test_validate_persists_and_audits_nothing(
     assert await _counts() == before
 
 
-@pytest.mark.req("FR-9445")
+@pytest.mark.req("FR-1607")
 async def test_validate_needs_rating_write(api_client, workspace_id, grant) -> None:
     reader = new_uuid7()
     await grant("approver", principal_id=reader)  # rating:read, no rating:write
@@ -201,7 +201,7 @@ class _Who:
         self.id = id_
 
 
-@pytest.mark.req("FR-9445")
+@pytest.mark.req("FR-1607")
 def test_a_malformed_body_is_a_field_level_422(
     api_client, workspace_id, principal, grant
 ) -> None:
@@ -216,7 +216,7 @@ def test_a_malformed_body_is_a_field_level_422(
     assert all(field.startswith("steps.0") for field in fields), fields
 
 
-@pytest.mark.req("FR-9445")
+@pytest.mark.req("FR-1607")
 def test_the_route_publishes_typed_bodies(app) -> None:
     operation = app.openapi()["paths"][VALIDATE]["post"]
     body = operation["requestBody"]["content"]["application/json"]["schema"]

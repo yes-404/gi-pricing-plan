@@ -290,7 +290,7 @@ async def diff_between(
 
 
 def validate_draft(draft: RatingAlgorithmDraft) -> AlgorithmValidationReport:
-    """FR 9445: every issue saving `draft` would refuse on, located; nothing is persisted.
+    """FR-1607: every issue saving `draft` would refuse on, located; nothing is persisted.
 
     The graph invariants first, all of them; only once they hold are the deeper checks
     (`validate_algorithm`, FR-227 and the expression checks) run, as save runs them.

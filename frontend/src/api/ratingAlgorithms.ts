@@ -31,7 +31,7 @@ export type ModelReferenceMode = Extract<RatingStep, { type: "model_call" }>["mo
 export type AlgorithmValidationReport = components["schemas"]["AlgorithmValidationReport"];
 export type ValidationIssue = components["schemas"]["ValidationIssue"];
 
-/** Validate an unsaved draft without saving it (03 FR 9445); every issue comes back located. */
+/** Validate an unsaved draft without saving it (03 FR-1607); every issue comes back located. */
 export function validateRatingAlgorithm(
   body: RatingAlgorithmDraft,
   signal?: AbortSignal,

@@ -34,7 +34,7 @@ beforeEach(() => {
 });
 afterEach(() => vi.useRealTimers());
 
-describe("useGraphValidation (FR 9445)", () => {
+describe("useGraphValidation (FR-1607)", () => {
   it("makes one call for three changes inside the debounce window", async () => {
     const { edit, scope } = setup();
     edit("a");

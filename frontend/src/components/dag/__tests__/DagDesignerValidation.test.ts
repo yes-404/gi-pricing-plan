@@ -1,4 +1,4 @@
-// Live validation on the real Vue Flow (03 FR 9445, FR-24): the server's issues are shown on
+// Live validation on the real Vue Flow (03 FR-1607, FR-24): the server's issues are shown on
 // the node they locate, before any save. The route is mocked; no rule is evaluated here.
 import { render, screen, within } from "@testing-library/vue";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -26,7 +26,7 @@ beforeEach(() => {
 });
 
 describe("live graph validation in the designer", () => {
-  it("FR 9445: an unresolved reference is shown on its node before save", async () => {
+  it("FR-1607: an unresolved reference is shown on its node before save", async () => {
     api.validateRatingAlgorithm.mockResolvedValue({
       issues: [
         {

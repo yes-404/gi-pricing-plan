@@ -70,7 +70,7 @@ async def validate_rating_algorithm(
     body: RatingAlgorithmDraft,
     caller: RatingWriteDep,
 ) -> AlgorithmValidationReport:
-    """**200** with every located issue (FR 9445); nothing is persisted or audited."""
+    """**200** with every located issue (FR-1607); nothing is persisted or audited."""
     return service.validate_draft(body)
 
 

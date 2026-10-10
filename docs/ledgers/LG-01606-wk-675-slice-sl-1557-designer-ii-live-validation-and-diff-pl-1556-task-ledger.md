@@ -1,9 +1,9 @@
 ---
-id: LG-9444
+id: LG-1606
 family: ledger
 title: WK-675 slice SL-1557 — Designer II, live validation and diff (PL-1556), task ledger
-status: active
-created: 2026-10-09
+status: closed
+created: 2026-10-10
 owner: executor
 tree: 8b9d12c7dac1c0272b1109c9c1d2e295847dd575
 phase: P2
@@ -14,11 +14,11 @@ corrected_by: []
 relates: [PL-1556, RL-1555, RL-1474, RL-1438, FD-1437, RL-1445, SL-1477, WK-675]
 ---
 
-# LG-9444 — WK-675 slice SL-1557: Designer II, live validation and diff
+# LG-1606 — WK-675 slice SL-1557: Designer II, live validation and diff
 
-*(LG-9444 is a working id reserved by the lead; the lead mints it. Authored ahead of the GO at the user's order of 2026-10-09 15:22:26 BST.)*
+*(Minted 2026-10-10 as LG-1606 from the working id the lead reserved. Authored ahead of the GO at the user's order of 2026-10-09 15:22:26 BST.)*
 
-**GO:** not yet given. This slice is authored ahead of its GO at the user's order ("2026-10-09 15:22:26 BST — USER: 'worrying only one executor runs'. FILL THE VM NOW …", items 1–4 of `to-lead.md`). Nothing merges without its GO, its full gate and the maintainer's MERGE-ACK.
+**GO:** given, `to-lead.md` "2026-10-10 21:12:25 BST — DISPATCH GO: WK-675 S3 (PL-1556 / SL-1557)". Before that: This slice is authored ahead of its GO at the user's order ("2026-10-09 15:22:26 BST — USER: 'worrying only one executor runs'. FILL THE VM NOW …", items 1–4 of `to-lead.md`). Nothing merges without its GO, its full gate and the maintainer's MERGE-ACK.
 **MERGE-ACK:** not yet given.
 
 ## Tasks
@@ -133,8 +133,8 @@ Count: **4** sites keep `BUNDLE_COMPILE_FAILED` with a reason (rows 1–4), **1*
 
 #### 2026-10-09 16:50 BST — Task 4 (commit 6): spec texts, route, tests
 
-- **FR id:** RL-1474 T1 needs `FR-<new>`; no working id was reserved for this seat, so every occurrence is the greppable token `FR 9445` (spec `03` §3.1, §4.1, §5.1 rows, `00` FR-24, route docstrings, test markers) until the lead names one. `grep -rn FR 9445` finds them all. **Open: asked the lead.**
-- Spec: T1 applied after the `| **FR-219** |` row (the anchor occurs once; S2's `FR-1530` row now follows it, as the plan predicted), T2 in its three-cell form (§5.1 header still `| Method | Path | Purpose |`), T3 before `### 4.2`, T4 appended to FR-24's second cell. Taken programmatically from RL-1474's code blocks (T1 to T4), then the placeholders `RL-<this>` → `RL-1474`, `<date>` → `2026-10-09`, `FR-<new>` → `FR 9445`. Every anchor found exactly once.
+- **FR id:** RL-1474 T1 needs `FR-<new>`; no working id was reserved for this seat, so every occurrence is the greppable token `FR-1607` (spec `03` §3.1, §4.1, §5.1 rows, `00` FR-24, route docstrings, test markers) until the lead names one. `grep -rn FR-1607` finds them all. **Open: asked the lead.**
+- Spec: T1 applied after the `| **FR-219** |` row (the anchor occurs once; S2's `FR-1530` row now follows it, as the plan predicted), T2 in its three-cell form (§5.1 header still `| Method | Path | Purpose |`), T3 before `### 4.2`, T4 appended to FR-24's second cell. Taken programmatically from RL-1474's code blocks (T1 to T4), then the placeholders `RL-<this>` → `RL-1474`, `<date>` → `2026-10-09`, `FR-<new>` → `FR-1607`. Every anchor found exactly once.
 - Code: `platform/rating_algorithms.py` `validate_draft`; `api/rating_algorithms.py` `validate_rating_algorithm` (registered before the `{slug}@{version}` routes; no `DatabaseDep`, so nothing persists). `generate-contracts` then `--check` rc 0; Acceptance 11's command prints two `$ref`s, `RatingAlgorithmDraft` and `AlgorithmValidationReport`.
 - Tests (`backend/tests/test_rating_algorithm_validate.py`, 14 cases incl. the 7-way parity parametrisation): authored; collection and `test_the_route_publishes_typed_bodies` run green; the rest need Postgres fixtures and are **UNRUN, so no red-on-404 was observed** (owed in the heavy phase: run each at `origin/main`'s router to show 404/422 red, then green here). A DB-free probe (`validate_draft` called directly on the save fixtures) printed: valid → `[]`; division → `EXPRESSION_UNGUARDED_DIVISION` on `s_office`; pre-edit → `LADDER_CLAMP_UNPLACEABLE` on `s_minprem`; cycle → `RATING_GRAPH_CYCLIC` on `s_office` and `s_minprem`.
 - Plan deltas: the type-mismatch fixture's issue is on `s_name_out`, not `s_clamp` (Acceptance 5 names `s_clamp`; the fixture in `test_rating_compile.py::test_an_algorithm_type_mismatch_reports_the_output_step` is the one the plan's pointer reaches). Load1 read 4.67 on the last small run, over the 4.0 cap: it should have waited.
@@ -142,12 +142,12 @@ Count: **4** sites keep `BUNDLE_COMPILE_FAILED` with a reason (rows 1–4), **1*
 #### 2026-10-10 00:3x BST — Tasks 6–8 authored by `executor-wk675s3fe` (fresh seat; frontend deps NOT installed)
 
 - Seat's head at start `cc80a3bf` (ls-remote matched). No `pnpm install` yet (the lead's hold on gate-1), so there is **no `frontend/node_modules` and no generated client**: every test below is **UNRUN, and no red was observed**. Owed: run each file once through the small-test slot, show it red against the pre-change component (`git stash` is barred; use the commit before) and green here.
-- Task 6 (`b1fe4d9e`): `validateRatingAlgorithm`; `useGraphValidation` (debounce 400 ms, abort, sequence number so a late older answer is dropped, `byStep`, `graphLevel`); `GraphIssues.vue` (`role="status"`); `StepNode` renders `⚠ n` (glyph `aria-hidden`), the messages in a list, `invalid` class with a 2px border, and `, n issue(s)` in its `aria-label`; `NodeNavigator` takes an optional `issueCounts` map and names its options `<id> <label>, n issue(s)`; `DagDesigner` wires them and adds an `aria-live="polite"` count (`n issues`). Tests: `__tests__/useGraphValidation.test.ts` (4: one call for three changes; abort; stale response; grouping), `__tests__/DagDesignerValidation.test.ts` (3: the `FR 9445` unresolved-reference-on-node-before-save test with `saveRatingAlgorithm` not called, graph-level issue in the status panel plus the live count, navigator option name). FR id is still the token `FR 9445` (hyphen form is barred outside the FR row and req markers).
+- Task 6 (`b1fe4d9e`): `validateRatingAlgorithm`; `useGraphValidation` (debounce 400 ms, abort, sequence number so a late older answer is dropped, `byStep`, `graphLevel`); `GraphIssues.vue` (`role="status"`); `StepNode` renders `⚠ n` (glyph `aria-hidden`), the messages in a list, `invalid` class with a 2px border, and `, n issue(s)` in its `aria-label`; `NodeNavigator` takes an optional `issueCounts` map and names its options `<id> <label>, n issue(s)`; `DagDesigner` wires them and adds an `aria-live="polite"` count (`n issues`). Tests: `__tests__/useGraphValidation.test.ts` (4: one call for three changes; abort; stale response; grouping), `__tests__/DagDesignerValidation.test.ts` (3: the `FR-1607` unresolved-reference-on-node-before-save test with `saveRatingAlgorithm` not called, graph-level issue in the status panel plus the live count, navigator option name). FR id is still the token `FR-1607` (hyphen form is barred outside the FR row and req markers).
 - Task 7 (`a7a66a6f`): `getAlgorithmDiff`; `DiffOverlay.vue` (number input defaulting to `version - 1`, absent at version 1; Compare; panel lists Removed and Re-pointed tables; 404 branches on `code === "NOT_FOUND"`, the code `get_algorithm` raises); `StepNode` renders the `added`/`changed` text chip; `DagDesigner` maps the emitted diff (a re-pointed table counts as changed). Test: `__tests__/DiffOverlay.test.ts` (5).
 - Task 8 (static review of the authored markup, WCAG 2.2 AA; not the `accessibility-tester` agent, which cannot run a browser here either): every marker has a text channel (`⚠ n` plus the messages, the `added`/`changed` chip, the graph issue prefixed "Graph issue:"); the new controls are native `input`/`button` with a visible `<label for>`; the red border (`red-700` on white) is ≥ 3:1 as a non-text indicator and is never the only channel; count region and `role="status"` panel are polite. **OWED, browser-only:** real keyboard tab order through the overlay and designer, focus ring visibility on the new input/button, screen-reader announcement of the count and of the status panel, and contrast measured on the rendered page. Not run.
 - **Deviations / open for the lead:** (a) `frontend/src/views/__tests__/RatingDesignView.test.ts` mocks `@/api/ratingAlgorithms` without `validateRatingAlgorithm`, so it will fail once run; the one-line fix is outside PL-1556's write set and was NOT made (asked the lead). (b) Acceptance 14's grep is not empty at this tree: `graph.test.ts:38` ("topological" in a test title), `graph.ts:39` (a Kahn comment), `RatingDesignView.test.ts:93,102` (a save-refusal fixture); none is a check of consumes/produces. (c) `DiffOverlay` is fed `draft.slug`/`draft.version`; whether `draft.version` is a plain `number` in the generated draft type is unchecked until `generate:api` and `type-check` run.
 
-**Handover to the next seat.** Remaining: Task 9 (the gate, after the lead's slot). First after install: `pnpm --dir <wt>/frontend generate:api`, then `vitest run` each new file singly (Task 6: `useGraphValidation.test.ts`, `DagDesignerValidation.test.ts`; Task 7: `DiffOverlay.test.ts`), then `lint` and `type-check` and fix what they find (expect fixes: `exactOptionalPropertyTypes` on the `diffMark` prop, `draft.version` typing, the `RatingAlgorithmDraft` vs `AlgorithmDiff` import in `DiffOverlay`). Then the heavy owed list: the unrun backend DB tests of Tasks 2 and 4 with their red-on-main, the browser a11y checks above, `test_sub_graph.py`, whole-tree mypy, audit-docs, `migrate --verify`, and the FR-id replacement of `FR 9445` once the lead names it.
+**Handover to the next seat.** Remaining: Task 9 (the gate, after the lead's slot). First after install: `pnpm --dir <wt>/frontend generate:api`, then `vitest run` each new file singly (Task 6: `useGraphValidation.test.ts`, `DagDesignerValidation.test.ts`; Task 7: `DiffOverlay.test.ts`), then `lint` and `type-check` and fix what they find (expect fixes: `exactOptionalPropertyTypes` on the `diffMark` prop, `draft.version` typing, the `RatingAlgorithmDraft` vs `AlgorithmDiff` import in `DiffOverlay`). Then the heavy owed list: the unrun backend DB tests of Tasks 2 and 4 with their red-on-main, the browser a11y checks above, `test_sub_graph.py`, whole-tree mypy, audit-docs, `migrate --verify`, and the FR-id replacement of `FR-1607` once the lead names it.
 
 #### 2026-10-10 — Acceptance 14 grep hits, listed and classified (lead's instruction; ruling pending with the maintainer)
 
@@ -180,13 +180,13 @@ Neither `useGraphValidation.ts` nor `GraphIssues.vue` contains any of the four t
 #### 2026-10-10 23:02 BST — gate-1 run at `62b8f155` (22:12:44 to 23:01), classified
 
 - DB red-firsts: `test_rating_algorithm_validate.py` at `origin/main`'s `backend/src` (`app.__file__` checked): 15 failed, 2 passed; at the branch 17 passed. The 2 tests of `test_rating_mode_mismatch_api.py` are **GUARDS**: they pass on main (the create-time check is already there, SL-1430), so no red exists for them.
-- Full gate: ruff, mypy, import-linter, req-coverage, contracts pass; `audit_docs` failed 7 and pytest 14 (5439 passed, 2820 s). Cause: four pre-mint working-id lines (checks 31 and 32 on `LG-9444`, `FR-9445`), the stale INDEX and the padded `RL-01474` (the last two fixed in the next commit), and 13 pytest cases that run `audit-docs` on the real tree. One case is the slice's: `test_quote_input_raise_sites` counts 6 `compile_bundle` raise sites against the 5 listed (the FR-223 `_raise_named`); its one-number edit awaits the maintainer's ruling (write-set delta). The compile site's `str(exc)` form of `ModelReferenceModeError` awaits the same ruling.
+- Full gate: ruff, mypy, import-linter, req-coverage, contracts pass; `audit_docs` failed 7 and pytest 14 (5439 passed, 2820 s). Cause: four pre-mint working-id lines (checks 31 and 32 on `LG-1606`, `FR-1607`), the stale INDEX and the padded the zero-padded RL-1474 filename form (the last two fixed in the next commit), and 13 pytest cases that run `audit-docs` on the real tree. One case is the slice's: `test_quote_input_raise_sites` counts 6 `compile_bundle` raise sites against the 5 listed (the FR-223 `_raise_named`); its one-number edit awaits the maintainer's ruling (write-set delta). The compile site's `str(exc)` form of `ModelReferenceModeError` awaits the same ruling.
 
 #### 2026-10-10 23:04 BST — the maintainer's rulings of "2026-10-10 23:03:19 BST" applied
 
 - `str(ModelReferenceModeError)` at the `compile_bundle` site is ACCEPTED (step id kept via `!r`, RL-1438 item 1). If this slice merges after SL-1600 and `InputFreeError` refuses the unpatterned step id, the raise STAYS `ModelReferenceModeError` as the ONE recorded exception.
 - `test_quote_input_raise_sites.py` joins the write set for one number: `("rating/compile.py", "compile_bundle")` 5 → 6, with its reason as a comment. Red first (the gate run's failure, re-run alone: 1 failed), green after (19 passed), on the small-test slot.
-- Audit findings of the gate run, for the ACK: 7 in all. Mint-expected: check 31 gap and check 31 `created` order (working id `9444`), check 32 `LG-9444` x3 and `FR-9445` (the last of the 3+1 vanished after the INDEX regeneration, so only the two check-31 lines remain until the mint). Fixed: check 32 padded `RL-01474`, check 39 stale INDEX.
+- Audit findings of the gate run, for the ACK: 7 in all. Mint-expected: check 31 gap and check 31 `created` order (the then-working id of this ledger), check 32 `LG-1606` x3 and `FR-1607` (the last of the 3+1 vanished after the INDEX regeneration, so only the two check-31 lines remain until the mint). Fixed: check 32 the zero-padded RL-1474 filename form, check 39 stale INDEX.
 
 ## PRs
 

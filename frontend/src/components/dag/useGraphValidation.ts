@@ -7,7 +7,7 @@ import {
 } from "@/api/ratingAlgorithms";
 
 /**
- * Live validation of the draft on the designer's nodes (03 FR 9445, FR-24). The server owns
+ * Live validation of the draft on the designer's nodes (03 FR-1607, FR-24). The server owns
  * every graph rule; this only debounces the draft to the validate route, drops a stale call
  * and groups the issues it was handed. Nothing here inspects the draft's content.
  */
