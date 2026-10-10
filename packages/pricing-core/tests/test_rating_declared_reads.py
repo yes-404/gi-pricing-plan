@@ -30,7 +30,7 @@ def test_referenced_names_reads_every_field_a_step_evaluates() -> None:
     }
     assert referenced_names(clamp) == {"office_premium_minor", "min_premium_minor"}
     expr = {"type": "expression", "consumes": ["a"], "produces": "c",
-            "expr": "a * b + round(a, 'half_even', 0)"}
+            "expr": "a * b + abs(a)"}
     assert referenced_names(expr) == {"a", "b"}
     table = {"type": "table", "consumes": ["channel"], "produces": "f", "key_expr": ["channel"]}
     assert referenced_names(table) == {"channel"}
