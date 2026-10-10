@@ -46,8 +46,8 @@ column, diff shading, bulk operations, import and export (S5).
 | 1 | `RateTableCell`, retype, `ManualEdit`, `RateTableManualEdit`, `created_by_edit` | Acceptance 7 (provenance limb, model level) | done, commit 2 |
 | 2 | the two reads, RL-1475 T3 and T4 | 1–5 | authored, commit 3; the 5 DB tests are UNRUN (OWED at the gate) |
 | 3 | the manual-edit route, RL-1555 T1 to T4, and `created_by_edit` persisted | 6–8 | authored, commit 4; pure level red→green; the DB tests are UNRUN (OWED at the gate) |
-| 4 | the dependency and its records | 17 | open |
-| 5 | `rateTables.ts` | — | open |
+| 4 | the dependency and its records | 17 | done, commit 5 (`e92ce26d`) |
+| 5 | `rateTables.ts` | — | done, commit 6 |
 | 6 | `DecimalCellInput.vue`, `RateTableGrid.vue` | 11, 12 | open |
 | 7 | `RateTableEditorView.vue`, route, FR-25 link | 11, 13–16 | open |
 | 8 | gate and ledger | 18 | waits for the GO and the gate slot |
@@ -213,6 +213,21 @@ route (405).
    `VALIDATION_FAILED` otherwise (T1's wording, "under code", names no mixed case); each field error carries its own code.
 4. The lead's load rule (wait for load1 <= 4.0 before every small test) was not met at the start of Task 1's red run
    (load 5.41); the runs since waited.
+
+#### Tasks 4 and 5 — the dependency; `rateTables.ts` (2026-10-10)
+
+**Task 4** (`e92ce26d`): `@tanstack/vue-table` `9.2.6` added with `--save-exact`; its `index.d.ts` was read after install:
+`useTable` takes `{ features, columns, data }` with `data` a `MaybeRef`, and the package re-exports `tableFeatures` and
+`FlexRender` from table-core. `git show --stat` lists `frontend/package.json`, `frontend/pnpm-lock.yaml`,
+`docs/skills-map.md` (the row marked verified) and `docs/specs/03-rating-engine.md` (§8's row) (Acceptance 17), plus
+`backend/tests/test_api_rate_tables.py`: the S4 404 tests now read one constant, `_UNKNOWN_TABLE_CODE`, to flip when the
+maintainer rules `NOT_FOUND` against `RATE_TABLE_MISS` (the lead's order, after the 3372f5ce report).
+
+**Task 5.** Red: `vitest run src/api/__tests__/rateTables.test.ts`, the module absent (a transform failure, no tests run);
+load 3.99. Green: `4 passed`. `frontend/src/api/rateTables.ts` follows the real client: `request` already prefixes
+`/api/v1` and takes `query`, the generated types come from `./generated/schema`, and the edit body from
+`./generated/schema.requests` (the permissive set, as `ratingAlgorithms.ts` does) minus `confirm`. `pnpm generate:api` was
+run; `generated/` is VCS-ignored.
 
 ## PRs
 
