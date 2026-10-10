@@ -11,7 +11,8 @@ Two rules hold this together:
 
 from __future__ import annotations
 
-from typing import Final
+from collections.abc import Mapping
+from typing import Any, Final
 
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -22,6 +23,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.observability.logging import get_logger
 from app.observability.trace import current_trace_id
 from model_schema import FieldError, ProblemDetail
+from pricing_core.safe_error import safe_validation_message
 
 __all__ = [
     "DATA_ERROR_CODES",
@@ -484,6 +486,20 @@ async def _handle_platform_error(request: Request, exc: PlatformError) -> JSONRe
     return problem_response(exc.to_problem(instance=request.url.path))
 
 
+def _field_error_message(err: Mapping[str, Any]) -> str:
+    """`FieldError.message` for one pydantic error, with no submitted value in it (NFR-499).
+
+    `pricing_core.safe_error.safe_validation_message` keeps fixed-text types, an
+    `InputFreeError`'s authored text and the authored texts of the request-common types; anything
+    else, which a validator may have filled with the value it was given, is replaced by a fixed
+    text naming the error type (DP-7 (a); FD-1589 row 8).
+    """
+    message = safe_validation_message(err)
+    if message is not None:
+        return message
+    return f"The value is not valid ({str(err['type']).upper()})."
+
+
 async def _handle_validation_error(
     request: Request, exc: RequestValidationError
 ) -> JSONResponse:
@@ -498,7 +514,7 @@ async def _handle_validation_error(
             # document and does not need our parser's internal framing.
             field=".".join(str(part) for part in err["loc"][1:]) or str(err["loc"][0]),
             code=str(err["type"]).upper().replace(".", "_"),
-            message=str(err["msg"]),
+            message=_field_error_message(err),
         )
         for err in exc.errors()
     )

@@ -21,7 +21,10 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ValidationError, field_validator
+
+from model_schema.input_free import InputFreeError
+from pricing_core.safe_error import CodedError
 
 _ROOT = Path(__file__).resolve().parents[2]
 #: The scope is DERIVED by glob, so a new file is covered by default (maintainer, 2026-09-29,
@@ -313,3 +316,59 @@ def test_an_unexpected_request_failure_logs_no_input(
     record = next(r for r in caplog.records if r.getMessage() == "request failed")
     assert record.exc_info is not None
     assert ValidationError.__name__ in str(record.exc_info[1])
+
+
+_AUTHORED = "authored-trigger"
+_CODED = "coded-trigger"
+
+
+class _SentinelBody(BaseModel):
+    driver_age: int
+
+    @field_validator("driver_age", mode="before")
+    @classmethod
+    def _refuse_with_the_value(cls, value: object) -> object:
+        if value == _SENTINEL:
+            # A custom validator that interpolates what it was given: the shape of every
+            # `value_error` and `assertion_error` a request model can raise.
+            raise ValueError(f"unacceptable value {value}")
+        if value == _AUTHORED:
+            raise InputFreeError("an authored, input-free message")
+        if value == _CODED:
+            raise CodedError("AUTHORED_CODE: an authored, input-free message")
+        return value
+
+
+def _post(api_client: TestClient, path: str, value: str) -> dict[str, object]:
+    async def intake(body: _SentinelBody) -> None:
+        return None
+
+    api_client.app.add_api_route(path, intake, methods=["POST"])  # type: ignore[attr-defined]
+    response = api_client.post(path, json={"driver_age": value})
+    assert response.status_code == 422
+    assert _SENTINEL not in response.text
+    return response.json()  # type: ignore[no-any-return]
+
+
+@pytest.mark.req("NFR-499")
+def test_a_request_validation_422_carries_no_submitted_value(api_client: TestClient) -> None:
+    """FD-1589 row 8: `_handle_validation_error` copied pydantic's `msg` into the 422's
+    `FieldError.message`, and a custom validator's `msg` carries the submitted value."""
+    body = _post(api_client, "/__nfr499_422", _SENTINEL)
+    assert body["errors"][0]["code"] == "VALUE_ERROR"  # type: ignore[index]
+
+
+@pytest.mark.req("NFR-499")
+def test_an_input_free_validator_message_survives_the_422_sink(api_client: TestClient) -> None:
+    """An `InputFreeError` is input-free by construction, so its authored message is kept,
+    byte for byte as on `main` (DP-4 (a): the "Value error, " prefix stays)."""
+    body = _post(api_client, "/__nfr499_authored", _AUTHORED)
+    assert body["errors"][0]["message"] == "Value error, an authored, input-free message"  # type: ignore[index]
+
+
+@pytest.mark.req("NFR-499")
+def test_a_coded_validator_message_gets_the_fixed_text(api_client: TestClient) -> None:
+    """A `CodedError` is not on the 422 allow-list (DP-3 (a) with DP-5 (b)): the parked form of
+    this test asserted its text survived; PL-1599 Task 5 changes that on purpose."""
+    body = _post(api_client, "/__nfr499_coded", _CODED)
+    assert body["errors"][0]["message"] == "The value is not valid (VALUE_ERROR)."  # type: ignore[index]
