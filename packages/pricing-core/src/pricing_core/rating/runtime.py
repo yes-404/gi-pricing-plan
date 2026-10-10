@@ -652,7 +652,14 @@ def _model_call_handler(
             try:
                 glm_prediction = glm_scorers[ref_str].predict(feature_row)
             except (ModellingError, PredictionError) as exc:
-                return _model_call_failure(step, f"{exc.code}: {exc}", context)
+                # The code only: a `PredictionError`'s own text can carry a quote's value (an unseen
+                # factor level, `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`), and a coded error keeps its text
+                # as it stands (NFR-499, RL-917), so the model's text is never passed on.
+                return _model_call_failure(
+                    step,
+                    f"{exc.code}: {ref_str} could not be scored for this quote (FR-255)",
+                    context,
+                )
             value = round(glm_prediction) if step.result_type is None else glm_prediction
         else:
             return _model_call_failure(

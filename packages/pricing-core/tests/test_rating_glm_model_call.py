@@ -615,3 +615,24 @@ async def test_the_opt_in_path_is_deterministic_and_its_money_is_decimal_exact()
     for rung in first.premium_ladder:
         if rung.unrounded_minor is not None and rung.rounding is not None:
             assert rung.value_minor == rung.unrounded_minor.quantize(Decimal(1), ROUND_HALF_EVEN)
+
+
+@pytest.mark.req("NFR-499", "FR-255")
+async def test_a_glm_failure_reports_its_code_and_never_the_models_text(
+    world: GlmWorld, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A `PredictionError`'s text can carry a quote value (an unseen factor level,
+    `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`, `predict.py`); a coded error keeps its text as it stands
+    (RL-917), so the handler passes on the code and a static sentence only (the 2026-10-10
+    03:20:34 BST ruling, item 2)."""
+    from pricing_core.modelling.predict import PredictionError
+    from pricing_core.rating import runtime
+
+    def _failing(self: Any, feature_row: Any) -> float:
+        raise PredictionError("UNSEEN_LEVEL_BEHAVIOUR_REQUIRED", "level 'SENTINEL-3c9d' unseen")
+
+    monkeypatch.setattr(runtime._GlmScorer, "predict", _failing)
+    compiled = load_bundle(await compiled_bundle(world))
+    message = (await _value(compiled, **QUOTES[0]))[MODEL_CALL_ERROR_KEY]
+    assert "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED" in message
+    assert "SENTINEL" not in message
