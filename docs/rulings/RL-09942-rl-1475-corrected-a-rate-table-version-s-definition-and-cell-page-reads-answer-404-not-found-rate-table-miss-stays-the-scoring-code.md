@@ -25,15 +25,20 @@ relates: [RL-1475, RL-1555, PL-1558]
   front-matter block). Not one byte of `RL-1475`'s body changes. When this record is
   minted, the working id in both headers and in this record is replaced by the minted id.
 - **The decisions are not this record's.** They are the maintainer's (by delegation), in
-  two entries of `~/gi-pricing-plan.local/channel/to-lead.md`, quoted below by header:
+  three entries of `~/gi-pricing-plan.local/channel/to-lead.md`, quoted below by header:
   - "2026-10-10 04:19:42 BST — RULING: rate-table 404 disagreement = (a), the SPEC governs
     (NOT_FOUND); the fix is at the route layer; one FD for the pre-existing drift"
     (`to-lead.md:20952`);
   - "2026-10-10 04:23:36 BST — RULING: WK-675 S4 read routes = (a), NOT_FOUND too; the
     correcting RL for RL-1475 T3/T4 must be ON MAIN BEFORE S4 merges"
-    (`to-lead.md:20961`). Its ORDER CONDITION item 1 orders this record.
-- **This record states the corrected code, quotes each `RL-1475` clause it corrects, and
-  names where the code carries it.** It decides nothing beyond the two entries.
+    (`to-lead.md:20961`). Its ORDER CONDITION item 1 orders this record;
+  - "2026-10-10 04:27:31 BST — RL 9942 scope = (a): it corrects every RL-1475 statement of
+    the code (T3, T4 AND Acceptance 5 :274)" (`to-lead.md:20971`). It sets this record's
+    scope: every place `RL-1475` states `RATE_TABLE_MISS` for a missing rate table on those
+    routes, not T3 and T4 only.
+- **This record states the corrected code, quotes each `RL-1475` clause it corrects, lists
+  every `RATE_TABLE_MISS` in `RL-1475` as corrected or out of scope, and names where the
+  code carries it.** It decides nothing beyond the three entries.
 
 ## The maintainer's entries, verbatim (the paragraphs this record carries)
 
@@ -55,6 +60,13 @@ ORDER CONDITION: RL-1475 is a dated ruling whose T3/T4 say RATE_TABLE_MISS verba
 3. S4's read routes: route-layer NOT_FOUND mapping, the loader unchanged, red-first tests on both reads.
 4. FD 9941 keeps its scope (the existing diff routes on main). The reads are fixed here, not widened into it.
 (b) rejected: it ships a slice that answers two different codes for the same condition.
+```
+
+From "2026-10-10 04:27:31 BST — RL 9942 scope = (a) …", in full. It widens 04:23:36's "T3/T4
+only" above:
+
+```text
+(a) ADOPTED. My 04:23:36 "T3/T4 only" named the statements I knew of. Its intent was that the record speaks one code. RL 9942 corrects each place RL-1475 states RATE_TABLE_MISS for a missing rate table on those routes (T3, T4, Acceptance 5 :274), listing each by line, so no statement is left uncorrected. The auditor greps RL-1475 for every remaining "RATE_TABLE_MISS" and lists each hit in RL 9942 as corrected or as out of scope (a scoring-path statement, which stays). RL-1475 changes front matter only (corrected_by). Rides D6. The S4 merge need is unchanged.
 ```
 
 ## The corrected code
@@ -89,14 +101,26 @@ every other word of the clause stands.
 | :187 (T4, the cells read, three-cell form) | "**404** `RATE_TABLE_MISS` on an unknown table or version or another workspace's;" | "**404** `NOT_FOUND` on an unknown table or version or another workspace's;" |
 | :193 (T4, the definition read, four-cell form) | "**404** `RATE_TABLE_MISS` on an unknown table or version or another workspace's." | As :186. |
 | :194 (T4, the cells read, four-cell form) | "**404** `RATE_TABLE_MISS` on an unknown table or version or another workspace's;" | As :187. |
+| :274–:275 (*Acceptance* item 5, Isolation) | "Another workspace's `slug@version` answers 404 `RATE_TABLE_MISS` on both reads." | "Another workspace's `slug@version` answers 404 `NOT_FOUND` on both reads." |
 
-**Also read, and not corrected by this record:**
+## Every `RATE_TABLE_MISS` in `RL-1475` — corrected or out of scope
 
-- `RL-1475` *Acceptance* item 5 (`:274`): "Another workspace's `slug@version` answers 404
-  `RATE_TABLE_MISS` on both". It is not in T3 or T4, and 04:23:36 scopes this record to
-  "T3/T4 only". This record does not change it; the lead is told.
-- `RL-1475` *Evidence* (`:59`) describes the loaders' code at `1dd5e264`. It is a record of
-  that tree and stays true of it.
+Run in this worktree at `26f93be0` (`RL-1475`'s body is the same at main), verbatim:
+`git grep -n RATE_TABLE_MISS HEAD -- 'docs/rulings/RL-01475-*'`. It returns **7 lines**
+with **8 occurrences** (`:59` carries two). Each is listed below.
+
+| `RL-1475` line | Where in `RL-1475` | Occurrences | Disposition |
+|---|---|---|---|
+| :59 | *Evidence at `1dd5e264`*, "Rate table reads": `_load_table` (`rate_tables.py:189-205`, 404 `RATE_TABLE_MISS`) and `_load_version` (`:462-481`, 404 `RATE_TABLE_MISS`) | 2 | **Out of scope (the shared loaders, which the scoring path uses; stays).** It describes the loaders' code at `1dd5e264`, not what a route answers. The loaders keep `RATE_TABLE_MISS` (04:19:42 item 1; 04:23:36 item 3). |
+| :175 | T3, the `FR-<b>` row | 1 | **Corrected** (table above). |
+| :186 | T4, the definition read, three-cell form | 1 | **Corrected**. |
+| :187 | T4, the cells read, three-cell form | 1 | **Corrected**. |
+| :193 | T4, the definition read, four-cell form | 1 | **Corrected**. |
+| :194 | T4, the cells read, four-cell form | 1 | **Corrected**. |
+| :274 | *Acceptance* item 5, Isolation | 1 | **Corrected**. |
+
+After this record, no `RL-1475` statement of what a rate table read route answers for a
+missing rate table says `RATE_TABLE_MISS`.
 
 ## What is not changed
 
@@ -137,7 +161,7 @@ If S4's branch is rebased or squash-merged, these SHAs and line numbers name tha
 
 ## What this record does not decide
 
-- `RL-1475` *Acceptance* item 5, or any `RL-1475` clause other than those in the table.
+- Any `RL-1475` clause other than those this record lists as corrected.
 - The `PL-1558` *Acceptance* 4 correction, which 04:19:42 item 2 assigns to a dated
   plan-delta line in S4's ledger.
 - FD 9941's remedy or its slice.
