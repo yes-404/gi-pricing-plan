@@ -24,7 +24,9 @@ def test_canonical_reference_round_trips():
     ],
 )
 def test_malformed_references_are_refused(bad):
-    with pytest.raises(ValueError, match=r"must have the form|slug is outside|unknown artifact type"):
+    with pytest.raises(
+        ValueError, match=r"must have the form|slug is outside|unknown artifact type"
+    ):
         ArtifactRef.parse(bad)
 
 
