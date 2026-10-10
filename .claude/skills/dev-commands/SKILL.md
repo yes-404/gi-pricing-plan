@@ -184,6 +184,11 @@ most two gates at once and the thread caps still hold each stage to 4. **Do not 
 each stage its own `flock`**: that is seven locks where the budget assumed one, and it
 reinstates exactly the double-lock deadlock `GIP_GATE_SLOT` exists to prevent.
 
+**Start no background process inside a held slot; if unavoidable, stop it and its children
+by their own pids before release; check with `fuser <lockfile>` that only your pid holds
+it.** Why: on 2026-10-08 (S2) a pnpm/vite wrapper started inside `flock -c` inherited the
+lock fd and held gate-1 for about 17 minutes after the run ended.
+
 **Read the table, not the exit code alone.** The body's last statement is
 `[ "$nfail" = "0" ]`, so a failing gate exits 1 and a passing one 0 — and 1 is
 distinguishable from the wrapper's busy-slot 99, which is what the `-E 99` fix below is
@@ -1096,7 +1101,7 @@ build log showing no actual build (wrong cwd), one tmpdir ls -i showing identica
 (collision). This section drafted by executor-h; verified by deputy as measured. Reference: 
 to-lead.md entries 10:55:17, 11:02:41, 11:48:50, 14:33:28 (maintainer instruction).
 
-Verified: 2026-10-06 against main a9ef6777 (new section: a slot probe that gates a check); previously 2026-09-29 against main 4819ec88 (gate slot budget 3 → 2 for the 8-vCPU box, WK-1178; the wrapper loop and `conftest.py` `_SLOT_COUNT` re-read together)
+Verified: 2026-10-08 against main d85cf854 (new rule: no background process inside a held slot, `fuser` check); previously 2026-10-06 against main a9ef6777 (new section: a slot probe that gates a check); previously 2026-09-29 against main 4819ec88 (gate slot budget 3 → 2 for the 8-vCPU box, WK-1178; the wrapper loop and `conftest.py` `_SLOT_COUNT` re-read together)
 Prior: 2026-09-17 against main 71f5a2208c7a92bad486ae128775a4a42c7ebc63
 
 2026-09-06 — the gate body's seven stages now run in parallel inside one slot, each

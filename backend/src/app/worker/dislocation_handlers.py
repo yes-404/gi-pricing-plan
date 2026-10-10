@@ -70,6 +70,7 @@ from pricing_core.rating.compile import (
     compile_bundle,
 )
 from pricing_core.rating.runtime import CompiledBundle, load_bundle
+from pricing_core.safe_error import safe_error_text
 
 __all__ = [
     "DISLOCATION_RATINGS_PER_WORKER_HOUR",
@@ -317,7 +318,7 @@ def _dislocation_run(parameters: dict[str, Any], callback: ProgressCallback) -> 
             )
         except AttributionError as exc:
             raise PlatformError(
-                exc.code, exc.code.replace("_", " ").title(), 422, str(exc)
+                exc.code, exc.code.replace("_", " ").title(), 422, safe_error_text(exc)
             ) from exc
     progress.update(0.9, "persisting")
 

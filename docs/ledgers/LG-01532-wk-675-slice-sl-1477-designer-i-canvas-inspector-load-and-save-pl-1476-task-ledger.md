@@ -2,7 +2,7 @@
 id: LG-1532
 family: ledger
 title: WK-675 slice SL-1477 — Designer I, canvas, inspector, load and save (PL-1476), task ledger
-status: active
+status: closed
 created: 2026-10-08
 owner: executor
 tree: adfa6e7671d98aadf41536714b2da41b1e00c1ae
