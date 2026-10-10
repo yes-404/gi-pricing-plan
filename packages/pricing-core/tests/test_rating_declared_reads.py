@@ -9,12 +9,12 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from pricing_core.rating.references import referenced_names
 from test_rating_score import _algorithm_payload
 
 from model_schema.rating import RatingAlgorithm, RatingVersion
 from model_schema.refs import ArtifactRef
 from pricing_core.rating.compile import ResolvedArtifact, compile_bundle, validate_algorithm
+from pricing_core.rating.references import referenced_names
 
 #: DP-F35-1 (iii-a)'s ruled code (RL-1519).
 UNDECLARED_READ_CODE = "RATING_STEP_UNDECLARED_READ"
@@ -163,3 +163,32 @@ def test_the_03_example_declares_every_read() -> None:
     }
     undeclared = {sid: names for sid, names in undeclared.items() if names}
     assert undeclared == {}, f"03 §4.1 steps read undeclared names: {undeclared}"
+
+
+@pytest.mark.req("FR-246")
+def test_a_mounted_fragment_passes_the_declared_reads_check_once_inlined() -> None:
+    """The planner's semantic risk (PL-1535): SL-1340's inliner renames the fields a step
+    evaluates with `rename_tokens`, and the check reads them with `references._names_in`. Two
+    tokenizers over one set of fields must agree: the inlined fragment's renamed `expr`, its
+    renamed `consumes` and the mapped ports leave no read undeclared. A guard, not a red-first:
+    it passed on first run, so no defect was exposed."""
+    from test_rating_inline import _fragment, _parent
+
+    from pricing_core.rating.inline import inline_mounts
+
+    ref = "sub_graph:ncd-ladder@4"
+    inlined = inline_mounts(_parent(), {ref: _fragment()})
+    assert any(s.step_id.startswith("m_ncd__") for s in inlined.steps)
+    issues = [i for i in validate_algorithm(inlined) if i.code == UNDECLARED_READ_CODE]
+    assert issues == []
+
+    # Control: the same path flags a fragment step that reads a name it does not declare, so the
+    # empty list above is the check running, not the check failing to see the fragment.
+    broken = _fragment(steps=[
+        {"step_id": "s_ladder", "type": "expression", "label": "Ladder",
+         "expr": "ncd_years * stray", "result_type": "decimal",
+         "consumes": ["ncd_years"], "produces": "ncd_factor"},
+    ])
+    flagged = [i for i in validate_algorithm(inline_mounts(_parent(), {ref: broken}))
+               if i.code == UNDECLARED_READ_CODE]
+    assert [i.step_id for i in flagged] == ["m_ncd__s_ladder"]
