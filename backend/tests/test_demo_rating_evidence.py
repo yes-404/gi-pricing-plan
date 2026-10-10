@@ -20,7 +20,7 @@ from sqlalchemy import select
 from app.db.models import JobRow, RegressionRunRow
 from app.db.session import Database
 from app.platform import rating_versions as rating_service
-from model_schema import ArtifactRef, JobKind, JobStatus, RegressionRun, new_uuid7
+from model_schema import ArtifactRef, JobKind, JobStatus, Pins, RegressionRun, new_uuid7
 
 _SPEC = importlib.util.spec_from_file_location(
     "demo_model", Path(__file__).resolve().parents[2] / "examples" / "fremtpl2" / "model.py"
@@ -32,11 +32,13 @@ _SPEC.loader.exec_module(demo_model)
 
 
 async def _draft(database: Database, workspace_id: UUID, analyst) -> UUID:
+    algorithm_ref = await demo_model.save_demo_algorithm(database, workspace_id, analyst)
     async with database.unit_of_work() as session:
         row = await rating_service.create_rating_version(
             session, workspace_id=workspace_id, actor=analyst, slug="fremtpl2-demo",
             dataset_version_id=new_uuid7(),
             model_ref=ArtifactRef(type="model", slug="fremtpl2-glm", version=1),
+            algorithm_ref=algorithm_ref, pins=Pins(),
         )
         return row.id
 

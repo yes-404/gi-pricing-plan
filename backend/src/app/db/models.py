@@ -2284,7 +2284,9 @@ class ScoringTraceRow(Base):
         PgUUID(as_uuid=True), ForeignKey("deployments.id")
     )
     #: The blob body's digest — `app.platform.blobs.blob_key`/`BlobStore.read` resolve it.
-    #: Null while `status == "pending"`; every other status requires it (Task 4B).
+    #: Null while `status == "pending"`, and on a `mismatch` row whose pinned bundle no longer
+    #: resolved (no body was written); every `complete` row, and every `mismatch` row that
+    #: re-scored, has it (Task 4B).
     blob_sha256: Mapped[str | None] = mapped_column(String(64))
     #: `pending` (awaiting off-path re-score), `complete` (reproduced and blobbed),
     #: `mismatch` (the re-score ran but did not reproduce the served result, or the
@@ -2517,4 +2519,50 @@ class DeploymentRow(Base):
     __table_args__ = (
         CheckConstraint("bundle_hash ~ '^sha256:[a-f0-9]{64}$'", name="bundle_hash_format"),
         Index("ix_deployments_environment", "workspace_id", "environment_id", "deployed_at"),
+    )
+
+
+class DislocationRunRow(Base):
+    """One Dislocation Run, the citable artifact (03 §4.6, FR-263, FR-265; PL-1501 Task 2).
+
+    `run` is the validated `DislocationRun` as JSON. `baseline_ref`, `candidate_ref`,
+    `baseline_bundle_hash`, `candidate_bundle_hash`, `portfolio_dataset_version_id`,
+    `movers_blob_sha256` and `job_id` are copies for querying, written from the same object
+    in one operation by `app.platform.dislocation_runs.persist_run`, the single writer.
+    `(workspace_id, candidate_ref, candidate_bundle_hash)` is the lookup `06` FR-257 limb (2)
+    reads: the runs naming one candidate at one bundle hash.
+
+    **`movers_blob_sha256` is the scalar digest of the run's movers blob**, copied out of
+    `run["largest_movers_blob"]`. It is deliberately **not** registered in
+    `QUOTE_INPUT_BLOB_COLUMNS` (RL-1504 item 5): the blob holds `dislocation_frame`'s own
+    columns and no portfolio column, so it is not a quote-input store. The generic blob
+    route refuses it all the same, because no Dataset Version table and no
+    `JobResult(kind="blob")` references the digest; `GET .../{id}/movers` is its one reader.
+    """
+
+    __tablename__ = "dislocation_runs"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    run: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    baseline_ref: Mapped[str] = mapped_column(String(100), nullable=False)
+    candidate_ref: Mapped[str] = mapped_column(String(100), nullable=False)
+    baseline_bundle_hash: Mapped[str] = mapped_column(String(71), nullable=False)
+    candidate_bundle_hash: Mapped[str] = mapped_column(String(71), nullable=False)
+    portfolio_dataset_version_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), nullable=False
+    )
+    movers_blob_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    job_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False, unique=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    created_by: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+
+    __table_args__ = (
+        Index(
+            "ix_dislocation_runs_candidate",
+            "workspace_id", "candidate_ref", "candidate_bundle_hash",
+        ),
+        Index("ix_dislocation_runs_movers_blob_sha256", "movers_blob_sha256"),
     )

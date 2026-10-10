@@ -8,11 +8,13 @@ version can be approved against and the demo can display.
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
 from itertools import pairwise
-from typing import Annotated, Any, Final, Literal
+from typing import Annotated, Any, Final, Literal, Protocol
 from uuid import UUID
 
 from pydantic import (
@@ -26,6 +28,7 @@ from pydantic import (
 )
 
 from model_schema.graph_errors import GraphCycleError, GraphUnresolvedRefError
+from model_schema.money import DecimalStr
 from model_schema.refs import ArtifactRef, BlobRef, Slug
 from model_schema.regression import GoldenQuoteEvidence
 
@@ -76,6 +79,8 @@ class Pins(BaseModel):
     models: list[ArtifactRef] = Field(default_factory=list)
     reference_tables: list[ArtifactRef] = Field(default_factory=list)
     custom_objectives: list[ArtifactRef] = Field(default_factory=list)
+    # WK-1250 Slice 2 (FR-217): the exact sub-graph versions an algorithm's mounts name.
+    sub_graphs: list[ArtifactRef] = Field(default_factory=list)
 
 
 class BundleMetadata(BaseModel):
@@ -116,6 +121,21 @@ class BundleMetadata(BaseModel):
     blob_sha256: Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")] | None = None
 
 
+class ApproximationCheck(BaseModel):
+    """FR-224's record on an `approximation`-mode version: the exact-mode baseline Dislocation
+    Run read, the threshold it was held to and the figure it showed (`03` FR-224, RL-1504).
+    Written once at submission with the rest of the evidence; `fidelity_statements` are FR-136's,
+    one per model referenced in `approximation` mode, copied for the approver."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    dislocation_run_id: UUID
+    quantile: DecimalStr
+    observed_abs_change_pct: DecimalStr
+    max_abs_change_pct: DecimalStr
+    fidelity_statements: tuple[str, ...] = ()
+
+
 class RatingVersionEvidence(BaseModel):
     """The evidence an `approved` version carries (03 §4.3, FR-257)."""
 
@@ -125,6 +145,11 @@ class RatingVersionEvidence(BaseModel):
     dislocation_run_id: UUID | None = None
     gipp_check_id: UUID | None = None
     structural_diff_blob: str | None = None
+    #: Written by the submit gate when FR-257 limb (2) finds no baseline: the algorithm's first
+    #: version, so no Dislocation Run is required (`03` FR-257, 2026-10-10 clarification).
+    no_baseline: Literal["first_version"] | None = None
+    #: Written by the submit gate for an `approximation`-mode version (FR-224).
+    approximation_check: ApproximationCheck | None = None
     #: Written once by the submit gate (FR-260, amended 2026-09-28) and never edited after.
     #: `None` means not yet submitted; a submitted version carries one of the two variants.
     golden_quotes: GoldenQuoteEvidence | None = None
@@ -168,6 +193,54 @@ class RatingVersion(BaseModel):
     change_summary: str | None = None
     evidence: RatingVersionEvidence | None = None
     approval_request_id: UUID | None = None
+
+
+#: The artifact types each pin list admits (FR-237; RL-1428 T1). `models` holds a
+#: `model_call`'s `model_ref` or `peril_structure_ref` (`compile.check_step_refs_pinned`).
+_PIN_TYPES: Final[dict[str, frozenset[str]]] = {
+    "rate_tables": frozenset({"rate_table"}),
+    "models": frozenset({"model", "peril_structure"}),
+    "reference_tables": frozenset({"reference_table"}),
+    "custom_objectives": frozenset({"custom_objective"}),
+}
+
+
+class RatingVersionCreate(BaseModel):
+    """The body of `POST /api/v1/rating-versions` (03 §5.1, FR-237; RL-1428).
+
+    Create stores the declared algorithm and pins and checks only their shape: a ref of the
+    wrong type is refused here (422). Whether each ref resolves, and at what maturity, is
+    compile's (FR-240), so a version created without them is refused there with
+    `RATING_VERSION_UNPINNED`.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    slug: Slug
+    dataset_version_id: UUID
+    model_ref: ArtifactRef
+    algorithm_ref: ArtifactRef | None = None
+    pins: Pins | None = None
+    model_reference_mode: ModelReferenceMode = "exact"
+
+    @field_validator("algorithm_ref")
+    @classmethod
+    def _an_algorithm(cls, ref: ArtifactRef | None) -> ArtifactRef | None:
+        if ref is not None and ref.type != "rating_algorithm":
+            raise ValueError(f"{ref} is not a rating_algorithm reference")
+        return ref
+
+    @field_validator("pins")
+    @classmethod
+    def _each_list_holds_its_own_type(cls, pins: Pins | None) -> Pins | None:
+        for name, admitted in _PIN_TYPES.items():
+            for ref in getattr(pins, name, ()):
+                if ref.type not in admitted:
+                    raise ValueError(
+                        f"pins.{name} holds {ref}, which is not a "
+                        f"{' or '.join(sorted(admitted))} reference"
+                    )
+        return pins
 
 
 def check_model_reference_mode(version: RatingVersion, algorithm: RatingAlgorithm) -> None:
@@ -302,6 +375,24 @@ class RatingModelCallStep(RatingStepBase):
     peril_structure_ref: ArtifactRef | None = None
     mode: Literal["exact", "approximation"]
     feature_map: dict[str, str] = Field(default_factory=dict)
+    #: `None` (the default) is the LEGACY behaviour: a GBM prediction is rounded to a whole
+    #: unit at the step, as before the field existed, so every stored algorithm hashes and
+    #: prices exactly as it did (FR-239; the maintainer's (by delegation) entry headed
+    #: "2026-10-10 00:40:31 BST — RULING: A-2 item 15. NEITHER (i) nor (ii)…"). Written
+    #: explicitly (`decimal` or `money_minor`) it opts in: the value is carried unrounded to
+    #: FR-244's boundary and an `output` step rounds it once (FR-226); the field is then also
+    #: the type FR-227's checks read. `to_jdm` omits it when `None`, so it enters the bundle
+    #: hash only when written.
+    result_type: str | None = None
+
+    @field_validator("result_type")
+    @classmethod
+    def _decimal_or_money_minor(cls, value: str | None) -> str | None:
+        if value is not None and value not in ("decimal", "money_minor"):
+            raise ValueError(
+                f"a model_call's result_type is decimal or money_minor, not {value!r} (FR-227)"
+            )
+        return value
 
     @model_validator(mode="after")
     def _exactly_one_ref(self) -> RatingModelCallStep:
@@ -339,24 +430,54 @@ RatingStep = Annotated[
 ]
 
 
+# RL 9586 DP-S2-2: a mount point is a plain identifier, so a namespaced name `<mount>__<name>` is
+# unambiguous. `__` is excluded by the validator on `SubGraphRef.mount_point`.
+_MOUNT_POINT: Final = r"^[A-Za-z][A-Za-z0-9_]*$"
+
+
 class SubGraphRef(BaseModel):
     """A versioned sub-graph referenced by a parent algorithm (FR-217).
 
     The sub-graph is a versioned artifact (`sub_graph:slug@version`) mounted at a named
-    point in the parent's DAG; it is inlined at bundle time (W9-3).
+    point in the parent's DAG; it is inlined at bundle time (W9-3). The mount is a node of
+    the parent's graph: it consumes the parent values `inputs` maps its input ports to, and
+    produces the parent names `outputs` maps its output ports to (`RL-1309` DP-3; RL 9586).
+    Whether the maps are complete against the pinned version's ports is compile's to check.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     ref: ArtifactRef
-    mount_point: str
+    mount_point: str = Field(pattern=_MOUNT_POINT)
+    inputs: dict[str, str] = Field(default_factory=dict)
+    outputs: dict[str, str] = Field(default_factory=dict)
+
+    @field_validator("mount_point")
+    @classmethod
+    def _no_namespace_separator(cls, value: str) -> str:
+        if "__" in value:
+            raise ValueError("mount_point must not contain the namespace separator '__'")
+        return value
+
+
+@dataclass(frozen=True)
+class _MountNode:
+    """A sub-graph mount seen as a graph node (`RL-1309` DP-3 item 4): it consumes its mapped
+    input values and produces its mapped output names, like a step."""
+
+    step_id: str
+    consumes: list[str]
+    produces: list[str]
+
+
+_Node = RatingStep | _MountNode
 
 
 def _as_list(value: str | list[str]) -> list[str]:
     return value if isinstance(value, list) else [value]
 
 
-def _produced_by(steps: list[RatingStep]) -> dict[str, list[str]]:
+def _produced_by(steps: Sequence[_Node]) -> dict[str, list[str]]:
     produced: dict[str, list[str]] = {}
     for step in steps:
         for name in _as_list(step.produces):
@@ -364,7 +485,7 @@ def _produced_by(steps: list[RatingStep]) -> dict[str, list[str]]:
     return produced
 
 
-def _consumed_by(steps: list[RatingStep]) -> dict[str, list[str]]:
+def _consumed_by(steps: Sequence[_Node]) -> dict[str, list[str]]:
     consumed: dict[str, list[str]] = {}
     for step in steps:
         for name in _as_list(step.consumes):
@@ -372,14 +493,12 @@ def _consumed_by(steps: list[RatingStep]) -> dict[str, list[str]]:
     return consumed
 
 
-class RatingAlgorithm(BaseModel):
-    """A Rating Algorithm: the declarative DAG of rating steps (03 §4.1).
+class RatingAlgorithmDraft(BaseModel):
+    """A Rating Algorithm's field set, without its graph invariants (03 §4.1; RL-1474 item 1).
 
-    Invariants (spec §4.1): the DAG is acyclic; every `consumes` name is produced by
-    exactly one upstream step; every declared output has an `output` step; no step is
-    unreachable from an `input` and unreferenced by an `output` (FR-212). Enforced
-    here at the shape level; the strict save-time validation (types, determinism) is
-    W9-2.
+    The body of `POST /rating-algorithms` (WK-675 S2) and of S3's validate route: a graph
+    that breaks an invariant reaches the handler, which validates it into `RatingAlgorithm`
+    and refuses with the invariant's own code, not a generic request-validation 422.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -391,6 +510,27 @@ class RatingAlgorithm(BaseModel):
     steps: list[RatingStep]
     sub_graphs: list[SubGraphRef] = Field(default_factory=list)
 
+
+class RatingAlgorithmSaved(BaseModel):
+    """The 201 of `POST /rating-algorithms`: the saved version's id and address (DP-S2-2)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    id: UUID
+    slug: Slug
+    version: int = Field(ge=1)
+
+
+class RatingAlgorithm(RatingAlgorithmDraft):
+    """A Rating Algorithm: the declarative DAG of rating steps (03 §4.1).
+
+    Invariants (spec §4.1): the DAG is acyclic; every `consumes` name is produced by
+    exactly one upstream step; every declared output has an `output` step; no step is
+    unreachable from an `input` and unreferenced by an `output` (FR-212). Enforced
+    here at the shape level; the strict save-time validation (types, determinism) is
+    W9-2.
+    """
+
     @model_validator(mode="after")
     def _graph_invariants(self) -> RatingAlgorithm:
         steps = self.steps
@@ -398,8 +538,23 @@ class RatingAlgorithm(BaseModel):
         if len(ids) != len(set(ids)):
             raise ValueError("every step_id is unique (FR-215)")
 
-        produced = _produced_by(steps)
-        consumed = _consumed_by(steps)
+        # A mount is a node (RL-1309 DP-3 items 2 to 4): its `mount_point` is unique among the
+        # step_ids and the other mounts, it consumes its mapped inputs and produces its mapped
+        # outputs, and the checks below count it. The orphan check stays on real steps.
+        mounts = [
+            _MountNode(m.mount_point, list(m.inputs.values()), list(m.outputs.values()))
+            for m in self.sub_graphs
+        ]
+        mount_points = [m.step_id for m in mounts]
+        if len(mount_points) != len(set(mount_points)) or set(mount_points) & set(ids):
+            raise ValueError(
+                "every mount_point is unique among the step_ids and the other mounts "
+                "(FR-215, RL-1309 DP-3)"
+            )
+        nodes: list[_Node] = [*steps, *mounts]
+
+        produced = _produced_by(nodes)
+        consumed = _consumed_by(nodes)
 
         # FR-214: every declared output has an output step.
         output_steps = {s.output_name for s in steps if isinstance(s, RatingOutputStep)}
@@ -412,8 +567,8 @@ class RatingAlgorithm(BaseModel):
         # Build the dependency graph: edge A -> B when B consumes a name A produces.
         # A step never depends on itself, even when it re-produces a name it consumed
         # (the clamp pattern) — the self-edge is excluded.
-        dependencies: dict[str, set[str]] = {s.step_id: set() for s in steps}
-        for step in steps:
+        dependencies: dict[str, set[str]] = {s.step_id: set() for s in nodes}
+        for step in nodes:
             for name in _as_list(step.consumes):
                 producers = produced.get(name)
                 if not producers:
@@ -427,20 +582,20 @@ class RatingAlgorithm(BaseModel):
 
         # Kahn's algorithm — a cycle fails (FR-212).
         order: list[str] = []
-        pending = {s.step_id: len(dependencies[s.step_id]) for s in steps}
+        pending = {s.step_id: len(dependencies[s.step_id]) for s in nodes}
         ready = [sid for sid, n in pending.items() if n == 0]
         while ready:
             sid = ready.pop()
             order.append(sid)
-            for other in steps:
+            for other in nodes:
                 if sid in dependencies[other.step_id]:
                     pending[other.step_id] -= 1
                     if pending[other.step_id] == 0:
                         ready.append(other.step_id)
-        if len(order) != len(steps):
+        if len(order) != len(nodes):
             raise GraphCycleError("the rating DAG contains a cycle (FR-212)")
         position = {sid: i for i, sid in enumerate(order)}
-        step_by_id = {s.step_id: s for s in steps}
+        step_by_id: dict[str, _Node] = {s.step_id: s for s in nodes}
 
         # A value may be re-produced only as a chain: each producer after the first
         # consumes the name, so the value has exactly one *effective* producer (the last
@@ -478,7 +633,7 @@ class RatingAlgorithm(BaseModel):
     @staticmethod
     def _reachable(
         start: set[str],
-        step_by_id: dict[str, RatingStep],
+        step_by_id: Mapping[str, _Node],
         produced: dict[str, list[str]],
         consumed: dict[str, list[str]],
     ) -> set[str]:
@@ -498,7 +653,7 @@ class RatingAlgorithm(BaseModel):
     @staticmethod
     def _reaches_output(
         start: set[str],
-        step_by_id: dict[str, RatingStep],
+        step_by_id: Mapping[str, _Node],
         produced: dict[str, list[str]],
         consumed: dict[str, list[str]],
     ) -> set[str]:
@@ -538,6 +693,49 @@ class AlgorithmTableRepoint(BaseModel):
     after: ArtifactRef
 
 
+class AlgorithmSubGraphChange(BaseModel):
+    """One sub-graph mount that differs between two versions (FR-219; `RL-1309` DP-1 item 3).
+
+    `before` / `after` are the mounted versions (`None` where the mount is absent on that side),
+    `ports_changed` says the port map differs, and `steps` is the inner step diff of the two
+    pinned fragments, present only when the caller supplied both and the version moved.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    mount_point: str
+    before: ArtifactRef | None = None
+    after: ArtifactRef | None = None
+    ports_changed: bool = False
+    steps: AlgorithmDiff | None = None
+
+
+class InterfaceDelta(BaseModel):
+    """One input-contract field or output that differs between two versions (FR-1399)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    name: str
+    change: Literal["added", "removed", "changed"]
+
+
+def _interface_deltas(
+    old: Sequence[InputContractField] | Sequence[AlgorithmOutput],
+    new: Sequence[InputContractField] | Sequence[AlgorithmOutput],
+) -> list[InterfaceDelta]:
+    """Added, removed and changed entries by name, sorted by name."""
+    old_by = {e.name: e for e in old}
+    new_by = {e.name: e for e in new}
+    deltas = [InterfaceDelta(name=n, change="added") for n in new_by.keys() - old_by.keys()]
+    deltas += [InterfaceDelta(name=n, change="removed") for n in old_by.keys() - new_by.keys()]
+    deltas += [
+        InterfaceDelta(name=n, change="changed")
+        for n in old_by.keys() & new_by.keys()
+        if old_by[n].model_dump() != new_by[n].model_dump()
+    ]
+    return sorted(deltas, key=lambda d: d.name)
+
+
 class AlgorithmDiff(BaseModel):
     """The structural diff between two algorithm versions (FR-219)."""
 
@@ -549,6 +747,10 @@ class AlgorithmDiff(BaseModel):
     repointed_tables: list[AlgorithmTableRepoint] = Field(default_factory=list)
     input_contract_changed: bool = False
     outputs_changed: bool = False
+    # WK-1250 Slice 2 (RL-1309 DP-1 item 3): a sub-graph mount re-pointed, added or removed.
+    sub_graph_mounts: list[AlgorithmSubGraphChange] = Field(default_factory=list)
+    input_contract_deltas: list[InterfaceDelta] = Field(default_factory=list)
+    output_deltas: list[InterfaceDelta] = Field(default_factory=list)
 
     @property
     def summary(self) -> str:
@@ -561,6 +763,8 @@ class AlgorithmDiff(BaseModel):
             parts.append(f"{len(self.changed_steps)} field change(s)")
         if self.repointed_tables:
             parts.append(f"{len(self.repointed_tables)} table(s) re-pointed")
+        if self.sub_graph_mounts:
+            parts.append(f"{len(self.sub_graph_mounts)} sub-graph mount(s) changed")
         if self.input_contract_changed:
             parts.append("input contract changed")
         if self.outputs_changed:
@@ -568,15 +772,24 @@ class AlgorithmDiff(BaseModel):
         return ", ".join(parts) if parts else "no structural change"
 
 
-def diff_algorithms(old: RatingAlgorithm, new: RatingAlgorithm) -> AlgorithmDiff:
-    """The structural diff between two algorithm versions (FR-219).
+class _FragmentLike(Protocol):
+    """What the diff reads of a stored sub-graph (`model_schema.sub_graphs.SubGraph`, which
+    imports this module, so it cannot be named here)."""
 
-    Names steps added, removed, or changed field-by-field, and tables re-pointed
-    (a `table`/`lookup` step's artifact reference changed). The diff is attached to
-    the approval request by the API slice (W9-2/W9-3); this function computes it.
-    """
-    old_by_id = {s.step_id: s for s in old.steps}
-    new_by_id = {s.step_id: s for s in new.steps}
+    @property
+    def inputs(self) -> Sequence[Any]: ...
+    @property
+    def outputs(self) -> list[AlgorithmOutput]: ...
+    @property
+    def steps(self) -> list[RatingStep]: ...
+
+
+def _diff_steps(
+    old_steps: Sequence[RatingStep], new_steps: Sequence[RatingStep]
+) -> tuple[list[str], list[str], list[AlgorithmStepChange], list[AlgorithmTableRepoint]]:
+    """Steps added, removed and changed field-by-field, and tables re-pointed (FR-219)."""
+    old_by_id = {s.step_id: s for s in old_steps}
+    new_by_id = {s.step_id: s for s in new_steps}
 
     added = sorted(set(new_by_id) - set(old_by_id))
     removed = sorted(set(old_by_id) - set(new_by_id))
@@ -608,7 +821,69 @@ def diff_algorithms(old: RatingAlgorithm, new: RatingAlgorithm) -> AlgorithmDiff
                         step_id=sid, field=key, before=o_dump.get(key), after=n_dump.get(key)
                     )
                 )
+    return added, removed, changes, repoints
 
+
+def _diff_mounts(
+    old: RatingAlgorithm,
+    new: RatingAlgorithm,
+    fragments: Mapping[str, _FragmentLike] | None,
+) -> list[AlgorithmSubGraphChange]:
+    old_by_point = {m.mount_point: m for m in old.sub_graphs}
+    new_by_point = {m.mount_point: m for m in new.sub_graphs}
+    found: list[AlgorithmSubGraphChange] = []
+    for point in sorted(set(old_by_point) | set(new_by_point)):
+        o, n = old_by_point.get(point), new_by_point.get(point)
+        before, after = (o.ref if o else None), (n.ref if n else None)
+        ports_changed = (o.inputs, o.outputs) != (n.inputs, n.outputs) if o and n else False
+        if before == after and not ports_changed:
+            continue
+        inner: AlgorithmDiff | None = None
+        if before is not None and after is not None and before != after and fragments:
+            old_fragment = fragments.get(str(before))
+            new_fragment = fragments.get(str(after))
+            if old_fragment is not None and new_fragment is not None:
+                added, removed, changes, repoints = _diff_steps(
+                    old_fragment.steps, new_fragment.steps
+                )
+                inner = AlgorithmDiff(
+                    added_steps=added,
+                    removed_steps=removed,
+                    changed_steps=changes,
+                    repointed_tables=repoints,
+                    input_contract_changed=old_fragment.inputs != new_fragment.inputs,
+                    outputs_changed=old_fragment.outputs != new_fragment.outputs,
+                )
+        found.append(
+            AlgorithmSubGraphChange(
+                mount_point=point,
+                before=before,
+                after=after,
+                ports_changed=ports_changed,
+                steps=inner,
+            )
+        )
+    return found
+
+
+def diff_algorithms(
+    old: RatingAlgorithm,
+    new: RatingAlgorithm,
+    *,
+    fragments: Mapping[str, _FragmentLike] | None = None,
+) -> AlgorithmDiff:
+    """The structural diff between two algorithm versions (FR-219).
+
+    Names steps added, removed, or changed field-by-field, and tables re-pointed
+    (a `table`/`lookup` step's artifact reference changed). The diff is attached to
+    the approval request by the API slice (W9-2/W9-3); this function computes it.
+
+    A sub-graph mount that was added, removed, re-pointed or re-mapped is named in
+    `sub_graph_mounts` (`RL-1309` DP-1 item 3). `fragments`, keyed by `str(ArtifactRef)`, supplies
+    the pinned fragments of both versions so a re-point also carries the inner step changes; with
+    none, the re-point is still named.
+    """
+    added, removed, changes, repoints = _diff_steps(old.steps, new.steps)
     return AlgorithmDiff(
         added_steps=added,
         removed_steps=removed,
@@ -616,6 +891,9 @@ def diff_algorithms(old: RatingAlgorithm, new: RatingAlgorithm) -> AlgorithmDiff
         repointed_tables=repoints,
         input_contract_changed=old.input_contract != new.input_contract,
         outputs_changed=old.outputs != new.outputs,
+        sub_graph_mounts=_diff_mounts(old, new, fragments),
+        input_contract_deltas=_interface_deltas(old.input_contract, new.input_contract),
+        output_deltas=_interface_deltas(old.outputs, new.outputs),
     )
 
 
@@ -738,6 +1016,11 @@ class RateTableDiff(BaseModel):
     `changed_cells` is the number of cells whose value differs. The two percentages are
     `None` where there is nothing to compare (no cells, or no cell has a non-zero
     baseline); percentages are Decimals, serialised as strings, never JSON floats (R2).
+
+    `portfolio_exposure` and `matched_exposure` (`RL-1361` item 4) are the named portfolio's
+    total exposure and the exposure that mapped to a cell of the current version. Both are
+    `None` when no portfolio is named, which tells an unweighted diff from a weighted one
+    whose mean is `None` (no weight on a changed cell, or only zero-weight cells).
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -745,6 +1028,32 @@ class RateTableDiff(BaseModel):
     changed_cells: int = Field(ge=0)
     max_abs_change_pct: Decimal | None = None
     exposure_weighted_mean_change_pct: Decimal | None = None
+    portfolio_exposure: Decimal | None = None
+    matched_exposure: Decimal | None = None
+
+
+class RateTableDiffCell(BaseModel):
+    """One changed cell of a rate table diff (03 §4.2, FR-231, `RL-1418` T2).
+
+    `key` holds each declared key's name and the cell's stored value for it. `change` says
+    whether the cell was added, removed or changed. The values are decimal strings on the
+    wire (R2), null on the side where the cell is absent. `abs_change` is
+    `current_value - baseline_value` and `rel_change_pct` is that over `baseline_value` x 100;
+    each is null unless both values are present, and the percentage also when the baseline is
+    zero. `weight` is the cell's Σ exposure (FR-231): `"0"` for a current cell whose Σ is 0 or
+    that no portfolio row maps to, and null when no portfolio is named or the cell is
+    `removed`, because rows map only to cells of the current version.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    key: dict[str, str]
+    change: Literal["added", "removed", "changed"]
+    baseline_value: Decimal | None = None
+    current_value: Decimal | None = None
+    abs_change: Decimal | None = None
+    rel_change_pct: Decimal | None = None
+    weight: Decimal | None = None
 
 
 #: The key filter of 03 §5.2: exact-value match over the table's declared keys.

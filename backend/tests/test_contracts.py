@@ -44,6 +44,7 @@ COMPARED_SLUGS: Final[tuple[str, ...]] = (
     "custom-objective",
     "dataset-version",
     "diagnostics",
+    "dislocation-run",
     "grouping",
     "job",
     "model",
@@ -88,6 +89,7 @@ ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     "deployment-request-create": "first written form — 03 §5.1 (WK-674 Slice 2, FR-267, RL-1301 A)",
     "approval-submission": "first written form — 06 §5.1 (WK-674 Slice 2, PL-1392 Acceptance 16)",
     "approval-withdrawal": "first written form — 06 §5.1 (WK-674 Slice 2, PL-1392 Task 6, FR-357)",
+    "rating-version-create": "first written form — 03 §5.1 create row (RL-1428, FD-1421, FR-237)",
     "objective-usage": "first written form — FR-164 named the query",
     "oidc-auth-config": "first written form — FR-394 names the contents",
     "problem-detail": "first written form — the RFC 9457 problem shape",
@@ -95,7 +97,6 @@ ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     # authored-only — later-phase shapes, shared common/ defs, or (F27) shapes that
     # have since shipped in model-schema and are excluded by omission rather than by plan
     "approval-request": "later-phase — 06 governance",
-    "dislocation-run": "03 §4.6 — hand-authored until WK-673 Slice 4 generates and compares it (PL-1267)",  # noqa: E501
     "dossier": "later-phase — 06 governance",
     "gipp-check": "later-phase — 06 governance",
     "monitoring": "later-phase — 05 monitoring",

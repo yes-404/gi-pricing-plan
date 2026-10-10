@@ -300,3 +300,315 @@ def test_the_pre_edit_valid_algorithm_is_refused_at_save_time(
     )
     assert response.status_code == 422, response.text
     assert response.json()["code"] == "LADDER_CLAMP_UNPLACEABLE"
+
+
+# --- WK-673 Slice 3 (SL-1387): the FR-219 diff route is typed, and keeps its keys ---
+
+
+@pytest.mark.req("FR-219")
+def test_algorithm_diff_route_is_typed_and_keeps_its_keys(
+    api_client, workspace_id, principal, grant
+) -> None:
+    schema = api_client.app.openapi()
+    ok = schema["paths"]["/api/v1/rating-algorithms/{slug}@{version}/diff"]["get"]["responses"][
+        "200"
+    ]["content"]["application/json"]["schema"]
+    assert ok == {"$ref": "#/components/schemas/AlgorithmDiff"}
+
+    asyncio.get_event_loop().run_until_complete(grant("analyst"))
+    for version in (1, 2):
+        body = valid_algorithm()
+        body["version"] = version
+        created = api_client.post(
+            "/api/v1/rating-algorithms", json=body, headers=_headers(principal, workspace_id)
+        )
+        assert created.status_code == 201, created.text
+    diff = api_client.get(
+        "/api/v1/rating-algorithms/motor-gb@2/diff",
+        params={"against": 1},
+        headers=_headers(principal, workspace_id),
+    )
+    assert diff.status_code == 200, diff.text
+    assert set(diff.json()) == {
+        # the six keys that exist before SL-1387, pinned by literal
+        "added_steps",
+        "removed_steps",
+        "changed_steps",
+        "repointed_tables",
+        "input_contract_changed",
+        "outputs_changed",
+        # the two it adds
+        "input_contract_deltas",
+        "output_deltas",
+        # the one SL-1340 adds (RL-1309 DP-1 item 3)
+        "sub_graph_mounts",
+    }
+
+
+@pytest.mark.req("FR-212")
+def test_the_save_route_publishes_typed_bodies(app) -> None:
+    operation = app.openapi()["paths"]["/api/v1/rating-algorithms"]["post"]
+    body = operation["requestBody"]["content"]["application/json"]["schema"]
+    created = operation["responses"]["201"]["content"]["application/json"]["schema"]
+    assert body == {"$ref": "#/components/schemas/RatingAlgorithmDraft"}
+    assert created == {"$ref": "#/components/schemas/RatingAlgorithmSaved"}
+
+
+@pytest.mark.req("FR-212")
+def test_the_typed_save_body_keeps_the_graph_codes(
+    api_client, workspace_id, principal, grant
+) -> None:
+    """DP-S2-1 condition 2: the codes, never the status alone."""
+    cyclic = valid_algorithm()
+    cyclic["steps"][6]["consumes"] = ["risk_premium_minor", "expense_factor", "cycle_val"]
+    cyclic["steps"][7] = {
+        "step_id": "s_minprem", "type": "constraint", "label": "Cycle",
+        "condition": "true", "on_violation": "clamp", "reason_code": "CYCLE",
+        "consumes": ["office_premium_minor"], "produces": "cycle_val",
+    }
+    unresolved = valid_algorithm()
+    unresolved["steps"][6]["consumes"] = [
+        "risk_premium_minor", "expense_factor", "commission_factor",
+    ]
+    assert _post(api_client, workspace_id, principal, grant, cyclic).json()["code"] == (
+        "RATING_GRAPH_CYCLIC"
+    )
+    assert _post(api_client, workspace_id, principal, grant, unresolved).json()["code"] == (
+        "RATING_GRAPH_UNRESOLVED_REF"
+    )
+
+
+@pytest.mark.req("FR-212")
+def test_the_save_answers_the_typed_201(api_client, workspace_id, principal, grant) -> None:
+    response = _post(api_client, workspace_id, principal, grant, valid_algorithm())
+    assert response.status_code == 201, response.text
+    assert set(response.json()) == {"id", "slug", "version"}
+
+
+# --- the algorithm read by slug@version (RL-1475 T1/T2; Acceptance 3) ------------------------
+
+
+@pytest.mark.req("FR-1530")
+async def test_a_saved_algorithm_reads_back_by_slug_at_version(
+    api_client, workspace_id, principal, grant
+) -> None:
+    from model_schema import RatingAlgorithm
+
+    await grant("analyst")
+    saved = api_client.post(
+        "/api/v1/rating-algorithms",
+        json=valid_algorithm(),
+        headers=_headers(principal, workspace_id),
+    )
+    assert saved.status_code == 201, saved.text
+    read = api_client.get(
+        "/api/v1/rating-algorithms/motor-gb@1", headers=_headers(principal, workspace_id)
+    )
+    assert read.status_code == 200, read.text
+    assert RatingAlgorithm.model_validate(read.json()) == RatingAlgorithm.model_validate(
+        valid_algorithm()
+    )
+
+
+@pytest.mark.req("FR-1530")
+async def test_an_unknown_algorithm_version_is_not_found(
+    api_client, workspace_id, principal, grant
+) -> None:
+    await grant("analyst")
+    read = api_client.get(
+        "/api/v1/rating-algorithms/motor-gb@99", headers=_headers(principal, workspace_id)
+    )
+    assert read.status_code == 404, read.text
+    assert read.json()["code"] == "NOT_FOUND"
+    # The handler's own refusal, not the router's: an unrouted path also answers NOT_FOUND.
+    assert read.json()["detail"] == "No rating algorithm motor-gb@99 in this workspace."
+
+
+@pytest.mark.req("FR-1530")
+async def test_another_workspaces_algorithm_is_not_found(
+    api_client, workspace_id, principal, grant, database
+) -> None:
+    from app.platform import rating_algorithms as service
+    from model_schema import new_uuid7
+
+    await grant("analyst")
+    await service.create_algorithm(database, new_uuid7(), principal.id, valid_algorithm())
+    read = api_client.get(
+        "/api/v1/rating-algorithms/motor-gb@1", headers=_headers(principal, workspace_id)
+    )
+    assert read.status_code == 404, read.text
+    assert read.json()["code"] == "NOT_FOUND"
+    assert read.json()["detail"] == "No rating algorithm motor-gb@1 in this workspace."
+
+
+@pytest.mark.req("FR-1530")
+async def test_the_algorithm_read_needs_rating_read(
+    api_client, workspace_id, principal, membership
+) -> None:
+    await membership()
+    read = api_client.get(
+        "/api/v1/rating-algorithms/motor-gb@1", headers=_headers(principal, workspace_id)
+    )
+    assert read.status_code == 403, read.text
+
+
+@pytest.mark.req("FR-1530")
+def test_the_algorithm_read_publishes_rating_algorithm(app) -> None:
+    operation = app.openapi()["paths"]["/api/v1/rating-algorithms/{slug}@{version}"]["get"]
+    schema = operation["responses"]["200"]["content"]["application/json"]["schema"]
+    assert schema == {"$ref": "#/components/schemas/RatingAlgorithm"}
+
+
+# -- FD-1458 (PL-1464): the feature_map save check ----------------------------------------
+#
+# **Authored ahead of a database run** (items 13, 16, 21 need a fitted GLM): their
+# red-by-cause is owed to the first gate-slot window (LG-1587).
+
+from pathlib import Path  # noqa: E402
+
+from backend.tests.test_model_jobs import (  # noqa: E402
+    _actuary,
+    _dataset,
+    _factor,
+    _spec,
+    _split,
+    _validated_version,
+)
+
+import app.platform.rating_algorithms as algorithms_module  # noqa: E402
+from app.db.models import ModelRow  # noqa: E402
+from app.platform import jobs as job_service  # noqa: E402
+from app.platform import modelling as model_service  # noqa: E402
+from app.worker.tasks import execute_job  # noqa: E402
+from model_schema import JobKind, JobStatus  # noqa: E402
+from pricing_core.modelling import factors as pricing_core_factors  # noqa: E402
+
+REPO = Path(__file__).resolve().parents[2]
+#: A Factor slug that is NOT its source column, so "the slug" and "the raw column" differ.
+FACTOR_SLUG = "area_group"
+SOURCE_COLUMN = "area"
+
+
+async def fitted_glm_with_distinct_slug(database, blob_store, workspace_id) -> str:
+    """A GLM fitted through the real Job whose one Factor's slug (`area_group`) differs from
+    its source column (`area`); returns its `model:slug@version` ref."""
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(database, blob_store, workspace_id, actor, dataset_id)
+    factor = await _factor(database, workspace_id, actor, dataset_id, FACTOR_SLUG, SOURCE_COLUMN)
+    split = await _split(database, blob_store, workspace_id, actor, version_id)
+    async with database.unit_of_work() as session:
+        row, _ = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor,
+            spec=_spec(version_id, (factor,), split_ref=split),
+        )
+        model_id = row.id
+        job = await job_service.submit(
+            session, JobKind.MODEL_FIT,
+            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+             "model_id": str(model_id)},
+            actor, workspace_id=workspace_id,
+        )
+    assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
+    async with database.session() as session:
+        fitted = await session.get(ModelRow, model_id)
+    assert fitted is not None
+    return f"model:{fitted.model_family_slug}@{fitted.version}"
+
+
+def glm_algorithm(model_ref: str, feature_map: dict) -> dict:
+    """`valid_algorithm` with its `model_call` re-pointed at `model_ref` under `feature_map`."""
+    body = valid_algorithm()
+    for step in body["steps"]:
+        if step["type"] == "model_call":
+            step["model_ref"] = model_ref
+            step["feature_map"] = feature_map
+    return body
+
+
+@pytest.mark.req("FR-222")
+async def test_a_feature_map_naming_a_raw_column_is_refused_at_save(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """Item 13 (DP-2 (b), DP-5 (ii) (a)): a raw dataset column is refused with its code and
+    nothing is written; the control, the Factor slug, saves."""
+    await grant("analyst")
+    ref = await fitted_glm_with_distinct_slug(database, blob_store, workspace_id)
+    headers = _headers(principal, workspace_id)
+
+    refused = api_client.post(
+        "/api/v1/rating-algorithms",
+        json=glm_algorithm(ref, {"driver_age": SOURCE_COLUMN}), headers=headers,
+    )
+    assert refused.status_code == 422, refused.text
+    assert refused.json()["code"] == "MODEL_CALL_FEATURE_MAP_INVALID"
+    detail = refused.json()["detail"]
+    for named in ("s_rp", SOURCE_COLUMN, ref):
+        assert named in detail
+    absent = api_client.get("/api/v1/rating-algorithms/motor-gb@1", headers=headers)
+    assert absent.status_code == 404
+
+    saved = api_client.post(
+        "/api/v1/rating-algorithms",
+        json=glm_algorithm(ref, {"driver_age": FACTOR_SLUG}), headers=headers,
+    )
+    assert saved.status_code == 201, saved.text
+
+
+@pytest.mark.req("FR-227")
+async def test_a_stored_model_call_without_result_type_reads_back_as_the_legacy_default(
+    api_client, workspace_id, principal, grant
+) -> None:
+    """Item 16: an algorithm stored before the field (`valid_algorithm` declares none) reads
+    back through the service with its `model_call` step's `result_type` null: the legacy
+    default, not `decimal` (the 2026-10-10 00:40:31 BST ruling). No migration is written:
+    the algorithm is its JSON payload and the default is the model's."""
+    await grant("analyst")
+    headers = _headers(principal, workspace_id)
+    assert api_client.post(
+        "/api/v1/rating-algorithms", json=valid_algorithm(), headers=headers
+    ).status_code == 201
+    read = api_client.get("/api/v1/rating-algorithms/motor-gb@1", headers=headers)
+    assert read.status_code == 200, read.text
+    call = next(s for s in read.json()["steps"] if s["type"] == "model_call")
+    assert call["result_type"] is None
+
+
+@pytest.mark.req("FR-222")
+async def test_the_feature_map_save_check_calls_the_one_required_inputs_helper(
+    monkeypatch, api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """Item 21: the save check imports `required_model_inputs` and calls it once, with the
+    fitted GLM's Factor slugs in spec order."""
+    assert (
+        algorithms_module.required_model_inputs is pricing_core_factors.required_model_inputs
+    )
+    await grant("analyst")
+    ref = await fitted_glm_with_distinct_slug(database, blob_store, workspace_id)
+    calls: list[tuple[str, ...]] = []
+
+    def spy(factors, feature_order):
+        result = pricing_core_factors.required_model_inputs(factors, feature_order)
+        calls.append(result)
+        return result
+
+    monkeypatch.setattr(algorithms_module, "required_model_inputs", spy)
+    response = api_client.post(
+        "/api/v1/rating-algorithms",
+        json=glm_algorithm(ref, {"driver_age": FACTOR_SLUG}),
+        headers=_headers(principal, workspace_id),
+    )
+    assert response.status_code == 201, response.text
+    assert calls == [(FACTOR_SLUG,)]
+
+
+@pytest.mark.req("FR-222")
+def test_required_model_inputs_is_defined_once() -> None:
+    roots = [*(REPO / "packages").glob("*/src"), REPO / "backend" / "src"]
+    hits = sorted(
+        path.relative_to(REPO).as_posix()
+        for root in roots
+        for path in root.rglob("*.py")
+        if "def required_model_inputs(" in path.read_text(encoding="utf-8")
+    )
+    assert hits == ["packages/pricing-core/src/pricing_core/modelling/factors.py"]

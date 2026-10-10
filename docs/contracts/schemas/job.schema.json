@@ -39,6 +39,7 @@
         "rating.compile",
         "rating.regression",
         "rate_table.diff",
+        "rate_table.diff_cells",
         "score.batch",
         "score.trace_produce",
         "dislocation.run",

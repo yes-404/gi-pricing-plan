@@ -3,7 +3,7 @@ id: PL-1342
 family: plan
 kind: leaf
 title: WK-674 Slice 3 — Environment isolation (FR-430, FR-431, register F54 and F48, NFR-496 prod-sampling limb): leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: superseded                  # draft → active → superseded | retired (§1.2a)
 created: 2026-09-30
 owner: planner
 tree: 11c76b6c83647c512796fedb9c0143927dcd78cb
@@ -11,7 +11,7 @@ phase: P2
 work: WK-674
 slice: SL-1257
 supersedes: []
-superseded_by: ~
+superseded_by: PL-1583
 corrected_by: []
 relates: [PL-1237, PL-1306, PL-1303, RL-1184, RL-1301, RL-1232, RL-1236, RL-1263, RL-1311]
 ---

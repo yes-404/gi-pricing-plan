@@ -1,0 +1,67 @@
+{
+ "slug": "fremtpl2-rel-veh-brand",
+ "version": 2,
+ "rateable": true,
+ "storage": "rows",
+ "keys": [
+  {
+   "name": "veh_brand",
+   "type": "string",
+   "banding_ref": null
+  }
+ ],
+ "value": {
+  "name": "rel_veh_brand",
+  "type": "relativity",
+  "unit": "factor",
+  "min": null,
+  "max": null
+ },
+ "default_row": null,
+ "rows": [
+  {
+   "veh_brand": "B1",
+   "rel_veh_brand": "1.00000000"
+  },
+  {
+   "veh_brand": "B10",
+   "rel_veh_brand": "1.04018283"
+  },
+  {
+   "veh_brand": "B11",
+   "rel_veh_brand": "1.14296159"
+  },
+  {
+   "veh_brand": "B12",
+   "rel_veh_brand": "1.21710489"
+  },
+  {
+   "veh_brand": "B13",
+   "rel_veh_brand": "1.04477744"
+  },
+  {
+   "veh_brand": "B14",
+   "rel_veh_brand": "0.87550691"
+  },
+  {
+   "veh_brand": "B2",
+   "rel_veh_brand": "0.99619658"
+  },
+  {
+   "veh_brand": "B3",
+   "rel_veh_brand": "0.99837942"
+  },
+  {
+   "veh_brand": "B4",
+   "rel_veh_brand": "0.98682173"
+  },
+  {
+   "veh_brand": "B5",
+   "rel_veh_brand": "1.06106588"
+  },
+  {
+   "veh_brand": "B6",
+   "rel_veh_brand": "0.98674199"
+  }
+ ]
+}

@@ -239,6 +239,18 @@ export const routes: RouteRecordRaw[] = [
     props: true,
   },
   {
+    // `03` §5.3's DAG designer. `:slug` and `:version` are the Rating Version's own
+    // (RL-1473), never its algorithm's.
+    path: "/rating/:slug/v/:version/design",
+    name: "rating-design",
+    meta: { requiresAuth: true },
+    component: () => import("@/views/RatingDesignView.vue"),
+    props: (route) => ({
+      slug: String(route.params.slug),
+      version: String(route.params.version),
+    }),
+  },
+  {
     // `02` §5.3 and `00` §5.6, both of which name this path exactly. Routed on the version
     // **id** rather than slug-and-number, because a banding is derived against one specific
     // version and the id is what every `/dataset-versions/{id}/…` route already takes.

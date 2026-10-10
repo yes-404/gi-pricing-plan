@@ -43,6 +43,7 @@ class AuthoredString:
 #: Every field whose text the engine evaluates, as (the class that defines it, the field name).
 EXPRESSION_FIELDS: tuple[tuple[type, str], ...] = (
     (RatingLookupStep, "key_expr"),
+    (RatingLookupStep, "as_at"),
     (RatingTableStep, "key_expr"),
     (RatingExpressionStep, "expr"),
     (RatingConstraintStep, "condition"),
@@ -57,16 +58,15 @@ NON_EXPRESSION_FIELDS: dict[tuple[type, str], str] = {
     (RatingStepBase, "consumes"): "names of upstream values, resolved by the graph invariants",
     (RatingStepBase, "produces"): "names of values this step defines",
     (RatingInputStep, "input_name"): "names a declared input",
-    (RatingLookupStep, "as_at"): (
-        "names a date input; nothing evaluates it, the window is an exact key match "
-        "(`runtime.py` module docstring). It moves to EXPRESSION_FIELDS when the runtime "
-        "evaluates it (RL-1313 DP-G5 (i))"
-    ),
     (RatingExpressionStep, "result_type"): (
         "the step's declared result type (FR-227), read by the result-type check and never "
         "evaluated by the engine"
     ),
     (RatingModelCallStep, "feature_map"): "graph value names mapped to model feature names",
+    (RatingModelCallStep, "result_type"): (
+        "the step's declared result type (FR-227), read by the result-type check and never "
+        "evaluated by the engine"
+    ),
     (RatingConstraintStep, "reason_code"): "a code recorded on violation",
     (RatingOutputStep, "output_name"): "names a declared output",
 }

@@ -73,6 +73,14 @@ onMounted(async () => {
           <dd class="font-medium">
             {{ rating.status }}
           </dd>
+          <dd>
+            <RouterLink
+              :to="`/rating/${rating.slug}/v/${rating.version}/design`"
+              class="text-sky-700 underline"
+            >
+              Open in the designer
+            </RouterLink>
+          </dd>
         </div>
         <div>
           <dt class="text-slate-500">

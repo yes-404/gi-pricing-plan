@@ -112,6 +112,7 @@ from model_schema.diagnostics import (
     UniversalDiagnostics,
     Weighting,
 )
+from model_schema.dislocation import DislocationEstimate, DislocationRun, DislocationSpec
 from model_schema.envelope import ArtifactEnvelope
 from model_schema.graph_errors import GraphCycleError, GraphUnresolvedRefError
 from model_schema.ids import new_uuid7, uuid7_timestamp_ms
@@ -279,6 +280,7 @@ from model_schema.rating import (
     AlgorithmDiff,
     AlgorithmOutput,
     AlgorithmStepChange,
+    AlgorithmSubGraphChange,
     AlgorithmTableRepoint,
     BundleMetadata,
     InputContractField,
@@ -286,6 +288,8 @@ from model_schema.rating import (
     Pins,
     RateTableVersion,
     RatingAlgorithm,
+    RatingAlgorithmDraft,
+    RatingAlgorithmSaved,
     RatingConstraintStep,
     RatingExpressionStep,
     RatingInputStep,
@@ -298,6 +302,7 @@ from model_schema.rating import (
     RatingStepBase,
     RatingTableStep,
     RatingVersion,
+    RatingVersionCreate,
     RatingVersionEvidence,
     RatingVersionStatus,
     RoundSpec,
@@ -438,6 +443,7 @@ __all__ = [
     "AlgorithmDiff",
     "AlgorithmOutput",
     "AlgorithmStepChange",
+    "AlgorithmSubGraphChange",
     "AlgorithmTableRepoint",
     "Applicability",
     "ApprovalDecision",
@@ -508,6 +514,9 @@ __all__ = [
     "DerivedBlock",
     "DerivedFrom",
     "Diagnostics",
+    "DislocationEstimate",
+    "DislocationRun",
+    "DislocationSpec",
     "DoubleLift",
     "DoubleLiftBin",
     "DroppedEvalMetric",
@@ -646,6 +655,8 @@ __all__ = [
     "QuotePurpose",
     "RateTableVersion",
     "RatingAlgorithm",
+    "RatingAlgorithmDraft",
+    "RatingAlgorithmSaved",
     "RatingConstraintStep",
     "RatingExpressionStep",
     "RatingInputStep",
@@ -658,6 +669,7 @@ __all__ = [
     "RatingStepBase",
     "RatingTableStep",
     "RatingVersion",
+    "RatingVersionCreate",
     "RatingVersionEvidence",
     "RatingVersionStatus",
     "ReconciledPeril",

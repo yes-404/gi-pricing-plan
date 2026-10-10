@@ -184,6 +184,13 @@ most two gates at once and the thread caps still hold each stage to 4. **Do not 
 each stage its own `flock`**: that is seven locks where the budget assumed one, and it
 reinstates exactly the double-lock deadlock `GIP_GATE_SLOT` exists to prevent.
 
+**Start no background process inside a held slot; if unavoidable, stop it and its children
+by their own pids before release; check with `fuser <lockfile>` that only your pid holds
+it.** Why: on 2026-10-08 (S2) a pnpm/vite wrapper started inside `flock -c` inherited the
+lock fd and held gate-1 for about 17 minutes after the run ended.
+
+**Gate-2 standing rule: one docs check beside one code gate, and nothing else.** From the entry "2026-10-10 03:41:56 BST — RULINGS: S4's test_audit_docs_ids.py 82→83 YES; evidence form accepted; GATE-2 pairing becomes STANDING (docs ∥ one code gate only)" in `~/gi-pricing-plan.local/channel/to-lead.md`, item 3, verbatim: *"From now on, gate-2 may run ONE DOCS check (audit-docs, doc-index, register-lint, migrate --verify, the docs pytest subset) concurrently with ONE code full gate on gate-1, never beside a measurement. Two concurrent code gates remain NOT allowed (untested). Any timing-sensitive failure while gate-2 is busy is re-run ALONE before it counts."* The rule rests on three clean pairs, and is limited to exactly what they tested: pair 1, #1250's gate beside finisher-s3's docs checks (00:24–01:10); pair 2, S4's gate beside D2's checks (01:53–02:40); pair 3, S4's re-gate beside D3's checks (02:54–03:40), all on 2026-10-10 BST.
+
 **Read the table, not the exit code alone.** The body's last statement is
 `[ "$nfail" = "0" ]`, so a failing gate exits 1 and a passing one 0 — and 1 is
 distinguishable from the wrapper's busy-slot 99, which is what the `-E 99` fix below is
@@ -390,6 +397,42 @@ database at all.
 
 So: **bring the stack up before the gate, and if the suite is red, check `docker ps` before
 diagnosing anything.**
+
+### Running a check beside a gate: a probe that gates, not one that prints
+
+The sweep-pause rule in every command-running role file (`.claude/roles/*.md`, the bullet
+beginning "A sweep or batch of checks … PAUSES for the WHOLE of any held gate slot") needs a
+probe whose result **stops** the check. Two incidents on 2026-10-06 show the difference: a
+chain ran `audit-docs` in the same command as a slot probe that printed `HELD1` — the probe
+reported, it did not gate (`channel/from-lead-2026-10-06.md`, entry "01:51:00 BST"); and a
+sweep ran beside a held gate-1 (same file, entry "01:41:35 BST"). **A probe whose result is
+only printed is not a control.**
+
+```bash
+held=
+for s in /tmp/slots/gate-1 /tmp/slots/gate-2; do
+  flock -n -E 75 "$s" true; rc=$?
+  [ "$rc" -eq 0 ] || held="$held ${s##*/}(rc=$rc)"
+done
+[ -z "$held" ] || { echo "SLOT HELD:$held — check not run" >&2; exit 75; }
+python3 /abs/path/to/scripts/audit-docs.py   # or any batch of checks
+```
+
+- **`-E 75`** makes "busy" a distinct code, so it reads apart from any other `flock` failure
+  (the `-E 99`/`-E 98` reasoning in the slot wrappers above; `flock -- cmd` is a different
+  trap and exits 69 here).
+- **Any nonzero refuses**, not only 75: an error is not a free slot.
+- **The refusal exits**, so the check after it cannot run. Printing and carrying on is the
+  defect.
+- **Never `cd` inside the wrapper**: pass absolute paths or `--directory` to the checks.
+- **Check scratch (`TMPDIR`, `--verify` dirs) goes under `/home` or the job dir, never `/tmp`**: `/tmp` is a 16 GB tmpfs, i.e. RAM. It hit 99% on 2026-10-06, and a full `/tmp` shows up as odd `mypy` or `pytest` internal errors.
+
+**Residual, named:** a gate can take a slot between the probe and the check. The pattern
+bounds the overlap; it does not remove it. For a long check, re-probe between stages.
+
+Verified: 2026-10-06 on this box against main a9ef6777. Held: gate-1 held by another
+session's gate → `SLOT HELD: gate-1(rc=75) — check not run`, exit 75, check not run. Free
+case: same loop over scratch lock files → check ran. See the PR body for output.
 
 ### `mypy`'s `files` list, and why it cannot be one flat list covering everything
 
@@ -1060,7 +1103,7 @@ build log showing no actual build (wrong cwd), one tmpdir ls -i showing identica
 (collision). This section drafted by executor-h; verified by deputy as measured. Reference: 
 to-lead.md entries 10:55:17, 11:02:41, 11:48:50, 14:33:28 (maintainer instruction).
 
-Verified: 2026-09-29 against main 4819ec88 (gate slot budget 3 → 2 for the 8-vCPU box, WK-1178; the wrapper loop and `conftest.py` `_SLOT_COUNT` re-read together)
+Verified: 2026-10-10 against main db0642c4 (new paragraph: the gate-2 standing rule, one docs check beside one code gate); previously 2026-10-08 against main d85cf854 (new rule: no background process inside a held slot, `fuser` check); previously 2026-10-06 against main a9ef6777 (new section: a slot probe that gates a check); previously 2026-09-29 against main 4819ec88 (gate slot budget 3 → 2 for the 8-vCPU box, WK-1178; the wrapper loop and `conftest.py` `_SLOT_COUNT` re-read together)
 Prior: 2026-09-17 against main 71f5a2208c7a92bad486ae128775a4a42c7ebc63
 
 2026-09-06 — the gate body's seven stages now run in parallel inside one slot, each

@@ -10,6 +10,7 @@ reference (FR-386) and refuse one that does not exist.
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -23,6 +24,7 @@ from app.db.models import (
     ApprovalDecisionRow,
     ApprovalRequestRow,
     AuditEventRow,
+    BlobRow,
     RatingVersionRow,
     RegressionSuiteRow,
     RegressionSuiteVersionRow,
@@ -32,14 +34,17 @@ from app.db.models import (
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import approvals as approval_service
+from app.platform import dislocation_runs as dislocation_service
 from app.platform import rating_algorithms as algorithm_service
 from app.platform import rating_versions as rating_service
 from app.platform import rbac
 from app.platform import regression_runs as run_service
 from app.platform import regression_suites as suite_service
+from app.platform.blobs import BlobStore
 from model_schema import (
     ActorKind,
     ArtifactRef,
+    BlobRef,
     DecisionKind,
     Principal,
     RatingVersionStatus,
@@ -49,6 +54,7 @@ from model_schema import (
     new_uuid7,
     suite_content_hash,
 )
+from model_schema.dislocation import DislocationRun
 from pricing_core.rating.compile import Bundle
 from pricing_core.rating.runtime import CompiledBundle, load_bundle
 
@@ -109,7 +115,7 @@ async def test_create_submit_approve_a_rating_version(
         _, request = await rating_service.submit_for_review(
             session, workspace_id=workspace_id, actor=actuary,
             rating_version_id=rating_id, change_summary="demo rating version",
-            load_compiled=gate.load,
+            blob_store=gate.blob_store, load_compiled=gate.load,
         )
         request_id = request.id
     async with database.session() as session:
@@ -176,7 +182,7 @@ async def test_a_rating_version_reference_resolves_in_the_approvals_fanout(
         await rating_service.submit_for_review(
             session, workspace_id=workspace_id, actor=actuary,
             rating_version_id=rating_id, change_summary="into review",
-            load_compiled=gate.load,
+            blob_store=gate.blob_store, load_compiled=gate.load,
         )
     async with database.session() as session:
         assert await _resolve_rating_version(
@@ -250,6 +256,85 @@ def test_an_unknown_rating_version_id_is_a_404_over_http(
     )
     assert response.status_code == 404, response.text
     assert response.json()["code"] == "NOT_FOUND"
+
+
+def _read_headers(principal: Principal, workspace_id: UUID) -> dict[str, str]:
+    from app.api.deps import DEV_PRINCIPAL_HEADER
+
+    return {DEV_PRINCIPAL_HEADER: str(principal.id), "Workspace-Id": str(workspace_id)}
+
+
+async def _draft_with_algorithm(
+    database: Database, workspace_id: UUID, actor: Principal, version: int
+) -> UUID:
+    """A `fremtpl2-demo@1` whose algorithm is `fremtpl2-demo@<version>` (the numbers differ)."""
+    async with database.unit_of_work() as session:
+        row = await rating_service.create_rating_version(
+            session, workspace_id=workspace_id, actor=actor,
+            slug="fremtpl2-demo", dataset_version_id=new_uuid7(),
+            model_ref=ArtifactRef(type="model", slug="fremtpl2-glm", version=1),
+            algorithm_ref=ArtifactRef(
+                type="rating_algorithm", slug="fremtpl2-demo", version=version
+            ),
+        )
+        return row.id
+
+
+@pytest.mark.req("FR-1531")
+async def test_a_rating_version_reads_by_its_own_slug_at_version(
+    api_client, workspace_id, principal, grant, database
+) -> None:
+    await grant("analyst")
+    headers = _read_headers(principal, workspace_id)
+    rating_id = await _draft_with_algorithm(database, workspace_id, principal, 5)
+
+    by_pair = api_client.get("/api/v1/rating-versions/fremtpl2-demo@1", headers=headers)
+    assert by_pair.status_code == 200, by_pair.text
+    assert by_pair.json()["id"] == str(rating_id)
+
+    by_id = api_client.get(f"/api/v1/rating-versions/{rating_id}", headers=headers)
+    assert by_id.status_code == 200, by_id.text
+
+    by_algorithm_number = api_client.get("/api/v1/rating-versions/fremtpl2-demo@5", headers=headers)
+    assert by_algorithm_number.status_code == 404, by_algorithm_number.text
+    assert by_algorithm_number.json()["code"] == "NOT_FOUND"
+    assert by_algorithm_number.json()["detail"] == (
+        "No rating version rating_version:fremtpl2-demo@5."
+    )
+
+
+@pytest.mark.req("FR-1531")
+async def test_another_workspaces_rating_version_pair_is_not_found(
+    api_client, workspace_id, principal, grant, database
+) -> None:
+    await grant("analyst")
+    other = new_uuid7()
+    owner = await _principal(database, other, "analyst")
+    await _draft(database, other, owner, ArtifactRef(type="model", slug="fremtpl2-glm", version=1))
+    response = api_client.get(
+        "/api/v1/rating-versions/fremtpl2-demo@1", headers=_read_headers(principal, workspace_id)
+    )
+    assert response.status_code == 404, response.text
+    assert response.json()["code"] == "NOT_FOUND"
+    assert response.json()["detail"] == "No rating version rating_version:fremtpl2-demo@1."
+
+
+@pytest.mark.req("FR-1531")
+async def test_the_rating_version_pair_read_needs_rating_read(
+    api_client, workspace_id, principal, membership
+) -> None:
+    await membership()
+    response = api_client.get(
+        "/api/v1/rating-versions/fremtpl2-demo@1", headers=_read_headers(principal, workspace_id)
+    )
+    assert response.status_code == 403, response.text
+
+
+@pytest.mark.req("FR-1531")
+def test_the_rating_version_read_publishes_rating_version(app) -> None:
+    operation = app.openapi()["paths"]["/api/v1/rating-versions/{slug}@{version}"]["get"]
+    schema = operation["responses"]["200"]["content"]["application/json"]["schema"]
+    assert schema == {"$ref": "#/components/schemas/RatingVersion"}
 
 
 def test_create_rating_version_over_http(
@@ -347,6 +432,45 @@ def test_submit_rating_version_over_http(
 
 
 @pytest.mark.req("FR-257")
+@pytest.mark.req("FR-242")
+def test_submit_writes_the_change_summary_on_the_version(
+    api_client, workspace_id, principal, grant, database, monkeypatch
+) -> None:
+    """PL-1500 Task 7 (DP-E1-6 (a)): the version carries the summary it was submitted with.
+    The submit answers with it, and a later GET of the version reads the same text. Red first:
+    the submit response's `change_summary` is `None`, because nothing wrote the field."""
+    import asyncio
+
+    from app.api.deps import DEV_PRINCIPAL_HEADER
+
+    asyncio.get_event_loop().run_until_complete(grant("pricing_actuary"))
+    headers = {DEV_PRINCIPAL_HEADER: str(principal.id), "Workspace-Id": str(workspace_id)}
+    created = api_client.post(
+        "/api/v1/rating-versions",
+        json={
+            "slug": "fremtpl2-summary",
+            "dataset_version_id": str(new_uuid7()),
+            "model_ref": ArtifactRef(type="model", slug="fremtpl2-glm", version=1).model_dump(),
+        },
+        headers=headers,
+    )
+    assert created.status_code == 201, created.text
+    rating_id = created.json()["id"]
+    _submittable_over_http(database, workspace_id, principal, rating_id, monkeypatch)
+
+    summary = "Moved the young-driver relativity; see the structural diff."
+    submitted = api_client.post(
+        f"/api/v1/rating-versions/{rating_id}/submit",
+        json={"change_summary": summary},
+        headers=headers,
+    )
+    assert submitted.status_code == 200, submitted.text
+    assert submitted.json()["change_summary"] == summary
+    read = api_client.get(f"/api/v1/rating-versions/{rating_id}", headers=headers)
+    assert read.status_code == 200, read.text
+    assert read.json()["change_summary"] == summary
+
+
 def test_a_blank_change_summary_cannot_submit_a_rating_version(
     api_client, workspace_id, principal, grant, database, monkeypatch
 ) -> None:
@@ -525,7 +649,7 @@ async def test_one_of_two_approvals_leaves_the_rating_version_in_review(
         _, request = await rating_service.submit_for_review(
             session, workspace_id=workspace_id, actor=actuary,
             rating_version_id=rating_id, change_summary="two approvals needed",
-            load_compiled=gate.load,
+            blob_store=gate.blob_store, load_compiled=gate.load,
         )
         request_id = request.id
     async with database.unit_of_work() as session:
@@ -559,7 +683,7 @@ async def test_a_rejected_rating_version_returns_to_draft_with_a_true_audit_befo
         row, request = await rating_service.submit_for_review(
             session, workspace_id=workspace_id, actor=actuary,
             rating_version_id=rating_id, change_summary="to be rejected",
-            load_compiled=gate.load,
+            blob_store=gate.blob_store, load_compiled=gate.load,
         )
         request_id, ref = request.id, f"rating_version:{row.slug}@{row.version}"
     async with database.unit_of_work() as session:
@@ -644,7 +768,7 @@ async def test_a_stale_request_on_a_draft_rating_version_can_still_be_closed(
         row, _ = await rating_service.submit_for_review(
             session, workspace_id=workspace_id, actor=actuary,
             rating_version_id=rating_id, change_summary="submitted properly",
-            load_compiled=gate.load,
+            blob_store=gate.blob_store, load_compiled=gate.load,
         )
     assert row.status == "review"
 
@@ -697,6 +821,78 @@ def _suite(*quotes: dict[str, Any], algorithm_slug: str = "minimal") -> Regressi
     )
 
 
+class AccountingBlobStore(BlobStore):
+    """A `BlobStore` whose `put` keeps the accounting row and the bytes in memory.
+
+    The submit tests need a store that accepts a blob and counts it, not MinIO: the structural
+    diff is stored at submission (PL-1500 Task 2), and `read` here returns what `put` was given.
+    """
+
+    def __init__(self) -> None:  # no S3 client: only `put` and `read` are used
+        self.objects: dict[str, bytes] = {}
+
+    async def put(self, session: Any, content: Any, media_type: str) -> BlobRef:
+        body = content if isinstance(content, bytes) else b"".join(content)
+        digest = hashlib.sha256(body).hexdigest()
+        if await session.get(BlobRow, digest) is None:
+            session.add(
+                BlobRow(sha256=digest, bytes_=len(body), media_type=media_type, ref_count=0)
+            )
+            await session.flush()
+        self.objects[digest] = body
+        return BlobRef(sha256=digest, bytes=len(body), media_type=media_type)
+
+    async def read(self, ref: BlobRef) -> bytes:
+        return self.objects[ref.sha256]
+
+
+async def record_dislocation_run(
+    database: Database,
+    workspace_id: UUID,
+    *,
+    candidate_ref: str,
+    candidate_hash: str,
+    baseline_ref: str,
+    actor_id: UUID,
+    quantiles: dict[str, str | None] | None = None,
+    baseline_hash: str | None = None,
+) -> UUID:
+    """Persist a Dislocation Run naming `candidate_ref` at `candidate_hash` against
+    `baseline_ref` (FR-257 limb (2)'s evidence), through the one writer `persist_run`.
+
+    The run is empty-portfolio and valid; the limb (2) gate reads only its refs and hashes.
+    `quantiles` is FR-224's observed figure (PL-1500 Task 4), left out of a limb (2) run."""
+    body: dict[str, Any] = {
+        "baseline_ref": baseline_ref,
+        "candidate_ref": candidate_ref,
+        "portfolio_dataset_version_id": str(new_uuid7()),
+        "job_id": str(new_uuid7()),
+        "policy_count": 0,
+        "exposure_years": "0",
+        "totals": {"baseline_premium_minor": 0, "candidate_premium_minor": 0, "change_pct": None},
+        "outcomes": {
+            "quoted_both": 0, "quoted_to_declined": 0, "declined_to_quoted": 0,
+            "declined_both": 0, "error": 0, "zero_baseline": 0, "negative_baseline": 0,
+        },
+        "distribution": [
+            {"band": "all", "policies": 0, "exposure_share": None, "mean_change_pct": None}
+        ],
+        "largest_movers_blob": "blob:sha256:" + "d" * 64,
+        "errors": [],
+    }
+    if quantiles is not None:
+        body["abs_change_pct_quantiles"] = quantiles
+    run = DislocationRun.model_validate(body)
+    async with database.unit_of_work() as session:
+        row = await dislocation_service.persist_run(
+            session, workspace_id=workspace_id, run=run,
+            baseline_bundle_hash=baseline_hash or candidate_hash,
+            candidate_bundle_hash=candidate_hash,
+            actor_id=actor_id,
+        )
+        return row.id
+
+
 class _Gate:
     """One workspace's golden-quote world: principals, algorithms, versions, suites."""
 
@@ -705,6 +901,7 @@ class _Gate:
         self.workspace_id = workspace_id
         self.bundles: dict[str, Bundle] = {}
         self.next_version = 1
+        self.blob_store = AccountingBlobStore()
 
     async def setup(self) -> _Gate:
         self.analyst = await _principal(self.database, self.workspace_id, "analyst")
@@ -838,14 +1035,37 @@ class _Gate:
         await self.ensure_suite(rating_id)
         await self.record_run(rating_id, "pass")
 
+    async def ensure_dislocation_run(self, rating_id: UUID) -> UUID | None:
+        """Record the Dislocation Run FR-257 limb (2) needs, if the version has a baseline:
+        the shared fixture that gives every existing submit test its new evidence (PL-1500
+        Acceptance 10). A first version has no baseline and needs none. The run names the
+        version's current bundle hash and the baseline the gate itself will pick."""
+        row = await self.row(rating_id)
+        if row.bundle is None:
+            return None
+        async with self.database.session() as session:
+            policy = await approval_service.policy_for(session, self.workspace_id)
+            baseline, _reason = await rating_service._dislocation_baseline(
+                session, workspace_id=self.workspace_id, row=row, policy=policy
+            )
+        if baseline is None:
+            return None
+        return await record_dislocation_run(
+            self.database, self.workspace_id,
+            candidate_ref=f"rating_version:{row.slug}@{row.version}",
+            candidate_hash=str(row.bundle["content_hash"]), baseline_ref=str(baseline),
+            actor_id=self.analyst.id,
+        )
+
     async def submit(
         self, rating_id: UUID, loader: Any = None, *, run: str | None = "pass",
-        provision: bool = True,
+        provision: bool = True, dislocation: bool = True,
     ) -> ApprovalRequestRow:
         """Submit. By default the version's algorithm is given a golden-quote suite if it has
         none, and a passing Regression Run is recorded first (FR-257 limb (1), DP-S3-1 forward):
         every golden-quote test that must reach `review` goes through this one fixture (T6b).
-        `provision=False` authors no suite; `run=None` records no run."""
+        `provision=False` authors no suite; `run=None` records no run; `dislocation=False`
+        records no Dislocation Run (FR-257 limb (2), PL-1500 Task 3)."""
         if provision:
             await self.ensure_suite(rating_id)
         row = await self.row(rating_id)
@@ -856,11 +1076,13 @@ class _Gate:
             ) is not None
         if run is not None and has_suite and row.bundle is not None:
             await self.record_run(rating_id, run)
+        if dislocation:
+            await self.ensure_dislocation_run(rating_id)
         async with self.database.unit_of_work() as session:
             _, request = await rating_service.submit_for_review(
                 session, workspace_id=self.workspace_id, actor=self.actuary,
                 rating_version_id=rating_id, change_summary="golden",
-                load_compiled=loader or self.load,
+                blob_store=self.blob_store, load_compiled=loader or self.load,
             )
             return request
 
@@ -1133,7 +1355,11 @@ async def test_a_passing_run_is_recorded_and_golden_evidence_is_untouched(
     assert row.status == "review"
     evidence = row.evidence or {}
     assert evidence["regression_suite_run_id"] == str(run_id)
-    assert set(evidence) == {"golden_quotes", "regression_suite_run_id"}
+    # The other keys are limb (2)'s `no_baseline` (a first version) and E4's diff blob, written
+    # by S5's gates beside the two this test is about (PL-1500 Tasks 2 and 3).
+    assert set(evidence) == {
+        "golden_quotes", "regression_suite_run_id", "structural_diff_blob", "no_baseline",
+    }
     pinned = evidence["golden_quotes"]
     assert json.dumps(pinned, sort_keys=True) == before[0]
     assert pinned["status"] == "checked"

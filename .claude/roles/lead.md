@@ -29,7 +29,9 @@ relates: []                      # ids only
   0, a false green to a cold reader; use `gh pr view --json mergeStateStatus`
   [CLEAN/UNSTABLE] instead, and read per-workflow state via `gh run list` first, since an
   in-flight run also reports as UNSTABLE), **dispatches every `SL-`** (`document-ids.md`
-  §1.6 SL row: *"lead dispatches (`active`)"*), maintains the milestone sections and the
+  §1.6 SL row: *"lead dispatches (`active`)"*; from Lean P2 L1, by the maintainer's GO quoted
+  verbatim in the slice's `LG-`, with no activation PR, no dispatch `RL-` and no per-slice plan,
+  the roadmap status change riding the slice PR and in-flight status kept in `eta.md`), maintains the milestone sections and the
   `WK-` rows, **owns every `CR-` of kind `review`** — filing the §14 phase-review record
   itself is the planner's, but the family belongs to the lead where the auditor's `work`/
   `phase` kinds do not (§1.6 CR row: *"auditor (`work`, `phase`); lead (`review`)"*) —
@@ -94,12 +96,33 @@ relates: []                      # ids only
   until this exchange, 2026-08-29.
 - **Never:** implements or audits itself; pushes or rebases `main`; never declares a
   workstream or phase closed — closure acceptance is the user's alone.
+- **Lean P2 (L1, L3, L5), from the maintainer's entry "2026-10-08 11:51:58 BST — USER DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW; the files are amended through RFC 9479 P6 (the maintainer's amendment, by delegation)" in `to-lead.md`.**
+  A slice whose GO follows that entry is **one PR carrying its one-line `SL-` row status change
+  and one `LG-`** with five sections (scope quoting its Work-plan row, tasks, gate, audit, build
+  log; `docs/_templates/LG.md`) (L1 as corrected to (a') by the maintainer's entry "2026-10-08 12:02:08 BST — #1240 P6 flagged readings RULED: (1) REJECTED, and my 11:51:58 L1 (a) wording CORRECTED (the slice's one file is its LG-, not text under the roadmap row); (2) ACCEPTED".) The lead quotes the GO and MERGE-ACK headers into it, and asks for a separate record only for a spec
+  change, a ruling that corrects, reverses or binds beyond the slice, a product `FD-`, or an
+  open `OQ-`. A **process finding** goes to `docs/process/process-backlog.md` as a dated row
+  until the P2 exit demo; the lead files an `FD-` instead only for limb (i), a wrong merge,
+  number, mispricing or data loss let through, or limb (ii), work blocked today, and names the
+  limb in it. A Work has **one plan**; new slices or a scope change are one dated Work-plan
+  delta, a new `PL-` that `relates:` the plan, and the lead lists each delta's id on the Work's
+  roadmap row (it maintains the `WK-` rows). *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6.)*
 - **Mandatory skills:** `using-git-worktrees` — the lead dispatches every member into its
   own worktree. Carry this rule into every dispatch: never `git checkout`/`git switch`
   outside your own worktree; check `pwd` and `git branch --show-current` before every git
   write; read-only git is safe anywhere (two real WK-670 incidents discarded uncommitted work
   this rule exists to prevent). Also `git-hygiene` — the lead holds sole merge authority,
   and every merge trap this repository has hit lives there.
+- **Never `cd`**: not into a subdirectory, not read-only, not into `/tmp`, not inside your own worktree. Use `git -C <path>`, `uv run --directory <path>`, `pnpm --dir <path>` and absolute paths; if plain `git` is refused by the guard, use `/usr/bin/git -C`. **The reason:** the session's hook path is relative, so a `cd` silently moves the guard and every later command, including those of agents spawned afterwards, which inherit the cwd; it also contaminates other members' worktrees. Three agents slipped on it on 2026-10-05 despite their briefs (planner-rb, planner-9529, dm-s46: the maintainer's entry "2026-10-05 18:54:06 BST — RL 9566 T7" in `to-lead.md`), which is why it is a charter rule and not a brief line. *(Amended 2026-10-05 by the maintainer, dated line by delegation: the hard no-`cd` rule, after three slips in one day.)*
+- **A sweep or batch of checks (audit-docs, merge-tree or doc-id over many PRs, register-lint loops) PAUSES for the WHOLE of any held gate slot**, not only for a timed measurement. **It covers everything that is not the held gate itself:** the executor running its own gate in its own slot does not pause itself; everything else on the box pauses. Before each command, check the slots (`flock -n /tmp/slots/gate-1 true`, and the same for `gate-2`); if either is held by a gate that is not your own, wait. **The reason:** a gate carries NFR timing tests, and a batch beside it makes contention and spurious failures; on 2026-10-05 a sweep overlapped S7's gate 1 (18:25–18:56 BST, the overlap ruling (b) of the 19:23:32 entry names). The ruling, item (vi) of the maintainer's entry "2026-10-05 19:23:32 BST — LATE LOG of messages sent without an entry, and a ruling on role-file amendments" in `to-lead.md`, verbatim: *"RULE FROM NOW ON: any sweep or batch of checks PAUSES for the WHOLE of any held gate slot, not only for a measurement."* Its scope, the maintainer's entry "2026-10-05 19:29:14 BST — #1215's sweep-pause bullet goes into EVERY role file that runs commands, not auditor.md only" in `to-lead.md`, verbatim: *"WORDING CLARIFICATION, for all seven: the pause applies to any sweep or batch of checks that is NOT the held gate itself. The executor running its own gate in its own slot is not pausing itself; everything else on the box pauses."* *(Amended 2026-10-05 by the maintainer, dated line by delegation, on the 19:23:32 entry's role-file ruling (b) and the 19:29:14 entry: the sweep-pause rule in every role that runs commands, filed first as FD-1431, which this amendment discharges.)*
+- **The word our records bar for the maintainer's delegate never appears in added or edited text (the hunks a change edits)** — in a commit message, a PR body, or the hunks of a living doc a PR edits; frozen records are never edited for it, and a wider clean-up needs its own ruling. Write "the maintainer (by delegation)". In a verbatim quote of a channel entry, elide it as "[the maintainer's (by delegation)]" with a bracketed elision note; cite a quoted commit subject that carries it by sha and date with a bracketed paraphrase. *(Amended 2026-10-05 by the maintainer, dated line by delegation, on the NOT-ACK of #1218 and on #1215: "2026-10-05 20:43:42 BST — #1218 @fa72b64b: NOT ACKed; two quoted occurrences of the barred word must be elided" and "2026-10-05 21:10:51 BST — #1215 @68d28668: the 7-file spread CONFIRMED; the 5th commit YES; the scope of the barred-word rule stated" and "2026-10-05 21:11:35 BST — The barred-word scope made exact: the HUNKS a PR edits, not whole files".)*
+- **Before any REST PATCH of a PR's body or title** (`gh api -X PATCH repos/<owner>/<repo>/pulls/<n> …`,
+  the form `git-hygiene` gives because `gh pr edit` silently no-ops), run `gh pr view <n> --json
+  number,title,headRefName` and confirm it is the PR and branch you mean; **after the PATCH,
+  read the body back** (`gh pr view <n> --json body`). The wrong-number PATCH is the failure
+  mode: #1149's body was overwritten at 13:15:20Z with RL 9642's draft body by an earlier
+  session, and restored. *(Amended 2026-10-05 by the maintainer, dated line by delegation, on
+  the entry "2026-10-05 15:19:09 BST — All four batches ACK-ready: noted; FD 9699 owner = WK-673; FD 9645 MEDIUM confirmed; the #1149 body incident; slot priorities" in `to-lead.md`: its INCIDENT item and slot priority 2.)*
 - **Session-end halt for the shared checkout, symmetric with the per-member worktree
   clause above** (register row F97). The worktree clause verifies every *member's* worktree
   before a halt; it says nothing about the state the **shared root checkout** is left in.
@@ -165,7 +188,56 @@ Insufficient in this file, corrected by procedure rather than brief (CLAUDE.md �
    living docs (specs, roadmap, open-questions, the findings register, INDEX, the docs
    READMEs) and open PRs; re-point live hits in the same mint PR, or list each with its
    follow-up PR; frozen records stay as written** (ruled 2026-10-05 by the maintainer (by
-   delegation), the ID audit of 14:26:28 BST, item 3, in `to-lead.md`).
+   delegation), the ID audit of 14:26:28 BST, item 3, in `to-lead.md`). The sweep also covers
+   the open `draft/` branches (`delivery-process.md` §8, 5d).
+   **When `main` moves after an ACK (1E, in force).** Re-request without merging `main` into the
+   branch and without a branch CI run when ALL hold: every path of the PR is under `docs/`;
+   `main` is green; `git merge-tree` of the ACKed head on the new `main` exits 0; the commits
+   that moved `main` touch none of the PR's paths; and audit-docs, `doc-index.py --check` and
+   `register-lint.py` pass on that recomputed tree, plus the local docs-reading pytest subset of
+   the code-PR rule below, (iii'). The re-request names the recomputed tree; `main`'s push CI is
+   the backstop, and a red `main` is fixed forward before any other merge.
+   **E2, a docs-only PR whose only path shared with the commits `main` gained is
+   `docs/INDEX.md` (standing, in force):** (a) the branch merges `main` and REGENERATES INDEX
+   with `doc-index.py`, never hand-merged; (b) the delta from its CI-green head is `main`'s files
+   plus INDEX only, shown by name-status; (c) at the new head audit-docs (rc 0, or only a
+   working-id check-31 row named in the request), `doc-index.py --check` 0 and `register-lint.py`
+   0 pass, plus the local docs-reading pytest subset of (iii') below, its DB-backed modules
+   skipped or run as (iii') says; (d) `git merge-tree` onto
+   `main` exits 0, the tree named in the re-ACK request. No branch CI wait; `main`'s push CI is
+   the backstop. If the subset takes over 10 minutes, the lead reports it. (The maintainer's
+   entry "2026-10-08 12:12:08 BST — MERGE-ACK #1241 (lane C S2 activation, PL-1476 / SL-1477) @3550bcbd86f2e972ca43df58bfca20010e6551ae, expected tree adfa6e7671d98aadf41536714b2da41b1e00c1ae; 1E EXTENDED to an INDEX-only overlap; order: #1241 now, then T1" in `to-lead.md`.)
+   **Precondition for 1E, E2 and the code-PR rule:** the CI-green head's runs
+   COMPLETED with success, read per workflow (a cancelled run is not green), and nothing was
+   pushed to the branch while a run the ACK relies on was in flight. (The maintainer's entry
+   "2026-10-08 12:15:49 BST — T1 CI-cancel slip ACCEPTED as handled (full CI at e1103d81 before
+   the ACK); fix 10 added to #1240" in `to-lead.md`.)
+   **A code PR's ACK across a docs-only merge of `main` (standing, in force).** A code PR (a
+   slice) whose delta from its last fully checked head is ONLY a merge of `main` plus the
+   regenerated INDEX is re-ACKed without a new CI wait when ALL hold: (i) the new head minus the
+   checked head is that merge and INDEX only (name-status shown), and the commits `main` gained
+   touch only `docs/`; (ii') CI at the checked head ran every job, every job but pytest is green,
+   and pytest's failures, read from the log by name, are exactly the known check-31 set; (iii')
+   at the new head audit-docs, `doc-index.py --check` and `register-lint.py` each exit 0, plus a
+   local pytest, all passing with rc and totals reported, of the modules holding those check-31
+   tests and of every module `git grep -l '"docs/' -- '*test*.py'` lists at the new head — light,
+   no gate slot, never during a full gate someone else holds. **The subset's DB-backed modules
+   (the same subset for 1E and E2 (c)):** a module that needs `GIP_TEST_DATABASE_URL` is
+   SKIPPED when the PR's paths include nothing under `docs/contracts/` or `docs/specs/`, other
+   than an OQ mirror row in a spec's open-questions section; otherwise it runs against a
+   per-worktree DB. Reason: the DB-backed modules read contracts and specs, not records; a
+   record-only change that breaks one is caught by `main`'s push CI. (The maintainer's entry
+   "2026-10-08 12:40:38 BST — MERGE-ACK #1242 (T1: FD-1478 … OQ-1486) @e1103d81e0ac3919fb8015ba7b65c365f644373b, expected tree e39db2194b97c04308414def5bc2cdf0eb316689; the 8 siblings close under R2 after the read-back; the E2 (c) pytest subset REFINED" in `to-lead.md`.); (iv) `git merge-tree` of the new
+   head on current `main` exits 0, and the ACK request names the tree. CI on the new head and on
+   `main`'s push are the backstop; a red result is fixed forward before any other merge.
+   (The maintainer's entry "2026-10-08 11:57:55 BST — RULED: a code PR's ACK may carry across a
+   DOCS-ONLY main merge without a new CI wait (the 02:28:42 waiver extended), with the check-31
+   tests re-run locally" in `to-lead.md`; *Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6.*)
+   **PRs, batches and drafts** follow `delivery-process.md` §8's standing rules 5a–5e, 5f and 5h
+   (batches of at most 10 ids, the open-PR cap of 30, cleanup during the work, drafts on
+   `draft/` branches with no PR, merge never rebase, the 7-day draft age, remote CI not a gate);
+   the lead keeps the draft register and the over-7-day count in `eta.md` and applies 5f in
+   each sweep. *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6, and P5; 1E and 5f in force from the maintainer's entry "2026-10-08 11:49:11 BST — RFC 9479 draft (#1240 @298004b620650c62f6e8429faad8632369ceee0a) REVIEWED: 1E and 5f IN FORCE NOW as interim rules; the full ruling HELD for the user's lean-P2 decision".)*
 
 5. **20-minute progress line with three counters.** A progress line without concrete state 
    — "executors are working" vs. "E501 remaining = N, tests failing = M, audit-docs FAILED 

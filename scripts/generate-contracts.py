@@ -147,6 +147,10 @@ GENERATED_SHAPES: dict[str, str] = {
     # counterpart** — `03` §4.10 is the shape's first written form (the `model-comparison`
     # and `dataset-lineage` precedent).
     "score-comparison": "ScoreComparison",
+    # Added 2026-10-09 (WK-673 Slice 4, PL-1267 Acceptance 6): `dislocation-run.schema.json` is
+    # the hand-authored 03 §4.6 contract (WK-673 Slices 1-3 edited it); this is its generated
+    # counterpart, so the comparison in `test_contracts.py` now holds the two together.
+    "dislocation-run": "DislocationRun",
     # Added 2026-10-01 (WK-1250 Slice 1, PL-1325 Task 2). **No hand-authored Phase-0
     # counterpart** — `03` §4.11 is the shapes' first written form. The two request shapes
     # are published too: the routes take a raw body, so OpenAPI shows an open object, and a
@@ -175,6 +179,9 @@ GENERATED_SHAPES: dict[str, str] = {
     "approval-submission": "ApprovalSubmission",
     # Added 2026-10-04 (PL-1392 Task 6): the body of `.../withdraw`, moved out of the API module.
     "approval-withdrawal": "ApprovalWithdrawal",
+    # Added 2026-10-05 (WK-1178, the FD-1421 fix, RL-1428): the body of `POST /rating-versions`,
+    # moved out of the API module. First written form, no hand-authored counterpart.
+    "rating-version-create": "RatingVersionCreate",
 }
 
 

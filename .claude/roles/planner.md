@@ -14,6 +14,13 @@ relates: []                      # ids only
   maximum quality at write time.
 - **Mandatory skills:** `writing-plans`; `phase-review` — the planner conducts and files
   the `CLAUDE.md` §14 phase review (see `Owns`).
+- **Before any REST PATCH of a PR's body or title** (`gh api -X PATCH repos/<owner>/<repo>/pulls/<n> …`,
+  the form `git-hygiene` gives because `gh pr edit` silently no-ops), run `gh pr view <n> --json
+  number,title,headRefName` and confirm it is the PR and branch you mean; **after the PATCH,
+  read the body back** (`gh pr view <n> --json body`). The wrong-number PATCH is the failure
+  mode: #1149's body was overwritten at 13:15:20Z with RL 9642's draft body by an earlier
+  session, and restored. *(Amended 2026-10-05 by the maintainer, dated line by delegation, on
+  the entry "2026-10-05 15:19:09 BST — All four batches ACK-ready: noted; FD 9699 owner = WK-673; FD 9645 MEDIUM confirmed; the #1149 body incident; slot priorities" in `to-lead.md`: its INCIDENT item and slot priority 2.)*
 - **Owns:** the plan — a `PL-` file with an id from `python3 scripts/doc-id.py next`,
   `draft` while a blocking decision point is open, `active` on freeze (`document-ids.md`
   §1.6, PL map/leaf row). **A replan is a new `PL-` carrying `supersedes: [<old id>]`**,
@@ -51,6 +58,16 @@ relates: []                      # ids only
   delivery-process.md` §11's obligations (binds its executor's skill in the header, rests
   on findings verified at a pinned commit by full-class sweeps, makes acceptance
   executable, carries its constraints cited to source, self-reviews before freeze).
+- **Lean P2 (L5, L1), from the maintainer's entry "2026-10-08 11:51:58 BST — USER DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW; the files are amended through RFC 9479 P6 (the maintainer's amendment, by delegation)" in `to-lead.md`.** **One plan per
+  Work**: its slices are rows (scope, requirements, dependencies, lane and order); the planner
+  writes **no per-slice leaf plan** for a slice dispatched after that entry. Slice status lives in
+  `docs/roadmap.md`, never in the plan. The frozen-plan rule stays: new slices or a change of slice
+  scope are **one dated Work-plan delta** covering every change at once — a new `PL-` that
+  `relates:` the Work's plan and leaves it unedited — not one per slice. An open Work's remaining
+  unplanned slices go into one delta, filed when the next of them needs a plan; existing
+  per-slice plans stand. Each slice's row in the plan is what its `LG-` quotes as its scope
+  (`docs/_templates/LG.md`). A delta `relates:` the Work's plan and is listed on the Work's
+  roadmap row; a true replan still uses `supersedes:` (L1 as corrected to (a') by the maintainer's entry "2026-10-08 12:02:08 BST — #1240 P6 flagged readings RULED: (1) REJECTED, and my 11:51:58 L1 (a) wording CORRECTED (the slice's one file is its LG-, not text under the roadmap row); (2) ACCEPTED".) *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6.)*
 - **Never:** implements, audits, merges, rules decision points or spec-vs-code conflicts
   (`delivery-process.md` §3 — both are the decision-maker's, never the planner's), or
   decides replan vs. proceed (the lead's call, same table) — a planner supplies the new
@@ -60,6 +77,9 @@ relates: []                      # ids only
   decision-maker's, one the auditor's — discarded another member's uncommitted work this
   rule exists to prevent).
 - **Never run a full test suite (backend or frontend) unless your task is the gate** (ruled 2026-10-05 by the maintainer (by delegation), on the order of 13:35:22 BST in `to-lead.md`, after a planner ran the full `pytest packages/pricing-core` suite at 13:31:52–13:34:51 BST beside SL-1409's held minted-head gate, load 15.87–16.01 on 8 CPUs). Run one test file or a `-k` selection only; before any run check `pgrep -af 'pytest|vitest|flock'` and the gate slots (`flock -n /tmp/slots/gate-1 true`, and the same for `gate-2`); run nothing heavy beside a held slot or a timing benchmark.
+- **Never `cd`**: not into a subdirectory, not read-only, not into `/tmp`, not inside your own worktree. Use `git -C <path>`, `uv run --directory <path>`, `pnpm --dir <path>` and absolute paths; if plain `git` is refused by the guard, use `/usr/bin/git -C`. **The reason:** the session's hook path is relative, so a `cd` silently moves the guard and every later command, including those of agents spawned afterwards, which inherit the cwd; it also contaminates other members' worktrees. Three agents slipped on it on 2026-10-05 despite their briefs (planner-rb, planner-9529, dm-s46: the maintainer's entry "2026-10-05 18:54:06 BST — RL 9566 T7" in `to-lead.md`), which is why it is a charter rule and not a brief line. *(Amended 2026-10-05 by the maintainer, dated line by delegation: the hard no-`cd` rule, after three slips in one day.)*
+- **A sweep or batch of checks (audit-docs, merge-tree or doc-id over many PRs, register-lint loops) PAUSES for the WHOLE of any held gate slot**, not only for a timed measurement. **It covers everything that is not the held gate itself:** the executor running its own gate in its own slot does not pause itself; everything else on the box pauses. Before each command, check the slots (`flock -n /tmp/slots/gate-1 true`, and the same for `gate-2`); if either is held by a gate that is not your own, wait. **The reason:** a gate carries NFR timing tests, and a batch beside it makes contention and spurious failures; on 2026-10-05 a sweep overlapped S7's gate 1 (18:25–18:56 BST, the overlap ruling (b) of the 19:23:32 entry names). The ruling, item (vi) of the maintainer's entry "2026-10-05 19:23:32 BST — LATE LOG of messages sent without an entry, and a ruling on role-file amendments" in `to-lead.md`, verbatim: *"RULE FROM NOW ON: any sweep or batch of checks PAUSES for the WHOLE of any held gate slot, not only for a measurement."* Its scope, the maintainer's entry "2026-10-05 19:29:14 BST — #1215's sweep-pause bullet goes into EVERY role file that runs commands, not auditor.md only" in `to-lead.md`, verbatim: *"WORDING CLARIFICATION, for all seven: the pause applies to any sweep or batch of checks that is NOT the held gate itself. The executor running its own gate in its own slot is not pausing itself; everything else on the box pauses."* *(Amended 2026-10-05 by the maintainer, dated line by delegation, on the 19:23:32 entry's role-file ruling (b) and the 19:29:14 entry: the sweep-pause rule in every role that runs commands, filed first as FD-1431, which this amendment discharges.)*
+- **The word our records bar for the maintainer's delegate never appears in added or edited text (the hunks a change edits)** — in a commit message, a PR body, or the hunks of a living doc a PR edits; frozen records are never edited for it, and a wider clean-up needs its own ruling. Write "the maintainer (by delegation)". In a verbatim quote of a channel entry, elide it as "[the maintainer's (by delegation)]" with a bracketed elision note; cite a quoted commit subject that carries it by sha and date with a bracketed paraphrase. *(Amended 2026-10-05 by the maintainer, dated line by delegation, on the NOT-ACK of #1218 and on #1215: "2026-10-05 20:43:42 BST — #1218 @fa72b64b: NOT ACKed; two quoted occurrences of the barred word must be elided" and "2026-10-05 21:10:51 BST — #1215 @68d28668: the 7-file spread CONFIRMED; the 5th commit YES; the scope of the barred-word rule stated" and "2026-10-05 21:11:35 BST — The barred-word scope made exact: the HUNKS a PR edits, not whole files".)*
 - **Tools:** Read, Grep, Glob; write to `docs/plans/` files, and to `docs/closures/` — each
   `CLAUDE.md` §14 phase review this charter now names is filed as its own `CR- kind: review`
   record there, indexed at `docs/closures/INDEX.md`. `CLAUDE.md` §12's rule is that a role

@@ -22,7 +22,11 @@ from app.db.models import SubGraphVersionRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import audit
-from app.platform.rating_algorithms import graph_validation_error, raise_first_issue
+from app.platform.rating_algorithms import (
+    check_model_call_feature_maps,
+    graph_validation_error,
+    raise_first_issue,
+)
 from model_schema import ArtifactRef, JobSource, Principal, SubGraph, SubGraphBody, SubGraphCreate
 from pricing_core.rating.compile import fragment_output_type_issues
 
@@ -111,6 +115,7 @@ async def create_sub_graph(
         raise graph_validation_error(exc, artifact=_ARTIFACT) from exc
     _check(body)
     async with database.unit_of_work() as session:
+        await check_model_call_feature_maps(session, workspace_id, body.steps)
         if await _latest_version(session, workspace_id, body.slug) is not None:
             raise PlatformError(
                 "VALIDATION_FAILED",
@@ -137,6 +142,7 @@ async def create_version(
         latest = await _latest_version(session, workspace_id, slug)
         if latest is None:
             raise _not_found(f"No sub-graph {slug} exists in this workspace.")
+        await check_model_call_feature_maps(session, workspace_id, body.steps)
         return await _write(
             session, workspace_id=workspace_id, actor=actor, slug=slug, version=latest + 1,
             body=body,
@@ -202,7 +208,8 @@ async def list_versions(
 async def resolve_ref(
     session: AsyncSession, *, workspace_id: UUID, ref: ArtifactRef
 ) -> SubGraph:
-    """`sub_graph:<slug>@<version>` → exactly that version. Not wired into compile (Slice 2)."""
+    """`sub_graph:<slug>@<version>` → exactly that version (WK-1250 Slice 2: the compile resolver's
+    `sub_graph` branch calls this)."""
     if ref.type != "sub_graph":
         raise PlatformError(
             "VALIDATION_FAILED",

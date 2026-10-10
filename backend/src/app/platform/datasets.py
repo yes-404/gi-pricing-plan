@@ -70,6 +70,7 @@ __all__ = [
     "new_version",
     "promote_to_validated",
     "purge_subject",
+    "read_version",
     "record_split",
     "resolve_artifact_ref",
     "to_schema",
@@ -775,6 +776,23 @@ async def load_version(
     Every other caller wants `fittable_or_refuse`, which is this plus the gate.
     """
     row = await session.get(DatasetVersionRow, version_id, with_for_update=True)
+    if row is None or row.workspace_id != workspace_id:
+        raise PlatformError(
+            "NOT_FOUND", "Dataset version not found", 404, f"No version {version_id}."
+        )
+    return row
+
+
+async def read_version(
+    session: AsyncSession, *, workspace_id: UUID, version_id: UUID
+) -> DatasetVersionRow:
+    """A version, or a `404` naming it, **without** `load_version`'s row lock.
+
+    For a read that changes nothing: `load_version` takes `FOR UPDATE` because its callers
+    transition the version, and `RL-1361` item 7 says a read may drop the lock. The scope
+    check is the same, so another workspace's version answers as a missing one.
+    """
+    row = await session.get(DatasetVersionRow, version_id)
     if row is None or row.workspace_id != workspace_id:
         raise PlatformError(
             "NOT_FOUND", "Dataset version not found", 404, f"No version {version_id}."

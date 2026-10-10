@@ -30,16 +30,12 @@ failing `model_call` at once, and nothing in this codebase has verified which OS
 `customHandler` callback actually runs on. The sentinel travels through the same
 per-call-isolated mechanism every other produced value already uses.
 
-**2. `predict_glm` is not called from a real Bundle today, and that is confirmed correct,
-not a bug this task fixes.** `Bundle.resolved_payloads` carries a GLM's own dump but not
-the `Factor`/`Banding`/`Grouping` objects `predict_glm` structurally requires — a genuine
-gap `runtime.py`'s `_model_call_failure` docstring already names, refusing the quote with
-`MODEL_CALL_FAILED` rather than silently mis-scoring it. Building real `Factor` resolution
-into `Bundle.resolved_payloads` is a resolver-level (Task 1.2) or Bundle-shape change, out
-of Task 1.4's scope (`score_one` takes an already-compiled `CompiledBundle` and cannot
-retroactively enrich what it was built from) — this module's own tests exercise the GBM
-path and rely on the already-tested GLM refusal (`test_rating_runtime.py`), rather than
-re-proving it.
+**2. A GLM `model_call` scores from the Bundle alone (FD-1458).** Compile carries a GLM pin's
+`Factor`, `Banding` and `Grouping` versions in `Bundle.resolved_payloads`, `load_bundle` rebuilds
+them once, and `predict_glm` runs per quote (FR-222, FR-239, NFR-491). A failure inside it
+(`MODEL_OFFSET_MISSING`, an unseen level) still surfaces as `MODEL_CALL_FAILED` with its error
+code, through the sentinel of item 1; the model's own text is not passed on (NFR-499). This item
+used to say a GLM was refused here.
 
 **3. A `set_param`/`predict()` race inside XGBoost, found by this task's own concurrency
 smoke test, not assumed away.** `predict_gbm`'s first cut (this task) called
@@ -430,6 +426,53 @@ def _check_billing_surface(ctx: QuoteContext) -> None:
             "INPUT_CONTRACT_VIOLATION",
             f"{requested} asks for a payment schedule, an APR figure or a credit "
             "agreement term (FR-252) — refused rather than answered approximately",
+        )
+
+
+def _check_no_shadowed_produced_names(
+    algorithm: RatingAlgorithm, inputs: Mapping[str, Any]
+) -> None:
+    """FR-213 (FD-1425): an undeclared quote input never names a value a step produces. The
+    declared inputs are subtracted first, so a declared input that a clamp re-produces in
+    place is a legitimate key (the maintainer's (by delegation) 17:22:47 DP-2)."""
+    declared = {field.name for field in algorithm.input_contract}
+    produced = {
+        str(name)
+        for step in algorithm.steps
+        if step.type not in ("input", "output")
+        for name in _as_list(step.produces)
+    }
+    shadowing = sorted((produced - declared) & inputs.keys())
+    if shadowing:
+        _raise_named(
+            "INPUT_CONTRACT_VIOLATION",
+            f"inputs {shadowing} name values the algorithm produces (FR-213); a quote input "
+            "never stands in for a produced value",
+        )
+
+
+_ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
+
+
+def _check_as_at_values(algorithm: RatingAlgorithm, context: Mapping[str, Any]) -> None:
+    """FR-221 (PL-1447 DP-1, DP-3): the value each lookup's `as_at` reads, in the context the
+    engine is about to receive, is a strict `YYYY-MM-DD` calendar date. ZEN's `date()` reads an
+    offset as UTC and turns a malformed value into a miss, so neither may reach it. Reading
+    the merged context also covers an input that shadows the stamped `effective_date`."""
+    for step in algorithm.steps:
+        if not isinstance(step, RatingLookupStep):
+            continue
+        value = context.get(step.as_at)
+        if isinstance(value, str) and _ISO_DATE.fullmatch(value):
+            try:
+                date.fromisoformat(value)
+                continue
+            except ValueError:
+                pass
+        _raise_named(
+            "INPUT_CONTRACT_VIOLATION",
+            f"as_at of lookup step {step.step_id!r} reads {step.as_at!r}, which is not a "
+            "YYYY-MM-DD calendar date (FR-221)",
         )
 
 
@@ -897,6 +940,7 @@ async def score_one(
     _validate_inputs(algorithm, ctx.inputs)
     _check_purpose_mount(algorithm, ctx)
     _check_billing_surface(ctx)
+    _check_no_shadowed_produced_names(algorithm, ctx.inputs)
 
     rating_version_ref = ctx.options.rating_version_ref if ctx.options is not None else None
     if rating_version_ref is None:
@@ -910,6 +954,7 @@ async def score_one(
     context = {
         "effective_date": ctx.effective_date.isoformat(), "purpose": ctx.purpose, **ctx.inputs
     }
+    _check_as_at_values(algorithm, context)
 
     t_eval = time.perf_counter()
     try:
@@ -1062,10 +1107,12 @@ def _score_context_sync(
     _validate_inputs(algorithm, ctx.inputs)
     _check_purpose_mount(algorithm, ctx)
     _check_billing_surface(ctx)
+    _check_no_shadowed_produced_names(algorithm, ctx.inputs)
 
     context = {
         "effective_date": ctx.effective_date.isoformat(), "purpose": ctx.purpose, **ctx.inputs
     }
+    _check_as_at_values(algorithm, context)
     try:
         out = bundle.decision.evaluate(context, {"trace": trace}) if trace else (
             bundle.decision.evaluate(context)

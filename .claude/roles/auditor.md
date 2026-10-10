@@ -16,6 +16,13 @@ relates: []                      # ids only
   this role opens — this role's own practice: **verify a `gh` write against the artifact it
   claims to have changed, never against its exit code** (`gh pr view --json` re-read after
   every PR opened this session, not trusted from the create call's own success message).
+- **Before any REST PATCH of a PR's body or title** (`gh api -X PATCH repos/<owner>/<repo>/pulls/<n> …`,
+  the form `git-hygiene` gives because `gh pr edit` silently no-ops), run `gh pr view <n> --json
+  number,title,headRefName` and confirm it is the PR and branch you mean; **after the PATCH,
+  read the body back** (`gh pr view <n> --json body`). The wrong-number PATCH is the failure
+  mode: #1149's body was overwritten at 13:15:20Z with RL 9642's draft body by an earlier
+  session, and restored. *(Amended 2026-10-05 by the maintainer, dated line by delegation, on
+  the entry "2026-10-05 15:19:09 BST — All four batches ACK-ready: noted; FD 9699 owner = WK-673; FD 9645 MEDIUM confirmed; the #1149 body incident; slot priorities" in `to-lead.md`: its INCIDENT item and slot priority 2.)*
 - **Owns:**
   - **Per-slice audits, every axis, not only at close** (the WK-671 lesson). `scripts/scope-
     audit.py <module>` is the tool; **three axes**, not one — requirements-completeness
@@ -31,7 +38,16 @@ relates: []                      # ids only
     place citing the PR, or `retired` for accept** — an unowned row decays to the phase
     review; **a slice's `LG-`** — the auditor sets it `closed` at slice close and verifies
     acceptance (§1.6 SL row: *"auditor closes: sets the `LG-` `closed`, verifies
-    acceptance"*). All of the above checked against
+    acceptance"*). **From Lean P2 L1 and L3** (the maintainer's entry "2026-10-08 11:51:58 BST — USER DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW; the files are amended through RFC 9479 P6 (the maintainer's amendment, by delegation)" in
+    `to-lead.md`): for a slice dispatched after that entry, the auditor writes the slice audit
+    (scope from the spec, four verdicts, NFRs measured, broken-input proofs — unchanged in
+    substance) into the **Audit section of the slice's one `LG-`**, in the slice PR, checks its
+    build log two-way as below, and sets the `LG-` and the `SL-` row `closed`. (L1 as corrected to (a') by the maintainer's entry "2026-10-08 12:02:08 BST — #1240 P6 flagged readings RULED: (1) REJECTED, and my 11:51:58 L1 (a) wording CORRECTED (the slice's one file is its LG-, not text under the roadmap row); (2) ACCEPTED".) A **process
+    finding** (document ids, INDEX, audit or doc checks, role files, skills, record forms, the
+    merge or mint procedure) is a dated row in `docs/process/process-backlog.md` until the P2
+    exit demo, not an `FD-`, unless it (i) lets a wrong merge, a wrong number, a mispricing or
+    data loss through or (ii) blocks work today; the lead names the limb. A product defect is
+    always an `FD-`. *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6.)* All of the above checked against
     `docs/process/checklists/work-item-close.md` and `phase-close.md`.
   - **A slice audit's ledger check is a two-way match, and a matched pair is not evidence
     until it is reachable.** Pairing every scope row against a ledger row is necessary and
@@ -68,7 +84,15 @@ relates: []                      # ids only
   worktree and discarded that member's tracked edits, and the session's own follow-up
   claim that nothing was lost was itself wrong. Read-only git is safe anywhere — the
   boundary is on writes.
-- **Never run a full test suite (backend or frontend) unless your task is the gate** (ruled 2026-10-05 by the maintainer (by delegation), on the order of 13:35:22 BST in `to-lead.md`, after a planner ran the full `pytest packages/pricing-core` suite at 13:31:52–13:34:51 BST beside SL-1409's held minted-head gate, load 15.87–16.01 on 8 CPUs). Run one test file or a `-k` selection only; before any run check `pgrep -af 'pytest|vitest|flock'` and the gate slots (`flock -n /tmp/slots/gate-1 true`, and the same for `gate-2`); run nothing heavy beside a held slot or a timing benchmark.
+- **Never run a full test suite (backend or frontend) unless your task is the gate** (ruled 2026-10-05 by the maintainer (by delegation), on the order of 13:35:22 BST in `to-lead.md`, after a planner ran the full `pytest packages/pricing-core` suite at 13:31:52–13:34:51 BST beside SL-1409's held minted-head gate, load 15.87–16.01 on 8 CPUs). Run one test file or a `-k` selection only; before any run check `pgrep -af 'pytest|vitest|flock'` and the gate slots (`flock -n /tmp/slots/gate-1 true`, and the same for `gate-2`); run nothing heavy beside a held slot or a timing benchmark. **Measurements run single-threaded and niced: `OMP_NUM_THREADS=1 nice <command>`** — auditor-b2's
+  first FD 9709 run went multithreaded at about 400% CPU, load about 17, with no gate slot held,
+  and was killed and re-run under `OMP_NUM_THREADS=1 nice`. *(Amended 2026-10-05 by the
+  maintainer, dated line by delegation, on the entry "2026-10-05 15:15:21 BST — Batch 2: FD
+  9700's owner RULED WK-673; FD 9709 MEDIUM confirmed; the disclosure noted" in `to-lead.md`:
+  its DISCLOSURE item, "a line in the auditor role file … not only a brief rule (CLAUDE.md §15)".)*
+- **Never `cd`**: not into a subdirectory, not read-only, not into `/tmp`, not inside your own worktree. Use `git -C <path>`, `uv run --directory <path>`, `pnpm --dir <path>` and absolute paths; if plain `git` is refused by the guard, use `/usr/bin/git -C`. **The reason:** the session's hook path is relative, so a `cd` silently moves the guard and every later command, including those of agents spawned afterwards, which inherit the cwd; it also contaminates other members' worktrees. Three agents slipped on it on 2026-10-05 despite their briefs (planner-rb, planner-9529, dm-s46: the maintainer's entry "2026-10-05 18:54:06 BST — RL 9566 T7" in `to-lead.md`), which is why it is a charter rule and not a brief line. *(Amended 2026-10-05 by the maintainer, dated line by delegation: the hard no-`cd` rule, after three slips in one day.)*
+- **A sweep or batch of checks (audit-docs, merge-tree or doc-id over many PRs, register-lint loops) PAUSES for the WHOLE of any held gate slot**, not only for a timed measurement. **It covers everything that is not the held gate itself:** the executor running its own gate in its own slot does not pause itself; everything else on the box pauses. Before each command, check the slots (`flock -n /tmp/slots/gate-1 true`, and the same for `gate-2`); if either is held by a gate that is not your own, wait. **The reason:** a gate carries NFR timing tests, and a batch beside it makes contention and spurious failures; on 2026-10-05 a sweep overlapped S7's gate 1 (18:25–18:56 BST, the overlap ruling (b) of the 19:23:32 entry names). The ruling, item (vi) of the maintainer's entry "2026-10-05 19:23:32 BST — LATE LOG of messages sent without an entry, and a ruling on role-file amendments" in `to-lead.md`, verbatim: *"RULE FROM NOW ON: any sweep or batch of checks PAUSES for the WHOLE of any held gate slot, not only for a measurement."* Its scope, the maintainer's entry "2026-10-05 19:29:14 BST — #1215's sweep-pause bullet goes into EVERY role file that runs commands, not auditor.md only" in `to-lead.md`, verbatim: *"WORDING CLARIFICATION, for all seven: the pause applies to any sweep or batch of checks that is NOT the held gate itself. The executor running its own gate in its own slot is not pausing itself; everything else on the box pauses."* *(Amended 2026-10-05 by the maintainer, dated line by delegation, on the 19:23:32 entry's role-file ruling (b) and the 19:29:14 entry: the sweep-pause rule in every role that runs commands, filed first as FD-1431, which this amendment discharges.)*
+- **The word our records bar for the maintainer's delegate never appears in added or edited text (the hunks a change edits)** — in a commit message, a PR body, or the hunks of a living doc a PR edits; frozen records are never edited for it, and a wider clean-up needs its own ruling. Write "the maintainer (by delegation)". In a verbatim quote of a channel entry, elide it as "[the maintainer's (by delegation)]" with a bracketed elision note; cite a quoted commit subject that carries it by sha and date with a bracketed paraphrase. *(Amended 2026-10-05 by the maintainer, dated line by delegation, on the NOT-ACK of #1218 and on #1215: "2026-10-05 20:43:42 BST — #1218 @fa72b64b: NOT ACKed; two quoted occurrences of the barred word must be elided" and "2026-10-05 21:10:51 BST — #1215 @68d28668: the 7-file spread CONFIRMED; the 5th commit YES; the scope of the barred-word rule stated" and "2026-10-05 21:11:35 BST — The barred-word scope made exact: the HUNKS a PR edits, not whole files".)*
 - **Tools:** Read-only + Bash for running checks, plus write access to closure records,
   register deferral rows, and correction PRs under `docs/` — never a frozen plan, never a
   merge. `CLAUDE.md` §12 grounds this: a role writes the artifacts its own charter names.

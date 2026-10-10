@@ -173,8 +173,8 @@
       "description": "UNRECONCILED (WK-661, 2026-08-22): this contract has always declared a closed set, and `Model.change_reason` is an unconstrained `str | None`. The enum is kept as the documented vocabulary — refit_new_data, respecified, rebanded, regrouped, hyperparameter_change, objective_change, bug_fix — but nothing enforces it; see CLAUDE.md §0."
     },
     "flags": {
-      "type": "array", "items": {"enum": ["dataset_invalidated"]},
-      "description": "FR-205, and computed from the referents rather than stored: a stored flag goes stale the moment `01` re-validates the dataset version. `objective_deprecated` and `attestation_overdue` were declared here from Phase 0, are named by no requirement and defined by no type, and were deleted on 2026-08-22."
+      "type": "array", "items": {"enum": ["dataset_invalidated", "custom_objective_not_approved"]},
+      "description": "FR-205, and computed from the referents rather than stored: a stored flag goes stale the moment `01` re-validates the dataset version. `objective_deprecated` and `attestation_overdue` were declared here from Phase 0, are named by no requirement and defined by no type, and were deleted on 2026-08-22. `custom_objective_not_approved` was added 2026-10-08 (R4, `06` FR-359, FD-1469; `RL-1470` DP-1): a model whose custom objective is not `approved` carries it, and approval is refused with `ARTIFACT_FLAGGED`."
     },
     "approval_request_id": {"type": ["string", "null"], "format": "uuid"}
   },
