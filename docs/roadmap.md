@@ -1218,7 +1218,7 @@ id: SL-1547
 family: slice
 title: Slice 5: Editor II — diff shading, bulk operations, CSV import and export (FR-230, FR-231, FR-232, FR-233, FR-235)
 status: draft                  # draft → active → closed | retired (§1.2a)
-created: 2026-10-09  # original date 2026-10-08, set at the draft; minted 2026-10-09
+created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
 phase: P2
@@ -1227,7 +1227,7 @@ corrected_by: []
 relates: [PL-1286, PL-1371]
 ```
 
-`PL-1286` S5, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. Diff-vs-previous and diff-vs-seed shading through the paged cells route, the exposure-weight column, the bulk-operation dialog, CSV import confirmation and export, and DP-3's order. **Activation needs:** S4 closed; OQ-1223 decided (DP-3); the FD-1366 bulk-operation typing slice merged. Lane or team fixed at GO. *(Cut 2026-10-08 by the planner under working id 9468, reserved by the lead; minted 2026-10-09 as SL-1547 in the D2 batch mint.)*
+`PL-1286` S5, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. Diff-vs-previous and diff-vs-seed shading through the paged cells route, the exposure-weight column, the bulk-operation dialog, CSV import confirmation and export, and DP-3's order. **Activation needs:** S4 closed; OQ-1223 decided (DP-3); the FD-1366 bulk-operation typing slice merged. Lane or team fixed at GO. *(Cut 2026-10-08 by the planner under working id 9468, reserved by the lead; minted 2026-10-10 as SL-1547 in the D2 batch mint.)*
 
 #### SL-1548 — Slice 6: Sandbox — quote form, ladder waterfall and trace (FR-213, FR-247, FR-248, FR-249, FR-251, FR-252, FR-255, FR-256, FR-258)
 
@@ -1236,7 +1236,7 @@ id: SL-1548
 family: slice
 title: Slice 6: Sandbox — quote form, ladder waterfall and trace (FR-213, FR-247, FR-248, FR-249, FR-251, FR-252, FR-255, FR-256, FR-258)
 status: draft                  # draft → active → closed | retired (§1.2a)
-created: 2026-10-09  # original date 2026-10-08, set at the draft; minted 2026-10-09
+created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
 phase: P2
@@ -1245,7 +1245,7 @@ corrected_by: []
 relates: [PL-1286, PL-1371]
 ```
 
-`PL-1286` S6, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. The quote form from the input contract, the ladder waterfall with its table, declined quotes and typed errors, the trace timeline; FR-249's per-peril components shown absent under RL-1459 (OQ-1460). **Activation needs:** `SL-1367` merged (FD-1335 hold). Lane or team fixed at GO. *(Cut 2026-10-08 by the planner under working id 9467, reserved by the lead; minted 2026-10-09 as SL-1548 in the D2 batch mint.)*
+`PL-1286` S6, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. The quote form from the input contract, the ladder waterfall with its table, declined quotes and typed errors, the trace timeline; FR-249's per-peril components shown absent under RL-1459 (OQ-1460). **Activation needs:** `SL-1367` merged (FD-1335 hold). Lane or team fixed at GO. *(Cut 2026-10-08 by the planner under working id 9467, reserved by the lead; minted 2026-10-10 as SL-1548 in the D2 batch mint.)*
 
 #### SL-1549 — Slice 7b: compare backend — StepChange.own_change from step-definition equality (RL-1261; FR-262 backend limb)
 
@@ -1254,7 +1254,7 @@ id: SL-1549
 family: slice
 title: Slice 7b: compare backend — StepChange.own_change from step-definition equality (RL-1261; FR-262 backend limb)
 status: draft                  # draft → active → closed | retired (§1.2a)
-created: 2026-10-09  # original date 2026-10-08, set at the draft; minted 2026-10-09
+created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
 phase: P2
@@ -1263,7 +1263,7 @@ corrected_by: []
 relates: [PL-1286, PL-1371]
 ```
 
-`PL-1286` S7b, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. `diff_traces` derives `own_change` from step-definition equality by `step_id`, with `RL-1261`'s five negative tests. **Activation needs:** `SL-1367` merged first (both edit `score_compare`). Lane or team fixed at GO. **Not on the automatic cut ladder** (rung 9 is OFF; to the maintainer if rungs 1–7 are spent). *(Cut 2026-10-08 by the planner under working id 9466, reserved by the lead; minted 2026-10-09 as SL-1549 in the D2 batch mint.)*
+`PL-1286` S7b, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. `diff_traces` derives `own_change` from step-definition equality by `step_id`, with `RL-1261`'s five negative tests. **Activation needs:** `SL-1367` merged first (both edit `score_compare`). Lane or team fixed at GO. **Not on the automatic cut ladder** (rung 9 is OFF; to the maintainer if rungs 1–7 are spent). *(Cut 2026-10-08 by the planner under working id 9466, reserved by the lead; minted 2026-10-10 as SL-1549 in the D2 batch mint.)*
 
 #### SL-1550 — Slice 7: Sandbox compare — FR-262's view limb and the own_change rendering rule
 
@@ -1272,7 +1272,7 @@ id: SL-1550
 family: slice
 title: Slice 7: Sandbox compare — FR-262's view limb and the own_change rendering rule
 status: draft                  # draft → active → closed | retired (§1.2a)
-created: 2026-10-09  # original date 2026-10-08, set at the draft; minted 2026-10-09
+created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
 phase: P2
@@ -1281,7 +1281,7 @@ corrected_by: []
 relates: [PL-1286, PL-1371]
 ```
 
-`PL-1286` S7, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. The compare view over `POST /score/compare`; `own_change: false` never rendered as "unchanged". **Activation needs:** S6 and S7b closed; `SL-1367` merged. Lane or team fixed at GO. **Not on the automatic cut ladder** (rung 9 is OFF; to the maintainer if rungs 1–7 are spent). *(Cut 2026-10-08 by the planner under working id 9465, reserved by the lead; minted 2026-10-09 as SL-1550 in the D2 batch mint.)*
+`PL-1286` S7, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. The compare view over `POST /score/compare`; `own_change: false` never rendered as "unchanged". **Activation needs:** S6 and S7b closed; `SL-1367` merged. Lane or team fixed at GO. **Not on the automatic cut ladder** (rung 9 is OFF; to the maintainer if rungs 1–7 are spent). *(Cut 2026-10-08 by the planner under working id 9465, reserved by the lead; minted 2026-10-10 as SL-1550 in the D2 batch mint.)*
 
 #### SL-1551 — Slice 8: Dislocation views (FR-263, FR-264, FR-265, FR-266)
 
@@ -1290,7 +1290,7 @@ id: SL-1551
 family: slice
 title: Slice 8: Dislocation views (FR-263, FR-264, FR-265, FR-266)
 status: draft                  # draft → active → closed | retired (§1.2a)
-created: 2026-10-09  # original date 2026-10-08, set at the draft; minted 2026-10-09
+created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
 phase: P2
@@ -1299,7 +1299,7 @@ corrected_by: []
 relates: [PL-1286, PL-1371]
 ```
 
-`PL-1286` S8, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. The change histogram, segment grid, attribution waterfall and largest movers, each chart with its table, the run cited by id. **Activation needs:** `SL-1388` (WK-673 S4) closed. Lane or team fixed at GO. **Cut-ladder rung 7** (conditional on #1164's served page: void if exit demo (b)'s served page is this view); not pre-cut. *(Cut 2026-10-08 by the planner under working id 9464, reserved by the lead; minted 2026-10-09 as SL-1551 in the D2 batch mint.)*
+`PL-1286` S8, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. The change histogram, segment grid, attribution waterfall and largest movers, each chart with its table, the run cited by id. **Activation needs:** `SL-1388` (WK-673 S4) closed. Lane or team fixed at GO. **Cut-ladder rung 7** (conditional on #1164's served page: void if exit demo (b)'s served page is this view); not pre-cut. *(Cut 2026-10-08 by the planner under working id 9464, reserved by the lead; minted 2026-10-10 as SL-1551 in the D2 batch mint.)*
 
 #### SL-1552 — Slice 10: Rating version list (FD-1283 option A; a new `03` §3.4 FR, spec first)
 
@@ -1308,7 +1308,7 @@ id: SL-1552
 family: slice
 title: Slice 10: Rating version list (FD-1283 option A; a new `03` §3.4 FR, spec first)
 status: draft                  # draft → active → closed | retired (§1.2a)
-created: 2026-10-09  # original date 2026-10-08, set at the draft; minted 2026-10-09
+created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
 phase: P2
@@ -1317,7 +1317,7 @@ corrected_by: []
 relates: [PL-1286, PL-1371]
 ```
 
-`PL-1286` S10, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. The `/rating` list: versions by status, live badges, effective dates, rows linking to `:slug/v/:version`; spec first, amending the existing `GET /api/v1/rating-versions` §5.1 row per `RL-1483`. **Activation needs:** S8 (order: reverse ladder order, ruled 2026-10-08 14:32:33 BST, item D); `SL-1256` (met); `03` §3.4 serialised with WK-674 S6 (`SL-1260`, `PL-1286:398`). Lane or team fixed at GO. **Cut-ladder rung 2**, with S11 (`handover/cut-ladder-2026-10-08.md`, ruled 2026-10-08 13:21:00 BST); not pre-cut. *(Cut 2026-10-08 by the planner under working id 9462, reserved by the lead; minted 2026-10-09 as SL-1552 in the D2 batch mint.)*
+`PL-1286` S10, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. The `/rating` list: versions by status, live badges, effective dates, rows linking to `:slug/v/:version`; spec first, amending the existing `GET /api/v1/rating-versions` §5.1 row per `RL-1483`. **Activation needs:** S8 (order: reverse ladder order, ruled 2026-10-08 14:32:33 BST, item D); `SL-1256` (met); `03` §3.4 serialised with WK-674 S6 (`SL-1260`, `PL-1286:398`). Lane or team fixed at GO. **Cut-ladder rung 2**, with S11 (`handover/cut-ladder-2026-10-08.md`, ruled 2026-10-08 13:21:00 BST); not pre-cut. *(Cut 2026-10-08 by the planner under working id 9462, reserved by the lead; minted 2026-10-10 as SL-1552 in the D2 batch mint.)*
 
 #### SL-1553 — Slice 11: Regression suite view (FR-260, FR-261, FR-1221; FD-1283 option A)
 
@@ -1326,7 +1326,7 @@ id: SL-1553
 family: slice
 title: Slice 11: Regression suite view (FR-260, FR-261, FR-1221; FD-1283 option A)
 status: draft                  # draft → active → closed | retired (§1.2a)
-created: 2026-10-09  # original date 2026-10-08, set at the draft; minted 2026-10-09
+created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
 phase: P2
@@ -1335,7 +1335,7 @@ corrected_by: []
 relates: [PL-1286, PL-1371]
 ```
 
-`PL-1286` S11, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. Golden quotes and property results over WK-672's routes; a run-list read route only if the version's evidence gives no run id (DP-4 (a), spec first). **Activation needs:** S10 (order). Lane or team fixed at GO. **Cut-ladder rung 2**, with S10 (`handover/cut-ladder-2026-10-08.md`, ruled 2026-10-08 13:21:00 BST); not pre-cut. *(Cut 2026-10-08 by the planner under working id 9461, reserved by the lead; minted 2026-10-09 as SL-1553 in the D2 batch mint.)*
+`PL-1286` S11, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. Golden quotes and property results over WK-672's routes; a run-list read route only if the version's evidence gives no run id (DP-4 (a), spec first). **Activation needs:** S10 (order). Lane or team fixed at GO. **Cut-ladder rung 2**, with S10 (`handover/cut-ladder-2026-10-08.md`, ruled 2026-10-08 13:21:00 BST); not pre-cut. *(Cut 2026-10-08 by the planner under working id 9461, reserved by the lead; minted 2026-10-10 as SL-1553 in the D2 batch mint.)*
 
 #### SL-1554 — Slice 9: Designer III — sub-graph mounting (FR-217, FR-218 authoring view)
 
@@ -1344,7 +1344,7 @@ id: SL-1554
 family: slice
 title: Slice 9: Designer III — sub-graph mounting (FR-217, FR-218 authoring view)
 status: draft                  # draft → active → closed | retired (§1.2a)
-created: 2026-10-09  # original date 2026-10-08, set at the draft; minted 2026-10-09
+created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
 phase: P2
@@ -1353,7 +1353,7 @@ corrected_by: []
 relates: [PL-1286, PL-1371]
 ```
 
-`PL-1286` S9, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. Mounting a pinned sub-graph in the designer. **Activation needs:** S3 closed; `SL-1341` (WK-1250 S3) closed. Lane or team fixed at GO. **Cut-ladder rung 1** (`handover/cut-ladder-2026-10-08.md`, ruled 2026-10-08 13:21:00 BST); not pre-cut. *(Cut 2026-10-08 by the planner under working id 9463, reserved by the lead; minted 2026-10-09 as SL-1554 in the D2 batch mint.)*
+`PL-1286` S9, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. Mounting a pinned sub-graph in the designer. **Activation needs:** S3 closed; `SL-1341` (WK-1250 S3) closed. Lane or team fixed at GO. **Cut-ladder rung 1** (`handover/cut-ladder-2026-10-08.md`, ruled 2026-10-08 13:21:00 BST); not pre-cut. *(Cut 2026-10-08 by the planner under working id 9463, reserved by the lead; minted 2026-10-10 as SL-1554 in the D2 batch mint.)*
 
 ### WK-690 — **`expression` custom objectives** — SymPy derivation, the gradient/hessian compilation target, the authoring UI, and lifting `expression_objectives_enabled` **plus `custom_objective:author` and its check, which `06` FR-367 requires the `expression` kind to arrive with**
 
