@@ -106,8 +106,8 @@ closed-vocabulary messages, and all 54 request-reachable free messages rewritten
 41 free messages built in a handler from a user's create body. **B2** is the 47 free messages
 in system-produced models. **B1 and B2 moved to P3 by the lead's ruling of 2026-10-10 16:07:46
 BST** (DP-9). Their site lists are kept in Appendix A, by `file:Class.validator`, so P3 can plan
-from them. The five graph signals go with B1 (DP-8, DP-10). A dated P3 row owned by WK-1178
-records B1 and B2 on the roadmap. It is not a cut-ladder rung: B1 and B2 were never in the P2
+from them. The five graph signals go with B1 (DP-8, DP-10). A dated P3 row owned by WK-1178,
+SL 9958 (working id, reserved by the lead), records B1 and B2 on the roadmap. It is not a cut-ladder rung: B1 and B2 were never in the P2
 baseline. Until P3 rewrites them, the guard's exact-count `_RESIDUAL` lists their sites, and P3
 shrinks it. A stored refusal from one of them already gets input-free fixed text through DP-5's
 allow-list (`_validation_detail`). Acceptance (i), that no request-reachable raise renders
