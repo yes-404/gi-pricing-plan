@@ -47,6 +47,7 @@ import statistics
 import sys
 import time
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -59,6 +60,13 @@ _PACKAGES = Path(__file__).resolve().parent.parent / "packages"
 sys.path.insert(0, str(_PACKAGES / "pricing-core" / "src"))
 sys.path.insert(0, str(_PACKAGES / "model-schema" / "src"))
 
+from model_schema import PerilStructure  # noqa: E402
+from model_schema.perils import (  # noqa: E402
+    LargeLossKind,
+    LargeLossTreatment,
+    PerilComponent,
+    PerilMethod,
+)
 from model_schema.rating import RatingVersion  # noqa: E402
 from model_schema.refs import ArtifactRef  # noqa: E402
 from model_schema.scoring import QuoteContext, QuoteContextOptions  # noqa: E402
@@ -393,6 +401,73 @@ async def _compiled(
         with_gbm=with_gbm, n_expr=n_expr, rounds=rounds, rows=rows, glm=glm
     )
     return load_bundle(bundle)
+
+
+# -- A-3 (PL-1465, DP-A3-6 (a)): a Peril Structure `model_call` --------------------------------
+
+PERIL_STRUCTURE = "peril_structure:bench-perils@1"
+PERIL_MODELS = ("model:bench-ad-freq@1", "model:bench-ad-sev@1", "model:bench-ws-bc@1")
+
+
+def _peril_structure_payload() -> dict[str, Any]:
+    """Two `frequency_severity` perils and one `burning_cost` peril: five predictions a quote
+    (DP-A3-6), no large-loss treatment, so the figure is the composition alone."""
+    none = LargeLossTreatment(kind=LargeLossKind.NONE)
+    ref = ArtifactRef.model_validate
+    structure = PerilStructure(
+        id=uuid4(), slug="bench-perils", version=1, created_at=datetime(2026, 10, 1, tzinfo=UTC),
+        perils=(
+            PerilComponent(
+                peril="AD", method=PerilMethod.FREQUENCY_SEVERITY, large_loss=none,
+                frequency_model=ref(PERIL_MODELS[0]), severity_model=ref(PERIL_MODELS[1]),
+            ),
+            PerilComponent(
+                peril="TP", method=PerilMethod.FREQUENCY_SEVERITY, large_loss=none,
+                frequency_model=ref(PERIL_MODELS[0]), severity_model=ref(PERIL_MODELS[1]),
+            ),
+            PerilComponent(
+                peril="WS", method=PerilMethod.BURNING_COST, large_loss=none,
+                burning_cost_model=ref(PERIL_MODELS[2]),
+            ),
+        ),
+    )
+    return structure.model_dump(mode="json")
+
+
+class _PerilResolver:
+    """Serves the structure, three real boosters and the usual rate table."""
+
+    def __init__(self, *, n_expr: int, rounds: int, rows: int) -> None:
+        algorithm = _algorithm_payload(with_gbm=True, n_expr=n_expr)
+        algorithm["slug"] = "bench-rating-peril"
+        call = next(step for step in algorithm["steps"] if step["step_id"] == "s_risk")
+        del call["model_ref"]
+        call["peril_structure_ref"] = PERIL_STRUCTURE
+        call["result_type"] = "decimal"
+        self._payloads: dict[str, dict[str, Any]] = {
+            "rating_algorithm:bench-rating-peril@1": algorithm,
+            "rate_table:bench-expense@1": _rate_table_payload(),
+            PERIL_STRUCTURE: _peril_structure_payload(),
+        }
+        for index, model in enumerate(PERIL_MODELS):
+            booster = _train_booster(rows=rows, rounds=rounds, seed=20260829 + index)
+            self._payloads[model] = _gbm_model_payload(booster, rounds=rounds, rows=rows)
+
+    async def resolve(self, ref: ArtifactRef) -> ResolvedArtifact:
+        return ResolvedArtifact(status="approved", payload=self._payloads[str(ref)])
+
+
+async def _peril_compiled(*, n_expr: int, rounds: int, rows: int) -> CompiledBundle:
+    version = _version(with_gbm=True)
+    assert version.pins is not None
+    version = version.model_copy(update={
+        "algorithm_ref": ArtifactRef.model_validate("rating_algorithm:bench-rating-peril@1"),
+        "pins": version.pins.model_copy(
+            update={"models": [ArtifactRef.model_validate(PERIL_STRUCTURE)]}
+        ),
+    })
+    resolver: ArtifactResolver = _PerilResolver(n_expr=n_expr, rounds=rounds, rows=rows)
+    return load_bundle(await compile_bundle(version, resolver))
 
 
 def _ctx() -> QuoteContext:
@@ -952,6 +1027,12 @@ def main() -> int:
     )
     parser.add_argument("--rows", type=int, default=5_000, help="Synthetic training rows")
     parser.add_argument(
+        "--peril-structure", action="store_true",
+        help="A-3 (DP-A3-6 (a)): also record p50/p99 for a Peril Structure model_call (two "
+             "frequency_severity perils and one burning_cost peril). No budget is asserted. "
+             "Run only when no gate slot is held.",
+    )
+    parser.add_argument(
         "--abc-iterations", type=int, default=200,
         help="Rounds for the A/B/C decomposition. Each round runs all three "
              "configurations, so this costs roughly 3x its own count in calls; 200 is "
@@ -1043,6 +1124,23 @@ def main() -> int:
         "trace=False)",
         run_glm, budget_ms=BUDGET_WITH_GBM_P99_MS,
     )
+
+    if args.peril_structure:
+        print("\ncompiling the Peril Structure bundle (~200 steps, five component predictions)...")
+        bundle_peril = asyncio.run(
+            _peril_compiled(n_expr=args.expr_steps, rounds=args.rounds, rows=args.rows)
+        )
+        run_peril = asyncio.run(
+            _measure(
+                bundle_peril, ctx, trace=False, warmup=args.warmup, iterations=args.iterations
+            )
+        )
+        _report(
+            f"Peril Structure model_call ({len(bundle_peril.algorithm.steps)} steps, "
+            "two frequency_severity perils and one burning_cost peril, trace=False; "
+            "recorded, no budget: DP-A3-6)",
+            run_peril, budget_ms=None,
+        )
 
     run_traced = asyncio.run(
         _measure(bundle_gbm, ctx, trace=True, warmup=args.warmup, iterations=args.iterations)
