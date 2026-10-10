@@ -2,7 +2,7 @@
 """WK-673 Slice 3, Task 7: the attribution cost and replay harness on the freMTPL2 fixture.
 
     uv run python scripts/measure-attribution-cost.py fit
-    uv run python scripts/measure-attribution-cost.py cost --policies 20000
+    uv run python scripts/measure-attribution-cost.py cost --policies 20000 --score-policies 678013
     uv run python scripts/measure-attribution-cost.py sets --policies 20000
     uv run python scripts/measure-attribution-cost.py replay --policies 2000
 
@@ -643,8 +643,10 @@ def _attribute(fx: Fixture, members: list[int], book: Any) -> Any:
 
 
 def cmd_cost(args: argparse.Namespace) -> None:
-    """score_batch N medians and the 2^K re-rates (K = 3..6) on the first `--policies` policies
-    by quote_id, N runs each. Full-portfolio figures are DERIVED and labelled so."""
+    """score_batch N medians (on the first `--score-policies`, 0 = skip) and the 2^K re-rates for
+    each K in `--ks` on the first `--policies` policies by quote_id, N runs each. Full-portfolio
+    figures are DERIVED and labelled so, from the score_batch rate measured in this call or
+    given by `--rate` (policies per second)."""
     from pricing_core.rating.compile import compile_bundle
     from pricing_core.rating.runtime import load_bundle
     from pricing_core.rating.score import score_batch
@@ -652,32 +654,34 @@ def cmd_cost(args: argparse.Namespace) -> None:
     fx = load_fixture()
     book = portfolio_for(fx, args.policies).collect().lazy()
     n = book.select(pl_len()).collect().item()
-    base_v, _c, resolver = versions_for(fx, [])
-    bundle = load_bundle(asyncio.run(compile_bundle(base_v, resolver)))
-    inputs = [f["name"] for f in bundle.algorithm.input_contract]
-    frame = book.select(["quote_id", *inputs]).with_columns(_stamp_columns())
-    secs = []
-    for _ in range(args.runs):
-        t = time.perf_counter()
-        score_batch(bundle, frame).collect()
-        secs.append(time.perf_counter() - t)
-    rate = n / statistics.median(secs)
-    _emit(what="score_batch", k=0, policies=n, seconds=statistics.median(secs), runs=secs)
-    for k, members in (
-        (3, [0, 1, 2]),
-        (4, [0, 1, 2, 3]),
-        (5, [0, 1, 2, 3, 4]),
-        (6, [0, 1, 2, 3, 4, 5]),
-    ):
+    rate = args.rate
+    if args.score_policies:
+        sbook = portfolio_for(fx, args.score_policies).collect().lazy()
+        sn = sbook.select(pl_len()).collect().item()
+        base_v, _c, resolver = versions_for(fx, [])
+        bundle = load_bundle(asyncio.run(compile_bundle(base_v, resolver)))
+        inputs = [f.name for f in bundle.algorithm.input_contract]
+        frame = sbook.select(["quote_id", *inputs]).with_columns(_stamp_columns())
+        secs = []
+        for _ in range(args.runs):
+            t = time.perf_counter()
+            score_batch(bundle, frame).collect()
+            secs.append(time.perf_counter() - t)
+        rate = sn / statistics.median(secs)
+        _emit(what="score_batch", k=0, policies=sn, seconds=statistics.median(secs), runs=secs,
+              policies_per_s=rate)  # fmt: skip
+    for k in (int(x) for x in args.ks.split(",") if x):
+        members = list(range(k))
         runs = []
         for _ in range(args.runs):
             t = time.perf_counter()
             _attribute(fx, members, book)
             runs.append(time.perf_counter() - t)
         _emit(what="attribute", k=k, policies=n, seconds=statistics.median(runs), runs=runs)
-        _emit(what="derived", k=k, formula="2^K * 678013 / rate",
-              inputs={"K": k, "policies": 678013, "score_batch_policies_per_s": rate},
-              seconds=(2**k) * 678013 / rate)  # fmt: skip
+        if rate:
+            _emit(what="derived", k=k, formula="2^K * 678013 / rate",
+                  inputs={"K": k, "policies": 678013, "score_batch_policies_per_s": rate},
+                  seconds=(2**k) * 678013 / rate)  # fmt: skip
 
 
 def pl_len() -> Any:
@@ -773,6 +777,10 @@ def main() -> None:
         p = sub.add_parser(name)
         p.add_argument("--policies", type=int, default=20_000)
         p.add_argument("--runs", type=int, default=5)
+        if name == "cost":
+            p.add_argument("--ks", default="3,4,5,6")
+            p.add_argument("--score-policies", type=int, default=0)
+            p.add_argument("--rate", type=float, default=0.0)
         p.set_defaults(fn=fn)
     args = parser.parse_args()
     args.fn(args)
