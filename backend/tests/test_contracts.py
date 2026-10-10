@@ -2654,6 +2654,77 @@ def _one_sided_slugs() -> tuple[set[str], set[str]]:
     return authored - generated, generated - authored
 
 
+#: Authored-only slugs whose `model-schema` class has shipped and that nothing compares yet,
+#: each with the reason it is exempt (FD-1416; RL-1522 DP-9). Not a place to park a new one.
+#: `dislocation-run` is absent: PL-1267 (WK-673 Slice 4) generated it, so it is no longer
+#: authored-only and the plan's fifth entry would be stale (the guard below refuses a stale one).
+SHIPPED_NOT_COMPARED: Final[dict[str, str]] = {
+    "rate-table": "register F27",
+    "rating-algorithm": "register F27",
+    "rating-version": "register F27",
+    "scoring": "RL-878: its four $defs are compared by field name, "
+    "test_generated_and_authored_agree_on_scoring_field_names",
+}
+
+
+def _model_schema_classes(document: dict[str, Any]) -> list[str]:
+    """The `model-schema` classes an authored file names: its `title` and its `$defs` keys.
+
+    A `BaseModel` subclass, not merely an attribute: `common/money`'s `$defs` include
+    `Currency` and `MoneyMinor`, which `model_schema` exports as `Annotated` aliases.
+    """
+    import model_schema
+    from pydantic import BaseModel
+
+    names = [document.get("title", ""), *document.get("$defs", {})]
+    return sorted(
+        n
+        for n in names
+        if isinstance(getattr(model_schema, n, None), type)
+        and issubclass(getattr(model_schema, n), BaseModel)
+    )
+
+
+def _hidden_model_schema_classes(
+    authored_only: set[str], exempt: dict[str, str]
+) -> tuple[dict[str, list[str]], list[str]]:
+    hidden = {
+        s: found
+        for s in sorted(authored_only)
+        if s not in exempt and (found := _model_schema_classes(_load(_authored_schema(s))))
+    }
+    return hidden, sorted(s for s in exempt if s not in authored_only)
+
+
+@pytest.mark.req("FR-9")
+def test_no_authored_only_slug_hides_a_model_schema_class() -> None:
+    """FD-1416 discharge item (3), the F27 class: an authored-only slug whose file names a
+    `model-schema` class (its `title` or a `$defs` key) is a second definition nothing
+    compares, unless it is in `SHIPPED_NOT_COMPARED` with its reason."""
+    authored_only, _ = _one_sided_slugs()
+    hidden, stale = _hidden_model_schema_classes(authored_only, SHIPPED_NOT_COMPARED)
+    assert not hidden, f"authored-only but shipped in model-schema: {hidden}"
+    assert not stale, f"SHIPPED_NOT_COMPARED names a slug that is no longer authored-only: {stale}"
+
+
+@pytest.mark.req("FR-9")
+def test_the_hidden_class_guard_fails_on_each_broken_input() -> None:
+    """Broken input for the guard (PL-1528 Acceptance 7): dropping `rate-table` and dropping
+    `scoring` from the map are each refused, naming the slug. `scoring` is the case only the
+    `title` + `$defs` predicate catches: no `Scoring` class exists, so a PascalCase-of-the-slug
+    lookup passes the same edit."""
+    import model_schema
+
+    authored_only, _ = _one_sided_slugs()
+    for dropped in ("rate-table", "scoring"):
+        exempt = {k: v for k, v in SHIPPED_NOT_COMPARED.items() if k != dropped}
+        hidden, _ = _hidden_model_schema_classes(authored_only, exempt)
+        assert dropped in hidden, f"dropping {dropped} from the map was not refused"
+    assert not hasattr(model_schema, "Scoring")
+    stale = {**SHIPPED_NOT_COMPARED, "no-such-slug": "invented"}
+    assert _hidden_model_schema_classes(authored_only, stale)[1] == ["no-such-slug"]
+
+
 @pytest.mark.req("FR-451")
 def test_every_one_sided_slug_is_declared() -> None:
     """OQ-649 (b): one-sidedness is declared, never inferred.

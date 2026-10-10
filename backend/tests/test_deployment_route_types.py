@@ -58,10 +58,15 @@ ROWS: tuple[Row, ...] = (
     ),
     Row("POST", "/api/v1/environments/{env}/deployments", "DeploymentCreate", "Deployment"),
     Row("GET", "/api/v1/environments/{env}/deployments", None, "Deployment", paged=True),
-    # Row 9: the body is typed; the 2xx is `FD-1335` Part B's (FD 9752), pinned by key set.
-    Row("POST", "/api/v1/approval-requests", "ApprovalSubmission", None),
+    # Row 9: the body and (FD-1416, PL-1528) the 2xx are typed.
+    Row("POST", "/api/v1/approval-requests", "ApprovalSubmission", "ApprovalRequest"),
     # Row 8 (Task 6): the withdraw body is `reason` only; the server derives liveness.
-    Row("POST", "/api/v1/approval-requests/{request_id}/withdraw", "ApprovalWithdrawal", None),
+    Row(
+        "POST",
+        "/api/v1/approval-requests/{request_id}/withdraw",
+        "ApprovalWithdrawal",
+        "ApprovalRequest",
+    ),
 )
 
 #: The module of each row's handler.

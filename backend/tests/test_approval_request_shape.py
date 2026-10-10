@@ -200,3 +200,79 @@ async def test_changes_requested_returns_a_rating_version_to_draft(
         request = await session.get(ApprovalRequestRow, UUID(created["id"]))
     assert request is not None and request.status == "changes_requested"
     assert rating_version.status == "draft"
+
+
+# -- Acceptance 2: every route's 2xx is an ApprovalRequest (FD-1416) -------------------------
+
+
+@pytest.mark.req("FR-9")
+async def test_every_approval_route_returns_an_approval_request(
+    client: TestClient,
+    database: Database,
+    workspace_id: UUID,
+    analyst: dict[str, str],
+    approver: dict[str, str],
+) -> None:
+    """The five routes `to_dict` served (DP-7 (a) puts the list in scope), each body through
+    `ApprovalRequest.model_validate`. Red at the base tree: `workspace_id` is missing and
+    `environment` is refused by `extra="forbid"`."""
+    from model_schema import ApprovalRequest
+
+    _, submitted = await _submitted(client, database, workspace_id, analyst)
+    ApprovalRequest.model_validate(submitted)
+
+    one = client.get(f"/api/v1/approval-requests/{submitted['id']}", headers=analyst)
+    assert one.status_code == 200, one.text
+    ApprovalRequest.model_validate(one.json())
+
+    listed = client.get("/api/v1/approval-requests", headers=analyst)
+    assert listed.status_code == 200, listed.text
+    assert listed.json()["items"]
+    for item in listed.json()["items"]:
+        ApprovalRequest.model_validate(item)
+
+    decided = _decide(client, approver, submitted["id"], "approve")
+    assert decided.status_code == 200, decided.text
+    ApprovalRequest.model_validate(decided.json())
+
+    _, second = await _submitted(client, database, workspace_id, analyst)
+    withdrawn = client.post(
+        f"/api/v1/approval-requests/{second['id']}/withdraw",
+        json={"reason": "not ready"},
+        headers=approver,
+    )
+    assert withdrawn.status_code == 200, withdrawn.text
+    ApprovalRequest.model_validate(withdrawn.json())
+
+
+# -- Acceptance 3: the OpenAPI 2xx is a $ref --------------------------------------------------
+
+_REF = {"$ref": "#/components/schemas/ApprovalRequest"}
+
+
+@pytest.mark.req("FR-451")
+def test_the_approval_routes_publish_the_approval_request_ref() -> None:
+    """The committed `generated.json`: red at the base tree, where `ApprovalRequest` is not a
+    component and the four 2xx are open objects."""
+    import json
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[2] / "docs" / "contracts" / "openapi" / "generated.json"
+    paths = json.loads(path.read_text())["paths"]
+    base = "/api/v1/approval-requests"
+    found: dict[str, Any] = {}
+    for route, method in (
+        (base, "post"),
+        (f"{base}/{{request_id}}", "get"),
+        (f"{base}/{{request_id}}/decide", "post"),
+        (f"{base}/{{request_id}}/withdraw", "post"),
+    ):
+        responses = paths[route][method]["responses"]
+        (code,) = (c for c in responses if c.startswith("2"))
+        found[f"{method.upper()} {route}"] = responses[code]["content"]["application/json"]["schema"]
+    wrong = {k: v for k, v in found.items() if v != _REF}
+    assert not wrong, f"2xx that is not {_REF}: {wrong}"
+
+    listed = paths[base]["get"]["responses"]["200"]["content"]["application/json"]["schema"]
+    page = json.loads(path.read_text())["components"]["schemas"][listed["$ref"].rsplit("/", 1)[-1]]
+    assert page["properties"]["items"]["items"] == _REF, page["properties"]["items"]
