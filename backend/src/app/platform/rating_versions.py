@@ -11,6 +11,7 @@ approver's decision reaches the row through `apply_approval_decision`, the seam
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
+from decimal import Decimal
 from typing import Any, Literal, cast
 from uuid import UUID
 
@@ -28,7 +29,8 @@ from app.db.models import (
     RegressionSuiteVersionRow,
 )
 from app.errors import PlatformError
-from app.platform import approvals, audit, rbac
+from app.platform import approvals, audit, blobs, rbac
+from app.platform import environments as environments_service
 from app.platform import objectives as objectives_service
 from app.platform import perils as perils_service
 from app.platform import rate_tables as rate_tables_service
@@ -36,9 +38,11 @@ from app.platform import reference as reference_service
 from app.platform import regression_runs as regression_runs_service
 from app.platform import regression_suites as regression_suites_service
 from app.platform import transformations as transform_service
+from app.platform import transparency as transparency_service
 from app.platform.blobs import BlobStore
 from app.platform.modelling import load_factors, resolve_offset_model, to_factor, to_model
 from model_schema import (
+    ApprovalPolicy,
     ApprovalStatus,
     ArtifactRef,
     BundleMetadata,
@@ -57,13 +61,21 @@ from model_schema import (
     Pins,
     Principal,
     RatingAlgorithm,
+    RatingModelCallStep,
     RatingVersion,
     RatingVersionEvidence,
     RatingVersionStatus,
     RegressionSuiteContent,
     check_model_reference_mode,
     context_hash,
+    diff_algorithms,
 )
+from model_schema.approvals import (
+    DEFAULT_APPROXIMATION_DEVIATION,
+    DEFAULT_DISLOCATION_BASELINE_ENVIRONMENT,
+)
+from model_schema.dislocation import DislocationRun
+from model_schema.rating import ApproximationCheck
 from pricing_core.rating.compile import Bundle, ResolvedArtifact, compile_bundle
 from pricing_core.rating.runtime import CompiledBundle
 from pricing_core.rating.testing import evaluate_golden_quotes
@@ -90,10 +102,13 @@ __all__ = [
     "BundleLoader",
     "WorkspaceResolver",
     "apply_approval_decision",
+    "approximation_fidelity_statements",
     "compile_rating_version",
     "create_rating_version",
+    "dislocation_run_verified",
     "golden_quote_delta_authors",
     "load_rating_version",
+    "structural_diff_verified",
     "submit_for_review",
     "to_schema",
 ]
@@ -329,6 +344,7 @@ async def submit_for_review(
     actor: Principal,
     rating_version_id: UUID,
     change_summary: str,
+    blob_store: BlobStore,
     load_compiled: BundleLoader | None = None,
 ) -> tuple[RatingVersionRow, ApprovalRequestRow]:
     """`draft → review`, creating the approval request through governance.
@@ -340,6 +356,10 @@ async def submit_for_review(
     same algorithm — is pinned into `evidence.golden_quotes`. `load_compiled` loads the
     bundle for a ref; the route supplies one that refuses rather than degrades when
     metadata storage is down (audit finding F5). It is needed only when a suite exists.
+
+    `blob_store` is required, with no default: FR-219's structural diff is stored as a blob
+    (`06` FR-364 E4), and a caller that forgets the store fails at once rather than submitting
+    a version whose diff was never kept.
     """
     await rbac.require_permission(
         session,
@@ -364,13 +384,42 @@ async def submit_for_review(
     run_id = await _regression_run_gate(
         session, workspace_id=workspace_id, row=row, ref=ref, golden_quotes=golden_quotes
     )
-    # Written once, here, and never edited after (`03` §4.3's invariant). The run id is the
-    # only other key this gate writes; `golden_quotes` is exactly what the gate returned.
+    policy = await approvals.policy_for(session, workspace_id)
+    baseline, baseline_reason = await _dislocation_baseline(
+        session, workspace_id=workspace_id, row=row, policy=policy
+    )
+    dislocation_run_id = await _dislocation_gate(
+        session, workspace_id=workspace_id, row=row, ref=ref, baseline=baseline
+    )
+    approximation_check = await _approximation_gate(
+        session, workspace_id=workspace_id, row=row, ref=ref, policy=policy
+    )
+    structural_diff_blob = await _structural_diff_gate(
+        session, workspace_id=workspace_id, row=row, ref=ref, baseline=baseline,
+        blob_store=blob_store,
+    )
+    # Written once, here, and never edited after (`03` §4.3's invariant). The ids are the
+    # only other keys these gates write; `golden_quotes` is exactly what the gate returned.
     row.evidence = {
         **(row.evidence or {}),
         "golden_quotes": golden_quotes,
         "regression_suite_run_id": str(run_id),
+        "structural_diff_blob": structural_diff_blob,
+        **(
+            {"approximation_check": approximation_check.model_dump(mode="json")}
+            if approximation_check is not None
+            else {}
+        ),
+        **(
+            {"dislocation_run_id": str(dislocation_run_id)}
+            if dislocation_run_id is not None
+            else {"no_baseline": baseline_reason}
+        ),
     }
+    # The version carries the summary it was submitted with (`03` FR-242; PL-1500 Task 7,
+    # DP-E1-6 (a)); a resubmission overwrites it, as the evidence above is. A blank summary is
+    # still `approvals.submit`'s refusal (FR-352), which rolls this assignment back.
+    row.change_summary = change_summary
     request = await approvals.submit(
         session,
         workspace_id=workspace_id,
@@ -819,6 +868,313 @@ async def _regression_run_gate(
             f"the latest Regression Run ({latest.id}) for this bundle and suite failed (FR-257)",
         )
     return latest.id
+
+
+async def _dislocation_baseline(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    row: RatingVersionRow,
+    policy: ApprovalPolicy,
+) -> tuple[ArtifactRef | None, str]:
+    """FR-257 limb (2)'s baseline and why (DP-S5-1 (a); `03` FR-257, 2026-10-10 clarification).
+
+    The Rating Version live in the Environment the `rating_version` policy entry names (default
+    `prod`); with nothing live there, the most recently approved other version of the same
+    algorithm (`_baseline`, the golden-quote precedent); with neither, the version is the
+    algorithm's first. The reason is `live:<environment>`, `approved` or `first_version`.
+    """
+    entry = policy.entry_for("rating_version")
+    environment = (
+        entry.dislocation_baseline_environment if entry is not None else None
+    ) or DEFAULT_DISLOCATION_BASELINE_ENVIRONMENT
+    live = await environments_service.live_rating_version_ref(
+        session, workspace_id=workspace_id, environment_slug=environment
+    )
+    if live is not None:
+        return ArtifactRef.parse(live), f"live:{environment}"
+    if row.algorithm_ref is not None:
+        found = await _baseline(
+            session,
+            workspace_id=workspace_id,
+            algorithm_slug=ArtifactRef.model_validate(row.algorithm_ref).slug,
+            exclude_id=row.id,
+        )
+        if found is not None:
+            approved = found[0]
+            return (
+                ArtifactRef(type="rating_version", slug=approved.slug, version=approved.version),
+                "approved",
+            )
+    return None, "first_version"
+
+
+async def _dislocation_gate(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    row: RatingVersionRow,
+    ref: ArtifactRef,
+    baseline: ArtifactRef | None,
+) -> UUID | None:
+    """FR-257 limb (2), a Dislocation Run against the baseline: the run id to record.
+
+    `None` only for a first version (no baseline, so no run is required; the caller records
+    `no_baseline`). Otherwise the latest run naming this version at its **current** bundle hash
+    as candidate and the baseline as baseline, else `EVIDENCE_INCOMPLETE` naming which of the
+    three failed: no run at all, a run on an earlier bundle hash (stale), or a run against a
+    different baseline.
+    """
+    if baseline is None:
+        return None
+    # Local, because `dislocation_runs` imports `WorkspaceResolver` and `to_schema` from this
+    # module: a module-level import here is a cycle (PL-1500 Task 3).
+    from app.platform import dislocation_runs as dislocation_runs_service
+
+    bundle_hash = (row.bundle or {}).get("content_hash")
+    if bundle_hash is None:
+        raise _evidence_incomplete(
+            ref, "FR-257 limb (2): the version has no compiled bundle for a Dislocation Run to name"
+        )
+    latest = await dislocation_runs_service.latest_run_for(
+        session,
+        workspace_id=workspace_id,
+        candidate_ref=str(ref),
+        candidate_bundle_hash=str(bundle_hash),
+        baseline_ref=str(baseline),
+    )
+    if latest is not None:
+        return latest.id
+    keys = await dislocation_runs_service.candidate_run_keys(
+        session, workspace_id=workspace_id, candidate_ref=str(ref)
+    )
+    if not keys:
+        why = f"no Dislocation Run names this version as its candidate against {baseline}"
+    elif not any(candidate_hash == str(bundle_hash) for candidate_hash, _ in keys):
+        why = (
+            f"every Dislocation Run of this version is on an earlier bundle hash than its "
+            f"current {bundle_hash} (stale)"
+        )
+    else:
+        why = (
+            f"no Dislocation Run at this version's current bundle hash has {baseline}, the "
+            "current live version, as its baseline"
+        )
+    raise _evidence_incomplete(ref, f"FR-257 limb (2): {why}")
+
+
+async def approximation_fidelity_statements(
+    session: AsyncSession, *, workspace_id: UUID, row: RatingVersionRow
+) -> list[str]:
+    """FR-136's pre-check for FR-224 (DP-S5-5 (a), `03` FR-224): the fidelity statements of the
+    models a version references in `approximation` mode, or `EVIDENCE_INCOMPLETE` naming the
+    first model whose transparency artifact has no GLM approximation (or none at all).
+
+    A model with no approximation cannot be rated in `approximation` mode (`02` FR-133), so
+    refusing it before a portfolio run is spent is the "plainly poor surrogate" case with no
+    new threshold. Run at `POST /dislocation-runs` for an exact-mode baseline spec and again
+    at submission; the statements are copied onto the evidence for the approver. A version
+    that references no model in `approximation` mode yields none.
+    """
+    ref = ArtifactRef(type="rating_version", slug=row.slug, version=row.version)
+    algorithm = await _algorithm_of(session, workspace_id=workspace_id, rating_version=row)
+    if algorithm is None:
+        return []
+    model_refs = sorted(
+        {
+            step.model_ref
+            for step in algorithm.steps
+            if isinstance(step, RatingModelCallStep)
+            and step.mode == "approximation"
+            and step.model_ref is not None
+        },
+        key=str,
+    )
+    statements: list[str] = []
+    for model_ref in model_refs:
+        model = await session.scalar(
+            select(ModelRow).where(
+                ModelRow.workspace_id == workspace_id,
+                ModelRow.model_family_slug == model_ref.slug,
+                ModelRow.version == model_ref.version,
+            )
+        )
+        if model is None:
+            raise _evidence_incomplete(ref, f"FR-136: {model_ref} is not a model of this workspace")
+        try:
+            artifact = await transparency_service.load_transparency(
+                session, workspace_id=workspace_id, model_id=model.id
+            )
+        except PlatformError as exc:
+            if exc.code != "NOT_FOUND":
+                raise
+            raise _evidence_incomplete(
+                ref,
+                f"FR-136: {model_ref} is referenced in approximation mode but has no "
+                "transparency artifact",
+            ) from exc
+        if artifact.glm_approximation is None:
+            raise _evidence_incomplete(
+                ref,
+                f"FR-136: {model_ref} is referenced in approximation mode but its transparency "
+                "artifact has no GLM approximation",
+            )
+        statements.append(f"{model_ref}: {artifact.fidelity_statement}")
+    return statements
+
+
+async def _approximation_gate(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    row: RatingVersionRow,
+    ref: ArtifactRef,
+    policy: ApprovalPolicy,
+) -> ApproximationCheck | None:
+    """FR-224: an `approximation`-mode version is held to the policy's threshold (DP-S5-2).
+
+    `None` for an `exact`-mode version, which the gate does not touch. Otherwise, in order:
+    FR-136's pre-check (cheap, ahead of any figure), the latest Dislocation Run whose spec
+    named this version at its current bundle hash as both baseline and candidate; then that
+    run's observed `abs_change_pct_quantiles` at the declared quantile against the maximum. A
+    run with no figure (an empty banded set, or one made before the field) is refused, never
+    read as zero (RL-1504 T7 choice (3)).
+
+    The threshold is read **only** from the `rating_version` policy entry, falling back to
+    `DEFAULT_APPROXIMATION_DEVIATION` when the entry leaves it unset: no value switches the
+    gate off, and nothing here reaches `Settings` or the environment (`RL-1264` DP-3 (b)).
+    """
+    if row.model_reference_mode != "approximation":
+        return None
+    from app.platform import dislocation_runs as dislocation_runs_service  # cycle, as limb (2)
+
+    statements = await approximation_fidelity_statements(
+        session, workspace_id=workspace_id, row=row
+    )
+    entry = policy.entry_for("rating_version")
+    threshold = (
+        entry.approximation_deviation
+        if entry is not None and entry.approximation_deviation is not None
+        else DEFAULT_APPROXIMATION_DEVIATION
+    )
+    bundle_hash = (row.bundle or {}).get("content_hash")
+    latest = (
+        None
+        if bundle_hash is None
+        else await dislocation_runs_service.latest_run_for(
+            session,
+            workspace_id=workspace_id,
+            candidate_ref=str(ref),
+            candidate_bundle_hash=str(bundle_hash),
+            baseline_ref=str(ref),
+        )
+    )
+    if latest is None:
+        raise _evidence_incomplete(
+            ref,
+            "FR-224: an approximation-mode version needs a Dislocation Run against its own "
+            "exact-mode twin at its current bundle hash, and there is none",
+        )
+    figures = DislocationRun.model_validate(latest.run).abs_change_pct_quantiles
+    observed = None if figures is None else figures.get(threshold.quantile_key)
+    if observed is None:
+        raise _evidence_incomplete(
+            ref,
+            f"FR-224: the Dislocation Run {latest.id} has no figure at quantile "
+            f"{threshold.quantile_key} (an empty banded set, or a run made before the field)",
+        )
+    if Decimal(observed) > threshold.max_abs_change_pct:
+        raise _evidence_incomplete(
+            ref,
+            f"FR-224: the absolute percentage change at the {threshold.quantile_key} quantile "
+            f"is {observed}%, above the policy's maximum of {threshold.max_abs_change_pct}% "
+            f"(Dislocation Run {latest.id})",
+        )
+    return ApproximationCheck(
+        dislocation_run_id=latest.id,
+        quantile=Decimal(threshold.quantile_key),
+        observed_abs_change_pct=Decimal(observed),
+        max_abs_change_pct=threshold.max_abs_change_pct,
+        fidelity_statements=tuple(statements),
+    )
+
+
+def _empty_algorithm(*, like: RatingAlgorithm) -> RatingAlgorithm:
+    """The algorithm a first version is diffed against (DP-S5-1 (a)): the same slug, no inputs,
+    no outputs, no steps, so every step of the first version is an addition."""
+    return RatingAlgorithm(
+        slug=like.slug, version=like.version, input_contract=[], outputs=[], steps=[]
+    )
+
+
+async def _algorithm_of(
+    session: AsyncSession, *, workspace_id: UUID, rating_version: RatingVersionRow
+) -> RatingAlgorithm | None:
+    """The saved Rating Algorithm a version points at, or `None` for a version without one."""
+    if rating_version.algorithm_ref is None:
+        return None
+    algorithm_ref = ArtifactRef.model_validate(rating_version.algorithm_ref)
+    saved = await session.scalar(
+        select(RatingAlgorithmRow).where(
+            RatingAlgorithmRow.workspace_id == workspace_id,
+            RatingAlgorithmRow.slug == algorithm_ref.slug,
+            RatingAlgorithmRow.version == algorithm_ref.version,
+        )
+    )
+    return None if saved is None else RatingAlgorithm.model_validate(saved.content)
+
+
+async def _structural_diff_gate(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    row: RatingVersionRow,
+    ref: ArtifactRef,
+    baseline: ArtifactRef | None,
+    blob_store: BlobStore,
+) -> str:
+    """FR-219's diff, computed at submission and stored: the blob's sha256 to record.
+
+    The bytes are `AlgorithmDiff.model_dump_json()` of the baseline's algorithm (DP-S5-1:
+    the same baseline limb (2) uses; an empty algorithm for a first version) against this
+    version's. A version with no algorithm has nothing to diff and fails closed (R4).
+    """
+    candidate = await _algorithm_of(session, workspace_id=workspace_id, rating_version=row)
+    if candidate is None:
+        raise _evidence_incomplete(
+            ref, "FR-219: a version with no saved Rating Algorithm has no structural diff"
+        )
+    previous = None
+    if baseline is not None:
+        baseline_row = await resolve_rating_version_ref(
+            session, workspace_id=workspace_id, ref=baseline
+        )
+        previous = await _algorithm_of(
+            session, workspace_id=workspace_id, rating_version=baseline_row
+        )
+    diff = diff_algorithms(
+        previous if previous is not None else _empty_algorithm(like=candidate), candidate
+    )
+    stored = await blob_store.put(session, diff.model_dump_json().encode(), "application/json")
+    # The row holds a reference to the blob for as long as the version exists, so FR-420's
+    # collector (`ref_count == 0`) can never take it (the pattern `traces.write_trace` uses).
+    await blobs.retain(session, stored.sha256)
+    return stored.sha256
+
+
+def structural_diff_verified(row: RatingVersionRow) -> bool:
+    """Whether the evidence names a stored structural diff: Slice 6's `verifiable` entry for
+    `structural_diff` (`06` FR-364's 2026-09-28 amendment, RL-1184 E4)."""
+    return bool((row.evidence or {}).get("structural_diff_blob"))
+
+
+def dislocation_run_verified(row: RatingVersionRow) -> bool:
+    """Whether the evidence shows limb (2) satisfied: a run id, or the recorded first-version
+    case. Slice 6's `verifiable` entry for `dislocation_run` (PL-1500 Hand-off)."""
+    evidence = row.evidence or {}
+    return evidence.get("dislocation_run_id") is not None or (
+        evidence.get("no_baseline") == "first_version"
+    )
 
 
 def _evidence_incomplete(ref: ArtifactRef, why: str) -> PlatformError:

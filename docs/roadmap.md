@@ -787,7 +787,7 @@ The `dislocation.run` handler owning the Job identity, output location and resum
 id: SL-1389
 family: slice
 title: Slice 5: the approval gate, part one — structural_diff, FR-257 limb (2), FR-224
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-03
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: d672f991bdc59008e09cf3f464cd7cffe5699553
@@ -798,6 +798,10 @@ relates: [PL-1267, RL-1264]
 ```
 
 `06` FR-364's `structural_diff` persisted at submission with a verifier registered; FR-257 limb (2) on `submit_for_review` (refused with `EVIDENCE_INCOMPLETE` without a Dislocation Run on the current bundle hash against the current live version); FR-224's exact-mode comparison for an `approximation`-mode version, its threshold a new `ApprovalPolicyEntry` field and never read from Settings. `PL-1267` Slice 5. Starts after Slice 4 closes and after WK-674 Slice 2 (`SL-1256`) has merged; serialised against `SL-1256` on `approvals.py` and `06` §4.2. Leaf plan PL-1500 (`draft`; filed 2026-10-05). **Activation needs:** the plan made `active` by a dated line; `SL-1388` closed; `SL-1256` closed (met); a ruling on its DP-S5-1 to DP-S5-5 merged and minted; RL-1524 minted (FR-257's gate stays at the submit route); the lane free under `RL-1263` as amended, with the same-Work conditions in the dispatch record (its FR-224 edit in `03` §3.2 serialises with PL-1447, PL-1429 and A-3); the maintainer's dispatch GO and the lead's go in a separate activation PR. *(Plan cite added 2026-10-05 by the planner; working id 9590 reserved by the lead.)*
+
+(Activated 2026-10-10 as WK-673 Slice 5 on the dispatch GO "2026-10-10 05:19:53 BST — DISPATCH GOs …" with its conditions a–d; `PL-1500` set `active` in the slice PR's first commit.)
+
+(Closed 2026-10-10 as a Slice, closing acts in the slice PR's mint commit, on the lead's merge; ledger `LG-1582`, minted 2026-10-10 from working id 9450.)
 
 #### SL-1390 — Slice 6: the approval gate, part two — the floor wiring
 
@@ -1022,6 +1026,8 @@ Per-environment keys, rate limits and monitoring configuration, and environment 
 *Dated 2026-10-01, mint batch 13a: **FR-452 (the `/score` limb, `RL-1347`)** is this slice's, with DP-S3-2 resolved by `RL-1347` (assigned here by `PL-1348`). FR-452's **management-API limb** is owned by WK-674 (the maintainer's entry "2026-09-30 23:48:24 BST — OWNER DECISION: FR-452 → WK-674, not WK-1178") and is carried to a later WK-674 slice, which a planner names in a dispatch record before WK-674 closes; that slice's row is annotated when named. DP-S3-1 is resolved by `RL-1346` and belongs to `SL-1345`.*
 
 *Annotated 2026-10-09, in the docs batch D1: FR-452's management-API limb is placed in WK-674 Slice 4 (`SL-1258`), as R4.1 of PL-1537, on the maintainer's (by delegation) entry "2026-10-08 14:32:33 BST — DELTAS AUDIT (handover/audit-deltas-2026-10-08.md) noted; fixes proceed; DP A, B (c), C confirmed, D AMENDED (build in reverse ladder order)", item A. That is the annotation this paragraph promised "when named".*
+
+*Dated 2026-10-10, in the docs batch D6: this slice's leaf plan is `PL-1583` (minted 2026-10-10 from working id 9456; it supersedes `PL-1342`, which is now `superseded`). The title's "NFR-496 prod-sampling limb" was delivered by `SL-1345`, whose `PL-1348` amended NFR-496's row in `03` §9 (the "sampled in prod" clause), so `PL-1583` does not carry it. The title is not edited. This is the dated line `PL-1583`'s Hand-off proposes.*
 
 #### SL-1345 — Slice 3L: the premium ladder — exact unrounded rungs, true operations, one rounding (FR-247, FR-248, NFR-496, FD-1336, FD-1330; RL-1329)
 

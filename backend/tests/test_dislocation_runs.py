@@ -710,3 +710,65 @@ async def test_movers_route_joins_the_portfolio_columns_at_read(
     rating_only = await _caller_with(database, world.workspace_id, ["rating:read"])
     refused = api_client.get(url, headers=rating_only)
     assert (refused.status_code, refused.json()["code"]) == (403, "PERMISSION_DENIED")
+
+
+# ---- WK-673 Slice 5 (PL-1500 Task 4): FR-224's exact-mode run and its quantiles ----------
+# Appended after Slice 4 created this module (PL-1500 Write set; the red-first proof is OWED).
+
+
+@pytest.mark.req("FR-224")
+async def test_the_run_holds_the_six_quantile_keys_and_one_is_the_largest_change(
+    database: Database, blob_store: BlobStore, world: _World
+) -> None:
+    """`abs_change_pct_quantiles` has exactly the six keys; `"1"` is the largest absolute
+    percentage change over the banded set, rounded once to 6 places toward +infinity.
+
+    The fixture prices `4p + 17` (baseline) and `5p + 29` (candidate) for premium input `p`,
+    so policy p changes by `(p + 12) / (4p + 17)`; the bound below is computed from the
+    portfolio, not from the handler."""
+    from decimal import Decimal
+    from fractions import Fraction
+
+    _, job = await _run_job(database, blob_store, world, world.spec())
+    assert job.status is JobStatus.SUCCEEDED, job.error
+    (row,) = await _runs(database, world.workspace_id)
+    quantiles = DislocationRun.model_validate(row.run).abs_change_pct_quantiles
+    assert quantiles is not None
+    # a set: the stored JSONB returns its keys shortest first, so the order is not the model's
+    assert set(quantiles) == {"0.5", "0.9", "0.95", "0.99", "0.999", "1"}
+    largest = max(
+        Fraction((p + 12) * 100, 4 * p + 17) for p in _portfolio()["premium_in"].to_list()
+    )
+    top = Decimal(quantiles["1"])  # type: ignore[arg-type]
+    assert largest <= Fraction(top) < largest + Fraction(1, 10**6)
+
+
+@pytest.mark.req("FR-224")
+@pytest.mark.req("FR-1398")
+async def test_an_exact_mode_run_writes_no_rating_version_and_has_no_attribution(
+    database: Database, blob_store: BlobStore, world: _World
+) -> None:
+    """DP-S5-3 (a): a spec naming one version as both baseline and candidate with
+    `baseline_mode_override: "exact"` runs without attribution and writes no `rating_versions`
+    row. This fixture's algorithm has no `model_call`, so its exact twin compiles to the same
+    bundle; that the twin's bundle hash differs from the candidate's needs a model fixture
+    (OWED, named in the ledger)."""
+    async def versions() -> int:
+        async with database.session() as session:
+            return (await session.execute(
+                select(func.count()).select_from(RatingVersionRow)
+                .where(RatingVersionRow.workspace_id == world.workspace_id)
+            )).scalar_one()
+
+    before = await versions()
+    spec = world.spec(baseline_ref=str(world.candidate), baseline_mode_override="exact")
+    _, job = await _run_job(database, blob_store, world, spec)
+    assert job.status is JobStatus.SUCCEEDED, job.error
+    (row,) = await _runs(database, world.workspace_id)
+    run = DislocationRun.model_validate(row.run)
+    assert row.baseline_ref == row.candidate_ref == str(world.candidate)
+    assert run.attribution is None
+    assert run.attribution_summary is None
+    assert run.derived_changes is None
+    assert run.abs_change_pct_quantiles is not None
+    assert await versions() == before

@@ -347,9 +347,33 @@
             "title": "Approvers Required",
             "type": "integer"
           },
+          "approximation_deviation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApproximationDeviation"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "FR-224's threshold for an `approximation`-mode Rating Version (`06` §4.2, RL-1504 T5). Unset means `DEFAULT_APPROXIMATION_DEVIATION`; no value switches the gate off. Valid only on a `rating_version` entry; never a Setting."
+          },
           "artifact_type": {
             "title": "Artifact Type",
             "type": "string"
+          },
+          "dislocation_baseline_environment": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The Environment slug whose live Rating Version is FR-257 limb (2)'s baseline (`06` §4.2, RL-1504 T5). Unset means `DEFAULT_DISLOCATION_BASELINE_ENVIRONMENT`. Valid only on a `rating_version` entry.",
+            "title": "Dislocation Baseline Environment"
           },
           "environment": {
             "anyOf": [
@@ -471,6 +495,75 @@
           "model_version"
         ],
         "title": "ApproximatedModel",
+        "type": "object"
+      },
+      "ApproximationCheck": {
+        "additionalProperties": false,
+        "description": "FR-224's record on an `approximation`-mode version: the exact-mode baseline Dislocation\nRun read, the threshold it was held to and the figure it showed (`03` FR-224, RL-1504).\nWritten once at submission with the rest of the evidence; `fidelity_statements` are FR-136's,\none per model referenced in `approximation` mode, copied for the approver.",
+        "properties": {
+          "dislocation_run_id": {
+            "format": "uuid",
+            "title": "Dislocation Run Id",
+            "type": "string"
+          },
+          "fidelity_statements": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Fidelity Statements",
+            "type": "array"
+          },
+          "max_abs_change_pct": {
+            "description": "Exact decimal as a string; never a binary float (FR-10).",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+            "title": "Max Abs Change Pct",
+            "type": "string"
+          },
+          "observed_abs_change_pct": {
+            "description": "Exact decimal as a string; never a binary float (FR-10).",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+            "title": "Observed Abs Change Pct",
+            "type": "string"
+          },
+          "quantile": {
+            "description": "Exact decimal as a string; never a binary float (FR-10).",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+            "title": "Quantile",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dislocation_run_id",
+          "quantile",
+          "observed_abs_change_pct",
+          "max_abs_change_pct"
+        ],
+        "title": "ApproximationCheck",
+        "type": "object"
+      },
+      "ApproximationDeviation": {
+        "additionalProperties": false,
+        "description": "FR-224's threshold: a maximum absolute percentage deviation at a declared portfolio\nquantile (`03` FR-224, `06` §4.2; DP-S5-2, RL-1504 T4/T5).\n\nThe quantile is one of the six a Dislocation Run reports (`abs_change_pct_quantiles`, `03`\n§4.6), so the gate always has a figure to read; `quantile_key` is the run's key for it.",
+        "properties": {
+          "max_abs_change_pct": {
+            "description": "Exact decimal as a string; never a binary float (FR-10).",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+            "title": "Max Abs Change Pct",
+            "type": "string"
+          },
+          "quantile": {
+            "description": "Exact decimal as a string; never a binary float (FR-10).",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+            "title": "Quantile",
+            "type": "string"
+          }
+        },
+        "required": [
+          "quantile",
+          "max_abs_change_pct"
+        ],
+        "title": "ApproximationDeviation",
         "type": "object"
       },
       "ArtifactRef": {
@@ -4383,6 +4476,29 @@
         "additionalProperties": false,
         "description": "03 §4.6; the four attribution fields are present together or not at all.",
         "properties": {
+          "abs_change_pct_quantiles": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "description": "Exact decimal as a string; never a binary float (FR-10).",
+                      "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Abs Change Pct Quantiles"
+          },
           "attribution": {
             "anyOf": [
               {
@@ -4551,6 +4667,18 @@
             "minItems": 1,
             "title": "Band Edges Pct",
             "type": "array"
+          },
+          "baseline_mode_override": {
+            "anyOf": [
+              {
+                "const": "exact",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Mode Override"
           },
           "baseline_ref": {
             "$ref": "#/components/schemas/ArtifactRef"
@@ -13041,6 +13169,16 @@
         "additionalProperties": false,
         "description": "The evidence an `approved` version carries (03 §4.3, FR-257).",
         "properties": {
+          "approximation_check": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApproximationCheck"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "dislocation_run_id": {
             "anyOf": [
               {
@@ -13089,6 +13227,18 @@
               }
             ],
             "title": "Golden Quotes"
+          },
+          "no_baseline": {
+            "anyOf": [
+              {
+                "const": "first_version",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "No Baseline"
           },
           "regression_suite_run_id": {
             "anyOf": [
@@ -23959,7 +24109,7 @@
     },
     "/api/v1/dislocation-runs": {
       "post": {
-        "description": "**202** with a `dislocation.run` Job. **422** `VALIDATION_FAILED`, with no Job, when the\nchange groups do not partition the derived changes (FR-1399, naming each change) or when\nthe run is estimated above the single-Job bound (`RL-1504` item 1, naming K, the policy\ncount and the estimate).",
+        "description": "**202** with a `dislocation.run` Job. **422** `VALIDATION_FAILED`, with no Job, when the\nchange groups do not partition the derived changes (FR-1399, naming each change) or when\nthe run is estimated above the single-Job bound (`RL-1504` item 1, naming K, the policy\ncount and the estimate). A spec with `baseline_mode_override` also gets FR-136's pre-check\nbefore any Job: **422** `EVIDENCE_INCOMPLETE` naming a model referenced in `approximation`\nmode whose transparency artifact has no GLM approximation (`03` FR-224, DP-S5-5).",
         "operationId": "start_dislocation_run_api_v1_dislocation_runs_post",
         "parameters": [
           {

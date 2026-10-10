@@ -243,3 +243,41 @@ def test_dislocation_run_attribution_is_all_or_none() -> None:
     """The schema's `dependentRequired` (`:9`): the four attribution fields come together."""
     with pytest.raises(ValidationError, match="attribution"):
         DislocationRun.model_validate(_run_body(derived_changes=[]))
+
+
+# ---- WK-673 Slice 5 (PL-1500 Task 4): FR-224's exact-mode run and its quantiles -----------
+
+
+@pytest.mark.req("FR-224")
+def test_spec_refuses_an_exact_override_naming_two_versions() -> None:
+    """DP-S5-3 (a): `baseline_mode_override` is one version compared with its own exact twin."""
+    with pytest.raises(ValidationError, match="baseline_mode_override"):
+        _spec(baseline_mode_override="exact")  # baseline@26 against candidate@27
+    spec = _spec(
+        baseline_mode_override="exact",
+        baseline_ref="rating_version:motor-gb@27",
+        candidate_ref="rating_version:motor-gb@27",
+    )
+    assert spec.baseline_mode_override == "exact"
+    assert _spec().baseline_mode_override is None
+
+
+@pytest.mark.req("FR-224")
+def test_run_quantiles_are_exactly_the_six_keys_or_absent() -> None:
+    """03 §4.6 (RL-1504 T7): all six keys, in any order (JSONB returns them shortest first),
+    each a decimal string or null; a run without the field still validates (a run made
+    before it)."""
+    keys = ["0.5", "0.9", "0.95", "0.99", "0.999", "1"]
+    assert DislocationRun.model_validate(_run_body()).abs_change_pct_quantiles is None
+    nulls = DislocationRun.model_validate(
+        _run_body(abs_change_pct_quantiles=dict.fromkeys(keys))
+    )
+    assert nulls.abs_change_pct_quantiles == dict.fromkeys(keys)
+    jsonb_order = ["1", "0.5", "0.9", "0.95", "0.99", "0.999"]
+    DislocationRun.model_validate(_run_body(abs_change_pct_quantiles=dict.fromkeys(jsonb_order)))
+    with pytest.raises(ValidationError, match="abs_change_pct_quantiles"):
+        DislocationRun.model_validate(_run_body(abs_change_pct_quantiles={"0.5": "1.000000"}))
+    with pytest.raises(ValidationError, match="abs_change_pct_quantiles"):
+        DislocationRun.model_validate(
+            _run_body(abs_change_pct_quantiles={**dict.fromkeys(keys), "0.75": "1.000000"})
+        )

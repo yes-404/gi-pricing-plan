@@ -513,6 +513,30 @@
   "additionalProperties": false,
   "description": "03 §4.6; the four attribution fields are present together or not at all.",
   "properties": {
+    "abs_change_pct_quantiles": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "description": "Exact decimal as a string; never a binary float (FR-10).",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Abs Change Pct Quantiles"
+    },
     "attribution": {
       "anyOf": [
         {

@@ -8,6 +8,8 @@ question of what a submission requires — which is the defect OQ-639 existed to
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pytest
 from pydantic import ValidationError
 
@@ -19,6 +21,7 @@ from model_schema import (
     PromotionSkip,
     promotion_order_refusal,
 )
+from model_schema.approvals import DEFAULT_APPROXIMATION_DEVIATION
 
 
 @pytest.mark.req("FR-364")
@@ -317,3 +320,104 @@ def test_an_unqualified_entry_carrying_the_field_grants_no_skip() -> None:
         )
         is not None
     )
+
+
+@pytest.mark.req("FR-257")
+def test_the_dislocation_baseline_environment_is_only_on_rating_version_entries() -> None:
+    """FR-257 limb (2), DP-S5-1 (a): the baseline Environment lives on the `rating_version`
+    entry and nowhere else (`06` §4.2, RL-1504 T5). Before the field exists, `extra="forbid"`
+    refuses it everywhere (a `ValidationError` for an unknown field), which is the red; after,
+    only a `rating_version` entry accepts it."""
+    accepted = ApprovalPolicyEntry(
+        artifact_type="rating_version",
+        approvers_required=2,
+        approver_roles=("approver",),
+        dislocation_baseline_environment="uat",
+    )
+    assert accepted.dislocation_baseline_environment == "uat"
+    unset = ApprovalPolicyEntry(
+        artifact_type="rating_version", approvers_required=2, approver_roles=("approver",)
+    )
+    assert unset.dislocation_baseline_environment is None
+    with pytest.raises(ValidationError, match="dislocation_baseline_environment"):
+        ApprovalPolicyEntry(
+            artifact_type="model",
+            approvers_required=1,
+            approver_roles=("approver",),
+            dislocation_baseline_environment="prod",
+        )
+
+
+@pytest.mark.req("FR-257")
+def test_a_blank_dislocation_baseline_environment_is_refused() -> None:
+    with pytest.raises(ValidationError, match="dislocation_baseline_environment"):
+        ApprovalPolicyEntry(
+            artifact_type="rating_version",
+            approvers_required=2,
+            approver_roles=("approver",),
+            dislocation_baseline_environment="",
+        )
+
+
+def _rating_version_entry(**extra: object) -> ApprovalPolicyEntry:
+    return ApprovalPolicyEntry(
+        artifact_type="rating_version",
+        approvers_required=2,
+        approver_roles=("approver",),
+        **extra,  # type: ignore[arg-type]
+    )
+
+
+@pytest.mark.req("FR-224")
+def test_the_deviation_threshold_is_only_on_rating_version_entries() -> None:
+    """DP-S5-2 (a), RL-1504 T5: FR-224's threshold lives on the `rating_version` entry only.
+    Red before the field exists: `extra="forbid"` refuses it on the entry that should hold it."""
+    entry = _rating_version_entry(
+        approximation_deviation={"quantile": "0.95", "max_abs_change_pct": "5"}
+    )
+    assert entry.approximation_deviation is not None
+    assert entry.approximation_deviation.quantile == Decimal("0.95")
+    assert entry.approximation_deviation.max_abs_change_pct == Decimal(5)
+    for artifact_type in ("model", "deployment", "peril_structure"):
+        with pytest.raises(ValidationError, match="approximation_deviation"):
+            ApprovalPolicyEntry(
+                artifact_type=artifact_type,
+                approvers_required=1,
+                approver_roles=("approver",),
+                approximation_deviation={"quantile": "0.99", "max_abs_change_pct": "10"},
+            )
+
+
+@pytest.mark.req("FR-224")
+def test_the_deviation_threshold_bounds() -> None:
+    """The quantile is one of the run's six keys (03 §4.6, so the gate always has a figure to
+    read); the maximum is non-negative; a float is refused as money-adjacent decimals are."""
+    for quantile in ("0.5", "0.9", "0.95", "0.99", "0.999", "1", "1.0", "0.50"):
+        entry = _rating_version_entry(
+            approximation_deviation={"quantile": quantile, "max_abs_change_pct": "0"}
+        )
+        assert entry.approximation_deviation is not None
+    for quantile in ("0", "0.75", "1.5", "-0.5"):
+        with pytest.raises(ValidationError, match="quantile"):
+            _rating_version_entry(
+                approximation_deviation={"quantile": quantile, "max_abs_change_pct": "5"}
+            )
+    with pytest.raises(ValidationError, match="max_abs_change_pct"):
+        _rating_version_entry(
+            approximation_deviation={"quantile": "0.99", "max_abs_change_pct": "-1"}
+        )
+    with pytest.raises(ValidationError, match="max_abs_change_pct"):
+        _rating_version_entry(
+            approximation_deviation={"quantile": "0.99", "max_abs_change_pct": 5.5}
+        )
+
+
+@pytest.mark.req("FR-224")
+def test_the_default_policy_carries_the_ruled_default_threshold() -> None:
+    """RL-1504 item 7: the maintainer's option D, `{quantile: 0.99, max_abs_change_pct: 10}`,
+    on the shipped `rating_version` entry, and the constant an unset entry falls back to."""
+    entry = DEFAULT_POLICY.entry_for("rating_version")
+    assert entry is not None
+    assert entry.approximation_deviation == DEFAULT_APPROXIMATION_DEVIATION
+    assert DEFAULT_APPROXIMATION_DEVIATION.quantile == Decimal("0.99")
+    assert DEFAULT_APPROXIMATION_DEVIATION.max_abs_change_pct == Decimal(10)
