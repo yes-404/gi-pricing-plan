@@ -66,7 +66,7 @@ Not yet. The auditor writes it.
   `git rev-parse`). The brief's Section C head matches.
 - First commit: `PL-1556` status `draft` → `active`, `SL-1557` row `draft` → `active`, this ledger.
 - Activation needs (PL-1556 *Activation needs, in order*), read at this tree:
-  1. RL-1474 minted: file `RL-01474-…` present. Met.
+  1. RL-1474 minted: file `RL-1474-…` present. Met.
   2. RL-1438 and FD-1437 minted: both files present. Met.
   3. S2 (SL-1477) merged: `frontend/src/components/dag/` carries `DagDesigner.vue`, `StepNode.vue`,
      `NodeNavigator.vue`; `RatingAlgorithmDraft` at `rating.py:423`. Met.
