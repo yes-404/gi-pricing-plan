@@ -24,7 +24,7 @@ from backend.tests.test_peril_structure_approval import (
     _model_id,
     _set_model_status,
 )
-from backend.tests.test_peril_structures import _book, _burning_cost_peril
+from backend.tests.test_peril_structures import _book, _burning_cost_peril, _structure
 from backend.tests.test_rating_algorithms import _headers, valid_algorithm
 from backend.tests.test_rating_glm_model_call import (
     ROW,
@@ -224,7 +224,8 @@ def test_a_stored_structure_that_no_longer_validates_fails_the_compile_job_input
     database: Any, blob_store: Any, principal: Any, workspace_id: UUID,
 ) -> None:
     """Row 3 (b'), backend level: a pinned structure whose stored row a direct `UPDATE` broke
-    fails the compile Job, and the stored error carries no value from the row.
+    fails the compile Job as `BUNDLE_COMPILE_FAILED` (FD 9952 row 1), and the stored error
+    carries no value from the row.
 
     `to_structure` re-validates the row on the way out (the resolver's boundary, before
     `compile_bundle` sees a payload), so `compile.py`'s own wrap is reached by a `pricing-core`
@@ -236,9 +237,17 @@ def test_a_stored_structure_that_no_longer_validates_fails_the_compile_job_input
 
     register_rating_handlers()
     loop = _LOOP()
-    structure_ref, _, _, _ = loop.run_until_complete(
-        _structure_over_a_burning_cost_model(database, blob_store, workspace_id)
-    )
+    async def _draft_structure() -> str:
+        # A `draft` structure has no reconciliation, so the composition is still editable
+        # (a reconciled one is frozen by trigger, 02 FR-MODEL-60).
+        actor, version_id, area, split = await _book(database, blob_store, workspace_id)
+        peril = await _burning_cost_peril(
+            database, blob_store, workspace_id, actor, version_id, area, split
+        )
+        structure = await _structure(database, workspace_id, actor, [peril])
+        return f"peril_structure:{structure.slug}@{structure.version}"
+
+    structure_ref = loop.run_until_complete(_draft_structure())
     body = _glm_algorithm(
         "model:placeholder@1", {"area": "area", "exposure_years": "exposure_years"}
     )
@@ -271,5 +280,5 @@ def test_a_stored_structure_that_no_longer_validates_fails_the_compile_job_input
     )
     job = _run_compile_job(client, admin_headers, database, blob_store, row.id)
     assert job.status is JobStatus.FAILED
+    assert job.error["code"] == "BUNDLE_COMPILE_FAILED"
     assert sentinel not in str(job.error)
-    assert job.error, "a failed Job states why"
