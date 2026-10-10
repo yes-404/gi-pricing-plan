@@ -260,7 +260,7 @@ def _handlers() -> None:
     register_dislocation_handlers()
 
 
-def _algorithm(a: str, b: str, c: str) -> dict[str, Any]:
+def _algorithm(a: str, b: str, c: str, version: int = 1) -> dict[str, Any]:
     """Three independent expression branches summed: editing a branch is one derived change."""
     def branch(step_id: str, expr: str, produces: str) -> dict[str, Any]:
         return {"step_id": step_id, "type": "expression", "label": step_id, "expr": expr,
@@ -268,7 +268,7 @@ def _algorithm(a: str, b: str, c: str) -> dict[str, Any]:
 
     return {
         "slug": "dislocation-fixture",
-        "version": 1,
+        "version": version,
         "input_contract": [{"name": "premium_in", "type": "int", "nullable": False}],
         "outputs": [{"name": "payable_premium_minor", "type": "money_minor", "required": True}],
         "steps": [
@@ -341,7 +341,8 @@ async def world(
     refs = []
     for branches in (_BASE_BRANCHES, _CAND_BRANCHES):
         created = api_client.post(
-            "/api/v1/rating-algorithms", json=_algorithm(*branches), headers=headers
+            "/api/v1/rating-algorithms",
+            json=_algorithm(*branches, version=len(refs) + 1), headers=headers,
         )
         assert created.status_code in (200, 201), created.text
         row = await _insert_version(
@@ -358,7 +359,8 @@ async def world(
         blob = await blob_store.put(session, buffer.getvalue(), "application/vnd.apache.parquet")
         version = DatasetVersionRow(
             slug="dislocation-portfolio", workspace_id=workspace_id, dataset_id=uuid4(),
-            version=1, status="validated", created_by=principal.id, currency="GBP",
+            version=1, status="validated", validation_report_id=new_uuid7(),
+            created_by=principal.id, currency="GBP",
             tables=[{"name": "portfolio", "row_count": frame.height,
                      "blob": {"sha256": blob.sha256}}],
         )
@@ -459,18 +461,28 @@ async def test_dislocation_subset_bundles_never_become_rating_versions(
 
 @pytest.mark.req("FR-1397")
 async def test_a_run_that_does_not_reconcile_fails_with_attribution_reconciliation_failed(
-    database: Database, blob_store: BlobStore, world: _World, monkeypatch: pytest.MonkeyPatch
+    api_client: TestClient, database: Database, blob_store: BlobStore, world: _World,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     async def refuse(*_: Any, **__: Any) -> Any:
+        # the text `attribute` raises when a compared policy has no premium under a subset
+        # bundle (`pricing_core.rating.analysis`): it names the policy's quote id
         raise AttributionError(
-            "ATTRIBUTION_RECONCILIATION_FAILED", "policy Q000 does not reconcile"
+            "ATTRIBUTION_RECONCILIATION_FAILED",
+            "policy Q000 is quoted in the baseline and the candidate but has no premium "
+            "under the subset bundle for changes [c1]",
         )
 
     monkeypatch.setattr(dislocation_handlers, "attribute", refuse)
-    _, job = await _run_job(database, blob_store, world, world.spec())
+    job_id, job = await _run_job(database, blob_store, world, world.spec())
     assert job.status is JobStatus.FAILED
     assert job.error is not None
     assert job.error["code"] == "ATTRIBUTION_RECONCILIATION_FAILED"
+    # NFR-499 (02:47:13): the stored error and the API body carry no quote id
+    assert "Q000" not in str(job.error)
+    served = api_client.get(f"/api/v1/jobs/{job_id}", headers=world.headers)
+    assert served.status_code == 200, served.text
+    assert "Q000" not in served.text
     assert await _runs(database, world.workspace_id) == []
 
 
@@ -528,6 +540,11 @@ async def test_a_second_delivery_for_a_running_dislocation_job_does_nothing(
 # ---- Task 5: the routes --------------------------------------------------------------
 
 
+def _headers_of(user_id: UUID, workspace_id: UUID) -> dict[str, str]:
+    """`_headers` for a bare user id (a caller with no `Principal` object)."""
+    return {DEV_PRINCIPAL_HEADER: str(user_id), "Workspace-Id": str(workspace_id)}
+
+
 async def _caller_with(
     database: Database, workspace_id: UUID, permissions: list[str]
 ) -> dict[str, str]:
@@ -546,7 +563,7 @@ async def _caller_with(
             role_id=role.id, scope_type=ScopeType.WORKSPACE.value,
         ))
         session.add(WorkspaceMemberRow(user_id=caller, workspace_id=workspace_id))
-    return _headers(caller, workspace_id)
+    return _headers_of(caller, workspace_id)
 
 
 async def _dislocation_jobs(database: Database, workspace_id: UUID) -> int:
@@ -599,8 +616,8 @@ async def test_post_needs_rating_compile_and_dataset_read(
     compile_only = await _caller_with(database, world.workspace_id, ["rating:compile"])
     outcomes = {}
     for name, headers in (
-        ("actuary", _headers(actuary, world.workspace_id)),
-        ("auditor", _headers(auditor, world.workspace_id)),
+        ("actuary", _headers_of(actuary, world.workspace_id)),
+        ("auditor", _headers_of(auditor, world.workspace_id)),
         ("compile_only", compile_only),
     ):
         response = api_client.post("/api/v1/dislocation-runs", json=world.spec(), headers=headers)
@@ -693,3 +710,65 @@ async def test_movers_route_joins_the_portfolio_columns_at_read(
     rating_only = await _caller_with(database, world.workspace_id, ["rating:read"])
     refused = api_client.get(url, headers=rating_only)
     assert (refused.status_code, refused.json()["code"]) == (403, "PERMISSION_DENIED")
+
+
+# ---- WK-673 Slice 5 (PL-1500 Task 4): FR-224's exact-mode run and its quantiles ----------
+# Appended after Slice 4 created this module (PL-1500 Write set; the red-first proof is OWED).
+
+
+@pytest.mark.req("FR-224")
+async def test_the_run_holds_the_six_quantile_keys_and_one_is_the_largest_change(
+    database: Database, blob_store: BlobStore, world: _World
+) -> None:
+    """`abs_change_pct_quantiles` has exactly the six keys; `"1"` is the largest absolute
+    percentage change over the banded set, rounded once to 6 places toward +infinity.
+
+    The fixture prices `4p + 17` (baseline) and `5p + 29` (candidate) for premium input `p`,
+    so policy p changes by `(p + 12) / (4p + 17)`; the bound below is computed from the
+    portfolio, not from the handler."""
+    from decimal import Decimal
+    from fractions import Fraction
+
+    _, job = await _run_job(database, blob_store, world, world.spec())
+    assert job.status is JobStatus.SUCCEEDED, job.error
+    (row,) = await _runs(database, world.workspace_id)
+    quantiles = DislocationRun.model_validate(row.run).abs_change_pct_quantiles
+    assert quantiles is not None
+    # a set: the stored JSONB returns its keys shortest first, so the order is not the model's
+    assert set(quantiles) == {"0.5", "0.9", "0.95", "0.99", "0.999", "1"}
+    largest = max(
+        Fraction((p + 12) * 100, 4 * p + 17) for p in _portfolio()["premium_in"].to_list()
+    )
+    top = Decimal(quantiles["1"])  # type: ignore[arg-type]
+    assert largest <= Fraction(top) < largest + Fraction(1, 10**6)
+
+
+@pytest.mark.req("FR-224")
+@pytest.mark.req("FR-1398")
+async def test_an_exact_mode_run_writes_no_rating_version_and_has_no_attribution(
+    database: Database, blob_store: BlobStore, world: _World
+) -> None:
+    """DP-S5-3 (a): a spec naming one version as both baseline and candidate with
+    `baseline_mode_override: "exact"` runs without attribution and writes no `rating_versions`
+    row. This fixture's algorithm has no `model_call`, so its exact twin compiles to the same
+    bundle; that the twin's bundle hash differs from the candidate's needs a model fixture
+    (OWED, named in the ledger)."""
+    async def versions() -> int:
+        async with database.session() as session:
+            return (await session.execute(
+                select(func.count()).select_from(RatingVersionRow)
+                .where(RatingVersionRow.workspace_id == world.workspace_id)
+            )).scalar_one()
+
+    before = await versions()
+    spec = world.spec(baseline_ref=str(world.candidate), baseline_mode_override="exact")
+    _, job = await _run_job(database, blob_store, world, spec)
+    assert job.status is JobStatus.SUCCEEDED, job.error
+    (row,) = await _runs(database, world.workspace_id)
+    run = DislocationRun.model_validate(row.run)
+    assert row.baseline_ref == row.candidate_ref == str(world.candidate)
+    assert run.attribution is None
+    assert run.attribution_summary is None
+    assert run.derived_changes is None
+    assert run.abs_change_pct_quantiles is not None
+    assert await versions() == before

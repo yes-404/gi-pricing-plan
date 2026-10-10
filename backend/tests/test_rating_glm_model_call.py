@@ -5,7 +5,7 @@ carries them in the Bundle; `POST /api/v1/score` returns the value `predict_rows
 the same row (FR-222, FR-193, FR-239, NFR-491).
 
 **Authored ahead of a database run** (the small-test rule bars Postgres): every test here needs
-`GIP_TEST_DATABASE_URL`, and its red-by-cause is owed to the first gate-slot window (LG-9449).
+`GIP_TEST_DATABASE_URL`, and its red-by-cause is owed to the first gate-slot window (LG-1587).
 """
 
 from __future__ import annotations

@@ -294,9 +294,9 @@ async def test_a_model_call_equals_predict_glm_at_full_precision(world: GlmWorld
     """No quantize and no `round()` at the step, whichever `result_type` it declares (a GLM
     step without one rounds like any other `model_call`: one rule, 2026-10-10 00:44:31).
 
-    **Item 15 is STOPPED / RULED in part (see LG-9449): this 1e-14 assertion is a DRAFT, not
+    **Item 15 is STOPPED / RULED in part (see LG-1587): this 1e-14 assertion is a DRAFT, not
     the item's evidence.** The lead's ruling of 2026-10-10 00:23:38 BST makes the evidence the
-    four checks recorded in LG-9449 (bit-exact money downstream, the analytic bound, a
+    four checks recorded in LG-1587 (bit-exact money downstream, the analytic bound, a
     deterministic pinned engine, the spec grep); this test only documents the carriage.
     **Deviation from item 15's "exact Decimal of the float", reported to the lead.** The
     engine carries a handler's float at 15 significant digits (`0.0588198259273704` for
@@ -602,7 +602,7 @@ async def test_the_same_algorithm_prices_by_single_rounding_only_when_it_opts_in
 async def test_the_opt_in_path_is_deterministic_and_its_money_is_decimal_exact() -> None:
     """(d) on the opt-in path: the same quote twice gives identical Decimal money, and the
     rung's rounded value is exactly the single half-even rounding of its unrounded Decimal
-    (no value moves because of the 15-digit carriage; the analytic bound is in LG-9449)."""
+    (no value moves because of the 15-digit carriage; the analytic bound is in LG-1587)."""
     from test_rating_ladder_exact import _compile_payload, _context
 
     _, opt_in = _legacy_and_opt_in_payloads()
@@ -615,3 +615,43 @@ async def test_the_opt_in_path_is_deterministic_and_its_money_is_decimal_exact()
     for rung in first.premium_ladder:
         if rung.unrounded_minor is not None and rung.rounding is not None:
             assert rung.value_minor == rung.unrounded_minor.quantize(Decimal(1), ROUND_HALF_EVEN)
+
+
+@pytest.mark.req("NFR-499", "FR-255")
+async def test_a_glm_failure_reports_its_code_and_never_the_models_text(
+    world: GlmWorld, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A `PredictionError`'s text can carry a quote value (an unseen factor level,
+    `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`, `predict.py`); a coded error keeps its text as it stands
+    (RL-917), so the handler passes on the code and a static sentence only (the 2026-10-10
+    03:20:34 BST ruling, item 2)."""
+    from pricing_core.modelling.predict import PredictionError
+    from pricing_core.rating import runtime
+
+    def _failing(self: Any, feature_row: Any) -> float:
+        raise PredictionError("UNSEEN_LEVEL_BEHAVIOUR_REQUIRED", "level 'SENTINEL-3c9d' unseen")
+
+    monkeypatch.setattr(runtime._GlmScorer, "predict", _failing)
+    compiled = load_bundle(await compiled_bundle(world))
+    message = (await _value(compiled, **QUOTES[0]))[MODEL_CALL_ERROR_KEY]
+    assert "UNSEEN_LEVEL_BEHAVIOUR_REQUIRED" in message
+    assert "SENTINEL" not in message
+
+
+@pytest.mark.req("FR-226", "FR-239")
+async def test_a_glm_model_call_without_result_type_rounds_like_any_other(
+    world: GlmWorld,
+) -> None:
+    """One rule for every `model_call` (the 2026-10-10 00:44:31 BST ruling; RL-1580's gap): an
+    absent `result_type` rounds the prediction as it always did, whatever the model type. The
+    frequency GLM's mean is about 0.07, so the legacy round is 0 and the unrounded value is not."""
+    compiled = load_bundle(await compiled_bundle(world, algorithm_payload(result_type=None)))
+    for quote in QUOTES:
+        result = await _value(compiled, **quote)
+        assert MODEL_CALL_ERROR_KEY not in result
+        exact = world.predict(
+            driver_age=float(quote["driver_age"]), region=quote["region"],
+            exposure_years=quote["exposure_years"],
+        )
+        assert exact != round(exact)
+        assert result["risk"] == round(exact)

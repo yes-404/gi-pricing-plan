@@ -22,8 +22,10 @@ from __future__ import annotations
 
 import asyncio
 import io
+import math
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
+from fractions import Fraction
 from typing import Any
 from uuid import UUID
 
@@ -46,11 +48,16 @@ from app.worker.data_handlers import _bridge, _workspace
 from app.worker.handlers import HANDLERS, register_handler
 from app.worker.progress import JobProgress
 from model_schema import ArtifactRef, JobKind, JobResult, RatingVersion
-from model_schema.dislocation import DislocationRun, DislocationSpec
+from model_schema.dislocation import (
+    ABS_CHANGE_PCT_QUANTILE_KEYS,
+    DislocationRun,
+    DislocationSpec,
+)
 from pricing_core.progress import ProgressCallback
 from pricing_core.rating.analysis import (
     _FRAME_COLUMNS,
     AttributionError,
+    _banded,
     attribute,
     dislocation_frame,
     select_movers,
@@ -63,12 +70,14 @@ from pricing_core.rating.compile import (
     compile_bundle,
 )
 from pricing_core.rating.runtime import CompiledBundle, load_bundle
+from pricing_core.safe_error import safe_error_text
 
 __all__ = [
     "DISLOCATION_RATINGS_PER_WORKER_HOUR",
     "DISLOCATION_SINGLE_JOB_MAX_HOURS",
     "MOVERS_COLUMNS",
     "PreloadedResolver",
+    "abs_change_pct_quantiles",
     "preload",
     "register_dislocation_handlers",
 ]
@@ -78,6 +87,35 @@ _PARQUET_MEDIA_TYPE = "application/vnd.apache.parquet"
 #: The movers blob holds `dislocation_frame`'s own columns, `quote_id` through `origin_rung`,
 #: and never a portfolio column (`RL-1504` item 5): `/movers` joins those at read.
 MOVERS_COLUMNS: tuple[str, ...] = ("quote_id", *_FRAME_COLUMNS)
+
+
+_SIX_PLACES = 10**6
+
+
+def abs_change_pct_quantiles(frame: pl.DataFrame) -> dict[str, str | None]:
+    """FR-224's observed figure: quantiles of the banded set's absolute percentage changes.
+
+    03 §4.6 (RL-1504 T7, the three choices the maintainer (by delegation) accepted). With the
+    n values in ascending order, quantile q is the value at rank ceil(q x n), nearest rank, so
+    `"1"` is the largest; the rank is chosen exactly on the integers, and each percentage is an
+    exact `Fraction` of integer minor units. The value is written as a decimal string rounded
+    once to 6 places toward +infinity, so rounding never brings a figure under a bound its exact
+    value exceeds. With n = 0 every value is `None`, and FR-224's gate refuses a run with no
+    figure. Never Polars' `quantile`, which interpolates.
+    """
+    banded = _banded(frame)
+    changes = sorted(
+        Fraction(abs(change) * 100, baseline)
+        for change, baseline in zip(banded["change_minor"], banded["baseline_minor"], strict=True)
+    )
+    if not changes:
+        return dict.fromkeys(ABS_CHANGE_PCT_QUANTILE_KEYS)
+    quantiles: dict[str, str | None] = {}
+    for key in ABS_CHANGE_PCT_QUANTILE_KEYS:
+        value = changes[math.ceil(Fraction(key) * len(changes)) - 1]
+        scaled = -((-value.numerator * _SIX_PLACES) // value.denominator)  # ceiling division
+        quantiles[key] = f"{scaled // _SIX_PLACES}.{scaled % _SIX_PLACES:06d}"
+    return quantiles
 
 
 class PreloadedResolver:
@@ -121,6 +159,45 @@ async def preload(base: ArtifactResolver, versions: Iterable[RatingVersion]) -> 
     for version in versions:
         await compile_bundle(version, recorder)
     return PreloadedResolver(recorder.seen)
+
+
+class _ExactModeResolver:
+    """Serves `inner`'s artifacts, but the version's algorithm with every `model_call` step in
+    `exact` mode: the ephemeral exact-mode twin FR-224 compares against (DP-S5-3 (a), FR-1398).
+
+    The mode is declared twice, on the version and on each `model_call` step of its algorithm
+    (`check_model_reference_mode`, FR-223), so flipping the version's alone does not compile.
+    Nothing is written: the flipped payload exists for one `compile_bundle` call.
+    """
+
+    def __init__(self, inner: ArtifactResolver, algorithm_ref: ArtifactRef) -> None:
+        self._inner = inner
+        self._algorithm_ref = algorithm_ref
+
+    async def resolve(self, ref: ArtifactRef) -> ResolvedArtifact:
+        resolved = await self._inner.resolve(ref)
+        if ref != self._algorithm_ref:
+            return resolved
+        steps = [
+            {**step, "mode": "exact"} if step.get("type") == "model_call" else step
+            for step in resolved.payload["steps"]
+        ]
+        return resolved.model_copy(update={"payload": {**resolved.payload, "steps": steps}})
+
+
+async def _exact_twin(
+    session: Any, progress: JobProgress, workspace_id: UUID, row: RatingVersionRow
+) -> tuple[CompiledBundle, str]:
+    """The version compiled in `exact` mode, in memory, and its content hash."""
+    version = rating_versions_service.to_schema(row).model_copy(
+        update={"model_reference_mode": "exact"}
+    )
+    assert version.algorithm_ref is not None  # a compiled version has one (FR-237)
+    resolver = _ExactModeResolver(
+        WorkspaceResolver(session, workspace_id, progress.blob_store), version.algorithm_ref
+    )
+    bundle = await compile_bundle(version, resolver)
+    return load_bundle(bundle), bundle.content_hash
 
 
 @dataclass(frozen=True)
@@ -189,9 +266,14 @@ def _dislocation_run(parameters: dict[str, Any], callback: ProgressCallback) -> 
                 )
                 for ref in (baseline_ref, candidate_ref)
             ]
-            baseline_bundle, baseline_hash = await _compiled(
-                progress, session, rows[0], baseline_ref
-            )
+            if spec.baseline_mode_override == "exact":
+                baseline_bundle, baseline_hash = await _exact_twin(
+                    session, progress, workspace_id, rows[0]
+                )
+            else:
+                baseline_bundle, baseline_hash = await _compiled(
+                    progress, session, rows[0], baseline_ref
+                )
             candidate_bundle, candidate_hash = await _compiled(
                 progress, session, rows[1], candidate_ref
             )
@@ -224,14 +306,20 @@ def _dislocation_run(parameters: dict[str, Any], callback: ProgressCallback) -> 
     summary = summarise_dislocation(frame, spec)
     movers = select_movers(frame, spec).select(MOVERS_COLUMNS)
 
-    progress.check_cancelled()
-    progress.update(0.5, "attributing")
-    try:
-        attribution = asyncio.run(
-            attribute(loaded.baseline, loaded.candidate, lazy, spec, loaded.resolver)
-        )
-    except AttributionError as exc:
-        raise PlatformError(exc.code, exc.code.replace("_", " ").title(), 422, str(exc)) from exc
+    quantiles = abs_change_pct_quantiles(frame)
+
+    attribution = None
+    if spec.baseline_mode_override is None:  # an exact-twin run has no attribution (03 §4.6)
+        progress.check_cancelled()
+        progress.update(0.5, "attributing")
+        try:
+            attribution = asyncio.run(
+                attribute(loaded.baseline, loaded.candidate, lazy, spec, loaded.resolver)
+            )
+        except AttributionError as exc:
+            raise PlatformError(
+                exc.code, exc.code.replace("_", " ").title(), 422, safe_error_text(exc)
+            ) from exc
     progress.update(0.9, "persisting")
 
     async def persist() -> UUID:
@@ -242,7 +330,8 @@ def _dislocation_run(parameters: dict[str, Any], callback: ProgressCallback) -> 
             run = DislocationRun.model_validate(
                 {
                     **summary.model_dump(mode="json"),
-                    **attribution.model_dump(mode="json"),
+                    **({} if attribution is None else attribution.model_dump(mode="json")),
+                    "abs_change_pct_quantiles": quantiles,
                     "largest_movers_blob": f"{MOVERS_BLOB_PREFIX}{blob.sha256}",
                     "job_id": str(progress.job_id),
                 }

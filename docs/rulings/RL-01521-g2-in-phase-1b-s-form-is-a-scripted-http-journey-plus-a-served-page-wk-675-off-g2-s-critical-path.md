@@ -12,7 +12,7 @@ supersedes: []
 superseded_by: ~
 corrected_by: []
 corrects: ~
-relates: [CR-1212, CR-821, FD-1283, PL-1371, WK-675]   # at the mint, add PL 9629's minted id
+relates: [CR-1212, CR-821, FD-1283, PL-1371, PL-1544, WK-675]   # PL-1544 is PL 9629's minted id
 ---
 
 # RL-1521 — G2's "in Phase 1b's form": a scripted HTTP journey plus a served page; WK-675 off G2's critical path

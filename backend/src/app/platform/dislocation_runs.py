@@ -33,15 +33,18 @@ from pricing_core.rating.analysis import (
     derive_changes,
     estimate_attribution_ratings,
 )
+from pricing_core.safe_error import safe_error_text
 
 __all__ = [
     "DISLOCATION_RATINGS_PER_WORKER_HOUR",
     "DISLOCATION_SINGLE_JOB_MAX_HOURS",
     "MOVERS_BLOB_PREFIX",
+    "candidate_run_keys",
     "check_partition",
     "estimate_for_spec",
     "estimate_run",
     "fetch_run",
+    "latest_run_for",
     "movers_digest",
     "persist_run",
     "portfolio_table",
@@ -119,6 +122,48 @@ async def fetch_run(
             "NOT_FOUND", "Dislocation run not found", 404, f"No dislocation run {run_id}."
         )
     return row
+
+
+async def latest_run_for(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    candidate_ref: str,
+    candidate_bundle_hash: str,
+    baseline_ref: str,
+) -> DislocationRunRow | None:
+    """The latest run naming this candidate at this bundle hash against this baseline.
+
+    FR-257 limb (2)'s lookup (`06` FR-364; PL-1500 Task 3): the `ix_dislocation_runs_candidate`
+    index serves it. "Latest" is by `created_at`, then `id` (a UUIDv7, so time-ordered) for a tie.
+    """
+    return (
+        await session.execute(
+            select(DislocationRunRow)
+            .where(
+                DislocationRunRow.workspace_id == workspace_id,
+                DislocationRunRow.candidate_ref == candidate_ref,
+                DislocationRunRow.candidate_bundle_hash == candidate_bundle_hash,
+                DislocationRunRow.baseline_ref == baseline_ref,
+            )
+            .order_by(DislocationRunRow.created_at.desc(), DislocationRunRow.id.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+
+
+async def candidate_run_keys(
+    session: AsyncSession, *, workspace_id: UUID, candidate_ref: str
+) -> list[tuple[str, str]]:
+    """`(candidate_bundle_hash, baseline_ref)` of every run naming this candidate: what the
+    limb (2) gate reads to say *why* `latest_run_for` found none (stale hash or other baseline)."""
+    rows = await session.execute(
+        select(DislocationRunRow.candidate_bundle_hash, DislocationRunRow.baseline_ref).where(
+            DislocationRunRow.workspace_id == workspace_id,
+            DislocationRunRow.candidate_ref == candidate_ref,
+        )
+    )
+    return [(bundle_hash, baseline_ref) for bundle_hash, baseline_ref in rows.all()]
 
 
 def portfolio_table(version: DatasetVersionRow) -> dict[str, Any]:
@@ -248,6 +293,8 @@ async def estimate_for_spec(
             versions[0], versions[1], WorkspaceResolver(session, workspace_id, blob_store)
         )
     except AttributionError as exc:
-        raise PlatformError(exc.code, exc.code.replace("_", " ").title(), 422, str(exc)) from exc
+        raise PlatformError(
+            exc.code, exc.code.replace("_", " ").title(), 422, safe_error_text(exc)
+        ) from exc
     check_partition(deltas, spec.change_groups)
     return estimate_run(deltas, spec, int(table["row_count"]))

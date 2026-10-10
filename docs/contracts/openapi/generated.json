@@ -347,9 +347,33 @@
             "title": "Approvers Required",
             "type": "integer"
           },
+          "approximation_deviation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApproximationDeviation"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "FR-224's threshold for an `approximation`-mode Rating Version (`06` §4.2, RL-1504 T5). Unset means `DEFAULT_APPROXIMATION_DEVIATION`; no value switches the gate off. Valid only on a `rating_version` entry; never a Setting."
+          },
           "artifact_type": {
             "title": "Artifact Type",
             "type": "string"
+          },
+          "dislocation_baseline_environment": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The Environment slug whose live Rating Version is FR-257 limb (2)'s baseline (`06` §4.2, RL-1504 T5). Unset means `DEFAULT_DISLOCATION_BASELINE_ENVIRONMENT`. Valid only on a `rating_version` entry.",
+            "title": "Dislocation Baseline Environment"
           },
           "environment": {
             "anyOf": [
@@ -473,6 +497,75 @@
         "title": "ApproximatedModel",
         "type": "object"
       },
+      "ApproximationCheck": {
+        "additionalProperties": false,
+        "description": "FR-224's record on an `approximation`-mode version: the exact-mode baseline Dislocation\nRun read, the threshold it was held to and the figure it showed (`03` FR-224, RL-1504).\nWritten once at submission with the rest of the evidence; `fidelity_statements` are FR-136's,\none per model referenced in `approximation` mode, copied for the approver.",
+        "properties": {
+          "dislocation_run_id": {
+            "format": "uuid",
+            "title": "Dislocation Run Id",
+            "type": "string"
+          },
+          "fidelity_statements": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Fidelity Statements",
+            "type": "array"
+          },
+          "max_abs_change_pct": {
+            "description": "Exact decimal as a string; never a binary float (FR-10).",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+            "title": "Max Abs Change Pct",
+            "type": "string"
+          },
+          "observed_abs_change_pct": {
+            "description": "Exact decimal as a string; never a binary float (FR-10).",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+            "title": "Observed Abs Change Pct",
+            "type": "string"
+          },
+          "quantile": {
+            "description": "Exact decimal as a string; never a binary float (FR-10).",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+            "title": "Quantile",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dislocation_run_id",
+          "quantile",
+          "observed_abs_change_pct",
+          "max_abs_change_pct"
+        ],
+        "title": "ApproximationCheck",
+        "type": "object"
+      },
+      "ApproximationDeviation": {
+        "additionalProperties": false,
+        "description": "FR-224's threshold: a maximum absolute percentage deviation at a declared portfolio\nquantile (`03` FR-224, `06` §4.2; DP-S5-2, RL-1504 T4/T5).\n\nThe quantile is one of the six a Dislocation Run reports (`abs_change_pct_quantiles`, `03`\n§4.6), so the gate always has a figure to read; `quantile_key` is the run's key for it.",
+        "properties": {
+          "max_abs_change_pct": {
+            "description": "Exact decimal as a string; never a binary float (FR-10).",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+            "title": "Max Abs Change Pct",
+            "type": "string"
+          },
+          "quantile": {
+            "description": "Exact decimal as a string; never a binary float (FR-10).",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+            "title": "Quantile",
+            "type": "string"
+          }
+        },
+        "required": [
+          "quantile",
+          "max_abs_change_pct"
+        ],
+        "title": "ApproximationDeviation",
+        "type": "object"
+      },
       "ArtifactRef": {
         "description": "Canonical artifact reference {type}:{slug}@{version} (ID-3).",
         "examples": [
@@ -482,6 +575,169 @@
         "pattern": "^((banding|custom_metric|custom_objective|dataset|dataset_version|deployment|dossier|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}|factor:[a-z0-9][a-z0-9_-]{1,62})@[1-9][0-9]*$",
         "title": "ArtifactRef",
         "type": "string"
+      },
+      "AttributionItem": {
+        "additionalProperties": false,
+        "description": "One change group's Shapley part of record and its isolated and cumulative views (FR-266).",
+        "properties": {
+          "cumulative_change_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cumulative Change Pct"
+          },
+          "cumulative_minor": {
+            "description": "Amount in minor units (pence/cents) of the workspace currency.",
+            "title": "Cumulative Minor",
+            "type": "integer"
+          },
+          "group": {
+            "title": "Group",
+            "type": "string"
+          },
+          "isolated_minor": {
+            "description": "Amount in minor units (pence/cents) of the workspace currency.",
+            "title": "Isolated Minor",
+            "type": "integer"
+          },
+          "mean_change_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Change Pct"
+          },
+          "shapley_minor": {
+            "anyOf": [
+              {
+                "description": "Amount in minor units (pence/cents) of the workspace currency.",
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shapley Minor"
+          }
+        },
+        "required": [
+          "group",
+          "shapley_minor",
+          "isolated_minor",
+          "cumulative_minor",
+          "mean_change_pct"
+        ],
+        "title": "AttributionItem",
+        "type": "object"
+      },
+      "AttributionSummary": {
+        "additionalProperties": false,
+        "description": "Method, totals, S and R, and the subset bundles compiled (FR-266, FR-1397, FR-1398).",
+        "properties": {
+          "method": {
+            "enum": [
+              "shapley",
+              "order_dependent"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "order_sensitivity_lower_bound": {
+            "anyOf": [
+              {
+                "description": "Exact decimal as a string; never a binary float (FR-10).",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Sensitivity Lower Bound"
+          },
+          "orders_sampled": {
+            "anyOf": [
+              {
+                "minimum": 2.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Orders Sampled"
+          },
+          "replay_fell_back": {
+            "title": "Replay Fell Back",
+            "type": "boolean"
+          },
+          "residual_minor": {
+            "description": "Amount in minor units (pence/cents) of the workspace currency.",
+            "title": "Residual Minor",
+            "type": "integer"
+          },
+          "residual_share": {
+            "anyOf": [
+              {
+                "description": "Exact decimal as a string; never a binary float (FR-10).",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Residual Share"
+          },
+          "subset_bundle_count": {
+            "minimum": 0.0,
+            "title": "Subset Bundle Count",
+            "type": "integer"
+          },
+          "subset_bundle_hashes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Subset Bundle Hashes",
+            "type": "array"
+          },
+          "subset_valuation": {
+            "enum": [
+              "rerate",
+              "ladder_replay"
+            ],
+            "title": "Subset Valuation",
+            "type": "string"
+          },
+          "total_change_minor": {
+            "description": "Amount in minor units (pence/cents) of the workspace currency.",
+            "title": "Total Change Minor",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "method",
+          "total_change_minor",
+          "residual_minor",
+          "order_sensitivity_lower_bound",
+          "residual_share",
+          "orders_sampled",
+          "subset_bundle_count",
+          "subset_bundle_hashes",
+          "subset_valuation",
+          "replay_fell_back"
+        ],
+        "title": "AttributionSummary",
+        "type": "object"
       },
       "AuditEventView": {
         "additionalProperties": false,
@@ -1172,6 +1428,40 @@
         "title": "BulkOperationResult",
         "type": "object"
       },
+      "BundleDelta": {
+        "additionalProperties": false,
+        "description": "One derived change between baseline and candidate (FR-1399).",
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "pin",
+              "step_added",
+              "step_removed",
+              "step_changed",
+              "table_repointed",
+              "input_field",
+              "output"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "description"
+        ],
+        "title": "BundleDelta",
+        "type": "object"
+      },
       "BundleMetadata": {
         "additionalProperties": false,
         "description": "The compiled Bundle's identity (03 §4.3, FR-239): a reproducible content hash,\nand the blob key the serialised bundle was stored under.\n\n**`content_hash` and `blob_sha256` are hashes of different things, and their patterns\nkeep them apart on purpose.** `content_hash` is reproducible from the graph and pins\n(FR-239) and carries a `sha256:` prefix. `blob_sha256` is the blob store's content\naddress for the serialised bundle and is bare hex, matching `BlobRef.sha256`. Neither\nvalue validates into the other's field, so passing one where the other belongs is\nrefused loudly at the boundary rather than warned about in a comment (RL-915 §3).",
@@ -1403,6 +1693,30 @@
           "intact"
         ],
         "title": "ChainVerification",
+        "type": "object"
+      },
+      "ChangeGroup": {
+        "additionalProperties": false,
+        "description": "One analyst group of derived changes (FR-1399); partition-checked by Slice 3.",
+        "properties": {
+          "changes": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Changes",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "changes"
+        ],
+        "title": "ChangeGroup",
         "type": "object"
       },
       "CheckStatus": {
@@ -4017,6 +4331,449 @@
         "title": "DictionaryUpdate",
         "type": "object"
       },
+      "DislocationBand": {
+        "additionalProperties": false,
+        "properties": {
+          "band": {
+            "title": "Band",
+            "type": "string"
+          },
+          "exposure_share": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exposure Share"
+          },
+          "mean_change_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Change Pct"
+          },
+          "policies": {
+            "minimum": 0.0,
+            "title": "Policies",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "band",
+          "policies",
+          "exposure_share",
+          "mean_change_pct"
+        ],
+        "title": "DislocationBand",
+        "type": "object"
+      },
+      "DislocationEstimate": {
+        "additionalProperties": false,
+        "description": "What a run with a `DislocationSpec` would cost, before launch (`RL-1264`'s feasibility\nrule; `RL-1504` item 4; 03 §5.1 `POST /api/v1/dislocation-runs/estimate`).\n\n`estimated_ratings` is `estimate_attribution_ratings` (03 §5.2); `estimated_worker_hours`\nis that count over the worker throughput the run's guard uses, so the number shown is the\nnumber the guard compares.",
+        "properties": {
+          "derived_changes": {
+            "minimum": 0.0,
+            "title": "Derived Changes",
+            "type": "integer"
+          },
+          "estimated_ratings": {
+            "minimum": 0.0,
+            "title": "Estimated Ratings",
+            "type": "integer"
+          },
+          "estimated_worker_hours": {
+            "minimum": 0.0,
+            "title": "Estimated Worker Hours",
+            "type": "number"
+          },
+          "method": {
+            "enum": [
+              "shapley",
+              "order_dependent"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "policies": {
+            "minimum": 0.0,
+            "title": "Policies",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "derived_changes",
+          "policies",
+          "estimated_ratings",
+          "estimated_worker_hours",
+          "method"
+        ],
+        "title": "DislocationEstimate",
+        "type": "object"
+      },
+      "DislocationOutcomes": {
+        "additionalProperties": false,
+        "description": "Each policy once by its two outcomes; the first five sum to policy_count (DP-S2-2).",
+        "properties": {
+          "declined_both": {
+            "minimum": 0.0,
+            "title": "Declined Both",
+            "type": "integer"
+          },
+          "declined_to_quoted": {
+            "minimum": 0.0,
+            "title": "Declined To Quoted",
+            "type": "integer"
+          },
+          "error": {
+            "minimum": 0.0,
+            "title": "Error",
+            "type": "integer"
+          },
+          "negative_baseline": {
+            "minimum": 0.0,
+            "title": "Negative Baseline",
+            "type": "integer"
+          },
+          "quoted_both": {
+            "minimum": 0.0,
+            "title": "Quoted Both",
+            "type": "integer"
+          },
+          "quoted_to_declined": {
+            "minimum": 0.0,
+            "title": "Quoted To Declined",
+            "type": "integer"
+          },
+          "zero_baseline": {
+            "minimum": 0.0,
+            "title": "Zero Baseline",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "quoted_both",
+          "quoted_to_declined",
+          "declined_to_quoted",
+          "declined_both",
+          "error",
+          "zero_baseline",
+          "negative_baseline"
+        ],
+        "title": "DislocationOutcomes",
+        "type": "object"
+      },
+      "DislocationRun": {
+        "additionalProperties": false,
+        "description": "03 §4.6; the four attribution fields are present together or not at all.",
+        "properties": {
+          "abs_change_pct_quantiles": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "description": "Exact decimal as a string; never a binary float (FR-10).",
+                      "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Abs Change Pct Quantiles"
+          },
+          "attribution": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AttributionItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attribution"
+          },
+          "attribution_summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AttributionSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "baseline_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "by_ladder_rung": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/RungContribution"
+            },
+            "title": "By Ladder Rung",
+            "type": "array"
+          },
+          "by_segment": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SegmentSlice"
+            },
+            "title": "By Segment",
+            "type": "array"
+          },
+          "candidate_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "change_groups": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ChangeGroup"
+                },
+                "maxItems": 6,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Groups"
+          },
+          "derived_changes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/BundleDelta"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Derived Changes"
+          },
+          "distribution": {
+            "items": {
+              "$ref": "#/components/schemas/DislocationBand"
+            },
+            "minItems": 1,
+            "title": "Distribution",
+            "type": "array"
+          },
+          "errors": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ErrorTally"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "exposure_years": {
+            "description": "Exact decimal as a string; never a binary float (FR-10).",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+            "title": "Exposure Years",
+            "type": "string"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "largest_movers_blob": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Largest Movers Blob"
+          },
+          "outcomes": {
+            "$ref": "#/components/schemas/DislocationOutcomes"
+          },
+          "policy_count": {
+            "minimum": 0.0,
+            "title": "Policy Count",
+            "type": "integer"
+          },
+          "portfolio_dataset_version_id": {
+            "format": "uuid",
+            "title": "Portfolio Dataset Version Id",
+            "type": "string"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/DislocationTotals"
+          }
+        },
+        "required": [
+          "baseline_ref",
+          "candidate_ref",
+          "portfolio_dataset_version_id",
+          "policy_count",
+          "exposure_years",
+          "totals",
+          "outcomes",
+          "distribution"
+        ],
+        "title": "DislocationRun",
+        "type": "object"
+      },
+      "DislocationSpec": {
+        "additionalProperties": false,
+        "description": "What a run compares and how it reports (03 §5.2's types paragraph, RL-1394 T7).",
+        "properties": {
+          "as_at": {
+            "format": "date",
+            "title": "As At",
+            "type": "string"
+          },
+          "band_edges_pct": {
+            "items": {
+              "description": "Exact decimal as a string; never a binary float (FR-10).",
+              "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Band Edges Pct",
+            "type": "array"
+          },
+          "baseline_mode_override": {
+            "anyOf": [
+              {
+                "const": "exact",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Mode Override"
+          },
+          "baseline_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "candidate_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "change_groups": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ChangeGroup"
+                },
+                "maxItems": 6,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Groups"
+          },
+          "mover_threshold_pct": {
+            "description": "Exact decimal as a string; never a binary float (FR-10).",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+            "title": "Mover Threshold Pct",
+            "type": "string"
+          },
+          "portfolio_dataset_version_id": {
+            "format": "uuid",
+            "title": "Portfolio Dataset Version Id",
+            "type": "string"
+          },
+          "purpose": {
+            "enum": [
+              "new_business",
+              "renewal"
+            ],
+            "title": "Purpose",
+            "type": "string"
+          },
+          "segments": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Segments",
+            "type": "array"
+          }
+        },
+        "required": [
+          "baseline_ref",
+          "candidate_ref",
+          "portfolio_dataset_version_id",
+          "purpose",
+          "as_at",
+          "band_edges_pct",
+          "mover_threshold_pct"
+        ],
+        "title": "DislocationSpec",
+        "type": "object"
+      },
+      "DislocationTotals": {
+        "additionalProperties": false,
+        "properties": {
+          "baseline_premium_minor": {
+            "description": "Amount in minor units (pence/cents) of the workspace currency.",
+            "title": "Baseline Premium Minor",
+            "type": "integer"
+          },
+          "candidate_premium_minor": {
+            "description": "Amount in minor units (pence/cents) of the workspace currency.",
+            "title": "Candidate Premium Minor",
+            "type": "integer"
+          },
+          "change_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Pct"
+          }
+        },
+        "required": [
+          "baseline_premium_minor",
+          "candidate_premium_minor",
+          "change_pct"
+        ],
+        "title": "DislocationTotals",
+        "type": "object"
+      },
       "DoubleLift": {
         "additionalProperties": false,
         "description": "One challenger against the baseline (FR-186, and FR-171 as amended).",
@@ -4713,6 +5470,55 @@
           }
         },
         "title": "EnvironmentUpdate",
+        "type": "object"
+      },
+      "ErrorSample": {
+        "additionalProperties": false,
+        "properties": {
+          "quote_id": {
+            "title": "Quote Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "quote_id"
+        ],
+        "title": "ErrorSample",
+        "type": "object"
+      },
+      "ErrorTally": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "count": {
+            "minimum": 1.0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "sample": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ErrorSample"
+                },
+                "maxItems": 10,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample"
+          }
+        },
+        "required": [
+          "code",
+          "count"
+        ],
+        "title": "ErrorTally",
         "type": "object"
       },
       "ExcludedPeril": {
@@ -11943,6 +12749,17 @@
             ],
             "title": "Produces"
           },
+          "result_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Type"
+          },
           "step_id": {
             "minLength": 1,
             "title": "Step Id",
@@ -12352,6 +13169,16 @@
         "additionalProperties": false,
         "description": "The evidence an `approved` version carries (03 §4.3, FR-257).",
         "properties": {
+          "approximation_check": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApproximationCheck"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "dislocation_run_id": {
             "anyOf": [
               {
@@ -12400,6 +13227,18 @@
               }
             ],
             "title": "Golden Quotes"
+          },
+          "no_baseline": {
+            "anyOf": [
+              {
+                "const": "first_version",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "No Baseline"
           },
           "regression_suite_run_id": {
             "anyOf": [
@@ -13913,6 +14752,44 @@
         "title": "RunGeneration",
         "type": "object"
       },
+      "RungContribution": {
+        "additionalProperties": false,
+        "properties": {
+          "contribution_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contribution Pct"
+          },
+          "rung": {
+            "enum": [
+              "risk_premium",
+              "expense_loading",
+              "commission",
+              "profit_loading",
+              "office_premium",
+              "optimisation_adjustment",
+              "constraints",
+              "instalment_loading",
+              "ipt_and_fees",
+              "payable_premium"
+            ],
+            "title": "Rung",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rung",
+          "contribution_pct"
+        ],
+        "title": "RungContribution",
+        "type": "object"
+      },
       "SamplingSpec": {
         "additionalProperties": false,
         "description": "The grid the checks ran over (§4.7).\n\nPart of the certificate rather than a run parameter thrown away afterwards: §4.7's own\nnote says the convexity share \"is strongly dependent on `y_range`/`f_range`, so the\nshare is only meaningful alongside the sampling block\". A finding without its grid is\na percentage of nothing.",
@@ -14066,6 +14943,63 @@
           "seeded_at"
         ],
         "title": "SeededFrom",
+        "type": "object"
+      },
+      "SegmentSlice": {
+        "additionalProperties": false,
+        "properties": {
+          "exposure_share": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exposure Share"
+          },
+          "factor": {
+            "title": "Factor",
+            "type": "string"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level"
+          },
+          "mean_change_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Change Pct"
+          },
+          "policies": {
+            "minimum": 0.0,
+            "title": "Policies",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "factor",
+          "level",
+          "policies",
+          "mean_change_pct"
+        ],
+        "title": "SegmentSlice",
         "type": "object"
       },
       "SemanticType": {
@@ -23170,6 +24104,459 @@
         "summary": "What is testable today, derived from the repository (FR-409)",
         "tags": [
           "demo"
+        ]
+      }
+    },
+    "/api/v1/dislocation-runs": {
+      "post": {
+        "description": "**202** with a `dislocation.run` Job. **422** `VALIDATION_FAILED`, with no Job, when the\nchange groups do not partition the derived changes (FR-1399, naming each change) or when\nthe run is estimated above the single-Job bound (`RL-1504` item 1, naming K, the policy\ncount and the estimate). A spec with `baseline_mode_override` also gets FR-136's pre-check\nbefore any Job: **422** `EVIDENCE_INCOMPLETE` naming a model referenced in `approximation`\nmode whose transparency artifact has no GLM approximation (`03` FR-224, DP-S5-5).",
+        "operationId": "start_dislocation_run_api_v1_dislocation_runs_post",
+        "parameters": [
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DislocationSpec"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Start a Dislocation Run",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/v1/dislocation-runs/estimate": {
+      "post": {
+        "description": "**200** with the rating count and single-worker hours this spec's run would take\n(`RL-1264` item 3); **422** `VALIDATION_FAILED` for groups that do not partition the\nderived changes (FR-1399). Writes no Job and applies no size bound: the caller sees the\nestimate that the run's own bound is compared with.",
+        "operationId": "estimate_dislocation_run_api_v1_dislocation_runs_estimate_post",
+        "parameters": [
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DislocationSpec"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DislocationEstimate"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "The estimated cost of a Dislocation Run, before launch",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/v1/dislocation-runs/{run_id}": {
+      "get": {
+        "description": "**200** with the persisted artifact (FR-265); **404** `NOT_FOUND` for an unknown id or\nanother workspace's.",
+        "operationId": "get_dislocation_run_api_v1_dislocation_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DislocationRun"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Read a Dislocation Run",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/v1/dislocation-runs/{run_id}/movers": {
+      "get": {
+        "description": "The run's movers in §4.6's mover order, each row joined at read on `quote_id` to the\nportfolio columns of the run's portfolio Dataset Version. Needs `rating:read` and\n`dataset:read`; the stored blob holds no portfolio column (`RL-1504` item 5, NFR-499), and\nthis is its one reader (`GET /api/v1/blobs/{sha256}` refuses it).",
+        "operationId": "get_dislocation_run_movers_api_v1_dislocation_runs__run_id__movers_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Get Dislocation Run Movers Api V1 Dislocation Runs  Run Id  Movers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Read a Dislocation Run's movers, joined to the portfolio's columns",
+        "tags": [
+          "rating"
         ]
       }
     },

@@ -311,7 +311,7 @@ async def test_another_workspaces_sub_graph_is_404_and_absent_from_its_list(
 
 # -- FD-1458 (PL-1464) items 18 and 19: the same feature_map save check ---------------------
 #
-# **Authored ahead of a database run** (a fitted GLM is needed); red-by-cause owed (LG-9449).
+# **Authored ahead of a database run** (a fitted GLM is needed); red-by-cause owed (LG-1587).
 
 
 def _model_call_body(model_ref: str, feature_map: dict[str, str]) -> dict[str, Any]:

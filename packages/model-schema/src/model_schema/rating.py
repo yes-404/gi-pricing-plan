@@ -27,6 +27,7 @@ from pydantic import (
 )
 
 from model_schema.graph_errors import GraphCycleError, GraphUnresolvedRefError
+from model_schema.money import DecimalStr
 from model_schema.refs import ArtifactRef, BlobRef, Slug
 from model_schema.regression import GoldenQuoteEvidence
 
@@ -117,6 +118,21 @@ class BundleMetadata(BaseModel):
     blob_sha256: Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")] | None = None
 
 
+class ApproximationCheck(BaseModel):
+    """FR-224's record on an `approximation`-mode version: the exact-mode baseline Dislocation
+    Run read, the threshold it was held to and the figure it showed (`03` FR-224, RL-1504).
+    Written once at submission with the rest of the evidence; `fidelity_statements` are FR-136's,
+    one per model referenced in `approximation` mode, copied for the approver."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    dislocation_run_id: UUID
+    quantile: DecimalStr
+    observed_abs_change_pct: DecimalStr
+    max_abs_change_pct: DecimalStr
+    fidelity_statements: tuple[str, ...] = ()
+
+
 class RatingVersionEvidence(BaseModel):
     """The evidence an `approved` version carries (03 §4.3, FR-257)."""
 
@@ -126,6 +142,11 @@ class RatingVersionEvidence(BaseModel):
     dislocation_run_id: UUID | None = None
     gipp_check_id: UUID | None = None
     structural_diff_blob: str | None = None
+    #: Written by the submit gate when FR-257 limb (2) finds no baseline: the algorithm's first
+    #: version, so no Dislocation Run is required (`03` FR-257, 2026-10-10 clarification).
+    no_baseline: Literal["first_version"] | None = None
+    #: Written by the submit gate for an `approximation`-mode version (FR-224).
+    approximation_check: ApproximationCheck | None = None
     #: Written once by the submit gate (FR-260, amended 2026-09-28) and never edited after.
     #: `None` means not yet submitted; a submitted version carries one of the two variants.
     golden_quotes: GoldenQuoteEvidence | None = None
