@@ -67,8 +67,9 @@ BlobStoreDep = Annotated[BlobStore, Depends(_blob_store)]
 
 @contextmanager
 def spec_not_found() -> Iterator[None]:
-    """`03` §5.1 types the manual-edit route's unknown table or `base_version` as 404
-    `NOT_FOUND` (RL-1555 T1; the maintainer's ruling of 2026-10-10 04:19:42: the spec governs).
+    """`03` §5.1 types the S4 routes' unknown table, version or `base_version` as 404
+    `NOT_FOUND` (RL-1555 T1; the maintainer's rulings of 2026-10-10 04:19:42 and 04:23:36: the
+    spec governs, and the reads follow the edit route).
     The shared loaders keep `RATE_TABLE_MISS`, which the scoring path relies on, so the route
     maps it here and nothing below it changes."""
     try:
@@ -439,7 +440,8 @@ async def read_rate_table(
     slug: str, version: int, caller: RatingReadDep, database: DatabaseDep
 ) -> RateTable:
     """FR 9940: the version's keys, value, storage, flag and default row; never its cells."""
-    return await service.read_definition(database, caller.workspace_id, slug, version)
+    with spec_not_found():
+        return await service.read_definition(database, caller.workspace_id, slug, version)
 
 
 @router.get(
@@ -459,9 +461,10 @@ async def read_rate_table_cells(
     """FR 9940, FR-232: one cursor page of `RateTableCell` rows in key order, for `rows` and
     `parquet` storage alike, answered **200** and never as a Job. A cursor this API did not
     issue is a **400**, a `limit` out of range a **422**."""
-    return await service.cells_page(
-        database, caller.workspace_id, slug, version, blob_store, cursor=cursor, limit=limit
-    )
+    with spec_not_found():
+        return await service.cells_page(
+            database, caller.workspace_id, slug, version, blob_store, cursor=cursor, limit=limit
+        )
 
 
 @router.get(

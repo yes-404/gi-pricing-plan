@@ -259,6 +259,20 @@ the grid sets both. (3) The server's error is shown as text beside the input and
 rely on colour. (4) The grid passes `getRowId`, so the row id is the `\u001f`-joined key the parent's `edits` and `errors`
 use. `whole-tree vue-tsc`, `eslint` and the build wait for the gate.
 
+#### Plan delta, 2026-10-10 — the reads answer `NOT_FOUND` too (the maintainer's ruling "04:23:36", relayed by the lead)
+
+**Ruling (a): the two reads answer 404 `NOT_FOUND`**, like the manual-edit route (04:19:42). This corrects RL-1475 T3 and T4
+(`RATE_TABLE_MISS`) and PL-1558 Acceptance 4 and RL-1475 Acceptance 5; the plan body and the ruling are not edited. Done at the
+route layer: `spec_not_found()` now wraps `read_rate_table` and `read_rate_table_cells`; the loader is unchanged.
+**Spec:** in `03`, the FR 9940 row and the two §5.1 rows say `NOT_FOUND`, each with a dated line citing 04:19:42 and 04:23:36
+and the correcting ruling **`RL 9942`** (a working id reserved by the lead; a decision-maker drafts it; it corrects RL-1475
+T3 and T4).
+**Merge need: `RL 9942` minted on main before S4's ACK.** Until it is, the dated lines cite a working id.
+**Red by cause, then green** (DB-free, `test_rate_table_route_codes.py`): with the wrappers off, both parametrised cases fail
+`assert ('RATE_TABLE_MISS', 404) == ('NOT_FOUND', 404)`; with them on, `4 passed`. (A first red run failed for a wrong cause,
+a `None` caller, and was discarded.) The DB route tests read `_READ_MISS_CODE` and `_EDIT_MISS_CODE`, both `NOT_FOUND`: OWED
+at the gate.
+
 ## PRs
 
 None yet.

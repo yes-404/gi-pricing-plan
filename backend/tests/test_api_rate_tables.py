@@ -1569,10 +1569,10 @@ def test_against_seed_resolves_to_the_versions_own_seed_origin(
     assert on_v2.json()["changed_cells"] == on_v2_vs_v1.json()["changed_cells"]
 
 
-#: The codes of a 404 on an unknown table or version. The two reads answer `RATE_TABLE_MISS`
-#: (RL-1475 T3 and T4, the loaders' code); the manual-edit route answers `NOT_FOUND`
-#: (RL-1555 T1; the maintainer's ruling of 2026-10-10 04:19:42: the spec governs).
-_READ_MISS_CODE = "RATE_TABLE_MISS"
+#: The code of a 404 on an unknown table or version at the S4 routes: `NOT_FOUND`, mapped at
+#: the route (RL-1555 T1; the maintainer's rulings of 2026-10-10 04:19:42 and 04:23:36: the
+#: spec governs, reads included). The loaders keep `RATE_TABLE_MISS` for the scoring path.
+_READ_MISS_CODE = "NOT_FOUND"
 _EDIT_MISS_CODE = "NOT_FOUND"
 
 # -- the definition and cell-page reads (FR 9940, FR-232; RL-1475 items 2 and 3) -------------
