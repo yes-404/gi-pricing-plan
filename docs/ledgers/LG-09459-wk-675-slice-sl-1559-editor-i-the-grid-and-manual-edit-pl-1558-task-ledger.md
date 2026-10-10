@@ -48,7 +48,7 @@ column, diff shading, bulk operations, import and export (S5).
 | 3 | the manual-edit route, RL-1555 T1 to T4, and `created_by_edit` persisted | 6–8 | authored, commit 4; pure level red→green; the DB tests are UNRUN (OWED at the gate) |
 | 4 | the dependency and its records | 17 | done, commit 5 (`e92ce26d`) |
 | 5 | `rateTables.ts` | — | done, commit 6 |
-| 6 | `DecimalCellInput.vue`, `RateTableGrid.vue` | 11, 12 | open |
+| 6 | `DecimalCellInput.vue`, `RateTableGrid.vue` | 11, 12 | done, commit 8 |
 | 7 | `RateTableEditorView.vue`, route, FR-25 link | 11, 13–16 | open |
 | 8 | gate and ledger | 18 | waits for the GO and the gate slot |
 
@@ -246,6 +246,18 @@ isolation test asserts `NOT_FOUND` (DB, OWED at the gate).
 **The existing diff routes (`:943`/`:944`)** say `NOT_FOUND` in the spec while their loader answers `RATE_TABLE_MISS`: the
 drift is the lead's finding. Not fixed here: the fix would also change the existing diff tests that assert
 `RATE_TABLE_MISS`, so it is not a ~20-line, test-neutral change.
+
+#### Task 6 — `DecimalCellInput.vue`, `RateTableGrid.vue` (2026-10-10)
+
+**Red:** `vitest run src/components/rating`, both test files failing to load, the components absent (load 1.36). **Green:**
+`2 files, 10 tests passed`. Acceptance 12's `git grep -n -E 'Number\(|parseFloat|parseInt' -- frontend/src/components/rating/`
+prints nothing (rc 1).
+**Deviations from the plan's sketch.** (1) The header reads `name (unit)`, the unit of `RateTableValue` (Acceptance 11 and
+FR-228 say "unit"; the sketch's test expected the type, `relativity (relativity)`). (2) `DecimalCellInput` gains two optional
+props, `integer` (money in minor units and counts take whole numbers only, FR-10) and `label` (an accessible name per cell);
+the grid sets both. (3) The server's error is shown as text beside the input and tied by `aria-describedby`, so it does not
+rely on colour. (4) The grid passes `getRowId`, so the row id is the `\u001f`-joined key the parent's `edits` and `errors`
+use. `whole-tree vue-tsc`, `eslint` and the build wait for the gate.
 
 ## PRs
 
