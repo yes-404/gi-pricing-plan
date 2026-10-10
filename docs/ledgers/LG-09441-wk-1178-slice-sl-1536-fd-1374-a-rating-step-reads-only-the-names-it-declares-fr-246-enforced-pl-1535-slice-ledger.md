@@ -32,13 +32,28 @@ Write set: `PL-1535` §Tasks / `PL-1520` Task 1A "Files" only. **FD-1534's remed
 ### Task list
 
 PL-1520 Task 1A, by step (acceptance checks are PL-1535 Acceptance Standard items 1 to 6):
-- [x] Step 1: `test_rating_declared_reads.py` (6 tests), commit `3af2475f`. **Red proof owed** (Step 2: expected `ModuleNotFoundError: No module named 'pricing_core.rating.references'` at collection, then per Step 3 the two refusal tests and the two example tests red by their causes).
+- [x] Step 1: `test_rating_declared_reads.py` (6 tests), commit `3af2475f`. **Red proof run 2026-10-10, see Red-by-cause runs** (Step 2: expected `ModuleNotFoundError: No module named 'pricing_core.rating.references'` at collection, then per Step 3 the two refusal tests and the two example tests red by their causes).
 - [x] Step 3: `pricing_core/rating/references.py` (deviation D4 below).
 - [x] Step 4: `_check_declared_reads` appended to `compile.py`, last entry of `ALGORITHM_CHECKS`; commit `aeeb39ad` (Steps 3 and 4 together).
 - [x] Step 5: four fixtures fixed, three `input` steps added in `test_rating_score.py`, one in the model-schema fixture (whose `input_contract` gains `min_premium_minor`; its step-count assert 9 to 10); commit `cb945b84` and a style commit.
 - [ ] Step 6, 7: **owed** (need pytest; gate slot for Step 7).
 - [x] Step 8 (authoring half): RL-1519 T1 to T5 applied: `03` (FR-246 row, the 4.1 example fence, its Invariants note, the owned-code row) and `errors.py`; commit `497bd69d`. T2's sha256 (with final newline) printed `6a35964d410f9b6c`, matching RL-1519. Audit-docs, FD-1374's predicate, the release note in the squash body, `git diff` of `03` beside the RL text: **owed**.
-- [x] FD-1534, both limbs, authored in `test_rating_committed_strings.py`, commit below (write-set addition ruled, build log). **Red proofs and the controls' run at the test file: owed.** FD-1534 is closed (status, register row) only if both limbs are discharged by that run.
+- [x] FD-1534, both limbs, authored in `test_rating_committed_strings.py`, commit below (write-set addition ruled, build log). **Red proofs run 2026-10-10 (Red-by-cause runs): both limbs red by cause, controls green; the file is not green at the head, see the finding there.** FD-1534 is closed (status, register row) only if both limbs are discharged by that run.
+
+### Red-by-cause runs (2026-10-10, 14:39 BST)
+
+Single test file per run, `flock -w 300 /tmp/slots/small-test -c "timeout 150 nice -n 19 uv run --directory <dir> pytest -q <file> -p no:cacheprovider"`, gate-1 and gate-2 free at the start, no DB test. `<dir>` is a detached scratch worktree of this repository (removed after), never this worktree's index. Test paths are under `packages/pricing-core/tests/`.
+
+| Test file, state | Tree | rc | Printed line |
+|---|---|---|---|
+| `test_rating_declared_reads.py`, tests only | `3af2475f` | 2 | `ModuleNotFoundError: No module named 'pricing_core.rating.references'` at collection; `1 error` |
+| same, `references.py` taken from `aeeb39ad`, `compile.py` and `03` as at `3af2475f` | `3af2475f` + that one file | 1 | `4 failed, 2 passed`. `test_a_constraint_reading_an_undeclared_name_is_refused` and `test_an_expression_reading_an_undeclared_name_is_refused`: `assert [] == [('s_clamp', ...'RATING_STEP_UNDECLARED_READ')]` (no check yet). `test_the_03_example_validates_in_full_and_compiles`: `declared output 'premium_ladder' has no output step (FR-214)`. `test_the_03_example_declares_every_read`: `steps read undeclared names: {'s_area': [...` (old `03` example) |
+| same file, branch head | `649e7e54` | 0 | `6 passed` |
+| `test_rating_committed_strings.py`, limb (a) reverted in a scratch copy (`_text` returns `match.group(first) or match.group(first + 1)`, the `is not None` guards forced true) | `649e7e54` + that edit | 1 | `test_an_empty_literal_is_skipped_and_a_real_one_beside_it_is_still_caught`: `assert [('expr', None)] == []` |
+| same file, limb `_KEY` reverted (`_END = ""`) | `649e7e54` + that edit | 1 | `test_a_literal_that_is_not_the_whole_value_is_not_an_authored_expression`: `assert [('expr', ' * ')] == []`; the first limb's test and the controls pass |
+| same file, branch head | `649e7e54` | **1** | `1 failed, 5 passed`. Both FD-1534 tests green. **Red:** `test_every_committed_string_is_accepted_or_a_declared_negative`, one unexplained string: `test_rating_declared_reads.py:33 [expr] "a * b + round(a, 'half_even', 0)": ['EXPRESSION_INVALID_VOCABULARY']` |
+
+**Finding for the lead (not fixed here).** The last row is a defect at the head, not a red proof: the `referenced_names` fixture at `test_rating_declared_reads.py:33` authors an `expr` string that the FR-244 scan reads and the vocabulary check refuses. The same string is reported in the limb (a) and limb `_KEY` rows (the line is in both trees); whether it is red at `20f3df51`'s extractor was not run. Fix options: change the fixture string to a vocabulary-valid expression, or add it to `_NEGATIVES`. Not applied: the lead picks.
 
 ### Gate
 
