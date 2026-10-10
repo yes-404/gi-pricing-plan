@@ -70,6 +70,11 @@ MAX_EXPOSURE = 1.05
 #: everywhere it is shown. Reproducible without a random seed: the size is fixed, the rule is
 #: `build_csv`'s deterministic every-nth-row, and the input is sha256-pinned (`fetch.py`).
 PORTFOLIO_ROWS: Final = 20_000
+#: What the sample holds after the v2 recipe drops the 21 policies above `MAX_EXPOSURE`
+#: (19 979 of 20 000). **Measured, not derived** (PL-1577 DP-3): `build_csv(PORTFOLIO_ROWS)` over
+#: the sha256-pinned book, then `exposure_years <= MAX_EXPOSURE`; the seed asserts the ingested
+#: version's profile row count against it, so a changed input or sampler stops the seed.
+PORTFOLIO_VALIDATED_ROWS: Final = 19_979
 
 
 def recipe(*, drop_implausible_exposure: bool) -> list[dict[str, Any]]:
@@ -460,10 +465,12 @@ async def run(rows: int | None) -> int:
             )
             rule_ids.append((rule["slug"], row.id))
 
-    async def ingest(label: str, *, cleaned: bool) -> UUID:
+    ingested_rows: dict[UUID, int] = {}
+
+    async def ingest(label: str, *, cleaned: bool, data: bytes | None = None) -> UUID:
         started = time.perf_counter()
         async with database.unit_of_work() as session:
-            ref = await blob_store.put(session, payload, "text/csv")
+            ref = await blob_store.put(session, payload if data is None else data, "text/csv")
             job = await job_service.submit(
                 session, JobKind.DATASET_INGEST,
                 {"workspace_id": str(workspace_id),
@@ -489,6 +496,7 @@ async def run(rows: int | None) -> int:
             )
         print(f"  {label}: v{version.version}, {profile.row_count:,} rows, "
               f"{len(profile.columns)} columns profiled, {time.perf_counter() - started:.1f}s")
+        ingested_rows[version.id] = profile.row_count
         return version.id
 
     async def validate(version_id: UUID) -> UUID:
@@ -614,49 +622,62 @@ async def run(rows: int | None) -> int:
     second = await ingest("ingest", cleaned=True)
     second_report = await validate(second)
 
-    async with database.unit_of_work() as session:
-        outstanding = await validation_service.unacknowledged_warnings(
-            session, workspace_id=workspace_id, report_id=second_report
-        )
-        report = await validation_service.load_report(
-            session, workspace_id=workspace_id, report_id=second_report
-        )
-    if outstanding:
+    async def promote(version_id: UUID, report_id: UUID) -> int:
+        """Acknowledge the report's warnings as the actuary, then promote the version."""
         async with database.unit_of_work() as session:
-            for result in report.results:
-                if result.outcome is RuleOutcome.WARN:
-                    await validation_service.acknowledge(
-                        session, workspace_id=workspace_id, actor=actuary,
-                        report_id=second_report, rule_id=result.rule_id,
-                        justification=(
-                            "Reviewed against the 2023 French motor market: within "
-                            "expectation for this book."
-                        ),
-                    )
-            print(f"    {outstanding} warning(s) acknowledged by {actuary.display}")
+            outstanding = await validation_service.unacknowledged_warnings(
+                session, workspace_id=workspace_id, report_id=report_id
+            )
+            report = await validation_service.load_report(
+                session, workspace_id=workspace_id, report_id=report_id
+            )
+        if outstanding:
+            async with database.unit_of_work() as session:
+                for result in report.results:
+                    if result.outcome is RuleOutcome.WARN:
+                        await validation_service.acknowledge(
+                            session, workspace_id=workspace_id, actor=actuary,
+                            report_id=report_id, rule_id=result.rule_id,
+                            justification=(
+                                "Reviewed against the 2023 French motor market: within "
+                                "expectation for this book."
+                            ),
+                        )
+                print(f"    {outstanding} warning(s) acknowledged by {actuary.display}")
 
-    # A passing report leaves the version `validating`; promotion is the actuary's act.
-    async with database.unit_of_work() as session:
-        promoted = await validation_service.promote_using_report(
-            session, workspace_id=workspace_id, actor=actuary,
-            version_id=second, report_id=second_report,
-        )
-    print(f"    version {promoted.version} is {promoted.status}\n")
+        # A passing report leaves the version `validating`; promotion is the actuary's act.
+        async with database.unit_of_work() as session:
+            promoted = await validation_service.promote_using_report(
+                session, workspace_id=workspace_id, actor=actuary,
+                version_id=version_id, report_id=report_id,
+            )
+        print(f"    version {promoted.version} is {promoted.status}\n")
+        return promoted.version
+
+    promoted_version = await promote(second, second_report)
 
     async with database.session() as session:
         fittable = await dataset_service.fittable_or_refuse(
             session, workspace_id=workspace_id, version_id=second
         )
-    print(f"  a model may be fitted on {slug}@{promoted.version} ({fittable.id})")
+    print(f"  a model may be fitted on {slug}@{promoted_version} ({fittable.id})")
     print("  and still may not on @1 — `01` §1.3 has no override\n")
 
     # W7-1/W7-2: the demo models — factors, GLM and GBM fits, then the comparison and
     # approval. `Path(__file__).parent` is on sys.path (the seed's own import shim), so
     # `model` — not `examples.fremtpl2.model` — is the importable name here.
-    from model import compare_and_approve, create_approved_rating_version, fit_demo_models
+    from model import (
+        compare_and_approve,
+        create_approved_rating_version,
+        create_demo_bandings,
+        demo_base_premium,
+        fit_demo_models,
+        seed_demo_rate_tables,
+    )
 
+    bandings = await create_demo_bandings(database, blob_store, workspace_id, analyst, second)
     fitted = await fit_demo_models(
-        database, blob_store, workspace_id, analyst, dataset_id, second
+        database, blob_store, workspace_id, analyst, dataset_id, second, bandings
     )
     print(f"  demo models fitted: GLM {fitted['glm']}, GBM {fitted['gbm']}")
     approved = await compare_and_approve(
@@ -664,11 +685,38 @@ async def run(rows: int | None) -> int:
         fitted["glm"], fitted["gbm"],
     )
     print(f"  approved model: {approved}")
+    tables = await seed_demo_rate_tables(
+        database, settings, blob_store, workspace_id, analyst, approved
+    )
+    base_minor = await demo_base_premium(database, blob_store, workspace_id, approved, second)
     await create_approved_rating_version(
         database, blob_store, workspace_id, analyst, actuary, approver, second_approver,
-        second, approved,
+        second, approved, tables, bandings, base_minor,
     )
     print()
+
+    # PL-1577 DP-1 (b): the dislocation and attribution portfolio is a separate Dataset Version,
+    # a SAMPLE of the book (`PORTFOLIO_ROWS` policies, the sampler's every-nth-row over the pinned
+    # input), run through the same recipe and the same rules. The model above stays fitted on the
+    # full book. Everything the demo shows over it says "20,000-policy sample".
+    print("── the demo portfolio: a " + f"{PORTFOLIO_ROWS:,}" + "-policy sample " + "─" * 28)
+    sample = build_csv(PORTFOLIO_ROWS)
+    portfolio = await ingest("portfolio sample", cleaned=True, data=sample)
+    if ingested_rows[portfolio] != PORTFOLIO_VALIDATED_ROWS:
+        raise SystemExit(
+            f"the portfolio sample holds {ingested_rows[portfolio]:,} rows, not the measured "
+            f"{PORTFOLIO_VALIDATED_ROWS:,}: the pinned input or the sampler changed (PL-1577 DP-3)"
+        )
+    await promote(portfolio, await validate(portfolio))
+    record = json.loads((DATA_DIR / "last-seed.json").read_text(encoding="utf-8"))
+    record.update(
+        portfolio_dataset_version_id=str(portfolio),
+        portfolio_rows=ingested_rows[portfolio],
+        portfolio_is_a_sample_of_rows=PORTFOLIO_ROWS,
+    )
+    (DATA_DIR / "last-seed.json").write_text(json.dumps(record, indent=2), encoding="utf-8")
+    print(f"  portfolio {portfolio}: a {PORTFOLIO_ROWS:,}-policy sample, "
+          f"{ingested_rows[portfolio]:,} rows validated\n")
     await database.dispose()
     return 0
 

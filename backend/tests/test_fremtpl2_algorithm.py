@@ -163,7 +163,7 @@ def test_the_built_algorithm_validates() -> None:
     assert step_types.count("output") == 1
     base = next(step for step in algorithm.steps if step.step_id == "s_base")
     assert base.note is not None
-    assert "a simplification (frequency GLM × mean severity; no severity model)" in base.note
+    assert "a simplification (frequency GLM \u00d7 mean severity; no severity model)" in base.note
 
 
 @pytest.mark.req("FR-226")

@@ -9,9 +9,21 @@ rating version, and the Phase 1b exit demo (OD3, OD4).
 
 from __future__ import annotations
 
+import io
+import math
+from dataclasses import dataclass
+from decimal import Decimal
+from itertools import pairwise
 from typing import Any, Final
 from uuid import UUID
 
+from algorithm import (
+    BASE_LABEL,
+    FREMTPL2_ALGORITHM_SLUG,
+    base_premium_minor,
+    build_fremtpl2_algorithm,
+    glm_premium_minor,
+)
 from sqlalchemy import select
 
 from app.db.models import BlobRow, DatasetVersionRow, ModelRow, RegressionRunRow
@@ -22,15 +34,21 @@ from app.platform import comparison as comparison_service
 from app.platform import datasets as dataset_service
 from app.platform import jobs as job_service
 from app.platform import modelling as model_service
+from app.platform import rate_tables as rate_table_service
 from app.platform import rating_algorithms as algorithm_service
 from app.platform import rating_versions as rating_versions_service
 from app.platform import regression_suites as suite_service
+from app.platform import transformations as transform_service
 from app.platform.blobs import BlobStore, to_ref
+from app.platform.dislocation_runs import portfolio_table, read_stored_blob
 from app.worker.model_handlers import register_model_handlers
 from app.worker.rating_handlers import register_rating_handlers
 from app.worker.tasks import execute_job
 from model_schema import (
     ArtifactRef,
+    Banding,
+    BandingMethod,
+    BandingProposal,
     DecisionKind,
     EarlyStopping,
     Factor,
@@ -38,6 +56,7 @@ from model_schema import (
     FactorType,
     GbmFunctionRef,
     GbmSpec,
+    GlmFitResult,
     GlmSpec,
     JobKind,
     JobStatus,
@@ -51,17 +70,17 @@ from model_schema import (
     new_uuid7,
 )
 from pricing_core.rating.compile import Bundle
-from pricing_core.rating.properties import payable_minor
 from pricing_core.rating.runtime import CompiledBundle, load_bundle
-from pricing_core.rating.score import score_one
 
-#: The demo factor set (OD4's "reduced factor set"): three continuous, four categorical.
-#: Each names a column the WK-666 dictionary declares. The continuous columns carry the
-#: largest exposure mass; the categorical ones are the ones the freMTPL2 literature fits.
+#: The demo factor set (OD4's "reduced factor set"), seven categorical-rated Factors. The three
+#: continuous columns are **banded** (PL-1525 DP-a1 (a)): a banding is the rateable form (RL-1361:
+#: a continuous factor has no relativity table), and each Factor's slug differs from its column,
+#: because the algorithm's band step produces the Factor from the raw column and a value name has
+#: one producer. Each is `(factor slug, column)`; the column is one the WK-666 dictionary declares.
 CONTINUOUS_FACTORS: tuple[tuple[str, str], ...] = (
-    ("driv_age", "driv_age"),
-    ("veh_age", "veh_age"),
-    ("veh_power", "veh_power"),
+    ("driv_age_band", "driv_age"),
+    ("veh_age_band", "veh_age"),
+    ("veh_power_band", "veh_power"),
 )
 CATEGORICAL_FACTORS: tuple[tuple[str, str], ...] = (
     ("veh_brand", "veh_brand"),
@@ -69,10 +88,14 @@ CATEGORICAL_FACTORS: tuple[tuple[str, str], ...] = (
     ("area", "area"),
     ("region", "region"),
 )
-FACTOR_SET: tuple[str, ...] = (
-    *(column for _, column in CONTINUOUS_FACTORS),
-    *(column for _, column in CATEGORICAL_FACTORS),
+#: The Factor slugs, in the order the model is fitted and the tables are seeded.
+FACTOR_SET: tuple[str, ...] = tuple(
+    slug for slug, _ in (*CONTINUOUS_FACTORS, *CATEGORICAL_FACTORS)
 )
+
+#: The bands' method and count (PL-1525 Acceptance 11 (a)): 5 exposure-blind quantile bands.
+BANDING_METHOD: Final = BandingMethod.QUANTILE
+BAND_COUNT: Final = 5
 
 SPLIT_SEED: Final = 20260827
 FIT_SEED: Final = 20260827
@@ -148,8 +171,9 @@ async def _create_factor(
     dataset_id: UUID,
     slug: str,
     column: str,
+    banding_id: UUID | None = None,
 ) -> UUID:
-    """Author one factor through the platform service (FR-96)."""
+    """Author one factor through the platform service (FR-96); a banded one pins its Banding."""
     async with database.unit_of_work() as session:
         row = await model_service.create_factor(
             session, workspace_id=workspace_id, actor=actor,
@@ -158,8 +182,9 @@ async def _create_factor(
                 slug=slug,
                 dataset_id=dataset_id,
                 version=1,
-                type=FactorType.IDENTITY,
+                type=FactorType.IDENTITY if banding_id is None else FactorType.BANDING,
                 source_columns=(column,),
+                banding_id=banding_id,
                 intent=FactorIntent.RISK,
                 monotonic_direction=MonotonicDirection.NONE,
             ),
@@ -192,6 +217,50 @@ async def _fit(
     return model_id
 
 
+@dataclass(frozen=True)
+class DemoBanding:
+    """A saved Banding: its row id (what a Factor pins) and the artifact as proposed."""
+
+    id: UUID
+    banding: Banding
+
+
+async def create_demo_bandings(
+    database: Database,
+    blob_store: BlobStore,
+    workspace_id: UUID,
+    analyst: Principal,
+    version_id: UUID,
+) -> dict[str, DemoBanding]:
+    """One Banding per continuous column, proposed on the validated dataset version and saved
+    through the service (FR-97, FR-98, FR-101). Returns them by Factor slug.
+
+    The edges are an output of the proposal on the seeded data, so they are printed here and
+    recorded in the slice ledger (PL-1525 Acceptance 11 (a)); nobody typed them.
+    """
+    bandings: dict[str, DemoBanding] = {}
+    for slug, column in CONTINUOUS_FACTORS:
+        async with database.session() as session:
+            proposed = await transform_service.propose_banding_for_version(
+                session, workspace_id=workspace_id, actor=analyst, blob_store=blob_store,
+                proposal=BandingProposal(
+                    dataset_version_id=version_id, column=column, method=BANDING_METHOD,
+                    n_bands=BAND_COUNT,
+                ),
+                slug=f"fremtpl2-{column.replace('_', '-')}-banding",
+            )
+        async with database.unit_of_work() as session:
+            row = await transform_service.create_banding(
+                session, workspace_id=workspace_id, actor=analyst, banding=proposed
+            )
+            banding_id = row.id
+        bandings[slug] = DemoBanding(banding_id, proposed)
+        print(f"  banding {proposed.slug}@{proposed.version} ({banding_id}): {column} "
+              f"{BANDING_METHOD.value} x{BAND_COUNT} on {version_id}, "
+              f"boundaries {list(proposed.boundaries)}, labels {list(proposed.labels)}")
+    return bandings
+
+
 async def fit_demo_models(
     database: Database,
     blob_store: BlobStore,
@@ -199,6 +268,7 @@ async def fit_demo_models(
     analyst: Principal,
     dataset_id: UUID,
     version_id: UUID,
+    bandings: dict[str, DemoBanding],
 ) -> dict[str, UUID]:
     """Create the demo factors and fit the GLM and the GBM.
 
@@ -211,8 +281,10 @@ async def fit_demo_models(
 
     factor_ids: dict[str, UUID] = {}
     for slug, column in (*CONTINUOUS_FACTORS, *CATEGORICAL_FACTORS):
+        banding = bandings.get(slug)
         factor_ids[slug] = await _create_factor(
-            database, workspace_id, analyst, dataset_id, slug, column
+            database, workspace_id, analyst, dataset_id, slug, column,
+            None if banding is None else banding.id,
         )
     factors = tuple(factor_ids[slug] for slug in FACTOR_SET)
     print(f"  {len(factors)} factors on {dataset_id}")
@@ -311,37 +383,171 @@ async def compare_and_approve(
     return glm_id
 
 
-#: The label every demo-fixture artifact carries (DP-S3-8): the algorithm's slug and step
-#: labels, the suite's slug, the golden quote's name and the change note. It is not priced
-#: from the approved GLM — the real freMTPL2 algorithm is G2's, owned by the lead.
-DEMO_FIXTURE: Final = "demo-fixture"
-DEMO_ALGORITHM_SLUG: Final = f"{DEMO_FIXTURE}-motor"
-DEMO_SUITE_SLUG: Final = f"{DEMO_FIXTURE}-suite"
-DEMO_QUOTE_NAME: Final = f"{DEMO_FIXTURE}-quote"
-DEMO_PREMIUM_IN: Final = 100
+DEMO_SUITE_SLUG: Final = "fremtpl2-rate-suite"
+DEMO_RATING_SLUG: Final = "fremtpl2-demo"
+DEMO_CHANGE_NOTE: Final = (
+    "priced from the approved freMTPL2 GLM through its seeded rate tables; the base premium is "
+    f"{BASE_LABEL}"
+)
 
-def _demo_algorithm() -> dict[str, Any]:
-    """The demo fixture's algorithm: `payable = premium_in * 2`. **Not priced from the GLM**
-    (DP-S3-8): it exists so the demo's rating version can carry executed regression evidence
-    (FR-257 limb (1)); the real algorithm around the approved freMTPL2 models is G2's."""
-    return {
-        "slug": DEMO_ALGORITHM_SLUG,
-        "version": 1,
-        "input_contract": [{"name": "premium_in", "type": "int", "nullable": False,
-                            "min": 0, "max": 1_000_000}],
-        "outputs": [{"name": "payable_premium_minor", "type": "money_minor", "required": True}],
-        "steps": [
-            {"step_id": "s_in", "type": "input", "label": "Demo fixture input",
-             "input_name": "premium_in", "on_missing": "error", "produces": "premium_in"},
-            {"step_id": "s_expr", "type": "expression", "label": "Demo fixture: doubles the input",
-             "expr": "premium_in * 2", "result_type": "money_minor",
-             "consumes": ["premium_in"], "produces": "payable"},
-            {"step_id": "s_out", "type": "output", "label": "Demo fixture payable premium",
-             "output_name": "payable_premium_minor", "rounding": {"mode": "half_even", "dp": 0},
-             "consumes": ["payable"]},
-        ],
-        "sub_graphs": [],
+
+def table_slug(factor: str) -> str:
+    """A Factor's seeded Rate Table slug. The slug grammar has no `_` (`refs.py:_SLUG`), a
+    Factor slug may (`_FACTOR_SLUG`), so `driv_age_band` seeds `fremtpl2-driv-age-band`."""
+    return f"fremtpl2-{factor.replace('_', '-')}"
+
+
+async def load_approved_glm(
+    database: Database, workspace_id: UUID, model_id: UUID
+) -> tuple[ArtifactRef, GlmFitResult]:
+    """The approved GLM's ref and fit result."""
+    async with database.session() as session:
+        row = await session.get(ModelRow, model_id)
+        if row is None:
+            raise RuntimeError(f"the approved model {model_id} does not exist")
+        model = model_service.to_model(row)
+    fit = model.fit_result
+    if not isinstance(fit, GlmFitResult):
+        raise RuntimeError(f"the approved model {model_id} carries no GLM fit result")
+    return ArtifactRef(type="model", slug=row.model_family_slug, version=row.version), fit
+
+
+async def seed_demo_rate_tables(
+    database: Database,
+    settings: Any,
+    blob_store: BlobStore,
+    workspace_id: UUID,
+    analyst: Principal,
+    model_id: UUID,
+) -> dict[str, ArtifactRef]:
+    """One Rate Table per Factor of the approved GLM, seeded with `seed_from_model` (FR-230).
+
+    Returns the refs by Factor slug, in `FACTOR_SET` order. A Factor the model has no
+    relativities for stops the seed: the algorithm below prices on every one.
+    """
+    if analyst.id is None:
+        raise RuntimeError("the demo analyst has no id")
+    model_ref, fit = await load_approved_glm(database, workspace_id, model_id)
+    absent = [factor for factor in FACTOR_SET if factor not in fit.relativities]
+    if absent:
+        raise RuntimeError(f"the approved GLM has no relativities for {absent}")
+    tables: dict[str, ArtifactRef] = {}
+    for factor in FACTOR_SET:
+        version = await rate_table_service.seed_from_model(
+            database, workspace_id, analyst.id, settings, blob_store,
+            slug=table_slug(factor), model_ref=model_ref, factor=factor,
+            change_note=f"seeded from the approved freMTPL2 GLM, factor {factor}",
+        )
+        tables[factor] = ArtifactRef(type="rate_table", slug=version.slug, version=version.version)
+    print(f"  {len(tables)} rate tables seeded from {model_ref}: "
+          + ", ".join(str(ref) for ref in tables.values()))
+    return tables
+
+
+async def demo_base_premium(
+    database: Database, blob_store: BlobStore, workspace_id: UUID, model_id: UUID, version_id: UUID
+) -> int:
+    """DP-a2: `exp(intercept)` of the approved GLM times the mean claim cost of the seed's
+    dataset version (Σ claim_amount_minor ÷ Σ claim_count), whole minor units. **A
+    simplification** (frequency GLM x mean severity; no severity model)."""
+    import polars as pl
+
+    _, fit = await load_approved_glm(database, workspace_id, model_id)
+    intercept = next(c.estimate for c in fit.coefficients if c.term == "intercept")
+    async with database.session() as session:
+        version = await dataset_service.read_version(
+            session, workspace_id=workspace_id, version_id=version_id
+        )
+        raw = await read_stored_blob(
+            session, blob_store, portfolio_table(version)["blob"]["sha256"], "The seed's table"
+        )
+    frame = pl.read_parquet(io.BytesIO(raw)).select("claim_amount_minor", "claim_count")
+    totals = frame.select(
+        pl.col("claim_amount_minor").cast(pl.Int64).sum().alias("amount"),
+        pl.col("claim_count").cast(pl.Int64).sum().alias("claims"),
+    ).row(0, named=True)
+    mean_claim = Decimal(totals["amount"]) / Decimal(totals["claims"])
+    base = base_premium_minor(Decimal(str(intercept)), mean_claim)
+    print(f"  base premium {base} minor units = exp({intercept}) x mean claim cost "
+          f"{mean_claim:.2f} ({totals['amount']} / {totals['claims']} claims on {version_id}); "
+          f"{BASE_LABEL}")
+    return base
+
+
+@dataclass(frozen=True)
+class GoldenCase:
+    """A golden quote: its inputs, the Factor levels they fall on, and the premium the GLM gives
+    them, computed from the coefficients and never from the scored bundle."""
+
+    name: str
+    inputs: dict[str, Any]
+    expected_minor: int
+
+
+def demo_golden_cases(
+    fit: GlmFitResult, bandings: dict[str, DemoBanding], base_minor: int
+) -> list[GoldenCase]:
+    """Three quotes: every Factor at its base level; at its first non-base level; at its last
+    level. A banded Factor's raw value is the lower edge of the band it is on, so the cases sit
+    on band edges (PL-1525 Acceptance 3)."""
+    import polars as pl
+
+    from pricing_core.modelling.bandings import apply_banding
+
+    picks = {
+        "base-levels": lambda levels: next(r for r in levels if r.is_base),
+        "first-non-base-levels": lambda levels: next(r for r in levels if not r.is_base),
+        "last-levels": lambda levels: levels[-1],
     }
+    cases = []
+    for name, pick in picks.items():
+        inputs: dict[str, Any] = {"bonus_malus": 100}
+        levels_by_factor: dict[str, str] = {}
+        for factor in FACTOR_SET:
+            level = pick(fit.relativities[factor]).level
+            levels_by_factor[factor] = level
+            demo = bandings.get(factor)
+            if demo is None:
+                inputs[factor] = level
+            else:
+                value = math.ceil(demo.banding.boundaries[demo.banding.labels.index(level)])
+                labelled = apply_banding(pl.Series("v", [value]), demo.banding)[0]
+                if labelled != level:
+                    raise RuntimeError(
+                        f"{factor}: the edge value {value} falls in band {labelled!r}, "
+                        f"not {level!r}"
+                    )
+                inputs[demo.banding.column] = value
+        expected = glm_premium_minor(
+            fit.coefficients, fit.relativities, base_minor, levels_by_factor
+        )
+        cases.append(GoldenCase(name, inputs, expected))
+    return cases
+
+
+def monotone_property(
+    fit: GlmFitResult, bandings: dict[str, DemoBanding]
+) -> dict[str, Any] | None:
+    """One `monotone` property on a banded Factor whose fitted relativities rise or fall with
+    its bands (FR-261); `None` when none does. The Factor and its relativities are printed, for
+    the ledger."""
+    for factor, demo in bandings.items():
+        by_level = {r.level: r.relativity for r in fit.relativities[factor]}
+        series = [by_level[label] for label in demo.banding.labels]
+        if any(value is None for value in series):
+            continue
+        direction = (
+            "increasing" if all(a <= b for a, b in pairwise(series))
+            else "decreasing" if all(a >= b for a, b in pairwise(series))
+            else None
+        )
+        if direction is not None:
+            print(f"  monotone property: {demo.banding.column} {direction}; "
+                  f"relativities by band {dict(zip(demo.banding.labels, series, strict=True))}")
+            return {"name": f"premium-monotone-in-{demo.banding.column}",
+                    "check": {"kind": "monotone", "input": demo.banding.column,
+                              "direction": direction}}
+    return None
 
 
 async def _load_compiled(
@@ -360,19 +566,23 @@ async def _load_compiled(
 
 
 async def save_demo_algorithm(
-    database: Database, workspace_id: UUID, analyst: Principal
+    database: Database, workspace_id: UUID, analyst: Principal,
+    tables: dict[str, ArtifactRef], bandings: dict[str, DemoBanding],
+    domains: dict[str, list[str]], base_minor: int,
 ) -> ArtifactRef:
-    """Save the demo-fixture algorithm through the service; a re-seed's 409 is tolerated."""
+    """Save the freMTPL2 algorithm through the service; a re-seed's 409 is tolerated."""
     if analyst.id is None:
         raise RuntimeError("the demo analyst has no id")
+    payload = build_fremtpl2_algorithm(
+        tables=tables, bandings={slug: d.banding for slug, d in bandings.items()},
+        base_minor=base_minor, domains=domains,
+    )
     try:
-        await algorithm_service.create_algorithm(
-            database, workspace_id, analyst.id, _demo_algorithm()
-        )
+        await algorithm_service.create_algorithm(database, workspace_id, analyst.id, payload)
     except PlatformError as exc:  # a re-seed: the algorithm is already saved
         if exc.status_code != 409:
             raise
-    return ArtifactRef(type="rating_algorithm", slug=DEMO_ALGORITHM_SLUG, version=1)
+    return ArtifactRef(type="rating_algorithm", slug=FREMTPL2_ALGORITHM_SLUG, version=1)
 
 
 async def author_demo_rating_evidence(
@@ -381,16 +591,18 @@ async def author_demo_rating_evidence(
     workspace_id: UUID,
     analyst: Principal,
     rating_id: UUID,
+    cases: list[GoldenCase],
+    monotone: dict[str, Any] | None,
 ) -> UUID:
     """Give a draft rating version its executed FR-257 limb (1) evidence (DP-S3-8, T6b).
 
     **Every piece is produced by the real path, none inserted**: the version arrives with its
-    algorithm (saved through the service, `save_demo_algorithm`) and pins declared at create;
-    it is compiled by the `rating.compile` Job; the
-    golden quote's expected premium is computed by `score_one` on that compiled bundle at
-    seed time; and the regression runs through the `rating.regression` Job, whose handler
-    calls `run_regression` and persists the run. No `RegressionRun` row and no pass verdict
-    is written here. Returns the regression Job's run id.
+    algorithm and pins declared at create; it is compiled by the `rating.compile` Job; the
+    golden quotes' expected premiums are the GLM's (`cases`, computed from the fitted
+    coefficients, **not** from the compiled bundle: a golden quote whose expectation was
+    `score_one` on the bundle under test could not fail); and the regression runs through the
+    `rating.regression` Job, whose handler calls `run_regression` and persists the run. No
+    `RegressionRun` row and no pass verdict is written here. Returns the regression run's id.
     """
     register_rating_handlers()
     async with database.session() as session:
@@ -405,35 +617,37 @@ async def author_demo_rating_evidence(
     )
     if compiled_status is not JobStatus.SUCCEEDED:
         raise RuntimeError(f"demo compile Job {compiled_status}")
-    bundle = await _load_compiled(database, blob_store, workspace_id, rating_id)
 
-    context = QuoteContext.model_validate({
-        "purpose": "new_business", "quoted_at": "2026-09-28T09:00:00",
-        "effective_date": "2026-10-01", "inputs": {"premium_in": DEMO_PREMIUM_IN},
-        "options": {"rating_version_ref": str(ref)},
-    })
-    expected = payable_minor(await score_one(bundle, context))
-    if expected is None:
-        raise RuntimeError("the demo golden quote was not quoted")
-    suite = RegressionSuiteContent.model_validate({
-        "algorithm_slug": DEMO_ALGORITHM_SLUG,
-        "golden_quotes": [{
-            "name": DEMO_QUOTE_NAME,
+    golden = []
+    for case in cases:
+        context = QuoteContext.model_validate({
+            "purpose": "new_business", "quoted_at": "2026-09-28T09:00:00",
+            "effective_date": "2026-10-01", "inputs": case.inputs,
+            "options": {"rating_version_ref": str(ref)},
+        })
+        golden.append({
+            "name": f"{FREMTPL2_ALGORITHM_SLUG}-{case.name}",
             "context": context.model_dump(mode="json", exclude={"options"}),
-            "expected": {"payable_premium_minor": expected, "outcome": "quoted"},
+            "expected": {"payable_premium_minor": case.expected_minor, "outcome": "quoted"},
             "tolerance": {"money_minor": 0},
-            "note": "demo fixture: not priced from the GLM",
-        }],
-        "properties": [
-            {"name": "no-null-output", "check": {"kind": "no_null_output"}},
-            {"name": "premium-bounded", "check": {"kind": "premium_bounded", "lower_minor": 0}},
-        ],
+            "note": f"the approved GLM's premium for {case.name}, computed from its coefficients",
+        })
+    properties = [
+        {"name": "no-null-output", "check": {"kind": "no_null_output"}},
+        {"name": "premium-bounded", "check": {"kind": "premium_bounded", "lower_minor": 0}},
+    ]
+    if monotone is not None:
+        properties.append(monotone)
+    suite = RegressionSuiteContent.model_validate({
+        "algorithm_slug": FREMTPL2_ALGORITHM_SLUG,
+        "golden_quotes": golden,
+        "properties": properties,
         "generation": {"cases": 25, "seed": SPLIT_SEED, "strategy": "input_contract_sampling"},
     })
     async with database.unit_of_work() as session:
         await suite_service.create_suite_version(
             session, workspace_id=workspace_id, actor=analyst, slug=DEMO_SUITE_SLUG,
-            content=suite, change_note="demo fixture: not priced from the GLM",
+            content=suite, change_note=DEMO_CHANGE_NOTE,
         )
 
     run_status = await _run_job(
@@ -502,38 +716,43 @@ async def create_approved_rating_version(
     second_approver: Principal,
     dataset_version_id: UUID,
     model_id: UUID,
+    tables: dict[str, ArtifactRef],
+    bandings: dict[str, DemoBanding],
+    base_minor: int,
 ) -> UUID:
     """W7-3: create, submit and approve the demo rating version (FR-440).
 
-    The rating version pins the approved GLM as `model:{slug}@{version}`, so the exit
-    demo's rating version is addressable and its approval is auditable. Since WK-672 Slice 3
-    it also carries **executed** regression evidence (`author_demo_rating_evidence`): a
-    submission needs a passing Regression Suite with a golden quote (FR-257 limb (1)), and
-    two approvers decide it (`06` §4.2's default policy).
+    The rating version is priced from the approved GLM: it pins the freMTPL2 algorithm, the
+    approved model as `model:{slug}@{version}`, and every seeded Rate Table at its seeded
+    version (FR-237), so the exit demo's rating version is addressable and its approval is
+    auditable. It carries **executed** regression evidence (`author_demo_rating_evidence`)
+    whose golden quotes are the GLM's own premiums, and two approvers decide it (`06` §4.2).
     """
-    async with database.session() as session:
-        model_row = await session.get(ModelRow, model_id)
-        if model_row is None:
-            raise RuntimeError(f"the approved model {model_id} does not exist")
-        model_ref = ArtifactRef(
-            type="model", slug=model_row.model_family_slug, version=model_row.version
-        )
-
-    algorithm_ref = await save_demo_algorithm(database, workspace_id, analyst)
+    model_ref, fit = await load_approved_glm(database, workspace_id, model_id)
+    domains = {
+        factor: [r.level for r in fit.relativities[factor]]
+        for factor, _ in CATEGORICAL_FACTORS
+    }
+    algorithm_ref = await save_demo_algorithm(
+        database, workspace_id, analyst, tables, bandings, domains, base_minor
+    )
     async with database.unit_of_work() as session:
         row = await rating_versions_service.create_rating_version(
             session, workspace_id=workspace_id, actor=analyst,
-            slug="fremtpl2-demo", dataset_version_id=dataset_version_id, model_ref=model_ref,
-            algorithm_ref=algorithm_ref, pins=Pins(),
+            slug=DEMO_RATING_SLUG, dataset_version_id=dataset_version_id, model_ref=model_ref,
+            algorithm_ref=algorithm_ref,
+            pins=Pins(rate_tables=list(tables.values()), models=[model_ref]),
         )
         rating_id = row.id
 
     run_id = await author_demo_rating_evidence(
-        database, blob_store, workspace_id, analyst, rating_id
+        database, blob_store, workspace_id, analyst, rating_id,
+        demo_golden_cases(fit, bandings, base_minor), monotone_property(fit, bandings),
     )
 
     await submit_and_approve_demo(
         database, blob_store, workspace_id, actuary, approver, second_approver, rating_id
     )
-    print(f"  rating version approved: {rating_id} (regression run {run_id}, demo fixture)")
+    print(f"  rating version approved: {rating_id} (regression run {run_id}, priced from the "
+          f"approved GLM; the base premium is {BASE_LABEL})")
     return rating_id

@@ -5,7 +5,7 @@ journey imports it, so the demo never carries two freMTPL2 algorithms that disag
 (`CLAUDE.md` §2: a shape defined twice diverges, and in a pricing platform that is a mispricing).
 
 The algorithm multiplies a base premium by one seeded relativity per Factor and rounds once to
-the penny (FR-226). **The base premium is a simplification (frequency GLM × mean severity; no
+the penny (FR-226). **The base premium is a simplification (frequency GLM x mean severity; no
 severity model)** (DP-a2): `exp(intercept)` of the frequency GLM times the mean claim cost of
 freMTPL2sev. Nobody should read it as a modelled pure premium.
 
@@ -27,6 +27,8 @@ from model_schema import (
     ArtifactRef,
     Banding,
     BelowRangePolicy,
+    Coefficient,
+    RelativityLevel,
 )
 
 FREMTPL2_ALGORITHM_SLUG: Final = "fremtpl2-rate"
@@ -38,7 +40,7 @@ BONUS_MALUS: Final = "bonus_malus"
 BONUS_MALUS_RANGE: Final = (50, 230)
 
 #: DP-a2's ruled label. It opens the base step's note and the algorithm's change note.
-BASE_LABEL: Final = "a simplification (frequency GLM × mean severity; no severity model)"
+BASE_LABEL: Final = "a simplification (frequency GLM \u00d7 mean severity; no severity model)"
 
 
 def _number(value: float) -> str:
@@ -86,8 +88,32 @@ def _null_level(banding: Banding) -> str:
 
 
 def base_premium_minor(intercept: Decimal, mean_claim_minor: Decimal) -> int:
-    """`exp(intercept) × mean claim cost`, in Decimal, half-even to whole minor units (DP-a2)."""
+    """`exp(intercept) x mean claim cost`, in Decimal, half-even to whole minor units (DP-a2)."""
     return int((intercept.exp() * mean_claim_minor).quantize(Decimal(1), rounding=ROUND_HALF_EVEN))
+
+
+def glm_premium_minor(
+    coefficients: Sequence[Coefficient],
+    relativities: Mapping[str, Sequence[RelativityLevel]],
+    base_minor: int,
+    levels: Mapping[str, str],
+) -> int:
+    """The premium the fitted GLM gives a quote, independent of the seeded tables and of the
+    scored bundle (PL-1525 Acceptance 3): `base x Π exp(β_level)`, in Decimal from the
+    coefficients, half-even to a whole minor unit. A Factor at its base level contributes 1.
+
+    Refuses a level that is neither the base nor a fitted coefficient, so a mistyped level cannot
+    quietly price as the base.
+    """
+    estimates = {c.term: Decimal(str(c.estimate)) for c in coefficients}
+    total = Decimal(0)
+    for factor, level in levels.items():
+        entry = next((r for r in relativities[factor] if r.level == level), None)
+        if entry is None:
+            raise ValueError(f"factor {factor!r} has no level {level!r} in the fit")
+        if not entry.is_base:
+            total += estimates[f"{factor}[{level}]"]
+    return int((Decimal(base_minor) * total.exp()).quantize(Decimal(1), rounding=ROUND_HALF_EVEN))
 
 
 def build_fremtpl2_algorithm(
@@ -134,7 +160,7 @@ def build_fremtpl2_algorithm(
     steps.append({
         "step_id": "s_base", "type": "expression", "label": "Base premium",
         "note": (
-            f"{BASE_LABEL}: exp(intercept) of the frequency GLM × the mean freMTPL2sev claim "
+            f"{BASE_LABEL}: exp(intercept) of the frequency GLM x the mean freMTPL2sev claim "
             "cost, in whole minor units"
         ),
         "expr": str(base_minor), "result_type": "money_minor",
