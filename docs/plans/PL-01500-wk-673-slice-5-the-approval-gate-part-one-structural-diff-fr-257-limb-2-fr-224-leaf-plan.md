@@ -3,7 +3,7 @@ id: PL-1500
 family: plan
 kind: leaf
 title: WK-673 Slice 5 — the approval gate, part one, structural_diff, FR-257 limb (2), FR-224: leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-08            # original date 2026-10-05, set at the draft; minted 2026-10-08
 owner: planner
 tree: 137bc817ef1fb40ea57e9053e0ad40b73bdff3a8

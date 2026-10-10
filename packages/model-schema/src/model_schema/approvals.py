@@ -18,14 +18,19 @@ from __future__ import annotations
 
 import enum
 from datetime import datetime
+from decimal import Decimal
 from typing import Final
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from model_schema.dislocation import ABS_CHANGE_PCT_QUANTILE_KEYS
+from model_schema.money import DecimalStr
 from model_schema.refs import ArtifactRef
 
 __all__ = [
+    "DEFAULT_APPROXIMATION_DEVIATION",
+    "DEFAULT_DISLOCATION_BASELINE_ENVIRONMENT",
     "DEFAULT_POLICY",
     "EVIDENCE_FLOOR",
     "VALID_APPROVAL_TRANSITIONS",
@@ -36,6 +41,7 @@ __all__ = [
     "ApprovalStatus",
     "ApprovalSubmission",
     "ApprovalWithdrawal",
+    "ApproximationDeviation",
     "Decide",
     "DecisionKind",
     "PromotionSkip",
@@ -126,6 +132,48 @@ EVIDENCE_FLOOR: Final[dict[str, tuple[str, ...]]] = {
 }
 
 
+#: The Environment whose live version is FR-257 limb (2)'s baseline when a `rating_version`
+#: policy entry names none (`03` FR-257's 2026-10-10 clarification, `06` §4.2). It is the slug
+#: `DEFAULT_POLICY`'s `deployment` entry already uses.
+DEFAULT_DISLOCATION_BASELINE_ENVIRONMENT: Final = "prod"
+
+
+class ApproximationDeviation(BaseModel):
+    """FR-224's threshold: a maximum absolute percentage deviation at a declared portfolio
+    quantile (`03` FR-224, `06` §4.2; DP-S5-2, RL-1504 T4/T5).
+
+    The quantile is one of the six a Dislocation Run reports (`abs_change_pct_quantiles`, `03`
+    §4.6), so the gate always has a figure to read; `quantile_key` is the run's key for it.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    quantile: DecimalStr
+    max_abs_change_pct: DecimalStr
+
+    @property
+    def quantile_key(self) -> str:
+        return format(self.quantile.normalize(), "f")
+
+    @model_validator(mode="after")
+    def _within_bounds(self) -> ApproximationDeviation:
+        if self.quantile_key not in ABS_CHANGE_PCT_QUANTILE_KEYS:
+            raise ValueError(
+                f"quantile must be one of {list(ABS_CHANGE_PCT_QUANTILE_KEYS)} "
+                "(03 §4.6, the run's fixed set)"
+            )
+        if self.max_abs_change_pct < 0:
+            raise ValueError("max_abs_change_pct must be at least 0")
+        return self
+
+
+#: The threshold an `approximation_deviation`-less `rating_version` entry is governed by: the
+#: maintainer's option D (RL-1504 item 7). No value switches the gate off; an unset field is this.
+DEFAULT_APPROXIMATION_DEVIATION: Final = ApproximationDeviation(
+    quantile=Decimal("0.99"), max_abs_change_pct=Decimal(10)
+)
+
+
 class ApprovalPolicyEntry(BaseModel):
     """What a given artifact type requires (`06` §4.2)."""
 
@@ -146,6 +194,36 @@ class ApprovalPolicyEntry(BaseModel):
             "entry that names an environment."
         ),
     )
+
+    approximation_deviation: ApproximationDeviation | None = Field(
+        default=None,
+        description=(
+            "FR-224's threshold for an `approximation`-mode Rating Version (`06` §4.2, "
+            "RL-1504 T5). Unset means `DEFAULT_APPROXIMATION_DEVIATION`; no value switches "
+            "the gate off. Valid only on a `rating_version` entry; never a Setting."
+        ),
+    )
+    dislocation_baseline_environment: str | None = Field(
+        default=None,
+        min_length=1,
+        description=(
+            "The Environment slug whose live Rating Version is FR-257 limb (2)'s baseline "
+            "(`06` §4.2, RL-1504 T5). Unset means `DEFAULT_DISLOCATION_BASELINE_ENVIRONMENT`. "
+            "Valid only on a `rating_version` entry."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _baseline_environment_is_only_on_a_rating_version_entry(
+        self,
+    ) -> ApprovalPolicyEntry:
+        if self.artifact_type != "rating_version":
+            for name in ("dislocation_baseline_environment", "approximation_deviation"):
+                if getattr(self, name) is not None:
+                    raise ValueError(
+                        f"{name} is valid only on a `rating_version` entry (`06` §4.2, RL-1504 T5)"
+                    )
+        return self
 
     @model_validator(mode="after")
     def _skip_permission_is_only_on_a_qualified_deployment_entry(
@@ -350,6 +428,7 @@ DEFAULT_POLICY: Final[ApprovalPolicy] = ApprovalPolicy(
             approvers_required=2,
             approver_roles=("approver",),
             evidence=("structural_diff", "regression_run", "dislocation_run"),
+            approximation_deviation=DEFAULT_APPROXIMATION_DEVIATION,
         ),
         # Added 2026-10-03 (WK-674 Slice 2, RL-886). `06` §4.2 shows this entry and §3.3's
         # floor names `deployment`, but the code had no entry, so `submit` refused a
