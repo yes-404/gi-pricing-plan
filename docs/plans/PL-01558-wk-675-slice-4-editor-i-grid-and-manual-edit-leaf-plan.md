@@ -3,7 +3,7 @@ id: PL-1558
 family: plan
 kind: leaf
 title: WK-675 Slice 4 — Editor I, the rate table grid and manual edit (FR-228, FR-229, FR-231, FR-232, FR-234, FR-1186, FR-10, FR-21, FR-25): leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
 owner: planner
 tree: 9489405370a1ce06c2b985ad88c7d471438febb1
