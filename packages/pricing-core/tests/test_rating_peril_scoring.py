@@ -240,6 +240,22 @@ async def test_a_peril_model_call_inside_a_mounted_sub_graph_is_checked_at_compi
         assert ref in bundle.resolved_payloads
 
 
+@pytest.mark.req("FR-188", "NFR-499")
+async def test_an_invalid_structure_payload_is_refused_at_compile_coded_and_input_free(
+) -> None:
+    """Row 3 (b'): `PerilStructure.model_validate` at compile is wrapped, so a structure whose
+    payload does not validate raises the existing `BUNDLE_COMPILE_FAILED` naming only the
+    structure ref and the fields at fault, never a payload value (a raw pydantic error would
+    carry the input). Replaces A-1's stub-refusal test in `test_rating_runtime.py`."""
+    sentinel = "SENTINEL-7c1e"
+    payload = {"slug": sentinel, "version": 1, "perils": [], "excluded_perils": []}
+    with pytest.raises(ValueError, match="BUNDLE_COMPILE_FAILED") as caught:
+        await compile_bundle(_peril_version(), _resolver(structure=payload))
+    message = str(caught.value)
+    assert STRUCTURE in message
+    assert sentinel not in message
+
+
 @pytest.mark.req("FR-189")
 async def test_a_separate_model_large_loss_is_refused_at_compile() -> None:
     """Item 9 (DP-A3-2 (a)): `LOSS_TREATMENT_UNIMPLEMENTED` naming structure and peril."""

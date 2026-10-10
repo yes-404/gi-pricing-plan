@@ -215,3 +215,61 @@ def test_a_rating_version_pinning_an_approved_peril_structure_compiles_and_score
     )
     assert response.status_code == 200, response.text
     assert float(response.json()["outputs"]["risk_out"]) == pytest.approx(expected, rel=1e-9)
+
+
+@pytest.mark.req("FR-188", "NFR-499")
+def test_a_stored_structure_that_no_longer_validates_fails_the_compile_job_input_free(
+    client: TestClient,  # noqa: F811
+    admin_headers: dict[str, str],  # noqa: F811
+    database: Any, blob_store: Any, principal: Any, workspace_id: UUID,
+) -> None:
+    """Row 3 (b'), backend level: a pinned structure whose stored row a direct `UPDATE` broke
+    fails the compile Job, and the stored error carries no value from the row.
+
+    `to_structure` re-validates the row on the way out (the resolver's boundary, before
+    `compile_bundle` sees a payload), so `compile.py`'s own wrap is reached by a `pricing-core`
+    caller with its own resolver (`test_rating_peril_scoring.py`); this test pins the Job path.
+    """
+    from sqlalchemy import update
+
+    from app.db.models import PerilStructureRow
+
+    register_rating_handlers()
+    loop = _LOOP()
+    structure_ref, _, _, _ = loop.run_until_complete(
+        _structure_over_a_burning_cost_model(database, blob_store, workspace_id)
+    )
+    body = _glm_algorithm(
+        "model:placeholder@1", {"area": "area", "exposure_years": "exposure_years"}
+    )
+    for step in body["steps"]:
+        if step["type"] == "model_call":
+            step.pop("model_ref")
+            step["peril_structure_ref"] = structure_ref
+    assert client.post(
+        "/api/v1/rating-algorithms", json=body, headers=admin_headers
+    ).status_code == 201
+    sentinel = "SENTINEL-5e2b"
+
+    async def _break() -> None:
+        slug, version = structure_ref.split(":", 1)[1].rsplit("@", 1)
+        async with database.unit_of_work() as session:
+            await session.execute(
+                update(PerilStructureRow)
+                .where(PerilStructureRow.slug == slug, PerilStructureRow.version == int(version))
+                .values(perils=[{"peril": sentinel, "method": "no_such_method"}])
+            )
+
+    loop.run_until_complete(_break())
+    row = loop.run_until_complete(
+        _insert_version(
+            database, workspace_id, principal.id, algorithm_ref="rating_algorithm:glm-score@1",
+            pins={"rate_tables": [], "models": [structure_ref], "reference_tables": [],
+                  "custom_objectives": []},
+            slug="peril-broken-rv",
+        )
+    )
+    job = _run_compile_job(client, admin_headers, database, blob_store, row.id)
+    assert job.status is JobStatus.FAILED
+    assert sentinel not in str(job.error)
+    assert job.error, "a failed Job states why"

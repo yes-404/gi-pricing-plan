@@ -96,7 +96,7 @@ _INPUT_FREE = {
     # model ref, a fitted feature name and the Factor's slug@version
     ("rating/compile.py", "_refuse_control_factor_model_calls"): 1,
     ("rating/compile.py", "_refuse_peril_model_calls"): 1,  # :815 step id, ref, names
-    ("rating/compile.py", "_resolve_peril_components"): 2,  # :839, :851 refs, peril, status
+    ("rating/compile.py", "_resolve_peril_components"): 3,  # refs, fields at fault, peril, status
     # mount point, port and value names (WK-1250 Slice 2)
     ("rating/compile.py", "_refuse_mount_port_type_mismatch"): 1,
     ("rating/compile.py", "_raise_named"): 1,  # the constructor helper itself (`from None`)

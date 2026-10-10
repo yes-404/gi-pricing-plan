@@ -23,7 +23,7 @@ from decimal import Decimal
 from typing import Any, NoReturn, Protocol
 
 import zen
-from pydantic import BaseModel, ConfigDict, SerializationInfo, field_serializer
+from pydantic import BaseModel, ConfigDict, SerializationInfo, ValidationError, field_serializer
 
 from model_schema.modelling import Banding, Factor, FactorIntent, Grouping
 from model_schema.perils import LargeLossKind, PerilStructure
@@ -49,7 +49,7 @@ from pricing_core.rating.authored import authored_expression_fields
 from pricing_core.rating.inline import inline_mounts, mounted_fragments
 from pricing_core.rating.ladder import RUNG_ORDER, output_steps_by_name, rung_output_name
 from pricing_core.rating.vocabulary import check_allow_list
-from pricing_core.safe_error import CodedError
+from pricing_core.safe_error import CodedError, safe_error_detail
 
 _NON_DETERMINISTIC: tuple[str, ...] = ("now(", "random(", "rand(", "today(", "clock(")
 #: FR-246: a quote timestamp is an input; `now()` does not exist.
@@ -880,7 +880,15 @@ async def _resolve_peril_components(
     component that is also pinned directly reuses the pin loop's result. A `separate_model`
     peril is refused first (`RL-1459` DP-A3-2 (a)): `assemble_risk_premium` cannot restore it.
     """
-    structure = PerilStructure.model_validate(payload)
+    try:
+        structure = PerilStructure.model_validate(payload)
+    except ValidationError as exc:
+        # A raw pydantic error carries the offending input (NFR-499): name the ref and the
+        # fields at fault only.
+        _raise_named(
+            "BUNDLE_COMPILE_FAILED",
+            f"{structure_ref} is not a valid Peril Structure: {safe_error_detail(exc)} (FR-188)",
+        )
     for peril in structure.perils:
         if peril.large_loss.kind is LargeLossKind.SEPARATE_MODEL:
             _raise_named(

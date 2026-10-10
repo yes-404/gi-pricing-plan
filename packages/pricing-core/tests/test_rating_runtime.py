@@ -478,58 +478,6 @@ def test_lookup_step_wire_translation_matches_by_key() -> None:
     ] == "MAN"
 
 
-_PERIL_REF = "peril_structure:motor-perils@1"
-
-
-@pytest.mark.req("FR-255")
-async def test_a_peril_structure_model_call_is_refused_with_a_named_reason() -> None:
-    """DP-3 (b) of RL-1457: until A-3 (PL-1465), scoring a Peril Structure is a named refusal.
-
-    A resolved Peril Structure payload carries no `fit_result`, so the handler's read of
-    `payload["fit_result"]` raised `KeyError`, which the `zen` binding reports only as a
-    generic node error (`_model_call_failure`'s docstring). The handler now returns the
-    `MODEL_CALL_ERROR_KEY` sentinel naming the ref and A-3, and `score_one` turns it into
-    `MODEL_CALL_FAILED`. **A-3 replaces this branch and this test.**
-    """
-    from datetime import UTC, date, datetime
-
-    from model_schema.scoring import QuoteContext, QuoteContextOptions
-    from pricing_core.rating.runtime import MODEL_CALL_ERROR_KEY, _model_call_handler
-    from pricing_core.rating.score import score_one
-
-    resolver = _FakeResolver()
-    step = next(s for s in resolver._payloads["rating_algorithm:motor-runtime-test@1"]["steps"]
-                if s["step_id"] == "s_risk")
-    del step["model_ref"]
-    step["peril_structure_ref"] = _PERIL_REF
-    resolver._payloads[_PERIL_REF] = {
-        "slug": "motor-perils", "version": 1, "status": "approved",
-        "perils": [], "excluded_perils": [], "reconciliation": None,
-    }
-    version = _version().model_dump(mode="json")
-    version["pins"]["models"] = [_PERIL_REF]
-    bundle = await compile_bundle(RatingVersion.model_validate(version), resolver)
-    compiled = load_bundle(bundle)
-
-    handler = _model_call_handler(compiled.algorithm, bundle.resolved_payloads, compiled.boosters)
-    direct = handler(SimpleNamespace(node={"id": "s_risk"}, input={"driver_age": 34, "$nodes": {}}))
-    message = direct["output"][MODEL_CALL_ERROR_KEY]
-    assert _PERIL_REF in message
-    assert "A-3" in message
-
-    ctx = QuoteContext.model_validate({
-        "purpose": "new_business",
-        "quoted_at": datetime(2026, 8, 29, 12, 0, 0, tzinfo=UTC).replace(tzinfo=None),
-        "effective_date": date(2026, 9, 1),
-        "inputs": {"driver_age": 34, "channel": "direct"},
-        "options": QuoteContextOptions(
-            rating_version_ref="rating_version:motor-runtime-test@1"
-        ),
-    })
-    with pytest.raises(ValueError, match="MODEL_CALL_FAILED"):
-        await score_one(compiled, ctx)
-
-
 # --- WK-1250 Slice 2 (SL-1340): a pinned sub-graph is re-inlined at load (RL 9586 DP-S2-1) -------
 
 _MOUNT_NCD = "sub_graph:ncd-ladder@4"
