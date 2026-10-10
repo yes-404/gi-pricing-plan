@@ -1,7 +1,7 @@
 ---
 id: LG-9443
 family: ledger
-title: WK-1250 slice SL-1340 — the sub-graph pin and the inlining (FR-217's pin and inlining limbs; FR-258's inlined steps), PL 9610 slice ledger
+title: WK-1250 slice SL-1340 — the sub-graph pin and the inlining (FR-217's pin and inlining limbs; FR-258's inlined steps), PL-1572 slice ledger
 status: active
 created: 2026-10-09            # working id; the mint date will replace this (check 31)
 owner: executor
@@ -9,22 +9,21 @@ tree: 61e2a8d9d06087cadd3760e9668b3caff881b85c
 phase: P2
 work: WK-1250
 slice: SL-1340
-plans: []
+plans: [PL-1572]
 corrected_by: []
-relates: [RL-1309, RL-1344, PL-1254, PL-1325, LG-1355, SL-1340, FR-217, FR-258]
+relates: [RL-1571, PL-1572, RL-1309, RL-1344, PL-1254, PL-1325, LG-1355, SL-1340, FR-217, FR-258]
 ---
 
 # LG-9443 (working id) — SL-1340: the sub-graph pin and the inlining
 
-Executed by `executor-sl1340` (sonnet) from **PL 9610** (working id, mints in D5; read at
-`origin/pl-9610-wk1250-s2-leaf` `202d67774c409a9981dcced60e2f97d94955643d`) and **RL 9586**
-(working id, mints in D5; read at `origin/dm-9586-wk1250-s2` `4f1c8a90fe7e5884031a012975557634a69965a8`).
-Neither is on `main`, so neither is in `plans:` or `relates:` (check 32); they are cited here in
-working-id form. Branch `sl-1340-wk1250-s2`, worktree `.claude/worktrees/sl-1340`, from
+Executed by `executor-sl1340` (sonnet) from **PL-1572** (minted 2026-10-10 from working id 9610; drafted at
+`origin/pl-9610-wk1250-s2-leaf` `202d67774c409a9981dcced60e2f97d94955643d`) and **RL-1571** (minted from working id 9586;
+drafted at `origin/dm-9586-wk1250-s2` `4f1c8a90fe7e5884031a012975557634a69965a8`). Both are on `main` from 2026-10-10 and
+are in `plans:` and `relates:`; the working ids 9610 and 9586 survive only in the branch names. Branch `sl-1340-wk1250-s2`, worktree `.claude/worktrees/sl-1340`, from
 `origin/main` `61e2a8d9d06087cadd3760e9668b3caff881b85c` (#1253). The slice runs under L1 (a'):
 one PR, this one ledger, no activation PR.
 
-**GO:** none yet. This is authoring ahead of a GO, at the user's order.
+**GO:** `to-lead.md` "2026-10-10 08:57:14 BST — DISPATCH GO: SL-1340 (PL-1572), sequenced after A-2" (authoring first; tests and the merge of `main` wait for A-2 and the lead's word).
 **MERGE-ACK:** none yet.
 
 ## Tasks
@@ -40,27 +39,27 @@ The brief is `handover/brief-executor-authoring-trio-2026-10-09.md` (local), Sec
 
 **Work-plan row.** `SL-1340 — Slice 2: the pin and the inlining (FR-217's pin and inlining limbs;
 FR-258's inlined steps)`, `docs/roadmap.md` `#### SL-1340` under `### WK-1250`, `status: draft`
-at `61e2a8d9`. It is `PL-1254` Task 2. Its leaf plan is PL 9610 (draft, working id).
+at `61e2a8d9`. It is `PL-1254` Task 2. Its leaf plan is PL-1572 (draft, working id).
 
-**Requirement coverage, each id** (PL 9610 §Scope): `03` FR-217 (pin and inlining limbs),
+**Requirement coverage, each id** (PL-1572 §Scope): `03` FR-217 (pin and inlining limbs),
 FR-258 (inlined steps), FR-212, FR-216, FR-274, FR-275, FR-276, FR-237; `00` FR-20.
 
-**Not in this slice** (PL 9610): `SubGraphRef.purposes` and the real check (SL-1341); persisting
+**Not in this slice** (PL-1572): `SubGraphRef.purposes` and the real check (SL-1341); persisting
 `structural_diff` (WK-673); G3 (WK-674 Slice 2); any `TraceStep` change (WK-1178); the designer
 view (WK-675 S9). `RL-1242`'s interim refusal stays.
 
-**Rulings that bind** (RL 9586, working id, quoting the maintainer's (by delegation) entry
+**Rulings that bind** (RL-1571, working id, quoting the maintainer's (by delegation) entry
 "2026-10-05 16:54:17 BST — CLEANUP NOW … WK-1250 S2 DPs and the DOUBLE-COUNT DP RULED"):
 DP-S2-1 (a) re-inline at load, with C1 (`BUNDLE_COMPILE_FAILED` when the graph's node ids and the
 re-inlined step ids differ, red first); DP-S2-2 shape (a) (`inputs`, `outputs` dicts), separator
 **`__`** (not `/`), `mount_point` `^[A-Za-z][A-Za-z0-9_]*$` with no `__`, renaming by FR-244 token
 through a shared `vocabulary._tokenize` helper (`vocabulary.py` joins the write set), codes as
-PL 9610's DP row. P1 to P5 of RL 9586 amend PL 9610 and are **not yet applied to the plan text**
-(`git grep -c 'mount_point}__'` over the plan at `202d6777` prints 0); where PL 9610 says `/`, the
+PL-1572's DP row. P1 to P5 of RL-1571 amend PL-1572 and are **not yet applied to the plan text**
+(`git grep -c 'mount_point}__'` over the plan at `202d6777` prints 0); where PL-1572 says `/`, the
 ruling's `__` is followed, and P5's topological step order (Kahn, list order as tie-break) is the
 inliner's order.
 
-**Read-first differences, PL 9610 versus `main` at `61e2a8d9`** (premises re-derived; each named at its site):
+**Read-first differences, PL-1572 versus `main` at `61e2a8d9`** (premises re-derived; each named at its site):
 - Line numbers moved: `compile_bundle` is now `compile.py:694`, `_MATURITY_CHECK_EXEMPT` `:472`,
   `_compatible` `:126`, `output_type_issues` `:134`, `to_jdm` `:521`, `bundle_hash` `:566`,
   `check_step_refs_pinned` `:586`; `load_bundle` `runtime.py:698`; `to_wire` `runtime.py:481`;
@@ -80,7 +79,7 @@ inliner's order.
 ### Task list
 
 - [ ] Task 0 — preconditions and premises a–n at `61e2a8d9` (this entry: partial; pending items listed in Scope)
-- [x] Task 1 — spec: `03` §4.1, §4.3, §4.11, §5.2 (T1, T2 verbatim from RL 9586)
+- [x] Task 1 — spec: `03` §4.1, §4.3, §4.11, §5.2 (T1, T2 verbatim from RL-1571)
 - [x] Task 2 — `model-schema`: `Pins.sub_graphs`, the port map, the mount as a node, the two contracts
 - [x] Task 3 — `pricing-core/rating/inline.py` and the `vocabulary.py` token helper
 - [x] Task 4 — the diff limb (`diff_algorithms`)
@@ -103,10 +102,10 @@ Not yet run.
 
 **2026-10-09, Task 0 (partial).** Worktree made from `origin/main` `61e2a8d9`; `ls-remote` of
 `pl-9610-wk1250-s2-leaf` (`202d6777…`) and `dm-9586-wk1250-s2` (`4f1c8a90…`) matched the brief.
-PL 9610 (734 lines) and RL 9586 (162 lines) read in full. Premises re-derived by symbol at the new
+PL-1572 (734 lines) and RL-1571 (162 lines) read in full. Premises re-derived by symbol at the new
 lines listed in Scope.
 
-**2026-10-09, Task 1.** `03` §4.1 (example per RL 9586 T1, invariants note), §4.3 (pins example, FR-20 restated by class with the struck clause kept), §4.11 (Slice note, T2 namespacing bullet verbatim with date 2026-10-09), §5.2 (`compile_bundle` comment, `inline_mounts` line) edited by script (each find string counted 1 first). FR-217/218/258 not reworded. `audit-docs.py` NOT run: waits for the gate slot (brief, small-test rule). `inline_mounts` is the plan's proposed name.
+**2026-10-09, Task 1.** `03` §4.1 (example per RL-1571 T1, invariants note), §4.3 (pins example, FR-20 restated by class with the struck clause kept), §4.11 (Slice note, T2 namespacing bullet verbatim with date 2026-10-09), §5.2 (`compile_bundle` comment, `inline_mounts` line) edited by script (each find string counted 1 first). FR-217/218/258 not reworded. `audit-docs.py` NOT run: waits for the gate slot (brief, small-test rule). `inline_mounts` is the plan's proposed name.
 
 **2026-10-09, Task 2 (model-schema).** `uv sync --all-packages` rc 0 in the worktree.
 - **Red** (before any code), `flock -w 300 /tmp/slots/small-test -c "timeout 150 nice -n 19 uv run --directory <wt> pytest -q -p no:cacheprovider packages/model-schema/tests/test_rating_algorithm.py -k 'mount or pins_default or unmapped'"`: the new mount tests failed by the predicted cause: `sub_graphs.0.inputs / .outputs: Extra inputs are not permitted [type=extra_forbidden]` (the port map is refused by `extra="forbid"`), and `AttributeError: 'Pins' object has no attribute 'sub_graphs'`. A first draft of the five `mount_point` pattern cases passed for the wrong cause (the same `extra_forbidden`); they were tightened to `match="mount_point"` and then failed for it. load1 was 3.2 to 3.4 at launch.
@@ -118,7 +117,7 @@ lines listed in Scope.
 - **Red**: `test_rating_inline.py` first run at 14:31 (load1 4.12 at launch, 0.12 over the cap; later runs 3.3 to 3.8): collection `ModuleNotFoundError: No module named 'pricing_core.rating.inline'`, rc 2.
 - **Green**: `pricing_core/rating/inline.py` (`inline_mounts`, the proposed name, kept) and `vocabulary.py` (`_scan` with spans; `_tokenize` is now a wrapper over it; new `rename_tokens`). `test_rating_inline.py`: 22 passed (rc 0). `test_rating_vocabulary.py`: 58 passed. `ruff check packages`: clean. Two fixture slips seen red and fixed in the tests (short artifact slugs; a parent that cannot be built with no mapped output).
 - **Raise-site register**: `test_quote_input_raise_sites.py` went red ("a `_raise_named` site is not accounted for", the five `inline.py` sites) until `_INPUT_FREE` gained five `rating/inline.py` rows with their input-free reasons; then 19 passed. Plan acceptance 10 allows this only for `compile_bundle`'s own count; this is the new-file case, named here.
-- **Deviations from PL 9610 Task 3 (read at `202d6777`)**: (1) the separator is `__` and renaming is by token (RL 9586), not `/`; (2) steps are in RL 9586 P5's Kahn order, not "parent then mounts"; (3) `as_at` is renamed as well as RL 9586's seven fields, because `authored.py` `EXPRESSION_FIELDS` lists it as an evaluated string (additive, no unruled choice); (4) the plan's "nested mount: refused" case is not an inliner case, since `fragments` is already `SubGraph`s; it is Task 5's (the payload is validated into `SubGraph`, whose `extra="forbid"` refuses `sub_graphs`).
+- **Deviations from PL-1572 Task 3 (read at `202d6777`)**: (1) the separator is `__` and renaming is by token (RL-1571), not `/`; (2) steps are in RL-1571 P5's Kahn order, not "parent then mounts"; (3) `as_at` is renamed as well as RL-1571's seven fields, because `authored.py` `EXPRESSION_FIELDS` lists it as an evaluated string (additive, no unruled choice); (4) the plan's "nested mount: refused" case is not an inliner case, since `fragments` is already `SubGraph`s; it is Task 5's (the payload is validated into `SubGraph`, whose `extra="forbid"` refuses `sub_graphs`).
 - **DP RULED** (see the 15:35:45 entry in the Build log below; the text that follows is the question as first raised): a fragment that re-produces one of its own input ports (the in-place clamp that Slice 1's `SubGraphBody` allows) cannot be inlined faithfully, since the port IS the parent's value and the write would reach the parent. `inline_mounts` refuses it with `VALIDATION_FAILED` (test `test_a_fragment_that_re_produces_its_input_port_is_refused`). No ruling covers it; the refusal is the conservative, reversible default.
 
 **2026-10-09, Task 4 (diff limb).**
@@ -144,13 +143,29 @@ lines listed in Scope.
 
 **2026-10-09, Tasks 7 and 8 (the trace; `RL-1242` stays).** PL 9776 (PL-1520, the `TraceStep` ruling's delivery) has not merged at `61e2a8d9` (`grep -rn _check_declared_reads packages/pricing-core/src` prints nothing), so order (b) runs: tests only, `TraceStep` and `_build_trace` not edited.
 - **Trace test** `test_the_trace_shows_each_inlined_step_attributed_to_its_mount_point` (`test_rating_score.py`, appended): `score_one(trace=True)` on the score fixture with an NCD mount returns a `TraceStep` per inlined step, ids `m_ncd__s_ladder` and `m_ncd__s_cap`, ordered before `s_office`; the premium is the unmounted golden 1_507 (the fragment yields 1); tracing does not change the result. **Red** (premise h confirmed), with `runtime.py` swapped for the Task 4 commit `7ea29503`'s copy for the run and put back by copy and `cmp`: `assert {'m_ncd__s_cap', 'm_ncd__s_ladder'} <= {'s_clamp', ..., 's_office', ...}`, "Extra items in the left set: 'm_ncd__s_cap' 'm_ncd__s_ladder'" (the inlined nodes dropped, as `_build_trace` reads `algorithm.steps`). **Green** with Task 5's `load_bundle`: 1 passed.
-- **Plan premise that does not hold**: PL 9610 Task 7 asks for "a batch trace test [that] mirrors the existing one". There is no batch trace: `score_batch` takes no `trace` argument and `grep trace` over its body prints nothing, and no batch trace test exists. None is written; FR-258's "same structure in real-time and batch" has no batch trace to compare at this tree. Reported to the lead.
+- **Plan premise that does not hold**: PL-1572 Task 7 asks for "a batch trace test [that] mirrors the existing one". There is no batch trace: `score_batch` takes no `trace` argument and `grep trace` over its body prints nothing, and no batch trace test exists. None is written; FR-258's "same structure in real-time and batch" has no batch trace to compare at this tree. Reported to the lead.
 - **Task 8**: the existing FR-218 interim tests (`test_rating_score.py`, the `test_a_purpose_needing_a_sub_graph...` family) pass unmodified. Appended: `test_a_version_that_mounts_a_sub_graph_still_refuses_mta_and_cancellation` (both purposes, `INPUT_CONTRACT_VIOLATION`, "interim"; it holds because `CompiledBundle.algorithm` is the inlined algorithm, whose `sub_graphs` is empty) and `test_an_unconditional_mount_prices_a_new_business_quote_with_the_fragment` (`new_business` and `renewal`: factor 1 gives 1_507, factor 2 gives more). They pass at birth (Task 5 is in the tree); Slice 3 changes the first on purpose. `test_rating_score.py`: 45 passed (40 existing, unmodified, plus 5 new). `ruff check packages`: clean.
 
 **2026-10-09, rulings after the final report, and the resolver's landing place.**
 - **Self-port refusal RULED** by the lead's adoption in `to-lead.md`, header verbatim: "2026-10-09 15:35:45 BST — RULINGS on the lead's 15:35:22 (SL-1340): (1) (a), REFUSE with VALIDATION_FAILED, plus a one-line spec statement; (2) YES, added rows only". Item 1: `inline_mounts` refuses a fragment that re-produces its own input port with `VALIDATION_FAILED`, no new `RATING_ERROR_CODES` entry; one line in `03` §4.11's inlining bullet ("A mount whose fragment writes its own input port is refused (`VALIDATION_FAILED`); revisit if an algorithm needs it", ruled 2026-10-09), in the same commit as this entry; one refusal test (parent value asserted untouched) and one positive control (`test_a_fragment_that_only_reads_its_input_port_still_inlines`). The refusal code was already in `6247dbef`; `test_rating_inline.py`: 24 passed (both tests red-green history: the refusal test was red-before-code at Task 3, `ModuleNotFoundError`).
-- **Write set, item 2 of the same entry:** `packages/pricing-core/tests/test_quote_input_raise_sites.py` joins PL 9610's write set for ADDED rows only. At this head the rows added there are the five `inline.py` rows, `mounted_fragments`, `_refuse_mount_port_type_mismatch` and `_check_graph_matches_inlined_algorithm`; the removed row (`_rename_text`) was added and removed inside this branch, so `git diff -U0 origin/main...HEAD -- <that file>` shows no removed or changed line of main's. (To be re-checked at the ACK.)
+- **Write set, item 2 of the same entry:** `packages/pricing-core/tests/test_quote_input_raise_sites.py` joins PL-1572's write set for ADDED rows only. At this head the rows added there are the five `inline.py` rows, `mounted_fragments`, `_refuse_mount_port_type_mismatch` and `_check_graph_matches_inlined_algorithm`; the removed row (`_rename_text`) was added and removed inside this branch, so `git diff -U0 origin/main...HEAD -- <that file>` shows no removed or changed line of main's. (To be re-checked at the ACK.)
 - **Resolver landing place** (lead's Task 6 instruction): S4's `c31a2bfd` lifts the nested `_Resolver` to module-level `WorkspaceResolver(session, workspace_id, blob_store)` (`resolve` binds `session, workspace_id, blob_store` as locals), and A-1 (`origin/sl-1462-a1-peril-approval`) adds a `peril_structure` branch just before the final `NOT_FOUND` raise, plus an import line. My hunk is therefore: (1) one import `from app.platform import sub_graphs as sub_graphs_service` beside the other `app.platform` imports, (2) the free function `_resolve_sub_graph_pin(session, workspace_id, ref)` above `compile_rating_version`, and (3) a two-line branch `if ref.type == "sub_graph": return await _resolve_sub_graph_pin(session, workspace_id, ref)` directly after the `rating_algorithm` branch of `WorkspaceResolver.resolve` (8-space indent there, 12 here), clear of A-1's end-of-method hunk. Neither branch was fetched into this tree.
+
+## Plan deltas, dated 2026-10-10 (the lead's GO, `to-lead.md` "2026-10-10 08:57:14 BST — DISPATCH GO: SL-1340 (PL-1572) …", decisions 1 to 4)
+
+PL-1572 is frozen from its merge; these are this ledger's deltas against it, not edits to it.
+
+1. **Write-set additions (decision 1: YES), each by file:line at this branch's head before the merge of `main`:**
+   - `packages/pricing-core/tests/test_rating_compile_fr240.py`: the appended G1-objective tests, `PLANTED` at line 207 (shifted by the second import line below), `_planted_in_a_sub_graph` and the two `test_g1_…` tests, plus the `RatingVersion` import at line 31.
+   - `packages/model-schema/src/model_schema/__init__.py:282` (the import of `AlgorithmSubGraphChange`) and `:445` (its `__all__` entry): two added exports.
+   - `backend/src/app/platform/sub_graphs.py:205-206`: the `resolve_ref` docstring, whose "Not wired into compile (Slice 2)" is no longer true.
+2. **Acceptance 10 holds as written (decision 2: YES).** `test_rating_compile_fr240.py` keeps its original line `from test_rating_compile_bundle import FakeResolver, _resolver, _version` unchanged (line 14); a SECOND import line (`NCD`, `_fragment_payload`, `_mounted_resolver`, `_mounted_version`) follows it under a `# isort: split` comment, because without the split ruff's `I001` merges the two into one rewritten line. `git diff 61e2a8d9 -- packages/pricing-core/tests/test_rating_compile_fr240.py` shows the original line as context, not as a change.
+3. **Task 7's batch-trace item is dropped (decision 3: (a)).** `score_batch` takes no `trace` argument at `main`, so the item cannot be met in this slice's write set; the single-quote trace test `test_the_trace_shows_each_inlined_step_attributed_to_its_mount_point` stays. **The condition (does any FR require a trace for BATCH scoring?):** YES, one clause does.
+   - `docs/specs/03-rating-engine.md:177`, FR-258: "Traces are the same structure in real-time and batch."
+   - `docs/specs/03-rating-engine.md:178`, FR-259's RL-890 clarification: "A batch run may still produce traces on request under FR-258, and they are written with that Job's own output and never returned by the production traces route."
+   - Against it, `docs/specs/03-rating-engine.md:735-737` (the batch output contract) says `trace` is excluded from the batch result ("batch requests no engine trace … so this is always absent"). The three passages do not agree: FR-258 and FR-259 allow a batch trace on request, §735 says none is requested. Batch trace is therefore **unevidenced** at this tree. The lead is told, and one OQ row (owner WK-1250) is for the lead to file, for a §13 verdict at WK-1250's close.
+4. **S5's `diff_algorithms` call is not edited (decision 4: YES).** `RL-1309` holds as written. The OQ (owner WK-673: should the persisted structural diff carry fragment inner steps via `fragments=`?) rides the lead's next docs batch; this slice files nothing for it.
+5. **Acceptance 7's second test is owed at the merged tree.** At `61e2a8d9` WK-673's persistence had not merged; after the merge of `main` it is written against what the persisted evidence carries (the `sub_graph_mounts`, not the inner steps), per the GO.
 
 ## PRs
 

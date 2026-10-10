@@ -11,14 +11,14 @@ from datetime import UTC, datetime
 
 import pytest
 from test_rate_table_operations import _factor, _glm_model
+from test_rating_compile_bundle import FakeResolver, _resolver, _version
+
+# isort: split
 from test_rating_compile_bundle import (
     NCD,
-    FakeResolver,
     _fragment_payload,
     _mounted_resolver,
     _mounted_version,
-    _resolver,
-    _version,
 )
 
 from model_schema.modelling import Factor, FactorIntent, ModelStatus
