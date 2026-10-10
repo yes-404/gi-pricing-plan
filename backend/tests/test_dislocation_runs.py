@@ -260,7 +260,7 @@ def _handlers() -> None:
     register_dislocation_handlers()
 
 
-def _algorithm(a: str, b: str, c: str) -> dict[str, Any]:
+def _algorithm(a: str, b: str, c: str, version: int = 1) -> dict[str, Any]:
     """Three independent expression branches summed: editing a branch is one derived change."""
     def branch(step_id: str, expr: str, produces: str) -> dict[str, Any]:
         return {"step_id": step_id, "type": "expression", "label": step_id, "expr": expr,
@@ -268,7 +268,7 @@ def _algorithm(a: str, b: str, c: str) -> dict[str, Any]:
 
     return {
         "slug": "dislocation-fixture",
-        "version": 1,
+        "version": version,
         "input_contract": [{"name": "premium_in", "type": "int", "nullable": False}],
         "outputs": [{"name": "payable_premium_minor", "type": "money_minor", "required": True}],
         "steps": [
@@ -341,7 +341,8 @@ async def world(
     refs = []
     for branches in (_BASE_BRANCHES, _CAND_BRANCHES):
         created = api_client.post(
-            "/api/v1/rating-algorithms", json=_algorithm(*branches), headers=headers
+            "/api/v1/rating-algorithms",
+            json=_algorithm(*branches, version=len(refs) + 1), headers=headers,
         )
         assert created.status_code in (200, 201), created.text
         row = await _insert_version(
