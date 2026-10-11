@@ -28,7 +28,7 @@ Times are BST (`TZ=Europe/London date`) unless marked.
 | Task | Plan step | Acceptance | Status |
 |---|---|---|---|
 | 0 | preconditions | — | done (below) |
-| 1 | `03` §5.1 T1, T2 | 17 | HELD: applied only after WK-675 S4 merges (WK-675 S3 has: `99f22479`) |
+| 1 | `03` §5.1 T1, T2 | 17 | done 2026-10-11 (WK-675 S3 and S4 on main: `372fa92a`) |
 | 2 | shape and pure draft | 1–9, 20 | done |
 | 3 | service and route | 10–15 | authored; H tests UNRUN (DB: they wait for the gate slot), red owed |
 | 4 | contract, gate, ledger | 16–19 | contract regenerated and `--check` green; `generate:api`, gate, audit-docs, INDEX open |
@@ -87,6 +87,15 @@ Not yet. The auditor writes it.
 #### 2026-10-11 00:20 BST — audit-docs and INDEX
 
 `doc-index.py` regenerated `docs/INDEX.md`; `audit-docs.py` (under `gate-2`, per the lead) fails only check 31 ("gap in the full allocation between 1607 and 9978"), the expected red of a working id until the mint. Two earlier reds were mine and fixed: check 22 (a pipe inside a table cell) and check 37 (the missing `PRs` section).
+
+#### 2026-10-11 20:2x BST — re-seat: merge of `origin/main` `372fa92a`, T1/T2 applied
+
+- Authority: `to-lead.md` "2026-10-11 20:17:38 BST" item 5 (SL-1503 unblocked: WK-675 S3 `#1271` and S4 `#1281` on main), with "2026-10-10 21:41:05 BST" item 3.
+- `git merge-tree --write-tree origin/main 8f289c60` was rc 1: conflicts in `docs/INDEX.md` and `docs/contracts/openapi/generated.json` only, both generated. Resolved by script, not by hand: `generate-contracts.py` (then `--check` rc 0, "48 generated contracts match the models") and `doc-index.py`. `rating_versions.py`, `model_schema/rating.py` and `roadmap.md` auto-merged; the `rating_versions.py` and `rating.py` hunks were read: this slice's hunks are the added imports, `draft_change_summary_for` and `_pins_by_slug` after `_baseline`, and the two classes after `RateTableDiffCell`; no existing definition is edited.
+- **T1/T2 applied by content** (RL-1498 governs; the date placeholder is the apply date 2026-10-11). Anchors matched before the insert, each `grep -cF` = 1: the line starting `` | `POST` | `/api/v1/rating-versions/{id}/submit` | Submit for approval; `` (now line 1027; the table is still the three-cell form `Method | Path | Purpose`, no `Permission` column) and the line `` > matching pin list (`rate_tables`, `reference_tables`, `models`) at that exact version. `` (now line 1098, inside the `RATING_VERSION_UNPINNED` meaning note). Drift: only the line numbers. After: `grep -c 'change-summary-draft' docs/specs/03-rating-engine.md` prints 2; `grep -cF 'refuses with **409** and this code when the version has no'` prints 1; each inserted line equals RL-1498's T1/T2 byte for byte once its date is put back to `<E1 date>`.
+- Messages: this slice's `PlatformError` texts are fixed literals plus the pin name or an `ArtifactRef`; no `str(exc)` or `{exc}` in the diff. `InputFreeError` (`model_schema/input_free.py`) is a validator `ValueError`; this slice adds no validator and no `raise` in `model_schema`, so it has no use here.
+- Small proof (`run-small.sh`): `test_change_summary_draft.py` 10 passed; `ruff check` clean and `mypy` clean on the touched source files.
+- `audit-docs.py` (under `gate-2`): fails only check 31 (working id 9978 until the mint), as before.
 
 ## PRs
 
