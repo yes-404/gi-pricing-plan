@@ -42,7 +42,7 @@ routes' media types follow later. DP-A1 and DP-A2 are ruled by `RL-1365`. `FD 97
 | 1 | predicates, red first | 1, 2 | done |
 | 2 | guard on the real document | 3, 4, 5 | done (one item red until Task 3) |
 | 3 | two 200 declarations, regenerated contract | 6–9 | done |
-| 4 | the NFR-502 spec line | 10 | open (the lead to say whether it lands here with the carried figure) |
+| 4 | the NFR-502 spec line | 10 | CARRIED with Acceptance 10 (`to-lead.md` "2026-10-11 16:30:29 BST"); not in this slice |
 | 5 | NFR-502 re-measure, local, diagnostic | 10 | runs b, c and D done, all UNCLEAN; the timing is CARRIED to the dedicated VM (Acceptance 10 carry record below) |
 | 6 | client evidence, skill note, gate, ledger | 11–13 | client evidence and skill note done; gate and closing acts open |
 
@@ -254,6 +254,10 @@ Q3 (b): steal as a share of ALL ticks, idle included, at most 5% per invocation,
 "2026-10-11 16:27:15 BST — SL-1367 run D: UNCLEAN applies (iii) → the dedicated VM; BUT the compare delta is a PROBABLE REAL REGRESSION, investigated in code NOW; lane C proceeds without waiting".
 
 #### 2026-10-11 — Acceptance 10: the timing is CARRIED to the dedicated VM (owner WK-1178)
+
+**Task 4 (the dated `03` NFR-502 line) is CARRIED with Acceptance 10** (`to-lead.md` "2026-10-11 16:30:29 BST — SL-1367 PL-1364 Task 4 (the dated NFR-502 spec line): (a) CARRIED with Acceptance 10"):
+the line lands with the dedicated-VM run's discharge record (owner WK-1178), carrying the CLEAN VM figure. No spec line states a figure that was never measured cleanly (runs b, c and D are unclean by the 15:26:41 pre-registration).
+SL-1367 merges without it. Option (b), a "pending" line, was rejected: a "pending" line in a spec records nothing and would need a later correction. `docs/specs/03-rating-engine.md` is therefore untouched by this slice.
 
 **Decision** (`to-lead.md` "2026-10-11 16:29:03 BST — SL-1367: NO code cause found → Acceptance 10's timing is CARRIED to the dedicated VM (a measurement owed, not a merge gate); SL-1367 proceeds to its full gate and ACK; the VM protocol is pre-registered now"),
 under the lane-C clause reserved at 15:26:41 (iii): Acceptance 10 exists to catch a runtime cost this slice's code adds; the code proof shows the slice adds no runtime path, so the measured compare delta is not attributable to its code and holding the merge protects nothing.
