@@ -3,12 +3,19 @@
 // measuring is asserted here; the canvas's pan and zoom are measured in Task 11, not unit-tested.
 import userEvent from "@testing-library/user-event";
 import { render, screen } from "@testing-library/vue";
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { RatingAlgorithmDraft } from "@/api/ratingAlgorithms";
 
 import DagDesigner from "../DagDesigner.vue";
 import { valid } from "./fixtures";
+
+// useGraphValidation debounces the draft to /rating-algorithms/validate. Left unmocked, that
+// fetch landed inside whichever test the timer fired in, under load (register row F39).
+vi.mock("@/api/ratingAlgorithms", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  validateRatingAlgorithm: async () => ({ issues: [] }),
+}));
 
 beforeAll(() => {
   // A browser API happy-dom lacks; Vue Flow observes its pane with it.
@@ -17,6 +24,16 @@ beforeAll(() => {
     unobserve(): void {}
     disconnect(): void {}
   };
+});
+
+beforeEach(() => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+});
+
+afterEach(async () => {
+  // Past useGraphValidation's 400 ms debounce: a validate call still scheduled fires now.
+  await vi.advanceTimersByTimeAsync(500);
+  vi.useRealTimers();
 });
 
 const props = { draft: valid, versionMode: "exact" as const, rateTablePins: ["rate_table:motor-expense@3"] };
