@@ -61,7 +61,9 @@ Premise i (Alembic head) re-derived at base `14fa6fb3`: one head, `b8d2f4a6c0e1`
 
 ### Gate
 
-Not yet run.
+**Run 1, head `ae6d9fda`, gate-1, 10:41–11:32 BST (2026-10-11): INVALID.** Script `~/gi-pricing-plan.local/handover/sl1257-slot.sh`, output `~/gi-pricing-plan.local/handover/sl1257-slot.out`, stage logs `/tmp/tmp.2TNUHpAE0d`. Cause: the script ran `alembic -c backend/alembic.ini` but `alembic.ini` is at the repository root (rc 255, "No 'script_location'"), so the per-worktree database cloned from the template was never migrated to this tree. Every DB-backed result is void: pytest 167 failed / 12 errors, none classifiable as a code red (missing-table class). The script is fixed (alembic run from the root via `uv run --directory`, plus `upgrade head` after `createdb`; `alembic heads` = `c5a91e7d3b26`, one head). A re-run at the same head is queued by the lead.
+
+Valid facts from run 1: ruff, mypy, import-linter, req-coverage and contracts rc 0. audit-docs rc 1 = check 32 (LG-9977 unresolved in INDEX) and check 39 (INDEX stale), both mint artefacts. Frontend: install, generate, lint, type-check, build rc 0; fe_test 3 failures, all in `DagDesigner.test.ts` (FD-1611, WK-675's, not this slice's). Case 9 (`GIP_MEASURE_RATE_LIMIT=1 -k case_9`, 1 of 10 collected): calls=10000, p50 0.523 ms, p99 1.420 ms. T5 red against parent source (score, deps, auth/service, errors, main at `origin/main`): 9 errors `'State' object has no attribute 'rate_limiter'` (valid). T4 red against parent `service_accounts.py`: `test_key_lifecycle_is_audited_by_prefix_never_by_value` failed (partly valid: unmigrated database).
 
 ### Audit
 
