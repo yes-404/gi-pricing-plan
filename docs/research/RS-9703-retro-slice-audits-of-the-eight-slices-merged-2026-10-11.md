@@ -77,7 +77,7 @@ verdict, quoted from the lead's message of 2026-10-11 (logged at from-lead 20:14
 | SL-1631 (#1278) | (a)–(e) MET, (d) a GUARD not a red; LG lines 1, 4, 5 MET or CARRIED | LG lines 2 and 3 (no money change; NFR-499) not written | `LG-1632` `closed`; no Audit section | Accepted; no finding |
 | SL-1390 (#1279) | A1–A3, A5–A7, A10 MET; A4 UNEVIDENCED; A8 CARRIED-by-CI | A4: broken-loop proofs and the base reds of A3/A4/A10 not recorded; `LG-1633` `### Gate` empty | `LG-1633` `closed`; Audit "(Written by the auditor at slice close.)" | `FD-9712`, MEDIUM, WK-673, delivered but untested; the gate-record limb to `FD-9784` (ii) |
 | SL-1559 (#1281) | A1–A9, A11–A17 MET by presence; A10 GAP; A18 PARTIAL | A10: the stored-data stop query (RL-1475) never recorded; the slice retyped `rows`/`default_row` and shipped a migration | `LG-1635` `closed`; Gate "Not run." above a real record; GO line stale | `FD-9714`, MEDIUM, WK-675, delivered but untested; discharge is a read-only count; gate limb to `FD-9784` (ii) |
-| SL-1600 (#1273) | A1–A5, A7, A8, A11, A12 MET; A6 GAP; A9 PARTIAL | A6: ACK states 28/12 where the plan states 30/10 and 74, no recorded delta, no reached-today list. B1/B2 plain raises render the generic 422 text until P3 | `LG-1609` `closed`; "Written by the auditor." | A6: `FD-9724`, LOW-MEDIUM, WK-1178, delivered but untested. B1/B2: no FD, carried by the live roadmap row `SL-1601` ("WK-1178 P3 carry — FD-1589 row 8, remedy (c), B1 and B2", status draft, phase P3, relates FD-1589/SL-1600). Gate limb to `FD-9784` (ii) |
+| SL-1600 (#1273) | A1–A5, A7, A8, A11, A12 MET; A6 GAP; A9 PARTIAL | A6: ACK states 28/12 where the plan states 30/10 and 74; reconciled at `02f23b4a` (two lax date types moved to authored, recorded as a plan delta in `LG-1609`); the ACK omits the changed total (76) and the reached-today list. B1/B2 plain raises render the generic 422 text until P3 | `LG-1609` `closed`; "Written by the auditor." | A6: `FD-9724`, LOW-MEDIUM, WK-1178, delivered but untested; reconciled by the auditor in the FD (proposed LOW, accept). B1/B2: no FD, carried by the live roadmap row `SL-1601` ("WK-1178 P3 carry — FD-1589 row 8, remedy (c), B1 and B2", status draft, phase P3, relates FD-1589/SL-1600). Gate limb to `FD-9784` (ii) |
 | SL-1557 (#1271) | A1–A23 MET by presence; A24 CARRIED-by-CI (conclusion only); A16/A19 HTTP mismatch tests are GUARDS | Ledger gate section empty. Executor's finding candidate: no owned code for a malformed stored pinned payload | `LG-1606` `closed`; Audit "Not yet." | `FD-9725`, LOW, WK-1178 (spec / decision-maker), deferred with owner. The GUARD classification accepted as carried. Gate limb to `FD-9784` (ii) |
 
 Cross-slice, filed once as `FD-9784` (MEDIUM, owner: process backlog, Lean P2 item 5):
@@ -94,7 +94,7 @@ Cross-slice, filed once as `FD-9784` (MEDIUM, owner: process backlog, Lean P2 it
 
 Eight slices audited; no code defect was found by reading, and CI at all eight PR heads was
 green. Findings filed: `FD-9704` (SL-1257, MEDIUM, WK-674), `FD-9712` (SL-1390, MEDIUM,
-WK-673), `FD-9714` (SL-1559, MEDIUM, WK-675), `FD-9724` (SL-1600, LOW-MEDIUM, WK-1178),
+WK-673), `FD-9714` (SL-1559, MEDIUM, WK-675), `FD-9724` (SL-1600, LOW-MEDIUM, WK-1178; reconciled in the FD, proposed accept),
 `FD-9725` (SL-1557, LOW, WK-1178), `FD-9784` (cross-slice, MEDIUM, process backlog). Not
 filed: the B1/B2 generic-text regression (carried by `SL-1601`) and SL-1631's two omitted
 ledger lines (accepted). The record is a proposal; the verdict column is the lead's.
