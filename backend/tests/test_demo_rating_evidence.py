@@ -15,6 +15,7 @@ import importlib.util
 import sys
 from decimal import ROUND_HALF_EVEN, Decimal
 from pathlib import Path
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
@@ -41,6 +42,8 @@ from model_schema import (
     ModelStatus,
     QuoteContext,
     RegressionRun,
+    RegressionSuiteContent,
+    RelativityLevel,
     new_uuid7,
 )
 from pricing_core.rating.properties import payable_minor
@@ -276,3 +279,26 @@ async def test_the_demo_premium_is_the_glm_premium_and_the_golden_quotes_are_not
     assert kinds["premium-monotone-in-veh_age"] == "pass"
     assert kinds["no-null-output"] == "pass"
     assert kinds["premium-bounded"] == "pass"
+
+
+@pytest.mark.req("FR-261")
+def test_the_monotone_property_name_is_a_valid_suite_property_name() -> None:
+    """A banded Factor's column has `_`; the property name must still be a slug."""
+    bandings = _bandings()
+    fit = SimpleNamespace(
+        relativities={
+            slug: tuple(
+                RelativityLevel(level=label, relativity=1.0 + 0.1 * i)
+                for i, label in enumerate(banding.banding.labels)  # type: ignore[attr-defined]
+            )
+            for slug, banding in bandings.items()
+        }
+    )
+    prop = demo_model.monotone_property(fit, bandings)
+    assert prop is not None
+    RegressionSuiteContent.model_validate({
+        "algorithm_slug": "fremtpl2-rating",
+        "golden_quotes": [],
+        "properties": [prop],
+        "generation": {"cases": 25, "seed": 1, "strategy": "input_contract_sampling"},
+    })

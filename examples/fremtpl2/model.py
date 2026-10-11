@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import io
 import math
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from decimal import Decimal
 from itertools import pairwise
@@ -66,6 +67,7 @@ from model_schema import (
     Principal,
     QuoteContext,
     RegressionSuiteContent,
+    RelativityLevel,
     SplitRef,
     new_uuid7,
 )
@@ -494,7 +496,7 @@ def demo_golden_cases(
 
     from pricing_core.modelling.bandings import apply_banding
 
-    picks = {
+    picks: dict[str, Callable[[Sequence[RelativityLevel]], RelativityLevel]] = {
         "base-levels": lambda levels: next(r for r in levels if r.is_base),
         "first-non-base-levels": lambda levels: next(r for r in levels if not r.is_base),
         "last-levels": lambda levels: levels[-1],
@@ -533,8 +535,9 @@ def monotone_property(
     the ledger."""
     for factor, demo in bandings.items():
         by_level = {r.level: r.relativity for r in fit.relativities[factor]}
-        series = [by_level[label] for label in demo.banding.labels]
-        if any(value is None for value in series):
+        values = [by_level[label] for label in demo.banding.labels]
+        series = [value for value in values if value is not None]
+        if len(series) != len(values):
             continue
         direction = (
             "increasing" if all(a <= b for a, b in pairwise(series))
@@ -544,7 +547,7 @@ def monotone_property(
         if direction is not None:
             print(f"  monotone property: {demo.banding.column} {direction}; "
                   f"relativities by band {dict(zip(demo.banding.labels, series, strict=True))}")
-            return {"name": f"premium-monotone-in-{demo.banding.column}",
+            return {"name": f"premium-monotone-in-{demo.banding.column.replace('_', '-')}",
                     "check": {"kind": "monotone", "input": demo.banding.column,
                               "direction": direction}}
     return None
