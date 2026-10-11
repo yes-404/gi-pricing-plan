@@ -15,7 +15,7 @@ from uuid import uuid4
 
 import pytest
 from backend.tests.approved_rows import add_approved
-from backend.tests.test_api_rate_tables import _LEVELS
+from backend.tests.test_api_rate_tables import _LEVELS, _diff_ready
 from backend.tests.test_rate_tables_service import _seed_approved_model, _table_slug
 from backend.tests.test_rating_version_compile import _headers, _minimal_algorithm
 from sqlalchemy import func, select
@@ -194,8 +194,10 @@ def test_wf699_e1_the_draft_is_built_from_the_approved_baseline(
     (entry,) = body["rate_tables"]
     assert entry["slug"] == slug
     assert entry["pending"] is False
-    table_diff = api_client.get(
-        f"/api/v1/rate-tables/{slug}@{two}/diff", params={"against": str(one)}, headers=headers
+    # The diff route is a Job the first time (FR-232, R1), rows pairs too: run it to its end,
+    # then read the stored artifact's summary, which is what the route serves.
+    table_diff = _diff_ready(
+        api_client, f"/api/v1/rate-tables/{slug}@{two}/diff", {"against": str(one)}, headers
     )
     assert table_diff.status_code == 200, table_diff.text
     assert entry["diff"] == table_diff.json()
@@ -259,13 +261,19 @@ def test_another_workspaces_version_is_404(
     api_client, workspace_id, principal, grant, database
 ) -> None:
     _run(grant("analyst"))
+    headers = _headers(principal, workspace_id)
+    # The algorithm exists for the caller, so with workspace scoping removed the draft would be
+    # built and answer 200; the 404 below can only be the version's own scoped miss.
+    _save_algorithms(api_client, headers, _algorithm(1))
     other = uuid4()
     row = _run(_insert(database, other, principal, version=1, algorithm_version=1, pins=_pins()))
 
-    response = api_client.get(_url(row), headers=_headers(principal, workspace_id))
+    response = api_client.get(_url(row), headers=headers)
 
     assert response.status_code == 404
-    assert response.json()["code"] == "NOT_FOUND"
+    body = response.json()
+    assert body["code"] == "NOT_FOUND"
+    assert body["title"] == "Rating version not found"
 
 
 def test_rating_read_is_required(api_client, workspace_id, principal, grant, database) -> None:
@@ -345,7 +353,7 @@ def test_a_parquet_table_answers_200_with_the_entry_pending(
             version = await session.scalar(
                 select(RateTableVersionRow).where(
                     RateTableVersionRow.rate_table_id == table.id,
-                    RateTableVersionRow.version == two,
+                    RateTableVersionRow.version_number == two,
                 )
             )
             assert version is not None
