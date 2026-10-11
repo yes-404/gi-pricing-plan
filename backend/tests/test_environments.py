@@ -462,7 +462,11 @@ def test_rotation_is_refused_for_an_account_naming_a_retired_environment(
     )
     assert client.post(f"/api/v1/environments/{slug}/retire", headers=headers).status_code == 200
 
-    rotated = client.post(f"/api/v1/service-accounts/{account['id']}/rotate", headers=headers)
+    rotated = client.post(
+        f"/api/v1/service-accounts/{account['id']}/rotate",
+        json={"environment": slug},
+        headers=headers,
+    )
     assert rotated.status_code == 422
     assert rotated.json()["code"] == "VALIDATION_FAILED"
     assert slug in rotated.json()["detail"]

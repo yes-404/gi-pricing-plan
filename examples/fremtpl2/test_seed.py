@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from arff import to_csv
 from seed import DICTIONARY, PORTFOLIO_ROWS, RENAMES, RULES, build_csv, recipe
 
-#: None is the full book. Measured (LG 9966): every smaller sample has a level fitted below the
+#: None is the full book. Measured (LG-1641): every smaller sample has a level fitted below the
 #: relativity floor; only the full book has none.
 ROWS_FOR_A_HEALTHY_FIT: int | None = None
 

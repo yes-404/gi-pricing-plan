@@ -416,7 +416,7 @@ async def load_approved_glm(
 #: The lowest relativity a fitted level may carry. Below it the GLM prices a level at under
 #: 1% of its base, which is quasi-separation (no claims in the fitting rows), not a rating
 #: signal: at 2 000 seeded rows area[F] fits to 1.4e-07 and its golden premium is 0 minor units.
-#: Real levels of the full book sit between 0.7 and 1.5 (measured, LG 9966).
+#: Real levels of the full book sit between 0.7 and 1.5 (measured, LG-1641).
 RELATIVITY_FLOOR: Final = 0.01
 
 

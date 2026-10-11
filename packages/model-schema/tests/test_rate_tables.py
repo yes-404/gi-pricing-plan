@@ -234,7 +234,10 @@ class TestRateTableVersionImmutability:
         assert version.version == 6
         assert [key.name for key in version.keys] == ["driver_age_band"]
         assert version.value.name == "relativity"
-        assert version.rows == [{"driver_age_band": "17-20", "relativity": "1.8400"}]
+        assert version.rows is not None
+        assert [row.root for row in version.rows] == [
+            {"driver_age_band": "17-20", "relativity": "1.8400"}
+        ]
         assert version.created_by_operation is None
         assert version.created_by_import is None
 
@@ -695,3 +698,119 @@ def test_a_factor_ref_with_an_underscore_slug_round_trips() -> None:
         value=RateTableValue(name="relativity", type="relativity", unit="factor"),
     )
     assert RateTable.model_validate(table.model_dump(mode="json")) == table
+
+
+@pytest.mark.req("FR-10")
+def test_rate_table_cell_refuses_a_non_string_value() -> None:
+    """RL-1475 item 2: a cell's every value is a string (a key level or a decimal string)."""
+    from model_schema.rating import RateTableCell
+
+    with pytest.raises(ValidationError):
+        RateTableCell.model_validate({"area": "A", "relativity": 1.1})
+    with pytest.raises(ValidationError):
+        RateTableCell.model_validate({"area": "A", "relativity": 2})
+    assert RateTableCell.model_validate({"area": "A", "relativity": "1.1"}).root == {
+        "area": "A",
+        "relativity": "1.1",
+    }
+
+
+def test_default_row_and_rows_are_typed_as_a_cell() -> None:
+    """RL-1475 item 2: `rows` and both `default_row` fields are retyped to `RateTableCell`."""
+    for model in (RateTable, RateTableVersion):
+        default_row = model.model_json_schema()["properties"]["default_row"]
+        refs = [arm.get("$ref") for arm in default_row["anyOf"]]
+        assert "#/$defs/RateTableCell" in refs
+    rows = RateTableVersion.model_json_schema()["properties"]["rows"]
+    assert any(
+        arm.get("items", {}).get("$ref") == "#/$defs/RateTableCell" for arm in rows["anyOf"]
+    )
+
+
+_BASE_REF = ArtifactRef(type="rate_table", slug="motor-driver-age-relativity", version=5)
+
+
+@pytest.mark.req("FR-229")
+class TestManualEditContract:
+    """RL-1555 items 1 and 2: the manual-edit body and the `created_by_edit` record."""
+
+    @staticmethod
+    def _body(**changes: object) -> dict[str, object]:
+        body: dict[str, object] = {
+            "base_version": 5,
+            "edits": [{"area": "A", "relativity": "1.05"}],
+            "change_note": "area A +5%",
+        }
+        return body | changes
+
+    def test_the_body_parses_and_defaults_to_a_preview(self) -> None:
+        from model_schema.rating import RateTableManualEdit
+
+        body = RateTableManualEdit.model_validate(self._body())
+        assert body.confirm is False
+        assert body.edits[0].root == {"area": "A", "relativity": "1.05"}
+
+    @pytest.mark.parametrize(
+        "changes",
+        [
+            {"change_note": ""},
+            {"change_note": "   "},
+            {"edits": []},
+            {"base_version": 0},
+            {"edits": [{"area": "A", "relativity": 1.05}]},
+            {"unknown": 1},
+        ],
+    )
+    def test_the_body_refuses(self, changes: dict[str, object]) -> None:
+        from model_schema.rating import RateTableManualEdit
+
+        with pytest.raises(ValidationError):
+            RateTableManualEdit.model_validate(self._body(**changes))
+
+    def test_created_by_edit_names_the_base_and_at_least_one_edit(self) -> None:
+        from model_schema.rating import ManualEdit
+
+        edit = ManualEdit(applied_to=_BASE_REF, edited_cells=2)
+        assert edit.applied_to == _BASE_REF
+        with pytest.raises(ValidationError):
+            ManualEdit(applied_to=_BASE_REF, edited_cells=0)
+        with pytest.raises(ValidationError):
+            ManualEdit.model_validate(
+                {
+                    "applied_to": "rate_table:motor-driver-age-relativity@5",
+                    "edited_cells": 1,
+                    "x": 1,
+                }
+            )
+
+    def test_a_version_carries_created_by_edit_and_a_seeded_one_carries_none(self) -> None:
+        from model_schema.rating import ManualEdit
+
+        edited = _version(created_by_edit=ManualEdit(applied_to=_BASE_REF, edited_cells=1))
+        assert edited.created_by_edit is not None
+        assert _version().created_by_edit is None
+
+    def test_created_by_edit_is_exclusive_with_the_other_two(self) -> None:
+        from model_schema.rating import ManualEdit
+
+        edit = ManualEdit(applied_to=_BASE_REF, edited_cells=1)
+        verdict = ImportVerdict(
+            filename="f.csv", content_sha256="a" * 64, round_trip="passed", applied_to=_BASE_REF
+        )
+        with pytest.raises(ValidationError):
+            _version(created_by_edit=edit, created_by_import=verdict)
+        with pytest.raises(ValidationError):
+            _version(
+                created_by_edit=edit,
+                created_by_operation=BULK_OPERATION_ADAPTER.validate_python(
+                    {
+                        "kind": "uplift_table",
+                        "parameters": {"percentage": "0.10"},
+                        "applied_to": "rate_table:motor-driver-age-relativity@6",
+                        "result": {
+                            "changed_cells": 3,
+                            "new_version": "rate_table:motor-driver-age-relativity@7",
+                        },
+                    }
+                ),
+            )

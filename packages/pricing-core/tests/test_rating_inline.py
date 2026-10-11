@@ -150,8 +150,8 @@ def test_only_the_exact_token_is_renamed_never_a_substring() -> None:
       "clamp_bounds": {"min": "ncd_raw"}, "reason_code": "X", "consumes": ["ncd_raw"],
       "produces": "ncd_raw"}, "clamp_bounds", {"min": "m_ncd__ncd_raw"}),
     ({"type": "model_call", "model_ref": "model:motor-ad@1", "mode": "exact",
-      "feature_map": {"f": "ncd_raw"}, "consumes": ["ncd_raw"], "produces": "m_out"},
-     "feature_map", {"f": "m_ncd__ncd_raw"}),
+      "feature_map": {"ncd_raw": "f"}, "consumes": ["ncd_raw"], "produces": "m_out"},
+     "feature_map", {"m_ncd__ncd_raw": "f"}),
     ({"type": "table", "rate_table_ref": "rate_table:expense@1", "key_expr": ["ncd_raw"],
       "consumes": ["ncd_raw"], "produces": "t_out"}, "key_expr", ["m_ncd__ncd_raw"]),
     ({"type": "lookup", "reference_table_ref": "reference_table:area@1", "key_expr": ["ncd_raw"],
@@ -167,6 +167,20 @@ def test_every_name_bearing_field_is_renamed(
     renamed = next(s for s in _inline(_parent(), fragment).steps if s.step_id == "m_ncd__s_x")
     assert getattr(renamed, attr) == expected
     assert renamed.consumes == ["m_ncd__ncd_raw"]
+
+
+@pytest.mark.req("FR-217", "FR-222")
+def test_a_feature_map_value_equal_to_a_fragment_name_is_not_renamed() -> None:
+    """The VALUES of `feature_map` are the model's feature names (FR-222), not graph names."""
+    extra = {"step_id": "s_x", "label": "x", "type": "model_call", "model_ref": "model:motor-ad@1",
+             "mode": "exact", "feature_map": {"ncd_years": "ncd_raw"},
+             "consumes": ["ncd_years"], "produces": "m_out"}
+    base = _fragment().model_dump(mode="json")["steps"]
+    renamed = next(
+        s for s in _inline(_parent(), _fragment(steps=[*base, extra])).steps
+        if s.step_id == "m_ncd__s_x"
+    )
+    assert renamed.feature_map == {"years_clean": "ncd_raw"}
 
 
 @pytest.mark.req("FR-217")

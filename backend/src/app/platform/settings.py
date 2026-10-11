@@ -1,6 +1,10 @@
-"""The settings registry and its three-layer resolver (FR-446, FR-447, FR-448, FR-449, `07` §4.4).
+"""The settings registry and its four-layer resolver (FR-446, FR-447, FR-448, FR-449, `07` §4.4).
 
-    environment variable  →  workspace setting  →  platform default
+    process variable  →  Environment setting  →  workspace setting  →  platform default
+
+The Environment layer applies only when the caller names an Environment, and only to a key
+whose declared scope permits it (`RL-1311`). A process variable never supplies an
+Environment-only key.
 
 Every setting is **declared** here with a type, a default and its constraints. That is what
 makes FR-447 possible: an unknown key or an out-of-range value is rejected when it is
@@ -14,16 +18,18 @@ automatically the safe answer.
 
 from __future__ import annotations
 
+import enum
 from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import Settings
-from app.db.models import WorkspaceSettingRow
+from app.config import ConfigInvalidError, Settings
+from app.db.models import EnvironmentRow, EnvironmentSettingRow, WorkspaceSettingRow
 from app.errors import PlatformError
+from app.observability.logging import get_logger
 from model_schema import (
     SettingCandidate,
     SettingResolution,
@@ -34,10 +40,24 @@ from model_schema import (
 __all__ = [
     "REGISTRY",
     "SettingDefinition",
+    "SettingScope",
+    "require_environment",
     "resolve",
     "resolve_all",
+    "set_environment_setting",
     "set_workspace_setting",
+    "validate_setting_overrides",
 ]
+
+_log = get_logger("app.platform.settings")
+
+
+class SettingScope(enum.StrEnum):
+    """The levels a setting may be set at (FR-446, `RL-1311` item 1)."""
+
+    WORKSPACE = "workspace"
+    WORKSPACE_OR_ENVIRONMENT = "workspace_or_environment"
+    ENVIRONMENT = "environment"
 
 
 @dataclass(frozen=True)
@@ -50,6 +70,7 @@ class SettingDefinition:
     description: str
     constraints: dict[str, Any] = field(default_factory=dict)
     feature_flag: bool = False
+    scope: SettingScope = SettingScope.WORKSPACE
 
     def coerce(self, value: Any) -> Any:
         """Validate and normalise a candidate value, or raise `SETTING_INVALID`."""
@@ -206,6 +227,18 @@ REGISTRY: dict[str, SettingDefinition] = _define(
         "100 % floor) — `app.platform.traces.decide_sampling` applies that floor before "
         "this fraction is even consulted.",
         constraints={"min": 0.0, "max": 1.0},
+        scope=SettingScope.WORKSPACE_OR_ENVIRONMENT,
+    ),
+    SettingDefinition(
+        key="scoring.default_client_rate_limit_rps",
+        type=SettingType.INT,
+        default=None,
+        description="`07` FR-452's default rate limit for `POST /api/v1/score`, in requests "
+        "per second per (Environment, Principal), for a caller whose Service Account sets no "
+        "`rate_limit_rps` of its own. Unset by default: with no limit the request is "
+        "admitted without a counter call (`RL-1347` rule 2).",
+        constraints={"min": 1},
+        scope=SettingScope.WORKSPACE_OR_ENVIRONMENT,
     ),
     SettingDefinition(
         key="governance.approval_policy_ref",
@@ -289,15 +322,67 @@ def _unknown(key: str) -> PlatformError:
     )
 
 
+def validate_setting_overrides(settings: Settings) -> None:
+    """Refuse to start on a `GIP_SETTING_*` variable the registry cannot honour (FR-447).
+
+    Run from the lifespan, so a bad override stops the process with the variable named
+    rather than failing at first use. Three refusals: an unknown key, a value that does not
+    parse or violates its constraints, and a key declared Environment-only (`RL-1311`
+    item 3a), which a process variable never supplies.
+    """
+    by_variable = {_env_name(k): d for k, d in REGISTRY.items()}
+    problems: list[str] = []
+    for variable, raw in sorted(settings.setting_overrides.items()):
+        definition = by_variable.get(variable)
+        if definition is None:
+            problems.append(f"  {variable}: not a declared setting")
+        elif definition.scope is SettingScope.ENVIRONMENT:
+            problems.append(
+                f"  {variable}: {definition.key} is an Environment-only setting and a "
+                "process variable never supplies one"
+            )
+        else:
+            try:
+                definition.coerce(_parse_env(definition, raw))
+            except PlatformError as exc:
+                problems.append(f"  {variable}: {exc.detail}")
+    if problems:
+        raise ConfigInvalidError(
+            "setting overrides are invalid, refusing to start:\n" + "\n".join(problems)
+        )
+
+
+async def _environment_value(
+    session: AsyncSession, environment: str | None, key: str
+) -> Any:
+    if environment is None:
+        return None
+    return (
+        await session.execute(
+            select(EnvironmentSettingRow.value)
+            .join(EnvironmentRow, EnvironmentRow.id == EnvironmentSettingRow.environment_id)
+            .where(EnvironmentRow.slug == environment, EnvironmentSettingRow.key == key)
+        )
+    ).scalar_one_or_none()
+
+
 async def resolve(
-    session: AsyncSession, settings: Settings, workspace_id: UUID, key: str
+    session: AsyncSession,
+    settings: Settings,
+    workspace_id: UUID,
+    key: str,
+    environment: str | None = None,
 ) -> SettingResolution:
-    """Resolve one setting through the three layers (FR-446)."""
+    """Resolve one setting through the four layers (FR-446).
+
+    With no `environment` the Environment layer is skipped and not reported.
+    """
     definition = REGISTRY.get(key)
     if definition is None:
         raise _unknown(key)
 
     env_value = _env_candidate(settings, definition)
+    environment_value = await _environment_value(session, environment, key)
     workspace_value = (
         await session.execute(
             select(WorkspaceSettingRow.value).where(
@@ -307,13 +392,16 @@ async def resolve(
         )
     ).scalar_one_or_none()
 
-    return _resolution(definition, env_value, workspace_value)
+    return _resolution(definition, env_value, workspace_value, environment, environment_value)
 
 
 async def resolve_all(
-    session: AsyncSession, settings: Settings, workspace_id: UUID
+    session: AsyncSession,
+    settings: Settings,
+    workspace_id: UUID,
+    environment: str | None = None,
 ) -> list[SettingResolution]:
-    """Resolve every declared setting. One query, not one per key."""
+    """Resolve every declared setting. One query per layer, not one per key."""
     rows = (
         await session.execute(
             select(WorkspaceSettingRow.key, WorkspaceSettingRow.value).where(
@@ -322,8 +410,29 @@ async def resolve_all(
         )
     ).all()
     overrides: dict[str, Any] = {row[0]: row[1] for row in rows}
+    environment_overrides: dict[str, Any] = {}
+    if environment is not None:
+        environment_overrides = {
+            row[0]: row[1]
+            for row in (
+                await session.execute(
+                    select(EnvironmentSettingRow.key, EnvironmentSettingRow.value)
+                    .join(
+                        EnvironmentRow,
+                        EnvironmentRow.id == EnvironmentSettingRow.environment_id,
+                    )
+                    .where(EnvironmentRow.slug == environment)
+                )
+            ).all()
+        }
     return [
-        _resolution(d, _env_candidate(settings, d), overrides.get(key))
+        _resolution(
+            d,
+            _env_candidate(settings, d),
+            overrides.get(key),
+            environment,
+            environment_overrides.get(key),
+        )
         for key, d in sorted(REGISTRY.items())
     ]
 
@@ -331,6 +440,14 @@ async def resolve_all(
 def _env_candidate(settings: Settings, definition: SettingDefinition) -> Any:
     raw = settings.setting_overrides.get(_env_name(definition.key))
     if raw is None:
+        return None
+    if definition.scope is SettingScope.ENVIRONMENT:
+        # RL-1311 item 3a: startup refuses this, so seeing it here means the variable
+        # appeared after startup. Skipped, and the variable named; its value is not logged.
+        _log.warning(
+            "ignoring %s: %s is an Environment-only setting", _env_name(definition.key),
+            definition.key,
+        )
         return None
     return definition.coerce(_parse_env(definition, raw))
 
@@ -352,32 +469,45 @@ def _parse_env(definition: SettingDefinition, raw: str) -> Any:
             "SETTING_INVALID",
             "Environment override cannot be parsed",
             422,
-            f"{_env_name(definition.key)}={raw!r}: {exc}",
+            f"{_env_name(definition.key)} cannot be parsed as {definition.type.value}",
         ) from exc
 
 
 def _resolution(
-    definition: SettingDefinition, env_value: Any, workspace_value: Any
+    definition: SettingDefinition,
+    env_value: Any,
+    workspace_value: Any,
+    environment: str | None = None,
+    environment_value: Any = None,
 ) -> SettingResolution:
     if workspace_value is not None:
         workspace_value = definition.coerce(workspace_value)
+    if environment_value is not None:
+        environment_value = definition.coerce(environment_value)
 
     if env_value is not None:
         effective, source = env_value, SettingSource.ENV
+    elif environment_value is not None:
+        effective, source = environment_value, SettingSource.ENVIRONMENT_SETTING
     elif workspace_value is not None:
         effective, source = workspace_value, SettingSource.WORKSPACE
     else:
         effective, source = definition.default, SettingSource.DEFAULT
 
+    candidates = [SettingCandidate(source=SettingSource.ENV, value=env_value)]
+    if environment is not None:
+        candidates.append(
+            SettingCandidate(source=SettingSource.ENVIRONMENT_SETTING, value=environment_value)
+        )
+    candidates += [
+        SettingCandidate(source=SettingSource.WORKSPACE, value=workspace_value),
+        SettingCandidate(source=SettingSource.DEFAULT, value=definition.default),
+    ]
     return SettingResolution(
         key=definition.key,
         effective_value=effective,
         resolved_from=source,
-        candidates=(
-            SettingCandidate(source=SettingSource.ENV, value=env_value),
-            SettingCandidate(source=SettingSource.WORKSPACE, value=workspace_value),
-            SettingCandidate(source=SettingSource.DEFAULT, value=definition.default),
-        ),
+        candidates=tuple(candidates),
         type=definition.type,
         constraints=definition.constraints,
         feature_flag=definition.feature_flag,
@@ -397,6 +527,13 @@ async def set_workspace_setting(
     definition = REGISTRY.get(key)
     if definition is None:
         raise _unknown(key)
+    if definition.scope is SettingScope.ENVIRONMENT:
+        raise PlatformError(
+            "SETTING_INVALID",
+            "Setting cannot be set at workspace level",
+            422,
+            f"{key}: declared Environment-only (FR-446), so it takes a value per Environment.",
+        )
 
     coerced = definition.coerce(value)
     row = (
@@ -414,3 +551,63 @@ async def set_workspace_setting(
         row.value = coerced
     await session.flush()
     return definition
+
+
+async def require_environment(session: AsyncSession, slug: str) -> UUID:
+    """The id of the Environment with this slug, retired ones included, or a 404."""
+    environment_id = (
+        await session.execute(select(EnvironmentRow.id).where(EnvironmentRow.slug == slug))
+    ).scalar_one_or_none()
+    if environment_id is None:
+        raise PlatformError(
+            "NOT_FOUND", "Environment not found", 404, f"No environment with slug {slug!r}."
+        )
+    return environment_id
+
+
+async def set_environment_setting(
+    session: AsyncSession,
+    environment: str,
+    key: str,
+    value: Any,
+    updated_by: UUID | None,
+) -> tuple[SettingDefinition, Any]:
+    """Write an Environment setting, validating it first (FR-431, FR-446, FR-447).
+
+    Returns the definition and the value the Environment held before (`None` when unset), for
+    the caller's audit event: as with `set_workspace_setting`, the caller audits.
+    """
+    definition = REGISTRY.get(key)
+    if definition is None:
+        raise _unknown(key)
+    if definition.scope is SettingScope.WORKSPACE:
+        raise PlatformError(
+            "SETTING_INVALID",
+            "Setting cannot be set at Environment level",
+            422,
+            f"{key}: declared workspace-only (FR-446), so it takes no Environment value.",
+        )
+    coerced = definition.coerce(value)
+
+    environment_id = await require_environment(session, environment)
+    row = (
+        await session.execute(
+            select(EnvironmentSettingRow).where(
+                EnvironmentSettingRow.environment_id == environment_id,
+                EnvironmentSettingRow.key == key,
+            )
+        )
+    ).scalar_one_or_none()
+    before = None if row is None else row.value
+    if row is None:
+        session.add(
+            EnvironmentSettingRow(
+                environment_id=environment_id, key=key, value=coerced, updated_by=updated_by
+            )
+        )
+    else:
+        row.value = coerced
+        row.updated_by = updated_by
+        row.updated_at = func.now()
+    await session.flush()
+    return definition, before

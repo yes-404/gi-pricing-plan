@@ -1,9 +1,9 @@
 ---
-id: LG-9966
+id: LG-1641
 family: ledger
 title: WK-1178 slice SL-1526 — exit demo (a): the real freMTPL2 rating algorithm in the seed and the 20,000-policy portfolio sample (PL-1525 + PL-1577 slice ledger)
-status: active
-created: 2026-10-10
+status: closed
+created: 2026-10-11            # original date 2026-10-10, set at the draft; minted 2026-10-11
 owner: executor
 tree: 31b88780aa52894624a5e08454ce2d5925d04b37
 phase: P2
@@ -14,9 +14,9 @@ corrected_by: []
 relates: [PL-1525, PL-1577, FD-1209, FD-1573, FD-1576]
 ---
 
-# LG-9966 — WK-1178 slice SL-1526: exit demo (a)
+# LG-1641 — WK-1178 slice SL-1526: exit demo (a)
 
-*(LG-9966 is a working id reserved by the lead; the lead mints it at the merge turn.)* Executed by
+*(Minted 2026-10-11 as LG-1641 from working id 9966, reserved by the lead.)* Executed by
 `executor-sl1526` from PL-1525 and its delta PL-1577, base `origin/main`
 `31b88780aa52894624a5e08454ce2d5925d04b37`. Times are BST (`TZ=Europe/London date`) unless marked.
 

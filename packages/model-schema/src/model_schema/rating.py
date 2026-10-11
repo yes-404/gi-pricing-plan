@@ -22,12 +22,14 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    RootModel,
     TypeAdapter,
     field_validator,
     model_validator,
 )
 
 from model_schema.graph_errors import GraphCycleError, GraphUnresolvedRefError
+from model_schema.input_free import InputFreeError
 from model_schema.money import DecimalStr
 from model_schema.refs import ArtifactRef, BlobRef, Slug
 from model_schema.regression import GoldenQuoteEvidence
@@ -227,7 +229,9 @@ class RatingVersionCreate(BaseModel):
     @classmethod
     def _an_algorithm(cls, ref: ArtifactRef | None) -> ArtifactRef | None:
         if ref is not None and ref.type != "rating_algorithm":
-            raise ValueError(f"{ref} is not a rating_algorithm reference")
+            raise InputFreeError(
+                "a rating version's algorithm must be a rating_algorithm reference"
+            )
         return ref
 
     @field_validator("pins")
@@ -236,9 +240,9 @@ class RatingVersionCreate(BaseModel):
         for name, admitted in _PIN_TYPES.items():
             for ref in getattr(pins, name, ()):
                 if ref.type not in admitted:
-                    raise ValueError(
-                        f"pins.{name} holds {ref}, which is not a "
-                        f"{' or '.join(sorted(admitted))} reference"
+                    raise InputFreeError(
+                        "a rating version's pin list holds a reference of an artifact type that "
+                        "list does not admit"
                     )
         return pins
 
@@ -305,9 +309,9 @@ def _reject_float_type(value: str) -> str:
     `float` is refused in every declared result type, not just the monetary ones.
     """
     if "float" in value:
-        raise ValueError(
-            "a rating result type is never float (FR-227); a monetary result is "
-            f"decimal or money_minor (got {value!r})"
+        raise InputFreeError(
+            "a rating result type is never float (FR-227); a monetary result is decimal or "
+            "money_minor"
         )
     return value
 
@@ -395,15 +399,13 @@ class RatingModelCallStep(RatingStepBase):
     @classmethod
     def _decimal_or_money_minor(cls, value: str | None) -> str | None:
         if value is not None and value not in ("decimal", "money_minor"):
-            raise ValueError(
-                f"a model_call's result_type is decimal or money_minor, not {value!r} (FR-227)"
-            )
+            raise InputFreeError("a model_call's result_type is decimal or money_minor (FR-227)")
         return value
 
     @model_validator(mode="after")
     def _exactly_one_ref(self) -> RatingModelCallStep:
         if (self.model_ref is None) == (self.peril_structure_ref is None):
-            raise ValueError(
+            raise InputFreeError(
                 "a model_call step declares exactly one of model_ref or "
                 "peril_structure_ref (FR-222)"
             )
@@ -462,7 +464,7 @@ class SubGraphRef(BaseModel):
     @classmethod
     def _no_namespace_separator(cls, value: str) -> str:
         if "__" in value:
-            raise ValueError("mount_point must not contain the namespace separator '__'")
+            raise InputFreeError("mount_point must not contain the namespace separator '__'")
         return value
 
 
@@ -1064,9 +1066,9 @@ class RateTableKey(BaseModel):
     def _one_binding(self) -> RateTableKey:
         """`RL-1361` Ruled item 9: `factor_ref` is of type `factor`, and never with a Banding."""
         if self.factor_ref is not None and self.factor_ref.type != "factor":
-            raise ValueError("factor_ref must reference a factor artifact")
+            raise InputFreeError("factor_ref must reference a factor artifact")
         if self.factor_ref is not None and self.banding_ref is not None:
-            raise ValueError(
+            raise InputFreeError(
                 "a key carries at most one of factor_ref and banding_ref (FR-228)"
             )
         return self
@@ -1082,6 +1084,12 @@ class RateTableValue(BaseModel):
     unit: str
     min: Decimal | int | None = None
     max: Decimal | int | None = None
+
+
+class RateTableCell(RootModel[dict[str, str]]):
+    """One rate table row in §4.2's form: key columns and the value column, every value a
+    string (a key level or a decimal string). RL-1475 item 2; FR-228's columns are data,
+    so the keys are open and the value type is closed."""
 
 
 class RateTable(BaseModel):
@@ -1100,7 +1108,7 @@ class RateTable(BaseModel):
     storage: RateTableStorageMode
     keys: list[RateTableKey]
     value: RateTableValue
-    default_row: dict[str, Any] | None = None
+    default_row: RateTableCell | None = None
 
 
 class SeededFrom(BaseModel):
@@ -1282,6 +1290,43 @@ class ImportPreview(BaseModel):
     created_by_import: ImportVerdict
 
 
+class ManualEdit(BaseModel):
+    """The provenance of a version created by the manual-edit route (03 §4.2, RL-1555 item 2).
+
+    `applied_to` names the base version edited, in `ImportVerdict.applied_to`'s form;
+    `edited_cells` is the number of edits applied. It is what tells a hand-edited version
+    from a re-seed.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    applied_to: ArtifactRef
+    edited_cells: int = Field(ge=1)
+
+
+class RateTableManualEdit(BaseModel):
+    """`POST /api/v1/rate-tables/{slug}/versions` body (FR-229, `03` §5.1, RL-1555 item 1).
+
+    `edits` are full rows of keys that `base_version` has, a key at most once (checked
+    against the base, which the route holds). `confirm: false` previews; `true` creates.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    base_version: int = Field(ge=1)
+    edits: list[RateTableCell] = Field(min_length=1)
+    change_note: str
+    confirm: bool = False
+
+    @field_validator("change_note")
+    @classmethod
+    def _change_note_is_required(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise InputFreeError("change_note is required and must be non-empty (FR-229)")
+        return stripped
+
+
 class SeedFromModelRequest(BaseModel):
     """`POST /api/v1/rate-tables/{slug}/seed-from-model` body (FR-230, `03` §5.1).
 
@@ -1300,7 +1345,7 @@ class SeedFromModelRequest(BaseModel):
     @classmethod
     def _model_ref_is_a_model(cls, value: ArtifactRef) -> ArtifactRef:
         if value.type != "model":
-            raise ValueError("model_ref must reference a model artifact")
+            raise InputFreeError("model_ref must reference a model artifact")
         return value
 
     @field_validator("change_note")
@@ -1308,7 +1353,7 @@ class SeedFromModelRequest(BaseModel):
     def _change_note_is_required(cls, value: str) -> str:
         stripped = value.strip()
         if not stripped:
-            raise ValueError("change_note is required and must be non-empty (FR-229)")
+            raise InputFreeError("change_note is required and must be non-empty (FR-229)")
         return stripped
 
 
@@ -1331,24 +1376,25 @@ class RateTableVersion(BaseModel):
     storage: RateTableStorageMode
     keys: list[RateTableKey]
     value: RateTableValue
-    default_row: dict[str, Any] | None = None
-    rows: list[dict[str, str | int]] | None = None
+    default_row: RateTableCell | None = None
+    rows: list[RateTableCell] | None = None
     cells: BlobRef | None = None
     change_note: str
     seeded_from: SeededFrom | None = None
     created_by_operation: BulkOperation | None = None
     created_by_import: ImportVerdict | None = None
+    created_by_edit: ManualEdit | None = None
 
     @model_validator(mode="after")
     def _cells_match_storage_mode(self) -> RateTableVersion:
         """Cells are inline rows under the threshold, a parquet BlobRef above it."""
         if self.storage == RateTableStorageMode.ROWS:
             if self.rows is None or self.cells is not None:
-                raise ValueError(
+                raise InputFreeError(
                     "a rows-stored version carries inline rows and no blob (FR-232)"
                 )
         elif self.rows is not None or self.cells is None:
-            raise ValueError(
+            raise InputFreeError(
                 "a parquet version addresses its cells by a BlobRef, never inline "
                 "rows (FR-232)"
             )
@@ -1356,9 +1402,10 @@ class RateTableVersion(BaseModel):
 
     @model_validator(mode="after")
     def _one_creation_path(self) -> RateTableVersion:
-        if self.created_by_operation is not None and self.created_by_import is not None:
-            raise ValueError(
-                "a version is created by an operation or by an import, never both "
-                "(03 §4.2)"
+        paths = (self.created_by_operation, self.created_by_import, self.created_by_edit)
+        if sum(path is not None for path in paths) > 1:
+            raise InputFreeError(
+                "a version is created by an operation, an import or a manual edit, "
+                "never more than one (03 §4.2)"
             )
         return self
