@@ -2205,6 +2205,24 @@ relates: [RL-920, RL-1263, RL-1445]
 
 (Closed 2026-10-10 as a Slice, closing acts in the slice PR's last commit, on the lead's merge; ledger LG-1604, plan PL-1602.)
 
+#### SL 9937 — WK-1178 fix slice — a default-live POST /score passes the resolved Rating Version to score_one
+
+```yaml
+id: SL-9937
+family: slice
+title: WK-1178 fix slice — a default-live POST /score passes the resolved Rating Version to score_one
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-11
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: d699a561d6a93f33b74beb9c07023f8e655bb8c7
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-9908, PL-1544, PL-1454]
+```
+
+The fix slice of to-lead "2026-10-11 11:25:16 BST — DEFAULT-LIVE /score: CONFIRMED by reading (no wait for a run); FD + fix slice NOW; SL-1526's demo script checked before its window", item 3. `score()` resolves the live ref (`backend/src/app/api/score.py:369`) and then passes `ctx` unchanged to `score_one` (`:375`), which refuses a missing ref (`packages/pricing-core/src/pricing_core/rating/score.py:945-952`). Every default-live `/score` is refused on main. The fix passes an immutable copy of `ctx` carrying the resolved ref to `score_one` and to `_maybe_sample_trace`. The sampled-trace re-score (`backend/src/app/worker/trace_handlers.py:79`, `:98`) is the second instance and is in scope (to-lead "2026-10-11 11:29:37 BST — DISPATCH GO: SL 9937 …", item 1). An explicit ref is never overridden, and no bundle or price changes. The acceptance is that GO's (a)–(e), each red on base in the slot, added to `backend/tests/test_score.py`. **On the G2 path:** `PL-1544:377` step S1 (from-lead "2026-10-11 11:26:33 BST"). Leaf plan `PL 9908`; ledger `LG 9909`. **Depends on:** nothing open. **Lane:** at GO.
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
