@@ -3,7 +3,7 @@ id: PL-1540
 family: plan
 kind: leaf
 title: WK-1178 — compile refuses a model_call whose feature_map misses the pinned model's required inputs, per component for a Peril Structure (FR-240): leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
 owner: planner
 tree: ecbd1954d90b1faf0bd197174d720d90ad8f6c6d

@@ -199,7 +199,14 @@ async def test_a_model_call_over_a_gbm_fitted_on_a_control_factor_is_refused() -
 @pytest.mark.req("FR-88")
 @pytest.mark.req("FR-240")
 async def test_a_model_call_over_risk_factors_compiles() -> None:
-    await compile_bundle(_version(), _model_fitted_on(FactorIntent.RISK))
+    res = _model_fitted_on(FactorIntent.RISK)
+    # FR-240's completeness clause (SL-1541): the map supplies every feature the model was
+    # fitted on, `year_of_account` through the step's second graph name.
+    step = next(
+        s for s in res._payloads["rating_algorithm:motor-gb@14"]["steps"] if s["step_id"] == "s_rp"
+    )
+    step["feature_map"] = {"driver_age": "driver_age", "rating_area": "year_of_account"}
+    await compile_bundle(_version(), res)
 
 
 # -- G1's objective clause through a pinned sub-graph (WK-1250 Slice 2, RL-1309 G1) ----------
