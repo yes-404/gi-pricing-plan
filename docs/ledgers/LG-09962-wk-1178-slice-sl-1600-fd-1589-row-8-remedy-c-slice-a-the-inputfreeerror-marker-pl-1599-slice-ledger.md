@@ -42,7 +42,21 @@ The slice's row is `#### SL-1600 — WK-1178 fix slice — FD-1589 row 8, remedy
 
 ### Gate
 
-Recorded after the gate (Task 7).
+**Gate 2 (HEAD `8f674476`, tree `76fd5860aacf8aac0d5d8dba2f9eb870088934d9`, gate-1 01:31:47–02:18:32 BST 2026-10-11).** Log `~/gi-pricing-plan.local/handover/salvage-2026-10-11/tmp/sl1600_gate.out`; per-stage logs `…/tmp/sl1600_gatelogs/`.
+
+| stage | rc | reading |
+|---|---|---|
+| red_sinks (main's `errors.py`, restored, tree clean) | 1 | expected red-first: `test_a_request_validation_422_carries_no_submitted_value` and `test_a_coded_validator_message_gets_the_fixed_text` FAILED |
+| green_sinks (slice's handler) | 0 | |
+| ruff / mypy / import-linter / req-coverage / contracts `--check` | 0 | |
+| audit_docs | 1 | `FAILED (1)`: check 31 "gap in the full allocation between 1607 and 9962" — LG 9962 unminted; the mint clears it (as at Gate 1). The check-36 lines are non-failing output. |
+| pytest | 1 | 13 failed, 5468 passed, 4 skipped (44:31). All 13 are top-level `tests/` audit-on-tree modules (listed below); none in `backend/`, `packages/`. |
+| fe_install / generate:api / lint / type-check / build | 0 | |
+| fe_test | 1 | 664 passed, 1 failed: `DagDesigner.test.ts` "emits an edited draft and leaves the other steps as they were" (F39 un-stubbed `/rating-algorithms/validate`; WK-675's, not this slice's) |
+
+The 13 pytest failures (all in `tests/`, each a reading of the unminted tree, check 31 / id-allocation / INDEX): `test_audit_docs_finding_citations::test_a_finding_resolved_only_by_a_closure_record_is_not_flagged`; `test_audit_docs_ids::test_the_real_tree_passes_all_ten_checks`; `test_audit_docs_ids::test_doc_id_check_exits_0_on_the_real_tree`; `test_audit_docs_process_core_digest::test_an_unrelated_file_edit_is_the_negative_control_and_stays_green`; `…::test_the_committed_digest_currently_matches_the_committed_spec`; `test_audit_docs_w37_11_ceiling::test_audit_docs_end_to_end_exit_0_then_1_then_0_on_an_injected_residue`; `test_doc_index::test_an_index_skipping_a_reserved_block_breaks_contiguity`; `test_register_lint::test_check_29_is_wired_into_the_docs_gate`; `…::test_check_29_note_carries_the_residue_line`; `…::test_phase1b_residue_count_matches_check_29s_own_count`; `test_register_owed::test_check_29_wiring_is_undisturbed`; `test_repository_invariants::test_money_discipline_is_enforced_by_the_docs_audit`; `…::test_journey_citations_are_audited_in_ci`. (Listed from `pytest.log`'s `FAILED` lines, count 13.) The 4 pricing-core and 2 backend FR-223 failures of Gate 1 are gone. Classification of the 13 as mint artefacts rests on their being the same audit-on-tree family that clears with check 31; the minted-head CI run confirms it.
+
+**DagDesigner.test.ts alone (rule 6), on `8f674476`, 2026-10-11 09:39 BST, load1 3.0, small-test flock, ×1:** 1 file passed, 4 of 4 tests passed. So the gate's red was load/ordering-dependent, not this slice's; not mine to fix (WK-675's).
 
 ### Audit
 
