@@ -10,7 +10,7 @@ export type RateTableVersion = components["schemas"]["RateTableVersion"];
 /** The edit body without `confirm`: preview and confirm set it, so a caller cannot send both. */
 export type RateTableEdit = Omit<requestComponents["schemas"]["RateTableManualEdit"], "confirm">;
 
-/** A version's definition, without its cells (FR 9940). `ref` is `slug@version`. */
+/** A version's definition, without its cells (FR-1636). `ref` is `slug@version`. */
 export function getRateTable(ref: string): Promise<RateTable> {
   return request<RateTable>(`/rate-tables/${ref}`);
 }

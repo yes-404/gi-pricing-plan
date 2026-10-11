@@ -30521,7 +30521,7 @@
     },
     "/api/v1/rate-tables/{slug}@{version}": {
       "get": {
-        "description": "FR 9940: the version's keys, value, storage, flag and default row; never its cells.",
+        "description": "FR-1636: the version's keys, value, storage, flag and default row; never its cells.",
         "operationId": "read_rate_table_api_v1_rate_tables__slug___version__get",
         "parameters": [
           {
@@ -30775,7 +30775,7 @@
     },
     "/api/v1/rate-tables/{slug}@{version}/cells": {
       "get": {
-        "description": "FR 9940, FR-232: one cursor page of `RateTableCell` rows in key order, for `rows` and\n`parquet` storage alike, answered **200** and never as a Job. A cursor this API did not\nissue is a **400**, a `limit` out of range a **422**.",
+        "description": "FR-1636, FR-232: one cursor page of `RateTableCell` rows in key order, for `rows` and\n`parquet` storage alike, answered **200** and never as a Job. A cursor this API did not\nissue is a **400**, a `limit` out of range a **422**.",
         "operationId": "read_rate_table_cells_api_v1_rate_tables__slug___version__cells_get",
         "parameters": [
           {

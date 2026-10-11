@@ -1216,7 +1216,7 @@ async def _load_cells_of(
 async def read_definition(
     database: Database, workspace_id: UUID, slug: str, version: int
 ) -> RateTable:
-    """FR 9940: one version's definition — keys, value, storage, flag, default row — never
+    """FR-1636: one version's definition — keys, value, storage, flag, default row — never
     its cells. The stored `definition` is exactly a `RateTable`."""
     async with database.session() as session:
         table_row = await _load_table(session, workspace_id, slug)
@@ -1243,7 +1243,7 @@ async def cells_page(
     cursor: str | None,
     limit: int,
 ) -> Page[RateTableCell]:
-    """FR 9940: one page of an immutable version's cells, never a Job (FR-232).
+    """FR-1636: one page of an immutable version's cells, never a Job (FR-232).
 
     The cells of the version are loaded per page, then sorted and sliced. For a rows-stored
     version that is at most the version's cell count, which is at most the workspace

@@ -1575,7 +1575,7 @@ def test_against_seed_resolves_to_the_versions_own_seed_origin(
 _READ_MISS_CODE = "NOT_FOUND"
 _EDIT_MISS_CODE = "NOT_FOUND"
 
-# -- the definition and cell-page reads (FR 9940, FR-232; RL-1475 items 2 and 3) -------------
+# -- the definition and cell-page reads (FR-1636, FR-232; RL-1475 items 2 and 3) -------------
 
 _MIXED_LEVELS: dict[str, list[tuple[str, float]]] = {
     "driver_age_band": [("B", 1.0), ("a", 1.1), ("10", 1.2), ("9", 1.3)]
@@ -1630,7 +1630,7 @@ def _job_count() -> int:
     return counted[0]
 
 
-@pytest.mark.req("FR-9940")
+@pytest.mark.req("FR-1636")
 def test_definition_read_carries_no_cells(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -1689,7 +1689,7 @@ def test_cell_paging_concatenates_and_refuses_a_bad_cursor_or_limit(
     assert too_many.status_code == 422, too_many.text
 
 
-@pytest.mark.req("FR-9940")
+@pytest.mark.req("FR-1636")
 def test_rate_table_isolation_another_workspace_answers_404(
     api_client: TestClient, workspace_id, actuary
 ) -> None:

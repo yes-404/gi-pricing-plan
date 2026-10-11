@@ -1,9 +1,9 @@
 ---
-id: LG-9459
+id: LG-1635
 family: ledger
 title: WK-675 slice SL-1559 — Editor I, the rate table grid and manual edit (PL-1558), task ledger
-status: active
-created: 2026-10-10
+status: closed
+created: 2026-10-11            # original date 2026-10-10, set at the draft; minted 2026-10-11
 owner: executor
 tree: 26f93be0727d7b028d9b73143d41b05b472e57b3
 phase: P2
@@ -14,9 +14,9 @@ corrected_by: []
 relates: [PL-1558, RL-1555, RL-1475, RL-1184, RL-1445, RL-1263, FD-1366, SL-1477, SL-1391, WK-675]
 ---
 
-# LG-9459 — WK-675 slice SL-1559: Editor I, the rate table grid and manual edit
+# LG-1635 — WK-675 slice SL-1559: Editor I, the rate table grid and manual edit
 
-*(LG-9459 is a working id reserved by the lead; the lead mints it. Authored ahead of the GO at the lead's order of 2026-10-10 (brief `brief-executor-wk675s4-authoring-2026-10-10.md`, local).)*
+*(Minted 2026-10-11 as LG-1635 from working id 9459, at the merge turn. Authored ahead of the GO at the lead's order of 2026-10-10 (brief `brief-executor-wk675s4-authoring-2026-10-10.md`, local).)*
 
 **GO:** not yet given. This slice is authored, not gated: no PR and no gate until the GO. Nothing merges without its GO, its full gate and the maintainer's MERGE-ACK.
 **MERGE-ACK:** not yet given.
@@ -139,7 +139,7 @@ arguments to `validate_rate_table`; `backend/src/app/platform/rate_tables.py` `_
 `test_rating_runtime.py`; `ruff check packages backend/src` clean; `mypy` over the three changed source files clean.
 
 **Spec:** RL-1475 T5 applied byte for byte before `### 4.3` with `<date>` = 2026-10-10, `RL-<this>` = `RL-1475` and
-`FR-<b>` = the working id `FR 9940` (the lead's ruling of this date). `scripts/generate-contracts.py` run: `generated.json`
+`FR-<b>` = the FR minted as FR-1636 (from working id 9940) (the lead's ruling of this date). `scripts/generate-contracts.py` run: `generated.json`
 and `rate-table-version.schema.json` changed. `RateTableManualEdit` reaches the contract only when Task 3's route uses it.
 
 **Observation, not acted on.** T5's list of what `RateTable` lacks does not name `created_by_edit`; the text is the
@@ -151,7 +151,7 @@ decision-maker's, byte for byte, and `created_by_edit` is RL-1555's addition. Re
 `cells_bound`; appended to `backend/tests/test_api_rate_tables.py`) need Postgres and the blob store, which the box lacks, so
 no red/green is possible here: **OWED at the gate**, red first by the plan's causes (the routes absent → 404/405; leave a
 path unsorted → the sequences differ). `cell_pages` writes the expected order out: `"10"`, `"9"`, `"B"`, `"a"`. They carry
-`@pytest.mark.req("FR-9940")` / `("FR-232")`.
+`@pytest.mark.req("FR-1636")` / `("FR-232")`.
 
 **Code.** `platform/rate_tables.py`: `read_definition`, `_cells_in_key_order` (the one sort, Python, both storages) and
 `cells_page` (a malformed cursor → 400 through `decode_int_cursor`; a cursor outside `0 < start < total` → the existing
@@ -160,7 +160,7 @@ path unsorted → the sequences differ). `cell_pages` writes the expected order 
 sketch decoded the cursor in the handler and took `limit: Limit = MAX_LIMIT`; I followed the diff-cells route (decode in the
 service, `Annotated[int, Query(ge=1, le=MAX_LIMIT)] = DEFAULT_LIMIT`) so the two cursor routes read alike.
 
-**Spec.** RL-1475 T3 (the FR row, id cell `FR-9940`, prose `FR 9940`) and T4 (two §5.1 rows, three-cell form, before the diff
+**Spec.** RL-1475 T3 (the FR row, id cell `FR-1636`, prose `FR-1636`) and T4 (two §5.1 rows, three-cell form, before the diff
 row) applied with `<date>` = 2026-10-10 and `RL-<this>` = `RL-1475`. **Contract** regenerated: the definition read's 200 is a
 `$ref` to `RateTable`, the cells read's to `Page_RateTableCell_`, and `RateTable.default_row` is `anyOf [RateTableCell, null]`.
 `ruff check backend packages` clean; `mypy` over the two route/service files clean.
@@ -264,10 +264,10 @@ use. `whole-tree vue-tsc`, `eslint` and the build wait for the gate.
 **Ruling (a): the two reads answer 404 `NOT_FOUND`**, like the manual-edit route (04:19:42). This corrects RL-1475 T3 and T4
 (`RATE_TABLE_MISS`) and PL-1558 Acceptance 4 and RL-1475 Acceptance 5; the plan body and the ruling are not edited. Done at the
 route layer: `spec_not_found()` now wraps `read_rate_table` and `read_rate_table_cells`; the loader is unchanged.
-**Spec:** in `03`, the FR 9940 row and the two §5.1 rows say `NOT_FOUND`, each with a dated line citing 04:19:42 and 04:23:36
-and the correcting ruling **`RL 9942`** (a working id reserved by the lead; a decision-maker drafts it; it corrects RL-1475
+**Spec:** in `03`, the FR-1636 row and the two §5.1 rows say `NOT_FOUND`, each with a dated line citing 04:19:42 and 04:23:36
+and the correcting ruling **`RL-1584`** (a working id reserved by the lead; a decision-maker drafts it; it corrects RL-1475
 T3 and T4).
-**Merge need: `RL 9942` minted on main before S4's ACK.** Until it is, the dated lines cite a working id.
+**Merge need: `RL-1584` minted on main before S4's ACK.** Until it is, the dated lines cite a working id.
 **Red by cause, then green** (DB-free, `test_rate_table_route_codes.py`): with the wrappers off, both parametrised cases fail
 `assert ('RATE_TABLE_MISS', 404) == ('NOT_FOUND', 404)`; with them on, `4 passed`. (A first red run failed for a wrong cause,
 a `None` caller, and was discarded.) The DB route tests read `_READ_MISS_CODE` and `_EDIT_MISS_CODE`, both `NOT_FOUND`: OWED
@@ -388,7 +388,7 @@ source, all RED (none NOT RED):** `3372f5ce` api rc 1; `20a220fd` api rc 1, rout
 route_codes rc 1; `55a460db` service rc 1; `e2f3a38d` service rc 1. ruff, mypy, lint-imports, req-coverage, contracts, fe install and
 generate: rc 0. **pytest 13 failed / 5551 passed** (the 13 audit-on-tree modules, working ids unminted). **audit-docs rc 1:** per-check
 counts 2:5, 5:5, 30:71, 32:244, 35:27, 36:497 equal the salvaged baseline `s1559-base-audit.log` exactly; the only addition is check 31
-(3 lines, working id 9459): mint artefact. **OWN reds, fixed:** fe_lint (`_dropped` unused, `RateTableEditorView.vue`), fe_typecheck and
+(3 lines, this ledger's then-unminted working id): mint artefact. **OWN reds, fixed:** fe_lint (`_dropped` unused, `RateTableEditorView.vue`), fe_typecheck and
 fe_build (`RateTableGrid.vue` `invalid` under exactOptionalPropertyTypes; `RateTableEditorView.test.ts` ProblemError missing `errors`),
 fe_test (the unhandled TypeCheckError from the same test; 689/689 tests passed). Fix check: lint and type-check clean, the 3 touched test
 files 18 passed.
@@ -397,6 +397,16 @@ files 18 passed.
 frontend workflow (lint, type-check, test, build) at the MINTED head is the evidence, as for SL-1529's ungated ruff fix. (2) Order: WK-674 S3
 merges first (standing M3 ruling); at the mint turn this slice re-chains `d4e81b7a2c95`'s `down_revision` and its "Revises:" docstring onto
 `c5a91e7d3b26`, and proves migrate up/down/up and one head in a short targeted gate slot the lead grants then.
+
+#### Mint turn, 2026-10-11 (merge of main fe80aec6, the re-chain, the migration slot)
+
+`origin/main` `fe80aec625b616adb467d4bca322674882e60f5c` (#1280, WK-674 S3) merged by content: the one conflict was `docs/INDEX.md`
+(generated; regenerated by `scripts/doc-index.py`). **Re-chain (M3):** `d4e81b7a2c95`'s `down_revision` and its "Revises:" docstring now
+read `c5a91e7d3b26`; the revision graph has one head (`d4e81b7a2c95`), and only it points at `c5a91e7d3b26`. **Migration slot** at
+`ad2f049e`, 18:51:32 to 18:51:48 BST (log `~/gi-pricing-plan.local/scratch/sl1559/migslot.out`, local): one head, `downgrade -1` rc 0
+(column `created_by_edit` 0), `upgrade head` rc 0 (column 1), one head after, stamped `d4e81b7a2c95`. Targeted tests on the merged
+head (`run-small.sh`): `test_rate_table_route_codes`, `test_api_rate_tables`, `test_rate_tables_service` 83 passed. The FE fix
+`58864465` is evidenced by CI's frontend workflow at the minted head (ruling 1 above). Closing acts: this ledger `closed`, `SL-1559` `closed`.
 
 ## PRs
 

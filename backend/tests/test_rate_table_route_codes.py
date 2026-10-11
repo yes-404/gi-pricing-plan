@@ -12,7 +12,7 @@ from app.api.rate_tables import spec_not_found
 from app.errors import PlatformError
 
 
-@pytest.mark.req("FR-9940")
+@pytest.mark.req("FR-1636")
 def test_a_rate_table_miss_is_a_404_not_found_at_the_route() -> None:
     with pytest.raises(PlatformError) as caught, spec_not_found():
         raise PlatformError("RATE_TABLE_MISS", "Rate table not found", 404, "area not found.")
@@ -20,14 +20,14 @@ def test_a_rate_table_miss_is_a_404_not_found_at_the_route() -> None:
     assert caught.value.detail == "area not found."
 
 
-@pytest.mark.req("FR-9940")
+@pytest.mark.req("FR-1636")
 def test_any_other_error_passes_through_unchanged() -> None:
     with pytest.raises(PlatformError) as caught, spec_not_found():
         raise PlatformError("VALIDATION_FAILED", "Malformed cursor", 400, "bad")
     assert caught.value.code == "VALIDATION_FAILED"
 
 
-@pytest.mark.req("FR-9940")
+@pytest.mark.req("FR-1636")
 @pytest.mark.parametrize("handler", ["read_rate_table", "read_rate_table_cells"])
 async def test_the_two_reads_answer_404_not_found_for_an_unknown_table(
     handler: str, monkeypatch: pytest.MonkeyPatch

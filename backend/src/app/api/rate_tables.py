@@ -439,7 +439,7 @@ async def rate_table_diff(
 async def read_rate_table(
     slug: str, version: int, caller: RatingReadDep, database: DatabaseDep
 ) -> RateTable:
-    """FR 9940: the version's keys, value, storage, flag and default row; never its cells."""
+    """FR-1636: the version's keys, value, storage, flag and default row; never its cells."""
     with spec_not_found():
         return await service.read_definition(database, caller.workspace_id, slug, version)
 
@@ -458,7 +458,7 @@ async def read_rate_table_cells(
     limit: Annotated[int, Query(ge=1, le=MAX_LIMIT)] = DEFAULT_LIMIT,
     cursor: str | None = None,
 ) -> Page[RateTableCell]:
-    """FR 9940, FR-232: one cursor page of `RateTableCell` rows in key order, for `rows` and
+    """FR-1636, FR-232: one cursor page of `RateTableCell` rows in key order, for `rows` and
     `parquet` storage alike, answered **200** and never as a Job. A cursor this API did not
     issue is a **400**, a `limit` out of range a **422**."""
     with spec_not_found():
