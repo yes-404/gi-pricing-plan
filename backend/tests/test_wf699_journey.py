@@ -304,7 +304,7 @@ async def _world(database: Any, blob_store: Any, workspace_id: Any) -> dict[str,
 @pytest.mark.req("FR-263")
 @pytest.mark.req("FR-355")
 @pytest.mark.req("FR-429")
-def test_wf699_journey_runs_end_to_end(client, database, blob_store, workspace_id) -> None:  # type: ignore[no-untyped-def]
+def test_wf699_journey_runs_end_to_end(api_client, database, blob_store, workspace_id) -> None:  # type: ignore[no-untyped-def]
     """PL-1544 Acceptance 2, 3 and 4 and the delta's Acceptance 2: every step of `WF-699` A to E
     and the deploy step over HTTP, each deliberate failure asserted by its code, the D4 property
     failing between two adjacent grid values and then passing, and the version deployed
@@ -322,13 +322,13 @@ def test_wf699_journey_runs_end_to_end(client, database, blob_store, workspace_i
     register_rating_handlers()
     register_dislocation_handlers()
     register_rate_table_handlers()
-    client.base_url = "http://testserver/api/v1"
+    api_client.base_url = "http://testserver/api/v1"
     lines: list[str] = []
 
     def run_job(job_id: str) -> None:
         loop.run_until_complete(execute_job(database, UUID(job_id), blob_store))
 
-    result = journey.run_wf699_journey(client, record, log=lines.append, run_job=run_job)
+    result = journey.run_wf699_journey(api_client, record, log=lines.append, run_job=run_job)
 
     status = result.step_status
     for step in (
