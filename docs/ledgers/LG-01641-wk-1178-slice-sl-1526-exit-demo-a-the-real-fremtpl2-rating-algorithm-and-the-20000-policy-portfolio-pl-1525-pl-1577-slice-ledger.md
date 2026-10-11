@@ -59,7 +59,7 @@ Written by the auditor (`auditor-sl1526`), 2026-10-11, over `origin/main...e24b5
 | 10 | Scope held | MET | `git diff --name-only origin/main...e24b52d0` is 13 files: all within the PL-1525 Write set, PL-1577 Tasks 1-2, the 21:55:37 ruling's WF-699 :30 amendment, the plan and roadmap activation lines, and `docs/INDEX.md`. No `backend/src`, `packages`, `frontend` or `scripts/demo.py`. |
 | 11 | The refit is visible | MET at `693c10d5` | (a) the three saved Bandings with ids, versions, boundaries and labels agree with `demo.log`:58-60; (b) the base-vs-slice table agrees with `wrapper.out` FITCOL lines (deviance 166257.17 / 165508.08, AIC 218476.999 / 217745.92, 7 factors each, same rows proven). Recorded in the Build log after the lead's fix-before-close verdict (20:14:10). The PR body half of 11 is not checked here. |
 
-**Closing acts.** LG-9966 is minted as LG-1641 (`status: closed`); `SL-1526` is `closed` in `docs/roadmap.md`; `PL-1525` and `PL-1577` stay `active` (their lifecycle has no `closed`). Both match the lead's instruction.
+**Closing acts.** working id 9966 is minted as LG-1641 (`status: closed`); `SL-1526` is `closed` in `docs/roadmap.md`; `PL-1525` and `PL-1577` stay `active` (their lifecycle has no `closed`). Both match the lead's instruction.
 
 **Observations, none a gap.**
 1. `veh_power` Banding labels `4-4` and `5-5` are cosmetic (the LG says so). Proposed verdict: delivered; no action.
