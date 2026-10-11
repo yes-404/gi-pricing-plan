@@ -2,7 +2,7 @@
 id: LG-9975
 family: ledger
 title: WK-1178 slice SL-1541 — compile refuses a model_call whose feature_map misses the pinned model's required inputs, per component for a Peril Structure (FR-240) (PL-1540 slice ledger)
-status: active
+status: closed
 created: 2026-10-10
 owner: executor
 tree: 14fa6fb3d5b7097a829343e38cb5f20afbd0d2e2
@@ -34,13 +34,24 @@ relates: [PL-1540, RL-1523, RL-1445, RL-1263, FD-1424, FR-240, FR-222, NFR-499, 
 - [x] Task 0 — preconditions (below).
 - [x] Task 1 — the reds (Acceptance 1–3, 6, 13 first test) and WS-1's census red; `041d46b5`.
 - [x] Task 2 — the check (Acceptance 1–6, 13); `54b79c67`.
-- [~] Task 3 — backend e2e test (Acceptance 7) and 13's second test authored `49d28282`, DB run owed to the gate slot; Acceptance 11 pricing-core modules run, see Build log; one red OPEN (below).
+- [x] Task 3 — backend e2e test (Acceptance 7) and 13's second test authored `49d28282`; the DB run was in the full gate (see Gate); Acceptance 11 pricing-core modules run, see Build log.
 - [x] Task 4 — the FR-240 text, `084fcba0`; phrase count 1.
-- [ ] Task 5 — Acceptance 9, 10, gate (Acceptance 12), closing acts.
+- [x] Task 5 — Acceptance 9, 10, gate (Acceptance 12), closing acts.
 
 ### Gate
 
-Not yet run. Owed: one full two-half gate in gate-1, on the lead's "gate slot granted" for the head.
+Full two-half gate at `d536053f` (after the inliner fix; accepted at `to-lead.md` 2026-10-11 10:35:30 item 3), ended 2026-10-11 01:31:47 BST, `GATE-RC=1`. Log `~/gi-pricing-plan.local/handover/salvage-2026-10-11/gate-sl1541.out`; per-stage logs `salvage-2026-10-11/tmp.TnRgec7xlH/`.
+
+| Stage | Result | Class |
+|---|---|---|
+| ruff | FAIL | OWN: E501 at `backend/tests/test_rating_algorithms.py:620:101`; fixed after the gate (docstring wrapped; `ruff check` on that file -> 0; the helper test `-k one_required_inputs_helper` 2 passed under the small-test slot, 2026-10-11 10:40 BST) |
+| mypy, import-linter, req-coverage, contracts | pass (0) | |
+| audit-docs | FAIL (check 31) | mint artefact (the working id LG-9975 is unminted) |
+| pytest | 13 failed, 5456 passed, 4 skipped | all 13 are `tests/test_audit_docs_*`, `test_doc_index`, `test_register_*`, `test_repository_invariants` modules that audit the tree; mint artefact |
+| frontend (install, generate:api, lint, type-check, test, build) | 0 failed (665/665 tests) | `DagDesigner.test.ts` did not fail here |
+
+The ruff fix is the only change after the gate besides this ledger's closing acts; no new gate run (the lead's rule: none unless told).
+
 
 ### Audit
 
@@ -82,6 +93,10 @@ Red at base (`bca00b9b` merge head, tests only, single files): `test_rating_inli
 Grep of the committed fixtures and `examples/` (`git grep -nE '"ref": *"?sub_graph:|mount_point' -- examples scripts backend packages`): the only stored-DB mount fixture is `backend/tests/test_rating_version_compile.py:1023`, whose fragment (`_ncd_sub_graph`, :989-) holds one `expression` step and no `model_call`, so no money expectation there moves. The other mounts are model-schema / inline / runtime tests with no model_call (before this slice).
 
 **Acceptance 9/10 (at `a243c068`):** `git diff origin/main...HEAD -- backend/src/app/errors.py | wc -l` -> 0; `git grep -c MODEL_CALL_FEATURE_MAP_INVALID -- packages/pricing-core/src/pricing_core/rating/compile.py` -> 1; `git diff --stat origin/main...HEAD` names the PL write set plus the additions above. `packages/model-schema/tests/test_rating_algorithm.py` 31 passed. `scripts/bench-rating.py --warmup 1 --iterations 2 --rows 500` (compile path only, rc 0, no timing read). **Deviation:** it ran under the small-test slot while gate-1 was held by another seat (1-min load 9.3 at the start); the run made no timing claim and no DB call, but it was a heavier run than the small-test rule permits beside a gate. Recorded, not repeated.
+
+#### D10 FD severity text (for the lead; 10:35:30 item 3)
+
+On main the inliner defect (`inline.py` renaming `feature_map` VALUES as graph names) surfaced as a compile refusal through FD-1374's reads guard wherever a mounted `model_call` key was left unread. A silent mispricing therefore needs a key that guard does not catch; the exposure query above found no stored algorithm mounting a fragment.
 
 ## PRs
 

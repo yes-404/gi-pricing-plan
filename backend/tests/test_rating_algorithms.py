@@ -617,7 +617,8 @@ def test_required_model_inputs_is_defined_once() -> None:
 @pytest.mark.req("FR-240")
 def test_both_feature_map_checks_use_the_one_required_inputs_helper() -> None:
     """SL-1541: the save check (membership) and the compile check (completeness) are two
-    callers of the one definition in `pricing_core.modelling.factors` (RL-1445's 19:03:24 ruling)."""
+    callers of the one definition in `pricing_core.modelling.factors`
+    (RL-1445's 19:03:24 ruling)."""
     from pricing_core.rating import compile as compile_module
 
     one = pricing_core_factors.required_model_inputs
