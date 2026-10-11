@@ -28,6 +28,7 @@ class SettingSource(enum.StrEnum):
     """Which layer supplied a value. Ordered by precedence, highest first."""
 
     ENV = "env"
+    ENVIRONMENT_SETTING = "environment_setting"
     WORKSPACE = "workspace"
     DEFAULT = "default"
 

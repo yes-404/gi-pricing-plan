@@ -2083,6 +2083,7 @@ class RateTableVersionRow(Base):
     cells: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     created_by_operation: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     created_by_import: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    created_by_edit: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -2438,6 +2439,33 @@ class EnvironmentRow(Base):
     __table_args__ = (
         UniqueConstraint("slug", name="uq_environments_slug"),
         CheckConstraint("promotion_order >= 1", name="promotion_order_positive"),
+    )
+
+
+class EnvironmentSettingRow(Base):
+    """An Environment-level value for one setting (`07` §4.4, FR-431, FR-446; WK-674 Slice 3).
+
+    The layer between the process variable and the workspace setting (`RL-1311`). Keyed by
+    the Environment's id, so a rename or retirement leaves the row where it is. Only values
+    that were set are stored: no row means the layer is silent and resolution falls through.
+    `updated_by` is the writing principal's id, `NULL` only for the platform itself.
+    """
+
+    __tablename__ = "environment_settings"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    environment_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("environments.id"), nullable=False
+    )
+    key: Mapped[str] = mapped_column(String(128), nullable=False)
+    value: Mapped[Any] = mapped_column(JSONB, nullable=False)
+    updated_by: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("environment_id", "key", name="uq_environment_settings_environment_key"),
     )
 
 

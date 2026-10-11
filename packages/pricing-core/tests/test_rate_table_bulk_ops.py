@@ -21,6 +21,7 @@ from openpyxl import load_workbook
 from model_schema.rating import (
     ImportPreview,
     ImportVerdict,
+    RateTableCell,
     RateTableKey,
     RateTableKeyType,
     RateTableStorageMode,
@@ -31,6 +32,7 @@ from model_schema.rating import (
 )
 from model_schema.refs import ArtifactRef
 from pricing_core.rate_tables.operations import (
+    apply_cell_edits,
     decide_storage_mode,
     export_to_csv,
     export_to_xlsx,
@@ -68,6 +70,12 @@ _DEFAULT_ROWS = [
     {"driver_age_band": "21-24", "relativity": "1.4100"},
     {"driver_age_band": "25-29", "relativity": "1.1200"},
 ]
+
+
+def _cells(version: RateTableVersion) -> list[dict[str, str]]:
+    """The version's rows as plain dicts (`rows` is typed `RateTableCell`, RL-1475)."""
+    assert version.rows is not None
+    return [row.root for row in version.rows]
 
 
 def _version(
@@ -131,7 +139,7 @@ class TestUpliftTable:
     @pytest.mark.req("FR-233")
     def test_uplifts_every_cell_by_the_percentage(self) -> None:
         result = uplift_table(_version(), percentage=Decimal("0.10"))
-        assert result.rows == [
+        assert _cells(result) == [
             {"driver_age_band": "17-20", "relativity": "2.024"},
             {"driver_age_band": "21-24", "relativity": "1.551"},
             {"driver_age_band": "25-29", "relativity": "1.232"},
@@ -147,7 +155,7 @@ class TestUpliftTable:
         assert result.rateable is True
         assert result.change_note == "uplift_table: percentage=0.10"
         assert baseline.version == 6
-        assert baseline.rows == _DEFAULT_ROWS
+        assert _cells(baseline) == _DEFAULT_ROWS
 
     @pytest.mark.req("FR-233")
     def test_records_the_operation_with_parameters_and_result(self) -> None:
@@ -164,7 +172,7 @@ class TestUpliftTable:
     @pytest.mark.req("FR-233")
     def test_zero_percentage_changes_nothing(self) -> None:
         result = uplift_table(_version(), percentage=Decimal("0"))
-        assert result.rows == _DEFAULT_ROWS
+        assert _cells(result) == _DEFAULT_ROWS
         assert result.created_by_operation is not None
         assert result.created_by_operation.result.changed_cells == 0
 
@@ -187,7 +195,7 @@ class TestUpliftByFilter:
             percentage=Decimal("0.10"),
             filter={"driver_age_band": ["17-20"]},
         )
-        assert result.rows == [
+        assert _cells(result) == [
             {"driver_age_band": "17-20", "relativity": "2.024"},
             {"driver_age_band": "21-24", "relativity": "1.4100"},
             {"driver_age_band": "25-29", "relativity": "1.1200"},
@@ -202,7 +210,7 @@ class TestUpliftByFilter:
             percentage=Decimal("0.10"),
             filter={"driver_age_band": ["60+"]},
         )
-        assert result.rows == _DEFAULT_ROWS
+        assert _cells(result) == _DEFAULT_ROWS
         assert result.created_by_operation is not None
         assert result.created_by_operation.result.changed_cells == 0
 
@@ -235,7 +243,7 @@ class TestFloorAndCap:
             floor=Decimal("0.5"),
             cap=Decimal("2.0"),
         )
-        assert result.rows == [
+        assert _cells(result) == [
             {"driver_age_band": "17-20", "relativity": "0.5"},
             {"driver_age_band": "21-24", "relativity": "2"},
             {"driver_age_band": "25-29", "relativity": "1.0000"},
@@ -248,7 +256,7 @@ class TestFloorAndCap:
         result = floor_and_cap(
             _version(), floor=Decimal("0.5"), cap=Decimal("2.0")
         )
-        assert result.rows == _DEFAULT_ROWS
+        assert _cells(result) == _DEFAULT_ROWS
         assert result.created_by_operation is not None
         assert result.created_by_operation.result.changed_cells == 0
 
@@ -271,7 +279,7 @@ class TestRebaseToLevel:
             _version(rows=self._ROWS, value=_value(min=None, max=None)),
             base_level={"driver_age_band": ["25-29"]},
         )
-        assert result.rows == [
+        assert _cells(result) == [
             {"driver_age_band": "17-20", "relativity": "2"},
             {"driver_age_band": "21-24", "relativity": "1.5"},
             {"driver_age_band": "25-29", "relativity": "1"},
@@ -496,3 +504,58 @@ class TestSeedLineage:
         )
         with pytest.raises(ValueError, match="INCOMPLETE_KEY_DOMAIN"):
             import_from_csv(version, content, filename="import.csv")
+
+
+@pytest.mark.req("FR-234")
+class TestApplyCellEdits:
+    """`apply_cell_edits` (FR-229, FR-234; RL-1555 item 3): every failure is located by the
+    index of the edit it concerns, so the route can answer one field error per failure."""
+
+    @staticmethod
+    def _edit(band: str, relativity: str) -> RateTableCell:
+        return RateTableCell({"driver_age_band": band, "relativity": relativity})
+
+    def test_an_edit_replaces_the_value_and_keeps_the_rest_in_order(self) -> None:
+        base = _version()
+        result = apply_cell_edits(base, [self._edit("21-24", "1.5000")])
+        assert result.issues == ()
+        assert list(result.cells) == [
+            {"driver_age_band": "17-20", "relativity": "1.8400"},
+            {"driver_age_band": "21-24", "relativity": "1.5000"},
+            {"driver_age_band": "25-29", "relativity": "1.1200"},
+        ]
+        assert _cells(base) == _DEFAULT_ROWS  # the base is immutable
+
+    def test_an_unknown_key_is_a_located_issue_not_a_raise(self) -> None:
+        result = apply_cell_edits(_version(), [self._edit("99-99", "1.0")])
+        assert [(i.index, i.code) for i in result.issues] == [(0, "UNKNOWN_KEY")]
+        assert result.cells == ()
+
+    def test_a_key_edited_twice_is_a_duplicate_at_its_second_index(self) -> None:
+        edit = self._edit("17-20", "1.5")
+        result = apply_cell_edits(_version(), [edit, edit])
+        assert [(i.index, i.code) for i in result.issues] == [(1, "DUPLICATE_KEY")]
+
+    def test_every_out_of_bounds_value_is_reported(self) -> None:
+        base = _version(value=_value(min=Decimal("0"), max=Decimal("3")))
+        result = apply_cell_edits(
+            base, [self._edit("17-20", "-1"), self._edit("21-24", "4"), self._edit("25-29", "2")]
+        )
+        assert [(i.index, i.code) for i in result.issues] == [
+            (0, "OUT_OF_BOUNDS"),
+            (1, "OUT_OF_BOUNDS"),
+        ]
+
+    def test_an_edit_that_is_not_exactly_the_declared_columns_is_refused(self) -> None:
+        result = apply_cell_edits(
+            _version(),
+            [RateTableCell({"driver_age_band": "17-20"}), RateTableCell({"relativity": "1.1"})],
+        )
+        assert [(i.index, i.code) for i in result.issues] == [
+            (0, "EDIT_COLUMNS"),
+            (1, "EDIT_COLUMNS"),
+        ]
+
+    def test_a_non_decimal_value_is_out_of_bounds_by_the_shared_check(self) -> None:
+        result = apply_cell_edits(_version(), [self._edit("17-20", "abc")])
+        assert [(i.index, i.code) for i in result.issues] == [(0, "OUT_OF_BOUNDS")]

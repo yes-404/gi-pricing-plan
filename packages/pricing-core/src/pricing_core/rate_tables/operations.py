@@ -38,6 +38,7 @@ from model_schema.rating import (
     ImportVerdict,
     KeyFilter,
     RateTable,
+    RateTableCell,
     RateTableDiff,
     RateTableDiffCell,
     RateTableKey,
@@ -77,6 +78,11 @@ REBASE_ZERO_REFERENCE = "REBASE_ZERO_REFERENCE"
 IMPORT_KEY_MISMATCH = "IMPORT_KEY_MISMATCH"
 IMPORT_TYPE_MISMATCH = "IMPORT_TYPE_MISMATCH"
 IMPORT_PARSE_ERROR = "IMPORT_PARSE_ERROR"
+
+#: The manual edit's edit-addressing codes (RL-1555 item 3). `DUPLICATE_KEY` is shared with
+#: FR-234; the route reports both under `VALIDATION_FAILED`, on the edit they concern.
+UNKNOWN_KEY = "UNKNOWN_KEY"
+EDIT_COLUMNS = "EDIT_COLUMNS"
 
 #: One cell row: the declared key columns plus the value column, all decimal strings.
 CellRow = dict[str, str]
@@ -532,7 +538,11 @@ def _rows_of(table: RateTableVersion) -> list[CellRow]:
             f"{PARQUET_CELLS_UNAVAILABLE}: rate_table:{table.slug}@{table.version} "
             "stores its cells as a blob; the pricing core works on inline rows"
         )
-    return [{key: str(value) for key, value in row.items()} for row in table.rows]
+    return [dict(row.root) for row in table.rows]
+
+
+def _default_row_of(table: RateTableVersion) -> CellRow | None:
+    return None if table.default_row is None else dict(table.default_row.root)
 
 
 def _key_domains_of_version(
@@ -548,10 +558,77 @@ def _validate_result(rows: Cells, table: RateTableVersion) -> None:
         table.keys,
         table.value,
         key_domains=_key_domains_of_version(table, rows),
-        default_row=table.default_row,
+        default_row=_default_row_of(table),
     )
     if issues:
         raise ValueError(f"{issues[0].code}: {issues[0].message}")
+
+
+@dataclass(frozen=True)
+class EditIssue:
+    """One failure of a manual edit, located by the index of the edit it concerns.
+
+    `message` for the structural failures names the constraint only; FR-234's value issues keep
+    the text of the shared check, which names the table key and the submitted value (pricing
+    configuration, not a quote input under NFR-499; the maintainer's 2026-10-10 22:16:18 BST
+    entry in `to-lead.md`).
+    """
+
+    index: int
+    code: str
+    message: str
+
+
+@dataclass(frozen=True)
+class EditResult:
+    """What applying edits yields: the new cells, or every issue and no cells."""
+
+    cells: tuple[CellRow, ...]
+    issues: tuple[EditIssue, ...]
+
+
+def apply_cell_edits(table: RateTableVersion, edits: Sequence[RateTableCell]) -> EditResult:
+    """FR-229, FR-234 (RL-1555 items 1 and 3): the base's cells with each edit's value.
+
+    An edit is the full row of a key the base has, once. Every failure is collected, none
+    raised, so the route answers one field error per failure: `EDIT_COLUMNS` (the row is not
+    exactly the declared key columns and the value column), `UNKNOWN_KEY` (no such key in the
+    base), `DUPLICATE_KEY` (a key edited twice, at its later index), and FR-234's `NULL_VALUE`
+    and `OUT_OF_BOUNDS` from the check every save runs (`_value_issue`). A key is never added
+    or removed here, so coverage cannot change; that is the import route's.
+    """
+    base = _rows_of(table)
+    key_names = [key.name for key in table.keys]
+    columns = {*key_names, table.value.name}
+    position = {tuple(row[name] for name in key_names): at for at, row in enumerate(base)}
+    replaced: dict[int, str] = {}
+    issues: list[EditIssue] = []
+    for index, edit in enumerate(edits):
+        row = edit.root
+        if set(row) != columns:
+            issues.append(
+                EditIssue(index, EDIT_COLUMNS, "an edit carries exactly the declared columns")
+            )
+            continue
+        key = tuple(row[name] for name in key_names)
+        if key not in position:
+            issues.append(EditIssue(index, UNKNOWN_KEY, "no such key in the base version"))
+        elif position[key] in replaced:
+            issues.append(EditIssue(index, DUPLICATE_KEY, "this key is edited more than once"))
+        elif (value_issue := _value_issue(row, table.value, key_names)) is not None:
+            issues.append(EditIssue(index, value_issue.code, value_issue.message))
+        else:
+            replaced[position[key]] = row[table.value.name]
+    if issues:
+        return EditResult((), tuple(issues))
+    value_name = table.value.name
+    return EditResult(
+        tuple(
+            {**row, value_name: replaced[at]} if at in replaced else row
+            for at, row in enumerate(base)
+        ),
+        (),
+    )
 
 
 def _ref(table: RateTableVersion, version: int) -> ArtifactRef:
@@ -571,7 +648,7 @@ def _new_version(
     return table.model_copy(
         update={
             "version": table.version + 1,
-            "rows": rows,
+            "rows": [RateTableCell(row) for row in rows],
             "change_note": change_note,
             "created_by_operation": operation,
             "seeded_from": table.seeded_from,
@@ -880,7 +957,7 @@ def _checked_import(
         key_domains={
             key.name: frozenset(row[key.name] for row in rows) for key in version.keys
         },
-        default_row=version.default_row,
+        default_row=_default_row_of(version),
     )
     if issues:
         raise ValueError(f"{issues[0].code}: {issues[0].message}")
