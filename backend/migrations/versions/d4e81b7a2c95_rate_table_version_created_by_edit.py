@@ -7,7 +7,7 @@ what tells a hand-edited version from a re-seed. Nullable, and every existing ro
 NULL (no backfill): a seeded, operated or imported version carries none.
 
 Revision ID: d4e81b7a2c95
-Revises: b8d2f4a6c0e1
+Revises: c5a91e7d3b26
 Create Date: 2026-10-10 03:30:00+00:00
 """
 
@@ -20,7 +20,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "d4e81b7a2c95"
-down_revision: str | None = "b8d2f4a6c0e1"
+down_revision: str | None = "c5a91e7d3b26"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
