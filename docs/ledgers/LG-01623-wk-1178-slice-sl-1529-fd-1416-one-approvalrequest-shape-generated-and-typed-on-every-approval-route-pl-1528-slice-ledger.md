@@ -1,9 +1,9 @@
 ---
-id: LG-9973
+id: LG-1623
 family: ledger
 title: WK-1178 slice SL-1529 — FD-1416, one ApprovalRequest shape, generated and typed on every approval route (PL-1528 slice ledger)
 status: closed
-created: 2026-10-10
+created: 2026-10-11
 owner: executor
 tree: 31b88780aa52894624a5e08454ce2d5925d04b37
 phase: P2
@@ -14,9 +14,9 @@ corrected_by: []
 relates: [PL-1528, FD-1416, FD-1335, RL-1522, SL-1409, FR-9, FR-451, FR-351, FR-355, FR-357]
 ---
 
-# LG-9973 — WK-1178 slice SL-1529: FD-1416, one ApprovalRequest shape
+# LG-1623 — WK-1178 slice SL-1529: FD-1416, one ApprovalRequest shape
 
-*(LG-9973 is a working id reserved by the lead; the lead mints it at the merge turn.)* Executed by
+*(LG-1623 is a working id reserved by the lead; the lead mints it at the merge turn.)* Executed by
 `executor-sl1529` from PL-1528, base `origin/main` `31b88780aa52894624a5e08454ce2d5925d04b37`.
 Times are BST (`TZ=Europe/London date`) unless marked.
 
@@ -113,7 +113,7 @@ Run at `origin/main`-merged head `823a617f1be343364d14c932aad780c8f3f82e77` (tre
 | ruff | 1 | OWN: 5 errors, fixed below |
 | mypy | 0 | green |
 | import_linter | 0 | green |
-| audit_docs | 1 | mint artefact (check 32 on LG-9973 x3; check 39 INDEX stale) |
+| audit_docs | 1 | mint artefact (check 32 on LG-1623 x3; check 39 INDEX stale) |
 | req_coverage | 0 | green |
 | contracts | 0 | green |
 | pytest | 1 | 13 failed, 5466 passed, 4 skipped: the docs/audit tests, mint artefact (lead-accepted) |
