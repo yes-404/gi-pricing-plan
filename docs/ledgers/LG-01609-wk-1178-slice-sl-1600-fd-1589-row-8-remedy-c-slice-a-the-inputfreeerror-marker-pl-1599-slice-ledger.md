@@ -21,7 +21,12 @@ relates: [FD-1589, PL-1599]
 Times are BST (`TZ=Europe/London date`) unless marked.
 
 **GO:** `to-lead.md` "2026-10-10 21:05:35 BST — DISPATCH GO: SL-1600 (PL-1599 slice A, InputFreeError, ≈3.0 lane-days). OP-SL1600-M1 = READY-FIRST merge order, not (c): WK-675 S3/S4 are not held for A". The write-set ruling "2026-10-10 21:15:58 BST — SL-1600 write-set: YES" adds `packages/model-schema/tests/test_sub_graph.py` for its type asserts only. The gate grant came from the lead in the session (gate-1, one slot, the DB-backed row-8 tests first, then the full two-half gate).
-**MERGE-ACK:** added at merge.
+**MERGE-ACK (rendering changes vs main, request-validation 422 `FieldError.message`; read from `backend/src/app/errors.py:_field_error_message` and `pricing_core.safe_error.safe_validation_message` at this head):**
+1. The 28 `_FIXED_TEXT_TYPES` (`missing`, `extra_forbidden`, `int_type`/`int_parsing`, `float_*`, `string_*`, `bool_*`, `decimal_type`/`decimal_parsing`/`decimal_max_digits`, `date_type`, `datetime_type`, `literal_error`, `enum`, the bound types, `too_short`/`too_long`, `list_type`, `dict_type`, `model_type`): `msg` kept, no change.
+2. A `value_error` whose underlying error is an `InputFreeError`: `msg` kept byte-identical to main, "Value error, " prefix included (DP-4); the texts themselves are the 68 rewritten and 96 adopted messages.
+3. The 12 `_AUTHORED_TEXT` types (`json_invalid`, `date_parsing`, `date_from_datetime_parsing`, `datetime_from_date_parsing`, `date_from_datetime_inexact`, `datetime_parsing`, `uuid_parsing`, `uuid_type`, `union_tag_invalid`, `union_tag_not_found`, `int_from_float`, `decimal_max_places`): pydantic's `msg` is replaced by a fixed authored text (it could echo the submitted tag, UUID characters or the parser's detail). Changed.
+4. Every other pydantic error type, including a `value_error` from a plain `ValueError`/`assertion_error` (B1/B2, P3's): the message is now `The value is not valid (<TYPE>).`, naming the type only. Changed. The `code` field is unchanged.
+No other field of the 422 body changes.
 
 ## Tasks
 
