@@ -37,6 +37,19 @@ was read at `d699a561` (#1272), and `git diff --name-only d699a561 02f23b4a` tou
 cited code, test, plan or ruling files (only `docs/roadmap.md`, outside the two rows edited
 here). Branch heads read: WK-675 S4, `origin/sl-1559-wk675-s4` @`af4f634b` (unmerged).
 
+## Goal
+
+Fold into WK-1178's two remaining fix slices what changed after their leaf plans were filed,
+so that each can be GO'd against a plan that matches the tree:
+- **SL-1563** (FD-1424): A-2's test file joins the write set for three lines (DP-7 (i)), and
+  the mount-port caller SL-1340 added becomes this slice's fourth call path (Part A).
+- **SL-1517** (FD-1513, BOUND before the 4 Nov freeze): three test files join Task 1's
+  call-site fold, and WK-675 S4's manual edit becomes the fifth audited action,
+  `rate_table_version.edited` (DP-6 (a)) (Part B).
+
+No requirement is added. The coverage stays as the leaf plans list it: `03` FR-227, FR-226 and
+FR-217 for SL-1563; `03` NFR-498 and `06` FR-368 for SL-1517.
+
 ## The rulings this delta records
 
 Three entries in `~/gi-pricing-plan.local/channel/to-lead.md`, by the maintainer (by
@@ -76,10 +89,13 @@ above, and is cited here by its repository location.
 
 ## Status
 
-`draft`. **No decision point is open:** DP-7 is ruled (i) (11:48:00 BST) and DP-6 is ruled (a)
-(11:49:51 BST). Neither leaf plan has an open DP. Each slice's activation still waits on its
-needs (§A6, §B7). The activation follows the L1 (a′) shape the readiness memo names: the slice
-PR flips its leaf plan and this delta's part for it, with ONE `LG-`.
+`draft` until it mints. **No decision point is open:** DP-7 is ruled (i) (11:48:00 BST) and DP-6
+is ruled (a) (11:49:51 BST) (§"Decision points"). Neither leaf plan has an open DP. **So this
+delta may mint `active`:** `document-ids.md` §1.6, PL `map`/`leaf` row, reads "`draft` while
+decision points are open, `active` on freeze", and a plan freezes at its first merge, the mint.
+That is the delta's own status only. **The leaf plans and the `SL-` rows still activate per
+slice**, each at its own GO, in the L1 (a′) shape the readiness memo names (the slice PR flips
+PL-1562 or PL-1516 and its `SL-` row, with ONE `LG-`), after its needs hold (§A6, §B7).
 
 ---
 
@@ -259,8 +275,13 @@ has not merged when this slice's GO is due, the GO waits (§B4).
 `git grep -n 'rate_table_version\.' 02f23b4a -- docs/contracts packages/model-schema/src` prints
 nothing. So `.edited` needs no shape change. The ruling's "regenerates" is honoured by running
 the generator: `uv run python scripts/generate-contracts.py --check` exits 0. If it ever does
-not, the generated file is regenerated (never hand-edited), and the ledger names it. PL-1516's
-"Not written: `docs/contracts/`" holds unless that happens.
+not, the generated file is regenerated (never hand-edited), and the ledger names it. **The write set therefore gains
+the regenerated contract** (the 11:49:51 BST order, item 3, as the lead relayed it):
+`docs/contracts/schemas/generated/audit-event.schema.json`, written only by
+`scripts/generate-contracts.py`. At `02f23b4a` its `action` is the same pattern (`:67-70`), so
+the expected diff is empty. A non-empty diff is the generator's output, quoted in the ledger,
+and never a hand edit. This replaces PL-1516's "Not written: `docs/contracts/`" for that one
+file.
 
 **The spec text.** RL 9817 (additive, `relates: RL-1515`; it is not minted yet) carries the
 dated note. Task 5 applies RL-1515's T-1a to T-1d byte for byte, then RL 9817's note **in the
@@ -311,7 +332,8 @@ matches too (`git grep -c audit af4f634b -- backend/src/app/platform/rate_tables
   only edits to the three fold files are the call-site argument.
 - **Item 10's write set** is PL-1516's, plus the three files of §B1, plus
   `manual_edit_confirmed` and its route call in `platform/rate_tables.py` and
-  `api/rate_tables.py`.
+  `api/rate_tables.py`, plus `docs/contracts/schemas/generated/audit-event.schema.json` as
+  regenerated (§B3).
 - **Item 13's set gains `R7`**, an edit-made version: after `R1`, a confirmed manual edit on
   `t-rows@<latest>` through S4's route (`POST /rate-tables/{slug}/versions` with
   `confirm: true`). **Seven** `cmp` exit codes, all 0, and the positive control's `cmp` reports
@@ -327,6 +349,45 @@ PL-1516 D7's needs stand: 1 (FD-1513), 2 (RL-1514), 3 (RL-1515), 4 (SL-1427) and
 - **5a. WK-675 S4 (`SL-1559`) merged** (11:49:51 item 4).
 - 6, the lead's GO, names: this delta; DP-6's three fold items; the rebase of `test_diff_cache.py`
   (§B2); the latest GO date and the BOUND (§B4).
+
+---
+
+## Decision points
+
+Both are ruled. The table is kept as the record of the options.
+
+| DP | Question | Options | Recommendation | Ruled |
+|---|---|---|---|---|
+| **DP-7** (SL-1563) | The 11:45:03 item 2 bounds A-2's file to `:463–475`, but the refused cases' list is `:456` (§A1). How does the pair move? | (i) widen the bound to `:456–475`: add `"decimal"` at `:456`, drop the pair at `:469`, relax `:463`; three changed lines. (ii) stay inside `:463–475`: relax `:463`, drop the pair at `:469`, and insert a new refused test for the pair in the `:464–465` gap; about 8 added lines and a duplicate test body | **(i)** | **(i)**, the maintainer (by delegation), 11:48:00 BST (quoted above): "(ii) is rejected: it duplicates a test body" |
+| **DP-6** (SL-1517) | WK-675 S4's `manual_edit_confirmed` is a fourth writer through `_persist_new_version`, and RL-1515 DP-3 names no action for it (§B3) | (a) a fifth action `rate_table_version.edited`; (a′) `rate_table_version.manually_edited`; (b) fold edits into `.imported`; (c) a generic `rate_table_version.created`; (d) leave the edit path out of SL-1517. Carrier: (s1) an additive RL; (s2) a correcting RL | **(a) + (s1)**, as the DP-6 memo recommends | **(a)**, carried by the additive RL 9817, the maintainer (by delegation), 11:49:51 BST (quoted above). RL 9817 is not minted yet; it is activation need 3a (§B7) |
+
+## Tasks
+
+The leaf plans' tasks stand. These are the changes, task by task.
+
+**SL-1563 (PL-1562):**
+- **Task 0 Step 1** re-anchors by symbol from §A3's table, and confirms §A6.
+- **Task 2 Step 1** also writes item 15 (§A2, red) and makes A-2's `:456` and `:469` edits (§A1,
+  the `decimal` case red on `:462`).
+- **Task 3 Step 2** also passes `at_output_step=False` at the mount-port call (`compile.py:702`).
+- **Task 3 Step 3** removes `model_call_money_issues` and its two calls, runs A-2's file to
+  record the `:463` failure, then relaxes `:463` (§A1).
+- **Task 2 Step 1 or Task 4** builds item 12 (c), owed here (§A2).
+- **Task 6 Step 2's ledger** quotes A-2's file diff in full (acceptance 1).
+
+**SL-1517 (PL-1516):**
+- **Task 0 Step 1** confirms S4's merge and RL 9817's mint (§B7). **Step 2** re-anchors from
+  §B5's table and re-enumerates the version-returning routes, S4's edit route among them.
+- **Task 1 Steps 1–4** also move the call sites of §B1's three files, and thread `actor` through
+  `manual_edit_confirmed` and its route (§B3 2).
+- **Task 1b Step 1**'s `_stored_version` carries `created_by_edit` (§B3 1). **Step 3**'s harness
+  adds `R7` (§B6).
+- **Task 2** adds item 3b (§B6), red first.
+- **Task 3 Step 1** passes `action="rate_table_version.edited"` and the base version's state as
+  `before` from `manual_edit_confirmed` (§B3 2).
+- **Task 4 Step 1**'s report date follows §B4.
+- **Task 5** applies RL 9817's dated note after T-1b's text (§B3).
+- **Task 6** runs `generate-contracts.py --check` and rebases the shared S7 test (§B2).
 
 ---
 
