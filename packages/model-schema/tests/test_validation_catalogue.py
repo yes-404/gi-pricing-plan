@@ -70,8 +70,9 @@ def test_every_severity_is_warn_or_fail() -> None:
 
 @pytest.mark.req("FR-68")
 def test_an_unknown_catalogue_id_is_refused_by_name() -> None:
-    with pytest.raises(ValueError, match="VR-STR-99"):
+    with pytest.raises(ValueError, match="unknown built-in rule") as raised:
         builtin_rule("VR-STR-99")
+    assert "VR-STR-99" not in str(raised.value), "the message names no submitted value"
 
 
 @pytest.mark.req("FR-68")

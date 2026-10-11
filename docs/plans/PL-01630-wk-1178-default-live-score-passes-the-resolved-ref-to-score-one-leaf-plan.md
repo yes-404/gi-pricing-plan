@@ -1,5 +1,5 @@
 ---
-id: PL-9908
+id: PL-1630
 family: plan
 kind: leaf
 title: WK-1178 — a default-live POST /score passes the resolved Rating Version to score_one: leaf plan
@@ -12,18 +12,18 @@ work: WK-1178
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [PL-1544, PL-1454, PL-1392, SL-9937]
+relates: [PL-1544, PL-1454, PL-1392, SL-1631]
 ---
 
-# PL-9908 — WK-1178: default-live `/score` passes the resolved ref to `score_one`, leaf plan
+# PL-1630 — WK-1178: default-live `/score` passes the resolved ref to `score_one`, leaf plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: subagent-driven-development (recommended) or
 > executing-plans. The executor also binds `test-driven-development`, `python-test`,
 > `fastapi-service`, `dev-commands` (the two-half gate) and `git-hygiene`. It is spawned from
 > `.claude/roles/executor.md` and reads [`README.md`](README.md)'s five unchecked conventions.
 
-Filed under working id 9908, for slice `SL 9937` (its `draft` row under `### WK-1178` in
-[`../roadmap.md`](../roadmap.md)) and ledger `LG 9909` (the executor's). The lead reserved all
+Filed under working id 9908, for slice `SL-1631` (its `draft` row under `### WK-1178` in
+[`../roadmap.md`](../roadmap.md)) and ledger `LG-1632` (the executor's). The lead reserved all
 three (from-lead "2026-10-11 11:26:33 BST — Lead: default-live fix IS on the G2 path …", "IDS
 RESERVED"). Written 2026-10-11 by the planner (planner-wk690). Read at `origin/main` `d699a561`.
 **Form:** this is a one-page leaf plan on the lead's and the maintainer's ruling ("Plan as a 1-page
@@ -115,7 +115,7 @@ Also, each a line in the `LG-` (the GO's item 2, "quoted with file:line in the L
    (the GO's item 3; from-lead 11:26:33). The 13 audit-on-tree tests clear at the minted-head CI.
 5. **The finding.** The FD (the auditor proposes the severity; HIGH is expected) names **both
    instances**, `score()` → `score_one` and the sampled-trace re-score, and is discharged by
-   SL 9937 (the GO's item 4). It rides the next docs batch. It is not this slice's write.
+   SL-1631 (the GO's item 4). It rides the next docs batch. It is not this slice's write.
 
 ## Tasks
 
@@ -127,7 +127,7 @@ One task, red first. The executor has authored it at `0b46672a` and `7ec284f9`.
    explicit ref is returned untouched). Pass the copy to `score_one` and to
    `_maybe_sample_trace`. The request object is never mutated.
 3. In the gate slot: run the src-only revert of `score.py` to show (a)–(e) red, restore it,
-   run them green, then run the full two-half gate. Write the `LG 9909` lines 1–5. Closing acts
+   run them green, then run the full two-half gate. Write the `LG-1632` lines 1–5. Closing acts
    per `executor.md`: the `LG-` and the SL row go `closed` in the slice PR.
 
 ## Decision points

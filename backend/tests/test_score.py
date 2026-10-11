@@ -1631,7 +1631,7 @@ def test_a_pending_trace_whose_context_names_a_produced_value_is_not_reproduced_
 
 
 # --------------------------------------------------------------------------------------
-# SL 9937 — default-live /score against a REAL `score_one`. The `refs_scored` cases above
+# SL-1631 — default-live /score against a REAL `score_one`. The `refs_scored` cases above
 # stub it, so they cannot see `score_one` refusing a context that carries no ref.
 # --------------------------------------------------------------------------------------
 

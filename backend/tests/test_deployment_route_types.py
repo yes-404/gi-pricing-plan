@@ -58,10 +58,15 @@ ROWS: tuple[Row, ...] = (
     ),
     Row("POST", "/api/v1/environments/{env}/deployments", "DeploymentCreate", "Deployment"),
     Row("GET", "/api/v1/environments/{env}/deployments", None, "Deployment", paged=True),
-    # Row 9: the body is typed; the 2xx is `FD-1335` Part B's (FD 9752), pinned by key set.
-    Row("POST", "/api/v1/approval-requests", "ApprovalSubmission", None),
+    # Row 9: the body and (FD-1416, PL-1528) the 2xx are typed.
+    Row("POST", "/api/v1/approval-requests", "ApprovalSubmission", "ApprovalRequest"),
     # Row 8 (Task 6): the withdraw body is `reason` only; the server derives liveness.
-    Row("POST", "/api/v1/approval-requests/{request_id}/withdraw", "ApprovalWithdrawal", None),
+    Row(
+        "POST",
+        "/api/v1/approval-requests/{request_id}/withdraw",
+        "ApprovalWithdrawal",
+        "ApprovalRequest",
+    ),
 )
 
 #: The module of each row's handler.
@@ -545,11 +550,12 @@ def test_the_withdrawal_body_is_a_model_schema_type_with_no_liveness_field() -> 
 
 # --- Acceptance 18: S2 does not widen the untyped surface of the two changed routes -------------
 
-#: `service.to_dict`'s 12 top-level keys (`platform/approvals.py`, both routes call it as
-#: `to_dict(row, [])`). Neither Task 5 nor Task 6 changes what these routes return.
+#: `ApprovalRequest`'s 13 top-level keys (`model_schema/approvals.py`; `workspace_id` joined
+#: the 12 `to_dict` emitted, FD-1416 DP-2 (a)).
 APPROVAL_REQUEST_KEYS = frozenset(
     {
         "id",
+        "workspace_id",
         "artifact_ref",
         "artifact_type",
         "environment",
