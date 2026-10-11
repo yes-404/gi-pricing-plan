@@ -43,7 +43,7 @@ routes' media types follow later. DP-A1 and DP-A2 are ruled by `RL-1365`. `FD 97
 | 2 | guard on the real document | 3, 4, 5 | done (one item red until Task 3) |
 | 3 | two 200 declarations, regenerated contract | 6–9 | done |
 | 4 | the NFR-502 spec line | 10 | open (after Task 5) |
-| 5 | NFR-502 re-measure, local, diagnostic | 10 | open |
+| 5 | NFR-502 re-measure, local, diagnostic | 10 | runs b and c set aside; run D prepared, not run |
 | 6 | client evidence, skill note, gate, ledger | 11–13 | client evidence and skill note done; gate and closing acts open |
 
 ### Gate
@@ -166,6 +166,40 @@ count generated with the same `openapi-typescript` 7.13.0 from `git show origin/
 `.claude/skills/contract-guard/SKILL.md` gains the section "The untyped-body guard is a different kind
 of guard" and a `Verified` entry for 2026-10-11 at `origin/main` `99f22479` plus this slice;
 `.claude/skills/README.md`'s row date is refreshed.
+
+#### 2026-10-11 — Task 5: the NFR-502 re-measure, runs b and c (both set aside), and the run-D criterion
+
+Script `run.sh` (sha256 prefix `c7fa8b3feaafd38a`), head `0fd4a3d9`, base `99f22479`, DSN `gipricing_sl-1367_9dd03528`, alone under
+`gate-1`, `gate-2` and `small-test`. Outputs are local, under
+`~/gi-pricing-plan.local/scratch/sl1367-t5/`.
+
+**Run b** (`out-2026-10-11b/`, 15:00:32–15:11:37 BST, end rc 0): the disturbed record. Lead probes ran 15:03:11–15:03:18 and the WK-674 S3 seat ran
+about 15:00–15:02, inside the window (`to-lead.md` "2026-10-11 15:04:13 BST" and "2026-10-11 15:05:03 BST"). `verdict.py`: `/score` base p99
+[52.353, 52.413, 51.236] median 52.353, HEAD [53.593, 49.578, 48.634] median 49.578, delta -2.775, STOP=False; `/score/compare` base
+[110.329, 64.442, 62.559] median 64.442 (range 47.769), HEAD [70.810, 65.203, 62.560] median 65.203, delta 0.761, STOP=False;
+`NO_STOP_CONDITION` (informative only). Limb-2 durations in order: base1 115.32 s, HEAD1 106.37, base2 97.34, HEAD2 98.93, base3 97.95, HEAD3 97.40.
+No per-invocation stamps existed, so overlap was reconstructed from the log (from-lead "2026-10-11 15:12:25 BST").
+
+**Run c** (`out-2026-10-11c/`, 15:12:06–15:24:44 BST, end rc 0; same script, head, flocks): `verdict.py`: `/score` base [52.100, 54.797, 75.937]
+median 54.797, HEAD [52.308, 75.030, 72.704] median 72.704, delta 17.906, STOP=False; `/score/compare` base [65.125, 66.215, 85.616] median
+66.215 (range 20.490), HEAD [71.680, 97.312, 87.280] median 87.280, delta 21.065, **STOP=True**; `STOP_CONDITION_FIRED`. Limb-2 durations: base1
+98.19 s, HEAD1 102.52, base2 101.09, **HEAD2 133.49, base3 134.06, HEAD3 133.84**. From HEAD2 on both arms are about 33% slower, a whole-VM step
+from about 15:16; the cause was not identified (from-lead "2026-10-11 15:26:10 BST"). Paired within iteration, p99 ms base to HEAD: iteration 1
+`/score` +0.2, compare +6.6; iteration 2 +20.2, +31.1; iteration 3 -3.2, +1.7. Only iteration 2, which straddles the step, gives the large deltas.
+
+**Rulings** (`to-lead.md`, quoted by header):
+- "2026-10-11 15:04:13 BST — slot-preflight.sh template ACCEPTED (aborts 90–95 shown on broken input; one EXIT trap prints the end marker); every grant requires it. The 7 s of lead probes beside SL-1367's ALONE window: the affected timed invocation is RE-RUN": any invocation overlapping 15:03:11–15:03:18 is re-run after the last limb, and the LG shows both the original and the re-run.
+- "2026-10-11 15:12:46 BST — SL-1367 T5 run b → run c: ACCEPTED; STANDING: every ALONE/measurement script stamps each timed invocation": run c is the verdict run; run b stays the disturbed record; every ALONE or measurement script writes a start and end stamp (TZ=Europe/London, to the second) for each timed invocation.
+- "2026-10-11 15:26:41 BST — SL-1367 T5 run c: (b) RULED, run c UNCLEAN on evidence that implicates BOTH arms; a validity criterion PRE-REGISTERED NOW, before the re-run; (c) as the bound fallback": (b) adopted, run c UNCLEAN and kept in the LG. Item 2 (i): the run is CLEAN only if every limb-2 invocation's duration lies within +-15% of the median of all six limb-2 durations, AND the per-invocation steal sample (`/proc/stat` steal delta as a % of the invocation's CPU time) is <= 5% for every invocation. (ii) CLEAN: Acceptance 10's stop rule applies exactly as written. (iii) UNCLEAN again: no third local run; the relative measurement moves to the dedicated VM with NFR-502's absolute verdict, and the merge waits for it. Item 3: the paired within-iteration deltas are printed as information.
+- "2026-10-11 15:27:07 BST — SL-1367 script prep ACCEPTED; one addition so the pre-registration is PROVABLE": the script carrying the check is committed and pushed before the run; the run prints its blob sha and commit time; the LG shows commit time < run start.
+
+**Run D (the re-run) is prepared, not run.** The script and the check are `scripts/measure/sl1367-t5/run.sh` and `cleancheck.py`, committed in this slice
+(the commit that adds this paragraph). `run.sh` sources `handover/slot-preflight.sh` (exit 90–95), refuses to run unless it is the committed copy in
+the HEAD tree (exit 3), prints both blob shas and commit times and the run start, stamps START and END (Europe/London, to the second), duration, steal
+delta, CPU delta (user+nice+system+irq+softirq+steal) and steal % for the limb-1+3 call and each of the six limb-2 calls, then prints the CLEAN check
+before `verdict.py` (unchanged) and the paired deltas after it, labelled "INFORMATION ONLY (15:26:41 item 3)". Reading of the criterion, stated so
+it is not chosen later: the duration test is over the six limb-2 invocations; the steal test is over every stamped invocation, limb 1+3 included;
+both bounds are inclusive. Run D's start stamp, blob shas and commit time go here when it has run.
 
 ## PRs
 
