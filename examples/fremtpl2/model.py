@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import io
 import math
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any, Final
@@ -413,6 +413,35 @@ async def load_approved_glm(
     return ArtifactRef(type="model", slug=row.model_family_slug, version=row.version), fit
 
 
+#: The lowest relativity a fitted level may carry. Below it the GLM prices a level at under
+#: 1% of its base, which is quasi-separation (no claims in the fitting rows), not a rating
+#: signal: at 2 000 seeded rows area[F] fits to 1.4e-07 and its golden premium is 0 minor units.
+#: Real levels of the full book sit between 0.7 and 1.5 (measured, LG 9966).
+RELATIVITY_FLOOR: Final = 0.01
+
+
+class DegenerateFitError(RuntimeError):
+    """The approved GLM carries a level the rating path cannot price (see `RELATIVITY_FLOOR`)."""
+
+
+def refuse_degenerate_fit(
+    relativities: Mapping[str, Sequence[RelativityLevel]], floor: float = RELATIVITY_FLOOR
+) -> None:
+    """Stop the seed, naming every `factor[level]` whose relativity is below `floor`."""
+    degenerate = [
+        f"{factor}[{level.level}] = {level.relativity:.3g}"
+        for factor, levels in relativities.items()
+        for level in levels
+        if level.relativity is not None and level.relativity < floor
+    ]
+    if degenerate:
+        raise DegenerateFitError(
+            f"the fit is degenerate: {len(degenerate)} level(s) below the relativity floor "
+            f"{floor}: {', '.join(degenerate)}. The seed holds too few rows for these levels "
+            "to carry a claim; seed more rows (the full book is the demo's size)."
+        )
+
+
 async def seed_demo_rate_tables(
     database: Database,
     settings: Any,
@@ -432,6 +461,7 @@ async def seed_demo_rate_tables(
     absent = [factor for factor in FACTOR_SET if factor not in fit.relativities]
     if absent:
         raise RuntimeError(f"the approved GLM has no relativities for {absent}")
+    refuse_degenerate_fit(fit.relativities)
     tables: dict[str, ArtifactRef] = {}
     for factor in FACTOR_SET:
         version = await rate_table_service.seed_from_model(

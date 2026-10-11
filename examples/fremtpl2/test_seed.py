@@ -8,6 +8,7 @@ shape, and the rule set's conformance to FR-45.
 from __future__ import annotations
 
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,10 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from arff import to_csv
 from seed import DICTIONARY, PORTFOLIO_ROWS, RENAMES, RULES, build_csv, recipe
+
+#: None is the full book. Measured (LG 9966): every smaller sample has a level fitted below the
+#: relativity floor; only the full book has none.
+ROWS_FOR_A_HEALTHY_FIT: int | None = None
 
 SAMPLE = """% a comment, ignored
 @relation freMTPL2freq
@@ -112,18 +117,13 @@ def test_the_dictionary_covers_every_column_the_seed_produces() -> None:
 ARFF_DIR = Path(__file__).parent / "data"
 
 
-@pytest.mark.req("FR-398")
-def test_the_seed_reruns_against_a_seeded_database(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """FD 9717: the realm user's `(issuer, subject)` is unique, and the seed used to mint
-    a fresh analyst id on every run, so a second seed died on `uq_users_issuer_subject`.
-    The second run must reuse the first run's user, and `last-seed.json` must name it.
+@pytest.fixture
+def scratch_seed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
+    """A scratch database of its own and a scratch data directory, never the demo's; yields
+    the data directory with the fetched ARFF files linked into it.
 
-    Needs the fetched ARFF files and the local Postgres/MinIO stack, so CI skips it. Runs
-    on a scratch database of its own and a scratch data directory, never the demo's."""
+    Needs the fetched ARFF files and the local Postgres/MinIO stack, so CI skips it."""
     import asyncio
-    import json
     import os
     import subprocess
     from uuid import uuid4
@@ -160,16 +160,43 @@ def test_the_seed_reruns_against_a_seeded_database(
         for arff in ARFF_DIR.glob("*.arff"):
             (tmp_path / arff.name).symlink_to(arff.resolve())
         monkeypatch.setattr(seed, "DATA_DIR", tmp_path)
-
-        assert asyncio.run(seed.run(2000)) == 0
-        first = json.loads((tmp_path / "last-seed.json").read_text(encoding="utf-8"))
-        assert asyncio.run(seed.run(2000)) == 0
-        second = json.loads((tmp_path / "last-seed.json").read_text(encoding="utf-8"))
-
-        assert second["workspace_id"] != first["workspace_id"]
-        assert second["analyst_id"] == first["analyst_id"]
+        yield tmp_path
     finally:
         asyncio.run(admin_sql(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
+
+
+def test_the_seed_reruns_against_a_seeded_database(scratch_seed: Path) -> None:
+    """FD 9717: the realm user's `(issuer, subject)` is unique, and the seed used to mint
+    a fresh analyst id on every run, so a second seed died on `uq_users_issuer_subject`.
+    The second run must reuse the first run's user, and `last-seed.json` must name it.
+
+    Seeds ROWS_FOR_A_HEALTHY_FIT rows twice: every smaller sample fits a level the rating
+    path cannot price, and the seed refuses it (the next test)."""
+    import asyncio
+    import json
+
+    import seed
+
+    assert asyncio.run(seed.run(ROWS_FOR_A_HEALTHY_FIT)) == 0
+    first = json.loads((scratch_seed / "last-seed.json").read_text(encoding="utf-8"))
+    assert asyncio.run(seed.run(ROWS_FOR_A_HEALTHY_FIT)) == 0
+    second = json.loads((scratch_seed / "last-seed.json").read_text(encoding="utf-8"))
+
+    assert second["workspace_id"] != first["workspace_id"]
+    assert second["analyst_id"] == first["analyst_id"]
+
+
+def test_a_small_seed_is_refused_for_its_degenerate_fit(scratch_seed: Path) -> None:
+    """At 2 000 rows area[F] has no claims and fits to a relativity of 1.4e-07 (golden premium
+    0 minor units; the engine cannot score it). The seed stops, naming the level, rather than
+    failing later inside the regression Job as GOLDEN_QUOTE_MISMATCH."""
+    import asyncio
+
+    import seed
+    from model import DegenerateFitError
+
+    with pytest.raises(DegenerateFitError, match=r"area\[F\]"):
+        asyncio.run(seed.run(2000))
 
 
 def _write_book(directory: Path, policies: int) -> None:
@@ -272,3 +299,29 @@ def test_the_seeded_portfolio_satisfies_the_dislocation_frame(
     assert frame["quote_id"].n_unique() == frame.height
     assert frame["quote_id"].to_list() == frame["policy_id"].to_list()
     assert frame["quote_id"].dtype == pl.String
+
+
+@pytest.mark.req("FR-439")
+def test_a_degenerate_fit_is_refused_by_factor_and_level() -> None:
+    """A level fitted below the relativity floor (no claims in the fitting rows) stops the
+    seed, naming `factor[level]`. At 2 000 seeded rows area[F] fits to 1.4e-07: its golden
+    premium is 0 minor units and the engine cannot score it. A healthy fit is untouched."""
+    from model import DegenerateFitError, refuse_degenerate_fit
+
+    from model_schema import RelativityLevel
+
+    def level(name: str, relativity: float, base: bool = False) -> RelativityLevel:
+        return RelativityLevel(level=name, relativity=relativity, is_base=base)
+
+    healthy = {"area": [level("C", 1.0, True), level("F", 1.0354)]}
+    refuse_degenerate_fit(healthy)
+
+    degenerate = {
+        "area": [level("C", 1.0, True), level("F", 1.3634832381413387e-07)],
+        "region": [level("R24", 1.0, True), level("R43", 2.8e-08)],
+    }
+    with pytest.raises(DegenerateFitError) as raised:
+        refuse_degenerate_fit(degenerate)
+    assert "area[F]" in str(raised.value)
+    assert "region[R43]" in str(raised.value)
+    assert "area[C]" not in str(raised.value)
