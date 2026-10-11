@@ -1011,7 +1011,7 @@ The Environment and Deployment records, promotion order and their audit limb for
 id: SL-1257
 family: slice
 title: Slice 3: environment isolation (FR-430, FR-431, register F54 and F48, NFR-496 prod-sampling limb)
-status: active                 # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-09-29
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 0d5b0765f76320518bfe76ddb30e5013525797c0
@@ -1051,7 +1051,9 @@ Carved from `SL-1257` on the maintainer's entry "2026-09-30 23:57:25 BST — DEC
 
 *Dated 2026-10-01, mint batch 13a: its leaf plan is `PL-1348` (draft until activation). DP-S3-1 is resolved by `RL-1346`. The activation needs are `PL-1348`'s own, each a command with an expected output.*
 
-(Activated 2026-10-10 as WK-674 Slice 3, on the dispatch GO "2026-10-10 21:38:39 BST — DISPATCH GO: SL-1455 (Task 0; FD-1411's NFR-489 HTTP remedy) and WK-674 S3 (PL-1583); OP-1455-M1/M2/M3; the register :293 record", item 6; ledger `LG-9977` (working id), `PL-1583` set `active` in the same commit.)
+(Activated 2026-10-10 as WK-674 Slice 3, on the dispatch GO "2026-10-10 21:38:39 BST — DISPATCH GO: SL-1455 (Task 0; FD-1411's NFR-489 HTTP remedy) and WK-674 S3 (PL-1583); OP-1455-M1/M2/M3; the register :293 record", item 6; ledger `LG-1634` (minted 2026-10-11 from working id 9977), `PL-1583` set `active` in the same commit.)
+
+(Closed 2026-10-11 as a Slice, closing acts in the slice PR's mint commit, on the lead's merge; ledger `LG-1634`, minted 2026-10-11 from working id 9977.)
 
 #### SL-1258 — Slice 4: the deployment path (FR-437, FR-412 memory half, FR-415, FR-434, FR-435, NFR-531, NFR-534, FD-1211)
 
