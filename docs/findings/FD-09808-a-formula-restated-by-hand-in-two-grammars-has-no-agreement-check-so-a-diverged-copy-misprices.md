@@ -7,7 +7,7 @@ created: 2026-10-11
 owner: auditor
 tree: 02f23b4a74cfdf81ff4ac875e1ff7ab2db777c4a
 corrected_by: []
-relates: [WK-1178, WK-690, OQ-9809]
+relates: [WK-1178, WK-690, RL-9934, OQ-9809]
 ---
 
 # FD-9808 — formula parity: two hand-kept copies of one formula, no check
