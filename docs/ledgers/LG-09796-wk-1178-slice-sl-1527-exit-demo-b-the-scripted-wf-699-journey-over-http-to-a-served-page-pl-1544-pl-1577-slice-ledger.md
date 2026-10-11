@@ -103,3 +103,90 @@ branch `sl-1527-wk1178-exit-demo-b` tracks it. `uv sync --all-packages` and
 9. **Dispatch steps not run at authoring:** Task 0 Step 3 (PL-1408's containment query,
    `TOTAL route_approved=0`) and Step 2's re-derivation of needs run at dispatch, on the lead's word,
    because a gate slot is held on the box.
+
+#### Rulings on the Task 0 gaps (quoted by header; the entries are local channel files, RFC-777)
+
+- **Worker (gap 1): Option A.** The lead's ruling, `from-lead` "2026-10-11 23:25:00 BST", confirmed
+  by the maintainer (by delegation), `to-lead.md` "2026-10-11 23:25:46 BST", item (a). `scripts/demo.py
+  --journey` starts `celery -A app.worker.entrypoint worker --queues default,compute --concurrency 2`
+  and `beat` as background children through `background()`, before the journey and stopped with it.
+  The red-first wiring test shows that with no worker the first 202 Job never completes. The
+  compose file's missing worker service is not this slice's (it becomes an FD in D13).
+- **Marker (gap 2): the `test_wf01_journey.py` precedent, as a disclosed deviation** (23:25:46, item
+  (b)). The journey test is marked with the FRs it exercises (decorator form) and names `WF-699` in
+  its docstring and test names. **Disclosed deviation:** PL-1544 Acceptance 1 and 9 say the test
+  carries a `WF-699` marker and that `req-coverage` lists it; `scripts/req-coverage.py:58` reads
+  only decorator `FR-`/`NFR-` ids, so that clause cannot hold.
+- **B7's "@4"** is illustrative (23:25:46, item (c)): the journey asserts the exact version it
+  saved and pinned, read from its own create response, never a literal 4.
+- **WRITE-SET WIDENING (gap 3), disclosed.** `from-lead` "2026-10-11 23:27:08 BST": Option A.
+  `examples/fremtpl2/seed.py` for principal role grants, workspace membership and recording every id
+  in `last-seed.json`, **nothing else in `seed.py`**; its test in `examples/fremtpl2/test_seed.py`;
+  one README line. The maintainer let it stand with four conditions, `to-lead.md` "2026-10-11
+  23:27:48 BST": (1) idempotent, existing role slugs only (no new role, permission or migration);
+  (2) ONE definition of the principal set, the journey's fixture CALLS the seed's provisioning
+  function and never writes rows; (3) the LG records the widening (this entry); (4) the grep of
+  specs 06 and 07 for a role-grant or membership FR is the auditor's. **RL-1521 binds the journey's
+  steps, not its setup.** Built: `seed.py` `DEMO_PRINCIPALS` and `grant_demo_principals()` (seed
+  and journey test both call it); `analyst` and `actuary` also hold `approver` so
+  `SUBMITTER_CANNOT_APPROVE` and `AUTHOR_CANNOT_APPROVE` fire past the role gate.
+- **SKIPPED lines:** the lead's correction (23:27:48 forward): print BOTH, B4's `model_call` clause
+  and C1′, per PL-1542 :110 and Hand-off 6. `SKIPS` has `SKIPPED B4 model_call: FD-1456; SL-1543`
+  and `SKIPPED C1′: FD-1456; SL-1543`; the B4 line's exact text is the executor's, pending the
+  planner's correction of Acceptance 2.
+
+#### Notes recorded at the lead's instruction (from-lead 23:27:08)
+
+- D4's regression Job carries no run id: a failed Job has `result = null` and `error.detail = {}`;
+  the run id is only inside `error.message` ("regression run <uuid> is recorded") and no route
+  lists runs. The journey parses it from the message (`regression()` in `journey.py`).
+- E3 is staged as "submit before any Dislocation Run exists for the candidate"
+  (`EVIDENCE_INCOMPLETE`). The gate keys staleness on the bundle hash, not on a rate-table edit time
+  (`rating_versions.py:_dislocation_gate`), and a created Rating Version's pins are immutable, so
+  WF-699 E3's "predates the last rate table edit" cannot be staged over HTTP. D6 to D8 therefore run
+  between E3 and E4 (the resubmission), as WF-699 E4 words it.
+- The ladder is an expression-only sub-graph. There is no route that creates a rate table from
+  scratch (only seed-from-model, which needs a model Factor, and versions of an existing table), so
+  working id 9799's "the rate table behind the ncd-ladder" cannot be built over HTTP; the maintainer's
+  23:18:17 wording is "the hand-written NCD-ladder sub-graph". `POST /sub-graphs` creates it with the
+  bands as one ternary chain (`ladder_body()`); the defect and its fix are new sub-graph versions
+  (D4 and D5 each build a new algorithm version and Rating Version, because pins cannot be edited).
+- The journey forks the **seeded** `fremtpl2-rate@1` (WF-699 B1: "forks to @n") rather than calling
+  `build_fremtpl2_algorithm`, which needs `Banding` objects and the base premium that are not
+  readable over HTTP. It is still the one definition: the seed saved what the builder returned.
+- **B3 (the reference-table `lookup`) is not walked in this cut.** It is not in `SKIPS` and no owner
+  exists for it, so it prints nothing and is not claimed `ok`; the lead rules whether to build it
+  (a reference table, `admin` principal, a pinned `lookup` step consumed by the premium) or to give
+  it an owner.
+- Fixed-seed fixture: the in-process journey test uses the synthetic fit of
+  `test_demo_rating_evidence.py` (the 2,000-row seed is refused as a degenerate fit); the delta's
+  "the journey test seeds 20,000 rows and needs the ARFF" is not what the test does, and the real
+  full-seed fit is exercised by the one-command rehearsal. Disclosed deviation from the delta, item
+  "Task 1 Step 1".
+
+#### Reds (each by its cause), authoring
+
+| Task | Test | Red line as printed |
+|---|---|---|
+| 1 | `backend/tests/test_wf699_journey.py` (collection) | `ERROR backend/tests/test_wf699_journey.py - FileNotFoundError: [Errno 2] No s…` (`examples/fremtpl2/journey.py` absent) |
+| principals | `examples/fremtpl2/test_seed.py::test_the_demo_principals_use_existing_roles_and_cover_the_journey` | `ImportError: cannot import name 'DEMO_PRINCIPALS' from 'seed'` |
+| D4 | `test_the_d4_property_does_not_depend_on_the_fit` | `AttributeError: module 'demo_journey' has no attribute 'declared_d4_property'` |
+| 5 | `test_the_seed_record_pre_flight_runs_before_the_rule_set_pre_flight` | `ValueError: substring not found` (no `check-seed-record.py` in `demo`) |
+| 5 | `test_postcondition_http_error_is_a_refusal` | `urllib.error.HTTPError: HTTP Error 403: Forbidden` escaping `_verify_journey_postconditions` |
+| 5 | `test_the_journey_flag_names_one_journey_and_defaults_to_none` | `AttributeError: module 'demo_script' has no attribute 'JOURNEYS'` |
+| 5 | `test_the_journey_runs_with_a_worker_after_the_postconditions_and_before_the_frontend` | `ValueError: substring not found` (no worker in `demo`) |
+| 5 | `test_a_journey_failure_exits_non_zero_with_the_step_line` | `SystemExit: 2` (`--journey` unrecognised) |
+
+DB-backed reds (`test_the_seed_record_pre_flight_refuses_*`, `test_an_id_that_contradicts_the_stored_identity_is_refused_where_it_arises`,
+`test_wf699_journey_runs_end_to_end`) are written and wait for the lead's slot; their red-by-cause
+lines are recorded at the slot, against the parent source.
+
+#### Commits (authoring, pushed to `origin/sl-1527-wk1178-exit-demo-b`)
+
+| Task | What | Commit |
+|---|---|---|
+| 1 | the journey test, red | `9b041b42` |
+| principals | `grant_demo_principals`, `DEMO_PRINCIPALS`, ids recorded | `9352b424` |
+| 1-2 | journey core, skip table, step-naming client | `fbd418ce` |
+| 2-4 | phases A to E, deploy, served quote; the D4 declaration; the ladder body | `d918c534` |
+| 4 | the end-to-end journey test, authored | `e328556c` |

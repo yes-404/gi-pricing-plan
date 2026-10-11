@@ -62,6 +62,29 @@ claims). Nothing the demo shows over it is a full-book rate or a full-book timin
 cost of a full-book dislocation run is the owned, measured target `PL-1574`; the cost of
 full-book attribution is `FD-1576`.
 
+## The WF-699 journey: one command to a served page
+
+```bash
+uv run python scripts/demo.py --journey wf-699
+```
+
+One command seeds the demo, starts the API, a Celery worker and its outbox relay, then walks
+`WF-699` Phases A to E and its deploy step **over HTTP** (`journey.py`, an `httpx` client of
+`/api/v1`): the rate tables are seeded from the approved GLM and edited, the algorithm is forked
+and its NCD ladder mounted, the version is compiled with every pin, the regression suite runs
+(a deliberate `bonus_malus` inversion fails the declared D4 property, then the fix passes), the
+dislocation run and its attribution are read, the version is submitted, refused once, approved by
+two principals who are neither its submitter nor its author, deployed `dev` → `uat` → `prod`, and
+one quote is scored from `prod`'s live deployment. It ends with the frontend serving a 200
+page: the UI is available for hands-on driving, and is not driven.
+
+**Read the output as a demonstration on a sample.** The D6 dislocation run and the D7
+attribution run go over the 20,000-policy sample of the book described above, never the full
+book; nothing the journey prints is a full-book rate or timing (full-book dislocation cost is
+`PL-1574`, full-book attribution cost `FD-1576`). The NCD ladder's bands (1.00, 1.20 and 1.50 on
+`bonus_malus` 50-99, 100-149 and 150-230) are demo values, not a priced NCD scale. Steps the
+platform does not yet do are printed as `SKIPPED` or `KNOWN GAP` with their owner, never hidden.
+
 ## The data
 
 [OpenML 41214 / 41215](https://www.openml.org/d/41214) — French motor third-party
