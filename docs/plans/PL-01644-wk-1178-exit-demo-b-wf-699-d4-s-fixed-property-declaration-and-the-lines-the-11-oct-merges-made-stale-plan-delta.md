@@ -1,10 +1,10 @@
 ---
-id: PL-9799
+id: PL-1644
 family: plan
 kind: map
 title: WK-1178 — exit demo (b), WF-699 D4's fixed property declaration, and the lines the 11 Oct merges made stale: a dated delta to PL-1544
-status: draft                  # draft → active → superseded | retired (§1.2a)
-created: 2026-10-11            # original date 2026-10-11, set at the draft
+status: active                 # draft → active → superseded | retired (§1.2a)
+created: 2026-10-11            # original date 2026-10-11, set at the draft; minted 2026-10-11
 owner: planner
 tree: 1b04cb05a72e2329d35f57dd87cb3be600096177
 phase: P2
@@ -17,8 +17,9 @@ relates: [PL-1544, PL-1577, PL-1525, RL-1524, RL-1522, RL-1521, FD-1244, FD-1416
 
 # WK-1178, exit demo (b): WF-699 D4's fixed property declaration and the stale lines (delta to PL-1544)
 
-*Disclosure: drafted under working id 9799, reserved by the lead (eta, "2026-10-11 23:17:40
-BST"). It is not minted. Every mention of this file in its own text uses the working id.*
+*(Minted 2026-10-11 as PL-1644 from working id 9799, reserved by the lead (eta, "2026-10-11
+23:17:40 BST"). "PL 9799" in the maintainer's (by delegation) entries quoted below is this file's
+working id, quoted as written.)*
 
 > **For agentic workers:** this is a **dated delta** under Lean P2 L5 (`document-ids.md` §1.6,
 > PL row: *"a change is one dated Work-plan delta, a new `PL-` that `relates:` the Work's
@@ -37,13 +38,13 @@ the readiness note `handover/readiness-pl1544-2026-10-11.md`, local). Evidence w
 
 ## Status
 
-`draft` until it mints. **DP-D4 is ruled (a)**: `bonus_malus`, increasing, over the NCD
+Minted as `PL-1644` (`active`). **DP-D4 is ruled (a)**: `bonus_malus`, increasing, over the NCD
 ladder (the maintainer (by delegation), 23:18:17 BST, quoted below). It was drafted open with
 both variants (commit `cf2d31a4` on this branch), and this file now carries only (a). It mints
-first in the next docs PR, together with the decision-maker's WF-699 D4 T-text (working id
-RL 9701, reserved in eta "2026-10-11 23:18:40 BST"), and before `SL-1527`'s activation (the 23:18:17 entry, item 4). `PL-1544`'s activation
+first in the next docs PR, together with the decision-maker's WF-699 D4 T-text (`RL-1645`,
+minted from working id 9701, reserved in eta "2026-10-11 23:18:40 BST"), and before `SL-1527`'s activation (the 23:18:17 entry, item 4). `PL-1544`'s activation
 needs 1 to 16 and 18 are **MET** at `1b04cb05`. Need 17, the lead's go, is **given
-conditionally**: *"Its activation and gate wait for PL 9799 and the WF-699 T-text to MINT."*
+conditionally**: *"Its activation and gate wait for PL 9799 and the WF-699 T-text to MINT."* [PL 9799 is `PL-1644`.]
 §"Activation needs at `1b04cb05`" gives the evidence.
 
 ## The rulings this delta records
@@ -55,7 +56,7 @@ them.
 *"2026-10-11 23:18:17 BST — PL-1544 (SL-1527) re-check ACCEPTED: needs 1–16 and 18 MET. DP-D4 =
 (a), bonus_malus increasing over the NCD ladder, WITH a dated WF-699 D4 amendment (spec text,
 not a silent reading). SL-1527 authors NOW; the GO (need 17) is effective when PL 9799 + the
-WF-699 T-text mint"*, items 1 to 4, verbatim:
+WF-699 T-text mint"* [PL 9799 is `PL-1644`], items 1 to 4, verbatim:
 
 > 1. DP-D4 = (a): premium increasing in bonus_malus on [50, 230] over the hand-written NCD-ladder sub-graph; grid spacing 45 (properties.py :75's 5-point grid). Reason, the 19:07:08 rule: the property cannot depend on the fit, so the D4 failure is the DELIBERATE inverted band, and D5's fix is provably the cure. (b) is rejected: driv_age's fitted effect on freMTPL2 is not guaranteed monotone (it is typically U-shaped), so the post-D5 pass would depend on the fit and the journey could not demonstrate a clean fix.
 > 2. SPEC, NOT A SILENT READING: WF-699 D4 names "monotone_in_age … two rate tables band age differently". Choosing bonus_malus departs from that literal text, so a decision-maker T-text amends WF-699 D4 by a dated line: "the demo's monotone property is premium increasing in bonus_malus over the NCD ladder; the deliberate inversion is a ladder band wider than the grid spacing (amended 2026-10-11, <this entry>, RL-1524 DP-1 unchanged in substance)". The original text is struck, not deleted. Record: the T-text rides with PL 9799.
@@ -149,7 +150,7 @@ builds `PL-1544` as amended by `PL-1577` and by this file.
 | The defect (D4) | The 100–149 band is set to 0.90. The band is **50 wide, wider than the spacing of 45**, so the uniform point 140 lies inside it, and the premium at 140 is below the premium at 95. The counterexample is the base context and the grid values 95 and 140 |
 | D5 | The 100–149 band is set back to 1.20. The same property passes |
 | Fit dependence | **None.** The pass, the fail and the counterexample depend only on the ladder table that the journey writes. Item 5's STOP stays armed regardless: a failure before the defect or after D5 is a STOP, never a re-choice (the 23:18:17 entry, item 3) |
-| Spec | WF-699 D4 (`docs/workflows/WF-00699-…md:84`) names `monotone_in_age` and two tables banding age. The decision-maker's dated T-text (working id RL 9701) amends D4 to this property and this inversion, striking the old text, and it mints with this file (the 23:18:17 entry, item 2). `RL-1524` DP-1 is unchanged in substance: an inverted band wider than the grid spacing |
+| Spec | WF-699 D4 (`docs/workflows/WF-00699-…md:84`) names `monotone_in_age` and two tables banding age. The decision-maker's dated T-text (`RL-1645`) amends D4 to this property and this inversion, striking the old text, and it mints with this file (the 23:18:17 entry, item 2). `RL-1524` DP-1 is unchanged in substance: an inverted band wider than the grid spacing |
 
 **Not taken: (b), `driv_age`.** It was drafted in full (`cf2d31a4`) and rejected by the 23:18:17
 entry, item 1: *"driv_age's fitted effect on freMTPL2 is not guaranteed monotone (it is
@@ -216,7 +217,7 @@ line, and its merge commit from `git log origin/main --grep='SL-<n>\b'`. Each re
 | 17 the lead's go | GIVEN, conditional | the 23:18:17 entry, item 4: `SL-1527` authors now; its activation and gate wait for the row below |
 | 18 `SL-1340` | MET | `closed`; `a3572d1a` #1263 |
 | **new: DP-D4 ruled** | **MET** | (a), the 23:18:17 entry, item 1 |
-| **new: this file and the WF-699 D4 T-text (working id RL 9701) minted** | **OPEN** | the next docs PR, ahead of `SL-1527` (the 23:18:17 entry, item 4) |
+| **new: this file and the WF-699 D4 T-text (`RL-1645`) minted** | **MINTED** here; MET when this docs PR merges | the docs PR that carries this file, ahead of `SL-1527` (the 23:18:17 entry, item 4) |
 
 ## Decision points
 
@@ -229,7 +230,7 @@ line, and its merge commit from `git log origin/main --grep='SL-<n>\b'`. Each re
 Each task runs inside `SL-1527` and is added to `PL-1544`'s Tasks.
 
 **Task 0, added Step 6.** Quote DP-D4's ruling verbatim in the ledger, and quote `D4_PROPERTY`
-as written in this file. Check that the WF-699 D4 T-text (working id RL 9701, read at
+as written in this file. Check that the WF-699 D4 T-text (`RL-1645`, read at
 `c823ca83` on `rl-9701-wf699-d4-2026-10-11`) is on `main`:
 ``git grep -n -F 'premium increasing in `bonus_malus` over the NCD-ladder sub-graph' -- docs/workflows/WF-00699-*.md``
 prints its line (the D4 row). If it does not: STOP to the lead.

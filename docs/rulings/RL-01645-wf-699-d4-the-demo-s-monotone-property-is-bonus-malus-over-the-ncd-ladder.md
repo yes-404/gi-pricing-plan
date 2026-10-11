@@ -1,9 +1,9 @@
 ---
-id: RL-9701
+id: RL-1645
 family: ruling
 title: WF-699 D4 — the demo's monotone property is premium increasing in bonus_malus over the NCD ladder, a fixed declaration; the old text is struck
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
-created: 2026-10-11
+created: 2026-10-11            # original date 2026-10-11, set at the draft; minted 2026-10-11
 owner: decision-maker
 tree: 1b04cb05a72e2329d35f57dd87cb3be600096177
 phase: P2
@@ -11,14 +11,14 @@ work: WK-1178
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [WF-699, RL-1524, FD-1244, PL-1544, SL-1527, OQ-1224, FR-261]   # and PL working id 9799, added at its mint
+relates: [WF-699, RL-1524, FD-1244, PL-1544, SL-1527, OQ-1224, FR-261, PL-1644]   # PL-1644 added at the mint
 ---
 
-# RL 9701 — WF-699 D4: the demo's monotone property is `bonus_malus` over the NCD ladder
+# RL-1645 — WF-699 D4: the demo's monotone property is `bonus_malus` over the NCD ladder
 
-*(Filed under working id 9701, which the lead reserved. "RL 9701" in this record and in the
-T-text below stands for this ruling's minted id, and "PL 9799" for the planner's dated delta to
-PL-1544; the minter rewrites both at the mint.)*
+*(Minted 2026-10-11 as RL-1645 from working id 9701, which the lead reserved. The planner's dated
+delta to PL-1544 is `PL-1644`, minted from working id 9799; "PL 9799" inside the quoted entry
+below is that working id, quoted as written.)*
 
 ## How this was ruled
 
@@ -60,7 +60,7 @@ PL-1544; the minter rewrites both at the mint.)*
 - `examples/fremtpl2/algorithm.py:35-37`: *"no step of this algorithm consumes it … the
   journey's `ncd-ladder` sub-graph keys on it. The range is freMTPL2's own (50 to 230)."* The readiness note §2 records that the seed
   creates no `ncd-ladder` (*"`git grep -l 'ncd-ladder\|ncd_ladder' 1b04cb05 -- backend packages
-  examples scripts`"* hits tests and that comment only); who builds it is PL 9799's to say.
+  examples scripts`"* hits tests and that comment only); who builds it is PL-1644's to say.
 - `docs/ledgers/LG-01641-…-slice-ledger.md:277`, the dated corrective line: the full-book
   `veh_age_band` relativities `0-1` 1.9533, `2-3` 1.1209, `4-7` 1.2534, `8-11` 1.2338,
   `12+` 1.0 (base), *"still not monotone in the band order"*.
@@ -86,7 +86,7 @@ Quoted verbatim from the 23:18:17 entry, items 1 and 2:
 2. **The deliberate defect.** The demo data carries one inverted ladder band **wider than the
    grid spacing**, 45 bonus-malus points at this tree. That width is what makes D4 fire under
    `RL-1524` DP-1: an inversion narrower than the spacing may be missed until `OQ-1224` lands.
-   The band's edges are PL 9799's to state, as `RL-1524` bound PL-1544 to state them.
+   The band's edges are PL-1644's to state, as `RL-1524` bound PL-1544 to state them.
 3. **D5's fix restores the ladder order**, and the same declared property then passes. Because
    the ladder is a table the journey writes, not a fit, the failure and the pass both depend
    only on that table: D5's fix is provably the cure.
@@ -142,7 +142,7 @@ A property assertion fails: `monotone_in_age` breaks between two adjacent grid a
 Replace:
 
 ```
-A property assertion fails: ~~`monotone_in_age` breaks between two adjacent grid ages, because two rate tables band age differently and the inverted band is wider than the grid spacing. Hypothesis shrinks the base context; the counterexample is that base context and the two grid ages (`grid: uniform+sampled`).~~ in the freMTPL2 demo, the declared `monotone` property, premium increasing in `bonus_malus` over the NCD-ladder sub-graph, breaks between two adjacent grid values, because one ladder band is inverted and the inverted band is wider than the grid spacing. Hypothesis shrinks the base context; the counterexample is that base context and the two grid values (`grid: uniform+sampled`). An inversion narrower than the grid spacing may not be detected until `OQ-1224` lands. *(Amended 2026-10-05, `RL-1524` DP-1.)* *(Amended 2026-10-11, the maintainer's (by delegation) entry "2026-10-11 23:18:17 BST", DP-D4 = (a), RL 9701: the demo's monotone property is premium increasing in `bonus_malus` over the NCD ladder; the deliberate inversion is a ladder band wider than the grid spacing. The property is a fixed declaration, never derived from the fit, so D5's fix is provably the cure. `monotone_in_age` was illustrative; `RL-1524` DP-1 is unchanged in substance.)*
+A property assertion fails: ~~`monotone_in_age` breaks between two adjacent grid ages, because two rate tables band age differently and the inverted band is wider than the grid spacing. Hypothesis shrinks the base context; the counterexample is that base context and the two grid ages (`grid: uniform+sampled`).~~ in the freMTPL2 demo, the declared `monotone` property, premium increasing in `bonus_malus` over the NCD-ladder sub-graph, breaks between two adjacent grid values, because one ladder band is inverted and the inverted band is wider than the grid spacing. Hypothesis shrinks the base context; the counterexample is that base context and the two grid values (`grid: uniform+sampled`). An inversion narrower than the grid spacing may not be detected until `OQ-1224` lands. *(Amended 2026-10-05, `RL-1524` DP-1.)* *(Amended 2026-10-11, the maintainer's (by delegation) entry "2026-10-11 23:18:17 BST", DP-D4 = (a), RL-1645: the demo's monotone property is premium increasing in `bonus_malus` over the NCD ladder; the deliberate inversion is a ladder band wider than the grid spacing. The property is a fixed declaration, never derived from the fit, so D5's fix is provably the cure. `monotone_in_age` was illustrative; `RL-1524` DP-1 is unchanged in substance.)*
 ```
 
 The citation cell stays `` `03` FR-261 ``. The struck clause is the old text byte for byte, so
@@ -152,7 +152,7 @@ the record of what D4 said is kept in place.
 [50, 230] is the input contract's (`algorithm.py:40`) and 45 follows from `_GRID_POINTS`
 (`properties.py:75`); a number copied into the journey is the copy that goes stale
 ([`RFC-756`](../rfcs/RFC-00756-duplicated-status-in-claude-md-goes-stale.md)). This record and
-PL 9799 carry the figures with their sources. (2) "in the freMTPL2 demo" scopes the property as
+PL-1644 carry the figures with their sources. (2) "in the freMTPL2 demo" scopes the property as
 `:30` and D6's amendments scope theirs; the journey's mechanism is general, its property is the
 demo's.
 
@@ -168,7 +168,7 @@ demo's.
 - **A spec edit lands with its ruling**, in one commit (this role's charter; `RL-1524` applied
   T1–T3 in its own commit, the precedent).
 - **The GO waits on it anyway.** Item 4 of the 23:18:17 entry: SL-1527's activation and gate
-  wait for *"PL 9799 and the WF-699 T-text to MINT"*. Applied here, the mint makes the spec
+  wait for *"PL 9799 and the WF-699 T-text to MINT"* [PL 9799 is `PL-1644`]. Applied here, the mint makes the spec
   true before SL-1527's journey test is written against it; applied in SL-1527, the slice would
   build against a journey text that still says `monotone_in_age`.
 
@@ -177,10 +177,11 @@ from the find/replace above, unchanged.
 
 ## What it obliges
 
-- **At the mint (the minter):** rewrite "RL 9701" to the minted id in this record and in T1's
-  applied text in WF-699; add PL 9799's minted id to `relates:`; re-count T1's find string (0)
+- **At the mint (the minter; done in the docs PR that mints this record):** "RL 9701" is
+  rewritten to `RL-1645` in this record and in T1's applied text in WF-699; `PL-1644` is added
+  to `relates:`; re-count T1's find string (0)
   and its replace string (1) at the then-current main.
-- **PL 9799 (planner-pl1544):** state the inverted ladder band's edges and the 45-point spacing,
+- **PL-1644 (planner-pl1544):** state the inverted ladder band's edges and the 45-point spacing,
   the declaration (`input`, `direction`, `strict`, `lower`, `upper`), who builds the
   `ncd-ladder`, and the STOP rule (items 3 and 5 of the 23:18:17 entry).
 - **The register row keyed `(FD-1244)`**: unchanged by this record; FD-1244 was resolved by
@@ -195,4 +196,4 @@ from the find/replace above, unchanged.
   is 1: the old text struck, not deleted.
 - The observable breach in the product is `RL-1524`'s, unchanged: a G2 demo run whose
   regression run reports no `monotone` failure on `bonus_malus` at D4, or still reports it
-  after D5, fails the journey. PL 9799's acceptance carries that check.
+  after D5, fails the journey. PL-1644's acceptance carries that check.
