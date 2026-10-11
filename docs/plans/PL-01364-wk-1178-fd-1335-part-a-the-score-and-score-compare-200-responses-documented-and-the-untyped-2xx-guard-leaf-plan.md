@@ -3,7 +3,7 @@ id: PL-1364
 family: plan
 kind: leaf
 title: WK-1178 slice — FD-1335 Part A, the /score and /score/compare 200 responses documented, and one untyped-body guard over 2xx responses and JSON request bodies (FR-250, FR-262, FR-451, NFR-502): leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-01
 owner: planner
 tree: 427323218abaeb208a141cbbcd0a363a3ddc8815

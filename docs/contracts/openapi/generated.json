@@ -1925,6 +1925,48 @@
         "title": "ChangeGroup",
         "type": "object"
       },
+      "ChangeSummaryDraft": {
+        "additionalProperties": false,
+        "description": "The drafted change summary of a Rating Version (03 FR-242; WF-699 E1; `RL-1498`).\n\nDrafted from the structural diff (FR-219) and the rate-table diffs (FR-231) against\n`baseline`, the most recently approved other version of the same algorithm. `baseline` is\n`None` when there is none; `structural_diff` is `None` when there is no baseline or the\nbaseline has no algorithm. `text` states *what* changed and ends with the empty `Why:` and\n`Expected impact:` labels for the actuary. Nothing is stored.",
+        "properties": {
+          "baseline": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rate_tables": {
+            "items": {
+              "$ref": "#/components/schemas/RateTableChange"
+            },
+            "title": "Rate Tables",
+            "type": "array"
+          },
+          "structural_diff": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AlgorithmDiff"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "ChangeSummaryDraft",
+        "type": "object"
+      },
       "CheckStatus": {
         "description": "One certificate check's verdict.\n\n§4.7's example shows `pass`, `warn` and `violated`. `failed` is the fourth, and the\ndistinction it draws is the one FR-152 turns on: `violated` is a *stated property\nbreach the platform tolerates with a declared mitigation* — a non-convex loss is a\nlegitimate pricing loss — where `failed` is a check that cannot pass at all, and an\nobjective whose derivatives disagree with the numeric ones is not usable at any\napproval level. `02` §4.7 carries a dated note adding it to the vocabulary.",
         "enum": [
@@ -8722,6 +8764,137 @@
         "title": "KeyView",
         "type": "object"
       },
+      "LadderOperation": {
+        "additionalProperties": false,
+        "description": "`LadderRung.operation` (`scoring.schema.json`, FR-248 as amended by `RL-1329`).\n\nThe operation a rung applied to the previous rung's **unrounded** value. Operands are\nexact and never quantised: `factor` (`multiply`), `divisor` (`divide`),\n`amount_unrounded_minor` (`add`), and `bound` with `bound_unrounded_minor` (`clamp`,\non the `constraints` rung only). `mode` and `dp` are emitted only on `round`.\n`applied` carries the reason codes of the binding clamps on the `constraints` rung\n(`clamp` or `none`), empty rather than absent when nothing fired. `amount_minor` is\n**legacy**: kept so a stored pre-ruling ladder still validates; the builder no longer\nemits it. Every field added by `RL-1329` is optional, because stored ladders are\nwrite-once and lack them.",
+        "properties": {
+          "amount_minor": {
+            "anyOf": [
+              {
+                "description": "Amount in minor units (pence/cents) of the workspace currency.",
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Minor"
+          },
+          "amount_unrounded_minor": {
+            "anyOf": [
+              {
+                "description": "Exact decimal as a string; never a binary float (FR-10).",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Unrounded Minor"
+          },
+          "applied": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Applied",
+            "type": "array"
+          },
+          "bound": {
+            "anyOf": [
+              {
+                "enum": [
+                  "min",
+                  "max"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bound"
+          },
+          "bound_unrounded_minor": {
+            "anyOf": [
+              {
+                "description": "Exact decimal as a string; never a binary float (FR-10).",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bound Unrounded Minor"
+          },
+          "divisor": {
+            "anyOf": [
+              {
+                "description": "Exact decimal as a string; never a binary float (FR-10).",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Divisor"
+          },
+          "dp": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dp"
+          },
+          "factor": {
+            "anyOf": [
+              {
+                "description": "Exact decimal as a string; never a binary float (FR-10).",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Factor"
+          },
+          "kind": {
+            "enum": [
+              "multiply",
+              "divide",
+              "add",
+              "clamp",
+              "round",
+              "none"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "LadderOperation",
+        "type": "object"
+      },
       "LadderReconciles": {
         "additionalProperties": false,
         "description": "The premium ladder reconciles (FR-248).",
@@ -8736,6 +8909,115 @@
           "kind"
         ],
         "title": "LadderReconciles",
+        "type": "object"
+      },
+      "LadderRounding": {
+        "additionalProperties": false,
+        "description": "A rung's declared rounding (`common/money.schema.json#/$defs/Rounding`, `RL-1329` §3).",
+        "properties": {
+          "dp": {
+            "minimum": 0.0,
+            "title": "Dp",
+            "type": "integer"
+          },
+          "mode": {
+            "enum": [
+              "half_even",
+              "half_up",
+              "ceiling",
+              "floor",
+              "down"
+            ],
+            "title": "Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "dp"
+        ],
+        "title": "LadderRounding",
+        "type": "object"
+      },
+      "LadderRung": {
+        "additionalProperties": false,
+        "description": "One rung of the Premium Ladder (FR-247/248, `scoring.schema.json`).\n\n`unrounded_minor` is the engine's exact value for the rung; `value_minor` is that value\nrounded once with `rounding` (`RL-1329` §2). Displayed values do not multiply into each\nother; the unrounded column is the one that replays (FR-248).",
+        "properties": {
+          "components": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "description": "Amount in minor units (pence/cents) of the workspace currency.",
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Components"
+          },
+          "operation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LadderOperation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rounding": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LadderRounding"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rung": {
+            "enum": [
+              "risk_premium",
+              "expense_loading",
+              "commission",
+              "profit_loading",
+              "office_premium",
+              "optimisation_adjustment",
+              "constraints",
+              "instalment_loading",
+              "ipt_and_fees",
+              "payable_premium"
+            ],
+            "title": "Rung",
+            "type": "string"
+          },
+          "unrounded_minor": {
+            "anyOf": [
+              {
+                "description": "Exact decimal as a string; never a binary float (FR-10).",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unrounded Minor"
+          },
+          "value_minor": {
+            "description": "Amount in minor units (pence/cents) of the workspace currency.",
+            "title": "Value Minor",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rung",
+          "value_minor"
+        ],
+        "title": "LadderRung",
         "type": "object"
       },
       "LargeLossKind": {
@@ -12056,6 +12338,56 @@
         "title": "RateTableCell",
         "type": "object"
       },
+      "RateTableChange": {
+        "additionalProperties": false,
+        "description": "One rate table whose pinned version differs between the baseline and a version\n(FR-242's drafted change summary; `RL-1498` DP-E1-5).\n\n`from_ref` / `to_ref` are the pins on the baseline and on the version; `None` marks a\ntable pinned on one side only. `diff` is the unweighted cell diff (FR-231); it is `None`\nwhen `pending` (a `storage: parquet` side is not computed here, FR-232) or when the table\nis on one side only.",
+        "properties": {
+          "diff": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RateTableDiff"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "from_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pending": {
+            "default": false,
+            "title": "Pending",
+            "type": "boolean"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "to_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "slug"
+        ],
+        "title": "RateTableChange",
+        "type": "object"
+      },
       "RateTableDiff": {
         "additionalProperties": false,
         "description": "A cell-level diff between two rate table versions (03 §4.2, FR-231).\n\n`changed_cells` is the number of cells whose value differs. The two percentages are\n`None` where there is nothing to compare (no cells, or no cell has a non-zero\nbaseline); percentages are Decimals, serialised as strings, never JSON floats (R2).\n\n`portfolio_exposure` and `matched_exposure` (`RL-1361` item 4) are the named portfolio's\ntotal exposure and the exposure that mapped to a cell of the current version. Both are\n`None` when no portfolio is named, which tells an unweighted diff from a weighted one\nwhose mean is `None` (no weight on a changed cell, or only zero-weight cells).",
@@ -15318,6 +15650,95 @@
         "title": "ScoreCompareRequest",
         "type": "object"
       },
+      "ScoreComparison": {
+        "additionalProperties": false,
+        "description": "`POST /api/v1/score/compare` response (FR-262, `03` §4.10): both traced results and\nthe diff of their traces.",
+        "properties": {
+          "base": {
+            "$ref": "#/components/schemas/ScoringResult"
+          },
+          "comparison": {
+            "$ref": "#/components/schemas/ScoringResult"
+          },
+          "diff": {
+            "$ref": "#/components/schemas/TraceDiff"
+          }
+        },
+        "required": [
+          "base",
+          "comparison",
+          "diff"
+        ],
+        "title": "ScoreComparison",
+        "type": "object"
+      },
+      "ScoringResult": {
+        "additionalProperties": false,
+        "description": "`ScoringResult` (`scoring.schema.json:46-63`, `03` §4.4).\n\nInvariants (`scoring.schema.json:59-62`, enforced by `pricing_core.rating.score`, not\nre-validated here): applying every rung's recorded operation to `risk_premium`\nreproduces `payable_premium` exactly (FR-248); a traced and an untraced call on the\nsame bundle and context return an identical premium (`03` R3).",
+        "properties": {
+          "bundle_hash": {
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "title": "Bundle Hash",
+            "type": "string"
+          },
+          "decline_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Decline Reasons",
+            "type": "array"
+          },
+          "outcome": {
+            "enum": [
+              "quoted",
+              "declined",
+              "error"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "outputs": {
+            "additionalProperties": true,
+            "title": "Outputs",
+            "type": "object"
+          },
+          "premium_ladder": {
+            "items": {
+              "$ref": "#/components/schemas/LadderRung"
+            },
+            "title": "Premium Ladder",
+            "type": "array"
+          },
+          "rating_version_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "timing_ms": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Timing Ms",
+            "type": "object"
+          },
+          "trace": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Trace"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "outcome",
+          "rating_version_ref",
+          "bundle_hash",
+          "premium_ladder"
+        ],
+        "title": "ScoringResult",
+        "type": "object"
+      },
       "SeedFromModelRequest": {
         "additionalProperties": false,
         "description": "`POST /api/v1/rate-tables/{slug}/seed-from-model` body (FR-230, `03` §5.1).\n\nOne seed request names one Factor of an approved model (`RL-1361` section A);\n`factor` is the Factor's slug, a key of the model's relativities. Exactly three\nfields, and an unknown field is refused (`RL-1375` DP-3).",
@@ -16017,6 +16438,72 @@
         "title": "SplitRequest",
         "type": "object"
       },
+      "StepChange": {
+        "additionalProperties": false,
+        "description": "One step that differs between two Traces (FR-262, `03` §4.10). `own_change` is true\nwhen the step was added, removed, or changed while consuming identical inputs. False\nmeans no own change attributable from the traces, which is not a claim that the step\nwas not edited.",
+        "properties": {
+          "base": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TraceStep"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "change": {
+            "enum": [
+              "added",
+              "removed",
+              "changed"
+            ],
+            "title": "Change",
+            "type": "string"
+          },
+          "changed_fields": {
+            "items": {
+              "enum": [
+                "type",
+                "label",
+                "consumed",
+                "produced",
+                "matched",
+                "violation"
+              ],
+              "type": "string"
+            },
+            "title": "Changed Fields",
+            "type": "array"
+          },
+          "comparison": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TraceStep"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "own_change": {
+            "description": "True for an added or removed step, and for a changed step whose consumed inputs are identical on both sides. False means no own change attributable from the traces; it is not a claim that the step was not edited (a downstream step can be edited and also consume a moved value).",
+            "title": "Own Change",
+            "type": "boolean"
+          },
+          "step_id": {
+            "title": "Step Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step_id",
+          "change",
+          "own_change"
+        ],
+        "title": "StepChange",
+        "type": "object"
+      },
       "SubGraph": {
         "additionalProperties": false,
         "description": "A stored, immutable Sub-graph Version (`sub_graph:<slug>@<version>`).",
@@ -16329,6 +16816,30 @@
           "ladder_reconciled"
         ],
         "title": "Trace",
+        "type": "object"
+      },
+      "TraceDiff": {
+        "additionalProperties": false,
+        "description": "The step-level difference of two executed Traces (FR-262, `03` §4.10). Distinct from\nFR-219's structural `AlgorithmDiff`, which compares two algorithm definitions.",
+        "properties": {
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/StepChange"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "unchanged": {
+            "minimum": 0.0,
+            "title": "Unchanged",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "steps",
+          "unchanged"
+        ],
+        "title": "TraceDiff",
         "type": "object"
       },
       "TraceStep": {
@@ -32410,6 +32921,133 @@
         ]
       }
     },
+    "/api/v1/rating-versions/{rating_version_id}/change-summary-draft": {
+      "get": {
+        "description": "**200** with the drafted change summary (03 §5.1, FR-242; WF-699 E1; `RL-1498`).\n\nBuilt from the structural diff and each re-pinned rate table's diff against the most\nrecently approved other version of the same algorithm. Read-only: the actuary edits the\n`text` and sends it as `change_summary` on the submit route. **409**\n`RATING_VERSION_UNPINNED` for a version without an algorithm or pins.",
+        "operationId": "draft_rating_version_change_summary_api_v1_rating_versions__rating_version_id__change_summary_draft_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rating_version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rating Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeSummaryDraft"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Draft a rating version's change summary",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
     "/api/v1/rating-versions/{rating_version_id}/compile": {
       "post": {
         "description": "**202** with a Job (`03` §5.1:514, FR-239/240, WK-671 Task 1.2).\n\nCompilation resolves the pinned algorithm, rate tables, reference tables, custom\nobjectives and model to their real content and persists the compiled Bundle as a\nblob — no longer a synchronous 200, since resolving real content can do real I/O.\nPolling the returned Job to completion yields a `JobResult(kind=\"blob\")` whose `ref`\nis the persisted Bundle's content-addressed sha256. **409** `RATING_VERSION_IMMUTABLE`,\nwith no Job, unless the version is `draft` (FR-239, RL-1379).",
@@ -34298,7 +34936,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ScoringResult"
+                }
               }
             },
             "description": "Successful Response"
@@ -34580,7 +35220,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ScoreComparison"
+                }
               }
             },
             "description": "Successful Response"
