@@ -1,9 +1,9 @@
 ---
-id: PL-9813
+id: PL-1627
 family: plan
 kind: map
 title: WK-1178 — the tail folds for SL-1563 (money_minor closed both ways) and SL-1517 (NFR-498 Audit Events): a dated delta to PL-1562 and PL-1516
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-11
 owner: planner
 tree: 02f23b4a74cfdf81ff4ac875e1ff7ab2db777c4a
@@ -15,7 +15,7 @@ corrected_by: []
 relates: [PL-1562, PL-1516, SL-1563, SL-1517, FD-1424, FD-1513, RL-1564, RL-1515, RL-1555, SL-1559, SL-1340, SL-1391]
 ---
 
-# PL 9813 — WK-1178, the tail folds for SL-1563 and SL-1517 (delta to PL-1562 and PL-1516)
+# PL-1627 — WK-1178, the tail folds for SL-1563 and SL-1517 (delta to PL-1562 and PL-1516)
 
 > **For agentic workers:** this is a **dated delta** under Lean P2 L5 (`document-ids.md` §1.6,
 > PL row: *"a change is one dated Work-plan delta, a new `PL-` that `relates:` the Work's
@@ -31,7 +31,7 @@ relates: [PL-1562, PL-1516, SL-1563, SL-1517, FD-1424, FD-1513, RL-1564, RL-1515
 > `dev-commands`, `git-hygiene`), and is spawned from `.claude/roles/executor.md`.
 
 Filed under working id 9813, reserved by the lead in `handover/brief-wave3-2026-10-11.md`.
-Written 2026-10-11 by the planner (planner-9813). It mints in D11 or D12 (the 11:45:03 entry,
+Written 2026-10-11 by the planner (planner-9813). It was minted in the D12 batch (2026-10-11; the 11:45:03 entry,
 item 5). **Tree read:** `origin/main` `02f23b4a` (#1273). Every repository `file:line` below
 was read at `d699a561` (#1272), and `git diff --name-only d699a561 02f23b4a` touches none of the
 cited code, test, plan or ruling files (only `docs/roadmap.md`, outside the two rows edited
@@ -57,7 +57,7 @@ delegation), each read in full by this planner. A repository reader cannot resol
 entry (RFC-777), so the parts this delta rests on are quoted verbatim.
 
 **"2026-10-11 11:45:03 BST — WK-1178 tail: GO SL-1566; SL-1563 write-set (a) YES; SL-1517 fold
-YES, DP-6 → the decision-maker; ONE delta PL 9813; SL-1569 last"**, items 2, 3 and 5:
+YES, DP-6 → the decision-maker; ONE delta PL-1627; SL-1569 last"**, items 2, 3 and 5:
 
 > 2. SL-1563: (a) YES. test_rating_glm_model_call.py joins the write set for :463–475 only. The ("money_minor","decimal") pair moves from the LEGAL controls to the REFUSED cases, because closing money_minor at save is exactly this slice's purpose. The other A-2 asserts stay byte-identical (the LG shows a diff of that file limited to those lines). PL-1562 :607 "A-2 tests unedited" is superseded for those lines only, by the delta. The row's stale "Open: DP-1" gets a dated line (DP-1 was ruled; cite where).
 > 3. SL-1517 (NFR-498, BOUND before the freeze): the 3-file write-set fold is YES, each file named in the delta. NEW DP-6 (WK-675 S4's manual_edit_confirmed is a fourth version writer with no RL-1515 DP-3 action) goes to a decision-maker, with options incl. your `rate_table_version.edited`, matched against the existing audit action vocabulary (the RL-1515 DP-3 list and the audit-event contract), so the name is consistent. Timing: right after WK-675 S4 merges, latest GO Thu 29 Oct.
@@ -70,7 +70,7 @@ cases' list (§A1):
 > SL-1563 DP-7 = (i): widen the write-set bound to test_rating_glm_model_call.py :456–475 for exactly 3 changed lines: add "decimal" to :456's parametrize list, drop the pair from :469, relax :463. Every other A-2 assert stays byte-identical (the LG shows that file's diff). (ii) is rejected: it duplicates a test body.
 
 **"2026-10-11 11:49:51 BST — DP-6 (SL-1517) RULED (a): a 5th audit action
-`rate_table_version.edited`, carried by an ADDITIVE RL 9817; the three fold items into PL 9813
+`rate_table_version.edited`, carried by an ADDITIVE RL-1625; the three fold items into PL-1627
 ADOPTED; RL-1515's body is NOT touched"**, items 1 to 4:
 
 > 1. (a) ADOPTED: `rate_table_version.edited` (FR-229; fits ^[a-z_]+\.[a-z_]+$). It maps 1:1 to WK-675 S4's `created_by_edit`, as `.imported` maps to `created_by_import`. `.updated` stays reserved for mutable entities. The rejected options are rejected for the memo's reasons: the fold into `.imported` breaks DP-3's distinct actions; a generic `.created` loses the source; leaving edits out is an NFR-498 gap past the freeze.
@@ -283,10 +283,10 @@ the expected diff is empty. A non-empty diff is the generator's output, quoted i
 and never a hand edit. This replaces PL-1516's "Not written: `docs/contracts/`" for that one
 file.
 
-**The spec text.** RL 9817 (additive, `relates: RL-1515`; it is not minted yet) carries the
-dated note. Task 5 applies RL-1515's T-1a to T-1d byte for byte, then RL 9817's note **in the
-spec text T-1b inserted**, as a dated line citing RL 9817 (11:49:51 item 2). If RL 9817 places
-it elsewhere, RL 9817 governs.
+**The spec text.** RL-1625 (additive, `relates: RL-1515`; minted in the same D12 batch) carries the
+dated note. Task 5 applies RL-1515's T-1a to T-1d byte for byte, then RL-1625's note **in the
+spec text T-1b inserted**, as a dated line citing RL-1625 (11:49:51 item 2). If RL-1625 places
+it elsewhere, RL-1625 governs.
 
 ### B4. Timing and the BOUND
 
@@ -345,7 +345,7 @@ matches too (`git grep -c audit af4f634b -- backend/src/app/platform/rate_tables
 
 PL-1516 D7's needs stand: 1 (FD-1513), 2 (RL-1514), 3 (RL-1515), 4 (SL-1427) and 5 (A-2,
 `2edc4d89`) are met at `02f23b4a`. They gain:
-- **3a. RL 9817 minted** (DP-6 (a), the additive note).
+- **3a. RL-1625 minted** (DP-6 (a), the additive note).
 - **5a. WK-675 S4 (`SL-1559`) merged** (11:49:51 item 4).
 - 6, the lead's GO, names: this delta; DP-6's three fold items; the rebase of `test_diff_cache.py`
   (§B2); the latest GO date and the BOUND (§B4).
@@ -359,7 +359,7 @@ Both are ruled. The table is kept as the record of the options.
 | DP | Question | Options | Recommendation | Ruled |
 |---|---|---|---|---|
 | **DP-7** (SL-1563) | The 11:45:03 item 2 bounds A-2's file to `:463–475`, but the refused cases' list is `:456` (§A1). How does the pair move? | (i) widen the bound to `:456–475`: add `"decimal"` at `:456`, drop the pair at `:469`, relax `:463`; three changed lines. (ii) stay inside `:463–475`: relax `:463`, drop the pair at `:469`, and insert a new refused test for the pair in the `:464–465` gap; about 8 added lines and a duplicate test body | **(i)** | **(i)**, the maintainer (by delegation), 11:48:00 BST (quoted above): "(ii) is rejected: it duplicates a test body" |
-| **DP-6** (SL-1517) | WK-675 S4's `manual_edit_confirmed` is a fourth writer through `_persist_new_version`, and RL-1515 DP-3 names no action for it (§B3) | (a) a fifth action `rate_table_version.edited`; (a′) `rate_table_version.manually_edited`; (b) fold edits into `.imported`; (c) a generic `rate_table_version.created`; (d) leave the edit path out of SL-1517. Carrier: (s1) an additive RL; (s2) a correcting RL | **(a) + (s1)**, as the DP-6 memo recommends | **(a)**, carried by the additive RL 9817, the maintainer (by delegation), 11:49:51 BST (quoted above). RL 9817 is not minted yet; it is activation need 3a (§B7) |
+| **DP-6** (SL-1517) | WK-675 S4's `manual_edit_confirmed` is a fourth writer through `_persist_new_version`, and RL-1515 DP-3 names no action for it (§B3) | (a) a fifth action `rate_table_version.edited`; (a′) `rate_table_version.manually_edited`; (b) fold edits into `.imported`; (c) a generic `rate_table_version.created`; (d) leave the edit path out of SL-1517. Carrier: (s1) an additive RL; (s2) a correcting RL | **(a) + (s1)**, as the DP-6 memo recommends | **(a)**, carried by the additive RL-1625, the maintainer (by delegation), 11:49:51 BST (quoted above). RL-1625 is not minted yet; it is activation need 3a (§B7) |
 
 ## Tasks
 
@@ -376,7 +376,7 @@ The leaf plans' tasks stand. These are the changes, task by task.
 - **Task 6 Step 2's ledger** quotes A-2's file diff in full (acceptance 1).
 
 **SL-1517 (PL-1516):**
-- **Task 0 Step 1** confirms S4's merge and RL 9817's mint (§B7). **Step 2** re-anchors from
+- **Task 0 Step 1** confirms S4's merge and RL-1625's mint (§B7). **Step 2** re-anchors from
   §B5's table and re-enumerates the version-returning routes, S4's edit route among them.
 - **Task 1 Steps 1–4** also move the call sites of §B1's three files, and thread `actor` through
   `manual_edit_confirmed` and its route (§B3 2).
@@ -386,7 +386,7 @@ The leaf plans' tasks stand. These are the changes, task by task.
 - **Task 3 Step 1** passes `action="rate_table_version.edited"` and the base version's state as
   `before` from `manual_edit_confirmed` (§B3 2).
 - **Task 4 Step 1**'s report date follows §B4.
-- **Task 5** applies RL 9817's dated note after T-1b's text (§B3).
+- **Task 5** applies RL-1625's dated note after T-1b's text (§B3).
 - **Task 6** runs `generate-contracts.py --check` and rebases the shared S7 test (§B2).
 
 ---
@@ -434,13 +434,13 @@ adds to each leaf plan's Acceptance Standard and changes nothing else in it.
 
 ## Hand-off
 
-1. **To the lead:** mint this delta in D11 or D12. The SL-1563 and SL-1517 rows carry a dated
+1. **To the lead:** mint this delta in D11 or D12 (done: D12, 2026-10-11). The SL-1563 and SL-1517 rows carry a dated
    line pointing here (this PR). The GO records quote §A6 and §B7.
 2. **To SL-1563's executor:** Part A, then PL-1562. The three-line edit is DP-7 (i)'s, and
    nothing more of A-2's file moves.
 3. **To SL-1517's executor:** Part B, then PL-1516 and its two dated deltas inside it. The edit
-   path's action is `rate_table_version.edited`; the spec note is RL 9817's.
-4. **To RL 9817's decision-maker:** this delta names the note's place as "the spec text T-1b
+   path's action is `rate_table_version.edited`; the spec note is RL-1625's.
+4. **To RL-1625's decision-maker:** this delta names the note's place as "the spec text T-1b
    inserted" (§B3), as ruled; the RL's own placement governs.
 5. **To WK-675 S4's executor (`SL-1559`):** nothing changes in S4. SL-1517 merges second and
    carries the edit path's event.
@@ -454,7 +454,7 @@ adds to each leaf plan's Acceptance Standard and changes nothing else in it.
    plans.
 2. **Coverage of 11:48:00 (DP-7 (i)).** The bound is `:456–475` with exactly three changed
    lines (§A1, acceptance 1). (ii) is not used.
-3. **Coverage of 11:49:51.** Item 1: the action name (§B3, item 3b). Item 2: RL 9817 is
+3. **Coverage of 11:49:51.** Item 1: the action name (§B3, item 3b). Item 2: RL-1625 is
    additive, RL-1515's body is not touched, and the note goes in the spec text T-1b inserted.
    Item 3 (i)–(iii): §B3 1–3 and §B6. Its contract line: §B3, acceptance 10. Item 4: §B3 and
    §B7 5a.

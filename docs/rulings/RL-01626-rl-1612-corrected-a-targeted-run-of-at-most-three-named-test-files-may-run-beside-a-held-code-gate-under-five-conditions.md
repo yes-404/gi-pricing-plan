@@ -1,5 +1,5 @@
 ---
-id: RL-9818
+id: RL-1626
 family: ruling
 title: RL-1612 corrected — a seat's targeted test run of at most three named files may run beside a held code gate, under five conditions; never beside an ALONE window or a measurement, never a full suite (process, the maintainer's ruling by delegation, recorded)
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
@@ -15,12 +15,11 @@ corrects: RL-1612
 relates: [RL-1612, RL-1445, RL-1263]
 ---
 
-# RL-9818 — RL-1612 corrected: a targeted run of at most three named test files may run beside a held code gate
+# RL-1626 — RL-1612 corrected: a targeted run of at most three named test files may run beside a held code gate
 
 *Disclosure: drafted under working id 9818, reserved by the lead (team-lead) on 2026-10-11
 (`~/gi-pricing-plan.local/handover/eta.md`, the line stamped "2026-10-11 11:48:45 BST": "RL
-9818 RESERVED for D11 + §8 line"). It is minted in the D11 batch mint PR. When it is minted,
-the working id in this record is replaced by the minted id.*
+9818 RESERVED for D11 + §8 line"). Minted 2026-10-11 as RL-1626 from working id 9818, in the D12 batch mint PR (drafted for D11; the D11/D12 split of the lead's 11:58:45 entry moved it). The working id in this record was replaced by the minted id.*
 
 ## How this was ruled
 
@@ -49,8 +48,7 @@ the working id in this record is replaced by the minted id.*
 - **`RL-1612` is not on `main` at this record's tree.** It is minted on the D10 branch
   `docs-d10-2026-10-11` (PR #1274, OPEN at head `80e467733fb6f1a962c4db3384011aa9d63b03ea`
   when read, 2026-10-11 11:5x BST). This record's citations of `RL-1612` are to that head.
-  D11, which carries this record, mints after D10 merges; if `RL-1612`'s text moves before
-  then, the minter re-checks the lines cited here.
+  D12, which carries this record (drafted for D11), mints after D10 and D11 merge; the minter re-checks the lines cited here (done at the D12 mint: see the PR body).
 - **Owner.** It is owned by the maintainer, as `RL-1612` is, because it amends a process
   ruling. The decision-maker seat `dm-rls` wrote it.
 
@@ -113,7 +111,7 @@ measured. The full suite stays a gate.
 
 ## What it obliges
 
-The minter of the D11 batch (`minter-d11`) applies items 1 and 2 in the same PR as this record
+The minter of the D12 batch (`minter-d11`; the record was drafted for D11) applies items 1 and 2 in the same PR as this record
 (the entry: "the correcting RL in D11 … and a dated §8 line, quoting this entry"). This record
 names them; it does not apply them.
 

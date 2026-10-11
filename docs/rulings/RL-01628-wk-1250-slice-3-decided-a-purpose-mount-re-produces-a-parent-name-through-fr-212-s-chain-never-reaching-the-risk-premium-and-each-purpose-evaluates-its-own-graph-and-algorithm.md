@@ -1,9 +1,9 @@
 ---
-id: RL-9573
+id: RL-1628
 family: ruling
 title: WK-1250 Slice 3 decided — a purpose mount re-produces a parent name through FR-212's chain, never reaching the risk premium, and each purpose evaluates its own graph and algorithm
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-10-05            # working id; the mint date is set at the mint (check 31)
+created: 2026-10-11            # original date 2026-10-05, set at the draft; minted 2026-10-11
 owner: decision-maker
 tree: d699a561d6a93f33b74beb9c07023f8e655bb8c7
 phase: P2
@@ -15,7 +15,7 @@ corrects: ~
 relates: [RL-1344, RL-1309, RL-1242, RL-1571, RL-1519, FD-1425, SL-1436, PL-1254, SL-1341, FR-212, FR-217, FR-218, FR-243, FR-248]
 ---
 
-# RL 9573 (working id) — WK-1250 Slice 3: DP-S3-1 and DP-S3-2 decided
+# RL-1628 — WK-1250 Slice 3: DP-S3-1 and DP-S3-2 decided
 
 ## How this was ruled
 
@@ -28,7 +28,7 @@ relates: [RL-1344, RL-1309, RL-1242, RL-1571, RL-1519, FD-1425, SL-1436, PL-1254
 
   **DP-S3-1 is accepted in principle and becomes final at this record's ACK.** DP-S3-2 is
   accepted.
-- **The decision points** are PL 9609's (working id, #1173, branch `pl-9609-wk1250-s3-leaf` at
+- **The decision points** are PL-1629's (minted in the same D12 batch; #1173, branch `pl-9609-wk1250-s3-leaf` at
   `7c8736fd5c083fddf175d3a10a2e51b2cbcdc3d6`), §"Decision points", raised as `RL-1344` §3 requires
   (`RL-1344:180-181`). The memo the ruling names is
   `~/gi-pricing-plan.local/handover/dp-memo-wk1250-s3-2026-10-05.md` (a local file).
@@ -36,10 +36,10 @@ relates: [RL-1344, RL-1309, RL-1242, RL-1571, RL-1519, FD-1425, SL-1436, PL-1254
   the lead's order. Every fact was first read at `origin/main`
   `137bc817ef1fb40ea57e9053e0ad40b73bdff3a8`, by symbol with its line. **Every locator below is
   re-read at `d699a561d6a93f33b74beb9c07023f8e655bb8c7`** (§"Pre-mint refresh, 2026-10-11"). PL
-  9609 is unminted, so it is cited in working-id form and kept out of `relates:` (check 32). The
+  9609 was unminted when this refresh was written, and is now PL-1629 (minted in this batch, after this record). The
   Slice 2 ruling RL 9586 (#1180) was minted as `RL-1571` (D5, 2026-10-10) and is cited so.
 - **This record rules a plan's decision points and never edits the plan** (`document-ids.md`
-  §1.6, PL row). Its texts for PL 9609 (P1 to P5) are applied by the planner as a pre-mint edit.
+  §1.6, PL row). Its texts for PL-1629 (P1 to P5) are applied by the planner as a pre-mint edit.
 - **Not ruled by this record:** the `to_wire` step-order question (`runtime.py` `to_wire` `:412`,
   `:461-492`). *(Dated clause, 2026-10-05 17:09 BST (by `date`), pre-mint, dm-finals2.)* It was
   reproduced as FD 9572 (working id; minted `FD-1425`, `closed`) and its fix ruled by the maintainer, by delegation, in the
@@ -80,7 +80,7 @@ at this record's ACK; DP-S3-2 accepted (quoted above).**
 | **Limit 2 — one re-producer per name** | A mount may re-produce `X` only where the parent has no other re-producer of `X`. Inside the fragment, only the step producing the output port mapped to `X` consumes the input port mapped to `X`. Either violation is a cycle, refused at save by FR-212 as it stands with `RATING_GRAPH_CYCLIC` |
 | **Limit 3 — author-placed `X`** | Where `X` sits is the author's choice. Every parent step downstream of `X` runs on the adjusted value; a minimum-premium clamp downstream of `X` clamps a refund. The mount and its `purposes` are in FR-219's diff (`RL-1344` acceptance 5) and in the trace |
 | **Limit 4 — order** | The re-producing step is evaluated after the parent's producer of `X` and before every downstream consumer. It holds by the stable topological order the maintainer, by delegation, ruled at 2026-10-05 17:06:26 BST for `to_wire` and for the Slice 2 inliner (RL 9586's P5, ACCEPTED; FD 9572, working id): *"wires every consumed name to its PRODUCER by name through the graph, over a STABLE topological order computed from the dependency edges (Kahn with list order as the tie-break …)"*. **That order is now delivered**: `to_wire` lays the interior steps on one path in `_dependency_order`'s order (`runtime.py` `:458`, `:500`; FD-1425, fixed by `SL-1436`, `closed` 2026-10-06), and the inliner uses `_stable_topological` (`inline.py` `:161`; `RL-1571` P5). A re-producer depends on the earlier producer of `X`, and every downstream consumer depends on the re-producer, so that order puts each where (d) needs it. Slice 3 adds no ordering code; its red-first test 1 (Acceptance below) shows the order holds for a purpose graph |
-| **Codes (DP-S3-1)** | A step that runs for every purpose consuming a purpose-only name → `RATING_GRAPH_UNRESOLVED_REF` (PL 9609 acceptance 3; `RL-1344` acceptance 4). R1 → `VALIDATION_FAILED`. Limit 2 → `RATING_GRAPH_CYCLIC`. No new code |
+| **Codes (DP-S3-1)** | A step that runs for every purpose consuming a purpose-only name → `RATING_GRAPH_UNRESOLVED_REF` (PL-1629 acceptance 3; `RL-1344` acceptance 4). R1 → `VALIDATION_FAILED`. Limit 2 → `RATING_GRAPH_CYCLIC`. No new code |
 | **DP-S3-2** | **(a) one graph per purpose that has a mount.** `Bundle` gains `purpose_graphs: dict[str, JdmGraph]`, holding only the purposes some mount selects, so it is empty for a version with no purpose mount. `bundle_hash` covers it only when it is non-empty, so every existing `content_hash` is unchanged. Scoring chooses the graph by `ctx.purpose` and falls back to the base graph |
 | **DP-S3-2, condition 1** | `CompiledBundle` holds, per purpose graph, its **decision, algorithm and `model_call` handler**; boosters stay shared and keyed by ref. One selector returns the pair for `ctx.purpose`, and every read of `bundle.algorithm` or `bundle.decision` in the Locators' scoring rows goes through it. Red first: a cancellation mount containing a clamping `constraint` step, whose clamp appears in the cancellation quote's ladder |
 | **DP-S3-2, condition 2** | `RL-1571`'s C1 (DP-S2-1; `runtime.py` `_check_graph_matches_inlined_algorithm` `:962`) runs per purpose graph: `load_bundle` re-inlines with the purpose for each key of `purpose_graphs` and refuses with `BUNDLE_COMPILE_FAILED` when that graph's node ids differ from the re-inlined algorithm's `step_id`s |
@@ -97,13 +97,13 @@ count other than one.
 ### T1 — `03` §4.1, the invariants. The invariants paragraph contains `` and unreferenced by an `output` (FR-212). `` (`03:340`). Slice 2 appended the paragraph beginning `` *(Amended 2026-10-09, WK-1250 Slice 2, `RL-1309` DP-3 items 2 to 4: a mount is a node. `` (`03:349`). Insert after that Slice 2 paragraph, as a new paragraph
 
 ```markdown
-*(Added <date>, WK-1250 Slice 3, RL 9573 (working id); `RL-1344` §3.)* **Per purpose.** FR-212 holds for each purpose's graph: the algorithm with its unconditional mounts, and the algorithm with the mounts selected for `mid_term_adjustment`, and for `cancellation`. A step that runs for every purpose cannot consume a name only a purpose mount produces (`RATING_GRAPH_UNRESOLVED_REF`). **A purpose mount re-produces a parent name.** It maps an input port and an output port to the same parent name, and in that purpose's graph it consumes the parent's value and re-produces it, as a clamping `constraint` re-produces its value; every step downstream reads the adjusted value, so the premium ladder and the payable of an MTA or cancellation are the adjusted figures. Its steps never reach the `risk_premium_minor` output: one risk price (FR-218; `VALIDATION_FAILED`). A name has at most one re-producer, and inside the fragment only the step producing the re-produced name consumes it (otherwise `RATING_GRAPH_CYCLIC`). Where the mount re-produces is the author's choice: a step downstream of it, a minimum-premium clamp included, runs on the adjusted value.
+*(Added <date>, WK-1250 Slice 3, RL-1628; `RL-1344` §3.)* **Per purpose.** FR-212 holds for each purpose's graph: the algorithm with its unconditional mounts, and the algorithm with the mounts selected for `mid_term_adjustment`, and for `cancellation`. A step that runs for every purpose cannot consume a name only a purpose mount produces (`RATING_GRAPH_UNRESOLVED_REF`). **A purpose mount re-produces a parent name.** It maps an input port and an output port to the same parent name, and in that purpose's graph it consumes the parent's value and re-produces it, as a clamping `constraint` re-produces its value; every step downstream reads the adjusted value, so the premium ladder and the payable of an MTA or cancellation are the adjusted figures. Its steps never reach the `risk_premium_minor` output: one risk price (FR-218; `VALIDATION_FAILED`). A name has at most one re-producer, and inside the fragment only the step producing the re-produced name consumes it (otherwise `RATING_GRAPH_CYCLIC`). Where the mount re-produces is the author's choice: a step downstream of it, a minimum-premium clamp included, runs on the adjusted value.
 ```
 
 ### T2 — `03` §4.11, a purpose mount's shape. Find `` revisit if an algorithm needs it *(ruled 2026-10-09, WK-1250 Slice 2)*. `` (the last sentence of the "Inlining and namespacing" bullet, `03:943`) and insert after that bullet, as a new bullet
 
 ```markdown
-- **Purpose mounts** *(added <date>, WK-1250 Slice 3, RL 9573 (working id); DP-S3-1 (d))*. A mount's `purposes` selects the purposes it is inlined for; with none, it is unconditional. A purpose mount maps an input port and an output port to the **same** parent name, so in that purpose's graph it re-produces the name (§4.1). The shape, as an entry of `sub_graphs`:
+- **Purpose mounts** *(added <date>, WK-1250 Slice 3, RL-1628; DP-S3-1 (d))*. A mount's `purposes` selects the purposes it is inlined for; with none, it is unconditional. A purpose mount maps an input port and an output port to the **same** parent name, so in that purpose's graph it re-produces the name (§4.1). The shape, as an entry of `sub_graphs`:
 
   ```json
   {"ref": "sub_graph:motor-cancellation@1", "mount_point": "s_cancel",
@@ -112,7 +112,7 @@ count other than one.
    "outputs": {"refund_payable": "payable_premium_pre_round"}}
   ```
 
-  The mount re-produces `payable_premium_pre_round`, which §4.1's example computes after its minimum-premium clamp (`s_minprem`), so the refund is not clamped. A mount placed above the clamp would be (RL 9573 Limit 3). `days_on_risk` has no producer in §4.1's example, and `sub_graph:motor-cancellation@1` is illustrative: this shows the shape, not a complete FR-212 graph.
+  The mount re-produces `payable_premium_pre_round`, which §4.1's example computes after its minimum-premium clamp (`s_minprem`), so the refund is not clamped. A mount placed above the clamp would be (RL-1628 Limit 3). `days_on_risk` has no producer in §4.1's example, and `sub_graph:motor-cancellation@1` is illustrative: this shows the shape, not a complete FR-212 graph.
 ```
 
 *(Re-pointed 2026-10-11, pre-mint refresh.)* T2 first replaced a mount in §4.1's example that
@@ -125,31 +125,31 @@ content is unchanged. Only its place moves to §4.11, where a mount's shape is s
 ```python
 # Bundle.purpose_graphs: dict[str, JdmGraph]          # one graph per purpose a mount selects; empty
 #                                                       # otherwise, and hashed only when non-empty
-#                                                       # (RL 9573, DP-S3-2 (a))
+#                                                       # (RL-1628, DP-S3-2 (a))
 # CompiledBundle: per purpose graph, its decision, algorithm and model_call handler; load_bundle's
 #                 node-id check (RL-1571 C1) runs per purpose graph   # added <date>, WK-1250 Slice 3
 ```
 
-## The texts for PL 9609 (applied by the planner, pre-mint)
+## The texts for PL-1629 (applied by the planner, pre-mint)
 
-Each find string has exactly one hit in PL 9609 at `7c8736fd`.
+Each find string has exactly one hit in PL-1629 at `7c8736fd`.
 
 - **P1 — acceptance 3, the code.** Find `` naming the step and the purpose, with the code DP-S3-1's ruling names. `` and replace it with
-  `` naming the step and the purpose, with `RATING_GRAPH_UNRESOLVED_REF` (RL 9573). Also red first (RL 9573, DP-S3-1 (d)): a purpose mount whose steps reach the `risk_premium_minor` output is refused with `VALIDATION_FAILED` (R1); a second re-producer of a name already re-produced is refused with `RATING_GRAPH_CYCLIC` (Limit 2). ``
+  `` naming the step and the purpose, with `RATING_GRAPH_UNRESOLVED_REF` (RL-1628). Also red first (RL-1628, DP-S3-1 (d)): a purpose mount whose steps reach the `risk_premium_minor` output is refused with `VALIDATION_FAILED` (R1); a second re-producer of a name already re-produced is refused with `RATING_GRAPH_CYCLIC` (Limit 2). ``
 - **P2 — Task 2, Step 1, the cases.** Find `` consuming a purpose-only name; DP-S3-1's override cases. `` and replace it with
-  `` consuming a purpose-only name; DP-S3-1's re-production cases (RL 9573): a mount re-producing a parent name is accepted per purpose graph; R1's route to `risk_premium_minor` is refused; a second re-producer and a fragment step consuming `X` beside the re-producer are each refused as a cycle. ``
+  `` consuming a purpose-only name; DP-S3-1's re-production cases (RL-1628): a mount re-producing a parent name is accepted per purpose graph; R1's route to `risk_premium_minor` is refused; a second re-producer and a fragment step consuming `X` beside the re-producer are each refused as a cycle. ``
 - **P3 — Task 3, Step 1, the inliner case.** Find `` adds the cancellation mounts and applies DP-S3-1's override; `` and replace it with
-  `` adds the cancellation mounts, whose re-producing step reads the parent's value and re-produces it (RL 9573, DP-S3-1 (d)); ``
+  `` adds the cancellation mounts, whose re-producing step reads the parent's value and re-produces it (RL-1628, DP-S3-1 (d)); ``
 - **P4 — Task 3, Steps 1 and 3, the per-purpose load.** Find `` - `load_bundle` gives one decision per purpose graph. `` and replace it with
-  `` - `load_bundle` gives one decision, algorithm and `model_call` handler per purpose graph, and refuses with `BUNDLE_COMPILE_FAILED` when a purpose graph's node ids differ from its re-inlined algorithm's (RL 9573, DP-S3-2 conditions 1 and 2). ``
+  `` - `load_bundle` gives one decision, algorithm and `model_call` handler per purpose graph, and refuses with `BUNDLE_COMPILE_FAILED` when a purpose graph's node ids differ from its re-inlined algorithm's (RL-1628, DP-S3-2 conditions 1 and 2). ``
   Then find `` - `bundle_hash` covers `purpose_graphs` only when it is non-empty. `` and insert after it
-  `` - `CompiledBundle` holds the per-purpose decision, algorithm and handler; boosters stay shared (RL 9573, condition 1). ``
+  `` - `CompiledBundle` holds the per-purpose decision, algorithm and handler; boosters stay shared (RL-1628, condition 1). ``
 - **P5 — Task 4, Step 3, the selector.** Find `` The trace is built from the algorithm that was evaluated. `` and replace it with
-  `` One selector returns the purpose's decision and algorithm, and every read of `bundle.algorithm` or `bundle.decision` in `build_scoring_result`, `score_one`, `_score_context_sync` and the batch row path goes through it: lookup misses, constraints, ladder inputs, outputs and the trace all use the algorithm that was evaluated (RL 9573, condition 1). Red first: a clamping `constraint` inside a cancellation mount appears in the cancellation quote's ladder. ``
+  `` One selector returns the purpose's decision and algorithm, and every read of `bundle.algorithm` or `bundle.decision` in `build_scoring_result`, `score_one`, `_score_context_sync` and the batch row path goes through it: lookup misses, constraints, ladder inputs, outputs and the trace all use the algorithm that was evaluated (RL-1628, condition 1). Red first: a clamping `constraint` inside a cancellation mount appears in the cancellation quote's ladder. ``
 
 ## What it obliges
 
-- **PL 9609's planner** applies P1 to P5 as a pre-mint edit to #1173. The plan's DP-S3-1 and
+- **PL-1629's planner** applies P1 to P5 as a pre-mint edit to #1173. The plan's DP-S3-1 and
   DP-S3-2 rows then cite this record. Activation need 2 is met at this record's mint, with
   DP-S3-1 final only if the ACK accepts it.
 - **WK-1250 Slice 3 (`SL-1341`)** applies T1 to T3 verbatim in its Task 1 spec commit, with its
@@ -220,14 +220,14 @@ locator change is a moved line, not a changed premise. At `d699a561`:
    - RL 9586 → `RL-1571`, in condition 2 and T3's comment;
    - FD 9572 → `FD-1425`;
    - `relates:` gains `RL-1571`, `RL-1519`, `FD-1425` and `SL-1436`.
-   PL 9609 is still unminted and stays in working-id form.
+   PL-1629 was still unminted at this refresh; it is minted in the same D12 batch (2026-10-11) as PL-1629, after this record.
 7. **Acceptance 9's writer is named** (§"What it obliges", last bullet). The decision is this
    record's. The writer is Slice 3's executor, in the final commit.
 
-**Left to PL 9609's planner refresh, not ruled here:**
+**Left to PL-1629's planner refresh, not ruled here:**
 - P1 to P5's find strings were counted at `7c8736fd`, which is still that branch's tip at
   2026-10-11 11:29 BST. If the planner's refresh moves a find string, the replacement text still
   binds, and the planner re-quotes the anchor.
 - planner-d11's readiness memo (`readiness-wk1250-s3-2026-10-11.md` §2) found acceptance 8 short
-  by two Slice 2 interim tests (`test_rating_score.py:1023`, `:1036`). Adding them is PL 9609's
+  by two Slice 2 interim tests (`test_rating_score.py:1023`, `:1036`). Adding them is PL-1629's
   edit.

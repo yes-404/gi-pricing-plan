@@ -1,5 +1,5 @@
 ---
-id: FD-9815
+id: FD-1624
 family: finding
 title: An algorithm input declared "string" with a "domain" gets meaningless generated property tests, because generate_contexts samples a domain only for enum
 status: active
@@ -10,9 +10,9 @@ corrected_by: []
 relates: [WK-1178, SL-1526]
 ---
 
-# FD-9815 — a `string` input with a `domain` is sampled as arbitrary text
+# FD-1624 — a `string` input with a `domain` is sampled as arbitrary text
 
-**Working id 9815, to be minted in the D11 batch.** Filed at the lead's entry "2026-10-11 11:40:34 BST — SL-1526 cause = a
+**Minted 2026-10-11 as FD-1624 from working id 9815, in the D12 batch mint PR.** Filed at the lead's entry "2026-10-11 11:40:34 BST — SL-1526 cause = a
 declaration defect: OPTION 1 RULED (declare the five categoricals `enum`); it is NOT under my STOP; conditions on the hash and
 prices; FD LOW for the latent trap", item 4. Lines are at `origin/main` `02f23b4a74cfdf81ff4ac875e1ff7ab2db777c4a`.
 

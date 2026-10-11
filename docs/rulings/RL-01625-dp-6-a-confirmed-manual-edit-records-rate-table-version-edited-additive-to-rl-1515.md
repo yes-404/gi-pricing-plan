@@ -1,5 +1,5 @@
 ---
-id: RL-9817
+id: RL-1625
 family: ruling
 title: DP-6 — a Rate Table Version made by a confirmed manual edit records its own Audit Event, `rate_table_version.edited`; additive to RL-1515, whose T-1b gains one dated note in 03, applied by SL-1517 (the maintainer's ruling by delegation, recorded)
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
@@ -15,19 +15,18 @@ corrects: ~
 relates: [RL-1515, RL-1555, PL-1516, SL-1517, NFR-498, FR-229, FD-1513]
 ---
 
-# RL-9817 — DP-6: a confirmed manual edit records `rate_table_version.edited`
+# RL-1625 — DP-6: a confirmed manual edit records `rate_table_version.edited`
 
 *Disclosure: drafted under working id 9817, reserved by the lead (team-lead) on 2026-10-11
 (`~/gi-pricing-plan.local/handover/eta.md`, the line stamped "2026-10-11 11:45:36 BST":
-"DP-6 → DM (RL 9817 RESERVED)"). It is minted in the D11 batch mint PR. When it is minted,
-the working id in this record and in T-2 below is replaced by the minted id.*
+"DP-6 → DM (RL 9817 RESERVED)"). Minted 2026-10-11 as RL-1625 from working id 9817, in the D12 batch mint PR (drafted for D11; the D11/D12 split of the lead's 11:58:45 entry moved it). The working id in this record and in T-2 below was replaced by the minted id.*
 
 ## How this was ruled
 
 - **The ruling is not this record's.** It is the maintainer's (by delegation), in the entry
   of `~/gi-pricing-plan.local/channel/to-lead.md` headed "2026-10-11 11:49:51 BST — DP-6
   (SL-1517) RULED (a): a 5th audit action `rate_table_version.edited`, carried by an ADDITIVE
-  RL 9817; the three fold items into PL 9813 ADOPTED; RL-1515's body is NOT touched"
+  RL-1625; the three fold items into PL-1627 ADOPTED; RL-1515's body is NOT touched"
   (`to-lead.md:22176`). That file is local, so a repository reader cannot open it (RFC-777):
   the entry is quoted whole below, with the item of the 11:45:03 BST entry that raised the
   question. This record decides nothing beyond them.
@@ -45,7 +44,7 @@ the working id in this record and in T-2 below is replaced by the minted id.*
 ### The maintainer's entries, quoted verbatim
 
 The question, item 3 of the entry headed "2026-10-11 11:45:03 BST — WK-1178 tail: GO SL-1566;
-SL-1563 write-set (a) YES; SL-1517 fold YES, DP-6 → the decision-maker; ONE delta PL 9813;
+SL-1563 write-set (a) YES; SL-1517 fold YES, DP-6 → the decision-maker; ONE delta PL-1627;
 SL-1569 last" (`to-lead.md:22150`, item 3 at `:22154`):
 
 > 3. SL-1517 (NFR-498, BOUND before the freeze): the 3-file write-set fold is YES, each file named in the delta. NEW DP-6 (WK-675 S4's manual_edit_confirmed is a fourth version writer with no RL-1515 DP-3 action) goes to a decision-maker, with options incl. your `rate_table_version.edited`, matched against the existing audit action vocabulary (the RL-1515 DP-3 list and the audit-event contract), so the name is consistent. Timing: right after WK-675 S4 merges, latest GO Thu 29 Oct.
@@ -111,8 +110,8 @@ does not assert that the contract changes.
    (`RL-1515` "What it obliges"). So no spec file is edited in this commit. **T-2 below is
    the dated note; SL-1517 applies it immediately after T-1b, in the same commit**, under
    `spec-change`, byte for byte. The ruling's fallback ("If T-1b's target is anywhere other
-   than a spec, the note goes in RL 9817 only") does not apply.
-3. **The fold into PL 9813, adopted** (the planner's delta; this record names the items so
+   than a spec, the note goes in RL-1625 only") does not apply.
+3. **The fold into PL-1627, adopted** (the planner's delta; this record names the items so
    the delta cites one record, and does not edit a plan):
    - (i) `_stored_version` (PL-1516 D3) gains `created_by_edit`;
    - (ii) `manual_edit_confirmed` (S4 `rate_tables.py:1047`) and its route (S4
@@ -138,8 +137,8 @@ does not assert that the contract changes.
 ## T-2 — the dated note after T-1b in `03`
 
 One insertion in `docs/specs/03-rating-engine.md`, applied by SL-1517 in the commit that
-applies T-1b, byte for byte, under `spec-change`. The placeholders are `RL-9817` (replaced by
-this record's minted id at the D11 mint) and `<Slice date>` (the date of the SL-1517 commit
+applies T-1b, byte for byte, under `spec-change`. The placeholders are `RL-1625` (replaced by
+this record's minted id at the D12 mint) and `<Slice date>` (the date of the SL-1517 commit
 that applies it, as in T-1). Nothing else is a placeholder. Nothing is struck. T-1a to T-1d
 stay byte for byte as `RL-1515` gives them.
 
@@ -152,7 +151,7 @@ stay byte for byte as `RL-1515` gives them.
 and before the heading `### 4.3 \`RatingVersion\``, with one blank line on each side. Insert
 
 ```text
-*(Amended <Slice date>, `RL-9817`, FR-229, `RL-1555` DP-S4-1c: a Rate Table Version made by a confirmed manual edit records the Audit Event `rate_table_version.edited`, under every rule of the paragraph above. Its `before` is, in the same form, the stored state of the version the edit names as its `base_version`, and its `after` is the new version's, which carries `created_by_edit`.)*
+*(Amended <Slice date>, `RL-1625`, FR-229, `RL-1555` DP-S4-1c: a Rate Table Version made by a confirmed manual edit records the Audit Event `rate_table_version.edited`, under every rule of the paragraph above. Its `before` is, in the same form, the stored state of the version the edit names as its `base_version`, and its `after` is the new version's, which carries `created_by_edit`.)*
 ```
 
 **Anchor counts, by a trial apply.** Each count is `str.count` over a copy of `03` taken by
@@ -171,9 +170,9 @@ The negative control: the anchor with one byte changed (`attests` → `attes7s`)
 ## What it obliges
 
 - **This commit:** this record only. No spec, `model-schema`, contract or code file is edited.
-- **The D11 mint (`minter-d11`):** the working id 9817 is replaced by the minted id in this
+- **The D12 mint (`minter-d11`):** the working id 9817 was replaced by the minted id in this
   record and in T-2. `RL-1515`'s header is **not** changed: this record does not correct it.
-- **PL 9813 (the planner's delta, working id):** folds Ruled 3's three items and Ruled 4's
+- **PL-1627 (the planner's delta, minted in the same D12 batch):** folds Ruled 3's three items and Ruled 4's
   order into PL-1516's SL-1517, cites this record, and adds T-2 to the spec text SL-1517
   applies (PL-1516 Task 5 applies T-1a to T-1d).
 - **SL-1517:** applies T-2 after T-1b in one commit with the code (`CLAUDE.md` §2); shows the
@@ -184,7 +183,7 @@ The negative control: the anchor with one byte changed (`attests` → `attes7s`)
 
 - Anything of `RL-1515` other than adding a fifth action and T-2: DP-1, DP-2, DP-4, DP-5 and
   T-1a to T-1d stand as ruled.
-- The S4 slice's own scope, and the plan text of PL 9813 (the planner's).
+- The S4 slice's own scope, and the plan text of PL-1627 (the planner's).
 - If SL-1517 were dispatched before WK-675 S4 merges, which slice threads the actor through
   the edit path. Ruled 4 orders SL-1517 after S4, so the question does not arise; a change of
   order is a new decision point for the lead.
