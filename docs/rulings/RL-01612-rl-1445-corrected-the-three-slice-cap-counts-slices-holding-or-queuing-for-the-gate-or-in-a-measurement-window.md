@@ -1,5 +1,5 @@
 ---
-id: RL-9915
+id: RL-1612
 family: ruling
 title: RL-1445 corrected — the three-slice cap counts slices that hold or queue for the full gate or are in a measurement window, not every build slice; authoring and executor seats count against the seat cap, with guard rails (process, the maintainer's ruling by delegation, recorded)
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
@@ -15,9 +15,9 @@ corrects: RL-1445
 relates: [RL-1445, RL-1263]
 ---
 
-# RL-9915 — RL-1445 corrected: the three-slice cap counts gate holders, gate queuers and measurement windows
+# RL-1612 — RL-1445 corrected: the three-slice cap counts gate holders, gate queuers and measurement windows
 
-*Disclosure: drafted under working id 9915, reserved by the lead (team-lead) on 2026-10-11
+*Disclosure: drafted under working id 9915 (minted as RL-1612 on 2026-10-11, in the D10 batch mint PR), reserved by the lead (team-lead) on 2026-10-11
 (`~/gi-pricing-plan.local/handover/brief-wave1b-2026-10-11.md`, "Reserved working ids");
 the id is minted in the D10 batch mint PR. When it is minted, the working id in this record
 is replaced by the minted id.*

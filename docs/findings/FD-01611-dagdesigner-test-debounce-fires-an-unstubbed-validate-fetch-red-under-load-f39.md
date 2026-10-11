@@ -1,5 +1,5 @@
 ---
-id: FD-9914
+id: FD-1611
 family: finding
 title: The DagDesigner live-validation debounce can fire an unstubbed /rating-algorithms/validate fetch inside a test, so F39 reds a loaded gate
 status: active
@@ -10,9 +10,9 @@ corrected_by: []
 relates: [WK-675, SL-1526, SL-1600]
 ---
 
-# FD-9914 — the DagDesigner debounce fires an unstubbed `validate` fetch under load
+# FD-1611 — the DagDesigner debounce fires an unstubbed `validate` fetch under load
 
-**DRAFT**, in the D10 docs batch, at the maintainer's ruling (`to-lead.md`, "2026-10-11 10:38:57 BST —
+**Minted 2026-10-11 from a working id, in the D10 batch.** Drafted in the D10 docs batch, at the maintainer's ruling (`to-lead.md`, "2026-10-11 10:38:57 BST —
 DagDesigner F39 reds: an FD against WK-675 at D10 ADOPTED, with a small fix slice queued; no synthetic-load
 reproduction needed; interim classification adopted", item 2). Every line number is at `origin/main`
 `99f22479`, read for this record.

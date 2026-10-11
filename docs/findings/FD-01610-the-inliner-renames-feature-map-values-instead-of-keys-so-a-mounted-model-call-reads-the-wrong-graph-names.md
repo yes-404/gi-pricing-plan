@@ -1,5 +1,5 @@
 ---
-id: FD-9913
+id: FD-1610
 family: finding
 title: The fragment inliner renames feature_map VALUES (model features) instead of KEYS (graph names), so a mounted model_call can read the wrong graph names
 status: active
@@ -10,9 +10,9 @@ corrected_by: []
 relates: [WK-1178, FD-1374, RL-1571, SL-1541, FR-222, FR-239, FR-246]
 ---
 
-# FD-9913 — the inliner renames `feature_map` VALUES, not KEYS
+# FD-1610 — the inliner renames `feature_map` VALUES, not KEYS
 
-**DRAFT**, in the D10 docs batch, at the maintainer's ruling (`to-lead.md`, "2026-10-10 23:46:57 BST —
+**Minted 2026-10-11 from a working id, in the D10 batch.** Drafted in the D10 docs batch, at the maintainer's ruling (`to-lead.md`, "2026-10-10 23:46:57 BST —
 RULING (mispricing): the inliner renames feature_map KEYS, never values — option (A), fixed INSIDE SL-1541; 03
 :943 corrected by dated line; an FD at D10; the exposure query owed before SL-1541's ACK", item 5) and its
 severity text per "2026-10-11 10:35:30 BST — READ-IN OK …", item 3. Every line number is at `origin/main`
