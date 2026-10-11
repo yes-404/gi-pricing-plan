@@ -111,3 +111,35 @@ async def test_ensuring_a_member_twice_does_not_raise(database: Database) -> Non
             )
         ).scalars().all()
     assert len(rows) == 1
+
+
+@pytest.mark.req("FR-398")
+async def test_an_id_that_contradicts_the_stored_identity_is_refused_where_it_arises(
+    database: Database,
+) -> None:
+    """FD-1494 limb 3 (PL-1544 Acceptance 12). `(issuer, subject)` is unique in `users`, and the
+    old lookup was by id alone, so a second call with the same pair and another `user_id` failed
+    at flush with an `IntegrityError` on `uq_users_issuer_subject`. It is now a `PlatformError`
+    with the existing generic code `VALIDATION_FAILED` (422), raised before any write."""
+    from app.errors import PlatformError
+
+    workspace_id = new_uuid7()
+    first_id, other_id = new_uuid7(), new_uuid7()
+    subject = f"sub-{new_uuid7().hex[-12:]}"
+    async with database.unit_of_work() as session:
+        await workspaces.ensure_workspace(session, workspace_id=workspace_id)
+        await workspaces.ensure_member(
+            session, workspace_id=workspace_id, user_id=first_id, issuer=ISSUER, subject=subject
+        )
+
+    with pytest.raises(PlatformError) as refused:
+        async with database.unit_of_work() as session:
+            await workspaces.ensure_member(
+                session, workspace_id=workspace_id, user_id=other_id, issuer=ISSUER, subject=subject
+            )
+    assert refused.value.code == "VALIDATION_FAILED"
+    assert refused.value.status_code == 422
+    detail = str(refused.value)
+    assert str(first_id) in detail
+    assert str(other_id) in detail
+    assert subject in detail
