@@ -1628,3 +1628,121 @@ def test_a_pending_trace_whose_context_names_a_produced_value_is_not_reproduced_
     status, after = _run(_plant_and_run())
     assert status is JobStatus.FAILED
     assert after.status == "pending"
+
+
+# --------------------------------------------------------------------------------------
+# SL 9937 — default-live /score against a REAL `score_one`. The `refs_scored` cases above
+# stub it, so they cannot see `score_one` refusing a context that carries no ref.
+# --------------------------------------------------------------------------------------
+
+
+@pytest.mark.req("FR-250")
+def test_a_default_live_quote_is_scored_by_the_real_evaluator_against_the_live_version(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    compiled_version: Any,
+    database: Any,
+    workspace_id: Any,
+) -> None:
+    """No ref in the body, a live Deployment, nothing stubbed: 200, and the result reports the
+    deployed version. On the base source this is 422 INPUT_CONTRACT_VIOLATION."""
+    _run(plant_deployment(database, workspace_id, "uat", SCORED_REF))
+
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": None}), headers=scoring_headers
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["rating_version_ref"] == SCORED_REF
+    assert body["outcome"] == "quoted"
+    assert body["premium_ladder"]
+
+
+@pytest.mark.req("FR-250")
+def test_a_default_live_quote_with_no_options_object_is_scored_by_the_real_evaluator(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    compiled_version: Any,
+    database: Any,
+    workspace_id: Any,
+) -> None:
+    _run(plant_deployment(database, workspace_id, "uat", SCORED_REF))
+
+    response = client.post(
+        SCORE_URL, json=_quote(omit_options=True), headers=scoring_headers
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["rating_version_ref"] == SCORED_REF
+
+
+@pytest.mark.req("FR-259")
+def test_a_sampled_default_live_trace_records_and_reproduces_the_resolved_version(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    compiled_version: Any,
+    database: Any,
+    blob_store: Any,
+    workspace_id: Any,
+) -> None:
+    """The stored Quote Context carries the resolved ref, so the off-path re-score is not
+    refused for the same gap."""
+    register_trace_handlers()
+    _run(plant_deployment(database, workspace_id, "uat", SCORED_REF))
+    _run(_set_trace_sample_rate(database, workspace_id, 1.0))
+
+    served = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": None}), headers=scoring_headers
+    )
+    assert served.status_code == 200, served.text
+    (row,) = _run(_rows_for(database, workspace_id))
+    (job,) = _run(_trace_produce_jobs(database, workspace_id))
+    assert row.rating_version_ref == SCORED_REF
+    assert row.pending_quote_context["options"]["rating_version_ref"] == SCORED_REF
+
+    status = _run(execute_job(database, job.id, blob_store))
+
+    assert status is JobStatus.SUCCEEDED
+
+
+@pytest.mark.req("FR-250")
+def test_an_explicit_ref_wins_over_a_different_live_version(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    compiled_version: Any,
+    database: Any,
+    workspace_id: Any,
+) -> None:
+    """The live Deployment names a version that was never compiled; the explicit ref is the
+    one scored, so the live one is never even resolved to a bundle."""
+    _run(plant_deployment(database, workspace_id, "uat", OTHER_VERSION_REF))
+
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": SCORED_REF}), headers=scoring_headers
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["rating_version_ref"] == SCORED_REF
+
+
+@pytest.mark.req("FR-250")
+def test_the_resolved_ref_is_stamped_on_a_copy_and_an_explicit_one_is_kept() -> None:
+    ref = ArtifactRef.parse(LIVE_REF)
+    explicit = ArtifactRef.parse(OTHER_VERSION_REF)
+    bare = QuoteContext.model_validate(_quote({"rating_version_ref": None}))
+    named = QuoteContext.model_validate(_quote({"rating_version_ref": OTHER_VERSION_REF}))
+    no_options = QuoteContext.model_validate(_quote(omit_options=True))
+
+    stamped = score_module._with_resolved_ref(bare, ref)
+    assert stamped.options is not None
+    assert stamped.options.rating_version_ref == ref
+    assert bare.options is not None
+    assert bare.options.rating_version_ref is None
+    created = score_module._with_resolved_ref(no_options, ref)
+    assert created.options is not None
+    assert created.options.rating_version_ref == ref
+    assert no_options.options is None
+    assert score_module._with_resolved_ref(named, ref) is named
+    assert named.options is not None
+    assert named.options.rating_version_ref == explicit
