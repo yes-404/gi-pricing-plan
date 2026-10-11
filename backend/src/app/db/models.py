@@ -2083,6 +2083,7 @@ class RateTableVersionRow(Base):
     cells: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     created_by_operation: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     created_by_import: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    created_by_edit: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
