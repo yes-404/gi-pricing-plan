@@ -1,8 +1,8 @@
 ---
 id: LG-9917
 family: ledger
-title: WK-675 slice SL-9916 — the DagDesigner F39 fix, stub /rating-algorithms/validate and flush the debounce (FD-9914)
-status: active                 # active → closed (§1.2a)
+title: WK-675 slice SL-9916 — the DagDesigner F39 fix, validate route mocked and the debounce's unmount cancel proven (FD-9914)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-11
 owner: executor
 tree: 99f22479a20e7fa64f8b6654e0d371c595b1e35a
