@@ -2,7 +2,7 @@
 id: LG-9946
 family: ledger
 title: WK-673 slice SL-1390 — the approval gate, part two — the rating_version floor wiring (PL-1499), slice ledger
-status: active
+status: closed
 created: 2026-10-10
 owner: executor
 tree: db0642c4b4f87e71dceff36d1ebd7c7ba4ef68f9
