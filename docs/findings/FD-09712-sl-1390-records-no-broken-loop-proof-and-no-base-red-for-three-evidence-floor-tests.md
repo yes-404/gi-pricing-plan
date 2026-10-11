@@ -1,0 +1,29 @@
+---
+id: FD-9712
+family: finding
+title: SL-1390 records no broken-loop proof and no base red for three evidence-floor tests
+status: active
+created: 2026-10-11
+owner: auditor
+tree: 372fa92ae3ab306bc067c234487ce929dc0e2a04
+corrected_by: []
+relates: [WK-673, SL-1390, PL-1499, LG-1633, RS-9703, FR-364]
+---
+
+# FD-9712 — unrecorded red-first evidence on SL-1390
+
+Filed by the retro audit RS-9703. Reads are at the squash-merge `3065770c` (PR #1279).
+
+## Evidence
+
+- PL-1499 Acceptance 4 requires `test_a_policy_naming_an_unverifiable_kind_is_refused_by_name` "shown red on a deliberately broken loop that skips unknown kinds (scratch-reverted)", and the preamble requires every test red before its code, quoted by cause.
+- LG-1633 at the merge sha: the scratch-reverted broken-loop runs (skip unknown kinds; `rate_table_diffs` mapped as met) are "OWED" in the Task 2 entry and described as planned in the slot-script entry; the 2026-10-11 gate-1 classification entry covers Acceptance 1, 2 and 7 only. No quoted outcome exists for Acceptance 3, 4 or 10 against the base source, or for either broken-loop run.
+- The tests exist (`backend/tests/test_rating_version_evidence_floor.py`: `test_a_policy_above_the_floor_adds_a_verifiable_kind`, `test_a_policy_naming_an_unverifiable_kind_is_refused_by_name`, `test_a_policy_naming_rate_table_diffs_is_refused_naming_the_kind`); CI on the PR head concluded `success` (pytest 5522 passed).
+
+## Finding
+
+**Severity MEDIUM (proposed by the auditor):** the fail-closed behaviour of the evidence floor is the point of the slice, and the record cannot show that its tests fail when the loop is broken. Verdict candidate: delivered but untested.
+
+## Disposition
+
+**Owner: WK-673.** Decision: `fix before close with an owner: WK-673` — run the three tests against the two scratch-broken loops and the base `rating_versions.py`, quote the failing lines in a dated record; SL 9965 touches the same verifier map and may carry it. Event that next confirms or discharges it: that record. Filed by the auditor, 2026-10-11; the lead gives the verdict.
