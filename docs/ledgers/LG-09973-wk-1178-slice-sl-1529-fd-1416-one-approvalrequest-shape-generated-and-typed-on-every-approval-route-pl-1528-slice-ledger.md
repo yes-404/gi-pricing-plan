@@ -96,6 +96,8 @@ Output: `approval-request ['ApprovalRequest']`, `dossier []`, `gipp-check []`, `
 
 **Commits so far** (pushed): `1e0ca169` activation + this ledger; `7691b823` Task 1; `bfb14545` the tests-only red commit (Acceptance 2, 3, 4, 7); `4dc32059` Task 2; `b10b37a2` Task 3; `853cbe4d` Task 4 sources. No test has been run yet: the DB-backed reds and greens run inside this slice's gate-1 slot (the amended RL-1445 of 21:41:05, item (b)), each red at a scratch worktree of the commit that carries only the tests.
 
+- **Slot script (2026-10-11):** `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1529/slot.sh` (local, not in the repository); logs go to `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1529/gatelogs/` (durable, not `/tmp`). It recreates the worktree database (S-14), runs the reds by cause for Acceptance 2, 3, 4, 7 (i to iii), 12 and 13 on base sources or scratch mutations, then the full two-half gate. Merge of `origin/main` `d699a561` done (merge-tree rc 0); contracts regenerated at `d2a720d7`; Acceptance 8's counts 0, 1, 0, 0.
+
 ## PRs
 
 (none yet)
