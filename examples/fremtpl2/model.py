@@ -14,7 +14,6 @@ import math
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from decimal import Decimal
-from itertools import pairwise
 from typing import Any, Final
 from uuid import UUID
 
@@ -527,30 +526,18 @@ def demo_golden_cases(
     return cases
 
 
-def monotone_property(
-    fit: GlmFitResult, bandings: dict[str, DemoBanding]
-) -> dict[str, Any] | None:
-    """One `monotone` property on a banded Factor whose fitted relativities rise or fall with
-    its bands (FR-261); `None` when none does. The Factor and its relativities are printed, for
-    the ledger."""
-    for factor, demo in bandings.items():
-        by_level = {r.level: r.relativity for r in fit.relativities[factor]}
-        values = [by_level[label] for label in demo.banding.labels]
-        series = [value for value in values if value is not None]
-        if len(series) != len(values):
-            continue
-        direction = (
-            "increasing" if all(a <= b for a, b in pairwise(series))
-            else "decreasing" if all(a >= b for a, b in pairwise(series))
-            else None
-        )
-        if direction is not None:
-            print(f"  monotone property: {demo.banding.column} {direction}; "
-                  f"relativities by band {dict(zip(demo.banding.labels, series, strict=True))}")
-            return {"name": f"premium-monotone-in-{demo.banding.column.replace('_', '-')}",
-                    "check": {"kind": "monotone", "input": demo.banding.column,
-                              "direction": direction}}
-    return None
+def declared_properties() -> list[dict[str, Any]]:
+    """The demo suite's property assertions: FIXED declarations of intent, read from no fit.
+
+    A property chosen from the fit it then checks cannot fail, so it is evidence of nothing
+    (the maintainer's ruling, `to-lead.md` "2026-10-11 18:59:23 BST" item 1). No `monotone`
+    property is declared: the fitted `veh_age_band` relativities are not monotone, and the
+    demo makes no monotonicity claim about any Factor.
+    """
+    return [
+        {"name": "no-null-output", "check": {"kind": "no_null_output"}},
+        {"name": "premium-bounded", "check": {"kind": "premium_bounded", "lower_minor": 0}},
+    ]
 
 
 async def _load_compiled(
@@ -595,7 +582,6 @@ async def author_demo_rating_evidence(
     analyst: Principal,
     rating_id: UUID,
     cases: list[GoldenCase],
-    monotone: dict[str, Any] | None,
 ) -> UUID:
     """Give a draft rating version its executed FR-257 limb (1) evidence (DP-S3-8, T6b).
 
@@ -635,12 +621,7 @@ async def author_demo_rating_evidence(
             "tolerance": {"money_minor": 0},
             "note": f"the approved GLM's premium for {case.name}, computed from its coefficients",
         })
-    properties = [
-        {"name": "no-null-output", "check": {"kind": "no_null_output"}},
-        {"name": "premium-bounded", "check": {"kind": "premium_bounded", "lower_minor": 0}},
-    ]
-    if monotone is not None:
-        properties.append(monotone)
+    properties = declared_properties()
     suite = RegressionSuiteContent.model_validate({
         "algorithm_slug": FREMTPL2_ALGORITHM_SLUG,
         "golden_quotes": golden,
@@ -750,7 +731,7 @@ async def create_approved_rating_version(
 
     run_id = await author_demo_rating_evidence(
         database, blob_store, workspace_id, analyst, rating_id,
-        demo_golden_cases(fit, bandings, base_minor), monotone_property(fit, bandings),
+        demo_golden_cases(fit, bandings, base_minor),
     )
 
     await submit_and_approve_demo(

@@ -13,11 +13,11 @@ from __future__ import annotations
 
 import asyncio
 import importlib.util
+import inspect
 import os
 import sys
 from decimal import ROUND_HALF_EVEN, Decimal
 from pathlib import Path
-from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
@@ -47,7 +47,6 @@ from model_schema import (
     QuoteContext,
     RegressionRun,
     RegressionSuiteContent,
-    RelativityLevel,
     new_uuid7,
 )
 from pricing_core.rating.properties import payable_minor
@@ -69,7 +68,6 @@ _SPEC.loader.exec_module(demo_model)
 _INTERCEPT = Decimal("-2.5")
 _BASE_MINOR = 200_000
 #: The fitted log-relativity of every non-base level; a base level is the first of its Factor.
-#: The banded Factors rise with their bands, so a `monotone` property is named from the fit.
 _ESTIMATES: dict[str, dict[str, Decimal]] = {
     "driv_age_band": {"25-39": Decimal("-0.2"), "40+": Decimal("-0.1")},
     "veh_age_band": {"3-9": Decimal("0.1"), "10+": Decimal("0.25")},
@@ -247,7 +245,7 @@ async def test_the_demo_premium_is_the_glm_premium_and_the_golden_quotes_are_not
     """Acceptance 3 and 6. For three quotes (every base level; a non-base level of every Factor;
     the last level of every Factor, banded ones on a band edge) the scored premium equals the
     premium computed here from the fit's coefficients. The Regression Suite holds the same three
-    as golden quotes with those expected values, and its properties, one of them `monotone`, pass
+    as golden quotes with those expected values, and its fixed properties pass
     in a run produced by the `rating.regression` Job."""
     analyst, model_id, tables = await _seed(database, workspace_id, blob_store)
     actuary = await _principal(database, workspace_id, "pricing_actuary")
@@ -284,32 +282,8 @@ async def test_the_demo_premium_is_the_glm_premium_and_the_golden_quotes_are_not
     assert [g.status for g in run.golden_results] == ["pass"] * 3
     assert {g.name: g.expected_minor for g in run.golden_results} == expected_by_name
     kinds = {p.name: p.status for p in run.property_results}
-    assert kinds["premium-monotone-in-veh-age"] == "pass"
     assert kinds["no-null-output"] == "pass"
     assert kinds["premium-bounded"] == "pass"
-
-
-@pytest.mark.req("FR-261")
-def test_the_monotone_property_name_is_a_valid_suite_property_name() -> None:
-    """A banded Factor's column has `_`; the property name must still be a slug."""
-    bandings = _bandings()
-    fit = SimpleNamespace(
-        relativities={
-            slug: tuple(
-                RelativityLevel(level=label, relativity=1.0 + 0.1 * i)
-                for i, label in enumerate(banding.banding.labels)  # type: ignore[attr-defined]
-            )
-            for slug, banding in bandings.items()
-        }
-    )
-    prop = demo_model.monotone_property(fit, bandings)
-    assert prop is not None
-    RegressionSuiteContent.model_validate({
-        "algorithm_slug": "fremtpl2-rating",
-        "golden_quotes": [],
-        "properties": [prop],
-        "generation": {"cases": 25, "seed": 1, "strategy": "input_contract_sampling"},
-    })
 
 
 @pytest.mark.req("FR-213")
@@ -353,3 +327,17 @@ def test_a_categorical_outside_its_declared_domain_is_a_422_through_the_api(
     assert response.status_code == 422, response.text
     assert response.json()["code"] == "INPUT_CONTRACT_VIOLATION"
     assert "veh_brand" in response.json()["detail"]
+
+
+@pytest.mark.req("FR-261")
+def test_the_declared_properties_are_fixed_and_read_no_fit() -> None:
+    """A property is a declaration of intent, not a reading of the fit it then checks: the
+    declaration takes no fit, is valid suite content, and claims no monotonicity (the fitted
+    `veh_age_band` relativities are not monotone)."""
+    assert not inspect.signature(demo_model.declared_properties).parameters
+    properties = demo_model.declared_properties()
+    assert [p["check"]["kind"] for p in properties] == ["no_null_output", "premium_bounded"]
+    RegressionSuiteContent.model_validate({
+        "algorithm_slug": "fremtpl2-rating", "golden_quotes": [], "properties": properties,
+        "generation": {"cases": 25, "seed": 1, "strategy": "input_contract_sampling"},
+    })
