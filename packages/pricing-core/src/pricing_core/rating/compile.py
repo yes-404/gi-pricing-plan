@@ -29,6 +29,7 @@ from model_schema.modelling import Banding, Factor, FactorIntent, Grouping
 from model_schema.perils import LargeLossKind, PerilStructure
 from model_schema.rating import (
     AlgorithmOutput,
+    ModelReferenceModeError,
     Pins,
     RatingAlgorithm,
     RatingConstraintStep,
@@ -41,6 +42,7 @@ from model_schema.rating import (
     RatingStep,
     RatingTableStep,
     RatingVersion,
+    ValidationIssue,
     check_model_reference_mode,
 )
 from model_schema.refs import ArtifactRef
@@ -60,21 +62,6 @@ _SCALE_CAP = 28
 _DECIMAL_LITERAL = re.compile(r"\b\d+\.\d+\b")
 #: The numeric family — values that may legitimately cross where a number is expected.
 _NUMERIC = frozenset({"int", "decimal", "money_minor", "relativity", "percentage", "count"})
-
-
-class ValidationIssue(BaseModel):
-    """One named problem found at save time.
-
-    `code` is the stable machine code the API maps to a problem response; `step_id` and
-    `field` locate the offending part of the algorithm.
-    """
-
-    model_config = ConfigDict(frozen=True)
-
-    code: str
-    message: str
-    step_id: str | None = None
-    field: str | None = None
 
 
 def _as_list(value: str | list[str]) -> list[str]:
@@ -1001,7 +988,11 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
     issues = validate_algorithm(inlined)
     if issues:
         _raise_named(issues[0].code, issues[0].message)
-    check_model_reference_mode(version, inlined)
+    try:
+        check_model_reference_mode(version, inlined)
+    except ModelReferenceModeError as exc:
+        # NFR-499: kept by class, not by shape; its text is the step id and the two modes.
+        _raise_named("MODEL_REFERENCE_MODE_INCONSISTENT", str(exc))
     check_step_refs_pinned(inlined, pins)
     _refuse_peril_model_calls(inlined)
 
