@@ -1011,7 +1011,7 @@ The Environment and Deployment records, promotion order and their audit limb for
 id: SL-1257
 family: slice
 title: Slice 3: environment isolation (FR-430, FR-431, register F54 and F48, NFR-496 prod-sampling limb)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-09-29
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 0d5b0765f76320518bfe76ddb30e5013525797c0
@@ -1050,6 +1050,10 @@ relates: [PL-1342, RL-1329]
 Carved from `SL-1257` on the maintainer's entry "2026-09-30 23:57:25 BST — DECISION on the S3 halt: (A) carve the ladder half into its own slice; lane B takes WK-1250 S1 now": the ladder half of `PL-1342`, which depends on nothing in Slice 2. A new leaf plan (a planner, quoting `PL-1342`'s text, never editing it) carries it; its decision points are minted before activation. It takes the first free lane after activation. The work already built for it is on a salvage branch from the halted WK-674 S3 dispatch. Minted as `SL-1345` at this PR's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `248dbf11`.
 
 *Dated 2026-10-01, mint batch 13a: its leaf plan is `PL-1348` (draft until activation). DP-S3-1 is resolved by `RL-1346`. The activation needs are `PL-1348`'s own, each a command with an expected output.*
+
+(Activated 2026-10-10 as WK-674 Slice 3, on the dispatch GO "2026-10-10 21:38:39 BST — DISPATCH GO: SL-1455 (Task 0; FD-1411's NFR-489 HTTP remedy) and WK-674 S3 (PL-1583); OP-1455-M1/M2/M3; the register :293 record", item 6; ledger `LG-1634` (minted 2026-10-11 from working id 9977), `PL-1583` set `active` in the same commit.)
+
+(Closed 2026-10-11 as a Slice, closing acts in the slice PR's mint commit, on the lead's merge; ledger `LG-1634`, minted 2026-10-11 from working id 9977.)
 
 #### SL-1258 — Slice 4: the deployment path (FR-437, FR-412 memory half, FR-415, FR-434, FR-435, NFR-531, NFR-534, FD-1211)
 
@@ -1797,7 +1801,7 @@ A pytest invariant fails the gate in three cases: `06` §4.1's permission tables
 id: SL-1367
 family: slice
 title: WK-1178 slice — FD-1335 Part A: the /score and /score/compare 200 responses documented, and one untyped-body guard over 2xx responses and JSON request bodies
-status: active                  # draft → active → closed | retired (§1.2a)
+status: closed                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-01
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 9b0fb97c9ed1cea743639897351191bc1a862041
@@ -1811,7 +1815,9 @@ relates: [FD-1335, FD-1366, PL-1364, PL-1348, SL-1345, RL-1343, RL-1365]
 
 *(Amended before mint, 2026-10-01, by the maintainer's decision, relayed by the lead.)* The guard is now one guard over both 2xx responses and JSON request bodies, folding in `FD-1366` (filed as working id 9779). Each side is shown red first on broken input. Multipart bodies are excluded with a citation. The five untyped request routes are temporary exceptions: four are marked `pending FD-1366 Part B`, and `seed-from-model` is marked `pending FD-1357's fix DP`. No handler outside `score.py` is edited. `FD-1366` Part B types the four existing shapes in a later slice. DP-A1 and DP-A2 are ruled by `RL-1365` (filed as working id 9783). *(Minted 2026-10-01 as SL-1367, filed under working id 9787; its plan is PL-1364, mint batch A.)*
 
-*(Activated 2026-10-11 by the lead's GO, the activation record `from-lead-2026-10-09.md` "2026-10-11 10:58:50 BST — Lead: GO SL-1367 (WK-1178, FD-1335 Part A, PL-1364)", accepted in `to-lead.md` entry "2026-10-11 10:59:23 BST — SL-1367 GO accepted; Task 5's NFR-502 re-measure: run LOCAL now as measured, diagnostic, verdict CARRIED to the dedicated-VM run list". DP-A3 = (a) and DP-A4 = (a), lead-kind, recorded dated in that entry; history in `to-lead.md` "2026-10-05 18:25:42 BST". The slice's ledger is LG 9925, a working id reserved by the lead and minted at the merge turn.)*
+*(Activated 2026-10-11 by the lead's GO, the activation record `from-lead-2026-10-09.md` "2026-10-11 10:58:50 BST — Lead: GO SL-1367 (WK-1178, FD-1335 Part A, PL-1364)", accepted in `to-lead.md` entry "2026-10-11 10:59:23 BST — SL-1367 GO accepted; Task 5's NFR-502 re-measure: run LOCAL now as measured, diagnostic, verdict CARRIED to the dedicated-VM run list". DP-A3 = (a) and DP-A4 = (a), lead-kind, recorded dated in that entry; history in `to-lead.md` "2026-10-05 18:25:42 BST". The slice's ledger is LG-1637, minted 2026-10-11 from working id 9925.)*
+
+(Closed 2026-10-11 as a Slice, closing acts in the slice PR's last commit, on the lead's merge; ledger LG-1637, plan PL-1364. Acceptance 10's timing and Task 4's dated NFR-502 line are CARRIED to the dedicated-VM discharge, owner WK-1178 (`to-lead.md` "2026-10-11 16:29:03 BST" and "2026-10-11 16:30:29 BST").)
 
 #### SL-1377 — WK-1178 fix slice — FD-1357: multi-factor seeding per RL-1361, typed seed request and 201
 

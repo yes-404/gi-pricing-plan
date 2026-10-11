@@ -1,0 +1,88 @@
+---
+id: LG-1634
+family: ledger
+title: WK-674 slice SL-1257 — environment isolation, the environment half (PL-1583), slice ledger
+status: closed
+created: 2026-10-11            # original date 2026-10-10, set at the draft; minted 2026-10-11
+owner: executor
+tree: 14fa6fb3d5b7097a829343e38cb5f20afbd0d2e2
+phase: P2
+work: WK-674
+slice: SL-1257
+plans: [PL-1583]
+corrected_by: []
+relates: [PL-1583, PL-1342, RL-1311, RL-1347, RL-1445, FD-1320, FR-430, FR-431, FR-446, FR-447, FR-452, NFR-499]
+---
+
+# LG-1634 — WK-674 slice SL-1257: environment isolation, the environment half
+
+*(Minted 2026-10-11 as LG-1634 from working id 9977, at the merge turn.)* Executed by
+`executor-wk674s3` from PL-1583, base `origin/main` `14fa6fb3d5b7097a829343e38cb5f20afbd0d2e2`.
+Times are BST (`TZ=Europe/London date`) unless marked.
+
+**GO:** `to-lead.md` "2026-10-10 21:38:39 BST — DISPATCH GO: SL-1455 (Task 0; FD-1411's NFR-489 HTTP remedy) and WK-674 S3 (PL-1583); OP-1455-M1/M2/M3; the register :293 record", item 6: "GO WK-674 S3 (PL-1583), needs 1–5 MET as quoted. Conditions: re-point the alembic down_revision at merge to main's head then (b8d2f4a6c0e1, or d4e81b7a2c95 if WK-675 S4 merges first), with heads = 1 and upgrade/downgrade run at the head. Real Redis for the RL-1347 cases (Redis down = STOP). The contract change regenerates on the merge base. SL-1600's errors.py adjacency: the second merger re-reads. It serialises with SL-1455 on score.py, deps.py, auth/service.py and main.py's lifespan, in item 4's order." Item 4 (OP-1455-M3 (a)): "WK-674 S3 merges BEFORE SL-1455's Task 4 sweep, so the sweep measures /score with the Redis limiter, the exit-tree path. Trigger for (b): if S3 is not merged when SL-1455's Tasks 1–3 are ACK-ready, SL-1455 sweeps then, and S3's ACK re-runs the 200 rps arm pair (×3) and shows it in budget."
+**MERGE-ACK:** not yet given.
+
+## Tasks
+
+### Scope
+
+The slice's row is `#### SL-1257 — Slice 3: environment isolation (FR-430, FR-431, register F54 and F48, NFR-496 prod-sampling limb)` in `docs/roadmap.md`, under PL-1583 (which supersedes PL-1342 for the environment half). Requirement ids covered: FR-430, FR-431, FR-446, FR-447, FR-452 (the scoring limb only), NFR-499 (the per-client rate-limit limb); register F54, F48; FD-1320 (discharged at merge). Not in scope: the ladder half (SL-1345, closed), FR-452's management-API limb (SL-1258), FR-270/271 flags (Slice 6).
+
+**DP rulings, verbatim** (`to-lead.md`, "2026-10-10 03:23:31 BST — R1 CONFIRMED (my 03:10:58 premise corrected); PL 9456 DPs ruled; R2 (§12 row 2) goes to the USER"): "DP-S3E-1 (b) additive (`keys` always; `key` only when exactly one Environment is granted; no break to the 9 test files or PL-1544 S1). DP-S3E-2 (a), rotation always names its Environment (FR-430 literally). DP-S3E-3 (a), S3's 07 commit adds the dated pointer on FR-452 to SL-1258 / R4.1. All three ADOPTED".
+
+**Lane / serial sets (activation need 5), from the planner's go-request draft §3**, read at origin/main `31b88780`:
+
+| In flight | Intersection | Rule | Result |
+|---|---|---|---|
+| SL-1600 `sl-1600-input-free-error` | `errors.py`: imports, a NEW function `_field_error_message` after `_handle_platform_error`, one line in `_handle_validation_error` | name-disjoint only if none edits `PlatformError` or the handler | name-disjoint, line-adjacent; the second to merge re-reads; `merge-tree` rc checked at its turn |
+| WK-675 S3 `sl-1557-wk675-s3` | none (specs `00`/`03` only) | — | concurrent OK |
+| WK-675 S4 `sl-1559-wk675-s4` | `db/models.py` (append), `migrations/versions/` (new `d4e81b7a2c95` after `b8d2f4a6c0e1`) | append / new file: exempt; re-point `down_revision` at the second merge; `alembic heads` = one | concurrent OK |
+| SL-1455 (PL-1454, not started) | `api/score.py`, `api/deps.py`, `auth/service.py`, `main.py` lifespan | RL-1263 item 4: serialise | SERIALISE (S3 first, per the GO item 4) |
+| G2 chain | behavioural only (PL-1544 S1 reads `key`) | — | concurrent OK; assert a one-Environment create still returns `key` |
+
+### Task list
+
+Premise i (Alembic head) re-derived at base `14fa6fb3`: one head, `b8d2f4a6c0e1` (54 revisions; the revision no `down_revision` names).
+
+- [x] Task 0: preconditions, premises a–j at this tree (a–i hold at `14fa6fb3`; head `b8d2f4a6c0e1`) — `cfa62a66`
+- [x] Task 1: spec (`07` §4.2–§4.4, §5.1, §5.2, FR-452 pointer) — `1586b7db`
+- [x] Task 2: `SettingSource.ENVIRONMENT_SETTING` — `c2b9dc8f`. Red: `AttributeError: type object 'SettingSource' has no attribute 'ENVIRONMENT_SETTING'` (`packages/model-schema/tests/test_settings.py`, rc 1); green rc 0; `generate-contracts.py --check` rc 0; `backend/tests/test_contracts.py` 156 passed.
+- [~] Task 3: migration `c5a91e7d3b26` (down_revision `b8d2f4a6c0e1`), `SettingScope`, `validate_setting_overrides`, lifespan hook — `87dc0fc3`. Non-DB tests red (collection `ImportError: cannot import name 'SettingScope'`), then green (7 passed). **Owed for the slot:** the three lifespan tests, migration round trip, `api_keys` unchanged.
+- [~] Task 4: key set per Environment — `7e7a2928`; Environment-setting PUT/GET, audit, trace-sampling call site — `37fd9e90`. **Owed for the slot:** everything DB-backed in `test_settings_environment.py`, `test_api_service_accounts.py` (new cases + the 3 edited rotate calls), `test_score.py` (edited multi-environment test, new parametrised sampling test), `test_environments.py` (edited rotate call).
+- [~] Task 5: `platform/rate_limit.py`, `RateLimiter`, header carrier on `PlatformError`, `gip_rate_limit_unenforced_total`, lifespan Redis client (50 ms timeouts), `rate_limit_rps` on identity and `Caller`, 429 in `/score` OpenAPI, contracts regenerated — `aafa2b36`, contracts commit after. **Owed for the slot:** `backend/tests/test_score_rate_limit.py` (cases 1–8; case 9 with `GIP_MEASURE_RATE_LIMIT=1`).
+- [ ] Task 6: gate and close.
+
+**Deviations (named, not silent).**
+1. Tasks 4 and 5: the production code for the key set, the header carrier and the limiter was written before its DB/Redis-backed test, and those tests are not yet run. The red proofs are owed in the slot: run each new test file at the parent version of the touched source file (`git show origin/main:<path>`), quote the failing assertion, restore.
+2. `scoring.default_client_rate_limit_rps` is declared in Task 3's commit, not Task 5's, so the scope assertion (exactly two workspace-or-Environment keys) is green at one commit.
+3. `ConfigInvalidError` (existing) is the startup refusal; the `_parse_env` detail no longer echoes the raw value or `str(exc)`.
+4. **Route pin, resolved (A)** by the maintainer, `to-lead.md` "2026-10-10 23:55:18 BST — WK-674 S3 @9e14e79f: (A) ADOPTED for the route pin; the red proofs owed in the slot". `backend/tests/test_deployment_route_types.py` joined the write set for the pin only: the seven S2 rows stay exact, `SETTINGS_ROUTES` holds the two settings routes (citing PL-1583 :68 and `07` :319–320), and the assert is `live == union` with `len(union) == 9`. Red once, planted: with the `GET` row deleted from `SETTINGS_ROUTES` the pin fails (`assert 8 == 9`, rc 1); restored, rc 0 (`-k route_set_is_pinned`, small-test slot).
+
+### Gate
+
+**Run 1, head `ae6d9fda`, gate-1, 10:41–11:32 BST (2026-10-11): INVALID.** Script `~/gi-pricing-plan.local/handover/sl1257-slot.sh`, output `~/gi-pricing-plan.local/handover/sl1257-slot.out`, stage logs `/tmp/tmp.2TNUHpAE0d`. Cause: the script ran `alembic -c backend/alembic.ini` but `alembic.ini` is at the repository root (rc 255, "No 'script_location'"), so the per-worktree database cloned from the template was never migrated to this tree. Every DB-backed result is void: pytest 167 failed / 12 errors, none classifiable as a code red (missing-table class). The script is fixed (alembic run from the root via `uv run --directory`, plus `upgrade head` after `createdb`; `alembic heads` = `c5a91e7d3b26`, one head). A re-run at the same head is queued by the lead. **Standing preflight added** (to-lead 2026-10-11 item 3): before any pytest stage the slot script aborts with rc 4/5/6 and the reason unless postgres, redis and minio report healthy, `alembic upgrade head` exits 0, and `alembic heads` shows exactly one head, `c5a91e7d3b26`. Checked by `bash -n` and, against the dev stack, the three health states and the head value; the abort branches have not been exercised on broken input.
+
+Valid facts from run 1: ruff, mypy, import-linter, req-coverage and contracts rc 0. audit-docs rc 1 = check 32 (working id 9977 unresolved in INDEX) and check 39 (INDEX stale), both mint artefacts. Frontend: install, generate, lint, type-check, build rc 0; fe_test 3 failures, all in `DagDesigner.test.ts` (FD-1611, WK-675's, not this slice's). Case 9 (`GIP_MEASURE_RATE_LIMIT=1 -k case_9`, 1 of 10 collected): calls=10000, p50 0.523 ms, p99 1.420 ms. T5 red against parent source (score, deps, auth/service, errors, main at `origin/main`): 9 errors `'State' object has no attribute 'rate_limiter'` (valid). T4 red against parent `service_accounts.py`: `test_key_lifecycle_is_audited_by_prefix_never_by_value` failed (partly valid: unmigrated database).
+
+**Run 2, head `5d6ddb2d`, gate-1, 14:16:36–14:59:38 BST (2026-10-11): phases 0-4 VALID, phase 5 killed, phase 6 not run.** Script `~/gi-pricing-plan.local/handover/sl1257-slot.sh`, output `~/gi-pricing-plan.local/handover/sl1257-slot-run2.out`, stage logs `/tmp/tmp.L5OuJETE8h`. The lead killed the run at about 14:59 BST (end marker `end 2026-10-11T14:59:38+01:00 rc=143`) because phase 5's full `pytest` was deadlocked: the script did not export `GIP_GATE_SLOT`, so the root `conftest.py` tried to take `/tmp/slots/gate-1`, which the wrapper held (`pytest.log` held only the "gate slots are busy" line). Cause in the script, not in the code; fixed by `export GIP_GATE_SLOT=/tmp/slots/gate-1` before any pytest.
+Preflight ok (upgrade rc 0, one head `c5a91e7d3b26`, three containers healthy). Phase 1 reds, expected: T4 rc 1 (`test_key_lifecycle_is_audited_by_prefix_never_by_value`); T5 rc 4, an ImportError (`cannot import name 'safe_validation_message' from 'pricing_core.safe_error'`) when collecting `conftest.py` against the parent `errors.py`, so the T5 tests did not run and T5 proves only that parent source cannot import. Phase 2 up/down/up rc 0/0/0. Phase 3 cases 1-8 rc 0 (9 passed, 1 skipped); case 9 rc 0, 10000 calls, p50 0.729 ms, p99 1.552 ms. Phase 4: `test_settings_environment` 22, `test_score` 46, `test_environments` 25, `test_deployment_route_types` 18 all passed; `test_api_service_accounts` 14 passed, 1 failed. Phase 5: ruff, mypy, lint-imports, req-coverage, contracts rc 0; audit-docs rc 1 = check 32 (working id 9977 and FD-1611 unresolved in INDEX) and check 39 (INDEX stale), mint artefacts; pytest rc 143 (the kill).
+The one phase-4 red, `test_rotation_acts_on_the_key_of_the_named_environment_only`, is OWN: alone it failed 3 of 3 with `assert len(after["dev"]) == 1` / `KeyError: 'dev'` (`test_api_service_accounts.py:333`). `rotate_key` built its view from `[*current, successor]`, the rotated Environment's keys only; the fix loads every key of the account (commit `66b1bac7`), after which the whole file passed (15). The fix landed after the phases ran, so phases 1-4 must be repeated on the new head.
+
+**Run 3, head `89312bfc` (run 2's fix `66b1bac7` plus `origin/main` ff0edc39 merged), gate-1, 15:24:45-16:13:11 BST (2026-10-11), through the shared preflight template: complete, end marker `rc=1`.** Output `~/gi-pricing-plan.local/handover/sl1257-slot-run3.out`, stage logs `/tmp/tmp.3R1t5fWdpt`. Phase 1 reds, expected: T4 rc 1 (`test_key_lifecycle_is_audited_by_prefix_never_by_value`); T5 rc 1, nine setup errors `'State' object has no attribute 'rate_limiter'` (parent source imports now, limiter absent). Phases 2-4 rc 0 (alembic up/down/up; rate-limit cases 1-8 and 9; `test_api_service_accounts` 15, `test_score` 46, `test_environments` 25, `test_deployment_route_types` 18). Gate: ruff, mypy, lint-imports, req-coverage, contracts rc 0; audit-docs rc 1 (checks 31, 32, 39: the unminted working id 9977, mint artefacts); full `pytest` rc 1 (17 failed, 5530 passed, 5 skipped). Frontend: install, generate, lint, type-check, test (105 files, 665 tests), build all rc 0.
+The 17 pytest reds: 13 under `tests/` run `audit-docs` or the register checks on the real tree and fail for the same working-id reason (mint artefacts). Four under `backend/tests/` were OWN: three in `test_api_authorisation_sweep.py` (`POST /api/v1/score` declared no permission, because the rate-limit wrapper `_rate_limited_score_caller` hid `requires(score:execute)` one dependency level down, where the sweep does not look) and one in `test_error_sinks.py` (the `_SINKS` row for `settings.py` `_parse_env` `{exc}`, a sink this slice removed, deviation 3). Fix: the route declares `ScoreExecuteDep` itself and the limiter is a second dependency (`ScoreRateLimitDep`) that reuses it, and the stale `_SINKS` row is deleted. Targeted proof through `run-small.sh`: sweep + error sinks + rate limit 25 passed 1 skipped; `test_score` + `test_api_service_accounts` 61 passed; mypy 236 files clean; ruff clean. Not re-run as a full gate; the lead rules whether a final gate is needed.
+
+**Run 4, head `a97edc7f` (run 3's fixes plus `origin/main` 3065770c merged), gate-1, 17:19:50-18:07:39 BST (2026-10-11), through the shared preflight template: complete, end marker `rc=1`, zero reds of the slice's own.** Output `~/gi-pricing-plan.local/handover/sl1257-slot-run4.out`, stage logs `/tmp/tmp.dKPo8Vqwow`. Preflight ok (head guard, clean tree, slot held with `GIP_GATE_SLOT` exported, containers healthy, upgrade rc 0, one head). Stage to rc: phase 1 expected reds T4 rc 1 and T5 rc 1 (nine setup errors, `'State' object has no attribute 'rate_limiter'`); phase 2 alembic up/down/up 0/0/0; phase 3 cases 1-8 and case 9 rc 0; phase 4 `test_settings_environment` 22, `test_api_service_accounts` 15, `test_score` 51, `test_environments` 25, `test_deployment_route_types` 18, all rc 0; phase 5 ruff, mypy, lint-imports, req-coverage, contracts `--check` rc 0, audit-docs rc 1, full `pytest` rc 1 (13 failed, 5549 passed, 5 skipped); phase 6 frontend install, generate, lint, type-check, test (665 tests), build all rc 0.
+Classification: audit-docs rc 1 (9) = check 31 (the working id's `created` earlier than id 1633's), check 32 (the working id unresolved in the INDEX, ledger lines and `docs/roadmap.md`) and check 39 (INDEX stale): mint artefacts, discharged by this mint. The 13 `pytest` failures are the same 13 tests under the root `tests/` as run 3 (`test_audit_docs_finding_citations` 1, `test_audit_docs_ids` 3, `test_audit_docs_process_core_digest` 2, `test_audit_docs_w37_11_ceiling` 1, `test_register_lint` 3, `test_register_owed` 1, `test_repository_invariants` 2): each runs `audit-docs` or the register checks on the real tree, so each fails for the same reason. 17 to 13 is exactly the four fixed own reds; no file under `backend/tests/` failed.
+
+### Audit
+
+Not yet run.
+
+### Build log
+
+- 2026-10-10: worktree `.claude/worktrees/sl-1257`, branch `sl-1257-wk674-s3-env`, from `14fa6fb3`. First commit: PL-1583 `draft → active`, SL-1257 `draft → active`, this ledger.
+
+## PRs
+
+None yet.

@@ -64,6 +64,7 @@ from app.errors import PlatformError
 from app.observability.logging import get_logger
 from app.observability.metrics import ladder_reconciliation_failed
 from app.platform import jobs as job_service
+from app.platform import rate_limit
 from app.platform import rating_versions as rating_versions_service
 from app.platform import settings as settings_service
 from app.platform import traces as traces_service
@@ -135,6 +136,29 @@ DatabaseDep = Annotated[Database, Depends(_database)]
 BlobStoreDep = Annotated[BlobStore, Depends(_blob_store)]
 BundleSlotDep = Annotated[BundleSlot, Depends(_bundle_slot)]
 ScoreExecuteDep = Annotated[Caller, Depends(requires(Permission.SCORE_EXECUTE))]
+
+
+async def _enforce_score_rate_limit(
+    request: Request, caller: ScoreExecuteDep, database: DatabaseDep, settings: SettingsDep
+) -> None:
+    """FR-452's scoring limit: after authentication and `score:execute`, before any scoring,
+    so a 401 or 403 is never counted and a refused request scores nothing (RL-1347 rule 4)."""
+    await rate_limit.enforce(
+        request.app.state.rate_limiter,
+        database,
+        settings,
+        route="score",
+        default_setting="scoring.default_client_rate_limit_rps",
+        workspace_id=caller.workspace_id,
+        environment=caller.environment,
+        principal=caller.principal,
+        account_limit=caller.rate_limit_rps,
+    )
+
+
+#: The route declares `ScoreExecuteDep` itself, so the authorisation sweep sees its
+#: permission; the limiter reuses that one resolved dependency and adds no second check.
+ScoreRateLimitDep = Annotated[None, Depends(_enforce_score_rate_limit)]
 ScoreBatchDep = Annotated[Caller, Depends(requires(Permission.SCORE_BATCH))]
 
 
@@ -361,11 +385,12 @@ def _as_platform_error(exc: ValueError) -> PlatformError | None:
     # named version has no compiled bundle — and 422 carries FR-255's four per-quote
     # codes. 404 is a ref naming no version; 401 and 403 are authentication and the
     # `score:execute` check.
-    responses={**problems(401, 403, 404, 409, 422, 500), 200: {"model": ScoringResult}},
+    responses={**problems(401, 403, 404, 409, 422, 429, 500), 200: {"model": ScoringResult}},
 )
 async def score(
     ctx: QuoteContext,
     caller: ScoreExecuteDep,
+    _rate_limit: ScoreRateLimitDep,
     database: DatabaseDep,
     blob_store: BlobStoreDep,
     slot: BundleSlotDep,
@@ -502,8 +527,13 @@ async def _maybe_sample_trace(
     """
     try:
         async with database.unit_of_work() as session:
+            # FR-430/FR-431: monitoring configuration is per Environment (DP-S3-3 (a)).
             rate = await settings_service.resolve(
-                session, settings, caller.workspace_id, "rating.trace_sample_rate"
+                session,
+                settings,
+                caller.workspace_id,
+                "rating.trace_sample_rate",
+                caller.environment,
             )
             sampled, reason = traces_service.decide_sampling(
                 result.outcome, rate.effective_value, roll=random.random()

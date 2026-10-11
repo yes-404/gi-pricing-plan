@@ -829,8 +829,8 @@ def test_a_multi_environment_accounts_trace_is_stamped_with_the_served_environme
 ) -> None:
     """RL-916 part 3, test 1 — the discriminating case.
 
-    A Service Account created `["uat", "dev"]` mints a key for `environments[0]`
-    (`service_accounts.py:180`), which is `uat` — the environment the quote is actually
+    A Service Account created `["uat", "dev"]` mints one key per Environment (FR-430, WK-674
+    Slice 3). The `uat` key is the one used here — the environment the quote is actually
     served in. The old `_environment_for` stamped `min(caller.environments)` instead, which
     is `dev` (`"dev" < "uat"` lexicographically): a caller scoped to more than one
     environment discriminates the fix from the defect, where a single-environment account
@@ -847,7 +847,7 @@ def test_a_multi_environment_accounts_trace_is_stamped_with_the_served_environme
     )
     assert created.status_code == 201, created.text
     headers = {
-        "X-API-Key": created.json()["key"],
+        "X-API-Key": next(k["key"] for k in created.json()["keys"] if k["environment"] == "uat"),
         "Workspace-Id": str(workspace_id),
     }
 
@@ -958,6 +958,63 @@ def test_a_quoted_outcome_at_rate_one_is_sampled(
     rows = _run(_rows_for(database, workspace_id))
     assert len(rows) == 1
     assert rows[0].sample_reason == "rate"
+
+
+async def _set_environment_trace_sample_rate(
+    database: Any, environment: str, rate: float
+) -> None:
+    async with database.unit_of_work() as session:
+        await settings_service.set_environment_setting(
+            session, environment, "rating.trace_sample_rate", rate, None
+        )
+
+
+@pytest.mark.req("FR-430")
+@pytest.mark.parametrize(
+    ("set_for", "expect_sampled"),
+    [("uat", True), ("prod", False)],
+)
+def test_the_trace_sampling_rate_is_read_for_the_callers_environment(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    served: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    database: Any,
+    workspace_id: Any,
+    set_for: str,
+    expect_sampled: bool,
+) -> None:
+    """DP-S3-3 (a): monitoring configuration is per Environment. Workspace rate 0.0; the
+    Environment setting 1.0 for `set_for`. A `uat` caller is sampled only when the value was
+    set for `uat` — predicted red at the parent: the workspace rate was read, so never."""
+    quoted = _scored(outcome="quoted")
+
+    async def _score_one(*_args: Any, **_kwargs: Any) -> ScoringResult:
+        return quoted
+
+    monkeypatch.setattr(score_module, "score_one", _score_one)
+    _run(_set_trace_sample_rate(database, workspace_id, 0.0))
+    _run(_set_environment_trace_sample_rate(database, set_for, 1.0))
+    try:
+        response = client.post(
+            SCORE_URL, json=_quote({"rating_version_ref": SCORED_REF}), headers=scoring_headers
+        )
+        assert response.status_code == 200, response.text
+
+        rows = _run(_rows_for(database, workspace_id))
+        assert len(rows) == (1 if expect_sampled else 0)
+    finally:
+        _run(_clear_environment_settings(database))
+
+
+async def _clear_environment_settings(database: Any) -> None:
+    """Environments are deployment-wide, so a row written here would outlive the test."""
+    from sqlalchemy import delete
+
+    from app.db.models import EnvironmentSettingRow
+
+    async with database.unit_of_work() as session:
+        await session.execute(delete(EnvironmentSettingRow))
 
 
 @pytest.mark.req("FR-259")
