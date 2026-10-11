@@ -15,8 +15,12 @@ W=$G/.claude/worktrees/sl-1526
 EW=$G/.claude/worktrees/sl-1526-evidence       # evidence worktree: branch evidence/sl-1526-alone-2026-10-11
 REL=evidence/sl-1526-alone
 E=$(dirname "$(readlink -f "$0")")             # the scripts this run executes
-SCRIPTS="run.sh driver.py realglm.py fittable.py"
-BASE=99f22479a20e7fa64f8b6654e0d371c595b1e35a  # the slice's merge-base with origin/main (git merge-base origin/main HEAD)
+SCRIPTS="run.sh driver.py realglm.py fittable.py rows.py"
+# BASE = the dispatch tree: the slice branch was created at 31b88780 (`git reflog show sl-1526-exit-demo-a`:
+# "31b88780 sl-1526-exit-demo-a@{18}: branch: Created from origin/main"), the plan's other option being 809a3794.
+# examples/ is identical from 31b88780 to the slice's merge-base 99f22479 (`git diff --stat 31b88780 99f22479 -- examples`
+# is empty), and 809a3794 is 28k lines of backend/packages older than the venv this run uses, so it is not used.
+BASE=31b88780
 ROWS=20000
 EXPECT_HEAD=$1; OUTD=$2; STAMPS=$OUTD/stamps.tsv; LOG=$OUTD/alone.log
 mkdir -p "$OUTD"; : > "$STAMPS"
@@ -41,7 +45,8 @@ slot_preflight                         # exits 90-95 (HEAD guard, dirty tree, ga
 for s in /tmp/slots/gate-2 /tmp/slots/small-test; do
   if flock -n "$s" true; then echo "ALONE ABORT: $s is FREE - the window holds all three slots"; exit 97; fi
 done
-[ "$(git -C "$W" merge-base origin/main HEAD)" = "$BASE" ] || { echo "BASE GUARD FAILED: merge-base != $BASE"; exit 98; }
+git -C "$W" cat-file -e "$BASE^{commit}" || { echo "BASE GUARD FAILED: $BASE missing"; exit 98; }
+git -C "$W" diff --quiet "$BASE" 99f22479a20e7fa64f8b6654e0d371c595b1e35a -- examples || { echo "BASE GUARD FAILED: examples/ differs between $BASE and 99f22479"; exit 98; }
 for port in 8000 5173; do
   if ss -ltn "sport = :$port" | grep -q LISTEN; then echo "ALONE ABORT: port $port is in use (demo.py needs it)"; exit 98; fi
 done
@@ -73,6 +78,7 @@ inv() {
 echo "== before"; date -Is; uptime; free -h; df / | tail -1
 echo "== other heavy processes"; pgrep -af '[p]ytest|[b]ench-|migrate --verify|[v]itest|[v]ue-tsc|[m]ypy' | grep -v "$REL/run.sh" || echo none
 
+echo "== containers before"; docker ps -a --filter name=gi-pricing --format '{{.Names}} {{.Status}}'
 echo "== setup (stamped, not part of the DP-2 figures): fresh databases from the template (S-14), base tree"
 PGX="docker exec gi-pricing-postgres-1"
 for d in "$SDB" "$BDB"; do
@@ -84,6 +90,8 @@ echo "== stage a: Acceptance 8 - scripts/demo.py --rows $ROWS to its banner, the
 GIP_DATABASE_URL=$DSN inv a_demo a python3 -I "$E/driver.py" "$W" "$OUTD/demo.log" "$ROWS"
 ARC=$?
 cat "$OUTD/a_demo.out"
+echo "== keycloak: the demo recreated it; stop it (never compose down); containers after"
+docker stop gi-pricing-keycloak-1; docker ps -a --filter name=gi-pricing --format '{{.Names}} {{.Status}}'
 echo "-- demo.log: tail"; tail -25 "$OUTD/demo.log"
 
 echo "== stage c: REAL-GLM report (fitted veh_age relativities + every declared property vs the real bundle)"
@@ -101,12 +109,20 @@ fi
 
 echo "== stage b: 11(b) fit table - slice column, then the base tree seeded on the same --rows"
 INV_TAIL=0 GIP_DATABASE_URL=$DSN inv b_slice b uv run --directory "$W" python "$E/fittable.py" slice "$REC" || exit 5
+CSV=$OUTD/slice-rows.csv
+inv b_export_rows b uv run --directory "$W" python "$E/rows.py" export "$W" "$ROWS" "$CSV" || exit 5
 GIP_DATABASE_URL=$BDSN inv b_base_migrate b uv run --directory "$W" alembic upgrade head || exit 5
-GIP_DATABASE_URL=$BDSN inv b_base_seed b uv run --directory "$W" python "$BASEDIR/examples/fremtpl2/seed.py" --rows "$ROWS" || exit 5
+GIP_DATABASE_URL=$BDSN inv b_base_seed b uv run --directory "$W" python "$E/rows.py" seed "$BASEDIR" "$CSV" "$ROWS" || exit 5
 INV_TAIL=0 GIP_DATABASE_URL=$BDSN inv b_base b uv run --directory "$W" python "$E/fittable.py" base "$BASEDIR/examples/fremtpl2/data/last-seed.json" || exit 5
-echo "== 11(b): fit statistics, base tree $BASE | slice head $EXPECT_HEAD, --rows $ROWS (both seeded by their own examples/fremtpl2/seed.py; the sampler differs: the slice's is the fixed every-nth-index one)"
+echo "== same-rows proof"
+S=$(grep '^slice ROWSET' "$OUTD/b_export_rows.out" | cut -d' ' -f2-); B=$(grep '^base  ROWSET' "$OUTD/b_base_seed.out" | cut -d' ' -f2-)
+echo "slice: $S"; echo "base : $B"
+if [ -n "$S" ] && [ "$S" = "$B" ]; then echo "SAME ROWS: yes (csv sha256, row count and sorted-IDpol hash equal)"; else echo "SAME ROWS: NO - 11(b) column is not valid"; note 5; fi
+SR=$(grep -o 'rows=[0-9]*' "$OUTD/b_slice.out" | head -1); BR=$(grep -o 'rows=[0-9]*' "$OUTD/b_base.out" | head -1)
+echo "fitted rows: slice $SR base $BR"; [ "$SR" = "$BR" ] || { echo "SAME ROWS: NO - fitted row counts differ"; note 5; }
+echo "== 11(b): fit statistics, base tree $BASE (dispatch tree) | slice head $EXPECT_HEAD, same rows, --rows $ROWS"
 cat "$OUTD/b_base.out" "$OUTD/b_slice.out"
 echo "factor count: base $(grep -c 'type=' "$OUTD/b_base.out") slice $(grep -c 'type=' "$OUTD/b_slice.out") (want 7 in each)"
 echo "== after"; date -Is; uptime; free -h
-echo "RESULT: all stages rc 0 (max rc so far $MAXRC); figures vs DP-2 are in the DRIVER lines above"
-sha256sum "$E"/run.sh "$E"/driver.py "$E"/realglm.py "$E"/fittable.py | cut -c1-16,65-
+echo "RESULT: max stage rc so far $MAXRC (0 = all stages passed and same rows proven); figures vs DP-2 are in the DRIVER lines above"
+sha256sum "$E"/run.sh "$E"/driver.py "$E"/realglm.py "$E"/fittable.py "$E"/rows.py | cut -c1-16,65-
