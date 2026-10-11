@@ -293,8 +293,9 @@ class _Middleware:
         if not self._started:
             self._started = True
             loop = asyncio.get_running_loop()
-            loop.set_debug(True)
-            loop.slow_callback_duration = 0.05
+            if os.environ.get("T0_ASYNCIO_DEBUG", "1") == "1":  # the rerun sets 0: no debug hooks
+                loop.set_debug(True)
+                loop.slow_callback_duration = 0.05
             asyncio.create_task(_ticker())
         cur: dict[str, Any] = {"t": time.time(), "phases": {}}
         token = CUR.set(cur)

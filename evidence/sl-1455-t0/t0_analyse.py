@@ -10,6 +10,7 @@ Usage: python3 -I t0_analyse.py <out dir>
 from __future__ import annotations
 
 import json
+import os
 import sys
 from collections import Counter
 from pathlib import Path
@@ -80,9 +81,10 @@ def summarise_profile(path: Path, top: int = 12) -> list[str]:
 
 HEADER = """# SL-1455 Task 0 results (diagnostic attribution, never an NFR-489 reading)
 
-Measured at slice COMMIT 47cf560426a78f079a3fdf57cb935224dfd5ebcc, on its base COMMIT
+Measured at slice COMMIT {head}, on its base COMMIT
 372fa92ae3ab306bc067c234487ce929dc0e2a04 (origin/main). Not re-merged when main moves: the
 pre-registration pins this head (lead, 2026-10-11).
+Run mode: {mode}
 
 Instruments NEW relative to PL-1454 Task 0's plan text (Step 2), added for main 372fa92a:
 - `rate_limit` phase: times `rate_limit.enforce` (FR-452, #1280), which `score` now calls on every
@@ -96,8 +98,51 @@ Instruments NEW relative to PL-1454 Task 0's plan text (Step 2), added for main 
 """
 
 
+POOL_TIMEOUT_MS = 30000.0   # the checkout wait at the pool timeout (tonight's longest single: 30.0 - 30.2 s)
+P99_CLEAN_MS = 1000.0
+
+
+def reading_rule(root: Path) -> None:
+    """The rerun's PRE-REGISTERED reading rule, in numbers, per arm at 25 rps over its 3 repeats.
+
+    Per repeat (all request records of the measured window, whatever their status, and the client's
+    error count): longest single pool checkout `L` (ms), server `total` p99 `P` (ms), client errors `E`.
+      CLEAN repeat      = L < 30000 AND P < 1000 AND E == 0.
+      SATURATING repeat = L >= 30000 OR E > 0.
+      any other repeat  = neither.
+    Arm verdict: CLEAN if all 3 repeats are clean; SATURATES if any repeat saturates; otherwise MIXED
+    (reported as neither). Read together: both arms CLEAN = debug mode was the stall; either arm SATURATES =
+    the 6-checkout / 10-statement shape saturates the pool at 25 rps without debug mode.
+    """
+    print("\n## Reading rule (pre-registered): CLEAN = every repeat has longest checkout < 30000 ms, server total p99 < 1000 ms, "
+          "0 client errors; SATURATES = any repeat with longest checkout >= 30000 ms or any client error; else MIXED\n")
+    print("| arm | run | longest checkout ms | server total p99 ms | client errors | repeat |\n|---|---|---|---|---|---|")
+    verdicts = {}
+    for arm_dir in sorted(p for p in root.iterdir() if p.is_dir()):
+        reps = []
+        for d in sorted(arm_dir.glob("r25-run[1-9]")):
+            if not (d / "client.json").exists():
+                continue
+            client = json.loads((d / "client.json").read_text())
+            reqs = [r for r in jsonl(d / "requests.jsonl") if r["t"] >= client["measure_from"]]
+            longest = max([r.get("checkout_max_ms", 0.0) for r in reqs] or [0.0])
+            p99 = pct([r["phases"]["total"] for r in reqs if "total" in r.get("phases", {})], .99)
+            errs = client["errors"]
+            sat = longest >= POOL_TIMEOUT_MS or errs > 0
+            clean = longest < POOL_TIMEOUT_MS and p99 < P99_CLEAN_MS and errs == 0
+            label = "SATURATING" if sat else ("clean" if clean else "neither")
+            reps.append(label)
+            print(f"| {arm_dir.name} | {client['run']} | {longest:.0f} | {p99:.1f} | {errs} | {label} |")
+        if reps:
+            verdicts[arm_dir.name] = ("SATURATES" if "SATURATING" in reps else
+                                      "CLEAN" if reps.count("clean") == len(reps) == 3 else "MIXED")
+    print("\nArm verdicts: " + "; ".join(f"{a} = {v}" for a, v in verdicts.items()) + ".")
+
+
 def main(root: Path) -> None:
-    print(HEADER)
+    mode_file = root / "mode.txt"
+    mode = mode_file.read_text().strip() if mode_file.exists() else "asyncio debug mode ON (the first run)"
+    print(HEADER.format(head=os.environ.get("T0_HEAD", "(not recorded)"), mode=mode))
     for arm_dir in sorted(p for p in root.iterdir() if p.is_dir()):
         passes = {}
         profile = None
@@ -159,6 +204,8 @@ def main(root: Path) -> None:
             print("\n".join(summarise_profile(profile / "profile.txt")))
         elif profile is not None:
             print(f"\n### py-spy: no profile.txt in {profile.name}; see its server.log")
+    if "debug mode OFF" in mode:
+        reading_rule(root)
 
 
 if __name__ == "__main__":

@@ -11,7 +11,8 @@
 # Output: $OUT/{run.log,results.md,<arm>/<pass>/...}. DIAGNOSTIC on this shared box: an ATTRIBUTION,
 # never an NFR-489 reading (Step 4).
 #
-# Pre-registration: this file and t0_app.py, t0_driver.py, t0_analyse.py are committed to the evidence
+# The debug-off rerun is `run2.sh` (it only sets T0_ASYNCIO_DEBUG=0, the arms and the rates, then runs this file).
+# Pre-registration: this file, run2.sh and t0_app.py, t0_driver.py, t0_analyse.py are committed to the evidence
 # branch EVID before any run; step 0 below proves the four files on disk are byte-identical to that
 # branch's blobs, and aborts 97 if not. The tree guard is ONE EXPECT_HEAD (slot-preflight.sh), because
 # a per-directory tree pin cannot say "the whole merged head" and the preflight needs the head anyway.
@@ -19,7 +20,7 @@ set -u
 SCR=/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1455-t0
 W=/home/puzhenhao1989/gi-pricing-plan/.claude/worktrees/sl-1455
 EVID=refs/heads/evidence/sl-1455-t0-2026-10-11
-EXPECT_HEAD=${T0_PROVE_WRONG_HEAD:-47cf560426a78f079a3fdf57cb935224dfd5ebcc}   # the override exists only to prove abort 90; the log prints expect=
+EXPECT_HEAD=${T0_PROVE_WRONG_HEAD:-3c0e99a073887075478117c929753e7d6fec0f1d}   # the override exists only to prove abort 90; the log prints expect=
 DB="gipricing_sl1455t0_$(date +%s)"
 DSN=postgresql+asyncpg://gipricing:gipricing@localhost:5432/$DB
 SLOT=/tmp/slots/gate-1
@@ -45,10 +46,17 @@ quiet() { pgrep -fc '[p]ytest|[v]itest|[p]npm|[v]ite build' ; }
 
 stamp "T0 start; HEAD $(git -C "$W" rev-parse HEAD) branch $(git -C "$W" branch --show-current)"
 echo "uptime start: $(uptime)"
+# Seat processes at OPEN (rerun condition 2): who else is on the box, pollers and gh and pytest included.
+seat_procs() {
+  echo "### $1 $(TZ=Europe/London date '+%F %T %Z'): pgrep -af of gh / pytest / vitest / uvicorn / alembic / run-small / claude seats"
+  pgrep -af '[g]h (run|pr|api|workflow)|[p]ytest|[v]itest|[u]vicorn|[a]lembic|[r]un-small|[c]laude' | cut -c1-200 || true
+  echo "top by CPU:"; ps -eo pid,etime,pcpu,args --sort=-pcpu | head -12 | cut -c1-200
+}
+seat_procs OPEN > "$OUT/seat-procs-open.txt"; cat "$OUT/seat-procs-open.txt"
 
 # Step 0: pre-registration proof — the files that run are the files that were committed.
 echo "evidence ref $EVID = $(git -C "$W" rev-parse "$EVID" 2>&1)"
-for f in run.sh t0_app.py t0_driver.py t0_analyse.py; do
+for f in run.sh run2.sh t0_app.py t0_driver.py t0_analyse.py; do
   disk=$(git hash-object "$SCR/$f")
   blob=$(git -C "$W" rev-parse "$EVID:evidence/sl-1455-t0/$f" 2>&1)
   if [ "$disk" = "$blob" ]; then echo "prereg ok: $f $disk"
@@ -72,6 +80,13 @@ if [ "${T0_ALLOW_BUSY:-0}" != 1 ] && [ "$(quiet || true)" != 0 ]; then
 fi
 df / | tail -1
 
+# The mode this run is in (read by t0_analyse.py). T0_ASYNCIO_DEBUG=0 is the pre-registered rerun: no asyncio
+# debug mode (neither PYTHONASYNCIODEBUG nor loop.set_debug); py-spy stays, in SAMPLING mode (--nonblocking).
+export T0_ASYNCIO_DEBUG="${T0_ASYNCIO_DEBUG:-1}" T0_HEAD="$(git -C "$W" rev-parse HEAD)"
+if [ "$T0_ASYNCIO_DEBUG" = 0 ]; then echo "asyncio debug mode OFF (the rerun; py-spy sampling mode only)" > "$OUT/mode.txt"
+else echo "asyncio debug mode ON (the first run's mode)" > "$OUT/mode.txt"; fi
+cat "$OUT/mode.txt"
+
 # Step 4 pre-flight: can uvx fetch and attach py-spy? (Never installed; the printed error is the record.)
 PROFILE=--profile
 if ! timeout 120 uvx py-spy --version; then echo "py-spy UNAVAILABLE (printed above); no profile passes"; PROFILE=; fi
@@ -87,6 +102,8 @@ note "$rc"
 # Step 5.
 python3 -I "$SCR/t0_analyse.py" "$OUT" > "$OUT/results.md" 2>"$OUT/analyse.err"; arc=$?
 echo "analyse rc=$arc"; note "$arc"
+seat_procs CLOSE > "$OUT/seat-procs-close.txt"
+{ echo; echo "## Seat processes at OPEN and CLOSE (rerun condition 2)"; echo '```'; cat "$OUT/seat-procs-open.txt" "$OUT/seat-procs-close.txt"; echo '```'; } >> "$OUT/results.md"
 echo "pytest/vitest processes: $(quiet || true)"
 echo "slots: $(slots)"
 stamp "T0 end; results $OUT/results.md"

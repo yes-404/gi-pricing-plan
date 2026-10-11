@@ -100,7 +100,8 @@ def server_cmd(root: Path, port: int) -> list[str]:
 def start_server(root: Path, cmd: list[str], env: dict[str, str], log: Path, *, spy: Path | None) -> Any:
     full = cmd
     if spy is not None:
-        full = ["uvx", "py-spy", "record", "--format", "raw", "--rate", "100",
+        # SAMPLING only: --nonblocking so py-spy never pauses the process to read it (pre-registered).
+        full = ["uvx", "py-spy", "record", "--nonblocking", "--format", "raw", "--rate", "100",
                 "-o", str(spy), "--"] + cmd
     return subprocess.Popen(full, cwd=str(root), env=env, stdout=log.open("wb"),
                             stderr=subprocess.STDOUT)
@@ -133,9 +134,12 @@ def one_pass(bench: Any, root: Path, *, arm: str, rate: int, run: int, ctx: dict
         "GIP_ENVIRONMENT": "local", "GIP_VERSION": "bench",
         "GIP_DATABASE_URL": dsn, "GIP_BLOB_BUCKET": bucket,
         "PYTHONPATH": str(HERE) + os.pathsep + os.environ.get("PYTHONPATH", ""),
-        "PYTHONASYNCIODEBUG": "1",
         "T0_OUT": str(pass_dir),
     }
+    if os.environ.get("T0_ASYNCIO_DEBUG", "1") == "1":
+        env["PYTHONASYNCIODEBUG"] = "1"
+    else:  # the rerun: no asyncio debug hooks of any kind, nor from the inherited environment
+        env.pop("PYTHONASYNCIODEBUG", None)
     start = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     london_start = london_now()
     steal0, total0 = cpu_steal()
