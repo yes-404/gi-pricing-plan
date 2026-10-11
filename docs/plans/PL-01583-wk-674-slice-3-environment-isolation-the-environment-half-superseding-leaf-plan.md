@@ -3,7 +3,7 @@ id: PL-1583
 family: plan
 kind: leaf
 title: WK-674 Slice 3 — Environment isolation, the environment half (FR-430, FR-431, FR-446, FR-447, FR-452 scoring limb; register F54 and F48): superseding leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-10            # original date 2026-10-10, set at the draft; minted 2026-10-10
 owner: planner
 tree: 3519a919e30aa6993d40b22df212dd57bbd4a685

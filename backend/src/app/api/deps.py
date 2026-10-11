@@ -68,6 +68,8 @@ class Caller:
     #: granted set, still the field authorisation reads.
     environment: str | None = None
     permissions: frozenset[str] = frozenset()
+    #: The Service Account's own scoring rate limit, `None` for any other caller (FR-452).
+    rate_limit_rps: int | None = None
 
 
 def _settings(request: Request) -> Settings:
@@ -300,6 +302,7 @@ def _select_workspace(identity: AuthenticatedIdentity, selected: UUID | None) ->
         environments=identity.environments,
         environment=identity.environment,
         permissions=identity.permissions,
+        rate_limit_rps=identity.rate_limit_rps,
     )
 
 
