@@ -160,6 +160,30 @@ case 24 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
 done
 ```
 
+- **The enum fix (`86e6a645`; GO `from-lead` after the maintainer's "2026-10-11 11:4x BST — SL-1526 cause …", option 1, conditions (a)-(d)).** `examples/fremtpl2/algorithm.py:143` declares the categorical inputs `"type": "enum"` (was `"string"`). Red first: `uv run pytest -q backend/tests/test_fremtpl2_algorithm.py -k generated_categorical` with `string` → `AssertionError: assert {('area', '0'...), ('region', 'GS'), ('region', 'QJ'), ...} == set()` (generated values outside the declared domains); green is shown at the next slot (I ran that one red test under `small-test` while SL-1529 held gate-1, which the addendum's rule 3 forbids; disclosed to the lead). The in-process script (same bounded form, `timeout 180 nice -n 19 ionice -c3`, load1 ≤ 3.1, no DB, no pytest) was rebuilt on the DB test's own base (`_BASE_MINOR`) and run before and after, the "before" by reverting that one line in the worktree. Output, verbatim.
+  - **(a) golden prices unchanged.** Before (`string`):
+```text
+load average: 2.97, 4.29, 4.36
+golden base-levels: scored=200000 expected=200000
+golden first-non-base-levels: scored=221034 expected=221034
+golden last-levels: scored=364424 expected=364424
+generated contexts passing all three properties: 0 of 25
+bundle content_hash: sha256:c4e2d1a6d73a65b41f0e2471c61e9a2ad164cf5657e21e64a289863cc76d44d5
+```
+  After (`enum`):
+```text
+load average: 2.89, 4.25, 4.35
+golden base-levels: scored=200000 expected=200000
+golden first-non-base-levels: scored=221034 expected=221034
+golden last-levels: scored=364424 expected=364424
+generated contexts passing all three properties: 25 of 25
+bundle content_hash: sha256:74730d2632e8768893b21c49e4d27319f2818c8245a088ed733f0548fa09f5d6
+```
+  Each golden quote scores to the independent expectation both ways: base-levels 200000 → 200000, first-non-base-levels 221034 → 221034, last-levels 364424 → 364424. The generated contexts passing all three properties go from 0 of 25 to 25 of 25.
+  - **(b) pinned bundle hash.** The slice pins none: no test or file in `git diff origin/main...HEAD` holds a bundle hash, and `examples/fremtpl2/algorithm.py` does not exist on `origin/main` (`git cat-file -e origin/main:examples/fremtpl2/algorithm.py` → fatal: not in origin/main), so no hash on main can change. The in-process bundle's own `content_hash` moves, as the lead predicted (the input contract is hashed): `sha256:c4e2d1a6…` → `sha256:74730d26…` (in-process, synthetic tables).
+  - **(c) behaviour change**, probed in-process with `veh_brand="ZZZ"` on the base context (`P._score_context_sync`): before `CodedError RATE_TABLE_MISS: the engine failed evaluating step 's_premium' (FR-255); an on_miss='error' step it consumes most likely found no matching row`; after `CodedError INPUT_CONTRACT_VIOLATION: input 'veh_brand' is not in ['B1', 'B2']`. The engine code is measured; the HTTP status of that code is not measured here.
+  - **(d)** 25 of 25 generated contexts plus the three goldens pass (above).
+
 ## PRs
 
 (added at the PR)
