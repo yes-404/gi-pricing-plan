@@ -2,12 +2,12 @@
 id: FD-9815
 family: finding
 title: An algorithm input declared "string" with a "domain" gets meaningless generated property tests, because generate_contexts samples a domain only for enum
-status: draft                   # a working id; active at the mint
+status: active
 created: 2026-10-11
 owner: auditor
 tree: 02f23b4a74cfdf81ff4ac875e1ff7ab2db777c4a
 corrected_by: []
-relates: [WK-1178, SL-1526, LG-9966]
+relates: [WK-1178, SL-1526]
 ---
 
 # FD-9815 — a `string` input with a `domain` is sampled as arbitrary text

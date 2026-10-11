@@ -2,12 +2,12 @@
 id: FD-9806
 family: finding
 title: A default-live /score is refused with INPUT_CONTRACT_VIOLATION, because the handler and the trace worker pass score_one a context with no rating_version_ref
-status: draft                   # a working id; active at the mint
+status: active
 created: 2026-10-11
 owner: auditor
 tree: 02f23b4a74cfdf81ff4ac875e1ff7ab2db777c4a
 corrected_by: []
-relates: [WK-1178, SL-9937, PL-9908]
+relates: [WK-1178]
 ---
 
 # FD-9806 — a default-live `/score` never reaches a price
@@ -17,7 +17,7 @@ relates: [WK-1178, SL-9937, PL-9908]
 script checked before its window" (item 2), and "2026-10-11 11:29:37 BST — DISPATCH GO: SL 9937 …" (item 1: the trace limb is
 in scope). Every line number below is at `origin/main` `02f23b4a74cfdf81ff4ac875e1ff7ab2db777c4a`, read for this record.
 
-## Evidence — two instances of one defect
+## Evidence
 
 1. **The handler.** `backend/src/app/api/score.py:369` resolves `ref, deployment_id = await _serving_ref(database, caller, ctx)`
    (the Environment's live Deployment when the request names no ref), and `:375` calls `score_one(compiled, ctx, trace=trace)`

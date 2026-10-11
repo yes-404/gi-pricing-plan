@@ -2,7 +2,7 @@
 id: FD-9808
 family: finding
 title: A formula that rating restates by hand in ZEN has no agreement check against the expression it came from, so a diverged copy misprices
-status: draft                   # a working id; active at the mint
+status: active
 created: 2026-10-11
 owner: auditor
 tree: 02f23b4a74cfdf81ff4ac875e1ff7ab2db777c4a
