@@ -58,7 +58,25 @@ Both red-firsts came back red, as they must. pytest and audit-docs were rc 1 and
 
 ### Audit
 
-Written by the auditor.
+Written by `auditor-sl9916` on head `fd14bec4434958a2bbb5170ee5fbd89e22dc488c` (tree `c6df5573`), range `origin/main...origin/sl-9916-wk675-dag-f39`, 2026-10-11. Authority: `to-lead.md` "2026-10-11 19:57:42 BST" (a slice closes on a clean audit and the lead's merge; the audit runs in parallel with the minted-head CI). Scope was derived from PL-1638's Acceptance Standard (items 1–7) and its write set first, then evidenced. Evidence: the diff, the gate record `~/gi-pricing-plan.local/scratch/sl9916/slot.out` and `gatelogs/`, and the CI read the lead relayed. I ran no test and no audit-docs.
+
+| PL-1638 item | Evidence | Result, proposed verdict |
+|---|---|---|
+| 1 Red first, on base, by its cause | `red_unstubbed` rc=1 with 1 F39 line naming `/rating-algorithms/validate` (slot.out) | MET |
+| 2 Green ×3 | `green_1`, `green_2`, `green_3` rc=0 | MET |
+| 3 The stub holds (broken input) | the `red_unstubbed` stage is the file with the `vi.mock` line removed; rc=1, F39 line; tree clean after (`tree after reds: []`) | MET |
+| 4 Unmount cancel proven (broken input) | `red_nocancel` rc=1: "expected vi.fn() to not be called"; the unmount test asserts `expect(api.validateRatingAlgorithm).not.toHaveBeenCalled()` after 450 ms | MET. Note: the regression test (item 1's test) has no assertion of its own and relies on the F39 `afterEach` guard throwing, as planned (Task 1 step 1) |
+| 5 Test files only | non-docs write set is `DagDesigner.test.ts` alone; `useGraphValidation.ts` and `test-setup.ts` unchanged; the diff also carries generated `docs/INDEX.md` | MET; the INDEX is a note, not a gap (the lead's verdict, "2026-10-11 20:14:10 BST") |
+| 6 Full two-half gate | gate @`fbcd3366`: both red-firsts RED, greens 0, every frontend stage and ruff, mypy, lint-imports, req-coverage, contracts rc=0; pytest rc=1 (13 failed) and audit-docs rc=1 | CARRIED (the lead's verdict, 20:14:10 BST): the reds are mint artefacts. I read all 13 failing test names, all audit-docs-derived; audit-docs failed on three working-id lines (check 31 ×2, check 25 ×1). `fbcd3366` is an ancestor of the head (`merge-base --is-ancestor` rc 0); the test file and `frontend/src/components/dag/` are unchanged between `fbcd3366` and the head |
+| 7 Barred word | 0 hits in the added lines of the range | MET |
+
+Closing acts, checked on `fd14bec4`: LG-1640 "### Gate" carries the `fbcd3366` rc table (fixed); `plans:` lists `[PL-1546, PL-1638]` (fixed); PL-1638 `status: active` (fixed); PRs names #1283 (fixed). Not mine to write: FD-1611's discharge line and register row belong to D13 and the close; MERGE-ACK is added at merge.
+
+CI at `d131b6db` (relayed by the lead, read with the bashrc token; not read by me): red only on check 31's "gap between 1636 and 1638" — 1637 is SL-1367's LG-1637 in #1282, not merged; frontend and history-policy green; python 5591 passed with the same 13 tree-audit tests failing on the gap message. CARRIED: it clears when #1282 merges and the branch merges main. The merged-main CI is the proof.
+
+Findings proposed: none. Overall proposal: clean — items 1–5 and 7 MET, item 6 CARRIED by the lead's verdict, the CI red carried to #1282's merge.
+
+Lead verdict: (pending)
 
 ### Build log
 
