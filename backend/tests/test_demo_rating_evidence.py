@@ -11,7 +11,9 @@ this file, in Decimal, from those numbers, and never from the seeded tables or t
 
 from __future__ import annotations
 
+import asyncio
 import importlib.util
+import os
 import sys
 from decimal import ROUND_HALF_EVEN, Decimal
 from pathlib import Path
@@ -23,6 +25,8 @@ from backend.tests.approved_rows import add_approved
 from backend.tests.test_api_rate_tables import _ensure_factor, _glm_spec
 from backend.tests.test_fremtpl2_algorithm import _BANDED, _DOMAINS, _FACTORS
 from backend.tests.test_rating_versions import _principal
+from backend.tests.test_score import admin_headers, client, scoring_headers  # noqa: F401
+from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from app.config import Settings
@@ -49,7 +53,11 @@ from model_schema import (
 from pricing_core.rating.properties import payable_minor
 from pricing_core.rating.score import score_one
 
-_EXAMPLE = Path(__file__).resolve().parents[2] / "examples" / "fremtpl2"
+#: Overridable only so the 422 test can be run red against the parent's `string` algorithm.
+_EXAMPLE = Path(
+    os.environ.get("GIP_FREMTPL2_EXAMPLE_DIR")
+    or Path(__file__).resolve().parents[2] / "examples" / "fremtpl2"
+)
 sys.path.insert(0, str(_EXAMPLE))  # `model.py` imports its sibling `algorithm`
 _SPEC = importlib.util.spec_from_file_location("demo_model", _EXAMPLE / "model.py")
 assert _SPEC is not None
@@ -302,3 +310,46 @@ def test_the_monotone_property_name_is_a_valid_suite_property_name() -> None:
         "properties": [prop],
         "generation": {"cases": 25, "seed": 1, "strategy": "input_contract_sampling"},
     })
+
+
+@pytest.mark.req("FR-213")
+def test_a_categorical_outside_its_declared_domain_is_a_422_through_the_api(
+    client: TestClient, scoring_headers: dict[str, str],  # noqa: F811
+    database: Database, blob_store, workspace_id,
+) -> None:
+    """SL-1526 condition (c), the HTTP status. The demo's categorical inputs are declared
+    `enum`, so a `veh_brand` outside the seeded levels is refused at the input contract
+    (`INPUT_CONTRACT_VIOLATION`, 422) rather than reaching the rate-table lookup, where it
+    was a `RATE_TABLE_MISS`. The in-domain quote scores first, so the 422 is the value's."""
+    loop = asyncio.get_event_loop()
+
+    async def _build() -> ArtifactRef:
+        analyst, model_id, tables = await _seed(database, workspace_id, blob_store)
+        actuary = await _principal(database, workspace_id, "pricing_actuary")
+        approver = await _principal(database, workspace_id, "approver")
+        second = await _principal(database, workspace_id, "approver")
+        rating_id = await demo_model.create_approved_rating_version(
+            database, blob_store, workspace_id, analyst, actuary, approver, second,
+            new_uuid7(), model_id, tables, _bandings(), _BASE_MINOR,
+        )
+        async with database.session() as session:
+            row = await rating_service.load_rating_version(
+                session, workspace_id=workspace_id, rating_version_id=rating_id
+            )
+        return ArtifactRef(type="rating_version", slug=row.slug, version=row.version)
+
+    ref = loop.run_until_complete(_build())
+
+    def _post(inputs: dict[str, object]):  # type: ignore[no-untyped-def]
+        return client.post("/api/v1/score", headers=scoring_headers, json={
+            "purpose": "new_business", "quoted_at": "2026-09-28T09:00:00Z",
+            "effective_date": "2026-10-01", "inputs": inputs,
+            "options": {"rating_version_ref": str(ref)},
+        })
+
+    base = _raw_inputs(_QUOTES["base-levels"])
+    assert _post(base).status_code == 200
+    response = _post({**base, "veh_brand": "ZZZ"})
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "INPUT_CONTRACT_VIOLATION"
+    assert "veh_brand" in response.json()["detail"]
