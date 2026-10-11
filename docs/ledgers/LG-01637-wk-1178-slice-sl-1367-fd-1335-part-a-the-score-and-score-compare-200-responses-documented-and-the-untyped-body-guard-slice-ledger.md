@@ -55,6 +55,29 @@ Classification: 13 pytest failures are the audit-on-tree modules (`tests/test_au
 **One own red:** `backend/tests/test_contracts.py::test_every_untyped_body_exclusion_is_still_untyped`: `no longer untyped, remove from the 2xx lists:` the four `approval-requests` routes (GET `{request_id}` 200, POST 201, `decide` 200, `withdraw` 200),
 typed on `main` by `SL-1390` (`3065770c`) and merged in at `ca7b8b54`. The guard did its job (the stale-entry check); the four entries are removed from `UNTYPED_2XX_PENDING_PART_B`, which now holds 5 routes; `test_contracts.py` alone: 171 passed, 2 skipped; ruff on the file 0. A re-gate at the new head is owed.
 
+**Re-gate at the head (added by the cure commit, 2026-10-11).** GATE 8/8 rc 0 at `26b9ab45` (tree `dc13cc6a762ec846fb861382dc3fa8d9fad8b926`), `5619 passed`: the lead's gate-1 record, from-lead "2026-10-11 19:56:33 BST". CI at `26b9ab45` all green, `python` run `38163878044`.
+
+**Acceptance 10 limb 3 (structural), run by the auditor at HEAD `8a838708`** (tree of `26b9ab45` for the code: `dc13cc6a`; the audit commit changes only this ledger). Script `/tmp/aud1367/limb3.py` (sha256 prefix `6fa80c30e43bf1c4`), read from `backend/src/app/api/score.py`'s router, `generated.json` from the worktree:
+
+```text
+import json
+from app.api import score
+doc = json.load(open("docs/contracts/openapi/generated.json"))
+for r in score.router.routes:
+    if r.path in ("/score", "/score/compare") and "POST" in r.methods:
+        sch = doc["paths"]["/api/v1" + r.path]["post"]["responses"]["200"]["content"]["application/json"]["schema"]
+        print("/api/v1" + r.path, "response_model=", r.response_model, "response_field=", r.response_field, "200=", sch)
+```
+
+Command: `/home/puzhenhao1989/gi-pricing-plan.local/handover/run-small.sh uv run --directory <audit-sl1367 worktree> --all-packages python /tmp/aud1367/limb3.py`. Output, verbatim:
+
+```text
+/api/v1/score response_model= None response_field= None 200= {'$ref': '#/components/schemas/ScoringResult'}
+/api/v1/score/compare response_model= None response_field= None 200= {'$ref': '#/components/schemas/ScoreComparison'}
+```
+
+The router is read directly because FastAPI 0.142 wraps included routers (`_IncludedRouter`), so `app.routes` holds no `/score` `APIRoute`.
+
 ### Audit
 
 **Auditor seat `auditor-sl1367` (sonnet), 2026-10-11 20:00 BST,** under `to-lead.md` "2026-10-11 19:57:42 BST" (the slice audit is a standing step before every ACK; `docs/process/delivery-process.md` :130–136, `CLAUDE.md` §12).
@@ -91,7 +114,7 @@ typed on `main` by `SL-1390` (`3065770c`) and merged in at `ca7b8b54`. The guard
 
 No missing requirement. No code defect found in the range. Nothing proposed as **not started**, **reassigned**, or a **new deferral** beyond the two rulings already on record.
 
-**Lead verdict: (pending)**
+**Lead verdict (team-lead, from-lead 2026-10-11 20:14:10 BST): CLEAN after cure. 1 cured in-slice (gate record + PR); 2 accepted (counts recorded, low weight); 3 covered by the retro's cross-slice process FD, this audit + the merge is the close; 4 cured by the quoted one-liner; 5 not a finding.**
 
 ### Build log
 
@@ -329,4 +352,4 @@ into the slice branch would ship to main: they live on an evidence branch with a
 
 ## PRs
 
-None yet.
+#1282
