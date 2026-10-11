@@ -39,7 +39,7 @@ The slice's row is `#### SL-1526 — WK-1178 exit-demo slice (a) — the real fr
 
 ### Gate
 
-(filled at the slice head)
+Run d, the proving run, is the evidence for the demo's acceptances (Build log, "ALONE run d"; stages a, b, c, d all PASS, DP-2 met). The code gate is CI at the minted head `4b0d32aa` (PR #1284; no local full gate was run): `history-policy` and `no-session-links` pass; `python` GATE fails 1 of 8 stages (pytest only; ruff, mypy, import_linter, contracts, migrate, minio and req_coverage pass), 13 failed / 5610 passed / 6 skipped, the 13 being audit-on-tree tests failing on audit-docs check 31 ("gap in the full allocation between 1636 and 1641", ids 1637-1640 unmerged); `docs` fails on the same check 31 (audit_docs, doc_id_check). A re-run after SL-1367 and SL 9916 merge is expected to clear it. The frontend workflow did not run on that head (path-filtered).
 
 ### Audit
 
@@ -233,6 +233,22 @@ bundle content_hash: sha256:74730d2632e8768893b21c49e4d27319f2818c8245a088ed733f
   | d - DP-2, dislocation + attribution of the portfolio | MET | portfolio Dataset Version `01a12c51…`, rows 19985, `quote_id` present, nulls 0, distinct 19985, unique True; baseline = compiled draft @2 (+1.95 %, a measurement fixture); in-process `dislocation.run` + attribution: **job wall 116.2 s (judged from the job's own `JOBWALL_DISLOCATION` line; process wall 122.7 s) against the 3600 s bound; process-tree peak RSS 0.48 GiB (largest process 0.43 GiB) against 15.5 GiB**; "DP-2 bounds met" |
   The stage d containers peak sum is 0.79 GiB and the host tree peak plus that sum is **1.27 GiB, PROVISIONAL** (printed, not judged; in-process, not a Celery worker). **The README sentence quoting the host + container SUM (2.70 GiB for stage a, 1.27 GiB provisional for stage d) is SL-1527's**, not this slice's. Earlier attempts, for the record: **(a)** setup abort, the ARFF data not fetched; **(b)** `out-2026-10-11b`: stage d STOP `JOB_HANDLER_FAILED` / `PortfolioFrameError`, the missing `quote_id` (fixed above); **(c)** and **(d)** dequeued before they ran (no figures). Run d is the first run to pass every stage.
 
+- **Acceptance 11 recording, added at the lead's FIX-BEFORE-CLOSE verdict (`from-lead` "2026-10-11 20:14:10 BST", no FD), from run d (`out-2026-10-11e/`).**
+  **(1) 11(b), base vs slice** (the `FITCOL` lines of `wrapper.out`:121-140, copied verbatim; "SAME ROWS: yes"):
+  | | Base (dispatch tree `31b88780`) | Slice |
+  |---|---|---|
+  | model | `fremtpl2-glm-77ca8b@1` | `fremtpl2-glm-5fc222@1` |
+  | rows | 508364 | 508364 |
+  | deviance | 166257.17 (`166257.16773307766`) | 165508.08 (`165508.08377280214`) |
+  | AIC | 218476.999 (`218476.9990589372`) | 217745.92 (`217745.9150986617`) |
+  | factors | 7, all `identity` | 7: `driv_age_band`, `veh_age_band`, `veh_power_band` `banding`; `veh_brand`, `veh_gas`, `area`, `region` `identity` |
+  **(2) The saved Bandings** (`demo.log`:58-60, verbatim; the dataset version they are proposed on is `01a12c50-9ce4-766d-9f92-a21fec3fb56e`):
+  - `fremtpl2-driv-age-banding@1` (`01a12c50-a601-7f77-94ad-c62942a3b1a4`): `driv_age` quantile x5, boundaries [18.0, 32.0, 40.0, 48.0, 57.0, 100.0], labels ['18-31', '32-39', '40-47', '48-56', '57+']
+  - `fremtpl2-veh-age-banding@1` (`01a12c50-a6a2-793e-91f4-56656f6ca557`): `veh_age` quantile x5, boundaries [0.0, 2.0, 4.0, 8.0, 12.0, 100.0], labels ['0-1', '2-3', '4-7', '8-11', '12+']
+  - `fremtpl2-veh-power-banding@1` (`01a12c50-a731-7999-93d8-b96c42f96c5f`): `veh_power` quantile x5, boundaries [4.0, 5.0, 6.0, 7.0, 8.0, 15.0], labels ['4-4', '5-5', '6-6', '7-7', '8+']
+  These **supersede the "offline preview" in the Task 2 entry above** (same boundaries, now with ids and versions). The `veh_power` labels `4-4` and `5-5` are cosmetic: the quantile edges fall on single integer values; no price depends on the label text.
+  **(3) Dated corrective line, 2026-10-11 20:35 BST (the entries above are not edited).** The "Defect fix" entry's monotone rationale quoted the `veh_age_band` relativities of the run-b fit (`0-1` 2.1436 ... `12+` 1.0), which were the 20k-row fit's. The **full-book fit of run d** gives `0-1` 1.9533, `2-3` 1.1209, `4-7` 1.2534, `8-11` 1.2338, `12+` 1.0 (base). These are still not monotone in the band order, so the maintainer's 19:07:08 ruling (no monotone declaration) stands.
+
 ## PRs
 
-(added at the PR)
+- PR #1284, `sl-1526-exit-demo-a`.
