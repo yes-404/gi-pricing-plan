@@ -34,23 +34,25 @@ echo "base=$B"
 [ "$B" = 99f22479a20e7fa64f8b6654e0d371c595b1e35a ] || { echo "BASE GUARD FAILED"; exit 2; }
 echo "run start=$(TZ=Europe/London date -Is)"
 
-cpu_sample() { awk '/^cpu /{print $9, $2+$3+$4+$7+$8+$9}' /proc/stat; }   # steal (8th value after the label), user+nice+system+irq+softirq+steal
+# steal ($9); busy = user+nice+system+irq+softirq+steal; all = busy + idle ($5) + iowait ($6)  (Q3 (b), 15:32:42: the verdict uses steal/all)
+cpu_sample() { awk '/^cpu /{print $9, $2+$3+$4+$7+$8+$9, $2+$3+$4+$5+$6+$7+$8+$9}' /proc/stat; }
 # inv <label> <limb> <tree> <iter> <command…>: START/END stamps, duration, steal delta, CPU delta, steal%.
 inv() {
-  local dur label=$1 limb=$2 tree=$3 it=$4 s0 c0 s1 c1 t0 t1 a b rc
+  local dur label=$1 limb=$2 tree=$3 it=$4 s0 c0 w0 s1 c1 w1 t0 t1 a b w rc
   shift 4
-  read -r s0 c0 < <(cpu_sample); t0=$(date +%s.%N)
+  read -r s0 c0 w0 < <(cpu_sample); t0=$(date +%s.%N)
   local st; st=$(TZ=Europe/London date "+%Y-%m-%dT%H:%M:%S%:z")
   echo "START $label limb=$limb tree=$tree iter=$it $st"
   "$@" > "$OUTD/$label.out" 2>&1; rc=$?
-  t1=$(date +%s.%N); read -r s1 c1 < <(cpu_sample)
+  t1=$(date +%s.%N); read -r s1 c1 w1 < <(cpu_sample)
   local en; en=$(TZ=Europe/London date '+%Y-%m-%dT%H:%M:%S%:z')
   tail -3 "$OUTD/$label.out"
-  a=$((s1 - s0)); b=$((c1 - c0)); dur=$(awk -v x="$t0" -v y="$t1" 'BEGIN{printf "%.3f", y-x}')
-  printf 'END %s %s rc=%s duration=%.1fs steal_delta=%s cpu_delta=%s steal%%=%s\n' "$label" "$en" "$rc" \
-    "$dur" "$a" "$b" "$(awk -v a="$a" -v b="$b" 'BEGIN{printf "%.2f", (b > 0) ? 100*a/b : 0}')"
-  printf '%s\t%s\t%s\t%s\t%s\t%s\t%.3f\t%s\t%s\n' "$label" "$limb" "$tree" "$it" "$st" "$en" \
-    "$dur" "$a" "$b" >> "$STAMPS"
+  a=$((s1 - s0)); b=$((c1 - c0)); w=$((w1 - w0)); dur=$(awk -v x="$t0" -v y="$t1" 'BEGIN{printf "%.3f", y-x}')
+  printf 'END %s %s rc=%s duration=%.1fs steal_delta=%s busy_delta=%s all_delta=%s steal_busy%%=%s steal_all%%=%s\n' "$label" "$en" "$rc" \
+    "$dur" "$a" "$b" "$w" "$(awk -v a="$a" -v b="$b" 'BEGIN{printf "%.2f", (b > 0) ? 100*a/b : 0}')" \
+    "$(awk -v a="$a" -v b="$w" 'BEGIN{printf "%.2f", (b > 0) ? 100*a/b : 0}')"
+  printf '%s\t%s\t%s\t%s\t%s\t%s\t%.3f\t%s\t%s\t%s\n' "$label" "$limb" "$tree" "$it" "$st" "$en" \
+    "$dur" "$a" "$b" "$w" >> "$STAMPS"
   note "$rc"
 }
 
