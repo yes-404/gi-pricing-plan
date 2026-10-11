@@ -44,7 +44,7 @@ routes' media types follow later. DP-A1 and DP-A2 are ruled by `RL-1365`. `FD 97
 | 3 | two 200 declarations, regenerated contract | 6–9 | done |
 | 4 | the NFR-502 spec line | 10 | open (after Task 5) |
 | 5 | NFR-502 re-measure, local, diagnostic | 10 | open |
-| 6 | client evidence, skill note, gate, ledger | 11–13 | open |
+| 6 | client evidence, skill note, gate, ledger | 11–13 | client evidence and skill note done; gate and closing acts open |
 
 ### Gate
 
@@ -152,6 +152,20 @@ control route counts 1 at this version. The per-worktree database was created wi
     (`INTERNAL_ERROR`, mapped by `_handle_unexpected`) and the spy test is red, `assert 1 == 0`, on both routes;
   - instance form (`return result` / `return comparison`): the spy test is red, `assert 1 == 0`, and the 500 test stays green
     (status 200), which is Acceptance 8b's point, on both routes.
+
+#### 2026-10-11 — Task 6 (part): the client evidence and the skill note (Acceptance 11)
+
+`pnpm --dir frontend install --frozen-lockfile` then `pnpm --dir frontend generate:api` at HEAD; the base
+count generated with the same `openapi-typescript` 7.13.0 from `git show origin/main:docs/contracts/openapi/generated.json`:
+
+| | `grep -c 'ScoringResult' schema.d.ts` | `grep -c '"application/json": unknown;' schema.d.ts` |
+|---|---|---|
+| base (`origin/main` `99f22479`) | 0 | 6 |
+| HEAD | 6 | 4 (base minus 2) |
+
+`.claude/skills/contract-guard/SKILL.md` gains the section "The untyped-body guard is a different kind
+of guard" and a `Verified` entry for 2026-10-11 at `origin/main` `99f22479` plus this slice;
+`.claude/skills/README.md`'s row date is refreshed.
 
 ## PRs
 
