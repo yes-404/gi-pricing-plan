@@ -110,7 +110,7 @@ Written by `auditor-sl1503` on head `cd403d41413a5ccc208d5d28a910febb5539eb4f` (
 
 **Findings proposed:** none. Three own test defects (items 15, 13a, 10) were found by this audit and the gate and cured in-slice, each with a valid red by cause; no FD (the lead, from-lead "2026-10-11 20:53:27 BST" and "21:13:13 BST"). Overall proposal: clean once #1285's CI is green on this tree — items 1–9, 11, 12, 13b, 14, 16, 17, 18, 20 MET; items 10, 13a and 15 GAP → CURED IN-SLICE; item 19 CARRIED (mint artefacts), proven by the PR's CI.
 
-Lead verdict: (pending)
+Lead verdict (team-lead, from-lead 2026-10-11 20:50:16 BST): CLEAN; no FD; item 19 discharged by green CI at the merge head.
 
 ### Build log
 
