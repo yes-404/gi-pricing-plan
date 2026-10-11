@@ -147,4 +147,4 @@ Lead verdict: (pending)
 
 ## PRs
 
-None yet.
+#1286 — `SL-1566: batch scoring serialises every declared output type and never aborts on one row (LG-1643)`, branch `sl-1566-wk1178-batch-serialise`. Merge order: SL-1503 (LG-1642) first.
