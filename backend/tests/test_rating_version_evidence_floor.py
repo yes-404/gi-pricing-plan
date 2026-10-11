@@ -129,7 +129,7 @@ async def test_the_floor_is_checked_in_floor_order_and_the_diff_blob_is_stored_f
     """PL-1499 §"Risks" (the loop runs floor order, `structural_diff` first): with several
     kinds missing, the first refusal is the earliest of `structural_diff`, `regression_run`,
     `dislocation_run`; and the structural-diff blob is stored before a later kind refuses (the
-    transaction rolls back, so only the store's own record shows it). The LG-9946 record of
+    transaction rolls back, so only the store's own record shows it). The LG-1633 record of
     the maintainer's 2026-10-10 21:35:23 BST ruling 3."""
     gate = await _gate(database, workspace_id)
     await _approved_baseline(gate, _suite(_quote()))

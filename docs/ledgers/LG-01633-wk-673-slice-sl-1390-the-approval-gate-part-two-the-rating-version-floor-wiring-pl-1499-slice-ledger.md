@@ -1,9 +1,9 @@
 ---
-id: LG-9946
+id: LG-1633
 family: ledger
 title: WK-673 slice SL-1390 — the approval gate, part two — the rating_version floor wiring (PL-1499), slice ledger
 status: closed
-created: 2026-10-10
+created: 2026-10-11            # original date 2026-10-10, set at the draft; minted 2026-10-11
 owner: executor
 tree: db0642c4b4f87e71dceff36d1ebd7c7ba4ef68f9
 phase: P2
@@ -14,7 +14,7 @@ corrected_by: []
 relates: [PL-1499, RL-1504, RL-1445, RL-1263, SL-1389, FR-363, FR-364, FR-257, FR-352]
 ---
 
-# LG-9946 — WK-673 slice SL-1390: the approval gate, part two — the floor wiring
+# LG-1633 — WK-673 slice SL-1390: the approval gate, part two — the floor wiring
 
 **GO:** given, "2026-10-10 21:35:23 BST — DISPATCH GO: WK-673 Slice 6 (PL-1499 / SL-1390; PL-1544 need 6), with rulings 1–6" (`to-lead.md`, local); the original line read: not yet given. Authoring ahead of the GO at the user's order (the lead's brief `brief-executor-s6-authoring-2026-10-10.md`, local, authority "2026-10-10 03:07:11 BST — W3 pacing"): code and tests are written on a branch from `origin/main` `db0642c4b4f87e71dceff36d1ebd7c7ba4ef68f9`; no PR and no gate before the GO.
 **MERGE-ACK:** not yet given.
@@ -84,7 +84,7 @@ Order and acceptance checks are `PL-1499` §"Tasks" and §"Acceptance Standard" 
 - **2026-10-11, wave-2 resume (seat `executor-s6g`).** `git merge-tree --write-tree HEAD origin/main` rc 0 (tree `d71552ac`); `origin/main` `d699a561` merged by content, merge commit `d6937015`; the slice's diff against `origin/main` stays inside the write set (`rating_versions.py`, the new test file, `06`, this ledger, PL-1499). `ruff check` on the two code files: clean. Barred-word split grep over the added lines: 0. No DB test ran (gate-1 is held by another slice).
 - **Slot script written, not run:** `~/gi-pricing-plan.local/scratch/sl1390/slot.sh <head>` (local, not in the repository), logs to `~/gi-pricing-plan.local/scratch/sl1390/gatelogs/`. Order inside one gate-1 hold: PREFLIGHT (recreated DB, `alembic upgrade head` rc 0, exactly one head, postgres/redis/minio healthy, else abort rc 3) → Acceptance 6's three files at the `d699a561` source (and `git diff` of them empty) → one red run per new test with the `d699a561` `rating_versions.py` swapped in → the two broken-loop proofs (skip unknown kinds; `rate_table_diffs` mapped as met), each scratch-reverted → green (new file, then the three files) → the full two-half gate.
 
-- **2026-10-11, gate-1 run of `d674aa69` (tree `d042f0b4`), red-first classification.** Plan = `PL-1499` (`docs/plans/PL-01499-*.md`). Three red-first stages passed at the `d699a561` source, all expected by the plan or this ledger's own ruling: (1) `red_a_stored_policy_below_the_floor` is Acceptance 2, plan `:141`, whose Task 2 Step 2 (`:328-331`) expected red; this ledger's GO-turn ruling 1 (above) already rules it a GUARD, green before and after, red only against a loop reading `entry.evidence` instead of `effective_evidence`. The pass is correct and the slot swapped the right base file. (2)+(3) `red_evidence_keys_match_the_direct_checks_for_a_first` and `..._for_a_version_with` are Acceptance 7, plan `:159`, which Step 2 (`:331-333`) says PASSES on old code: "they guard behaviour this task must keep". Result correct (c). No test defect, no targeted re-run owed. One reverse surprise, not a defect: `red_a_policy_at_the_floor_refuses_each_missing_kind` (Acceptance 1, plan Step 2 expected PASS) is red at base, by cause: base refuses with the golden-quote gate's FR-257 text before the FR-219 refusal the test asserts. This is the floor-order change Task 0 and ruling 3 record, not a guard failing. The remaining gate reds (`audit_docs` checks 32 and 39, 13 docs-audit pytest wrappers) are the mint artefact: LG-9946 unindexed, `docs/INDEX.md` regenerates at the mint turn.
+- **2026-10-11, gate-1 run of `d674aa69` (tree `d042f0b4`), red-first classification.** Plan = `PL-1499` (`docs/plans/PL-01499-*.md`). Three red-first stages passed at the `d699a561` source, all expected by the plan or this ledger's own ruling: (1) `red_a_stored_policy_below_the_floor` is Acceptance 2, plan `:141`, whose Task 2 Step 2 (`:328-331`) expected red; this ledger's GO-turn ruling 1 (above) already rules it a GUARD, green before and after, red only against a loop reading `entry.evidence` instead of `effective_evidence`. The pass is correct and the slot swapped the right base file. (2)+(3) `red_evidence_keys_match_the_direct_checks_for_a_first` and `..._for_a_version_with` are Acceptance 7, plan `:159`, which Step 2 (`:331-333`) says PASSES on old code: "they guard behaviour this task must keep". Result correct (c). No test defect, no targeted re-run owed. One reverse surprise, not a defect: `red_a_policy_at_the_floor_refuses_each_missing_kind` (Acceptance 1, plan Step 2 expected PASS) is red at base, by cause: base refuses with the golden-quote gate's FR-257 text before the FR-219 refusal the test asserts. This is the floor-order change Task 0 and ruling 3 record, not a guard failing. The remaining gate reds (`audit_docs` checks 32 and 39, 13 docs-audit pytest wrappers) are the mint artefact: LG-1633 unindexed, `docs/INDEX.md` regenerates at the mint turn.
 
 ## PRs
 
