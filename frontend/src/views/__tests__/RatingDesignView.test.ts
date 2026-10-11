@@ -17,6 +17,7 @@ vi.mock("@/api/ratingVersions", () => ({
 vi.mock("@/api/ratingAlgorithms", () => ({
   getRatingAlgorithm: (...args: unknown[]) => getRatingAlgorithm(...args),
   saveRatingAlgorithm: (...args: unknown[]) => saveRatingAlgorithm(...args),
+  validateRatingAlgorithm: () => Promise.resolve({ issues: [] }),
 }));
 
 beforeAll(() => {
