@@ -363,6 +363,15 @@ messages carry: FR-234's value issues name the table key and the submitted value
 input under NFR-499 (same entry, item 1); the count message interpolates only `len(errors)`. (e) The 13 audit-docs-driven pytest
 reds at 56ffdbdb are a hypothesis (working ids unminted); proof is CI on the minted head with those 13 named and green.
 
+#### Merge of main 99f22479, 2026-10-11 (merge commit `ce4d1555`)
+
+`origin/main` `99f22479a20e7fa64f8b6654e0d371c595b1e35a` (#1270, #1271) merged into the branch; the earlier merge was 31b88780.
+`git merge-tree --write-tree ce4d1555^1 ce4d1555^2` printed rc 1: the one conflict is `docs/INDEX.md` (generated), resolved by
+`python3 scripts/doc-index.py`; no file in the write set conflicted. **Alembic:** `alembic heads` (DSN set) prints
+`d4e81b7a2c95 (head)`, one head, its `down_revision` `b8d2f4a6c0e1`. Up/down/up and Task 0 step 4 are DB steps, owed to the
+slot script. **Small tests at ce4d1555 (small-test flock):** `test_rate_table_route_codes.py` 4 passed; `test_rate_table_bulk_ops.py`
+45 passed (load1 4.01 and 4.08 at the starts, a hair above the 4.0 rule). The gate at `e2f3a38d` is stale; a fresh full gate is owed at the merged head.
+
 ## PRs
 
 None yet.
