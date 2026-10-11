@@ -25,13 +25,14 @@ Executed by `executor-dagfix`. Working ids: slice 9916, ledger 9917, finding 991
 
 ### Scope
 
-Row SL 9916 in `docs/roadmap.md` (cherry-picked from the planner's commit). Defect (FD-9914): S3's live-validation debounce in `useGraphValidation` can fire an un-stubbed `/rating-algorithms/validate` fetch inside a `DagDesigner.test.ts` test, which `frontend/src/test-setup.ts` fails by name (register row F39). Seen in two loaded gates (SL-1526 @e00c71c1, SL-1600 @8f674476). Write set: `frontend/src/components/dag/__tests__/DagDesigner.test.ts` only; any source change stops to the lead. No FR-/NFR- id.
+Row SL 9916 in `docs/roadmap.md` and its Work-plan delta PL 9918 (cherry-picked from the planner's commit `e434f71f`), quoted there. Defect (FD 9914): S3's live-validation debounce (`useGraphValidation.ts:14`, 400 ms) can fire an un-stubbed `/rating-algorithms/validate` fetch inside a `DagDesigner.test.ts` test body, which `frontend/src/test-setup.ts` fails by name (register row F39); seen in two loaded gates (SL-1526 @e00c71c1, SL-1600 @8f674476). Write set: `DagDesigner.test.ts` only. DP-1 (a) adopted at the GO: the unmount cancel (`useGraphValidation.ts:52–54`) is proven, with no extra flush and no source change. Requirements: FR-1607 (unchanged), register row F39 (guard held).
 
 ### Task list
 
-- Task 1 — red first on base: advance fake timers past the debounce after each test.
-- Task 2 — stub `validateRatingAlgorithm` for the file and keep the debounce flush in teardown.
-- Task 3 — the full two-half gate on the lead's grant, closing acts.
+- Task 1 — the regression test, red on base (PL 9918 Acceptance 1).
+- Task 2 — the file-wide `vi.mock("@/api/ratingAlgorithms")`, green ×3 (2) and the stub's broken-input proof (3).
+- Task 3 — the unmount test and its broken-input proof (4).
+- Task 4 — diff, closing acts, the full two-half gate on the lead's grant (5–7).
 
 ### Gate
 
@@ -43,9 +44,15 @@ Written by the auditor.
 
 ### Build log
 
-**2026-10-11 09:47 UTC — Task 1, red (base `99f22479`).** The debounce is `delayMs = 400` at `frontend/src/components/dag/useGraphValidation.ts:14` (`setTimeout(…, delayMs)` at :34). With `beforeEach` `vi.useFakeTimers({ shouldAdvanceTime: true })` and `afterEach` `await vi.advanceTimersByTimeAsync(500)`, no stub: `flock -w 300 /tmp/slots/small-test pnpm --dir <wt>/frontend exec vitest run src/components/dag/__tests__/DagDesigner.test.ts` → rc=1, `4 failed (4)`; each: `Error: F39: this test called fetch without stubbing it: http://localhost:3000/api/v1/rating-algorithms/validate` (`src/test-setup.ts:22`).
+**2026-10-11 09:47 UTC — an earlier attempt, superseded.** A first version (commit `6eb206a4`) used an `afterEach` that advanced fake timers 500 ms, plus a module mock. The lead ruled at the GO that the flush is not the ruled form (DP-1 (a)); this version replaces it. Its red was rc=1, 4 of 4 failed with the F39 line, and it is not the evidence below.
 
-**2026-10-11 09:49 UTC — Task 2, green.** `vi.mock("@/api/ratingAlgorithms", …)` with `validateRatingAlgorithm: async () => ({ issues: [] })` over `importOriginal`; the `afterEach` flush stays and restores real timers. The same command ×3 → `Tests 4 passed (4)` each time, `Type Errors no errors`. `eslint` on the file rc=0.
+**2026-10-11 10:5x BST — Task 1, red on base `99f22479`.** Added to the unmodified file only a test that renders `DagDesigner`, finds the step list, then waits 450 ms. `flock -w 300 /tmp/slots/small-test pnpm --dir <wt>/frontend exec vitest run src/components/dag/__tests__/DagDesigner.test.ts` → rc=1, `1 failed | 4 passed (5)`; the new test fails with `Error: F39: this test called fetch without stubbing it: http://localhost:3000/api/v1/rating-algorithms/validate` (`src/test-setup.ts:22`).
+
+**Task 2, green.** Sibling pattern (`DagDesignerValidation.test.ts:9–10`): `vi.hoisted` object with `validateRatingAlgorithm` and `saveRatingAlgorithm` as `vi.fn()`, `vi.mock("@/api/ratingAlgorithms", () => api)`, and a `beforeEach` resolving the validate mock to `{ issues: [] }`. The same command ×3 → `Tests 6 passed (6)`, `Type Errors no errors`, each time. `eslint` on the file rc=0.
+Broken input (3), uncommitted: the `vi.mock` line replaced by a comment → `1 failed | 5 passed (6)`, the regression test fails with the same F39 line; restored.
+
+**Task 3, the unmount test.** Renders, `unmount()`, waits 450 ms, expects the mocked `validateRatingAlgorithm` not called; it passes in the three green runs.
+Broken input (4), uncommitted and reverted at once: `cancel();` at `useGraphValidation.ts:54` commented out → `1 failed | 5 passed (6)`; the unmount test fails with `AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times`. `git status` after the revert shows the source file unmodified.
 
 ## PRs
 
