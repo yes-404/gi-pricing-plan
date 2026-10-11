@@ -42,8 +42,8 @@ routes' media types follow later. DP-A1 and DP-A2 are ruled by `RL-1365`. `FD 97
 | 1 | predicates, red first | 1, 2 | done |
 | 2 | guard on the real document | 3, 4, 5 | done (one item red until Task 3) |
 | 3 | two 200 declarations, regenerated contract | 6–9 | done |
-| 4 | the NFR-502 spec line | 10 | open (after Task 5) |
-| 5 | NFR-502 re-measure, local, diagnostic | 10 | runs b and c set aside; run D prepared, not run |
+| 4 | the NFR-502 spec line | 10 | open (the lead to say whether it lands here with the carried figure) |
+| 5 | NFR-502 re-measure, local, diagnostic | 10 | runs b, c and D done, all UNCLEAN; the timing is CARRIED to the dedicated VM (Acceptance 10 carry record below) |
 | 6 | client evidence, skill note, gate, ledger | 11–13 | client evidence and skill note done; gate and closing acts open |
 
 ### Gate
@@ -193,7 +193,7 @@ from about 15:16; the cause was not identified (from-lead "2026-10-11 15:26:10 B
 - "2026-10-11 15:26:41 BST — SL-1367 T5 run c: (b) RULED, run c UNCLEAN on evidence that implicates BOTH arms; a validity criterion PRE-REGISTERED NOW, before the re-run; (c) as the bound fallback": (b) adopted, run c UNCLEAN and kept in the LG. Item 2 (i): the run is CLEAN only if every limb-2 invocation's duration lies within +-15% of the median of all six limb-2 durations, AND the per-invocation steal sample (`/proc/stat` steal delta as a % of the invocation's CPU time) is <= 5% for every invocation. (ii) CLEAN: Acceptance 10's stop rule applies exactly as written. (iii) UNCLEAN again: no third local run; the relative measurement moves to the dedicated VM with NFR-502's absolute verdict, and the merge waits for it. Item 3: the paired within-iteration deltas are printed as information.
 - "2026-10-11 15:27:07 BST — SL-1367 script prep ACCEPTED; one addition so the pre-registration is PROVABLE": the script carrying the check is committed and pushed before the run; the run prints its blob sha and commit time; the LG shows commit time < run start.
 
-**Run D (the re-run) is prepared, not run.** The scripts are NOT in this slice (they would ship to `main`); they are committed and pushed on the evidence
+**Run D (the re-run): prepared first, then run (its record follows).** The scripts are NOT in this slice (they would ship to `main`); they are committed and pushed on the evidence
 branch `evidence/sl-1367-t5-runD-2026-10-11`, commit `8894ca299ce8f7ddb339d40de9b81fa5a1a7198f`, committer time `2026-10-11T14:32:16Z` (15:32:16 BST), under
 `evidence/sl-1367-t5/`: `run.sh`, `cleancheck.py`, `limb13.py`, `test_zz_limb2.py`, `shapes.py`, `verdict.py` (unchanged from run C). Commit time < run start is
 shown by the run's own output, which prints the evidence commit's sha and committer time and every script's `git hash-object` blob next to the committed blob,
@@ -203,7 +203,86 @@ before `verdict.py` and the paired deltas after it, labelled "INFORMATION ONLY (
 the duration test is over the six limb-2 invocations; the steal test is over every stamped invocation, limb 1+3 included; both bounds are inclusive.
 Broken-input proofs, no measurement: an edited copy of `verdict.py` gives `PRE-REGISTRATION ABORT: verdict.py differs from the committed blob`, rc 96; a wrong
 EXPECT_HEAD gives `PREFLIGHT ABORT: HEAD guard`, rc 90; synthetic stamps give CLEAN, and UNCLEAN naming the invocation for a +20% duration and for 6% steal.
-Run D's start stamp and outcome go here when it has run.
+
+**Run D** (`out-2026-10-11d/`, 16:13:47–16:25:53 BST, end rc 0; the lead ran it ALONE under `gate-1`, `gate-2` and `small-test`). Pre-registration as the run printed it:
+evidence commit `ea640ff8a118f53440d270403bdb5736a6ceaf96`, committer time `2026-10-11T14:34:36Z` (15:34:36 BST);
+the run start was `2026-10-11T16:13:47+01:00`, so commit time < run start (by 39 minutes). All six local blobs equalled the committed ones: `run.sh` `00b418e1432d80edf30a8c5553d1b439000d0d1e`,
+`cleancheck.py` `e2c4d87508071bbb4313ed13b1f7061a03b1daaa`, `limb13.py` `1f8ce9767e8b60c3f19b681b9d4aa9350edf7024`, `test_zz_limb2.py` `09d8b8be5a79f3f30765fd5576bb623821bc930a`,
+`shapes.py` `4dde70c3af171d876e869c01e2d357ecf87c67de`, `verdict.py` `6854ce5623e967d80e41daf28f1a813ddb5f7e36`. `HEAD=e05d09f38d922fa363b537183d64ae5f600d7603`, `base=99f22479a20e7fa64f8b6654e0d371c595b1e35a`,
+template `PREFLIGHT ok`, load at start 4.32 2.75 2.01 (a WK-674 S3 tail decaying), after 1.54 1.82 1.84. Per-invocation stamps (`stamps.tsv`, Europe/London):
+
+| invocation | start | end | duration s | steal ticks | steal % of busy | steal % of all ticks |
+|---|---|---|---|---|---|---|
+| limb13 | 16:13:47 | 16:13:57 | 9.4 | 30 | 1.55 | 0.39 |
+| limb2-base-1 | 16:13:57 | 16:15:53 | 115.9 | 399 | 2.08 | 0.42 |
+| limb2-HEAD-1 | 16:15:53 | 16:17:42 | 109.5 | 288 | 1.72 | 0.32 |
+| limb2-base-2 | 16:17:42 | 16:19:37 | 114.7 | 397 | 2.25 | 0.42 |
+| limb2-HEAD-2 | 16:19:37 | 16:22:04 | 146.7 | 450 | 1.66 | 0.37 |
+| limb2-base-3 | 16:22:04 | 16:23:56 | 112.0 | 326 | 1.65 | 0.36 |
+| limb2-HEAD-3 | 16:23:56 | 16:25:53 | 117.1 | 447 | 2.43 | 0.47 |
+
+CLEAN-check lines, verbatim from the run's output (printed before the verdict):
+
+```text
+CLEAN CHECK (15:26:41 item 2 (i)): limb-2 median duration 115.3 s; tolerance +-15%, steal_all <= 5% of all ticks (verdict); steal_busy printed
+  limb13           limb 13 HEAD 2026-10-11T16:13:47+01:00 -> 2026-10-11T16:13:57+01:00      9.4 s  n/a (limb 1+3: not in the median); steal 30 ticks: steal_busy 1.55% steal_all 0.39%  OK
+  limb2-base-1     limb 2 base 2026-10-11T16:13:57+01:00 -> 2026-10-11T16:15:53+01:00    115.9 s  +0.5% from median; steal 399 ticks: steal_busy 2.08% steal_all 0.42%  OK
+  limb2-HEAD-1     limb 2 HEAD 2026-10-11T16:15:53+01:00 -> 2026-10-11T16:17:42+01:00    109.5 s  -5.0% from median; steal 288 ticks: steal_busy 1.72% steal_all 0.32%  OK
+  limb2-base-2     limb 2 base 2026-10-11T16:17:42+01:00 -> 2026-10-11T16:19:37+01:00    114.7 s  -0.5% from median; steal 397 ticks: steal_busy 2.25% steal_all 0.42%  OK
+  limb2-HEAD-2     limb 2 HEAD 2026-10-11T16:19:37+01:00 -> 2026-10-11T16:22:04+01:00    146.7 s  +27.2% from median; steal 450 ticks: steal_busy 1.66% steal_all 0.37%  FAIL duration
+  limb2-base-3     limb 2 base 2026-10-11T16:22:04+01:00 -> 2026-10-11T16:23:56+01:00    112.0 s  -2.8% from median; steal 326 ticks: steal_busy 1.65% steal_all 0.36%  OK
+  limb2-HEAD-3     limb 2 HEAD 2026-10-11T16:23:56+01:00 -> 2026-10-11T16:25:53+01:00    117.1 s  +1.5% from median; steal 447 ticks: steal_busy 2.43% steal_all 0.47%  OK
+UNCLEAN (limb2-HEAD-2 (limb 2, HEAD): duration)
+```
+
+The verdict, printed and **not applied** because the run is UNCLEAN:
+`/score` base p99 [55.685, 54.985, 49.052] median 54.985, HEAD [52.438, 55.712, 50.414] median 52.438, delta -2.547, STOP=False;
+`/score/compare` base [65.317, 69.114, 68.945] median 68.945 (range 3.797), HEAD [74.668, 99.509, 79.116] median 79.116, delta 10.171, STOP=True; `STOP_CONDITION_FIRED`.
+Paired within iteration, HEAD minus base, INFORMATION ONLY: `/score` -3.247 / +0.727 / +1.362 ms; `/score/compare` +9.351 / +30.395 / +10.171 ms.
+Run D's slowdown was not host steal (steal 0.32-0.47% of all ticks on every invocation); HEAD-2 was the slow outlier in run c and in run D (from-lead "2026-10-11 16:26:29 BST").
+By 15:26:41 item 2 (iii): UNCLEAN again, no third local run.
+
+**Evidence custody.** Branch `evidence/sl-1367-t5-runD-2026-10-11` at `ea640ff8a118f53440d270403bdb5736a6ceaf96` (parent `8894ca299ce8f7ddb339d40de9b81fa5a1a7198f`, committer `2026-10-11T14:32:16Z`, the first
+pre-registration commit); ref `refs/salvage/evidence-2026-10-11/sl1367-t5` at `73c9c0788a9a4a8507479ce27fe0ab68ca993c03` (committer `2026-10-11T14:31:15Z`, the slice-branch commit that first carried
+`scripts/measure/sl1367-t5/`; `run.sh` blob `16664eeb600dcbd3c6bb719f85723c01a78fdcee`, `cleancheck.py` blob `89aff0586a766a9ab6ea709813f24dfd6a96dbef`, the form before the Q3 (b) denominator change),
+both `ls-remote` checked on `origin`. The branch's `git diff --stat origin/main...HEAD` shows no `scripts/` path: `e05d09f3` moved the scripts off the slice. Run outputs are local, under
+`~/gi-pricing-plan.local/scratch/sl1367-t5/out-2026-10-11{b,c,d}/`.
+
+**Rulings on run D** (`to-lead.md`, by header): "2026-10-11 15:32:42 BST — SL-1367 run D: Q1 your rec; Q2 as read; Q3 = (b), the denominator CLARIFIED before any run data (still pre-registered)":
+Q1 the evidence ref as above and a forward commit removing `scripts/measure/sl1367-t5/` before the mint; Q2 the duration test covers the six limb-2 invocations, the steal test every stamped invocation, bounds inclusive;
+Q3 (b): steal as a share of ALL ticks, idle included, at most 5% per invocation, both ratios printed, the verdict uses (b) (the busy-ticks denominator inflates on an idle-ish 8-vCPU host: 15.7% of busy against 3.4% of all ticks in the seat's probe).
+"2026-10-11 16:27:15 BST — SL-1367 run D: UNCLEAN applies (iii) → the dedicated VM; BUT the compare delta is a PROBABLE REAL REGRESSION, investigated in code NOW; lane C proceeds without waiting".
+
+#### 2026-10-11 — Acceptance 10: the timing is CARRIED to the dedicated VM (owner WK-1178)
+
+**Decision** (`to-lead.md` "2026-10-11 16:29:03 BST — SL-1367: NO code cause found → Acceptance 10's timing is CARRIED to the dedicated VM (a measurement owed, not a merge gate); SL-1367 proceeds to its full gate and ACK; the VM protocol is pre-registered now"),
+under the lane-C clause reserved at 15:26:41 (iii): Acceptance 10 exists to catch a runtime cost this slice's code adds; the code proof shows the slice adds no runtime path, so the measured compare delta is not attributable to its code and holding the merge protects nothing.
+SL-1367 proceeds to its full gate (template), mint and MERGE-ACK. Acceptance 10's timing is CARRIED, **owner WK-1178**, **discharge condition: the dedicated-VM run under the protocol below**. Runs b, c and D stay in this ledger.
+This is not a re-run until green: the verdict mechanism did not decide, and the code evidence does.
+
+**The code diff the decision rests on** (from-lead "2026-10-11 16:28:30 BST — SL-1367 /score/compare investigation (your 16:27:15 item 3): NO outbound change found", `git diff 99f22479..e05d09f3 -- backend packages`):
+5 files, `backend/src/app/api/score.py` (+6 -2) and tests only otherwise (`outbound_validation_spy.py` new, `test_contracts.py`, `test_score.py`, `test_score_compare.py`); `packages/` untouched. The score.py code delta, verbatim:
+- `/score`: `responses=problems(401, 403, 404, 409, 422, 500),` -> `responses={**problems(401, 403, 404, 409, 422, 500), 200: {"model": ScoringResult}},`
+- `/score/compare`: `responses=problems(…),` -> `responses={**problems(…), 200: {"model": ScoreComparison}},`
+- plus a 2-line module docstring note (the 200 is documented through `responses=`, read only when the OpenAPI document is built; nothing validates the body, FD-1335).
+No `response_model`, `response_class`, decorator or serialisation change on either route. `/score` carries the identical change and shows no delta (paired -3.2 / +0.7 / +1.4 in run D). The slice's own NFR-502 tests (the per-test spy, Task 3) show that no outbound validation runs.
+Harness (same entry): limb 2 imports its fixtures from each tree's `test_score.py` / `test_score_compare.py`; `test_score_compare.py` adds only the two NFR-502 tests and imports; the spy is installed per test by monkeypatch, never in limb 2; `test_zz_limb2.py` is the same file in both arms.
+The lead's hypothesis, not a conclusion: the alternation is fixed-order (base then HEAD) on one shared DB, so if `/score/compare` writes rows that `/score` does not, HEAD always runs on a larger table, an order effect on compare only (run D's base p99s do not grow, 65.3 / 69.1 / 68.9, so it is weak).
+Compare's paired delta was positive in every clean iteration of runs c and D (c +6.6 / +1.7; D +9.4 / +10.2).
+
+**VM protocol, pre-registered before any VM data** (16:29:03 item 2, verbatim):
+- counterbalanced ABBA order (base, HEAD, HEAD, base, ×3 blocks);
+- a FRESH DB per invocation (the same seed snapshot restored), with the row counts of every table compare writes printed before and after each invocation;
+- the same CLEAN check (±15% durations; steal/all-ticks ≤ 5%);
+- the plan statistic as the verdict, with paired deltas as information.
+If clean and STOP fires on the VM → an FD against SL-1367 (post-merge), fix owned by WK-1178. (Item 3:) if the VM shows an ORDER/DB-growth effect, that is a finding against the measurement harness (PL-1364's limb-2 method), filed LOW, not against SL-1367.
+
+
+**Disclosed slip and seat-side lessons.** A seat awk slip left a stray untracked file `0` in the root checkout's cwd; it was deleted and the root verified at `8f5a8987` with only `?? .claude/jobs`
+(from-lead "2026-10-11 15:32:15 BST — SL-1367 run D PREPARED @73c9c078; THREE questions before the ALONE grant", "Also disclosed"; noted at the 15:32:42 entry). It is a write in the root, which the never-`cd` / absolute-path rule exists to prevent.
+Lessons, each from a record above: (1) run b had no per-invocation stamps, so the overlap with lead probes and another seat had to be reconstructed from the log: stamp every timed invocation; (2) runs c and D each had one slow limb-2 invocation
+with host steal near zero, so a steal-only criterion would not have caught it: the duration limb of the CLEAN check did; (3) a busy-ticks steal denominator inflates on an idle host: decide the denominator before the run; (4) measurement scripts committed
+into the slice branch would ship to main: they live on an evidence branch with a ref that survives the squash; (5) a pre-registered criterion is only provable if the script carrying it is committed before the run and the run prints its blob and commit time.
 
 ## PRs
 
