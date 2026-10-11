@@ -325,7 +325,13 @@ async def rotate_key(
                 "overlap_until": overlap_until.isoformat(),
             },
         )
-        view = _view(account, [*current, successor])
+        # The account view lists every Environment's keys, not only the rotated one's.
+        all_keys = (
+            await session.execute(
+                select(ApiKeyRow).where(ApiKeyRow.service_account_id == account.id)
+            )
+        ).scalars().all()
+        view = _view(account, list(all_keys))
 
     return _created(view, [generated])
 
