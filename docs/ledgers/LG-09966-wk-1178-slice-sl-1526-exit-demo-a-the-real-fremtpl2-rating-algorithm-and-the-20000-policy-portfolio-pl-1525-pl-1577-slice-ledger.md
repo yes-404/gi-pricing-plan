@@ -61,6 +61,105 @@ The slice's row is `#### SL-1526 — WK-1178 exit-demo slice (a) — the real fr
 
 - **Gate fixes after the full gate at `e00c71c1` (classified by the lead, `from-lead` "2026-10-11 00:42:22 BST"; item numbers are that classification's).** #2: the monotone property's name carried the banded column's `_` (`premium-monotone-in-veh_age_band`-style), which `RegressionSuiteContent`'s property-name slug refuses; it is now `column.replace("_", "-")`. Red first: `uv run pytest -q backend/tests/test_demo_rating_evidence.py -k monotone_property_name` with the replace removed → `1 failed` (`ValidationError … RegressionSuiteContent`); with it → `1 passed` (new pure test, no DB). #3: `uv run mypy` 7 errors in `examples/fremtpl2/model.py` (:507 untyped lambda call, :540–541 `float | None` comparisons) → typed `picks` as `Callable[[Sequence[RelativityLevel]], RelativityLevel]` and narrowed the relativity series; `mypy` 0 and `ruff check .` 0 on the whole tree.
 
+- **In-process counterexample, 2026-10-11 ~10:38 (the maintainer's narrow exception, `to-lead.md` "2026-10-11 11:36:45 BST — EXCEPTION GRANTED (narrow, named): SL-1526's counterexample computed IN-PROCESS beside SL-1529's gate"; one process, no DB, no pytest).** Command: `timeout 180 nice -n 19 ionice -c3 uv run --directory <sl-1526 worktree> python ~/gi-pricing-plan.local/handover/sl1526-regate/inproc.py` at head `dc11d9d1`, load1 6.69 before / 6.42 after, rc 0, 5 s. The script compiles the demo algorithm (`test_fremtpl2_algorithm._full_algorithm`) with seven rows-tables built from the DB test's `_ESTIMATES`, then runs `pricing_core.rating.properties` over the three golden bases and over `generate_contexts(contract, 25, SPLIT_SEED)`, the suite's own generation. **Finding:** the three golden bases pass the monotone `veh_age` increasing property, `no_null_output` and `premium_bounded` (premiums 25000, 27629, 32101 from `veh_age` 0, 7, 15 on the first base). **All 25 generated contexts fail**, because the generator draws arbitrary text for the five categorical inputs (`veh_brand`, `veh_gas`, `area`, `region`, ...): `testing.py:138-140` samples a declared `domain` only for an `enum` input, and `algorithm.py` declares them `string` with a `domain`. A table lookup on a value outside the table (`on_miss: error`) is refused, the scorer returns `None`, and every property treats `None` as a failure (monotone `broken_at=(v, v)`). So the red is not a non-monotone premium and not the slug fix; it is the input contract's type. Output, verbatim:
+
+```text
+contract veh_age: [('veh_age', 0, 30)]
+base=base-levels inputs={'bonus_malus': 100, 'driv_age': 18, 'veh_age': 0, 'veh_power': 4, 'veh_brand': 'B1', 'veh_gas': 'Diesel', 'area': 'A', 'region': 'R11'}
+  grid/premiums=[(0, ('quoted', 25000)), (7, ('quoted', 27629)), (9, ('quoted', 27629)), (15, ('quoted', 32101)), (22, ('quoted', 32101)), (23, ('quoted', 32101)), (28, ('quoted', 32101)), (30, ('quoted', 32101))]
+  monotone increasing veh_age: broken_at=None quoted=8
+  no_null_output: holds=True
+  premium_bounded: holds=True
+base=first-non-base-levels inputs={'bonus_malus': 100, 'driv_age': 25, 'veh_age': 3, 'veh_power': 6, 'veh_brand': 'B2', 'veh_gas': 'Regular', 'area': 'B', 'region': 'R24'}
+  grid/premiums=[(0, ('quoted', 25000)), (7, ('quoted', 27629)), (9, ('quoted', 27629)), (15, ('quoted', 32101)), (22, ('quoted', 32101)), (23, ('quoted', 32101)), (28, ('quoted', 32101)), (30, ('quoted', 32101))]
+  monotone increasing veh_age: broken_at=None quoted=8
+  no_null_output: holds=True
+  premium_bounded: holds=True
+base=last-levels inputs={'bonus_malus': 100, 'driv_age': 40, 'veh_age': 10, 'veh_power': 8, 'veh_brand': 'B2', 'veh_gas': 'Regular', 'area': 'B', 'region': 'R24'}
+  grid/premiums=[(0, ('quoted', 35477)), (7, ('quoted', 39208)), (9, ('quoted', 39208)), (15, ('quoted', 45553)), (22, ('quoted', 45553)), (23, ('quoted', 45553)), (28, ('quoted', 45553)), (30, ('quoted', 45553))]
+  monotone increasing veh_age: broken_at=None quoted=8
+  no_null_output: holds=True
+  premium_bounded: holds=True
+
+== generated contexts: 25 under seed 20260827 (the suite's generation) ==
+case 0 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'driv_age': 18, 'veh_age': 0, 'veh_power': 4, 'veh_brand': '0', 'veh_gas': '0', 'area': '0', 'region': '0', 'bonus_malus': 50}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 1 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'driv_age': 30, 'veh_age': 0, 'veh_power': 4, 'veh_brand': '0', 'veh_gas': '0', 'area': '0', 'region': '0', 'bonus_malus': 50}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 2 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'region': '0Bsw8l', 'veh_brand': 'eFgat', 'veh_gas': 'luY2', 'driv_age': 30, 'area': 'R', 'bonus_malus': 91, 'veh_power': 8, 'veh_age': 12}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 3 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'driv_age': 33, 'area': 'ot7', 'veh_power': 5, 'veh_gas': '4HRtaaKZn2', 'region': 'mTl5G', 'veh_age': 6, 'bonus_malus': 91, 'veh_brand': 'ZVTGSHZ2I9'}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 4 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'bonus_malus': 173, 'veh_age': 12, 'veh_gas': 'iigY', 'veh_brand': 'X0jM', 'area': 'LT2AIBpoMn', 'region': 'YVcdSnzOz1a1', 'veh_power': 4, 'driv_age': 67}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 5 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_age': 3, 'veh_power': 12, 'area': 'gFe', 'driv_age': 65, 'region': 'ErWRGh0ANsXu', 'veh_gas': 'Gp', 'bonus_malus': 171, 'veh_brand': 'Z'}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 6 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'area': 'R', 'region': 'QJ', 'veh_gas': 'ptdQMmmuVStE', 'bonus_malus': 77, 'driv_age': 71, 'veh_power': 13, 'veh_brand': 'EUCg', 'veh_age': 7}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 7 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'bonus_malus': 170, 'area': 'czS', 'veh_power': 7, 'veh_age': 1, 'region': 'xyLd', 'driv_age': 51, 'veh_gas': 'a', 'veh_brand': 'Z'}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 8 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_brand': 'FKOCMS', 'bonus_malus': 58, 'area': 'X1jhqm8TA', 'region': 'gaaahm2VkkUD', 'veh_age': 29, 'veh_power': 11, 'veh_gas': 'hy', 'driv_age': 86}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 9 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'area': 'qkxKf5Tf', 'veh_brand': 'A', 'driv_age': 59, 'veh_age': 28, 'veh_gas': 'LPj9LBD', 'bonus_malus': 100, 'region': 'GS', 'veh_power': 4}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 10 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_brand': 'kFM', 'region': 'HG', 'driv_age': 60, 'area': 'h8Ug6f', 'veh_gas': 'atiY', 'veh_age': 14, 'veh_power': 5, 'bonus_malus': 189}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 11 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_brand': 'kFM', 'region': 'HG', 'driv_age': 60, 'area': 'h8Ug6f', 'veh_gas': 'kFM', 'veh_age': 14, 'veh_power': 5, 'bonus_malus': 189}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 12 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_brand': 'kFM', 'region': 'HG', 'driv_age': 60, 'area': 'h8Ug6f', 'veh_gas': 'kFM', 'veh_age': 14, 'veh_power': 4, 'bonus_malus': 189}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 13 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_brand': 'kFM', 'region': 'HG', 'driv_age': 60, 'area': 'h8Ug6f', 'veh_gas': 'kFM', 'veh_age': 14, 'veh_power': 4, 'bonus_malus': 50}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 14 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_brand': 'kFM', 'region': 'HG', 'driv_age': 60, 'area': 'h8Ug6f', 'veh_gas': 'kFM', 'veh_age': 14, 'veh_power': 14, 'bonus_malus': 50}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 15 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_brand': 'kFM', 'region': 'HG', 'driv_age': 18, 'area': 'h8Ug6f', 'veh_gas': 'kFM', 'veh_age': 14, 'veh_power': 14, 'bonus_malus': 50}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 16 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_brand': 'kFM', 'region': 'HG', 'driv_age': 18, 'area': 'h8Ug6f', 'veh_gas': 'HG', 'veh_age': 14, 'veh_power': 14, 'bonus_malus': 50}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 17 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_power': 12, 'region': 'get', 'veh_gas': 'Permission', 'driv_age': 49, 'bonus_malus': 176, 'veh_age': 19, 'veh_brand': '0', 'area': 'ewzdY6'}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 18 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_power': 12, 'region': 'get', 'veh_gas': 'Permission', 'driv_age': 49, 'bonus_malus': 176, 'veh_age': 0, 'veh_brand': '0', 'area': 'ewzdY6'}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 19 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_power': 4, 'region': 'get', 'veh_gas': 'Permission', 'driv_age': 49, 'bonus_malus': 176, 'veh_age': 0, 'veh_brand': '0', 'area': 'ewzdY6'}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 20 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_power': 4, 'region': 'get', 'veh_gas': 'Permission', 'driv_age': 49, 'bonus_malus': 50, 'veh_age': 0, 'veh_brand': '0', 'area': 'ewzdY6'}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 21 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_power': 4, 'region': 'get', 'veh_gas': 'Permission', 'driv_age': 49, 'bonus_malus': 50, 'veh_age': 0, 'veh_brand': '0', 'area': 'get'}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 22 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_power': 4, 'region': 'get', 'veh_gas': 'Permission', 'driv_age': 18, 'bonus_malus': 50, 'veh_age': 0, 'veh_brand': '0', 'area': 'get'}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 23 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_power': 4, 'region': 'get', 'veh_gas': 'Permission', 'driv_age': 18, 'bonus_malus': 50, 'veh_age': 18, 'veh_brand': '0', 'area': 'get'}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 24 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_age': 9, 'veh_brand': '1fz', 'area': 'lqqXMc5', 'region': 'r8', 'veh_gas': '4VNuXsHJNN', 'veh_power': 12, 'driv_age': 54, 'bonus_malus': 100}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+done
+```
+
 ## PRs
 
 (added at the PR)
