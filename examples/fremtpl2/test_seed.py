@@ -223,3 +223,52 @@ def test_the_portfolio_sample_is_the_same_policies_every_run(
     assert ids == expected
     assert ids[0] == "1"
     assert int(ids[-1]) > 49_990
+
+
+@pytest.mark.req("FR-263")
+def test_the_seeded_portfolio_satisfies_the_dislocation_frame(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """03 §4.8: a dislocation portfolio needs a unique, non-null string `quote_id` and a usable
+    `exposure_years`, or `dislocation.run` ends `PortfolioFrameError` before any rating (found at
+    SL-1526's stage d: the seeded portfolio had `policy_id` and no `quote_id`). The portfolio the
+    seed ingests, taken through the seed's own recipe, passes `read_portfolio`; `quote_id` is the
+    policy's identity, the same as `policy_id`."""
+    import io
+
+    import polars as pl
+    import seed
+
+    from pricing_core.data.prepare import apply_recipe
+    from pricing_core.rating.analysis import read_portfolio
+
+    _write_book(tmp_path, 2_000)
+    monkeypatch.setattr(seed, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(seed, "PORTFOLIO_ROWS", 500)
+    # the synthetic book has only IDpol and ClaimNb; the recipe also renames and casts the rest
+    raw = pl.read_csv(io.BytesIO(seed.build_portfolio_csv()),
+                      infer_schema=False)
+    # ingestion snake-cases the headers before the recipe runs (`IDpol` -> `i_dpol`)
+    raw = raw.rename({"IDpol": "i_dpol", "ClaimNb": "claim_nb"}).with_columns(
+        pl.lit("0.5").alias("exposure")
+    )
+    stored = apply_recipe({"policy_exposure": raw}, [
+        step if step["step"] != "cast" else {
+            **step, "params": {"columns": {c: t for c, t in step["params"]["columns"].items()
+                                           if c in {"exposure_years", "claim_count",
+                                                    "claim_amount_minor"}}}}
+        for step in recipe(drop_implausible_exposure=True)
+    ]).tables["policy_exposure"]
+
+    book = pl.read_csv(io.BytesIO(build_csv(500)), infer_schema=False)
+    assert "quote_id" not in book.columns
+    # the only change to the sample is the added column: every other column and row is the book's
+    assert raw.drop("quote_id").height == book.height
+    assert pl.read_csv(io.BytesIO(seed.build_portfolio_csv()), infer_schema=False).drop(
+        "quote_id"
+    ).equals(book)
+    frame = read_portfolio(stored.lazy(), segments=()).collect()
+    assert frame["quote_id"].null_count() == 0
+    assert frame["quote_id"].n_unique() == frame.height
+    assert frame["quote_id"].to_list() == frame["policy_id"].to_list()
+    assert frame["quote_id"].dtype == pl.String

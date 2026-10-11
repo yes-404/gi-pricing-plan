@@ -151,6 +151,26 @@ def build_csv(rows: int | None) -> bytes:
     return buffer.getvalue()
 
 
+def build_portfolio_csv() -> bytes:
+    """The dislocation portfolio's CSV: the `PORTFOLIO_ROWS` sample plus a `quote_id` column.
+
+    `03` §4.8 refuses a dislocation portfolio without a unique, non-null string `quote_id`, the
+    key on which the baseline and candidate passes are joined (`analysis.read_portfolio`). The
+    book's key is `IDpol`, which the recipe renames to `policy_id`, so the sample carries the same
+    value under the second name; no recipe step copies a column, and `quote_id` is in neither the
+    rename map nor the cast, so it stays a string. Only the portfolio has it: the fitted book is
+    byte-for-byte what `build_csv` returns.
+    """
+    import io
+
+    import polars as pl
+
+    frame = pl.read_csv(io.BytesIO(build_csv(PORTFOLIO_ROWS)), infer_schema=False)
+    buffer = io.BytesIO()
+    frame.with_columns(pl.col("IDpol").alias("quote_id")).write_csv(buffer)
+    return buffer.getvalue()
+
+
 DICTIONARY: dict[str, dict[str, Any]] = {
     "policy_id": {
         "description": "Policy identifier, pseudonymous in the public extract",
@@ -705,7 +725,7 @@ async def run(rows: int | None) -> int:
     # input), run through the same recipe and the same rules. The model above stays fitted on the
     # full book. Everything the demo shows over it says "20,000-policy sample".
     print("── the demo portfolio: a " + f"{PORTFOLIO_ROWS:,}" + "-policy sample " + "─" * 28)
-    sample = build_csv(PORTFOLIO_ROWS)
+    sample = build_portfolio_csv()
     portfolio = await ingest("portfolio sample", cleaned=True, data=sample)
     if ingested_rows[portfolio] != PORTFOLIO_VALIDATED_ROWS:
         raise SystemExit(
