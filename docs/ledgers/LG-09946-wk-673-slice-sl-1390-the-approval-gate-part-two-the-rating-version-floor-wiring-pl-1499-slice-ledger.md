@@ -81,6 +81,9 @@ Order and acceptance checks are `PL-1499` §"Tasks" and §"Acceptance Standard" 
   5. **Unknown kind named as built:** `{kind!r}`; no enum branch (`ApprovalPolicyEntry.evidence` is `tuple[str, ...]`). Naming it is configuration, not quote or policy input (NFR-499); `modelling.py` names unknown kinds the same way.
   6. **Comment re-point:** `FD 9952` to `FD-1589` at the `except ValueError` comment in `compile_rating_version`, comment only, its own commit.
 
+- **2026-10-11, wave-2 resume (seat `executor-s6g`).** `git merge-tree --write-tree HEAD origin/main` rc 0 (tree `d71552ac`); `origin/main` `d699a561` merged by content, merge commit `d6937015`; the slice's diff against `origin/main` stays inside the write set (`rating_versions.py`, the new test file, `06`, this ledger, PL-1499). `ruff check` on the two code files: clean. Barred-word split grep over the added lines: 0. No DB test ran (gate-1 is held by another slice).
+- **Slot script written, not run:** `~/gi-pricing-plan.local/scratch/sl1390/slot.sh <head>` (local, not in the repository), logs to `~/gi-pricing-plan.local/scratch/sl1390/gatelogs/`. Order inside one gate-1 hold: PREFLIGHT (recreated DB, `alembic upgrade head` rc 0, exactly one head, postgres/redis/minio healthy, else abort rc 3) → Acceptance 6's three files at the `d699a561` source (and `git diff` of them empty) → one red run per new test with the `d699a561` `rating_versions.py` swapped in → the two broken-loop proofs (skip unknown kinds; `rate_table_diffs` mapped as met), each scratch-reverted → green (new file, then the three files) → the full two-half gate.
+
 ## PRs
 
 (None yet: authoring ahead of the GO.)
