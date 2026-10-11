@@ -167,9 +167,11 @@ below), over HTTP, in `examples/fremtpl2/journey.py`, so that it is inside `PL-1
 set and the "over HTTP only" constraint. The routes are on `main`: `POST /api/v1/sub-graphs`
 and `POST /api/v1/sub-graphs/{slug}/versions` (`backend/src/app/api/sub_graphs.py:38`, `:53`),
 with the rate table created through the A-phase rate-table routes. **`@4`:** WF-699 B7's
-"`ncd-ladder@4`" names a pinned version. This plan reads it as *the version the journey saved,
-mounted by exact pin*, and does not save four versions to reach the number 4. The lead
-confirms or corrects that reading at this file's ACK.
+"`ncd-ladder@4`" names a pinned version. The "@4" is **illustrative**: the journey asserts the
+exact version it saved and pinned, read from its own create response, never a literal 4 (the
+maintainer (by delegation), `to-lead.md` "2026-10-11 23:25:46 BST", item 2(c): *"WF-699 B7's
+"@4": CONFIRMED as illustrative. The journey asserts the EXACT version it saved and pinned (by
+id or version from its own create response), never a literal 4."*).
 
 ## What changes in PL-1544
 
@@ -290,7 +292,7 @@ items are added to `PL-1544`'s Acceptance Standard, and they replace Acceptance 
    sentence: Acceptance 7, quoted from 16:37:21 item 3. The journey seed size: 20,000, with the
    floor. Global Constraint 2's HOLD text: its row. The moot B7 contingency: its row. Both
    DP-D4 variants were written in full (`cf2d31a4`), and (a) is kept as ruled. The NCD ladder's builder is named (Task 2a).
-4. **Nothing was picked silently.** DP-D4 was drafted open, with a recommendation, and ruled by the maintainer (by delegation). The `@4` reading is
-   flagged for the lead.
+4. **Nothing was picked silently.** DP-D4 was drafted open, with a recommendation, and ruled by the maintainer (by delegation). The `@4` reading was
+   flagged and is ruled illustrative (23:25:46 item 2(c)).
 5. **What was not executed.** No code or test was run. The citations were read at `1b04cb05`.
    No fit was read.
