@@ -141,8 +141,6 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         "by the suite's author or the input contract; the swept values are generated "
         "later, never in this text. Save-time, at declaration, before any quote-derived "
         "run"),
-    ("backend/src/app/platform/settings.py", "_parse_env", "{exc}"): (
-        1, "a workspace setting or environment override, an operator value; not a quote input"),
     ("backend/src/app/platform/settings.py", "coerce", "{exc}"): (
         1, "a workspace setting's type error; not a quote input"),
     ("backend/src/app/platform/transformations.py", "_refuse", "str(exc)"): (

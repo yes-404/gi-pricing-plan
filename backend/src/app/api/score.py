@@ -136,9 +136,9 @@ BundleSlotDep = Annotated[BundleSlot, Depends(_bundle_slot)]
 ScoreExecuteDep = Annotated[Caller, Depends(requires(Permission.SCORE_EXECUTE))]
 
 
-async def _rate_limited_score_caller(
+async def _enforce_score_rate_limit(
     request: Request, caller: ScoreExecuteDep, database: DatabaseDep, settings: SettingsDep
-) -> Caller:
+) -> None:
     """FR-452's scoring limit: after authentication and `score:execute`, before any scoring,
     so a 401 or 403 is never counted and a refused request scores nothing (RL-1347 rule 4)."""
     await rate_limit.enforce(
@@ -152,10 +152,11 @@ async def _rate_limited_score_caller(
         principal=caller.principal,
         account_limit=caller.rate_limit_rps,
     )
-    return caller
 
 
-RateLimitedScoreDep = Annotated[Caller, Depends(_rate_limited_score_caller)]
+#: The route declares `ScoreExecuteDep` itself, so the authorisation sweep sees its
+#: permission; the limiter reuses that one resolved dependency and adds no second check.
+ScoreRateLimitDep = Annotated[None, Depends(_enforce_score_rate_limit)]
 ScoreBatchDep = Annotated[Caller, Depends(requires(Permission.SCORE_BATCH))]
 
 
@@ -373,7 +374,8 @@ def _as_platform_error(exc: ValueError) -> PlatformError | None:
 )
 async def score(
     ctx: QuoteContext,
-    caller: RateLimitedScoreDep,
+    caller: ScoreExecuteDep,
+    _rate_limit: ScoreRateLimitDep,
     database: DatabaseDep,
     blob_store: BlobStoreDep,
     slot: BundleSlotDep,
