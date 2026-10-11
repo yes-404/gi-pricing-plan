@@ -337,6 +337,7 @@ def test_wf699_journey_runs_end_to_end(client, database, blob_store, workspace_i
         "A3",
         "A4",
         "A5",
+        "B3",
         "B6",
         "B7",
         "C1",
@@ -365,3 +366,56 @@ def test_wf699_journey_runs_end_to_end(client, database, blob_store, workspace_i
     assert result.bundle_hash.startswith("sha256:")
     assert result.prod_premium_minor > 0
     assert any("20,000-policy sample" in line for line in lines)
+
+
+@pytest.mark.req("FR-221")
+def test_b3_the_fork_puts_a_pinned_as_at_lookup_in_the_premium() -> None:
+    """The maintainer's B3 ruling (to-lead "2026-10-11 23:46:22 BST"): the algorithm carries a
+    lookup step on the reference table, as at `effective_date`, whose result the premium consumes,
+    and a miss is an error (a quote dated before the row's `effective_from` is refused, not priced
+    without the loading). Without a reference table the fork has no lookup (the B6/B9 probes)."""
+    seeded = {
+        "slug": "fremtpl2-rate",
+        "input_contract": [],
+        "outputs": [{"name": "payable_premium_minor", "type": "money_minor", "required": True}],
+        "sub_graphs": [],
+        "steps": [
+            {
+                "step_id": "s_t_region",
+                "type": "table",
+                "rate_table_ref": "rate_table:x@1",
+                "key_expr": ["region"],
+                "consumes": ["region"],
+                "produces": "rel_region",
+            },
+            {
+                "step_id": "s_premium",
+                "type": "expression",
+                "expr": "base_premium_minor * rel_region",
+                "result_type": "decimal",
+                "consumes": ["base_premium_minor", "rel_region"],
+                "produces": "premium_unrounded",
+            },
+        ],
+    }
+    walk = journey._Journey(None, {}, print, None, 1.0)  # type: ignore[arg-type]
+    walk.seeded = seeded
+    walk.table_refs = {"region": "rate_table:wf699-region@2"}
+    plain = walk.fork(version=2, ladder_ref="sub_graph:ncd-ladder@1")
+    assert [s["step_id"] for s in plain["steps"]] == ["s_t_region", "s_premium"]
+    assert plain["steps"][0]["rate_table_ref"] == "rate_table:wf699-region@2"
+
+    walk.loading_ref = "reference_table:wf699-region-loading@1"
+    forked = walk.fork(version=2, ladder_ref="sub_graph:ncd-ladder@1")
+    ids = [s["step_id"] for s in forked["steps"]]
+    assert ids == ["s_t_region", "s_loading", "s_premium"]
+    lookup = forked["steps"][1]
+    assert lookup["type"] == "lookup"
+    assert lookup["reference_table_ref"] == "reference_table:wf699-region-loading@1"
+    assert lookup["as_at"] == "effective_date"
+    assert lookup["on_miss"] == "error"
+    premium = forked["steps"][2]
+    assert "number(expense_loading)" in premium["expr"]
+    assert "expense_loading" in premium["consumes"]
+    assert "ncd_factor" in premium["consumes"]
+    assert seeded["steps"][1]["expr"] == "base_premium_minor * rel_region"  # the seed is untouched

@@ -124,6 +124,15 @@ LADDER_BANDS: Final = {"low": "1.00", "middle": "1.20", "high": "1.50"}
 LADDER_DEFECT_MIDDLE: Final = "0.90"
 LADDER_MIDDLE_EDGES: Final = (100, 150)
 
+#: B3's reference rows are in force from this date; a quote dated before it finds no row.
+EFFECTIVE_FROM: Final = "2020-01-01"
+BEFORE_EFFECTIVE_FROM: Final = "2019-06-01"
+#: One region's loading rises to 1.05 on this date, after every golden and demo quote date; a
+#: quote on a later date in that region is the earlier premium x 1.05 (the multiply is observable).
+LOADING_RISES_ON: Final = "2027-01-01"
+LOADING_AFTER: Final = "1.05"
+AFTER_LOADING_RISES: Final = "2027-06-01"
+
 
 def ladder_body(middle: str, change_note: str) -> dict[str, Any]:
     """The `ncd-ladder` sub-graph body: bands 50-99, 100-149, 150-230 on `bonus_malus`."""
@@ -213,6 +222,8 @@ class _Journey:
         self.run_job = run_job
         self.job_timeout = job_timeout
         self.result = JourneyResult()
+        self.loading_ref: str | None = None
+        self.loading_region = ""
 
     # -- plumbing ------------------------------------------------------------------------
     def who(self, name: str) -> dict[str, str]:
@@ -447,6 +458,7 @@ class _Journey:
         self.skip("B9")
         self.skip("B4")
         self.done("B8", "output rounding half_even, 0 dp")
+        self.reference_table()
 
     def fork(self, *, version: int, ladder_ref: str | None) -> dict[str, Any]:
         """The seeded algorithm forked to `version` over the A-phase tables (WF-699 B1) and, with
@@ -476,7 +488,101 @@ class _Journey:
                 if step["step_id"] == "s_premium":
                     step["expr"] = f"{step['expr']} * ncd_factor"
                     step["consumes"] = [*step["consumes"], "ncd_factor"]
+            if self.loading_ref is not None:
+                # B3: the loading in force on the quote's effective date, from the pinned
+                # reference table (FR-221). `on_miss: error`, so a quote dated before the row's
+                # `effective_from` does not use it and is refused instead of priced without it.
+                lookup = {
+                    "step_id": "s_loading",
+                    "type": "lookup",
+                    "label": "Expense loading as at the effective date",
+                    "reference_table_ref": self.loading_ref,
+                    "key_expr": ["region"],
+                    "as_at": "effective_date",
+                    "on_miss": "error",
+                    "consumes": ["region"],
+                    "produces": "expense_loading",
+                }
+                steps = payload["steps"]
+                at = next(i for i, step in enumerate(steps) if step["step_id"] == "s_premium")
+                payload["steps"] = [*steps[:at], lookup, *steps[at:]]
+                for step in payload["steps"]:
+                    if step["step_id"] == "s_premium":
+                        step["expr"] = f"{step['expr']} * number(expense_loading)"
+                        step["consumes"] = [*step["consumes"], "expense_loading"]
         return payload
+
+    def reference_table(self) -> None:
+        """B3: a reference table created over HTTP by the seeded admin through the existing
+        `/reference-tables` routes, loaded with one row per region (loading 1.00, so the premium
+        is unchanged) effective from 2020-01-01, and published so that it can be pinned."""
+        slug = "wf699-region-loading"
+        self.req(
+            "B3",
+            "admin",
+            "POST",
+            "/reference-tables",
+            expect=201,
+            json={
+                "slug": slug,
+                "key_columns": ["region"],
+                "payload_columns": ["expense_loading"],
+                "description": "WF-699 B3: the expense loading in force by region, as at a date",
+            },
+        )
+        relativities = self.glm["fit_result"]["relativities"]["region"]
+        levels = [r["level"] for r in relativities]
+        # The golden quotes sit on each Factor's base level, so the region with a second row is the
+        # base region: the same region on two dates then hits two rows. The 1.05 row starts after
+        # every golden and demo quote date, so no golden moves.
+        self.loading_region = next(r["level"] for r in relativities if r["is_base"])
+        rows: list[dict[str, Any]] = []
+        for level in levels:
+            if level == self.loading_region:
+                rows.append(
+                    {
+                        "key": level,
+                        "payload": {"expense_loading": "1.00"},
+                        "effective_from": EFFECTIVE_FROM,
+                        "effective_to": LOADING_RISES_ON,
+                    }
+                )
+                rows.append(
+                    {
+                        "key": level,
+                        "payload": {"expense_loading": LOADING_AFTER},
+                        "effective_from": LOADING_RISES_ON,
+                    }
+                )
+            else:
+                rows.append(
+                    {
+                        "key": level,
+                        "payload": {"expense_loading": "1.00"},
+                        "effective_from": EFFECTIVE_FROM,
+                    }
+                )
+        loaded = self.req(
+            "B3",
+            "admin",
+            "POST",
+            f"/reference-tables/{slug}/versions",
+            expect=201,
+            json={
+                "source_note": f"demo loading: 1.00, and {LOADING_AFTER} in {self.loading_region} "
+                f"from {LOADING_RISES_ON}",
+                "rows": rows,
+            },
+        )
+        self.req(
+            "B3",
+            "admin",
+            "POST",
+            f"/reference-tables/{slug}/versions/{loaded['version']}/publish",
+            expect=(200, 201),
+        )
+        self.loading_ref = f"reference_table:{slug}@{loaded['version']}"
+        self.done("B3", f"{self.loading_ref}: a pinned lookup as at the effective date")
 
     def build_version(self, label: str, middle: str, change_note: str) -> dict[str, Any]:
         """B7 and C1: save the next ladder, the algorithm mounting it by exact pin, and a Rating
@@ -525,6 +631,7 @@ class _Journey:
                 "pins": {
                     "rate_tables": list(self.table_refs.values()),
                     "models": [self.glm_ref, self.gbm_ref],
+                    "reference_tables": [self.loading_ref] if self.loading_ref else [],
                     "sub_graphs": [ladder_ref],
                 },
             },
@@ -898,6 +1005,37 @@ class _Journey:
         self.result.prod_premium_minor = int(rung["value_minor"])
         if self.result.prod_premium_minor != self.golden[0]["expected"]["payable_premium_minor"]:
             raise JourneyStepFailed("S1", "PREMIUM_DIFFERS_FROM_THE_GOLDEN_QUOTE")
+        # B3, the multiply made observable: the same region on a later date hits the 1.05 row, and
+        # its premium is exactly the earlier premium x 1.05 in Decimal, half-even to whole minor
+        # units (the declared rounding). A wiring that consulted the lookup and dropped the
+        # multiply would pass the refusal below and fail here.
+        if context["inputs"]["region"] != self.loading_region:
+            raise JourneyStepFailed("B3", "GOLDEN_NOT_IN_THE_LOADED_REGION")
+        later = call(
+            self.client,
+            "B3",
+            "POST",
+            "/score",
+            expect=200,
+            headers={"X-API-Key": account["key"]},
+            json={**context, "effective_date": AFTER_LOADING_RISES},
+        )
+        later_rung = next(r for r in later["premium_ladder"] if r["rung"] == "payable_premium")
+        expected = _minor(Decimal(self.result.prod_premium_minor) * Decimal(LOADING_AFTER))
+        if int(later_rung["value_minor"]) != expected:
+            raise JourneyStepFailed("B3", "LOADING_NOT_MULTIPLIED_INTO_THE_PREMIUM")
+        # B3's other half: a quote dated before the reference row's `effective_from` does not use
+        # it. The lookup has no row in force, so the quote is refused, not priced without it.
+        call(
+            self.client,
+            "B3",
+            "POST",
+            "/score",
+            expect=422,
+            code="REFERENCE_LOOKUP_MISS",
+            headers={"X-API-Key": account["key"]},
+            json={**context, "effective_date": BEFORE_EFFECTIVE_FROM},
+        )
         self.done(
             "S1", f"prod scored {self.result.prod_premium_minor} minor units from the live version"
         )

@@ -164,6 +164,49 @@ branch `sl-1527-wk1178-exit-demo-b` tracks it. `uv sync --all-packages` and
   full-seed fit is exercised by the one-command rehearsal. Disclosed deviation from the delta, item
   "Task 1 Step 1".
 
+#### The lead's verdicts on the disclosed deviations (`from-lead` "2026-10-11 23:45:51 BST")
+
+Accepted as disclosed deviations: the expression-sub-graph ladder; the HTTP fork of
+`fremtpl2-rate@1`; E3's staging and the D4 run id taken from `error.message`; the README
+machine-requirement sentence after the Acceptance 5 run. B4's SKIPPED text: aligned to minted
+PL-1644's Acceptance 2 row, which requires a line for B4's `model_call` clause and one for C1′,
+each naming `FD-1456` and `SL-1543` (no exact string is given; the executor's line matches).
+Held for the maintainer's ruling, as written: B3 (the lead recommends SKIPPED plus an FD) and
+the Acceptance 5 fit (the lead recommends the real-seed rehearsal in the ledger plus a synthetic CI
+test). DB-test slots (`STAGE=reds`) are granted by head after the ALONE window.
+
+#### The maintainer's rulings on B3 and Acceptance 5 (`to-lead.md` "2026-10-11 23:46:22 BST", relayed by the lead)
+
+- **B3 is BUILT in this slice, not carried.** The widening is accepted for exactly: the reference
+  table is created over HTTP through the existing `/reference-tables` routes by the seeded admin
+  principal; a pinned `lookup` step as at `effective_date` is consumed by the premium; a red-first
+  test shows a quote dated BEFORE the row's `effective_from` does NOT use it. No new route, no DB
+  writes (RL-1521). If the route cannot create or pin what B3 needs: STOP and send the gap.
+  Authored (not yet run): `journey.py` `reference_table()` (admin creates `wf699-region-loading`,
+  keyed on `region`, payload `expense_loading` 1.00, effective from 2020-01-01, published and pinned
+  in `pins.reference_tables`); `fork()` inserts `s_loading` (`lookup`, `as_at: effective_date`,
+  `on_miss: error`) and `number(expense_loading)` into `s_premium`; S1 scores a quote dated
+  2019-06-01 and asserts 422 `REFERENCE_LOOKUP_MISS`. Honest reading, not a silent pick: the
+  freMTPL2 contract has no outcode input (the WF's "outcode → rating area" key), so the key is
+  `region`, the nearest existing geography input, and the loading is 1.00 so goldens are unaffected.
+  Pure test `test_b3_the_fork_puts_a_pinned_as_at_lookup_in_the_premium`; B3 added to the end-to-end
+  test's required steps.
+- **B3's geography key is `region` (the maintainer accepted it, `to-lead.md` "2026-10-11 23:48:51 BST").
+  Deviation recorded: WF-699 B3's "outcode → rating area" is walked on freMTPL2's `region`.** The
+  maintainer added one assertion, because a 1.00 loading makes consumption unobservable (the 2019 422
+  proves the step is consulted, not that `s_premium` multiplies by it). Authored: the base region has
+  a second reference row, 1.05 effective from 2027-01-01 (after every golden and demo quote date, so
+  no golden moves); the first row ends there. S1 scores the same region on 2027-06-01 and asserts the
+  premium is exactly the earlier premium × 1.05 in Decimal, half-even to whole minor units, else
+  `LOADING_NOT_MULTIPLIED_INTO_THE_PREMIUM`. A possible ±1 from double rounding (the earlier premium
+  is itself rounded) is not accepted as a tolerance; if the slot shows it, it is reported, not
+  absorbed. RED on a wiring that drops the multiply: the slot script's `red_b3_multiply` stage
+  scratch-reverts the multiply in `journey.py`, runs the end-to-end test and restores the file; its
+  line is recorded here at the slot, or this test is recorded as a GUARD if it cannot be shown.
+- **Acceptance 5, split (accepted):** CI stays synthetic (the in-process journey test); Acceptance 5
+  is met by the real full-seed one-command rehearsal in an ALONE window, and this ledger will quote
+  its command, tree, the "20,000 rows ran" line and exit code verbatim. The lead books the window.
+
 #### Reds (each by its cause), authoring
 
 | Task | Test | Red line as printed |
