@@ -15,6 +15,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from model_schema.input_free import InputFreeError
 from model_schema.money import DecimalStr, MoneyMinor
 
 __all__ = [
@@ -69,17 +70,11 @@ class Histogram(BaseModel):
     @model_validator(mode="after")
     def _edges_bound_the_bins(self) -> Histogram:
         if len(self.edges) != len(self.counts) + 1:
-            raise ValueError(
-                "a histogram needs one more edge than it has bins "
-                f"({len(self.edges)} edges, {len(self.counts)} counts)"
-            )
+            raise InputFreeError("a histogram needs one more edge than it has bins")
         if any(b <= a for a, b in zip(self.edges, self.edges[1:], strict=False)):
-            raise ValueError("histogram edges must be strictly increasing")
+            raise InputFreeError("histogram edges must be strictly increasing")
         if self.exposure and len(self.exposure) != len(self.counts):
-            raise ValueError(
-                "a histogram with exposure needs one exposure weight per bin "
-                f"({len(self.exposure)} weights, {len(self.counts)} bins)"
-            )
+            raise InputFreeError("a histogram with exposure needs one exposure weight per bin")
         return self
 
 
