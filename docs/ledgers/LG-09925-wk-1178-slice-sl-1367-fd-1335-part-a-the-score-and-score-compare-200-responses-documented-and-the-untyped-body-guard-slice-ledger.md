@@ -16,7 +16,7 @@ relates: [FD-1335, FD-1366, FD-1372, RL-1365, SL-1345]
 
 # LG-9925 — WK-1178 slice SL-1367: FD-1335 Part A
 
-**GO:** `to-lead.md` "2026-10-11 10:59:23 BST — SL-1367 GO accepted; Task 5's NFR-502 re-measure: run LOCAL now as "measured, diagnostic", verdict CARRIED to the dedicated-VM run list. SL-1367's merge does NOT wait for the VM". Task 5's local reading is diagnostic; its discharge is the dedicated-VM run. A clear FAIL is a STOP to the lead.
+**GO:** the activation record, `from-lead-2026-10-09.md` "2026-10-11 10:58:50 BST — Lead: GO SL-1367 (WK-1178, FD-1335 Part A, PL-1364) — the activation record (DP-A3 (a), DP-A4 (a))"; its acceptance, `to-lead.md` "2026-10-11 10:59:23 BST — SL-1367 GO accepted; Task 5's NFR-502 re-measure: run LOCAL now as "measured, diagnostic", verdict CARRIED to the dedicated-VM run list. SL-1367's merge does NOT wait for the VM". **Ruling on Task 5 (the maintainer, relayed by the lead, 2026-10-11 11:00):** Acceptance 10 compares HEAD with base on the same box, so its stop conditions are decided locally and are a true verdict; only NFR-502's absolute reading against the budget is "carried; discharge: the dedicated-VM run", and it does not block the merge. A clear FAIL is a STOP to the lead.
 **MERGE-ACK:** not yet given.
 
 ## Tasks
