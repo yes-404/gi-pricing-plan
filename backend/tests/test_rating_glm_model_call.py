@@ -200,3 +200,40 @@ def test_a_model_offset_glm_scores_with_its_source_model(
     )
     assert response.status_code == 200, response.text
     assert float(response.json()["outputs"]["risk_out"]) == pytest.approx(expected, rel=1e-9)
+
+
+@pytest.mark.req("FR-240")
+def test_a_glm_version_missing_a_factor_mapping_fails_to_compile(
+    client: TestClient,  # noqa: F811
+    admin_headers: dict[str, str],  # noqa: F811
+    database: Any, blob_store: Any, principal: Any, workspace_id: UUID,
+) -> None:
+    """SL-1541, item 7: the algorithm saves (the offset column is an accepted name, so
+    membership holds) but its `feature_map` maps no Factor of the pinned GLM. Compile, through
+    the real resolver that fills `ResolvedArtifact.factors`, refuses it with
+    `MODEL_CALL_FEATURE_MAP_INVALID` naming the step and the Factor, and writes no Bundle. Red
+    first: the version compiles."""
+    loop = asyncio.get_event_loop()
+    _, model_id, *_ = loop.run_until_complete(_fitted_model(database, blob_store, workspace_id))
+    model_ref = loop.run_until_complete(_approve(database, model_id))
+    register_rating_handlers()
+    created = client.post(
+        "/api/v1/rating-algorithms",
+        json=_algorithm(model_ref, {"exposure_years": "exposure_years"}),
+        headers=admin_headers,
+    )
+    assert created.status_code == 201, created.text
+    row = loop.run_until_complete(
+        _insert_version(
+            database, workspace_id, principal.id, algorithm_ref="rating_algorithm:glm-score@1",
+            pins={"rate_tables": [], "models": [model_ref], "reference_tables": [],
+                  "custom_objectives": []},
+            slug="glm-rv",
+        )
+    )
+    job = _run_compile_job(client, admin_headers, database, blob_store, row.id)
+    assert job.status is JobStatus.FAILED
+    assert job.error["code"] == "MODEL_CALL_FEATURE_MAP_INVALID"
+    assert "'s_risk'" in str(job.error)
+    assert "area" in str(job.error)
+    assert job.result is None

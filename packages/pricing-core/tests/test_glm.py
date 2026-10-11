@@ -26,6 +26,7 @@ from model_schema import (
     OffsetSpec,
     WeightSpec,
 )
+from model_schema.input_free import InputFreeError
 from pricing_core.modelling import GlmFitError, fit_glm
 from pricing_core.modelling.factors import FactorResolutionError, resolve_factors
 
@@ -471,9 +472,10 @@ def test_a_tweedie_power_outside_its_range_is_refused_by_the_spec() -> None:
     Refused when the spec is built, not when the fit runs: it is a fact about the
     specification, and a spec that cannot be fitted should not be storable.
     """
-    with pytest.raises(ValueError, match="outside"):
+    with pytest.raises(ValueError, match=r"must lie inside \(1, 2\)") as raised:
         _spec(family="tweedie", family_params={"power": 2.5}, response_column="severity",
               offset=OffsetSpec(kind="none"))
+    assert isinstance(raised.value.errors()[0]["ctx"]["error"], InputFreeError)
 
 
 @pytest.mark.req("FR-115")
