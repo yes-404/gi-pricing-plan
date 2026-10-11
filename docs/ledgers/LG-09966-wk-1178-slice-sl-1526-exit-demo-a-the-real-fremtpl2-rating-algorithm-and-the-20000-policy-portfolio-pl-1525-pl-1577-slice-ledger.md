@@ -184,6 +184,9 @@ bundle content_hash: sha256:74730d2632e8768893b21c49e4d27319f2818c8245a088ed733f
   - **(c) behaviour change**, probed in-process with `veh_brand="ZZZ"` on the base context (`P._score_context_sync`): before `CodedError RATE_TABLE_MISS: the engine failed evaluating step 's_premium' (FR-255); an on_miss='error' step it consumes most likely found no matching row`; after `CodedError INPUT_CONTRACT_VIOLATION: input 'veh_brand' is not in ['B1', 'B2']`. The engine code is measured; the HTTP status of that code is not measured here.
   - **(d)** 25 of 25 generated contexts plus the three goldens pass (above).
 
+- **Condition (b) does not apply, recorded at the lead's instruction.** The slice has no "own pinned hash": no test or file in `git diff origin/main...HEAD` pins a bundle hash, and `examples/fremtpl2/algorithm.py` is not on `origin/main`, so no hash on main changes. The only hash that moved is the in-process bundle's own `content_hash`, `sha256:c4e2d1a6d73a65b41f0e2471c61e9a2ad164cf5657e21e64a289863cc76d44d5` → `sha256:74730d2632e8768893b21c49e4d27319f2818c8245a088ed733f0548fa09f5d6` (synthetic tables).
+- **Re-slot script:** `~/gi-pricing-plan.local/handover/sl1526-regate/slot3.sh`, head guard `bbe74c34`, the standing PREFLIGHT (alembic upgrade head rc 0, exactly one head, postgres/redis/minio healthy), then the 3 DB tests, `test_fremtpl2_algorithm.py` (with the new categorical-domain test) and `test_seed.py` at full `-v` output, whole-tree mypy, ruff and DagDesigner alone; logs in `sl1526-regate/logs/`.
+
 ## PRs
 
 (added at the PR)
