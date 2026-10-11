@@ -43,7 +43,34 @@ Run d (`stamps.tsv`, stage → rc): a_demo 0, c_realglm 0, b_slice 0, b_export_r
 
 ### Audit
 
-(the auditor's)
+Written by the auditor (`auditor-sl1526`), 2026-10-11, over `origin/main...e24b52d0` (the head named final by the lead was `693c10d5`; `e24b52d0` is one LG-only line on top of it, the Gate section's run-d stage rcs). Scope derived from `PL-1525` Acceptance 1-11 and its Write set first, with `PL-1577` and the rulings of `to-lead.md` 11:39:18 to 19:36:01 BST as amendments, then evidenced from the diff, the tests' asserts and run d (`~/gi-pricing-plan.local/scratch/sl1526-alone/out-2026-10-11e/`). Read-only; no test was run by the auditor. The verdicts below are proposals; the lead issues them.
+
+| # | PL-1525 Acceptance | Result | Evidence |
+|---|---|---|---|
+| 1 | One table per rateable Factor (FR-230) | MET | `backend/tests/test_demo_rating_evidence.py::test_the_seed_seeds_one_table_per_rateable_factor` asserts the slug, `seeded_from.model_ref` and each key's `factor_ref`. The slug rule `_` to `-` is a lead-accepted deviation (Build log). |
+| 2 | Rating Version pins algorithm and every table (FR-237) | MET | `test_the_demo_rating_version_pins_every_seeded_table`: `pins.rate_tables` equals the seeded refs, `pins.models` equals the GLM, a `rating.compile` Job succeeded, the version is approved. |
+| 3 | Premium is the GLM's, to the penny | MET | The CI test scores three contexts against a Decimal oracle (`_expected_minor`, from the estimates, not the bundle). Run d stage c, the real fit: goldens 12870 / 22757 / 22752, diff 0. `model.py:demo_golden_cases` takes expected values from `glm_premium_minor(fit.coefficients, ...)`, never from the bundle. |
+| 4 | Reads within consumes, with broken-input proof | MET | `backend/tests/test_fremtpl2_algorithm.py`: `test_the_demo_algorithm_reads_only_what_it_declares`, `test_the_reads_check_refuses_an_undeclared_read`, `test_a_predicate_that_agrees_with_itself_is_not_the_oracle` (the 21:43:24 independence condition). |
+| 5 | No decimal output | MET | `test_the_demo_algorithm_declares_no_decimal_output`. |
+| 6 | Regression evidence is real | AMENDED by 19:07:08 | The goldens are non-circular (asserted equal to the oracle, three distinct values). The monotone property is dropped by the ruling; the suite declares `no-null-output` and `premium-bounded`; `test_the_declared_properties_are_fixed_and_read_no_fit`. Run d: replay `overall=pass`, 25 cases each. |
+| 7 | Spike S1 claims (a)(b)(c) | MET | `test_the_reads_extractor_agrees_with_the_engine`, `test_the_cross_check_refuses_a_planted_mismatch`; outputs in the Build log. |
+| 8 | The demo still runs | AMENDED by 19:36:01 | Runs the FULL seed (PL-1577 DP-1). Run d stage a rc 0, banner at 102.8 s. The seed prints "priced from the approved GLM" and the base-premium simplification label (`demo.log`:71-72). |
+| 9 | The gate | CARRIED | Run d stages rc 0 (`stamps.tsv`; the Gate section's rc list matches). CI at `4b0d32aa`: `history-policy` pass; `python` 1 of 8 stages failed (pytest only), 13 `FAILED tests/...` lines, all audit-on-tree tests failing on check 31 "gap in the full allocation between 1636 and 1641" (44 log hits), ids 1637-1640 unmerged; `docs` fails on the same check (`audit_docs`, `doc_id_check`); `frontend` not triggered (path filter). `693c10d5` and `e24b52d0` were still running when read. It clears when #1282 and #1283 merge and this branch merges main; the minted-head result on that merge head is the evidence, not yet in hand. |
+| 10 | Scope held | MET | `git diff --name-only origin/main...e24b52d0` is 13 files: all within the PL-1525 Write set, PL-1577 Tasks 1-2, the 21:55:37 ruling's WF-699 :30 amendment, the plan and roadmap activation lines, and `docs/INDEX.md`. No `backend/src`, `packages`, `frontend` or `scripts/demo.py`. |
+| 11 | The refit is visible | MET at `693c10d5` | (a) the three saved Bandings with ids, versions, boundaries and labels agree with `demo.log`:58-60; (b) the base-vs-slice table agrees with `wrapper.out` FITCOL lines (deviance 166257.17 / 165508.08, AIC 218476.999 / 217745.92, 7 factors each, same rows proven). Recorded in the Build log after the lead's fix-before-close verdict (20:14:10). The PR body half of 11 is not checked here. |
+
+**Closing acts.** LG-9966 is minted as LG-1641 (`status: closed`); `SL-1526` is `closed` in `docs/roadmap.md`; `PL-1525` and `PL-1577` stay `active` (their lifecycle has no `closed`). Both match the lead's instruction.
+
+**Observations, none a gap.**
+1. `veh_power` Banding labels `4-4` and `5-5` are cosmetic (the LG says so). Proposed verdict: delivered; no action.
+2. Acceptance 3's CI test runs on a synthetic fit; the real-fit proof is run d only, and `test_the_seed_reruns_against_a_seeded_database` skips without the ARFF. Proposed verdict: delivered, evidenced by run d; no FD.
+3. The platform defect behind the degenerate-fit refusal is already filed as FD 9702 (D13 batch, owner WK-1178); not this slice's.
+
+**Requirements without evidence.** None found against the PL-1525 id list: FR-212, FR-213, FR-226, FR-230, FR-237, FR-240, FR-246, FR-257, FR-260, FR-261 (`03`), FR-97, FR-101 (`02`), FR-440 (`07`) each map to an item above. `scripts/scope-audit.py` was not run; the requirement set was taken from PL-1525 §Requirement coverage, not recollected.
+
+**Proposed verdict: CLEAN, with Acceptance 9 CARRIED to the minted-head CI after the merge of main.**
+
+Lead verdict: (pending)
 
 ### Build log
 
