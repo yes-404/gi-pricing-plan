@@ -129,8 +129,10 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
-    # FD-1211 (R4.2): the design is RECYCLE, not finalize. On stop the process receives SIGTERM,
-    # uvicorn drains and exits; the container is replaced, never reused after a teardown abort.
+    # FD-1211 (R4.2): the design is FINALIZE, then REPLACE. On stop the process gets SIGTERM,
+    # uvicorn drains and the interpreter exits normally (`test_deploy_shutdown.py` proves a
+    # process that has loaded FD-1199's extensions does so cleanly, N times); the container is
+    # then replaced, never reused. `worker` below does the same through Celery's warm shutdown.
     stop_grace_period: 20s
 
   # FR-415: the worker service FR-412's memory half applies to. `mem_limit` is the hard
