@@ -42,7 +42,8 @@ def test_wf699_the_skip_and_known_gap_lines_are_exactly_the_ruled_ones() -> None
         "SKIPPED E7 Commentary Block: Phase 3; WK-680",
         "KNOWN GAP A6: FD-1491",
         "KNOWN GAP B9: FD-1490",
-        "SKIPPED C1′: FD-1456; SL-1543",
+        "SKIPPED B4 model_call: FD-1456; SL-1543",
+        "SKIPPED C1′: FD-1456; SL-1543",  # noqa: RUF001
     ]
     assert not [e for e in journey.SKIPS if e.line.startswith("KNOWN GAP") and "FD-1456" in e.line]
     # `SKIPPED B7: SL-1340` is moot: SL-1340 merged (PL-1544 activation need 18).
