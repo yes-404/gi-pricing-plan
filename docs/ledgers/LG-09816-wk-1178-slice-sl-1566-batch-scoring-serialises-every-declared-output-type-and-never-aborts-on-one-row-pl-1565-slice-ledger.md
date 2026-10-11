@@ -92,6 +92,7 @@ Deviations from the plan, all disclosed:
    `(…score.py, _score_batch_row, error_message key): 1 != 2` and `(…, _batch_error_row, …): 1` extra. After the
    edit (a `_batch_error_row` row at 1, `_score_batch_row` at 1, each with its reason; the new one cites
    `test_an_error_row_from_serialisation_carries_no_value`, SENTINEL-9513 not in error_message): `7 passed`.
+   **The maintainer's (by delegation) two conditions** (`to-lead.md` "2026-10-11 21:58:07 BST", relayed by the lead): (1) *the census total is unchanged*: one row moves and none is added. Before (`f13f606a`) → after: `(…/rating/score.py, _score_batch_row, "error_message key")` 2 → 1; `(…/rating/score.py, _batch_error_row, "error_message key")` absent (0) → 1; the `_SINKS` total over all rows, and the `error_message key` total in `score.py`, is the same before and after (the second row's +1 is the first's −1). No sink was added: the count of `{"error_message": …}` dict keys in `score.py` is 2 at the base `02f23b4a` (`_score_batch_row`'s error dict and its success dict) and 2 at `f13f606a` and now (`_batch_error_row`'s and the success dict); the evidence is Task 1's sentinel test, `test_an_error_row_from_serialisation_carries_no_value` (`SENTINEL-9513` not in `error_message`). A changed count would be a new sink and a stop to the lead. (2) *the targeted re-gate holds only if* `git diff --stat f13f606a..<head>` touches only `backend/tests/test_error_sinks.py` plus this ledger; INDEX, roadmap and every mint-turn file stay out.
 
 ### Gate
 
