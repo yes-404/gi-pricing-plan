@@ -383,6 +383,43 @@
         "title": "Applicability",
         "type": "object"
       },
+      "ApprovalDecision": {
+        "additionalProperties": false,
+        "description": "One approver's decision (`06` §4.3).",
+        "properties": {
+          "approver_id": {
+            "format": "uuid",
+            "title": "Approver Id",
+            "type": "string"
+          },
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "decision": {
+            "$ref": "#/components/schemas/DecisionKind"
+          }
+        },
+        "required": [
+          "approver_id",
+          "decision",
+          "at"
+        ],
+        "title": "ApprovalDecision",
+        "type": "object"
+      },
       "ApprovalPolicy": {
         "additionalProperties": false,
         "description": "A workspace's approval policy (FR-354).",
@@ -486,6 +523,100 @@
           "approver_roles"
         ],
         "title": "ApprovalPolicyEntry",
+        "type": "object"
+      },
+      "ApprovalRequest": {
+        "additionalProperties": false,
+        "description": "An artifact submitted for approval (`06` §4.3).",
+        "properties": {
+          "approvers_recorded": {
+            "minimum": 0.0,
+            "title": "Approvers Recorded",
+            "type": "integer"
+          },
+          "approvers_required": {
+            "minimum": 1.0,
+            "title": "Approvers Required",
+            "type": "integer"
+          },
+          "artifact_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "artifact_type": {
+            "title": "Artifact Type",
+            "type": "string"
+          },
+          "change_summary": {
+            "title": "Change Summary",
+            "type": "string"
+          },
+          "decisions": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ApprovalDecision"
+            },
+            "title": "Decisions",
+            "type": "array"
+          },
+          "environment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Environment"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ApprovalStatus"
+          },
+          "submitted_at": {
+            "format": "date-time",
+            "title": "Submitted At",
+            "type": "string"
+          },
+          "submitted_by": {
+            "format": "uuid",
+            "title": "Submitted By",
+            "type": "string"
+          },
+          "withdrawn_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Withdrawn Reason"
+          },
+          "workspace_id": {
+            "format": "uuid",
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "workspace_id",
+          "artifact_ref",
+          "artifact_type",
+          "submitted_by",
+          "submitted_at",
+          "change_summary",
+          "status",
+          "approvers_required",
+          "approvers_recorded"
+        ],
+        "title": "ApprovalRequest",
         "type": "object"
       },
       "ApprovalStatus": {
@@ -10036,6 +10167,42 @@
         "title": "OwnerUpdate",
         "type": "object"
       },
+      "Page_ApprovalRequest_": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ApprovalRequest"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque; pass back verbatim. Null when this is the last page.",
+            "title": "Next Cursor"
+          },
+          "total_estimate": {
+            "description": "Matching rows, counted up to 10000. An estimate by design.",
+            "minimum": 0.0,
+            "title": "Total Estimate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_estimate"
+        ],
+        "title": "Page[ApprovalRequest]",
+        "type": "object"
+      },
       "Page_AuditEventView_": {
         "additionalProperties": false,
         "properties": {
@@ -10610,43 +10777,6 @@
           "total_estimate"
         ],
         "title": "Page[ValidationRule]",
-        "type": "object"
-      },
-      "Page_dict_str__Any__": {
-        "additionalProperties": false,
-        "properties": {
-          "items": {
-            "items": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "title": "Items",
-            "type": "array"
-          },
-          "next_cursor": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Opaque; pass back verbatim. Null when this is the last page.",
-            "title": "Next Cursor"
-          },
-          "total_estimate": {
-            "description": "Matching rows, counted up to 10000. An estimate by design.",
-            "minimum": 0.0,
-            "title": "Total Estimate",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "items",
-          "total_estimate"
-        ],
-        "title": "Page[dict[str, Any]]",
         "type": "object"
       },
       "PartialDependence": {
@@ -17719,7 +17849,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Page_dict_str__Any__"
+                  "$ref": "#/components/schemas/Page_ApprovalRequest_"
                 }
               }
             },
@@ -17829,9 +17959,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Submit For Approval Api V1 Approval Requests Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ApprovalRequest"
                 }
               }
             },
@@ -17957,9 +18085,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Request Api V1 Approval Requests  Request Id  Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ApprovalRequest"
                 }
               }
             },
@@ -18081,9 +18207,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Decide Request Api V1 Approval Requests  Request Id  Decide Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ApprovalRequest"
                 }
               }
             },
@@ -18220,9 +18344,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Withdraw Request Api V1 Approval Requests  Request Id  Withdraw Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ApprovalRequest"
                 }
               }
             },

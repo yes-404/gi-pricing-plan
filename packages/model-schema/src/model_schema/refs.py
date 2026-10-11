@@ -14,6 +14,8 @@ from pydantic import BaseModel, Field, GetJsonSchemaHandler, model_serializer, m
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
+from model_schema.input_free import InputFreeError
+
 __all__ = ["ARTIFACT_TYPES", "ArtifactRef", "BlobRef", "ModelRef", "Slug", "slug_is_admitted"]
 
 #: Every artifact type that may appear in a reference. Extending this is a spec change:
@@ -101,19 +103,15 @@ class ArtifactRef(BaseModel, frozen=True):
         if isinstance(value, str):
             match = _REF_RE.match(value)
             if match is None:
-                raise ValueError(
-                    f"{value!r} is not a valid artifact reference "
-                    "({type}:{slug}@{version})"
+                raise InputFreeError(
+                    "an artifact reference must have the form {type}:{slug}@{version}"
                 )
             if match["type"] not in ARTIFACT_TYPES:
-                raise ValueError(
-                    f"unknown artifact type {match['type']!r}; extending the set is a "
-                    "spec change"
-                )
+                raise InputFreeError("unknown artifact type; extending the set is a spec change")
             if not slug_is_admitted(match["type"], match["slug"]):
-                raise ValueError(
-                    f"{value!r} is not a valid artifact reference: the slug is outside "
-                    f"the {match['type']!r} slug grammar"
+                raise InputFreeError(
+                    "not a valid artifact reference: the slug is outside the artifact type's slug "
+                    "grammar"
                 )
             return {
                 "type": match["type"],
@@ -130,13 +128,11 @@ class ArtifactRef(BaseModel, frozen=True):
         this a reference that could be built could not be re-read from its own dump.
         """
         if self.type not in ARTIFACT_TYPES:
-            raise ValueError(
-                f"unknown artifact type {self.type!r}; extending the set is a spec change"
-            )
+            raise InputFreeError("unknown artifact type; extending the set is a spec change")
         if not slug_is_admitted(self.type, self.slug):
-            raise ValueError(
-                f"{str(self)!r} is not a valid artifact reference: the slug is outside "
-                f"the {self.type!r} slug grammar"
+            raise InputFreeError(
+                "not a valid artifact reference: the slug is outside the artifact type's slug "
+                "grammar"
             )
         return self
 
@@ -171,17 +167,14 @@ class ArtifactRef(BaseModel, frozen=True):
         """
         match = _REF_RE.match(raw)
         if match is None:
-            raise ValueError(
-                f"{raw!r} is not a valid artifact reference "
-                "({type}:{slug}@{version})"
-            )
+            raise InputFreeError("an artifact reference must have the form {type}:{slug}@{version}")
         kind = match["type"]
         if kind not in ARTIFACT_TYPES:
-            raise ValueError(f"unknown artifact type {kind!r}; extending the set is a spec change")
+            raise InputFreeError("unknown artifact type; extending the set is a spec change")
         if not slug_is_admitted(kind, match["slug"]):
-            raise ValueError(
-                f"{raw!r} is not a valid artifact reference: the slug is outside "
-                f"the {kind!r} slug grammar"
+            raise InputFreeError(
+                "not a valid artifact reference: the slug is outside the artifact type's slug "
+                "grammar"
             )
         return cls(type=kind, slug=match["slug"], version=int(match["version"]))
 
