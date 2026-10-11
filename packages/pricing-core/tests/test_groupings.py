@@ -26,6 +26,7 @@ from model_schema import (
     GroupingProposal,
     UnseenLevelBehaviour,
 )
+from model_schema.input_free import InputFreeError
 from pricing_core.data.profile import one_way
 from pricing_core.modelling import (
     FactorResolutionError,
@@ -129,13 +130,17 @@ def test_unseen_level_behaviour_has_no_default() -> None:
 
 @pytest.mark.req("FR-104")
 def test_map_to_default_must_name_a_default_that_exists() -> None:
-    with pytest.raises(ValueError, match="names no default"):
+    with pytest.raises(ValueError, match="must name that default") as raised:
         _manual(unseen_level_behaviour=UnseenLevelBehaviour.MAP_TO_DEFAULT)
-    with pytest.raises(ValueError, match="not one of its target levels"):
+    assert isinstance(raised.value.errors()[0]["ctx"]["error"], InputFreeError)
+    with pytest.raises(ValueError, match="must be one of its target levels") as raised:
         _manual(
             unseen_level_behaviour=UnseenLevelBehaviour.MAP_TO_DEFAULT,
             default_target_level="Z",
         )
+    error = raised.value.errors()[0]
+    assert isinstance(error["ctx"]["error"], InputFreeError)
+    assert "Z" not in error["msg"], "the message names no submitted value"
 
 
 @pytest.mark.req("FR-104")
@@ -155,11 +160,16 @@ def test_a_credibility_model_belongs_only_to_the_method_that_uses_one() -> None:
 @pytest.mark.req("FR-106")
 def test_an_unknown_credibility_model_is_refused() -> None:
     """`method_params` is loosely typed by the contract; the enum is still closed."""
-    with pytest.raises(ValueError, match="not one of"):
+    with pytest.raises(
+        ValueError, match="must be one of the supported credibility models"
+    ) as raised:
         _manual(
             method=GroupingMethod.CREDIBILITY_WEIGHTED,
             method_params={"credibility_model": "vibes"},
         )
+    error = raised.value.errors()[0]
+    assert isinstance(error["ctx"]["error"], InputFreeError)
+    assert "vibes" not in error["msg"], "the message names no submitted value"
 
 
 # --- proposing --------------------------------------------------------------------------

@@ -10,7 +10,9 @@ absent; the controls check what an operator needs (the field, the type, the boun
 from __future__ import annotations
 
 import enum
+import json
 import logging
+from collections.abc import Callable
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated, Any, Literal
@@ -28,13 +30,16 @@ from pydantic import (
 from test_rating_score import _compiled
 from test_rating_score_batch import _contexts, _ctx_to_row
 
+from model_schema.input_free import InputFreeError, identifier
 from pricing_core.rating.score import _batch_error_code, score_batch
 from pricing_core.safe_error import (
+    _AUTHORED_TEXT,
     _FIXED_TEXT_TYPES,
     CodedError,
     safe_error_detail,
     safe_error_text,
     safe_exc_info,
+    safe_validation_message,
 )
 
 _SENTINEL = "SENTINEL-quote-input-b81e4f27"
@@ -79,9 +84,7 @@ def _cases() -> dict[str, tuple[type[BaseModel], dict[str, Any]]]:
             {"a": "99999"},
         ),
         "date_type": (model(a=(date, ...)), {"a": [_SENTINEL]}),
-        "date_from_datetime_parsing": (model(a=(date, ...)), {"a": _SENTINEL}),
         "datetime_type": (model(a=(datetime, ...)), {"a": [_SENTINEL]}),
-        "datetime_from_date_parsing": (model(a=(datetime, ...)), {"a": _SENTINEL}),
         "literal_error": (model(a=(Literal["x", "y"], ...)), {"a": _SENTINEL}),
         "enum": (model(a=(_Colour, ...)), {"a": _SENTINEL}),
         "string_pattern_mismatch": (
@@ -192,6 +195,140 @@ def test_a_type_outside_the_allow_list_keeps_its_type_and_drops_its_message(
     assert f"[{error_type}]" in detail
     assert _SENTINEL not in detail
     assert echo not in detail, "the message of an unlisted type was kept"
+
+
+class _Authored(BaseModel):
+    family: str
+
+    @field_validator("family")
+    @classmethod
+    def _refuse(cls, value: str) -> str:
+        if value == "authored":
+            raise InputFreeError("a Poisson model must declare an offset")
+        raise ValueError(f"unacceptable family {value}")
+
+
+class _RefusedIdentifier(BaseModel):
+    step: str
+
+    @field_validator("step")
+    @classmethod
+    def _name(cls, value: str) -> str:
+        raise InputFreeError(
+            "step {step} is refused", step=identifier(value, r"[a-z][a-z0-9_]*")
+        )
+
+
+@pytest.mark.req("NFR-499")
+def test_an_input_free_validator_message_is_kept_and_an_interpolating_one_is_not() -> None:
+    kept = safe_error_detail(_failure(_Authored, {"family": "authored"}))
+    assert "family: [value_error] Value error, a Poisson model must declare an offset" in kept
+    dropped_exc = _failure(_Authored, {"family": _SENTINEL})
+    assert _SENTINEL in str(dropped_exc), "control: the raw text carries the value"
+    dropped = safe_error_detail(dropped_exc)
+    assert _SENTINEL not in dropped
+    assert "family: [value_error]" in dropped
+    assert "unacceptable" not in dropped
+
+
+@pytest.mark.req("NFR-499")
+def test_safe_validation_message_keeps_fixed_text_and_the_marker_only() -> None:
+    (authored,) = _failure(_Authored, {"family": "authored"}).errors()
+    (plain,) = _failure(_Authored, {"family": _SENTINEL}).errors()
+    assert safe_validation_message(authored) == authored["msg"]
+    assert safe_validation_message(plain) is None
+    assert safe_validation_message(
+        {"type": "int_parsing", "msg": "Input should be a valid integer"}
+    ) == ("Input should be a valid integer")
+    assert safe_validation_message({"type": "recursion_loop", "msg": _SENTINEL}) is None
+    assert safe_validation_message({"type": "union_tag_invalid", "msg": _SENTINEL}) == (
+        _AUTHORED_TEXT["union_tag_invalid"]
+    )
+    # A CodedError is not on the allow-list of a validation message (DP-3 (a) with DP-5 (b)).
+    assert safe_validation_message(
+        {"type": "value_error", "msg": _SENTINEL, "ctx": {"error": CodedError("X: y")}}
+    ) is None
+
+
+@pytest.mark.req("NFR-499")
+def test_a_marker_identifier_that_fails_its_pattern_is_not_echoed() -> None:
+    """DP-8 (b), acceptance 12: the constructor refuses it, and the refusal is a plain
+    ValueError, so neither the allow-list nor the stored detail carries the value."""
+    exc = _failure(_RefusedIdentifier, {"step": _SENTINEL})
+    (error,) = exc.errors()
+    assert not isinstance(error["ctx"]["error"], InputFreeError)
+    assert safe_validation_message(error) is None
+    assert _SENTINEL not in safe_error_detail(exc)
+
+
+def _authored_cases() -> dict[str, tuple[type[BaseModel], str | bytes, bool]]:
+    """One (model, input, from-json) per _AUTHORED_TEXT type. Where the input can be a string
+    the sentinel is the input; where it cannot, the input's own text is what must not appear."""
+    from datetime import date as date_
+    from datetime import datetime as datetime_
+    from decimal import Decimal as Decimal_
+    from uuid import UUID
+
+    from pydantic import create_model
+
+    def one(**fields: Any) -> type[BaseModel]:
+        return create_model("_Case", **fields)
+
+    return {
+        "json_invalid": (one(a=(int, ...)), b'{"a": "' + _SENTINEL.encode(), True),
+        # A lax body (what FastAPI validates) gives these two for a bad date or date-time.
+        "date_from_datetime_parsing": (one(a=(date_, ...)), '{"a": "' + _SENTINEL + '"}', False),
+        "datetime_from_date_parsing": (
+            one(a=(datetime_, ...)),
+            '{"a": "' + _SENTINEL + '"}',
+            False,
+        ),
+        # `date_parsing` and `datetime_parsing` arise only from strict JSON validation
+        # (`validate_json`); a lax body, which is what FastAPI validates, gives
+        # `date_from_datetime_parsing` / `datetime_from_date_parsing`, already fixed-text types.
+        "date_parsing": (one(a=(date_, Field(strict=True))), '{"a": "' + _SENTINEL + '"}', True),
+        "date_from_datetime_inexact": (one(a=(date_, ...)), '{"a": "2026-01-31T09:30:11"}', True),
+        "datetime_parsing": (
+            one(a=(datetime_, Field(strict=True))),
+            '{"a": "' + _SENTINEL + '"}',
+            True,
+        ),
+        "uuid_parsing": (one(a=(UUID, ...)), '{"a": "' + _SENTINEL + '"}', True),
+        "uuid_type": (one(a=(UUID, ...)), '{"a": 987654321}', True),
+        "union_tag_invalid": (_Pets, '{"pet": {"kind": "' + _SENTINEL + '"}}', True),
+        "union_tag_not_found": (_Pets, '{"pet": {"nokind": "' + _SENTINEL + '"}}', True),
+        "int_from_float": (one(a=(int, ...)), '{"a": 123456.5}', True),
+        "decimal_max_places": (
+            one(a=(Decimal_, Field(decimal_places=2))),
+            '{"a": "123456.789"}',
+            True,
+        ),
+    }
+
+
+def _validate_parsed(model: type[BaseModel]) -> Callable[[str | bytes], object]:
+    return lambda data: model.model_validate(json.loads(data))
+
+
+@pytest.mark.req("NFR-499")
+def test_every_authored_text_type_has_a_case_and_leaks_no_input() -> None:
+    cases = _authored_cases()
+    assert set(cases) == set(_AUTHORED_TEXT), "a listed type without a case, or a case unlisted"
+    assert not set(_AUTHORED_TEXT) & _FIXED_TEXT_TYPES, "one allow-list entry per type"
+    for error_type, (model, data, from_json) in cases.items():
+        # a lax body: parsed JSON handed to python-mode validation, as FastAPI does
+        validate = model.model_validate_json if from_json else _validate_parsed(model)
+        with pytest.raises(ValidationError) as caught:
+            validate(data)
+        exc = caught.value
+        assert error_type in {e["type"] for e in exc.errors()}, f"{error_type}: not produced"
+        detail = safe_error_detail(exc)
+        assert f"[{error_type}] {_AUTHORED_TEXT[error_type]}" in detail, (error_type, detail)
+        for echoed in (_SENTINEL, "987654321", "123456", "09:30:11", "99999"):
+            assert echoed not in detail, (error_type, echoed, detail)
+        assert _AUTHORED_TEXT[error_type] == safe_validation_message(
+            next(e for e in exc.errors() if e["type"] == error_type)
+        )
 
 
 class _Bag(BaseModel):

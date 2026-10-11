@@ -31,6 +31,7 @@ __all__ = [
     "job_queue_depth",
     "ladder_reconciliation_failed",
     "observe_request",
+    "rate_limit_unenforced",
     "render",
 ]
 
@@ -59,6 +60,14 @@ _request_seconds = Histogram(
     "HTTP request duration by route template and method.",
     ("route", "method"),
     buckets=_LATENCY_BUCKETS,
+    registry=REGISTRY,
+)
+
+rate_limit_unenforced = Counter(
+    "gip_rate_limit_unenforced_total",
+    "Requests admitted without a rate-limit decision because the counter was unavailable "
+    "(FR-452, RL-1347 rule 5), by the caller's Environment ('' for a caller with none).",
+    ("environment",),
     registry=REGISTRY,
 )
 

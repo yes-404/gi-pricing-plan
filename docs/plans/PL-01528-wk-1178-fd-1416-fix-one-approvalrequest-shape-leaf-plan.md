@@ -3,7 +3,7 @@ id: PL-1528
 family: plan
 kind: leaf
 title: WK-1178 — the FD-1416 fix, one ApprovalRequest shape, generated and typed on every approval route (FR-9, FR-451, FR-351, FR-357): leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-08            # original date 2026-10-05, set at the draft; minted 2026-10-08
 owner: planner
 tree: cdaaa57345cb765f96034ce1ec2733c338f1c3cd

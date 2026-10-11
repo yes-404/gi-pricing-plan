@@ -2,8 +2,8 @@
 
 | Method | Path |
 |---|---|
-| `POST` | `/api/v1/service-accounts` — create, key shown **once** |
-| `POST` | `/api/v1/service-accounts/{id}/rotate` — new key, old one valid for an overlap |
+| `POST` | `/api/v1/service-accounts` — create, one key per granted Environment, shown **once** |
+| `POST` | `/api/v1/service-accounts/{id}/rotate` — a new key for one named Environment |
 | `DELETE` | `/api/v1/service-accounts/{id}/keys/{prefix}` — revoke |
 
 The key value appears in exactly one response body in the platform's whole lifetime. Every
@@ -25,7 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.authz import requires
 from app.api.deps import Caller
 from app.api.responses import problems
-from app.auth.api_keys import generate_key
+from app.auth.api_keys import GeneratedKey, generate_key
 from app.db.models import ApiKeyRow, ServiceAccountRow
 from app.db.session import Database
 from app.errors import PlatformError
@@ -91,14 +91,40 @@ class ServiceAccountView(BaseModel):
     keys: list[KeyView]
 
 
+class IssuedKey(BaseModel):
+    """One key's secret, for the Environment it was issued for (FR-430)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    environment: str
+    prefix: str
+    key: str = Field(
+        description="The full key. Shown once and never recoverable — nothing stores it."
+    )
+
+
+class RotateKey(BaseModel):
+    """FR-430: rotation acts on the key of one named Environment (DP-S3E-2 (a))."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    environment: str
+
+
 class CreatedServiceAccount(BaseModel):
-    """The one response that carries a key value (FR-389)."""
+    """The one response that carries key values (FR-389).
+
+    `keys` always lists what was issued, one per Environment. `key` is the secret when
+    exactly one key was issued and `None` otherwise (DP-S3E-1 (b)): a caller granted
+    several Environments has no "first" secret to take.
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     account: ServiceAccountView
-    key: str = Field(
-        description="The full key. Shown once and never recoverable — nothing stores it."
+    keys: list[IssuedKey]
+    key: str | None = Field(
+        description="The secret of the one key issued, when exactly one was; otherwise null."
     )
     warning: str = "Store this now. It cannot be retrieved again."
 
@@ -159,7 +185,10 @@ def _check_permissions(requested: list[str]) -> None:
 async def create_service_account(
     body: CreateServiceAccount, caller: ManageAccounts, database: DatabaseDep
 ) -> CreatedServiceAccount:
-    """Create the account and its first key. The key is in this response and nowhere else."""
+    """Create the account and one key per granted Environment (FR-430).
+
+    The keys are in this response and nowhere else.
+    """
     _check_permissions(body.permissions)
 
     async with database.unit_of_work() as session:
@@ -191,15 +220,18 @@ async def create_service_account(
         session.add(account)
         await session.flush()
 
-        generated = generate_key(body.environments[0])
-        key = ApiKeyRow(
-            service_account_id=account.id,
-            prefix=generated.prefix,
-            secret_hash=generated.secret_hash,
-            environment=generated.environment,
-            expires_at=datetime.now(UTC) + timedelta(days=body.expires_in_days),
-        )
-        session.add(key)
+        generated_keys = [generate_key(slug) for slug in dict.fromkeys(body.environments)]
+        rows = [
+            ApiKeyRow(
+                service_account_id=account.id,
+                prefix=g.prefix,
+                secret_hash=g.secret_hash,
+                environment=g.environment,
+                expires_at=datetime.now(UTC) + timedelta(days=body.expires_in_days),
+            )
+            for g in generated_keys
+        ]
+        session.add_all(rows)
         await session.flush()
 
         # FR-392 / FR-427: the *prefix* is audited, never the secret. An audit log
@@ -215,12 +247,12 @@ async def create_service_account(
                 "slug": account.slug,
                 "environments": list(account.environments),
                 "permissions": list(account.permissions),
-                "key_prefix": generated.prefix,
+                "key_prefixes": {g.environment: g.prefix for g in generated_keys},
             },
         )
-        view = _view(account, [key])
+        view = _view(account, rows)
 
-    return CreatedServiceAccount(account=view, key=generated.value)
+    return _created(view, generated_keys)
 
 
 @router.post(
@@ -230,11 +262,12 @@ async def create_service_account(
 )
 async def rotate_key(
     account_id: UUID,
+    body: RotateKey,
     caller: ManageAccounts,
     database: DatabaseDep,
     overlap_days: Annotated[int, Field(ge=0, le=90)] = DEFAULT_ROTATION_OVERLAP_DAYS,
 ) -> CreatedServiceAccount:
-    """Issue a new key and give the old one a deadline (FR-389).
+    """Issue a new key for one Environment and give that Environment's old one a deadline.
 
     The old key keeps working for the overlap window rather than dying immediately. A
     rotation that breaks production the instant it is requested is a rotation nobody
@@ -242,12 +275,21 @@ async def rotate_key(
     """
     async with database.unit_of_work() as session:
         account = await _load_scoped(session, account_id, caller)
-        await _check_environments(session, list(account.environments))
+        if body.environment not in account.environments:
+            raise PlatformError(
+                "VALIDATION_FAILED",
+                "Environment not granted",
+                422,
+                f"The account is not granted {body.environment!r}; granted: "
+                f"{sorted(account.environments)}.",
+            )
+        await _check_environments(session, [body.environment])
 
         current = (
             await session.execute(
                 select(ApiKeyRow).where(
                     ApiKeyRow.service_account_id == account.id,
+                    ApiKeyRow.environment == body.environment,
                     ApiKeyRow.revoked_at.is_(None),
                 )
             )
@@ -258,7 +300,7 @@ async def rotate_key(
             if key.expires_at > overlap_until:
                 key.expires_at = overlap_until
 
-        generated = generate_key(account.environments[0])
+        generated = generate_key(body.environment)
         successor = ApiKeyRow(
             service_account_id=account.id,
             prefix=generated.prefix,
@@ -276,15 +318,22 @@ async def rotate_key(
             source=JobSource.API,
             action="service_account.key_rotated",
             entity_ref=f"service_account:{account.slug}@1",
-            before={"key_prefixes": [k.prefix for k in current]},
+            before={"environment": body.environment, "key_prefixes": [k.prefix for k in current]},
             after={
+                "environment": body.environment,
                 "successor_prefix": generated.prefix,
                 "overlap_until": overlap_until.isoformat(),
             },
         )
-        view = _view(account, [*current, successor])
+        # The account view lists every Environment's keys, not only the rotated one's.
+        all_keys = (
+            await session.execute(
+                select(ApiKeyRow).where(ApiKeyRow.service_account_id == account.id)
+            )
+        ).scalars().all()
+        view = _view(account, list(all_keys))
 
-    return CreatedServiceAccount(account=view, key=generated.value)
+    return _created(view, [generated])
 
 
 @router.delete(
@@ -329,6 +378,15 @@ async def revoke_key(
             )
         ).scalars().all()
         return _view(account, list(keys))
+
+
+def _created(view: ServiceAccountView, generated: list[GeneratedKey]) -> CreatedServiceAccount:
+    keys = [
+        IssuedKey(environment=g.environment, prefix=g.prefix, key=g.value) for g in generated
+    ]
+    return CreatedServiceAccount(
+        account=view, keys=keys, key=keys[0].key if len(keys) == 1 else None
+    )
 
 
 async def _load_scoped(

@@ -179,6 +179,9 @@ GENERATED_SHAPES: dict[str, str] = {
     "approval-submission": "ApprovalSubmission",
     # Added 2026-10-04 (PL-1392 Task 6): the body of `.../withdraw`, moved out of the API module.
     "approval-withdrawal": "ApprovalWithdrawal",
+    # Added 2026-10-10 (WK-1178, the FD-1416 fix, PL-1528 / RL-1522 DP-8 (a)): the one shape every
+    # approval route returns; the hand-authored Phase 0 draft is retired ("generated wins").
+    "approval-request": "ApprovalRequest",
     # Added 2026-10-05 (WK-1178, the FD-1421 fix, RL-1428): the body of `POST /rating-versions`,
     # moved out of the API module. First written form, no hand-authored counterpart.
     "rating-version-create": "RatingVersionCreate",

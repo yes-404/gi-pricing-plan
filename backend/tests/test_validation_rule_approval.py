@@ -761,10 +761,11 @@ async def test_the_submitter_and_the_author_cannot_decide(
     assert refused.json()["code"] == "AUTHOR_CANNOT_APPROVE"
 
 
-# The key set of `service.to_dict` (`backend/src/app/platform/approvals.py`), read at the
-# dispatch tree. Decide's `200` stays `dict[str, Any]`; FD-1416 owns typing it.
+# The key set of `ApprovalRequest` (`model_schema/approvals.py`), which decide's `200` returns
+# since FD-1416 (PL-1528); `workspace_id` joined the 12 keys `to_dict` emitted (DP-2 (a)).
 DECIDE_RESPONSE_KEYS = {
     "id",
+    "workspace_id",
     "artifact_ref",
     "artifact_type",
     "environment",

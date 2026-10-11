@@ -24,6 +24,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
+from model_schema.input_free import InputFreeError
+
 __all__ = [
     "ALL_LAYERS",
     "BUILTIN_RULES",
@@ -481,9 +483,9 @@ def builtin_rule(catalogue_id: str) -> BuiltinRule:
     try:
         return BUILTIN_RULES[catalogue_id]
     except KeyError:
-        raise ValueError(
-            f"unknown built-in rule {catalogue_id!r}; the catalogue is `01` §4.4's 38 rules, "
-            "and a workspace's own rules are stored, not defined here"
+        raise InputFreeError(
+            "unknown built-in rule; the catalogue is `01` §4.4's 38 rules, and a workspace's own "
+            "rules are stored, not defined here"
         ) from None
 
 
