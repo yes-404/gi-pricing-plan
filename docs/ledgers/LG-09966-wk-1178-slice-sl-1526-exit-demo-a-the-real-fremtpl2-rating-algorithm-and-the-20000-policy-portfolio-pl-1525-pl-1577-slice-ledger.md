@@ -187,6 +187,20 @@ bundle content_hash: sha256:74730d2632e8768893b21c49e4d27319f2818c8245a088ed733f
 - **Condition (b) does not apply, recorded at the lead's instruction.** The slice has no "own pinned hash": no test or file in `git diff origin/main...HEAD` pins a bundle hash, and `examples/fremtpl2/algorithm.py` is not on `origin/main`, so no hash on main changes. The only hash that moved is the in-process bundle's own `content_hash`, `sha256:c4e2d1a6d73a65b41f0e2471c61e9a2ad164cf5657e21e64a289863cc76d44d5` → `sha256:74730d2632e8768893b21c49e4d27319f2818c8245a088ed733f0548fa09f5d6` (synthetic tables).
 - **Re-slot script:** `~/gi-pricing-plan.local/handover/sl1526-regate/slot3.sh`, head guard `bbe74c34`, the standing PREFLIGHT (alembic upgrade head rc 0, exactly one head, postgres/redis/minio healthy), then the 3 DB tests, `test_fremtpl2_algorithm.py` (with the new categorical-domain test) and `test_seed.py` at full `-v` output, whole-tree mypy, ruff and DagDesigner alone; logs in `sl1526-regate/logs/`.
 
+- **Re-gate at `b7c54bd5` (the HTTP-422 test added), 2026-10-11 14:15:44-14:16:36 BST, gate-1, `slot3.sh` (head guard `b7c54bd5`), load1 7.80 at acquire.** Preflight ok (alembic upgrade head rc 0, 1 head, postgres/redis/minio healthy). Logs: `~/gi-pricing-plan.local/handover/sl1526-regate/logs/`, output `slot3.out`, end marker `end 2026-10-11T14:16:36+01:00 rc=1`.
+
+  | Stage | rc | Result |
+  |---|---|---|
+  | db_tests (`test_demo_rating_evidence.py`) | 0 | 5 passed, 9.97s; `test_a_categorical_outside_its_declared_domain_is_a_422_through_the_api` PASSED: base quote 200, `veh_brand="ZZZ"` 422, code `INPUT_CONTRACT_VIOLATION`, detail names `veh_brand` |
+  | red_control | 1 | "UNEXPECTED" by the script; ruled the setup-red below |
+  | algorithm_and_seed | 0 | 21 passed, 1 skipped |
+  | mypy | 0 | 234 source files |
+  | ruff | 0 | |
+  | dagdesigner_alone | 0 | |
+
+  **red_control.** The same test against the parent's `string` `algorithm.py` (`86e6a645^`, via `GIP_FREMTPL2_EXAMPLE_DIR`) fails in SETUP, before any request: `red_control.log:141` `E           RuntimeError: demo regression Job failed`, `:143` `.../red-example/model.py:661: RuntimeError`, `:151` job handler failed with `"code":"PROPERTY_ASSERTION_FAILED"` (`rating_handlers.py:210`). The script expected a red at the status assert and got one at setup, so it marked the stage UNEXPECTED. **The property is not named in the log** (the code is sanitised); the suite's properties are `no-null-output`, `premium-bounded` and `premium-monotone-in-veh-age`, and the link to this slice's defect rests on the separate in-process measurement above (`string` 0 of 25 generated contexts pass all three, `enum` 25 of 25). **The HTTP-status contrast on the parent was not measured**: the parent cannot reach the request, and a status-only contrast would not discriminate (the parent most likely answers 422 with `RATE_TABLE_MISS`, unmeasured); what discriminates is the head's 422 carrying `INPUT_CONTRACT_VIOLATION` and naming `veh_brand`. **Only the head-guard abort of the script's PREFLIGHT is proven** (a wrong expected head: `HEAD GUARD REFUSED`, `end ... rc=97`); the alembic and health aborts (exits 93-95) were not exercised.
+  **Ruling (a) accepted, (b) rejected**: `to-lead.md` "2026-10-11 14:19:08 BST — SL-1526 re-gate @b7c54bd5 GREEN; red_control setup-red: (a) ACCEPTED; next its ALONE window" - the parent fails in setup from the very defect this slice fixes, so it cannot reach the assert, and that is the red for condition (c); rc 1 is that setup-red, not a harness fault. (b), a regression-gate bypass so the parent reaches the request, is not run.
+
 ## PRs
 
 (added at the PR)
