@@ -3,7 +3,7 @@ id: PL-1599
 family: plan
 kind: map
 title: WK-1178 — FD-1589 row 8, remedy (c), slice A: an input-free marker for authored model-schema validator messages, the 96 input-free messages adopted and the 15 closed-vocabulary and 54 request-reachable interpolating messages rewritten input-free, allow-listed by pricing_core.safe_error, so the request-validation 422 keeps authored guidance and drops anything else (B1 and B2 carried to P3): single-row Work plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-10            # original date 2026-10-10, set at the draft; minted 2026-10-10
 owner: planner
 tree: fe0b0627590307259ec6d56be7f73115cf245092

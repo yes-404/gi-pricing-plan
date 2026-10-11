@@ -69,7 +69,7 @@ def test_a_path_with_fewer_than_two_alphas_is_refused() -> None:
 
 @pytest.mark.req("FR-112")
 def test_a_path_with_a_repeated_alpha_is_refused() -> None:
-    with pytest.raises(ValidationError, match="repeats"):
+    with pytest.raises(ValidationError, match="must not repeat a value"):
         GlmCvSpec(alphas=(0.1, 0.1, 0.5))
 
 

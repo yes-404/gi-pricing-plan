@@ -24,6 +24,7 @@ from model_schema import (
     BandingProposal,
     BelowRangePolicy,
 )
+from model_schema.input_free import InputFreeError
 from pricing_core.modelling import (
     BandingError,
     FactorResolutionError,
@@ -96,8 +97,9 @@ def test_boundaries_must_strictly_increase() -> None:
 @pytest.mark.req("FR-97")
 def test_a_label_list_one_short_is_refused() -> None:
     """It does not drop the last band — it renames every band after the gap."""
-    with pytest.raises(ValueError, match="labels for 3 bands"):
+    with pytest.raises(ValueError, match="one label per band") as raised:
         _manual(labels=("18-29", "30-49"))
+    assert isinstance(raised.value.errors()[0]["ctx"]["error"], InputFreeError)
 
 
 @pytest.mark.req("FR-97")

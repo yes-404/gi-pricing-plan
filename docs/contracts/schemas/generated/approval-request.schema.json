@@ -1,0 +1,168 @@
+{
+  "$defs": {
+    "ApprovalDecision": {
+      "additionalProperties": false,
+      "description": "One approver's decision (`06` §4.3).",
+      "properties": {
+        "approver_id": {
+          "format": "uuid",
+          "title": "Approver Id",
+          "type": "string"
+        },
+        "at": {
+          "format": "date-time",
+          "title": "At",
+          "type": "string"
+        },
+        "comment": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Comment"
+        },
+        "decision": {
+          "$ref": "#/$defs/DecisionKind"
+        }
+      },
+      "required": [
+        "approver_id",
+        "decision",
+        "at"
+      ],
+      "title": "ApprovalDecision",
+      "type": "object"
+    },
+    "ApprovalStatus": {
+      "description": "FR-351. Post-approval states (`live`, `superseded`, `retired`) belong to the\nowning module — this machine stops at `approved`.",
+      "enum": [
+        "draft",
+        "review",
+        "approved",
+        "changes_requested",
+        "rejected",
+        "withdrawn"
+      ],
+      "title": "ApprovalStatus",
+      "type": "string"
+    },
+    "ArtifactRef": {
+      "description": "Canonical artifact reference {type}:{slug}@{version} (ID-3).",
+      "examples": [
+        "model:motor-ad-frequency@7",
+        "rating_version:motor-gb@27"
+      ],
+      "pattern": "^((banding|custom_metric|custom_objective|dataset|dataset_version|deployment|dossier|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}|factor:[a-z0-9][a-z0-9_-]{1,62})@[1-9][0-9]*$",
+      "title": "ArtifactRef",
+      "type": "string"
+    },
+    "DecisionKind": {
+      "enum": [
+        "approve",
+        "reject",
+        "request_changes"
+      ],
+      "title": "DecisionKind",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "An artifact submitted for approval (`06` §4.3).",
+  "properties": {
+    "approvers_recorded": {
+      "minimum": 0,
+      "title": "Approvers Recorded",
+      "type": "integer"
+    },
+    "approvers_required": {
+      "minimum": 1,
+      "title": "Approvers Required",
+      "type": "integer"
+    },
+    "artifact_ref": {
+      "$ref": "#/$defs/ArtifactRef"
+    },
+    "artifact_type": {
+      "title": "Artifact Type",
+      "type": "string"
+    },
+    "change_summary": {
+      "title": "Change Summary",
+      "type": "string"
+    },
+    "decisions": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ApprovalDecision"
+      },
+      "title": "Decisions",
+      "type": "array"
+    },
+    "environment": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Environment"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/ApprovalStatus"
+    },
+    "submitted_at": {
+      "format": "date-time",
+      "title": "Submitted At",
+      "type": "string"
+    },
+    "submitted_by": {
+      "format": "uuid",
+      "title": "Submitted By",
+      "type": "string"
+    },
+    "withdrawn_reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Withdrawn Reason"
+    },
+    "workspace_id": {
+      "format": "uuid",
+      "title": "Workspace Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "workspace_id",
+    "artifact_ref",
+    "artifact_type",
+    "submitted_by",
+    "submitted_at",
+    "change_summary",
+    "status",
+    "approvers_required",
+    "approvers_recorded"
+  ],
+  "title": "ApprovalRequest",
+  "type": "object"
+}

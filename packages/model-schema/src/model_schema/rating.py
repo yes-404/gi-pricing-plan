@@ -28,6 +28,7 @@ from pydantic import (
 )
 
 from model_schema.graph_errors import GraphCycleError, GraphUnresolvedRefError
+from model_schema.input_free import InputFreeError
 from model_schema.money import DecimalStr
 from model_schema.refs import ArtifactRef, BlobRef, Slug
 from model_schema.regression import GoldenQuoteEvidence
@@ -227,7 +228,9 @@ class RatingVersionCreate(BaseModel):
     @classmethod
     def _an_algorithm(cls, ref: ArtifactRef | None) -> ArtifactRef | None:
         if ref is not None and ref.type != "rating_algorithm":
-            raise ValueError(f"{ref} is not a rating_algorithm reference")
+            raise InputFreeError(
+                "a rating version's algorithm must be a rating_algorithm reference"
+            )
         return ref
 
     @field_validator("pins")
@@ -236,9 +239,9 @@ class RatingVersionCreate(BaseModel):
         for name, admitted in _PIN_TYPES.items():
             for ref in getattr(pins, name, ()):
                 if ref.type not in admitted:
-                    raise ValueError(
-                        f"pins.{name} holds {ref}, which is not a "
-                        f"{' or '.join(sorted(admitted))} reference"
+                    raise InputFreeError(
+                        "a rating version's pin list holds a reference of an artifact type that "
+                        "list does not admit"
                     )
         return pins
 
@@ -305,9 +308,9 @@ def _reject_float_type(value: str) -> str:
     `float` is refused in every declared result type, not just the monetary ones.
     """
     if "float" in value:
-        raise ValueError(
-            "a rating result type is never float (FR-227); a monetary result is "
-            f"decimal or money_minor (got {value!r})"
+        raise InputFreeError(
+            "a rating result type is never float (FR-227); a monetary result is decimal or "
+            "money_minor"
         )
     return value
 
@@ -395,15 +398,13 @@ class RatingModelCallStep(RatingStepBase):
     @classmethod
     def _decimal_or_money_minor(cls, value: str | None) -> str | None:
         if value is not None and value not in ("decimal", "money_minor"):
-            raise ValueError(
-                f"a model_call's result_type is decimal or money_minor, not {value!r} (FR-227)"
-            )
+            raise InputFreeError("a model_call's result_type is decimal or money_minor (FR-227)")
         return value
 
     @model_validator(mode="after")
     def _exactly_one_ref(self) -> RatingModelCallStep:
         if (self.model_ref is None) == (self.peril_structure_ref is None):
-            raise ValueError(
+            raise InputFreeError(
                 "a model_call step declares exactly one of model_ref or "
                 "peril_structure_ref (FR-222)"
             )
@@ -462,7 +463,7 @@ class SubGraphRef(BaseModel):
     @classmethod
     def _no_namespace_separator(cls, value: str) -> str:
         if "__" in value:
-            raise ValueError("mount_point must not contain the namespace separator '__'")
+            raise InputFreeError("mount_point must not contain the namespace separator '__'")
         return value
 
 
@@ -1064,9 +1065,9 @@ class RateTableKey(BaseModel):
     def _one_binding(self) -> RateTableKey:
         """`RL-1361` Ruled item 9: `factor_ref` is of type `factor`, and never with a Banding."""
         if self.factor_ref is not None and self.factor_ref.type != "factor":
-            raise ValueError("factor_ref must reference a factor artifact")
+            raise InputFreeError("factor_ref must reference a factor artifact")
         if self.factor_ref is not None and self.banding_ref is not None:
-            raise ValueError(
+            raise InputFreeError(
                 "a key carries at most one of factor_ref and banding_ref (FR-228)"
             )
         return self
@@ -1300,7 +1301,7 @@ class SeedFromModelRequest(BaseModel):
     @classmethod
     def _model_ref_is_a_model(cls, value: ArtifactRef) -> ArtifactRef:
         if value.type != "model":
-            raise ValueError("model_ref must reference a model artifact")
+            raise InputFreeError("model_ref must reference a model artifact")
         return value
 
     @field_validator("change_note")
@@ -1308,7 +1309,7 @@ class SeedFromModelRequest(BaseModel):
     def _change_note_is_required(cls, value: str) -> str:
         stripped = value.strip()
         if not stripped:
-            raise ValueError("change_note is required and must be non-empty (FR-229)")
+            raise InputFreeError("change_note is required and must be non-empty (FR-229)")
         return stripped
 
 
@@ -1344,11 +1345,11 @@ class RateTableVersion(BaseModel):
         """Cells are inline rows under the threshold, a parquet BlobRef above it."""
         if self.storage == RateTableStorageMode.ROWS:
             if self.rows is None or self.cells is not None:
-                raise ValueError(
+                raise InputFreeError(
                     "a rows-stored version carries inline rows and no blob (FR-232)"
                 )
         elif self.rows is not None or self.cells is None:
-            raise ValueError(
+            raise InputFreeError(
                 "a parquet version addresses its cells by a BlobRef, never inline "
                 "rows (FR-232)"
             )
@@ -1357,7 +1358,7 @@ class RateTableVersion(BaseModel):
     @model_validator(mode="after")
     def _one_creation_path(self) -> RateTableVersion:
         if self.created_by_operation is not None and self.created_by_import is not None:
-            raise ValueError(
+            raise InputFreeError(
                 "a version is created by an operation or by an import, never both "
                 "(03 §4.2)"
             )

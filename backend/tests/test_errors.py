@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from app.errors import (
     PLATFORM_ERROR_CODES,
@@ -16,6 +16,8 @@ from app.errors import (
 from app.main import create_app
 from app.observability.middleware import TraceMiddleware
 from app.observability.trace import TRACE_ID_PATTERN
+from model_schema import GlmSpec, new_uuid7
+from model_schema.input_free import InputFreeError
 
 PROBLEM = "application/problem+json"
 
@@ -162,3 +164,94 @@ def test_golden_quote_mismatch_is_registered() -> None:
     assert "GOLDEN_QUOTE_MISMATCH" in RATING_ERROR_CODES
     error = PlatformError("GOLDEN_QUOTE_MISMATCH", "Golden quote mismatch", 409)
     assert error.code == "GOLDEN_QUOTE_MISMATCH"
+
+
+_SENTINEL = "SENTINEL-422-input-5e0c2b91"
+
+
+class _Validated(BaseModel):
+    family: str
+
+    @field_validator("family")
+    @classmethod
+    def _refuse(cls, value: str) -> str:
+        if value == "authored":
+            raise InputFreeError("an authored, input-free message")
+        raise ValueError(f"unacceptable value {value}")
+
+
+@pytest.fixture
+def validating_client(settings) -> TestClient:
+    app = create_app(settings)
+
+    @app.post("/_test/authored")
+    async def _authored(body: _Validated) -> None:
+        return None
+
+    @app.post("/_test/glm")
+    async def _glm(body: GlmSpec) -> None:
+        return None
+
+    return TestClient(app, raise_server_exceptions=False)
+
+
+@pytest.mark.req("NFR-499")
+def test_an_input_free_validator_message_reaches_the_422(validating_client: TestClient) -> None:
+    response = validating_client.post("/_test/authored", json={"family": "authored"})
+    assert response.status_code == 422
+    (error,) = response.json()["errors"]
+    assert error["code"] == "VALUE_ERROR"
+    assert error["message"] == "Value error, an authored, input-free message"
+
+
+@pytest.mark.req("NFR-499")
+def test_an_interpolating_validator_message_does_not_reach_the_422(
+    validating_client: TestClient,
+) -> None:
+    response = validating_client.post("/_test/authored", json={"family": _SENTINEL})
+    assert response.status_code == 422
+    assert _SENTINEL not in response.text
+    (error,) = response.json()["errors"]
+    assert error["field"] == "family"
+    assert error["message"] == "The value is not valid (VALUE_ERROR)."
+
+
+@pytest.mark.req("NFR-499")
+def test_a_model_schema_authored_refusal_keeps_its_guidance(validating_client: TestClient) -> None:
+    body = {
+        "model_family_slug": "motor-ad-frequency",
+        "dataset_version_id": str(new_uuid7()),
+        "response_column": "claim_count",
+    }  # family defaults to poisson and offset to kind "none"
+    response = validating_client.post("/_test/glm", json=body)
+    assert response.status_code == 422
+    messages = [e["message"] for e in response.json()["errors"]]
+    assert any("a Poisson model must declare an offset" in m for m in messages), messages
+
+
+@pytest.mark.req("FR-403")
+def test_a_fixed_text_type_keeps_its_message(failing_client: TestClient) -> None:
+    response = failing_client.post("/_test/validate", json={"count": "not-an-int"})
+    (error,) = response.json()["errors"]
+    assert error["code"] == "INT_PARSING"
+    assert error["message"] == (
+        "Input should be a valid integer, unable to parse string as an integer"
+    )
+
+
+@pytest.mark.req("NFR-499")
+def test_a_malformed_json_body_renders_the_authored_text_and_no_input(
+    validating_client: TestClient,
+) -> None:
+    """DP-5's extension: FastAPI reports a malformed body as `json_invalid`, whose own text is
+    the parser's detail; the authored text replaces it and the submitted bytes never appear."""
+    response = validating_client.post(
+        "/_test/authored",
+        content=b'{"family": "' + _SENTINEL.encode(),
+        headers={"content-type": "application/json"},
+    )
+    assert response.status_code == 422
+    assert _SENTINEL not in response.text
+    (error,) = response.json()["errors"]
+    assert error["code"] == "JSON_INVALID"
+    assert error["message"] == "The request body is not valid JSON."

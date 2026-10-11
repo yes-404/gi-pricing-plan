@@ -34,7 +34,7 @@ def _spec(**over: object) -> GlmSpec:
 def test_estimation_declares_a_tweedie_family() -> None:
     """Negative: a grid nobody will scan — estimation is a statement about the Tweedie
     power, which a Poisson or Gamma model does not have."""
-    with pytest.raises(ValidationError, match="not 'tweedie'"):
+    with pytest.raises(ValidationError, match="family must be 'tweedie'"):
         _spec(tweedie=TweediePowerSpec())
 
 
