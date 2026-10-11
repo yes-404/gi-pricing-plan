@@ -27,3 +27,9 @@ Filed by the retro audit RS-9703. Reads are at the squash-merge `3065770c` (PR #
 ## Disposition
 
 **Owner: WK-673.** Decision: `fix before close with an owner: WK-673` — run the three tests against the two scratch-broken loops and the base `rating_versions.py`, quote the failing lines in a dated record; SL 9965 touches the same verifier map and may carry it. Event that next confirms or discharges it: that record. Filed by the auditor, 2026-10-11; the lead gives the verdict.
+
+## Discharge path
+
+Required by the maintainer's condition, `to-lead.md` "2026-10-11 20:17:38 BST" item 4: "each retro FD names its DISCHARGE PATH and date, not only an owner, so \"delivered-but-untested\" is closed by a TEST that runs, before the P2 close".
+
+Re-run on main the two broken-loop proofs (the loop skipping unknown kinds; `rate_table_diffs` mapped as met), each scratch-reverted, plus the three tests against the base `rating_versions.py`; quote the failing lines in this FD's resolution (LG-1633 is frozen). Date, accepted by the lead: the first free gate-2/small-test window, no later than Fri 2026-10-23, and in every case before the P2 exit demo, Thu 2026-11-12.

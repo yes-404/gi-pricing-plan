@@ -21,8 +21,17 @@ Filed by the retro audit RS-9703, from the executor's finding candidate in LG-16
 
 ## Finding
 
-**Severity LOW (proposed by the auditor):** the sites need a stored artifact that no longer validates, so a corrupt artifact; the generic code is accurate but gives the author no pointer. Verdict candidate: deferred with owner; a code needs the decision-maker.
+**Severity LOW (proposed by the auditor).** The sites need a stored artifact that no longer validates, so a corrupt artifact; the generic code is accurate but gives the author no pointer.
+
+**Failure mode: LOUD, never a misprice** (the maintainer's test, `to-lead.md` "2026-10-11 20:17:38 BST" item 4). Read at `origin/main` `372fa92a`:
+- The three raise sites are `packages/pricing-core/src/pricing_core/rating/compile.py:761` (`ArtifactRef.model_validate(objective["ref"])`), `:785` (`ArtifactRef.model_validate(factor_ref)`) and `:1007` (`RatingAlgorithm.model_validate(resolved_algorithm.payload)`). Each raises before `compile_bundle` builds a `Bundle`, so no bundle exists to price with.
+- `backend/src/app/platform/rating_versions.py:816-838` (`compile_rating_version`): the `except ValueError` at `:821` re-raises `PlatformError(code, ..., 422, detail)` with `code = "BUNDLE_COMPILE_FAILED"` when the text carries no coded prefix (`:827-829`), and `row.bundle` is set only after the `try` (`:833`), so a failed compile writes none. The compile Job fails with that code.
+- The detail is rendered through `safe_error_detail(exc)` (`:826`), so a `ValidationError` is input-free (NFR-499).
 
 ## Disposition
 
-**Owner: WK-1178 (spec change, decision-maker).** Decision: `fix before close with an owner: WK-1178`, or accept at the P2 close. Event that next confirms or discharges it: a ruling naming a code or accepting the generic one. Filed by the auditor, 2026-10-11; the lead gives the verdict.
+**Owner: WK-1178 (spec change by the decision-maker).** Decision: `fix before close with an owner: WK-1178`, or accept at the P2 close; because the mode is LOUD, a P3 carry is acceptable under the maintainer's condition. Event that next confirms or discharges it: a ruling naming a code or accepting `BUNDLE_COMPILE_FAILED`.
+
+## Discharge path
+
+Required by the maintainer's condition, `to-lead.md` "2026-10-11 20:17:38 BST" item 4. Deferred to WK-1178 as a P3 carry: the decision-maker rules a named code or accepts the generic one, decided no later than the P2 close review (target the P2 exit demo, Thu 2026-11-12); if a code is named, a red-first test per site (`compile.py:761`, `:785`, `:1007`) closes it. Filed by the auditor, 2026-10-11; the lead gives the verdict.

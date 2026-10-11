@@ -28,3 +28,9 @@ Filed by the retro audit RS-9703. Reads are at the squash-merge `fe80aec6` (PR #
 ## Disposition
 
 **Owner: WK-674.** Decision: `fix before close with an owner: WK-674` — one migration test (round trip plus an `api_keys` row count and hash comparison), in SL-1258 or a maintenance slice. Event that next confirms or discharges it: that test merged. Filed by the auditor, 2026-10-11; the lead gives the verdict.
+
+## Discharge path
+
+Required by the maintainer's condition, `to-lead.md` "2026-10-11 20:17:38 BST" item 4: "each retro FD names its DISCHARGE PATH and date, not only an owner, so \"delivered-but-untested\" is closed by a TEST that runs, before the P2 close".
+
+Fold into WK-674 S4's write set (SL-1258, its next alembic slice) as a red-first migration round-trip test: `upgrade` / `downgrade -1` / `upgrade` on a database holding `api_keys` rows, asserting the rows unchanged. Date: merged with SL-1258 and no later than the P2 exit demo, Thu 2026-11-12 (`docs/roadmap.md`, "Target: the P2 exit demo").

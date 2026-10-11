@@ -27,3 +27,9 @@ Filed by the retro audit RS-9703. Reads are at the squash-merge `372fa92a` (PR #
 ## Disposition
 
 **Owner: WK-675.** Decision: `fix before close with an owner: WK-675` — run the two read-only `jsonb_typeof` counts the plan names and record the output. Event that next confirms or discharges it: that output in a dated record. Filed by the auditor, 2026-10-11; the lead gives the verdict.
+
+## Discharge path
+
+Required by the maintainer's condition, `to-lead.md` "2026-10-11 20:17:38 BST" item 4: "each retro FD names its DISCHARGE PATH and date, not only an owner, so \"delivered-but-untested\" is closed by a TEST that runs, before the P2 close".
+
+Measure on the dev database, read-only, `select count(*) … where jsonb_typeof(...) <> 'string'` over the stored `rows` and `default_row` values PL-1558 names, and record the count in this FD. If non-zero, it becomes a fix row under WK-675. Date, accepted by the lead: the first free window, no later than Fri 2026-10-23, and before the P2 exit demo, Thu 2026-11-12.

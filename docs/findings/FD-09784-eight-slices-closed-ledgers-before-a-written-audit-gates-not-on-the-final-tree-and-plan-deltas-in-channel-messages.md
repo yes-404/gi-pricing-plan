@@ -27,3 +27,9 @@ Filed by the retro audit RS-9703. Three limbs, one process cause.
 ## Disposition
 
 **Owner: process backlog (Lean P2 item 5).** Decision: the lead chooses whether ledgers stay `active` until the audit is written, and whether a ledger quote of the ruling is enough durable record for a plan delta. Event that next confirms or discharges it: that rule stated in `delivery-process.md` or a ruling. Filed by the auditor, 2026-10-11; the lead gives the verdict.
+
+## Discharge path
+
+Required by the maintainer's condition, `to-lead.md` "2026-10-11 20:17:38 BST" item 4: "each retro FD names its DISCHARGE PATH and date, not only an owner, so \"delivered-but-untested\" is closed by a TEST that runs, before the P2 close".
+
+Process backlog per Lean P2 item 5. The forward cure already stands: the maintainer's rule at `to-lead.md` "2026-10-11 19:57:42 BST" (retro audits for the eight slices, and slice audits written, not skipped). This FD is discharged when `delivery-process.md` or a ruling states whether a ledger may close before its audit and where a plan delta is recorded; date: before the P2 close review, no later than Thu 2026-11-12.
