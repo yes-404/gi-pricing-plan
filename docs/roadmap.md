@@ -811,7 +811,7 @@ relates: [PL-1267, RL-1264]
 id: SL-1390
 family: slice
 title: Slice 6: the approval gate, part two — the floor wiring
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-03
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: d672f991bdc59008e09cf3f464cd7cffe5699553
