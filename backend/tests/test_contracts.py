@@ -216,6 +216,17 @@ def test_health_endpoints_are_published() -> None:
     assert {"/healthz", "/readyz", "/version"} <= set(paths)
 
 
+@pytest.mark.req("FR-219")
+def test_the_algorithm_diff_response_is_typed_by_its_model() -> None:
+    """The overlay consumes this route, so its 200 is a `$ref` to `AlgorithmDiff`, not an
+    open object (FD-1335 Part B, DP-S3-1)."""
+    paths = _load(OPENAPI)["paths"]
+    schema = paths["/api/v1/rating-algorithms/{slug}@{version}/diff"]["get"]["responses"][
+        "200"
+    ]["content"]["application/json"]["schema"]
+    assert schema == {"$ref": "#/components/schemas/AlgorithmDiff"}
+
+
 @pytest.mark.req("FR-10")
 def test_decimal_money_is_pinned_to_the_string_form() -> None:
     """Research F7: a bare `Decimal` renders as `anyOf: [number, string]`, and the number

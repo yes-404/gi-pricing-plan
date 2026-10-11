@@ -25,17 +25,21 @@ from model_schema import (
     ArtifactRef,
     GraphCycleError,
     GraphUnresolvedRefError,
+    RatingAlgorithmDraft,
+    ValidationIssue,
 )
 from model_schema.perils import PerilComponent
 from model_schema.rating import (
     AlgorithmDiff,
+    AlgorithmValidationReport,
     RatingAlgorithm,
     RatingModelCallStep,
     RatingStepBase,
     diff_algorithms,
+    graph_invariant_issues,
 )
 from pricing_core.modelling.factors import required_model_inputs
-from pricing_core.rating.compile import ValidationIssue, validate_algorithm
+from pricing_core.rating.compile import validate_algorithm
 
 __all__ = [
     "create_algorithm",
@@ -43,6 +47,7 @@ __all__ = [
     "get_algorithm",
     "graph_validation_error",
     "raise_first_issue",
+    "validate_draft",
 ]
 
 
@@ -282,3 +287,16 @@ async def diff_between(
     current = await get_algorithm(database, workspace_id, slug, version)
     base = await get_algorithm(database, workspace_id, slug, against)
     return diff_algorithms(base, current)
+
+
+def validate_draft(draft: RatingAlgorithmDraft) -> AlgorithmValidationReport:
+    """FR-1607: every issue saving `draft` would refuse on, located; nothing is persisted.
+
+    The graph invariants first, all of them; only once they hold are the deeper checks
+    (`validate_algorithm`, FR-227 and the expression checks) run, as save runs them.
+    """
+    issues = graph_invariant_issues(draft)
+    if issues:
+        return AlgorithmValidationReport(issues=issues)
+    algorithm = RatingAlgorithm.model_validate(draft.model_dump(mode="json", exclude_unset=True))
+    return AlgorithmValidationReport(issues=validate_algorithm(algorithm))

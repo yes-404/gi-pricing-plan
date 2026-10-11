@@ -115,7 +115,7 @@ def _inline_one(mount: SubGraphRef, fragment: SubGraph) -> tuple[list[RatingStep
         names.update(_as_list(step.produces))
         names.update(_as_list(step.consumes))
         if isinstance(step, RatingModelCallStep):
-            names.update(step.feature_map.values())
+            names.update(step.feature_map)  # the KEYS are graph names; the values are not (FR-222)
     reproduced = sorted(ports & {n for s in fragment.steps for n in _as_list(s.produces)})
     if reproduced:
         _raise_named(
@@ -149,8 +149,10 @@ def _inline_one(mount: SubGraphRef, fragment: SubGraph) -> tuple[list[RatingStep
                     for key, text in step.clamp_bounds.items()
                 }
         elif isinstance(step, RatingModelCallStep):
+            # Keys are graph value names and are renamed; values are the model's feature names
+            # (FR-222) and never are (the ruling of 2026-10-10 23:46:57 BST).
             update["feature_map"] = {
-                feature: mapping.get(name, name) for feature, name in step.feature_map.items()
+                mapping.get(name, name): feature for name, feature in step.feature_map.items()
             }
         steps.append(step.model_copy(update=update))
     return steps, new_names

@@ -1265,7 +1265,7 @@ agreement and the lead's go.
 id: SL-1557
 family: slice
 title: Slice 3: Designer II — live validation through the validate route (DP-6), and the structural diff overlay
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 9489405370a1ce06c2b985ad88c7d471438febb1
@@ -1289,6 +1289,8 @@ maintainer's agreement and the lead's go.
 *(Filed 2026-10-05 under working ids 9581 (this row) and 9578 (the plan), reserved by the lead.)*
 
 *(Minted 2026-10-10 as SL-1557 from working id 9581, with its plan PL-1556 from working id 9578, in the D3 batch mint.)*
+
+*(Dispatched 2026-10-10 on `to-lead.md` "2026-10-10 21:12:25 BST — DISPATCH GO: WK-675 S3"; closed 2026-10-10 in the slice PR, ledger LG-1606.)*
 
 *(P3 note, 2026-10-09: WK-675 Slice 13 (SL 9577, Jobs: the filterable list, live over the SSE stream) and Slice 14 (SL 9575, Job detail) moved from P2 to P3. Both stay working ids, unminted and off the D3 id list, and their row blocks stay on the draft branch `pl-9582-wk675-s4-leaf` (#1187 @3b15a829), per to-lead "2026-10-09 11:48:22 BST — Rulings …" item 2, option (B).)*
 
@@ -2050,7 +2052,7 @@ relates: [FD-1416, FD-1335, SL-1409, PL-1408, SL-1367, PL-1371]
 id: SL-1541
 family: slice
 title: WK-1178 slice — compile refuses a model_call whose feature_map misses the pinned model's required inputs, per component for a Peril Structure (FR-240)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: ecbd1954d90b1faf0bd197174d720d90ad8f6c6d
@@ -2061,6 +2063,10 @@ relates: [PL-1371, RL-1263]
 ```
 
 The maintainer's (by delegation) decision "2026-10-05 18:51:33 BST — Save-time completeness: DECIDED NOW as (b), completeness at COMPILE" (`channel/to-lead.md`), ruled as RL-1523. `compile_bundle` refuses a `model_call` step whose `feature_map` does not cover the pinned model's required Factors, or its `feature_order` when it has none, and for a `peril_structure_ref` step each component model's, with `MODEL_CALL_FEATURE_MAP_INVALID` (A-2's code, reused) naming the step and the missing features; the offset column is not a required input. Today such a version compiles and fails on every quote as `MODEL_CALL_FAILED`. Leaf plan PL-1540. It follows A-2 (SL-1463) and A-3 (SL-1466), and precedes A-4 (SL-1543); it serialises with PL 9578, PL-1572, PL 9609 and PL-1452 on `compile_bundle`.
+
+(Activated 2026-10-10 as WK-1178's compile-completeness slice (A-4's need 4a), on the dispatch GO "2026-10-10 21:41:05 BST — RL-1445 CAP: AMENDED by dated line (counting unit = gate or measurement, with guard rails); GO SL-1541 (WS-1 (a)); OP-1503-1 (a); SL-1575 noted" item 2 in `to-lead.md`; `PL-1540` set `active` in the slice branch's first commit; ledger LG-1608 (working id 9975).)
+
+(Closed 2026-10-11 on the slice's own full gate and the closing acts in the slice PR; ledger LG-1608 `closed`; the merge and the auditor's re-check are the lead's.)
 
 
 #### SL-1543 — WK-1178 A-4 — the exit demo walks `WF-699`'s Peril Structure path
