@@ -6,6 +6,29 @@
 
 name: gi-pricing
 
+# The deployment path (WK-674 Slice 4). `api`, `worker` and `migrate` are one image run under
+# three commands (`deploy/Dockerfile`), behind the `app` profile: the default `up` stays the
+# three backing services every contributor needs, and `--profile app` adds the path.
+x-gip-env: &gip-env
+  GIP_ENVIRONMENT: dev
+  # FR-18: the full commit SHA the image was built from. `:-unset`, not `:?`, because compose
+  # interpolates the whole file and the default `up` must still work; `unset` is refused by the
+  # Dockerfile's SHA check at build and by `Settings.require_startable` at start.
+  GIP_BUILD: ${GIP_BUILD:-unset}
+  GIP_TENANT_ID: ${GIP_TENANT_ID:-compose-reference}
+  GIP_DEV_AUTH_ENABLED: ${GIP_DEV_AUTH_ENABLED:-true}   # reference path only; FR-437 for production
+  GIP_DATABASE_URL: postgresql+asyncpg://gipricing:gipricing@postgres:5432/gipricing
+  GIP_REDIS_URL: redis://redis:6379/0
+  GIP_BLOB_ENDPOINT_URL: http://minio:9000
+  GIP_BLOB_ACCESS_KEY: gipricing
+  GIP_BLOB_SECRET_KEY: gipricing
+
+x-gip-build: &gip-build
+  context: ..
+  dockerfile: deploy/Dockerfile
+  args:
+    GIP_BUILD: ${GIP_BUILD:-unset}
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -74,6 +97,66 @@ services:
       interval: 5s
       timeout: 5s
       retries: 40
+
+  # FR-435: migrations are an explicit pre-deploy step, a one-shot container, never run by
+  # `api` at start (`backend/migrations/env.py` says nothing here is invoked by `create_app`).
+  # `api` waits for it to exit 0, so no replica starts against an unmigrated schema.
+  migrate:
+    profiles: ["app"]
+    image: gi-pricing-app:${GIP_BUILD:-unset}
+    build: *gip-build
+    command: ["alembic", "upgrade", "head"]
+    environment: *gip-env
+    restart: "no"
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  # FR-434 / NFR-534: the scoring API deploys and scales on its own. It does not depend on
+  # `worker`, and `docker compose --profile app up api` starts it with no worker present.
+  # Replicas: `docker compose --profile app up --scale api=<n>`; they sit behind `lb`.
+  api:
+    profiles: ["app"]
+    image: gi-pricing-app:${GIP_BUILD:-unset}
+    build: *gip-build
+    environment: *gip-env
+    expose: ["8000"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+      minio: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/readyz', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    # FD-1211 (R4.2): the design is RECYCLE, not finalize. On stop the process receives SIGTERM,
+    # uvicorn drains and exits; the container is replaced, never reused after a teardown abort.
+    stop_grace_period: 20s
+
+  # FR-415: the worker service FR-412's memory half applies to. `mem_limit` is the hard
+  # backstop; the per-Job `resource_budget.memory_gb` is checked inside the process
+  # (`app.worker.progress`) and fails the Job naming the budget before the kernel does.
+  worker:
+    profiles: ["app"]
+    image: gi-pricing-app:${GIP_BUILD:-unset}
+    build: *gip-build
+    command: ["celery", "-A", "app.worker.entrypoint", "worker", "--queues", "compute", "--concurrency", "2"]
+    environment: *gip-env
+    mem_limit: ${GIP_WORKER_MEM_LIMIT:-4g}
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+      minio: {condition: service_healthy}
+    stop_grace_period: 20s
+
+  # The stated topology (PL-1537 R4.3): one nginx, round-robin over the `api` replicas.
+  lb:
+    profiles: ["app"]
+    image: nginx:1.27-alpine
+    volumes: ["./lb.conf:/etc/nginx/conf.d/default.conf:ro"]
+    ports: ["8000:8000"]
+    depends_on:
+      api: {condition: service_healthy}
 
 volumes:
   pgdata:
