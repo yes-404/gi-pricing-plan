@@ -912,7 +912,7 @@ The fix for FD-1422 and FD-1469 (HIGH, a G2 blocker before the P2 exit demo, the
 id: SL-1503
 family: slice
 title: WF-699 E1 — FR-242's drafted change summary, over HTTP
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-08            # original date 2026-10-05, set at the draft; minted 2026-10-08
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 4d3be1414ad4dacdaa0c14ef49fb21853adbaed6
@@ -926,7 +926,9 @@ relates: [PL-1267, SL-1389, SL-1391, CR-838]
 
 *(Pre-mint note, 2026-10-05, written 18:41:17 BST (`TZ=Europe/London date`), by the planner, on the lead's order (capacity fill, Part D item 3); the row's text above is kept, one phrase struck.)* **FR-242 in WK-673.** This slice delivers `03` FR-242's drafting limb (`03-rating-engine.md:139`: "It is generated as a draft from the structural and rate-table diffs and edited by the actuary"), and FR-242's required-field limb is written by `SL-1389`, whose `submit_for_review` writes the version's `change_summary` (DP-E1-6 (a)). Both are ruled in RL-1498 (#1199 @`82d801c6`), on the maintainer's (by delegation) entry headed "## 2026-10-05 17:34:57 BST — E1 DPs (dm-e1 memo handover/dp-memo-e1-2026-10-05.md): all six ADOPTED as recommended; S1 yes; S2 yes; PL 9578 noted", whose lines PL-1502 quotes: "DP-E1-6 (a): S5's submit_for_review WRITES row.change_summary, with a red test" and "S1: YES. DP-E1-6 (a) goes into PL-1500's scope (#1181 …)". The schema's requirement on a `draft` row is F27's (`FD-934`), not WK-673's (RL-1498 item 7). WK-673's "From Workstreams" line (`### WK-673`, above) does not name FR-242. Adding it is a Work-scope amendment, which the lead makes, as at the 2026-09-30 amendment of that line; this row is the planner's and records the scope only. RL-1498 also records, as already ruled at "2026-10-05 17:28:27 BST", that this slice's `03` §5.1 row is applied after `SL-1391`, WK-675 S2 (RL-1473) and PL-1429 (RL-1428) have merged, and that it may run beside `SL-1389` when both dispatch records name each other.
 
+(Activated 2026-10-10 as WK-673 E1, on the dispatch GO "2026-10-10 21:41:05 BST — RL-1445 CAP: AMENDED by dated line (counting unit = gate or measurement, with guard rails); GO SL-1541 (WS-1 (a)); OP-1503-1 (a); SL-1575 noted", item 3: authored now, its `03` §5.1 texts T1 and T2 applied after WK-675 S3 and S4 have merged, on main, re-anchored by content; ledger `LG-1642` (then working id 9978), `PL-1502` set `active` in the same commit.)
 
+(Closed 2026-10-11 as a Slice, closing acts in the slice PR's mint commit, on the lead's merge turn; ledger `LG-1642`, minted 2026-10-11 from working id 9978. `PL-1502` stays `active`.)
 
 ### WK-674 — Deployment: environments, atomic switchover, rollback, shadow — **and the tenancy mechanics ADR-710 requires**
 
