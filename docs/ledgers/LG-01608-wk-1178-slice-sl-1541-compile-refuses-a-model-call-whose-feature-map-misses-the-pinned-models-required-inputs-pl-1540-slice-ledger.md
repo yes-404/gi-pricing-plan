@@ -1,5 +1,5 @@
 ---
-id: LG-9975
+id: LG-1608
 family: ledger
 title: WK-1178 slice SL-1541 — compile refuses a model_call whose feature_map misses the pinned model's required inputs, per component for a Peril Structure (FR-240) (PL-1540 slice ledger)
 status: closed
@@ -14,9 +14,9 @@ corrected_by: []
 relates: [PL-1540, RL-1523, RL-1445, RL-1263, FD-1424, FR-240, FR-222, NFR-499, WK-1178]
 ---
 
-# LG-9975 — WK-1178 slice SL-1541: compile refuses a short `feature_map`
+# LG-1608 — WK-1178 slice SL-1541: compile refuses a short `feature_map`
 
-*(LG-9975 is a working id reserved by the lead; the lead mints it at the merge turn.)* Executed by
+*(Minted 2026-10-11 as LG-1608; its working id while authored was 9975.)* Executed by
 `executor-sl1541` from PL-1540, base `origin/main` `14fa6fb3d5b7097a829343e38cb5f20afbd0d2e2`. Times are BST
 (`TZ=Europe/London date`) unless marked.
 
@@ -46,7 +46,7 @@ Full two-half gate at `d536053f` (after the inliner fix; accepted at `to-lead.md
 |---|---|---|
 | ruff | FAIL | OWN: E501 at `backend/tests/test_rating_algorithms.py:620:101`; fixed after the gate (docstring wrapped; `ruff check` on that file -> 0; the helper test `-k one_required_inputs_helper` 2 passed under the small-test slot, 2026-10-11 10:40 BST) |
 | mypy, import-linter, req-coverage, contracts | pass (0) | |
-| audit-docs | FAIL (check 31) | mint artefact (the working id LG-9975 is unminted) |
+| audit-docs | FAIL (check 31) | mint artefact (the working id 9975 was unminted) |
 | pytest | 13 failed, 5456 passed, 4 skipped | all 13 are `tests/test_audit_docs_*`, `test_doc_index`, `test_register_*`, `test_repository_invariants` modules that audit the tree; mint artefact |
 | frontend (install, generate:api, lint, type-check, test, build) | 0 failed (665/665 tests) | `DagDesigner.test.ts` did not fail here |
 
