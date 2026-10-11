@@ -432,7 +432,7 @@ async def test_another_workspaces_algorithm_is_not_found(
     from model_schema import new_uuid7
 
     await grant("analyst")
-    await service.create_algorithm(database, new_uuid7(), principal.id, valid_algorithm())
+    await service.create_algorithm(database, new_uuid7(), principal, valid_algorithm())
     read = api_client.get(
         "/api/v1/rating-algorithms/motor-gb@1", headers=_headers(principal, workspace_id)
     )

@@ -47,7 +47,15 @@ from app.platform.modelling import (
     load_model,
     to_model,
 )
-from model_schema import Banding, DatasetStatus, Factor, Grouping, JobKind, JobStatus
+from model_schema import (
+    Banding,
+    DatasetStatus,
+    Factor,
+    Grouping,
+    JobKind,
+    JobStatus,
+    Principal,
+)
 from model_schema.jobs import Job
 from model_schema.problem import FieldError
 from model_schema.rating import (
@@ -129,7 +137,7 @@ def _map_operation_error(exc: ValueError) -> PlatformError:
 async def seed_from_model(
     database: Database,
     workspace_id: UUID,
-    created_by: UUID,
+    actor: Principal,
     settings: Settings,
     blob_store: BlobStore,
     *,
@@ -152,6 +160,7 @@ async def seed_from_model(
     non-approved model gives `PIN_NOT_APPROVED` whatever its Factor ids resolve to; an id
     that resolves nowhere is then a 404 (`load_factors`), never an empty list.
     """
+    assert actor.id is not None
     async with database.unit_of_work() as session:
         model_row = await load_model(
             session,
@@ -191,7 +200,7 @@ async def seed_from_model(
                 workspace_id=workspace_id,
                 slug=slug,
                 current_version=0,
-                created_by=created_by,
+                created_by=actor.id,
             )
             session.add(table_row)
             await session.flush()
@@ -218,7 +227,7 @@ async def seed_from_model(
             table_row=table_row,
             derived=derived,
             version_number=version_number,
-            created_by=created_by,
+            created_by=actor.id,
             threshold=threshold,
             blob_store=blob_store,
         )
@@ -897,7 +906,7 @@ async def import_preview(
 async def import_confirmed(
     database: Database,
     workspace_id: UUID,
-    created_by: UUID,
+    actor: Principal,
     settings: Settings,
     blob_store: BlobStore,
     *,
@@ -914,6 +923,7 @@ async def import_confirmed(
     the seed anchor is inherited from the baseline (DP4, FR-234), and the
     storage decision follows the workspace threshold like any other version (DP2).
     """
+    assert actor.id is not None
     async with database.unit_of_work() as session:
         table_row = await _load_table(session, workspace_id, slug)
         version_row = await _load_version(session, table_row.id, version, slug)
@@ -942,7 +952,7 @@ async def import_confirmed(
             table_row=table_row,
             derived=derived,
             version_number=version + 1,
-            created_by=created_by,
+            created_by=actor.id,
             threshold=threshold,
             blob_store=blob_store,
         )
@@ -1047,7 +1057,7 @@ async def manual_edit_preview(
 async def manual_edit_confirmed(
     database: Database,
     workspace_id: UUID,
-    created_by: UUID,
+    actor: Principal,
     settings: Settings,
     blob_store: BlobStore,
     *,
@@ -1057,6 +1067,7 @@ async def manual_edit_confirmed(
     """FR-229 (RL-1555 items 1 and 2): create the version the preview showed, with its
     `created_by_edit` record. A base that is not the latest is the existing 409 of
     `_persist_new_version` (`base_version + 1` already exists)."""
+    assert actor.id is not None
     async with database.unit_of_work() as session:
         table_row, version_row, _, derived = await _edit_derived(
             session, workspace_id, slug, body, blob_store
@@ -1068,7 +1079,7 @@ async def manual_edit_confirmed(
             table_row=table_row,
             derived=derived,
             version_number=derived.version,
-            created_by=created_by,
+            created_by=actor.id,
             threshold=threshold,
             blob_store=blob_store,
         )
@@ -1462,7 +1473,7 @@ def _dispatch_operation(
 async def bulk_operation(
     database: Database,
     workspace_id: UUID,
-    created_by: UUID,
+    actor: Principal,
     settings: Settings,
     blob_store: BlobStore,
     *,
@@ -1478,6 +1489,7 @@ async def bulk_operation(
     (FR-234, 03 §4.2, DP4), and the new version's storage is decided against the
     workspace threshold (FR-232, DP2).
     """
+    assert actor.id is not None
     async with database.unit_of_work() as session:
         table_row = await session.scalar(
             select(RateTableRow).where(
@@ -1509,7 +1521,7 @@ async def bulk_operation(
             table_row=table_row,
             derived=derived,
             version_number=baseline_row.version_number + 1,
-            created_by=created_by,
+            created_by=actor.id,
             threshold=threshold,
             blob_store=blob_store,
         )

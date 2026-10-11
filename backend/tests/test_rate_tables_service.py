@@ -86,7 +86,7 @@ async def _seed(
     return await svc.seed_from_model(
         database,
         workspace_id,
-        principal.id,
+        principal,
         Settings(),
         blob_store,
         slug=slug,
@@ -131,7 +131,7 @@ async def test_bulk_uplift_records_the_operation_and_inherits_seed_lineage(
     wire = await svc.bulk_operation(
         database,
         workspace_id,
-        principal.id,
+        principal,
         Settings(),
         blob_store,
         slug=slug,
@@ -179,7 +179,7 @@ async def test_cells_spill_to_parquet_above_the_workspace_threshold(
     wire = await svc.bulk_operation(
         database,
         workspace_id,
-        principal.id,
+        principal,
         Settings(),
         blob_store,
         slug=slug,
@@ -236,7 +236,7 @@ async def test_a_parquet_baseline_feeds_a_bulk_operation(
     await svc.bulk_operation(
         database,
         workspace_id,
-        principal.id,
+        principal,
         Settings(),
         blob_store,
         slug=slug,
@@ -248,7 +248,7 @@ async def test_a_parquet_baseline_feeds_a_bulk_operation(
     wire = await svc.bulk_operation(
         database,
         workspace_id,
-        principal.id,
+        principal,
         Settings(),
         blob_store,
         slug=slug,
@@ -348,7 +348,7 @@ async def test_floor_above_cap_is_a_named_refusal(
         await svc.bulk_operation(
             database,
             workspace_id,
-            principal.id,
+            principal,
             Settings(),
             blob_store,
             slug=slug,
@@ -372,7 +372,7 @@ async def test_an_unknown_operation_kind_is_refused(
         await svc.bulk_operation(
             database,
             workspace_id,
-            principal.id,
+            principal,
             Settings(),
             blob_store,
             slug=slug,
@@ -396,7 +396,7 @@ async def test_malformed_operation_parameters_are_refused(
         await svc.bulk_operation(
             database,
             workspace_id,
-            principal.id,
+            principal,
             Settings(),
             blob_store,
             slug=slug,
@@ -423,7 +423,7 @@ async def test_import_confirmed_persists_the_verdict_and_inherits_lineage(
     wire = await svc.import_confirmed(
         database,
         workspace_id,
-        principal.id,
+        principal,
         Settings(),
         blob_store,
         slug=slug,
@@ -469,7 +469,7 @@ async def test_import_confirmed_obeys_the_threshold(
     wire = await svc.import_confirmed(
         database,
         workspace_id,
-        principal.id,
+        principal,
         Settings(),
         blob_store,
         slug=slug,
@@ -498,7 +498,7 @@ async def test_diff_needs_job_flags_a_diff_touching_parquet(
     await svc.import_confirmed(
         database,
         workspace_id,
-        principal.id,
+        principal,
         Settings(),
         blob_store,
         slug=slug,
@@ -510,7 +510,7 @@ async def test_diff_needs_job_flags_a_diff_touching_parquet(
     await svc.import_confirmed(
         database,
         workspace_id,
-        principal.id,
+        principal,
         Settings(),
         blob_store,
         slug=slug,
@@ -547,7 +547,7 @@ async def test_diff_materialises_parquet_cells_to_the_same_artifact(
     await svc.import_confirmed(
         database,
         workspace_id,
-        principal.id,
+        principal,
         Settings(),
         blob_store,
         slug=rows_slug,
@@ -563,7 +563,7 @@ async def test_diff_materialises_parquet_cells_to_the_same_artifact(
     await svc.import_confirmed(
         database,
         parquet_ws,
-        principal.id,
+        principal,
         Settings(),
         blob_store,
         slug=parquet_slug,

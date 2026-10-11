@@ -25,6 +25,7 @@ from model_schema import (
     ArtifactRef,
     GraphCycleError,
     GraphUnresolvedRefError,
+    Principal,
     RatingAlgorithmDraft,
     ValidationIssue,
 )
@@ -219,7 +220,7 @@ async def check_model_call_feature_maps(
 async def create_algorithm(
     database: Database,
     workspace_id: UUID,
-    created_by: UUID,
+    actor: Principal,
     content: dict[str, Any],
 ) -> RatingAlgorithmRow:
     """Parse, validate, and persist a rating algorithm (03 §5.1).
@@ -227,6 +228,7 @@ async def create_algorithm(
     A conflicting (slug, version) is refused as a conflict; save-time validation runs
     before the row is written.
     """
+    assert actor.id is not None
     algorithm = _parse_algorithm(content)
     _issues_to_error(algorithm)
 
@@ -251,7 +253,7 @@ async def create_algorithm(
             slug=algorithm.slug,
             version=algorithm.version,
             content=content,
-            created_by=created_by,
+            created_by=actor.id,
         )
         session.add(row)
         await session.flush()

@@ -367,7 +367,7 @@ async def save_demo_algorithm(
         raise RuntimeError("the demo analyst has no id")
     try:
         await algorithm_service.create_algorithm(
-            database, workspace_id, analyst.id, _demo_algorithm()
+            database, workspace_id, analyst, _demo_algorithm()
         )
     except PlatformError as exc:  # a re-seed: the algorithm is already saved
         if exc.status_code != 409:
