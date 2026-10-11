@@ -21,9 +21,7 @@ one-plan-per-Work reads as PL-1565 itself). Authored on branch `sl-1566-wk1178-b
 cut from `origin/main` `d699a561d6a93f33b74beb9c07023f8e655bb8c7` and merged with `origin/main`
 `02f23b4a74cfdf81ff4ac875e1ff7ab2db777c4a` (SL-1600). Times are BST (`TZ=Europe/London date`).
 
-**GO:** not recorded here yet. The lead's dispatch brief (`brief-executor-sl1566-2026-10-11.md`)
-says AUTHOR now and activate only on the maintainer's GO; this ledger quotes the GO header when the
-lead relays it. Until then `SL-1566` and `PL-1565` stay `draft` (no activation commit).
+**GO:** `to-lead.md` "2026-10-11 11:45:03 BST — WK-1178 tail: GO SL-1566; SL-1563 write-set (a) YES; SL-1517 fold YES, DP-6 → the decision-maker; ONE delta PL 9813; SL-1569 last" (the maintainer, by delegation), item 1; activation record `from-lead-2026-10-09.md` "2026-10-11 11:45:36 BST — Lead: DISPATCH SL-1566 (PL-1565, WK-1178, FD-1561) — activation record; GO per the maintainer's "2026-10-11 11:4x BST — WK-1178 tail …" item 1". The GO arrived after the authoring commits were pushed (4ec75c85), so the activation is this ledger's later commit, not its first.
 **MERGE-ACK:** not yet given.
 
 ## Tasks

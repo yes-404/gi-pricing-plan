@@ -2115,7 +2115,7 @@ relates: [FD-1374, PL-1371]
 id: SL-1566
 family: slice
 title: WK-1178 fix slice — batch scoring serialises every declared output type and never aborts on one row
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 5fe56b87e55b0a29399f96f0af2e7c2e2ef9b72a
@@ -2126,6 +2126,8 @@ relates: [FD-1333, RL-1343, RL-923, RL-1263]
 ```
 
 The FD-1561 fix (MEDIUM, LATENT; owner WK-1178), on the maintainer's (by delegation) entry "2026-10-05 17:58:45 BST — FD 9513 (#1204 @0303d0bf): your decision ACCEPTED (MEDIUM, LATENT, WK-1178, its own fix slice after SL 9561); the row escape is the first red". Two reds, in order. **(1) The row escape first:** `_score_batch_row` (`score.py:1081`) runs `_ladder_json` (`:1122`) and `_outputs_json` (`:1123`) after its `try` (`:1096-1103`), so anything they raise ends the whole batch run and the Job (FR-255). Any exception there becomes that row's `"error"` row and the run continues; this does not wait for the type DP. **(2) The four declared types:** `_coerce_output_value` refuses `int`, `count`, `relativity` and `percentage` (`:947`, `:964-965`), which `/score` serves (FR-254). Their JSON form is DP-1, **ruled (b)** by the maintainer (by delegation), 2026-10-05 18:10:57 BST: `int`/`count` a JSON integer on both paths, with a non-integral value made that row's error, and `relativity`/`percentage` the `decimal` string form. DP-2 is **ruled (ii)**: the `/score` half belongs to the `RL-1343` slice, SL-1569 / PL-1568, which must cover a whole-valued `decimal` (a JSON integer on `/score` today) as well as a fractional one, and which serialises with this slice on `_coerce_output_value`. DP-3 is **ruled**: the error code is the exception class name. An `RL-` owes T1 (the `03:692` row) and T2 (FR-214's dated clause). Leaf plan PL-1565 (`draft`). **Activation needs:** FD-1561 minted; SL-1427 (the emergency slice) merged; the `RL-` carrying T1/T2 minted; Task 1 is dispatchable before the rest, but still after SL-1427; the maintainer's GO; active by a dated line in a separate activation PR. *(Filed 2026-10-05 under working ids 9511 (this row) and 9509 (the plan), reserved by the lead.)*
+
+(Activated 2026-10-11 as WK-1178's batch-serialisation slice, on the maintainer's (by delegation) GO, `to-lead.md` "2026-10-11 11:45:03 BST — WK-1178 tail: GO SL-1566; SL-1563 write-set (a) YES; SL-1517 fold YES, DP-6 → the decision-maker; ONE delta PL 9813; SL-1569 last", and the lead's activation record, `from-lead-2026-10-09.md` "2026-10-11 11:45:36 BST — Lead: DISPATCH SL-1566 (PL-1565, WK-1178, FD-1561) — activation record; GO per the maintainer's "2026-10-11 11:4x BST — WK-1178 tail …" item 1"; `PL-1565` set `active` in this slice branch's activation commit (after its authoring commits, which were pushed before the GO arrived); ledger LG-9816.)
 
 #### SL-1569 — WK-1178 fix slice — a declared decimal output is served as an exact JSON string on every scoring path
 
