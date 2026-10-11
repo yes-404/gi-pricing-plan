@@ -43,6 +43,10 @@ Executed by `executor-dlfix` from PL-9908, base `origin/main` `d699a561d6a93f33b
 | `score_one` in the trace worker | `backend/src/app/worker/trace_handlers.py:98`, re-scoring `QuoteContext.model_validate(row.pending_quote_context)` (`:79`) | **same gap**: the stored context lacked the ref, so a default-live sampled trace would have failed `INPUT_CONTRACT_VIOLATION`. Fixed in `score.py` by storing the copy; the handler is untouched. Test (c) runs `execute_job` to `SUCCEEDED`. |
 | batch worker | `backend/src/app/worker/scoring_handlers.py:178` (`_score_one_ref`) stamps the resolved ref per frame; it has no `score_one` call | none |
 
+### Red and guard classification (the lead's ruling, 2026-10-11)
+
+The slot runs each test on the base `score.py` (`git show d699a561:backend/src/app/api/score.py`, src-only revert), one `-k` each, and records rc and the printed cause. Expected: (a), (b) HTTP and (c) red by `INPUT_CONTRACT_VIOLATION`; (e) and (b)'s created-options assert, which live in one unit test, red as `AttributeError` (the helper is absent on base, a valid red for a new helper). **(d), explicit-ref-wins, passes on base** (explicit refs already work), so it is recorded as a **GUARD** (green on base, green at the head), not a red.
+
 ### Gate
 
 Not yet run.
