@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import io
+import itertools
 import json
 from datetime import date
 from typing import Any
@@ -44,6 +45,7 @@ from app.worker.rating_handlers import register_rating_handlers
 from app.worker.scoring_handlers import _score_batch_handler
 from app.worker.tasks import execute_job
 from model_schema import JobKind, JobResult, Principal
+from pricing_core.rating import score as score_module
 
 SCORED_REF = "rating_version:minimal-rv@1"
 
@@ -534,3 +536,37 @@ async def test_a_dataset_column_named_like_a_produced_value_is_refused_per_row(
     assert ref_result["error_counts"] == {"INPUT_CONTRACT_VIOLATION": 4}
     assert ref_result["outcome_counts"]["error"] == 4
     assert "payable" in ref_result["error_samples"]["INPUT_CONTRACT_VIOLATION"][0]
+
+
+@pytest.mark.req("FR-255")
+async def test_a_row_whose_serialisation_raises_does_not_end_the_job(
+    api_client: TestClient, headers: dict[str, str], database: Database, blob_store: BlobStore,
+    workspace_id: UUID, principal: Principal, grant: Any, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """FD-1561: a row whose serialisation raises is that row's error row (FR-255), and the
+    Job completes. The injection is in pricing-core, so the handler loop needs no change."""
+    await _compiled_version(
+        api_client, headers, database, blob_store, workspace_id, principal, grant
+    )
+    frame = _scoring_frame(4)
+    dataset_version_id = await _dataset_version(
+        database, blob_store, workspace_id, principal, frame
+    )
+    original = score_module._outputs_json
+    calls = itertools.count()
+
+    def failing(*args: Any, **kwargs: Any) -> str:
+        if next(calls) == 1:
+            raise ValueError("injected serialisation failure")
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(score_module, "_outputs_json", failing)
+    result, _ = await _run_handler(
+        database, blob_store, workspace_id, principal, _parameters(dataset_version_id)
+    )
+    summary = await _summary(database, blob_store, result)
+
+    ref_result = summary["results"][0]
+    assert ref_result["error_counts"] == {"ValueError": 1}
+    assert ref_result["outcome_counts"]["quoted"] == 3
+    assert ref_result["row_count"] == 4
