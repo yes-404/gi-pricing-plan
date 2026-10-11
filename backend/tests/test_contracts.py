@@ -3235,3 +3235,39 @@ def test_non_json_request_bodies_are_exactly_the_cited_routes() -> None:
         if "json" not in media
     }
     assert non_json == set(NON_JSON_REQUEST_BODIES)
+
+
+@pytest.mark.req("FR-250")
+@pytest.mark.req("FR-262")
+@pytest.mark.req("FR-451")
+def test_the_score_responses_document_their_models() -> None:
+    """`/score` and `/score/compare` document their 200 as a `$ref` to the model, and each
+    model's published properties are the model's own fields at this tree, so "the contract
+    documents the post-ladder rung shape" is a property of the merged tree rather than a list of
+    names copied into a test. The documentation builds the contract and validates nothing
+    (NFR-502, FD-1335)."""
+    import model_schema
+
+    document = _load(OPENAPI)
+    for path, model in (
+        ("/api/v1/score", "ScoringResult"),
+        ("/api/v1/score/compare", "ScoreComparison"),
+    ):
+        schema = document["paths"][path]["post"]["responses"]["200"]["content"][
+            "application/json"
+        ]["schema"]
+        assert schema == {"$ref": f"#/components/schemas/{model}"}, path
+
+    components = document["components"]["schemas"]
+    for name in (
+        "ScoringResult",
+        "LadderRung",
+        "LadderOperation",
+        "ScoreComparison",
+        "StepChange",
+        "TraceDiff",
+    ):
+        fields = {
+            (field.alias or key) for key, field in getattr(model_schema, name).model_fields.items()
+        }
+        assert set(components[name]["properties"]) == fields, name

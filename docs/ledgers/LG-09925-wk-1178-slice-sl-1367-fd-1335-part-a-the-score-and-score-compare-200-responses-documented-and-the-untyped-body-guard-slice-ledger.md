@@ -41,7 +41,7 @@ routes' media types follow later. DP-A1 and DP-A2 are ruled by `RL-1365`. `FD 97
 | 0 | preconditions, dated delta below | needs 1–8 | done |
 | 1 | predicates, red first | 1, 2 | done |
 | 2 | guard on the real document | 3, 4, 5 | done (one item red until Task 3) |
-| 3 | two 200 declarations, regenerated contract | 6–9 | open |
+| 3 | two 200 declarations, regenerated contract | 6–9 | done |
 | 4 | the NFR-502 spec line | 10 | open (after Task 5) |
 | 5 | NFR-502 re-measure, local, diagnostic | 10 | open |
 | 6 | client evidence, skill note, gate, ledger | 11–13 | open |
@@ -120,6 +120,38 @@ Command (small-test flock): `pytest -q backend/tests/test_contracts.py -k "untyp
   `no longer untyped, remove: [('POST', '/api/v1/score/batch')]`. One `NON_JSON_REQUEST_BODIES` entry deleted ->
   `test_non_json_request_bodies_are_exactly_the_cited_routes` red (set inequality). Each restored.
 - `test_the_guard_fails_on_an_unlisted_open_body` green on both sides (planted remainder = real remainder plus the planted key).
+
+#### 2026-10-11 — Task 3: the two 200 declarations and the regenerated contract (Acceptance 6–9, 8, 8b)
+
+Environment note: fastapi is **0.142.2** at this base (the plan measured 0.141.1);
+`fastapi._compat.v2.ModelField.validate(self, value, values={}, *, loc=())` is unchanged, and the
+control route counts 1 at this version. The per-worktree database was created with the dev-commands
+`docker exec … createdb -T` block and migrated to head.
+- Red first: `test_the_score_responses_document_their_models` before the edit: **1 failed**,
+  `assert {} == {'$ref': '#/components/schemas/ScoringResult'}` on `/api/v1/score` (premise a).
+- The two spy tests and `test_the_comparison_is_returned_without_outbound_validation` are green on the
+  unchanged routes (2 passed per file, spy 0 on the route, ≥ 1 on the planted control).
+- FD-1372 docstring: `test_the_result_is_returned_without_outbound_validation`'s docstring replaced with
+  the plan's text, with the placeholder filled `FD-1372`. **Delta:** the plan's lines carry the placeholder
+  across a wrap (`FD-<minted id of / FD 9775>`); with a 7-character id the paragraph re-flows by one
+  line, and the words are otherwise identical. The test body is unchanged and green.
+- `score.py`: `responses={**problems(401, 403, 404, 409, 422, 500), 200: {"model": ScoringResult}}` on
+  `/score`, `… 200: {"model": ScoreComparison}` on `/score/compare`; `problems(…)` copied from main
+  (it carries 500). One sentence added to the module docstring's NFR-502 paragraph citing FD-1335.
+  `git diff origin/main -- backend/src` = 4 insertions, 2 deletions, only those. (Acceptance 9.)
+- `uv run python scripts/generate-contracts.py` then `--check`: rc 0 ("47 generated contracts match the models").
+- Acceptance 7, `sl1367_cmp.py` (sha256 prefix `9cbc9fe1844b8dc3`), against `origin/main`: paths changed = `POST /api/v1/score`
+  and `POST /api/v1/score/compare`, `responses["200"]` only; components added = `LadderOperation`, `LadderRounding`,
+  `LadderRung`, `ScoreComparison`, `ScoringResult`, `StepChange`, `TraceDiff` (`LadderRounding` is the model SL-1345 added
+  that `LadderRung` reaches); removed none; changed none; the only `-Input`/`-Output` names are the pre-existing `InputContractField-*`.
+  `LadderRung.properties` at HEAD = `components, operation, rounding, rung, unrounded_minor, value_minor`.
+- Collected: 15 node ids (`pytest --collect-only -q` over the three files with the new tests' selectors): 12 in `test_contracts.py`,
+  1 spy test in `test_score.py`, 2 in `test_score_compare.py`. All 15 green after the edit.
+- Broken-input proofs on a backup of `score.py` (annotation `-> ScoringResult` / `-> ScoreComparison`), each restored:
+  - dict form (`return result.model_dump()` / `comparison.model_dump()`): the 500 test is red, `assert 500 == 200`
+    (`INTERNAL_ERROR`, mapped by `_handle_unexpected`) and the spy test is red, `assert 1 == 0`, on both routes;
+  - instance form (`return result` / `return comparison`): the spy test is red, `assert 1 == 0`, and the 500 test stays green
+    (status 200), which is Acceptance 8b's point, on both routes.
 
 ## PRs
 
