@@ -30,6 +30,12 @@ RESERVED"). Written 2026-10-11 by the planner (planner-wk690). Read at `origin/m
 leaf delta under WK-1178"). WK-1178 has no single Work plan, and its fix slices each carry their
 own leaf plan (`PL-1602`, `SL-1603`).
 
+## Goal
+
+A default-live `POST /api/v1/score` (no `rating_version_ref`) scores against the caller's
+Environment's live Deployment and answers 200, instead of 422 `INPUT_CONTRACT_VIOLATION`. The
+resolved version is recorded, an explicit ref is untouched, and no price moves.
+
 ## Authority and the defect
 
 - **Scope, ruled:** to-lead "2026-10-11 11:25:16 BST — DEFAULT-LIVE /score: CONFIRMED by reading
@@ -87,7 +93,9 @@ Each item is checked by a command a fresh reviewer can run from the repository r
 6. **Both gate halves pass on the merge tree** (`CLAUDE.md` §11). This is the full two-half gate,
    queued in the background on the lead's grant.
 
-## Task (one, red first)
+## Tasks
+
+One task, red first.
 
 1. Write `test_score_default_live.py` (Acceptance 1–3) and run it on the base. It is red on 1–2
    and green on 3. Quote both in `LG 9909`.
@@ -97,6 +105,10 @@ Each item is checked by a command a fresh reviewer can run from the repository r
    change no other call.
 3. Run the file green, then Acceptance 5's two files, then the gate. Closing acts per
    `executor.md`: the `LG-` and the SL row go `closed` in the slice PR.
+
+## Decision points
+
+None. The scope is ruled (to-lead 11:25:16 item 3), and nothing in it is left open.
 
 ## Self-review
 
