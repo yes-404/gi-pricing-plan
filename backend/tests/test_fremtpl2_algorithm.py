@@ -387,3 +387,22 @@ def test_the_cross_check_refuses_a_planted_mismatch() -> None:
     assert under == [(text, "rel_area", "engine reads outside the set")]
     over = _extractor_vs_engine(text, truth | {"zz_unused"}, contexts)
     assert over == [(text, "zz_unused", "extractor claims a read the engine does not make")]
+
+
+@pytest.mark.req("FR-261")
+def test_generated_categorical_inputs_lie_in_their_declared_domains() -> None:
+    """The Regression Suite generates contexts from the input contract, and samples a declared
+    `domain` only for an `enum` input; a `string` input gets arbitrary text, which every table
+    lookup refuses (`on_miss: error`), so a property over generated contexts could never pass."""
+    from pricing_core.rating.testing import generate_contexts
+
+    algorithm = RatingAlgorithm.model_validate(_full_algorithm())
+    domains = {field.name: field.domain for field in algorithm.input_contract if field.domain}
+    assert set(domains) == set(_DOMAINS)
+    cases = generate_contexts(algorithm.input_contract, 25, 20260827)
+    assert len(cases) == 25
+    outside = {
+        (name, case.inputs[name])
+        for case in cases for name, domain in domains.items() if case.inputs[name] not in domain
+    }
+    assert outside == set()

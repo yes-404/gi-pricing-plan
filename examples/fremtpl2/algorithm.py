@@ -140,7 +140,7 @@ def build_fremtpl2_algorithm(
             inputs.append({"name": column, "type": "int", "nullable": False,
                            "min": low, "max": high})
         else:
-            inputs.append({"name": column, "type": "string", "nullable": False,
+            inputs.append({"name": column, "type": "enum", "nullable": False,
                            "domain": list(domains[factor])})
         steps.append({"step_id": f"s_in_{column}", "type": "input", "label": column,
                       "input_name": column, "on_missing": "error", "produces": column})
