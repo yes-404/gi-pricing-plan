@@ -9109,6 +9109,26 @@
         "title": "LossTreatment",
         "type": "object"
       },
+      "ManualEdit": {
+        "additionalProperties": false,
+        "description": "The provenance of a version created by the manual-edit route (03 §4.2, RL-1555 item 2).\n\n`applied_to` names the base version edited, in `ImportVerdict.applied_to`'s form;\n`edited_cells` is the number of edits applied. It is what tells a hand-edited version\nfrom a re-seed.",
+        "properties": {
+          "applied_to": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "edited_cells": {
+            "minimum": 1.0,
+            "title": "Edited Cells",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "applied_to",
+          "edited_cells"
+        ],
+        "title": "ManualEdit",
+        "type": "object"
+      },
       "Me": {
         "additionalProperties": false,
         "description": "The current principal, its roles, and its effective permissions.",
@@ -10620,6 +10640,42 @@
         "title": "Page[PerilStructure]",
         "type": "object"
       },
+      "Page_RateTableCell_": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RateTableCell"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque; pass back verbatim. Null when this is the last page.",
+            "title": "Next Cursor"
+          },
+          "total_estimate": {
+            "description": "Matching rows, counted up to 10000. An estimate by design.",
+            "minimum": 0.0,
+            "title": "Total Estimate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_estimate"
+        ],
+        "title": "Page[RateTableCell]",
+        "type": "object"
+      },
       "Page_RateTableDiffCell_": {
         "additionalProperties": false,
         "properties": {
@@ -11939,6 +11995,67 @@
         "title": "QuoteContextOptions",
         "type": "object"
       },
+      "RateTable": {
+        "additionalProperties": false,
+        "description": "A Rate Table definition (FR-228, FR-236, 03 §3.3).\n\nA typed table with declared key columns (each bound to a Factor or banded input),\na declared value column with type and unit, an optional default row, and a\nrateable/diagnostic flag.",
+        "properties": {
+          "default_row": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RateTableCell"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "keys": {
+            "items": {
+              "$ref": "#/components/schemas/RateTableKey"
+            },
+            "title": "Keys",
+            "type": "array"
+          },
+          "rateable": {
+            "title": "Rateable",
+            "type": "boolean"
+          },
+          "slug": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Slug",
+            "type": "string"
+          },
+          "storage": {
+            "$ref": "#/components/schemas/RateTableStorageMode"
+          },
+          "value": {
+            "$ref": "#/components/schemas/RateTableValue"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "slug",
+          "version",
+          "rateable",
+          "storage",
+          "keys",
+          "value"
+        ],
+        "title": "RateTable",
+        "type": "object"
+      },
+      "RateTableCell": {
+        "additionalProperties": {
+          "type": "string"
+        },
+        "description": "One rate table row in §4.2's form: key columns and the value column, every value a\nstring (a key level or a decimal string). RL-1475 item 2; FR-228's columns are data,\nso the keys are open and the value type is closed.",
+        "title": "RateTableCell",
+        "type": "object"
+      },
       "RateTableDiff": {
         "additionalProperties": false,
         "description": "A cell-level diff between two rate table versions (03 §4.2, FR-231).\n\n`changed_cells` is the number of cells whose value differs. The two percentages are\n`None` where there is nothing to compare (no cells, or no cell has a non-zero\nbaseline); percentages are Decimals, serialised as strings, never JSON floats (R2).\n\n`portfolio_exposure` and `matched_exposure` (`RL-1361` item 4) are the named portfolio's\ntotal exposure and the exposure that mapped to a cell of the current version. Both are\n`None` when no portfolio is named, which tells an unweighted diff from a weighted one\nwhose mean is `None` (no weight on a changed cell, or only zero-weight cells).",
@@ -12141,6 +12258,41 @@
         "title": "RateTableKeyType",
         "type": "string"
       },
+      "RateTableManualEdit": {
+        "additionalProperties": false,
+        "description": "`POST /api/v1/rate-tables/{slug}/versions` body (FR-229, `03` §5.1, RL-1555 item 1).\n\n`edits` are full rows of keys that `base_version` has, a key at most once (checked\nagainst the base, which the route holds). `confirm: false` previews; `true` creates.",
+        "properties": {
+          "base_version": {
+            "minimum": 1.0,
+            "title": "Base Version",
+            "type": "integer"
+          },
+          "change_note": {
+            "title": "Change Note",
+            "type": "string"
+          },
+          "confirm": {
+            "default": false,
+            "title": "Confirm",
+            "type": "boolean"
+          },
+          "edits": {
+            "items": {
+              "$ref": "#/components/schemas/RateTableCell"
+            },
+            "minItems": 1,
+            "title": "Edits",
+            "type": "array"
+          }
+        },
+        "required": [
+          "base_version",
+          "edits",
+          "change_note"
+        ],
+        "title": "RateTableManualEdit",
+        "type": "object"
+      },
       "RateTableStorageMode": {
         "description": "Storage mode for rate table cells (FR-232, 03 §3.3).\n\n`rows` is the default for small tables (< 250k cells); `parquet` is used\nfor larger tables. Once written, the storage mode is immutable with the version.",
         "enum": [
@@ -12233,6 +12385,16 @@
             "title": "Change Note",
             "type": "string"
           },
+          "created_by_edit": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ManualEdit"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "created_by_import": {
             "anyOf": [
               {
@@ -12279,14 +12441,12 @@
           "default_row": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "#/components/schemas/RateTableCell"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Default Row"
+            ]
           },
           "keys": {
             "items": {
@@ -12303,17 +12463,7 @@
             "anyOf": [
               {
                 "items": {
-                  "additionalProperties": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "integer"
-                      }
-                    ]
-                  },
-                  "type": "object"
+                  "$ref": "#/components/schemas/RateTableCell"
                 },
                 "type": "array"
               },
@@ -30223,6 +30373,257 @@
         ]
       }
     },
+    "/api/v1/rate-tables/{slug}/versions": {
+      "post": {
+        "description": "**200** with a bare `RateTableDiff` of the would-be version against `base_version`;\nnothing is created (FR-229, FR-231). **201** with `confirm: true`: the `RateTableVersion`\nat `base_version + 1`, carrying `created_by_edit` (`RL-1555`). **404** `NOT_FOUND` for an\nunknown table or `base_version`. **409** where\n`base_version + 1` already exists (the base is not the latest). **422** with every\nfailure as a field error in `errors` (FR-234).",
+        "operationId": "edit_rate_table_api_v1_rate_tables__slug__versions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RateTableManualEdit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateTableDiff"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateTableVersion"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Preview or create a Rate Table Version from manual cell edits",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/v1/rate-tables/{slug}@{version}": {
+      "get": {
+        "description": "FR-1636: the version's keys, value, storage, flag and default row; never its cells.",
+        "operationId": "read_rate_table_api_v1_rate_tables__slug___version__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateTable"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          }
+        },
+        "summary": "Read one Rate Table Version's definition, without its cells",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
     "/api/v1/rate-tables/{slug}@{version}/bulk-operation": {
       "post": {
         "description": "**201** with the new version (FR-233): the operation and its parameters\nrecorded as `created_by_operation` (04 §4.4), the seed anchor inherited and\nproven equal to the baseline's at save time (03 §4.2, FR-234).\n\nThe body is `{\"kind\", \"parameters\"}` — `applied_to` and `result` are server-side:\n`applied_to` names the addressed version, and `result` is computed by the\noperation. Parameters are decimal strings, never floats (R2).",
@@ -30367,6 +30768,169 @@
           }
         },
         "summary": "Apply a bulk operation to a rate table version",
+        "tags": [
+          "rating"
+        ]
+      }
+    },
+    "/api/v1/rate-tables/{slug}@{version}/cells": {
+      "get": {
+        "description": "FR-1636, FR-232: one cursor page of `RateTableCell` rows in key order, for `rows` and\n`parquet` storage alike, answered **200** and never as a Job. A cursor this API did not\nissue is a **400**, a `limit` out of range a **422**.",
+        "operationId": "read_rate_table_cells_api_v1_rate_tables__slug___version__cells_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_RateTableCell_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Malformed request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Page through one Rate Table Version's cells, either storage, no Job",
         "tags": [
           "rating"
         ]

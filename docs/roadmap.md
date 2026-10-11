@@ -1229,7 +1229,7 @@ the third build lane's candidate.
 id: SL-1559
 family: slice
 title: Slice 4: Editor I — the rate table grid and manual edit; RL 9753's definition and cell-page reads; the manual-edit route (F-W10-3)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 9489405370a1ce06c2b985ad88c7d471438febb1
@@ -1264,6 +1264,8 @@ agreement and the lead's go.
 *(Filed 2026-10-05 under working ids 9583 (this row) and 9582 (the plan), reserved by the lead.)*
 
 *(Minted 2026-10-10 as SL-1559 from working id 9583, with its plan PL-1558 from working id 9582, in the D3 batch mint.)*
+
+(Closed 2026-10-11 as a Slice, closing acts in the slice PR's mint commit, on the lead's merge; ledger `LG-1635`, minted 2026-10-11 from working id 9459.)
 
 #### SL-1557 — Slice 3: Designer II — live validation through the validate route (DP-6), and the structural diff overlay
 
