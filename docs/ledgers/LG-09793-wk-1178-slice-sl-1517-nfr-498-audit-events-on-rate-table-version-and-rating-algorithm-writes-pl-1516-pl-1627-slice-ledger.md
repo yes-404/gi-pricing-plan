@@ -111,9 +111,48 @@ take `actor: Principal` (each opens with `assert actor.id is not None`), read `c
 `actor.id`; five route call sites pass `caller.principal` (four in `api/rate_tables.py`, the edit route among them; one in `api/rating_algorithms.py`); 30 test/example call sites (all of the grep's tests/example lines), two benches
 (`Principal(kind=ActorKind.USER, id=created_by, display="bench")`). Proof: `ruff check` on touched files
 clean; whole-tree `uv run mypy` "no issues found in 236 source files"; item 9's 11 files, in 3-file
-`run-small.sh` batches: 24 + 136 + 58 + 95 passed, no assertion edited. **The full two-half gate "at
-Task 1's commit" (RL-1515, D5 Step 5b) is not run separately**: the question went to the lead; the one
-final gate below runs the full suite on the head (see Gate).
+`run-small.sh` batches: 24 + 136 + 58 + 95 passed, no assertion edited. **Task 1 gate (RL-1515 D5 Step 5b; PL-1516 item 9, PL-1516 :188), ruled separate by the lead
+(from-lead "2026-10-11 20:38:51 BST" and the 22:45:14 BST grant).** Run on a detached worktree at
+`fdc02a7454fdc749b5ed9661bc09b6c5b809f2d6` (tree `85ba6487513d56410f2ab874bd2e2792c23df938`) by
+`scratch/sl1517/slot-t1.sh`, under `flock /tmp/slots/gate-1`, slot held 22:45:28 to 23:40:24 BST
+(script `end ... rc=1`); preflight line: `PREFLIGHT ok: head guard, clean tree, /tmp/slots/gate-1 held +
+GIP_GATE_SLOT exported, containers healthy, upgrade rc 0, 1 head`. Stage to rc, START-END (BST):
+
+| Stage | START-END | rc |
+|---|---|---|
+| item9 (11 files) | 22:45:33-22:51:06 | 0 |
+| ruff | 22:51:06-22:51:06 | 0 |
+| mypy | 22:51:06-22:51:42 | 0 |
+| import_linter | 22:51:42-22:51:43 | 0 |
+| pytest | 22:51:43-23:38:30 | 1 (13 failed, 5591 passed, 5 skipped) |
+| audit_docs | 23:38:30-23:38:50 | 1 (check 31 only; non-31 failures 0) |
+| req_coverage | 23:38:50-23:38:50 | 0 |
+| contracts | 23:38:50-23:38:58 | 0 |
+| fe_install / fe_generate / fe_lint / fe_typecheck | 23:38:58-23:39:36 | 0 / 0 / 0 / 0 |
+| fe_test | 23:39:36-23:40:21 | 1 (2 failed, 687 passed) |
+| fe_build | 23:40:21-23:40:24 | 0 |
+
+Classification of every red, from the logs:
+- **pytest, 13 failed:** `test_audit_docs_finding_citations::test_a_finding_resolved_only_by_a_closure_record_is_not_flagged`,
+  `test_audit_docs_ids::test_the_real_tree_passes_all_ten_checks`, `::test_doc_id_check_exits_0_on_the_real_tree`,
+  `test_audit_docs_process_core_digest` (2), `test_audit_docs_w37_11_ceiling` (1), `test_doc_index` (1),
+  `test_register_lint` (3), `test_register_owed` (1), `test_repository_invariants` (2). All run `audit-docs` on the tree
+  and fail on `check 31: gap in the full allocation between 1636 and 9793`: the unminted working id of this ledger
+  (the mint artefact). None is a timing or NFR test, and none is in this slice's files.
+- **audit_docs rc 1:** the same check 31 only.
+- **fe_test, 2 failed:** `DagDesigner.test.ts` ("emits an edited draft ..." and "adds a step ..."), the F39 un-stubbed
+  fetch (WK-675's; fixed on main by #1283, after this base `372fa92a`). Re-run alone on `fdc02a74` through
+  `run-small.sh`: 4 passed.
+- **Gate-2 window.** Lead entries: "2026-10-11 23:23:57 BST" (retraction of the instruction that had other seats run
+  audit-docs beside this gate), "2026-10-11 23:25:00 BST" (window), "2026-10-11 23:26:13 BST" (reclassified, with the
+  maintainer's "2026-10-11 23:25:12 BST": each was one flocked gate-2 check, allowed by the gate-2 standing rule, not a
+  breach). Gate-2 was busy about 22:46-23:24 BST (22:46-22:53, 23:12-23:13, runs ending 23:21:32 and 23:23:34). No
+  timing or NFR test failed, so no quiet re-run was owed; the window is recorded as the period gate-2 was busy.
+- **Note, 23:40:36 BST:** one `run-small.sh` DagDesigner run (above) started after the gate ended and before the lead's
+  ALONE announcement ("2026-10-11 23:40:50 BST"); the lead's entry says the ALONE wrapper waited for `small-test` and
+  started timing only after it finished, so no measurement was touched.
+- The lead accepted this classification (message after the 23:40:50 announcement). Worktree `sl-1517-t1` and database
+  `gipricing_sl-1517-t1_f0715d8c` removed after this record.
 
 #### Task 1b (commit `90036b59`): the stored wire form, and no route response moves
 
@@ -131,7 +170,7 @@ edit; each run alone through `run-small.sh`, 1 test, `OMP_NUM_THREADS=1`.
 answers **409 `Rate table version already exists`** because step 4 already made `t-rows@4` from `@3` (the
 version number is `version + 1`). Run once with `@3` in both trees: R0..R4 cmp 0, R5 the 409 at base and head
 (the 409 bodies differ only in `trace_id`), R6 missing (harness stopped). Corrected to import on `t-rows@4`
-(`@5` is created); the rest unchanged. Reported to the lead.
+(`@5` is created); the rest unchanged. Ruled a recorded deviation by the lead, from-lead "2026-10-11 20:38:51 BST": step 5's `@3` is unreachable as written and `@4` is its evident intent; not a plan change and not an FD.
 
 Result, raw response bytes (`status\n` + `response.content`), BASE vs HEAD:
 
@@ -330,7 +369,7 @@ set as amended by PL-1627 (22 files; no `docs/contracts/`, no `packages/`, no `f
 
 ### Gate
 
-Not run yet: the full two-half gate runs only on the lead's "GATE GRANTED <head>", under
+Task 1 gate: see Task 1 (`fdc02a74`, rc table above). Final gate (item 11): not run yet; it runs only on the lead's "GATE GRANTED <head>", under
 `flock /tmp/slots/gate-1`, by `~/gi-pricing-plan.local/scratch/sl1517/slot.sh <head>` (sources
 `handover/slot-preflight.sh`; wrong `EXPECT_HEAD` aborts with rc 90, shown: `slot.sh deadbeef...` printed
 `HEAD guard: ... != deadbeef...` and `end ... rc=90`). Its stages: the NFR-498 module's reds against the
@@ -349,7 +388,9 @@ may be red), req-coverage, contracts `--check`, and the five frontend stages, se
   forward).
 - 2026-10-11 — `fdc02a74` Task 1; `90036b59` Task 1b (8 cmp = 0, control = 1; plan defect E3 step 5 recorded
   above); `ac0440c0` Task 2 (10 red, 1 control); `b335481c` Task 3 (11 green); `bc2163f1` Task 5 (T-1a..d, T-2).
-- 2026-10-11 — this commit: ledger filled, slot script written and its abort proved. Ready to queue.
+- 2026-10-11 — `a44314d0` ledger filled, slot script written and its abort proved. Ready to queue.
+- 2026-10-12 — `74b6be2a` merge of `origin/main` `cad75a7e` (conflicts: `docs/INDEX.md` by script, `examples/fremtpl2/model.py`); two call sites that arrived on main now pass the Principal (`examples/fremtpl2/model.py` `seed_demo_rate_tables`, `backend/tests/test_rating_version_change_summary_route.py` line 74): the second file is outside PL-1516 and PL-1627's write set, a one-argument consequence of the merge, reported to the lead.
+- 2026-10-12 — this commit: the Task 1 gate record.
 
 ## PRs
 
