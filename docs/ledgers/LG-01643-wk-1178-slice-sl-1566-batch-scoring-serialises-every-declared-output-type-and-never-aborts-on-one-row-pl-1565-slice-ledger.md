@@ -165,7 +165,7 @@ Written by the auditor (`auditor-sl1566`), 2026-10-11, over `origin/main...d9494
 
 **Proposed verdict: CLEAN, with Acceptance 10 CARRIED to the merge-head CI after #1285 merges and main is re-merged. Proposed FD: none.**
 
-Lead verdict: (pending)
+Lead verdict (team-lead, from-lead 2026-10-11 22:52:57 BST): CLEAN; no FD; Acc 10 discharged by green CI at the merge head.
 
 ### Build log
 
