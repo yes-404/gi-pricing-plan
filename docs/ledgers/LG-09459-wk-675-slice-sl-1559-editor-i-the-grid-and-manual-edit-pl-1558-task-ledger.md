@@ -393,6 +393,11 @@ fe_build (`RateTableGrid.vue` `invalid` under exactOptionalPropertyTypes; `RateT
 fe_test (the unhandled TypeCheckError from the same test; 689/689 tests passed). Fix check: lint and type-check clean, the 3 touched test
 files 18 passed.
 
+**Lead's rulings, 2026-10-11 (after the 25ede2d4 gate).** (1) No local frontend re-gate for the three-file fix at `58864465`: CI's
+frontend workflow (lint, type-check, test, build) at the MINTED head is the evidence, as for SL-1529's ungated ruff fix. (2) Order: WK-674 S3
+merges first (standing M3 ruling); at the mint turn this slice re-chains `d4e81b7a2c95`'s `down_revision` and its "Revises:" docstring onto
+`c5a91e7d3b26`, and proves migrate up/down/up and one head in a short targeted gate slot the lead grants then.
+
 ## PRs
 
 None yet.
