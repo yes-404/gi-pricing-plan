@@ -193,13 +193,17 @@ from about 15:16; the cause was not identified (from-lead "2026-10-11 15:26:10 B
 - "2026-10-11 15:26:41 BST — SL-1367 T5 run c: (b) RULED, run c UNCLEAN on evidence that implicates BOTH arms; a validity criterion PRE-REGISTERED NOW, before the re-run; (c) as the bound fallback": (b) adopted, run c UNCLEAN and kept in the LG. Item 2 (i): the run is CLEAN only if every limb-2 invocation's duration lies within +-15% of the median of all six limb-2 durations, AND the per-invocation steal sample (`/proc/stat` steal delta as a % of the invocation's CPU time) is <= 5% for every invocation. (ii) CLEAN: Acceptance 10's stop rule applies exactly as written. (iii) UNCLEAN again: no third local run; the relative measurement moves to the dedicated VM with NFR-502's absolute verdict, and the merge waits for it. Item 3: the paired within-iteration deltas are printed as information.
 - "2026-10-11 15:27:07 BST — SL-1367 script prep ACCEPTED; one addition so the pre-registration is PROVABLE": the script carrying the check is committed and pushed before the run; the run prints its blob sha and commit time; the LG shows commit time < run start.
 
-**Run D (the re-run) is prepared, not run.** The script and the check are `scripts/measure/sl1367-t5/run.sh` and `cleancheck.py`, committed in this slice
-(the commit that adds this paragraph). `run.sh` sources `handover/slot-preflight.sh` (exit 90–95), refuses to run unless it is the committed copy in
-the HEAD tree (exit 3), prints both blob shas and commit times and the run start, stamps START and END (Europe/London, to the second), duration, steal
-delta, CPU delta (user+nice+system+irq+softirq+steal) and steal % for the limb-1+3 call and each of the six limb-2 calls, then prints the CLEAN check
-before `verdict.py` (unchanged) and the paired deltas after it, labelled "INFORMATION ONLY (15:26:41 item 3)". Reading of the criterion, stated so
-it is not chosen later: the duration test is over the six limb-2 invocations; the steal test is over every stamped invocation, limb 1+3 included;
-both bounds are inclusive. Run D's start stamp, blob shas and commit time go here when it has run.
+**Run D (the re-run) is prepared, not run.** The scripts are NOT in this slice (they would ship to `main`); they are committed and pushed on the evidence
+branch `evidence/sl-1367-t5-runD-2026-10-11`, commit `8894ca299ce8f7ddb339d40de9b81fa5a1a7198f`, committer time `2026-10-11T14:32:16Z` (15:32:16 BST), under
+`evidence/sl-1367-t5/`: `run.sh`, `cleancheck.py`, `limb13.py`, `test_zz_limb2.py`, `shapes.py`, `verdict.py` (unchanged from run C). Commit time < run start is
+shown by the run's own output, which prints the evidence commit's sha and committer time and every script's `git hash-object` blob next to the committed blob,
+and refuses with exit 96 on any difference. `run.sh` sources `handover/slot-preflight.sh` (exit 90-95), stamps START and END (Europe/London, to the second),
+duration, steal delta, CPU delta (user+nice+system+irq+softirq+steal) and steal % for the limb-1+3 call and each of the six limb-2 calls, prints the CLEAN check
+before `verdict.py` and the paired deltas after it, labelled "INFORMATION ONLY (15:26:41 item 3)". Reading of the criterion, stated so it is not chosen later:
+the duration test is over the six limb-2 invocations; the steal test is over every stamped invocation, limb 1+3 included; both bounds are inclusive.
+Broken-input proofs, no measurement: an edited copy of `verdict.py` gives `PRE-REGISTRATION ABORT: verdict.py differs from the committed blob`, rc 96; a wrong
+EXPECT_HEAD gives `PREFLIGHT ABORT: HEAD guard`, rc 90; synthetic stamps give CLEAN, and UNCLEAN naming the invocation for a +20% duration and for 6% steal.
+Run D's start stamp and outcome go here when it has run.
 
 ## PRs
 
