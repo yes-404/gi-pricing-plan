@@ -712,7 +712,9 @@ class Rung:
         return speedup / mean_s if mean_s > 0 else float("nan")
 
 
-async def _seed(bundle: Bundle, *, dsn: str, bucket: str) -> tuple[str, str]:
+async def _seed(
+    bundle: Bundle, *, dsn: str, bucket: str, blob_endpoint_url: str | None = None
+) -> tuple[str, str]:
     """Insert exactly what `POST /api/v1/score` reads, and return `(workspace_id, api_key)`.
 
     Deliberately **not** `compile_rating_version`: that path compiles from a stored
@@ -742,6 +744,7 @@ async def _seed(bundle: Bundle, *, dsn: str, bucket: str) -> tuple[str, str]:
         version="bench",
         database_url=SecretStr(dsn),
         blob_bucket=bucket,
+        **({"blob_endpoint_url": blob_endpoint_url} if blob_endpoint_url else {}),
     )
     database = Database(settings)
     blob_store = BlobStore(settings)
