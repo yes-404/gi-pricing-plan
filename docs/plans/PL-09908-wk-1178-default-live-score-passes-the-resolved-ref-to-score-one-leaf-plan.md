@@ -66,45 +66,69 @@ resolved version is recorded, an explicit ref is untouched, and no price moves.
 
 ## Acceptance Standard
 
-Each item is checked by a command a fresh reviewer can run from the repository root.
+The maintainer's GO, verbatim: to-lead "2026-10-11 11:29:37 BST — DISPATCH GO: SL 9937 (default-live
+/score fix, PL 9908, LG 9909), effective when PL 9908 is pushed with the acceptance below; the
+trace limb IN scope", item 2: *"PL 9908 acceptance must carry, each red on base (shown in the slot,
+src-only revert, Redis/DB up)"*. **(a)–(e) are each shown red on the base in the gate slot** by a
+src-only revert of `backend/src/app/api/score.py`, with Redis and the DB up, then green at the head.
+The `LG-` quotes each command, its rc and its red line. The tests are additions to
+`backend/tests/test_score.py`, as authored at `origin/sl-9937-default-live-score` `0b46672a` and
+`7ec284f9`; no existing test is edited. `uv run pytest backend/tests/test_score.py -q` runs them.
 
-1. **Red first, on a real `score_one`.** The new file is
-   `backend/tests/test_score_default_live.py`, a DB test with `score_one` **not** stubbed and a
-   Deployment of a compiled Rating Version in the caller's Environment. Its default-live request
-   carries no `rating_version_ref`. It runs once with no `options` at all, and once with `options`
-   present but no ref. The `LG-` quotes it on the base answering 422 `INPUT_CONTRACT_VIOLATION`, one of the route's per-quote
-   codes (`score.py` `responses=` comment), with *"rating_version_ref is required"* in its
-   detail, then 200 after the fix.
-   The command is `uv run pytest backend/tests/test_score_default_live.py -q`.
-2. **The resolved version is recorded.** In that 200, the result's `rating_version_ref` equals
-   the deployed version, and so does the sampled trace's when tracing is on (`:384`,
-   `_maybe_sample_trace`). Each is asserted.
-3. **An explicit ref is never overridden.** A test supplies an explicit `rating_version_ref` that
-   differs from the live Deployment's. The result names the explicit one, and the request object
-   the route received is unchanged. The test asserts both.
-4. **The request is not mutated.** The fix builds the copy with `model_copy` (or a new
-   `QuoteContextOptions`, `packages/model-schema/src/model_schema/scoring.py:82`) and never
-   assigns to `ctx`. `QuoteContext` is frozen (`scoring.py:99`), so an assignment raises.
-5. **No bundle or price change.** The diff touches no file under `packages/` or `examples/`, and
-   no fixture: `git diff --stat origin/main...<branch>` lists only
-   `backend/src/app/api/score.py`, the new test file, the `LG-` and the roadmap row. The existing
-   money fixtures and pinned hashes pass unchanged:
-   `uv run pytest backend/tests/test_score.py backend/tests/test_demo_rating_evidence.py -q`.
-6. **Both gate halves pass on the merge tree** (`CLAUDE.md` §11). This is the full two-half gate,
-   queued in the background on the lead's grant.
+- **(a)** A default-live request, with the **real** `score_one` (not stubbed) and a Deployment
+  in the caller's Environment, answers **200**, and the result's `rating_version_ref` is the
+  deployed version. On the base it is 422 `INPUT_CONTRACT_VIOLATION` (*"rating_version_ref is
+  required"*, `packages/pricing-core/src/pricing_core/rating/score.py:945-952`).
+- **(b)** The no-options variant. For a request with no `options` at all, the created options
+  carry the **same defaults as absent options** (`trace` off, and every other field at its
+  `QuoteContextOptions` default, `packages/model-schema/src/model_schema/scoring.py:82`), plus
+  the resolved ref. The test asserts this field by field.
+- **(c)** A default-live **sampled** trace job runs to `SUCCEEDED`. The trace worker re-scores
+  the stored `pending_quote_context` (`backend/src/app/worker/trace_handlers.py:79`
+  `QuoteContext.model_validate(row.pending_quote_context)`, then `:98` `score_one(compiled, ctx,
+  trace=True)`). On the base the stored context has no ref, so the job is refused with
+  `INPUT_CONTRACT_VIOLATION`. The fix passes the resolved-ref copy to `_maybe_sample_trace` as
+  well, so the stored context carries the resolved ref (the GO's item 1: "the trace limb IN
+  scope").
+- **(d)** An explicit `rating_version_ref` that differs from the live Deployment's **wins**: the
+  result names the explicit one.
+- **(e)** A unit test of the helper (`_with_resolved_ref(ctx, ref)` as authored). It shows that
+  an explicit ref is returned untouched, that the options are created when absent, and that the
+  input object is never mutated (`QuoteContext` is frozen, `scoring.py:99`).
+
+Also, each a line in the `LG-` (the GO's item 2, "quoted with file:line in the LG"):
+
+1. **One caller.** `_serving_ref` has one caller, `score()` (`backend/src/app/api/score.py:369`
+   at `d699a561`; predicate `git grep -n '_serving_ref\|_required_ref(' -- backend/src`).
+   **Compare and batch build explicit refs, so they have no gap.** `/score/compare` builds
+   `QuoteContextOptions(trace=True, rating_version_ref=ref)` (`score.py:443-445` at
+   `d699a561`). The batch worker stamps "the **resolved** ref into each frame it builds"
+   (`backend/src/app/worker/scoring_handlers.py:33`).
+2. **No bundle or money change.** The money fixtures and the pinned bundle hash are unchanged.
+   `git diff --stat origin/main...<branch>` lists only `backend/src/app/api/score.py`,
+   `backend/tests/test_score.py`, the `LG-` and the roadmap row. Nothing under `packages/`,
+   `examples/` or a fixture appears, and `backend/tests/test_demo_rating_evidence.py` passes
+   unchanged.
+3. **NFR-499 is unaffected.** The trace store already holds the full quote input, which is
+   access-controlled (FR-259), so adding the ref changes nothing there (the GO's item 1).
+4. **The gate.** The full two-half gate (`CLAUDE.md` §11) runs **after SL-1529** in the G2 order
+   (the GO's item 3; from-lead 11:26:33). The 13 audit-on-tree tests clear at the minted-head CI.
+5. **The finding.** The FD (the auditor proposes the severity; HIGH is expected) names **both
+   instances**, `score()` → `score_one` and the sampled-trace re-score, and is discharged by
+   SL 9937 (the GO's item 4). It rides the next docs batch. It is not this slice's write.
 
 ## Tasks
 
-One task, red first.
+One task, red first. The executor has authored it at `0b46672a` and `7ec284f9`.
 
-1. Write `test_score_default_live.py` (Acceptance 1–3) and run it on the base. It is red on 1–2
-   and green on 3. Quote both in `LG 9909`.
-2. In `score()`, after `:369`, build `scored_ctx` as `ctx` with its options carrying `ref`. Do
-   this only when `ctx.options` is `None` or its ref is `None`; an explicit ref passes through
-   as it is. Pass `scored_ctx` to `score_one` at `:375`. Keep `ctx` for everything else, and
-   change no other call.
-3. Run the file green, then Acceptance 5's two files, then the gate. Closing acts per
-   `executor.md`: the `LG-` and the SL row go `closed` in the slice PR.
+1. Add the (a)–(e) tests to `backend/tests/test_score.py`.
+2. In `score()`, after `_serving_ref` (`:369`), build the resolved-ref copy with
+   `_with_resolved_ref(ctx, ref)` (an immutable `model_copy`; options created if absent; an
+   explicit ref is returned untouched). Pass the copy to `score_one` and to
+   `_maybe_sample_trace`. The request object is never mutated.
+3. In the gate slot: run the src-only revert of `score.py` to show (a)–(e) red, restore it,
+   run them green, then run the full two-half gate. Write the `LG 9909` lines 1–5. Closing acts
+   per `executor.md`: the `LG-` and the SL row go `closed` in the slice PR.
 
 ## Decision points
 
@@ -112,8 +136,14 @@ None. The scope is ruled (to-lead 11:25:16 item 3), and nothing in it is left op
 
 ## Self-review
 
-Every clause of the 11:25:16 item 3 maps to an acceptance item: immutable copy → 4; result and
-trace record the resolved version → 2; explicit not overridden → 3; no bundle or price change →
-5. NFR-499 is unaffected because this is the same `score_one` call with one more option field. No
-decision point is open: the scope is ruled. Status goes `active` at the lead's GO (the PL row of
-`document-ids.md` §1.6).
+Every clause of the 11:25:16 item 3 and the 11:29:37 GO maps to an acceptance item. The immutable
+copy is (e). The result and the trace record the resolved version: (a) and (c). An explicit ref is
+not overridden: (d). No bundle or price change: line 2. NFR-499: line 3. The one-caller and
+compare/batch claims: line 1. The gate order: line 4. The FD: line 5. No decision point is open,
+because the scope is ruled. Status goes `active` at the GO's effect, when this plan is pushed
+with this acceptance (the PL row of `document-ids.md` §1.6).
+
+*(Revised 2026-10-11 before its first merge, on the lead's relay of the 11:29:37 GO. The first
+draft named a new test file, `test_score_default_live.py`, and said "`test_score.py`
+unchanged". The tests were authored in `test_score.py`, as additions only, and the trace
+limb was added to scope.)*
