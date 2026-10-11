@@ -152,4 +152,4 @@ Lead verdict: (pending)
 
 ## PRs
 
-None yet.
+- PR #1285, `sl-1503-wk673-e1-change-summary`.
