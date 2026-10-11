@@ -1,6 +1,6 @@
 """SL-1526 ALONE stage b: the SAME seeded rows for both 11(b) columns (PL-1525 Acceptance 11 (b), :371-376).
 
-  rows.py export <slice worktree> <rows> <out csv>   write the slice seed's own `build_csv(rows)` bytes
+  rows.py export <slice worktree> <rows|full> <out csv>   write the slice seed's own `build_csv(rows)` bytes
   rows.py seed   <base tree dir> <csv> <rows>        run the BASE tree's seed.py with its `build_csv` replaced
                                                      by that file, so it ingests exactly the slice's rows
 Both print `ROWSET sha256=<csv bytes> n=<data rows> ids_sha256=<sha256 of the sorted IDpol list>`, the proof
@@ -34,7 +34,7 @@ def load_seed(tree_example_dir: Path):  # noqa: ANN201
 
 mode = sys.argv[1]
 if mode == "export":
-    data = load_seed(Path(sys.argv[2]) / "examples" / "fremtpl2").build_csv(int(sys.argv[3]))
+    data = load_seed(Path(sys.argv[2]) / "examples" / "fremtpl2").build_csv(None if sys.argv[3] == "full" else int(sys.argv[3]))
     Path(sys.argv[4]).write_bytes(data)
     print("slice " + rowset(data))
 elif mode == "seed":
@@ -42,7 +42,7 @@ elif mode == "seed":
     print("base  " + rowset(data))
     seed = load_seed(Path(sys.argv[2]) / "examples" / "fremtpl2")
     seed.build_csv = lambda rows: data  # the base seed's `run` calls the module-level name
-    sys.argv = ["seed.py", "--rows", sys.argv[4]]
+    sys.argv = ["seed.py"] + ([] if sys.argv[4] == "full" else ["--rows", sys.argv[4]])
     sys.exit(seed.main())
 else:
     sys.exit(f"unknown mode {mode}")

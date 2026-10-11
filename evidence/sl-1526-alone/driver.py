@@ -1,4 +1,4 @@
-"""SL-1526 ALONE stage a: Acceptance 8's `scripts/demo.py --rows 20000`, timed and memory-sampled.
+"""SL-1526 ALONE stage a: Acceptance 8's `scripts/demo.py` (rows="full": no --rows, the whole book; a number passes --rows), timed and memory-sampled.
 
 Usage: driver.py <slice worktree> <demo log> <rows>
 `demo.py` never exits by itself: after it prints the banner (`Open  http://localhost:5173/demo`) it waits
@@ -28,7 +28,8 @@ t0 = time.monotonic()
 cp = ContainerPeaks()
 cp.start()
 with LOG.open("wb") as out:
-    proc = subprocess.Popen([str(W / ".venv/bin/python"), str(W / "scripts/demo.py"), "--rows", ROWS],
+    cmd = [str(W / ".venv/bin/python"), str(W / "scripts/demo.py")] + ([] if ROWS == "full" else ["--rows", ROWS])
+    proc = subprocess.Popen(cmd,
                             stdout=out, stderr=subprocess.STDOUT, cwd=W)
     peak_sum = peak_big = 0
     t_banner = None

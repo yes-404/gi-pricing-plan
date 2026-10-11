@@ -1,5 +1,5 @@
 #!/bin/bash
-# SL-1526 ALONE window (WK-1178 exit demo (a)): Acceptance 8 demo run + 11(b) fit table + REAL-GLM report.
+# SL-1526 ALONE window (WK-1178 exit demo (a)): Acceptance 8 demo run (FULL seed) + 11(b) fit table + REAL-GLM report.
 # Runs ALONE under gate-1, gate-2 and small-test, on the lead's "ALONE GRANTED".
 # Usage: run.sh <expected slice HEAD sha> <out dir>     (run from the committed copy of this directory)
 # Authority (to-lead.md): "2026-10-11 11:39:18 BST" item 3 (real GLM tested only here; any property failure -> STOP,
@@ -25,7 +25,9 @@ SCRIPTS="run.sh driver.py realglm.py fittable.py rows.py sampler.py treemeasure.
 # examples/ is identical from 31b88780 to the slice's merge-base 99f22479 (`git diff --stat 31b88780 99f22479 -- examples`
 # is empty), and 809a3794 is 28k lines of backend/packages older than the venv this run uses, so it is not used.
 BASE=31b88780
-ROWS=20000
+# Acceptance 8 seeds the FULL book (maintainer, to-lead "2026-10-11 19:36:01 BST" ruling (i); PL-1577 DP-1 keeps the GLM on
+# the full book). "full" = no --rows: every script below maps it to build_csv(None) / a seed with no --rows.
+ROWS=full
 EXPECT_HEAD=$1; OUTD=$2; STAMPS=$OUTD/stamps.tsv; LOG=$OUTD/alone.log
 mkdir -p "$OUTD"; : > "$STAMPS"
 exec > >(tee "$LOG") 2>&1
@@ -90,7 +92,7 @@ for d in "$SDB" "$BDB"; do
 done
 inv base-tree setup sh -c "mkdir -p '$BASEDIR' && git -C '$W' archive $BASE examples/fremtpl2 | tar -x -C '$BASEDIR' && cp -r '$W/examples/fremtpl2/data' '$BASEDIR/examples/fremtpl2/'" || exit 99
 
-echo "== stage a: Acceptance 8 - scripts/demo.py --rows $ROWS to its banner, then SIGINT (slice DB $SDB)"
+echo "== stage a: Acceptance 8 - scripts/demo.py (rows=$ROWS: the full book, no --rows) to its banner, then SIGINT (slice DB $SDB)"
 GIP_DATABASE_URL=$DSN inv a_demo a python3 -I "$E/driver.py" "$W" "$OUTD/demo.log" "$ROWS"
 ARC=$?
 cat "$OUTD/a_demo.out"
@@ -129,7 +131,7 @@ echo "fitted rows: slice $SR base $BR"; [ "$SR" = "$BR" ] || { echo "SAME ROWS: 
 echo "== 11(b): fit statistics, base tree $BASE (dispatch tree) | slice head $EXPECT_HEAD, same rows, --rows $ROWS"
 cat "$OUTD/b_base.out" "$OUTD/b_slice.out"
 echo "factor count: base $(grep -c 'type=' "$OUTD/b_base.out") slice $(grep -c 'type=' "$OUTD/b_slice.out") (want 7 in each)"
-echo "== stage d: dislocation.run + attribution over the 20,000-policy sample (a throwaway copy of the demo DB; baseline = a +1.95% re-priced measurement fixture)"
+echo "== stage d: dislocation.run + attribution over the 20,000-policy PORTFOLIO sample (DP-2 object; unchanged by the full-book fit) (a throwaway copy of the demo DB; baseline = a +1.95% re-priced measurement fixture)"
 DDB=gipricing_sl1526_stage_d
 inv "db-$DDB" setup sh -c "$PGX dropdb -U gipricing --if-exists -f '$DDB' && $PGX createdb -U gipricing -T '$SDB' '$DDB'" || exit 99
 INV_TAIL=0 GIP_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/$DDB inv d_dislocation d \

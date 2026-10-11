@@ -124,6 +124,25 @@ async def main() -> int:
     if status is not JobStatus.SUCCEEDED:
         return stop(f"the baseline fixture's compile Job ended {status}")
 
+    # DP-2's object is the R6 portfolio sample, not the fitted book: print its row count and prove `quote_id` (03 4.8's
+    # frame key) is present, non-null and unique BEFORE dislocation.run (ruling 2026-10-11 19:36:01 BST, item 6).
+    import io
+
+    import polars as pl
+
+    async with database.session() as s:
+        pv = await demo_model.dataset_service.read_version(s, workspace_id=ws, version_id=portfolio)
+        raw = await demo_model.read_stored_blob(
+            s, blobs, demo_model.portfolio_table(pv)["blob"]["sha256"], "The portfolio table")
+    frame = pl.read_parquet(io.BytesIO(raw))
+    if "quote_id" not in frame.columns:
+        return stop("the portfolio has no quote_id column")
+    qid = frame["quote_id"]
+    print(f"PORTFOLIO dataset_version={portfolio} rows={frame.height} "
+          f"quote_id present=True nulls={qid.null_count()} distinct={qid.n_unique()} unique={qid.n_unique() == frame.height}", flush=True)
+    if qid.null_count() or qid.n_unique() != frame.height:
+        return stop("quote_id is not unique and non-null")
+
     spec = DislocationSpec(
         baseline_ref=ArtifactRef(type="rating_version", slug=demo_model.DEMO_RATING_SLUG, version=baseline_version),
         candidate_ref=ArtifactRef(type="rating_version", slug=demo_model.DEMO_RATING_SLUG, version=1),
