@@ -74,7 +74,7 @@ Deviations from the plan, all disclosed:
 
 1. **Item 12 is a unit test as well as an integration test.** The plan's integration item needs
    the engine to return a `float` `3.0`; FD-1561's probe shows it returns the Python `int` `27`
-   for a whole value, so an integration test cannot reach the float path. Item 12's integration
+   for a whole value, so an integration test cannot reach the float path. FD-1561's probe, quoted: `[relativity] REALTIME wire outputs = {"payable_premium_minor": 1507, "probe_out": 27}   probe_out JSON type = int` (expr `driver_age * 1.5`, whole), and `[decimal] ... "probe_out": 19.8 ... JSON type = float` (expr `driver_age * 1.1`). The lead accepted this deviation (message of 2026-10-11, after the activation) and discloses it at the ACK. Item 12's integration
    test uses `driver_age * 1.5` (whole `27`), and `test_integral_means_exact_equality_with_the_integer_part`
    drives `_coerce_output_value` with `3.0`, `-2.0`, `0.0` and `1e15` directly; the
    `isinstance` break (below) turns the float cases red.
