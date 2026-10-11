@@ -9,7 +9,7 @@ tree: 99f22479a20e7fa64f8b6654e0d371c595b1e35a
 phase: P2
 work: WK-675
 slice: SL-1639
-plans: [PL-1546]
+plans: [PL-1546, PL-1638]
 corrected_by: []
 relates: [FD-1611]
 ---
@@ -36,7 +36,25 @@ Row SL-1639 in `docs/roadmap.md` and its Work-plan delta PL-1638 (cherry-picked 
 
 ### Gate
 
-Pending the lead's grant.
+The full two-half gate ran at `fbcd33662b10f1fcbbcf2b828e4e0463f76f76b7` (tree `c261e2ab2e9955fd845265d928ca26891cf20e43`), in gate-1 on the lead's grant, 19:02:20–19:53:23 BST, one serial slot script (`~/gi-pricing-plan.local/scratch/sl9916/slot.sh`, sourcing `handover/slot-preflight.sh`). The tree was clean after the red-firsts and at the end.
+
+| Stage | rc | Expected |
+|---|---|---|
+| red_unstubbed (`vi.mock` line deleted; 1 `F39: this test called fetch without stubbing it:` line naming `/rating-algorithms/validate`) | 1 | 1 (RED) |
+| red_nocancel (`cancel();` at `useGraphValidation.ts:54` deleted; the unmount test fails) | 1 | 1 (RED) |
+| green_1, green_2, green_3 | 0, 0, 0 | 0 |
+| ruff | 0 | 0 |
+| mypy | 0 | 0 |
+| lint-imports | 0 | 0 |
+| pytest -q (13 failed, 5549 passed, 5 skipped) | 1 | 0 |
+| audit-docs | 1 | 0 |
+| req-coverage | 0 | 0 |
+| contracts `--check` | 0 | 0 |
+| frontend install, generate, lint, type-check | 0 | 0 |
+| frontend test (105 files, 667 tests) | 0 | 0 |
+| frontend build | 0 | 0 |
+
+Both red-firsts came back red, as they must. pytest and audit-docs were rc 1 and are classed as mint artefacts: audit-docs failed on exactly three working-id lines (check 31 twice, check 25 once), and the 13 pytest failures are the tests that assert audit-docs on the real tree, each showing the working-id gap or the unresolved citation in its own captured output. The minted-head CI is the proof for those 14 (13 tests and the audit-docs stage).
 
 ### Audit
 
@@ -56,4 +74,4 @@ Broken input (4), uncommitted and reverted at once: `cancel();` at `useGraphVali
 
 ## PRs
 
-The slice PR (number added at open): "SL-1639: the DagDesigner F39 fix" (merge commit added at merge).
+#1283, "SL-1639: the DagDesigner F39 fix, stub validate and prove the unmount cancel (LG-1640)" (merge commit added at merge).

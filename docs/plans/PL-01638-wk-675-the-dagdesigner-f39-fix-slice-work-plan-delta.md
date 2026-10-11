@@ -3,7 +3,7 @@ id: PL-1638
 family: plan
 kind: map
 title: WK-675 — the DagDesigner F39 fix slice (the validate route stubbed in DagDesigner.test.ts, the debounce's teardown cancel proven): Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-11
 owner: planner
 tree: 99f22479a20e7fa64f8b6654e0d371c595b1e35a
