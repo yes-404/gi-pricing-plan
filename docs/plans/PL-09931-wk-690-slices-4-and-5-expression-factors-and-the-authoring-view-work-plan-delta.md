@@ -12,7 +12,7 @@ work: WK-690
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [PL-1268, PL-1371, RL-1263, RL-1265, RL-1307, RL-1410, RL-1445, RL-1474, FD-1294, FD-1349, FD-1492, FD-1512, SL-1274, SL-1275]
+relates: [PL-1268, PL-1371, RL-1263, RL-1265, RL-1307, RL-1410, RL-1445, RL-1474, FD-1294, FD-1349, FD-1492, FD-1512, SL-1274, SL-1275, SL-9936]
 ---
 
 # PL-9931 — WK-690 Slices 4 and 5 as rows: Work-plan delta
@@ -63,15 +63,16 @@ single-row Work plan: the FD-1374 fix slice".
 
 ## Goal
 
-Plan WK-690's last two P2 slices as L5 rows so that each can be GO'd without a leaf plan. This
-delta is done when S4 and S5 have each closed on their own `LG-`, or have been moved to Phase 3
-by a dated move line. The Work's own goal is still `PL-1268`'s.
+Plan WK-690's last two P2 build slices, and its fix row, as L5 rows so that each can be GO'd
+without a leaf plan. This delta is done when S4 and S5 have each closed on their own `LG-`, or
+have been moved to Phase 3 by a dated move line, and the fix row (SL 9936) has closed on its
+own `LG-`. The fix row is never moved by a ladder rung. The Work's own goal is still `PL-1268`'s.
 
 ## Acceptance Standard
 
 Each item is checked by a command a fresh reviewer can run from the repository root. Items 1–3
-bind the delta; items 4.x bind S4 and 5.x bind S5. `PL-1268`'s Acceptance items 1, 2, 9 and 10
-still bind both slices.
+bind the delta; items 4.x bind S4, 5.x bind S5 and F.x bind the fix row. `PL-1268`'s Acceptance
+items 1, 2, 9 and 10 still bind all three.
 
 1. **This delta passes the docs checks on its own branch.** `python3 scripts/audit-docs.py`,
    `python3 scripts/doc-index.py --check` and `python3 scripts/register-lint.py` exit 0 at the
@@ -143,6 +144,36 @@ still bind both slices.
 - **5.6 Both gate halves pass on the merge tree**, including `generate:api` and `type-check`
   run under `env -C`.
 
+**Fix row — SL 9936** (FD-1349, FD-1492, FD-1512; FD-1294's discharge line)
+
+- **F.1 FD-1349: the contract guard compares the check-name enum.** `backend/tests/test_contracts.py`
+  gains a comparison between the authored `result.checks[].name` enum in
+  `docs/contracts/schemas/objective-certificate.schema.json` and `OBJECTIVE_CERTIFICATE_CHECKS` /
+  `OBJECTIVE_CERTIFICATE_CHECKS_SYMBOLIC` (`packages/model-schema/src/model_schema/objectives.py`),
+  written per `.claude/skills/contract-guard`. The `LG-` quotes it red on the finding's broken
+  input (five names replaced by `"BOGUS"`), then green on the tree, under
+  `uv run pytest backend/tests/test_contracts.py -q`.
+- **F.2 FD-1492: a dangling metric certificate is refused.** A test through `submit` shows that
+  a custom metric whose `certificate_id` names no `metric_certificate` row (same workspace,
+  same metric) is refused 409 `VALIDATION_FAILED`. That is the stored-state code the objective
+  twin uses (`02` §5.1 submit row, `RL-1410`). The test is red first at the base, where
+  `backend/src/app/platform/metrics.py:794` tests only `is not None`, and green after.
+- **F.3 FD-1512: `pseudo_huber` certifies on the default grid.** The template's loss is
+  evaluated in the finding's cancellation-free form (register `:327`'s event). A test certifies
+  `pseudo_huber` over `default_sampling` at delta 1, 63, 100, 1000 and 100000, and none is
+  `failed`. It is red first at the base for 63, 100, 1000 and 100000. A second test shows that
+  the template's gradient and hessian are unchanged to 1e-12 at the finding's worst points, so
+  no fitted model's objective changes.
+- **F.4 FD-1294's dated line.** The register row (`docs/findings/register.md:218`) gains the
+  dated line "Resolved by SL-1271 (#981, `bd67fb51`)", citing
+  `packages/pricing-core/tests/test_expression_profiles.py:181-204` (R-F.1). This is the
+  auditor's write at the slice's close, not the executor's (`.claude/roles/planner.md` Tools).
+  `python3 scripts/register-lint.py` exits 0 after it.
+- **F.5 Each register row is closed by the slice.** The `LG-` names FD-1349, FD-1492 and
+  FD-1512 with their red and green commands, and the auditor's close moves each row to
+  resolved. `python3 scripts/register-lint.py` exits 0.
+- **F.6 Both gate halves pass on the merge tree** (`CLAUDE.md` §11).
+
 ## Global Constraints
 
 `PL-1268`'s Global Constraints apply unchanged. That covers: `pricing-core` stays standalone;
@@ -166,7 +197,8 @@ flag stays off. Added since:
 
 Under L5 a Work plan's tasks are its slice rows, and each slice's steps are written in its `LG-`
 by its executor. The size is `PL-1371` §3.4's estimate. **The lane is assigned at GO.**
-**Order: S4, then S5**, in reverse ladder order (S4 is rung 6 and S5 is rung 3), so that a cut
+**The fix row goes first**, as soon as a lane frees: it has no decision point and no unmet
+dependency, so it is the one WK-690 row GO-able today. **Then S4, then S5**, in reverse ladder order (S4 is rung 6 and S5 is rung 3), so that a cut
 discards no finished work. This is the principle the maintainer ruled for WK-675 ("2026-10-08
 14:32:33 BST — DELTAS AUDIT …", item D). It is a recommendation for this Work, not a ruling.
 No dependency forbids it, because S4 needs S1 and S5 needs S3, and both have closed. If one
@@ -174,6 +206,7 @@ slice's decision point is still open when a lane frees, the other takes its turn
 
 | Order | Slice | Scope (what the `LG-` quotes) | Requirements, each id | Governance | Depends on | Lane | Size | Ladder |
 |---|---|---|---|---|---|---|---|---|
+| 0 | SL 9936 — WK-690 fix row: the three fix-before-close findings | FD-1349 (register `:281`), FD-1492 (`:318`) and FD-1512 (`:327`), each as its register row's Event states it; plus FD-1294's dated discharge line (R-F.1) | `02` §3.7: FR-146 (the certificate a `failed` `pseudo_huber` blocks), FR-157 (the metric evidence kind FD-1492 bypasses); `docs/contracts/schemas/objective-certificate.schema.json` (FD-1349, the guard's comparison) | Declared and versioned: unchanged (no new objective form; `pseudo_huber`'s declared loss is the same function, re-evaluated). Validated: FD-1512 removes a false `failed`; FD-1492 restores the submission evidence check. Audited: unchanged | nothing open: S1–S3 are closed and every cited line is on main at `d699a561` | at GO | 1 | **off the ladder** (DP-W-1 (a), ruled) |
 | 1 | SL-1274 — S4: `expression` Factors | `PL-1268` Slice 4 (`:517-530`), plus R4.1–R4.3 | `02` §3.1: FR-95; §3.10: FR-208 (the expression arm); §4.1 `Factor`'s expression field; `RL-1265` DP-4's refusal naming FR-210; §9: NFR-483, NFR-484 | Declared: the `factor` profile (`02:940`), with the text stored on the Factor. Validated: parsed at create (422 with the position), undeclared columns refused at create, numeric-unbanded refused (DP-S4-1). Versioned: `Factor.version`, pinned by id (FR-96). Audited: `factor.created` | S1 (closed, met); DP-4 (`RL-1265`, met); **DP-S4-1 ruled** | at GO | 1 | **rung 6** |
 | 2 | SL-1275 — S5: the authoring view and `WF-702` Route B | `PL-1268` Slice 5 (`:532-554`), plus R5.1–R5.4 | `02` §5.3 Custom objective library (editor, derived gradient and hessian display, loss-curve preview); §5.1: DP-S5-1's route and its new FR (spec first); §3.7: FR-145 (position-accurate parse through the route), FR-150 (editor gated), FR-152 (`violated` rendered as a finding); `06` §3.3: FR-367 (the route's permission); `WF-702` Route B B1.1–B4.3 and B4.6, and §7's failure rows; NFR-463; NFR-483 | Declared: text sent to the API only. Validated: the preview route, `/derive` and certify (FR-146). Versioned: create gives `draft`, and `derived` is stored with its tool version (B2.3). Audited: derive, certify and approve (NFR-484, built in S3); the preview route records nothing because it persists nothing | S3 (closed, met); OQ-550 (decided, met); DP-3 (`RL-1265`, met); **DP-S5-1 ruled** | at GO | 1 | **rung 3** |
 
@@ -225,6 +258,26 @@ slice's decision point is still open when a lane frees, the other takes its turn
   list it. There is no edit route either, so a wrong loss is corrected by creating a new
   objective. The editor creates and does not edit, unless DP-S5-1's ruling adds an edit limb.
 
+- **R-F.1 — FD-1294 is discharged at main; only its dated line is owed.** The register row's
+  event (`:218`) reads: "SL-1271 merges with the rule, and its acceptance proves `round(x, 2)`
+  refused through each of the three callers (a `derive_expression` step, a `filter_rows` step
+  and an `expression` check)". At `d699a561`,
+  `packages/pricing-core/tests/test_expression_profiles.py:181-204` refuses `round(y, 2)`
+  through each of the three, matching `round\(\) takes exactly 1 argument`. Those lines were
+  added by `bd67fb51` ("feat(modelling): WK-690 Slice 1 — parser profiles, limits and the sympy
+  pin; LG-1304 (#981)"), by the predicate `git log --format='%h %aI %s'
+  -L181,205:packages/pricing-core/tests/test_expression_profiles.py origin/main`. The
+  arity rule is `_ARITY` at `pricing_core/data/expressions.py:74` and is enforced at `:204-207`.
+  The tests were read, not run, by this delta. The fix row's auditor runs them once at the
+  close, before the line is written.
+- **R-F.2 — The fix row's file set.** It is `backend/tests/test_contracts.py`,
+  `backend/src/app/platform/metrics.py` with its tests, and
+  `packages/pricing-core/src/pricing_core/modelling/objectives.py` (the `pseudo_huber`
+  template) with its tests. It is disjoint from S4's. It overlaps S5 only if DP-S5-1's route
+  reuses the template code, so the lead resolves that file set at S5's GO (`RL-1445`). No spec
+  text changes: `02` §4.5 (`:880`) gives `pseudo_huber`'s parameter and purpose, not its
+  arithmetic form.
+
 ### The cut-ladder rows (marked, not cut)
 
 **S5 is rung 3** and is the first WK-690 slice a missed Friday line cuts. Cutting it leaves `02`
@@ -232,7 +285,8 @@ slice's decision point is still open when a lane frees, the other takes its turn
 `PL-1268` Acceptance item 7, the Work's own close condition, which then needs the same dated
 move line. **S4 is rung 6.** Cutting it leaves FR-95 and FR-208's expression arm to P3, with
 FR-210, the gate its result rule waits on. Until a dated move line applies a rung, both rows
-stand.
+stand. **The fix row is off the ladder** (DP-W-1 (a), ruled): no rung cuts it, so a cut of S5 or S4
+never carries a fix-before-close finding with it.
 
 ## Decision points
 
@@ -240,12 +294,14 @@ stand.
 |---|---|---|---|---|---|---|
 | DP-S4-1 | How is an `expression` Factor's numeric result banded, so that `RL-1265` DP-4 (b)'s "banded" case exists? (R4.1) | **(a)** `Factor` admits `banding_id` on `expression`: the result is banded by the pinned Banding, whose `column` names the factor's own slug. `02` §4.1 and FR-208 are amended, and the validator gains an arm. **(b)** An `expression` Factor is never fitted directly: it is a derived input that a `banding` Factor names. This is a new chain between Factors, and FR-92's operand pattern widens to `banding`. **(c)** No banding mechanism: S4 ships the field, the validator and the numeric refusal, so only a bare categorical column resolves, and FR-95 is delivered only nominally | **(a).** It is the smallest change. It reuses `apply_banding` and the FR-98–FR-103 boundary standard unchanged, and every such Factor gets FR-113's relativity table, which is what DP-4 (b) asked for. (b) adds a second resolution pass beside FR-92's for one case. (c) satisfies DP-4 by refusing everything, and the maintainer's rung 6 is the honest form of that outcome | decision point | **yes, for S4** | — (the decision-maker, by `RL-`) |
 | DP-S5-1 | How does the editor get live parse errors and a loss-curve preview without persisting a draft per keystroke? (R5.1) | **(a)** One stateless route, e.g. `POST /api/v1/custom-objectives/preview`, takes the loss text, the parameters and a grid. It parses in the `objective` profile, derives, and evaluates the loss on the grid. It is flag-gated and needs `custom_objective:author`. It writes nothing and audits nothing (FR-1607's pattern). It lands spec first: a `02` §5.1 row and an FR. **(b)** Create a draft per debounce, then call `/derive`. That persists noise, and `RL-1410` R4 refuses re-derive. **(c)** Parse only on an explicit "Derive". That drops B1.4 and §5.3's "live parse errors", which is a spec change the other way | **(a).** FR-1607 is the same need, already ruled, for the designer. One route serves the parse, the display and the preview, so the frontend never holds a parser (`PL-1268:174`). It persists nothing, so there is no versioning or audit question, and the permission is FR-367's own | decision point | **yes, for S5** | — (the decision-maker, by `RL-`) |
-| DP-W-1 | WK-690's four open findings have no slice: FD-1294 (register `:218`, carry; very likely discharged by `SL-1271`'s arity rule, so only its dated line is owed), FD-1349 (`:281`, carry, "a follow-up slice"), FD-1492 (`:318`, fix before close) and FD-1512 (`:327`, fix before close). Where are they built? | **(a)** A third WK-690 row, a fix slice that is not on the cut ladder, cut by a later delta. **(b)** Fold them into S5. That puts two fix-before-close findings behind rung 3. **(c)** Re-own them to WK-1178, the P2 maintenance Work | **(a).** Two of the four carry the verdict "fix before close", so the Work cannot close while they are open, and a ladder cut must not take a defect fix with it. The three fixes touch `platform/metrics.py`, `pricing_core/modelling/objectives.py` and `backend/tests/test_contracts.py`, which are disjoint from S4 and S5 | scope | no, for S4 and S5. **Yes, for the Work's close** | — (the lead: whether this delta cuts the row) |
+| DP-W-1 | WK-690's four open findings have no slice: FD-1294 (register `:218`, carry; very likely discharged by `SL-1271`'s arity rule, so only its dated line is owed), FD-1349 (`:281`, carry, "a follow-up slice"), FD-1492 (`:318`, fix before close) and FD-1512 (`:327`, fix before close). Where are they built? | **(a)** A third WK-690 row, a fix slice that is not on the cut ladder, cut by a later delta. **(b)** Fold them into S5. That puts two fix-before-close findings behind rung 3. **(c)** Re-own them to WK-1178, the P2 maintenance Work | **(a).** Two of the four carry the verdict "fix before close", so the Work cannot close while they are open, and a ladder cut must not take a defect fix with it. The three fixes touch `platform/metrics.py`, `pricing_core/modelling/objectives.py` and `backend/tests/test_contracts.py`, which are disjoint from S4 and S5 | scope | no, for S4 and S5. **Yes, for the Work's close** | **RULED (a).** Adopted by the lead, from-lead "2026-10-11 11:20:43 BST — Lead: WK-1250 S3 and WK-690 S4/S5 readiness — both NOT READY; DP-F asked (yours); DP-W-1"; confirmed by the maintainer, to-lead "2026-10-11 11:21:02 BST — DP-F (WK-1250 S3 plan form): (a); DP-W-1 (a): confirmed; dm-wk690 seated: OK", item 2. The fix row is cut above (order 0) |
 
 ## Hand-off (not this plan's writes)
 
 - The lead lists this delta on WK-690's roadmap row (L5). `SL-1274` and `SL-1275` already exist
-  (`docs/roadmap.md:1528`, `:1547`, `draft`), so no `SL-` row is cut here. Each row's
+  (`docs/roadmap.md:1528`, `:1547`, `draft`), so no `SL-` row is cut for them. **The fix row's
+  `SL 9936` row is cut `draft` under `### WK-690` in `docs/roadmap.md` on this branch** (the
+  planner's write, `document-ids.md` §1.6 SL row), with the working id the lead reserved. Each row's
   "relates" gains this delta's minted id at its GO.
 - The decision-maker rules DP-S4-1 and DP-S5-1. When both carry a `Resolved by` id, the plan
   goes `active` by its status line (`document-ids.md` §1.6, the PL row).
@@ -257,7 +313,10 @@ stand.
 - **Spec coverage.** Every id `PL-1268`'s Core scope assigns to Slices 4 and 5 is in a row:
   FR-95, FR-208 (the expression arm), `02` §5.3 Custom objective library, and `WF-702` Route B.
   The rows add the ids each slice's acceptance exercises: FR-145, FR-150, FR-152, FR-367,
-  NFR-463, NFR-483 and NFR-484. B4.4–B4.5 are carried (R5.3), not dropped.
+  NFR-463, NFR-483 and NFR-484. Every open register row owned by WK-690 is placed: FD-1349,
+  FD-1492 and FD-1512 in the fix row, and FD-1294's discharge line (R-F.1). The predicate is
+  `grep -n 'WK-690' docs/findings/register.md`, which prints six rows: `:182` (FD-1195, resolved,
+  WK-1178's), `:326` (FD-1511, resolved by SL-1273), and these four. B4.4–B4.5 are carried (R5.3), not dropped.
 - **Placeholders.** None. The route path in DP-S5-1 (a) is illustrative, and the ruling names
   it. The Route B file name is fixed here (`backend/tests/test_wf702_route_b.py`), as
   `PL-1268` Acceptance item 7 asked the slice plan to do.
