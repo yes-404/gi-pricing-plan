@@ -1821,7 +1821,7 @@ A pytest invariant fails the gate in three cases: `06` §4.1's permission tables
 id: SL-1367
 family: slice
 title: WK-1178 slice — FD-1335 Part A: the /score and /score/compare 200 responses documented, and one untyped-body guard over 2xx responses and JSON request bodies
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-01
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 9b0fb97c9ed1cea743639897351191bc1a862041
@@ -1834,6 +1834,10 @@ relates: [FD-1335, FD-1366, PL-1364, PL-1348, SL-1345, RL-1343, RL-1365]
 `FD-1335` Part A: `responses={200: {"model": ScoringResult}}` on `POST /api/v1/score` and the `ScoreComparison` equivalent on `POST /api/v1/score/compare`, with the raw `Response` kept and no outbound validation (`NFR-502`); `docs/contracts/` regenerated (`FR-451`); `NFR-502` measured again in a solo window; and a guard in `backend/tests/test_contracts.py` over both forms of an untyped JSON 2xx response, each form proven red first, with four permanent exclusions and twelve marked `pending FD-1335 part B`. Leaf plan `PL-1364`. **Serialised after `SL-1345` merges**, by the lead's decision on the evidence: both edit the `responses=` argument on the same two `score.py` decorators, which is not registry-exempt (`RL-1263`), and the contract must document the post-ladder rung shape. It lands before WK-675 dispatches a slice that consumes `/score` or `/score/compare` (`FD-1335` *Disposition* item 1). Filed under working ids 9787 (this row) and 9788 (the plan), allocated by the lead; both are minted at the plan PR's merge turn.
 
 *(Amended before mint, 2026-10-01, by the maintainer's decision, relayed by the lead.)* The guard is now one guard over both 2xx responses and JSON request bodies, folding in `FD-1366` (filed as working id 9779). Each side is shown red first on broken input. Multipart bodies are excluded with a citation. The five untyped request routes are temporary exceptions: four are marked `pending FD-1366 Part B`, and `seed-from-model` is marked `pending FD-1357's fix DP`. No handler outside `score.py` is edited. `FD-1366` Part B types the four existing shapes in a later slice. DP-A1 and DP-A2 are ruled by `RL-1365` (filed as working id 9783). *(Minted 2026-10-01 as SL-1367, filed under working id 9787; its plan is PL-1364, mint batch A.)*
+
+*(Activated 2026-10-11 by the lead's GO, the activation record `from-lead-2026-10-09.md` "2026-10-11 10:58:50 BST — Lead: GO SL-1367 (WK-1178, FD-1335 Part A, PL-1364)", accepted in `to-lead.md` entry "2026-10-11 10:59:23 BST — SL-1367 GO accepted; Task 5's NFR-502 re-measure: run LOCAL now as measured, diagnostic, verdict CARRIED to the dedicated-VM run list". DP-A3 = (a) and DP-A4 = (a), lead-kind, recorded dated in that entry; history in `to-lead.md` "2026-10-05 18:25:42 BST". The slice's ledger is LG-1637, minted 2026-10-11 from working id 9925.)*
+
+(Closed 2026-10-11 as a Slice, closing acts in the slice PR's last commit, on the lead's merge; ledger LG-1637, plan PL-1364. Acceptance 10's timing and Task 4's dated NFR-502 line are CARRIED to the dedicated-VM discharge, owner WK-1178 (`to-lead.md` "2026-10-11 16:29:03 BST" and "2026-10-11 16:30:29 BST").)
 
 #### SL-1377 — WK-1178 fix slice — FD-1357: multi-factor seeding per RL-1361, typed seed request and 201
 

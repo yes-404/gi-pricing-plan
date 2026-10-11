@@ -76,7 +76,7 @@ CI at `d131b6db` (relayed by the lead, read with the bashrc token; not read by m
 
 Findings proposed: none. Overall proposal: clean — items 1–5 and 7 MET, item 6 CARRIED by the lead's verdict, the CI red carried to #1282's merge.
 
-Lead verdict: (pending)
+Lead verdict (team-lead, from-lead 2026-10-11 20:28:32 BST): CLEAN; no FD.
 
 ### Build log
 
