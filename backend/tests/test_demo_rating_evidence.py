@@ -276,7 +276,7 @@ async def test_the_demo_premium_is_the_glm_premium_and_the_golden_quotes_are_not
     assert [g.status for g in run.golden_results] == ["pass"] * 3
     assert {g.name: g.expected_minor for g in run.golden_results} == expected_by_name
     kinds = {p.name: p.status for p in run.property_results}
-    assert kinds["premium-monotone-in-veh_age"] == "pass"
+    assert kinds["premium-monotone-in-veh-age"] == "pass"
     assert kinds["no-null-output"] == "pass"
     assert kinds["premium-bounded"] == "pass"
 
