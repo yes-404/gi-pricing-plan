@@ -226,9 +226,10 @@ line, and its merge commit from `git log origin/main --grep='SL-<n>\b'`. Each re
 Each task runs inside `SL-1527` and is added to `PL-1544`'s Tasks.
 
 **Task 0, added Step 6.** Quote DP-D4's ruling verbatim in the ledger, and quote `D4_PROPERTY`
-as written in this file. Check that the WF-699 D4 T-text is on `main`: `git grep -n 'premium
-increasing in bonus_malus over the NCD ladder' -- docs/workflows/WF-00699-*.md` prints its
-line. If it does not: STOP to the lead.
+as written in this file. Check that the WF-699 D4 T-text (working id RL 9701, read at
+`c823ca83` on `rl-9701-wf699-d4-2026-10-11`) is on `main`:
+``git grep -n -F 'premium increasing in `bonus_malus` over the NCD-ladder sub-graph' -- docs/workflows/WF-00699-*.md``
+prints its line (the D4 row). If it does not: STOP to the lead.
 
 **Task 1, added test.** `test_the_d4_property_does_not_depend_on_the_fit` (§"D4" item 6).
 Also, in `test_wf699_journey_runs_end_to_end`: D4 fails with the declared name and two adjacent
