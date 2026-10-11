@@ -134,6 +134,13 @@ _SITES: dict[_Key, tuple[frozenset[str], str]] = {
         "`ModellingError`/`PredictionError` on the synchronous model-prediction path"
         " (test_error_sinks.py `_SINKS`)",
     ),
+    ("backend/src/app/platform/rate_tables.py", "_edit_failure", _DYNAMIC): (
+        frozenset({"errors", "len(errors)"}),
+        "a manual edit's refusal: `errors` are the field errors, whose value issues name the table "
+        "key and the submitted value (pricing configuration, the caller's own edit, not a quote "
+        "input under NFR-499; ruled in the maintainer's 2026-10-10 22:16:18 BST entry in "
+        "`to-lead.md`); `len(errors)` is a count",
+    ),
     ("backend/src/app/platform/rate_tables.py", "_load_table", "RATE_TABLE_MISS"): (
         frozenset({"slug"}),
         "an artifact slug the caller named in the path; a rate-table lookup, not a per-quote miss",

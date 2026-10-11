@@ -58,10 +58,15 @@ ROWS: tuple[Row, ...] = (
     ),
     Row("POST", "/api/v1/environments/{env}/deployments", "DeploymentCreate", "Deployment"),
     Row("GET", "/api/v1/environments/{env}/deployments", None, "Deployment", paged=True),
-    # Row 9: the body is typed; the 2xx is `FD-1335` Part B's (FD 9752), pinned by key set.
-    Row("POST", "/api/v1/approval-requests", "ApprovalSubmission", None),
+    # Row 9: the body and (FD-1416, PL-1528) the 2xx are typed.
+    Row("POST", "/api/v1/approval-requests", "ApprovalSubmission", "ApprovalRequest"),
     # Row 8 (Task 6): the withdraw body is `reason` only; the server derives liveness.
-    Row("POST", "/api/v1/approval-requests/{request_id}/withdraw", "ApprovalWithdrawal", None),
+    Row(
+        "POST",
+        "/api/v1/approval-requests/{request_id}/withdraw",
+        "ApprovalWithdrawal",
+        "ApprovalRequest",
+    ),
 )
 
 #: The module of each row's handler.
@@ -74,6 +79,18 @@ MODULES: tuple[Path, ...] = (
 #: Rows that are Environment-prefixed routes: the set `test_the_route_set_is_pinned` holds equal.
 ENVIRONMENT_ROWS: tuple[Row, ...] = tuple(
     row for row in ROWS if row.path.startswith("/api/v1/environments")
+)
+
+
+#: WK-674 Slice 3's two routes, held apart from the Route table above: they are `PL-1583`'s
+#: (Acceptance 5), not `PL-1392`'s. `PL-1583` :68 amends `{name}` to `{slug}` and appends the
+#: `GET`; `07` §5.1 carries both as dated changes. Their bodies are `api/settings.py`'s
+#: `UpdateSettings` and `SettingResolution`, so they are not rows of the typing checks.
+SETTINGS_ROUTES: frozenset[tuple[str, str]] = frozenset(
+    {
+        ("GET", "/api/v1/environments/{slug}/settings"),
+        ("PUT", "/api/v1/environments/{slug}/settings"),
+    }
 )
 
 
@@ -297,15 +314,18 @@ def _environment_operations(document: dict[str, Any]) -> set[tuple[str, str]]:
 
 @pytest.mark.req("FR-428")
 def test_the_route_set_is_pinned(document: dict[str, Any]) -> None:
-    """The operations under `/api/v1/environments` equal the Route table's seven rows, exactly.
+    """The operations under `/api/v1/environments` equal the Route table's seven rows plus
+    `SETTINGS_ROUTES`' two, exactly.
 
     A route added or removed unchecked fails here naming it.
     """
     live = _environment_operations(document)
     expected = {(row.method, row.path) for row in ENVIRONMENT_ROWS}
     assert len(expected) == 7
-    assert live == expected, (
-        f"extra: {sorted(live - expected)}; missing: {sorted(expected - live)}"
+    union = expected | SETTINGS_ROUTES
+    assert len(union) == 9
+    assert live == union, (
+        f"extra: {sorted(live - union)}; missing: {sorted(union - live)}"
     )
 
 
@@ -545,11 +565,12 @@ def test_the_withdrawal_body_is_a_model_schema_type_with_no_liveness_field() -> 
 
 # --- Acceptance 18: S2 does not widen the untyped surface of the two changed routes -------------
 
-#: `service.to_dict`'s 12 top-level keys (`platform/approvals.py`, both routes call it as
-#: `to_dict(row, [])`). Neither Task 5 nor Task 6 changes what these routes return.
+#: `ApprovalRequest`'s 13 top-level keys (`model_schema/approvals.py`; `workspace_id` joined
+#: the 12 `to_dict` emitted, FD-1416 DP-2 (a)).
 APPROVAL_REQUEST_KEYS = frozenset(
     {
         "id",
+        "workspace_id",
         "artifact_ref",
         "artifact_type",
         "environment",

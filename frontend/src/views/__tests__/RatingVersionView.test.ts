@@ -50,6 +50,31 @@ describe("the rating version view", () => {
     expect(link).toHaveAttribute("href", "/rating/fremtpl2-demo/v/1/design");
   });
 
+  it("FR-25: links one rate table editor per pinned table, with no list call (RL-1475 item 3)", async () => {
+    getRatingVersion.mockClear();
+    getRatingVersion.mockResolvedValue({
+      ...RATING,
+      pins: { rate_tables: ["rate_table:area@3", "rate_table:band@2"] },
+    });
+    render(RatingVersionView, { props, ...mounted });
+
+    const area = await screen.findByRole("link", { name: "area@3" });
+    expect(area).toHaveAttribute("href", "/rating/fremtpl2-demo/v/1/tables/area");
+    expect(screen.getByRole("link", { name: "band@2" })).toHaveAttribute(
+      "href",
+      "/rating/fremtpl2-demo/v/1/tables/band",
+    );
+    expect(getRatingVersion).toHaveBeenCalledTimes(1); // the one read; the pins come with it
+  });
+
+  it("shows no table links when the rating version pins no rate table", async () => {
+    getRatingVersion.mockResolvedValue(RATING);
+    render(RatingVersionView, { props, ...mounted });
+
+    await screen.findByText(/fremtpl2-demo/);
+    expect(screen.queryByText("Rate tables")).not.toBeInTheDocument();
+  });
+
   it("shows the loading state while the read is in flight", () => {
     // A never-resolving promise keeps `loading` true, so the view renders the loading
     // placeholder rather than the rating or an error.

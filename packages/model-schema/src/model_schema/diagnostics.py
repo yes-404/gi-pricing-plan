@@ -27,6 +27,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from model_schema.input_free import InputFreeError
 from model_schema.money import DecimalStr
 
 __all__ = [
@@ -192,10 +193,9 @@ class UniversalDiagnostics(BaseModel):
         is exactly where the reader assumes they are commensurable.
         """
         if self.train.weighting is not self.holdout.weighting:
-            raise ValueError(
-                f"train is weighted by {self.train.weighting.value} and holdout by "
-                f"{self.holdout.weighting.value}; side-by-side metrics must share a "
-                "weighting scheme (FR-184)."
+            raise InputFreeError(
+                "train and holdout must be weighted the same way; side-by-side metrics must share "
+                "a weighting scheme (FR-184)."
             )
         return self
 
@@ -305,7 +305,7 @@ class GbmEvalPoint(BaseModel):
     @model_validator(mode="after")
     def _a_point_reports_at_least_one_part(self) -> GbmEvalPoint:
         if self.train is None and self.holdout is None:
-            raise ValueError("an evaluation point reports neither train nor holdout")
+            raise InputFreeError("an evaluation point reports neither train nor holdout")
         return self
 
 
@@ -443,7 +443,7 @@ class PartialDependenceOmission(BaseModel):
         if self.reason is PartialDependenceOmissionReason.LEVEL_CAP and (
             self.levels is None or self.exposure_share is None
         ):
-            raise ValueError(
+            raise InputFreeError(
                 "a level_cap omission must report the levels it dropped and the exposure "
                 "they hold (FR-175) — an unquantified truncation is the silent one "
                 "the requirement forbids"
@@ -645,9 +645,9 @@ class CrossValidationDiagnostics(BaseModel):
                 "fold's dispersion cannot include a fold that was never scored."
             )
         if len(seen) != len(self.fold_metrics):
-            raise ValueError(
-                f"fold_metrics lists {len(self.fold_metrics)} entries for {len(seen)} "
-                "distinct folds; a fold's dispersion cannot double-count a fold."
+            raise InputFreeError(
+                "fold_metrics lists a fold more than once; a fold's dispersion cannot double-count"
+                " a fold."
             )
         return self
 
