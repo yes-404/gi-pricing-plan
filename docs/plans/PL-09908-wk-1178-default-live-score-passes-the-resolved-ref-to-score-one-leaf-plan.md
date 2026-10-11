@@ -3,7 +3,7 @@ id: PL-9908
 family: plan
 kind: leaf
 title: WK-1178 — a default-live POST /score passes the resolved Rating Version to score_one: leaf plan
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-11
 owner: planner
 tree: d699a561d6a93f33b74beb9c07023f8e655bb8c7

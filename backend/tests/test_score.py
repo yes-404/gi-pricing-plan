@@ -1743,7 +1743,10 @@ def test_the_resolved_ref_is_stamped_on_a_copy_and_an_explicit_one_is_kept() -> 
     assert created.options is not None
     assert created.options.rating_version_ref == ref
     # The created options are the absent defaults plus the ref, nothing else.
-    assert created.options == score_module.QuoteContextOptions(trace=False, rating_version_ref=ref)
+    absent = score_module.QuoteContextOptions()
+    for field in score_module.QuoteContextOptions.model_fields:
+        if field != "rating_version_ref":
+            assert getattr(created.options, field) == getattr(absent, field), field
     assert no_options.options is None
     assert score_module._with_resolved_ref(named, ref) is named
     assert named.options is not None
