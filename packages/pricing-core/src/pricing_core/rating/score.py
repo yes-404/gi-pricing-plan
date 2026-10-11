@@ -179,6 +179,7 @@ cancellation is a hand-off to whichever caller can make the platform-level Job t
 from __future__ import annotations
 
 import json
+import math
 import re
 import time
 from collections.abc import Mapping, Sequence
@@ -989,7 +990,11 @@ def _ladder_json(ladder: Sequence[LadderRung]) -> str:
 #: (FR-227). Anything else is refused rather than stringified — RL-923 §5(i): a
 #: silent `default=str` catch-all put a `Decimal` output and an `int` output in the same
 #: JSON column with no way to tell which was which by reading the text back.
-_KNOWN_OUTPUT_TYPES = frozenset({"money_minor", "decimal", "bool", "string", "date"})
+#: The numeric family is `compile._NUMERIC` (FR-227's save-time vocabulary), so a type that
+#: saves, compiles and is served on `/score` is never refused here (FD-1561, FR-254).
+_KNOWN_OUTPUT_TYPES = frozenset(
+    {"money_minor", "int", "count", "decimal", "relativity", "percentage", "bool", "string", "date"}
+)
 
 
 def _coerce_output_value(declared_type: str, value: Any) -> int | str | bool:
@@ -1014,7 +1019,26 @@ def _coerce_output_value(declared_type: str, value: Any) -> int | str | bool:
                 f"score_batch: a money_minor output must be int, got {type(value).__name__}"
             )
         return value
-    if declared_type == "decimal":
+    if declared_type in ("int", "count"):
+        # RL-1567 T1: a JSON integer. Integral means exact equality with the integer part, no
+        # tolerance, and a whole-valued float is written as that integer (3.0 -> 3). The
+        # message names the types, never the value (NFR-499). A bool is not an integer
+        # output, and a non-finite float is refused here, before `int()` could raise another
+        # class.
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or (isinstance(value, float) and not math.isfinite(value))
+            or value != int(value)
+        ):
+            raise ValueError(
+                f"score_batch: a {declared_type} output must be integral, "
+                f"got {type(value).__name__}"
+            )
+        return int(value)
+    if declared_type in ("decimal", "relativity", "percentage"):
+        # RL-1567 T1: `relativity` and `percentage` take `decimal`'s string form. SL-1569
+        # (the RL-1343 slice) replaces this conversion with the one producer on every path.
         as_decimal = value if isinstance(value, Decimal) else Decimal(repr(value))
         return str(as_decimal)
     if declared_type == "bool":
@@ -1035,7 +1059,9 @@ def _coerce_output_value(declared_type: str, value: Any) -> int | str | bool:
 
 def _outputs_json(algorithm: RatingAlgorithm, outputs: Mapping[str, Any]) -> str:
     """`ScoringResult.outputs` -> a JSON object, total over every declared output type this
-    module recognises (`_KNOWN_OUTPUT_TYPES`) and refusing — never silently stringifying —
+    module recognises (`_KNOWN_OUTPUT_TYPES`; RL-1567 T1: `money_minor`, `int` and `count` a
+    JSON integer, `decimal`, `relativity` and `percentage` a JSON string, `bool` a JSON
+    boolean, `string` and `date` a JSON string) and refusing — never silently stringifying —
     anything else, so a type this function does not know about fails loudly instead of
     reaching `05` FR-317's A/E computation as data of an unknown shape (RL-923 §5(i))."""
     declared_types = {output.name: output.type for output in algorithm.outputs}
