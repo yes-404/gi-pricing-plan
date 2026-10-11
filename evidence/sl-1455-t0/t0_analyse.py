@@ -78,7 +78,26 @@ def summarise_profile(path: Path, top: int = 12) -> list[str]:
     return [f"| {frame} | {n} | {100 * n / total:.1f}% |" for frame, n in selfs.most_common(top)]
 
 
+HEADER = """# SL-1455 Task 0 results (diagnostic attribution, never an NFR-489 reading)
+
+Measured at slice COMMIT 47cf560426a78f079a3fdf57cb935224dfd5ebcc, on its base COMMIT
+372fa92ae3ab306bc067c234487ce929dc0e2a04 (origin/main). Not re-merged when main moves: the
+pre-registration pins this head (lead, 2026-10-11).
+
+Instruments NEW relative to PL-1454 Task 0's plan text (Step 2), added for main 372fa92a:
+- `rate_limit` phase: times `rate_limit.enforce` (FR-452, #1280), which `score` now calls on every
+  request: a Setting resolve in its own DB session, then a Redis INCR only if a limit is set. The plan's
+  phase list (auth, rbac, serving_ref, fetch_bundle, score_one, sample_trace, serialise) predates it.
+- Out-of-tree instrument module (`t0_app.py`) instead of the plan's in-tree `_phase.py` patch, so the
+  measured code is main's unedited; plus a 10 ms event-loop ticker (stall >= 50 ms), per-pass
+  START/END (Europe/London) and /proc/stat steal (`t0_driver.py`).
+- Step 3b's probe (main's handler, no ref in body) is expected to answer 200 now: SL-1631 (#1278)
+  stamps the resolved ref on a copy; `ref_filled` is then 0 of N on the live arms.
+"""
+
+
 def main(root: Path) -> None:
+    print(HEADER)
     for arm_dir in sorted(p for p in root.iterdir() if p.is_dir()):
         passes = {}
         profile = None
