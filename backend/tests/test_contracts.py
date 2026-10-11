@@ -2955,3 +2955,137 @@ def test_the_certificate_check_name_comparison_reaches_the_enum_and_can_fail() -
     broken = ["BOGUS" if name == "convexity" else name for name in authored]
     assert _certificate_check_name_drift(broken, authored) == {"BOGUS", "convexity"}
     assert _certificate_check_name_drift([], []) == set()
+
+
+# --- FD-1335 Part A / FD-1366: no untyped JSON body in the published contract ------------------
+#
+# One guard, two sides. A 2xx response and a JSON request body are each "untyped" in two forms
+# (the predicates below, verbatim from FD-1335 Evidence §1, which FD-1366's predicate 2
+# restates): form 1, a schema of `{}` (what a raw `Response` handler publishes), and form 2,
+# an object with no `properties` and no `$ref`/`allOf`/`anyOf`/`oneOf` (what `dict[str, Any]`
+# publishes). A frontend client types such a body as `unknown` or `{[key: string]: unknown}`.
+
+_HTTP_METHODS: Final[tuple[str, ...]] = (
+    "get",
+    "put",
+    "post",
+    "delete",
+    "options",
+    "head",
+    "patch",
+    "trace",
+)
+
+
+def _is_empty(schema: Any) -> bool:
+    """Form 1: the schema is `{}`."""
+    return schema == {}
+
+
+def _is_open_object(schema: Any) -> bool:
+    """Form 2: a JSON object with no `properties`, and no `$ref`, `allOf`, `anyOf`, `oneOf`."""
+    return (
+        isinstance(schema, dict)
+        and schema.get("type") == "object"
+        and "properties" not in schema
+        and not any(key in schema for key in ("$ref", "allOf", "anyOf", "oneOf"))
+    )
+
+
+def _walk_bodies(
+    document: dict,
+) -> Iterable[tuple[str, str, str, str, object]]:
+    """Yield `(side, METHOD, path, key, schema)` for every body the guard inspects.
+
+    The response side reads every media type of every 2xx response; its `key` is the status.
+    The request side reads every media type whose name contains `json`; its `key` is the media
+    type (multipart bodies are outside the JSON scope and are pinned apart, by citation, in
+    `NON_JSON_REQUEST_BODIES`). A schema-less media type counts as `{}`.
+    """
+    for path, item in document["paths"].items():
+        for method in _HTTP_METHODS:
+            operation = item.get(method)
+            if operation is None:
+                continue
+            for media, body in operation.get("requestBody", {}).get("content", {}).items():
+                if "json" in media:
+                    yield "request", method.upper(), path, media, body.get("schema", {})
+            for status, response in operation.get("responses", {}).items():
+                if str(status).startswith("2"):
+                    for body in response.get("content", {}).values():
+                        yield "response", method.upper(), path, str(status), body.get("schema", {})
+
+
+def _visited_bodies(document: dict) -> Iterable[tuple[str, str, str, str]]:
+    """Every body the walker inspected, reported or not: the reach control's evidence."""
+    for side, method, path, key, _schema in _walk_bodies(document):
+        yield side, method, path, key
+
+
+def _untyped_bodies(document: dict) -> list[tuple[str, str, str, str, str]]:
+    """`(side, METHOD, path, key, form)` for every body that is `{}` or an open object."""
+    found = []
+    for side, method, path, key, schema in _walk_bodies(document):
+        if _is_empty(schema):
+            found.append((side, method, path, key, "form1"))
+        elif _is_open_object(schema):
+            found.append((side, method, path, key, "form2"))
+    return found
+
+
+_SCORE_BATCH: Final[str] = "/api/v1/score/batch"
+
+
+def _plant(side: str, form: str) -> dict:
+    """The real document with `POST /api/v1/score/batch`'s typed body made untyped."""
+    document = copy.deepcopy(_load(OPENAPI))
+    operation = document["paths"][_SCORE_BATCH]["post"]
+    bad: dict = {} if form == "form1" else {"type": "object", "additionalProperties": True}
+    if side == "response":
+        operation["responses"]["202"]["content"]["application/json"]["schema"] = bad
+    else:
+        operation["requestBody"]["content"]["application/json"]["schema"] = bad
+    return document
+
+
+@pytest.mark.req("FR-451")
+@pytest.mark.parametrize("form", ["form1", "form2"])
+@pytest.mark.parametrize("side", ["response", "request"])
+def test_the_untyped_body_predicates_flag_each_planted_form(side: str, form: str) -> None:
+    """Each predicate is shown on planted input before the guard relies on it: a typed body
+    of the real document, made `{}` (form 1) or an open object (form 2), is reported."""
+    key = "202" if side == "response" else "application/json"
+    reported = _untyped_bodies(_plant(side, form))
+    assert (side, "POST", _SCORE_BATCH, key, form) in reported
+
+
+@pytest.mark.req("FR-451")
+def test_the_untyped_body_predicates_pass_typed_bodies() -> None:
+    """Negative controls and the reach control. A typed body is reported in neither form, and
+    the walker is shown to have *visited* two named real bodies, so a walker that stopped
+    descending fails here on a path rather than on a count."""
+    document = _load(OPENAPI)
+    visited = set(_visited_bodies(document))
+    reported = {entry[:4] for entry in _untyped_bodies(document)}
+    for typed in (
+        ("response", "POST", _SCORE_BATCH, "202"),
+        ("request", "POST", "/api/v1/score", "application/json"),
+    ):
+        assert typed in visited, f"the walker never reached {typed}"
+        assert typed not in reported, f"{typed} is typed, and was reported"
+
+    # An object with `properties` is typed on either side, in either spelling of the body.
+    for side in ("response", "request"):
+        planted = _plant(side, "form2")
+        operation = planted["paths"][_SCORE_BATCH]["post"]
+        typed_object = {"type": "object", "properties": {"a": {"type": "string"}}}
+        if side == "response":
+            operation["responses"]["202"]["content"]["application/json"]["schema"] = typed_object
+            key = "202"
+        else:
+            operation["requestBody"]["content"]["application/json"]["schema"] = typed_object
+            key = "application/json"
+        assert (side, "POST", _SCORE_BATCH, key) in set(_visited_bodies(planted))
+        assert (side, "POST", _SCORE_BATCH, key) not in {
+            entry[:4] for entry in _untyped_bodies(planted)
+        }

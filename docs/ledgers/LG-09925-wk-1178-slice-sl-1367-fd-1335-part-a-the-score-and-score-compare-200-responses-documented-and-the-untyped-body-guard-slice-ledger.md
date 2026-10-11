@@ -39,7 +39,7 @@ routes' media types follow later. DP-A1 and DP-A2 are ruled by `RL-1365`. `FD 97
 | Task | Plan step | Acceptance | Status |
 |---|---|---|---|
 | 0 | preconditions, dated delta below | needs 1–8 | done |
-| 1 | predicates, red first | 1, 2 | open |
+| 1 | predicates, red first | 1, 2 | done |
 | 2 | guard on the real document | 3, 4, 5 | open |
 | 3 | two 200 declarations, regenerated contract | 6–9 | open |
 | 4 | the NFR-502 spec line | 10 | open (after Task 5) |
@@ -84,6 +84,24 @@ the guard on the shortened lists. The merge turn records which merged second.
 **Overlap.** `sl-1257-wk674-s3-env` (WK-674 S3) edits the same `responses=problems(…)` line on
 `/score` (adds 429) and regenerates `generated.json`; it does not touch `test_contracts.py`.
 Plan: take main after it lands and regenerate the contract.
+
+#### 2026-10-11 — Task 1: the predicates, red first on planted input (Acceptance 1, 2)
+
+Stubs first: `_untyped_bodies` returned `[]` and `_visited_bodies` returned `iter(())`, with the
+tests appended to `backend/tests/test_contracts.py`. Command:
+`uv run --directory <wt> pytest -q -p no:cacheprovider backend/tests/test_contracts.py -k "untyped_body_predicates"`
+(under the small-test flock). Result: **5 failed, 159 deselected** (rc 1), as the plan predicted:
+- `test_the_untyped_body_predicates_flag_each_planted_form[response-form1|response-form2|request-form1|request-form2]`:
+  4 of 4 red, the planted body is not reported;
+- `test_the_untyped_body_predicates_pass_typed_bodies`: red on its first visited assertion,
+  `AssertionError: the walker never reached ('response', 'POST', '/api/v1/score/batch', '202')`.
+
+Then `_walk_bodies`, `_visited_bodies` and `_untyped_bodies` went in: **5 passed**. Negative
+control: with `_is_open_object`'s `and "properties" not in schema` clause deleted on a backup copy,
+the pass-typed test is red (1 failed, 4 passed) with `assert ('response', 'POST',
+'/api/v1/score/batch', '202') not in {…}`, the object-with-properties control reported; the file was
+restored and is green again (5 passed). `_guard_remainder` is defined in Task 2, with the lists it
+subtracts.
 
 ## PRs
 
