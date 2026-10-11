@@ -87,7 +87,9 @@ _INPUT_FREE = {
     # text (`test_a_glm_failure_reports_its_code_and_never_the_models_text` drives it).
     ("rating/runtime.py", "handler"): 3,
     ("rating/compile.py", "check_step_refs_pinned"): 1,  # step id and ref string, no quote
-    ("rating/compile.py", "compile_bundle"): 5,  # artifact-level (compile time), no quote
+    # artifact-level (compile time), no quote; the sixth is FR-223 (mode mismatch),
+    # whose text (`ModelReferenceModeError`, caught by class) is the step id and two declared modes
+    ("rating/compile.py", "compile_bundle"): 6,
     # PL-1471 (SL-1472), each at compile time over pinned artifacts, never a quote:
     # model ref, objective ref and its status
     ("rating/compile.py", "_refuse_unapproved_objectives"): 1,
@@ -95,6 +97,9 @@ _INPUT_FREE = {
     ("rating/compile.py", "_refuse_control_factor_keys"): 1,
     # model ref, a fitted feature name and the Factor's slug@version
     ("rating/compile.py", "_refuse_control_factor_model_calls"): 1,
+    # WK-1178 SL-1541 (FR-240): step id, refs, peril, role, feature slugs: authored identifiers
+    # at compile time, never a quote
+    ("rating/compile.py", "check_model_call_coverage"): 1,
     ("rating/compile.py", "_refuse_peril_model_calls"): 1,  # :815 step id, ref, names
     ("rating/compile.py", "_resolve_peril_components"): 3,  # refs, fields at fault, peril, status
     # mount point, port and value names (WK-1250 Slice 2)

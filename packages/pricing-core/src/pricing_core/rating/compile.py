@@ -29,6 +29,7 @@ from model_schema.modelling import Banding, Factor, FactorIntent, Grouping
 from model_schema.perils import LargeLossKind, PerilStructure
 from model_schema.rating import (
     AlgorithmOutput,
+    ModelReferenceModeError,
     Pins,
     RatingAlgorithm,
     RatingConstraintStep,
@@ -41,10 +42,12 @@ from model_schema.rating import (
     RatingStep,
     RatingTableStep,
     RatingVersion,
+    ValidationIssue,
     check_model_reference_mode,
 )
 from model_schema.refs import ArtifactRef
 from model_schema.sub_graphs import SubGraph, SubGraphInputPort
+from pricing_core.modelling.factors import required_model_inputs
 from pricing_core.rating.authored import authored_expression_fields
 from pricing_core.rating.inline import inline_mounts, mounted_fragments
 from pricing_core.rating.ladder import RUNG_ORDER, output_steps_by_name, rung_output_name
@@ -60,21 +63,6 @@ _SCALE_CAP = 28
 _DECIMAL_LITERAL = re.compile(r"\b\d+\.\d+\b")
 #: The numeric family — values that may legitimately cross where a number is expected.
 _NUMERIC = frozenset({"int", "decimal", "money_minor", "relativity", "percentage", "count"})
-
-
-class ValidationIssue(BaseModel):
-    """One named problem found at save time.
-
-    `code` is the stable machine code the API maps to a problem response; `step_id` and
-    `field` locate the offending part of the algorithm.
-    """
-
-    model_config = ConfigDict(frozen=True)
-
-    code: str
-    message: str
-    step_id: str | None = None
-    field: str | None = None
 
 
 def _as_list(value: str | list[str]) -> list[str]:
@@ -942,6 +930,51 @@ async def _resolve_peril_components(
     return components
 
 
+def check_model_call_coverage(
+    algorithm: RatingAlgorithm, resolved_pins: Mapping[str, ResolvedArtifact]
+) -> None:
+    """Refuse a `model_call` whose `feature_map` misses an input its pinned model needs (FR-240).
+
+    A model's required inputs are `required_model_inputs` of its Factors and `feature_order`
+    (`RL-1523`); the map's values are the model features it supplies, so an empty map supplies
+    none. A `peril_structure_ref` step is checked on each component model, which
+    `resolved_pins` holds beside the pins once compile has resolved them, and the message names
+    the peril and role. Membership (a mapped name the model does not take) is the save check's
+    (`PL-1464`); this is completeness only. The message names authored identifiers, never a
+    quote value (NFR-499).
+    """
+    for step in algorithm.steps:
+        if not isinstance(step, RatingModelCallStep):
+            continue
+        mapped = set(step.feature_map.values())
+        targets: list[tuple[ArtifactRef, str]] = []
+        if step.model_ref is not None:
+            targets.append((step.model_ref, ""))
+        else:
+            assert step.peril_structure_ref is not None  # exactly one is set (FR-222)
+            structure = PerilStructure.model_validate(
+                resolved_pins[str(step.peril_structure_ref)].payload
+            )
+            for peril in structure.perils:
+                for role in ("frequency_model", "severity_model", "burning_cost_model"):
+                    component = getattr(peril, role)
+                    if component is not None:
+                        where = f" (peril {peril.peril!r}, {role} of {step.peril_structure_ref})"
+                        targets.append((component, where))
+        for model_ref, where in targets:
+            pin = resolved_pins[str(model_ref)]
+            fit_result = pin.payload.get("fit_result")
+            order = fit_result.get("feature_order", ()) if isinstance(fit_result, dict) else ()
+            required = required_model_inputs(pin.factors, order)
+            missing = [feature for feature in required if feature not in mapped]
+            if missing:
+                _raise_named(
+                    "MODEL_CALL_FEATURE_MAP_INVALID",
+                    f"step {step.step_id!r}: the feature_map does not map {missing}, "
+                    f"which {model_ref}{where} requires (FR-240)",
+                )
+
+
 async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> Bundle:
     """Compile a pinned `RatingVersion` to a self-contained Bundle (FR-239/240).
 
@@ -951,7 +984,9 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
     `model_reference_mode` (FR-223), and no custom objective is unapproved, pinned or
     reached through a pinned model (FR-240).
     Every `table`, `lookup` and `model_call` step's ref is pinned at its exact version
-    (FR-237, `check_step_refs_pinned`).
+    (FR-237, `check_step_refs_pinned`). Every `model_call` `feature_map` maps each input its
+    pinned model requires, per component for a Peril Structure (FR-240,
+    `check_model_call_coverage`).
     Each sub-graph mount is resolved from the version's pins (`RL-1309` G1) and inlined at its
     mount point (FR-217, `inline_mounts`), and every check above runs over the **inlined**
     algorithm, so a fragment's steps, references and expressions are checked as the parent's.
@@ -1001,7 +1036,11 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
     issues = validate_algorithm(inlined)
     if issues:
         _raise_named(issues[0].code, issues[0].message)
-    check_model_reference_mode(version, inlined)
+    try:
+        check_model_reference_mode(version, inlined)
+    except ModelReferenceModeError as exc:
+        # NFR-499: kept by class, not by shape; its text is the step id and the two modes.
+        _raise_named("MODEL_REFERENCE_MODE_INCONSISTENT", str(exc))
     check_step_refs_pinned(inlined, pins)
     _refuse_peril_model_calls(inlined)
 
@@ -1040,6 +1079,7 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
     await _refuse_unapproved_objectives(version, payloads, resolver, component_refs)
     await _refuse_control_factor_keys(version, payloads, resolver)
     _refuse_control_factor_model_calls(inlined, resolved_pins)
+    check_model_call_coverage(inlined, resolved_pins)
 
     graph = to_jdm(inlined)
     return Bundle(
@@ -1062,6 +1102,7 @@ __all__ = [
     "ValidationIssue",
     "assert_integer_minor_round_trip",
     "bundle_hash",
+    "check_model_call_coverage",
     "check_step_refs_pinned",
     "compile_bundle",
     "fragment_output_type_issues",
