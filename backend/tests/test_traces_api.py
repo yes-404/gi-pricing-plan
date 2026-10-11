@@ -23,9 +23,11 @@ from __future__ import annotations
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 from app.api.deps import DEV_PRINCIPAL_HEADER
 from app.config import Environment, Settings
+from app.db.models import ScoringTraceRow
 from app.db.session import Database
 from app.main import create_app
 from app.platform import traces as traces_service
@@ -325,3 +327,49 @@ async def test_a_pending_trace_is_never_returned(
     quote_ids = {item["quote_id"] for item in body["items"]}
     assert quote_ids == {"quote-complete"}
     assert body["total_estimate"] == 1
+
+
+@pytest.mark.req("FR-259")
+async def test_a_reproduction_that_differs_from_the_served_quote_is_marked(
+    client: TestClient,
+    database: Database,
+    blob_store: BlobStore,
+    workspace_id,
+    reader_headers,
+) -> None:
+    """FD-1433, RL-1434 (T-M1): a re-score that did not reproduce the served result is listed
+    marked `mismatch`, never as the quote's trace. `traces.py:257` already sets the row's
+    status; this is the read route carrying it."""
+    await _write_real_time(
+        database, blob_store, workspace_id,
+        quote_id="quote-complete", rating_version="rating_version:motor-gb@1",
+    )
+    await _write_pending(
+        database, workspace_id,
+        quote_id="quote-differs", rating_version="rating_version:motor-gb@1",
+    )
+    async with database.unit_of_work() as session:
+        pending = (
+            await session.execute(
+                select(ScoringTraceRow).where(ScoringTraceRow.quote_id == "quote-differs")
+            )
+        ).scalar_one()
+        await traces_service.complete_pending_trace(
+            session,
+            blob_store,
+            pending.id,
+            _trace(
+                quote_id="quote-differs",
+                rating_version=pending.rating_version_ref,
+                bundle_hash=pending.bundle_hash,
+            ),
+            # `_write_pending` stores `{"outcome": "declined"}` as the served summary.
+            reproduced_summary={"outcome": "quoted"},
+        )
+
+    response = client.get("/api/v1/traces", headers=reader_headers)
+    assert response.status_code == 200, response.text
+    by_quote = {item["quote_id"]: item for item in response.json()["items"]}
+    assert set(by_quote) == {"quote-complete", "quote-differs"}
+    assert by_quote["quote-complete"].get("status") == "complete"
+    assert by_quote["quote-differs"].get("status") == "mismatch", by_quote["quote-differs"].keys()

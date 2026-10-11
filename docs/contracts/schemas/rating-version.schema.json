@@ -17,7 +17,9 @@
         "rate_tables": {"type": "array", "items": {"$ref": "common/artifact-ref.schema.json"}},
         "models": {"type": "array", "items": {"$ref": "common/artifact-ref.schema.json"}},
         "reference_tables": {"type": "array", "items": {"$ref": "common/artifact-ref.schema.json"}},
-        "custom_objectives": {"type": "array", "items": {"$ref": "common/artifact-ref.schema.json"}}
+        "custom_objectives": {"type": "array", "items": {"$ref": "common/artifact-ref.schema.json"}},
+        "sub_graphs": {"type": "array", "items": {"$ref": "common/artifact-ref.schema.json"},
+                       "description": "The exact Sub-graph Versions the algorithm's mounts name (FR-217, WK-1250 Slice 2)."}
       }
     },
     "model_reference_mode": {"enum": ["exact", "approximation"]},

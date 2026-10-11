@@ -594,6 +594,7 @@ class TestImportContract:
 def test_rate_table_diff_job_kind_exists() -> None:
     """The parquet diff answers 202 with a Job whose kind is rate_table.diff (03 §5.1)."""
     assert JobKind.RATE_TABLE_DIFF.value == "rate_table.diff"
+    assert JobKind.RATE_TABLE_DIFF_CELLS.value == "rate_table.diff_cells"
 
 
 @pytest.mark.req("FR-228")

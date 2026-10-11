@@ -17,11 +17,11 @@ wrapper form was typed wrong three times in one day (W37-6 channel):
    a *second* time when the wrapper already holds one (below).
 
 **One shared lock namespace with the wrapper, announced rather than duplicated.** This
-hook locks the identical `/tmp/slots/gate-{1,2}` files the wrapped gate command in
+hook locks the identical `/tmp/slots/gate-1` file the wrapped gate command in
 `dev-commands` uses — a *separate* namespace was tried first and rejected (the deputy's
 ruling): it let the wrapped gates and as many bare ones run at once, double the budget,
 defeating the budget the files exist to enforce. One namespace means a correctly-wrapped run and a
-bare one draw from the same two slots either way.
+bare one draw from the same one slot either way.
 
 That raises the deadlock risk a shared namespace implies: the wrapper's outer shell holds
 its lock via its own open file description and then execs `uv run pytest` as a *child* —
@@ -67,7 +67,7 @@ del _var
 #: The wrapper's own files (`.claude/skills/dev-commands/SKILL.md`'s gate block) —
 #: deliberately the same namespace, not a private one; see the module docstring.
 _SLOT_DIR: Any = Path("/tmp/slots")
-_SLOT_COUNT = 2  # matches dev-commands' current gate concurrency budget
+_SLOT_COUNT = 1  # one full gate at a time (RL-1445); matches dev-commands' gate loop
 _SLOT_PREFIX = "gate-"
 #: Set by the wrapper immediately after its own `flock` succeeds — its presence means a
 #: slot is already held on this process's behalf, so this hook must not acquire a second.

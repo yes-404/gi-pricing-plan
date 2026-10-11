@@ -52,6 +52,8 @@ Project
 
 *(Amended 2026-09-29 by the maintainer, dated line by delegation: "one at a time" above is now
 qualified by §8's amendment. Up to 2 build slices, from different Works, may run at once; RL-1263
+(working id).)* *(Amended 2026-10-05 by the maintainer, dated line by delegation: up to 3
+build slices may run at once, and two from the same Work only under §8's conditions; RL-1445
 (working id).)*
 
 One template, applied recursively three times (§5), plus a leaf-level variant at Slice
@@ -96,7 +98,8 @@ declared in the phase's own milestone section and checked by `phase-close.md` (r
 5. **Process children, one at a time** — invoke the next layer's flow for each child,
    strictly sequentially at this level (see §8 for the read-only fan-out carve-out). *(Amended 2026-09-29: "strictly
 sequentially" is qualified by §8's amendment, which allows up to 2 build slices from different
-Works; RL-1263.)*
+Works; RL-1263.)* *(Amended 2026-10-05: up to 3 build slices, and two from the same Work only
+under §8's conditions; RL-1445.)*
 6. **Audit** — auditor reviews the completed children against this layer's plan: no
    missing requirements, every gate actually achieved, watching specifically for drift at
    this layer's own level (a Phase audit checks work-level drift, not implementation
@@ -133,6 +136,23 @@ Works; RL-1263.)*
    lead adopts, amends, or rejects. Fix loops to Implement, guarded (§7).
 7. **Commit** — small, working commit; PR opened, never self-merged (§3, Lead).
 8. **Return to Work layer** — signals this slice is complete.
+
+**Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6** (Lean P2 item L1, in force from the maintainer's entry
+"2026-10-08 11:51:58 BST — USER DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW; the files are amended through RFC 9479 P6 (the maintainer's amendment, by delegation)" in `to-lead.md`). For every slice whose GO is given after that entry:
+**the slice is one PR** — the code, the tests, any spec change it needs, its one-line `SL-`
+roadmap row status change, and **one ledger file**, an `LG-` under `docs/ledgers/`, with five
+sections: scope (quoting its row in the Work's plan, step 1, and any §8 dispatch record), tasks,
+gate rc table, audit result and build log (the LG template, `docs/_templates/LG.md`). The `LG-`
+quotes the GO and MERGE-ACK headers verbatim. **There is no per-slice `PL-`, no dispatch `RL-`
+and no activation PR**; in-flight status lives in `eta.md`. (L1 as corrected to (a') by the
+maintainer's entry "2026-10-08 12:02:08 BST — #1240 P6 flagged readings RULED: (1) REJECTED,
+and my 11:51:58 L1 (a) wording CORRECTED (the slice's one file is its LG-, not text under the
+roadmap row); (2) ACCEPTED".) A separate governed record
+is written only for a spec change or a new or amended requirement; a ruling that corrects or
+reverses an earlier ruling, or binds beyond the slice; a product defect (`FD-`); or a design
+question left open (`OQ-`). The audit is unchanged in substance (`CLAUDE.md` §13); only where it
+is written down changes. Step 1's "slice plan" is the slice's row in its Work's one plan
+(L5, §10). A slice dispatched before that entry finishes in the old form.
 
 ## 7. Escalation guards — instrumented defaults, not fixed governance
 
@@ -179,6 +199,24 @@ rebases, mints and audits. It is not a slice and runs alongside. What "no shared
 covers (a closed append-only registry list) and RL-871 §7's three conditions are defined in
 RL-1263, not restated here.
 
+*(Amended 2026-10-05 by the maintainer, dated line by delegation: at most 3 build slices at
+once; at most ONE full gate runs at a time on this VM, and a built slice waits for it
+(corrected 2026-10-05 15:27:25 BST from "gate slots stay 2"); targeted single-file test runs
+stay allowed outside the gate window, never beside a gate or a benchmark. Two slices from the
+same Work may run at once only when the dispatch record shows (a) their file sets resolved by
+the existing contention rules (exempt, one-sided, name-disjoint or serialise) and (b) no plan
+dependency: neither slice consumes the other's output, named both ways. Otherwise they
+serialise.)* The ruling is RL-1445, which amends RL-1263. A measurement step
+still runs alone. Condition (b) is an extra bar on a same-Work pair, not a ground for it:
+the single gate, not plan-independence, still bounds the contention.
+
+*(Amended 2026-10-05 by the maintainer, dated line by delegation, on the 15:27:25 BST entry:
+the registry list's exempt paths include two dated amendments, `ONE_SIDED_SLUGS` in
+`backend/tests/test_contracts.py` for key-disjoint edits (2026-10-03 21:11:06 BST, #1093) and
+`__all__` in a package `__init__.py` for name-disjoint appends (2026-10-05 09:44:39 BST,
+#1118).)* RL-1445 records both verbatim; their conditions are there, not
+restated here.
+
 **The interest §8 protects is resource contention, not plan stability.** Two children can be
 perfectly plan-independent and running them concurrently still breaches this rule, so an
 exception argued on plan-independence argues past it (RL-871 refused exactly that
@@ -211,6 +249,57 @@ inside an hour before the announcement half was added.)*
 full gate and runs on clean hardware. A reviewer re-running the suite locally buys nothing CI
 does not buy better, and risks the borrowed-environment traps `dev-commands` documents.
 
+**PRs, batches and merging — the standing rules (RFC-1506 P5).** **Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6**,
+recording rules already in force by the maintainer's rulings, each cited by its `to-lead.md`
+entry header in RFC-1506 P5 (not restated there and here: the RFC carries the citations, this
+section the rules). The merge procedure itself is `.claude/roles/lead.md` rule 4.
+- **(5a) Batching.** Records reach `main` in mint-batch PRs of at most 10 ids (more needs the
+  maintainer's prior OK), ordered cited-first by dependency layer; the batch body lists every
+  record (working id → minted id, its source, its normalised-diff result); a back-cite into a
+  later batch stays a space-form working id and is listed in the body. Only one
+  register-touching minter runs at a time, paired with a roadmap-only batch.
+- **(5b) The open-PR cap.** All open PRs stay under 30, as a standing control. At or over 30, a
+  new record rides a same-subject PR or the next batch; slice PRs and urgent fixes are exempt.
+- **(5c) Cleanup during the work.** A batch's absorbed sibling PRs close at once after its
+  verified read-back, when each sibling's normalised diff against the batch copy is empty apart
+  from id re-points and the INDEX and register regeneration; a draft found superseded, absorbed
+  or obsolete closes at once naming its carrier; merged branches and worktrees go; every status
+  carries the open count and the closes since the last. Branch cleanup runs once open PRs are
+  under 30, dry-run table first, every deleted tip recorded and pinned under `refs/salvage/`.
+- **(5d) A new governed-record draft gets no PR.** It is committed on its own branch
+  `draft/<family>-<working id>` from current `main` and pushed; reviews cite
+  `draft/<family>-<wid> @ <full sha>`; the lead keeps a draft register in `eta.md`; at mint the
+  minter builds one batch PR from current `main`. A draft branch commits no `docs/INDEX.md`
+  hunk; the batch regenerates INDEX once. Exempt: slice PRs, security and dependency fixes, and
+  RFC-1506's own PR. (Activation PRs end for slices dispatched after 2026-10-08 11:51:58 BST, under L1.)
+- **(5e) Merge `main`, never rebase.** A branch behind `main` takes it by `git merge
+  origin/main`, then regenerates INDEX in a new commit; a rebase voids every SHA a record cites.
+- **(5f) A 7-day draft age.** A draft (PR or `draft/` branch) older than 7 days is closed, or
+  its branch deleted with the tip sha recorded, or carried by the lead with a dated reason in
+  `eta.md`; the lead's sweep reports the count. *(In force, interim, from the maintainer's
+  entry "2026-10-08 11:49:11 BST — RFC 9479 draft (#1240 @298004b620650c62f6e8429faad8632369ceee0a)
+  REVIEWED: 1E and 5f IN FORCE NOW as interim rules; the full ruling HELD for the user's
+  lean-P2 decision".)*
+- **(5h) Remote CI is not a gate.** A minter pushes and runs CI while a gate slot is held; only
+  its local checks wait for the slot.
+- **(1E, E2) An ACK carries over a move of `main` without a new branch CI run** when the
+  conditions in `.claude/roles/lead.md` rule 4 hold (the procedure is there, not restated here):
+  1E, a docs-only PR whose paths `main`'s new commits do not touch; E2, a docs-only PR whose only
+  shared path is `docs/INDEX.md`, regenerated with `doc-index.py`; and a code PR whose delta is
+  only a docs-only merge of `main`. Each needs merge-tree rc 0 with the tree named, the docs
+  checks green at the new head, and a local docs-reading pytest subset (every module
+  `git grep -l '"docs/' -- '*test*.py'` lists); a module of that subset that needs
+  `GIP_TEST_DATABASE_URL` is skipped when the PR touches nothing under `docs/contracts/` or
+  `docs/specs/` (an OQ mirror row in a spec's open-questions section excepted), and otherwise
+  runs against a per-worktree DB. **Precondition for all three:** the CI-green
+  head's runs COMPLETED with success, read per workflow (a cancelled run is not green), and
+  nothing was pushed to the branch while a run the ACK relies on was in flight. `main`'s push CI
+  is the backstop; a red `main` is fixed forward before any other merge. *(From the
+  maintainer's entries "2026-10-08 11:49:11 BST" (1E), "2026-10-08 11:57:55 BST" (code PRs),
+  "2026-10-08 12:12:08 BST" (E2), "2026-10-08 12:15:49 BST" (the precondition) and
+  "2026-10-08 12:40:38 BST" (the DB-backed modules of the subset) in
+  `to-lead.md`, full headers in RFC-1506's Sources.)*
+
 ## 9. Global findings register
 
 Adopted as-is (rulings record Part C row 8) — this **is** `docs/findings/register.md`,
@@ -222,6 +311,13 @@ owner or trigger). Resolution is durable and artifact-linked: appended as a date
 citing the merging PR, never rewritten. Every map-plan and slice-plan stage reads the
 rows relevant to it before finalizing (§11 obligation 7).
 
+**Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6** (Lean P2 item L3). Until the P2 exit demo (2026-11-12), a finding about the process
+itself (document ids, INDEX, audit or doc checks, role files, skills, record forms, the merge
+or mint procedure) is not an `FD-` and gets no register row: it is a dated row in
+`docs/process/process-backlog.md`, riding the next batch or slice PR. It is still an `FD-`
+when it (i) lets a wrong merge, a wrong number, a mispricing or data loss through, or (ii)
+blocks work today; the lead names the limb. The P2 phase review keeps, files or drops each row.
+
 ## 10. Required artifacts
 
 - **Process spec** (this document) and **agent settings**
@@ -231,9 +327,16 @@ rows relevant to it before finalizing (§11 obligation 7).
   breakdown + open questions — existing, unchanged. Each phase's milestone section
   declares its three dated freeze gates (plan, code, docs — ritual (b), `document-ids.md`
   §1.10), and `phase-close.md` checks that each passed on or before its date.
-- A work breakdown per phase, a slice breakdown per work item, and a plan per slice
-  (`docs/plans/`) — existing, unchanged, following the frozen/dated-revision convention
-  already in force.
+- A work breakdown per phase, and **one plan per Work** (`docs/plans/`) whose slices are
+  rows: scope, requirements, dependencies, lane and order. No per-slice plan. The frozen-plan
+  rule stays: a change of slice scope, or new slices, is **one dated Work-plan delta** covering
+  every change at once; slice status lives in `docs/roadmap.md`, never in the plan. An open
+  Work's remaining unplanned slices go into one delta, filed when the next of them needs a
+  plan; existing per-slice plans stand. A delta is a new `PL-` that `relates:` the Work's plan; a
+  true replan still uses `supersedes:`; the Work's roadmap row lists every delta's id. **Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6** (Lean P2 item L5;
+  it read "a slice breakdown per work item, and a plan per slice … existing, unchanged").
+- The **process backlog** (`docs/process/process-backlog.md`): process findings held until
+  the P2 phase review (§9's amendment).
 - The central **open-questions log** (`docs/open-questions.md`) — existing, unchanged.
 - The **global findings register** (§9), with per-work closure records alongside it per
   current audit practice — existing, unchanged.

@@ -1,0 +1,47 @@
+{
+ "slug": "fremtpl2-rel-area",
+ "version": 2,
+ "rateable": true,
+ "storage": "rows",
+ "keys": [
+  {
+   "name": "area",
+   "type": "string",
+   "banding_ref": null
+  }
+ ],
+ "value": {
+  "name": "rel_area",
+  "type": "relativity",
+  "unit": "factor",
+  "min": null,
+  "max": null
+ },
+ "default_row": null,
+ "rows": [
+  {
+   "area": "A",
+   "rel_area": "1.00000000"
+  },
+  {
+   "area": "B",
+   "rel_area": "1.01812804"
+  },
+  {
+   "area": "C",
+   "rel_area": "1.01424096"
+  },
+  {
+   "area": "D",
+   "rel_area": "1.06385647"
+  },
+  {
+   "area": "E",
+   "rel_area": "1.05712666"
+  },
+  {
+   "area": "F",
+   "rel_area": "0.98658410"
+  }
+ ]
+}

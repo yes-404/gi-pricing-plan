@@ -256,8 +256,9 @@ Four things are never a role's:
 - **An amendment to what this file requires** — the maintainer's. Editing this file to
   *point at* something already ruled is not an amendment.
 
-**Every decision lands as a dated artifact** — a ruling record, an audit record, a plan —
-never in chat.
+**Every decision lands as a dated artifact** — a ruling record, an audit record, a plan, or
+the slice ledger that quotes the GO and MERGE-ACK headers verbatim — never in chat.
+**Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6** (Lean P2 item L1).
 
 **Precedence — superpowers first.** When a superpowers skill and any other both apply,
 follow the superpowers one. Read `using-superpowers` when a task starts;
@@ -273,7 +274,15 @@ repository does not have, which the next workstream is then planned against. **R
 destinations, per `document-ids.md` §1.4:** a closure record or a plan review is a `CR-`
 under `docs/closures/`; a finding is an `FD-` under `docs/findings/`, with a row in
 `docs/findings/register.md`; a decision already made is an `RL-` under `docs/rulings/`; a
-slice ledger is an `LG-` under `docs/ledgers/`. Three rules bind wherever anything here is
+slice ledger is an `LG-` under `docs/ledgers/` — from Lean P2 the slice's one paperwork file,
+with five sections (scope quoting its Work-plan row, tasks, gate rc table, audit, build log),
+carried in the slice's one PR with the `SL-` row's one-line status change; a Work has one `PL-`
+whose slices are rows, changed by dated deltas that `relates:` it; no per-slice `PL-`, dispatch
+`RL-` or activation PR for a slice dispatched after the change; a process finding is a dated row in `docs/process/process-backlog.md`
+until the P2 exit demo, and an `FD-` only when it lets a wrong merge, a wrong number, a
+mispricing or data loss through, or blocks work today.
+**Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6** (Lean P2 items L1, L3 and L5, L1 as corrected to (a') on 2026-10-08 12:02:08 BST; it read "a slice
+ledger is an `LG-` under `docs/ledgers/`"). Three rules bind wherever anything here is
 audited, not only at a close:
 
 - **Scope is derived from the specification first, then evidenced** — never from

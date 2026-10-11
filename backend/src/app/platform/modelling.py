@@ -17,7 +17,7 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import json
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Any, Final
 from uuid import UUID
 
@@ -58,6 +58,7 @@ from model_schema import (
     ModelFlag,
     ModelSpec,
     ModelStatus,
+    ObjectiveStatus,
     ObjectiveTemplate,
     Permission,
     Principal,
@@ -72,6 +73,7 @@ __all__ = [
     "create_factor",
     "flags_for",
     "list_factors",
+    "load_factor_by_ref",
     "load_factors",
     "load_interval_models",
     "load_model",
@@ -341,6 +343,31 @@ async def load_factors(
     deduped = list(dict.fromkeys(operand_ids))
     operands = await _load(deduped, "interaction operands")
     return ordered + [to_factor(operands[fid]) for fid in deduped]
+
+
+async def load_factor_by_ref(
+    session: AsyncSession, *, workspace_id: UUID, ref: ArtifactRef
+) -> list[Factor]:
+    """The Factor a `factor:<slug>@<version>` ref pins, **followed by the operands it crosses**.
+
+    A rate table key carries a ref, not an id (`RL-1361`), so this finds the row by its slug
+    and version and then goes through `load_factors`, which brings the interaction operands a
+    cross needs. A ref that names no Factor of this workspace is a `404` naming the ref, never
+    an empty list: `resolve_factors` would otherwise report a dangling reference as a
+    resolution failure.
+    """
+    factor_id = await session.scalar(
+        select(FactorRow.id).where(
+            FactorRow.workspace_id == workspace_id,
+            FactorRow.slug == ref.slug,
+            FactorRow.version == ref.version,
+        )
+    )
+    if factor_id is None:
+        raise PlatformError(
+            "NOT_FOUND", "Factor not found", 404, f"No factor {ref} in this workspace."
+        )
+    return await load_factors(session, workspace_id=workspace_id, factor_ids=[factor_id])
 
 
 async def reserve_model(
@@ -1049,7 +1076,7 @@ def fit_payload(row: ModelRow) -> dict[str, Any]:
 async def flags_for(
     session: AsyncSession, *, workspace_id: UUID, row: ModelRow
 ) -> tuple[ModelFlag, ...]:
-    """FR-205's flags, **computed rather than stored**.
+    """FR-205's and R4's flags, **computed rather than stored**.
 
     A stored flag is a snapshot, and the thing this one describes moves: `01` FR-53
     makes validation re-runnable on an already-validated version, so a dataset that was
@@ -1059,10 +1086,42 @@ async def flags_for(
 
     The cost is a read per model, which is why it is not called on the list path.
     """
+    flags: list[ModelFlag] = []
     version = await session.get(DatasetVersionRow, row.dataset_version_id)
     if version is None or DatasetStatus(version.status) is not DatasetStatus.VALIDATED:
-        return (ModelFlag.DATASET_INVALIDATED,)
-    return ()
+        flags.append(ModelFlag.DATASET_INVALIDATED)
+    objective_ref = _custom_objective_ref(row)
+    if objective_ref is not None:
+        from app.platform import objectives as objective_service
+
+        objective = await objective_service.resolve_ref(
+            session, workspace_id=workspace_id, ref=objective_ref
+        )
+        # DP-5: one set for both doors; anything but `approved` is flagged (`02` R4).
+        if objective.status is not ObjectiveStatus.APPROVED:
+            flags.append(ModelFlag.CUSTOM_OBJECTIVE_NOT_APPROVED)
+    return tuple(flags)
+
+
+_FLAG_REASONS: dict[ModelFlag, Callable[[ModelRow], str]] = {
+    ModelFlag.DATASET_INVALIDATED: lambda row: (
+        "FR-205: a Model whose Dataset Version was invalidated cannot advance to "
+        "`approved`. Re-validating the version, or refitting on one that holds, clears it."
+    ),
+    ModelFlag.CUSTOM_OBJECTIVE_NOT_APPROVED: lambda row: (
+        f"R4 (`custom_objective_not_approved`): its custom objective "
+        f"{_custom_objective_ref(row)} is not `approved`; a Model can only reach `approved` "
+        "if that objective is itself `approved`."
+    ),
+}
+
+
+def _custom_objective_ref(row: ModelRow) -> str | None:
+    """The custom objective a GBM's spec names, if any (`GbmSpec.objective`)."""
+    objective = row.spec.get("objective") if isinstance(row.spec, dict) else None
+    if isinstance(objective, dict) and objective.get("kind") == "custom":
+        return str(objective["ref"])
+    return None
 
 
 def _require_transition(row: ModelRow, target: ModelStatus) -> ModelStatus:
@@ -1345,9 +1404,9 @@ async def apply_approval_decision(
                 "This model carries a flag and cannot be approved",
                 409,
                 f"{request.artifact_ref} is flagged {[f.value for f in flags]}. "
-                "FR-205: a Model whose Dataset Version was invalidated cannot advance "
-                "to `approved`. Re-validating the version, or refitting on one that holds, "
-                "clears it — the flag is computed, not stored, so nothing needs unsetting.",
+                + " ".join(_FLAG_REASONS[f](row) for f in flags)
+                + " The flag is computed, not stored, so nothing needs unsetting once its "
+                "referent is fixed.",
             )
 
     before = ModelStatus(row.status)

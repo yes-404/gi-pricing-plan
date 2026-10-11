@@ -1,0 +1,437 @@
+{
+ "slug": "fremtpl2-rate",
+ "version": 1,
+ "input_contract": [
+  {
+   "name": "area",
+   "type": "enum",
+   "domain": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F"
+   ],
+   "nullable": false
+  },
+  {
+   "name": "veh_power",
+   "type": "int",
+   "nullable": false,
+   "min": 4,
+   "max": 12
+  },
+  {
+   "name": "veh_brand",
+   "type": "enum",
+   "domain": [
+    "B1",
+    "B10",
+    "B11",
+    "B12",
+    "B13",
+    "B14",
+    "B2",
+    "B3",
+    "B4",
+    "B5",
+    "B6"
+   ],
+   "nullable": false
+  },
+  {
+   "name": "region",
+   "type": "enum",
+   "domain": [
+    "R11",
+    "R21",
+    "R22",
+    "R23",
+    "R24",
+    "R25",
+    "R26",
+    "R31",
+    "R41",
+    "R42",
+    "R43",
+    "R52",
+    "R53",
+    "R54",
+    "R72",
+    "R73",
+    "R74",
+    "R82",
+    "R83",
+    "R91",
+    "R93",
+    "R94"
+   ],
+   "nullable": false
+  },
+  {
+   "name": "bonus_malus",
+   "type": "int",
+   "nullable": false,
+   "min": 50,
+   "max": 150
+  },
+  {
+   "name": "density",
+   "type": "int",
+   "nullable": false,
+   "min": 1,
+   "max": 27000
+  },
+  {
+   "name": "age_band",
+   "type": "enum",
+   "domain": [
+    "18-20",
+    "21-25",
+    "26-30",
+    "31-40",
+    "41-50",
+    "51-60",
+    "61-70",
+    "71+"
+   ],
+   "nullable": false
+  },
+  {
+   "name": "current_premium_minor",
+   "type": "int",
+   "nullable": false,
+   "min": 0
+  }
+ ],
+ "outputs": [
+  {
+   "name": "payable_premium_minor",
+   "type": "money_minor",
+   "required": true
+  }
+ ],
+ "steps": [
+  {
+   "step_id": "s_in_area",
+   "type": "input",
+   "label": "area",
+   "input_name": "area",
+   "on_missing": "error",
+   "produces": "area"
+  },
+  {
+   "step_id": "s_in_veh_power",
+   "type": "input",
+   "label": "veh_power",
+   "input_name": "veh_power",
+   "on_missing": "error",
+   "produces": "veh_power"
+  },
+  {
+   "step_id": "s_in_veh_brand",
+   "type": "input",
+   "label": "veh_brand",
+   "input_name": "veh_brand",
+   "on_missing": "error",
+   "produces": "veh_brand"
+  },
+  {
+   "step_id": "s_in_region",
+   "type": "input",
+   "label": "region",
+   "input_name": "region",
+   "on_missing": "error",
+   "produces": "region"
+  },
+  {
+   "step_id": "s_in_bonus_malus",
+   "type": "input",
+   "label": "bonus_malus",
+   "input_name": "bonus_malus",
+   "on_missing": "error",
+   "produces": "bonus_malus"
+  },
+  {
+   "step_id": "s_in_density",
+   "type": "input",
+   "label": "density",
+   "input_name": "density",
+   "on_missing": "error",
+   "produces": "density"
+  },
+  {
+   "step_id": "s_in_age_band",
+   "type": "input",
+   "label": "age_band",
+   "input_name": "age_band",
+   "on_missing": "error",
+   "produces": "age_band"
+  },
+  {
+   "step_id": "s_in_current_premium_minor",
+   "type": "input",
+   "label": "current_premium_minor",
+   "input_name": "current_premium_minor",
+   "on_missing": "error",
+   "produces": "current_premium_minor"
+  },
+  {
+   "step_id": "s_t_area",
+   "type": "table",
+   "label": "area relativity",
+   "rate_table_ref": "rate_table:fremtpl2-rel-area@1",
+   "key_expr": [
+    "area"
+   ],
+   "on_miss": "error",
+   "consumes": [
+    "area"
+   ],
+   "produces": "rel_area"
+  },
+  {
+   "step_id": "s_t_veh_power",
+   "type": "table",
+   "label": "veh_power relativity",
+   "rate_table_ref": "rate_table:fremtpl2-rel-veh-power@1",
+   "key_expr": [
+    "veh_power"
+   ],
+   "on_miss": "error",
+   "consumes": [
+    "veh_power"
+   ],
+   "produces": "rel_veh_power"
+  },
+  {
+   "step_id": "s_t_age_band",
+   "type": "table",
+   "label": "age_band relativity",
+   "rate_table_ref": "rate_table:fremtpl2-rel-age-band@1",
+   "key_expr": [
+    "age_band"
+   ],
+   "on_miss": "error",
+   "consumes": [
+    "age_band"
+   ],
+   "produces": "rel_age_band"
+  },
+  {
+   "step_id": "s_t_veh_brand",
+   "type": "table",
+   "label": "veh_brand relativity",
+   "rate_table_ref": "rate_table:fremtpl2-rel-veh-brand@1",
+   "key_expr": [
+    "veh_brand"
+   ],
+   "on_miss": "error",
+   "consumes": [
+    "veh_brand"
+   ],
+   "produces": "rel_veh_brand"
+  },
+  {
+   "step_id": "s_t_region",
+   "type": "table",
+   "label": "region relativity",
+   "rate_table_ref": "rate_table:fremtpl2-rel-region@1",
+   "key_expr": [
+    "region"
+   ],
+   "on_miss": "error",
+   "consumes": [
+    "region"
+   ],
+   "produces": "rel_region"
+  },
+  {
+   "step_id": "s_t_bonus_malus",
+   "type": "table",
+   "label": "bonus_malus relativity",
+   "rate_table_ref": "rate_table:fremtpl2-rel-bonus-malus@1",
+   "key_expr": [
+    "bonus_malus"
+   ],
+   "on_miss": "error",
+   "consumes": [
+    "bonus_malus"
+   ],
+   "produces": "rel_bonus_malus"
+  },
+  {
+   "step_id": "s_t_density",
+   "type": "table",
+   "label": "density relativity",
+   "rate_table_ref": "rate_table:fremtpl2-rel-density@1",
+   "key_expr": [
+    "density"
+   ],
+   "on_miss": "error",
+   "consumes": [
+    "density"
+   ],
+   "produces": "rel_density"
+  },
+  {
+   "step_id": "s_freq",
+   "type": "expression",
+   "label": "Claim frequency",
+   "expr": "0.019369349543 * rel_area * rel_veh_power * rel_age_band * rel_veh_brand * rel_region * rel_bonus_malus * rel_density",
+   "result_type": "decimal",
+   "consumes": [
+    "rel_area",
+    "rel_veh_power",
+    "rel_age_band",
+    "rel_veh_brand",
+    "rel_region",
+    "rel_bonus_malus",
+    "rel_density"
+   ],
+   "produces": "freq"
+  },
+  {
+   "step_id": "s_risk",
+   "type": "expression",
+   "label": "Risk premium",
+   "expr": "freq * 190000",
+   "result_type": "money_minor",
+   "consumes": [
+    "freq"
+   ],
+   "produces": "risk_minor"
+  },
+  {
+   "step_id": "s_out_risk",
+   "type": "output",
+   "label": "risk_premium_minor",
+   "output_name": "risk_premium_minor",
+   "rounding": {
+    "mode": "half_even",
+    "dp": 0
+   },
+   "consumes": [
+    "risk_minor"
+   ]
+  },
+  {
+   "step_id": "s_load",
+   "type": "expression",
+   "label": "Expense loading",
+   "expr": "risk_minor * 1.25",
+   "result_type": "money_minor",
+   "consumes": [
+    "risk_minor"
+   ],
+   "produces": "pre_cap_minor"
+  },
+  {
+   "step_id": "s_cap",
+   "type": "expression",
+   "label": "Transitional cap",
+   "expr": "min([pre_cap_minor, current_premium_minor * 1000])",
+   "result_type": "money_minor",
+   "consumes": [
+    "pre_cap_minor",
+    "current_premium_minor"
+   ],
+   "produces": "loaded_minor"
+  },
+  {
+   "step_id": "s_out_load",
+   "type": "output",
+   "label": "expense_loading_minor",
+   "output_name": "expense_loading_minor",
+   "rounding": {
+    "mode": "half_even",
+    "dp": 0
+   },
+   "consumes": [
+    "loaded_minor"
+   ]
+  },
+  {
+   "step_id": "s_age",
+   "type": "table",
+   "label": "Age relativity",
+   "rate_table_ref": "rate_table:fremtpl2-age-relativity@1",
+   "key_expr": [
+    "age_band"
+   ],
+   "on_miss": "error",
+   "consumes": [
+    "age_band"
+   ],
+   "produces": "rel_age_adj"
+  },
+  {
+   "step_id": "s_adj",
+   "type": "expression",
+   "label": "Age adjustment",
+   "expr": "loaded_minor * rel_age_adj",
+   "result_type": "money_minor",
+   "consumes": [
+    "loaded_minor",
+    "rel_age_adj"
+   ],
+   "produces": "adjusted_minor"
+  },
+  {
+   "step_id": "s_out_adj",
+   "type": "output",
+   "label": "profit_loading_minor",
+   "output_name": "profit_loading_minor",
+   "rounding": {
+    "mode": "half_even",
+    "dp": 0
+   },
+   "consumes": [
+    "adjusted_minor"
+   ]
+  },
+  {
+   "step_id": "s_floor",
+   "type": "constraint",
+   "label": "Minimum premium",
+   "condition": "adjusted_minor >= 15000",
+   "on_violation": "clamp",
+   "clamp_bounds": {
+    "min": "15000"
+   },
+   "reason_code": "MIN_PREMIUM_APPLIED",
+   "consumes": [
+    "adjusted_minor"
+   ],
+   "produces": [
+    "adjusted_minor"
+   ]
+  },
+  {
+   "step_id": "s_pay",
+   "type": "expression",
+   "label": "Payable premium",
+   "expr": "adjusted_minor",
+   "result_type": "money_minor",
+   "consumes": [
+    "adjusted_minor"
+   ],
+   "produces": "payable_minor"
+  },
+  {
+   "step_id": "s_out_payable",
+   "type": "output",
+   "label": "payable_premium_minor",
+   "output_name": "payable_premium_minor",
+   "rounding": {
+    "mode": "half_even",
+    "dp": 0
+   },
+   "consumes": [
+    "payable_minor"
+   ]
+  }
+ ],
+ "sub_graphs": []
+}

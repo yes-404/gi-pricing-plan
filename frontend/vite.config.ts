@@ -24,6 +24,8 @@ export default defineConfig({
         // The function form, not the object form: this Rollup types `manualChunks` as
         // `ManualChunksFunction` and rejects the record shape outright.
         manualChunks(id: string): string | undefined {
+          // Vue Flow (RS-1269 F2): the DAG designer only, so it stays off the entry chunk.
+          if (/node_modules[\\/]@vue-flow[\\/]/.test(id)) return "vueflow";
           return /node_modules[\\/](echarts|vue-echarts|zrender)/.test(id)
             ? "echarts"
             : undefined;

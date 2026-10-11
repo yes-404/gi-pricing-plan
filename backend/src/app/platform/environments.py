@@ -52,6 +52,7 @@ from model_schema import (
 __all__ = [
     "create_environment",
     "list_environments",
+    "live_rating_version_ref",
     "require_existing",
     "retire_environment",
     "update_environment",
@@ -84,6 +85,26 @@ async def _live_by_environment(
     for row in rows:
         latest.setdefault(row.environment_id, row)
     return latest
+
+
+async def live_rating_version_ref(
+    session: AsyncSession, *, workspace_id: UUID, environment_slug: str
+) -> str | None:
+    """The Rating Version ref live in one Environment, or `None` (nothing deployed there, or
+    no such Environment).
+
+    FR-257 limb (2)'s baseline reader (`03` FR-257's 2026-10-10 clarification, RL-1504 T3):
+    the one public resolution of "live", beside `_live_by_environment`, which stays private.
+    """
+    environment_id = await session.scalar(
+        select(EnvironmentRow.id).where(EnvironmentRow.slug == environment_slug)
+    )
+    if environment_id is None:
+        return None
+    live = (await _live_by_environment(session, workspace_id, [environment_id])).get(
+        environment_id
+    )
+    return None if live is None else live.rating_version_ref
 
 
 def _to_model(row: EnvironmentRow, live: DeploymentRow | None) -> Environment:

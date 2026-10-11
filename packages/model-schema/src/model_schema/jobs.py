@@ -53,6 +53,9 @@ class JobKind(enum.StrEnum):
     RATING_COMPILE = "rating.compile"
     RATING_REGRESSION = "rating.regression"
     RATE_TABLE_DIFF = "rate_table.diff"
+    #: `RL-1418`, FD-1358: the paged diff-cells route's 202 Job, a kind of its own so that
+    #: `rate_table.diff` and the artifact its summary route returns do not change.
+    RATE_TABLE_DIFF_CELLS = "rate_table.diff_cells"
     SCORE_BATCH = "score.batch"
     #: WK-671 Task 4B, RL-862 (`docs/plans/2026-08-29-w11-nfr-rate-1-trace-capture-remedy-
     #: ruling.md`): the off-path re-score that fills in a sampled real-time trace's body.

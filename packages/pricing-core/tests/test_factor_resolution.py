@@ -32,6 +32,7 @@ from model_schema import (
     UnseenLevelBehaviour,
 )
 from pricing_core.modelling import FactorResolutionError, fit_glm, resolve_factors
+from pricing_core.modelling.factors import required_model_inputs
 
 DATASET = uuid4()
 
@@ -333,3 +334,22 @@ def test_an_interaction_declaring_a_refused_intent_is_refused_too() -> None:
     )
     with pytest.raises(FactorResolutionError, match="FR-84"):
         resolve_factors(_book(200), [left, right, cross])
+
+
+@pytest.mark.req("FR-222")
+def test_required_model_inputs_are_the_factor_slugs_when_the_model_has_factors() -> None:
+    factors = [_factor("age_band", "driver_age"), _factor("region", "region")]
+    assert required_model_inputs(factors, ("x", "y")) == ("age_band", "region")
+
+
+@pytest.mark.req("FR-222")
+def test_required_model_inputs_fall_back_to_feature_order_without_factors() -> None:
+    assert required_model_inputs((), ("driver_age", "vehicle_age")) == (
+        "driver_age",
+        "vehicle_age",
+    )
+
+
+@pytest.mark.req("FR-222")
+def test_required_model_inputs_are_empty_with_neither() -> None:
+    assert required_model_inputs((), ()) == ()

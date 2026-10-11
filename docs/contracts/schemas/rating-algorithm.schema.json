@@ -91,7 +91,12 @@
       "items": {
         "type": "object",
         "required": ["ref", "mount_point"],
-        "properties": {"ref": {"$ref": "common/artifact-ref.schema.json"}, "mount_point": {"type": "string"}}
+        "properties": {
+          "ref": {"$ref": "common/artifact-ref.schema.json"},
+          "mount_point": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$", "description": "No '__' (the namespace separator; RL 9586)."},
+          "inputs": {"type": "object", "additionalProperties": {"type": "string"}, "description": "Input port to the parent value it consumes."},
+          "outputs": {"type": "object", "additionalProperties": {"type": "string"}, "description": "Output port to the parent name it produces."}
+        }
       }
     }
   },

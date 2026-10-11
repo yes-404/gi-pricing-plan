@@ -33,6 +33,7 @@ from app.errors import PlatformError
 from app.platform import audit, datasets, rbac
 from app.platform.blobs import BlobStore, to_ref
 from model_schema import (
+    ArtifactRef,
     Banding,
     BandingEvaluation,
     BandingProposal,
@@ -58,6 +59,7 @@ __all__ = [
     "evaluate_grouping_for_version",
     "list_bandings",
     "list_groupings",
+    "load_banding_by_ref",
     "load_bandings",
     "load_groupings",
     "propose_banding_for_version",
@@ -409,6 +411,24 @@ async def load_bandings(
     )
     _refuse_missing({row.id for row in rows}, ids, kind="banding")
     return {row.id: to_banding(row) for row in rows}
+
+
+async def load_banding_by_ref(
+    session: AsyncSession, *, workspace_id: UUID, ref: ArtifactRef
+) -> Banding:
+    """The Banding a `banding:<slug>@<version>` ref pins, or a `404` naming the ref."""
+    row = await session.scalar(
+        select(BandingRow).where(
+            BandingRow.workspace_id == workspace_id,
+            BandingRow.slug == ref.slug,
+            BandingRow.version == ref.version,
+        )
+    )
+    if row is None:
+        raise PlatformError(
+            "NOT_FOUND", "Banding not found", 404, f"No banding {ref} in this workspace."
+        )
+    return to_banding(row)
 
 
 async def load_groupings(

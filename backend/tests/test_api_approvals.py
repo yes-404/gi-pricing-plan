@@ -1046,7 +1046,9 @@ _AFTER = {
     "custom_objective": _moves("approved", "review", "certified"),
     "custom_metric": _moves("approved", "review", "certified"),
     "rating_version": _moves("approved", "review", "draft"),
-    "peril_structure": dict.fromkeys(_OUTCOMES, "review"),
+    # FR-191, FR-355 (FD-1456): a structure's non-approval returns it to `reconciled` (never
+    # `draft`: the reconciliation stays on the row, `VALID_PERIL_STRUCTURE_TRANSITIONS`).
+    "peril_structure": _moves("approved", "review", "reconciled"),
     # FR-355: the pre-submission state of a rule is `draft` (`01` §4.5 step 1).
     "validation_rule": _moves("approved", "review", "draft"),
     "dataset_version": dict.fromkeys(_OUTCOMES, "validated"),
@@ -1061,6 +1063,7 @@ _MOVE_ACTION = {
         "rating_version.approved" if to == "approved" else "rating_version.returned_to_draft"
     ),
     "validation_rule": lambda to: f"validation_rule.{to}",
+    "peril_structure": lambda to: f"peril_structure.{to}",
 }
 
 

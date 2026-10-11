@@ -43,6 +43,7 @@ from model_schema import (
     JobStatus,
     MonotonicDirection,
     OffsetSpec,
+    Pins,
     Principal,
     QuoteContext,
     RegressionSuiteContent,
@@ -319,11 +320,6 @@ DEMO_SUITE_SLUG: Final = f"{DEMO_FIXTURE}-suite"
 DEMO_QUOTE_NAME: Final = f"{DEMO_FIXTURE}-quote"
 DEMO_PREMIUM_IN: Final = 100
 
-_EMPTY_PINS: Final[dict[str, list[str]]] = {
-    "rate_tables": [], "models": [], "reference_tables": [], "custom_objectives": [],
-}
-
-
 def _demo_algorithm() -> dict[str, Any]:
     """The demo fixture's algorithm: `payable = premium_in * 2`. **Not priced from the GLM**
     (DP-S3-8): it exists so the demo's rating version can carry executed regression evidence
@@ -363,23 +359,10 @@ async def _load_compiled(
     return load_bundle(Bundle.model_validate_json(payload))
 
 
-async def author_demo_rating_evidence(
-    database: Database,
-    blob_store: BlobStore,
-    workspace_id: UUID,
-    analyst: Principal,
-    rating_id: UUID,
-) -> UUID:
-    """Give a draft rating version its executed FR-257 limb (1) evidence (DP-S3-8, T6b).
-
-    **Every piece is produced by the real path, none inserted**: the demo-fixture algorithm
-    is saved through the service; the version is compiled by the `rating.compile` Job; the
-    golden quote's expected premium is computed by `score_one` on that compiled bundle at
-    seed time; and the regression runs through the `rating.regression` Job, whose handler
-    calls `run_regression` and persists the run. No `RegressionRun` row and no pass verdict
-    is written here. Returns the regression Job's run id.
-    """
-    register_rating_handlers()
+async def save_demo_algorithm(
+    database: Database, workspace_id: UUID, analyst: Principal
+) -> ArtifactRef:
+    """Save the demo-fixture algorithm through the service; a re-seed's 409 is tolerated."""
     if analyst.id is None:
         raise RuntimeError("the demo analyst has no id")
     try:
@@ -389,12 +372,31 @@ async def author_demo_rating_evidence(
     except PlatformError as exc:  # a re-seed: the algorithm is already saved
         if exc.status_code != 409:
             raise
-    async with database.unit_of_work() as session:
+    return ArtifactRef(type="rating_algorithm", slug=DEMO_ALGORITHM_SLUG, version=1)
+
+
+async def author_demo_rating_evidence(
+    database: Database,
+    blob_store: BlobStore,
+    workspace_id: UUID,
+    analyst: Principal,
+    rating_id: UUID,
+) -> UUID:
+    """Give a draft rating version its executed FR-257 limb (1) evidence (DP-S3-8, T6b).
+
+    **Every piece is produced by the real path, none inserted**: the version arrives with its
+    algorithm (saved through the service, `save_demo_algorithm`) and pins declared at create;
+    it is compiled by the `rating.compile` Job; the
+    golden quote's expected premium is computed by `score_one` on that compiled bundle at
+    seed time; and the regression runs through the `rating.regression` Job, whose handler
+    calls `run_regression` and persists the run. No `RegressionRun` row and no pass verdict
+    is written here. Returns the regression Job's run id.
+    """
+    register_rating_handlers()
+    async with database.session() as session:
         row = await rating_versions_service.load_rating_version(
             session, workspace_id=workspace_id, rating_version_id=rating_id
         )
-        row.algorithm_ref = f"rating_algorithm:{DEMO_ALGORITHM_SLUG}@1"
-        row.pins = dict(_EMPTY_PINS)
         ref = ArtifactRef(type="rating_version", slug=row.slug, version=row.version)
 
     compiled_status = await _run_job(
@@ -461,6 +463,9 @@ async def submit_and_approve_demo(
 
     The gate re-scores the golden quote, pins the suite and reads the executed run
     (FR-257 limb (1)); `06` §4.2's default policy asks two approvers for a rating version.
+    The store is the submission's (FR-219's structural diff is kept as a blob). The seeded
+    version is the algorithm's first with nothing live, so limb (2) needs no Dislocation Run
+    and the evidence records `no_baseline`; a later version would need one (`03` FR-257).
     """
     async def load_compiled(_ref: ArtifactRef) -> CompiledBundle:
         return await _load_compiled(database, blob_store, workspace_id, rating_id)
@@ -470,7 +475,7 @@ async def submit_and_approve_demo(
             session, workspace_id=workspace_id, actor=actuary,
             rating_version_id=rating_id,
             change_summary="Phase 1b demo rating version pinning the approved GLM",
-            load_compiled=load_compiled,
+            blob_store=blob_store, load_compiled=load_compiled,
         )
         request_id = request.id
 
@@ -514,10 +519,12 @@ async def create_approved_rating_version(
             type="model", slug=model_row.model_family_slug, version=model_row.version
         )
 
+    algorithm_ref = await save_demo_algorithm(database, workspace_id, analyst)
     async with database.unit_of_work() as session:
         row = await rating_versions_service.create_rating_version(
             session, workspace_id=workspace_id, actor=analyst,
             slug="fremtpl2-demo", dataset_version_id=dataset_version_id, model_ref=model_ref,
+            algorithm_ref=algorithm_ref, pins=Pins(),
         )
         rating_id = row.id
 

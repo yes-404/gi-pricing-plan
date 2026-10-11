@@ -58,10 +58,11 @@ app.conf.beat_schedule = {
     }
 }
 
-# The `dataset.*`, `model.*`, `rate_table.*` and `rating.*` handlers. Registered here
-# rather than at import of the handler modules, so importing one for a type or a test does
-# not mutate a process-global registry.
+# The `dataset.*`, `model.*`, `rate_table.*`, `rating.*` and `dislocation.*` handlers.
+# Registered here rather than at import of the handler modules, so importing one for a type
+# or a test does not mutate a process-global registry.
 from app.worker.data_handlers import register_data_handlers  # noqa: E402
+from app.worker.dislocation_handlers import register_dislocation_handlers  # noqa: E402
 from app.worker.model_handlers import register_model_handlers  # noqa: E402
 from app.worker.rate_table_handlers import register_rate_table_handlers  # noqa: E402
 from app.worker.rating_handlers import register_rating_handlers  # noqa: E402
@@ -72,3 +73,4 @@ register_model_handlers()
 register_rate_table_handlers()
 register_rating_handlers()
 register_scoring_handlers()
+register_dislocation_handlers()

@@ -18,7 +18,6 @@ a numbered platform requirement.
 
 from __future__ import annotations
 
-import contextlib
 import fcntl
 import importlib.util
 import os
@@ -252,7 +251,6 @@ def test_acquire_holds_a_real_exclusive_flock_and_release_frees_it(
 ) -> None:
     slot_dir = tmp_path / "slots"
     monkeypatch.setattr(conftest_module, "_SLOT_DIR", slot_dir)
-    monkeypatch.setattr(conftest_module, "_SLOT_COUNT", 1)
 
     conftest_module._acquire_pytest_gate_slot()
     held_path = slot_dir / f"{conftest_module._SLOT_PREFIX}1"
@@ -269,36 +267,28 @@ def test_acquire_holds_a_real_exclusive_flock_and_release_frees_it(
         fcntl.flock(third.fileno(), fcntl.LOCK_UN)
 
 
-def test_a_full_slot_set_falls_through_to_the_blocking_wait_path(
+def test_a_second_bare_run_waits_for_gate_1_and_never_takes_gate_2(
     conftest_module: types.ModuleType,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """With every non-blocking slot pre-held by someone else, `_acquire_pytest_gate_slot`
-    must fall through to the blocking `flock` on slot 1 and print the wait message —
-    proof (a)'s own mechanism, exercised without a second real process by holding every
-    slot from this one first.
+    """One full gate at a time (RL-1445). With `gate-1` held by someone else,
+    `_acquire_pytest_gate_slot` must fall through to the blocking `flock` on slot 1 and
+    print the wait message; it must never take or create `gate-2`. Exercised without a
+    second real process by holding the slot from this one first.
     """
     slot_dir = tmp_path / "slots"
     slot_dir.mkdir()
     monkeypatch.setattr(conftest_module, "_SLOT_DIR", slot_dir)
-    monkeypatch.setattr(conftest_module, "_SLOT_COUNT", 2)
 
-    with contextlib.ExitStack() as stack:
-        holders = [
-            stack.enter_context(
-                open(slot_dir / f"{conftest_module._SLOT_PREFIX}{i}", "w")
-            )
-            for i in (1, 2)
-        ]
-        for handle in holders:
-            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    with open(slot_dir / f"{conftest_module._SLOT_PREFIX}1", "w") as holder:
+        fcntl.flock(holder.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
 
-        def _release_holder_1_soon() -> None:
-            fcntl.flock(holders[0].fileno(), fcntl.LOCK_UN)
+        def _release_holder_soon() -> None:
+            fcntl.flock(holder.fileno(), fcntl.LOCK_UN)
 
-        timer = threading.Timer(0.3, _release_holder_1_soon)
+        timer = threading.Timer(0.3, _release_holder_soon)
         timer.start()
         try:
             conftest_module._acquire_pytest_gate_slot()
@@ -307,14 +297,17 @@ def test_a_full_slot_set_falls_through_to_the_blocking_wait_path(
         conftest_module._release_pytest_gate_slot()
 
         err = capsys.readouterr().err
-        assert "all 2 gate slots are busy" in err
+        count = conftest_module._SLOT_COUNT
+        assert f"all {count} gate slots are busy" in err
         assert "acquired after waiting" in err
+        assert f"{conftest_module._SLOT_PREFIX}2" not in err
+        assert not (slot_dir / f"{conftest_module._SLOT_PREFIX}2").exists()
 
 
 def test_slot_count_matches_the_dev_commands_gate_wrapper(
     conftest_module: types.ModuleType,
 ) -> None:
-    """`_SLOT_COUNT` is the wrapper's slot loop (`for i in 1 2 …` over `gate-$i` in
+    """`_SLOT_COUNT` is the wrapper's slot loop (`for i in 1 …` over `gate-$i` in
     `.claude/skills/dev-commands/SKILL.md`) and both must name the same budget: the
     shared `/tmp/slots/gate-*` namespace only enforces one number if both sides agree."""
     import re
@@ -322,4 +315,4 @@ def test_slot_count_matches_the_dev_commands_gate_wrapper(
     skill = (ROOT / ".claude/skills/dev-commands/SKILL.md").read_text(encoding="utf-8")
     loops = re.findall(r"for i in ([0-9 ]+); do\n\s+flock -n -E 99 /tmp/slots/gate-\$i", skill)
     assert len(loops) == 1, loops
-    assert conftest_module._SLOT_COUNT == len(loops[0].split()) == 2
+    assert conftest_module._SLOT_COUNT == len(loops[0].split()) == 1

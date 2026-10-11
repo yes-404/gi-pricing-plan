@@ -79,7 +79,13 @@ REFUSED_FACTOR_INTENTS: Mapping[FactorIntent, str] = MappingProxyType(
     }
 )
 
-__all__ = ["FactorMatrix", "FactorResolutionError", "rateable", "resolve_factors"]
+__all__ = [
+    "FactorMatrix",
+    "FactorResolutionError",
+    "rateable",
+    "required_model_inputs",
+    "resolve_factors",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -327,3 +333,17 @@ def rateable(factors: Sequence[Factor]) -> tuple[Factor, ...]:
     case. Selecting them here rather than in `03` keeps the intent with the definition.
     """
     return tuple(f for f in factors if f.intent is FactorIntent.RISK)
+
+
+def required_model_inputs(
+    factors: Sequence[Factor], feature_order: Sequence[str]
+) -> tuple[str, ...]:
+    """A model's required inputs: its Factors' slugs, or its `feature_order` without Factors.
+
+    The one definition (PL 9494's DP-1, ruled 2026-10-05). A-2's `feature_map` save check
+    tests membership against it; SL 9495's compile check tests completeness against it.
+    The offset column is not a required input here: the save check adds it (A-2's R2).
+    """
+    if factors:
+        return tuple(factor.slug for factor in factors)
+    return tuple(feature_order)

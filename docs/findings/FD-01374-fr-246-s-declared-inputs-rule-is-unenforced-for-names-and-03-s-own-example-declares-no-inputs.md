@@ -2,7 +2,7 @@
 id: FD-1374
 family: finding
 title: FR-246's declared-inputs rule is unenforced for names, and 03's own canonical example declares no inputs
-status: active
+status: closed
 created: 2026-10-03
 owner: auditor
 tree: 19155b505741317da6967362707f387b39bd2cef

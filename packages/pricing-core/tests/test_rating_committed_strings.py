@@ -40,10 +40,11 @@ _DATA_PREPARATION = (
     "packages/pricing-core/tests/test_prepare.py",
     "scripts/bench-data.py",
 )
-_KEY = re.compile(
-    r"""["']?\b(condition|expr|key_expr)\b["']?\]?\s*[:=]\s*"""
-    r"""(?:"((?:[^"\\\n]|\\.)*)"|'((?:[^'\\\n]|\\.)*)')"""
-)
+#: The literal must be the whole value: followed by a delimiter, a comment or the end of the line.
+#: `expr = " * ".join(...)` has a literal as a method receiver, not as the expression (FD-1534).
+_END = r"""(?=\s*(?:[,;})\]]|#|//|$))"""
+_LITERAL = r"""(?:"((?:[^"\\\n]|\\.)*)"|'((?:[^'\\\n]|\\.)*)')""" + _END
+_KEY = re.compile(r"""["']?\b(condition|expr|key_expr)\b["']?\]?\s*[:=]\s*""" + _LITERAL)
 _CLAMP = re.compile(r"""clamp_bounds\b["']?\]?\s*[:=]\s*\{([^}\n]*)\}""")
 _BOUND = re.compile(
     r"""["'](?:min|max)["']\s*:\s*(?:"((?:[^"\\\n]|\\.)*)"|'((?:[^'\\\n]|\\.)*)')"""
@@ -92,6 +93,30 @@ def _json_flat(item: object) -> list[str]:
     return []
 
 
+def _text(match: re.Match[str], first: int) -> str | None:
+    """The literal's text, from the double-quoted group `first` or the single-quoted one after.
+
+    Chosen by `is not None`, not by truth: a double-quoted empty literal is `""`, which is falsy
+    and would fall through to the other group's `None` (FD-1534). An empty literal is a blank
+    placeholder, not an authored expression, so it is skipped (`None`).
+    """
+    text = match.group(first) if match.group(first) is not None else match.group(first + 1)
+    return text or None
+
+
+def _line_strings(line: str) -> list[tuple[str, str]]:
+    """The (field, text) pairs one line of text authors, by the line-scoped patterns."""
+    found: list[tuple[str, str]] = []
+    for match in _KEY.finditer(line):
+        if (text := _text(match, 2)) is not None:
+            found.append((match.group(1), text))
+    for match in _CLAMP.finditer(line):
+        for inner in _BOUND.finditer(match.group(1)):
+            if (text := _text(inner, 1)) is not None:
+                found.append(("clamp_bounds", text))
+    return found
+
+
 def _authored_strings() -> set[tuple[str, int, str, str]]:
     tracked = subprocess.run(
         ["git", "ls-files"], cwd=_ROOT, capture_output=True, text=True, check=True
@@ -106,11 +131,7 @@ def _authored_strings() -> set[tuple[str, int, str, str]]:
             continue
         if path.endswith((".py", ".json", ".yaml", ".yml", ".ts", ".vue", ".md", ".toml", ".js")):
             for number, line in enumerate(text.split("\n"), 1):
-                for match in _KEY.finditer(line):
-                    found.add((path, number, match.group(1), match.group(2) or match.group(3)))
-                for match in _CLAMP.finditer(line):
-                    for inner in _BOUND.finditer(match.group(1)):
-                        found.add((path, number, "clamp_bounds", inner.group(1) or inner.group(2)))
+                found |= {(path, number, field, t) for field, t in _line_strings(line)}
         if path.endswith(".py"):
             try:
                 tree = ast.parse(text)
@@ -206,3 +227,33 @@ def test_a_property_definition_title_is_ignored_and_nothing_else_in_it() -> None
     schema = {"properties": {field: {"title": "T", "default": bad}}}
     assert _json_strings(schema) == [bad]
     assert _json_strings({field: {"title": "T"}}) == ["T"]
+
+
+#: Built from parts so this file's own lines are not authored strings to the scan above.
+_EXPR, _COND, _KEYX, _CLAMPF = "ex" + "pr", "con" + "dition", "key_" + "expr", "clamp_" + "bounds"
+
+
+@pytest.mark.req("FR-244")
+def test_an_empty_literal_is_skipped_and_a_real_one_beside_it_is_still_caught() -> None:
+    """FD-1534 limb (a). Each form crashed or failed as unexplained before; the controls are the
+    same lines with text in them, which must still be caught by the same pattern."""
+    assert _line_strings(f'{_EXPR}: ""') == []
+    assert _line_strings(f"{_EXPR}: ''") == []
+    assert _line_strings(f'"{_EXPR}": ""') == []
+    assert _line_strings(f'{_CLAMPF}: {{"min": "", "max": "1"}}') == [(_CLAMPF, "1")]
+    assert _line_strings(f'{_EXPR}: "a * b"') == [(_EXPR, "a * b")]
+    assert _line_strings(f'"{_EXPR}": \'a * b\'') == [(_EXPR, "a * b")]
+    assert _line_strings(f'{_CLAMPF}: {{"min": "a"}}') == [(_CLAMPF, "a")]
+
+
+@pytest.mark.req("FR-244")
+def test_a_literal_that_is_not_the_whole_value_is_not_an_authored_expression() -> None:
+    """FD-1534 limb _KEY: `expr = " * ".join(...)` has a literal receiver, so the line is not
+    read as the expression ` * `; a literal that is the whole value, in any of the forms the
+    scan reads, still is (this includes a variable assigned the expression, as a fixture does)."""
+    assert _line_strings(f'{_EXPR} = " * ".join(parts)') == []
+    assert _line_strings(f"    {_COND} = 'x' + other") == []
+    assert _line_strings(f'{_EXPR} = "a * b"') == [(_EXPR, "a * b")]
+    assert _line_strings(f'{_COND}: "a > 1",') == [(_COND, "a > 1")]
+    assert _line_strings(f'row["{_KEYX}"] = "a"  # note') == [(_KEYX, "a")]
+    assert _line_strings(f'{{"{_COND}": "a > 1"}}') == [(_COND, "a > 1")]
