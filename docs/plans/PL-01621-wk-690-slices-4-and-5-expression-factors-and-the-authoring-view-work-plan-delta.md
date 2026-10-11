@@ -306,7 +306,7 @@ never carries a fix-before-close finding with it.
 - The decision-maker rules DP-S4-1 and DP-S5-1. When both carry a `Resolved by` id, the plan
   goes `active` by its status line (`document-ids.md` §1.6, the PL row).
 
-**Activation (2026-10-11, in the D11 batch mint PR).** Both rows above now carry a `Resolved by` id (DP-S4-1 and DP-S4-2 by RL-1615, DP-S5-1 by RL-1616, both minted in this batch), and DP-W-1 was already RULED, so no decision-point cell is empty. By the rule in the bullet above (:306-307 before this line) the plan goes `active` by its status line; the lead instructed it in a message to the minter seat sent after the eta entry "2026-10-11 12:16:41 BST" (D11 MINT RESERVED), which carries no stamp of its own. The plan had not had its first merge, so filling its own Resolved-by cells is the step its text prescribes. Filed under working id 9931; minted as PL-1621.
+**Activation (2026-10-11, in the D11 batch mint PR).** Both rows above now carry a `Resolved by` id (DP-S4-1 and DP-S4-2 by RL-1615, DP-S5-1 by RL-1616, both minted in this batch), and DP-W-1 was already RULED, so no decision-point cell is empty. By the rule in the bullet above (:306-307 before this line) the plan goes `active` by its status line; the lead decided it in the eta entry "2026-10-11 12:20:19 BST" ("LEAD DECISION: ACTIVATE PL-1621 …", `~/gi-pricing-plan.local/handover/eta.md`). The plan had not had its first merge, so filling its own Resolved-by cells is the step its text prescribes. Filed under working id 9931; minted as PL-1621.
 - `PL-1371:210-211`'s "leaf plan" prep state for S4 and S5 is superseded by L5. The frozen plan
   is not edited.
 
