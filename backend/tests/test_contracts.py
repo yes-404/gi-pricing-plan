@@ -3089,3 +3089,149 @@ def test_the_untyped_body_predicates_pass_typed_bodies() -> None:
         assert (side, "POST", _SCORE_BATCH, key) not in {
             entry[:4] for entry in _untyped_bodies(planted)
         }
+
+
+#: 2xx responses that are streams or files, so no JSON shape exists to publish. Permanent.
+#: Keyed `(METHOD, path, status)`; each reason names the file and line that makes it so.
+UNTYPED_2XX_PERMANENT: Final[dict[tuple[str, str, str], str]] = {
+    ("GET", "/api/v1/audit/export", "200"): (
+        "StreamingResponse, application/x-ndjson (backend/src/app/api/audit.py:280) or "
+        "text/csv (backend/src/app/api/audit.py:308)"
+    ),
+    ("GET", "/api/v1/jobs/{job_id}/events", "200"): (
+        "StreamingResponse, text/event-stream (backend/src/app/api/jobs.py:310)"
+    ),
+    ("GET", "/api/v1/rate-tables/{slug}@{version}/export/csv", "200"): (
+        "Response, text/csv (backend/src/app/api/rate_tables.py:184)"
+    ),
+    ("GET", "/api/v1/rate-tables/{slug}@{version}/export/xlsx", "200"): (
+        "Response, the spreadsheetml media type (backend/src/app/api/rate_tables.py:206-207)"
+    ),
+}
+
+#: 2xx responses published as an object with no properties, to be typed by FD-1335 Part B (or by
+#: the WK-675 slice that consumes the route, which removes its entry in the same change).
+#: Temporary: the list empties as the routes are typed, and FD-1335 closes when it is empty.
+_PENDING_2XX = "pending FD-1335 part B: an object with no properties"
+UNTYPED_2XX_PENDING_PART_B: Final[dict[tuple[str, str, str], str]] = {
+    key: _PENDING_2XX
+    for key in (
+        ("GET", "/api/v1/approval-requests/{request_id}", "200"),
+        ("GET", "/api/v1/dataset-versions/{version_id}/rejected", "200"),
+        ("POST", "/api/v1/approval-requests", "201"),
+        ("POST", "/api/v1/approval-requests/{request_id}/decide", "200"),
+        ("POST", "/api/v1/approval-requests/{request_id}/withdraw", "200"),
+        ("POST", "/api/v1/rate-tables/{slug}@{version}/bulk-operation", "201"),
+        ("POST", "/api/v1/rate-tables/{slug}@{version}/import", "200"),
+        ("POST", "/api/v1/sources/{source_id}/preview", "200"),
+        ("POST", "/api/v1/validation-reports/{report_id}/results/{rule_id}/acknowledge", "201"),
+    )
+}
+
+#: JSON request bodies published as an open object from `body: dict[str, Any]` (FD-1366).
+#: Temporary: each entry is removed when its route is typed. Keyed `(METHOD, path)`.
+UNTYPED_REQUEST_PENDING: Final[dict[tuple[str, str], str]] = {
+    ("POST", "/api/v1/rate-tables/{slug}@{version}/bulk-operation"): (
+        "pending FD-1366 Part B: BulkOperationBase exists (model_schema/rating.py:1179); "
+        "body: dict[str, Any] (backend/src/app/api/rate_tables.py:128)"
+    ),
+    ("POST", "/api/v1/sub-graphs"): (
+        "pending FD-1366 Part B: SubGraphCreate exists (model_schema/sub_graphs.py:155); "
+        "body: dict[str, Any] (backend/src/app/api/sub_graphs.py:46)"
+    ),
+    ("POST", "/api/v1/sub-graphs/{slug}/versions"): (
+        "pending FD-1366 Part B: SubGraphBody exists (model_schema/sub_graphs.py:40); "
+        "body: dict[str, Any] (backend/src/app/api/sub_graphs.py:61)"
+    ),
+}
+
+#: Request bodies that are not JSON, so they are outside this guard's scope. Pinned exactly, by
+#: citation, so a new non-JSON body is a visible act. Keyed `(METHOD, path, media)`.
+NON_JSON_REQUEST_BODIES: Final[dict[tuple[str, str, str], str]] = {
+    ("POST", "/api/v1/rate-tables/{slug}@{version}/import", "multipart/form-data"): (
+        "UploadFile with File() and Form() (backend/src/app/api/rate_tables.py:225-226)"
+    ),
+    ("POST", "/api/v1/sources/{source_id}/preview", "multipart/form-data"): (
+        "UploadFile with File() (backend/src/app/api/datasets.py:215)"
+    ),
+}
+
+
+def _guard_remainder(document: dict[str, Any]) -> set[tuple[str, str, str, str]]:
+    """`(side, METHOD, path, key)` of every reported body that its side's allow-list lacks.
+
+    Response keys are matched on `(METHOD, path, status)`, request keys on `(METHOD, path)`.
+    """
+    remainder = set()
+    for side, method, path, key, _form in _untyped_bodies(document):
+        listed = (
+            (method, path, key) in UNTYPED_2XX_PERMANENT
+            or (method, path, key) in UNTYPED_2XX_PENDING_PART_B
+            if side == "response"
+            else (method, path) in UNTYPED_REQUEST_PENDING
+        )
+        if not listed:
+            remainder.add((side, method, path, key))
+    return remainder
+
+
+@pytest.mark.req("FR-451")
+@pytest.mark.parametrize("side", ["response", "request"])
+def test_no_json_body_is_untyped(side: str) -> None:
+    """No JSON 2xx response and no JSON request body is `{}` or an object with no properties,
+    unless its route is on this side's allow-list (FD-1335 Part A, FD-1366). A client generated
+    from such a body types it `unknown`, which is how a premium crosses the seam untyped."""
+    remainder = sorted(e for e in _guard_remainder(_load(OPENAPI)) if e[0] == side)
+    assert not remainder, (
+        f"untyped {side} bodies not on the allow-list: {remainder}. Type the body with a "
+        "model-schema model, or add a cited entry to the allow-list."
+    )
+
+
+@pytest.mark.req("FR-451")
+@pytest.mark.parametrize("side", ["response", "request"])
+def test_the_guard_fails_on_an_unlisted_open_body(side: str) -> None:
+    """The guard is shown able to fail: one more open body, on a route that is on no list, is
+    exactly one more remainder entry. Compared against the unplanted document at that moment, so
+    the claim holds whatever the baseline holds."""
+    key = "202" if side == "response" else "application/json"
+    planted_key = (side, "POST", _SCORE_BATCH, key)
+    real = _load(OPENAPI)
+    assert planted_key not in _guard_remainder(real)
+    assert _guard_remainder(_plant(side, "form2")) == _guard_remainder(real) | {planted_key}
+
+
+@pytest.mark.req("FR-451")
+def test_every_untyped_body_exclusion_is_still_untyped() -> None:
+    """A route typed later fails here until its entry is removed: FD-1335 closes when
+    `UNTYPED_2XX_PENDING_PART_B` is empty, and FD-1366 Part B empties `UNTYPED_REQUEST_PENDING`."""
+    reported = _untyped_bodies(_load(OPENAPI))
+    responses = {(m, p, k) for s, m, p, k, _ in reported if s == "response"}
+    requests = {(m, p) for s, m, p, _k, _ in reported if s == "request"}
+    stale_2xx = (set(UNTYPED_2XX_PERMANENT) | set(UNTYPED_2XX_PENDING_PART_B)) - responses
+    assert not stale_2xx, f"no longer untyped, remove from the 2xx lists: {sorted(stale_2xx)}"
+    stale_requests = set(UNTYPED_REQUEST_PENDING) - requests
+    assert not stale_requests, f"no longer untyped, remove: {sorted(stale_requests)}"
+    assert not set(UNTYPED_2XX_PERMANENT) & set(UNTYPED_2XX_PENDING_PART_B)
+
+    for reason in UNTYPED_2XX_PENDING_PART_B.values():
+        assert "pending FD-1335 part B" in reason
+    for reason in UNTYPED_REQUEST_PENDING.values():
+        assert "pending FD-1366 Part B" in reason
+    for key, reason in UNTYPED_2XX_PERMANENT.items():
+        assert re.search(r"\.py:\d+", reason), f"{key}: the reason names no file and line"
+
+
+@pytest.mark.req("FR-451")
+def test_non_json_request_bodies_are_exactly_the_cited_routes() -> None:
+    """Multipart is excluded from the JSON scope with a citation, not by silence."""
+    document = _load(OPENAPI)
+    non_json = {
+        (method.upper(), path, media)
+        for path, item in document["paths"].items()
+        for method in _HTTP_METHODS
+        if method in item
+        for media in item[method].get("requestBody", {}).get("content", {})
+        if "json" not in media
+    }
+    assert non_json == set(NON_JSON_REQUEST_BODIES)

@@ -40,7 +40,7 @@ routes' media types follow later. DP-A1 and DP-A2 are ruled by `RL-1365`. `FD 97
 |---|---|---|---|
 | 0 | preconditions, dated delta below | needs 1–8 | done |
 | 1 | predicates, red first | 1, 2 | done |
-| 2 | guard on the real document | 3, 4, 5 | open |
+| 2 | guard on the real document | 3, 4, 5 | done (one item red until Task 3) |
 | 3 | two 200 declarations, regenerated contract | 6–9 | open |
 | 4 | the NFR-502 spec line | 10 | open (after Task 5) |
 | 5 | NFR-502 re-measure, local, diagnostic | 10 | open |
@@ -102,6 +102,24 @@ the pass-typed test is red (1 failed, 4 passed) with `assert ('response', 'POST'
 '/api/v1/score/batch', '202') not in {…}`, the object-with-properties control reported; the file was
 restored and is green again (5 passed). `_guard_remainder` is defined in Task 2, with the lists it
 subtracts.
+
+#### 2026-10-11 — Task 2: the guard on the real document (Acceptance 3, 4, 5), lists 4 / 9 / 3 / 2
+
+Lines cited by the reasons were re-read at the base and corrected where they had moved
+(`rate_tables.py:184` csv, `:206-207` xlsx, `:225-226` import upload, `:128` bulk body; `datasets.py:215`;
+`sub_graphs.py:46`, `:61`; `rating.py:1179` `BulkOperationBase`; `audit.py:280`, `:308`; `jobs.py:310`).
+Command (small-test flock): `pytest -q backend/tests/test_contracts.py -k "untyped_body or no_json_body or non_json_request or unlisted_open_body"`.
+- End of Task 2: **1 failed, 10 passed** (rc 1). The one red is `test_no_json_body_is_untyped[response]`,
+  remainder exactly `{('response','POST','/api/v1/score','200'), ('response','POST','/api/v1/score/compare','200')}`
+  (the prediction); `[request]` green. 11 node ids collect.
+- Request side red on broken input: with `("POST", "/api/v1/sub-graphs")` removed from `UNTYPED_REQUEST_PENDING`
+  on a backup copy (the plan's example route, `/api/v1/rating-algorithms`, is typed at this base),
+  `[request]` is red with exactly `[('request','POST','/api/v1/sub-graphs','application/json')]` and `[response]` unchanged. Restored.
+- Stale entries: `("POST","/api/v1/score/batch","202")` added to the pending 2xx list ->
+  `no longer untyped, remove from the 2xx lists: [('POST', '/api/v1/score/batch', '202')]`; the request-side twin ->
+  `no longer untyped, remove: [('POST', '/api/v1/score/batch')]`. One `NON_JSON_REQUEST_BODIES` entry deleted ->
+  `test_non_json_request_bodies_are_exactly_the_cited_routes` red (set inequality). Each restored.
+- `test_the_guard_fails_on_an_unlisted_open_body` green on both sides (planted remainder = real remainder plus the planted key).
 
 ## PRs
 
