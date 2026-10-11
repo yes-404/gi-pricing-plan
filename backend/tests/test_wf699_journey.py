@@ -67,14 +67,18 @@ def test_an_unowned_skip_fails_the_journey() -> None:
 def test_a_journey_failure_names_its_step() -> None:
     """PL-1544 Acceptance 6: an unexpected status raises `JourneyStepFailed` whose message starts
     with the step id and carries the problem's `code`, so the demo can print one line."""
+
     def refuse(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(
             422, json={"code": "VALIDATION_FAILED", "detail": "pins: a rate table is missing"}
         )
 
-    with httpx.Client(
-        transport=httpx.MockTransport(refuse), base_url="http://journey.test/api/v1"
-    ) as client, pytest.raises(journey.JourneyStepFailed) as failure:
+    with (
+        httpx.Client(
+            transport=httpx.MockTransport(refuse), base_url="http://journey.test/api/v1"
+        ) as client,
+        pytest.raises(journey.JourneyStepFailed) as failure,
+    ):
         journey.call(client, "C1", "POST", "/rating-versions", json={}, expect=201)
     assert failure.value.step == "C1"
     assert failure.value.code == "VALIDATION_FAILED"
@@ -85,6 +89,7 @@ def test_a_journey_failure_names_its_step() -> None:
 def test_a_refusal_that_was_expected_is_returned_with_its_code() -> None:
     """The deliberate failures (B6, C4, E3, E8) are asserted by code: a call that expects a
     refusal passes only when both the status and the problem's `code` match."""
+
     def refuse(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(422, json={"code": "RATING_GRAPH_UNRESOLVED_REF", "detail": "x"})
 
@@ -92,13 +97,82 @@ def test_a_refusal_that_was_expected_is_returned_with_its_code() -> None:
         transport=httpx.MockTransport(refuse), base_url="http://journey.test/api/v1"
     ) as client:
         problem = journey.call(
-            client, "B6", "POST", "/rating-algorithms", json={},
-            expect=422, code="RATING_GRAPH_UNRESOLVED_REF",
+            client,
+            "B6",
+            "POST",
+            "/rating-algorithms",
+            json={},
+            expect=422,
+            code="RATING_GRAPH_UNRESOLVED_REF",
         )
         assert problem["code"] == "RATING_GRAPH_UNRESOLVED_REF"
         with pytest.raises(journey.JourneyStepFailed) as failure:
             journey.call(
-                client, "B6", "POST", "/rating-algorithms", json={},
-                expect=422, code="RATING_GRAPH_CYCLIC",
+                client,
+                "B6",
+                "POST",
+                "/rating-algorithms",
+                json={},
+                expect=422,
+                code="RATING_GRAPH_CYCLIC",
             )
     assert failure.value.code == "RATING_GRAPH_UNRESOLVED_REF"
+
+
+@pytest.mark.req("FR-261")
+def test_the_d4_property_does_not_depend_on_the_fit() -> None:
+    """PL-1544's delta (working id 9799), D4 item 6, and the maintainer's 18:59:23 rule: a
+    property chosen from the fit it is checked against can never fail. D4's declaration takes no
+    fit at all, equals the ruled constant (premium increasing in `bonus_malus` on 50..230,
+    spacing 45) and is valid suite content. Two different fits therefore give the identical
+    property: there is nothing to pass one to."""
+    import inspect
+
+    from model_schema import RegressionSuiteContent
+
+    assert not inspect.signature(journey.declared_d4_property).parameters
+    first, second = journey.declared_d4_property(), journey.declared_d4_property()
+    assert (
+        first
+        == second
+        == {
+            "name": "premium-increasing-in-bonus-malus",
+            "check": {
+                "kind": "monotone",
+                "input": "bonus_malus",
+                "direction": "increasing",
+                "strict": False,
+                "lower": "50",
+                "upper": "230",
+            },
+        }
+    )
+    assert journey.D4_GRID_SPACING == 45  # (230 - 50) / 4: the engine's 5-point uniform grid
+    RegressionSuiteContent.model_validate(
+        {
+            "algorithm_slug": "fremtpl2-rate",
+            "golden_quotes": [],
+            "properties": [first],
+            "generation": {"cases": 25, "seed": 1, "strategy": "input_contract_sampling"},
+        }
+    )
+    # the deliberate defect: a middle band wider than the grid spacing
+    low, high = journey.LADDER_MIDDLE_EDGES
+    assert high - low > journey.D4_GRID_SPACING
+
+
+@pytest.mark.req("FR-217")
+def test_the_ncd_ladder_body_is_a_valid_sub_graph_and_the_defect_differs_only_in_the_middle() -> (
+    None
+):
+    """The ladder is built from `ladder_body` over HTTP (B7); the same body with the defect
+    differs from the good one in the middle band alone."""
+    from model_schema.sub_graphs import SubGraphBody
+
+    good = journey.ladder_body(journey.LADDER_BANDS["middle"], "good")
+    bad = journey.ladder_body(journey.LADDER_DEFECT_MIDDLE, "bad")
+    SubGraphBody.model_validate(good)
+    SubGraphBody.model_validate(bad)
+    assert good["steps"][0]["expr"] != bad["steps"][0]["expr"]
+    assert "1.20" in good["steps"][0]["expr"] and "0.90" in bad["steps"][0]["expr"]
+    assert bad["steps"][0]["expr"].replace("0.90", "1.20") == good["steps"][0]["expr"]
