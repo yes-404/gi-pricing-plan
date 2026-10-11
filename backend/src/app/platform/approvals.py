@@ -25,7 +25,7 @@ import sys
 from collections.abc import AsyncIterator, Mapping
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
-from typing import Any, Final, Protocol
+from typing import Final, Protocol
 from uuid import UUID
 
 from sqlalchemy import select, text

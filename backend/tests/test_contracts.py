@@ -2684,8 +2684,9 @@ def _model_schema_classes(document: dict[str, Any]) -> list[str]:
     A `BaseModel` subclass, not merely an attribute: `common/money`'s `$defs` include
     `Currency` and `MoneyMinor`, which `model_schema` exports as `Annotated` aliases.
     """
-    import model_schema
     from pydantic import BaseModel
+
+    import model_schema
 
     names = [document.get("title", ""), *document.get("$defs", {})]
     return sorted(

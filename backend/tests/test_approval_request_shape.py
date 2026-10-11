@@ -11,6 +11,8 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
+from backend.tests.test_api_approvals import _headers
+from backend.tests.test_deployment_route_types import APPROVAL_REQUEST_KEYS
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 from sqlalchemy import select
@@ -20,8 +22,6 @@ from app.db.models import ApprovalRequestRow, RatingVersionRow
 from app.db.session import Database
 from app.main import create_app
 from app.platform import approvals, audit
-from backend.tests.test_api_approvals import _headers
-from backend.tests.test_deployment_route_types import APPROVAL_REQUEST_KEYS
 from model_schema import ActorKind, JobSource, Principal, new_uuid7
 
 #: Who created the versions these tests submit: nobody who submits or decides here (`06`
@@ -198,7 +198,8 @@ async def test_changes_requested_returns_a_rating_version_to_draft(
             )
         ).scalar_one()
         request = await session.get(ApprovalRequestRow, UUID(created["id"]))
-    assert request is not None and request.status == "changes_requested"
+    assert request is not None
+    assert request.status == "changes_requested"
     assert rating_version.status == "draft"
 
 
@@ -269,7 +270,8 @@ def test_the_approval_routes_publish_the_approval_request_ref() -> None:
     ):
         responses = paths[route][method]["responses"]
         (code,) = (c for c in responses if c.startswith("2"))
-        found[f"{method.upper()} {route}"] = responses[code]["content"]["application/json"]["schema"]
+        content = responses[code]["content"]["application/json"]
+        found[f"{method.upper()} {route}"] = content["schema"]
     wrong = {k: v for k, v in found.items() if v != _REF}
     assert not wrong, f"2xx that is not {_REF}: {wrong}"
 
