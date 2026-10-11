@@ -1,8 +1,8 @@
 ---
-id: LG-9962
+id: LG-1609
 family: ledger
 title: WK-1178 slice SL-1600 — FD-1589 row 8 remedy (c), slice A: the InputFreeError marker, the safe_error allow-list and the request-reachable model-schema messages (PL-1599 slice ledger)
-status: active
+status: closed
 created: 2026-10-10
 owner: executor
 tree: 31b88780aa52894624a5e08454ce2d5925d04b37
@@ -14,9 +14,9 @@ corrected_by: []
 relates: [FD-1589, PL-1599]
 ---
 
-# LG-9962 — WK-1178 slice SL-1600: the InputFreeError marker, slice A
+# LG-1609 — WK-1178 slice SL-1600: the InputFreeError marker, slice A
 
-*(LG-9962 is a working id reserved by the lead; the lead mints it at the merge turn.)* Executed by
+*(Drafted under the working id LG 9962, reserved by the lead; minted as LG-1609 at the merge turn 2026-10-11. Gate records below quote the working id as the gate saw it.)* Executed by
 `executor-sl1600` from PL-1599, base `origin/main` `31b88780aa52894624a5e08454ce2d5925d04b37`.
 Times are BST (`TZ=Europe/London date`) unless marked.
 
