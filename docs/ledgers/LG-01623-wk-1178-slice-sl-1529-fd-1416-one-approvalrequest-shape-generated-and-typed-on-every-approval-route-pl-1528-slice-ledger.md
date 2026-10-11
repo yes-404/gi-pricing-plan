@@ -3,7 +3,7 @@ id: LG-1623
 family: ledger
 title: WK-1178 slice SL-1529 — FD-1416, one ApprovalRequest shape, generated and typed on every approval route (PL-1528 slice ledger)
 status: closed
-created: 2026-10-11
+created: 2026-10-11            # original date 2026-10-10, set at the draft; minted 2026-10-11
 owner: executor
 tree: 31b88780aa52894624a5e08454ce2d5925d04b37
 phase: P2
