@@ -3188,11 +3188,7 @@ _PENDING_2XX = "pending FD-1335 part B: an object with no properties"
 UNTYPED_2XX_PENDING_PART_B: Final[dict[tuple[str, str, str], str]] = {
     key: _PENDING_2XX
     for key in (
-        ("GET", "/api/v1/approval-requests/{request_id}", "200"),
         ("GET", "/api/v1/dataset-versions/{version_id}/rejected", "200"),
-        ("POST", "/api/v1/approval-requests", "201"),
-        ("POST", "/api/v1/approval-requests/{request_id}/decide", "200"),
-        ("POST", "/api/v1/approval-requests/{request_id}/withdraw", "200"),
         ("POST", "/api/v1/rate-tables/{slug}@{version}/bulk-operation", "201"),
         ("POST", "/api/v1/rate-tables/{slug}@{version}/import", "200"),
         ("POST", "/api/v1/sources/{source_id}/preview", "200"),

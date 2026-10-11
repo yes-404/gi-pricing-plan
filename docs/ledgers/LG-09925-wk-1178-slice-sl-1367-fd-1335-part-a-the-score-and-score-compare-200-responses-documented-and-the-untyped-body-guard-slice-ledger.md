@@ -48,7 +48,12 @@ routes' media types follow later. DP-A1 and DP-A2 are ruled by `RL-1365`. `FD 97
 
 ### Gate
 
-Not run.
+First full gate at `da3666a1499b7486a50dea58462f149a906865fa` (tree `a3e38611f25be65482a319a79c89a139bc4ccca8`, serial stages, template preflight ok), `gate-1` 18:07:40-18:51:32 BST, end rc 1;
+logs `~/gi-pricing-plan.local/scratch/sl1367-full/gatelogs/`. ruff 0, mypy 0, lint-imports 0, req-coverage 0, contracts `--check` 0, frontend install/generate/lint/type-check/test/build all 0. pytest rc 1:
+`14 failed, 5523 passed, 4 skipped` (41m10s); audit-docs rc 1 with check 31 only (`gap in the full allocation between 1633 and 9925`, the unminted working id).
+Classification: 13 pytest failures are the audit-on-tree modules (`tests/test_audit_docs_*`, `test_doc_index`, `test_register_*`, `test_repository_invariants`) failing on the same unminted-id gap: mint artefact.
+**One own red:** `backend/tests/test_contracts.py::test_every_untyped_body_exclusion_is_still_untyped`: `no longer untyped, remove from the 2xx lists:` the four `approval-requests` routes (GET `{request_id}` 200, POST 201, `decide` 200, `withdraw` 200),
+typed on `main` by `SL-1390` (`3065770c`) and merged in at `ca7b8b54`. The guard did its job (the stale-entry check); the four entries are removed from `UNTYPED_2XX_PENDING_PART_B`, which now holds 5 routes; `test_contracts.py` alone: 171 passed, 2 skipped; ruff on the file 0. A re-gate at the new head is owed.
 
 ### Audit
 
