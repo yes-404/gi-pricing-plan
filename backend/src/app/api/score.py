@@ -206,6 +206,19 @@ async def _serving_ref(
     return ref, served_by
 
 
+def _with_resolved_ref(ctx: QuoteContext, ref: ArtifactRef) -> QuoteContext:
+    """`ctx` carrying `ref` as `options.rating_version_ref`, as a copy. An explicit ref is
+    already `ref` (`_required_ref` returns it) and is returned untouched."""
+    if ctx.options is not None and ctx.options.rating_version_ref is not None:
+        return ctx
+    options = (
+        ctx.options.model_copy(update={"rating_version_ref": ref})
+        if ctx.options is not None
+        else QuoteContextOptions(rating_version_ref=ref)
+    )
+    return ctx.model_copy(update={"options": options})
+
+
 async def _fetch_bundle(
     database: Database,
     blob_store: BlobStore,
@@ -373,6 +386,11 @@ async def score(
         database, blob_store, slot, workspace_id=caller.workspace_id, ref=ref
     )
     trace = ctx.options.trace if ctx.options is not None else False
+    # `score_one` refuses a context without `options.rating_version_ref` and reads the ref it
+    # reports from there. A default-live quote has none, so it is stamped on an immutable copy
+    # (never the request); the copy is also what a sampled trace stores, so the off-path
+    # re-score (`score.trace_produce`) is not refused for the same gap.
+    ctx = _with_resolved_ref(ctx, ref)
     try:
         result = await score_one(compiled, ctx, trace=trace)
     except ValueError as exc:
