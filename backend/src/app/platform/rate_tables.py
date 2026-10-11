@@ -1309,6 +1309,27 @@ async def _to_version(
     )
 
 
+def _stored_version(
+    version_row: RateTableVersionRow, cells: Sequence[dict[str, str]]
+) -> RateTableVersion:
+    """The version's §4.2 wire form as stored (FR-232): inline rows when rows-stored, the
+    parquet `BlobRef` otherwise, with its provenance fields. Unlike `_to_version`, which
+    materialises a transformation input, this is the one constructor of what is stored."""
+    return RateTableVersion.model_validate(
+        version_row.definition
+        | {
+            "storage": version_row.storage,
+            "rows": _wire_rows(cells) if version_row.storage == "rows" else None,
+            "cells": version_row.cells,
+            "change_note": version_row.change_note,
+            "seeded_from": version_row.seeded_from,
+            "created_by_operation": version_row.created_by_operation,
+            "created_by_import": version_row.created_by_import,
+            "created_by_edit": version_row.created_by_edit,
+        }
+    )
+
+
 def _guard_seed_lineage(
     derived: RateTableVersion, baseline: RateTableVersionRow
 ) -> None:
@@ -1423,22 +1444,7 @@ async def _persist_new_version(
         )
         version_row.cells = blob_ref.model_dump(mode="json")
     await session.flush()
-    return RateTableVersion(
-        slug=derived.slug,
-        version=version_number,
-        rateable=derived.rateable,
-        storage=RateTableStorageMode(storage_mode),
-        keys=derived.keys,
-        value=derived.value,
-        default_row=derived.default_row,
-        rows=_wire_rows(cells) if storage_mode == "rows" else None,
-        cells=blob_ref,
-        change_note=derived.change_note,
-        seeded_from=derived.seeded_from,
-        created_by_operation=derived.created_by_operation,
-        created_by_import=derived.created_by_import,
-        created_by_edit=derived.created_by_edit,
-    )
+    return _stored_version(version_row, cells)
 
 
 def _dispatch_operation(
