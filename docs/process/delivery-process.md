@@ -210,6 +210,8 @@ serialise.)* The ruling is RL-1445, which amends RL-1263. A measurement step
 still runs alone. Condition (b) is an extra bar on a same-Work pair, not a ground for it:
 the single gate, not plan-independence, still bounds the contention.
 
+*(Amended 2026-10-11 by the maintainer, dated line by delegation, on the entry "2026-10-10 21:41:05 BST — RL-1445 CAP: AMENDED by dated line (counting unit = gate or measurement, with guard rails); GO SL-1541 (WS-1 (a)); OP-1503-1 (a); SL-1575 noted" in `to-lead.md`, item 1, recorded by RL-9915, which corrects RL-1445. The "at most 3" above counts slices that hold or queue for the single full gate, or that are in a measurement window (a benchmark sweep or a proving run), from that point until merge or release. It no longer counts every build slice. Authoring and executor seats count against the seat cap, not the 3-cap; their local test runs are single-file, one at a time through one small-test slot, never beside a gate or a measurement window, and a seat that needs a full-suite run is a gate holder. Item 2's same-Work conditions apply from dispatch, not from the gate. A seat's per-worktree database counts toward disk; when `df /` shows less than 15% free, no new seat starts. The 2026-10-05 lines in §4 and §5 that say "up to 3 build slices" are read with this counting unit.)*
+
 *(Amended 2026-10-05 by the maintainer, dated line by delegation, on the 15:27:25 BST entry:
 the registry list's exempt paths include two dated amendments, `ONE_SIDED_SLUGS` in
 `backend/tests/test_contracts.py` for key-disjoint edits (2026-10-03 21:11:06 BST, #1093) and
