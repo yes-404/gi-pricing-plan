@@ -42,4 +42,4 @@ The 28/12 counts are reconciled to the plan: 30 − 2 = 28 fixed, 10 + 2 = 12 au
 
 ## Disposition
 
-**Owner: WK-1178.** Decision: `accept` on the lead's verdict; this essay's Reconciliation is the test that ran. Discharge path (the maintainer's condition, `to-lead.md` "2026-10-11 20:17:38 BST" item 4): done in this record, 2026-10-11, by running the predicate at `02f23b4a`; the reached-today list, if wanted, is a one-line addition to SL-1601's plan. Filed by the auditor, 2026-10-11; the lead gives the verdict.
+**Owner: WK-1178.** Decision: `accept`, LOW, accepted by the lead (from-lead 2026-10-11 20:24:40 BST); this essay's Reconciliation is the test that ran. Discharge path (the maintainer's condition, `to-lead.md` "2026-10-11 20:17:38 BST" item 4): done in this record, 2026-10-11, by running the predicate at `02f23b4a`; the reached-today list, if wanted, is a one-line addition to SL-1601's plan. Filed by the auditor, 2026-10-11; the lead gives the verdict.
