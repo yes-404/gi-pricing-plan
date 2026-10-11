@@ -10,7 +10,7 @@ tree: 372fa92ae3ab306bc067c234487ce929dc0e2a04
 phase: P2
 work: WK-1178
 corrected_by: []
-relates: [SL-1257, SL-1541, SL-1529, SL-1631, SL-1390, SL-1559, SL-1600, SL-1557, PL-1583, PL-1540, PL-1528, PL-1630, PL-1499, PL-1558, PL-1599, PL-1556, LG-1634, LG-1608, LG-1623, LG-1632, LG-1633, LG-1635, LG-1609, LG-1606]
+relates: [FD-9704, FD-9712, FD-9714, FD-9724, FD-9725, FD-9784, SL-1601, SL-1257, SL-1541, SL-1529, SL-1631, SL-1390, SL-1559, SL-1600, SL-1557, PL-1583, PL-1540, PL-1528, PL-1630, PL-1499, PL-1558, PL-1599, PL-1556, LG-1634, LG-1608, LG-1623, LG-1632, LG-1633, LG-1635, LG-1609, LG-1606]
 ---
 
 # RS-9703 — Retro slice audits of the eight slices merged on 2026-10-11
@@ -34,13 +34,23 @@ closing acts), then evidenced at the slice's squash-merge commit on `origin/main
 (`git show <sha>:<path>`, `git diff <sha>^1 <sha>`, `git grep <pat> <sha> -- <path>`).
 Evidence is read, not run: **no test, gate or build was run by this audit**; "MET" means
 the named test or text exists at the merge sha and its assert was read where the row says
-so, and a result quoted from an `LG-` is marked CARRIED-by-LG. **CI on each PR head was
-read** with `gh pr view <n> --json statusCheckRollup` and `gh run view <id> --log`: the
-`python` workflow concluded `success` on all eight PR heads, with a pytest summary of
-`N passed` and no `failed` line for seven (#1280 5562, #1272 5469, #1276 5507, #1278 5512,
-#1279 5522, #1281 5604, #1273 5497); the log of #1271's run (26b78e49, run 38090771465)
-returned no text, so for it only the `success` conclusion is evidenced. CI ran on each PR
-head, not on the squash-merge tree.
+so, and a result quoted from an `LG-` is marked CARRIED-by-LG. **CI on each PR head was read**
+twice: by this audit (`gh pr view <n> --json statusCheckRollup`, `gh run view <id> --log`:
+pytest `N passed` with no `failed` line for seven PRs; #1271's run log returned no text)
+and by the lead (`gh run list --commit <head>`, from-lead 2026-10-11 20:14:10 BST). CI ran
+on each PR head, not on the squash-merge tree.
+
+| PR | PR head | Workflows green (lead's read) | pytest passed (audit's read) |
+|---|---|---|---|
+| #1271 | 26b78e49 | python, docs, frontend, history-policy | log empty |
+| #1272 | 559ed54a | python, docs, history-policy | 5469 |
+| #1273 | 71d578ae | python, docs, history-policy | 5497 |
+| #1276 | eea1adac | python, docs, frontend, history-policy | 5507 |
+| #1278 | 4726e440 | python, docs, history-policy | 5512 |
+| #1279 | 64fe7eda | python, docs, history-policy | 5522 |
+| #1280 | 418f78e6 | python, docs, frontend, history-policy | 5562 |
+| #1281 | 024208de | python, docs, frontend, history-policy | 5604 |
+
 Verdicts below are proposals; the lead adopts, amends or rejects them (`CLAUDE.md` §13).
 
 | Slice | PR | Merge sha (parent) | Plan | Ledger |
@@ -56,39 +66,35 @@ Verdicts below are proposals; the lead adopts, amends or rejects them (`CLAUDE.m
 
 ## Findings
 
-One row per slice. "A<n>" is the plan's Acceptance item n.
+One row per slice. "A<n>" is the plan's Acceptance item n. Each row ends with the lead's
+verdict, quoted from the lead's message of 2026-10-11 (logged at from-lead 20:14:10 BST).
 
-| Slice | Acceptance items | Gaps (proposed verdict) | Closing acts at the merge sha |
-|---|---|---|---|
-| SL-1257 | A1, A2, A4–A8 MET; A3 PARTIAL; A9 CARRIED-by-LG only; A10 see closing | A3: no committed migration round-trip test and no "existing `api_keys` rows unchanged" test; the round trip is a slot-script result in the ledger (delivered but untested, `FD-9704`) | `LG-1634` and `SL-1257` `closed`; Audit "Not yet run"; MERGE-ACK "not yet given"; PRs "None yet" |
-| SL-1541 | A1–A7, A9, A13 MET; A8 MET; A11 CARRIED-by-LG; A12 PARTIAL | A12: no local gate on the final tree (ruff E501 fixed after the gate); CI on the PR head `success`, 5469 passed. Write-set additions all carried by quoted rulings; `FD-1610` filed for the inliner defect | `LG-1608` `closed`; Audit "Not yet given"; MERGE-ACK "not yet given" |
-| SL-1529 | A1–A9, A11–A13 MET; A10 PARTIAL | A10: ruff fixes after the local gate, "not re-gated"; CI on the PR head `success`, 5507 passed. Plan delta D1 (4 exempt slugs, not 5) lives in the ledger and a channel message only (X3, `FD-9724`) | `LG-1623` `closed`; its Gate table still "(not yet run)" above a later gate record; Audit empty |
-| SL-1631 | (a)–(e) MET, (d) a GUARD not a red; LG line 1, 4, 5 MET/CARRIED | LG lines 2 and 3 (no money change; NFR-499) not written (not filed; proposed accept) | `LG-1632` `closed`; no Audit section |
-| SL-1390 | A1–A3, A5–A7, A10 MET; A4 UNEVIDENCED; A8 CARRIED-by-CI | A4: the broken-loop proofs and the base-red outcomes of A3/A4/A10 are not recorded (delivered but untested, `FD-9712`); A8: `LG-1633` `### Gate` is empty, CI on the PR head `success`, 5522 passed | `LG-1633` `closed`; Audit "(Written by the auditor at slice close.)" |
-| SL-1559 | A1–A9, A11–A17 MET by presence; A10 GAP; A18 PARTIAL | A10: the stored-data stop query (RL-1475) was never recorded; the slice retyped `rows`/`default_row` and shipped a migration (`FD-9714`) | `LG-1635` `closed`; Gate "Not run." above a real gate record; GO line stale |
-| SL-1600 | A1–A5, A7, A8, A11, A12 MET; A6 GAP; A9 PARTIAL | A6: the ACK states 28/12 type counts where the plan states 30/10 and 74 changed types, with no recorded delta and no "reached today" list ((unfiled, id needed)). B1/B2 raise sites render the generic text in a 422 until P3 ((unfiled, id needed), conditional on P3 being a live row) | `LG-1609` `closed`; "Written by the auditor." |
-| SL-1557 | A1–A23 MET by presence; A24 CARRIED-by-CI (conclusion only) | A24: ledger gate section empty and the frontend half of the local gate run not recorded (CI on the PR head `success`, run log empty); A16/A19 mismatch HTTP tests are GUARDS, not reds. Executor's finding candidate: no owned code for a malformed stored payload ((unfiled, id needed)) | `LG-1606` `closed`; Audit "Not yet." |
+| Slice | Acceptance items | Gaps (audit's proposal) | Closing acts at the merge sha | Lead verdict (team-lead, from-lead 2026-10-11 20:14:10 BST) |
+|---|---|---|---|---|
+| SL-1257 (#1280) | A1, A2, A4–A8 MET; A3 PARTIAL; A9 CARRIED-by-LG and CI; A10 see closing | A3: no committed migration round-trip test and no "existing `api_keys` rows unchanged" test; the round trip is a slot-script result in the ledger | `LG-1634` and `SL-1257` `closed`; Audit "Not yet run"; MERGE-ACK "not yet given"; PRs "None yet" | `FD-9704`, MEDIUM, WK-674, delivered but untested; A10 goes to `FD-9784` |
+| SL-1541 (#1272) | A1–A9, A13 MET; A11 CARRIED-by-LG; A12 PARTIAL | A12: ruff E501 fixed after the local gate, per-file check only; CI green on the PR head. Write-set additions all carried by quoted rulings; `FD-1610` filed for the inliner defect | `LG-1608` `closed`; Audit "Not yet given"; MERGE-ACK "not yet given" | A12 limb to `FD-9784` (ii) |
+| SL-1529 (#1276) | A1–A9, A11–A13 MET; A10 PARTIAL | A10: ruff fixes after the local gate, "not re-gated"; plan delta D1 (4 exempt slugs, not 5) only in the ledger and a channel message | `LG-1623` `closed`; Gate table "(not yet run)" above a later record; Audit empty | `FD-9784` (ii) and (iii) |
+| SL-1631 (#1278) | (a)–(e) MET, (d) a GUARD not a red; LG lines 1, 4, 5 MET or CARRIED | LG lines 2 and 3 (no money change; NFR-499) not written | `LG-1632` `closed`; no Audit section | Accepted; no finding |
+| SL-1390 (#1279) | A1–A3, A5–A7, A10 MET; A4 UNEVIDENCED; A8 CARRIED-by-CI | A4: broken-loop proofs and the base reds of A3/A4/A10 not recorded; `LG-1633` `### Gate` empty | `LG-1633` `closed`; Audit "(Written by the auditor at slice close.)" | `FD-9712`, MEDIUM, WK-673, delivered but untested; the gate-record limb to `FD-9784` (ii) |
+| SL-1559 (#1281) | A1–A9, A11–A17 MET by presence; A10 GAP; A18 PARTIAL | A10: the stored-data stop query (RL-1475) never recorded; the slice retyped `rows`/`default_row` and shipped a migration | `LG-1635` `closed`; Gate "Not run." above a real record; GO line stale | `FD-9714`, MEDIUM, WK-675, delivered but untested; discharge is a read-only count; gate limb to `FD-9784` (ii) |
+| SL-1600 (#1273) | A1–A5, A7, A8, A11, A12 MET; A6 GAP; A9 PARTIAL | A6: ACK states 28/12 where the plan states 30/10 and 74, no recorded delta, no reached-today list. B1/B2 plain raises render the generic 422 text until P3 | `LG-1609` `closed`; "Written by the auditor." | A6: `FD-9724`, LOW-MEDIUM, WK-1178, delivered but untested. B1/B2: no FD, carried by the live roadmap row `SL-1601` ("WK-1178 P3 carry — FD-1589 row 8, remedy (c), B1 and B2", status draft, phase P3, relates FD-1589/SL-1600). Gate limb to `FD-9784` (ii) |
+| SL-1557 (#1271) | A1–A23 MET by presence; A24 CARRIED-by-CI (conclusion only); A16/A19 HTTP mismatch tests are GUARDS | Ledger gate section empty. Executor's finding candidate: no owned code for a malformed stored pinned payload | `LG-1606` `closed`; Audit "Not yet." | `FD-9725`, LOW, WK-1178 (spec / decision-maker), deferred with owner. The GUARD classification accepted as carried. Gate limb to `FD-9784` (ii) |
 
-Cross-slice (X1–X3), filed once:
+Cross-slice, filed once as `FD-9784` (MEDIUM, owner: process backlog, Lean P2 item 5):
 
-- **X1.** All eight ledgers and slice rows were set `closed` in the slice PR while the
+- **(i)** All eight ledgers and slice rows were set `closed` in the slice PR while the
   ledger's own `### Audit` read "Not yet" or was empty and `MERGE-ACK` read "not yet given".
-  The `document-ids.md` §1.6 SL row lets the auditor's CLEAN verdict authorise the closing
-  acts when the brief orders the audit before the mint; here the audit followed the merge.
-- **X2.** Seven of eight ledger gate records end non-zero with failures classed "mint
-  artefact" (13 `tests/` audit-on-tree modules and `audit-docs` checks 31/32/39). The
-  claim that the mint-turn rerun is green is not in any ledger, but CI on each PR head is
-  green (see Method), which discharges it for the PR heads; no finding is filed for X2.
-- **X3.** Plan deltas accepted in channel messages (SL-1529 D1; SL-1559 "04:19:42" and
-  "04:23:36"; SL-1600 "23:03:19" and "23:53:00"; SL-1541 "23:46:57") are recorded in the
-  ledger build logs and the local channel file, not in the frozen plan.
+- **(ii)** The gate was not run on the final tree, or the ledger has no gate record (SL-1541
+  A12, SL-1529 A10, SL-1390, SL-1559, SL-1600, SL-1557); the CI table in Method is what exists.
+- **(iii)** Plan deltas accepted in channel messages (SL-1529 D1; SL-1559 "04:19:42" and
+  "04:23:36"; SL-1600 "23:03:19" and "23:53:00"; SL-1541 "23:46:57") are recorded in ledger
+  build logs, not in the frozen plan.
 
 ## Result
 
-Eight slices audited; no slice has a code defect found by reading. Proposed findings, each
-to be filed as an `FD-` with the owner shown: `FD-9704` SL-1257 A3 (WK-674, MEDIUM);
-`FD-9712` SL-1390 A4 and the unrecorded base reds of A3/A10 (WK-673, MEDIUM); `FD-9714` SL-1559 A10 (WK-675, MEDIUM);
-(unfiled, id needed) SL-1600 A6 (WK-1178, LOW); (unfiled, id needed) SL-1600 B1/B2 generic text, conditional
-(WK-1178, MEDIUM); (unfiled, id needed) malformed stored pinned payload has no owned code (WK-1178,
-LOW); `FD-9724` X1 and X3: closing before audit, channel-only plan deltas (process, MEDIUM); (not filed; proposed accept) SL-1631 LG lines 2 and 3 (WK-1178, LOW, proposed accept).
-Ids for the three unfiled rows are the lead's to give; the SL-1631 row is proposed accept and needs none.
+Eight slices audited; no code defect was found by reading, and CI at all eight PR heads was
+green. Findings filed: `FD-9704` (SL-1257, MEDIUM, WK-674), `FD-9712` (SL-1390, MEDIUM,
+WK-673), `FD-9714` (SL-1559, MEDIUM, WK-675), `FD-9724` (SL-1600, LOW-MEDIUM, WK-1178),
+`FD-9725` (SL-1557, LOW, WK-1178), `FD-9784` (cross-slice, MEDIUM, process backlog). Not
+filed: the B1/B2 generic-text regression (carried by `SL-1601`) and SL-1631's two omitted
+ledger lines (accepted). The record is a proposal; the verdict column is the lead's.
