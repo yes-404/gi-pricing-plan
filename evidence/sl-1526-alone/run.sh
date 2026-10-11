@@ -119,7 +119,9 @@ GIP_DATABASE_URL=$BDSN inv b_base_migrate b uv run --directory "$W" alembic upgr
 GIP_DATABASE_URL=$BDSN inv b_base_seed b uv run --directory "$W" python "$E/rows.py" seed "$BASEDIR" "$CSV" "$ROWS" || exit 5
 INV_TAIL=0 GIP_DATABASE_URL=$BDSN inv b_base b uv run --directory "$W" python "$E/fittable.py" base "$BASEDIR/examples/fremtpl2/data/last-seed.json" || exit 5
 echo "== same-rows proof"
-S=$(grep '^slice ROWSET' "$OUTD/b_export_rows.out" | cut -d' ' -f2-); B=$(grep '^base  ROWSET' "$OUTD/b_base_seed.out" | cut -d' ' -f2-)
+# Compare the parsed sha256/n/ids_sha256 fields, never the raw lines: the two lines differ in their label ("slice " vs "base  ").
+rowset() { grep -E "^$1 +ROWSET " "$2" | head -1 | grep -oE '(sha256|n|ids_sha256)=[0-9a-f]+' | tr '\n' ' '; }
+S=$(rowset slice "$OUTD/b_export_rows.out"); B=$(rowset base "$OUTD/b_base_seed.out")
 echo "slice: $S"; echo "base : $B"
 if [ -n "$S" ] && [ "$S" = "$B" ]; then echo "SAME ROWS: yes (csv sha256, row count and sorted-IDpol hash equal)"; else echo "SAME ROWS: NO - 11(b) column is not valid"; note 5; fi
 SR=$(grep -o 'rows=[0-9]*' "$OUTD/b_slice.out" | head -1); BR=$(grep -o 'rows=[0-9]*' "$OUTD/b_base.out" | head -1)
