@@ -7,15 +7,19 @@
 # "2026-10-11 15:12:46 BST" (START/END stamp per timed invocation). Pre-registration as SL-1367 run D: this
 # directory is committed and pushed BEFORE the run; the run prints every script's blob sha and the commit's sha and
 # committer time, and refuses (exit 96) if a local script differs from the committed blob.
+# Order (maintainer, to-lead "2026-10-11 16:37:21 BST" item 4): Acceptance 8 -> real-GLM report -> 11(b) -> stage d.
+#   Stage d (option A) = the dislocation + attribution run over the 20,000-policy sample, the DP-2 VERDICT object
+#   ("16:34:21 BST"): process-tree peak RSS (sampled every 2 s) <= 15.5 GiB and job wall <= 60 min. The demo-wide
+#   figures of stage a are PRINTED, not judged.
 # Exit codes: 90-95 slot-preflight.sh; 96 pre-registration; 97 gate-2 / small-test not held; 98 wrong tree/guard;
-#             otherwise the highest stage rc (driver 1-3, realglm 4, fittable 5).
+#             otherwise the highest stage rc (driver 1-2, realglm 4, fittable/rows 5, treemeasure 3 = DP-2 MISS, 4 = failed/STOP).
 set -u
 G=/home/puzhenhao1989/gi-pricing-plan
 W=$G/.claude/worktrees/sl-1526
 EW=$G/.claude/worktrees/sl-1526-evidence       # evidence worktree: branch evidence/sl-1526-alone-2026-10-11
 REL=evidence/sl-1526-alone
 E=$(dirname "$(readlink -f "$0")")             # the scripts this run executes
-SCRIPTS="run.sh driver.py realglm.py fittable.py rows.py"
+SCRIPTS="run.sh driver.py realglm.py fittable.py rows.py sampler.py treemeasure.py dislocation.py"
 # BASE = the dispatch tree: the slice branch was created at 31b88780 (`git reflog show sl-1526-exit-demo-a`:
 # "31b88780 sl-1526-exit-demo-a@{18}: branch: Created from origin/main"), the plan's other option being 809a3794.
 # examples/ is identical from 31b88780 to the slice's merge-base 99f22479 (`git diff --stat 31b88780 99f22479 -- examples`
@@ -123,6 +127,16 @@ echo "fitted rows: slice $SR base $BR"; [ "$SR" = "$BR" ] || { echo "SAME ROWS: 
 echo "== 11(b): fit statistics, base tree $BASE (dispatch tree) | slice head $EXPECT_HEAD, same rows, --rows $ROWS"
 cat "$OUTD/b_base.out" "$OUTD/b_slice.out"
 echo "factor count: base $(grep -c 'type=' "$OUTD/b_base.out") slice $(grep -c 'type=' "$OUTD/b_slice.out") (want 7 in each)"
+echo "== stage d: dislocation.run + attribution over the 20,000-policy sample (a throwaway copy of the demo DB; baseline = a +1.95% re-priced measurement fixture)"
+DDB=gipricing_sl1526_stage_d
+inv "db-$DDB" setup sh -c "$PGX dropdb -U gipricing --if-exists -f '$DDB' && $PGX createdb -U gipricing -T '$SDB' '$DDB'" || exit 99
+INV_TAIL=0 GIP_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/$DDB inv d_dislocation d \
+  python3 -I "$E/treemeasure.py" dislocation "$OUTD/d_dislocation.log" JOBWALL_DISLOCATION 3600 15.5 -- \
+  uv run --directory "$W" python "$E/dislocation.py" "$W" "$REC"
+DRC=$?
+cat "$OUTD/d_dislocation.out"; echo "-- d_dislocation.log:"; cat "$OUTD/d_dislocation.log"
+if [ "$DRC" = 3 ]; then echo "RESULT: DP-2 MISS -> fallback (D); SL-1575 need. STOP to the lead (-> maintainer) with these figures."
+elif [ "$DRC" != 0 ]; then echo "RESULT: STOP - stage d rc $DRC (an approval-gate block, an error or a refusal). No retry. STOP to the lead (-> maintainer)."; fi
 echo "== after"; date -Is; uptime; free -h
-echo "RESULT: max stage rc so far $MAXRC (0 = all stages passed and same rows proven); figures vs DP-2 are in the DRIVER lines above"
-sha256sum "$E"/run.sh "$E"/driver.py "$E"/realglm.py "$E"/fittable.py "$E"/rows.py | cut -c1-16,65-
+echo "RESULT: max stage rc so far $MAXRC (0 = all stages passed and same rows proven); the DP-2 verdict is the TREEMEASURE dislocation lines of stage d"
+sha256sum "$E"/run.sh "$E"/driver.py "$E"/realglm.py "$E"/fittable.py "$E"/rows.py "$E"/sampler.py "$E"/treemeasure.py "$E"/dislocation.py | cut -c1-16,65-
