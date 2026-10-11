@@ -1,5 +1,5 @@
 ---
-id: PL-9918
+id: PL-1638
 family: plan
 kind: map
 title: WK-675 — the DagDesigner F39 fix slice (the validate route stubbed in DagDesigner.test.ts, the debounce's teardown cancel proven): Work-plan delta
@@ -12,21 +12,22 @@ work: WK-675
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [PL-1546, PL-1286, PL-1556, SL-1557, SL-1559, FD-9914, SL-9916]
+relates: [PL-1546, PL-1286, PL-1556, SL-1557, SL-1559, FD-1611, SL-1639]
 ---
 
-# PL-9918 — WK-675: the DagDesigner F39 fix slice, Work-plan delta
+# PL-1638 — WK-675: the DagDesigner F39 fix slice, Work-plan delta
 
 *Disclosure: drafted under working ids 9918 (this plan), 9916 (its slice row) and 9914 (the
 finding it discharges), all reserved by the lead in
-`~/gi-pricing-plan.local/handover/brief-wave1b-2026-10-11.md` "Reserved working ids". None is
-minted; each is renamed at the mint.*
+`~/gi-pricing-plan.local/handover/brief-wave1b-2026-10-11.md` "Reserved working ids". Minted
+2026-10-11 in the slice PR's mint commit: 9918 as PL-1638, 9916 as SL-1639, 9917 as LG-1640; 9914 had already
+been minted as FD-1611 in the D10 batch, so no new FD was filed.*
 
 > **For agentic workers:** this is a **one-row WK-675 Work-plan delta** under Lean P2 L5. It
-> adds one slice, SL 9916, to WK-675 beside the eight rows of
+> adds one slice, SL-1639, to WK-675 beside the eight rows of
 > [`PL-1546`](PL-01546-wk-675-slices-5-to-11-work-plan-delta.md), which is frozen since its first
 > merge, so a new slice is a new delta (`.claude/skills/writing-plans/SKILL.md`, "One plan per
-> Work"). No leaf plan. The slice is one PR under L1 (a'); its `LG-` (working id 9917) quotes the
+> Work"). No leaf plan. The slice is one PR under L1 (a'); its `LG-` (LG-1640, drafted as working id 9917) quotes the
 > row below as its scope. REQUIRED SUB-SKILL for the executor: executing-plans (the slice is
 > small). The executor also binds `vue-testing-best-practices`, `vue-frontend`,
 > `test-driven-development` (the red seen first, by its cause), `dev-commands` (the two-half
@@ -49,7 +50,7 @@ file at that tree.
   cancel the debounce in teardown (fake timers or an unmount flush); — red-first: the debounce made
   to fire after the test body (e.g. advance timers past the debounce after the assertions) shows
   the F39 failure on base, and passes after."*
-- **The finding**: the same entry, item 2: an FD at D10, owner WK-675 (FD 9914, working id,
+- **The finding**: the same entry, item 2: an FD at D10, owner WK-675 (FD-1611, drafted as working id 9914,
   authored by minter-d10 in the D10 batch).
 - **Lane C order**: "2026-10-11 10:39:56 BST — USER: … RULED: WK-675 is OUR standing lane C to
   its end …", item 2, position (0b): *"the DagDesigner F39 fix slice (10:38:57; small)"*.
@@ -92,8 +93,8 @@ file at that tree.
 
 `DagDesigner.test.ts` cannot reach the network through the validate route, whatever the load,
 and the designer's debounce is proven to be cancelled when the component unmounts. Done when
-SL 9916 closes on its `LG-` with the red on base, the green ×3, the broken-input proof and the
-full two-half gate, and FD 9914's register row carries the fix's merge sha.
+SL-1639 closes on its `LG-` with the red on base, the green ×3, the broken-input proof and the
+full two-half gate, and FD-1611's register row carries the fix's merge sha.
 
 ## Acceptance Standard
 
@@ -115,7 +116,7 @@ code and the lines it names. "Base" is `origin/main` at the slice's first commit
    fails because the mocked `validateRatingAlgorithm` was called after unmount.
 5. **Test files only.** `git diff --stat origin/main...HEAD` lists
    `frontend/src/components/dag/__tests__/DagDesigner.test.ts`, the `LG-` and
-   `docs/roadmap.md` (SL 9916's status lines) and nothing else.
+   `docs/roadmap.md` (SL-1639's status lines) and nothing else.
 6. **The full gate is green.** Every `CLAUDE.md` §11 command, both halves, exits 0 against
    `origin/main...<slice branch>`, in gate-1 on the lead's grant, queued in the background.
 7. **Barred word.** `git diff origin/main...HEAD | grep '^+' | grep -ciE 'dep''uty'` prints 0.
@@ -128,7 +129,7 @@ code and the lines it names. "Base" is `origin/main` at the slice's first commit
   non-test file stops the slice and goes to the lead (the brief's executor section).
 - **The F39 guard is not weakened.** `test-setup.ts` is not in the write set: the fix stubs the
   call; it never silences the guard.
-- **One PR per slice** (L1 (a')): the test file, SL 9916's status lines and one `LG-`.
+- **One PR per slice** (L1 (a')): the test file, SL-1639's status lines and one `LG-`.
 - **Small tests one file at a time under the small-test slot; the full gate only in gate-1 on the
   lead's grant** (`.claude/roles/executor.md`; the brief's rule 4).
 
@@ -138,12 +139,12 @@ Under L5 a Work plan's tasks are its slice rows; this row's steps follow the tab
 
 | Order | Slice | Scope (what the `LG-` quotes) | Requirements, each id | Depends on | Lane | Size |
 |---|---|---|---|---|---|---|
-| 0b (lane C) | SL 9916 — WK-675 fix slice — FD 9914: DagDesigner.test.ts stubs the validate route, and the debounce's unmount cancel is proven | In `frontend/src/components/dag/__tests__/DagDesigner.test.ts` only: a regression test that lets the 400 ms debounce elapse after its assertions, red on base with F39; the module `@/api/ratingAlgorithms` mocked for the whole file in the sibling files' pattern; a test that unmounts before the debounce elapses and proves no validate call follows. **Out of scope:** any non-test file, including `useGraphValidation.ts` and `test-setup.ts`; the other four test files, which already mock the module | `03` §3: FR-1607 (its live-validation tests, unchanged); register row F39 (the guard, held) | none: S3 (`SL-1557`) is merged; it runs beside S4 (`SL-1559`, backend write set) under `RL-1445` item 2 only if the dispatch names both | C | ≈ 0.25 lane-day, derived: one file, three tests, one full gate |
+| 0b (lane C) | SL-1639 — WK-675 fix slice — FD-1611: DagDesigner.test.ts stubs the validate route, and the debounce's unmount cancel is proven | In `frontend/src/components/dag/__tests__/DagDesigner.test.ts` only: a regression test that lets the 400 ms debounce elapse after its assertions, red on base with F39; the module `@/api/ratingAlgorithms` mocked for the whole file in the sibling files' pattern; a test that unmounts before the debounce elapses and proves no validate call follows. **Out of scope:** any non-test file, including `useGraphValidation.ts` and `test-setup.ts`; the other four test files, which already mock the module | `03` §3: FR-1607 (its live-validation tests, unchanged); register row F39 (the guard, held) | none: S3 (`SL-1557`) is merged; it runs beside S4 (`SL-1559`, backend write set) under `RL-1445` item 2 only if the dispatch names both | C | ≈ 0.25 lane-day, derived: one file, three tests, one full gate |
 
-### Task 1: SL 9916
+### Task 1: SL-1639
 
 **Files:** modify `frontend/src/components/dag/__tests__/DagDesigner.test.ts`; create the `LG-`
-(working id 9917) under `docs/ledgers/`; `docs/roadmap.md` SL 9916's status lines.
+(LG-1640) under `docs/ledgers/`; `docs/roadmap.md` SL-1639's status lines.
 
 - [ ] **Step 1: the regression test, red on base.** Add a test that renders `DagDesigner` with
   the file's `props`, makes its assertion, then lets the debounce elapse past 400 ms before it
@@ -177,8 +178,8 @@ Under L5 a Work plan's tasks are its slice rows; this row's steps follow the tab
 
 - **The 10:38:57 item 4 interim** ("a gate whose ONLY frontend red is a DagDesigner F39
   un-stubbed-validate failure is classified WK-675's") is not ended by this plan. Whether it
-  lapses at SL 9916's merge is the lead's to say.
-- **FD 9914's register row and its discharge** are minter-d10's and the auditor's, at D10 and at
+  lapses at SL-1639's merge is the lead's to say.
+- **FD-1611's register row and its discharge** are minter-d10's and the auditor's, at D10 and at
   this slice's merge.
 
 ## Self-review

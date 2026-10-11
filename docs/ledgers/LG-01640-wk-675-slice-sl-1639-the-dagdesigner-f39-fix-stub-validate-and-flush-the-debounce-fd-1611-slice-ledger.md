@@ -1,22 +1,22 @@
 ---
-id: LG-9917
+id: LG-1640
 family: ledger
-title: WK-675 slice SL-9916 — the DagDesigner F39 fix, validate route mocked and the debounce's unmount cancel proven (FD-9914)
+title: WK-675 slice SL-1639 — the DagDesigner F39 fix, validate route mocked and the debounce's unmount cancel proven (FD-1611)
 status: closed                 # active → closed (§1.2a)
 created: 2026-10-11
 owner: executor
 tree: 99f22479a20e7fa64f8b6654e0d371c595b1e35a
 phase: P2
 work: WK-675
-slice: SL-9916
+slice: SL-1639
 plans: [PL-1546]
 corrected_by: []
-relates: [FD-9914]
+relates: [FD-1611]
 ---
 
-# LG-9917 — WK-675 slice SL-9916, the DagDesigner F39 fix
+# LG-1640 — WK-675 slice SL-1639, the DagDesigner F39 fix
 
-Executed by `executor-dagfix`. Working ids: slice 9916, ledger 9917, finding 9914. Stamps are UTC.
+Executed by `executor-dagfix`. Drafted under working ids slice 9916, ledger 9917, finding 9914; minted 2026-10-11 as SL-1639, LG-1640 and FD-1611 (the finding was already minted in the D10 batch). Stamps are UTC.
 
 **GO:** `to-lead.md` "2026-10-11 10:38:57 BST — DagDesigner F39 reds: an FD against WK-675 at D10 ADOPTED, with a small fix slice queued" item 3, and "2026-10-11 10:41:41 BST — CORRECTION to my 10:41:33 item 2c: the DagDesigner fix gets the FULL two-half gate". The dispatch is the lead's brief `brief-wave1b-2026-10-11.md` (executor-dagfix section).
 **MERGE-ACK:** added at merge.
@@ -25,11 +25,11 @@ Executed by `executor-dagfix`. Working ids: slice 9916, ledger 9917, finding 991
 
 ### Scope
 
-Row SL 9916 in `docs/roadmap.md` and its Work-plan delta PL 9918 (cherry-picked from the planner's commit `e434f71f`), quoted there. Defect (FD 9914): S3's live-validation debounce (`useGraphValidation.ts:14`, 400 ms) can fire an un-stubbed `/rating-algorithms/validate` fetch inside a `DagDesigner.test.ts` test body, which `frontend/src/test-setup.ts` fails by name (register row F39); seen in two loaded gates (SL-1526 @e00c71c1, SL-1600 @8f674476). Write set: `DagDesigner.test.ts` only. DP-1 (a) adopted at the GO: the unmount cancel (`useGraphValidation.ts:52–54`) is proven, with no extra flush and no source change. Requirements: FR-1607 (unchanged), register row F39 (guard held).
+Row SL-1639 in `docs/roadmap.md` and its Work-plan delta PL-1638 (cherry-picked from the planner's commit `e434f71f`), quoted there. Defect (FD-1611): S3's live-validation debounce (`useGraphValidation.ts:14`, 400 ms) can fire an un-stubbed `/rating-algorithms/validate` fetch inside a `DagDesigner.test.ts` test body, which `frontend/src/test-setup.ts` fails by name (register row F39); seen in two loaded gates (SL-1526 @e00c71c1, SL-1600 @8f674476). Write set: `DagDesigner.test.ts` only. DP-1 (a) adopted at the GO: the unmount cancel (`useGraphValidation.ts:52–54`) is proven, with no extra flush and no source change. Requirements: FR-1607 (unchanged), register row F39 (guard held).
 
 ### Task list
 
-- Task 1 — the regression test, red on base (PL 9918 Acceptance 1).
+- Task 1 — the regression test, red on base (PL-1638 Acceptance 1).
 - Task 2 — the file-wide `vi.mock("@/api/ratingAlgorithms")`, green ×3 (2) and the stub's broken-input proof (3).
 - Task 3 — the unmount test and its broken-input proof (4).
 - Task 4 — diff, closing acts, the full two-half gate on the lead's grant (5–7).
@@ -56,4 +56,4 @@ Broken input (4), uncommitted and reverted at once: `cancel();` at `useGraphVali
 
 ## PRs
 
-The slice PR (number added at open): "SL-9916: the DagDesigner F39 fix" (merge commit added at merge).
+The slice PR (number added at open): "SL-1639: the DagDesigner F39 fix" (merge commit added at merge).
