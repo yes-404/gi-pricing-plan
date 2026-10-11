@@ -27,6 +27,13 @@ relates: []                      # ids only
   --delete-branch` exiting `1` or `0` with neither meaning "the merge landed", and the
   stranded-push race. **Verify a `gh` write against the artifact it claims to have changed,
   never against its exit code.**
+- **Before any REST PATCH of a PR's body or title** (`gh api -X PATCH repos/<owner>/<repo>/pulls/<n> …`,
+  the form `git-hygiene` gives because `gh pr edit` silently no-ops), run `gh pr view <n> --json
+  number,title,headRefName` and confirm it is the PR and branch you mean; **after the PATCH,
+  read the body back** (`gh pr view <n> --json body`). The wrong-number PATCH is the failure
+  mode: #1149's body was overwritten at 13:15:20Z with RL 9642's draft body by an earlier
+  session, and restored. *(Amended 2026-10-05 by the maintainer, dated line by delegation, on
+  the entry "2026-10-05 15:19:09 BST — All four batches ACK-ready: noted; FD 9699 owner = WK-673; FD 9645 MEDIUM confirmed; the #1149 body incident; slot priorities" in `to-lead.md`: its INCIDENT item and slot priority 2.)*
 - **S-8** (ruled 02:29:40 BST): a reproduction already filed as a dated record with its run
   id discharges the reproduce step of any debugging skill.
 - **Owns:** one slice at a time from the frozen plan, in its own worktree (what a slice is,
@@ -35,8 +42,17 @@ relates: []                      # ids only
   push (both halves — a Python-only gate has been green here while the frontend was red);
   opens PRs. Concretely, per `document-ids.md` §1.6:
   - **Works from a `PL-` leaf for its `SL-`** — the executor does not write the plan, it
-    executes it (§1.6 PL `map`/`leaf` row: *"executor works from it"*).
-  - **Appends its `LG-` per task and per PR**, setting it `active` — the slice ledger is
+    executes it (§1.6 PL `map`/`leaf` row: *"executor works from it"*). **From Lean P2 L1 and
+    L5** (the maintainer's entry "2026-10-08 11:51:58 BST — USER DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW; the files are amended through RFC 9479 P6 (the maintainer's amendment, by delegation)" in `to-lead.md`), for a slice dispatched after that
+    entry: it works from the slice's row in its **Work's one plan**, and the slice is **one PR**
+    carrying the code, the tests, any spec change it needs, the `SL-` row's one-line status change
+    and the slice's **one `LG-`**, whose scope, tasks, gate (the full local gate's rc table) and
+    build log sections the executor writes and appends in that PR (`docs/_templates/LG.md`). It
+    opens **no activation PR** and works from **no per-slice plan**. (L1 as corrected to (a') by the maintainer's entry "2026-10-08 12:02:08 BST — #1240 P6 flagged readings RULED: (1) REJECTED, and my 11:51:58 L1 (a) wording CORRECTED (the slice's one file is its LG-, not text under the roadmap row); (2) ACCEPTED".) A process finding it hits is a dated row in
+    `docs/process/process-backlog.md`, riding the same PR, unless it lets a wrong merge, number,
+    mispricing or data loss through or blocks work today, when the lead files an `FD-`. *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6.)*
+  - **Appends its `LG-` per task and per PR** (from Lean P2 L1 (a'), in the slice's one PR, in
+    its Build log section), setting it `active` — the slice ledger is
     grown, never rewritten in place (§1.6 LG row: *"executor, appends per task and per PR
     (`active`)"*).
   - **As the mint step, when the lead's brief makes it one after the slice audit** (the SL-1377 order: slice audit → mint → minted-head gate), the executor performs §1.6's closing acts on the auditor's behalf in the mint commit: the `LG-` front matter `status: closed`, the roadmap `SL-` row `status: closed` with its dated line, then `docs/INDEX.md` regenerated and `audit-docs` green. *(Added 2026-10-04, on the maintainer's (by delegation) direction, after LG-1400 and WK-674 Slice 2's ledger (not yet merged when this was written, so not cited by id) were each minted `active`.)*
@@ -64,6 +80,9 @@ relates: []                      # ids only
     an auditor session — not chance: a structural hazard of being the role every other
     write-access role's mistakes land on.
   - **Silently amends after review has started** — name the delta instead.
+- **Never `cd`**: not into a subdirectory, not read-only, not into `/tmp`, not inside your own worktree. Use `git -C <path>`, `uv run --directory <path>`, `pnpm --dir <path>` and absolute paths; if plain `git` is refused by the guard, use `/usr/bin/git -C`. **The reason:** the session's hook path is relative, so a `cd` silently moves the guard and every later command, including those of agents spawned afterwards, which inherit the cwd; it also contaminates other members' worktrees. Three agents slipped on it on 2026-10-05 despite their briefs (planner-rb, planner-9529, dm-s46: the maintainer's entry "2026-10-05 18:54:06 BST — RL 9566 T7" in `to-lead.md`), which is why it is a charter rule and not a brief line. *(Amended 2026-10-05 by the maintainer, dated line by delegation: the hard no-`cd` rule, after three slips in one day.)*
+- **A sweep or batch of checks (audit-docs, merge-tree or doc-id over many PRs, register-lint loops) PAUSES for the WHOLE of any held gate slot**, not only for a timed measurement. **It covers everything that is not the held gate itself:** the executor running its own gate in its own slot does not pause itself; everything else on the box pauses. Before each command, check the slots (`flock -n /tmp/slots/gate-1 true`, and the same for `gate-2`); if either is held by a gate that is not your own, wait. **The reason:** a gate carries NFR timing tests, and a batch beside it makes contention and spurious failures; on 2026-10-05 a sweep overlapped S7's gate 1 (18:25–18:56 BST, the overlap ruling (b) of the 19:23:32 entry names). The ruling, item (vi) of the maintainer's entry "2026-10-05 19:23:32 BST — LATE LOG of messages sent without an entry, and a ruling on role-file amendments" in `to-lead.md`, verbatim: *"RULE FROM NOW ON: any sweep or batch of checks PAUSES for the WHOLE of any held gate slot, not only for a measurement."* Its scope, the maintainer's entry "2026-10-05 19:29:14 BST — #1215's sweep-pause bullet goes into EVERY role file that runs commands, not auditor.md only" in `to-lead.md`, verbatim: *"WORDING CLARIFICATION, for all seven: the pause applies to any sweep or batch of checks that is NOT the held gate itself. The executor running its own gate in its own slot is not pausing itself; everything else on the box pauses."* *(Amended 2026-10-05 by the maintainer, dated line by delegation, on the 19:23:32 entry's role-file ruling (b) and the 19:29:14 entry: the sweep-pause rule in every role that runs commands, filed first as FD-1431, which this amendment discharges.)*
+- **The word our records bar for the maintainer's delegate never appears in added or edited text (the hunks a change edits)** — in a commit message, a PR body, or the hunks of a living doc a PR edits; frozen records are never edited for it, and a wider clean-up needs its own ruling. Write "the maintainer (by delegation)". In a verbatim quote of a channel entry, elide it as "[the maintainer's (by delegation)]" with a bracketed elision note; cite a quoted commit subject that carries it by sha and date with a bracketed paraphrase. *(Amended 2026-10-05 by the maintainer, dated line by delegation, on the NOT-ACK of #1218 and on #1215: "2026-10-05 20:43:42 BST — #1218 @fa72b64b: NOT ACKed; two quoted occurrences of the barred word must be elided" and "2026-10-05 21:10:51 BST — #1215 @68d28668: the 7-file spread CONFIRMED; the 5th commit YES; the scope of the barred-word rule stated" and "2026-10-05 21:11:35 BST — The barred-word scope made exact: the HUNKS a PR edits, not whole files".)*
 - **S-9** (ruled 04:38:48 BST): Stop a process by pid, after `readlink /proc/<pid>/cwd`
   names it as yours; never by pattern (`pkill -f`, `pkill` by name) — a pattern matches
   every session's processes on the box.
@@ -116,7 +135,7 @@ relates: []                      # ids only
     #883 (three times) and WK-672 Slice 3's T7 (three times) — **plus one wrong-process
     kill** (an executor's permitted targeted test) and one relaunch under `setsid` after
     such a stop. Sources, all local and not in the repository: the lead's correction entry
-    of 2026-09-28 22:21:21 BST (`to-deputy.md`, archive, until 2026-09-29) for the count; the maintainer's (by delegation) entry of
+    of 2026-09-28 22:21:21 BST (the channel archive [its filename elided per the records rule], until 2026-09-29) for the count; the maintainer's (by delegation) entry of
     22:18:07 BST (`to-lead.md`) for the ruling. **The "five" stops in the lead's 22:17:09 BST
     entry and in the 22:18:07 entry is superseded by that correction.**
 - **S-14** (ruled 2026-09-28 by the maintainer (by delegation)): **A force-stopped gate leaves
@@ -129,7 +148,7 @@ relates: []                      # ids only
   - **Grounds, 2026-09-28:** #883's gate at `1602cb07` (22:43:25–23:00:27) failed two
     tests in `test_api_datasets.py` with `IntegrityError … uq_users_issuer_subject`. The
     users count was 0 after that gate's teardown, and the file passed 31 of 31 in
-    isolation. The lead's entry of 23:02:03 BST (`to-deputy.md`, archive, until 2026-09-29) gives the cause as the
+    isolation. The lead's entry of 23:02:03 BST (the channel archive [its filename elided per the records rule], until 2026-09-29) gives the cause as the
     three earlier #883 gates it killed, and calls it strong evidence, not yet proven by a
     re-run; the maintainer's (by delegation) entry of 23:02:24 BST (`to-lead.md`) records the same cause and
     asks for this line. Both entries are local and not in the repository.

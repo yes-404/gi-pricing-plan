@@ -533,9 +533,9 @@ async def _carry_to_the_artifact(
 
     One call per artifact type rather than a branch here: each module's function returns
     `None` for a request that is not its own, so adding a type is a change in that module
-    and not in this route. `model`, `custom_objective` and `custom_metric` have lifecycles
-    in code — a Peril Structure and a Rating Version each gain one with the slice that
-    builds them, and until then their requests decide without an artifact to move.
+    and not in this route. `model`, `custom_objective`, `custom_metric`, `validation_rule`,
+    `peril_structure`, `rating_version` and `deployment` have lifecycles in code; a type
+    without one decides without an artifact to move.
     """
     async with service.approval_decision(session):
         await modelling_service.apply_approval_decision(
@@ -557,6 +557,12 @@ async def _carry_to_the_artifact(
             request=request,
         )
         await validation_rules_service.apply_approval_decision(
+            session,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            request=request,
+        )
+        await perils_service.apply_approval_decision(
             session,
             workspace_id=caller.workspace_id,
             actor=caller.principal,

@@ -1,0 +1,90 @@
+{
+ "members": [
+  {
+   "name": "model: freq_v1 -> freq_v2 (adds VehGas, VehAge)",
+   "steps": [
+    "s_t_area",
+    "s_t_veh_power",
+    "s_t_age_band",
+    "s_t_veh_brand",
+    "s_t_region",
+    "s_t_bonus_malus",
+    "s_t_density",
+    "s_freq",
+    "s_in_veh_gas",
+    "s_in_veh_age_band",
+    "s_t_veh_gas",
+    "s_t_veh_age_band"
+   ]
+  },
+  {
+   "name": "rate_table: age relativity v1 -> v2",
+   "steps": [
+    "s_age"
+   ]
+  },
+  {
+   "name": "severity 1900 -> 1976 (+4%)",
+   "steps": [
+    "s_risk"
+   ]
+  },
+  {
+   "name": "expense_load 0.25 -> 0.28",
+   "steps": [
+    "s_load"
+   ]
+  },
+  {
+   "name": "min_premium 150 -> 180",
+   "steps": [
+    "s_floor"
+   ]
+  },
+  {
+   "name": "cap: increase capped at +25% of baseline",
+   "steps": [
+    "s_cap"
+   ]
+  }
+ ],
+ "sets": [
+  [
+   0,
+   1,
+   2
+  ],
+  [
+   0,
+   1,
+   2,
+   3
+  ],
+  [
+   0,
+   1,
+   2,
+   3,
+   4
+  ],
+  [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5
+  ],
+  [
+   0,
+   1,
+   4,
+   5
+  ],
+  [
+   1,
+   2,
+   4
+  ]
+ ]
+}

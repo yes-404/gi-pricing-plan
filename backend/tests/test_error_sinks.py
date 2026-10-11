@@ -21,7 +21,10 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ValidationError, field_validator
+
+from model_schema.input_free import InputFreeError
+from pricing_core.safe_error import CodedError
 
 _ROOT = Path(__file__).resolve().parents[2]
 #: The scope is DERIVED by glob, so a new file is covered by default (maintainer, 2026-09-29,
@@ -97,13 +100,40 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         2, "a bulk operation's named refusal over a rate table; a rate table is not a quote input"),
     ("backend/src/app/platform/rate_tables.py", "bulk_operation", "str(exc)"): (
         1, "a rate-table bulk operation's parameter validation, echoed to the caller who sent it"),
+    ("backend/src/app/platform/rate_tables.py", "_portfolio_weights", "str(exc)"): (
+        1, "FEEDS the text of a `PortfolioFrameError`, `WeightJoinError` or "
+        "`FactorResolutionError` to the failure of the `rate_table.diff_cells` Job (stored as the "
+        "Job's error message; the weights are computed in the Job) and to the legacy `diff`'s "
+        "422 body. The input is a portfolio Dataset Version, not a Quote Context. "
+        "`WeightJoinError` names the key, the column or the ref and never a value "
+        "(test_rate_table_weights.py::test_a_refusal_never_carries_a_portfolio_value; "
+        "test_rate_table_diff_portfolio.py::"
+        "test_a_portfolio_refusal_that_reads_the_content_is_the_jobs_validation_failed); a "
+        "`FactorResolutionError`'s message is carried with its count and example value by "
+        "RL-1361 item 3 and RL-1418 T5 "
+        "(test_rate_table_diff_portfolio.py::"
+        "test_a_resolution_error_reaches_the_failed_job_with_its_count_and_example)"),
+    ("packages/pricing-core/src/pricing_core/rating/compile.py", "compile_bundle",
+     "str(exc)"): (
+        1, "FR-223 MODEL_REFERENCE_MODE_INCONSISTENT at compile: caught BY CLASS "
+        "(`ModelReferenceModeError`), whose text is authored from the step id and the two "
+        "declared modes; no quote is involved; any other `ValueError` falls through uncoded "
+        "(test_rating_compile_bundle.py::"
+        "test_a_foreign_value_error_is_not_given_the_mode_code)"),
+    ("packages/pricing-core/src/pricing_core/rate_tables/weights.py", "_resolved_series",
+     "str(exc)"): (
+        1, "re-wraps a `FactorResolutionError` as a `WeightJoinError` with its message kept, as "
+        "RL-1418 T5 and RL-1361 item 3 rule (the count and the example value); the input is a "
+        "portfolio Dataset Version, not a Quote Context; the message reaches the Job's failure "
+        "(test_rate_table_diff_portfolio.py::"
+        "test_a_resolution_error_reaches_the_failed_job_with_its_count_and_example)"),
     ("backend/src/app/platform/rating_algorithms.py", "graph_validation_error", "str(exc)"): (
         1, "RETURNS Pydantic's text of the submitter's own algorithm or sub-graph JSON to the "
         "submitter in the 422 body; not stored, not logged; an artifact definition, not a Quote "
         "Context. The code is chosen by the typed error class, never by this text (FD-1326)"),
-    ("backend/src/app/platform/rating_versions.py", "compile_rating_version", "str(exc)"): (
-        1, "compile time: an artifact-level `ValueError` from `compile_bundle`; no quote is "
-        "involved"),
+    ("backend/src/app/platform/rating_versions.py", "create_rating_version", "str(exc)"): (
+        1, "create time: an artifact-level refusal (FR-223 MODEL_REFERENCE_MODE_INCONSISTENT) "
+        "naming the step and the two declared modes; no quote is involved"),
     ("backend/src/app/platform/regression_suites.py", "_validate_properties", "{exc}"): (
         1, "VERDICT (Q889-c): cannot carry a quote-input value. `UnsweepableProperty`'s text"
         " (`properties.py`, five raises) interpolates only `check.input`, "
@@ -293,3 +323,59 @@ def test_an_unexpected_request_failure_logs_no_input(
     record = next(r for r in caplog.records if r.getMessage() == "request failed")
     assert record.exc_info is not None
     assert ValidationError.__name__ in str(record.exc_info[1])
+
+
+_AUTHORED = "authored-trigger"
+_CODED = "coded-trigger"
+
+
+class _SentinelBody(BaseModel):
+    driver_age: int
+
+    @field_validator("driver_age", mode="before")
+    @classmethod
+    def _refuse_with_the_value(cls, value: object) -> object:
+        if value == _SENTINEL:
+            # A custom validator that interpolates what it was given: the shape of every
+            # `value_error` and `assertion_error` a request model can raise.
+            raise ValueError(f"unacceptable value {value}")
+        if value == _AUTHORED:
+            raise InputFreeError("an authored, input-free message")
+        if value == _CODED:
+            raise CodedError("AUTHORED_CODE: an authored, input-free message")
+        return value
+
+
+def _post(api_client: TestClient, path: str, value: str) -> dict[str, object]:
+    async def intake(body: _SentinelBody) -> None:
+        return None
+
+    api_client.app.add_api_route(path, intake, methods=["POST"])  # type: ignore[attr-defined]
+    response = api_client.post(path, json={"driver_age": value})
+    assert response.status_code == 422
+    assert _SENTINEL not in response.text
+    return response.json()  # type: ignore[no-any-return]
+
+
+@pytest.mark.req("NFR-499")
+def test_a_request_validation_422_carries_no_submitted_value(api_client: TestClient) -> None:
+    """FD-1589 row 8: `_handle_validation_error` copied pydantic's `msg` into the 422's
+    `FieldError.message`, and a custom validator's `msg` carries the submitted value."""
+    body = _post(api_client, "/__nfr499_422", _SENTINEL)
+    assert body["errors"][0]["code"] == "VALUE_ERROR"  # type: ignore[index]
+
+
+@pytest.mark.req("NFR-499")
+def test_an_input_free_validator_message_survives_the_422_sink(api_client: TestClient) -> None:
+    """An `InputFreeError` is input-free by construction, so its authored message is kept,
+    byte for byte as on `main` (DP-4 (a): the "Value error, " prefix stays)."""
+    body = _post(api_client, "/__nfr499_authored", _AUTHORED)
+    assert body["errors"][0]["message"] == "Value error, an authored, input-free message"  # type: ignore[index]
+
+
+@pytest.mark.req("NFR-499")
+def test_a_coded_validator_message_gets_the_fixed_text(api_client: TestClient) -> None:
+    """A `CodedError` is not on the 422 allow-list (DP-3 (a) with DP-5 (b)): the parked form of
+    this test asserted its text survived; PL-1599 Task 5 changes that on purpose."""
+    body = _post(api_client, "/__nfr499_coded", _CODED)
+    assert body["errors"][0]["message"] == "The value is not valid (VALUE_ERROR)."  # type: ignore[index]

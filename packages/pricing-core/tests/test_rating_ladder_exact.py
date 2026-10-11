@@ -386,12 +386,16 @@ async def test_an_unclamped_quote_is_unchanged_and_constraints_is_none() -> None
     assert result.trace.ladder_reconciled is True
 
 
-def _clamp_variant(bounds: dict[str, str], condition: str) -> dict[str, Any]:
+def _clamp_variant(
+    bounds: dict[str, str], condition: str, consumes: list[str] | None = None
+) -> dict[str, Any]:
     payload = _score_fixture()
     for step in payload["steps"]:
         if step["step_id"] == "s_clamp":
             step["clamp_bounds"] = bounds
             step["condition"] = condition
+            if consumes is not None:
+                step["consumes"] = consumes  # FR-246: the names the variant reads
     return payload
 
 
@@ -402,7 +406,8 @@ async def test_a_max_clamp_and_a_step_declaring_both_bounds() -> None:
     from pricing_core.rating.ladder import ladder_violations
 
     cap = _clamp_variant(
-        {"max": "sanity_floor_minor"}, "office_premium_minor <= sanity_floor_minor"
+        {"max": "sanity_floor_minor"}, "office_premium_minor <= sanity_floor_minor",
+        ["office_premium_minor", "sanity_floor_minor"],
     )
     ladder, inputs, _ = await _built(cap, **{**_CLAMP_INPUTS, "sanity_floor_minor": 1000})
     constraints = next(r for r in ladder if r.rung == "constraints")
@@ -414,6 +419,7 @@ async def test_a_max_clamp_and_a_step_declaring_both_bounds() -> None:
     both = _clamp_variant(
         {"min": "min_premium_minor", "max": "sanity_floor_minor"},
         "office_premium_minor >= min_premium_minor",
+        ["office_premium_minor", "min_premium_minor", "sanity_floor_minor"],
     )
     ladder, inputs, _ = await _built(both, **{**_CLAMP_INPUTS, "sanity_floor_minor": 1000})
     constraints = next(r for r in ladder if r.rung == "constraints")
@@ -429,12 +435,18 @@ async def test_a_disposition_that_disagrees_with_the_comparison_fails_r0() -> No
     fails: the platform cannot say which one priced the quote."""
     from pricing_core.rating.ladder import ladder_violations
 
-    always_ok = _clamp_variant({"min": "min_premium_minor"}, "office_premium_minor >= 0")
+    always_ok = _clamp_variant(
+        {"min": "min_premium_minor"}, "office_premium_minor >= 0",
+        ["office_premium_minor", "min_premium_minor"],
+    )
     ladder, inputs, _ = await _built(always_ok, **_CLAMP_INPUTS)
     violations = ladder_violations(ladder, inputs)
     assert any("disagree" in v for v in violations), violations
 
-    never_ok = _clamp_variant({"min": "min_premium_minor"}, "office_premium_minor < 0")
+    never_ok = _clamp_variant(
+        {"min": "min_premium_minor"}, "office_premium_minor < 0",
+        ["office_premium_minor", "min_premium_minor"],
+    )
     ladder, inputs, _ = await _built(never_ok, **{**_CLAMP_INPUTS, "min_premium_minor": 0})
     assert any("disagree" in v for v in ladder_violations(ladder, inputs))
 

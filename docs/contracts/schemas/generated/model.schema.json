@@ -1426,7 +1426,8 @@
     "ModelFlag": {
       "description": "Conditions raised elsewhere that gate this model's approval (`06` FR-359).\n\nNamed rather than free strings because two surfaces branch on them — `02` FR-205's\nblock on `approved`, and the approvals inbox — and a flag spelled two ways is a gate\nthat holds on one screen and not the other.",
       "enum": [
-        "dataset_invalidated"
+        "dataset_invalidated",
+        "custom_objective_not_approved"
       ],
       "title": "ModelFlag",
       "type": "string"

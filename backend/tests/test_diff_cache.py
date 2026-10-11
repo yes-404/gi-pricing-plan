@@ -10,6 +10,7 @@ from uuid import uuid4
 
 import pytest
 
+from app.errors import PlatformError
 from app.platform.diff_cache import DiffCache, version_content_hash
 from model_schema.rating import RateTableDiff
 
@@ -43,27 +44,33 @@ async def test_the_key_hashes_both_versions_and_the_portfolio_identity() -> None
     cache = DiffCache(_FakeClient())
     current = "a" * 64
     baseline = "b" * 64
+    definition = "d" * 64
     portfolio = uuid4()
+    workspace = uuid4()
 
-    key = cache.key(current, baseline, portfolio)
-    assert key == f"rate_table:diff:{current}:{baseline}:{portfolio}"
+    key = cache.key(current, baseline, definition, portfolio, workspace)
+    assert key == f"rate_table:diff:{current}:{baseline}:{definition}:{portfolio}:{workspace}"
 
     # Deterministic — a wall-clock date in the key would make a second call differ.
-    assert cache.key(current, baseline, portfolio) == key
+    assert cache.key(current, baseline, definition, portfolio, workspace) == key
     # Every input is load-bearing: a different current or baseline hash, a different
-    # portfolio identity, or none at all, names a different entry.
-    assert cache.key(baseline, current, portfolio) != key
-    assert cache.key(current, "c" * 64, portfolio) != key
-    assert cache.key(current, baseline, uuid4()) != key
-    assert cache.key(current, baseline, None) == (
-        f"rate_table:diff:{current}:{baseline}:none"
+    # definition, a different portfolio identity or workspace, or no portfolio at all,
+    # names a different entry.
+    assert cache.key(baseline, current, definition, portfolio, workspace) != key
+    assert cache.key(current, "c" * 64, definition, portfolio, workspace) != key
+    assert cache.key(current, baseline, "e" * 64, portfolio, workspace) != key
+    assert cache.key(current, baseline, definition, uuid4(), workspace) != key
+    assert cache.key(current, baseline, definition, portfolio, uuid4()) != key
+    # Unweighted, the figure depends on the two versions alone: no workspace in the key.
+    assert cache.key(current, baseline, definition, None, workspace) == (
+        f"rate_table:diff:{current}:{baseline}:{definition}:none"
     )
 
 
 async def test_the_cache_round_trips_a_diff() -> None:
     client = _FakeClient()
     cache = DiffCache(client)
-    key = cache.key("a" * 64, "b" * 64, None)
+    key = cache.key("a" * 64, "b" * 64, "d" * 64, None, None)
 
     assert await cache.get(key) is None
     await cache.set(key, _diff())
@@ -83,7 +90,7 @@ async def test_a_cache_failure_never_fails_the_diff() -> None:
             raise redis.RedisError("redis is down")
 
     cache = DiffCache(_BrokenClient())
-    key = cache.key("a" * 64, "b" * 64, None)
+    key = cache.key("a" * 64, "b" * 64, "d" * 64, None, None)
 
     assert await cache.get(key) is None
     await cache.set(key, _diff())  # must not raise
@@ -115,7 +122,7 @@ async def test_the_cache_round_trips_through_real_redis(settings) -> None:
         pytest.skip(f"Redis not reachable: {type(exc).__name__}")
 
     cache = DiffCache(client)
-    key = cache.key("a" * 64, "b" * 64, None)
+    key = cache.key("a" * 64, "b" * 64, "d" * 64, None, None)
     await client.delete(key)
     try:
         assert await cache.get(key) is None
@@ -189,15 +196,20 @@ async def test_diff_is_computed_on_miss_and_served_from_the_cache_on_hit(
     assert client.gets == 2
     assert client.sets == 1  # served from the cache — no recompute, no re-store
 
-    portfolio = uuid4()
-    await svc.diff(
-        database,
-        workspace_id,
-        slug,
-        2,
-        "previous",
-        blob_store=blob_store,
-        cache=cache,
-        portfolio_dataset_version_id=portfolio,
-    )
-    assert client.sets == 2  # a different portfolio identity is a different entry
+    # A named portfolio is checked before the cache is read (`RL-1361` item 7): an id that
+    # names no Dataset Version is a 404, and the cache is not consulted. Two portfolios
+    # being two entries is `test_rate_table_diff_portfolio`'s.
+    with pytest.raises(PlatformError) as refused:
+        await svc.diff(
+            database,
+            workspace_id,
+            slug,
+            2,
+            "previous",
+            blob_store=blob_store,
+            cache=cache,
+            portfolio_dataset_version_id=uuid4(),
+        )
+    assert refused.value.status_code == 404
+    assert client.gets == 2
+    assert client.sets == 1

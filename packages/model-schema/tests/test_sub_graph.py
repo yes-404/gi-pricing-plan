@@ -13,6 +13,7 @@ import pytest
 from pydantic import ValidationError
 
 from model_schema.graph_errors import GraphCycleError, GraphUnresolvedRefError
+from model_schema.input_free import InputFreeError
 from model_schema.sub_graphs import SubGraph, SubGraphBody, SubGraphCreate, SubGraphInputPort
 
 pytestmark = pytest.mark.req("FR-217")
@@ -115,7 +116,7 @@ def test_a_duplicate_step_id_is_refused() -> None:
     payload = body()
     payload["steps"].append(copy.deepcopy(payload["steps"][0]))
     err = refusal(payload)
-    assert type(err["ctx"]["error"]) is ValueError
+    assert type(err["ctx"]["error"]) is InputFreeError
     assert "unique" in str(err["ctx"]["error"])
 
 
@@ -139,7 +140,7 @@ def test_ports_replace_input_and_output_steps(step_type: str) -> None:
     )
     payload["steps"].append(extra)
     err = refusal(payload)
-    assert type(err["ctx"]["error"]) is ValueError
+    assert type(err["ctx"]["error"]) is InputFreeError
     assert "ports replace" in str(err["ctx"]["error"])
 
 
@@ -162,4 +163,4 @@ def test_port_names_are_unique() -> None:
     payload = body()
     payload["inputs"].append({"name": "ncd_years", "type": "int"})
     err = refusal(payload)
-    assert type(err["ctx"]["error"]) is ValueError
+    assert type(err["ctx"]["error"]) is InputFreeError

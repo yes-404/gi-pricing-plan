@@ -1,0 +1,59 @@
+{
+ "slug": "fremtpl2-rel-veh-power",
+ "version": 2,
+ "rateable": true,
+ "storage": "rows",
+ "keys": [
+  {
+   "name": "veh_power",
+   "type": "int",
+   "banding_ref": null
+  }
+ ],
+ "value": {
+  "name": "rel_veh_power",
+  "type": "relativity",
+  "unit": "factor",
+  "min": null,
+  "max": null
+ },
+ "default_row": null,
+ "rows": [
+  {
+   "veh_power": "4",
+   "rel_veh_power": "1.00000000"
+  },
+  {
+   "veh_power": "5",
+   "rel_veh_power": "1.18604307"
+  },
+  {
+   "veh_power": "6",
+   "rel_veh_power": "1.20668801"
+  },
+  {
+   "veh_power": "7",
+   "rel_veh_power": "1.12314634"
+  },
+  {
+   "veh_power": "8",
+   "rel_veh_power": "0.94206463"
+  },
+  {
+   "veh_power": "9",
+   "rel_veh_power": "1.32542796"
+  },
+  {
+   "veh_power": "10",
+   "rel_veh_power": "1.26378006"
+  },
+  {
+   "veh_power": "11",
+   "rel_veh_power": "1.16977949"
+  },
+  {
+   "veh_power": "12",
+   "rel_veh_power": "1.02393078"
+  }
+ ]
+}

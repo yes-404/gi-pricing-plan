@@ -17,6 +17,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from model_schema.input_free import InputFreeError
+
 __all__ = [
     "TERMINAL_STATUSES",
     "VALID_TRANSITIONS",
@@ -53,6 +55,9 @@ class JobKind(enum.StrEnum):
     RATING_COMPILE = "rating.compile"
     RATING_REGRESSION = "rating.regression"
     RATE_TABLE_DIFF = "rate_table.diff"
+    #: `RL-1418`, FD-1358: the paged diff-cells route's 202 Job, a kind of its own so that
+    #: `rate_table.diff` and the artifact its summary route returns do not change.
+    RATE_TABLE_DIFF_CELLS = "rate_table.diff_cells"
     SCORE_BATCH = "score.batch"
     #: WK-671 Task 4B, RL-862 (`docs/plans/2026-08-29-w11-nfr-rate-1-trace-capture-remedy-
     #: ruling.md`): the off-path re-score that fills in a sampled real-time trace's body.
@@ -136,7 +141,7 @@ class Principal(BaseModel):
     @model_validator(mode="after")
     def _non_system_principals_are_identified(self) -> Principal:
         if self.kind is not ActorKind.SYSTEM and self.id is None:
-            raise ValueError(f"a {self.kind.value} principal must carry an id")
+            raise InputFreeError("a principal that is not a system principal must carry an id")
         return self
 
 
@@ -257,15 +262,15 @@ class Job(BaseModel):
         invisible to both.
         """
         if self.status in TERMINAL_STATUSES and self.finished_at is None:
-            raise ValueError(f"a {self.status.value} job must have finished_at set")
+            raise InputFreeError("a job in a terminal status must have finished_at set")
         if self.status not in TERMINAL_STATUSES and self.finished_at is not None:
-            raise ValueError(f"a {self.status.value} job must not have finished_at set")
+            raise InputFreeError("a job not in a terminal status must not have finished_at set")
         if self.status is JobStatus.QUEUED and self.started_at is not None:
-            raise ValueError("a queued job must not have started_at set")
+            raise InputFreeError("a queued job must not have started_at set")
         if (
             self.finished_at is not None
             and self.started_at is not None
             and self.finished_at < self.started_at
         ):
-            raise ValueError("finished_at precedes started_at")
+            raise InputFreeError("finished_at precedes started_at")
         return self

@@ -468,6 +468,18 @@
           ],
           "title": "Produces"
         },
+        "result_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Result Type"
+        },
         "step_id": {
           "minLength": 1,
           "title": "Step Id",

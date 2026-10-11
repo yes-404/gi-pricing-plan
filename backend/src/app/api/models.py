@@ -99,6 +99,7 @@ from model_schema import (
     MonotonicDirection,
     Prediction,
     RatingVersion,
+    RatingVersionCreate,
     RegressionRun,
     SpecValidation,
     TransparencyArtifact,
@@ -266,14 +267,6 @@ class ModelCreate(BaseModel):
 
     spec: ModelSpec
     change_reason: str | None = None
-
-
-class RatingVersionCreate(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    slug: str
-    dataset_version_id: UUID
-    model_ref: ArtifactRef
 
 
 class RatingVersionSubmit(BaseModel):
@@ -1136,6 +1129,31 @@ async def list_rating_versions(
 
 
 @router.get(
+    "/rating-versions/{slug}@{version}",
+    summary="Get a rating version by its slug@version",
+    responses=problems(401, 403, 404, 422),
+)
+async def get_rating_version_by_ref(
+    slug: str,
+    version: int,
+    caller: Annotated[Caller, Depends(requires(Perm.RATING_READ))],
+    database: DatabaseDep,
+) -> RatingVersion:
+    """**200** with the version its own `slug@version` names (03 §5.1, RL-1473).
+
+    Registered before the by-id read: `{rating_version_id}` matches any one segment,
+    `fremtpl2-demo@1` included, and would answer 422.
+    """
+    async with database.session() as session:
+        row = await rating_versions_service.resolve_rating_version_ref(
+            session,
+            workspace_id=caller.workspace_id,
+            ref=ArtifactRef(type="rating_version", slug=slug, version=version),
+        )
+        return rating_versions_service.to_schema(row)
+
+
+@router.get(
     "/rating-versions/{rating_version_id}",
     summary="Get a rating version",
     responses=problems(401, 403, 404),
@@ -1168,10 +1186,11 @@ async def create_rating_version(
     caller: Annotated[Caller, Depends(requires(Perm.RATING_WRITE))],
     database: DatabaseDep,
 ) -> RatingVersion:
-    """Create a draft rating version with pins to a model (FR-237).
+    """Create a draft rating version, declaring its algorithm and pins (FR-237).
 
-    The draft version is editable until submitted for approval. It pins an approved
-    model for rating use.
+    Their shape is checked here (422); whether they resolve, and at what maturity, is
+    checked at compile (FR-240). A declared mode that the algorithm's `model_call` steps
+    contradict is 422 `MODEL_REFERENCE_MODE_INCONSISTENT` (FR-223).
     """
     async with database.unit_of_work() as session:
         row = await rating_versions_service.create_rating_version(
@@ -1181,6 +1200,9 @@ async def create_rating_version(
             slug=body.slug,
             dataset_version_id=body.dataset_version_id,
             model_ref=body.model_ref,
+            algorithm_ref=body.algorithm_ref,
+            pins=body.pins,
+            model_reference_mode=body.model_reference_mode,
         )
         return rating_versions_service.to_schema(row)
 
@@ -1223,6 +1245,7 @@ async def submit_rating_version(
             actor=caller.principal,
             rating_version_id=rating_version_id,
             change_summary=body.change_summary,
+            blob_store=blob_store,
             load_compiled=load_compiled,
         )
         await session.refresh(row)

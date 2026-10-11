@@ -1,0 +1,695 @@
+{
+  "$defs": {
+    "ArtifactRef": {
+      "description": "Canonical artifact reference {type}:{slug}@{version} (ID-3).",
+      "examples": [
+        "model:motor-ad-frequency@7",
+        "rating_version:motor-gb@27"
+      ],
+      "pattern": "^((banding|custom_metric|custom_objective|dataset|dataset_version|deployment|dossier|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}|factor:[a-z0-9][a-z0-9_-]{1,62})@[1-9][0-9]*$",
+      "title": "ArtifactRef",
+      "type": "string"
+    },
+    "AttributionItem": {
+      "additionalProperties": false,
+      "description": "One change group's Shapley part of record and its isolated and cumulative views (FR-266).",
+      "properties": {
+        "cumulative_change_pct": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cumulative Change Pct"
+        },
+        "cumulative_minor": {
+          "description": "Amount in minor units (pence/cents) of the workspace currency.",
+          "title": "Cumulative Minor",
+          "type": "integer"
+        },
+        "group": {
+          "title": "Group",
+          "type": "string"
+        },
+        "isolated_minor": {
+          "description": "Amount in minor units (pence/cents) of the workspace currency.",
+          "title": "Isolated Minor",
+          "type": "integer"
+        },
+        "mean_change_pct": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Mean Change Pct"
+        },
+        "shapley_minor": {
+          "anyOf": [
+            {
+              "description": "Amount in minor units (pence/cents) of the workspace currency.",
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Shapley Minor"
+        }
+      },
+      "required": [
+        "group",
+        "shapley_minor",
+        "isolated_minor",
+        "cumulative_minor",
+        "mean_change_pct"
+      ],
+      "title": "AttributionItem",
+      "type": "object"
+    },
+    "AttributionSummary": {
+      "additionalProperties": false,
+      "description": "Method, totals, S and R, and the subset bundles compiled (FR-266, FR-1397, FR-1398).",
+      "properties": {
+        "method": {
+          "enum": [
+            "shapley",
+            "order_dependent"
+          ],
+          "title": "Method",
+          "type": "string"
+        },
+        "order_sensitivity_lower_bound": {
+          "anyOf": [
+            {
+              "description": "Exact decimal as a string; never a binary float (FR-10).",
+              "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Order Sensitivity Lower Bound"
+        },
+        "orders_sampled": {
+          "anyOf": [
+            {
+              "minimum": 2,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Orders Sampled"
+        },
+        "replay_fell_back": {
+          "title": "Replay Fell Back",
+          "type": "boolean"
+        },
+        "residual_minor": {
+          "description": "Amount in minor units (pence/cents) of the workspace currency.",
+          "title": "Residual Minor",
+          "type": "integer"
+        },
+        "residual_share": {
+          "anyOf": [
+            {
+              "description": "Exact decimal as a string; never a binary float (FR-10).",
+              "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Residual Share"
+        },
+        "subset_bundle_count": {
+          "minimum": 0,
+          "title": "Subset Bundle Count",
+          "type": "integer"
+        },
+        "subset_bundle_hashes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Subset Bundle Hashes",
+          "type": "array"
+        },
+        "subset_valuation": {
+          "enum": [
+            "rerate",
+            "ladder_replay"
+          ],
+          "title": "Subset Valuation",
+          "type": "string"
+        },
+        "total_change_minor": {
+          "description": "Amount in minor units (pence/cents) of the workspace currency.",
+          "title": "Total Change Minor",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "method",
+        "total_change_minor",
+        "residual_minor",
+        "order_sensitivity_lower_bound",
+        "residual_share",
+        "orders_sampled",
+        "subset_bundle_count",
+        "subset_bundle_hashes",
+        "subset_valuation",
+        "replay_fell_back"
+      ],
+      "title": "AttributionSummary",
+      "type": "object"
+    },
+    "BundleDelta": {
+      "additionalProperties": false,
+      "description": "One derived change between baseline and candidate (FR-1399).",
+      "properties": {
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "pin",
+            "step_added",
+            "step_removed",
+            "step_changed",
+            "table_repointed",
+            "input_field",
+            "output"
+          ],
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "description"
+      ],
+      "title": "BundleDelta",
+      "type": "object"
+    },
+    "ChangeGroup": {
+      "additionalProperties": false,
+      "description": "One analyst group of derived changes (FR-1399); partition-checked by Slice 3.",
+      "properties": {
+        "changes": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Changes",
+          "type": "array"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "changes"
+      ],
+      "title": "ChangeGroup",
+      "type": "object"
+    },
+    "DislocationBand": {
+      "additionalProperties": false,
+      "properties": {
+        "band": {
+          "title": "Band",
+          "type": "string"
+        },
+        "exposure_share": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Exposure Share"
+        },
+        "mean_change_pct": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Mean Change Pct"
+        },
+        "policies": {
+          "minimum": 0,
+          "title": "Policies",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "band",
+        "policies",
+        "exposure_share",
+        "mean_change_pct"
+      ],
+      "title": "DislocationBand",
+      "type": "object"
+    },
+    "DislocationOutcomes": {
+      "additionalProperties": false,
+      "description": "Each policy once by its two outcomes; the first five sum to policy_count (DP-S2-2).",
+      "properties": {
+        "declined_both": {
+          "minimum": 0,
+          "title": "Declined Both",
+          "type": "integer"
+        },
+        "declined_to_quoted": {
+          "minimum": 0,
+          "title": "Declined To Quoted",
+          "type": "integer"
+        },
+        "error": {
+          "minimum": 0,
+          "title": "Error",
+          "type": "integer"
+        },
+        "negative_baseline": {
+          "minimum": 0,
+          "title": "Negative Baseline",
+          "type": "integer"
+        },
+        "quoted_both": {
+          "minimum": 0,
+          "title": "Quoted Both",
+          "type": "integer"
+        },
+        "quoted_to_declined": {
+          "minimum": 0,
+          "title": "Quoted To Declined",
+          "type": "integer"
+        },
+        "zero_baseline": {
+          "minimum": 0,
+          "title": "Zero Baseline",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "quoted_both",
+        "quoted_to_declined",
+        "declined_to_quoted",
+        "declined_both",
+        "error",
+        "zero_baseline",
+        "negative_baseline"
+      ],
+      "title": "DislocationOutcomes",
+      "type": "object"
+    },
+    "DislocationTotals": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline_premium_minor": {
+          "description": "Amount in minor units (pence/cents) of the workspace currency.",
+          "title": "Baseline Premium Minor",
+          "type": "integer"
+        },
+        "candidate_premium_minor": {
+          "description": "Amount in minor units (pence/cents) of the workspace currency.",
+          "title": "Candidate Premium Minor",
+          "type": "integer"
+        },
+        "change_pct": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Change Pct"
+        }
+      },
+      "required": [
+        "baseline_premium_minor",
+        "candidate_premium_minor",
+        "change_pct"
+      ],
+      "title": "DislocationTotals",
+      "type": "object"
+    },
+    "ErrorSample": {
+      "additionalProperties": false,
+      "properties": {
+        "quote_id": {
+          "title": "Quote Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "quote_id"
+      ],
+      "title": "ErrorSample",
+      "type": "object"
+    },
+    "ErrorTally": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "count": {
+          "minimum": 1,
+          "title": "Count",
+          "type": "integer"
+        },
+        "sample": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/ErrorSample"
+              },
+              "maxItems": 10,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sample"
+        }
+      },
+      "required": [
+        "code",
+        "count"
+      ],
+      "title": "ErrorTally",
+      "type": "object"
+    },
+    "RungContribution": {
+      "additionalProperties": false,
+      "properties": {
+        "contribution_pct": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Contribution Pct"
+        },
+        "rung": {
+          "enum": [
+            "risk_premium",
+            "expense_loading",
+            "commission",
+            "profit_loading",
+            "office_premium",
+            "optimisation_adjustment",
+            "constraints",
+            "instalment_loading",
+            "ipt_and_fees",
+            "payable_premium"
+          ],
+          "title": "Rung",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rung",
+        "contribution_pct"
+      ],
+      "title": "RungContribution",
+      "type": "object"
+    },
+    "SegmentSlice": {
+      "additionalProperties": false,
+      "properties": {
+        "exposure_share": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Exposure Share"
+        },
+        "factor": {
+          "title": "Factor",
+          "type": "string"
+        },
+        "level": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Level"
+        },
+        "mean_change_pct": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Mean Change Pct"
+        },
+        "policies": {
+          "minimum": 0,
+          "title": "Policies",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "factor",
+        "level",
+        "policies",
+        "mean_change_pct"
+      ],
+      "title": "SegmentSlice",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "03 §4.6; the four attribution fields are present together or not at all.",
+  "properties": {
+    "abs_change_pct_quantiles": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "description": "Exact decimal as a string; never a binary float (FR-10).",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Abs Change Pct Quantiles"
+    },
+    "attribution": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/AttributionItem"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Attribution"
+    },
+    "attribution_summary": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AttributionSummary"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "baseline_ref": {
+      "$ref": "#/$defs/ArtifactRef"
+    },
+    "by_ladder_rung": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/RungContribution"
+      },
+      "title": "By Ladder Rung",
+      "type": "array"
+    },
+    "by_segment": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/SegmentSlice"
+      },
+      "title": "By Segment",
+      "type": "array"
+    },
+    "candidate_ref": {
+      "$ref": "#/$defs/ArtifactRef"
+    },
+    "change_groups": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/ChangeGroup"
+          },
+          "maxItems": 6,
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Change Groups"
+    },
+    "derived_changes": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/BundleDelta"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Derived Changes"
+    },
+    "distribution": {
+      "items": {
+        "$ref": "#/$defs/DislocationBand"
+      },
+      "minItems": 1,
+      "title": "Distribution",
+      "type": "array"
+    },
+    "errors": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ErrorTally"
+      },
+      "title": "Errors",
+      "type": "array"
+    },
+    "exposure_years": {
+      "description": "Exact decimal as a string; never a binary float (FR-10).",
+      "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+      "title": "Exposure Years",
+      "type": "string"
+    },
+    "job_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Job Id"
+    },
+    "largest_movers_blob": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Largest Movers Blob"
+    },
+    "outcomes": {
+      "$ref": "#/$defs/DislocationOutcomes"
+    },
+    "policy_count": {
+      "minimum": 0,
+      "title": "Policy Count",
+      "type": "integer"
+    },
+    "portfolio_dataset_version_id": {
+      "format": "uuid",
+      "title": "Portfolio Dataset Version Id",
+      "type": "string"
+    },
+    "totals": {
+      "$ref": "#/$defs/DislocationTotals"
+    }
+  },
+  "required": [
+    "baseline_ref",
+    "candidate_ref",
+    "portfolio_dataset_version_id",
+    "policy_count",
+    "exposure_years",
+    "totals",
+    "outcomes",
+    "distribution"
+  ],
+  "title": "DislocationRun",
+  "type": "object"
+}

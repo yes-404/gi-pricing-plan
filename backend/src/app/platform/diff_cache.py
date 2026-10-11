@@ -3,10 +3,12 @@
 The cache key is the diff's deterministic inputs, and nothing else:
 
 - the content hashes of **both** versions, so an entry can never serve a diff the
-  caller did not ask for, and
-- the portfolio dataset version's identity — a Dataset Version is immutable
-  (`00` §2), so a changed portfolio snapshot is a different entry and a stale
-  weighted diff can never be served.
+  caller did not ask for,
+- the hash of the current version's definition (its keys and value), because a key of
+  another role, type or binding joins a portfolio differently, and
+- the portfolio dataset version's identity and, with it, the workspace — a Dataset
+  Version is immutable (`00` §2), so a changed portfolio snapshot is a different entry
+  and a stale weighted diff can never be served.
 
 **Never a wall-clock date**: a date key would silently serve yesterday's diff when
 today's is wanted; with identity keys, invalidation is exact. No TTL either — an
@@ -28,9 +30,9 @@ from uuid import UUID
 
 from redis.exceptions import RedisError
 
-from model_schema.rating import RateTableDiff
+from model_schema.rating import RateTable, RateTableDiff
 
-__all__ = ["DiffCache", "version_content_hash"]
+__all__ = ["DiffCache", "cells_key", "definition_hash", "version_content_hash"]
 
 _log = logging.getLogger(__name__)
 
@@ -56,6 +58,60 @@ def version_content_hash(cells: Sequence[dict[str, str]]) -> str:
     ).hexdigest()
 
 
+def definition_hash(table: RateTable) -> str:
+    """Hash of what decides how a diff is weighted: the keys and the value declaration.
+
+    Two versions with the same cells but a key of another role, type or binding
+    (`banding_ref`, `factor_ref`) join a portfolio differently, so the definition is part
+    of the cache key (`RL-1361` item 5).
+    """
+    canonical = {
+        "keys": [key.model_dump(mode="json") for key in table.keys],
+        "value": table.value.model_dump(mode="json"),
+    }
+    return hashlib.sha256(
+        json.dumps(canonical, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+
+
+def _entry_name(
+    kind: str,
+    current_hash: str,
+    baseline_hash: str,
+    definition_hash: str,
+    portfolio_dataset_version_id: UUID | None,
+    workspace_id: UUID | None,
+) -> str:
+    """The workspace joins the name only with a portfolio: an unweighted diff is a function of
+    the two versions and the definition alone, and a weighted one of a portfolio that is scoped
+    to a workspace (`RL-1361` item 5)."""
+    if portfolio_dataset_version_id is None:
+        portfolio = "none"
+    else:
+        portfolio = f"{portfolio_dataset_version_id}:{workspace_id}"
+    return f"rate_table:{kind}:{current_hash}:{baseline_hash}:{definition_hash}:{portfolio}"
+
+
+def cells_key(
+    slug: str,
+    current_version: int,
+    baseline_version: int,
+    portfolio_dataset_version_id: UUID | None,
+) -> str:
+    """The name of one query's stored cell artifact (`RL-1418` T1, amended): the identity of
+    the two versions and of the portfolio, and nothing read from a cell.
+
+    A rate table version and a Dataset Version are immutable, so `slug@version` on each side
+    and the portfolio's id name exactly one answer; a page finds its artifact without loading
+    or hashing a cell (R1: a page must not cost the table). The workspace is not in the key:
+    the lookup is within the caller's workspace. Two tables with identical cells are two keys.
+    """
+    portfolio = (
+        "none" if portfolio_dataset_version_id is None else str(portfolio_dataset_version_id)
+    )
+    return f"rate_table:diff_cells:{slug}@{current_version}:{slug}@{baseline_version}:{portfolio}"
+
+
 class DiffCache:
     """The DP3 read-path cache: `key` names the entry, `get`/`set` move the artifact.
 
@@ -78,14 +134,15 @@ class DiffCache:
         self,
         current_hash: str,
         baseline_hash: str,
+        definition_hash: str,
         portfolio_dataset_version_id: UUID | None,
+        workspace_id: UUID | None,
     ) -> str:
-        portfolio = (
-            str(portfolio_dataset_version_id)
-            if portfolio_dataset_version_id is not None
-            else "none"
+        """The entry name (`_entry_name`)."""
+        return _entry_name(
+            "diff", current_hash, baseline_hash, definition_hash,
+            portfolio_dataset_version_id, workspace_id,
         )
-        return f"rate_table:diff:{current_hash}:{baseline_hash}:{portfolio}"
 
     async def get(self, key: str) -> RateTableDiff | None:
         try:

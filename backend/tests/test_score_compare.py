@@ -399,3 +399,16 @@ def test_a_ladder_that_does_not_reconcile_on_one_side_is_a_500_naming_that_side(
     assert response.status_code == 500, response.text
     assert response.json()["code"] == "LADDER_RECONCILIATION_FAILED"
     assert response.json()["detail"].startswith(f"{side}: ")
+
+
+@pytest.mark.req("FR-213")
+def test_a_context_input_naming_a_produced_value_is_a_422_on_compare(
+    client: TestClient, reader_headers: dict[str, str], two_versions: None
+) -> None:
+    """FD-1425, `/score/compare` (`api/score.py:447`)."""
+    body = _body()
+    body["context"]["inputs"]["payable"] = 1
+    response = client.post(COMPARE_URL, json=body, headers=reader_headers)
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "INPUT_CONTRACT_VIOLATION"
+    assert "'payable'" in response.json()["detail"]

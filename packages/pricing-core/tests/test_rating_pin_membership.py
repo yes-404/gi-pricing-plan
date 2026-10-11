@@ -59,7 +59,7 @@ def _lookup_algo(*, ref: str = "reference_table:expense@1") -> dict[str, Any]:
     algo = copy.deepcopy(_algorithm_payload())
     algo["steps"] = [
         {"step_id": "s_expense", "type": "lookup", "label": "Expense factor",
-         "reference_table_ref": ref, "key_expr": ["channel"], "as_at": "channel",
+         "reference_table_ref": ref, "key_expr": ["channel"], "as_at": "effective_date",
          "on_miss": "default", "consumes": ["channel"], "produces": "expense_factor"}
         if s["step_id"] == "s_expense" else s
         for s in algo["steps"]
@@ -229,7 +229,7 @@ async def test_a_correctly_pinned_tolerant_consumer_still_prices(
 def _veh_algo(kind: str, ref: str) -> dict[str, Any]:
     if kind == "lookup":
         step = {"step_id": "s_veh", "type": "lookup", "label": "Vehicle loading",
-                "reference_table_ref": ref, "key_expr": ["veh"], "as_at": "veh",
+                "reference_table_ref": ref, "key_expr": ["veh"], "as_at": "effective_date",
                 "on_miss": "default", "consumes": ["veh"], "produces": "veh_loading"}
         expr = "base_minor * number(veh_loading ?? '1.0')"
         produced = "veh_loading"

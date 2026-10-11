@@ -15,6 +15,7 @@ listed operators. `pricing_core.data.expressions` never parses this grammar (RL-
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 
 #: FR-244's **Operators:** clause. `?` and `:` are the two halves of the ternary `c ? a : b`.
 OPERATORS: tuple[str, ...] = (
@@ -46,37 +47,69 @@ def _refused(construct: str) -> str:
     return f"`{construct}` is not on FR-244's allow-list"
 
 
-def _tokenize(text: str) -> tuple[list[str], str | None]:
-    """The tokens of `text`, and the first refused construct found while scanning, if any."""
-    tokens: list[str] = []
+def _scan(text: str) -> tuple[list[tuple[str, int, int]], str | None]:
+    """The tokens of `text` with their `[start, end)` spans, and the first refused construct."""
+    tokens: list[tuple[str, int, int]] = []
     i = 0
     while i < len(text):
         char = text[i]
         if char.isspace():
             i += 1
         elif (match := _NUMBER.match(text, i)) or (match := _STRING.match(text, i)):
-            tokens.append(match.group(0))
+            tokens.append((match.group(0), i, match.end()))
             i = match.end()
         elif char == "'":
             return tokens, _refused("'") + " (an unterminated string)"
         elif match := _NAME.match(text, i):
             word = match.group(0)
+            start = i
             i = match.end()
             if word == "in":
                 return tokens, _refused("in")
             called = text[i:].lstrip().startswith("(")
             if called and word not in FUNCTIONS and word not in _WORD_OPERATORS:
                 return tokens, _refused(word)
-            tokens.append(word)
+            tokens.append((word, start, i))
         elif symbol := next((op for op in _SYMBOL_OPERATORS if text.startswith(op, i)), None):
-            tokens.append(symbol)
+            tokens.append((symbol, i, i + len(symbol)))
             i += len(symbol)
         elif char in _STRUCTURE:
-            tokens.append(char)
+            tokens.append((char, i, i + 1))
             i += 1
         else:
             return tokens, _refused(char)
     return tokens, None
+
+
+def _tokenize(text: str) -> tuple[list[str], str | None]:
+    """The tokens of `text`, and the first refused construct found while scanning, if any."""
+    spans, refused = _scan(text)
+    return [token for token, _, _ in spans], refused
+
+
+def rename_tokens(text: str, mapping: Mapping[str, str]) -> str:
+    """`text` with each FR-244 name TOKEN that is a key of `mapping` replaced by its value.
+
+    Renaming is by token, never by substring (RL 9586 DP-S2-2): `ncd` is renamed and `ncd_years`
+    is not. A function, a word operator and a literal word (`min`, `and`, `true`) are never
+    renamed, and a string literal is one token that is not a name. Everything between tokens,
+    whitespace included, is kept as written. A text holding a construct the allow-list refuses is
+    returned unchanged: there is no token boundary to rename at, and the save-time checks over the
+    inlined algorithm name the construct under its own code (FR-244, FR-216, FR-276).
+    """
+    spans, refused = _scan(text)
+    if refused is not None:
+        return text
+    keep = set(FUNCTIONS) | set(LITERAL_WORDS) | _WORD_OPERATORS
+    out: list[str] = []
+    cursor = 0
+    for token, start, end in spans:
+        if token in mapping and token not in keep and _NAME.fullmatch(token):
+            out.append(text[cursor:start])
+            out.append(mapping[token])
+            cursor = end
+    out.append(text[cursor:])
+    return "".join(out)
 
 
 def _array_argument(tokens: list[str], start: int) -> tuple[set[int], str | None]:

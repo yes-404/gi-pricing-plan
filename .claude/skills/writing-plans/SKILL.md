@@ -27,6 +27,14 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 - Plans here are **committed and audited**. `docs/plans/README.md` carries the conventions
   that keep one passing `scripts/audit-docs.py`, and the three the gate cannot check — read
   it before writing.
+- **One plan per Work (Lean P2 L5)**, from the maintainer's entry "2026-10-08 11:51:58 BST — USER DECISION: LEAN P2 items 1, 3 and 5 APPROVED; IN PRACTICE NOW; the files are amended through RFC 9479 P6 (the maintainer's amendment, by delegation)" in `to-lead.md`. A
+  Work's plan lists its slices as **rows** — scope, requirements (each id listed), dependencies,
+  lane and order — and no per-slice leaf plan is written for a slice dispatched after that
+  entry. Slice status lives in `docs/roadmap.md`, never in the plan. The plan stays frozen at its
+  date: new slices or a change of slice scope are **one dated Work-plan delta** covering every
+  change at once, a new `PL-` that `relates:` the Work's plan (a true replan still uses
+  `supersedes:`), listed on the Work's roadmap row. Each slice's `LG-` quotes its row as its
+  scope (`docs/_templates/LG.md`). *(Amended 2026-10-08 by the maintainer (dated line by delegation), on RFC-1506 P6.)*
 
 ## Scope Check
 

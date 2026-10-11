@@ -124,6 +124,43 @@ def _insert_rows(rows: list[object]) -> None:
     _run_with_database(_insert)
 
 
+def _run_job(job_id: str) -> None:
+    """Run a submitted Job to its end on a loop of our own, as the worker would (R1: a diff of a
+    version pair is a Job the first time, and a read of its stored artifact after)."""
+    from backend.tests.conftest_db import test_blob_bucket, test_database_url
+
+    from app.platform.blobs import BlobStore
+    from app.worker.rate_table_handlers import register_rate_table_handlers
+    from app.worker.tasks import execute_job
+    from model_schema import JobStatus
+
+    register_rate_table_handlers()
+
+    async def _run() -> None:
+        database = Database(Settings(database_url=test_database_url()))
+        try:
+            store = BlobStore(Settings(blob_bucket=test_blob_bucket()))
+            assert await execute_job(database, UUID(job_id), store) is JobStatus.SUCCEEDED
+        finally:
+            await database.dispose()
+
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(_run())
+    finally:
+        loop.close()
+
+
+def _diff_ready(api_client, url, params, headers):  # type: ignore[no-untyped-def]
+    """The diff's answer: a 202 runs its Job to the end, then asks again; anything else is
+    returned as it came (a 404 or 403 precedes any Job)."""
+    response = api_client.get(url, params=params, headers=headers)
+    if response.status_code == 202:
+        _run_job(response.json()["id"])
+        response = api_client.get(url, params=params, headers=headers)
+    return response
+
+
 async def _ensure_factor(
     session: AsyncSession, workspace_id: UUID, slug: str, version: int
 ) -> UUID:
@@ -274,10 +311,10 @@ def test_seed_appends_the_next_version_and_diff_vs_previous(
     assert second.status_code == 201, second.text
     assert second.json()["version"] == 2
 
-    diff = api_client.get(
-        f"/api/v1/rate-tables/{slug}@2/diff",
-        params={"against": "previous"},
-        headers=actuary,
+    diff = _diff_ready(
+
+        api_client, f"/api/v1/rate-tables/{slug}@2/diff", {"against": "previous"}, actuary
+
     )
     assert diff.status_code == 200, diff.text
     body = diff.json()
@@ -313,18 +350,18 @@ def test_diff_vs_seed_compares_against_the_origin_not_the_previous_version(
         )
         assert derived.status_code == 201, derived.text
 
-    vs_previous = api_client.get(
-        f"/api/v1/rate-tables/{slug}@3/diff",
-        params={"against": "previous"},
-        headers=actuary,
+    vs_previous = _diff_ready(
+
+        api_client, f"/api/v1/rate-tables/{slug}@3/diff", {"against": "previous"}, actuary
+
     )
     assert vs_previous.status_code == 200, vs_previous.text
     assert vs_previous.json()["changed_cells"] == 1  # 1.84 -> 1.50
 
-    vs_seed = api_client.get(
-        f"/api/v1/rate-tables/{slug}@3/diff",
-        params={"against": "seed"},
-        headers=actuary,
+    vs_seed = _diff_ready(
+
+        api_client, f"/api/v1/rate-tables/{slug}@3/diff", {"against": "seed"}, actuary
+
     )
     assert vs_seed.status_code == 200, vs_seed.text
     assert vs_seed.json()["changed_cells"] == 2  # 17-20 and 25-29, from the origin
@@ -348,10 +385,10 @@ def test_diff_against_an_explicit_version(
         )
         assert created.status_code == 201, created.text
 
-    diff = api_client.get(
-        f"/api/v1/rate-tables/{slug}@2/diff",
-        params={"against": "1"},
-        headers=actuary,
+    diff = _diff_ready(
+
+        api_client, f"/api/v1/rate-tables/{slug}@2/diff", {"against": "1"}, actuary
+
     )
     assert diff.status_code == 200, diff.text
     assert diff.json()["changed_cells"] == 1
@@ -467,17 +504,17 @@ def test_diff_404s_for_unknown_table_and_version(
     assert missing_table.status_code == 404, missing_table.text
     assert missing_table.json()["code"] == "RATE_TABLE_MISS"
 
-    missing_version = api_client.get(
-        f"/api/v1/rate-tables/{slug}@9/diff",
-        params={"against": "previous"},
-        headers=actuary,
+    missing_version = _diff_ready(
+
+        api_client, f"/api/v1/rate-tables/{slug}@9/diff", {"against": "previous"}, actuary
+
     )
     assert missing_version.status_code == 404, missing_version.text
 
-    no_previous = api_client.get(
-        f"/api/v1/rate-tables/{slug}@1/diff",
-        params={"against": "previous"},
-        headers=actuary,
+    no_previous = _diff_ready(
+
+        api_client, f"/api/v1/rate-tables/{slug}@1/diff", {"against": "previous"}, actuary
+
     )
     assert no_previous.status_code == 404, no_previous.text
 
@@ -496,10 +533,10 @@ def test_diff_rejects_an_unknown_baseline(
     )
     assert created.status_code == 201, created.text
 
-    response = api_client.get(
-        f"/api/v1/rate-tables/{slug}@1/diff",
-        params={"against": "banana"},
-        headers=actuary,
+    response = _diff_ready(
+
+        api_client, f"/api/v1/rate-tables/{slug}@1/diff", {"against": "banana"}, actuary
+
     )
     assert response.status_code == 422, response.text
     assert response.json()["code"] == "VALIDATION_FAILED"
@@ -554,10 +591,10 @@ def test_diff_seed_without_a_seed_origin_404s(
         ]
     )
 
-    response = api_client.get(
-        f"/api/v1/rate-tables/{slug}@1/diff",
-        params={"against": "seed"},
-        headers=actuary,
+    response = _diff_ready(
+
+        api_client, f"/api/v1/rate-tables/{slug}@1/diff", {"against": "seed"}, actuary
+
     )
     assert response.status_code == 404, response.text
     assert response.json()["code"] == "RATE_TABLE_MISS"
@@ -650,13 +687,11 @@ def test_a_diff_touching_a_parquet_version_answers_202_with_a_job(
         loop.close()
 
     response = api_client.get(
-        f"/api/v1/rate-tables/{slug}@2/diff",
-        params={"against": "previous"},
-        headers=actuary,
+        f"/api/v1/rate-tables/{slug}@2/diff", params={"against": "previous"}, headers=actuary
     )
     assert response.status_code == 202, response.text
     job = response.json()
-    assert job["kind"] == "rate_table.diff"
+    assert job["kind"] == "rate_table.diff_cells"
     assert job["queue"] == "compute"
     assert job["status"] == "queued"
     assert job["parameters"]["slug"] == slug
@@ -699,12 +734,10 @@ def test_routes_are_permission_gated(
     )
     assert anon_diff.status_code == 401, anon_diff.text
 
-    read_only_diff = api_client.get(
-        f"/api/v1/rate-tables/{slug}@1/diff",
-        # Version 1 has no `previous` (that diff is a 404, asserted in the 404s test);
-        # the seed origin is version 1 itself, so this answers 200 with zero changes.
-        params={"against": "seed"},
-        headers=auditor_headers,
+    # Version 1 has no `previous` (that diff is a 404, asserted in the 404s test); the seed
+    # origin is version 1 itself, so this answers 200 with zero changes (after its Job).
+    read_only_diff = _diff_ready(
+        api_client, f"/api/v1/rate-tables/{slug}@1/diff", {"against": "seed"}, auditor_headers
     )
     assert read_only_diff.status_code == 200, read_only_diff.text
 
@@ -963,10 +996,10 @@ def test_import_preview_creates_nothing(
     )
     assert response.status_code == 200, response.text
 
-    missing = api_client.get(
-        f"/api/v1/rate-tables/{slug}@2/diff",
-        params={"against": "previous"},
-        headers=actuary,
+    missing = _diff_ready(
+
+        api_client, f"/api/v1/rate-tables/{slug}@2/diff", {"against": "previous"}, actuary
+
     )
     assert missing.status_code == 404
     assert missing.json()["code"] == "RATE_TABLE_MISS"
@@ -1028,10 +1061,8 @@ def test_import_confirm_cannot_override_the_verdict(
 
     assert response.status_code == 422, response.text
     assert response.json()["code"] == "IMPORT_KEY_MISMATCH"
-    missing = api_client.get(
-        f"/api/v1/rate-tables/{slug}@2/diff",
-        params={"against": "previous"},
-        headers=actuary,
+    missing = _diff_ready(
+        api_client, f"/api/v1/rate-tables/{slug}@2/diff", {"against": "previous"}, actuary
     )
     assert missing.status_code == 404
     assert missing.json()["code"] == "RATE_TABLE_MISS"
@@ -1516,23 +1547,23 @@ def test_against_seed_resolves_to_the_versions_own_seed_origin(
 
     # `@4` against its seed origin (v3, 1.84/1.41/1.12) differs in 17-20 and 25-29 only;
     # against the first seed (v1) every cell it left alone would also differ from v1's.
-    vs_origin = api_client.get(
-        f"/api/v1/rate-tables/{slug}@4/diff", params={"against": "seed"}, headers=actuary
+    vs_origin = _diff_ready(
+        api_client, f"/api/v1/rate-tables/{slug}@4/diff", {"against": "seed"}, actuary
     )
     assert vs_origin.status_code == 200, vs_origin.text
-    vs_v3 = api_client.get(
-        f"/api/v1/rate-tables/{slug}@4/diff", params={"against": "3"}, headers=actuary
+    vs_v3 = _diff_ready(
+        api_client, f"/api/v1/rate-tables/{slug}@4/diff", {"against": "3"}, actuary
     )
     assert vs_origin.json()["changed_cells"] == vs_v3.json()["changed_cells"]
-    vs_v1 = api_client.get(
-        f"/api/v1/rate-tables/{slug}@4/diff", params={"against": "1"}, headers=actuary
+    vs_v1 = _diff_ready(
+        api_client, f"/api/v1/rate-tables/{slug}@4/diff", {"against": "1"}, actuary
     )
     assert vs_origin.json() != vs_v1.json()
-    on_v2 = api_client.get(
-        f"/api/v1/rate-tables/{slug}@2/diff", params={"against": "seed"}, headers=actuary
+    on_v2 = _diff_ready(
+        api_client, f"/api/v1/rate-tables/{slug}@2/diff", {"against": "seed"}, actuary
     )
-    on_v2_vs_v1 = api_client.get(
-        f"/api/v1/rate-tables/{slug}@2/diff", params={"against": "1"}, headers=actuary
+    on_v2_vs_v1 = _diff_ready(
+        api_client, f"/api/v1/rate-tables/{slug}@2/diff", {"against": "1"}, actuary
     )
     assert on_v2.status_code == 200, on_v2.text
     assert on_v2.json()["changed_cells"] == on_v2_vs_v1.json()["changed_cells"]

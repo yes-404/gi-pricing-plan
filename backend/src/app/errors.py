@@ -11,7 +11,8 @@ Two rules hold this together:
 
 from __future__ import annotations
 
-from typing import Final
+from collections.abc import Mapping
+from typing import Any, Final
 
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -22,6 +23,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.observability.logging import get_logger
 from app.observability.trace import current_trace_id
 from model_schema import FieldError, ProblemDetail
+from pricing_core.safe_error import safe_validation_message
 
 __all__ = [
     "DATA_ERROR_CODES",
@@ -331,9 +333,19 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "RATING_EVALUATION_FAILED",
         # FR-240 (RL-1329): a clamp the premium ladder cannot place, refused at save and at compile.
         "LADDER_CLAMP_UNPLACEABLE",
+        # FR-246 (RL-1519): a step reads a name it does not declare, refused at save and at compile.
+        "RATING_STEP_UNDECLARED_READ",
         "RATE_TABLE_INCOMPLETE",
         "RATE_TABLE_KEY_DUPLICATE",
         "PIN_NOT_APPROVED",
+        # FR-88 / FR-240 (RL-1470): a `control`-intent Factor in a rateable path,
+        # refused at seed and at compile.
+        "CONTROL_FACTOR_IN_RATEABLE_PATH",
+        # FR-223 at the pin write (RL 9758 item 2) and at compile (limb 2).
+        "MODEL_REFERENCE_MODE_INCONSISTENT",
+        # FR-222 as amended (WK-1178 A-2, PL-1464): a `model_call`'s `feature_map` names
+        # something other than its Model's Factor slugs or offset column, refused at save.
+        "MODEL_CALL_FEATURE_MAP_INVALID",
         # W10-3C: the save-time seed-lineage equality proof (03 §4.2, FR-234) and
         # the named refusals of the bulk-operation and import operations (03 §5.1).
         "RATE_TABLE_SEED_MISMATCH",
@@ -393,6 +405,11 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # decimal value) is refused 422 at declaration, and again by the Job handler, so it
         # never reaches a running Job as a raw exception.
         "REGRESSION_PROPERTY_INVALID",
+        # Dislocation attribution (WK-673 Slice 4, FR-1397): the Shapley parts of a
+        # Dislocation Run do not reconcile to a compared policy's change. Raised by the
+        # `dislocation.run` handler from `pricing_core`'s `AttributionError`, which cannot
+        # import `PlatformError`. Owned by `03` §5.1.
+        "ATTRIBUTION_RECONCILIATION_FAILED",
     }
 )
 
@@ -469,6 +486,20 @@ async def _handle_platform_error(request: Request, exc: PlatformError) -> JSONRe
     return problem_response(exc.to_problem(instance=request.url.path))
 
 
+def _field_error_message(err: Mapping[str, Any]) -> str:
+    """`FieldError.message` for one pydantic error, with no submitted value in it (NFR-499).
+
+    `pricing_core.safe_error.safe_validation_message` keeps fixed-text types, an
+    `InputFreeError`'s authored text and the authored texts of the request-common types; anything
+    else, which a validator may have filled with the value it was given, is replaced by a fixed
+    text naming the error type (DP-7 (a); FD-1589 row 8).
+    """
+    message = safe_validation_message(err)
+    if message is not None:
+        return message
+    return f"The value is not valid ({str(err['type']).upper()})."
+
+
 async def _handle_validation_error(
     request: Request, exc: RequestValidationError
 ) -> JSONResponse:
@@ -483,7 +514,7 @@ async def _handle_validation_error(
             # document and does not need our parser's internal framing.
             field=".".join(str(part) for part in err["loc"][1:]) or str(err["loc"][0]),
             code=str(err["type"]).upper().replace(".", "_"),
-            message=str(err["msg"]),
+            message=_field_error_message(err),
         )
         for err in exc.errors()
     )

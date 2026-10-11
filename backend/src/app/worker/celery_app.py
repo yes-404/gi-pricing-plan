@@ -50,5 +50,12 @@ def build_celery(settings: Settings | None = None) -> Celery:
         worker_prefetch_multiplier=1,
         broker_connection_retry_on_startup=True,
         task_default_queue="default",
+        # How long the broker waits for an ack before redelivering a message. Celery's
+        # default is one hour; a `dislocation.run` Job is admitted up to
+        # `DISLOCATION_SINGLE_JOB_MAX_HOURS` (4) of work, so a default timeout would hand the
+        # message to a second worker while the first still ran. Six hours exceeds that bound.
+        # The cost is a slower recovery from a lost worker *host*; a dead process on a live
+        # host is requeued at once by `task_reject_on_worker_lost` (RL-1504 item 2).
+        broker_transport_options={"visibility_timeout": 21600},
     )
     return app

@@ -49,7 +49,7 @@ its off-path Job.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -112,6 +112,11 @@ class TraceView(BaseModel):
     #: docstring). Typed `str` rather than `str | None` because a batch-produced or still-
     #: pending row can never reach this constructor.
     environment: str
+    #: The row's reproduction status (`03` FR-259, RL-1434): `complete` when the off-path
+    #: re-score reproduced the served result, `mismatch` when it did not — a `mismatch` item
+    #: stays listed but is never the quote's trace. No default: required in the contract.
+    #: A `pending` row never reaches this view (`_filtered`).
+    status: Literal["complete", "mismatch"]
     created_at: datetime
     trace: Trace
 
@@ -152,6 +157,8 @@ async def _view(session: AsyncSession, blob_store: BlobStore, row: ScoringTraceR
         bundle_hash=row.bundle_hash,
         sample_reason=row.sample_reason,
         environment=row.environment,
+        # `_filtered` admits no `pending` row; the model validates the two values at runtime.
+        status=cast(Literal["complete", "mismatch"], row.status),
         created_at=row.created_at,
         trace=trace,
     )

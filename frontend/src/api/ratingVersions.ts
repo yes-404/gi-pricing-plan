@@ -11,3 +11,8 @@ export function listRatingVersions(): Promise<RatingVersion[]> {
 export function getRatingVersion(id: string): Promise<RatingVersion> {
   return request<RatingVersion>(`/rating-versions/${encodeURIComponent(id)}`);
 }
+
+/** The version its own `slug@version` names (RL-1473): the address the §5.3 routes use. */
+export function getRatingVersionByRef(slug: string, version: number): Promise<RatingVersion> {
+  return request<RatingVersion>(`/rating-versions/${encodeURIComponent(slug)}@${version}`);
+}
