@@ -36,7 +36,7 @@ from app.db.models import (
 )
 from app.db.session import Database
 from app.errors import PlatformError
-from app.platform import datasets, transformations
+from app.platform import audit, datasets, transformations
 from app.platform import jobs as job_service
 from app.platform import settings as settings_svc
 from app.platform.blobs import BlobStore, to_ref
@@ -53,6 +53,7 @@ from model_schema import (
     Factor,
     Grouping,
     JobKind,
+    JobSource,
     JobStatus,
     Principal,
 )
@@ -195,6 +196,7 @@ async def seed_from_model(
                 RateTableRow.slug == slug,
             )
         )
+        before: dict[str, Any] | None = None
         if table_row is None:
             table_row = RateTableRow(
                 workspace_id=workspace_id,
@@ -207,6 +209,8 @@ async def seed_from_model(
             version_number = 1
         else:
             await _check_reseed_lineage(session, table_row, slug=slug, factor=factor)
+            current = await _load_version(session, table_row.id, table_row.current_version, slug)
+            before = _baseline_state(current, await _to_version(session, current, blob_store))
             version_number = table_row.current_version + 1
 
         derived = RateTableVersion(
@@ -227,7 +231,9 @@ async def seed_from_model(
             table_row=table_row,
             derived=derived,
             version_number=version_number,
-            created_by=actor.id,
+            actor=actor,
+            action="rate_table_version.seeded",
+            before=before,
             threshold=threshold,
             blob_store=blob_store,
         )
@@ -952,7 +958,9 @@ async def import_confirmed(
             table_row=table_row,
             derived=derived,
             version_number=version + 1,
-            created_by=actor.id,
+            actor=actor,
+            action="rate_table_version.imported",
+            before=_baseline_state(version_row, table),
             threshold=threshold,
             blob_store=blob_store,
         )
@@ -1069,7 +1077,7 @@ async def manual_edit_confirmed(
     `_persist_new_version` (`base_version + 1` already exists)."""
     assert actor.id is not None
     async with database.unit_of_work() as session:
-        table_row, version_row, _, derived = await _edit_derived(
+        table_row, version_row, base, derived = await _edit_derived(
             session, workspace_id, slug, body, blob_store
         )
         _guard_seed_lineage(derived, version_row)
@@ -1079,7 +1087,9 @@ async def manual_edit_confirmed(
             table_row=table_row,
             derived=derived,
             version_number=derived.version,
-            created_by=actor.id,
+            actor=actor,
+            action="rate_table_version.edited",
+            before=_baseline_state(version_row, base),
             threshold=threshold,
             blob_store=blob_store,
         )
@@ -1330,6 +1340,23 @@ def _stored_version(
     )
 
 
+def _audit_state(version: RateTableVersion, cells: Sequence[dict[str, str]]) -> dict[str, Any]:
+    """NFR-498's state of one version (RL-1515 DP-2): its stored wire form without inline
+    rows, plus the cells' canonical content hash, the diff cache's own (FR-232). The version
+    is immutable and its `entity_ref` addresses it, so the cells stay recoverable."""
+    return version.model_dump(mode="json", exclude={"rows"}) | {
+        "cells_digest": version_content_hash(cells)
+    }
+
+
+def _baseline_state(version_row: RateTableVersionRow, base: RateTableVersion) -> dict[str, Any]:
+    """The audit state of the stored version `base` was materialised from (`_to_version`)."""
+    if base.rows is None:
+        raise _rows_form_violated()
+    cells = [dict(row.root) for row in base.rows]
+    return _audit_state(_stored_version(version_row, cells), cells)
+
+
 def _guard_seed_lineage(
     derived: RateTableVersion, baseline: RateTableVersionRow
 ) -> None:
@@ -1363,7 +1390,9 @@ async def _persist_new_version(
     table_row: RateTableRow,
     derived: RateTableVersion,
     version_number: int,
-    created_by: UUID,
+    actor: Principal,
+    action: str,
+    before: dict[str, Any] | None,
     threshold: int,
     blob_store: BlobStore,
 ) -> RateTableVersion:
@@ -1374,7 +1403,13 @@ async def _persist_new_version(
     threshold the cells keep the `rate_table_cells` rows; above it they are written
     to a content-addressed parquet blob addressed by `cells`. Returns the version in
     its §4.2 wire form.
+
+    The one writer of a rate table version, so the one place its Audit Event is recorded
+    (NFR-498, RL-1515 DP-1): `action` names how the version was made and `before` is the
+    state of the version it was made from, `None` for a table's first. The event follows the
+    last flush, in the write's transaction (`06` R2), so a refused write records none.
     """
+    assert actor.id is not None
     if derived.rows is None:
         raise _rows_form_violated()
     cells = [dict(row.root) for row in derived.rows]
@@ -1400,7 +1435,7 @@ async def _persist_new_version(
             if derived.seeded_from is not None
             else None
         ),
-        created_by=created_by,
+        created_by=actor.id,
         created_by_operation=(
             derived.created_by_operation.model_dump(mode="json")
             if derived.created_by_operation is not None
@@ -1444,7 +1479,18 @@ async def _persist_new_version(
         )
         version_row.cells = blob_ref.model_dump(mode="json")
     await session.flush()
-    return _stored_version(version_row, cells)
+    created = _stored_version(version_row, cells)
+    await audit.record(
+        session,
+        workspace_id=table_row.workspace_id,
+        actor=actor,
+        source=JobSource.API,
+        action=action,
+        entity_ref=f"rate_table:{derived.slug}@{version_number}",
+        before=before,
+        after=_audit_state(created, cells),
+    )
+    return created
 
 
 def _dispatch_operation(
@@ -1527,7 +1573,9 @@ async def bulk_operation(
             table_row=table_row,
             derived=derived,
             version_number=baseline_row.version_number + 1,
-            created_by=actor.id,
+            actor=actor,
+            action="rate_table_version.bulk_operation",
+            before=_baseline_state(baseline_row, baseline),
             threshold=threshold,
             blob_store=blob_store,
         )

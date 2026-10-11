@@ -36,7 +36,7 @@ from app.platform import rate_tables as svc
 from app.platform import settings as settings_svc
 from app.platform import workspaces
 from app.platform.blobs import BlobStore
-from model_schema import ModelStatus, new_uuid7
+from model_schema import ActorKind, ModelStatus, Principal, new_uuid7
 from model_schema.rating import RateTableVersion, SeededFrom
 from model_schema.refs import ArtifactRef, BlobRef
 
@@ -605,7 +605,9 @@ async def test_persisting_a_derived_version_without_rows_is_an_internal_error() 
             table_row=cast(Any, None),
             derived=derived,
             version_number=2,
-            created_by=uuid4(),
+            actor=Principal(kind=ActorKind.USER, id=uuid4(), display="crafted"),
+            action="rate_table_version.seeded",
+            before=None,
             threshold=1,
             blob_store=cast(Any, None),
         )
