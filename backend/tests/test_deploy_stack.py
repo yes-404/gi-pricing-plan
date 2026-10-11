@@ -165,3 +165,18 @@ def test_each_check_goes_red_on_the_break_it_exists_for(breaker: Any, check: Any
     broken = copy.deepcopy(_load())
     breaker(broken)
     assert check(broken), f"{check.__name__} stayed green on {breaker.__name__}"
+
+
+@pytest.mark.req("FR-437")
+def test_the_reference_keycloak_is_marked_as_the_deployers_to_operate() -> None:
+    """FR-437: documented, in production mode, no default credential, accountability stated."""
+    folder = COMPOSE.parent / "keycloak"
+    readme = (folder / "README.md").read_text(encoding="utf-8")
+    assert "operate it, you" in readme
+    assert "accountable" in readme
+    reference = yaml.safe_load((folder / "docker-compose.yml").read_text(encoding="utf-8"))
+    service = reference["services"]["keycloak"]
+    assert service["command"] == ["start"], "the reference runs production mode, not start-dev"
+    assert "ports" not in service, "the reference publishes no port; the proxy fronts it"
+    for key in ("KC_DB_PASSWORD", "KC_BOOTSTRAP_ADMIN_PASSWORD"):
+        assert ":?" in service["environment"][key], f"{key} must be required, not defaulted"
