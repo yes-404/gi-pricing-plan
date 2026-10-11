@@ -41,7 +41,7 @@ the readiness note `handover/readiness-pl1544-2026-10-11.md`, local). Evidence w
 ladder (the maintainer (by delegation), 23:18:17 BST, quoted below). It was drafted open with
 both variants (commit `cf2d31a4` on this branch), and this file now carries only (a). It mints
 first in the next docs PR, together with the decision-maker's WF-699 D4 T-text (working id
-9701), and before `SL-1527`'s activation (the 23:18:17 entry, item 4). `PL-1544`'s activation
+RL 9701, reserved in eta "2026-10-11 23:18:40 BST"), and before `SL-1527`'s activation (the 23:18:17 entry, item 4). `PL-1544`'s activation
 needs 1 to 16 and 18 are **MET** at `1b04cb05`. Need 17, the lead's go, is **given
 conditionally**: *"Its activation and gate wait for PL 9799 and the WF-699 T-text to MINT."*
 §"Activation needs at `1b04cb05`" gives the evidence.
@@ -149,7 +149,7 @@ builds `PL-1544` as amended by `PL-1577` and by this file.
 | The defect (D4) | The 100–149 band is set to 0.90. The band is **50 wide, wider than the spacing of 45**, so the uniform point 140 lies inside it, and the premium at 140 is below the premium at 95. The counterexample is the base context and the grid values 95 and 140 |
 | D5 | The 100–149 band is set back to 1.20. The same property passes |
 | Fit dependence | **None.** The pass, the fail and the counterexample depend only on the ladder table that the journey writes. Item 5's STOP stays armed regardless: a failure before the defect or after D5 is a STOP, never a re-choice (the 23:18:17 entry, item 3) |
-| Spec | WF-699 D4 (`docs/workflows/WF-00699-…md:84`) names `monotone_in_age` and two tables banding age. The decision-maker's dated T-text (working id 9701) amends D4 to this property and this inversion, striking the old text, and it mints with this file (the 23:18:17 entry, item 2). `RL-1524` DP-1 is unchanged in substance: an inverted band wider than the grid spacing |
+| Spec | WF-699 D4 (`docs/workflows/WF-00699-…md:84`) names `monotone_in_age` and two tables banding age. The decision-maker's dated T-text (working id RL 9701) amends D4 to this property and this inversion, striking the old text, and it mints with this file (the 23:18:17 entry, item 2). `RL-1524` DP-1 is unchanged in substance: an inverted band wider than the grid spacing |
 
 **Not taken: (b), `driv_age`.** It was drafted in full (`cf2d31a4`) and rejected by the 23:18:17
 entry, item 1: *"driv_age's fitted effect on freMTPL2 is not guaranteed monotone (it is
@@ -213,7 +213,7 @@ line, and its merge commit from `git log origin/main --grep='SL-<n>\b'`. Each re
 | 17 the lead's go | GIVEN, conditional | the 23:18:17 entry, item 4: `SL-1527` authors now; its activation and gate wait for the row below |
 | 18 `SL-1340` | MET | `closed`; `a3572d1a` #1263 |
 | **new: DP-D4 ruled** | **MET** | (a), the 23:18:17 entry, item 1 |
-| **new: this file and the WF-699 D4 T-text (working id 9701) minted** | **OPEN** | the next docs PR, ahead of `SL-1527` (the 23:18:17 entry, item 4) |
+| **new: this file and the WF-699 D4 T-text (working id RL 9701) minted** | **OPEN** | the next docs PR, ahead of `SL-1527` (the 23:18:17 entry, item 4) |
 
 ## Decision points
 
