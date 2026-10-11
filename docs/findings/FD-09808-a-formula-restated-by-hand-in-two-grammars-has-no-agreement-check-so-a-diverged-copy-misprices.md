@@ -29,8 +29,7 @@ DP-S4-2 ADOPTED (both points); need 4.5 = an FD AND an OQ, not an OQ alone", ite
 - **The instance that exists on main:** a `derive_expression` column feeding a Model that a Rating Version scores (`prepare.py:165`
   evaluates it for training; the rating graph restates it). **The instance WK-690 Slice 4 would add:** an `expression` Factor
   (dm-wk690's memo, `handover/dm-wk690-dps4-1-2026-10-11.md` §4, which says the `derive_expression` path "ALREADY exists").
-- I have not measured how many Rating Versions on any deployment restate a formula; the platform has no live deployment
-  (no live exposure is claimed or excluded by this record).
+- Exposure is measured below (section "Exposure, measured"); the result is zero committed or stored instances.
 
 ## Finding
 
@@ -38,9 +37,26 @@ If the two copies diverge (a changed constant, a different rounding, `%` against
 trained on and every quote it prices is wrong, silently: there is no refusal and no signal. That is the "diverged shape is a
 mispricing" failure `CLAUDE.md` §2 names for hand-written shapes, applied to a formula.
 
-**Severity (proposed by the auditor): MEDIUM.** The reason: a silent mispricing path is HIGH by kind, but it needs a human to
-write a copy that disagrees, the exposure is unmeasured, and the interim (S4 records the expression text in the Model's factor
-record so a reviewer can compare) narrows the Slice 4 instance. The maintainer may raise it; I would not lower it.
+**Severity (proposed by the auditor): MEDIUM, conditional on the exposure measurement below, which found 0 committed and 0 stored instances.** The reason: a silent mispricing path is HIGH by kind, but it needs a human to write a copy that disagrees, no instance exists at the measured tree, and the interim (S4 records the expression text in the Model's factor record so a reviewer can compare) narrows the Slice 4 instance. Any instance found later moves it to HIGH (the lead's rule, "2026-10-11 11:5x BST" ruling on FD 9808); the path in measurement (3) is open today, so the severity does not fall below MEDIUM.
+
+## Exposure, measured
+
+Measured 2026-10-11 by the auditor, read-only, one command at a time under `nice -n 19` beside the held gate-1. Tree: `origin/main` `02f23b4a74cfdf81ff4ac875e1ff7ab2db777c4a` for (1) and (3); the dev database of the local stack (`gi-pricing-postgres-1`, Up 2 hours, healthy) for (2). `P="docker exec gi-pricing-postgres-1 psql -U gipricing -d gipricing -At"` below.
+
+**(1) Committed instances: 0.** Predicate: a file in `examples/` or a test fixture that both defines a rating path and restates a `derive_expression` formula.
+- `git -C <wt> grep -l "derive_expression" origin/main -- examples ':(glob)**/fixtures/**' ':(glob)**/tests/**'` returns 3 files, all data-preparation tests (`packages/pricing-core/tests/test_expression_nfrs.py`, `test_expression_profiles.py`, `test_prepare.py`). None defines a Rating Algorithm.
+- `git -C <wt> grep -n -i "derive" origin/main -- examples` returns 8 lines, all English "derive", `dataset.derive` or `derived_from`; the narrower `git -C <wt> grep -n -i "derive_expression" origin/main -- examples` returns 0.
+- Rating definitions in `examples/`: `git -C <wt> grep -l -E '"steps"|RatingAlgorithm|"sub_graphs"' origin/main -- examples` returns 4 files (`examples/fremtpl2/model.py` and three `examples/fremtpl2/rating/fremtpl2-rate.*.json`). Their `expression` steps (read with `json.load`, v1 and v2) are the rating arithmetic (`s_freq` = a constant times the relativities, `s_risk`, `s_load`, `s_cap`, `s_adj`, `s_pay`), not a restated feature formula. `git -C <wt> grep -c '"model_call"' origin/main -- examples` prints nothing, so 0 files carry a `model_call`.
+
+**(2) Stored instances: 0.**
+- `$P -c "select body->>'type', count(*) from factors group by 1"` returns `identity|18`: all 18 stored Factors are identity; `select count(*) from factors where body ? 'expression' and body->>'expression' is not null` returns 0.
+- A loop over every base table of schema `public` running `select count(*) from "<t>" x where x::text like '%derive_expression%'` found 0 rows in every table (dataset versions and jobs included), so no stored Preparation Recipe contains a `derive_expression` step.
+- `select count(*) from rating_algorithms where content::text like '%derive%'` returns 0, and `select count(*) from rating_versions where bundle::text like '%derive%' or pins::text like '%derive%'` returns 0. The one stored algorithm (`demo-fixture-motor` v1) has 3 steps and 0 `model_call` steps; `sub_graph_versions` has 0 rows.
+
+**(3) The code path through which a `derive_expression` column reaches rating** (open today):
+`pricing_core/data/prepare.py:165` (`case "derive_expression"`) evaluates the formula into a Dataset Version column; a Factor reads that column (`pricing_core/modelling/factors.py`, `identity` today, `expression` under WK-690 S4); `required_model_inputs` (`factors.py:338`) returns the feature slugs the Model needs; `pricing_core/rating/compile.py:938-968` requires a `model_call`'s `feature_map` to cover them (SL-1541); the Rating Version's graph must then produce each slug's value, and for a derived feature the only way is an `expression` step that writes the formula again (FR-244). Nothing on this path reads the Recipe's text.
+
+Conclusion at this tree: the path exists and is exercised by no committed or stored definition. A later instance, found by this predicate, makes the finding HIGH.
 
 ## Remedy
 
