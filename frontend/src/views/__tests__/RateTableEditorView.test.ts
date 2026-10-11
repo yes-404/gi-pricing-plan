@@ -179,6 +179,7 @@ describe("RateTableEditorView: the edit flow (FR-229, FR-231, FR-234)", () => {
         status: 409,
         code: "VALIDATION_FAILED",
         detail: "area@4 already exists in this workspace.",
+        errors: [],
       }),
     );
     render(RateTableEditorView, { props, ...mounted });

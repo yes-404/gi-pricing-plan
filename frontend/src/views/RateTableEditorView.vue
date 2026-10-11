@@ -125,7 +125,8 @@ function onEdit(key: string, value: string): void {
   const row = rows.value.find((candidate) => rowKey(candidate) === key);
   if (!row) return;
   const before = edited.value[key]?.before ?? row[valueName.value] ?? "";
-  const { [key]: _dropped, ...rest } = edited.value;
+  const rest = { ...edited.value };
+  delete rest[key];
   edited.value = value === before ? rest : { ...rest, [key]: { row, before, after: value } };
   diff.value = null;
   cellErrors.value = {};

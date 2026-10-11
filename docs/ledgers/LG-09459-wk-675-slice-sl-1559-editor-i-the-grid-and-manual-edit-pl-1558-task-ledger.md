@@ -381,6 +381,18 @@ now raises `InputFreeError` (main's SL-1600 class) with the branch's reworded li
 adopts `InputFreeError` (the SL-1600 conditional line). **Alembic:** read from the `down_revision` chain, the one head is
 `d4e81b7a2c95` on `b8d2f4a6c0e1`; no migration ran. A fresh full gate is owed at this head via the slot script.
 
+#### Gate-1 run at 25ede2d4, 2026-10-11 16:29:55-17:19:49 BST (log `~/gi-pricing-plan.local/scratch/sl1559/slot.out`, local)
+
+Migration: downgrade -1 and upgrade head both rc 0 (`created_by_edit` column 0 then 1), one head. **DB red-firsts, each against its parent
+source, all RED (none NOT RED):** `3372f5ce` api rc 1; `20a220fd` api rc 1, route_codes rc 2 (collection error); `918b9933` api rc 1,
+route_codes rc 1; `55a460db` service rc 1; `e2f3a38d` service rc 1. ruff, mypy, lint-imports, req-coverage, contracts, fe install and
+generate: rc 0. **pytest 13 failed / 5551 passed** (the 13 audit-on-tree modules, working ids unminted). **audit-docs rc 1:** per-check
+counts 2:5, 5:5, 30:71, 32:244, 35:27, 36:497 equal the salvaged baseline `s1559-base-audit.log` exactly; the only addition is check 31
+(3 lines, working id 9459): mint artefact. **OWN reds, fixed:** fe_lint (`_dropped` unused, `RateTableEditorView.vue`), fe_typecheck and
+fe_build (`RateTableGrid.vue` `invalid` under exactOptionalPropertyTypes; `RateTableEditorView.test.ts` ProblemError missing `errors`),
+fe_test (the unhandled TypeCheckError from the same test; 689/689 tests passed). Fix check: lint and type-check clean, the 3 touched test
+files 18 passed.
+
 ## PRs
 
 None yet.

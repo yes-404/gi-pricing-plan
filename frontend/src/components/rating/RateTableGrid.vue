@@ -87,7 +87,7 @@ function shown(row: RateTableCell): string {
         <td class="border-b border-slate-100 px-3 py-1">
           <DecimalCellInput
             :model-value="shown(row.original)"
-            :invalid="errors[row.id]"
+            :invalid="errors[row.id] ?? ''"
             :integer="integerValue"
             :label="`${valueName} for ${keyNames.map((n) => `${n} ${row.original[n]}`).join(', ')}`"
             @update:model-value="emit('edit', row.id, $event)"
