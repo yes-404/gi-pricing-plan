@@ -1,9 +1,9 @@
 ---
-id: LG-9978
+id: LG-1642
 family: ledger
 title: WK-673 slice SL-1503 — WF-699 E1, FR-242's drafted change summary over HTTP (PL-1502), slice ledger
-status: active
-created: 2026-10-10
+status: closed
+created: 2026-10-11            # original date 2026-10-10, set at the draft; minted 2026-10-11
 owner: executor
 tree: 99f22479a20e7fa64f8b6654e0d371c595b1e35a
 phase: P2
@@ -14,14 +14,14 @@ corrected_by: []
 relates: [PL-1502, RL-1498, RL-1445, RL-1263, SL-1389, SL-1391, FR-242, FR-219, FR-231]
 ---
 
-# LG-9978 — WK-673 slice SL-1503: WF-699 E1, FR-242's drafted change summary over HTTP
+# LG-1642 — WK-673 slice SL-1503: WF-699 E1, FR-242's drafted change summary over HTTP
 
-*(LG-9978 is a working id reserved by the lead; the lead mints it at the merge turn.)* Executed by
+*(Minted 2026-10-11 as LG-1642 from working id 9978, at the merge turn.)* Executed by
 `executor-sl1503` from PL-1502, base `origin/main` `99f22479a20e7fa64f8b6654e0d371c595b1e35a`.
 Times are BST (`TZ=Europe/London date`) unless marked.
 
 **GO:** `to-lead.md` "2026-10-10 21:41:05 BST — RL-1445 CAP: AMENDED by dated line (counting unit = gate or measurement, with guard rails); GO SL-1541 (WS-1 (a)); OP-1503-1 (a); SL-1575 noted", item 3: "OP-1503-1: (a) ADOPTED. SL-1503 authors now. Its 03 §5.1 hunks (T1/T2) are applied after WK-675 S3 and S4 have merged, on main, re-anchored by content. Needs 1 (merge-only) and 4 (this GO) are MET with this entry."
-**MERGE-ACK:** not yet given.
+**MERGE-ACK:** not yet given (the lead's read at the mint turn, from-lead "2026-10-11 22:44:45 BST": re-gate green modulo mint artefacts; mint turn granted).
 
 ## Tasks
 
@@ -30,16 +30,60 @@ Times are BST (`TZ=Europe/London date`) unless marked.
 | 0 | preconditions | — | done (below) |
 | 1 | `03` §5.1 T1, T2 | 17 | done 2026-10-11 (WK-675 S3 and S4 on main: `372fa92a`) |
 | 2 | shape and pure draft | 1–9, 20 | done |
-| 3 | service and route | 10–15 | authored; H tests UNRUN (DB: they wait for the gate slot), red owed |
-| 4 | contract, gate, ledger | 16–19 | contract regenerated and `--check` green; `generate:api`, gate, audit-docs, INDEX open |
+| 3 | service and route | 10–15 | done; first gate @07830ca6 found three own test defects (below); re-gate @71cc28ae green |
+| 4 | contract, gate, ledger | 16–19 | done: contract `--check` rc 0, two-half gate run twice (below), INDEX regenerated, audit-docs fails only the mint artefacts at the pre-mint head |
 
 ### Gate
 
-Not run. The full two-half gate waits for the lead's "gate slot granted" for the head.
+Two full runs of `~/gi-pricing-plan.local/scratch/sl1503/slot.sh <head>` under the `gate-1` flock, each through `handover/slot-preflight.sh` (abort proof before the first run: a wrong head gave rc 90, the right head without the flock rc 92), each: preflight, three red-firsts against the base source, then the two-half gate serially with a START and END stamp per stage. Logs, local and not in the repository: `~/gi-pricing-plan.local/scratch/sl1503/slot.out` and `gatelogs.8dfPbC` (run 1), `slot-regate.out` and `gatelogs.zqwlbu` (run 2).
+
+**Run 1, head `07830ca614782bf9cfb6c63c2e99877b4d9cce55`, tree `b70bf15b8f3b2743b85caffc5b29ee2bc1795b19`, gate-1 20:26:36 to 21:11:54 BST (2026-10-11): rc 1.** Granted by the lead, from-lead "2026-10-11 20:26:27 BST".
+
+| stage | rc |
+|---|---|
+| red1 pure draft, whole feature reverted | 2 [red] |
+| red2 route file, handler reverted | 1 [red] |
+| red3 refusal check removed | 1 [red] |
+| ruff | 0 |
+| mypy | 0 |
+| import-linter | 0 |
+| pytest | 1 (15 failed, 5607 passed, 5 skipped) |
+| audit-docs | 1 |
+| req-coverage | 0 |
+| contracts `--check` | 0 |
+| frontend install, generate, lint, type-check | 0 |
+| frontend test | 1 (1 failed of 689) |
+| frontend build | 0 |
+
+The 15 pytest reds: 13 are mint artefacts, 2 were this slice's own (below). The 13 run `audit-docs` or the register checks on the real tree and fail on check 31 alone (the working id's gap and `created` order): `test_audit_docs_finding_citations` (1), `test_audit_docs_ids` (2), `test_audit_docs_process_core_digest` (2), `test_audit_docs_w37_11_ceiling` (1), `test_doc_index` (1), `test_register_lint` (3), `test_register_owed` (1), `test_repository_invariants` (2). The 2 own: `test_a_parquet_table_answers_200_with_the_entry_pending` (`AttributeError`, `RateTableVersionRow.version`; from-lead "2026-10-11 20:53:27 BST") and `test_wf699_e1_the_draft_is_built_from_the_approved_baseline` (`202 == 200` from the rate-table diff route, defect 3 in the build log; ruled from-lead "2026-10-11 21:13:13 BST", confirmed by the maintainer "2026-10-11 21:13:52 BST"). The one frontend red was `DagDesigner.test.ts` "emits an edited draft and leaves the other steps as they were" (F39, WK-675's, fixed on main by #1283); alone, once, on this tree under `small-test`: 4 passed.
+
+**Run 2, head `71cc28aea19ae360376d5da4dd4725090b965819` (the three test fixes and the ledger's deviation line on run 1's head), tree `a29278a7bcdb3f2cea09e47d4d0faa6069a82d06`, gate-1 21:56:35 to 22:44:10 BST (2026-10-11): rc 1, mint artefacts only.** Granted by the lead, from-lead "2026-10-11 21:15 BST".
+
+| stage | rc |
+|---|---|
+| red1 pure draft, whole feature reverted | 2 [red] |
+| red2 route file, handler reverted | 1 [red] |
+| red3 refusal check removed | 1 [red] |
+| ruff | 0 |
+| mypy | 0 (237 source files) |
+| import-linter | 0 |
+| pytest | 1 (13 failed, 5609 passed, 5 skipped) |
+| audit-docs | 1 |
+| req-coverage | 0 |
+| contracts `--check` | 0 |
+| frontend install, generate, lint, type-check | 0 |
+| frontend test | 0 (109 files, 689 of 689, `DagDesigner.test.ts` included) |
+| frontend build | 0 |
+
+All 13 pytest reds are the mint artefacts named under run 1, the same modules; `audit-docs` printed exactly two lines, both check 31 (the id gap 1636 to 9978, and 9978 `created` 2026-10-10 earlier than id 1635's 2026-10-11). Neither route test file nor `test_change_summary_draft.py` has a failure. `ruff` and `mypy` finished in about 0 s, answered from the warm cache on this exact tree; the first run's mypy took 15 s from a cold one. The lead's verdict: green modulo mint artefacts, from-lead "2026-10-11 22:44:45 BST".
+
+**Red-firsts, classified (run 2; run 1 as in the build log).** red1: by cause, `ModuleNotFoundError: No module named 'app.platform.change_summary'`, a collection error (Acceptance 1 to 9 and 20). red2: 8 failed, 0 passed, every one by the router's 404 (`404 == 200`, `404 == 409`, `404 == 403`, and item 13a's title `Resource not found` against `Rating version not found`); item 13a is a real red now, not the vacuous pass of run 1 (rulings "2026-10-11 20:53:55 BST", and for item 15 "2026-10-11 20:53:27 BST"). red3: weak but valid, accepted as a note (from-lead "2026-10-11 21:13:13 BST"): both item-12 cases fail with the check removed, by a 500 (`pins` None, `ArtifactRef` validation) and by a 404 `Rating algorithm not found` (`algorithm_ref` None), not by a 200. The pre-merge head of this slice's mint commit is not gated; the merge of `origin/main` `4af5997e` and the mint change docs, the INDEX and this ledger only, which CI covers.
 
 ### Audit
 
-Not yet. The auditor writes it.
+Not yet. The auditor (`auditor-sl1503`) writes it.
+
+Lead verdict: (pending)
 
 ### Build log
 

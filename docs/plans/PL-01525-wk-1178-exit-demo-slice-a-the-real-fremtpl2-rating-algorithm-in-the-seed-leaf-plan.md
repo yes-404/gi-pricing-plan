@@ -3,7 +3,7 @@ id: PL-1525
 family: plan
 kind: leaf
 title: WK-1178 — exit-demo slice (a), the real freMTPL2 rating algorithm in the seed, priced from the approved GLM through its seeded rate tables (FR-230, FR-237, FR-246, FR-257, FR-260): leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-08            # original date 2026-10-05, set at the draft; minted 2026-10-08
 owner: planner
 tree: 809a3794af6d3a6ba688663b0d9b59f951190680

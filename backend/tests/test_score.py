@@ -25,6 +25,7 @@ from uuid import UUID
 
 import pytest
 import pytest_asyncio
+from backend.tests.outbound_validation_spy import install_outbound_validation_spy
 from backend.tests.test_bundle_slot import _compiled
 from backend.tests.test_rating_version_compile import (
     _empty_pins,
@@ -345,13 +346,21 @@ def test_the_result_is_returned_without_outbound_validation(
     served: Any,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """RL-883's acceptance test, and the one that discriminates the implementations.
+    """RL-883's acceptance test: the route emits an unvalidated result verbatim.
 
     A `ScoringResult` built with `model_construct` holds values that violate its own
     declared types — no validation ran to stop them. The route must emit those bytes
-    verbatim with a 200. **A route carrying a Pydantic return annotation or a
-    `response_model=` answers 500 here**, because FastAPI would validate on the way out,
-    which is exactly what NFR-502 forbids: validate inbound, never outbound.
+    verbatim with a 200, which is what NFR-502 requires: validate inbound, never outbound.
+
+    **This test is not the discriminator for every validating form** (FD-1372). A route
+    whose handler returns a dict or other non-instance value under a
+    Pydantic return annotation or `response_model=` answers 500 here, because FastAPI
+    validates that value on the way out. A route that returns this `ScoringResult`
+    *instance* under either answers 200 and passes this test, because pydantic does not
+    revalidate an instance of the declared class (`revalidate_instances='never'`), although
+    FastAPI's response validation still runs. The test that catches every form is
+    `test_no_outbound_validation_runs_on_score`, which counts calls to the response
+    validation entry point directly (PL-1364 Acceptance 8b).
     """
     malformed = ScoringResult.model_construct(
         outcome="quoted",
@@ -1685,6 +1694,47 @@ def test_a_pending_trace_whose_context_names_a_produced_value_is_not_reproduced_
     status, after = _run(_plant_and_run())
     assert status is JobStatus.FAILED
     assert after.status == "pending"
+
+
+@pytest.mark.req("NFR-502")
+def test_no_outbound_validation_runs_on_score(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    served: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The property itself (PL-1364 Acceptance 8b): `/score` makes no call to FastAPI's
+    response-validation entry point. The 500 test above observes a side effect of outbound
+    validation and cannot see a route that validates and passes; this counts the calls.
+
+    The planted control proves the spy is not blind at this FastAPI version: a route that
+    declares `response_model=ScoringResult` and returns a valid dict is counted at least once.
+    """
+    spy = install_outbound_validation_spy(monkeypatch)
+
+    async def _score_one(*_args: Any, **_kwargs: Any) -> ScoringResult:
+        return _scored()
+
+    monkeypatch.setattr(score_module, "score_one", _score_one)
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": SCORED_REF}), headers=scoring_headers
+    )
+    assert response.status_code == 200, response.text
+    assert spy.calls == 0
+
+    async def _control() -> dict[str, Any]:
+        return _scored().model_dump(mode="json")
+
+    client.app.add_api_route(  # type: ignore[attr-defined]
+        "/__nfr502_control",
+        _control,
+        methods=["POST"],
+        response_model=ScoringResult,
+    )
+    spy.reset()
+    controlled = client.post("/__nfr502_control")
+    assert controlled.status_code == 200, controlled.text
+    assert spy.calls >= 1, "the spy saw no response validation on a route that validates"
 
 
 # --------------------------------------------------------------------------------------
