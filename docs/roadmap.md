@@ -2211,7 +2211,7 @@ relates: [RL-920, RL-1263, RL-1445]
 id: SL-9937
 family: slice
 title: WK-1178 fix slice — a default-live POST /score passes the resolved Rating Version to score_one
-status: active                  # draft → active → closed | retired (§1.2a)
+status: closed                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-11
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: d699a561d6a93f33b74beb9c07023f8e655bb8c7
