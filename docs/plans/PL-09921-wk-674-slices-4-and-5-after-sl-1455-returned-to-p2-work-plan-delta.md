@@ -54,6 +54,11 @@ every `to-lead.md` entry naming `PL-1537`, `SL-1258`, `SL-1259`, `SL-1455` or WK
   DISPATCH GO: SL-1455 (Task 0; FD-1411's NFR-489 HTTP remedy) and WK-674 S3 (PL-1583);
   OP-1455-M1/M2/M3; the register :293 record" (items 2 to 7), and the user's DP-S5-b decision
   recorded at "2026-10-11 10:57:16 BST" (D0.3).
+- **DP-S5-a, ruled:** the maintainer's entry "2026-10-11 11:02:35 BST — DP-S5-a RULED (a):
+  SL-1259 (WK-674 S5) holds the NFR-489 EXIT verdict; SL-1455's Task 4 is the FD-1411 remedy
+  proof. CORRECTION of my 2026-10-10 21:38:39 M1/M3 wording" (items 1 to 4). The decision-maker
+  records it as RL 9929 (working id). D0.3, D5.1, the Tasks table and the Decision points table
+  carry it.
 
 ## Goal
 
@@ -117,6 +122,11 @@ tree.
   discharge event … The measurement on it can be a real pass or fail." Item 3: "WK-674 S5's
   verdicts run there, and the local ALONE windows become rehearsals." No slice waits for the VM
   to **build**. The VM is created only after the user approves the spend (item 2).
+  **The run list and the VM's life (11:02:35 item 3):** "its run list = SL-1455 Task 4 (remedy
+  proof) plus SL-1259's verdicts (NFR-489 exit and the other S5 NFRs, NFR-502 among them). The
+  hours cover both. The VM is STOPPED between the two sessions (vCPU/RAM billing stops; the disk
+  keeps the state), not left up, and DELETED after S5's verdict, with deletion verified." S5's
+  `LG-` records the delete and its verification after its verdict runs.
 
 ## Tasks
 
@@ -125,7 +135,7 @@ The columns follow L5 (a). Each row is `PL-1537`'s, as changed below. The lead a
 | Order | Slice | Scope (what the `LG-` quotes) | Requirements, each id | Depends on | Size |
 |---|---|---|---|---|---|
 | 1 | `SL-1258` — Slice 4: the deployment path | `PL-1537` row 1 (with R4.1 to R4.3), plus D4.1 to D4.3 | `07` §3.6: FR-434, FR-435, FR-437; `07` §3.2: FR-412 (memory half), FR-415 (worker service); `07` §3.9: FR-452 (management-API limb); `07` §9: NFR-531, NFR-534; register FD-1211 | `SL-1257` closed (and so S3's limiter on main) | 1 |
-| 2 | `SL-1259` — Slice 5: switchover, rollback and the measurements | `PL-1537` row 2 (with R5.1, R5.3 to R5.10), plus D5.1 to D5.5 | `03` §3.10: FR-268, FR-269, FR-272 (rollback audit limb); `03` §9: NFR-489, NFR-490, NFR-493 (linearity limb), NFR-494, NFR-497 (mechanism), NFR-498 (rollback limb), NFR-501, NFR-502; register F-W9-1, F38, F41, FD-1411 (measurement half), F35 (measurement half) | `SL-1258` closed; `SL-1256` (closed, met); DP-S5-a resolved | 1 + an ALONE window |
+| 2 | `SL-1259` — Slice 5: switchover, rollback and the measurements | `PL-1537` row 2 (with R5.1, R5.3 to R5.10), plus D5.1 to D5.5 | `03` §3.10: FR-268, FR-269, FR-272 (rollback audit limb); `03` §9: NFR-489, NFR-490, NFR-493 (linearity limb), NFR-494, NFR-497 (mechanism), NFR-498 (rollback limb), NFR-501, NFR-502; register F-W9-1, F38, F41, FD-1411 (measurement half), F35 (measurement half) | `SL-1258` closed; `SL-1256` (closed, met); DP-S5-a ruled (a), 11:02:35 (RL 9929) | 1 + an ALONE window |
 
 The requirement set is `PL-1537`'s, unchanged. No id is added or removed.
 
@@ -159,7 +169,16 @@ The requirement set is `PL-1537`'s, unchanged. No id is added or removed.
 - **D5.1 — replaces R5.2: SL-1455 is in P2, and it builds FD-1411's remedy.** 21:29:10 item 2:
   "NFR-489 (the /score HTTP path) stays in P2's exit: FD-1411 (HIGH, owner SL-1455) needs its
   remedy built and MEASURED (a pass at the HTTP path, not the model_call step) before the exit
-  demo." Slice 5 does not build that remedy. Slice 5's NFR-489 limb is governed by **DP-S5-a**.
+  demo." Slice 5 does not build that remedy. Slice 5's NFR-489 limb is governed by **DP-S5-a,
+  ruled (a)** (11:02:35 item 1): **Slice 5 holds the NFR-489 exit verdict**, on the exit tree, on
+  Slice 4's path with replicas under the DP-3 reading (D5.2). SL-1455's Task 4 sweep is FD-1411's
+  **remedy proof** only: its Acceptance 2 bar stands ("both arms in budget at 25/50/100/200 rps,
+  ×3 interleaved, issued = offered, 0 errors", item 2). This is the frozen plans' own allocation
+  (`PL-1454` :62, :199, :550 at `99f22479`; :550: "FD-1411's remedy event is met; its own
+  discharge also needs SL-1259's NFR-489 verdict"). Item 2 corrects the maintainer's 21:38:39 M1
+  and M3: the sweep's condition is not a pass "on the exit tree". M3's order (WK-674 S3 before the
+  sweep) stays, because the sweep then includes the limiter. **An SL-1455 pass followed by an
+  SL-1259 miss is a finding against S5's changes** (item 2), and S5's `LG-` says so if it happens.
   Register `:293`'s dated line is D10's, per 21:38:39 item 7, and it is not this plan's write.
 - **D5.2 — replaces R5.3a: "per replica" is ruled in P2.** 21:38:39 item 3: "OP-1455-M2: YES.
   DP-3 ('per replica') is ruled in P2 from Task 0's record, because 'meeting NFR-489' cannot be
@@ -189,10 +208,15 @@ The requirement set is `PL-1537`'s, unchanged. No id is added or removed.
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-S5-a | Who carries the exit-tree NFR-489 reading: Slice 5 on Slice 4's replicated path, or SL-1455's Task 4 sweep? SL-1455 measures "on one replica" (`PL-1454:58`). Its harness serves "one replica", a single `uvicorn` process (`scripts/bench-rating.py:866-867`, `_serve`). Only Slice 4's path has n replicas behind a load balancer. | (a) S5 carries it on the S4 path, and SL-1455's sweep is the remedy's proof only. (b) SL-1455's sweep carries it, and S5 cites it. (c) Both are recorded: SL-1455's sweep is the per-replica reading under DP-3 as ruled, S5's n ∈ {2, 4, 8} run on the S4 path is the deployment-path reading under the same protocol (D4.2), and the closure record sets them side by side. | **(c).** NFR-489 is stated "per replica", and the exit row says "meeting NFR-489" (21:29:10). The per-replica figure is SL-1455's to give, and only S5 can show that it holds on the path that ships. (c) adds one arm pair to a window S5 books anyway (D0.2). If the two readings disagree, the decision-maker rules. Neither is picked silently. | scope / measurement | **yes, for S5 only** | open: the decision-maker seat named in the maintainer's entry "2026-10-11 10:55:55 BST", item 2 ("then DP-S5-a") |
+| DP-S5-a | Who carries the exit-tree NFR-489 reading: Slice 5 on Slice 4's replicated path, or SL-1455's Task 4 sweep? SL-1455 measures "on one replica" (`PL-1454:58`). Its harness serves "one replica", a single `uvicorn` process (`scripts/bench-rating.py:866-867`, `_serve`). Only Slice 4's path has n replicas behind a load balancer. | (a) S5 carries it on the S4 path, and SL-1455's sweep is the remedy's proof only. (b) SL-1455's sweep carries it, and S5 cites it. (c) Both are recorded: SL-1455's sweep is the per-replica reading under DP-3 as ruled, S5's n ∈ {2, 4, 8} run on the S4 path is the deployment-path reading under the same protocol (D4.2), and the closure record sets them side by side. | **(a), as ruled.** S5 holds the NFR-489 exit verdict on the S4 path, with replicas under DP-3; SL-1455's Task 4 is FD-1411's remedy proof (D5.1). This plan's draft at `4a76b8cc` recommended (c). The ruling rejected (c), "two competing verdicts", and (b), "one process is not S4's replicas, and SL-1455 precedes SL-1259's bundle-path edits, so it cannot read the exit tree" (11:02:35 item 1). | scope / measurement | no longer: ruled | **ruled (a)**: the maintainer's entry "2026-10-11 11:02:35 BST", items 1 to 3; recorded by the decision-maker as RL 9929 (working id), item 4 |
 | DP-S5-b | Can §12 row 2 ("meeting NFR-489") be met from the shared VM? If not, which host? | Put to the user by the maintainer (10:55:55 item 3): a temporary dedicated VM for the ALONE windows only; a temporary resize; or carry | none from this plan: an exit-criterion and spending question | exit criterion / spending | no, for S5's build | **ruled**: the user, "Temporary dedicated VM" (the maintainer's entry 2026-10-11 10:57:16 BST). The spend for the exact type is approved separately, by Thu 15 Oct (D0.3, D5.3) |
 
-This plan stays `draft` while DP-S5-a is open (`document-ids.md` §1.7).
+A plan is "`draft` while decision points are open, `active` on freeze" (`document-ids.md` §1.6,
+the PL `map`/`leaf` row). DP-S5-a was this plan's only open decision point, and it is ruled. No
+decision point is open. This plan therefore goes `active` at its mint, and the activation line
+cites RL 9929's minted id. The branch keeps `status: draft` until then, because the ruling's
+`RL-` is not yet minted. **If RL 9929 is not minted in the same batch or before**, this plan
+mints `draft`, and its activation follows RL 9929's mint.
 
 ## Hand-off (not this plan's writes)
 
@@ -200,8 +224,8 @@ This plan stays `draft` while DP-S5-a is open (`document-ids.md` §1.7).
   `SL-1258` and `SL-1259` rows that point at it are the planner's at the mint batch, and they
   change no status.
 - Register `:293` (FD-1411) and the `SL-1455` row's dated lines are D10's (21:38:39 item 7).
-- DP-S5-a's ruling is the decision-maker's (an `RL-`). When it is minted, the activation line
-  sets this plan `active` and cites that `RL-`.
+- DP-S5-a's ruling is the decision-maker's (an `RL-`; RL 9929, working id). When it is minted,
+  the activation line sets this plan `active` and cites that `RL-`.
 
 ## Self-review
 
@@ -215,5 +239,6 @@ This plan stays `draft` while DP-S5-a is open (`document-ids.md` §1.7).
 - **Consistency.** D5.1 and D5.2 replace R5.2 and R5.3a only. R5.1 (F35 carried) and R5.3 (NFR-489
   untraced, `OQ-1453`, `03:1466`) stand. D0.3 and D5.3 restate `PL-1237`'s fallback without
   changing it.
-- **Rulings since the sweep.** `to-lead.md` was read to the 2026-10-11 10:57:16 BST entry. Re-read at the
-  mint, and add any ruling on WK-674 S4 or S5 as a dated line.
+- **Rulings since the sweep.** `to-lead.md` was read to the 2026-10-11 10:57:16 BST entry, and
+  then (planner-d11, 2026-10-11) to the 11:02:35 BST entry, which this file now carries. Re-read
+  at the mint, and add any later ruling on WK-674 S4 or S5 as a dated line.
