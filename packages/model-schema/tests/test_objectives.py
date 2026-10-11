@@ -433,15 +433,23 @@ def test_nine_checks_with_one_name_wrong_is_refused() -> None:
     assert len(names) == 9
     with pytest.raises(pydantic.ValidationError) as raised:
         _certificate(_battery(names))
-    assert "branch_discontinuity" in str(raised.value)
-    assert "duplicated ['finiteness']" in str(raised.value)
+    assert "must carry every required check" in str(raised.value)
+    assert "branch_discontinuity" not in str(raised.value), "the message names no submitted value"
 
 
 @pytest.mark.req("FR-158")
 def test_a_check_name_outside_the_battery_is_refused() -> None:
     """A misspelling is not a tenth check; nine names is a closed set."""
     names = (*OBJECTIVE_CERTIFICATE_CHECKS[:8], "smoke_fitt")
-    with pytest.raises(pydantic.ValidationError, match=r"unexpected \['smoke_fitt'\]"):
+    with pytest.raises(pydantic.ValidationError, match="carries a check outside its battery"):
+        _certificate(_battery(names))
+
+
+@pytest.mark.req("FR-158")
+def test_a_check_run_twice_beside_the_full_battery_is_refused() -> None:
+    """Every required check is present and one runs twice: the duplicate alone is the refusal."""
+    names = (*OBJECTIVE_CERTIFICATE_CHECKS, "finiteness")
+    with pytest.raises(pydantic.ValidationError, match="must carry each required check once"):
         _certificate(_battery(names))
 
 
@@ -470,7 +478,7 @@ def test_battery_refuses_a_certificate_that_mixes_the_two_pairs() -> None:
     assert len(names) == 9
     with pytest.raises(pydantic.ValidationError) as raised:
         _certificate(_battery(names))
-    assert "analytic_vs_numeric_hessian" in str(raised.value)
+    assert "carries a check outside its battery" in str(raised.value)
 
 
 @pytest.mark.req("FR-158")
