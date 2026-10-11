@@ -8722,6 +8722,137 @@
         "title": "KeyView",
         "type": "object"
       },
+      "LadderOperation": {
+        "additionalProperties": false,
+        "description": "`LadderRung.operation` (`scoring.schema.json`, FR-248 as amended by `RL-1329`).\n\nThe operation a rung applied to the previous rung's **unrounded** value. Operands are\nexact and never quantised: `factor` (`multiply`), `divisor` (`divide`),\n`amount_unrounded_minor` (`add`), and `bound` with `bound_unrounded_minor` (`clamp`,\non the `constraints` rung only). `mode` and `dp` are emitted only on `round`.\n`applied` carries the reason codes of the binding clamps on the `constraints` rung\n(`clamp` or `none`), empty rather than absent when nothing fired. `amount_minor` is\n**legacy**: kept so a stored pre-ruling ladder still validates; the builder no longer\nemits it. Every field added by `RL-1329` is optional, because stored ladders are\nwrite-once and lack them.",
+        "properties": {
+          "amount_minor": {
+            "anyOf": [
+              {
+                "description": "Amount in minor units (pence/cents) of the workspace currency.",
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Minor"
+          },
+          "amount_unrounded_minor": {
+            "anyOf": [
+              {
+                "description": "Exact decimal as a string; never a binary float (FR-10).",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Unrounded Minor"
+          },
+          "applied": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Applied",
+            "type": "array"
+          },
+          "bound": {
+            "anyOf": [
+              {
+                "enum": [
+                  "min",
+                  "max"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bound"
+          },
+          "bound_unrounded_minor": {
+            "anyOf": [
+              {
+                "description": "Exact decimal as a string; never a binary float (FR-10).",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bound Unrounded Minor"
+          },
+          "divisor": {
+            "anyOf": [
+              {
+                "description": "Exact decimal as a string; never a binary float (FR-10).",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Divisor"
+          },
+          "dp": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dp"
+          },
+          "factor": {
+            "anyOf": [
+              {
+                "description": "Exact decimal as a string; never a binary float (FR-10).",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Factor"
+          },
+          "kind": {
+            "enum": [
+              "multiply",
+              "divide",
+              "add",
+              "clamp",
+              "round",
+              "none"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "LadderOperation",
+        "type": "object"
+      },
       "LadderReconciles": {
         "additionalProperties": false,
         "description": "The premium ladder reconciles (FR-248).",
@@ -8736,6 +8867,115 @@
           "kind"
         ],
         "title": "LadderReconciles",
+        "type": "object"
+      },
+      "LadderRounding": {
+        "additionalProperties": false,
+        "description": "A rung's declared rounding (`common/money.schema.json#/$defs/Rounding`, `RL-1329` §3).",
+        "properties": {
+          "dp": {
+            "minimum": 0.0,
+            "title": "Dp",
+            "type": "integer"
+          },
+          "mode": {
+            "enum": [
+              "half_even",
+              "half_up",
+              "ceiling",
+              "floor",
+              "down"
+            ],
+            "title": "Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "dp"
+        ],
+        "title": "LadderRounding",
+        "type": "object"
+      },
+      "LadderRung": {
+        "additionalProperties": false,
+        "description": "One rung of the Premium Ladder (FR-247/248, `scoring.schema.json`).\n\n`unrounded_minor` is the engine's exact value for the rung; `value_minor` is that value\nrounded once with `rounding` (`RL-1329` §2). Displayed values do not multiply into each\nother; the unrounded column is the one that replays (FR-248).",
+        "properties": {
+          "components": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "description": "Amount in minor units (pence/cents) of the workspace currency.",
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Components"
+          },
+          "operation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LadderOperation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rounding": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LadderRounding"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rung": {
+            "enum": [
+              "risk_premium",
+              "expense_loading",
+              "commission",
+              "profit_loading",
+              "office_premium",
+              "optimisation_adjustment",
+              "constraints",
+              "instalment_loading",
+              "ipt_and_fees",
+              "payable_premium"
+            ],
+            "title": "Rung",
+            "type": "string"
+          },
+          "unrounded_minor": {
+            "anyOf": [
+              {
+                "description": "Exact decimal as a string; never a binary float (FR-10).",
+                "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unrounded Minor"
+          },
+          "value_minor": {
+            "description": "Amount in minor units (pence/cents) of the workspace currency.",
+            "title": "Value Minor",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rung",
+          "value_minor"
+        ],
+        "title": "LadderRung",
         "type": "object"
       },
       "LargeLossKind": {
@@ -15318,6 +15558,95 @@
         "title": "ScoreCompareRequest",
         "type": "object"
       },
+      "ScoreComparison": {
+        "additionalProperties": false,
+        "description": "`POST /api/v1/score/compare` response (FR-262, `03` §4.10): both traced results and\nthe diff of their traces.",
+        "properties": {
+          "base": {
+            "$ref": "#/components/schemas/ScoringResult"
+          },
+          "comparison": {
+            "$ref": "#/components/schemas/ScoringResult"
+          },
+          "diff": {
+            "$ref": "#/components/schemas/TraceDiff"
+          }
+        },
+        "required": [
+          "base",
+          "comparison",
+          "diff"
+        ],
+        "title": "ScoreComparison",
+        "type": "object"
+      },
+      "ScoringResult": {
+        "additionalProperties": false,
+        "description": "`ScoringResult` (`scoring.schema.json:46-63`, `03` §4.4).\n\nInvariants (`scoring.schema.json:59-62`, enforced by `pricing_core.rating.score`, not\nre-validated here): applying every rung's recorded operation to `risk_premium`\nreproduces `payable_premium` exactly (FR-248); a traced and an untraced call on the\nsame bundle and context return an identical premium (`03` R3).",
+        "properties": {
+          "bundle_hash": {
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "title": "Bundle Hash",
+            "type": "string"
+          },
+          "decline_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Decline Reasons",
+            "type": "array"
+          },
+          "outcome": {
+            "enum": [
+              "quoted",
+              "declined",
+              "error"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "outputs": {
+            "additionalProperties": true,
+            "title": "Outputs",
+            "type": "object"
+          },
+          "premium_ladder": {
+            "items": {
+              "$ref": "#/components/schemas/LadderRung"
+            },
+            "title": "Premium Ladder",
+            "type": "array"
+          },
+          "rating_version_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "timing_ms": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Timing Ms",
+            "type": "object"
+          },
+          "trace": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Trace"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "outcome",
+          "rating_version_ref",
+          "bundle_hash",
+          "premium_ladder"
+        ],
+        "title": "ScoringResult",
+        "type": "object"
+      },
       "SeedFromModelRequest": {
         "additionalProperties": false,
         "description": "`POST /api/v1/rate-tables/{slug}/seed-from-model` body (FR-230, `03` §5.1).\n\nOne seed request names one Factor of an approved model (`RL-1361` section A);\n`factor` is the Factor's slug, a key of the model's relativities. Exactly three\nfields, and an unknown field is refused (`RL-1375` DP-3).",
@@ -16017,6 +16346,72 @@
         "title": "SplitRequest",
         "type": "object"
       },
+      "StepChange": {
+        "additionalProperties": false,
+        "description": "One step that differs between two Traces (FR-262, `03` §4.10). `own_change` is true\nwhen the step was added, removed, or changed while consuming identical inputs. False\nmeans no own change attributable from the traces, which is not a claim that the step\nwas not edited.",
+        "properties": {
+          "base": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TraceStep"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "change": {
+            "enum": [
+              "added",
+              "removed",
+              "changed"
+            ],
+            "title": "Change",
+            "type": "string"
+          },
+          "changed_fields": {
+            "items": {
+              "enum": [
+                "type",
+                "label",
+                "consumed",
+                "produced",
+                "matched",
+                "violation"
+              ],
+              "type": "string"
+            },
+            "title": "Changed Fields",
+            "type": "array"
+          },
+          "comparison": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TraceStep"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "own_change": {
+            "description": "True for an added or removed step, and for a changed step whose consumed inputs are identical on both sides. False means no own change attributable from the traces; it is not a claim that the step was not edited (a downstream step can be edited and also consume a moved value).",
+            "title": "Own Change",
+            "type": "boolean"
+          },
+          "step_id": {
+            "title": "Step Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step_id",
+          "change",
+          "own_change"
+        ],
+        "title": "StepChange",
+        "type": "object"
+      },
       "SubGraph": {
         "additionalProperties": false,
         "description": "A stored, immutable Sub-graph Version (`sub_graph:<slug>@<version>`).",
@@ -16329,6 +16724,30 @@
           "ladder_reconciled"
         ],
         "title": "Trace",
+        "type": "object"
+      },
+      "TraceDiff": {
+        "additionalProperties": false,
+        "description": "The step-level difference of two executed Traces (FR-262, `03` §4.10). Distinct from\nFR-219's structural `AlgorithmDiff`, which compares two algorithm definitions.",
+        "properties": {
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/StepChange"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "unchanged": {
+            "minimum": 0.0,
+            "title": "Unchanged",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "steps",
+          "unchanged"
+        ],
+        "title": "TraceDiff",
         "type": "object"
       },
       "TraceStep": {
@@ -34298,7 +34717,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ScoringResult"
+                }
               }
             },
             "description": "Successful Response"
@@ -34580,7 +35001,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ScoreComparison"
+                }
               }
             },
             "description": "Successful Response"

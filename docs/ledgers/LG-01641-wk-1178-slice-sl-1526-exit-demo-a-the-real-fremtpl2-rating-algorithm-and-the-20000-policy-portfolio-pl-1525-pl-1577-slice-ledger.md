@@ -1,0 +1,281 @@
+---
+id: LG-1641
+family: ledger
+title: WK-1178 slice SL-1526 — exit demo (a): the real freMTPL2 rating algorithm in the seed and the 20,000-policy portfolio sample (PL-1525 + PL-1577 slice ledger)
+status: closed
+created: 2026-10-11            # original date 2026-10-10, set at the draft; minted 2026-10-11
+owner: executor
+tree: 31b88780aa52894624a5e08454ce2d5925d04b37
+phase: P2
+work: WK-1178
+slice: SL-1526
+plans: [PL-1525, PL-1577]
+corrected_by: []
+relates: [PL-1525, PL-1577, FD-1209, FD-1573, FD-1576]
+---
+
+# LG-1641 — WK-1178 slice SL-1526: exit demo (a)
+
+*(Minted 2026-10-11 as LG-1641 from working id 9966, reserved by the lead.)* Executed by
+`executor-sl1526` from PL-1525 and its delta PL-1577, base `origin/main`
+`31b88780aa52894624a5e08454ce2d5925d04b37`. Times are BST (`TZ=Europe/London date`) unless marked.
+
+**GO:** `to-lead.md` "2026-10-10 21:36:36 BST — DISPATCH GO: SL-1526 (exit demo (a)) and SL-1529 (FD-1416); FD-1573 severity; SL-1575 OFF the G2 serial path (corrects my 21:33:57 items 2 and 4)", item 3: "GO SL-1526 (PL-1525 + delta PL-1577), needs 1–4 MET … author now, activate in the slice PR's first commit, merge on its ACK." Condition (item 2): the merge-ack carries PL-1577's proving run, alone in a slot: wall time and peak RSS of the 20,000-policy dislocation and attribution against DP-2's plan target of at most 60 minutes and 15.5 GiB per run; a miss is a stop to the lead (fallback (D)). The algorithm declares no decimal output.
+**MERGE-ACK:** added at merge.
+
+## Tasks
+
+### Scope
+
+The slice's row is `#### SL-1526 — WK-1178 exit-demo slice (a) — the real freMTPL2 rating algorithm in the seed` in `docs/roadmap.md`, under PL-1525 and its delta PL-1577. Requirement ids: `03` FR-212, FR-213, FR-226, FR-230, FR-237, FR-240, FR-246, FR-257, FR-260, FR-261; `02` FR-97, FR-101; `07` FR-440; `01` NFR none measured here. Write set: PL-1525 §Write set plus PL-1577 Task 2 (`examples/fremtpl2/{algorithm.py,model.py,seed.py,README.md,test_seed.py}`, `backend/tests/test_demo_rating_evidence.py`, `backend/tests/test_fremtpl2_algorithm.py`, this ledger, `docs/INDEX.md`, the row and plan status lines).
+
+### Task list
+
+- Task 0 — preconditions; premises P1–P8 re-read (Build log).
+- Task 1 — the builder and its tests (Acceptance 3, 4, 5, 7).
+- Task 2 — bandings, seeded tables, the Rating Version's pins, and the portfolio Dataset Version (Acceptance 1, 2; PL-1577 Task 2).
+- Task 3 — golden quotes priced independently of the bundle (Acceptance 3, 6).
+- Task 4 — the demo run, the gate, the proving run, the sample-vs-book comparison (Acceptance 7–11; PL-1577 Acceptance 7).
+
+### Gate
+
+Run d (`stamps.tsv`, stage → rc): a_demo 0, c_realglm 0, b_slice 0, b_export_rows 0, b_base_migrate 0, b_base_seed 0, b_base 0, d_dislocation 0; setup invocations 0; end marker `rc=0`. Run d, the proving run, is the evidence for the demo's acceptances (Build log, "ALONE run d"; stages a, b, c, d all PASS, DP-2 met). The code gate is CI at the minted head `4b0d32aa` (PR #1284; no local full gate was run): `history-policy` and `no-session-links` pass; `python` GATE fails 1 of 8 stages (pytest only; ruff, mypy, import_linter, contracts, migrate, minio and req_coverage pass), 13 failed / 5610 passed / 6 skipped, the 13 being audit-on-tree tests failing on audit-docs check 31 ("gap in the full allocation between 1636 and 1641", ids 1637-1640 unmerged); `docs` fails on the same check 31 (audit_docs, doc_id_check). A re-run after SL-1367 and SL 9916 merge is expected to clear it. The frontend workflow did not run on that head (path-filtered).
+
+### Audit
+
+Written by the auditor (`auditor-sl1526`), 2026-10-11, over `origin/main...e24b52d0` (the head named final by the lead was `693c10d5`; `e24b52d0` is one LG-only line on top of it, the Gate section's run-d stage rcs). Scope derived from `PL-1525` Acceptance 1-11 and its Write set first, with `PL-1577` and the rulings of `to-lead.md` 11:39:18 to 19:36:01 BST as amendments, then evidenced from the diff, the tests' asserts and run d (`~/gi-pricing-plan.local/scratch/sl1526-alone/out-2026-10-11e/`). Read-only; no test was run by the auditor. The verdicts below are proposals; the lead issues them.
+
+| # | PL-1525 Acceptance | Result | Evidence |
+|---|---|---|---|
+| 1 | One table per rateable Factor (FR-230) | MET | `backend/tests/test_demo_rating_evidence.py::test_the_seed_seeds_one_table_per_rateable_factor` asserts the slug, `seeded_from.model_ref` and each key's `factor_ref`. The slug rule `_` to `-` is a lead-accepted deviation (Build log). |
+| 2 | Rating Version pins algorithm and every table (FR-237) | MET | `test_the_demo_rating_version_pins_every_seeded_table`: `pins.rate_tables` equals the seeded refs, `pins.models` equals the GLM, a `rating.compile` Job succeeded, the version is approved. |
+| 3 | Premium is the GLM's, to the penny | MET | The CI test scores three contexts against a Decimal oracle (`_expected_minor`, from the estimates, not the bundle). Run d stage c, the real fit: goldens 12870 / 22757 / 22752, diff 0. `model.py:demo_golden_cases` takes expected values from `glm_premium_minor(fit.coefficients, ...)`, never from the bundle. |
+| 4 | Reads within consumes, with broken-input proof | MET | `backend/tests/test_fremtpl2_algorithm.py`: `test_the_demo_algorithm_reads_only_what_it_declares`, `test_the_reads_check_refuses_an_undeclared_read`, `test_a_predicate_that_agrees_with_itself_is_not_the_oracle` (the 21:43:24 independence condition). |
+| 5 | No decimal output | MET | `test_the_demo_algorithm_declares_no_decimal_output`. |
+| 6 | Regression evidence is real | AMENDED by 19:07:08 | The goldens are non-circular (asserted equal to the oracle, three distinct values). The monotone property is dropped by the ruling; the suite declares `no-null-output` and `premium-bounded`; `test_the_declared_properties_are_fixed_and_read_no_fit`. Run d: replay `overall=pass`, 25 cases each. |
+| 7 | Spike S1 claims (a)(b)(c) | MET | `test_the_reads_extractor_agrees_with_the_engine`, `test_the_cross_check_refuses_a_planted_mismatch`; outputs in the Build log. |
+| 8 | The demo still runs | AMENDED by 19:36:01 | Runs the FULL seed (PL-1577 DP-1). Run d stage a rc 0, banner at 102.8 s. The seed prints "priced from the approved GLM" and the base-premium simplification label (`demo.log`:71-72). |
+| 9 | The gate | CARRIED | Run d stages rc 0 (`stamps.tsv`; the Gate section's rc list matches). CI at `4b0d32aa`: `history-policy` pass; `python` 1 of 8 stages failed (pytest only), 13 `FAILED tests/...` lines, all audit-on-tree tests failing on check 31 "gap in the full allocation between 1636 and 1641" (44 log hits), ids 1637-1640 unmerged; `docs` fails on the same check (`audit_docs`, `doc_id_check`); `frontend` not triggered (path filter). `693c10d5` and `e24b52d0` were still running when read. It clears when #1282 and #1283 merge and this branch merges main; the minted-head result on that merge head is the evidence, not yet in hand. |
+| 10 | Scope held | MET | `git diff --name-only origin/main...e24b52d0` is 13 files: all within the PL-1525 Write set, PL-1577 Tasks 1-2, the 21:55:37 ruling's WF-699 :30 amendment, the plan and roadmap activation lines, and `docs/INDEX.md`. No `backend/src`, `packages`, `frontend` or `scripts/demo.py`. |
+| 11 | The refit is visible | MET at `693c10d5` | (a) the three saved Bandings with ids, versions, boundaries and labels agree with `demo.log`:58-60; (b) the base-vs-slice table agrees with `wrapper.out` FITCOL lines (deviance 166257.17 / 165508.08, AIC 218476.999 / 217745.92, 7 factors each, same rows proven). Recorded in the Build log after the lead's fix-before-close verdict (20:14:10). The PR body half of 11 is not checked here. |
+
+**Closing acts.** working id 9966 is minted as LG-1641 (`status: closed`); `SL-1526` is `closed` in `docs/roadmap.md`; `PL-1525` and `PL-1577` stay `active` (their lifecycle has no `closed`). Both match the lead's instruction.
+
+**Observations, none a gap.**
+1. `veh_power` Banding labels `4-4` and `5-5` are cosmetic (the LG says so). Proposed verdict: delivered; no action.
+2. Acceptance 3's CI test runs on a synthetic fit; the real-fit proof is run d only, and `test_the_seed_reruns_against_a_seeded_database` skips without the ARFF. Proposed verdict: delivered, evidenced by run d; no FD.
+3. The platform defect behind the degenerate-fit refusal is already filed as FD 9702 (D13 batch, owner WK-1178); not this slice's.
+
+**Requirements without evidence.** None found against the PL-1525 id list: FR-212, FR-213, FR-226, FR-230, FR-237, FR-240, FR-246, FR-257, FR-260, FR-261 (`03`), FR-97, FR-101 (`02`), FR-440 (`07`) each map to an item above. `scripts/scope-audit.py` was not run; the requirement set was taken from PL-1525 §Requirement coverage, not recollected.
+
+**Proposed verdict: CLEAN, with Acceptance 9 CARRIED to the minted-head CI after the merge of main.**
+
+Lead verdict (team-lead, from-lead 2026-10-11 20:37:24 BST): CLEAN; no FD; Acc 9 discharged by green CI at the merge head.
+
+### Build log
+
+- 2026-10-10 21:4x — Task 0. Base `31b88780`. Premise moved: P6 (`pricing_core/rating/references.py:referenced_names` now exists, SL-1536 `e4753e47`); reported to the lead, ruling awaited.
+- Task 1, part 1 — red: `uv run pytest -q backend/tests/test_fremtpl2_algorithm.py` → collection error `FileNotFoundError: …/examples/fremtpl2/algorithm.py`; green after `algorithm.py`: 7 passed (one first-run failure was the test's own expectation of the input set, fixed). Commit `1f789d57`.
+- Deviations, both ACCEPTED by the lead (message of 2026-10-10, after the 21:43:24 entry) as implementation choices within PL-1525: (1) rate-table slugs forbid `_` (`packages/model-schema/src/model_schema/refs.py:36`, `_SLUG = r"[a-z0-9][a-z0-9-]{1,62}"`; only the Factor grammar at `:40` admits `_`), so a table slug is `fremtpl2-<factor slug with _ → ->`, not `fremtpl2-<factor slug>`; (2) banded Factor slugs are `driv_age_band`, `veh_age_band`, `veh_power_band`, because a step's produced name may not equal its raw input's name.
+- P6 RULED (A), `to-lead.md` "2026-10-10 21:43:24 BST" item B: Acceptance 4 and 7 import `referenced_names` (`packages/pricing-core/src/pricing_core/rating/references.py:38`), with no hand-copied predicate. Independence condition, quoted: "besides the planted-mismatch case (a step reading a name outside its consumes must FAIL the check, shown red), one step's expected reads set is written out literally in the test, so a wrong predicate cannot pass by agreeing with itself." Met by `test_the_reads_check_refuses_an_undeclared_read` (one name dropped from `s_premium.consumes` → exactly `{"s_premium": {"rel_veh_gas"}}`), `test_the_cross_check_refuses_a_planted_mismatch` (both directions, one failure each, naming the name) and `test_a_predicate_that_agrees_with_itself_is_not_the_oracle` (`s_premium`'s eight reads, `s_band_driv_age_band`, `s_t_veh_gas` and `s_base` written out literally). The plan's wording departure ("FD-1374's predicate, not Task 1A's code") is the lead's dispatch delta.
+- Task 1, part 2 — Acceptance 4 and 7 (a)(b)(c): 12 passed in `backend/tests/test_fremtpl2_algorithm.py` (small-test slot). One first-run failure: the edge claim was written as equality, but an `output` step only declares `consumes` and evaluates nothing, so it is now "reads add no edge the declaration lacks". Per-step read sets printed by the test (`-s`): e.g. `s_premium ['base_premium_minor', 'rel_area', 'rel_driv_age_band', 'rel_region', 'rel_veh_age_band', 'rel_veh_brand', 'rel_veh_gas', 'rel_veh_power_band']`; the cross-check printed `[]` failures for all 12 evaluated strings; no `as_at` string exists ("predicate only": none). 0 undeclared reads, so 0 added edges and 0 added cycles.
+- Task 2 (PL-1577 part), red: `uv run pytest -q examples/fremtpl2/test_seed.py` → `ImportError: cannot import name 'PORTFOLIO_ROWS' from 'seed'`; then green after the constant, with one expectation of my own corrected (`ids[-1] == "39999"`: `step = height // rows` = 2 over 50 001 rows, and `head(rows)` of that stride ends at policy 39 999, so the sample never reaches the last 10 002 rows: 8 passed, 1 skipped).
+- **Sample vs book (PL-1577 Acceptance 7; measured 2026-10-10 with a one-off polars script over the sha256-pinned book, `build_csv(None)` vs `build_csv(20000)`, `exposure_years <= 1.05`):** the sampler is deterministic (two calls, same `IDpol` list: True). Raw rows 678 013 book / 20 000 sample; after the v2 recipe 677 442 / **19 979** (so `PORTFOLIO_VALIDATED_ROWS = 19_979`, 21 policies dropped; to be confirmed by the seed's own profile row count at the proving run). Exposure mean 0.5282 book / 0.5332 sample. Claim frequency (claims / exposure) **0.1008 book / 0.1060 sample (+5.2 %)**; claims per policy 0.0532 / 0.0565. Region share, max absolute difference over 22 regions 0.75 pp (R24 0.2370 / 0.2446; R11 0.1029 / 0.0980). Vehicle-age bands 0-2 / 3-9 / 10+: book 27.7 % / 39.2 % / 33.1 %, sample 26.1 % / 39.4 % / 34.5 % (max difference 1.7 pp). Cause check: `step` is 33 on the real file, so the sample ends at row 660 000 of 678 013; the head 660 000 rows have frequency 0.1014 and the tail 18 013 rows 0.0613 (the book 0.1007), so the truncation explains about 0.0007 of the 0.0052 gap and the rest reads as sampling noise (about 1 130 claims in the sample, standard error about 3 %). **Reported to the lead before the demo text is final**, as the 00:34:03 entry requires if any column differs materially; the frequency is the one that does.
+- Task 2 (examples/), code: `model.py` (banded Factors `driv_age_band`/`veh_age_band`/`veh_power_band` on 5 quantile Bandings proposed by `transform_service.propose_banding_for_version`; `create_demo_bandings`, `seed_demo_rate_tables`, `demo_base_premium`, `demo_golden_cases`, `monotone_property`, the real `author_demo_rating_evidence` and `create_approved_rating_version`); `seed.py` (the portfolio sample as its own Dataset Version, ingested through the v2 recipe, validated and promoted, its id and row count written into `last-seed.json`, the exact count asserted); `algorithm.py` (`glm_premium_minor`). Offline preview of the Bandings the proposal gives on the full cleaned book (pure `propose_banding`, quantile, 5 bands): `driv_age` (18, 32, 40, 48, 57, 100) labels 18-31 / 32-39 / 40-47 / 48-56 / 57+; `veh_age` (0, 2, 4, 8, 12, 100) labels 0-1 / 2-3 / 4-7 / 8-11 / 12+; `veh_power` (4, 5, 6, 7, 8, 15) labels 4-4 / 5-5 / 6-6 / 7-7 / 8+. The saved Bandings' own ids and edges are printed by the seed and recorded here at the proving run.
+- Task 2/3 DB tests (`backend/tests/test_demo_rating_evidence.py`: one table per Factor, the pins, the GLM premium to the penny with non-circular golden quotes and the monotone property) are written and collect (3 tests); they need the DB stack and wait for my gate slot. Red-first for them is shown at that slot on the base tree (`origin/main` has no `seed_demo_rate_tables`), then green at the head.
+- **Sampler fix, `to-lead.md` "2026-10-10 21:55:37 BST — SL-1526 sample-vs-book: NOT material; the tail skip IS fixed in-slice, WITH WF-699 :30's dated amendment in the same commit"** (items 1–5). Not material (+5.2 % was 1.7 standard errors); fixed in this slice: `seed.py:build_csv` takes the evenly spaced integer indices `[i * N // n for i in range(n)]` (all rows when `n >= N`), replacing `gather_every(height // rows)`; WF-699 :30 carries the dated amendment with the old text struck, in the same commit. PL-1577 is frozen (its DP-2 names the every-nth-row rule); this entry records the change. Red first: `uv run pytest -q examples/fremtpl2/test_seed.py` → `AssertionError: assert ['1', '3', '5'...] == ['1', '3', '6'...]` ("At index 2 diff: '5' != '6'"; the old stride against the re-derived indices); green: 8 passed, 1 skipped. No seeded golden quote moves: the golden quotes are the GLM's premiums, the GLM is fitted on the full book (or `--rows`) and the sample is only the dislocation portfolio, so no price changes.
+- **Re-measure after the fix** (same script and book as above, the sample is deterministic: True): after the v2 recipe 677 442 book / **19 985** sample (15 dropped; `PORTFOLIO_VALIDATED_ROWS` is now 19_985). Exposure mean 0.5282 book / 0.5276 sample. Claim frequency **0.1008 book / 0.0957 sample (-5.1 %)** on 1 009 sample claims (relative SE about 3.1 %, so 1.6 SE; |gap| < 6 %, no STOP). Claims per policy 0.0532 / 0.0505. Region share max absolute gap **0.24 pp** (was 0.75). Vehicle-age bands 0-2 / 3-9 / 10+: book 27.7 / 39.2 / 33.1 %, sample 27.3 / 39.3 / 33.4 % (max gap **0.44 pp**, was 1.7). The README quotes the measured -5.1 %. The sample now spans the book; the remaining frequency gap is sampling noise of a different draw (the sign flipped), as the SE says.
+
+- **Gate fixes after the full gate at `e00c71c1` (classified by the lead, `from-lead` "2026-10-11 00:42:22 BST"; item numbers are that classification's).** #2: the monotone property's name carried the banded column's `_` (`premium-monotone-in-veh_age_band`-style), which `RegressionSuiteContent`'s property-name slug refuses; it is now `column.replace("_", "-")`. Red first: `uv run pytest -q backend/tests/test_demo_rating_evidence.py -k monotone_property_name` with the replace removed → `1 failed` (`ValidationError … RegressionSuiteContent`); with it → `1 passed` (new pure test, no DB). #3: `uv run mypy` 7 errors in `examples/fremtpl2/model.py` (:507 untyped lambda call, :540–541 `float | None` comparisons) → typed `picks` as `Callable[[Sequence[RelativityLevel]], RelativityLevel]` and narrowed the relativity series; `mypy` 0 and `ruff check .` 0 on the whole tree.
+
+- **In-process counterexample, 2026-10-11 ~10:38 (the maintainer's narrow exception, `to-lead.md` "2026-10-11 11:36:45 BST — EXCEPTION GRANTED (narrow, named): SL-1526's counterexample computed IN-PROCESS beside SL-1529's gate"; one process, no DB, no pytest).** Command: `timeout 180 nice -n 19 ionice -c3 uv run --directory <sl-1526 worktree> python ~/gi-pricing-plan.local/handover/sl1526-regate/inproc.py` at head `dc11d9d1`, load1 6.69 before / 6.42 after, rc 0, 5 s. The script compiles the demo algorithm (`test_fremtpl2_algorithm._full_algorithm`) with seven rows-tables built from the DB test's `_ESTIMATES`, then runs `pricing_core.rating.properties` over the three golden bases and over `generate_contexts(contract, 25, SPLIT_SEED)`, the suite's own generation. **Finding:** the three golden bases pass the monotone `veh_age` increasing property, `no_null_output` and `premium_bounded` (premiums 25000, 27629, 32101 from `veh_age` 0, 7, 15 on the first base). **All 25 generated contexts fail**, because the generator draws arbitrary text for the five categorical inputs (`veh_brand`, `veh_gas`, `area`, `region`, ...): `testing.py:138-140` samples a declared `domain` only for an `enum` input, and `algorithm.py` declares them `string` with a `domain`. A table lookup on a value outside the table (`on_miss: error`) is refused, the scorer returns `None`, and every property treats `None` as a failure (monotone `broken_at=(v, v)`). So the red is not a non-monotone premium and not the slug fix; it is the input contract's type. Output, verbatim:
+
+```text
+contract veh_age: [('veh_age', 0, 30)]
+base=base-levels inputs={'bonus_malus': 100, 'driv_age': 18, 'veh_age': 0, 'veh_power': 4, 'veh_brand': 'B1', 'veh_gas': 'Diesel', 'area': 'A', 'region': 'R11'}
+  grid/premiums=[(0, ('quoted', 25000)), (7, ('quoted', 27629)), (9, ('quoted', 27629)), (15, ('quoted', 32101)), (22, ('quoted', 32101)), (23, ('quoted', 32101)), (28, ('quoted', 32101)), (30, ('quoted', 32101))]
+  monotone increasing veh_age: broken_at=None quoted=8
+  no_null_output: holds=True
+  premium_bounded: holds=True
+base=first-non-base-levels inputs={'bonus_malus': 100, 'driv_age': 25, 'veh_age': 3, 'veh_power': 6, 'veh_brand': 'B2', 'veh_gas': 'Regular', 'area': 'B', 'region': 'R24'}
+  grid/premiums=[(0, ('quoted', 25000)), (7, ('quoted', 27629)), (9, ('quoted', 27629)), (15, ('quoted', 32101)), (22, ('quoted', 32101)), (23, ('quoted', 32101)), (28, ('quoted', 32101)), (30, ('quoted', 32101))]
+  monotone increasing veh_age: broken_at=None quoted=8
+  no_null_output: holds=True
+  premium_bounded: holds=True
+base=last-levels inputs={'bonus_malus': 100, 'driv_age': 40, 'veh_age': 10, 'veh_power': 8, 'veh_brand': 'B2', 'veh_gas': 'Regular', 'area': 'B', 'region': 'R24'}
+  grid/premiums=[(0, ('quoted', 35477)), (7, ('quoted', 39208)), (9, ('quoted', 39208)), (15, ('quoted', 45553)), (22, ('quoted', 45553)), (23, ('quoted', 45553)), (28, ('quoted', 45553)), (30, ('quoted', 45553))]
+  monotone increasing veh_age: broken_at=None quoted=8
+  no_null_output: holds=True
+  premium_bounded: holds=True
+
+== generated contexts: 25 under seed 20260827 (the suite's generation) ==
+case 0 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'driv_age': 18, 'veh_age': 0, 'veh_power': 4, 'veh_brand': '0', 'veh_gas': '0', 'area': '0', 'region': '0', 'bonus_malus': 50}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 1 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'driv_age': 30, 'veh_age': 0, 'veh_power': 4, 'veh_brand': '0', 'veh_gas': '0', 'area': '0', 'region': '0', 'bonus_malus': 50}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 2 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'region': '0Bsw8l', 'veh_brand': 'eFgat', 'veh_gas': 'luY2', 'driv_age': 30, 'area': 'R', 'bonus_malus': 91, 'veh_power': 8, 'veh_age': 12}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 3 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'driv_age': 33, 'area': 'ot7', 'veh_power': 5, 'veh_gas': '4HRtaaKZn2', 'region': 'mTl5G', 'veh_age': 6, 'bonus_malus': 91, 'veh_brand': 'ZVTGSHZ2I9'}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 4 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'bonus_malus': 173, 'veh_age': 12, 'veh_gas': 'iigY', 'veh_brand': 'X0jM', 'area': 'LT2AIBpoMn', 'region': 'YVcdSnzOz1a1', 'veh_power': 4, 'driv_age': 67}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 5 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_age': 3, 'veh_power': 12, 'area': 'gFe', 'driv_age': 65, 'region': 'ErWRGh0ANsXu', 'veh_gas': 'Gp', 'bonus_malus': 171, 'veh_brand': 'Z'}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 6 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'area': 'R', 'region': 'QJ', 'veh_gas': 'ptdQMmmuVStE', 'bonus_malus': 77, 'driv_age': 71, 'veh_power': 13, 'veh_brand': 'EUCg', 'veh_age': 7}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 7 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'bonus_malus': 170, 'area': 'czS', 'veh_power': 7, 'veh_age': 1, 'region': 'xyLd', 'driv_age': 51, 'veh_gas': 'a', 'veh_brand': 'Z'}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 8 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_brand': 'FKOCMS', 'bonus_malus': 58, 'area': 'X1jhqm8TA', 'region': 'gaaahm2VkkUD', 'veh_age': 29, 'veh_power': 11, 'veh_gas': 'hy', 'driv_age': 86}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 9 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'area': 'qkxKf5Tf', 'veh_brand': 'A', 'driv_age': 59, 'veh_age': 28, 'veh_gas': 'LPj9LBD', 'bonus_malus': 100, 'region': 'GS', 'veh_power': 4}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 10 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_brand': 'kFM', 'region': 'HG', 'driv_age': 60, 'area': 'h8Ug6f', 'veh_gas': 'atiY', 'veh_age': 14, 'veh_power': 5, 'bonus_malus': 189}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 11 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_brand': 'kFM', 'region': 'HG', 'driv_age': 60, 'area': 'h8Ug6f', 'veh_gas': 'kFM', 'veh_age': 14, 'veh_power': 5, 'bonus_malus': 189}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 12 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_brand': 'kFM', 'region': 'HG', 'driv_age': 60, 'area': 'h8Ug6f', 'veh_gas': 'kFM', 'veh_age': 14, 'veh_power': 4, 'bonus_malus': 189}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 13 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_brand': 'kFM', 'region': 'HG', 'driv_age': 60, 'area': 'h8Ug6f', 'veh_gas': 'kFM', 'veh_age': 14, 'veh_power': 4, 'bonus_malus': 50}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 14 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_brand': 'kFM', 'region': 'HG', 'driv_age': 60, 'area': 'h8Ug6f', 'veh_gas': 'kFM', 'veh_age': 14, 'veh_power': 14, 'bonus_malus': 50}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 15 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_brand': 'kFM', 'region': 'HG', 'driv_age': 18, 'area': 'h8Ug6f', 'veh_gas': 'kFM', 'veh_age': 14, 'veh_power': 14, 'bonus_malus': 50}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 16 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_brand': 'kFM', 'region': 'HG', 'driv_age': 18, 'area': 'h8Ug6f', 'veh_gas': 'HG', 'veh_age': 14, 'veh_power': 14, 'bonus_malus': 50}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 17 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_power': 12, 'region': 'get', 'veh_gas': 'Permission', 'driv_age': 49, 'bonus_malus': 176, 'veh_age': 19, 'veh_brand': '0', 'area': 'ewzdY6'}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 18 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_power': 12, 'region': 'get', 'veh_gas': 'Permission', 'driv_age': 49, 'bonus_malus': 176, 'veh_age': 0, 'veh_brand': '0', 'area': 'ewzdY6'}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 19 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_power': 4, 'region': 'get', 'veh_gas': 'Permission', 'driv_age': 49, 'bonus_malus': 176, 'veh_age': 0, 'veh_brand': '0', 'area': 'ewzdY6'}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 20 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_power': 4, 'region': 'get', 'veh_gas': 'Permission', 'driv_age': 49, 'bonus_malus': 50, 'veh_age': 0, 'veh_brand': '0', 'area': 'ewzdY6'}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 21 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_power': 4, 'region': 'get', 'veh_gas': 'Permission', 'driv_age': 49, 'bonus_malus': 50, 'veh_age': 0, 'veh_brand': '0', 'area': 'get'}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 22 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_power': 4, 'region': 'get', 'veh_gas': 'Permission', 'driv_age': 18, 'bonus_malus': 50, 'veh_age': 0, 'veh_brand': '0', 'area': 'get'}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 23 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_power': 4, 'region': 'get', 'veh_gas': 'Permission', 'driv_age': 18, 'bonus_malus': 50, 'veh_age': 18, 'veh_brand': '0', 'area': 'get'}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+case 24 FAILS monotone_broken_at=(0, 0) no_null=False bounded=False
+  base={'veh_age': 9, 'veh_brand': '1fz', 'area': 'lqqXMc5', 'region': 'r8', 'veh_gas': '4VNuXsHJNN', 'veh_power': 12, 'driv_age': 54, 'bonus_malus': 100}
+  grid/premiums=[(0, None), (7, None), (9, None), (15, None), (22, None), (23, None), (28, None), (30, None)]
+done
+```
+
+- **The enum fix (`86e6a645`; GO `from-lead` after the maintainer's "2026-10-11 11:4x BST — SL-1526 cause …", option 1, conditions (a)-(d)).** `examples/fremtpl2/algorithm.py:143` declares the categorical inputs `"type": "enum"` (was `"string"`). Red first: `uv run pytest -q backend/tests/test_fremtpl2_algorithm.py -k generated_categorical` with `string` → `AssertionError: assert {('area', '0'...), ('region', 'GS'), ('region', 'QJ'), ...} == set()` (generated values outside the declared domains); green is shown at the next slot (I ran that one red test under `small-test` while SL-1529 held gate-1, which the addendum's rule 3 forbids; disclosed to the lead). The in-process script (same bounded form, `timeout 180 nice -n 19 ionice -c3`, load1 ≤ 3.1, no DB, no pytest) was rebuilt on the DB test's own base (`_BASE_MINOR`) and run before and after, the "before" by reverting that one line in the worktree. Output, verbatim.
+  - **(a) golden prices unchanged.** Before (`string`):
+```text
+load average: 2.97, 4.29, 4.36
+golden base-levels: scored=200000 expected=200000
+golden first-non-base-levels: scored=221034 expected=221034
+golden last-levels: scored=364424 expected=364424
+generated contexts passing all three properties: 0 of 25
+bundle content_hash: sha256:c4e2d1a6d73a65b41f0e2471c61e9a2ad164cf5657e21e64a289863cc76d44d5
+```
+  After (`enum`):
+```text
+load average: 2.89, 4.25, 4.35
+golden base-levels: scored=200000 expected=200000
+golden first-non-base-levels: scored=221034 expected=221034
+golden last-levels: scored=364424 expected=364424
+generated contexts passing all three properties: 25 of 25
+bundle content_hash: sha256:74730d2632e8768893b21c49e4d27319f2818c8245a088ed733f0548fa09f5d6
+```
+  Each golden quote scores to the independent expectation both ways: base-levels 200000 → 200000, first-non-base-levels 221034 → 221034, last-levels 364424 → 364424. The generated contexts passing all three properties go from 0 of 25 to 25 of 25.
+  - **(b) pinned bundle hash.** The slice pins none: no test or file in `git diff origin/main...HEAD` holds a bundle hash, and `examples/fremtpl2/algorithm.py` does not exist on `origin/main` (`git cat-file -e origin/main:examples/fremtpl2/algorithm.py` → fatal: not in origin/main), so no hash on main can change. The in-process bundle's own `content_hash` moves, as the lead predicted (the input contract is hashed): `sha256:c4e2d1a6…` → `sha256:74730d26…` (in-process, synthetic tables).
+  - **(c) behaviour change**, probed in-process with `veh_brand="ZZZ"` on the base context (`P._score_context_sync`): before `CodedError RATE_TABLE_MISS: the engine failed evaluating step 's_premium' (FR-255); an on_miss='error' step it consumes most likely found no matching row`; after `CodedError INPUT_CONTRACT_VIOLATION: input 'veh_brand' is not in ['B1', 'B2']`. The engine code is measured; the HTTP status of that code is not measured here.
+  - **(d)** 25 of 25 generated contexts plus the three goldens pass (above).
+
+- **Condition (b) does not apply, recorded at the lead's instruction.** The slice has no "own pinned hash": no test or file in `git diff origin/main...HEAD` pins a bundle hash, and `examples/fremtpl2/algorithm.py` is not on `origin/main`, so no hash on main changes. The only hash that moved is the in-process bundle's own `content_hash`, `sha256:c4e2d1a6d73a65b41f0e2471c61e9a2ad164cf5657e21e64a289863cc76d44d5` → `sha256:74730d2632e8768893b21c49e4d27319f2818c8245a088ed733f0548fa09f5d6` (synthetic tables).
+- **Re-slot script:** `~/gi-pricing-plan.local/handover/sl1526-regate/slot3.sh`, head guard `bbe74c34`, the standing PREFLIGHT (alembic upgrade head rc 0, exactly one head, postgres/redis/minio healthy), then the 3 DB tests, `test_fremtpl2_algorithm.py` (with the new categorical-domain test) and `test_seed.py` at full `-v` output, whole-tree mypy, ruff and DagDesigner alone; logs in `sl1526-regate/logs/`.
+
+- **Re-gate at `b7c54bd5` (the HTTP-422 test added), 2026-10-11 14:15:44-14:16:36 BST, gate-1, `slot3.sh` (head guard `b7c54bd5`), load1 7.80 at acquire.** Preflight ok (alembic upgrade head rc 0, 1 head, postgres/redis/minio healthy). Logs: `~/gi-pricing-plan.local/handover/sl1526-regate/logs/`, output `slot3.out`, end marker `end 2026-10-11T14:16:36+01:00 rc=1`.
+
+  | Stage | rc | Result |
+  |---|---|---|
+  | db_tests (`test_demo_rating_evidence.py`) | 0 | 5 passed, 9.97s; `test_a_categorical_outside_its_declared_domain_is_a_422_through_the_api` PASSED: base quote 200, `veh_brand="ZZZ"` 422, code `INPUT_CONTRACT_VIOLATION`, detail names `veh_brand` |
+  | red_control | 1 | "UNEXPECTED" by the script; ruled the setup-red below |
+  | algorithm_and_seed | 0 | 21 passed, 1 skipped |
+  | mypy | 0 | 234 source files |
+  | ruff | 0 | |
+  | dagdesigner_alone | 0 | |
+
+  **red_control.** The same test against the parent's `string` `algorithm.py` (`86e6a645^`, via `GIP_FREMTPL2_EXAMPLE_DIR`) fails in SETUP, before any request: `red_control.log:141` `E           RuntimeError: demo regression Job failed`, `:143` `.../red-example/model.py:661: RuntimeError`, `:151` job handler failed with `"code":"PROPERTY_ASSERTION_FAILED"` (`rating_handlers.py:210`). The script expected a red at the status assert and got one at setup, so it marked the stage UNEXPECTED. **The property is not named in the log** (the code is sanitised); the suite's properties are `no-null-output`, `premium-bounded` and `premium-monotone-in-veh-age`, and the link to this slice's defect rests on the separate in-process measurement above (`string` 0 of 25 generated contexts pass all three, `enum` 25 of 25). **The HTTP-status contrast on the parent was not measured**: the parent cannot reach the request, and a status-only contrast would not discriminate (the parent most likely answers 422 with `RATE_TABLE_MISS`, unmeasured); what discriminates is the head's 422 carrying `INPUT_CONTRACT_VIOLATION` and naming `veh_brand`. **Only the head-guard abort of the script's PREFLIGHT is proven** (a wrong expected head: `HEAD GUARD REFUSED`, `end ... rc=97`); the alembic and health aborts (exits 93-95) were not exercised.
+  **Ruling (a) accepted, (b) rejected**: `to-lead.md` "2026-10-11 14:19:08 BST — SL-1526 re-gate @b7c54bd5 GREEN; red_control setup-red: (a) ACCEPTED; next its ALONE window" - the parent fails in setup from the very defect this slice fixes, so it cannot reach the assert, and that is the red for condition (c); rc 1 is that setup-red, not a harness fault. (b), a regression-gate bypass so the parent reaches the request, is not run.
+
+- **Defect fix, 2026-10-11 (the maintainer's ruling, `to-lead.md` "2026-10-11 18:59:23 BST" item 1): the demo suite's properties are fixed declarations, read from no fit.** `monotone_property(fit, bandings)` chose a `monotone` property from the fit it then checked (a property chosen from the fit cannot fail); it is deleted. `examples/fremtpl2/model.py` now has `declared_properties()` (no parameters: `no-null-output`, `premium-bounded`), and `author_demo_rating_evidence` lost its `monotone` parameter. **No monotonicity is declared for `veh_age`**, and the fitted relativities are the evidence why (`out-2026-10-11b/wrapper.out`, "fitted relativities, factor veh_age_band", the real GLM fit; base `12+`): `0-1` 2.1436, `2-3` 1.0990, `4-7` 1.1016, `8-11` 1.3526, `12+` 1.0 (base). They are not monotone in the band order. Red first: `backend/tests/test_demo_rating_evidence.py::test_the_declared_properties_do_not_depend_on_the_fit` against `386058fc` (two different fits, one rising and one jagged, given to `monotone_property`) failed with `AssertionError` (the two property lists differ); replaced by `test_the_declared_properties_are_fixed_and_read_no_fit` (green; `ruff` 0, `mypy` 0 over 234 files). The DB test's `premium-monotone-in-veh-age` assertion and the name-slug test went with the function.
+
+- **Slice defect, found at the ALONE stage d on 2026-10-11 (ruled by the maintainer, `to-lead.md` "2026-10-11 19:05:59 BST": the SPEC governs, so the SEED is wrong; no separate FD, because main is unaffected): the seeded portfolio had no `quote_id`.** `dislocation.run` ended `JOB_HANDLER_FAILED` / `PortfolioFrameError` (stage d, `out-2026-10-11b/d_dislocation.log`); read-only in-process rebuild of the handler's frame against `gipricing_sl1526_stage_d` printed the unsanitised message `portfolio column 'quote_id' is missing`, raised at `packages/pricing-core/src/pricing_core/rating/analysis.py:116` (`read_portfolio`), the portfolio (19 985 x 13) holding `policy_id` and no `quote_id`; `03` §4.8 requires a unique, non-null string `quote_id`. **Fix:** `examples/fremtpl2/seed.py` `build_portfolio_csv()` returns the 20 000-row sample plus a `quote_id` column equal to `IDpol` (string, as the spec declares it; no recipe step copies a column, and `quote_id` is in neither the rename map nor the cast); the portfolio ingest uses it. `read_portfolio` and the spec are unchanged. **Red first:** `examples/fremtpl2/test_seed.py::test_the_seeded_portfolio_satisfies_the_dislocation_frame` (the seed's CSV through `pricing_core.data.prepare.apply_recipe` with the seed's own recipe, then `read_portfolio`; asserts `quote_id` unique, non-null, a string and equal to `policy_id`) against the unfixed seed: `PortfolioFrameError: portfolio column 'quote_id' is missing`; after the fix, passes (27 passed with the neighbouring seed, demo-evidence and algorithm tests, `ruff` 0, `mypy` 0 over 234 files). **Effects.** (1) The portfolio Dataset Version's content hash moves (one more column). (2) The goldens and the 11(b) fit-statistics table are **unchanged by construction**: the model is fitted on the book ingested from `build_csv`, which this change does not touch, and the golden quotes are computed from that fit's coefficients; the portfolio is read by nothing but `dislocation.run`. The same test pins it: the portfolio CSV with `quote_id` dropped equals `build_csv` of the same rows, and `build_csv` carries no `quote_id`. A re-derivation of the 11(b) table was not run (it needs the full seed); the SAME ROWS comparison for it is the evidence branch's, fixed at `36908197`. **Noted, not caused here:** `test_the_seed_reruns_against_a_seeded_database` (skipped without the fetched ARFF files, so CI skips it) fails with `GOLDEN_QUOTE_MISMATCH` in the regression Job on a 2 000-row seed; it fails the same with `model.py` at `386058fc`, so it is not this change.
+
+- **Monotone proposal "none" ACCEPTED, 2026-10-11 (the maintainer, `to-lead.md` "2026-10-11 19:07:08 BST").** The demo suite declares only `no-null-output` and `premium-bounded`, through `declared_properties()` (`2deb3ebe`, red first). `bonus_malus` is not ratified as a monotone declaration: a raw integer input with a monotone GLM term would make the property hold by the model's form, not by anything the suite checked.
+
+- **Dated delta, 2026-10-11 (the maintainer (by delegation), `to-lead.md` "2026-10-11 19:36:01 BST" ruling (i)): Acceptance 8 runs the FULL seed, and the seed refuses a degenerate fit.** The hidden red was `examples/fremtpl2/test_seed.py::test_the_seed_reruns_against_a_seeded_database` (skipped in CI for want of the ARFF): GOLDEN_QUOTE_MISMATCH in the regression Job on a `--rows 2000` seed, identically at `386058fc`.
+  - **Diagnosis (in-process, `handover/run-small.sh`, harness `~/gi-pricing-plan.local/scratch/sl1526-small/diag_golden.py`, which spies `model.demo_golden_cases`, `pricing_core.rating.golden._score_context_sync` and `pricing_core.rating.score._reraise_engine_failure`).** Not non-determinism: two fresh-database 2,000-row seeds printed identical output (`base_minor` 6613; goldens 6613 / 1596 / 0). Not goldens pinned to another fit: `demo_golden_cases` recomputes them from each seed's own fit. At 2,000 rows `area[F]` fits to `-15.808` (relativity `1.3634832381413387e-07`; no claims in the fitting rows), so the `last-levels` golden is 0 minor units and scoring it raises `CodedError RATE_TABLE_MISS` (golden `actual_minor` None).
+  - **Per-size measurement (same harness; the minimum relativity over every level of every factor).**
+    | Seed rows | `base_minor` | min relativity (factor, level) | levels below 0.01 | levels whose Decimal renders in exponent form | result |
+    |---|---|---|---|---|---|
+    | 2,000 | 6613 | 2.8e-08 (region R43) | area F and at least 7 region levels | many | `last-levels` golden fails |
+    | 5,000 | 9434 | 6.5e-07 (region R43) | R43, R83 | 2 | seed rc 0 |
+    | 10,000 | 5697 | 2.8e-07 (region R83) | R42, R43, R74, R83 | 4 | goldens pass; regression Job fails (the property sweep scores a 1e-7 level) |
+    | 20,000 | 12590 | 2.15e-06 (region R43) | R43 | 0 | seed rc 0 |
+    | full 678,013 | 12870 | 0.707 (region R83) | none | 0 | seed rc 0; goldens 12870 / 22757 / 22752 |
+    Only the full book is clean. A sub-1e-6 relativity prints as `1.36E-7` (uppercase exponent) from `rate_tables/operations.py:160`, which `rating/runtime.py:282` pastes into the decision-table output cell; ZEN's expression parser rejects it (`zen.evaluate_expression("6613 * 1.3634832381413387E-7")` gives `parserError "Incomplete parser output"`; the lowercase `e-7` and the positional form evaluate). The engine error is `NodeError` at `s_premium`, which `score.py:524` `_reraise_engine_failure` reports as `RATE_TABLE_MISS` (the documented residual at `:546-552`). That is a platform finding, **FD 9702 (working id; rides the D13 docs batch, owner WK-1178): reachable on small fits (5,000 and 10,000 rows; at 20,000 rows `region[R43]` is just above the exponent range), absent on the full-book fit (0 of its levels render in exponent form, measured from the fit's relativities with `str(Decimal(str(relativity)))`, the exact string `operations.py:160` writes).** It is not in this slice's write set and is not touched here.
+  - **Acceptance 8 moves from `--rows 20000` to the FULL seed.** The 20,000-row fit is a model the demo never uses: `PL-1577` DP-1 keeps ingestion, validation and the 7-factor GLM on the full book (`docs/plans/PL-01577-…` :72, :80) and calls `--rows 20000` a rehearsal size (:107, the §Size row). `PL-1525` is frozen and not edited. DP-2's object is unchanged: the 19,985-row portfolio Dataset Version (the R6 sample), which stage d dislocates.
+  - **The fix: the seed refuses a degenerate fit by name** (`33fdfc39`). `examples/fremtpl2/model.py` `refuse_degenerate_fit(fit.relativities)` runs in `seed_demo_rate_tables` right after the fit is loaded and raises `DegenerateFitError` naming every `factor[level] = value` below `RELATIVITY_FLOOR = 0.01`. **Floor only.** The ruling named two limbs, a level with zero claims in the fitting rows, or a relativity below the floor; the zero-claims limb needs the training frame, which `RelativityLevel` (`model_schema/modelling.py:1530`) does not carry (it holds `exposure`, not claim counts), and every zero-claims level observed above is far below the floor (1e-6 to 1e-8). The floor is a pricing criterion: below 0.01 the GLM says a level costs under 1% of its base, which is quasi-separation, not rating signal; the full book's levels sit at 0.707 and above.
+  - **Red first.** `test_a_degenerate_fit_is_refused_by_factor_and_level` (pure, runs in CI) and `test_a_small_seed_is_refused_for_its_degenerate_fit` (2,000 rows; asserts the refusal names `area[F]`; needs the ARFF) both fail on the parent with `ImportError: cannot import name 'DegenerateFitError' from 'model'`, and pass after (6 s; 28.7 s). `test_the_seed_reruns_against_a_seeded_database` now seeds the FULL book twice (109 s) and passes; its database setup moved to a `scratch_seed` fixture the refusal test shares. `uv run pytest -q examples/fremtpl2/test_seed.py`: 12 passed.
+  - **Reconciliation of the two sets of golden numbers.** `200000 / 221034 / 364424` (LG lines above, the enum-fix "(a) golden prices unchanged" evidence) are the SYNTHETIC test fixture's premiums, not any seed's: the probe `~/gi-pricing-plan.local/handover/sl1526-regate/inproc.py` builds its rate tables from `backend/tests/test_demo_rating_evidence.py` `_ESTIMATES` with `_BASE_MINOR = 200_000` (:69). No seed fit produces them, and nothing outside this ledger cites them. The real seeds' goldens are recomputed per fit: 2,000 rows 6613 / 1596 / 0 (refused now), 20,000 rows 12590 / 21800 / 37170, full book 12870 / 22757 / 22752. The earlier "20k fit's fixed goldens" premise was wrong: no golden is fixed across seed sizes.
+  - **Evidence for the re-queued ALONE run d** (branch `evidence/sl-1526-alone-2026-10-11`, `991387f6`): stage a seeds the full book (`demo.py` with no `--rows`), 11(b) runs on the same full rows (`rows.py` accepts `full`), stage c is unchanged, and stage d is unchanged in object (the 19,985-row portfolio), now printing the portfolio's row count and proving `quote_id` present, non-null and unique before `dislocation.run`. Smoke-checked on a scratch seed: `PORTFOLIO … rows=19985 quote_id present=True nulls=0 distinct=19985 unique=True`, the Job succeeded in 121.7 s.
+
+- **ALONE run d, 2026-10-11 19:53:23-19:58:14 BST (the proving run; lead's report `from-lead` "2026-10-11 19:59:05 BST — SL-1526 run d: ALL STAGES PASS; DP-2 MET"; output `~/gi-pricing-plan.local/scratch/sl1526-alone/out-2026-10-11e/`, end marker `end 2026-10-11T19:58:14+01:00 rc=0`).** Slice head `74b093a9`. The script is the evidence branch `evidence/sl-1526-alone-2026-10-11` at `991387f6`, committed 2026-10-11T18:46:31Z (19:46:31 BST), **before the run started (19:53:23 BST)**; the four files run (`run.sh`, `driver.py`, `rows.py`, `dislocation.py`) are byte-identical to the committed blobs (`git hash-object` of the scratch copy equals `git rev-parse 991387f6:evidence/sl-1526-alone/<file>` for each: `b8d2938f…`, `b83890fa…`, `279e12ab…`, `4d9fe875…`). Template preflight ok; the run held all three slots; every timed invocation is stamped in `stamps.tsv` (steal 0.16-2.13 %). Figures, verbatim from the lead's report and the run's own `alone.log`/`a_demo.out`/`d_dislocation.out`:
+  | Stage | Result | Figures |
+  |---|---|---|
+  | a - Acceptance 8, the FULL seed (`scripts/demo.py`, no `--rows`) | PASS | to its banner 102.8 s (`a_demo` 103.3 s, rc 0); host process tree peak 1.25 GiB; containers peak sum 1.45 GiB; host + container SUM 2.70 GiB (an upper bound, printed not judged) |
+  | c - real GLM | PASS | approved GLM `01a12c50…` converged on 508,364 fitting rows; `veh_age_band` 0-1 1.9533, 2-3 1.1209, 4-7 1.2534, 8-11 1.2338, 12+ 1.0 (base; non-monotone, and no monotone property is declared); replay on `rating_version:fremtpl2-demo@1` (bundle `sha256:93a14b16…`) overall=pass; goldens 12870 / 22757 / 22752 (diff 0); `no-null-output` PASS (25), `premium-bounded` PASS (25); the 0.01 floor did not trip (full-book minimum relativity 0.707) |
+  | b - 11(b) fit-statistics table | VALID | "SAME ROWS: yes (csv sha256, row count and sorted-IDpol hash equal)"; base `31b88780` (dispatch tree) deviance 166257.168, AIC 218476.999; slice deviance 165508.084, AIC 217745.915; 7 factors each (slice: 3 banding + 4 identity); 508,364 rows both; base full seed 43.4 s |
+  | d - DP-2, dislocation + attribution of the portfolio | MET | portfolio Dataset Version `01a12c51…`, rows 19985, `quote_id` present, nulls 0, distinct 19985, unique True; baseline = compiled draft @2 (+1.95 %, a measurement fixture); in-process `dislocation.run` + attribution: **job wall 116.2 s (judged from the job's own `JOBWALL_DISLOCATION` line; process wall 122.7 s) against the 3600 s bound; process-tree peak RSS 0.48 GiB (largest process 0.43 GiB) against 15.5 GiB**; "DP-2 bounds met" |
+  The stage d containers peak sum is 0.79 GiB and the host tree peak plus that sum is **1.27 GiB, PROVISIONAL** (printed, not judged; in-process, not a Celery worker). **The README sentence quoting the host + container SUM (2.70 GiB for stage a, 1.27 GiB provisional for stage d) is SL-1527's**, not this slice's. Earlier attempts, for the record: **(a)** setup abort, the ARFF data not fetched; **(b)** `out-2026-10-11b`: stage d STOP `JOB_HANDLER_FAILED` / `PortfolioFrameError`, the missing `quote_id` (fixed above); **(c)** and **(d)** dequeued before they ran (no figures). Run d is the first run to pass every stage.
+
+- **Acceptance 11 recording, added at the lead's FIX-BEFORE-CLOSE verdict (`from-lead` "2026-10-11 20:14:10 BST", no FD), from run d (`out-2026-10-11e/`).**
+  **(1) 11(b), base vs slice** (the `FITCOL` lines of `wrapper.out`:121-140, copied verbatim; "SAME ROWS: yes"):
+  | | Base (dispatch tree `31b88780`) | Slice |
+  |---|---|---|
+  | model | `fremtpl2-glm-77ca8b@1` | `fremtpl2-glm-5fc222@1` |
+  | rows | 508364 | 508364 |
+  | deviance | 166257.17 (`166257.16773307766`) | 165508.08 (`165508.08377280214`) |
+  | AIC | 218476.999 (`218476.9990589372`) | 217745.92 (`217745.9150986617`) |
+  | factors | 7, all `identity` | 7: `driv_age_band`, `veh_age_band`, `veh_power_band` `banding`; `veh_brand`, `veh_gas`, `area`, `region` `identity` |
+  **(2) The saved Bandings** (`demo.log`:58-60, verbatim; the dataset version they are proposed on is `01a12c50-9ce4-766d-9f92-a21fec3fb56e`):
+  - `fremtpl2-driv-age-banding@1` (`01a12c50-a601-7f77-94ad-c62942a3b1a4`): `driv_age` quantile x5, boundaries [18.0, 32.0, 40.0, 48.0, 57.0, 100.0], labels ['18-31', '32-39', '40-47', '48-56', '57+']
+  - `fremtpl2-veh-age-banding@1` (`01a12c50-a6a2-793e-91f4-56656f6ca557`): `veh_age` quantile x5, boundaries [0.0, 2.0, 4.0, 8.0, 12.0, 100.0], labels ['0-1', '2-3', '4-7', '8-11', '12+']
+  - `fremtpl2-veh-power-banding@1` (`01a12c50-a731-7999-93d8-b96c42f96c5f`): `veh_power` quantile x5, boundaries [4.0, 5.0, 6.0, 7.0, 8.0, 15.0], labels ['4-4', '5-5', '6-6', '7-7', '8+']
+  These **supersede the "offline preview" in the Task 2 entry above** (same boundaries, now with ids and versions). The `veh_power` labels `4-4` and `5-5` are cosmetic: the quantile edges fall on single integer values; no price depends on the label text.
+  **(3) Dated corrective line, 2026-10-11 20:35 BST (the entries above are not edited).** The "Defect fix" entry's monotone rationale quoted the `veh_age_band` relativities of the run-b fit (`0-1` 2.1436 ... `12+` 1.0), which were the 20k-row fit's. The **full-book fit of run d** gives `0-1` 1.9533, `2-3` 1.1209, `4-7` 1.2534, `8-11` 1.2338, `12+` 1.0 (base). These are still not monotone in the band order, so the maintainer's 19:07:08 ruling (no monotone declaration) stands.
+
+## PRs
+
+- PR #1284, `sl-1526-exit-demo-a`.
