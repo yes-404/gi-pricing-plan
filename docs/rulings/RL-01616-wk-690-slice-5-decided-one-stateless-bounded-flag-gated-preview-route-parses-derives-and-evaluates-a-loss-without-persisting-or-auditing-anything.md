@@ -1,9 +1,9 @@
 ---
-id: RL-9935
+id: RL-1616
 family: ruling
 title: WK-690 Slice 5 decided — one stateless, bounded, flag-gated preview route parses, derives and evaluates a loss without persisting or auditing anything
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-10-11            # working id; the mint date is set at the mint (check 31)
+created: 2026-10-11            # original date 2026-10-11, set at the draft; minted 2026-10-11
 owner: decision-maker
 tree: d699a561d6a93f33b74beb9c07023f8e655bb8c7
 phase: P2
@@ -15,14 +15,16 @@ corrects: ~
 relates: [RL-1265, RL-1362, RL-1410, PL-1268, SL-1275, FR-144, FR-145, FR-150, FR-367, NFR-483, NFR-484]
 ---
 
-# RL 9935 (working id) — WK-690 Slice 5: DP-S5-1 decided
+# RL-1616 — WK-690 Slice 5: DP-S5-1 decided
+
+*(Minted 2026-10-11 as RL-1616 from working id 9935, in the D11 batch mint PR.)*
 
 ## How this was ruled
 
 - **The decision is not this record's.** It is the maintainer's, by delegation, in the entry
   headed *"2026-10-11 11:28:14 BST — DP-S5-1 RULED (a): one stateless POST
   /api/v1/custom-objectives/preview, with BOUNDS so a keystroke route cannot starve the platform;
-  SL 9936 noted"* in `~/gi-pricing-plan.local/channel/to-lead.md`. Items 1 to 5 read, verbatim:
+  SL-1622 noted"* in `~/gi-pricing-plan.local/channel/to-lead.md`. Items 1 to 5 read, verbatim:
 
   > 1. (a) ADOPTED: no grid → parse only; with a grid → derive and evaluate with the SAME derive()/compile_kernel() as the fit (one implementation, never a preview copy). A bad loss → 200 ok:false with the position (the /model-specs/validate precedent). SPEC FIRST: the §3.7 FR, the §5.1 row, and the model-schema request/response shapes (generated contract; never hand-written in the frontend).
   > 2. Permissions: model:fit + custom_objective:author; flag off → 409 OBJECTIVE_KIND_NOT_ENABLED. No audit, because it persists nothing; the FR says NFR-484's "objective derivation" means the stored /derive result only, and create refuses `derived`, so a preview can never become a stored one.
@@ -37,7 +39,7 @@ relates: [RL-1265, RL-1362, RL-1410, PL-1268, SL-1275, FR-144, FR-145, FR-150, F
 - **The options memo** is `~/gi-pricing-plan.local/handover/dm-wk690-dps5-1-2026-10-11.md` (a
   local file; decision-maker `dm-wk690`, 2026-10-11). The decision point comes from
   planner-wk690's `readiness-wk690-s4s5-2026-10-11.md` (needs 5.4, 5.5 and 5.8). WK-690's L5 delta
-  PL 9931 (working id, unminted, kept out of `relates:`) carries it as DP-S5-1.
+  PL-1621 (minted in the same D11 batch) carries it as DP-S5-1.
 - **Written 2026-10-11 by `date`**, by the decision-maker seat `dm-wk690`. Every fact below was
   read at `origin/main` `d699a561d6a93f33b74beb9c07023f8e655bb8c7`.
 - **This record rules a plan's decision point and never edits the plan** (`document-ids.md`
@@ -71,7 +73,7 @@ relates: [RL-1265, RL-1362, RL-1410, PL-1268, SL-1275, FR-144, FR-145, FR-150, F
 | **Condition 3d: own budget** | S5 measures the preview's own latency budget, which the FR states. Diagnostic, on the shared VM |
 | **RL-1410 R4** | Unchanged. The preview touches no persisted objective |
 | **Editing (need 5.8)** | The editor is create-only. FR-367's "create, edit and version" is met by create, which versions on a reused slug (the route summary *"Create or version a Custom Objective"*, `custom_objectives.py:235`). No edit route is added |
-| **Rejected** | A draft per keystroke (an audit log of typing; R4 refuses its second derive). Dropping live parse (a scope cut, not taken). A client-side parser (a second parser, so two grammars, which is the need-4.5 class of defect in `RL 9934`, working id) |
+| **Rejected** | A draft per keystroke (an audit log of typing; R4 refuses its second derive). Dropping live parse (a scope cut, not taken). A client-side parser (a second parser, so two grammars, which is the need-4.5 class of defect in `RL-1615`, working id) |
 
 **Each of conditions 3a to 3d is a numbered clause in the FR, and each is tested.**
 
@@ -90,7 +92,7 @@ The FR's id is appended under `spec-change`, from the global sequence.
 
 ## What it obliges
 
-- **PL 9931's planner** cites this record on DP-S5-1. S5's estimate gains about 0.3 of a slice
+- **PL-1621's planner** cites this record on DP-S5-1. S5's estimate gains about 0.3 of a slice
   (accepted), plus whatever conditions 3a to 3c add, and the plan says so.
 - **WK-690 Slice 5 (`SL-1275`)** builds the route and the editor against it, red first. The tests
   cover: the flag; both permissions; `ok: false` with a position; the grid cap's 422 before

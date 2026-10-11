@@ -1,5 +1,5 @@
 ---
-id: FD-9806
+id: FD-1618
 family: finding
 title: A default-live /score is refused with INPUT_CONTRACT_VIOLATION, because the handler and the trace worker pass score_one a context with no rating_version_ref
 status: active
@@ -10,9 +10,9 @@ corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-9806 — a default-live `/score` never reaches a price
+# FD-1618 — a default-live `/score` never reaches a price
 
-**Working id 9806, to be minted in the D11 batch.** Filed at the lead's entries in `to-lead.md`:
+**Minted 2026-10-11 as FD-1618 from working id 9806, in the D11 batch mint PR.** Filed at the lead's entries in `to-lead.md`:
 "2026-10-11 11:25:16 BST — DEFAULT-LIVE /score: CONFIRMED by reading (no wait for a run); FD + fix slice NOW; SL-1526's demo
 script checked before its window" (item 2), and "2026-10-11 11:29:37 BST — DISPATCH GO: SL 9937 …" (item 1: the trace limb is
 in scope). Every line number below is at `origin/main` `02f23b4a74cfdf81ff4ac875e1ff7ab2db777c4a`, read for this record.

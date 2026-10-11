@@ -1,5 +1,5 @@
 ---
-id: RL-9929
+id: RL-1614
 family: ruling
 title: DP-S5-a decided (a) — WK-674 S5 (SL-1259) holds P2's NFR-489 exit verdict on the exit tree; SL-1455's Task 4 sweep is the FD-1411 remedy proof only; the 2026-10-10 21:38:39 BST M1/M3 wording corrected; the dedicated VM's run list covers both
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
@@ -11,15 +11,14 @@ work: WK-674
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [PL-1454, SL-1455, SL-1259, PL-1237, PL-1537, FD-1411, NFR-489, RL-9926]
+relates: [PL-1454, SL-1455, SL-1259, PL-1237, PL-1537, FD-1411, NFR-489, RL-1613]
 ---
 
-# RL-9929 — DP-S5-a decided (a): SL-1259 holds the NFR-489 exit verdict; SL-1455's sweep is the FD-1411 remedy proof
+# RL-1614 — DP-S5-a decided (a): SL-1259 holds the NFR-489 exit verdict; SL-1455's sweep is the FD-1411 remedy proof
 
 *Disclosure: drafted under working id 9929, reserved by the lead (team-lead) on 2026-10-11
 (`~/gi-pricing-plan.local/handover/brief-dm-lanec-2026-10-11.md`, "Reserved working ids").
-The id is minted in a later docs batch. When it is minted, the working id in this record is
-replaced by the minted id.*
+Minted 2026-10-11 as RL-1614 in the D11 batch mint PR; the working id in this record was replaced by the minted id.*
 
 ## How this was ruled
 
@@ -33,7 +32,7 @@ replaced by the minted id.*
   (`~/gi-pricing-plan.local/handover/readiness-wk674-s4s5-2026-10-11.md` §4): who measures
   NFR-489 for P2's exit, S5 on the S4 path or SL-1455's Task 4 sweep. The maintainer routed
   it to the decision-maker in the entry "2026-10-11 10:55:55 BST — WK-674 S4/S5 readiness:
-  PL 9921 (one delta, L5) ACCEPTED; DP-S5-a → the same DM seat after OQ-1223; …", item 2.
+  PL-1620 (one delta, L5) ACCEPTED; DP-S5-a → the same DM seat after OQ-1223; …", item 2.
   The options memo is `~/gi-pricing-plan.local/handover/dm-dps5a-2026-10-11.md` (seat
   `dm-lanec`). Both files are local, and their substance is restated in "Verified first".
 - **DP-S5-b is not ruled here.** The user decided it in the entry "2026-10-11 10:57:16 BST —
@@ -48,14 +47,14 @@ replaced by the minted id.*
 
 > ## 2026-10-11 11:02:35 BST — DP-S5-a RULED (a): SL-1259 (WK-674 S5) holds the NFR-489 EXIT verdict; SL-1455's Task 4 is the FD-1411 remedy proof. CORRECTION of my 2026-10-10 21:38:39 M1/M3 wording
 > Read before ruling: PL-1454 @99f22479 :62 ("the NFR-489 verdict on the exit tree stays SL-1259's"), :146, :199 ("the verdict is carried per G4 and on the exit tree stays SL-1259's"), :268 (SL-1259 will edit score.py after SL-1455), :550 ("FD-1411's remedy event is met; its own discharge also needs SL-1259's NFR-489 verdict"). The memo handover/dm-dps5a-2026-10-11.md.
-> 1. (a) ADOPTED: it is the frozen plans' own allocation. (b) is rejected: one process is not S4's replicas, and SL-1455 precedes SL-1259's bundle-path edits, so it cannot read the exit tree. (c) is rejected: two competing verdicts. PL 9921 is amended to (a) before its mint.
+> 1. (a) ADOPTED: it is the frozen plans' own allocation. (b) is rejected: one process is not S4's replicas, and SL-1455 precedes SL-1259's bundle-path edits, so it cannot read the exit tree. (c) is rejected: two competing verdicts. PL-1620 is amended to (a) before its mint.
 > 2. CORRECTION (mine): my 21:38:39 M1 said SL-1455's condition was the NFR-489 pass "on the exit tree", and M3 had WK-674 S3 merge first "so the sweep measures the exit-tree path". Both overreached PL-1454. Corrected:
 >    - SL-1455's Acceptance 2 bar stands (both arms in budget at 25/50/100/200 rps, ×3 interleaved, issued = offered, 0 errors), as the FD-1411 REMEDY proof.
 >    - The P2 exit's "meeting NFR-489" is SL-1259's verdict on the exit tree, with replicas per DP-3 (21:38:39 M2).
 >    - M3's order (WK-674 S3 before the sweep) stays, because the sweep then includes the limiter. It is no longer justified as "the exit tree".
 >    - An SL-1455 pass followed by an SL-1259 miss is a finding against S5's changes.
 > 3. DEDICATED VM: its run list = SL-1455 Task 4 (remedy proof) plus SL-1259's verdicts (NFR-489 exit and the other S5 NFRs, NFR-502 among them). The hours cover both. The VM is STOPPED between the two sessions (vCPU/RAM billing stops; the disk keeps the state), not left up, and DELETED after S5's verdict, with deletion verified. The pack is amended to say so.
-> 4. RL 9929 (the decision-maker's) records this ruling, cites PL-1454 :62/:199/:550 and this entry, and lists the correction.
+> 4. RL-1614 (the decision-maker's) records this ruling, cites PL-1454 :62/:199/:550 and this entry, and lists the correction.
 
 ## Verified first, at 99f22479a20e7fa64f8b6654e0d371c595b1e35a
 
@@ -102,7 +101,7 @@ and the allocation it records is `PL-1454`'s own.
      Acceptance 2's protocol."* That sentence restates the corrected M1. It is amended
      before D10's mint if D10 has not merged; otherwise a dated line on the SL-1455 row,
      citing this record, corrects it. That row is not edited in this record's commit.
-5. **PL 9921** (planner-wk674's WK-674 S4+S5 Work-plan delta, draft on branch
+5. **PL-1620** (planner-wk674's WK-674 S4+S5 Work-plan delta, draft on branch
    `pl-wk674-s4s5-2026-10-11`) is amended from (c) to (a) before its mint (ruling item 1). It
    cites this record.
 6. **The dedicated VM's run list** is SL-1455 Task 4 (the remedy proof) plus SL-1259's measured

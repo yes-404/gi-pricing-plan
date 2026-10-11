@@ -1,5 +1,5 @@
 ---
-id: PL-9931
+id: PL-1621
 family: plan
 kind: map
 title: WK-690 — Slices 4 and 5 (expression Factors; the authoring view and WF-702 Route B) as rows: Work-plan delta
@@ -12,10 +12,10 @@ work: WK-690
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [PL-1268, PL-1371, RL-1263, RL-1265, RL-1307, RL-1410, RL-1445, RL-1474, FD-1294, FD-1349, FD-1492, FD-1512, SL-1274, SL-1275, SL-9936]
+relates: [PL-1268, PL-1371, RL-1263, RL-1265, RL-1307, RL-1410, RL-1445, RL-1474, FD-1294, FD-1349, FD-1492, FD-1512, SL-1274, SL-1275, SL-1622]
 ---
 
-# PL-9931 — WK-690 Slices 4 and 5 as rows: Work-plan delta
+# PL-1621 — WK-690 Slices 4 and 5 as rows: Work-plan delta
 
 > **For agentic workers:** this is a **Work-plan delta** under Lean P2 L5. It does not replace
 > [`PL-1268`](PL-01268-wk-690-expression-custom-objectives-map-plan.md) (WK-690's map plan,
@@ -33,7 +33,7 @@ relates: [PL-1268, PL-1371, RL-1263, RL-1265, RL-1307, RL-1410, RL-1445, RL-1474
 > and is spawned from `.claude/roles/executor.md`.
 
 Filed under working id 9931, reserved by the lead (brief `brief-planner-wk690-2026-10-11.md`,
-eta "2026-10-11 11:14:34 BST: RESERVED PL 9931"). Written 2026-10-11 by the planner
+eta "2026-10-11 11:14:34 BST: RESERVED PL-1621"). Written 2026-10-11 by the planner
 (planner-wk690). Evidence was read at `origin/main` `d699a561` (#1272,
 2026-10-11T11:12:28+01:00). The readiness memo behind it is
 `handover/readiness-wk690-s4s5-2026-10-11.md` (local). The sweep is by full class: every
@@ -65,7 +65,7 @@ single-row Work plan: the FD-1374 fix slice".
 
 Plan WK-690's last two P2 build slices, and its fix row, as L5 rows so that each can be GO'd
 without a leaf plan. This delta is done when S4 and S5 have each closed on their own `LG-`, or
-have been moved to Phase 3 by a dated move line, and the fix row (SL 9936) has closed on its
+have been moved to Phase 3 by a dated move line, and the fix row (SL-1622) has closed on its
 own `LG-`. The fix row is never moved by a ladder rung. The Work's own goal is still `PL-1268`'s.
 
 ## Acceptance Standard
@@ -77,7 +77,7 @@ items 1, 2, 9 and 10 still bind all three.
 1. **This delta passes the docs checks on its own branch.** `python3 scripts/audit-docs.py`,
    `python3 scripts/doc-index.py --check` and `python3 scripts/register-lint.py` exit 0 at the
    branch head. The one exception is check 31's line naming this file's working id, which
-   clears at the mint.
+   cleared at the mint (PL-1621, 2026-10-11).
 2. **Each slice closes on its own L1 (a') ledger, and that ledger's scope section quotes the
    slice's row below verbatim.** By the Work's close, `git grep -l 'PL-<this delta's minted id>'
    -- docs/ledgers` prints one `LG-` per slice that was not moved to P3, and each names its
@@ -144,7 +144,7 @@ items 1, 2, 9 and 10 still bind all three.
 - **5.6 Both gate halves pass on the merge tree**, including `generate:api` and `type-check`
   run under `env -C`.
 
-**Fix row — SL 9936** (FD-1349, FD-1492, FD-1512; FD-1294's discharge line)
+**Fix row — SL-1622** (FD-1349, FD-1492, FD-1512; FD-1294's discharge line)
 
 - **F.1 FD-1349: the contract guard compares the check-name enum.** `backend/tests/test_contracts.py`
   gains a comparison between the authored `result.checks[].name` enum in
@@ -206,7 +206,7 @@ slice's decision point is still open when a lane frees, the other takes its turn
 
 | Order | Slice | Scope (what the `LG-` quotes) | Requirements, each id | Governance | Depends on | Lane | Size | Ladder |
 |---|---|---|---|---|---|---|---|---|
-| 0 | SL 9936 — WK-690 fix row: the three fix-before-close findings | FD-1349 (register `:281`), FD-1492 (`:318`) and FD-1512 (`:327`), each as its register row's Event states it; plus FD-1294's dated discharge line (R-F.1) | `02` §3.7: FR-146 (the certificate a `failed` `pseudo_huber` blocks), FR-157 (the metric evidence kind FD-1492 bypasses); `docs/contracts/schemas/objective-certificate.schema.json` (FD-1349, the guard's comparison) | Declared and versioned: unchanged (no new objective form; `pseudo_huber`'s declared loss is the same function, re-evaluated). Validated: FD-1512 removes a false `failed`; FD-1492 restores the submission evidence check. Audited: unchanged | nothing open: S1–S3 are closed and every cited line is on main at `d699a561` | at GO | 1 | **off the ladder** (DP-W-1 (a), ruled) |
+| 0 | SL-1622 — WK-690 fix row: the three fix-before-close findings | FD-1349 (register `:281`), FD-1492 (`:318`) and FD-1512 (`:327`), each as its register row's Event states it; plus FD-1294's dated discharge line (R-F.1) | `02` §3.7: FR-146 (the certificate a `failed` `pseudo_huber` blocks), FR-157 (the metric evidence kind FD-1492 bypasses); `docs/contracts/schemas/objective-certificate.schema.json` (FD-1349, the guard's comparison) | Declared and versioned: unchanged (no new objective form; `pseudo_huber`'s declared loss is the same function, re-evaluated). Validated: FD-1512 removes a false `failed`; FD-1492 restores the submission evidence check. Audited: unchanged | nothing open: S1–S3 are closed and every cited line is on main at `d699a561` | at GO | 1 | **off the ladder** (DP-W-1 (a), ruled) |
 | 1 | SL-1274 — S4: `expression` Factors | `PL-1268` Slice 4 (`:517-530`), plus R4.1–R4.3 | `02` §3.1: FR-95; §3.10: FR-208 (the expression arm); §4.1 `Factor`'s expression field; `RL-1265` DP-4's refusal naming FR-210; §9: NFR-483, NFR-484 | Declared: the `factor` profile (`02:940`), with the text stored on the Factor. Validated: parsed at create (422 with the position), undeclared columns refused at create, numeric-unbanded refused (DP-S4-1). Versioned: `Factor.version`, pinned by id (FR-96). Audited: `factor.created` | S1 (closed, met); DP-4 (`RL-1265`, met); **DP-S4-1 ruled** | at GO | 1 | **rung 6** |
 | 2 | SL-1275 — S5: the authoring view and `WF-702` Route B | `PL-1268` Slice 5 (`:532-554`), plus R5.1–R5.4 | `02` §5.3 Custom objective library (editor, derived gradient and hessian display, loss-curve preview); §5.1: DP-S5-1's route and its new FR (spec first); §3.7: FR-145 (position-accurate parse through the route), FR-150 (editor gated), FR-152 (`violated` rendered as a finding); `06` §3.3: FR-367 (the route's permission); `WF-702` Route B B1.1–B4.3 and B4.6, and §7's failure rows; NFR-463; NFR-483 | Declared: text sent to the API only. Validated: the preview route, `/derive` and certify (FR-146). Versioned: create gives `draft`, and `derived` is stored with its tool version (B2.3). Audited: derive, certify and approve (NFR-484, built in S3); the preview route records nothing because it persists nothing | S3 (closed, met); OQ-550 (decided, met); DP-3 (`RL-1265`, met); **DP-S5-1 ruled** | at GO | 1 | **rung 3** |
 
@@ -300,7 +300,7 @@ never carries a fix-before-close finding with it.
 
 - The lead lists this delta on WK-690's roadmap row (L5). `SL-1274` and `SL-1275` already exist
   (`docs/roadmap.md:1528`, `:1547`, `draft`), so no `SL-` row is cut for them. **The fix row's
-  `SL 9936` row is cut `draft` under `### WK-690` in `docs/roadmap.md` on this branch** (the
+  `SL-1622` row is cut `draft` under `### WK-690` in `docs/roadmap.md` on this branch** (the
   planner's write, `document-ids.md` §1.6 SL row), with the working id the lead reserved. Each row's
   "relates" gains this delta's minted id at its GO.
 - The decision-maker rules DP-S4-1 and DP-S5-1. When both carry a `Resolved by` id, the plan

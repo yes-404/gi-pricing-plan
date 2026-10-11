@@ -1,9 +1,9 @@
 ---
-id: RL-9934
+id: RL-1615
 family: ruling
 title: WK-690 Slice 4 decided — an expression Factor is banded only by a Banding that records the expression it was cut over, and a numeric unbanded result is refused at creation when certain and at resolution by dtype
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-10-11            # working id; the mint date is set at the mint (check 31)
+created: 2026-10-11            # original date 2026-10-11, set at the draft; minted 2026-10-11
 owner: decision-maker
 tree: d699a561d6a93f33b74beb9c07023f8e655bb8c7
 phase: P2
@@ -15,7 +15,9 @@ corrects: ~
 relates: [RL-1265, PL-1268, SL-1274, WK-1178, FR-95, FR-97, FR-99, FR-101, FR-113, FR-208, FR-210, NFR-484]
 ---
 
-# RL 9934 (working id) — WK-690 Slice 4: DP-S4-1 and DP-S4-2 decided, and need 4.5 routed
+# RL-1615 — WK-690 Slice 4: DP-S4-1 and DP-S4-2 decided, and need 4.5 routed
+
+*(Minted 2026-10-11 as RL-1615 from working id 9934, in the D11 batch mint PR.)*
 
 ## How this was ruled
 
@@ -30,13 +32,12 @@ relates: [RL-1265, PL-1268, SL-1274, WK-1178, FR-95, FR-97, FR-99, FR-101, FR-11
   >    (a) an FD (the auditor proposes the severity), owner WK-1178 (P2's open maintenance Work), citing the derive_expression instance on main and the S4 instance it would add. Its resolution at the P2 close is either fixed or carried to P3 with a named owner (CLAUDE.md §14: nothing starts in P3 while a P2 finding lacks a resolution);
   >    (b) the OQ for the DESIGN of the parity check (owner WK-1178 or P3, mirrored in both places);
   >    (c) interim, S4's evidence carries the expression text in the Model's factor record, as the memo says.
-  >    RL 9934 records all three.
+  >    RL-1615 records all three.
 
 - **The options memo** is `~/gi-pricing-plan.local/handover/dm-wk690-dps4-1-2026-10-11.md` (a
   local file; decision-maker `dm-wk690`, 2026-10-11). It raised the decision points from
   planner-wk690's `readiness-wk690-s4s5-2026-10-11.md` (needs 4.3 to 4.5). WK-690's L5 delta
-  PL 9931 (working id) carries them as DP-S4-1 and DP-S4-2. It is unminted, so it is cited here in
-  working-id form and kept out of `relates:` (check 32).
+  PL-1621 carries them as DP-S4-1 and DP-S4-2 (minted in the same D11 batch).
 - **Written 2026-10-11 by `date`**, by the decision-maker seat `dm-wk690`. Every fact below was
   read at `origin/main` `d699a561d6a93f33b74beb9c07023f8e655bb8c7`, by symbol with its line.
 - **This record rules a plan's decision points and never edits the plan** (`document-ids.md`
@@ -113,7 +114,7 @@ These land in **S4's commit with the code** (`CLAUDE.md` §2), applied by WK-690
 
 ## What it obliges
 
-- **PL 9931's planner** cites this record on DP-S4-1 and DP-S4-2. Its S4 row's write set adds
+- **PL-1621's planner** cites this record on DP-S4-1 and DP-S4-2. Its S4 row's write set adds
   `backend/src/app/platform/transformations.py` and the banding routes in
   `backend/src/app/api/models.py`. The memo estimated S4 at about 1.5 slices against the plan's
   1. That is an estimate, not a measurement.

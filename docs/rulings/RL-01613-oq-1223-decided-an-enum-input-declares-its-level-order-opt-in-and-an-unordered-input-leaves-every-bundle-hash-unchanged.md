@@ -1,5 +1,5 @@
 ---
-id: RL-9926
+id: RL-1613
 family: ruling
 title: OQ-1223 decided (a) — an enum Rating Input declares its level order with an opt-in `ordered` flag, a `monotone` property sweeps an ordered enum's levels in order, and an unordered input leaves every bundle hash unchanged; WK-675 S5 is contract-changing
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
@@ -14,12 +14,11 @@ corrected_by: []
 relates: [OQ-1223, PL-1546, PL-1286, SL-1547, SL-1600, OQ-1224, RL-1365]
 ---
 
-# RL-9926 — OQ-1223 decided (a): an enum input declares its level order, opt-in; an unordered input leaves every bundle hash unchanged
+# RL-1613 — OQ-1223 decided (a): an enum input declares its level order, opt-in; an unordered input leaves every bundle hash unchanged
 
 *Disclosure: drafted under working id 9926, reserved by the lead (team-lead) on 2026-10-11
 (`~/gi-pricing-plan.local/handover/brief-dm-lanec-2026-10-11.md`, "Reserved working ids").
-The id is minted in a later docs batch. When it is minted, the working id in this record and
-in the three rows it edits is replaced by the minted id.*
+Minted 2026-10-11 as RL-1613 in the D11 batch mint PR; the working id in this record and in the three rows it edits was replaced by the minted id.*
 
 ## How this was ruled
 
@@ -50,8 +49,8 @@ in the three rows it edits is replaced by the minted id.*
 >    (ii) a test recomputes the content_hash of an EXISTING stored or fixture bundle at head and shows it equal to the base's, and shows it red when the omission is removed;
 >    (iii) the money fixtures and the pinned hash are unchanged;
 >    (iv) a bundle with `ordered: true` hashes differently from the same bundle without it (opt-in enters the hash).
-> 3. S5 is CONTRACT-CHANGING (model-schema; docs/contracts rating-algorithm.schema.json and generated.json regenerated on the merge base; the frontend regenerated). The frontend shows an ordered input's levels in declared order, display only, from the generated type. RL 9926 states all of this.
-> 4. RL 9926 is the decision-maker's: it rules OQ-1223 with this text, closes the OQ in BOTH mirrors (open-questions.md and 03 §10) by a dated line, and is cited by S5's LG. It meets PL-1546 acceptance item 6 (the resolver RL on S5's base). (c) is rejected: it would cut a real P2 capability without need. (b) is rejected (the memo's reasons). (d) is out of scope.
+> 3. S5 is CONTRACT-CHANGING (model-schema; docs/contracts rating-algorithm.schema.json and generated.json regenerated on the merge base; the frontend regenerated). The frontend shows an ordered input's levels in declared order, display only, from the generated type. RL-1613 states all of this.
+> 4. RL-1613 is the decision-maker's: it rules OQ-1223 with this text, closes the OQ in BOTH mirrors (open-questions.md and 03 §10) by a dated line, and is cited by S5's LG. It meets PL-1546 acceptance item 6 (the resolver RL on S5's base). (c) is rejected: it would cut a real P2 capability without need. (b) is rejected (the memo's reasons). (d) is out of scope.
 > 5. Next: the DP-S5-a memo, as planned.
 
 ## Verified first, at 99f22479a20e7fa64f8b6654e0d371c595b1e35a

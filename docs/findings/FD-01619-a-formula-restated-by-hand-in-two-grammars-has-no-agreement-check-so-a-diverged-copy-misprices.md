@@ -1,5 +1,5 @@
 ---
-id: FD-9808
+id: FD-1619
 family: finding
 title: A formula that rating restates by hand in ZEN has no agreement check against the expression it came from, so a diverged copy misprices
 status: active
@@ -7,14 +7,14 @@ created: 2026-10-11
 owner: auditor
 tree: 02f23b4a74cfdf81ff4ac875e1ff7ab2db777c4a
 corrected_by: []
-relates: [WK-1178, WK-690, RL-9934, OQ-9809]
+relates: [WK-1178, WK-690, RL-1615, OQ-1617]
 ---
 
-# FD-9808 — formula parity: two hand-kept copies of one formula, no check
+# FD-1619 — formula parity: two hand-kept copies of one formula, no check
 
-**Working id 9808, to be minted in the D11 batch.** Filed at the lead's entry "2026-10-11 11:25:51 BST — DP-S4-1 RULED (a2);
-DP-S4-2 ADOPTED (both points); need 4.5 = an FD AND an OQ, not an OQ alone", item 3(a), and recorded by RL 9934
-("Need 4.5 — formula parity, routed three ways"). The design question is OQ 9809, the interim is item 3(c).
+**Minted 2026-10-11 as FD-1619 from working id 9808, in the D11 batch mint PR.** Filed at the lead's entry "2026-10-11 11:25:51 BST — DP-S4-1 RULED (a2);
+DP-S4-2 ADOPTED (both points); need 4.5 = an FD AND an OQ, not an OQ alone", item 3(a), and recorded by RL-1615
+("Need 4.5 — formula parity, routed three ways"). The design question is OQ-1617, the interim is item 3(c).
 
 ## Evidence
 
@@ -37,7 +37,7 @@ If the two copies diverge (a changed constant, a different rounding, `%` against
 trained on and every quote it prices is wrong, silently: there is no refusal and no signal. That is the "diverged shape is a
 mispricing" failure `CLAUDE.md` §2 names for hand-written shapes, applied to a formula.
 
-**Severity (proposed by the auditor): MEDIUM, conditional on the exposure measurement below, which found 0 committed and 0 stored instances.** The reason: a silent mispricing path is HIGH by kind, but it needs a human to write a copy that disagrees, no instance exists at the measured tree, and the interim (S4 records the expression text in the Model's factor record so a reviewer can compare) narrows the Slice 4 instance. Any instance found later moves it to HIGH (the lead's rule, "2026-10-11 11:5x BST" ruling on FD 9808); the path in measurement (3) is open today, so the severity does not fall below MEDIUM.
+**Severity (proposed by the auditor): MEDIUM, conditional on the exposure measurement below, which found 0 committed and 0 stored instances.** The reason: a silent mispricing path is HIGH by kind, but it needs a human to write a copy that disagrees, no instance exists at the measured tree, and the interim (S4 records the expression text in the Model's factor record so a reviewer can compare) narrows the Slice 4 instance. Any instance found later moves it to HIGH (the lead's rule, "2026-10-11 11:5x BST" ruling on FD-1619); the path in measurement (3) is open today, so the severity does not fall below MEDIUM.
 
 ## Exposure, measured
 
@@ -60,11 +60,11 @@ Conclusion at this tree: the path exists and is exercised by no committed or sto
 
 ## Remedy
 
-The **design** of the check is OQ 9809 (options and a recommendation there); this finding decides none. Its resolution at the P2
+The **design** of the check is OQ-1617 (options and a recommendation there); this finding decides none. Its resolution at the P2
 close is either fixed, or carried to P3 with a named owner (`CLAUDE.md` §14).
 
 ## Disposition
 
 **Owner: WK-1178** (P2's open maintenance Work). Decision: `fix before close with an owner: WK-1178`, or carry to P3 with a named
-owner. Event that next confirms or discharges it: OQ 9809's decision, then the slice it names. Filed by the auditor, 2026-10-11;
+owner. Event that next confirms or discharges it: OQ-1617's decision, then the slice it names. Filed by the auditor, 2026-10-11;
 the lead gives the verdict.
