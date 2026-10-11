@@ -70,7 +70,7 @@ Written by the auditor (`auditor-sl1526`), 2026-10-11, over `origin/main...e24b5
 
 **Proposed verdict: CLEAN, with Acceptance 9 CARRIED to the minted-head CI after the merge of main.**
 
-Lead verdict: (pending)
+Lead verdict (team-lead, from-lead 2026-10-11 20:37:24 BST): CLEAN; no FD; Acc 9 discharged by green CI at the merge head.
 
 ### Build log
 

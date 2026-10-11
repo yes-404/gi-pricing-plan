@@ -25,6 +25,8 @@ serialised with Pydantic v2's compiled encoder and returned in a raw `Response`.
 annotation is precisely what FastAPI's own `ORJSONResponse` deprecation notice recommends, and
 precisely what this requirement forbids — an annotated route filters extra keys and answers
 500 on a shape that violates its model, which is outbound validation by another name.
+The 200 is documented through `responses=`, which FastAPI reads only when it builds the
+OpenAPI document: the contract carries the shape and nothing validates the body (FD-1335).
 
 **The error boundary is this module's.** `pricing-core` cannot import `PlatformError`
 (ADR-703), so `score_one` raises a code-named bare `ValueError` — `f"{code}: {message}"`. The
@@ -383,7 +385,7 @@ def _as_platform_error(exc: ValueError) -> PlatformError | None:
     # named version has no compiled bundle — and 422 carries FR-255's four per-quote
     # codes. 404 is a ref naming no version; 401 and 403 are authentication and the
     # `score:execute` check.
-    responses=problems(401, 403, 404, 409, 422, 429, 500),
+    responses={**problems(401, 403, 404, 409, 422, 429, 500), 200: {"model": ScoringResult}},
 )
 async def score(
     ctx: QuoteContext,
@@ -459,7 +461,7 @@ def _naming_side(problem: PlatformError, side: str) -> PlatformError:
     "/score/compare",
     summary="Score one Quote Context against two Rating Versions, with a step-level diff",
     status_code=200,
-    responses=problems(401, 403, 404, 409, 422, 500),
+    responses={**problems(401, 403, 404, 409, 422, 500), 200: {"model": ScoreComparison}},
 )
 async def score_compare(
     body: ScoreCompareRequest,
