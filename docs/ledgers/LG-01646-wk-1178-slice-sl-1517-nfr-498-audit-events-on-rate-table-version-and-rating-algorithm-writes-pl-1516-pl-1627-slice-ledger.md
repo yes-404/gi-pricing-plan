@@ -429,4 +429,4 @@ Lead verdict: (pending)
 
 ## PRs
 
-(none yet)
+#1288 — `SL-1517: NFR-498 Audit Events on rate table version and rating algorithm writes (LG-1646)`, branch `sl-1517-wk1178-nfr498-audit-events`. Merge order: SL-1503 (LG-1642, #1285) and SL-1566 (LG-1643, #1286) are on main already.
