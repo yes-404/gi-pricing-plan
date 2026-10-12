@@ -2333,7 +2333,7 @@ relates: [FD-1366, FD-1335, PL-1364, SL-1367, SL-1547]
 id: SL-1675
 family: slice
 title: WK-1178 slice — rows whose declared weight is 0 are excluded from the fit and from every diagnostic (FR-111)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-12
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 604ea084c96efe93f521fb9ba17738e05241e61a
