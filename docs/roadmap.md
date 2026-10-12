@@ -1079,6 +1079,8 @@ relates: [PL-1237]
 
 The compose `api` and `worker` services, the reference identity provider, the memory budget and the explicit migration step: the path Slice 5 measures on. `PL-1237` Task 4. Starts after Slice 3 closes.
 
+*Dated 2026-10-12 by the planner: the Work-plan deltas for this slice are `PL-1537` row 1, `PL-1620` (D0.1 to D0.3, D4.1 to D4.3; minted in D11, #1275) and PL 9865 (working id; D0.4, D0.5, D4.4 to D4.6: FD 9704's round-trip test, FR-452's management limb behind its DP-S4-1, and FD 9860 kept out of this slice). The authored branch is `sl-1258-wk674-s4` @`a04ff676`, not activated. This row's status and fields are unchanged.*
+
 #### SL-1259 — Slice 5: atomic switchover, rollback and the measurements (FR-268, FR-269, FR-272 audit and NFR-498 for rollback, NFR-494, NFR-489, NFR-502, NFR-490, NFR-493 linearity limb, NFR-497 mechanism)
 
 ```yaml
@@ -1096,6 +1098,8 @@ relates: [PL-1237]
 ```
 
 Atomic switchover and rollback on the Slice 4 path, with the rollback's audit limb (FR-272, NFR-498), the F1 acceptance test and the measured verdicts. NFR-497's degraded read is kept reachable against the `live` reference; the availability verdict is the lead's at the close. `PL-1237` Task 5. Starts after Slice 4 closes; its measured verdicts wait on a dedicated host (maintainer-owned).
+
+*Dated 2026-10-12 by the planner: the Work-plan deltas for this slice are `PL-1537` row 2 and `PL-1620` (D0.1 to D0.3, D5.1 to D5.5; minted in D11, #1275). `PL-1620` DP-S5-a is ruled (a) by `RL-1614`. This row's status and fields are unchanged.*
 
 #### SL-1260 — Slice 6: date-based routing and shadow scoring (FR-270, FR-271, FR-272 audit and NFR-498 for routing and shadow)
 

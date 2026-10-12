@@ -3,7 +3,7 @@ id: PL-1537
 family: plan
 kind: map
 title: WK-674 — Slices 4 to 6 (deployment path, switchover and measurements, routing and shadow) as rows, after the 2026-10-08 re-plan: Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-09  # original date 2026-10-08, set at the draft; minted 2026-10-09
 owner: planner
 tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
