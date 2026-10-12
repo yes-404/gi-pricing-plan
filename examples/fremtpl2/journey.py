@@ -81,7 +81,7 @@ SKIPS: Final[tuple[Skip, ...]] = (
     # sub-graph: it compiles a bundle per subset of the change groups and never carries
     # `sub_graphs` into a subset (analysis.py `_subset_algorithm`, `:742`; the compile loop,
     # `:1001-1006`), so any split fails BUNDLE_COMPILE_FAILED. The finding is a working id
-    # (FD 9804, owner WK-673, MEDIUM), minted in D13; G2 is not met until D7 decomposes.
+    # (FD 9804, owner WK-673, HIGH), minted in D13; G2 is not met until D7 decomposes.
     Skip("D7", "SKIPPED D7 decomposition — FD 9804"),
 )
 
@@ -1150,10 +1150,10 @@ class _Journey:
         # it. The lookup has no row in force, so the quote is refused, not priced without it.
         # The LOOKUP misses here (no row is in force on that date; every rate table still hits),
         # and the platform reports RATE_TABLE_MISS. That is CURRENT behaviour, asserted exactly:
-        # FD (D13, working, owner WK-1178): a reference-lookup miss in a step that also consumes
-        # a rate table is reported as RATE_TABLE_MISS (`score.py` `_reraise_engine_failure`
-        # orders tables first). When it is fixed, this assertion turns red and becomes
-        # REFERENCE_LOOKUP_MISS.
+        # FD 9802 (D13, working, owner WK-1178): a reference-lookup miss in a step that also
+        # consumes a rate table is reported as RATE_TABLE_MISS (`score.py`
+        # `_reraise_engine_failure` orders tables first). When it is fixed, this assertion
+        # turns red and becomes REFERENCE_LOOKUP_MISS.
         call(
             self.client,
             "B3",

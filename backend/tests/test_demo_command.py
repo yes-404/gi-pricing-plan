@@ -359,10 +359,10 @@ def test_the_journey_refuses_when_pnpm_is_absent() -> None:
     """The same end-state rule when the frontend cannot start: `demo` must not fall back to an
     API-only run for a journey (it would end with no served page). The refusal sits at the place
     the fallback was."""
-    import inspect
-
-    source = inspect.getsource(demo_script.demo)
-    fallback = source.index("shutil.which")
-    window = source[fallback - 80 : fallback + 700]
-    assert "journey is not None" in window
-    assert "DemoRefusedError" in window
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(demo_script.shutil, "which", lambda _name: None)
+        with pytest.raises(demo_script.DemoRefusedError) as refusal:
+            demo_script.demo(rows=None, skip_seed=True, frontend=True, journey="wf-699")
+        assert "pnpm" in str(refusal.value)
+        patch.setattr(demo_script.sys, "argv", ["demo.py", "--journey", "wf-699"])
+        assert demo_script.main() == 1

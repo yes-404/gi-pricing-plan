@@ -401,7 +401,7 @@ Observations recorded, not smoothed:
   platform says `RATE_TABLE_MISS`. A first attempt moved the loading into a step of its own (`s_loaded`)
   so the code would come out `REFERENCE_LOOKUP_MISS`; the lead refused it, because that routes the demo
   around the defect the ruling wants seen. The fork is back to the single `s_premium` form and the
-  journey asserts `RATE_TABLE_MISS` EXACTLY, with a comment naming the finding: "FD (D13, working, owner
+  journey asserts `RATE_TABLE_MISS` EXACTLY, with a comment naming the finding: "FD 9802 (D13, working, owner
   WK-1178): a reference-lookup miss in a step that also consumes a rate table is reported as
   RATE_TABLE_MISS (`score.py` `_reraise_engine_failure` orders tables first); when fixed, this assertion
   turns red and becomes `REFERENCE_LOOKUP_MISS`." The lead files the FD in D13. Pure test
@@ -413,8 +413,10 @@ Observations recorded, not smoothed:
   maintainer's ruling (A), `to-lead.md` "2026-10-12 02:29:16 BST"; (B) and (D) refused).** WF-699 D7
   means attribution that decomposes the change (FR-264). The journey authored a two-group version (the
   rate-table edits and the added structure, the effects summing to the total, the partition proved);
-  it ran at `e14a81e5` and the Dislocation Job failed `BUNDLE_COMPILE_FAILED`
-  (`slot-reds-10.out`, `logs/db_journey.log`). Cause, verified by the lead at that head: attribution
+  it ran at `e14a81e5` and the Dislocation Job failed `BUNDLE_COMPILE_FAILED`. The reproduction is the
+  salvage commit `e14a81e5` (`origin/salv-sl1527-d7-2group`) plus the lead's verified record,
+  `from-lead` "2026-10-12 02:28:38 BST": "db_journey rc 1 'D6: BUNDLE_COMPILE_FAILED' after E3"; the
+  run's own log was overwritten by the next run and is not cited. Cause, verified by the lead at that head: attribution
   compiles one bundle per subset of the groups (`packages/pricing-core/src/pricing_core/rating/analysis.py`
   `:1001-1006`), and `_subset_algorithm` (`:742`) copies only steps, input contract and outputs from the
   candidate: `sub_graph` appears nowhere in that file. The NCD ladder is a sub-graph MOUNT
@@ -424,7 +426,7 @@ Observations recorded, not smoothed:
   ladder and the loading are also inseparable (the premium step consumes both, and `_check_dependence`,
   `analysis.py:816`, refuses a group that is not self-contained). The one-group lump compiles (baseline and
   full candidate only), as run at `dced2856`, so the journey runs it and prints exactly
-  `SKIPPED D7 decomposition — FD 9804` (a working id; owner WK-673, MEDIUM: attribution ignores
+  `SKIPPED D7 decomposition — FD 9804` (a working id; owner WK-673, HIGH: attribution ignores
   sub-graph mounts, `analysis.py:742` and `:1001-1006`), recorded in the skip table and asserted like
   B4 and C1′. The two-group code is kept unchanged on the branch **`salv-sl1527-d7-2group`**
   (`e14a81e55c509de5378858dc84a46f6c5fa03c77`), where a planner builds the WK-673 fix slice (working SL
@@ -440,7 +442,10 @@ Observations recorded, not smoothed:
   skip line. The only departures from the workflow's order are the declared ones (B3 and B7 before B1;
   C3 after the passing compile; D6 to D9 between E3 and E4).
 - **GAP 5:** `scripts/demo.py --journey` with `--no-frontend`, or with pnpm absent, is refused up front
-  with a nonzero exit (two tests, red first).
+  with a nonzero exit (two tests, red first). The pnpm test is a behaviour test: it patches
+  `shutil.which` to return None and asserts `DemoRefusedError` from `demo()` and exit 1 from `main()`.
+  Red with the guard disabled (`ZeroDivisionError` from the next step, `check_environment`, patched to
+  fail if reached), green restored (`test_demo_command.py`, 23 passed).
 - **GAP 6 (PL-1644 Acceptance 3), one line:** the D4 sweep is `bonus_malus` over **50..230**, the grid
   spacing is **(230 − 50) / 4 = 45** (uniform points 50, 95, 140, 185, 230), and the inverted ladder band
   is **100–149** (50 points wide, wider than the spacing of 45, so the uniform point 140 lies inside it).
