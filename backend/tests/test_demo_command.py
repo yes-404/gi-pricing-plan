@@ -157,3 +157,212 @@ def test_the_rule_set_pre_flight_runs_after_the_seed_record_and_before_the_api_s
     # Not inside the `if not skip_seed:` block: the seed is skipped on `--skip-seed`.
     assert source.index("if not skip_seed:") < record
     assert source[record:pre_flight].count("if not skip_seed") == 0
+
+
+# -- SL-1527: the seed-record pre-flight, the refusal, and the journey (PL-1544 Tasks 5; DP-b1) --
+
+
+def _load_script(name: str, filename: str):  # type: ignore[no-untyped-def]
+    spec = importlib.util.spec_from_file_location(
+        name, Path(__file__).resolve().parents[2] / "scripts" / filename
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.mark.req("FR-408")
+async def test_the_seed_record_pre_flight_refuses_a_workspace_the_database_lost(database) -> None:  # type: ignore[no-untyped-def]
+    """FD-1494 limb 1 (PL-1544 Acceptance 7 (i)): the record's workspace row is absent, so the
+    check exits 1 naming the record and saying to re-run the seed without --skip-seed. Red first:
+    the script did not exist, and on the base tree this path printed the rule-set script's
+    "the seed did not finish" instead."""
+    import io
+
+    from model_schema import new_uuid7
+
+    check = _load_script("gi_check_seed_record", "check-seed-record.py")
+    out, err = io.StringIO(), io.StringIO()
+    code = await check.check(database, new_uuid7(), new_uuid7(), out=out, err=err)
+    assert code == 1
+    assert "examples/fremtpl2/data/last-seed.json" in err.getvalue()
+    assert "without --skip-seed" in err.getvalue()
+    assert out.getvalue() == ""
+
+
+@pytest.mark.req("FR-408")
+async def test_the_seed_record_pre_flight_refuses_an_analyst_who_is_not_a_member(database) -> None:  # type: ignore[no-untyped-def]
+    """Acceptance 7 (ii): the workspace is present and the analyst is not a member of it; and
+    the negative, so the check cannot pass by always refusing: a member passes."""
+    import io
+
+    from app.platform import workspaces
+    from model_schema import new_uuid7
+
+    check = _load_script("gi_check_seed_record", "check-seed-record.py")
+    workspace_id, member_id, stranger_id = new_uuid7(), new_uuid7(), new_uuid7()
+    async with database.unit_of_work() as session:
+        await workspaces.ensure_workspace(session, workspace_id=workspace_id)
+        await workspaces.ensure_member(
+            session,
+            workspace_id=workspace_id,
+            user_id=member_id,
+            issuer="http://localhost:8080/realms/gi-pricing",
+            subject=f"sub-{member_id.hex[-12:]}",
+        )
+    out, err = io.StringIO(), io.StringIO()
+    assert await check.check(database, workspace_id, stranger_id, out=out, err=err) == 1
+    assert "not a member" in err.getvalue()
+    assert "last-seed.json" in err.getvalue()
+    out, err = io.StringIO(), io.StringIO()
+    assert await check.check(database, workspace_id, member_id, out=out, err=err) == 0
+    assert "seed record holds" in out.getvalue()
+
+
+@pytest.mark.req("FR-408")
+def test_the_seed_record_pre_flight_runs_before_the_rule_set_pre_flight() -> None:
+    """Acceptance 7: it runs on every path (not inside `if not skip_seed`), right after the
+    record is read and BEFORE `check-rule-sets-runnable.py`, which for an absent workspace takes
+    its zero branch and prints the wrong message."""
+    import inspect
+
+    source = inspect.getsource(demo_script.demo)
+    record = source.index("record = read_seed_record()")
+    seed_record = source.index("check-seed-record.py")
+    rule_sets = source.index("check-rule-sets-runnable.py")
+    assert record < seed_record < rule_sets
+    assert source[record:seed_record].count("if not skip_seed") == 0
+
+
+@pytest.mark.req("FR-408")
+def test_postcondition_http_error_is_a_refusal(monkeypatch: pytest.MonkeyPatch) -> None:
+    """FD-1494 limb 2 (Acceptance 11): the `/api/v1/models` call answers 403 and the check
+    raises `DemoRefusedError` naming the status, the record's workspace id and the record's path,
+    and `main()` returns 1. Red first: `urllib.error.HTTPError: HTTP Error 403` escaped, because
+    `main` catches only `DemoRefusedError` and `KeyboardInterrupt`."""
+    import io
+    import sys
+    import urllib.error
+    import urllib.request
+
+    def refuse(request, timeout=None):  # type: ignore[no-untyped-def]
+        raise urllib.error.HTTPError(request.full_url, 403, "Forbidden", {}, io.BytesIO(b""))  # type: ignore[arg-type]
+
+    monkeypatch.setattr(urllib.request, "urlopen", refuse)
+    record = {"workspace_id": "w-1", "analyst_id": "p-1"}
+    with pytest.raises(demo_script.DemoRefusedError) as refusal:
+        demo_script._verify_journey_postconditions(record, {})
+    text = str(refusal.value)
+    assert "403" in text
+    assert "w-1" in text
+    assert "last-seed.json" in text
+
+    def demo_that_verifies(**_kwargs: object) -> int:
+        demo_script._verify_journey_postconditions(record, {})
+        return 0
+
+    monkeypatch.setattr(demo_script, "demo", demo_that_verifies)
+    monkeypatch.setattr(sys, "argv", ["demo.py"])
+    assert demo_script.main() == 1
+
+
+@pytest.mark.req("FR-408")
+def test_the_journey_flag_names_one_journey_and_defaults_to_none() -> None:
+    """DP-b1 (a): `--journey wf-699` is an option of the one command and is off by default
+    (every Phase 1 demo would otherwise pay for the whole journey)."""
+    assert demo_script.JOURNEYS == ("wf-699",)
+    parser = demo_script.build_parser()
+    assert parser.parse_args([]).journey is None
+    assert parser.parse_args(["--journey", "wf-699"]).journey == "wf-699"
+    with pytest.raises(SystemExit):
+        parser.parse_args(["--journey", "wf-700"])
+
+
+@pytest.mark.req("FR-408")
+def test_the_journey_runs_with_a_worker_after_the_postconditions_and_before_the_frontend() -> None:
+    """G2's wiring (RL-1521; the lead's and maintainer's Option A for the worker): the journey
+    starts a Celery worker and the outbox relay (`beat`) before its first call, because the API
+    only writes an outbox row and with no worker the first 202 Job never completes. Order: the
+    API's postconditions, then the worker and beat, then the journey, then the frontend, then
+    the served-page check. Red first: none of these existed."""
+    import inspect
+
+    source = inspect.getsource(demo_script.demo)
+    post = source.index("_verify_journey_postconditions(record, env)")
+    worker = source.index("worker_command()")
+    beat = source.index("beat_command()")
+    journey = source.index("run_journey(")
+    frontend = source.index("frontend_command,")
+    served = source.index("check_served_page(")
+    assert post < worker < journey
+    assert post < beat < journey
+    assert journey < frontend < served
+    assert demo_script.worker_command()[:5] == [
+        "uv",
+        "run",
+        "celery",
+        "-A",
+        "app.worker.entrypoint",
+    ]
+    assert "worker" in demo_script.worker_command()
+    assert "default,compute" in demo_script.worker_command()
+    assert "beat" in demo_script.beat_command()
+
+
+@pytest.mark.req("FR-408")
+def test_a_journey_failure_exits_non_zero_with_the_step_line(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Acceptance 6: a journey failure reaches `main` as a refusal carrying `<step>: <code>`, and
+    the command exits 1 with that line on stderr."""
+    import sys
+
+    class FailedError(RuntimeError):
+        step, code, status = "C1", "VALIDATION_FAILED", 422
+
+    def failing_journey(_record: dict[str, str]) -> None:
+        raise demo_script.DemoRefusedError(demo_script.journey_failure_line(FailedError()))
+
+    def demo_that_runs_the_journey(**_kwargs: object) -> int:
+        failing_journey({})
+        return 0
+
+    monkeypatch.setattr(demo_script, "demo", demo_that_runs_the_journey)
+    monkeypatch.setattr(sys, "argv", ["demo.py", "--journey", "wf-699"])
+    assert demo_script.main() == 1
+    assert (
+        demo_script.journey_failure_line(FailedError())
+        == "the WF-699 journey failed at C1: VALIDATION_FAILED (HTTP 422)"
+    )
+
+
+@pytest.mark.req("FR-408")
+def test_the_journey_refuses_to_run_without_the_frontend(monkeypatch: pytest.MonkeyPatch) -> None:
+    """RL-1521: the command ends with the frontend serving a 200 page. `--journey` with
+    `--no-frontend` would run the journey, wait for Ctrl-C and exit 0 with no 200 check, so it is
+    refused, before anything is started, with a nonzero exit and a message saying why. Red first:
+    on the unfixed command it started the infrastructure instead of refusing."""
+    import sys
+
+    with pytest.raises(demo_script.DemoRefusedError) as refusal:
+        demo_script.demo(rows=None, skip_seed=True, frontend=False, journey="wf-699")
+    assert "--no-frontend" in str(refusal.value)
+
+    monkeypatch.setattr(sys, "argv", ["demo.py", "--journey", "wf-699", "--no-frontend"])
+    assert demo_script.main() == 1
+
+
+@pytest.mark.req("FR-408")
+def test_the_journey_refuses_when_pnpm_is_absent() -> None:
+    """The same end-state rule when the frontend cannot start: `demo` must not fall back to an
+    API-only run for a journey (it would end with no served page). The refusal sits at the place
+    the fallback was."""
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(demo_script.shutil, "which", lambda _name: None)
+        with pytest.raises(demo_script.DemoRefusedError) as refusal:
+            demo_script.demo(rows=None, skip_seed=True, frontend=True, journey="wf-699")
+        assert "pnpm" in str(refusal.value)
+        patch.setattr(demo_script.sys, "argv", ["demo.py", "--journey", "wf-699"])
+        assert demo_script.main() == 1

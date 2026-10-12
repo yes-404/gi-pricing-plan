@@ -24,6 +24,7 @@ the most expensive way.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import shutil
@@ -35,9 +36,9 @@ import time
 import urllib.error
 import urllib.request
 from collections.abc import Iterator
-from contextlib import contextmanager, suppress
+from contextlib import ExitStack, contextmanager, suppress
 from pathlib import Path
-from typing import Final
+from typing import Any, Final
 
 #: Every print here is flushed. The subprocesses this starts write to the same descriptor
 #: unbuffered, so a buffered step header appears *after* the output it introduces — and
@@ -49,6 +50,10 @@ LOCAL_ENVIRONMENTS: Final = frozenset({"local", "dev", ""})
 
 API_PORT: Final = 8000
 FRONTEND_PORT: Final = 5173
+
+#: The scripted journeys `--journey` can run after the seed (RL-1521: `scripts/demo.py`-style ONE
+#: command). Off by default: a Phase 1 demo would otherwise pay for the whole journey.
+JOURNEYS: Final = ("wf-699",)
 
 
 class DemoRefusedError(RuntimeError):
@@ -200,7 +205,99 @@ def demo_env() -> dict[str, str]:
     }
 
 
-def demo(*, rows: int | None, skip_seed: bool, frontend: bool) -> int:
+def worker_command() -> list[str]:
+    """The Celery worker the journey needs. The API only writes an outbox row for a Job
+    (`07` FR-406); with no worker the first 202 never completes and the journey would wait for
+    ever. `default` carries the compile, `compute` the regression, rate-table diff and
+    dislocation Jobs (`app/platform/jobs.py`)."""
+    return [
+        "uv",
+        "run",
+        "celery",
+        "-A",
+        "app.worker.entrypoint",
+        "worker",
+        "--queues",
+        "default,compute",
+        "--concurrency",
+        "2",
+    ]
+
+
+def beat_command() -> list[str]:
+    """The outbox relay: without `beat`, committed Jobs stay `queued` and nothing says why
+    (`.claude/skills/dev-commands`). Its schedule file is kept under the gitignored data dir."""
+    schedule = ROOT / "examples" / "fremtpl2" / "data" / "celerybeat-schedule"
+    return [
+        "uv",
+        "run",
+        "celery",
+        "-A",
+        "app.worker.entrypoint",
+        "beat",
+        "--schedule",
+        str(schedule),
+    ]
+
+
+def journey_failure_line(failure: Any) -> str:
+    """The one line a failed journey prints: the step and the problem's code, built from the
+    failure's fields and never from its text."""
+    status = f" (HTTP {failure.status})" if failure.status is not None else ""
+    return f"the WF-699 journey failed at {failure.step}: {failure.code}{status}"
+
+
+def run_journey(record: dict[str, str]) -> None:
+    """Walk WF-699 over HTTP against the API this command started (`examples/fremtpl2/journey.py`).
+
+    The 20,000-policy sample is the journey's dislocation portfolio, and its output says so.
+    """
+    import httpx
+
+    example = ROOT / "examples" / "fremtpl2"
+    sys.path.insert(0, str(example))
+    spec = importlib.util.spec_from_file_location("fremtpl2_journey", example / "journey.py")
+    assert spec is not None
+    assert spec.loader is not None
+    journey = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = journey
+    spec.loader.exec_module(journey)
+    print("\n── the WF-699 journey over HTTP " + "─" * 30, flush=True)
+    started = time.monotonic()
+    with httpx.Client(base_url=f"http://localhost:{API_PORT}/api/v1", timeout=120.0) as client:
+        try:
+            journey.run_wf699_journey(client, record, log=lambda line: print(line, flush=True))
+        except journey.JourneyStepFailed as failure:
+            raise DemoRefusedError(journey_failure_line(failure)) from failure
+    print(f"   journey done in {time.monotonic() - started:.0f}s", flush=True)
+
+
+def check_served_page(url: str) -> None:
+    """G2 ends with the frontend serving a 200 page (RL-1521); anything else is a refusal."""
+    try:
+        with urllib.request.urlopen(url, timeout=10) as response:
+            status = response.status
+    except urllib.error.HTTPError as failure:
+        raise DemoRefusedError(f"the frontend answered {failure.code} at {url}, not 200.") from None
+    if status != 200:
+        raise DemoRefusedError(f"the frontend answered {status} at {url}, not 200.")
+    print(f"   served page: {url} answered 200", flush=True)
+
+
+def demo(*, rows: int | None, skip_seed: bool, frontend: bool, journey: str | None = None) -> int:
+    if journey is not None and not frontend:
+        # G2 is a journey that ENDS with the frontend serving a 200 page (RL-1521). Without the
+        # frontend it would run, wait for Ctrl-C and exit 0 with no such check.
+        raise DemoRefusedError(
+            "--journey needs the frontend: the command ends with it serving a 200 page "
+            "(RL-1521). Drop --no-frontend."
+        )
+    if journey is not None and shutil.which("pnpm") is None:
+        # Refused up front, not after a seed: the fallback below would run the API only.
+        raise DemoRefusedError(
+            "--journey needs pnpm to serve the frontend (RL-1521), and pnpm is not on PATH. "
+            "`npm config set prefix ~/.npm-global && npm i -g pnpm` installs it."
+        )
     check_environment()
     started = time.monotonic()
 
@@ -233,6 +330,17 @@ def demo(*, rows: int | None, skip_seed: bool, frontend: bool) -> int:
     # Read it here — after the seed, and in `--skip-seed` runs as the proof the
     # workspace this run reuses was seeded at all.
     record = read_seed_record()
+    # FD-1494 limb 1: the record is a file, the database may have been reset since. Checked on
+    # every path and BEFORE the rule-set pre-flight, which for an absent workspace takes its zero
+    # branch and prints "the seed did not finish", the wrong message for this cause.
+    run(
+        [
+            "uv", "run", "python", "scripts/check-seed-record.py",
+            record["workspace_id"], record["analyst_id"],
+        ],
+        step="pre-flight: the seed record's workspace and analyst are in the database",
+        env=env,
+    )
     # The seed, or a `--skip-seed` run's earlier seed, must have left rule sets every
     # member of which is approved: a workspace reset by the FD-1356 data reset has none that
     # run (RL-1407 condition 2). Read-only, and it needs the migrated database.
@@ -268,37 +376,57 @@ def demo(*, rows: int | None, skip_seed: bool, frontend: bool) -> int:
         frontend = False
 
     require_free(API_PORT, step="the API")
-    with background(api, step=f"API on :{API_PORT}", env=env) as api_process:
+    # One stack for everything this command starts: they stop together, in reverse, on the way out.
+    with ExitStack() as started_here:
+        api_process = started_here.enter_context(
+            background(api, step=f"API on :{API_PORT}", env=env)
+        )
         _still_running(api_process, step="the API")
         wait_for(f"http://localhost:{API_PORT}/api/v1/demo/guide", step="API")
         _verify_journey_postconditions(record, env)
+        if journey is not None:
+            # The API only writes an outbox row for a Job; the worker and the relay consume it.
+            worker_env = {**env, "PYTHONPATH": str(ROOT / "backend" / "src")}
+            worker_process = started_here.enter_context(
+                background(
+                    worker_command(), step="Celery worker (default, compute)", env=worker_env
+                )
+            )
+            beat_process = started_here.enter_context(
+                background(beat_command(), step="Celery beat (the outbox relay)", env=worker_env)
+            )
+            _still_running(worker_process, step="the Celery worker")
+            _still_running(beat_process, step="Celery beat")
+            run_journey(record)
         if not frontend:
             print(f"\n   API ready: http://localhost:{API_PORT}/docs", flush=True)
             print("   Ctrl-C to stop.\n", flush=True)
             _wait_for_interrupt()
             return 0
         require_free(FRONTEND_PORT, step="the frontend")
-        with background(
-            frontend_command, step=f"frontend on :{FRONTEND_PORT}", env=env
-        ) as frontend_process:
-            _still_running(frontend_process, step="the frontend")
-            wait_for(f"http://localhost:{FRONTEND_PORT}/", step="frontend")
-            elapsed = time.monotonic() - started
-            print(
-                f"\n{'═' * 62}\n"
-                f"  Open  http://localhost:{FRONTEND_PORT}/demo\n"
-                f"{'═' * 62}\n"
-                f"  Seeded to a usable state in {elapsed:.0f}s"
-                f"  (NFR-529: < 5 min on a developer laptop).\n\n"
-                "  That page is derived from this checkout — the specs' view tables\n"
-                "  against the router, the published contract, and the roadmap. It says\n"
-                "  what is worth clicking and, more usefully, what is not built yet.\n\n"
-                f"  The seeded membership that answers the login (FR-398) is analyst\n"
-                f"  {record['analyst_id']} in workspace {record['workspace_id']}.\n\n"
-                "  Ctrl-C to stop everything this command started.\n",
-                flush=True,
-            )
-            _wait_for_interrupt()
+        frontend_process = started_here.enter_context(
+            background(frontend_command, step=f"frontend on :{FRONTEND_PORT}", env=env)
+        )
+        _still_running(frontend_process, step="the frontend")
+        wait_for(f"http://localhost:{FRONTEND_PORT}/", step="frontend")
+        if journey is not None:
+            check_served_page(f"http://localhost:{FRONTEND_PORT}/")
+        elapsed = time.monotonic() - started
+        print(
+            f"\n{'═' * 62}\n"
+            f"  Open  http://localhost:{FRONTEND_PORT}/demo\n"
+            f"{'═' * 62}\n"
+            f"  Seeded to a usable state in {elapsed:.0f}s from the start of this command"
+            f"  (NFR-529's budget is < 5 min; this run is not a timing measurement).\n\n"
+            "  That page is derived from this checkout — the specs' view tables\n"
+            "  against the router, the published contract, and the roadmap. It says\n"
+            "  what is worth clicking and, more usefully, what is not built yet.\n\n"
+            f"  The seeded membership that answers the login (FR-398) is analyst\n"
+            f"  {record['analyst_id']} in workspace {record['workspace_id']}.\n\n"
+            "  Ctrl-C to stop everything this command started.\n",
+            flush=True,
+        )
+        _wait_for_interrupt()
     return 0
 
 
@@ -321,8 +449,18 @@ def _verify_journey_postconditions(record: dict[str, str], env: dict[str, str]) 
             "Workspace-Id": record["workspace_id"],
         },
     )
-    with urllib.request.urlopen(request, timeout=10) as response:
-        body = json.loads(response.read())
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            body = json.loads(response.read())
+    except urllib.error.HTTPError as refused:
+        # FD-1494 limb 2: an HTTP refusal is a refusal, not a traceback. The usual cause is a
+        # record naming a workspace or analyst the database no longer holds.
+        raise DemoRefusedError(
+            f"The API answered {refused.code} to the approved-model check for workspace "
+            f"{record['workspace_id']}. The seed record ({SEED_RECORD.relative_to(ROOT)}) may "
+            "name a workspace or analyst the database no longer holds: re-run the seed "
+            "without --skip-seed."
+        ) from None
     approved = body.get("items", [])
     if not approved:
         raise DemoRefusedError(
@@ -343,16 +481,31 @@ def _wait_for_interrupt() -> None:
             time.sleep(3600)
 
 
-def main() -> int:
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rows", type=int, help="Seed a sample rather than all 678 013")
     parser.add_argument(
         "--skip-seed", action="store_true", help="Reuse the workspace from the last run"
     )
     parser.add_argument("--no-frontend", action="store_true", help="API only")
-    args = parser.parse_args()
+    parser.add_argument(
+        "--journey",
+        choices=JOURNEYS,
+        help="After the seed, start a worker and walk this scripted journey over HTTP, "
+        "then serve the frontend (G2: WF-699 A to E and its deploy step)",
+    )
+    return parser
+
+
+def main() -> int:
+    args = build_parser().parse_args()
     try:
-        return demo(rows=args.rows, skip_seed=args.skip_seed, frontend=not args.no_frontend)
+        return demo(
+            rows=args.rows,
+            skip_seed=args.skip_seed,
+            frontend=not args.no_frontend,
+            journey=args.journey,
+        )
     except DemoRefusedError as exc:
         print(f"\n  {exc}\n", file=sys.stderr, flush=True)
         return 1
