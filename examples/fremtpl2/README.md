@@ -86,12 +86,16 @@ book; nothing the journey prints is a full-book rate or timing (full-book disloc
 platform does not yet do are printed as `SKIPPED` or `KNOWN GAP` with their owner, never hidden.
 
 **What it needs.** Measured on 2026-10-12 at tree `c960b408f0577bdedf13e72147f892033e6a9627` (full
-seed, no `--rows`) on an 8-core, 31 GiB Linux host with Docker running Postgres, Redis, MinIO and the
-auth provider: the command reached the served page 286 s after it started, the journey itself taking
-201 s of that (it then stays up until Ctrl-C; the run was stopped 13 min 19 s in). Sampled every 15 s across the run, peak host memory in use was 9.4 GiB (the idle host
-read 6.8 GiB at the start, so the run itself added about 2.6 GiB), and the containers summed to at most
-1.5 GiB. No smaller machine was tried, so this is what one run used, not a minimum. The GBM
-transparency build the journey waits for at C5 took 29 s.
+seed, no `--rows`) on a Linux host with 8 cores (`nproc`) and 32,870,088 kB of memory
+(`/proc/meminfo` `MemTotal`, 31.3 GiB), Docker running Postgres, Redis, MinIO and the auth provider:
+the command reached the served page 286 s after it started, the journey itself taking 201 s of that
+(it then stays up until Ctrl-C; the run was stopped 13 min 19 s in). **286 s is an observation in a
+functional rehearsal on a shared host, not a timing measurement**, and `NFR-529`'s budget of under
+5 minutes is neither claimed met nor missed by it. Sampled every 15 s across the run, peak host memory
+in use was 9.4 GiB; the host read 6.8 GiB at the start, so the run added about 2.6 GiB (approximate: the
+baseline includes other idle processes on the shared host). The containers summed to at most 1.5 GiB.
+No smaller machine was tried, so this is what one run used, not a minimum. The GBM transparency build
+the journey waits for at C5 took 29 s; its own peak memory is not isolable at 15 s sampling.
 
 ## The data
 

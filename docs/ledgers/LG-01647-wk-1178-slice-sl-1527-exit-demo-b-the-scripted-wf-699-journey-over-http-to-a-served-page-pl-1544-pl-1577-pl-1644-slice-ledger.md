@@ -207,8 +207,24 @@ after the journey, while the frontend was starting) (`slot-acc5-2.out`, `logs/ac
 `portfolio 01a12dd4-ca0e-70a5-8f8d-c53dc992cd8d: a 20,000-policy sample, 19,985 rows validated`, and
 `D6   ok  a 20,000-policy sample of the freMTPL2 book (full-book cost: PL-1574)`. The end: `S1   ok  prod
 scored 46332 minor units from the live version`, `journey done in 201s`, `served page: http://localhost:5173/
-answered 200`, `Seeded to a usable state in 286s  (NFR-529: < 5 min on a developer laptop)` (within the
-NFR by 14 s on this host). The recorded statuses are as designed: A6 and B9 KNOWN GAP; B4, C1′, D7
+answered 200`, `Seeded to a usable state in 286s  (NFR-529: < 5 min on a developer laptop)` (the line as
+`scripts/demo.py` printed it at `c960b408`; reworded in the commit that follows, see below). **NFR-529 is
+NOT claimed met** (the maintainer, `to-lead.md` "2026-10-12 03:13:00 BST"): 286 s against "< 5 min" is 95%
+of the budget, **observed 286 s in a functional rehearsal (not a timing measurement)**, on a host with a
+2.3x contention factor (`.claude/skills/dev-commands/SKILL.md` :893-895); it proves neither a pass nor a fail, and the 14 s margin
+is an observation, not a pass-with-room. The 286 s also counts the journey (201 s) and the frontend start,
+so it is not the stack's seed time alone. NFR-529's verdict owner: no slice or Work owns a verdict on the
+current full demo seed. Its last recorded verdict is the Phase 1b exit row of `docs/roadmap.md` (`CR-821`:
+a scripted HTTP run, 90 s against 300 s, a smaller run), and `PL-815` and `PL-816` each said to record
+the seed time against it. The lead files a carried verdict in D13. The stop: the demo does not exit by
+itself, and **the lead stopped it with SIGINT at 03:10:09 BST (`from-lead` "2026-10-12 03:11:05 BST"), the
+demo's own Ctrl-C path**; teardown was clean (`end 2026-10-12T03:10:14+01:00 rc=0`, `PGREP_CLOSE (none)`).
+The sampler's first and peak lines, verbatim from `slot-acc5-2.out`/`acc5-samples.txt`: first
+`2026-10-12T02:56:55+01:00 host_used_mib=6918 containers=[gi-pricing-keycloak-1:880 gi-pricing-minio-1:382
+gi-pricing-postgres-1:189 gi-pricing-redis-1:13 SUM:1464] worker_procs=0 beat_procs=0`; peak
+`2026-10-12T03:02:13+01:00 host_used_mib=9582 containers=[gi-pricing-keycloak-1:885 gi-pricing-minio-1:390
+gi-pricing-postgres-1:202 gi-pricing-redis-1:13 SUM:1491] worker_procs=4 beat_procs=2`. The transparency
+Job's own peak memory is not isolable at 15 s sampling. The recorded statuses are as designed: A6 and B9 KNOWN GAP; B4, C1′, D7
 (`SKIPPED D7 decomposition — FD 9804`), D9, E5 and E7 SKIPPED. **G2 is still NOT met: D7 does not
 decompose.** The transparency Job: `C5   transparency artifact built in 29 s`, well under the 5-minute
 flag; its peak memory alone cannot be isolated (15 s samples, no per-step timestamps). Full-journey
