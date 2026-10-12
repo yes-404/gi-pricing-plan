@@ -1,9 +1,9 @@
 ---
-id: LG-9793
+id: LG-1646
 family: ledger
 title: WK-1178 slice SL-1517 — NFR-498 Audit Events on rate table version and rating algorithm writes (PL-1516, PL-1627), slice ledger
-status: active
-created: 2026-10-11
+status: closed                 # active → closed (§1.2a)
+created: 2026-10-11            # original date 2026-10-11, set at the draft; minted 2026-10-11
 owner: executor
 tree: 372fa92ae3ab306bc067c234487ce929dc0e2a04
 phase: P2
@@ -14,7 +14,9 @@ corrected_by: []
 relates: [PL-1516, PL-1627, FD-1513, RL-1514, RL-1515, RL-1625, RL-1263, SL-1559, SL-1391, NFR-498, FR-368]
 ---
 
-# LG-9793 — WK-1178 slice SL-1517: NFR-498 Audit Events on rate table version and rating algorithm writes
+# LG-1646 — WK-1178 slice SL-1517: NFR-498 Audit Events on rate table version and rating algorithm writes
+
+*(Minted 2026-10-11 as LG-1646 from working id 9793, at the merge turn.)*
 
 **GO:** the maintainer's (by delegation) entries in `to-lead.md`: "2026-10-11 19:24:24 BST — #1281 (SL-1559, WK-675 S4) read-back VERIFIED: main 372fa92ae3ab306bc067c234487ce929dc0e2a04, parent fe80aec6, tree b38efae0 = ACK tree; PR MERGED, mergeCommit matches. Lane C: S4 done; next SL 9916, then S5. SL-1517 (DP-6 edit path) may now GO, latest Thu 29 Oct." and "2026-10-11 19:23:39 BST — MERGE-ACK #1281 …" ("SL-1517 (DP-6 edit path) may GO after this merges (latest Thu 29 Oct)"). BOUND: merged on or before Wed 2026-11-04 (PL-1516 item 12); report bound for PL-1516 Task 4 Step 1: Fri 2026-10-30 18:00 GMT (PL-1627 §B4, as the lead's GO sets it).
 **MERGE-ACK:** not yet given.
@@ -369,17 +371,42 @@ set as amended by PL-1627 (22 files; no `docs/contracts/`, no `packages/`, no `f
 
 ### Gate
 
-Task 1 gate: see Task 1 (`fdc02a74`, rc table above). Final gate (item 11): not run yet; it runs only on the lead's "GATE GRANTED <head>", under
-`flock /tmp/slots/gate-1`, by `~/gi-pricing-plan.local/scratch/sl1517/slot.sh <head>` (sources
-`handover/slot-preflight.sh`; wrong `EXPECT_HEAD` aborts with rc 90, shown: `slot.sh deadbeef...` printed
-`HEAD guard: ... != deadbeef...` and `end ... rc=90`). Its stages: the NFR-498 module's reds against the
-pre-audit source of the three writers (expect `10 failed, 1 passed`), greens, two deliberate breaks
-(`cells_digest` blanked; `before` dropped), then ruff, mypy, import-linter, pytest, audit-docs (only check 31
-may be red), req-coverage, contracts `--check`, and the five frontend stages, serial, each stamped START/END.
+**Task 1 gate:** at `fdc02a74`, recorded under Task 1 above (rc table, classification, the gate-2 window).
+
+**Final gate (PL-1516 item 11; the gate on the merge tree):** `GATE GRANTED 89f40635fd2dc2c81ecd3d1b2f6fbb85c4d2dabd`,
+from-lead "2026-10-12 00:17:34 BST"; head `89f40635` (tree `bb688b16cc310a204c94efe9bbdc6da04493baf0`, which includes
+`origin/main` `cad75a7e`), run by `scratch/sl1517/slot.sh` under `flock /tmp/slots/gate-1`, slot held
+2026-10-12 00:17:44 to 01:07:10 BST (script `end ... rc=1`). Preflight: `PREFLIGHT ok: head guard, clean tree,
+/tmp/slots/gate-1 held + GIP_GATE_SLOT exported, containers healthy, upgrade rc 0, 1 head`. The lead's verdict:
+from-lead "2026-10-12 01:07:41 BST" (green modulo the mint artefact).
+
+| Stage | START-END (BST) | rc |
+|---|---|---|
+| red_nfr498 (pre-audit source of the three writers; expect `10 failed, 1 passed`) | 00:17:47-00:17:59 | 1 (expected; count held) |
+| green_nfr498 (11 tests) | 00:17:59-00:18:11 | 0 |
+| break_no_digest (`cells_digest` blanked) | 00:18:11-00:18:24 | 1 (expected) |
+| break_before_dropped (`before=None`) | 00:18:24-00:18:36 | 1 (expected) |
+| ruff, mypy (238 files), import_linter | 00:18:37-00:18:38 | 0, 0, 0 |
+| pytest | 00:18:38-01:05:16 | 1 (13 failed, 5708 passed, 6 skipped) |
+| audit_docs | 01:05:16-01:05:36 | 1 (check 31 only, `gap ... between 1643 and 9793`; non-31 failures 0) |
+| req_coverage, contracts | 01:05:36-01:05:45 | 0, 0 |
+| fe_install, fe_generate, fe_lint, fe_typecheck | 01:05:45-01:06:20 | 0, 0, 0, 0 |
+| fe_test (691 of 691) | 01:06:20-01:07:06 | 0 |
+| fe_build | 01:07:06-01:07:09 | 0 |
+
+**Broken-input proofs (three):** `red_nfr498` (10 of 11 tests fail on the code before any `audit.record`: no event row,
+a steps-less sub-graph `after`, no sub-graph `before`, a chain of 1 event instead of 6; the control passes),
+`break_no_digest` and `break_before_dropped` (each turns the module red when the digest or the baseline `before` is
+removed from the writer). **Classification of the 13 pytest reds:** the same 13 audit-docs-on-tree tests as in the Task 1
+gate, each failing on check 31, the unminted working id of this ledger (the mint artefact, cleared by this mint): none is
+a timing or NFR test and none is in this slice's files, so no quiet re-run applied. The audit-docs line of the table is
+that same check 31. At the mint head, `python3 scripts/audit-docs.py` was run once under the gate-2 flock, see the Build log.
 
 ### Audit
 
-(written by an auditor seat; not by the executor)
+To be written by `auditor-sl1517` (an auditor seat; the executor does not self-audit).
+
+Lead verdict: (pending)
 
 ### Build log
 
@@ -390,7 +417,15 @@ may be red), req-coverage, contracts `--check`, and the five frontend stages, se
   above); `ac0440c0` Task 2 (10 red, 1 control); `b335481c` Task 3 (11 green); `bc2163f1` Task 5 (T-1a..d, T-2).
 - 2026-10-11 — `a44314d0` ledger filled, slot script written and its abort proved. Ready to queue.
 - 2026-10-12 — `74b6be2a` merge of `origin/main` `cad75a7e` (conflicts: `docs/INDEX.md` by script, `examples/fremtpl2/model.py`); two call sites that arrived on main now pass the Principal (`examples/fremtpl2/model.py` `seed_demo_rate_tables`, `backend/tests/test_rating_version_change_summary_route.py` line 74): the second file is outside PL-1516 and PL-1627's write set, a one-argument consequence of the merge, reported to the lead.
-- 2026-10-12 — this commit: the Task 1 gate record.
+- 2026-10-12 — `89f40635` the Task 1 gate record. Final gate at `89f40635` (above).
+- 2026-10-12 — **Named widening (disclosed at the mint).** `backend/tests/test_rating_version_change_summary_route.py`
+  line 74 (`principal.id` becomes `principal`), outside PL-1516 and PL-1627's write set, is RULED a named widening
+  by the lead, from-lead "2026-10-12 00:17:34 BST", citing the maintainer's "2026-10-12 00:17:53 BST": a forced
+  merge-interaction adaptation (SL-1503's new test, merged as #1285, meeting this slice's Principal threading), not
+  new scope. `examples/fremtpl2/model.py` `seed_demo_rate_tables`'s call is in the write set.
+- 2026-10-12 — mint turn (from-lead "2026-10-12 01:07:41 BST"): merged `origin/main` `80c77c8e` (#1287; the only
+  conflict, `docs/INDEX.md`, by script), minted LG 9793 as LG-1646, closing acts: this ledger `closed`, the `SL-1517`
+  row `closed` with a dated line, `PL-1516` and `PL-1627` left `active` (their precedent).
 
 ## PRs
 
