@@ -61,6 +61,16 @@ on are quoted verbatim.
    is cited only by `RL-1613:111` (*"S5 is already OpenAPI-contract-changing under the 10:55:02
    BST entry's DP-A (a)"*). The supersession is recorded in a governed record by `RL 9870`
    (working id, reserved by the lead, eta "2026-10-12 02:58:57 BST"; the D13 batch), not here.
+4. **"2026-10-12 03:06:12 BST — PL 9866/9867 noted; DP-2 (DecimalStr for percentage/floor/cap)
+   NOT objected: 04 :278 is explicit. Two additions"**, verbatim: *"1. base_level is named in the
+   same sentence. Confirm its type at the route: a key level (string) or a decimal. If it is a bare
+   Decimal too, it switches with the other three. 2. This is a BREAKING change for any caller now
+   sending a JSON number. SL 9868's red-first set adds "a JSON number for percentage → 422" and
+   greps examples/, scripts/ and backend/tests for bulk-operation bodies sending numbers. Every hit
+   converts in the same slice and is named in the LG."* **Item 1, answered:** `base_level` is a key
+   filter (`KeyFilter = dict[str, list[str]]`, `rating.py:1212`; `RebaseToLevelParameters.base_level:
+   KeyFilter`, `:1264`), not a Decimal, so it does not switch (DP-2). **Item 2** is Task 0's sweep,
+   Red 5 and Acceptance 3.
 
 ## Goal
 
@@ -161,6 +171,7 @@ it is minted or GO'd on its working ids, as `PL-1629` did at its mint.
 | `docs/findings/register.md` FD-1366 row | a dated line: the bulk-operation route typed by SL 9868 | 5 |
 | `docs/roadmap.md` SL 9868 row; `docs/ledgers/LG-<working id>` | status lines and the slice ledger (L1 (a')) | 0, 5 |
 
+Plus any file holding a bulk-operation body that sends a number (Task 0's sweep; none at `fc4401dc`).
 `frontend/src/api/generated` is regenerated and VCS-ignored; it is not in the write set. No
 frontend source calls this route at `fc4401dc` (`grep -rln bulk frontend/src --include=*.ts
 --include=*.vue | grep -v generated` → no output).
@@ -181,6 +192,25 @@ frontend source calls this route at `fc4401dc` (`grep -rln bulk frontend/src --i
   read each hit; record in the `LG-` any that dumps in Python mode, not JSON mode. At
   `fc4401dc` the stores are JSON-mode (`platform/rate_tables.py:1439-1442`) and
   `pricing_core/rate_tables/operations.py:653` builds the record from the model.
+- [ ] **The breaking-caller sweep (03:06:12 item 2).** Run, verbatim, from the repository root:
+
+  ```bash
+  git grep -nE '"(percentage|floor|cap)"[[:space:]]*:[[:space:]]*-?[0-9]' -- examples scripts backend/tests packages frontend/src | grep -v '/generated/'
+  git grep -nE '\b(percentage|floor|cap)[[:space:]]*=[[:space:]]*-?[0-9]' -- examples scripts backend/tests packages
+  ```
+
+  Triage each hit. It is a **bulk-operation body** when its line or enclosing call is a
+  `_bulk_body(` call, a post to `bulk-operation`, `svc.bulk_operation(`, a `*Parameters(` or
+  `*Operation(` constructor, or `BULK_OPERATION_ADAPTER`. Record the hit list and each triage
+  verdict in the `LG-`.
+  - **At `fc4401dc` (the planner's run):** the first command prints 13 hits and the second 1. **None is
+    a bulk-operation body.** The hits are custom-metric and objective `cap` params
+    (`test_custom_metrics*.py`, `test_custom_objectives.py`, `test_metrics.py`, `test_objectives.py`
+    ×2), an expression arity table (`pricing_core/data/expressions.py:76`), a ZEN input
+    (`test_rating_wire_order.py:234`), and a `change_note` string assertion
+    (`test_rate_table_bulk_ops.py:156`).
+  - **Any bulk-operation hit at the slice base** converts to a decimal string inside this slice.
+    Its file joins the write set by that hit and is named in the `LG-`.
 - [ ] Commit the `LG-` scaffold and the SL row's `active` line (L1 (a')).
 
 ### Task 1: Spec — `03` §5.1's bulk-operation row
@@ -238,7 +268,7 @@ signature (premise e).
   `{"kind": "uplift_table", "parameters": {"percentage": "0.10"}, "applied_to": "rate_table:x@1"}`,
   and asserts 422, `code == "VALIDATION_FAILED"`, and a field error whose `field` ends with
   `applied_to`. Run it: **red by its cause** (201; the open body ignores the extra key).
-- [ ] **Red 5 (DP-2: a JSON float is accepted today and refused after).** The same, with `{"percentage": 0.1}`;
+- [ ] **Red 5 (DP-2; 03:06:12 item 2: "a JSON number for percentage → 422").** The same, with `{"percentage": 0.1}`;
   asserts 422 `VALIDATION_FAILED` with a field error ending `percentage`. Run it: **red by its
   cause** (201).
 - [ ] **Red 6 (the published contract).** A `@pytest.mark.req("FR-451")` test in
@@ -312,7 +342,13 @@ Each item is checked by a command a fresh reviewer can run from the repository r
    `UNTYPED_REQUEST_PENDING` or `UNTYPED_2XX_PENDING_PART_B`; `grep -c 'pending FD-1366 Part B'
    backend/tests/test_contracts.py` prints `3` (two entries plus the assertion at `:3288`).
 3. **A server-set field is refused at the boundary** (Red 4) and **a float is
-   refused** (Reds 3, 5); each was seen red by its cause, in the `LG-`.
+   refused** (Reds 3, 5); each was seen red by its cause, in the `LG-`. **Scope of "a number":**
+   `DecimalStr` refuses a Python `float`, which is what a JSON non-integer becomes, and still
+   accepts an `int` (`model_schema/money.py:79-90`: *"Pass a string, an int or a Decimal"*), while
+   the published schema is string-only. Red 5 therefore posts `0.1`. Refusing a JSON integer too
+   would change `DecimalStr` everywhere it is used, which is outside this slice.
+   **Breaking callers:** Task 0's sweep, run again at the head, shows no bulk-operation body
+   sending a number.
 4. **The record's field order is pinned:** Red 1 passes, and its planted-reversal red is in the `LG-`.
 5. **Stored bytes do not move:** a test dumps one record of each kind built from string decimals
    (`model_dump(mode="json")`) and compares it with the literal dump recorded at the slice base;
