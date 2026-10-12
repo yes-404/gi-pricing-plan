@@ -285,6 +285,19 @@ def check_served_page(url: str) -> None:
 
 
 def demo(*, rows: int | None, skip_seed: bool, frontend: bool, journey: str | None = None) -> int:
+    if journey is not None and not frontend:
+        # G2 is a journey that ENDS with the frontend serving a 200 page (RL-1521). Without the
+        # frontend it would run, wait for Ctrl-C and exit 0 with no such check.
+        raise DemoRefusedError(
+            "--journey needs the frontend: the command ends with it serving a 200 page "
+            "(RL-1521). Drop --no-frontend."
+        )
+    if journey is not None and shutil.which("pnpm") is None:
+        # Refused up front, not after a seed: the fallback below would run the API only.
+        raise DemoRefusedError(
+            "--journey needs pnpm to serve the frontend (RL-1521), and pnpm is not on PATH. "
+            "`npm config set prefix ~/.npm-global && npm i -g pnpm` installs it."
+        )
     check_environment()
     started = time.monotonic()
 

@@ -186,7 +186,8 @@ test). DB-test slots (`STAGE=reds`) are granted by head after the ALONE window.
   keyed on `region`, payload `expense_loading` 1.00, effective from 2020-01-01, published and pinned
   in `pins.reference_tables`); `fork()` inserts `s_loading` (`lookup`, `as_at: effective_date`,
   `on_miss: error`) and `number(expense_loading)` into `s_premium`; S1 scores a quote dated
-  2019-06-01 and asserts 422 `REFERENCE_LOOKUP_MISS`. Honest reading, not a silent pick: the
+  2019-06-01 and asserts 422 with the exact code the platform gives today, `RATE_TABLE_MISS` (see the
+  B3 bullet of the fix batch below: it is the lookup that misses). Honest reading, not a silent pick: the
   freMTPL2 contract has no outcode input (the WF's "outcode → rating area" key), so the key is
   `region`, the nearest existing geography input, and the loading is 1.00 so goldens are unaffected.
   Pure test `test_b3_the_fork_puts_a_pinned_as_at_lookup_in_the_premium`; B3 added to the end-to-end
@@ -220,9 +221,13 @@ test). DB-test slots (`STAGE=reds`) are granted by head after the ALONE window.
 | 5 | `test_the_journey_runs_with_a_worker_after_the_postconditions_and_before_the_frontend` | `ValueError: substring not found` (no worker in `demo`) |
 | 5 | `test_a_journey_failure_exits_non_zero_with_the_step_line` | `SystemExit: 2` (`--journey` unrecognised) |
 
-DB-backed reds (`test_the_seed_record_pre_flight_refuses_*`, `test_an_id_that_contradicts_the_stored_identity_is_refused_where_it_arises`,
-`test_wf699_journey_runs_end_to_end`) are written and wait for the lead's slot; their red-by-cause
-lines are recorded at the slot, against the parent source.
+DB-backed reds are shown by the slot script's `reds` stage against the base source, each as its own
+stage in the slot output, and their lines are quoted in the re-gate section below: the id-mismatch
+test (`red_ensure_member`, `IntegrityError`), the B3 multiply (`red_b3_multiply`), and Acceptance 7's
+two pre-flight cases, (i) the record's workspace absent and (ii) the analyst not a member
+(`red_seed_record_preflight`, which moves `scripts/check-seed-record.py` aside, as on the base tree,
+and expects `FileNotFoundError` twice). The end-to-end journey test's red is its absence on the base
+tree (the first commit, `FileNotFoundError` on `journey.py`).
 
 #### Commits (authoring, pushed to `origin/sl-1527-wk1178-exit-demo-b`)
 
@@ -274,6 +279,76 @@ Observations recorded, not smoothed:
   the change ids, which no route exposes. Reported to the lead as a deviation.
 - The test's stand-in GBM carries its creation audit event and a real validated Dataset Version; the
   seeded GBM has both from the fit.
+
+#### The fix batch after the full gate at `dced2856` (the maintainer's rulings `to-lead.md` "2026-10-12 01:25:10 BST" and "2026-10-12 01:30:34 BST", relayed by the lead)
+
+- **D7: the lump is NOT accepted** (01:25:10): D7 means attribution that DECOMPOSES the change
+  (FR-264); "accepts either" for B3's code is REFUSED because it cannot fail. FIX BEFORE CLOSE is
+  endorsed on gaps 4 to 7 and Acceptance 7 (01:30:34); the role-routes finding is the lead's, in D13.
+  **A route does map the changes**: `DislocationRun.derived_changes` (`id`, `kind`, `description`,
+  `packages/model-schema/src/model_schema/dislocation.py` `BundleDelta`) is readable from a finished run
+  (`/dislocation-runs/estimate` returns only counts). The journey runs once with one group, reads the
+  derived changes, and `split_effects()` splits them into the journey's own effects: **rate table
+  edits** (`table_repointed` and rate-table pins) and **NCD ladder and expense loading** (everything
+  the fork added or rewired, which depends on itself and so is one group by construction: attribution
+  refuses a group that is not self-contained, `_check_dependence`). The second run attributes the two
+  groups; the journey asserts both effects are present, the Shapley parts sum to the total, and the
+  isolated parts plus the residual reconcile. Cost: two Dislocation Runs on the 20,000-policy sample.
+  Ladder and loading cannot be split from each other: the premium step consumes both, so a group
+  holding one without the other is not self-contained. Pure test
+  `test_d7_splits_the_derived_changes_into_the_journeys_own_effects`.
+- **B3: one exact code, asserting CURRENT behaviour (the lead's ruling `from-lead` "2026-10-12
+  02:20:03 BST").** Read at this head, `packages/pricing-core/src/pricing_core/rating/score.py`
+  `_reraise_engine_failure`: the miss is named by what the FAILING step consumes (`:550`
+  `consumed = set(_as_list(step.consumes))`), and **rate-table outputs are tested first**:
+  `:560` `if consumes_output_of(tables): code = "RATE_TABLE_MISS"` then `:562`
+  `elif consumes_output_of(lookups): code = "REFERENCE_LOOKUP_MISS"`. The failing step is
+  `s_premium`, which consumes the rate-table outputs AND the lookup's, so the LOOKUP missed (no row is
+  in force on 2019-06-01; the same context passed on 2026-10-01 and every table still hits) and the
+  platform says `RATE_TABLE_MISS`. A first attempt moved the loading into a step of its own (`s_loaded`)
+  so the code would come out `REFERENCE_LOOKUP_MISS`; the lead refused it, because that routes the demo
+  around the defect the ruling wants seen. The fork is back to the single `s_premium` form and the
+  journey asserts `RATE_TABLE_MISS` EXACTLY, with a comment naming the finding: "FD (D13, working, owner
+  WK-1178): a reference-lookup miss in a step that also consumes a rate table is reported as
+  RATE_TABLE_MISS (`score.py` `_reraise_engine_failure` orders tables first); when fixed, this assertion
+  turns red and becomes `REFERENCE_LOOKUP_MISS`." The lead files the FD in D13. Pure test
+  `test_b3_the_fork_puts_a_pinned_as_at_lookup_in_the_premium`.
+- **D7's two groups are not "ladder vs lookup" (disclosed deviation, with the maintainer by the
+  lead's recommendation to accept it):** the two cannot be separated, because `s_premium` consumes both
+  the ladder's factor and the loading and `_check_dependence`
+  (`packages/pricing-core/src/pricing_core/rating/analysis.py`, "refuse, naming each dependent pair, a
+  group that is not self-contained") rejects a group holding one without the other. The two effects
+  attributed are the rate-table edits and the added structure (ladder plus loading).
+- **Acceptance 7's pre-flight DB reds:** `slot.sh` has a `red_seed_record_preflight` stage that moves
+  `check-seed-record.py` aside (the base source has none), runs both DB tests and expects
+  `FileNotFoundError` twice; its line is quoted at the re-gate.
+- **Inseparable effects (the maintainer's condition 1, `to-lead.md` "2026-10-12 02:20:32 BST",
+  relayed by the lead):** ladder and lookup cannot be attributed apart: `s_premium` consumes both the
+  ladder's factor and the lookup's output, and `_check_dependence`
+  (`packages/pricing-core/src/pricing_core/rating/analysis.py:816`, "refuse, naming each dependent
+  pair, a group that is not self-contained") refuses a group holding one without the other.
+- **Minimum-premium effect (condition 2):** the fork does not exercise it. WF-699's attribution names
+  peril-structure, rate-table and minimum-premium effects; this fork has no `constraint` step, so there
+  is no minimum-premium change to attribute and no group for it. The two attributed effects are the
+  rate-table edits and the added structure.
+- **The partition is asserted (condition 3):** the journey checks, from the run it read back, that
+  every `derived_changes` id appears in exactly one `change_groups` entry (none lost, none twice), and
+  `test_d7_splits_the_derived_changes_into_the_journeys_own_effects` asserts the same of
+  `split_effects`.
+- **GAP 4 (every step recorded, asserted, in order):** `journey.STEP_ORDER` lists the 42 steps (the workflow's 39, plus C1′, DEP and S1); the
+  journey now records B1, B2, B5 and B8 from the stored algorithm (B8 checks one output step, half_even
+  at 0 dp), C2 and C3 with their own checks, E2 beside E3, D8 with the run cited by id; the end-to-end
+  test asserts `list(step_status) == list(STEP_ORDER)` and that every status is `ok` or the exact ruled
+  skip line. The only departures from the workflow's order are the declared ones (B3 and B7 before B1;
+  C3 after the passing compile; D6 to D9 between E3 and E4).
+- **GAP 5:** `scripts/demo.py --journey` with `--no-frontend`, or with pnpm absent, is refused up front
+  with a nonzero exit (two tests, red first).
+- **GAP 6 (PL-1644 Acceptance 3), one line:** the D4 sweep is `bonus_malus` over **50..230**, the grid
+  spacing is **(230 − 50) / 4 = 45** (uniform points 50, 95, 140, 185, 230), and the inverted ladder band
+  is **100–149** (50 points wide, wider than the spacing of 45, so the uniform point 140 lies inside it).
+- **GAP 7 (23:27:48 condition 2):** the test's `_world` now takes the author, submitter and both
+  approvers of the baseline Rating Version from `seed.grant_demo_principals`; `_principal(...)` and
+  `_seed(...)` are no longer used there. One definition of the principal set.
 
 ## PRs
 

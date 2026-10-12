@@ -211,14 +211,14 @@ async def _world(database: Any, blob_store: Any, workspace_id: Any) -> dict[str,
     from backend.tests.test_api_rate_tables import _glm_spec
     from backend.tests.test_demo_rating_evidence import (
         _BASE_MINOR,
+        _approved_model,
         _bandings,
         _fit_result,
-        _seed,
         demo_model,
     )
     from backend.tests.test_fremtpl2_algorithm import _BANDED, _DOMAINS
-    from backend.tests.test_rating_versions import _principal
 
+    from app.config import Settings
     from app.db.models import DatasetVersionRow, ModelRow
     from model_schema import ModelStatus, new_uuid7
 
@@ -227,10 +227,15 @@ async def _world(database: Any, blob_store: Any, workspace_id: Any) -> dict[str,
     record = {"workspace_id": str(workspace_id)}
     record |= {f"{name}_id": str(who.id) for name, who in people.items()}
 
-    analyst, model_id, tables = await _seed(database, workspace_id, blob_store)
-    actuary = await _principal(database, workspace_id, "pricing_actuary")
-    approver = await _principal(database, workspace_id, "approver")
-    second = await _principal(database, workspace_id, "approver")
+    # ONE definition of the principal set (the maintainer's 23:27:48 condition 2): the seed's own,
+    # for the baseline's author, submitter and approvers as well as for the journey. No principal
+    # is built here.
+    analyst, actuary = people["analyst"], people["actuary"]
+    approver, second = people["approver"], people["second_approver"]
+    model_id = await _approved_model(database, workspace_id)
+    tables = await demo_model.seed_demo_rate_tables(
+        database, Settings(), blob_store, workspace_id, analyst, model_id
+    )
     await demo_model.create_approved_rating_version(
         database,
         blob_store,
@@ -354,37 +359,19 @@ def test_wf699_journey_runs_end_to_end(api_client, database, blob_store, workspa
         pytest.fail(f"{failure} :: {failure.detail} :: after {lines[-1:]}")
 
     status = result.step_status
-    for step in (
-        "A1",
-        "A2",
-        "A3",
-        "A4",
-        "A5",
-        "B3",
-        "B6",
-        "B7",
-        "C1",
-        "C4",
-        "C5",
-        "D1",
-        "D2",
-        "D3",
-        "D4",
-        "D5",
-        "D6",
-        "D7",
-        "E1",
-        "E3",
-        "E4",
-        "E6",
-        "E8",
-        "E9",
-        "DEP",
-        "S1",
-    ):
-        assert status[step] == "ok", (step, status.get(step))
-    for entry in journey.SKIPS:
-        assert status[entry.step] == f"SKIPPED: {entry.line}"
+    # PL-1544 Acceptance 2: EVERY WF-699 step is recorded, once, in the documented order. A step
+    # missing from the record, or recorded out of that order, fails here.
+    assert list(status) == list(journey.STEP_ORDER)
+    skipped = {entry.step: f"SKIPPED: {entry.line}" for entry in journey.SKIPS}
+    for step, outcome in status.items():
+        # Each step is either asserted by the journey (`ok`) or a ruled skip, whose exact line is
+        # the recorded status. Nothing else is a status.
+        assert outcome == skipped.get(step, "ok"), (step, outcome)
+    assert set(skipped) <= set(status)
+    # The deliberate failures were asserted by their codes inside the journey; their statuses are
+    # `ok` only because the platform answered exactly that code.
+    for step in ("B6", "C4", "E3", "D4", "E8"):
+        assert status[step] == "ok", step
     assert result.rating_version_id is not None
     assert result.bundle_hash.startswith("sha256:")
     assert result.prod_premium_minor > 0
@@ -419,26 +406,90 @@ def test_b3_the_fork_puts_a_pinned_as_at_lookup_in_the_premium() -> None:
                 "consumes": ["base_premium_minor", "rel_region"],
                 "produces": "premium_unrounded",
             },
+            {
+                "step_id": "s_out",
+                "type": "output",
+                "output_name": "payable_premium_minor",
+                "rounding": {"mode": "half_even", "dp": 0},
+                "consumes": ["premium_unrounded"],
+            },
         ],
     }
     walk = journey._Journey(None, {}, print, None, 1.0)  # type: ignore[arg-type]
     walk.seeded = seeded
     walk.table_refs = {"region": "rate_table:wf699-region@2"}
     plain = walk.fork(version=2, ladder_ref="sub_graph:ncd-ladder@1")
-    assert [s["step_id"] for s in plain["steps"]] == ["s_t_region", "s_premium"]
+    assert [s["step_id"] for s in plain["steps"]] == ["s_t_region", "s_premium", "s_out"]
     assert plain["steps"][0]["rate_table_ref"] == "rate_table:wf699-region@2"
 
     walk.loading_ref = "reference_table:wf699-region-loading@1"
     forked = walk.fork(version=2, ladder_ref="sub_graph:ncd-ladder@1")
     ids = [s["step_id"] for s in forked["steps"]]
-    assert ids == ["s_t_region", "s_loading", "s_premium"]
-    lookup = forked["steps"][1]
+    assert ids == ["s_t_region", "s_loading", "s_premium", "s_out"]
+    by_id = {s["step_id"]: s for s in forked["steps"]}
+    lookup = by_id["s_loading"]
     assert lookup["type"] == "lookup"
     assert lookup["reference_table_ref"] == "reference_table:wf699-region-loading@1"
     assert lookup["as_at"] == "effective_date"
     assert lookup["on_miss"] == "error"
-    premium = forked["steps"][2]
+    # The premium step multiplies by the loading: it is the one step that consumes the rate-table
+    # outputs, the ladder's factor and the lookup's output (so a lookup miss is reported as
+    # RATE_TABLE_MISS today; the journey asserts that exactly and names the finding).
+    premium = by_id["s_premium"]
     assert "number(expense_loading)" in premium["expr"]
     assert "expense_loading" in premium["consumes"]
     assert "ncd_factor" in premium["consumes"]
+    assert by_id["s_out"]["consumes"] == ["premium_unrounded"]
     assert seeded["steps"][1]["expr"] == "base_premium_minor * rel_region"  # the seed is untouched
+
+
+@pytest.mark.req("FR-264")
+def test_d7_splits_the_derived_changes_into_the_journeys_own_effects() -> None:
+    """The maintainer's D7 ruling (to-lead "2026-10-12 01:25:10 BST"): attribution decomposes the
+    change. The derived changes of a run (`id`, `kind`, `description`) become two groups: what the
+    journey did to the rate tables, and the structure it added; a pin on a rate table belongs with
+    the first. If either effect is empty there is nothing to decompose and the journey stops."""
+    derived = [
+        {"id": "c1", "kind": "table_repointed", "description": "step s_t_region"},
+        {"id": "c2", "kind": "table_repointed", "description": "step s_t_area"},
+        {"id": "c3", "kind": "step_added", "description": "step s_loading"},
+        {"id": "c4", "kind": "step_changed", "description": "step s_out"},
+        {"id": "c5", "kind": "pin", "description": "rate_tables pin rate_table:x@2 added"},
+        {"id": "c6", "kind": "pin", "description": "sub_graphs pin sub_graph:ncd-ladder@1 added"},
+    ]
+    effects = journey.split_effects(derived)
+    assert effects == {
+        journey.EFFECT_RATE_TABLES: ["c1", "c2", "c5"],
+        journey.EFFECT_STRUCTURE: ["c3", "c4", "c6"],
+    }
+    flat = [cid for ids in effects.values() for cid in ids]
+    assert sorted(flat) == sorted(d["id"] for d in derived)  # a partition: none lost, none twice
+    assert journey.split_effects(derived[:2]) is None  # tables only: nothing else to decompose
+    assert journey.split_effects(derived[2:4]) is None  # structure only
+    assert journey.split_effects([]) is None
+
+
+@pytest.mark.req("FR-257")
+def test_the_step_order_names_every_wf699_step_once() -> None:
+    """PL-1544 Acceptance 2: the journey's recorded order has every step of `WF-699` A to E once,
+    plus the two steps this slice adds (`DEP`, `S1`) and `C1'`. The only departures from the
+    workflow's own order are the declared ones."""
+    import re
+
+    workflow = (_EXAMPLE.parents[1] / "docs" / "workflows").glob("WF-00699-*.md")
+    text = next(workflow).read_text(encoding="utf-8")
+    ids = re.findall(r"^\| ([A-E]\d) \|", text, flags=re.MULTILINE)
+    assert len(ids) == len(set(ids))
+    expected = set(ids) | {"C1′", "DEP", "S1"}  # noqa: RUF001
+    assert set(journey.STEP_ORDER) == expected
+    assert len(journey.STEP_ORDER) == len(set(journey.STEP_ORDER))
+    positions = {step: i for i, step in enumerate(journey.STEP_ORDER)}
+    # D6 to D9 run between E3 and E4; B3 and B7 come before B1; all else follows the workflow.
+    assert positions["E3"] < positions["D6"] < positions["D9"] < positions["E4"]
+    assert positions["B3"] < positions["B7"] < positions["B1"]
+    assert positions["C5"] < positions["C3"] < positions["C6"]  # C3 follows the compile that passes
+    for phase in "ADE":
+        in_phase = [s for s in journey.STEP_ORDER if s[0] == phase]
+        if phase == "D":
+            in_phase = [s for s in in_phase if s in {"D1", "D2", "D3", "D4", "D5"}]
+        assert in_phase == sorted(in_phase), phase

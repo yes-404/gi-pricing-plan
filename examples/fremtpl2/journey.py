@@ -465,7 +465,6 @@ class _Journey:
         )
         self.skip("B9")
         self.skip("B4")
-        self.done("B8", "output rounding half_even, 0 dp")
         self.reference_table()
 
     def fork(self, *, version: int, ladder_ref: str | None) -> dict[str, Any]:
@@ -511,6 +510,9 @@ class _Journey:
                     "consumes": ["region"],
                     "produces": "expense_loading",
                 }
+                # The premium multiplies by the loading in the one step that already multiplies the
+                # relativities. That step therefore consumes rate-table outputs AND the lookup's;
+                # see the B3 assertion in `deploy_and_score` for what that does to a lookup miss.
                 steps = payload["steps"]
                 at = next(i for i, step in enumerate(steps) if step["step_id"] == "s_premium")
                 payload["steps"] = [*steps[:at], lookup, *steps[at:]]
@@ -596,7 +598,8 @@ class _Journey:
         """B7 and C1: save the next ladder, the algorithm mounting it by exact pin, and a Rating
         Version pinning everything. The versions are read from the create responses."""
         body = ladder_body(middle, change_note)
-        if self.ladder_version == 0:
+        first = self.ladder_version == 0
+        if first:
             ladder = self.req(
                 "B7",
                 "analyst",
@@ -616,6 +619,8 @@ class _Journey:
             )
         self.ladder_version = int(ladder["version"])
         ladder_ref = f"sub_graph:{LADDER_SLUG}@{self.ladder_version}"
+        if first:
+            self.done("B7", f"{ladder_ref} saved over HTTP and mounted by exact pin")
         self.algorithm_version += 1
         saved = self.req(
             "B1",
@@ -625,6 +630,8 @@ class _Journey:
             expect=201,
             json=self.fork(version=self.algorithm_version, ladder_ref=ladder_ref),
         )
+        if first:
+            self.check_saved_algorithm(saved)
         version = self.req(
             "C1",
             "analyst",
@@ -649,6 +656,49 @@ class _Journey:
         )
         return dict(version)
 
+    def check_saved_algorithm(self, saved: Mapping[str, Any]) -> None:
+        """B1, B2, B5 and B8, each asserted on the algorithm as the platform stored it."""
+        stored = self.req(
+            "B1",
+            "analyst",
+            "GET",
+            f"/rating-algorithms/{saved['slug']}@{saved['version']}",
+            expect=200,
+        )
+        if stored["slug"] != self.seeded["slug"] or stored["version"] == self.seeded["version"]:
+            raise JourneyStepFailed("B1", "NOT_A_FORK_OF_THE_SEEDED_ALGORITHM")
+        self.done(
+            "B1", f"{stored['slug']}@{stored['version']} forked from @{self.seeded['version']}"
+        )
+
+        contract = {field["name"]: field for field in stored["input_contract"]}
+        seeded_names = {field["name"] for field in self.seeded["input_contract"]}
+        if set(contract) != seeded_names or "bonus_malus" not in contract:
+            raise JourneyStepFailed("B2", "INPUT_CONTRACT_CHANGED")
+        if any(
+            field.get("type") is None or field.get("nullable") is None
+            for field in contract.values()
+        ):
+            raise JourneyStepFailed("B2", "INPUT_CONTRACT_NOT_DECLARED")
+        self.done("B2", f"{len(contract)} inputs declared: types, ranges, domains, nullability")
+
+        kinds = [step["type"] for step in stored["steps"]]
+        wanted = {"table": len(self.factors), "lookup": 1, "output": 1}
+        if any(kinds.count(kind) != count for kind, count in wanted.items()) or (
+            "expression" not in kinds
+        ):
+            raise JourneyStepFailed("B5", "STEP_KINDS_NOT_AS_BUILT")
+        self.done(
+            "B5",
+            f"{kinds.count('table')} table steps, {kinds.count('expression')} expression steps, "
+            "the lookup and the output",
+        )
+
+        (output,) = [step for step in stored["steps"] if step["type"] == "output"]
+        if output.get("rounding") != {"mode": "half_even", "dp": 0}:
+            raise JourneyStepFailed("B8", "ROUNDING_NOT_HALF_EVEN_0DP_ONCE")
+        self.done("B8", "one output step, rounding half_even at 0 dp: rounded exactly once")
+
     def compile(
         self, step: str, version: Mapping[str, Any], *, expect_failure: str | None = None
     ) -> dict[str, Any]:
@@ -666,18 +716,25 @@ class _Journey:
     # -- Phase C: compile and pin ------------------------------------------------------------
     def phase_c(self) -> None:
         self.rv1 = self.build_version("RV1", LADDER_BANDS["middle"], "the NCD ladder, demo bands")
-        self.done("B7", f"{LADDER_SLUG}@{self.ladder_version} mounted by exact pin")
         self.skip("C1′")  # noqa: RUF001
+        pins = self.rv1["pins"]
+        if self.gbm_ref not in pins["models"] or len(pins["rate_tables"]) != len(self.factors):
+            raise JourneyStepFailed("C1", "PINS_DO_NOT_ECHO_THE_REQUEST")
         self.done("C1", "the version pins the algorithm, every table, both models and the ladder")
         self.compile("C2", self.rv1, expect_failure="PIN_NOT_APPROVED")
+        self.done("C2", "202 and a rating.compile Job, which the worker ran")
         self.done("C4", "PIN_NOT_APPROVED: the GBM is not approved")
         self.approve_gbm()
         self.compile("C5", self.rv1)
+        self.done("C5", "the GBM approved through the workflow, then recompiled")
         read = self.req("C6", "analyst", "GET", f"/rating-versions/{self.rv1['id']}", expect=200)
-        self.done("C2")
-        self.done("C3")
-        self.done("C5", "approved through the workflow, recompiled")
-        self.done("C6", read["bundle"]["content_hash"])
+        if not read.get("bundle"):
+            raise JourneyStepFailed("C3", "COMPILED_BUT_NO_BUNDLE")
+        self.done("C3", "every pin, reference and type resolved at once: the compile passed")
+        bundle_hash = str(read["bundle"]["content_hash"])
+        if not bundle_hash.startswith("sha256:"):
+            raise JourneyStepFailed("C6", "BUNDLE_NOT_CONTENT_HASHED")
+        self.done("C6", bundle_hash)
 
     def approve_gbm(self) -> None:
         slug, number = self.gbm["model_family_slug"], self.gbm["version"]
@@ -875,6 +932,7 @@ class _Journey:
         text = f"{draft['text']}\nWhy: the NCD ladder and the A-phase edits (WF-699 journey)."
         self.done("E1", "drafted from the structural and rate diffs, then edited")
         self.submit("E2", text, expect=422, code="EVIDENCE_INCOMPLETE")
+        self.done("E2", "POST /rating-versions/{id}/submit, the route RL-1524 names")
         self.done("E3", "EVIDENCE_INCOMPLETE: no Dislocation Run for this version yet")
         self.dislocation()
         first = self.submit("E4", text, expect=200)
@@ -946,6 +1004,16 @@ class _Journey:
                 raise JourneyStepFailed("D6", "ESTIMATE_FAILED", response.status_code)
         raise JourneyStepFailed("D6", "DERIVED_CHANGES_NOT_FOUND")
 
+    def run_dislocation(self, spec: Mapping[str, Any]) -> tuple[str, dict[str, Any]]:
+        """Start a Dislocation Run, wait for its Job and read the run back: its id and body."""
+        accepted = self.req("D6", "analyst", "POST", "/dislocation-runs", expect=202, json=spec)
+        job = self.job_ok("D6", "analyst", accepted)
+        run_id = str(job["result"]["ref"]).split(":", 1)[1]
+        run: dict[str, Any] = self.req(
+            "D7", "analyst", "GET", f"/dislocation-runs/{run_id}", expect=200
+        )
+        return run_id, run
+
     def dislocation(self) -> None:
         spec: dict[str, Any] = {
             "baseline_ref": "rating_version:fremtpl2-demo@1",
@@ -957,25 +1025,48 @@ class _Journey:
             "band_edges_pct": ["-10", "-5", "0", "5", "10"],
             "mover_threshold_pct": "10",
         }
-        # The fork adds and rewires steps that depend on one another, and attribution refuses
-        # dependent changes that are not in one group. The derived changes are numbered c1, c2, ...
-        # (FR-1399) and the estimate refuses a partition that leaves one out or names one that is
-        # not derived, so the count is found by asking, then they go into one group.
-        spec["change_groups"] = [{"name": "the whole fork", "changes": self.derived_changes(spec)}]
-        accepted = self.req("D6", "analyst", "POST", "/dislocation-runs", expect=202, json=spec)
-        job = self.job_ok("D6", "analyst", accepted)
+        # D7 is attribution that decomposes the change (FR-264). The derived changes are numbered
+        # c1, c2, ... but their kinds are only readable from a finished run, so the first run puts
+        # them all in one group (the estimate route refuses a partition that leaves one out or
+        # names one that is not derived, so the count is found by asking), and the second run
+        # splits them into the effects the journey itself made: its rate-table edits, and the
+        # structure it added (the NCD ladder and the expense loading, which depend on one another
+        # and so must share a group).
+        everything = [{"name": "the whole fork", "changes": self.derived_changes(spec)}]
+        _, first = self.run_dislocation({**spec, "change_groups": everything})
+        effects = split_effects(first.get("derived_changes") or [])
+        if effects is None:
+            # Not walked: printed as a skip with its finding by the lead's rule, never as ok.
+            raise JourneyStepFailed("D7", "NO_DECOMPOSITION_MAPPING")
+        groups = [{"name": name, "changes": ids} for name, ids in effects.items()]
+        run_id, run = self.run_dislocation({**spec, "change_groups": groups})
         self.done("D6", "a 20,000-policy sample of the freMTPL2 book (full-book cost: PL-1574)")
-        run_id = str(job["result"]["ref"]).split(":", 1)[1]
-        run = self.req("D7", "analyst", "GET", f"/dislocation-runs/{run_id}", expect=200)
-        if not run.get("attribution"):
-            raise JourneyStepFailed("D7", "NO_ATTRIBUTION")
+
+        # The partition, proved from the run as stored: every derived change is in exactly one
+        # group (none lost, none placed twice).
+        placed = [cid for group in run["change_groups"] for cid in group["changes"]]
+        derived_ids = [str(change["id"]) for change in run["derived_changes"]]
+        if sorted(placed) != sorted(derived_ids) or len(set(placed)) != len(placed):
+            raise JourneyStepFailed("D7", "GROUPS_DO_NOT_PARTITION_THE_DERIVED_CHANGES")
+        items = {item["group"]: item for item in run["attribution"]}
+        if set(items) != set(effects):
+            raise JourneyStepFailed("D7", "EFFECT_MISSING_FROM_THE_ATTRIBUTION")
+        summary = run["attribution_summary"]
+        total = int(summary["total_change_minor"])
+        parts = [int(item["shapley_minor"]) for item in items.values()]
+        isolated = [int(item["isolated_minor"]) for item in items.values()]
+        if summary["method"] != "shapley" or sum(parts) != total:
+            raise JourneyStepFailed("D7", "EFFECTS_DO_NOT_SUM_TO_THE_TOTAL")
+        if sum(isolated) + int(summary["residual_minor"]) != total:
+            raise JourneyStepFailed("D7", "ISOLATED_EFFECTS_DO_NOT_RECONCILE")
         self.req("D7", "analyst", "GET", f"/dislocation-runs/{run_id}/movers", expect=200)
+        shown = "; ".join(f"{name}: {int(items[name]['shapley_minor']):+d}" for name in items)
         self.done(
             "D7",
-            f"{run['policy_count']} policies in the sample; attribution persisted "
+            f"{run['policy_count']} policies in the sample; {shown}; sum {total:+d} minor units "
             "(full-book attribution cost: FD-1576)",
         )
-        self.done("D8", f"dislocation run {run_id}")
+        self.done("D8", f"dislocation run {run_id}, attribution cited by id")
         self.skip("D9")
 
     # -- Deploy and the served quote -------------------------------------------------------
@@ -1068,20 +1159,22 @@ class _Journey:
             raise JourneyStepFailed("B3", "LOADING_NOT_MULTIPLIED_INTO_THE_PREMIUM")
         # B3's other half: a quote dated before the reference row's `effective_from` does not use
         # it. The lookup has no row in force, so the quote is refused, not priced without it.
-        # The code is REFERENCE_LOOKUP_MISS or, when the miss surfaces at the expression that
-        # consumes the empty lookup, the documented residual RATE_TABLE_MISS (`score.py`
-        # `_reraise_engine_failure`): both are the refusal this asserts.
-        before = call(
+        # The LOOKUP misses here (no row is in force on that date; every rate table still hits),
+        # and the platform reports RATE_TABLE_MISS. That is CURRENT behaviour, asserted exactly:
+        # FD (D13, working, owner WK-1178): a reference-lookup miss in a step that also consumes
+        # a rate table is reported as RATE_TABLE_MISS (`score.py` `_reraise_engine_failure`
+        # orders tables first). When it is fixed, this assertion turns red and becomes
+        # REFERENCE_LOOKUP_MISS.
+        call(
             self.client,
             "B3",
             "POST",
             "/score",
             expect=422,
+            code="RATE_TABLE_MISS",
             headers={"X-API-Key": account["key"]},
             json={**context, "effective_date": BEFORE_EFFECTIVE_FROM},
         )
-        if before.get("code") not in ("REFERENCE_LOOKUP_MISS", "RATE_TABLE_MISS"):
-            raise JourneyStepFailed("B3", before.get("code"), 422)
         self.done(
             "S1", f"prod scored {self.result.prod_premium_minor} minor units from the live version"
         )
@@ -1099,6 +1192,47 @@ def run_wf699_journey(
     workspace id, every principal's id and the portfolio Dataset Version. `client` has the API's
     `/api/v1` as its base URL."""
     return _Journey(client, record, log, run_job, job_timeout).run()
+
+
+#: The order the journey records its steps, which `test_wf699_journey_runs_end_to_end` asserts
+#: (every WF-699 step, once). It is WF-699's own order except where a step cannot be staged over
+#: HTTP in it: B3 and B7 come before B1 and B2 (the reference table and the ladder are saved
+#: first, then the algorithm that pins them), B6, B9 and B4 are probed before the algorithm is
+#: saved, C3 follows the compile that passes, and D6 to D9 run between E3 and E4, because a
+#: Rating Version's pins cannot be edited to make a Dislocation Run stale (the run is E4's rerun).
+STEP_ORDER: Final = (
+    "A1", "A2", "A3", "A4", "A5", "A6",
+    "B6", "B9", "B4", "B3", "B7", "B1", "B2", "B5", "B8",
+    "C1′", "C1", "C2", "C4", "C5", "C3", "C6",  # noqa: RUF001
+    "D1", "D2", "D3", "D4", "D5",
+    "E1", "E2", "E3", "D6", "D7", "D8", "D9", "E4", "E5", "E6", "E7", "E8", "E9",
+    "DEP", "S1",
+)  # fmt: skip
+
+
+#: D7's two effects: what the journey did to the rate tables (A3, A4 and the A-phase seeding), and
+#: the structure it added to the algorithm (the NCD ladder and the expense loading).
+EFFECT_RATE_TABLES: Final = "rate table edits"
+EFFECT_STRUCTURE: Final = "NCD ladder and expense loading"
+
+
+def split_effects(derived: Sequence[Mapping[str, Any]]) -> dict[str, list[str]] | None:
+    """Group a run's derived changes (`DislocationRun.derived_changes`: `id`, `kind`,
+    `description`) into the journey's own effects. The changes to rate tables (a repointed table
+    step, a rate-table pin) are one effect and everything else the fork added or rewired is the
+    other: that second set depends on itself (the premium step consumes the ladder and the
+    loading), so it is one group by construction, and the first set consumes nothing new. `None`
+    when either effect is empty: the journey then has nothing to decompose."""
+    tables = [
+        str(d["id"])
+        for d in derived
+        if d["kind"] == "table_repointed"
+        or (d["kind"] == "pin" and "rate_table" in str(d["description"]))
+    ]
+    structure = [str(d["id"]) for d in derived if str(d["id"]) not in tables]
+    if not tables or not structure:
+        return None
+    return {EFFECT_RATE_TABLES: tables, EFFECT_STRUCTURE: structure}
 
 
 def _minor(value: Decimal) -> int:

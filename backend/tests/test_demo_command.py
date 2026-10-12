@@ -336,3 +336,33 @@ def test_a_journey_failure_exits_non_zero_with_the_step_line(
         demo_script.journey_failure_line(FailedError())
         == "the WF-699 journey failed at C1: VALIDATION_FAILED (HTTP 422)"
     )
+
+
+@pytest.mark.req("FR-408")
+def test_the_journey_refuses_to_run_without_the_frontend(monkeypatch: pytest.MonkeyPatch) -> None:
+    """RL-1521: the command ends with the frontend serving a 200 page. `--journey` with
+    `--no-frontend` would run the journey, wait for Ctrl-C and exit 0 with no 200 check, so it is
+    refused, before anything is started, with a nonzero exit and a message saying why. Red first:
+    on the unfixed command it started the infrastructure instead of refusing."""
+    import sys
+
+    with pytest.raises(demo_script.DemoRefusedError) as refusal:
+        demo_script.demo(rows=None, skip_seed=True, frontend=False, journey="wf-699")
+    assert "--no-frontend" in str(refusal.value)
+
+    monkeypatch.setattr(sys, "argv", ["demo.py", "--journey", "wf-699", "--no-frontend"])
+    assert demo_script.main() == 1
+
+
+@pytest.mark.req("FR-408")
+def test_the_journey_refuses_when_pnpm_is_absent() -> None:
+    """The same end-state rule when the frontend cannot start: `demo` must not fall back to an
+    API-only run for a journey (it would end with no served page). The refusal sits at the place
+    the fallback was."""
+    import inspect
+
+    source = inspect.getsource(demo_script.demo)
+    fallback = source.index("shutil.which")
+    window = source[fallback - 80 : fallback + 700]
+    assert "journey is not None" in window
+    assert "DemoRefusedError" in window
