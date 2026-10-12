@@ -450,5 +450,6 @@ Observations recorded, not smoothed:
 
 ## PRs
 
-The slice's PR is opened at the lead's word, after the full gate and the Acceptance 5 rehearsal;
-its number and merge commit are recorded here at merge.
+- #1289, "feat(examples): SL-1527 — the scripted WF-699 journey over HTTP to a served page (WK-1178
+  G2 exit-demo b; PL-1544, PL-1577, PL-1644, LG-1647)", opened as a draft 2026-10-12 at head
+  `8760258c`. Merge commit: recorded at merge.
