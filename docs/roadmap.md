@@ -1101,6 +1101,8 @@ The compose `api` and `worker` services, the reference identity provider, the me
 
 *Dated 2026-10-12 by the planner: the Work-plan deltas for this slice are `PL-1537` row 1, `PL-1620` (D0.1 to D0.3, D4.1 to D4.3; minted in D11, #1275) and PL-1666 (minted in D13; D0.4, D0.5, D4.4 to D4.6: FD-1650's round-trip test, FR-452's management limb behind its DP-S4-1, and FD-1661 kept out of this slice). The authored branch is `sl-1258-wk674-s4` @`a04ff676`, not activated. This row's status and fields are unchanged.*
 
+*Dated 2026-10-12 by the planner: a further Work-plan delta for this slice, PL-1690 (minted 2026-10-12 as PL-1690 from working id 9898): E4.1, FR-452's management limb as RL-1687 rules it (minted 2026-10-12 as RL-1687 from working id 9876; ACKed by the maintainer's (by delegation) entry "2026-10-12 07:44:13 BST"); E4.2, the `worker` on `--queues default,compute`, an S4 GO condition (the lead's from-lead entry "2026-10-12 05:37:23 BST"); E4.3, the compose smoke proving delivery, with beat as a one-off test fixture (the maintainer's (by delegation) entries "2026-10-12 05:37:42 BST" and "2026-10-12 05:39:20 BST"). This row's status and fields are unchanged.*
+
 #### SL-1259 — Slice 5: atomic switchover, rollback and the measurements (FR-268, FR-269, FR-272 audit and NFR-498 for rollback, NFR-494, NFR-489, NFR-502, NFR-490, NFR-493 linearity limb, NFR-497 mechanism)
 
 ```yaml
@@ -1138,6 +1140,24 @@ relates: [PL-1237]
 ```
 
 Date-based routing and shadow scoring, both built and default off per environment (`RL-1232` Part A, DP-2 (a)), with the audit limb for routing and shadow configuration changes (FR-272, NFR-498). `PL-1237` Task 6. Starts after Slice 5 closes.
+
+#### SL-1689 — the scheduler (beat) and frontend-image row: FR-432's last two limbs (FR-432, FR-413, FR-406; FD-1661)
+
+```yaml
+id: SL-1689
+family: slice
+title: the scheduler (beat) and frontend-image row: FR-432's last two limbs (FR-432, FR-413, FR-406; FD-1661)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-12
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 604ea084c96efe93f521fb9ba17738e05241e61a
+phase: P2
+work: WK-674
+corrected_by: []
+relates: [PL-1237, PL-1666, SL-1258, FD-1661]
+```
+
+The `scheduler` service (the Celery beat process, which runs the outbox relay today and FR-413's tick when that lands) and the `frontend` image and service, both under the `app` profile on Slice 4's path: FR-432's `scheduler` and `frontend` limbs, which discharge FD-1661 with Slice 4's `worker`. The maintainer (by delegation) placed it in the entries "2026-10-12 02:53:52 BST" item 4 (beat as its own row after S4, serialised on `deploy/docker-compose.yml`) and "2026-10-12 03:09:50 BST" (DP-S4-3 (b): the `frontend` image folds into this row, in P2, with three conditions). Work-plan delta PL-1688 (both of its decision points ruled 05:37:23, so `active` at its mint). **Activation needs:** `SL-1258` merged, with this row's base containing it; `SL-1258`'s worker consuming `default,compute` (DP-B1 ruled (a), an S4 GO condition) and DP-B2 ruled (a), the frontend on `${GIP_WEB_PORT:-5173}`, both in the lead's entry "2026-10-12 05:37:23 BST"; the lane free and serialised on `deploy/docker-compose.yml`; a build window booked for the runtime and fresh-checkout proofs; the maintainer's dispatch GO and the lead's go. Off the exit path. **If the cut ladder takes its lane**, it moves to P3 by the dated line PL-1688 B0.3 pre-names (owner WK-674; discharge event: this row's merge), and is never dropped. *(Cut 2026-10-12 by the planner under working id 9883, reserved by the lead; minted 2026-10-12 as SL-1689 from working id 9883, with PL-1688 from working id 9882.)*
 
 
 ### WK-675 — Frontend: **DAG designer (Vue Flow)**, rate table editor, quote sandbox + ladder waterfall, dislocation views
