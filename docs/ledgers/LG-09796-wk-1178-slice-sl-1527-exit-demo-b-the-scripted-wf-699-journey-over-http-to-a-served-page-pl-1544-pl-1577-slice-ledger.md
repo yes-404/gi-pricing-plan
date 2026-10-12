@@ -232,7 +232,48 @@ lines are recorded at the slot, against the parent source.
 | principals | `grant_demo_principals`, `DEMO_PRINCIPALS`, ids recorded | `9352b424` |
 | 1-2 | journey core, skip table, step-naming client | `fbd418ce` |
 | 2-4 | phases A to E, deploy, served quote; the D4 declaration; the ladder body | `d918c534` |
-| 4 | the end-to-end journey test, authored | `e328556c` |
+
+#### Slot iterations, STAGE=reds under the standing grant (`from-lead` "2026-10-12 01:09:01 BST"), and what each found
+
+All runs: `~/gi-pricing-plan.local/scratch/sl1527/slot.sh`, gate-1, out files `slot-reds-1..9.out`, logs
+`logs/`. Each failure was the executor's own defect (test fixture or journey logic), found by the
+first real run of code that was authored unrun:
+
+| Head | Result | First failure, by cause |
+|---|---|---|
+| `daae293e` | rc 1 | `GET /models` 401: the test used conftest's bare `client` (no database, no dev auth), not `api_client` |
+| `bfc86692` | rc 1 | A1 to A5 passed over HTTP; A6 `CHANGE_NOTE_MISSING`: the definition read (`RateTable`) carries no `change_note`; the notes are on the create responses |
+| `1b2aeabb` (activation) | rc 1 | C5 409 `VALIDATION_FAILED`: the unapproved model is `fitted` (submit is fitted to review), not `draft` |
+| `6e504b81` | rc 1 | C5 decide 403 `APPROVAL_AUTHOR_UNRESOLVED`: the direct `ModelRow` insert lacked its `model.reserved` creation event (the seed's fit writes it) |
+| `523bf661` | rc 1 | C5 decide 409 `ARTIFACT_FLAGGED`: a model on a Dataset Version that does not exist is flagged |
+| `c6cbb1ff` | rc 1 | D6: the dislocation Job failed `VALIDATION_FAILED` in attribution; dependent changes need one group |
+| `e96798a8` | rc 1 | the same, now with the Job message surfaced (`AttributionError`, sanitised) |
+| `57773eab` | rc 1 | D6 passed (one group of the derived changes, found via the estimate route); B3's before-the-row quote answered 422 `RATE_TABLE_MISS`, not `REFERENCE_LOOKUP_MISS` |
+| `bb662bdc` | **rc 0** | `db_journey` 8 passed (15.7 s); `db_members` 3 passed; `db_demo_command` 21 passed |
+
+Final reds run `bb662bdc`, 2026-10-12 01:21:xx to 01:23:13 BST, `end ... rc=0`:
+- `red_ensure_member`: RED by `IntegrityError` on the parent source (FD-1494 limb 3), as required.
+- **`red_b3_multiply`: RED by `LOADING_NOT_MULTIPLIED_INTO_THE_PREMIUM`** with the multiply scratch-reverted:
+  the maintainer's 23:48:51 condition is shown by its cause, so the 1.05 assertion is not a guard.
+- `db_members` rc 0, `db_demo_command` rc 0 (21), `db_journey` rc 0 (8 passed, the end-to-end test included).
+
+Observations recorded, not smoothed:
+- D4 ran as designed over HTTP: the run on the defective version reported `premium-increasing-in-bonus-malus`
+  failed with `grid: uniform+sampled` and two adjacent points straddling 100..149; the restored version
+  passed the same declared property. E3 refused with `EVIDENCE_INCOMPLETE`; E6 returned the version to
+  `draft`; E8 refused the submitter and the author by code; deploy `dev`, `uat`, `prod`; `/score` from `prod`.
+- **B3**: the 2027-06-01 quote in the base region equalled the earlier premium x 1.05 exactly (no
+  double-rounding +-1 appeared). The quote dated 2019-06-01 is refused 422, with code `RATE_TABLE_MISS`
+  rather than `REFERENCE_LOOKUP_MISS`: the empty lookup surfaces at the consuming expression and the
+  platform's documented residual (`score.py` `_reraise_engine_failure`) labels it so. The journey accepts
+  either code. That the code names the wrong artifact is the platform's, not this slice's.
+- **D6/D7 attribution is one lump**: the fork's added and rewired steps depend on one another, and
+  attribution refuses dependent changes outside one group, so the journey groups every derived change
+  together (the count found with `POST /dislocation-runs/estimate`). The run therefore attributes the
+  whole fork as one effect; the by-effect decomposition WF-699 D7/D8 describes needs the journey to know
+  the change ids, which no route exposes. Reported to the lead as a deviation.
+- The test's stand-in GBM carries its creation audit event and a real validated Dataset Version; the
+  seeded GBM has both from the fit.
 
 ## PRs
 
