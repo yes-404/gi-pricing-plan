@@ -142,5 +142,3 @@ slug. Supplementary result: SAFE, nothing added."*
 Per `CLAUDE.md` §14 it is HIGH in P2 and needs a resolution before any P3 start. The event that
 next confirms or discharges the guard limb is `SL-1678`'s merge, with Reds 1 to 3 red on `main`
 by their causes and green after.
-
-*(Dated line, 2026-10-12, SL-1678's mint commit: **the guard limb is discharged by `SL-1678`** (ledger `LG-1681`): Reds 1 to 3 were red on the base by their causes and are green after, through the HTTP routes; `POST /api/v1/rating-versions` still accepts such pins (`RL-1538`). **DP-P1 keeps this finding open**, owner WK-673; the finding closes only on the pairing fix.)*
