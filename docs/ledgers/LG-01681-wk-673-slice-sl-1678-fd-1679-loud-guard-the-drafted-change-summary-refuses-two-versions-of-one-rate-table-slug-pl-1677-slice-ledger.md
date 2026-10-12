@@ -31,6 +31,19 @@ Base: branch `sl-1678-wk673-fd1679-guard`, worktree `.claude/worktrees/sl-1678`,
 - Premise c re-read at the base: `backend/src/app/platform/rating_versions.py` `_pins_by_slug` still reads `return {ref.slug: ref for ref in Pins.model_validate(pins).rate_tables}`; premises a, b, d–i to be re-read and recorded here before Task 2.
 - `gh pr list --state open` at the start: #1292, #1293, #1294 (no other writer on the write set). `to-lead.md` read to its tail: the last entry on `FD-1679` is the maintainer's (by delegation) "2026-10-12 05:58:56 BST"; nothing later rules on `pins_by_slug`, the change summary, DP-K, DP-G1 or DP-G2.
 
+**Premises a–i re-read at the merge head** (Task 0, audit finding 1, 2026-10-12): `origin/main` `2a81974184ee405536fb43d30f59a990b3953669` merged into the slice branch. File:line are at that merge tree. The slice's own edit shifted `rating_versions.py` below `:1404`, so the base lines of `PL-1677` (premise table, at `604ea084`) differ from these.
+
+| # | Premise | Locator at the merge head | Reads as |
+|---|---|---|---|
+| a | `Pins` is a plain list per kind, no duplicate check | `packages/model-schema/src/model_schema/rating.py:70-85` (`class Pins`; `rate_tables` `:80`) | `extra="forbid"` (`:78`), five `list[ArtifactRef]` fields, no validator: holds |
+| b | create stores pins as given | `backend/src/app/platform/rating_versions.py:258` `create_rating_version`, `pins=pins.model_dump(mode="json") if pins is not None else None` at `:307` | no dedup, no refusal: holds; untouched by this slice |
+| c | the pairing keys by slug | `rating_versions.py:1405` `_pins_by_slug`; the guard `if ref.slug in by_slug:` at `:1416`, `return by_slug` at `:1426` | at the base it read `{ref.slug: ref for ref in …rate_tables}` (recorded above); at this head it refuses a repeated slug: **changed by this slice, as intended** |
+| d | only the rate-table pins feed the summary | `rating_versions.py:1329` `draft_change_summary_for`; `before`/`after` at `:1378`, `:1379`; the structural diff at `:1377` | the two pin reads are the only ones: holds |
+| e | no baseline, no pairing | `rating_versions.py:1368` `if found is None:` returns `draft_change_summary(None, None, [])` before `_pins_by_slug` is called at `:1378` | holds (Red 4 pins it) |
+| f | the existing 409 on this route | `rating_versions.py:1345-1351` (`RATING_VERSION_UNPINNED`, 409); `docs/specs/03-rating-engine.md:1052` (row) and `:1124` (the 2026-10-11 use note) | holds |
+| g | the route declares 409 | `backend/src/app/api/models.py:1257-1259`, `responses=problems(401, 403, 404, 409, 422)` | holds; no contract change |
+| h | the route's tests and helpers | `backend/tests/test_rating_version_change_summary_route.py`: `pytestmark` `:37`, `_seed_table_version` `:66`, `_pins` `:85`, `_insert` `:94`, `_url` `:140`, `_save_algorithms` `:144`; `_headers` imported at `:20`; this slice adds `_create_over_http` `:392` and the three tests from `:456` | holds |
+| i | the HTTP create route's tests | `backend/tests/test_rating_version_create_pins.py`: `_body` `:38`, `api_client.post("/api/v1/rating-versions", …)` `:89`, `:110`, `:123` | holds |
 
 ### Tasks 1 and 2 — spec clause, Reds 1–4, the guard (2026-10-12)
 
@@ -84,7 +97,7 @@ Both failing stages are the expected working-id reds (the same class as the 13 o
 
 ## PRs
 
-- Opened at the mint turn, 2026-10-12: title `fix(rating): the drafted change summary refuses two versions of one rate-table slug — SL-1678 (FD-1679)`; PR number and merge commit: not yet merged. Merges after #1295.
+- Opened at the mint turn, 2026-10-12: title `fix(rating): the drafted change summary refuses two versions of one rate-table slug — SL-1678 (FD-1679)`; PR **#1296** (`https://github.com/yes-404/gi-pricing-plan/pull/1296`); merge commit: not yet merged. Merged after #1295 (`LG-1680`), main `2a819741`.
 
 ## Closing acts (mint turn, 2026-10-12)
 
@@ -100,7 +113,7 @@ Auditor `auditor-sl1678`, 2026-10-12, range `origin/main...origin/sl-1678-wk673-
 
 | # | Item | Evidence | Proposed |
 |---|---|---|---|
-| 1 | Reds 1–3 pass; each failed on the base by its cause and again on the planted reversal | Tests `test_a_candidate_pinning_two_versions_of_one_table_is_refused[two_then_one|one_then_two]` and `test_a_baseline_pinning_two_versions_of_one_table_is_refused` each go through `_assert_refused` (409, `code == "VALIDATION_FAILED"`, slug and `FD-1679` in `detail`). This ledger: base `3 failed, 1 passed` with `assert 200 == 409` per red; guard disabled `3 failed, 9 passed`; green `12 passed` | MET |
+| 1 | Reds 1–3 pass; each failed on the base by its cause and again on the planted reversal | Tests `test_a_candidate_pinning_two_versions_of_one_table_is_refused[two_then_one\|one_then_two]` and `test_a_baseline_pinning_two_versions_of_one_table_is_refused` each go through `_assert_refused` (409, `code == "VALIDATION_FAILED"`, slug and `FD-1679` in `detail`). This ledger: base `3 failed, 1 passed` with `assert 200 == 409` per red; guard disabled `3 failed, 9 passed`; green `12 passed` | MET |
 | 2 | Create stays permissive | `_create_over_http` asserts 201 for the duplicate-slug candidate (Red 1, Red 2, Red 4). `git diff -U0 origin/main...HEAD -- backend/src` has three hunks (`:1337` docstring, `:1405-1414` `_pins_by_slug`); none in `create_rating_version` | MET |
 | 3 | A first version is answered | Red 4 asserts 200, `baseline is None`, `rate_tables == []` | MET |
 | 4 | Existing tests unchanged, diff adds lines only | One changed line: the import now `add_approved, mark_approved`. No test body changes. Lead-accepted deviation (from-lead "2026-10-12 06:13:21 BST") | MET with the accepted deviation |
