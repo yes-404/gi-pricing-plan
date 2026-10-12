@@ -35,6 +35,7 @@ Tasks 1–6 wait on the DP-1…DP-4 ruling from Task 0's record.
 - [x] Task 0, Step 0 — need 4 re-derived at the base (Build log).
 - [x] Task 0, Steps 1–5 — AUTHORED as scratch scripts under `~/gi-pricing-plan.local/scratch/sl1455-t0/` (not in the repository; Task 0 commits "nothing but its ledger"). **Not run.**
 - [x] Task 0, Steps 1, 3, 3b, 4 — the timings: RUN in the ALONE window 2026-10-11 23:41:11 – 2026-10-12 00:14:49 BST (Build log, last entry).
+- [x] Task 0, rerun with asyncio debug off — RUN 2026-10-12 02:16:09 – 02:20:29 BST (Build log, last entry); both arms CLEAN by the pre-registered rule.
 - [ ] Task 0, Step 5 — the tabulation: `results.md` is generated (path in the last Build log entry); the one-line (i)–(iii) statements and any rerun are the lead's ruling (asyncio debug mode swamps the run).
 - [ ] Task 0, Step 6 — STOP; hand to the lead for DP-1…DP-4.
 - Tasks 1–6 — not started (need 5).
@@ -82,6 +83,35 @@ Not applicable to Task 0 (no code is committed). The two-half gate is Task 5's.
   - **The reading rule, in numbers (`reading_rule` in `t0_analyse.py`).** Per repeat, over every request record of the measured window and the client's error count: *longest single pool checkout* `L`, *server `total` p99* `P`, *client errors* `E`. A repeat is **clean** when `L < 30000 ms` AND `P < 1000 ms` AND `E = 0`; it is **saturating** when `L >= 30000 ms` (the pool timeout) OR `E > 0`; any other repeat is neither. An arm is **CLEAN** if all 3 repeats are clean, **SATURATES** if any repeat saturates, and otherwise **MIXED**, which is reported as neither. Read together: both arms CLEAN means debug mode was the stall; either arm SATURATES means the 6-checkout, 10-statement shape saturates the pool at 25 rps without it. The rule was run on this ledger's first run (debug on): `bench-gbm` SATURATES, `bench-nogbm` MIXED; and on a synthetic clean input: both CLEAN.
   - **A TRUE ALONE window:** the lead pauses every poller first; `run.sh` writes `pgrep -af` of `gh`, `pytest`, `vitest`, `uvicorn`, `alembic`, `run-small` and `claude` processes, with the top processes by CPU, at OPEN and at CLOSE into `results.md`.
   - **Not an NFR-489 reading,** and not a stall verdict beyond the rule above.
+
+- **The debug-off rerun, RUN 2026-10-12 02:16:09 – 02:20:29 BST (diagnostic attribution, not an NFR-489 reading).**
+  - **Authority and window.** The maintainer's ruling, to-lead "2026-10-12 00:16:39 BST" (conditions 1 to 4); the lead's GO and window, from-lead "2026-10-12 02:15:54 BST" (ALONE WINDOW OPEN) and "2026-10-12 02:21:18 BST" (CLOSED). Wrapper: `flock -w 7200 /tmp/slots/gate-1 flock -w 600 /tmp/slots/gate-2 flock -w 600 /tmp/slots/small-test timeout 5700 bash ~/gi-pricing-plan.local/scratch/sl1455-t0/run2.sh`. Markers: `T0 start 2026-10-12 02:16:09 BST` … `T0 end 2026-10-12 02:20:28 BST`, `end 2026-10-12T02:20:29+01:00 rc=0`; driver rc 0, analyse rc 0; the scratch database was dropped.
+  - **Pins.** Slice COMMIT `3c0e99a073887075478117c929753e7d6fec0f1d` (the preflight printed `HEAD=… expect=…` equal, and `PREFLIGHT ok`); evidence COMMIT `3200b5a507d28c13dfd04bbb449df4205c200f7d`, and `prereg ok` for `run.sh` `6b93eb08`, `run2.sh` `695c6bb1`, `t0_app.py` `25aaa6aa`, `t0_driver.py` `db862c8d`, `t0_analyse.py` `2d2d0f44` (all byte-identical to the blobs under `evidence/sl-1455-t0/`). Base `origin/main` COMMIT `372fa92ae3ab306bc067c234487ce929dc0e2a04`; main was not re-merged.
+  - **Where.** `~/gi-pricing-plan.local/scratch/sl1455-t0/out-20261012T021609/results.md` (the OPEN and CLOSE process blocks are appended to it from the heading "Seat processes at OPEN and CLOSE", and are in `seat-procs-open.txt` and `seat-procs-close.txt` beside it); the log is `~/gi-pricing-plan.local/scratch/sl1455-t0/wrapper-rerun.out`. Not in the repository.
+  - **The reading rule, quoted verbatim from `reading_rule` in `t0_analyse.py` (pre-registered in evidence `3200b5a5`):**
+
+    > Per repeat (all request records of the measured window, whatever their status, and the client's error count): longest single pool checkout `L` (ms), server `total` p99 `P` (ms), client errors `E`.
+    > CLEAN repeat = L < 30000 AND P < 1000 AND E == 0. SATURATING repeat = L >= 30000 OR E > 0. any other repeat = neither.
+    > Arm verdict: CLEAN if all 3 repeats are clean; SATURATES if any repeat saturates; otherwise MIXED (reported as neither). Read together: both arms CLEAN = debug mode was the stall; either arm SATURATES = the 6-checkout / 10-statement shape saturates the pool at 25 rps without debug mode.
+
+  - **The per-repeat table, verbatim from `results.md`:**
+
+    | arm | run | longest checkout ms | server total p99 ms | client errors | repeat |
+    |---|---|---|---|---|---|
+    | bench-gbm | 1 | 9 | 146.2 | 0 | clean |
+    | bench-gbm | 2 | 13 | 148.0 | 0 | clean |
+    | bench-gbm | 3 | 11 | 140.2 | 0 | clean |
+    | bench-nogbm | 1 | 13 | 131.0 | 0 | clean |
+    | bench-nogbm | 2 | 17 | 115.9 | 0 | clean |
+    | bench-nogbm | 3 | 13 | 109.2 | 0 | clean |
+
+    Arm verdicts: bench-gbm = CLEAN; bench-nogbm = CLEAN. By the pre-registered sentence, both arms CLEAN = debug mode was the stall. The lead verified the reading against `reading_rule` and `results.md` (from-lead "2026-10-12 02:21:18 BST"). No interpretation is added here beyond the rule.
+  - **Per arm, server-side `total` ms (p50 / p99 / max, 3 repeats pooled, 1500 requests, 25 rps):** `bench-gbm` 88.60 / 142.55 / 193.92; `bench-nogbm` 78.12 / 116.43 / 179.66.
+  - **Phase table (p50 / p99 ms; `bench-gbm` | `bench-nogbm`):** auth 10.69 / 17.84 | 10.30 / 17.12; rbac 6.37 / 12.07 | 6.18 / 10.19; rate_limit 10.96 / 18.99 | 10.22 / 18.75; serving_ref 9.35 / 16.20 | 8.95 / 15.02; fetch_bundle 8.27 / 16.04 | 8.37 / 13.61; score_one 13.16 / 26.46 | 7.94 / 14.53; sample_trace 11.55 / 22.65 | 10.86 / 20.48; serialise 0.08 / 0.22 | 0.08 / 0.15.
+  - **Structural facts (this run; the first run's agree).** Pool checkouts per request p50 6 (checkout ms p99 30.50 | 28.69; longest single 12.57 | 17.34), statements 10, commits 2; slot hits 1500, misses 0 in each arm; loop stalls of 50 ms or more: 0 and 0; new connections in the window: 0 and 0; GC gen2 3 collections, longest 369.24 | 360.00 ms; asyncio slow-callback lines 0 (debug mode off).
+  - **py-spy, SAMPLING mode only (`--nonblocking`), top frames by self time; one 25 rps pass per arm.** `bench-nogbm`: `asyncio/runners.run` 32.2%, `_compile_bytecode` 2.8%, `asyncpg execute` 1.9%, pydantic `_generate_schema` 1.4%, `__subclasshook__` 1.3%, sqlalchemy `greenlet_spawn` 1.1%. `bench-gbm`: `asyncio/runners.run` 27.4%, `_compile_bytecode` 3.5%, xgboost `_from_numpy_array` 2.4%, `asyncpg execute` 2.1%, pandas accessor lambda 1.7%, xgboost `predict` 1.4%, `greenlet_spawn` 1.2%. No `traceback` or `linecache` frames appear. The `bench-gbm` py-spy pass has client p99 901.6 ms (n=500, errors 0); it is an instrumented pass and is not read by the rule.
+  - **Per-pass START – END (BST) and steal:** `bench-nogbm` run1 02:16:18 – 02:16:49 0.63%; run2 02:16:49 – 02:17:19 0.65%; run3 02:17:19 – 02:17:50 0.63%; py-spy 02:17:50 – 02:18:19 0.63%. `bench-gbm` run1 02:18:21 – 02:18:52 0.55%; run2 02:18:52 – 02:19:24 0.60%; run3 02:19:24 – 02:19:56 0.65%; py-spy 02:19:56 – 02:20:27 1.03%. Load average 2.40 / 2.88 / 2.28 at the start, 2.70 / 2.88 / 2.45 at the end.
+  - **Disturbance disclosure (condition 2).** No `gh`, `pytest`, `vitest`, `uvicorn` or `alembic` process was alive at OPEN (02:16:09) or at CLOSE (02:20:28). The box was not free of all CPU: the seats' Claude sessions were idle at 3–7% CPU each, and the harness's own hook processes burst (about 150%, 109% and 100%) at the instant a seat ran a tool call, at OPEN (the call that launched this wrapper); no burst appears at CLOSE. The largest consumers at CLOSE: a `claude bg-spare` 7.0%, `executor-sl1527` 6.7%, `docker-proxy` 4.5%, `minio` 2.8%. The OPEN and CLOSE blocks are in the files named above. Steal is 0.55% – 1.03%.
 
 ## PRs
 
