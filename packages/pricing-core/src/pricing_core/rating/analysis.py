@@ -55,7 +55,7 @@ from pricing_core.rating.compile import ArtifactResolver, ResolvedArtifact, comp
 from pricing_core.rating.ladder import RUNG_ORDER
 from pricing_core.rating.runtime import CompiledBundle, load_bundle
 from pricing_core.rating.score import score_batch
-from pricing_core.safe_error import safe_error_text
+from pricing_core.safe_error import CodedError, safe_error_text
 
 __all__ = [
     "AttributionError",
@@ -499,6 +499,21 @@ class AttributionError(ValueError):
         self.code = code
 
 
+class _MountNotYetAttributable(AttributionError, CodedError):  # noqa: N818 (named by PL-1694)
+    """FD-1660's guard (RL-1686 DP-W): an `AttributionError` (code `VALIDATION_FAILED`) that is also
+    a `CodedError`, so `safe_error_text` keeps its text and the Dislocation Job's error names the
+    finding. The text is a fixed literal plus `mount_point`s (authored identifiers), never a quote
+    value (NFR-499). SL-1696 removes it."""
+
+    def __init__(self, reason: str, mount_points: Iterable[str]) -> None:
+        super().__init__(
+            "VALIDATION_FAILED",
+            "VALIDATION_FAILED: sub-graph mount differences are not yet attributable (FD-1660); "
+            "attribution of sub-graph mount changes is unavailable until SL-1696. "
+            f"{reason}: {', '.join(sorted(set(mount_points)))}",
+        )
+
+
 @dataclass(frozen=True)
 class _Change:
     """One derived change and the payload its substitution needs."""
@@ -829,12 +844,7 @@ def _check_mounts_attributable(derivation: _Derivation, groups: Sequence[_Group]
         reason, points = "a sub-graph is mounted and two or more groups are declared", mounted
     else:
         return
-    raise AttributionError(
-        "VALIDATION_FAILED",
-        "VALIDATION_FAILED: sub-graph mount differences are not yet attributable (FD-1660); "
-        "attribution of sub-graph mount changes is unavailable until SL-1696. "
-        f"{reason}: {', '.join(sorted(set(points)))}",
-    )
+    raise _MountNotYetAttributable(reason, points)
 
 
 def _check_dependence(derivation: _Derivation, groups: Sequence[_Group]) -> None:
