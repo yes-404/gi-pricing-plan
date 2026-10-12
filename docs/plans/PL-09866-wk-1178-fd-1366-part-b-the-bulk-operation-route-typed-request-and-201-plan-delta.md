@@ -152,14 +152,14 @@ it is minted or GO'd on its working ids, as `PL-1629` did at its mint.
 |---|---|---|---|---|---|
 | DP-0 | Who types this route: S5 (DP-A (a), 10:55:02) or a WK-1178 slice? | (a) S5, in its first commit; (b) a WK-1178 slice, S5 waits; (c) (b) plus the two sub-graph routes | — | — | **Ruled (b)**, the maintainer 02:58:33 (Context, entry 2); (c) refused |
 | DP-1 | What is the request body's shape, since `BulkOperationBase` carries server-set fields (premise b)? | (i) four request models `{kind, parameters}`, the four records **inheriting** from them, with field order pinned; (ii) four request models written separately from the records; (iii) make `applied_to`/`result` optional on the record | **(i).** It writes the `kind`↔`parameters` pairing once (`CLAUDE.md` §2: "a shape defined twice will diverge"). (ii) defines it twice. (iii) weakens the persisted record. **Proof obligation:** the record's field order (`applied_to, result, kind, parameters`), its JSON dump and its published schema do not move (Acceptance 4, 5) | no | the planner (a design choice inside a ruled scope); stated here so the lead can overrule it |
-| DP-2 | Does the typed request keep publishing `percentage`/`floor`/`cap` as `number \| string` (premise d)? | — | **Not a decision: spec compliance.** `04-optimisation.md:278` already reads *"`percentage`, `floor`, `cap` and `base_level` are decimal strings, never floats (R2)"*. The bare `Decimal` (`rating.py:1236`, `:1244`, `:1252-1253`) and its `anyOf: [number, string]` publication are drift from that line. SL 9868 corrects them with `DecimalStr` (`model_schema/money.py:95-100`: float refused, string schema, `str()` serialiser), shared by record and request. **`base_level`** is not changed: in the code it is a `KeyFilter` (`rating.py:1212`, `dict[str, list[str]]`; `RebaseToLevelParameters.base_level`, `:1264`), and `04` itself defines it as a key filter: the example `"base_level": {"driver_age_band": ["25-29"]}` (`:262`) and *"`filter` and `base_level` use exact-value matching over the table's declared keys"* (`:279`). So `:278`'s naming of `base_level` contradicts `:262` and `:279`; Task 1 corrects `:278` by a dated clause. Related, not decided here: FD 9872 (working id; LOW, owner WK-1178, eta "2026-10-12 03:05:01 BST"), the same float class on `/score`'s decimal Rating Inputs | — | settled | the lead, from-lead "2026-10-12 03:05:42 BST" |
+| DP-2 | Does the typed request keep publishing `percentage`/`floor`/`cap` as `number \| string` (premise d)? | — | **Not a decision: spec compliance.** `04-optimisation.md:278` already reads *"`percentage`, `floor`, `cap` and `base_level` are decimal strings, never floats (R2)"*. The bare `Decimal` (`rating.py:1236`, `:1244`, `:1252-1253`) and its `anyOf: [number, string]` publication are drift from that line. SL 9868 corrects them with `DecimalStr` (`model_schema/money.py:95-100`: float refused, string schema, `str()` serialiser), shared by record and request. **`base_level`** is not changed: in the code it is a `KeyFilter` (`rating.py:1212`, `dict[str, list[str]]`; `RebaseToLevelParameters.base_level`, `:1264`), and `04` itself defines it as a key filter: the example `"base_level": {"driver_age_band": ["25-29"]}` (`:262`) and *"`filter` and `base_level` use exact-value matching over the table's declared keys"* (`:279`). So `:278`'s naming of `base_level` contradicts `:262` and `:279`; Task 1's text is ruled verbatim in to-lead "2026-10-12 03:07:15 BST" and lands with Task 2's code. Related, not decided here: FD 9872 (working id; LOW, owner WK-1178, eta "2026-10-12 03:05:01 BST"), the same float class on `/score`'s decimal Rating Inputs | — | settled | the lead, from-lead "2026-10-12 03:05:42 BST" |
 
 ## Write set
 
 | Path | What changes | Task |
 |---|---|---|
 | `docs/specs/03-rating-engine.md` §5.1 bulk-operation row (`:1039`) | a dated clause: the request body and the 201 | 1 |
-| `docs/specs/04-optimisation.md` §4.4 (`:278`) | a dated clause: `base_level` is a key filter, not a decimal (DP-2) | 1 |
+| `docs/specs/04-optimisation.md` §4.4 (`:278`), **this clause only** (03:07:15) | the ruled T-text: `base_level` struck in place, a dated clause appended | 2 (with the code) |
 | `packages/model-schema/src/model_schema/rating.py` `:1215-1300` | four `*Request` models; `BulkOperationRequest` union; `BULK_OPERATION_REQUEST_ADAPTER`; the four `*Operation` records rebased (DP-1 (i)); `DecimalStr` on four fields (DP-2) | 2 |
 | `packages/model-schema/src/model_schema/__init__.py` (`:314`, `:720` neighbourhood) | import + `__all__`: the four request models, `BulkOperationRequest`, `BULK_OPERATION_REQUEST_ADAPTER` | 2 |
 | `packages/model-schema/tests/test_rate_tables.py` | DP-1's order pin; DP-2's float refusal; the request models' `extra="forbid"` | 2 |
@@ -218,9 +218,18 @@ frontend source calls this route at `fc4401dc` (`grep -rln bulk frontend/src --i
 - [ ] Append to the row's description cell (`03:1039`), keeping the row's cell count:
   `*(Amended <date>, SL 9868, FD-1366 Part B: the request body is a BulkOperationRequest, the 04 §4.4 record's kind and parameters, discriminated on kind; applied_to and result are set by the server. The 201 is the new RateTableVersion.)*`
   and add: `percentage, floor and cap are decimal strings; a JSON number is refused (FR-10, 04 §4.4).`
-- [ ] **`04` §4.4** (`04-optimisation.md:278`): after the sentence, append
-  `*(Corrected <date>, SL 9868: base_level is a key filter, as the example above and the next sentence define it, not a decimal string.)*`
-  The sentence itself is not reworded (`spec-change`: append, never silently rewrite).
+- [ ] **`04` §4.4** (`04-optimisation.md:278`), the T-text ruled verbatim in to-lead "2026-10-12
+  03:07:15 BST — 04 :278 base_level: a dated correcting clause INSIDE SL 9868 (one commit with the
+  code, CLAUDE.md §2); T-text ruled here, verbatim". Strike in place, keep the old text, append.
+  The line becomes, exactly:
+
+  ```markdown
+  `percentage`, `floor`, `cap` ~~and `base_level`~~ are decimal strings, never floats (R2). *(Amended 2026-10-12, the maintainer's (by delegation) entry "2026-10-12 03:07:15 BST": `base_level` is a key filter, as the example above and the next sentence state, never a decimal; its listing here was an error. Delivered with SL 9868, which types `percentage`, `floor` and `cap` as decimal strings.)*
+  ```
+
+  No `RL-` (the same entry: *"No RL is needed: the entry plus the dated clause is the record"*).
+  It lands in **one commit with the `DecimalStr` code** of Task 2 (`CLAUDE.md` §2), so Task 1's
+  commit carries `03` only and Task 2's carries this `04` line.
 - [ ] `python3 scripts/audit-docs.py` exits 0 (run once, under `flock -w 1800 /tmp/slots/gate-2`).
 - [ ] Commit: `docs(specs): 03 §5.1 — the bulk-operation request body and 201 (FD-1366 Part B)`.
 
@@ -256,7 +265,8 @@ def test_a_bulk_operation_record_keeps_its_field_order(record: type[BaseModel]) 
   `DecimalStr`, imported from `model_schema.money`.
 - [ ] Export the new names from `model_schema/__init__.py` (import block and `__all__`).
 - [ ] Reds 1–3 green; `uv run pytest -q packages/model-schema/tests/test_rate_tables.py` exits 0.
-- [ ] Commit: `feat(model-schema): BulkOperationRequest — the bulk-operation request, discriminated on kind (FD-1366 Part B)`.
+- [ ] Apply the `04-optimisation.md:278` line written out in Task 1, in this commit (03:07:15: one commit with the code).
+- [ ] Commit: `feat(model-schema): BulkOperationRequest, discriminated on kind, and DecimalStr parameters; 04 §4.4 :278 corrected (FD-1366 Part B)`.
 
 ### Task 3: The route — typed body and 201
 
