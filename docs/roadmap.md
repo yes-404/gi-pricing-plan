@@ -2375,7 +2375,7 @@ On the maintainer's (by delegation) entry "2026-10-12 05:39:20 BST — SL-1543 s
 id: SL-1683
 family: slice
 title: WK-1178 fix slice — FD-1335 Part B for the rate-table import route: a typed 200 and a declared 201
-status: draft                    # draft → active → closed | retired (§1.2a)
+status: active                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-12
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 50bbdd96b2154cb4eb79ccf91658191e51ab8906
@@ -2386,6 +2386,8 @@ relates: [PL-1682, FD-1335, FD-1684, PL-1364, SL-1367, PL-1667, SL-1669, SL-1547
 ```
 
 On the maintainer's (by delegation) entry "2026-10-12 07:28:38 BST — S5 flags: (1) NEITHER (a) nor (c): type POST …/import's 200 FIRST in a tiny WK-1178 slice (d), with (a)+tripwire only as a named fallback; …", flag (1): `POST /api/v1/rate-tables/{slug}@{version}/import` publishes its 200 as the existing `model-schema` `ImportPreview` (`diff: RateTableDiff`, `created_by_import: ImportVerdict`; `rating.py:1363`) and its 201 (`confirm: true`) as `RateTableVersion`, in the manual-edit route's form (`response_model=None` with a `responses` map, `api/rate_tables.py:138-147`). No model is added or composed. The route leaves `UNTYPED_2XX_PENDING_PART_B` (`backend/tests/test_contracts.py:3193`, FD-1335 Part B's list, not FD-1366's), and `docs/contracts/openapi/generated.json` and the frontend client are regenerated. Spec first: a dated clause on `03` §5.1's import row (`:1046`, FR-235). Red first by cause: the published 200 has no `$ref` today; the stale-list test after regeneration; a real preview and confirm response round-trip through the published models (a guard, shown red on a planted extra field). `FD-1335` stays active with three routes in its Part B list. The export routes are out of scope (`FD-1684`). WK-675 S5 (`SL-1547`) uses the generated types after this slice merges, and S5's gate waits for it (07:28:38). Plan: Work-plan delta `PL-1682`. **Activation needs:** DP-1 (the 201 published too) and DP-2 (no standalone schema file) MET, both accepted by the maintainer (by delegation), "2026-10-12 07:46:06 BST", items 1 and 2; PL-1682 set `active` in this slice's activation commit; the shared-path census re-checked at the GO (`generated.json` against `SL-1547`; the later PR regenerates); the lead's executor GO. *(Cut 2026-10-12 by the planner under working id 9911, reserved by the lead, from-lead "2026-10-12 07:29:15 BST"; minted 2026-10-12 as SL-1683 from working id 9911, early, on the maintainer's (by delegation) entry "2026-10-12 07:46:06 BST".)*
+
+(Activated 2026-10-12 as WK-1178's FD-1335 Part B slice for the rate-table import route, on the lead's from-lead entry "2026-10-12 07:50:10 BST" (GO SL-1683; the build seat executor-sl1683). `PL-1682` set `active` in this slice branch's activation commit; ledger LG-9636 (working id).)
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
