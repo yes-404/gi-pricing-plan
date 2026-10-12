@@ -181,8 +181,26 @@ The requirement set is `PL-1620`'s, unchanged. FD 9704 is a register row, not a 
   merge." So the three limbs of `07` FR-432 (`07:148`) are:
   1. **`worker`**: `SL-1258` (D4.6 above).
   2. **`scheduler` (beat)**: its own row after S4 (the follow-on note above).
-  3. **`frontend` image**: a third row. **Whether it is P2 scope or carried forward is DP-S4-3.**
-     It is not added to S4, and it is not dropped.
+  3. **`frontend` image**: **folded into the beat row, in P2**, by DP-S4-3 ruled (b). It is not
+     added to S4.
+- **The beat-and-frontend row's conditions (DP-S4-3, ruled 2026-10-12).** The maintainer's entry
+  "2026-10-12 03:09:50 BST — DP-S4-3: (b) fold the frontend image into the beat row; P2 scope, with
+  the cut-ladder move line pre-named". The row's plan carries all three conditions:
+  1. **The cut-ladder move is pre-named.** "if the cut ladder takes the lane, the row moves to P3
+     by a dated line with an owner (WK-674) and a discharge event. It is never dropped." The
+     discharge event is the row's merge, which closes FR-432's last two limbs and FD 9860.
+  2. **Tech dependency in the same PR.** "A new frontend Dockerfile brings a base image (node
+     build stage plus a static server, e.g. nginx). If that is a new tech dependency for the
+     stack, docs/skills-map.md is updated in the SAME PR (CLAUDE.md §10), and 07's
+     tech-dependencies section if it names images." At `fc4401dc`, `docs/skills-map.md:142` has a
+     "Docker Compose / Helm" row (`deploy/`), and `07` §8 starts at `07:463`. The row's planner
+     reads both and states whether the static server is a new dependency.
+  3. **Reachable, not declared.** "Test it from a fresh checkout: the image builds and serves the
+     built app (a curl 200 on /), recorded in the LG." The `LG-` records the clean checkout's
+     commit, the build command and its rc, and the `curl` command with its status line.
+  The row's acceptance adds the `frontend` image beside the beat shape test. The image exists
+  under the `app` profile, and the broken-input proof is that test seen red against the compose
+  file without the service.
 
 ### Activation of `PL-1537` (dated 2026-10-12)
 
@@ -201,12 +219,11 @@ goes `active` in this delta's branch, by its status line only. Its body is not e
 |---|---|---|---|---|---|---|
 | DP-S4-1 | FR-452's management-API limb: (1) which routes are counted; (2) where the limit comes from; (3) does a Service Account's own `rate_limit_rps` apply to them? `07:183` states the scoring limb only. | (1a) every `/api/v1/*` route except the `/score` family and the health probes; (1b) the state-changing routes only (`POST`, `PUT`, `PATCH`, `DELETE`) outside `/score`. (2a) a new Setting, for example `platform.default_management_rate_limit_rps`: unset by default, workspace or Environment scope, resolved by §3.8 as `scoring.default_client_rate_limit_rps` is; (2b) the scoring Setting reused. (3a) no: `rate_limit_rps` stays the scoring limit; (3b) yes: one account limit for both. | **(1a), (2a), (3a).** FR-452 says the scoring limit is "configured separately from management-API limits". Options (2b) and (3b) put both limbs on one source, which reads against that clause. (1a) has no per-method list for the spec to keep in step with routes. With (2a) unset by default, nothing changes for a deployment that sets nothing: the same no-counter-call path as RL-1347 rule 2. The Environment and fail-open rules are the scoring limb's: the key's Environment, empty for a bearer caller; admitted and counted on `gip_rate_limit_unenforced_total` if Redis is down. | spec interpretation | **yes, for Task C only** | the decision-maker (an `RL-`), seated by the lead |
 | DP-S4-2 | Where does FD 9860's remaining half go: the `scheduler` (beat) service, and with it the rest of FR-432's service list? | (i) widen S4 with the `scheduler` service. This adds FR-432 and FR-413 to S4's requirement set, so it needs a further delta. (ii) a separate row after S4, serialised on `deploy/docker-compose.yml`, built on S4's `app` profile and Dockerfile. | **(ii).** S4 is on P2's exit path (`PL-1620` D0.1), and the beat tick is not on `WF-701` A to D. A row after S4 reuses the image and profile S4 builds, with no second edit to the same compose file in flight. | scope | no, for S4 | **ruled (ii)**: the maintainer, "2026-10-12 02:53:52 BST", item 4 (D4.6) |
-| DP-S4-3 | FR-432's third limb, the `frontend` image (`07:148`; the maintainer, "2026-10-12 03:08:30 BST", item 2): is it P2 scope, and in which row? `frontend/` has no Dockerfile at `fc4401dc`, and the S4 branch adds none. | (a) a third WK-674 row in P2, after the beat row, serialised on `deploy/docker-compose.yml`: one image that builds `frontend/` (`pnpm --dir frontend build`) and serves the static output under the `app` profile. (b) fold the image into the beat row, so one P2 row after S4 closes both remaining limbs with one more edit of the compose file. (c) carry it to P3 by a dated move line, with an owner and a discharge event, leaving FR-432 and FD 9860 open past the P2 close with that carriage recorded in the phase closure record (`CLAUDE.md` §14). | **(b).** The beat and `frontend` limbs share the dependency (S4's `app` profile), the file and the serialisation. One row makes one compose edit instead of two serialised ones, and it lets FR-432 and FD 9860 close together in P2. Neither limb is on `WF-701` A to D (`PL-1620` D0.1), so the row stays off the exit path. If the cut ladder needs the lane, the row is moved to P3 by a dated move line, which is (c) applied later and never a silent drop. | scope | no, for S4 | the maintainer |
+| DP-S4-3 | FR-432's third limb, the `frontend` image (`07:148`; the maintainer, "2026-10-12 03:08:30 BST", item 2): is it P2 scope, and in which row? `frontend/` has no Dockerfile at `fc4401dc`, and the S4 branch adds none. | (a) a third WK-674 row in P2, after the beat row, serialised on `deploy/docker-compose.yml`: one image that builds `frontend/` (`pnpm --dir frontend build`) and serves the static output under the `app` profile. (b) fold the image into the beat row, so one P2 row after S4 closes both remaining limbs with one more edit of the compose file. (c) carry it to P3 by a dated move line, with an owner and a discharge event, leaving FR-432 and FD 9860 open past the P2 close with that carriage recorded in the phase closure record (`CLAUDE.md` §14). | **(b).** The beat and `frontend` limbs share the dependency (S4's `app` profile), the file and the serialisation. One row makes one compose edit instead of two serialised ones, and it lets FR-432 and FD 9860 close together in P2. Neither limb is on `WF-701` A to D (`PL-1620` D0.1), so the row stays off the exit path. If the cut ladder needs the lane, the row is moved to P3 by a dated move line, which is (c) applied later and never a silent drop. | scope | no, for S4 | **ruled (b)**: the maintainer, "2026-10-12 03:09:50 BST", with three conditions (D4.6) |
 
 A plan is "`draft` while decision points are open, `active` on freeze" (`document-ids.md` §1.6,
 the PL `map`/`leaf` row). DP-S4-1 blocks Task C, so this delta mints `draft`. It goes `active` by a
-dated line once DP-S4-1's `RL-` is minted. DP-S4-2 is ruled. DP-S4-3 is the maintainer's, and
-neither blocks S4. The same entry,
+dated line once DP-S4-1's `RL-` is minted. DP-S4-2 and DP-S4-3 are ruled, and neither blocks S4. The same entry,
 item 4, sends DP-S4-1 to a decision-maker "when a seat frees (medium unless it writes spec text)".
 The ruling's content is written into `07` §3.9 by S4's executor (D4.5). Whether that makes the
 ruling "write spec text" is the lead's reading.
@@ -218,8 +235,8 @@ ruling "write spec text" is the lead's reading.
   it.
 - **The decision-maker:** DP-S4-1, as an `RL-`.
 - **The lead:** reserve the beat row's `SL-` id on the planner's request (D4.6's follow-on
-  note). Put DP-S4-3 (the `frontend` image) to the maintainer. If (b) is ruled, the beat row's scope
-  gains the image. If (a) is ruled, a second `SL-` id is needed.
+  note). That one row carries beat and the `frontend` image (DP-S4-3 (b)). No second `SL-` id is
+  needed.
 - **The D13 minter:** FD 9704 and FD 9860 are minted with their batch. Once they are minted, this
   file's working-id cites resolve in the mint commit, as `PL-1620`'s did.
 
