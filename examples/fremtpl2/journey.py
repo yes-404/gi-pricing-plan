@@ -262,7 +262,10 @@ class _Journey:
     def job_ok(self, step: str, who: str, accepted: Mapping[str, Any]) -> dict[str, Any]:
         job = self.job(step, who, accepted)
         if job["status"] != "succeeded":
-            raise JourneyStepFailed(step, (job.get("error") or {}).get("code") or "JOB_FAILED")
+            error = job.get("error") or {}
+            raise JourneyStepFailed(
+                step, error.get("code") or "JOB_FAILED", detail=str(error.get("message", ""))
+            )
         return job
 
     # -- the journey ---------------------------------------------------------------------

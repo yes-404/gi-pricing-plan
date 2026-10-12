@@ -346,7 +346,11 @@ def test_wf699_journey_runs_end_to_end(api_client, database, blob_store, workspa
     def run_job(job_id: str) -> None:
         loop.run_until_complete(execute_job(database, UUID(job_id), blob_store))
 
-    result = journey.run_wf699_journey(api_client, record, log=lines.append, run_job=run_job)
+    try:
+        result = journey.run_wf699_journey(api_client, record, log=lines.append, run_job=run_job)
+    except journey.JourneyStepFailed as failure:
+        # The exception's text is the step and code only; the server's detail is on the attribute.
+        pytest.fail(f"{failure} :: {failure.detail} :: after {lines[-1:]}")
 
     status = result.step_status
     for step in (
