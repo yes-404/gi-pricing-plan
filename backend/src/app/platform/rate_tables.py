@@ -36,7 +36,7 @@ from app.db.models import (
 )
 from app.db.session import Database
 from app.errors import PlatformError
-from app.platform import datasets, transformations
+from app.platform import audit, datasets, transformations
 from app.platform import jobs as job_service
 from app.platform import settings as settings_svc
 from app.platform.blobs import BlobStore, to_ref
@@ -47,7 +47,16 @@ from app.platform.modelling import (
     load_model,
     to_model,
 )
-from model_schema import Banding, DatasetStatus, Factor, Grouping, JobKind, JobStatus
+from model_schema import (
+    Banding,
+    DatasetStatus,
+    Factor,
+    Grouping,
+    JobKind,
+    JobSource,
+    JobStatus,
+    Principal,
+)
 from model_schema.jobs import Job
 from model_schema.problem import FieldError
 from model_schema.rating import (
@@ -129,7 +138,7 @@ def _map_operation_error(exc: ValueError) -> PlatformError:
 async def seed_from_model(
     database: Database,
     workspace_id: UUID,
-    created_by: UUID,
+    actor: Principal,
     settings: Settings,
     blob_store: BlobStore,
     *,
@@ -152,6 +161,7 @@ async def seed_from_model(
     non-approved model gives `PIN_NOT_APPROVED` whatever its Factor ids resolve to; an id
     that resolves nowhere is then a 404 (`load_factors`), never an empty list.
     """
+    assert actor.id is not None
     async with database.unit_of_work() as session:
         model_row = await load_model(
             session,
@@ -186,18 +196,21 @@ async def seed_from_model(
                 RateTableRow.slug == slug,
             )
         )
+        before: dict[str, Any] | None = None
         if table_row is None:
             table_row = RateTableRow(
                 workspace_id=workspace_id,
                 slug=slug,
                 current_version=0,
-                created_by=created_by,
+                created_by=actor.id,
             )
             session.add(table_row)
             await session.flush()
             version_number = 1
         else:
             await _check_reseed_lineage(session, table_row, slug=slug, factor=factor)
+            current = await _load_version(session, table_row.id, table_row.current_version, slug)
+            before = _baseline_state(current, await _to_version(session, current, blob_store))
             version_number = table_row.current_version + 1
 
         derived = RateTableVersion(
@@ -218,7 +231,9 @@ async def seed_from_model(
             table_row=table_row,
             derived=derived,
             version_number=version_number,
-            created_by=created_by,
+            actor=actor,
+            action="rate_table_version.seeded",
+            before=before,
             threshold=threshold,
             blob_store=blob_store,
         )
@@ -897,7 +912,7 @@ async def import_preview(
 async def import_confirmed(
     database: Database,
     workspace_id: UUID,
-    created_by: UUID,
+    actor: Principal,
     settings: Settings,
     blob_store: BlobStore,
     *,
@@ -914,6 +929,7 @@ async def import_confirmed(
     the seed anchor is inherited from the baseline (DP4, FR-234), and the
     storage decision follows the workspace threshold like any other version (DP2).
     """
+    assert actor.id is not None
     async with database.unit_of_work() as session:
         table_row = await _load_table(session, workspace_id, slug)
         version_row = await _load_version(session, table_row.id, version, slug)
@@ -942,7 +958,9 @@ async def import_confirmed(
             table_row=table_row,
             derived=derived,
             version_number=version + 1,
-            created_by=created_by,
+            actor=actor,
+            action="rate_table_version.imported",
+            before=_baseline_state(version_row, table),
             threshold=threshold,
             blob_store=blob_store,
         )
@@ -1047,7 +1065,7 @@ async def manual_edit_preview(
 async def manual_edit_confirmed(
     database: Database,
     workspace_id: UUID,
-    created_by: UUID,
+    actor: Principal,
     settings: Settings,
     blob_store: BlobStore,
     *,
@@ -1057,8 +1075,9 @@ async def manual_edit_confirmed(
     """FR-229 (RL-1555 items 1 and 2): create the version the preview showed, with its
     `created_by_edit` record. A base that is not the latest is the existing 409 of
     `_persist_new_version` (`base_version + 1` already exists)."""
+    assert actor.id is not None
     async with database.unit_of_work() as session:
-        table_row, version_row, _, derived = await _edit_derived(
+        table_row, version_row, base, derived = await _edit_derived(
             session, workspace_id, slug, body, blob_store
         )
         _guard_seed_lineage(derived, version_row)
@@ -1068,7 +1087,9 @@ async def manual_edit_confirmed(
             table_row=table_row,
             derived=derived,
             version_number=derived.version,
-            created_by=created_by,
+            actor=actor,
+            action="rate_table_version.edited",
+            before=_baseline_state(version_row, base),
             threshold=threshold,
             blob_store=blob_store,
         )
@@ -1298,6 +1319,44 @@ async def _to_version(
     )
 
 
+def _stored_version(
+    version_row: RateTableVersionRow, cells: Sequence[dict[str, str]]
+) -> RateTableVersion:
+    """The version's §4.2 wire form as stored (FR-232): inline rows when rows-stored, the
+    parquet `BlobRef` otherwise, with its provenance fields. Unlike `_to_version`, which
+    materialises a transformation input, this is the one constructor of what is stored."""
+    return RateTableVersion.model_validate(
+        version_row.definition
+        | {
+            "storage": version_row.storage,
+            "rows": _wire_rows(cells) if version_row.storage == "rows" else None,
+            "cells": version_row.cells,
+            "change_note": version_row.change_note,
+            "seeded_from": version_row.seeded_from,
+            "created_by_operation": version_row.created_by_operation,
+            "created_by_import": version_row.created_by_import,
+            "created_by_edit": version_row.created_by_edit,
+        }
+    )
+
+
+def _audit_state(version: RateTableVersion, cells: Sequence[dict[str, str]]) -> dict[str, Any]:
+    """NFR-498's state of one version (RL-1515 DP-2): its stored wire form without inline
+    rows, plus the cells' canonical content hash, the diff cache's own (FR-232). The version
+    is immutable and its `entity_ref` addresses it, so the cells stay recoverable."""
+    return version.model_dump(mode="json", exclude={"rows"}) | {
+        "cells_digest": version_content_hash(cells)
+    }
+
+
+def _baseline_state(version_row: RateTableVersionRow, base: RateTableVersion) -> dict[str, Any]:
+    """The audit state of the stored version `base` was materialised from (`_to_version`)."""
+    if base.rows is None:
+        raise _rows_form_violated()
+    cells = [dict(row.root) for row in base.rows]
+    return _audit_state(_stored_version(version_row, cells), cells)
+
+
 def _guard_seed_lineage(
     derived: RateTableVersion, baseline: RateTableVersionRow
 ) -> None:
@@ -1331,7 +1390,9 @@ async def _persist_new_version(
     table_row: RateTableRow,
     derived: RateTableVersion,
     version_number: int,
-    created_by: UUID,
+    actor: Principal,
+    action: str,
+    before: dict[str, Any] | None,
     threshold: int,
     blob_store: BlobStore,
 ) -> RateTableVersion:
@@ -1342,7 +1403,13 @@ async def _persist_new_version(
     threshold the cells keep the `rate_table_cells` rows; above it they are written
     to a content-addressed parquet blob addressed by `cells`. Returns the version in
     its §4.2 wire form.
+
+    The one writer of a rate table version, so the one place its Audit Event is recorded
+    (NFR-498, RL-1515 DP-1): `action` names how the version was made and `before` is the
+    state of the version it was made from, `None` for a table's first. The event follows the
+    last flush, in the write's transaction (`06` R2), so a refused write records none.
     """
+    assert actor.id is not None
     if derived.rows is None:
         raise _rows_form_violated()
     cells = [dict(row.root) for row in derived.rows]
@@ -1368,7 +1435,7 @@ async def _persist_new_version(
             if derived.seeded_from is not None
             else None
         ),
-        created_by=created_by,
+        created_by=actor.id,
         created_by_operation=(
             derived.created_by_operation.model_dump(mode="json")
             if derived.created_by_operation is not None
@@ -1412,22 +1479,18 @@ async def _persist_new_version(
         )
         version_row.cells = blob_ref.model_dump(mode="json")
     await session.flush()
-    return RateTableVersion(
-        slug=derived.slug,
-        version=version_number,
-        rateable=derived.rateable,
-        storage=RateTableStorageMode(storage_mode),
-        keys=derived.keys,
-        value=derived.value,
-        default_row=derived.default_row,
-        rows=_wire_rows(cells) if storage_mode == "rows" else None,
-        cells=blob_ref,
-        change_note=derived.change_note,
-        seeded_from=derived.seeded_from,
-        created_by_operation=derived.created_by_operation,
-        created_by_import=derived.created_by_import,
-        created_by_edit=derived.created_by_edit,
+    created = _stored_version(version_row, cells)
+    await audit.record(
+        session,
+        workspace_id=table_row.workspace_id,
+        actor=actor,
+        source=JobSource.API,
+        action=action,
+        entity_ref=f"rate_table:{derived.slug}@{version_number}",
+        before=before,
+        after=_audit_state(created, cells),
     )
+    return created
 
 
 def _dispatch_operation(
@@ -1462,7 +1525,7 @@ def _dispatch_operation(
 async def bulk_operation(
     database: Database,
     workspace_id: UUID,
-    created_by: UUID,
+    actor: Principal,
     settings: Settings,
     blob_store: BlobStore,
     *,
@@ -1478,6 +1541,7 @@ async def bulk_operation(
     (FR-234, 03 §4.2, DP4), and the new version's storage is decided against the
     workspace threshold (FR-232, DP2).
     """
+    assert actor.id is not None
     async with database.unit_of_work() as session:
         table_row = await session.scalar(
             select(RateTableRow).where(
@@ -1509,7 +1573,9 @@ async def bulk_operation(
             table_row=table_row,
             derived=derived,
             version_number=baseline_row.version_number + 1,
-            created_by=created_by,
+            actor=actor,
+            action="rate_table_version.bulk_operation",
+            before=_baseline_state(baseline_row, baseline),
             threshold=threshold,
             blob_store=blob_store,
         )

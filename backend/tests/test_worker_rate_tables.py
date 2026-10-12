@@ -55,7 +55,7 @@ async def _seed_parquet_diff(
     await svc.import_confirmed(
         database,
         workspace_id,
-        principal.id,
+        principal,
         Settings(),
         blob_store,
         slug=slug,

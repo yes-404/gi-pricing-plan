@@ -194,12 +194,12 @@ async def _seed_two_versions(
     """Seed one Factor of the family's model into a table, then import a changed v2."""
     slug = f"tbl-{uuid4().hex[:8]}"
     await svc.seed_from_model(
-        database, workspace_id, principal.id, Settings(), blob_store, slug=slug,
+        database, workspace_id, principal, Settings(), blob_store, slug=slug,
         model_ref=ArtifactRef(type="model", slug=family, version=1),
         factor=factor, change_note="seed",
     )
     await svc.import_confirmed(
-        database, workspace_id, principal.id, Settings(), blob_store, slug=slug,
+        database, workspace_id, principal, Settings(), blob_store, slug=slug,
         version=1, filename="v2.csv", content=v2,
     )
     return slug
@@ -864,12 +864,12 @@ async def _uplifted_table(
     )
     slug = f"tbl-{uuid4().hex[:8]}"
     await svc.seed_from_model(
-        database, workspace_id, principal.id, Settings(), blob_store, slug=slug,
+        database, workspace_id, principal, Settings(), blob_store, slug=slug,
         model_ref=ArtifactRef(type="model", slug=family, version=1),
         factor="driver_age_band", change_note="seed",
     )
     await svc.bulk_operation(
-        database, workspace_id, principal.id, Settings(), blob_store, slug=slug, version=1,
+        database, workspace_id, principal, Settings(), blob_store, slug=slug, version=1,
         kind="uplift_table", parameters={"percentage": "10"},
     )
     return slug
@@ -1297,12 +1297,12 @@ async def test_the_artifact_is_keyed_by_version_identity_so_twins_do_not_share(
         )
         slug = f"tbl-{uuid4().hex[:8]}"
         await svc.seed_from_model(
-            database, workspace_id, principal.id, Settings(), blob_store, slug=slug,
+            database, workspace_id, principal, Settings(), blob_store, slug=slug,
             model_ref=ArtifactRef(type="model", slug=family, version=1),
             factor="driver_age_band", change_note="seed",
         )
         await svc.import_confirmed(
-            database, workspace_id, principal.id, Settings(), blob_store, slug=slug,
+            database, workspace_id, principal, Settings(), blob_store, slug=slug,
             version=1, filename="v2.csv",
             content=b"driver_age_band,relativity\n17-20,2.1120\n21-24,1.2690\n25-29,1.1200\n",
         )

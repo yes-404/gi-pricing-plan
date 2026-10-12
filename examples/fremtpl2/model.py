@@ -465,7 +465,7 @@ async def seed_demo_rate_tables(
     tables: dict[str, ArtifactRef] = {}
     for factor in FACTOR_SET:
         version = await rate_table_service.seed_from_model(
-            database, workspace_id, analyst.id, settings, blob_store,
+            database, workspace_id, analyst, settings, blob_store,
             slug=table_slug(factor), model_ref=model_ref, factor=factor,
             change_note=f"seeded from the approved freMTPL2 GLM, factor {factor}",
         )
@@ -598,7 +598,7 @@ async def save_demo_algorithm(
         base_minor=base_minor, domains=domains,
     )
     try:
-        await algorithm_service.create_algorithm(database, workspace_id, analyst.id, payload)
+        await algorithm_service.create_algorithm(database, workspace_id, analyst, payload)
     except PlatformError as exc:  # a re-seed: the algorithm is already saved
         if exc.status_code != 409:
             raise

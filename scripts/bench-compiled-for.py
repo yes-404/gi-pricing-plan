@@ -60,7 +60,7 @@ from app.platform.rating_versions import (
     compile_rating_version,
     record_bundle_blob,
 )
-from model_schema import new_uuid7
+from model_schema import ActorKind, Principal, new_uuid7
 from model_schema.refs import ArtifactRef
 
 DEFAULT_DSN = os.environ.get(
@@ -97,7 +97,8 @@ async def _setup(database: Database, blob_store: BlobStore) -> tuple[UUID, Artif
     workspace_id = new_uuid7()
     created_by = new_uuid7()
 
-    await create_algorithm(database, workspace_id, created_by, _algorithm_payload())
+    bench = Principal(kind=ActorKind.USER, id=created_by, display="bench")
+    await create_algorithm(database, workspace_id, bench, _algorithm_payload())
 
     row = RatingVersionRow(
         workspace_id=workspace_id, slug="bench-compiled-for", version=1, status="draft",
