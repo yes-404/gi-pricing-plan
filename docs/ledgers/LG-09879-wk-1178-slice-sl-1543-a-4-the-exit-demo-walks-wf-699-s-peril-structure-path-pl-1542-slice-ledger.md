@@ -30,7 +30,13 @@ Base: `origin/main` `604ea084c96efe93f521fb9ba17738e05241e61a`. The activation c
 
 ### Task 0
 
-(entries follow)
+### Task 0 — plan defect: the severity GLM cannot share the frequency GLM's holdout (2026-10-12)
+
+**Finding (base `604ea084`).** `backend/src/app/platform/perils.py:639` `_refuse_unshared_holdout` refuses a structure whose component models do not cite one (`dataset_version_id`, `split_artifact_id`, `holdout_part`); `_reconcile` (`worker/model_handlers.py:1348`) derives its single holdout from the first candidate's spec. PL-1542 Acceptance 1 and Task 1 Step 2 fit the severity GLM on a claims-only frame, a different Dataset Version, so `create_structure` would refuse it. Fitting it on the full-book version fails instead: `pricing_core/modelling/glm.py` ~:671-692 documents that a nil-settlement row in a Gamma response raises `GLM_FIT_FAILED`. PL-1542 does not mention the shared-holdout rule.
+
+**Spike (scratch, no commits; `pricing_core.modelling.fit_glm` and `compute_diagnostics` called directly, which is what the fit job calls at `model_handlers.py:374` and `:446`; a synthetic frame of 20,000 rows, 3 areas).** Option A (non-claimants carry response 1.0 and weight 0): the fit succeeds with one glum `RuntimeWarning: divide by zero encountered in divide` (`glum/_distribution.py:165`); the coefficients equal a claims-only fit's to the 14th digit (intercept 7.806226313974, `area[a]` -0.897677907610, `area[b]` -0.512106638573). The holdout diagnostics do not drop the zero-weight rows: `PartitionDiagnostics.rows` 14,000 against 1,939 claimant rows; `ae_overall` 0.1388 against 0.9987 claims-only; AE cell expected for area a 4,618,661.7 against actual 627,919.5; lift bin 1 has predicted 0.0 and actual 0.0. No fit-time row filter, exclusion or null-response handling exists in `model_handlers.py`, `platform/modelling.py`, `pricing_core/modelling/glm.py` or `diagnostics.py`, nor in `02` FR-111 or `ModelSpecCommon`.
+
+**Ruling.** The lead's message of 2026-10-12 relays the maintainer's (by delegation) entry in `to-lead.md` "2026-10-12 05:39:20 BST": option (i), a small PRECEDING WK-1178 slice, SL 9887 (plan PL 9886, working ids), that excludes weight-0 rows from the fit and from every diagnostic, with a dated FR-111 clause; (ii) and (iii) are refused. After SL 9887 merges, the severity GLM fits on the SAME Dataset Version and split as the frequency GLM with non-claimants at weight 0; FR-190 is untouched and no placeholder response is ever used. The entry itself is a local channel file (RFC-777), quoted from the lead's relay, not re-read by the executor. This slice's severity work (Tasks 1 and 2, and what depends on them) waits for SL 9887; the gate turn moves behind it.
 
 ## PRs
 
