@@ -3,7 +3,7 @@ id: PL-1694
 family: plan
 kind: map
 title: WK-673 — the FD-1660 fix, two slices: Stage A the loud guard (the refusal names FD-1660 and reaches the Job; WF-699 D6 asserts it), then Stage B the fix (a mount is a derived change, a subset carries its mounts and their pins, and WF-699 D7 decomposes): a dated delta to PL-1267
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-12
 owner: planner
 tree: 50bbdd96b2154cb4eb79ccf91658191e51ab8906
