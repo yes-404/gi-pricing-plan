@@ -246,7 +246,7 @@ async def _world(database: Any, blob_store: Any, workspace_id: Any) -> dict[str,
     )
 
     # The fitted model stands on the validated portfolio Dataset Version: a model on a Dataset
-    # Version that does not exist is flagged, and approval refuses a flagged model (ARTIFACT_FLAGGED).
+    # Version that does not exist is flagged, and approval refuses it (ARTIFACT_FLAGGED).
     portfolio_id = new_uuid7()
     family = f"fremtpl2-gbm-{uuid4().hex[:6]}"
     async with database.unit_of_work() as session:
