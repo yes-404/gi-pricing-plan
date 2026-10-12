@@ -2554,8 +2554,12 @@ def test_a_weight_zero_row_does_not_shape_the_boosters_bins(backend: str) -> Non
 
 @pytest.mark.req("FR-111")
 @pytest.mark.parametrize("backend", BACKENDS)
-@pytest.mark.parametrize("bad", [-1.0, None], ids=["negative", "null"])
-def test_a_negative_or_null_weight_is_refused_by_the_weight_code_on_both_backends(
+@pytest.mark.parametrize(
+    "bad",
+    [-1.0, None, float("inf"), float("nan")],
+    ids=["negative", "null", "inf", "nan"],
+)
+def test_an_unusable_weight_is_refused_by_the_weight_code_on_both_backends(
     backend: str, bad: float | None
 ) -> None:
     """One rule, one code, before any backend sees the column (06:10:04).

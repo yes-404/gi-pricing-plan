@@ -37,8 +37,8 @@ from model_schema import (
     OffsetSpec,
     PartitionDiagnostics,
     UniversalDiagnostics,
-    WeightSpec,
     Weighting,
+    WeightSpec,
 )
 
 

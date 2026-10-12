@@ -859,8 +859,12 @@ def test_only_an_exact_zero_weight_is_excluded() -> None:
 
 
 @pytest.mark.req("FR-111")
-@pytest.mark.parametrize("bad", [-1.0, None], ids=["negative", "null"])
-def test_a_negative_or_null_weight_is_refused_by_the_weight_code(bad: float | None) -> None:
+@pytest.mark.parametrize(
+    "bad",
+    [-1.0, None, float("inf"), float("nan")],
+    ids=["negative", "null", "inf", "nan"],
+)
+def test_an_unusable_weight_is_refused_by_the_weight_code(bad: float | None) -> None:
     """Negative and null stay loud (05:39:20), under ONE code for every arm (06:10:04).
 
     The code names the cause. It replaced `GLM_FIT_FAILED` for a bad weight because the

@@ -507,8 +507,12 @@ def test_a_weight_zero_row_does_not_shape_the_ebms_bins() -> None:
 
 
 @pytest.mark.req("FR-111")
-@pytest.mark.parametrize("bad", [-1.0, None], ids=["negative", "null"])
-def test_a_negative_or_null_weight_is_refused_by_the_weight_code(bad: float | None) -> None:
+@pytest.mark.parametrize(
+    "bad",
+    [-1.0, None, float("inf"), float("nan")],
+    ids=["negative", "null", "inf", "nan"],
+)
+def test_an_unusable_weight_is_refused_by_the_weight_code(bad: float | None) -> None:
     """One code for every arm (06:10:04); on main EBM named this
     `EBM_MONOTONE_CONSTRAINT_INCOMPLETE`."""
     book = _zero_weight_book(300).with_columns(
