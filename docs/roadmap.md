@@ -1607,17 +1607,19 @@ Minted as `SL-1275` at #943's merge turn, 2026-09-30, with `python3 scripts/doc-
 id: SL-1622
 family: slice
 title: WK-690 fix row — FD-1349, FD-1492 and FD-1512 fixed before close, and FD-1294's discharge line
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-11
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: d699a561d6a93f33b74beb9c07023f8e655bb8c7
 phase: P2
 work: WK-690
 corrected_by: []
-relates: [PL-1621, PL-1268, FD-1294, FD-1349, FD-1492, FD-1512]
+relates: [PL-1621, PL-1665, PL-1268, FD-1294, FD-1349, FD-1492, FD-1512]
 ```
 
 The fix row of DP-W-1 (a), adopted by the lead (from-lead "2026-10-11 11:20:43 BST") and confirmed by the maintainer (to-lead "2026-10-11 11:21:02 BST — DP-F (WK-1250 S3 plan form): (a); DP-W-1 (a): confirmed; dm-wk690 seated: OK", item 2). Three changes land in one PR. The contract guard compares the objective-certificate check-name enum with the code's vocabulary (FD-1349). A custom metric whose `certificate_id` names no `metric_certificate` row is refused at submit (FD-1492). The `pseudo_huber` template certifies on the default grid (FD-1512). Each is red first. FD-1294 is already discharged by `SL-1271` (#981, `bd67fb51`), so only its dated register line is owed, at the close. The row is `PL-1621`'s order 0, and its acceptance is that plan's F.1 to F.6. **Off the cut ladder**: no rung cuts it. **Depends on:** nothing open. **Lane:** at GO.
+
+(Activated 2026-10-12 on the lead's GO, the `from-lead` entry "2026-10-12 05:31:21 BST", on the maintainer's (by delegation) entries "2026-10-11 11:21:02 BST" item 2 (DP-W-1 (a)) and "2026-10-12 02:53:52 BST" item 3 (`PL-1665` approved). `PL-1665` set `active` in this activation commit, its status line only; it replaces F.1 with F.1′. The slice's one ledger is `LG-9880` (working id, not yet minted).)
 
 ### WK-693 — Machine-readable process core — RFC-895, adopted remainder (Slices E/F/G)
 
