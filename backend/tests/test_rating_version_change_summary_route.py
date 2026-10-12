@@ -71,7 +71,7 @@ async def _seed_table_version(
     seeded = await rate_tables_service.seed_from_model(
         database,
         workspace_id,
-        principal.id,
+        principal,
         Settings(),
         blob_store,
         slug=slug,

@@ -125,7 +125,7 @@ async def seed_rate_table_from_model(
     version = await service.seed_from_model(
         database,
         caller.workspace_id,
-        caller.principal.id,
+        caller.principal,
         settings,
         blob_store,
         slug=slug,
@@ -170,7 +170,7 @@ async def edit_rate_table(
     assert caller.principal.id is not None
     with spec_not_found():
         created = await service.manual_edit_confirmed(
-            database, caller.workspace_id, caller.principal.id, settings, blob_store,
+            database, caller.workspace_id, caller.principal, settings, blob_store,
             slug=slug, body=body,
         )
     response.status_code = status.HTTP_201_CREATED
@@ -213,7 +213,7 @@ async def bulk_operate_rate_table(
     created = await service.bulk_operation(
         database,
         caller.workspace_id,
-        caller.principal.id,
+        caller.principal,
         settings,
         blob_store,
         slug=slug,
@@ -321,7 +321,7 @@ async def import_rate_table(
     created = await service.import_confirmed(
         database,
         caller.workspace_id,
-        caller.principal.id,
+        caller.principal,
         settings,
         blob_store,
         slug=slug,

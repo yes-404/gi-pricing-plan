@@ -55,7 +55,7 @@ async def create_rating_algorithm(
     row = await service.create_algorithm(
         database,
         caller.workspace_id,
-        caller.principal.id,
+        caller.principal,
         body.model_dump(mode="json", exclude_unset=True),
     )
     return RatingAlgorithmSaved(id=row.id, slug=row.slug, version=row.version)

@@ -351,6 +351,14 @@ no step produced, and mounted a sub-graph at a step it did not define.)*
 
 *(Added 2026-10-09, `RL-1474`.)* **`RatingAlgorithmDraft`** is the same field set without the invariants above. It is the body of `POST /api/v1/rating-algorithms/validate`, so a graph that breaks an invariant reaches the validator and is reported, rather than refused before it (FR-1607). `RatingAlgorithm` is `RatingAlgorithmDraft` plus the invariants, defined in `model-schema` as its subclass, so the field set is written once. The invariants are one function returning every breach detectable on the graph as it stands, located, in this order: a duplicate `step_id` (FR-215), which stops the other checks because each of them keys steps by `step_id`; a declared output with no output step (FR-214); an unresolved reference, located on the consuming step; a cycle, one issue per step that lies on it; an ambiguous producer, skipped after a cycle because it needs the topological order; and an orphan step. `RatingAlgorithm`'s validator calls it and raises on the first, with the codes save answers today, and the validate route calls it and reports them all (FR-1607). `SubGraphBody` keeps its own parallel invariants (§4.11), so this single definition covers algorithms only. **`AlgorithmValidationReport`** is `{"issues": [ValidationIssue, …]}`. A `ValidationIssue` is `{"code", "message", "step_id", "field"}`, the last two nullable; it is defined in `model-schema`, from which `pricing-core`'s `validate_algorithm` and `validate_rate_table` (§5.2) take it.
 
+> **Audit Event (added 2026-10-11, `RL-1515`, NFR-498, FD-1513).** Every saved Rating
+> Algorithm version records one Audit Event `rating_algorithm.created`, in the same
+> transaction as the version (`06` FR-368), after the version is written, so a refused save
+> records none. Its `entity_ref` is `rating_algorithm:<slug>@<version>`, its actor is the
+> saving Principal, its `after` is the stored content of the version saved, and its `before`
+> is the stored content of the slug's highest-numbered existing version, or `null` when the
+> slug has none.
+
 ### 4.2 `RateTable` / `RateTableVersion`
 
 ```json
@@ -432,7 +440,7 @@ Values are stored as decimal strings, never JSON floats (R2).
 > name of the actually-uploaded file as the endpoint received it (stored as text, bounded
 > length, never used as a path), not a format-derived constant — per FR-235. Both are
 > set at creation and immutable with the version; the before/after cells and the actor
-> belong to NFR-498's Audit Event, not here. This example's version was edited by
+> belong to NFR-498's Audit Event, not here. *(Amended 2026-10-11, `RL-1515`, DP-2 and T-1b: the Audit Event carries the cells by reference, not inline: by its `entity_ref`, which addresses this immutable version, plus `cells_digest`, the cells' canonical content hash. "Audit Events" at the end of this section says what `before` and `after` hold.)* This example's version was edited by
 > hand, so both are `null` and it carries `created_by_edit` instead.
 >
 > **`created_by_edit` added 2026-10-10 (`RL-1555`, DP-S4-1c).** A version created by the
@@ -465,6 +473,22 @@ Values are stored as decimal strings, never JSON floats (R2).
 > `VALIDATION_FAILED`, naming the table and its keys; seed a new table slug instead.
 
 *(Added 2026-10-10, `RL-1475`.)* **`RateTableCell`** is one row in the form `rows` uses above: an object whose members are the table's key columns and its value column, each value a string (a key level or a decimal string). A Rate Table Version's `rows` and `default_row` are typed as `RateTableCell`, and the cells read (§5.1, FR-1636) returns pages of it. The definition read returns a `RateTable`, which carries every field above except `rows`, `cells`, `change_note`, `seeded_from`, `created_by_operation`, `created_by_import`, `diff_vs_previous` and `diff_vs_seed`.
+
+> **Audit Events (added 2026-10-11, `RL-1515`, NFR-498, FD-1513).** Every new Rate Table
+> Version records one Audit Event, in the same transaction as the version (`06` FR-368),
+> after the version is written, so a refused write records none. The action names how the
+> version was made: `rate_table_version.seeded` (FR-230), `rate_table_version.imported`
+> (FR-235) or `rate_table_version.bulk_operation` (FR-233). Its `entity_ref` is the new
+> version's `rate_table:<slug>@<version>` and its actor is the Principal who made the write.
+> Its `after` is the new version's wire form above without `rows`, plus the cells' canonical
+> content hash under the key `cells_digest`: the hash over the cells that the diff is cached
+> under, the same for a rows-stored version and its parquet twin (FR-232). Its `before` is, in the same form, the
+> version the new one was made from: the addressed baseline of an import or a bulk
+> operation, or the table's current version for a re-seed; it is `null` for a table's first
+> version. The cell values are not copied into the event: the version is immutable,
+> `entity_ref` addresses it, and the hash attests its cells.
+
+*(Amended 2026-10-11, `RL-1625`, FR-229, `RL-1555` DP-S4-1c: a Rate Table Version made by a confirmed manual edit records the Audit Event `rate_table_version.edited`, under every rule of the paragraph above. Its `before` is, in the same form, the stored state of the version the edit names as its `base_version`, and its `after` is the new version's, which carries `created_by_edit`.)*
 
 ### 4.3 `RatingVersion`
 
@@ -953,7 +977,7 @@ A Sub-graph Version is a stored, immutable fragment of a Rating Algorithm, addre
 - **Inlining and namespacing** *(added 2026-10-09, WK-1250 Slice 2, RL-1571 (2026-10-10, re-pointed: RL 9586 was minted as RL-1571 in D5; the 11:47:04 follow-up))*. At compile, a pinned mount is inlined at its `mount_point` (FR-217). Every fragment `step_id`, and every fragment name that is not a mapped port, becomes `<mount_point>__<name>`: `__`, not `/`, because `/` is FR-244's division operator. A mapped input port's name becomes the parent value it is mapped to, and a mapped output port's name becomes the parent name it is mapped to. Names are renamed by FR-244 token in every field that holds one (`consumes`, `produces`, `key_expr`, `expr`, `condition`, the values of `clamp_bounds` and ~~the values of~~ `feature_map`), never by substring. *(Corrected 2026-10-10, the maintainer's (by delegation) entry headed "2026-10-10 23:46:57 BST — RULING (mispricing): the inliner renames feature_map KEYS, never values — option (A), fixed INSIDE SL-1541" in `to-lead.md`, WK-1178 SL-1541: a `feature_map`'s KEYS are graph value names and are renamed; its VALUES are the Model's feature names (FR-222) and are never renamed. The struck words "the values of" before `feature_map` read wrongly; `RL-1571` is frozen and is not edited.)* A `mount_point` matches `^[A-Za-z][A-Za-z0-9_]*$` and contains no `__`. ~~Mounted under §4.1's example, this fragment's step `s_ncd` becomes `s_ncd__s_ncd`; it consumes the parent's `ncd_years` and produces the parent's `ncd_factor`.~~ *(Corrected 2026-10-11, in the D11 docs batch, on dm-wk690's routing as relayed by the lead at "2026-10-11 11:36:23 BST" in `from-lead-2026-10-09.md`: §4.1's example mounts nothing. `RL-1519` removed its mount (its table row "`mount_point: "s_ncd"` names no step": "The mount is removed (`"sub_graphs": []`)"), and the example now ends at `"sub_graphs": []`, so there is no mounted `s_ncd` to become `s_ncd__s_ncd`. The renaming rule above is unchanged; only its worked example is withdrawn. `s_ncd` is the step id **inside** §4.11's `ncd-ladder` fragment.)* Compile refuses an unmapped or undeclared port (`RATING_GRAPH_UNRESOLVED_REF`), an incompatible input type (`RATING_TYPE_MISMATCH`), a mount whose sub-graph is not pinned (`RATING_VERSION_UNPINNED`), and a `mount_point` that breaks the pattern, clashes, or produces a namespaced name equal to a parent name, step id or engine-derived key (`VALIDATION_FAILED`). A mount whose fragment writes its own input port is refused (`VALIDATION_FAILED`); revisit if an algorithm needs it *(ruled 2026-10-09, WK-1250 Slice 2)*.
 - **Graph invariants** (FR-212, restated for ports). Every name a step consumes is an input port or is produced by a step (`RATING_GRAPH_UNRESOLVED_REF`). Every output port is produced by a step (`RATING_GRAPH_UNRESOLVED_REF`: a port is a reference to a named value). An input port is the first producer of its name; a step that produces it without consuming it is refused, while a step that consumes it and re-produces it (a clamp chain) is accepted. A step reachable from no input port and contributing to no output port is refused. A cycle is refused (`RATING_GRAPH_CYCLIC`). A duplicate `step_id` is refused. These other refusals are `VALIDATION_FAILED`.
 - **Result types at create** (FR-227; `RL-1309` DP-S1-4). An output port whose declared type is incompatible with its producing step's result type is refused with `RATING_TYPE_MISMATCH`, naming the producing step and the port. Only producers whose type is known at save are checked: an `expression` step's `result_type` and an input port's declared type. An output produced by a `table`, `lookup` or `model_call` step is not checked at create, as for an algorithm today; its type is known only against the pinned artifact, at compile.
-- **Versions are immutable** (`00` FR-4). The server numbers versions: the current maximum plus one. There is no update and no delete. Every write records an Audit Event `sub_graph.created` with `entity_ref` `sub_graph:<slug>@<version>`, in the same transaction (`06` FR-368).
+- **Versions are immutable** (`00` FR-4). The server numbers versions: the current maximum plus one. There is no update and no delete. Every write records an Audit Event `sub_graph.created` with `entity_ref` `sub_graph:<slug>@<version>`, in the same transaction (`06` FR-368). *(Amended 2026-10-11, `RL-1515`, NFR-498: the event's `after` is the stored content of the version written, steps included, and its `before` is the stored content of version N−1, or absent for version 1.)*
 
 ### 4.12 `Deployment`
 
