@@ -208,7 +208,7 @@ Each item is checked by a command a fresh reviewer can run from the repository r
   - 3d: the preview's own latency against the FR's budget.
 
   The `LG-` records the rate, the sample count, the box load before and after each run, and the
-  command verbatim. **The lead books the ALONE window at S5's GO.** A run on a shared box is a
+  command verbatim. **This is S5's activation need (§Tasks, S5 row): a TRUE ALONE window, booked by the lead and quoted at S5's GO.** A run on a shared box is a
   functional run only and does not discharge 5.7. A test that shows `/score` is never queued
   behind the preview executor (separate executors) is also required. It discharges 3c's "never
   queue ahead" clause apart from the timing.
@@ -276,7 +276,12 @@ assigned at GO. This delta changes the rows as follows.
 
 **S5 row (`PL-1621:211`).**
 - **Size.** 1 plus about 0.3 (`RL-1616:95-96`, accepted), plus whatever conditions 3a–3c add.
-- **Depends on.** Add the ALONE window of 5.7, booked by the lead at GO.
+- **Activation need (new): a TRUE ALONE window for 5.7**, of the class of the maintainer's
+  "2026-10-12 00:16:39 BST" entry (`to-lead.md:22637`): no other gate, test, check or sweep on
+  the box. It is required by the maintainer's "2026-10-12 02:53:52 BST" item 3 (`to-lead.md:22817`).
+  A FUNCTIONAL window does not meet this need. The lead books the window, and S5's GO quotes the
+  booking. S5's code may be built before the window. 5.7 is measured inside it, and S5 does not
+  close until 5.7 is measured.
 - **Requirements.** Add the new §3.7 FR (5.1′).
 
 **Fix row (`PL-1621:209`).** The write set loses the new guard (F.1′). It keeps
