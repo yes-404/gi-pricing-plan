@@ -28,8 +28,8 @@ from model_schema import (
     GbmSpec,
     GlmSpec,
     OffsetSpec,
-    WeightSpec,
     Weighting,
+    WeightSpec,
 )
 from pricing_core.modelling import (
     backtest_model,
@@ -586,9 +586,13 @@ def _walk(
         # `DiagnosticsResult` is a dataclass wrapping the pydantic blocks.
         assert type(got) is type(want), path
         for field in dataclasses.fields(got):
-            _walk(getattr(got, field.name), getattr(want, field.name), f"{path}.{field.name}", diffs, counts)
+            _walk(
+                getattr(got, field.name), getattr(want, field.name),
+                f"{path}.{field.name}", diffs, counts,
+            )
     elif isinstance(got, (tuple, list)):
-        assert isinstance(want, (tuple, list)) and len(got) == len(want), f"{path}: length"
+        assert isinstance(want, (tuple, list)), path
+        assert len(got) == len(want), f"{path}: length"
         for i, (a, b) in enumerate(zip(got, want, strict=True)):
             _walk(a, b, f"{path}[{i}]", diffs, counts)
     elif isinstance(got, float):
@@ -634,7 +638,9 @@ def test_a_weight_zero_row_is_not_counted_in_a_partitions_rows_or_ae() -> None:
     claims_only = compute_diagnostics(
         fit, spec, factors, train=_drop_zero(train), holdout=_drop_zero(holdout), type_iii=False
     )
-    assert result.universal.train.ae_overall == pytest.approx(claims_only.universal.train.ae_overall)
+    assert result.universal.train.ae_overall == pytest.approx(
+        claims_only.universal.train.ae_overall
+    )
     assert result.universal.holdout.ae_overall == pytest.approx(
         claims_only.universal.holdout.ae_overall
     )

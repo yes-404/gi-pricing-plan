@@ -793,15 +793,15 @@ def _severity_book(
     age = rng.integers(18, 80, n).astype(float)
     claims = rng.poisson(0.6, n).astype(float)
     cost = rng.gamma(4.0, 800.0 * np.exp(0.3 * urban + 0.01 * (age - 40.0)) / 4.0)
+    costs = [
+        float(c) if k > 0 else nonclaimant_cost for c, k in zip(cost, claims, strict=True)
+    ]
     return pl.DataFrame(
         {
             "area": ["urban" if u else "rural" for u in urban],
             "driv_age": age,
             "claim_count": claims,
-            "cost": pl.Series(
-                [float(c) if k > 0 else nonclaimant_cost for c, k in zip(cost, claims, strict=True)],
-                dtype=pl.Float64,
-            ),
+            "cost": pl.Series(costs, dtype=pl.Float64),
         }
     )
 

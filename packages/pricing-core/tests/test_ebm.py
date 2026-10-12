@@ -480,13 +480,20 @@ def _zero_weight_book(n: int = 2000, seed: int = 20261012) -> pl.DataFrame:
     zero = rng.uniform(0.0, 1.0, n) < 0.5
     return book.with_columns(
         pl.Series("n_claims", np.where(zero, 0.0, 1.0)),
-        pl.Series("claim_count", np.where(zero, rng.uniform(5.0, 9.0, n), book["claim_count"].to_numpy())),
+        pl.Series(
+            "claim_count",
+            np.where(zero, rng.uniform(5.0, 9.0, n), book["claim_count"].to_numpy()),
+        ),
     )
 
 
 @pytest.mark.req("FR-111")
 def test_a_weight_zero_row_does_not_shape_the_ebms_bins() -> None:
-    """The full book fits as the CLAIMS-ONLY book does — not as today's full-frame fit (05:47:19)."""
+    """The full book fits as the CLAIMS-ONLY book does (05:47:19).
+
+    On main `interpret` refuses a zero `sample_weight` outright (`illegal sample_weight value
+    of zero`, as `EbmFitError`), so the full-frame fit does not exist to compare with.
+    """
     book = _zero_weight_book()
     claims_only = book.filter(pl.col("n_claims") > 0)
     spec = _spec(weight=CLAIM_WEIGHT)
@@ -494,15 +501,16 @@ def test_a_weight_zero_row_does_not_shape_the_ebms_bins() -> None:
     full = fit_ebm(book, spec, FACTORS, bandings=BANDINGS)
     reference = fit_ebm(claims_only, spec, FACTORS, bandings=BANDINGS)
 
-    got = predict_ebm(full, claims_only, FACTORS, bandings=BANDINGS).to_numpy()
-    want = predict_ebm(reference, claims_only, FACTORS, bandings=BANDINGS).to_numpy()
+    got = np.asarray(predict_ebm(full, claims_only, FACTORS, bandings=BANDINGS))
+    want = np.asarray(predict_ebm(reference, claims_only, FACTORS, bandings=BANDINGS))
     assert np.allclose(got, want, rtol=1e-9, atol=1e-12), float(np.max(np.abs(got - want)))
 
 
 @pytest.mark.req("FR-111")
 @pytest.mark.parametrize("bad", [-1.0, None], ids=["negative", "null"])
 def test_a_negative_or_null_weight_is_refused_by_the_weight_code(bad: float | None) -> None:
-    """One code for every arm (06:10:04). On main EBM named this `EBM_MONOTONE_CONSTRAINT_INCOMPLETE`."""
+    """One code for every arm (06:10:04); on main EBM named this
+    `EBM_MONOTONE_CONSTRAINT_INCOMPLETE`."""
     book = _zero_weight_book(300).with_columns(
         pl.when(pl.int_range(pl.len()) == 3).then(bad).otherwise(1.0).alias("n_claims")
     )

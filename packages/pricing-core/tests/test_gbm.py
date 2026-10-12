@@ -2548,7 +2548,8 @@ def test_a_weight_zero_row_does_not_shape_the_boosters_bins(backend: str) -> Non
     want = predict_gbm(reference.result, reference.booster_bytes, claims_only, FACTORS).to_numpy()
     # XGBoost returns float32, so the tolerance is the float32 one; the failure this guards
     # against moves a Gamma mean by whole percent.
-    assert np.allclose(got, want, rtol=1e-6), f"{backend}: max rel diff {np.max(np.abs(got / want - 1))}"
+    worst = np.max(np.abs(got / want - 1))
+    assert np.allclose(got, want, rtol=1e-6), f"{backend}: max rel diff {worst}"
 
 
 @pytest.mark.req("FR-111")

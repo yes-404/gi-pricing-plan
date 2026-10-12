@@ -2108,7 +2108,7 @@ imported from §4.5 rather than restated — the same catalogue, read two ways.
 `GROUPING_NOT_EXHAUSTIVE`, `CREDIBILITY_VARIANCE_NOT_ESTIMABLE`,
 `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`, `GLM_CV_FOLD_EMPTY`,
 `GLM_TWEEDIE_POWER_GRID_EDGE`, `GLM_DID_NOT_CONVERGE`, `GLM_RANK_DEFICIENT`,
-`GLM_SEPARATION_DETECTED`, `GLM_FIT_FAILED`,
+`GLM_SEPARATION_DETECTED`, `GLM_FIT_FAILED`, `DECLARED_WEIGHT_INVALID`,
 `OFFSET_REQUIRED_FOR_FREQUENCY`,
 `MONOTONE_CONSTRAINT_CONFLICT`, `EARLY_STOPPING_REQUIRES_HOLDOUT`,
 `OBJECTIVE_NOT_APPROVED`, `OBJECTIVE_NOT_APPLICABLE`,
@@ -2183,6 +2183,18 @@ imported from §4.5 rather than restated — the same catalogue, read two ways.
 > a *subclass* of `ValueError`, so the two clauses are not siblings: putting the wider one
 > first turns every singular design into `GLM_FIT_FAILED`, leaving the fit correctly refused
 > and only the diagnosis wrong — which is exactly the tidy-up a later reader would make.
+
+> **`DECLARED_WEIGHT_INVALID` added 2026-10-12 (WK-1178, SL-1675, on the maintainer's (by
+> delegation) entry "2026-10-12 06:10:04 BST", (A)).** One refusal, raised by `pricing-core`'s
+> weight rule before any backend sees the column, for **all three fit arms** (GLM, GBM — both
+> backends — and EBM): the declared weight column holds a negative, null or non-finite
+> value, or nothing but 0s (FR-111's exclusion of weight-0 rows would leave no row). It
+> replaces three answers to the same input: `GLM_FIT_FAILED` carrying `glum`'s "Sample weights
+> must be non-negative" (a negative weight no longer reaches that clause above), a raw
+> `XGBoostError` with no platform code, and `EBM_MONOTONE_CONSTRAINT_INCOMPLETE`; and it
+> closes a fourth, LightGBM fitting on a negative or null weight without refusing. A
+> one-row-at-weight-0 frame is not an error: those rows are excluded and counted (FR-111).
+> Not `GLM_FIT_FAILED` for a GBM: borrowing a GLM code keeps the error lying about its cause.
 
 > **Added 2026-08-22 (WK-661, the EBM slice).** `ebm_monotonicity_verified` refuses to
 > check a constraint naming a feature the fitted tables do not contain: reporting
