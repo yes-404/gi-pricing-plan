@@ -31,3 +31,7 @@ Base: `origin/main` `604ea084c96efe93f521fb9ba17738e05241e61a`. The activation c
 ### Task 0
 
 (entries follow)
+
+## PRs
+
+- Not yet opened; the lead's merge-turn mint resolves the working id.
