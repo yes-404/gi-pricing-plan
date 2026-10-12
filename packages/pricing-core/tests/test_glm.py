@@ -701,8 +701,10 @@ def test_a_malformed_weight_column_is_named_rather_than_a_stack_trace() -> None:
     with pytest.raises(GlmFitError) as refused:
         fit_glm(data, spec, [_factor("area", "area")])
 
-    assert refused.value.code == "GLM_FIT_FAILED"
-    assert "Sample weights must be non-negative" in str(refused.value)
+    # Was `GLM_FIT_FAILED` carrying glum's "Sample weights must be non-negative". Since
+    # SL-1675 the weight check runs before `glum` and names its own cause (06:10:04).
+    assert refused.value.code == "DECLARED_WEIGHT_INVALID"
+    assert "claim_weight" in str(refused.value)
 
 
 @pytest.mark.req("FR-115")
@@ -768,3 +770,132 @@ def test_fit_glm_refuses_a_seed_argument() -> None:
     """
     with pytest.raises(TypeError, match="seed"):
         fit_glm(pl.DataFrame(), _spec(), [], seed=0)  # type: ignore[call-arg]
+
+
+# --------------------------------------------------------------------------------------
+# FR-111 (amended 2026-10-12, SL-1675) — a row whose declared weight is exactly 0 is absent
+# --------------------------------------------------------------------------------------
+
+WEIGHT_INVALID = "DECLARED_WEIGHT_INVALID"
+CLAIM_WEIGHT = WeightSpec(kind="column", column="claim_count")
+
+
+def _severity_book(
+    nonclaimant_cost: float | None, n: int = 3_000, seed: int = 20261012
+) -> pl.DataFrame:
+    """A full severity book: every policy, with `claim_count` as the weight (FR-111).
+
+    A non-claimant carries weight 0 and no real cost, so `nonclaimant_cost` is whatever the
+    extract holds there — a nil settlement (0.0), which the Gamma family refuses, or a null.
+    """
+    rng = np.random.default_rng(seed)
+    urban = rng.integers(0, 2, n)
+    age = rng.integers(18, 80, n).astype(float)
+    claims = rng.poisson(0.6, n).astype(float)
+    cost = rng.gamma(4.0, 800.0 * np.exp(0.3 * urban + 0.01 * (age - 40.0)) / 4.0)
+    return pl.DataFrame(
+        {
+            "area": ["urban" if u else "rural" for u in urban],
+            "driv_age": age,
+            "claim_count": claims,
+            "cost": pl.Series(
+                [float(c) if k > 0 else nonclaimant_cost for c, k in zip(cost, claims, strict=True)],
+                dtype=pl.Float64,
+            ),
+        }
+    )
+
+
+def _severity_spec() -> GlmSpec:
+    return _spec(
+        family="gamma", response_column="cost", offset=OffsetSpec(kind="none"), weight=CLAIM_WEIGHT
+    )
+
+
+SEVERITY_FACTORS = [_factor("area", "area"), _factor("driv_age", "driv_age")]
+
+
+@pytest.mark.req("FR-111")
+@pytest.mark.parametrize("nonclaimant_cost", [0.0, None], ids=["response-0", "response-null"])
+def test_a_weight_zero_row_never_reaches_the_family_domain_check(
+    nonclaimant_cost: float | None,
+) -> None:
+    """The full severity book fits, and fits as the claims-only book does (05:39:20 (i)).
+
+    On main this is `GLM_FIT_FAILED`, and the cause is the Gamma family's response domain
+    (a 0) or a NaN (a null): the non-claimant's response, which carries no weight, was read.
+    Parity is asserted for the GLM without cross-validation only (`select_by` is not `cv`):
+    excluding a row changes the CV fold assignment, so under CV it holds only under the same
+    folds and is not claimed (05:47:19).
+    """
+    book = _severity_book(nonclaimant_cost)
+    claims_only = book.filter(pl.col("claim_count") > 0)
+    assert 0 < claims_only.height < book.height
+
+    full = fit_glm(book, _severity_spec(), SEVERITY_FACTORS).result
+    reference = fit_glm(claims_only, _severity_spec(), SEVERITY_FACTORS).result
+
+    assert [c.term for c in full.coefficients] == [c.term for c in reference.coefficients]
+    for got, want in zip(full.coefficients, reference.coefficients, strict=True):
+        assert got.estimate == pytest.approx(want.estimate, abs=1e-10), got.term
+        assert got.std_error == pytest.approx(want.std_error, abs=1e-10), got.term
+    assert full.dispersion == pytest.approx(reference.dispersion, abs=1e-10)
+
+
+@pytest.mark.req("FR-111")
+def test_only_an_exact_zero_weight_is_excluded() -> None:
+    """A tiny positive weight is a row; the rule is `== 0.0`, not a tolerance."""
+    book = _severity_book(0.0).with_columns(
+        pl.when(pl.col("claim_count") == 0)
+        .then(1e-300)
+        .otherwise(pl.col("claim_count"))
+        .alias("claim_count")
+    )
+    # Every row now carries a positive weight, so the non-claimants' nil settlements are read.
+    with pytest.raises(GlmFitError) as refused:
+        fit_glm(book, _severity_spec(), SEVERITY_FACTORS)
+    assert refused.value.code == "GLM_FIT_FAILED"
+    assert "out of the valid range" in str(refused.value)
+
+
+@pytest.mark.req("FR-111")
+@pytest.mark.parametrize("bad", [-1.0, None], ids=["negative", "null"])
+def test_a_negative_or_null_weight_is_refused_by_the_weight_code(bad: float | None) -> None:
+    """Negative and null stay loud (05:39:20), under ONE code for every arm (06:10:04).
+
+    The code names the cause. It replaced `GLM_FIT_FAILED` for a bad weight because the
+    weight check runs before `glum` is reached.
+    """
+    book = _severity_book(500.0).with_columns(
+        pl.when(pl.int_range(pl.len()) == 3)
+        .then(bad)
+        .otherwise(pl.col("claim_count"))
+        .alias("claim_count")
+    )
+    with pytest.raises(GlmFitError) as refused:
+        fit_glm(book, _severity_spec(), SEVERITY_FACTORS)
+    assert refused.value.code == WEIGHT_INVALID
+    assert "claim_count" in str(refused.value)
+
+
+@pytest.mark.req("FR-111")
+def test_a_book_of_only_weight_zero_rows_says_so() -> None:
+    book = _severity_book(500.0).with_columns(pl.lit(0.0).alias("claim_count"))
+    with pytest.raises(GlmFitError) as refused:
+        fit_glm(book, _severity_spec(), SEVERITY_FACTORS)
+    assert refused.value.code == WEIGHT_INVALID
+    assert "weight 0" in str(refused.value)
+
+
+@pytest.mark.req("FR-111")
+def test_a_zero_exposure_offset_is_still_refused_it_is_not_a_weight() -> None:
+    """FR-111's exclusion reads `spec.weight` only; the frequency offset's own refusal stays."""
+    data = _frequency_data(500).with_columns(
+        pl.when(pl.int_range(pl.len()) == 0)
+        .then(0.0)
+        .otherwise(pl.col("exposure_years"))
+        .alias("exposure_years")
+    )
+    with pytest.raises(GlmFitError) as refused:
+        fit_glm(data, _spec(), [_factor("area", "area")])
+    assert refused.value.code == "OFFSET_REQUIRED_FOR_FREQUENCY"

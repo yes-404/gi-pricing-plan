@@ -2491,3 +2491,94 @@ def test_old_glm_diagnostics_without_type_iii_omitted_loads_empty() -> None:
     }
     glm = GlmDiagnostics(**old_data)
     assert glm.type_iii_omitted == ()
+
+
+# --------------------------------------------------------------------------------------
+# FR-111 (amended 2026-10-12, SL-1675) — a row whose declared weight is exactly 0 is absent
+# --------------------------------------------------------------------------------------
+
+
+def _zero_weight_book(n: int = 4_000, seed: int = 20261012) -> pl.DataFrame:
+    """A severity book whose non-claimants carry weight 0 *and a loud, non-zero response*.
+
+    The response is non-zero on purpose: the fit runs on main, so the comparison with a
+    claims-only fit is a real one. Without the exclusion the booster bins and splits on
+    those rows too, because a weight of 0 is not the same as the row being absent.
+    """
+    rng = np.random.default_rng(seed)
+    age = rng.integers(18, 80, n).astype(float)
+    claims = rng.poisson(0.6, n).astype(float)
+    cost = rng.gamma(4.0, 800.0 * np.exp(0.01 * (age - 40.0)) / 4.0)
+    return pl.DataFrame(
+        {
+            "area": rng.choice(["urban", "rural"], n),
+            "driv_age": age,
+            "claim_count": claims,
+            "cost": np.where(claims > 0, cost, rng.uniform(5_000.0, 9_000.0, n)),
+        }
+    )
+
+
+def _zero_weight_spec(backend: str) -> GbmSpec:
+    return _spec(
+        backend,
+        response_column="cost",
+        objective=GbmFunctionRef(kind="builtin", name="reg:gamma"),
+        offset=OffsetSpec(kind="none"),
+        weight=WeightSpec(kind="column", column="claim_count"),
+    )
+
+
+@pytest.mark.req("FR-111")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_weight_zero_row_does_not_shape_the_boosters_bins(backend: str) -> None:
+    """The full book fits as the CLAIMS-ONLY book does — not as today's full-frame fit (05:47:19).
+
+    On main the two differ: the weight-0 rows are given zero weight in the loss, yet the
+    binning (and, for LightGBM, the dataset construction) still sees them.
+    """
+    book = _zero_weight_book()
+    claims_only = book.filter(pl.col("claim_count") > 0)
+    spec = _zero_weight_spec(backend)
+
+    full = fit_gbm(book, spec, FACTORS)
+    reference = fit_gbm(claims_only, spec, FACTORS)
+
+    got = predict_gbm(full.result, full.booster_bytes, claims_only, FACTORS).to_numpy()
+    want = predict_gbm(reference.result, reference.booster_bytes, claims_only, FACTORS).to_numpy()
+    # XGBoost returns float32, so the tolerance is the float32 one; the failure this guards
+    # against moves a Gamma mean by whole percent.
+    assert np.allclose(got, want, rtol=1e-6), f"{backend}: max rel diff {np.max(np.abs(got / want - 1))}"
+
+
+@pytest.mark.req("FR-111")
+@pytest.mark.parametrize("backend", BACKENDS)
+@pytest.mark.parametrize("bad", [-1.0, None], ids=["negative", "null"])
+def test_a_negative_or_null_weight_is_refused_by_the_weight_code_on_both_backends(
+    backend: str, bad: float | None
+) -> None:
+    """One rule, one code, before any backend sees the column (06:10:04).
+
+    On main LightGBM fitted on either silently, and XGBoost's refusal was a raw
+    `XGBoostError` with no platform code.
+    """
+    book = _zero_weight_book(500).with_columns(
+        pl.when(pl.int_range(pl.len()) == 3)
+        .then(bad)
+        .otherwise(pl.col("claim_count"))
+        .alias("claim_count")
+    )
+    with pytest.raises(GbmFitError) as refused:
+        fit_gbm(book, _zero_weight_spec(backend), FACTORS)
+    assert refused.value.code == "DECLARED_WEIGHT_INVALID"
+    assert "claim_count" in str(refused.value)
+
+
+@pytest.mark.req("FR-111")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_book_of_only_weight_zero_rows_says_so_on_both_backends(backend: str) -> None:
+    book = _zero_weight_book(500).with_columns(pl.lit(0.0).alias("claim_count"))
+    with pytest.raises(GbmFitError) as refused:
+        fit_gbm(book, _zero_weight_spec(backend), FACTORS)
+    assert refused.value.code == "DECLARED_WEIGHT_INVALID"
+    assert "weight 0" in str(refused.value)

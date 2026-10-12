@@ -8,11 +8,14 @@ arithmetic that is wrong.
 
 from __future__ import annotations
 
+import dataclasses
+import math
 from uuid import uuid4
 
 import numpy as np
 import polars as pl
 import pytest
+from pydantic import BaseModel
 
 from model_schema import (
     Banding,
@@ -25,9 +28,11 @@ from model_schema import (
     GbmSpec,
     GlmSpec,
     OffsetSpec,
+    WeightSpec,
     Weighting,
 )
 from pricing_core.modelling import (
+    backtest_model,
     compute_diagnostics,
     fit_ebm,
     fit_gbm,
@@ -536,3 +541,194 @@ def test_a_glm_without_a_cross_records_no_type_iii_omission() -> None:
     )
     assert result.glm is not None
     assert result.glm.type_iii_omitted == ()
+
+
+# --------------------------------------------------------------------------------------
+# FR-111 (amended 2026-10-12, SL-1675) — a weight-0 row is in no diagnostic's population
+# --------------------------------------------------------------------------------------
+
+COUNT = "rows_excluded_zero_weight"
+ZERO_WEIGHT = WeightSpec(kind="column", column="w")
+
+
+def _with_weights(book: pl.DataFrame, train_rows: int) -> pl.DataFrame:
+    """Add `w`: 0 on every 7th train row and every 3rd holdout row, else 1.
+
+    The two partitions lose **different** numbers of rows, so a count swapped between
+    train and holdout cannot pass.
+    """
+    index = np.arange(book.height)
+    zero = np.where(index < train_rows, index % 7 == 0, index % 3 == 0)
+    return book.with_columns(pl.Series("w", np.where(zero, 0.0, 1.0)))
+
+
+def _drop_zero(frame: pl.DataFrame) -> pl.DataFrame:
+    return frame.filter(pl.col("w") > 0)
+
+
+def _walk(
+    got: object, want: object, path: str, diffs: list[str], counts: dict[str, tuple[object, object]]
+) -> None:
+    """Compare two results field by field, walked from `model_fields`.
+
+    A field added to a result model later is compared without anyone editing this test.
+    `rows_excluded_zero_weight` is the one field allowed to differ; it is collected, not
+    compared, and the caller asserts its values.
+    """
+    if isinstance(got, BaseModel):
+        assert type(got) is type(want), path
+        for name in type(got).model_fields:
+            if name == COUNT:
+                counts[path] = (getattr(got, name), getattr(want, name))
+                continue
+            _walk(getattr(got, name), getattr(want, name), f"{path}.{name}", diffs, counts)
+    elif dataclasses.is_dataclass(got) and not isinstance(got, type):
+        # `DiagnosticsResult` is a dataclass wrapping the pydantic blocks.
+        assert type(got) is type(want), path
+        for field in dataclasses.fields(got):
+            _walk(getattr(got, field.name), getattr(want, field.name), f"{path}.{field.name}", diffs, counts)
+    elif isinstance(got, (tuple, list)):
+        assert isinstance(want, (tuple, list)) and len(got) == len(want), f"{path}: length"
+        for i, (a, b) in enumerate(zip(got, want, strict=True)):
+            _walk(a, b, f"{path}[{i}]", diffs, counts)
+    elif isinstance(got, float):
+        assert isinstance(want, float), path
+        both_nan = math.isnan(got) and math.isnan(want)
+        if not (both_nan or math.isclose(got, want, rel_tol=1e-9, abs_tol=1e-12)):
+            diffs.append(f"{path}: {got!r} != {want!r}")
+    elif got != want:
+        diffs.append(f"{path}: {got!r} != {want!r}")
+
+
+def _assert_parity(
+    with_zero: object, without: object, *, partitions: dict[str, int]
+) -> None:
+    """Every field equals the claims-only frame's; the count equals the rows removed."""
+    diffs: list[str] = []
+    counts: dict[str, tuple[object, object]] = {}
+    _walk(with_zero, without, "", diffs, counts)
+    assert not diffs, "\n".join(diffs[:12])
+    assert counts == {path: (removed, 0) for path, removed in partitions.items()}
+
+
+def _glm_frames() -> tuple[pl.DataFrame, pl.DataFrame, GlmSpec, list[Factor]]:
+    book = _with_weights(_book(3_000), 2_000)
+    factors = [_factor("area"), _factor("noise")]
+    spec = _spec(factors).model_copy(update={"weight": ZERO_WEIGHT})
+    return book[:2_000], book[2_000:], spec, factors
+
+
+@pytest.mark.req("FR-171")
+@pytest.mark.req("FR-183")
+def test_a_weight_zero_row_is_not_counted_in_a_partitions_rows_or_ae() -> None:
+    """R2: on main `rows` counts the weight-0 rows and `ae_overall` sums their response."""
+    train, holdout, spec, factors = _glm_frames()
+    fit = fit_glm(_drop_zero(train), spec, factors).result
+
+    result = compute_diagnostics(
+        fit, spec, factors, train=train, holdout=holdout, type_iii=False
+    )
+
+    assert result.universal.train.rows == _drop_zero(train).height
+    assert result.universal.holdout.rows == _drop_zero(holdout).height
+    claims_only = compute_diagnostics(
+        fit, spec, factors, train=_drop_zero(train), holdout=_drop_zero(holdout), type_iii=False
+    )
+    assert result.universal.train.ae_overall == pytest.approx(claims_only.universal.train.ae_overall)
+    assert result.universal.holdout.ae_overall == pytest.approx(
+        claims_only.universal.holdout.ae_overall
+    )
+
+
+@pytest.mark.req("FR-171")
+@pytest.mark.req("FR-183")
+def test_every_glm_diagnostic_equals_the_claims_only_frames() -> None:
+    """R3, GLM: every field, walked from `model_fields`, with a per-partition count."""
+    train, holdout, spec, factors = _glm_frames()
+    fit = fit_glm(_drop_zero(train), spec, factors).result
+
+    with_zero = compute_diagnostics(fit, spec, factors, train=train, holdout=holdout)
+    without = compute_diagnostics(
+        fit, spec, factors, train=_drop_zero(train), holdout=_drop_zero(holdout)
+    )
+
+    _assert_parity(
+        with_zero, without,
+        partitions={
+            ".universal.train": train.height - _drop_zero(train).height,
+            ".universal.holdout": holdout.height - _drop_zero(holdout).height,
+        },
+    )
+
+
+@pytest.mark.req("FR-171")
+@pytest.mark.req("FR-183")
+def test_every_gbm_diagnostic_equals_the_claims_only_frames() -> None:
+    """R3, GBM (XGBoost): the same walk through `compute_gbm_diagnostics`."""
+    book = _with_weights(_book(3_000), 2_000)
+    factors = [_factor("area"), _factor("noise")]
+    spec = _gbm_spec(factors).model_copy(update={"weight": ZERO_WEIGHT})
+    train, holdout = book[:2_000], book[2_000:]
+    fit = fit_gbm(_drop_zero(train), spec, factors)
+
+    with_zero = compute_gbm_diagnostics(
+        fit.result, fit.booster_bytes, spec, factors, train=train, holdout=holdout
+    )
+    without = compute_gbm_diagnostics(
+        fit.result, fit.booster_bytes, spec, factors,
+        train=_drop_zero(train), holdout=_drop_zero(holdout),
+    )
+
+    _assert_parity(
+        with_zero, without,
+        partitions={
+            ".universal.train": train.height - _drop_zero(train).height,
+            ".universal.holdout": holdout.height - _drop_zero(holdout).height,
+        },
+    )
+
+
+@pytest.mark.req("FR-171")
+@pytest.mark.req("FR-183")
+def test_every_ebm_diagnostic_equals_the_claims_only_frames() -> None:
+    """R3, EBM: the same walk through `compute_ebm_diagnostics`."""
+    book = _with_weights(_ebm_book(2_000), 1_500)
+    spec = _ebm_spec(EBM_FACTORS, weight=ZERO_WEIGHT)
+    train, holdout = book[:1_500], book[1_500:]
+    fit = fit_ebm(_drop_zero(train), spec, EBM_FACTORS, bandings=EBM_BANDINGS)
+
+    with_zero = compute_ebm_diagnostics(
+        fit, spec, EBM_FACTORS, train=train, holdout=holdout, bandings=EBM_BANDINGS
+    )
+    without = compute_ebm_diagnostics(
+        fit, spec, EBM_FACTORS, train=_drop_zero(train), holdout=_drop_zero(holdout),
+        bandings=EBM_BANDINGS,
+    )
+
+    _assert_parity(
+        with_zero, without,
+        partitions={
+            ".universal.train": train.height - _drop_zero(train).height,
+            ".universal.holdout": holdout.height - _drop_zero(holdout).height,
+        },
+    )
+
+
+@pytest.mark.req("FR-187")
+def test_a_backtest_excludes_weight_zero_rows_and_reports_the_count() -> None:
+    """R3, backtest: `backtest_model` runs the same `_partition` on its one partition."""
+    train, holdout, spec, factors = _glm_frames()
+    fit = fit_glm(_drop_zero(train), spec, factors).result
+    kwargs = {
+        "model_ref": "model:freq@1",
+        "dataset_version_ref": "dataset_version:later@2",
+        "fitted_on_ref": "dataset_version:fitted@1",
+    }
+
+    with_zero = backtest_model(fit, spec, factors, holdout, **kwargs)
+    without = backtest_model(fit, spec, factors, _drop_zero(holdout), **kwargs)
+
+    _assert_parity(
+        with_zero, without,
+        partitions={".partition": holdout.height - _drop_zero(holdout).height},
+    )
