@@ -934,6 +934,24 @@ relates: [PL-1267, SL-1389, SL-1391, CR-838]
 
 (Closed 2026-10-11 as a Slice, closing acts in the slice PR's mint commit, on the lead's merge turn; ledger `LG-1642`, minted 2026-10-11 from working id 9978. `PL-1502` stays `active`.)
 
+#### SL 9897 — WK-673 fix slice — FD 9895: FR-242's drafted change summary refuses a version pinning two versions of one rate-table slug
+
+```yaml
+id: SL-9897
+family: slice
+title: WK-673 fix slice — FD 9895, FR-242's drafted change summary refuses a version pinning two versions of one rate-table slug
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-12
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 604ea084c96efe93f521fb9ba17738e05241e61a
+phase: P2
+work: WK-673
+corrected_by: []
+relates: [PL-9896, PL-1267, SL-1503, RL-1498, RL-1538, SL-1543]
+```
+
+The loud guard for FD 9895 (working id; HIGH, owner WK-673). `_pins_by_slug` (`backend/src/app/platform/rating_versions.py:1404-1408` at `604ea084`) keys a version's rate-table pins by slug, so the last ref wins: with two versions of one slug pinned (valid input under `RL-1538`), FR-242's drafted change summary silently omits one table's change or reports a wrong from/to pair. The slice makes `GET /api/v1/rating-versions/{id}/change-summary-draft` refuse with **409 `VALIDATION_FAILED`**, naming FD 9895 and the slug, when the candidate's or its baseline's rate-table pins carry one slug twice; `POST /api/v1/rating-versions` stays permissive (`RL-1538`). Write set: `_pins_by_slug` and `draft_change_summary_for`'s docstring in `rating_versions.py`, `backend/tests/test_rating_version_change_summary_route.py`, and one dated clause on `03` §5.1's change-summary-draft row. Reds first on `main` through the HTTP create route (both pin orders, and the baseline side); a first version with no baseline is still answered. Requirements: `03` FR-242 (drafting limb), `03` FR-237 (read only). Ordered by the maintainer's (by delegation) entry "2026-10-12 05:43:54 BST — FD 9895: HIGH (not MEDIUM), owner WK-673; a LOUD GUARD merges BEFORE SL-1543" and cut as a standalone row by the maintainer's (by delegation) entry "2026-10-12 05:44:45 BST — FD 9895 is LIVE: (a) a standalone tiny WK-673 row NOW; create stays permissive (RL-1538); PLUS a sweep for the same defect class" (`to-lead.md`). **Merges before `SL-1543`.** The real pairing fix is `PL 9896`'s DP-P1, open for WK-673's plan, not this slice. Work-plan delta `PL 9896` (working id, `draft`). **Activation needs:** the delta minted or GO'd on its working ids; no in-flight writer on the write set, or the dispatch record names it; a build slot and the single gate (`RL-1445` item 1). *(Row cut 2026-10-12 by the planner (seat planner-fd9895); working ids 9897 and 9896 reserved by the lead, eta "2026-10-12 05:45:46 BST". Re-point at the mint.)*
+
 ### WK-674 — Deployment: environments, atomic switchover, rollback, shadow — **and the tenancy mechanics ADR-710 requires**
 
 ```yaml
