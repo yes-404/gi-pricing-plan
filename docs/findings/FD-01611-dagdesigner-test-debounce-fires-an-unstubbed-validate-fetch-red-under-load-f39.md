@@ -2,7 +2,7 @@
 id: FD-1611
 family: finding
 title: The DagDesigner live-validation debounce can fire an unstubbed /rating-algorithms/validate fetch inside a test, so F39 reds a loaded gate
-status: active
+status: closed
 created: 2026-10-11
 owner: auditor
 tree: 99f22479

@@ -2,7 +2,7 @@
 id: FD-1618
 family: finding
 title: A default-live /score is refused with INPUT_CONTRACT_VIOLATION, because the handler and the trace worker pass score_one a context with no rating_version_ref
-status: active
+status: closed
 created: 2026-10-11
 owner: auditor
 tree: 02f23b4a74cfdf81ff4ac875e1ff7ab2db777c4a
