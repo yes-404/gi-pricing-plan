@@ -35,7 +35,7 @@ relates: [PL-1267, FD-1660, PL-1452, SL-1387, SL-1527, RL-1449, RL-1309, RL-1571
 > spawned from `.claude/roles/executor.md`, one per slice.
 
 **Re-cut 2026-10-12 from 08:02 BST (`TZ=Europe/London date`) by the planner
-(planner-wk673-recut), on RL 9852 (working id; minted as RL-1686 in D14) DP-S (i) and DP-W, and
+(planner-wk673-recut), on RL 9852 (working id; to be minted as RL 1686 in D14) DP-S (i) and DP-W, and
 on the maintainer's (by delegation) entry "2026-10-12 07:44:13 BST" item (1).** The plan first
 cut one slice row, SL 9850, holding both stages; it is now **two rows**: **SL 9851 — Stage A,
 the guard** and **SL 9850 — Stage B, the fix**, gated right after SL 9851 merges. The first cut
@@ -46,7 +46,7 @@ commit RL 9852 rules); this re-cut is filed on a new branch, `pl-9807-recut-2026
 **PL 9807** and the rows **SL 9850** and **SL 9851** were reserved by the lead
 (`handover/eta.md`, 2026-10-12 02:29:39 BST corrected at 02:29:58 BST, *"The WK-673 slice (C)
 is **PL 9807 + SL 9850**"*; SL 9851 in RL 9852's disclosure, *"the slices it names (working ids
-9850 and 9851)"*). None is minted here. **Tree read:** `origin/main` `50bbdd96` (#1294); every
+9850 and 9851)"*). None is minted here. RL 9852's id allocated in D14 (the lead's from-lead "2026-10-12 07:57:35 BST", *"D14 ALLOCATED: … [RL 1686] (RL 9852)"* (the bracket stands for the quoted hyphenated id, which check 32 would read as a citation)) is written in the space form, RL 1686, until D14 merges, because the hyphenated form does not resolve in `docs/INDEX.md` before then (`audit-docs` check 32); the minter re-points it. **Tree read:** `origin/main` `50bbdd96` (#1294); every
 repository `file:line` below is at that tree unless a branch or commit is named.
 `packages/pricing-core/` is unchanged from `fc4401dc` (the first cut's tree and RL 9852's) to
 `50bbdd96`: `git diff --stat fc4401dc 50bbdd96 -- packages/pricing-core backend/src/app/worker`
@@ -174,13 +174,15 @@ an `AttributionError` (code `VALIDATION_FAILED`) and a `CodedError`, declared in
 whose text is input-free. Every `AttributionError` made coded is **refused** (NFR-499), and so is
 special-casing the worker (`backend/src/` stays not written).
 
-## Decision points — all ruled
+## Decision points
+
+All ruled.
 
 | DP | Ruled | By |
 |---|---|---|
 | DP-G | refuse any `sub_graph_mounts` difference at any K (K = 0 and 1 included), and refuse at K ≥ 2 when either side mounts; `VALIDATION_FAILED`, naming FD-1660; in `attribute` after `_check_groups`; exemption (i) (one group holding every derived change) **refused** | the maintainer (by delegation), to-lead "2026-10-12 02:43:49 BST" |
 | DP-G's consequence | (A): the guard fails D6's Job for a mount-changing version until Stage B; (B) and (C) refused; conditions (a), (b), (c) | the maintainer (by delegation), to-lead "2026-10-12 07:44:13 BST" item (1) |
-| DP-S | **(i)**: Stage A is its own slice, SL 9851; Stage B stays SL 9850, gated right after Stage A merges | RL 9852 (working id; minted as RL-1686 in D14) |
+| DP-S | **(i)**: Stage A is its own slice, SL 9851; Stage B stays SL 9850, gated right after Stage A merges | RL 9852 (working id; to be minted as RL 1686 in D14) |
 | DP-W | Stage A: the guard as a coded `AttributionError` so its text reaches the Job (write 1); the journey's D6 asserts the refusal and the later steps are `SKIPPED` naming FD-1660 (write 2); condition (b)'s grep, recorded in the LG (write 3); `backend/src/` not written. Stage B: (a), `_derive`, `_subset_pins`, `_PIN_KINDS`, `_subset_algorithm`, `_check_dependence` and `03`'s FR-1398 and FR-1399 texts | RL 9852 |
 | DP-1 | (a): a mount is derived like a step by its `mount_point`; kinds `step_added` / `step_removed` / `step_changed` (a re-point is never `table_repointed`); no new `DeltaKind`; descriptions `<mount_point>: mount added (<after>)`, `<mount_point>: mount removed (<before>)`, `<mount_point>: mount <before> → <after>` (a re-map appends `; ports re-mapped`, or is `<mount_point>: mount ports re-mapped (<ref>)` alone), each `<ref>` being `str(ArtifactRef)` | RL 9852 |
 | DP-2 | (i): a subset's `sub_graphs` are the baseline's with the subset's own mount changes applied by `_merged` keyed on `mount_point`; `sub_graphs` joins `_PIN_KINDS`; sub-graph pins follow the other kinds' rule | RL 9852 |
@@ -232,7 +234,7 @@ must change, that is a STOP for the lead, not a widening.
 
 **SL 9851 (Stage A):**
 
-1. **RL 9852 minted (RL-1686, D14) and PL 9807, SL 9851 and SL 9850 minted** (in D14 or an
+1. **RL 9852 minted (RL 1686, D14) and PL 9807, SL 9851 and SL 9850 minted** (in D14 or an
    early-mint PR, as the lead orders), so that the guard's literal and the `SKIPPED` lines carry
    **SL 9850's minted id** (condition (a) names SL 9850; RL 9852 DP-W: *"written with the minted
    id"*). This plan set `active` by a dated line (L1: in the slice PR's first commit).
@@ -252,7 +254,7 @@ must change, that is a STOP for the lead, not a widening.
 
 1. **SL 9851 merged** (condition (c): *"gated right after Stage A"*; Stage B removes the guard
    Stage A adds, so it cannot be built on a base without it).
-2. RL 9852 minted (RL-1686), so T1 and T2 cite it.
+2. RL 9852 minted (RL 1686), so T1 and T2 cite it.
 3. The salvage sha: **met**, `e14a81e5` (the lead, `from-lead-2026-10-09.md` "2026-10-12
    02:31:03 BST": *"git ls-remote origin refs/heads/salv-sl1527-d7-2group =
    e14a81e55c509de5378858dc84a46f6c5fa03c77"*).
@@ -384,7 +386,7 @@ code with a differing cause is a plan defect, reported, never accepted. `<SL9850
     (`s_premium` consumes both; `_check_dependence`, DP-3), and whether the minimum-premium effect
     is exercised by the fork (a zero-effect group or one line saying so).
 20. **Spec and contracts.** T1 and T2 appear in `03` exactly as RL 9852 adopted them, `<RL>`
-    filled with `RL-1686` and `<date>` with the applying date; `python3 scripts/audit-docs.py`
+    filled with `RL 1686` and `<date>` with the applying date; `python3 scripts/audit-docs.py`
     and `uv run python scripts/req-coverage.py` exit 0; `uv run python
     scripts/generate-contracts.py --check` exits 0 and `git diff --name-only origin/main...HEAD
     -- docs/contracts` is empty.
@@ -402,9 +404,11 @@ code with a differing cause is a plan defect, reported, never accepted. `<SL9850
   identifiers held to `_MOUNT_POINT` (`model_schema/rating.py` `SubGraphRef.mount_point`), never a
   quote value (NFR-499; RL 9852 DP-W).
 
-## Tasks — SL 9851 (Stage A, the guard)
+## Tasks
 
-### Task 1 — the fixtures and the reds, on the base, by cause
+### SL 9851 (Stage A, the guard)
+
+#### Task 1 — the fixtures and the reds, on the base, by cause
 
 **Files:** `packages/pricing-core/tests/test_rating_attribution.py` only.
 
@@ -428,7 +432,7 @@ code with a differing cause is a plan defect, reported, never accepted. `<SL9850
   if any limb is green on the base, or if one fails by another cause than the one stated.
 - [ ] **Step 4.** Commit (`test(rating): …`).
 
-### Task 2 — the guard, coded so its text reaches the Job
+#### Task 2 — the guard, coded so its text reaches the Job
 
 **Files:** `analysis.py`, the test file, `test_quote_input_raise_sites.py`.
 
@@ -441,7 +445,7 @@ code with a differing cause is a plan defect, reported, never accepted. `<SL9850
 
   ```python
   class _MountNotYetAttributable(AttributionError, CodedError):
-      """FD-1660's guard (RL-1686 DP-W): an `AttributionError` (code `VALIDATION_FAILED`) that is
+      """FD-1660's guard (RL 1686 DP-W): an `AttributionError` (code `VALIDATION_FAILED`) that is
       also a `CodedError`, so `safe_error_text` keeps its text and the Dislocation Job's error
       names the finding. The text is a fixed literal plus `mount_point`s (authored identifiers),
       never a quote value (NFR-499). <SL9850> removes it."""
@@ -474,7 +478,7 @@ code with a differing cause is a plan defect, reported, never accepted. `<SL9850
   removes it. `uv run mypy`, `uv run ruff check`, `uv run lint-imports`; item 9. Commit
   (`fix(rating): …`).
 
-### Task 3 — the journey asserts the refusal (condition (b))
+#### Task 3 — the journey asserts the refusal (condition (b))
 
 **Files:** `examples/fremtpl2/journey.py`, `backend/tests/test_wf699_journey.py`,
 `examples/fremtpl2/README.md`.
@@ -537,24 +541,24 @@ code with a differing cause is a plan defect, reported, never accepted. `<SL9850
   journey run once (`scripts/demo.py --journey wf-699` per `dev-commands`, or the lead's named
   substitute), its D6 line copied into the LG. Commit (`test(journey): …`).
 
-### Task 4 — gate, LG, PR (Stage A)
+#### Task 4 — gate, LG, PR (Stage A)
 
 - [ ] Full gate in a slot (item 10); the LG names the tree. Before the PR: `gh pr list --state
   open` and a read of anything ruling on attribution, sub-graphs or `journey.py` (README rule 4),
   naming the commit read. The PR closes SL 9851 only; FD-1660 stays open until SL 9850.
 
-## Tasks — SL 9850 (Stage B, the fix), gated right after SL 9851 merges
+### SL 9850 (Stage B, the fix), gated right after SL 9851 merges
 
-### Task 1 — T1 and T2, spec first
+#### Task 1 — T1 and T2, spec first
 
 **Files:** `docs/specs/03-rating-engine.md`.
 
 - [ ] Merge `main` (holding SL 9851). Append T1 to FR-1399 and T2 to FR-1398 **verbatim as RL
-  9852 §DP-T adopted them** (not the first cut's drafts), `<RL>` = `RL-1686`, `<date>` the
+  9852 §DP-T adopted them** (not the first cut's drafts), `<RL>` = `RL 1686`, `<date>` the
   applying date; run `python3 scripts/audit-docs.py` once in the gate-2 slot (`dev-commands`).
   Commit (`docs(specs): …`).
 
-### Task 2 — derive the mount (DP-1 (a), DP-2 (i) pins)
+#### Task 2 — derive the mount (DP-1 (a), DP-2 (i) pins)
 
 **Files:** `analysis.py`, the test file.
 
@@ -569,7 +573,7 @@ code with a differing cause is a plan defect, reported, never accepted. `<SL9850
   steps' `applied` map.
 - [ ] **Step 4.** Remove the guard's first limb. R3 green; item 16's no-mount lists. Commit.
 
-### Task 3 — the subset and the dependence (DP-2 (i), DP-3 (i))
+#### Task 3 — the subset and the dependence (DP-2 (i), DP-3 (i))
 
 **Files:** `analysis.py`, the test file, `test_quote_input_raise_sites.py`.
 
@@ -588,7 +592,7 @@ code with a differing cause is a plan defect, reported, never accepted. `<SL9850
   `_INPUT_FREE` case (and its `_SITE_NAMES` entry if Stage A added one). R1, R2, R4, item 15
   green; items 16 and 17; `uv run mypy`, `uv run ruff check`. Commit.
 
-### Task 4 — D7 decomposes (serial with SL-1543)
+#### Task 4 — D7 decomposes (serial with SL-1543)
 
 **Files:** `examples/fremtpl2/journey.py`, `backend/tests/test_wf699_journey.py`,
 `examples/fremtpl2/README.md`.
@@ -608,7 +612,7 @@ code with a differing cause is a plan defect, reported, never accepted. `<SL9850
 - [ ] **Step 3.** Write the two 02:20:32 lines into the LG (item 19).
 - [ ] **Step 4.** Run `test_wf699_journey.py` and the journey run; commit.
 
-### Task 5 — gate, LG, PR (Stage B)
+#### Task 5 — gate, LG, PR (Stage B)
 
 - [ ] Full gate in a slot (item 21); the LG names the tree. Before the PR: `gh pr list --state
   open` and a read of anything ruling on attribution, sub-graphs or `journey.py`, naming the
@@ -629,7 +633,7 @@ to two, so D7 rates 4 × the 20,000-policy sample (`PL-1577`); the full-book cos
 
 ## Gate and merge order
 
-1. RL 9852 merges and mints (RL-1686, D14); PL 9807, SL 9851 and SL 9850 mint with it or in an
+1. RL 9852 merges and mints (RL 1686, D14); PL 9807, SL 9851 and SL 9850 mint with it or in an
    early-mint PR (Stage A activation need 1).
 2. **SL 9851 (Stage A)** is dispatched at once after that, serialised with SL-1543 on
    `journey.py` / `test_wf699_journey.py`: whichever merges second re-merges `main` and re-runs
@@ -639,7 +643,7 @@ to two, so D7 rates 4 × the 20,000-policy sample (`PL-1577`); the full-book cos
    merged by then.
 4. G2 is declared only after SL-1543, SL 9851 and SL 9850 have merged (the lead's D13 delta line,
    `docs/roadmap.md:569`, names SL 9850; SL 9851 precedes it by need 1). FD-1660, HIGH in P2,
-   needs its resolution before any P3 start (02:35:40; `CLAUDE.md` §14); SL 9851 is the interim
+   needs its resolution before any P3 start (the rule of `CLAUDE.md` §14, applied by the 02:35:40 entry); SL 9851 is the interim
    mitigation, SL 9850 the resolution.
 
 ## Self-review (before freeze)
