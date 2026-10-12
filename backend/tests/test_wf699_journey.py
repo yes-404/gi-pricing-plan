@@ -260,6 +260,20 @@ async def _world(database: Any, blob_store: Any, workspace_id: Any) -> dict[str,
                 diagnostics_id=uuid4(),
             )
         )
+        # `modelling.reserve`'s creation event, which this direct insert stands in for: its actor
+        # is the version's author, and without it approval fails closed as
+        # APPROVAL_AUTHOR_UNRESOLVED (the seed's fitted GBM has it from the fit).
+        from app.platform import audit
+        from model_schema import JobSource
+
+        await audit.record(
+            session,
+            workspace_id=workspace_id,
+            actor=analyst,
+            source=JobSource.API,
+            action="model.reserved",
+            entity_ref=f"model:{family}@1",
+        )
 
     n = 40
     columns: dict[str, list[object]] = {
