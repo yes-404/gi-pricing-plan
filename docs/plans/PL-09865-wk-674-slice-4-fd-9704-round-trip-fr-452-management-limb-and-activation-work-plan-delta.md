@@ -49,6 +49,9 @@ Evidence read at `origin/main` `fc4401dc` (#1288) and at the authored S4 branch
 - **The GO request is owed now:** the maintainer's entry "2026-10-11 11:32:09 BST", item 2: "The
   activation and GO request come to me when PL 9921 is minted (D11), with its needs quoted. No
   gate before that." PL 9921 is `PL-1620`, minted in D11 (#1275, `b1cdefb5`).
+- **This delta accepted in form:** the maintainer's entry "2026-10-12 02:53:52 BST", item 4:
+  "WK-674 S4: PL 9865 delta with FD 9704's round-trip test, OK." The same item rules DP-S4-2 (ii)
+  and routes DP-S4-1 (Decision points).
 - **Lean P2 L5** (`docs/plans/README.md:16-19`): a change of slice scope is one dated Work-plan
   delta that `relates:` the Work's plan.
 
@@ -150,9 +153,29 @@ The requirement set is `PL-1620`'s, unchanged. FD 9704 is a register row, not a 
   branch adds a `worker` service under the `app` profile
   (`deploy/docker-compose.yml:141-145` at `a04ff676`), and no `scheduler` and no `frontend`.
   FR-432 and FR-413 are not in S4's requirement set, and S4 is not widened (the lead, 2026-10-12).
-  So S4 closes FD 9860's worker half only. FD 9860's placement is DP-S4-2. **For the D13
-  assembler:** word FD 9860 against the S4 branch, or its "lacks the worker" clause goes stale when
-  S4 merges.
+  So S4 closes FD 9860's worker half only. FD 9860's placement is DP-S4-2, **ruled (ii)** by the
+  maintainer's entry "2026-10-12 02:53:52 BST — Readiness rulings: GO S6 SL-1548 (swap
+  planner-wk673-c out); FD 9862 LOW, owner WK-677; PL 9864 + PL 9865 deltas OK; FD 9860 (ii)",
+  item 4: "FD 9860: (ii) ACCEPTED, beat as its own row after S4, serialised on
+  deploy/docker-compose.yml. FR-432 is not met until both land, and the FD stays open until beat
+  merges." **For the D13 assembler:** word FD 9860 against the S4 branch, or its "lacks the
+  worker" clause goes stale when S4 merges. The FD stays open past S4's merge.
+- **Follow-on note — the beat row (not cut here; its `SL-` id is reserved by the lead on the
+  planner's request).** What the row needs, from the ruling and this delta's evidence:
+  - **Scope:** a `scheduler` service in `deploy/docker-compose.yml` under S4's `app` profile,
+    from S4's one image (`deploy/Dockerfile`), running the Celery beat tick FR-413 names.
+    Requirements: `07` §3.2 FR-432 (its `scheduler` limb) and FR-413. FD 9860, discharged
+    at that row's merge.
+  - **Depends on:** `SL-1258` merged (the same compose file, the `app` profile and the
+    image). Serialised on `deploy/docker-compose.yml`, so it is never in flight beside an S4 or S5
+    edit of that file.
+  - **Acceptance shape:** a shape test beside S4's `backend/tests/test_deploy_stack.py`, so that
+    the service exists under the `app` profile, runs the beat command and gets one replica. A
+    broken-input proof is that test seen red against the compose file without the service. A
+    runtime proof behind `GIP_DEPLOY_TESTS=1` shows the tick firing, in a build window, as D0.5 says.
+  - **Open, not this plan's to pick:** FR-432 also lists a `frontend` image (`07:148`), and
+    neither S4 nor this row builds one. Whether "FR-432 is not met until both land" covers the
+    `frontend` limb, or a third row carries it, is the lead's to raise with the maintainer.
 
 ### Activation of `PL-1537` (dated 2026-10-12)
 
@@ -170,11 +193,14 @@ goes `active` in this delta's branch, by its status line only. Its body is not e
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
 | DP-S4-1 | FR-452's management-API limb: (1) which routes are counted; (2) where the limit comes from; (3) does a Service Account's own `rate_limit_rps` apply to them? `07:183` states the scoring limb only. | (1a) every `/api/v1/*` route except the `/score` family and the health probes; (1b) the state-changing routes only (`POST`, `PUT`, `PATCH`, `DELETE`) outside `/score`. (2a) a new Setting, for example `platform.default_management_rate_limit_rps`: unset by default, workspace or Environment scope, resolved by §3.8 as `scoring.default_client_rate_limit_rps` is; (2b) the scoring Setting reused. (3a) no: `rate_limit_rps` stays the scoring limit; (3b) yes: one account limit for both. | **(1a), (2a), (3a).** FR-452 says the scoring limit is "configured separately from management-API limits". Options (2b) and (3b) put both limbs on one source, which reads against that clause. (1a) has no per-method list for the spec to keep in step with routes. With (2a) unset by default, nothing changes for a deployment that sets nothing: the same no-counter-call path as RL-1347 rule 2. The Environment and fail-open rules are the scoring limb's: the key's Environment, empty for a bearer caller; admitted and counted on `gip_rate_limit_unenforced_total` if Redis is down. | spec interpretation | **yes, for Task C only** | the decision-maker (an `RL-`), seated by the lead |
-| DP-S4-2 | Where does FD 9860's remaining half go: the `scheduler` (beat) service, and with it the rest of FR-432's service list? | (i) widen S4 with the `scheduler` service. This adds FR-432 and FR-413 to S4's requirement set, so it needs a further delta. (ii) a separate row after S4, serialised on `deploy/docker-compose.yml`, built on S4's `app` profile and Dockerfile. | **(ii).** S4 is on P2's exit path (`PL-1620` D0.1), and the beat tick is not on `WF-701` A to D. A row after S4 reuses the image and profile S4 builds, with no second edit to the same compose file in flight. | scope | no, for S4 | the maintainer |
+| DP-S4-2 | Where does FD 9860's remaining half go: the `scheduler` (beat) service, and with it the rest of FR-432's service list? | (i) widen S4 with the `scheduler` service. This adds FR-432 and FR-413 to S4's requirement set, so it needs a further delta. (ii) a separate row after S4, serialised on `deploy/docker-compose.yml`, built on S4's `app` profile and Dockerfile. | **(ii).** S4 is on P2's exit path (`PL-1620` D0.1), and the beat tick is not on `WF-701` A to D. A row after S4 reuses the image and profile S4 builds, with no second edit to the same compose file in flight. | scope | no, for S4 | **ruled (ii)**: the maintainer, "2026-10-12 02:53:52 BST", item 4 (D4.6) |
 
 A plan is "`draft` while decision points are open, `active` on freeze" (`document-ids.md` §1.6,
 the PL `map`/`leaf` row). DP-S4-1 blocks Task C, so this delta mints `draft`. It goes `active` by a
-dated line once DP-S4-1's `RL-` is minted. DP-S4-2 does not block S4.
+dated line once DP-S4-1's `RL-` is minted. DP-S4-2 is ruled and does not block S4. The same entry,
+item 4, sends DP-S4-1 to a decision-maker "when a seat frees (medium unless it writes spec text)".
+The ruling's content is written into `07` §3.9 by S4's executor (D4.5). Whether that makes the
+ruling "write spec text" is the lead's reading.
 
 ## Hand-off (not this plan's writes)
 
@@ -182,7 +208,8 @@ dated line once DP-S4-1's `RL-` is minted. DP-S4-2 does not block S4.
   `fc4401dc`, `git grep -n 'PL-1620' -- docs/roadmap.md` prints nothing. The D13 minter writes
   it.
 - **The decision-maker:** DP-S4-1, as an `RL-`.
-- **The maintainer:** DP-S4-2. FD 9860's owner line follows that answer.
+- **The lead:** reserve the beat row's `SL-` id on the planner's request (D4.6's follow-on
+  note), and raise FR-432's `frontend` limb with the maintainer.
 - **The D13 minter:** FD 9704 and FD 9860 are minted with their batch. Once they are minted, this
   file's working-id cites resolve in the mint commit, as `PL-1620`'s did.
 
