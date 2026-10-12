@@ -17,7 +17,7 @@ from __future__ import annotations
 import random
 from collections.abc import Callable, Sequence
 from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
-from typing import Any, NamedTuple
+from typing import Any, Literal, NamedTuple
 
 from model_schema.rating import InputContractField, RatingInputType
 from model_schema.refs import ArtifactRef, BlobRef
@@ -53,9 +53,11 @@ __all__ = [
     "make_scorer",
     "monotone_field",
     "monotone_grid",
+    "monotone_grid_kind",
     "monotone_has_comparable_pair",
     "monotone_sweep",
     "payable_minor",
+    "property_grid",
 ]
 
 class UnsweepableProperty(ValueError):  # noqa: N818 - named in 03 section 5.2
@@ -141,6 +143,13 @@ def monotone_field(
         raise UnsweepableProperty(
             f"monotone names input {check.input!r}, absent from the input contract"
         )
+    if _is_ordered_enum(field):
+        if check.lower is not None or check.upper is not None:
+            raise UnsweepableProperty(
+                f"monotone input {check.input!r} is an ordered enum: `lower` and `upper` are "
+                "decimal bounds and mean nothing on levels"
+            )
+        return field
     if field.type not in (RatingInputType.INT, RatingInputType.DECIMAL):
         raise UnsweepableProperty(
             f"monotone input {check.input!r} is {field.type.value}, not orderable"
@@ -152,6 +161,27 @@ def monotone_field(
         )
     _swept_range(field, check)  # refuses an empty or unquantisable range, by name
     return field
+
+
+def _is_ordered_enum(field: InputContractField) -> bool:
+    """An `enum` that declares its level order (FR-213), whose `domain` is then the range."""
+    return field.type is RatingInputType.ENUM and field.ordered
+
+
+def monotone_grid_kind(
+    field: InputContractField, check: MonotoneInInput
+) -> Literal["uniform+sampled", "levels"]:
+    """How a `monotone`'s grid is built, as the run records it (FR-261)."""
+    return "levels" if _is_ordered_enum(field) else "uniform+sampled"
+
+
+def property_grid(
+    check: PropertyCheck, contract: Sequence[InputContractField]
+) -> Literal["uniform+sampled", "levels"] | None:
+    """The grid kind a run records for a property: set for a `monotone`, else `None`."""
+    if not isinstance(check, MonotoneInInput):
+        return None
+    return monotone_grid_kind(monotone_field(contract, check), check)
 
 
 def _bounds(field: InputContractField, check: MonotoneInInput) -> tuple[Decimal, Decimal] | None:
@@ -197,13 +227,16 @@ _SAMPLED_POINTS = 5
 
 
 def monotone_grid(field: InputContractField, check: MonotoneInInput, seed: int) -> list[Any]:
-    """The values a `monotone` sweep visits: a uniform grid of `_GRID_POINTS` points, bounds
+    """The values a `monotone` sweep visits. For an `ordered` enum: every level of `domain`, in
+    the declared order. Otherwise a uniform grid of `_GRID_POINTS` points, bounds
     included, plus `_SAMPLED_POINTS` points drawn from `random.Random` seeded by the suite's
     seed and the input's name (stable across processes), all inside the bounds, sorted.
 
     **Weaker than band edges** (DP-S3-6): the bundle pins no Banding, so no edge is known
     and an inversion narrower than the spacing between these points may not be detected.
     """
+    if _is_ordered_enum(field):
+        return list(field.domain or ())  # every declared level, lowest first; nothing sampled
     lo, hi = _swept_range(field, check)
     rng = random.Random(f"{seed}:{field.name}")
     if field.type is RatingInputType.INT:

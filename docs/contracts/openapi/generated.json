@@ -8154,6 +8154,10 @@
             "title": "Nullable",
             "type": "boolean"
           },
+          "ordered": {
+            "title": "Ordered",
+            "type": "boolean"
+          },
           "pattern": {
             "anyOf": [
               {
@@ -8242,6 +8246,10 @@
           "nullable": {
             "default": false,
             "title": "Nullable",
+            "type": "boolean"
+          },
+          "ordered": {
+            "title": "Ordered",
             "type": "boolean"
           },
           "pattern": {
@@ -12136,7 +12144,10 @@
           "grid": {
             "anyOf": [
               {
-                "const": "uniform+sampled",
+                "enum": [
+                  "uniform+sampled",
+                  "levels"
+                ],
                 "type": "string"
               },
               {

@@ -14,7 +14,7 @@ from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
 from itertools import pairwise
-from typing import Annotated, Any, Final, Literal, Protocol
+from typing import Annotated, Any, Final, Literal, Protocol, Self
 from uuid import UUID
 
 from pydantic import (
@@ -287,10 +287,20 @@ class RatingInputType(StrEnum):
     ENUM = "enum"
 
 
+def _ordered_may_be_absent(schema: dict[str, Any]) -> None:
+    """`ordered` is left out of a dump while false, so the schema neither requires it nor
+    declares a default a client would take to be present (`openapi-typescript` types a response
+    property with a default as always present)."""
+    required: list[str] = schema.get("required", [])
+    if "ordered" in required:
+        required.remove("ordered")
+    schema["properties"]["ordered"].pop("default", None)
+
+
 class InputContractField(BaseModel):
     """One Rating Input (FR-213): name, type, nullability, range or domain, description."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", json_schema_extra=_ordered_may_be_absent)
 
     name: str
     type: RatingInputType
@@ -299,7 +309,17 @@ class InputContractField(BaseModel):
     max: Decimal | int | None = None
     pattern: str | None = None
     domain: list[str] | None = None
+    #: Left out of every dump while false, so an input that never declares it keeps its stored
+    #: form and its bundle's `content_hash` (RL-1613 ruling item 2 (i)); the schema stays typed.
+    ordered: bool = Field(default=False, exclude_if=lambda declared: not declared)
     description: str | None = None
+
+    @model_validator(mode="after")
+    def _ordered_needs_an_enum_domain(self) -> Self:
+        """`ordered` declares that `domain`'s list order is the level order (FR-213, RL-1613)."""
+        if self.ordered and (self.type is not RatingInputType.ENUM or not self.domain):
+            raise InputFreeError("ordered is valid only on an enum with a non-empty domain")
+        return self
 
 
 def _reject_float_type(value: str) -> str:
