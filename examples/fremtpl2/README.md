@@ -85,6 +85,14 @@ book; nothing the journey prints is a full-book rate or timing (full-book disloc
 `bonus_malus` 50-99, 100-149 and 150-230) are demo values, not a priced NCD scale. Steps the
 platform does not yet do are printed as `SKIPPED` or `KNOWN GAP` with their owner, never hidden.
 
+**What it needs.** Measured on 2026-10-12 at tree `c960b408f0577bdedf13e72147f892033e6a9627` (full
+seed, no `--rows`) on an 8-core, 31 GiB Linux host with Docker running Postgres, Redis, MinIO and the
+auth provider: the whole command took 13 min 19 s, of which the seed to a usable state took 286 s and
+the journey 201 s. Sampled every 15 s across the run, peak host memory in use was 9.4 GiB (the idle host
+read 6.8 GiB at the start, so the run itself added about 2.6 GiB), and the containers summed to at most
+1.5 GiB. No smaller machine was tried, so this is what one run used, not a minimum. The GBM
+transparency build the journey waits for at C5 took 29 s.
+
 ## The data
 
 [OpenML 41214 / 41215](https://www.openml.org/d/41214) — French motor third-party

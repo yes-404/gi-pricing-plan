@@ -193,9 +193,32 @@ gap (the gate accepts a dangling `diagnostics_id`) is **FD 9862 (working, D13)**
 GLM-typed, then re-reads the model for its `If-Match` etag and submits). `STAGE=reds` at that head
 (`slot-reds-12.out`, rc 0): the three reds still red by their causes, `db_members` 3 passed,
 `db_demo_command` 23 passed, `db_journey` 11 passed (the end-to-end test with the real diagnostics row,
-and the guard). The second Acceptance 5 run, its command, tree, rows line, exit code, the Job's wall time
-and peak memory, the full-journey memory measurement, the README machine-requirement sentence and the live
-worker and beat check are recorded here when it has run. `docs/workflows/WF-00698-*.md` `:129` cites the
+and the guard).
+
+**Acceptance 5, second run (FUNCTIONAL window, `from-lead` "2026-10-12 02:56:01 BST"): rc 0, the served
+page.** Command: `flock -w 600 /tmp/slots/gate-1 flock -w 600 /tmp/slots/gate-2 flock -w 600
+/tmp/slots/small-test env EXPECT_HEAD=7bc6ce365e747bdbac260e5abe813a580216c9d7 bash acc5.sh`, which
+sources `handover/slot-preflight.sh` and runs `uv run python scripts/demo.py --journey wf-699` (full seed,
+no `--rows`) against its own database. Tree `c960b408f0577bdedf13e72147f892033e6a9627`. START
+`2026-10-12T02:56:55+01:00`, END `2026-10-12T03:10:14+01:00` (13 min 19 s), rc 0
+(`slot-acc5-2.out`, `logs/acc5-demo.log`, `logs/acc5-samples.txt`). The rows line, verbatim:
+`portfolio 01a12dd4-ca0e-70a5-8f8d-c53dc992cd8d: a 20,000-policy sample, 19,985 rows validated`, and
+`D6   ok  a 20,000-policy sample of the freMTPL2 book (full-book cost: PL-1574)`. The end: `S1   ok  prod
+scored 46332 minor units from the live version`, `journey done in 201s`, `served page: http://localhost:5173/
+answered 200`, `Seeded to a usable state in 286s  (NFR-529: < 5 min on a developer laptop)` (within the
+NFR by 14 s on this host). The recorded statuses are as designed: A6 and B9 KNOWN GAP; B4, C1′, D7
+(`SKIPPED D7 decomposition — FD 9804`), D9, E5 and E7 SKIPPED. **G2 is still NOT met: D7 does not
+decompose.** The transparency Job: `C5   transparency artifact built in 29 s`, well under the 5-minute
+flag; its peak memory alone cannot be isolated (15 s samples, no per-step timestamps). Full-journey
+memory, 46 samples at 15 s (host = MemTotal − MemAvailable from `/proc/meminfo`, containers = `docker
+stats --no-stream`): peak host in use 9,582 MiB at 03:02:13 against 6,918 MiB at the first sample (the
+box baseline includes the other idle seats, so the 2.6 GiB difference is approximate); peak container
+sum 1,513 MiB (flat 1,464 to 1,513 MiB all run), the API, worker and vite being host processes inside the
+host figure. Live worker and beat: 4 worker and 2 beat processes in every sample from 02:58:23 to the end,
+none at the first four samples (before they started). `pgrep` for `pytest|demo.py|celery|app.worker|vite|
+uvicorn|ruff|mypy` at open: none; at close: none. Load 2.63 at open, 1.43 at close. At shutdown pnpm
+prints `[ELIFECYCLE] Command failed` for the vite dev server's SIGINT stop after the 200 was checked; the
+command exits 0. The README machine-requirement paragraph is written from these figures. `docs/workflows/WF-00698-*.md` `:129` cites the
 struck code `TRANSPARENCY_ARTIFACT_REQUIRED` where the platform raises `EVIDENCE_INCOMPLETE` (a doc finding
 for the lead's D13; outside this slice's write set).
 
