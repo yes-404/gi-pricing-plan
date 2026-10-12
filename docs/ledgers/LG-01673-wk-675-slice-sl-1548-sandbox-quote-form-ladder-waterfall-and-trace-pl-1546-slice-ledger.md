@@ -64,7 +64,47 @@ The 13 pytest failures, each read in the log: `test_audit_docs_finding_citations
 
 ### Audit
 
-(written by an auditor seat; not by the executor)
+Written by the auditor (`auditor-sl1548`), 2026-10-12, over `origin/main...129fae7c94ef652c59a711965f65bf4ea64951d0` (`origin/main` `249670fe`, the final head the lead named; PR #1291). The code was first audited at `a73444fd` (interim table accepted by the lead), then at this head. Scope was derived first from `PL-1546`'s order-table row 2 (S6), R6.1 and R6.2, and the `PL-1286` S6 row, and only then evidenced from the diff, the tests' asserts and the gate logs. The lead's rulings applied are quoted by header, since the entries are local channel files (RFC-777): `to-lead.md` "2026-10-12 02:53:52 BST" and "2026-10-12 03:04:43 BST"; the lead's "2026-10-12 03:04:15 BST" and "2026-10-12 03:13:49 BST".
+
+| # | Item | Result | Evidence |
+|---|---|---|---|
+| 1 | FR-213 quote form from the input contract | MET | `QuoteForm.vue`, `quoteForm.ts` type values only and leave range, domain and pattern to the platform; `quoteForm.test.ts` (6 tests, including "does not re-check range or domain"). Red-first. |
+| 2 | FR-251 explicit `rating_version_ref`, `what_if`, trace on | MET | `QuoteSandboxView.test.ts:104`. |
+| 3 | FR-247, FR-248, FR-252, NFR-463 waterfall with its table, `instalment_loading` present and absent | MET | `LadderWaterfall.vue` through `ChartFigure`; `LadderWaterfall.test.ts:28,38`; `ladder.test.ts` (rung changes, operation operands as sent). |
+| 4 | FR-256 declined quote is a result, reasons plural, ladder still shown | MET | `QuoteOutcome.vue`; `QuoteSandboxView.test.ts:122`. |
+| 5 | FR-255 typed errors rendered distinctly | MET | `QuoteError.test.ts`: an `it.each` over the four error codes, a field-naming test, and a fallback test that never shows a generic failure; the fifth kind, a constraint decline, is item 4's. |
+| 6 | FR-258 trace timeline | MET | `TraceTimeline.test.ts:27,38`: step id, label, consumed, produced, elapsed, matched row key, bundle hash, version reference. |
+| 7 | FR-25 waterfall one click from a traced quote; route reachable | MET | Route `/rating/:slug/v/:version/sandbox` matches `03` §5.3 (`:1407`). `RatingVersionView.vue` links to it; `RatingVersionView.test.ts:53` asserts the href (red by its cause, then green). Outcome, ladder and trace share one page (`QuoteSandboxView.test.ts:114`). The router suite passes (4 files, 23 tests: guard, index, reachability, routeGraph). There is no sandbox-specific router test; reachability rests on the generic `reachability.test.ts` plus the link test, which I judge sufficient. |
+| 8 | R6.1 FR-249 per-peril components absent, with a test | MET, view limb CARRIED | No source reads a rung's `components`. `LadderWaterfall.test.ts:60` gives a rung `components` and asserts the chart option has no `frequency`, `severity` or `components`; `QuoteOutcome.test.ts:33` and `QuoteSandboxView.test.ts:158` assert the "not available" element naming `OQ-1460`. The view limb is carried under `OQ-1460` (owner WK-1178). |
+| 9 | R6.2 FD-1335 hold | MET | `SL-1367` merged (`13a02bba`, #1282); `13a02bba` is an ancestor of the head. |
+| 10 | CLAUDE.md §3: `<script setup lang="ts">` only, no hand-written API type | MET | Every `<script` in the sandbox files and the view is `setup lang="ts"`. `score.ts` takes `ScoringResult`, `LadderRung`, `Trace`, `TraceStep` and `QuoteContext` from `generated/schema` and `schema.requests`. `QuoteFormSubmit`, `BuiltInputs` and `RungChange` are view-models, not API shapes. |
+| 11 | OQ-551 no hard-coded currency | MET | A grep of the sandbox sources for GBP, £, USD and EUR finds none. The amount formatter has no symbol, and the chart axis and caption say "currency not configured (OQ-551)"; `ladder.test.ts:32` asserts it. Carried under `OQ-551` (open). |
+| 12 | Decimal Rating Inputs as JSON numbers | CARRIED | Re-verified at `origin/main` `249670fe`: `score.py:353` is the `isinstance(value, (int, float, Decimal))` check (a string is refused); `scoring.py:109` is `inputs: dict[str, object]`; `score.py:955-962` builds the context from the raw value. The finding is on main as `FD-1671` (`docs/findings/register.md:360`, LOW, ruled at "2026-10-12 03:04:43 BST"), and this ledger cites `FD-1671`, with no live working id left outside quoted lines. The JSON-number path is the platform's contract (the lead's "2026-10-12 03:04:15 BST"); no exact path exists beyond about 15 significant digits. Not this slice's to fix. |
+| 13 | No money as float in the display path | MET with a note | `ladder.ts` subtracts integer minor units; `formatAmount` is `minor / 100` through `toLocaleString`, for display only. `formatMinor` needs a currency, so it could not be reused without picking one (item 11). |
+| 14 | Red-first | MET, disclosed | `sl1548-red.out`: 8 of 8 files failed at `64fe67fe` plus the eight test files. Seven fail on `Failed to resolve import` of the module under test (I confirmed all seven names), so those reds prove only that the tests need the implementation; `RatingVersionView.test.ts` fails by cause (`Unable to find role="link" and name "Open the quote sandbox"`, 1 failed and 6 passed). The ledger's Build log discloses this. |
+| 15 | Green, lint, type-check | MET | `sl1548-green1.out`: 8 files, 45 tests passed; `sl1548-lint.out` and `sl1548-types.out` rc 0; the gate's `fe_test` is 116 files and 730 tests passed. |
+| 16 | The gate at `c0d39234` | CARRIED to the minted-head CI | rc 0: ruff, mypy, import-linter, req-coverage, contracts, frontend install, generate, lint, type-check, test, build. pytest rc 1: 13 failed, 5708 passed, 6 skipped. I matched the 13 `FAILED` names in `pytest.log` to the ledger's list and read each failure block: every block ends in `check 31: gap in the full allocation between 1646 and 9869` (`test_audit_docs_w37_11_ceiling`'s message is truncated; its cause is at `pytest.log:4617`). `audit_docs.log` ends "FAILED (1): check 31". The cause is the unminted working id, removed by the mint. No pytest run of those modules exists on the minted tree; the merge-head CI on #1291 is the carried check. |
+| 17 | Write set | MET | `git diff --stat origin/main...129fae7c`: 23 paths. They are the sandbox components and tests, `score.ts`, the router entry, `RatingVersionView.vue` and its test, `QuoteSandboxView.vue` and its test, this ledger, the `PL-1546` status line (`draft → active`), the `SL-1548` roadmap row and `docs/INDEX.md`. That is the inferred set the ledger records and the lead accepted. No generated, contract or backend path. |
+
+**Re-verified at `129fae7c`.**
+- **The merge of main.** `git diff --name-only c0d39234 129fae7c -- frontend packages` is empty. `git diff origin/main...129fae7c` lists no `backend`, `packages` or `docs/contracts` path, so the only backend difference from `c0d39234` is main's own (`073bf5b4`, SL-1527). The code audited at `a73444fd` and `c0d39234` is the code at the final head.
+- **Mint.** Ledger `id: LG-1673`, `status: closed`; `relates` carries `FD-1671`. The roadmap `SL-1548` row is `closed` and cites `LG-1673`. The PRs line names #1291, "merge commit: not yet merged". The `MERGE-ACK` line reads "not yet given", correctly, since the lead gives it.
+- **Ledger SHAs.** The commit SHAs in this ledger (`1205dc6a`, `13a02bba`, `64fe67fe`, `b2ec0653`, `c0d39234`) each exit 0 from `git merge-base --is-ancestor <sha> 129fae7c`.
+- **audit-docs.** Run once, under the `gate-2` flock with `gate-1` free, `python3 scripts/audit-docs.py` on the worktree at `129fae7c`: rc 0, "All checks passed" (check 36's legacy-form lines are the standing notes).
+- **CI on #1291** (head `129fae7c`): `no-session-links` SUCCESS; `specification audit`, `check` and `ruff · mypy · import-linter · pytest` were IN_PROGRESS at 04:55 BST. CARRIED until green.
+- **House rules.** No barred word in added hunks (the text says "by delegation"); every commit carries the Co-Authored-By line.
+
+**Observations, none a gap.**
+1. `LG-1673` and the `SL-1548` row are marked `closed` in the mint commit, before this audit, as `LG-1647` and `LG-1643` were. Acceptance is verified here, so `closed` stands if the lead's verdict below accepts the carries.
+2. The roadmap row's closing line says "Closed 2026-10-12 on a clean slice audit"; that holds only through this audit.
+
+**Requirements without evidence.** None. The set was taken from `PL-1546` row 2, not from recollection: FR-213, FR-247, FR-248, FR-251, FR-252, FR-255, FR-256, FR-258, FR-25 and NFR-463 are evidenced above. FR-249's view limb is **deferred with an owner**: `OQ-1460`, owner WK-1178, per R6.1. `scripts/scope-audit.py` was not run.
+
+**Findings and proposed owners.** None new. `FD-1671` (decimal Rating Inputs cross `/score` as float, LOW) is already on main; its owner and disposition are the lead's.
+
+**Proposed verdict: DELIVERED.** FR-249's view limb stays carried under `OQ-1460`; decimal-input exactness stays carried under `FD-1671`; currency stays carried under `OQ-551`. Carried check: the merge-head CI on #1291, including the 13 audit-on-tree modules that failed only on the pre-mint check 31.
+
+Lead verdict: (pending)
 
 ### Build log
 
