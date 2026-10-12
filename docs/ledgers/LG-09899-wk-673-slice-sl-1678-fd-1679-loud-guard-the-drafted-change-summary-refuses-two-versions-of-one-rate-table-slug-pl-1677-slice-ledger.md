@@ -59,6 +59,27 @@ It reports `version 1 -> 2` for a candidate that pins both versions.
 **Spec:** `docs/specs/03-rating-engine.md` §5.1 change-summary-draft row, a dated clause appended (added 2026-10-12, SL-1678, FR-242). `generate-contracts.py --check` rc 0; `git diff origin/main --stat -- docs/contracts` prints nothing. `ruff check` (touched files) clean; `mypy` clean (239 source files). `audit-docs.py`: check 31 only (working-id gap, expected until the mint).
 
 **Acceptance 4 note:** the test file's diff against the base is additions plus one changed line, the import `from backend.tests.approved_rows import add_approved` → `… import add_approved, mark_approved` (ruff's isort would merge a second line); no existing test body changes.
+### Task 3 — the full two-half gate (2026-10-12)
+
+Granted by the lead at head `d01cf107bf01f76fdb19527e7527a1da269e3c93` (from-lead "2026-10-12 06:13:21 BST" entry's grant message), clean tree, own database `gipricing_sl-1678_f12bc072` recreated from the template, run under `flock -w 14400 /tmp/slots/gate-1` through `slot-preflight.sh` (preflight ok: head guard, clean tree, slot held + `GIP_GATE_SLOT` exported, containers healthy, `alembic upgrade head` rc 0, 1 head). Output `~/gi-pricing-plan.local/scratch/sl1678/gate.out`, stage logs in `scratch/sl1678/logs/`. Base `f7ca32ec` (#1294 not yet on main at this head).
+
+| stage | exit | cause |
+|---|---|---|
+| ruff | 0 | |
+| mypy | 0 | |
+| import-linter | 0 | |
+| pytest | 1 | 13 failed, 5734 passed, 6 skipped (47 min 22 s): all 13 are the audit-on-tree test class (9 files), failing on check 31 only |
+| audit-docs | 1 | check 31 only: gap 1673→1677 (1674–1676 not on this base) and gap 1679→9899 (this ledger's working id, unminted) |
+| req-coverage | 0 | |
+| contracts --check | 0 | |
+| frontend install | 0 | |
+| frontend generate:api | 0 | |
+| frontend lint | 0 | |
+| frontend type-check | 0 | |
+| frontend test | 0 | |
+| frontend build | 0 | |
+
+Both failing stages are the expected working-id reds (the same class as the 13 on LG-1673's gate); the check-31 gaps close at the merge-main re-merge and the mint. The lead's merge-tree re-checks after #1294 lands are the proof that they close.
 
 ## PRs
 
