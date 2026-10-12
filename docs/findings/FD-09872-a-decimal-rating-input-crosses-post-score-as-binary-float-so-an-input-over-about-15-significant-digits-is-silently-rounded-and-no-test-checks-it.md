@@ -24,7 +24,7 @@ The hops, in order:
 - `score.py:955-962` builds `context` from `**ctx.inputs` and passes the raw value to `bundle.decision.async_evaluate`.
 - The ZEN binding refuses `Decimal` (FR-244), so the engine evaluates in binary float whatever the parser does.
 
-An input with more than about 15 significant digits is therefore rounded without any signal. The 15-digit figure is **measured** for handler outputs (`LG-01587` lines 67 and 82) and **inferred** for inputs. No test checks the exactness of a decimal input. Money is unaffected: it crosses as integer minor units (FR-273).
+An input with more than about 15 significant digits is therefore rounded without any signal. The 15-digit figure is **measured** for handler outputs (`LG-1587` lines 67 and 82) and **inferred** for inputs. No test checks the exactness of a decimal input. Money is unaffected: it crosses as integer minor units (FR-273).
 
 ## Finding
 
