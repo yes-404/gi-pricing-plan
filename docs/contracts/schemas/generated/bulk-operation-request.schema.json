@@ -1,0 +1,193 @@
+{
+  "$defs": {
+    "FloorAndCapParameters": {
+      "additionalProperties": false,
+      "description": "`floor_and_cap`'s parameters (04 §4.4): the clamp bounds, decimal strings.",
+      "properties": {
+        "cap": {
+          "description": "Exact decimal as a string; never a binary float (FR-10).",
+          "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+          "title": "Cap",
+          "type": "string"
+        },
+        "floor": {
+          "description": "Exact decimal as a string; never a binary float (FR-10).",
+          "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+          "title": "Floor",
+          "type": "string"
+        }
+      },
+      "required": [
+        "floor",
+        "cap"
+      ],
+      "title": "FloorAndCapParameters",
+      "type": "object"
+    },
+    "FloorAndCapRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "floor_and_cap",
+          "title": "Kind",
+          "type": "string"
+        },
+        "parameters": {
+          "$ref": "#/$defs/FloorAndCapParameters"
+        }
+      },
+      "required": [
+        "kind",
+        "parameters"
+      ],
+      "title": "FloorAndCapRequest",
+      "type": "object"
+    },
+    "RebaseToLevelParameters": {
+      "additionalProperties": false,
+      "description": "`rebase_to_level`'s parameters (04 §4.4): the reference level that becomes 1.0.",
+      "properties": {
+        "base_level": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "title": "Base Level",
+          "type": "object"
+        }
+      },
+      "required": [
+        "base_level"
+      ],
+      "title": "RebaseToLevelParameters",
+      "type": "object"
+    },
+    "RebaseToLevelRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "rebase_to_level",
+          "title": "Kind",
+          "type": "string"
+        },
+        "parameters": {
+          "$ref": "#/$defs/RebaseToLevelParameters"
+        }
+      },
+      "required": [
+        "kind",
+        "parameters"
+      ],
+      "title": "RebaseToLevelRequest",
+      "type": "object"
+    },
+    "UpliftByFilterParameters": {
+      "additionalProperties": false,
+      "description": "`uplift_by_filter`'s parameters (04 §4.4): the percentage plus the key filter.",
+      "properties": {
+        "filter": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "title": "Filter",
+          "type": "object"
+        },
+        "percentage": {
+          "description": "Exact decimal as a string; never a binary float (FR-10).",
+          "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+          "title": "Percentage",
+          "type": "string"
+        }
+      },
+      "required": [
+        "percentage",
+        "filter"
+      ],
+      "title": "UpliftByFilterParameters",
+      "type": "object"
+    },
+    "UpliftByFilterRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "uplift_by_filter",
+          "title": "Kind",
+          "type": "string"
+        },
+        "parameters": {
+          "$ref": "#/$defs/UpliftByFilterParameters"
+        }
+      },
+      "required": [
+        "kind",
+        "parameters"
+      ],
+      "title": "UpliftByFilterRequest",
+      "type": "object"
+    },
+    "UpliftTableParameters": {
+      "additionalProperties": false,
+      "description": "`uplift_table`'s parameters (04 §4.4): the percentage, applied to every cell.",
+      "properties": {
+        "percentage": {
+          "description": "Exact decimal as a string; never a binary float (FR-10).",
+          "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+          "title": "Percentage",
+          "type": "string"
+        }
+      },
+      "required": [
+        "percentage"
+      ],
+      "title": "UpliftTableParameters",
+      "type": "object"
+    },
+    "UpliftTableRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "uplift_table",
+          "title": "Kind",
+          "type": "string"
+        },
+        "parameters": {
+          "$ref": "#/$defs/UpliftTableParameters"
+        }
+      },
+      "required": [
+        "kind",
+        "parameters"
+      ],
+      "title": "UpliftTableRequest",
+      "type": "object"
+    }
+  },
+  "discriminator": {
+    "mapping": {
+      "floor_and_cap": "#/$defs/FloorAndCapRequest",
+      "rebase_to_level": "#/$defs/RebaseToLevelRequest",
+      "uplift_by_filter": "#/$defs/UpliftByFilterRequest",
+      "uplift_table": "#/$defs/UpliftTableRequest"
+    },
+    "propertyName": "kind"
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/UpliftTableRequest"
+    },
+    {
+      "$ref": "#/$defs/UpliftByFilterRequest"
+    },
+    {
+      "$ref": "#/$defs/FloorAndCapRequest"
+    },
+    {
+      "$ref": "#/$defs/RebaseToLevelRequest"
+    }
+  ]
+}

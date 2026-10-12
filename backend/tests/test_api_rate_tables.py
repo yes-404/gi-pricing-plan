@@ -842,6 +842,56 @@ def test_bulk_operation_refuses_an_unknown_kind(
 
 
 @pytest.mark.req("FR-233")
+def test_bulk_operation_refuses_a_server_set_field(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """`applied_to` and `result` are the server's: a body carrying one is refused (SL-1669)."""
+    slug, _family = _seeded_table(api_client, workspace_id, actuary)
+
+    response = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/bulk-operation",
+        json={**_bulk_body("uplift_table", {"percentage": "0.10"}), "applied_to": "rate_table:x@1"},
+        headers=actuary,
+    )
+    assert response.status_code == 422, response.text
+    body = response.json()
+    assert body["code"] == "VALIDATION_FAILED"
+    assert any(e["field"].endswith("applied_to") for e in body["errors"]), body
+
+
+@pytest.mark.req("FR-233")
+def test_bulk_operation_refuses_a_json_number_for_a_decimal_parameter(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """04 §4.4: `percentage` is a decimal string, never a float (SL-1669, DP-2)."""
+    slug, _family = _seeded_table(api_client, workspace_id, actuary)
+
+    response = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/bulk-operation",
+        json=_bulk_body("uplift_table", {"percentage": 0.1}),
+        headers=actuary,
+    )
+    assert response.status_code == 422, response.text
+    body = response.json()
+    assert body["code"] == "VALIDATION_FAILED"
+    assert any(e["field"].endswith("percentage") for e in body["errors"]), body
+
+
+@pytest.mark.req("FR-451")
+def test_bulk_operation_publishes_a_discriminated_request_and_a_typed_201(
+    api_client: TestClient,
+) -> None:
+    operation = api_client.app.openapi()["paths"][
+        "/api/v1/rate-tables/{slug}@{version}/bulk-operation"
+    ]["post"]
+    request = operation["requestBody"]["content"]["application/json"]["schema"]
+    assert request["discriminator"]["propertyName"] == "kind"
+    assert len(request["oneOf"]) == 4
+    created = operation["responses"]["201"]["content"]["application/json"]["schema"]
+    assert created["$ref"].endswith("/RateTableVersion")
+
+
+@pytest.mark.req("FR-233")
 def test_bulk_operation_refuses_floor_above_cap(
     api_client: TestClient, workspace_id, actuary
 ) -> None:

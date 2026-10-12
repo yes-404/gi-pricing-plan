@@ -3,7 +3,7 @@ id: PL-1667
 family: plan
 kind: map
 title: WK-1178 — FD-1366 Part B for the bulk-operation route, a discriminated request body and a typed 201 (SL-1669): a dated Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-12
 owner: planner
 tree: fc4401dcad789692f79f6c3ffc058c1c3921b7b9

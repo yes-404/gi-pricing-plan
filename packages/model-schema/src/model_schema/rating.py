@@ -1235,7 +1235,7 @@ class UpliftTableParameters(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    percentage: Decimal
+    percentage: DecimalStr
 
 
 class UpliftByFilterParameters(BaseModel):
@@ -1243,7 +1243,7 @@ class UpliftByFilterParameters(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    percentage: Decimal
+    percentage: DecimalStr
     filter: KeyFilter
 
 
@@ -1252,8 +1252,8 @@ class FloorAndCapParameters(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    floor: Decimal
-    cap: Decimal
+    floor: DecimalStr
+    cap: DecimalStr
 
 
 class RebaseToLevelParameters(BaseModel):
@@ -1264,24 +1264,66 @@ class RebaseToLevelParameters(BaseModel):
     base_level: KeyFilter
 
 
-class UpliftTableOperation(BulkOperationBase):
+# The request body of `POST .../bulk-operation` (03 §5.1): the record's `kind` and
+# `parameters`, written once. `applied_to` and `result` are the server's, so they are
+# not request fields and `extra="forbid"` refuses them. Each record below inherits its
+# request first, so the pairing is defined once; `BulkOperationBase` stays first in the
+# record's field order (applied_to, result, kind, parameters), which fixes the stored
+# JSON order.
+class UpliftTableRequest(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
     kind: Literal["uplift_table"]
     parameters: UpliftTableParameters
 
 
-class UpliftByFilterOperation(BulkOperationBase):
+class UpliftByFilterRequest(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
     kind: Literal["uplift_by_filter"]
     parameters: UpliftByFilterParameters
 
 
-class FloorAndCapOperation(BulkOperationBase):
+class FloorAndCapRequest(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
     kind: Literal["floor_and_cap"]
     parameters: FloorAndCapParameters
 
 
-class RebaseToLevelOperation(BulkOperationBase):
+class RebaseToLevelRequest(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
     kind: Literal["rebase_to_level"]
     parameters: RebaseToLevelParameters
+
+
+#: The bulk-operation request body (03 §5.1), discriminated on `kind`.
+BulkOperationRequest = Annotated[
+    UpliftTableRequest | UpliftByFilterRequest | FloorAndCapRequest | RebaseToLevelRequest,
+    Field(discriminator="kind"),
+]
+
+#: The wire-parse path for a bulk-operation request — dict in, member out.
+BULK_OPERATION_REQUEST_ADAPTER: Final[TypeAdapter[BulkOperationRequest]] = TypeAdapter(
+    BulkOperationRequest
+)
+
+
+class UpliftTableOperation(UpliftTableRequest, BulkOperationBase):
+    pass
+
+
+class UpliftByFilterOperation(UpliftByFilterRequest, BulkOperationBase):
+    pass
+
+
+class FloorAndCapOperation(FloorAndCapRequest, BulkOperationBase):
+    pass
+
+
+class RebaseToLevelOperation(RebaseToLevelRequest, BulkOperationBase):
+    pass
 
 
 #: The BulkOperation record (04 §4.4), discriminated on `kind`. A version created by a
