@@ -80,4 +80,4 @@ The 13 pytest failures, each read in the log: `test_audit_docs_finding_citations
 
 ## PRs
 
-(none yet)
+- #1291 — `feat(frontend): quote sandbox — form from the input contract, ladder waterfall, trace — SL-1548 (WK-675 S6)`; merge commit: not yet merged.
