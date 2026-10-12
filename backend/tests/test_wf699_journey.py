@@ -245,6 +245,9 @@ async def _world(database: Any, blob_store: Any, workspace_id: Any) -> dict[str,
         _BASE_MINOR,
     )
 
+    # The fitted model stands on the validated portfolio Dataset Version: a model on a Dataset
+    # Version that does not exist is flagged, and approval refuses a flagged model (ARTIFACT_FLAGGED).
+    portfolio_id = new_uuid7()
     family = f"fremtpl2-gbm-{uuid4().hex[:6]}"
     async with database.unit_of_work() as session:
         session.add(
@@ -253,8 +256,8 @@ async def _world(database: Any, blob_store: Any, workspace_id: Any) -> dict[str,
                 model_family_slug=family,
                 version=1,
                 status=ModelStatus.FITTED.value,
-                dataset_version_id=new_uuid7(),
-                spec=_glm_spec(family, new_uuid7()),
+                dataset_version_id=portfolio_id,
+                spec=_glm_spec(family, portfolio_id),
                 spec_hash=f"v3:sha256:{uuid4().hex}{uuid4().hex}",
                 fit_result=_fit_result(),
                 diagnostics_id=uuid4(),
@@ -291,6 +294,7 @@ async def _world(database: Any, blob_store: Any, workspace_id: Any) -> dict[str,
     async with database.unit_of_work() as session:
         blob = await blob_store.put(session, buffer.getvalue(), "application/vnd.apache.parquet")
         version = DatasetVersionRow(
+            id=portfolio_id,
             slug="wf699-portfolio",
             workspace_id=workspace_id,
             dataset_id=uuid4(),
