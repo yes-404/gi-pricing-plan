@@ -300,9 +300,22 @@ output: `rating_versions.py` 13, `deployments.py` 6, `perils.py` 6, `test_rate_t
 **The predicate's reach.** `\.slug\]? *=` also matches `==` and `===`, so most hits are
 comparisons, not maps. It does not match a TypeScript `new Map(… [r.slug, r])` or a
 `reduce` keyed by slug, nor a tuple compare such as `(p.type, p.slug) == …`; the reading found
-one such non-matched pin consumer in passing (`compile.py:731`, classified below). No separate
-sweep was run for those forms, so this table says nothing about pin consumers outside the 99
-hits beyond that one.
+one such non-matched pin consumer in passing (`compile.py:731`, classified below).
+
+**The lead's supplementary sweep for those forms.** The lead's from-lead entry "2026-10-12
+05:57:28 BST" (`channel/from-lead-2026-10-09.md`) records one command, run under
+`flock -w 1800 /tmp/slots/gate-2` at `origin/main` `604ea084`, verbatim from that entry:
+
+```text
+git grep -nE '\[[a-zA-Z_]+\.slug *,|\.slug\] *:|acc\[[a-zA-Z_]+\.slug\]|Object\.fromEntries' origin/main -- frontend/src backend/src packages (tests excluded by grep -v)
+```
+
+It gave **4 hits**, all read, in the entry's words: *"QuoteForm.vue:39 (field.name),
+PredictionView.vue:60,:70 (column), RateTableEditorView.vue:60 (cell key) — none slug-keyed,
+none pin consumers; plus 'new Map(' in frontend/src: 4 (f.id, step id x2, id) — none slug.
+Supplementary result: SAFE, nothing added."* So the TypeScript-form limit is closed as **SAFE**:
+the `new Map(` forms in `frontend/src` key on an id or a `step_id`, never a slug. The tuple-compare
+form is covered only by the one case read in passing (`compile.py:731`).
 
 ### Pin consumers
 
