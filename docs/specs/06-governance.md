@@ -573,6 +573,8 @@ Generated sections, in order (R3). Each cites the artifacts it drew from.
 | `POST` | `/api/v1/approval-requests/{id}/decide` | `approve` / `reject` / `request_changes` + comment (FR-353/355) |
 | `POST` | `/api/v1/approval-requests/{id}/withdraw` | Withdraw before deployment (FR-357) |
 
+*(Dated note, 2026-10-12, on the maintainer's (by delegation) entry "2026-10-12 01:30:34 BST — SL-1527 condition 4" in `to-lead.md`, which decides `CR-823` Q2(a) (`docs/closures/CR-00823-plan-review-5-at-wk-664-s-close.md`, lines 55 to 58) as that record recommends: the three routes `GET`/`POST /api/v1/roles`, `POST /api/v1/role-assignments` and `POST /api/v1/break-glass` above are **spec-ahead-of-phase**. They are owned by `WK-676` (Phase 3, "Full scoped RBAC, custom roles, break-glass", which owns FR-342 to FR-349), and none is built in Phase 2: the machinery exists at the service layer only (`rbac.py`). A caller who copies this table gets a 404 on those three until `WK-676` delivers them. Finding: `FD-9801` (working id 9801; a product identifier is the spec's, this id is the findings family's). No membership route is specified here (FR-350 is Phase 3), so there is no second finding.)*
+
 > **Permissions on this table, stated 2026-08-15 after an independent audit.** Four of
 > these six require **authentication only**, and nothing said so — a route sweep found them
 > answering a principal holding no roles at all, which read as a hole until the handlers
