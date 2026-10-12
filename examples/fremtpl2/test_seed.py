@@ -325,3 +325,26 @@ def test_a_degenerate_fit_is_refused_by_factor_and_level() -> None:
     assert "area[F]" in str(raised.value)
     assert "region[R43]" in str(raised.value)
     assert "area[C]" not in str(raised.value)
+
+
+@pytest.mark.req("FR-345")
+def test_the_demo_principals_use_existing_roles_and_cover_the_journey() -> None:
+    """The WF-699 journey (SL-1527) acts as seven principals over HTTP, and no route grants a
+    role or a membership, so the seed does. The set uses built-in role slugs only (no new role),
+    and it must make the journey's separation-of-duties steps reachable: the submitter and the
+    author hold an approver role, so SUBMITTER_CANNOT_APPROVE and AUTHOR_CANNOT_APPROVE fire past
+    the role gate; the prod deployment is decided by one principal holding approver and deployer;
+    the admin (service accounts) holds neither approver nor deployer."""
+    from seed import DEMO_PRINCIPALS
+
+    from model_schema.permissions import BUILTIN_ROLES
+
+    assert set(DEMO_PRINCIPALS) == {
+        "analyst", "actuary", "approver", "second_approver", "admin", "deployer", "prod_approver",
+    }
+    for roles in DEMO_PRINCIPALS.values():
+        assert set(roles) <= set(BUILTIN_ROLES)
+    assert "approver" in DEMO_PRINCIPALS["analyst"]
+    assert "approver" in DEMO_PRINCIPALS["actuary"]
+    assert {"approver", "deployer"} <= set(DEMO_PRINCIPALS["prod_approver"])
+    assert not {"approver", "deployer"} & set(DEMO_PRINCIPALS["admin"])
