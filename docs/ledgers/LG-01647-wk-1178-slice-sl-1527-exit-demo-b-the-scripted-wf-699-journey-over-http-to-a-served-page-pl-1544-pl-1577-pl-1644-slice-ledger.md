@@ -298,7 +298,7 @@ Written by the auditor (`auditor-sl1527`), 2026-10-12, over `origin/main...47d10
 
 **Proposed verdict: DELIVERED. F1 is cured and re-verified at `2f790bba` (tree `f76f108a`); no fix remains before close. The carries above stay: the merge-head CI on #1289, and the C5 non-GLM branch to the Acceptance 5 run. G2 is NOT met (FD 9804). Proposed FDs: those in D13 above; the auditor files none.**
 
-Lead verdict: (pending)
+Lead verdict (team-lead, from-lead 2026-10-12 03:25:21 BST): DELIVERED; Audit adopted; F1 cured; line 2 met for the run's DB (03:23:33); Acc 5 met by the functional rehearsal (maintainer 02:47:50), NFR-529 observed not measured (03:13:00); carried: merge-head CI and the C5 non-GLM branch (Acc 5 only); G2 NOT met (FD 9804, SL 9850); FDs filed by the lead in D13; no further FD.
 
 ### Build log
 
