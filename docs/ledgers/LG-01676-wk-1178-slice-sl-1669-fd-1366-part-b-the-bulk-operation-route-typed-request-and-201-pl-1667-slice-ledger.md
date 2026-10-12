@@ -1,8 +1,8 @@
 ---
-id: LG-9877
+id: LG-1676
 family: ledger
 title: WK-1178 slice SL-1669 — FD-1366 Part B for the bulk-operation route, a discriminated request body and a typed 201 (PL-1667), slice ledger
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-12
 owner: executor
 tree: 249670fe2506ea1572d80faa1f3821edf04f194c
@@ -14,13 +14,14 @@ corrected_by: []
 relates: [PL-1667, SL-1669, FD-1366, FD-1335, RL-1670, PL-1668, SL-1547, FR-233, FR-451]
 ---
 
-# LG-9877 — WK-1178 slice SL-1669: the bulk-operation route, a typed request and a typed 201
+# LG-1676 — WK-1178 slice SL-1669: the bulk-operation route, a typed request and a typed 201
 
-*(Working id 9877, reserved by the lead. The id is minted at the merge turn; until then every citation of this record is by working id.)*
+*(Minted 2026-10-12 as LG-1676 from working id 9877, reserved by the lead; every citation of a minted id in this record is re-pointed, and quoted entries stay as quoted.)*
 
-**GO:** the lead's from-lead entry "2026-10-12 04:53:47 BST" (GO SL-1669; ledger working id 9877). Authority for the scope: the maintainer's (by delegation) entries in `to-lead.md` "2026-10-12 02:58:33 BST" (DP-0 = (b); the bulk-operation request and 201 only), "2026-10-12 03:06:12 BST" (DecimalStr; the breaking-caller sweep), "2026-10-12 03:07:15 BST" (the 04 :278 T-text) and "2026-10-12 03:08:30 BST" item 3 (integers stay accepted); `RL-1670` on main.
+**GO:** the lead's from-lead entry "2026-10-12 04:53:47 BST" (GO SL-1669; the ledger's working id 9877, minted as LG-1676). Authority for the scope: the maintainer's (by delegation) entries in `to-lead.md` "2026-10-12 02:58:33 BST" (DP-0 = (b); the bulk-operation request and 201 only), "2026-10-12 03:06:12 BST" (DecimalStr; the breaking-caller sweep), "2026-10-12 03:07:15 BST" (the 04 :278 T-text) and "2026-10-12 03:08:30 BST" item 3 (integers stay accepted); `RL-1670` on main.
 **FALLBACK (02:58:33 condition 3):** if `SL-1548` merges before this slice, the maintainer rules S5's path.
 **MERGE-ACK:** not yet given.
+**Audit:** pending (the auditor fills it).
 
 ## Tasks
 
@@ -81,9 +82,19 @@ Full two-half gate, 2026-10-12 05:04:46 to 05:55:21 BST, under `flock /tmp/slots
 | contracts `--check` | 0 |
 | fe_install, fe_generate, fe_lint, fe_types, fe_test, fe_build | 0 |
 
-- **audit_docs:** one failure, check 31, `gap in the full allocation between 1672 and 9877`: this ledger's unminted working id. Expected until the mint.
+- **audit_docs:** one failure, check 31, `gap in the full allocation between 1672 and 9877`: this ledger's then-unminted working id 9877 (now LG-1676). Quoted as the gate printed it.
 - **pytest:** 13 failed, 5744 passed, 6 skipped. All 13 are that same gap: twelve run `scripts/audit-docs.py` on the real tree and assert exit 0 (the log carries the check-31 line in each), and `test_doc_index.py::test_an_index_skipping_a_reserved_block_breaks_contiguity` reports `[(1672, 9877)]`. No route, model-schema, contracts or frontend test failed.
+
+
+### Merge of main and the re-check (the mint turn)
+
+The lead's from-lead entry "2026-10-12 05:56:06 BST" accepted the gate as check-31-only and ordered the mint turn. `origin/main` `604ea084c96efe93f521fb9ba17738e05241e61a` (carrying SL-1548 / S6, #1291) was merged into the branch with a merge commit, no rebase. **One conflict, in `docs/INDEX.md` only** (a generated file: both sides had added rows). It was resolved by regenerating it (`python3 scripts/doc-index.py`), not by hand, and no marker is left. Nothing else conflicted. Re-checks after the merge, small ones through `handover/run-small.sh`: `generate-contracts.py --check` rc 0 (49 contracts match); `pnpm --dir frontend generate:api` rc 0 and `git status --short` clean of tracked files; `type-check` rc 0; `lint` rc 0; `pytest -q` over `backend/tests/test_api_rate_tables.py`, `backend/tests/test_contracts.py`, `packages/model-schema/tests/test_rate_tables.py` and `tests/test_audit_docs_ids.py` (`-k 'bulk or contracts or rate_tables or non_markdown'`): 311 passed, 2 skipped; `ruff check .`: all checks passed; `mypy`: no issues in 239 source files.
+
+### Gate evidence, durable
+
+`/tmp/sl1669-gate.out` and the gate's log directory (`/tmp/tmp.lqQlkPZKKZ`) are copied to `~/gi-pricing-plan.local/scratch/sl1669/` (`sl1669-gate.out`, `logs/`), local and not in the repository. The 13 pytest failures, by name (every one is the check-31 gap `1672 → 9877`):
+`tests/test_audit_docs_finding_citations.py::test_a_finding_resolved_only_by_a_closure_record_is_not_flagged`; `tests/test_audit_docs_ids.py::test_the_real_tree_passes_all_ten_checks`; `tests/test_audit_docs_ids.py::test_doc_id_check_exits_0_on_the_real_tree`; `tests/test_audit_docs_process_core_digest.py::test_an_unrelated_file_edit_is_the_negative_control_and_stays_green`; `tests/test_audit_docs_process_core_digest.py::test_the_committed_digest_currently_matches_the_committed_spec`; `tests/test_audit_docs_w37_11_ceiling.py::test_audit_docs_end_to_end_exit_0_then_1_then_0_on_an_injected_residue`; `tests/test_doc_index.py::test_an_index_skipping_a_reserved_block_breaks_contiguity`; `tests/test_register_lint.py::test_check_29_is_wired_into_the_docs_gate`; `tests/test_register_lint.py::test_check_29_note_carries_the_residue_line`; `tests/test_register_lint.py::test_phase1b_residue_count_matches_check_29s_own_count`; `tests/test_register_owed.py::test_check_29_wiring_is_undisturbed`; `tests/test_repository_invariants.py::test_money_discipline_is_enforced_by_the_docs_audit`; `tests/test_repository_invariants.py::test_journey_citations_are_audited_in_ci`.
 
 ## PRs
 
-- Not yet opened; the lead's merge-turn mint resolves the working id.
+- Recorded at the PR's opening (the mint turn).

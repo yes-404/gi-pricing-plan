@@ -2311,7 +2311,7 @@ The fix slice of to-lead "2026-10-11 11:25:16 BST — DEFAULT-LIVE /score: CONFI
 id: SL-1669
 family: slice
 title: WK-1178 fix slice — FD-1366 Part B for the bulk-operation route: a discriminated request body and a typed 201
-status: active                   # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-12
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: fc4401dcad789692f79f6c3ffc058c1c3921b7b9
@@ -2325,7 +2325,9 @@ relates: [FD-1366, FD-1335, PL-1364, SL-1367, SL-1547]
 
 *(Cut 2026-10-12 by the planner under working id 9868, reserved by the lead; minted 2026-10-12 as SL-1669 in the D13 batch mint.)*
 
-(Activated 2026-10-12 as WK-1178's FD-1366 Part B slice for the bulk-operation route, on the lead's from-lead entry "2026-10-12 04:53:47 BST" (GO SL-1669; the readiness report accepted; the build seat executor-sl1669). `PL-1667` set `active` in this slice branch's activation commit; ledger LG-9877 (working id).)
+(Activated 2026-10-12 as WK-1178's FD-1366 Part B slice for the bulk-operation route, on the lead's from-lead entry "2026-10-12 04:53:47 BST" (GO SL-1669; the readiness report accepted; the build seat executor-sl1669). `PL-1667` set `active` in this slice branch's activation commit; ledger LG-1676 (minted from working id 9877).)
+
+(Closed 2026-10-12 as a Slice, closing acts in the slice PR's last commit, on the lead's merge; ledger LG-1676, plan PL-1667. Gate at `15439b9d`: check 31 only, the unminted ledger id; the audit is pending and the auditor fills the ledger's Audit line.)
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
