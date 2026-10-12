@@ -104,7 +104,7 @@ Written by the auditor (`auditor-sl1548`), 2026-10-12, over `origin/main...129fa
 
 **Proposed verdict: DELIVERED.** FR-249's view limb stays carried under `OQ-1460`; decimal-input exactness stays carried under `FD-1671`; currency stays carried under `OQ-551`. Carried check: the merge-head CI on #1291, including the 13 audit-on-tree modules that failed only on the pre-mint check 31.
 
-Lead verdict: (pending)
+Lead verdict (team-lead, from-lead 2026-10-12 04:55:58 BST): DELIVERED; Audit adopted; carried: merge-head CI, FR-249 view limb (OQ-1460), decimal-input exactness (FD-1671), currency (OQ-551); no new FD; S5 merges second and re-gates its quote-form tests (drift rule, 02:53:52).
 
 ### Build log
 
