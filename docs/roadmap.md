@@ -2159,7 +2159,7 @@ relates: [PL-1371, FD-1209, FD-1374, RL-1263, RL-1343]
 
 Option A's fourth build slice (the maintainer's entry "2026-10-05 16:43:31 BST — THE MAINTAINER'S DECISION (asked live): G2 takes OPTION A, WF-699's literal Peril Structure path is BUILT IN P2; and the FD 9605 approval, now on the record", item 1). The freMTPL2 seed fits a severity GLM (`02` FR-111), and builds, reconciles (FR-190) and approves through the workflow the AD Peril Structure (FR-188, FR-191). Exit-demo slice (a)'s algorithm gains `WF-699` B4's `model_call` on the structure (`03` FR-222), combined with the seeded tables as the double-count ruling decides. Slice (b)'s journey pins the structure at C1 (FR-237) and no longer prints B4 or C1′ as `SKIPPED`. When it merges, G2's `WF-699` literal path is complete. It is its own slice, not an edit to PL-1525 or PL-1544, so those two keep no plan dependency on the A chain. Leaf plan PL-1542, `draft`: the double count (DP-A4-1), where the structure is made (DP-A4-2) and its large-loss treatment and severity factors (DP-A4-3) are open. **Activation needs:** DP-A4-1 ruled by the maintainer (by delegation) (item 4: "ruled BEFORE A-4's plan activates"); A-1 (SL-1462), A-2 (SL-1463) and A-3 (SL-1466) merged, all working ids; exit-demo slices (a) (SL-1526) and (b) (SL-1527) merged, also working ids; DP-A4-2 and DP-A4-3 ruled; the lead's go. *(Cut 2026-10-05 by the planner on the lead's order (prep wave, section AM), under working id 9594, reserved by the lead.)*
 
-*Dated 2026-10-12 by the planner, on the maintainer's (by delegation) entry "2026-10-12 05:39:20 BST", (i): a new activation need for this slice's severity steps — **SL 9887 (working id; PL 9886) merged first**, which excludes weight-0 rows from the fit and every diagnostic so the severity GLM fits the full book. Until then this slice runs only its non-severity Task 0 steps, and G2 slips by SL 9887. This row's status and other fields are unchanged.*
+*Dated 2026-10-12 by the planner, on the maintainer's (by delegation) entry "2026-10-12 05:39:20 BST", (i): a new activation need for this slice's severity steps — **SL-1675 (PL-1674) merged first**, which excludes weight-0 rows from the fit and every diagnostic so the severity GLM fits the full book. Until then this slice runs only its non-severity Task 0 steps, and G2 slips by SL-1675. This row's status and other fields are unchanged.*
 
 #### SL-1536 — WK-1178 fix slice — FD-1374: a rating step reads only the names it declares (FR-246 enforced)
 
@@ -2327,10 +2327,10 @@ relates: [FD-1366, FD-1335, PL-1364, SL-1367, SL-1547]
 
 *(Cut 2026-10-12 by the planner under working id 9868, reserved by the lead; minted 2026-10-12 as SL-1669 in the D13 batch mint.)*
 
-#### SL-9887 — WK-1178 slice — rows whose declared weight is 0 are excluded from the fit and from every diagnostic (FR-111)
+#### SL-1675 — WK-1178 slice — rows whose declared weight is 0 are excluded from the fit and from every diagnostic (FR-111)
 
 ```yaml
-id: SL-9887
+id: SL-1675
 family: slice
 title: WK-1178 slice — rows whose declared weight is 0 are excluded from the fit and from every diagnostic (FR-111)
 status: draft                  # draft → active → closed | retired (§1.2a)
@@ -2343,7 +2343,7 @@ corrected_by: []
 relates: [PL-1542, SL-1543, RL-1263]
 ```
 
-On the maintainer's (by delegation) entry "2026-10-12 05:39:20 BST — SL-1543 severity block: (i) a small PRECEDING WK-1178 slice ACCEPTED; …", (i): a row whose declared weight column holds exactly 0 is excluded from the fit and from every diagnostic (FR-171, FR-183), before the family's response-domain check, so FR-111's severity `weight = claim_count` fits the full book on the frequency model's `dataset_version`, split and `holdout_part` (FR-190 untouched, no placeholder response). Each partition's diagnostics report the count excluded (`PartitionDiagnostics.rows_excluded_zero_weight`). A negative or null weight is still refused. Spec first: one dated FR-111 clause. The GLM, GBM and EBM arms and the backtest are all covered, because they share the weight and `_partition`. The A/E definition is not changed (FD 9889 and OQ 9891, filed in D14). Work-plan delta PL 9886 (working id; `draft` while DP-Z1 is open). **Activation needs:** PL 9886 minted and `active` (DP-Z1 ruled); the shared-path census on `docs/contracts/` against `SL-1669` and `SL-1549` (the later PR regenerates); the lead's executor GO. It **precedes `SL-1543`'s severity steps**, and G2 slips by it (05:39:20). *(Cut 2026-10-12 by the planner under working id 9887, reserved by the lead.)*
+On the maintainer's (by delegation) entry "2026-10-12 05:39:20 BST — SL-1543 severity block: (i) a small PRECEDING WK-1178 slice ACCEPTED; …", (i): a row whose declared weight column holds exactly 0 is excluded from the fit and from every diagnostic (FR-171, FR-183), before the family's response-domain check, so FR-111's severity `weight = claim_count` fits the full book on the frequency model's `dataset_version`, split and `holdout_part` (FR-190 untouched, no placeholder response). Each partition's diagnostics report the count excluded (`PartitionDiagnostics.rows_excluded_zero_weight`). A negative or null weight is still refused. Spec first: one dated FR-111 clause. The GLM, GBM and EBM arms and the backtest are all covered, because they share the weight and `_partition`. The A/E definition is not changed (FD 9889 and OQ 9891, filed in D14). Work-plan delta PL-1674 (DP-Z1 ruled (a) by the maintainer (by delegation), "2026-10-12 05:47:19 BST": the view in a later WK-675 frontend row). **Activation needs:** PL-1674 set `active` in this slice's activation commit; the shared-path census on `docs/contracts/` against `SL-1669` and `SL-1549` (the later PR regenerates); the lead's executor GO. It **precedes `SL-1543`'s severity steps**, and G2 slips by it (05:39:20). *(Cut 2026-10-12 by the planner under working id 9887, reserved by the lead; minted 2026-10-12 as SL-1675, early, on the maintainer's (by delegation) GO "2026-10-12 05:47:19 BST".)*
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 

@@ -1,8 +1,8 @@
 ---
-id: PL-9886
+id: PL-1674
 family: plan
 kind: map
-title: WK-1178 — rows whose declared weight is 0 are excluded from the fit and from every diagnostic, the slice before SL-1543's severity path (SL 9887): a dated Work-plan delta
+title: WK-1178 — rows whose declared weight is 0 are excluded from the fit and from every diagnostic, the slice before SL-1543's severity path (SL-1675): a dated Work-plan delta
 status: draft                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-12
 owner: planner
@@ -15,14 +15,14 @@ corrected_by: []
 relates: [PL-1542, SL-1543, PL-1544, RL-1263]
 ---
 
-# PL-9886 — WK-1178: rows whose declared weight is 0 are excluded from the fit and from every diagnostic (SL 9887)
+# PL-1674 — WK-1178: rows whose declared weight is 0 are excluded from the fit and from every diagnostic (SL-1675)
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L5
 > (`document-ids.md` §1.6, PL row: *"one plan per Work, slices as rows, no per-slice `leaf`; a
 > change is one dated Work-plan delta, a new `PL-` that `relates:` the Work's plan"*). WK-1178
 > has no Work plan, so, as for `PL-1667`, this delta `relates:` the records it builds on:
-> `PL-1542` and `SL-1543` (A-4, which this slice precedes). It adds **one slice row**, SL 9887
-> (working id), under `### WK-1178` in [`../roadmap.md`](../roadmap.md). REQUIRED SUB-SKILL:
+> `PL-1542` and `SL-1543` (A-4, which this slice precedes). It adds **one slice row**, SL-1675
+> (minted from working id 9887), under `### WK-1178` in [`../roadmap.md`](../roadmap.md). REQUIRED SUB-SKILL:
 > subagent-driven-development (recommended) or executing-plans, task by task. Steps use checkbox
 > (`- [ ]`) syntax. The executor also binds:
 > - `test-driven-development`: every acceptance item is seen red **by its cause** on main before
@@ -36,6 +36,11 @@ relates: [PL-1542, SL-1543, PL-1544, RL-1263]
 >
 > Read [`README.md`](README.md)'s five unchecked conventions before the first step. The executor
 > is spawned from `.claude/roles/executor.md`.
+
+*(Minted 2026-10-12 as PL-1674 from working id 9886, and its slice row as SL-1675 from working id
+9887, early, in their own docs PR, on the maintainer's GO in the entry "2026-10-12 05:47:19 BST"
+and the lead's allocation in the from-lead entry "2026-10-12 05:47:57 BST" (`doc-id.py next`
+printed 1674 at `604ea084`). Quoted entries keep their working ids as written.)*
 
 Filed under **working id 9886**. Its slice row is **working id 9887** (`draft`). Both were
 reserved by the lead (team-lead to planner-wk674-s4, 2026-10-12, the task "plan the
@@ -80,6 +85,9 @@ PartitionDiagnostics.rows counts placeholder rows (14,000 vs 1,939), ae_overall 
 claims-only, … lift bins 0/0"; and "NO fit-time row filter / exclusion / null-response handling
 in code … or spec (02 FR-111, ModelSpecCommon)".
 
+**The GO, the correction and DP-Z1:** the maintainer's (by delegation) entry "2026-10-12 05:47:19 BST — PL 9886/SL 9887: GO to activate and mint early, after ONE T-text correction; DP-Z1 = (a); SL-1549's three struck bullets accepted". Its correction is applied at the T-text
+(Task 1), at R1 and Acceptance 4 (the CV scope), and at R1-GBM and R1-EBM (a claims-only fit).
+
 **Not this slice — the A/E definition.** The entry's restated finding is filed separately in D14,
 as FD 9889 (working, MEDIUM, owner WK-1178) and OQ 9891 (working: which A/E the platform defines).
 This slice **does not change** how `ae_overall`, the by-level A/E or calibration are weighted. It
@@ -105,8 +113,7 @@ merge tree.
 
 1. **This delta passes the docs checks on its own branch.** `python3 scripts/audit-docs.py`,
    `python3 scripts/doc-index.py --check` and `python3 scripts/register-lint.py` exit 0 at the
-   branch head, except check 31's lines naming the working ids 9886 and 9887, which clear at
-   their mint.
+   branch head (the ids are minted, so check 31 has no working-id line to except).
 2. **No requirement range.** `grep -nE '(N?FR)-[0-9]+ *(-|to|–) *(N?FR-)?[0-9]+' <this file>`
    prints no line that stands for a set of ids.
 3. **Spec first.** `git log --format=%s origin/main..<slice head> -- docs/specs/02-modelling.md`
@@ -115,8 +122,9 @@ merge tree.
    prints the FR-111 row.
 4. **The severity full-book fit (red on main).** The severity GLM over a full book with
    `weight = claim_count` and weight-0 rows is refused on main with `GLM_FIT_FAILED`, and the
-   cause in the message is the family's response domain (Task 2, R1). On the slice it fits, and
-   every coefficient equals the claims-only fit's to `1e-10`.
+   cause in the message is the family's response domain (Task 2, R1). On the slice it fits, and,
+   for the GLM without cross-validation, every coefficient equals the claims-only fit's to
+   `1e-10`. With CV it holds only under the same folds, and otherwise it is not claimed (05:47:19).
    `uv run pytest -q packages/pricing-core/tests -k zero_weight` exits 0. The `LG-` quotes each
    red line.
 5. **The diagnostics (red on main).** On main, `PartitionDiagnostics.rows` and `ae_overall`
@@ -163,7 +171,7 @@ merge tree.
 
 | Order | Slice | Scope (what the `LG-` quotes) | Requirements, each id | Depends on | Size |
 |---|---|---|---|---|---|
-| 1 | SL 9887 — weight-0 rows excluded from the fit and every diagnostic | Tasks 0 to 4 below | `02` §3.2: FR-111 (the dated clause); `02` §3.8: FR-171, FR-183, FR-184 (unchanged in meaning; each diagnostic's population), FR-187 (a backtest uses the same `_partition`) | nothing in code; this delta minted (D14); DP-Z1 ruled | 1 |
+| 1 | SL-1675 — weight-0 rows excluded from the fit and every diagnostic | Tasks 0 to 4 below | `02` §3.2: FR-111 (the dated clause); `02` §3.8: FR-171, FR-183, FR-184 (unchanged in meaning; each diagnostic's population), FR-187 (a backtest uses the same `_partition`) | nothing in code; this delta minted (D14); DP-Z1 ruled | 1 |
 
 ### Task 0 — re-read at the base, and enumerate every site (convention 4)
 
@@ -202,12 +210,14 @@ merge tree.
   clause, verbatim (the T-text). It lands in the same commit as Task 2's code, or in an earlier
   one:
 
-  > *(Amended 2026-10-12, WK-1178, SL 9887, on the maintainer's (by delegation) entry
+  > *(Amended 2026-10-12, WK-1178, SL-1675, on the maintainer's (by delegation) entry
   > "2026-10-12 05:39:20 BST", (i).)* **Rows whose declared weight is 0 are excluded from the
   > fit and from every diagnostic (FR-171/FR-183).** A row whose weight column holds exactly 0
   > carries no information: a non-claimant under severity's `weight = claim_count`, or a
-  > zero-exposure row under burning cost's `weight = exposure`. Excluding it leaves every
-  > estimate unchanged. The exclusion is applied **before the family's response-domain check**,
+  > zero-exposure row under burning cost's `weight = exposure`. Under a weighted likelihood a
+  > weight-0 row contributes nothing; excluding it also removes it from the steps that do not
+  > read the weight (binning, cross-validation folds, row counts), which is intended: a row with
+  > no information should not shape them. The exclusion is applied **before the family's response-domain check**,
   > so a non-claimant's 0 never reaches the Gamma family. It is also applied before anything else
   > reads the row, and an excluded row's response is never read. Only an exact 0 is excluded. A
   > negative or a null weight is still refused. FR-111's frequency offset is not a weight, and a
@@ -232,12 +242,17 @@ merge tree.
     the family's domain ("out of the valid range"). A `GLM_FIT_FAILED` whose cause is anything
     else is a test defect (convention 2).
   - Green after: the fit succeeds, and every coefficient equals the claims-only frame's fit to
-    `1e-10`.
+    `1e-10`. **This parity is claimed for the GLM without cross-validation only** (the R1 spec
+    selects no penalty by CV). Where CV selects the penalty, it holds only under the same folds,
+    so the test either fixes the folds to the claims-only rows or states the parity as not
+    claimed. Excluding a row changes the fold assignment, which is intended (05:47:19; the T-text).
   - Marked `req("FR-111")`.
-- [ ] **R1-GBM, R1-EBM (red on main):** in `test_gbm.py` and `test_ebm.py`, the same book with
-  the weight-0 rows given a *non-zero* response (so the fit runs on main). On main the predictions
-  over the claims-only rows differ from the claims-only fit's, because GBM's binning and EBM's
-  binning see the extra rows. Green after: they are equal, to the arm's tolerance, which the test
+- [ ] **R1-GBM, R1-EBM — equality with a CLAIMS-ONLY fit (red on main):** in `test_gbm.py` and
+  `test_ebm.py`, the same book with the weight-0 rows given a *non-zero* response, so the fit
+  runs on main. The comparison is with a fit over the **claims-only** frame, **not** with today's
+  fit over the full frame (05:47:19). On main, the full-book fit's predictions over the
+  claims-only rows differ from the claims-only fit's, because GBM's and EBM's binning see the
+  extra rows. Green after: they equal the claims-only fit's, to the arm's tolerance, which the test
   states. If they are already equal on main for an arm, that arm's test is recorded as a guard,
   not a red.
 - [ ] **R1-all-zero:** every training row has weight 0. After the change, each arm refuses with
@@ -303,35 +318,37 @@ merge tree.
 - `backend/tests/test_diagnostics.py`;
 - the `LG-`.
 
-**Not in it:** `backend/src/` (Global Constraints); `frontend/src/` (DP-Z1); `_weighting`,
+**Not in it:** `backend/src/` (Global Constraints); `frontend/src/` (DP-Z1, ruled (a)); `_weighting`,
 `_weights` and the A/E formulas (OQ 9891).
 
 ## Decision points
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-Z1 | Does the Diagnostics view show the new count in this slice? The artifact and the API carry it either way (Task 3). | (a) not in this slice. The count is in the artifact and in the generated client types, and showing it is a follow-on frontend row. (b) in this slice: one line per partition in the Diagnostics view (`/models/:slug/diagnostics`), with a component test. | **(a).** G2 slips by this slice (05:39:20), so it stays as small as the rule allows. The maintainer's condition, "the diagnostics report the count … never silent", is met by the persisted, typed field that every reader of the artifact sees. (b) adds a frontend gate half, a lane and a view owner to a G2-path fix. The follow-on is named in the Hand-off so it is not lost. | scope | yes, for the write set | the lead |
+| DP-Z1 | Does the Diagnostics view show the new count in this slice? The artifact and the API carry it either way (Task 3). | (a) not in this slice. The count is in the artifact and in the generated client types, and showing it is a follow-on frontend row. (b) in this slice: one line per partition in the Diagnostics view (`/models/:slug/diagnostics`), with a component test. | **(a).** G2 slips by this slice (05:39:20), so it stays as small as the rule allows. The maintainer's condition, "the diagnostics report the count … never silent", is met by the persisted, typed field that every reader of the artifact sees. (b) adds a frontend gate half, a lane and a view owner to a G2-path fix. The follow-on is named in the Hand-off so it is not lost. | scope | no longer: ruled | **ruled (a)** by the maintainer's (by delegation) entry "2026-10-12 05:47:19 BST — PL 9886/SL 9887: GO to activate and mint early, after ONE T-text correction; DP-Z1 = (a); SL-1549's three struck bullets accepted": "DP-Z1 = (a): artifact and API now, the view later in a WK-675 frontend row, given an id when it is cut, so it is not orphaned. The persisted typed field is the \"never silent\" record." |
 
 A plan is "`draft` while decision points are open, `active` on freeze" (`document-ids.md` §1.6).
-DP-Z1 is open, so this delta mints `draft`, and it goes `active` by a dated line when DP-Z1 is
-ruled. If DP-Z1 is ruled before the mint, it goes `active` at the mint.
+DP-Z1 is ruled (05:47:19), so no decision point is open. This delta is minted early, at the
+maintainer's GO in the same entry ("Mint PL 9886 + SL 9887 early as a tiny docs PR: yes"). It
+is merged `draft` and frozen at that merge. It goes `active` by its status line in SL-1675's
+activation commit, and SL-1675 stays `draft` until its executor's activation.
 
 ## The row, cut
 
-SL 9887 is cut under `### WK-1178` in `docs/roadmap.md`, after `SL-1669`, as `draft`. A dated line
-on `SL-1543`'s row records the new need: SL 9887 merges before its severity steps
+SL-1675 is cut under `### WK-1178` in `docs/roadmap.md`, after `SL-1669`, as `draft`. A dated line
+on `SL-1543`'s row records the new need: SL-1675 merges before its severity steps
 (05:39:20, "G2 slips by this slice").
 
 ## Hand-off (not this plan's writes)
 
 - **The lead:**
-  - rule DP-Z1;
   - record G2's slip in `eta` (05:39:20);
   - GO the executor;
   - at merge, write the dated line that `SL-1543`'s severity path is unblocked.
 - **The D14 minter:** FD 9889 and OQ 9891, which are not this slice's (Authority).
-- **If DP-Z1 is ruled (a):** a frontend follow-on row (owner WK-675, the Diagnostics view) shows
-  `rows_excluded_zero_weight` per partition, labelled as FR-111's exclusion.
+- **DP-Z1 (a), the follow-on:** a WK-675 frontend row (the Diagnostics view) shows
+  `rows_excluded_zero_weight` per partition, labelled as FR-111's exclusion. It gets its id when it
+  is cut (05:47:19), so it is not orphaned.
 
 ## Self-review
 
