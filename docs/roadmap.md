@@ -2311,7 +2311,7 @@ The fix slice of to-lead "2026-10-11 11:25:16 BST — DEFAULT-LIVE /score: CONFI
 id: SL-1669
 family: slice
 title: WK-1178 fix slice — FD-1366 Part B for the bulk-operation route: a discriminated request body and a typed 201
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-12
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: fc4401dcad789692f79f6c3ffc058c1c3921b7b9
@@ -2324,6 +2324,8 @@ relates: [FD-1366, FD-1335, PL-1364, SL-1367, SL-1547]
 `FD-1366` Part B for `POST /api/v1/rate-tables/{slug}@{version}/bulk-operation` only, on to-lead "2026-10-12 02:58:33 BST — DP-0: (b), stated as SUPERSEDING my 2026-10-11 10:55:02 item 2 (DP-A (a)); with a fallback trigger" (condition 1: "the bulk-operation request + 201 only, (c) refused"). The body becomes a `BulkOperationRequest` discriminated on `kind`, whose four arms carry the existing `*Parameters` models, and the four `*Operation` records are rebuilt on them with their field order and stored bytes pinned. The 201 becomes `RateTableVersion`. The route leaves `UNTYPED_REQUEST_PENDING` and `UNTYPED_2XX_PENDING_PART_B` (`backend/tests/test_contracts.py`), and `docs/contracts/` is regenerated. The two sub-graph routes stay with WK-1178, and `FD-1366` stays active. WK-675 S5 (`SL-1547`) waits for this slice to merge (`PL-1668`). Plan: `PL-1667`. **Activation needs:** DP-2 MET as spec compliance (`04-optimisation.md:278`: `percentage`, `floor` and `cap` become `DecimalStr`; `base_level` is a key filter, corrected at `:278`; the lead, from-lead "2026-10-12 03:05:42 BST"); the plan minted or GO'd on its working ids; the file-set re-check and `RL-1445` item 2's record if it builds beside another WK-1178 slice; the lead's GO on the first free seat. *(Cut 2026-10-12 by the planner under working id 9868, reserved by the lead, eta "2026-10-12 02:54:24 BST".)*
 
 *(Cut 2026-10-12 by the planner under working id 9868, reserved by the lead; minted 2026-10-12 as SL-1669 in the D13 batch mint.)*
+
+(Activated 2026-10-12 as WK-1178's FD-1366 Part B slice for the bulk-operation route, on the lead's from-lead entry "2026-10-12 04:53:47 BST" (GO SL-1669; the readiness report accepted; the build seat executor-sl1669). `PL-1667` set `active` in this slice branch's activation commit; ledger LG-9877 (working id).)
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
