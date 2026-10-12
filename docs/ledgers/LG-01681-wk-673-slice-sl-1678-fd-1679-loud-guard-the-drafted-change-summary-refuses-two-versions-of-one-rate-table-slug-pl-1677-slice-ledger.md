@@ -1,8 +1,8 @@
 ---
-id: LG-9899
+id: LG-1681
 family: ledger
 title: WK-673 slice SL-1678 — FD-1679 loud guard, the drafted change summary refuses two versions of one rate-table slug (PL-1677), slice ledger
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-12
 owner: executor
 tree: f7ca32ec5450d61aa6948e82fbf6262ac1ed307a
@@ -14,12 +14,13 @@ corrected_by: []
 relates: [PL-1677, PL-1267, SL-1678, FD-1679, SL-1503, RL-1498, RL-1538, SL-1543, FR-242, FR-237]
 ---
 
-# LG-9899 — WK-673 slice SL-1678: the FD-1679 loud guard
+# LG-1681 — WK-673 slice SL-1678: the FD-1679 loud guard
 
-*(Working id 9899, reserved by the lead. The id is minted at the merge turn; until then every citation of this record is by working id.)*
+*(Minted 2026-10-12 as LG-1681 from working id 9899, at the mint turn, allocated by the lead. Live citations are re-pointed; quoted entries, command output and the dated gate table keep the working id they were written under.)*
 
 **GO:** the lead's from-lead entry "2026-10-12 06:05:28 BST — GO SL-1678 (WK-673, FD-1679 loud guard) → executor-sl1678 (sonnet)" (`channel/from-lead-2026-10-09.md`), citing the maintainer's (by delegation) entries "2026-10-12 05:57:57 BST" (ACK: DP-K rate_tables only, DP-G1 409, DP-G2 inside `_pins_by_slug`) and "2026-10-12 05:58:56 BST" (FD-1679 mints in the same PR) in `to-lead.md`.
 **MERGE-ACK:** not yet given.
+**Audit:** pending (the auditor's verdict is not written yet; this record's Audit section is added after it).
 
 ## Tasks
 
@@ -69,7 +70,7 @@ Granted by the lead at head `d01cf107bf01f76fdb19527e7527a1da269e3c93` (from-lea
 | mypy | 0 | |
 | import-linter | 0 | |
 | pytest | 1 | 13 failed, 5734 passed, 6 skipped (47 min 22 s): all 13 are the audit-on-tree test class (9 files), failing on check 31 only |
-| audit-docs | 1 | check 31 only: gap 1673→1677 (1674–1676 not on this base) and gap 1679→9899 (this ledger's working id, unminted) |
+| audit-docs | 1 | check 31 only: gap 1673→1677 (1674–1676 not on this base) and gap 1679→9899 (this ledger's working id, then unminted) |
 | req-coverage | 0 | |
 | contracts --check | 0 | |
 | frontend install | 0 | |
@@ -83,4 +84,8 @@ Both failing stages are the expected working-id reds (the same class as the 13 o
 
 ## PRs
 
-- Not yet opened (the slice PR is opened at the first gate-ready push).
+- Opened at the mint turn, 2026-10-12: title `fix(rating): the drafted change summary refuses two versions of one rate-table slug — SL-1678 (FD-1679)`; PR number and merge commit: not yet merged. Merges after #1295.
+
+## Closing acts (mint turn, 2026-10-12)
+
+Merge head: `origin/main` `50bbdd96` (carrying #1294's `PL-1677`, `SL-1678`, `FD-1679`) merged into the slice branch at `7757a2f8`. Gate: at `d01cf107bf01f76fdb19527e7527a1da269e3c93`, accepted by the lead as check-31-only after reading all 13 failure bodies (from-lead "2026-10-12 07:38:09 BST"). The 13 failing tests, by file: `test_audit_docs_finding_citations.py` (1), `test_audit_docs_ids.py` (2), `test_audit_docs_process_core_digest.py` (2), `test_audit_docs_w37_11_ceiling.py` (1), `test_doc_index.py` (1), `test_register_lint.py` (3), `test_register_owed.py` (1), `test_repository_invariants.py` (2). Small re-checks at `7757a2f8` via `run-small.sh`: change-summary route file 12 passed, `ruff check .` 0, `mypy` 0, `generate-contracts.py --check` 0. Closing acts here: `SL-1678` closed, this ledger closed, `FD-1679`'s guard limb discharged (DP-P1 keeps it open), `PL-1677` stays `active` (DP-P1 open).
