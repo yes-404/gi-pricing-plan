@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { LadderRung } from "@/api/score";
 
-import { describeOperation, rungChanges } from "../ladder";
+import { describeOperation, formatAmount, rungChanges } from "../ladder";
 
 const RUNGS: LadderRung[] = [
   { rung: "risk_premium", value_minor: 50000 },
@@ -27,5 +27,11 @@ describe("the ladder's waterfall rows (FR-247, FR-248)", () => {
     expect(describeOperation(RUNGS[2]!.operation)).toBe("clamp to max 54000");
     expect(describeOperation(RUNGS[3]!.operation)).toBe("round half_even to 0 dp");
     expect(describeOperation(undefined)).toBe("");
+  });
+
+  it("OQ-551: formats minor units as two-decimal major units with no currency symbol", () => {
+    expect(formatAmount(123456)).toMatch(/^1.234.56$/);
+    expect(formatAmount(5)).toMatch(/^0.05$/);
+    expect(formatAmount(-1000)).not.toMatch(/[£€$]/);
   });
 });

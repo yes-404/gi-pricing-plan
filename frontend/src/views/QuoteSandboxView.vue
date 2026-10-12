@@ -24,9 +24,6 @@ import TraceTimeline from "@/components/sandbox/TraceTimeline.vue";
 
 const props = defineProps<{ slug: string; version: string }>();
 
-/** The API carries no workspace currency yet (OQ-551); money is shown in sterling. */
-const CURRENCY = "GBP";
-
 const rating = ref<RatingVersion | null>(null);
 const algorithm = ref<RatingAlgorithm | null>(null);
 const loading = ref(true);
@@ -145,10 +142,7 @@ async function score(form: QuoteFormSubmit): Promise<void> {
           />
           <template v-if="result">
             <QuoteOutcome :result="result" />
-            <LadderWaterfall
-              :rungs="result.premium_ladder"
-              :currency="CURRENCY"
-            />
+            <LadderWaterfall :rungs="result.premium_ladder" />
             <TraceTimeline
               v-if="result.trace"
               :trace="result.trace"

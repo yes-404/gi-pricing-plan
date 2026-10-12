@@ -18,30 +18,25 @@ import { CanvasRenderer } from "echarts/renderers";
 import { computed } from "vue";
 import VChart from "vue-echarts";
 
-import { formatMinor } from "@/api/versions";
 import type { LadderRung } from "@/api/score";
 import type { Column } from "@/chart-table";
 import ChartFigure from "@/components/ChartFigure.vue";
 
-import { describeOperation, rungChanges } from "./ladder";
+import { describeOperation, formatAmount, rungChanges } from "./ladder";
 
 use([BarChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
 
-const props = defineProps<{
-  rungs: readonly LadderRung[];
-  /** ISO 4217. The API carries no workspace currency yet (OQ-551), so the view names one. */
-  currency: string;
-}>();
+const props = defineProps<{ rungs: readonly LadderRung[] }>();
 
 const rows = computed(() => rungChanges(props.rungs));
 
 const columns = computed<readonly Column<(typeof rows.value)[number]>[]>(() => [
   { key: "rung", label: "Rung", value: (row) => row.rung.rung },
-  { key: "value", label: "Value", value: (row) => formatMinor(row.rung.value_minor, props.currency) },
+  { key: "value", label: "Value", value: (row) => formatAmount(row.rung.value_minor) },
   {
     key: "change",
     label: "Change",
-    value: (row) => (row.change === null ? "" : formatMinor(row.change, props.currency)),
+    value: (row) => (row.change === null ? "" : formatAmount(row.change)),
   },
   { key: "operation", label: "Operation", value: (row) => describeOperation(row.rung.operation) },
 ]);
@@ -52,7 +47,7 @@ const option = computed(() => ({
   legend: { data: ["Total", "Increase", "Decrease"], bottom: 0 },
   grid: { left: 70, right: 30, top: 20, bottom: 60 },
   xAxis: { type: "category" as const, data: rows.value.map((row) => row.rung.rung) },
-  yAxis: { type: "value" as const, name: "Minor units" },
+  yAxis: { type: "value" as const, name: "Minor units (currency not configured, OQ-551)" },
   series: [
     {
       name: "Base",
@@ -86,7 +81,7 @@ const option = computed(() => ({
 <template>
   <ChartFigure
     title="Premium ladder"
-    caption="Each rung's value, and the change from the rung before it."
+    caption="Each rung's value, and the change from the rung before it. Amounts are in major units; currency not configured (OQ-551)."
     :columns="columns"
     :rows="rows"
   >

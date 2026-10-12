@@ -31,12 +31,12 @@ Branch `sl-1548-wk675-s6-sandbox`, worktree `.claude/worktrees/sl-1548`, cut fro
 
 ### Task list
 
-- **T1 — API client and form logic.** `frontend/src/api/score.ts` (`POST /score`, generated types); `components/sandbox/quoteForm.ts`, `QuoteForm.vue` (FR-213). The form types values only; range, domain and pattern stay the platform's (`INPUT_CONTRACT_VIOLATION`). A `decimal` input is sent as a JSON number because `_validate_inputs` refuses a string; an input is not money, so no FR-10 line is crossed.
-- **T2 — Ladder waterfall.** `LadderWaterfall.vue`, `ladder.ts` through `ChartFigure` (FR-247, FR-248, FR-252, NFR-463). Currency is the constant GBP: the API carries no workspace currency (OQ-551).
+- **T1 — API client and form logic.** `frontend/src/api/score.ts` (`POST /score`, generated types); `components/sandbox/quoteForm.ts`, `QuoteForm.vue` (FR-213). The form types values only; range, domain and pattern stay the platform's (`INPUT_CONTRACT_VIOLATION`). A `decimal` input is sent as a JSON number because `packages/pricing-core/src/pricing_core/rating/score.py:353` refuses anything but `int`, `float` or `Decimal` (a string fails `INPUT_CONTRACT_VIOLATION`), and `QuoteContext.inputs` is `dict[str, object]` (`packages/model-schema/src/model_schema/scoring.py:109`, so the generated type is `additionalProperties: true`). **Open, escalated to the lead:** a JS number is a binary float and reaches the engine as a Python float (`score.py:956`); whether that can touch a rate is a finding for the lead, not a frontend choice. No change is made on that path pending the lead's ruling.
+- **T2 — Ladder waterfall.** `LadderWaterfall.vue`, `ladder.ts` through `ChartFigure` (FR-247, FR-248, FR-252, NFR-463). **Currency: none is picked.** Amounts render as two-decimal major units with no symbol, and the chart and table caption say "currency not configured (OQ-551)". Carried under `OQ-551` (open); the lead's correction of 2026-10-12 replaced an earlier hard-coded GBP.
 - **T3 — Outcome, typed errors, trace.** `QuoteOutcome.vue` (FR-256), `QuoteError.vue` (FR-255), `TraceTimeline.vue` (FR-258).
 - **T4 — View, route, link.** `QuoteSandboxView.vue`, route `/rating/:slug/v/:version/sandbox`, link from `RatingVersionView` (FR-25, FR-251).
 - **R6.1 (FR-249).** No component reads a rung's `components`; tests in `LadderWaterfall.test.ts`, `QuoteOutcome.test.ts` and `QuoteSandboxView.test.ts` assert the absence. The view limb is carried under `OQ-1460`.
-- **Write set.** `PL-1546` and `PL-1286` give S6 no write-set list; the set used is the files above plus this ledger, the `SL-1548` row and `docs/INDEX.md`. Reported to the lead.
+- **Write set (inferred).** `PL-1546` and `PL-1286` give S6 no write-set list; the set inferred, and accepted by the lead on 2026-10-12, is the files above plus this ledger, the `SL-1548` row and `docs/INDEX.md`. 
 
 ### Gate
 
@@ -49,6 +49,7 @@ Branch `sl-1548-wk675-s6-sandbox`, worktree `.claude/worktrees/sl-1548`, cut fro
 ### Build log
 
 - 2026-10-12 — Build commit `1205dc6a`: T1–T4 and their tests, written while a functional window barred test runs; no test, lint or type-check had run at that head.
+- 2026-10-12 — Lead's four corrections: red-first to be proven after CLOSE (new tests against `64fe67fe` plus the test files only, then green; both runs with out-file paths recorded here, a test not shown red labelled a guard); no GBP (done, below); decimal contract cited and escalated; write set recorded as inferred. Currency change made in the next commit.
 - 2026-10-12 — Activation commit: `SL-1548` `draft → active` with a dated line citing the 02:53:52 BST GO; `PL-1546` `draft → active` (status line only); this ledger opened under working id 9869.
 
 ## PRs

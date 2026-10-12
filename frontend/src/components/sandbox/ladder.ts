@@ -38,6 +38,18 @@ export function rungChanges(rungs: readonly LadderRung[]): RungChange[] {
   });
 }
 
+/**
+ * Minor units as major units with two decimals, **no currency symbol**: the API carries no
+ * workspace currency (OQ-551, open), so no currency is picked here. Display only; the
+ * division is by 100 as `formatMinor` does.
+ */
+export function formatAmount(minor: number): string {
+  return (minor / 100).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 /** The recorded operation (FR-248) in words, operands exactly as the platform sent them. */
 export function describeOperation(operation: Operation | null | undefined): string {
   if (!operation) return "";
