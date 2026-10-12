@@ -44,8 +44,15 @@ class WeightExclusion:
     excluded: int
 
     def take(self, array: np.ndarray | None) -> np.ndarray | None:
-        """`array` restricted to the kept rows; `None` stays `None`."""
-        return None if array is None else array[self.keep]
+        """`array` restricted to the kept rows; `None` stays `None`.
+
+        An array that is not aligned to the original frame is returned as it came, so the
+        caller's own length check still refuses it by name (`_model_offset`, FR-116) rather
+        than numpy raising an index error from here.
+        """
+        if array is None or array.shape != self.keep.shape:
+            return array
+        return array[self.keep]
 
 
 def _weights(data: pl.DataFrame, spec: ModelSpecCommon) -> npt.NDArray[np.float64] | None:

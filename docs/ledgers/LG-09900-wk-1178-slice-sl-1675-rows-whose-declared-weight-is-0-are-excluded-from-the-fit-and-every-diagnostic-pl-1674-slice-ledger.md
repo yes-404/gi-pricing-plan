@@ -76,7 +76,7 @@ Command: `uv run pytest -q packages/pricing-core/tests/<file> -k <names> -p no:c
 
 **R1-GBM:** LightGBM RED, `test_a_weight_zero_row_does_not_shape_the_boosters_bins[lightgbm]`: `AssertionError: lightgbm: max rel diff 0.1285983078301599` (the full-book fit's predictions on the claims-only rows differ from the claims-only fit's by up to 12.9%). **XGBoost is a GUARD, green on main** (`[xgboost]` PASSED): XGBoost's weighted quantile sketch already gives zero-weight rows no say in the bins, so that arm's test records the property, not a red.
 
-**R1-EBM RED:** `test_a_weight_zero_row_does_not_shape_the_ebms_bins` FAILED on main (the full-book EBM's predictions differ from the claims-only fit's).
+**R1-EBM RED:** `test_a_weight_zero_row_does_not_shape_the_ebms_bins` FAILED on main. **Corrected at the green commit (the entry above this line said only "FAILED"):** the cause is not "predictions differ". On main `fit_ebm` over the full book never returns, because `interpret` refuses a zero weight outright: `pricing_core.modelling.ebm.EbmFitError: interpret refused the EBM fit: illegal sample_weight value of zero` (reproduced by running the test's body with `require_usable_weights` patched to a no-op, which is the base's behaviour; `ebm.py:231`). PL-1674's "binning sees the extra rows" premise does not hold for the EBM: there is no full-frame EBM fit to differ from. The test is still the claims-only equality the plan asks for, and is red on main by that refusal.
 
 **Acceptance 6, red first on all four arms, by cause** (`DECLARED_WEIGHT_INVALID` expected; one row at weight `-1` or null):
 - GLM `[negative]`, `[null]`: `AssertionError: assert 'GLM_FIT_FAILED' == 'DECLARED_WEIGHT_INVALID'`.
@@ -97,6 +97,22 @@ Command: `uv run pytest -q packages/pricing-core/tests/<file> -k <names> -p no:c
 - The count assertion (`rows_excluded_zero_weight` equals the rows removed per partition and is 0 on the claims-only run) cannot be reached on main, where the field does not exist.
 
 **Write-set note.** The backtest R3 case sits in `test_diagnostics.py` with the shared walker, not in `test_backtests.py`, so the walker is not duplicated.
+
+### Green (2026-10-12)
+
+**The code.** `pricing_core/modelling/weights.py` (new): `require_usable_weights(data, spec, error)` for the fits (refuses negative, null and non-finite weights and an all-zero book with `DECLARED_WEIGHT_INVALID`, then drops `weight == 0.0` exactly) and `drop_zero_weight_rows(data, spec)` for the diagnostics (drops, refuses nothing). Called at the entry of `fit_glm`, `fit_gbm` (train and holdout) and `fit_ebm`, before `resolve_factors`, with FR-116's `model_offset` filtered by the same mask (`WeightExclusion.take`), and at the entry of `compute_diagnostics`, `compute_gbm_diagnostics`, `compute_ebm_diagnostics` and `backtest_model`. `_partition` takes `excluded_zero_weight` from its caller. `diagnostics._weights`, `gbm._weights` and `_weighting` are untouched, as are the A/E formulas. `PartitionDiagnostics.rows_excluded_zero_weight: int | None = Field(default=None, ge=0)`; `docs/contracts` regenerated (`openapi/generated.json`, `schemas/generated/{diagnostics,backtest}.schema.json`) and the hand-authored `schemas/diagnostics.schema.json` gains the property. `backend/src/app/errors.py`: the one registration line (above). `backend/src` is otherwise unchanged; `model_handlers.py` is not touched.
+
+**Defect found by the full run and fixed.** `packages/pricing-core/tests/test_glm_model_offset.py::test_a_model_offset_of_the_wrong_length_is_refused` failed after the first green commit: `WeightExclusion.take` indexed a wrong-length `model_offset` with the row mask, so numpy raised before `_model_offset`'s own length check could refuse it by name. `take` now returns an unaligned array as it came. (The weaker rule, "excluded rows then make the check's message cite the filtered height", only applies when the offset is already wrong.)
+
+**Evidence** (all through `run-small.sh`, own test DB `gipricing_sl-1675_99411a3e`, `alembic upgrade head`):
+- `uv run pytest packages/pricing-core packages/model-schema`: **2364 passed**.
+- The new tests: `test_glm.py` (R1 both variants, exact-zero guard, bad-weight code, all-zero, offset guard), `test_gbm.py` (R1-GBM on both backends, bad-weight code on both, all-zero), `test_ebm.py`, `test_diagnostics.py` (R2 and R3 on the four entry points, with different train and holdout counts), `model-schema/tests/test_partition_zero_weight_count.py` (a stored partition with no count validates, `None` is not `0`, a negative count is refused).
+- `backend/tests/test_api_backtests.py test_backtests.py test_diagnostics.py test_ebm_model_jobs.py test_model_jobs_gbm.py test_model_jobs.py test_model_offset_jobs.py test_spec_hash.py test_model_comparison.py test_custom_objectives.py test_contracts.py test_prediction.py`: **310 passed, 2 skipped**. The new `backend/tests/test_diagnostics.py::test_a_severity_fit_over_a_book_with_weight_zero_rows_stores_their_count` runs the MODEL_FIT Job over a dataset version with 133 weight-0 rows and reads both stored partitions' counts back (each > 0, summing to 133, with `rows` plus counts accounting for all 400 rows).
+- `uv run ruff check .` clean; `uv run mypy` "no issues found in 240 source files"; `uv run lint-imports` "Contracts: 4 kept, 0 broken"; `uv run python scripts/generate-contracts.py --check` "48 generated contracts match the models"; `uv run python scripts/req-coverage.py` rc 0; `python3 scripts/audit-docs.py` fails only check 31 (working-id gap, expected until minted).
+
+**Acceptance (PL-1674), per item.** 1 docs checks: as above. 2 no requirement range in the plan: unchanged since the mint. 3 spec first: `6aca576c` (FR-111 clause) precedes `ba89c87d` (code); the clause is `grep -n 'excluded from the fit and from every diagnostic' docs/specs/02-modelling.md`. 4 R1: red `893f96f5`, green after. 5 R2/R3: same. 6 refusals: red then green on all four arms, one code. 7 contract: `--check` clean, `test_contracts.py` green, stored artifact without the field validates. 8 the full gate: not run; awaiting the lead's grant.
+
+**Frontend.** None (DP-Z1 ruled (a) by the maintainer's (by delegation) entry "2026-10-12 05:47:19 BST"); `frontend/src` is untouched.
 
 ## PRs
 

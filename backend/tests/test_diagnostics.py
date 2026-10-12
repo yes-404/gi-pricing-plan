@@ -37,6 +37,7 @@ from model_schema import (
     OffsetSpec,
     PartitionDiagnostics,
     UniversalDiagnostics,
+    WeightSpec,
     Weighting,
 )
 
@@ -253,3 +254,75 @@ async def test_a_spec_with_no_split_cannot_be_fitted(
         assert stored is not None
         assert stored.status == ModelStatus.DRAFT.value
         assert stored.diagnostics_id is None
+
+
+#: A full severity book: every policy, `claim_count` as the weight (FR-111). Every third
+#: policy is a non-claimant, so it carries weight 0 and a nil settlement the Gamma family
+#: would refuse. The amounts vary within a level so the fit has a dispersion to estimate.
+SEVERITY_BOOK = b"policy_id,exposure_years,area,claim_count,claim_amount_minor\n" + b"".join(
+    (
+        f"P{i},1.0,{'urban' if i % 4 == 0 else 'rural'},0,0\n"
+        if i % 3 == 0
+        else f"P{i},1.0,{'urban' if i % 4 == 0 else 'rural'},{1 + i % 2},"
+        f"{(200_000 if i % 4 == 0 else 100_000) * (10 + i % 5) // 10}\n"
+    ).encode()
+    for i in range(1, 401)
+)
+
+
+@pytest.mark.req("FR-111")
+@pytest.mark.req("FR-170")
+async def test_a_severity_fit_over_a_book_with_weight_zero_rows_stores_their_count(
+    database, blob_store, workspace_id
+) -> None:
+    """The path the fit Job runs (`model_handlers`), not `fit_glm` called directly.
+
+    The Job hands the full frame and holdout to the fit and to the diagnostics, and
+    `pricing-core` alone excludes the weight-0 rows (SL-1675). Each stored partition carries
+    its own count, and rows kept plus rows excluded account for every row of the book.
+    """
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id, book=SEVERITY_BOOK
+    )
+    area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
+    split = await _split(database, blob_store, workspace_id, actor, version_id)
+
+    async with database.unit_of_work() as session:
+        row, _ = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor,
+            spec=_spec(
+                version_id, (area,), split_ref=split,
+                response_column="claim_amount_minor", family="gamma",
+                offset=OffsetSpec(kind="none"),
+                weight=WeightSpec(kind="column", column="claim_count"),
+            ),
+        )
+        model_id = row.id
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_FIT,
+            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+             "model_id": str(model_id)},
+            actor,
+            workspace_id=workspace_id,
+        )
+    assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
+
+    async with database.session() as session:
+        stored = await diagnostics_service.load_diagnostics(
+            session, workspace_id=workspace_id, model_id=model_id
+        )
+
+    train, holdout = stored.universal.train, stored.universal.holdout
+    assert train.rows_excluded_zero_weight is not None
+    assert holdout.rows_excluded_zero_weight is not None
+    assert train.rows_excluded_zero_weight > 0
+    assert holdout.rows_excluded_zero_weight > 0
+    non_claimants = sum(1 for i in range(1, 401) if i % 3 == 0)
+    assert train.rows_excluded_zero_weight + holdout.rows_excluded_zero_weight == non_claimants
+    assert (
+        train.rows + train.rows_excluded_zero_weight
+        + holdout.rows + holdout.rows_excluded_zero_weight
+    ) == 400
