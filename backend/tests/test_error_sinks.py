@@ -191,10 +191,17 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         1, "reads only the engine error's JSON `nodeId`; the text is neither stored nor logged, "
         "and only a matched step's own id reaches the raised message: "
         "test_rating_score.py::test_an_engine_error_text_never_reaches_the_raised_message"),
+    ("packages/pricing-core/src/pricing_core/rating/score.py", "_batch_error_row",
+     "error_message key"): (
+        1, "the one place a batch `\"error\"` row is written (FR-255), fed only by "
+        "`_batch_error_code`'s safe text: it was `_score_batch_row`'s second sink until FD-1561's "
+        "row escape (PL-1565 Task 1) wrote the row from two `except` clauses; "
+        "test_rating_score_batch_outputs.py::test_an_error_row_from_serialisation_carries_no_value "
+        "(SENTINEL-9513 not in error_message); widened by from-lead 2026-10-11 21:57:43 BST"),
     ("packages/pricing-core/src/pricing_core/rating/score.py", "_score_batch_row",
      "error_message key"): (
-        2, "test_scoring_handlers.py and test_quote_input_raise_sites.py (the error row and "
-        "the success row's None)"),
+        1, "test_scoring_handlers.py and test_quote_input_raise_sites.py (the success row's "
+        "None; the error row moved to `_batch_error_row`)"),
 }
 
 

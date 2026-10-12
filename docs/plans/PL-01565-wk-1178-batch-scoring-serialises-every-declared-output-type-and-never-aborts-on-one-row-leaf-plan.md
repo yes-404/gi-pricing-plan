@@ -3,7 +3,7 @@ id: PL-1565
 family: plan
 kind: leaf
 title: WK-1178 — batch scoring serialises every declared output type and never aborts on one row (FR-254, FR-255): leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
 owner: planner
 tree: 5fe56b87e55b0a29399f96f0af2e7c2e2ef9b72a

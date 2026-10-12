@@ -179,6 +179,7 @@ cancellation is a hand-off to whichever caller can make the platform-level Job t
 from __future__ import annotations
 
 import json
+import math
 import re
 import time
 from collections.abc import Mapping, Sequence
@@ -989,7 +990,11 @@ def _ladder_json(ladder: Sequence[LadderRung]) -> str:
 #: (FR-227). Anything else is refused rather than stringified — RL-923 §5(i): a
 #: silent `default=str` catch-all put a `Decimal` output and an `int` output in the same
 #: JSON column with no way to tell which was which by reading the text back.
-_KNOWN_OUTPUT_TYPES = frozenset({"money_minor", "decimal", "bool", "string", "date"})
+#: The numeric family is `compile._NUMERIC` (FR-227's save-time vocabulary), so a type that
+#: saves, compiles and is served on `/score` is never refused here (FD-1561, FR-254).
+_KNOWN_OUTPUT_TYPES = frozenset(
+    {"money_minor", "int", "count", "decimal", "relativity", "percentage", "bool", "string", "date"}
+)
 
 
 def _coerce_output_value(declared_type: str, value: Any) -> int | str | bool:
@@ -1014,7 +1019,26 @@ def _coerce_output_value(declared_type: str, value: Any) -> int | str | bool:
                 f"score_batch: a money_minor output must be int, got {type(value).__name__}"
             )
         return value
-    if declared_type == "decimal":
+    if declared_type in ("int", "count"):
+        # RL-1567 T1: a JSON integer. Integral means exact equality with the integer part, no
+        # tolerance, and a whole-valued float is written as that integer (3.0 -> 3). The
+        # message names the types, never the value (NFR-499). A bool is not an integer
+        # output, and a non-finite float is refused here, before `int()` could raise another
+        # class.
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or (isinstance(value, float) and not math.isfinite(value))
+            or value != int(value)
+        ):
+            raise ValueError(
+                f"score_batch: a {declared_type} output must be integral, "
+                f"got {type(value).__name__}"
+            )
+        return int(value)
+    if declared_type in ("decimal", "relativity", "percentage"):
+        # RL-1567 T1: `relativity` and `percentage` take `decimal`'s string form. SL-1569
+        # (the RL-1343 slice) replaces this conversion with the one producer on every path.
         as_decimal = value if isinstance(value, Decimal) else Decimal(repr(value))
         return str(as_decimal)
     if declared_type == "bool":
@@ -1035,7 +1059,9 @@ def _coerce_output_value(declared_type: str, value: Any) -> int | str | bool:
 
 def _outputs_json(algorithm: RatingAlgorithm, outputs: Mapping[str, Any]) -> str:
     """`ScoringResult.outputs` -> a JSON object, total over every declared output type this
-    module recognises (`_KNOWN_OUTPUT_TYPES`) and refusing — never silently stringifying —
+    module recognises (`_KNOWN_OUTPUT_TYPES`; RL-1567 T1: `money_minor`, `int` and `count` a
+    JSON integer, `decimal`, `relativity` and `percentage` a JSON string, `bool` a JSON
+    boolean, `string` and `date` a JSON string) and refusing — never silently stringifying —
     anything else, so a type this function does not know about fails loudly instead of
     reaching `05` FR-317's A/E computation as data of an unknown shape (RL-923 §5(i))."""
     declared_types = {output.name: output.type for output in algorithm.outputs}
@@ -1125,13 +1151,36 @@ def _score_context_sync(
     )
 
 
+def _batch_error_row(
+    quote_id: str | None,
+    rating_version_ref: Any,
+    bundle: CompiledBundle,
+    code: str,
+    message: str,
+) -> dict[str, Any]:
+    """The one place an `"error"` output row is written (FR-255)."""
+    return {
+        "quote_id": quote_id,
+        "outcome": "error",
+        "rating_version_ref": rating_version_ref,
+        "bundle_hash": bundle.content_hash,
+        "premium_ladder_json": None,
+        "outputs_json": None,
+        "decline_reasons": [],
+        "error_code": code,
+        "error_message": message,
+    }
+
+
 def _score_batch_row(bundle: CompiledBundle, row: Mapping[str, Any]) -> dict[str, Any]:
     """Score one row, reusing `score_one`'s own pre-checks and `build_scoring_result`
     unmodified (the module docstring's "What `score_batch` is"). Never lets a `ValueError`
     (the `_raise_named` convention) or the untyped `RuntimeError` `_reraise_engine_failure`
     can re-raise escape past this row — an `"error"` output row instead, which is the
     structural half of FR-255 a chunked transform has to provide regardless of who is
-    charged with the requirement id. `NotImplementedError` (a `RuntimeError` subclass) is
+    charged with the requirement id. The same holds for what the two serialisers
+    (`_ladder_json`, `_outputs_json`) raise after the scoring `try` (FD-1561): any exception
+    there is this row's error row too. `NotImplementedError` (a `RuntimeError` subclass) is
     deliberately let through: it marks a genuinely undesigned case `score_one` does not
     catch either, not a per-quote data error."""
     # Stringified: the output column is `String`, and a struct- or list-valued `quote_id` made
@@ -1149,25 +1198,28 @@ def _score_batch_row(bundle: CompiledBundle, row: Mapping[str, Any]) -> dict[str
         raise
     except (ValueError, RuntimeError) as exc:
         code, message = _batch_error_code(exc)
-        return {
-            "quote_id": quote_id,
-            "outcome": "error",
-            "rating_version_ref": rating_version_ref_str,
-            "bundle_hash": bundle.content_hash,
-            "premium_ladder_json": None,
-            "outputs_json": None,
-            "decline_reasons": [],
-            "error_code": code,
-            "error_message": message,
-        }
+        return _batch_error_row(quote_id, rating_version_ref_str, bundle, code, message)
+
+    # The serialisers run after the first `try`, so anything they raise would leave the row,
+    # the chunk and the Job (FD-1561): one row's value must never end the run (FR-255). Any
+    # exception here is this row's error row, except the undesigned-case marker, which the
+    # first `try` lets through for the same reason.
+    try:
+        premium_ladder_json = _ladder_json(scored.premium_ladder)
+        outputs_json = _outputs_json(algorithm, scored.outputs)
+    except NotImplementedError:
+        raise
+    except Exception as exc:  # FR-255: anything this row's serialisation raises
+        code, message = _batch_error_code(exc)
+        return _batch_error_row(quote_id, rating_version_ref_str, bundle, code, message)
 
     return {
         "quote_id": quote_id,
         "outcome": scored.outcome,
         "rating_version_ref": rating_version_ref_str,
         "bundle_hash": scored.bundle_hash,
-        "premium_ladder_json": _ladder_json(scored.premium_ladder),
-        "outputs_json": _outputs_json(algorithm, scored.outputs),
+        "premium_ladder_json": premium_ladder_json,
+        "outputs_json": outputs_json,
         "decline_reasons": list(scored.decline_reasons),
         "error_code": None,
         "error_message": None,

@@ -105,6 +105,7 @@ from model_schema import (
     TransparencyArtifact,
 )
 from model_schema import Permission as Perm
+from model_schema.rating import ChangeSummaryDraft
 from pricing_core.rating.runtime import CompiledBundle
 
 __all__ = ["router"]
@@ -1250,6 +1251,32 @@ async def submit_rating_version(
         )
         await session.refresh(row)
         return rating_versions_service.to_schema(row)
+
+
+@router.get(
+    "/rating-versions/{rating_version_id}/change-summary-draft",
+    summary="Draft a rating version's change summary",
+    responses=problems(401, 403, 404, 409, 422),
+)
+async def draft_rating_version_change_summary(
+    rating_version_id: UUID,
+    caller: Annotated[Caller, Depends(requires(Perm.RATING_READ))],
+    database: DatabaseDep,
+    blob_store: score_api.BlobStoreDep,
+) -> ChangeSummaryDraft:
+    """**200** with the drafted change summary (03 §5.1, FR-242; WF-699 E1; `RL-1498`).
+
+    Built from the structural diff and each re-pinned rate table's diff against the most
+    recently approved other version of the same algorithm. Read-only: the actuary edits the
+    `text` and sends it as `change_summary` on the submit route. **409**
+    `RATING_VERSION_UNPINNED` for a version without an algorithm or pins.
+    """
+    return await rating_versions_service.draft_change_summary_for(
+        database,
+        blob_store=blob_store,
+        workspace_id=caller.workspace_id,
+        rating_version_id=rating_version_id,
+    )
 
 
 @router.post(

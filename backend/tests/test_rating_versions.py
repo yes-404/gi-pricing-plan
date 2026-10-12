@@ -910,10 +910,10 @@ class _Gate:
             await _principal(self.database, self.workspace_id, "approver") for _ in range(2)
         ]
         await algorithm_service.create_algorithm(
-            self.database, self.workspace_id, self.analyst.id, _algorithm(1)
+            self.database, self.workspace_id, self.analyst, _algorithm(1)
         )
         await algorithm_service.create_algorithm(
-            self.database, self.workspace_id, self.analyst.id, _algorithm(2, plus=1)
+            self.database, self.workspace_id, self.analyst, _algorithm(2, plus=1)
         )
         return self
 
@@ -1533,7 +1533,7 @@ async def test_golden_delta_ignores_an_approved_version_of_another_algorithm(
     gate = await _gate(database, workspace_id)
     other = _algorithm(1)
     other["slug"] = "other-algo"
-    await algorithm_service.create_algorithm(database, workspace_id, gate.analyst.id, other)
+    await algorithm_service.create_algorithm(database, workspace_id, gate.analyst, other)
     rv_other = await gate.version(algorithm="rating_algorithm:other-algo@1", slug="other-rv")
     await gate.approve((await gate.submit(rv_other)).id)
     await gate.suite(gate.analyst, _suite(_quote()))
