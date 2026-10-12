@@ -9,9 +9,9 @@ tree: 1b04cb05a72e2329d35f57dd87cb3be600096177
 phase: P2
 work: WK-1178
 slice: SL-1527
-plans: [PL-1544, PL-1577]
+plans: [PL-1544, PL-1577, PL-1644]
 corrected_by: []
-relates: [PL-1544, PL-1577, RL-1521, RL-1524, FD-1209, FD-1244, FD-1245, FD-1494, LG-1641]
+relates: [PL-1544, PL-1577, PL-1644, RL-1645, RL-1521, RL-1524, FD-1209, FD-1244, FD-1245, FD-1494, LG-1641]
 ---
 
 # LG-9796 — WK-1178 slice SL-1527: exit demo (b)
@@ -233,3 +233,8 @@ lines are recorded at the slot, against the parent source.
 | 1-2 | journey core, skip table, step-naming client | `fbd418ce` |
 | 2-4 | phases A to E, deploy, served quote; the D4 declaration; the ladder body | `d918c534` |
 | 4 | the end-to-end journey test, authored | `e328556c` |
+
+## PRs
+
+The slice's PR is opened at the lead's word, after the full gate and the Acceptance 5 rehearsal;
+its number and merge commit are recorded here at merge.
