@@ -83,14 +83,17 @@ therefore stays **active**; this slice adds a dated line to its register row nam
 
 ## Status
 
-The status is the `status:` field in the header, and nothing else. **It stays `draft` while
-DP-2 below is open.** DP-0 is ruled (Context, entry 2); DP-1 is the planner's design choice,
-stated with its proof obligation, and is not a ruling.
+The status is the `status:` field in the header, and nothing else. **No decision point is
+open.** DP-0 is ruled (Context, entry 2). DP-1 is the planner's design choice, accepted by the
+lead (from-lead "2026-10-12 03:05:42 BST"). DP-2 is not a decision: the lead settled it as **spec
+compliance** in the same entry (`04` §4.4, `04-optimisation.md:278`). The plan stays `draft` until
+it is minted or GO'd on its working ids, as `PL-1629` did at its mint.
 
 ## Activation needs, each with its state at `fc4401dc`
 
 1. **DP-0 ruled.** **MET**: Context, entry 2 (02:58:33).
-2. **DP-2 ruled** by the lead or a decision-maker, with a dated line. **OPEN.**
+2. **DP-2 settled.** **MET**: spec compliance (`04-optimisation.md:278`), the lead, from-lead
+   "2026-10-12 03:05:42 BST". No ruling record is needed.
 3. **This delta is minted or GO'd on its working ids**, as the lead dispatches. **OPEN.**
 4. **No in-flight writer on the write set below, or the dispatch record names the
    definitions.** At `fc4401dc`, a sweep of 57 origin refs
@@ -113,7 +116,8 @@ stated with its proof obligation, and is not a ruling.
 - `03` **FR-233** (bulk operations are recorded with their parameters): the route this slice types.
 - `07` **FR-451** (the contract is generated, and CI fails on drift): the regenerated
   `docs/contracts/`.
-- `00` **FR-10** (exact decimals, never a float): DP-2 only.
+- `00` **FR-10** (exact decimals, never a float), as `04` §4.4 applies it to these parameters
+  (`04-optimisation.md:278`): DP-2.
 - `FD-1366` Part B for this one route; `FD-1335` Part B for this route's 201.
 
 ## Premises, read at `fc4401dc`
@@ -138,21 +142,22 @@ stated with its proof obligation, and is not a ruling.
 |---|---|---|---|---|---|
 | DP-0 | Who types this route: S5 (DP-A (a), 10:55:02) or a WK-1178 slice? | (a) S5, in its first commit; (b) a WK-1178 slice, S5 waits; (c) (b) plus the two sub-graph routes | — | — | **Ruled (b)**, the maintainer 02:58:33 (Context, entry 2); (c) refused |
 | DP-1 | What is the request body's shape, since `BulkOperationBase` carries server-set fields (premise b)? | (i) four request models `{kind, parameters}`, the four records **inheriting** from them, with field order pinned; (ii) four request models written separately from the records; (iii) make `applied_to`/`result` optional on the record | **(i).** It writes the `kind`↔`parameters` pairing once (`CLAUDE.md` §2: "a shape defined twice will diverge"). (ii) defines it twice. (iii) weakens the persisted record. **Proof obligation:** the record's field order (`applied_to, result, kind, parameters`), its JSON dump and its published schema do not move (Acceptance 4, 5) | no | the planner (a design choice inside a ruled scope); stated here so the lead can overrule it |
-| DP-2 | The typed request publishes `percentage`/`floor`/`cap` as `number \| string` (premise d), so a generated client may send a float, and the route accepts it today. Does this slice close that? | (a) the four `*Parameters` decimal fields become `DecimalStr` (`model_schema/money.py:95-100`, float refused, string schema), shared by record and request; (b) leave `Decimal`, publish `number \| string`, and file an FD (owner WK-1178) for the float acceptance; (c) request-only strictness with separate request parameter models | **(a).** The route is being typed now. Publishing a float-accepting contract that S5 then generates against is the hazard `generate-contracts.py:224-229` names (research F7), and `04` §4.4 already says "never floats". `DecimalStr` serialises with `str()`, as `Decimal` does in JSON mode, so stored bytes do not move (Acceptance 5 proves this). (c) duplicates four shapes; (b) leaves a known FR-10 gap published. Related, not decided here: FD 9872 (working id, reserved by the lead, eta "2026-10-12 03:04:15 BST"), the same float class on `/score`'s decimal Rating Inputs | **yes, for the GO** | lead or decision-maker, dated line |
+| DP-2 | Does the typed request keep publishing `percentage`/`floor`/`cap` as `number \| string` (premise d)? | — | **Not a decision: spec compliance.** `04-optimisation.md:278` already reads *"`percentage`, `floor`, `cap` and `base_level` are decimal strings, never floats (R2)"*. The bare `Decimal` (`rating.py:1236`, `:1244`, `:1252-1253`) and its `anyOf: [number, string]` publication are drift from that line. SL 9868 corrects them with `DecimalStr` (`model_schema/money.py:95-100`: float refused, string schema, `str()` serialiser), shared by record and request. **`base_level`** is not changed: in the code it is a `KeyFilter` (`rating.py:1212`, `dict[str, list[str]]`; `RebaseToLevelParameters.base_level`, `:1264`), and `04` itself defines it as a key filter: the example `"base_level": {"driver_age_band": ["25-29"]}` (`:262`) and *"`filter` and `base_level` use exact-value matching over the table's declared keys"* (`:279`). So `:278`'s naming of `base_level` contradicts `:262` and `:279`; Task 1 corrects `:278` by a dated clause. Related, not decided here: FD 9872 (working id; LOW, owner WK-1178, eta "2026-10-12 03:05:01 BST"), the same float class on `/score`'s decimal Rating Inputs | — | settled | the lead, from-lead "2026-10-12 03:05:42 BST" |
 
 ## Write set
 
 | Path | What changes | Task |
 |---|---|---|
 | `docs/specs/03-rating-engine.md` §5.1 bulk-operation row (`:1039`) | a dated clause: the request body and the 201 | 1 |
-| `packages/model-schema/src/model_schema/rating.py` `:1215-1300` | four `*Request` models; `BulkOperationRequest` union; `BULK_OPERATION_REQUEST_ADAPTER`; the four `*Operation` records rebased (DP-1 (i)); under DP-2 (a), `DecimalStr` on four fields | 2 |
+| `docs/specs/04-optimisation.md` §4.4 (`:278`) | a dated clause: `base_level` is a key filter, not a decimal (DP-2) | 1 |
+| `packages/model-schema/src/model_schema/rating.py` `:1215-1300` | four `*Request` models; `BulkOperationRequest` union; `BULK_OPERATION_REQUEST_ADAPTER`; the four `*Operation` records rebased (DP-1 (i)); `DecimalStr` on four fields (DP-2) | 2 |
 | `packages/model-schema/src/model_schema/__init__.py` (`:314`, `:720` neighbourhood) | import + `__all__`: the four request models, `BulkOperationRequest`, `BULK_OPERATION_REQUEST_ADAPTER` | 2 |
-| `packages/model-schema/tests/test_rate_tables.py` | DP-1's order pin; DP-2's float refusal (if (a)); the request models' `extra="forbid"` | 2 |
+| `packages/model-schema/tests/test_rate_tables.py` | DP-1's order pin; DP-2's float refusal; the request models' `extra="forbid"` | 2 |
 | `backend/src/app/api/rate_tables.py` `:42-50`, `:180-224` | the typed body and 201; the hand check removed; the service call unchanged in signature | 3 |
 | `backend/tests/test_api_rate_tables.py` | three new red-first tests (Task 3); the existing ones unchanged | 3 |
 | `scripts/generate-contracts.py` `GENERATED_SHAPES` | `"bulk-operation-request": "BULK_OPERATION_REQUEST_ADAPTER"`, dated comment | 4 |
 | `backend/tests/test_contracts.py` `:70-90`, `:3192`, `:3202-3205` | `ONE_SIDED_SLUGS` entry; both pending entries removed | 4 |
-| `docs/contracts/openapi/generated.json`; `docs/contracts/schemas/generated/bulk-operation-request.schema.json` (new); `…/rate-table-version.schema.json` (DP-2 (a) only) | regenerated, never hand-edited | 4 |
+| `docs/contracts/openapi/generated.json`; `docs/contracts/schemas/generated/bulk-operation-request.schema.json` (new); `…/rate-table-version.schema.json` (the four decimal fields only, DP-2) | regenerated, never hand-edited | 4 |
 | `docs/findings/register.md` FD-1366 row | a dated line: the bulk-operation route typed by SL 9868 | 5 |
 | `docs/roadmap.md` SL 9868 row; `docs/ledgers/LG-<working id>` | status lines and the slice ledger (L1 (a')) | 0, 5 |
 
@@ -169,8 +174,9 @@ frontend source calls this route at `fc4401dc` (`grep -rln bulk frontend/src --i
 - [ ] Re-read premises a–k at the slice base, and record each one in the `LG-`, with its locator.
 - [ ] `gh pr list --state open`, and grep `to-lead.md` for entries since 2026-10-12 02:58:33 that
   rule on `bulk-operation`, `FD-1366`, `BulkOperation` or `DecimalStr`. Name the SHA and entry read.
-- [ ] Quote DP-2's ruling (dated) in the `LG-`. Stop if it is absent.
-- [ ] Sweep the python-mode dumps the DP-2 (a) serialiser could change:
+- [ ] Quote `04-optimisation.md:278-279` and the lead's from-lead "2026-10-12 03:05:42 BST" (DP-2 as spec
+  compliance) in the `LG-`.
+- [ ] Sweep the python-mode dumps the `DecimalStr` serialiser could change:
   `grep -rn 'created_by_operation\|BulkOperation\|Parameters(' packages/*/src backend/src --include=*.py`;
   read each hit; record in the `LG-` any that dumps in Python mode, not JSON mode. At
   `fc4401dc` the stores are JSON-mode (`platform/rate_tables.py:1439-1442`) and
@@ -181,11 +187,14 @@ frontend source calls this route at `fc4401dc` (`grep -rln bulk frontend/src --i
 
 - [ ] Append to the row's description cell (`03:1039`), keeping the row's cell count:
   `*(Amended <date>, SL 9868, FD-1366 Part B: the request body is a BulkOperationRequest, the 04 §4.4 record's kind and parameters, discriminated on kind; applied_to and result are set by the server. The 201 is the new RateTableVersion.)*`
-  Under DP-2 (a), add: `percentage, floor and cap are decimal strings; a JSON number is refused (FR-10).`
+  and add: `percentage, floor and cap are decimal strings; a JSON number is refused (FR-10, 04 §4.4).`
+- [ ] **`04` §4.4** (`04-optimisation.md:278`): after the sentence, append
+  `*(Corrected <date>, SL 9868: base_level is a key filter, as the example above and the next sentence define it, not a decimal string.)*`
+  The sentence itself is not reworded (`spec-change`: append, never silently rewrite).
 - [ ] `python3 scripts/audit-docs.py` exits 0 (run once, under `flock -w 1800 /tmp/slots/gate-2`).
 - [ ] Commit: `docs(specs): 03 §5.1 — the bulk-operation request body and 201 (FD-1366 Part B)`.
 
-### Task 2: `model-schema` — the request models (DP-1 (i)) and, under DP-2 (a), `DecimalStr`
+### Task 2: `model-schema` — the request models (DP-1 (i)) and `DecimalStr` (DP-2)
 
 **Interfaces — Produces:** `UpliftTableRequest`, `UpliftByFilterRequest`, `FloorAndCapRequest`,
 `RebaseToLevelRequest` (each `kind: Literal[...]`, `parameters: <Kind>Parameters`,
@@ -209,11 +218,11 @@ def test_a_bulk_operation_record_keeps_its_field_order(record: type[BaseModel]) 
   `class UpliftTableOperation(BulkOperationBase, UpliftTableRequest)` in a scratch edit: the order becomes
   `kind, parameters, applied_to, result`). Revert. Record both outputs in the `LG-`.
 - [ ] **Red 2 (the request refuses a server-set field).** `BULK_OPERATION_REQUEST_ADAPTER.validate_python({"kind": "uplift_table", "parameters": {"percentage": "0.10"}, "applied_to": "rate_table:t@1"})` raises `ValidationError` (`extra_forbidden`). Run it: **red by its cause** (`ImportError`, the adapter does not exist).
-- [ ] **Red 3 (DP-2 (a) only).** `UpliftTableParameters.model_validate({"percentage": 0.1})` raises `ValidationError` from `_reject_float`'s `InputFreeError`; the same for `floor`/`cap`. Run it: **red by its cause** (`DID NOT RAISE`; `Decimal` accepts the float today).
+- [ ] **Red 3 (DP-2).** `UpliftTableParameters.model_validate({"percentage": 0.1})` raises `ValidationError` from `_reject_float`'s `InputFreeError`; the same for `floor`/`cap`. Run it: **red by its cause** (`DID NOT RAISE`; `Decimal` accepts the float today).
 - [ ] Implement. Each record keeps `BulkOperationBase` **first in its own field order**:
   `class UpliftTableOperation(UpliftTableRequest, BulkOperationBase)` declares no field and the
   pin decides. Pydantic collects fields in reverse MRO, so `BulkOperationBase`'s come first;
-  Red 1 is the proof, not this sentence. Under DP-2 (a), `percentage`, `floor` and `cap` become
+  Red 1 is the proof, not this sentence. `percentage` (both uplift kinds), `floor` and `cap` become
   `DecimalStr`, imported from `model_schema.money`.
 - [ ] Export the new names from `model_schema/__init__.py` (import block and `__all__`).
 - [ ] Reds 1–3 green; `uv run pytest -q packages/model-schema/tests/test_rate_tables.py` exits 0.
@@ -229,7 +238,7 @@ signature (premise e).
   `{"kind": "uplift_table", "parameters": {"percentage": "0.10"}, "applied_to": "rate_table:x@1"}`,
   and asserts 422, `code == "VALIDATION_FAILED"`, and a field error whose `field` ends with
   `applied_to`. Run it: **red by its cause** (201; the open body ignores the extra key).
-- [ ] **Red 5 (DP-2 (a) only: a float is refused).** The same, with `{"percentage": 0.1}`;
+- [ ] **Red 5 (DP-2: a JSON float is accepted today and refused after).** The same, with `{"percentage": 0.1}`;
   asserts 422 `VALIDATION_FAILED` with a field error ending `percentage`. Run it: **red by its
   cause** (201).
 - [ ] **Red 6 (the published contract).** A `@pytest.mark.req("FR-451")` test in
@@ -263,8 +272,8 @@ signature (premise e).
   `git diff --stat docs/contracts` must name only:
   - `openapi/generated.json`;
   - the new `schemas/generated/bulk-operation-request.schema.json`;
-  - under DP-2 (a), `schemas/generated/rate-table-version.schema.json`, whose only change is
-    the three decimal fields' `anyOf` becoming the `DecimalStr` string schema. Show that hunk
+  - `schemas/generated/rate-table-version.schema.json`, whose only change is
+    the four decimal fields' `anyOf` (Acceptance 8) becoming the `DecimalStr` string schema. Show that hunk
     in the `LG-`.
 
   Any other file in the stat is a stop.
@@ -302,7 +311,7 @@ Each item is checked by a command a fresh reviewer can run from the repository r
    `grep -n 'bulk-operation' backend/tests/test_contracts.py` prints no line inside
    `UNTYPED_REQUEST_PENDING` or `UNTYPED_2XX_PENDING_PART_B`; `grep -c 'pending FD-1366 Part B'
    backend/tests/test_contracts.py` prints `3` (two entries plus the assertion at `:3288`).
-3. **A server-set field is refused at the boundary** (Red 4) and, under DP-2 (a), **a float is
+3. **A server-set field is refused at the boundary** (Red 4) and **a float is
    refused** (Reds 3, 5); each was seen red by its cause, in the `LG-`.
 4. **The record's field order is pinned:** Red 1 passes, and its planted-reversal red is in the `LG-`.
 5. **Stored bytes do not move:** a test dumps one record of each kind built from string decimals
@@ -313,7 +322,12 @@ Each item is checked by a command a fresh reviewer can run from the repository r
    backend/tests/test_api_rate_tables.py` adds lines only).
 7. **No hand-written shape; no drift:** `uv run python scripts/generate-contracts.py --check`
    exits 0; `pnpm --dir frontend generate:api` leaves `git status --short` clean of tracked files.
-8. **The gate is green on the merge tree:** the `CLAUDE.md` §11 commands, both halves, each exit 0
+8. **`rate-table-version.schema.json` moves only in the four decimal fields:** `git diff origin/main -- docs/contracts/schemas/generated/rate-table-version.schema.json`
+   touches only `$defs.UpliftTableParameters.properties.percentage`,
+   `$defs.UpliftByFilterParameters.properties.percentage`, `$defs.FloorAndCapParameters.properties.floor` and
+   `$defs.FloorAndCapParameters.properties.cap` (each `anyOf: [number, string]` → the `DecimalStr` string schema), and
+   `uv run python scripts/generate-contracts.py --check` exits 0. `base_level` is unchanged.
+9. **The gate is green on the merge tree:** the `CLAUDE.md` §11 commands, both halves, each exit 0
    against `origin/main...<slice branch>`.
 
 ## Global Constraints
@@ -337,7 +351,8 @@ Each item is checked by a command a fresh reviewer can run from the repository r
 ## Self-review
 
 - **Spec coverage.** FR-233's route is typed in both directions. FR-451's drift check covers the
-  regenerated files. FR-10 is covered under DP-2 (a) only, and DP-2 is blocking, so no silent pick.
+  regenerated files. FR-10 is covered as `04` §4.4 applies it (DP-2, spec compliance), and
+  `base_level`'s exclusion is argued from `04`'s own lines and corrected there, not silently.
 - **Placeholders.** None. `<date>` and the `LG-` working id are filled at execution.
 - **Type consistency.** `BulkOperationRequest` and `BULK_OPERATION_REQUEST_ADAPTER` are named the
   same in Tasks 2–4. The four request names follow the records' names, with `Operation`
