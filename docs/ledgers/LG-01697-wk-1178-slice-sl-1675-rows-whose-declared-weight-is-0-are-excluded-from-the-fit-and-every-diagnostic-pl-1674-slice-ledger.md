@@ -1,22 +1,22 @@
 ---
-id: LG-9900
+id: LG-1697
 family: ledger
 title: WK-1178 slice SL-1675 — rows whose declared weight is 0 are excluded from the fit and every diagnostic (PL-1674 slice ledger)
-status: active
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-12
 owner: executor
-tree: a83aeef11b104258639be062ef5623593fe88a44
+tree: 2a81974184ee405536fb43d30f59a990b3953669
 phase: P2
 work: WK-1178
 slice: SL-1675
 plans: [PL-1674]
 corrected_by: []
-relates: [PL-1674, SL-1543, PL-1542, RL-1263, FR-111, FR-171, FR-183, FR-184, FR-187]
+relates: [PL-1674, SL-1543, PL-1542, RL-1263, FD-1698, FR-111, FR-171, FR-183, FR-184, FR-187]
 ---
 
-# LG-9900 — WK-1178 slice SL-1675: weight-0 rows excluded from the fit and every diagnostic
+# LG-1697 — WK-1178 slice SL-1675: weight-0 rows excluded from the fit and every diagnostic
 
-*(LG-9900 is a working id reserved by the lead; the lead mints it at the merge turn.)* Executed by
+*(Minted 2026-10-12 as LG-1697 from working id 9900, at the mint turn.)* Executed by
 `executor-sl1675` from PL-1674, base `origin/pl-9886-wk1178-zero-weight-2026-10-12`
 `a83aeef11b104258639be062ef5623593fe88a44` (PR #1292, not yet on main at the start; `origin/main`
 `604ea084c96efe93f521fb9ba17738e05241e61a`). Times are BST.
@@ -25,6 +25,7 @@ relates: [PL-1674, SL-1543, PL-1542, RL-1263, FR-111, FR-171, FR-183, FR-184, FR
 exclusion; G2 critical path before SL-1543)", on the maintainer's (by delegation) entry
 "2026-10-12 05:47:19 BST" (GO + early mint; the T-text correction; DP-Z1 = (a)) and the rule of
 "2026-10-12 05:39:20 BST", (i).
+**Audit:** pending (the lead seats the auditor; written audit not yet filed).
 **MERGE-ACK:** not yet given.
 
 ## Tasks
@@ -70,7 +71,7 @@ The maintainer's (by delegation) entry "2026-10-12 06:10:04 BST — SL-1675 STOP
 
 **The tests that assert `GLM_FIT_FAILED` for a bad weight** (06:10:04's "list every test", stated command, run at `a83aeef1` and re-run at the green head): `git grep -n -E 'GLM_FIT_FAILED|non-negative|Sample weights' -- packages/pricing-core/tests backend/tests` prints `test_glm.py` `test_a_response_outside_the_family_domain_is_named_rather_than_a_stack_trace` (a nil *response*, not a weight; unchanged) and `test_glm.py` `test_a_malformed_weight_column_is_named_rather_than_a_stack_trace` (a negative weight; updated to `DECLARED_WEIGHT_INVALID`), plus `test_tweedie_density.py` `y must be non-negative` (a different function, unrelated). No `backend/tests` file asserts it. The new `test_only_an_exact_zero_weight_is_excluded` asserts `GLM_FIT_FAILED` for a **response** outside the Gamma domain (a weight of `1e-300` is a row), and is not a bad-weight test.
 
-**FD working id 9902** (limb 1 HIGH PROVISIONAL; limbs 2 and 3 LOW; owner WK-1178; discharged by this slice) is filed in this branch: `docs/findings/FD-09902-…md` and its row in `docs/findings/register.md`. The validation check it was conditioned on: `VR-ACT-8` refuses a negative `claim_count` when present in the Rule Set, but its `range` check excludes nulls (`validate.py:694`), and no rule covers another declared weight column; reported to the lead, whose reading of the severity governs.
+**FD-1698** (minted from working id 9902; limb 1 HIGH, limbs 2 and 3 LOW; owner WK-1178; discharged by this slice) is filed in this branch: `docs/findings/FD-01698-…md` and its row in `docs/findings/register.md`. The validation check it was conditioned on: `VR-ACT-8` refuses a negative `claim_count` when present in the Rule Set, but its `range` check excludes nulls (`validate.py:694`), and no rule covers another declared weight column; reported to the lead, whose reading of the severity governs.
 
 ### Reds, on `a83aeef1` + the spec commit (tests only, no source change) — 2026-10-12
 
@@ -125,6 +126,49 @@ Command: `uv run pytest -q packages/pricing-core/tests/<file> -k <names> -p no:c
 **Defect found while doing this and fixed:** the previous push (`c6bb0d95`) left `uv run ruff check .` failing with I001 on `backend/tests/test_diagnostics.py` (the `WeightSpec` import added after the last ruff run). Fixed with `ruff check --select I001 --fix`; `uv run ruff check .` is clean at this head.
 
 **Frontend.** None (DP-Z1 ruled (a) by the maintainer's (by delegation) entry "2026-10-12 05:47:19 BST"); `frontend/src` is untouched.
+
+### The full gate (2026-10-12)
+
+Run on head `f1399e6d8facc488a014ddf6dcfa9cf952f64b95` (on `origin/main` `bf8d7929`, before this mint merge) by `~/gi-pricing-plan.local/scratch/sl1675/slot.sh` under `flock /tmp/slots/gate-1`, 07:37:04 to 08:29:31 BST, own database recreated from the template, preflight ok (head guard, clean tree, slot held, upgrade rc 0, one head). The run is the harness-tracked background form the maintainer's (by delegation) entry "2026-10-12 06:44:25 BST" adopts for a run past the foreground cap, each stage under `timeout 3600`. Logs: `~/gi-pricing-plan.local/scratch/sl1675/`.
+
+| stage | exit |
+|---|---|
+| ruff | 0 |
+| mypy | 0 |
+| import_linter | 0 |
+| pytest | 1 |
+| audit_docs | 1 |
+| req_coverage | 0 |
+| contracts | 0 |
+| fe_install | 0 |
+| fe_generate | 0 |
+| fe_lint | 0 |
+| fe_types | 0 |
+| fe_test | 0 |
+| fe_build | 0 |
+
+`pytest`: **13 failed, 5766 passed, 6 skipped** in 50:09. The 13, every one a root `tests/` docs-audit, doc-id or doc-index test that runs on the real tree and fails on the same cause, **check 31's gaps in the allocation, 1675 to 9900 and 9900 to 9902** (the two working ids of this ledger and its finding), which the minting in this commit closes:
+1. `tests/test_audit_docs_finding_citations.py::test_a_finding_resolved_only_by_a_closure_record_is_not_flagged`
+2. `tests/test_audit_docs_ids.py::test_the_real_tree_passes_all_ten_checks`
+3. `tests/test_audit_docs_ids.py::test_doc_id_check_exits_0_on_the_real_tree`
+4. `tests/test_audit_docs_process_core_digest.py::test_an_unrelated_file_edit_is_the_negative_control_and_stays_green`
+5. `tests/test_audit_docs_process_core_digest.py::test_the_committed_digest_currently_matches_the_committed_spec`
+6. `tests/test_audit_docs_w37_11_ceiling.py::test_audit_docs_end_to_end_exit_0_then_1_then_0_on_an_injected_residue`
+7. `tests/test_doc_index.py::test_an_index_skipping_a_reserved_block_breaks_contiguity` ("the live allocation is not contiguous: [(1675, 9900), (9900, 9902)]")
+8. `tests/test_register_lint.py::test_check_29_is_wired_into_the_docs_gate`
+9. `tests/test_register_lint.py::test_check_29_note_carries_the_residue_line`
+10. `tests/test_register_lint.py::test_phase1b_residue_count_matches_check_29s_own_count`
+11. `tests/test_register_owed.py::test_check_29_wiring_is_undisturbed`
+12. `tests/test_repository_invariants.py::test_money_discipline_is_enforced_by_the_docs_audit`
+13. `tests/test_repository_invariants.py::test_journey_citations_are_audited_in_ci`
+
+`audit_docs` printed `FAILED (2)`: check 31, gap between 1675 and 9900, and between 9900 and 9902. Nothing else. The lead read the 13 failure bodies in `pytest.log` and accepted the gate as check-31-only (from-lead entry "2026-10-12 08:30:37 BST"). The frontend half is green and nothing under `frontend/` changed.
+
+**Not re-run after the mint:** the 13 are expected to pass once the ids are contiguous on main, which also needs the ids `1681` to `1696` of the pull requests ahead of this one. They are recorded as not yet run on the merge tree.
+
+### The mint turn (2026-10-12)
+
+`origin/main` `2a819741` merged into the branch (merge commit). `docs/INDEX.md` conflicted and was regenerated. **`docs/findings/register.md` also conflicted**, which is more than the brief allowed for ("INDEX conflicts regenerate; anything else stop"): both sides appended one row at the end of the file (this slice's FD row, and main's FD-1679 row). Resolved by keeping both rows; checked with `git diff origin/main -- docs/findings/register.md`, which shows exactly one row added and none removed. Disclosed to the lead in the mint report. Working ids minted: LG 9900 to **LG-1697**, FD 9902 to **FD-1698** (allocated by the lead, reserved in eta); every occurrence renamed, files and register row included. `PL-1674` stays `active` (a plan is not retired while its slice is closed, `document-ids.md` check 33).
 
 ## PRs
 

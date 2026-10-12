@@ -1,5 +1,5 @@
 ---
-id: FD-9902
+id: FD-1698
 family: finding
 title: LightGBM fits silently on a negative or null declared weight, XGBoost raises a raw library error with no platform code, and the EBM names it with an unrelated code
 status: active
@@ -10,13 +10,13 @@ corrected_by: []
 relates: [WK-1178, SL-1675, PL-1674, FR-111, FR-115, FR-140, FR-171, OQ-1672]
 ---
 
-# FD-9902 — a declared weight that cannot be fitted on is not refused uniformly
+# FD-1698 — a declared weight that cannot be fitted on is not refused uniformly
 
-*(FD-9902 is a working id reserved by the lead; the lead mints it at the merge turn. Filed by
+*(Minted 2026-10-12 as FD-1698 from working id 9902, at the mint turn. Filed by
 `executor-sl1675` from the maintainer's (by delegation) entry "2026-10-12 06:10:04 BST" and the
 lead's from-lead entries "2026-10-12 06:10:29 BST" and "2026-10-12 06:17:07 BST".)*
 
-Found by SL-1675 (LG 9900), PL-1674 Task 0 Step 2: the base behaviour of the refusals, run on a
+Found by SL-1675 (LG-1697), PL-1674 Task 0 Step 2: the base behaviour of the refusals, run on a
 600-row severity frame with ONE row at weight `-1` and, separately, ONE row at weight null.
 Measured at `origin/main` `604ea084` and again at `a83aeef1`.
 
@@ -30,7 +30,7 @@ Measured at `origin/main` `604ea084` and again at `a83aeef1`.
 | `fit_ebm` | `EbmFitError`, code `EBM_MONOTONE_CONSTRAINT_INCOMPLETE` ("illegal negative sample_weight value") | same code ("sample_weight cannot contain missing values or infinites") |
 
 `gbm._weights` (`gbm.py:235`) casts the column to `Float64` and hands it to the backend as it
-stands, so a null reaches LightGBM as NaN and a negative as a negative. The reds in LG 9900
+stands, so a null reaches LightGBM as NaN and a negative as a negative. The reds in LG-1697
 (`893f96f5`) reproduce each row of the table by its cause.
 
 ## The validation check the maintainer asked for
@@ -57,7 +57,7 @@ negative or null value in a weight column other than the two named, reach the fi
 
 ## Finding
 
-**Severity HIGH (the maintainer's (by delegation) entry "2026-10-12 06:37:28 BST": "FD 9902 limb 1
+**Severity HIGH (the maintainer's (by delegation) entry "2026-10-12 06:37:28 BST": "FD-1698 limb 1
 STAYS HIGH"; it was HIGH PROVISIONAL in the entry "2026-10-12 06:10:04 BST", whose one condition for
 MEDIUM was the validation check above).** Limb 1, LightGBM fitting silently on a negative or null
 weight, is a silently wrong model: a mispricing path. The check does not clear it: `VR-ACT-8` covers

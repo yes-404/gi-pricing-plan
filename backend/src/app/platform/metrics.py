@@ -515,6 +515,23 @@ async def submit(
             "from `certified` only. Certification is the evidence the approval reads.",
         )
     await _require_evidence(session, workspace_id=workspace_id, row=row)
+    # FD-1492: `certificate_id` is a bare pointer (no foreign key), and `_require_evidence`
+    # only checks it is set. A pointer to no row, to another metric's row or to another
+    # workspace's is no evidence: the same check `objectives.submit_for_review` makes.
+    pointed = await session.get(MetricCertificateRow, row.certificate_id)
+    if (
+        pointed is None
+        or pointed.workspace_id != workspace_id
+        or pointed.custom_metric_id != row.id
+    ):
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "The metric's certificate does not exist",
+            409,
+            f"{row.slug}@{row.version} names certificate {row.certificate_id}, which has "
+            "no certificate row: re-certify it (POST /api/v1/custom-metrics/{id}/certify) "
+            "before submitting it (FR-157).",
+        )
 
     request = await approvals.submit(
         session,
