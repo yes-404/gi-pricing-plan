@@ -1332,7 +1332,7 @@ relates: [PL-1286, PL-1371]
 id: SL-1548
 family: slice
 title: Slice 6: Sandbox — quote form, ladder waterfall and trace (FR-213, FR-247, FR-248, FR-249, FR-251, FR-252, FR-255, FR-256, FR-258)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
@@ -1342,7 +1342,7 @@ corrected_by: []
 relates: [PL-1286, PL-1371]
 ```
 
-`PL-1286` S6, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. The quote form from the input contract, the ladder waterfall with its table, declined quotes and typed errors, the trace timeline; FR-249's per-peril components shown absent under RL-1459 (OQ-1460). **Activation needs:** `SL-1367` merged (FD-1335 hold). Lane or team fixed at GO. *(Cut 2026-10-08 by the planner under working id 9467, reserved by the lead; minted 2026-10-10 as SL-1548 in the D2 batch mint.)*
+`PL-1286` S6, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. The quote form from the input contract, the ladder waterfall with its table, declined quotes and typed errors, the trace timeline; FR-249's per-peril components shown absent under RL-1459 (OQ-1460). **Activation needs:** `SL-1367` merged (FD-1335 hold). Lane or team fixed at GO. *(Cut 2026-10-08 by the planner under working id 9467, reserved by the lead; minted 2026-10-10 as SL-1548 in the D2 batch mint.)* *(Activated 2026-10-12 on the lead's GO, the maintainer's (by delegation) entry "2026-10-12 02:53:52 BST — Readiness rulings: GO S6 SL-1548 (swap planner-wk673-c out)" and the lead's readiness record (`SL-1367` closed, `13a02bba`, #1282 — the only activation need). `PL-1546` set `active` in this activation commit, its status line only. The slice's one ledger is opened under working id 9869 (`LG-9869`, minted at the merge turn). R6.1: the per-peril components render absent, with a test, while `OQ-1460` is open.)*
 
 #### SL-1549 — Slice 7b: compare backend — StepChange.own_change from step-definition equality (RL-1261; FR-262 backend limb)
 
