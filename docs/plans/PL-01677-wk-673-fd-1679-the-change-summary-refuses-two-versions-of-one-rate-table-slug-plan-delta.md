@@ -3,7 +3,7 @@ id: PL-1677
 family: plan
 kind: map
 title: WK-673 — the FD-1679 loud guard, FR-242's drafted change summary refuses a version pinning two versions of one rate-table slug (SL-1678), and the slug-only-map class sweep: a dated delta to PL-1267
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-12
 owner: planner
 tree: 604ea084c96efe93f521fb9ba17738e05241e61a
