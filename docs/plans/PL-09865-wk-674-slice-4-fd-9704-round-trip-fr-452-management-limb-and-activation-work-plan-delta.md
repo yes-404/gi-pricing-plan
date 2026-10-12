@@ -42,9 +42,9 @@ Evidence read at `origin/main` `fc4401dc` (#1288) and at the authored S4 branch
   20:14:10) ACCEPTED, with each retro FD's DISCHARGE PATH named; SL-1503 is UNBLOCKED (WK-675 S3
   and S4 both merged), so it is the gate's G2 work now", item 4: "FD 9704 (SL-1257 migration
   round-trip): fold into WK-674 S4's write set (its next alembic slice) as a red-first round-trip
-  test". The finding is FD 9704 (working, D13): `origin/docs-d13-2026-10-11`,
-  `docs/findings/FD-09704-sl-1257-has-no-committed-migration-round-trip-or-api-keys-unchanged-test.md`,
-  *Discharge path*: "`upgrade` / `downgrade -1` / `upgrade` on a database holding `api_keys` rows,
+  test". The finding is FD 9704 (working, D13): on `origin/docs-d13-2026-10-11`, the file under
+  `docs/findings/` whose name ends `sl-1257-has-no-committed-migration-round-trip-or-api-keys-unchanged-test.md`
+  (its working-id prefix is elided here because it does not resolve before the mint), *Discharge path*: "`upgrade` / `downgrade -1` / `upgrade` on a database holding `api_keys` rows,
   asserting the rows unchanged. Date: merged with SL-1258 and no later than the P2 exit demo".
 - **The GO request is owed now:** the maintainer's entry "2026-10-11 11:32:09 BST", item 2: "The
   activation and GO request come to me when PL 9921 is minted (D11), with its needs quoted. No
