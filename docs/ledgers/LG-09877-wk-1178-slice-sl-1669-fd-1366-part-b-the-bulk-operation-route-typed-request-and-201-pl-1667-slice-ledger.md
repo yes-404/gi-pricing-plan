@@ -61,3 +61,11 @@ The two predicates, verbatim, now print 14 and 1 hits. The one new hit against t
 ### Integers (the maintainer's (by delegation) entry "2026-10-12 03:08:30 BST", item 3)
 
 `DecimalStr` refuses a Python `float` and still accepts an `int` (`model_schema/money.py` `_reject_float`), while the published schema is string-only. An integer is exact, so accepting it violates nothing R2 protects; this is lenient input, not drift in what is stored. No FD.
+
+### Write-set addition (audit-docs scope registration)
+
+The new generated `docs/contracts/schemas/generated/bulk-operation-request.schema.json` cannot carry a header, so `audit-docs.py` checks 30 and 35 failed naming it (run at the branch head before the fix, under `flock -w 1800 /tmp/slots/gate-2`). Registered as every earlier generated schema was (LG-1405, `seed-from-model-request` precedent): the literal path joins `_CONTRACT_ARTIFACT_PATHS` in `scripts/audit-docs.py`, and `tests/test_audit_docs_ids.py` `non_markdown` goes 83 to **84** (83 read from the committed assertion at `249670fe`, +1 here). Neither file is in PL-1667's write set; neither is touched by `origin/sl-1548-wk675-s6-sandbox` (`git diff --name-only origin/main...` over `audit-docs`, `test_audit_docs_ids`, `contracts`, `rating.py`, `rate_tables.py`, `test_contracts` prints nothing). If another slice merges first with the same bump, the count is re-measured on the merged tree.
+
+## PRs
+
+- Not yet opened; the lead's merge-turn mint resolves the working id.

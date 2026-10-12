@@ -2132,7 +2132,10 @@ def test_widening_the_scope_roots_reaches_every_non_markdown_file_the_register_e
     # 82 became 83 (WK-673 Slice 4, PL-1501, 2026-10-10; the maintainer's entries "2026-10-10
     # 02:43:18 BST" (S-A) and "2026-10-10 03:41:56 BST"): the generated `dislocation-run` schema,
     # registered for F83's reason.
-    assert len(non_markdown) == 83, len(non_markdown)
+    # 83 became 84 (WK-1178 SL-1669, PL-1667, 2026-10-12; the maintainer's (by delegation) entry
+    # "2026-10-12 02:58:33 BST" scopes the slice; the write-set addition is named in LG-9877): the
+    # generated `bulk-operation-request` schema, registered for F83's reason.
+    assert len(non_markdown) == 84, len(non_markdown)
     assert set(non_markdown) <= rels
 
     # Named individually, so the proof is "one of the 63" and not "63 of something".
