@@ -251,6 +251,17 @@ export const routes: RouteRecordRaw[] = [
     }),
   },
   {
+    // `03` §5.3's quote sandbox. `:slug` and `:version` are the Rating Version's own (RL-1473).
+    path: "/rating/:slug/v/:version/sandbox",
+    name: "quote-sandbox",
+    meta: { requiresAuth: true },
+    component: () => import("@/views/QuoteSandboxView.vue"),
+    props: (route) => ({
+      slug: String(route.params.slug),
+      version: String(route.params.version),
+    }),
+  },
+  {
     // `03` §5.3's rate table editor. `:slug` and `:version` are the Rating Version's own
     // (RL-1473); `:tableSlug` is one of its `pins.rate_tables` (RL-1475 item 3).
     path: "/rating/:slug/v/:version/tables/:tableSlug",

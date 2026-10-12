@@ -89,6 +89,14 @@ onMounted(async () => {
               Open in the designer
             </RouterLink>
           </dd>
+          <dd>
+            <RouterLink
+              :to="`/rating/${rating.slug}/v/${rating.version}/sandbox`"
+              class="text-sky-700 underline"
+            >
+              Open the quote sandbox
+            </RouterLink>
+          </dd>
         </div>
         <div>
           <dt class="text-slate-500">
