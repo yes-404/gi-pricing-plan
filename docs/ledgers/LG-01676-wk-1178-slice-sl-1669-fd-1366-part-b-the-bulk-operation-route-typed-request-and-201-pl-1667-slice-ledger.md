@@ -97,4 +97,4 @@ The lead's from-lead entry "2026-10-12 05:56:06 BST" accepted the gate as check-
 
 ## PRs
 
-- Recorded at the PR's opening (the mint turn).
+- #1293, "feat(rating): SL-1669 — type POST bulk-operation's request and 201, DecimalStr parameters (FD-1366 Part B; WK-1178; PL-1667, LG-1676)", opened 2026-10-12 at head `01ed71b1ddc9e86c003ca4e4f320f27ba915e66e`. Merge commit: recorded at merge.
