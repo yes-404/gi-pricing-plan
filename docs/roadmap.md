@@ -2329,7 +2329,7 @@ relates: [FD-1366, FD-1335, PL-1364, SL-1367, SL-1547]
 
 (Activated 2026-10-12 as WK-1178's FD-1366 Part B slice for the bulk-operation route, on the lead's from-lead entry "2026-10-12 04:53:47 BST" (GO SL-1669; the readiness report accepted; the build seat executor-sl1669). `PL-1667` set `active` in this slice branch's activation commit; ledger LG-1676 (minted from working id 9877).)
 
-(Closed 2026-10-12 as a Slice, closing acts in the slice PR's last commit, on the lead's merge; ledger LG-1676, plan PL-1667. Gate at `15439b9d`: check 31 only, the unminted ledger id; the audit is pending and the auditor fills the ledger's Audit line.)
+(Closed 2026-10-12 as a Slice, closing acts in the slice PR's last commit, on the lead's merge; ledger LG-1676, plan PL-1667. Gate at `15439b9d`: check 31 only, the unminted ledger id; audited in LG-1676's Audit section (auditor-sl1669); Acceptance 1–8 adopted by the lead, Acceptance 9 discharged by CI on the merge head, in the lead's from-lead entry "2026-10-12 06:05:14 BST".)
 
 #### SL-1675 — WK-1178 slice — rows whose declared weight is 0 are excluded from the fit and from every diagnostic (FR-111)
 
