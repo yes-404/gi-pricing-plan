@@ -1,8 +1,8 @@
 ---
-id: LG-9880
+id: LG-1680
 family: ledger
 title: WK-690 slice SL-1622 — the fix row, FD-1349, FD-1492 and FD-1512 fixed before close and FD-1294's discharge line (PL-1621, PL-1665), slice ledger
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-12
 owner: executor
 tree: 604ea084c96efe93f521fb9ba17738e05241e61a
@@ -14,7 +14,9 @@ corrected_by: []
 relates: [PL-1621, PL-1665, SL-1622, FD-1294, FD-1349, FD-1492, FD-1512, FR-146, FR-157]
 ---
 
-# LG-9880 — WK-690 slice SL-1622: the fix row
+# LG-1680 — WK-690 slice SL-1622: the fix row
+
+*(Minted 2026-10-12 as LG-1680 from working id 9880, at the merge turn. Live citations are re-pointed; quoted entries, command output and the build log's dated lines keep the working id they were written under.)*
 
 **GO:** the lead's `from-lead` entry "2026-10-12 05:31:21 BST" (GO; readiness; ledger working id 9880), on the maintainer's (by delegation) entries in `to-lead.md`: "2026-10-11 11:21:02 BST" item 2 (DP-W-1 (a): the fix row, off the cut ladder) and "2026-10-12 02:53:52 BST" item 3 (the PL-1665 delta approved).
 **MERGE-ACK:** not yet given.
@@ -50,12 +52,14 @@ Full two-half gate, granted by the lead for head `75271962aa95d6daa656371fde3a18
 | contracts | 0 |
 | fe_install, fe_generate, fe_lint, fe_types, fe_test, fe_build | 0 |
 
-**Every red, by cause: one cause, the unminted ledger id.** `audit_docs` prints `check 31: gap in the full allocation between 1673 and 9880`, the expected red for working id 9880 until the mint. The 13 pytest failures are tests that run the audit or `doc-id.py check` on the real tree and so see that same gap: `test_audit_docs_finding_citations` (1), `test_audit_docs_ids` (2: `doc-id.py check: [noncontiguous] docs/INDEX.md has a gap between 1673 and 9880`), `test_audit_docs_process_core_digest` (2), `test_audit_docs_w37_11_ceiling` (1), `test_doc_index` (1: `the live allocation is not contiguous: [(1673, 9880)]`), `test_register_lint` (3), `test_register_owed` (1), `test_repository_invariants` (2). Each reads `assert 1 == 0` on the audit's exit code. No failure is in code this slice touched. The mint turn re-runs the minted-head gate (the SL-1377 order).
+**Every red, by cause: one cause, the unminted ledger id.** `audit_docs` prints `check 31: gap in the full allocation between 1673 and 9880`, the expected red for working id 9880 until the mint. The 13 pytest failures are tests that run the audit or `doc-id.py check` on the real tree and so see that same gap: `test_audit_docs_finding_citations` (1), `test_audit_docs_ids` (2: `doc-id.py check: [noncontiguous] docs/INDEX.md has a gap between 1673 and 9880`), `test_audit_docs_process_core_digest` (2), `test_audit_docs_w37_11_ceiling` (1), `test_doc_index` (1: `the live allocation is not contiguous: [(1673, 9880)]`), `test_register_lint` (3), `test_register_owed` (1), `test_repository_invariants` (2). Each reads `assert 1 == 0` on the audit's exit code. No failure is in code this slice touched. The 13 failures by test: `tests/test_audit_docs_finding_citations.py::test_a_finding_resolved_only_by_a_closure_record_is_not_flagged`; `tests/test_audit_docs_ids.py::test_the_real_tree_passes_all_ten_checks`, `::test_doc_id_check_exits_0_on_the_real_tree`; `tests/test_audit_docs_process_core_digest.py::test_an_unrelated_file_edit_is_the_negative_control_and_stays_green`, `::test_the_committed_digest_currently_matches_the_committed_spec`; `tests/test_audit_docs_w37_11_ceiling.py::test_audit_docs_end_to_end_exit_0_then_1_then_0_on_an_injected_residue`; `tests/test_doc_index.py::test_an_index_skipping_a_reserved_block_breaks_contiguity`; `tests/test_register_lint.py::test_check_29_is_wired_into_the_docs_gate`, `::test_check_29_note_carries_the_residue_line`, `::test_phase1b_residue_count_matches_check_29s_own_count`; `tests/test_register_owed.py::test_check_29_wiring_is_undisturbed`; `tests/test_repository_invariants.py::test_money_discipline_is_enforced_by_the_docs_audit`, `::test_journey_citations_are_audited_in_ci`. The lead accepted the gate as check-31-only (`from-lead` "2026-10-12 06:48:33 BST"). The gate's console output and its seven-plus logs are kept at `~/gi-pricing-plan.local/scratch/sl1622/` (`sl1622-gate.out`, `sl1622-slot.sh`, `tmp.X5pWvN0G9h/`), because `/tmp` is not durable.
+
+At the mint turn (the SL-1669 order: the pre-mint gate, small re-checks after merging main, CI on the PR head): see the build log.
 
 
 ### Audit
 
-Not yet run.
+Audit: pending (the auditor is seated by the lead).
 
 ### Build log
 
@@ -68,4 +72,4 @@ Not yet run.
 
 ## PRs
 
-Not yet opened.
+PR number and merge commit: filled at the PR open and the merge.
