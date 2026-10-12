@@ -1396,7 +1396,7 @@ relates: [PL-1286, PL-1371]
 
 (Activated 2026-10-12 on the lead's from-lead entry "2026-10-12 05:34:34 BST" (GO S7b SL-1549; lane C; readiness at `604ea084`: `SL-1367` merged, `RL-1261` active). `PL-1546` stays `active`; ledger `LG-1699`, minted 2026-10-12 from working id 9884. **R7b.1's namespaced-`step_id` limb is in scope**: `SL-1340` merged (#1263), so the slice also covers `step_id`s namespaced by a sub-graph mount. Backend-only: `frontend/` is `SL-1550`'s.)
 
-(Closed 2026-10-12 as a Slice, closing acts in the slice PR's mint commit; ledger `LG-1699`, minted 2026-10-12 from working id 9884. Audit: pending. `PL-1546` stays `active`.)
+(Closed 2026-10-12 as a Slice, closing acts in the slice PR's mint commit; ledger `LG-1699`, minted 2026-10-12 from working id 9884. Audit written in `LG-1699` (commit `2793387d`; verdicts in the lead's from-lead entry "2026-10-12 09:22:22 BST": all items delivered). `PL-1546` stays `active`.)
 
 #### SL-1550 — Slice 7: Sandbox compare — FR-262's view limb and the own_change rendering rule
 

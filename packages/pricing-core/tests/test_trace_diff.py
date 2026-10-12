@@ -193,7 +193,7 @@ def test_an_edit_that_feeds_nothing_that_changes_is_the_only_entry() -> None:
     assert [c.step_id for c in diff.steps] == ["s_rate"]
 
 
-def _fragment(expr: str) -> SubGraph:
+def _fragment(expr: str, cap: int = 50) -> SubGraph:
     return SubGraph.model_validate({
         "slug": "ncd-ladder", "version": 4,
         "inputs": [{"name": "ncd_years", "type": "int"}],
@@ -202,7 +202,7 @@ def _fragment(expr: str) -> SubGraph:
             {"step_id": "s_ladder", "type": "expression", "label": "Ladder", "expr": expr,
              "result_type": "decimal", "consumes": ["ncd_years"], "produces": "ncd_raw"},
             {"step_id": "s_cap", "type": "expression", "label": "Cap",
-             "expr": "min([ncd_raw, 50])", "result_type": "decimal",
+             "expr": f"min([ncd_raw, {cap}])", "result_type": "decimal",
              "consumes": ["ncd_raw"], "produces": "ncd_factor"},
         ],
         "change_note": "cut",
@@ -241,6 +241,24 @@ def test_a_namespaced_step_inside_a_mounted_sub_graph_is_compared_by_its_namespa
         _step("m_ncd__s_cap", consumed={"ncd_raw": 12}, produced={"ncd_factor": 12}),
     )
     assert _own(base, other, old, new) == {"m_ncd__s_ladder": True, "m_ncd__s_cap": False}
+
+
+def test_an_edited_namespaced_step_whose_input_also_moved_reads_true() -> None:
+    # LOW 2 (SL-1549 audit): the old `consumed` rule and definition equality DISAGREE here.
+    # `m_ncd__s_cap`'s cap is edited AND its input moved (the ladder was edited too), so the old
+    # rule read False; its definition differs, so it reads True.
+    parent = _mounted_parent()
+    old = inline_mounts(parent, {"sub_graph:ncd-ladder@4": _fragment("ncd_years * 10", 50)})
+    new = inline_mounts(parent, {"sub_graph:ncd-ladder@4": _fragment("ncd_years * 12", 40)})
+    base = _trace(
+        _step("m_ncd__s_ladder", produced={"ncd_raw": 10}),
+        _step("m_ncd__s_cap", consumed={"ncd_raw": 10}, produced={"ncd_factor": 10}),
+    )
+    other = _trace(
+        _step("m_ncd__s_ladder", produced={"ncd_raw": 12}),
+        _step("m_ncd__s_cap", consumed={"ncd_raw": 12}, produced={"ncd_factor": 12}),
+    )
+    assert _own(base, other, old, new) == {"m_ncd__s_ladder": True, "m_ncd__s_cap": True}
 
 
 def test_elapsed_time_never_makes_a_step_differ() -> None:
