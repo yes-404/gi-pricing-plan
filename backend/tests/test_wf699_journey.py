@@ -220,7 +220,7 @@ async def _world(database: Any, blob_store: Any, workspace_id: Any) -> dict[str,
     from backend.tests.test_fremtpl2_algorithm import _BANDED, _DOMAINS
 
     from app.config import Settings
-    from app.db.models import DatasetVersionRow, ModelRow
+    from app.db.models import DatasetVersionRow, DiagnosticsRow, ModelRow
     from model_schema import ModelStatus, new_uuid7
 
     seed = _seed_module()
@@ -257,19 +257,26 @@ async def _world(database: Any, blob_store: Any, workspace_id: Any) -> dict[str,
     portfolio_id = new_uuid7()
     family = f"fremtpl2-gbm-{uuid4().hex[:6]}"
     async with database.unit_of_work() as session:
-        session.add(
-            ModelRow(
-                workspace_id=workspace_id,
-                model_family_slug=family,
-                version=1,
-                status=ModelStatus.FITTED.value,
-                dataset_version_id=portfolio_id,
-                spec=_glm_spec(family, portfolio_id),
-                spec_hash=f"v3:sha256:{uuid4().hex}{uuid4().hex}",
-                fit_result=_fit_result(),
-                diagnostics_id=uuid4(),
-            )
+        model = ModelRow(
+            workspace_id=workspace_id,
+            model_family_slug=family,
+            version=1,
+            status=ModelStatus.DRAFT.value,
+            dataset_version_id=portfolio_id,
+            spec=_glm_spec(family, portfolio_id),
+            spec_hash=f"v3:sha256:{uuid4().hex}{uuid4().hex}",
         )
+        session.add(model)
+        await session.flush()
+        # A REAL diagnostics row, in `record_fit`'s order (the row, then the pointer and the status
+        # in one UPDATE, the only shape `models_fit_immutable` admits). It is an empty payload: the
+        # gate checks that evidence exists, and this fixture does not fit a model.
+        diagnostics = DiagnosticsRow(workspace_id=workspace_id, model_id=model.id, payload={})
+        session.add(diagnostics)
+        await session.flush()
+        model.fit_result = _fit_result()
+        model.diagnostics_id = diagnostics.id
+        model.status = ModelStatus.FITTED.value
         # `modelling.reserve`'s creation event, which this direct insert stands in for: its actor
         # is the version's author, and without it approval fails closed as
         # APPROVAL_AUTHOR_UNRESOLVED (the seed's fitted GBM has it from the fit).
@@ -333,7 +340,14 @@ def test_wf699_journey_runs_end_to_end(api_client, database, blob_store, workspa
     """PL-1544 Acceptance 2, 3 and 4 and the delta's Acceptance 2: every step of `WF-699` A to E
     and the deploy step over HTTP, each deliberate failure asserted by its code, the D4 property
     failing between two adjacent grid values and then passing, and the version deployed
-    `dev -> uat -> prod` and scored from `prod`'s live deployment."""
+    `dev -> uat -> prod` and scored from `prod`'s live deployment.
+
+    **This covers the post-approval plumbing only.** The stand-in for the unapproved GBM is a
+    GLM-typed Model with a real (empty) diagnostics row: it satisfies `02` R3 by its type, so the
+    transparency build is never run here. The GBM transparency/submit gate for a real xgboost
+    model is covered by the Acceptance 5 rehearsal (`scripts/demo.py --journey wf-699`, full
+    seed) and not by CI. `test_a_non_glm_stand_in_without_a_transparency_artifact_is_refused` is
+    the guard on the gate itself."""
     import asyncio
     from uuid import UUID
 
@@ -482,3 +496,56 @@ def test_the_step_order_names_every_wf699_step_once() -> None:
         if phase == "D":
             in_phase = [s for s in in_phase if s in {"D1", "D2", "D3", "D4", "D5"}]
         assert in_phase == sorted(in_phase), phase
+
+
+@pytest.mark.req("FR-211")
+async def test_a_non_glm_stand_in_without_a_transparency_artifact_is_refused(
+    database, workspace_id  # type: ignore[no-untyped-def]
+) -> None:
+    """A GUARD, not a red-first: it passes on `main` too. It pins the refusal the journey's C5 step
+    now satisfies by building the artifact. A non-GLM Model with diagnostics but no transparency
+    artifact is refused `422 EVIDENCE_INCOMPLETE` at submission (`modelling._require_evidence`),
+    so the journey's old C5 (submit with no build) could not have passed for a real GBM."""
+    from uuid import uuid4
+
+    from backend.tests.test_api_rate_tables import _glm_spec
+
+    from app.db.models import DiagnosticsRow, ModelRow
+    from app.errors import PlatformError
+    from app.platform import modelling as model_service
+    from model_schema import ModelStatus, new_uuid7
+
+    people = await _seed_module().grant_demo_principals(database, workspace_id)
+    family = f"fremtpl2-gbm-{uuid4().hex[:6]}"
+    portfolio_id = new_uuid7()
+    async with database.unit_of_work() as session:
+        model = ModelRow(
+            workspace_id=workspace_id,
+            model_family_slug=family,
+            version=1,
+            status=ModelStatus.DRAFT.value,
+            dataset_version_id=portfolio_id,
+            spec={**_glm_spec(family, portfolio_id), "model_type": "xgboost"},
+            spec_hash=f"v3:sha256:{uuid4().hex}{uuid4().hex}",
+        )
+        session.add(model)
+        await session.flush()
+        diagnostics = DiagnosticsRow(workspace_id=workspace_id, model_id=model.id, payload={})
+        session.add(diagnostics)
+        await session.flush()
+        model.fit_result = {}
+        model.diagnostics_id = diagnostics.id
+        model.status = ModelStatus.FITTED.value
+        model_id = model.id
+
+    async with database.unit_of_work() as session:
+        with pytest.raises(PlatformError) as refused:
+            await model_service.submit_for_review(
+                session,
+                workspace_id=workspace_id,
+                actor=people["actuary"],
+                model_id=model_id,
+                change_summary="a non-GLM model submitted with no transparency artifact",
+            )
+    assert refused.value.code == "EVIDENCE_INCOMPLETE"
+    assert "transparency artifact names it" in (refused.value.detail or "")

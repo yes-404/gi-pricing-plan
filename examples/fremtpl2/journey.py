@@ -750,6 +750,28 @@ class _Journey:
         )
         if fetched.status_code != 200:
             raise JourneyStepFailed("C5", "MODEL_READ_FAILED", fetched.status_code)
+        # WF-698 D10 comes before E6: a non-GLM model cannot be submitted without its
+        # transparency artifact (`02` R3, FR-211; `modelling._require_evidence`). The build is the
+        # platform's own Job at its default sample, waited for by status; a GLM needs none and
+        # the route refuses it.
+        if fetched.json()["spec"]["model_type"] != "glm":
+            built = call(
+                self.client,
+                "C5",
+                "POST",
+                f"/models/{self.gbm['id']}/transparency",
+                expect=202,
+                headers=self.who("analyst"),
+                json={},
+            )
+            started = time.monotonic()
+            self.job_ok("C5", "analyst", built)
+            self.log(f"  C5   transparency artifact built in {time.monotonic() - started:.0f} s")
+            fetched = self.client.get(
+                f"/models/{slug}", params={"version": number}, headers=self.who("actuary")
+            )
+            if fetched.status_code != 200:
+                raise JourneyStepFailed("C5", "MODEL_READ_FAILED", fetched.status_code)
         call(
             self.client,
             "C5",
