@@ -39,7 +39,7 @@ stands, so a null reaches LightGBM as NaN and a negative as a negative. The reds
 declares as its weight?* Partly, and not where it matters:
 
 - `01`'s Layer 3 table, `VR-ACT-8` `claim-count-non-negative` (`fail`; `packages/model-schema/src/model_schema/validation.py:372-375`,
-  check kind `range`) refuses a negative `claim_count`, when the rule is in the Dataset's rule set.
+  check kind `range`), whose check text reads verbatim "`claim_count >= 0, integer`" (`01`: "`claim_count ≥ 0`, integer"), refuses a negative `claim_count`, when the rule is in the Dataset's rule set.
   The check (`packages/pricing-core/src/pricing_core/data/validate.py:671-703`) selects
   `offending = frame.filter(pl.col(column).is_not_null() & predicate)`: **a null is never an
   offender.** A null `claim_count` passes `VR-ACT-8`.
