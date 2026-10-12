@@ -20,7 +20,7 @@ relates: [PL-1677, PL-1267, SL-1678, FD-1679, SL-1503, RL-1498, RL-1538, SL-1543
 
 **GO:** the lead's from-lead entry "2026-10-12 06:05:28 BST — GO SL-1678 (WK-673, FD-1679 loud guard) → executor-sl1678 (sonnet)" (`channel/from-lead-2026-10-09.md`), citing the maintainer's (by delegation) entries "2026-10-12 05:57:57 BST" (ACK: DP-K rate_tables only, DP-G1 409, DP-G2 inside `_pins_by_slug`) and "2026-10-12 05:58:56 BST" (FD-1679 mints in the same PR) in `to-lead.md`.
 **MERGE-ACK:** not yet given.
-**Audit:** pending (the auditor's verdict is not written yet; this record's Audit section is added after it).
+**Audit:** written 2026-10-12 by `auditor-sl1678` (the section below); verdicts are proposed, the lead's to give.
 
 ## Tasks
 
@@ -91,3 +91,35 @@ Both failing stages are the expected working-id reds (the same class as the 13 o
 Merge head: `origin/main` `50bbdd96` (carrying #1294's `PL-1677`, `SL-1678`, `FD-1679`) merged into the slice branch at `7757a2f8`. Gate: at `d01cf107bf01f76fdb19527e7527a1da269e3c93`, accepted by the lead as check-31-only after reading all 13 failure bodies (from-lead "2026-10-12 07:38:09 BST"). The 13 failing tests, by file: `test_audit_docs_finding_citations.py` (1), `test_audit_docs_ids.py` (2), `test_audit_docs_process_core_digest.py` (2), `test_audit_docs_w37_11_ceiling.py` (1), `test_doc_index.py` (1), `test_register_lint.py` (3), `test_register_owed.py` (1), `test_repository_invariants.py` (2). Small re-checks at `7757a2f8` via `run-small.sh`: change-summary route file 12 passed, `ruff check .` 0, `mypy` 0, `generate-contracts.py --check` 0. Closing acts here: `SL-1678` closed, this ledger closed, `FD-1679`'s guard limb discharged (DP-P1 keeps it open), `PL-1677` stays `active` (DP-P1 open).
 
 **Gated head versus merge head:** the gate table names `d01cf107`, the gated head. The slice's own code (`rating_versions.py`, the route test file, the `03` spec row) is byte-identical at the merge head (`git diff --quiet d01cf107 HEAD` over the two code files exits 0); the only `backend/` differences since are the files `origin/main` brought in with SL-1669 (`api/rate_tables.py`, `test_api_rate_tables.py`, `test_contracts.py`). CI on the PR head covers the merge (the lead, from-lead "2026-10-12 07:38:09 BST").
+
+## Audit
+
+Auditor `auditor-sl1678`, 2026-10-12, range `origin/main...origin/sl-1678-wk673-fd1679-guard` at PR #1296's head `56a780fc949d2a564087b861535c44197d22c92d` (the brief named `1ea26bc8`, an ancestor; `56a780fc` adds only this ledger's last paragraph). Authorities: the maintainer's (by delegation) entries "2026-10-12 05:43:54 BST", "05:44:45 BST", "05:57:57 BST", "05:58:56 BST" (`to-lead.md`); the lead's from-lead entries "2026-10-12 06:05:28 BST", "06:13:21 BST", "07:38:09 BST". I did not re-run the route test file or the gate (charter: no full suite); test evidence is read from the code and the raw logs in `scratch/sl1678/logs/`.
+
+**Acceptance (`PL-1677` Acceptance Standard), proposed verdicts**
+
+| # | Item | Evidence | Proposed |
+|---|---|---|---|
+| 1 | Reds 1–3 pass; each failed on the base by its cause and again on the planted reversal | Tests `test_a_candidate_pinning_two_versions_of_one_table_is_refused[two_then_one|one_then_two]` and `test_a_baseline_pinning_two_versions_of_one_table_is_refused` each go through `_assert_refused` (409, `code == "VALIDATION_FAILED"`, slug and `FD-1679` in `detail`). This ledger: base `3 failed, 1 passed` with `assert 200 == 409` per red; guard disabled `3 failed, 9 passed`; green `12 passed` | MET |
+| 2 | Create stays permissive | `_create_over_http` asserts 201 for the duplicate-slug candidate (Red 1, Red 2, Red 4). `git diff -U0 origin/main...HEAD -- backend/src` has three hunks (`:1337` docstring, `:1405-1414` `_pins_by_slug`); none in `create_rating_version` | MET |
+| 3 | A first version is answered | Red 4 asserts 200, `baseline is None`, `rate_tables == []` | MET |
+| 4 | Existing tests unchanged, diff adds lines only | One changed line: the import now `add_approved, mark_approved`. No test body changes. Lead-accepted deviation (from-lead "2026-10-12 06:13:21 BST") | MET with the accepted deviation |
+| 5 | No contract drift | `git diff --stat origin/main...HEAD -- docs/contracts frontend` prints nothing; `contracts.rc` 0 in the gate logs | MET |
+| 6 | Spec says it; `audit-docs.py` exits 0 with the LG minted | `03` §5.1 change-summary-draft row carries the dated clause (added 2026-10-12, SL-1678, FR-242), matching the behaviour (409 `VALIDATION_FAILED`, either side, create unchanged, RL-1538). `audit-docs.py` at `56a780fc` (gate-2, flocked): rc 1, exactly one failure, `check 31: gap in the full allocation between 1679 and 1681` (1680 is LG-1680 on #1295) | clause MET; exit 0 NOT YET: closes when #1295 merges and this branch re-merges `main` |
+| 7 | Gate green on the merge tree | Gate ran at `d01cf107` on base `f7ca32ec`, not the merge tree: `ruff`, `mypy`, import-linter, req-coverage, contracts, frontend ×5 rc 0; `pytest` rc 1 (`13 failed, 5734 passed, 6 skipped`); `audit-docs` rc 1. Logs: `audit_docs.log` lists only check 31 gaps `1673→1677` and `1679→9899`; `pytest.log` shows the same two lines as the cause in the audit-on-tree tests (13 FAILED lines in 8 files, matching the count above). The slice's code is byte-identical at the merge head (this ledger's closing acts) | PARTIAL: accepted by the lead as check-31-only; the merge tree is covered by CI, which is not yet complete |
+
+**Reds by cause.** Red 1 (candidate `[X@two, X@one]`, edit silently dropped), Red 2 (candidate `[X@one, X@two]`), Red 3 (baseline side) each assert 409 `VALIDATION_FAILED` naming the slug and `FD-1679`. Red 2's FALSE entry is quoted verbatim above (`version 1 -> 2` for a candidate that still pins both). Red 4 is labelled a guard in the code comment and in this ledger. `grep -n 9895` over the code and the test file: no hit (code cites the minted id only; the maintainer's (by delegation) entry "2026-10-12 05:58:56 BST").
+
+**Write set.** `git diff --stat origin/main...HEAD`: `rating_versions.py`, the route test file, `03-rating-engine.md`, `docs/roadmap.md`, `PL-1677` (status only), `FD-1679` (dated line), this ledger, `docs/INDEX.md`. `models.py` and `docs/contracts` untouched, as planned. Nothing outside PL-1677's write set except the closing-act files it names.
+
+**Findings (all for the lead's verdict)**
+
+1. LOW, evidence gap: `PL-1677` Task 0 requires premises a–i re-read at the slice base and each recorded with its locator. This ledger records premise c only and says the rest are "to be re-read and recorded here before Task 2"; they never are. The code diff shows premises c and d unchanged in effect; a, b, e–i are unrecorded. Verdict options: delivered but untested (record the re-read in this ledger) or accept.
+2. LOW, stale text: the SL-1678 roadmap row still reads "Work-plan delta `PL-1677` (`draft`)" mid-row; `PL-1677` is `active`.
+3. LOW, completeness: the `## PRs` section does not name the PR number (#1296).
+4. INFO, gate scope: Acceptance 7 and 6 close only after #1295 merges, this branch re-merges `main`, and CI on the new head is green. At the audit CI on `56a780fc`: `history-policy` completed success; `python` and `docs` in progress; the runs on `1ea26bc8` were cancelled (superseded). CI is not green yet.
+5. INFO, behaviour: the 409 `detail` names the slug and the two versions but not which side (candidate or baseline) carries the duplicate. Within PL-1677's text; no action proposed.
+
+**Closing acts.** `SL-1678` `closed` with a dated line (roadmap) and this ledger `closed`: present; the roadmap line's "Audit: pending" is filled by the commit that adds this section. `FD-1679` dated line: guard limb discharged, DP-P1 keeps it open, owner WK-673: present and accurate. `PL-1677` `active`: correct while DP-P1 is open. `MERGE-ACK` is the lead's and the maintainer's.
+
+**Proposed verdict (the lead decides):** the guard delivers every behavioural acceptance item (1–5, 6's clause); items 6 (exit 0) and 7 (merge-tree gate) are open on #1295 and CI, not on the code. No finding blocks the merge on the code. Findings 1–3 are fixable in the re-merge commit.
