@@ -22,7 +22,7 @@ Raised as a D13 owed addition: the lead's eta entry "2026-10-12 00:16:48 BST" (a
 
 ## Finding
 
-**Severity LOW (proposed by the executor; the lead rules).** No product behaviour is wrong; the exposure is that `scripts/` includes the demo entrance and the generators, which run against real stacks, and a type error there is found by running, not by the gate. `CLAUDE.md` §3 states `mypy --strict`; the claim is false for these trees.
+**Severity LOW (proposed by the executor; ruled LOW, owner WK-1178, by the lead, "2026-10-12 02:57:36 BST").** The fix is `scripts/demo.py` into `files` now, the rest by a per-tree baseline or a declared exclusion. No product behaviour is wrong; the exposure is that `scripts/` includes the demo entrance and the generators, which run against real stacks, and a type error there is found by running, not by the gate. `CLAUDE.md` §3 states `mypy --strict`; the claim is false for these trees.
 
 ## Disposition
 
