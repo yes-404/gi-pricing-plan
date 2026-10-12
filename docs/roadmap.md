@@ -1360,7 +1360,7 @@ relates: [PL-1286, PL-1371]
 id: SL-1549
 family: slice
 title: Slice 7b: compare backend — StepChange.own_change from step-definition equality (RL-1261; FR-262 backend limb)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
@@ -1371,6 +1371,8 @@ relates: [PL-1286, PL-1371]
 ```
 
 `PL-1286` S7b, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. `diff_traces` derives `own_change` from step-definition equality by `step_id`, with `RL-1261`'s five negative tests. **Activation needs:** `SL-1367` merged first (both edit `score_compare`). Lane or team fixed at GO. **Not on the automatic cut ladder** (rung 9 is OFF; to the maintainer if rungs 1–7 are spent). *(Cut 2026-10-08 by the planner under working id 9466, reserved by the lead; minted 2026-10-10 as SL-1549 in the D2 batch mint.)*
+
+(Activated 2026-10-12 on the lead's from-lead entry "2026-10-12 05:34:34 BST" (GO S7b SL-1549; lane C; readiness at `604ea084`: `SL-1367` merged, `RL-1261` active). `PL-1546` stays `active`; ledger working id 9884, reserved by the lead. **R7b.1's namespaced-`step_id` limb is in scope**: `SL-1340` merged (#1263), so the slice also covers `step_id`s namespaced by a sub-graph mount. Backend-only: `frontend/` is `SL-1550`'s.)
 
 #### SL-1550 — Slice 7: Sandbox compare — FR-262's view limb and the own_change rendering rule
 
