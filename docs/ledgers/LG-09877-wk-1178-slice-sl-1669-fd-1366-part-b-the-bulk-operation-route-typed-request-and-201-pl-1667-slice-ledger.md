@@ -64,7 +64,25 @@ The two predicates, verbatim, now print 14 and 1 hits. The one new hit against t
 
 ### Write-set addition (audit-docs scope registration)
 
-The new generated `docs/contracts/schemas/generated/bulk-operation-request.schema.json` cannot carry a header, so `audit-docs.py` checks 30 and 35 failed naming it (run at the branch head before the fix, under `flock -w 1800 /tmp/slots/gate-2`). Registered as every earlier generated schema was (LG-1405, `seed-from-model-request` precedent): the literal path joins `_CONTRACT_ARTIFACT_PATHS` in `scripts/audit-docs.py`, and `tests/test_audit_docs_ids.py` `non_markdown` goes 83 to **84** (83 read from the committed assertion at `249670fe`, +1 here). Neither file is in PL-1667's write set; neither is touched by `origin/sl-1548-wk675-s6-sandbox` (`git diff --name-only origin/main...` over `audit-docs`, `test_audit_docs_ids`, `contracts`, `rating.py`, `rate_tables.py`, `test_contracts` prints nothing). If another slice merges first with the same bump, the count is re-measured on the merged tree. **Accepted** by the lead as a precedent-based widening (`LG-1405`, the `seed-from-model-request` registration), in the lead's message to this seat after its gate-readiness report (a from-lead entry to follow); the lead flags it to the maintainer at the ACK.
+The new generated `docs/contracts/schemas/generated/bulk-operation-request.schema.json` cannot carry a header, so `audit-docs.py` checks 30 and 35 failed naming it (run at the branch head before the fix, under `flock -w 1800 /tmp/slots/gate-2`). Registered as every earlier generated schema was (LG-1405, `seed-from-model-request` precedent): the literal path joins `_CONTRACT_ARTIFACT_PATHS` in `scripts/audit-docs.py`, and `tests/test_audit_docs_ids.py` `non_markdown` goes 83 to **84** (83 read from the committed assertion at `249670fe`, +1 here). Neither file is in PL-1667's write set; neither is touched by `origin/sl-1548-wk675-s6-sandbox` (`git diff --name-only origin/main...` over `audit-docs`, `test_audit_docs_ids`, `contracts`, `rating.py`, `rate_tables.py`, `test_contracts` prints nothing). If another slice merges first with the same bump, the count is re-measured on the merged tree. **Accepted** by the lead as a precedent-based widening (`LG-1405`, the `seed-from-model-request` registration), in the lead's from-lead entry "2026-10-12 05:03:49 BST"; the lead flags it to the maintainer at the ACK.
+
+### Gate — head `15439b9d29a71fd4b8e09567e1b99935a55fe1c5`
+
+Full two-half gate, 2026-10-12 05:04:46 to 05:55:21 BST, under `flock /tmp/slots/gate-1` with `handover/slot-preflight.sh` sourced, on this slice's own database; granted by the lead for `b3efad52`, and the lead's message to this seat confirmed the grant covers `15439b9d` (three docs-only commits on top; code unchanged). Evidence, durable: `~/gi-pricing-plan.local/scratch/sl1669/` (`sl1669-gate.out` and `logs/`; local, not in the repository).
+
+| stage | rc |
+|---|---|
+| ruff | 0 |
+| mypy | 0 |
+| import_linter | 0 |
+| pytest | 1 |
+| audit_docs | 1 |
+| req_coverage | 0 |
+| contracts `--check` | 0 |
+| fe_install, fe_generate, fe_lint, fe_types, fe_test, fe_build | 0 |
+
+- **audit_docs:** one failure, check 31, `gap in the full allocation between 1672 and 9877`: this ledger's unminted working id. Expected until the mint.
+- **pytest:** 13 failed, 5744 passed, 6 skipped. All 13 are that same gap: twelve run `scripts/audit-docs.py` on the real tree and assert exit 0 (the log carries the check-31 line in each), and `test_doc_index.py::test_an_index_skipping_a_reserved_block_breaks_contiguity` reports `[(1672, 9877)]`. No route, model-schema, contracts or frontend test failed.
 
 ## PRs
 
