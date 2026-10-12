@@ -8,9 +8,10 @@ The journey is a cheap-to-fake thing: a client that returns `ok` for every step 
 So each test below asserts a *code* the API returned, not only that a call succeeded, and the
 skip lines are asserted by their exact text (PL-1544 Acceptance 2).
 
-Marker form: `scripts/req-coverage.py` reads only `@pytest.mark.req("<FR or NFR id>")`, and a
-workflow id is not one, so (as `test_wf01_journey.py` does for `WF-698`) the requirement ids the
-journey exercises are the markers and `WF-699` is named here and in the test names.
+Marker form: `scripts/req-coverage.py` reads only the decorator form of the `req` marker with an
+FR or NFR id, and a workflow id is not one, so (as `test_wf01_journey.py` does for `WF-698`)
+the requirement ids the journey exercises are the markers and `WF-699` is named here and in
+the test names.
 """
 
 from __future__ import annotations
