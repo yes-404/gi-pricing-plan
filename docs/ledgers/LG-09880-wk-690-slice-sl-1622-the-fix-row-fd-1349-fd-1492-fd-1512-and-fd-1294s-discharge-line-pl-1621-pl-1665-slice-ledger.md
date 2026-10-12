@@ -37,7 +37,21 @@ Branch `sl-1622-wk690-fix-row`, worktree `.claude/worktrees/sl-1622`, cut from `
 
 ### Gate
 
-Not yet run.
+Full two-half gate, granted by the lead for head `75271962aa95d6daa656371fde3a18f8257a6c68` (the lead's message "FULL GATE GRANTED", 2026-10-12 05:42 BST). Run under `flock -w 14400 /tmp/slots/gate-1` with `slot-preflight.sh`, own database `gipricing_sl-1622_e23bc949`; ran 05:55:21 to 06:47:04 BST (rc 1). The tree was clean at the head; this ledger text was written after the gate, in the next commit (a docs-only change).
+
+| stage | exit |
+|---|---|
+| ruff | 0 |
+| mypy | 0 |
+| import_linter | 0 |
+| pytest | 1 (13 failed, 5738 passed, 6 skipped) |
+| audit_docs | 1 |
+| req_coverage | 0 |
+| contracts | 0 |
+| fe_install, fe_generate, fe_lint, fe_types, fe_test, fe_build | 0 |
+
+**Every red, by cause: one cause, the unminted ledger id.** `audit_docs` prints `check 31: gap in the full allocation between 1673 and 9880`, the expected red for working id 9880 until the mint. The 13 pytest failures are tests that run the audit or `doc-id.py check` on the real tree and so see that same gap: `test_audit_docs_finding_citations` (1), `test_audit_docs_ids` (2: `doc-id.py check: [noncontiguous] docs/INDEX.md has a gap between 1673 and 9880`), `test_audit_docs_process_core_digest` (2), `test_audit_docs_w37_11_ceiling` (1), `test_doc_index` (1: `the live allocation is not contiguous: [(1673, 9880)]`), `test_register_lint` (3), `test_register_owed` (1), `test_repository_invariants` (2). Each reads `assert 1 == 0` on the audit's exit code. No failure is in code this slice touched. The mint turn re-runs the minted-head gate (the SL-1377 order).
+
 
 ### Audit
 
@@ -49,6 +63,7 @@ Not yet run.
 - **T1 (F.1′, FD-1349) — red on BOGUS, then green.** Scratch edit in the worktree: `"analytic_vs_numeric_gradient", "analytic_vs_numeric_hessian"`, `"symbolic_vs_numeric_gradient", "symbolic_vs_numeric_hessian"` and `"finiteness"` replaced by `"BOGUS"` in `docs/contracts/schemas/objective-certificate.schema.json` (`git diff --stat`: 3 lines changed). Command: `run-small.sh uv run --directory <wt> pytest backend/tests/test_contracts.py -q -k certificate_check_name_enum_is_the_code_vocabulary`. Result (rc 1): `AssertionError: authored enum vs code vocabulary differ on: ['BOGUS', 'analytic_vs_numeric_gradient', 'analytic_vs_numeric_hessian', 'finiteness', 'symbolic_vs_numeric_gradient', 'symbolic_vs_numeric_hessian']` at `backend/tests/test_contracts.py:3009`; `1 failed, 172 deselected`. Restored with `git checkout -- <file>`; `git diff --stat` on the file printed nothing; the same command: `1 passed, 172 deselected`. FD-1349's register line is the auditor's write at the close (F.1′, F.4).
 - **T2 (F.2, FD-1492) — red first, then fix.** Tests added to `backend/tests/test_custom_metrics_api.py`: `test_a_certificate_id_naming_no_certificate_row_is_refused_at_submit` and `test_another_metrics_certificate_is_no_evidence_for_this_one`. At the base: `pytest -q backend/tests/test_custom_metrics_api.py -k certificate` gave `2 failed, 1 passed`, each `assert 200 == 409` (the submit was accepted: `metrics.py:794` tests only `is not None`). Fix in `backend/src/app/platform/metrics.py` `submit`: after `_require_evidence`, the pointed row must exist, in this workspace, for this metric, else 409 `VALIDATION_FAILED`, the same check `objectives.submit_for_review` makes. After: `test_custom_metrics_api.py`, `test_custom_metrics.py` and `test_metrics.py`: `27 passed`.
 - **T3 (F.3, FD-1512) — red first, then fix.** Tests added to `backend/tests/test_custom_objectives.py`: `test_pseudo_huber_is_not_failed_on_the_default_grid` (delta 1, 63, 100, 1000, 100000, over `objectives.default_sampling`) and `test_pseudo_huber_gradient_and_hessian_are_unchanged` (1e-12 against the closed forms, delta 1, 100, 1e5). At the base: `pytest -q backend/tests/test_custom_objectives.py -k pseudo_huber`: `4 failed, 2 passed`; the four are delta 63, 100, 1000, 100000, each `[('analytic_vs_numeric_gradient', 'failed')]`; delta 1 and the derivative test pass. Fix in `packages/pricing-core/src/pricing_core/modelling/objectives.py` `_pseudo_huber_loss`: `r**2 / (s + 1.0)`, the same function as `delta**2 * (s - 1.0)` without the cancellation (the register `:327` event's form). Gradient, hessian and Gauss-Newton are untouched. After: `backend/tests/test_custom_objectives.py` + `packages/pricing-core/tests/test_objectives.py`: `136 passed`; with `test_objective_submission.py` and `test_custom_metrics_api.py`: `72 passed`.
+- **Write-set deviation (F.3).** `PL-1621` and `PL-1665` name `model_schema/objectives.py`; the fix is in `packages/pricing-core/src/pricing_core/modelling/objectives.py:372` (`_pseudo_huber_loss`). The loss function is evaluated there. `packages/model-schema/src/model_schema/objectives.py:369` holds only the template's parameter declaration (`delta`), which does not change; the declared loss is the same function, re-evaluated (the plan's own Governance cell). The owning layer is fixed, not the declaration. Identity: with `r = y - mu` and `s = sqrt(1 + (r/delta)**2)`, `delta**2 * (s - 1) = delta**2 * (s**2 - 1) / (s + 1) = r**2 / (s + 1)`, because `delta**2 * (s**2 - 1) = delta**2 * (r/delta)**2 = r**2`.
 - Small checks at this tree: `ruff check .` all passed; `mypy` `Success: no issues found in 239 source files`. The full two-half gate is not run: it waits for the lead's "gate slot granted" for the head (S-13).
 
 ## PRs
