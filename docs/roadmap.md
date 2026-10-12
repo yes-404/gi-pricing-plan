@@ -2159,6 +2159,8 @@ relates: [PL-1371, FD-1209, FD-1374, RL-1263, RL-1343]
 
 Option A's fourth build slice (the maintainer's entry "2026-10-05 16:43:31 BST — THE MAINTAINER'S DECISION (asked live): G2 takes OPTION A, WF-699's literal Peril Structure path is BUILT IN P2; and the FD 9605 approval, now on the record", item 1). The freMTPL2 seed fits a severity GLM (`02` FR-111), and builds, reconciles (FR-190) and approves through the workflow the AD Peril Structure (FR-188, FR-191). Exit-demo slice (a)'s algorithm gains `WF-699` B4's `model_call` on the structure (`03` FR-222), combined with the seeded tables as the double-count ruling decides. Slice (b)'s journey pins the structure at C1 (FR-237) and no longer prints B4 or C1′ as `SKIPPED`. When it merges, G2's `WF-699` literal path is complete. It is its own slice, not an edit to PL-1525 or PL-1544, so those two keep no plan dependency on the A chain. Leaf plan PL-1542, `draft`: the double count (DP-A4-1), where the structure is made (DP-A4-2) and its large-loss treatment and severity factors (DP-A4-3) are open. **Activation needs:** DP-A4-1 ruled by the maintainer (by delegation) (item 4: "ruled BEFORE A-4's plan activates"); A-1 (SL-1462), A-2 (SL-1463) and A-3 (SL-1466) merged, all working ids; exit-demo slices (a) (SL-1526) and (b) (SL-1527) merged, also working ids; DP-A4-2 and DP-A4-3 ruled; the lead's go. *(Cut 2026-10-05 by the planner on the lead's order (prep wave, section AM), under working id 9594, reserved by the lead.)*
 
+*Dated 2026-10-12 by the planner, on the maintainer's (by delegation) entry "2026-10-12 05:39:20 BST", (i): a new activation need for this slice's severity steps — **SL-1675 (PL-1674) merged first**, which excludes weight-0 rows from the fit and every diagnostic so the severity GLM fits the full book. Until then this slice runs only its non-severity Task 0 steps, and G2 slips by SL-1675. This row's status and other fields are unchanged.*
+
 #### SL-1536 — WK-1178 fix slice — FD-1374: a rating step reads only the names it declares (FR-246 enforced)
 
 ```yaml
@@ -2324,6 +2326,24 @@ relates: [FD-1366, FD-1335, PL-1364, SL-1367, SL-1547]
 `FD-1366` Part B for `POST /api/v1/rate-tables/{slug}@{version}/bulk-operation` only, on to-lead "2026-10-12 02:58:33 BST — DP-0: (b), stated as SUPERSEDING my 2026-10-11 10:55:02 item 2 (DP-A (a)); with a fallback trigger" (condition 1: "the bulk-operation request + 201 only, (c) refused"). The body becomes a `BulkOperationRequest` discriminated on `kind`, whose four arms carry the existing `*Parameters` models, and the four `*Operation` records are rebuilt on them with their field order and stored bytes pinned. The 201 becomes `RateTableVersion`. The route leaves `UNTYPED_REQUEST_PENDING` and `UNTYPED_2XX_PENDING_PART_B` (`backend/tests/test_contracts.py`), and `docs/contracts/` is regenerated. The two sub-graph routes stay with WK-1178, and `FD-1366` stays active. WK-675 S5 (`SL-1547`) waits for this slice to merge (`PL-1668`). Plan: `PL-1667`. **Activation needs:** DP-2 MET as spec compliance (`04-optimisation.md:278`: `percentage`, `floor` and `cap` become `DecimalStr`; `base_level` is a key filter, corrected at `:278`; the lead, from-lead "2026-10-12 03:05:42 BST"); the plan minted or GO'd on its working ids; the file-set re-check and `RL-1445` item 2's record if it builds beside another WK-1178 slice; the lead's GO on the first free seat. *(Cut 2026-10-12 by the planner under working id 9868, reserved by the lead, eta "2026-10-12 02:54:24 BST".)*
 
 *(Cut 2026-10-12 by the planner under working id 9868, reserved by the lead; minted 2026-10-12 as SL-1669 in the D13 batch mint.)*
+
+#### SL-1675 — WK-1178 slice — rows whose declared weight is 0 are excluded from the fit and from every diagnostic (FR-111)
+
+```yaml
+id: SL-1675
+family: slice
+title: WK-1178 slice — rows whose declared weight is 0 are excluded from the fit and from every diagnostic (FR-111)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-12
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 604ea084c96efe93f521fb9ba17738e05241e61a
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1542, SL-1543, RL-1263]
+```
+
+On the maintainer's (by delegation) entry "2026-10-12 05:39:20 BST — SL-1543 severity block: (i) a small PRECEDING WK-1178 slice ACCEPTED; …", (i): a row whose declared weight column holds exactly 0 is excluded from the fit and from every diagnostic (FR-171, FR-183), before the family's response-domain check, so FR-111's severity `weight = claim_count` fits the full book on the frequency model's `dataset_version`, split and `holdout_part` (FR-190 untouched, no placeholder response). Each partition's diagnostics report the count excluded (`PartitionDiagnostics.rows_excluded_zero_weight`). A negative or null weight is still refused. Spec first: one dated FR-111 clause. The GLM, GBM and EBM arms and the backtest are all covered, because they share the weight and `_partition`. The A/E definition is not changed (FD 9889 and OQ 9891, filed in D14). Work-plan delta PL-1674 (DP-Z1 ruled (a) by the maintainer (by delegation), "2026-10-12 05:47:19 BST": the view in a later WK-675 frontend row). **Activation needs:** PL-1674 set `active` in this slice's activation commit; the shared-path census on `docs/contracts/` against `SL-1669` and `SL-1549` (the later PR regenerates); the lead's executor GO. It **precedes `SL-1543`'s severity steps**, and G2 slips by it (05:39:20). *(Cut 2026-10-12 by the planner under working id 9887, reserved by the lead; minted 2026-10-12 as SL-1675, early, on the maintainer's (by delegation) GO "2026-10-12 05:47:19 BST".)*
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
