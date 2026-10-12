@@ -446,7 +446,7 @@ Written by the auditor (`auditor-sl1517`), 2026-10-12, over `origin/main...a53ba
 
 **Proposed verdict: CLEAN, with Acceptance 12 (the bound) to be read against the merge commit's date and Acceptance 11's CI evidence to be read at the merge head. Proposed FD: none.**
 
-Lead verdict: (pending)
+Lead verdict (team-lead, from-lead 2026-10-12 01:14:43 BST): CLEAN; no FD; item 11 discharged by green CI at the merge head, item 12 by the merge date.
 
 ### Build log
 
