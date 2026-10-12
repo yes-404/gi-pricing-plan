@@ -11,12 +11,14 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from model_schema.jobs import JobKind
 from model_schema.rating import (
     BULK_OPERATION_ADAPTER,
     BulkOperation,
+    FloorAndCapOperation,
+    FloorAndCapParameters,
     ImportPreview,
     ImportVerdict,
     RateTable,
@@ -24,7 +26,12 @@ from model_schema.rating import (
     RateTableKey,
     RateTableValue,
     RateTableVersion,
+    RebaseToLevelOperation,
     SeededFrom,
+    UpliftByFilterOperation,
+    UpliftByFilterParameters,
+    UpliftTableOperation,
+    UpliftTableParameters,
 )
 from model_schema.refs import ArtifactRef, BlobRef
 
@@ -814,3 +821,96 @@ class TestManualEditContract:
                     }
                 ),
             )
+
+
+_REF = "rate_table:motor-driver-age-relativity@6"
+_NEW = "rate_table:motor-driver-age-relativity@7"
+
+
+@pytest.mark.req("FR-233")
+@pytest.mark.parametrize(
+    "record",
+    [UpliftTableOperation, UpliftByFilterOperation, FloorAndCapOperation, RebaseToLevelOperation],
+)
+def test_a_bulk_operation_record_keeps_its_field_order(record: type[BaseModel]) -> None:
+    """The stored JSON (platform/rate_tables.py:1439-1442) keeps this order (PL-1667 DP-1)."""
+    assert list(record.model_fields) == ["applied_to", "result", "kind", "parameters"]
+
+
+@pytest.mark.req("FR-233")
+def test_the_bulk_operation_request_refuses_a_server_set_field() -> None:
+    """`applied_to` and `result` are the server's; the request body refuses them (PL-1667 Red 2)."""
+    from model_schema.rating import BULK_OPERATION_REQUEST_ADAPTER
+
+    with pytest.raises(ValidationError) as caught:
+        BULK_OPERATION_REQUEST_ADAPTER.validate_python(
+            {"kind": "uplift_table", "parameters": {"percentage": "0.10"}, "applied_to": _REF}
+        )
+    assert caught.value.errors()[0]["type"] == "extra_forbidden"
+
+
+@pytest.mark.req("FR-233")
+def test_the_bulk_operation_request_parses_each_kind_to_the_matching_parameters() -> None:
+    from model_schema.rating import BULK_OPERATION_REQUEST_ADAPTER
+
+    request = BULK_OPERATION_REQUEST_ADAPTER.validate_python(
+        {"kind": "floor_and_cap", "parameters": {"floor": "0.5", "cap": "2"}}
+    )
+    assert isinstance(request.parameters, FloorAndCapParameters)
+    with pytest.raises(ValidationError):
+        BULK_OPERATION_REQUEST_ADAPTER.validate_python({"kind": "nope", "parameters": {}})
+
+
+@pytest.mark.req("FR-10")
+@pytest.mark.parametrize(
+    ("model", "field", "other"),
+    [
+        (UpliftTableParameters, "percentage", {}),
+        (UpliftByFilterParameters, "percentage", {"filter": {"age": ["a"]}}),
+        (FloorAndCapParameters, "floor", {"cap": "2"}),
+        (FloorAndCapParameters, "cap", {"floor": "0.5"}),
+    ],
+)
+def test_a_bulk_operation_decimal_parameter_refuses_a_float(
+    model: type[BaseModel], field: str, other: dict[str, object]
+) -> None:
+    """04 §4.4: percentage, floor and cap are decimal strings, never floats (R2; PL-1667 Red 3)."""
+    with pytest.raises(ValidationError):
+        model.model_validate({field: 0.1, **other})
+
+
+@pytest.mark.req("FR-233")
+def test_a_bulk_operation_record_dumps_the_bytes_it_dumped_before_the_request_models() -> None:
+    """Stored bytes do not move (PL-1667 Acceptance 5): literals from origin/main 249670fe."""
+    result = '"result":{"changed_cells":3,"new_version":"' + _NEW + '"}'
+    head = '{"applied_to":"' + _REF + '",' + result + ","
+    cases = {
+        "uplift_table": (
+            {"percentage": "0.10"},
+            head + '"kind":"uplift_table","parameters":{"percentage":"0.10"}}',
+        ),
+        "uplift_by_filter": (
+            {"percentage": "0.0500", "filter": {"age": ["a", "b"]}},
+            head
+            + '"kind":"uplift_by_filter","parameters":'
+            + '{"percentage":"0.0500","filter":{"age":["a","b"]}}}',
+        ),
+        "floor_and_cap": (
+            {"floor": "0.5", "cap": "2"},
+            head + '"kind":"floor_and_cap","parameters":{"floor":"0.5","cap":"2"}}',
+        ),
+        "rebase_to_level": (
+            {"base_level": {"age": ["25-29"]}},
+            head + '"kind":"rebase_to_level","parameters":{"base_level":{"age":["25-29"]}}}',
+        ),
+    }
+    for kind, (parameters, expected) in cases.items():
+        record = BULK_OPERATION_ADAPTER.validate_python(
+            {
+                "kind": kind,
+                "parameters": parameters,
+                "applied_to": _REF,
+                "result": {"changed_cells": 3, "new_version": _NEW},
+            }
+        )
+        assert record.model_dump_json() == expected

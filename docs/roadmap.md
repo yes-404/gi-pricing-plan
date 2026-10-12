@@ -701,6 +701,8 @@ From “Workstreams” (line 383): Dislocation with attribution | FR-263, FR-264
 
 *(Dated line, 2026-10-12, on the lead's entry "2026-10-12 02:45:03 BST" (the eta, a local file) and the maintainer's (by delegation) entries "2026-10-12 02:34:38 BST" and "2026-10-12 02:35:40 BST" in `to-lead.md`: `PL 9807` (a working id; branch `pl-9807-wk673-subgraph-attribution-2026-10-12`) is a Work-plan delta relating `PL-1267`, for the fix of `FD-1660` (attribution ignores sub-graph mounts): a loud guard first, then the fix, in the slice `SL 9850` (working id). The planner's charter limits it to its `SL-` rows, so this one entry on the Work's row is the lead's. Re-point the working ids at the mint.)*
 
+*(Dated line, 2026-10-12, written by the planner by delegation of the lead, from-lead "2026-10-12 05:58:38 BST" (`channel/from-lead-2026-10-09.md`), on the maintainer's (by delegation) entries "2026-10-12 05:57:57 BST" and "2026-10-12 05:58:56 BST" in `to-lead.md`: `PL-1677` is a Work-plan delta relating `PL-1267`, for the loud guard on FD-1679 (FR-242's drafted change summary pairs rate-table pins by slug alone, so two pinned versions of one slug are silently dropped or mis-paired). It adds the slice `SL-1678`, which merges before `SL-1543`. Its DP-P1, the real pairing fix, stays open for this Work's plan.)*
+
 #### SL-1385 — Slice 1: spec — FR-266's amendment, the hard gate as requirements, the contract and the types
 
 ```yaml
@@ -933,6 +935,26 @@ relates: [PL-1267, SL-1389, SL-1391, CR-838]
 (Activated 2026-10-10 as WK-673 E1, on the dispatch GO "2026-10-10 21:41:05 BST — RL-1445 CAP: AMENDED by dated line (counting unit = gate or measurement, with guard rails); GO SL-1541 (WS-1 (a)); OP-1503-1 (a); SL-1575 noted", item 3: authored now, its `03` §5.1 texts T1 and T2 applied after WK-675 S3 and S4 have merged, on main, re-anchored by content; ledger `LG-1642` (then working id 9978), `PL-1502` set `active` in the same commit.)
 
 (Closed 2026-10-11 as a Slice, closing acts in the slice PR's mint commit, on the lead's merge turn; ledger `LG-1642`, minted 2026-10-11 from working id 9978. `PL-1502` stays `active`.)
+
+#### SL-1678 — WK-673 fix slice — FD-1679: FR-242's drafted change summary refuses a version pinning two versions of one rate-table slug
+
+```yaml
+id: SL-1678
+family: slice
+title: WK-673 fix slice — FD-1679, FR-242's drafted change summary refuses a version pinning two versions of one rate-table slug
+status: closed                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-12
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 604ea084c96efe93f521fb9ba17738e05241e61a
+phase: P2
+work: WK-673
+corrected_by: []
+relates: [PL-1677, FD-1679, PL-1267, SL-1503, RL-1498, RL-1538, SL-1543]
+```
+
+The loud guard for FD-1679 (HIGH, owner WK-673). `_pins_by_slug` (`backend/src/app/platform/rating_versions.py:1404-1408` at `604ea084`) keys a version's rate-table pins by slug, so the last ref wins: with two versions of one slug pinned (valid input under `RL-1538`), FR-242's drafted change summary silently omits one table's change or reports a wrong from/to pair. The slice makes `GET /api/v1/rating-versions/{id}/change-summary-draft` refuse with **409 `VALIDATION_FAILED`**, naming FD-1679 and the slug, when the candidate's or its baseline's rate-table pins carry one slug twice; `POST /api/v1/rating-versions` stays permissive (`RL-1538`). Write set: `_pins_by_slug` and `draft_change_summary_for`'s docstring in `rating_versions.py`, `backend/tests/test_rating_version_change_summary_route.py`, and one dated clause on `03` §5.1's change-summary-draft row. Reds first on `main` through the HTTP create route (both pin orders, and the baseline side); a first version with no baseline is still answered. Requirements: `03` FR-242 (drafting limb), `03` FR-237 (read only). Ordered by the maintainer's (by delegation) entry "2026-10-12 05:43:54 BST — [FD-1679]: HIGH (not MEDIUM), owner WK-673; a LOUD GUARD merges BEFORE SL-1543" and cut as a standalone row by the maintainer's (by delegation) entry "2026-10-12 05:44:45 BST — [FD-1679] is LIVE: (a) a standalone tiny WK-673 row NOW; create stays permissive (RL-1538); PLUS a sweep for the same defect class" (`to-lead.md`). **Merges before `SL-1543`.** The real pairing fix is `PL-1677`'s DP-P1, open for WK-673's plan, not this slice. Work-plan delta `PL-1677` (`active`). **Activation needs:** the delta ACKed and minted (the maintainer's (by delegation) entry "2026-10-12 05:57:57 BST", and this row's mint PR); no in-flight writer on the write set, or the dispatch record names it; a build slot and the single gate (`RL-1445` item 1). *(Row cut 2026-10-12 by the planner; working ids 9897 and 9896 reserved by the lead, eta "2026-10-12 05:45:46 BST".)* *(Minted 2026-10-12 as SL-1678 from working id 9897, with PL-1677 from working id 9896 and FD-1679 from working id 9895, in the early-mint PR, on the maintainer's (by delegation) entries "2026-10-12 05:57:57 BST" and "2026-10-12 05:58:56 BST" (`to-lead.md`); a quoted entry header shows the minted id in brackets.)* *(Activated 2026-10-12 (`active`), on the lead's from-lead entry "2026-10-12 06:05:28 BST — GO SL-1678" (`channel/from-lead-2026-10-09.md`), which cites the maintainer's (by delegation) entries "2026-10-12 05:57:57 BST" and "2026-10-12 05:58:56 BST"; executor `executor-sl1678`; ledger `LG-1681` (minted from working id 9899); branch `sl-1678-wk673-fd1679-guard`. `PL-1677` is `active` in the same commit.)*
+
+(Closed 2026-10-12 as a Slice, closing acts at the mint turn in the slice PR, on the lead's merge; ledger `LG-1681`, minted from working id 9899; plan `PL-1677` stays `active` for DP-P1. Gate at `d01cf107`: check 31 only, accepted by the lead (from-lead "2026-10-12 07:38:09 BST"). Audit: written 2026-10-12 by `auditor-sl1678`, in `LG-1681`'s Audit section; the lead's verdict is not yet given.)
 
 ### WK-674 — Deployment: environments, atomic switchover, rollback, shadow — **and the tenancy mechanics ADR-710 requires**
 
@@ -1360,7 +1382,7 @@ relates: [PL-1286, PL-1371]
 id: SL-1549
 family: slice
 title: Slice 7b: compare backend — StepChange.own_change from step-definition equality (RL-1261; FR-262 backend limb)
-status: active                 # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
@@ -1372,7 +1394,9 @@ relates: [PL-1286, PL-1371]
 
 `PL-1286` S7b, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. `diff_traces` derives `own_change` from step-definition equality by `step_id`, with `RL-1261`'s five negative tests. **Activation needs:** `SL-1367` merged first (both edit `score_compare`). Lane or team fixed at GO. **Not on the automatic cut ladder** (rung 9 is OFF; to the maintainer if rungs 1–7 are spent). *(Cut 2026-10-08 by the planner under working id 9466, reserved by the lead; minted 2026-10-10 as SL-1549 in the D2 batch mint.)*
 
-(Activated 2026-10-12 on the lead's from-lead entry "2026-10-12 05:34:34 BST" (GO S7b SL-1549; lane C; readiness at `604ea084`: `SL-1367` merged, `RL-1261` active). `PL-1546` stays `active`; ledger working id 9884, reserved by the lead. **R7b.1's namespaced-`step_id` limb is in scope**: `SL-1340` merged (#1263), so the slice also covers `step_id`s namespaced by a sub-graph mount. Backend-only: `frontend/` is `SL-1550`'s.)
+(Activated 2026-10-12 on the lead's from-lead entry "2026-10-12 05:34:34 BST" (GO S7b SL-1549; lane C; readiness at `604ea084`: `SL-1367` merged, `RL-1261` active). `PL-1546` stays `active`; ledger `LG-1699`, minted 2026-10-12 from working id 9884. **R7b.1's namespaced-`step_id` limb is in scope**: `SL-1340` merged (#1263), so the slice also covers `step_id`s namespaced by a sub-graph mount. Backend-only: `frontend/` is `SL-1550`'s.)
+
+(Closed 2026-10-12 as a Slice, closing acts in the slice PR's mint commit; ledger `LG-1699`, minted 2026-10-12 from working id 9884. Audit: pending. `PL-1546` stays `active`.)
 
 #### SL-1550 — Slice 7: Sandbox compare — FR-262's view limb and the own_change rendering rule
 
@@ -1609,17 +1633,20 @@ Minted as `SL-1275` at #943's merge turn, 2026-09-30, with `python3 scripts/doc-
 id: SL-1622
 family: slice
 title: WK-690 fix row — FD-1349, FD-1492 and FD-1512 fixed before close, and FD-1294's discharge line
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-11
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: d699a561d6a93f33b74beb9c07023f8e655bb8c7
 phase: P2
 work: WK-690
 corrected_by: []
-relates: [PL-1621, PL-1268, FD-1294, FD-1349, FD-1492, FD-1512]
+relates: [PL-1621, PL-1665, PL-1268, FD-1294, FD-1349, FD-1492, FD-1512]
 ```
 
 The fix row of DP-W-1 (a), adopted by the lead (from-lead "2026-10-11 11:20:43 BST") and confirmed by the maintainer (to-lead "2026-10-11 11:21:02 BST — DP-F (WK-1250 S3 plan form): (a); DP-W-1 (a): confirmed; dm-wk690 seated: OK", item 2). Three changes land in one PR. The contract guard compares the objective-certificate check-name enum with the code's vocabulary (FD-1349). A custom metric whose `certificate_id` names no `metric_certificate` row is refused at submit (FD-1492). The `pseudo_huber` template certifies on the default grid (FD-1512). Each is red first. FD-1294 is already discharged by `SL-1271` (#981, `bd67fb51`), so only its dated register line is owed, at the close. The row is `PL-1621`'s order 0, and its acceptance is that plan's F.1 to F.6. **Off the cut ladder**: no rung cuts it. **Depends on:** nothing open. **Lane:** at GO.
+
+(Activated 2026-10-12 on the lead's GO, the `from-lead` entry "2026-10-12 05:31:21 BST", on the maintainer's (by delegation) entries "2026-10-11 11:21:02 BST" item 2 (DP-W-1 (a)) and "2026-10-12 02:53:52 BST" item 3 (`PL-1665` approved). `PL-1665` set `active` in this activation commit, its status line only; it replaces F.1 with F.1′. The slice's one ledger is `LG-1680` (opened under working id 9880, minted at the merge turn).)
+(Closed 2026-10-12 on a clean slice audit (audited in LG-1680's Audit section (auditor-sl1622); verdicts in the lead's from-lead entry 2026-10-12 06:56:37 BST) and the lead's merge, per `CLAUDE.md` §13 (a Slice, not a Work: no maintainer acceptance). Ledger `LG-1680`. FD-1349 is proved red on BOGUS input against the guard already on main; FD-1492 and FD-1512 are fixed red-first. The register rows and FD-1294's dated line are the auditor's writes at the close. The F.3 fix sits in `pricing-core`, not `model_schema` (the write-set deviation, in the ledger). `PL-1621` and `PL-1665` stay `active`: they close with their other slices.)
 
 ### WK-693 — Machine-readable process core — RFC-895, adopted remainder (Slices E/F/G)
 
@@ -2161,6 +2188,8 @@ relates: [PL-1371, FD-1209, FD-1374, RL-1263, RL-1343]
 
 Option A's fourth build slice (the maintainer's entry "2026-10-05 16:43:31 BST — THE MAINTAINER'S DECISION (asked live): G2 takes OPTION A, WF-699's literal Peril Structure path is BUILT IN P2; and the FD 9605 approval, now on the record", item 1). The freMTPL2 seed fits a severity GLM (`02` FR-111), and builds, reconciles (FR-190) and approves through the workflow the AD Peril Structure (FR-188, FR-191). Exit-demo slice (a)'s algorithm gains `WF-699` B4's `model_call` on the structure (`03` FR-222), combined with the seeded tables as the double-count ruling decides. Slice (b)'s journey pins the structure at C1 (FR-237) and no longer prints B4 or C1′ as `SKIPPED`. When it merges, G2's `WF-699` literal path is complete. It is its own slice, not an edit to PL-1525 or PL-1544, so those two keep no plan dependency on the A chain. Leaf plan PL-1542, `draft`: the double count (DP-A4-1), where the structure is made (DP-A4-2) and its large-loss treatment and severity factors (DP-A4-3) are open. **Activation needs:** DP-A4-1 ruled by the maintainer (by delegation) (item 4: "ruled BEFORE A-4's plan activates"); A-1 (SL-1462), A-2 (SL-1463) and A-3 (SL-1466) merged, all working ids; exit-demo slices (a) (SL-1526) and (b) (SL-1527) merged, also working ids; DP-A4-2 and DP-A4-3 ruled; the lead's go. *(Cut 2026-10-05 by the planner on the lead's order (prep wave, section AM), under working id 9594, reserved by the lead.)*
 
+*Dated 2026-10-12 by the planner, on the maintainer's (by delegation) entry "2026-10-12 05:39:20 BST", (i): a new activation need for this slice's severity steps — **SL-1675 (PL-1674) merged first**, which excludes weight-0 rows from the fit and every diagnostic so the severity GLM fits the full book. Until then this slice runs only its non-severity Task 0 steps, and G2 slips by SL-1675. This row's status and other fields are unchanged.*
+
 #### SL-1536 — WK-1178 fix slice — FD-1374: a rating step reads only the names it declares (FR-246 enforced)
 
 ```yaml
@@ -2313,7 +2342,7 @@ The fix slice of to-lead "2026-10-11 11:25:16 BST — DEFAULT-LIVE /score: CONFI
 id: SL-1669
 family: slice
 title: WK-1178 fix slice — FD-1366 Part B for the bulk-operation route: a discriminated request body and a typed 201
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-12
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: fc4401dcad789692f79f6c3ffc058c1c3921b7b9
@@ -2326,6 +2355,28 @@ relates: [FD-1366, FD-1335, PL-1364, SL-1367, SL-1547]
 `FD-1366` Part B for `POST /api/v1/rate-tables/{slug}@{version}/bulk-operation` only, on to-lead "2026-10-12 02:58:33 BST — DP-0: (b), stated as SUPERSEDING my 2026-10-11 10:55:02 item 2 (DP-A (a)); with a fallback trigger" (condition 1: "the bulk-operation request + 201 only, (c) refused"). The body becomes a `BulkOperationRequest` discriminated on `kind`, whose four arms carry the existing `*Parameters` models, and the four `*Operation` records are rebuilt on them with their field order and stored bytes pinned. The 201 becomes `RateTableVersion`. The route leaves `UNTYPED_REQUEST_PENDING` and `UNTYPED_2XX_PENDING_PART_B` (`backend/tests/test_contracts.py`), and `docs/contracts/` is regenerated. The two sub-graph routes stay with WK-1178, and `FD-1366` stays active. WK-675 S5 (`SL-1547`) waits for this slice to merge (`PL-1668`). Plan: `PL-1667`. **Activation needs:** DP-2 MET as spec compliance (`04-optimisation.md:278`: `percentage`, `floor` and `cap` become `DecimalStr`; `base_level` is a key filter, corrected at `:278`; the lead, from-lead "2026-10-12 03:05:42 BST"); the plan minted or GO'd on its working ids; the file-set re-check and `RL-1445` item 2's record if it builds beside another WK-1178 slice; the lead's GO on the first free seat. *(Cut 2026-10-12 by the planner under working id 9868, reserved by the lead, eta "2026-10-12 02:54:24 BST".)*
 
 *(Cut 2026-10-12 by the planner under working id 9868, reserved by the lead; minted 2026-10-12 as SL-1669 in the D13 batch mint.)*
+
+(Activated 2026-10-12 as WK-1178's FD-1366 Part B slice for the bulk-operation route, on the lead's from-lead entry "2026-10-12 04:53:47 BST" (GO SL-1669; the readiness report accepted; the build seat executor-sl1669). `PL-1667` set `active` in this slice branch's activation commit; ledger LG-1676 (minted from working id 9877).)
+
+(Closed 2026-10-12 as a Slice, closing acts in the slice PR's last commit, on the lead's merge; ledger LG-1676, plan PL-1667. Gate at `15439b9d`: check 31 only, the unminted ledger id; audited in LG-1676's Audit section (auditor-sl1669); Acceptance 1–8 adopted by the lead, Acceptance 9 discharged by CI on the merge head, in the lead's from-lead entry "2026-10-12 06:05:14 BST".)
+
+#### SL-1675 — WK-1178 slice — rows whose declared weight is 0 are excluded from the fit and from every diagnostic (FR-111)
+
+```yaml
+id: SL-1675
+family: slice
+title: WK-1178 slice — rows whose declared weight is 0 are excluded from the fit and from every diagnostic (FR-111)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-12
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 604ea084c96efe93f521fb9ba17738e05241e61a
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1542, SL-1543, RL-1263]
+```
+
+On the maintainer's (by delegation) entry "2026-10-12 05:39:20 BST — SL-1543 severity block: (i) a small PRECEDING WK-1178 slice ACCEPTED; …", (i): a row whose declared weight column holds exactly 0 is excluded from the fit and from every diagnostic (FR-171, FR-183), before the family's response-domain check, so FR-111's severity `weight = claim_count` fits the full book on the frequency model's `dataset_version`, split and `holdout_part` (FR-190 untouched, no placeholder response). Each partition's diagnostics report the count excluded (`PartitionDiagnostics.rows_excluded_zero_weight`). A negative or null weight is still refused. Spec first: one dated FR-111 clause. The GLM, GBM and EBM arms and the backtest are all covered, because they share the weight and `_partition`. The A/E definition is not changed (FD 9889 and OQ 9891, filed in D14). Work-plan delta PL-1674 (DP-Z1 ruled (a) by the maintainer (by delegation), "2026-10-12 05:47:19 BST": the view in a later WK-675 frontend row). **Activation needs:** PL-1674 set `active` in this slice's activation commit; the shared-path census on `docs/contracts/` against `SL-1669` and `SL-1549` (the later PR regenerates); the lead's executor GO. It **precedes `SL-1543`'s severity steps**, and G2 slips by it (05:39:20). *(Cut 2026-10-12 by the planner under working id 9887, reserved by the lead; minted 2026-10-12 as SL-1675, early, on the maintainer's (by delegation) GO "2026-10-12 05:47:19 BST".)*
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 

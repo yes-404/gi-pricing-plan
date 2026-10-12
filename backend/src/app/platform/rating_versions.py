@@ -1334,7 +1334,8 @@ async def draft_change_summary_for(
 
     A version without an `algorithm_ref` or `pins` has nothing to diff: 409
     `RATING_VERSION_UNPINNED`. Rate tables are paired by slug across the two versions'
-    pins. A pair with a `storage: parquet` side is returned `pending`, not computed, so no
+    pins; two versions of one slug on either side: 409 `VALIDATION_FAILED` (FD-1679). A pair
+    with a `storage: parquet` side is returned `pending`, not computed, so no
     Job is created (FR-232); the rest are the unweighted diff of `rate_tables.diff`.
     """
     async with database.session() as session:
@@ -1402,10 +1403,27 @@ async def draft_change_summary_for(
 
 
 def _pins_by_slug(pins: dict[str, Any] | None) -> dict[str, ArtifactRef]:
-    """A version's pinned rate tables by slug; a version without pins pins none."""
+    """A version's pinned rate tables by slug; a version without pins pins none.
+
+    Refuses a version pinning two versions of one slug (FD-1679): pairing by slug would keep
+    one of them and silently drop or mis-pair the other's change. `RL-1538` makes such pins
+    valid input, so create accepts them; the pairing rule is WK-673's DP-P1.
+    """
     if pins is None:
         return {}
-    return {ref.slug: ref for ref in Pins.model_validate(pins).rate_tables}
+    by_slug: dict[str, ArtifactRef] = {}
+    for ref in Pins.model_validate(pins).rate_tables:
+        if ref.slug in by_slug:
+            raise PlatformError(
+                "VALIDATION_FAILED",
+                "Two versions of one rate table are pinned",
+                409,
+                f"The pins carry rate table {ref.slug!r} at versions "
+                f"{by_slug[ref.slug].version} and {ref.version}; the change summary pairs "
+                "rate tables by slug and cannot pair these (FD-1679).",
+            )
+        by_slug[ref.slug] = ref
+    return by_slug
 
 
 def _compared(quote: GoldenQuote) -> dict[str, Any]:

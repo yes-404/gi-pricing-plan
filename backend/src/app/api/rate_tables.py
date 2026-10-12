@@ -40,6 +40,7 @@ from app.platform.blobs import BlobStore
 from model_schema import JobKind, Permission
 from model_schema.jobs import Job
 from model_schema.rating import (
+    BulkOperationRequest,
     RateTable,
     RateTableCell,
     RateTableDiff,
@@ -181,35 +182,27 @@ async def edit_rate_table(
     "/rate-tables/{slug}@{version}/bulk-operation",
     summary="Apply a bulk operation to a rate table version",
     status_code=status.HTTP_201_CREATED,
+    response_model=RateTableVersion,
     responses=problems(401, 403, 404, 409, 422),
 )
 async def bulk_operate_rate_table(
     slug: str,
     version: int,
-    body: dict[str, Any],
+    body: BulkOperationRequest,
     caller: RatingWriteDep,
     database: DatabaseDep,
     settings: SettingsDep,
     blob_store: BlobStoreDep,
-) -> dict[str, Any]:
+) -> RateTableVersion:
     """**201** with the new version (FR-233): the operation and its parameters
     recorded as `created_by_operation` (04 §4.4), the seed anchor inherited and
     proven equal to the baseline's at save time (03 §4.2, FR-234).
 
-    The body is `{"kind", "parameters"}` — `applied_to` and `result` are server-side:
-    `applied_to` names the addressed version, and `result` is computed by the
-    operation. Parameters are decimal strings, never floats (R2).
+    The body is a `BulkOperationRequest` (`{"kind", "parameters"}`) — `applied_to`
+    and `result` are server-side: `applied_to` names the addressed version, and
+    `result` is computed by the operation. Parameters are decimal strings, never floats (R2).
     """
     assert caller.principal.id is not None
-    kind = body.get("kind")
-    parameters = body.get("parameters")
-    if not isinstance(kind, str) or not isinstance(parameters, dict):
-        raise PlatformError(
-            "VALIDATION_FAILED",
-            "Request validation failed",
-            422,
-            detail="body must carry `kind` and `parameters` (04 §4.4)",
-        )
     created = await service.bulk_operation(
         database,
         caller.workspace_id,
@@ -218,10 +211,10 @@ async def bulk_operate_rate_table(
         blob_store,
         slug=slug,
         version=version,
-        kind=kind,
-        parameters=parameters,
+        kind=body.kind,
+        parameters=body.parameters.model_dump(mode="json"),
     )
-    return created.model_dump(mode="json")
+    return created
 
 
 @router.get(

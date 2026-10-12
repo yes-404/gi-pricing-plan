@@ -101,28 +101,16 @@
       "description": "`floor_and_cap`'s parameters (04 §4.4): the clamp bounds, decimal strings.",
       "properties": {
         "cap": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-              "type": "string"
-            }
-          ],
-          "title": "Cap"
+          "description": "Exact decimal as a string; never a binary float (FR-10).",
+          "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+          "title": "Cap",
+          "type": "string"
         },
         "floor": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-              "type": "string"
-            }
-          ],
-          "title": "Floor"
+          "description": "Exact decimal as a string; never a binary float (FR-10).",
+          "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+          "title": "Floor",
+          "type": "string"
         }
       },
       "required": [
@@ -435,16 +423,10 @@
           "type": "object"
         },
         "percentage": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-              "type": "string"
-            }
-          ],
-          "title": "Percentage"
+          "description": "Exact decimal as a string; never a binary float (FR-10).",
+          "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+          "title": "Percentage",
+          "type": "string"
         }
       },
       "required": [
@@ -486,16 +468,10 @@
       "description": "`uplift_table`'s parameters (04 §4.4): the percentage, applied to every cell.",
       "properties": {
         "percentage": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-              "type": "string"
-            }
-          ],
-          "title": "Percentage"
+          "description": "Exact decimal as a string; never a binary float (FR-10).",
+          "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+          "title": "Percentage",
+          "type": "string"
         }
       },
       "required": [
