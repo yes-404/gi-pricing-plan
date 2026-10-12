@@ -1068,16 +1068,20 @@ class _Journey:
             raise JourneyStepFailed("B3", "LOADING_NOT_MULTIPLIED_INTO_THE_PREMIUM")
         # B3's other half: a quote dated before the reference row's `effective_from` does not use
         # it. The lookup has no row in force, so the quote is refused, not priced without it.
-        call(
+        # The code is REFERENCE_LOOKUP_MISS or, when the miss surfaces at the expression that
+        # consumes the empty lookup, the documented residual RATE_TABLE_MISS (`score.py`
+        # `_reraise_engine_failure`): both are the refusal this asserts.
+        before = call(
             self.client,
             "B3",
             "POST",
             "/score",
             expect=422,
-            code="REFERENCE_LOOKUP_MISS",
             headers={"X-API-Key": account["key"]},
             json={**context, "effective_date": BEFORE_EFFECTIVE_FROM},
         )
+        if before.get("code") not in ("REFERENCE_LOOKUP_MISS", "RATE_TABLE_MISS"):
+            raise JourneyStepFailed("B3", before.get("code"), 422)
         self.done(
             "S1", f"prod scored {self.result.prod_premium_minor} minor units from the live version"
         )
