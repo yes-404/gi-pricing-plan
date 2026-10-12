@@ -1,8 +1,8 @@
 ---
-id: PL-9896
+id: PL-1677
 family: plan
 kind: map
-title: WK-673 — the FD 9895 loud guard, FR-242's drafted change summary refuses a version pinning two versions of one rate-table slug (SL 9897), and the slug-only-map class sweep: a dated delta to PL-1267
+title: WK-673 — the FD-1679 loud guard, FR-242's drafted change summary refuses a version pinning two versions of one rate-table slug (SL-1678), and the slug-only-map class sweep: a dated delta to PL-1267
 status: draft                   # draft → active → superseded | retired (§1.2a)
 created: 2026-10-12
 owner: planner
@@ -12,15 +12,15 @@ work: WK-673
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [PL-1267, PL-1502, SL-1503, RL-1498, RL-1538, PL-1542, SL-1543, FD-1660]
+relates: [PL-1267, FD-1679, SL-1678, PL-1502, SL-1503, RL-1498, RL-1538, PL-1542, SL-1543, FD-1660]
 ---
 
-# PL 9896 — WK-673, the FD 9895 loud guard: the drafted change summary refuses two versions of one rate-table slug (delta to PL-1267)
+# PL-1677 — WK-673, the FD-1679 loud guard: the drafted change summary refuses two versions of one rate-table slug (delta to PL-1267)
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L5
 > (`document-ids.md` §1.6, PL row: *"one plan per Work, slices as rows, no per-slice `leaf`; a
 > change is one dated Work-plan delta, a new `PL-` that `relates:` the Work's plan"*). It adds
-> **one slice row**, SL 9897 (working id), under `### WK-673` in [`../roadmap.md`](../roadmap.md),
+> **one slice row**, SL-1678 (working id), under `### WK-673` in [`../roadmap.md`](../roadmap.md),
 > to WK-673's Work plan [`PL-1267`](PL-01267-wk-673-dislocation-with-attribution-map-plan.md),
 > whose body is frozen and not edited. It also records one **open** decision point for WK-673's
 > plan (DP-P1, the real pairing fix), which this slice does not decide.
@@ -32,44 +32,52 @@ relates: [PL-1267, PL-1502, SL-1503, RL-1498, RL-1538, PL-1542, SL-1543, FD-1660
 > and `git-hygiene`. Read [`README.md`](README.md)'s unchecked conventions before the first step.
 > The executor is spawned from `.claude/roles/executor.md`.
 
-Filed under **working id 9896**; its slice row is **working id 9897** (`draft`). Both were
+*(Minted 2026-10-12 as PL-1677 from working id 9896, with its slice row SL-1678 from working id
+9897 and its finding FD-1679 from working id 9895, in this plan's early-mint PR, on the
+maintainer's (by delegation) entries "2026-10-12 05:57:57 BST" (the ACK to activate and to
+early-mint as PL-1677 and SL-1678 after SL-1669's ledger PR) and "2026-10-12 05:58:56 BST" (the finding
+mints as FD-1679 in the same PR), in `to-lead.md`. Every
+citation of these ids is re-pointed; inside a verbatim quote the minted id stands in brackets,
+`[FD-1679]`, where the entry wrote the working id.)*
+
+Filed under a working id (the mint note above); its slice row likewise (`draft`). Both were
 reserved by the lead, `~/gi-pricing-plan.local/handover/eta.md` line "2026-10-12 05:45:46 BST"
-(free-check run first: index 0, eta 0, branches 0). Written 2026-10-12 by the planner (seat
-planner-fd9895). **Tree read:** `origin/main` `604ea084c96efe93f521fb9ba17738e05241e61a` (#1291,
-SL-1548). Every `file:line` below was read at that tree. FD 9895 is a working id; its text is
-minted by the lead's D14 batch, and this plan supplies its class-sweep table (§Class sweep).
+(free-check run first: index 0, eta 0, branches 0). Written 2026-10-12 by the planner.
+**Tree read:** `origin/main` `604ea084c96efe93f521fb9ba17738e05241e61a` (#1291,
+SL-1548). Every `file:line` below was read at that tree. FD-1679 is minted in the same PR, and its
+class-sweep table is this plan's (§Class sweep).
 
 ## Context — the entries this delta records
 
 Each entry is quoted from the channel file named, with its author.
 
 1. **The finding and its order constraint** — the maintainer's (by delegation) entry
-   "2026-10-12 05:43:54 BST — FD 9895: HIGH (not MEDIUM), owner WK-673; a LOUD GUARD merges
+   "2026-10-12 05:43:54 BST — [FD-1679]: HIGH (not MEDIUM), owner WK-673; a LOUD GUARD merges
    BEFORE SL-1543. Task 0 results noted" (`channel/to-lead.md`), verbatim in its operative lines:
 
    ```text
    Verified at main: rating_versions.py:1404 `{ref.slug: ref for ref in …rate_tables}` keeps the LAST ref per slug. It feeds FR-242's drafted change summary (:1377-1400, SL-1503's), which an approver reads.
    - With two pinned versions of one slug (RL-1538), the summary silently omits one table's change, or reports a wrong from/to pair.
    ORDER CONSTRAINT: A-4 (SL-1543) is what puts a B1 version into the demo, so a guard MUST merge before SL-1543:
-   - the change summary REFUSES with a named code (VALIDATION_FAILED, message naming FD 9895) when either side pins two versions of one rate-table slug;
+   - the change summary REFUSES with a named code (VALIDATION_FAILED, message naming [FD-1679]) when either side pins two versions of one rate-table slug;
    - red first on main (two versions of one slug → today a silently one-sided summary).
    The real fix (diff keyed by slug with an explicit pairing of versions) is a DP for the WK-673 plan: which old version pairs with which new, when a slug carries two. It is not decided here.
    ```
 
 2. **The vehicle, the permissive create, and the class sweep** — the maintainer's (by
-   delegation) entry "2026-10-12 05:44:45 BST — FD 9895 is LIVE: (a) a standalone tiny WK-673
+   delegation) entry "2026-10-12 05:44:45 BST — [FD-1679] is LIVE: (a) a standalone tiny WK-673
    row NOW; create stays permissive (RL-1538); PLUS a sweep for the same defect class"
    (`channel/to-lead.md`), verbatim in its operative lines:
 
    ```text
    (a) YES. Plan the one-row WK-673 delta, then an executor. Write set: the change-summary path in rating_versions.py + its test. Red first through the HTTP create route + change summary on main. Create stays permissive: RL-1538 allows two versions of one slug on purpose; the defect is the consumer, not the input.
    Predicate, verbatim in the plan: `git grep -nE '\{[a-z_]+\.slug *:|\.slug\]? *=|by_slug' -- backend/src packages frontend/src`, and every hit is read, not just counted.
-   - Each hit that consumes pins is classified: SAFE (cannot see duplicates), GUARDED by this row (added to its write set if small), or LISTED in FD 9895's text with its own owner.
+   - Each hit that consumes pins is classified: SAFE (cannot see duplicates), GUARDED by this row (added to its write set if small), or LISTED in [FD-1679]'s text with its own owner.
    - The FD's scope is the class, not only :1404.
    ```
 
-3. **Reachable on `main` today** — the lead's from-lead entry "2026-10-12 05:44:28 BST — FD
-   9895 REACHABILITY CHECK" (`channel/from-lead-2026-10-09.md`): *"REACHABLE ON MAIN TODAY by
+3. **Reachable on `main` today** — the lead's from-lead entry "2026-10-12 05:44:28 BST — [FD-1679]
+   REACHABILITY CHECK" (`channel/from-lead-2026-10-09.md`): *"REACHABLE ON MAIN TODAY by
    code reading at 604ea084 — packages/model-schema/src/model_schema/rating.py:70-84 Pins = plain
    list[ArtifactRef] per kind, extra=forbid, NO model_validator against duplicate slugs;
    backend/src/app/platform/rating_versions.py:258+ create_rating_version stores
@@ -86,25 +94,28 @@ Each entry is quoted from the channel file named, with its author.
 `GET /api/v1/rating-versions/{id}/change-summary-draft` never drafts a summary that silently
 drops or mis-pairs a rate-table change. When the candidate's pins or its baseline's pins carry
 two versions of one rate-table slug, the route refuses with **409 `VALIDATION_FAILED`**, the
-detail naming FD 9895 (its minted id once D14 mints it) and the slug, until DP-P1's pairing fix
+detail naming FD-1679 and the slug, until DP-P1's pairing fix
 lands. `POST /api/v1/rating-versions` keeps accepting such pins (`RL-1538`).
 
 ## Status
 
 The status is the `status:` field in the header, and nothing else. **No decision point blocks
-SL 9897.** DP-G1 (the status code) and DP-G2 (where the guard sits) are the planner's design
-choices inside a ruled scope, stated so the lead can overrule them. DP-K (which pin kinds the
-refusal covers) is ruled by the lead (§Decision points, and the note under the table). DP-P1 is **open**, for WK-673's plan, and does not block this slice. The plan
-stays `draft` until it is minted or GO'd on its working ids.
+SL-1678.** DP-K is ruled by the lead (§Decision points, and the note under the table). DP-G1
+(409) and DP-G2 (the guard inside `_pins_by_slug`) were the planner's design choices, accepted by
+the maintainer (by delegation), entry "2026-10-12 05:57:57 BST": *"DP-G1 409: accepted"* and
+*"DP-G2 inside _pins_by_slug: accepted. Every consumer of that map is guarded at once."* DP-P1 is
+**open**, for WK-673's plan, and does not block this slice. The plan is minted `draft`; the slice
+PR's first commit sets it `active`, as for `PL-1502`.
 
 ## Activation needs, each with its state at `604ea084`
 
 1. **DP-K answered by the lead.** **MET**: (i), from-lead "2026-10-12 05:48:32 BST".
-2. **This delta is minted or GO'd on its working ids**, as the lead dispatches. **OPEN.**
+2. **This delta is ACKed and minted.** **MET at the mint PR's merge**: the ACK is the
+   maintainer's (by delegation) entry "2026-10-12 05:57:57 BST"; the mint is this plan's PR.
 3. **No in-flight writer on the write set, or the dispatch record names the definitions.**
    Re-checked by the lead at the GO (§Write set lists the paths). **OPEN until the GO.**
 4. **A build slot and the single gate** (`RL-1445` item 1). **OPEN.**
-5. **Order:** SL 9897 merges **before `SL-1543`** (entry 1's ORDER CONSTRAINT). The lead holds
+5. **Order:** SL-1678 merges **before `SL-1543`** (entry 1's ORDER CONSTRAINT). The lead holds
    SL-1543's reseat on it.
 
 ## Scope and requirements, each id individually
@@ -113,7 +124,7 @@ stays `draft` until it is minted or GO'd on its working ids.
   drafting limb, delivered by `SL-1503` under `PL-1502` / `RL-1498`, gains a refusal where it
   cannot pair. FR-242's text (`03-rating-engine.md:142`) carries no dated amendment at `604ea084`.
 - `03` **FR-237** (exact pins): read only; create is not changed.
-- FD 9895 (working id; HIGH, owner WK-673): the loud guard for `:1404`, and the class sweep's
+- FD-1679 (working id; HIGH, owner WK-673): the loud guard for `:1404`, and the class sweep's
   verdict: GUARDED is `:1404` and its two callers only, and nothing is LISTED (§Class sweep).
 
 ## Premises, read at `604ea084`
@@ -147,10 +158,10 @@ Baseline `[X@1, X@2]` against candidate `[X@2]`: `before = {X: X@2}`, no entry. 
 
 **Note on DP-K — a brief that disagreed with its authority.** The lead's brief for this seat
 (`handover/brief-planner-fd9895-2026-10-12.md`, Do item 3) read: *"the change summary REFUSES
-with `VALIDATION_FAILED`, naming FD 9895, when EITHER side's pins carry two versions of one slug
+with `VALIDATION_FAILED`, naming [FD-1679], when EITHER side's pins carry two versions of one slug
 (any kind: models / rate_tables / reference_tables / sub_graphs)"*. Its authority, the
 maintainer's (by delegation) entry 05:43:54 (Context, entry 1), reads: *"the change summary
-REFUSES with a named code (VALIDATION_FAILED, message naming FD 9895) when either side pins two
+REFUSES with a named code (VALIDATION_FAILED, message naming [FD-1679]) when either side pins two
 versions of one rate-table slug"*. The planner raised the conflict to the lead; the lead ruled,
 from-lead "2026-10-12 05:48:32 BST": *"refuse on rate_tables only. You are right, and my brief's
 "any kind" was a lead brief error"*, citing the 05:43:54 text and that *"The consumer reads only
@@ -161,10 +172,10 @@ custom_objectives, are the class sweep's business: classify each as SAFE / GUARD
 
 | Path | What changes | Task |
 |---|---|---|
-| `backend/src/app/platform/rating_versions.py` `_pins_by_slug` (`:1404-1408`) and its two callers' docstring (`:1329-1339`) | the refusal (DP-G2 (a)): a slug seen twice in `rate_tables` raises `PlatformError("VALIDATION_FAILED", …, 409, …)` naming FD 9895 and the slug; the docstring says so | 2 |
+| `backend/src/app/platform/rating_versions.py` `_pins_by_slug` (`:1404-1408`) and its two callers' docstring (`:1329-1339`) | the refusal (DP-G2 (a)): a slug seen twice in `rate_tables` raises `PlatformError("VALIDATION_FAILED", …, 409, …)` naming FD-1679 and the slug; the docstring says so | 2 |
 | `backend/tests/test_rating_version_change_summary_route.py` | Reds 1–4 (Task 2); the existing tests unchanged | 2 |
-| `docs/specs/03-rating-engine.md` §5.1 change-summary-draft row (`:1052`) | a dated clause: **409** `VALIDATION_FAILED` when either side's pins carry two versions of one rate-table slug (FD 9895); create is unchanged | 1 |
-| `docs/roadmap.md` SL 9897 row; `docs/ledgers/LG-<working id>` | status lines and the slice ledger (L1 (a')) | 0, 3 |
+| `docs/specs/03-rating-engine.md` §5.1 change-summary-draft row (`:1052`) | a dated clause: **409** `VALIDATION_FAILED` when either side's pins carry two versions of one rate-table slug (FD-1679); create is unchanged | 1 |
+| `docs/roadmap.md` SL-1678 row; `docs/ledgers/LG-<working id>` | status lines and the slice ledger (L1 (a')) | 0, 3 |
 
 The class sweep adds nothing to the write set: its GUARDED hits are this row's own lines (§Class sweep). `backend/src/app/api/models.py` is not
 in the write set: 409 is already declared on the route (premise g), and
@@ -179,17 +190,17 @@ in the write set: 409 is already declared on the route (premise g), and
 - [ ] Re-read premises a–i at the slice base and record each in the `LG-` with its locator. If
   `:1404` no longer reads as premise c, STOP to the lead.
 - [ ] `gh pr list --state open`, and grep `to-lead.md` for entries since 2026-10-12 05:44:45 BST
-  that rule on `FD 9895`, `pins_by_slug`, `change summary` or DP-K / DP-G1 / DP-G2. Name the SHA
+  that rule on `FD-1679`, `pins_by_slug`, `change summary` or DP-K / DP-G1 / DP-G2. Name the SHA
   and the entries read. Use the ruled answer where one exists.
 - [ ] Commit the `LG-` scaffold and the SL row's `active` line (L1 (a')).
 
 ### Task 1: Spec — `03` §5.1's change-summary-draft row
 
 - [ ] Append to the row at `03-rating-engine.md:1052`, after its last parenthesis, this dated
-  clause (DP-K (i); fill the date; FD 9895 is written with its minted id if D14 has minted it):
+  clause (DP-K (i); fill the date):
 
   ```text
-  **409** `VALIDATION_FAILED` when the version's pins or its baseline's pins carry two versions of one rate-table slug (FD 9895): the summary pairs rate tables by slug and cannot pair them; `POST /api/v1/rating-versions` still accepts such pins (RL-1538). (**added <date>, SL 9897, FR-242**)
+  **409** `VALIDATION_FAILED` when the version's pins or its baseline's pins carry two versions of one rate-table slug (FD-1679): the summary pairs rate tables by slug and cannot pair them; `POST /api/v1/rating-versions` still accepts such pins (RL-1538). (**added <date>, SL-1678, FR-242**)
   ```
 
 - [ ] `python3 scripts/audit-docs.py` in a gate-2 docs check; record the rc in the `LG-`.
@@ -214,8 +225,8 @@ signature and raises `PlatformError` on a repeated slug. No new public name.
     needs the full FR-257 evidence, which is not this slice's subject; say so in a comment).
     Create the candidate the same way with `algorithm_ref` `…minimal@2` and
     `pins=_pins(X@two, X@one)` → **assert 201** (create stays permissive). `GET _url(candidate)`
-    → assert **409**, `problem["code"] == "VALIDATION_FAILED"`, and the slug and `FD 9895` (or
-    its minted id) in `problem["detail"]`.
+    → assert **409**, `problem["code"] == "VALIDATION_FAILED"`, and the slug and `FD-1679` in
+    `problem["detail"]`.
   - **Red 2 — the other order:** as Red 1 with the candidate pinning `_pins(X@one, X@two)`.
     Today: 200 with one entry `X one→two`. Assert the same 409.
   - **Red 3 — the baseline side:** baseline (via `_insert(approved=True)`) pinning
@@ -239,7 +250,7 @@ signature and raises `PlatformError` on a repeated slug. No new public name.
   def _pins_by_slug(pins: dict[str, Any] | None) -> dict[str, ArtifactRef]:
       """A version's pinned rate tables by slug; a version without pins pins none.
 
-      Refuses a version pinning two versions of one slug (FD 9895): pairing by slug would keep
+      Refuses a version pinning two versions of one slug (FD-1679): pairing by slug would keep
       one of them and silently drop or mis-pair the other's change. `RL-1538` makes such pins
       valid input, so create accepts them; the pairing rule is WK-673's DP-P1.
       """
@@ -254,28 +265,28 @@ signature and raises `PlatformError` on a repeated slug. No new public name.
                   409,
                   f"The pins carry rate table {ref.slug!r} at versions "
                   f"{by_slug[ref.slug].version} and {ref.version}; the change summary pairs "
-                  "rate tables by slug and cannot pair these (FD 9895).",
+                  "rate tables by slug and cannot pair these (FD-1679).",
               )
           by_slug[ref.slug] = ref
       return by_slug
   ```
 
-  Use FD 9895's minted id in the message if D14 has minted it. Add one sentence to
+  Add one sentence to
   `draft_change_summary_for`'s docstring (`:1336`): *"Two versions of one rate-table slug on
-  either side: 409 `VALIDATION_FAILED` (FD 9895)."*
+  either side: 409 `VALIDATION_FAILED` (FD-1679)."*
 
 - [ ] **Step 4: Run the file:** `uv run pytest -q backend/tests/test_rating_version_change_summary_route.py`.
   Expected: all pass, the existing tests unchanged.
 - [ ] **Step 5: The broken-input proof.** Revert Step 3's `if` block locally; Reds 1–3 fail
   again; restore. Record both runs in the `LG-`.
-- [ ] **Step 6: Commit** `fix(rating): the drafted change summary refuses two versions of one rate-table slug — SL 9897 (FD 9895)`.
+- [ ] **Step 6: Commit** `fix(rating): the drafted change summary refuses two versions of one rate-table slug — SL-1678 (FD-1679)`.
 
 ### Task 3: The gate and the closing acts
 
 - [ ] The full gate, both halves (`CLAUDE.md` §11), in the single gate slot, on
   `origin/main...<branch>`; the rc table goes in the `LG-`.
-- [ ] Closing acts in the slice PR's last commit (L1 (a')): SL 9897 `closed` line; the `LG-`'s
-  Audit section after the auditor's verdict. FD 9895's register line ("guard landed; DP-P1 open,
+- [ ] Closing acts in the slice PR's last commit (L1 (a')): SL-1678 `closed` line; the `LG-`'s
+  Audit section after the auditor's verdict. FD-1679's register line ("guard landed; DP-P1 open,
   owner WK-673") is the lead's or the minter's, not this slice's.
 
 ## Class sweep (the maintainer's predicate, verbatim)
@@ -321,8 +332,8 @@ form is covered only by the one case read in passing (`compile.py:731`).
 
 | Hit | What it does with pins | Verdict | Why / owner |
 |---|---|---|---|
-| `backend/src/app/platform/rating_versions.py:1404`, `:1408` | `_pins_by_slug`: `{ref.slug: ref for ref in …rate_tables}` | **GUARDED** by SL 9897 | the defect: last ref per slug wins. Task 2 makes it refuse; the pairing fix is DP-P1 (open, owner WK-673) |
-| `rating_versions.py:1377`, `:1378` | `before`/`after` in `draft_change_summary_for` | **GUARDED** by SL 9897 | the two callers of `_pins_by_slug`; refused through it |
+| `backend/src/app/platform/rating_versions.py:1404`, `:1408` | `_pins_by_slug`: `{ref.slug: ref for ref in …rate_tables}` | **GUARDED** by SL-1678 | the defect: last ref per slug wins. Task 2 makes it refuse; the pairing fix is DP-P1 (open, owner WK-673) |
+| `rating_versions.py:1377`, `:1378` | `before`/`after` in `draft_change_summary_for` | **GUARDED** by SL-1678 | the two callers of `_pins_by_slug`; refused through it |
 | `rating_versions.py:616` | `WorkspaceResolver.resolve`, the algorithm branch | SAFE | one SQL lookup per ref on slug **and** version (`:617`); compile stores results under `str(ref)` (`compile.py:1057-1066`) |
 | `rating_versions.py:764` | `WorkspaceResolver.resolve`, the factor branch (factor refs of pinned rate tables' keys) | SAFE | slug and version (`:765`) |
 | `backend/src/app/platform/rate_tables.py:299` | `_load_table` for a `rate_tables` pin via the resolver (`rating_versions.py:702-707`) | SAFE | the table row by slug, then `_load_version(table_row.id, ref.version)` (`rate_tables.py:1159-1161`) |
@@ -334,7 +345,7 @@ form is covered only by the one case read in passing (`compile.py:731`).
 | `packages/pricing-core/src/pricing_core/rating/runtime.py:877` | `columns` keyed by factor slug for one GLM's own factors (`_glm_scorer`) | SAFE | scorers are keyed by `str` ref (`:885-897`); the slug map is inside one model |
 | *(not a hit)* `compile.py:731` | `check_step_refs_pinned`: after the exact `ref in pinned` test fails, `next(p for p in pinned if (p.type, p.slug) == (ref.type, ref.slug))` | SAFE | the refusal is decided by the exact test (`:729`); the slug match only fills the message's *"(pinned at … instead)"*, which names the first of several pinned versions. True, not complete; no verdict or price depends on it |
 
-**LISTED: none.** No pin consumer outside the change summary keys pins by slug alone. FD 9895's
+**LISTED: none.** No pin consumer outside the change summary keys pins by slug alone. FD-1679's
 remaining limb is DP-P1 (the pairing fix), owner WK-673.
 
 ### Not pin consumers — one line each
@@ -444,9 +455,9 @@ Each item is checked by a command a fresh reviewer can run from the repository r
    -- backend/tests/test_rating_version_change_summary_route.py` adds lines only).
 5. **No contract drift:** `uv run python scripts/generate-contracts.py --check` exits 0, and
    `git diff origin/main --stat -- docs/contracts` prints nothing.
-6. **The spec says it:** `grep -n 'FD 9895\|VALIDATION_FAILED' docs/specs/03-rating-engine.md`
-   shows the dated clause on the change-summary-draft row (or the minted FD id in its place);
-   `python3 scripts/audit-docs.py` exits 0 once the working ids are minted.
+6. **The spec says it:** `grep -n 'FD-1679\|VALIDATION_FAILED' docs/specs/03-rating-engine.md`
+   shows the dated clause on the change-summary-draft row; `python3 scripts/audit-docs.py`
+   exits 0 with the slice's `LG-` minted.
 7. **The gate is green on the merge tree:** the `CLAUDE.md` §11 commands, both halves, each exit 0
    against `origin/main...<slice branch>`.
 
@@ -462,8 +473,10 @@ Each item is checked by a command a fresh reviewer can run from the repository r
 ## Hand-off (not this plan's writes)
 
 - **The WK-673 roadmap row** lists this delta as a Work-plan delta; the planner's charter limits
-  its roadmap writes to the `SL-` rows it cuts, so the line is the lead's or the D14 minter's.
-- **FD 9895's text** (D14) carries the class-sweep table above and DP-P1 as its remaining limb.
+  its roadmap writes to the `SL-` rows it cuts. The line was written in the mint PR by
+  delegation of the lead (from-lead "2026-10-12 05:58:38 BST").
+- **FD-1679** (minted in the same PR) carries the class-sweep table above and DP-P1 as its
+  remaining limb.
 - **DP-P1** goes to the decision-maker for WK-673's plan when the lead schedules it; it is not a
   G2 blocker once this guard has merged.
 
@@ -471,8 +484,8 @@ Each item is checked by a command a fresh reviewer can run from the repository r
 
 - **Spec coverage.** FR-242's drafting limb refuses where it cannot pair, in code (Task 2) and in
   `03` §5.1 (Task 1). FR-237's create path is unchanged and tested (Red 1's 201).
-- **Placeholders.** `<date>` and the `LG-` working id are filled at execution; FD 9895 becomes its
-  minted id when D14 mints it. No other placeholder.
+- **Placeholders.** `<date>` and the `LG-` working id are filled at execution. No other
+  placeholder.
 - **Type consistency.** `_pins_by_slug` keeps its signature; `PlatformError(code, title, status,
   detail)` is the form used at `:1346-1351`.
 - **Literals.** Every `file:line` was read at `604ea084`.
