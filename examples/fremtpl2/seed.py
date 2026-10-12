@@ -41,6 +41,22 @@ DATA_DIR = Path(__file__).parent / "data"
 REALM_ISSUER = "http://localhost:8080/realms/gi-pricing"
 REALM_SUBJECT = "84eea68e-a19e-46a0-9f35-a27cbd51c795"
 
+#: The demo's principals and the built-in roles each holds (no role is added here). The WF-699
+#: journey (SL-1527) acts as all seven over HTTP, and no route grants a role or a membership, so
+#: the seed does. The submitter (`actuary`) and the author (`analyst`) also hold `approver`, so
+#: the journey's SUBMITTER_CANNOT_APPROVE and AUTHOR_CANNOT_APPROVE fire past the role gate;
+#: `prod_approver` decides the prod deployment request (approver + deployer); `admin` creates the
+#: service account and holds neither.
+DEMO_PRINCIPALS: Final[dict[str, tuple[str, ...]]] = {
+    "analyst": ("analyst", "approver"),
+    "actuary": ("pricing_actuary", "approver"),
+    "approver": ("approver",),
+    "second_approver": ("approver",),
+    "admin": ("admin",),
+    "deployer": ("deployer",),
+    "prod_approver": ("approver", "deployer"),
+}
+
 #: `IDpol` normalises to `i_dpol`, not `idpol`: the camel-case splitter reads it as
 #: `I` + `Dpol`, the same rule that correctly gives `HTTPServer` → `http_server`. No
 #: mechanical splitter can know that `ID` is the acronym here. The original header is kept
@@ -299,15 +315,77 @@ RULES: list[dict[str, Any]] = [
 ]
 
 
+async def grant_demo_principals(database: Any, workspace_id: UUID) -> dict[str, Any]:
+    """Create the workspace row and every `DEMO_PRINCIPALS` member with its roles. Idempotent:
+    a user is looked up by `(issuer, subject)` first and a role assignment is added only when
+    absent, so a second call (the seed re-run, or the journey test's fixture) changes nothing.
+
+    One definition of the principal set: the seed calls this, and the WF-699 journey test's
+    fixture calls this rather than writing rows (RL-1521 binds the journey's steps, not its
+    setup). The `analyst` keeps the realm login's subject (FR-398); the rest have no realm user.
+    """
+    from sqlalchemy import select
+
+    from app.db.models import RoleAssignmentRow, RoleRow, UserRow
+    from app.platform import rbac, workspaces
+    from model_schema import ActorKind, Principal, ScopeType, new_uuid7
+
+    principals: dict[str, Any] = {}
+    async with database.unit_of_work() as session:
+        # The workspace row first: `workspace_members.workspace_id` is a foreign key.
+        await workspaces.ensure_workspace(
+            session, workspace_id=workspace_id, name="freMTPL2 demo"
+        )
+        await rbac.seed_builtin_roles(session, workspace_id)
+        for name, slugs in DEMO_PRINCIPALS.items():
+            subject = REALM_SUBJECT if name == "analyst" else f"{REALM_SUBJECT}:{name}"
+            user_id = (
+                await session.execute(
+                    select(UserRow.id).where(
+                        UserRow.issuer == REALM_ISSUER, UserRow.subject == subject
+                    )
+                )
+            ).scalar_one_or_none() or new_uuid7()
+            display = f"{name.replace('_', '-')}@example.fr"
+            await workspaces.ensure_member(
+                session, workspace_id=workspace_id, user_id=user_id, issuer=REALM_ISSUER,
+                subject=subject, email=display, display_name=f"Demo {name.replace('_', ' ')}",
+            )
+            for slug in slugs:
+                role = (
+                    await session.execute(
+                        select(RoleRow).where(
+                            RoleRow.workspace_id == workspace_id, RoleRow.slug == slug
+                        )
+                    )
+                ).scalar_one()
+                held = (
+                    await session.execute(
+                        select(RoleAssignmentRow.id).where(
+                            RoleAssignmentRow.workspace_id == workspace_id,
+                            RoleAssignmentRow.principal_id == user_id,
+                            RoleAssignmentRow.role_id == role.id,
+                        )
+                    )
+                ).first()
+                if held is None:
+                    session.add(
+                        RoleAssignmentRow(
+                            workspace_id=workspace_id, principal_kind="user",
+                            principal_id=user_id, role_id=role.id,
+                            scope_type=ScopeType.WORKSPACE.value,
+                        )
+                    )
+            principals[name] = Principal(kind=ActorKind.USER, id=user_id, display=display)
+    return principals
+
+
 async def run(rows: int | None) -> int:
     from sqlalchemy import select
 
     from app.config import load_settings
     from app.db.models import (
         DatasetVersionRow,
-        RoleAssignmentRow,
-        RoleRow,
-        UserRow,
         ValidationReportRow,
     )
     from app.db.session import Database
@@ -315,7 +393,6 @@ async def run(rows: int | None) -> int:
     from app.platform import datasets as dataset_service
     from app.platform import jobs as job_service
     from app.platform import profiles as profile_service
-    from app.platform import rbac, workspaces
     from app.platform import validation as validation_service
     from app.platform import validation_rules as rule_service
     from app.platform.blobs import BlobStore
@@ -323,13 +400,10 @@ async def run(rows: int | None) -> int:
     from app.worker.tasks import execute_job
     from model_schema import (
         BUILTIN_RULES,
-        ActorKind,
         DecisionKind,
         JobKind,
         JobStatus,
-        Principal,
         RuleOutcome,
-        ScopeType,
         Severity,
         ValidationLayer,
         new_uuid7,
@@ -348,77 +422,15 @@ async def run(rows: int | None) -> int:
     await blob_store.ensure_bucket()
 
     workspace_id = new_uuid7()
-    # FD 9717: `(issuer, subject)` is unique in `users`, and `ensure_member` looks a user up
-    # by id alone, so a fresh id on a re-run collides with the realm user the last run left
-    # behind. Reuse that user's id when there is one, so a second seed runs against a
-    # seeded database; mint one only the first time.
-    async with database.unit_of_work() as session:
-        existing_analyst_id = (
-            await session.execute(
-                select(UserRow.id).where(
-                    UserRow.issuer == REALM_ISSUER, UserRow.subject == REALM_SUBJECT
-                )
-            )
-        ).scalar_one_or_none()
-    analyst = Principal(
-        kind=ActorKind.USER, id=existing_analyst_id or new_uuid7(), display="analyst@example.fr"
-    )
-    actuary = Principal(kind=ActorKind.USER, id=new_uuid7(), display="actuary@example.fr")
+    # FD 9717: `(issuer, subject)` is unique in `users`; `grant_demo_principals` looks a user up
+    # by it first, so a re-run reuses the realm user the last run left behind.
+    principals = await grant_demo_principals(database, workspace_id)
+    analyst, actuary = principals["analyst"], principals["actuary"]
+    approver, second_approver = principals["approver"], principals["second_approver"]
     # Principal.id is UUID | None at the type level -- "null only for `system`" (jobs.py) --
-    # but both of these are ActorKind.USER with an id supplied at construction, and
-    # Principal's own validator refuses a non-system principal with no id. Narrow once here
-    # rather than at every call site below that needs a bare UUID.
+    # but these are ActorKind.USER with an id supplied at construction.
     assert analyst.id is not None
     assert actuary.id is not None
-
-    async def grant(principal: Principal, *slugs: str) -> None:
-        async with database.unit_of_work() as session:
-            await rbac.seed_builtin_roles(session, workspace_id)
-            for slug in slugs:
-                role = (
-                    await session.execute(
-                        select(RoleRow).where(
-                            RoleRow.workspace_id == workspace_id, RoleRow.slug == slug
-                        )
-                    )
-                ).scalar_one()
-                session.add(
-                    RoleAssignmentRow(
-                        workspace_id=workspace_id, principal_kind="user",
-                        principal_id=principal.id, role_id=role.id,
-                        scope_type=ScopeType.WORKSPACE.value,
-                    )
-                )
-
-    approver = Principal(kind=ActorKind.USER, id=new_uuid7(), display="approver@example.fr")
-    second_approver = Principal(
-        kind=ActorKind.USER, id=new_uuid7(), display="second-approver@example.fr"
-    )
-
-    await grant(analyst, "analyst")
-    await grant(actuary, "pricing_actuary")
-    await grant(approver, "approver")
-    await grant(second_approver, "approver")
-
-    # A real login through the local provider (FR-398) resolves to `analyst`, so it
-    # inherits the role assignments granted just above rather than needing its own. The
-    # workspace row comes first: `workspace_members.workspace_id` is a foreign key, and
-    # nothing has created that row until now -- `RoleRow.workspace_id` has no foreign key,
-    # which is why the seed has worked without one. The actuary has no realm user; one demo
-    # login is what FR-398 asks for.
-    async with database.unit_of_work() as session:
-        await workspaces.ensure_workspace(
-            session, workspace_id=workspace_id, name="freMTPL2 demo"
-        )
-        await workspaces.ensure_member(
-            session,
-            workspace_id=workspace_id,
-            user_id=analyst.id,
-            issuer=REALM_ISSUER,
-            subject=REALM_SUBJECT,
-            email=analyst.display,
-            display_name="Demo Analyst",
-        )
 
     print(f"\nworkspace {workspace_id}")
     print(f"  analyst  {analyst.display}\n  actuary  {actuary.display}\n")
@@ -433,8 +445,8 @@ async def run(rows: int | None) -> int:
         json.dumps(
             {
                 "workspace_id": str(workspace_id),
-                "analyst_id": str(analyst.id),
-                "actuary_id": str(actuary.id),
+                # the WF-699 journey acts as every principal, so each id is recorded
+                **{f"{name}_id": str(who.id) for name, who in principals.items()},
             },
             indent=2,
         ),
