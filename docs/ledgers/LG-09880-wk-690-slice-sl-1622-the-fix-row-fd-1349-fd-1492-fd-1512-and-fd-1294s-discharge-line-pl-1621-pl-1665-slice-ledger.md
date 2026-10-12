@@ -37,7 +37,7 @@ Branch `sl-1622-wk690-fix-row`, worktree `.claude/worktrees/sl-1622`, cut from `
 
 ### Gate
 
-Full two-half gate, granted by the lead for head `75271962aa95d6daa656371fde3a18f8257a6c68` (the lead's message "FULL GATE GRANTED", 2026-10-12 05:42 BST). Run under `flock -w 14400 /tmp/slots/gate-1` with `slot-preflight.sh`, own database `gipricing_sl-1622_e23bc949`; ran 05:55:21 to 06:47:04 BST (rc 1). The tree was clean at the head; this ledger text was written after the gate, in the next commit (a docs-only change).
+Full two-half gate, granted by the lead for head `75271962aa95d6daa656371fde3a18f8257a6c68` (the lead's `from-lead` entry "2026-10-12 05:42:07 BST"). Run under `flock -w 14400 /tmp/slots/gate-1` with `slot-preflight.sh`, own database `gipricing_sl-1622_e23bc949`; ran 05:55:21 to 06:47:04 BST (rc 1). The tree was clean at the head; this ledger text was written after the gate, in the next commit (a docs-only change).
 
 | stage | exit |
 |---|---|
