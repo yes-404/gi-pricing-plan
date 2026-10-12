@@ -46,6 +46,7 @@ def test_wf699_the_skip_and_known_gap_lines_are_exactly_the_ruled_ones() -> None
         "KNOWN GAP B9: FD-1490",
         "SKIPPED B4 model_call: FD-1456; SL-1543",
         "SKIPPED C1′: FD-1456; SL-1543",  # noqa: RUF001
+        "SKIPPED D7 decomposition — FD 9804",
     ]
     assert not [e for e in journey.SKIPS if e.line.startswith("KNOWN GAP") and "FD-1456" in e.line]
     # `SKIPPED B7: SL-1340` is moot: SL-1340 merged (PL-1544 activation need 18).
@@ -444,29 +445,17 @@ def test_b3_the_fork_puts_a_pinned_as_at_lookup_in_the_premium() -> None:
 
 
 @pytest.mark.req("FR-264")
-def test_d7_splits_the_derived_changes_into_the_journeys_own_effects() -> None:
-    """The maintainer's D7 ruling (to-lead "2026-10-12 01:25:10 BST"): attribution decomposes the
-    change. The derived changes of a run (`id`, `kind`, `description`) become two groups: what the
-    journey did to the rate tables, and the structure it added; a pin on a rate table belongs with
-    the first. If either effect is empty there is nothing to decompose and the journey stops."""
-    derived = [
-        {"id": "c1", "kind": "table_repointed", "description": "step s_t_region"},
-        {"id": "c2", "kind": "table_repointed", "description": "step s_t_area"},
-        {"id": "c3", "kind": "step_added", "description": "step s_loading"},
-        {"id": "c4", "kind": "step_changed", "description": "step s_out"},
-        {"id": "c5", "kind": "pin", "description": "rate_tables pin rate_table:x@2 added"},
-        {"id": "c6", "kind": "pin", "description": "sub_graphs pin sub_graph:ncd-ladder@1 added"},
-    ]
-    effects = journey.split_effects(derived)
-    assert effects == {
-        journey.EFFECT_RATE_TABLES: ["c1", "c2", "c5"],
-        journey.EFFECT_STRUCTURE: ["c3", "c4", "c6"],
-    }
-    flat = [cid for ids in effects.values() for cid in ids]
-    assert sorted(flat) == sorted(d["id"] for d in derived)  # a partition: none lost, none twice
-    assert journey.split_effects(derived[:2]) is None  # tables only: nothing else to decompose
-    assert journey.split_effects(derived[2:4]) is None  # structure only
-    assert journey.split_effects([]) is None
+def test_d7_is_a_skip_that_names_its_finding_and_is_never_recorded_as_ok() -> None:
+    """The maintainer's D7 ruling (A), to-lead "2026-10-12 02:29:16 BST": attribution cannot
+    decompose a change that involves a mounted sub-graph, so the journey runs the one-group lump and
+    prints D7's decomposition as SKIPPED with its finding (FD 9804, a working id; owner WK-673).
+    The skip table carries it, the owner check accepts a finding's working id, and G2 is not met
+    until D7 decomposes (the fix is its own WK-673 slice)."""
+    (entry,) = [e for e in journey.SKIPS if e.step == "D7"]
+    assert entry.line == "SKIPPED D7 decomposition — FD 9804"
+    journey.check_skip_owners([entry])  # a working id is an owner
+    with pytest.raises(journey.JourneyStepFailed):
+        journey.check_skip_owners([journey.Skip(step="D7", line="SKIPPED D7 decomposition")])
 
 
 @pytest.mark.req("FR-257")

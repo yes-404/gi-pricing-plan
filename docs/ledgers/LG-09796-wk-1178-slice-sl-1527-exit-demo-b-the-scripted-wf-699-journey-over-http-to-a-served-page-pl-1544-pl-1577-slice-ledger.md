@@ -272,31 +272,13 @@ Observations recorded, not smoothed:
   rather than `REFERENCE_LOOKUP_MISS`: the empty lookup surfaces at the consuming expression and the
   platform's documented residual (`score.py` `_reraise_engine_failure`) labels it so. The journey accepts
   either code. That the code names the wrong artifact is the platform's, not this slice's.
-- **D6/D7 attribution is one lump**: the fork's added and rewired steps depend on one another, and
-  attribution refuses dependent changes outside one group, so the journey groups every derived change
-  together (the count found with `POST /dislocation-runs/estimate`). The run therefore attributes the
-  whole fork as one effect; the by-effect decomposition WF-699 D7/D8 describes needs the journey to know
-  the change ids, which no route exposes. Reported to the lead as a deviation.
+- **D6/D7 attribution is one lump, and D7's decomposition is SKIPPED** (the maintainer's ruling (A),
+  `to-lead.md` "2026-10-12 02:29:16 BST", relayed by the lead): see the cited deviation below.
 - The test's stand-in GBM carries its creation audit event and a real validated Dataset Version; the
   seeded GBM has both from the fit.
 
 #### The fix batch after the full gate at `dced2856` (the maintainer's rulings `to-lead.md` "2026-10-12 01:25:10 BST" and "2026-10-12 01:30:34 BST", relayed by the lead)
 
-- **D7: the lump is NOT accepted** (01:25:10): D7 means attribution that DECOMPOSES the change
-  (FR-264); "accepts either" for B3's code is REFUSED because it cannot fail. FIX BEFORE CLOSE is
-  endorsed on gaps 4 to 7 and Acceptance 7 (01:30:34); the role-routes finding is the lead's, in D13.
-  **A route does map the changes**: `DislocationRun.derived_changes` (`id`, `kind`, `description`,
-  `packages/model-schema/src/model_schema/dislocation.py` `BundleDelta`) is readable from a finished run
-  (`/dislocation-runs/estimate` returns only counts). The journey runs once with one group, reads the
-  derived changes, and `split_effects()` splits them into the journey's own effects: **rate table
-  edits** (`table_repointed` and rate-table pins) and **NCD ladder and expense loading** (everything
-  the fork added or rewired, which depends on itself and so is one group by construction: attribution
-  refuses a group that is not self-contained, `_check_dependence`). The second run attributes the two
-  groups; the journey asserts both effects are present, the Shapley parts sum to the total, and the
-  isolated parts plus the residual reconcile. Cost: two Dislocation Runs on the 20,000-policy sample.
-  Ladder and loading cannot be split from each other: the premium step consumes both, so a group
-  holding one without the other is not self-contained. Pure test
-  `test_d7_splits_the_derived_changes_into_the_journeys_own_effects`.
 - **B3: one exact code, asserting CURRENT behaviour (the lead's ruling `from-lead` "2026-10-12
   02:20:03 BST").** Read at this head, `packages/pricing-core/src/pricing_core/rating/score.py`
   `_reraise_engine_failure`: the miss is named by what the FAILING step consumes (`:550`
@@ -313,28 +295,31 @@ Observations recorded, not smoothed:
   RATE_TABLE_MISS (`score.py` `_reraise_engine_failure` orders tables first); when fixed, this assertion
   turns red and becomes `REFERENCE_LOOKUP_MISS`." The lead files the FD in D13. Pure test
   `test_b3_the_fork_puts_a_pinned_as_at_lookup_in_the_premium`.
-- **D7's two groups are not "ladder vs lookup" (disclosed deviation, with the maintainer by the
-  lead's recommendation to accept it):** the two cannot be separated, because `s_premium` consumes both
-  the ladder's factor and the loading and `_check_dependence`
-  (`packages/pricing-core/src/pricing_core/rating/analysis.py`, "refuse, naming each dependent pair, a
-  group that is not self-contained") rejects a group holding one without the other. The two effects
-  attributed are the rate-table edits and the added structure (ladder plus loading).
 - **Acceptance 7's pre-flight DB reds:** `slot.sh` has a `red_seed_record_preflight` stage that moves
   `check-seed-record.py` aside (the base source has none), runs both DB tests and expects
   `FileNotFoundError` twice; its line is quoted at the re-gate.
-- **Inseparable effects (the maintainer's condition 1, `to-lead.md` "2026-10-12 02:20:32 BST",
-  relayed by the lead):** ladder and lookup cannot be attributed apart: `s_premium` consumes both the
-  ladder's factor and the lookup's output, and `_check_dependence`
-  (`packages/pricing-core/src/pricing_core/rating/analysis.py:816`, "refuse, naming each dependent
-  pair, a group that is not self-contained") refuses a group holding one without the other.
-- **Minimum-premium effect (condition 2):** the fork does not exercise it. WF-699's attribution names
-  peril-structure, rate-table and minimum-premium effects; this fork has no `constraint` step, so there
-  is no minimum-premium change to attribute and no group for it. The two attributed effects are the
-  rate-table edits and the added structure.
-- **The partition is asserted (condition 3):** the journey checks, from the run it read back, that
-  every `derived_changes` id appears in exactly one `change_groups` entry (none lost, none twice), and
-  `test_d7_splits_the_derived_changes_into_the_journeys_own_effects` asserts the same of
-  `split_effects`.
+- **Cited deviation, D7: the decomposition is SKIPPED and G2 is NOT met until it is built (the
+  maintainer's ruling (A), `to-lead.md` "2026-10-12 02:29:16 BST"; (B) and (D) refused).** WF-699 D7
+  means attribution that decomposes the change (FR-264). The journey authored a two-group version (the
+  rate-table edits and the added structure, the effects summing to the total, the partition proved);
+  it ran at `e14a81e5` and the Dislocation Job failed `BUNDLE_COMPILE_FAILED`
+  (`slot-reds-10.out`, `logs/db_journey.log`). Cause, verified by the lead at that head: attribution
+  compiles one bundle per subset of the groups (`packages/pricing-core/src/pricing_core/rating/analysis.py`
+  `:1001-1006`), and `_subset_algorithm` (`:742`) copies only steps, input contract and outputs from the
+  candidate: `sub_graph` appears nowhere in that file. The NCD ladder is a sub-graph MOUNT
+  (`algorithm.sub_graphs`), so it is neither a derived change nor carried into a subset, and any subset
+  holding the changed `s_premium` (which consumes the mount's `ncd_factor`) without the whole candidate
+  has no producer for it. Any two-group split puts `s_premium` in one group, so it cannot compile; the
+  ladder and the loading are also inseparable (the premium step consumes both, and `_check_dependence`,
+  `analysis.py:816`, refuses a group that is not self-contained). The one-group lump compiles (baseline and
+  full candidate only), as run at `dced2856`, so the journey runs it and prints exactly
+  `SKIPPED D7 decomposition — FD 9804` (a working id; owner WK-673, MEDIUM: attribution ignores
+  sub-graph mounts, `analysis.py:742` and `:1001-1006`), recorded in the skip table and asserted like
+  B4 and C1′. The two-group code is kept unchanged on the branch **`salv-sl1527-d7-2group`**
+  (`e14a81e55c509de5378858dc84a46f6c5fa03c77`), where a planner builds the WK-673 fix slice (working SL
+  9850, PL 9807). The 02:20:32 conditions on the two-group split (the inseparability line, the
+  minimum-premium line, the partition test) presuppose two groups and are removed with it; the
+  minimum-premium effect is in any case not exercised by this fork, which has no `constraint` step.
 - **GAP 4 (every step recorded, asserted, in order):** `journey.STEP_ORDER` lists the 42 steps (the workflow's 39, plus C1′, DEP and S1); the
   journey now records B1, B2, B5 and B8 from the stored algorithm (B8 checks one output step, half_even
   at 0 dp), C2 and C3 with their own checks, E2 beside E3, D8 with the run cited by id; the end-to-end
