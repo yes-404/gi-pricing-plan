@@ -356,7 +356,10 @@ Each item is checked by a command a fresh reviewer can run from the repository r
    `DecimalStr` refuses a Python `float`, which is what a JSON non-integer becomes, and still
    accepts an `int` (`model_schema/money.py:79-90`: *"Pass a string, an int or a Decimal"*), while
    the published schema is string-only. Red 5 therefore posts `0.1`. Refusing a JSON integer too
-   would change `DecimalStr` everywhere it is used, which is outside this slice.
+   would change `DecimalStr` everywhere it is used, which is outside this slice. **Ruled:** the
+   maintainer's entry "2026-10-12 03:08:30 BST", item 3, keeps integers accepted (R2 says "never
+   floats", and an integer is exact). SL 9868's `LG-` carries **one line** naming the lenient
+   integer input, with no FD.
    **Breaking callers:** Task 0's sweep, run again at the head, shows no bulk-operation body
    sending a number.
 4. **The record's field order is pinned:** Red 1 passes, and its planted-reversal red is in the `LG-`.
