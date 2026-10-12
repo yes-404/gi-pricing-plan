@@ -2072,7 +2072,7 @@ The Exit demo row's first scope item, "the real freMTPL2 rating algorithm in the
 id: SL-1527
 family: slice
 title: WK-1178 exit-demo slice (b) — the scripted WF-699 journey over HTTP, ending in a served page
-status: active                  # draft → active → closed | retired (§1.2a)
+status: closed                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-08            # original date 2026-10-05, set at the draft; minted 2026-10-08
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 809a3794af6d3a6ba688663b0d9b59f951190680
@@ -2084,7 +2084,9 @@ relates: [PL-1371, FD-1209, FD-1244, FD-1245, FD-1356, FD-1411, FD-1416, SL-1256
 
 The Exit demo row's journey: ONE command runs `WF-699` Phases A to E and its deploy step over HTTP on the freMTPL2 seed, with A1–A2 (seed-from-model) on every rateable factor of the 7-factor GLM, and ends with the frontend serving a 200 page, plus the journey test that cites `WF-699` by id. The form of G2 is the maintainer's ruling, by delegation, recorded as RL-1521 (working id), which mints before this slice's plan. PL-1371 §3.8 row 7 and §7; WK-1178 by `PL-1371` DP-1 (a). Leaf plan PL-1544, `draft`. **Activation needs:** exit-demo slice (a) (SL-1526, working id) merged; WK-673 S3–S6 (`SL-1387`–`SL-1390`) and S7 (`SL-1391`) merged; WK-674 S2 (`SL-1256`) closed, which it is; the FD-1356 fix (`SL-1409`) merged; the FD-1421 fix (PL-1429), the FD-1420 fix (PL-1447) and the FR-240 family fix (PL-1471) merged; FD-1416 fixed; FD-1494 (working id, #1125) minted with an owner for the seed record's pre-flight; FD-1244 and FD-1245 ruled; PL-1544's DP-6 ruled; the lead's go. The journey's `/score` step is the one PL-1454's acceptance covers (FD-1411). *(Cut 2026-10-05 by the planner under `PL-1371` Task 3, on the lead's order, under working id 9625, reserved by the lead.)*
 
-(Activated 2026-10-12 as WK-1178 exit-demo slice (b), on the dispatch GO "2026-10-11 23:18:17 BST" (PL-1544 re-check ACCEPTED; DP-D4 = (a); SL-1527 authors now, its activation and gate wait for the WF-699 D4 T-text and the PL-1544 delta to mint), whose condition is met: `PL-1644` and `RL-1645` merged as #1287 (main `80c77c8e`). `PL-1544` set `active` in this slice branch's activation commit; ledger `LG-9796` (working id).)
+(Activated 2026-10-12 as WK-1178 exit-demo slice (b), on the dispatch GO "2026-10-11 23:18:17 BST" (PL-1544 re-check ACCEPTED; DP-D4 = (a); SL-1527 authors now, its activation and gate wait for the WF-699 D4 T-text and the PL-1544 delta to mint), whose condition is met: `PL-1644` and `RL-1645` merged as #1287 (main `80c77c8e`). `PL-1544` set `active` in this slice branch's activation commit; ledger `LG-1647`, minted 2026-10-12 from working id 9796.)
+
+(Closed 2026-10-12 as a Slice, closing acts in the slice PR's mint commit, on the lead's merge; ledger `LG-1647` `closed`. `PL-1544`, `PL-1577` and `PL-1644` stay `active`: a plan's lifecycle has no `closed` (draft, active, superseded, retired), and none is superseded or retired. **The slice closes without meeting G2:** the exit-demo journey runs `WF-699` A to E and its deploy step over HTTP to a served page, but D7's attribution cannot decompose the change (attribution omits sub-graph mounts, `analysis.py:742`, `:1001-1006`), so D7 prints `SKIPPED D7 decomposition — FD 9804` and G2 is NOT met until the WK-673 fix slice (working SL 9850, PL 9807) lands. The two-group code is kept at `salv-sl1527-d7-2group` (`e14a81e5`).)
 
 #### SL-1529 — WK-1178 fix slice — FD-1416: one ApprovalRequest shape, generated and typed on every approval route
 

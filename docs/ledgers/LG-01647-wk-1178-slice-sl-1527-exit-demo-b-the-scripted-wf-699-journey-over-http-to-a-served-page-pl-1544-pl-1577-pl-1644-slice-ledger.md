@@ -1,9 +1,9 @@
 ---
-id: LG-9796
+id: LG-1647
 family: ledger
-title: WK-1178 slice SL-1527 — exit demo (b): the scripted WF-699 journey over HTTP to a served page (PL-1544 + PL-1577 slice ledger)
-status: active                 # active → closed (§1.2a) — set `closed` only at slice close
-created: 2026-10-11
+title: WK-1178 slice SL-1527 — exit demo (b): the scripted WF-699 journey over HTTP to a served page (PL-1544 + PL-1577 + PL-1644 slice ledger)
+status: closed                 # active → closed (§1.2a) — set `closed` only at slice close
+created: 2026-10-12            # original date 2026-10-11, set at the draft; minted 2026-10-12
 owner: executor
 tree: 1b04cb05a72e2329d35f57dd87cb3be600096177
 phase: P2
@@ -14,18 +14,20 @@ corrected_by: []
 relates: [PL-1544, PL-1577, PL-1644, RL-1645, RL-1521, RL-1524, FD-1209, FD-1244, FD-1245, FD-1494, LG-1641]
 ---
 
-# LG-9796 — WK-1178 slice SL-1527: exit demo (b)
+# LG-1647 — WK-1178 slice SL-1527: exit demo (b)
 
-*(Filed under working id 9796, reserved by the lead.)* Executed by `executor-sl1527` from PL-1544
-and its deltas PL-1577 and working id 9799, base `origin/main`
+*(Minted 2026-10-12 as LG-1647 from working id 9796, reserved by the lead; every citation of a minted
+id in this record is re-pointed, and quoted entries stay as quoted.)* Executed by `executor-sl1527`
+from PL-1544 and its deltas PL-1577 and PL-1644 (PL-1644 until it minted), base `origin/main`
 `1b04cb05a72e2329d35f57dd87cb3be600096177` (#1285, SL-1503). Times are BST
 (`TZ=Europe/London date`) unless marked.
 
 **GO:** `to-lead.md` "2026-10-11 23:18:17 BST" (PL-1544 re-check ACCEPTED; DP-D4 = (a), `bonus_malus`
 increasing on [50, 230] over the NCD ladder, spacing 45; GO (need 17) CONDITIONAL: SL-1527 AUTHORS
-NOW; activation and gate wait for working id 9799 and the WF-699 D4 T-text (working id RL 9701) to
-mint; merge order docs, then SL-1527). Quoted from the lead's brief; the entry itself is a local
-channel file (RFC-777) and was not re-read by the executor.
+NOW; activation and gate wait for working id 9799 [PL-1644] and the WF-699 D4 T-text (working id RL
+9701) [RL-1645] to mint; merge order docs, then SL-1527). Quoted from the lead's brief; the entry
+itself is a local channel file (RFC-777) and was not re-read by the executor. The condition was met
+by #1287 (main `80c77c8e`); the activation commit is `1b2aeabb`.
 **MERGE-ACK:** added at merge.
 
 ## Tasks
@@ -33,29 +35,138 @@ channel file (RFC-777) and was not re-read by the executor.
 ### Scope
 
 The slice's row is `#### SL-1527 — WK-1178 exit-demo slice (b) — the scripted WF-699 journey over
-HTTP, ending in a served page` in `docs/roadmap.md`, under PL-1544 as amended by PL-1577 and working
-id 9799. Write set (the lead's brief, item 3): PL-1544 §Write set, PL-1577 Task 3, and working id
-9799 only; any other path is a STOP to the lead. PL-1544 and SL-1527 stay `draft` until the
-activation commit, which comes on the lead's word after the docs mint.
+HTTP, ending in a served page` in `docs/roadmap.md`, under PL-1544 as amended by PL-1577 and
+PL-1644. Write set (the lead's brief, item 3): PL-1544 §Write set, PL-1577 Task 3 and PL-1644, plus the
+three widenings ruled below (the worker and beat, the seed's principal grants, B3's reference table);
+any other path is a STOP to the lead. PL-1544 and SL-1527 were `draft` until the activation commit
+(`1b2aeabb`), which came on the lead's word after the docs mint.
 
 ### Task list
 
 - Task 0 — preconditions and drift (below). No code.
 - Task 1 — the journey test, red first.
 - Task 2 — phases A and B over HTTP.
-- Task 3 — phases C and D (D4 and D5 per working id 9799 (a)).
+- Task 3 — phases C and D (D4 and D5 per PL-1644 (a)).
 - Task 4 — phase E, the deploy step, the served quote.
 - Task 5 — the one command, the pre-flight, the served page, FD-1494's three limbs.
 - Task 6 — rehearsal, the gate, this ledger (owed after the docs mint and the lead's grant).
 
 ### Gate
 
-Not run. No gate starts before the docs mint and the lead's "gate slot granted" for the head
-(executor charter S-13).
+Every run is `~/gi-pricing-plan.local/scratch/sl1527/slot.sh` under the lead's `flock /tmp/slots/gate-1`
+(preflight: head guard, clean tree, slot held, containers healthy, `alembic upgrade head` rc 0, one head);
+out files are under `~/gi-pricing-plan.local/scratch/sl1527/`, per-stage logs under `logs/`. Lines below are
+copied from them.
+
+**Full two-half gate at `dced2856`** (granted `from-lead` "2026-10-12 01:24:12 BST"; `slot-gate.out`,
+`01:24:22` to `02:13:48`, rc 1). ruff, mypy, import-linter, contracts `--check` and the whole frontend half
+(install, generate, lint, type-check, test, build) rc 0. pytest rc 1: 13 failed, 5714 passed, 6 skipped
+(46:54), the 13 all audit-on-tree and register tests failing on audit-docs check 31, the working-id gap
+before this mint. audit-docs rc 1, check 31 only. req-coverage rc 1 was this slice's own defect (the test
+docstring quoted the marker pattern, read as a claim on a requirement that does not exist), fixed at
+`97ea16e3`.
+
+```text
+HEAD=dced2856c3cc519f364e9e3d8472b94ed0d6da66 expect=dced2856c3cc519f364e9e3d8472b94ed0d6da66 start=2026-10-12T01:24:22+01:00 load=1.09 1.55 2.08
+PREFLIGHT ok: head guard, clean tree, /tmp/slots/gate-1 held + GIP_GATE_SLOT exported, containers healthy, upgrade rc 0, 1 head
+START ruff 2026-10-12T01:24:25+01:00
+END   ruff 2026-10-12T01:24:25+01:00 rc=0
+START mypy 2026-10-12T01:24:25+01:00
+END   mypy 2026-10-12T01:24:43+01:00 rc=0
+START import_linter 2026-10-12T01:24:43+01:00
+END   import_linter 2026-10-12T01:24:44+01:00 rc=0
+START pytest 2026-10-12T01:24:44+01:00
+END   pytest 2026-10-12T02:11:59+01:00 rc=1
+START audit_docs 2026-10-12T02:11:59+01:00
+END   audit_docs 2026-10-12T02:12:20+01:00 rc=1
+START req_coverage 2026-10-12T02:12:20+01:00
+END   req_coverage 2026-10-12T02:12:20+01:00 rc=1
+START contracts 2026-10-12T02:12:20+01:00
+END   contracts 2026-10-12T02:12:30+01:00 rc=0
+START fe_install 2026-10-12T02:12:30+01:00
+END   fe_install 2026-10-12T02:12:30+01:00 rc=0
+START fe_generate 2026-10-12T02:12:30+01:00
+END   fe_generate 2026-10-12T02:12:34+01:00 rc=0
+START fe_lint 2026-10-12T02:12:34+01:00
+END   fe_lint 2026-10-12T02:12:43+01:00 rc=0
+START fe_typecheck 2026-10-12T02:12:43+01:00
+END   fe_typecheck 2026-10-12T02:13:04+01:00 rc=0
+START fe_test 2026-10-12T02:13:04+01:00
+END   fe_test 2026-10-12T02:13:44+01:00 rc=0
+START fe_build 2026-10-12T02:13:44+01:00
+END   fe_build 2026-10-12T02:13:48+01:00 rc=0
+end 2026-10-12T02:13:48+01:00 rc=1
+```
+
+**Reds and DB tests at the fix head `eda8589b`** (standing grant `from-lead` "2026-10-12 01:09:01 BST";
+`slot-reds-11.out`). Each red is by its cause against the base source: the id-mismatch test by
+`IntegrityError` on the parent `workspaces.py`; Acceptance 7's two pre-flight cases by
+`FileNotFoundError` (the base tree has no `scripts/check-seed-record.py`); B3's multiply by
+`LOADING_NOT_MULTIPLIED_INTO_THE_PREMIUM` (the multiply scratch-reverted in `journey.py`, then restored).
+
+```text
+HEAD=eda8589b86da9606b2bba4e14932ce7170fea7fd expect=eda8589b86da9606b2bba4e14932ce7170fea7fd start=2026-10-12T02:32:31+01:00 load=2.26 1.79 1.99
+PREFLIGHT ok: head guard, clean tree, /tmp/slots/gate-1 held + GIP_GATE_SLOT exported, containers healthy, upgrade rc 0, 1 head
+START red_ensure_member 2026-10-12T02:32:34+01:00
+END   red_ensure_member 2026-10-12T02:32:43+01:00 rc=1
+| red_ensure_member | RED by IntegrityError (expected) |
+START red_seed_record_preflight 2026-10-12T02:32:43+01:00
+END   red_seed_record_preflight 2026-10-12T02:32:53+01:00 rc=1
+| red_seed_record_preflight | RED x2 by FileNotFoundError (expected) |
+START red_b3_multiply 2026-10-12T02:32:53+01:00
+END   red_b3_multiply 2026-10-12T02:33:19+01:00 rc=1
+| red_b3_multiply | RED by LOADING_NOT_MULTIPLIED_INTO_THE_PREMIUM (expected) |
+START db_members 2026-10-12T02:33:19+01:00
+END   db_members 2026-10-12T02:33:29+01:00 rc=0
+START db_demo_command 2026-10-12T02:33:29+01:00
+END   db_demo_command 2026-10-12T02:33:40+01:00 rc=0
+START db_journey 2026-10-12T02:33:40+01:00
+END   db_journey 2026-10-12T02:34:05+01:00 rc=0
+end 2026-10-12T02:34:05+01:00 rc=0
+```
+
+**Targeted re-gate at `eda8589b`** (the lead's scope, `from-lead` "2026-10-12 02:21:18 BST";
+`slot-targeted.out`, `02:34:14` to `02:35:29`, rc 1). ruff, mypy, import-linter, req-coverage and
+contracts `--check` rc 0; pytest on the affected files rc 0 (70 passed, 2 skipped: the seed tests that need
+the pinned ARFF); audit-docs rc 1, check 31 only ("gap in the full allocation between 1646 and 9796"),
+the working id before this mint. After the mint it shows no check 31 (see Build log).
+
+```text
+HEAD=eda8589b86da9606b2bba4e14932ce7170fea7fd expect=eda8589b86da9606b2bba4e14932ce7170fea7fd start=2026-10-12T02:34:15+01:00 load=2.21 1.92 2.01
+PREFLIGHT ok: head guard, clean tree, /tmp/slots/gate-1 held + GIP_GATE_SLOT exported, containers healthy, upgrade rc 0, 1 head
+START ruff 2026-10-12T02:34:18+01:00
+END   ruff 2026-10-12T02:34:18+01:00 rc=0
+All checks passed!
+START mypy 2026-10-12T02:34:18+01:00
+END   mypy 2026-10-12T02:34:19+01:00 rc=0
+START import_linter 2026-10-12T02:34:19+01:00
+END   import_linter 2026-10-12T02:34:20+01:00 rc=0
+START pytest_affected 2026-10-12T02:34:20+01:00
+END   pytest_affected 2026-10-12T02:34:58+01:00 rc=0
+70 passed, 2 skipped, 2 warnings in 30.90s
+START req_coverage 2026-10-12T02:34:58+01:00
+END   req_coverage 2026-10-12T02:34:59+01:00 rc=0
+START audit_docs 2026-10-12T02:34:59+01:00
+END   audit_docs 2026-10-12T02:35:20+01:00 rc=1
+START contracts 2026-10-12T02:35:20+01:00
+END   contracts 2026-10-12T02:35:29+01:00 rc=0
+end 2026-10-12T02:35:29+01:00 rc=1
+```
+
+**The salvage.** The unchanged two-group D7 code (split_effects, the two-group run, the partition proof
+and sum assertions, their test) is kept at `e14a81e55c509de5378858dc84a46f6c5fa03c77` on the branch
+`salv-sl1527-d7-2group`, for the WK-673 fix slice (working SL 9850, PL 9807). **G2 is NOT met until D7
+decomposes (FD 9804).**
+
+**Acceptance 5 (the one-command rehearsal)** is not yet run: it is an ALONE window the lead opens. Its
+command, tree, the "20,000 rows ran" line, the exit code, the README machine-requirement sentence and the
+live worker and beat check are recorded in the Build log when it has run.
 
 ### Audit
 
-Not yet.
+Not yet: written by the auditor (`auditor-sl1527`).
+
+Lead verdict: (pending)
 
 ### Build log
 
@@ -147,7 +258,7 @@ branch `sl-1527-wk1178-exit-demo-b` tracks it. `uv sync --all-packages` and
   between E3 and E4 (the resubmission), as WF-699 E4 words it.
 - The ladder is an expression-only sub-graph. There is no route that creates a rate table from
   scratch (only seed-from-model, which needs a model Factor, and versions of an existing table), so
-  working id 9799's "the rate table behind the ncd-ladder" cannot be built over HTTP; the maintainer's
+  PL-1644's "the rate table behind the ncd-ladder" cannot be built over HTTP; the maintainer's
   23:18:17 wording is "the hand-written NCD-ladder sub-graph". `POST /sub-graphs` creates it with the
   bands as one ternary chain (`ladder_body()`); the defect and its fix are new sub-graph versions
   (D4 and D5 each build a new algorithm version and Rating Version, because pins cannot be edited).
@@ -320,6 +431,8 @@ Observations recorded, not smoothed:
   9850, PL 9807). The 02:20:32 conditions on the two-group split (the inseparability line, the
   minimum-premium line, the partition test) presuppose two groups and are removed with it; the
   minimum-premium effect is in any case not exercised by this fork, which has no `constraint` step.
+  The maintainer's entries of "2026-10-12 02:34:38 BST" and "2026-10-12 02:35:40 BST" bear on the same
+  finding and are recorded by reference, through FD 9804 (the lead files it in D13).
 - **GAP 4 (every step recorded, asserted, in order):** `journey.STEP_ORDER` lists the 42 steps (the workflow's 39, plus C1′, DEP and S1); the
   journey now records B1, B2, B5 and B8 from the stored algorithm (B8 checks one output step, half_even
   at 0 dp), C2 and C3 with their own checks, E2 beside E3, D8 with the run cited by id; the end-to-end
