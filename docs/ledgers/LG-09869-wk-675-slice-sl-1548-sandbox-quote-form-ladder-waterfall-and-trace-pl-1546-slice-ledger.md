@@ -40,7 +40,25 @@ Branch `sl-1548-wk675-s6-sandbox`, worktree `.claude/worktrees/sl-1548`, cut fro
 
 ### Gate
 
-(not yet; the full gate runs only on the lead's "gate slot granted" for that head)
+Full two-half gate, granted by the lead at 03:13:49 BST on gate-1, at head `c0d3923495dad3f25c2da78ff7f46ffd3f76c120` (clean tree), own database, run 03:14–04:04 BST under `flock /tmp/slots/gate-1` through `handover/slot-preflight.sh`. Output `/home/puzhenhao1989/gi-pricing-plan.local/evidence/sl1548-gate.out`, per-stage logs `.../evidence/sl1548-gate-logs/`.
+
+| stage | exit | cause |
+|---|---|---|
+| ruff | 0 | |
+| mypy | 0 | |
+| import-linter | 0 | |
+| pytest | 1 | 13 failed, 5708 passed, 6 skipped (45 min 48 s): all 13 are the audit-on-tree test class, failing on check 31 only (see below) |
+| audit-docs | 1 | check 31 only: "gap in the full allocation between 1646 and 9869" (this ledger's working id, unminted) |
+| req-coverage | 0 | |
+| contracts --check | 0 | |
+| frontend install | 0 | |
+| frontend generate:api | 0 | |
+| frontend lint | 0 | |
+| frontend type-check | 0 | |
+| frontend test | 0 | |
+| frontend build | 0 | |
+
+The 13 pytest failures, each read in the log: `test_audit_docs_finding_citations::test_a_finding_resolved_only_by_a_closure_record_is_not_flagged`, `test_audit_docs_ids::test_the_real_tree_passes_all_ten_checks`, `test_audit_docs_ids::test_doc_id_check_exits_0_on_the_real_tree`, `test_audit_docs_process_core_digest` (two), `test_audit_docs_w37_11_ceiling::test_audit_docs_end_to_end_exit_0_then_1_then_0_on_an_injected_residue`, `test_doc_index::test_an_index_skipping_a_reserved_block_breaks_contiguity`, `test_register_lint` (three), `test_register_owed::test_check_29_wiring_is_undisturbed`, `test_repository_invariants` (two). Each asserts a clean docs audit or a contiguous allocation on the real tree and reports the 1646-to-9869 gap (twelve name it or check 31 in their message; the ceiling test's baseline run is the same `audit-docs` exit 1). Expected and removed at the mint, when LG 9869 takes its sequence number; the minted-head gate re-proves them.
 
 ### Audit
 
@@ -49,6 +67,7 @@ Branch `sl-1548-wk675-s6-sandbox`, worktree `.claude/worktrees/sl-1548`, cut fro
 ### Build log
 
 - 2026-10-12 — Build commit `1205dc6a`: T1–T4 and their tests, written while a functional window barred test runs; no test, lint or type-check had run at that head.
+- 2026-10-12 04:04 BST — Full gate at `c0d39234` ended: every code and frontend stage 0; pytest and audit-docs red on check 31 only (Gate section).
 - 2026-10-12 03:11–03:13 BST — **Red-first proof, run after the lead's CLOSE of 03:11:05**, each through `run-small.sh`, `pnpm exec vitest run`:
   - **RED**, at `64fe67fe` (scratch detached worktree) plus only the eight test files (six under `components/sandbox/__tests__/`, `QuoteSandboxView.test.ts`, `RatingVersionView.test.ts`): rc 1, 8 files failed, `/home/puzhenhao1989/gi-pricing-plan.local/evidence/sl1548-red.out`. Seven files are red by `Failed to resolve import` of the module under test (`quoteForm`, `ladder`, `LadderWaterfall.vue`, `QuoteOutcome.vue`, `QuoteError.vue`, `TraceTimeline.vue`, `QuoteSandboxView.vue`): unavoidable, the modules do not exist there, so those reds prove only that the tests need the implementation. The eighth, `RatingVersionView.test.ts`, is red by its intended cause: `Unable to find role="link" and name "Open the quote sandbox"` (its six older tests pass).
   - **GREEN**, at the slice head before this entry (`b2ec0653`): the same files, rc 0, 8 files and 45 tests passed, `/home/puzhenhao1989/gi-pricing-plan.local/evidence/sl1548-green1.out`.
