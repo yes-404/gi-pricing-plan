@@ -947,7 +947,7 @@ class _Journey:
         raise JourneyStepFailed("D6", "DERIVED_CHANGES_NOT_FOUND")
 
     def dislocation(self) -> None:
-        spec = {
+        spec: dict[str, Any] = {
             "baseline_ref": "rating_version:fremtpl2-demo@1",
             "candidate_ref": f"rating_version:{self.rv3['slug']}@{self.rv3['version']}",
             "portfolio_dataset_version_id": self.record["portfolio_dataset_version_id"],
