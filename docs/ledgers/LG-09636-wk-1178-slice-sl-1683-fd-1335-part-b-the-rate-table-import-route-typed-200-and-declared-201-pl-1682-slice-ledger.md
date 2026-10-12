@@ -27,3 +27,7 @@ Executed from `PL-1682` (Tasks 0–4), branch `sl-1683-wk1178-import-200-typing`
 ### Task 0 — preconditions
 
 (To be filled as each is read.)
+
+## PRs
+
+- (none opened yet; the PR is opened by the executor after the gate.)
