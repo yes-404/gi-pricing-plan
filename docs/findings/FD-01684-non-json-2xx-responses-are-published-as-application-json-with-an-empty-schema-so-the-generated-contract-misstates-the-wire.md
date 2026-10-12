@@ -1,5 +1,5 @@
 ---
-id: FD-9912
+id: FD-1684
 family: finding
 title: Non-JSON 2xx responses are published as application/json with an empty schema, so the generated contract misstates the wire
 status: active
@@ -7,12 +7,14 @@ created: 2026-10-12
 owner: auditor
 tree: 50bbdd96b2154cb4eb79ccf91658191e51ab8906
 corrected_by: []
-relates: [FD-1335, PL-1364, SL-1367, WK-1178, WK-679, FR-235, FR-371, FR-451]
+relates: [FD-1335, PL-1364, SL-1367, PL-1682, WK-1178, WK-679, FR-235, FR-371, FR-451]
 ---
 
-# FD-9912 — Non-JSON 2xx responses are published as `application/json` with an empty schema
+# FD-1684 — Non-JSON 2xx responses are published as `application/json` with an empty schema
 
-*(Filed 2026-10-12 under working id 9912, reserved by the lead, from-lead "2026-10-12 07:29:15 BST"
+*(Minted 2026-10-12 as FD-1684 from working id 9912, early, on the maintainer's (by delegation) entry
+"2026-10-12 07:46:06 BST" (`to-lead.md`) and the lead's from-lead entry "2026-10-12 07:46:27 BST".
+Filed under working id 9912, reserved by the lead, from-lead "2026-10-12 07:29:15 BST"
 (`~/gi-pricing-plan.local/channel/from-lead-2026-10-09.md`). Text drafted by the planner (seat
 planner-import) on the lead's brief; the finding's owner field is the auditor's family default.)*
 
@@ -65,7 +67,8 @@ GET /api/v1/rate-tables/{slug}@{version}/export/xlsx 200 application/json
 
 **The ruling names three routes; the sweep finds four.** The fourth, the job-events SSE stream, is
 the same class by the ruling's own definition ("a non-JSON route that never declares its media
-type"). It is recorded here as limb 3, with no owner set (Disposition).
+type"). The maintainer (by delegation) took it into this finding, entry "2026-10-12 07:46:06
+BST", items 3 and 4 (Disposition).
 
 ### The published contract, verbatim
 
@@ -114,35 +117,39 @@ media type but publishes it with an empty schema is still reported.
 
 FD-1335's register row carries a **LOW sub-item, same carrier, not blocking WK-675**: *"document
 the four stream and file routes' media types as their code declares them."* That sub-item is this
-finding's subject. The 07:28:38 entry sets the class at MEDIUM. Whether this finding absorbs the
-sub-item, so that FD-1335's row is annotated to point here, is the lead's to decide; this record
-does not edit FD-1335's row.
+finding's subject. The 07:28:38 entry sets the class at MEDIUM. **This finding absorbs the
+sub-item**: the maintainer (by delegation), entry "2026-10-12 07:46:06 BST", item 5, verbatim:
+*"YES: FD 9912 absorbs FD-1335's LOW sub-item ("document the four stream and file routes' media
+types"). Close that sub-item by citation in the same mint, with a dated line on FD-1335's register
+row, so one finding owns the class."* FD-1335's register row carries that dated line; FD-1335 itself
+stays active for its Part B list.
 
 ## Disposition
 
-*Proposed; the lead gives the verdict.*
+**MEDIUM, fix before close with an owner: WK-1178, all four limbs** (the maintainer (by delegation),
+entry "2026-10-12 07:46:06 BST", items 3 and 4). Item 3 and 4, verbatim: *"ONE owner for the whole
+class: WK-1178, all four limbs. That is /export/csv, /export/xlsx, /api/v1/jobs/{job_id}/events (07
+:317 says "SSE stream", the wire is text/event-stream at jobs.py:310), and /api/v1/audit/export."*
+And: *"Why the audit export too, although WK-679 is P3: declaring the media type of a route that
+ALREADY EXISTS on main corrects the published contract of built code. It does not build a P3
+capability, so §0's "do not build ahead" is not engaged."*
 
-**MEDIUM, fix before close, one limb per owner:**
+1. `GET /api/v1/rate-tables/{slug}@{version}/export/csv`: WK-1178.
+2. `GET /api/v1/rate-tables/{slug}@{version}/export/xlsx`: WK-1178.
+3. `GET /api/v1/audit/export`: WK-1178.
+4. `GET /api/v1/jobs/{job_id}/events`: WK-1178.
 
-1. **Limb 1, the rate-table exports** (`/export/csv`, `/export/xlsx`): **owner WK-1178** (07:28:38).
-2. **Limb 2, the audit export** (`/api/v1/audit/export`): **owner WK-679**, the Work that owns
-   `06` FR-371's export. `docs/roadmap.md` at `50bbdd96`: `### WK-679 — Audit explorer, chain
-   verification, export` (`:2591`), whose source row reads *"From “Workstreams” (line 470): Audit
-   explorer, chain verification, export | FR-368, FR-369, FR-370, FR-371, FR-372, FR-374,
-   FR-375"* (`:2603`). **WK-679 is `phase: P3`** (`:2600`). Under `CLAUDE.md` §0 and §14 ("A later
-   phase's finding is a spec change only"), this limb is not built in P2 unless the maintainer
-   reassigns it. The lead raises that consequence with the maintainer; this record does not decide
-   it.
-3. **Limb 3, the job-events stream** (`/api/v1/jobs/{job_id}/events`): **not named by the ruling;
-   no owner set here.** The lead asks the maintainer whether it joins this finding and who owns it.
+**WK-679 keeps the audit-export feature** (`06` FR-371; `docs/roadmap.md:2591`, `:2603` at
+`50bbdd96`, `phase: P3` at `:2600`); this finding owns only the media-type declaration of the route
+that already exists.
 
-**Remedy (07:28:38):** each route declares its response media type, so the generated contract reads
-`text/csv` and the spreadsheetml type for the two exports and `application/x-ndjson` and `text/csv`
-for the audit export, with no `application/json` entry on any of them. The remedy also re-points or
-removes the routes' `UNTYPED_2XX_PERMANENT` entries, as the declared schemas decide, and proves the
-change red first on the stale-list test (`test_every_untyped_body_exclusion_is_still_untyped`). The
-form (FastAPI `response_class` or a `responses` `content` map, and each media type's schema) is
-the fixing slice's design. **S5 (`SL-1547`) is unchanged.**
+**Remedy (to be cut):** one small WK-1178 slice declares the four routes' response media types
+(`response_class` or a `responses` content map), so `generated.json` reads `text/csv`, the
+spreadsheetml type, `text/event-stream`, and the audit export's real types (`application/x-ndjson`
+and `text/csv`), with no `application/json` entry on any of them. **Red first: a contract test per
+route asserts its declared media type** (07:46:06, the remedy row). The slice also re-points or
+removes the routes' `UNTYPED_2XX_PERMANENT` entries, as the declared schemas decide; the
+stale-list test (`test_every_untyped_body_exclusion_is_still_untyped`) shows any entry the change
+makes stale. **S5 (`SL-1547`) is unchanged.**
 
-**Event:** the finding closes when the sweep predicate above, run on `main`, prints no line for an
-owned limb's route, and no limb remains open.
+**Event:** the finding closes when the sweep predicate above, run on `main`, prints no line.

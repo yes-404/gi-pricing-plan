@@ -1,5 +1,5 @@
 ---
-id: PL-9906
+id: PL-1682
 family: plan
 kind: map
 title: WK-1178 — FD-1335 Part B for the rate-table import route, a typed 200 (ImportPreview) and a declared 201 (RateTableVersion): a dated Work-plan delta
@@ -12,10 +12,12 @@ work: WK-1178
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [FD-1335, FD-1366, PL-1364, SL-1367, PL-1667, SL-1669, PL-1546, PL-1668, SL-1547, RL-1445]
+relates: [FD-1335, FD-1684, FD-1366, PL-1364, SL-1367, PL-1667, SL-1669, PL-1546, PL-1668, SL-1547, RL-1445]
 ---
 
-# PL-9906 — WK-1178, FD-1335 Part B for the rate-table import route: a typed 200 and a declared 201
+# PL-1682 — WK-1178, FD-1335 Part B for the rate-table import route: a typed 200 and a declared 201
+
+*(Minted 2026-10-12 as PL-1682 from working id 9906, early, on the maintainer's (by delegation) entry "2026-10-12 07:46:06 BST — PL 9906/SL 9911/FD 9912: ACK + early mint as PL-1682/SL-1683/FD-1684 after #1295/#1296; …" (`to-lead.md`) and the lead's from-lead entry "2026-10-12 07:46:27 BST". Its slice SL-1683 is minted from working id 9911 and the finding FD-1684 from working id 9912. Every citation of those ids in this record is re-pointed; quoted entries stay as quoted, and a working id left in them is resolved by this note.)*
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L5
 > (`document-ids.md` §1.6, PL row: *"one plan per Work, slices as rows, no per-slice `leaf`; a
@@ -23,7 +25,7 @@ relates: [FD-1335, FD-1366, PL-1364, SL-1367, PL-1667, SL-1669, PL-1546, PL-1668
 > has no Work plan, so, as for `PL-1667`, this delta `relates:` the records it builds on:
 > `FD-1335` (the finding whose Part B list holds this route), `PL-1364`/`SL-1367` (Part A, the
 > guard) and `PL-1667`/`SL-1669` (the precedent this delta copies). It adds **one slice row**,
-> working id 9911, under `### WK-1178` in [`../roadmap.md`](../roadmap.md).
+> `SL-1683`, under `### WK-1178` in [`../roadmap.md`](../roadmap.md).
 > REQUIRED SUB-SKILL: subagent-driven-development (recommended) or executing-plans, task by
 > task; steps use checkbox (`- [ ]`) syntax. The executor also binds `test-driven-development`
 > (every acceptance item is seen red **by its cause** before the code that turns it green),
@@ -32,8 +34,8 @@ relates: [FD-1335, FD-1366, PL-1364, SL-1367, PL-1667, SL-1669, PL-1546, PL-1668
 > and `git-hygiene`. Read [`README.md`](README.md)'s five unchecked conventions before the first
 > step. The executor is spawned from `.claude/roles/executor.md`.
 
-Filed under **working id 9906**; its slice row is **working id 9911** (`draft`); the finding
-filed beside it is **working id 9912**. All three were reserved by the lead, from-lead
+Filed under **working id 9906**; its slice row is **SL-1683** (`draft`, working id 9911); the
+finding filed beside it is **FD-1684** (working id 9912). All three ids were reserved by the lead, from-lead
 "2026-10-12 07:29:15 BST" (`~/gi-pricing-plan.local/channel/from-lead-2026-10-09.md`). Written
 2026-10-12 by the planner (seat planner-import). **Tree read:** `origin/main`
 `50bbdd96b2154cb4eb79ccf91658191e51ab8906` (#1294); the branch was cut at
@@ -64,9 +66,16 @@ verbatim.
    still-untyped POST …/import 200 (UNTYPED_2XX_PENDING_PART_B, WK-1178's hold) at ONE call site"*.
 3. The seat and the ids: the lead's from-lead entry **"2026-10-12 07:29:15 BST"**: *"Lead: PL 9906 +
    SL 9911 + FD 9912 reserved; SEATING planner-import"*.
+4. **"2026-10-12 07:46:06 BST — PL 9906/SL 9911/FD 9912: ACK + early mint as PL-1682/SL-1683/FD-1684
+   after #1295/#1296; DP-1 (type the 201 too) and DP-2 accepted; FD 9912 owns ALL FOUR limbs under
+   WK-1178, absorbing FD-1335's LOW sub-item"**, items 1 and 2, verbatim: *"1. DP-1: ACCEPTED. A bare
+   response_model=ImportPreview would 500 on the confirm branch, and S5's confirmImport would otherwise
+   keep a cast. Typing the 201 as RateTableVersion is the same pair the manual-edit route uses. Within
+   07:28:38's intent: no cast survives."* *"2. DP-2: ACCEPTED. generated.json is drift-checked, so a
+   standalone schema file would be a second copy."*
 
 Flag (3) of the same entry is **not this slice's**: it is the finding filed beside this plan
-(working id 9912), whose remedy is a separate slice. This slice does not touch either export route.
+(FD-1684), whose remedy is a separate slice. This slice does not touch either export route.
 
 **Which finding holds this route.** The import route's 200 is an entry of
 `UNTYPED_2XX_PENDING_PART_B` (`backend/tests/test_contracts.py:3193`), whose reason is
@@ -92,22 +101,23 @@ The lead's brief named FD-1366's hold; the guard list it names, and the ruling's
 - the route leaves `UNTYPED_2XX_PENDING_PART_B` (`test_contracts.py:3193`);
 - `docs/contracts/openapi/generated.json` and the frontend client are regenerated.
 
-**Out of scope:** the two export routes and `/api/v1/audit/export` (the finding of working id
-9912; its remedy is a separate slice); S5's frontend (S5 switches to the generated type after this
+**Out of scope:** the two export routes and `/api/v1/audit/export` (`FD-1684`; its remedy is a separate slice); S5's frontend (S5 switches to the generated type after this
 slice merges, per entry 1). `FD-1335` stays **active**: three entries remain in its Part B list.
 
 ## Status
 
 The status is the `status:` field in the header, and nothing else. **No decision point is
-open.** The scope is ruled (Context, entry 1). DP-1 and DP-2 are the planner's design choices
-inside that scope, stated so the lead can overrule them. The plan stays `draft` until it is minted
-or GO'd on its working ids.
+open.** The scope is ruled (Context, entry 1). DP-1 and DP-2 were the planner's design choices
+inside that scope; both are **accepted** by the maintainer (by delegation), entry "2026-10-12
+07:46:06 BST", items 1 and 2 (Context, entry 4). The plan stays `draft` until the slice's
+activation commit.
 
 ## Activation needs, each with its state at `50bbdd96`
 
 1. **The scope ruled.** **MET**: Context, entry 1 (07:28:38).
-2. **DP-1 and DP-2 accepted or overruled by the lead.** **OPEN.**
-3. **This delta minted or GO'd on its working ids**, as the lead dispatches. **OPEN.**
+2. **DP-1 and DP-2 accepted or overruled.** **MET**: both accepted (Context, entry 4).
+3. **This delta minted or GO'd on its working ids.** **MET**: minted early as PL-1682 (Context,
+   entry 4), merging after #1295 and #1296.
 4. **No in-flight writer on the write set, or the dispatch record names the shared paths.** At
    `50bbdd96` one PR is open (`gh pr list --state open`, 2026-10-12 07:33:51 BST: #1295 only).
    `git diff --name-only origin/main...<ref>`, filtered to the write set, on the two refs that can
@@ -154,8 +164,8 @@ or GO'd on its working ids.
 
 | DP | Question | Options | Recommendation | Blocking | Who |
 |---|---|---|---|---|---|
-| DP-1 | How does one route publish a 200 and a 201 of different models? A bare `response_model=ImportPreview` validates the 201's `RateTableVersion` against `ImportPreview` and answers 500 | (i) the manual-edit precedent (premise e): `response_model=None`, `responses={…, 200: {"model": ImportPreview}, 201: {"model": RateTableVersion}}`, the handler returns the models; (ii) `response_model=ImportPreview`, and the 201 branch returns a `JSONResponse`, so the 201 stays unpublished; (iii) `response_model=ImportPreview \| RateTableVersion` | **(i).** It is the repository's own form for this exact preview/confirm pair (`rate_tables.py:138-178`). (ii) leaves S5's `confirmImport` asserting a type onto an undeclared 201, the same unchecked cast entry 1 refuses for the 200. (iii) publishes a union on the 200 that a client cannot narrow without a hand-written test. **This publishes the 201 as well as the 200**, one line wider than entry 1's words; it adds no model and no file | no | the planner (a design choice inside a ruled scope); stated here so the lead can overrule it |
-| DP-2 | Does `ImportPreview` get a standalone generated schema (`docs/contracts/schemas/generated/import-preview.schema.json`)? | (i) no: the OpenAPI component in `generated.json` is its generated contract, as for `RateTableDiff` (premise g); (ii) yes: a `GENERATED_SHAPES` entry, a new file, a `ONE_SIDED_SLUGS` entry, and the non-markdown file count in `tests/test_audit_docs_ids.py` widened (SL-1669 needed that widening for its new file, `LG-1676`'s write-set note) | **(i).** Entry 1 asks for a contract that is generated, and `generated.json` is generated and drift-checked (FR-451). (ii) adds four edits for a shape no other artifact embeds | no | the planner; the lead can overrule it |
+| DP-1 | How does one route publish a 200 and a 201 of different models? A bare `response_model=ImportPreview` validates the 201's `RateTableVersion` against `ImportPreview` and answers 500 | (i) the manual-edit precedent (premise e): `response_model=None`, `responses={…, 200: {"model": ImportPreview}, 201: {"model": RateTableVersion}}`, the handler returns the models; (ii) `response_model=ImportPreview`, and the 201 branch returns a `JSONResponse`, so the 201 stays unpublished; (iii) `response_model=ImportPreview \| RateTableVersion` | **(i).** It is the repository's own form for this exact preview/confirm pair (`rate_tables.py:138-178`). (ii) leaves S5's `confirmImport` asserting a type onto an undeclared 201, the same unchecked cast entry 1 refuses for the 200. (iii) publishes a union on the 200 that a client cannot narrow without a hand-written test. **This publishes the 201 as well as the 200**, one line wider than entry 1's words; it adds no model and no file | no | **Accepted (i)**, the maintainer (by delegation), 07:46:06 item 1 (Context, entry 4) |
+| DP-2 | Does `ImportPreview` get a standalone generated schema (`docs/contracts/schemas/generated/import-preview.schema.json`)? | (i) no: the OpenAPI component in `generated.json` is its generated contract, as for `RateTableDiff` (premise g); (ii) yes: a `GENERATED_SHAPES` entry, a new file, a `ONE_SIDED_SLUGS` entry, and the non-markdown file count in `tests/test_audit_docs_ids.py` widened (SL-1669 needed that widening for its new file, `LG-1676`'s write-set note) | **(i).** Entry 1 asks for a contract that is generated, and `generated.json` is generated and drift-checked (FR-451). (ii) adds four edits for a shape no other artifact embeds | no | **Accepted (i)**, the maintainer (by delegation), 07:46:06 item 2 (Context, entry 4) |
 
 ## Write set
 
@@ -167,7 +177,7 @@ or GO'd on its working ids.
 | `backend/tests/test_contracts.py` `:3193`, `:3215-3217` | the `UNTYPED_2XX_PENDING_PART_B` key removed; the `NON_JSON_REQUEST_BODIES` citation re-pointed to the handler's `File()`/`Form()` lines | 3 |
 | `docs/contracts/openapi/generated.json` | regenerated, never hand-edited | 3 |
 | `docs/findings/register.md` FD-1335 row | a dated line: the import route typed | 4 |
-| `docs/roadmap.md` slice row (working id 9911); `docs/ledgers/LG-<working id>` | status lines and the slice ledger (L1 (a')) | 0, 4 |
+| `docs/roadmap.md` SL-1683 row; `docs/ledgers/LG-<working id>` | status lines and the slice ledger (L1 (a')) | 0, 4 |
 
 **Not in the write set:** `packages/model-schema/` (DP-2 (i): no model changes);
 `scripts/generate-contracts.py`; `frontend/src/api/generated` (regenerated and VCS-ignored). No
