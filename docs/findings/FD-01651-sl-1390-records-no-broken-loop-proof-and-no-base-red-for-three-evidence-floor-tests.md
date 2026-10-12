@@ -1,18 +1,20 @@
 ---
-id: FD-9712
+id: FD-1651
 family: finding
 title: SL-1390 records no broken-loop proof and no base red for three evidence-floor tests
 status: active
-created: 2026-10-11
+created: 2026-10-12
 owner: auditor
 tree: 372fa92ae3ab306bc067c234487ce929dc0e2a04
 corrected_by: []
-relates: [WK-673, SL-1390, PL-1499, LG-1633, RS-9703, FR-364]
+relates: [WK-673, SL-1390, PL-1499, LG-1633, RS-1649, FR-364]
 ---
 
-# FD-9712 — unrecorded red-first evidence on SL-1390
+# FD-1651 — unrecorded red-first evidence on SL-1390
 
-Filed by the retro audit RS-9703. Reads are at the squash-merge `3065770c` (PR #1279).
+*(Minted 2026-10-12 as FD-1651 from working id 9712, in the D13 batch mint PR. Every citation of a minted id in this record is re-pointed; quoted entries and the lead's quoted headers stay as quoted, and a bare working id left in them is resolved by this record's front matter.)*
+
+Filed by the retro audit RS-1649. Reads are at the squash-merge `3065770c` (PR #1279).
 
 ## Evidence
 

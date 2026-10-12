@@ -1,5 +1,5 @@
 ---
-id: FD-9801
+id: FD-1658
 family: finding
 title: 06 §5.1 declares GET/POST /api/v1/roles, POST /api/v1/role-assignments and POST /api/v1/break-glass, and none is served: the machinery is at the service layer only
 status: active
@@ -10,9 +10,11 @@ corrected_by: []
 relates: [WK-676, SL-1527, FR-342, FR-344, FR-345, FR-349, FR-350]
 ---
 
-# FD-9801 — three declared role routes with no HTTP route
+# FD-1658 — three declared role routes with no HTTP route
 
-Found by SL-1527 (its ledger, id reserved and unmerged) while widening the demo seed so the journey has a principal who is neither submitter nor author. Filed from the maintainer's (by delegation) entry "2026-10-12 01:30:34 BST — SL-1527 condition 4: the role-routes FD → owner WK-676 (P3), LOW; CR-823 Q2(a) DECIDED as its recommendation" (`to-lead.md`, a local channel file, cited by its header). The entry's text for this finding, verbatim: *"06 §5.1 declares GET/POST /api/v1/roles, POST /api/v1/role-assignments and POST /api/v1/break-glass; none is served; service layer only (rbac.py). Demo workaround: SL-1527's seed widening (to-lead 23:27:48)."*
+*(Minted 2026-10-12 as FD-1658 from working id 9801, in the D13 batch mint PR. Every citation of a minted id in this record is re-pointed; quoted entries and the lead's quoted headers stay as quoted, and a bare working id left in them is resolved by this record's front matter.)*
+
+Found by SL-1527 (LG-1647) while widening the demo seed so the journey has a principal who is neither submitter nor author. Filed from the maintainer's (by delegation) entry "2026-10-12 01:30:34 BST — SL-1527 condition 4: the role-routes FD → owner WK-676 (P3), LOW; CR-823 Q2(a) DECIDED as its recommendation" (`to-lead.md`, a local channel file, cited by its header). The entry's text for this finding, verbatim: *"06 §5.1 declares GET/POST /api/v1/roles, POST /api/v1/role-assignments and POST /api/v1/break-glass; none is served; service layer only (rbac.py). Demo workaround: SL-1527's seed widening (to-lead 23:27:48)."*
 
 ## Evidence
 

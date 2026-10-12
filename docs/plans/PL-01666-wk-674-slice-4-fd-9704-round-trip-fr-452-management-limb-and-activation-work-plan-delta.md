@@ -1,8 +1,8 @@
 ---
-id: PL-9865
+id: PL-1666
 family: plan
 kind: map
-title: WK-674 — Slice 4 (deployment path) at GO readiness: FD 9704's migration round trip, the FR-452 management limb's decision point, and the activation paper — Work-plan delta
+title: WK-674 — Slice 4 (deployment path) at GO readiness: FD-1650's migration round trip, the FR-452 management limb's decision point, and the activation paper — Work-plan delta
 status: draft                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-12
 owner: planner
@@ -15,7 +15,9 @@ corrected_by: []
 relates: [PL-1237, PL-1537, PL-1620, PL-1583, RL-1347, RL-1614, SL-1257, SL-1258, SL-1259, FD-1211]
 ---
 
-# PL-9865 — WK-674 Slice 4 at GO readiness: Work-plan delta
+# PL-1666 — WK-674 Slice 4 at GO readiness: Work-plan delta
+
+*(Minted 2026-10-12 as PL-1666 from working id 9865, in the D13 batch mint PR. Every citation of a minted id in this record is re-pointed; quoted entries and the lead's quoted headers stay as quoted, and a bare working id left in them is resolved by this record's front matter.)*
 
 > **For agentic workers:** this is a **Work-plan delta** under Lean P2 L5. It does not replace
 > [`PL-1237`](PL-01237-wk-674-deployment-environments-switchover-tenancy-map-plan.md) (the map
@@ -38,11 +40,11 @@ Evidence read at `origin/main` `fc4401dc` (#1288) and at the authored S4 branch
 
 ## Authority
 
-- **FD 9704 into S4:** the maintainer's entry "2026-10-11 20:17:38 BST — Audit verdicts (your
+- **FD-1650 into S4:** the maintainer's entry "2026-10-11 20:17:38 BST — Audit verdicts (your
   20:14:10) ACCEPTED, with each retro FD's DISCHARGE PATH named; SL-1503 is UNBLOCKED (WK-675 S3
   and S4 both merged), so it is the gate's G2 work now", item 4: "FD 9704 (SL-1257 migration
   round-trip): fold into WK-674 S4's write set (its next alembic slice) as a red-first round-trip
-  test". The finding is FD 9704 (working, D13): on `origin/docs-d13-2026-10-11`, the file under
+  test". The finding is FD-1650 (working, D13): on `origin/docs-d13-2026-10-11`, the file under
   `docs/findings/` whose name ends `sl-1257-has-no-committed-migration-round-trip-or-api-keys-unchanged-test.md`
   (its working-id prefix is elided here because it does not resolve before the mint), *Discharge path*: "`upgrade` / `downgrade -1` / `upgrade` on a database holding `api_keys` rows,
   asserting the rows unchanged. Date: merged with SL-1258 and no later than the P2 exit demo".
@@ -57,9 +59,9 @@ Evidence read at `origin/main` `fc4401dc` (#1288) and at the authored S4 branch
 
 ## Goal
 
-Make `SL-1258` GO-able: put FD 9704's test into its write set and Acceptance, state FR-452's
+Make `SL-1258` GO-able: put FD-1650's test into its write set and Acceptance, state FR-452's
 management limb as a decision point instead of a silent pick, record `PL-1537`'s activation, and
-keep FD 9860 (the compose `scheduler` gap) out of S4. The Work's goal is `PL-1237`'s, unchanged.
+keep FD-1661 (the compose `scheduler` gap) out of S4. The Work's goal is `PL-1237`'s, unchanged.
 
 ## Acceptance Standard
 
@@ -72,7 +74,7 @@ tree.
    their mints.
 2. **No requirement range.** `grep -nE '(N?FR)-[0-9]+ *(-|to|–) *(N?FR-)?[0-9]+' <this file>`
    prints no line that stands for a set of ids.
-3. **FD 9704's test (D4.4).** On the S4 merge tree,
+3. **FD-1650's test (D4.4).** On the S4 merge tree,
    `uv run pytest -q backend/tests -k environment_settings_round_trip` exits 0 and collects at
    least 1 test, and the `LG-` quotes its red line from the deliberately broken input D4.4 names,
    with the cause in the line (an `api_keys` row differs), never a bare migration error.
@@ -80,7 +82,7 @@ tree.
    (`uv run pytest -q backend/tests -k management_rate_limit` exits 0, at least 2 tests, red lines
    quoted), **after** DP-S4-1 is ruled, and `git grep -n 'FR-452' -- docs/specs/07-platform.md`
    shows a dated amendment citing that ruling's `RL-` id before the code commit.
-5. **FD 9860 is not in S4 (D4.6).** `git diff --name-only origin/main...<S4 branch>` names no
+5. **FD-1661 is not in S4 (D4.6).** `git diff --name-only origin/main...<S4 branch>` names no
    file under `frontend/`, and `deploy/docker-compose.yml` on the S4 branch adds no `scheduler`
    or `beat` service: `git show <S4 head>:deploy/docker-compose.yml | grep -nE '^  (scheduler|beat):'`
    prints nothing.
@@ -110,13 +112,13 @@ exit path).
 
 | Order | Slice | Scope (what the `LG-` quotes) | Requirements, each id | Depends on | Size |
 |---|---|---|---|---|---|
-| 1 | `SL-1258` — Slice 4: the deployment path | `PL-1537` row 1 (R4.1 to R4.3), `PL-1620` D4.1 to D4.3, and D4.4 to D4.6 below | `07` §3.6: FR-434, FR-435, FR-437; `07` §3.2: FR-412 (memory half), FR-415 (worker service); `07` §3.9: FR-452 (management-API limb); `07` §9: NFR-531, NFR-534; register FD-1211; FD 9704 (working, D13) | `SL-1257` closed (met: `fe80aec6`); DP-S4-1 ruled (for Task C only); FD 9704 minted, or cited by working id | 1 + a build window |
+| 1 | `SL-1258` — Slice 4: the deployment path | `PL-1537` row 1 (R4.1 to R4.3), `PL-1620` D4.1 to D4.3, and D4.4 to D4.6 below | `07` §3.6: FR-434, FR-435, FR-437; `07` §3.2: FR-412 (memory half), FR-415 (worker service); `07` §3.9: FR-452 (management-API limb); `07` §9: NFR-531, NFR-534; register FD-1211; FD-1650 (working, D13) | `SL-1257` closed (met: `fe80aec6`); DP-S4-1 ruled (for Task C only); FD-1650 minted, or cited by working id | 1 + a build window |
 
-The requirement set is `PL-1620`'s, unchanged. FD 9704 is a register row, not a requirement.
+The requirement set is `PL-1620`'s, unchanged. FD-1650 is a register row, not a requirement.
 
 ### Slice 4 (`SL-1258`) — changes since `PL-1620`
 
-- **D4.4 — FD 9704's migration round trip.** One test in a new
+- **D4.4 — FD-1650's migration round trip.** One test in a new
   `backend/tests/test_migration_environment_settings.py`, named
   `test_environment_settings_round_trip_leaves_api_keys_unchanged`, mirroring the neighbouring
   `test_the_migration_round_trips` (`backend/tests/test_migration_deployments.py:348-365` at
@@ -133,7 +135,7 @@ The requirement set is `PL-1620`'s, unchanged. FD 9704 is a register row, not a 
   revision is already correct, so the test is seen red against a **scratch** edit of
   `c5a91e7d3b26`'s `upgrade()` that changes one `api_keys` value. The edit is reverted before
   commit. The quoted red line names the differing row. A red line from a migration error or a
-  missing table is a fixture defect, not the red. Write set: that test file only (FD 9704 names no
+  missing table is a fixture defect, not the red. Write set: that test file only (FD-1650 names no
   code change).
 - **D4.5 — FR-452's management limb is spec-first, behind DP-S4-1.** `07` §3.9 FR-452 at
   `fc4401dc` (`docs/specs/07-platform.md:183`) defines only the scoring limb. Its amendment of
@@ -147,24 +149,24 @@ The requirement set is `PL-1620`'s, unchanged. FD 9704 is a register row, not a 
   a Setting is added, **in a commit before the code**. That path is in `PL-1537`'s S4 write set
   (`PL-1537:147`, "`docs/specs/07-platform.md` if a contract is clarified"). Tasks A and B1 to B5
   do not wait for DP-S4-1.
-- **D4.6 — FD 9860 stays out of S4.** FD 9860 (working, D13, reserved 2026-10-12 02:48:51 BST):
+- **D4.6 — FD-1661 stays out of S4.** FD-1661 (working, D13, reserved 2026-10-12 02:48:51 BST):
   `deploy/docker-compose.yml` lacks the Celery worker and beat services that `07` FR-432 lists
   (`07:148`: "`api`, `worker`, `scheduler` (the beat tick, FR-413), `frontend`"). The authored S4
   branch adds a `worker` service under the `app` profile
   (`deploy/docker-compose.yml:141-145` at `a04ff676`), and no `scheduler` and no `frontend`.
   FR-432 and FR-413 are not in S4's requirement set, and S4 is not widened (the lead, 2026-10-12).
-  So S4 closes FD 9860's worker half only. FD 9860's placement is DP-S4-2, **ruled (ii)** by the
+  So S4 closes FD-1661's worker half only. FD-1661's placement is DP-S4-2, **ruled (ii)** by the
   maintainer's entry "2026-10-12 02:53:52 BST — Readiness rulings: GO S6 SL-1548 (swap
   planner-wk673-c out); FD 9862 LOW, owner WK-677; PL 9864 + PL 9865 deltas OK; FD 9860 (ii)",
   item 4: "FD 9860: (ii) ACCEPTED, beat as its own row after S4, serialised on
   deploy/docker-compose.yml. FR-432 is not met until both land, and the FD stays open until beat
-  merges." **For the D13 assembler:** word FD 9860 against the S4 branch, or its "lacks the
+  merges." **For the D13 assembler:** word FD-1661 against the S4 branch, or its "lacks the
   worker" clause goes stale when S4 merges. The FD stays open past S4's merge.
 - **Follow-on note — the beat row (not cut here; its `SL-` id is reserved by the lead on the
   planner's request).** What the row needs, from the ruling and this delta's evidence:
   - **Scope:** a `scheduler` service in `deploy/docker-compose.yml` under S4's `app` profile,
     from S4's one image (`deploy/Dockerfile`), running the Celery beat tick FR-413 names.
-    Requirements: `07` §3.2 FR-432 (its `scheduler` limb) and FR-413. FD 9860, discharged
+    Requirements: `07` §3.2 FR-432 (its `scheduler` limb) and FR-413. FD-1661, discharged
     at that row's merge.
   - **Depends on:** `SL-1258` merged (the same compose file, the `app` profile and the
     image). Serialised on `deploy/docker-compose.yml`, so it is never in flight beside an S4 or S5
@@ -175,9 +177,9 @@ The requirement set is `PL-1620`'s, unchanged. FD 9704 is a register row, not a 
     runtime proof behind `GIP_DEPLOY_TESTS=1` shows the tick firing, in a build window, as D0.5 says.
 - **FR-432's three unmet limbs (dated 2026-10-12).** The maintainer's entry "2026-10-12 03:08:30
   BST — (1) noted, close after the SIGINT report; (2) the frontend image is FR-432's THIRD limb, so
-  FD 9860 lists all three and FR-432 stays open until all land; (3) integers stay accepted; (4)
+  FD-1661 lists all three and FR-432 stays open until all land; (3) integers stay accepted; (4)
   HIGH, separate CLI: agreed", item 2: "worker (SL-1258, WK-674 S4); beat (its own row after
-  S4); the `frontend` image (a third row). FR-432 and FD 9860 stay open until ALL listed limbs
+  S4); the `frontend` image (a third row). FR-432 and FD-1661 stay open until ALL listed limbs
   merge." So the three limbs of `07` FR-432 (`07:148`) are:
   1. **`worker`**: `SL-1258` (D4.6 above).
   2. **`scheduler` (beat)**: its own row after S4 (the follow-on note above).
@@ -188,7 +190,7 @@ The requirement set is `PL-1620`'s, unchanged. FD 9704 is a register row, not a 
   the cut-ladder move line pre-named". The row's plan carries all three conditions:
   1. **The cut-ladder move is pre-named.** "if the cut ladder takes the lane, the row moves to P3
      by a dated line with an owner (WK-674) and a discharge event. It is never dropped." The
-     discharge event is the row's merge, which closes FR-432's last two limbs and FD 9860.
+     discharge event is the row's merge, which closes FR-432's last two limbs and FD-1661.
   2. **Tech dependency in the same PR.** "A new frontend Dockerfile brings a base image (node
      build stage plus a static server, e.g. nginx). If that is a new tech dependency for the
      stack, docs/skills-map.md is updated in the SAME PR (CLAUDE.md §10), and 07's
@@ -218,8 +220,8 @@ goes `active` in this delta's branch, by its status line only. Its body is not e
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
 | DP-S4-1 | FR-452's management-API limb: (1) which routes are counted; (2) where the limit comes from; (3) does a Service Account's own `rate_limit_rps` apply to them? `07:183` states the scoring limb only. | (1a) every `/api/v1/*` route except the `/score` family and the health probes; (1b) the state-changing routes only (`POST`, `PUT`, `PATCH`, `DELETE`) outside `/score`. (2a) a new Setting, for example `platform.default_management_rate_limit_rps`: unset by default, workspace or Environment scope, resolved by §3.8 as `scoring.default_client_rate_limit_rps` is; (2b) the scoring Setting reused. (3a) no: `rate_limit_rps` stays the scoring limit; (3b) yes: one account limit for both. | **(1a), (2a), (3a).** FR-452 says the scoring limit is "configured separately from management-API limits". Options (2b) and (3b) put both limbs on one source, which reads against that clause. (1a) has no per-method list for the spec to keep in step with routes. With (2a) unset by default, nothing changes for a deployment that sets nothing: the same no-counter-call path as RL-1347 rule 2. The Environment and fail-open rules are the scoring limb's: the key's Environment, empty for a bearer caller; admitted and counted on `gip_rate_limit_unenforced_total` if Redis is down. | spec interpretation | **yes, for Task C only** | the decision-maker (an `RL-`), seated by the lead |
-| DP-S4-2 | Where does FD 9860's remaining half go: the `scheduler` (beat) service, and with it the rest of FR-432's service list? | (i) widen S4 with the `scheduler` service. This adds FR-432 and FR-413 to S4's requirement set, so it needs a further delta. (ii) a separate row after S4, serialised on `deploy/docker-compose.yml`, built on S4's `app` profile and Dockerfile. | **(ii).** S4 is on P2's exit path (`PL-1620` D0.1), and the beat tick is not on `WF-701` A to D. A row after S4 reuses the image and profile S4 builds, with no second edit to the same compose file in flight. | scope | no, for S4 | **ruled (ii)**: the maintainer, "2026-10-12 02:53:52 BST", item 4 (D4.6) |
-| DP-S4-3 | FR-432's third limb, the `frontend` image (`07:148`; the maintainer, "2026-10-12 03:08:30 BST", item 2): is it P2 scope, and in which row? `frontend/` has no Dockerfile at `fc4401dc`, and the S4 branch adds none. | (a) a third WK-674 row in P2, after the beat row, serialised on `deploy/docker-compose.yml`: one image that builds `frontend/` (`pnpm --dir frontend build`) and serves the static output under the `app` profile. (b) fold the image into the beat row, so one P2 row after S4 closes both remaining limbs with one more edit of the compose file. (c) carry it to P3 by a dated move line, with an owner and a discharge event, leaving FR-432 and FD 9860 open past the P2 close with that carriage recorded in the phase closure record (`CLAUDE.md` §14). | **(b).** The beat and `frontend` limbs share the dependency (S4's `app` profile), the file and the serialisation. One row makes one compose edit instead of two serialised ones, and it lets FR-432 and FD 9860 close together in P2. Neither limb is on `WF-701` A to D (`PL-1620` D0.1), so the row stays off the exit path. If the cut ladder needs the lane, the row is moved to P3 by a dated move line, which is (c) applied later and never a silent drop. | scope | no, for S4 | **ruled (b)**: the maintainer, "2026-10-12 03:09:50 BST", with three conditions (D4.6) |
+| DP-S4-2 | Where does FD-1661's remaining half go: the `scheduler` (beat) service, and with it the rest of FR-432's service list? | (i) widen S4 with the `scheduler` service. This adds FR-432 and FR-413 to S4's requirement set, so it needs a further delta. (ii) a separate row after S4, serialised on `deploy/docker-compose.yml`, built on S4's `app` profile and Dockerfile. | **(ii).** S4 is on P2's exit path (`PL-1620` D0.1), and the beat tick is not on `WF-701` A to D. A row after S4 reuses the image and profile S4 builds, with no second edit to the same compose file in flight. | scope | no, for S4 | **ruled (ii)**: the maintainer, "2026-10-12 02:53:52 BST", item 4 (D4.6) |
+| DP-S4-3 | FR-432's third limb, the `frontend` image (`07:148`; the maintainer, "2026-10-12 03:08:30 BST", item 2): is it P2 scope, and in which row? `frontend/` has no Dockerfile at `fc4401dc`, and the S4 branch adds none. | (a) a third WK-674 row in P2, after the beat row, serialised on `deploy/docker-compose.yml`: one image that builds `frontend/` (`pnpm --dir frontend build`) and serves the static output under the `app` profile. (b) fold the image into the beat row, so one P2 row after S4 closes both remaining limbs with one more edit of the compose file. (c) carry it to P3 by a dated move line, with an owner and a discharge event, leaving FR-432 and FD-1661 open past the P2 close with that carriage recorded in the phase closure record (`CLAUDE.md` §14). | **(b).** The beat and `frontend` limbs share the dependency (S4's `app` profile), the file and the serialisation. One row makes one compose edit instead of two serialised ones, and it lets FR-432 and FD-1661 close together in P2. Neither limb is on `WF-701` A to D (`PL-1620` D0.1), so the row stays off the exit path. If the cut ladder needs the lane, the row is moved to P3 by a dated move line, which is (c) applied later and never a silent drop. | scope | no, for S4 | **ruled (b)**: the maintainer, "2026-10-12 03:09:50 BST", with three conditions (D4.6) |
 
 A plan is "`draft` while decision points are open, `active` on freeze" (`document-ids.md` §1.6,
 the PL `map`/`leaf` row). DP-S4-1 blocks Task C, so this delta mints `draft`. It goes `active` by a
@@ -237,13 +239,13 @@ ruling "write spec text" is the lead's reading.
 - **The lead:** reserve the beat row's `SL-` id on the planner's request (D4.6's follow-on
   note). That one row carries beat and the `frontend` image (DP-S4-3 (b)). No second `SL-` id is
   needed.
-- **The D13 minter:** FD 9704 and FD 9860 are minted with their batch. Once they are minted, this
+- **The D13 minter:** FD-1650 and FD-1661 are minted with their batch. Once they are minted, this
   file's working-id cites resolve in the mint commit, as `PL-1620`'s did.
 
 ## Self-review
 
 - **Spec coverage.** The requirement set is `PL-1620` row 1's, unchanged: FR-412, FR-415,
-  FR-434, FR-435, FR-437, FR-452, NFR-531 and NFR-534, plus register FD-1211, with FD 9704 added
+  FR-434, FR-435, FR-437, FR-452, NFR-531 and NFR-534, plus register FD-1211, with FD-1650 added
   as a register row. No requirement id is added or dropped. FR-432 and FR-413 are named only to
   keep them **out** of S4 (D4.6, DP-S4-2, DP-S4-3). FR-432's three limbs are listed in D4.6.
 - **Literals verified at `fc4401dc`** (conventions 1 and 3): the revision ids and `down_revision`

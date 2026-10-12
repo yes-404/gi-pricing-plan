@@ -1,18 +1,20 @@
 ---
-id: FD-9714
+id: FD-1652
 family: finding
 title: SL-1559 never recorded the stored-data check required before retyping rate-table rows and default_row
 status: active
-created: 2026-10-11
+created: 2026-10-12
 owner: auditor
 tree: 372fa92ae3ab306bc067c234487ce929dc0e2a04
 corrected_by: []
-relates: [WK-675, SL-1559, PL-1558, LG-1635, RS-9703, FR-232]
+relates: [WK-675, SL-1559, PL-1558, LG-1635, RS-1649, FR-232]
 ---
 
-# FD-9714 — the RL-1475 stored-data stop was not recorded
+# FD-1652 — the RL-1475 stored-data stop was not recorded
 
-Filed by the retro audit RS-9703. Reads are at the squash-merge `372fa92a` (PR #1281).
+*(Minted 2026-10-12 as FD-1652 from working id 9714, in the D13 batch mint PR. Every citation of a minted id in this record is re-pointed; quoted entries and the lead's quoted headers stay as quoted, and a bare working id left in them is resolved by this record's front matter.)*
+
+Filed by the retro audit RS-1649. Reads are at the squash-merge `372fa92a` (PR #1281).
 
 ## Evidence
 

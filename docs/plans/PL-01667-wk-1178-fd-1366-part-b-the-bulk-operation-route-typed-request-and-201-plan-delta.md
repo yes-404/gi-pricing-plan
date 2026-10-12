@@ -1,8 +1,8 @@
 ---
-id: PL-9866
+id: PL-1667
 family: plan
 kind: map
-title: WK-1178 — FD-1366 Part B for the bulk-operation route, a discriminated request body and a typed 201 (SL 9868): a dated Work-plan delta
+title: WK-1178 — FD-1366 Part B for the bulk-operation route, a discriminated request body and a typed 201 (SL-1669): a dated Work-plan delta
 status: draft                   # draft → active → superseded | retired (§1.2a)
 created: 2026-10-12
 owner: planner
@@ -15,14 +15,16 @@ corrected_by: []
 relates: [FD-1366, FD-1335, PL-1364, SL-1367, PL-1546, SL-1547, RL-1613, RL-1263, RL-1445]
 ---
 
-# PL 9866 — WK-1178, FD-1366 Part B for the bulk-operation route: a discriminated request body and a typed 201 (SL 9868)
+# PL-1667 — WK-1178, FD-1366 Part B for the bulk-operation route: a discriminated request body and a typed 201 (SL-1669)
+
+*(Minted 2026-10-12 as PL-1667 from working id 9866, in the D13 batch mint PR. Every citation of a minted id in this record is re-pointed; quoted entries and the lead's quoted headers stay as quoted, and a bare working id left in them is resolved by this record's front matter.)*
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L5
 > (`document-ids.md` §1.6, PL row: *"one plan per Work, slices as rows, no per-slice `leaf`; a
 > change is one dated Work-plan delta, a new `PL-` that `relates:` the Work's plan"*). WK-1178
 > has no Work plan, so, as for `PL-1627` and `PL-1577`, this delta `relates:` the records it
 > builds on: `FD-1366` (the finding), `PL-1364` (Part A, the guard) and `SL-1367` (its slice).
-> It adds **one slice row**, SL 9868, under `### WK-1178` in [`../roadmap.md`](../roadmap.md).
+> It adds **one slice row**, SL-1669, under `### WK-1178` in [`../roadmap.md`](../roadmap.md).
 > REQUIRED SUB-SKILL: subagent-driven-development (recommended) or executing-plans, task by
 > task; steps use checkbox (`- [ ]`) syntax. The executor also binds `test-driven-development`
 > (every acceptance item is seen red **by its cause** before the code that turns it green),
@@ -47,11 +49,11 @@ on are quoted verbatim.
 1. **"2026-10-12 02:51:32 BST — Lane C S5 NOT READY: (1)+(2) OK on the first free planner;
    ALSO check S8/S6 readiness so lane C does not idle"**: *"(1) the FD-1366 Part B typing-slice
    planner and (2) the PL-1546 delta for RL-1613: YES, on the first free readiness planner, no
-   extra seat."* (2) is `PL 9867`, filed on the same branch.
+   extra seat."* (2) is `PL-1668`, filed on the same branch.
 2. **"2026-10-12 02:58:33 BST — DP-0: (b), stated as SUPERSEDING my 2026-10-11 10:55:02 item 2
    (DP-A (a)); with a fallback trigger"**, condition 1: *"PL 9866 cuts SL 9868 (WK-1178): the
    bulk-operation request + 201 only, (c) refused. It cites this entry AND strikes nothing,
-   because the plan never carried DP-A. Instead PL 9866's Context names 10:55:02 item 2 as
+   because the plan never carried DP-A. Instead PL-1667's Context names 10:55:02 item 2 as
    superseded by this entry."* Condition 3: *"FALLBACK TRIGGER: if SL 9868 is not merged when S6
    merges, bring it to me. S5 then either waits or reverts to DP-A (a), my ruling at that time."*
 3. **Superseded: "2026-10-11 10:55:02 BST — S5 (SL-1547) not ready: … (2) DP-A = (a), S5 types
@@ -59,13 +61,13 @@ on are quoted verbatim.
    commit, with the existing BulkOperationBase (model_schema/rating.py:1179). That discharges
    FD-1366 Part B for that ONE route"*. **Item 2 is superseded by entry 2 above.** On `main` it
    is cited only by `RL-1613:111` (*"S5 is already OpenAPI-contract-changing under the 10:55:02
-   BST entry's DP-A (a)"*). The supersession is recorded in a governed record by `RL 9870`
+   BST entry's DP-A (a)"*). The supersession is recorded in a governed record by `RL-1670`
    (working id, reserved by the lead, eta "2026-10-12 02:58:57 BST"; the D13 batch), not here.
 4. **"2026-10-12 03:06:12 BST — PL 9866/9867 noted; DP-2 (DecimalStr for percentage/floor/cap)
    NOT objected: 04 :278 is explicit. Two additions"**, verbatim: *"1. base_level is named in the
    same sentence. Confirm its type at the route: a key level (string) or a decimal. If it is a bare
    Decimal too, it switches with the other three. 2. This is a BREAKING change for any caller now
-   sending a JSON number. SL 9868's red-first set adds "a JSON number for percentage → 422" and
+   sending a JSON number. SL-1669's red-first set adds "a JSON number for percentage → 422" and
    greps examples/, scripts/ and backend/tests for bulk-operation bodies sending numbers. Every hit
    converts in the same slice and is named in the LG."* **Item 1, answered:** `base_level` is a key
    filter (`KeyFilter = dict[str, list[str]]`, `rating.py:1212`; `RebaseToLevelParameters.base_level:
@@ -112,10 +114,10 @@ it is minted or GO'd on its working ids, as `PL-1629` did at its mint.
    `model_schema/rating.py`, or `backend/tests/test_api_rate_tables.py`. Known writers to
    shared paths: WK-1250 S3 (`SL-1341`, READY plan-side, not dispatched) edits `SubGraphRef` in
    the same `rating.py` (a different definition) and regenerates `docs/contracts/`; WK-675 S5
-   (`SL-1547`) waits for this slice (PL 9867). **Re-check at the GO.**
+   (`SL-1547`) waits for this slice (PL-1668). **Re-check at the GO.**
 5. **A build slot and the single gate** (`RL-1445` item 1). SL-1527 (WK-1178) is building: a
    second WK-1178 slice may run beside it only with `RL-1445` item 2's two conditions in the
-   dispatch record. (a) **Files.** SL 9868's set (below) and SL-1527's (`examples/`, the demo
+   dispatch record. (a) **Files.** SL-1669's set (below) and SL-1527's (`examples/`, the demo
    path) are disjoint at `fc4401dc`; the lead re-checks this at the GO. (b) **Dependencies.**
    Neither slice consumes the other's output. It needs **no gate before S6's gate** (02:58:33,
    condition 2).
@@ -152,7 +154,7 @@ it is minted or GO'd on its working ids, as `PL-1629` did at its mint.
 |---|---|---|---|---|---|
 | DP-0 | Who types this route: S5 (DP-A (a), 10:55:02) or a WK-1178 slice? | (a) S5, in its first commit; (b) a WK-1178 slice, S5 waits; (c) (b) plus the two sub-graph routes | — | — | **Ruled (b)**, the maintainer 02:58:33 (Context, entry 2); (c) refused |
 | DP-1 | What is the request body's shape, since `BulkOperationBase` carries server-set fields (premise b)? | (i) four request models `{kind, parameters}`, the four records **inheriting** from them, with field order pinned; (ii) four request models written separately from the records; (iii) make `applied_to`/`result` optional on the record | **(i).** It writes the `kind`↔`parameters` pairing once (`CLAUDE.md` §2: "a shape defined twice will diverge"). (ii) defines it twice. (iii) weakens the persisted record. **Proof obligation:** the record's field order (`applied_to, result, kind, parameters`), its JSON dump and its published schema do not move (Acceptance 4, 5) | no | the planner (a design choice inside a ruled scope); stated here so the lead can overrule it |
-| DP-2 | Does the typed request keep publishing `percentage`/`floor`/`cap` as `number \| string` (premise d)? | — | **Not a decision: spec compliance.** `04-optimisation.md:278` already reads *"`percentage`, `floor`, `cap` and `base_level` are decimal strings, never floats (R2)"*. The bare `Decimal` (`rating.py:1236`, `:1244`, `:1252-1253`) and its `anyOf: [number, string]` publication are drift from that line. SL 9868 corrects them with `DecimalStr` (`model_schema/money.py:95-100`: float refused, string schema, `str()` serialiser), shared by record and request. **`base_level`** is not changed: in the code it is a `KeyFilter` (`rating.py:1212`, `dict[str, list[str]]`; `RebaseToLevelParameters.base_level`, `:1264`), and `04` itself defines it as a key filter: the example `"base_level": {"driver_age_band": ["25-29"]}` (`:262`) and *"`filter` and `base_level` use exact-value matching over the table's declared keys"* (`:279`). So `:278`'s naming of `base_level` contradicts `:262` and `:279`; Task 1's text is ruled verbatim in to-lead "2026-10-12 03:07:15 BST" and lands with Task 2's code. Related, not decided here: FD 9872 (working id; LOW, owner WK-1178, eta "2026-10-12 03:05:01 BST"), the same float class on `/score`'s decimal Rating Inputs | no (settled) | the lead, from-lead "2026-10-12 03:05:42 BST" |
+| DP-2 | Does the typed request keep publishing `percentage`/`floor`/`cap` as `number \| string` (premise d)? | — | **Not a decision: spec compliance.** `04-optimisation.md:278` already reads *"`percentage`, `floor`, `cap` and `base_level` are decimal strings, never floats (R2)"*. The bare `Decimal` (`rating.py:1236`, `:1244`, `:1252-1253`) and its `anyOf: [number, string]` publication are drift from that line. SL-1669 corrects them with `DecimalStr` (`model_schema/money.py:95-100`: float refused, string schema, `str()` serialiser), shared by record and request. **`base_level`** is not changed: in the code it is a `KeyFilter` (`rating.py:1212`, `dict[str, list[str]]`; `RebaseToLevelParameters.base_level`, `:1264`), and `04` itself defines it as a key filter: the example `"base_level": {"driver_age_band": ["25-29"]}` (`:262`) and *"`filter` and `base_level` use exact-value matching over the table's declared keys"* (`:279`). So `:278`'s naming of `base_level` contradicts `:262` and `:279`; Task 1's text is ruled verbatim in to-lead "2026-10-12 03:07:15 BST" and lands with Task 2's code. Related, not decided here: FD-1671 (working id; LOW, owner WK-1178, eta "2026-10-12 03:05:01 BST"), the same float class on `/score`'s decimal Rating Inputs | no (settled) | the lead, from-lead "2026-10-12 03:05:42 BST" |
 
 ## Write set
 
@@ -168,8 +170,8 @@ it is minted or GO'd on its working ids, as `PL-1629` did at its mint.
 | `scripts/generate-contracts.py` `GENERATED_SHAPES` | `"bulk-operation-request": "BULK_OPERATION_REQUEST_ADAPTER"`, dated comment | 4 |
 | `backend/tests/test_contracts.py` `:70-90`, `:3192`, `:3202-3205` | `ONE_SIDED_SLUGS` entry; both pending entries removed | 4 |
 | `docs/contracts/openapi/generated.json`; `docs/contracts/schemas/generated/bulk-operation-request.schema.json` (new); `…/rate-table-version.schema.json` (the four decimal fields only, DP-2) | regenerated, never hand-edited | 4 |
-| `docs/findings/register.md` FD-1366 row | a dated line: the bulk-operation route typed by SL 9868 | 5 |
-| `docs/roadmap.md` SL 9868 row; `docs/ledgers/LG-<working id>` | status lines and the slice ledger (L1 (a')) | 0, 5 |
+| `docs/findings/register.md` FD-1366 row | a dated line: the bulk-operation route typed by SL-1669 | 5 |
+| `docs/roadmap.md` SL-1669 row; `docs/ledgers/LG-<working id>` | status lines and the slice ledger (L1 (a')) | 0, 5 |
 
 Plus any file holding a bulk-operation body that sends a number (Task 0's sweep; none at `fc4401dc`).
 `frontend/src/api/generated` is regenerated and VCS-ignored; it is not in the write set. No
@@ -216,7 +218,7 @@ frontend source calls this route at `fc4401dc` (`grep -rln bulk frontend/src --i
 ### Task 1: Spec — `03` §5.1's bulk-operation row
 
 - [ ] Append to the row's description cell (`03:1039`), keeping the row's cell count:
-  `*(Amended <date>, SL 9868, FD-1366 Part B: the request body is a BulkOperationRequest, the 04 §4.4 record's kind and parameters, discriminated on kind; applied_to and result are set by the server. The 201 is the new RateTableVersion.)*`
+  `*(Amended <date>, SL-1669, FD-1366 Part B: the request body is a BulkOperationRequest, the 04 §4.4 record's kind and parameters, discriminated on kind; applied_to and result are set by the server. The 201 is the new RateTableVersion.)*`
   and add: `percentage, floor and cap are decimal strings; a JSON number is refused (FR-10, 04 §4.4).`
 - [ ] **`04` §4.4** (`04-optimisation.md:278`), the T-text ruled verbatim in to-lead "2026-10-12
   03:07:15 BST — 04 :278 base_level: a dated correcting clause INSIDE SL 9868 (one commit with the
@@ -224,7 +226,7 @@ frontend source calls this route at `fc4401dc` (`grep -rln bulk frontend/src --i
   The line becomes, exactly:
 
   ```markdown
-  `percentage`, `floor`, `cap` ~~and `base_level`~~ are decimal strings, never floats (R2). *(Amended 2026-10-12, the maintainer's (by delegation) entry "2026-10-12 03:07:15 BST": `base_level` is a key filter, as the example above and the next sentence state, never a decimal; its listing here was an error. Delivered with SL 9868, which types `percentage`, `floor` and `cap` as decimal strings.)*
+  `percentage`, `floor`, `cap` ~~and `base_level`~~ are decimal strings, never floats (R2). *(Amended 2026-10-12, the maintainer's (by delegation) entry "2026-10-12 03:07:15 BST": `base_level` is a key filter, as the example above and the next sentence state, never a decimal; its listing here was an error. Delivered with SL-1669, which types `percentage`, `floor` and `cap` as decimal strings.)*
   ```
 
   No `RL-` (the same entry: *"No RL is needed: the entry plus the dated clause is the record"*).
@@ -333,11 +335,11 @@ signature (premise e).
 ### Task 5: The gate, the register line, the ledger
 
 - [ ] `docs/findings/register.md`, FD-1366's row: append
-  `*(<date>: the bulk-operation route typed by SL 9868 (PL 9866). Remaining: POST /sub-graphs and POST /sub-graphs/{slug}/versions, owner WK-1178.)*`
+  `*(<date>: the bulk-operation route typed by SL-1669 (PL-1667). Remaining: POST /sub-graphs and POST /sub-graphs/{slug}/versions, owner WK-1178.)*`
   The finding stays `active`.
 - [ ] The full gate, both halves (`CLAUDE.md` §11), in the single gate slot, on
   `origin/main...<branch>`; the rc table goes in the `LG-`.
-- [ ] Closing acts in the slice PR's last commit (L1 (a')): SL 9868 `closed` line; the `LG-`'s
+- [ ] Closing acts in the slice PR's last commit (L1 (a')): SL-1669 `closed` line; the `LG-`'s
   Audit section after the auditor's verdict.
 
 ## Acceptance Standard
@@ -358,7 +360,7 @@ Each item is checked by a command a fresh reviewer can run from the repository r
    the published schema is string-only. Red 5 therefore posts `0.1`. Refusing a JSON integer too
    would change `DecimalStr` everywhere it is used, which is outside this slice. **Ruled:** the
    maintainer's entry "2026-10-12 03:08:30 BST", item 3, keeps integers accepted (R2 says "never
-   floats", and an integer is exact). SL 9868's `LG-` carries **one line** naming the lenient
+   floats", and an integer is exact). SL-1669's `LG-` carries **one line** naming the lenient
    integer input, with no FD.
    **Breaking callers:** Task 0's sweep, run again at the head, shows no bulk-operation body
    sending a number.
@@ -393,8 +395,8 @@ Each item is checked by a command a fresh reviewer can run from the repository r
 - **The WK-1178 roadmap row** lists this delta as a Work-plan delta. The planner's charter
   limits its roadmap writes to the `SL-` rows it cuts. The line is the lead's or the D13
   minter's.
-- **RL 9870** (the DP-0 supersession record) is D13's.
-- **The fallback trigger** (02:58:33 condition 3) is the lead's: if SL 9868 has not merged when
+- **RL-1670** (the DP-0 supersession record) is D13's.
+- **The fallback trigger** (02:58:33 condition 3) is the lead's: if SL-1669 has not merged when
   `SL-1548` (S6) merges, it goes to the maintainer.
 
 ## Self-review

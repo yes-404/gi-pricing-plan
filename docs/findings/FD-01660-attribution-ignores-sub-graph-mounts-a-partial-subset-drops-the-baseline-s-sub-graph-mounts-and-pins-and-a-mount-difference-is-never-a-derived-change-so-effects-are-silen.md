@@ -1,5 +1,5 @@
 ---
-id: FD-9804
+id: FD-1660
 family: finding
 title: Attribution ignores sub-graph mounts: a partial subset drops the baseline's sub-graph mounts and pins, and a mount difference is never a derived change, so effects are silently misattributed
 status: active
@@ -10,9 +10,11 @@ corrected_by: []
 relates: [WK-673, SL-1387, SL-1527, PL-1267, FR-266, FR-1399, RL-1449]
 ---
 
-# FD-9804 — the attribution engine does not see sub-graph mounts
+# FD-1660 — the attribution engine does not see sub-graph mounts
 
-Found by SL-1527 (its ledger, id reserved and unmerged) at WF-699 D7, widened by the planner of the `WK-673` fix slice's code read, and re-rated by the maintainer (by delegation). Filed from the entries "2026-10-12 02:29:16 BST — SL-1527 D7: (A) ACCEPTED; FD owner WK-673 (not WK-1178), MEDIUM; (C) gets its OWN WK-673 slice before G2", "2026-10-12 02:34:38 BST — FD 9804 widened to 3 limbs: ACCEPTED, MEDIUM PROVISIONAL with a named re-rate trigger", "2026-10-12 02:35:40 BST — FD 9804 RE-RATED HIGH now (code read), confirmed or reverted by R3" and "2026-10-12 02:43:49 BST — DP-G: exemption (i) REFUSED" (`to-lead.md`, local, cited by header). Every `file:line` below was re-read at `origin/main` `fc4401dcad789692f79f6c3ffc058c1c3921b7b9` on 2026-10-12. The code is SL-1387's (WK-673 Slice 3). File: `packages/pricing-core/src/pricing_core/rating/analysis.py`.
+*(Minted 2026-10-12 as FD-1660 from working id 9804, in the D13 batch mint PR. Every citation of a minted id in this record is re-pointed; quoted entries and the lead's quoted headers stay as quoted, and a bare working id left in them is resolved by this record's front matter.)*
+
+Found by SL-1527 (LG-1647) at WF-699 D7, widened by the planner of the `WK-673` fix slice's code read, and re-rated by the maintainer (by delegation). Filed from the entries "2026-10-12 02:29:16 BST — SL-1527 D7: (A) ACCEPTED; FD owner WK-673 (not WK-1178), MEDIUM; (C) gets its OWN WK-673 slice before G2", "2026-10-12 02:34:38 BST — FD 9804 widened to 3 limbs: ACCEPTED, MEDIUM PROVISIONAL with a named re-rate trigger", "2026-10-12 02:35:40 BST — FD 9804 RE-RATED HIGH now (code read), confirmed or reverted by R3" and "2026-10-12 02:43:49 BST — DP-G: exemption (i) REFUSED" (`to-lead.md`, local, cited by header). Every `file:line` below was re-read at `origin/main` `fc4401dcad789692f79f6c3ffc058c1c3921b7b9` on 2026-10-12. The code is SL-1387's (WK-673 Slice 3). File: `packages/pricing-core/src/pricing_core/rating/analysis.py`.
 
 ## Evidence
 
@@ -30,7 +32,7 @@ Found by SL-1527 (its ledger, id reserved and unmerged) at WF-699 D7, widened by
 
 **Owner: WK-673; the fix slice is `SL 9850` (working id) under `PL 9807` (working id), a dated delta to PL-1267.** Order (entries 02:35:40 and 02:43:49, DP-G, the latter superseding the former's "K at least 2" clause):
 
-- **First, a loud guard.** In `attribute`, after `_check_groups`: refuse **any** attribution when the derived diff carries any `sub_graph_mounts` difference (add, remove, re-point, re-map), at **any** K including 0 and 1; and also refuse when either side mounts a sub-graph and K is two or more. Code `VALIDATION_FAILED` (FR-1399's refusal, no new code); the message names "sub-graph mount differences are not yet attributable" and FD-9804. `derive_changes`, the estimate and D6's dislocation are untouched. Exemption (i) ("one group holding every derived change") is refused: a group is reported by its members, so it mislabels the ladder effect.
+- **First, a loud guard.** In `attribute`, after `_check_groups`: refuse **any** attribution when the derived diff carries any `sub_graph_mounts` difference (add, remove, re-point, re-map), at **any** K including 0 and 1; and also refuse when either side mounts a sub-graph and K is two or more. Code `VALIDATION_FAILED` (FR-1399's refusal, no new code); the message names "sub-graph mount differences are not yet attributable" and FD-1660. `derive_changes`, the estimate and D6's dislocation are untouched. Exemption (i) ("one group holding every derived change") is refused: a group is reported by its members, so it mislabels the ladder effect.
 - **Then the fix** (limbs 1 to 3: carry the mounts and their pins in a subset; a mount difference becomes a derived change), restoring WF-699 D7's two-group split from the salvage branch `salv-sl1527-d7-2group`.
 - **G2 gains this slice** (a dated line under `docs/roadmap.md` G2). SL-1527 merges first with one group and prints "SKIPPED D7 decomposition — FD 9804".
 

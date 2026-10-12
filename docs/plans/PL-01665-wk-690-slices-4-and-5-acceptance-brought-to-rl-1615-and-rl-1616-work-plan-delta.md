@@ -1,5 +1,5 @@
 ---
-id: PL-9864
+id: PL-1665
 family: plan
 kind: map
 title: WK-690 — Slices 4 and 5 acceptance brought to RL-1615 and RL-1616, and the fix row's F.1 restated: Work-plan delta
@@ -15,7 +15,9 @@ corrected_by: []
 relates: [PL-1268, PL-1621, RL-1265, RL-1410, RL-1445, RL-1615, RL-1616, FD-1349, FD-1619, OQ-1617, SL-1274, SL-1275, SL-1622]
 ---
 
-# PL-9864 — WK-690 Slices 4 and 5 brought to their rulings: Work-plan delta
+# PL-1665 — WK-690 Slices 4 and 5 brought to their rulings: Work-plan delta
+
+*(Minted 2026-10-12 as PL-1665 from working id 9864, in the D13 batch mint PR. Every citation of a minted id in this record is re-pointed; quoted entries and the lead's quoted headers stay as quoted, and a bare working id left in them is resolved by this record's front matter.)*
 
 > **For agentic workers:** the executor of each slice binds `subagent-driven-development` or
 > `executing-plans`, and `spec-change` for every `docs/specs/` edit. Under L5 the steps are
@@ -43,7 +45,7 @@ differ. A difference is a defect in this delta, and the executor reports it to t
   is an additive dated Work-plan delta that relates `PL-1268` and `PL-1621` (Lean P2 L5,
   `docs/plans/README.md:16-20`). The maintainer's entry "2026-10-12 02:53:52 BST — Readiness
   rulings: …; PL 9864 + PL 9865 deltas OK; …" (`to-lead.md:22817`), item 3, verbatim: *"WK-690:
-  PL 9864, an additive Work-plan delta. 5.3 follows RL-1616 (200 ok:false), because a ruling
+  PL-1665, an additive Work-plan delta. 5.3 follows RL-1616 (200 ok:false), because a ruling
   outranks an earlier plan line. The delta strikes the plan line and cites RL-1616. The S5 timing
   window needs a TRUE ALONE."*
 - **The rulings it applies.** `RL-1615` (DP-S4-1 (a2), DP-S4-2, need 4.5) and `RL-1616` (DP-S5-1

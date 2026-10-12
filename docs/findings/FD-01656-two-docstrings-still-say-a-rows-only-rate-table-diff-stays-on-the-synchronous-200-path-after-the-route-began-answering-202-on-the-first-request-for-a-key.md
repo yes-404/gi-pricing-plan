@@ -1,16 +1,18 @@
 ---
-id: FD-9797
+id: FD-1656
 family: finding
 title: Two docstrings still say a rows-only rate-table diff stays on the synchronous 200 path, after the route began answering 202 on the first request for a key
 status: active
-created: 2026-10-11
+created: 2026-10-12
 owner: auditor
 tree: 4af5997e14861bafda4685730180233db54dc243
 corrected_by: []
 relates: [WK-675, SL-1503, SL-1391, RL-1418, RL-1442, FR-232]
 ---
 
-# FD-9797 — a docstring that describes the route before SL-1391
+# FD-1656 — a docstring that describes the route before SL-1391
+
+*(Minted 2026-10-12 as FD-1656 from working id 9797, in the D13 batch mint PR. Every citation of a minted id in this record is re-pointed; quoted entries and the lead's quoted headers stay as quoted, and a bare working id left in them is resolved by this record's front matter.)*
 
 Found by SL-1503's gate classification. Filed from the lead's entries "2026-10-11 21:13:13 BST — SL-1503 gate @07830ca6 CLASSIFIED (executor) …" (`from-lead-2026-10-09.md`, a local channel file, cited by its header) and "2026-10-11 21:13:52 BST — SL-1503 Acc 10: a DISCLOSED DEVIATION in LG 9978 is sufficient (no RL) … FD 9797 (LOW, WK-675, D13) noted" (`to-lead.md`, local). Every line below was re-read at `origin/main` `4af5997e14861bafda4685730180233db54dc243` on 2026-10-11.
 

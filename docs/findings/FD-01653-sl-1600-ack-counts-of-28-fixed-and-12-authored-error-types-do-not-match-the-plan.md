@@ -1,18 +1,20 @@
 ---
-id: FD-9724
+id: FD-1653
 family: finding
 title: SL-1600's ACK states 28 fixed-text and 12 authored-text error types where PL-1599 states 30 and 10 with 74 changed; the delta is recorded in the ledger but the ACK omits the changed total and the reached-today list
 status: active
-created: 2026-10-11
+created: 2026-10-12
 owner: auditor
 tree: 372fa92ae3ab306bc067c234487ce929dc0e2a04
 corrected_by: []
-relates: [WK-1178, SL-1600, PL-1599, LG-1609, RS-9703, NFR-499]
+relates: [WK-1178, SL-1600, PL-1599, LG-1609, RS-1649, NFR-499]
 ---
 
-# FD-9724 — unreconciled DP-5 type counts
+# FD-1653 — unreconciled DP-5 type counts
 
-Filed by the retro audit RS-9703. Reads are at the squash-merge `02f23b4a` (PR #1273).
+*(Minted 2026-10-12 as FD-1653 from working id 9724, in the D13 batch mint PR. Every citation of a minted id in this record is re-pointed; quoted entries and the lead's quoted headers stay as quoted, and a bare working id left in them is resolved by this record's front matter.)*
+
+Filed by the retro audit RS-1649. Reads are at the squash-merge `02f23b4a` (PR #1273).
 
 ## Evidence
 
@@ -32,11 +34,11 @@ Predicate: every member of `pydantic_core.core_schema.ErrorType` not in `_FIXED_
 | authored text (`_AUTHORED_TEXT`) | 10 | 12 |
 | DP-7 text | 63 | 63 |
 
-The difference is two types, `date_from_datetime_parsing` and `datetime_from_date_parsing`, moved from fixed to authored. **LG-1609 records this** as a plan delta in its build log (the entry beginning "Plan delta (pydantic 2.13.5, probe by `TypeAdapter`/`create_model`)"): a FastAPI body is validated lax, so a bad date gives `date_from_datetime_parsing` and a bad date-time `datetime_from_date_parsing`, while `date_parsing` and `datetime_parsing` arise only from strict JSON; the lead ruled to keep the two strict types and add the two lax ones with their own authored text. The retro audit's first reading, "no recorded delta" (RS-9703 row and the first draft of this FD), was wrong and is corrected here.
+The difference is two types, `date_from_datetime_parsing` and `datetime_from_date_parsing`, moved from fixed to authored. **LG-1609 records this** as a plan delta in its build log (the entry beginning "Plan delta (pydantic 2.13.5, probe by `TypeAdapter`/`create_model`)"): a FastAPI body is validated lax, so a bad date gives `date_from_datetime_parsing` and a bad date-time `datetime_from_date_parsing`, while `date_parsing` and `datetime_parsing` arise only from strict JSON; the lead ruled to keep the two strict types and add the two lax ones with their own authored text. The retro audit's first reading, "no recorded delta" (RS-1649 row and the first draft of this FD), was wrong and is corrected here.
 
 ## Finding
 
-The 28/12 counts are reconciled to the plan: 30 − 2 = 28 fixed, 10 + 2 = 12 authored, 63 unchanged, total changed 74 + 2 = 76. What remains unrecorded is small: the ACK block does not state the changed-type total (76) and has no "reached today" list. The delta also lives in the ledger only (see FD-9784 limb iii).
+The 28/12 counts are reconciled to the plan: 30 − 2 = 28 fixed, 10 + 2 = 12 authored, 63 unchanged, total changed 74 + 2 = 76. What remains unrecorded is small: the ACK block does not state the changed-type total (76) and has no "reached today" list. The delta also lives in the ledger only (see FD-1655 limb iii).
 
 **Severity LOW (proposed by the auditor).** Verdict candidate: accept, the reconciliation above being the resolution. No code change.
 

@@ -1,5 +1,5 @@
 ---
-id: FD-9863
+id: FD-1664
 family: finding
 title: WF-698's failure row names TRANSPARENCY_ARTIFACT_REQUIRED, a code 02-modelling strikes, where the platform raises EVIDENCE_INCOMPLETE
 status: active
@@ -10,7 +10,9 @@ corrected_by: []
 relates: [WK-1178, WK-661, WF-698, FR-211]
 ---
 
-# FD-9863 — a struck error code still in a workflow row
+# FD-1664 — a struck error code still in a workflow row
+
+*(Minted 2026-10-12 as FD-1664 from working id 9863, in the D13 batch mint PR. Every citation of a minted id in this record is re-pointed; quoted entries and the lead's quoted headers stay as quoted, and a bare working id left in them is resolved by this record's front matter.)*
 
 Filed from the lead's brief of 2026-10-12. Every line was re-read at `origin/main` `fc4401dcad789692f79f6c3ffc058c1c3921b7b9` on 2026-10-12.
 

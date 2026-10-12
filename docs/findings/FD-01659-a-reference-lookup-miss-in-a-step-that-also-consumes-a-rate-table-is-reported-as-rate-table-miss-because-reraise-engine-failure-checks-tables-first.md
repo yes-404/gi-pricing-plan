@@ -1,5 +1,5 @@
 ---
-id: FD-9802
+id: FD-1659
 family: finding
 title: A reference-lookup miss in a step that also consumes a rate table is reported as RATE_TABLE_MISS, because _reraise_engine_failure checks tables first
 status: active
@@ -7,12 +7,14 @@ created: 2026-10-12
 owner: auditor
 tree: fc4401dcad789692f79f6c3ffc058c1c3921b7b9
 corrected_by: []
-relates: [WK-1178, SL-1527, FD-9702, FR-255]
+relates: [WK-1178, SL-1527, FD-1648, FR-255]
 ---
 
-# FD-9802 — the wrong miss code when a step consumes both a table and a lookup
+# FD-1659 — the wrong miss code when a step consumes both a table and a lookup
 
-Found by SL-1527 (its ledger, id reserved and unmerged): the journey asserts the current behaviour with a comment naming this defect. Filed from the maintainer's (by delegation) entry "2026-10-12 02:20:32 BST — SL-1527: (a) D7 option (i) two-group split ACCEPTED; (b) RATE_TABLE_MISS exact + FD MEDIUM, WK-1178, separate from FD 9702 ACCEPTED; your refusal of the step-split workaround ENDORSED" (`to-lead.md`, local), item (b). Every line below was re-read at `origin/main` `fc4401dcad789692f79f6c3ffc058c1c3921b7b9` on 2026-10-12 (SL-1527's ledger quoted `:550`, `:560` and `:562`; the function is now at `:525`).
+*(Minted 2026-10-12 as FD-1659 from working id 9802, in the D13 batch mint PR. Every citation of a minted id in this record is re-pointed; quoted entries and the lead's quoted headers stay as quoted, and a bare working id left in them is resolved by this record's front matter.)*
+
+Found by SL-1527 (LG-1647): the journey asserts the current behaviour with a comment naming this defect. Filed from the maintainer's (by delegation) entry "2026-10-12 02:20:32 BST — SL-1527: (a) D7 option (i) two-group split ACCEPTED; (b) RATE_TABLE_MISS exact + FD MEDIUM, WK-1178, separate from FD 9702 ACCEPTED; your refusal of the step-split workaround ENDORSED" (`to-lead.md`, local), item (b). Every line below was re-read at `origin/main` `fc4401dcad789692f79f6c3ffc058c1c3921b7b9` on 2026-10-12 (LG-1647 quoted `:550`, `:560` and `:562`; the function is now at `:525`).
 
 ## Evidence
 
@@ -25,7 +27,7 @@ Found by SL-1527 (its ledger, id reserved and unmerged): the journey asserts the
 
 ## Finding
 
-**Severity MEDIUM (the maintainer's (by delegation), entry "2026-10-12 02:20:32 BST", item (b)).** LOUD, never a misprice: the quote is refused either way. But a misattributed refusal sends an operator to the wrong artifact (a rate table that is fine, not the reference table that missed). Separate from FD-9702, which is a different cause (a ZEN literal the engine cannot parse, reported under the same code); the two share `_reraise_engine_failure` and no fix.
+**Severity MEDIUM (the maintainer's (by delegation), entry "2026-10-12 02:20:32 BST", item (b)).** LOUD, never a misprice: the quote is refused either way. But a misattributed refusal sends an operator to the wrong artifact (a rate table that is fine, not the reference table that missed). Separate from FD-1648, which is a different cause (a ZEN literal the engine cannot parse, reported under the same code); the two share `_reraise_engine_failure` and no fix.
 
 ## Disposition
 

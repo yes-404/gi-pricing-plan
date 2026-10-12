@@ -1,18 +1,20 @@
 ---
-id: FD-9704
+id: FD-1650
 family: finding
 title: SL-1257's migration c5a91e7d3b26 has no committed round-trip test and no test that existing api_keys rows are unchanged
 status: active
-created: 2026-10-11
+created: 2026-10-12
 owner: auditor
 tree: 372fa92ae3ab306bc067c234487ce929dc0e2a04
 corrected_by: []
-relates: [WK-674, SL-1257, PL-1583, LG-1634, RS-9703, FR-417]
+relates: [WK-674, SL-1257, PL-1583, LG-1634, RS-1649, FR-417]
 ---
 
-# FD-9704 — no committed test for SL-1257's migration
+# FD-1650 — no committed test for SL-1257's migration
 
-Filed by the retro audit RS-9703. Reads are at the squash-merge `fe80aec6` (PR #1280).
+*(Minted 2026-10-12 as FD-1650 from working id 9704, in the D13 batch mint PR. Every citation of a minted id in this record is re-pointed; quoted entries and the lead's quoted headers stay as quoted, and a bare working id left in them is resolved by this record's front matter.)*
+
+Filed by the retro audit RS-1649. Reads are at the squash-merge `fe80aec6` (PR #1280).
 
 ## Evidence
 

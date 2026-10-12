@@ -1,18 +1,20 @@
 ---
-id: FD-9784
+id: FD-1655
 family: finding
 title: Eight slices closed ledgers before a written audit, several gates ran on an older tree or left no ledger record, and plan deltas were taken in channel messages
 status: active
-created: 2026-10-11
+created: 2026-10-12
 owner: auditor
 tree: 372fa92ae3ab306bc067c234487ce929dc0e2a04
 corrected_by: []
-relates: [RS-9703, SL-1257, SL-1541, SL-1529, SL-1631, SL-1390, SL-1559, SL-1600, SL-1557]
+relates: [RS-1649, SL-1257, SL-1541, SL-1529, SL-1631, SL-1390, SL-1559, SL-1600, SL-1557]
 ---
 
-# FD-9784 — closing before audit, gates off the final tree, deltas without a plan record
+# FD-1655 — closing before audit, gates off the final tree, deltas without a plan record
 
-Filed by the retro audit RS-9703. Three limbs, one process cause.
+*(Minted 2026-10-12 as FD-1655 from working id 9784, in the D13 batch mint PR. Every citation of a minted id in this record is re-pointed; quoted entries and the lead's quoted headers stay as quoted, and a bare working id left in them is resolved by this record's front matter.)*
+
+Filed by the retro audit RS-1649. Three limbs, one process cause.
 
 ## Evidence
 

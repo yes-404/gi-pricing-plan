@@ -1,16 +1,18 @@
 ---
-id: FD-9702
+id: FD-1648
 family: finding
 title: A rate-table value in exponent form is accepted at write and compile, then rejected by the engine at scoring and reported as RATE_TABLE_MISS
 status: active
-created: 2026-10-11
+created: 2026-10-12
 owner: auditor
 tree: 4af5997e14861bafda4685730180233db54dc243
 corrected_by: []
 relates: [WK-1178, SL-1526, LG-1641, FR-228, FR-234, FR-255]
 ---
 
-# FD-9702 — an `E`-form decimal the engine cannot parse, and the wrong code it is reported under
+# FD-1648 — an `E`-form decimal the engine cannot parse, and the wrong code it is reported under
+
+*(Minted 2026-10-12 as FD-1648 from working id 9702, in the D13 batch mint PR. Every citation of a minted id in this record is re-pointed; quoted entries and the lead's quoted headers stay as quoted, and a bare working id left in them is resolved by this record's front matter.)*
 
 Found by SL-1526 (LG-1641) on its 2 000-row seed fit. Filed from the lead's entry "2026-10-11 19:25:28 BST — SL-1526 (D) result: NO row dropped; a PLATFORM defect (exponent-form decimals the engine cannot parse) → FD, MEDIUM, owner WK-1178" (`to-lead.md`, a local channel file, cited by its header), item 1, and corrected by the lead's entry "2026-10-11 19:38:54 BST — CORRECTION of my 19:36:01 item 5 … FD 9702's premise "0 exponent values at 20k" was TRUE". Every `file:line` below was re-read at `origin/main` `4af5997e14861bafda4685730180233db54dc243` on 2026-10-11, not copied from the entry (main moved since the entry: `operations.py` `:160` is now `:166`).
 

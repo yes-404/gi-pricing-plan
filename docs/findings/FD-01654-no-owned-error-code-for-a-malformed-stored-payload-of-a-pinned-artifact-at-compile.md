@@ -1,18 +1,20 @@
 ---
-id: FD-9725
+id: FD-1654
 family: finding
 title: No owned error code for a malformed stored payload of a pinned artifact, so compile answers BUNDLE_COMPILE_FAILED
 status: active
-created: 2026-10-11
+created: 2026-10-12
 owner: auditor
 tree: 372fa92ae3ab306bc067c234487ce929dc0e2a04
 corrected_by: []
-relates: [WK-1178, SL-1557, PL-1556, LG-1606, RS-9703, FD-1437]
+relates: [WK-1178, SL-1557, PL-1556, LG-1606, RS-1649, FD-1437]
 ---
 
-# FD-9725 — three compile sites with no owned code
+# FD-1654 — three compile sites with no owned code
 
-Filed by the retro audit RS-9703, from the executor's finding candidate in LG-1606 (Task 3 sweep, 2026-10-09 16:25 BST entry, rows 1 to 3). Reads are at `99f22479` (PR #1271).
+*(Minted 2026-10-12 as FD-1654 from working id 9725, in the D13 batch mint PR. Every citation of a minted id in this record is re-pointed; quoted entries and the lead's quoted headers stay as quoted, and a bare working id left in them is resolved by this record's front matter.)*
+
+Filed by the retro audit RS-1649, from the executor's finding candidate in LG-1606 (Task 3 sweep, 2026-10-09 16:25 BST entry, rows 1 to 3). Reads are at `99f22479` (PR #1271).
 
 ## Evidence
 

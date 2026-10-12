@@ -1,5 +1,5 @@
 ---
-id: PL-9867
+id: PL-1668
 family: plan
 kind: map
 title: WK-675 — Slice 5 (SL-1547) after RL-1613 and the 02:58:33 DP-0 ruling, the contract-changing ordered input, the bulk-operation typing dependency, and the S5/S6 drift rule: a dated Work-plan delta to PL-1546
@@ -15,7 +15,9 @@ corrected_by: []
 relates: [PL-1546, PL-1286, RL-1613, OQ-1223, SL-1547, SL-1548, FD-1366, SL-1600, RL-1445]
 ---
 
-# PL 9867 — WK-675 Slice 5 after RL-1613: the contract-changing `ordered` input, the bulk-operation typing dependency and the S5/S6 drift rule (delta to PL-1546)
+# PL-1668 — WK-675 Slice 5 after RL-1613: the contract-changing `ordered` input, the bulk-operation typing dependency and the S5/S6 drift rule (delta to PL-1546)
+
+*(Minted 2026-10-12 as PL-1668 from working id 9867, in the D13 batch mint PR. Every citation of a minted id in this record is re-pointed; quoted entries and the lead's quoted headers stay as quoted, and a bare working id left in them is resolved by this record's front matter.)*
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L5
 > (`document-ids.md` §1.6, PL row: *"a change is one dated Work-plan delta, a new `PL-` that
@@ -31,7 +33,7 @@ relates: [PL-1546, PL-1286, RL-1613, OQ-1223, SL-1547, SL-1548, FD-1366, SL-1600
 
 Filed under **working id 9867**, reserved by the lead (`~/gi-pricing-plan.local/handover/eta.md`,
 "2026-10-12 02:54:24 BST", free-checked 0/0/0). Written 2026-10-12 by the planner (seat
-planner-wk1250-s3), on the same branch as `PL 9866` (the bulk-operation typing slice, SL 9868,
+planner-wk1250-s3), on the same branch as `PL-1667` (the bulk-operation typing slice, SL-1669,
 WK-1178). **Tree read:** `origin/main` `fc4401dcad789692f79f6c3ffc058c1c3921b7b9`. Every
 `file:line` below was read there. **No test was run at planning time.**
 
@@ -58,7 +60,7 @@ from `RL-1613` on `main`:
 ## Goal
 
 Make `SL-1547` (WK-675 S5) GO-able against a plan that matches the tree and the rulings since
-`PL-1546` was filed. That means RL-1613's contract-changing scope, SL 9868 as the slice that
+`PL-1546` was filed. That means RL-1613's contract-changing scope, SL-1669 as the slice that
 discharges the bulk-operation typing hold, the S5/S6 drift rule, and the overlap on the contract
 guard. Done when `SL-1547` closes on its `LG-`, which quotes `PL-1546` row 1 and this file's
 §"Tasks" as its scope.
@@ -72,21 +74,21 @@ Under L5 a Work plan's tasks are its slice rows (`PL-1546` §Tasks); S5's steps 
 requirements (`03` §3.3 FR-230, FR-231, FR-232, FR-233, FR-235; `00` FR-25; NFR-463; register
 F-W10-1, F-W10-2 view limb) are unchanged. **Added** to the requirements, each individually:
 `03` **FR-213** (the input contract; RL-1613's dated clarification) and `03` **FR-261** (the
-`monotone` property; RL-1613's dated amendment). **Added** to the dependencies: SL 9868 (R5.3,
+`monotone` property; RL-1613's dated amendment). **Added** to the dependencies: SL-1669 (R5.3,
 as amended).
 
-### R5.3, amended — the bulk-operation typing hold is discharged by SL 9868
+### R5.3, amended — the bulk-operation typing hold is discharged by SL-1669
 
 - **Was** (`PL-1546:163-166`): *"S5 calls `bulk-operation`, so it waits until that route is typed
   — the FD-1366 residue, which WK-1178 builds in P2"*.
-- **Now:** the slice that types it is **SL 9868** (WK-1178, `PL 9866`): the request
+- **Now:** the slice that types it is **SL-1669** (WK-1178, `PL-1667`): the request
   (`BulkOperationRequest`, discriminated on `kind`) and the 201 (`RateTableVersion`).
 - **S5 does not type the route, and does not edit `backend/src/app/api/rate_tables.py`'s
   bulk-operation handler.** S5's dialog posts with the generated `BulkOperationRequest` type and
   reads the generated `RateTableVersion`.
 - **If S5 finds it must edit that handler**, `FD-1366`'s per-route hold (ii) applies, and S5
   stops and reports.
-- **Fallback (02:58:33 condition 3):** if SL 9868 has not merged when `SL-1548` (S6) merges, the
+- **Fallback (02:58:33 condition 3):** if SL-1669 has not merged when `SL-1548` (S6) merges, the
   lead takes it to the maintainer. S5 then waits, or reverts to DP-A (a) by a new ruling, not by
   this plan.
 
@@ -170,11 +172,11 @@ Either way, the Acceptance's existing-hash test is the proof.
 - **Expected order.** One WK-675 slice builds at a time (`PL-1546` Global Constraints), so S5
   starts after S6 merges. S5 is therefore expected to be second.
 
-### R5.9 — the overlap with SL 9868 on the contract guard and the generated contract
+### R5.9 — the overlap with SL-1669 on the contract guard and the generated contract
 
-| Shared path | SL 9868 (WK-1178) | S5 (WK-675) | Rule |
+| Shared path | SL-1669 (WK-1178) | S5 (WK-675) | Rule |
 |---|---|---|---|
-| `backend/tests/test_contracts.py` `UNTYPED_REQUEST_PENDING` (`:3201-3213`) and `UNTYPED_2XX_PENDING_PART_B` (`:3187-3196`) | removes the bulk-operation entries (`:3202-3205`, `:3192`) | **adds none**; re-adding a bulk-operation entry is a stop | **SL 9868 merges first** (an activation need below). S5 re-merges `main` before its gate and does not touch these lists. Otherwise `test_every_untyped_body_exclusion_is_still_untyped` (`:3273-3290`) is the check that reds |
+| `backend/tests/test_contracts.py` `UNTYPED_REQUEST_PENDING` (`:3201-3213`) and `UNTYPED_2XX_PENDING_PART_B` (`:3187-3196`) | removes the bulk-operation entries (`:3202-3205`, `:3192`) | **adds none**; re-adding a bulk-operation entry is a stop | **SL-1669 merges first** (an activation need below). S5 re-merges `main` before its gate and does not touch these lists. Otherwise `test_every_untyped_body_exclusion_is_still_untyped` (`:3273-3290`) is the check that reds |
 | `docs/contracts/openapi/generated.json` | regenerated (the typed route) | regenerated (`ordered`) | generated, never hand-merged: **the second to merge regenerates on its own merge base** (`uv run python scripts/generate-contracts.py`, then `--check`) |
 | `packages/model-schema/src/model_schema/rating.py` | the bulk-operation block (`:1215-1300`) | `InputContractField` (`:290-302`) | **name-disjoint by definition** (`RL-1263` as amended by `RL-1445`) |
 | `docs/specs/03-rating-engine.md` | §5.1 bulk-operation row (`:1039`) | FR-213 (`:82`), FR-261 (`:182`) | different rows; no serialisation |
@@ -193,7 +195,7 @@ binds S3 to this).
 2. **OQ-1223 decided** (`PL-1546` acceptance 6). **MET**: `docs/open-questions.md:135` struck,
    resolver `RL-1613`.
 3. **`SL-1391` closed.** **MET** (`PL-1546` row 1).
-4. **SL 9868 (WK-1178, `PL 9866`) merged.** **OPEN.** Its own GO waits on its DP-2 (`PL 9866`).
+4. **SL-1669 (WK-1178, `PL-1667`) merged.** **OPEN.** Its own GO waits on its DP-2 (`PL-1667`).
    This need replaces `PL-1546` row 1's "the FD-1366 bulk-operation typing slice (WK-1178)
    merged" by naming the slice.
 5. **`SL-1548` (S6) merged**, because one WK-675 slice builds at a time (`PL-1546` Global
@@ -252,7 +254,7 @@ head unless stated.
 ## Hand-off (not this plan's writes)
 
 - **`SL-1547`'s roadmap row** names "the FD-1366 bulk-operation typing slice merged" as a need.
-  At this delta's mint, the minter appends a dated line naming SL 9868's minted id and this
+  At this delta's mint, the minter appends a dated line naming SL-1669's minted id and this
   delta. The planner may write it, since it cut that row, but a minted id is needed first.
 - **WK-675's roadmap row** lists this delta (the lead's or the D13 minter's).
 - **The fallback trigger** (R5.3) is the lead's to watch at `SL-1548`'s merge.

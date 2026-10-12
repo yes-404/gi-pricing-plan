@@ -1,5 +1,5 @@
 ---
-id: FD-9861
+id: FD-1662
 family: finding
 title: The gate's mypy files list excludes scripts/ and backend/tests, so errors there have never been seen by any gate
 status: active
@@ -7,10 +7,12 @@ created: 2026-10-12
 owner: auditor
 tree: fc4401dcad789692f79f6c3ffc058c1c3921b7b9
 corrected_by: []
-relates: [WK-1178, SL-1527]
+relates: [WK-1178, SL-1527, LG-1647]
 ---
 
-# FD-9861 — two trees the type gate never reads
+# FD-1662 — two trees the type gate never reads
+
+*(Minted 2026-10-12 as FD-1662 from working id 9861, in the D13 batch mint PR. Every citation of a minted id in this record is re-pointed; quoted entries and the lead's quoted headers stay as quoted, and a bare working id left in them is resolved by this record's front matter.)*
 
 Raised as a D13 owed addition: the lead's eta entry "2026-10-12 00:16:48 BST" (a local file), *"the gate's mypy 'files' (pyproject.toml:130-139 …) does NOT cover scripts/ or backend/tests — scripts/demo.py:69-70 carries pre-existing mypy errors on main that no gate has ever seen (found by executor-sl1527, 00:16)"*. Re-measured at `origin/main` `fc4401dcad789692f79f6c3ffc058c1c3921b7b9` on 2026-10-12, after `uv sync --all-packages` in a fresh worktree (without it, missing-import errors inflate every count).
 

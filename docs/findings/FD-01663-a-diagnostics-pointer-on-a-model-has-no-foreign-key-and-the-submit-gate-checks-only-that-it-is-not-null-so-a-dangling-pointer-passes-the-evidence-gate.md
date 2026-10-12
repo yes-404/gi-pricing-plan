@@ -1,5 +1,5 @@
 ---
-id: FD-9862
+id: FD-1663
 family: finding
 title: A diagnostics pointer on a Model has no foreign key and the submit gate checks only that it is not null, so a dangling pointer passes the evidence gate
 status: active
@@ -10,7 +10,9 @@ corrected_by: []
 relates: [WK-677, SL-1527, FR-211, FR-202]
 ---
 
-# FD-9862 — `diagnostics_id` is a bare UUID
+# FD-1663 — `diagnostics_id` is a bare UUID
+
+*(Minted 2026-10-12 as FD-1663 from working id 9862, in the D13 batch mint PR. Every citation of a minted id in this record is re-pointed; quoted entries and the lead's quoted headers stay as quoted, and a bare working id left in them is resolved by this record's front matter.)*
 
 Found by SL-1527: its CI fixture inserted a Model with `diagnostics_id=uuid4()` and nothing refused it. Filed from the lead's brief of 2026-10-12 and the maintainer's (by delegation) entries "2026-10-12 02:51:17 BST" (MEDIUM PROVISIONAL) and "2026-10-12 02:53:52 BST" (LOW, owner WK-677, with the facts below) (`to-lead.md`, local, cited by header). Every line was re-read at `origin/main` `fc4401dcad789692f79f6c3ffc058c1c3921b7b9` on 2026-10-12.
 

@@ -1,5 +1,5 @@
 ---
-id: FD-9860
+id: FD-1661
 family: finding
 title: deploy/docker-compose.yml brings up only the dependencies: it has no api, worker, scheduler or frontend service, against FR-432
 status: active
@@ -7,10 +7,12 @@ created: 2026-10-12
 owner: auditor
 tree: fc4401dcad789692f79f6c3ffc058c1c3921b7b9
 corrected_by: []
-relates: [WK-674, FR-432, FR-413, SL-1527]
+relates: [WK-674, FR-432, FR-413, SL-1527, LG-1647]
 ---
 
-# FD-9860 — the compose stack does not run the platform
+# FD-1661 — the compose stack does not run the platform
+
+*(Minted 2026-10-12 as FD-1661 from working id 9860, in the D13 batch mint PR. Every citation of a minted id in this record is re-pointed; quoted entries and the lead's quoted headers stay as quoted, and a bare working id left in them is resolved by this record's front matter.)*
 
 Raised as a D13 owed addition: the lead's eta entry "2026-10-11 23:26:41 BST" (a local file) records *"D13 OWED ADD: FD (compose gap: deploy/docker-compose.yml has no Celery worker/beat service vs 07 FR-432) — owner WK-674, severity from the auditor"*, from the maintainer's entry "2026-10-11 23:25:46 BST" (`to-lead.md`). Every line was re-read at `origin/main` `fc4401dcad789692f79f6c3ffc058c1c3921b7b9` on 2026-10-12. **The gap is wider than the entry says.**
 
