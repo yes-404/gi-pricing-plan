@@ -200,8 +200,10 @@ page.** Command: `flock -w 600 /tmp/slots/gate-1 flock -w 600 /tmp/slots/gate-2 
 /tmp/slots/small-test env EXPECT_HEAD=7bc6ce365e747bdbac260e5abe813a580216c9d7 bash acc5.sh`, which
 sources `handover/slot-preflight.sh` and runs `uv run python scripts/demo.py --journey wf-699` (full seed,
 no `--rows`) against its own database. Tree `c960b408f0577bdedf13e72147f892033e6a9627`. START
-`2026-10-12T02:56:55+01:00`, END `2026-10-12T03:10:14+01:00` (13 min 19 s), rc 0
-(`slot-acc5-2.out`, `logs/acc5-demo.log`, `logs/acc5-samples.txt`). The rows line, verbatim:
+`2026-10-12T02:56:55+01:00`, END `2026-10-12T03:10:14+01:00`, rc 0. **The command does not exit by itself: it served the page and then
+stayed up until Ctrl-C, which the lead sent at the end of the window** (13 min 19 s in; the page was served
+about 286 s after the start, the "Seeded to a usable state" line, and the peak host sample 03:02:13 falls
+after the journey, while the frontend was starting) (`slot-acc5-2.out`, `logs/acc5-demo.log`, `logs/acc5-samples.txt`). The rows line, verbatim:
 `portfolio 01a12dd4-ca0e-70a5-8f8d-c53dc992cd8d: a 20,000-policy sample, 19,985 rows validated`, and
 `D6   ok  a 20,000-policy sample of the freMTPL2 book (full-book cost: PL-1574)`. The end: `S1   ok  prod
 scored 46332 minor units from the live version`, `journey done in 201s`, `served page: http://localhost:5173/
