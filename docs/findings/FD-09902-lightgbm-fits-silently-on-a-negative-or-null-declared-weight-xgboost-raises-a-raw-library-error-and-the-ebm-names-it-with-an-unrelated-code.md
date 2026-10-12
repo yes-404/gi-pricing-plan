@@ -57,12 +57,12 @@ negative or null value in a weight column other than the two named, reach the fi
 
 ## Finding
 
-**Severity HIGH, PROVISIONAL (the maintainer's (by delegation) entry "2026-10-12 06:10:04 BST", limb 1;
-the validation check above is the one condition that entry set for lowering it to MEDIUM).** Limb 1,
-LightGBM fitting silently on a negative or null weight, is a silently wrong model: a mispricing path.
-The check does not clear it: it protects one column and not nulls. The lead rules the final
-severity; the executor's reading is that the check supports **HIGH** (nulls and non-`claim_count`
-weights are unprotected, and the one rule that is present is optional).
+**Severity HIGH (the maintainer's (by delegation) entry "2026-10-12 06:37:28 BST": "FD 9902 limb 1
+STAYS HIGH"; it was HIGH PROVISIONAL in the entry "2026-10-12 06:10:04 BST", whose one condition for
+MEDIUM was the validation check above).** Limb 1, LightGBM fitting silently on a negative or null
+weight, is a silently wrong model: a mispricing path. The check does not clear it: `VR-ACT-8` covers
+`claim_count` only, so an exposure or custom weight column can arrive negative or null in a validated
+Dataset Version, and the rule that is present is optional and ignores nulls.
 
 Limbs 2 and 3 are **LOW**: XGBoost refuses, with a raw library error and no platform code; the EBM
 refuses, with a code that names monotone constraints.
