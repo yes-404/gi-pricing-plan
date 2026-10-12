@@ -313,6 +313,7 @@ class _Journey:
     def phase_a(self) -> None:
         slugs = {f: "wf699-" + f.replace("_", "-") for f in self.factors}
         self.table_refs: dict[str, str] = {}
+        seed_notes: list[str] = []
         for factor, slug in slugs.items():
             seeded = self.req(
                 "A1",
@@ -333,6 +334,7 @@ class _Journey:
             ):
                 raise JourneyStepFailed("A1", "SEED_NOT_RECORDED")
             self.table_refs[factor] = f"rate_table:{slug}@{seeded['version']}"
+            seed_notes.append(seeded.get("change_note", ""))
         self.done("A1", f"{len(slugs)} tables, one per rateable Factor of the approved GLM")
         self.done("A2")
 
@@ -404,13 +406,16 @@ class _Journey:
         )
         self.done("A5", "a duplicate key is refused")
 
-        for slug in (edit_slug, bulk_slug):
-            for version in (1, 2):
-                table = self.req(
-                    "A6", "analyst", "GET", f"/rate-tables/{slug}@{version}", expect=(200, 404)
-                )
-                if isinstance(table, dict) and not str(table.get("change_note", "")).strip():
-                    raise JourneyStepFailed("A6", "CHANGE_NOTE_MISSING")
+        # A6: every save is a new version with a change note. The notes are read from the create
+        # responses (the definition read carries none). Seed and import notes are present; the bulk
+        # version's is the service-built one (FD-1491), which is today's behaviour, printed as a
+        # known gap and never as ok.
+        if not all(str(note).strip() for note in seed_notes):
+            raise JourneyStepFailed("A6", "CHANGE_NOTE_MISSING")
+        if not str(imported.get("change_note", "")).strip():
+            raise JourneyStepFailed("A6", "CHANGE_NOTE_MISSING")
+        if not str(bulk.get("change_note", "")).strip():
+            raise JourneyStepFailed("A6", "BULK_CHANGE_NOTE_ABSENT_NOT_THE_FD_1491_BEHAVIOUR")
         self.skip("A6")
 
     def diff(self, slug: str, version: int, against: str, portfolio: str) -> dict[str, Any]:
