@@ -35,15 +35,17 @@ from pricing_core.rating.analysis import (
     dislocation_frame,
     estimate_attribution_ratings,
 )
-from pricing_core.rating.compile import compile_bundle
+from pricing_core.rating.compile import ResolvedArtifact, compile_bundle
 from pricing_core.rating.runtime import load_bundle
-from pricing_core.safe_error import CodedError
+from pricing_core.safe_error import CodedError, safe_error_text
 
 _TESTS_DIR = str(Path(__file__).parent)
 _BASE_ALG = "rating_algorithm:score-fixture@1"
 _CAND_ALG = "rating_algorithm:score-fixture@2"
 _TABLE_1 = "rate_table:motor-expense@1"
 _TABLE_2 = "rate_table:motor-expense@2"
+_NCD4 = "sub_graph:ncd-ladder@4"
+_NCD5 = "sub_graph:ncd-ladder@5"
 
 
 def _ref(text: str) -> ArtifactRef:
@@ -77,6 +79,85 @@ def _e_office(alg: dict[str, Any]) -> None:
 _THREE = (_e_table, _e_instalment, _e_office)
 
 
+def _fragment(version: int, factor: int) -> dict[str, Any]:
+    """A stored NCD ladder (WK-673 FD-1660): `@4` yields 1, `@5` yields 2, so a re-point moves
+    every price."""
+    return {
+        "slug": "ncd-ladder",
+        "version": version,
+        "inputs": [{"name": "ncd_years", "type": "int"}],
+        "outputs": [{"name": "ncd_factor", "type": "decimal", "required": True}],
+        "steps": [
+            {
+                "step_id": "s_ladder",
+                "type": "expression",
+                "label": "Ladder",
+                "expr": f"ncd_years * 0 + {factor}",
+                "result_type": "decimal",
+                "consumes": ["ncd_years"],
+                "produces": "ncd_raw",
+            },
+            {
+                "step_id": "s_cap",
+                "type": "expression",
+                "label": "Cap",
+                "expr": "min([ncd_raw, 5])",
+                "result_type": "decimal",
+                "consumes": ["ncd_raw"],
+                "produces": "ncd_factor",
+            },
+        ],
+        "change_note": "ncd ladder",
+    }
+
+
+def _e_mounted(alg: dict[str, Any]) -> None:
+    """Mount `m_ncd` (`@4`) on the score fixture: an `ncd_years` input, its input step, the mount
+    and `s_office` consuming `ncd_factor` (the shape of `test_rating_score.py`'s
+    `_compiled_with_a_mounted_sub_graph`). Do not follow it with `_e_office`: that rewrites
+    `s_office`'s `expr` and drops `ncd_factor`."""
+    alg["input_contract"].append(
+        {"name": "ncd_years", "type": "int", "nullable": False, "min": 0, "max": 9}
+    )
+    alg["steps"].insert(
+        0,
+        {
+            "step_id": "s_in_ncd",
+            "type": "input",
+            "label": "NCD years",
+            "input_name": "ncd_years",
+            "on_missing": "error",
+            "produces": "ncd_years",
+        },
+    )
+    office = _step(alg, "s_office")
+    office["expr"] = "risk_premium_minor * expense_factor * ncd_factor"
+    office["consumes"] = ["risk_premium_minor", "expense_factor", "ncd_factor"]
+    alg["sub_graphs"] = [
+        {
+            "ref": _NCD4,
+            "mount_point": "m_ncd",
+            "inputs": {"ncd_years": "ncd_years"},
+            "outputs": {"ncd_factor": "ncd_factor"},
+        }
+    ]
+
+
+def _e_repoint(alg: dict[str, Any]) -> None:
+    alg["sub_graphs"][0]["ref"] = _NCD5
+
+
+def _mounted_base() -> dict[str, Any]:
+    """The baseline that already mounts `m_ncd` at `@4` (version 1)."""
+    alg = copy.deepcopy(_algorithm_payload())
+    _e_mounted(alg)
+    return alg
+
+
+def _mounted_book() -> pl.LazyFrame:
+    return _book(ncd_years=[i % 5 for i in range(12)])
+
+
 def _candidate_payload(*edits: Callable[[dict[str, Any]], None]) -> dict[str, Any]:
     alg = copy.deepcopy(_algorithm_payload())
     alg["version"] = 2
@@ -85,10 +166,23 @@ def _candidate_payload(*edits: Callable[[dict[str, Any]], None]) -> dict[str, An
     return alg
 
 
+class _MountAwareResolver(_FakeResolver):
+    """The score fixture's resolver, answering a sub-graph ref with the status a stored fragment
+    carries (`no_maturity_concept`, as `test_rating_compile_bundle.py` resolves one)."""
+
+    async def resolve(self, ref: ArtifactRef) -> ResolvedArtifact:
+        resolved = await super().resolve(ref)
+        if ref.type == "sub_graph":
+            return ResolvedArtifact(status="no_maturity_concept", payload=resolved.payload)
+        return resolved
+
+
 def _resolver(
     cand: dict[str, Any] | None = None, *, base: dict[str, Any] | None = None
 ) -> _FakeResolver:
-    resolver = _FakeResolver()
+    resolver = _MountAwareResolver()
+    resolver._payloads[_NCD4] = _fragment(4, 1)
+    resolver._payloads[_NCD5] = _fragment(5, 2)
     if base is not None:
         resolver._payloads[_BASE_ALG] = base
     if cand is not None:
@@ -103,7 +197,17 @@ def _resolver(
     return resolver
 
 
-def _candidate_version(*, table: bool = False, extra_pins: tuple[str, ...] = ()) -> Any:
+def _mounted_version(*sub_graphs: str) -> Any:
+    """The baseline version, pinning the given sub-graph refs."""
+    base = _version()
+    assert base.pins is not None
+    pins = base.pins.model_copy(update={"sub_graphs": [_ref(r) for r in sub_graphs]})
+    return base.model_copy(update={"pins": pins})
+
+
+def _candidate_version(
+    *, table: bool = False, extra_pins: tuple[str, ...] = (), sub_graphs: tuple[str, ...] = ()
+) -> Any:
     base = _version()
     assert base.pins is not None
     tables = [_ref(_TABLE_2 if table else _TABLE_1), *(_ref(t) for t in extra_pins)]
@@ -112,6 +216,7 @@ def _candidate_version(*, table: bool = False, extra_pins: tuple[str, ...] = ())
         models=base.pins.models,
         reference_tables=base.pins.reference_tables,
         custom_objectives=base.pins.custom_objectives,
+        sub_graphs=[_ref(r) for r in sub_graphs],
     )
     return base.model_copy(update={"algorithm_ref": _ref(_CAND_ALG), "pins": pins})
 
@@ -153,12 +258,15 @@ def _run(
     groups: list[tuple[str, list[str]]] | None = None,
     resolver: Any = None,
     extra_pins: tuple[str, ...] = (),
+    base_sub_graphs: tuple[str, ...] = (),
+    sub_graphs: tuple[str, ...] = (),
+    base: dict[str, Any] | None = None,
 ) -> Any:
-    resolver = resolver or _resolver(cand)
+    resolver = resolver or _resolver(cand, base=base)
     return asyncio.run(
         attribute(
-            _version(),
-            _candidate_version(table=table, extra_pins=extra_pins),
+            _mounted_version(*base_sub_graphs),
+            _candidate_version(table=table, extra_pins=extra_pins, sub_graphs=sub_graphs),
             book if book is not None else _book(),
             _spec(groups),
             resolver,
@@ -732,9 +840,7 @@ def test_attribute_undeclared_column_never_reaches_the_engine(
     monkeypatch.setattr(
         compile_module,
         "ALGORITHM_CHECKS",
-        tuple(
-            c for c in compile_module.ALGORITHM_CHECKS if c.__name__ != "_check_declared_reads"
-        ),
+        tuple(c for c in compile_module.ALGORITHM_CHECKS if c.__name__ != "_check_declared_reads"),
     )
     base = _with_secret_step()
     cand = copy.deepcopy(base)
@@ -876,3 +982,176 @@ def test_attribute_is_byte_identical_across_processes() -> None:
     first, second = _child("1"), _child("2")
     assert first == second
     assert '"attribution_summary"' in first
+
+
+# ---------------------------------------------------------------------------
+# FD-1660 (WK-673, PL-1694 Stage A): attribution does not see sub-graph mounts, so it refuses.
+# ---------------------------------------------------------------------------
+
+
+class _MountSpy:
+    """Records every subset compile `attribute` attempts: the sub-graph refs a compiled bundle
+    resolved, and the text of a compile that failed."""
+
+    def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        self.compiled: list[tuple[str, list[str]]] = []
+        self.failed: list[tuple[str, str]] = []
+        real = analysis.compile_bundle
+
+        async def spy(version: Any, resolver: Any) -> Any:
+            slug = version.algorithm_ref.slug
+            try:
+                bundle = await real(version, resolver)
+            except ValueError as exc:
+                self.failed.append((slug, safe_error_text(exc)))
+                raise
+            resolved = sorted(k for k in bundle.resolved_payloads if k.startswith("sub_graph:"))
+            self.compiled.append((slug, resolved))
+            return bundle
+
+        monkeypatch.setattr(analysis, "compile_bundle", spy)
+
+    @property
+    def attempts(self) -> int:
+        return len(self.compiled) + len(self.failed)
+
+
+def _g1_run() -> Any:
+    """The baseline mounts `m_ncd` at `@4`; the candidate re-points it to `@5` and edits the rate
+    table. No groups."""
+    cand = _candidate_payload(_e_mounted, _e_repoint, _e_table)
+    return _run(
+        cand,
+        table=True,
+        book=_mounted_book(),
+        base=_mounted_base(),
+        base_sub_graphs=(_NCD4,),
+        sub_graphs=(_NCD5,),
+    )
+
+
+def _independent_total(version: Any, payload: dict[str, Any], slug: str) -> int:
+    """The book's summed payable premium for one algorithm, scored without attribution."""
+    book = _mounted_book()
+    resolver = _resolver()
+    ref = _ref(f"rating_algorithm:{slug}@1")
+    resolver._payloads[str(ref)] = payload
+    bundle = load_bundle(
+        asyncio.run(compile_bundle(version.model_copy(update={"algorithm_ref": ref}), resolver))
+    )
+    rated = analysis._score_pass(bundle, book, book.collect_schema().names(), _spec(), ref)
+    assert all(r["minor"] is not None for r in rated.values())
+    return sum(int(r["minor"]) for r in rated.values())
+
+
+def _g1_independent_effects() -> tuple[int, int, int, int]:
+    """(total, ladder-only effect, table-only effect, interaction), each from its own bundle."""
+    base = _independent_total(_mounted_version(_NCD4), _mounted_base(), "g1-base")
+    repoint = copy.deepcopy(_mounted_base())
+    _e_repoint(repoint)
+    ladder = _independent_total(_mounted_version(_NCD5), repoint, "g1-ladder") - base
+    table_only = copy.deepcopy(_mounted_base())
+    _e_table(table_only)
+    table_version = _candidate_version(table=True, sub_graphs=(_NCD4,))
+    table = _independent_total(table_version, table_only, "g1-tbl") - base
+    full = _candidate_payload(_e_mounted, _e_repoint, _e_table)
+    full_version = _candidate_version(table=True, sub_graphs=(_NCD5,))
+    total = _independent_total(full_version, full, "g1-full") - base
+    return total, ladder, table, total - ladder - table
+
+
+@pytest.mark.req("FR-1399")
+def test_guard_mount_difference_base_outcome_is_a_silent_misattribution() -> None:
+    """FD-1660 limb 3 on the base, in numbers: the re-point is no derived change, so the one
+    change (the rate-table edit) is credited with the whole total, the ladder effect included."""
+    result = _g1_run()
+    total, ladder, table, interaction = _g1_independent_effects()
+    assert [c.kind for c in result.derived_changes] == ["table_repointed"]
+    assert not any("m_ncd" in c.description for c in result.derived_changes)
+    (item,) = result.attribution
+    assert result.attribution_summary.total_change_minor == total
+    assert item.shapley_minor == total
+    assert ladder != 0, "the ladder-only effect must be non-zero for the misattribution to bite"
+    assert item.shapley_minor - table == ladder + interaction, (table, ladder, interaction)
+
+
+def _g2_run() -> Any:
+    """Baseline and candidate both mount `m_ncd` at `@4`; the candidate adds the rate-table and
+    instalment edits (K = 2, no groups): no mount differs, but the baseline mounts."""
+    cand = _candidate_payload(_e_mounted, _e_table, _e_instalment)
+    return _run(
+        cand,
+        table=True,
+        book=_mounted_book(),
+        base=_mounted_base(),
+        base_sub_graphs=(_NCD4,),
+        sub_graphs=(_NCD4,),
+    )
+
+
+def _demo_shape_run(split: Callable[[list[Any]], list[tuple[str, list[str]]]]) -> Any:
+    """The demo's shape: the baseline has no mount; the candidate mounts `m_ncd` with its consumer
+    edited (`s_in_ncd` added, `s_office` consuming `ncd_factor`) and also edits `s_instalment`.
+    `split` turns the derived changes into the declared groups."""
+    cand = _candidate_payload(_e_mounted, _e_instalment)
+    sub_graphs = (_NCD4,)
+    changes = asyncio.run(
+        derive_changes(_version(), _candidate_version(sub_graphs=sub_graphs), _resolver(cand))
+    )
+    return _run(cand, book=_mounted_book(), sub_graphs=sub_graphs, groups=split(changes))
+
+
+def _one_group(changes: list[Any]) -> list[tuple[str, list[str]]]:
+    return [("all", [c.id for c in changes])]
+
+
+def _structure_and_instalment(changes: list[Any]) -> list[tuple[str, list[str]]]:
+    instalment = [c.id for c in changes if "s_instalment" in c.description]
+    return [
+        ("structure", [c.id for c in changes if c.id not in instalment]),
+        ("instalment", instalment),
+    ]
+
+
+@pytest.mark.req("FR-1399")
+def test_guard_baseline_mount_k2_base_outcome_is_an_unpinned_mount(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """FD-1660 limb 2 on the base: `_subset_pins` carries no sub-graph pin, so the first partial
+    subset fails to compile; the only subset that compiled resolved the baseline's own `@4`."""
+    spy = _MountSpy(monkeypatch)
+    with pytest.raises(AttributionError) as exc:
+        _g2_run()
+    assert exc.value.code == "BUNDLE_COMPILE_FAILED"
+    assert "RATING_VERSION_UNPINNED" in str(exc.value)
+    assert "m_ncd" in str(exc.value)
+    assert spy.compiled == [("score-fixture-subset-00", [_NCD4])]
+
+
+@pytest.mark.req("FR-1399")
+def test_guard_one_group_refused_base_outcome_is_a_mislabelled_lump(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """DP-G (exemption (i) refused), on the base: one group holding every derived change returns
+    one item equal to the total, the sub-graph's effect labelled as the group's."""
+    spy = _MountSpy(monkeypatch)
+    result = _demo_shape_run(_one_group)
+    (item,) = result.attribution
+    assert item.shapley_minor == result.attribution_summary.total_change_minor
+    assert not any("m_ncd" in c.description for c in result.derived_changes)
+    assert all(resolved in ([], [_NCD4]) for _, resolved in spy.compiled)
+
+
+@pytest.mark.req("FR-1399")
+def test_guard_mount_added_two_groups_base_outcome_is_a_compile_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """FD-1660 limb 1 on the base: the `structure` subset keeps the baseline's (empty) mounts but
+    holds a step consuming `ncd_factor`, so it does not compile; only the empty subset did, and
+    it resolved no sub-graph."""
+    spy = _MountSpy(monkeypatch)
+    with pytest.raises(AttributionError) as exc:
+        _demo_shape_run(_structure_and_instalment)
+    assert exc.value.code == "BUNDLE_COMPILE_FAILED"
+    assert "did not compile" in str(exc.value)
+    assert spy.compiled == [("score-fixture-subset-00", [])]
