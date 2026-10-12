@@ -929,6 +929,23 @@ class _Journey:
         )
         return decided
 
+    def derived_changes(self, spec: Mapping[str, Any]) -> list[str]:
+        """The ids of the changes between the baseline and the candidate: the smallest `c1..ck`
+        the estimate route accepts as a partition (`k` below the count leaves one out, above it
+        names one that does not exist)."""
+        for count in range(1, 80):
+            ids = [f"c{i}" for i in range(1, count + 1)]
+            response = self.client.post(
+                "/dislocation-runs/estimate",
+                headers=self.who("analyst"),
+                json={**spec, "change_groups": [{"name": "the whole fork", "changes": ids}]},
+            )
+            if response.status_code == 200:
+                return ids
+            if response.status_code != 422:
+                raise JourneyStepFailed("D6", "ESTIMATE_FAILED", response.status_code)
+        raise JourneyStepFailed("D6", "DERIVED_CHANGES_NOT_FOUND")
+
     def dislocation(self) -> None:
         spec = {
             "baseline_ref": "rating_version:fremtpl2-demo@1",
@@ -940,9 +957,14 @@ class _Journey:
             "band_edges_pct": ["-10", "-5", "0", "5", "10"],
             "mover_threshold_pct": "10",
         }
+        # The fork adds and rewires steps that depend on one another, and attribution refuses
+        # dependent changes that are not in one group. The derived changes are numbered c1, c2, ...
+        # (FR-1399) and the estimate refuses a partition that leaves one out or names one that is
+        # not derived, so the count is found by asking, then they go into one group.
+        spec["change_groups"] = [{"name": "the whole fork", "changes": self.derived_changes(spec)}]
         accepted = self.req("D6", "analyst", "POST", "/dislocation-runs", expect=202, json=spec)
-        self.done("D6", "a 20,000-policy sample of the freMTPL2 book (full-book cost: PL-1574)")
         job = self.job_ok("D6", "analyst", accepted)
+        self.done("D6", "a 20,000-policy sample of the freMTPL2 book (full-book cost: PL-1574)")
         run_id = str(job["result"]["ref"]).split(":", 1)[1]
         run = self.req("D7", "analyst", "GET", f"/dislocation-runs/{run_id}", expect=200)
         if not run.get("attribution"):
