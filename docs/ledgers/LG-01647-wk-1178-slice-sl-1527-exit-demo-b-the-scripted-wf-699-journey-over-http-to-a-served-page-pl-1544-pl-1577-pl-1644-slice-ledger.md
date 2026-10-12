@@ -158,9 +158,46 @@ and sum assertions, their test) is kept at `e14a81e55c509de5378858dc84a46f6c5fa0
 `salv-sl1527-d7-2group`, for the WK-673 fix slice (working SL 9850, PL 9807). **G2 is NOT met until D7
 decomposes (FD 9804).**
 
-**Acceptance 5 (the one-command rehearsal)** is not yet run: it is an ALONE window the lead opens. Its
-command, tree, the "20,000 rows ran" line, the exit code, the README machine-requirement sentence and the
-live worker and beat check are recorded in the Build log when it has run.
+**Acceptance 5 (the one-command rehearsal), first run, FAILED at C5.** `uv run python scripts/demo.py
+--journey wf-699` (full seed, no `--rows`), under the three-flock wrapper in the ALONE window opened at
+`from-lead` "2026-10-12 02:43:50 BST", at head `bc7695d0f890ffae9d5d2986911c829d7151ec2c`, tree
+`aa0812108cc5bbc2220a4898b7454cef524649c3`: START `2026-10-12T02:44:29+01:00`, END
+`2026-10-12T02:46:42+01:00`, rc 1 (`slot-acc5.out`). The "20,000" line ran
+(`portfolio 01a12dca-0017-7dd3-9e2d-0982f9122f50: a 20,000-policy sample, 19,985 rows validated`); C1 to C4
+passed; C5 failed `EVIDENCE_INCOMPLETE` (HTTP 422) at `POST /models/{id}/submit` for the real full-seed
+GBM `fremtpl2-gbm-4c8c2b`. The run's 8 memory samples are a fragment, not a measurement, and no README
+sentence is written from them.
+
+**Diagnosis (read-only, verified by the lead).** The gate is `modelling._require_evidence`
+(`backend/src/app/platform/modelling.py` `:1242`): a non-GLM model with no transparency artifact is refused
+(`:1273`, `02` R3, FR-211), and `diagnostics` needs `diagnostics_id is not None` (`:1298`). The real GBM
+(xgboost) had diagnostics and no artifact. The CI stand-in passed because it is GLM-typed
+(`test_wf699_journey.py`, `_glm_spec`), which satisfies R3 by its type, and its `diagnostics_id` was a bare
+`uuid4()` pointing at no row (the column has no foreign key, `db/models.py:1430`). **Finding against my
+own fixture: the CI journey approved a model no user can produce.** WF-698 puts the transparency build (D10)
+before the submit (E6); the journey had skipped D10.
+
+**The ruling** (the maintainer, `to-lead.md` "2026-10-12 02:51:17 BST", relayed `from-lead` as the C5
+GO): (a) C5 `POST /models/{id}/transparency`, waits for the real Job by polling its status, then submits,
+nothing sampled or shortened (the route's default sample is used); the next rehearsal records the Job's
+wall time and peak memory, and a run over 5 minutes is too long for a live demo and is said so here and in
+the README. (b) The CI test keeps the GLM-typed stand-in, with a real `DiagnosticsRow` in place of the
+`uuid4()`, a docstring saying it covers the post-approval plumbing only and that the GBM
+transparency/submit gate is covered by the Acceptance 5 rehearsal, and a new DB test, **a guard and not a
+red-first because it passes on `main`**: `test_a_non_glm_stand_in_without_a_transparency_artifact_is_refused`
+(non-GLM, diagnostics, no artifact, `422 EVIDENCE_INCOMPLETE`). (c) The fixture gap is a **disclosed limit**
+of this slice: CI never runs the GBM transparency build; only the Acceptance 5 rehearsal does. The platform
+gap (the gate accepts a dangling `diagnostics_id`) is **FD 9862 (working, D13)**, the lead's.
+
+**The fix** is `1e689b92a0679ef4a1a9650ed3c0d3a6e45d4095` (C5 builds the artifact when the model is not
+GLM-typed, then re-reads the model for its `If-Match` etag and submits). `STAGE=reds` at that head
+(`slot-reds-12.out`, rc 0): the three reds still red by their causes, `db_members` 3 passed,
+`db_demo_command` 23 passed, `db_journey` 11 passed (the end-to-end test with the real diagnostics row,
+and the guard). The second Acceptance 5 run, its command, tree, rows line, exit code, the Job's wall time
+and peak memory, the full-journey memory measurement, the README machine-requirement sentence and the live
+worker and beat check are recorded here when it has run. `docs/workflows/WF-00698-*.md` `:129` cites the
+struck code `TRANSPARENCY_ARTIFACT_REQUIRED` where the platform raises `EVIDENCE_INCOMPLETE` (a doc finding
+for the lead's D13; outside this slice's write set).
 
 ### Audit
 
