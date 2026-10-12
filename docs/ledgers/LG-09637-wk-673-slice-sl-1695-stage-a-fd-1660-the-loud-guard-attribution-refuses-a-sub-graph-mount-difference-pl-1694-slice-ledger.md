@@ -38,7 +38,7 @@ Branch `sl-1695-wk673-fd1660-guard`, worktree `.claude/worktrees/sl-1695`, cut f
 
 ### Gate
 
-Not yet run. The full gate starts only on the lead's explicit "gate slot granted" for the head (S-13).
+Granted by the lead on head `e6019598124bcc5e93d2aa4b9cc2c3eff6455244` (the lead's `from-lead` entry "2026-10-12 08:34:15 BST"); ran 09:15:24 BST under `flock /tmp/slots/gate-1` with `scratch/sl1695/slot.sh` (own database `gipricing_sl-1695_dfe5cf59`). **Stopped by the lead by PID, not a result:** the lead's `from-lead` entry "2026-10-12 09:31:18 BST" (handover freeze) stopped it during pytest, which could not finish by about 09:50. Before the stop: ruff rc 0, mypy rc 0, import_linter rc 0. No pytest, audit_docs, req_coverage, contracts or frontend result exists. The demo-journey run (Task 3 Step 7) did not run; its waiter was cancelled. A re-run needs a new grant (S-13) and a recreated database (S-14).
 
 ### Audit
 
