@@ -26,8 +26,8 @@ relates: [PL-1546, PL-1286, RL-1613, OQ-1223, SL-1547, SL-1548, FD-1366, SL-1600
 > statement.** S5's executor binds what `PL-1546`'s header names. This delta adds
 > `contract-schema` (the authored `rating-algorithm.schema.json`), `spec-change` (FR-213,
 > FR-261) and `python-package` (`model-schema`, `pricing-core`). The executor is spawned from
-> `.claude/roles/executor.md`; its `LG-` quotes `PL-1546` row 1 and this file's §"S5's row, as
-> amended" as its scope.
+> `.claude/roles/executor.md`; its `LG-` quotes `PL-1546` row 1 and this file's §"Tasks" (S5's
+> row, as amended) as its scope.
 
 Filed under **working id 9867**, reserved by the lead (`~/gi-pricing-plan.local/handover/eta.md`,
 "2026-10-12 02:54:24 BST", free-checked 0/0/0). Written 2026-10-12 by the planner (seat
@@ -55,7 +55,18 @@ from `RL-1613` on `main`:
    10:55:02 entry's item 2 ("S5 types POST bulk-operation itself, in its FIRST commit") is
    superseded.** `PL-1546` never carried it, so nothing here strikes it.
 
-## S5's row, as amended
+## Goal
+
+Make `SL-1547` (WK-675 S5) GO-able against a plan that matches the tree and the rulings since
+`PL-1546` was filed. That means RL-1613's contract-changing scope, SL 9868 as the slice that
+discharges the bulk-operation typing hold, the S5/S6 drift rule, and the overlap on the contract
+guard. Done when `SL-1547` closes on its `LG-`, which quotes `PL-1546` row 1 and this file's
+§"Tasks" as its scope.
+
+## Tasks
+
+Under L5 a Work plan's tasks are its slice rows (`PL-1546` §Tasks); S5's steps are written in its
+`LG-` by its executor. This delta's one task is **S5's row, as amended**:
 
 `PL-1546` row 1 stands except as amended below. Its scope (`PL-1286` S5 row, R5.1–R5.3) and its
 requirements (`03` §3.3 FR-230, FR-231, FR-232, FR-233, FR-235; `00` FR-25; NFR-463; register
@@ -198,8 +209,9 @@ amendment, by design. That is S5's specification work, read at the ACK, not a de
 this plan. R5.7's two implementation routes are both inside `RL-1613`; the executor records
 which route it took.
 
-## Acceptance Standard — additions to `PL-1546`'s items 1–8 for S5
+## Acceptance Standard
 
+These are **additions to `PL-1546`'s items 1–8**, for S5 only.
 Each item is checked by a command a fresh reviewer can run from the repository root, at S5's
 head unless stated.
 
