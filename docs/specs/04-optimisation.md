@@ -275,7 +275,7 @@ Each `kind` uses the parameters FR-233 names:
 - `rebase_to_level` — `base_level`; rescales the table so the named reference level's
   value becomes 1.0.
 
-`percentage`, `floor`, `cap` and `base_level` are decimal strings, never floats (R2).
+`percentage`, `floor`, `cap` ~~and `base_level`~~ are decimal strings, never floats (R2). *(Amended 2026-10-12, the maintainer's (by delegation) entry "2026-10-12 03:07:15 BST": `base_level` is a key filter, as the example above and the next sentence state, never a decimal; its listing here was an error. Delivered with SL-1669, which types `percentage`, `floor` and `cap` as decimal strings.)*
 `filter` and `base_level` use exact-value matching over the table's declared keys (`03`
 §4.2 `keys`) — the "key filter" FR-233 names; richer filter syntax (ranges,
 expressions) is an append-only extension of the `parameters` shape. `applied_to` names
