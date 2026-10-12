@@ -300,7 +300,7 @@ class _Journey:
             "analyst",
             "GET",
             "/models",
-            params={"status": "draft", "limit": 100},
+            params={"status": "fitted", "limit": 100},
             expect=200,
         )["items"]
         gbm = next((m for m in drafts if m.get("fit_result") is not None), None)
@@ -683,7 +683,7 @@ class _Journey:
         )
         if fetched.status_code != 200:
             raise JourneyStepFailed("C5", "MODEL_READ_FAILED", fetched.status_code)
-        submitted = call(
+        call(
             self.client,
             "C5",
             "POST",
@@ -692,7 +692,19 @@ class _Journey:
             headers={**self.who("actuary"), "If-Match": fetched.headers["etag"]},
             json={"change_summary": "the GBM as a challenger for the rating version"},
         )
-        self.decide_until_approved("C5", submitted["approval_request_id"])
+        # The submit route answers with the Model, not the request: find its Approval Request.
+        requests = self.req(
+            "C5",
+            "approver",
+            "GET",
+            "/approval-requests",
+            params={"artifact_type": "model", "limit": 100},
+            expect=200,
+        )["items"]
+        pending = [r for r in requests if r["artifact_ref"] == self.gbm_ref]
+        if not pending:
+            raise JourneyStepFailed("C5", "NO_APPROVAL_REQUEST_FOR_THE_MODEL")
+        self.decide_until_approved("C5", str(pending[0]["id"]))
 
     def decide_until_approved(self, step: str, request_id: str) -> None:
         for who in ("approver", "second_approver", "prod_approver"):
