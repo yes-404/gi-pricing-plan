@@ -585,6 +585,48 @@ Observations recorded, not smoothed:
   approvers of the baseline Rating Version from `seed.grant_demo_principals`; `_principal(...)` and
   `_seed(...)` are no longer used there. One definition of the principal set.
 
+### The containment query and rehearsal lines 2, 4, 6 and 8 (audit finding F1; `PL-1544` Task 0 Step 3 and the §"Rehearsal checklist")
+
+Run on 2026-10-12 after the audit head `91122eda`, read-only, once each, from this worktree.
+
+- **Task 0 Step 3 and checklist line 3: `PL-1408` Task 0's script.** The script is `PL-1408` Task 0
+  Step 1's block copied verbatim to a scratch file outside the repository
+  (`~/.claude/jobs/cf2df524/tmp/pl1408-task0.sh`) and run once with `bash`, `gi-pricing-postgres-1` up. It
+  covers every `gipricing*` database, which includes the rehearsal database
+  `gipricing_sl-1527_44fd5b81`. Started `2026-10-12 03:21:27 BST`, ended `03:21:28 BST`, exit code 0.
+  Whole output, verbatim: `databases=3 with_tables=3 without_table_or_error=0` then
+  `TOTAL route_approved=0 self_approved=0 user_approved_no_approved_request=0`. The last line reads
+  `TOTAL route_approved=0`: the STOP condition did not fire.
+- **Line 2 (alembic current = heads): NOT equal for the shared database, equal for the rehearsal one.**
+  `docker exec gi-pricing-postgres-1 psql -U gipricing -d gipricing -Atc "select version_num from
+  alembic_version"` read `e5b7d9f1a3c6`; the same query on `gipricing_sl-1527_44fd5b81` read
+  `d4e81b7a2c95`; `uv run alembic heads` at this tree read `d4e81b7a2c95 (head)`. The shared `gipricing`
+  database is four revisions behind the head (`uv run alembic history -r e5b7d9f1a3c6:head`: `f3a7c1d9e2b4`,
+  `b8d2f4a6c0e1`, `c5a91e7d3b26`, `d4e81b7a2c95`). This slice adds no migration; the rehearsal ran against
+  its own database, which `slot_preflight` upgrades to head before the run. The line as the checklist
+  writes it (the shared database) therefore does not hold, and I report it rather than upgrade a shared
+  database outside the slice's write set.
+- **Line 4 (`FD-1356`'s containment and `FD-1416`'s fix both on main):** `git log --oneline origin/main
+  --grep='FD-1356' -i` lists `cdaaa573 SL-1409: WK-1178 — the FD-1356 fix, validation-rule approval through
+  the workflow (PL-1408; RL-1407; LG-1417) (#1157)`; `--grep='FD-1416' -i` lists `e3a98c97 fix(approvals):
+  SL-1529 — one ApprovalRequest shape, generated and typed on every approval route (FD-1416, LG-1623)
+  (#1276)`. Both are present on `origin/main` (`fc4401dc` at this fetch).
+- **Line 6 (browser: `/demo`, then `/rating-versions/<id>`): not done; it does not apply under "not
+  driven".** This slice's journey ends with `check_served_page` (`http://localhost:5173/` answered 200,
+  recorded above) and the UI is "available for hands-on driving, and is not driven" (the README section).
+  No browser loaded `/demo` or `/rating-versions/<id>`, and nothing here evidences that those pages render.
+  What is evidenced instead is over HTTP: the journey's E-steps read the version back as `approved`
+  through the API before it is deployed and scored (`S1`).
+- **Line 8 (NFR-489's verdict on the exit tree, read, not re-run):** there is none. `PL-1454` says "the
+  NFR-489 verdict on the exit tree stays SL-1259's" (`PL-1454` :62); `SL-1259` is `status: draft` in
+  `docs/roadmap.md` (the `#### SL-1259` row, :1081-1085) and unbuilt, and `PL-1454` is `status: draft`
+  (its SL-1455 remedy was dispatched for Task 0 only, per the roadmap's dated line of 2026-10-11 under
+  `PL-1454`'s row). `FD-1411` (HIGH: `POST /api/v1/score` misses NFR-489 on `main`) is the open finding.
+  The latest NFR-489 measurement in the repository is a component benchmark, not the HTTP path: `LG-1587`
+  Acceptance 9, GLM `model_call` component p99 11.959 ms against 50 ms, at tree `0d1507c2…`, which
+  speaks to neither the HTTP path nor the exit tree. Recorded as: NFR-489's verdict on this tree is not
+  rendered, owner `SL-1259`.
+
 ## PRs
 
 - #1289, "feat(examples): SL-1527 — the scripted WF-699 journey over HTTP to a served page (WK-1178
