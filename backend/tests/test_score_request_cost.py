@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Iterator
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -22,6 +23,7 @@ from backend.tests.test_score import (  # noqa: F401  (fixtures, imported the wa
     SCORE_URL,
     SCORED_REF,
     _quote,
+    _rows_for,
     _set_trace_sample_rate,
     admin_headers,
     client,
@@ -29,7 +31,10 @@ from backend.tests.test_score import (  # noqa: F401  (fixtures, imported the wa
     scoring_headers,
 )
 from fastapi.testclient import TestClient
-from sqlalchemy import event
+from sqlalchemy import event, select, text, update
+
+from app.api import score as score_module
+from app.db.models import ApiKeyRow
 
 pytestmark = pytest.mark.req("NFR-489")
 
@@ -85,3 +90,127 @@ def test_a_warm_score_request_issues_at_most_nine_statements(
     one_warm_request: dict[str, int],
 ) -> None:
     assert one_warm_request["statements"] <= MAX_STATEMENTS, one_warm_request
+
+
+# --- DP-1 (b): `last_used_at` is written only when it is None or older than 60 seconds ------
+
+
+def _update_api_keys_during_one_request(
+    client: TestClient,  # noqa: F811
+    headers: dict[str, str],
+) -> int:
+    """The number of `UPDATE api_keys` statements one `/score` request issues, by text."""
+    engine = client.app.state.database.engine.sync_engine  # type: ignore[attr-defined]
+    texts: list[str] = []
+
+    def _statement(_conn: Any, _cursor: Any, statement: str, *_rest: Any) -> None:
+        texts.append(statement)
+
+    event.listen(engine, "before_cursor_execute", _statement)
+    try:
+        response = client.post(
+            SCORE_URL, json=_quote({"rating_version_ref": SCORED_REF}), headers=headers
+        )
+        assert response.status_code == 200, response.text
+    finally:
+        event.remove(engine, "before_cursor_execute", _statement)
+    return sum(1 for t in texts if t.lstrip().upper().startswith("UPDATE API_KEYS"))
+
+
+async def _set_last_used(database: Any, age: timedelta) -> None:
+    async with database.unit_of_work() as session:
+        await session.execute(update(ApiKeyRow).values(last_used_at=datetime.now(UTC) - age))
+
+
+async def _last_used(database: Any) -> datetime | None:
+    async with database.session() as session:
+        return (await session.execute(select(ApiKeyRow.last_used_at))).scalar_one()
+
+
+def test_last_used_at_is_not_written_on_every_request(
+    client: TestClient,  # noqa: F811
+    scoring_headers: dict[str, str],  # noqa: F811
+    compiled_version: Any,  # noqa: F811
+    database: Any,
+    workspace_id: Any,
+) -> None:
+    """Two requests inside the interval: the second issues no `UPDATE api_keys`."""
+    asyncio.get_event_loop().run_until_complete(_set_trace_sample_rate(database, workspace_id, 0.0))
+    asyncio.get_event_loop().run_until_complete(_set_last_used(database, timedelta(seconds=30)))
+    assert _update_api_keys_during_one_request(client, scoring_headers) == 0
+
+
+def test_last_used_at_is_written_once_the_interval_has_passed(
+    client: TestClient,  # noqa: F811
+    scoring_headers: dict[str, str],  # noqa: F811
+    compiled_version: Any,  # noqa: F811
+    database: Any,
+    workspace_id: Any,
+) -> None:
+    """Past the 60 s interval the write happens, exactly once, and advances the stamp.
+
+    Green before the fix (the write is per request); it guards the other side of DP-1 (b),
+    so a fix that stops writing `last_used_at` at all cannot pass.
+    """
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(_set_trace_sample_rate(database, workspace_id, 0.0))
+    stale = timedelta(seconds=120)
+    loop.run_until_complete(_set_last_used(database, stale))
+    before = loop.run_until_complete(_last_used(database))
+    assert before is not None
+    assert _update_api_keys_during_one_request(client, scoring_headers) == 1
+    after = loop.run_until_complete(_last_used(database))
+    assert after is not None
+    assert after > before + timedelta(seconds=60)
+
+
+# --- RL-1685 Ruled 1 (a), binding condition: a failed sampling-rate read never fails a quote --
+
+
+async def _poison_session(session: Any) -> None:
+    """A real statement failure: it aborts the transaction, as on a shared session."""
+    await session.execute(text("SELECT 1/0"))
+
+
+@pytest.mark.req("FR-259")
+@pytest.mark.parametrize("failure", ["raises", "aborts_the_transaction"])
+def test_a_failed_sampling_rate_read_degrades_to_not_sampled(
+    failure: str,
+    client: TestClient,  # noqa: F811
+    scoring_headers: dict[str, str],  # noqa: F811
+    compiled_version: Any,  # noqa: F811
+    monkeypatch: pytest.MonkeyPatch,
+    database: Any,
+    workspace_id: Any,
+) -> None:
+    """The failure is injected at the sampling-rate read, wherever it lives.
+
+    It is injected on `settings_service.resolve` for `rating.trace_sample_rate` only (the
+    FR-452 limit read goes through the same function and must keep working), so the test
+    follows the read to its new place once it moves onto the request-scoped session. The
+    second parametrisation aborts the transaction, which on a session the request still
+    uses would fail every later statement. Green before the fix: the read is already inside
+    `_maybe_sample_trace`'s `try`; it guards the move.
+    """
+    real_resolve = score_module.settings_service.resolve
+    seen = {"hit": 0}
+
+    async def _resolve(session: Any, settings: Any, workspace: Any, key: str, *rest: Any) -> Any:
+        if key == "rating.trace_sample_rate":
+            seen["hit"] += 1
+            if failure == "raises":
+                raise RuntimeError("injected: the sampling-rate read failed")
+            await _poison_session(session)
+        return await real_resolve(session, settings, workspace, key, *rest)
+
+    monkeypatch.setattr(score_module.settings_service, "resolve", _resolve)
+
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": SCORED_REF}), headers=scoring_headers
+    )
+
+    assert seen["hit"] == 1, "the injected read was never reached; the test proves nothing"
+    assert response.status_code == 200, response.text
+    assert response.json()["outcome"] == "quoted"
+    loop = asyncio.get_event_loop()
+    assert loop.run_until_complete(_rows_for(database, workspace_id)) == []
