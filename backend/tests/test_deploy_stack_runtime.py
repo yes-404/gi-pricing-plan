@@ -178,3 +178,89 @@ def test_previous_version_serves_the_migrated_schema_and_rolls_forward_with_no_f
         thread.join()
     assert failures == 0, f"{failures} failed requests while rolling {n1} to {n}"
     assert _score(url, headers, body) == 200
+
+
+# -- PL-1690 E4.3: delivery, not declaration -------------------------------------------------
+
+#: The bound inside which a submitted Job must leave `queued`: NFR-527's 5 s submit-to-running
+#: floor (the relay ticks every second) plus the time to run a cheap, failing-or-succeeding
+#: compile. The bound and the elapsed time are quoted in the slice's LG-.
+JOB_TERMINAL_BOUND_SECONDS = 60
+_TERMINAL = {"succeeded", "failed", "cancelled"}
+
+
+@pytest.fixture
+def built_n() -> str:
+    """Only image N: the delivery proof does not need N-1."""
+    n = os.environ["GIP_N_SHA"]
+    _build_from_commit(n)
+    return n
+
+
+@pytest.fixture
+def beat_fixture(built_n: str) -> Iterator[None]:
+    """Beat as a one-off TEST FIXTURE from the slice's image, not a compose service (SL-1689's).
+
+    The outbox relay is a beat schedule entry (`app.worker.entrypoint`), so without a beat
+    process no Job ever leaves the outbox. It is stopped in teardown.
+    """
+    started = _compose(
+        built_n, "run", "--rm", "-d", "worker",
+        "celery", "-A", "app.worker.entrypoint", "beat", "--schedule", "/tmp/celerybeat-schedule",
+    )
+    container = started.stdout.strip().splitlines()[-1]
+    try:
+        yield
+    finally:
+        subprocess.run(["docker", "rm", "-f", container], check=False, capture_output=True)
+
+
+def _api(method: str, path: str, headers: dict[str, str], body: Any = None) -> Any:
+    request = urllib.request.Request(
+        f"http://127.0.0.1:{LB_PORT}{path}",
+        data=None if body is None else json.dumps(body).encode(),
+        headers={**headers, "Content-Type": "application/json"},
+        method=method,
+    )
+    with urllib.request.urlopen(request, timeout=10) as response:
+        return json.loads(response.read())
+
+
+@pytest.mark.req("FR-415")
+@pytest.mark.req("FR-406")
+def test_a_submitted_job_reaches_a_terminal_state_through_the_compose_worker(
+    built_n: str, down: None, beat_fixture: None
+) -> None:
+    """A shape test proves `--queues default,compute` is declared; this proves it is delivered.
+
+    The Job is `rating.compile` (queue `default`, `platform/jobs.py` `DEFAULT_QUEUE_FOR_KIND`):
+    the one cheap kind whose own queue is the one a `compute`-only worker does not consume.
+    The relay that moves it out of the outbox also rides `default`, so both queues are on the
+    path. Red cause: with the worker on `--queues compute` only, the Job stays `queued` past
+    the bound.
+    """
+    n = built_n
+    _compose(n, "up", "-d", "--wait", "lb", "worker")
+    # Seed a workspace, a draft rating version and a key; the bench seed grants the key only
+    # `score:execute`, so widen it to what this route and the Job read need.
+    _, headers, _ = _seeded_scoring_request()
+    _compose(
+        n, "exec", "-T", "postgres", "psql", "-U", "gipricing", "-d", "gipricing", "-c",
+        "UPDATE service_accounts SET permissions = "
+        "'[\"score:execute\", \"rating:read\", \"rating:compile\", \"job:read\"]'::jsonb",
+    )
+    version_id = _api("GET", "/api/v1/rating-versions", headers)[0]["id"]
+    started = time.monotonic()
+    job = _api("POST", f"/api/v1/rating-versions/{version_id}/compile", headers)
+    assert job["queue"] == "default"
+    status = job["status"]
+    deadline = started + JOB_TERMINAL_BOUND_SECONDS
+    while status not in _TERMINAL and time.monotonic() < deadline:
+        time.sleep(1)
+        status = _api("GET", f"/api/v1/jobs/{job['id']}", headers)["status"]
+    elapsed = time.monotonic() - started
+    print(f"job {job['id']} kind={job['kind']} queue={job['queue']} -> {status} in {elapsed:.1f}s")
+    assert status in _TERMINAL, (
+        f"job {job['id']} still {status!r} after {JOB_TERMINAL_BOUND_SECONDS}s: "
+        "nothing consumed its queue"
+    )

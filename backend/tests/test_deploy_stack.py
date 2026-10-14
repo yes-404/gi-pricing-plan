@@ -84,6 +84,26 @@ def worker_has_a_memory_backstop(compose: dict[str, Any]) -> list[str]:
     return problems
 
 
+ROUTED_QUEUES = {"default", "compute"}
+
+
+def worker_consumes_every_routed_queue(compose: dict[str, Any]) -> list[str]:
+    """FR-415 / PL-1690 E4.2: the worker consumes every queue the platform routes to.
+
+    The outbox relay sends to `default` (the Celery default queue) and the compute kinds to
+    `compute`, so a worker on `compute` alone leaves a Job `queued` for ever.
+    """
+    command = compose["services"].get("worker", {}).get("command") or []
+    if "--queues" not in command:
+        return ["worker names no --queues"]
+    consumed = set(command[command.index("--queues") + 1].split(","))
+    missing = sorted(ROUTED_QUEUES - consumed)
+    extra = sorted(consumed - ROUTED_QUEUES)
+    return [f"queue {q} is routed to and not consumed" for q in missing] + [
+        f"queue {q} is consumed and not routed to" for q in extra
+    ]
+
+
 def one_image_three_roles(compose: dict[str, Any]) -> list[str]:
     services = compose["services"]
     images = {services[n].get("image") for n in ("api", "worker", "migrate")}
@@ -94,6 +114,7 @@ CHECKS = [
     api_needs_no_worker,
     migrations_are_their_own_step,
     worker_has_a_memory_backstop,
+    worker_consumes_every_routed_queue,
     one_image_three_roles,
 ]
 
@@ -114,6 +135,11 @@ def test_migrations_are_a_separate_one_shot_step_that_api_waits_for() -> None:
 @pytest.mark.req("FR-412")
 def test_the_worker_service_carries_a_memory_limit() -> None:
     assert worker_has_a_memory_backstop(_load()) == []
+
+
+@pytest.mark.req("FR-415")
+def test_the_worker_consumes_the_default_and_compute_queues() -> None:
+    assert worker_consumes_every_routed_queue(_load()) == []
 
 
 @pytest.mark.req("FR-434")
@@ -149,6 +175,11 @@ def _break_no_memory_limit(c: dict[str, Any]) -> None:
     del c["services"]["worker"]["mem_limit"]
 
 
+def _break_worker_drops_default_queue(c: dict[str, Any]) -> None:
+    command = c["services"]["worker"]["command"]
+    command[command.index("--queues") + 1] = "compute"
+
+
 @pytest.mark.req("FR-434")
 @pytest.mark.req("FR-435")
 @pytest.mark.req("FR-415")
@@ -159,6 +190,7 @@ def _break_no_memory_limit(c: dict[str, Any]) -> None:
         (_break_api_migrates_at_start, migrations_are_their_own_step),
         (_break_migrate_not_awaited, migrations_are_their_own_step),
         (_break_no_memory_limit, worker_has_a_memory_backstop),
+        (_break_worker_drops_default_queue, worker_consumes_every_routed_queue),
     ],
 )
 def test_each_check_goes_red_on_the_break_it_exists_for(breaker: Any, check: Any) -> None:
