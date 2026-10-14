@@ -2747,6 +2747,8 @@ phase: P3
 
 From “Workstreams” (line 469): **Approvals inbox with inline evidence** | FR-358 — "the screen where the platform earns its keep"
 
+*(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 10:57:10 BST — FD 8023 MEDIUM + trigger CONFIRMED; the D-list line-read GO (closed-phase + P2-scope only); later-phase D lines GO (re lead 10:56:41)", item 4 ("dated roadmap lines placing each on its module's Work … No line-read is needed: they are spec-only until their phase"): `06` NFR-524 (the approvals inbox loads in < 1 s; full evidence renders progressively) join this Work's requirement list — it is the approvals inbox. Placement only: nothing is built ahead of this Work's phase (`CLAUDE.md` §0).)*
+
 
 ### WK-679 — Audit explorer, chain verification, export
 
@@ -2763,6 +2765,8 @@ phase: P3
 From “Workstreams” (line 470): Audit explorer, chain verification, export | FR-368, FR-369, FR-370, FR-371, FR-372, FR-374, FR-375
 
 *(Dated 2026-09-30 by the lead, on the maintainer's entry "2026-09-30 11:56:33 BST — DECISIONS: slice order after the split; FR-384 confirmed; FR-383 and FR-385 owners": `06` FR-383 (the uniform per-artifact history view, `06` line 179, route `06` §5.1 line 542) was held by no roadmap row. It is **owned by this Work** — its content (versions, transitions, actors, timestamps, justifications, diffs) is audit-derived. It joins this Work's requirement list by a dated amendment when its map plan is cut.)*
+
+*(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 10:57:10 BST — FD 8023 MEDIUM + trigger CONFIRMED; the D-list line-read GO (closed-phase + P2-scope only); later-phase D lines GO (re lead 10:56:41)", item 4 ("dated roadmap lines placing each on its module's Work … No line-read is needed: they are spec-only until their phase"): `06` NFR-521 (audit retention ≥ 7 years; the hash chain verifiable over the whole retained range) join this Work's requirement list — it is chain verification over the audit log. Placement only: nothing is built ahead of this Work's phase (`CLAUDE.md` §0).)*
 
 
 ### WK-680 — Dossier generation, commentary blocks, PDF, point-in-time regeneration
@@ -2781,6 +2785,8 @@ From “Workstreams” (line 471): Dossier generation, commentary blocks, PDF, p
 
 *(Dated 2026-09-30 by the lead, on the maintainer's entries "2026-09-30 11:52:53 BST — #983's closure sweep: accepted (no §13 verdict owed); DECISIONS on the recurrence and FR-384" and "2026-09-30 11:56:33 BST — DECISIONS: slice order after the split; FR-384 confirmed; FR-383 and FR-385 owners": `06` FR-384 (artifact dependencies / blast radius, route `GET /api/v1/artifacts/{ref}/dependencies`, `06` §5.1; view "Dependencies", `06` §5.3 line 588) was held by no roadmap row (`PL-1237` line 525). It is **owned by this Work**, confirmed by the maintainer, with two conditions: (i) this Work's map plan builds FR-384 — the dependency graph, its route and the view — in its **first slice**, before FR-379's bundle and FR-380's as-at regeneration, which reuse its down traversal; (ii) WK-681 reuses that slice for FR-382 and builds no second traversal. FR-384 joins this Work's requirement list by a dated amendment when its map plan is cut.)*
 
+*(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 10:57:10 BST — FD 8023 MEDIUM + trigger CONFIRMED; the D-list line-read GO (closed-phase + P2-scope only); later-phase D lines GO (re lead 10:56:41)", item 4 ("dated roadmap lines placing each on its module's Work … No line-read is needed: they are spec-only until their phase"): `06` NFR-522 (a full Rating Version's dossier in < 2 min, byte-reproducible) join this Work's requirement list — it is dossier generation. Placement only: nothing is built ahead of this Work's phase (`CLAUDE.md` §0).)*
+
 
 ### WK-681 — Regulatory evidence export
 
@@ -2795,6 +2801,8 @@ phase: P3
 ```
 
 From “Workstreams” (line 472): Regulatory evidence export | FR-382
+
+*(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 10:57:10 BST — FD 8023 MEDIUM + trigger CONFIRMED; the D-list line-read GO (closed-phase + P2-scope only); later-phase D lines GO (re lead 10:56:41)", item 4 ("dated roadmap lines placing each on its module's Work … No line-read is needed: they are spec-only until their phase"): `06` NFR-523 (a one-year regulatory export in < 30 min, self-contained) join this Work's requirement list — it is the regulatory export. Placement only: nothing is built ahead of this Work's phase (`CLAUDE.md` §0).)*
 
 
 ### WK-682 — Model risk tiering, if OQ-636 is accepted
@@ -2846,6 +2854,10 @@ Opened `draft` 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 1
 *(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 10:51:08 BST — FR-420 → WK-1251 ACCEPTED; latent blob-GC DATA-LOSS finding: file in D16 (not D17) + a precondition line (re lead after 10:48:32)", item 3, which accepted the line above and ruled this precondition. **Precondition on this Work:** no non-dry `collect_garbage` is wired until every blob-owning artifact retains its blobs, proven by a DERIVED check (every `BlobStore.put` call site in `backend/src` is paired with a `retain` by its owning record, or is listed with a reason), and a dry-run report over a seeded database shows 0 live blobs selected.)*
 
 *(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 11:24:38 BST" (RL 8028 confirmed; FD 8023's check widened), which ruled that the derived check above and this precondition count **every `BlobRow` writer**, not `BlobStore.put` call sites only. The precondition's derived check therefore reads: every writer of a `BlobRow` in `backend/src` is paired with a `retain` by its owning record, or is listed with a reason. At `8eaf6d5f`, `git grep -nE 'BlobRow\(' 8eaf6d5f -- backend/src packages` prints two lines: the class definition (`backend/src/app/db/models.py:316`) and the only constructor, `backend/src/app/platform/blobs.py:186`, inside `BlobStore.put`; after SL 8026 (working id, `RL 8028`'s `blob.promote`), `promote_upload` is a second writer and is counted. FD 8023 carries the same widening.)*
+
+*(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 11:00:31 BST — Line-read rulings: NFR-519 → marker only; FR-423 → WK-1251 (P3) with NFR-530, plus a no-real-data precondition (re lead 11:00)", and the maintainer's (by delegation) entry "2026-10-14 11:06:52 BST — D-list line-read RULED (35 ids; lineread-dlist-2026-10-14.md at ba68a6da) (re lead 11:06)", item 4: `07` FR-423 (PITR archiving, blob versioning/replication, a documented and tested restore) and FR-424, FR-425, FR-426 (a pluggable secret backend, secrets resolved at use, never logged or audited) are **NOT DELIVERED and owned by this Work, in P3**. NFR-530 (the CI restore exercise) is already this Work's (`CR-1247` Proposal 7, above). This supersedes `RS-708` line 241's "not started … deployment, Phase 2" for FR-423 by this dated assignment. The P2 closure record lists FR-423 and FR-424–426 as "deferred with owner WK-1251" (`CLAUDE.md` §13).)*
+
+*(Dated 2026-10-14 by the lead, same two entries: **BINDING PRECONDITION**, as widened by 11:06:52 item 4: "No non-public data AND no production credentials or secrets are loaded into any deployed environment until FR-423, FR-424–426 and NFR-530 are delivered." It is also carried in the P2 closure record's open-items list. P2's demo uses freMTPL2, which is public, so it is unaffected.)*
 
 ### WK-1288 — Platform administration views: Settings and System status
 
@@ -2937,6 +2949,8 @@ phase: P4
 
 From “Workstreams” (line 495): Optimisation runs, constraints, binding analysis, frontier | FR-284, FR-285, FR-286, FR-287, FR-288, FR-289, FR-290, FR-291, FR-292, FR-293
 
+*(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 10:57:10 BST — FD 8023 MEDIUM + trigger CONFIRMED; the D-list line-read GO (closed-phase + P2-scope only); later-phase D lines GO (re lead 10:56:41)", item 4 ("dated roadmap lines placing each on its module's Work … No line-read is needed: they are spec-only until their phase"): `04` NFR-503 (a 1.3 M-policy, 400-segment run in < 15 min incl. Monte Carlo), NFR-505 (run determinism to 1e-9), NFR-506 (infeasibility detected and explained within 60 s) and NFR-507 (the run, materialisation-acceptance and GIPP-result Audit Events; its materialisation limb is evidenced with `WK-686` and its GIPP limb with `WK-685`, this Work owning the row) join this Work's requirement list — each is a property of an optimisation run. Placement only: nothing is built ahead of this Work's phase (`CLAUDE.md` §0).)*
+
 
 ### WK-685 — GIPP checks, price-walking, disparity reporting
 
@@ -2951,6 +2965,8 @@ phase: P4
 ```
 
 From “Workstreams” (line 496): GIPP checks, price-walking, disparity reporting | FR-294, FR-297, FR-298, FR-299, FR-300, FR-301, FR-302
+
+*(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 10:57:10 BST — FD 8023 MEDIUM + trigger CONFIRMED; the D-list line-read GO (closed-phase + P2-scope only); later-phase D lines GO (re lead 10:56:41)", item 4 ("dated roadmap lines placing each on its module's Work … No line-read is needed: they are spec-only until their phase"): `04` FR-295 (ENBP through the most-used new-business channel when the original is unavailable), FR-296 (the GIPP check records its product scope) and NFR-508 (GIPP evidence retained ≥ 7 years, exportable) join this Work's requirement list — each is a GIPP-check or GIPP-evidence property, this Work's title. Placement only: nothing is built ahead of this Work's phase (`CLAUDE.md` §0).)*
 
 
 ### WK-686 — Materialisation into rate tables
@@ -2967,6 +2983,8 @@ phase: P4
 
 From “Workstreams” (line 497): Materialisation into rate tables | FR-303, FR-304, FR-305, FR-306
 
+*(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 10:57:10 BST — FD 8023 MEDIUM + trigger CONFIRMED; the D-list line-read GO (closed-phase + P2-scope only); later-phase D lines GO (re lead 10:56:41)", item 4 ("dated roadmap lines placing each on its module's Work … No line-read is needed: they are spec-only until their phase"): `04` NFR-509 (no optimisation output reaches a live price except through `03`'s approval path; no write path from this module to a Deployment) join this Work's requirement list — it is the materialisation boundary. Placement only: nothing is built ahead of this Work's phase (`CLAUDE.md` §0).)*
+
 
 ### WK-687 — Monitoring: monitors, drift, A/E, demand, rate achieved, operational
 
@@ -2981,6 +2999,10 @@ phase: P4
 ```
 
 From “Workstreams” (line 498): Monitoring: monitors, drift, A/E, demand, rate achieved, operational | `05` FR-307, FR-308, FR-309, FR-310, FR-311, FR-312, FR-313, FR-314, FR-315, FR-316, FR-317, FR-318, FR-319, FR-320, FR-321, FR-322, FR-323, FR-324, FR-325, FR-326, FR-327, FR-328, FR-329, FR-330, FR-331, FR-332, FR-333
+
+*(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 10:57:10 BST — FD 8023 MEDIUM + trigger CONFIRMED; the D-list line-read GO (closed-phase + P2-scope only); later-phase D lines GO (re lead 10:56:41)", item 4 ("dated roadmap lines placing each on its module's Work … No line-read is needed: they are spec-only until their phase"): `05` NFR-510 (a weekly run over 400 k quotes and 1 200 claims in < 10 min), NFR-511 (monitoring off the scoring latency path), NFR-513 (metric identity with validation/diagnostics by a shared suite), NFR-515 (metric history indefinite; evidence blobs ≥ 13 months), NFR-516 (monitor, rebaseline, threshold, alert-state and refit Audit Events; its alert limb is evidenced with `WK-688`, this Work owning the row) and NFR-517 (an outage loses no data; a missed run is backfillable) join this Work's requirement list — each is a property of a monitoring run or its record. Placement only: nothing is built ahead of this Work's phase (`CLAUDE.md` §0).)*
+
+*(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 11:06:52 BST — D-list line-read RULED (35 ids; lineread-dlist-2026-10-14.md at ba68a6da) (re lead 11:06)", item 4: "FR-441, 442 (log correlation beyond trace_id; OpenTelemetry spans) → the observability Work the roadmap names for 07 §… The planner cites the row; if none exists, P4 with WK-687." No roadmap row names an observability Work (`grep -niE 'observab|opentelemetry' docs/roadmap.md` finds none on a `WK-` heading at this batch's base), so `07` FR-441 (structured JSON logging with `trace_id`, `workspace_id`, `principal_id`, `job_id` and the entity reference) and FR-442 (OpenTelemetry spans across request, queue hop, worker and `pricing-core`) are **owned by this Work, in P4**. Placement only.)*
 
 
 ### WK-688 — Alerting lifecycle and routing
@@ -2998,6 +3020,8 @@ phase: P4
 From “Workstreams” (line 499): Alerting lifecycle and routing | FR-334, FR-335, FR-336, FR-337, FR-338, FR-453 (added 2026-09-29, `CR-1247` Proposal 5: both limbs, alert routing and deployment notifications)
 
 **FR-453, both limbs** (`07`: signed webhooks for alert routing and for deployment notifications, with retries, backoff and observable delivery status) *(added 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 5: "Accepted. OQ-1233 → (b): FR-453 (both limbs) is named on WK-688's row, and the OQ moves to Before Phase 4. FR-272's notification limb is deferred to P4. OQ-1234 (before WK-674 Slice 2) and OQ-1235 (before Slice 3) are ruled by the decision-maker.")*. So `03` FR-272's notification limb is delivered here, in P4, through FR-453's deployment-notification limb. WK-674 delivers FR-272's Audit Event limb in P2 (`RL-1232` DP-4).
+
+*(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 10:57:10 BST — FD 8023 MEDIUM + trigger CONFIRMED; the D-list line-read GO (closed-phase + P2-scope only); later-phase D lines GO (re lead 10:56:41)", item 4 ("dated roadmap lines placing each on its module's Work … No line-read is needed: they are spec-only until their phase"): `05` NFR-514 (alert delivery within 5 minutes of the run; routing failures retried with backoff and surfaced) join this Work's requirement list — it is alert routing. Placement only: nothing is built ahead of this Work's phase (`CLAUDE.md` §0).)*
 
 
 ### WK-689 — Dashboards and monitoring packs
@@ -3028,6 +3052,8 @@ it promised.
 rating structure with no monitoring is the least comfortable state the platform can be in.
 
 ---
+
+*(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 10:57:10 BST — FD 8023 MEDIUM + trigger CONFIRMED; the D-list line-read GO (closed-phase + P2-scope only); later-phase D lines GO (re lead 10:56:41)", item 4 ("dated roadmap lines placing each on its module's Work … No line-read is needed: they are spec-only until their phase"): `05` NFR-512 (dashboard reads < 500 ms from persisted Monitoring Results; no on-request metric computation) join this Work's requirement list — it is a dashboard property. Placement only: nothing is built ahead of this Work's phase (`CLAUDE.md` §0).)*
 
 ## 10. Decision gates
 
