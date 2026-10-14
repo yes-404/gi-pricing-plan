@@ -1306,7 +1306,9 @@ def test_mount_and_its_consumer_ungrouped_is_refused_naming_the_pair(
     changes = asyncio.run(
         derive_changes(_version(), _candidate_version(sub_graphs=sub_graphs), _resolver(cand))
     )
-    mount = _mount_changes(changes)[0]
+    mounts = _mount_changes(changes)
+    assert mounts, "no derived change names the mount: _derive does not read sub_graph_mounts"
+    mount = mounts[0]
     producer = _by_description(changes, "s_in_ncd")
     consumer = _by_description(changes, "s_office")
     instalment = _by_description(changes, "s_instalment")
@@ -1412,7 +1414,9 @@ def test_mount_alone_in_a_group_without_its_input_step_is_refused_naming_the_pai
     changes = asyncio.run(
         derive_changes(_version(), _candidate_version(sub_graphs=sub_graphs), _resolver(cand))
     )
-    mount = _mount_changes(changes)[0]
+    mounts = _mount_changes(changes)
+    assert mounts, "no derived change names the mount: _derive does not read sub_graph_mounts"
+    mount = mounts[0]
     producer = _by_description(changes, "s_in_ncd")
     groups = [
         ("mount", [mount.id]),
