@@ -337,17 +337,17 @@ register line is the lead's or the minter's, RL-9996 "What it obliges", third bu
 
   In `backend/tests/test_change_summary_draft.py`:
 
-  - **U1** — `entry = RateTableChange(slug="X", step_id="t", from_ref=_table("X", 1),
-    to_ref=_table("X", 2), diff=RateTableDiff(changed_cells=1))`;
+  - **U1** — `entry = RateTableChange(slug="age", step_id="t", from_ref=_table("age", 1),
+    to_ref=_table("age", 2), diff=RateTableDiff(changed_cells=1))`;
     `draft = draft_change_summary(_rv(1), AlgorithmDiff(), [entry])`; assert
-    `"- X (step t): version 1 -> 2, 1 cell(s) changed." in draft.text.splitlines()`; and
-    `_changed("X", 1, 2, changed_cells=1)` (no `step_id`) renders
-    `"- X: version 1 -> 2, 1 cell(s) changed."` as today. **Red on main by:**
+    `"- age (step t): version 1 -> 2, 1 cell(s) changed." in draft.text.splitlines()`; and
+    `_changed("age", 1, 2, changed_cells=1)` (no `step_id`) renders
+    `"- age: version 1 -> 2, 1 cell(s) changed."` as today. **Red on main by:**
     `pydantic_core._pydantic_core.ValidationError: 1 validation error for RateTableChange` /
     `step_id` / `Extra inputs are not permitted` at the constructor.
-  - **U2** — `step = RateTableChange(slug="X", step_id="t", from_ref=_table("X", 1),
-    to_ref=_table("X", 2), diff=RateTableDiff(changed_cells=1))`;
-    `pin = RateTableChange(slug="X", from_ref=None, to_ref=_table("X", 5))`;
+  - **U2** — `step = RateTableChange(slug="age", step_id="t", from_ref=_table("age", 1),
+    to_ref=_table("age", 2), diff=RateTableDiff(changed_cells=1))`;
+    `pin = RateTableChange(slug="age", from_ref=None, to_ref=_table("age", 5))`;
     `draft = draft_change_summary(_rv(1), AlgorithmDiff(), [pin, step])`; assert
     `draft.rate_tables == [step, pin]`. **Red on main by:** the same `ValidationError` (the step
     entry cannot be built on main).
