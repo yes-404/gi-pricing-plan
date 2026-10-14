@@ -2513,10 +2513,11 @@ On the maintainer's (by delegation) entries "2026-10-14 11:52:51 BST" (item (1):
 
 **Ruled:**
 - **DP-C1 → (Q), quarantine.** The row's source text goes into `PreparationResult.rejected` (declared, never filled), then into the version's `_rejected` table, named by column and step, and is counted in `rows_rejected`. The quarantine is **complete for each row**, and `rows_read == rows_written + rows_rejected` is asserted.
+- **The identity, widened** (the maintainer's (by delegation) entry "2026-10-14 12:31:22 BST"): for every recipe, `rows_read − rows_rejected − Σ rows_removed_by_step + Σ rows_added_by_step == rows_written`, with each step's in/out Polars height recorded in the ingestion run. It is asserted on the fixture (R1, and R7 through `filter_rows`) and on the G2 seed's version-2 and portfolio recipe (R8, `seed.py:96-118`). The engine already measures the heights (`prepare.py:119-124`); recording them **in the run** needs `models.py` and a migration, outside FD 8040's write set: **DP-S1, open for the maintainer's ruling**, with the narrow assert and the LG list carried until then.
 - **DP-C3 → (ii).** `reject_rate`, `dtype_match` and `date_parsed` each give a verdict at the declared severity: the last two through `measured.coerced_cells`, even without `reject_rate`. `range` is unchanged, with its guard stated. No tolerance.
 - **DP-C2 → (a).** No handler change.
 
-**Reds:** R1 to R6 are run through `execute_job` over the auditor's 4 rows plus `p5`, each red on main by cause. R6 asserts that after ingest a column's `null_count` equals the source's genuine empty cells only.
+**Reds:** R1 to R8 are run through `execute_job` over the auditor's 4 rows plus `p5` (R8 over the seed's own recipe), each red on main by cause. R6 asserts that after ingest a column's `null_count` equals the source's genuine empty cells only.
 
 **G2 (binding):** before any code, Task 0 Step 3 counts through Polars, with the seed recipe's own cast, over all 678 013 freMTPL2 rows and the seeded 20 000-row sample. A non-zero count is a STOP to the maintainer. The planner's proxy count of 0 is noted, not relied on.
 
@@ -2527,9 +2528,11 @@ Plan `PL-8042` (a WK-1178 Work-plan delta; `draft`). **Activation needs:**
 - every DP ruled — MET, by the maintainer's (by delegation) entry "2026-10-14 12:23:36 BST";
 - the plan made `active` by a dated line;
 - Task 0 Step 3's G2 probe clean on both populations, or the maintainer's ruling on it;
+- DP-S1 ruled, before the step-count limb only (Task 5's step-count write, R7, R8, G5);
 - a free build lane.
 
 *(Row cut 2026-10-14 by the planner, planner-fd8040; working ids 8043 and 8042 reserved by the lead.)*
+*(Amended 2026-10-14 by the planner, planner-p1fix, before merge, on the maintainer's (by delegation) entry "2026-10-14 12:31:22 BST": the identity widened, R7 and R8, DP-S1.)*
 
 #### SL-8045 — WK-1178 fix slice — the failed-authentication audit: a keyed-workspace refusal's audit row survives the 401, and every failure is counted by reason
 
