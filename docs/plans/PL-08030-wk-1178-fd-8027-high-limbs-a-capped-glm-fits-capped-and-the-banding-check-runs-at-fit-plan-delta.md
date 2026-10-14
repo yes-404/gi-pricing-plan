@@ -54,10 +54,11 @@ minted), read in full at `origin/fd-8027-closure-gap-p1-2026-10-14` @`00b683ee`.
 
 ## Authority
 
-All five entries are the maintainer's (by delegation), in `to-lead.md`. The first three were read
+All six entries are the maintainer's (by delegation), in `to-lead.md`. The first three were read
 in full at 2026-10-14 11:41:12 BST, when the plan was first written; the fourth, which rules this
 plan's decision points, was read in full after it was logged; the fifth, which corrects DP-B2's
-reading, was read in full after it was logged, for this amendment (seat planner-fd8040).
+reading, was read in full after it was logged, for this amendment (seat planner-fd8040); the sixth, which rules
+Task 5's FR-100 clause, likewise.
 
 - **"2026-10-14 11:06:52 BST — D-list line-read RULED"**, item 2: *"CLOSED-PHASE PARTIAL → ONE
   closure-gap FD … **Any HIGH limb is fixed in P2.**"*, with FR-100 named first: *"`check_banding`
@@ -97,6 +98,15 @@ reading, was read in full after it was logged, for this amendment (seat planner-
   full (the other bullets are not this plan's). It **corrects** this plan's reading of the
   11:52:51 DP-B2 ruling, which had typed the field `tuple[str, ...]`:
   > - **PL 8030 DP-B2: `banding_warnings: tuple[str, ...]` is NOT what I ruled.** "A typed field" means a model-schema type a reviewer or UI can act on, not free text. Define `BandingWarning` in model-schema with: banding ref, band label/index, `measure` (exposure | claim_count, an enum), observed value, configured minimum (Decimal or int as the measure requires; no float for a count). The fit results carry `banding_warnings: tuple[BandingWarning, ...]`, empty when none. FR-100's text is unchanged. The contract is regenerated and checked at the ACK (response shape). A non-A-4 BAND_EMPTY → STOP to you: OK.
+
+- **"2026-10-14 12:12:51 BST — PL 8030 @5657d85e: the BandingWarning union ACCEPTED; FR-100
+  gets a dated CLARIFICATION clause for DP-B1/B3 (not DP-B2) (re lead 12:12:28)"**, quoted in
+  part (its first paragraph accepts the type as Task 6 defines it):
+  > **FR-100's row: a dated CLARIFICATION clause IS permitted, for DP-B1 and DP-B3 only.** My 12:05:33 "FR-100's text is unchanged" meant the requirement's SUBSTANCE (thresholds, warn by default, fail if configured, empty always fails) is not amended. It did not forbid recording how the row is read. […]
+  > **DP-B2's typed shape does NOT go on the row:** it is a data contract, so it goes to 02 §4 (the data contracts section, beside `PartitionDiagnostics` / the fit result types) and the §5.2 signature note. Task 5 is amended accordingly.
+
+  [Elided: the entry's two bullets, which define DP-B1's and DP-B3's readings; Task 5 restates
+  them.]
 
   Every decision point below is therefore ruled, and the plan below is written to those rulings.
   The EBM limb is **FD 8027's**, added by an auditor before the mint (DP-L2 (a)); this plan
@@ -230,7 +240,7 @@ slice's merge tree.
 2. **No requirement range.** `grep -nE '(N?FR)-[0-9]+ *(-|to|–) *(N?FR-)?[0-9]+' <this file>`
    prints no line that stands for a set of ids.
 3. **Spec first.** `git log --format=%s origin/main..<slice head> -- docs/specs/02-modelling.md`
-   shows the FR-127 note (Task 2), and the FR-100 clause with its FR-207 note (Task 5), landing
+   shows the FR-127 note (Task 2), and the FR-100 clarification (DP-B1 and DP-B3), the `§4.8` shape, the `§5.2` note and the FR-207 note (Task 5), landing
    in a commit before or with the code, never after.
 4. **A capped GLM fits capped (R1, red on main).** A capped `GlmSpec` fitted on raw data has
    every coefficient equal, to `1e-10`, to a `none` spec fitted on the same data capped by hand.
@@ -425,23 +435,33 @@ slice's merge tree.
 
 ### Task 5 — FR-100 in the spec (`spec-change`)
 
-- [ ] One dated clause on the FR-100 row, citing the maintainer's (by delegation) entry
-  "2026-10-14 11:52:51 BST", item (2). It states the three rulings: the check reads the training
-  rows actually fitted, after FR-111's weight-0 exclusion (DP-B1 (a)); a `warn` violation is
-  recorded in the fit result's typed `banding_warnings` field (DP-B2 (a)); the floors read
-  `exposure_years` and `claim_count`, and a non-zero floor on an absent column is refused by name
-  (DP-B3 (a)). *(Amended 2026-10-14, on the 12:05:33 entry's correction of DP-B2:)* the `§5.2`
-  `check_banding` signature (`02-modelling.md:2382-2388`) **changes**, with a dated note in
-  place: it returns `tuple[BandingWarning, ...]` instead of `tuple[str, ...]`, and its two floor
-  overrides become `min_exposure: Decimal | None` and `min_claims: int | None` (no float for a
-  count, and the exposure compared exactly). FR-100's text is unchanged (the entry: *"FR-100's
-  text is unchanged"*).
+- [ ] *(Amended 2026-10-14, on the maintainer's (by delegation) entry "2026-10-14 12:12:51 BST",
+  which rules this task's FR-100 clause.)* **One dated CLARIFICATION clause on the FR-100 row,
+  for DP-B1 and DP-B3 only**, in the form *"Clarified 2026-10-14, SL-8031, on the entry
+  "2026-10-14 12:12:51 BST""*. It records the two readings that decide warn against fail:
+  - DP-B1: the band minimums are evaluated over the rows actually fitted, after FR-111's
+    weight-0 exclusion;
+  - DP-B3: the default columns are `exposure_years` and `claim_count`, and a missing column
+    under a non-zero floor is refused by name.
+
+  The requirement's substance is not amended: its thresholds, warn by default, fail if
+  configured, and empty always fails (the entry: *"'unchanged' meant the requirement's
+  SUBSTANCE … is not amended"*). **DP-B2's typed shape does not go on the row.**
+- [ ] **DP-B2's typed shape goes to `02` §4, the data contracts** (the 12:12:51 entry). In
+  `§4.8` (`02-modelling.md:1206` onward), beside the fit result's `dropped_eval_metrics` text
+  (`:1409`, the example at `:1437`), add `BandingWarning` and `BandingMeasure` with their fields
+  and per-measure value types (Task 6), and `banding_warnings` on the three fit results.
+- [ ] The `§5.2` `check_banding` signature (`02-modelling.md:2382-2388`) **changes**, with a
+  dated note in place: it returns `tuple[BandingWarning, ...]` instead of `tuple[str, ...]`, and
+  its two floor overrides become `min_exposure: Decimal | None` and `min_claims: int | None`
+  (no float for a count, and the exposure compared exactly). The 12:12:51 entry accepts these
+  forced consequences.
 - [ ] A dated note on FR-207 (`02-modelling.md:372`): `banding_warnings` goes live on
   `GlmFitResult`, `GbmFitResult` and `EbmFitResult`, empty on every fit with no `warn` violation
   and on every artifact written before that date, in the form of the `dropped_eval_metrics` entry.
-- [ ] The `02` §4 fit-result shape names the field where the fit results are described. Task 0
-  Step 1 locates that text at the base (`git grep -n "FitResult" -- docs/specs/02-modelling.md`)
-  and the LG records the lines.
+- [ ] Task 0 Step 1 re-reads the `§4.8` fit-result text at the base
+  (`git grep -n "FitResult\|dropped_eval_metrics" -- docs/specs/02-modelling.md`), and the LG
+  records the lines the shape lands at.
 
 ### Task 6 — FR-100's warnings field, through the contract (DP-B2 (a), ruled)
 
@@ -537,7 +557,8 @@ slice's merge tree.
 
 ### Write set
 
-- `docs/specs/02-modelling.md` (the FR-127 note; the FR-100 clause; the FR-207 note; the §4
+- `docs/specs/02-modelling.md` (the FR-127 note; the FR-100 clarification clause, DP-B1 and DP-B3
+  only; the `§4.8` `BandingWarning` shape and the `§5.2` `check_banding` note; the FR-207 note; the §4
   fit-result field);
 - `packages/pricing-core/src/pricing_core/modelling/` (`glm.py`, `gbm.py`, `ebm.py`,
   `bandings.py`, `__init__.py`, and the new `loss_treatment.py`);
@@ -569,7 +590,7 @@ limb.
 |---|---|---|---|---|---|---|
 | DP-L1 | Where does `apply_loss_treatment` live once three arms call it? | **(a), ruled:** its own module, `pricing_core/modelling/loss_treatment.py`, taking the arm's error class as `weights.require_usable_weights` does (`weights.py:91-97`); `gbm.py` and `__init__.py` re-export it. | The ruling: *"its own module, taking the arm's error class (the weights.py:91-97 pattern). OK."* `CLAUDE.md` §2 forbids a shape defined twice, and the spec says *"it belongs beside the fit rather than inside it"* (`02:2659-2661`). | design | no — ruled | Ruled 2026-10-14 by the maintainer (by delegation), entry 2026-10-14 11:52:51 BST |
 | DP-L2 | `EbmSpec` inherits `loss_treatment` and `fit_ebm` ignores it (`ebm.py:209`), the same silent class. Does this slice fix the EBM arm too? | **(a), ruled:** yes — one call (Task 3), one red (R4, Task 1), and an auditor adds the EBM limb to FD 8027 before it is minted. | The ruling: *"fix EBM here (ebm.py:209 ignores loss_treatment, the same FR-127 class); an auditor adds the EBM limb to FD 8027 before mint."* | scope | no — ruled; FD 8027's EBM limb is an activation need | Ruled 2026-10-14 by the maintainer (by delegation), entry 2026-10-14 11:52:51 BST |
-| DP-B1 | Which frame does the fit-time check read? FR-100 says *"the Dataset Version"*; the fit receives the training partition. | **(a), ruled:** the training rows actually fitted, after FR-111's weight-0 exclusion. | A coefficient is estimated from the rows fitted, so a band empty in those rows is the *"coefficient estimated from no data"* that `check_banding`'s docstring names (`bandings.py:536-538`). The FR-100 clause records the reading (Task 5). | design | no — ruled | Ruled 2026-10-14 by the maintainer (by delegation), entry 2026-10-14 11:52:51 BST |
+| DP-B1 | Which frame does the fit-time check read? FR-100 says *"the Dataset Version"*; the fit receives the training partition. | **(a), ruled:** the training rows actually fitted, after FR-111's weight-0 exclusion. | A coefficient is estimated from the rows fitted, so a band empty in those rows is the *"coefficient estimated from no data"* that `check_banding`'s docstring names (`bandings.py:536-538`). The FR-100 clarification clause records the reading (Task 5). | design | no — ruled | Ruled 2026-10-14 by the maintainer (by delegation), entry 2026-10-14 11:52:51 BST |
 | DP-B2 | Where does a thin-band **warning** land? `check_banding` returns it, and no fit result has a field for it. | **(a), ruled, as corrected:** a typed field on the three fit results, `banding_warnings: tuple[BandingWarning, ...] = ()`, empty when none. `BandingWarning` is a `model-schema` type with the banding ref (`ArtifactRef`, `banding:{slug}@{version}`), `band_label` and `band_index`, `measure` (the enum `BandingMeasure`: `exposure` or `claim_count`), and `observed` and `minimum` typed as the measure requires (`DecimalStr` for exposure, `int` for a claim count, never a float). `check_banding` returns the same type. Persisted with the model, published in the regenerated contract, and reaching the frontend's generated types (Task 6). This plan first wrote `tuple[str, ...]`; the 12:05:33 entry corrects that reading. | The ruling: FR-100's *"warns (default)"* is the default behaviour, so deferring the warning would leave it unbuilt; *"Through model-schema, with the contract regenerated; the API ACK checks the shape."* The correction: *"'A typed field' means a model-schema type a reviewer or UI can act on, not free text."* | design | no — ruled | Ruled 2026-10-14 by the maintainer (by delegation), entry 2026-10-14 11:52:51 BST; corrected by the entry 2026-10-14 12:05:33 BST, which corrects 11:52:51's DP-B2 as this plan had read it |
 | DP-B3 | Which columns does the thin check read? `one_way` reads an absent column as 0 (`data/profile.py:372-377`). | **(a), ruled:** `check_banding`'s defaults, `exposure_years` and `claim_count`, which the `BandingProposal` also uses (`modelling.py:599-600`); a non-zero floor whose column is absent from the rows is refused by name, never read as 0. | The floor and the stats that set it read the same columns, and the refusal closes the absent-column trap. | design | no — ruled | Ruled 2026-10-14 by the maintainer (by delegation), entry 2026-10-14 11:52:51 BST |
 | DP-G1 | When may the FR-100 limb merge relative to SL-1543 (G2)? The 11:29:53 entry put only the FR-127 limb off the G2 path. | **Ruled: the probe decides.** Task 0 Step 3's probe runs before any code. Any `BAND_EMPTY` for the A-4 severity GLM is a STOP to the maintainer before code (a G2 interaction). On a clean probe, whichever of this slice and SL-1543 is ready first merges first, and the second re-merges `main` and re-runs the WF-699 journey (Task 8). | The ruling: *"the Task 0 Step 3 probe decides; on ANY BAND_EMPTY for the A-4 severity GLM → STOP to me before code (a G2 interaction)."* | scope | yes, until the probe is clean or the maintainer rules on it | Ruled 2026-10-14 by the maintainer (by delegation), entry 2026-10-14 11:52:51 BST |
@@ -639,6 +660,10 @@ lead writes any dated line on SL-1543 at dispatch.
   `test_bandings.py:365`, `:386`, `:403`, `:406`, `:413`;
   `docs/contracts/openapi/generated.json` (`components.schemas` holds `DroppedEvalMetric` and the
   three fit results by those names).
+- **The 12:12:51 ruling at every site** (amended 2026-10-14, seat planner-fd8040): the
+  Authority section, Task 5 (the FR-100 clause now carries only DP-B1 and DP-B3; DP-B2's shape
+  goes to `§4.8` and the `§5.2` note), Acceptance 3, the write set and the DP-B1 row. The `§4.8`
+  lines `02-modelling.md:1206`, `:1409` and `:1437` were read at `a3fc2e8d`.
 - **The 11:28:56 and 11:29:53 conditions at every site** (convention 5):
   - red first on main: R1 to R8, and Acceptance 4 to 11;
   - *"a capped GlmSpec fit asserts capped behaviour"*: R1, R2 and Acceptance 4;
