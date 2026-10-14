@@ -43,6 +43,8 @@ before trusting a reused venv at all.
 This repository is polyglot and CI runs two workflows. **A "gate" that covers only Python
 has been green here while the frontend was red.** Run both.
 
+**Hold ONE gate-1 flock across both halves.** Take the slot before the first Python stage and release it after the last frontend command. A release between the halves is not a release: a queued run takes the slot in the gap. *(Amended 2026-10-14 by the maintainer, dated line by delegation, on the entry "2026-10-14 10:45:59 BST — Your two process corrections ACCEPTED; root cause: neither rule is in a role or skill file → fix the FILES in D16 (re lead 10:45:15)" in `to-lead.md`, item 2; the same line is in `.claude/roles/executor.md` and `.claude/agents/gate-runner.md`.)*
+
 ### Python (`.github/workflows/python.yml`) and docs (`docs.yml`)
 
 **A gate or a `migrate --verify` run, launched with no thread cap, costs ~4.5 CPU cores by
@@ -968,6 +970,26 @@ celery -A app.worker.entrypoint beat
 The relay is what moves a committed job to the broker. **Without `beat` running, jobs stay
 `queued` and nothing explains why.**
 
+## Small targeted runs beside a held code gate — `run-small.sh` (`RL-1626`)
+
+*(Amended 2026-10-14 by the maintainer, dated line by delegation, on the entry "2026-10-14 10:45:59 BST — Your two process corrections ACCEPTED; root cause: neither rule is in a role or skill file → fix the FILES in D16 (re lead 10:45:15)" in `to-lead.md`, items 1 and 3.)*
+
+`RL-1626` allows a seat to run **at most three named test files** while a **code** gate is held, under five
+conditions: (a) under `nice -n 19 ionice -c3`; (b) through the small-test flock, one run at a time; (c) load1
+below 6 at the start; (d) no database-schema migration; (e) never beside an ALONE or measurement window, and never
+a full suite (a seat that needs one is a gate holder). **A change that needs `alembic upgrade` waits for a gate
+gap**, and the database must already be migrated. The script is outside the repository,
+`~/gi-pricing-plan.local/handover/run-small.sh <command> [args…]`
+(e.g. `run-small.sh uv run --directory <wt> pytest -q backend/tests/test_x.py`). **What it does, so it can be rebuilt from this text:**
+
+1. With no command it prints a usage line and exits 64.
+2. It **refuses, exit 65**, if the caller's shell exports `GIP_GATE_SLOT`. No seat shell exports it; only a wrapper that holds a slot does.
+3. It **waits until load1 (the first field of `/proc/loadavg`) is below 6**, polling every 30 seconds and printing the load each time.
+4. It takes **`/tmp/slots/small-test`** with `flock -w 7200` (waits up to 2 hours). An ALONE window holds gate-1, gate-2 and small-test, so a compliant run simply waits until the window ends.
+5. Inside the flock it execs the command as `env GIP_GATE_SLOT=/tmp/slots/small-test nice -n 19 ionice -c3 <command>`. Setting `GIP_GATE_SLOT` is what stops the root conftest from also taking gate-1, so a small test is not stalled behind a whole code gate.
+
+The exit code is the command's own, unless the flock wait expires (flock's `-w` expiry code, 1).
+
 ## Expensive-run checklist — pytest, gate, frontend as one pattern
 
 **Expensive runs (full suite, full gate, full frontend build) cost 4.5+ cores and 13+ 
@@ -1030,6 +1052,8 @@ where the tree did not change:
 Verified: 2026-09-17
 
 ## Verified
+
+2026-10-14, against main `ba68a6daf3cfb7634258915a6e542bc658ae3f62`. **The `RL-1626` small-run section and the one-flock-across-both-halves line were added.** The script text was read at `~/gi-pricing-plan.local/handover/run-small.sh` the same day and the five steps above restate it; it was not executed.
 
 2026-09-29, against main `633c6f34b7e841e09c7f108cd4696658c524fcfc`. **The gate and verify
 blocks now exit with the gate's own status.** The old tail (`[ "$got" = "0" ] && flock -w 7200
