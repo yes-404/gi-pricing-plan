@@ -53,21 +53,24 @@ async def reader_headers(workspace_id: Any, principal: Any, grant: Any) -> dict[
     return {DEV_PRINCIPAL_HEADER: str(principal.id), "Workspace-Id": str(workspace_id)}
 
 
-@pytest.fixture
-def two_versions(
+def _install_versions(
     client: TestClient,
     reader_headers: dict[str, str],
     database: Any,
     blob_store: Any,
     principal: Any,
     workspace_id: Any,
+    *,
+    adjustment_edit: str | None,
 ) -> None:
-    """Two compiled versions of one algorithm that differ in exactly one step: `s_expr` doubles
-    the premium in version 1 and triples it in version 2."""
+    """Two compiled versions of one algorithm. `s_expr` doubles the premium in version 1 and
+    triples it in version 2; with `adjustment_edit`, version 2 also rewrites `s_adj`."""
     register_rating_handlers()
     tripled = _with_adjustment(_minimal_algorithm())
     tripled["version"] = 2
     tripled["steps"][1]["expr"] = "premium_in * 3"
+    if adjustment_edit is not None:
+        tripled["steps"][2]["expr"] = adjustment_edit
     for version, algorithm in ((1, _with_adjustment(_minimal_algorithm())), (2, tripled)):
         created = client.post("/api/v1/rating-algorithms", json=algorithm, headers=reader_headers)
         assert created.status_code in (200, 201), created.text
@@ -83,6 +86,42 @@ def two_versions(
         )
         job = _run_compile_job(client, reader_headers, database, blob_store, row.id)
         assert job.status is JobStatus.SUCCEEDED, job.error
+
+
+@pytest.fixture
+def two_versions(
+    client: TestClient,
+    reader_headers: dict[str, str],
+    database: Any,
+    blob_store: Any,
+    principal: Any,
+    workspace_id: Any,
+) -> None:
+    """Two compiled versions of one algorithm that differ in exactly one step: `s_expr`."""
+    _install_versions(
+        client, reader_headers, database, blob_store, principal, workspace_id, adjustment_edit=None
+    )
+
+
+@pytest.fixture
+def two_versions_both_edited(
+    client: TestClient,
+    reader_headers: dict[str, str],
+    database: Any,
+    blob_store: Any,
+    principal: Any,
+    workspace_id: Any,
+) -> None:
+    """As `two_versions`, and version 2 also edits the downstream `s_adj` (`RL-1261`'s F5)."""
+    _install_versions(
+        client,
+        reader_headers,
+        database,
+        blob_store,
+        principal,
+        workspace_id,
+        adjustment_edit="payable + 200",
+    )
 
 
 def _run(coro: Any) -> Any:
@@ -161,6 +200,21 @@ def test_exactly_one_step_is_the_own_change_at_the_http_layer(
     assert [s["step_id"] for s in downstream] == ["s_adj"]
     assert "consumed" in downstream[0]["changed_fields"]
     assert diff["unchanged"] == 0
+
+
+@pytest.mark.req("FR-262")
+def test_a_downstream_edit_with_a_moved_input_is_an_own_change_at_the_http_layer(
+    client: TestClient, reader_headers: dict[str, str], two_versions_both_edited: None
+) -> None:
+    """RL-1261 through the route: `s_adj` is edited AND consumes the moved `payable`, so the
+    old trace-derived rule read it False. Both edited steps are own changes now."""
+    diff = client.post(COMPARE_URL, json=_body(), headers=reader_headers).json()["diff"]
+
+    assert {s["step_id"]: s["own_change"] for s in diff["steps"]} == {
+        "s_expr": True,
+        "s_adj": True,
+    }
+    assert "consumed" in next(s for s in diff["steps"] if s["step_id"] == "s_adj")["changed_fields"]
 
 
 @pytest.mark.req("FR-262")

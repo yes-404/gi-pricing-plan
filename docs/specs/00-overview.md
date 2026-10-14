@@ -167,6 +167,7 @@ term must be added here before it is used in any other document.**
 | **Deployment Request** | The subject of a `deployment` approval request: its own artifact, owned by the deployment module, whose row pins its evidence (RL-1301 A.1). |
 | **Environment** | A named runtime target: `dev`, `uat`, `prod`. Each owns its own live Rating Version deployments and service-account scopes. |
 | **Scoring** | Evaluating a Rating Version for one or more risks. **Real-time** (single quote, target p99 < 50 ms) or **batch** (portfolio re-rate). |
+| **Replica** | One serving instance of the scoring API: N `uvicorn` worker processes, one per dedicated vCPU, behind one listening address. Real-time scoring's throughput budgets are per replica, and N is stated with every reading of them. *(Added 2026-10-12, RL-1685, PL-1454 DP-3 (b).)* |
 | **Trace** | The per-step record of a single scoring call: step id, every intermediate value, table row matched, model output, and per-step timing. The backbone of explainability and dispute resolution. |
 | **Dislocation** | The distribution of premium change between two Rating Versions over a fixed portfolio. |
 | **Shapley attribution** | The decomposition of a Dislocation Run's premium change into its declared changes by exact Shapley values, allocated to integer minor units by largest remainder (`03` FR-266). |
@@ -540,7 +541,7 @@ Cross-cutting stack usage. Module specs list their own; all of it aggregates int
 
 | ID | Requirement |
 |---|---|
-| **NFR-454** | Real-time scoring: p99 < 50 ms server-side for a single quote against a live Rating Version, excluding network, at 200 rps sustained per replica. |
+| **NFR-454** | Real-time scoring: p99 < 50 ms server-side for a single quote against a live Rating Version, excluding network, at 200 rps sustained per replica. *(Clarified 2026-10-12, RL-1685, PL-1454 DP-3 (b): a replica is N worker processes (§2.3, **Replica**), not one process. One event loop cannot carry 200 rps of the evaluator alone: SL-1455 Task 0 measured `score_one` at a mean of 14.18 ms with one GBM call and 8.27 ms without, 2.8 and 1.7 s of evaluator time per second at 200 rps. Every reading states N; on the shared VM N = 4, a diagnostic reading only, and the reference N is fixed with G4's dedicated host.)* |
 | **NFR-455** | Batch scoring throughput: ≥ 1 M risks/hour per worker for a typical motor rating structure (≈ 200 DAG steps). |
 | **NFR-456** | GLM fitting: 5 M rows × 60 factors converges in < 10 min on a 16-core worker. GBM fitting: same data, 500 trees, < 20 min. |
 | **NFR-457** | Interactive UI: p95 < 300 ms for metadata reads; any operation exceeding 2 s becomes a Job with progress. |
