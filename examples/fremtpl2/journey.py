@@ -77,15 +77,23 @@ SKIPS: Final[tuple[Skip, ...]] = (
     Skip("B9", "KNOWN GAP B9: FD-1490"),
     Skip("B4", "SKIPPED B4 model_call: FD-1456; SL-1543"),
     Skip("C1′", "SKIPPED C1′: FD-1456; SL-1543"),  # noqa: RUF001
-    # D7 should decompose the change (FR-264). Attribution cannot when the algorithm mounts a
-    # sub-graph: it compiles a bundle per subset of the change groups and never carries
-    # `sub_graphs` into a subset (analysis.py `_subset_algorithm`, `:742`; the compile loop,
-    # `:1001-1006`), so any split fails BUNDLE_COMPILE_FAILED. The finding is a working id
-    # (FD 9804, owner WK-673, HIGH), minted in D13; G2 is not met until D7 decomposes.
-    Skip("D7", "SKIPPED D7 decomposition — FD 9804"),
+    # D7 should decompose the change (FR-264), but attribution refuses a sub-graph mount
+    # difference until SL-1696 (FD-1660, HIGH, owner WK-673): the maintainer (by delegation)
+    # ruled (A) on 2026-10-12 07:44:13 BST, so the guard fails D6's Job and no Dislocation Run
+    # exists. Every step that needs D6's run is a skip naming the finding; SL-1696 removes them
+    # and restores the steps. G2 is not met until D7 decomposes.
+    Skip("D7", "SKIPPED D7 — FD-1660 guard"),
+    Skip("D8", "SKIPPED D8: FD-1660; SL-1696"),
+    Skip("E4", "SKIPPED E4: FD-1660; SL-1696"),
+    Skip("E6", "SKIPPED E6: FD-1660; SL-1696"),
+    Skip("E8", "SKIPPED E8: FD-1660; SL-1696"),
+    Skip("E9", "SKIPPED E9: FD-1660; SL-1696"),
+    Skip("DEP", "SKIPPED DEP: FD-1660; SL-1696"),
+    Skip("S1", "SKIPPED S1: FD-1660; SL-1696"),
 )
 
-#: An owner is a finding or a Work: `FD-1491`, `WK-685`, or a finding's working id, `FD 9804`.
+#: An owner is a finding or a Work: `FD-1491`, `WK-685`; the pattern also admits a finding's
+#: working id (`FD 9804` was FD-1660's, before its mint).
 _OWNER: Final = re.compile(r"\b(?:FD[- ]|WK-)\d+\b")
 
 
@@ -231,6 +239,7 @@ class _Journey:
         self.result = JourneyResult()
         self.loading_ref: str | None = None
         self.loading_region = ""
+        self.attribution_refused = False  # FD-1660: D6's run was refused, so none exists
 
     # -- plumbing ------------------------------------------------------------------------
     def who(self, name: str) -> dict[str, str]:
@@ -964,6 +973,13 @@ class _Journey:
         self.done("E2", "POST /rating-versions/{id}/submit, the route RL-1524 names")
         self.done("E3", "EVIDENCE_INCOMPLETE: no Dislocation Run for this version yet")
         self.dislocation()
+        if self.attribution_refused:
+            # FD-1660, until SL-1696: no Dislocation Run exists, so E4's resubmission, the
+            # approval it opens (E5's decide, E7's submit need it) and the approved version are
+            # not reachable. Each is printed SKIPPED with the finding, with no live call.
+            for step in ("E4", "E5", "E6", "E7", "E8", "E9"):
+                self.skip(step)
+            return
         first = self.submit("E4", text, expect=200)
         self.done("E4", "dislocation run, resubmitted")
         self.decide("E5", "approver", first["approval_request_id"], "approve")
@@ -1044,18 +1060,15 @@ class _Journey:
             "band_edges_pct": ["-10", "-5", "0", "5", "10"],
             "mover_threshold_pct": "10",
         }
-        # ONE group of every derived change. D7 should decompose the change (FR-264), but
-        # attribution cannot: it compiles a bundle per subset of the groups, and a subset omits
-        # the NCD ladder's sub-graph mount (`_subset_algorithm` copies steps, input contract and
-        # outputs, never `sub_graphs`), so any split leaves a step consuming the mount's output
-        # with no producer and the subset does not compile (BUNDLE_COMPILE_FAILED). The
-        # maintainer ruled (A) on 2026-10-12 02:29:16 BST: the journey runs the one-group lump,
-        # which does compile, and prints D7's decomposition as SKIPPED with its finding
-        # (FD 9804, owner WK-673). G2 is not met until D7 decomposes. The two-group version is
-        # kept on the branch `salv-sl1527-d7-2group`.
+        # ONE group of every derived change, at the demo's fork (the baseline has no mount; the
+        # candidate adds the NCD ladder's `m_ncd`). Attribution refuses a sub-graph mount
+        # difference at any group count until SL-1696 (FD-1660, owner WK-673; the maintainer (by
+        # delegation) ruled (A) on 2026-10-12 07:44:13 BST), so the Job FAILS here and D6 asserts
+        # that refusal. SL-1696 restores `job_ok` and D7's two-group run (branch
+        # `salv-sl1527-d7-2group`).
         # The derived changes are numbered c1, c2, ... (FR-1399) and the estimate refuses a
         # partition that leaves one out or names one that is not derived, so the count is found
-        # by asking.
+        # by asking (the estimate does not attribute, so it still answers).
         everything = [{"name": "the whole fork", "changes": self.derived_changes(spec)}]
         accepted = self.req(
             "D6",
@@ -1065,23 +1078,34 @@ class _Journey:
             expect=202,
             json={**spec, "change_groups": everything},
         )
-        job = self.job_ok("D6", "analyst", accepted)
-        self.done("D6", "a 20,000-policy sample of the freMTPL2 book (full-book cost: PL-1574)")
-        run_id = str(job["result"]["ref"]).split(":", 1)[1]
-        run = self.req("D7", "analyst", "GET", f"/dislocation-runs/{run_id}", expect=200)
-        if not run.get("attribution"):
-            raise JourneyStepFailed("D7", "NO_ATTRIBUTION")
-        self.req("D7", "analyst", "GET", f"/dislocation-runs/{run_id}/movers", expect=200)
-        self.log(
-            f"       the sample's {run['policy_count']} policies: attribution persisted as one "
-            "effect (full-book attribution cost: FD-1576)"
+        job = self.job("D6", "analyst", accepted)
+        error = job.get("error") or {}
+        message = str(error.get("message", ""))
+        if (
+            job["status"] != "failed"
+            or error.get("code") != "VALIDATION_FAILED"
+            or "FD-1660" not in message
+            or "SL-1696" not in message
+        ):
+            raise JourneyStepFailed("D6", "FD_1660_GUARD_NOT_RAISED", detail=message)
+        self.done(
+            "D6",
+            "refused VALIDATION_FAILED: sub-graph mount changes are not attributable until "
+            "SL-1696 (FD-1660); a 20,000-policy sample of the freMTPL2 book",
         )
+        self.attribution_refused = True
         self.skip("D7")
-        self.done("D8", f"dislocation run {run_id}, attribution cited by id")
+        self.skip("D8")
         self.skip("D9")
 
     # -- Deploy and the served quote -------------------------------------------------------
     def deploy_and_score(self) -> None:
+        if self.attribution_refused:
+            # FD-1660, until SL-1696: `rv3` was never approved (E9 is a skip), so there is
+            # nothing to deploy or to score from a live deployment.
+            self.skip("DEP")
+            self.skip("S1")
+            return
         ref = f"rating_version:{self.rv3['slug']}@{self.rv3['version']}"
         for env in ("dev", "uat"):
             self.req(
