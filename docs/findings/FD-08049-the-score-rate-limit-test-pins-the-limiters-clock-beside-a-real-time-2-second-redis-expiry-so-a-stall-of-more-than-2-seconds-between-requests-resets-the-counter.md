@@ -88,6 +88,44 @@ Its finding that no expiry test exists today is the one recorded above.
 
 **Land early: struck twice today (D16 `5e03ced9`, D17 `3012748a`).**
 
+### Limb 2 — the limiter fails open on a Redis timeout under load, and the tests cannot tell (2026-10-14 18:00:21 BST; the maintainer's (by delegation) entry "2026-10-14 17:56:42 BST")
+
+**Observed (SL-1719's window run, load 13, 2026-10-14 17:52–17:55 BST):** in a restored run
+(no planted fault) `test_the_accounts_own_rate_wins_over_the_environment_default` failed
+`assert 409 == 429` (`:198`) with `WARNING app.platform.rate_limit … rate limit not enforced:
+TimeoutError` (`rate_limit.py:103`) and the `/score` request at `duration_ms 2255`. Under the plant the
+same line appeared in `test_the_environment_default_limits_only_its_environment` (`:166`, 3116 ms).
+Source: `/home/puzhenhao1989/.claude/jobs/b6860f8f/tmp/sl8051-window/{red,green}.log`. The CI control
+shows 0 such lines in runs 38587011863 and 38568100882, so this is **not** the CI flake, and the
+TTL fix stands as the CI fix.
+
+**"Fail open by design" checked against the spec, as the maintainer's entry required.** Grep predicate:
+`git grep -nEi 'fail[- ]open|fails open|unenforced|FR-452' origin/main -- docs/specs docs/rulings docs/open-questions.md`.
+The spec is **not silent**. `docs/specs/07-platform.md:183`, FR-452, amended 2026-09-30 (RL-1347, PL-1342
+DP-S3-2): *"If the counter is unavailable, the request is admitted (fail open), logged, and counted on
+`gip_rate_limit_unenforced_total` by Environment."* RL-1347 §5 ("A Redis outage: fail open, logged and
+counted") specifies: any `RedisError` *"(a refused connection, a timeout, a reset)"* admits the request; each
+is logged at `WARNING` once with the error type and the Environment, counted on the counter with one label
+`environment`; the client has a 50 ms socket connect and read timeout ("a hung Redis then costs a request at
+most about 100 ms"); no circuit breaker. The code matches: `rate_limit.py:101-108` admits, counts
+(`metrics.rate_limit_unenforced`) and logs at WARNING; the WARNING lines are what exposed the cause.
+So the behaviour is the specified one and is observable, as specified.
+
+**Rating: LOW** (the spec says fail open on a store timeout). The defect is in the tests: a fail-open
+admit and a correct admit are both `status != 429` (module docstring), so a Redis timeout surfaces as
+`409 == 429` and reads as a limiter bug. **Remedy, out of SL-1719:** the fixture (or a helper) must fail
+loudly when the limiter failed open, by asserting `metrics.rate_limit_unenforced` did not move across the
+test (the existing `_unenforced(environment)` helper is the form, used by the case 7 test), so a loaded
+box reports "limiter not enforced" instead of a wrong status. SL-1719's tests (i) and (ii) share the exposure
+(an `admit` that fails open writes no key); the same assertion and a TTL they cannot outrun
+(`_KEY_TTL_SECONDS` patched to 60 in (i)) harden them. Owner WK-1178.
+
+**One observation, not a finding:** the 3116 ms and 2255 ms request durations are far above the "about 100 ms"
+bound in RL-1347 §5. They include account lookup and Settings resolution under load 13 and the event loop being
+starved, and were not decomposed; no claim is made that the 50 ms client timeout is wrong. **No OQ is drafted:**
+the choice (fail open, logged, counted) is decided by FR-452 and RL-1347 §5; re-opening it is a maintainer
+decision, not an open item.
+
 ## Sweep (item 3)
 
 Predicates, run with `git grep` at `beee5ebedcfebc03c1658728442827960975392a` (the D18 worktree, which carries no change under `backend/`
