@@ -2448,6 +2448,24 @@ relates: [PL-1682, FD-1335, FD-1684, PL-1364, SL-1367, PL-1667, SL-1669, SL-1547
 
 On the maintainer's (by delegation) entry "2026-10-12 07:28:38 BST — S5 flags: (1) NEITHER (a) nor (c): type POST …/import's 200 FIRST in a tiny WK-1178 slice (d), with (a)+tripwire only as a named fallback; …", flag (1): `POST /api/v1/rate-tables/{slug}@{version}/import` publishes its 200 as the existing `model-schema` `ImportPreview` (`diff: RateTableDiff`, `created_by_import: ImportVerdict`; `rating.py:1363`) and its 201 (`confirm: true`) as `RateTableVersion`, in the manual-edit route's form (`response_model=None` with a `responses` map, `api/rate_tables.py:138-147`). No model is added or composed. The route leaves `UNTYPED_2XX_PENDING_PART_B` (`backend/tests/test_contracts.py:3193`, FD-1335 Part B's list, not FD-1366's), and `docs/contracts/openapi/generated.json` and the frontend client are regenerated. Spec first: a dated clause on `03` §5.1's import row (`:1046`, FR-235). Red first by cause: the published 200 has no `$ref` today; the stale-list test after regeneration; a real preview and confirm response round-trip through the published models (a guard, shown red on a planted extra field). `FD-1335` stays active with three routes in its Part B list. The export routes are out of scope (`FD-1684`). WK-675 S5 (`SL-1547`) uses the generated types after this slice merges, and S5's gate waits for it (07:28:38). Plan: Work-plan delta `PL-1682`. **Activation needs:** DP-1 (the 201 published too) and DP-2 (no standalone schema file) MET, both accepted by the maintainer (by delegation), "2026-10-12 07:46:06 BST", items 1 and 2; PL-1682 set `active` in this slice's activation commit; the shared-path census re-checked at the GO (`generated.json` against `SL-1547`; the later PR regenerates); the lead's executor GO. *(Cut 2026-10-12 by the planner under working id 9911, reserved by the lead, from-lead "2026-10-12 07:29:15 BST"; minted 2026-10-12 as SL-1683 from working id 9911, early, on the maintainer's (by delegation) entry "2026-10-12 07:46:06 BST".)*
 
+#### SL-8026 — WK-1178 fix slice — the upload-completion step: an upload becomes an owned, content-addressed blob, proven by one public-path HTTP test with no seeding
+
+```yaml
+id: SL-8026
+family: slice
+title: WK-1178 fix slice — the upload-completion step: an upload becomes an owned, content-addressed blob, proven by one public-path HTTP test with no seeding
+status: draft                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-14
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 4420f91fa4112a1fcabcae23d3d50a1ad4fcbb59
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-8025, SL-1258]
+```
+
+On the maintainer's (by delegation) entry "2026-10-14 10:56:38 BST — Upload-completion gap: owner WK-1178, FIXED IN P2 (spec first, off the G2 path); 2nd-pass counts noted (re lead 10:56:05)", items 2 to 4. `07` FR-421 is half-built: `POST /api/v1/blobs/upload-url` returns a staging key, and nothing completes the upload, hashes it, moves it to its content address, writes its `blobs` row or records an owner, so `POST /api/v1/datasets/{slug}/versions` refuses every publicly uploaded file with the missing-blob `404` (`backend/src/app/api/datasets.py:543-546`). Spec first: a new `07` FR for the completion step, the `07` §5.1 upload-url row's dated line and a new `complete` row, and `01`'s ingest row amended to cite the FR, in the slice's commit. The completion design is PL 8025's DP-U1 (recommended: `complete` returns `202` with a `blob.promote` Job on `io`, whose blob result is the owner the allow-list already admits; the blob is retained, per FD 8023's rule). ONE HTTP test walks upload-url → PUT to MinIO → complete → POST versions → ingest `succeeded` on a real worker with no DB seeding, and the route-level reds are listed in PL 8025. Off the G2 path; never displaces a G2 gate; merged before the 4 Nov code freeze. Work-plan delta PL 8025 (working id). **Activation needs:** DP-U1 ruled by a high-effort decision-maker in a separate CLI; DP-U2 ruled (where the test's `io` worker comes from: recommended, the test starts its own; otherwise `SL-1258` merged first); the upload-completion FD minted (D16 or D17), naming #883's unowned deferral and its relation to FD 8021 (working id); the shared-path census against `SL-1258` and any open slice regenerating `docs/contracts/` or adding a migration; PL 8025 set `active` in this slice's activation commit; the lead's GO. *(Cut 2026-10-14 by the planner under working id 8026, reserved by the lead, eta "2026-10-14 10:57:11 BST".)*
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
