@@ -119,7 +119,7 @@ Every line is read in this record's worktree, which is checked out at
    traces, plus 100 % of declines and errors, and persists them."* No other text in
    `docs/specs/`, `docs/workflows/`, `docs/open-questions.md` or `docs/roadmap.md` matches
    `grep -rniE '100 ?% of (declines|errors)|declines and errors|every error'` (two hits:
-   `03:180` and `WF-00701:67`).
+   `03:180`, and row C7 of WF-701 at line 67 of its file).
 
 ## Ruled
 
@@ -228,10 +228,12 @@ C7's errors limb is **walked, not skipped, and is no longer a `KNOWN GAP`**. The
 
 Assertion 2 is an absence read through a route that lists only completed traces. It does not
 prove by itself that no row was written. The proof that no row is written is the backend test
-in §4 below, which reads `scoring_traces` directly. The demo cites that test by name.
+in "What it obliges" below, which reads `scoring_traces` directly. The demo cites that test by name.
 **Nothing about errors at 100 % is asserted, and no fault is caused in `prod`.**
 
-### 4. The texts and the minimal work they need (owner WK-1178)
+## What it obliges
+
+### The texts and the minimal work they need (owner WK-1178)
 
 The spec texts are proposed here and **are not edited into `docs/specs/` or `docs/workflows/`
 by this record** (the brief and the 10:11:47 entry: "the spec clarification text is the RL's
@@ -290,10 +292,10 @@ docs/workflows/WF-00701-deploy-and-monitor.md` prints `1` at `1e260c15`. Insert:
 with the write set exactly the four files named (`03`, WF-701, `test_score.py`, `traces.py`'s
 docstring). It needs no contract regeneration and no migration. It lands **before the 4 Nov code
 freeze**, because it carries a test, and in any case before the WF-701 demo slice's compose
-rehearsal, which asserts §3 against it. It discharges FD-8011 when merged. The planner may give
+rehearsal, which asserts §3 of Ruled against it. It discharges FD-8011 when merged. The planner may give
 it its own slice or fold it into an open WK-1178 slice; that is the planner's call.
 
-## What this record does not decide
+### What this record does not decide
 
 - **The `scoring` queue that no worker consumes** (the lead's 10:13:05 entry). It affects C7's
   1 % limb and the declines limb, not this ruling's limb, which asserts an absence. It is the
@@ -303,18 +305,28 @@ it its own slice or fold it into an open WK-1178 slice; that is the planner's ca
 - **The declines limb** (DP-W4 (a), the governed decline candidate). This ruling leaves it
   unchanged.
 - **FD-8011's severity or closure.** The maintainer confirmed MEDIUM and owner WK-1178. The
-  merge of the slice in §4 discharges it, and the lead records that.
+  merge of the slice above discharges it, and the lead records that.
 - **Whether to keep a platform fault's quote input** (§2, "Why C loses", last item). It is not
   raised here.
 
-## How to check this record
+## Acceptance — the violation that must become detectable
 
-- **The ruling.** Read FR-259 at the applying commit: T1 is present once, byte-equal to the
-  block above with its placeholders filled, and the row still opens with *"plus 100 % of
-  declines and errors"*. The text is clarified, not struck.
-- **The behaviour.** The new test is green on the merged tree. R1 is recorded red in the `LG-`
-  with the scratch diff and its failure line.
-- **The demo.** `scripts/demo.py --journey wf-701` prints `C7-errors: refused, not traced
-  (FR-259, RL-<minted>)`, and no line containing `KNOWN GAP C7-errors`.
+The violation: **`POST /api/v1/score` refuses a quote and a `scoring_traces` row is written for
+it**, or FR-259 is left saying "100 % of … errors" with no definition while the demo walks C7's
+errors limb as a `KNOWN GAP`.
+
+- *Violation: a refused quote writes a trace row.* The new `test_score.py` test, at sample rate
+  1.0 over the five refusal codes, reds on the R1 scratch edit (a pending row written in the
+  `except ValueError` block) with one row per code. This record cannot show that red itself,
+  because the test is part of the slice's write set; the slice shows it red, with the scratch
+  diff and the failure line in its `LG-`, before its merge.
+- *Violation: the clarification is missing or altered.* At the applying commit, `grep -cF` of
+  T1's first sentence in `03` and of T2's in WF-701 each print `1`, and each block is byte-equal
+  to the text above with its placeholders filled. FR-259 still opens with *"plus 100 % of
+  declines and errors"*: the text is clarified, not struck.
+- *Violation: the demo still carries the gap.* `scripts/demo.py --journey wf-701` prints
+  `C7-errors: refused, not traced (FR-259, RL-<minted>)` and no line containing
+  `KNOWN GAP C7-errors`. With the T1 text absent from `main`, the demo slice keeps the
+  `KNOWN GAP` line, so the exit demo cannot pass C7.
 
 Drafted as working id RL 8019.
