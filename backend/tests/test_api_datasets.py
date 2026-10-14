@@ -188,6 +188,69 @@ def test_replacing_the_dictionary_is_audited_with_before_and_after(
     assert entry.after["data_dictionary"]["ethnicity"]["pii_class"] == "none"
 
 
+@pytest.mark.req("NFR-472")
+def test_replacing_a_rule_set_is_audited_with_before_and_after(
+    client: TestClient, workspace_id, principal, grant, database
+) -> None:
+    """NFR-472: a rule-set change carries the set it replaced, so "which rules were
+    switched off, and when?" is answerable from the audit trail alone."""
+    import asyncio
+
+    from sqlalchemy import select
+
+    from app.db.models import AuditEventRow
+
+    asyncio.get_event_loop().run_until_complete(grant("analyst"))
+    headers = _headers(principal.id, workspace_id)
+    approver = new_uuid7()
+    asyncio.get_event_loop().run_until_complete(grant("approver", principal_id=approver))
+    approver_headers = _headers(approver, workspace_id)
+
+    slug = f"ds-{new_uuid7().hex[-8:]}"
+    assert client.post(
+        "/api/v1/datasets", json={"slug": slug, "name": "Rule-set audit"}, headers=headers
+    ).status_code == 201
+    kept = _approved_rule(client, headers, approver_headers, database)
+    parked = _approved_rule(
+        client, headers, approver_headers, database, layer="structural", check="not_null",
+        params={"key_columns": ["policy_id"]},
+    )
+
+    first = client.put(
+        f"/api/v1/datasets/{slug}/rule-set",
+        json={"rules": [{"rule_id": kept}]},
+        headers=headers,
+    )
+    assert first.status_code == 200, first.text
+    second = client.put(
+        f"/api/v1/datasets/{slug}/rule-set",
+        json={"rules": [{"rule_id": kept}, {"rule_id": parked, "enabled": False}]},
+        headers=headers,
+    )
+    assert second.status_code == 200, second.text
+
+    async def events() -> dict[str, AuditEventRow]:
+        async with database.session() as session:
+            rows = (
+                await session.execute(
+                    select(AuditEventRow).where(
+                        AuditEventRow.workspace_id == workspace_id,
+                        AuditEventRow.action == "validation_rule_set.replaced",
+                    )
+                )
+            ).scalars().all()
+            return {row.entity_ref: row for row in rows}
+
+    by_ref = asyncio.get_event_loop().run_until_complete(events())
+    v1 = by_ref[f"validation_rule_set:{slug}@1"]
+    v2 = by_ref[f"validation_rule_set:{slug}@2"]
+    # The set it replaced, in the same shape the earlier event wrote as its `after`.
+    assert v2.before == v1.after
+    assert v2.after["disabled"] == [parked]
+    # The first version replaced nothing.
+    assert v1.before is None
+
+
 @pytest.mark.req("FR-27")
 async def test_starting_an_ingestion_returns_202_and_a_job(
     client: TestClient, analyst: dict[str, str], database: Database, workspace_id
