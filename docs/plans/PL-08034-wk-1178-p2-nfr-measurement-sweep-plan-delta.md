@@ -2,7 +2,7 @@
 id: PL-8034
 family: plan
 kind: map
-title: WK-1178 — the P2 NFR measurement sweep (NFR-468, NFR-470, NFR-485, NFR-1443 measured DIAGNOSTIC on the shared VM with pre-registered reading rules; NFR-472's red-first test): a dated Work-plan delta
+title: WK-1178 — the P2 NFR measurement sweep (NFR-467, NFR-468, NFR-470, NFR-485, NFR-1443 measured DIAGNOSTIC on the shared VM with pre-registered reading rules; NFR-472's red-first test): a dated Work-plan delta
 status: draft                   # draft → active → superseded | retired (§1.2a)
 created: 2026-10-14
 owner: planner
@@ -80,7 +80,19 @@ PL 8034 items, verbatim, and the one sentence of its PL 8042 item that is this p
 > - **PL 8034 (b), NFR-470's counted overhead: CONFIRMED** = the version's tables + reports + profile; ingestion_runs and audit_events rows EXCLUDED and printed separately (they are platform records, not the version's storage).
 > The S5 run-list amendment as a dated line under SL-1259's roadmap row (RL-1614/PL-1620 frozen): OK.
 
-Its PL 8042 item is otherwise PL 8042's, and its P1/P2 item is the lead's. The dated lines that
+Its PL 8042 item is otherwise PL 8042's, and its P1/P2 item is the lead's.
+
+**Amended again 2026-10-14, before the mint, by the planner (seat planner-p1fix)**, on the
+maintainer's (by delegation) entry headed **"2026-10-14 12:42:55 BST — PL 8042 DP-S1 → (i) a
+column on the run; PL 8034: NFR-467 MEASURED at 10M (re lead 12:42:23)"**, read in full. Its
+item (2), verbatim (item (1) is PL 8042's):
+
+> **(2) PL 8034 → ADD NFR-467's measurement, as you recommend.** My 11:06:52 classed it PARTIAL-MEASUREMENT ("10M extrapolated from a 2M run is not a measurement"), and 11:28:56 put it in the sweep. PL 8034 must carry its own instrument, the pre-registered threshold from NFR-467's text, a task and an acceptance item, measured at 10M. If the shared VM cannot hold it, it goes to nfr-bench-1 session 2 with NFR-485's 5M runs. **Restate session 2's total planned duration** in the plan (5M × arms + NFR-467 at 10M + S5's own list), because my 2 h VM heads-up to the user must carry a true duration and cost. If it now exceeds ~6 h, tell me before it is committed.
+
+It is carried by: the Goal; the scope table (NFR-467 moves out of the read-only list); the new
+NFR-467 section (instrument, threshold from the row and its 2026-08-14 amendment, host and
+sizing); Task 5a; Acceptance 10; "nfr-bench-1 session 2 — the total planned duration"; the
+write set; the Hand-off; and the Self-review. The dated lines that
 record the three confirmations are at Task 0 Step 2, the NFR-470 section, DP-3, Task 3 Step 2,
 Task 4 Step 4, the write set and the Self-review.
 
@@ -128,13 +140,14 @@ Three further constraints are cited to source:
 
 ## Goal
 
-Each of NFR-468, NFR-470, NFR-485 and NFR-1443 gets one **committed** instrument, a
+Each of NFR-467, NFR-468, NFR-470, NFR-485 and NFR-1443 gets one **committed** instrument, a
 **pre-registered** threshold and reading rule committed before its first run, and one
 recorded **DIAGNOSTIC** reading on the shared VM in the slice's `LG-`, with the load, the tree
 and the size beside every figure, and every latency reading labelled **"server-side,
 in-process, excludes network"** (DP-2). A latency reading in the NEAR-BOUND band (DP-1) and
 NFR-485 at its stated 5 M scale (DP-4) are written into the slice's ledger as **named extra
-readings** for nfr-bench-1's second session; this slice does not run them. A reading that comes
+readings** for nfr-bench-1's second session; this slice does not run them. NFR-467 is measured
+**at its stated 10 M rows** on the shared VM, never extrapolated (the 12:42:55 entry). A reading that comes
 out OVER is reported to the lead for an `FD-` (the auditor files it) and the requirement's
 text is not touched. NFR-470's pass/fail-deciding reading is written into the spec as one dated
 clarification on its row (DP-3). NFR-472 gets one red-first test, red by its cause, and the fix
@@ -144,6 +157,7 @@ that turns it green.
 
 | Id | Spec row at `8eaf6d5f` | Kind in this slice |
 |---|---|---|
+| NFR-467 | `docs/specs/01-data-management.md:1181`, amendment note `:1190-1207` | measurement at 10 M rows (time + memory scaling); added 2026-10-14 by the 12:42:55 entry |
 | NFR-468 | `docs/specs/01-data-management.md:1182` | measurement (latency) |
 | NFR-470 | `docs/specs/01-data-management.md:1184` | measurement (bytes) |
 | NFR-472 | `docs/specs/01-data-management.md:1186` | test gap: one red-first test + its fix |
@@ -151,20 +165,19 @@ that turns it green.
 | NFR-1443 | `docs/specs/03-rating-engine.md:1518` | measurement (latency + a ratio) |
 
 Read only, cited: NFR-457 (`00-overview.md:547`), `07` §1.3 R1 (`07-platform.md:36-37`),
-NFR-467 (`01-data-management.md:1181`), NFR-475 and NFR-476 (the `02` measurement note),
-FR-7, FR-51, FR-62, FR-231, FR-232.
+NFR-475 and NFR-476 (the `02` measurement note), FR-7, FR-51, FR-62, FR-231, FR-232.
 
 *(Dated 2026-10-14 by the planner, seat planner-p1fix, before the mint: the citation the sweep
 finds by stamp.)* The maintainer's (by delegation) entry headed **"2026-10-14 11:28:56 BST —
 FD 8027 severity → HIGH (the max of its limbs), per-limb table kept; the FR-127 GLM limb may
 touch G2: CHECK NOW (re lead 11:28:22)"** (FD 8027's ruling, in `to-lead.md`, read in full)
 says, in its LOW-limbs line, verbatim: *"**LOW limbs:** fixed in P2 where small (FR-33, 80,
-123, NFR-467's measurement joins the P2 NFR sweep); else carried with owner at §14."* **This
-plan does not yet carry that measurement:** NFR-467 is in the read-only list above, and its only
-other use is the 11:06:52 entry's item 1 as the extrapolation standard (Context; the NFR-485
-section). The difference is reported to the lead, and this line changes no scope, task or
-acceptance item; adding NFR-467 as a measured requirement is a change of this plan's scope for
-the lead to order. **One spec edit only:** the dated clarification on
+123, NFR-467's measurement joins the P2 NFR sweep); else carried with owner at §14."* When this
+line was first written the plan carried NFR-467 read-only, and the difference was reported to
+the lead; the 12:42:55 entry, item (2), then **added NFR-467's measurement at 10 M** (Context),
+and the scope table above carries it.
+
+**One spec edit only:** the dated clarification on
 NFR-470's row that DP-3 orders (Task 3, Step 4); it records how the row is read and changes
 neither its subject nor its 1.2× bound. A reading that disagrees with a requirement is an
 `FD-`, never a re-wording (the ruling's third bullet). Two findings already filed from this
@@ -173,7 +186,85 @@ not yet on `main`): **`FD 8046`** (DP-5: NFR-485's construction clause against t
 **`FD 8047`** (DP-6: the purge audit's missing `before`, and `test_data_nfrs.py:147`'s
 docstring claiming coverage it does not assert).
 
-## The five requirements — spec row, owning code, existing evidence, and the instrument
+## The six requirements — spec row, owning code, existing evidence, and the instrument
+
+### NFR-467 — profiling a 10 M-row version (added 2026-10-14, the 12:42:55 entry)
+
+**Spec row, verbatim** (`01-data-management.md:1181` at `a3fc2e8d`, unchanged since `8eaf6d5f`):
+
+> | **NFR-467** | Profiling a 10 M-row version completes in ≤ 5 min, and its memory **does not scale with row count**: every statistic is aggregated in DuckDB and only aggregates are materialised (see the note below). |
+
+**Its dated amendment, verbatim** (`:1190-1207`, the note the row's "see the note below" names; no
+later amendment):
+
+> **NFR-467 amended 2026-08-14.** It previously bounded profiling memory at "2× the
+> largest column's compressed size". That number is not achievable and was never the
+> property worth requiring. Measured on the WK-660 benchmark (`scripts/bench-data.py`), 80
+> columns × 2 M rows: the largest compressed column is 15.4 MB, so the old bound was
+> 30.7 MB — while a Python process with `polars`, `duckdb`, `scipy` and `pydantic`
+> imported occupies 140 MB before it has read a byte. The bound counted the interpreter
+> against the dataset.
+>
+> The property that actually protects the platform is that profiling does not hold the
+> data, and that *is* measurable: over a 10× increase in payload (109 MB → 1,092 MB),
+> peak RSS above the import baseline moved 113 MB → 236 MB. Sub-linear, so a 10 M-row
+> version does not need 10 M rows' worth of memory.
+>
+> The requirement was met in intent and missed in fact by the first implementation, which
+> ran `SELECT *` and handed the frame to the in-memory profiler — 2,278 MB peak on that
+> same 1,092 MB payload, and roughly 11 GB at the scale the requirement is written
+> against. The parenthetical "DuckDB streaming, not full materialisation" was already in
+> the spec; the code did not do it, and no test asked.
+
+**Owning code.** `pricing_core.data.profile.profile_parquet`, which aggregates in DuckDB (the
+amendment's fix). **Existing evidence: a partial measurement.** `CR-721`'s NFR table
+(`docs/closures/CR-00721-wk-660-data-workbench-closed.md:85-98` at `a3fc2e8d`) records
+*"NFR-467 profiling | 91.7 s | 300 s"* and the memory line *"113 MB → 236 MB above baseline
+over a 10× payload increase"*, both from `scripts/bench-data.py` *"at 2 M rows × 80 columns,
+extrapolated to 10 M"*. The 11:06:52 entry, item 1, classes it **PARTIAL-MEASUREMENT** (*"10M
+extrapolated from a 2M run … is not a measurement"*).
+
+**Instrument (pre-registered).** `scripts/measure-p2-nfr-sweep.py profile` (Task 5a). For each
+of two sizes, **2 000 000 and 10 000 000 rows × 80 columns**:
+1. generate the synthetic parquet in its own process with the existing generator,
+   `uv run python scripts/bench-data.py --rows N --generate-to <path>` (`bench-data.py:166-173`,
+   `:186-191`; the file goes under the executor's job tmp directory, never `/tmp`, and is
+   deleted after its run);
+2. profile it in a **fresh** process that never held the data (the reason `bench-data.py`
+   gives at `:169-173`): read `VmRSS` after the imports as the **baseline**, call
+   `profile_parquet` exactly as `bench-data.py:196-198` does, time the call with
+   `time.perf_counter()` at its boundaries, then read `VmHWM` (one phase per process,
+   `dev-commands:887-889`; no sampler thread, which the Global Constraints bar). It prints
+   wall seconds, `VmHWM`, the baseline, **Δpeak = VmHWM − baseline**, the payload bytes, the
+   load at start and end, and the tree.
+
+**Threshold and reading rule (pre-registered, from the row and its amendment).**
+- **Time:** the 10 M profile's wall time **≤ 300 s** (*"completes in ≤ 5 min"*), read by DP-1's
+  bands as every latency reading is: ≤ `NEAR_BOUND_FRACTION` × 300 s (129 s at the interim 0.43)
+  is DIAGNOSTIC-PASS; above it and ≤ 300 s is NEAR-BOUND, a named nfr-bench-1 session 2 extra
+  reading; > 300 s is DIAGNOSTIC-OVER, an `FD-`.
+- **Memory:** *"does not scale with row count"*, read as the amendment reads it, *"Sub-linear,
+  so a 10 M-row version does not need 10 M rows' worth of memory"*: **r = Δpeak(10 M) ÷
+  Δpeak(2 M) < 5.0**, the row ratio. r ≥ 5.0 (linear or worse) is DIAGNOSTIC-OVER, an `FD-`.
+  The row gives no tighter number, so none is invented here; r and both Δpeaks are printed.
+  Memory does not change with load, so this limb is a reading, not a diagnostic of load.
+- The aggregation clause (*"every statistic is aggregated in DuckDB and only aggregates are
+  materialised"*) is the mechanism the memory limb tests; it gets no separate check.
+
+**Host and sizing: the shared VM**, as the 12:42:55 entry allows when it can hold the run.
+Sizing, at this plan's reading on 2026-10-14: the box has 8 vCPU and 31 GB, `MemAvailable`
+read 18 GB and `/` had 15 GB free. The 10 M parquet is about **5.5 GB** (the amendment's 1,092 MB
+at 2 M, × 5). Generation holds 80 numeric columns at 10 M rows, **6.4 GB** resident by
+`bench-data.py`'s own docstring (`:11-13`), plus transients: about **8–13 GB peak** in the
+generating process, which exits before profiling. The profiling process is sub-linear by the
+amendment's own reading (236 MB above baseline at 2 M), well under 2 GB. So the run fits, with
+two guards checked before generating and recorded: **`MemAvailable` ≥ 16 GB** and **free disk
+under the job tmp ≥ 12 GB**. If either guard fails, the run waits and re-checks; if it cannot
+run on the shared VM before Task 6, it moves to nfr-bench-1 session 2 (e2-standard-8, 32 GB,
+50 GB disk, the VM brief) as a named run, and the session-2 total below already allows for it.
+The profile is CPU-heavy (DuckDB uses every core), so it runs under the gate-1 slot with the
+load settled below 2.0 at its start, like Tasks 2 and 5.
+
 
 ### NFR-468 — the one-way read
 
@@ -405,6 +496,31 @@ host (DP-7 (a), ruled): the reading is taken on the shared VM in an `RL-1441` qu
 the load settled below 2.0 before each run; only a NEAR-BOUND figure goes to nfr-bench-1
 session 2 as a named extra reading.
 
+## nfr-bench-1 session 2 — the total planned duration (the 12:42:55 entry)
+
+*(Stated 2026-10-14 by the planner, seat planner-p1fix, before the mint, as the 12:42:55
+entry orders: "Restate session 2's total planned duration … because my 2 h VM heads-up to the
+user must carry a true duration and cost.")* Every run assigned to session 2, summed:
+
+| Runs | Source | Hours |
+|---|---|---|
+| WK-674 S5's own list: SL-1259's verdicts (NFR-489's exit verdict and the other S5 NFRs, NFR-502 among them) | `RL-1614` item 6, `PL-1620` D5.3; the session estimate is the approved spend's, `~/gi-pricing-plan.local/handover/vm-build-brief-nfr-bench-1-2026-10-12.md:41` (*"WK-674 S5, the exit verdicts (~2.9 h)"*) | 2.9 |
+| NFR-485 at 5 M × 60, one run per arm (`--only glm`, `--only gbm`) | DP-4 (b), the 12:07:40 entry: *"≈ +30 min/arm"* | 2 × 0.5 = 1.0 |
+| **Committed total** | | **2.9 + 1.0 = 3.9** |
+| NFR-467 at 10 M, **only if** the shared VM cannot hold it (the NFR-467 section's guards) | planner's allowance: generate 2 M and 10 M (about 5 min), profile both (≤ 300 s at 10 M by the budget; CR-721's extrapolated 91.7 s), set-up | 0.25 |
+| NEAR-BOUND re-run of NFR-468, **only if** its shared-VM reading is NEAR-BOUND | planner's allowance: 2 corpora × 220 requests at < 300 ms is under 3 min; the rest is seeding the freMTPL2 prepared version on the VM | 0.5 |
+| NEAR-BOUND re-run of NFR-1443, **only if** NEAR-BOUND | planner's allowance: six runs, each one `diff_cells` Job plus 100 pages, over 10 000 seeded Jobs | 0.5 |
+| **Upper total, every allowance taken** | | **3.9 + 0.25 + 0.5 + 0.5 = 5.15** |
+
+So session 2 is **3.9 h committed, at most 5.15 h**, which is under the entry's ~6 h line. The
+allowances are the planner's estimates, not measured durations; the slice's `LG-` replaces each
+with the run's own wall time. **Cost**, at the VM brief's unconfirmed $0.3453/h (`:54`):
+session 2 is 3.9 × 0.3453 ≈ **$1.35** committed, 5.15 × 0.3453 ≈ **$1.78** at most. The
+approved budget (*"Likely ≈ $2.20, worst ≈ $7.00"*, `:54`) matches set-up 1 h + session 1
+~2.25 h + session 2 ~2.9 h = 6.15 h ≈ $2.12. With this plan's additions the VM's whole life is
+1 + 2.25 + 5.15 = 8.4 h ≈ **$2.90** at most: above the "likely" figure, inside the worst case.
+The stopped disk (about $0.20/day, `:33`) is extra, as before.
+
 ## How an OVER reading is handled (every NFR)
 
 An OVER reading is a fact the slice reports; the slice does not change the requirement or the
@@ -444,7 +560,7 @@ ruled**; the options the ruling did not take are removed, and each row states th
 
 - Modify: `backend/src/app/platform/validation_rules.py` (`replace_rule_set`, `:801-913`).
 - Modify: `backend/tests/test_api_datasets.py` (one new test after `:190`).
-- Create: `scripts/measure-p2-nfr-sweep.py` (subcommands `one-way`, `storage`, `cells-diff`).
+- Create: `scripts/measure-p2-nfr-sweep.py` (subcommands `one-way`, `storage`, `cells-diff`, and `profile` for NFR-467, added by the 12:42:55 entry). `scripts/bench-data.py` is called as it is, not modified.
 - Modify: `scripts/bench-model.py` (`--peak hwm`, Task 4).
 - Create: the slice's `LG-` under `docs/ledgers/` (`docs/_templates/LG.md`).
 - Modify: `docs/specs/01-data-management.md` — NFR-470's row (`:1184` at `a3fc2e8d`) only: one
@@ -624,23 +740,43 @@ def _audit_state(version: int, body: Mapping[str, Any]) -> dict[str, Any]:
 - [ ] **Step 2:** For each run, assert that the first request returns 202 and that its Job is `succeeded` with its artifact present. Then time n = 100 later pages at `limit=50` under the same instrument rules as Task 2, Step 4.
 - [ ] **Step 3:** Take the readings in an `RL-1441` quiet window on the shared VM, settling the load immediately before each run. Read them by DP-1's bands and the ratio bands, each labelled "server-side, in-process, excludes network", and record them in the `LG-`. Under DP-7 (a) only a NEAR-BOUND figure becomes a named nfr-bench-1 session 2 extra reading. Commit.
 
+### Task 5a: NFR-467 — the profiling instrument at 10 M rows (added 2026-10-14, the 12:42:55 entry)
+
+**Files:** `scripts/measure-p2-nfr-sweep.py` (`profile` subcommand).
+
+- [ ] **Step 1:** Pre-register with P1 (Task 0, Step 4): add `NFR_467_RULE` beside the other
+  constants: `{"sizes": [2_000_000, 10_000_000], "columns": 80, "time_budget_s": 300,
+  "memory_ratio_below": 5.0, "mem_available_min_gb": 16, "disk_free_min_gb": 12}`.
+- [ ] **Step 2:** Write the `profile` subcommand as the NFR-467 section states: for each size,
+  check both guards and print them; generate with `bench-data.py --rows N --generate-to` in its
+  own process under the job tmp directory; profile in a fresh process (baseline `VmRSS` after
+  imports, `profile_parquet` as `bench-data.py:196-198`, `perf_counter` at its boundaries,
+  `VmHWM` after); print wall seconds, `VmHWM`, baseline, Δpeak, payload bytes, load at start and
+  end, and the tree; delete the parquet.
+- [ ] **Step 3:** Run it on the shared VM under the gate-1 slot, load settled below 2.0 at
+  start. Read the 10 M time by DP-1's bands against 300 s, and r = Δpeak(10 M) ÷ Δpeak(2 M)
+  against 5.0. Record both in the `LG-`, labelled DIAGNOSTIC (time) and as a reading (memory),
+  each with its size, tree and load. If a guard keeps the run off the shared VM, or the time is
+  NEAR-BOUND, name the 10 M run as an nfr-bench-1 session 2 extra reading. Commit.
+
 ### Task 6: The gate, the ledger, the hand-off
 
 - [ ] **Step 1:** Run both gate halves (`dev-commands`), through the gate-1 slot.
 - [ ] **Step 2:** In the `LG-`, record one row per NFR: the reading, its band (DIAGNOSTIC-PASS, NEAR-BOUND or DIAGNOSTIC-OVER; NFR-485's shared-VM curve "projection, not a reading"), and its next step. The next step is "none", "nfr-bench-1 session 2 extra reading (named)", or "OVER, reported to the lead for an `FD-`". NFR-485's row names its two session 2 runs (Task 4).
-- [ ] **Step 3:** Send the lead the list of named extra readings (always NFR-485's two 5 M runs; any NEAR-BOUND latency reading), for the lead's 2 h VM heads-up (DP-4).
+- [ ] **Step 3:** Send the lead the list of named extra readings (always NFR-485's two 5 M runs; any NEAR-BOUND latency reading; NFR-467's 10 M run if Task 5a named it), with session 2's total re-summed from "nfr-bench-1 session 2 — the total planned duration" using the actual list, for the lead's 2 h VM heads-up (DP-4; the 12:42:55 entry).
 
 ## Acceptance Standard
 
 1. `uv run pytest backend/tests/test_api_datasets.py -k test_replacing_a_rule_set_is_audited_with_before_and_after -q` passes on the slice head. The `LG-` quotes the red run from before the fix. That run failed on `v2.before == v1.after` with `None` on its left side, and on no other line.
 2. `git -C <wt> grep -n 'req("NFR-472")' backend/tests/test_api_datasets.py` lists the new test.
 3. `git -C <wt> log --format='%h %aI %s' -- scripts/measure-p2-nfr-sweep.py` shows pre-registration P0 (Task 0, Step 2), older than every factor run's start stamp in the `LG-`, and P1 (Task 0, Step 4), older than every sweep run's start stamp. The `LG-` records at least 3 interleaved A/B pairs of the named benchmark, each run's load1 at start and end, every exclusion, each ratio, the max factor and the spread. P1's constants equal the ruled DP-1 and DP-3 values: `NEAR_BOUND_FRACTION` = `floor(100 / max factor) / 100` from that record (0.43 only if the factor reading has not landed), the ratio bands 1.5 and 2.0, and an NFR-470 rule of ratio ≤ 1.2 with the source upload excluded and dedup = 0 new bytes.
-4. `uv run python scripts/measure-p2-nfr-sweep.py --help` lists `one-way`, `storage` and `cells-diff`. `uv run python scripts/bench-model.py --help` lists `--peak`.
-5. The `LG-` has one reading row for each of NFR-468, NFR-470, NFR-485 and NFR-1443, each labelled DIAGNOSTIC. Each row carries its size or corpus, its n and percentile (latency), the tree, the load at start and end, and its band: DIAGNOSTIC-PASS, NEAR-BOUND or DIAGNOSTIC-OVER (DP-1). Every NFR-468 and NFR-1443 figure carries the label "server-side, in-process, excludes network" (DP-2). The NFR-470 row gives the ratio without the source upload, the excluded figures on their own lines, and the dedup limb's new-bytes figure (DP-3).
+4. `uv run python scripts/measure-p2-nfr-sweep.py --help` lists `one-way`, `storage`, `cells-diff` and `profile`. `uv run python scripts/bench-model.py --help` lists `--peak`.
+5. The `LG-` has one reading row for each of NFR-467, NFR-468, NFR-470, NFR-485 and NFR-1443, each labelled DIAGNOSTIC. Each row carries its size or corpus, its n and percentile (latency), the tree, the load at start and end, and its band: DIAGNOSTIC-PASS, NEAR-BOUND or DIAGNOSTIC-OVER (DP-1). Every NFR-468 and NFR-1443 figure carries the label "server-side, in-process, excludes network" (DP-2). The NFR-470 row gives the ratio without the source upload, the excluded figures on their own lines, and the dedup limb's new-bytes figure (DP-3).
 6. Each OVER reading in the `LG-` has a matching line to the lead, sent at the time of the reading, that names the NFR, the figure and the threshold. `git -C <wt> diff --stat origin/main...HEAD -- docs/specs` lists only `docs/specs/01-data-management.md`, and `git -C <wt> diff -U0 origin/main...HEAD -- docs/specs/01-data-management.md` shows one changed line, NFR-470's row, which still contains the row's original text unchanged and now ends with Task 3, Step 4's clarification (DP-3).
 7. The NFR-485 projections in the `LG-` are labelled as projections, and no verdict is read from them. The `LG-` names NFR-485's two 5 M × 60 nfr-bench-1 session 2 runs with their commands and the `MemoryMax=30G` cap, and `git -C <wt> diff origin/main...HEAD -- docs/roadmap.md` adds Task 4, Step 4's dated line under `SL-1259`'s row and changes no other line of that row (DP-4).
 8. Both gate halves exit 0 on the slice head, through the gate-1 slot.
 9. `python3 scripts/audit-docs.py` prints no line that names this slice's files, except the working-id lines expected before the mint (checks 31, 32 and 39).
+10. **NFR-467 at 10 M (the 12:42:55 entry).** The `LG-` has the `profile` subcommand's output for 2 000 000 and 10 000 000 rows × 80 columns, each from a fresh process: wall seconds, `VmHWM`, baseline, Δpeak, payload bytes, both guards, load at start and end, and the tree. The 10 M time is read against 300 s by DP-1's bands, and r = Δpeak(10 M) ÷ Δpeak(2 M) against 5.0, by `NFR_467_RULE` as committed at P1, older than both runs' start stamps. No NFR-467 figure in the `LG-` is extrapolated from another size.
 
 ## Global Constraints
 
@@ -655,7 +791,7 @@ def _audit_state(version: int, body: Mapping[str, Any]) -> dict[str, Any]:
 ## Hand-off (not this plan's writes)
 
 - The lead: a dated line on WK-1178's row that lists this delta, when it is accepted (the planner writes only the `SL-` row).
-- The lead: NFR-485's two 5 M runs (and any NEAR-BOUND latency reading the slice names) in the 2 h nfr-bench-1 VM heads-up (DP-4). Session 2 runs them only if `SL-1259`'s dated line (Task 4, Step 4) is on `main` by then, or the lead adds them to the session's brief directly.
+- The lead: NFR-485's two 5 M runs (and any NEAR-BOUND latency reading the slice names, and NFR-467's 10 M run if Task 5a names it) in the 2 h nfr-bench-1 VM heads-up (DP-4), with session 2's duration and cost from "nfr-bench-1 session 2 — the total planned duration": 3.9 h committed, at most 5.15 h; ≈ $1.35, at most ≈ $1.78 (the 12:42:55 entry). Session 2 runs them only if `SL-1259`'s dated line (Task 4, Step 4) is on `main` by then, or the lead adds them to the session's brief directly.
 - `FD 8046` (DP-5) and `FD 8047` (DP-6) are filed (D17); their rulings, severities and owners are the auditor's and the lead's, not this slice's.
 
 ## Self-review
@@ -666,4 +802,5 @@ def _audit_state(version: int, body: Mapping[str, Any]) -> dict[str, Any]:
 - **Amendment of 2026-10-14 (the 12:07:40 BST rulings), checked at `a3fc2e8d`.** Every DP row states one ruling and its resolver; no option the ruling did not take remains. Each consequence is carried into a task and an acceptance item: DP-1's bands and its 12:25:22 re-measure (Task 0, Steps 2 to 4; Tasks 2, 5, 6; Acceptance 3, 5), DP-2's label (Tasks 2, 5; Acceptance 5), DP-3's reading and the NFR-470 clarification (Task 3, Steps 2 to 4; write set; Acceptance 3, 5, 6), DP-4's session 2 runs and the `SL-1259` dated line (Task 4, Steps 3 and 4; write set; Acceptance 7), DP-5 and DP-6 as `FD 8046` and `FD 8047` (Scope; the NFR-472 and NFR-485 sections), DP-7's quiet window (NFR-1443 section; Task 5). The 2.3 factor is traced past `dev-commands` to its primary record (DP-1 row). Line numbers in the amended text cited "at `a3fc2e8d`" were read there; between `8eaf6d5f` and `a3fc2e8d` none of the code files this plan cites changed, and `03-rating-engine.md`'s NFR-1443 row moved from `:1518` to `:1519`.
 - **Readings put to the lead.** (i) The 2.3 factor's limits and the 0.43 rounding were put to the lead and ruled at 12:25:22: Task 0 re-measures the factor, and 0.43 is accepted as the interim, conservative rounding. **The planner's own pre-registration in Task 0, Step 2, open to the lead's correction before P0:** the named benchmark, the ALONE limit load1 < 1.0, and the contended regime load1 in [1.0, 2.0) at start and < 2.0 at end, taken from Tasks 2 and 5's settle ceiling. (ii) NFR-470's counted overhead follows the ruling's enumeration (*"its tables + reports + profile"*), so the `ingestion_runs` and `audit_events` rows are excluded and printed apart.
 - **Confirmed 2026-10-14 by the maintainer (by delegation), entry "2026-10-14 12:31:22 BST"** (recorded by the planner, seat planner-p1fix, before the mint): (a) the Task 0 regime — ALONE = load1 < 1.0 at start; contended = load1 in [1.0, 2.0) at start and < 2.0 at end — **CONFIRMED** (Task 0 Step 2, DP-1 row); (b) NFR-470's counted overhead = the version's tables + reports + profile, with the `ingestion_runs` and `audit_events` rows excluded and printed — **CONFIRMED** (the NFR-470 section, DP-3 row, Task 3 Step 2); and the S5 run-list line under `SL-1259`'s row: **OK** (Task 4 Step 4, write set). Neither choice is now open to correction before P0; both stand as ruled, and no task's text changed beyond these dated lines.
+- **The 12:42:55 entry, item (2), at every site** (amended 2026-10-14 by the planner, seat planner-p1fix, before the mint): *"its own instrument"*: the `profile` subcommand (the NFR-467 section, Task 5a, write set, Acceptance 4); *"the pre-registered threshold from NFR-467's text"*: the row and its 2026-08-14 amendment quoted verbatim, time ≤ 300 s by DP-1's bands and memory r < 5.0 read as the amendment's own "sub-linear" (the NFR-467 section; `NFR_467_RULE` at P1, Task 5a Step 1); *"a task and an acceptance item"*: Task 5a, Acceptance 10 (and 5); *"measured at 10M"*: 10 000 000 rows, never extrapolated (Goal, Acceptance 10); *"If the shared VM cannot hold it, it goes to nfr-bench-1 session 2"*: the shared VM, with the sizing (5.5 GB parquet, 8–13 GB generation peak, under 2 GB profiling, against 31 GB and 15 GB free disk) and two guards, session 2 the fallback (the NFR-467 section); *"Restate session 2's total planned duration"*: its section, with the arithmetic, 3.9 h committed and 5.15 h at most, under ~6 h, with its cost (and Task 6 Step 3, Hand-off). The memory reading's 5.0 is the planner's reading of the row's "does not scale" through its amendment's "sub-linear"; the row states no number, and a tighter bound would be one this plan invented.
 - **No placeholders.** `<date>` and the working ids in Task 3, Step 4 and Task 4, Step 4 are substituted at the slice's commit, as those steps say.
