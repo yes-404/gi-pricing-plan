@@ -79,6 +79,7 @@ from model_schema import (
     Permission,
     QuoteContext,
     QuoteContextOptions,
+    RatingAlgorithm,
     ScoreCompareRequest,
     ScoreComparison,
     ScoringResult,
@@ -486,6 +487,7 @@ async def score_compare(
     side named in the problem (DP-S4-5).
     """
     results: list[ScoringResult] = []
+    algorithms: list[RatingAlgorithm] = []
     for side, ref in (("base", body.base), ("comparison", body.comparison)):
         try:
             compiled = await _compiled_for(
@@ -493,6 +495,7 @@ async def score_compare(
             )
         except PlatformError as exc:
             raise _naming_side(exc, side) from exc
+        algorithms.append(compiled.algorithm)
         ctx = body.context.model_copy(
             update={"options": QuoteContextOptions(trace=True, rating_version_ref=ref)}
         )
@@ -504,12 +507,18 @@ async def score_compare(
                 raise
             raise _naming_side(problem, side) from exc
     base_result, comparison_result = results
+    base_algorithm, comparison_algorithm = algorithms
     if base_result.trace is None or comparison_result.trace is None:
         raise RuntimeError("score_one(trace=True) returned no trace")
     comparison = ScoreComparison(
         base=base_result,
         comparison=comparison_result,
-        diff=diff_traces(base_result.trace, comparison_result.trace),
+        diff=diff_traces(
+            base_result.trace,
+            comparison_result.trace,
+            base_algorithm,
+            comparison_algorithm,
+        ),
     )
     return Response(content=comparison.model_dump_json(), media_type="application/json")
 
