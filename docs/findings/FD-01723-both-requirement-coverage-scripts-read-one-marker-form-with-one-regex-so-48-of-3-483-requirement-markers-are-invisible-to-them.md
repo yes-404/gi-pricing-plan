@@ -1,5 +1,5 @@
 ---
-id: FD-8029
+id: FD-1723
 family: finding
 title: Both requirement-coverage scripts read one marker form with one regex, so 48 of 3,483 requirement markers are invisible to them
 status: active
@@ -10,7 +10,9 @@ corrected_by: []
 relates: [WK-1178, WK-674, FR-272, FR-217, FR-242, NFR-498, P2]
 ---
 
-# FD-8029 — the requirement-marker parser sees one form of three
+# FD-1723 — the requirement-marker parser sees one form of three
+
+*(Minted 2026-10-14 as FD-1723 from working id 8029, in the D17 batch mint PR.)*
 
 *(Filed under working id 8029, reserved by the lead in `eta.md`, line stamped "2026-10-14 11:14:02 BST"; a minter
 folds it into the docs batch. Every count below was taken at `origin/main`
@@ -133,7 +135,7 @@ The maintainer's entry also says "MEDIUM at least"; this proposal accepts that f
 3. **Before and after counts at the tree where it lands**, from both scripts. The "before" at `4420f91f` is:
    `req-coverage` 371 marked of 544 (68.20 %), 1046 (id, file) pairs; AST 372 (68.38 %), 1087 pairs, and FR-272 the one
    id that moves from unmarked to marked.
-4. **The D list re-checked against the corrected evidence before FD 8027 is final** (done once above at `4420f91f`:
+4. **The D list re-checked against the corrected evidence before FD-1721 is final** (done once above at `4420f91f`:
    no overlap; redone after the fix).
 
 Also in scope of the fix, and named here so it is not forgotten: the `python-test` skill's marker section shows the one

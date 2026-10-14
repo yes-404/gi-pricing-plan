@@ -1,5 +1,5 @@
 ---
-id: FD-8038
+id: FD-1727
 family: finding
 title: The application never connects as gip_app; it connects as the superuser table owner, so every grant and revoke in FR-44's privilege layer is inert at runtime
 status: active
@@ -7,10 +7,12 @@ created: 2026-10-14
 owner: auditor
 tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
 corrected_by: []
-relates: [WK-1178, FD-1704, FD-8037, FR-44, FR-43, P2]
+relates: [WK-1178, FD-1704, FD-1726, FR-44, FR-43, P2]
 ---
 
-# FD-8038 — the privilege layer binds no one
+# FD-1727 — the privilege layer binds no one
+
+*(Minted 2026-10-14 as FD-1727 from working id 8038, in the D17 batch mint PR.)*
 
 *(Filed under working id 8038, reserved by the lead. The code and compose predicates were run by the auditor at
 `origin/main` `a3fc2e8dd384de6abf909f662f43011b8078fb4e` on 2026-10-14, from the object database, not the root checkout's
@@ -51,7 +53,7 @@ only in migrations and tests.
   the default DSN; its user is `gip`, not `gip_app`.
 - `deploy/docker-compose.yml:13`: `POSTGRES_USER: gipricing` (with `POSTGRES_DB: gipricing`, `:15`). The image's bootstrap
   user is the role that creates the database and runs the migrations, so it owns every table (the catalog extract in
-  FD-8037 shows `owner = gipricing` on all sixty public tables).
+  FD-1726 shows `owner = gipricing` on all sixty public tables).
 - The migrations run as that same role (`alembic` with `GIP_DATABASE_URL=…gipricing:gipricing@…`, `dev-commands`), so the
   application and the migrations are one role.
 
@@ -70,18 +72,18 @@ is not described by any file in the repository, and none of its files provisions
 topology can be shown in which the privilege layer binds.
 
 **4. What the privilege layer would refuse, if it applied.** In the auditor-fr44 run (`~/.claude/jobs/b6860f8f/tmp/fr44/out4.txt`,
-`8eaf6d5f`), `SET LOCAL ROLE gip_app` then `DELETE` or `TRUNCATE` on each of the ten FD-8037 tables, on `rating_versions`
+`8eaf6d5f`), `SET LOCAL ROLE gip_app` then `DELETE` or `TRUNCATE` on each of the ten FD-1726 tables, on `rating_versions`
 (`DELETE`) and on `factors` (`DELETE`, `TRUNCATE`) was `ERROR: permission denied for table …`. The same statements as the
-owner succeeded (FD-8037's table). The layer works; no one is subject to it.
+owner succeeded (FD-1726's table). The layer works; no one is subject to it.
 
 ## What this makes inert
 
 - **Every `GRANT` and `REVOKE` in the migrations** (`a1b2c3d4e5f6_artifact_append_only.py:36` onward; `GRANT SELECT, INSERT`
   on the append-only tables; `GRANT SELECT, INSERT, UPDATE ON models, factors`, `b2c3d4e5f6a7_model_fit_immutable.py:89`).
   The "grants alone" tables FR-44 itself lists as not protected against a direct connection are protected against nothing.
-- **FD-1704's planned `REVOKE UPDATE` on `factors`** (a limb of FD-8037): a revoke from `gip_app` changes nothing for a
+- **FD-1704's planned `REVOKE UPDATE` on `factors`** (a limb of FD-1726): a revoke from `gip_app` changes nothing for a
   connection that is the owner. The trigger on `factors` is what must bind, and only S-b makes the revoke matter.
-- **`test_artifact_immutability.py`'s grants-derived list** (FD-8037): it tests the grants, not what the application can
+- **`test_artifact_immutability.py`'s grants-derived list** (FD-1726): it tests the grants, not what the application can
   do, so it stays green over an application that is not subject to them.
 
 ## Tamper limb: the trigger layer can be switched off by the role the application is
@@ -95,7 +97,7 @@ available with the credentials the application already holds:
    = replica` suspends every user trigger at once"), and the auditor-fr44 seed did too; it is a documented, available
    mechanism, not a hypothetical.
 
-A trigger-only fix (FD-8037's S-a) therefore closes the **accidental and ordinary-code** paths (an `UPDATE` anywhere in the
+A trigger-only fix (FD-1726's S-a) therefore closes the **accidental and ordinary-code** paths (an `UPDATE` anywhere in the
 application that was never meant to run), and is effective even for the owner, so it closes the live risk fastest. It does
 **not** close a deliberate write by the application's own role, a compromised application credential, or a migration or
 hot-fix script run as the owner. **S-b (least privilege) is what makes S-a tamper-resistant**: once the application connects
@@ -111,7 +113,7 @@ compose provisioning), migrations still run as the owner, a startup and test ass
 owner of the artifact tables, and the existing grants audited so the application can still do every write it legitimately
 makes, red-first per refused path. Three facts the planner needs, from the runs:
 
-- **The ten FD-8037 tables carry no `gip_app` grant at all** (`ins = f` on every one). An application running as `gip_app`
+- **The ten FD-1726 tables carry no `gip_app` grant at all** (`ins = f` on every one). An application running as `gip_app`
   today could not insert a rate table, a rate table version or its cells, a rating algorithm or a reference row. S-b's
   grants audit is therefore not a formality; it adds grants for those inserts, and S-a's triggers must be in place before
   or with them so that the grant added is `SELECT, INSERT` only.
@@ -136,7 +138,7 @@ removed. The migration path, run as the owner, is asserted separately so the two
 
 ## Disposition
 
-Carry forward, owner WK-1178: fixed in P2 (D17), by PL 8016's slice S-b, ruled at "2026-10-14 12:00:14 BST". FD-8037 (S-a)
+Carry forward, owner WK-1178: fixed in P2 (D17), by PL 8016's slice S-b, ruled at "2026-10-14 12:00:14 BST". FD-1726 (S-a)
 is first and independent; FD-1704's revoke becomes meaningful only after this lands. It needs a resolution before any P3
 start (`CLAUDE.md` §14). The event that next confirms or discharges it is the merge of S-b with the three reds above shown
 on the base tree by cause.

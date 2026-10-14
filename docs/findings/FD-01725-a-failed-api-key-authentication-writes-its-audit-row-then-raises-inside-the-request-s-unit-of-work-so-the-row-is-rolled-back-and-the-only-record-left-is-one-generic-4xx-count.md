@@ -1,5 +1,5 @@
 ---
-id: FD-8036
+id: FD-1725
 family: finding
 title: A failed API-key authentication writes its audit row and then raises inside the unit of work that discards it, so FR-392's failed-authentication audit is unmet and no per-attempt record exists
 status: active
@@ -10,7 +10,9 @@ corrected_by: []
 relates: [WK-1178, FR-392, FR-368, FR-389, NFR-519, P2]
 ---
 
-# FD-8036 — a failed API-key authentication leaves no audit row
+# FD-1725 — a failed API-key authentication leaves no audit row
+
+*(Minted 2026-10-14 as FD-1725 from working id 8036, in the D17 batch mint PR.)*
 
 *(Filed under working id 8036, reserved by the lead in `eta.md`, line stamped "2026-10-14 11:54:58 BST"; a minter folds it
 into the docs batch. The code was read at `origin/main` `4420f91fa4112a1fcabcae23d3d50a1ad4fcbb59` and the HTTP runs were

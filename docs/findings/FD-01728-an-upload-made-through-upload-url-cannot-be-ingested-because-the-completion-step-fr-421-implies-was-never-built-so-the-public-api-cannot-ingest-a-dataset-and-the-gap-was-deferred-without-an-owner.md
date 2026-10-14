@@ -1,5 +1,5 @@
 ---
-id: FD-8039
+id: FD-1728
 family: finding
 title: An upload made through upload-url cannot be ingested, because the completion step FR-421 implies was never built, so the public API cannot ingest a dataset, and the gap was deferred 16 days without an owner
 status: active
@@ -7,10 +7,12 @@ created: 2026-10-14
 owner: auditor
 tree: 8eaf6d5f9cd4204e1e077b44069d4afd395f1461
 corrected_by: []
-relates: [WK-1178, SL-8026, PL-8025, RL-8028, FR-421, FR-418, FR-419, FR-27, FR-405, FD-1715, P2]
+relates: [WK-1178, SL-1720, PL-1719, RL-1722, FR-421, FR-418, FR-419, FR-27, FR-405, FD-1715, P2]
 ---
 
-# FD-8039 — `POST /blobs/upload-url` → PUT → `POST /datasets/{slug}/versions` ends in `404 Blob not found`
+# FD-1728 — `POST /blobs/upload-url` → PUT → `POST /datasets/{slug}/versions` ends in `404 Blob not found`
+
+*(Minted 2026-10-14 as FD-1728 from working id 8039, in the D17 batch mint PR.)*
 
 *(Filed under working id 8039, reserved by the lead; a minter folds it into the docs batch.
 Authority for filing it as its own finding: the maintainer's (by delegation) entry
@@ -29,8 +31,8 @@ here, not copied.)*
 ## Finding
 
 **Severity: HIGH, proposed by the auditor (to be ruled by the maintainer, whose expectation in
-the 10:56:38 entry, item 1, is HIGH). Owner WK-1178, fixed in P2 by SL-8026 (`PL-8025`,
-`RL-8028`) before the 4 Nov code freeze.**
+the 10:56:38 entry, item 1, is HIGH). Owner WK-1178, fixed in P2 by SL-1720 (`PL-1719`,
+`RL-1722`) before the 4 Nov code freeze.**
 
 A file uploaded through the platform's own upload route cannot become a Dataset Version. The
 public API has no sequence of calls that takes a client's file to an ingested dataset:
@@ -181,23 +183,23 @@ If the maintainer rates it below HIGH, the owner, the fix and the discharge are 
 "2026-10-14 10:56:38 BST", items 2 to 4). Not carried to P3; off the G2 critical path and never
 displaces a G2 gate. The fix is already planned and decided:
 
-- `PL-8025` and its slice `SL-8026` cut it. `RL-8028` (the decision-maker) rules the design: a
+- `PL-1719` and its slice `SL-1720` cut it. `RL-1722` (the decision-maker) rules the design: a
   presigned PUT, then an asynchronous complete, a `blob.promote` Job on `io`, with its Job result
   owning the blob and a pending Blob Upload record authorising it. A new `07` FR for the completion
   step, the `07` §5.1 `upload-url` row's dated line and a new `complete` row, and `01`'s ingest row
   citing the FR ship in the slice's commit (spec first, `CLAUDE.md` §0).
 - **The test that would have caught it** is the slice's one public-path HTTP test: `upload-url` →
   PUT (to MinIO) → complete → `POST …/versions` → ingest `succeeded` on a real `io` worker, with no
-  database seeding. `SL-8026`'s acceptance line also converts `PL-1714` E4.3's compose ingest test
+  database seeding. `SL-1720`'s acceptance line also converts `PL-1714` E4.3's compose ingest test
   to that path.
 - **The process remedy is the slice's own spec step.** The completion step gets a requirement id,
   and the `upload-url` docstring and the `07` row stop being the only places the gap is written.
 
-**The event that next discharges this finding** is the merge of `SL-8026` with its public-path
+**The event that next discharges this finding** is the merge of `SL-1720` with its public-path
 test green on `main` and the `PL-1714` E4.3 conversion done. If it has not merged by the 4 Nov
-freeze, the P2 closure record lists this finding as open with that reason, per `SL-8026`'s
+freeze, the P2 closure record lists this finding as open with that reason, per `SL-1720`'s
 acceptance line.
 
 **Not in this finding.** FD-1715 (blob garbage collection) is related, not the same: its widened
-derived check already counts `promote_upload` as a `BlobRow` writer after `SL-8026`, so the two
+derived check already counts `promote_upload` as a `BlobRow` writer after `SL-1720`, so the two
 land together.

@@ -1,8 +1,8 @@
 ---
-id: PL-8025
+id: PL-1719
 family: plan
 kind: map
-title: WK-1178 — the upload-completion step, FR-421's missing half — the completion design as a decision point, the spec text, one public-path HTTP test with no seeding, and slice SL-8026 — Work-plan delta
+title: WK-1178 — the upload-completion step, FR-421's missing half — the completion design as a decision point, the spec text, one public-path HTTP test with no seeding, and slice SL-1720 — Work-plan delta
 status: draft                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-14
 owner: planner
@@ -12,20 +12,22 @@ work: WK-1178
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [SL-8026, SL-1258]                # PL-1714, FD-1713 and FD-1715 (working ids 8022, 8021, 8023 at filing, minted in D16) are cited in the body
+relates: [SL-1720, SL-1258]                # PL-1714, FD-1713 and FD-1715 (working ids 8022, 8021, 8023 at filing, minted in D16) are cited in the body
 ---
 
-# PL-8025 — WK-1178: the upload-completion step (Work-plan delta)
+# PL-1719 — WK-1178: the upload-completion step (Work-plan delta)
+
+*(Minted 2026-10-14 as PL-1719 and SL-1720 from working ids 8025 and 8026, in the D17 batch mint PR.)*
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L5. WK-1178 is the
-> standing maintenance Work and has no single map plan; this delta cuts one new slice, `SL-8026`,
+> standing maintenance Work and has no single map plan; this delta cuts one new slice, `SL-1720`,
 > and changes no other slice. It is `draft` while DP-U1 and DP-U2 are open, and it does not
 > decide either. Required sub-skill for the executor: `subagent-driven-development` or
 > `executing-plans`. Bound skills: `spec-change` (the spec text lands first, in the slice's
 > commit), `fastapi-service`, `python-package`, `python-test`, `contract-guard` (the generated
 > OpenAPI regenerates), `dev-commands`, `git-hygiene`.
 
-Working ids PL 8025 and SL 8026, reserved by the lead in `eta.md`, "2026-10-14 10:57:11 BST lead:
+Working ids PL-1719 and SL-1720, reserved by the lead in `eta.md`, "2026-10-14 10:57:11 BST lead:
 RESERVED working ids PL 8025 … and SL 8026". Written 2026-10-14 (from 11:04:18 BST) by the planner
 (planner-upload). Evidence was read at `origin/main` `ba68a6da` and the branch was cut from
 `4420f91f`; `git diff --stat ba68a6da 4420f91f` over every spec and source file cited below
@@ -145,7 +147,7 @@ entry's item 3. The planner recommends; it does not rule.
 
 *2026-10-14: per the maintainer's (by delegation) "2026-10-14 11:10:26 BST" (a) — what "a real worker" in the 10:56:38 entry's item 4 means: "a separate Celery worker PROCESS that takes the Job from Redis by queue routing and runs it through the handler registry that `app.worker.entrypoint` builds, i.e. NOT inline `execute_job` and NOT a test-assembled registry. W2 (the test starts its own io worker, runs in CI) satisfies it IF that worker is launched as `celery -A app.worker.entrypoint worker --queues io` (or imports the entrypoint module unmodified). The test asserts the Job was consumed from the `io` queue and its status is `succeeded`. A worker that registers handlers itself would hide exactly the unregistered-handler defect found today, and does NOT qualify. W1 (compose) is not required for this slice."*
 
-*2026-10-14: per the maintainer's (by delegation) "2026-10-14 11:24:38 BST" — RL 8028 (working id), the ruling on DP-U1 to DP-U3: "CONFIRMED, no amendment" (read at `a8e1191a`); "The no-seeding carve-out: ACCEPTED". "Seeding" means "writing a row the path under test would otherwise create (blob, blob owner, Blob Upload, Job, Dataset, Dataset Version). `principal`/`grant` are identity and provisioning, not seeding." "RL 8028 rides D17 with PL 8025 + SL 8026."*
+*2026-10-14: per the maintainer's (by delegation) "2026-10-14 11:24:38 BST" — RL-1722 (minted from working id 8028), the ruling on DP-U1 to DP-U3: "CONFIRMED, no amendment" (read at `a8e1191a`); "The no-seeding carve-out: ACCEPTED". "Seeding" means "writing a row the path under test would otherwise create (blob, blob owner, Blob Upload, Job, Dataset, Dataset Version). `principal`/`grant` are identity and provisioning, not seeding." "RL 8028 rides D17 with PL 8025 + SL 8026."*
 
 | DP | Question | Options | Recommendation | Kind | Blocking? | Resolved by |
 |---|---|---|---|---|---|---|
@@ -153,7 +155,7 @@ entry's item 3. The planner recommends; it does not rule.
 | **DP-U1.1** | What owns the blob after completion, and what records the upload before it? | **(O1) The promotion Job's result** (`JobResult(kind="blob")`, already an owner at `blobs.py:528`): no allow-list change; permanent, like every Job result. **(O2) A new Upload owner**: the Upload row, once complete, is a third owner kind in `blob_readable_by`, with an expiry after which it no longer admits. One more allow-list entry, and `01`'s ingest row and `07` §5.1's download row both change. **(O3) A pending record with expiry only**: no owner after the expiry; an ingestion must start inside the window. Under every option a **pending Upload record** is needed *before* completion: today the staging key is recorded nowhere (P2), so nothing could stop a `dataset:write` holder in another workspace who learns a key from completing it and owning the bytes. The record holds workspace, principal, staging key, the S3 upload id, declared parts, media type, created time and a completion deadline. | **O1 under (a2)**, with the pending Upload record for authorisation and idempotency. **O2 under (a1)**, which has no Job to be the owner. | design | yes, with DP-U1 | the same `RL-` |
 | **DP-U1.2** | Retention and abandoned uploads | **Retain:** the promotion takes one reference in the transaction that writes the `blobs` row (FD-1715 item 1; a second upload of the same bytes takes a second). **Release:** O1's owner is permanent, so it never releases; O2/O3's expiry would release, but nothing runs a sweep (`blob.gc` has no handler; P8), so the release is WK-1251's under FD-1715 in every option. **Abandoned bytes:** an incomplete multipart upload is not listed as an object and is kept until aborted; a never-completed single-part staging object is kept forever. Option: a bucket lifecycle rule on the `staging/` prefix (expire objects and abort incomplete multipart uploads after N days), set idempotently by `BlobStore.ensure_bucket` (`blobs.py:125`) so it holds under `docker compose up` (R2). A completion after the deadline is refused (`409 VALIDATION_FAILED`), and the Upload row stays as the record. | Retain at promotion; the release is FD-1715's, recorded and not built here. The lifecycle rule with N = 2 days and a 24-hour completion deadline, **if** Task 0's spike shows the compose MinIO applies an `AbortIncompleteMultipartUpload` rule; if it does not, the rule is still set (it is S3's contract) and the `LG-` records MinIO's own behaviour. | design | no — the defaults apply unless the `RL-` changes them | the same `RL-` |
 | **DP-U1.3** | Multipart interplay | **Part list:** (i) the client sends `[{PartNumber, ETag}]` with `complete`; a browser can read `ETag` only if the bucket's CORS exposes it; or (ii) the Job lists the parts (`list_parts`) and refuses unless they are exactly parts 1 to the declared count. **Part size:** S3 refuses a part below 5 MiB except the last (`EntityTooSmall` at completion); the Job maps it to a `failed` Job with `VALIDATION_FAILED`, never `JOB_HANDLER_FAILED`. **Copy:** one `CopyObject` request is limited to 5 GB, so the Job uses a managed multipart copy (boto3's `copy`). **`part_count`:** the declared count for a multipart upload, null for one part (`BlobRef.part_count`, `01` §4.2's example). | (ii), and the rest as stated. | design | no | the same `RL-` |
-| **DP-U2** | Where does the one HTTP test get a real `io` worker before S4 merges? | **(W1) An activation need: S4 merged.** The test lives in `backend/tests/test_deploy_stack_runtime.py`, through `lb`, on S4's `worker` consuming `io`. It runs only with `GIP_DEPLOY_TESTS=1` in a build window the lead grants, never in CI, and that file's helpers seed the service account by `psql` (`_seeded_scoring_request` and the `UPDATE service_accounts` in S4's runtime test), which is DB seeding. **(W2) The test starts its own worker.** A fixture starts `celery -A app.worker.entrypoint worker --queues io --pool solo --concurrency 1` as a subprocess with the test process's settings, empties the `io` list first, drives the relay with `outbox.relay_once` (as `test_celery_broker.py` does), and stops the worker in teardown. It runs in the ordinary backend suite, so CI runs it on every PR; it does not depend on S4. **(W3) W2 now, and the compose proof after both merge:** PL-1714's compose ingest test walks the public path once SL-8026 is on `main`, instead of seeding. | **(W2), with W3's follow-up offered to the lead** (P10). W2 is the only option under which the test that "would have caught it" runs in CI. It is a real Celery worker process on a real broker, not an inline `execute_job`. If the maintainer reads "(with S4's io consumer)" as requiring S4's compose service, W1 applies and SL-8026 waits for S4's merge. | test design (the maintainer's wording) | **yes** — it decides an activation need | the maintainer's dated line, or the decision-maker's `RL-` with DP-U1 |
+| **DP-U2** | Where does the one HTTP test get a real `io` worker before S4 merges? | **(W1) An activation need: S4 merged.** The test lives in `backend/tests/test_deploy_stack_runtime.py`, through `lb`, on S4's `worker` consuming `io`. It runs only with `GIP_DEPLOY_TESTS=1` in a build window the lead grants, never in CI, and that file's helpers seed the service account by `psql` (`_seeded_scoring_request` and the `UPDATE service_accounts` in S4's runtime test), which is DB seeding. **(W2) The test starts its own worker.** A fixture starts `celery -A app.worker.entrypoint worker --queues io --pool solo --concurrency 1` as a subprocess with the test process's settings, empties the `io` list first, drives the relay with `outbox.relay_once` (as `test_celery_broker.py` does), and stops the worker in teardown. It runs in the ordinary backend suite, so CI runs it on every PR; it does not depend on S4. **(W3) W2 now, and the compose proof after both merge:** PL-1714's compose ingest test walks the public path once SL-1720 is on `main`, instead of seeding. | **(W2), with W3's follow-up offered to the lead** (P10). W2 is the only option under which the test that "would have caught it" runs in CI. It is a real Celery worker process on a real broker, not an inline `execute_job`. If the maintainer reads "(with S4's io consumer)" as requiring S4's compose service, W1 applies and SL-1720 waits for S4's merge. | test design (the maintainer's wording) | **yes** — it decides an activation need | the maintainer's dated line, or the decision-maker's `RL-` with DP-U1 |
 | **DP-U3** | Does the ingest worker now also check ownership (`d068fb00` item 3's stated trigger)? | **(a) Yes:** `_ingest` calls `blob_readable_by` with the Job's workspace and fails the Job on a refusal. Defence in depth if a second enqueuer appears. Cost: `examples/fremtpl2/seed.py` and the tests that enqueue `dataset.ingest` directly with an unowned blob (`d068fb00`: "trusted local code, not the route") start failing, and each needs an owner. **(b) No:** the route stays the only check, and `backend/tests/test_ingest_enqueuers.py` still pins the route as the only enqueuer. | **(b).** The census already closes the bypass the worker check would guard, and (a) widens a small P2 slice into the seed and every direct-enqueue test. The `LG-` records that the trigger in `d068fb00` item 3 was considered and declined, citing the `RL-`. | scope | no — default (b) | the same `RL-` |
 
 ## The spec text (T-text), applied in the slice's commit, not here
@@ -165,12 +167,12 @@ as `FR-<n>`. The slice's commit replaces `<date>`, `<n>` and the `RL-` reference
 
 **T1 — a new FR in `07` §3.3, appended after FR-423:**
 
-> | **FR-<n>** | *(appended <date>, WK-1178, `SL-8026`; the completion step FR-421 implies, as `RL-…` rules `PL-8025` DP-U1)* **An upload completes into an owned, content-addressed blob.** `POST /api/v1/blobs/upload-url` records an **Upload** in the caller's workspace (the principal, the staging key, the S3 multipart upload id when `parts > 1`, the declared part count, the media type and a completion deadline of 24 hours) and returns its `id`. `POST /api/v1/blobs/uploads/{id}/complete` returns `202` with a Job of kind `blob.promote` on the `io` queue (R1). The Job lists the uploaded parts and refuses unless they are exactly parts 1 to the declared count; completes the multipart upload; reads the object once to compute its SHA-256; copies it to `blob/{sha256[:2]}/{sha256}` unless a blob with that digest is already stored (FR-419); deletes the staging object; writes the `blobs` row, with `part_count` set to the declared count for a multipart upload; and takes a reference (FR-420) in the same transaction. It succeeds with `JobResult(kind="blob", ref=<sha256>)`. That result is the blob's owner in the Upload's workspace (§5.1, `GET /api/v1/blobs/{sha256}`), so the digest the client reads from `GET /api/v1/jobs/{id}` is one `01`'s ingest route accepts. The file's bytes never transit the API process (FR-421). An Upload in another workspace, or none, is refused with the same `404` a missing one gets; a completion after the deadline is refused `409 VALIDATION_FAILED`; a second completion of the same Upload returns the first Job. A part below the store's minimum size, or a missing part, fails the Job with `VALIDATION_FAILED`. Staging objects and incomplete multipart uploads older than two days are removed by a lifecycle rule on the `staging/` prefix, which the platform sets on startup. Releasing the reference is FR-420's, and is not delivered by this clause. |
+> | **FR-<n>** | *(appended <date>, WK-1178, `SL-1720`; the completion step FR-421 implies, as `RL-…` rules `PL-1719` DP-U1)* **An upload completes into an owned, content-addressed blob.** `POST /api/v1/blobs/upload-url` records an **Upload** in the caller's workspace (the principal, the staging key, the S3 multipart upload id when `parts > 1`, the declared part count, the media type and a completion deadline of 24 hours) and returns its `id`. `POST /api/v1/blobs/uploads/{id}/complete` returns `202` with a Job of kind `blob.promote` on the `io` queue (R1). The Job lists the uploaded parts and refuses unless they are exactly parts 1 to the declared count; completes the multipart upload; reads the object once to compute its SHA-256; copies it to `blob/{sha256[:2]}/{sha256}` unless a blob with that digest is already stored (FR-419); deletes the staging object; writes the `blobs` row, with `part_count` set to the declared count for a multipart upload; and takes a reference (FR-420) in the same transaction. It succeeds with `JobResult(kind="blob", ref=<sha256>)`. That result is the blob's owner in the Upload's workspace (§5.1, `GET /api/v1/blobs/{sha256}`), so the digest the client reads from `GET /api/v1/jobs/{id}` is one `01`'s ingest route accepts. The file's bytes never transit the API process (FR-421). An Upload in another workspace, or none, is refused with the same `404` a missing one gets; a completion after the deadline is refused `409 VALIDATION_FAILED`; a second completion of the same Upload returns the first Job. A part below the store's minimum size, or a missing part, fails the Job with `VALIDATION_FAILED`. Staging objects and incomplete multipart uploads older than two days are removed by a lifecycle rule on the `staging/` prefix, which the platform sets on startup. Releasing the reference is FR-420's, and is not delivered by this clause. |
 
 **T2 — `07` §5.1, the upload-url row (`07-platform.md:327`), a dated line appended to its cell;
 the 2026-09-28 text is not edited:**
 
-> **Amended <date> (WK-1178, `SL-8026`, FR-<n>):** the response also carries the Upload's `id`,
+> **Amended <date> (WK-1178, `SL-1720`, FR-<n>):** the response also carries the Upload's `id`,
 > and `POST /api/v1/blobs/uploads/{id}/complete` (the next row) moves the staged object to its
 > content address and records its owner. The 2026-09-28 sentences saying nothing does so, and
 > that such an upload cannot be ingested or downloaded, are superseded.
@@ -189,14 +191,14 @@ parenthesised list.
 **T6 — `01` §5.1, the ingest row (`01-data-management.md:858`), a dated line appended to its
 cell; the 2026-09-28 text is not edited:**
 
-> **Amended <date> (WK-1178, `SL-8026`):** a client obtains an admissible digest through `07`
+> **Amended <date> (WK-1178, `SL-1720`):** a client obtains an admissible digest through `07`
 > FR-<n>: request an upload URL, upload, complete it, and read the digest from the completing
 > Job's result, which is the owner the rule above admits. The client never names a digest
 > before the platform has computed it.
 
 ## Tasks
 
-### SL-8026 — the slice row
+### SL-1720 — the slice row
 
 | Field | Value |
 |---|---|
@@ -337,7 +339,7 @@ commit (the slice's `status:` and the roadmap row's closing line), per the slice
 `backend/src/app/worker/entrypoint.py`, `docs/contracts/openapi/generated.json`,
 `backend/tests/test_upload_to_ingest.py` (new), `backend/tests/test_api_blob_uploads.py` (new),
 `backend/tests/test_blobs.py`, the slice's `LG-` under `docs/ledgers/`, `docs/roadmap.md` (the
-`SL-8026` row's closing lines only), and `docs/INDEX.md` (regenerated).
+`SL-1720` row's closing lines only), and `docs/INDEX.md` (regenerated).
 
 **Shared paths for the lead's census:** `backend/src/app/platform/jobs.py` and
 `backend/src/app/worker/entrypoint.py` with S4 (`SL-1258`, PL-1714 E4.2/E4.7, and DP-Q4 (a) if
@@ -383,7 +385,7 @@ half of FR-420 and any `blob.gc` handler (FD-1715, WK-1251); the PL-1714 compose
 
 ## Activation
 
-`SL-8026` is GO-able when all of these hold:
+`SL-1720` is GO-able when all of these hold:
 
 1. **DP-U1 ruled** by a high-effort decision-maker in a separate CLI (the 10:56:38 entry, item 3),
    with DP-U1.1 to DP-U1.3 and DP-U3 in the same `RL-` or defaulted as above.
@@ -393,7 +395,7 @@ half of FR-420 and any `blob.gc` handler (FD-1715, WK-1251); the PL-1714 compose
    queue, "2026-10-14 11:01:07 BST"), so the `LG-` can name what the merge discharges. It names
    #883's unowned deferral (the 10:56:38 entry, item 1).
 4. **Its relation to FD-1713 stated in that FD:** the public upload path needs an `io` consumer
-   twice (promotion and ingestion). Under W2, SL-8026's test brings its own; a deployed or
+   twice (promotion and ingestion). Under W2, SL-1720's test brings its own; a deployed or
    compose stack has one only once S4 discharges FD-1713. Until then the path works in the test
    and in CI, not on `docker compose up`.
 5. **The shared-path census** above, against whatever is open at GO.
@@ -403,7 +405,7 @@ half of FR-420 and any `blob.gc` handler (FD-1715, WK-1251); the PL-1714 compose
 ## Report to the lead (not an edit to PL-1714)
 
 P10: PL-1714's compose ingest proof cannot reach `POST /api/v1/datasets/{slug}/versions` with an
-admissible digest through the public API until SL-8026 is on `main`. Unless it waits, it must
+admissible digest through the public API until SL-1720 is on `main`. Unless it waits, it must
 insert a blob and an owner by `psql`, which is the seeding the 10:56:38 entry's item 4 names as
-the reason the gap went unseen. Whether S4's proof seeds, or waits for SL-8026 (DP-U2's W3), is
+the reason the gap went unseen. Whether S4's proof seeds, or waits for SL-1720 (DP-U2's W3), is
 the lead's to route; this delta records the dependency and does not decide it.
