@@ -148,7 +148,7 @@ exercise the way a file reaches the route.
 
 ### 4. What the check is not at fault for
 
-`blob_readable_by` is an allow-list by ruling (the deputy's DP-P1-2, 2026-09-28 21:51:10 BST): a
+`blob_readable_by` is an allow-list by ruling ([the maintainer's (by delegation)] DP-P1-2, 2026-09-28 21:51:10 BST): a
 digest is readable only if a Dataset Version's table or a Job's blob result in the caller's
 workspace references it, and never if a quote-input store does. It is doing what it was written to
 do, and it closed a real cross-workspace read. **The defect is not the 404 or the check.** It is
