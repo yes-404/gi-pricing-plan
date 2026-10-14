@@ -54,9 +54,10 @@ minted), read in full at `origin/fd-8027-closure-gap-p1-2026-10-14` @`00b683ee`.
 
 ## Authority
 
-All four entries are the maintainer's (by delegation), in `to-lead.md`. The first three were read
+All five entries are the maintainer's (by delegation), in `to-lead.md`. The first three were read
 in full at 2026-10-14 11:41:12 BST, when the plan was first written; the fourth, which rules this
-plan's decision points, was read in full after it was logged.
+plan's decision points, was read in full after it was logged; the fifth, which corrects DP-B2's
+reading, was read in full after it was logged, for this amendment (seat planner-fd8040).
 
 - **"2026-10-14 11:06:52 BST — D-list line-read RULED"**, item 2: *"CLOSED-PHASE PARTIAL → ONE
   closure-gap FD … **Any HIGH limb is fixed in P2.**"*, with FR-100 named first: *"`check_banding`
@@ -90,6 +91,12 @@ plan's decision points, was read in full after it was logged.
   > - DP-B3 → (a). OK.
   > - **DP-G1 →** the Task 0 Step 3 probe decides; on ANY BAND_EMPTY for the A-4 severity GLM → STOP to me before code (a G2 interaction).
   > - DP-S1 → OK.
+
+- **"2026-10-14 12:05:33 BST — The rename confirmed working; DP-B2's field must be STRUCTURED;
+  run-small verdicts OK; audit:read closed (re lead 12:05:11)"**, its PL 8030 bullet, quoted in
+  full (the other bullets are not this plan's). It **corrects** this plan's reading of the
+  11:52:51 DP-B2 ruling, which had typed the field `tuple[str, ...]`:
+  > - **PL 8030 DP-B2: `banding_warnings: tuple[str, ...]` is NOT what I ruled.** "A typed field" means a model-schema type a reviewer or UI can act on, not free text. Define `BandingWarning` in model-schema with: banding ref, band label/index, `measure` (exposure | claim_count, an enum), observed value, configured minimum (Decimal or int as the measure requires; no float for a count). The fit results carry `banding_warnings: tuple[BandingWarning, ...]`, empty when none. FR-100's text is unchanged. The contract is regenerated and checked at the ACK (response shape). A non-A-4 BAND_EMPTY → STOP to you: OK.
 
   Every decision point below is therefore ruled, and the plan below is written to those rulings.
   The EBM limb is **FD 8027's**, added by an auditor before the mint (DP-L2 (a)); this plan
@@ -250,8 +257,11 @@ slice's merge tree.
    fit"*. On main every arm fits, and `pytest.raises` reports *DID NOT RAISE*.
 10. **A thin band under `on_violation="fail"` refuses (R6, red on main)**, with
     `BAND_BELOW_MIN_EXPOSURE`. The same frame under `warn` fits, and the fit result's
-    `banding_warnings` carries the warning `check_banding` returned (R7). On main R7 fails with an
-    `AttributeError` on the absent field, and the LG names it as that cause.
+    `banding_warnings` carries the `BandingWarning` that `check_banding` returned (R7): its
+    `banding` ref, `band_label`, `band_index`, `measure`, and an `observed` and `minimum` typed as
+    the measure requires (an `int` for a claim count, a `Decimal` for exposure; never a `float`,
+    never a string of prose). On main R7 fails with an `AttributeError` on the absent field, and
+    the LG names it as that cause. *(Amended 2026-10-14, on the 12:05:33 entry.)*
 11. **The fit Job surfaces the refusal (R8, red on main).** A fit Job over a Banding with an empty
     band ends with status **`failed`**, its stored error code is **`BAND_EMPTY`**, and the problem
     status is `409`. On main the Job **succeeds**, so the assert on `failed` is the red. A test
@@ -263,17 +273,35 @@ slice's merge tree.
 13. **SL-1543's guard test is untouched.** `git diff --stat origin/main...<slice branch>` lists
     no file of SL-1543's write set. This item is void only if DP-A4-3 has switched to (y), and
     then the pairing in "The SL-1543 guard test" item 2 is cited in the LG.
-14. **The contract (DP-B2 (a)).** `uv run python scripts/generate-contracts.py --check` exits 0;
-    `grep -c '"banding_warnings"' docs/contracts/openapi/generated.json` prints a count of at
-    least 3 (one per fit result), and the LG records the count and the three schema names it
-    found them under; the hand-authored fit-result schemas agree with the generated ones
-    (`backend/tests/test_contracts.py` green). A fit result stored before the slice, with no
-    `banding_warnings` key, still validates (a test loads one through `model-schema`). The lead's
-    API ACK checks the shape (the 11:52:51 entry).
+14. **The contract (DP-B2 (a), as corrected by the 12:05:33 entry).**
+    `uv run python scripts/generate-contracts.py --check` exits 0, and this prints `OK` on the
+    slice's merge tree (and a `KeyError` on main, the red):
+    ```bash
+    python3 -c "import json; s=json.load(open('docs/contracts/openapi/generated.json'))['components']['schemas']
+    for fr in ('GlmFitResult','GbmFitResult','EbmFitResult'):
+        items=s[fr]['properties']['banding_warnings']['items']; assert 'oneOf' in items or '\$ref' in items, (fr, items)
+    e=s['ExposureBandingWarning']['properties']; c=s['ClaimCountBandingWarning']['properties']
+    assert e['observed']['type']=='string' and e['minimum']['type']=='string', e
+    assert c['observed']['type']=='integer' and c['minimum']['type']=='integer', c
+    assert set(e) == set(c) == {'banding','band_label','band_index','measure','observed','minimum'}, (e, c)
+    print('OK')"
+    ```
+    The three fit results' `banding_warnings` are arrays of the `BandingWarning` union, never
+    of `{"type": "string"}`; the exposure arm's values are JSON strings (`DecimalStr`) and the
+    claim-count arm's are integers; `measure` is an enum. If the executor took the single-class
+    form (Task 6), the LG gives the equivalent check against its one component, with the same
+    asserts on the field set and on the per-measure value types. The hand-authored fit-result
+    schemas agree with the generated ones (`backend/tests/test_contracts.py` green). A fit result
+    stored before the slice, with no `banding_warnings` key, still validates (a test loads one
+    through `model-schema`). The lead's API ACK checks the **response shape** (the 11:52:51 and
+    12:05:33 entries): a fit result read back through the API carries a structured
+    `BandingWarning`, not a string.
 15. **The generated frontend types carry it, and nothing is hand-written.**
     `pnpm --dir frontend install --frozen-lockfile && pnpm --dir frontend generate:api` writes a
     `frontend/src/api/generated/schema.d.ts` in which each of `GlmFitResult`, `GbmFitResult` and
-    `EbmFitResult` has `banding_warnings`, and `pnpm --dir frontend type-check` and
+    `EbmFitResult` has `banding_warnings` typed as an array of the generated `BandingWarning`
+    union (not `string[]`), with `measure` a union of the two string literals, and
+    `pnpm --dir frontend type-check` and
     `pnpm --dir frontend test` exit 0. `git diff --stat origin/main...<slice branch> -- frontend/`
     prints nothing.
 16. **The probe gated the code (DP-G1).** The LG carries Task 0 Step 3's per-Banding output
@@ -297,8 +325,9 @@ slice's merge tree.
 - **The thin check reads `check_banding`'s default columns** (DP-B3 (a)), `exposure_years` and
   `claim_count`, the ones the `BandingProposal` measured (`modelling.py:599-600`). A non-zero
   floor whose column is absent from the fitted rows is refused by name, never read as 0.
-- **One contract, one way** (`CLAUDE.md` §2). `banding_warnings` is defined once, in
-  `model-schema`. `docs/contracts/` changes only by `scripts/generate-contracts.py`, apart from
+- **One contract, one way** (`CLAUDE.md` §2). `banding_warnings`, `BandingWarning` and
+  `BandingMeasure` are each defined once, in `model-schema` (amended 2026-10-14, on the 12:05:33
+  entry); `pricing-core` imports them, as it imports `Banding`. `docs/contracts/` changes only by `scripts/generate-contracts.py`, apart from
   the hand-authored `docs/contracts/schemas/model.schema.json` that `test_contracts.py` compares;
   `frontend/src/api/generated/` is regenerated and never committed or hand-written.
 - **No change to the shape of `LossTreatment`, to `spec_hash`, or to any stored spec.** A spec
@@ -383,7 +412,13 @@ slice's merge tree.
 - [ ] **R6.** A Banding with `minimums=(min_exposure_per_band=…, on_violation="fail")` and a band
   below the floor: expect `BAND_BELOW_MIN_EXPOSURE`.
 - [ ] **R7.** The same Banding under `warn` fits, and the fit result's `banding_warnings` equals
-  the tuple `check_banding` returns for those rows (DP-B2 (a)). One arm per file, all three arms.
+  the tuple of `BandingWarning` that `check_banding` returns for those rows (DP-B2 (a), as
+  corrected 12:05:33). The test asserts the structure, not a string: the warning's `banding` is
+  the Banding's `banding:{slug}@{version}` ref, its `band_label` and `band_index` name the thin
+  band, `measure` is `BandingMeasure.CLAIM_COUNT` (or `EXPOSURE`) as the floor breached, and
+  `observed` and `minimum` are an `int` for a claim count and a `Decimal` for exposure, never a
+  `float`. One arm per file, all three arms. On main it fails with an `AttributeError` on the
+  absent field.
 - [ ] **Guard G-W.** A band reached only by weight-0 rows (FR-111) is `BAND_EMPTY`. This guard
   is green after Task 5 only. Record it as a guard of the ordering, not as a red of this slice.
 - [ ] Run `scripts/run-small.sh` per file at the base, and record each red line and its cause.
@@ -395,7 +430,12 @@ slice's merge tree.
   rows actually fitted, after FR-111's weight-0 exclusion (DP-B1 (a)); a `warn` violation is
   recorded in the fit result's typed `banding_warnings` field (DP-B2 (a)); the floors read
   `exposure_years` and `claim_count`, and a non-zero floor on an absent column is refused by name
-  (DP-B3 (a)). The `§5.2` `check_banding` signature (`02-modelling.md:2382-2388`) is unchanged.
+  (DP-B3 (a)). *(Amended 2026-10-14, on the 12:05:33 entry's correction of DP-B2:)* the `§5.2`
+  `check_banding` signature (`02-modelling.md:2382-2388`) **changes**, with a dated note in
+  place: it returns `tuple[BandingWarning, ...]` instead of `tuple[str, ...]`, and its two floor
+  overrides become `min_exposure: Decimal | None` and `min_claims: int | None` (no float for a
+  count, and the exposure compared exactly). FR-100's text is unchanged (the entry: *"FR-100's
+  text is unchanged"*).
 - [ ] A dated note on FR-207 (`02-modelling.md:372`): `banding_warnings` goes live on
   `GlmFitResult`, `GbmFitResult` and `EbmFitResult`, empty on every fit with no `warn` violation
   and on every artifact written before that date, in the form of the `dropped_eval_metrics` entry.
@@ -409,11 +449,53 @@ slice's merge tree.
   `@pytest.mark.req("FR-100")`, in the form of `test_dropped_eval_metrics.py`). A test that `GlmFitResult`, `GbmFitResult` and
   `EbmFitResult` each accept `banding_warnings` and default it to `()`; on main it fails on the
   absent field (`EbmFitResult` forbids extra fields, `02-modelling.md:1396`). Also a stored fit
-  result without the key validates (the guard).
-- [ ] `packages/model-schema/src/model_schema/modelling.py`: add `banding_warnings:
-  tuple[str, ...] = ()` to the three fit results. The field is declared once if the three share
-  a base at the slice's base tree, else once on each with the same type and default; Task 0
-  Step 1 records which, and no second shape is hand-written anywhere else (`CLAUDE.md` §2).
+  result without the key validates (the guard). *(Amended 2026-10-14, on the 12:05:33 entry:)*
+  the same file also asserts the type: a `BandingWarning` round-trips through JSON; an exposure
+  warning's `observed` and `minimum` are `Decimal` on the model and JSON strings on the wire; a
+  claim-count warning's are `int`; a `float` for either measure's value is refused, as
+  `DecimalStr` refuses one (`model_schema/money.py:20`); a free-text string in
+  `banding_warnings` is refused; and a `measure` outside the enum is refused. On main it fails
+  on the import of `BandingWarning`.
+- [ ] `packages/model-schema/src/model_schema/modelling.py` *(amended 2026-10-14, on the
+  12:05:33 entry, which corrects the `tuple[str, ...]` this item first named)*:
+  - a `BandingMeasure(enum.StrEnum)` with `EXPOSURE = "exposure"` and
+    `CLAIM_COUNT = "claim_count"`, in the form of `BandingMethod` (`modelling.py:284-297` at
+    `a3fc2e8d`, the same lines at `8eaf6d5f`);
+  - `BandingWarning`, defined once, beside `BandingMinimums` (`:320-337`), frozen with
+    `extra="forbid"` as every model in the file is (`:330`). Its fields:
+    - `banding: ArtifactRef` — the Banding version checked, on the wire the ID-3 string
+      `banding:{slug}@{version}` (`model_schema/refs.py:78-99`; `"banding"` is in
+      `ARTIFACT_TYPES`, `refs.py:23-26`), built from the Banding's `slug` and `version`
+      (`modelling.py:356`, `:358`); a validator refuses a ref whose `type` is not `banding`;
+    - `band_label: str` (one of `Banding.labels`, `:370`) and `band_index: int` (`ge=0`, its
+      position in `labels`, which are unique by `:402-404`);
+    - `measure: BandingMeasure`;
+    - `observed` and `minimum`, typed **as the measure requires**: `DecimalStr` for `exposure`,
+      as `min_exposure_per_band` is (`:335`) and as `OneWayRow.exposure_years` is
+      (`model_schema/profiles.py:149`); `int` with `ge=0` for `claim_count`, as
+      `min_claims_per_band` is (`modelling.py:336`) and `OneWayRow.claim_count` is
+      (`profiles.py:150`). The plan's form: two arms, `ExposureBandingWarning` and
+      `ClaimCountBandingWarning`, each with `measure: Literal[BandingMeasure.<member>]`, and
+      `BandingWarning = Annotated[ExposureBandingWarning | ClaimCountBandingWarning,
+      Field(discriminator="measure")]`, the pattern of `EbmFeatureBins` (`:1768`). The type
+      then refuses a `Decimal` count or a `float` exposure with no validator, and the generated
+      contract shows each arm's value type. If the executor finds a single class with a
+      validator simpler at the base, it records why in the LG; the field set and the value types
+      above are fixed either way;
+  - `banding_warnings: tuple[BandingWarning, ...] = ()` on the three fit results, in the form of
+    `dropped_eval_metrics: tuple[DroppedEvalMetric, ...] = ()` (`:1695`), the structured
+    record FR-161 put on `GbmFitResult`. It is declared once if the three share a base at the
+    slice's base tree, else once on each with the same type and default; Task 0 Step 1 records
+    which. `BandingMeasure` and `BandingWarning` are exported where `DroppedEvalMetric` is (`model_schema/__init__.py:162`, `:538`), and
+    no second shape is hand-written anywhere else (`CLAUDE.md` §2).
+- [ ] `pricing_core/modelling/bandings.py`: `check_banding` (`:524-584`) returns
+  `tuple[BandingWarning, ...]`, one per breached floor per band, built from the
+  `band_statistics` row (`OneWayRow`): exposure compared as `Decimal` (no `float(...)` cast, as
+  `:546` and `:567` cast today), claim count as `int`. Its two override keywords become
+  `min_exposure: Decimal | None` and `min_claims: int | None` (Task 5's §5.2 note). The
+  `BAND_BELOW_MIN_EXPOSURE` message renders the same warnings, so its text stays readable.
+  `test_bandings.py:365` and `:403` keep their asserts (a non-empty tuple); `:386`, `:406` and
+  `:413` keep `== ()`.
 - [ ] `contract-schema`: run `uv run python scripts/generate-contracts.py` to regenerate
   `docs/contracts/` (never hand-edit a generated file), then add the property to the
   hand-authored `docs/contracts/schemas/model.schema.json` `fit_result` arms (`:19`) where
@@ -433,9 +515,11 @@ slice's merge tree.
   and the bandings mapping, and runs `check_banding` once per distinct Banding that a factor
   (or an interaction operand, per Task 0 Step 2) applies, over the rows the arm fits (DP-B1 (a)),
   reading the default columns and refusing a non-zero floor on an absent column by name
-  (DP-B3 (a)). It returns the warnings.
+  (DP-B3 (a)). It returns the warnings, a `tuple[BandingWarning, ...]` (Task 6, as corrected by
+  the 12:05:33 entry).
 - [ ] Each fit entry calls it after `require_usable_weights` and before `resolve_factors`, and
-  writes the returned warnings into the fit result's `banding_warnings`.
+  writes the returned `BandingWarning`s into the fit result's `banding_warnings`, unchanged (no
+  string is rendered on the way).
 - [ ] In `model_handlers.py:395-416`, map `BandingError` to `PlatformError(exc.code, …, 409, str(exc))`,
   as the `FactorResolutionError` clause does. Mapping `ModellingError` at that point would also
   catch `FactorResolutionError` and change its detail text, so name `BandingError`.
@@ -458,7 +542,9 @@ slice's merge tree.
 - `packages/pricing-core/src/pricing_core/modelling/` (`glm.py`, `gbm.py`, `ebm.py`,
   `bandings.py`, `__init__.py`, and the new `loss_treatment.py`);
 - `packages/pricing-core/tests/` (`test_glm.py`, `test_gbm.py`, `test_ebm.py`, `test_bandings.py`);
-- `packages/model-schema/src/model_schema/modelling.py` (the three fit results' `banding_warnings`)
+- `packages/model-schema/src/model_schema/modelling.py` (`BandingMeasure`, `BandingWarning` and the
+  three fit results' `banding_warnings`) and `packages/model-schema/src/model_schema/__init__.py`
+  (the two exports; amended 2026-10-14, on the 12:05:33 entry)
   and a new `packages/model-schema/tests/test_banding_warnings.py` (Task 6's red, in the form of
   `test_dropped_eval_metrics.py`, FR-161's field test);
 - `docs/contracts/`: the files `scripts/generate-contracts.py` regenerates (written by the
@@ -484,7 +570,7 @@ limb.
 | DP-L1 | Where does `apply_loss_treatment` live once three arms call it? | **(a), ruled:** its own module, `pricing_core/modelling/loss_treatment.py`, taking the arm's error class as `weights.require_usable_weights` does (`weights.py:91-97`); `gbm.py` and `__init__.py` re-export it. | The ruling: *"its own module, taking the arm's error class (the weights.py:91-97 pattern). OK."* `CLAUDE.md` §2 forbids a shape defined twice, and the spec says *"it belongs beside the fit rather than inside it"* (`02:2659-2661`). | design | no — ruled | Ruled 2026-10-14 by the maintainer (by delegation), entry 2026-10-14 11:52:51 BST |
 | DP-L2 | `EbmSpec` inherits `loss_treatment` and `fit_ebm` ignores it (`ebm.py:209`), the same silent class. Does this slice fix the EBM arm too? | **(a), ruled:** yes — one call (Task 3), one red (R4, Task 1), and an auditor adds the EBM limb to FD 8027 before it is minted. | The ruling: *"fix EBM here (ebm.py:209 ignores loss_treatment, the same FR-127 class); an auditor adds the EBM limb to FD 8027 before mint."* | scope | no — ruled; FD 8027's EBM limb is an activation need | Ruled 2026-10-14 by the maintainer (by delegation), entry 2026-10-14 11:52:51 BST |
 | DP-B1 | Which frame does the fit-time check read? FR-100 says *"the Dataset Version"*; the fit receives the training partition. | **(a), ruled:** the training rows actually fitted, after FR-111's weight-0 exclusion. | A coefficient is estimated from the rows fitted, so a band empty in those rows is the *"coefficient estimated from no data"* that `check_banding`'s docstring names (`bandings.py:536-538`). The FR-100 clause records the reading (Task 5). | design | no — ruled | Ruled 2026-10-14 by the maintainer (by delegation), entry 2026-10-14 11:52:51 BST |
-| DP-B2 | Where does a thin-band **warning** land? `check_banding` returns it, and no fit result has a field for it. | **(a), ruled:** a typed field on the three fit results, `banding_warnings: tuple[str, ...] = ()`, defined in `model-schema`, persisted with the model, published in the regenerated contract, and reaching the frontend's generated types (Task 6). | The ruling: FR-100's *"warns (default)"* is the default behaviour, so deferring the warning would leave it unbuilt; *"Through model-schema, with the contract regenerated; the API ACK checks the shape."* | design | no — ruled | Ruled 2026-10-14 by the maintainer (by delegation), entry 2026-10-14 11:52:51 BST |
+| DP-B2 | Where does a thin-band **warning** land? `check_banding` returns it, and no fit result has a field for it. | **(a), ruled, as corrected:** a typed field on the three fit results, `banding_warnings: tuple[BandingWarning, ...] = ()`, empty when none. `BandingWarning` is a `model-schema` type with the banding ref (`ArtifactRef`, `banding:{slug}@{version}`), `band_label` and `band_index`, `measure` (the enum `BandingMeasure`: `exposure` or `claim_count`), and `observed` and `minimum` typed as the measure requires (`DecimalStr` for exposure, `int` for a claim count, never a float). `check_banding` returns the same type. Persisted with the model, published in the regenerated contract, and reaching the frontend's generated types (Task 6). This plan first wrote `tuple[str, ...]`; the 12:05:33 entry corrects that reading. | The ruling: FR-100's *"warns (default)"* is the default behaviour, so deferring the warning would leave it unbuilt; *"Through model-schema, with the contract regenerated; the API ACK checks the shape."* The correction: *"'A typed field' means a model-schema type a reviewer or UI can act on, not free text."* | design | no — ruled | Ruled 2026-10-14 by the maintainer (by delegation), entry 2026-10-14 11:52:51 BST; corrected by the entry 2026-10-14 12:05:33 BST, which corrects 11:52:51's DP-B2 as this plan had read it |
 | DP-B3 | Which columns does the thin check read? `one_way` reads an absent column as 0 (`data/profile.py:372-377`). | **(a), ruled:** `check_banding`'s defaults, `exposure_years` and `claim_count`, which the `BandingProposal` also uses (`modelling.py:599-600`); a non-zero floor whose column is absent from the rows is refused by name, never read as 0. | The floor and the stats that set it read the same columns, and the refusal closes the absent-column trap. | design | no — ruled | Ruled 2026-10-14 by the maintainer (by delegation), entry 2026-10-14 11:52:51 BST |
 | DP-G1 | When may the FR-100 limb merge relative to SL-1543 (G2)? The 11:29:53 entry put only the FR-127 limb off the G2 path. | **Ruled: the probe decides.** Task 0 Step 3's probe runs before any code. Any `BAND_EMPTY` for the A-4 severity GLM is a STOP to the maintainer before code (a G2 interaction). On a clean probe, whichever of this slice and SL-1543 is ready first merges first, and the second re-merges `main` and re-runs the WF-699 journey (Task 8). | The ruling: *"the Task 0 Step 3 probe decides; on ANY BAND_EMPTY for the A-4 severity GLM → STOP to me before code (a G2 interaction)."* | scope | yes, until the probe is clean or the maintainer rules on it | Ruled 2026-10-14 by the maintainer (by delegation), entry 2026-10-14 11:52:51 BST |
 | DP-S1 | If the 11:29:53 condition fires (the FR-127 limb joins G2), how does the FR-127 limb ship ahead? | **(a), ruled:** the lead asks the planner for a re-cut delta: SL-8031 keeps FR-100, and a new row takes Tasks 1 to 3 unchanged. | Tasks 1 to 3 are cut to pass the gate alone. Until the condition fires, one slice, as the lead ordered. | scope | no — ruled; reopened only by the condition | Ruled 2026-10-14 by the maintainer (by delegation), entry 2026-10-14 11:52:51 BST |
@@ -534,6 +620,25 @@ lead writes any dated line on SL-1543 at dispatch.
     Acceptance 16, the Tasks row, the hand-off;
   - DP-S1 (a): "The SL-1543 guard test" item 3 and the DP table.
   Each DP row now carries only its ruled option, and its "Resolved by" cell the ruling line.
+- **The 12:05:33 correction of DP-B2 at every site** (amended 2026-10-14, seat planner-fd8040):
+  `BandingWarning` (banding ref, band label and index, the `BandingMeasure` enum, `observed` and
+  `minimum` typed per measure) and `banding_warnings: tuple[BandingWarning, ...] = ()` replace
+  `tuple[str, ...]` in: the Authority section (the entry quoted), the DP-B2 row, R7, Task 5 (the
+  §5.2 `check_banding` signature now changes, with a dated note, where it said "unchanged"),
+  Task 6 (the red's type asserts, the two types, `check_banding`'s return), Task 7 (the helper
+  returns and stores the structured warnings), Acceptance 10, 14 (a runnable shape check of the
+  generated contract, red on main) and 15 (the generated frontend type is not `string[]`),
+  Global Constraints (each shape defined once) and the write set (`model_schema/__init__.py`).
+  Nothing else in the plan changed. The new citations were read at `origin/main` `a3fc2e8d`;
+  `git diff --stat 8eaf6d5f a3fc2e8d` lists no change to `model_schema/modelling.py`,
+  `bandings.py` or `02-modelling.md`, so they hold at the plan's tree too:
+  `model_schema/modelling.py:284-297`, `:320-337`, `:330`, `:335`, `:336`, `:356`, `:358`,
+  `:370`, `:402-404`, `:1695`, `:1768`; `model_schema/refs.py:23-26`, `:78-99`;
+  `model_schema/profiles.py:149`, `:150`; `model_schema/money.py:20`;
+  `model_schema/__init__.py:162`, `:538`; `bandings.py:524-584`, `:546`, `:567`;
+  `test_bandings.py:365`, `:386`, `:403`, `:406`, `:413`;
+  `docs/contracts/openapi/generated.json` (`components.schemas` holds `DroppedEvalMetric` and the
+  three fit results by those names).
 - **The 11:28:56 and 11:29:53 conditions at every site** (convention 5):
   - red first on main: R1 to R8, and Acceptance 4 to 11;
   - *"a capped GlmSpec fit asserts capped behaviour"*: R1, R2 and Acceptance 4;
@@ -566,6 +671,8 @@ lead writes any dated line on SL-1543 at dispatch.
   plan was first written; the entries of 11:31:17, 11:34:03 and 11:34:58 do not rule on this
   subject. For this amendment it was read through the entry "2026-10-14 12:00:14 BST"; of the
   entries after 11:41:12, only "2026-10-14 11:52:51 BST" item (2) rules on this plan, and
-  "2026-10-14 11:57:51 BST" item 2 places FD 8027's file in the D17 batch. `gh pr list`
+  "2026-10-14 11:57:51 BST" item 2 places FD 8027's file in the D17 batch. For the DP-B2
+  correction it was read through the entry "2026-10-14 12:05:33 BST" (its last entry when read);
+  of the entries after 12:00:14, only 12:05:33's PL 8030 bullet rules on this plan. `gh pr list`
   was not run (no GitHub posts by brief). Task 0 Step 4 re-reads at dispatch.
 - **Placeholders.** `<slice head>` and `<slice branch>` are values read when the slice runs.
