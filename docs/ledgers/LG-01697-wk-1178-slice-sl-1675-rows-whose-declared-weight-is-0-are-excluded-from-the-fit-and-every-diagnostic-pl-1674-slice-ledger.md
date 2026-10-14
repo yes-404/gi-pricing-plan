@@ -194,6 +194,10 @@ Run on head `f1399e6d8facc488a014ddf6dcfa9cf952f64b95` (on `origin/main` `bf8d79
 
 `origin/main` `2a819741` merged into the branch (merge commit). `docs/INDEX.md` conflicted and was regenerated. **`docs/findings/register.md` also conflicted**, which is more than the brief allowed for ("INDEX conflicts regenerate; anything else stop"): both sides appended one row at the end of the file (this slice's FD row, and main's FD-1679 row). Resolved by keeping both rows; checked with `git diff origin/main -- docs/findings/register.md`, which shows exactly one row added and none removed. Disclosed to the lead in the mint report. Working ids minted: LG 9900 to **LG-1697**, FD 9902 to **FD-1698** (allocated by the lead, reserved in eta); every occurrence renamed, files and register row included. `PL-1674` stays `active` (a plan is not retired while its slice is closed, `document-ids.md` check 33).
 
+## F4 follow-up (audit finding, lead's entry "2026-10-12 08:39:13 BST")
+
+`test_an_all_zero_weight_holdout_is_refused_by_the_weight_code` (`packages/pricing-core/tests/test_gbm.py`, both backends) covers `fit_gbm` refusing a holdout whose every row has weight 0. **RED by mutation:** with the holdout call to `require_usable_weights` disabled (`if False and holdout is not None:`), both parametrisations fail with `Failed: DID NOT RAISE GbmFitError` (`2 failed, 154 deselected`). **GREEN** with the source restored: `2 passed, 154 deselected`.
+
 ## PRs
 
 (none yet; the slice's one PR carries this ledger.)

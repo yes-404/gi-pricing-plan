@@ -2587,3 +2587,22 @@ def test_a_book_of_only_weight_zero_rows_says_so_on_both_backends(backend: str) 
         fit_gbm(book, _zero_weight_spec(backend), FACTORS)
     assert refused.value.code == "DECLARED_WEIGHT_INVALID"
     assert "weight 0" in str(refused.value)
+
+
+@pytest.mark.req("FR-111")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_an_all_zero_weight_holdout_is_refused_by_the_weight_code(backend: str) -> None:
+    """A holdout whose every row is weight 0 is refused, not fitted against an empty frame.
+
+    The train half is usable; only the holdout is empty after FR-111's exclusion. The
+    refusal names the holdout so the reader is not sent to the training book.
+    """
+    spec = _zero_weight_spec(backend).model_copy(
+        update={"early_stopping": EarlyStopping(on="holdout", metric="gamma-nloglik", rounds=5)}
+    )
+    holdout = _zero_weight_book(500).with_columns(pl.lit(0.0).alias("claim_count"))
+    with pytest.raises(GbmFitError) as refused:
+        fit_gbm(_zero_weight_book(), spec, FACTORS, holdout=holdout)
+    assert refused.value.code == "DECLARED_WEIGHT_INVALID"
+    assert "the holdout" in str(refused.value)
+    assert "weight 0" in str(refused.value)
