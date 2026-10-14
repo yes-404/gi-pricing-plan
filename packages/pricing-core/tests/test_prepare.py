@@ -339,3 +339,105 @@ def test_a_changed_recipe_produces_a_different_artifact() -> None:
     without = run_and_hash([{"step": "filter_rows",
                              "params": {"expression": "exposure_years > 0"}}])
     assert with_filter != without
+
+
+# -- FR-32 (FD 8040): a cell that does not parse is quarantined, never silently nulled ---
+
+_REJECT_COLUMNS = ("_reject_column", "_reject_step", "_reject_reason")
+
+
+@pytest.mark.req("FR-32")
+def test_a_cast_that_cannot_parse_a_cell_quarantines_its_row() -> None:
+    frame = pl.DataFrame({"k": ["a", "b"], "x": ["1.5", "abc"]})
+    result = apply_recipe({"t": frame}, [{"step": "cast", "params": {"columns": {"x": "float64"}}}])
+
+    assert result.rejected is not None
+    assert result.tables["t"]["k"].to_list() == ["a"]
+    assert result.rejected["k"].to_list() == ["b"]
+    assert result.rejected["x"].to_list() == ["abc"]
+    assert result.rejected.schema["x"] == pl.String
+    assert set(_REJECT_COLUMNS) <= set(result.rejected.columns)
+    assert result.rejected["_reject_column"].to_list() == ["x"]
+    assert result.rejected["_reject_step"].to_list() == ["cast"]
+
+
+@pytest.mark.req("FR-32")
+def test_a_parse_date_that_cannot_parse_a_cell_quarantines_its_row() -> None:
+    frame = pl.DataFrame({"k": ["a", "b"], "d": ["2024-01-15", "2024-02-30"]})
+    result = apply_recipe(
+        {"t": frame},
+        [{"step": "parse_date", "params": {"column": "d", "format": "%Y-%m-%d"}}],
+    )
+
+    assert result.rejected is not None
+    assert result.tables["t"]["k"].to_list() == ["a"]
+    assert result.rejected["k"].to_list() == ["b"]
+    assert result.rejected["d"].to_list() == ["2024-02-30"]
+    assert result.rejected["_reject_column"].to_list() == ["d"]
+    assert result.rejected["_reject_step"].to_list() == ["parse_date"]
+
+
+@pytest.mark.req("FR-32")
+def test_a_row_quarantined_by_a_later_step_keeps_its_source_text_not_a_cast_value() -> None:
+    """Completeness: `b`'s cast succeeds and its date fails. No partially cast row
+    survives, and the quarantined row is the input row, not the step-1 intermediate."""
+    frame = pl.DataFrame({"k": ["a", "b"], "x": ["1.5", "2.5"], "d": ["2024-01-15", "2024-13-01"]})
+    result = apply_recipe(
+        {"t": frame},
+        [
+            {"step": "cast", "params": {"columns": {"x": "float64"}}},
+            {"step": "parse_date", "params": {"column": "d", "format": "%Y-%m-%d"}},
+        ],
+    )
+
+    assert result.rejected is not None
+    assert result.tables["t"]["k"].to_list() == ["a"]
+    assert result.rejected["k"].to_list() == ["b"]
+    assert result.rejected["x"].to_list() == ["2.5"]
+    assert result.rejected["d"].to_list() == ["2024-13-01"]
+    assert result.rejected["_reject_step"].to_list() == ["parse_date"]
+
+
+@pytest.mark.req("FR-32")
+def test_a_source_null_is_not_a_coercion() -> None:
+    """G1, green at base and at head: a cell the source left empty is null before the
+    cast, so it is written as null and makes no reject row."""
+    frame = pl.DataFrame(
+        {"k": ["a", "b"], "x": [None, "2.5"]}, schema={"k": pl.String, "x": pl.String}
+    )
+    result = apply_recipe({"t": frame}, [{"step": "cast", "params": {"columns": {"x": "float64"}}}])
+
+    assert not result.rejected  # None, or empty
+    assert result.tables["t"]["x"].to_list() == [None, 2.5]
+
+
+@pytest.mark.req("FR-32")
+def test_every_step_records_its_rejected_removed_and_added_rows() -> None:
+    """The identity `rows_in - rejected - removed + added == rows_out`, step by step."""
+    frame = pl.DataFrame({"k": ["a", "b", "c", "d"], "x": ["1", "1", "abc", "5"]})
+    result = apply_recipe(
+        {"t": frame},
+        [
+            {"step": "cast", "params": {"columns": {"x": "int"}}},
+            {"step": "deduplicate", "params": {"columns": ["x"]}},
+            {"step": "filter_rows", "params": {"expression": "x <= 3"}},
+        ],
+    )
+
+    steps = result.stats["steps"]
+    assert [
+        (
+            s["step"],
+            s["rows_before"],
+            s["rows_after"],
+            s["rows_rejected"],
+            s["rows_removed"],
+            s["rows_added"],
+        )
+        for s in steps
+    ] == [
+        ("cast", 4, 3, 1, 0, 0),
+        ("deduplicate", 3, 2, 0, 1, 0),
+        ("filter_rows", 2, 1, 0, 1, 0),
+    ]
+    assert 4 - 1 - 2 + 0 == result.tables["t"].height == 1

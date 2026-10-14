@@ -545,3 +545,98 @@ def test_distributional_rules_answer_from_a_stored_profile() -> None:
     assert outcomes["volume-shift"].measured["reference_rows"] == 400
     # Neither skipped, which is the claim: no reference frame was supplied.
     assert all(r.outcome is not RuleOutcome.SKIPPED for r in report.results)
+
+
+# -- FR-32 (FD 8040): a quarantined coercion is a verdict, not only a reject count --------
+
+#: The version FD 8040's fixture makes: `p1` and `p4` written, `p2` and `p3` quarantined by
+#: the `cast` of `claim_amount`, `p5` by the `parse_date` of `start_date`.
+_COERCED_CLEAN = pl.DataFrame(
+    {
+        "policy_id": ["p1", "p4"],
+        "claim_amount": [100.0, 250.5],
+        "start_date": [datetime(2024, 1, 15).date(), datetime(2024, 3, 1).date()],
+    }
+)
+_COERCED_REJECTED = pl.DataFrame(
+    {
+        "policy_id": ["p2", "p3", "p5"],
+        "claim_amount": ["np.float64(1.0)", "abc", "80.0"],
+        "start_date": ["2024-02-30", "not-a-date", "2024-13-01"],
+        "_reject_column": ["claim_amount", "claim_amount", "start_date"],
+        "_reject_step": ["cast", "cast", "parse_date"],
+        "_reject_reason": ["x", "y", "z"],
+    }
+)
+
+
+@pytest.mark.req("FR-32")
+def test_dtype_match_reports_the_cells_quarantined_because_of_each_declared_column() -> None:
+    rule = _rule(
+        "dtype_match",
+        layer=ValidationLayer.STRUCTURAL,
+        slug="dtype",
+        params={"columns": {"claim_amount": "float64", "start_date": "date"}},
+    )
+    report = _run(
+        _set(rule),
+        tables={"policy_exposure": _COERCED_CLEAN, "_rejected": _COERCED_REJECTED},
+    )
+    result = report.results[0]
+
+    assert result.outcome is RuleOutcome.FAIL
+    assert result.measured.get("coerced_cells") == {"claim_amount": 2, "start_date": 1}
+
+
+@pytest.mark.req("FR-32")
+def test_date_parsed_reports_the_cells_quarantined_because_of_its_columns() -> None:
+    rule = _rule(
+        "date_parsed",
+        layer=ValidationLayer.STRUCTURAL,
+        slug="datep",
+        params={"columns": ["start_date"]},
+    )
+    report = _run(
+        _set(rule),
+        tables={"policy_exposure": _COERCED_CLEAN, "_rejected": _COERCED_REJECTED},
+    )
+    result = report.results[0]
+
+    assert result.outcome is RuleOutcome.FAIL
+    assert result.measured.get("coerced_cells") == {"start_date": 1}
+
+
+@pytest.mark.req("FR-32")
+def test_a_clean_version_reports_no_coerced_cells() -> None:
+    rule = _rule(
+        "dtype_match",
+        layer=ValidationLayer.STRUCTURAL,
+        slug="dtype",
+        params={"columns": {"claim_amount": "float64", "start_date": "date"}},
+    )
+    report = _run(_set(rule), tables={"policy_exposure": _COERCED_CLEAN})
+    result = report.results[0]
+
+    assert result.outcome is RuleOutcome.PASS
+    assert result.measured.get("coerced_cells") == {}
+
+
+@pytest.mark.req("FR-32")
+def test_range_ignores_a_genuine_source_null() -> None:
+    """G4, the `range` guard, green at base and at head.
+
+    `range` filters `is_not_null() & predicate`, so a null is outside every range test.
+    That is safe because no coerced null reaches it: a cell that does not parse is
+    quarantined whole (DP-C1 (Q)), and its verdict is `dtype_match`'s and `date_parsed`'s
+    (DP-C3 (ii)). A null in a column that must not be null is VR-STR-3's verdict.
+    """
+    frame = pl.DataFrame({"policy_id": ["p1", "p2"], "claim_amount": [None, 10.0]})
+    rule = _rule(
+        "range",
+        target={"table": "policy_exposure", "column": "claim_amount"},
+        params={"min_inclusive": 0, "key_columns": ["policy_id"]},
+    )
+    report = _run(_set(rule), tables={"policy_exposure": frame})
+
+    assert report.results[0].outcome is RuleOutcome.PASS
+    assert report.results[0].measured["violating_rows"] == 0
