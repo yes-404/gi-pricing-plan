@@ -52,8 +52,8 @@ it is pushed.
 
 ## Authority
 
-Both entries are the maintainer's (by delegation), in `to-lead.md`, read in full after they
-were logged.
+All three entries are the maintainer's (by delegation), in `to-lead.md`, read in full after
+they were logged. The third rules this plan's decision points.
 
 - **"2026-10-14 11:52:51 BST — PL 8030/SL 8031 DPs ruled; SL-1543 fixture fix accepted; NEW
   candidate: the recipe cast silently nulls unparseable values (re lead 11:51:03 / 11:52:02)"**,
@@ -68,6 +68,14 @@ were logged.
   > - (a) **the coercion:** prepare.py:136/:142 `strict=False`; the Job handler (data_handlers.py:140) never passes `required_non_null`;
   > - (b) **the blind validation:** dtype_match passes by construction after the cast, date_parsed checks type only, range ignores nulls, and reject_rate reads an always-empty `_rejected`. Whatever the design, a coerced cell must produce a validation VERDICT (a counted check, fail or warn per its declaration) so the version cannot read "validated" over a silent change.
   > Reds by run through the real Job path, both limbs red on main by cause (the auditor's 4-row input is the fixture).
+- **"2026-10-14 12:23:36 BST — PL 8042/SL 8043 (FD 8040 fix) DPs RULED: C1 → Q (quarantine), C3
+  → (ii), C2 → (a) (re lead 12:23:06)"**, quoted in full:
+  > - **DP-C1 → (Q) QUARANTINE the row** (source text into `PreparationResult.rejected` → the version's `_rejected` table with `_reject_column` / `_step` / `_reason`; counted in `rows_rejected`). It builds 01 FR-32's own mechanism, which already exists unfilled (the `_rejected` table 01:285, its endpoint :874, the drawer :1046, VR-STR-9, `prepare.py:85`'s declared `.rejected` field). (R) is refused: it contradicts FR-32 ("a version with rejects can still be validated") and gives no version to judge. (C) is refused: the null still reaches modelling. The quarantine must be COMPLETE for each row (no partially cast row written), and `rows_read == rows_written + rows_rejected` is asserted.
+  > - **DP-C3 → (ii):** `reject_rate` PLUS `dtype_match` (VR-STR-2) and `date_parsed` (VR-STR-5) each report `measured.coerced_cells` for the columns they declare (= the cells quarantined because of that column), at their declared severity. This holds even when a rule set omits `reject_rate` (FR-45 does not mandate it). `range`'s null-ignoring is unchanged, but its guard is stated. warn + an FR-46 acknowledgement remains the user's knob, which is the governed path. (iii) tolerance: not now.
+  > - **DP-C2 → (a):** no handler change (under Q every coercion is quarantined).
+  > - **Reds:** R1–R5 by RUN via `execute_job` with the 4-row fixture + p5 "2024-13-01", each red on main by cause. Plus one assert the old behaviour cannot survive: after ingest, `null_count(claim_amount)` equals the SOURCE's genuine empty cells only (0 for the fixture), never the bad-cell count.
+  > - **G2 condition (binding):** Task 0 re-counts through POLARS, with the same cast the recipe uses, over all 678,013 freMTPL2 rows and the seeded 20k. A non-zero count is a STOP to me before code (it would change the A-4/WF-699 seed's rows). The proxy regex count of 0 is noted, not relied on.
+  > - The SL 8043 / SL 8031 roadmap adjacency: both go in P1 and are resolved in that one PR. OK.
 
 The evidence is the lead's from-lead entry **"2026-10-14 12:02:15 BST"** (in
 `from-lead-2026-10-09.md`), item (1), and the auditor's run it reports,
@@ -110,12 +118,20 @@ T = {"table": "policy_exposure"}
 ("reject-rate", "structural", "reject_rate", "fail", T, {}),
 ```
 
-**One added row, for the date limb only.** In the auditor's fixture both bad rows also carry a
-bad number, and the cast step runs first. Under a design that stops a row at its first failing
-step (option Q below), neither row ever reaches `parse_date`, so the 4-row fixture cannot show a
-date verdict. The reds therefore also run **the 4-row fixture plus `p5,1.0,80.0,2024-13-01`**
-(a good number and a bad date). This is stated as an addition, not a change to the auditor's
-input; every red names which of the two fixtures it uses.
+**One added row, `p5`, ruled into the fixture** (the 12:23:36 entry: *"the 4-row fixture + p5
+"2024-13-01""*). In the auditor's fixture both bad rows also carry a bad number, and the cast
+step runs first, so under the quarantine neither row reaches `parse_date` and the 4 rows alone
+cannot show a date verdict. **Every red below uses the five rows**: the auditor's four,
+verbatim, then
+
+```python
+b"p5,1.0,80.0,2024-13-01\n"                       # a good number and a bad date
+```
+
+On it: `p2` and `p3` are quarantined by the `cast` step (`claim_amount`), `p5` by the
+`parse_date` step (`start_date`); `p1` and `p4` are written. So `rows_read == 5`,
+`rows_rejected == 3` and `rows_written == 2`. The source has no genuinely empty cell, so after
+ingest `null_count` is 0 in every column.
 
 ## Evidence at `a3fc2e8d` (the owning code, read)
 
@@ -195,17 +211,16 @@ either):
 ## Goal
 
 A cell that is non-null in the source and does not survive a recipe `cast` or `parse_date`
-is **never written as a silent null**. What happens to it instead is DP-C1's ruling. Whatever
-the ruling, every such cell yields a **validation verdict**: a counted check, `fail` or `warn`
-per its declaration, so a version over a coerced cell cannot read `validated` without that
-verdict being passed or acknowledged (FR-46). The production Job path is fixed, not only the
-service function: what the Job handler passes is DP-C2's ruling. The four checks the
-12:02:46 entry names (`dtype_match`, `date_parsed`, `range`, `reject_rate`) are each either
-changed so they see the coercion, or shown by a guard test why they need not (DP-C3).
-
-Below, the tasks are written for the **recommended** options (C1-Q, C2-a, C3-ii). Where a
-different option is ruled, the "Per option" table in Decision points says which reds and
-tasks change; the lead asks for a re-cut delta if the change is larger than that table.
+is **never written as a silent null**. Its whole row is **quarantined** (DP-C1 (Q), ruled):
+the row's source text goes to the version's `_rejected` table, named by column, step and reason,
+and is counted in `rows_rejected`. The quarantine is **complete for each row**: no partially cast
+row, and no row derived from a quarantined one, is written. Every such cell yields a
+**validation verdict** at the declared severity of each rule that declares its column:
+`reject_rate`, `dtype_match` and `date_parsed` (DP-C3 (ii), ruled). So a version over a
+coerced cell cannot read `validated` unless that verdict passes or is acknowledged (FR-46), even
+when its Rule Set has no `reject_rate`. The Job handler is unchanged (DP-C2 (a), ruled). `range`
+is unchanged, and a guard test states why (DP-C3 (ii)). After ingest, a column's `null_count`
+equals the source's genuinely empty cells, never the bad-cell count.
 
 ## Acceptance Standard
 
@@ -222,52 +237,72 @@ slice's merge tree.
 3. **Spec first.** `git log --format=%s origin/main..<slice head> -- docs/specs/01-data-management.md`
    shows Task 3's dated clauses landing in a commit before or with the code, never after.
 4. **No silent null on the Job path (R1, limb (a), red on main).** Through a real
-   `dataset.ingest` Job over the 4-row fixture, the version's `policy_exposure` table has **no
-   null** in `claim_amount` or `start_date` that was non-null in the source; the version has a
-   `_rejected` table holding rows `p2` and `p3`, each carrying its source text
-   (`"np.float64(1.0)"`, `"abc"`) in `claim_amount`; `rows_read == 4`,
-   `rows_rejected == 2`, `rows_written == 2`. On main the first assert fails on the two nulls
-   (`null_count` 2 in `claim_amount`), with `rows_rejected == 0`. A failure from any other
-   cause is a plan defect.
-5. **The quarantine is filled by `pricing-core` (R2, red on main).** `apply_recipe` over an
-   all-`String` frame with one unparseable `cast` cell returns `.rejected` holding that row,
-   all-`String`, with the source text intact and `_reject_column`, `_reject_step` and
-   `_reject_reason` set; `.tables` no longer holds it. On main `.rejected is None`.
-6. **A later step cannot launder a coercion (R3, red on main).** The recipe
-   `[cast claim_amount→float64, fill_null claim_amount 0]` over the 4-row fixture quarantines
-   `p2` and `p3` at the cast; no `0.0` appears in the clean table for them. On main both rows
-   reach the clean table with `claim_amount == 0.0`.
-7. **Validation gives a verdict (R4, limb (b), red on main).** A `dataset.validate` Job over the
-   R1 version with the five approved rules reports overall **`fail`**:
-   `reject-rate` measures `rejected_rows == 2`, `rows_read == 4` and fails;
-   `dtype` measures `coerced_cells == {"claim_amount": 2}` and fails (C3-ii). Over the
-   4-row-plus-`p5` fixture, `datep` measures `coerced_cells == {"start_date": 1}` and fails.
-   On main the report is overall `pass` with all five rules passing, which is the auditor's
-   run. A matching `fail` from any other rule or cause is a plan defect.
-8. **The declared severity decides (R5, red on main).** With `dtype` declared `warn` instead
-   of `fail` (and `reject-rate` removed from the set), the report is overall `warn` and the
-   version cannot become `validated` until the warning is acknowledged (FR-46). On main it is
-   `pass`.
-9. **The guards stay green, at base and at head.**
-   - G1: a source cell left empty or written as one of `formats.py:120`'s null tokens is a
-     source null, not a coercion: it stays in the clean table as null, and no `_rejected` row
-     or `coerced_cells` count is made for it.
-   - G2: `test_data_jobs.py`'s existing recipe tests (`CAST_RECIPE`, `:57`) and
-     `test_ingestion.py:149-153` (a required-null reject) pass unchanged.
-   - G3: `correct_schema`'s refusal (`ingestion.py:436-449`) is unchanged; its tests pass.
-   - G4: `range` (`validate.py:694`) still ignores a genuine null (nulls are VR-STR-3's); a
-     test pins it, citing C3.
-   - G5: `rows_read == rows_written + rows_rejected` (`test_data_jobs.py:506`) holds for every
-     recipe without `explode_period`.
-   The LG records each as a guard.
-10. **The G2 probe gated the code (DP-G2).** The LG carries Task 0 Step 3's per-column output
-    for the WF-699 seed ingest verbatim, and the first code commit is after it. If any count is
-    non-zero, the LG records the STOP to the maintainer, and no code commit follows without the
-    maintainer's dated ruling.
-11. **One reject shape.** `git grep -nE '"_reject_(column|step)"' -- packages backend/src`
+   `dataset.ingest` Job (`execute_job`) over the five-row fixture, the version has a `_rejected`
+   table holding exactly `p2`, `p3` and `p5`, each with **every** column as source text
+   (`claim_amount` `"np.float64(1.0)"`, `"abc"`, `"80.0"`; `start_date` `"2024-02-30"`,
+   `"not-a-date"`, `"2024-13-01"`), with `_reject_column`/`_reject_step` `claim_amount`/`cast`
+   for `p2` and `p3`, and `start_date`/`parse_date` for `p5`. The `policy_exposure` table holds
+   exactly `p1` and `p4`. The `IngestionRunRow` has `rows_read == 5`, `rows_rejected == 3`,
+   `rows_written == 2`, and **`rows_read == rows_written + rows_rejected` is asserted** (the
+   12:23:36 entry). On main the first assert fails: there is no `_rejected` table. A failure
+   from any other cause is a plan defect.
+5. **After ingest, a null is a source null and nothing else (R6, red on main; the 12:23:36
+   entry's added assert).** Over the five-row fixture, the written table's
+   `null_count(claim_amount) == 0` and `null_count(start_date) == 0`: the source's genuinely
+   empty cells, of which it has none. The same test then ingests the fixture with `p1`'s
+   `claim_amount` replaced by `""`. It asserts `null_count(claim_amount) == 1`, which is that one
+   empty cell, never the bad-cell count. On main the first assert reads 2 for `claim_amount` and
+   3 for `start_date`, which are the bad-cell counts.
+6. **The quarantine is filled by `pricing-core`, completely (R2, red on main).** `apply_recipe`
+   over an all-`String` frame returns `.rejected` with every failing row as its **input** text,
+   and `.tables` without it. This holds for a `cast` failure and for a `parse_date` failure. It
+   also holds for a row whose first step succeeded and whose second failed: that row is
+   quarantined with its source text, not its step-1 cast value, so no partially cast row
+   survives. On main `.rejected is None`.
+7. **A later step cannot launder a coercion (R3, red on main).** Over the five-row fixture,
+   the recipe plus
+   `{"step": "fill_null", "params": {"column": "claim_amount", "value": 0}}` writes no row for
+   `p2`, `p3` or `p5`. On main `p2` and `p3` are written with `claim_amount == 0.0`.
+8. **Validation gives a verdict at the declared severity (R4, limb (b), red on main).** A
+   `dataset.validate` Job over the R1 version with the fixture's five rules, approved, reports
+   overall **`fail`**. Each of the three rules then fails as follows:
+   - `reject-rate`: `measured.rejected_rows == 3` and `measured.rows_read == 5`;
+   - `dtype`: `measured.coerced_cells == {"claim_amount": 2, "start_date": 1}`;
+   - `datep`: `measured.coerced_cells == {"start_date": 1}`.
+
+   On main the report is overall `pass`, with all five passing, as in the auditor's run. A
+   matching `fail` from another rule or cause is a plan defect.
+9. **Without `reject_rate`, the declared severity still decides (R5, red on main).** The same
+   version, with `reject-rate` left out of the Rule Set, `dtype` declared `warn` and `datep`
+   declared `warn`, reports overall `warn`. The version cannot move to `validated` until both
+   warnings are acknowledged (FR-46). With `dtype` declared `fail` instead, it reports `fail`.
+   On main both read `pass`.
+10. **The guards stay green, at base and at head.**
+    - G1: a source cell left empty, or written as one of `formats.py:120`'s null tokens, is a
+      source null and not a coercion. It is written as null, and makes no `_rejected` row and no
+      `coerced_cells` count.
+    - G2: `test_data_jobs.py`'s existing recipe tests (`CAST_RECIPE`, `:57`) and
+      `test_ingestion.py:149-153` (a required-null reject) pass unchanged.
+    - G3: `correct_schema`'s refusal (`ingestion.py:436-449`) is unchanged.
+    - G4, the `range` guard stated (DP-C3 (ii)): `range` (`validate.py:694`) still ignores a
+      genuine null. Under the quarantine, no coerced null reaches it, so its null-ignoring
+      cannot hide a coercion. A null in a column that must not be null is VR-STR-3's verdict. A
+      test pins this.
+    - G5: `rows_read == rows_written + rows_rejected` holds for every recipe without a
+      row-changing step (`filter_rows`, `deduplicate`, `explode_period`). Under those steps
+      `rows_written` counts what the steps wrote, so the identity cannot hold by definition. The
+      LG records which recipes it was asserted for.
+
+    The LG records each as a guard.
+11. **The G2 probe gated the code (DP-G2, binding).** The LG carries Task 0 Step 3's output
+    verbatim, one line per cast column for each of the two populations: all 678 013 freMTPL2
+    rows, and the seeded 20 000-row portfolio sample. The first code commit comes after it. If
+    any count is non-zero, the LG records the STOP to the maintainer, and no code commit follows
+    without the maintainer's dated ruling.
+12. **One reject shape.** `git grep -nE '"_reject_(column|step)"' -- packages backend/src`
     prints each literal once, as a constant beside `REJECT_REASON_COLUMN`
     (`pricing_core/data/ingest.py:242`); every other use imports it.
-12. **The gate is green on the merge tree.** Both halves of the `CLAUDE.md` §11 commands pass,
+13. **The gate is green on the merge tree.** Both halves of the `CLAUDE.md` §11 commands pass,
     named against `origin/main...<slice branch>`.
 
 ## Global Constraints
@@ -277,9 +312,10 @@ slice's merge tree.
   never raises `PlatformError`.
 - **A coercion is defined once:** a cell non-null before a `cast` or `parse_date` step and null
   after it. A source null is never a coercion (G1).
-- **Evidence is kept.** A quarantined row keeps its source text (`01` FR-32: *"rather than
-  dropped silently"*); the `_rejected` table is all-`String`, and the row is taken from the
-  frame **before** the step that failed it.
+- **Evidence is kept, and the quarantine is complete for each row** (the 12:23:36 entry). A
+  quarantined row keeps its **source** text (`01` FR-32: *"rather than dropped silently"*). It is
+  taken from `apply_recipe`'s input, never from a partially cast intermediate frame, and the
+  `_rejected` table is all-`String`. No row derived from a quarantined source row is written.
 - **FR-32's wording is not changed.** The clause Task 3 adds is a dated amendment beside it;
   `ingest.reject_rate` keeps its threshold meaning.
 - **No money becomes a float on the way.** The fixture's `claim_amount → float64` is the
@@ -309,17 +345,18 @@ unless it matches `^-?\d+$`, and failing a `float` cast unless it matches a deci
 exponent form. Result:
 `{'ClaimNb': 0, 'VehPower': 0, 'VehAge': 0, 'DrivAge': 0, 'BonusMalus': 0, 'Density': 0}`
 non-integer values, and `exposure_nonfloat 0`. **This is a proxy for Polars' own
-`String → Int64` parse, not the parse itself**, which is why Task 0 Step 3 re-measures it
-through `apply_recipe`'s own cast with `strict=True` per column. `claim_amount_minor` is
+`String → Int64` parse, not the parse itself.** It is noted, not relied on (the 12:23:36 entry).
+Task 0 Step 3 re-counts through Polars, with the recipe's own cast, over the whole book and the
+seeded 20 000-row portfolio sample, and that count is binding. `claim_amount_minor` is
 computed by the seed itself as an `Int64` (`seed.py:141`) before it is written as text, so its
 cells are integer strings. One side fact, not this plan's scope: `IDpol` holds one value
 written `1e+05`, but `policy_id` is never cast, so nothing is coerced.
 
-So, on that measurement, the fix **changes nothing on G2**: no row is quarantined, no
+So, on that proxy measurement, the fix **would change nothing on G2**: no row is quarantined, no
 `coerced_cells` count is non-zero, and the seed's rule set (`seed.py:254` onward) sees the same
-tables. If the probe finds any non-zero count, that column is being nulled silently on main
-today, and that is a STOP to the maintainer before code (DP-G2), because it would change G2's
-data.
+tables. If the binding probe finds any non-zero count in either population, that column is
+being nulled silently on main today, and that is a STOP to the maintainer before code (DP-G2,
+ruled binding), because it would change the A-4/WF-699 seed's rows.
 
 **SL-1543.** Its fixture once relied on the nulling: the 11:52:51 entry accepted the cause
 (*"test_demo_peril_structure.py:81 wrote "np.float64(…)""*) and the fix-forward `@f52906ac`.
@@ -338,35 +375,35 @@ on a cast nulling a value: the `strict=False` hits under `backend/tests` and
 
 ## Decision points
 
+Every row is ruled by the maintainer's (by delegation) entry "2026-10-14 12:23:36 BST", quoted
+in full under Authority. The options and recommendations are kept as they were weighed. The
+"Resolved by" cell carries the ruling.
+
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-C1 | What happens to a source cell that is non-null and does not survive a recipe `cast` or `parse_date`? | **(R) Refuse:** the ingest fails with no version, in the form `correct_schema` already uses (`ingestion.py:436-449`); `apply_recipe` raises `RecipeError` naming the column, the step and the count. **(Q) Quarantine:** the step moves the row, as it was before the step and all-`String`, into `PreparationResult.rejected` (`prepare.py:85`, declared and never filled) with `_reject_column`, `_reject_step` and `_reject_reason`; the ingest stores it in the version's `_rejected` table with the rows `partition_rejects` rejects, and counts it in `rows_rejected` and the sample (FR-31). **(C) Counted coercion:** the cell stays null in the row; the version carries a `_coercions` table (row key, column, step, source text), and checks read it. | **(Q).** FR-32 says these rows are *"rejected to a quarantine table stored with the version rather than dropped silently. A version with rejects can still be validated; a configurable rule (`ingest.reject_rate`) fails it above a threshold"*. Q is that sentence built: the table (`01:285`), its endpoint (`01:874`), its drawer (`01:1046`), its rule (VR-STR-9) and its result field (`01:956`) all exist, and only the filling is missing. It keeps the source text as evidence, and no null reaches a model. **(R)** gives no version, so no validation verdict: it meets the 12:02:46 entry's *"a coerced cell must produce a validation VERDICT"* only vacuously, and it is what FR-32's second sentence and `formats.py:10-14` (*"Failing the whole file because one row has a bad date would discard 4.8 million good rows to punish seventeen"*) argue against. **(C)** keeps the row, so its exposure stays in the version, but the null still reaches modelling whenever the rule is `warn` and acknowledged or absent. It also needs a second quarantine-like table that FR-32 does not name. Q's cost: a row stops at its **first** failing step, so it is counted once, under that step's column. This is why the reds add `p5` (see "The fixture"). C would count every cell. | design | **yes** — Tasks 1 to 6 are written for Q | |
-| DP-C2 | The Job handler (`data_handlers.py:140-149`) never passes `required_non_null`. Does this slice make it pass one, and from where? | **(a)** No: under Q a coercion is quarantined whatever the column, so the coercion limb no longer depends on `required_non_null`; a **source** null in a column that must not be null is VR-STR-3's verdict (`not_null`, `validate.py:179`), as today. **(b)** Add an optional `required_non_null` list to the ingest Job's parameters and the ingest route's request body (`api/datasets.py:556`), passed through at `:140-149`; this is a contract change, with `docs/contracts/` regenerated. **(c)** Derive it from a declared schema; no field exists to derive it from (`DataDictionaryEntry`, `model_schema/datasets.py:140-155`, has no `nullable` or `required`), so this means a new field and a spec change first. | **(a).** FR-32's *"unparseable dates in a required date column"* is, under Q, a subset of what is quarantined: every unparseable cell is, required or not. A source-null required cell is not unparseable; it is a nullability fact, and VR-STR-3 already gives it a verdict at its declared severity. (b) and (c) add a public surface to serve a case Q already covers. Under (R) or (C) this answer does not change. The FR-32 clause (Task 3) records that the Job path quarantines by coercion, not by a required list. | design | no — default (a) is applied until ruled; Task 3's clause names it | |
-| DP-C3 | Which checks carry the verdict for a quarantined coercion? `reject_rate` alone gives none when a Rule Set omits it, and no requirement puts it in every Rule Set (FR-45, `01:107`). | **(i)** `reject_rate` (VR-STR-9) only, now reading a filled `_rejected`. **(ii)** (i), plus `dtype_match` (VR-STR-2) and `date_parsed` (VR-STR-5) each count the `_rejected` rows whose `_reject_column` is a column they declare and whose `_reject_step` is `cast` or `parse_date`. Each reports the count as `measured.coerced_cells` and makes it `violating_rows` at the rule's declared severity. `range` is unchanged, with a guard (G4): under Q no coerced null reaches it, and a source null is VR-STR-3's. **(iii)** (ii), with a `max_coerced_fraction` parameter (default 0) on both checks. | **(ii).** VR-STR-2's own text is *"(no silent coercion)"*, so a coercion of a declared column is its subject; VR-STR-5's is *"no fallback-to-string"*. The 12:02:46 entry names both as blind. With (ii), any Rule Set that declares the column's dtype or date gives a verdict, *"fail or warn per its declaration"*: an actuary who accepts a few rejects declares the rule `warn` and acknowledges it (FR-46). FR-32's threshold stays where FR-32 puts it, on `reject_rate`. (iii) adds a knob that FR-32 already provides through `reject_rate`. | design | **yes** — Task 6 is written for (ii) | |
-| DP-G2 | Does the fix change G2's data? The seed's `cast` (`seed.py:69-78`) runs on every G2 ingest. | **The probe decides.** Task 0 Step 3 runs the seed's own recipe over the pinned freMTPL2 file through `apply_recipe`'s cast, column by column with `strict=True`, and prints each column's count of non-null cells that do not survive. All zero: no G2 interaction, and the slice proceeds. Any non-zero: STOP to the maintainer before code. | The planner's proxy measurement (see "The G2 interaction") found zero on every cast column. The probe repeats it through Polars' own parse, because a regex is not the parser. | scope | yes, until the probe is clean or the maintainer rules on it | |
+| DP-C1 | What happens to a source cell that is non-null and does not survive a recipe `cast` or `parse_date`? | **(R) Refuse:** the ingest fails and makes no version, in the form `correct_schema` already uses (`ingestion.py:436-449`). **(Q) Quarantine:** the row's source text goes into `PreparationResult.rejected` (`prepare.py:85`, declared and never filled), then into the version's `_rejected` table with `_reject_column`, `_reject_step` and `_reject_reason`, and is counted in `rows_rejected` (FR-31). **(C) Counted coercion:** the cell stays null in the row, and a `_coercions` table records it. | **(Q).** It is FR-32's own mechanism, which exists unfilled: the table (`01:285`), its endpoint (`01:874`), its drawer (`01:1046`), VR-STR-9 and the result field (`01:956`). (R) gives no version to judge, and FR-32 says *"a version with rejects can still be validated"*. Under (C) the null still reaches modelling. | design | no — ruled | **Ruled (Q)**, 2026-10-14, by the maintainer (by delegation), entry 2026-10-14 12:23:36 BST. (R) and (C) were refused. The quarantine is complete for each row, and `rows_read == rows_written + rows_rejected` is asserted. |
+| DP-C2 | The Job handler (`data_handlers.py:140-149`) never passes `required_non_null`. Does this slice make it pass one, and from where? | **(a)** No change: under Q every coercion is quarantined, whatever the column. A **source** null in a column that must not be null is VR-STR-3's verdict (`not_null`, `validate.py:179`). **(b)** Add an optional list to the Job parameters and the route body (`api/datasets.py:556`); this is a contract change. **(c)** Derive it from a declared schema. No field exists to derive it from (`DataDictionaryEntry`, `model_schema/datasets.py:140-155`). | **(a).** FR-32's *"unparseable dates in a required date column"* is a subset of what Q quarantines. | design | no — ruled | **Ruled (a)**, 2026-10-14, by the maintainer (by delegation), entry 2026-10-14 12:23:36 BST: *"no handler change (under Q every coercion is quarantined)"*. |
+| DP-C3 | Which checks carry the verdict for a quarantined coercion? `reject_rate` alone gives none when a Rule Set omits it, and FR-45 (`01:107`) does not require it. | **(i)** `reject_rate` (VR-STR-9) only. **(ii)** (i), plus `dtype_match` (VR-STR-2) and `date_parsed` (VR-STR-5): each reports `measured.coerced_cells` for the columns it declares, at its declared severity. `range` is unchanged, with a stated guard. **(iii)** (ii), with a tolerance parameter. | **(ii).** VR-STR-2's own text is *"(no silent coercion)"*. `warn` plus an FR-46 acknowledgement is the user's knob. | design | no — ruled | **Ruled (ii)**, 2026-10-14, by the maintainer (by delegation), entry 2026-10-14 12:23:36 BST. `coerced_cells` = the cells quarantined because of that column. The verdict holds without `reject_rate`. The `range` guard is stated (G4). (iii) is not taken now. |
+| DP-G2 | Does the fix change G2's data? The seed's `cast` (`seed.py:69-78`) runs on every G2 ingest. | **The probe decides.** Task 0 Step 3 counts, through Polars and with the recipe's own cast, the cells the cast would quarantine. It counts over all 678 013 freMTPL2 rows and over the seeded 20 000-row portfolio sample. All zero: no G2 interaction. Any non-zero: STOP. | The planner's proxy regex count was 0 on every cast column. It is noted, not relied on. | scope | **yes, binding: blocks code until the probe is clean or the maintainer rules on it** | **Ruled binding**, 2026-10-14, by the maintainer (by delegation), entry 2026-10-14 12:23:36 BST, *"G2 condition (binding)"*. A non-zero count is a STOP to the maintainer before code. |
 
-**Per option: what changes if DP-C1 is ruled other than (Q).**
+**The refused options, kept as the record of what was weighed** (DP-C1). The table below says
+what would have changed under each one. It is not a live alternative.
 
-| Item | (Q), as written | (R) Refuse | (C) Counted coercion |
+| Item | (Q), ruled | (R) Refuse, refused | (C) Counted coercion, refused |
 |---|---|---|---|
-| R1 | the version has `_rejected` with `p2`, `p3`; clean table has no coerced null | the ingest Job ends `failed`, error code `VALIDATION_FAILED` (`ingestion.py:172-178`'s), detail naming `claim_amount`, `cast` and `2`; no Dataset Version row | the version keeps 4 rows; a `_coercions` table holds 2 rows for `claim_amount` and 2 for `start_date`, each with its source text |
-| R2 | `.rejected` holds the row | `apply_recipe` raises `RecipeError` naming the column and the count | `.stats["coercions"]` and a coercions frame hold the cell |
-| R3 | `fill_null` cannot reach the quarantined row | the refusal fires before `fill_null` | the `_coercions` row stays, though the cell is filled with `0`; the verdict still fires |
-| R4, R5 | `reject-rate`, `dtype`, `datep` give the verdict | void: there is no version to validate | `dtype` and `datep` read `_coercions` (DP-C3 (ii) then reads `_coercions`); `reject-rate` stays 0 |
-| p5 row | needed for `datep` | not needed | not needed |
-| Write set | as below | no `validate.py`, no `ingest.py` constants; `ingestion.py` maps the error | plus the `_coercions` table in `01` §4.2 |
+| R1 | `_rejected` holds `p2`, `p3` and `p5`, and the clean table holds `p1` and `p4` | the ingest Job fails and makes no version | the version keeps 5 rows, and a `_coercions` table holds the cells |
+| R2 | `.rejected` holds the rows | `apply_recipe` raises `RecipeError` | a coercions frame holds the cells |
+| R4, R5 | `reject-rate`, `dtype` and `datep` give the verdict | void: no version | `dtype` and `datep` read `_coercions` |
 
-A different ruling is a re-cut delta when it changes more than this table. Every DP row is
-**open**: no ruling exists on this plan's subject after the 12:02:46 entry
-(`to-lead.md` read through its last entry, "2026-10-14 12:05:33 BST", none of whose bullets is
-about FD 8040). The plan is `draft` and stays so until DP-C1 and DP-C3 have a resolver
-(`document-ids.md` §1.7). No status is set here.
+Every decision point is ruled. DP-G2's ruling leaves one gate inside the slice, Task 0 Step 3's
+probe, which stops the slice, not the plan. This delta stays `draft` here. It is frozen at its
+merge and made `active` by a dated line, and no status is set here.
 
 ## Tasks
 
 | Order | Slice | Tasks | Requirements (each id) | Activation needs | Lane |
 |---|---|---|---|---|---|
-| 1 | SL-8043 — FD 8040: a recipe cell that does not parse is never silently nulled, and validation gives it a verdict | Tasks 0 to 7 below | `01` §3.1: FR-32 (the quarantine, and the Job path); `01` §4.4: VR-STR-2, VR-STR-5 and VR-STR-9 (catalogue rules; the checks that give the verdict); `01` §3.2: FR-35 (the steps whose behaviour changes); read only: FR-31, FR-45, FR-46, VR-STR-3 | FD 8040 minted; DP-C1 and DP-C3 ruled (DP-C2's default applied unless ruled); this delta minted and made `active` by a dated line; Task 0 Step 3's G2 probe clean, or the maintainer's ruling on it; a free build lane | 1 |
+| 1 | SL-8043 — FD 8040: a recipe cell that does not parse is never silently nulled, and validation gives it a verdict | Tasks 0 to 7 below | `01` §3.1: FR-32 (the quarantine, and the Job path); `01` §4.4: VR-STR-2, VR-STR-5 and VR-STR-9 (catalogue rules; the checks that give the verdict); `01` §3.2: FR-35 (the steps whose behaviour changes); read only: FR-31, FR-45, FR-46, VR-STR-3 | FD 8040 minted; every DP ruled — MET, by the maintainer's (by delegation) entry "2026-10-14 12:23:36 BST"; this delta minted and made `active` by a dated line; Task 0 Step 3's G2 probe clean on both populations, or the maintainer's ruling on it; a free build lane | 1 |
 
 ### Task 0 — re-read at the base, enumerate, and probe (convention 4)
 
@@ -382,15 +419,25 @@ about FD 8040). The plan is `draft` and stays so until DP-C1 and DP-C3 have a re
     Known at this tree: `validate.py:404-409`, `ingestion.py:204-211`,
     `dislocation_runs.py:170`, `ingest.py:242` and its uses. Each reader must accept the two
     new columns.
-- [ ] **Step 3 — the G2 probe (DP-G2).** Before any code, with a throwaway script under the job's
-  tmp directory (never committed): read `examples/fremtpl2/data/freMTPL2freq.arff` through
-  `examples/fremtpl2/arff.py`'s `to_csv`, then `app.data.formats.read_tabular`, then
-  `normalise_columns` and the seed's `rename` step. For each column of
-  `examples/fremtpl2/seed.py`'s `NUMERIC`, print the number of cells that are non-null before
-  `pl.col(c).cast(<dtype>, strict=False)` and null after it. Print one line per column. All
-  zero: record the output verbatim in the LG and proceed. **Any non-zero: STOP to the lead for
-  the maintainer before code.**
-- [ ] **Step 4.** Re-read `to-lead.md` from "2026-10-14 12:05:33 BST" on, for any ruling on
+- [ ] **Step 3 — the G2 probe (DP-G2, binding; the 12:23:36 entry).** Run this before any code,
+  with a throwaway script under the job's tmp directory that is never committed. It counts
+  **through Polars, with the recipe's own cast**, over two populations:
+  - **(i)** the whole book, the bytes `examples/fremtpl2/seed.py`'s `build_csv(None)` (`:121`)
+    makes. It must report 678 013 rows read, and a different row count is itself a STOP;
+  - **(ii)** the seeded portfolio sample, the bytes `build_portfolio_csv()` (`:170`) makes. It
+    must report 20 000 rows (`PORTFOLIO_ROWS`, `:88`).
+
+  For each population, read the bytes with `app.data.formats.read_tabular`, apply
+  `normalise_columns`, then run `pricing_core.data.prepare.apply_recipe` with the seed's own
+  `recipe(drop_implausible_exposure=False)`, using the **base tree's** code. For each column of
+  `NUMERIC` (`:69-78`), print the number of cells that are non-null before the `cast` step and
+  null after it. Print one line per population and column.
+  - **All zero:** record the output verbatim in the LG and proceed.
+  - **Any non-zero:** STOP to the lead for the maintainer before code. That count would change
+    the A-4/WF-699 seed's rows.
+
+  The planner's proxy count (regex, "The G2 interaction") is not evidence for this step.
+- [ ] **Step 4.** Re-read `to-lead.md` from "2026-10-14 12:23:36 BST" on, for any ruling on
   this plan's subject, and name each one at every site it operates (convention 5).
 
 ### Task 1 — limb (a)'s reds, on main
@@ -398,83 +445,115 @@ about FD 8040). The plan is `draft` and stays so until DP-C1 and DP-C3 have a re
 **Files:** create `backend/tests/test_ingest_coercion.py`; modify
 `packages/pricing-core/tests/test_prepare.py`.
 
-- [ ] **R1** (`test_ingest_coercion.py`, `@pytest.mark.req("FR-32")`). Seed a workspace,
-  dataset and actor in the form of `test_data_jobs.py:119-165` (`_seed_dataset_and_rules`).
-  Do not import its private helpers; mirror them, because `_ingest` (`:167-199`) hard-codes
-  `CAST_RECIPE`. Put the fixture's `CSV` in the blob store and submit
-  `JobKind.DATASET_INGEST` with `"recipe": RECIPE` (the fixture's). Run `execute_job`. Assert,
-  in this order:
-  1. the `policy_exposure` parquet has `null_count` 0 in `claim_amount` and `start_date`;
-  2. the version's `tables` include `_rejected`, holding `policy_id` `p2` and `p3`, with
-     `claim_amount` `"np.float64(1.0)"` and `"abc"` (the source text);
-  3. for both rows `_reject_column == "claim_amount"` and `_reject_step == "cast"`;
-  4. the `IngestionRunRow` has `rows_read == 4`, `rows_rejected == 2` and `rows_written == 2`.
+Every red in this task and the next uses **the five-row fixture** ("The fixture") and the
+auditor's `RECIPE`, through `execute_job`, as the 12:23:36 entry orders.
 
-  **Expected on main:** assert 1 fails on `claim_amount`'s `null_count` of 2, the auditor's
-  output. Any other first failure is a plan defect.
-- [ ] **R2** (`test_prepare.py`, `@pytest.mark.req("FR-32")`). Call `apply_recipe` over
-  `pl.DataFrame({"k": ["a", "b"], "x": ["1.5", "abc"]})`, all `String`, with
-  `[{"step": "cast", "params": {"columns": {"x": "float64"}}}]`. Assert `.tables[...]` holds
-  only `k == "a"`, and `.rejected` holds `k == "b"` with `x == "abc"` and the three reject
-  columns. Run the same for `parse_date` with `["2024-01-15", "2024-02-30"]` and
-  `"%Y-%m-%d"`. **Expected on main:** `.rejected is None`.
-- [ ] **R3** (`test_ingest_coercion.py`). R1's fixture with
-  `RECIPE + [{"step": "fill_null", "params": {"column": "claim_amount", "value": 0}}]`. The
-  params are the ones the `fill_null` case reads (`prepare.py:161-164`). Assert no
-  row of the clean table is `p2` or `p3`. **Expected on main:** both rows are present with
+- [ ] **R1** (`test_ingest_coercion.py`, `@pytest.mark.req("FR-32")`).
+  - Setup: seed a workspace, dataset and actor in the form of `test_data_jobs.py:119-165`
+    (`_seed_dataset_and_rules`). Mirror its private helpers rather than importing them, because
+    `_ingest` (`:167-199`) hard-codes `CAST_RECIPE`.
+  - Run: put the five-row `CSV` in the blob store, submit `JobKind.DATASET_INGEST` with
+    `"recipe": RECIPE`, and run `execute_job`.
+  - Assert, in this order:
+    1. the version's `tables` include `_rejected`;
+    2. `_rejected` holds exactly `p2`, `p3` and `p5`, every column as source text, with
+       `_reject_column`/`_reject_step` as Acceptance 4 lists;
+    3. `policy_exposure` holds exactly `p1` and `p4`;
+    4. `rows_read == 5`, `rows_rejected == 3`, `rows_written == 2`, and
+       `rows_read == rows_written + rows_rejected`.
+
+  **Expected on main:** assert 1 fails, because the version's only table is `policy_exposure`.
+  Any other first failure is a plan defect.
+- [ ] **R6, the old behaviour cannot survive** (`test_ingest_coercion.py`,
+  `@pytest.mark.req("FR-32")`; the 12:23:36 entry's added assert).
+  - Ingest as in R1. Assert `null_count` is 0 for `claim_amount` and 0 for `start_date` in the
+    written parquet. The fixture has no genuinely empty cell.
+  - Then ingest the fixture again with `p1`'s `claim_amount` replaced by `""`. Assert
+    `null_count(claim_amount) == 1`, which is the source's one empty cell.
+
+  **Expected on main:** the first assert reads `claim_amount` 2 and `start_date` 3, the
+  bad-cell counts. The four nulls in the auditor's run were this.
+- [ ] **R2** (`test_prepare.py`, `@pytest.mark.req("FR-32")`). Three cases, each over an
+  all-`String` `pl.DataFrame` with a key column `k`:
+  - a `cast` of `x` to `float64` over `["1.5", "abc"]`;
+  - a `parse_date` of `d` with `"%Y-%m-%d"` over `["2024-01-15", "2024-02-30"]`;
+  - **completeness:** a recipe `[cast x→float64, parse_date d]` over two rows: `k="a"` with
+    `x="1.5"` and `d="2024-01-15"`, and `k="b"` with `x="2.5"` and `d="2024-13-01"`. `b`'s cast
+    succeeds and its date fails.
+
+  Assert, in each case, that `.tables[...]` holds only the good row, and that `.rejected` holds
+  the bad row with every column as its **input** text and the three reject columns. In the
+  completeness case `.rejected` has `x == "2.5"`, the source text, not a cast value.
+  **Expected on main:** `.rejected is None`.
+- [ ] **R3** (`test_ingest_coercion.py`). The five-row fixture with
+  `RECIPE + [{"step": "fill_null", "params": {"column": "claim_amount", "value": 0}}]`; the
+  params are the ones the `fill_null` case reads (`prepare.py:161-164`). Assert that no row of
+  the clean table is `p2`, `p3` or `p5`. **Expected on main:** `p2` and `p3` are written with
   `claim_amount == 0.0`.
 - [ ] **G1** (`test_prepare.py` and `test_ingest_coercion.py`). A cell `""` or `"NA"` in
-  `claim_amount` is null **before** the cast. It stays in the clean table as null and makes
-  no reject row. This is green at base and at head.
+  `claim_amount` is null **before** the cast. It is written as null and makes no reject row.
+  This is green at base and at head.
 - [ ] Run each file with `scripts/run-small.sh` at the base, and record each red line and its
   cause in the LG.
 
 ### Task 2 — limb (b)'s reds, on main
 
-**Files:** `backend/tests/test_ingest_coercion.py`.
+**Files:** `backend/tests/test_ingest_coercion.py`, `packages/pricing-core/tests/test_validate.py`.
 
-- [ ] **R4** (`@pytest.mark.req("FR-32")`, `@pytest.mark.req("FR-46")`). Ingest as in R1. Then
-  create the fixture's five rules, approve them through `backend/tests/approved_rows.py:78`
-  (`add_approved`), as `test_data_jobs.py` does, and attach them as the dataset's Rule Set.
-  Submit `JobKind.DATASET_VALIDATE`, and read the report. Assert, in this order:
-  1. the overall outcome is `fail`;
-  2. `reject-rate` fails with `measured.rejected_rows == 2` and `measured.rows_read == 4`;
-  3. `dtype` fails with `measured.coerced_cells == {"claim_amount": 2}` (DP-C3 (ii)).
+- [ ] **R4** (`@pytest.mark.req("FR-32")`, `@pytest.mark.req("FR-46")`).
+  - Setup: ingest as in R1. Create the fixture's five rules and approve them through
+    `backend/tests/approved_rows.py:78` (`add_approved`), as `test_data_jobs.py` does. Attach
+    them as the dataset's Rule Set.
+  - Run: submit `JobKind.DATASET_VALIDATE` through `execute_job`, and read the report.
+  - Assert, in this order:
+    1. the overall outcome is `fail`;
+    2. `reject-rate` fails with `measured.rejected_rows == 3` and `measured.rows_read == 5`;
+    3. `dtype` fails with `measured.coerced_cells == {"claim_amount": 2, "start_date": 1}`;
+    4. `datep` fails with `measured.coerced_cells == {"start_date": 1}`.
 
-  Then repeat over the 4-row-plus-`p5` fixture, and assert that `datep` fails with
-  `measured.coerced_cells == {"start_date": 1}`.
-  **Expected on main:** assert 1 fails with overall `pass`, all five rules passing, as in the
-  auditor's run.
-- [ ] **R5** (`@pytest.mark.req("FR-46")`). As R4, but declare `dtype` with severity `warn` and
-  leave `reject-rate` out of the set. Assert the overall outcome is `warn`, and that the
-  promotion to `validated` is refused until the warning is acknowledged. Mirror the existing
-  acknowledgement test; find it with `git grep -n "acknowledg" -- backend/tests` and do not
-  invent its helpers. **Expected on main:** overall `pass`.
-- [ ] **G4** (`packages/pricing-core/tests/test_validate.py`). `range` over a column with a
-  source null and in-range values reports `violating_rows == 0`. This pins
-  `validate.py:694`'s `is_not_null()` as intended (DP-C3 (ii)). It is green at base and at
-  head.
+  **Expected on main:** assert 1 fails. The report is overall `pass` with all five rules
+  passing, as in the auditor's run.
+- [ ] **R5** (`@pytest.mark.req("FR-46")`). The R1 version with `reject-rate` **left out** of
+  the Rule Set, and `dtype` and `datep` declared `warn`.
+  - Assert the overall outcome is `warn`.
+  - Assert that the promotion to `validated` is refused until both warnings are acknowledged.
+    Mirror the existing acknowledgement test; find it with
+    `git grep -n "acknowledg" -- backend/tests`, and do not invent its helpers.
+  - Then, with `dtype` declared `fail`, assert the overall outcome is `fail`.
+
+  **Expected on main:** overall `pass` both times.
+- [ ] **G4, the `range` guard stated** (`packages/pricing-core/tests/test_validate.py`). `range`
+  over a column with a source null and in-range values reports `violating_rows == 0`. The
+  test's docstring says why that is safe: under the quarantine no coerced null reaches `range`
+  (DP-C3 (ii)), and a null in a column that must not be null is VR-STR-3's verdict. This is
+  green at base and at head.
 
 ### Task 3 — the spec (`spec-change`)
 
 **Files:** `docs/specs/01-data-management.md`.
 
 - [ ] One dated clause on **FR-32** (`:84`), citing the maintainer's (by delegation) entries
-  "2026-10-14 12:02:46 BST" item (1) and the DP-C1 and DP-C3 rulings. It says:
+  "2026-10-14 12:02:46 BST" item (1) and "2026-10-14 12:23:36 BST" (DP-C1 (Q), DP-C2 (a)).
+  It says:
   - a non-null source cell that does not survive a recipe `cast` or `parse_date` is a row
     *"that cannot be parsed"*;
-  - the row goes to the quarantine table as it was before the step, as text, with the column
-    and the step named;
+  - the whole row goes to the quarantine table as its source text, with the column and the
+    step named. The quarantine is complete for each row: no partially cast row, and no row
+    derived from it, is written;
+  - `rows_read == rows_written + rows_rejected` for a recipe without a row-changing step;
   - this holds on the Job path whatever columns are required (DP-C2 (a)).
   
   FR-32's sentence is not edited.
 - [ ] Dated notes on the **VR-STR-2** row (`:392`) and the **VR-STR-5** row (`:395`): each
-  counts the quarantined coercions of the columns it declares (`measured.coerced_cells`),
-  violating at its declared severity (DP-C3 (ii)).
+  counts the quarantined coercions of the columns it declares (`measured.coerced_cells`, the
+  cells quarantined because of that column), violating at its declared severity, whether or not
+  the Rule Set carries `reject_rate` (DP-C3 (ii), the 12:23:36 entry). There is no tolerance
+  parameter.
 - [ ] `§4.2`: the `_rejected` entry (`:285`) names its three reason columns, `_reject_reason`,
   `_reject_column` and `_reject_step`, and states that its columns are text.
-- [ ] `§5.2`: one dated note at `apply_recipe` (`:952-956`): `.rejected` is now filled, with
-  rows quarantined at the step that failed them. The signature is unchanged.
+- [ ] `§5.2`: one dated note at `apply_recipe` (`:952-956`): `.rejected` is now filled with
+  each quarantined row's source text, named by the step that failed it. The signature is
+  unchanged.
 - [ ] No requirement id is added, renumbered or struck. No new term is used, so `00` §2 is
   unchanged. If the executor finds that one is needed, the glossary entry comes first.
 
@@ -488,16 +567,26 @@ about FD 8040). The plan is `draft` and stays so until DP-C1 and DP-C3 have a re
   `REJECT_STEP_COLUMN: Final = "_reject_step"`, and export them. `partition_rejects` fills them
   for its rows: the column it found null, and the step `"required_non_null"`. Its rejected
   frame is otherwise unchanged.
-- [ ] In `prepare.py`, the `cast` and `parse_date` cases (`:134-144`) mark each row where a
-  named column is non-null before the step and null after it. Those rows leave the table.
-  Each one is appended to a running rejected frame, taken from the frame **before** the step
-  with every column cast to `pl.String`, plus the three reject columns. `_reject_reason` reads
-  `"<column>: <step> could not parse <value!r> as <dtype or format>"`. When one step fails
-  several columns in one row, the row is quarantined once, under the first failing column in
-  the step's declared order.
+- [ ] **The quarantine is complete for each row** (the 12:23:36 entry). On entry,
+  `apply_recipe` keeps its input frames and adds a private row index, `_source_row`, to each
+  working table. Normalised source columns never start with `_` (`ingest.py:240-241`), so the
+  name cannot collide. Every step carries the index through. A row that a later step duplicates,
+  such as `explode_period` or a join, keeps its source's index.
+- [ ] In `prepare.py`, the `cast` and `parse_date` cases (`:134-144`) find each row where a named
+  column is non-null before the step and null after it. For each such row:
+  - its `_source_row` is quarantined;
+  - **every** working row carrying that index leaves the table;
+  - the quarantined row is taken from the **input** frame by index, with every column cast to
+    `pl.String` (the source text, never a step-1 cast value), plus the three reject columns.
+  
+  `_reject_reason` reads `"<column>: <step> could not parse <value!r> as <dtype or format>"`,
+  where `<value>` is the source text. When one step fails several columns in one row, the row is
+  quarantined once, under the first failing column in the step's declared order. `_source_row`
+  is dropped from every frame before `apply_recipe` returns.
 - [ ] `apply_recipe` returns `PreparationResult(tables=..., rejected=<the frame, or None when
   empty>, stats=...)`. `stats["steps"]` gains `rows_rejected` per step.
-- [ ] R2 and G1 (`test_prepare.py`) are green, and `test_ingest.py` is green unchanged.
+- [ ] R2, including its completeness case, and G1 (`test_prepare.py`) are green, and
+  `test_ingest.py` is green unchanged.
 
 ### Task 5 — limb (a) on the Job path
 
@@ -507,12 +596,14 @@ about FD 8040). The plan is `draft` and stays so until DP-C1 and DP-C3 have a re
 - [ ] At `:186-211`, the `_rejected` table is the recipe's rejected rows followed by
   `partition.rejected`, each cast to all-`String`. Concatenate with
   `pl.concat(..., how="diagonal")`, so a column present in one and absent in the other is
-  null. `rows_rejected` (`:246`), `reject_sample` (`:247`) and the totals (`:267`) count both.
-  `rows_read` stays the source row count, as at `:162`.
+  null. `rows_rejected` (`:246`), `reject_sample` (`:247`) and the totals (`:267`) count both,
+  as source rows. `rows_read` stays the source row count, as at `:162`. So
+  `rows_read == rows_written + rows_rejected` holds for a recipe without a row-changing step.
+  R1 asserts it on the fixture, and G5 on the existing recipe tests (the 12:23:36 entry).
 - [ ] `correct_schema` (`:363-449`) is not changed (G3). Its refusal is the right answer there,
   because a correction has no quarantine.
-- [ ] `data_handlers.py:140-149` is not changed (DP-C2 (a)).
-- [ ] R1 and R3 are green; G1, G2, G3 and G5 are green.
+- [ ] `data_handlers.py:140-149` is not changed (DP-C2 (a), ruled).
+- [ ] R1, R3 and R6 are green; G1, G2, G3 and G5 are green.
 
 ### Task 6 — limb (b) in validation
 
@@ -520,13 +611,15 @@ about FD 8040). The plan is `draft` and stays so until DP-C1 and DP-C3 have a re
 
 - [ ] One private helper beside `_reject_rate` (`:394`). It reads the Rule's `_rejected`
   table, in the way `:408` does, and returns `{column: count}` over rows whose
-  `_reject_step` is in `{"cast", "parse_date"}`. It imports the constants from `ingest.py`.
+  `_reject_step` is in `{"cast", "parse_date"}`, keyed by `_reject_column`. That is *"the cells
+  quarantined because of that column"* (the 12:23:36 entry). It imports the constants from `ingest.py`.
 - [ ] `dtype_match` (`:258-292`) counts, for each declared column, the helper's value as
   `measured["coerced_cells"]`, listing only the columns with a non-zero count, so that a clean
   version reports `{}`. Its `violating_rows` becomes the mismatched columns **plus** the
   coerced cells, and `detail` names both. `date_parsed` (`:295-321`) does the same for its
   declared date columns.
-- [ ] `range` is unchanged (G4). `reject_rate` is unchanged: a filled `_rejected` is its fix.
+- [ ] `range` is unchanged, and its guard is stated (G4). `reject_rate` is unchanged: a filled
+  `_rejected` is its fix. No tolerance parameter is added (DP-C3 (iii) is not taken now).
 - [ ] `test_validate.py`: one test each for `dtype_match` and `date_parsed` over a `tables`
   mapping with a `_rejected` frame, with `@pytest.mark.req("FR-32")`.
 - [ ] R4, R5 and G4 are green.
@@ -556,6 +649,13 @@ the version, not a published model. `GET /api/v1/dataset-versions/{id}/rejected`
 sample with no contract change. If Task 0 finds that the route has been typed since, the
 columns are a contract change: STOP to the lead.
 
+## Hand-off (not this plan's writes)
+
+- **The lead:** mint FD 8040 (auditor-upload404's record) before this delta. GO the executor.
+  Relay Task 0 Step 3's probe output, and any STOP, to the maintainer (DP-G2, binding).
+- **The P1 batch:** SL-8043's roadmap row sits next to SL-8031's (PL 8030), both before
+  `### WK-1250`. The 12:23:36 entry rules that this adjacency is resolved in that one PR.
+
 ## Self-review
 
 - **Spec coverage.** The plan names each requirement with its section:
@@ -565,28 +665,48 @@ columns are a contract change: STOP to the lead.
 
   FR-31, FR-45, FR-46 and VR-STR-3 are read only. No requirement id is added or changed. Each
   limb maps to tasks:
-  - limb (a), the coercion: R1, R2, R3, Tasks 4 and 5, and DP-C2 for the handler;
+  - limb (a), the coercion: R1, R2, R3, R6, Tasks 4 and 5, and DP-C2 for the handler;
   - limb (b), the blind validation: R4, R5, G4, Task 6 and DP-C3.
 
   The 12:02:46 entry names four checks, and each is handled:
   - `dtype_match` and `date_parsed` are changed (DP-C3 (ii));
   - `reject_rate` is fixed by filling `_rejected`;
   - `range` is shown not to need a change, with a guard (G4).
-- **The two entries at every site** (convention 5):
-  - *"both limbs red on main by cause"*: R1 to R5, each with its expected cause on main;
-  - *"through the real Job path"*: R1, R3, R4 and R5 run `execute_job` on `dataset.ingest` and
-    `dataset.validate`. R2 is the `pricing-core` unit red beside them, not a substitute;
-  - *"the auditor's 4-row input is the fixture"*: "The fixture", verbatim, with the one added
-    row `p5` stated as an addition and the reason given;
+- **The three entries at every site** (convention 5):
+  - *"both limbs red on main by cause"*: R1 to R6, each with its expected cause on main;
+  - *"through the real Job path"* and *"by RUN via `execute_job`"*: R1, R3, R4, R5 and R6 run
+    `execute_job` on `dataset.ingest` and `dataset.validate`. R2 is the `pricing-core` unit red
+    beside them, not a substitute;
+  - *"the 4-row fixture + p5"*: "The fixture", with the auditor's four rows verbatim and `p5`;
+    every red uses the five rows;
   - *"a coerced cell must produce a validation VERDICT … fail or warn per its declaration"*:
-    R4 (`fail`), R5 (`warn`, then the FR-46 acknowledgement), Acceptance 7 and 8;
-  - *"the design DP is the planner's"*: DP-C1, with options R, Q and C, a recommendation, and
-    the per-option table of what changes.
+    R4 (`fail`), R5 (`warn` without `reject_rate`, then the FR-46 acknowledgement; `fail` when
+    declared `fail`), Acceptance 8 and 9.
+- **The 12:23:36 rulings at every site** (amended 2026-10-14, after the rulings):
+  - DP-C1 (Q), *"COMPLETE for each row"*: Goal, Global Constraints, R1, R2's completeness
+    case, Task 3, Task 4 (the `_source_row` index), Acceptance 4 and 6;
+  - *"`rows_read == rows_written + rows_rejected` is asserted"*: R1, Task 3, Task 5,
+    Acceptance 4 and G5. G5 states the one scope the identity cannot reach, a recipe with a
+    row-changing step;
+  - DP-C3 (ii), *"coerced_cells … = the cells quarantined because of that column"*, the
+    verdict without `reject_rate`, and no tolerance: Goal, R4, R5, Task 3, Task 6,
+    Acceptance 8 and 9;
+  - *"`range`'s … guard is stated"*: G4 in Task 2 and Acceptance 10;
+  - DP-C2 (a): Goal, Task 3 and Task 5;
+  - the added assert (*"`null_count(claim_amount)` equals the SOURCE's genuine empty cells
+    only"*): R6 and Acceptance 5;
+  - *"G2 condition (binding)"*, Polars over 678 013 rows and the seeded 20k: DP-G2, Task 0
+    Step 3, "The G2 interaction" (the proxy noted, not relied on), Acceptance 11 and the
+    Tasks row;
+  - the roadmap adjacency of SL-8043 and SL-8031, resolved in the one P1 PR: "Hand-off".
+
+  Each DP row's "Resolved by" cell carries its ruling, and the refused options are kept only as
+  a record.
 - **The G2 and SL-1543 interactions:** "The G2 interaction", DP-G2, Task 0 Step 3, Task 7 and
-  Acceptance 10.
+  Acceptance 11.
 - **Literals verified at `a3fc2e8d`** (conventions 1 and 3), each by `git show` or `git grep`:
   - `prepare.py`: `:81-86`, `:85`, `:89-126`, `:126`, `:134-144`, `:161-164`;
-  - `ingest.py`: `:242`, `:245-286`, `:248-255`, `:257-261`;
+  - `ingest.py`: `:240-241`, `:242`, `:245-286`, `:248-255`, `:257-261`;
   - `validate.py`: `:84-94`, `:179`, `:258-292`, `:279`, `:295-321`, `:313`, `:394-428`,
     `:408-409`, `:671-704`, `:694`;
   - `ingestion.py`: `:162`, `:164-178`, `:171`, `:186`, `:204-211`, `:246-247`, `:267`,
@@ -597,15 +717,16 @@ columns are a contract change: STOP to the lead.
     `backend/tests/approved_rows.py:78`;
   - `01-data-management.md`: `:84`, `:107`, `:108`, `:285`, `:392`, `:393`, `:395`, `:399`,
     `:874`, `:952-956`, `:1046`;
-  - `examples/fremtpl2/seed.py`: `:63-67`, `:69-78`, `:96-118`, `:141`, `:254`, `:507-517`,
+  - `examples/fremtpl2/seed.py`: `:63-67`, `:69-78`, `:88`, `:96-118`, `:121`, `:141`, `:170`, `:254`, `:507-517`,
     `:571`, `:659`, `:741`; `scripts/demo.py:324`; `arff.py:43`;
   - `backend/tests/test_wf699_journey.py` (exists), and `4ec537c3` on
     `origin/sl-1543-prep-on-1300`.
 
   `api/datasets.py:556` and `model_schema/datasets.py:140-155` come from a delegated read; the
   executor re-reads them at Task 0.
-- **Convention 4.** `to-lead.md` was read through its last entry, "2026-10-14 12:05:33 BST".
-  Only the 11:52:51 entry (item (1)) and the 12:02:46 entry (item (1)) rule on this subject.
+- **Convention 4.** `to-lead.md` was read through the entry "2026-10-14 12:23:36 BST". Only the
+  11:52:51 entry (item (1)), the 12:02:46 entry (item (1)) and the 12:23:36 entry rule on this
+  subject.
   `gh pr list` was not run, because the brief allows no GitHub posts. Task 0 Step 4 re-reads at
   dispatch.
 - **Placeholders.** `<slice head>` and `<slice branch>` are values read when the slice runs.

@@ -2469,11 +2469,28 @@ corrected_by: []
 relates: [PL-1542, SL-1543]
 ```
 
-On the maintainer's (by delegation) entries "2026-10-14 11:52:51 BST" (item (1): the recipe cast silently nulls unparseable values; the fix's design is a planner DP against FR-32 and VR-STR-2) and "2026-10-14 12:02:46 BST" (item (1): FD 8040 HIGH, confirmed; owner WK-1178, fixed in P2; two limbs, both in scope). **Limb (a), the coercion:** the recipe's `cast` and `parse_date` run with `strict=False` (`prepare.py:136`, `:142`), so a non-null source cell that does not parse becomes null with no error. The Job handler (`data_handlers.py:140-149`) passes no `required_non_null`, so `partition_rejects` never quarantines anything on the production path. **Limb (b), the blind validation:** `dtype_match` passes by construction after the cast, `date_parsed` checks the type only, `range` ignores nulls, and `reject_rate` reads a `_rejected` table that is never written. The auditor's run at `a3fc2e8d` gave: ingest `4/4/0`, four nulls written, then validation `pass` 5/5. The fix's design is **DP-C1**, open: refuse, quarantine, or counted coercion. The recommendation is **quarantine**, the step moving the row with its source text into the version's `_rejected` table (FR-32's own design, and `PreparationResult.rejected`, declared and never filled). **DP-C3**, open, recommends that `dtype_match` and `date_parsed` also count the quarantined coercions of their declared columns at their declared severity, so the verdict does not depend on a Rule Set carrying `reject_rate`. **DP-C2** recommends that the handler stay as it is, because under quarantine a coercion no longer depends on a required-column list. Reds R1 to R5 are first seen red on main, by cause, through the real `dataset.ingest` and `dataset.validate` Jobs, over the auditor's 4-row fixture (plus one stated row for the date limb). **G2:** the seed's only recipe is one `cast` over eight numeric columns, with no `parse_date`. The planner's proxy count over all 678 013 freMTPL2 rows found no value that fails its cast, so on that measurement the fix changes nothing on G2. Task 0 Step 3 re-measures it through Polars before code, and any non-zero count is a STOP to the maintainer (DP-G2). **SL-1543:** its fixture's `np.float64(…)` cells were fixed at `4ec537c3`, and its remaining nulls are nulls at read. Whichever of the two merges second re-runs SL-1543's tests and the WF-699 journey test. Plan `PL-8042` (a WK-1178 Work-plan delta; `draft`). **Activation needs:**
+On the maintainer's (by delegation) entries "2026-10-14 11:52:51 BST" (item (1): the recipe cast silently nulls unparseable values; the fix's design is a planner DP against FR-32 and VR-STR-2), "2026-10-14 12:02:46 BST" (item (1): FD 8040 HIGH, confirmed; owner WK-1178, fixed in P2; two limbs, both in scope) and "2026-10-14 12:23:36 BST" (every DP ruled).
+
+**Limb (a), the coercion:** the recipe's `cast` and `parse_date` run with `strict=False` (`prepare.py:136`, `:142`), so a non-null source cell that does not parse becomes null with no error. The Job path never quarantines anything.
+
+**Limb (b), the blind validation:** `dtype_match` passes by construction, `date_parsed` checks the type only, `range` ignores nulls, and `reject_rate` reads a `_rejected` table that is never written. The auditor's run at `a3fc2e8d` gave ingest `4/4/0`, four nulls written, then validation `pass` 5/5.
+
+**Ruled:**
+- **DP-C1 → (Q), quarantine.** The row's source text goes into `PreparationResult.rejected` (declared, never filled), then into the version's `_rejected` table, named by column and step, and is counted in `rows_rejected`. The quarantine is **complete for each row**, and `rows_read == rows_written + rows_rejected` is asserted.
+- **DP-C3 → (ii).** `reject_rate`, `dtype_match` and `date_parsed` each give a verdict at the declared severity: the last two through `measured.coerced_cells`, even without `reject_rate`. `range` is unchanged, with its guard stated. No tolerance.
+- **DP-C2 → (a).** No handler change.
+
+**Reds:** R1 to R6 are run through `execute_job` over the auditor's 4 rows plus `p5`, each red on main by cause. R6 asserts that after ingest a column's `null_count` equals the source's genuine empty cells only.
+
+**G2 (binding):** before any code, Task 0 Step 3 counts through Polars, with the seed recipe's own cast, over all 678 013 freMTPL2 rows and the seeded 20 000-row sample. A non-zero count is a STOP to the maintainer. The planner's proxy count of 0 is noted, not relied on.
+
+**SL-1543:** its `np.float64(…)` cells were fixed at `4ec537c3`. Whichever of the two merges second re-runs SL-1543's tests and the WF-699 journey test. The roadmap adjacency with SL-8031 is resolved in the P1 PR (12:23:36).
+
+Plan `PL-8042` (a WK-1178 Work-plan delta; `draft`). **Activation needs:**
 - FD 8040 minted;
-- DP-C1 and DP-C3 ruled;
+- every DP ruled — MET, by the maintainer's (by delegation) entry "2026-10-14 12:23:36 BST";
 - the plan made `active` by a dated line;
-- Task 0 Step 3's G2 probe clean, or the maintainer's ruling on it;
+- Task 0 Step 3's G2 probe clean on both populations, or the maintainer's ruling on it;
 - a free build lane.
 
 *(Row cut 2026-10-14 by the planner, planner-fd8040; working ids 8043 and 8042 reserved by the lead.)*
