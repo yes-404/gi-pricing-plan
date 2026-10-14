@@ -34,7 +34,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import event, select, text, update
 
 from app.api import score as score_module
-from app.db.models import ApiKeyRow
+from app.db.models import ApiKeyRow, ServiceAccountRow
 
 pytestmark = pytest.mark.req("NFR-489")
 
@@ -117,14 +117,27 @@ def _update_api_keys_during_one_request(
     return sum(1 for t in texts if t.lstrip().upper().startswith("UPDATE API_KEYS"))
 
 
-async def _set_last_used(database: Any, age: timedelta) -> None:
+def _keys_of(workspace_id: Any) -> Any:
+    """This test's keys: the database is shared across tests, so `api_keys` holds others."""
+    return ApiKeyRow.service_account_id.in_(
+        select(ServiceAccountRow.id).where(ServiceAccountRow.workspace_id == workspace_id)
+    )
+
+
+async def _set_last_used(database: Any, workspace_id: Any, age: timedelta) -> None:
     async with database.unit_of_work() as session:
-        await session.execute(update(ApiKeyRow).values(last_used_at=datetime.now(UTC) - age))
+        await session.execute(
+            update(ApiKeyRow)
+            .where(_keys_of(workspace_id))
+            .values(last_used_at=datetime.now(UTC) - age)
+        )
 
 
-async def _last_used(database: Any) -> datetime | None:
+async def _last_used(database: Any, workspace_id: Any) -> datetime | None:
     async with database.session() as session:
-        return (await session.execute(select(ApiKeyRow.last_used_at))).scalar_one()
+        return (
+            await session.execute(select(ApiKeyRow.last_used_at).where(_keys_of(workspace_id)))
+        ).scalar_one()
 
 
 def test_last_used_at_is_not_written_on_every_request(
@@ -136,7 +149,9 @@ def test_last_used_at_is_not_written_on_every_request(
 ) -> None:
     """Two requests inside the interval: the second issues no `UPDATE api_keys`."""
     asyncio.get_event_loop().run_until_complete(_set_trace_sample_rate(database, workspace_id, 0.0))
-    asyncio.get_event_loop().run_until_complete(_set_last_used(database, timedelta(seconds=30)))
+    asyncio.get_event_loop().run_until_complete(
+        _set_last_used(database, workspace_id, timedelta(seconds=30))
+    )
     assert _update_api_keys_during_one_request(client, scoring_headers) == 0
 
 
@@ -155,11 +170,11 @@ def test_last_used_at_is_written_once_the_interval_has_passed(
     loop = asyncio.get_event_loop()
     loop.run_until_complete(_set_trace_sample_rate(database, workspace_id, 0.0))
     stale = timedelta(seconds=120)
-    loop.run_until_complete(_set_last_used(database, stale))
-    before = loop.run_until_complete(_last_used(database))
+    loop.run_until_complete(_set_last_used(database, workspace_id, stale))
+    before = loop.run_until_complete(_last_used(database, workspace_id))
     assert before is not None
     assert _update_api_keys_during_one_request(client, scoring_headers) == 1
-    after = loop.run_until_complete(_last_used(database))
+    after = loop.run_until_complete(_last_used(database, workspace_id))
     assert after is not None
     assert after > before + timedelta(seconds=60)
 
