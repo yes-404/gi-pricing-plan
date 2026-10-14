@@ -42,7 +42,9 @@ draw a node per step) does not make. The same file's other six tests pass at the
 they await the view's own "Algorithm version" label (`:61`, `:77`, `:100`, `:119`, `:131`), which is not
 behind the lazy import.
 
-### Evidence, by run, 2026-10-14 (recorded as the lead reported it in the entry above)
+## Evidence
+
+By run, 2026-10-14, recorded as the lead reported it in the entry above.
 
 | Run | Tree | Load | Result | Failing at |
 |---|---|---|---|---|

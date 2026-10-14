@@ -129,6 +129,14 @@ where `GAP=2.5` must turn **green**, proving the cause and the fix. Both outputs
 into this essay before it is set `closed`. Until then the mechanism above is a hypothesis that
 fits the symptom (409 in place of 429, passes on re-run) and does not yet exclude another cause.
 
+## Evidence
+
+- CI run 38568100882 (python job, D16 #1304 at `5e03ced9`): `assert 409 == 429` at `test_score_rate_limit.py:128`;
+  the re-run of the failed job passed (5847). The maintainer's entry "2026-10-14 14:30:54 BST" records both.
+- Re-readable at the stated tree: `git show origin/main:backend/src/app/platform/rate_limit.py | sed -n 36,40p` (the TTL),
+  `| sed -n 94,106p` (the pipeline and the `count <= limit` test); `git show origin/main:backend/tests/test_score_rate_limit.py | sed -n 50,55p` (the pin).
+- By-run reproduction: OWED (see above); until it is printed here the mechanism is a hypothesis.
+
 ## Why MEDIUM, proposed
 
 - Against HIGH: no wrong price or wrong refusal ships; the limiter is correct in production.
