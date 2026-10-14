@@ -730,10 +730,17 @@ async def _seed(bundle: Bundle, *, dsn: str, bucket: str) -> tuple[str, str]:
     from datetime import UTC, datetime, timedelta
 
     from pydantic import SecretStr
+    from sqlalchemy import select
 
     from app.auth.api_keys import generate_key
     from app.config import Environment, Settings
-    from app.db.models import ApiKeyRow, RatingVersionRow, ServiceAccountRow
+    from app.db.models import (
+        ApiKeyRow,
+        DeploymentRow,
+        EnvironmentRow,
+        RatingVersionRow,
+        ServiceAccountRow,
+    )
     from app.db.session import Database
     from app.platform.blobs import BlobStore
 
@@ -783,6 +790,22 @@ async def _seed(bundle: Bundle, *, dsn: str, bucket: str) -> tuple[str, str]:
 
     generated = generate_key("uat")
     async with database.unit_of_work() as session:
+        # The default-live arm (PL-1454 Task 1 Step 2b): a Deployment of the seeded version to
+        # the key's Environment, so a request that omits `options.rating_version_ref` resolves
+        # the ref from it, as the G2 exit-demo path does (`api/score.py` `_serving_ref`).
+        uat_id = (
+            await session.execute(select(EnvironmentRow.id).where(EnvironmentRow.slug == "uat"))
+        ).scalar_one()
+        session.add(
+            DeploymentRow(
+                workspace_id=workspace_id,
+                environment_id=uat_id,
+                rating_version_ref=str(_RATING_VERSION_REF),
+                bundle_hash=bundle.content_hash,
+                deployed_by=created_by,
+                reason="bench: default-live arm",
+            )
+        )
         account = ServiceAccountRow(
             workspace_id=workspace_id,
             slug="bench-scorer",
@@ -810,17 +833,17 @@ async def _seed(bundle: Bundle, *, dsn: str, bucket: str) -> tuple[str, str]:
 
 
 async def _measure_fetch(
-    *, dsn: str, bucket: str, workspace_id: str, iterations: int
+    *, dsn: str, bucket: str, workspace_id: str, iterations: int, warm: bool = False
 ) -> Measurement:
-    """`_fetch_bundle` alone — the per-request cost the slot does **not** avoid.
+    """`_fetch_bundle` alone, on its miss path or on its hit path.
 
-    `_compiled_for` (`api/score.py:181`) consults the slot only *after* `_fetch_bundle` has
-    returned, because the slot is keyed on `content_hash` and the only way to learn a ref's
-    content hash is to fetch the bundle. So every happy-path request pays two SELECTs, a full
-    object read and `Bundle.model_validate_json` of the whole booster; the slot saves
-    `load_bundle` and nothing else. The ref-to-hash memo that would break that circularity
-    exists (Task 2A) but is reachable only from the `except Exception` degradation branch.
-    Measured separately here so the full-path figure can be attributed rather than asserted.
+    The served path checks the version row's `content_hash` against the slot before it reads
+    the blob (`api/score.py` `_fetch_bundle`, RL-921), so a warm request reads the version row
+    and nothing else, and the full read plus `Bundle.model_validate_json` of the whole booster
+    is paid only on a slot miss. `warm=False` is that miss: a fresh, empty slot per call.
+    `warm=True` is the hit: one slot created before the loop and reused, so only the version
+    row is read. Measured separately here so the full-path figure can be attributed rather
+    than asserted.
     """
     _backend_on_path()
     from uuid import UUID
@@ -843,19 +866,24 @@ async def _measure_fetch(
     blob_store = BlobStore(settings)
     ws = UUID(workspace_id)
 
-    # A fresh, empty slot per call: `_fetch_bundle` checks the slot before the blob store,
-    # so a shared one would turn every call after the first into a hit and this would stop
-    # measuring the read the slot does not avoid.
+    # Cold: a fresh, empty slot per call, because `_fetch_bundle` checks the slot before the
+    # blob store and a shared one would turn every call after the first into a hit. Warm: the
+    # one slot, shared, which is the point of the figure.
+    shared = BundleSlot()
+
+    def _slot() -> BundleSlot:
+        return shared if warm else BundleSlot()
+
     for _ in range(20):
         await _fetch_bundle(
-            database, blob_store, BundleSlot(), workspace_id=ws, ref=_RATING_VERSION_REF
+            database, blob_store, _slot(), workspace_id=ws, ref=_RATING_VERSION_REF
         )
     load_start = loadavg()
     samples: list[float] = []
     for _ in range(iterations):
         start = time.perf_counter()
         await _fetch_bundle(
-            database, blob_store, BundleSlot(), workspace_id=ws, ref=_RATING_VERSION_REF
+            database, blob_store, _slot(), workspace_id=ws, ref=_RATING_VERSION_REF
         )
         samples.append((time.perf_counter() - start) * 1000)
     load_end = loadavg()
@@ -1266,8 +1294,20 @@ def _run_http_sweep(args: Any) -> None:
                 dsn=args.dsn, bucket=args.bucket, workspace_id=workspace_id, iterations=200
             )
         )
-        _report(f"_fetch_bundle alone, {label} (every request pays this)", fetch,
-                budget_ms=None)
+        _report(
+            f"_fetch_bundle alone, {label}, cold (slot miss: blob read, parse, load_bundle)",
+            fetch, budget_ms=None,
+        )
+        warm_fetch = asyncio.run(
+            _measure_fetch(
+                dsn=args.dsn, bucket=args.bucket, workspace_id=workspace_id,
+                iterations=200, warm=True,
+            )
+        )
+        _report(
+            f"_fetch_bundle alone, {label}, warm (slot hit: version row read only)",
+            warm_fetch, budget_ms=None,
+        )
 
         log_path = logs / f"server-{'gbm' if with_gbm else 'nogbm'}.log"
         proc = _serve(
@@ -1292,6 +1332,23 @@ def _run_http_sweep(args: Any) -> None:
                 rung = asyncio.run(
                     _drive(
                         f"{base}/api/v1/score", headers, body,
+                        rate=rate, seconds=args.rung_seconds,
+                    )
+                )
+                handler = _handler_ms(log_path)[before:]
+                _report_rung(rung, handler, budget_ms=budget, speedup=args.speedup)
+
+            # The default-live arm (PL-1454 Task 1 Step 2b): the same rates, the request body
+            # without `options.rating_version_ref`, so `_serving_ref` reads the seeded
+            # Deployment as the G2 exit-demo path does. Its own rung per arm.
+            live_body = json.loads(_ctx().model_dump_json())
+            live_body["options"].pop("rating_version_ref", None)
+            print(f"\n--- {label}: default-live (exit-demo path) ---")
+            for rate in rates:
+                before = len(_handler_ms(log_path))
+                rung = asyncio.run(
+                    _drive(
+                        f"{base}/api/v1/score", headers, live_body,
                         rate=rate, seconds=args.rung_seconds,
                     )
                 )
