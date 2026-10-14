@@ -73,7 +73,7 @@ optional."). The lead mints it.*
 | A fitted Model's `spec` cannot change | `models_fit_immutable`, latest body `backend/migrations/versions/9e4c7b21fa08_diagnostics_id_immutable.py` `:66-85` (`OR NEW.spec IS DISTINCT FROM OLD.spec`) |
 | The `factors` table is **not** append-only | `backend/migrations/versions/b2c3d4e5f6a7_model_fit_immutable.py` `:89` (`GRANT SELECT, INSERT, UPDATE ON models, factors`); no trigger on `factors` in any migration; `e1f2a3b4c5d6_artifact_row_triggers.py` `:48`, `:50` list six other tables; `backend/tests/test_artifact_immutability.py` `APPEND_ONLY_TABLES` `:38-52` has no `factors` |
 | `bandings` and `groupings` are append-only | `c3d4e5f6a7b8_modelling_bandings_and_groupings.py` `:111-112` (`REVOKE UPDATE, DELETE`) |
-| A test edits a `factors` row in place | `backend/tests/test_fr240_governance.py` `_make_control` `:247-256` |
+| A test edits a `factors` row in place | `backend/tests/test_fr240_governance.py` `_make_control` `:248-256` |
 | The read routes | `backend/src/app/api/models.py` `list_factors` `:303-323` (`GET /factors`, `?dataset_id=`), `get_model` `:626-653` (`GET /models/{slug}`); there is no `GET /factors/{id}` |
 | The one positioned-error form | `RL-1362` DP-S3-3, item 1; built as `_require_the_grammar`, `backend/src/app/platform/objectives.py` `:297-322` |
 | A request-validation 422 keeps a validator's message only for an `InputFreeError` | `backend/src/app/errors.py` `_field_error_message` `:494-505`; `packages/pricing-core/src/pricing_core/safe_error.py` `safe_validation_message` `:145-161` |
@@ -172,7 +172,7 @@ falls outside it unnoticed. FR-44's first sentence is *"Every artifact table car
 layers"*. No application path updates a `factors` row: every `FactorRow` use in `backend/src`
 is an insert or a select, by the predicate `git -C <tree> grep -n 'FactorRow' -- backend/src`
 at `36e2610a` (class definition, `select(FactorRow…)` and one `FactorRow(` constructor).
-`test_fr240_governance.py` `:247-256` does edit one in place, *"the way a later edit would"*.
+`test_fr240_governance.py` `:248-256` does edit one in place, *"the way a later edit would"*.
 
 A direct edit of a `factors` row changes how every Model pinned to that row scores, while the
 pin stays the same. That is `RL-1615`'s stale-band class one level up. **It is a present gap
