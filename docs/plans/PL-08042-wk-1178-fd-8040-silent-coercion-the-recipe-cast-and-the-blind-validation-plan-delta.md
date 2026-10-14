@@ -46,7 +46,10 @@ RESERVED to you"*). Written 2026-10-14 by the planner (seat planner-fd8040). **A
 delegation) entry "2026-10-14 12:31:22 BST"**: the row identity is widened to a full
 accounting identity for every recipe (Goal, Global Constraints, "The row-changing steps",
 DP-S1, Tasks 0 to 5, R1, R7, R8, Acceptance 4, G5, 14 and 15, the write set and the
-self-review).
+self-review). **Amended again 2026-10-14 by the planner (seat planner-p1fix), before merge, on
+the maintainer's (by delegation) entry "2026-10-14 12:42:55 BST"**: DP-S1 ruled (i); the write
+set widened as that entry accepts; the migration discipline (Task 5); the (iii) fallback
+removed.
 **Tree read:** `origin/main` `a3fc2e8dd384de6abf909f662f43011b8078fb4e` (committed
 2026-10-14T11:55:40+01:00). Every `file:line` below is at that tree. The executor re-reads each
 one at its base (Task 0). The finding is **FD 8040** (working id), filed by auditor-upload404 on
@@ -57,9 +60,9 @@ it is pushed.
 
 ## Authority
 
-All four entries are the maintainer's (by delegation), in `to-lead.md`, read in full after
+All five entries are the maintainer's (by delegation), in `to-lead.md`, read in full after
 they were logged. The third rules this plan's decision points; the fourth widens the third's
-row identity.
+row identity; the fifth rules DP-S1.
 
 - **"2026-10-14 11:52:51 BST — PL 8030/SL 8031 DPs ruled; SL-1543 fixture fix accepted; NEW
   candidate: the recipe cast silently nulls unparseable values (re lead 11:51:03 / 11:52:02)"**,
@@ -86,6 +89,9 @@ row identity.
   12:30:55)"**, its PL 8042 item, quoted in full (its two PL 8034 items and its P1/P2 item are
   not this plan's):
   > - **PL 8042, the row conservation: WIDEN it to a full accounting identity, for ALL recipes:** `rows_read − rows_rejected − Σ rows_removed_by_step + Σ rows_added_by_step == rows_written`, where each row-changing step (filter_rows, deduplicate, explode_period, …) records its in/out height in the ingestion run (Polars height before/after the step), visible in the run record. Asserted on the 4-row fixture AND on the G2 seed's v2 + portfolio recipes (which use filter_rows). Asserting only the steps-free recipes would exempt exactly the recipes G2 runs. If per-step counts cannot be recorded without touching the recipe engine beyond FD 8040's write set, the planner says so with file:line, and then the narrower assert + the LG list stands as a carried item, which I rule on then. The S5 run-list amendment as a dated line under SL-1259's roadmap row (RL-1614/PL-1620 frozen): OK.
+- **"2026-10-14 12:42:55 BST — PL 8042 DP-S1 → (i) a column on the run; PL 8034: NFR-467
+  MEASURED at 10M (re lead 12:42:23)"**, item (1), quoted in full (item (2) is PL 8034's):
+  > **(1) DP-S1 → (i)** `step_counts` (JSONB, per step: name, rows_in, rows_out) on IngestionRunRow, with a NEW migration and a dated FR-31 clause (01:83). The write set widens to models.py:921-923, the migration, and the three assertion sites (test_data_jobs.py, test_ingestion.py, examples/fremtpl2/test_seed.py). This is accepted: the run is the provenance record of what ingestion did to the rows, and the engine already measures the heights (prepare.py:119-124), so the only defect is that ingestion.py:171 discards them. **Migration discipline:** one head (FR-417), with a downgrade. SL 8043's migration and P2's S-a/S-b migrations re-point down_revision in merge order; the second to merge re-points, with a single-head check at its gate. R7 (5−3−1+0 == 1), R8a/b and G5 proceed. Task 0's portfolio identity (20000 − 0 − 15 + 0 == 19985) is printed.
 
 The evidence is the lead's from-lead entry **"2026-10-14 12:02:15 BST"** (in
 `from-lead-2026-10-09.md`), item (1), and the auditor's run it reports,
@@ -214,8 +220,9 @@ ingest `null_count` is 0 in every column.
   The run is read back by `rejected_rows` (`api/dataset_versions.py:418-452`), whose untyped
   `dict[str, Any]` (`:420`) returns the three counts and `reject_rate` (`:446-452`).
 - **So recording the counts in the run record is outside FD 8040's write set.** It needs a
-  column on `IngestionRunRow` and a migration, neither in this plan's write set. That is DP-S1,
-  for the maintainer's ruling, as the 12:31:22 entry orders.
+  column on `IngestionRunRow` and a migration, neither in this plan's write set as first cut.
+  That was DP-S1, put to the maintainer as the 12:31:22 entry ordered, and **ruled (i) at
+  12:42:55**: the write set widens to them.
 - **The G2 seed's row-changing step.** `recipe()` (`examples/fremtpl2/seed.py:96-118`) appends
   one `filter_rows`, `exposure_years <= MAX_EXPOSURE` (`:111-117`, `MAX_EXPOSURE = 1.05` at
   `:83`), when `drop_implausible_exposure` is true. Version 2 (`:659`) and the portfolio sample
@@ -275,7 +282,7 @@ is unchanged, and a guard test states why (DP-C3 (ii)). After ingest, a column's
 equals the source's genuinely empty cells, never the bad-cell count. **Every ingest balances
 its rows** (the 12:31:22 entry), for every recipe:
 `rows_read − rows_rejected − Σ rows_removed_by_step + Σ rows_added_by_step == rows_written`,
-where each step's in/out Polars height is recorded in the ingestion run (DP-S1 says where).
+where each step's in/out Polars height is recorded in the ingestion run's `step_counts` (DP-S1 (i), ruled 12:42:55).
 
 ## Acceptance Standard
 
@@ -347,7 +354,7 @@ slice's merge tree.
     - G5 (widened by the 12:31:22 entry): the full identity holds for **every** ingest with a
       recipe in `test_data_jobs.py` and `test_ingestion.py`, with or without a row-changing
       step. One shared assert helper, in `test_ingest_coercion.py`, reads the run record
-      (DP-S1) and is called after each of their ingests (those two files are DP-S1 items (B)). The LG lists every recipe it was asserted for. *(Was, before
+      (DP-S1) and is called after each of their ingests (those two files are in the write set by DP-S1 (i), 12:42:55). The LG lists every recipe it was asserted for. *(Was, before
       12:31:22: the narrow `rows_read == rows_written + rows_rejected` for step-free recipes
       only.)*
 
@@ -471,7 +478,7 @@ in full under Authority. The options and recommendations are kept as they were w
 | DP-C2 | The Job handler (`data_handlers.py:140-149`) never passes `required_non_null`. Does this slice make it pass one, and from where? | **(a)** No change: under Q every coercion is quarantined, whatever the column. A **source** null in a column that must not be null is VR-STR-3's verdict (`not_null`, `validate.py:179`). **(b)** Add an optional list to the Job parameters and the route body (`api/datasets.py:556`); this is a contract change. **(c)** Derive it from a declared schema. No field exists to derive it from (`DataDictionaryEntry`, `model_schema/datasets.py:140-155`). | **(a).** FR-32's *"unparseable dates in a required date column"* is a subset of what Q quarantines. | design | no — ruled | **Ruled (a)**, 2026-10-14, by the maintainer (by delegation), entry 2026-10-14 12:23:36 BST: *"no handler change (under Q every coercion is quarantined)"*. |
 | DP-C3 | Which checks carry the verdict for a quarantined coercion? `reject_rate` alone gives none when a Rule Set omits it, and FR-45 (`01:107`) does not require it. | **(i)** `reject_rate` (VR-STR-9) only. **(ii)** (i), plus `dtype_match` (VR-STR-2) and `date_parsed` (VR-STR-5): each reports `measured.coerced_cells` for the columns it declares, at its declared severity. `range` is unchanged, with a stated guard. **(iii)** (ii), with a tolerance parameter. | **(ii).** VR-STR-2's own text is *"(no silent coercion)"*. `warn` plus an FR-46 acknowledgement is the user's knob. | design | no — ruled | **Ruled (ii)**, 2026-10-14, by the maintainer (by delegation), entry 2026-10-14 12:23:36 BST. `coerced_cells` = the cells quarantined because of that column. The verdict holds without `reject_rate`. The `range` guard is stated (G4). (iii) is not taken now. |
 | DP-G2 | Does the fix change G2's data? The seed's `cast` (`seed.py:69-78`) runs on every G2 ingest. | **The probe decides.** Task 0 Step 3 counts, through Polars and with the recipe's own cast, the cells the cast would quarantine. It counts over all 678 013 freMTPL2 rows and over the seeded 20 000-row portfolio sample. All zero: no G2 interaction. Any non-zero: STOP. | The planner's proxy regex count was 0 on every cast column. It is noted, not relied on. | scope | **yes, binding: blocks code until the probe is clean or the maintainer rules on it** | **Ruled binding**, 2026-10-14, by the maintainer (by delegation), entry 2026-10-14 12:23:36 BST, *"G2 condition (binding)"*. A non-zero count is a STOP to the maintainer before code. |
-| DP-S1 | The 12:31:22 entry orders each step's in/out height recorded **in the ingestion run**, visible in the run record. The engine already measures it (`prepare.py:119-124`), but the Job path discards it (`ingestion.py:171`) and the run has no field for it (`models.py:918-923`). Where is it recorded? | **(i) A column on the run.** (A) `IngestionRunRow.step_counts`, JSONB, not null, default `[]`, beside `reject_sample` (`backend/src/app/db/models.py:921-923`), and one new Alembic migration under `backend/migrations/versions/` adding it to `ingestion_runs` (created at `902093cc0437_data_ingestion_runs.py:24`) with server default `'[]'`. Task 5 writes `PreparationResult.stats["steps"]` into it. (B) The assert sites: `backend/tests/test_data_jobs.py` and `backend/tests/test_ingestion.py` (G5), and `examples/fremtpl2/test_seed.py` (R8b). (C) Visibility: `rejected_rows` (`backend/src/app/api/dataset_versions.py:446-452`) also returns the list as `steps`; it is an untyped `dict[str, Any]` (`:420`), so there is no contract change. A dated clause on FR-31 (`01-data-management.md:83`) adds the per-step heights to what a run records. **(ii) Beside the recipe on the version:** `version.derived_from["recipe_stats"]`, set where the recipe is stored (`ingestion.py:221-226`), in this plan's write set and with no migration. It is the version's record, not the run's, which the entry names. **(iii) The entry's fallback:** the narrow `rows_read == rows_written + rows_rejected` for step-free recipes, plus the LG list of recipes asserted, carried for the maintainer's ruling. | **(i).** It is what the entry orders, and its cost is one not-null JSONB column and an additive migration. (ii) puts a run's measurement on the version. (iii) leaves the G2 recipes unasserted, which the entry says *"would exempt exactly the recipes G2 runs"*. Every file in (i)'s (A), (B) and (C) is **outside FD 8040's write set**, and none is added to it before this ruling. | scope | **yes, for Task 5's step-count write, R7, R8 and G5 only.** Tasks 0 to 4 and R1 to R6 proceed. | **Open: for the maintainer's ruling** (the 12:31:22 entry: *"the planner says so with file:line … which I rule on then"*). Until it is ruled, (iii) stands as the carried item. |
+| DP-S1 | The 12:31:22 entry orders each step's in/out height recorded **in the ingestion run**, visible in the run record. The engine already measures it (`prepare.py:119-124`), but the Job path discards it (`ingestion.py:171`) and the run has no field for it (`models.py:918-923`). Where is it recorded? | **(i) A column on the run:** `IngestionRunRow.step_counts`, JSONB, with one new Alembic migration; the assert sites `test_data_jobs.py`, `test_ingestion.py` (G5) and `examples/fremtpl2/test_seed.py` (R8b); a dated FR-31 clause (`01:83`). **(ii) Beside the recipe on the version** (`version.derived_from`, `ingestion.py:221-226`): no migration, but the version's record, not the run's. **(iii) The 12:31:22 fallback:** the narrow assert plus the LG list. | **(i).** It is what the 12:31:22 entry orders. (ii) puts a run's measurement on the version; (iii) exempts the G2 recipes. | scope | no — ruled | **Ruled (i)**, 2026-10-14, by the maintainer (by delegation), entry 2026-10-14 12:42:55 BST, item (1) (quoted under Authority): `step_counts` (per step: name, rows_in, rows_out) on `IngestionRunRow`, a new migration with one head and a downgrade, and a dated FR-31 clause; the write set widens to `models.py:921-923`, the migration and the three assertion sites, **accepted**. R7, R8a/b and G5 proceed. (ii) and (iii) are not taken; (iii) is no longer carried. The `rejected_rows` `steps` key once offered as visibility is **not** in the ruled write set and is not built. |
 
 **The refused options, kept as the record of what was weighed** (DP-C1). The table below says
 what would have changed under each one. It is not a live alternative.
@@ -482,8 +489,7 @@ what would have changed under each one. It is not a live alternative.
 | R2 | `.rejected` holds the rows | `apply_recipe` raises `RecipeError` | a coercions frame holds the cells |
 | R4, R5 | `reject-rate`, `dtype` and `datep` give the verdict | void: no version | `dtype` and `datep` read `_coercions` |
 
-Every decision point but DP-S1 is ruled. DP-S1 is open for the maintainer's ruling (the
-12:31:22 entry), and blocks only the step-count limb. DP-G2's ruling leaves one gate inside the slice, Task 0 Step 3's
+Every decision point is ruled; DP-S1 by the 12:42:55 entry. DP-G2's ruling leaves one gate inside the slice, Task 0 Step 3's
 probe, which stops the slice, not the plan. This delta stays `draft` here. It is frozen at its
 merge and made `active` by a dated line, and no status is set here.
 
@@ -491,7 +497,7 @@ merge and made `active` by a dated line, and no status is set here.
 
 | Order | Slice | Tasks | Requirements (each id) | Activation needs | Lane |
 |---|---|---|---|---|---|
-| 1 | SL-8043 — FD 8040: a recipe cell that does not parse is never silently nulled, and validation gives it a verdict | Tasks 0 to 7 below | `01` §3.1: FR-32 (the quarantine, and the Job path); `01` §4.4: VR-STR-2, VR-STR-5 and VR-STR-9 (catalogue rules; the checks that give the verdict); `01` §3.2: FR-35 (the steps whose behaviour changes); `01` §3.1: FR-31 (the run's record; amended only if DP-S1 is ruled (i)); read only: FR-45, FR-46, VR-STR-3 | FD 8040 minted; every DP ruled — MET, by the maintainer's (by delegation) entry "2026-10-14 12:23:36 BST"; this delta minted and made `active` by a dated line; Task 0 Step 3's G2 probe clean on both populations, or the maintainer's ruling on it; DP-S1 ruled before Task 5's step-count write, R7, R8 and G5 (Tasks 0 to 4 do not wait); a free build lane | 1 |
+| 1 | SL-8043 — FD 8040: a recipe cell that does not parse is never silently nulled, and validation gives it a verdict | Tasks 0 to 7 below | `01` §3.1: FR-32 (the quarantine, and the Job path); `01` §4.4: VR-STR-2, VR-STR-5 and VR-STR-9 (catalogue rules; the checks that give the verdict); `01` §3.2: FR-35 (the steps whose behaviour changes); `01` §3.1: FR-31 (the run's record; its dated clause, DP-S1 (i)); read only: FR-45, FR-46, VR-STR-3 | FD 8040 minted; every DP ruled — MET, by the maintainer's (by delegation) entries "2026-10-14 12:23:36 BST" and, for DP-S1, "2026-10-14 12:42:55 BST"; this delta minted and made `active` by a dated line; Task 0 Step 3's G2 probe clean on both populations, or the maintainer's ruling on it; a free build lane | 1 |
 
 ### Task 0 — re-read at the base, enumerate, and probe (convention 4)
 
@@ -563,8 +569,7 @@ auditor's `RECIPE`, through `execute_job`, as the 12:23:36 entry orders.
     4. `rows_read == 5`, `rows_rejected == 3`, `rows_written == 2`, and the full identity
        (the 12:31:22 entry): the run record's steps are `cast` 5 → 3 with 2 rejected and
        `parse_date` 3 → 2 with 1 rejected, each with 0 removed and 0 added, and
-       `5 − 3 − 0 + 0 == 2`. Until DP-S1 is ruled, only
-       `rows_read == rows_written + rows_rejected` is asserted here (the carried item).
+       `5 − 3 − 0 + 0 == 2`, read from the run's `step_counts` (DP-S1 (i), 12:42:55).
 
   **Expected on main:** assert 1 fails, because the version's only table is `policy_exposure`.
   Any other first failure is a plan defect.
@@ -606,14 +611,14 @@ auditor's `RECIPE`, through `execute_job`, as the 12:23:36 entry orders.
   nothing is rejected (and the step entries carry no `rows_rejected`, `rows_removed` or
   `rows_added`).
 - [ ] **R7, the identity through a row-changing step** (`test_ingest_coercion.py`,
-  `@pytest.mark.req("FR-32")`, `@pytest.mark.req("FR-31")`; the 12:31:22 entry; binds once
-  DP-S1 is ruled (i) or (ii)). The five-row fixture through `execute_job` with
+  `@pytest.mark.req("FR-32")`, `@pytest.mark.req("FR-31")`; the 12:31:22 entry; DP-S1 (i),
+  12:42:55). The five-row fixture through `execute_job` with
   `RECIPE + [{"step": "filter_rows", "params": {"expression": "claim_amount <= 200"}}]`.
   Assert, in this order: the run record has one step entry per step, as Acceptance 14 lists;
   the clean table holds only `p1`; `5 − 3 − 1 + 0 == 1 == rows_written`. **Expected on main:**
   the first assert fails, because the run has no step counts.
-- [ ] **R8, the identity on the G2 seed's recipes** (the 12:31:22 entry; binds once DP-S1 is
-  ruled (i) or (ii)).
+- [ ] **R8, the identity on the G2 seed's recipes** (the 12:31:22 entry; DP-S1 (i),
+  12:42:55).
   - **R8a** (`test_ingest_coercion.py`, CI). Import `recipe`, `RENAMES`, `NUMERIC` and
     `MAX_EXPOSURE` from the seed as `examples/fremtpl2/test_seed.py:16-19` does (a
     `sys.path` insert, then `from seed import …`); never copy the recipe, because a copied
@@ -623,7 +628,7 @@ auditor's `RECIPE`, through `execute_job`, as the 12:23:36 entry orders.
     Ingest it through `execute_job` with `recipe(drop_implausible_exposure=True)`, and assert
     Acceptance 15's R8a figures. If the import fails at collection, or `lint-imports` refuses
     it, STOP to the lead; do not copy the recipe.
-  - **R8b** (`examples/fremtpl2/test_seed.py`, a DP-S1 item (B); skipped in CI, by the
+  - **R8b** (`examples/fremtpl2/test_seed.py`, in the write set by DP-S1 (i); skipped in CI, by the
     `scratch_seed` fixture at `:120-165`). After the seed's run, read the version-2 run and the
     portfolio run from the database, and assert the identity on each from its run record,
     with the portfolio's figures in Acceptance 15. Run it locally at Task 7, and the LG
@@ -680,10 +685,18 @@ auditor's `RECIPE`, through `execute_job`, as the 12:23:36 entry orders.
   - the accounting identity, for every recipe (the 12:31:22 entry):
     `rows_read − rows_rejected − Σ rows_removed_by_step + Σ rows_added_by_step == rows_written`;
   - this holds on the Job path whatever columns are required (DP-C2 (a)).
-- [ ] **Only if DP-S1 is ruled (i):** one dated clause on **FR-31** (`:83`), citing the
-  12:31:22 entry and the DP-S1 ruling: a run also records, for each recipe step, its kind and
-  its row heights before and after, with the rows it rejected, removed and added. FR-31's
-  sentence is not edited.
+- [ ] One dated clause on **FR-31** (`:83`), appended inside its cell, FR-31's sentence not
+  edited (DP-S1 (i), ruled 12:42:55). Proposed text, with the commit date and the minted ids
+  substituted:
+
+  > *(Amended &lt;date&gt;, WK-1178, SL-8043, PL-8042 DP-S1 (i), on the maintainer's (by
+  > delegation) entries "2026-10-14 12:31:22 BST" and "2026-10-14 12:42:55 BST" in
+  > `to-lead.md`: a run also records `step_counts`, one entry per recipe step in order, each
+  > with the step's `name`, its `rows_in` and `rows_out` (the table's row count before and
+  > after the step) and its `rows_rejected` (the source rows the step quarantined). Its rows
+  > then balance: rows read − rows rejected − Σ rows removed by steps + Σ rows added by steps
+  > = rows written, where a step's removed or added rows are its change in row count net of
+  > its quarantine.)*
   
   FR-32's sentence is not edited.
 - [ ] Dated notes on the **VR-STR-2** row (`:392`) and the **VR-STR-5** row (`:395`): each
@@ -757,13 +770,28 @@ auditor's `RECIPE`, through `execute_job`, as the 12:23:36 entry orders.
   as source rows. `rows_read` stays the source row count, as at `:162`. So
   `rows_read − rows_rejected − Σ rows_removed + Σ rows_added == rows_written` holds for every
   recipe (the 12:31:22 entry), `partition_rejects`' rows counting in `rows_rejected`.
-- [ ] **The step counts into the run record, as DP-S1 is ruled.** Under (i): the run's
-  `step_counts` is `PreparationResult.stats["steps"]` (`[]` with no recipe), written with
-  the other counts (`:235-251`), with the model column and the migration of DP-S1 (A), and
-  `rejected_rows` returning it as `steps` (DP-S1 (C)). Under (ii): it is
-  `version.derived_from["recipe_stats"]`, set beside `"recipe"` (`:224-226`). Under (iii):
-  nothing is stored, and R1 and G5 assert the narrow form, the LG listing every recipe.
-  No file of DP-S1 (A), (B) or (C) is touched before its ruling.
+- [ ] **The step counts into the run record (DP-S1 (i), ruled 12:42:55).** In
+  `backend/src/app/db/models.py`, beside `reject_sample` (`:921-923`), add
+  `step_counts: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False,
+  default=list)`. At `:235-251`, write it from `PreparationResult.stats["steps"]`, one entry
+  per step in order, with the ruled keys `name` (`step`), `rows_in` (`rows_before`) and
+  `rows_out` (`rows_after`), plus `rows_rejected`, the one count the identity cannot derive
+  from the other three (a quarantine is not a removal); `[]` with no recipe. The identity
+  helper derives each step's removed and added rows by Task 4's formula from these four.
+- [ ] **The migration** (the 12:42:55 entry's migration discipline; `07` FR-417):
+  - one new revision under `backend/migrations/versions/` adding `step_counts` to
+    `ingestion_runs` as JSONB, not null, server default `'[]'`, so existing rows read `[]`;
+    with a `downgrade()` that drops the column;
+  - its `down_revision` is the single head of `main` at the slice's base;
+  - **re-point in merge order:** SL-8043's migration and P2's S-a/S-b migrations (PL 8016) are
+    parented on the same head while they run. Whichever merges **second** re-merges `main` and
+    re-points its `down_revision` to the head the first one landed;
+  - **the single-head check at that slice's gate:** `scripts/run-small.sh` over
+    `tests/test_repository_invariants.py -k test_the_migration_chain_has_exactly_one_head`
+    (`:357`, which reads the chain through Alembic's `ScriptDirectory`, `:374-381`) passes on
+    the re-merged tree, and `alembic upgrade head` then `alembic downgrade -1` then
+    `alembic upgrade head` run clean on a fresh database (the DSN form `dev-commands` gives).
+    The LG records both.
 - [ ] `correct_schema` (`:363-449`) is not changed (G3). Its refusal is the right answer there,
   because a correction has no quarantine.
 - [ ] `data_handlers.py:140-149` is not changed (DP-C2 (a), ruled).
@@ -806,16 +834,16 @@ auditor's `RECIPE`, through `execute_job`, as the 12:23:36 entry orders.
 - `backend/tests/test_ingest_coercion.py` (new), including R7, R8a and G5's shared helper.
 - The `LG-`.
 
-**Outside FD 8040's write set, for the maintainer's ruling (DP-S1; the 12:31:22 entry).** The
-step-count limb needs files this write set does not hold. None is added here, and none is
-touched until DP-S1 is ruled:
-- (A) recording: `backend/src/app/db/models.py:921-923` (a `step_counts` column on
-  `IngestionRunRow`), and one new migration under `backend/migrations/versions/`;
-- (B) asserting: `backend/tests/test_data_jobs.py` and `backend/tests/test_ingestion.py`
-  (G5's helper called after their ingests), and `examples/fremtpl2/test_seed.py` (R8b);
-- (C) visibility: `backend/src/app/api/dataset_versions.py:446-452` (`steps` in the untyped
-  response), and FR-31's dated clause in `01-data-management.md` (`:83`; the file is in the
-  write set, the requirement is not).
+**Widened by DP-S1 (i), accepted by the maintainer's (by delegation) entry "2026-10-14
+12:42:55 BST"** (beyond FD 8040's first-cut write set):
+- `backend/src/app/db/models.py:921-923`: the `step_counts` column on `IngestionRunRow`;
+- one new migration under `backend/migrations/versions/` (one head, with a downgrade);
+- `backend/tests/test_data_jobs.py` and `backend/tests/test_ingestion.py` (G5's helper called
+  after their ingests), and `examples/fremtpl2/test_seed.py` (R8b);
+- FR-31's dated clause in `01-data-management.md` (`:83`).
+
+`backend/src/app/api/dataset_versions.py` is **not** in the write set: the `steps` key once
+offered there is not in the ruled list.
 
 The recipe engine itself needs nothing beyond Task 4's change to `prepare.py`, which is in the
 write set: it already measures every step's height (`prepare.py:119-124`).
@@ -831,8 +859,9 @@ columns are a contract change: STOP to the lead.
 
 - **The lead:** mint FD 8040 (auditor-upload404's record) before this delta. GO the executor.
   Relay Task 0 Step 3's probe output, and any STOP, to the maintainer (DP-G2, binding).
-  Relay DP-S1 to the maintainer for its ruling (the 12:31:22 entry), with its options and the
-  "Outside FD 8040's write set" list; the step-count limb waits on it, the rest does not.
+  DP-S1 was ruled (i) at 12:42:55; nothing waits on it.
+- **SL-8043 and PL 8016's S-a/S-b:** their migrations re-point `down_revision` in merge order;
+  the second to merge runs the single-head check at its gate (Task 5).
 - **The P1 batch:** SL-8043's roadmap row sits next to SL-8031's (PL 8030), both before
   `### WK-1250`. The 12:23:36 entry rules that this adjacency is resolved in that one PR.
 
@@ -851,16 +880,21 @@ columns are a contract change: STOP to the lead.
     Acceptance 14 and 15;
   - *"If per-step counts cannot be recorded without touching … beyond FD 8040's write set, the
     planner says so with file:line"*: they cannot be recorded **in the run** without
-    `models.py` and a migration. This is DP-S1 (open, for the maintainer's ruling), the
-    "Outside FD 8040's write set" list, and the Tasks row's activation need. Until the ruling,
-    the narrow assert and the LG list stand as the carried item;
+    `models.py` and a migration. This was DP-S1, with the file:line list;
+  - **the 12:42:55 entry, item (1)**: DP-S1 → (i) (the DP row, quoted under Authority);
+    `step_counts` with name, rows_in, rows_out (Task 5; `rows_rejected` added because the
+    identity cannot derive it, stated there); the new migration with one head and a downgrade,
+    and the re-point in merge order with the single-head check (Task 5's migration step,
+    Hand-off); the FR-31 clause with its proposed text (Task 3); the widened write set (write
+    set); R7, R8a/b and G5 proceed, the (iii) fallback removed (R1, R7, R8, Tasks row);
+    Task 0's portfolio identity printed (Task 0 Step 3);
   - the entry's S5 sentence is PL 8034's, not this plan's.
 - **Spec coverage.** The plan names each requirement with its section:
   - FR-32 (`01` §3.1): the quarantine, and the Job path;
   - VR-STR-2, VR-STR-5 and VR-STR-9 (`01` §4.4): the checks that give the verdict;
   - FR-35 (`01` §3.2): the steps whose behaviour changes.
 
-  FR-31 is amended only if DP-S1 is ruled (i). FR-45, FR-46 and VR-STR-3 are read only. No requirement id is added or changed. Each
+  FR-31 gets a dated clause (DP-S1 (i), 12:42:55). FR-45, FR-46 and VR-STR-3 are read only. No requirement id is added or changed. Each
   limb maps to tasks:
   - limb (a), the coercion: R1, R2, R3, R6, Tasks 4 and 5, and DP-C2 for the handler;
   - limb (b), the blind validation: R4, R5, G4, Task 6 and DP-C3.
@@ -928,9 +962,9 @@ columns are a contract change: STOP to the lead.
   `api/datasets.py:556` and `model_schema/datasets.py:140-155` come from a delegated read; the
   executor re-reads them at Task 0.
 - **Convention 4.** `to-lead.md` was read through the entry "2026-10-14 12:23:36 BST", and
-  again, for the amendment, through "2026-10-14 12:31:22 BST". Only the
-  11:52:51 entry (item (1)), the 12:02:46 entry (item (1)), the 12:23:36 entry and the
-  12:31:22 entry (its PL 8042 item) rule on this subject.
+  again, for the amendments, through "2026-10-14 12:42:55 BST". Only the
+  11:52:51 entry (item (1)), the 12:02:46 entry (item (1)), the 12:23:36 entry, the
+  12:31:22 entry (its PL 8042 item) and the 12:42:55 entry (item (1)) rule on this subject.
   `gh pr list` was not run, because the brief allows no GitHub posts. Task 0 Step 4 re-reads at
   dispatch.
 - **Placeholders.** `<slice head>` and `<slice branch>` are values read when the slice runs.
