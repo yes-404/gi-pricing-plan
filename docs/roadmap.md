@@ -2392,6 +2392,24 @@ relates: [PL-1682, FD-1335, FD-1684, PL-1364, SL-1367, PL-1667, SL-1669, SL-1547
 
 On the maintainer's (by delegation) entry "2026-10-12 07:28:38 BST — S5 flags: (1) NEITHER (a) nor (c): type POST …/import's 200 FIRST in a tiny WK-1178 slice (d), with (a)+tripwire only as a named fallback; …", flag (1): `POST /api/v1/rate-tables/{slug}@{version}/import` publishes its 200 as the existing `model-schema` `ImportPreview` (`diff: RateTableDiff`, `created_by_import: ImportVerdict`; `rating.py:1363`) and its 201 (`confirm: true`) as `RateTableVersion`, in the manual-edit route's form (`response_model=None` with a `responses` map, `api/rate_tables.py:138-147`). No model is added or composed. The route leaves `UNTYPED_2XX_PENDING_PART_B` (`backend/tests/test_contracts.py:3193`, FD-1335 Part B's list, not FD-1366's), and `docs/contracts/openapi/generated.json` and the frontend client are regenerated. Spec first: a dated clause on `03` §5.1's import row (`:1046`, FR-235). Red first by cause: the published 200 has no `$ref` today; the stale-list test after regeneration; a real preview and confirm response round-trip through the published models (a guard, shown red on a planted extra field). `FD-1335` stays active with three routes in its Part B list. The export routes are out of scope (`FD-1684`). WK-675 S5 (`SL-1547`) uses the generated types after this slice merges, and S5's gate waits for it (07:28:38). Plan: Work-plan delta `PL-1682`. **Activation needs:** DP-1 (the 201 published too) and DP-2 (no standalone schema file) MET, both accepted by the maintainer (by delegation), "2026-10-12 07:46:06 BST", items 1 and 2; PL-1682 set `active` in this slice's activation commit; the shared-path census re-checked at the GO (`generated.json` against `SL-1547`; the later PR regenerates); the lead's executor GO. *(Cut 2026-10-12 by the planner under working id 9911, reserved by the lead, from-lead "2026-10-12 07:29:15 BST"; minted 2026-10-12 as SL-1683 from working id 9911, early, on the maintainer's (by delegation) entry "2026-10-12 07:46:06 BST".)*
 
+#### SL-8017 — WK-1178 fix slice — FD-8007: the factors table made append-only at the database, red first
+
+```yaml
+id: SL-8017
+family: slice
+title: WK-1178 fix slice — FD-8007: the factors table made append-only at the database, red first
+status: draft                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-14
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 1e260c1553acf39844939fe12da685ccfb835e54
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-8016, FD-8007, RL-8001, SL-1274]
+```
+
+On the maintainer's (by delegation) entries "2026-10-14 10:01:11 BST" and "2026-10-14 10:11:47 BST" (`to-lead.md`): FD-8007, MEDIUM with its re-rate trigger, owner WK-1178, its own row, red first, due before the 4 Nov P2 code freeze (`FR-44`). One Alembic migration revokes `UPDATE, DELETE` on `factors` from `gip_app` and `PUBLIC` and attaches `artifact_append_only()`'s row and `TRUNCATE` triggers (the `e1f2a3b4c5d6` form). `factors` joins `APPEND_ONLY_TABLES` (`backend/tests/test_artifact_immutability.py:38-52`), with the grant and trigger tests red by cause on the base. The DB-layer red is a `gip_app` `UPDATE` refused by the new trigger (PL-8016 DP-1). `_make_control` (`backend/tests/test_fr240_governance.py:248-256`) is removed, and its callers insert a `control` version before the pin (DP-2, DP-3). A both-layers assertion covers `bandings`, `factors` and `groupings` (DP-4). `FR-44` (`specs/01-data-management.md`) gets a dated line naming the seventh table. Plan: `PL-8016`, a dated Work-plan delta; `draft` until DP-1 to DP-3 are ruled. Activation: FD-8007 minted.
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
