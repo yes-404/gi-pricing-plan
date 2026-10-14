@@ -11,6 +11,8 @@ platform, not in pricing-core (DP1, DP3).
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -38,8 +40,12 @@ from app.platform.blobs import BlobStore
 from model_schema import JobKind, Permission
 from model_schema.jobs import Job
 from model_schema.rating import (
+    BulkOperationRequest,
+    RateTable,
+    RateTableCell,
     RateTableDiff,
     RateTableDiffCell,
+    RateTableManualEdit,
     RateTableVersion,
     SeedFromModelRequest,
 )
@@ -58,6 +64,21 @@ def _blob_store(request: Request) -> BlobStore:
 
 
 BlobStoreDep = Annotated[BlobStore, Depends(_blob_store)]
+
+
+@contextmanager
+def spec_not_found() -> Iterator[None]:
+    """`03` §5.1 types the S4 routes' unknown table, version or `base_version` as 404
+    `NOT_FOUND` (RL-1555 T1; the maintainer's rulings of 2026-10-10 04:19:42 and 04:23:36: the
+    spec governs, and the reads follow the edit route).
+    The shared loaders keep `RATE_TABLE_MISS`, which the scoring path relies on, so the route
+    maps it here and nothing below it changes."""
+    try:
+        yield
+    except PlatformError as exc:
+        if exc.code != "RATE_TABLE_MISS":
+            raise
+        raise PlatformError("NOT_FOUND", "Not Found", 404, exc.detail) from exc
 
 
 def _parse_against(raw: str) -> str | int:
@@ -105,7 +126,7 @@ async def seed_rate_table_from_model(
     version = await service.seed_from_model(
         database,
         caller.workspace_id,
-        caller.principal.id,
+        caller.principal,
         settings,
         blob_store,
         slug=slug,
@@ -117,50 +138,83 @@ async def seed_rate_table_from_model(
 
 
 @router.post(
+    "/rate-tables/{slug}/versions",
+    summary="Preview or create a Rate Table Version from manual cell edits",
+    response_model=None,
+    responses={
+        **problems(401, 403, 404, 409, 422),
+        200: {"model": RateTableDiff},
+        201: {"model": RateTableVersion},
+    },
+)
+async def edit_rate_table(
+    slug: str,
+    body: RateTableManualEdit,
+    caller: RatingWriteDep,
+    database: DatabaseDep,
+    settings: SettingsDep,
+    blob_store: BlobStoreDep,
+    response: Response,
+) -> RateTableDiff | RateTableVersion:
+    """**200** with a bare `RateTableDiff` of the would-be version against `base_version`;
+    nothing is created (FR-229, FR-231). **201** with `confirm: true`: the `RateTableVersion`
+    at `base_version + 1`, carrying `created_by_edit` (`RL-1555`). **404** `NOT_FOUND` for an
+    unknown table or `base_version`. **409** where
+    `base_version + 1` already exists (the base is not the latest). **422** with every
+    failure as a field error in `errors` (FR-234).
+    """
+    if not body.confirm:
+        with spec_not_found():
+            return await service.manual_edit_preview(
+                database, caller.workspace_id, slug, body, blob_store
+            )
+    assert caller.principal.id is not None
+    with spec_not_found():
+        created = await service.manual_edit_confirmed(
+            database, caller.workspace_id, caller.principal, settings, blob_store,
+            slug=slug, body=body,
+        )
+    response.status_code = status.HTTP_201_CREATED
+    return created
+
+
+@router.post(
     "/rate-tables/{slug}@{version}/bulk-operation",
     summary="Apply a bulk operation to a rate table version",
     status_code=status.HTTP_201_CREATED,
+    response_model=RateTableVersion,
     responses=problems(401, 403, 404, 409, 422),
 )
 async def bulk_operate_rate_table(
     slug: str,
     version: int,
-    body: dict[str, Any],
+    body: BulkOperationRequest,
     caller: RatingWriteDep,
     database: DatabaseDep,
     settings: SettingsDep,
     blob_store: BlobStoreDep,
-) -> dict[str, Any]:
+) -> RateTableVersion:
     """**201** with the new version (FR-233): the operation and its parameters
     recorded as `created_by_operation` (04 §4.4), the seed anchor inherited and
     proven equal to the baseline's at save time (03 §4.2, FR-234).
 
-    The body is `{"kind", "parameters"}` — `applied_to` and `result` are server-side:
-    `applied_to` names the addressed version, and `result` is computed by the
-    operation. Parameters are decimal strings, never floats (R2).
+    The body is a `BulkOperationRequest` (`{"kind", "parameters"}`) — `applied_to`
+    and `result` are server-side: `applied_to` names the addressed version, and
+    `result` is computed by the operation. Parameters are decimal strings, never floats (R2).
     """
     assert caller.principal.id is not None
-    kind = body.get("kind")
-    parameters = body.get("parameters")
-    if not isinstance(kind, str) or not isinstance(parameters, dict):
-        raise PlatformError(
-            "VALIDATION_FAILED",
-            "Request validation failed",
-            422,
-            detail="body must carry `kind` and `parameters` (04 §4.4)",
-        )
     created = await service.bulk_operation(
         database,
         caller.workspace_id,
-        caller.principal.id,
+        caller.principal,
         settings,
         blob_store,
         slug=slug,
         version=version,
-        kind=kind,
-        parameters=parameters,
+        kind=body.kind,
+        parameters=body.parameters.model_dump(mode="json"),
     )
-    return created.model_dump(mode="json")
+    return created
 
 
 @router.get(
@@ -260,7 +314,7 @@ async def import_rate_table(
     created = await service.import_confirmed(
         database,
         caller.workspace_id,
-        caller.principal.id,
+        caller.principal,
         settings,
         blob_store,
         slug=slug,
@@ -368,6 +422,42 @@ async def rate_table_diff(
             slug=slug, version=version, against=against, portfolio=portfolio,
         )
     return answer
+
+
+@router.get(
+    "/rate-tables/{slug}@{version}",
+    summary="Read one Rate Table Version's definition, without its cells",
+    responses=problems(401, 403, 404),
+)
+async def read_rate_table(
+    slug: str, version: int, caller: RatingReadDep, database: DatabaseDep
+) -> RateTable:
+    """FR-1636: the version's keys, value, storage, flag and default row; never its cells."""
+    with spec_not_found():
+        return await service.read_definition(database, caller.workspace_id, slug, version)
+
+
+@router.get(
+    "/rate-tables/{slug}@{version}/cells",
+    summary="Page through one Rate Table Version's cells, either storage, no Job",
+    responses=problems(400, 401, 403, 404, 422),
+)
+async def read_rate_table_cells(
+    slug: str,
+    version: int,
+    caller: RatingReadDep,
+    database: DatabaseDep,
+    blob_store: BlobStoreDep,
+    limit: Annotated[int, Query(ge=1, le=MAX_LIMIT)] = DEFAULT_LIMIT,
+    cursor: str | None = None,
+) -> Page[RateTableCell]:
+    """FR-1636, FR-232: one cursor page of `RateTableCell` rows in key order, for `rows` and
+    `parquet` storage alike, answered **200** and never as a Job. A cursor this API did not
+    issue is a **400**, a `limit` out of range a **422**."""
+    with spec_not_found():
+        return await service.cells_page(
+            database, caller.workspace_id, slug, version, blob_store, cursor=cursor, limit=limit
+        )
 
 
 @router.get(

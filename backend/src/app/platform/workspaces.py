@@ -14,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import UserRow, WorkspaceMemberRow, WorkspaceRow
+from app.errors import PlatformError
 
 __all__ = ["ensure_member", "ensure_workspace"]
 
@@ -71,11 +72,27 @@ async def ensure_member(
     the caller owns the workspace's name, and `ensure_workspace` returns an existing row
     untouched -- naming it afterwards silently does nothing.
 
-    Idempotent, like `ensure_workspace` and `seed_builtin_roles`: a seed is re-run against an
-    existing database routinely, and both `uq_workspace_members_user_workspace` and
-    `uq_users_issuer_subject` make a second blind insert an error rather than a no-op.
+    Idempotent for the same identity, like `ensure_workspace` and `seed_builtin_roles`: a seed is
+    re-run against an existing database routinely, and both `uq_workspace_members_user_workspace`
+    and `uq_users_issuer_subject` make a second blind insert an error rather than a no-op. **An
+    id that contradicts the stored identity is refused**, not absorbed: when `(issuer, subject)`
+    already belongs to a user with another id, this raises `VALIDATION_FAILED` (422) naming both
+    ids and the pair, instead of failing at flush on the unique constraint (FD-1494 limb 3).
     """
-    user = await session.get(UserRow, user_id)
+    stored = (
+        await session.execute(
+            select(UserRow).where(UserRow.issuer == issuer, UserRow.subject == subject)
+        )
+    ).scalar_one_or_none()
+    if stored is not None and stored.id != user_id:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "Identity already belongs to another user",
+            422,
+            f"The identity ({issuer}, {subject}) belongs to user {stored.id}, "
+            f"not the requested user {user_id}.",
+        )
+    user = stored or await session.get(UserRow, user_id)
     if user is None:
         user = UserRow(id=user_id, issuer=issuer, subject=subject)
         session.add(user)

@@ -163,6 +163,10 @@ GENERATED_SHAPES: dict[str, str] = {
     # authored `rate-table.schema.json` is F27(c)'s, never compared).
     "rate-table-version": "RateTableVersion",
     "seed-from-model-request": "SeedFromModelRequest",
+    # Added 2026-10-12 (WK-1178 SL-1669, PL-1667). The bulk-operation route's request body,
+    # a `kind`-discriminated union of four arms, so it is a `TypeAdapter` (FD-1366 Part B).
+    # The 201 is `RateTableVersion`, already generated above.
+    "bulk-operation-request": "BULK_OPERATION_REQUEST_ADAPTER",
     # Added 2026-10-03 (WK-674 Slice 2, PL-1392 C1). The Environment and Deployment shapes
     # and the request bodies of the new routes: first written forms, with no hand-authored
     # counterpart (`03` §4.12, `07` §4.2). A client that creates an Environment or deploys
@@ -179,6 +183,9 @@ GENERATED_SHAPES: dict[str, str] = {
     "approval-submission": "ApprovalSubmission",
     # Added 2026-10-04 (PL-1392 Task 6): the body of `.../withdraw`, moved out of the API module.
     "approval-withdrawal": "ApprovalWithdrawal",
+    # Added 2026-10-10 (WK-1178, the FD-1416 fix, PL-1528 / RL-1522 DP-8 (a)): the one shape every
+    # approval route returns; the hand-authored Phase 0 draft is retired ("generated wins").
+    "approval-request": "ApprovalRequest",
     # Added 2026-10-05 (WK-1178, the FD-1421 fix, RL-1428): the body of `POST /rating-versions`,
     # moved out of the API module. First written form, no hand-authored counterpart.
     "rating-version-create": "RatingVersionCreate",

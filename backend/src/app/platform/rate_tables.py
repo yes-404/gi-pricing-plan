@@ -24,7 +24,7 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from app.api.pagination import COUNT_CAP, MAX_LIMIT, decode_int_cursor, encode_cursor
+from app.api.pagination import COUNT_CAP, MAX_LIMIT, Page, decode_int_cursor, encode_cursor
 from app.config import Settings
 from app.db.models import (
     BlobRow,
@@ -36,7 +36,7 @@ from app.db.models import (
 )
 from app.db.session import Database
 from app.errors import PlatformError
-from app.platform import datasets, transformations
+from app.platform import audit, datasets, transformations
 from app.platform import jobs as job_service
 from app.platform import settings as settings_svc
 from app.platform.blobs import BlobStore, to_ref
@@ -47,15 +47,28 @@ from app.platform.modelling import (
     load_model,
     to_model,
 )
-from model_schema import Banding, DatasetStatus, Factor, Grouping, JobKind, JobStatus
+from model_schema import (
+    Banding,
+    DatasetStatus,
+    Factor,
+    Grouping,
+    JobKind,
+    JobSource,
+    JobStatus,
+    Principal,
+)
 from model_schema.jobs import Job
+from model_schema.problem import FieldError
 from model_schema.rating import (
     FloorAndCapParameters,
     ImportPreview,
+    ManualEdit,
     RateTable,
+    RateTableCell,
     RateTableDiff,
     RateTableDiffCell,
     RateTableKey,
+    RateTableManualEdit,
     RateTableStorageMode,
     RateTableVersion,
     RebaseToLevelParameters,
@@ -66,6 +79,10 @@ from model_schema.rating import (
 from model_schema.refs import ArtifactRef, BlobRef
 from pricing_core.modelling import FactorResolutionError
 from pricing_core.rate_tables.operations import (
+    NULL_VALUE,
+    OUT_OF_BOUNDS,
+    EditIssue,
+    apply_cell_edits,
     check_model_approved,
     decide_storage_mode,
     diff_cells,
@@ -121,7 +138,7 @@ def _map_operation_error(exc: ValueError) -> PlatformError:
 async def seed_from_model(
     database: Database,
     workspace_id: UUID,
-    created_by: UUID,
+    actor: Principal,
     settings: Settings,
     blob_store: BlobStore,
     *,
@@ -144,6 +161,7 @@ async def seed_from_model(
     non-approved model gives `PIN_NOT_APPROVED` whatever its Factor ids resolve to; an id
     that resolves nowhere is then a 404 (`load_factors`), never an empty list.
     """
+    assert actor.id is not None
     async with database.unit_of_work() as session:
         model_row = await load_model(
             session,
@@ -178,18 +196,21 @@ async def seed_from_model(
                 RateTableRow.slug == slug,
             )
         )
+        before: dict[str, Any] | None = None
         if table_row is None:
             table_row = RateTableRow(
                 workspace_id=workspace_id,
                 slug=slug,
                 current_version=0,
-                created_by=created_by,
+                created_by=actor.id,
             )
             session.add(table_row)
             await session.flush()
             version_number = 1
         else:
             await _check_reseed_lineage(session, table_row, slug=slug, factor=factor)
+            current = await _load_version(session, table_row.id, table_row.current_version, slug)
+            before = _baseline_state(current, await _to_version(session, current, blob_store))
             version_number = table_row.current_version + 1
 
         derived = RateTableVersion(
@@ -210,7 +231,9 @@ async def seed_from_model(
             table_row=table_row,
             derived=derived,
             version_number=version_number,
-            created_by=created_by,
+            actor=actor,
+            action="rate_table_version.seeded",
+            before=before,
             threshold=threshold,
             blob_store=blob_store,
         )
@@ -260,9 +283,9 @@ def _cells_for_rows(
     return [([row[name] for name in key_names], row[value_name]) for row in cells]
 
 
-def _wire_rows(cells: Sequence[dict[str, str]]) -> list[dict[str, str | int]]:
+def _wire_rows(cells: Sequence[dict[str, str]]) -> list[RateTableCell]:
     """Cells → the wire form's row type (§4.2): every value is a decimal string."""
-    return cast(list[dict[str, str | int]], list(cells))
+    return [RateTableCell(row) for row in cells]
 
 
 async def _load_table(
@@ -889,7 +912,7 @@ async def import_preview(
 async def import_confirmed(
     database: Database,
     workspace_id: UUID,
-    created_by: UUID,
+    actor: Principal,
     settings: Settings,
     blob_store: BlobStore,
     *,
@@ -906,6 +929,7 @@ async def import_confirmed(
     the seed anchor is inherited from the baseline (DP4, FR-234), and the
     storage decision follows the workspace threshold like any other version (DP2).
     """
+    assert actor.id is not None
     async with database.unit_of_work() as session:
         table_row = await _load_table(session, workspace_id, slug)
         version_row = await _load_version(session, table_row.id, version, slug)
@@ -934,7 +958,138 @@ async def import_confirmed(
             table_row=table_row,
             derived=derived,
             version_number=version + 1,
-            created_by=created_by,
+            actor=actor,
+            action="rate_table_version.imported",
+            before=_baseline_state(version_row, table),
+            threshold=threshold,
+            blob_store=blob_store,
+        )
+
+
+def _edit_failure(issues: Sequence[EditIssue], value_name: str) -> PlatformError:
+    """RL-1555 item 3: every failure of a manual edit is one `FieldError` in the problem's
+    `errors`, `field` `edits.<index>.<value name>`, `code` the failure's own (`UNKNOWN_KEY`,
+    `DUPLICATE_KEY`, `EDIT_COLUMNS`, `NULL_VALUE`, `OUT_OF_BOUNDS`). The problem's code is
+    `RATE_TABLE_INCOMPLETE` when every failure is an FR-234 value issue and
+    `VALIDATION_FAILED` otherwise. FR-234's value issues name the table key and
+    the submitted value (pricing configuration, the caller's own edit, not a quote input under
+    NFR-499; ruled in the maintainer's entry "2026-10-10 22:16:18 BST" in `to-lead.md`); the
+    count message interpolates only `len(errors)`. Nothing here reads an exception's text."""
+    errors = tuple(
+        FieldError(
+            field=f"edits.{issue.index}.{value_name}", code=issue.code, message=issue.message
+        )
+        for issue in issues
+    )
+    values_only = all(issue.code in (NULL_VALUE, OUT_OF_BOUNDS) for issue in issues)
+    return PlatformError(
+        "RATE_TABLE_INCOMPLETE" if values_only else "VALIDATION_FAILED",
+        "Manual edit refused",
+        422,
+        f"{len(errors)} edit failure(s); each is a field error.",
+        errors=errors,
+    )
+
+
+async def _edit_derived(
+    session: Any,
+    workspace_id: UUID,
+    slug: str,
+    body: RateTableManualEdit,
+    blob_store: BlobStore,
+) -> tuple[RateTableRow, RateTableVersionRow, RateTableVersion, RateTableVersion]:
+    """The base and the version the edits would make, at `base_version + 1` (FR-229).
+
+    The base is addressed by the body's `base_version`; an unknown table or version is the
+    loaders' 404 `RATE_TABLE_MISS`. Every failure of the edits is collected (`_edit_failure`).
+    The derived version inherits the base's seed lineage and records `created_by_edit`.
+    """
+    table_row = await _load_table(session, workspace_id, slug)
+    version_row = await _load_version(session, table_row.id, body.base_version, slug)
+    base = await _to_version(session, version_row, blob_store)
+    result = apply_cell_edits(base, body.edits)
+    if result.issues:
+        raise _edit_failure(result.issues, base.value.name)
+    derived = RateTableVersion(
+        slug=slug,
+        version=body.base_version + 1,
+        rateable=base.rateable,
+        storage=RateTableStorageMode.ROWS,
+        keys=base.keys,
+        value=base.value,
+        default_row=base.default_row,
+        rows=_wire_rows(result.cells),
+        change_note=body.change_note,
+        seeded_from=base.seeded_from,
+        created_by_edit=ManualEdit(
+            applied_to=ArtifactRef(type="rate_table", slug=slug, version=body.base_version),
+            edited_cells=len(body.edits),
+        ),
+    )
+    return table_row, version_row, base, derived
+
+
+def _rows_form_violated() -> PlatformError:
+    """An internal invariant, not a caller error: a manual edit derives a rows-form version
+    from a rows-form base. Static text only (NFR-499); an `assert` would vanish under
+    `python -O` (RL-1555 C)."""
+    return PlatformError(
+        "INTERNAL_ERROR",
+        "Internal server error",
+        500,
+        "A rate table version reached a rows-only step without its cells.",
+    )
+
+
+async def manual_edit_preview(
+    database: Database,
+    workspace_id: UUID,
+    slug: str,
+    body: RateTableManualEdit,
+    blob_store: BlobStore,
+) -> RateTableDiff:
+    """FR-229, FR-231 (RL-1555 item 1): the would-be version as a bare diff against its base;
+    nothing is created."""
+    async with database.unit_of_work() as session:
+        _, _, base, derived = await _edit_derived(session, workspace_id, slug, body, blob_store)
+        if base.rows is None or derived.rows is None:
+            raise _rows_form_violated()
+        return diff_vs_previous(
+            [dict(row.root) for row in base.rows],
+            [dict(row.root) for row in derived.rows],
+            base.keys,
+            base.value,
+        )
+
+
+async def manual_edit_confirmed(
+    database: Database,
+    workspace_id: UUID,
+    actor: Principal,
+    settings: Settings,
+    blob_store: BlobStore,
+    *,
+    slug: str,
+    body: RateTableManualEdit,
+) -> RateTableVersion:
+    """FR-229 (RL-1555 items 1 and 2): create the version the preview showed, with its
+    `created_by_edit` record. A base that is not the latest is the existing 409 of
+    `_persist_new_version` (`base_version + 1` already exists)."""
+    assert actor.id is not None
+    async with database.unit_of_work() as session:
+        table_row, version_row, base, derived = await _edit_derived(
+            session, workspace_id, slug, body, blob_store
+        )
+        _guard_seed_lineage(derived, version_row)
+        threshold = await _resolve_threshold(session, settings, workspace_id)
+        return await _persist_new_version(
+            session,
+            table_row=table_row,
+            derived=derived,
+            version_number=derived.version,
+            actor=actor,
+            action="rate_table_version.edited",
+            before=_baseline_state(version_row, base),
             threshold=threshold,
             blob_store=blob_store,
         )
@@ -1079,6 +1234,60 @@ async def _load_cells_of(
     return await _load_cells(session, version_row.id, table)
 
 
+async def read_definition(
+    database: Database, workspace_id: UUID, slug: str, version: int
+) -> RateTable:
+    """FR-1636: one version's definition — keys, value, storage, flag, default row — never
+    its cells. The stored `definition` is exactly a `RateTable`."""
+    async with database.session() as session:
+        table_row = await _load_table(session, workspace_id, slug)
+        version_row = await _load_version(session, table_row.id, version, slug)
+        return RateTable.model_validate(version_row.definition)
+
+
+def _cells_in_key_order(
+    cells: Sequence[dict[str, str]], key_names: Sequence[str]
+) -> list[dict[str, str]]:
+    """RL-1475 item 2: code-point order per key column in declared order, compared as
+    strings, for both storages. The one place cells are sorted; never a SQL `ORDER BY`,
+    whose collation could differ from the parquet path's."""
+    return sorted(cells, key=lambda row: tuple(row[name] for name in key_names))
+
+
+async def cells_page(
+    database: Database,
+    workspace_id: UUID,
+    slug: str,
+    version: int,
+    blob_store: BlobStore,
+    *,
+    cursor: str | None,
+    limit: int,
+) -> Page[RateTableCell]:
+    """FR-1636: one page of an immutable version's cells, never a Job (FR-232).
+
+    The cells of the version are loaded per page, then sorted and sliced. For a rows-stored
+    version that is at most the version's cell count, which is at most the workspace
+    threshold (FR-232); a parquet version reads its blob once per page.
+    """
+    async with database.session() as session:
+        table_row = await _load_table(session, workspace_id, slug)
+        version_row = await _load_version(session, table_row.id, version, slug)
+        table = RateTable.model_validate(version_row.definition)
+        cells = await _load_cells_of(session, version_row, table, blob_store)
+    ordered = _cells_in_key_order(cells, [key.name for key in table.keys])
+    total = len(ordered)
+    start = decode_int_cursor(cursor) or 0
+    if cursor is not None and not 0 < start < total:
+        raise _bad_cursor()
+    stop = min(start + limit, total)
+    return Page[RateTableCell](
+        items=_wire_rows(ordered[start:stop]),
+        next_cursor=encode_cursor(stop) if stop < total else None,
+        total_estimate=min(total, COUNT_CAP),
+    )
+
+
 async def _to_version(
     session: Any, version_row: RateTableVersionRow, blob_store: BlobStore
 ) -> RateTableVersion:
@@ -1108,6 +1317,44 @@ async def _to_version(
             else None
         ),
     )
+
+
+def _stored_version(
+    version_row: RateTableVersionRow, cells: Sequence[dict[str, str]]
+) -> RateTableVersion:
+    """The version's §4.2 wire form as stored (FR-232): inline rows when rows-stored, the
+    parquet `BlobRef` otherwise, with its provenance fields. Unlike `_to_version`, which
+    materialises a transformation input, this is the one constructor of what is stored."""
+    return RateTableVersion.model_validate(
+        version_row.definition
+        | {
+            "storage": version_row.storage,
+            "rows": _wire_rows(cells) if version_row.storage == "rows" else None,
+            "cells": version_row.cells,
+            "change_note": version_row.change_note,
+            "seeded_from": version_row.seeded_from,
+            "created_by_operation": version_row.created_by_operation,
+            "created_by_import": version_row.created_by_import,
+            "created_by_edit": version_row.created_by_edit,
+        }
+    )
+
+
+def _audit_state(version: RateTableVersion, cells: Sequence[dict[str, str]]) -> dict[str, Any]:
+    """NFR-498's state of one version (RL-1515 DP-2): its stored wire form without inline
+    rows, plus the cells' canonical content hash, the diff cache's own (FR-232). The version
+    is immutable and its `entity_ref` addresses it, so the cells stay recoverable."""
+    return version.model_dump(mode="json", exclude={"rows"}) | {
+        "cells_digest": version_content_hash(cells)
+    }
+
+
+def _baseline_state(version_row: RateTableVersionRow, base: RateTableVersion) -> dict[str, Any]:
+    """The audit state of the stored version `base` was materialised from (`_to_version`)."""
+    if base.rows is None:
+        raise _rows_form_violated()
+    cells = [dict(row.root) for row in base.rows]
+    return _audit_state(_stored_version(version_row, cells), cells)
 
 
 def _guard_seed_lineage(
@@ -1143,7 +1390,9 @@ async def _persist_new_version(
     table_row: RateTableRow,
     derived: RateTableVersion,
     version_number: int,
-    created_by: UUID,
+    actor: Principal,
+    action: str,
+    before: dict[str, Any] | None,
     threshold: int,
     blob_store: BlobStore,
 ) -> RateTableVersion:
@@ -1154,8 +1403,16 @@ async def _persist_new_version(
     threshold the cells keep the `rate_table_cells` rows; above it they are written
     to a content-addressed parquet blob addressed by `cells`. Returns the version in
     its §4.2 wire form.
+
+    The one writer of a rate table version, so the one place its Audit Event is recorded
+    (NFR-498, RL-1515 DP-1): `action` names how the version was made and `before` is the
+    state of the version it was made from, `None` for a table's first. The event follows the
+    last flush, in the write's transaction (`06` R2), so a refused write records none.
     """
-    cells = cast(list[dict[str, str]], derived.rows)
+    assert actor.id is not None
+    if derived.rows is None:
+        raise _rows_form_violated()
+    cells = [dict(row.root) for row in derived.rows]
     storage_mode = decide_storage_mode(len(cells), threshold)
     definition = RateTable(
         slug=derived.slug,
@@ -1178,7 +1435,7 @@ async def _persist_new_version(
             if derived.seeded_from is not None
             else None
         ),
-        created_by=created_by,
+        created_by=actor.id,
         created_by_operation=(
             derived.created_by_operation.model_dump(mode="json")
             if derived.created_by_operation is not None
@@ -1187,6 +1444,11 @@ async def _persist_new_version(
         created_by_import=(
             derived.created_by_import.model_dump(mode="json")
             if derived.created_by_import is not None
+            else None
+        ),
+        created_by_edit=(
+            derived.created_by_edit.model_dump(mode="json")
+            if derived.created_by_edit is not None
             else None
         ),
     )
@@ -1217,21 +1479,18 @@ async def _persist_new_version(
         )
         version_row.cells = blob_ref.model_dump(mode="json")
     await session.flush()
-    return RateTableVersion(
-        slug=derived.slug,
-        version=version_number,
-        rateable=derived.rateable,
-        storage=RateTableStorageMode(storage_mode),
-        keys=derived.keys,
-        value=derived.value,
-        default_row=derived.default_row,
-        rows=_wire_rows(cells) if storage_mode == "rows" else None,
-        cells=blob_ref,
-        change_note=derived.change_note,
-        seeded_from=derived.seeded_from,
-        created_by_operation=derived.created_by_operation,
-        created_by_import=derived.created_by_import,
+    created = _stored_version(version_row, cells)
+    await audit.record(
+        session,
+        workspace_id=table_row.workspace_id,
+        actor=actor,
+        source=JobSource.API,
+        action=action,
+        entity_ref=f"rate_table:{derived.slug}@{version_number}",
+        before=before,
+        after=_audit_state(created, cells),
     )
+    return created
 
 
 def _dispatch_operation(
@@ -1266,7 +1525,7 @@ def _dispatch_operation(
 async def bulk_operation(
     database: Database,
     workspace_id: UUID,
-    created_by: UUID,
+    actor: Principal,
     settings: Settings,
     blob_store: BlobStore,
     *,
@@ -1282,6 +1541,7 @@ async def bulk_operation(
     (FR-234, 03 §4.2, DP4), and the new version's storage is decided against the
     workspace threshold (FR-232, DP2).
     """
+    assert actor.id is not None
     async with database.unit_of_work() as session:
         table_row = await session.scalar(
             select(RateTableRow).where(
@@ -1313,7 +1573,9 @@ async def bulk_operation(
             table_row=table_row,
             derived=derived,
             version_number=baseline_row.version_number + 1,
-            created_by=created_by,
+            actor=actor,
+            action="rate_table_version.bulk_operation",
+            before=_baseline_state(baseline_row, baseline),
             threshold=threshold,
             blob_store=blob_store,
         )

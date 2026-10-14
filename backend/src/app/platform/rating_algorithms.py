@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import ModelRow, RatingAlgorithmRow
 from app.db.session import Database
 from app.errors import PlatformError
+from app.platform import audit
 from app.platform.modelling import load_factors
 from app.platform.perils import load_structure_by_ref
 from model_schema import (
@@ -25,6 +26,8 @@ from model_schema import (
     ArtifactRef,
     GraphCycleError,
     GraphUnresolvedRefError,
+    JobSource,
+    Principal,
     RatingAlgorithmDraft,
     ValidationIssue,
 )
@@ -219,7 +222,7 @@ async def check_model_call_feature_maps(
 async def create_algorithm(
     database: Database,
     workspace_id: UUID,
-    created_by: UUID,
+    actor: Principal,
     content: dict[str, Any],
 ) -> RatingAlgorithmRow:
     """Parse, validate, and persist a rating algorithm (03 §5.1).
@@ -227,6 +230,7 @@ async def create_algorithm(
     A conflicting (slug, version) is refused as a conflict; save-time validation runs
     before the row is written.
     """
+    assert actor.id is not None
     algorithm = _parse_algorithm(content)
     _issues_to_error(algorithm)
 
@@ -246,15 +250,36 @@ async def create_algorithm(
                 409,
                 f"{algorithm.slug}@{algorithm.version} already exists in this workspace.",
             )
+        previous = await session.scalar(
+            select(RatingAlgorithmRow)
+            .where(
+                RatingAlgorithmRow.workspace_id == workspace_id,
+                RatingAlgorithmRow.slug == algorithm.slug,
+            )
+            .order_by(RatingAlgorithmRow.version.desc())
+            .limit(1)
+        )
         row = RatingAlgorithmRow(
             workspace_id=workspace_id,
             slug=algorithm.slug,
             version=algorithm.version,
             content=content,
-            created_by=created_by,
+            created_by=actor.id,
         )
         session.add(row)
         await session.flush()
+        # NFR-498: algorithm versions are numbered by the client, so the state replaced is the
+        # slug's highest-numbered existing version, `None` for its first (RL-1515 DP-3).
+        await audit.record(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            source=JobSource.API,
+            action="rating_algorithm.created",
+            entity_ref=f"rating_algorithm:{algorithm.slug}@{algorithm.version}",
+            before=None if previous is None else previous.content,
+            after=content,
+        )
         return row
 
 

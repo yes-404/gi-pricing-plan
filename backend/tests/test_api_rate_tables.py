@@ -842,6 +842,56 @@ def test_bulk_operation_refuses_an_unknown_kind(
 
 
 @pytest.mark.req("FR-233")
+def test_bulk_operation_refuses_a_server_set_field(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """`applied_to` and `result` are the server's: a body carrying one is refused (SL-1669)."""
+    slug, _family = _seeded_table(api_client, workspace_id, actuary)
+
+    response = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/bulk-operation",
+        json={**_bulk_body("uplift_table", {"percentage": "0.10"}), "applied_to": "rate_table:x@1"},
+        headers=actuary,
+    )
+    assert response.status_code == 422, response.text
+    body = response.json()
+    assert body["code"] == "VALIDATION_FAILED"
+    assert any(e["field"].endswith("applied_to") for e in body["errors"]), body
+
+
+@pytest.mark.req("FR-233")
+def test_bulk_operation_refuses_a_json_number_for_a_decimal_parameter(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """04 §4.4: `percentage` is a decimal string, never a float (SL-1669, DP-2)."""
+    slug, _family = _seeded_table(api_client, workspace_id, actuary)
+
+    response = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/bulk-operation",
+        json=_bulk_body("uplift_table", {"percentage": 0.1}),
+        headers=actuary,
+    )
+    assert response.status_code == 422, response.text
+    body = response.json()
+    assert body["code"] == "VALIDATION_FAILED"
+    assert any(e["field"].endswith("percentage") for e in body["errors"]), body
+
+
+@pytest.mark.req("FR-451")
+def test_bulk_operation_publishes_a_discriminated_request_and_a_typed_201(
+    api_client: TestClient,
+) -> None:
+    operation = api_client.app.openapi()["paths"][
+        "/api/v1/rate-tables/{slug}@{version}/bulk-operation"
+    ]["post"]
+    request = operation["requestBody"]["content"]["application/json"]["schema"]
+    assert request["discriminator"]["propertyName"] == "kind"
+    assert len(request["oneOf"]) == 4
+    created = operation["responses"]["201"]["content"]["application/json"]["schema"]
+    assert created["$ref"].endswith("/RateTableVersion")
+
+
+@pytest.mark.req("FR-233")
 def test_bulk_operation_refuses_floor_above_cap(
     api_client: TestClient, workspace_id, actuary
 ) -> None:
@@ -1567,3 +1617,430 @@ def test_against_seed_resolves_to_the_versions_own_seed_origin(
     )
     assert on_v2.status_code == 200, on_v2.text
     assert on_v2.json()["changed_cells"] == on_v2_vs_v1.json()["changed_cells"]
+
+
+#: The code of a 404 on an unknown table or version at the S4 routes: `NOT_FOUND`, mapped at
+#: the route (RL-1555 T1; the maintainer's rulings of 2026-10-10 04:19:42 and 04:23:36: the
+#: spec governs, reads included). The loaders keep `RATE_TABLE_MISS` for the scoring path.
+_READ_MISS_CODE = "NOT_FOUND"
+_EDIT_MISS_CODE = "NOT_FOUND"
+
+# -- the definition and cell-page reads (FR-1636, FR-232; RL-1475 items 2 and 3) -------------
+
+_MIXED_LEVELS: dict[str, list[tuple[str, float]]] = {
+    "driver_age_band": [("B", 1.0), ("a", 1.1), ("10", 1.2), ("9", 1.3)]
+}
+#: Code-point order, per key column, compared as strings (RL-1475 item 2): `"10"` before `"9"`,
+#: and `"B"` before `"a"`. Written out so no sort in the test can agree with a wrong one.
+_EXPECTED_ORDER = ["10", "9", "B", "a"]
+
+
+def _seed_mixed_table(api_client: TestClient, workspace_id, actuary) -> str:
+    """Seed the mixed-level table as version 1 and return its slug."""
+    family = f"mf-{uuid4().hex[:8]}"
+    _seed_approved_model(workspace_id, family, _MIXED_LEVELS)
+    slug = _table_slug()
+    seeded = api_client.post(
+        f"/api/v1/rate-tables/{slug}/seed-from-model",
+        json=_seed_body(family),
+        headers=actuary,
+    )
+    assert seeded.status_code == 201, seeded.text
+    return slug
+
+
+def _all_pages(
+    api_client: TestClient, slug: str, headers: dict[str, str], limit: int
+) -> list[dict[str, str]]:
+    items: list[dict[str, str]] = []
+    cursor: str | None = None
+    while True:
+        params: dict[str, object] = {"limit": limit} | ({"cursor": cursor} if cursor else {})
+        response = api_client.get(
+            f"/api/v1/rate-tables/{slug}@1/cells", params=params, headers=headers
+        )
+        assert response.status_code == 200, response.text
+        items += response.json()["items"]
+        cursor = response.json()["next_cursor"]
+        if cursor is None:
+            return items
+
+
+def _job_count() -> int:
+    from sqlalchemy import func
+
+    from app.db.models import JobRow
+
+    counted: list[int] = []
+
+    async def _count(session: AsyncSession) -> None:
+        counted.append(await session.scalar(select(func.count()).select_from(JobRow)) or 0)
+
+    _run_with_database(_count)
+    return counted[0]
+
+
+@pytest.mark.req("FR-1636")
+def test_definition_read_carries_no_cells(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    from model_schema.rating import RateTable
+
+    slug = _seed_mixed_table(api_client, workspace_id, actuary)
+
+    response = api_client.get(f"/api/v1/rate-tables/{slug}@1", headers=actuary)
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert "rows" not in body
+    assert "cells" not in body
+    assert RateTable.model_validate(body).slug == slug
+
+
+@pytest.mark.req("FR-232")
+def test_cell_pages_agree_across_storages_in_key_order(
+    api_client: TestClient, workspace_id, actuary, admin_headers
+) -> None:
+    jobs_before = _job_count()
+    rows_slug = _seed_mixed_table(api_client, workspace_id, actuary)
+    _set_threshold(api_client, admin_headers, 2)  # the next version spills to parquet
+    parquet_slug = _seed_mixed_table(api_client, workspace_id, actuary)
+    definition = api_client.get(f"/api/v1/rate-tables/{parquet_slug}@1", headers=actuary).json()
+    assert definition["storage"] == "parquet"
+
+    rows_order = [row["driver_age_band"] for row in _all_pages(api_client, rows_slug, actuary, 2)]
+    parquet_order = [
+        row["driver_age_band"] for row in _all_pages(api_client, parquet_slug, actuary, 2)
+    ]
+
+    assert rows_order == parquet_order == _EXPECTED_ORDER
+    assert _job_count() == jobs_before
+
+
+@pytest.mark.req("FR-232")
+def test_cell_paging_concatenates_and_refuses_a_bad_cursor_or_limit(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    slug = _seed_mixed_table(api_client, workspace_id, actuary)
+
+    one_by_one = _all_pages(api_client, slug, actuary, 1)
+    whole = _all_pages(api_client, slug, actuary, 200)
+    assert one_by_one == whole
+    assert len({row["driver_age_band"] for row in whole}) == len(whole) == 4
+
+    bad_cursor = api_client.get(
+        f"/api/v1/rate-tables/{slug}@1/cells", params={"cursor": "not-a-cursor"}, headers=actuary
+    )
+    assert bad_cursor.status_code == 400, bad_cursor.text
+    assert bad_cursor.json()["code"] == "VALIDATION_FAILED"
+    too_many = api_client.get(
+        f"/api/v1/rate-tables/{slug}@1/cells", params={"limit": 201}, headers=actuary
+    )
+    assert too_many.status_code == 422, too_many.text
+
+
+@pytest.mark.req("FR-1636")
+def test_rate_table_isolation_another_workspace_answers_404(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    from app.platform import workspaces
+
+    foreign = uuid4()
+    slug = _table_slug()
+
+    async def _insert(session: AsyncSession) -> None:
+        await workspaces.ensure_workspace(session, workspace_id=foreign)
+
+    _run_with_database(_insert)
+    _insert_table(foreign, slug, [{"name": "driver_age_band", "type": "string"}])
+
+    for path in (f"/api/v1/rate-tables/{slug}@1", f"/api/v1/rate-tables/{slug}@1/cells"):
+        response = api_client.get(path, headers=actuary)
+        assert response.status_code == 404, response.text
+        assert response.json()["code"] == _READ_MISS_CODE
+
+
+@pytest.mark.req("FR-232")
+def test_cells_bound_a_rows_page_loads_at_most_the_threshold(
+    api_client: TestClient, workspace_id, actuary, admin_headers, monkeypatch
+) -> None:
+    """FR-232's bound under test: a rows-stored page loads the version's cells (at most its
+    count, which is at most the workspace threshold, 250 000 by default); a parquet version
+    reads its blob once per page."""
+    from app.platform import rate_tables as service
+    from app.platform.blobs import BlobStore
+
+    loaded: list[int] = []
+    real_load = service._load_cells
+
+    async def _counting_load(session, version_id, table):  # type: ignore[no-untyped-def]
+        cells = await real_load(session, version_id, table)
+        loaded.append(len(cells))
+        return cells
+
+    monkeypatch.setattr(service, "_load_cells", _counting_load)
+    rows_slug = _seed_mixed_table(api_client, workspace_id, actuary)
+    loaded.clear()
+    _all_pages(api_client, rows_slug, actuary, 2)  # two pages
+    assert loaded == [4, 4]
+    assert max(loaded) <= 250_000
+
+    reads: list[int] = []
+    real_read = BlobStore.read
+
+    async def _counting_read(self, ref):  # type: ignore[no-untyped-def]
+        reads.append(1)
+        return await real_read(self, ref)
+
+    monkeypatch.setattr(BlobStore, "read", _counting_read)
+    _set_threshold(api_client, admin_headers, 2)
+    parquet_slug = _seed_mixed_table(api_client, workspace_id, actuary)
+    reads.clear()
+    _all_pages(api_client, parquet_slug, actuary, 2)  # two pages
+    assert len(reads) == 2
+
+
+# -- the manual-edit route (FR-229, FR-234, F-W10-3; RL-1555 items 1 to 3) --------------------
+
+
+def _edit_body(slug: str, **changes: object) -> dict[str, object]:
+    body: dict[str, object] = {
+        "base_version": 1,
+        "change_note": "area band 21-24 +5%",
+        "edits": [{"driver_age_band": "21-24", "relativity": "1.4500"}],
+    }
+    return body | changes
+
+
+def _post_edit(api_client: TestClient, slug: str, headers: dict[str, str], **changes: object):  # type: ignore[no-untyped-def]
+    return api_client.post(
+        f"/api/v1/rate-tables/{slug}/versions", json=_edit_body(slug, **changes), headers=headers
+    )
+
+
+def _version_count(slug: str) -> int:
+    counted: list[int] = []
+
+    async def _count(session: AsyncSession) -> None:
+        from sqlalchemy import func
+
+        counted.append(
+            await session.scalar(
+                select(func.count())
+                .select_from(RateTableVersionRow)
+                .join(RateTableRow, RateTableRow.id == RateTableVersionRow.rate_table_id)
+                .where(RateTableRow.slug == slug)
+            )
+            or 0
+        )
+
+    _run_with_database(_count)
+    return counted[0]
+
+
+def _stored_created_by_edit(slug: str, version: int) -> dict[str, object] | None:
+    """The `created_by_edit` column of the stored row, read back from the database."""
+    found: list[dict[str, object] | None] = []
+
+    async def _read(session: AsyncSession) -> None:
+        found.append(
+            await session.scalar(
+                select(RateTableVersionRow.created_by_edit)
+                .join(RateTableRow, RateTableRow.id == RateTableVersionRow.rate_table_id)
+                .where(RateTableRow.slug == slug, RateTableVersionRow.version_number == version)
+            )
+        )
+
+    _run_with_database(_read)
+    return found[0]
+
+
+@pytest.mark.req("FR-229")
+def test_manual_edit_preview_creates_nothing_and_is_a_bare_diff(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    from model_schema.rating import RateTableDiff
+
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+    before = _version_count(slug)
+
+    response = _post_edit(api_client, slug, actuary)
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert set(body) == set(RateTableDiff.model_fields)  # bare: no `diff` or verdict wrapper
+    assert RateTableDiff.model_validate(body).changed_cells == 1
+    assert _version_count(slug) == before
+
+
+@pytest.mark.req("FR-229")
+def test_manual_edit_confirm_creates_the_next_version_with_its_record(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+    submitted = {"applied_to": f"rate_table:{slug}@1", "edited_cells": 1}
+
+    created = _post_edit(api_client, slug, actuary, confirm=True)
+
+    assert created.status_code == 201, created.text
+    body = created.json()
+    assert body["version"] == 2
+    assert body["change_note"] == "area band 21-24 +5%"
+    assert body["created_by_edit"] == submitted
+    # The record is stored, not only returned: read it back from the row (RL-1555 item 2).
+    assert _stored_created_by_edit(slug, 2) == submitted
+    assert _stored_created_by_edit(slug, 1) is None  # a seeded version carries none
+    cells = _all_pages_of(api_client, slug, 2, actuary)
+    assert {row["driver_age_band"]: row["relativity"] for row in cells} == {
+        "17-20": "1.92",
+        "21-24": "1.4500",
+        "25-29": "1.12",
+    }
+    # A second confirm against the same, now stale, base is the existing 409.
+    again = _post_edit(api_client, slug, actuary, confirm=True)
+    assert again.status_code == 409, again.text
+    assert again.json()["code"] == "VALIDATION_FAILED"
+
+
+def _all_pages_of(
+    api_client: TestClient, slug: str, version: int, headers: dict[str, str]
+) -> list[dict[str, str]]:
+    response = api_client.get(
+        f"/api/v1/rate-tables/{slug}@{version}/cells", params={"limit": 200}, headers=headers
+    )
+    assert response.status_code == 200, response.text
+    return response.json()["items"]
+
+
+@pytest.mark.req("FR-229")
+def test_a_manual_edit_diffs_against_its_base_by_exactly_the_edited_cells(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """RL-1555 item 2 and the maintainer's 04:12:41 condition: the stored version differs from
+    its base by exactly the edited cells, their count is `edited_cells`, and each old → new
+    pair is what was submitted."""
+    from decimal import Decimal
+
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+    edits = [
+        {"driver_age_band": "17-20", "relativity": "2.0000"},
+        {"driver_age_band": "25-29", "relativity": "1.0000"},
+    ]
+    created = _post_edit(api_client, slug, actuary, confirm=True, edits=edits)
+    assert created.status_code == 201, created.text
+
+    diff = _diff_ready(
+        api_client,
+        f"/api/v1/rate-tables/{slug}@2/diff/cells",
+        {"against": "1"},
+        actuary,
+    )
+
+    assert diff.status_code == 200, diff.text
+    changed = diff.json()["items"]
+    assert len(changed) == created.json()["created_by_edit"]["edited_cells"] == 2
+    old = {row["driver_age_band"]: Decimal(row["relativity"]) for row in _all_pages_of(
+        api_client, slug, 1, actuary
+    )}
+    assert {
+        item["key"]["driver_age_band"]: (
+            Decimal(item["baseline_value"]),
+            Decimal(item["current_value"]),
+        )
+        for item in changed
+    } == {
+        edit["driver_age_band"]: (old[edit["driver_age_band"]], Decimal(edit["relativity"]))
+        for edit in edits
+    }
+    assert {item["change"] for item in changed} == {"changed"}
+
+
+@pytest.mark.req("FR-234")
+@pytest.mark.parametrize(
+    ("changes", "status", "field_errors"),
+    [
+        ({"change_note": ""}, 422, None),
+        ({"change_note": "   "}, 422, None),
+        ({"edits": []}, 422, None),
+        ({"unknown_field": 1}, 422, None),
+        ({"edits": [{"driver_age_band": "21-24", "relativity": 1.45}]}, 422, None),
+        (
+            {"edits": [{"driver_age_band": "99-99", "relativity": "1.0"}]},
+            422,
+            [("edits.0.relativity", "UNKNOWN_KEY")],
+        ),
+        (
+            {"edits": [{"driver_age_band": "21-24", "relativity": "1.0"}] * 2},
+            422,
+            [("edits.1.relativity", "DUPLICATE_KEY")],
+        ),
+        (
+            {"edits": [{"driver_age_band": "21-24", "relativity": "1.0"}, {"relativity": "1"}]},
+            422,
+            [("edits.1.relativity", "EDIT_COLUMNS")],
+        ),
+    ],
+)
+def test_manual_edit_refusals(
+    api_client: TestClient, workspace_id, actuary, changes, status, field_errors
+) -> None:
+    """One case per refusal; an unknown key is a 422 with a field error, never a 500."""
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+
+    response = _post_edit(api_client, slug, actuary, **changes)
+
+    assert response.status_code == status, response.text
+    if field_errors is not None:
+        assert [(e["field"], e["code"]) for e in response.json()["errors"]] == field_errors
+        assert response.json()["code"] == "VALIDATION_FAILED"
+
+
+@pytest.mark.req("FR-234")
+def test_manual_edit_out_of_bounds_values_each_name_their_edit(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """Two non-decimal (out-of-bounds) values answer two field errors, `edits.0.<value>` and
+    `edits.1.<value>`, both `OUT_OF_BOUNDS`, under the problem code `RATE_TABLE_INCOMPLETE`
+    (RL-1555 item 3)."""
+    # A seeded value column declares no bounds, so the shared check's other OUT_OF_BOUNDS
+    # arm is used: a value that is not a decimal at all.
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+    not_a_decimal = "not-a-number"
+
+    response = _post_edit(
+        api_client,
+        slug,
+        actuary,
+        edits=[
+            {"driver_age_band": "17-20", "relativity": not_a_decimal},
+            {"driver_age_band": "21-24", "relativity": not_a_decimal},
+        ],
+    )
+
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "RATE_TABLE_INCOMPLETE"
+    assert [(e["field"], e["code"]) for e in response.json()["errors"]] == [
+        ("edits.0.relativity", "OUT_OF_BOUNDS"),
+        ("edits.1.relativity", "OUT_OF_BOUNDS"),
+    ]
+
+
+@pytest.mark.req("FR-229")
+def test_rate_table_isolation_on_the_manual_edit_route(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    from app.platform import workspaces
+
+    foreign = uuid4()
+    slug = _table_slug()
+
+    async def _insert(session: AsyncSession) -> None:
+        await workspaces.ensure_workspace(session, workspace_id=foreign)
+
+    _run_with_database(_insert)
+    _insert_table(foreign, slug, [{"name": "driver_age_band", "type": "string"}])
+
+    response = _post_edit(api_client, slug, actuary)
+
+    assert response.status_code == 404, response.text
+    assert response.json()["code"] == _EDIT_MISS_CODE

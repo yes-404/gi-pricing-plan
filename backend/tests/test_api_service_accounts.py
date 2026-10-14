@@ -113,7 +113,9 @@ def test_rotation_issues_a_new_key_and_gives_the_old_one_a_deadline(
     original_expiry = created["account"]["keys"][0]["expires_at"]
 
     rotated = client.post(
-        f"/api/v1/service-accounts/{account_id}/rotate", headers=headers
+        f"/api/v1/service-accounts/{account_id}/rotate",
+        json={"environment": "prod"},
+        headers=headers,
     ).json()
 
     assert rotated["key"] != created["key"]
@@ -166,7 +168,11 @@ async def test_key_lifecycle_is_audited_by_prefix_never_by_value(
     assert parsed is not None
     secret = parsed.secret
 
-    client.post(f"/api/v1/service-accounts/{account_id}/rotate", headers=headers)
+    client.post(
+        f"/api/v1/service-accounts/{account_id}/rotate",
+        json={"environment": "prod"},
+        headers=headers,
+    )
     client.delete(f"/api/v1/service-accounts/{account_id}/keys/{prefix}", headers=headers)
 
     async with database.session() as session:
@@ -187,7 +193,7 @@ async def test_key_lifecycle_is_audited_by_prefix_never_by_value(
         rendered = f"{event.before}{event.after}"
         assert secret not in rendered
         assert created["key"] not in rendered
-    assert events[0].after["key_prefix"] == prefix
+    assert events[0].after["key_prefixes"] == {"prod": prefix}
 
 
 @pytest.mark.req("FR-16")
@@ -242,7 +248,9 @@ async def test_another_workspaces_account_is_404_not_403(
         "Workspace-Id": str(other_workspace),
     }
     response = client.post(
-        f"/api/v1/service-accounts/{created['account']['id']}/rotate", headers=other_headers
+        f"/api/v1/service-accounts/{created['account']['id']}/rotate",
+        json={"environment": "prod"},
+        headers=other_headers,
     )
     assert response.status_code == 404
 
@@ -270,3 +278,119 @@ def test_creating_a_service_account_needs_the_admin_permission(
     )
     assert response.status_code == 403
     assert response.json()["code"] == "PERMISSION_DENIED"
+
+
+# --- FR-430 (register F54, WK-674 Slice 3): one key per granted Environment ---------------
+
+
+def _secret_for(body: dict, environment: str) -> str:
+    return next(k["key"] for k in body["keys"] if k["environment"] == environment)
+
+
+@pytest.mark.req("FR-430")
+def test_creating_an_account_granted_two_environments_mints_a_key_for_each(
+    client: TestClient, headers
+) -> None:
+    """Red at the parent: one key, for `environments[0]` only (register F54)."""
+    body = _create(client, headers, environments=["dev", "uat"]).json()
+
+    assert sorted(k["environment"] for k in body["keys"]) == ["dev", "uat"]
+    assert _secret_for(body, "dev").startswith("gip_dev_")
+    assert _secret_for(body, "uat").startswith("gip_uat_")
+    # DP-S3E-1 (b): several Environments, so no "first" secret.
+    assert body["key"] is None
+    assert sorted(k["environment"] for k in body["account"]["keys"]) == ["dev", "uat"]
+    assert all(k["key"] not in str(body["account"]) for k in body["keys"])
+
+
+@pytest.mark.req("FR-430")
+def test_a_one_environment_creation_still_returns_key(client: TestClient, headers) -> None:
+    """DP-S3E-1 (b): the additive shape leaves a one-Environment caller unchanged."""
+    body = _create(client, headers).json()
+    assert body["key"] == _secret_for(body, "prod")
+    assert [k["environment"] for k in body["keys"]] == ["prod"]
+
+
+@pytest.mark.req("FR-430")
+def test_rotation_acts_on_the_key_of_the_named_environment_only(
+    client: TestClient, headers
+) -> None:
+    """Red at the parent: the route took no Environment and rotated `environments[0]`."""
+    created = _create(client, headers, environments=["dev", "uat"]).json()
+    account_id = created["account"]["id"]
+    before = {k["environment"]: k for k in created["account"]["keys"]}
+
+    rotated = client.post(
+        f"/api/v1/service-accounts/{account_id}/rotate",
+        json={"environment": "uat"},
+        headers=headers,
+    ).json()
+
+    assert [k["environment"] for k in rotated["keys"]] == ["uat"]
+    after = {}
+    for k in rotated["account"]["keys"]:
+        after.setdefault(k["environment"], []).append(k)
+    assert len(after["dev"]) == 1
+    assert after["dev"][0]["expires_at"] == before["dev"]["expires_at"]
+    assert len(after["uat"]) == 2
+    old_uat = next(k for k in after["uat"] if k["prefix"] == before["uat"]["prefix"])
+    assert old_uat["expires_at"] < before["uat"]["expires_at"]
+
+
+@pytest.mark.req("FR-430")
+def test_rotation_requires_a_granted_environment(client: TestClient, headers) -> None:
+    created = _create(client, headers, environments=["dev"]).json()
+    url = f"/api/v1/service-accounts/{created['account']['id']}/rotate"
+
+    missing = client.post(url, json={}, headers=headers)
+    assert missing.status_code == 422
+
+    not_granted = client.post(url, json={"environment": "prod"}, headers=headers)
+    assert not_granted.status_code == 422
+    assert not_granted.json()["code"] == "VALIDATION_FAILED"
+
+
+@pytest.mark.req("FR-430")
+async def test_revoking_one_environments_key_leaves_the_other_authenticating(
+    client: TestClient, database: Database, headers
+) -> None:
+    from app.auth.service import authenticate_api_key
+    from app.errors import PlatformError
+
+    created = _create(client, headers, environments=["dev", "uat"]).json()
+    dev = next(k for k in created["keys"] if k["environment"] == "dev")
+    uat_secret = _secret_for(created, "uat")
+
+    client.delete(
+        f"/api/v1/service-accounts/{created['account']['id']}/keys/{dev['prefix']}",
+        headers=headers,
+    )
+
+    async with database.unit_of_work() as session:
+        identity = await authenticate_api_key(session, uat_secret)
+        assert identity.environment == "uat"
+        with pytest.raises(PlatformError):
+            await authenticate_api_key(session, dev["key"])
+
+
+@pytest.mark.req("FR-430")
+async def test_a_key_issued_for_dev_is_refused_once_dev_leaves_the_grant(
+    client: TestClient, database: Database, headers
+) -> None:
+    """No route narrows a grant at this tree (the only writer of `environments` is
+    `create_service_account`), so the test narrows it through the session."""
+    from app.auth.service import authenticate_api_key
+    from app.db.models import ServiceAccountRow
+    from app.errors import PlatformError
+
+    created = _create(client, headers, environments=["dev", "uat"]).json()
+    dev_secret = _secret_for(created, "dev")
+
+    async with database.unit_of_work() as session:
+        account = await session.get(ServiceAccountRow, created["account"]["id"])
+        account.environments = ["uat"]
+
+    async with database.unit_of_work() as session:
+        with pytest.raises(PlatformError) as exc:
+            await authenticate_api_key(session, dev_secret)
+    assert exc.value.code == "ENVIRONMENT_SCOPE_DENIED"

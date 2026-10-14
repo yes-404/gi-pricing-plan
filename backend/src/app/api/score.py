@@ -25,6 +25,8 @@ serialised with Pydantic v2's compiled encoder and returned in a raw `Response`.
 annotation is precisely what FastAPI's own `ORJSONResponse` deprecation notice recommends, and
 precisely what this requirement forbids — an annotated route filters extra keys and answers
 500 on a shape that violates its model, which is outbound validation by another name.
+The 200 is documented through `responses=`, which FastAPI reads only when it builds the
+OpenAPI document: the contract carries the shape and nothing validates the body (FD-1335).
 
 **The error boundary is this module's.** `pricing-core` cannot import `PlatformError`
 (ADR-703), so `score_one` raises a code-named bare `ValueError` — `f"{code}: {message}"`. The
@@ -62,6 +64,7 @@ from app.errors import PlatformError
 from app.observability.logging import get_logger
 from app.observability.metrics import ladder_reconciliation_failed
 from app.platform import jobs as job_service
+from app.platform import rate_limit
 from app.platform import rating_versions as rating_versions_service
 from app.platform import settings as settings_service
 from app.platform import traces as traces_service
@@ -133,6 +136,29 @@ DatabaseDep = Annotated[Database, Depends(_database)]
 BlobStoreDep = Annotated[BlobStore, Depends(_blob_store)]
 BundleSlotDep = Annotated[BundleSlot, Depends(_bundle_slot)]
 ScoreExecuteDep = Annotated[Caller, Depends(requires(Permission.SCORE_EXECUTE))]
+
+
+async def _enforce_score_rate_limit(
+    request: Request, caller: ScoreExecuteDep, database: DatabaseDep, settings: SettingsDep
+) -> None:
+    """FR-452's scoring limit: after authentication and `score:execute`, before any scoring,
+    so a 401 or 403 is never counted and a refused request scores nothing (RL-1347 rule 4)."""
+    await rate_limit.enforce(
+        request.app.state.rate_limiter,
+        database,
+        settings,
+        route="score",
+        default_setting="scoring.default_client_rate_limit_rps",
+        workspace_id=caller.workspace_id,
+        environment=caller.environment,
+        principal=caller.principal,
+        account_limit=caller.rate_limit_rps,
+    )
+
+
+#: The route declares `ScoreExecuteDep` itself, so the authorisation sweep sees its
+#: permission; the limiter reuses that one resolved dependency and adds no second check.
+ScoreRateLimitDep = Annotated[None, Depends(_enforce_score_rate_limit)]
 ScoreBatchDep = Annotated[Caller, Depends(requires(Permission.SCORE_BATCH))]
 
 
@@ -202,6 +228,19 @@ async def _serving_ref(
     ref = _required_ref(ctx, ArtifactRef.parse(live[0]) if live is not None else None)
     served_by = live[1] if live is not None and live[0] == str(ref) else None
     return ref, served_by
+
+
+def _with_resolved_ref(ctx: QuoteContext, ref: ArtifactRef) -> QuoteContext:
+    """`ctx` carrying `ref` as `options.rating_version_ref`, as a copy. An explicit ref is
+    already `ref` (`_required_ref` returns it) and is returned untouched."""
+    if ctx.options is not None and ctx.options.rating_version_ref is not None:
+        return ctx
+    options = (
+        ctx.options.model_copy(update={"rating_version_ref": ref})
+        if ctx.options is not None
+        else QuoteContextOptions(rating_version_ref=ref)
+    )
+    return ctx.model_copy(update={"options": options})
 
 
 async def _fetch_bundle(
@@ -346,11 +385,12 @@ def _as_platform_error(exc: ValueError) -> PlatformError | None:
     # named version has no compiled bundle — and 422 carries FR-255's four per-quote
     # codes. 404 is a ref naming no version; 401 and 403 are authentication and the
     # `score:execute` check.
-    responses=problems(401, 403, 404, 409, 422, 500),
+    responses={**problems(401, 403, 404, 409, 422, 429, 500), 200: {"model": ScoringResult}},
 )
 async def score(
     ctx: QuoteContext,
     caller: ScoreExecuteDep,
+    _rate_limit: ScoreRateLimitDep,
     database: DatabaseDep,
     blob_store: BlobStoreDep,
     slot: BundleSlotDep,
@@ -371,6 +411,11 @@ async def score(
         database, blob_store, slot, workspace_id=caller.workspace_id, ref=ref
     )
     trace = ctx.options.trace if ctx.options is not None else False
+    # `score_one` refuses a context without `options.rating_version_ref` and reads the ref it
+    # reports from there. A default-live quote has none, so it is stamped on an immutable copy
+    # (never the request); the copy is also what a sampled trace stores, so the off-path
+    # re-score (`score.trace_produce`) is not refused for the same gap.
+    ctx = _with_resolved_ref(ctx, ref)
     try:
         result = await score_one(compiled, ctx, trace=trace)
     except ValueError as exc:
@@ -416,7 +461,7 @@ def _naming_side(problem: PlatformError, side: str) -> PlatformError:
     "/score/compare",
     summary="Score one Quote Context against two Rating Versions, with a step-level diff",
     status_code=200,
-    responses=problems(401, 403, 404, 409, 422, 500),
+    responses={**problems(401, 403, 404, 409, 422, 500), 200: {"model": ScoreComparison}},
 )
 async def score_compare(
     body: ScoreCompareRequest,
@@ -482,8 +527,13 @@ async def _maybe_sample_trace(
     """
     try:
         async with database.unit_of_work() as session:
+            # FR-430/FR-431: monitoring configuration is per Environment (DP-S3-3 (a)).
             rate = await settings_service.resolve(
-                session, settings, caller.workspace_id, "rating.trace_sample_rate"
+                session,
+                settings,
+                caller.workspace_id,
+                "rating.trace_sample_rate",
+                caller.environment,
             )
             sampled, reason = traces_service.decide_sampling(
                 result.outcome, rate.effective_value, roll=random.random()

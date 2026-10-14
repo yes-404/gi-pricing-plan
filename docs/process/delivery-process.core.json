@@ -3,7 +3,7 @@
     "id": "delivery-process-core",
     "version": "1.0.0",
     "derived_from": "docs/process/delivery-process.md",
-    "derived_from_digest": "sha256:55fbdd8498679eb5aa85332cda58c517cab2dbb62445fadfa989522676133d2e",
+    "derived_from_digest": "sha256:73d3e86d05b5672e375ec0e5500c4081120b3315ef7df4220a9175fa1fd87db9",
     "verified_against_tree": "0651c1e265648cbd3918adfc729ad965b83b1e0b",
     "authoritative": false,
     "note": "The markdown spec is authoritative. This file is the mechanical extract: state machine, guards, vocabularies, and runtime-state schema for hooks/watcher scripts. Regenerate or diff-check against the md on every spec change (RFC-895 script C4). Each block is the mechanically-checkable subset of the section it cites, not an exhaustive rendering -- a section may state more than its block records, and a block's silence is not the section's silence.",
@@ -406,6 +406,11 @@
           "amended": "2026-10-05 15:15:11 BST, the maintainer by delegation (option (i)); RL-1445 amends RL-1263"
         },
         "each_holds_gate_slot": true,
+        "counting_unit": "slices_that_hold_or_queue_for_the_single_full_gate_or_are_in_a_measurement_window_until_merge_or_release",
+        "counting_unit_amended": "2026-10-11, the maintainer by delegation, on the 2026-10-10 21:41:05 BST entry item 1; RL-1612 corrects RL-1445",
+        "authoring_and_executor_seats": "count_against_the_seat_cap_not_the_3_cap_their_test_runs_are_single_file_one_at_a_time_through_the_small_test_slot_never_beside_a_measurement_window_and_beside_a_held_code_gate_only_as_a_targeted_run_of_at_most_three_named_files_under_the_five_conditions_of_RL-1626",
+        "same_work_conditions_apply_from": "dispatch",
+        "no_new_seat_when_disk_free_below_percent": 15,
         "no_shared_files": {
           "forbidden": "both_change_same_existing_function_class_method_spec_section_or_policy_table",
           "registry_exempt_append_only": {

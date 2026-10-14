@@ -24,7 +24,7 @@ import json
 import sys
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 from uuid import UUID
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -40,6 +40,22 @@ DATA_DIR = Path(__file__).parent / "data"
 #: changed either would authenticate a *different* user into nothing.
 REALM_ISSUER = "http://localhost:8080/realms/gi-pricing"
 REALM_SUBJECT = "84eea68e-a19e-46a0-9f35-a27cbd51c795"
+
+#: The demo's principals and the built-in roles each holds (no role is added here). The WF-699
+#: journey (SL-1527) acts as all seven over HTTP, and no route grants a role or a membership, so
+#: the seed does. The submitter (`actuary`) and the author (`analyst`) also hold `approver`, so
+#: the journey's SUBMITTER_CANNOT_APPROVE and AUTHOR_CANNOT_APPROVE fire past the role gate;
+#: `prod_approver` decides the prod deployment request (approver + deployer); `admin` creates the
+#: service account and holds neither.
+DEMO_PRINCIPALS: Final[dict[str, tuple[str, ...]]] = {
+    "analyst": ("analyst", "approver"),
+    "actuary": ("pricing_actuary", "approver"),
+    "approver": ("approver",),
+    "second_approver": ("approver",),
+    "admin": ("admin",),
+    "deployer": ("deployer",),
+    "prod_approver": ("approver", "deployer"),
+}
 
 #: `IDpol` normalises to `i_dpol`, not `idpol`: the camel-case splitter reads it as
 #: `I` + `Dpol`, the same rule that correctly gives `HTTPServer` → `http_server`. No
@@ -65,6 +81,16 @@ NUMERIC = {
 
 #: VR-ACT-2's bound. An annual motor policy cannot be on risk for two years.
 MAX_EXPOSURE = 1.05
+
+#: The demo portfolio (PL-1577, R6 = (A1)): a 20,000-row sample of the book, named as a sample
+#: everywhere it is shown. Reproducible without a random seed: the size is fixed, the rule is
+#: `build_csv`'s deterministic every-nth-row, and the input is sha256-pinned (`fetch.py`).
+PORTFOLIO_ROWS: Final = 20_000
+#: What the sample holds after the v2 recipe drops the 15 policies above `MAX_EXPOSURE`
+#: (19 985 of 20 000). **Measured, not derived** (PL-1577 DP-3): `build_csv(PORTFOLIO_ROWS)` over
+#: the sha256-pinned book, then `exposure_years <= MAX_EXPOSURE`; the seed asserts the ingested
+#: version's profile row count against it, so a changed input or sampler stops the seed.
+PORTFOLIO_VALIDATED_ROWS: Final = 19_985
 
 
 def recipe(*, drop_implausible_exposure: bool) -> list[dict[str, Any]]:
@@ -127,12 +153,37 @@ def build_csv(rows: int | None) -> bytes:
         # **Not `head`.** The file is ordered by claim count, so the first 50 000 rows are
         # very nearly every claiming policy and almost nothing else — a sample whose
         # frequency is 0.42 against the book's 0.05, which fails a plausibility rule for a
-        # reason that is entirely the sampler's fault. Every nth row preserves the mix.
-        step = max(joined.height // rows, 1)
-        joined = joined.gather_every(step).head(rows)
+        # reason that is entirely the sampler's fault. **Nor a stride** (`gather_every(N // n)`):
+        # `n` rows at that stride end before the file does (row 660 000 of 678 013 here), and
+        # the tail of an ordered file is a distinct block that the sample could then never hold.
+        # Evenly spaced integer indices `i * N // n` span the whole book, and integer arithmetic
+        # keeps the sample bit-reproducible (the maintainer's ruling, 2026-10-10 21:55:37 BST).
+        height = joined.height
+        if rows < height:
+            joined = joined[[i * height // rows for i in range(rows)]]
 
     buffer = io.BytesIO()
     joined.write_csv(buffer)
+    return buffer.getvalue()
+
+
+def build_portfolio_csv() -> bytes:
+    """The dislocation portfolio's CSV: the `PORTFOLIO_ROWS` sample plus a `quote_id` column.
+
+    `03` §4.8 refuses a dislocation portfolio without a unique, non-null string `quote_id`, the
+    key on which the baseline and candidate passes are joined (`analysis.read_portfolio`). The
+    book's key is `IDpol`, which the recipe renames to `policy_id`, so the sample carries the same
+    value under the second name; no recipe step copies a column, and `quote_id` is in neither the
+    rename map nor the cast, so it stays a string. Only the portfolio has it: the fitted book is
+    byte-for-byte what `build_csv` returns.
+    """
+    import io
+
+    import polars as pl
+
+    frame = pl.read_csv(io.BytesIO(build_csv(PORTFOLIO_ROWS)), infer_schema=False)
+    buffer = io.BytesIO()
+    frame.with_columns(pl.col("IDpol").alias("quote_id")).write_csv(buffer)
     return buffer.getvalue()
 
 
@@ -264,15 +315,77 @@ RULES: list[dict[str, Any]] = [
 ]
 
 
+async def grant_demo_principals(database: Any, workspace_id: UUID) -> dict[str, Any]:
+    """Create the workspace row and every `DEMO_PRINCIPALS` member with its roles. Idempotent:
+    a user is looked up by `(issuer, subject)` first and a role assignment is added only when
+    absent, so a second call (the seed re-run, or the journey test's fixture) changes nothing.
+
+    One definition of the principal set: the seed calls this, and the WF-699 journey test's
+    fixture calls this rather than writing rows (RL-1521 binds the journey's steps, not its
+    setup). The `analyst` keeps the realm login's subject (FR-398); the rest have no realm user.
+    """
+    from sqlalchemy import select
+
+    from app.db.models import RoleAssignmentRow, RoleRow, UserRow
+    from app.platform import rbac, workspaces
+    from model_schema import ActorKind, Principal, ScopeType, new_uuid7
+
+    principals: dict[str, Any] = {}
+    async with database.unit_of_work() as session:
+        # The workspace row first: `workspace_members.workspace_id` is a foreign key.
+        await workspaces.ensure_workspace(
+            session, workspace_id=workspace_id, name="freMTPL2 demo"
+        )
+        await rbac.seed_builtin_roles(session, workspace_id)
+        for name, slugs in DEMO_PRINCIPALS.items():
+            subject = REALM_SUBJECT if name == "analyst" else f"{REALM_SUBJECT}:{name}"
+            user_id = (
+                await session.execute(
+                    select(UserRow.id).where(
+                        UserRow.issuer == REALM_ISSUER, UserRow.subject == subject
+                    )
+                )
+            ).scalar_one_or_none() or new_uuid7()
+            display = f"{name.replace('_', '-')}@example.fr"
+            await workspaces.ensure_member(
+                session, workspace_id=workspace_id, user_id=user_id, issuer=REALM_ISSUER,
+                subject=subject, email=display, display_name=f"Demo {name.replace('_', ' ')}",
+            )
+            for slug in slugs:
+                role = (
+                    await session.execute(
+                        select(RoleRow).where(
+                            RoleRow.workspace_id == workspace_id, RoleRow.slug == slug
+                        )
+                    )
+                ).scalar_one()
+                held = (
+                    await session.execute(
+                        select(RoleAssignmentRow.id).where(
+                            RoleAssignmentRow.workspace_id == workspace_id,
+                            RoleAssignmentRow.principal_id == user_id,
+                            RoleAssignmentRow.role_id == role.id,
+                        )
+                    )
+                ).first()
+                if held is None:
+                    session.add(
+                        RoleAssignmentRow(
+                            workspace_id=workspace_id, principal_kind="user",
+                            principal_id=user_id, role_id=role.id,
+                            scope_type=ScopeType.WORKSPACE.value,
+                        )
+                    )
+            principals[name] = Principal(kind=ActorKind.USER, id=user_id, display=display)
+    return principals
+
+
 async def run(rows: int | None) -> int:
     from sqlalchemy import select
 
     from app.config import load_settings
     from app.db.models import (
         DatasetVersionRow,
-        RoleAssignmentRow,
-        RoleRow,
-        UserRow,
         ValidationReportRow,
     )
     from app.db.session import Database
@@ -280,7 +393,6 @@ async def run(rows: int | None) -> int:
     from app.platform import datasets as dataset_service
     from app.platform import jobs as job_service
     from app.platform import profiles as profile_service
-    from app.platform import rbac, workspaces
     from app.platform import validation as validation_service
     from app.platform import validation_rules as rule_service
     from app.platform.blobs import BlobStore
@@ -288,13 +400,10 @@ async def run(rows: int | None) -> int:
     from app.worker.tasks import execute_job
     from model_schema import (
         BUILTIN_RULES,
-        ActorKind,
         DecisionKind,
         JobKind,
         JobStatus,
-        Principal,
         RuleOutcome,
-        ScopeType,
         Severity,
         ValidationLayer,
         new_uuid7,
@@ -313,77 +422,15 @@ async def run(rows: int | None) -> int:
     await blob_store.ensure_bucket()
 
     workspace_id = new_uuid7()
-    # FD 9717: `(issuer, subject)` is unique in `users`, and `ensure_member` looks a user up
-    # by id alone, so a fresh id on a re-run collides with the realm user the last run left
-    # behind. Reuse that user's id when there is one, so a second seed runs against a
-    # seeded database; mint one only the first time.
-    async with database.unit_of_work() as session:
-        existing_analyst_id = (
-            await session.execute(
-                select(UserRow.id).where(
-                    UserRow.issuer == REALM_ISSUER, UserRow.subject == REALM_SUBJECT
-                )
-            )
-        ).scalar_one_or_none()
-    analyst = Principal(
-        kind=ActorKind.USER, id=existing_analyst_id or new_uuid7(), display="analyst@example.fr"
-    )
-    actuary = Principal(kind=ActorKind.USER, id=new_uuid7(), display="actuary@example.fr")
+    # FD 9717: `(issuer, subject)` is unique in `users`; `grant_demo_principals` looks a user up
+    # by it first, so a re-run reuses the realm user the last run left behind.
+    principals = await grant_demo_principals(database, workspace_id)
+    analyst, actuary = principals["analyst"], principals["actuary"]
+    approver, second_approver = principals["approver"], principals["second_approver"]
     # Principal.id is UUID | None at the type level -- "null only for `system`" (jobs.py) --
-    # but both of these are ActorKind.USER with an id supplied at construction, and
-    # Principal's own validator refuses a non-system principal with no id. Narrow once here
-    # rather than at every call site below that needs a bare UUID.
+    # but these are ActorKind.USER with an id supplied at construction.
     assert analyst.id is not None
     assert actuary.id is not None
-
-    async def grant(principal: Principal, *slugs: str) -> None:
-        async with database.unit_of_work() as session:
-            await rbac.seed_builtin_roles(session, workspace_id)
-            for slug in slugs:
-                role = (
-                    await session.execute(
-                        select(RoleRow).where(
-                            RoleRow.workspace_id == workspace_id, RoleRow.slug == slug
-                        )
-                    )
-                ).scalar_one()
-                session.add(
-                    RoleAssignmentRow(
-                        workspace_id=workspace_id, principal_kind="user",
-                        principal_id=principal.id, role_id=role.id,
-                        scope_type=ScopeType.WORKSPACE.value,
-                    )
-                )
-
-    approver = Principal(kind=ActorKind.USER, id=new_uuid7(), display="approver@example.fr")
-    second_approver = Principal(
-        kind=ActorKind.USER, id=new_uuid7(), display="second-approver@example.fr"
-    )
-
-    await grant(analyst, "analyst")
-    await grant(actuary, "pricing_actuary")
-    await grant(approver, "approver")
-    await grant(second_approver, "approver")
-
-    # A real login through the local provider (FR-398) resolves to `analyst`, so it
-    # inherits the role assignments granted just above rather than needing its own. The
-    # workspace row comes first: `workspace_members.workspace_id` is a foreign key, and
-    # nothing has created that row until now -- `RoleRow.workspace_id` has no foreign key,
-    # which is why the seed has worked without one. The actuary has no realm user; one demo
-    # login is what FR-398 asks for.
-    async with database.unit_of_work() as session:
-        await workspaces.ensure_workspace(
-            session, workspace_id=workspace_id, name="freMTPL2 demo"
-        )
-        await workspaces.ensure_member(
-            session,
-            workspace_id=workspace_id,
-            user_id=analyst.id,
-            issuer=REALM_ISSUER,
-            subject=REALM_SUBJECT,
-            email=analyst.display,
-            display_name="Demo Analyst",
-        )
 
     print(f"\nworkspace {workspace_id}")
     print(f"  analyst  {analyst.display}\n  actuary  {actuary.display}\n")
@@ -398,8 +445,8 @@ async def run(rows: int | None) -> int:
         json.dumps(
             {
                 "workspace_id": str(workspace_id),
-                "analyst_id": str(analyst.id),
-                "actuary_id": str(actuary.id),
+                # the WF-699 journey acts as every principal, so each id is recorded
+                **{f"{name}_id": str(who.id) for name, who in principals.items()},
             },
             indent=2,
         ),
@@ -455,10 +502,12 @@ async def run(rows: int | None) -> int:
             )
             rule_ids.append((rule["slug"], row.id))
 
-    async def ingest(label: str, *, cleaned: bool) -> UUID:
+    ingested_rows: dict[UUID, int] = {}
+
+    async def ingest(label: str, *, cleaned: bool, data: bytes | None = None) -> UUID:
         started = time.perf_counter()
         async with database.unit_of_work() as session:
-            ref = await blob_store.put(session, payload, "text/csv")
+            ref = await blob_store.put(session, payload if data is None else data, "text/csv")
             job = await job_service.submit(
                 session, JobKind.DATASET_INGEST,
                 {"workspace_id": str(workspace_id),
@@ -484,6 +533,7 @@ async def run(rows: int | None) -> int:
             )
         print(f"  {label}: v{version.version}, {profile.row_count:,} rows, "
               f"{len(profile.columns)} columns profiled, {time.perf_counter() - started:.1f}s")
+        ingested_rows[version.id] = profile.row_count
         return version.id
 
     async def validate(version_id: UUID) -> UUID:
@@ -609,49 +659,62 @@ async def run(rows: int | None) -> int:
     second = await ingest("ingest", cleaned=True)
     second_report = await validate(second)
 
-    async with database.unit_of_work() as session:
-        outstanding = await validation_service.unacknowledged_warnings(
-            session, workspace_id=workspace_id, report_id=second_report
-        )
-        report = await validation_service.load_report(
-            session, workspace_id=workspace_id, report_id=second_report
-        )
-    if outstanding:
+    async def promote(version_id: UUID, report_id: UUID) -> int:
+        """Acknowledge the report's warnings as the actuary, then promote the version."""
         async with database.unit_of_work() as session:
-            for result in report.results:
-                if result.outcome is RuleOutcome.WARN:
-                    await validation_service.acknowledge(
-                        session, workspace_id=workspace_id, actor=actuary,
-                        report_id=second_report, rule_id=result.rule_id,
-                        justification=(
-                            "Reviewed against the 2023 French motor market: within "
-                            "expectation for this book."
-                        ),
-                    )
-            print(f"    {outstanding} warning(s) acknowledged by {actuary.display}")
+            outstanding = await validation_service.unacknowledged_warnings(
+                session, workspace_id=workspace_id, report_id=report_id
+            )
+            report = await validation_service.load_report(
+                session, workspace_id=workspace_id, report_id=report_id
+            )
+        if outstanding:
+            async with database.unit_of_work() as session:
+                for result in report.results:
+                    if result.outcome is RuleOutcome.WARN:
+                        await validation_service.acknowledge(
+                            session, workspace_id=workspace_id, actor=actuary,
+                            report_id=report_id, rule_id=result.rule_id,
+                            justification=(
+                                "Reviewed against the 2023 French motor market: within "
+                                "expectation for this book."
+                            ),
+                        )
+                print(f"    {outstanding} warning(s) acknowledged by {actuary.display}")
 
-    # A passing report leaves the version `validating`; promotion is the actuary's act.
-    async with database.unit_of_work() as session:
-        promoted = await validation_service.promote_using_report(
-            session, workspace_id=workspace_id, actor=actuary,
-            version_id=second, report_id=second_report,
-        )
-    print(f"    version {promoted.version} is {promoted.status}\n")
+        # A passing report leaves the version `validating`; promotion is the actuary's act.
+        async with database.unit_of_work() as session:
+            promoted = await validation_service.promote_using_report(
+                session, workspace_id=workspace_id, actor=actuary,
+                version_id=version_id, report_id=report_id,
+            )
+        print(f"    version {promoted.version} is {promoted.status}\n")
+        return promoted.version
+
+    promoted_version = await promote(second, second_report)
 
     async with database.session() as session:
         fittable = await dataset_service.fittable_or_refuse(
             session, workspace_id=workspace_id, version_id=second
         )
-    print(f"  a model may be fitted on {slug}@{promoted.version} ({fittable.id})")
+    print(f"  a model may be fitted on {slug}@{promoted_version} ({fittable.id})")
     print("  and still may not on @1 — `01` §1.3 has no override\n")
 
     # W7-1/W7-2: the demo models — factors, GLM and GBM fits, then the comparison and
     # approval. `Path(__file__).parent` is on sys.path (the seed's own import shim), so
     # `model` — not `examples.fremtpl2.model` — is the importable name here.
-    from model import compare_and_approve, create_approved_rating_version, fit_demo_models
+    from model import (
+        compare_and_approve,
+        create_approved_rating_version,
+        create_demo_bandings,
+        demo_base_premium,
+        fit_demo_models,
+        seed_demo_rate_tables,
+    )
 
+    bandings = await create_demo_bandings(database, blob_store, workspace_id, analyst, second)
     fitted = await fit_demo_models(
-        database, blob_store, workspace_id, analyst, dataset_id, second
+        database, blob_store, workspace_id, analyst, dataset_id, second, bandings
     )
     print(f"  demo models fitted: GLM {fitted['glm']}, GBM {fitted['gbm']}")
     approved = await compare_and_approve(
@@ -659,11 +722,38 @@ async def run(rows: int | None) -> int:
         fitted["glm"], fitted["gbm"],
     )
     print(f"  approved model: {approved}")
+    tables = await seed_demo_rate_tables(
+        database, settings, blob_store, workspace_id, analyst, approved
+    )
+    base_minor = await demo_base_premium(database, blob_store, workspace_id, approved, second)
     await create_approved_rating_version(
         database, blob_store, workspace_id, analyst, actuary, approver, second_approver,
-        second, approved,
+        second, approved, tables, bandings, base_minor,
     )
     print()
+
+    # PL-1577 DP-1 (b): the dislocation and attribution portfolio is a separate Dataset Version,
+    # a SAMPLE of the book (`PORTFOLIO_ROWS` policies, the sampler's every-nth-row over the pinned
+    # input), run through the same recipe and the same rules. The model above stays fitted on the
+    # full book. Everything the demo shows over it says "20,000-policy sample".
+    print("── the demo portfolio: a " + f"{PORTFOLIO_ROWS:,}" + "-policy sample " + "─" * 28)
+    sample = build_portfolio_csv()
+    portfolio = await ingest("portfolio sample", cleaned=True, data=sample)
+    if ingested_rows[portfolio] != PORTFOLIO_VALIDATED_ROWS:
+        raise SystemExit(
+            f"the portfolio sample holds {ingested_rows[portfolio]:,} rows, not the measured "
+            f"{PORTFOLIO_VALIDATED_ROWS:,}: the pinned input or the sampler changed (PL-1577 DP-3)"
+        )
+    await promote(portfolio, await validate(portfolio))
+    record = json.loads((DATA_DIR / "last-seed.json").read_text(encoding="utf-8"))
+    record.update(
+        portfolio_dataset_version_id=str(portfolio),
+        portfolio_rows=ingested_rows[portfolio],
+        portfolio_is_a_sample_of_rows=PORTFOLIO_ROWS,
+    )
+    (DATA_DIR / "last-seed.json").write_text(json.dumps(record, indent=2), encoding="utf-8")
+    print(f"  portfolio {portfolio}: a {PORTFOLIO_ROWS:,}-policy sample, "
+          f"{ingested_rows[portfolio]:,} rows validated\n")
     await database.dispose()
     return 0
 

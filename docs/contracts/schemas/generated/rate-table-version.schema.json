@@ -101,28 +101,16 @@
       "description": "`floor_and_cap`'s parameters (04 §4.4): the clamp bounds, decimal strings.",
       "properties": {
         "cap": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-              "type": "string"
-            }
-          ],
-          "title": "Cap"
+          "description": "Exact decimal as a string; never a binary float (FR-10).",
+          "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+          "title": "Cap",
+          "type": "string"
         },
         "floor": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-              "type": "string"
-            }
-          ],
-          "title": "Floor"
+          "description": "Exact decimal as a string; never a binary float (FR-10).",
+          "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+          "title": "Floor",
+          "type": "string"
         }
       },
       "required": [
@@ -161,6 +149,34 @@
         "applied_to"
       ],
       "title": "ImportVerdict",
+      "type": "object"
+    },
+    "ManualEdit": {
+      "additionalProperties": false,
+      "description": "The provenance of a version created by the manual-edit route (03 §4.2, RL-1555 item 2).\n\n`applied_to` names the base version edited, in `ImportVerdict.applied_to`'s form;\n`edited_cells` is the number of edits applied. It is what tells a hand-edited version\nfrom a re-seed.",
+      "properties": {
+        "applied_to": {
+          "$ref": "#/$defs/ArtifactRef"
+        },
+        "edited_cells": {
+          "minimum": 1,
+          "title": "Edited Cells",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "applied_to",
+        "edited_cells"
+      ],
+      "title": "ManualEdit",
+      "type": "object"
+    },
+    "RateTableCell": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "One rate table row in §4.2's form: key columns and the value column, every value a\nstring (a key level or a decimal string). RL-1475 item 2; FR-228's columns are data,\nso the keys are open and the value type is closed.",
+      "title": "RateTableCell",
       "type": "object"
     },
     "RateTableKey": {
@@ -407,16 +423,10 @@
           "type": "object"
         },
         "percentage": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-              "type": "string"
-            }
-          ],
-          "title": "Percentage"
+          "description": "Exact decimal as a string; never a binary float (FR-10).",
+          "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+          "title": "Percentage",
+          "type": "string"
         }
       },
       "required": [
@@ -458,16 +468,10 @@
       "description": "`uplift_table`'s parameters (04 §4.4): the percentage, applied to every cell.",
       "properties": {
         "percentage": {
-          "anyOf": [
-            {
-              "type": "number"
-            },
-            {
-              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-              "type": "string"
-            }
-          ],
-          "title": "Percentage"
+          "description": "Exact decimal as a string; never a binary float (FR-10).",
+          "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+          "title": "Percentage",
+          "type": "string"
         }
       },
       "required": [
@@ -494,6 +498,17 @@
     "change_note": {
       "title": "Change Note",
       "type": "string"
+    },
+    "created_by_edit": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ManualEdit"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "created_by_import": {
       "anyOf": [
@@ -543,15 +558,13 @@
     "default_row": {
       "anyOf": [
         {
-          "additionalProperties": true,
-          "type": "object"
+          "$ref": "#/$defs/RateTableCell"
         },
         {
           "type": "null"
         }
       ],
-      "default": null,
-      "title": "Default Row"
+      "default": null
     },
     "keys": {
       "items": {
@@ -568,17 +581,7 @@
       "anyOf": [
         {
           "items": {
-            "additionalProperties": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                }
-              ]
-            },
-            "type": "object"
+            "$ref": "#/$defs/RateTableCell"
           },
           "type": "array"
         },

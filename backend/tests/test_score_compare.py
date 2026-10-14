@@ -14,6 +14,7 @@ from typing import Any
 
 import pytest
 import pytest_asyncio
+from backend.tests.outbound_validation_spy import install_outbound_validation_spy
 from backend.tests.test_rating_version_compile import (
     _empty_pins,
     _insert_version,
@@ -30,7 +31,7 @@ from app.db.models import JobRow, ScoringTraceRow
 from app.main import create_app
 from app.platform import settings as settings_service
 from app.worker.rating_handlers import register_rating_handlers
-from model_schema import JobStatus
+from model_schema import JobStatus, ScoreComparison, ScoringResult
 from pricing_core.safe_error import CodedError
 
 COMPARE_URL = "/api/v1/score/compare"
@@ -412,3 +413,60 @@ def test_a_context_input_naming_a_produced_value_is_a_422_on_compare(
     assert response.status_code == 422, response.text
     assert response.json()["code"] == "INPUT_CONTRACT_VIOLATION"
     assert "'payable'" in response.json()["detail"]
+
+
+@pytest.mark.req("NFR-502")
+def test_the_comparison_is_returned_without_outbound_validation(
+    client: TestClient,
+    reader_headers: dict[str, str],
+    two_versions: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """RL-883's acceptance test, for `/score/compare`: a `ScoreComparison` built with
+    `model_construct` holds values that violate its declared types, and the route emits those
+    bytes verbatim with a 200. A route that validated on the way out would answer 500."""
+    real_comparison = score_module.ScoreComparison
+
+    def _malformed(**kwargs: Any) -> Any:
+        return real_comparison.model_construct(
+            base=kwargs["base"], comparison=kwargs["comparison"], diff="not-a-diff"
+        )
+
+    monkeypatch.setattr(score_module, "ScoreComparison", _malformed)
+    response = client.post(COMPARE_URL, json=_body(), headers=reader_headers)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["diff"] == "not-a-diff"
+
+
+@pytest.mark.req("NFR-502")
+def test_no_outbound_validation_runs_on_compare(
+    client: TestClient,
+    reader_headers: dict[str, str],
+    two_versions: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The property itself for `/score/compare` (PL-1364 Acceptance 8b): no call to the
+    response-validation entry point, with a planted control route that does validate."""
+    spy = install_outbound_validation_spy(monkeypatch)
+    response = client.post(COMPARE_URL, json=_body(), headers=reader_headers)
+    assert response.status_code == 200, response.text
+    assert spy.calls == 0
+
+    valid = response.json()
+    ScoreComparison.model_validate(valid)
+    ScoringResult.model_validate(valid["base"])
+
+    async def _control() -> dict[str, Any]:
+        return valid
+
+    client.app.add_api_route(  # type: ignore[attr-defined]
+        "/__nfr502_control",
+        _control,
+        methods=["POST"],
+        response_model=ScoreComparison,
+    )
+    spy.reset()
+    controlled = client.post("/__nfr502_control")
+    assert controlled.status_code == 200, controlled.text
+    assert spy.calls >= 1, "the spy saw no response validation on a route that validates"

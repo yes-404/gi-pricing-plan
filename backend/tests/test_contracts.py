@@ -80,6 +80,7 @@ ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     "sub-graph-body": "first written form — 03 §4.11 (WK-1250 Slice 1, FR-217)",
     "rate-table-version": "first written form of the seed route's 201 (RL-1375 DP-4); the authored rate-table contract is F27(c)'s, never compared",  # noqa: E501 -- RL-1375 DP-4's string, verbatim
     "seed-from-model-request": "first written form — 03 §5.1 seed row (RL-1375 DP-3, FR-230)",
+    "bulk-operation-request": "first written form — 03 §5.1 bulk-operation row (FD-1366 Part B, FR-233)",  # noqa: E501 -- the PL-1667 string
     "environment": "first written form — 07 §4.2 (WK-674 Slice 2, FR-428)",
     "environment-create": "first written form — 07 §5.1 (WK-674 Slice 2, FR-428)",
     "environment-update": "first written form — 07 §5.1 (WK-674 Slice 2, FR-428)",
@@ -89,6 +90,7 @@ ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     "deployment-request-create": "first written form — 03 §5.1 (WK-674 Slice 2, FR-267, RL-1301 A)",
     "approval-submission": "first written form — 06 §5.1 (WK-674 Slice 2, PL-1392 Acceptance 16)",
     "approval-withdrawal": "first written form — 06 §5.1 (WK-674 Slice 2, PL-1392 Task 6, FR-357)",
+    "approval-request": "generated wins — FD-1416 retired the hand-authored Phase 0 draft",
     "rating-version-create": "first written form — 03 §5.1 create row (RL-1428, FD-1421, FR-237)",
     "objective-usage": "first written form — FR-164 named the query",
     "oidc-auth-config": "first written form — FR-394 names the contents",
@@ -96,7 +98,6 @@ ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     "metric-certificate": "OQ-651 (c): authored by the next certificate workstream",
     # authored-only — later-phase shapes, shared common/ defs, or (F27) shapes that
     # have since shipped in model-schema and are excluded by omission rather than by plan
-    "approval-request": "later-phase — 06 governance",
     "dossier": "later-phase — 06 governance",
     "gipp-check": "later-phase — 06 governance",
     "monitoring": "later-phase — 05 monitoring",
@@ -2665,6 +2666,78 @@ def _one_sided_slugs() -> tuple[set[str], set[str]]:
     return authored - generated, generated - authored
 
 
+#: Authored-only slugs whose `model-schema` class has shipped and that nothing compares yet,
+#: each with the reason it is exempt (FD-1416; RL-1522 DP-9). Not a place to park a new one.
+#: `dislocation-run` is absent: PL-1267 (WK-673 Slice 4) generated it, so it is no longer
+#: authored-only and the plan's fifth entry would be stale (the guard below refuses a stale one).
+SHIPPED_NOT_COMPARED: Final[dict[str, str]] = {
+    "rate-table": "register F27",
+    "rating-algorithm": "register F27",
+    "rating-version": "register F27",
+    "scoring": "RL-878: its four $defs are compared by field name, "
+    "test_generated_and_authored_agree_on_scoring_field_names",
+}
+
+
+def _model_schema_classes(document: dict[str, Any]) -> list[str]:
+    """The `model-schema` classes an authored file names: its `title` and its `$defs` keys.
+
+    A `BaseModel` subclass, not merely an attribute: `common/money`'s `$defs` include
+    `Currency` and `MoneyMinor`, which `model_schema` exports as `Annotated` aliases.
+    """
+    from pydantic import BaseModel
+
+    import model_schema
+
+    names = [document.get("title", ""), *document.get("$defs", {})]
+    return sorted(
+        n
+        for n in names
+        if isinstance(getattr(model_schema, n, None), type)
+        and issubclass(getattr(model_schema, n), BaseModel)
+    )
+
+
+def _hidden_model_schema_classes(
+    authored_only: set[str], exempt: dict[str, str]
+) -> tuple[dict[str, list[str]], list[str]]:
+    hidden = {
+        s: found
+        for s in sorted(authored_only)
+        if s not in exempt and (found := _model_schema_classes(_load(_authored_schema(s))))
+    }
+    return hidden, sorted(s for s in exempt if s not in authored_only)
+
+
+@pytest.mark.req("FR-9")
+def test_no_authored_only_slug_hides_a_model_schema_class() -> None:
+    """FD-1416 discharge item (3), the F27 class: an authored-only slug whose file names a
+    `model-schema` class (its `title` or a `$defs` key) is a second definition nothing
+    compares, unless it is in `SHIPPED_NOT_COMPARED` with its reason."""
+    authored_only, _ = _one_sided_slugs()
+    hidden, stale = _hidden_model_schema_classes(authored_only, SHIPPED_NOT_COMPARED)
+    assert not hidden, f"authored-only but shipped in model-schema: {hidden}"
+    assert not stale, f"SHIPPED_NOT_COMPARED names a slug that is no longer authored-only: {stale}"
+
+
+@pytest.mark.req("FR-9")
+def test_the_hidden_class_guard_fails_on_each_broken_input() -> None:
+    """Broken input for the guard (PL-1528 Acceptance 7): dropping `rate-table` and dropping
+    `scoring` from the map are each refused, naming the slug. `scoring` is the case only the
+    `title` + `$defs` predicate catches: no `Scoring` class exists, so a PascalCase-of-the-slug
+    lookup passes the same edit."""
+    import model_schema
+
+    authored_only, _ = _one_sided_slugs()
+    for dropped in ("rate-table", "scoring"):
+        exempt = {k: v for k, v in SHIPPED_NOT_COMPARED.items() if k != dropped}
+        hidden, _ = _hidden_model_schema_classes(authored_only, exempt)
+        assert dropped in hidden, f"dropping {dropped} from the map was not refused"
+    assert not hasattr(model_schema, "Scoring")
+    stale = {**SHIPPED_NOT_COMPARED, "no-such-slug": "invented"}
+    assert _hidden_model_schema_classes(authored_only, stale)[1] == ["no-such-slug"]
+
+
 @pytest.mark.req("FR-451")
 def test_every_one_sided_slug_is_declared() -> None:
     """OQ-649 (b): one-sidedness is declared, never inferred.
@@ -2955,3 +3028,310 @@ def test_the_certificate_check_name_comparison_reaches_the_enum_and_can_fail() -
     broken = ["BOGUS" if name == "convexity" else name for name in authored]
     assert _certificate_check_name_drift(broken, authored) == {"BOGUS", "convexity"}
     assert _certificate_check_name_drift([], []) == set()
+
+
+# --- FD-1335 Part A / FD-1366: no untyped JSON body in the published contract ------------------
+#
+# One guard, two sides. A 2xx response and a JSON request body are each "untyped" in two forms
+# (the predicates below, verbatim from FD-1335 Evidence §1, which FD-1366's predicate 2
+# restates): form 1, a schema of `{}` (what a raw `Response` handler publishes), and form 2,
+# an object with no `properties` and no `$ref`/`allOf`/`anyOf`/`oneOf` (what `dict[str, Any]`
+# publishes). A frontend client types such a body as `unknown` or `{[key: string]: unknown}`.
+
+_HTTP_METHODS: Final[tuple[str, ...]] = (
+    "get",
+    "put",
+    "post",
+    "delete",
+    "options",
+    "head",
+    "patch",
+    "trace",
+)
+
+
+def _is_empty(schema: Any) -> bool:
+    """Form 1: the schema is `{}`."""
+    return schema == {}
+
+
+def _is_open_object(schema: Any) -> bool:
+    """Form 2: a JSON object with no `properties`, and no `$ref`, `allOf`, `anyOf`, `oneOf`."""
+    return (
+        isinstance(schema, dict)
+        and schema.get("type") == "object"
+        and "properties" not in schema
+        and not any(key in schema for key in ("$ref", "allOf", "anyOf", "oneOf"))
+    )
+
+
+def _walk_bodies(
+    document: dict,
+) -> Iterable[tuple[str, str, str, str, object]]:
+    """Yield `(side, METHOD, path, key, schema)` for every body the guard inspects.
+
+    The response side reads every media type of every 2xx response; its `key` is the status.
+    The request side reads every media type whose name contains `json`; its `key` is the media
+    type (multipart bodies are outside the JSON scope and are pinned apart, by citation, in
+    `NON_JSON_REQUEST_BODIES`). A schema-less media type counts as `{}`.
+    """
+    for path, item in document["paths"].items():
+        for method in _HTTP_METHODS:
+            operation = item.get(method)
+            if operation is None:
+                continue
+            for media, body in operation.get("requestBody", {}).get("content", {}).items():
+                if "json" in media:
+                    yield "request", method.upper(), path, media, body.get("schema", {})
+            for status, response in operation.get("responses", {}).items():
+                if str(status).startswith("2"):
+                    for body in response.get("content", {}).values():
+                        yield "response", method.upper(), path, str(status), body.get("schema", {})
+
+
+def _visited_bodies(document: dict) -> Iterable[tuple[str, str, str, str]]:
+    """Every body the walker inspected, reported or not: the reach control's evidence."""
+    for side, method, path, key, _schema in _walk_bodies(document):
+        yield side, method, path, key
+
+
+def _untyped_bodies(document: dict) -> list[tuple[str, str, str, str, str]]:
+    """`(side, METHOD, path, key, form)` for every body that is `{}` or an open object."""
+    found = []
+    for side, method, path, key, schema in _walk_bodies(document):
+        if _is_empty(schema):
+            found.append((side, method, path, key, "form1"))
+        elif _is_open_object(schema):
+            found.append((side, method, path, key, "form2"))
+    return found
+
+
+_SCORE_BATCH: Final[str] = "/api/v1/score/batch"
+
+
+def _plant(side: str, form: str) -> dict:
+    """The real document with `POST /api/v1/score/batch`'s typed body made untyped."""
+    document = copy.deepcopy(_load(OPENAPI))
+    operation = document["paths"][_SCORE_BATCH]["post"]
+    bad: dict = {} if form == "form1" else {"type": "object", "additionalProperties": True}
+    if side == "response":
+        operation["responses"]["202"]["content"]["application/json"]["schema"] = bad
+    else:
+        operation["requestBody"]["content"]["application/json"]["schema"] = bad
+    return document
+
+
+@pytest.mark.req("FR-451")
+@pytest.mark.parametrize("form", ["form1", "form2"])
+@pytest.mark.parametrize("side", ["response", "request"])
+def test_the_untyped_body_predicates_flag_each_planted_form(side: str, form: str) -> None:
+    """Each predicate is shown on planted input before the guard relies on it: a typed body
+    of the real document, made `{}` (form 1) or an open object (form 2), is reported."""
+    key = "202" if side == "response" else "application/json"
+    reported = _untyped_bodies(_plant(side, form))
+    assert (side, "POST", _SCORE_BATCH, key, form) in reported
+
+
+@pytest.mark.req("FR-451")
+def test_the_untyped_body_predicates_pass_typed_bodies() -> None:
+    """Negative controls and the reach control. A typed body is reported in neither form, and
+    the walker is shown to have *visited* two named real bodies, so a walker that stopped
+    descending fails here on a path rather than on a count."""
+    document = _load(OPENAPI)
+    visited = set(_visited_bodies(document))
+    reported = {entry[:4] for entry in _untyped_bodies(document)}
+    for typed in (
+        ("response", "POST", _SCORE_BATCH, "202"),
+        ("request", "POST", "/api/v1/score", "application/json"),
+    ):
+        assert typed in visited, f"the walker never reached {typed}"
+        assert typed not in reported, f"{typed} is typed, and was reported"
+
+    # An object with `properties` is typed on either side, in either spelling of the body.
+    for side in ("response", "request"):
+        planted = _plant(side, "form2")
+        operation = planted["paths"][_SCORE_BATCH]["post"]
+        typed_object = {"type": "object", "properties": {"a": {"type": "string"}}}
+        if side == "response":
+            operation["responses"]["202"]["content"]["application/json"]["schema"] = typed_object
+            key = "202"
+        else:
+            operation["requestBody"]["content"]["application/json"]["schema"] = typed_object
+            key = "application/json"
+        assert (side, "POST", _SCORE_BATCH, key) in set(_visited_bodies(planted))
+        assert (side, "POST", _SCORE_BATCH, key) not in {
+            entry[:4] for entry in _untyped_bodies(planted)
+        }
+
+
+#: 2xx responses that are streams or files, so no JSON shape exists to publish. Permanent.
+#: Keyed `(METHOD, path, status)`; each reason names the file and line that makes it so.
+UNTYPED_2XX_PERMANENT: Final[dict[tuple[str, str, str], str]] = {
+    ("GET", "/api/v1/audit/export", "200"): (
+        "StreamingResponse, application/x-ndjson (backend/src/app/api/audit.py:280) or "
+        "text/csv (backend/src/app/api/audit.py:308)"
+    ),
+    ("GET", "/api/v1/jobs/{job_id}/events", "200"): (
+        "StreamingResponse, text/event-stream (backend/src/app/api/jobs.py:310)"
+    ),
+    ("GET", "/api/v1/rate-tables/{slug}@{version}/export/csv", "200"): (
+        "Response, text/csv (backend/src/app/api/rate_tables.py:184)"
+    ),
+    ("GET", "/api/v1/rate-tables/{slug}@{version}/export/xlsx", "200"): (
+        "Response, the spreadsheetml media type (backend/src/app/api/rate_tables.py:206-207)"
+    ),
+}
+
+#: 2xx responses published as an object with no properties, to be typed by FD-1335 Part B (or by
+#: the WK-675 slice that consumes the route, which removes its entry in the same change).
+#: Temporary: the list empties as the routes are typed, and FD-1335 closes when it is empty.
+_PENDING_2XX = "pending FD-1335 part B: an object with no properties"
+UNTYPED_2XX_PENDING_PART_B: Final[dict[tuple[str, str, str], str]] = {
+    key: _PENDING_2XX
+    for key in (
+        ("GET", "/api/v1/dataset-versions/{version_id}/rejected", "200"),
+        ("POST", "/api/v1/rate-tables/{slug}@{version}/import", "200"),
+        ("POST", "/api/v1/sources/{source_id}/preview", "200"),
+        ("POST", "/api/v1/validation-reports/{report_id}/results/{rule_id}/acknowledge", "201"),
+    )
+}
+
+#: JSON request bodies published as an open object from `body: dict[str, Any]` (FD-1366).
+#: Temporary: each entry is removed when its route is typed. Keyed `(METHOD, path)`.
+UNTYPED_REQUEST_PENDING: Final[dict[tuple[str, str], str]] = {
+    ("POST", "/api/v1/sub-graphs"): (
+        "pending FD-1366 Part B: SubGraphCreate exists (model_schema/sub_graphs.py:155); "
+        "body: dict[str, Any] (backend/src/app/api/sub_graphs.py:46)"
+    ),
+    ("POST", "/api/v1/sub-graphs/{slug}/versions"): (
+        "pending FD-1366 Part B: SubGraphBody exists (model_schema/sub_graphs.py:40); "
+        "body: dict[str, Any] (backend/src/app/api/sub_graphs.py:61)"
+    ),
+}
+
+#: Request bodies that are not JSON, so they are outside this guard's scope. Pinned exactly, by
+#: citation, so a new non-JSON body is a visible act. Keyed `(METHOD, path, media)`.
+NON_JSON_REQUEST_BODIES: Final[dict[tuple[str, str, str], str]] = {
+    ("POST", "/api/v1/rate-tables/{slug}@{version}/import", "multipart/form-data"): (
+        "UploadFile with File() and Form() (backend/src/app/api/rate_tables.py:225-226)"
+    ),
+    ("POST", "/api/v1/sources/{source_id}/preview", "multipart/form-data"): (
+        "UploadFile with File() (backend/src/app/api/datasets.py:215)"
+    ),
+}
+
+
+def _guard_remainder(document: dict[str, Any]) -> set[tuple[str, str, str, str]]:
+    """`(side, METHOD, path, key)` of every reported body that its side's allow-list lacks.
+
+    Response keys are matched on `(METHOD, path, status)`, request keys on `(METHOD, path)`.
+    """
+    remainder = set()
+    for side, method, path, key, _form in _untyped_bodies(document):
+        listed = (
+            (method, path, key) in UNTYPED_2XX_PERMANENT
+            or (method, path, key) in UNTYPED_2XX_PENDING_PART_B
+            if side == "response"
+            else (method, path) in UNTYPED_REQUEST_PENDING
+        )
+        if not listed:
+            remainder.add((side, method, path, key))
+    return remainder
+
+
+@pytest.mark.req("FR-451")
+@pytest.mark.parametrize("side", ["response", "request"])
+def test_no_json_body_is_untyped(side: str) -> None:
+    """No JSON 2xx response and no JSON request body is `{}` or an object with no properties,
+    unless its route is on this side's allow-list (FD-1335 Part A, FD-1366). A client generated
+    from such a body types it `unknown`, which is how a premium crosses the seam untyped."""
+    remainder = sorted(e for e in _guard_remainder(_load(OPENAPI)) if e[0] == side)
+    assert not remainder, (
+        f"untyped {side} bodies not on the allow-list: {remainder}. Type the body with a "
+        "model-schema model, or add a cited entry to the allow-list."
+    )
+
+
+@pytest.mark.req("FR-451")
+@pytest.mark.parametrize("side", ["response", "request"])
+def test_the_guard_fails_on_an_unlisted_open_body(side: str) -> None:
+    """The guard is shown able to fail: one more open body, on a route that is on no list, is
+    exactly one more remainder entry. Compared against the unplanted document at that moment, so
+    the claim holds whatever the baseline holds."""
+    key = "202" if side == "response" else "application/json"
+    planted_key = (side, "POST", _SCORE_BATCH, key)
+    real = _load(OPENAPI)
+    assert planted_key not in _guard_remainder(real)
+    assert _guard_remainder(_plant(side, "form2")) == _guard_remainder(real) | {planted_key}
+
+
+@pytest.mark.req("FR-451")
+def test_every_untyped_body_exclusion_is_still_untyped() -> None:
+    """A route typed later fails here until its entry is removed: FD-1335 closes when
+    `UNTYPED_2XX_PENDING_PART_B` is empty, and FD-1366 Part B empties `UNTYPED_REQUEST_PENDING`."""
+    reported = _untyped_bodies(_load(OPENAPI))
+    responses = {(m, p, k) for s, m, p, k, _ in reported if s == "response"}
+    requests = {(m, p) for s, m, p, _k, _ in reported if s == "request"}
+    stale_2xx = (set(UNTYPED_2XX_PERMANENT) | set(UNTYPED_2XX_PENDING_PART_B)) - responses
+    assert not stale_2xx, f"no longer untyped, remove from the 2xx lists: {sorted(stale_2xx)}"
+    stale_requests = set(UNTYPED_REQUEST_PENDING) - requests
+    assert not stale_requests, f"no longer untyped, remove: {sorted(stale_requests)}"
+    assert not set(UNTYPED_2XX_PERMANENT) & set(UNTYPED_2XX_PENDING_PART_B)
+
+    for reason in UNTYPED_2XX_PENDING_PART_B.values():
+        assert "pending FD-1335 part B" in reason
+    for reason in UNTYPED_REQUEST_PENDING.values():
+        assert "pending FD-1366 Part B" in reason
+    for key, reason in UNTYPED_2XX_PERMANENT.items():
+        assert re.search(r"\.py:\d+", reason), f"{key}: the reason names no file and line"
+
+
+@pytest.mark.req("FR-451")
+def test_non_json_request_bodies_are_exactly_the_cited_routes() -> None:
+    """Multipart is excluded from the JSON scope with a citation, not by silence."""
+    document = _load(OPENAPI)
+    non_json = {
+        (method.upper(), path, media)
+        for path, item in document["paths"].items()
+        for method in _HTTP_METHODS
+        if method in item
+        for media in item[method].get("requestBody", {}).get("content", {})
+        if "json" not in media
+    }
+    assert non_json == set(NON_JSON_REQUEST_BODIES)
+
+
+@pytest.mark.req("FR-250")
+@pytest.mark.req("FR-262")
+@pytest.mark.req("FR-451")
+def test_the_score_responses_document_their_models() -> None:
+    """`/score` and `/score/compare` document their 200 as a `$ref` to the model, and each
+    model's published properties are the model's own fields at this tree, so "the contract
+    documents the post-ladder rung shape" is a property of the merged tree rather than a list of
+    names copied into a test. The documentation builds the contract and validates nothing
+    (NFR-502, FD-1335)."""
+    import model_schema
+
+    document = _load(OPENAPI)
+    for path, model in (
+        ("/api/v1/score", "ScoringResult"),
+        ("/api/v1/score/compare", "ScoreComparison"),
+    ):
+        schema = document["paths"][path]["post"]["responses"]["200"]["content"][
+            "application/json"
+        ]["schema"]
+        assert schema == {"$ref": f"#/components/schemas/{model}"}, path
+
+    components = document["components"]["schemas"]
+    for name in (
+        "ScoringResult",
+        "LadderRung",
+        "LadderOperation",
+        "ScoreComparison",
+        "StepChange",
+        "TraceDiff",
+    ):
+        fields = {
+            (field.alias or key) for key, field in getattr(model_schema, name).model_fields.items()
+        }
+        assert set(components[name]["properties"]) == fields, name

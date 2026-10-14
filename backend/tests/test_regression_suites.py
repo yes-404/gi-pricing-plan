@@ -339,7 +339,7 @@ async def test_an_invalid_monotone_bound_is_a_422_at_declaration_and_no_job_exis
     from app.platform import rating_algorithms as algorithm_service
 
     await algorithm_service.create_algorithm(
-        database, workspace_id, analyst.id, _algorithm(field)
+        database, workspace_id, analyst, _algorithm(field)
     )
     body = _content(algorithm_slug="motor-gb") | {
         "change_note": "x",
@@ -373,7 +373,7 @@ async def test_a_lone_monotone_bound_is_accepted_when_the_contract_has_the_other
     from app.platform import rating_algorithms as algorithm_service
 
     await algorithm_service.create_algorithm(
-        database, workspace_id, analyst.id, _algorithm({"type": "int", "min": 0, "max": 10})
+        database, workspace_id, analyst, _algorithm({"type": "int", "min": 0, "max": 10})
     )
     body = _content(algorithm_slug="motor-gb") | {
         "change_note": "x",

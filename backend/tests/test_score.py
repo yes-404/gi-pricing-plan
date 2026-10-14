@@ -25,6 +25,7 @@ from uuid import UUID
 
 import pytest
 import pytest_asyncio
+from backend.tests.outbound_validation_spy import install_outbound_validation_spy
 from backend.tests.test_bundle_slot import _compiled
 from backend.tests.test_rating_version_compile import (
     _empty_pins,
@@ -345,13 +346,21 @@ def test_the_result_is_returned_without_outbound_validation(
     served: Any,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """RL-883's acceptance test, and the one that discriminates the implementations.
+    """RL-883's acceptance test: the route emits an unvalidated result verbatim.
 
     A `ScoringResult` built with `model_construct` holds values that violate its own
     declared types — no validation ran to stop them. The route must emit those bytes
-    verbatim with a 200. **A route carrying a Pydantic return annotation or a
-    `response_model=` answers 500 here**, because FastAPI would validate on the way out,
-    which is exactly what NFR-502 forbids: validate inbound, never outbound.
+    verbatim with a 200, which is what NFR-502 requires: validate inbound, never outbound.
+
+    **This test is not the discriminator for every validating form** (FD-1372). A route
+    whose handler returns a dict or other non-instance value under a
+    Pydantic return annotation or `response_model=` answers 500 here, because FastAPI
+    validates that value on the way out. A route that returns this `ScoringResult`
+    *instance* under either answers 200 and passes this test, because pydantic does not
+    revalidate an instance of the declared class (`revalidate_instances='never'`), although
+    FastAPI's response validation still runs. The test that catches every form is
+    `test_no_outbound_validation_runs_on_score`, which counts calls to the response
+    validation entry point directly (PL-1364 Acceptance 8b).
     """
     malformed = ScoringResult.model_construct(
         outcome="quoted",
@@ -820,8 +829,8 @@ def test_a_multi_environment_accounts_trace_is_stamped_with_the_served_environme
 ) -> None:
     """RL-916 part 3, test 1 — the discriminating case.
 
-    A Service Account created `["uat", "dev"]` mints a key for `environments[0]`
-    (`service_accounts.py:180`), which is `uat` — the environment the quote is actually
+    A Service Account created `["uat", "dev"]` mints one key per Environment (FR-430, WK-674
+    Slice 3). The `uat` key is the one used here — the environment the quote is actually
     served in. The old `_environment_for` stamped `min(caller.environments)` instead, which
     is `dev` (`"dev" < "uat"` lexicographically): a caller scoped to more than one
     environment discriminates the fix from the defect, where a single-environment account
@@ -838,7 +847,7 @@ def test_a_multi_environment_accounts_trace_is_stamped_with_the_served_environme
     )
     assert created.status_code == 201, created.text
     headers = {
-        "X-API-Key": created.json()["key"],
+        "X-API-Key": next(k["key"] for k in created.json()["keys"] if k["environment"] == "uat"),
         "Workspace-Id": str(workspace_id),
     }
 
@@ -949,6 +958,63 @@ def test_a_quoted_outcome_at_rate_one_is_sampled(
     rows = _run(_rows_for(database, workspace_id))
     assert len(rows) == 1
     assert rows[0].sample_reason == "rate"
+
+
+async def _set_environment_trace_sample_rate(
+    database: Any, environment: str, rate: float
+) -> None:
+    async with database.unit_of_work() as session:
+        await settings_service.set_environment_setting(
+            session, environment, "rating.trace_sample_rate", rate, None
+        )
+
+
+@pytest.mark.req("FR-430")
+@pytest.mark.parametrize(
+    ("set_for", "expect_sampled"),
+    [("uat", True), ("prod", False)],
+)
+def test_the_trace_sampling_rate_is_read_for_the_callers_environment(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    served: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    database: Any,
+    workspace_id: Any,
+    set_for: str,
+    expect_sampled: bool,
+) -> None:
+    """DP-S3-3 (a): monitoring configuration is per Environment. Workspace rate 0.0; the
+    Environment setting 1.0 for `set_for`. A `uat` caller is sampled only when the value was
+    set for `uat` — predicted red at the parent: the workspace rate was read, so never."""
+    quoted = _scored(outcome="quoted")
+
+    async def _score_one(*_args: Any, **_kwargs: Any) -> ScoringResult:
+        return quoted
+
+    monkeypatch.setattr(score_module, "score_one", _score_one)
+    _run(_set_trace_sample_rate(database, workspace_id, 0.0))
+    _run(_set_environment_trace_sample_rate(database, set_for, 1.0))
+    try:
+        response = client.post(
+            SCORE_URL, json=_quote({"rating_version_ref": SCORED_REF}), headers=scoring_headers
+        )
+        assert response.status_code == 200, response.text
+
+        rows = _run(_rows_for(database, workspace_id))
+        assert len(rows) == (1 if expect_sampled else 0)
+    finally:
+        _run(_clear_environment_settings(database))
+
+
+async def _clear_environment_settings(database: Any) -> None:
+    """Environments are deployment-wide, so a row written here would outlive the test."""
+    from sqlalchemy import delete
+
+    from app.db.models import EnvironmentSettingRow
+
+    async with database.unit_of_work() as session:
+        await session.execute(delete(EnvironmentSettingRow))
 
 
 @pytest.mark.req("FR-259")
@@ -1628,3 +1694,167 @@ def test_a_pending_trace_whose_context_names_a_produced_value_is_not_reproduced_
     status, after = _run(_plant_and_run())
     assert status is JobStatus.FAILED
     assert after.status == "pending"
+
+
+@pytest.mark.req("NFR-502")
+def test_no_outbound_validation_runs_on_score(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    served: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The property itself (PL-1364 Acceptance 8b): `/score` makes no call to FastAPI's
+    response-validation entry point. The 500 test above observes a side effect of outbound
+    validation and cannot see a route that validates and passes; this counts the calls.
+
+    The planted control proves the spy is not blind at this FastAPI version: a route that
+    declares `response_model=ScoringResult` and returns a valid dict is counted at least once.
+    """
+    spy = install_outbound_validation_spy(monkeypatch)
+
+    async def _score_one(*_args: Any, **_kwargs: Any) -> ScoringResult:
+        return _scored()
+
+    monkeypatch.setattr(score_module, "score_one", _score_one)
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": SCORED_REF}), headers=scoring_headers
+    )
+    assert response.status_code == 200, response.text
+    assert spy.calls == 0
+
+    async def _control() -> dict[str, Any]:
+        return _scored().model_dump(mode="json")
+
+    client.app.add_api_route(  # type: ignore[attr-defined]
+        "/__nfr502_control",
+        _control,
+        methods=["POST"],
+        response_model=ScoringResult,
+    )
+    spy.reset()
+    controlled = client.post("/__nfr502_control")
+    assert controlled.status_code == 200, controlled.text
+    assert spy.calls >= 1, "the spy saw no response validation on a route that validates"
+
+
+# --------------------------------------------------------------------------------------
+# SL-1631 — default-live /score against a REAL `score_one`. The `refs_scored` cases above
+# stub it, so they cannot see `score_one` refusing a context that carries no ref.
+# --------------------------------------------------------------------------------------
+
+
+@pytest.mark.req("FR-250")
+def test_a_default_live_quote_is_scored_by_the_real_evaluator_against_the_live_version(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    compiled_version: Any,
+    database: Any,
+    workspace_id: Any,
+) -> None:
+    """No ref in the body, a live Deployment, nothing stubbed: 200, and the result reports the
+    deployed version. On the base source this is 422 INPUT_CONTRACT_VIOLATION."""
+    _run(plant_deployment(database, workspace_id, "uat", SCORED_REF))
+
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": None}), headers=scoring_headers
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["rating_version_ref"] == SCORED_REF
+    assert body["outcome"] == "quoted"
+    assert body["premium_ladder"]
+
+
+@pytest.mark.req("FR-250")
+def test_a_default_live_quote_with_no_options_object_is_scored_by_the_real_evaluator(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    compiled_version: Any,
+    database: Any,
+    workspace_id: Any,
+) -> None:
+    _run(plant_deployment(database, workspace_id, "uat", SCORED_REF))
+
+    response = client.post(
+        SCORE_URL, json=_quote(omit_options=True), headers=scoring_headers
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["rating_version_ref"] == SCORED_REF
+
+
+@pytest.mark.req("FR-259")
+def test_a_sampled_default_live_trace_records_and_reproduces_the_resolved_version(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    compiled_version: Any,
+    database: Any,
+    blob_store: Any,
+    workspace_id: Any,
+) -> None:
+    """The stored Quote Context carries the resolved ref, so the off-path re-score is not
+    refused for the same gap."""
+    register_trace_handlers()
+    _run(plant_deployment(database, workspace_id, "uat", SCORED_REF))
+    _run(_set_trace_sample_rate(database, workspace_id, 1.0))
+
+    served = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": None}), headers=scoring_headers
+    )
+    assert served.status_code == 200, served.text
+    (row,) = _run(_rows_for(database, workspace_id))
+    (job,) = _run(_trace_produce_jobs(database, workspace_id))
+    assert row.rating_version_ref == SCORED_REF
+    assert row.pending_quote_context["options"]["rating_version_ref"] == SCORED_REF
+
+    status = _run(execute_job(database, job.id, blob_store))
+
+    assert status is JobStatus.SUCCEEDED
+
+
+@pytest.mark.req("FR-250")
+def test_an_explicit_ref_wins_over_a_different_live_version(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    compiled_version: Any,
+    database: Any,
+    workspace_id: Any,
+) -> None:
+    """The live Deployment names a version that was never compiled; the explicit ref is the
+    one scored, so the live one is never even resolved to a bundle."""
+    _run(plant_deployment(database, workspace_id, "uat", OTHER_VERSION_REF))
+
+    response = client.post(
+        SCORE_URL, json=_quote({"rating_version_ref": SCORED_REF}), headers=scoring_headers
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["rating_version_ref"] == SCORED_REF
+
+
+@pytest.mark.req("FR-250")
+def test_the_resolved_ref_is_stamped_on_a_copy_and_an_explicit_one_is_kept() -> None:
+    ref = ArtifactRef.parse(LIVE_REF)
+    explicit = ArtifactRef.parse(OTHER_VERSION_REF)
+    bare = QuoteContext.model_validate(_quote({"rating_version_ref": None}))
+    named = QuoteContext.model_validate(_quote({"rating_version_ref": OTHER_VERSION_REF}))
+    no_options = QuoteContext.model_validate(_quote(omit_options=True))
+
+    stamped = score_module._with_resolved_ref(bare, ref)
+    assert stamped.options is not None
+    assert stamped.options.rating_version_ref == ref
+    assert bare.options is not None
+    assert bare.options.rating_version_ref is None
+    created = score_module._with_resolved_ref(no_options, ref)
+    assert created.options is not None
+    assert created.options.rating_version_ref == ref
+    # The created options are the absent defaults plus the ref, nothing else.
+    absent = score_module.QuoteContextOptions()
+    for field in score_module.QuoteContextOptions.model_fields:
+        if field != "rating_version_ref":
+            assert getattr(created.options, field) == getattr(absent, field), field
+    assert no_options.options is None
+    assert score_module._with_resolved_ref(named, ref) is named
+    assert named.options is not None
+    assert named.options.rating_version_ref == explicit

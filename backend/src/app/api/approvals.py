@@ -49,6 +49,7 @@ from app.platform import rating_versions as rating_versions_service
 from app.platform import validation_rules as validation_rules_service
 from model_schema import (
     ApprovalPolicy,
+    ApprovalRequest,
     ApprovalStatus,
     ApprovalSubmission,
     ApprovalWithdrawal,
@@ -75,7 +76,7 @@ def _database(request: Request) -> Database:
 DatabaseDep = Annotated[Database, Depends(_database)]
 
 
-async def _detail(database: Database, row: ApprovalRequestRow) -> dict[str, Any]:
+async def _detail(database: Database, row: ApprovalRequestRow) -> ApprovalRequest:
     async with database.session() as session:
         decisions = list(
             (
@@ -86,7 +87,7 @@ async def _detail(database: Database, row: ApprovalRequestRow) -> dict[str, Any]
                 )
             ).scalars()
         )
-    return service.to_dict(row, decisions)
+    return service.to_approval_request(row, decisions)
 
 
 @router.post(
@@ -97,7 +98,7 @@ async def _detail(database: Database, row: ApprovalRequestRow) -> dict[str, Any]
 )
 async def submit_for_approval(
     body: ApprovalSubmission, caller: AnyCaller, database: DatabaseDep
-) -> dict[str, Any]:
+) -> ApprovalRequest:
     """Anyone authenticated may submit; the policy decides who may approve.
 
     Deliberately not permission-gated beyond authentication: submitting is asking, and the
@@ -130,7 +131,7 @@ async def submit_for_approval(
             environment=body.environment,
             resolve=_resolve_the_artifact,
         )
-        return service.to_dict(row, [])
+        return service.to_approval_request(row, [])
 
 
 @router.get(
@@ -145,7 +146,7 @@ async def list_requests(
     artifact_type: str | None = None,
     cursor: str | None = None,
     limit: Annotated[int, Query(ge=1, le=MAX_LIMIT)] = DEFAULT_LIMIT,
-) -> Page[dict[str, Any]]:
+) -> Page[ApprovalRequest]:
     conditions: list[Any] = [ApprovalRequestRow.workspace_id == caller.workspace_id]
     if status_filter is not None:
         conditions.append(ApprovalRequestRow.status == status_filter.value)
@@ -177,7 +178,7 @@ async def list_requests(
 
     has_more = len(rows) > limit
     page_rows = rows[:limit]
-    return Page[dict[str, Any]](
+    return Page[ApprovalRequest](
         items=[await _detail(database, row) for row in page_rows],
         next_cursor=encode_cursor(page_rows[-1].id) if has_more and page_rows else None,
         total_estimate=total,
@@ -191,7 +192,7 @@ async def list_requests(
 )
 async def get_request(
     request_id: UUID, caller: AnyCaller, database: DatabaseDep
-) -> dict[str, Any]:
+) -> ApprovalRequest:
     async with database.session() as session:
         row = await session.get(ApprovalRequestRow, request_id)
     if row is None or row.workspace_id != caller.workspace_id:
@@ -208,7 +209,7 @@ async def get_request(
 )
 async def decide_request(
     request_id: UUID, body: Decide, caller: Decider, database: DatabaseDep
-) -> dict[str, Any]:
+) -> ApprovalRequest:
     """The decision, and the artifact transition it implies, in **one** transaction.
 
     `06` FR-351 stops the approval machine at `approved` — "post-approval states belong to
@@ -241,7 +242,7 @@ async def decide_request(
                 )
             ).scalars()
         )
-        return service.to_dict(row, decisions)
+        return service.to_approval_request(row, decisions)
 
 
 async def decide_and_carry(
@@ -304,7 +305,7 @@ async def _is_deployed(session: AsyncSession, workspace_id: UUID, request_id: UU
 )
 async def withdraw_request(
     request_id: UUID, body: ApprovalWithdrawal, caller: Decider, database: DatabaseDep
-) -> dict[str, Any]:
+) -> ApprovalRequest:
     """Withdraw a request before its artifact is deployed (FR-357).
 
     Liveness is the server's to derive, never the client's to assert (`PL-1392` Task 6): a
@@ -326,7 +327,7 @@ async def withdraw_request(
         # pre-submission state. Without this the model would sit in `review` for ever with
         # no open request behind it — reviewable by nobody and resubmittable by nobody.
         await _carry_to_the_artifact(session, caller=caller, request=row)
-        return service.to_dict(row, [])
+        return service.to_approval_request(row, [])
 
 
 @router.get(

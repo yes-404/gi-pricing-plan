@@ -2620,7 +2620,6 @@ _CONTRACTS_RULING: Final = (
 _CONTRACT_ARTIFACT_PATHS: Final = (
     "docs/contracts/openapi/generated.json",
     "docs/contracts/openapi/gi-pricing.yaml",
-    "docs/contracts/schemas/approval-request.schema.json",
     "docs/contracts/schemas/audit-event.schema.json",
     "docs/contracts/schemas/banding.schema.json",
     "docs/contracts/schemas/common/artifact-envelope.schema.json",
@@ -2633,6 +2632,7 @@ _CONTRACT_ARTIFACT_PATHS: Final = (
     "docs/contracts/schemas/diagnostics.schema.json",
     "docs/contracts/schemas/dislocation-run.schema.json",
     "docs/contracts/schemas/dossier.schema.json",
+    "docs/contracts/schemas/generated/approval-request.schema.json",
     "docs/contracts/schemas/generated/artifact-envelope.schema.json",
     "docs/contracts/schemas/generated/artifact-ref.schema.json",
     "docs/contracts/schemas/generated/audit-event.schema.json",
@@ -2669,6 +2669,7 @@ _CONTRACT_ARTIFACT_PATHS: Final = (
     # 2026-10-03, FD-1357 fix (RL-1375 DP-4)
     "docs/contracts/schemas/generated/rate-table-version.schema.json",
     "docs/contracts/schemas/generated/seed-from-model-request.schema.json",
+    "docs/contracts/schemas/generated/bulk-operation-request.schema.json",
     # 2026-10-03, PL-1392 (WK-674 Slice 2)
     "docs/contracts/schemas/generated/environment.schema.json",
     "docs/contracts/schemas/generated/environment-create.schema.json",

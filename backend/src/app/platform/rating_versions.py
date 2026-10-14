@@ -28,6 +28,7 @@ from app.db.models import (
     RegressionSuiteRow,
     RegressionSuiteVersionRow,
 )
+from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import approvals, audit, blobs, rbac
 from app.platform import environments as environments_service
@@ -41,6 +42,7 @@ from app.platform import sub_graphs as sub_graphs_service
 from app.platform import transformations as transform_service
 from app.platform import transparency as transparency_service
 from app.platform.blobs import BlobStore
+from app.platform.change_summary import draft_change_summary
 from app.platform.modelling import load_factors, resolve_offset_model, to_factor, to_model
 from model_schema import (
     ApprovalPolicy,
@@ -76,7 +78,7 @@ from model_schema.approvals import (
     DEFAULT_DISLOCATION_BASELINE_ENVIRONMENT,
 )
 from model_schema.dislocation import DislocationRun
-from model_schema.rating import ApproximationCheck
+from model_schema.rating import ApproximationCheck, ChangeSummaryDraft, RateTableChange
 from pricing_core.rating.compile import Bundle, ResolvedArtifact, compile_bundle
 from pricing_core.rating.runtime import CompiledBundle
 from pricing_core.rating.testing import evaluate_golden_quotes
@@ -355,9 +357,12 @@ async def submit_for_review(
     2026-09-28): every golden quote of the algorithm's Regression Suite is re-scored
     against this version's compiled bundle, any mismatch refuses the submission, and the
     suite version checked — with its delta since the previous approved version of the
-    same algorithm — is pinned into `evidence.golden_quotes`. `load_compiled` loads the
-    bundle for a ref; the route supplies one that refuses rather than degrades when
-    metadata storage is down (audit finding F5). It is needed only when a suite exists.
+    same algorithm — is pinned into `evidence.golden_quotes`. Then each kind of
+    `policy.effective_evidence("rating_version")` — the floor and the policy entry — is
+    verified in that order, and a kind with no verifier is refused by name (`06` FR-364).
+    `load_compiled` loads the bundle for a ref; the route supplies one that refuses rather
+    than degrades when metadata storage is down (audit finding F5). It is needed only when a
+    suite exists.
 
     `blob_store` is required, with no default: FR-219's structural diff is stored as a blob
     (`06` FR-364 E4), and a caller that forgets the store fails at once rather than submitting
@@ -383,39 +388,88 @@ async def submit_for_review(
     golden_quotes = await _golden_quote_gate(
         session, workspace_id=workspace_id, row=row, ref=ref, load_compiled=load_compiled
     )
-    run_id = await _regression_run_gate(
-        session, workspace_id=workspace_id, row=row, ref=ref, golden_quotes=golden_quotes
-    )
     policy = await approvals.policy_for(session, workspace_id)
     baseline, baseline_reason = await _dislocation_baseline(
         session, workspace_id=workspace_id, row=row, policy=policy
     )
-    dislocation_run_id = await _dislocation_gate(
-        session, workspace_id=workspace_id, row=row, ref=ref, baseline=baseline
-    )
+
+    async def structural_diff() -> dict[str, Any]:
+        blob = await _structural_diff_gate(
+            session, workspace_id=workspace_id, row=row, ref=ref, baseline=baseline,
+            blob_store=blob_store,
+        )
+        return {"structural_diff_blob": blob}
+
+    async def regression_run() -> dict[str, Any]:
+        run_id = await _regression_run_gate(
+            session, workspace_id=workspace_id, row=row, ref=ref, golden_quotes=golden_quotes
+        )
+        return {"regression_suite_run_id": str(run_id)}
+
+    async def dislocation_run() -> dict[str, Any]:
+        run_id = await _dislocation_gate(
+            session, workspace_id=workspace_id, row=row, ref=ref, baseline=baseline
+        )
+        if run_id is None:
+            return {"no_baseline": baseline_reason}
+        return {"dislocation_run_id": str(run_id)}
+
+    async def summary_given() -> dict[str, Any]:
+        # The test `approvals.submit` applies later (FR-352), run here so a policy naming the
+        # kind is refused as missing evidence rather than as a blank field (RL-1504 item 11).
+        if not change_summary.strip():
+            raise _evidence_incomplete(
+                ref, "the approval policy requires 'change_summary', and the summary is blank"
+            )
+        return {}
+
+    async def gipp_not_enabled() -> dict[str, Any]:
+        # No workspace can enable the GIPP check yet (`04` FR-294, Phase 4); the slice that
+        # builds it replaces this verifier (`06` FR-364, RL-1504 item 11).
+        return {}
+
+    async def rate_table_diffs_unproduced() -> dict[str, Any]:
+        raise _evidence_incomplete(
+            ref,
+            "the approval policy requires 'rate_table_diffs', and no rate-table diff is "
+            "persisted as approval evidence yet (owner: WK-673; `06` FR-364)",
+        )
+
+    verifiers: dict[str, Callable[[], Awaitable[dict[str, Any]]]] = {
+        "structural_diff": structural_diff,
+        "regression_run": regression_run,
+        "dislocation_run": dislocation_run,
+        "change_summary": summary_given,
+        "gipp_check_if_enabled": gipp_not_enabled,
+        "rate_table_diffs": rate_table_diffs_unproduced,
+    }
+    # `06` FR-364: the union of the floor and the policy entry, in that order, failing closed
+    # on any kind with no verifier. Reading `effective_evidence`, never `entry.evidence`,
+    # is what holds a policy stored below the floor to it.
+    recorded: dict[str, Any] = {}
+    for kind in policy.effective_evidence("rating_version"):
+        verify = verifiers.get(kind)
+        if verify is None:
+            raise _evidence_incomplete(
+                ref,
+                f"the approval policy requires {kind!r}, which this build cannot verify; "
+                "treating an uncheckable requirement as met would make a policy tightening "
+                "do nothing",
+            )
+        recorded.update(await verify())
     approximation_check = await _approximation_gate(
         session, workspace_id=workspace_id, row=row, ref=ref, policy=policy
     )
-    structural_diff_blob = await _structural_diff_gate(
-        session, workspace_id=workspace_id, row=row, ref=ref, baseline=baseline,
-        blob_store=blob_store,
-    )
-    # Written once, here, and never edited after (`03` §4.3's invariant). The ids are the
-    # only other keys these gates write; `golden_quotes` is exactly what the gate returned.
+    # Written once, here, and never edited after (`03` §4.3's invariant). `golden_quotes` is
+    # exactly what its gate returned; the rest are what each verified kind recorded.
     row.evidence = {
         **(row.evidence or {}),
         "golden_quotes": golden_quotes,
-        "regression_suite_run_id": str(run_id),
-        "structural_diff_blob": structural_diff_blob,
+        **recorded,
         **(
             {"approximation_check": approximation_check.model_dump(mode="json")}
             if approximation_check is not None
             else {}
-        ),
-        **(
-            {"dislocation_run_id": str(dislocation_run_id)}
-            if dislocation_run_id is not None
-            else {"no_baseline": baseline_reason}
         ),
     }
     # The version carries the summary it was submitted with (`03` FR-242; PL-1500 Task 7,
@@ -767,7 +821,7 @@ async def compile_rating_version(
             schema, WorkspaceResolver(session, workspace_id, blob_store)
         )
     except ValueError as exc:
-        # FD 9952 row 1 (NFR-499): `str(exc)` of a pydantic `ValidationError` prints the failing
+        # FD-1589 row 1 (NFR-499): `str(exc)` of a pydantic `ValidationError` prints the failing
         # input, and this detail is stored in the Job error that `GET /jobs/{id}` serves. The
         # allow-list renders a `CodedError` as `CODE: message` (the form partitioned below) and a
         # `ValidationError` input-free; any other `ValueError` keeps only its type name.
@@ -1191,14 +1245,14 @@ async def _structural_diff_gate(
 
 
 def structural_diff_verified(row: RatingVersionRow) -> bool:
-    """Whether the evidence names a stored structural diff: Slice 6's `verifiable` entry for
-    `structural_diff` (`06` FR-364's 2026-09-28 amendment, RL-1184 E4)."""
+    """Whether the evidence names a stored structural diff (`06` FR-364's 2026-09-28
+    amendment, RL-1184 E4)."""
     return bool((row.evidence or {}).get("structural_diff_blob"))
 
 
 def dislocation_run_verified(row: RatingVersionRow) -> bool:
     """Whether the evidence shows limb (2) satisfied: a run id, or the recorded first-version
-    case. Slice 6's `verifiable` entry for `dislocation_run` (PL-1500 Hand-off)."""
+    case (PL-1500 Hand-off)."""
     evidence = row.evidence or {}
     return evidence.get("dislocation_run_id") is not None or (
         evidence.get("no_baseline") == "first_version"
@@ -1270,6 +1324,106 @@ async def _baseline(
         else None
     )
     return baseline, check
+
+
+async def draft_change_summary_for(
+    database: Database, *, blob_store: BlobStore, workspace_id: UUID, rating_version_id: UUID
+) -> ChangeSummaryDraft:
+    """FR-242's drafted change summary for a version, against the most recently approved
+    other version of its algorithm (`_baseline`); `RL-1498`. Writes nothing.
+
+    A version without an `algorithm_ref` or `pins` has nothing to diff: 409
+    `RATING_VERSION_UNPINNED`. Rate tables are paired by slug across the two versions'
+    pins; two versions of one slug on either side: 409 `VALIDATION_FAILED` (FD-1679). A pair
+    with a `storage: parquet` side is returned `pending`, not computed, so no
+    Job is created (FR-232); the rest are the unweighted diff of `rate_tables.diff`.
+    """
+    async with database.session() as session:
+        row = await load_rating_version(
+            session, workspace_id=workspace_id, rating_version_id=rating_version_id
+        )
+        if row.algorithm_ref is None or row.pins is None:
+            missing = "algorithm_ref" if row.algorithm_ref is None else "pins"
+            raise PlatformError(
+                "RATING_VERSION_UNPINNED",
+                "Rating version is not pinned",
+                409,
+                f"The rating version has no {missing}, so there is nothing to diff.",
+            )
+        algorithm_ref = ArtifactRef.model_validate(row.algorithm_ref)
+        candidate = await _algorithm_of(session, workspace_id=workspace_id, rating_version=row)
+        if candidate is None:
+            raise PlatformError(
+                "NOT_FOUND",
+                "Rating algorithm not found",
+                404,
+                f"No rating algorithm {algorithm_ref} in this workspace.",
+            )
+        found = await _baseline(
+            session,
+            workspace_id=workspace_id,
+            algorithm_slug=algorithm_ref.slug,
+            exclude_id=row.id,
+        )
+        if found is None:
+            return draft_change_summary(None, None, [])
+        baseline_row, _ = found
+        baseline_ref = ArtifactRef(
+            type="rating_version", slug=baseline_row.slug, version=baseline_row.version
+        )
+        previous = await _algorithm_of(
+            session, workspace_id=workspace_id, rating_version=baseline_row
+        )
+        structural = None if previous is None else diff_algorithms(previous, candidate)
+        before = _pins_by_slug(baseline_row.pins)
+        after = _pins_by_slug(row.pins)
+    changes: list[RateTableChange] = []
+    for slug in sorted(before.keys() | after.keys()):
+        old, new = before.get(slug), after.get(slug)
+        if old == new:
+            continue
+        if old is None or new is None:
+            changes.append(RateTableChange(slug=slug, from_ref=old, to_ref=new))
+        elif await rate_tables_service.diff_needs_job(
+            database, workspace_id, slug, new.version, old.version
+        ):
+            changes.append(RateTableChange(slug=slug, from_ref=old, to_ref=new, pending=True))
+        else:
+            diff = await rate_tables_service.diff(
+                database,
+                workspace_id,
+                slug,
+                new.version,
+                old.version,
+                blob_store=blob_store,
+                cache=None,
+            )
+            changes.append(RateTableChange(slug=slug, from_ref=old, to_ref=new, diff=diff))
+    return draft_change_summary(baseline_ref, structural, changes)
+
+
+def _pins_by_slug(pins: dict[str, Any] | None) -> dict[str, ArtifactRef]:
+    """A version's pinned rate tables by slug; a version without pins pins none.
+
+    Refuses a version pinning two versions of one slug (FD-1679): pairing by slug would keep
+    one of them and silently drop or mis-pair the other's change. `RL-1538` makes such pins
+    valid input, so create accepts them; the pairing rule is WK-673's DP-P1.
+    """
+    if pins is None:
+        return {}
+    by_slug: dict[str, ArtifactRef] = {}
+    for ref in Pins.model_validate(pins).rate_tables:
+        if ref.slug in by_slug:
+            raise PlatformError(
+                "VALIDATION_FAILED",
+                "Two versions of one rate table are pinned",
+                409,
+                f"The pins carry rate table {ref.slug!r} at versions "
+                f"{by_slug[ref.slug].version} and {ref.version}; the change summary pairs "
+                "rate tables by slug and cannot pair these (FD-1679).",
+            )
+        by_slug[ref.slug] = ref
+    return by_slug
 
 
 def _compared(quote: GoldenQuote) -> dict[str, Any]:

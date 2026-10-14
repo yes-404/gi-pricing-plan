@@ -160,7 +160,7 @@ async def test_diff_is_computed_on_miss_and_served_from_the_cache_on_hit(
     await svc.import_confirmed(
         database,
         workspace_id,
-        principal.id,
+        principal,
         Settings(),
         blob_store,
         slug=slug,

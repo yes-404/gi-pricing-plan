@@ -3,7 +3,7 @@ id: PL-1502
 family: plan
 kind: leaf
 title: WK-673 — WF-699 E1, FR-242's drafted change summary (the drafting limb), over HTTP: leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-08            # original date 2026-10-05, set at the draft; minted 2026-10-08
 owner: planner
 tree: 4d3be1414ad4dacdaa0c14ef49fb21853adbaed6

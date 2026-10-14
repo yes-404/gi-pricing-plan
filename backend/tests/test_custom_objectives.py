@@ -27,6 +27,7 @@ restating its value is what stops the next change going stale here again.)*
 
 from __future__ import annotations
 
+import numpy as np
 import pytest
 from backend.tests.test_api_datasets import _headers
 from backend.tests.test_contracts import OPENAPI, _load
@@ -55,9 +56,11 @@ from app.worker.data_handlers import register_data_handlers
 from app.worker.model_handlers import register_model_handlers
 from app.worker.tasks import execute_job
 from model_schema import (
+    TEMPLATE_APPLICABILITY,
     ArtifactRef,
     CertificateOutcome,
     CheckStatus,
+    CustomObjective,
     DecisionKind,
     GbmFunctionRef,
     HessianStrategy,
@@ -71,6 +74,8 @@ from model_schema import (
     SamplingSpec,
     new_uuid7,
 )
+from pricing_core.modelling import certify_objective
+from pricing_core.modelling.objectives import _TEMPLATES
 
 register_data_handlers()
 register_model_handlers()
@@ -846,3 +851,45 @@ async def test_template_create_with_model_fit_alone_is_201(
         headers=_headers(principal.id, workspace_id),
     )
     assert response.status_code == 201, response.text
+
+
+@pytest.mark.req("FR-146")
+@pytest.mark.parametrize("delta", [1, 63, 100, 1_000, 100_000])
+def test_pseudo_huber_is_not_failed_on_the_default_grid(delta: int) -> None:
+    """FD-1512: the loss `delta^2 (s - 1)` cancelled catastrophically, so the derivative check
+    differenced rounding noise and certified a correct gradient `failed` from delta 63 up.
+
+    The grid is `default_sampling`'s own, the one a platform certify job runs.
+    """
+    objective = CustomObjective(
+        id=new_uuid7(),
+        slug="ph-grid",
+        version=1,
+        template=ObjectiveTemplate.PSEUDO_HUBER,
+        params={"delta": delta},
+        applicability=TEMPLATE_APPLICABILITY[ObjectiveTemplate.PSEUDO_HUBER],
+        hessian_strategy=HessianStrategy.CLIP_TO_MIN,
+    )
+    result = certify_objective(objective, sampling=service.default_sampling(objective))
+    assert result.overall is not CertificateOutcome.FAILED, [
+        (c.name, c.status.value) for c in result.checks if c.status is CheckStatus.FAILED
+    ]
+
+
+@pytest.mark.req("FR-146")
+def test_pseudo_huber_gradient_and_hessian_are_unchanged() -> None:
+    """The fix touches the loss's evaluation only: the gradient and hessian are the closed
+    forms the template declared, to 1e-12 at the FD-1512 worst points (large delta)."""
+    gradient, hessian = _TEMPLATES[ObjectiveTemplate.PSEUDO_HUBER].grad, _TEMPLATES[
+        ObjectiveTemplate.PSEUDO_HUBER
+    ].hess
+    y = np.array([1.0, 5.0e4, 9.9e5, 1.0e6])
+    f = np.array([-5.0, 3.0, 11.0, 15.0])
+    for delta in (1.0, 100.0, 1.0e5):
+        mu = np.exp(f)
+        r = y - mu
+        s = np.sqrt(1.0 + (r / delta) ** 2)
+        g_ref = -mu * r / s
+        h_ref = -mu * r / s + mu**2 / s - mu**2 * r**2 / (delta**2 * s**3)
+        np.testing.assert_allclose(gradient(y, f, {"delta": delta}), g_ref, rtol=1e-12, atol=0)
+        np.testing.assert_allclose(hessian(y, f, {"delta": delta}), h_ref, rtol=1e-12, atol=0)

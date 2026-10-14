@@ -68,8 +68,10 @@ async def _write(
     slug: str,
     version: int,
     body: SubGraphBody,
+    before: dict[str, Any] | None,
 ) -> SubGraph:
-    """Insert one version and its Audit Event; a number already taken is a 409."""
+    """Insert one version and its Audit Event; a number already taken is a 409. `before` is the
+    stored content of version N-1, `None` for version 1 (NFR-498, RL-1515 DP-5)."""
     assert actor.id is not None
     row = SubGraphVersionRow(
         workspace_id=workspace_id,
@@ -96,11 +98,8 @@ async def _write(
         source=JobSource.API,
         action="sub_graph.created",
         entity_ref=f"sub_graph:{slug}@{version}",
-        after={
-            "change_note": body.change_note,
-            "inputs": [p.model_dump(mode="json") for p in body.inputs],
-            "outputs": [o.model_dump(mode="json") for o in body.outputs],
-        },
+        before=before,
+        after=row.content,
     )
     return _to_model(row)
 
@@ -125,7 +124,13 @@ async def create_sub_graph(
                 f"POST /api/v1/sub-graphs/{body.slug}/versions writes its next version.",
             )
         return await _write(
-            session, workspace_id=workspace_id, actor=actor, slug=body.slug, version=1, body=body
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            slug=body.slug,
+            version=1,
+            body=body,
+            before=None,
         )
 
 
@@ -143,9 +148,10 @@ async def create_version(
         if latest is None:
             raise _not_found(f"No sub-graph {slug} exists in this workspace.")
         await check_model_call_feature_maps(session, workspace_id, body.steps)
+        previous = await _row(session, workspace_id, slug, latest)
         return await _write(
             session, workspace_id=workspace_id, actor=actor, slug=slug, version=latest + 1,
-            body=body,
+            body=body, before=previous.content,
         )
 
 

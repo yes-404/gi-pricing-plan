@@ -26,6 +26,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from model_schema.input_free import InputFreeError
 from model_schema.jobs import JobSource, Principal
 
 __all__ = ["AuditEvent", "canonical_payload", "compute_event_hash"]
@@ -70,7 +71,7 @@ class AuditEventCore(BaseModel):
     def _timestamp_is_utc(cls, v: datetime) -> datetime:
         """FR-369 says UTC. A naive datetime is ambiguous the moment it is exported."""
         if v.tzinfo is None:
-            raise ValueError("audit timestamps must be timezone-aware and UTC")
+            raise InputFreeError("audit timestamps must be timezone-aware and UTC")
         return v
 
 

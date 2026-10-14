@@ -368,6 +368,18 @@ to join a problem response to a span in a trace backend, and an id in any other 
 correlates with nothing. Earlier examples in `06` and `07` showed a ULID; that was a
 defect, corrected 2026-08-14 when WK-658 implemented the propagation.
 
+*(Clarified 2026-10-10, WK-1178, FD-1589 row 8 remedy (c), on the lead's entries "2026-10-10
+15:37:31 BST — RULING: DP-M2 WITHDRAWN …", "2026-10-10 15:52:31 BST — RULINGS on PL 9955 / SL
+9956 …" and "2026-10-10 16:07:46 BST — RULINGS on PL 9955 re-sized …".)* A
+request-validation `422`'s `errors[].message` carries no submitted value (`03` NFR-499).
+Authored validator messages are input-free — they name the field and the rule, never the
+value — and are shown. Three kinds are shown: a refusal raised as `model-schema`'s
+`InputFreeError`, whose every raise site is a literal, and which may name an identifier of
+the submitted artifact's own structure only when that identifier matches the schema's
+pattern; a fixed-text error type; and an error type given its own fixed authored text. Any
+other message is
+`The value is not valid (<TYPE>).` `errors[].code` and `errors[].field` are unchanged.
+
 ### 5.4 Concurrency and idempotency
 
 - Mutating requests on versioned entities require `If-Match: <etag>`; a mismatch yields
