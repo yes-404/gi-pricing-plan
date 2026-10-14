@@ -519,6 +519,28 @@ DP-1 and DP-3 are therefore ruled (DP-3 conditionally) and DP-2 is ruled, so the
 sentence above holds only for what is not yet cited by a dated activation line. This delta stays
 `draft` until the lead gives that line.
 
+*(Dated 2026-10-14 by the planner, minter-d16e, in the D16 rulings sweep: the parts of two later
+rulings that bind this delta's content and were not yet at a site in it.)*
+
+- **WF-701's own text (11:14:40 BST, items (1) and (2)).** The maintainer's (by delegation) entry
+  "2026-10-14 11:14:40 BST — SL 8015's three §0 points RULED: the code is right in all three; the
+  PLAN (and WF-701's text) is stale": "**WF-701 C2 gets a dated line** (in SL 8015's commit) naming
+  both codes per FR-429's amendment", and "**WF-701 §1 gets a dated precondition row:** "a
+  successful deployment to every predecessor the workspace's environment configuration names for
+  `uat` (the default seed: `dev`)"". So SL-8015's write set gains those two dated lines in
+  `docs/workflows/WF-00701-deploy-and-monitor.md`, and nothing else in that file; acceptance item
+  8's "no spec" is read with that one exception.
+- **The auditor principal and the reds (11:14:40 BST, closing paragraph).** "Task 0 VERIFIES (not
+  assumes) that the principal reading the A3 audit holds the audit-read permission under the seeded
+  policy. If admin holds it only by accident of the seed, the seed adds an `auditor` principal (in
+  the demo's write set). R6–R8 must still be shown red BY CAUSE once the journey module exists; a
+  collection error is not a red." The rewritten asserts cite that ruling in the `LG-`.
+- **The "analyst 200" probe (11:45:50 BST item 2; 11:52:51 BST item (4)).** The maintainer's (by
+  delegation) entry "2026-10-14 11:52:51 BST": "the demo analyst held (analyst, approver) per
+  seed.py:51 on SL 8015's branch, and main has test_api_audit.py:231-245 (analyst-only → 403).
+  Explained. Close it on the run's output." SL-8015's `LG-` records the probe's run output and the
+  principal's role rows, per the 11:45:50 entry; no finding is filed.
+
 ## Hand-off (not this plan's writes)
 
 - **FD 8011** (C7 errors, MEDIUM, owner WK-1178, the §0 question): filed by an auditor (the lead's
