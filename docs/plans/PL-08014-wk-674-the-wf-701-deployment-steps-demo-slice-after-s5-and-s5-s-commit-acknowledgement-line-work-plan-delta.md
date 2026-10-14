@@ -226,6 +226,12 @@ SL-8015:
   is re-raised as a problem (`score.py:421-427`) before `_maybe_sample_trace` runs (`:429`), so
   an errored quote is never sampled from this route. 10:00:17 W5 rules the limb `KNOWN GAP` until
   FD 8011 is resolved, and requires that resolution before the 12 Nov exit demo.
+  *Amended 2026-10-14 (docs batch D16, in place, the plan being pre-merge):* FD 8011 is resolved by
+  RL 8019, confirmed by the maintainer (by delegation) in the entry "2026-10-14 10:26:21 BST" in
+  `to-lead.md`: the limb is walked, not a `KNOWN GAP`. A refused quote is not traced, so the
+  slice asserts the 422 refusal, the absence of that `quote_id` from `GET /traces`, and the ruled
+  line `C7-errors: refused, not traced (FR-259, RL 8019)`. The sentence above is kept as the
+  premise it was.
 - **P8 — the band for C7's 1 % limb, computed exactly.** For N = 2,000 quoted quotes at p = 0.01
   (the default, `settings.py:217-219`), the count X of persisted quoted traces is Binomial(2000,
   0.01), mean 20. The pre-registered band is **[3, 45]**. Computed with exact rational arithmetic
@@ -297,7 +303,7 @@ names the second route.
 | C6 | About 50 `POST /score` on a prod key, no ref, through `lb` | 200, every `bundle_hash` K1's, `outcome == "quoted"`, one golden quote's `payable_premium` equal to its integer expected value | `api/score.py:195-230` | replicas: **yes** |
 | C7 (i), (ii) | Prod `rating.trace_sample_rate` left at its default 0.01; N = 2,000 quoted quotes on the prod key; then `GET /traces?rating_version=…&from=…&to=…` as an analyst bearer, polled until the count is stable | (i) the count is inside [3, 45] (P8), with N, p and the band printed; (ii) every persisted trace's `bundle_hash` is K1's | `api/score.py:509-580`; `platform/traces.py:78-99`; completion by `score.trace_produce` (a worker on `scoring`, DP-2); `api/traces.py:167` | the worker queue (DP-2) |
 | C7 (iii) declines | K2 deployed `uat` then prod through the governed path; M = 20 quotes that K2 declines, on the prod key, rate unchanged | exactly M persisted traces with `outcome == "declined"` for K2 (the 100 % floor), read through `GET /traces` | `traces.decide_sampling` floor, `platform/traces.py:94-97` | the worker queue (DP-2) |
-| C7 (iv) errors | none | printed and asserted as exactly `KNOWN GAP C7-errors: FD-<the minted id of FD 8011>` | P7; FD 8011 (filed by the auditor, not this slice) | — |
+| C7 (iv) errors | With the prod key, `POST /api/v1/score` one quote that omits a declared non-nullable input; after C7's trace poll is stable, `GET /traces` | 422 with problem `code` `INPUT_CONTRACT_VIOLATION`; no listed trace carries that quote's `quote_id`; the one printed line, asserted, is exactly `C7-errors: refused, not traced (FR-259, RL 8019)`. The no-row proof is a backend test that reads `scoring_traces` directly, and the demo cites it by name. No fault is caused in `prod`; nothing about errors at 100 % is asserted | P7 as amended; RL 8019 §3 and its "What it obliges" section | — |
 
 **The two run modes** (the memo's §2, kept):
 
@@ -347,13 +353,14 @@ and output):
 - [ ] **T1 — the journey skeleton and its line rules.** Create `examples/fremtpl2/journey_wf701.py`
   with `run_wf701_journey(client, record, *, log)`, reusing `JourneyStepFailed` and `Skip` from
   `examples/fremtpl2/journey.py:44,76` by import (no second definition). Its ruled lines are exactly
-  `COMPOSE-ONLY A2/C4/C6 replica limb` (in-process only) and `KNOWN GAP C7-errors: FD-<minted id>`.
+  `COMPOSE-ONLY A2/C4/C6 replica limb` (in-process only) and the walked limb line `C7-errors: refused, not traced (FR-259, RL 8019)`.
   Test first: R1, then a test that an unruled skip fails the journey (the form of
   `test_wf699_journey.py:57`).
 - [ ] **T2 — the deliberate refusals** C2 and C3 (i), (ii): R2, R3 first.
 - [ ] **T3 — A1, A3 to A6, C1, C3 (iii), C6 (one process)** in order, each with its read-back.
 - [ ] **T4 — C7 (i) and (ii)**, the band test with R6 first; **C7 (iii)** with K2 through the
-  governed path, R7 first; **C7 (iv)** as the KNOWN GAP line. The journey's first output line is
+  governed path, R7 first; **C7 (iv)** as the walked limb of RL 8019 §3 (the 422 refusal, the
+  trace-list absence, the ruled line; no `KNOWN GAP C7-errors` line exists). The journey's first output line is
   *"WF-701 demo: process environment dev with development identity (dev auth); deployments target
   the Environment resources uat and prod"* (W2's "the output prints that the demo runs with dev
   auth", and P2).
@@ -402,9 +409,10 @@ with its failure line as printed; a matching status with a different cause is a 
    quoted in the `LG-`.
 2. Every in-scope step (A1–A6, C1–C4, C6, C7) is walked in order, each asserting its status and its
    read-back effect (the step table). The only ruled lines are `COMPOSE-ONLY A2/C4/C6 replica limb`
-   (in-process) and `KNOWN GAP C7-errors: FD-<minted id of FD 8011>`, and the test asserts them;
-   no step is absent and no other skip line exists. If FD 8011 is resolved before the GO, the limb
-   is asserted instead and the KNOWN GAP line is removed.
+   (in-process) and `C7-errors: refused, not traced (FR-259, RL 8019)`, and the test asserts them;
+   no step is absent and no other skip line exists, and no line contains `KNOWN GAP C7-errors`.
+   If the RL 8019 T1 text (the FR-259 clarification in `03`) is absent from `main` at the GO, the
+   slice keeps a `KNOWN GAP` line, and the exit demo cannot pass C7 (RL 8019's last violation).
 3. The refusals match on problem `code`: C2 `PROMOTION_ORDER_VIOLATION`; C3 (i) and (ii)
    `DEPLOY_REQUIRES_APPROVAL`.
 4. **On compose** (`GIP_DEPLOY_TESTS=1`, S4's stack, `api`×2), `uv run python scripts/demo.py
@@ -432,7 +440,7 @@ with its failure line as printed; a matching status with a different cause is a 
 3. `PL 1690` minted on `main` (D14, #1298), so E4.2's worker and E4.3's smoke are on the tree.
 4. DP-1 to DP-3 ruled (DP-4 to DP-6 are non-blocking; each has a recommendation that stands
    unless ruled otherwise).
-5. FD 8011 filed (its minted id fills the KNOWN GAP line), or resolved.
+5. RL 8019 minted (its minted id fills the walked limb's line), and its T1 text on `main`.
 6. This delta ACKed and minted; a build slot and the single gate; one compose build window booked
    in `eta`.
 
@@ -518,8 +526,8 @@ sentence above holds only for what is not yet cited by a dated activation line. 
   W1: D5.6, acceptance item 3, DP-3. W2: P1, Task 0.1 and 0.2, T4's first line, DP-1. W3: authoring
   paragraph, T5, DP-5. W4: frame, step C7 (iii), T4, write set, Global Constraints. W5: P7, step C7
   (iv), T1, acceptance item 2, Hand-off.
-- **Placeholders.** "FD-<minted id of FD 8011>" is a value filled at the GO from the mint, because
-  the finding is not yet filed; "<S5's LG>" and "<slice branch>" are read at the slice. No other.
+- **Placeholders.** "RL 8019" in the C7-errors line is a working id, replaced at the mint by the
+  ruling's minted id; "<S5's LG>" and "<slice branch>" are read at the slice. No other.
 - **Literals** were read at `1e260c15` (or the named branch) by path and line: every route, code,
   enum member, setting key and default in the step table and premises.
 - **Not done here:** the memo's §3 shape argument and ETA figures, which W0 has ruled.
