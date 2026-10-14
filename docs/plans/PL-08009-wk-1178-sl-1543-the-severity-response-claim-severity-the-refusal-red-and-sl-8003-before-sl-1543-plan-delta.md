@@ -43,6 +43,14 @@ about behaviour is a reading of the code at the named tree.
 Working ids cited below are written with a space (`SL 8003`, `PL 8002`, `RL 9996`, `LG 9879`)
 because none is minted at this tree; the mint re-points them.
 
+## Goal
+
+Unchanged from `PL-1542` §"Goal" except C11: the freMTPL2 demo walks `WF-699`'s literal Peril
+Structure path (a severity GLM, the AD Peril Structure reconciled and approved, B4's `model_call`,
+the C1 pin). This delta records the inputs that changed since `PL-1542` was dated: how the
+severity response reaches the Dataset Version, the fit's refusal red, where the T1/T2 tests run,
+who fixes the signatures, E1's ordering behind `SL 8003`, and two premises the re-check moved.
+
 ## Status
 
 `draft`. **DP-8009-1 (the refusal red's form, §"Decision points") is open and blocks Task 1's
@@ -74,8 +82,9 @@ verbatim:
 ### 2. E1 and SL 8003 — the maintainer (by delegation), 09:42:05 item 3 and 09:45:05 item (C)
 
 The maintainer's (by delegation) entry headed *"2026-10-14 09:42:05 BST — RL 9996 (DP-P1)
-CONFIRMED as drafted; fix slice to be cut now; G2 conditional; SL-1695 fact corrected (re lead
-09:41:01)"* (`to-lead.md`), item 3, verbatim:
+CONFIRMED as drafted; fix slice to be cut now; G2 conditional; [SL 1695] fact corrected (re lead
+09:41:01)"* (`to-lead.md`; the bracketed id is elided from its hyphen form because
+it does not resolve in `docs/INDEX.md` at `1e260c15`), item 3, verbatim:
 
 > 3. **G2 sequencing (yours, conditioned on the sl1543-prep read):** if E1's version pins two versions of one slug against an approved baseline, the fix slice JOINS the G2 path and merges before SL-1543. SL-1543 must not change E1's `expect=200`, re-order the journey to dodge the guard, or skip E1 (no faked step, as in my 12 Oct rulings). If E1 is not affected, the fix slice runs in parallel and is off the G2 path. Report the read and the decision to me, with the version and pins E1 drafts.
 
@@ -188,7 +197,10 @@ in order.
 No other decision is opened. The "probably" in P6 is a reading, and (a)'s STOP clause covers it
 being wrong.
 
-## Tasks — the additions to `PL-1542`'s
+## Tasks
+
+The additions to `PL-1542`'s tasks; every other step stands as `PL-1542` writes it.
+
 
 - [ ] **Task 0 Step 1 (amended).** Confirm N1 and N2 at `origin/main`, by `git log` of the merge
   commits, and N4. If any is unmet, STOP.
