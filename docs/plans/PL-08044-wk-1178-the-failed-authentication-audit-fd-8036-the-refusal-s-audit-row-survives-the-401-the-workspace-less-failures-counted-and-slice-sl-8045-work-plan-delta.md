@@ -33,6 +33,15 @@ the planner (planner-fd8036). Evidence was read at `origin/main` `a3fc2e8d`. The
 `docs/specs/07-platform.md` and `docs/specs/06-governance.md` prints nothing, so the run and every
 line number below hold at both trees.
 
+## Goal
+
+Done means: a failed authentication that resolves to a workspace leaves exactly one
+`principal.auth_failed` Audit Event in that workspace, committed even though the request's own unit
+of work rolls back with the 401; a failure that resolves to no workspace is recorded as DP-3 rules;
+`07` FR-392 and `06` FR-368 say the same thing, as DP-4 rules; and the test that was green only
+because it caught the raise inside the unit is replaced by HTTP reds, each red on `main` by its
+cause. One slice, `SL-8045`.
+
 ## Authority
 
 - **The run order:** the maintainer's (by delegation) entry in `to-lead.md`, "2026-10-14 11:08:32
