@@ -44,8 +44,6 @@ def test_wf699_the_skip_and_known_gap_lines_are_exactly_the_ruled_ones() -> None
         "SKIPPED E7 Commentary Block: Phase 3; WK-680",
         "KNOWN GAP A6: FD-1491",
         "KNOWN GAP B9: FD-1490",
-        "SKIPPED B4 model_call: FD-1456; SL-1543",
-        "SKIPPED C1′: FD-1456; SL-1543",  # noqa: RUF001
         "SKIPPED D7 decomposition — FD 9804",
     ]
     assert not [e for e in journey.SKIPS if e.line.startswith("KNOWN GAP") and "FD-1456" in e.line]
@@ -385,7 +383,7 @@ def test_wf699_journey_runs_end_to_end(api_client, database, blob_store, workspa
     assert set(skipped) <= set(status)
     # The deliberate failures were asserted by their codes inside the journey; their statuses are
     # `ok` only because the platform answered exactly that code.
-    for step in ("B6", "C4", "E3", "D4", "E8"):
+    for step in ("B4", "C1′", "B6", "C4", "E3", "D4", "E8"):  # noqa: RUF001
         assert status[step] == "ok", step
     assert result.rating_version_id is not None
     assert result.bundle_hash.startswith("sha256:")
@@ -549,3 +547,12 @@ async def test_a_non_glm_stand_in_without_a_transparency_artifact_is_refused(
             )
     assert refused.value.code == "EVIDENCE_INCOMPLETE"
     assert "transparency artifact names it" in (refused.value.detail or "")
+
+
+@pytest.mark.req("FR-222")
+def test_b4_and_c1_are_walked_not_skipped() -> None:
+    """PL-1542 Acceptance 6: the journey no longer declares B4 or C1' as skips, and no skip
+    line names SL-1543 as its owner. Red first, by cause: on the base tree `journey.SKIPS`
+    still carries `SKIPPED B4 model_call: FD-1456; SL-1543` and `SKIPPED C1': ...`."""
+    assert not [e for e in journey.SKIPS if e.step in {"B4", "C1′"}]  # noqa: RUF001
+    assert not [e for e in journey.SKIPS if "SL-1543" in e.line]

@@ -406,3 +406,38 @@ def test_generated_categorical_inputs_lie_in_their_declared_domains() -> None:
         for case in cases for name, domain in domains.items() if case.inputs[name] not in domain
     }
     assert outside == set()
+
+
+@pytest.mark.req("FR-222")
+def test_b4_model_call_references_the_peril_structure() -> None:
+    """PL-1542 Acceptance 3 (B4, `WF-699`): the builder emits exactly one `model_call` step
+    that references the AD Peril Structure, in `exact` mode, with a feature map naming every
+    model feature explicitly, and a declared `result_type` (RL-1580's point: left `None` the
+    engine rounds the prediction at the step, which FR-226 forbids before the output).
+
+    Red first, by cause: on the base tree the builder emits no `model_call` and takes no
+    `peril_structure_ref`."""
+    structure = ArtifactRef(type="peril_structure", slug="fremtpl2-ad", version=1)
+    tables = {
+        factor: ArtifactRef(
+            type="rate_table", slug=f"fremtpl2-{factor.replace('_', '-')}", version=1
+        )
+        for factor in _FACTORS
+    }
+    payload = demo_algorithm.build_fremtpl2_algorithm(
+        tables=tables,
+        bandings=_BANDED,
+        base_minor=25000,
+        domains=_DOMAINS,
+        peril_structure_ref=structure,
+    )
+    algorithm = RatingAlgorithm.model_validate(payload)
+
+    calls = [step for step in algorithm.steps if step.type == "model_call"]
+    assert len(calls) == 1, "B4 needs exactly one model_call step"
+    call = calls[0]
+    assert call.peril_structure_ref == structure
+    assert call.model_ref is None
+    assert call.mode == "exact"
+    assert set(call.feature_map) == set(_FACTORS), "every model feature is named, none implied"
+    assert call.result_type in ("decimal", "money_minor"), "RL-1580: declare, do not default"
