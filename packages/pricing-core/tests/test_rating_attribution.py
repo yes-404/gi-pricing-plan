@@ -1306,20 +1306,20 @@ def test_mount_and_its_consumer_ungrouped_is_refused_naming_the_pair(
     changes = asyncio.run(
         derive_changes(_version(), _candidate_version(sub_graphs=sub_graphs), _resolver(cand))
     )
-    mounts = _mount_changes(changes)
-    assert mounts, "no derived change names the mount: _derive does not read sub_graph_mounts"
-    mount = mounts[0]
+    mount_ids = [c.id for c in _mount_changes(changes)]
     producer = _by_description(changes, "s_in_ncd")
     consumer = _by_description(changes, "s_office")
     instalment = _by_description(changes, "s_instalment")
-    groups = [("mount", [mount.id, producer.id]), ("rest", [consumer.id, instalment.id])]
+    # The mount change, if one is derived, sits with `s_in_ncd`; the consumer is in the other group.
+    groups = [("mount", [*mount_ids, producer.id]), ("rest", [consumer.id, instalment.id])]
     spy = _MountSpy(monkeypatch)
     with pytest.raises(AttributionError) as exc:
         _run(cand, book=_mounted_book(), sub_graphs=sub_graphs, groups=groups)
     text = str(exc.value)
     assert exc.value.code == "VALIDATION_FAILED"
     assert "dependent changes must share a group" in text
-    assert f"({consumer.id}, {mount.id})" in text
+    assert mount_ids, "no derived change names the mount, so no pair can name it"
+    assert f"({consumer.id}, {mount_ids[0]})" in text
     assert "FD-1660" not in text
     assert spy.attempts == 0
 
@@ -1414,21 +1414,20 @@ def test_mount_alone_in_a_group_without_its_input_step_is_refused_naming_the_pai
     changes = asyncio.run(
         derive_changes(_version(), _candidate_version(sub_graphs=sub_graphs), _resolver(cand))
     )
-    mounts = _mount_changes(changes)
-    assert mounts, "no derived change names the mount: _derive does not read sub_graph_mounts"
-    mount = mounts[0]
+    mount_ids = [c.id for c in _mount_changes(changes)]
     producer = _by_description(changes, "s_in_ncd")
-    groups = [
-        ("mount", [mount.id]),
-        ("rest", [c.id for c in changes if c.id != mount.id]),
-    ]
+    # The mount change alone; where none is derived the group falls back to the producer, so the
+    # run still reaches attribution and fails at the pair assertions below, by the refusal it gets.
+    alone = mount_ids or [producer.id]
+    groups = [("mount", alone), ("rest", [c.id for c in changes if c.id not in alone])]
     spy = _MountSpy(monkeypatch)
     with pytest.raises(AttributionError) as exc:
         _run(cand, book=_mounted_book(), sub_graphs=sub_graphs, groups=groups)
     text = str(exc.value)
     assert exc.value.code == "VALIDATION_FAILED"
     assert "dependent changes must share a group" in text
-    assert f"({mount.id}, {producer.id})" in text
+    assert mount_ids, "no derived change names the mount, so no pair can name it"
+    assert f"({mount_ids[0]}, {producer.id})" in text
     assert "FD-1660" not in text
     assert spy.attempts == 0
 
