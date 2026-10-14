@@ -23,7 +23,7 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from app.api.deps import Caller, RequestSessionDep, require_caller
+from app.api.deps import Caller, RequestSessionDep, resolve_caller
 from app.platform import rbac
 from model_schema import Permission
 
@@ -39,7 +39,7 @@ __all__ = ["PERMISSION_ATTRIBUTE", "requires"]
 #: attribute is what makes that visible.
 PERMISSION_ATTRIBUTE = "__gip_permission__"
 
-CallerDep = Annotated[Caller, Depends(require_caller)]
+CallerDep = Annotated[Caller, Depends(resolve_caller)]
 
 
 def requires(

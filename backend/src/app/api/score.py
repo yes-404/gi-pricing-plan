@@ -555,6 +555,10 @@ async def _maybe_sample_trace(
         )
         if not sampled or reason is None:
             return
+        if read_session is not None:
+            # Release the read connection before the write takes its own: a request holds at
+            # most one (audit of SL-1455, F2). The quote's reads are finished.
+            await read_session.close()
         if caller.environment is None:
             # RL-916 part 3: `None` here is an impossible state, not a value to
             # stamp — it is indistinguishable from Correction 2's batch marker

@@ -2,22 +2,23 @@
 
 The stall RL-1685 attributes to a gen2 collection is not asserted by timing, which a loaded
 machine would make flake. RL-1685's own form, `gc.get_freeze_count() > 0` once the app has
-started, cannot fail: `create_app(...)` alone leaves 375 objects in the permanent generation
-before any lifespan runs, and where they come from is UNKNOWN (no `gc.freeze` call was visible
-to a wrapper plugin or to `sys.setprofile`). The ruling of the maintainer (by delegation),
-to-lead "2026-10-14 10:54:56 BST", replaces it with two asserts, each red on the base tree.
+started, was said to be unable to fail because a non-zero count already stood before any
+lifespan ran. That figure (375 in one earlier run) has an UNKNOWN source and was not
+reproduced: the final file read 0 before the lifespan. This file does not rely on it;
+the difference form below holds whatever the baseline is. The ruling of the maintainer
+(by delegation), to-lead "2026-10-14 10:54:56 BST", replaces it with two asserts, each red on
+the base tree.
 
 1. **Call.** `gc.freeze` is wrapped by a spy that still calls the real one. Start-up calls it
    exactly once, after the lifespan's last step (the rate limiter is on `app.state`).
 2. **Effect.** With the real `gc.freeze`, the permanent generation is larger at `yield` than
-   just before the lifespan started. It is a difference, not a level, because of the 375
-   baseline: a level would pass with no freeze at all.
+   just before the lifespan started. It is a difference, not a level: a level would pass with
+   no freeze at all if anything had frozen the heap earlier in the process.
 """
 
 from __future__ import annotations
 
 import gc
-from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
@@ -26,13 +27,6 @@ from app.config import Settings
 from app.main import create_app
 
 pytestmark = pytest.mark.req("NFR-489")
-
-
-@pytest.fixture(autouse=True)
-def _leave_no_frozen_objects() -> Iterator[None]:
-    """The permanent generation is process-wide: hand it back as found."""
-    yield
-    gc.unfreeze()
 
 
 def test_the_lifespan_calls_gc_freeze_once_after_its_last_start_up_step(

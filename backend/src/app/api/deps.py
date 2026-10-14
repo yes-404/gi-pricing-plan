@@ -57,6 +57,7 @@ __all__ = [
     "RequestSessionDep",
     "request_session",
     "require_caller",
+    "resolve_caller",
 ]
 
 #: Development-only header. Named so it cannot be mistaken for a supported mechanism.
@@ -225,7 +226,7 @@ WORKSPACE_ID_DESCRIPTION = (
 )
 
 
-async def require_caller(
+async def resolve_caller(
     request: Request,
     settings: SettingsDep,
     session: RequestSessionDep,
@@ -233,7 +234,12 @@ async def require_caller(
         str | None, Header(alias="Workspace-Id", description=WORKSPACE_ID_DESCRIPTION)
     ] = None,
 ) -> Caller:
-    """Resolve the caller, or refuse."""
+    """Resolve the caller, or refuse — leaving the request session as it found it.
+
+    Only `requires()` depends on this directly, because it reads the permission through the
+    same session next and releases it itself (RL-1685, PL-1454 DP-1 (a)). Every other route
+    depends on `require_caller`, which closes the session this one may have left open.
+    """
     # Taken as `str | None` and parsed here rather than annotated `UUID | None`: FastAPI
     # would answer a malformed UUID with a bare `422` outside the platform error
     # catalogue, and FR-397 requires the refusal to be a typed platform error.
@@ -277,6 +283,19 @@ async def require_caller(
     # true before W6b-11 (2026-08-26) removed `x-dev-workspace-id`, and describes no
     # code that exists now.
     return await _development_caller(request, settings, database, selected)
+
+
+async def require_caller(
+    caller: Annotated[Caller, Depends(resolve_caller)], session: RequestSessionDep
+) -> Caller:
+    """Resolve the caller, or refuse, and hold no pool connection afterwards.
+
+    API-key authentication reads through the request session, which keeps its connection until
+    closed; a handler that runs on its own session would otherwise hold two for the whole
+    request (audit of SL-1455, F1). Closing an unused session costs nothing.
+    """
+    await session.close()
+    return caller
 
 
 def _select_workspace(identity: AuthenticatedIdentity, selected: UUID | None) -> Caller:
