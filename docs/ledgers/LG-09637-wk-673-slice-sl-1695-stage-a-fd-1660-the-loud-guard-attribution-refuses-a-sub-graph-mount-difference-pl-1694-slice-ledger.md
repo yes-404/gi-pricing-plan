@@ -2,7 +2,7 @@
 id: LG-9637
 family: ledger
 title: WK-673 slice SL-1695 — Stage A, FD-1660 the loud guard; attribution refuses a sub-graph mount difference with a coded error, and WF-699 D6 asserts it (PL-1694), slice ledger
-status: active                 # active → closed (§1.2a) — set `closed` only at slice close
+status: closed                 # active → closed (§1.2a) — set `closed` only at slice close
 created: 2026-10-12
 owner: executor
 tree: 18803f1d074276052bfe74ee14196b2b0d531697
