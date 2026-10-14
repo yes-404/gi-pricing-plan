@@ -216,7 +216,7 @@ slice deletes `_pins_by_slug`'s refusal (`:1416-1424`) with the slug map itself,
 no longer goes through a slug-keyed map. It also removes the docstring sentence at `:1336-1337`,
 and strikes the `03` §5.1 clause (T2). SL-1678's three guard tests flip to C3b (both orders)
 and C3c: same fixtures, new asserts. This is the planned flip, recorded in the fix slice's
-`LG-`, as `PL-1694`'s Stage B does for its guard (see Interactions). The first-version test (C5)
+`LG-`, as the FD-1660 re-cut's Stage B (#1299) does for its guard (see Interactions). The first-version test (C5)
 stays as it is. After the fix, `git grep -n 'FD-1679' -- backend/src` prints nothing.
 
 ## DP-T — the texts
