@@ -1233,7 +1233,7 @@ class _BundleSpy:
 def test_mount_repoint_is_one_step_changed_change_naming_the_mount() -> None:
     """R3 (T1), the derivation half: the re-point is exactly one `step_changed` change, described
     from its `mount_point` with both versions, and its sub-graph pin difference is part of it, not
-    a separate `pin` change. (Red by its cause even under the guard: `_derive` never reads a mount.)"""
+    a separate `pin` change. (Red by its cause under the guard too: `_derive` skips mounts.)"""
     changes = _g1_changes()
     (mount,) = _mount_changes(changes)
     assert mount.kind == "step_changed"
