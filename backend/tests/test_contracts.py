@@ -204,6 +204,7 @@ def test_committed_contracts_match_the_models() -> None:
     assert result.returncode == 0, result.stdout + result.stderr
 
 
+@pytest.mark.req("FR-14")
 @pytest.mark.req("FR-451")
 def test_generated_document_is_openapi_31() -> None:
     """OpenAPI 3.1, because it is the version whose schema dialect is JSON Schema 2020-12 —

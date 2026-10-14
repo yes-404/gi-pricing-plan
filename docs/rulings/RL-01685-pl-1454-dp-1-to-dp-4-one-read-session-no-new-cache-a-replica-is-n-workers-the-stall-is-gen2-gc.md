@@ -11,7 +11,7 @@ work: WK-1178
 slice: SL-1455
 supersedes: []
 superseded_by: ~
-corrected_by: []
+corrected_by: [RL-1716]
 relates: [PL-1454, SL-1455, FD-1411, NFR-489, NFR-454, NFR-497, FR-259, FR-452, RL-921, RL-924, RL-1379, RL-1263]   # and LG working id 9932, added at its mint
 ---
 
