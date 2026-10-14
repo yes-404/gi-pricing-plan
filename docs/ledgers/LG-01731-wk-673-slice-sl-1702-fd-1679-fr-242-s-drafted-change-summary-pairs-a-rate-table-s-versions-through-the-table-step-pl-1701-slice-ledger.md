@@ -1,8 +1,8 @@
 ---
-id: LG-8048
+id: LG-1731
 family: ledger
 title: WK-673 slice SL-1702 — FD-1679, FR-242's drafted change summary pairs a rate table's versions through the table step and refuses no pin set (PL-1701), slice ledger
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-14
 owner: executor
 tree: 81e9d4cc5a9b681981a3e1c691f6218c7ef6161c
@@ -14,11 +14,13 @@ corrected_by: []
 relates: [PL-1701, PL-1677, SL-1702, SL-1678, LG-1681, RL-1707, FD-1679, RL-1538, RL-1498, FR-242, FR-219, FR-231, FR-232, FR-237, FR-1399]
 ---
 
-# LG-8048 — WK-673 slice SL-1702: the drafted change summary pairs rate tables through the `table` step
+# LG-1731 — WK-673 slice SL-1702: the drafted change summary pairs rate tables through the `table` step
+
+*(Minted 2026-10-14 as LG-1731 from working id 8048, in the SL-1702 PR.)*
 
 **GO:** the lead's relay, from-lead to `executor-sl1702`, "GO for SL-1702 (PL-1701), from the maintainer's to-lead '2026-10-14 13:32:07 BST'", build from `3ac63e35`, gate ALONE after SL-1695's, at load1 < 6 with all three locks, the demo `wf-699` with the frontend, pytest timeout 5400 s. The maintainer's entry itself is in `to-lead.md` (local, not in the repository); this record quotes the lead's relay of it, not the entry.
 **MERGE-ACK:** not yet given.
-**Audit:** not yet written; the auditor writes it.
+**Audit:** written 2026-10-14 by `auditor-sl1702` at `ce26e05a` (the Audit section below); verdict proposed CLEAN, adopted conditionally by the lead (conditions (a) to (c) in that section).
 
 ## Tasks
 
@@ -28,7 +30,7 @@ relates: [PL-1701, PL-1677, SL-1702, SL-1678, LG-1681, RL-1707, FD-1679, RL-1538
 
 Requirements: `03` FR-242 (drafting limb: T1 and T2); FR-219, FR-231, FR-232, FR-237, FR-1399 read only. Discharges FD-1679's remaining limb, DP-P1. On the G2 path: merges before `SL-1543`.
 
-Rulings in force, from `PL-1701`'s Decision points: DP-1 (a), DP-2 (a), DP-4 (a) and DP-5 (a), all ruled by the maintainer (by delegation), "2026-10-14 10:00:17 BST" (B). DP-5 (a) is set semantics: a ref listed twice is the ref once. The closing PR also sets `PL-1677` `closed` and carries FD-1679's register annotation: the maintainer (by delegation), to-lead "2026-10-14 12:02:46 BST" item (2), as `PL-1701`'s Task 5 quotes it.
+Rulings in force, from `PL-1701`'s Decision points: DP-1 (a), DP-2 (a), DP-4 (a) and DP-5 (a), all ruled by the maintainer (by delegation), "2026-10-14 10:00:17 BST" (B). DP-5 (a) is set semantics: a ref listed twice is the ref once. The closing PR also sets `PL-1677` `retired` (the maintainer's (by delegation) "2026-10-14 17:30:21 BST" correction of the 12:02:46 `closed`) and carries FD-1679's register annotation: the maintainer (by delegation), to-lead "2026-10-14 12:02:46 BST" item (2), as `PL-1701`'s Task 5 quotes it.
 
 ### Task list
 
@@ -39,7 +41,7 @@ Rulings in force, from `PL-1701`'s Decision points: DP-1 (a), DP-2 (a), DP-4 (a)
 | 1 | `PL-1701` Task 1 | T1 and T2 verbatim | done at `af96ea6f`, checked by script (Build log) |
 | 3 | `PL-1701` Task 3 | pairing, shape, guard removed; both files green; broken-input proof | code at `d87770c4`; green runs and proof are the gate window's (Gate) |
 | 4 | `PL-1701` Task 4 | generated contract | `1ed595d5`; frontend client and type-check at the gate |
-| 5 | `PL-1701` Task 5 | gate, closing acts | pending |
+| 5 | `PL-1701` Task 5 | gate, closing acts | gate run (Gate section); closing acts in the last commit: SL-1702 and this ledger `closed`, `PL-1677` `retired`, FD-1679's register annotation |
 
 **Renamed tests (DP-2 (a)), old → new.** SL-1678's three functions were already flipped and renamed in the prep commit `65daf404`; the old names and old asserts are in `LG-1681`'s Task list. The prep file defines `test_r3_a_candidate_adding_a_second_version_names_it_alone` (parametrized `two_then_one` / `one_then_two`), `test_r3_a_candidate_dropping_one_of_two_baseline_versions_names_it_alone`; `_assert_refused` is deleted.
 
@@ -90,16 +92,16 @@ R1, R2, R5 and R6 fail as required; E1 (`test_wf699_e1_…`) passes. The file wa
 **4. The gate result (logs in the lead's `sl1702-gate/`, gated head `3e087672`).**
 - Step 0: item 3 above. Start load 8.41 / 11.88 / 11.97; end 13.30 / 11.65 / 13.20 (heavy, as for every gate today).
 - rc: ruff 0, mypy 0, lint-imports 0, req-coverage 0, contracts 0; audit-docs 1; pytest 1 (`17 failed, 5843 passed, 6 skipped`, 4517 s); pnpm install / generate:api / lint / type-check / build 0; pnpm test 1; demo 124.
-- audit-docs at `3e087672` printed `FAILED (3)`: check 31 (gap 1717 to 8048, the unminted ledger, accepted until minted), check 32 (the ruling's working id at line 60 of this ledger), check 33 (`PL-1677` `closed`), plus check 29 (the register annotation). At the new head, under the gate-2 flock, `audit-docs.py` prints `FAILED (1)`: `check 31: gap in the full allocation between 1718 and 8048` only (the gap moved from 1717 to 1718 because #1306 minted `LG-1718`). Checks 29, 32 and 33 are cleared. Accepted until `LG-8048` is minted.
+- audit-docs at `3e087672` printed `FAILED (3)`: check 31 (gap 1717 to 8048, the unminted ledger, accepted until minted), check 32 (the ruling's working id at line 60 of this ledger), check 33 (`PL-1677` `closed`), plus check 29 (the register annotation). At the new head, under the gate-2 flock, `audit-docs.py` prints `FAILED (1)`: `check 31: gap in the full allocation between 1718 and 8048` only (the gap moved from 1717 to 1718 because #1306 minted `LG-1718`). Checks 29, 32 and 33 are cleared. Accepted until `LG-1731` is minted.
 - pytest's 17 F. (a) `backend/tests/test_score_rate_limit.py::test_the_counter_is_shared_across_replicas_and_the_refusal_carries_retry_after` (`assert 409 == 429` at `:128`): the rate-limit flake the maintainer's entries call FD 8049 (the 14:30:54 re-run rule); the file does not mention `change_summary` or `change-summary` (0 hits), and it was not re-run in this window. (b) The 16 docs-audit tests read the real tree and fail with it, each citing the same four audit findings (checks 29, 31, 32, 33): `test_audit_docs_finding_citations.py::test_a_finding_resolved_only_by_a_closure_record_is_not_flagged`; `test_audit_docs_ids.py::test_the_real_tree_passes_all_ten_checks`, `::test_doc_id_check_exits_0_on_the_real_tree`; `test_audit_docs_process_core_digest.py::test_an_unrelated_file_edit_is_the_negative_control_and_stays_green`, `::test_the_committed_digest_currently_matches_the_committed_spec`; `test_audit_docs_w37_11_ceiling.py::test_audit_docs_end_to_end_exit_0_then_1_then_0_on_an_injected_residue`; `test_doc_index.py::test_an_index_skipping_a_reserved_block_breaks_contiguity` (cause: the check-31 gap); `test_register_lint.py` ×6 (`test_the_live_register_passes`, `test_check_29_is_wired_into_the_docs_gate`, `test_residue_counts_are_never_treated_as_lint_failures`, `test_register_lint_main_prints_the_residue_line`, `test_check_29_note_carries_the_residue_line`, `test_phase1b_residue_count_matches_check_29s_own_count`; cause: check 29, the register row); `test_register_owed.py::test_check_29_wiring_is_undisturbed`; `test_repository_invariants.py::test_money_discipline_is_enforced_by_the_docs_audit`, `::test_journey_citations_are_audited_in_ci`. 1 + 16 = 17. Not re-run: I run no pytest (charter); the re-pass of the 16 is shown only by the audit-docs rc above, and the check-31 cause persists until the ledger is minted.
-- FE test: `src/views/__tests__/RatingDesignView.test.ts` "FR-1530: loads the algorithm the version pins, and draws one node per step" failed at 1080 ms (`Unable to find a label … input step Driver age (s_in_age)`), `1 failed, 729 passed`. The lead classifies it by run (the maintainer's 17:30:21 entry). My part of the entry's (ii): `grep -rln 'RateTableChange\|ChangeSummaryDraft\|change-summary-draft' frontend/src` outside `generated` prints nothing (exit 1), so no non-generated frontend file, including the view and its test, names the changed type. Lead's classification by run: (pending: the lead's line).
+- FE test: `src/views/__tests__/RatingDesignView.test.ts` "FR-1530: loads the algorithm the version pins, and draws one node per step" failed at 1080 ms (`Unable to find a label … input step Driver age (s_in_age)`), `1 failed, 729 passed`. The lead classifies it by run (the maintainer's 17:30:21 entry). My part of the entry's (ii): `grep -rln 'RateTableChange\|ChangeSummaryDraft\|change-summary-draft' frontend/src` outside `generated` prints nothing (exit 1), so no non-generated frontend file, including the view and its test, names the changed type. RatingDesignView FR-1530: MAIN's timing flake, classified by the maintainer's (by delegation) to-lead "2026-10-14 17:51:06 BST" on the lead's control (main-identical FE red 3/3 at the same load; SL-1702 changes no FE file); not a slice defect; this PR's CI frontend run must be green; tracked as FD 8053 (D18).
 - Demo (`wf-699`, with the frontend): rc 124. The log prints `S1 ok prod scored 46332 minor units from the live version`, `journey done in 345s`, the change-summary-draft GET (200 at 16:27:38) inside the journey, the frontend answering 200 at `http://localhost:5173/`, then the script's hold for Ctrl-C ended by its own `timeout`. 124 is the hold's timeout, not a step failure; `demo.log` shows no failed step.
 
 **5. Findings.**
 - **F1 (INFO).** FD 8049 is a working id, not on main (a repository grep of main finds it only in this ledger; the channel entries name it). Disposition: accepted class per 14:30:54 and 17:30:21; the lead may require the one re-run. Not blocking.
 - **F2 (LOW).** The FD-1679 register line and this ledger's Scope paragraph (`:31`) say `PL-1677` is retired / set `closed` citing the 12:02:46 item (2). That entry said `closed`; the correction to `retired` is 17:30:21 (`PL-1677`'s own front matter cites both correctly). Disposition: the executor adds "corrected to `retired` by 17:30:21" to the register parenthetical (living row) before the ACK; the Scope sentence is a past statement of the plan's wording and may stay, since `PL-1701` Task 5 is quoted there.
 - **F3 (INFO).** The gated tree is not the head's tree: the head also carries #1306's code (`=main` blobs). Disposition: same handling as SL-1683; the PR's CI at the head is the combination check.
-- **F4 (INFO).** After the re-merge, `audit-docs` still prints check 31 (gap 1718 to 8048) and the 16 docs-audit tests reflect the real tree; both clear only when `LG-8048` is minted, which is the lead's step at the PR.
+- **F4 (INFO).** After the re-merge, `audit-docs` still prints check 31 (gap 1718 to 8048) and the 16 docs-audit tests reflect the real tree; both clear only when `LG-1731` is minted, which is the lead's step at the PR.
 - No HIGH or MEDIUM finding. The barred word on added lines in the range: `git diff origin/main...ba47b378 | grep '^+'` count 0.
 
 **Proposed verdict (the lead's to give): CLEAN**, conditional on (a) the lead's by-run FE classification, (b) F2's one-line register fix, and (c) PR CI green at the final head. Audit-docs at `ba47b378` under the gate-2 flock: rc 1, check 31 only (accepted until the mint).
