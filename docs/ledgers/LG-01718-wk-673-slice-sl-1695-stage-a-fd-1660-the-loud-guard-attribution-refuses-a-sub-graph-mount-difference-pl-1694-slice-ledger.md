@@ -1,9 +1,9 @@
 ---
-id: LG-9637
+id: LG-1718
 family: ledger
 title: WK-673 slice SL-1695 — Stage A, FD-1660 the loud guard; attribution refuses a sub-graph mount difference with a coded error, and WF-699 D6 asserts it (PL-1694), slice ledger
 status: closed                 # active → closed (§1.2a) — set `closed` only at slice close
-created: 2026-10-12
+created: 2026-10-14   # original date 2026-10-12, set at the draft; minted 2026-10-14
 owner: executor
 tree: 18803f1d074276052bfe74ee14196b2b0d531697
 phase: P2
@@ -14,9 +14,9 @@ corrected_by: []
 relates: [PL-1694, PL-1267, SL-1695, SL-1696, FD-1660, RL-1686, FR-264, FR-1399]
 ---
 
-# LG-9637 — WK-673 slice SL-1695: Stage A, the FD-1660 loud guard
+# LG-1718 — WK-673 slice SL-1695: Stage A, the FD-1660 loud guard
 
-*(Working id 9637, reserved by the lead; it is minted at the slice's mint turn. Until then a citation of this ledger names "working id 9637". Quoted entries keep the working ids they were written with: "SL 9850" is SL-1696, "FD 9804" is FD-1660, "RL 9852" is RL-1686, resolved by `PL-1694`'s header paragraph.)*
+*(Minted 2026-10-14 as LG-1718 from working id 9637, in the SL-1695 PR; the working id was reserved by the lead. Quoted entries keep the working ids they were written with: "SL 9850" is SL-1696, "FD 9804" is FD-1660, "RL 9852" is RL-1686, resolved by `PL-1694`'s header paragraph. Citations below of "working id 9637" or "LG 9637" are history or verbatim quotes and are left as written.)*
 
 **GO:** the lead's `from-lead` entry "2026-10-12 08:15:37 BST" (GO for SL-1695; ledger working id 9637), on the maintainer's (by delegation) entries in `to-lead.md`: "2026-10-12 07:44:13 BST" item (1) (DP-G's consequence (A), conditions (a), (b), (c)) and "2026-10-12 08:09:39 BST" (ACK; the two fixed reason clauses; item 4, the interim `03` line in the same commit as the guard).
 **MERGE-ACK:** not yet given.
@@ -39,6 +39,28 @@ Branch `sl-1695-wk673-fd1660-guard`, worktree `.claude/worktrees/sl-1695`, cut f
 ### Gate
 
 Granted by the lead on head `e6019598124bcc5e93d2aa4b9cc2c3eff6455244` (the lead's `from-lead` entry "2026-10-12 08:34:15 BST"); ran 09:15:24 BST under `flock /tmp/slots/gate-1` with `scratch/sl1695/slot.sh` (own database `gipricing_sl-1695_dfe5cf59`). **Stopped by the lead by PID, not a result:** the lead's `from-lead` entry "2026-10-12 09:31:18 BST" (handover freeze) stopped it during pytest, which could not finish by about 09:50. Before the stop: ruff rc 0, mypy rc 0, import_linter rc 0. No pytest, audit_docs, req_coverage, contracts or frontend result exists. The demo-journey run (Task 3 Step 7) did not run; its waiter was cancelled. A re-run needs a new grant (S-13) and a recreated database (S-14).
+
+**The re-gate (2026-10-14), ALONE, at head `f704f20fbd1bd1734c6785e71d6598f78e43f41f` (tree `7119eec7e3a351f69193fc5312412c903a96a7c6`, clean before and after):** granted by the lead's `from-lead` entry "2026-10-14 13:27:57 BST" (load1 5.50) and run under the three locks `gate-1`, `gate-2` and `small-test`, by `/home/puzhenhao1989/.claude/jobs/b6860f8f/tmp/sl1695-regate.sh` (the Python half) and its continuation `sl1695-regate-cont.sh` (the frontend half and the demo). The earlier gate at `383dbb4a` is superseded by this one, not a result of this head.
+
+| stage | rc | note |
+|---|---|---|
+| ruff | 0 | |
+| mypy | 0 | |
+| import_linter | 0 | |
+| audit_docs | 1 | `check 31: gap in the full allocation between 1699 and 9637` only: the then-unminted ledger (working id 9637) |
+| req_coverage | 0 | |
+| contracts | 0 | |
+| pytest | 1 | `13 failed, 5812 passed, 6 skipped, 116 warnings in 4128.41s (1:08:48)`; `timeout 5400` |
+| pnpm install / generate:api / lint / type-check / test / build | 0 / 0 / 0 / 0 / 0 / 0 | the continuation |
+| demo `scripts/demo.py --journey wf-699` (with the frontend) | 124 | the designed stop: `timeout -s INT 720`; the journey ran D1 to D5 `ok`, E1 to E3 `ok`, D6 `ok  refused VALIDATION_FAILED: sub-graph mount changes are not attributable until SL-1696 (FD-1660); a 20,000-policy sample of the freMTPL2 book`, D7 `SKIPPED D7 — FD-1660 guard`, D8, E4, E6, E8, E9, DEP and S1 `SKIPPED … FD-1660; SL-1696`, `journey done in 403s`, `served page: http://localhost:5173/ answered 200` |
+
+**The 13 pytest failures** are all real-tree docs-audit tests, each failing only on that one check-31 line (read in the failure bodies, `--tb=short`): `test_audit_docs_finding_citations.py::test_a_finding_resolved_only_by_a_closure_record_is_not_flagged`; `test_audit_docs_ids.py::test_the_real_tree_passes_all_ten_checks` and `::test_doc_id_check_exits_0_on_the_real_tree`; `test_audit_docs_process_core_digest.py` (two tests); `test_audit_docs_w37_11_ceiling.py::test_audit_docs_end_to_end_exit_0_then_1_then_0_on_an_injected_residue`; `test_doc_index.py::test_an_index_skipping_a_reserved_block_breaks_contiguity`; `test_register_lint.py` (three tests); `test_register_owed.py::test_check_29_wiring_is_undisturbed`; `test_repository_invariants.py::test_money_discipline_is_enforced_by_the_docs_audit` and `::test_journey_citations_are_audited_in_ci`. The class is the accepted check-31-only one (SL-1683's gate carried it); the lead accepted it on 2026-10-14. The slice's own tests passed: `test_rating_attribution.py` 35, `test_quote_input_raise_sites.py` 19, `test_wf699_journey.py` 11 (run at the earlier head and inside this full run).
+
+**Disclosure — the Python half did not finish its own script.** `sl1695-regate.sh` ended its parallel stages with a bare `wait`, which also waited for its own background load logger (an endless loop). After pytest finished at 13:38:36Z the script sat in `wait`, wrote no table and no END line, and the lead stopped it with SIGTERM at about 15:09–15:12 BST so that the locks could pass to the continuation, which carried the Python half's rc files and ran the frontend half and the demo (the maintainer's (by delegation) entry "2026-10-14 15:12:59 BST"). The script was fixed (`wait $PIDS`) and not run again.
+
+**Stamps and load** (UTC; BST = UTC + 1 h; load1 load5 load15). Python half: start 12:29:15, load 10.65 7.01 7.15; pytest end 13:38:36. Continuation: start 14:13:31, load 6.37 5.87 6.95; end 14:30:05, load 9.95 18.86 16.29. The 5-minute series of the Python half: 12:29 10.65 7.01 7.15; 12:34 13.18 12.10 9.48; 12:39 11.89 12.54 10.48; 12:44 13.31 12.85 11.16; 12:49 13.21 13.45 11.93; 12:54 11.31 12.09 11.74; 12:59 10.75 11.87 11.80; 13:04 11.36 11.23 11.53; 13:09 8.61 10.09 10.99; 13:14 8.91 9.86 10.69; 13:19 10.77 10.59 10.80; 13:24 11.28 10.62 10.72; 13:29 10.84 10.66 10.73; 13:34 9.76 10.55 10.69; 13:39 8.70 9.86 10.37; 13:44 6.65 8.32 9.58; 13:49 12.09 9.46 9.64; 13:54 8.56 8.85 9.34; 13:59 4.56 7.28 8.65; 14:04 6.01 6.41 7.88; 14:09 6.38 6.32 7.41. The continuation's samples: 14:13:31 6.37 5.87 6.95; 14:13:33 7.30 6.07 7.01; 14:13:43 9.39 6.57 7.16; 14:14:11 15.82 8.41 7.75; 14:16:11 24.42 14.23 9.97; 14:17:48 21.50 16.23 11.13; 14:17:55 20.74 16.16 11.13; 14:30:05 9.95 18.86 16.29. Logs: `/home/puzhenhao1989/.claude/jobs/b6860f8f/tmp/sl1695-regate/`.
+
+**Re-merge of main at the mint** (2026-10-14): `origin/main` `1dede9e6a43ea6517bce8931f9f9357d939795de` merged; the only conflict was `docs/INDEX.md`, regenerated. No code path changed by the merge; the code paths of the slice are those gated at `f704f20f`.
 
 ### Audit
 
