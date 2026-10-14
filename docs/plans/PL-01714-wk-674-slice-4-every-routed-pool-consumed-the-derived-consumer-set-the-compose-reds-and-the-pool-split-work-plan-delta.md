@@ -1,5 +1,5 @@
 ---
-id: PL-8022
+id: PL-1714
 family: plan
 kind: map
 title: WK-674 — Slice 4 consumes every routed pool and handles every routed kind: E4.2 amended to a derived consumer set, the io and scoring reds on compose asserting succeeded, the trace handler and its derived guard, demo.py on the same set, and the FR-405 pool split for the maintainer's ruling — Work-plan delta
@@ -15,7 +15,9 @@ corrected_by: []
 relates: [PL-1237, PL-1537, PL-1666, PL-1688, PL-1690, SL-1258, SL-1689]
 ---
 
-# PL-8022 — WK-674 Slice 4: every routed pool consumed (Work-plan delta, amends PL-1690 E4.2)
+# PL-1714 — WK-674 Slice 4: every routed pool consumed (Work-plan delta, amends PL-1690 E4.2)
+
+*(Minted 2026-10-14 as PL-1714 from working id 8022, in the D16 batch mint PR.)*
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L5. It does not replace
 > `PL-1237`, `PL-1537`, `PL-1620`, `PL-1666` or `PL-1690`, and it leaves all their bodies unedited.
@@ -65,11 +67,15 @@ working id PL 8022". Written 2026-10-14 by the planner (planner-s4queues). Evide
   it; the verification of each allow-list entry is E4.7's table, and it does **not** confirm the
   entry's example "OPTIMISATION_RUN → P3/04" (the roadmap places WK-684 in P4).
 - **The rulings of 10:43:43 BST:** the maintainer's (by delegation) entry in `to-lead.md`, "2026-10-14 10:43:43 BST — PL 8022 RULED: DP-Q1 (b), DP-Q5 (a) + coverage sweep, DP-Q4 (b), DP-Q2 (a); red base @e1555803 OK". **DP-Q1 (b)**: one compose service per pool, sizes UNMEASURED (labelled so in the compose comments and the `LG-`; measured sizing is S5's and the NFR session's). **DP-Q2 (a)**: `RELAY_QUEUE`, asserted as consumed ⊇ routed ∪ {`RELAY_QUEUE`}. **DP-Q4 (b) now**, with (a) as an obligation line on `LATER_PHASE_KINDS`' docstring. **DP-Q5 (a)**. **The red base `e1555803` is OK**: main's compose has no worker and would fail by another cause, so the `LG-` names that base and shows each red failing by its stated cause. **`OPTIMISATION_RUN` is P4** (WK-684), the roadmap's placement, not the 10:36:42 entry's "P3" example.
-- **The batch red (10:52:40 BST):** the maintainer's (by delegation) entry "2026-10-14 10:52:40 BST" (FD 8021 HIGH confirmed): S4's `score.batch` red must show `succeeded` with a REAL approved model, not consumption; the probe's batch job was only consumed (failed `JOB_HANDLER_FAILED` on empty params). This binds E4.3's batch red.
+- **The batch red (10:52:40 BST):** the maintainer's (by delegation) entry "2026-10-14 10:52:40 BST" (FD-1713 HIGH confirmed): S4's `score.batch` red must show `succeeded` with a REAL approved model, not consumption; the probe's batch job was only consumed (failed `JOB_HANDLER_FAILED` on empty params). This binds E4.3's batch red.
+- *(Dated 2026-10-14 by the planner, minter-d16e, in the D16 rulings sweep: three later rulings that bind this delta's content, recorded here so none lives only in the channel.)*
+  - **BLOB_GC's allow-list entry (10:51:08 BST):** the maintainer's (by delegation) entry "2026-10-14 10:51:08 BST — FR-420 → WK-1251 ACCEPTED; latent blob-GC DATA-LOSS finding: file in D16 (not D17) + a precondition line (re lead after 10:48:32)". Item 1: "BLOB_GC is allow-listed as ("P3", "WK-1251", "07 FR-420") only once that line is on main." Item 4: "S4 must NOT register a blob.gc handler, and E4.7's guard enforces that." So DP-Q5 (a)'s placement is WK-1251 (P3), whose FR-420 line rides D16; Acceptance item 9's `BLOB_GC` entry is exactly that triple and is added only once D16 has merged; and E4.7's guard fails if a `blob.gc` handler is registered.
+  - **E4.3's compose ingest test may seed (11:10:26 BST):** the maintainer's (by delegation) entry "2026-10-14 11:10:26 BST — Upload plan, the two points: "real io worker" defined (W2 OK, conditional); E4.3 may seed now, with the conversion an OBLIGATION (re lead 11:09:44)", item (b). Conditions: the `LG-` names the psql seeding and why; the test carries a skip-free marker comment naming SL 8026 (working id, a later batch); the conversion to upload-url → PUT → complete → POST versions is an ACCEPTANCE line in SL 8026, not this delta's; if SL 8026 has not merged by the 4 Nov freeze, the P2 closure record lists the seeded test as an open item. Item (a) defines "a real worker": a separate Celery worker PROCESS launched from `app.worker.entrypoint` unmodified, never inline `execute_job` and never a test-assembled registry; E4.3's reds are held to that.
+  - **"A real approved model" and `rating.compile` (11:43:57 BST):** the maintainer's (by delegation) entry "2026-10-14 11:43:57 BST — S4 GO points: (1) APPROVED via the governed path ADOPTED; (2) rating.compile → `succeeded` YES, plus a sweep (re lead 11:43:35)". (1) The batch red's model is a Rating Version in `approved` reached through the GOVERNED path (API submit/decide by two distinct principals, or the documented seed path that calls those same services), never a draft compiled bundle and never a direct status or DB write; the batch red asserts `status == succeeded` AND a batch output artifact whose row count equals the input's. (2) S4's GO changes `PL-1690`'s `rating.compile` runtime assert from "terminal" to `succeeded`, with its compiled-bundle hash present, in S4's write set, cited to that entry and to 10:13:50 and 10:36:42. Its read-only SWEEP of Job-status asserts that admit failure is reported with its predicate; sites in S4's write set are fixed in S4, the rest go to one WK-1178 fix PR.
 - **The finding as first raised:** the lead's from-lead entry "2026-10-14 10:13:05 BST", its
   "QUEUE FINDING (planner-wf701plan, lead-verified at main 1e260c15)": `score.trace_produce` and
   `score.batch` route to `scoring`, and no worker consumes it.
-- **The finding record:** FD 8021 (working id), one class as the 10:36:42 entry words it: "a
+- **The finding record:** FD-1713, one class as the 10:36:42 entry words it: "a
   routed job never completes on a real worker: no consumer for io/scoring; no handler for
   trace_produce". Owner WK-674, reserved in `eta.md` "2026-10-14 10:14:33 BST"; auditor-queues is verifying it by
   a run, and proposes the severity over the whole class. **S4 discharges it.** This delta does not restate its severity.
@@ -117,7 +123,7 @@ production worker, or is an allow-listed later-phase kind, proven by a derived g
   `git grep -n register_trace_handlers origin/main -- backend/src` finds only its definition. So a
   `score.trace_produce` Job on a real worker that consumes `scoring` still ends `failed`: terminal,
   through a real worker, and the trace never produced. This was read, not run; the 10:36:42 entry
-  verified the same lines at `origin/main`, placed it inside FD 8021 (working id), and gave it to S4
+  verified the same lines at `origin/main`, placed it inside FD-1713, and gave it to S4
   (E4.7). Kinds with no handler module at all on `main`: `OPTIMISATION_RUN`, `GIPP_CHECK`,
   `MONITOR_RUN`, `DOSSIER_GENERATE`, `EXPORT_REGULATORY` and `BLOB_GC` (the `JobKind` references in
   `backend/src/app/worker/*_handlers.py`, read per module); and no route on `main` submits any of
@@ -133,7 +139,7 @@ production worker, or is an allow-listed later-phase kind, proven by a derived g
 
 | Order | Slice | Scope (what the `LG-` quotes) | Requirements, each id | Depends on | Size |
 |---|---|---|---|---|---|
-| 1 | `SL-1258` — Slice 4: the deployment path | `PL-1666` row 1, `PL-1690` E4.1 and E4.3, and E4.2 and E4.4 to E4.6 below | `PL-1690`'s set, unchanged: `07` §3.6: FR-434, FR-435, FR-437; `07` §3.2: FR-412 (memory half), FR-415 (worker service); `07` §3.9: FR-452 (management-API limb); `07` §9: NFR-531, NFR-534; register FD-1211, FD-1650. **Cited, not added:** `07` §3.2: FR-405 (the per-queue pools the split reads), FR-406 (the relay); FD 8021 (working id), discharged at merge | `PL-1690`'s, plus: DP-Q1 ruled by the maintainer; DP-Q5 resolved (E4.7's green); FD 8021 minted | 1 + a build window |
+| 1 | `SL-1258` — Slice 4: the deployment path | `PL-1666` row 1, `PL-1690` E4.1 and E4.3, and E4.2 and E4.4 to E4.6 below | `PL-1690`'s set, unchanged: `07` §3.6: FR-434, FR-435, FR-437; `07` §3.2: FR-412 (memory half), FR-415 (worker service); `07` §3.9: FR-452 (management-API limb); `07` §9: NFR-531, NFR-534; register FD-1211, FD-1650. **Cited, not added:** `07` §3.2: FR-405 (the per-queue pools the split reads), FR-406 (the relay); FD-1713, discharged at merge | `PL-1690`'s, plus: DP-Q1 ruled by the maintainer; DP-Q5 resolved (E4.7's green); FD-1713 minted | 1 + a build window |
 
 No requirement id is added or removed. FR-405 and FR-406 are cited because E4.2 and E4.4 read them;
 the markers below are `req("FR-415")` as `PL-1690` set them, plus `req("FR-405")` on the split check
@@ -217,7 +223,7 @@ the markers below are `req("FR-415")` as `PL-1690` set them, plus `req("FR-405")
     ```
 
     (The listing's envelope key is whatever `list_traces` returns; the executor reads it there.)
-    It is the delivery proof of E4.7 (a), and the one PL 8014 (working id)'s C7 rests on.
+    It is the delivery proof of E4.7 (a), and the one PL-1710's C7 rests on.
   - **Up:** every worker service DP-Q1 rules, plus `lb`; beat as `PL-1690` E4.3's one-off fixture.
     No inline `execute_job`: the Job is moved by the relay and run by the worker container.
   - **The assert in each, exactly:** poll `GET /api/v1/jobs/{id}` until a terminal status or the
@@ -268,10 +274,10 @@ the markers below are `req("FR-415")` as `PL-1690` set them, plus `req("FR-405")
   the local demo, not the deployed topology, and FR-405's sizing is the deployed stack's.
   `backend/tests/test_demo_command.py:310` changes to assert the queue argument's split set
   `>=` the derived set, red first against today's `"default,compute"`.
-  - **Why S4 and not the WF-701 demo slice (SL 8015, working id):** SL 8015 runs after Slice 5
-    (PL 8014, working id), and the maintainer's condition is "before the G2 rehearsal is re-run
+  - **Why S4 and not the WF-701 demo slice (SL-1711):** SL-1711 runs after Slice 5
+    (PL-1710), and the maintainer's condition is "before the G2 rehearsal is re-run
     on the merged tree"; S4 lands first. It also keeps the derived set and its two consumers in one
-    PR. SL 8015's T6 then reads the merged `worker_command()` rather than changing it.
+    PR. SL-1711's T6 then reads the merged `worker_command()` rather than changing it.
   - Acceptance item 5.
 
 - **E4.6 — the stale docstring.** `backend/src/app/worker/entrypoint.py:3`'s usage line is updated
@@ -355,7 +361,7 @@ the maintainer's (by delegation) entry "2026-10-12 02:53:52 BST" item 4), so it 
 S4 merges. Three of its premises change; its scope does not:
 
 - **Its activation need** "`SL-1258`'s worker consuming `default,compute`" (`docs/roadmap.md` SL-1689
-  row; `PL-1688` Tasks row) is read as "`SL-1258` merged with every routed pool consumed, per PL-8022
+  row; `PL-1688` Tasks row) is read as "`SL-1258` merged with every routed pool consumed, per PL-1714
   E4.2". A dated line under the row records it (this delta's commit); `PL-1688` stays unedited.
 - **Its Task 0** quotes "`deploy/docker-compose.yml`'s `worker` command"; under DP-Q1 (b) that is
   every worker service's command.
@@ -375,7 +381,7 @@ SL-1689's `LG-` records that reading at Task 0, or the lead rules it.
 | **DP-Q1** | How the compose stack maps pools to worker services (FR-405) | **(a) One worker for all pools.** The existing `worker` service, `--queues` = the derived set, one `--concurrency` (2 today) and one `mem_limit`. One service. A fit occupies a slot that a `score.batch` or an ingest then waits behind; the pools cannot be sized apart. **(b) One worker service per pool**, from the one image through a YAML anchor: `worker-compute` (`--concurrency 2`, `mem_limit` 4g: few and fat), `worker-scoring` (`--concurrency 4`: many and thin), `worker-io` (`--concurrency 4`: network-bound), `worker-default` (`--concurrency 2`: the relay, compile, monitor and dossier). Four services; each `--concurrency` and `mem_limit` an env-overridable default (`${GIP_WORKER_<POOL>_CONCURRENCY:-n}`), each a starting value, not a measured one. A new pool adds a service, which E4.2 forces. **(c) Three services:** `compute`, `scoring`, and one for `io` and `default` together. Fewer containers; `io` and `default` share a pool, so they are not sized apart. | **(b).** FR-405 says the pools are "sized independently", and FR-415 relies on "each queue's worker pool is sized independently (FR-405)" as the boundary that replaces a quota. (a) states both and builds neither; it also puts a model fit and a batch score in one slot pool, which `jobs.py:55-57`'s own comment names as the starvation case. (c) breaks the same promise for `io` and `default`. (b) costs three more compose services from one anchor and lets FR-434's "scoring without compute" be shown by stopping one service. The concurrency figures are defaults to be measured, not a claim. | scope (the maintainer, by the 10:13:50 entry: "I rule it") | **yes** — the compose edit, the E4.2 checks and both runtime tests depend on it | **RULED (b)**, the maintainer's (by delegation) entry "2026-10-14 10:43:43 BST": one compose service per pool (compute, scoring, io, default), env-overridable sizes; the sizes are labelled UNMEASURED in the compose comments and the `LG-`, and measured sizing belongs to S5 and the NFR session, never to an S4 claim |
 | **DP-Q2** | Is the relay's queue part of the asserted set? It is `default` by two literals (P3), outside the table | **(a)** Name it once, `RELAY_QUEUE` (E4.4), and assert `⊇ routed ∪ {RELAY_QUEUE}`. Two more files in the write set. **(b)** Assert `⊇ routed` only, as the 10:13:50 entry words it. `default` is covered today only while a kind routes to it. | **(a).** It is the same defect class one step earlier: if `RATING_COMPILE`, `MONITOR_RUN` and `DOSSIER_GENERATE` ever moved off `default`, (b) would pass while no Job left the outbox. It adds, never removes, from the ruled `⊇`. | decision point | no — default (b) until ruled, so E4.2 is built as the entry words it; (a) adds at E4.4 | **RULED (a)**, the maintainer's (by delegation) entry "2026-10-14 10:43:43 BST": `RELAY_QUEUE` named once; assert consumed ⊇ routed ∪ {`RELAY_QUEUE`}; E4.4 is built |
 | **DP-Q3** | Does S4 also register the trace handler (P5)? | (a) yes, with a derived guard; (b) no, a separate owner | (a), as recommended | scope | — | **RULED (a)** by the maintainer's (by delegation) entry "2026-10-14 10:36:42 BST"; applied as E4.7 |
-| **DP-Q4** | Should `jobs.submit` **refuse** a kind with no production handler, rather than queue a Job that can only fail? | **(a) Refuse the allow-listed kinds.** `LATER_PHASE_KINDS` moves from the guard's file to `backend/src/app/platform/jobs.py`, beside `DEFAULT_QUEUE_FOR_KIND`, as the one declaration; `submit` raises a typed `PlatformError` for a kind in it, before any row, audit event or outbox write. The API process cannot read the worker's registry (the registrars run in the worker process only), so the declaration is the only thing `submit` can check. Costs: one error code (a `07` spec line first, then `errors.py`), one red test, and a slice already at GO grows a spec edit. **(b) No runtime refusal.** E4.7's guard is the control: a P2 kind cannot lack a handler, and no route on `main` submits an allow-listed kind (P5). The gap that remains: a later phase adds a route for its kind before its handler, and the guard still allows the kind until its entry is removed. **(c) Refuse any kind with no handler, read at submit** — not buildable as stated, for the process reason in (a). | **(a).** It makes "a queued Job that can only fail" unrepresentable for the declared kinds instead of tested for, which is the class FD 8021 (working id) records, at the cost of one set lookup. The allow-list becomes a contract both sides read, and E4.7's stale-entry assert forces its removal when the handler lands, so the refusal cannot outlive the gap. If the maintainer prefers S4 not to grow a spec edit at GO, (b) now and (a) as the first slice of whichever phase adds the first route for an allow-listed kind. | scope (the maintainer: "Recommend; I rule") | no — default (b) until ruled; (a) adds a task after E4.7 | **RULED (b) now**, the maintainer's (by delegation) entry "2026-10-14 10:43:43 BST": no route submits an allow-listed kind in P2, so a submit-time refusal guards nothing reachable. (a) lands in the first later-phase slice that adds such a route, recorded as an obligation line on `LATER_PHASE_KINDS`' docstring |
+| **DP-Q4** | Should `jobs.submit` **refuse** a kind with no production handler, rather than queue a Job that can only fail? | **(a) Refuse the allow-listed kinds.** `LATER_PHASE_KINDS` moves from the guard's file to `backend/src/app/platform/jobs.py`, beside `DEFAULT_QUEUE_FOR_KIND`, as the one declaration; `submit` raises a typed `PlatformError` for a kind in it, before any row, audit event or outbox write. The API process cannot read the worker's registry (the registrars run in the worker process only), so the declaration is the only thing `submit` can check. Costs: one error code (a `07` spec line first, then `errors.py`), one red test, and a slice already at GO grows a spec edit. **(b) No runtime refusal.** E4.7's guard is the control: a P2 kind cannot lack a handler, and no route on `main` submits an allow-listed kind (P5). The gap that remains: a later phase adds a route for its kind before its handler, and the guard still allows the kind until its entry is removed. **(c) Refuse any kind with no handler, read at submit** — not buildable as stated, for the process reason in (a). | **(a).** It makes "a queued Job that can only fail" unrepresentable for the declared kinds instead of tested for, which is the class FD-1713 records, at the cost of one set lookup. The allow-list becomes a contract both sides read, and E4.7's stale-entry assert forces its removal when the handler lands, so the refusal cannot outlive the gap. If the maintainer prefers S4 not to grow a spec edit at GO, (b) now and (a) as the first slice of whichever phase adds the first route for an allow-listed kind. | scope (the maintainer: "Recommend; I rule") | no — default (b) until ruled; (a) adds a task after E4.7 | **RULED (b) now**, the maintainer's (by delegation) entry "2026-10-14 10:43:43 BST": no route submits an allow-listed kind in P2, so a submit-time refusal guards nothing reachable. (a) lands in the first later-phase slice that adds such a route, recorded as an obligation line on `LATER_PHASE_KINDS`' docstring |
 | **DP-Q5** | `BLOB_GC` is routed (`io`), has no handler, and FR-420 is on no roadmap row (E4.7's table). Where is it placed? | **(a)** The maintainer places FR-420 in a later phase by a dated roadmap line (a Work in P3, for example WK-1251's production packaging, or another); `BLOB_GC` is then allow-listed with that phase. **(b)** FR-420 is P2's: S4 or a new WK-674 row builds the `blob.gc` handler (conservative, dry-runnable, audited, per FR-420). **(c)** `BLOB_GC` leaves the routing table until its phase; the guard then does not see it. | **(a).** Nothing submits `blob.gc` (P5), and FR-420's GC is a deletion mechanism (`PL-850:189`'s reading), not part of P2's rating path. (b) adds unplanned scope to a slice at GO. (c) edits a shared routing table to make a test pass. | scope (the maintainer) | **yes, for E4.7's green only**: the guard is red on `blob.gc` until resolved; E4.2, E4.3 and E4.7 (a) proceed | **RULED (a)**, the maintainer's (by delegation) entry "2026-10-14 10:43:43 BST": FR-420 and `BLOB_GC` go to a later phase by a dated roadmap line (D16 places it under WK-1251, P3), and `LATER_PHASE_KINDS` then lists `BLOB_GC` with that phase and row; the allow-list entry lands only once that line is on main |
 
 ## Acceptance Standard
@@ -411,6 +417,6 @@ SL-1689's `LG-` records that reading at Task 0, or the lead rules it.
 
 At this delta's mint, and once DP-Q1 is ruled: `SL-1258`'s GO conditions are `PL-1690`'s Activation
 list with **E4.2 read as this file's E4.2**, plus E4.3 extended, E4.4 (as DP-Q2 rules), E4.5 and E4.6;
-E4.7 (with DP-Q5 resolved for its green); FD 8021 (working id) minted, so the `LG-` can name what
+E4.7 (with DP-Q5 resolved for its green); FD-1713 minted, so the `LG-` can name what
 the merge discharges; and the lead's GO.
 `PL-1690` stays as its own status line says; this delta does not change it.

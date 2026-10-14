@@ -1,5 +1,5 @@
 ---
-id: RL-8019
+id: RL-1712
 family: ruling
 title: FR-259's "errors" on the real-time path — the term was undefined and the code is not wrong; Option A, a refused quote is not traced, with the FR-259 and WF-701 C7 texts and the C7 assertion that follows
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
@@ -12,18 +12,24 @@ supersedes: []
 superseded_by: ~
 corrected_by: []
 corrects: ~
-relates: [FD-8011, FR-259, FR-255, FR-256, FR-258, FR-248, FR-331, NFR-459, NFR-499, RL-862, RL-877, RL-890, RL-1346, RL-1434, WF-701, WK-1178, WK-674, PL-1544]
+relates: [FD-1706, FR-259, FR-255, FR-256, FR-258, FR-248, FR-331, NFR-459, NFR-499, RL-862, RL-877, RL-890, RL-1346, RL-1434, WF-701, WK-1178, WK-674, PL-1544]
 ---
 
-# RL-8019 — FR-259's "100 % of errors" against `POST /api/v1/score`: the §0 question ruled
+# RL-1712 — FR-259's "100 % of errors" against `POST /api/v1/score`: the §0 question ruled
+
+*(Minted 2026-10-14 as RL-1712 from working id 8019, in the D16 batch mint PR.)*
 
 *Disclosure: drafted under **working id RL 8019**, reserved by the lead (team-lead) on
 2026-10-14 (`~/gi-pricing-plan.local/handover/eta.md`, the line stamped "2026-10-14 10:12:07
 BST": "RESERVED working id RL 8019 = FD 8011's §0 ruling (A/B/C: FR-259 "100% of errors" vs
-/score raising before the sampler), for D16"). The finding is FD-8011, also a working id,
+/score raising before the sampler), for D16"). The finding is FD-1706 (working id 8011),
 filed on `origin/fd-8007-8011-2026-10-14` @`3d6e0f0a67575e71eae3162566275ef8042be1c1` and folded
-into D15. The lead mints both; the mint sweep replaces `RL-8019` and `FD-8011` below with their
-minted ids.*
+into D15, which minted it as FD-1706; the D16 mint sweep replaced both working ids below with
+their minted ids.*
+
+*Confirmed: dated 2026-10-14, on the maintainer's (by delegation) entry "2026-10-14 10:26:21 BST
+— RL 8019 (FD 8011, FR-259 "errors") CONFIRMED as drafted; (i)–(iii) accepted (re lead 10:25:44)"
+(`to-lead.md`): "RL 8019 @b26af93f: CONFIRMED, reading (c), option A′."*
 
 ## How this was ruled
 
@@ -223,7 +229,7 @@ C7's errors limb is **walked, not skipped, and is no longer a `KNOWN GAP`**. The
    `code` = `INPUT_CONTRACT_VIOLATION`.
 2. After C7's trace poll is stable, assert that **no** listed item of `GET /api/v1/traces`
    carries that quote's `quote_id`.
-3. Print exactly one ruled line, `C7-errors: refused, not traced (FR-259, RL-8019)`, with the
+3. Print exactly one ruled line, `C7-errors: refused, not traced (FR-259, RL-1712)`, with the
    minted id, and assert it in the test as the memo asserts its other ruled lines.
 
 Assertion 2 is an absence read through a route that lists only completed traces. It does not
@@ -241,8 +247,8 @@ T-text"). They are applied byte for byte under `.claude/skills/spec-change`, in 
 with the test and the docstring below (`CLAUDE.md` §2). Where an applying plan's reading
 differs from this text, this text wins.
 
-Placeholders: `<date>` is the date of the applying commit. `RL-8019` and `FD-8011` are replaced
-by their minted ids. Nothing else is a placeholder.
+Placeholders: `<date>` is the date of the applying commit. `RL-1712` and `FD-1706` were working ids
+RL 8019 and FD 8011, replaced by their minted ids at the D16 mint. Nothing else is a placeholder.
 
 **T1 — `03` FR-259, a fourth dated clarification.** File `docs/specs/03-rating-engine.md`.
 Placement, read at `1e260c15`: in FR-259's row (`03:180`), insert immediately after the text
@@ -251,7 +257,7 @@ closing ` |`, separated by one space. The anchor: `` grep -cF 'Ruled in `RL-1434
 docs/specs/03-rating-engine.md `` prints `1` at `1e260c15`. Insert:
 
 ```text
-*(Clarified <date>, WK-1178 — what "errors" means in this row, written down because the real-time route refuses every quote it cannot price before the sampling decision, and the floor was read as unmet (FD-8011). "Errors" is a scored result whose `outcome` is `"error"`, and the 100 % floor applies to every such result on the real-time path. That path serves none today: a quote it cannot price is refused with a problem document and no `ScoringResult`, 422 with one of FR-255's per-quote codes or 500 `LADDER_RECONCILIATION_FAILED` (§5.1), so the floor that operates there is the declines floor. A refused quote is not traced. A trace's body is a re-score compared with the result actually served (`RL-862`, condition (b), and the clarification above), a refusal has no served result, and its re-score fails the same way. A refused quote is observed through the error rate by code (`05` FR-331) and, for a ladder refusal, through `RL-1346`'s log line and counter, none of which holds a quote input (NFR-499). Tracing a refused quote would be a new capability and needs its own requirement first. Ruled in `RL-8019`.)*
+*(Clarified <date>, WK-1178 — what "errors" means in this row, written down because the real-time route refuses every quote it cannot price before the sampling decision, and the floor was read as unmet (FD-1706). "Errors" is a scored result whose `outcome` is `"error"`, and the 100 % floor applies to every such result on the real-time path. That path serves none today: a quote it cannot price is refused with a problem document and no `ScoringResult`, 422 with one of FR-255's per-quote codes or 500 `LADDER_RECONCILIATION_FAILED` (§5.1), so the floor that operates there is the declines floor. A refused quote is not traced. A trace's body is a re-score compared with the result actually served (`RL-862`, condition (b), and the clarification above), a refusal has no served result, and its re-score fails the same way. A refused quote is observed through the error rate by code (`05` FR-331) and, for a ladder refusal, through `RL-1346`'s log line and counter, none of which holds a quote input (NFR-499). Tracing a refused quote would be a new capability and needs its own requirement first. Ruled in `RL-1712`.)*
 ```
 
 **T2 — `WF-701` C7, a dated amendment.** File `docs/workflows/WF-00701-deploy-and-monitor.md`.
@@ -261,7 +267,7 @@ one space. The anchor: `grep -cF 'plus 100 % of declines and errors, and persist
 docs/workflows/WF-00701-deploy-and-monitor.md` prints `1` at `1e260c15`. Insert:
 
 ```text
-*(Amended <date>, `RL-8019`: "errors" is a served result whose `outcome` is `"error"`, and the real-time path serves none. A quote the platform cannot price is refused with a problem document and is not traced (`03` FR-259, the clarification of <date>). Its count is D1's error rate (`05` FR-331).)*
+*(Amended <date>, `RL-1712`: "errors" is a served result whose `outcome` is `"error"`, and the real-time path serves none. A quote the platform cannot price is refused with a problem document and is not traced (`03` FR-259, the clarification of <date>). Its count is D1's error rate (`05` FR-331).)*
 ```
 
 **The test and the docstring**, the rest of the write set:
@@ -276,7 +282,7 @@ docs/workflows/WF-00701-deploy-and-monitor.md` prints `1` at `1e260c15`. Insert:
   doing and not the roll's.
 - `backend/src/app/platform/traces.py`: one sentence in `decide_sampling`'s docstring. The
   `"error"` floor is reached by no real-time path today, because a refusal is raised before
-  sampling and is not traced (FR-259, `RL-8019`). The branch itself is unchanged.
+  sampling and is not traced (FR-259, `RL-1712`). The branch itself is unchanged.
 
 **Reds by cause**, printed in the slice's `LG-` and then reverted:
 
@@ -292,7 +298,7 @@ docs/workflows/WF-00701-deploy-and-monitor.md` prints `1` at `1e260c15`. Insert:
 with the write set exactly the four files named (`03`, WF-701, `test_score.py`, `traces.py`'s
 docstring). It needs no contract regeneration and no migration. It lands **before the 4 Nov code
 freeze**, because it carries a test, and in any case before the WF-701 demo slice's compose
-rehearsal, which asserts §3 of Ruled against it. It discharges FD-8011 when merged. The planner may give
+rehearsal, which asserts §3 of Ruled against it. It discharges FD-1706 when merged. The planner may give
 it its own slice or fold it into an open WK-1178 slice; that is the planner's call.
 
 ### What this record does not decide
@@ -304,7 +310,7 @@ it its own slice or fold it into an open WK-1178 slice; that is the planner's ca
   where a refusal is counted, and it is not built ahead of its phase (`CLAUDE.md` §0).
 - **The declines limb** (DP-W4 (a), the governed decline candidate). This ruling leaves it
   unchanged.
-- **FD-8011's severity or closure.** The maintainer confirmed MEDIUM and owner WK-1178. The
+- **FD-1706's severity or closure.** The maintainer confirmed MEDIUM and owner WK-1178. The
   merge of the slice above discharges it, and the lead records that.
 - **Whether to keep a platform fault's quote input** (§2, "Why C loses", last item). It is not
   raised here.
