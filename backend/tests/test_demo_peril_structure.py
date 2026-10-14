@@ -79,7 +79,7 @@ def _book(
             continue
         mean = 150_000.0 if a else 90_000.0
         amount = int(round(float(_RNG.gamma(shape=2.0 * c, scale=mean / 2.0))) + c)
-        severity = repr(amount / c)
+        severity = repr(float(amount) / int(c))  # float(), int(): a numpy scalar's repr is 'np.float64(..)', which the cast reads as null
         if bad_row is not None and not planted:
             severity = "" if bad_row == "null" else "0.0"
             planted = True
@@ -215,19 +215,22 @@ async def test_seed_fits_and_approves_a_severity_glm(
     assert spec["split_ref"] == frequency.spec["split_ref"]
 
 
-@pytest.mark.req("FR-111")
-@pytest.mark.parametrize("bad_row", ["null", "non_positive"])
-async def test_a_claimant_row_without_a_positive_severity_fails_the_fit_with_glm_fit_failed(
-    database: Database, blob_store: BlobStore, workspace_id: UUID, grant: Any, bad_row: str
-) -> None:
-    """R1b (DP-8009-1, the maintainer's (by delegation) "2026-10-14 10:09:06 BST" ruling): a
-    null, or non-positive, `claim_severity` on a row with `claim_count > 0` is refused by the
-    EXISTING Gamma-domain refusal, `GLM_FIT_FAILED`, with its family-domain sentence in the
-    persisted Job error. Nothing is filtered or clipped.
+#: glum / sklearn's own CAUSE text for each planted row, the `{exc}` part of `GLM_FIT_FAILED`'s
+#: message. Constant across causes is the family-domain sentence glm.py appends to EVERY
+#: refusal, so asserting that sentence cannot tell one cause from another (the maintainer's
+#: (by delegation) "2026-10-14 11:41:17 BST" correction of R1b).
+_CAUSE = {
+    "null": "Input y contains NaN",
+    "non_positive": "out of the valid range for family",
+}
 
-    This asserts the platform's fit, not `fit_severity_glm`, so it is red only if the refusal
-    is absent. Red by cause is the scratch proof (disable the refusal, see this fail, revert);
-    on the base tree it is GREEN, which is the point: the refusal already exists."""
+
+async def _severity_fit(
+    database: Database, blob_store: BlobStore, workspace_id: UUID, grant: Any,
+    bad_row: str | None,
+) -> tuple[JobStatus, str, str]:
+    """Fit the Gamma/log severity GLM as the platform's MODEL_FIT Job and return the Job status,
+    the persisted error (JSON text, empty on success) and the Model's status."""
     world = await _world(database, blob_store, workspace_id, grant, bad_row=bad_row)
     spec = GlmSpec(
         model_family_slug="fremtpl2-severity-r1b",
@@ -252,17 +255,46 @@ async def test_a_claimant_row_without_a_positive_severity_fails_the_fit_with_glm
              "model_id": str(model_id)},
             world.actuary, workspace_id=workspace_id,
         )
-    assert await execute_job(database, job.id, blob_store) is JobStatus.FAILED
-
+    status = await execute_job(database, job.id, blob_store)
     async with database.session() as session:
         stored = (await session.execute(select(JobRow).where(JobRow.id == job.id))).scalar_one()
         model = (
             await session.execute(select(ModelRow).where(ModelRow.id == model_id))
         ).scalar_one()
-    error = json.dumps(stored.error)
+    return status, json.dumps(stored.error) if stored.error else "", model.status
+
+
+@pytest.mark.req("FR-111")
+async def test_a_clean_severity_book_fits(
+    database: Database, blob_store: BlobStore, workspace_id: UUID, grant: Any
+) -> None:
+    """R1b's NEGATIVE CONTROL: on the clean book the severity Job succeeds. Without it a
+    refusal below could come from the fixture (it did: `repr` of a numpy float wrote
+    'np.float64(..)' into the CSV, so every severity read as null)."""
+    status, error, _ = await _severity_fit(database, blob_store, workspace_id, grant, None)
+    assert status is JobStatus.SUCCEEDED, error
+
+
+@pytest.mark.req("FR-111")
+@pytest.mark.parametrize(
+    ("bad_row", "other"), [("null", "non_positive"), ("non_positive", "null")]
+)
+async def test_a_claimant_row_without_a_positive_severity_fails_the_fit_with_its_own_cause(
+    database: Database, blob_store: BlobStore, workspace_id: UUID, grant: Any,
+    bad_row: str, other: str,
+) -> None:
+    """R1b as corrected by the maintainer's (by delegation) "2026-10-14 11:41:17 BST": one
+    claimant row's `claim_severity` null, or 0, is refused by the EXISTING refusal
+    (`GLM_FIT_FAILED`) with THAT row's own cause text, not the other case's. Nothing is
+    filtered or clipped. Green on the base tree; red under a scratch that drops the row."""
+    status, error, model_status = await _severity_fit(
+        database, blob_store, workspace_id, grant, bad_row
+    )
+    assert status is JobStatus.FAILED
     assert "GLM_FIT_FAILED" in error
-    assert "family's domain" in error
-    assert model.status != ModelStatus.APPROVED.value
+    assert _CAUSE[bad_row] in error, error
+    assert _CAUSE[other] not in error, error  # the discrimination: the other case's text
+    assert model_status != ModelStatus.APPROVED.value
 
 
 async def _structure_world(
