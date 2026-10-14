@@ -1,5 +1,5 @@
 ---
-id: PL-8009
+id: PL-1705
 family: plan
 kind: map
 title: WK-1178 — SL-1543 (A-4) since PL-1542 was dated, the severity response claim_severity, the fit's loud refusal red, the synthetic book with the real-seed probe, SL 8003 before SL-1543, and the re-checked premises: a dated delta to PL-1542
@@ -15,7 +15,9 @@ corrected_by: []
 relates: [PL-1542, SL-1543, PL-1674, SL-1675, PL-1677, SL-1678, FD-1679, RL-1538, RL-1459, PL-1544]
 ---
 
-# PL-8009 — WK-1178, SL-1543 (A-4): what has changed since PL-1542 was dated (delta to PL-1542)
+# PL-1705 — WK-1178, SL-1543 (A-4): what has changed since PL-1542 was dated (delta to PL-1542)
+
+*(Minted 2026-10-14 as PL-1705 from working id 8009, in the D15 batch mint PR.)*
 
 > **For agentic workers:** this is a **dated delta** under Lean P2 L5 (`document-ids.md` §1.6,
 > PL row: *"a change is one dated Work-plan delta, a new `PL-` that `relates:` the Work's
@@ -253,7 +255,7 @@ each is checked by a command run from the repository root on the slice's merge t
    planner writes `docs/roadmap.md` only for rows it cuts, so the line is the lead's.
 2. **The next delta** records the signatures (C6) and DP-8009-1's ruling text, if it is ruled
    after this delta mints.
-3. **Mint.** `PL-8009` mints from working id 8009; `SL 8003`, `PL 8002`, `RL 9996` and `LG 9879`
+3. **Mint.** `PL-1705` mints from working id 8009; `SL 8003`, `PL 8002`, `RL 9996` and `LG 9879`
    are re-pointed where minted by then.
 
 ## Self-review

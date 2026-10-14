@@ -1,5 +1,5 @@
 ---
-id: RL-9996
+id: RL-1707
 family: ruling
 title: PL-1677 DP-P1 decided — the drafted change summary pairs a rate table's versions through the `table` step that names them, pairs a pin difference no step names by slug only where it is the one such ref on each side, and refuses no pin set; SL-1678's guard is removed by the fix slice (FD-1679)
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
@@ -15,7 +15,9 @@ corrects: ~
 relates: [FD-1679, PL-1677, PL-1267, SL-1678, LG-1681, RL-1498, RL-1538, FR-242, FR-219, FR-231, FR-237, FR-1399]
 ---
 
-# RL-9996 — PL-1677 DP-P1: how the drafted change summary pairs two versions of one rate table
+# RL-1707 — PL-1677 DP-P1: how the drafted change summary pairs two versions of one rate table
+
+*(Minted 2026-10-14 as RL-1707 from working id 9996, in the D15 batch mint PR.)*
 
 *Disclosure: drafted under **working id RL 9996**, reserved by the lead (team-lead) on
 2026-10-14 (`~/gi-pricing-plan.local/handover/eta.md`, the line stamped "2026-10-14 09:24:15
