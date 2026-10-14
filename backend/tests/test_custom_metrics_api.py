@@ -31,7 +31,7 @@ from backend.tests.test_model_jobs_gbm import _gbm_spec
 from fastapi.testclient import TestClient
 
 from app.config import Settings
-from app.db.models import CustomMetricRow, ModelRow
+from app.db.models import CustomMetricRow, MetricCertificateRow, ModelRow
 from app.db.session import Database
 from model_schema import GbmFunctionRef, MetricStatus, new_uuid7
 
@@ -267,6 +267,61 @@ def test_an_uncertified_metric_cannot_be_submitted(
         f"/api/v1/custom-metrics/{created['id']}/submit", headers=actuary
     )
     assert response.status_code == 409
+    assert response.json()["code"] == "VALIDATION_FAILED"
+
+
+@pytest.mark.req("FR-157")
+def test_a_certificate_id_naming_no_certificate_row_is_refused_at_submit(
+    client: TestClient, actuary: dict[str, str]
+) -> None:
+    """FD-1492: `certificate_id` is a bare pointer, and "is not null" is not evidence.
+
+    `_advance` gives the `certified` metric an id that names no `metric_certificate` row.
+    Submission is refused 409 `VALIDATION_FAILED`, the stored-state code the objective twin
+    uses (`02` §5.1 submit row, RL-1410).
+    """
+    created = _create(client, actuary)
+    _advance(UUID(created["id"]), status=MetricStatus.CERTIFIED)
+    response = client.post(
+        f"/api/v1/custom-metrics/{created['id']}/submit",
+        json={"change_summary": "Ready for review."},
+        headers=actuary,
+    )
+    assert response.status_code == 409, response.text
+    assert response.json()["code"] == "VALIDATION_FAILED"
+
+
+@pytest.mark.req("FR-157")
+def test_another_metrics_certificate_is_no_evidence_for_this_one(
+    client: TestClient, actuary: dict[str, str], workspace_id: UUID
+) -> None:
+    """The pointer must be this metric's own certificate row, as the objective twin requires."""
+    mine = _create(client, actuary)
+    other = _create(client, actuary)
+    foreign = MetricCertificateRow(
+        id=new_uuid7(),
+        workspace_id=workspace_id,
+        custom_metric_id=UUID(other["id"]),
+        metric_version=other["version"],
+        payload={},
+    )
+
+    async def _point(database: Database) -> None:
+        async with database.unit_of_work() as session:
+            session.add(foreign)
+            await session.flush()
+            row = await session.get(CustomMetricRow, UUID(mine["id"]))
+            assert row is not None
+            row.certificate_id = foreign.id
+            row.status = MetricStatus.CERTIFIED.value
+
+    _run(_point)
+    response = client.post(
+        f"/api/v1/custom-metrics/{mine['id']}/submit",
+        json={"change_summary": "Ready for review."},
+        headers=actuary,
+    )
+    assert response.status_code == 409, response.text
     assert response.json()["code"] == "VALIDATION_FAILED"
 
 

@@ -3,7 +3,7 @@ id: PL-1665
 family: plan
 kind: map
 title: WK-690 — Slices 4 and 5 acceptance brought to RL-1615 and RL-1616, and the fix row's F.1 restated: Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-12
 owner: planner
 tree: fc4401dcad789692f79f6c3ffc058c1c3921b7b9

@@ -14,7 +14,7 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
-from backend.tests.approved_rows import add_approved
+from backend.tests.approved_rows import add_approved, mark_approved
 from backend.tests.test_api_rate_tables import _LEVELS, _diff_ready
 from backend.tests.test_rate_tables_service import _seed_approved_model, _table_slug
 from backend.tests.test_rating_version_compile import _headers, _minimal_algorithm
@@ -382,3 +382,134 @@ def test_a_parquet_table_answers_200_with_the_entry_pending(
     assert entry["pending"] is True
     assert entry["diff"] is None
     assert _snapshot(database, workspace_id, v2.id)[-1] == jobs_before
+
+
+# --- FD-1679 / SL-1678: a version pinning two versions of one rate-table slug ---------------
+# `RL-1538` makes such pins valid input, so create accepts them (each test asserts the 201);
+# the drafted summary pairs rate tables by slug and refuses (409) rather than drop or mis-pair.
+
+
+def _create_over_http(
+    api_client, headers, *, algorithm_version: int, pins: dict[str, Any]
+) -> str:
+    created = api_client.post(
+        "/api/v1/rating-versions",
+        json={
+            "slug": "motor-rv",
+            "dataset_version_id": str(uuid4()),
+            "model_ref": "model:motor-ad-frequency@7",
+            "algorithm_ref": f"rating_algorithm:minimal@{algorithm_version}",
+            "pins": pins,
+        },
+        headers=headers,
+    )
+    assert created.status_code == 201, created.text
+    return created.json()["id"]
+
+
+async def _approve(database: Database, principal, workspace_id, rating_version_id: str) -> None:
+    # Approval over HTTP needs the full FR-257 evidence, which is not this slice's subject:
+    # mark the row approved the way `_insert(approved=True)` does.
+    async with database.unit_of_work() as session:
+        row = await session.get(RatingVersionRow, rating_version_id)
+        assert row is not None
+        await mark_approved(session, row)
+        await audit.record(
+            session,
+            workspace_id=workspace_id,
+            actor=Principal(kind=ActorKind.USER, id=principal.id, display="a@b.example"),
+            source=JobSource.API,
+            action="rating_version.approved",
+            entity_ref=f"rating_version:{row.slug}@{row.version}",
+            before={"status": "review"},
+            after={"status": "approved"},
+        )
+
+
+def _two_versions_of_one_table(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> tuple[dict[str, str], ArtifactRef, ArtifactRef]:
+    _run(grant("analyst"))
+    headers = _headers(principal, workspace_id)
+    slug = _table_slug()
+    one = _run(_seed_table_version(database, workspace_id, principal, slug, blob_store, _LEVELS))
+    two = _run(
+        _seed_table_version(database, workspace_id, principal, slug, blob_store, _SOFTENED)
+    )
+    _save_algorithms(api_client, headers, _algorithm(1), _algorithm(2, extra_step=True))
+    return (
+        headers,
+        ArtifactRef(type="rate_table", slug=slug, version=one),
+        ArtifactRef(type="rate_table", slug=slug, version=two),
+    )
+
+
+def _assert_refused(response, slug: str) -> None:
+    assert response.status_code == 409, response.text
+    problem = response.json()
+    assert problem["code"] == "VALIDATION_FAILED", problem
+    assert slug in problem["detail"], problem
+    assert "FD-1679" in problem["detail"], problem
+
+
+@pytest.mark.parametrize("candidate_order", ["two_then_one", "one_then_two"])
+def test_a_candidate_pinning_two_versions_of_one_table_is_refused(
+    api_client, workspace_id, principal, grant, database, blob_store, candidate_order
+) -> None:
+    """Red 1 (X@two, X@one: today the entry is dropped) and Red 2 (X@one, X@two: today a
+    false `X one -> two`)."""
+    headers, one, two = _two_versions_of_one_table(
+        api_client, workspace_id, principal, grant, database, blob_store
+    )
+    baseline = _create_over_http(api_client, headers, algorithm_version=1, pins=_pins(one))
+    _run(_approve(database, principal, workspace_id, baseline))
+    pair = (two, one) if candidate_order == "two_then_one" else (one, two)
+    candidate = _create_over_http(api_client, headers, algorithm_version=2, pins=_pins(*pair))
+
+    response = api_client.get(
+        f"/api/v1/rating-versions/{candidate}/change-summary-draft", headers=headers
+    )
+
+    _assert_refused(response, one.slug)
+
+
+def test_a_baseline_pinning_two_versions_of_one_table_is_refused(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """Red 3: the duplicate is on the baseline side; today `rate_tables == []`."""
+    headers, one, two = _two_versions_of_one_table(
+        api_client, workspace_id, principal, grant, database, blob_store
+    )
+    _run(
+        _insert(
+            database, workspace_id, principal, version=1, algorithm_version=1,
+            pins=_pins(one, two), approved=True,
+        )
+    )
+    candidate = _run(
+        _insert(
+            database, workspace_id, principal, version=2, algorithm_version=2, pins=_pins(two)
+        )
+    )
+
+    _assert_refused(api_client.get(_url(candidate), headers=headers), one.slug)
+
+
+def test_a_first_version_pinning_two_versions_of_one_table_is_still_answered(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """Red 4, a guard that passes on main: with no baseline nothing is paired, so the
+    summary is not wrong and is not refused (PL-1677 DP-G2 (a))."""
+    headers, one, two = _two_versions_of_one_table(
+        api_client, workspace_id, principal, grant, database, blob_store
+    )
+    first = _create_over_http(api_client, headers, algorithm_version=1, pins=_pins(one, two))
+
+    response = api_client.get(
+        f"/api/v1/rating-versions/{first}/change-summary-draft", headers=headers
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["baseline"] is None
+    assert body["rate_tables"] == []
