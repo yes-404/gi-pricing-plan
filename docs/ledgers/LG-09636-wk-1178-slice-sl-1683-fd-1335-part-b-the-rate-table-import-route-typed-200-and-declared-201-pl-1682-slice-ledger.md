@@ -44,6 +44,29 @@ Executed from `PL-1682` (Tasks 0–4), branch `sl-1683-wk1178-import-200-typing`
 - Guard list: the import 200 key removed from `UNTYPED_2XX_PENDING_PART_B` (three remain); the `NON_JSON_REQUEST_BODIES` citation now `rate_tables.py:285-286`. `pytest backend/tests/test_contracts.py`: 171 passed, 2 skipped.
 - Register: FD-1335's row carries the dated line (`register-lint`: 0 violations).
 
+### Gate 1 — merged head, 2026-10-14
+
+Gate head `ee15ba9916639890155394b80e46ad9689f56b13` (the merge of `origin/main` `36e2610a` into the branch; `docs/findings/register.md` resolved as the lead ruled: main's FD-1679 row verbatim, the branch's FD-1684 row kept; `docs/INDEX.md` regenerated with `scripts/doc-index.py`). The Python/docs half ran as the body in `dev-commands`, under `flock -w 3600 /tmp/slots/gate-1`, `GIP_GATE_SLOT` exported, `timeout 3600` per stage, DB `gipricing_sl-1683_8984a869` (alembic rc 0, one head `d4e81b7a2c95`). Start 08:43:52Z, end 09:40:30Z (56 min 38 s). The frontend half ran afterwards, 09:44:26Z to 09:46:25Z, **under a separate `flock` acquisition** (gate-1 was free between the halves, so the halves were not held under one lock; the frontend half has no timing tests).
+
+| stage | exit |
+|---|---|
+| `uv run ruff check .` | 0 |
+| `uv run mypy` | 0 |
+| `uv run lint-imports` | 0 |
+| `python3 scripts/audit-docs.py` | 1 |
+| `uv run python scripts/req-coverage.py` | 0 |
+| `uv run python scripts/generate-contracts.py --check` | 0 (49 generated contracts match the models) |
+| `uv run pytest -q` | 1 — `13 failed, 5758 passed, 6 skipped, 116 warnings in 3373.30s (0:56:13)` |
+
+| `pnpm install --frozen-lockfile` | 0 |
+| `pnpm generate:api` | 0 |
+| `pnpm lint` | 0 |
+| `pnpm type-check` | 0 |
+| `pnpm test` | 0 |
+| `pnpm build` | 0 |
+
+Every failure body was read. `audit-docs` prints one failure, `check 31: gap in the full allocation between 1684 and 9636` (the working id `9636` of this ledger is unminted — expected until the mint). All 13 pytest failures carry that same text: ten run `audit-docs.py` on the real tree and assert exit 0 (`1 == 0`), two assert the allocation is contiguous (`test_doc_id_check_exits_0_on_the_real_tree`: `[noncontiguous] docs/INDEX.md has a gap between 1684 and 9636`; `test_an_index_skipping_a_reserved_block_breaks_contiguity`: `[(1684, 9636)]`), and the thirteenth, `test_a_finding_resolved_only_by_a_closure_record_is_not_flagged`, asserts audit-docs exits 0 with the same text. No other cause found.
+
 ## PRs
 
 - (none opened yet; the PR is opened by the executor after the gate.)
