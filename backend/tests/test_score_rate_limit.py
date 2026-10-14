@@ -294,7 +294,7 @@ async def test_a_request_refused_at_authentication_or_authorisation_is_not_count
         await redis.aclose()
 
 
-_EXPIRY_PRINCIPAL = Principal(kind=ActorKind.SERVICE_ACCOUNT, id=UUID(int=8051), display="expiry")
+_EXPIRY_PRINCIPAL = Principal(kind=ActorKind.SERVICE_ACCOUNT, id=UUID(int=1719), display="expiry")
 
 
 @pytest.mark.req("FR-452")
