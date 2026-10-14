@@ -996,13 +996,23 @@ proven by `backend/tests/test_run_small_script.py`:
 | 67 | any argument names `alembic` (case-insensitive) |
 | 68 | more than 3 test files |
 | 71 | an argument is not an existing `.py` file: a directory, a pytest option or a typo |
+| 72 | a test file resolves (after `realpath`, so a symlink counts) outside `<worktree>` |
+| 73 | a `.py` file is not named `test_*.py` or `*_test.py` (pytest's default `python_files`; `conftest.py` and helpers are refused) |
 | 75 | the small-test flock stayed held for the whole wait (`flock -E 75`, clear of pytest's 0-5) |
 
 Otherwise it takes `/tmp/slots/small-test` with `flock -w 7200 -E 75 <file> <command>` (never `flock --`, which exits 69
 here; an ALONE window holds that slot, so a compliant run waits until the window ends) and runs the command as
 `env GIP_GATE_SLOT=/tmp/slots/small-test nice -n 19 ionice -c3 uv run …`. Setting `GIP_GATE_SLOT` inside the flock is
 what stops the root conftest from also taking gate-1, so a small test is not stalled behind a whole code gate.
-`RUN_SMALL_SLOT`, `RUN_SMALL_LOADAVG` and `RUN_SMALL_WAIT` exist for the script's own test; a seat never sets them.
+The slot path, the load source and the wait are constants in the script: **no environment variable changes them**
+(a hook a seat could set would bypass the load refusal and the one-at-a-time flock). The script's own test runs a
+`sed`-patched copy.
+
+**A run under `backend/tests` also triggers the per-worktree database teardown**, whatever the file tests: the
+session-scoped autouse fixture `_empty_the_database_after_the_session` (`backend/tests/conftest_db.py:408`, the
+`empty_the_database()` call and its warning at `:432-441`) empties the test database at the end of the session.
+The database must therefore already be migrated and created for the worktree; if it is not, the run still exits with
+pytest's code and only prints a "could not empty the test database" warning.
 
 ## Expensive-run checklist — pytest, gate, frontend as one pattern
 

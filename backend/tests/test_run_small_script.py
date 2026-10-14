@@ -2,10 +2,11 @@
 
 RL-1626 (a)-(e), the maintainer's (by delegation) entry "2026-10-14 11:34:58 BST" in `to-lead.md`:
 each refusal below is proven by running the script on bad input and asserting its exit code and
-message. Nothing here takes the real `/tmp/slots/small-test` flock or a gate slot: `RUN_SMALL_SLOT`
-points the flock at a file under `tmp_path`, `RUN_SMALL_LOADAVG` at a fake `/proc/loadavg`, and a
-stub `uv` first on `PATH` stands in for the real pytest run. Those two variables exist for these
-tests only; `RUN_SMALL_WAIT` bounds the held-flock test to one second.
+message. The real script has no environment hook that moves its load source, its flock path or its
+wait (a hook a seat can set is a bypass of the refusals). Nothing here takes the real
+`/tmp/slots/small-test` flock or a gate slot: `Env.run` runs a COPY of the script in `tmp_path`
+whose three constants are substituted by `sed`, and a stub `uv` first on `PATH` stands in for the
+real pytest run. `test_the_real_script_*` pins that the real source holds the literal constants.
 """
 
 from __future__ import annotations
@@ -13,6 +14,7 @@ from __future__ import annotations
 import fcntl
 import os
 import pathlib
+import re
 import subprocess
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -24,6 +26,7 @@ SCRIPT = ROOT / "scripts" / "run-small.sh"
 
 # Exit codes the script documents (flock's own -E code is 75, kept clear of pytest's 0-5).
 USAGE, SLOT_SET, LOAD, ALEMBIC, TOO_MANY, NOT_A_TEST_FILE, BUSY = 64, 65, 66, 67, 68, 71, 75
+OUTSIDE_WORKTREE, NOT_TEST_NAMED = 72, 73
 
 
 class Env:
@@ -38,6 +41,12 @@ class Env:
         self.loadavg = tmp / "loadavg"
         self.loadavg.write_text("0.50 0.50 0.50 1/100 1\n")
         self.record = tmp / "record"
+        self.script = tmp / "run-small.sh"
+        patched = SCRIPT.read_text()
+        for name, value in (("slot", self.slot), ("loadavg", self.loadavg), ("wait_s", 1)):
+            patched, n = re.subn(rf"^{name}=.*$", f"{name}={value}", patched, flags=re.M)
+            assert n == 1, name
+        self.script.write_text(patched)
         self.bin = tmp / "bin"
         self.bin.mkdir()
         uv = self.bin / "uv"
@@ -45,7 +54,7 @@ class Env:
             "#!/bin/bash\n"
             '{ echo "args: $*"; echo "slot: ${GIP_GATE_SLOT:-}";'
             ' echo "nice: $(cut -d" " -f19 /proc/self/stat)";'
-            ' echo "io: $(ionice -p $$)"; } > "$RUN_SMALL_RECORD"\n'
+            ' echo "io: $(ionice -p $$)"; } > "$STUB_RECORD"\n'
             "exit ${STUB_RC:-0}\n"
         )
         uv.chmod(0o755)
@@ -54,14 +63,11 @@ class Env:
         env = {k: v for k, v in os.environ.items() if k != "GIP_GATE_SLOT"}
         env.update(
             PATH=f"{self.bin}:{env['PATH']}",
-            RUN_SMALL_SLOT=str(self.slot),
-            RUN_SMALL_LOADAVG=str(self.loadavg),
-            RUN_SMALL_WAIT="1",
-            RUN_SMALL_RECORD=str(self.record),
+            STUB_RECORD=str(self.record),
         )
         env.update(extra)
         return subprocess.run(
-            ["bash", str(SCRIPT), *args], env=env, capture_output=True, text=True, timeout=60
+            ["bash", str(self.script), *args], env=env, capture_output=True, text=True, timeout=60
         )
 
 
@@ -173,3 +179,38 @@ def test_source_has_no_handover_path_no_flock_double_dash_and_no_alembic_command
     assert "handover" not in source
     assert "flock --" not in source
     assert "alembic upgrade" not in source
+
+
+def test_the_real_script_holds_its_constants_and_no_environment_override() -> None:
+    source = SCRIPT.read_text()
+    for literal in ("slot=/tmp/slots/small-test\n", "loadavg=/proc/loadavg\n", "wait_s=7200\n"):
+        assert literal in source, literal
+    assert "RUN_SMALL" not in source
+    for name in ("slot", "loadavg", "wait_s"):
+        assert f"${{{name}:-" not in source, name
+    assert "getenv" not in source
+
+
+@pytest.mark.parametrize("name", ["conftest.py", "helper.py", "tests_a.py", "xtest_a.py"])
+def test_a_py_file_not_named_as_a_test_is_refused(env: Env, name: str) -> None:
+    (env.wt / name).write_text("")
+    _refused(env, env.run(str(env.wt), name), NOT_TEST_NAMED, f"not named as a test file: {name}")
+
+
+def test_a_suffix_named_test_file_is_accepted(env: Env) -> None:
+    (env.wt / "a_test.py").write_text("")
+    assert env.run(str(env.wt), "a_test.py").returncode == 0
+
+
+def test_a_test_file_outside_the_worktree_is_refused(env: Env) -> None:
+    outside = env.tmp / "test_outside.py"
+    outside.write_text("")
+    _refused(env, env.run(str(env.wt), str(outside)), OUTSIDE_WORKTREE, "outside the worktree")
+    _refused(env, env.run(str(env.wt), "../test_outside.py"), OUTSIDE_WORKTREE, "outside")
+
+
+def test_a_symlink_resolving_outside_the_worktree_is_refused(env: Env) -> None:
+    outside = env.tmp / "test_real.py"
+    outside.write_text("")
+    (env.wt / "test_link.py").symlink_to(outside)
+    _refused(env, env.run(str(env.wt), "test_link.py"), OUTSIDE_WORKTREE, "outside the worktree")
