@@ -19,8 +19,10 @@ relates: [SL-8045]                # FD 8036 is a working id, cited in the body u
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L5. WK-1178 is the
 > standing maintenance Work and has no single map plan; this delta cuts one new slice, `SL-8045`,
-> and changes no other slice. It is `draft` while DP-1 to DP-4 are open, and it decides none of
-> them. Required sub-skill for the executor: `subagent-driven-development` or `executing-plans`.
+> and changes no other slice. DP-1 to DP-4 are ruled, by the maintainer (by delegation) directly, in
+> `to-lead.md` "2026-10-14 12:18:57 BST" item (1); that entry is the record and no decision-maker
+> `RL-` is filed. The plan stays `draft` until the slice's activation commit. Required sub-skill
+> for the executor: `subagent-driven-development` or `executing-plans`.
 > Bound skills: `spec-change` (the spec text lands first, in the slice's commit),
 > `fastapi-service`, `python-package`, `python-test`, `dev-commands`, `git-hygiene`.
 
@@ -37,10 +39,14 @@ line number below hold at both trees.
 
 Done means: a failed authentication that resolves to a workspace leaves exactly one
 `principal.auth_failed` Audit Event in that workspace, committed even though the request's own unit
-of work rolls back with the 401; a failure that resolves to no workspace is recorded as DP-3 rules;
-`07` FR-392 and `06` FR-368 say the same thing, as DP-4 rules; and the test that was green only
-because it caught the raise inside the unit is replaced by HTTP reds, each red on `main` by its
-cause. One slice, `SL-8045`.
+of work rolls back with the 401, written in its own unit of work after the auth unit has rolled
+back (DP-1 (i)); if that write fails, the caller gets a `5xx`, never a silent `401` (DP-2 F1);
+**every** failure, keyed or not and the bearer path included, is counted in
+`gip_auth_failures_total{reason}` over a closed set of exactly eight labels, and a workspace-less
+failure keeps a `WARNING` log line with no secret (DP-3 B); `07` FR-392 carries a dated amendment
+and `06` FR-368 a dated pointer (DP-4 (a)); and the two tests that were green only because they
+caught the raise inside the unit are replaced by HTTP reds, each red on `main` by its cause. One
+slice, `SL-8045`.
 
 ## Authority
 
@@ -84,13 +90,31 @@ cause. One slice, `SL-8045`.
   the two agree.
   Severity: the auditor proposes after the run. On your read the HIGH condition ("no other record of
   failed attempts") holds, so I expect HIGH."
+- **The rulings:** the maintainer's (by delegation) entry "2026-10-14 12:18:57 BST — PL 8044/SL 8045
+  (failed-auth fix) and PL 8016 re-cut DPs RULED by me directly (no DM needed); superuser finding
+  folded into FD 8038 / S-b (re lead 12:18:08)", item (1), verbatim:
+  "**(1) PL 8044/SL 8045 @dc1c9bc6: all four as recommended; this entry is the record (cite it in the
+  plan's Ruled column, no separate RL):**
+  - **DP-1 (i):** a separate unit_of_work opened after the auth unit rolls back. The red asserts the
+    row SURVIVES the request's 401 in production shape (a real HTTP 401, the exception escaping).
+  - **DP-2 F1:** if the failure-audit write itself fails → 5xx, never a silent 401. That is
+    consistent with "audit never fails silently"; it is counted.
+  - **DP-3 B:** `gip_auth_failures_total{reason}` with a CLOSED label set (exactly the 8 named; a
+    test asserts no other label value can be emitted, and no key material, prefix or principal in any
+    label) + a WARNING log line without secrets. A/C/D rejected for flood/oracle risk, agreed. The
+    bearer path's INFO-only log (service.py:116-118) is raised to WARNING and counted under the same
+    metric.
+  - **DP-4 (a):** the dated 07 FR-392 amendment + the 06 FR-368 pointer, with the T-text as in the
+    plan.
+  - **R9:** the vacuous `test_no_audit_event_contains_a_key_secret` (0 events in production shape)
+    becomes a red that FIRST produces failure events, then asserts no secret. Good."
 - **Severity:** no later entry in `to-lead.md` names FD 8036 (`grep -n 8036` over the file prints
   nothing at 12:10 BST). The lead's reservation records it as "proposed HIGH" (`eta.md`,
   "2026-10-14 11:54:58 BST lead: RESERVED working id FD 8036"). This plan assumes no severity; the
   slice is fixed in P2 either way (11:11:50).
 - **NFR-519:** released by 11:11:50. This slice names it in no marker and does not regress it: the
-  business path keeps `audit.record`'s same-transaction rule unchanged, and DP-2 decides what a
-  failing *failure-audit* write does.
+  business path keeps `audit.record`'s same-transaction rule unchanged, and DP-2 (F1) makes a
+  failing *failure-audit* write a `5xx`.
 
 ## The run (auditor-failauth)
 
@@ -152,25 +176,28 @@ have written one row. It wrote none.
 
 ## Decision points
 
-All four go to the decision-maker; the planner recommends and does not rule. DP-3 changes what
-FR-392 means, so it is a spec decision.
+All four are ruled by the maintainer (by delegation) directly, in the entry quoted under
+*Authority* ("2026-10-14 12:18:57 BST", item (1): "all four as recommended; this entry is the
+record"). No decision-maker `RL-` is filed. The options not taken are removed here; they stand in
+this file at `dc1c9bc6`.
 
-| DP | Question | Options | Recommendation | Kind | Blocking? | Resolved by |
+| DP | Question | Ruling | Why | Kind | Blocking? | Ruled |
 |---|---|---|---|---|---|---|
-| **DP-1** | How does a keyed-workspace failure's audit row survive the 401? | **(i) Its own committed unit of work.** `authenticate_api_key` stops writing; it raises `AuthenticationFailed`, a `PlatformError` subclass carrying the 401 fields plus `workspace_id` and `reason`. `require_caller` wraps each auth `async with` in `try/except AuthenticationFailed`: **after** the auth unit has rolled back, it opens `database.unit_of_work()`, calls `audit.record` (its transaction rule holds), commits, and re-raises. Costs: one extra transaction per keyed failure, sequential, never two connections at once; the auth function's callers in tests no longer see a row (only the HTTP or `require_caller` shape does, which is the point). No lock-order risk: the auth unit holds no advisory lock when it exits. **(i-a) the same, but `_audit_auth_failure` opens a second session inline** while the auth session is still open: two pooled connections per failure, and the write happens before the rollback it must survive. **(ii) Outbox.** An outbox row in the auth unit is rolled back with it, so it needs its own transaction anyway, which is (i) plus a new Job kind, a handler, a broker hop and a delayed row whose `at` is the worker's time. **(iii) Commit-then-reraise in the same unit.** `require_caller` catches the failure inside the `async with`, lets the unit commit, and raises after. One transaction, no new session. Cost: it commits whatever else the auth unit flushed. At this tree the failure branches flush nothing else (`last_used_at` is set only on success, `:238-239`), but nothing enforces that, and a later write before a refusal would be committed by the refusal. | **(i).** The committed transaction contains the audit row and nothing else, by construction, which no future edit to the auth branches can break. It also keeps `audit.record` exactly as it is (P3), so R2 and NFR-519 are untouched on the business path. (iii) is equally small but rests on an unchecked invariant; (ii) solves nothing (i) does not. | design | **yes** — every red below is written against it | the decision-maker's `RL-` |
-| **DP-2** | If the failure-audit write itself fails (database down, constraint), what does the caller get? | **(F1) Fail closed, loud:** the exception escapes; the response is the platform's 5xx problem response, and the error handler logs it. No `try/except` around the write, as `audit.py` `:6-9` requires of every audit write. **(F2) Keep the 401, log `ERROR` and count it:** the refusal is unchanged and the lost row is counted. A swallowed audit failure, which `audit.py` `:6-9` calls "the one outcome the requirement forbids". **(F3) Retry, then F1 or F2.** More code, and the database being down fails the auth lookup itself first. | **(F1).** The request is refused either way, so no access is granted; the only change is that a lost audit row is visible as a 5xx, never silent (NFR-519's word). A caller cannot choose when the database fails, so the 5xx is no oracle for which check failed. | design | **yes** — the response code is a public behaviour | the same `RL-` |
-| **DP-3** | Where is a workspace-less failure recorded (malformed key, unknown prefix or wrong secret, archived account with no account row, a rejected bearer token)? | **(A) A platform-scope audit chain.** A nullable or sentinel `workspace_id` and a platform chain. Costs: a migration and FR-417's one-head census; `verify_chain`, export and FR-372 all change; one advisory-lock key serialises every garbage request on the internet behind every other (P3), and the table grows at the attacker's rate. `service.py:90-93` already refuses "inventing one to hold an event". **(B) A labelled counter plus the structured log.** `gip_auth_failures_total{reason}` counts **every** failure, keyed or not; a workspace-less failure also keeps its structured `WARNING` line (trace id, action, reason; the bearer path's `INFO` at `:116` is raised to the same form). A keyed failure also writes its audit row (DP-1). Bounded cardinality, no storage at the attacker's rate. Cost: the durable record of a workspace-less failure is the log's retention and the metric, not the audit export; FR-392 must say so. **(C) B plus a non-chained `auth_failures` table.** A queryable record. Costs: a migration, a retention and purge rule, a size cap or rate limit against flooding, and a decision on which attacker-supplied text may be stored (R3: never a secret). **(D) Split by cause.** A wrong secret against a real prefix is audited in that key's workspace (the key row knows it); the rest go to B. Costs: the write makes "wrong secret" slower than "unknown prefix", recreating the prefix oracle that `:190-192` refuses unless the write leaves the response path; and anyone holding a prefix (audited by prefix, FR-375) can append rows to that workspace's chain at will, contending its lock. **Sub-question, the reason labels:** a closed set, never input: `malformed_key`, `invalid_key` (unknown prefix and wrong secret, one label, as `:190-192` requires), `account_archived`, `key_revoked`, `key_expired`, `environment_not_granted`, `bearer_expired`, `bearer_rejected`. | **(B), with all eight labels**, including `account_archived` and `environment_not_granted`. The counter then totals every 401 `require_caller` raises, so an alert on it covers keyed and workspace-less failures in one series. (B) is the only option that adds no storage an unauthenticated caller can fill. The audit export keeps holding what a workspace owner can act on: failures by a real key of theirs. | design (spec change) | **yes** — the 11:11:50 entry, item 3: "ruled before the build" | the same `RL-` |
-| **DP-4** | Where does the clarification land? | **(a) A dated amendment on `07` FR-392** (the rule: scope, own transaction, the counter) **and a dated pointer line on `06` FR-368.** **(b) Amend `06` FR-368 to name failed authentication.** FR-368's sentence is "written in the same transaction as the change (R2)", and a failed authentication has no change and is deliberately written in its own transaction, so the row would contradict its own requirement. | **(a).** FR-392 owns the rule; FR-368 points at it and says why R2's clause does not govern it. | spec placement | **yes** — the slice's first commit applies it | the same `RL-` |
+| **DP-1** | How does a keyed-workspace failure's audit row survive the 401? | **(i) Its own committed unit of work.** `authenticate_api_key` stops writing; it raises `AuthenticationFailed`, a `PlatformError` subclass carrying the 401 fields plus `workspace_id` and `reason`. `require_caller` wraps each auth `async with` in `try/except AuthenticationFailed`: **after** the auth unit has rolled back, it opens `database.unit_of_work()`, calls `audit.record` (its transaction rule holds), commits, and re-raises. One extra transaction per keyed failure, sequential, never two connections at once; no lock-order risk, because the auth unit holds no advisory lock when it exits. The red asserts the row survives a real HTTP `401`, the exception escaping (R1 to R3). | The committed transaction contains the audit row and nothing else, by construction, which no future edit to the auth branches can break. `audit.record` stays exactly as it is (P3), so R2 and NFR-519 are untouched on the business path. | design | no — ruled | the maintainer (by delegation), `to-lead.md` "2026-10-14 12:18:57 BST", item (1), DP-1 |
+| **DP-2** | If the failure-audit write itself fails (database down, constraint), what does the caller get? | **(F1) Fail closed, loud:** the exception escapes; the response is the platform's `5xx` problem response, and the error handler logs it. No `try/except` around the write, as `audit.py` `:6-9` requires of every audit write. The failure is still counted: the counter is incremented before the write (Task 3 item 1), so a `5xx` from a lost row is one `gip_auth_failures_total` increment (R8). | The request is refused either way, so no access is granted; a lost audit row is visible as a `5xx`, never a silent `401` (NFR-519's word). A caller cannot choose when the database fails, so the `5xx` is no oracle for which check failed. | design | no — ruled | the same entry, item (1), DP-2 |
+| **DP-3** | Where is a workspace-less failure recorded (malformed key, unknown prefix or wrong secret, archived account with no account row, a rejected bearer token)? | **(B) A labelled counter plus the structured log.** `gip_auth_failures_total{reason}` counts **every** failure, keyed or not. Its one label is `reason`, a **closed set of exactly eight** values, never input: `malformed_key`, `invalid_key` (unknown prefix and wrong secret, one label, as `:190-192` requires), `account_archived`, `key_revoked`, `key_expired`, `environment_not_granted`, `bearer_expired`, `bearer_rejected`. No other label value can be emitted, and no key material, prefix or principal appears in any label (R10). A workspace-less failure also keeps its structured `WARNING` line (trace id, action, reason; no secret, R10). The bearer path's `INFO`-only log (`service.py:116-118`) is raised to `WARNING` and counted under the same metric (R7). A keyed failure also writes its audit row (DP-1). | The counter totals every 401 `require_caller` raises, so one series covers keyed and workspace-less failures. It adds no storage an unauthenticated caller can fill; A, C and D are rejected for flood and oracle risk (the ruling: "A/C/D rejected for flood/oracle risk, agreed"). | design (spec change) | no — ruled | the same entry, item (1), DP-3 |
+| **DP-4** | Where does the clarification land? | **(a) A dated amendment on `07` FR-392** (the rule: scope, own transaction, the counter) **and a dated pointer line on `06` FR-368**, with T1 and T2 below as written. | FR-392 owns the rule; FR-368 points at it and says why R2's clause does not govern it: FR-368's rows are "written in the same transaction as the change (R2)", and a failed authentication has no change. | spec placement | no — ruled | the same entry, item (1), DP-4 |
 
-## The spec text (T-text), PROPOSED, applied in the slice's commit, not here
+## The spec text (T-text), as ruled, applied in the slice's commit, not here
 
-Written for DP-1 (i), DP-2 (F1), DP-3 (B) and DP-4 (a). If the ruling differs, the `RL-` carries the
-replacement text and the slice applies that. `<date>`, the FD id and the `RL-` id are filled in the
-slice's commit. This plan does not edit `docs/specs/`.
+Written for DP-1 (i), DP-2 (F1), DP-3 (B) and DP-4 (a), all four ruled; DP-4's ruling keeps it as
+written ("with the T-text as in the plan", 12:18:57 item (1)). `<date>` and the FD id are filled in
+the slice's commit; no `RL-` id is cited, because the rulings are the 12:18:57 entry and PL-8044
+carries them. This plan does not edit `docs/specs/`.
 
 **T1 — a dated amendment appended to `07` FR-392's cell (`docs/specs/07-platform.md:76`):**
 
-> *Amended `<date>` (FD-`<n>`, RL-`<n>`):* **A failed authentication is recorded whether or not it
+> *Amended `<date>` (FD-`<n>`, PL-8044):* **A failed authentication is recorded whether or not it
 > reaches a workspace, and its record survives the refusal.** A failure whose credential resolves to
 > a workspace (an API key that is revoked, expired, belongs to an archived Service Account, or was
 > presented for an environment the account is not granted) writes one `principal.auth_failed` Audit
@@ -200,7 +227,8 @@ The row is in `docs/roadmap.md` under WK-1178. One PR, one `LG-`, per Lean P2 L1
 
 ### Task 0 — the readiness reads (no code)
 
-1. Read the `RL-` that rules DP-1 to DP-4 and quote each ruling into the `LG-`.
+1. Quote the rulings of DP-1 to DP-4 and R9 into the `LG-` from the 12:18:57 entry, item (1)
+   (quoted under *Authority*); no `RL-` exists to read.
 2. Confirm the harness of P9 against the `database` and `workspace_id` fixtures the reds need (the
    app and the fixtures must point at one database), and whether `create_app(api_settings)` has an
    OIDC verifier that refuses a garbage bearer token. If it has none, R7's bearer limb is a
@@ -216,31 +244,34 @@ Apply T1 and T2 as ruled. Run `python3 scripts/audit-docs.py` once, through gate
 A new file `backend/tests/test_auth_failure_audit.py`, every test `@pytest.mark.req("FR-392")`,
 every test through the HTTP harness (P9), never `authenticate_api_key` inside a unit of work.
 `test_auth_keys.py:198-212` is **deleted** (R1 replaces it; 11:11:50 item 2: "corrected, not kept
-beside it"). Each red's failure on `main` is quoted in the `LG-` by its cause.
+beside it"), and `:216-238` is **deleted** (R9 replaces it in the new file; 12:18:57 item (1),
+R9). Each red's failure on `main` is quoted in the `LG-` by its cause.
 
 | # | Test | Red on `main`, by cause |
 |---|---|---|
-| R1 | A revoked key → HTTP `401`; the key's workspace then holds **exactly one** `principal.auth_failed` row, `after == {"reason": "key revoked"}`, and its `trace_id` equals the response's `x-trace-id`. | `0 != 1`: the row was flushed in the auth unit and rolled back with the 401 (P2). |
+| R1 | A revoked key → a real HTTP `401` (the exception escaping the auth unit, DP-1 (i)); the row **survives** it: the key's workspace then holds **exactly one** `principal.auth_failed` row, `after == {"reason": "key revoked"}`, and its `trace_id` equals the response's `x-trace-id`. | `0 != 1`: the row was flushed in the auth unit and rolled back with the 401 (P2). |
 | R2 | The same for an expired key: `after == {"reason": "key expired"}`, response code `API_KEY_EXPIRED`. | `0 != 1`, the same cause. |
 | R3 | The same for an archived account (`"service account archived"`) and for a key presented for an environment not granted (`"environment not granted"`), one test each. | `0 != 1`, the same cause. |
 | R4 | **Guard:** a valid key → `200`, and the workspace holds **no** `principal.auth_failed` row. | Green on `main` (success never writes). Shown red on a planted breaker that records unconditionally; the `LG-` quotes it. |
-| R5 | Under DP-3 (B): a malformed key, an unknown prefix and a wrong secret each → `401`, and `gip_auth_failures_total{reason="malformed_key"}` / `{reason="invalid_key"}` rise by exactly 1 per request (read with `REGISTRY.get_sample_value` before and after); `audit_events` total is unchanged. | `None`: the metric does not exist (P5). |
-| R6 | Under DP-3 (B): R1's and R2's requests also raise `{reason="key_revoked"}` and `{reason="key_expired"}` by 1. | `None`, the same cause. |
-| R7 | Under DP-3 (B): a rejected bearer token → `401`, `{reason="bearer_rejected"}` rises by 1, and the `app.auth` line is a `WARNING` with `action` and `reason` (Task 0 item 2 decides the harness). | `None`, the same cause. |
-| R8 | **Guard**, under DP-2 (F1): with `audit.record` patched to raise, a revoked key → a `5xx` problem response, not `401`. | Green on `main` (the raise escapes the auth unit). Shown red on a planted breaker that wraps the write in `try/except`; the `LG-` quotes it. |
-| R9 | `test_no_audit_event_contains_a_key_secret` (`:216-238`) moves to the HTTP shape and first asserts exactly one event, then that the secret is in neither `after` nor `before`. | `0 != 1` (P6: today, in production's shape, its loop runs over nothing). |
+| R5 | A malformed key, an unknown prefix and a wrong secret each → `401`, and `gip_auth_failures_total{reason="malformed_key"}` / `{reason="invalid_key"}` rise by exactly 1 per request (read with `REGISTRY.get_sample_value` before and after); `audit_events` total is unchanged. | `None`: the metric does not exist (P5). |
+| R6 | R1's and R2's requests also raise `{reason="key_revoked"}` and `{reason="key_expired"}` by 1. | `None`, the same cause. |
+| R7 | A rejected bearer token → `401`, `{reason="bearer_rejected"}` rises by 1, and the `app.auth` line is a `WARNING` (no longer `INFO`, 12:18:57 DP-3) with `action` and `reason` (Task 0 item 2 decides the harness). | `None`, the same cause; and the line is `INFO` (`service.py:116-118`). |
+| R8 | **Guard**, DP-2 (F1): with `audit.record` patched to raise, a revoked key → a `5xx` problem response, not `401`, and `{reason="key_revoked"}` still rises by 1 ("it is counted"). | The counter limb: `None` on `main`, the metric does not exist (P5). The `5xx` limb is green on `main` (the raise escapes the auth unit), so it is shown red on a planted breaker that wraps the write in `try/except`; the `LG-` quotes it. |
+| R9 | `test_no_audit_event_contains_a_key_secret` (`:216-238`) moves to the HTTP shape and is no longer vacuous: it **first produces** the four keyed failure events (a revoked, an expired, an archived-account and a not-granted key, each through HTTP, each key's full token and secret known to the test), asserts **exactly four** `principal.auth_failed` rows exist, and **only then** asserts that no key's secret, and no full token, appears in any of those rows' `after`, `before` or any other text column. | `0 != 4` (P6: today, in production's shape, no event is produced, so the old loop ran over nothing). |
+| R10 | **The closed label set**, DP-3 (B). After driving every failure path R1 to R3, R5 and R7 cover (each with a known key prefix, secret, key id and Service Account id and name): (a) every `gip_auth_failures_total` sample read from `REGISTRY.collect()` has the label keys `{"reason"}` exactly, and its `reason` value is one of the eight named, and the set of reason values in the code (the `AuthFailureReason` type, Task 3 item 1) equals those eight exactly; (b) passing any other value to `record_auth_failure` raises and adds no sample; (c) no label value, and no `app.auth` `WARNING` line captured by `caplog` in the run, contains any key's secret, full token or prefix, the key id, or the Service Account's id or name. | The metric is absent from `REGISTRY` and the reason type does not exist (P5). Shown red also on a planted breaker that labels with the raw detail string or the key prefix; the `LG-` quotes it. |
 
-Under another DP-3 ruling, R5 to R7 are rewritten from the `RL-` before Task 3, and the `LG-` says
-which rows changed.
-
-### Task 3 — the implementation (for the recommended rulings)
+### Task 3 — the implementation (as ruled)
 
 1. `backend/src/app/auth/service.py`: an `AuthenticationFailed(PlatformError)` carrying
-   `workspace_id: UUID | None` and `reason` (the closed label set). Every branch of P1 raises it
-   instead of calling `_audit_auth_failure`; the bearer branch (P4) raises it too. A function
-   `record_auth_failure(database, exc)` increments the counter, and then either opens
-   `database.unit_of_work()` and calls `audit.record` with today's arguments (`:98-106`, `after`
-   unchanged), or logs today's `WARNING`. `_audit_auth_failure` is removed. The module docstring's
+   `workspace_id: UUID | None` and `reason: AuthFailureReason`, a `StrEnum` whose members are
+   exactly the eight DP-3 labels, so no other value can reach the label. Every branch of P1 raises
+   it instead of calling `_audit_auth_failure`; the bearer branch (P4) raises it too, and its `INFO`
+   line (`:116-118`) is removed in favour of the `WARNING` below. A function
+   `record_auth_failure(database, exc)` refuses a reason that is not an `AuthFailureReason` member,
+   increments the counter with `reason.value` (first, so a failing write is still counted, DP-2),
+   and then either opens `database.unit_of_work()` and calls `audit.record` with today's arguments
+   (`:98-106`, `after` unchanged), with no `try/except` around it (DP-2 F1), or logs a `WARNING`
+   with `trace_id`, `action` and `reason`, never the presented credential. `_audit_auth_failure` is removed. The module docstring's
    FR-392 sentence (`:8-9`) and `_audit_auth_failure`'s docstring reasoning move to the new function.
 2. `backend/src/app/api/deps.py:232-242`: each auth `async with` sits inside `try / except
    AuthenticationFailed as exc: await record_auth_failure(database, exc); raise`, the `except`
@@ -251,7 +282,7 @@ which rows changed.
 ### Task 4 — the gate and the closing acts
 
 The full gate, both halves (CLAUDE.md §11), in a granted slot; the `LG-` names the tree. The `LG-`
-quotes each red and each breaker by cause, the RL's rulings, and the FD the merge discharges.
+quotes each red and each breaker by cause, the 12:18:57 rulings, and the FD the merge discharges.
 `SL-8045`'s closing lines on `docs/roadmap.md` in the slice PR.
 
 ## The write set
@@ -259,7 +290,7 @@ quotes each red and each breaker by cause, the RL's rulings, and the FD the merg
 `docs/specs/07-platform.md` (FR-392's cell only), `docs/specs/06-governance.md` (FR-368's cell
 only), `backend/src/app/auth/service.py`, `backend/src/app/api/deps.py`,
 `backend/src/app/observability/metrics.py`, `backend/tests/test_auth_failure_audit.py` (new),
-`backend/tests/test_auth_keys.py` (`:198-212` deleted, `:216-238` moved to the new file), the
+`backend/tests/test_auth_keys.py` (`:198-212` deleted, `:216-238` deleted and replaced by R9 in the new file), the
 slice's `LG-` under `docs/ledgers/`, `docs/roadmap.md` (the `SL-8045` row's closing lines only),
 and `docs/INDEX.md` (regenerated). No migration, no `model-schema` change, no contract change: the
 401's problem body is unchanged.
@@ -277,15 +308,15 @@ the alert rule on the new counter (FR-443's observability Work).
 
 1. **This delta passes the docs checks on its own branch**, check 31's working-id lines excepted:
    `python3 scripts/audit-docs.py` exits 0 apart from them.
-2. **DP-1 to DP-4 each carry a ruling** in the decision-maker's `RL-` before Task 2 is committed;
-   the `LG-` quotes each.
+2. **DP-1 to DP-4 each carry a ruling**, the maintainer's (by delegation) entry "2026-10-14 12:18:57
+   BST" item (1); the `LG-` quotes each before Task 2 is committed.
 3. **Spec first:** in the slice PR, `git log --format=%s origin/main..<slice head> -- docs/specs`
    names a commit earlier than every commit touching `backend/src`, and `git grep -n
-   "gip_auth_failures_total" <slice head> -- docs/specs/07-platform.md` finds FR-392's amendment
-   (under DP-3 (B)).
+   "gip_auth_failures_total" <slice head> -- docs/specs/07-platform.md` finds FR-392's amendment.
 4. **The reds:** `uv run pytest -q backend/tests/test_auth_failure_audit.py
    backend/tests/test_auth_keys.py` exits 0 at the slice head, and the `LG-` quotes R1, R2, R3, R5,
-   R6, R7 and R9 red on `main` by the causes in the table, and R4's and R8's breakers red.
+   R6, R7, R8 (its counter limb), R9 and R10 red on `main` by the causes in the table, and R4's,
+   R8's and R10's breakers red.
 5. **No in-unit catch remains for the audit claim:** `git grep -n "test_a_failed_authentication_is_audited"
    <slice head> -- backend/tests` prints nothing, and `git grep -n -A3 "unit_of_work" <slice head>
    -- backend/tests/test_auth_failure_audit.py` shows no `pytest.raises` inside a unit.
@@ -294,11 +325,33 @@ the alert rule on the new counter (FR-443's observability Work).
 7. **The full gate, both halves** (CLAUDE.md §11) at the slice head, in a granted slot; the `LG-`
    names the tree.
 
+## Self-review
+
+- **Coverage of the 12:18:57 rulings (item (1)).** DP-1 (i) → the DP table, Task 3 items 1-2, R1 to
+  R3 (a real HTTP `401`, the row survives), Acceptance 6. DP-2 F1 → Task 3 item 1 (no `try/except`,
+  counted first), R8, T1's last sentence. DP-3 B → Task 3 items 1 and 3 (`AuthFailureReason`, the
+  counter), R5 to R7, R10 (no other label value, no key material, prefix or principal in a label or
+  the `WARNING` line), the bearer `INFO` raised to `WARNING` (Task 3 item 1, R7). DP-4 (a) → T1 and
+  T2 kept as written, Task 1, Acceptance 3. R9 → R9 produces four events first, then asserts no
+  secret; Acceptance 4.
+- **No open option remains.** The DP table carries the ruled option only; "Under DP-3 (B)", "for
+  the recommended rulings", "PROPOSED" and every reference to a decision-maker `RL-` are gone. The
+  rejected options stand at `dc1c9bc6`.
+- **Activation.** Need 1 reads "DPs ruled — MET, 12:18:57"; FD 8036's minting, the census and the
+  lead's GO remain open. `SL-8045`'s row in `docs/roadmap.md` says the same.
+- **Literals.** The `file:line` locators are those read at `a3fc2e8d` (*Premises*);
+  `service.py:116-118` (the ruling's locator for the bearer log) was re-read at `a3fc2e8d` for this
+  amendment: `:116` is the `_log.info("bearer token rejected", …)` call, `:117-118` the raise.
+- **Type consistency.** `AuthenticationFailed`, `AuthFailureReason`, `record_auth_failure` and
+  `gip_auth_failures_total` are spelled the same in the DP table, Task 3, R5 to R10 and the
+  Acceptance Standard.
+
 ## Activation
 
 `SL-8045` is GO-able when all of these hold:
 
-1. **DP-1 to DP-4 ruled** in one `RL-`.
+1. **DPs ruled — MET, 12:18:57**: DP-1 to DP-4 and R9, the maintainer's (by delegation) entry
+   "2026-10-14 12:18:57 BST" item (1) in `to-lead.md`, quoted under *Authority*.
 2. **FD 8036 minted** (D17), so the `LG-` can name what the merge discharges.
 3. **The shared-path census** above, against whatever is open at GO.
 4. **This delta set `active`** in the slice's activation commit, and the lead's GO. Merged before
