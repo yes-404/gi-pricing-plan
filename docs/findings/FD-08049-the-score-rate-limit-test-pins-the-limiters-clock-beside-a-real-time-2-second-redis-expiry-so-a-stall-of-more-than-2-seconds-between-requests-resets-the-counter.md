@@ -69,7 +69,7 @@ A red-first regression test belongs with the fix: a test that deletes the key be
 (`redis.delete`, no sleep) is red on today's tree only if it asserts the TTL-independence; the cheaper
 red is asserting `await redis.ttl(key) > 60` after one request, red at 2.
 
-### Condition on the fix — expiry must stay tested (2026-10-14 16:42:26 BST; the maintainer's (by delegation) ruling accepting FD-8049, in `to-lead.md` after "2026-10-14 16:41:40 BST")
+### Condition on the fix — expiry must stay tested (2026-10-14 16:42:26 BST; the maintainer's (by delegation) ruling accepting FD-8049, in `to-lead.md`, entry "2026-10-14 16:43:11 BST — FD 8049 accepted + the expiry-coverage condition", which restates the ruling first sent after 16:41:40)
 
 Patching `_KEY_TTL_SECONDS` to 3600 in the fixture is the allowed "TTL the pinned clock cannot
 outrun", **on condition it leaves the limiter's key expiry covered.** Checked by reading
@@ -79,12 +79,12 @@ none touches `gip:ratelimit:*` TTL, and `test_score_rate_limit.py` has no hit. T
 if `pipe.expire` were deleted, which is the second defect the fix must close: with the line gone the
 counter keys never leave Redis.
 
-**So the fix MUST ADD an expiry test**, red first on a planted no-expire (a scratch copy with the
-`pipe.expire(...)` line removed, or the TTL set to `None`), using an *injected* TTL and no fixed sleep:
-1. after one `admit`, `await redis.pttl(key)` is in `(0, ttl*1000]` for the injected TTL (red at `-1`
-   when no expiry is set);
-2. with the injected TTL patched to 1, a bounded poll with a deadline (not a fixed sleep) sees the key
-   gone, and the next `admit` under the same pinned window returns count 1.
+**So the fix MUST ADD an expiry test**, red first on a planted no-expire (`pipe.expire` removed in a
+scratch copy: red, printed in its ledger, reverted). The 16:43:11 entry accepts this form, verbatim:
+*"(i) after one admit, `PTTL key` in (0, ttl·1000]; (ii) with an injected TTL of 1 s, a BOUNDED poll
+(max 3 s, polling `EXISTS`, not a fixed sleep) sees the key gone, and the next admit counts 1. …
+A real-time bounded poll against Redis is the only honest way to test a real TTL; it is not a retry."*
+Its finding that no expiry test exists today is the one recorded above.
 
 **Land early: struck twice today (D16 `5e03ced9`, D17 `3012748a`).**
 
