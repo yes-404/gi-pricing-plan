@@ -77,11 +77,11 @@ export async function getObjectiveCertificate(id: string): Promise<ObjectiveCert
 }
 
 // stub for red-first (SL-1275 prep); replaced at the GO
-export function previewObjective(..._args: unknown[]): unknown {
-  return undefined;
+export async function previewObjective(..._args: unknown[]): Promise<unknown> {
+  throw new Error("not implemented: stub for red-first (SL-1275 prep); replaced at the GO");
 }
 
 // stub for red-first (SL-1275 prep); replaced at the GO
-export function createObjective(..._args: unknown[]): unknown {
-  return undefined;
+export async function createObjective(..._args: unknown[]): Promise<unknown> {
+  throw new Error("not implemented: stub for red-first (SL-1275 prep); replaced at the GO");
 }
