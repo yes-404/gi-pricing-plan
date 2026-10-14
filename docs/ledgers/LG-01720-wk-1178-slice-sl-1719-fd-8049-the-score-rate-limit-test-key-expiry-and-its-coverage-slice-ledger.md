@@ -75,6 +75,8 @@ FAILED backend/tests/test_score_rate_limit.py::test_the_accounts_own_rate_wins_o
 - The one failure is `assert 409 == 429` at `:198`, again with `rate limit not enforced: TimeoutError` in the captured log (the first `/score` 2255.29 ms): the same Redis-timeout fail-open as the third red, a different test of the file. Both new tests passed. See the Audit section below for the explanation of the third red and this restored red.
 - Window end: `tree clean | ok`; `END 2026-10-14T16:55:25+00:00 rc=1`.
 
+- **Observation (no finding), dated 2026-10-14**, on the maintainer's (by delegation) entry "2026-10-14 18:01:20 BST" in `to-lead.md`: /score requests of 3116 ms and 2255 ms (`red.log`, `green.log`) against RL-1347's 50 ms Redis client timeout, at load1 ≈ 13 (an external load). It becomes a finding only if a run at load1 < 4 shows the limiter path itself over the bound.
+
 ### Audit
 
 Written 2026-10-14 17:59:52 BST by the auditor, against `origin/main...HEAD` of branch `sl-8051-fd8049-ratelimit-ttl` (head `95e97d84`, PR #1308). A proposal; the verdict is the lead's.
