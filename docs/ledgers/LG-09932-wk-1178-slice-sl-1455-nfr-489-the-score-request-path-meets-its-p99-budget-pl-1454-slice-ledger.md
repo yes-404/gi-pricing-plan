@@ -46,7 +46,216 @@ Not applicable to Task 0 (no code is committed). The two-half gate is Task 5's.
 
 ### Audit
 
-(the auditor's)
+**Slice audit of Tasks 1–3 (SL-1455, WK-1178, NFR-489)** by `auditor-sl1455`, 2026-10-14 (Europe/London, read
+between about 11:10 and 12:00 BST). Range: `origin/main...origin/sl-1455-wk1178-nfr489-http`, `origin/main`
+`4420f91f`, branch tip `11677daa`. Method: **reading only** (gate-1 is held; no test, no `audit-docs`, no
+run). Every "red on base" and "green" below is therefore the executor's recorded run in the Build log,
+**not re-run by me**; what I verified is that the asserts that were recorded would fail for the stated cause,
+by reading the test and the code. **Every verdict is PROPOSED; the lead decides.** This audit covers Tasks
+1–3 only; Tasks 4–6 (the sweep, gate, DP-6) are not audited here, so **I do not set the `LG-` or the `SL-`
+row `closed`**: the slice is not done.
+
+**Overall: no HIGH finding. Two MEDIUM (F1, F2: both are connection-holding consequences of the shared
+session, neither covered by a test), three LOW.** The ruled counts (1 checkout, 9 statements, one `UPDATE`
+inside 60 s) are delivered.
+
+#### 1. Scope from the spec, then evidence
+
+Scope derived from `PL-1454` Tasks 1–3 (`docs/plans/PL-01454-…` at `origin/main`, Task 1 Steps 1–4, Task 2
+Steps 1–3, Task 3 Steps 1–5) and `RL-1685` "Ruled" 1 (a)(b), 3, 4 and "What it obliges" (Task 1, 2, 3 bullets).
+
+| Item | Evidence (file:line at `11677daa`, test and its asserts READ) | Proposed verdict |
+|---|---|---|
+| T1 S1: fetch label says "miss" | `scripts/bench-rating.py` `_report(f"_fetch_bundle alone, {label}, cold (slot miss …)")`; docstring of `_measure_fetch` rewritten | **Delivered but untested** (no run; ruff and `py_compile` only, from-lead 10:32:47) |
+| T1 S2: warm figure (shared slot) | `_measure_fetch(…, warm=True)`, `_slot()` returns the one `shared` slot; second `_report(… warm (slot hit …))` | **Delivered but untested** |
+| T1 S2b: default-live arm | `_seed` adds a `DeploymentRow` to `uat`; `live_body` pops `rating_version_ref`; its own rung per arm | **Delivered but untested**; Acceptance 2 and 9 need Task 4's run |
+| T1 S3: `--workers N`, N in every header | `_serve(…, workers)` passes `--workers` only above 1; `main` prints `replica: N = …`; `backend/tests/test_bench_rating_header.py`: three tests, asserts `re.search(r"\bN = 4\b")`, `N = 1`, and `--workers` value in the `Popen` argv | **Delivered and tested** (the header is read from `main()` up to `_ctx`, not a mock of the print) |
+| T1 S4: `--help` shows the flag; one `--rates 25` run prints both fetch lines | no entry in the Build log | **Not evidenced**: owed (see F3) |
+| T2: `MAX_CHECKOUTS = 1`, `MAX_STATEMENTS = 9` at rate 0 | `backend/tests/test_score_request_cost.py` `one_warm_request` fixture (rate pinned to 0, warm-up request, `checkout` and `before_cursor_execute` listeners attached after the warm-up) and the two tests asserting `<= 1`, `<= 9` | **Delivered and tested** |
+| T2 / DP-1 (b): two `last_used_at` tests | same file: `…_not_written_on_every_request` (stamp 30 s old, `== 0` `UPDATE api_keys` by statement text), `…_written_once_the_interval_has_passed` (120 s old, `== 1` and the stamp advances by more than 60 s, read back through a new session, so it proves the commit) | **Delivered and tested** |
+| RL-1685 binding condition: sampling-rate read degrades | same file, `test_a_failed_sampling_rate_read_degrades_to_not_sampled`, two parametrisations ("raises", "aborts the transaction" by `SELECT 1/0` on the shared session); asserts the injected read was reached (`seen["hit"] == 1`), `200`, `outcome == "quoted"`, no trace row. `test_score.py` is not in the diff, so `test_a_trace_sampling_failure_does_not_turn_the_response_into_a_500` is unchanged | **Delivered and tested** (guard, labelled) |
+| RL-1685 "add no cache test" | none added; `bundle_slot.py` untouched | Conforms |
+| T3 S1 / DP-1 (a): one request-scoped session | `deps.py` `request_session` and `RequestSessionDep`; used by `require_caller`, `requires`, `_enforce_score_rate_limit`, `score`; `db/session.py` `reading()` | **Delivered and tested** for `/score`; **gaps for the other routes: F1** |
+| T3 S2 / DP-1 (b): 60 s | `auth/service.py` `LAST_USED_WRITE_INTERVAL = timedelta(seconds=60)`; write only if `None` or `now - last_used_at >= 60 s` | **Delivered and tested** (the exact 60 s boundary is not tested; not required) |
+| T3 S3 / DP-4: `gc.freeze()` | `main.py`, last statement before `yield`; pool arguments unchanged (`config.py` and `Database.__init__` pool arguments are not in the diff) | **Delivered and tested** (below) |
+| T3 S4: regression files pass | Build log: `test_score.py` 52, `test_traces.py` 39, `test_score_rate_limit.py` 9+1 skipped, `test_auth_keys.py` 20, `test_score_compare.py` 20, `test_api_authorisation_sweep.py` 9, bench 4 | Recorded, **not re-run by me** |
+| T3 S5: byte-identity of the `/score` body, `main` vs head | no entry | **Not evidenced**: owed (F3) |
+| RL-1685 obliges: write set widening recorded in the LG | Build log last bullet lists seven source files | Delivered (the two new tests and the bench are not in that list: F3) |
+| RL-1685 obliges: LG 9932's minted id into RL-1685 `relates` | owed at the mint (minter); LG 9932's own `relates` does not carry RL-1685 or RL 8024 | **Reassigned to the minter**, with F3's LG-side fix |
+
+**Four-verdict note for the lead:** T1 S1/S2/S2b and T1 S4, T3 S5 are *delivered but untested* or *not
+evidenced*; they are Task 4's run and a ledger entry, not missing code.
+
+#### 2. Reds by cause, and guards labelled as guards
+
+The Build log's "Phase 1 reds" bullet (this ledger, the entry headed "2026-10-14 — Phase 1 reds, then Task 3")
+records, on the red tree `78177ec8` plus the test files: `assert 6 <= 1` (`{'checkouts': 6, 'statements': 10}`),
+`assert 10 <= 9`, `assert 1 == 0` (one `UPDATE api_keys` inside 30 s). Each is a failure of the stated bound, so
+the cause is the right one (the plan's Task 2 Step 2 expected checkouts 5 and statements at least 7; Task 0
+re-measured 6 and 10, and RL-1685 fixed the bounds on that record). Stepwise: after the 60 s interval alone the
+cost file is `1 failed, 5 passed` (statements 9, checkouts still 6), after the session `6 passed`: the two
+changes are attributed separately. **Guards, green before and after, and labelled so** in the test
+docstrings and the ledger: `…_written_once_the_interval_has_passed`, and the two parametrisations of the
+degrade test. A guard that has never been red is not a regression proof of the fix, and the ledger does not
+claim it is. I could not run them; the asserts are read and would fail as recorded.
+
+**The gc test has BOTH asserts, each recorded red on the base** (`backend/tests/test_startup_gc_freeze.py`):
+(1) CALL: `monkeypatch.setattr(gc, "freeze", _spy)` where `_spy` records `hasattr(app.state, "rate_limiter")`
+and then calls the **real** `gc.freeze`; asserts `seen == [True]` (exactly one call, after the last start-up
+step). Recorded red on base: `assert [] == [True]`. (2) EFFECT: no spy; `before = gc.get_freeze_count()` after
+`create_app`, `at_yield` read inside `with TestClient(app)`; asserts `at_yield > before`. Recorded red on base:
+`assert 0 > 0` (0 before, 0 at yield). Both are the two asserts the maintainer's (by delegation) entry
+"2026-10-14 10:54:56 BST" rules; the spy wraps the real freeze, as ruled. The autouse `gc.unfreeze()` hands the
+permanent generation back. Remaining caveat: **F4**.
+
+Note on source: RL-1685's own form (count non-zero once started) is correctly **not** used; it is vacuous
+and the correcting RL 8024 (working id, `origin/docs-d16-2026-10-14` `75f9b1ae`) is not yet at `origin/main`.
+Until it merges, `docs/rulings/RL-01685-…` still says the vacuous form, and this slice's test follows the
+maintainer's entry, not the merged ruling text. The lead should keep the merge order RL 8024 before or with this slice.
+
+#### 3. The design risks, checked in the code
+
+**(a) `require_caller` commits only `if session.dirty`: is any write lost? No.** `authenticate_api_key` now sets
+`key.last_used_at` and does not flush (`auth/service.py`); `require_caller` commits when the session is dirty
+(`deps.py`, API-key branch), so the stamp is persisted **before** any handler or unit-of-work reads, and the
+`…_written_once_…` test reads it back from a new session. Unit-of-work callers open their own sessions
+(`database.unit_of_work()`) and do not depend on the stamp's session. The stamp is the only write on this path.
+Failure branches: every `_audit_auth_failure` row is added to the request session and the call then raises;
+the session is closed, so the row is rolled back. **That is the same net outcome as the base**, where the raise
+inside `async with database.unit_of_work()` rolled the same row back (the base lines are visible in the range
+diff). It is **pre-existing, not introduced here** (the lead's candidate in from-lead "2026-10-14 11:08:09
+BST" is right on this; I confirm it by reading both sides, not by a run): it stays with the maintainer.
+`autoflush=False` (`db/session.py`) means no stray flush on the dirty check.
+
+**(b) `requires()` closes by default, `keep_session=True` only on `/score`: is another route holding a
+connection or using a closed session? Yes for holding: F1 (MEDIUM).** Using a closed session is not a defect:
+`AsyncSession.close()` leaves it reusable and the next statement opens a new transaction. But
+`require_caller` itself does **not** release when it did not commit. For an API-key caller the first
+`SELECT` autobegins a transaction and holds a pool connection until the request ends. Routes that depend on
+`require_caller` **directly**, not through `requires()`: `api/me.py:42`, `api/deployments.py:38`,
+`api/approvals.py:66`, `api/demo.py:53`, `api/validation.py:68`. For those, the connection stays checked out
+for the whole request **and** the handler then opens its own `database.session()` or `unit_of_work()`
+(for example `me.py:110-111`, `approvals.py:80`, `validation.py:142`): two checkouts per request where the
+base held one at a time, and the base released the first at once. At pool defaults this is a nested
+checkout (see F2). No test covers it.
+
+**(c) `_maybe_sample_trace` with `read_session`: sampling semantics unchanged? Yes; one new coupling: F2.**
+Order is unchanged: resolve the rate, `decide_sampling(result.outcome, rate.effective_value,
+roll=random.random())` (decline and error at 100 %, `roll < rate` for quoted, floor unchanged), return if not
+sampled, then the `caller.environment is None` guard, then the write. Previously the guard ran inside the
+`unit_of_work`; now it runs before the write session is opened, so the raise happens one step earlier and is
+still caught by the same `try`, which logs and returns (the quote is still served). The rate is a read through
+`reading(read_session or database)`; a caller with no request session (`read_session=None`) gets a fresh
+`Database.session()`: the only `_maybe_sample_trace` caller in `backend/src` is `score()`, which passes it.
+The write keeps its own `unit_of_work`, so FR-259's isolation holds (the degrade test's "aborts the
+transaction" parametrisation shows the poisoned shared session does not change the status or the outcome).
+
+**(d) `rate_limit.enforce` takes a session: all callers updated? Yes.** `grep -rn 'rate_limit.enforce'
+backend/src packages scripts` finds one call: `_enforce_score_rate_limit` (`score.py:149`), now passing
+`session`; `enforce` no longer imports `Database`. `test_score_rate_limit.py` (9 passed, 1 skipped, recorded)
+exercises it through the app.
+
+**(e) Cached once per request, released on every exit path? Cached: yes. Released: yes by construction, with
+F1's holding window.** `request_session` is one callable used by `require_caller`, the `requires()` closure,
+`_enforce_score_rate_limit` and `score`, so FastAPI's per-request cache resolves it once. It is
+`async with database.session() as session: yield session`, so the session is closed when the dependency
+exits, including after an exception thrown in (the context manager's exit runs). No streaming route uses it.
+I did not verify FastAPI 0.142.2's exit point (before or after the response is sent); no venv is present in
+this worktree and I ran nothing. On `/score` the connection is held until that exit, which is the ruled design.
+The bearer and dev paths never touch the injected session (they take their own), so they cost no checkout.
+
+#### 4. Write set against `PL-1454` §"Write set"
+
+`git diff --stat origin/main...origin/sl-1455-wk1178-nfr489-http` lists 15 paths.
+| Path | Admitted by |
+|---|---|
+| `api/authz.py`, `api/deps.py`, `auth/service.py`, `api/score.py`, `db/session.py`, `main.py`, `scripts/bench-rating.py`, `tests/test_score_request_cost.py` | the plan's write-set table |
+| `platform/rate_limit.py` | **not in the plan's table;** RL-1685 "What it obliges", the last bullet (option (i): "if the Setting read moves, `rate_limit.py` (`enforce`)") |
+| `tests/test_bench_rating_header.py` | not in the table; RL-1685 "What it obliges", Task 1 bullet ("a test asserts the header carries the N") |
+| `tests/test_startup_gc_freeze.py` | not in the table; RL-1685 Task 3 bullet (the red-first freeze test); its **form** is the maintainer's 10:54:56 ruling |
+| the LG, `docs/INDEX.md` | the table (ledger and generated registry) |
+| the leaf plan (`status: draft → active`), `docs/roadmap.md` (row status) | activation by the dispatch GO, `to-lead.md` "2026-10-10 21:38:39 BST"; not Tasks 1–3 |
+
+In the table and **not touched**, correctly: `config.py` (DP-1 (d) is not admitted), `bundle_slot.py`,
+`test_score.py` (both read-only), `scripts/demo.py` and `test_demo_command.py` (DP-6 is (b)). No path outside
+the plan plus RL-1685's three admissions. **Acceptance 8 is met.** The ledger's own write-set line lists seven
+source files and omits the three tests and the bench (F3).
+
+#### 5. Barred word
+
+`git diff origin/main...origin/sl-1455-wk1178-nfr489-http -U0 | grep '^+' | grep -niE 'dep''uty'` prints
+nothing, and `git log origin/main..origin/sl-1455-wk1178-nfr489-http --format=%B | grep -ciE 'dep''uty'` prints 0.
+Clean over the range (added lines and every commit message).
+
+#### 6. Closing acts
+
+- **Reachability** (`git merge-base --is-ancestor <sha> origin/sl-1455-wk1178-nfr489-http`): `0544220a`,
+  `fecaf7b6`, `d943c2d0`, `1ab36c9f`, `c9a64068`, `051f9b3d`, `9777184f`, `3c0e99a0`, `78177ec8` all exit 0.
+  The ledger's red tree `78177ec8` and green tree `0544220a` are both reachable; the final test file is at the tip `11677daa`.
+- **`LG-` and `SL-` rows:** left `active`. Tasks 4–6 are open, and the Task list still says "Tasks 1–6 — not
+  started" (F3).
+- **Minted-id relation:** RL-1685's front matter says "and LG working id 9932, added at its mint", and its
+  "What it obliges" says the LG's minter adds it. That edit (`relates:` on `docs/rulings/RL-01685-…`) is owed at the mint of
+  LG 9932; it is a front-matter-only change to a frozen record (the same form as the correcting RL's own
+  `corrected_by`). Today `relates` lists neither the LG nor RL 8024 on either side.
+
+#### Findings
+
+- **F1 — MEDIUM.** `require_caller` leaves the request session's connection held for the whole request when
+  an API-key caller reaches a route that does not use `requires()`.
+  *File:line:* `backend/src/app/api/deps.py` (API-key branch of `require_caller`, `if session.dirty:` with no
+  `else`), with the five direct users above (`me.py:42`, `deployments.py:38`, `approvals.py:66`,
+  `demo.py:53`, `validation.py:68`).
+  *Failure:* an API-key request to, for example, `GET /me` takes a checkout at the auth `SELECT`, does not
+  commit (not dirty) and does not close, then `get_me` opens a second `database.session()`. Two connections
+  per request instead of one at a time; at pool defaults (5 + 10, no pool arguments anywhere in
+  `backend/src`) 15 concurrent such requests each hold one and wait for the second until `pool_timeout`.
+  Not a correctness loss; a pool-exhaustion regression against the base, which released at once.
+  No test in the range fails on it (the cost test counts `/score` only).
+  *Proposed fix:* a `require_caller` variant used by those five modules that closes the session after
+  authentication (`await session.close()`), leaving `CallerDep` (the base of `requires()`) as is; or have
+  `require_caller` close in the not-dirty branch and let `/score`'s `requires(keep_session=True)` accept the
+  re-checkout only if the cost test still shows 1 (it would not: keep a variant). Add one count test: an
+  API-key `GET /me` has at most one connection checked out while its handler runs.
+- **F2 — MEDIUM (latent).** A sampled `/score` outcome takes a second pool connection while the first is
+  still held.
+  *File:line:* `backend/src/app/api/score.py` `_maybe_sample_trace`, the `async with database.unit_of_work()`
+  after the early `return`, with `read_session=session` still open (the request session is closed only at
+  dependency exit).
+  *Failure:* declines and errors are sampled at 100 % regardless of the rate, quoted outcomes at 1 % by
+  default (`platform/settings.py`, `rating.trace_sample_rate` default 0.01). A burst of 15 concurrent sampled
+  requests, one process, default pool: all hold the first connection and wait for the second; the write
+  degrades to "logged" after `pool_timeout`, and the quote that was already priced is delayed by that time
+  first. The base opened the read and the write in one `unit_of_work`, one connection.
+  *Proposed fix:* when the outcome is sampled and before the write, `await read_session.close()` (the
+  handler does not use the session after this call), which keeps the unsampled hot path at one checkout and
+  the write at one at a time; add a test that a sampled outcome never has two connections checked out together.
+- **F3 — LOW (ledger).** `LG-9932` is stale against its own build. (i) The header and the Task list say "This
+  ledger covers Task 0 only" and "Tasks 1–6 — not started"; the Gate section says "Not applicable to Task 0".
+  (ii) No Build log entry for **Task 1** (commits `c9a64068`, `1ab36c9f`): no recorded red of the header
+  test on the base `_serve`/`main` (the commit order `d943c2d0` then `1ab36c9f` suggests it was red, but the
+  failure line is not recorded), no `--help` or `--rates 25` run (Step 4). (iii) No **Task 3 Step 5**
+  byte-identity entry. (iv) `relates:` lacks RL-1685 and RL 8024. (v) The write-set line omits the three
+  tests and the bench. (vi) The `tree:` header is the Task 0 base, `d699a561`.
+  *Fix:* an executor edit to the ledger before the ACK; (ii) and (iii) may be recorded as "owed to Task 4's
+  window" rather than back-filled.
+- **F4 — LOW (test hygiene).** `gc.freeze()` runs in the lifespan of **every** `TestClient(app)` in the suite,
+  and only `test_startup_gc_freeze.py` unfreezes. Each start-up freezes whatever is tracked at that moment
+  (including uncollected cyclic garbage) for the life of the pytest process, so memory is not reclaimed
+  between tests. In addition the test module docstring states as fact that "`create_app(...)` alone leaves 375
+  objects in the permanent generation"; the Build log itself records that the second `create_app` of a
+  process showed 0, so the sentence overstates (the effect test is a delta and is unaffected).
+  *Fix:* an autouse `gc.unfreeze()` in `backend/tests/conftest.py` (or the app fixture) and a docstring that
+  says "in the first `create_app` of a process". Optional; no behaviour in the product depends on it.
+- **F5 — INFORMATION (pre-existing, not this slice).** Failed-authentication audit rows are rolled back with
+  the raised error on the base and on the head (see 3 (a)). Already with the maintainer (from-lead 11:08:09
+  BST); this slice neither fixes nor worsens it. If the maintainer rules it a defect it needs its own FD, and
+  the fix must commit the audit row before raising, on a session that the request session's close does not roll back.
+
+**Proposed verdict on the slice's Tasks 1–3:** the ruled counts and the 60 s stamp are delivered and tested;
+the gc test has both ruled asserts. Hold the ACK for **F1 and F2** (each is a small change and each needs one
+test); F3 is the executor's ledger edit; F4 is optional. After F1 and F2 land, re-audit the specific
+checks (cost file plus the two new tests) against the new tip, then the Task 4 sweep.
 
 ### Build log
 
