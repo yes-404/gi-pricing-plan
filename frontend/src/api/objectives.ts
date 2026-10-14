@@ -75,3 +75,13 @@ export async function getObjectiveCertificate(id: string): Promise<ObjectiveCert
     `/custom-objectives/${encodeURIComponent(id)}/certificate`,
   );
 }
+
+// stub for red-first (SL-1275 prep); replaced at the GO
+export function previewObjective(..._args: unknown[]): unknown {
+  return undefined;
+}
+
+// stub for red-first (SL-1275 prep); replaced at the GO
+export function createObjective(..._args: unknown[]): unknown {
+  return undefined;
+}
