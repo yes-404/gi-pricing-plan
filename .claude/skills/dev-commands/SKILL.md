@@ -43,6 +43,8 @@ before trusting a reused venv at all.
 This repository is polyglot and CI runs two workflows. **A "gate" that covers only Python
 has been green here while the frontend was red.** Run both.
 
+**Hold ONE gate-1 flock across both halves.** Take the slot before the first Python stage and release it after the last frontend command. A release between the halves is not a release: a queued run takes the slot in the gap. *(Amended 2026-10-14 by the maintainer, dated line by delegation, on the entry "2026-10-14 10:45:59 BST — Your two process corrections ACCEPTED; root cause: neither rule is in a role or skill file → fix the FILES in D16 (re lead 10:45:15)" in `to-lead.md`, item 2; the same line is in `.claude/roles/executor.md` and `.claude/agents/gate-runner.md`.)*
+
 ### Python (`.github/workflows/python.yml`) and docs (`docs.yml`)
 
 **A gate or a `migrate --verify` run, launched with no thread cap, costs ~4.5 CPU cores by
@@ -1076,6 +1078,8 @@ where the tree did not change:
 Verified: 2026-09-17
 
 ## Verified
+
+2026-10-14, against main `ba68a6daf3cfb7634258915a6e542bc658ae3f62`. **The one-flock-across-both-halves line was added.** The `RL-1626` small-run section moves to `scripts/run-small.sh`'s own commit (the maintainer's (by delegation) entry "2026-10-14 11:34:58 BST").
 
 2026-09-29, against main `633c6f34b7e841e09c7f108cd4696658c524fcfc`. **The gate and verify
 blocks now exit with the gate's own status.** The old tail (`[ "$got" = "0" ] && flock -w 7200
