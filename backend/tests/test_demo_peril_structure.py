@@ -148,11 +148,14 @@ class _World:
 
 
 async def _world(
-    database: Database, blob_store: BlobStore, workspace_id: UUID, *, bad_row: str | None = None
+    database: Database, blob_store: BlobStore, workspace_id: UUID, grant: Any,
+    *, bad_row: str | None = None,
 ) -> Any:
     actuary = await _actuary(database, workspace_id)
     approver_a = await _actuary(database, workspace_id)
     approver_b = await _actuary(database, workspace_id)
+    for approver in (approver_a, approver_b):
+        await grant("approver", principal_id=approver.id)
     dataset_id, version_id = await _version(
         database, blob_store, workspace_id, actuary, _book(bad_row=bad_row)
     )
@@ -170,7 +173,7 @@ async def _world(
 
 @pytest.mark.req("FR-111")
 async def test_seed_fits_and_approves_a_severity_glm(
-    database: Database, blob_store: BlobStore, workspace_id: UUID
+    database: Database, blob_store: BlobStore, workspace_id: UUID, grant: Any
 ) -> None:
     """PL-1542 Acceptance 1. The severity model is `claim_severity` (ResponseKind), gamma/log,
     weighted by `claim_count`, peril AD, on the SAME dataset version and split as the frequency
@@ -178,7 +181,7 @@ async def test_seed_fits_and_approves_a_severity_glm(
 
     Red first, by cause: `demo_model` has no `fit_severity_glm`, so no `claim_severity` model
     exists in the seed."""
-    world = await _world(database, blob_store, workspace_id)
+    world = await _world(database, blob_store, workspace_id, grant)
 
     severity_id = await demo_model.fit_severity_glm(
         database, blob_store, workspace_id, world.actuary, world.approvers[0],
@@ -207,7 +210,7 @@ async def test_seed_fits_and_approves_a_severity_glm(
 @pytest.mark.req("FR-111")
 @pytest.mark.parametrize("bad_row", ["null", "non_positive"])
 async def test_a_claimant_row_without_a_positive_severity_is_refused_loudly(
-    database: Database, blob_store: BlobStore, workspace_id: UUID, bad_row: str
+    database: Database, blob_store: BlobStore, workspace_id: UUID, grant: Any, bad_row: str
 ) -> None:
     """The maintainer's (by delegation) "2026-10-14 09:45:05 BST" item (B): a null or
     non-positive `claim_severity` on a row with `claim_count > 0` is REFUSED by the fit, never
@@ -215,7 +218,7 @@ async def test_a_claimant_row_without_a_positive_severity_is_refused_loudly(
 
     Red first, by cause: `fit_severity_glm` does not exist. After it does, this stays the guard
     that the refusal is the fit's, and the model is not left `approved`."""
-    world = await _world(database, blob_store, workspace_id, bad_row=bad_row)
+    world = await _world(database, blob_store, workspace_id, grant, bad_row=bad_row)
 
     with pytest.raises((SystemExit, PlatformError, ValueError)):
         await demo_model.fit_severity_glm(
@@ -237,9 +240,9 @@ async def test_a_claimant_row_without_a_positive_severity_is_refused_loudly(
 
 
 async def _structure_world(
-    database: Database, blob_store: BlobStore, workspace_id: UUID
+    database: Database, blob_store: BlobStore, workspace_id: UUID, grant: Any
 ) -> Any:
-    world = await _world(database, blob_store, workspace_id)
+    world = await _world(database, blob_store, workspace_id, grant)
     await _approve(
         database, workspace_id, world.actuary, world.approvers[0], world.frequency_id
     )
@@ -252,14 +255,14 @@ async def _structure_world(
 
 @pytest.mark.req("FR-190")
 async def test_the_ad_peril_structure_reconciles(
-    database: Database, blob_store: BlobStore, workspace_id: UUID
+    database: Database, blob_store: BlobStore, workspace_id: UUID, grant: Any
 ) -> None:
     """PL-1542 Acceptance 2: one `frequency_severity` component over the frequency and severity
     GLMs, its reconciliation run as the real `PERIL_STRUCTURE_RECONCILE` job and persisted.
     The tolerance is wide: the book is 400 policies (the machinery is under test).
 
     Red first, by cause: `demo_model` has no `create_ad_peril_structure`."""
-    world = await _structure_world(database, blob_store, workspace_id)
+    world = await _structure_world(database, blob_store, workspace_id, grant)
 
     structure_id = await demo_model.create_ad_peril_structure(
         database, blob_store, workspace_id, world.actuary, world.approvers,
@@ -278,14 +281,14 @@ async def test_the_ad_peril_structure_reconciles(
 
 @pytest.mark.req("FR-191")
 async def test_the_ad_peril_structure_is_approved_through_the_workflow(
-    database: Database, blob_store: BlobStore, workspace_id: UUID
+    database: Database, blob_store: BlobStore, workspace_id: UUID, grant: Any
 ) -> None:
     """PL-1542 Acceptance 2: the structure reaches `approved` through submit and a decision by
     principals who are neither submitter nor author (A-1's carry moves it), never by a direct
     status write. Asserts the decision row, the request, and the status.
 
     Red first, by cause: `demo_model` has no `create_ad_peril_structure`."""
-    world = await _structure_world(database, blob_store, workspace_id)
+    world = await _structure_world(database, blob_store, workspace_id, grant)
 
     structure_id = await demo_model.create_ad_peril_structure(
         database, blob_store, workspace_id, world.actuary, world.approvers,
