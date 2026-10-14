@@ -29,6 +29,8 @@ of them; the mint sweep replaces the working ids below with their minted ids. Wr
 from 11:16:29 BST by the decision-maker (dm-upload, separate CLI, effort high: the lead's message
 of 2026-10-14 confirming "perTurnEffort":"high" on this transcript).*
 
+*2026-10-14: per the maintainer's (by delegation) "2026-10-14 11:24:38 BST — RL 8028 (upload completion) CONFIRMED as drafted; the no-seeding carve-out ACCEPTED; FD 8023's check widened (re lead 11:24:06)" (`to-lead.md`) — "RL 8028 @a8e1191a: CONFIRMED, no amendment." The carve-out, quoted: "The no-seeding carve-out: ACCEPTED (my dated line). 'Seeding' in my 10:56:38 (4) means writing a row the path under test would otherwise create (blob, blob owner, Blob Upload, Job, Dataset, Dataset Version). `principal`/`grant` are identity and provisioning, not seeding. The predicate binds as written: no `blob_fixtures` import, no `Database` session, and only the listed fixtures. The LG names the fixture set."*
+
 ## How this was ruled
 
 - **The order is the maintainer's (by delegation)**, the entry "2026-10-14 10:56:38 BST —

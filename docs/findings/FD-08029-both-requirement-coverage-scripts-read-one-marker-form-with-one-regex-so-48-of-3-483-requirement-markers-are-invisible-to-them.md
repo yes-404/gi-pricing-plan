@@ -140,3 +140,5 @@ Also in scope of the fix, and named here so it is not forgotten: the `python-tes
 form, and should state the accepted forms and that the parser reads them. Needs a resolution before any P3 start
 (`CLAUDE.md` §14). Event that next confirms or discharges it: the fix's merge with the red shown on the base tree by its
 causes.
+
+*(Ruled 2026-10-14: the maintainer (by delegation), "2026-10-14 11:28:56 BST" in `to-lead.md`: "Cause noted: scope-audit counts any marker as evidenced (CR-754:111-112), and 9 of the 11 ids appear in no closure record. That goes to the §14 review as a process finding with FD 8029.")*

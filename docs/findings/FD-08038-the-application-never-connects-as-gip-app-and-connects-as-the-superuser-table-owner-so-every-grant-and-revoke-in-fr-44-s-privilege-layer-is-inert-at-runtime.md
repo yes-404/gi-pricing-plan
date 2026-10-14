@@ -130,6 +130,8 @@ by its production DSN path, cannot `ALTER TABLE … DISABLE TRIGGER` on an artif
 legitimately written table, the application can still make its writes (the audited grants), each red-first when a grant is
 removed. The migration path, run as the owner, is asserted separately so the two roles are not conflated.
 
+*2026-10-14: per the maintainer's (by delegation) "2026-10-14 12:18:57 BST" (`to-lead.md`), item (2): "DP-14 (FD 8038 states the DISABLE TRIGGER dependency + a startup check): as recommended", and "NEW, from your 12:07:50 measurement (the owner `gipricing` is SUPERUSER, rolsuper = t): the app today can bypass ALL triggers via `session_replication_role`, not only DISABLE TRIGGER. S-b's startup refusal and test MUST assert the app's login role is NOT superuser, NOT the table owner, has NOBYPASSRLS, and cannot SET session_replication_role (a red: the SET attempted as the login role → refused). FD 8038's text states the superuser fact, measured by auditor-failauth with the query and output, and its HIGH stands."*
+
 ## Disposition
 
 Carry forward, owner WK-1178: fixed in P2 (D17), by PL 8016's slice S-b, ruled at "2026-10-14 12:00:14 BST". FD-8037 (S-a)
