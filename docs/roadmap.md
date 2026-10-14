@@ -2418,7 +2418,7 @@ relates: [FD-1366, FD-1335, PL-1364, SL-1367, SL-1547]
 id: SL-1675
 family: slice
 title: WK-1178 slice — rows whose declared weight is 0 are excluded from the fit and from every diagnostic (FR-111)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-12
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 604ea084c96efe93f521fb9ba17738e05241e61a
@@ -2430,6 +2430,7 @@ relates: [PL-1542, SL-1543, RL-1263]
 
 On the maintainer's (by delegation) entry "2026-10-12 05:39:20 BST — SL-1543 severity block: (i) a small PRECEDING WK-1178 slice ACCEPTED; …", (i): a row whose declared weight column holds exactly 0 is excluded from the fit and from every diagnostic (FR-171, FR-183), before the family's response-domain check, so FR-111's severity `weight = claim_count` fits the full book on the frequency model's `dataset_version`, split and `holdout_part` (FR-190 untouched, no placeholder response). Each partition's diagnostics report the count excluded (`PartitionDiagnostics.rows_excluded_zero_weight`). A negative or null weight is still refused. Spec first: one dated FR-111 clause. The GLM, GBM and EBM arms and the backtest are all covered, because they share the weight and `_partition`. The A/E definition is not changed (FD 9889 and OQ 9891, filed in D14). Work-plan delta PL-1674 (DP-Z1 ruled (a) by the maintainer (by delegation), "2026-10-12 05:47:19 BST": the view in a later WK-675 frontend row). **Activation needs:** PL-1674 set `active` in this slice's activation commit; the shared-path census on `docs/contracts/` against `SL-1669` and `SL-1549` (the later PR regenerates); the lead's executor GO. It **precedes `SL-1543`'s severity steps**, and G2 slips by it (05:39:20). *(Cut 2026-10-12 by the planner under working id 9887, reserved by the lead; minted 2026-10-12 as SL-1675, early, on the maintainer's (by delegation) GO "2026-10-12 05:47:19 BST".)*
 
+(Closed 2026-10-12 as a Slice, closing acts in the slice PR's mint commit, on the lead's merge turn; ledger `LG-1697`, minted 2026-10-12 from working id 9900. `PL-1674` stays `active`. Audit: written by `auditor-sl1675` in `LG-1697` (Audit section, over `origin/main...origin/sl-1675-wk1178-zero-weight`, PR #1300 head `5a5c9e8f`), verdicts adopted by the lead in the from-lead entry "2026-10-12 08:39:13 BST" (F1, F2, F3 and F4 dispositions there). The finding it discharges is `FD-1698` (minted from working id 9902).)
 #### SL-1683 — WK-1178 fix slice — FD-1335 Part B for the rate-table import route: a typed 200 and a declared 201
 
 ```yaml
