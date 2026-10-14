@@ -2453,6 +2453,42 @@ relates: [PL-1682, FD-1335, FD-1684, PL-1364, SL-1367, PL-1667, SL-1669, SL-1547
 
 On the maintainer's (by delegation) entry "2026-10-12 07:28:38 BST — S5 flags: (1) NEITHER (a) nor (c): type POST …/import's 200 FIRST in a tiny WK-1178 slice (d), with (a)+tripwire only as a named fallback; …", flag (1): `POST /api/v1/rate-tables/{slug}@{version}/import` publishes its 200 as the existing `model-schema` `ImportPreview` (`diff: RateTableDiff`, `created_by_import: ImportVerdict`; `rating.py:1363`) and its 201 (`confirm: true`) as `RateTableVersion`, in the manual-edit route's form (`response_model=None` with a `responses` map, `api/rate_tables.py:138-147`). No model is added or composed. The route leaves `UNTYPED_2XX_PENDING_PART_B` (`backend/tests/test_contracts.py:3193`, FD-1335 Part B's list, not FD-1366's), and `docs/contracts/openapi/generated.json` and the frontend client are regenerated. Spec first: a dated clause on `03` §5.1's import row (`:1046`, FR-235). Red first by cause: the published 200 has no `$ref` today; the stale-list test after regeneration; a real preview and confirm response round-trip through the published models (a guard, shown red on a planted extra field). `FD-1335` stays active with three routes in its Part B list. The export routes are out of scope (`FD-1684`). WK-675 S5 (`SL-1547`) uses the generated types after this slice merges, and S5's gate waits for it (07:28:38). Plan: Work-plan delta `PL-1682`. **Activation needs:** DP-1 (the 201 published too) and DP-2 (no standalone schema file) MET, both accepted by the maintainer (by delegation), "2026-10-12 07:46:06 BST", items 1 and 2; PL-1682 set `active` in this slice's activation commit; the shared-path census re-checked at the GO (`generated.json` against `SL-1547`; the later PR regenerates); the lead's executor GO. *(Cut 2026-10-12 by the planner under working id 9911, reserved by the lead, from-lead "2026-10-12 07:29:15 BST"; minted 2026-10-12 as SL-1683 from working id 9911, early, on the maintainer's (by delegation) entry "2026-10-12 07:46:06 BST".)*
 
+#### SL-8017 — WK-1178 fix slice (S-a) — FD 8037 and FD-8007: the eleven artifact tables append-only at the database, red first
+
+```yaml
+id: SL-8017
+family: slice
+title: WK-1178 fix slice (S-a) — FD 8037 and FD-8007: the eleven artifact tables append-only at the database, red first
+status: draft                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-14
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-8016, FD-8007, SL-8041, RL-8001, SL-1274]  # forward-cites kept out until D17 mints them: FD 8037, FD 8038
+```
+
+On the maintainer's (by delegation) entry "2026-10-14 12:00:14 BST" (`to-lead.md`), remedy S-a: FD 8037 (HIGH) and FD-8007, owner WK-1178, P2. One Alembic migration attaches `artifact_append_only()`'s row and `TRUNCATE` triggers to `factors` and eight of the ten tables FD 8037 names; `rate_tables` and `reference_table_versions` get a named column guard (forward-only `current_version`; `draft` to `published` only) plus the `TRUNCATE` trigger, each with its reason. Layer 1 for all eleven is in the same migration and is inert until SL-8041. The append-only set is derived from a declaration on every mapped table, never from grants. The reds are owner `UPDATE`, `DELETE` and `TRUNCATE` refused on each table, red on the base. Every legitimate in-place write is removed or declared (the plan's E4 table: `rate_tables.py:1465` and `:1480`, `reference.py:229`, and four test writers). FD-8007's `gip_app` test (DP-1, ruled). `FR-44`, `FR-70` and `FR-229` get dated lines. Lands right after the G2 merges, before the 4 Nov P2 code freeze. Plan: `PL-8016`, a dated Work-plan delta; DP-8 to DP-13 ruled by the maintainer (by delegation), `to-lead.md` "2026-10-14 12:18:57 BST" item (2) (DP-8's test-file fallback only if G2 slips past S-a's window). *(Cut 2026-10-14 under working id 8017 for FD-8007 alone; re-cut the same day as S-a, on the 12:00:14 entry.)*
+
+#### SL-8041 — WK-1178 fix slice (S-b) — FD 8038: the application connects as a login role with gip_app's grants, never as the owner
+
+```yaml
+id: SL-8041
+family: slice
+title: WK-1178 fix slice (S-b) — FD 8038: the application connects as a login role with gip_app's grants, never as the owner
+status: draft                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-14
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-8016, FD-8007, SL-8017, SL-1455]  # forward-cites kept out until D17 mints them: FD 8038, FD 8037
+```
+
+On the same entry, remedy S-b: FD 8038 (HIGH), owner WK-1178, P2. The application and the worker connect as `gip_app_login`, a member of `gip_app` provisioned for compose, CI and the shared container; migrations alone use the owner, through a new `GIP_MIGRATION_DATABASE_URL`. The test `database` fixture runs as the login role. The grants are found red first from that run, written as one migration with a test named on each line, and pinned by an exact map over every table. Startup refuses an owner, a superuser or a disabled artifact trigger. The login role cannot `DISABLE TRIGGER`: that is the proof that S-b makes SL-8017's triggers tamper-resistant. After SL-8017, the G2 merges and the `SL-1455` NFR session, before the 4 Nov P2 code freeze, with a full gate and a compose run on a fresh volume. The login role is asserted not superuser, not owner, `NOBYPASSRLS`, and unable to `SET session_replication_role`, red on `main` (the same entry's superuser item). Plan: `PL-8016`; DP-14 to DP-20 ruled by the maintainer (by delegation), `to-lead.md` "2026-10-14 12:18:57 BST" item (2). *(Cut 2026-10-14 under working id 8041, reserved by the lead, `eta.md` "2026-10-14 12:02:15 BST".)*
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
