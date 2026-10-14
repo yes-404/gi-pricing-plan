@@ -34,6 +34,19 @@ evidence or price" class. The fix (revoke + `artifact_append_only` triggers + AP
 `_make_control` rewrite) is scheduled before the P2 code freeze, owing to FR-44 "Every artifact table
 carries both layers"."*
 
+**Severity ruled: dated 2026-10-14, on the maintainer's (by delegation) entry "2026-10-14 10:11:47
+BST — FD 8007 severity: MEDIUM + re-rate trigger CONFIRMED" (`to-lead.md`).** MEDIUM, with the
+auditor's trigger: HIGH on any found UPDATE or DELETE path, or a route-level change. No application
+path writes `factors`, so reaching it needs direct database write access. The fix stays due before
+the 4 Nov code freeze, as its own row, red first. The entry adds to the remedy that the planted
+UPDATE red must fail at the database layer, not only through the derived test set.
+*Refined by the maintainer's (by delegation) entries "2026-10-14 10:29:14 BST" (PL 8016 DP-1 (a):
+after the REVOKE the privilege check fires before the trigger, so the two FR-44 layers are proven by
+two separate observations; the append-only set is derived from the artifact family, never from
+grants) and "2026-10-14 12:00:14 BST" item (A)–(B) (this finding becomes a limb of PL 8016's re-cut
+slices S-a, triggers first, and S-b, least privilege; its revoke matters only after S-b, because the
+app connects as the table owner). PL 8016 is a working id in a later batch.*
+
 `factors` is the one artifact table of the modelling module that has neither layer of FR-43/FR-44. A
 Model pins its Factors by row id, and a fitted Model's spec cannot change, so the *pin* is immutable
 and the *thing pinned* is not. The application never edits a `factors` row, so nothing is wrong on
