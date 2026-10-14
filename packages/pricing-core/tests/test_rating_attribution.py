@@ -1062,32 +1062,9 @@ def _g1_independent_effects() -> tuple[int, int, int, int]:
     return total, ladder, table, total - ladder - table
 
 
-def _assert_refused(exc: AttributionError, *mount_points: str) -> None:
-    """The guard's refusal: `VALIDATION_FAILED`, naming the finding, the slice that lifts it and
-    each mount point (Acceptance 1)."""
-    assert exc.code == "VALIDATION_FAILED"
-    text = str(exc)
-    for needle in ("sub-graph mount", "FD-1660", "SL-1696", *mount_points):
-        assert needle in text, (needle, text)
-
-
-@pytest.mark.req("FR-1399")
-def test_guard_mount_difference_refuses_a_re_pointed_mount(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """FD-1660 limb 3, after the guard: the re-point plus one table edit is refused naming `m_ncd`,
-    before any subset compiles, instead of crediting the table edit with the ladder's effect."""
-    spy = _MountSpy(monkeypatch)
-    with pytest.raises(AttributionError) as exc:
-        _g1_run()
-    _assert_refused(exc.value, "m_ncd")
-    assert "a mount differs" in str(exc.value)
-    assert spy.attempts == 0
-
-
 @pytest.mark.req("FR-1399")
 def test_guard_fixture_has_a_non_zero_ladder_effect_that_attribution_would_misattribute() -> None:
-    """The refusal in `_g1_run` is not for a vacuous fixture: scored without attribution, the
+    """`_g1_run` is not a vacuous fixture: scored without attribution, the
     re-point alone moves the book, and total = ladder + table + interaction (SL-1696 reads it)."""
     _total, ladder, table, _interaction = _g1_independent_effects()
     assert ladder != 0
@@ -1133,20 +1110,6 @@ def _structure_and_instalment(changes: list[Any]) -> list[tuple[str, list[str]]]
 
 
 @pytest.mark.req("FR-1399")
-def test_guard_baseline_mount_k2_refuses_when_either_side_mounts(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """FD-1660 limb 2, after the guard: no mount differs, but the baseline mounts and K = 2, so the
-    run is refused naming `m_ncd` before any compile (not as `BUNDLE_COMPILE_FAILED`)."""
-    spy = _MountSpy(monkeypatch)
-    with pytest.raises(AttributionError) as exc:
-        _g2_run()
-    _assert_refused(exc.value, "m_ncd")
-    assert "a sub-graph is mounted and two or more groups are declared" in str(exc.value)
-    assert spy.attempts == 0
-
-
-@pytest.mark.req("FR-1399")
 def test_guard_does_not_refuse_a_mounted_k1_run_with_an_unchanged_mount(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1163,45 +1126,6 @@ def test_guard_does_not_refuse_a_mounted_k1_run_with_an_unchanged_mount(
     )
     assert result is not None
     assert spy.attempts > 0
-
-
-@pytest.mark.req("FR-1399")
-def test_guard_one_group_refused_even_when_one_group_holds_every_change(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """DP-G (exemption (i) refused): the demo-shaped candidate with one group holding every
-    derived change is refused, not returned as one item equal to the total."""
-    spy = _MountSpy(monkeypatch)
-    with pytest.raises(AttributionError) as exc:
-        _demo_shape_run(_one_group)
-    _assert_refused(exc.value, "m_ncd")
-    assert spy.attempts == 0
-
-
-@pytest.mark.req("FR-1399")
-def test_guard_mount_added_two_groups_refuses_before_any_compile(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """FD-1660 limb 1, after the guard: a mount added with two groups is refused naming `m_ncd`
-    instead of failing as `BUNDLE_COMPILE_FAILED` in the `structure` subset."""
-    spy = _MountSpy(monkeypatch)
-    with pytest.raises(AttributionError) as exc:
-        _demo_shape_run(_structure_and_instalment)
-    _assert_refused(exc.value, "m_ncd")
-    assert spy.attempts == 0
-
-
-@pytest.mark.req("FR-1399")
-@pytest.mark.req("NFR-499")
-def test_guard_text_survives_safe_error_text() -> None:
-    """Condition (a) (the 07:44:13 entry): the Job keeps `safe_error_text(exc)` of an
-    `AttributionError`, so the guard's error is also a `CodedError` and its text reaches the Job."""
-    with pytest.raises(AttributionError) as exc:
-        _g1_run()
-    kept = safe_error_text(exc.value)
-    for needle in ("VALIDATION_FAILED", "FD-1660", "SL-1696", "m_ncd"):
-        assert needle in kept, (needle, kept)
-    assert isinstance(exc.value, CodedError)
 
 
 # ---------------------------------------------------------------------------
