@@ -417,8 +417,12 @@ report and again in S-a's `LG-`. It is not allowed and not removed here.
 item (4): "§0, re-profiling a validated version → REMOVE, not spec", on `00` :127, FR-60 `:161`,
 the GET-only route `:867` and the journey `:1113`: (a) the guard allows `profile_id` only `NULL →
 value` after the freeze, as planned; (b) **in this slice** the application path refuses a re-point
-on a data-frozen version with a named problem code, `PROFILE_ALREADY_SET` (`409`), never a raw
-trigger exception: Step 2.10; (c) a dated clarification on `01` FR-60, Steps 5.4 and 5.5. Item (3) is
+on a data-frozen version with a named problem code, ~~`PROFILE_ALREADY_SET` (`409`)~~, never a raw
+trigger exception: Step 2.10; (c) a dated clarification on `01` FR-60, Steps 5.4 ~~and 5.5~~.
+*Superseded in part 2026-10-14 by the maintainer (by delegation), `to-lead.md` "2026-10-14 15:32:52 BST": "reuse `DATASET_VERSION_IMMUTABLE`
+(errors.py:86, 409) … Error codes are permanent product identifiers: a new one is added only
+when no existing code is accurate"; the code is `DATASET_VERSION_IMMUTABLE` with the detail
+"the profile of a data-frozen Dataset Version cannot be re-pointed; profiles are computed once, FR-60", and Step 5.5 is withdrawn.* Item (3) is
 confirmed in the same entry: "confirmed as separate, never overwritten … No STOP.")*
 
 **The freeze marker.** "The first `draft → validating`" has to survive FR-53's return to
@@ -494,8 +498,9 @@ write succeeds), one case each:
 - **`validation_report_id`** (item 3): a change on `draft → draft` and on `validated → validated`
   is refused.
 - **`profile_id`** (item 4): a re-point on a `validated` row is refused (the guard); and
-  `store_profile` on a data-frozen version with a profile refuses with `PROFILE_ALREADY_SET`
-  (`409`) before any `UPDATE` (Step 2.10, 15:14:52 (4)(b)).
+  `store_profile` on a data-frozen version with a profile refuses with ~~`PROFILE_ALREADY_SET`~~
+  `DATASET_VERSION_IMMUTABLE` (`409`) before any `UPDATE` (Step 2.10, 15:14:52 (4)(b); the code
+  per 15:32:52).
 - **The back-fill** (15:14:52 (B)): Step 2.8b's seeded rows.
 - **Identity:** `UPDATE … SET slug = slug || 'x'` is refused on a `draft` row.
 - `DELETE` and `TRUNCATE` are refused.
@@ -602,7 +607,7 @@ layer holds the line until then.
 | `backend/src/app/db/models.py` | `{"info": {"immutability": …}}` on every mapped table (DP-8 (a)); `DatasetVersionRow.data_frozen_at`, a read-only mapped column the guard sets (DP-21, 13:27:39) | 2 |
 | `backend/migrations/versions/<rev>_artifact_tables_append_only.py` | **create**: one migration (triggers, three guard functions (`dataset_versions`' by DP-21), the six row-guarded tables' `TRUNCATE` triggers (plan review R2), grants, revokes) | 2 |
 | `backend/src/app/platform/rate_tables.py` | `_persist_new_version`: blob before row (DP-10) | 2 |
-| `backend/src/app/platform/profiles.py`, `backend/src/app/errors.py`, `backend/tests/test_profile_refusal.py` (**create**) | `store_profile` refuses a re-point on a data-frozen version with `PROFILE_ALREADY_SET` (`409`); the code registered (15:14:52 (4)(b)) | 2 |
+| `backend/src/app/platform/profiles.py`, ~~`backend/src/app/errors.py`~~, `backend/tests/test_profile_refusal.py` (**create**) | `store_profile` refuses a re-point on a data-frozen version with ~~`PROFILE_ALREADY_SET` (`409`); the code registered~~ the existing `DATASET_VERSION_IMMUTABLE` (`409`) and its FR-60 detail (15:14:52 (4)(b); 15:32:52). **`errors.py` is no longer touched**: the code is registered already (`:86`) | 2 |
 | `backend/tests/test_artifact_immutability.py` | the declaration-derived tests (replacing the grants-derived one), the eleven rows, the guard tests, DP-1's `gip_app` test | 1, 2, 3 |
 | `backend/tests/test_fr240_governance.py`, `test_model_jobs.py`, `test_model_jobs_gbm.py` | W4 (DP-2, DP-3) | 4 |
 | `backend/tests/test_rate_table_diff_portfolio.py`, `test_rating_version_change_summary_route.py` | W5, W6 (DP-13) | 4 |
@@ -952,22 +957,34 @@ def downgrade() -> None:
   - **The red first**, `backend/tests/test_profile_refusal.py` (**create**), through the
     `database` fixture and `store_profile` itself: on a version whose `data_frozen_at` is set
     and whose `profile_id` is already set, `store_profile` raises `PlatformError` with code
-    `PROFILE_ALREADY_SET` and status `409`, adds no `profiles` row, and leaves `profile_id`
-    unchanged. Red on the Task 2 tree before this step **by its cause**: the trigger's raw
+    ~~`PROFILE_ALREADY_SET`~~ **`DATASET_VERSION_IMMUTABLE`** and status `409`, **and its detail
+    contains `FR-60`** (15:32:52: *"The red asserts the code AND the detail's FR-60
+    reference"*), adds no `profiles` row, and leaves `profile_id` unchanged. Red on the Task 2 tree before this step **by its cause**: the trigger's raw
     refusal (a database error, which the API would turn into a 500) instead of the named code.
     Two companion cases stay green: a frozen version with `profile_id` `NULL` takes its first
     profile, and a never-validated `draft` version may be re-profiled (before the freeze,
     rule 6).
   - **The change**, `backend/src/app/platform/profiles.py`: after the version lookup
     (`:36-43`) and before the `ProfileRow` is built (`:45`), when `version.data_frozen_at is
-    not None and version.profile_id is not None`, raise `PlatformError("PROFILE_ALREADY_SET",
-    "This version's profile is already recorded", 409, <detail citing 01 FR-60 and 00 §2>)`.
+    not None and version.profile_id is not None`, raise ~~`PlatformError("PROFILE_ALREADY_SET",
+    "This version's profile is already recorded", 409, <detail citing 01 FR-60 and 00 §2>)`~~
+    `PlatformError("DATASET_VERSION_IMMUTABLE", "This version's profile is already recorded",
+    409, "The profile of a data-frozen Dataset Version cannot be re-pointed; profiles are computed
+    once, FR-60.")`, the detail as the maintainer (by delegation), `to-lead.md` "2026-10-14 15:32:52 BST" words it.
     The comment at `:55-57` (*"Re-profiling adds a row and re-points"*) is rewritten to say
     re-profiling is allowed only before the data freezes.
-  - **The code is registered** in `backend/src/app/errors.py`'s `DATA_ERROR_CODES` (`:83-111`),
+  - ~~**The code is registered** in `backend/src/app/errors.py`'s `DATA_ERROR_CODES` (`:83-111`),
     and in `01` §5.1's list (Step 5.5). The existing per-artifact code
     `DATASET_VERSION_IMMUTABLE` (`errors.py:86`, `409`) is an alternative to a new code. The
-    ruling's example name is used; the lead may choose the existing code at the ACK.
+    ruling's example name is used; the lead may choose the existing code at the ACK.~~
+    **The code (ruled 2026-10-14, the maintainer (by delegation), `to-lead.md` "2026-10-14 15:32:52 BST"):** *"**Ruled: reuse `DATASET_VERSION_IMMUTABLE`**
+    (errors.py:86, 409). Under the FR-60 clarification just written … and 00 :127 (the profile is
+    part of the immutable snapshot), a re-profile of a frozen version IS an immutability
+    violation, so the existing code is semantically exact. Error codes are permanent product
+    identifiers: a new one is added only when no existing code is accurate. The DETAIL names the
+    case … Drop `PROFILE_ALREADY_SET` from errors.py and 01 §5.1 before it is ever published."*
+    It is in `DATA_ERROR_CODES` already (`errors.py:86`) and in `01` §5.1's list (`:931`), so
+    neither is edited.
   - The full gate (Step 6.2) shows whether a route or Job re-profiles a frozen version (the
     profiling Job, `worker/data_handlers.py`). Each one now gets the `409`, and each goes into
     the `LG-` with its node id.
@@ -1027,11 +1044,14 @@ def downgrade() -> None:
 - [ ] **Step 5.4: `FR-60`** (`01-data-management.md:161`), a dated clarification, through the
   `spec-change` skill (the maintainer (by delegation), "2026-10-14 15:14:52 BST", (4)(c): *"it
   decides refuse/allow, so it goes in the spec, per my 12:07:40 rule"*), appended:
-  `*(Clarified <date>, WK-1178 SL-8017, on the maintainer's (by delegation) "2026-10-14 15:14:52 BST" ruling.)* **The profile is computed once per Dataset Version; a frozen version is never re-profiled.** A version's data freezes at its first `draft → validating` (`00` §2: the version is an immutable snapshot that carries its profile). A profile may still be recorded once after that if none was, and a second one is refused with `PROFILE_ALREADY_SET` (`409`).`
-- [ ] **Step 5.5:** `01` §5.1's *"Error codes owned by this module"* list (`:931-937`) gains
+  `*(Clarified <date>, WK-1178 SL-8017, on the maintainer's (by delegation) "2026-10-14 15:14:52 BST" ruling.)* **The profile is computed once per Dataset Version; a frozen version is never re-profiled.** A version's data freezes at its first `draft → validating` (`00` §2: the version is an immutable snapshot that carries its profile). A profile may still be recorded once after that if none was, and a second one is refused with ~~`PROFILE_ALREADY_SET`~~ `DATASET_VERSION_IMMUTABLE` (`409`).`
+  *(The refused code amended 2026-10-14, on the maintainer (by delegation), `to-lead.md` "2026-10-14 15:32:52 BST".)*
+- ~~**Step 5.5:** `01` §5.1's *"Error codes owned by this module"* list (`:931-937`) gains
   `PROFILE_ALREADY_SET`, in the same commit as `errors.py` (Step 2.10). If `spec-change` or the
   audit requires the code's row elsewhere (an error-code table, `00` §5's catalogue), it goes
-  there in the same commit.
+  there in the same commit.~~ **Step 5.5: withdrawn** 2026-10-14, on the maintainer (by delegation), `to-lead.md` "2026-10-14 15:32:52 BST": the
+  existing `DATASET_VERSION_IMMUTABLE` is used, which `01` §5.1 already lists (`:931`). The
+  number stays, so Step 5.6 keeps its number.
 - [ ] **Step 5.6:** `python3 scripts/audit-docs.py` as one gate-2 docs check, and
   `uv run python scripts/req-coverage.py`. Commit.
 
@@ -1437,11 +1457,14 @@ Each item can be checked by a fresh reviewer at the slice PR's merge tree, with 
 5. Exactly one new file under `backend/migrations/versions/`; `alembic heads` prints one head;
    the `LG-` carries Task 2.7 and 2.8's catalog outputs (upgrade, downgrade, upgrade).
 6. `FR-44`, `FR-60` (the 15:14:52 clarification), `FR-70` and `FR-229` carry Task 5's dated
-   lines, and `01` §5.1 lists `PROFILE_ALREADY_SET`, in the same PR as the migration.
+   lines, ~~and `01` §5.1 lists `PROFILE_ALREADY_SET`,~~ in the same PR as the migration (§5.1 is not
+   edited: 15:32:52).
 6b. `uv run pytest backend/tests/test_profile_refusal.py -q` is green, its red (the raw trigger
-   refusal) is in the `LG-`, and `git grep -n PROFILE_ALREADY_SET -- backend/src/app/errors.py
+   refusal) is in the `LG-`, ~~and `git grep -n PROFILE_ALREADY_SET -- backend/src/app/errors.py
    backend/src/app/platform/profiles.py docs/specs/01-data-management.md` prints a hit in each
-   (15:14:52 (4)(b), (c)). Step 2.8b's back-fill red and green are in the `LG-` (15:14:52 (B)).
+   (15:14:52 (4)(b), (c))~~ `git grep -n PROFILE_ALREADY_SET -- backend docs/specs` prints nothing,
+   and `git grep -nE 'DATASET_VERSION_IMMUTABLE|FR-60' -- backend/src/app/platform/profiles.py`
+   prints both (15:14:52 (4)(b), (c); 15:32:52). Step 2.8b's back-fill red and green are in the `LG-` (15:14:52 (B)).
 7. The postgres-pro review is in the `LG-`; the full gate rc table is all 0; `python3
    scripts/audit-docs.py` exits 0 on the merge tree.
 
