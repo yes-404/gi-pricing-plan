@@ -430,9 +430,9 @@ def test_every_step_records_its_rejected_removed_and_added_rows() -> None:
             s["step"],
             s["rows_before"],
             s["rows_after"],
-            s["rows_rejected"],
-            s["rows_removed"],
-            s["rows_added"],
+            s.get("rows_rejected"),
+            s.get("rows_removed"),
+            s.get("rows_added"),
         )
         for s in steps
     ] == [
