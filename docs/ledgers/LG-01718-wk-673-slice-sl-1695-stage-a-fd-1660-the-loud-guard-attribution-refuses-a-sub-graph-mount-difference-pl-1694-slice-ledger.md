@@ -107,6 +107,49 @@ Granted by the lead on head `e6019598124bcc5e93d2aa4b9cc2c3eff6455244` (the lead
 
 **Proposed verdict for the slice:** the change set agrees with the plan, the three conditions and DP-W; **not ready to close** until F-1's gate result exists (F-3 should be fixed before it, so the gate covers the fixed tree). No STOP, no HIGH.
 
+#### Addendum 2026-10-14 at e5f97de0 (auditor-sl1695add)
+
+**Auditor-sl1695add, 2026-10-14 15:36 BST (`TZ=Europe/London date`). A reading audit of the closing acts and of the gate record; no test, no gate and no database was run.** Verdicts are **proposed**; the lead decides. The old Audit text above is not edited; where it says "neither is closed" or "no verification result", this addendum supersedes it as of `e5f97de0`.
+
+**Range.** `origin/main...e5f97de0` (`e5f97de0` = the PR head, `origin/sl-1695-wk673-fd1660-guard`). `git diff --name-only origin/main...e5f97de0` lists eleven paths:
+- code and tests: `packages/pricing-core/src/pricing_core/rating/analysis.py`, `packages/pricing-core/tests/test_rating_attribution.py`, `packages/pricing-core/tests/test_quote_input_raise_sites.py`, `examples/fremtpl2/journey.py`, `backend/tests/test_wf699_journey.py`;
+- docs: `examples/fremtpl2/README.md`, `docs/specs/03-rating-engine.md`, `docs/roadmap.md`, `docs/plans/PL-01694-…` (the status flip and one dated line), this ledger, generated `docs/INDEX.md`.
+
+**Code identity with the gated tree.** Each code path's blob at `e5f97de0` against `f704f20f` (`git rev-parse <rev>:<path>`, both printed):
+
+| path | blob at `e5f97de0` | blob at `f704f20f` |
+|---|---|---|
+| `backend/tests/test_wf699_journey.py` | `e18dc7618512a63036a7d4a1f3d1e072999675eb` | `e18dc7618512a63036a7d4a1f3d1e072999675eb` |
+| `examples/fremtpl2/journey.py` | `bce1ed28daff17dd275b9360d451af899f3da016` | `bce1ed28daff17dd275b9360d451af899f3da016` |
+| `examples/fremtpl2/README.md` | `0923a6e72ba0dd3069b64e2a589bd15de3b63daf` | `0923a6e72ba0dd3069b64e2a589bd15de3b63daf` |
+| `packages/pricing-core/src/pricing_core/rating/analysis.py` | `896b5ebce8956da5005de23509d3072511a499b8` | `896b5ebce8956da5005de23509d3072511a499b8` |
+| `packages/pricing-core/tests/test_quote_input_raise_sites.py` | `56d2be4fb5dc5068571d96d51d7ee36e43d59d3d` | `56d2be4fb5dc5068571d96d51d7ee36e43d59d3d` |
+| `packages/pricing-core/tests/test_rating_attribution.py` | `fd87066e48729a0f96897748b686345993fd5ead` | `fd87066e48729a0f96897748b686345993fd5ead` |
+
+All six pairs are equal, so the code and test paths of this head are those of the tree the re-gate ran on; the gate result applies to this head for them. The docs paths differ by the main merge and the mint, which the re-gate's own check-31 line covers (below). The re-gate's `383dbb4a` fixes for F-2, F-3 and F-5 precede `f704f20f`, so the gated tree contains them.
+
+**Gate record against the files** (`/home/puzhenhao1989/.claude/jobs/b6860f8f/tmp/sl1695-regate/`): the `.rc` files print `ruff 0`, `mypy 0`, `import_linter 0`, `req_coverage 0`, `contracts 0`, `audit_docs 1`, `pytest 1`. `audit_docs.log` ends `FAILED (1): check 31: gap in the full allocation between 1699 and 9637` (the then-unminted ledger; the accepted cascade). `pytest.log` last line: `13 failed, 5812 passed, 6 skipped, 116 warnings in 4128.41s (1:08:48)`. `gate.log` tail: the six frontend rows rc 0, `demo.py --journey wf-699 rc=124` (the designed `timeout -s INT 720` stop), `tree after gate: 0 changed path(s)`, `END 2026-10-14T14:30:05+00:00`. `demo.log` line 1828 `journey done in 403s`, line 1836 `served page: http://localhost:5173/ answered 200`. All agree with the Gate section's table. Not re-derived here: the 13 failure names (the Gate section reads them in the failure bodies; this audit read the counts and the one `audit_docs` line, not the pytest bodies).
+
+**Findings, with dispositions.**
+- **F-1 (MEDIUM, no verification result): resolved.** The ALONE re-gate at `f704f20f` (tree `7119eec7`) is recorded in `### Gate`; both halves ran and are green apart from the check-31 cascade the maintainer accepted ("2026-10-14 15:30:45/15:31 BST" exchange in `to-lead.md`, per the lead's brief; that file was not re-read by this audit). Code identity above carries it to `e5f97de0`.
+- **F-2 (LOW, tautological assert): resolved by `383dbb4a`.** At `e5f97de0` `test_rating_attribution.py:1089-1094` asserts `ladder != 0` and `table != 0`; the identity is gone and the docstring says the fixture is not vacuous.
+- **F-3 (LOW, unrelated reformat at `:843`): resolved by `383dbb4a`.** At `e5f97de0` the `tuple(c for c in compile_module.ALGORITHM_CHECKS if c.__name__ != "_check_declared_reads")` is the three-line form (`:843-845`), and `git diff origin/main...e5f97de0 -- test_rating_attribution.py` has no hunk on it. The shared-helper widening stands as in the old audit; the gate's pytest run is green on the old tests apart from the 13 docs-audit failures.
+- **F-4 (INFO, #1299 in the range): resolved.** `git log origin/main --oneline | grep 1299` prints `4420f91f docs(plans,roadmap): PL-1694 + SL-1695 + SL-1696 … (#1299)`; #1299 is on main, and the range lists only the eleven paths above (the plan file appears for its activation only).
+- **F-5 (INFO, no over-refusal test): resolved by `383dbb4a`.** `test_guard_does_not_refuse_a_mounted_k1_run_with_an_unchanged_mount` (`:1150`) runs baseline and candidate both mounting `m_ncd@4`, one edit, asserts a result and `spy.attempts > 0`.
+- **F-6 (INFO, `tree:` is the base): accepted.** The front matter `tree:` is `18803f1d…` (`:8`); it is the slice's base by intent, as the old audit said.
+
+**Closing acts at `e5f97de0`, by line.**
+- `PL-1694` `status: active` at `docs/plans/PL-01694-…:6`; the dated activation line at `:707` ("Activated 2026-10-12 on the lead's `from-lead` entry … `status` set `active` on the SL-1695 branch 2026-10-14 … `to-lead` entry "2026-10-14 12:14:25 BST"").
+- `SL-1695` `status: closed` in its `docs/roadmap.md` block (starts `:961`; the `id:` line is `:962`), and its Closed line at `docs/roadmap.md:977` ("Closed 2026-10-14 as a Slice … ledger LG-1718 `closed` … `PL-1694` is `active` … FD-1660 stays open until SL-1696").
+- `LG-1718` `status: closed` at `:5` of this file.
+- The interim `03` line: `grep -c 'Interim, 2026-10-12' docs/specs/03-rating-engine.md` prints 2, at `:191` (FR-264) and `:713` (§4.6).
+- `created: 2026-10-14` at `:6` with its comment `# original date 2026-10-12, set at the draft; minted 2026-10-14`, and the disclosure under the H1 (`:19`, "Minted 2026-10-14 as LG-1718 from working id 9637 …").
+- Still open, and not this audit's to close: `**MERGE-ACK:** not yet given` (`:22`) is the lead's. The old Audit's "Closing acts … both `active`" (`:98`) is superseded by the lines above.
+
+**Barred word.** `git diff origin/main...e5f97de0 -U0 | grep '^+' | grep -niE 'dep''uty' | wc -l` prints 0 (run before this addendum was added; the addendum is written without the word).
+
+**Proposed verdict: ready to close** (the slice's closing acts are in place; the merge and MERGE-ACK are the lead's). Reasons: F-1 to F-5 are resolved and F-6 accepted, no finding is without a disposition, and the code identity ties the gate to this head. Stated limits: the maintainer's acceptance entry and the 13 pytest failure bodies were taken from the Gate section and the lead's brief, not re-read; `audit-docs` and `doc-index --check` at the new head are reported to the lead, not recorded here.
+
 ### Build log
 
 - 2026-10-12 08:17 BST — activation: `SL-1695` and `PL-1694` set `active`, this ledger opened (working id 9637), by the executor on the GO above. Base `18803f1d`. Activation commit `a8b8c3b9`.
