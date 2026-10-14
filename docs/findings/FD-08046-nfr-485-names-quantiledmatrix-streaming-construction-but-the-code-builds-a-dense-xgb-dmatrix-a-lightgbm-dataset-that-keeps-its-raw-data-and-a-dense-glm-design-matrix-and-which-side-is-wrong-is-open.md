@@ -41,7 +41,9 @@ meets the method clause on none of the three paths, at `a3fc2e8d`:
 Whether `free_raw_data=False` is needed (a later `predict` or a refit on the raw array) was not
 checked here; it is the first thing the owner reads.
 
-## The question this finding exists to ask (CLAUDE.md §0)
+## Evidence
+
+The code citations are in the table above; the question CLAUDE.md §0 puts to this finding follows.
 
 Code and spec disagree. Which is wrong is the question; this finding does not decide it.
 
@@ -71,7 +73,7 @@ owed). A run that is cap-killed or exceeds 32 GB makes Reading 1 correct on the 
 the method. The 250 k to 1 M curve on the shared VM is a diagnostic projection only, never a
 verdict, and does not answer this.
 
-## Why MEDIUM, proposed
+### Why MEDIUM, proposed
 
 - Against HIGH: no wrong number reaches a customer and no data is lost; the failure mode is an
   out-of-memory kill of a fit, which is loud. The budget clause is already scheduled for
@@ -82,7 +84,7 @@ verdict, and does not answer this.
   leaves little room if the GBM path doubles memory.
 - Re-rate trigger: HIGH if the 5 M run is cap-killed or exceeds 32 GB on either arm.
 
-## Discharge
+## Disposition
 
 The event that next discharges it: the SL 8035 5 M reading on nfr-bench-1 session 2, then a
 maintainer ruling on Reading 1 or 2, then either the construction fix or a dated NFR-485

@@ -65,7 +65,11 @@ makes `scripts/req-coverage.py` count NFR-472 as covered, so the requirement rea
 while four of its five classes have no assertion. The test is green by construction for those
 classes: it would stay green with Limb 1 present, as it does today.
 
-## Why MEDIUM, proposed
+## Evidence
+
+Re-runnable at `a3fc2e8d`: `git show a3fc2e8d:backend/src/app/platform/datasets.py | sed -n 1046,1056p`; `git show a3fc2e8d:backend/tests/test_data_nfrs.py | sed -n 147,180p`; `git show a3fc2e8d:backend/src/app/platform/audit.py | sed -n 52,66p`.
+
+### Why MEDIUM, proposed
 
 - Against HIGH: the events are written, with `after`, `actor` and `justification`; what is missing
   is the prior state on one class, and the coverage claim on the rest. No wrong number or data loss.
@@ -74,7 +78,7 @@ classes: it would stay green with Limb 1 present, as it does today.
   that hid this limb.
 - Re-rate trigger: HIGH if the SL 8035 red-first test finds a second event class with no `before`.
 
-## Discharge
+## Disposition
 
 The event that next discharges it: the WK-1178 slice that passes `before` on the purge event and
 adds a per-class assertion for acknowledgements, dictionary edits, rule-set changes and purges,
