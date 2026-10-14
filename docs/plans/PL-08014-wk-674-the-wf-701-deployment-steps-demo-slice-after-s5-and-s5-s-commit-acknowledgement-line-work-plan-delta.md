@@ -503,7 +503,8 @@ sentence above holds only for what is not yet cited by a dated activation line. 
   change is a dated line in S4's `LG-` or a further delta, the lead's choice.
 - **WK-674's roadmap row** lists this delta's minted id (L5): the lead.
 - **eta.md's row-2 block** already carries W0's +0.5 d / +1 d (the lead's eta line "2026-10-14
-  10:01:15 BST lead: §12 ROW 2 ETA amended").
+  10:01:15 BST lead:
+  §12 ROW 2 ETA amended").
 
 ## Self-review
 
