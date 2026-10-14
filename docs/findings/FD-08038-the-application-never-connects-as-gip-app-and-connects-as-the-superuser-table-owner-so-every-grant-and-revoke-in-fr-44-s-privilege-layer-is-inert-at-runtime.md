@@ -7,7 +7,7 @@ created: 2026-10-14
 owner: auditor
 tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
 corrected_by: []
-relates: [WK-1178, FD-8007, FD-8037, FR-44, FR-43, P2]
+relates: [WK-1178, FD-1704, FD-8037, FR-44, FR-43, P2]
 ---
 
 # FD-8038 — the privilege layer binds no one
@@ -79,7 +79,7 @@ owner succeeded (FD-8037's table). The layer works; no one is subject to it.
 - **Every `GRANT` and `REVOKE` in the migrations** (`a1b2c3d4e5f6_artifact_append_only.py:36` onward; `GRANT SELECT, INSERT`
   on the append-only tables; `GRANT SELECT, INSERT, UPDATE ON models, factors`, `b2c3d4e5f6a7_model_fit_immutable.py:89`).
   The "grants alone" tables FR-44 itself lists as not protected against a direct connection are protected against nothing.
-- **FD-8007's planned `REVOKE UPDATE` on `factors`** (a limb of FD-8037): a revoke from `gip_app` changes nothing for a
+- **FD-1704's planned `REVOKE UPDATE` on `factors`** (a limb of FD-8037): a revoke from `gip_app` changes nothing for a
   connection that is the owner. The trigger on `factors` is what must bind, and only S-b makes the revoke matter.
 - **`test_artifact_immutability.py`'s grants-derived list** (FD-8037): it tests the grants, not what the application can
   do, so it stays green over an application that is not subject to them.
@@ -133,6 +133,6 @@ removed. The migration path, run as the owner, is asserted separately so the two
 ## Disposition
 
 Carry forward, owner WK-1178: fixed in P2 (D17), by PL 8016's slice S-b, ruled at "2026-10-14 12:00:14 BST". FD-8037 (S-a)
-is first and independent; FD-8007's revoke becomes meaningful only after this lands. It needs a resolution before any P3
+is first and independent; FD-1704's revoke becomes meaningful only after this lands. It needs a resolution before any P3
 start (`CLAUDE.md` §14). The event that next confirms or discharges it is the merge of S-b with the three reds above shown
 on the base tree by cause.

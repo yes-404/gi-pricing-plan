@@ -7,7 +7,7 @@ created: 2026-10-14
 owner: auditor
 tree: 4420f91fa4112a1fcabcae23d3d50a1ad4fcbb59
 corrected_by: []
-relates: [WK-658, WK-659, WK-660, WK-661, WK-664, WK-1178, WK-1251, FR-6, FR-33, FR-41, FR-80, FR-89, FR-100, FR-109, FR-110, FR-123, FR-127, NFR-467, FR-70, FD-8007, FD-8023, FD-1660, FD-1679, CR-721, CR-754, CR-819, CR-822, P1a, P1b]
+relates: [WK-658, WK-659, WK-660, WK-661, WK-664, WK-1178, WK-1251, FR-6, FR-33, FR-41, FR-80, FR-89, FR-100, FR-109, FR-110, FR-123, FR-127, NFR-467, FR-70, FD-1704, FD-8023, FD-1660, FD-1679, CR-721, CR-754, CR-819, CR-822, P1a, P1b]
 ---
 
 # FD-8027 — eleven closed Phase 1 requirements carry an unbuilt or unproven clause, and no closure record gave any of them a verdict
@@ -19,7 +19,7 @@ maintainer's (by delegation) entry "2026-10-14 10:57:10 BST" item 3, *"closed-ph
 PARTIAL → ONE closure-gap FD for the §14 review"*, and its ruling entry of 11:06:52 BST item 2, which
 sets the scope used here: **FR-6, 33, 41, 80, 89, 100, 109, 110, 127, plus FR-123 and NFR-467**, one
 limb per id, a severity per limb, and *"Any HIGH limb is fixed in P2."* **FR-70 is not here**: it is
-FD 8007's class and the maintainer's item 2 puts it in that finding's table set (see Cross-citations).
+FD-1704's class and the maintainer's item 2 puts it in that finding's table set (see Cross-citations).
 The lead's brief to this seat listed FR-70 and omitted FR-123 and NFR-467; the later ruling governs.
 
 ## Finding
@@ -69,7 +69,7 @@ Columns: **Closing Work → record** (what the record says about the id) · **Mi
 
 ## Cross-citations, not duplicated
 
-- **FR-70** (reference-table immutability held by route absence only: no trigger, no test refusing a mutation of a published version) is **FD 8007's class** and the open-question O-1 on the FR-44 append-only work. The maintainer's item 2 puts it in that finding's table set with one remedy, so it is **not** a limb here. Evidence for it is in the line-read (`reference.py:203-229,255-276`; `test_api_reference.py:143-157`) and belongs in FD 8007's derivation.
+- **FR-70** (reference-table immutability held by route absence only: no trigger, no test refusing a mutation of a published version) is **FD-1704's class** and the open-question O-1 on the FR-44 append-only work. The maintainer's item 2 puts it in that finding's table set with one remedy, so it is **not** a limb here. Evidence for it is in the line-read (`reference.py:203-229,255-276`; `test_api_reference.py:143-157`) and belongs in FD-1704's derivation.
 - **FD 8023** (blob GC and the 14 of 17 writers that never retain) is a separate subject. It shares only the pattern *"a closure reported a capability the code did not carry"*.
 - **FD-1660 and FD-1679** are the HIGH precedent for *"silently wrong evidence an approver reads"*. The class rating below applies the same consistency argument to FR-100 and FR-127.
 - **The 11:06:52 entry, items 1 and 3.** The twelve DELIVERED-UNCITED ids go to the marker batch (no FD). NFR-468, 470, 472, 485 and 1443 go to the WK-1178 measurement sweep slice. Neither set is in this finding.

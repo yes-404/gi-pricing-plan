@@ -1,5 +1,5 @@
 ---
-id: FD-8007
+id: FD-1704
 family: finding
 title: The factors table is not append-only at the database, so a row edit re-prices every pinned fitted Model with the pin unchanged
 status: active
@@ -7,15 +7,17 @@ created: 2026-10-14
 owner: auditor
 tree: 1e260c1553acf39844939fe12da685ccfb835e54
 corrected_by: []
-relates: [WK-1178, WK-690, SL-1274, RL-8001, RL-1615, FD-1619, FD-1660, FD-1679, FR-43, FR-44, FR-96, FR-87, P2]
+relates: [WK-1178, WK-690, SL-1274, RL-1700, RL-1615, FD-1619, FD-1660, FD-1679, FR-43, FR-44, FR-96, FR-87, P2]
 ---
 
-# FD-8007 — the `factors` table is not append-only at the database
+# FD-1704 — the `factors` table is not append-only at the database
+
+*(Minted 2026-10-14 as FD-1704 from working id 8007, in the D15 batch mint PR.)*
 
 *(Filed under working id 8007, reserved by the lead; a minter folds it into the docs batch. Every
 `file:line` below was read at `origin/main` `1e260c1553acf39844939fe12da685ccfb835e54` unless it names
 another tree. The raising evidence is the seat's entry "2026-10-14 10:01:32 BST" in
-`channel/from-dm-wk690-47.md` and the draft `RL-8001` at `origin/rl-8001-wk690-s4-47-2026-10-14`
+`channel/from-dm-wk690-47.md` and the draft `RL-1700` at `origin/rl-8001-wk690-s4-47-2026-10-14`
 @`f3cad285`; the claims were re-read against the primary files, not copied.)*
 
 ## Finding
@@ -31,6 +33,19 @@ with the pin unchanged (RL 8001's own words), so weigh it against FD-1660/FD-167
 evidence or price" class. The fix (revoke + `artifact_append_only` triggers + APPEND_ONLY_TABLES +
 `_make_control` rewrite) is scheduled before the P2 code freeze, owing to FR-44 "Every artifact table
 carries both layers"."*
+
+**Severity ruled: dated 2026-10-14, on the maintainer's (by delegation) entry "2026-10-14 10:11:47
+BST — FD 8007 severity: MEDIUM + re-rate trigger CONFIRMED" (`to-lead.md`).** MEDIUM, with the
+auditor's trigger: HIGH on any found UPDATE or DELETE path, or a route-level change. No application
+path writes `factors`, so reaching it needs direct database write access. The fix stays due before
+the 4 Nov code freeze, as its own row, red first. The entry adds to the remedy that the planted
+UPDATE red must fail at the database layer, not only through the derived test set.
+*Refined by the maintainer's (by delegation) entries "2026-10-14 10:29:14 BST" (PL 8016 DP-1 (a):
+after the REVOKE the privilege check fires before the trigger, so the two FR-44 layers are proven by
+two separate observations; the append-only set is derived from the artifact family, never from
+grants) and "2026-10-14 12:00:14 BST" item (A)–(B) (this finding becomes a limb of PL 8016's re-cut
+slices S-a, triggers first, and S-b, least privilege; its revoke matters only after S-b, because the
+app connects as the table owner). PL 8016 is a working id in a later batch.*
 
 `factors` is the one artifact table of the modelling module that has neither layer of FR-43/FR-44. A
 Model pins its Factors by row id, and a fitted Model's spec cannot change, so the *pin* is immutable
@@ -113,7 +128,7 @@ row). Editing a Factor creates a new version. The one in-repo `UPDATE factors` i
 
 whose docstring says it flips the Factor *"the way a later edit would"*. That is the only writer, and
 it works because the grant allows it. Fixing the grant makes this helper fail, which is correct: the
-helper must create a `control` version instead (`RL-8001`'s proposal).
+helper must create a `control` version instead (`RL-1700`'s proposal).
 
 ### 5. How a Factor is pinned, and what an edit does to a pinned Model
 
@@ -125,7 +140,7 @@ helper must create a `control` version instead (`RL-8001`'s proposal).
 - A fitted Model's spec cannot change: the `models_fit_immutable` trigger freezes `fit_result`, `spec`,
   `spec_hash` and `dataset_version_id` once the model is fitted (`b2c3d4e5f6a7:32-50`).
 - Fit, prediction and rating resolve the pinned Factors **by id at use time**: `load_factors`
-  (`backend/src/app/platform/modelling.py:286`, `_load` at `:310-320`, `by_id[fid]` at `:331`). `RL-8001`'s
+  (`backend/src/app/platform/modelling.py:286`, `_load` at `:310-320`, `by_id[fid]` at `:331`). `RL-1700`'s
   table lists the callers (`worker/model_handlers.py`, `platform/prediction.py:130,511`,
   `platform/rating_algorithms.py:140`); that call list is the draft's and was not re-enumerated here.
 
@@ -139,7 +154,7 @@ This is the same defect class the repository has already met twice at one remove
 `b2c3d4e5f6a7` begins with *"An audit rewrote a stored coefficient from 0.6931 to 0.0 with a raw
 `UPDATE`"*; `FR-43`'s origin is *"rewriting 190 stored reports from `fail` to `pass` in one
 statement"* (`test_artifact_immutability.py:1-8`). `RL-1615` is the stale-band version, and
-`RL-8001` calls this *"`RL-1615`'s stale-band class one level up"*.
+`RL-1700` calls this *"`RL-1615`'s stale-band class one level up"*.
 
 ## Severity: the proposal and its reasoning against FD-1660 and FD-1679
 
@@ -149,7 +164,7 @@ FD-1679 was: *"That is silently wrong approval evidence … Consistency requires
 share the **consequence**: a silent wrong value an approver or a customer relies on, with every
 visible record unchanged. They differ on the **precondition**:
 
-| | FD-1660 | FD-1679 | FD-8007 |
+| | FD-1660 | FD-1679 | FD-1704 |
 |---|---|---|---|
 | Reachable by an ordinary API call on `main` | yes (a partial subset that compiles against another sub-graph version) | yes (two valid pins of one slug, `RL-1538`) | **no**: no application path updates `factors` (item 4) |
 | What it takes | normal operation | normal operation | a write path the application does not have: a SQL injection, a defect that adds an `UPDATE`, a direct connection, or a support script |
@@ -178,7 +193,7 @@ changed price with an unchanged pin, which is the platform's mispricing class (`
 ## Disposition
 
 **Fix before close with an owner: WK-1178**, as **its own row** (the maintainer's (by delegation)
-entry "2026-10-14 10:01:11 BST"; not `WK-690` S4, whose write set `RL-8001` already widens by one
+entry "2026-10-14 10:01:11 BST"; not `WK-690` S4, whose write set `RL-1700` already widens by one
 migration). **It lands before the P2 code freeze** (`FR-44`). Needs a resolution before any P3 start
 (`CLAUDE.md` §14).
 

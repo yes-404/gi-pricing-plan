@@ -70,6 +70,7 @@ from pricing_core.modelling.objectives import (
     make_lgb_objective,
     make_xgb_objective,
 )
+from pricing_core.modelling.weights import require_usable_weights
 from pricing_core.progress import NullProgress, ProgressCallback
 
 #: What each backend's callable-objective hook is handed and returns. XGBoost passes the
@@ -624,6 +625,13 @@ def fit_gbm(
     """
     report = progress or NullProgress()
     report.check_cancelled()
+    # FR-111: weight-0 rows are absent from the fit, the holdout included, and an unusable
+    # weight is refused here — before either backend sees it and before any binning.
+    data = require_usable_weights(data, spec, GbmFitError).data
+    if holdout is not None:
+        holdout = require_usable_weights(
+            holdout, spec, GbmFitError, what="the holdout"
+        ).data
     report.update(0.05, "resolving factors")
     matrix = resolve_factors(data, factors, bandings=bandings, groupings=groupings)
 

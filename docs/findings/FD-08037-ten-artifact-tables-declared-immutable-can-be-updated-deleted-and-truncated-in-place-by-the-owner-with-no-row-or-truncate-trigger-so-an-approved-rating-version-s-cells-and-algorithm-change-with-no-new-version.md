@@ -7,7 +7,7 @@ created: 2026-10-14
 owner: auditor
 tree: 8eaf6d5f9cd4204e1e077b44069d4afd395f1461
 corrected_by: []
-relates: [WK-1178, FD-8007, FD-8038, FR-44, FR-70, FR-229, FR-43, P2]
+relates: [WK-1178, FD-1704, FD-8038, FR-44, FR-70, FR-229, FR-43, P2]
 ---
 
 # FD-8037 — ten immutable artifact tables carry no trigger
@@ -30,8 +30,8 @@ price changes with no new version. That is the silent-price class. Separate from
 own derived test), as you propose."* The remedy as ruled is in the same entry, point (B), "S-a, triggers first": *"row +
 TRUNCATE `artifact_append_only` triggers on `factors` AND the 10 tables (mutable columns, if any, allow-listed explicitly
 with a reason). APPEND_ONLY_TABLES DERIVED from the artifact family (the ORM's artifact tables or the FR-44 list), never
-from grants. Reds: an OWNER UPDATE/DELETE/TRUNCATE on each table is refused by the trigger, red on main."* FD-8007 and
-FR-70 are limbs of this finding (below); FD-8007's body is not edited here.
+from grants. Reds: an OWNER UPDATE/DELETE/TRUNCATE on each table is refused by the trigger, red on main."* FD-1704 and
+FR-70 are limbs of this finding (below); FD-1704's body is not edited here.
 
 ## Finding
 
@@ -92,7 +92,7 @@ was rolled back):
 | `sub_graph_versions` | `UPDATE 1` | `DELETE 1` | `TRUNCATE TABLE` |
 | `regression_suite_versions` | `UPDATE 2` | `DELETE 2` | `TRUNCATE TABLE` |
 | `regression_suites` | `UPDATE 2` | `DELETE 2` | refused by a foreign key (`regression_suite_versions` references it), not by a guard |
-| `factors` (FD-8007's table) | `UPDATE 19` | `DELETE 19` | `TRUNCATE TABLE` |
+| `factors` (FD-1704's table) | `UPDATE 19` | `DELETE 19` | `TRUNCATE TABLE` |
 
 **What the run did not exercise: `reference_tables`.** Its ten-table membership rests on the catalog extract above (no
 trigger, no grant, owner `gipricing`), the same shape as its neighbours, not on an owner-write result. The remedy's red
@@ -113,7 +113,7 @@ nobody writes the table.
 
 ## Limbs
 
-- **FD-8007 (`factors`)** is limb 1: the same absence of a trigger on a table a Model pins by row id, with its own cause
+- **FD-1704 (`factors`)** is limb 1: the same absence of a trigger on a table a Model pins by row id, with its own cause
   and its own derived test. Cross-cited; its body is untouched.
 - **FR-70** ("Reference Table Versions are immutable and independently approvable", `01-data-management.md:177`) is limb 2.
   `reference_table_versions` and `reference_rows` are in the table above: owner `UPDATE` and `DELETE` succeed on both, so
