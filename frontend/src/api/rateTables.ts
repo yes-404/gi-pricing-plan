@@ -11,16 +11,8 @@ export type RateTableVersion = components["schemas"]["RateTableVersion"];
 export type RateTableDiffCell = components["schemas"]["RateTableDiffCell"];
 export type RateTableDiffCellPage = components["schemas"]["Page_RateTableDiffCell_"];
 export type ImportVerdict = components["schemas"]["ImportVerdict"];
-/**
- * What `POST …/import` answers while `confirm` is false (03 §5.1, `ImportPreview` in model-schema).
- * The route's 200 is still an open object in the contract (`UNTYPED_2XX_PENDING_PART_B`, a hold
- * that is WK-1178's), so this is composed from the generated parts and asserted at one boundary
- * (`previewImport`); it goes when that route is typed.
- */
-export interface ImportPreview {
-  diff: RateTableDiff;
-  created_by_import: ImportVerdict;
-}
+/** What `POST …/import` answers (200) while `confirm` is false (03 §5.1); the 201 is a `RateTableVersion`. */
+export type ImportPreview = components["schemas"]["ImportPreview"];
 /** `GET …/diff/cells` `against`: `previous`, `seed`, or a version number (FR-231). */
 export type DiffAgainst = string;
 /** A bulk operation's request, discriminated on `kind` (FR-233, `SL-1669`). */
