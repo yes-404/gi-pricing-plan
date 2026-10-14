@@ -102,6 +102,8 @@ hot-fix script run as the owner. **S-b (least privilege) is what makes S-a tampe
 as a role that is not the owner and not a superuser, it can neither `DISABLE TRIGGER` nor set `session_replication_role`, and
 FR-44's privilege layer begins to bind. S-a without S-b leaves the dependency this section states.
 
+*2026-10-14: per the maintainer's (by delegation) "2026-10-14 14:59:13 BST — Host exposure CLOSED: the user's read-only GCP check shows NO internet reachability of 5432/6379/9000/9001/8080 (re my 12:42:33)" (`to-lead.md`) — the measurement: network `default` has 4 ingress rules, all priority 65534: "default-allow-internal (10.128.0.0/9, all), -ssh (0.0.0.0/0 tcp:22), -rdp (0.0.0.0/0 tcp:3389), -icmp"; "no rule targets the VM's service account; no network firewall policies; no org/folder"; "live probe from outside GCP: 5432, 6379, 9000, 9001 and 8080 closed/filtered, with 22 OPEN as the control." "So the services are reachable only from inside the VPC (10.128.0.0/9)." Exposure of the superuser database recorded here: VPC-internal only, 2026-10-14. "No running container is recreated. S-b's Step 1.5 (compose binds every port to 127.0.0.1, red first) STAYS as defence in depth (other VMs in the VPC could reach them, and a future permissive rule would expose a superuser DB), together with the non-default GIP_APP_DB_PASSWORD gate (R8)."*
+
 ## The fix, for the planner (as ruled; a DP for the shape)
 
 S-b as ruled at "2026-10-14 12:00:14 BST": the application connects as a login role with `gip_app`'s grants (the DSN,
