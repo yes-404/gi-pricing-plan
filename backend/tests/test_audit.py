@@ -56,6 +56,7 @@ async def test_event_is_written_in_the_callers_transaction(
     assert stored[0].event_hash == event.event_hash
 
 
+@pytest.mark.req("FR-7")
 @pytest.mark.req("FR-368")
 @pytest.mark.req("NFR-519")
 async def test_rollback_discards_the_change_and_its_audit_event_together(
