@@ -37,6 +37,7 @@ from model_schema.rating import AlgorithmDiff, RatingAlgorithm, diff_algorithms
 pytestmark = pytest.mark.req("FR-242")
 
 _SOFTENED = {"driver_age_band": [("17-20", 1.84), ("21-24", 1.41), ("25-29", 1.12)]}
+_RAISED = {"driver_age_band": [("17-20", 1.92), ("21-24", 1.50), ("25-29", 1.12)]}
 
 
 def _run(coro: Any) -> Any:
@@ -384,9 +385,10 @@ def test_a_parquet_table_answers_200_with_the_entry_pending(
     assert _snapshot(database, workspace_id, v2.id)[-1] == jobs_before
 
 
-# --- FD-1679 / SL-1678: a version pinning two versions of one rate-table slug ---------------
+# --- FD-1679 / RL-9996: a version pinning two versions of one rate-table slug ---------------
 # `RL-1538` makes such pins valid input, so create accepts them (each test asserts the 201);
-# the drafted summary pairs rate tables by slug and refuses (409) rather than drop or mis-pair.
+# the drafted summary pairs rate tables by step and by unique slug (RL-9996), names every
+# version and refuses no pin set.
 
 
 def _create_over_http(
@@ -444,55 +446,289 @@ def _two_versions_of_one_table(
     )
 
 
-def _assert_refused(response, slug: str) -> None:
-    assert response.status_code == 409, response.text
-    problem = response.json()
-    assert problem["code"] == "VALIDATION_FAILED", problem
-    assert slug in problem["detail"], problem
-    assert "FD-1679" in problem["detail"], problem
+def _table_algorithm(version: int, tables: dict[str, ArtifactRef]) -> dict[str, Any]:
+    """`_minimal_algorithm` with one `table` step per `step_id -> rate table ref`, inserted as
+    `test_rating_pin_membership_api.py` inserts one; nothing consumes their outputs."""
+    body = _minimal_algorithm()
+    body["version"] = version
+    for offset, (step_id, ref) in enumerate(sorted(tables.items())):
+        body["steps"].insert(
+            1 + offset,
+            {
+                "step_id": step_id,
+                "type": "table",
+                "label": step_id,
+                "rate_table_ref": str(ref),
+                "key_expr": ["premium_in"],
+                "on_miss": "error",
+                "consumes": ["premium_in"],
+                "produces": f"factor_{step_id}",
+            },
+        )
+    return body
 
 
-@pytest.mark.parametrize("candidate_order", ["two_then_one", "one_then_two"])
-def test_a_candidate_pinning_two_versions_of_one_table_is_refused(
-    api_client, workspace_id, principal, grant, database, blob_store, candidate_order
-) -> None:
-    """Red 1 (X@two, X@one: today the entry is dropped) and Red 2 (X@one, X@two: today a
-    false `X one -> two`)."""
-    headers, one, two = _two_versions_of_one_table(
-        api_client, workspace_id, principal, grant, database, blob_store
-    )
-    baseline = _create_over_http(api_client, headers, algorithm_version=1, pins=_pins(one))
-    _run(_approve(database, principal, workspace_id, baseline))
-    pair = (two, one) if candidate_order == "two_then_one" else (one, two)
-    candidate = _create_over_http(api_client, headers, algorithm_version=2, pins=_pins(*pair))
-
-    response = api_client.get(
-        f"/api/v1/rating-versions/{candidate}/change-summary-draft", headers=headers
-    )
-
-    _assert_refused(response, one.slug)
+def _entries(body: dict[str, Any]) -> list[tuple[Any, ...]]:
+    """Each entry as (step_id, from_ref, to_ref, has a diff); `.get` so main reads None."""
+    return [
+        (e.get("step_id"), e["from_ref"], e["to_ref"], e["diff"] is not None)
+        for e in body["rate_tables"]
+    ]
 
 
-def test_a_baseline_pinning_two_versions_of_one_table_is_refused(
+def _three_versions(
     api_client, workspace_id, principal, grant, database, blob_store
-) -> None:
-    """Red 3: the duplicate is on the baseline side; today `rate_tables == []`."""
-    headers, one, two = _two_versions_of_one_table(
-        api_client, workspace_id, principal, grant, database, blob_store
-    )
+) -> tuple[dict[str, str], ArtifactRef, ArtifactRef, ArtifactRef]:
+    _run(grant("analyst"))
+    headers = _headers(principal, workspace_id)
+    slug = _table_slug()
+    versions = [
+        _run(_seed_table_version(database, workspace_id, principal, slug, blob_store, levels))
+        for levels in (_LEVELS, _SOFTENED, _RAISED)
+    ]
+    x1, x2, x3 = (ArtifactRef(type="rate_table", slug=slug, version=v) for v in versions)
+    return headers, x1, x2, x3
+
+
+def _draft(
+    api_client,
+    database: Database,
+    workspace_id,
+    principal,
+    headers,
+    *,
+    algorithms: tuple[dict[str, Any], dict[str, Any]],
+    pins: tuple[list[ArtifactRef], list[ArtifactRef]],
+) -> dict[str, Any]:
+    """Seed an approved baseline (algorithm 1) and a candidate (algorithm 2); draft the latter."""
+    _save_algorithms(api_client, headers, *algorithms)
     _run(
         _insert(
             database, workspace_id, principal, version=1, algorithm_version=1,
-            pins=_pins(one, two), approved=True,
+            pins=_pins(*pins[0]), approved=True,
         )
     )
     candidate = _run(
         _insert(
-            database, workspace_id, principal, version=2, algorithm_version=2, pins=_pins(two)
+            database, workspace_id, principal, version=2, algorithm_version=2,
+            pins=_pins(*pins[1]),
         )
     )
+    response = api_client.get(_url(candidate), headers=headers)
+    assert response.status_code == 200, response.text
+    body: dict[str, Any] = response.json()
+    return body
 
-    _assert_refused(api_client.get(_url(candidate), headers=headers), one.slug)
+
+def test_r1_a_repointed_step_and_a_seed_pin_are_both_named(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """C1: `t` moves X1 -> X2 while `t_seed` keeps X1; every version is named."""
+    headers, x1, x2, _ = _three_versions(
+        api_client, workspace_id, principal, grant, database, blob_store
+    )
+    body = _draft(
+        api_client, database, workspace_id, principal, headers,
+        algorithms=(_table_algorithm(1, {"t": x1}), _table_algorithm(2, {"t": x2, "t_seed": x1})),
+        pins=([x1], [x2, x1]),
+    )
+
+    assert _entries(body) == [("t", str(x1), str(x2), True), ("t_seed", None, str(x1), False)]
+    table_diff = _diff_ready(
+        api_client, f"/api/v1/rate-tables/{x1.slug}@{x2.version}/diff",
+        {"against": str(x1.version)}, headers,
+    )
+    assert body["rate_tables"][0]["diff"] == table_diff.json()
+
+
+def test_r2_a_repointed_step_beside_an_unchanged_seed_pin_is_one_entry(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """C2: `t` moves X2 -> X3, `t_seed` stays X1 on both sides."""
+    headers, x1, x2, x3 = _three_versions(
+        api_client, workspace_id, principal, grant, database, blob_store
+    )
+    body = _draft(
+        api_client, database, workspace_id, principal, headers,
+        algorithms=(
+            _table_algorithm(1, {"t": x2, "t_seed": x1}),
+            _table_algorithm(2, {"t": x3, "t_seed": x1}),
+        ),
+        pins=([x2, x1], [x3, x1]),
+    )
+
+    assert _entries(body) == [("t", str(x2), str(x3), True)]
+    table_diff = _diff_ready(
+        api_client, f"/api/v1/rate-tables/{x1.slug}@{x3.version}/diff",
+        {"against": str(x2.version)}, headers,
+    )
+    assert body["rate_tables"][0]["diff"] == table_diff.json()
+
+
+@pytest.mark.parametrize("candidate_order", ["two_then_one", "one_then_two"])
+def test_r3_a_candidate_adding_a_second_version_names_it_alone(
+    api_client, workspace_id, principal, grant, database, blob_store, candidate_order
+) -> None:
+    """C3b (SL-1678's first test, flipped): a pin no step names, one added: `— -> X2`."""
+    headers, x1, x2, _ = _three_versions(
+        api_client, workspace_id, principal, grant, database, blob_store
+    )
+    candidate = [x2, x1] if candidate_order == "two_then_one" else [x1, x2]
+    body = _draft(
+        api_client, database, workspace_id, principal, headers,
+        algorithms=(_algorithm(1), _algorithm(2, extra_step=True)),
+        pins=([x1], candidate),
+    )
+
+    assert _entries(body) == [(None, None, str(x2), False)]
+
+
+def test_r3_a_candidate_dropping_one_of_two_baseline_versions_names_it_alone(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """C3c (SL-1678's second test, flipped): the baseline pins X1 and X2, the candidate X2."""
+    headers, x1, x2, _ = _three_versions(
+        api_client, workspace_id, principal, grant, database, blob_store
+    )
+    body = _draft(
+        api_client, database, workspace_id, principal, headers,
+        algorithms=(_algorithm(1), _algorithm(2, extra_step=True)),
+        pins=([x1, x2], [x2]),
+    )
+
+    assert _entries(body) == [(None, str(x1), None, False)]
+
+
+def test_r4_two_removed_and_one_added_version_are_three_entries_without_diffs(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """C3d: [X1, X2] -> [X3] is no unique pair, so each pin is its own entry."""
+    headers, x1, x2, x3 = _three_versions(
+        api_client, workspace_id, principal, grant, database, blob_store
+    )
+    body = _draft(
+        api_client, database, workspace_id, principal, headers,
+        algorithms=(_algorithm(1), _algorithm(2, extra_step=True)),
+        pins=([x1, x2], [x3]),
+    )
+
+    expected = [(None, str(x1), None, False), (None, str(x2), None, False),
+                (None, None, str(x3), False)]
+    assert sorted(_entries(body), key=str) == sorted(expected, key=str)
+
+
+def test_r5_a_step_entry_and_an_extra_pin_are_both_named(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """C3e: `t` moves X1 -> X2 and the candidate also pins X3."""
+    headers, x1, x2, x3 = _three_versions(
+        api_client, workspace_id, principal, grant, database, blob_store
+    )
+    body = _draft(
+        api_client, database, workspace_id, principal, headers,
+        algorithms=(_table_algorithm(1, {"t": x1}), _table_algorithm(2, {"t": x2})),
+        pins=([x1], [x2, x3]),
+    )
+
+    assert _entries(body) == [("t", str(x1), str(x2), True), (None, None, str(x3), False)]
+
+
+def test_r6_a_step_pointing_at_another_table_is_two_entries_without_diffs(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """C4b: step `t` X1 -> step `u` X2 (same slug, different steps) are not paired by slug."""
+    headers, x1, x2, _ = _three_versions(
+        api_client, workspace_id, principal, grant, database, blob_store
+    )
+    body = _draft(
+        api_client, database, workspace_id, principal, headers,
+        algorithms=(_table_algorithm(1, {"t": x1}), _table_algorithm(2, {"u": x2})),
+        pins=([x1], [x2]),
+    )
+
+    assert len(body["rate_tables"]) == 2
+    assert _entries(body) == [("t", str(x1), None, False), ("u", None, str(x2), False)]
+
+
+def test_r7_a_step_repointed_to_another_table_names_both_with_its_step_id(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """C4a: step `t` moves from table X to table Y; each side's entry carries `t`."""
+    headers, x1, _, _ = _three_versions(
+        api_client, workspace_id, principal, grant, database, blob_store
+    )
+    y_slug = _table_slug()
+    y1 = ArtifactRef(
+        type="rate_table",
+        slug=y_slug,
+        version=_run(
+            _seed_table_version(database, workspace_id, principal, y_slug, blob_store, _LEVELS)
+        ),
+    )
+    body = _draft(
+        api_client, database, workspace_id, principal, headers,
+        algorithms=(_table_algorithm(1, {"t": x1}), _table_algorithm(2, {"t": y1})),
+        pins=([x1], [y1]),
+    )
+
+    assert len(body["rate_tables"]) == 2
+    assert [e.get("step_id") for e in body["rate_tables"]] == ["t", "t"]
+    by_slug = {e["slug"]: e for e in body["rate_tables"]}
+    assert (by_slug[x1.slug]["from_ref"], by_slug[x1.slug]["to_ref"]) == (str(x1), None)
+    assert (by_slug[y1.slug]["from_ref"], by_slug[y1.slug]["to_ref"]) == (None, str(y1))
+
+
+def test_e8_create_stores_an_identical_ref_twice(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """Establishes (not a red): nothing dedupes an identical ref, so stored pins keep both."""
+    headers, one, _ = _two_versions_of_one_table(
+        api_client, workspace_id, principal, grant, database, blob_store
+    )
+    first = _create_over_http(api_client, headers, algorithm_version=1, pins=_pins(one, one))
+
+    async def stored() -> Any:
+        async with database.session() as session:
+            row = await session.get(RatingVersionRow, first)
+            assert row is not None
+            return row.pins
+
+    assert _run(stored())["rate_tables"] == [str(one), str(one)]
+
+
+def test_r8_a_baseline_listing_one_ref_twice_is_not_refused(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """DP-5 (a): the baseline pins X1 twice; `t` moves X1 -> X2, `t_seed` stays X1."""
+    headers, x1, x2, _ = _three_versions(
+        api_client, workspace_id, principal, grant, database, blob_store
+    )
+    body = _draft(
+        api_client, database, workspace_id, principal, headers,
+        algorithms=(
+            _table_algorithm(1, {"t": x1, "t_seed": x1}),
+            _table_algorithm(2, {"t": x2, "t_seed": x1}),
+        ),
+        pins=([x1, x1], [x2, x1]),
+    )
+
+    assert _entries(body) == [("t", str(x1), str(x2), True)]
+
+
+def test_r9_an_identical_ref_listed_twice_on_the_candidate_is_no_difference(
+    api_client, workspace_id, principal, grant, database, blob_store
+) -> None:
+    """DP-5 (a), set semantics: a ref listed twice is the ref once, so no entry."""
+    headers, x1, _, _ = _three_versions(
+        api_client, workspace_id, principal, grant, database, blob_store
+    )
+    body = _draft(
+        api_client, database, workspace_id, principal, headers,
+        algorithms=(_algorithm(1), _algorithm(2)),
+        pins=([x1], [x1, x1]),
+    )
+
+    assert _entries(body) == []
 
 
 def test_a_first_version_pinning_two_versions_of_one_table_is_still_answered(
