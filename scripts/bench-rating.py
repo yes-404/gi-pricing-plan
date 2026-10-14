@@ -863,8 +863,14 @@ async def _measure_fetch(
     return Measurement(samples=samples, load_start=load_start, load_end=load_end)
 
 
-def _serve(*, dsn: str, bucket: str, log_path: Path, port: int) -> Any:
+def _serve(
+    *, dsn: str, bucket: str, log_path: Path, port: int, workers: int = 1
+) -> Any:
     """`uvicorn app.main:create_app --factory` in its own process — one replica.
+
+    A replica is N `uvicorn` worker processes (RL-1685, PL-1454 DP-3 (b)); `workers` is N,
+    and `--workers` is passed only above 1, so the default is the single process this
+    harness has always started.
 
     A subprocess rather than an in-process ASGI transport because NFR-489 measures a
     *replica*, and an in-process server would have the load generator's own work competing
@@ -887,6 +893,7 @@ def _serve(*, dsn: str, bucket: str, log_path: Path, port: int) -> Any:
             "uv", "run", "uvicorn", "app.main:create_app", "--factory",
             "--host", "127.0.0.1", "--port", str(port),
             "--log-level", "warning", "--no-access-log",
+            *(["--workers", str(workers)] if workers > 1 else []),
         ],
         cwd=str(root),
         env=env,
@@ -1065,9 +1072,18 @@ def main() -> int:
     parser.add_argument(
         "--bucket", default=os.environ.get("GIP_TEST_BUCKET", "gip-test-blobs")
     )
+    parser.add_argument(
+        "--workers", type=int, default=1,
+        help="N, the uvicorn worker processes of the replica under test (RL-1685). A reading "
+             "is per replica at this N; it is printed in the header of every run.",
+    )
     args = parser.parse_args()
 
     print(f"machine: {machine()}")
+    print(
+        f"replica: N = {args.workers} uvicorn worker process(es); "
+        "NFR-489/454 are read per replica at this N"
+    )
     print(
         f"warmup {args.warmup} calls, measured {args.iterations} calls, "
         f"{args.expr_steps} chained expression steps"
@@ -1254,7 +1270,10 @@ def _run_http_sweep(args: Any) -> None:
                 budget_ms=None)
 
         log_path = logs / f"server-{'gbm' if with_gbm else 'nogbm'}.log"
-        proc = _serve(dsn=args.dsn, bucket=args.bucket, log_path=log_path, port=args.port)
+        proc = _serve(
+            dsn=args.dsn, bucket=args.bucket, log_path=log_path, port=args.port,
+            workers=args.workers,
+        )
         base = f"http://127.0.0.1:{args.port}"
         try:
             asyncio.run(_await_ready(f"{base}/healthz"))
