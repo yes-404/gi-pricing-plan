@@ -1,18 +1,23 @@
-"""DP-4 (RL-1685): the app's own start-up calls `gc.freeze()`, after its last start-up step.
+"""DP-4 (RL-1685): start-up freezes the heap, proven by its call and by its effect.
 
-The ~200-300 ms stall RL-1685 attributes to a gen2 collection is not asserted by timing, which
-a loaded machine would make flake. RL-1685's own form, `gc.get_freeze_count() > 0` once the app
-has started, cannot fail here: `create_app(...)` alone leaves 375 objects in the permanent
-generation before any lifespan runs (measured on this tree, with no `gc.freeze` call visible to
-`sys.setprofile`), so a count proves nothing about the lifespan. This test therefore observes
-the call itself: `gc.freeze` is replaced by a spy, and the spy records whether the lifespan's
-last start-up step (the rate limiter, set just before `yield`) had run when it was called.
+The stall RL-1685 attributes to a gen2 collection is not asserted by timing, which a loaded
+machine would make flake. RL-1685's own form, `gc.get_freeze_count() > 0` once the app has
+started, cannot fail: `create_app(...)` alone leaves 375 objects in the permanent generation
+before any lifespan runs, and where they come from is UNKNOWN (no `gc.freeze` call was visible
+to a wrapper plugin or to `sys.setprofile`). The ruling of the maintainer (by delegation),
+to-lead "2026-10-14 10:54:56 BST", replaces it with two asserts, each red on the base tree.
+
+1. **Call.** `gc.freeze` is wrapped by a spy that still calls the real one. Start-up calls it
+   exactly once, after the lifespan's last step (the rate limiter is on `app.state`).
+2. **Effect.** With the real `gc.freeze`, the permanent generation is larger at `yield` than
+   just before the lifespan started. It is a difference, not a level, because of the 375
+   baseline: a level would pass with no freeze at all.
 """
 
 from __future__ import annotations
 
 import gc
-from typing import Any
+from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
@@ -23,19 +28,41 @@ from app.main import create_app
 pytestmark = pytest.mark.req("NFR-489")
 
 
-def test_the_lifespan_freezes_the_heap_after_its_last_start_up_step(
+@pytest.fixture(autouse=True)
+def _leave_no_frozen_objects() -> Iterator[None]:
+    """The permanent generation is process-wide: hand it back as found."""
+    yield
+    gc.unfreeze()
+
+
+def test_the_lifespan_calls_gc_freeze_once_after_its_last_start_up_step(
     api_settings: Settings, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     app = create_app(api_settings)
-    calls: list[bool] = []
+    real_freeze = gc.freeze
+    rate_limiter_present_at_each_call: list[bool] = []
 
-    def _spy_freeze() -> None:
-        calls.append(hasattr(app.state, "rate_limiter"))
+    def _spy() -> None:
+        rate_limiter_present_at_each_call.append(hasattr(app.state, "rate_limiter"))
+        real_freeze()
 
-    monkeypatch.setattr(gc, "freeze", _spy_freeze)
+    monkeypatch.setattr(gc, "freeze", _spy)
     with TestClient(app):
-        started: Any = list(calls)
-    assert started == [True], (
+        seen = list(rate_limiter_present_at_each_call)
+    assert seen == [True], (
         "gc.freeze() must be called exactly once during start-up, after the last start-up "
-        f"step; the spy saw (rate_limiter present at each call) {started}"
+        f"step; the spy saw (rate_limiter present at each call) {seen}"
+    )
+
+
+def test_the_lifespan_moves_objects_into_the_permanent_generation(
+    api_settings: Settings,
+) -> None:
+    app = create_app(api_settings)
+    before = gc.get_freeze_count()
+    with TestClient(app):
+        at_yield = gc.get_freeze_count()
+    assert at_yield > before, (
+        "start-up froze nothing: the permanent generation held "
+        f"{before} objects before the lifespan and {at_yield} at yield"
     )
