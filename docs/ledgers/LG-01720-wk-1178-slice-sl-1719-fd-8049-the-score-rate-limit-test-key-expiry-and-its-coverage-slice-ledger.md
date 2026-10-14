@@ -36,11 +36,44 @@ Branch `sl-8051-fd8049-ratelimit-ttl`, worktree `.claude/worktrees/sl-8051`, cut
 
 Run by `/home/puzhenhao1989/.claude/jobs/b6860f8f/tmp/sl8051-reds.sh <worktree>` in the lead's DB-prep window: the `pipe.expire` line is removed from `backend/src/app/platform/rate_limit.py` in the working tree only, never committed.
 
-- (output owed: the failing lines of tests (i) and (ii) on the planted no-expire.)
+Run in the lead's DB-prep window at head `95e97d84d6f6b2f79e941a3962f217be32524bbe`, tree `ddf10b4fd7e8cd7ff56100a92afadab5f93e8073` (START 2026-10-14T16:52:04+00:00; logs `window.log`, `red.log`, `green.log`). DB `gipricing_sl-8051_18ee3a35`, alembic rc 0. The planted no-expire, working tree only, never committed:
+
+```diff
+--- a/backend/src/app/platform/rate_limit.py
++++ b/backend/src/app/platform/rate_limit.py
+@@ -96,8 +96,7 @@ class RateLimiter:
+         try:
+             async with self._client.pipeline(transaction=True) as pipe:
+                 pipe.incr(key)
+-                pipe.expire(key, _KEY_TTL_SECONDS)
+-                count, _ = await pipe.execute()
++                (count,) = await pipe.execute()
+         except RedisError as exc:
+```
+
+Planted run, `rc=1`: `3 failed, 8 passed, 1 skipped, 1 warning in 50.89s`.
+
+```text
+FAILED backend/tests/test_score_rate_limit.py::test_the_environment_default_limits_only_its_environment
+FAILED backend/tests/test_score_rate_limit.py::test_an_admitted_request_leaves_a_key_with_a_bounded_expiry
+FAILED backend/tests/test_score_rate_limit.py::test_an_expired_key_is_gone_and_the_next_admit_counts_one
+```
+
+- **Red (i)**, `test_an_admitted_request_leaves_a_key_with_a_bounded_expiry`: `E   assert 0 < -1` at `test_score_rate_limit.py:317` (`PTTL` is -1, no expiry).
+- **Red (ii)**, `test_an_expired_key_is_gone_and_the_next_admit_counts_one`: `E   AssertionError: the key outlived its 1 s expiry by more than 3 s` / `assert not 1` at `test_score_rate_limit.py:344`.
+- **Third red**, `test_the_environment_default_limits_only_its_environment`: `assert 409 == 429` at `:166`. It is the Redis-timeout fail-open (FR-452, RL-1347): `rate limit not enforced: TimeoutError` in the captured log, the first `/score` taking 3116.7 ms on a box at load 13. It is not caused by the planted edit; see the Audit section below.
+- **Restore:** `git checkout` of `rate_limit.py`; `restore: backend/src diff = 0 line(s)`; the window log rows both new tests "RED on the planted no-expire (as required)".
 
 ### Green
 
-- (output owed: `test_score_rate_limit.py` after `git checkout` of the file; `git status --porcelain` empty; `git diff --stat backend/src` empty.)
+Restored run, same window, same head: `rc=1`, `1 failed, 10 passed, 1 skipped, 1 warning in 48.07s`.
+
+```text
+FAILED backend/tests/test_score_rate_limit.py::test_the_accounts_own_rate_wins_over_the_environment_default
+```
+
+- The one failure is `assert 409 == 429` at `:198`, again with `rate limit not enforced: TimeoutError` in the captured log (the first `/score` 2255.29 ms): the same Redis-timeout fail-open as the third red, a different test of the file. Both new tests passed. See the Audit section below for the explanation of the third red and this restored red.
+- Window end: `tree clean | ok`; `END 2026-10-14T16:55:25+00:00 rc=1`.
 
 ### Audit
 
