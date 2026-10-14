@@ -47,7 +47,7 @@ The Stage A guard tests that asserted the refusal are removed by Stage B's flip,
 
 ### Gate
 
-**Not yet granted.** The script is `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1696/slot.sh` (its Step 0 is condition (e), below) and `scratch/sl1696/demo-job.sh` (the demo with the frontend). Result: *(to be filled from the gate's output)*.
+**Not yet granted.** The ALONE gate script is `/home/puzhenhao1989/.claude/jobs/b6860f8f/tmp/sl1696-gate.sh`, modelled on `sl1702-gate.sh` (three nested locks, a head guard, a PIDs-only wait, the demo with the frontend); its Step 0 is condition (e), below, and calls `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1696/reds.py`. Result: *(to be filled from the gate's output)*.
 
 ### Reds by cause (condition (e))
 
