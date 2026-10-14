@@ -24,7 +24,7 @@ BST": "RESERVED working id RL 8028 = the upload-completion DP ruling (PL 8025 DP
 U2, U3), seat dm-upload"). The plan it rules on, `PL-8025`, and its slice, `SL-8026`, are also
 working ids (reserved "2026-10-14 10:57:11 BST"), filed on
 `origin/pl-8025-wk1178-upload-completion-2026-10-14` @`78e58ff0636a255cc55414f3c8f80b5e26c576b8`.
-FD 8021, FD 8023 and PL 8022 are working ids and are cited in the body only. The lead mints all
+FD 8021, FD 8023 and PL 8022 were working ids (minted in D16 as FD-1713, FD-1715 and PL-1714) and are cited in the body only. The lead mints all
 of them; the mint sweep replaces the working ids below with their minted ids. Written 2026-10-14
 from 11:16:29 BST by the decision-maker (dm-upload, separate CLI, effort high: the lead's message
 of 2026-10-14 confirming "perTurnEffort":"high" on this transcript).*
@@ -63,7 +63,7 @@ of 2026-10-14 confirming "perTurnEffort":"high" on this transcript).*
   non-dry `collect_garbage` is wired until every blob-owning artifact retains its blobs, proven by a
   DERIVED check (every `BlobStore.put` call site in backend/src is paired with a `retain` by its
   owning record, or is listed with a reason)"*; and "2026-10-14 10:57:10 BST — FD 8023 MEDIUM +
-  trigger CONFIRMED …", item 1, which confirms FD 8023 "MEDIUM latent, owner WK-1251".
+  trigger CONFIRMED …", item 1, which confirms FD-1715 "MEDIUM latent, owner WK-1251".
 - **The options and the recommendation are the planner's**, `PL-8025` §Decision points (the
   branch named above), read in full; this record rules on them and does not edit the plan.
 
@@ -109,9 +109,9 @@ checkout.
   that can exceed 2 s returns `202` with a Job".
 - **P8 (retention) — confirmed.** `BlobStore.put` adds `BlobRow(..., ref_count=0)`
   (`blobs.py:185-187`); `retain` (`:439-441`); `collect_garbage` (`:379`) selects
-  `BlobRow.ref_count == 0, BlobRow.created_at < cutoff`. FD 8023's remedy items 1 and 2, on
+  `BlobRow.ref_count == 0, BlobRow.created_at < cutoff`. FD-1715's remedy items 1 and 2, on
   `origin/fd-8023-blob-gc-unretained-2026-10-14` @`b94883a70f5831e65032523bb9b899986e7c38af`
-  (`docs/findings/FD-08023-…md:176-180`), verbatim: "1. **Retain at every owner.** Every
+  (`docs/findings/FD-08023-…md:176-180` at `b94883a7`, the file since minted as FD-1715), verbatim: "1. **Retain at every owner.** Every
   blob-owning artifact takes a reference to its blob in the transaction that stores it, and
   releases it when the owner replaces or deletes the blob (row 2). 2. **A derived check, not a
   list.** Every `BlobStore.put` call site in `backend/src` is paired with a `retain` by its
@@ -151,7 +151,7 @@ checkout.
    (`api/blobs.py:62`). A part check that reads one page refuses every valid upload above 1,000
    parts as "missing parts". *(S3 API behaviour from the API reference, not run here; the slice's
    unit test below makes it checkable.)*
-3. **FD 8023's derived check is keyed on `BlobStore.put` call sites.** A promotion that writes a
+3. **FD-1715's derived check is keyed on `BlobStore.put` call sites.** A promotion that writes a
    `BlobRow` without calling `put` is invisible to that check as worded (item 2 above). So where
    the promotion's row is written decides whether WK-1251's check can see it.
 
@@ -284,10 +284,10 @@ release that would justify it is WK-1251's in any case.
 ### DP-U1.2 — retention and abandoned uploads
 
 - **Retain at promotion, once per Blob Upload**, in the transaction that writes the `blobs` row
-  (DP-U1 step 5; FD 8023 remedy item 1). A second Blob Upload of identical bytes takes a second
+  (DP-U1 step 5; FD-1715 remedy item 1). A second Blob Upload of identical bytes takes a second
   reference, because it has a second owner.
 - **Release is not built here.** O1's owner is permanent, so the promotion's reference is never
-  released by this slice. Release and GC are FR-420's limb under WK-1251 (FD 8023), unchanged.
+  released by this slice. Release and GC are FR-420's limb under WK-1251 (FD-1715), unchanged.
 - **Abandoned bytes:** a lifecycle rule on the `staging/` prefix removes staging objects and
   incomplete multipart uploads older than **2 days**. `BlobStore.ensure_bucket` (`blobs.py:125`)
   sets it idempotently on every startup, so it holds under `docker compose up`.
@@ -326,7 +326,7 @@ three:
    permitted: they size the pool and do not touch the registry). The test file never imports
    `app.worker.entrypoint` and never registers a handler. It never calls `execute_job` or any job
    runner. A worker that registers handlers itself does not qualify, because it would hide the
-   unregistered-handler defect FD 8021 found today. **So `blob.promote` must be registered in
+   unregistered-handler defect FD-1713 found today. **So `blob.promote` must be registered in
    `entrypoint.py`**, or the test cannot pass.
 2. **The Job is taken from Redis by queue routing.** The test drives the relay with
    `outbox.relay_once` (as `test_celery_broker.py` does), which publishes to the queue that the
@@ -342,7 +342,7 @@ three:
 **Why W2 over W1:** W2 is the only option under which the test that "would have caught it" runs
 on every pull request. W1 runs only with `GIP_DEPLOY_TESTS=1` in a granted build window, never in
 CI. Its helpers also seed by `psql` (PL-8025 DP-U2, W1). The 11:10:26 entry says "W1 (compose)
-is not required for this slice". **W3 is not this record's to rule:** the conversion of PL 8022
+is not required for this slice". **W3 is not this record's to rule:** the conversion of PL-1714
 E4.3's compose ingest test to the public path is an **acceptance line in SL-8026**, by the
 11:10:26 entry, item (b), which the lead queued for D17 (`eta.md`, "2026-10-14 11:10:51 BST").
 
@@ -464,15 +464,15 @@ cell. The 2026-09-28 text is not edited:**
   dependency on S4") are discharged by this record once it is minted.
 - **Route the no-seeding carve-out to the maintainer** for a dated acceptance line, as stated
   under that ruling.
-- **For FD 8023 / WK-1251 (not ruled here, which is the FD's and the maintainer's):** as
-  worded, FD 8023's derived check counts `BlobStore.put` call sites. The promotion writes a
+- **For FD-1715 / WK-1251 (not ruled here, which is the FD's and the maintainer's):** as
+  worded, FD-1715's derived check counts `BlobStore.put` call sites. The promotion writes a
   `BlobRow` through `promote_upload`, not `put`. The check needs to count every writer of a
   `BlobRow` (at this tree, `put` only; after SL-8026, `put` and `promote_upload`), or the
   promotion's retain is outside its sight. It is in sight only because it lives in the same
   module.
 
-**Not decided here:** the release half of FR-420 and any `blob.gc` handler (FD 8023, WK-1251).
-An upload UI. PL 8022's E4.3 conversion (the 11:10:26 entry, item (b)). FR-421's part-size
+**Not decided here:** the release half of FR-420 and any `blob.gc` handler (FD-1715, WK-1251).
+An upload UI. PL-1714's E4.3 conversion (the 11:10:26 entry, item (b)). FR-421's part-size
 guidance to clients beyond the store's own minimum. Whether `00` §2's "a new term must be added
 here" should also list module-glossary terms such as Blob: T6 follows the suite's existing
 practice and does not rule on that rule.

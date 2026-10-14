@@ -7,7 +7,7 @@ created: 2026-10-14
 owner: auditor
 tree: 8eaf6d5f9cd4204e1e077b44069d4afd395f1461
 corrected_by: []
-relates: [WK-1178, SL-8026, PL-8025, RL-8028, FR-421, FR-418, FR-419, FR-27, FR-405, FD-8023, P2]
+relates: [WK-1178, SL-8026, PL-8025, RL-8028, FR-421, FR-418, FR-419, FR-27, FR-405, FD-1715, P2]
 ---
 
 # FD-8039 — `POST /blobs/upload-url` → PUT → `POST /datasets/{slug}/versions` ends in `404 Blob not found`
@@ -23,7 +23,7 @@ Reads were made at `origin/main` `ba68a6daf3cfb7634258915a6e542bc658ae3f62`; the
 `backend/src/app/api/blobs.py`, `backend/src/app/api/datasets.py`,
 `backend/src/app/platform/blobs.py` and `docs/specs/07-platform.md` is empty, so the code and
 spec under test are identical at both. The claim was raised by an auditor reading the essay for
-FD 8021 (branch `fd-8021-unconsumed-queues-2026-10-14` @`cb64f336`); it is re-read and re-run
+FD-1713 (branch `fd-8021-unconsumed-queues-2026-10-14` @`cb64f336`); it is re-read and re-run
 here, not copied.)*
 
 ## Finding
@@ -160,7 +160,7 @@ of `d068fb00`'s finding and is not a remedy.
 
 **HIGH.** Weighed against the comparators already ruled on this register:
 
-- **Against FD-8023 (MEDIUM, latent).** That finding needs a caller the application lacks. This one
+- **Against FD-1715 (MEDIUM, latent).** That finding needs a caller the application lacks. This one
   is reached by the ordinary first call of the first journey, on every attempt, with a
   deterministic result. Nothing latent about it.
 - **Against the silent-wrong-outcome class (FD-1660, FD-1679, HIGH).** This outcome is loud (a
@@ -188,16 +188,16 @@ displaces a G2 gate. The fix is already planned and decided:
   citing the FR ship in the slice's commit (spec first, `CLAUDE.md` §0).
 - **The test that would have caught it** is the slice's one public-path HTTP test: `upload-url` →
   PUT (to MinIO) → complete → `POST …/versions` → ingest `succeeded` on a real `io` worker, with no
-  database seeding. `SL-8026`'s acceptance line also converts `PL 8022` E4.3's compose ingest test
+  database seeding. `SL-8026`'s acceptance line also converts `PL-1714` E4.3's compose ingest test
   to that path.
 - **The process remedy is the slice's own spec step.** The completion step gets a requirement id,
   and the `upload-url` docstring and the `07` row stop being the only places the gap is written.
 
 **The event that next discharges this finding** is the merge of `SL-8026` with its public-path
-test green on `main` and the `PL 8022` E4.3 conversion done. If it has not merged by the 4 Nov
+test green on `main` and the `PL-1714` E4.3 conversion done. If it has not merged by the 4 Nov
 freeze, the P2 closure record lists this finding as open with that reason, per `SL-8026`'s
 acceptance line.
 
-**Not in this finding.** FD-8023 (blob garbage collection) is related, not the same: its widened
+**Not in this finding.** FD-1715 (blob garbage collection) is related, not the same: its widened
 derived check already counts `promote_upload` as a `BlobRow` writer after `SL-8026`, so the two
 land together.
