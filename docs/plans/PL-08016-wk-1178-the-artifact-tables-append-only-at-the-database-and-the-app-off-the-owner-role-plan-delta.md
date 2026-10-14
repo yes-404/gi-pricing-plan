@@ -3,7 +3,7 @@ id: PL-8016
 family: plan
 kind: map
 title: WK-1178 — the artifact tables append-only at the database (SL-8017) and the application off the owner role (SL-8041) — a dated Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a) — DP-1 to DP-7 ruled at 10:29:14, DP-8 to DP-20 at 12:18:57, DP-21 and DP-22 (plan review, 2026-10-14) at 12:42:33, DP-21b at 13:21:41, refined at 13:27:39; activation is the lead's
+status: draft                   # draft → active → superseded | retired (§1.2a) — DP-1 to DP-7 ruled at 10:29:14, DP-8 to DP-20 at 12:18:57, DP-21 and DP-22 (plan review, 2026-10-14) at 12:42:33, DP-21b at 13:21:41, refined at 13:27:39 and 15:14:52; activation is the lead's
 created: 2026-10-14
 owner: planner
 tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
@@ -147,7 +147,10 @@ owner's credential.
 6. **The findings.** `FD-8007` at `origin/docs-d15-2026-10-14` @`56b5a8e1` (the factors limb).
    `FD 8037` (O-1) and `FD 8038` (the root cause) are being filed by the auditor on
    `fd-8036-failed-auth-audit-2026-10-14`, not pushed when this plan was written; they are
-   cited by working id. FR-70 rides S-a (authority 1).
+   cited by working id. FR-70 rides S-a (authority 1), as the maintainer (by delegation) placed it
+   at "2026-10-14 11:06:52 BST", item 2: *"FR-70 is NOT in that FD: immutability by route absence
+   only is FD 8007/O-1's class. It joins that finding's table set (the artifact-family derivation),
+   with one remedy."*
 7. **The maintainer (by delegation), `to-lead.md` entry "2026-10-14 12:18:57 BST — PL 8044/SL
    8045 (failed-auth fix) and PL 8016 re-cut DPs RULED by me directly (no DM needed); superuser
    finding folded into FD 8038 / S-b (re lead 12:18:08)"**, item (2), verbatim:
@@ -410,6 +413,13 @@ exists, so the guard refuses the re-point**, and `store_profile`'s re-point
 (`platform/profiles.py:58`, its comment: *"Re-profiling adds a row and re-points"*) is **reported
 to the maintainer as a `CLAUDE.md` §0 item (code without spec)**, via the lead, by this plan's
 report and again in S-a's `LG-`. It is not allowed and not removed here.
+*(Ruled 2026-10-14 by the maintainer (by delegation), `to-lead.md` "2026-10-14 15:14:52 BST",
+item (4): "§0, re-profiling a validated version → REMOVE, not spec", on `00` :127, FR-60 `:161`,
+the GET-only route `:867` and the journey `:1113`: (a) the guard allows `profile_id` only `NULL →
+value` after the freeze, as planned; (b) **in this slice** the application path refuses a re-point
+on a data-frozen version with a named problem code, `PROFILE_ALREADY_SET` (`409`), never a raw
+trigger exception: Step 2.10; (c) a dated clarification on `01` FR-60, Steps 5.4 and 5.5. Item (3) is
+confirmed in the same entry: "confirmed as separate, never overwritten … No STOP.")*
 
 **The freeze marker.** "The first `draft → validating`" has to survive FR-53's return to
 `draft`, and no column records it today (`status` returns to `draft`; `validation_report_id` is
@@ -424,7 +434,12 @@ The migration back-fills it before the trigger exists: `status <> 'draft'`, or a
 whose audit chain records a transition to `validating` (the executor reads the action name from
 `_transition`'s `audit.record`, `datasets.py:584` onwards), gets `COALESCE(updated_at,
 created_at)`; the `LG-` prints the back-filled count. If a contract or schema-drift test demands
-the column in `model-schema`, that is outside S-a's write set: the executor reports it to the lead.
+the column in `model-schema`, that is outside S-a's write set: the executor reports it to the lead
+**before widening**. *(ACKed 2026-10-14, the maintainer (by delegation), "2026-10-14 15:14:52
+BST", (B): "`dataset_versions.data_frozen_at`, set by the guard at the first `draft → validating`,
+back-filled by the migration … models.py maps it read-only … A red: back-fill correctness on a
+seeded FR-53 returned-to-draft row. If a contract test needs it in model-schema, report it before
+widening." The red is Step 2.8b.)*
 
 **The guard, `dataset_versions_snapshot_guard()`**, `BEFORE UPDATE OR DELETE … FOR EACH ROW`,
 plus `dataset_versions_no_truncate`:
@@ -452,7 +467,9 @@ plus `dataset_versions_no_truncate`:
    (inside `tables`' `arrow_schema`), content-hash (`source_fingerprint`), row-count (`totals`)
    and identity columns. **The planner adds `derived_from`, `library_versions` and
    `ingestion_run_id`** as the data's provenance: each is written only at ingestion, before any
-   validation, so freezing them breaks no path. The lead confirms this at the ACK. Before the
+   validation, so freezing them breaks no path. *(ACKed 2026-10-14, the maintainer (by delegation),
+   "2026-10-14 15:14:52 BST", (A): "derived_from, library_versions and ingestion_run_id are frozen
+   with the data".)* Before the
    freeze, all six may change (ingestion, `correct_schema`, derivation, split).
 5. **`validation_report_id`** (item 3): it may change only when `OLD.status = 'validating'` and
    `NEW.status <> 'validating'`.
@@ -476,7 +493,10 @@ write succeeds), one case each:
   a `failed` row.
 - **`validation_report_id`** (item 3): a change on `draft → draft` and on `validated → validated`
   is refused.
-- **`profile_id`** (item 4): a re-point on a `validated` row is refused.
+- **`profile_id`** (item 4): a re-point on a `validated` row is refused (the guard); and
+  `store_profile` on a data-frozen version with a profile refuses with `PROFILE_ALREADY_SET`
+  (`409`) before any `UPDATE` (Step 2.10, 15:14:52 (4)(b)).
+- **The back-fill** (15:14:52 (B)): Step 2.8b's seeded rows.
 - **Identity:** `UPDATE … SET slug = slug || 'x'` is refused on a `draft` row.
 - `DELETE` and `TRUNCATE` are refused.
 - **Allowed (green before and after):** every pair of the transition table; FR-53's
@@ -582,10 +602,11 @@ layer holds the line until then.
 | `backend/src/app/db/models.py` | `{"info": {"immutability": …}}` on every mapped table (DP-8 (a)); `DatasetVersionRow.data_frozen_at`, a read-only mapped column the guard sets (DP-21, 13:27:39) | 2 |
 | `backend/migrations/versions/<rev>_artifact_tables_append_only.py` | **create**: one migration (triggers, three guard functions (`dataset_versions`' by DP-21), the six row-guarded tables' `TRUNCATE` triggers (plan review R2), grants, revokes) | 2 |
 | `backend/src/app/platform/rate_tables.py` | `_persist_new_version`: blob before row (DP-10) | 2 |
+| `backend/src/app/platform/profiles.py`, `backend/src/app/errors.py`, `backend/tests/test_profile_refusal.py` (**create**) | `store_profile` refuses a re-point on a data-frozen version with `PROFILE_ALREADY_SET` (`409`); the code registered (15:14:52 (4)(b)) | 2 |
 | `backend/tests/test_artifact_immutability.py` | the declaration-derived tests (replacing the grants-derived one), the eleven rows, the guard tests, DP-1's `gip_app` test | 1, 2, 3 |
 | `backend/tests/test_fr240_governance.py`, `test_model_jobs.py`, `test_model_jobs_gbm.py` | W4 (DP-2, DP-3) | 4 |
 | `backend/tests/test_rate_table_diff_portfolio.py`, `test_rating_version_change_summary_route.py` | W5, W6 (DP-13) | 4 |
-| `docs/specs/01-data-management.md` (`FR-44` `:106`, `FR-70` `:177`), `docs/specs/03-rating-engine.md` (`FR-229` `:122`) | dated lines (DP-5) | 5 |
+| `docs/specs/01-data-management.md` (`FR-44` `:106`, `FR-60` `:161` (15:14:52 (4)(c)), `FR-70` `:177`, §5.1's error-code list `:931-937`), `docs/specs/03-rating-engine.md` (`FR-229` `:122`) | dated lines (DP-5) | 5 |
 | `docs/ledgers/LG-<id>.md`, `docs/roadmap.md` (SL-8017's status line) | the slice's paperwork (Lean P2 L1) | all |
 
 **S-b (SL-8041)**
@@ -906,8 +927,50 @@ def downgrade() -> None:
   their new `_no_truncate` (plan review R2).
 - [ ] **Step 2.8: the downgrade (DP-6 (a)).** `downgrade -1`, the catalog, `upgrade head`, the
   catalog. All three outputs go into the `LG-`.
+- [ ] **Step 2.8b: the back-fill red** (the maintainer (by delegation), "2026-10-14 15:14:52
+  BST", (B): *"A red: back-fill correctness on a seeded FR-53 returned-to-draft row"*). At the
+  previous revision (`downgrade -1`), seed three `dataset_versions` rows **through the
+  services**, so their audit chains are real: (i) a version moved `draft → validating → draft`
+  by `begin_validation` and `conclude_failed_validation` (FR-53's return, `datasets.py:674-716`);
+  (ii) a never-validated `draft` version; (iii) a `validated` version. Then `upgrade head` and
+  read `data_frozen_at`: expected (i) set, (ii) `NULL`, (iii) set. **Red first:** with the
+  migration's back-fill `UPDATE` removed in a scratch edit, (i) reads `NULL` (and an `UPDATE`
+  of its `tables` then succeeds). Restore it and see it green. The seeding script, the red line
+  and the green read-back go into the `LG-`. Kept as a test too:
+  `test_the_back_fill_freezes_a_version_fr53_returned_to_draft` in
+  `test_artifact_immutability.py`, which runs the back-fill's own SQL (imported from the
+  migration module as a constant) against rows it seeds the same way, in a transaction that
+  rolls back.
 - [ ] **Step 2.9:** `uv run pytest backend/tests/test_artifact_immutability.py -q`: green.
   Commit.
+- [ ] **Step 2.10: the re-profiling refusal in the application** (the maintainer (by
+  delegation), "2026-10-14 15:14:52 BST", (4)(b): *"the application path (profiles.py:58
+  "Re-profiling adds a row and re-points") is changed IN THIS SLICE to refuse a re-point on a
+  data-frozen version with a NAMED problem code (e.g. `PROFILE_ALREADY_SET`, 409), so the user
+  never sees a raw trigger exception (a 500). The write set widens by profiles.py + its test,
+  red first"*).
+  - **The red first**, `backend/tests/test_profile_refusal.py` (**create**), through the
+    `database` fixture and `store_profile` itself: on a version whose `data_frozen_at` is set
+    and whose `profile_id` is already set, `store_profile` raises `PlatformError` with code
+    `PROFILE_ALREADY_SET` and status `409`, adds no `profiles` row, and leaves `profile_id`
+    unchanged. Red on the Task 2 tree before this step **by its cause**: the trigger's raw
+    refusal (a database error, which the API would turn into a 500) instead of the named code.
+    Two companion cases stay green: a frozen version with `profile_id` `NULL` takes its first
+    profile, and a never-validated `draft` version may be re-profiled (before the freeze,
+    rule 6).
+  - **The change**, `backend/src/app/platform/profiles.py`: after the version lookup
+    (`:36-43`) and before the `ProfileRow` is built (`:45`), when `version.data_frozen_at is
+    not None and version.profile_id is not None`, raise `PlatformError("PROFILE_ALREADY_SET",
+    "This version's profile is already recorded", 409, <detail citing 01 FR-60 and 00 §2>)`.
+    The comment at `:55-57` (*"Re-profiling adds a row and re-points"*) is rewritten to say
+    re-profiling is allowed only before the data freezes.
+  - **The code is registered** in `backend/src/app/errors.py`'s `DATA_ERROR_CODES` (`:83-111`),
+    and in `01` §5.1's list (Step 5.5). The existing per-artifact code
+    `DATASET_VERSION_IMMUTABLE` (`errors.py:86`, `409`) is an alternative to a new code. The
+    ruling's example name is used; the lead may choose the existing code at the ACK.
+  - The full gate (Step 6.2) shows whether a route or Job re-profiles a frozen version (the
+    profiling Job, `worker/data_handlers.py`). Each one now gets the `409`, and each goes into
+    the `LG-` with its node id.
 
 #### Task 3: FD-8007's `gip_app` test (DP-1 (a), the ADD)
 
@@ -961,7 +1024,15 @@ def downgrade() -> None:
   `*(Amended <date>, WK-1178 SL-8017.)* Enforced in the database: `reference_table_versions` may move only `draft` to `published`, and `reference_tables` and `reference_rows` are append-only (`<rev>`).`
 - [ ] **Step 5.3: `FR-229`** (`03-rating-engine.md:122`), appended:
   `*(Amended <date>, WK-1178 SL-8017, on FD 8037.)* Enforced in the database: `rate_table_versions` and `rate_table_cells` are append-only, and `rate_tables` may only move `current_version` forward (`<rev>`).`
-- [ ] **Step 5.4:** `python3 scripts/audit-docs.py` as one gate-2 docs check, and
+- [ ] **Step 5.4: `FR-60`** (`01-data-management.md:161`), a dated clarification, through the
+  `spec-change` skill (the maintainer (by delegation), "2026-10-14 15:14:52 BST", (4)(c): *"it
+  decides refuse/allow, so it goes in the spec, per my 12:07:40 rule"*), appended:
+  `*(Clarified <date>, WK-1178 SL-8017, on the maintainer's (by delegation) "2026-10-14 15:14:52 BST" ruling.)* **The profile is computed once per Dataset Version; a frozen version is never re-profiled.** A version's data freezes at its first `draft → validating` (`00` §2: the version is an immutable snapshot that carries its profile). A profile may still be recorded once after that if none was, and a second one is refused with `PROFILE_ALREADY_SET` (`409`).`
+- [ ] **Step 5.5:** `01` §5.1's *"Error codes owned by this module"* list (`:931-937`) gains
+  `PROFILE_ALREADY_SET`, in the same commit as `errors.py` (Step 2.10). If `spec-change` or the
+  audit requires the code's row elsewhere (an error-code table, `00` §5's catalogue), it goes
+  there in the same commit.
+- [ ] **Step 5.6:** `python3 scripts/audit-docs.py` as one gate-2 docs check, and
   `uv run python scripts/req-coverage.py`. Commit.
 
 #### Task 6: postgres-pro review and the gate
@@ -1109,6 +1180,11 @@ GRANT gip_app TO gip_app_login;
     kill running gates: it is a GO-time act that the maintainer names, with its window, never
     a step an executor takes on its own. Until then the shared stack keeps its `0.0.0.0` binds,
     and the non-default password (Step 1.3) is its gate. The `LG-` records which was done.
+  - *(Dated 2026-10-14, on the maintainer's (by delegation) entry "2026-10-14 14:59:13 BST —
+    Host exposure CLOSED": the user's read-only GCP check shows 5432, 6379, 9000, 9001 and 8080
+    *"reachable only from inside the VPC (10.128.0.0/9)"*, and *"S-b's Step 1.5 (compose binds
+    every port to 127.0.0.1, red first) STAYS as defence in depth … together with the
+    non-default GIP_APP_DB_PASSWORD gate (R8)"*. No running container is recreated.)*
 
 #### Task 2: the two DSNs (DP-16 (a))
 
@@ -1360,7 +1436,12 @@ Each item can be checked by a fresh reviewer at the slice PR's merge tree, with 
    is green, and Task 4.4's broken-input lines are in the `LG-`.
 5. Exactly one new file under `backend/migrations/versions/`; `alembic heads` prints one head;
    the `LG-` carries Task 2.7 and 2.8's catalog outputs (upgrade, downgrade, upgrade).
-6. `FR-44`, `FR-70` and `FR-229` carry Task 5's dated lines, in the same PR as the migration.
+6. `FR-44`, `FR-60` (the 15:14:52 clarification), `FR-70` and `FR-229` carry Task 5's dated
+   lines, and `01` §5.1 lists `PROFILE_ALREADY_SET`, in the same PR as the migration.
+6b. `uv run pytest backend/tests/test_profile_refusal.py -q` is green, its red (the raw trigger
+   refusal) is in the `LG-`, and `git grep -n PROFILE_ALREADY_SET -- backend/src/app/errors.py
+   backend/src/app/platform/profiles.py docs/specs/01-data-management.md` prints a hit in each
+   (15:14:52 (4)(b), (c)). Step 2.8b's back-fill red and green are in the `LG-` (15:14:52 (B)).
 7. The postgres-pro review is in the `LG-`; the full gate rc table is all 0; `python3
    scripts/audit-docs.py` exits 0 on the merge tree.
 
@@ -1411,6 +1492,10 @@ Each item can be checked by a fresh reviewer at the slice PR's merge tree, with 
   maintainer's GO names DP-15's target, the shared container, **and requires a
   non-default `GIP_APP_DB_PASSWORD` there, naming the file outside the repository that holds it**
   (plan review R8: 5432 is published on `0.0.0.0`); a gate slot for Tasks 3.2, 5.3 and 7.3.
+- **The plan is minted on `main` before either slice's GO**: it rides plans batch P2 (the
+  maintainer (by delegation), "2026-10-14 12:31:22 BST": *"P2 = PL 8016/SL 8017/SL 8041 after
+  auditor-pl8016's review: OK"*), and "2026-10-14 12:16:37 BST", condition 2: *"A plan is minted
+  (on main) before its slice's GO, an activation need as always."*
 - Every blocking row carries its resolver (the Decision points table); none is open. Moving it to `active` is the lead's
   act at activation, not this file's (`document-ids.md` §1.6, PL row).
 
@@ -1460,3 +1545,8 @@ Each item can be checked by a fresh reviewer at the slice PR's merge tree, with 
   shows it). **Read for 13:27:39:** `store_report` `validation.py:77-118`, its caller
   `data_handlers.py:283-296`, `ValidationReportRow` `models.py:1031-1079`; `01` FR-60 `:161`,
   FR-61 to FR-67 `:162-167`, the profile route `:867` and journey step 5 `:1113`.
+- **The 15:14:52 ruling, its sites read at `a3fc2e8d` by this seat:** `store_profile`'s lookup
+  `platform/profiles.py:36-43`, `ProfileRow` `:45`, the comment `:55-57`, the re-point `:58`;
+  `DATA_ERROR_CODES` `errors.py:83-112` with `DATASET_VERSION_IMMUTABLE` at `:86`; `01` §5.1's
+  list `:931-937` (at `origin/main`). **Not checked:** whether the profiling Job ever profiles a
+  version after its first validation began (Step 6.2 shows it).
