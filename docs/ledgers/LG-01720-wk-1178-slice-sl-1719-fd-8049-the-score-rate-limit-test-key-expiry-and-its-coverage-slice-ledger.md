@@ -11,7 +11,7 @@ work: WK-1178
 slice: SL-1719
 plans: []
 corrected_by: []
-relates: [SL-1719, FD-8049, FR-452, FR-430, RL-1347]
+relates: [SL-1719, FD 8049, FR-452, FR-430, RL-1347]
 ---
 
 # LG-1720 — WK-1178 slice SL-1719: the score rate-limit test's key expiry
@@ -83,7 +83,7 @@ Written 2026-10-14 17:59:52 BST by the auditor, against `origin/main...HEAD` of 
 
 **Scope.** `git diff origin/main --name-only` lists exactly `backend/tests/test_score_rate_limit.py`, this ledger, `docs/roadmap.md` and `docs/INDEX.md`. `git diff origin/main --name-only -- backend/src | wc -l` prints 0. Matches the GO ("2026-10-14 17:11:47 BST": test-only, fixture TTL 3600, two expiry tests).
 
-**Fixture.** `_app_client` takes `monkeypatch` and sets `rate_limit._KEY_TTL_SECONDS` to 3600; `client` and `second_client` pass it through. `admit` reads the module global at call time (`rate_limit.py:99`), so the patch takes effect, and the pinned window now has a TTL it cannot outrun (FD-8049 remedy).
+**Fixture.** `_app_client` takes `monkeypatch` and sets `rate_limit._KEY_TTL_SECONDS` to 3600; `client` and `second_client` pass it through. `admit` reads the module global at call time (`rate_limit.py:99`), so the patch takes effect, and the pinned window now has a TTL it cannot outrun (FD 8049 remedy).
 
 **Tests against the 16:43:11 form.**
 - (i) `test_an_admitted_request_leaves_a_key_with_a_bounded_expiry`: after one admit, `0 < PTTL <= _KEY_TTL_SECONDS * 1000`. Matches (i).
@@ -98,11 +98,11 @@ Written 2026-10-14 17:59:52 BST by the auditor, against `origin/main...HEAD` of 
 
 **The third failing test under the plant, named and explained.** `test_the_environment_default_limits_only_its_environment` (`test_score_rate_limit.py:153`; fails `assert 409 == 429` at `:166`, the third request under a limit of 2). **A missing expiry cannot make it fail.** Reading the test and `rate_limit.py:85-109`: every request of the test counts into one key per account (the clock is pinned; the account is created fresh in the test, so the key is new). With or without `expire` the count after requests 1, 2, 3 is 1, 2, 3; expiry only matters after the TTL elapses, and the fixture makes that 3600 s. So request 3 gets `count=3 > 2` and 429 either way. What produced the 409 is in the same failure's captured output in `red.log`: `WARNING app.platform.rate_limit … rate limit not enforced: TimeoutError`, with that `/score` request completing at `duration_ms 3116.7`, status 409. A Redis `TimeoutError` makes `admit` return `True` without a count (`rate_limit.py:101-108`, the fail-open path), so the third request was admitted and reached the handler (409). The first `F` in `..F.....FF.s` is the third test in file order, which is how that output is attributed to it. **Verdict on that red: not caused by the plant; load-induced fail-open (load 13).** It is therefore not evidence for or against the new tests; the two new reds are.
 
-**The restored-run red is the same cause, on a different test.** `test_the_accounts_own_rate_wins_over_the_environment_default` fails `assert 409 == 429` at `:198`, and `green.log` carries `WARNING … rate limit not enforced: TimeoutError` (`rate_limit.py:103`) with `/score` at `duration_ms 2255.29`. It is the limiter failing open on a Redis timeout, not the TTL fix: the fixture change cannot admit a fourth request. A counter is not unavailable in CI (FD-8049 control: 0 such lines in runs 38587011863 and 38568100882). The window therefore has **no clean green of the whole file**; CI's full python run on the PR head is the gate (the 17:11:47 ruling (a′)).
+**The restored-run red is the same cause, on a different test.** `test_the_accounts_own_rate_wins_over_the_environment_default` fails `assert 409 == 429` at `:198`, and `green.log` carries `WARNING … rate limit not enforced: TimeoutError` (`rate_limit.py:103`) with `/score` at `duration_ms 2255.29`. It is the limiter failing open on a Redis timeout, not the TTL fix: the fixture change cannot admit a fourth request. A counter is not unavailable in CI (FD 8049 control: 0 such lines in runs 38587011863 and 38568100882). The window therefore has **no clean green of the whole file**; CI's full python run on the PR head is the gate (the 17:11:47 ruling (a′)).
 
-**Findings against the slice (non-blocking, recorded for limb 2 of FD-8049).**
-1. Test (i) uses the default TTL of 2 s. A stall of more than 2 s between `admit` and `pttl` returns -2 (key gone) and fails `0 < pttl`; a fail-open admit (no key written) fails it the same way. Both are the load class FD-8049 names. Preferred hardening: patch `_KEY_TTL_SECONDS` to a value the run cannot outrun (the assertion already reads the constant) and assert `metrics.rate_limit_unenforced` did not move. Test (ii) has the same exposure at `assert await redis.get(key) == b"1"`.
-2. A fail-open admit is indistinguishable from a correct admit in this file (`status != 429`), so a Redis timeout surfaces as `409 == 429` and reads as a limiter bug. Remedy in FD-8049 limb 2; out of this slice.
+**Findings against the slice (non-blocking, recorded for limb 2 of FD 8049).**
+1. Test (i) uses the default TTL of 2 s. A stall of more than 2 s between `admit` and `pttl` returns -2 (key gone) and fails `0 < pttl`; a fail-open admit (no key written) fails it the same way. Both are the load class FD 8049 names. Preferred hardening: patch `_KEY_TTL_SECONDS` to a value the run cannot outrun (the assertion already reads the constant) and assert `metrics.rate_limit_unenforced` did not move. Test (ii) has the same exposure at `assert await redis.get(key) == b"1"`.
+2. A fail-open admit is indistinguishable from a correct admit in this file (`status != 429`), so a Redis timeout surfaces as `409 == 429` and reads as a limiter bug. Remedy in FD 8049 limb 2; out of this slice.
 
 **PROPOSED VERDICT: ACCEPT.** Scope is exactly the GO; both new tests are red on the planted no-expire and stated against the accepted form; `backend/src` is untouched; the third red under the plant is explained and unrelated to the expiry; the restored red is the fail-open of limb 2, not the fix. Condition: the PR's CI python job green at the head (it is the gate), with the merge-tree and tree checks of the lead's MERGE-ACK. If CI reds on this file, read the log for `rate limit not enforced` before classifying.
 
