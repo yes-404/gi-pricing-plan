@@ -114,14 +114,21 @@ relates: []                      # ids only
 - **S-11** (ruled 2026-09-28 by the maintainer (by delegation)): A long command — a gate, a
   test run, a benchmark — runs in the **foreground** and carries a `timeout` (for example
   `timeout 3600 …` inside the slot wrapper's `-c` body). This **completes S-9, it does not
-  reverse it**: S-9's foreground blocking call stays the rule and a background run stays
-  forbidden, because a backgrounded command cannot notify an ended turn. **The ruling
+  reverse it**: S-9's foreground blocking call stays the rule and ~~a background run stays
+  forbidden, because a backgrounded command cannot notify an ended turn~~. **The ruling
   offered two limbs — background with a cancel file the executor checks, or foreground only
   with a `timeout` — and this rule takes the second.** The first is not adopted: S-9 forbids
   backgrounding. The `timeout`
   bounds how long the foreground call can hold the box. A lead stop can also arrive as a
   kill of that process **by PID**; when the call returns non-zero, or a message says it was
   killed, read the message before anything else.
+  (Amended 2026-10-12 by the maintainer (by delegation), entry "2026-10-12 06:44:25 BST": the harness-tracked background run is permitted; S-11's premise held only for untracked backgrounding, and a full gate exceeds the foreground cap.)
+  **S-11 as amended:** a long command runs in the foreground with a `timeout` when it fits under
+  the tool's 600 000 ms foreground cap, or else as a harness-tracked background run (the tool's
+  own background mode), never any other way. The run sits under the slot flock (S-13) with
+  `timeout 3600` per stage inside the slot wrapper's `-c` body. S-12 stands in full: a tracked
+  run stays a child of the executor's harness, so a lead stop by PID still reaches it. On the
+  completion notice, read the exit code and its messages before anything else.
 - **S-12** (ruled 2026-09-28 by the maintainer (by delegation)): **Never relaunch a killed
   process detached** — no `setsid`, `nohup` or `disown`, and no `&` to survive the kill.
   An external kill of your process is a **lead stop**, not a fault to route around. End

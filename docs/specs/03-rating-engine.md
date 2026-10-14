@@ -1501,7 +1501,7 @@ single-row GBM inference latency tuning; hypothesis strategies from a declarativ
 
 | ID | Requirement |
 |---|---|
-| **NFR-489** | Real-time scoring p99 < 50 ms server-side at 200 rps per replica for a ~200-step motor structure with one `exact` GBM call (NFR-454). Without a GBM call, p99 < 15 ms. (Clarified 2026-10-05, OQ-1453: the ceiling governs untraced requests; a request served with an inline FR-258 trace is bounded by NFR-490.) |
+| **NFR-489** | Real-time scoring p99 < 50 ms server-side at 200 rps per replica for a ~200-step motor structure with one `exact` GBM call (NFR-454). Without a GBM call, p99 < 15 ms. (Clarified 2026-10-05, OQ-1453: the ceiling governs untraced requests; a request served with an inline FR-258 trace is bounded by NFR-490.) (Clarified 2026-10-12, RL-1685, PL-1454 DP-3 (b): "per replica" is N worker processes, as `00` NFR-454 and `00` §2.3 **Replica** define it; every reading states N.) |
 | **NFR-490** | Tracing adds ≤ 20 % to scoring latency and never changes the result (R3). |
 | **NFR-491** | A compiled bundle scores with **zero** database or network access; everything it needs is inside it (FR-239). |
 | **NFR-492** | Bundle compilation for a large motor structure completes in < 60 s; bundle size stays under 500 MB including booster artifacts. |
