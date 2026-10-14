@@ -23,6 +23,8 @@ batch OK; FR-7/14/15 → FD 8027 PARTIAL limbs …" in `channel/to-lead.md`; its
 **Proposed severity: MEDIUM, owner WK-1178, fixed in P2** (the auditor proposes; the lead and the maintainer
 (by delegation) rule). The entry above says the severity is the auditor's and "MEDIUM at least".
 
+*(Ruled 2026-10-14: the maintainer (by delegation), "2026-10-14 11:20:00 BST" in `to-lead.md`, CONFIRMED MEDIUM and the HIGH re-rate trigger as written, owner WK-1178, fixed in P2. The proposal above is kept as written. The ruling ADDED one red to the fix, in Disposition step 2a.)*
+
 `scripts/req-coverage.py` and `scripts/scope-audit.py` each carry their own copy of one regex, and the regex
 reads one spelling of a marker: the single-argument decorator. Two other spellings that `pytest` accepts, and that
 the repository's tests already use, are invisible to both scripts. A marker the scripts cannot see is not
@@ -127,6 +129,7 @@ The maintainer's entry also says "MEDIUM at least"; this proposal accepts that f
 2. **Red first**: a planted fixture tree holding each form (single, multi-argument, class decorator, `pytestmark`
    single, `pytestmark` list), whose expected (id, file) set is asserted; red on `main` by cause, because the regex
    returns the single forms only.
+2a. **Added red (ruling of 2026-10-14 11:20:00 BST):** the same fixture tree also plants `req("FR-272", <an FR id that does not exist>)` as a multi-argument marker and `pytestmark = pytest.mark.req(<an NFR id that does not exist>)` as a module-level marker, and asserts that the unknown-id exit fires for both. Today it cannot: the one failing exit of `req-coverage` is blind to the 48 invisible markers, so a typo inside either form passes silently. Red on `main` by that cause. The ruling also lists `scope-audit`'s false close-audit FAIL on FR-272 as a consequence, which re-runs green after the fix.
 3. **Before and after counts at the tree where it lands**, from both scripts. The "before" at `4420f91f` is:
    `req-coverage` 371 marked of 544 (68.20 %), 1046 (id, file) pairs; AST 372 (68.38 %), 1087 pairs, and FR-272 the one
    id that moves from unmarked to marked.

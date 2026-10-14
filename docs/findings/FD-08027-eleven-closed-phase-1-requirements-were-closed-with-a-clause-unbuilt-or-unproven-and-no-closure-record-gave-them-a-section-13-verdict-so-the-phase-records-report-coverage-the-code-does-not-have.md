@@ -25,6 +25,8 @@ The lead's brief to this seat listed FR-70 and omitted FR-123 and NFR-467; the l
 ## Finding
 
 **Proposed severity for the class: HIGH, on two limbs (FR-100, FR-127's GLM limb); the others are MEDIUM or LOW.**
+
+*(Ruled 2026-10-14: the maintainer (by delegation), "2026-10-14 11:28:56 BST" in `to-lead.md`, RULED the class HIGH, because the class takes its worst limb and the register sorts on it. The per-limb table below stays authoritative for scheduling. The proposal above is kept as written.)*
 Reasoning is in the last section. The thesis: each of these eleven requirements was closed by a Work in
 Phase 1a or 1b with a clause the code does not build, or builds and no test can fail, and **no
 closure record gave that clause one of `CLAUDE.md` §13's four verdicts**. The phase records then count
