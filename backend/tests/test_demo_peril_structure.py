@@ -14,6 +14,7 @@ null where `claim_count` is 0 (the weight-0 rows SL-1675 excludes from the fit).
 
 from __future__ import annotations
 
+import json
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -25,9 +26,14 @@ from backend.tests.test_demo_rating_evidence import demo_model
 from backend.tests.test_model_jobs import _actuary, _factor, _spec, _split
 from sqlalchemy import select
 
-from app.db.models import ApprovalDecisionRow, DatasetVersionRow, ModelRow, PerilStructureRow
+from app.db.models import (
+    ApprovalDecisionRow,
+    DatasetVersionRow,
+    JobRow,
+    ModelRow,
+    PerilStructureRow,
+)
 from app.db.session import Database
-from app.errors import PlatformError
 from app.platform import approvals as approval_service
 from app.platform import jobs as job_service
 from app.platform import modelling as model_service
@@ -38,12 +44,14 @@ from app.worker.model_handlers import register_model_handlers
 from app.worker.tasks import execute_job
 from model_schema import (
     DecisionKind,
+    GlmSpec,
     JobKind,
     JobStatus,
     ModelStatus,
     PerilStructureStatus,
     Principal,
     ResponseKind,
+    WeightSpec,
 )
 
 register_data_handlers()
@@ -209,34 +217,52 @@ async def test_seed_fits_and_approves_a_severity_glm(
 
 @pytest.mark.req("FR-111")
 @pytest.mark.parametrize("bad_row", ["null", "non_positive"])
-async def test_a_claimant_row_without_a_positive_severity_is_refused_loudly(
+async def test_a_claimant_row_without_a_positive_severity_fails_the_fit_with_glm_fit_failed(
     database: Database, blob_store: BlobStore, workspace_id: UUID, grant: Any, bad_row: str
 ) -> None:
-    """The maintainer's (by delegation) "2026-10-14 09:45:05 BST" item (B): a null or
-    non-positive `claim_severity` on a row with `claim_count > 0` is REFUSED by the fit, never
-    papered over (no placeholder response; weight-0 rows are the only rows allowed to be null).
+    """R1b (DP-8009-1, the maintainer's (by delegation) "2026-10-14 10:09:06 BST" ruling): a
+    null, or non-positive, `claim_severity` on a row with `claim_count > 0` is refused by the
+    EXISTING Gamma-domain refusal, `GLM_FIT_FAILED`, with its family-domain sentence in the
+    persisted Job error. Nothing is filtered or clipped.
 
-    Red first, by cause: `fit_severity_glm` does not exist. After it does, this stays the guard
-    that the refusal is the fit's, and the model is not left `approved`."""
+    This asserts the platform's fit, not `fit_severity_glm`, so it is red only if the refusal
+    is absent. Red by cause is the scratch proof (disable the refusal, see this fail, revert);
+    on the base tree it is GREEN, which is the point: the refusal already exists."""
     world = await _world(database, blob_store, workspace_id, grant, bad_row=bad_row)
-
-    with pytest.raises((SystemExit, PlatformError, ValueError)):
-        await demo_model.fit_severity_glm(
-            database, blob_store, workspace_id, world.actuary, world.approvers[0],
-            world.version_id, world.split, world.factors,
+    spec = GlmSpec(
+        model_family_slug="fremtpl2-severity-r1b",
+        dataset_version_id=world.version_id,
+        split_ref=world.split,
+        peril="AD",
+        response=ResponseKind.CLAIM_SEVERITY,
+        response_column=SEVERITY_COLUMN,
+        weight=WeightSpec(kind="column", column="claim_count"),
+        family="gamma",
+        link="log",
+        factors=world.factors,
+    )
+    async with database.unit_of_work() as session:
+        row, _ = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=world.actuary, spec=spec
         )
+        model_id = row.id
+        job = await job_service.submit(
+            session, JobKind.MODEL_FIT,
+            {"workspace_id": str(workspace_id), "actor": world.actuary.model_dump(mode="json"),
+             "model_id": str(model_id)},
+            world.actuary, workspace_id=workspace_id,
+        )
+    assert await execute_job(database, job.id, blob_store) is JobStatus.FAILED
 
     async with database.session() as session:
-        approved = (
-            await session.execute(
-                select(ModelRow).where(
-                    ModelRow.workspace_id == workspace_id,
-                    ModelRow.status == ModelStatus.APPROVED.value,
-                    ModelRow.spec["response"].astext == ResponseKind.CLAIM_SEVERITY.value,
-                )
-            )
-        ).scalars().all()
-    assert approved == []
+        stored = (await session.execute(select(JobRow).where(JobRow.id == job.id))).scalar_one()
+        model = (
+            await session.execute(select(ModelRow).where(ModelRow.id == model_id))
+        ).scalar_one()
+    error = json.dumps(stored.error)
+    assert "GLM_FIT_FAILED" in error
+    assert "family's domain" in error
+    assert model.status != ModelStatus.APPROVED.value
 
 
 async def _structure_world(
