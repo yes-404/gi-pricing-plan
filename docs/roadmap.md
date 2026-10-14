@@ -2374,6 +2374,24 @@ relates: [PL-1542, SL-1543, RL-1263]
 
 On the maintainer's (by delegation) entry "2026-10-12 05:39:20 BST — SL-1543 severity block: (i) a small PRECEDING WK-1178 slice ACCEPTED; …", (i): a row whose declared weight column holds exactly 0 is excluded from the fit and from every diagnostic (FR-171, FR-183), before the family's response-domain check, so FR-111's severity `weight = claim_count` fits the full book on the frequency model's `dataset_version`, split and `holdout_part` (FR-190 untouched, no placeholder response). Each partition's diagnostics report the count excluded (`PartitionDiagnostics.rows_excluded_zero_weight`). A negative or null weight is still refused. Spec first: one dated FR-111 clause. The GLM, GBM and EBM arms and the backtest are all covered, because they share the weight and `_partition`. The A/E definition is not changed (FD 9889 and OQ 9891, filed in D14). Work-plan delta PL-1674 (DP-Z1 ruled (a) by the maintainer (by delegation), "2026-10-12 05:47:19 BST": the view in a later WK-675 frontend row). **Activation needs:** PL-1674 set `active` in this slice's activation commit; the shared-path census on `docs/contracts/` against `SL-1669` and `SL-1549` (the later PR regenerates); the lead's executor GO. It **precedes `SL-1543`'s severity steps**, and G2 slips by it (05:39:20). *(Cut 2026-10-12 by the planner under working id 9887, reserved by the lead; minted 2026-10-12 as SL-1675, early, on the maintainer's (by delegation) GO "2026-10-12 05:47:19 BST".)*
 
+#### SL-9998 — WK-1178 fix slice — FD-1684: the four non-JSON routes declare their real media types
+
+```yaml
+id: SL-9998
+family: slice
+title: WK-1178 fix slice — FD-1684: the four non-JSON routes declare their real media types
+status: draft                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-14
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 36e2610ab8135bc3b3563464e7f5f719713b168b
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-9997, FD-1684, FD-1335, PL-1682, SL-1683, PL-1364, SL-1367, SL-1547]
+```
+
+On the maintainer's (by delegation) entry "2026-10-12 07:46:06 BST — PL 9906/SL 9911/FD 9912: ACK + early mint as PL-1682/SL-1683/FD-1684 after #1295/#1296; …", items 3 and 4 (WK-1178 owns all four limbs) and its remedy row: `GET /api/v1/rate-tables/{slug}@{version}/export/csv`, `…/export/xlsx`, `GET /api/v1/audit/export` and `GET /api/v1/jobs/{job_id}/events` each declare their real 200 media type, so `docs/contracts/openapi/generated.json` reads `text/csv`, the spreadsheetml type, `text/csv` and `application/x-ndjson`, and `text/event-stream`, with no `application/json` entry and a non-empty schema on each. The handler bodies and the wire do not change. Red first, one contract test per route, each red on `main` by its cause (the published 200 has a single `application/json` key); the stale-list test red after regeneration; the two wire tests without a `content-type` assert gain one. The four routes leave `UNTYPED_2XX_PERMANENT` (`backend/tests/test_contracts.py:3169-3183`), and `generated.json` and the frontend client are regenerated. The event: `FD-1684`'s sweep predicate prints no line. Plan: Work-plan delta `PL-9997`. **Activation needs:** DP-1 (the declaration form), DP-2 (the schemas), DP-3 (the emptied list removed), DP-4 (route 4 declared, not rewritten) and DP-5 (a dated clause on `06:606` only) accepted or overruled (**all five ruled as recommended**, the maintainer (by delegation), "2026-10-14 09:45:05 BST" (A)); `FD-1684` on `main` (#1297); `SL-1683` merged first, or `RL-1445` item 2's conditions in the dispatch record (shared `api/rate_tables.py`, `test_contracts.py`, `generated.json`); PL-9997 set `active` in this slice's activation commit; the shared-path census re-checked at the GO; the lead's executor GO. *(Cut 2026-10-14 by the planner under working id 9998, reserved by the lead, eta "2026-10-14 09:29:43 BST".)*
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
@@ -3185,5 +3203,9 @@ not when its requirements are individually ticked off.
 | 2 | [`WF-699`](workflows/WF-00699-approved-models-to-approved-rating-version.md) end to end, plus `WF-701` phases A–D, meeting NFR-489 |
 | 3 | [`WF-702`](workflows/WF-00702-custom-objective-lifecycle.md) end to end, plus a dossier that survives external review |
 | 4 | [`WF-700`](workflows/WF-00700-rate-change-impact-optimisation-dislocation-gipp-decision.md) end to end, plus `WF-701` phases E–H |
+
+*(Amended 2026-10-14 by the maintainer (dated line by delegation), on the user's decision of 2026-10-14 in the maintainer's channel entry "2026-10-14 09:50:37 BST": "WF-701 phases A–D" means its deployment steps, A1–A6 and C1–C4, C6, C7, with Phase B optional; C5 (`05` FR-310), D1–D4 (`05` FR-331, FR-333, FR-329, FR-332) and A3's notification (FR-453) are WF-701's monitoring half, checked at row 4 with `WK-687`/`WK-688` (P4), as the P2 outcome line already says.)* — attached to the row 2 line above.
+
+*(Row 4, cross-pointer, 2026-10-14: `WF-701`'s monitoring steps C5, D1–D4 and A3's notification are checked here, per the dated line on row 2 above, the maintainer's channel entry "2026-10-14 09:50:37 BST".)*
 
 The workflow documents were written with timing tables for exactly this purpose.
