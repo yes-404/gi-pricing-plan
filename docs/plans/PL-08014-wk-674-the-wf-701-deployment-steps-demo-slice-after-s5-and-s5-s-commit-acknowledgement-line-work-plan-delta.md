@@ -289,21 +289,26 @@ names the second route.
 
 | # | The call | The assert (status **and** read-back effect) | Served by | Needs S4/S5 |
 |---|---|---|---|---|
-| C2 (first) | Before A1: the prod request-and-deploy path for K1, which has no `uat` deployment | 409, problem `code == "PROMOTION_ORDER_VIOLATION"`; Task 0 records which call refuses (request or deploy). Read back: `GET /environments/prod/deployments` still lists `rv3` first | `platform/deployments.py:474-496` (the code at `:495`); `model_schema/approvals.py:342` | no |
-| C3 (i) | Deploy a compiled, unapproved version to `uat` | 409 `DEPLOY_REQUIRES_APPROVAL`; read back: `uat`'s list unchanged | `platform/deployments.py:557-607` (the code at `:559`) | no |
+| C3 (iii) (while K1 is built) | The FR-354 limb: after the **first** of K1's two approvers decides `approve` on K1's approval request, read that request and K1; then the second, distinct approver decides `approve` | after one decision: the request is `review`, not `approved`, and K1 is not `approved`, so no Deployment Request or deploy can name it; after the second: `approved`, with two **distinct** approvers. *(Corrected 2026-10-14, the maintainer's (by delegation) ruling "2026-10-14 11:14:40 BST" in `to-lead.md`, item (3): C3 is the prod approval completeness check, `06` FR-354, both approvers; this limb is reachable because the default policy requires two.)* | default policy `approvers_required=2` (`model_schema/approvals.py:428-434`); `_resolve_status`, `platform/approvals.py:607-614`; distinct approvers `:464-469` | no |
+| C2 (first) | Before A1, with K1 `approved` and no `uat` deployment of K1: submit the prod Deployment Request, `POST /environments/prod/deployment-requests` `{rating_version_ref: K1, …}` | 422, problem `code == "EVIDENCE_INCOMPLETE"`, the detail naming `'prod' requires a successful deployment to 'uat' first`; read back: `GET /environments/prod/deployments` still lists `rv3` first. *(Corrected 2026-10-14, the maintainer's (by delegation) ruling "2026-10-14 11:14:40 BST" in `to-lead.md`, item (1): this row read 409 `PROMOTION_ORDER_VIOLATION` and "Task 0 records which call refuses"; prod is gated, so the first act a prod deploy needs is the submission, and `07` FR-429 as amended 2026-09-28 (`RL-1232` DP-7) refuses it there with `EVIDENCE_INCOMPLETE`.)* | `submit_request`, `platform/deployments.py:206-282` (the code at `:269`); the one predicate `model_schema/approvals.py:342-372`; route `api/deployments.py:42-56` | no |
+| C2 (route) | Still before the `dev` precondition: `POST /environments/uat/deployments` `{rating_version_ref: K1, reason}`. `uat` is ungated and its predecessor `dev` holds no K1 deployment | 409, problem `code == "PROMOTION_ORDER_VIOLATION"`, the detail naming `'uat' requires a successful deployment to 'dev' first`; read back: `uat`'s list unchanged. *(Added 2026-10-14, the maintainer's (by delegation) ruling "2026-10-14 11:14:40 BST" in `to-lead.md`, item (1): the route's 409 is walked where a real path reaches it, "an ungated configured environment whose predecessor is undeployed", `07` FR-429's "any configured environment (FR-428)" limb. For `prod` it is stated unreachable, below the table.)* | the ungated branch, `platform/deployments.py:462-497` (the code at `:495`); `_predecessor_deployment` `:137-158` | no |
+| PRECONDITION `dev` (not a step) | `POST /environments/dev/deployments` `{rating_version_ref: K1, reason}`, printed as one line starting `PRECONDITION dev:` | 201; read back: `GET /environments/dev/deployments` lists K1 first | the seeds' `requires_prior_environment` `null`/`dev`/`uat` (`07` §4, `docs/specs/07-platform.md:265`); `07` FR-429 enforces the order for any configured environment (FR-428). *(Added 2026-10-14, the maintainer's (by delegation) ruling "2026-10-14 11:14:40 BST" in `to-lead.md`, item (2): the environment configuration is right and `uat` needs a `dev` deployment first; this is a labelled precondition setup step, not an A-step and not "A1dev".)* | no |
+| FR-238 extra (was C3 (i)) | Deploy a compiled, unapproved version to `uat` | 409, problem `code == "VALIDATION_FAILED"` ("Only an approved Rating Version can be deployed"); read back: `uat`'s list unchanged. Labelled FR-238, not C3. *(Corrected 2026-10-14, the maintainer's (by delegation) ruling "2026-10-14 11:14:40 BST" in `to-lead.md`, item (3): this row was C3 (i) and read 409 `DEPLOY_REQUIRES_APPROVAL`; an unapproved version to `uat` is `03` FR-238, which names no code, and the code's 409 `VALIDATION_FAILED` stands. `uat` has no `deployment` policy entry, so `DEPLOY_REQUIRES_APPROVAL` cannot fire there.)* | `_approved_compiled_version`, `platform/deployments.py:95-122` (the code at `:119`) | no |
 | A1 | `POST /environments/uat/deployments` `{rating_version_ref: K1, reason}` | 201; read back: `GET /environments/uat/deployments` lists K1 first, its `bundle_hash` equal to K1's compiled `content_hash` | `api/deployments.py:67-87`; list `:90-113` | no |
 | A2 | The same deploy, with a concurrent `POST /score` stream through `lb` on a `uat` key across the switch | (i) every response's `bundle_hash` is old or new; (ii) after the deploy returns, none carries the old hash; (iii) D5.6's COMMIT set, read through `GET /audit`, equals the `api` containers `docker compose ps` reports | S5's switch and D5.6; S4's `lb` and `api` replicas | **yes** |
 | A3 | `GET /audit` filtered to the deployment | one `deployment.created` event, before and after state, the deploy `reason` as justification, the deployer as actor | `platform/deployments.py:537-554`; `api/audit.py:156` | no |
 | A4 | `POST /score`, `uat`-bound `X-API-Key`, no `rating_version_ref` | 200, `outcome == "quoted"`, `bundle_hash` is K1's, a `premium_ladder` and `outputs` present | `api/score.py:378-431`, `_serving_ref` `:195`; the key from `POST /service-accounts` with `score:execute` | no |
 | A5 | `POST /score/compare` `{base: rv3, comparison: K1}`, once per quote, over K = 200 real freMTPL2 policies from the seed's dataset | each 200 with a step-level `TraceDiff`; at least one premium differs; totals and the changed count printed | `api/score.py:460-506` (FR-262 is one quote per call) | no |
 | A6 | From A5, the quote with the largest relative move whose K1 trace applies `MIN_PREMIUM_APPLIED` and whose `rv3` trace does not; re-score it with `options.trace=true` | K1's trace shows the min-premium step applied with that reason, `rv3`'s does not; step id and % move printed; **WF-701's "14 %" is not asserted** (example text) | `options.trace`, `api/score.py:410-419`; `TraceStep`, `model_schema/scoring.py:168-186` | no |
-| C3 (ii), (iii) | (ii) Deploy K1 to prod against an undecided request; (iii) read K1's approval request | (ii) 409 `DEPLOY_REQUIRES_APPROVAL`; (iii) two **distinct** approvers | default policy `approvers_required=2` (`model_schema/approvals.py:429-430`); distinct approvers `platform/approvals.py:464-469` | no |
+| C3 (ii) | After A6: `POST /environments/prod/deployments` `{rating_version_ref: K1, reason}` naming no `deployment_request_ref` | 409, problem `code == "DEPLOY_REQUIRES_APPROVAL"`; read back: `prod`'s list unchanged. *(Corrected 2026-10-14, the maintainer's (by delegation) ruling "2026-10-14 11:14:40 BST" in `to-lead.md`, item (3): this row read "against an undecided request" and carried (iii) as a read of the approval request; the ruling walks (ii) as prod with **no** request, and (iii), the FR-354 one-of-two limb, moved to the first row.)* | `_executable_request`, `platform/deployments.py:574-610` (no request named, `:582-583`); `_not_approved` `:557-564` | no |
 | C1 | `POST /environments/prod/deployment-requests`, decision `approve` by a prod approver, `POST /environments/prod/deployments` with `deployment_request_ref` | 201; read back: `GET /environments/prod/deployments` lists K1 first | `api/deployments.py:42-87` | no |
 | C4 | C1's deploy with the stream running on a prod key across the switch; the deploy call's wall time recorded | A2's (i) to (iii) on prod, plus the `deployment.created` event; elapsed printed and checked **< 30 s as a functional bound, not the NFR-494 verdict** | as A2 | **yes** |
 | C6 | About 50 `POST /score` on a prod key, no ref, through `lb` | 200, every `bundle_hash` K1's, `outcome == "quoted"`, one golden quote's `payable_premium` equal to its integer expected value | `api/score.py:195-230` | replicas: **yes** |
 | C7 (i), (ii) | Prod `rating.trace_sample_rate` left at its default 0.01; N = 2,000 quoted quotes on the prod key; then `GET /traces?rating_version=…&from=…&to=…` as an analyst bearer, polled until the count is stable | (i) the count is inside [3, 45] (P8), with N, p and the band printed; (ii) every persisted trace's `bundle_hash` is K1's | `api/score.py:509-580`; `platform/traces.py:78-99`; completion by `score.trace_produce` (a worker on `scoring`, DP-2); `api/traces.py:167` | the worker queue (DP-2) |
 | C7 (iii) declines | K2 deployed `uat` then prod through the governed path; M = 20 quotes that K2 declines, on the prod key, rate unchanged | exactly M persisted traces with `outcome == "declined"` for K2 (the 100 % floor), read through `GET /traces` | `traces.decide_sampling` floor, `platform/traces.py:94-97` | the worker queue (DP-2) |
 | C7 (iv) errors | With the prod key, `POST /api/v1/score` one quote that omits a declared non-nullable input; after C7's trace poll is stable, `GET /traces` | 422 with problem `code` `INPUT_CONTRACT_VIOLATION`; no listed trace carries that quote's `quote_id`; the one printed line, asserted, is exactly `C7-errors: refused, not traced (FR-259, RL 8019)`. The no-row proof is a backend test that reads `scoring_traces` directly, and the demo cites it by name. No fault is caused in `prod`; nothing about errors at 100 % is asserted | P7 as amended; RL 8019 §3 and its "What it obliges" section | — |
+
+**The route's 409 for `prod` is unreachable in this demo** *(added 2026-10-14, the maintainer's (by delegation) ruling "2026-10-14 11:14:40 BST" in `to-lead.md`, item (1))*. A prod deploy executes only an approved Deployment Request (`platform/deployments.py:574-610`), and that request was accepted at submission only if FR-429's one predicate held then: its pinned `uat_deployment` is a Deployment id, or a skip the policy permitted (`:254-282`). The route re-reads that pinned evidence (`:475-492`), so with the pinned item a Deployment id it passes. The one prod path to the 409 is a skip pinned under a policy that permits it and then withdrawn from the policy before the deploy; the default policy permits no skip (`skippable_predecessors` empty) and the demo makes no policy edit, so the journey does not walk it and prints nothing for it. The route's 409 is walked on `uat` (row C2 (route)).
 
 **The two run modes** (the memo's §2, kept):
 
@@ -356,8 +361,8 @@ and output):
   `COMPOSE-ONLY A2/C4/C6 replica limb` (in-process only) and the walked limb line `C7-errors: refused, not traced (FR-259, RL 8019)`.
   Test first: R1, then a test that an unruled skip fails the journey (the form of
   `test_wf699_journey.py:57`).
-- [ ] **T2 — the deliberate refusals** C2 and C3 (i), (ii): R2, R3 first.
-- [ ] **T3 — A1, A3 to A6, C1, C3 (iii), C6 (one process)** in order, each with its read-back.
+- [ ] **T2 — the deliberate refusals** C2 (the prod submission's 422 and the `uat` route's 409), C3 (ii) and the FR-238 extra: R2, R3 first. The `dev` precondition runs after C2 (route) and before A1, printed `PRECONDITION dev:`. *(Corrected 2026-10-14, the maintainer's (by delegation) ruling "2026-10-14 11:14:40 BST" in `to-lead.md`, items (1) to (3); this line read "C2 and C3 (i), (ii)".)*
+- [ ] **T3 — C3 (iii) while K1 is built, then A1, A3 to A6, C1, C6 (one process)** in order, each with its read-back. *(Corrected 2026-10-14, the maintainer's (by delegation) ruling "2026-10-14 11:14:40 BST" in `to-lead.md`, item (3): C3 (iii) is the FR-354 one-of-two limb, walked at K1's approval.)*
 - [ ] **T4 — C7 (i) and (ii)**, the band test with R6 first; **C7 (iii)** with K2 through the
   governed path, R7 first; **C7 (iv)** as the walked limb of RL 8019 §3 (the 422 refusal, the
   trace-list absence, the ruled line; no `KNOWN GAP C7-errors` line exists). The journey's first output line is
@@ -384,9 +389,14 @@ with its failure line as printed; a matching status with a different cause is a 
 
 - **R1.** `uv run pytest -q backend/tests/test_wf701_journey.py` fails at collection because
   `run_wf701_journey` does not exist.
-- **R2.** C2: first written expecting 201, it fails with 409 and problem `code
-  PROMOTION_ORDER_VIOLATION`: the refusal is the server's, not the test's.
-- **R3.** C3 (i) and (ii): R2's method, for `DEPLOY_REQUIRES_APPROVAL`.
+- **R2.** C2: the prod submission, first written expecting 201, fails with 422 and problem `code
+  EVIDENCE_INCOMPLETE`; the `uat` deploy before the `dev` precondition, first written expecting
+  201, fails with 409 and problem `code PROMOTION_ORDER_VIOLATION`: each refusal is the server's,
+  not the test's.
+- **R3.** C3 (ii): R2's method, for `DEPLOY_REQUIRES_APPROVAL`; the FR-238 extra: R2's method, for
+  `VALIDATION_FAILED`; C3 (iii): first written expecting `approved` after one decision, it fails
+  reading `review`.
+  *(R2 and R3 corrected 2026-10-14, the maintainer's (by delegation) ruling "2026-10-14 11:14:40 BST" in `to-lead.md`, items (1) and (3).)*
 - **R4.** A2 (i) / C4 (i): an injected response carrying a third hash fails the old-or-new
   assertion (the proof `PL-1237` Task 5's gate outline asks of S5, repeated on the journey).
 - **R5.** A2 (iii) / C4 (iii) on compose: the set read against 3 with `api`×2 (or one replica's
@@ -403,8 +413,10 @@ with its failure line as printed; a matching status with a different cause is a 
 **SL-8015 — acceptance standard**
 
 1. `backend/tests/test_wf701_journey.py` has a module docstring naming
-   `docs/workflows/WF-00701-deploy-and-monitor.md`, and `req` markers for FR-250, FR-258, FR-259,
-   FR-262, FR-267, FR-268, FR-272, FR-354, FR-429 and NFR-494, each listed separately.
+   `docs/workflows/WF-00701-deploy-and-monitor.md`, and `req` markers for FR-238, FR-250, FR-258,
+   FR-259, FR-262, FR-267, FR-268, FR-272, FR-354, FR-429 and NFR-494, each listed separately
+   (FR-238 added 2026-10-14 for the FR-238 extra, the maintainer's (by delegation) ruling
+   "2026-10-14 11:14:40 BST" in `to-lead.md`, item (3)).
    `uv run pytest -q backend/tests/test_wf701_journey.py` exits 0. R1, R2, R3, R4, R6 and R8 are
    quoted in the `LG-`.
 2. Every in-scope step (A1–A6, C1–C4, C6, C7) is walked in order, each asserting its status and its
@@ -413,8 +425,13 @@ with its failure line as printed; a matching status with a different cause is a 
    no step is absent and no other skip line exists, and no line contains `KNOWN GAP C7-errors`.
    If the RL 8019 T1 text (the FR-259 clarification in `03`) is absent from `main` at the GO, the
    slice keeps a `KNOWN GAP` line, and the exit demo cannot pass C7 (RL 8019's last violation).
-3. The refusals match on problem `code`: C2 `PROMOTION_ORDER_VIOLATION`; C3 (i) and (ii)
-   `DEPLOY_REQUIRES_APPROVAL`.
+3. The refusals match on problem `code`: C2 `EVIDENCE_INCOMPLETE` (the prod submission) and
+   `PROMOTION_ORDER_VIOLATION` (the `uat` route before the `dev` precondition); C3 (ii)
+   `DEPLOY_REQUIRES_APPROVAL`; the FR-238 extra `VALIDATION_FAILED`, labelled FR-238. C3 (iii)
+   reads the approval request `review` after one of two approvals. The `dev` deployment is one
+   line starting `PRECONDITION dev:`, not a step. *(Corrected 2026-10-14, the maintainer's (by delegation) ruling "2026-10-14 11:14:40 BST" in `to-lead.md`, items (1)
+   to (3); this item read "C2 `PROMOTION_ORDER_VIOLATION`; C3 (i) and (ii)
+   `DEPLOY_REQUIRES_APPROVAL`".)*
 4. **On compose** (`GIP_DEPLOY_TESTS=1`, S4's stack, `api`×2), `uv run python scripts/demo.py
    --journey wf-701 --target compose` exits 0 and prints one line per step: A2 and C4 show (i), (ii)
    and (iii) with a set of 2; C6 about 50 prod quotes on K1's hash; C7 the count inside [3, 45]
@@ -519,7 +536,7 @@ sentence above holds only for what is not yet cited by a dated activation line. 
 - **Spec coverage.** Each in-scope WF-701 step has a row in the step table and a task: A1 (T3), A2
   (T5), A3 (T3), A4 (T3), A5 (T3), A6 (T3), C1 (T3), C2 (T2), C3 (T2, T3), C4 (T5), C6 (T3, T5), C7
   (T4). Its requirement, by `docs/workflows/WF-00701-deploy-and-monitor.md` §2: A1 and C1 FR-267;
-  A2 FR-268 and NFR-494; A3 FR-272; A4 and C6 FR-250; A5 FR-262; A6 FR-258; C2 FR-429; C3 FR-354;
+  A2 FR-268 and NFR-494; A3 FR-272; A4 and C6 FR-250; A5 FR-262; A6 FR-258; C2 FR-429; C3 FR-354 (the FR-238 extra is `03` FR-238, outside WF-701's C-steps, 2026-10-14 ruling 11:14:40 item (3));
   C4 NFR-494; C7 FR-259. Each id is defined (`03` §3.7, §3.8, §3.10, §9; `07` §3.5; `06` §3.2) and
   listed individually in the Tasks table and acceptance item 1.
 - **Rulings at every site** (`README.md` convention 5). W0: the Tasks table and activation need 1.
