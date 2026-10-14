@@ -45,7 +45,7 @@ The consumers (second command), complete for the tree:
 | `deploy/docker-compose.yml` | **no worker service at all** (`FD-1661`) |
 | `.github/`, `Makefile`, systemd units, Dockerfiles | none |
 
-The not-yet-merged plan for the compose worker (`PL-01690`, `origin/docs-d14-2026-10-12`, E4.2) hard-codes `default,compute` and a shape test asserting exactly that set: it would bless the gap.
+The not-yet-merged plan for the compose worker (PL 1690, `origin/docs-d14-2026-10-12`, E4.2) hard-codes `default,compute` and a shape test asserting exactly that set: it would bless the gap.
 
 Beat's relay task is routed to `default` (`worker/entrypoint.py`, `beat_schedule`, `"options": {"queue": "default"}`), so a worker on `compute` alone, the entrypoint docstring's own example, would not even relay the outbox.
 
@@ -98,7 +98,9 @@ No. Section 1's table is the complete list at this tree, by the command shown. T
 
 The argument against: nothing is mispriced and no data is lost; G2's path is unaffected (section 2); compose has no worker at all yet (`FD-1661`), so no *deployed* stack is broken today, only the one being built. If the lead weighs "deployed stack" strictly, MEDIUM is defensible. I propose HIGH because the defect is certain on the topology that will ship, silent, and sits under the first step of the first workflow.
 
-## Remedy (ruled, not built here)
+## Disposition
+
+**Remedy (ruled, not built here).**
 
 Per the maintainer's (by delegation) entry "2026-10-14 10:13:50 BST" (a) and "2026-10-14 10:36:42 BST":
 
