@@ -2523,6 +2523,26 @@ relates: [PL-1708, FD-1684, FD-1335, PL-1682, SL-1683, PL-1364, SL-1367, SL-1547
 On the maintainer's (by delegation) entry "2026-10-12 07:46:06 BST — PL 9906/SL 9911/FD 9912: ACK + early mint as PL-1682/SL-1683/FD-1684 after #1295/#1296; …", items 3 and 4 (WK-1178 owns all four limbs) and its remedy row: `GET /api/v1/rate-tables/{slug}@{version}/export/csv`, `…/export/xlsx`, `GET /api/v1/audit/export` and `GET /api/v1/jobs/{job_id}/events` each declare their real 200 media type, so `docs/contracts/openapi/generated.json` reads `text/csv`, the spreadsheetml type, `text/csv` and `application/x-ndjson`, and `text/event-stream`, with no `application/json` entry and a non-empty schema on each. The handler bodies and the wire do not change. Red first, one contract test per route, each red on `main` by its cause (the published 200 has a single `application/json` key); the stale-list test red after regeneration; the two wire tests without a `content-type` assert gain one. The four routes leave `UNTYPED_2XX_PERMANENT` (`backend/tests/test_contracts.py:3169-3183`), and `generated.json` and the frontend client are regenerated. The event: `FD-1684`'s sweep predicate prints no line. Plan: Work-plan delta `PL-1708`. **Activation needs:** DP-1 (the declaration form), DP-2 (the schemas), DP-3 (the emptied list removed), DP-4 (route 4 declared, not rewritten) and DP-5 (a dated clause on `06:606` only) accepted or overruled (**all five ruled as recommended**, the maintainer (by delegation), "2026-10-14 09:45:05 BST" (A)); `FD-1684` on `main` (#1297); `SL-1683` merged first, or `RL-1445` item 2's conditions in the dispatch record (shared `api/rate_tables.py`, `test_contracts.py`, `generated.json`); PL-1708 set `active` in this slice's activation commit; the shared-path census re-checked at the GO; the lead's executor GO. *(Cut 2026-10-14 by the planner under working id 9998, reserved by the lead, eta "2026-10-14 09:29:43 BST".)*
 
 
+#### SL-8051 — WK-1178 fix slice — FD 8049: the score rate-limit test's key expiry is one the pinned clock cannot outrun, and the limiter's key expiry is tested
+
+```yaml
+id: SL-8051
+family: slice
+title: WK-1178 fix slice — FD 8049: the score rate-limit test's key expiry is one the pinned clock cannot outrun, and the limiter's key expiry is tested
+status: active                   # draft → active → closed | retired (§1.2a)
+created: 2026-10-14
+owner: executor                  # a test-only slice; the lead dispatches (active)
+tree: beee5ebedcfebc03c1658728442827960975392a
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-8049, FR-452, FR-430, RL-1347]
+```
+
+The fix of FD 8049 (MEDIUM, owner WK-1178; not on `main` yet, it rides D18). `backend/tests/test_score_rate_limit.py` pins the limiter's clock, so every request of a test counts into one key, while Redis evaluates the key's 2 s expiry in real time; a stall of more than 2 s between two requests resets the counter and the refused request is admitted (`assert 409 == 429`). The limiter is correct and the test is wrong. **Scope, exactly:** (1) the `_app_client` fixture sets `rate_limit._KEY_TTL_SECONDS` to 3600 with `monkeypatch`; (2) two expiry tests per the condition in the maintainer's (by delegation) entry "2026-10-14 16:43:11 BST": after one admit `PTTL` is in (0, ttl x 1000], and with an injected TTL of 1 s a bounded `EXISTS` poll (3 s deadline) sees the key gone and the next admit counts 1, each red first on a planted removal of `pipe.expire` (working tree only, never committed); (3) **no change to `backend/src`**. Written test-only, so CI's full python run on the PR head is its gate.
+
+(Activated 2026-10-14 as WK-1178's FD 8049 fix slice, on the maintainer's (by delegation) entry "2026-10-14 17:11:47 BST — FD 8049 third strike: NO further re-run and NO merge-past-red; LAND the test-only fix NOW with CI as its gate (no gate-1 cycle); D17 waits for it (re lead's STOP)" (`to-lead.md`). Working ids 8051 (this slice) and 8052 (its ledger, `LG 8052`) reserved by the lead; not yet minted.)
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
