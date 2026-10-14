@@ -1186,9 +1186,12 @@ def test_guard_text_survives_safe_error_text() -> None:
 # ---------------------------------------------------------------------------
 # FD-1660 (WK-673, PL-1694 Stage B, SL-1696): a mount is derived like a step, a subset carries its
 # mount changes and their pins, and a mount is a node for dependence (RL-1686 DP-1 to DP-3, T1, T2).
-# Written red-first. On Stage A's head they fail at the guard (`VALIDATION_FAILED`, FD-1660); the
-# bug's own cause is shown by running them against the base without the guard. Stage B flips the
-# Stage A `test_guard_*` cases into these, so a `test_guard_*` case is removed only by that flip.
+# Written red-first. The two derive tests (`test_mount_repoint_is_one_step_changed_change_naming_
+# the_mount` and `test_mount_added_and_removed_are_step_added_and_step_removed`) are red by their
+# own cause even on Stage A's head: `_derive` never reads a mount, and the guard is not on their
+# path. The others are red at the guard (`VALIDATION_FAILED`, FD-1660); the bug's own cause is
+# shown by running them against the base without the guard. Stage B flips the Stage A
+# `test_guard_*` cases into these, so a `test_guard_*` case is removed only by that flip.
 # ---------------------------------------------------------------------------
 
 _M_NCD_REPOINT = f"m_ncd: mount {_NCD4} → {_NCD5}"
@@ -1215,15 +1218,24 @@ def _g1_changes() -> list[Any]:
 
 
 class _BundleSpy:
-    """Records the compiled graph node ids of every subset `attribute` compiles."""
+    """Records, per subset `attribute` compiles, the compiled graph node ids and the
+    `(rate_tables, sub_graphs)` pins the subset's version carries (DP-2)."""
 
     def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
         self.nodes: list[set[str]] = []
+        self.pins: list[tuple[list[str], list[str]]] = []
         real = analysis.compile_bundle
 
         async def spy(version: Any, resolver: Any) -> Any:
             bundle = await real(version, resolver)
             self.nodes.append(set(bundle.graph.nodes))
+            assert version.pins is not None
+            self.pins.append(
+                (
+                    [str(r) for r in version.pins.rate_tables],
+                    [str(r) for r in version.pins.sub_graphs],
+                )
+            )
             return bundle
 
         monkeypatch.setattr(analysis, "compile_bundle", spy)
@@ -1239,7 +1251,9 @@ def test_mount_repoint_is_one_step_changed_change_naming_the_mount() -> None:
     assert mount.kind == "step_changed"
     assert mount.description == _M_NCD_REPOINT
     assert [c for c in changes if c.kind == "pin"] == []
-    assert [c.id for c in changes] == sorted(c.id for c in changes)
+    # `m_ncd` sorts before `s_expense`, so the mount change is the first one.
+    assert [c.kind for c in changes] == ["step_changed", "table_repointed"]
+    assert changes[0] is mount
 
 
 @pytest.mark.req("FR-1399")
@@ -1266,6 +1280,7 @@ def test_mount_added_and_removed_are_step_added_and_step_removed() -> None:
         "step_removed",
         f"m_ncd: mount removed ({_NCD4})",
     )
+    assert [c for c in added + removed if c.kind == "pin"] == []
 
 
 @pytest.mark.req("FR-1399")
@@ -1285,9 +1300,17 @@ def test_mount_repoint_plus_table_edit_attributes_each_effect_to_its_own_change(
     summary = result.attribution_summary
     assert summary.total_change_minor == total
     assert sum(i.shapley_minor for i in result.attribution) == total
+    assert interaction != 0
+    assert table != 0
+    # A part is the sum over the book's policies of a largest-remainder allocation of each policy's
+    # own split, so it is within half a minor unit of the exact value per policy (two parts: the
+    # unit goes to the larger remainder), never within one unit overall.
+    n_policies = _mounted_book().collect().height
+    bound = Fraction(n_policies, 2)
     for change, isolated in ((mount, ladder), (other, table)):
         exact = Fraction(isolated) + Fraction(interaction, 2)
-        assert abs(Fraction(items[change.id].shapley_minor) - exact) <= 1
+        part = items[change.id].shapley_minor
+        assert abs(Fraction(part) - exact) <= bound, (part, exact, bound)
 
 
 @pytest.mark.req("FR-1399")
@@ -1380,3 +1403,144 @@ def test_mounted_empty_and_full_subsets_hash_equal_baseline_and_candidate() -> N
     assert base_hash in hashes
     assert cand_hash in hashes
     assert base_hash != cand_hash
+    assert len(set(hashes)) == 4
+
+
+@pytest.mark.req("FR-1399")
+def test_mount_ports_re_mapped_forms() -> None:
+    """DP-1 (T1): a re-map alone is `<mount_point>: mount ports re-mapped (<ref>)`; a re-point with
+    a re-map is the re-point form plus `; ports re-mapped`. Both are one `step_changed`."""
+
+    def remap(alg: dict[str, Any]) -> None:
+        alg["sub_graphs"][0]["outputs"] = {"ncd_factor": "ncd_f2"}
+        office = _step(alg, "s_office")
+        office["expr"] = "risk_premium_minor * expense_factor * ncd_f2"
+        office["consumes"] = ["risk_premium_minor", "expense_factor", "ncd_f2"]
+
+    def derived(*edits: Callable[[dict[str, Any]], None], sub_graphs: tuple[str, ...]) -> Any:
+        cand = _candidate_payload(_e_mounted, *edits)
+        changes = asyncio.run(
+            derive_changes(
+                _mounted_version(_NCD4),
+                _candidate_version(sub_graphs=sub_graphs),
+                _resolver(cand, base=_mounted_base()),
+            )
+        )
+        (mount,) = _mount_changes(changes)
+        return mount
+
+    ports_only = derived(remap, sub_graphs=(_NCD4,))
+    assert ports_only.kind == "step_changed"
+    assert ports_only.description == f"m_ncd: mount ports re-mapped ({_NCD4})"
+    both = derived(_e_repoint, remap, sub_graphs=(_NCD5,))
+    assert both.kind == "step_changed"
+    assert both.description == f"{_M_NCD_REPOINT}; ports re-mapped"
+
+
+@pytest.mark.req("FR-1398")
+def test_each_subset_pins_only_the_sub_graphs_of_the_mounts_it_holds(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """DP-2: the mount-only subset pins `@5` only, the table-only subset `@4` only (neither carries
+    the other's version), and the empty and full subsets are the baseline's and the candidate's."""
+    nodes = _BundleSpy(monkeypatch)
+    _g1_run()
+    assert sorted(nodes.pins) == sorted(
+        [
+            ([_TABLE_1], [_NCD4]),  # empty subset: the baseline
+            ([_TABLE_1], [_NCD5]),  # the mount change alone
+            ([_TABLE_2], [_NCD4]),  # the table change alone
+            ([_TABLE_2], [_NCD5]),  # every change: the candidate
+        ]
+    )
+
+
+@pytest.mark.req("FR-1399")
+def test_mount_alone_in_a_group_without_its_input_step_is_refused_naming_the_pair(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """DP-3, the reverse direction: the mount alone in one group while `s_in_ncd`, which produces
+    the parent value the mount's `inputs` map, sits in another is refused as a dependent pair
+    (the mount first: it depends on `s_in_ncd`), before any compile."""
+    cand = _candidate_payload(_e_mounted, _e_instalment)
+    sub_graphs = (_NCD4,)
+    changes = asyncio.run(
+        derive_changes(_version(), _candidate_version(sub_graphs=sub_graphs), _resolver(cand))
+    )
+    mount = _mount_changes(changes)[0]
+    producer = _by_description(changes, "s_in_ncd")
+    groups = [
+        ("mount", [mount.id]),
+        ("rest", [c.id for c in changes if c.id != mount.id]),
+    ]
+    spy = _MountSpy(monkeypatch)
+    with pytest.raises(AttributionError) as exc:
+        _run(cand, book=_mounted_book(), sub_graphs=sub_graphs, groups=groups)
+    text = str(exc.value)
+    assert exc.value.code == "VALIDATION_FAILED"
+    assert "dependent changes must share a group" in text
+    assert f"({mount.id}, {producer.id})" in text
+    assert "FD-1660" not in text
+    assert spy.attempts == 0
+
+
+@pytest.mark.req("FR-1398")
+@pytest.mark.req("FR-266")
+def test_mount_removed_two_groups_returns_and_reconciles(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`_merged`'s removal path: the baseline mounts `@5`, the candidate drops the mount (with its
+    input step and consumer edit, in `structure`) and edits `s_instalment` (K = 2). The run
+    reconciles to the independently scored total, the removal carries a non-zero effect, and a
+    subset pins `@5` exactly while its mount is not removed."""
+    base_payload = copy.deepcopy(_mounted_base())
+    _e_repoint(base_payload)
+    cand = _candidate_payload(_e_instalment)
+    changes = asyncio.run(
+        derive_changes(
+            _mounted_version(_NCD5), _candidate_version(), _resolver(cand, base=base_payload)
+        )
+    )
+    (removed,) = _mount_changes(changes)
+    assert removed.kind == "step_removed"
+    instalment = [c.id for c in changes if "s_instalment" in c.description]
+    groups = [
+        ("structure", [c.id for c in changes if c.id not in instalment]),
+        ("instalment", instalment),
+    ]
+    nodes = _BundleSpy(monkeypatch)
+    result = _run(
+        cand,
+        book=_mounted_book(),
+        base=base_payload,
+        base_sub_graphs=(_NCD5,),
+        groups=groups,
+    )
+    summary = result.attribution_summary
+    base = _independent_total(_mounted_version(_NCD5), base_payload, "rm-base")
+    full = _independent_total(_candidate_version(), cand, "rm-full")
+    assert summary.method == "shapley"
+    assert summary.total_change_minor == full - base != 0
+    assert {i.group for i in result.attribution} == {"structure", "instalment"}
+    assert sum(i.shapley_minor for i in result.attribution) == summary.total_change_minor
+    structure = next(g for g in result.change_groups if g.name == "structure")
+    assert removed.id in structure.changes
+    items = {i.group: i for i in result.attribution}
+    assert items["structure"].isolated_minor != 0
+    pins = sorted(p[1] for p in nodes.pins)
+    assert pins == sorted([[_NCD5], [_NCD5], [], []])
+
+
+@pytest.mark.req("FR-1399")
+def test_guard_three_edit_change_list_is_unchanged_without_a_mount() -> None:
+    """GUARD (item 16, green on Stage A's head and after Stage B): a candidate with no mount on
+    either side derives exactly the lists below, so the mount work does not move a no-mount run."""
+    changes = _derive(_candidate_payload(*_THREE), table=True)
+    table = "rate_table_ref rate_table:motor-expense@1 → rate_table:motor-expense@2"
+    instalment = "expr office_premium_minor * 1.05 → office_premium_minor * 1.10"
+    office = "expr risk_premium_minor * expense_factor → risk_premium_minor * expense_factor + 500"
+    assert [(c.id, c.kind, c.description) for c in changes] == [
+        ("c1", "table_repointed", f"s_expense: {table}"),
+        ("c2", "step_changed", f"s_instalment: {instalment}"),
+        ("c3", "step_changed", f"s_office: {office}"),
+    ]
