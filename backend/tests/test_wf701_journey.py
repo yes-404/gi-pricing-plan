@@ -23,6 +23,7 @@ from __future__ import annotations
 import asyncio
 import importlib.util
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -44,13 +45,19 @@ def _load(name: str, filename: str) -> Any:
     return module
 
 
-wf699 = _load("demo_journey", "journey.py")
+# Loaded as `journey`, the name the journey module imports its types from, so the two journeys
+# share one `JourneyStepFailed` and one `Skip` (the identity test below).
+wf699 = _load("journey", "journey.py")
 # Fails at collection while the module does not exist: R1, by its cause.
 wf701 = _load("demo_journey_wf701", "journey_wf701.py")
 
 #: PL 8014 T1: the only two lines a WF-701 run may print as a ruled limb. `RL 8019` is a working
 #: id until the ruling is minted; the mint replaces it here and in the journey.
 COMPOSE_ONLY_LINE = "COMPOSE-ONLY A2/C4/C6 replica limb"
+PRECONDITION_LINE = (
+    "PRECONDITION dev: a successful deployment to dev before uat (requires_prior_environment, "
+    "FR-429)"
+)
 ERRORS_LINE = "C7-errors: refused, not traced (FR-259, RL 8019)"
 
 FIRST_LINE = (
@@ -58,12 +65,12 @@ FIRST_LINE = (
     "deployments target the Environment resources uat and prod"
 )
 
-#: T3/T4's order, PL 8014's step table, without A2 and C4 (T5). C3's three limbs and C7's four are
-#: separate steps because each asserts a different server effect. `A1dev` is a step the plan's
-#: table lacks: `uat` takes a deploy only after the same version is deployed to `dev`
-#: (`PROMOTION_ORDER_VIOLATION`, probed on `main` 4420f91f), so A1 cannot be the first deploy.
+#: T3/T4's order, PL 8014's step table, without A2 and C4 (T5). The dev deployment is NOT a step:
+#: it is a labelled PRECONDITION (RL, the maintainer's "2026-10-14 11:14:40 BST" ruling (2): the
+#: seeds' `requires_prior_environment`, FR-429, WF-701 §1). C3's limbs and C7's four are separate
+#: steps because each asserts a different server effect.
 STEPS_BEFORE_T5 = [
-    "C2", "C3i", "A1dev", "A1", "A3", "A4", "A5", "A6", "C3ii", "C3iii", "C1", "C6",
+    "C2route", "C2", "FR238", "A1", "A3", "A4", "A5", "A6", "C3ii", "C3iii", "C1", "C6",
     "C7i", "C7ii", "C7iii", "C7iv",
 ]  # fmt: skip
 
@@ -108,10 +115,11 @@ def _walk(  # type: ignore[no-untyped-def]
     workspace_id,
     *,
     rate: float | None = None,
-    refuse_a1: bool = False,
+    wrap: Callable[[Any], Callable[..., Any]] | None = None,
 ):
     """The WF-699 state, then WF-701. `rate` sets the prod trace sampling rate first (R6);
-    `refuse_a1` makes the platform's answer to the uat deploy a 422 (R8)."""
+    `wrap` replaces the client's `request` with `wrap(real_request)`, to change what the
+    platform answered (R7, R8) without changing the platform."""
     from app.platform import settings as settings_service
     from app.worker.dislocation_handlers import register_dislocation_handlers
     from app.worker.rate_table_handlers import register_rate_table_handlers
@@ -137,20 +145,17 @@ def _walk(  # type: ignore[no-untyped-def]
                 )
 
         _run(set_rate())
-    if refuse_a1:
-        import httpx
-
-        real_request = api_client.request
-
-        def request(method: str, url: str, **kwargs: Any) -> httpx.Response:
-            if method == "POST" and str(url).endswith("/environments/uat/deployments"):
-                return httpx.Response(422, json={"code": "VALIDATION_FAILED", "detail": "A1"})
-            return real_request(method, url, **kwargs)
-
-        api_client.request = request
+    if wrap is not None:
+        api_client.request = wrap(api_client.request)
     lines: list[str] = []
     result = wf701.run_wf701_journey(api_client, record, log=lines.append, run_job=run_job)
     return record, result, lines
+
+
+def client_get(client: Any, path: str, record: dict[str, str], who: str) -> Any:
+    response = client.get(path, headers=_who(record, who))
+    assert response.status_code == 200
+    return response.json()
 
 
 def _who(record: dict[str, str], name: str) -> dict[str, str]:
@@ -174,7 +179,7 @@ def test_wf701_journey_runs_end_to_end(api_client, database, blob_store, workspa
     record, result, lines = _walk(api_client, database, blob_store, workspace_id)
 
     # T4: the first output line says both facts (RL for DP-1 (a)).
-    assert lines[0] == FIRST_LINE
+    assert lines[:1] == [FIRST_LINE]
     # T1: the two ruled lines, each printed exactly once in process, and nothing else is a skip.
     assert lines.count(COMPOSE_ONLY_LINE) == 1
     assert lines.count(ERRORS_LINE) == 1
@@ -185,14 +190,39 @@ def test_wf701_journey_runs_end_to_end(api_client, database, blob_store, workspa
     assert recorded == STEPS_BEFORE_T5
     assert {result.step_status[s] for s in recorded} == {"ok"}
 
-    # T2: the refusals, by the problem `code` the platform returned (probed on `main` 4420f91f).
-    # The plan names `DEPLOY_REQUIRES_APPROVAL` for C3 (i) as well, but an unapproved version is
-    # refused first, by `_approved_compiled_version`, with 409 `VALIDATION_FAILED`.
+    # The dev deployment is a labelled PRECONDITION, not a step (ruling "2026-10-14 11:14:40 BST"
+    # (2)): named in the output, run before the first A-step, absent from the step record.
+    assert result.preconditions == ["dev"]
+    assert "A1dev" not in result.step_status
+    assert [ln for ln in lines if ln.startswith("PRECONDITION")] == [PRECONDITION_LINE]
+    dev = client_get(api_client, "/environments/dev/deployments", record, "analyst")
+    assert dev["items"][0]["rating_version_ref"] == result.k1_ref
+
+    # T2, as ruled ("2026-10-14 11:14:40 BST" (1) and (3)), by the problem `code`:
+    #  - C2: the prod APPROVAL SUBMISSION refuses 422 EVIDENCE_INCOMPLETE ("'prod' requires a
+    #    successful deployment to 'uat' first", FR-429 as amended 2026-09-28, RL-1232 DP-7).
+    #    The route's 409 PROMOTION_ORDER_VIOLATION (deployments.py, promotion_order_refusal)
+    #    is NOT walked for prod: the route re-evaluates the predicate on the request's PINNED
+    #    evidence, which the submission already refused to pin, so no prod request exists to
+    #    reach it with the default policy (the only way is editing the policy between an
+    #    approved skip request and the deploy, outside the journey).
+    #  - FR238: an unapproved version to uat is FR-238's, 409 VALIDATION_FAILED; not C3.
+    #  - C3ii: PROD, no request: 409 DEPLOY_REQUIRES_APPROVAL (FR-354).
+    #  - C2route: the route's 409 PROMOTION_ORDER_VIOLATION is walked on a REAL path (the
+    #    ruling's own example): K1 deployed to the configured, ungated `uat` while `dev`, its
+    #    predecessor, holds no deployment of K1. Run before the dev PRECONDITION. Prod cannot reach
+    #    this 409 here: prod is gated and refused at submission, as C2 asserts.
     assert result.refusals == {
-        "C2": "PROMOTION_ORDER_VIOLATION",
-        "C3i": "VALIDATION_FAILED",
+        "C2route": "PROMOTION_ORDER_VIOLATION",
+        "C2": "EVIDENCE_INCOMPLETE",
+        "FR238": "VALIDATION_FAILED",
         "C3ii": "DEPLOY_REQUIRES_APPROVAL",
     }
+    # C3iii (FR-354): K1's approval request carries two DISTINCT approvers.
+    assert len(set(result.k1_approvers)) == 2
+    # The one-approver-of-two limb is NOT walked and NOT probed: the reachability claim (a version
+    # with one of two decisions is not `approved`, so it is refused as FR238) is from reading
+    # `_approved_compiled_version`, not from a run. The GO probes it or states it, in the LG.
     # The journey matched them inside; this test re-checks the server's state: prod's newest
     # deployment is K1 after C1, and uat's is K1 after A1.
     client = api_client
@@ -256,6 +286,44 @@ def test_wf701_c7_fails_naming_the_band_when_the_sample_rate_is_zero(  # type: i
     assert "[3, 45]" in failure.value.detail
 
 
+def _refuse_a1(real_request: Any) -> Callable[..., Any]:
+    import httpx
+
+    def request(method: str, url: str, **kwargs: Any) -> httpx.Response:
+        if method == "POST" and str(url).endswith("/environments/uat/deployments"):
+            return httpx.Response(422, json={"code": "VALIDATION_FAILED", "detail": "A1"})
+        return real_request(method, url, **kwargs)  # type: ignore[no-any-return]
+
+    return request
+
+
+def _hide_declined_traces(real_request: Any) -> Callable[..., Any]:
+    import httpx
+
+    def request(method: str, url: str, **kwargs: Any) -> httpx.Response:
+        response = real_request(method, url, **kwargs)
+        if method == "GET" and str(url).endswith("/traces"):
+            body = response.json()
+            body["items"] = [t for t in body["items"] if t["sample_reason"] != "decline"]
+            return httpx.Response(response.status_code, json=body)
+        return response  # type: ignore[no-any-return]
+
+    return request
+
+
+@pytest.mark.req("FR-259")
+def test_wf701_c7_fails_when_no_declined_trace_is_found(  # type: ignore[no-untyped-def]
+    api_client, database, blob_store, workspace_id
+) -> None:
+    """R7: with K2's declined traces not listed (the 100 % floor not honoured, seen from the
+    read side), C7 (iii) fails naming M = 20, so the step cannot pass on an empty read."""
+    with pytest.raises(wf699.JourneyStepFailed) as failure:
+        _walk(api_client, database, blob_store, workspace_id, wrap=_hide_declined_traces)
+    assert failure.value.step == "C7iii"
+    assert failure.value.code == "DECLINED_TRACES_MISSING"
+    assert "20" in failure.value.detail
+
+
 @pytest.mark.req("FR-267")
 def test_wf701_a_refused_a1_fails_the_journey_at_a1(  # type: ignore[no-untyped-def]
     api_client, database, blob_store, workspace_id
@@ -264,7 +332,7 @@ def test_wf701_a_refused_a1_fails_the_journey_at_a1(  # type: ignore[no-untyped-
     problem's code; `scripts/demo.py` turns that into a line starting `A1:`
     (`test_demo_command.py`)."""
     with pytest.raises(wf699.JourneyStepFailed) as failure:
-        _walk(api_client, database, blob_store, workspace_id, refuse_a1=True)
+        _walk(api_client, database, blob_store, workspace_id, wrap=_refuse_a1)
     assert failure.value.step == "A1"
     assert failure.value.code == "VALIDATION_FAILED"
     assert str(failure.value).startswith("A1: VALIDATION_FAILED")
