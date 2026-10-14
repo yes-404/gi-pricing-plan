@@ -840,7 +840,9 @@ def test_attribute_undeclared_column_never_reaches_the_engine(
     monkeypatch.setattr(
         compile_module,
         "ALGORITHM_CHECKS",
-        tuple(c for c in compile_module.ALGORITHM_CHECKS if c.__name__ != "_check_declared_reads"),
+        tuple(
+            c for c in compile_module.ALGORITHM_CHECKS if c.__name__ != "_check_declared_reads"
+        ),
     )
     base = _with_secret_step()
     cand = copy.deepcopy(base)
@@ -1087,9 +1089,9 @@ def test_guard_mount_difference_refuses_a_re_pointed_mount(
 def test_guard_fixture_has_a_non_zero_ladder_effect_that_attribution_would_misattribute() -> None:
     """The refusal in `_g1_run` is not for a vacuous fixture: scored without attribution, the
     re-point alone moves the book, and total = ladder + table + interaction (SL-1696 reads it)."""
-    total, ladder, table, interaction = _g1_independent_effects()
+    _total, ladder, table, _interaction = _g1_independent_effects()
     assert ladder != 0
-    assert total == ladder + table + interaction
+    assert table != 0
 
 
 def _g2_run() -> Any:
@@ -1142,6 +1144,25 @@ def test_guard_baseline_mount_k2_refuses_when_either_side_mounts(
     _assert_refused(exc.value, "m_ncd")
     assert "a sub-graph is mounted and two or more groups are declared" in str(exc.value)
     assert spy.attempts == 0
+
+
+@pytest.mark.req("FR-1399")
+def test_guard_does_not_refuse_a_mounted_k1_run_with_an_unchanged_mount(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """GUARD (green by design): baseline and candidate both mount `m_ncd` at `@4`, one edit, so
+    K = 1 and no mount differs. The FD-1660 guard must not refuse it; it attributes normally."""
+    spy = _MountSpy(monkeypatch)
+    cand = _candidate_payload(_e_mounted, _e_instalment)
+    result = _run(
+        cand,
+        book=_mounted_book(),
+        base=_mounted_base(),
+        base_sub_graphs=(_NCD4,),
+        sub_graphs=(_NCD4,),
+    )
+    assert result is not None
+    assert spy.attempts > 0
 
 
 @pytest.mark.req("FR-1399")

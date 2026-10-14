@@ -3,7 +3,7 @@ id: PL-1674
 family: plan
 kind: map
 title: WK-1178 — rows whose declared weight is 0 are excluded from the fit and from every diagnostic, the slice before SL-1543's severity path (SL-1675): a dated Work-plan delta
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-12
 owner: planner
 tree: 604ea084c96efe93f521fb9ba17738e05241e61a

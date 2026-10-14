@@ -11287,6 +11287,18 @@
             "title": "Rows",
             "type": "integer"
           },
+          "rows_excluded_zero_weight": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rows Excluded Zero Weight"
+          },
           "weighting": {
             "$ref": "#/components/schemas/Weighting"
           }
@@ -16480,7 +16492,7 @@
       },
       "StepChange": {
         "additionalProperties": false,
-        "description": "One step that differs between two Traces (FR-262, `03` §4.10). `own_change` is true\nwhen the step was added, removed, or changed while consuming identical inputs. False\nmeans no own change attributable from the traces, which is not a claim that the step\nwas not edited.",
+        "description": "One step that differs between two Traces (FR-262, `03` §4.10). `own_change` is true\nwhen the step was added or removed, or changed and its definition differs between the two\ncompiled algorithms (`RL-1261`; `note` does not count). False means the step's own\ndefinition is the same on both sides and it differs only through what it consumed.",
         "properties": {
           "base": {
             "anyOf": [
@@ -16527,7 +16539,7 @@
             ]
           },
           "own_change": {
-            "description": "True for an added or removed step, and for a changed step whose consumed inputs are identical on both sides. False means no own change attributable from the traces; it is not a claim that the step was not edited (a downstream step can be edited and also consume a moved value).",
+            "description": "True for an added or removed step, and for a changed step whose definition differs between the two compiled algorithms, as the structural diff reports it (a change to the step's note alone does not count). False means the step's own definition is the same on both sides and it differs in the traces only through what it consumed; a definition that changed but whose trace is identical for this quote is not listed at all.",
             "title": "Own Change",
             "type": "boolean"
           },
