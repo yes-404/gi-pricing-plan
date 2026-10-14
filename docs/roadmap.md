@@ -2548,6 +2548,30 @@ On the maintainer's (by delegation) entry "2026-10-14 10:56:38 BST — Upload-co
 
 *Dated 2026-10-14 by the planner, on the maintainer's (by delegation) entry "2026-10-14 11:55:21 BST — MERGE-ACK #1301 (SL-1549, WK-675 S7b); upload-404 → its OWN FD; DISK: worktree sweep now (re lead 11:53:48 / 11:53:20)":* "A SEPARATE FD, as you recommend, in D17, proposed HIGH, discharged by SL 8026." That FD is FD-1730 (minted from working id 8039).
 
+#### SL-1719 — WK-1178 fix slice — FD 8049: the score rate-limit test's key expiry is one the pinned clock cannot outrun, and the limiter's key expiry is tested
+
+```yaml
+id: SL-1719
+family: slice
+title: WK-1178 fix slice — FD 8049: the score rate-limit test's key expiry is one the pinned clock cannot outrun, and the limiter's key expiry is tested
+status: closed                   # draft → active → closed | retired (§1.2a)
+created: 2026-10-14
+owner: executor                  # a test-only slice; the lead dispatches (active)
+tree: beee5ebedcfebc03c1658728442827960975392a
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-8049, FR-452, FR-430, RL-1347]
+```
+
+The fix of FD 8049 (MEDIUM, owner WK-1178; not on `main` yet, it rides D18). `backend/tests/test_score_rate_limit.py` pins the limiter's clock, so every request of a test counts into one key, while Redis evaluates the key's 2 s expiry in real time; a stall of more than 2 s between two requests resets the counter and the refused request is admitted (`assert 409 == 429`). The limiter is correct and the test is wrong. **Scope, exactly:** (1) the `_app_client` fixture sets `rate_limit._KEY_TTL_SECONDS` to 3600 with `monkeypatch`; (2) two expiry tests per the condition in the maintainer's (by delegation) entry "2026-10-14 16:43:11 BST": after one admit `PTTL` is in (0, ttl x 1000], and with an injected TTL of 1 s a bounded `EXISTS` poll (3 s deadline) sees the key gone and the next admit counts 1, each red first on a planted removal of `pipe.expire` (working tree only, never committed); (3) **no change to `backend/src`**. Written test-only, so CI's full python run on the PR head is its gate.
+
+(Activated 2026-10-14 as WK-1178's FD 8049 fix slice, on the maintainer's (by delegation) entry "2026-10-14 17:11:47 BST — FD 8049 third strike: NO further re-run and NO merge-past-red; LAND the test-only fix NOW with CI as its gate (no gate-1 cycle); D17 waits for it (re lead's STOP)" (`to-lead.md`). Ledger `LG-1720`.)
+
+(Minted 2026-10-14 as SL-1719 from working id 8051, in the FD 8049 fix PR; ledger LG-1720 from working id 8052.)
+
+(Closed 2026-10-14 as a Slice, closing acts in the slice PR, on the lead's merge; ledger LG-1720 `closed`. Audit written in LG-1720 (Audit section, by `auditor-fd8049`, at f78ab4ce), adopted by the lead; CI python green at run 38607168256. FD 8049's fix: test-only, no `backend/src` change.)
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
