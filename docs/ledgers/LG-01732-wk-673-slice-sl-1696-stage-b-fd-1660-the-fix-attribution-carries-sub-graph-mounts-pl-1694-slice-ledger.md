@@ -1,9 +1,9 @@
 ---
-id: LG-8050
+id: LG-1732
 family: ledger
 title: WK-673 slice SL-1696 — Stage B, the FD-1660 fix; a mount is a derived change, a subset carries its mounts, a mount is a dependence node, and WF-699 D7 decomposes (PL-1694), slice ledger
-status: active                 # active → closed (§1.2a) — set `closed` only at slice close
-created: 2026-10-14
+status: closed                 # active → closed (§1.2a) — set `closed` only at slice close
+created: 2026-10-14   # the same day as the working id's reservation; minted 2026-10-14
 owner: executor
 tree: 8b21b8f457470c417445a2639caf6d4a7053f4c9
 phase: P2
@@ -14,9 +14,9 @@ corrected_by: []
 relates: [PL-1694, SL-1695, SL-1696, LG-1718, FD-1660, RL-1686, FR-264, FR-266, FR-1398, FR-1399]
 ---
 
-# LG-8050 — WK-673 slice SL-1696: Stage B, the FD-1660 fix
+# LG-1732 — WK-673 slice SL-1696: Stage B, the FD-1660 fix
 
-*(Working id 8050, reserved by the lead; it is minted at the slice's mint turn. Until then a citation of this ledger names "working id 8050". The base tree in the front matter is the merge of `origin/main` `beee5ebedcfebc03c1658728442827960975392a` into the prep branch, `8b21b8f4`.)*
+*(Minted 2026-10-14 as LG-1732 from working id 8050, in the SL-1696 PR; the working id was reserved by the lead. Quoted entries keep the working ids they were written with: "SL 9850" is SL-1696, "FD 9804" is FD-1660, "RL 9852" is RL-1686, resolved by `PL-1694`'s header paragraph. Citations below of "working id 8050" or "LG 8050" are history or verbatim quotes and are left as written. The `tree:` in the front matter is the base `8b21b8f4`, the merge of `origin/main` `beee5ebe` into the prep branch.)*
 
 **GO:** the early-build GO is the maintainer's (by delegation) `to-lead` entry "2026-10-14 15:25:12 BST", relayed in the lead's brief to the executor on 2026-10-14. Its conditions, each binding:
 - **(a)** no gate, PR or status change until SL-1695 is merged on main. **Lifted** by the lead's message 2026-10-14: SL-1695 merged as `beee5ebedcfebc03c1658728442827960975392a`. The gate stays the lead's to grant.
@@ -67,9 +67,15 @@ The Stage A guard tests that asserted the refusal are removed by Stage B's flip,
 | pnpm test | 0 (116 files, 730 tests) |
 | demo `--journey wf-699` (with the frontend) | 124, the designed stop: `journey done in 581s`, `served page: http://localhost:5173/ answered 200` |
 
-**`audit-docs` rc 1 is one check: `check 31: gap in the full allocation between 1718 and 8050`.** The ledger carries the working id 8050 until the mint turn gives it its number (`PL-1694` Acceptance 10: check 31's working-id gap is excepted only while a working id remains). No other check is listed under FAILED. **The 13 pytest failures are the same gap read by tests that run the audit on the real tree** (`test_audit_docs_ids.py::test_the_real_tree_passes_all_ten_checks`, `::test_doc_id_check_exits_0_on_the_real_tree`, `test_audit_docs_finding_citations`, `test_audit_docs_process_core_digest` ×2, `test_audit_docs_w37_11_ceiling`, `test_doc_index`, `test_register_lint` ×3, `test_register_owed`, `test_repository_invariants` ×2); their output carries `check 31: gap in the full allocation between 1718 and 8050` 11 times, and none is in `pricing-core`, `backend` rating or the frontend. They are a consequence of the working id, not of the code; the mint turn clears them. No timing test failed.
+**`audit-docs` rc 1 was one check: `check 31: gap in the full allocation between 1718 and 8050`.** The ledger carried the working id 8050 until the mint turn gave it its number (`PL-1694` Acceptance 10: check 31's working-id gap is excepted only while a working id remains); this PR mints it as LG-1732, and the audit run recorded in the build log (the mint commit) is the check that the gap is gone. No other check is listed under FAILED. **The 13 pytest failures, named, are the same gap read by tests that run the audit on the real tree (the check-31 cascade of this ledger's working id):** `tests/test_audit_docs_finding_citations.py::test_a_finding_resolved_only_by_a_closure_record_is_not_flagged`, `tests/test_audit_docs_ids.py::test_doc_id_check_exits_0_on_the_real_tree`, `tests/test_audit_docs_ids.py::test_the_real_tree_passes_all_ten_checks`, `tests/test_audit_docs_process_core_digest.py::test_an_unrelated_file_edit_is_the_negative_control_and_stays_green`, `tests/test_audit_docs_process_core_digest.py::test_the_committed_digest_currently_matches_the_committed_spec`, `tests/test_audit_docs_w37_11_ceiling.py::test_audit_docs_end_to_end_exit_0_then_1_then_0_on_an_injected_residue`, `tests/test_doc_index.py::test_an_index_skipping_a_reserved_block_breaks_contiguity`, `tests/test_register_lint.py::test_check_29_is_wired_into_the_docs_gate`, `tests/test_register_lint.py::test_check_29_note_carries_the_residue_line`, `tests/test_register_lint.py::test_phase1b_residue_count_matches_check_29s_own_count`, `tests/test_register_owed.py::test_check_29_wiring_is_undisturbed`, `tests/test_repository_invariants.py::test_journey_citations_are_audited_in_ci` and `tests/test_repository_invariants.py::test_money_discipline_is_enforced_by_the_docs_audit`; their output carries `check 31: gap in the full allocation between 1718 and 8050` 11 times, and none is in `pricing-core`, `backend` rating or the frontend. They are a consequence of the working id, not of the code; the mint turn clears them. No timing test failed.
 
-**The demo run, D6 to S1:** every step `ok` as the journey records it (E5, E7 and D9 keep their Phase 3 and 4 lines; A6, B9, B4 and C1′ their known gaps). D7: `19985 policies in the sample; rate table edits: +711315508; NCD ladder and expense loading: +6418545; sum +717734053 minor units`; the summary is `method shapley`, `total_change_minor 717734053`, `residual_minor 6413842`, `subset_bundle_count 4`.
+**The two aborted starts, evidence kept.** (1) 2026-10-14 18:06 BST, END `2026-10-14T17:06:06+00:00` rc 97: preflight, `| alembic upgrade | rc=2 |`, `error: Failed to spawn: alembic`; the worktree's venv was the minimal one `uv run` had created, fixed by `uv sync --all-packages --dev`; no stage ran. (2) 2026-10-14 18:09 BST, END `2026-10-14T17:09:23+00:00` rc 95: Step 0a, whose checker printed `STEP0 guard FAILED reds=12/12` and `UNEXPECTED RED: test_wf699_journey_runs_end_to_end`, with `RED/WRONG` on the mount-alone test, R4 (`IndexError`) and the mount-removed test (`unpack`); evidence `scratch/sl1696/first-step0/` (`s0a.xml`, `s0b.xml`, `gate.log`); the build log has the reading against the plan and the fix. This run is the third start.
+
+**The load series** (`load.log`, date, l1 l5 l15; the lead's 5-minute series is `tmp/load-series.txt`): before Step 0 17:23:25 `12.26 12.83 13.18`; before the python half 17:27:20 `15.92 14.20 13.64`; before ruff `15.92 14.20 13.64`; mypy 17:27:21 `15.04 14.05 13.60`; import_linter 17:28:35 `13.79 13.91 13.58`; audit_docs 17:28:36 `13.72 13.89 13.58`; req_coverage and contracts 17:29:25 `12.99 13.65 13.51`; pytest 17:29:41 `12.99 13.62 13.50`; after the python half 18:45:17 `11.76 11.31 11.17`; after the frontend half 18:47:57 `16.96 13.80 12.13`; after the demo 19:13:08 `16.21 16.00 14.10`. The pytest run (75 minutes) ran at load1 11 to 17, so no timing verdict is drawn from it; no failure was a timing test.
+
+**The demo run, D6 to S1:** every step `ok` as the journey records it (E5, E7 and D9 keep their Phase 3 and 4 lines; A6, B9, B4 and C1′ their known gaps). D7: `19985 policies in the sample; rate table edits: +711315508; NCD ladder and expense loading: +6418545; sum +717734053 minor units`; the summary is `method shapley`, `total_change_minor 717734053`, `residual_minor 6413842`, `subset_bundle_count 4`. The demo prints `journey done in 581s`, then `served page: http://localhost:5173/ answered 200`; `rc=124` is the designed stop (`timeout -s INT 1500`, the demo waits for Ctrl-C after the journey and the page check).
+
+**The D7 split-test fixture, checked against the demo output.** The run's `derived_changes` (read from `gipricing_sl-1696_demo`, run `01a13bca-2560-7003-a026-cc52d7aab2b3`) are `c1` `step_added` `m_ncd: mount added (sub_graph:ncd-ladder@3)`, `c2` `step_added` `s_loading: step added`, `c3` `step_changed` `s_premium: consumes […] → […, "ncd_factor", "expense_loading"]; expr … → … * ncd_factor * number(expense_loading)`, `c4` to `c10` `table_repointed` (the seven `rate_table_ref` repoints), `c11` `pin` `models pin model:fremtpl2-gbm-130a2e@1 added`; the stored `change_groups` are `rate table edits` `[c4..c10]` and `NCD ladder and expense loading` `[c1, c2, c3, c11]`, a partition of the eleven. The fixture of `test_d7_splits_the_derived_changes_into_the_journeys_own_effects` holds exactly this list. The salvage's hand-written `sub_graphs pin … @1` row does not appear in the real list, as `PL-1694` Acceptance 18 says.
 
 ### Reds by cause (condition (e))
 
@@ -98,9 +104,17 @@ Step 0 above is the proof: the same test files ran red on the unfixed `analysis.
 - ~~**The D7 split test's fixture is DP-1-shaped, not copied from a run.** Acceptance 18 asks for the ids, kinds and descriptions of the real derived list. The journey needs the database, which this seat may not use outside the gate. The fixture uses DP-1's forms (`m_ncd: mount added (sub_graph:ncd-ladder@1)`, kind `step_added`) and no `sub_graphs pin` row. **To do after the gate's journey run:** compare the fixture to the run's `derived_changes` and replace any mismatch.~~
 - **Acceptance 13's and R3's numbers are asserted by the pre-existing red tests**, not re-derived here.
 
+### Proposed discharge of FD-1660 (for the auditor; `PL-1694` Task 5)
+
+FD-1660's three limbs are closed by this slice, on the evidence above: **L1** (a partial subset kept the baseline's mounts) and **L2** (a subset's pins carried no sub-graph pin) by `_subset_algorithm` and `_subset_pins` with `sub_graphs` in `_PIN_KINDS` (R1, R2, the pin test, the empty and full hash test, all green at the head); **L3** (a mount was no derived change, so its effect was attributed to another change) by `_derive` (R3, the derive tests); **DP-3** by `_check_dependence` (R4 and the mount-alone test). The guard, its class and its raise-site case are gone (`git grep -n FD-1660 -- packages/pricing-core/src` is empty); D7 decomposes in the demo. The discharge itself is the auditor's to propose and the lead's to record.
+
+### Audit
+
+*(To be written by `auditor-sl1696` on the head of this PR, range `origin/main...` the branch.)*
+
 ## PRs
 
-None yet.
+The SL-1696 PR, branch `sl-1696-wk673-fd1660-fix`, title `SL-1696: …` (RFC-937 §5.1); its number is the lead's to record at the open.
 
 ## Build log
 
