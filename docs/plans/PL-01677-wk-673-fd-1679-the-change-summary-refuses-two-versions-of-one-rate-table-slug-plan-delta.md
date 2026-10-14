@@ -3,7 +3,7 @@ id: PL-1677
 family: plan
 kind: map
 title: WK-673 — the FD-1679 loud guard, FR-242's drafted change summary refuses a version pinning two versions of one rate-table slug (SL-1678), and the slug-only-map class sweep: a dated delta to PL-1267
-status: closed                 # draft → active → superseded | retired (§1.2a)
+status: retired                # dated 2026-10-14: retired, not closed (a plan has no closed state), in SL-1702's closing PR, on the maintainer's (by delegation) GO "2026-10-14 13:32:07 BST" and its correction "2026-10-14 17:30:21 BST" (`to-lead.md`). draft → active → superseded | retired (§1.2a)
 created: 2026-10-12
 owner: planner
 tree: 604ea084c96efe93f521fb9ba17738e05241e61a

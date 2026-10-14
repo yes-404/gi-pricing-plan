@@ -5,7 +5,7 @@ title: WK-673 slice SL-1702 — FD-1679, FR-242's drafted change summary pairs a
 status: active                 # active → closed (§1.2a)
 created: 2026-10-14
 owner: executor
-tree: 171d685260893d17947aa5638e74ade9c4e6d94c
+tree: 81e9d4cc5a9b681981a3e1c691f6218c7ef6161c
 phase: P2
 work: WK-673
 slice: SL-1702
@@ -45,11 +45,30 @@ Rulings in force, from `PL-1701`'s Decision points: DP-1 (a), DP-2 (a), DP-4 (a)
 
 ### Gate
 
-Not yet run. The gate runs ALONE in the lead's gate-1 window; its first step, step 0, is the broken-input proof (below), then the full two-half gate on `origin/main...HEAD`. The rc table goes here.
+ALONE gate-1 window, script `sl1702-gate.sh` (local, `.claude/jobs/…/tmp/`), logs in `sl1702-gate/`. Gated head `3e087672c487bdac583a86076c7b4d4d60f556b5`, tree `81e9d4cc5a9b681981a3e1c691f6218c7ef6161c`, started 2026-10-14T15:00:31Z, ended 2026-10-14T16:46:08Z. Load1 over the run, every 10 minutes: 8.41, 16.60, 10.00, 24.03, 17.39, 23.15, 21.92, 13.25, 19.05, 15.19, 9.11; the run was never below 6 after the start, so no timing figure is a measurement. Tree after the gate: 0 changed paths.
 
-**Broken-input proof (`PL-1701` Task 3 Step 6), step 0 of the gate script.** In `pair_rate_tables`, replace `if previous is not None:` by `if False:`; run both test files; R1, R2, R5 and R6 must FAIL and E1 must PASS; restore; run again green; the tree is clean before the full gate. Both runs are recorded below once made.
+**Step 0, the broken-input proof (`PL-1701` Task 3 Step 6).** With `if previous is not None:` replaced by `if False:` in `pair_rate_tables`, both test files ran `6 failed, 27 passed`:
+- FAILED `test_r1_a_repointed_step_and_a_seed_pin_are_both_named`
+- FAILED `test_r2_a_repointed_step_beside_an_unchanged_seed_pin_is_one_entry`
+- FAILED `test_r5_a_step_entry_and_an_extra_pin_are_both_named`
+- FAILED `test_r6_a_step_pointing_at_another_table_is_two_entries_without_diffs`
+- FAILED `test_r7_a_step_repointed_to_another_table_names_both_with_its_step_id`
+- FAILED `test_r8_a_baseline_listing_one_ref_twice_is_not_refused`
 
-(not yet run)
+R1, R2, R5 and R6 fail as required; E1 (`test_wf699_e1_…`) passes. The file was restored with `git checkout`, the tree was clean, and the restored run was `33 passed`.
+
+| Stage | rc | Note |
+|---|---|---|
+| preflight (head guard, clean tree, createdb, alembic upgrade, 1 head, containers, pg_isready) | ok | |
+| ruff / mypy / lint-imports | 0 / 0 / 0 | |
+| req-coverage / `generate-contracts.py --check` | 0 / 0 | |
+| audit-docs | 1 | check 29 (the FD-1679 register row's annotation named no PR, commit or docs path), check 31 (working-id gap 1717 to 8048, this ledger's id), check 32 (the ruling's working id, cited in this ledger's build log), check 33 (`PL-1677` status `closed`); checks 29, 32 and 33 are fixed in the docs-only commits after the gated head |
+| pytest (timeout 5400) | 1 | `17 failed, 5843 passed, 6 skipped` in 4517 s; see below |
+| pnpm install / generate:api / lint / type-check / build | 0 / 0 / 0 / 0 / 0 | |
+| pnpm test | 1 | `1 failed, 729 passed`: `src/views/__tests__/RatingDesignView.test.ts`, `FR-1530: loads the algorithm the version pins, and draws one node per step`; classification is the lead's |
+| `demo.py --journey wf-699` (with the frontend) | 124 | the journey finished (`journey done in 345s`, every step `ok` or `SKIPPED` for Phase 3, E1 `ok`), the frontend answered 200 at `http://localhost:5173/`, and the command then waits for Ctrl-C until the script's `timeout -s INT 1500` ended it; no step failed |
+
+**The 17 pytest failures.** One is `backend/tests/test_score_rate_limit.py::test_the_counter_is_shared_across_replicas_and_the_refusal_carries_retry_after`, the rate-limit flake FD 8049 names, not re-run in this window. The other 16 are the docs-audit tests, which read the real tree and fail with it: `tests/test_audit_docs_finding_citations.py` (1), `test_audit_docs_ids.py` (2), `test_audit_docs_process_core_digest.py` (2), `test_audit_docs_w37_11_ceiling.py` (1), `test_doc_index.py` (1), `test_register_lint.py` (6), `test_register_owed.py` (1), `test_repository_invariants.py` (2). They read the same four audit findings; whether they pass once those are fixed is not yet shown by a run.
 
 ### Audit
 
@@ -57,7 +76,7 @@ Not yet written.
 
 ### Build log
 
-- **2026-10-14, prep (`65daf404`, re-pointed at `3ac63e35`).** Worktree `.claude/worktrees/sl-1702`, branch `sl-8003-wk673-dpp1-fix`. `git merge-tree --write-tree origin/main HEAD` rc 0; `origin/main` merged (`50d95b2c`). `RL-9996` → `RL-1707` in the two test files (4 occurrences). Reds run on the base through `run-small.sh`, one file per call, against the per-worktree database `gipricing_sl-1702_8a302640`, created with `createdb -T gipricing` and `alembic upgrade head` (disclosed to the maintainer by the lead; its keep-or-drop ruling is the lead's):
+- **2026-10-14, prep (`65daf404`, re-pointed at `3ac63e35`).** Worktree `.claude/worktrees/sl-1702`, branch `sl-8003-wk673-dpp1-fix`. `git merge-tree --write-tree origin/main HEAD` rc 0; `origin/main` merged (`50d95b2c`). the ruling's working id re-pointed to its minted id `RL-1707` in the two test files (4 occurrences). Reds run on the base through `run-small.sh`, one file per call, against the per-worktree database `gipricing_sl-1702_8a302640`, created with `createdb -T gipricing` and `alembic upgrade head` (disclosed to the maintainer by the lead; its keep-or-drop ruling is the lead's):
   - route file: 11 failed, 10 passed. R1, R2, R3 (three cases), R4, R5, R8, R9: `assert 409 == 200`, the detail naming FD-1679 (R8 and R9: "at versions 1 and 1"). R6: `assert 1 == 2` on the length. R7: `assert [None, None] == ['t', 't']`. E8, E1 and the first-version test pass.
   - draft file: U1 and U2 fail with `ValidationError` on `RateTableChange.step_id`, `Extra inputs are not permitted`, at `test_change_summary_draft.py:149` and `:166`.
 - **2026-10-14, Task 1 (`af96ea6f`).** T1 and T2 applied with `<date>` = 2026-10-14, `<RL>` = RL-1707, `<SL>` = SL-1702. Checked by script against the whitespace-normalised blockquotes of `RL-1707` §"DP-T": both are found verbatim in `03-rating-engine.md`.
