@@ -1,8 +1,8 @@
 ---
-id: PL-8014
+id: PL-1710
 family: plan
 kind: map
-title: WK-674 — the scripted WF-701 deployment-steps demo, cut as one slice after Slice 5 (SL-8015), and Slice 5's one added acceptance line (the COMMIT acknowledgement set in the deployment Audit Event's after-state) — Work-plan delta
+title: WK-674 — the scripted WF-701 deployment-steps demo, cut as one slice after Slice 5 (SL-1711), and Slice 5's one added acceptance line (the COMMIT acknowledgement set in the deployment Audit Event's after-state) — Work-plan delta
 status: draft                   # draft → active → superseded | retired (§1.2a)
 created: 2026-10-14
 owner: planner
@@ -15,7 +15,9 @@ corrected_by: []
 relates: [PL-1237, PL-1537, PL-1620, PL-1666, PL-1544, RL-1614, SL-1258, SL-1259, SL-1260]
 ---
 
-# PL-8014 — WK-674: the WF-701 deployment-steps demo slice after S5, and S5's acknowledgement line (Work-plan delta)
+# PL-1710 — WK-674: the WF-701 deployment-steps demo slice after S5, and S5's acknowledgement line (Work-plan delta)
+
+*(Minted 2026-10-14 as PL-1710 and SL-1711 from working ids 8014 and 8015, in the D16 batch mint PR.)*
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L5
 > (`document-ids.md` §1.6, PL row: *"one plan per Work, slices as rows, no per-slice `leaf`; a
@@ -25,23 +27,23 @@ relates: [PL-1237, PL-1537, PL-1620, PL-1666, PL-1544, RL-1614, SL-1258, SL-1259
 > [`PL-1620`](PL-01620-wk-674-slices-4-and-5-after-sl-1455-returned-to-p2-work-plan-delta.md) or
 > [`PL-1666`](PL-01666-wk-674-slice-4-fd-9704-round-trip-fr-452-management-limb-and-activation-work-plan-delta.md),
 > and it leaves every one of their bodies unedited. It does two things at once, as one delta:
-> (1) it adds **one slice row**, SL-8015 (working id), under `### WK-674` in
+> (1) it adds **one slice row**, SL-1711 (working id 8015), under `### WK-674` in
 > [`../roadmap.md`](../roadmap.md): the scripted, rehearsable walk of WF-701's deployment steps;
 > (2) it adds **one dated acceptance line to Slice 5** (`SL-1259`), D5.6 below.
 > **Read `PL-1237` Task 5, then `PL-1537` row 2 (R5.1 to R5.10), then `PL-1620` (D0.1 to D0.3,
 > D5.1 to D5.5), then this file.** For S4's compose, read `PL-1666` and then `PL 1690` (on
 > `origin/docs-d14-2026-10-12`, #1298, not yet on `main`; see activation need 3).
-> REQUIRED SUB-SKILL for SL-8015's executor: subagent-driven-development (recommended) or
+> REQUIRED SUB-SKILL for SL-1711's executor: subagent-driven-development (recommended) or
 > executing-plans, task by task; steps use checkbox (`- [ ]`) syntax. Bound skills:
 > `test-driven-development` (every red seen red **by its cause** before the code that turns it
 > green), `python-test` (the `req` marker; negative tests), `dev-commands` (`uv sync
 > --all-packages`; both gate halves; the compose commands), `fastapi-service` (reading the
 > routes it calls; it adds none), `git-hygiene`. Not bound: `spec-change` and `contract-schema`,
-> because SL-8015 changes no spec and no contract (if Task 0 finds it must, that is a stop, not
+> because SL-1711 changes no spec and no contract (if Task 0 finds it must, that is a stop, not
 > a widening). Spawned from `.claude/roles/executor.md`; reads [`README.md`](README.md)'s five
 > unchecked conventions before the first step.
 
-Filed under **working id 8014**; its slice row is **SL-8015** (`draft`, working id 8015). Both
+Filed under **working id 8014**; its slice row is **SL-1711** (`draft`, working id 8015). Both
 were reserved by the lead in `~/gi-pricing-plan.local/handover/eta.md`, line "2026-10-14 10:01:15
 BST lead: RESERVED working ids (free-check own calls: 8011, 8014, 8015 all 0 on
 id-form/eta/INDEX/branches/git grep; 8012, 8013 skipped for bare hits)", which assigns "PL 8014 =
@@ -115,7 +117,7 @@ another file. Each names its author.
   errors), PL 8014 + SL 8015 (demo delta + slice) reserved → planner-wf701plan."*
 - **RL-1614** (on `main`): Slice 5 holds P2's NFR-489 exit verdict on the exit tree. **PL-1620
   D0.3:** the temporary dedicated VM serves only the solo measurement runs and is deleted after
-  S5's verdict. SL-8015 needs no VM.
+  S5's verdict. SL-1711 needs no VM.
 - **Lean P2 L5** (`docs/plans/README.md`, the "One plan per Work" paragraph): a new slice is one
   dated Work-plan delta that `relates:` the Work's plan.
 
@@ -140,10 +142,10 @@ tree.
 3. **Slice 5 carries D5.6.** `SL-1259`'s `LG-` quotes D5.6 beside the `PL-1537` and `PL-1620` rows
    it already quotes, and `git grep -n 'COMMIT acknowledgement' -- <S5's LG>` prints D5.6's quoted
    line and the line recording its red (D5.6's red, by its cause).
-4. **SL-8015 closes on its own L1 (a') ledger** whose scope section quotes the SL-8015 row of this
+4. **SL-1711 closes on its own L1 (a') ledger** whose scope section quotes the SL-1711 row of this
    file's Tasks table and the slice section below verbatim, and cites this delta by its minted id:
    `git grep -l 'SL-<minted 8015>' -- docs/ledgers` prints one file by the Work's close.
-5. **SL-8015's own acceptance standard** (the section "SL-8015 — acceptance standard" below) holds
+5. **SL-1711's own acceptance standard** (the section "SL-1711 — acceptance standard" below) holds
    at its merge tree, item by item.
 6. **The gate is green on each slice's merge tree**: the `CLAUDE.md` §11 commands, both halves,
    each exit 0, named against `origin/main...<slice branch>`.
@@ -151,7 +153,7 @@ tree.
 ## Global Constraints
 
 `PL-1237`'s, `PL-1537`'s and `PL-1620`'s Global Constraints apply unchanged. In addition, for
-SL-8015:
+SL-1711:
 
 - **No faked step.** No step is replaced by a direct DB write, a status write or a fixture. The
   in-process test's `run_job` is the only in-process substitute, and the compose run removes it
@@ -222,15 +224,15 @@ SL-8015:
   (`packages/model-schema/src/model_schema/rating.py:415-420`); `ScoringOutcome = Literal["quoted",
   "declined", "error"]` (`model_schema/scoring.py:75`). `git grep -n -i decline origin/main --
   examples/fremtpl2` prints nothing, so no seeded version declines today.
-- **P7 — C7's errors limb is FD 8011's.** On `POST /api/v1/score`, a `ValueError` from `score_one`
+- **P7 — C7's errors limb is FD-1706's.** On `POST /api/v1/score`, a `ValueError` from `score_one`
   is re-raised as a problem (`score.py:421-427`) before `_maybe_sample_trace` runs (`:429`), so
   an errored quote is never sampled from this route. 10:00:17 W5 rules the limb `KNOWN GAP` until
-  FD 8011 is resolved, and requires that resolution before the 12 Nov exit demo.
-  *Amended 2026-10-14 (docs batch D16, in place, the plan being pre-merge):* FD 8011 is resolved by
-  RL 8019, confirmed by the maintainer (by delegation) in the entry "2026-10-14 10:26:21 BST" in
+  FD-1706 is resolved, and requires that resolution before the 12 Nov exit demo.
+  *Amended 2026-10-14 (docs batch D16, in place, the plan being pre-merge):* FD-1706 is resolved by
+  RL-1712, confirmed by the maintainer (by delegation) in the entry "2026-10-14 10:26:21 BST" in
   `to-lead.md`: the limb is walked, not a `KNOWN GAP`. A refused quote is not traced, so the
   slice asserts the 422 refusal, the absence of that `quote_id` from `GET /traces`, and the ruled
-  line `C7-errors: refused, not traced (FR-259, RL 8019)`. The sentence above is kept as the
+  line `C7-errors: refused, not traced (FR-259, RL-1712)`. The sentence above is kept as the
   premise it was.
 - **P8 — the band for C7's 1 % limb, computed exactly.** For N = 2,000 quoted quotes at p = 0.01
   (the default, `settings.py:217-219`), the count X of persisted quoted traces is Binomial(2000,
@@ -242,8 +244,8 @@ SL-8015:
 
 | Order | Slice | Scope (what the `LG-` quotes) | Requirements, each id | Depends on | Size |
 |---|---|---|---|---|---|
-| 1 | `SL-1259` — Slice 5 (changed) | `PL-1537` row 2 and `PL-1620` D5.1 to D5.5 as they stand, **plus D5.6 below** | unchanged from `PL-1620`; D5.6 adds no id (it serves `03` §3.10: FR-268's "every replica" observability for SL-8015) | unchanged | + one acceptance line |
-| 2 | SL-8015 — the WF-701 deployment-steps demo | the section "SL-8015 — the slice" below | `03` §3.7: FR-250; `03` §3.8: FR-258, FR-259, FR-262; `03` §3.10: FR-267, FR-268, FR-272 (audit limb only); `03` §9: NFR-494 (functional bound only; the verdict is S5's); `07` §3.5: FR-429; `06` §3.2: FR-354 | activation needs 1 to 6 below | 1 + a compose build window, no VM |
+| 1 | `SL-1259` — Slice 5 (changed) | `PL-1537` row 2 and `PL-1620` D5.1 to D5.5 as they stand, **plus D5.6 below** | unchanged from `PL-1620`; D5.6 adds no id (it serves `03` §3.10: FR-268's "every replica" observability for SL-1711) | unchanged | + one acceptance line |
+| 2 | SL-1711 — the WF-701 deployment-steps demo | the section "SL-1711 — the slice" below | `03` §3.7: FR-250; `03` §3.8: FR-258, FR-259, FR-262; `03` §3.10: FR-267, FR-268, FR-272 (audit limb only); `03` §9: NFR-494 (functional bound only; the verdict is S5's); `07` §3.5: FR-429; `06` §3.2: FR-354 | activation needs 1 to 6 below | 1 + a compose build window, no VM |
 
 Requirements **not** taken, each named: `03` FR-269 (rollback, WF-701 Phase H), `03` FR-271
 (shadow, Phase B, optional with `SL-1260`), `05` FR-310 (C5), `05` FR-329, FR-331, FR-332 and FR-333
@@ -266,9 +268,9 @@ entry "2026-10-14 10:00:17 BST", (A) DP-W1 (a):**
   the code, and if DP-3's recommendation cannot hold, S5 stops and raises it (`CLAUDE.md` §0)
   rather than recording something else under this line.
 
-Nothing else in Slice 5 changes. SL-8015 edits no S5 file.
+Nothing else in Slice 5 changes. SL-1711 edits no S5 file.
 
-### SL-8015 — the slice
+### SL-1711 — the slice
 
 **Scope in one sentence.** After Slice 5 merges, a scripted journey walks WF-701's A1–A6, C1–C4, C6
 and C7, in order, on the state WF-699's journey leaves, in two run modes, each step asserting its
@@ -306,7 +308,7 @@ names the second route.
 | C6 | About 50 `POST /score` on a prod key, no ref, through `lb` | 200, every `bundle_hash` K1's, `outcome == "quoted"`, one golden quote's `payable_premium` equal to its integer expected value | `api/score.py:195-230` | replicas: **yes** |
 | C7 (i), (ii) | Prod `rating.trace_sample_rate` left at its default 0.01; N = 2,000 quoted quotes on the prod key; then `GET /traces?rating_version=…&from=…&to=…` as an analyst bearer, polled until the count is stable | (i) the count is inside [3, 45] (P8), with N, p and the band printed; (ii) every persisted trace's `bundle_hash` is K1's | `api/score.py:509-580`; `platform/traces.py:78-99`; completion by `score.trace_produce` (a worker on `scoring`, DP-2); `api/traces.py:167` | the worker queue (DP-2) |
 | C7 (iii) declines | K2 deployed `uat` then prod through the governed path; M = 20 quotes that K2 declines, on the prod key, rate unchanged | exactly M persisted traces with `outcome == "declined"` for K2 (the 100 % floor), read through `GET /traces` | `traces.decide_sampling` floor, `platform/traces.py:94-97` | the worker queue (DP-2) |
-| C7 (iv) errors | With the prod key, `POST /api/v1/score` one quote that omits a declared non-nullable input; after C7's trace poll is stable, `GET /traces` | 422 with problem `code` `INPUT_CONTRACT_VIOLATION`; no listed trace carries that quote's `quote_id`; the one printed line, asserted, is exactly `C7-errors: refused, not traced (FR-259, RL 8019)`. The no-row proof is a backend test that reads `scoring_traces` directly, and the demo cites it by name. No fault is caused in `prod`; nothing about errors at 100 % is asserted | P7 as amended; RL 8019 §3 and its "What it obliges" section | — |
+| C7 (iv) errors | With the prod key, `POST /api/v1/score` one quote that omits a declared non-nullable input; after C7's trace poll is stable, `GET /traces` | 422 with problem `code` `INPUT_CONTRACT_VIOLATION`; no listed trace carries that quote's `quote_id`; the one printed line, asserted, is exactly `C7-errors: refused, not traced (FR-259, RL-1712)`. The no-row proof is a backend test that reads `scoring_traces` directly, and the demo cites it by name. No fault is caused in `prod`; nothing about errors at 100 % is asserted | P7 as amended; RL-1712 §3 and its "What it obliges" section | — |
 
 **The route's 409 for `prod` is unreachable in this demo** *(added 2026-10-14, the maintainer's (by delegation) ruling "2026-10-14 11:14:40 BST" in `to-lead.md`, item (1))*. A prod deploy executes only an approved Deployment Request (`platform/deployments.py:574-610`), and that request was accepted at submission only if FR-429's one predicate held then: its pinned `uat_deployment` is a Deployment id, or a skip the policy permitted (`:254-282`). The route re-reads that pinned evidence (`:475-492`), so with the pinned item a Deployment id it passes. The one prod path to the 409 is a skip pinned under a policy that permits it and then withdrawn from the policy before the deploy; the default policy permits no skip (`skippable_predecessors` empty) and the demo makes no policy edit, so the journey does not walk it and prints nothing for it. The route's 409 is walked on `uat` (row C2 (route)).
 
@@ -358,13 +360,13 @@ and output):
 - [ ] **T1 — the journey skeleton and its line rules.** Create `examples/fremtpl2/journey_wf701.py`
   with `run_wf701_journey(client, record, *, log)`, reusing `JourneyStepFailed` and `Skip` from
   `examples/fremtpl2/journey.py:44,76` by import (no second definition). Its ruled lines are exactly
-  `COMPOSE-ONLY A2/C4/C6 replica limb` (in-process only) and the walked limb line `C7-errors: refused, not traced (FR-259, RL 8019)`.
+  `COMPOSE-ONLY A2/C4/C6 replica limb` (in-process only) and the walked limb line `C7-errors: refused, not traced (FR-259, RL-1712)`.
   Test first: R1, then a test that an unruled skip fails the journey (the form of
   `test_wf699_journey.py:57`).
 - [ ] **T2 — the deliberate refusals** C2 (the prod submission's 422 and the `uat` route's 409), C3 (ii) and the FR-238 extra: R2, R3 first. The `dev` precondition runs after C2 (route) and before A1, printed `PRECONDITION dev:`. *(Corrected 2026-10-14, the maintainer's (by delegation) ruling "2026-10-14 11:14:40 BST" in `to-lead.md`, items (1) to (3); this line read "C2 and C3 (i), (ii)".)*
 - [ ] **T3 — C3 (iii) while K1 is built, then A1, A3 to A6, C1, C6 (one process)** in order, each with its read-back. *(Corrected 2026-10-14, the maintainer's (by delegation) ruling "2026-10-14 11:14:40 BST" in `to-lead.md`, item (3): C3 (iii) is the FR-354 one-of-two limb, walked at K1's approval.)*
 - [ ] **T4 — C7 (i) and (ii)**, the band test with R6 first; **C7 (iii)** with K2 through the
-  governed path, R7 first; **C7 (iv)** as the walked limb of RL 8019 §3 (the 422 refusal, the
+  governed path, R7 first; **C7 (iv)** as the walked limb of RL-1712 §3 (the 422 refusal, the
   trace-list absence, the ruled line; no `KNOWN GAP C7-errors` line exists). The journey's first output line is
   *"WF-701 demo: process environment dev with development identity (dev auth); deployments target
   the Environment resources uat and prod"* (W2's "the output prints that the demo runs with dev
@@ -410,7 +412,7 @@ with its failure line as printed; a matching status with a different cause is a 
   starting `A1:` (the form of `PL-1544` Acceptance 6).
 - **R9.** `--journey wf-701 --target compose` with S4's services down refuses, naming them.
 
-**SL-8015 — acceptance standard**
+**SL-1711 — acceptance standard**
 
 1. `backend/tests/test_wf701_journey.py` has a module docstring naming
    `docs/workflows/WF-00701-deploy-and-monitor.md`, and `req` markers for FR-238, FR-250, FR-258,
@@ -421,10 +423,10 @@ with its failure line as printed; a matching status with a different cause is a 
    quoted in the `LG-`.
 2. Every in-scope step (A1–A6, C1–C4, C6, C7) is walked in order, each asserting its status and its
    read-back effect (the step table). The only ruled lines are `COMPOSE-ONLY A2/C4/C6 replica limb`
-   (in-process) and `C7-errors: refused, not traced (FR-259, RL 8019)`, and the test asserts them;
+   (in-process) and `C7-errors: refused, not traced (FR-259, RL-1712)`, and the test asserts them;
    no step is absent and no other skip line exists, and no line contains `KNOWN GAP C7-errors`.
-   If the RL 8019 T1 text (the FR-259 clarification in `03`) is absent from `main` at the GO, the
-   slice keeps a `KNOWN GAP` line, and the exit demo cannot pass C7 (RL 8019's last violation).
+   If the RL-1712 T1 text (the FR-259 clarification in `03`) is absent from `main` at the GO, the
+   slice keeps a `KNOWN GAP` line, and the exit demo cannot pass C7 (RL-1712's last violation).
 3. The refusals match on problem `code`: C2 `EVIDENCE_INCOMPLETE` (the prod submission) and
    `PROMOTION_ORDER_VIOLATION` (the `uat` route before the `dev` precondition); C3 (ii)
    `DEPLOY_REQUIRES_APPROVAL`; the FR-238 extra `VALIDATION_FAILED`, labelled FR-238. C3 (iii)
@@ -457,7 +459,7 @@ with its failure line as printed; a matching status with a different cause is a 
 3. `PL 1690` minted on `main` (D14, #1298), so E4.2's worker and E4.3's smoke are on the tree.
 4. DP-1 to DP-3 ruled (DP-4 to DP-6 are non-blocking; each has a recommendation that stands
    unless ruled otherwise).
-5. RL 8019 minted (its minted id fills the walked limb's line), and its T1 text on `main`.
+5. RL-1712 minted (its minted id fills the walked limb's line), and its T1 text on `main`.
 6. This delta ACKed and minted; a build slot and the single gate; one compose build window booked
    in `eta`.
 
@@ -471,7 +473,7 @@ green.
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
 | DP-1 | W2 reads "dev-principal auth is REFUSED at startup for environment `prod`". The guard (P1) reads the **process** environment; the demo deploys to the **Environment resource** `prod` in a process whose environment is `dev` (P2). Is that the demo W2 permits? | (a) Yes: process `dev` with dev auth, Environment resources `uat`/`prod` inside it, both printed in the output's first line (T4). (b) No: the process runs `prod`, which needs OIDC through the reference Keycloak, TLS termination and an issuer (`config.py:215-226`) — the memo's DP-W2 (b), which W2 did not choose. | **(a).** It is the only form the shipped guard allows with dev auth, and Keycloak login is not a WF-701 step. | reading of a ruling | **yes** | the maintainer |
-| DP-2 | `score.trace_produce` routes to `scoring` (P3), and neither S4's worker (`PL 1690` E4.2: the set equals `{default, compute}`) nor `demo.py`'s consumes it, so C7 cannot pass outside the in-process test. Who adds the consumer? | (a) **S4**, at its GO (still open): the worker consumes `default,compute,scoring`, E4.2's shape test asserts that set, and E4.3's smoke stands; `demo.py`'s local worker gets `scoring` in SL-8015 (T6). (b) A separate compose `worker-scoring` service (FR-405's pools), added by SL-8015, which then edits S4's compose file after S4 merges. (c) SL-8015 runs a one-off `scoring` worker as a test fixture, as E4.3 runs beat; the demo command starts it too. | **(a).** It is the defect class E4.3 was ruled to catch ("no consumer on a queue"), found before S4's GO, and S4 owns FR-415's worker; (b) widens a demo slice into S4's file, (c) makes the demo pass on a stack the product does not ship. Whether it is also an `FD-` or a backlog row is the lead's (Lean P2 L3). | scope / finding | **yes** (C7 cannot pass otherwise) | the lead at S4's GO; the maintainer if contested |
+| DP-2 | `score.trace_produce` routes to `scoring` (P3), and neither S4's worker (`PL 1690` E4.2: the set equals `{default, compute}`) nor `demo.py`'s consumes it, so C7 cannot pass outside the in-process test. Who adds the consumer? | (a) **S4**, at its GO (still open): the worker consumes `default,compute,scoring`, E4.2's shape test asserts that set, and E4.3's smoke stands; `demo.py`'s local worker gets `scoring` in SL-1711 (T6). (b) A separate compose `worker-scoring` service (FR-405's pools), added by SL-1711, which then edits S4's compose file after S4 merges. (c) SL-1711 runs a one-off `scoring` worker as a test fixture, as E4.3 runs beat; the demo command starts it too. | **(a).** It is the defect class E4.3 was ruled to catch ("no consumer on a queue"), found before S4's GO, and S4 owns FR-415's worker; (b) widens a demo slice into S4's file, (c) makes the demo pass on a stack the product does not ship. Whether it is also an `FD-` or a backlog row is the lead's (Lean P2 L3). | scope / finding | **yes** (C7 cannot pass otherwise) | the lead at S4's GO; the maintainer if contested |
 | DP-3 | D5.6 (W1) records the COMMIT set in `deployment.created`'s after-state. Today that event is written inside the deploy transaction with `after=` the `Deployment` model (P5). How does the set get there? | (a) S5's switch completes its COMMIT round before the deploy transaction commits, and the set is a field added to `Deployment` in `model-schema` (so S5's write set adds `packages/model-schema/` and the regenerated contract). (b) The after-state carries the PREPARE set (known before commit), and the COMMIT set goes on a second, catalogued Audit Event after the switch (a `06` catalogue append, a spec change in S5). (c) The set is a column on the Deployment row, filled after COMMIT, read back through `GET /environments/{env}/deployments`; the after-state names the PREPARE set. | **(a)**, as W1 is worded, **on one condition**: S5's `LG-` states, before the code, what happens if the transaction fails after replicas have switched. If S5 cannot make that safe, it stops and the decision-maker rules (b) or (c) (`CLAUDE.md` §0); no S5 code records a different set under D5.6 without that ruling. | mechanism of a ruling | **yes**, for S5's D5.6 | the decision-maker, at S5's GO |
 | DP-4 | The frame: which version is live and which is the candidate? | (a) `rv3` live, K1 (`min_premium 150 -> 180`) candidate; (b) `fremtpl2-demo@1` live, `rv3` candidate; (c) `rv3` live, another new candidate | **(a)**, subject to Task 0.5; (b) re-deploys a version WF-699 already deployed, which A2 needs to be new | demo design | no | the recommendation stands unless ruled |
 | DP-5 | W3 says "author now on a branch stacked on S5's head", but no S5 branch exists at `1e260c15`, and S4 (`origin/sl-1258-wk674-s4` @`e1555803`) is not GO'd. What is the authoring base? | (a) Branch from `main` now; author T1 to T4 and T6 (no S4 or S5 dependency); re-stack onto S5's head when S5 pushes, then author T5. (b) Stack on S4's authored head now. (c) Wait for S5's branch. | **(a).** It keeps W3's intent (authoring early, GO after S5) without stacking on a branch that is itself unGO'd. | sequencing | no | the lead |
@@ -527,7 +529,7 @@ rulings that bind this delta's content and were not yet at a site in it.)*
   PLAN (and WF-701's text) is stale": "**WF-701 C2 gets a dated line** (in SL 8015's commit) naming
   both codes per FR-429's amendment", and "**WF-701 §1 gets a dated precondition row:** "a
   successful deployment to every predecessor the workspace's environment configuration names for
-  `uat` (the default seed: `dev`)"". So SL-8015's write set gains those two dated lines in
+  `uat` (the default seed: `dev`)"". So SL-1711's write set gains those two dated lines in
   `docs/workflows/WF-00701-deploy-and-monitor.md`, and nothing else in that file; acceptance item
   8's "no spec" is read with that one exception.
 - **The auditor principal and the reds (11:14:40 BST, closing paragraph).** "Task 0 VERIFIES (not
@@ -538,12 +540,12 @@ rulings that bind this delta's content and were not yet at a site in it.)*
 - **The "analyst 200" probe (11:45:50 BST item 2; 11:52:51 BST item (4)).** The maintainer's (by
   delegation) entry "2026-10-14 11:52:51 BST": "the demo analyst held (analyst, approver) per
   seed.py:51 on SL 8015's branch, and main has test_api_audit.py:231-245 (analyst-only → 403).
-  Explained. Close it on the run's output." SL-8015's `LG-` records the probe's run output and the
+  Explained. Close it on the run's output." SL-1711's `LG-` records the probe's run output and the
   principal's role rows, per the 11:45:50 entry; no finding is filed.
 
 ## Hand-off (not this plan's writes)
 
-- **FD 8011** (C7 errors, MEDIUM, owner WK-1178, the §0 question): filed by an auditor (the lead's
+- **FD-1706** (C7 errors, MEDIUM, owner WK-1178, the §0 question): filed by an auditor (the lead's
   10:01:48 entry), never by this plan.
 - **D5.6 into S5's `LG-`:** S5's executor, at S5's GO.
 - **DP-2 into S4:** the lead, at S4's GO, if ruled (a); `PL 1690` is frozen once minted, so the
@@ -565,8 +567,8 @@ rulings that bind this delta's content and were not yet at a site in it.)*
   W1: D5.6, acceptance item 3, DP-3. W2: P1, Task 0.1 and 0.2, T4's first line, DP-1. W3: authoring
   paragraph, T5, DP-5. W4: frame, step C7 (iii), T4, write set, Global Constraints. W5: P7, step C7
   (iv), T1, acceptance item 2, Hand-off.
-- **Placeholders.** "RL 8019" in the C7-errors line is a working id, replaced at the mint by the
-  ruling's minted id; "<S5's LG>" and "<slice branch>" are read at the slice. No other.
+- **Placeholders.** "RL-1712" in the C7-errors line was the working id RL 8019, replaced at the D16 mint by
+  the ruling's minted id; "<S5's LG>" and "<slice branch>" are read at the slice. No other.
 - **Literals** were read at `1e260c15` (or the named branch) by path and line: every route, code,
   enum member, setting key and default in the step table and premises.
 - **Not done here:** the memo's §3 shape argument and ETA figures, which W0 has ruled.

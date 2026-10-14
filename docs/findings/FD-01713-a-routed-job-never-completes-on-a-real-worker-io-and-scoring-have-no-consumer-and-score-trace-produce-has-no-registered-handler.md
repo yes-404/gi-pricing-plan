@@ -1,5 +1,5 @@
 ---
-id: FD-8021
+id: FD-1713
 family: finding
 title: A routed job never completes on a real worker — io and scoring have no consumer, and score.trace_produce has no registered handler
 status: active
@@ -10,7 +10,9 @@ corrected_by: []
 relates: [WK-674, WF-698, FR-405, FR-406, FD-1661]
 ---
 
-# FD-8021 — A routed job never completes on a real worker
+# FD-1713 — A routed job never completes on a real worker
+
+*(Minted 2026-10-14 as FD-1713 from working id 8021, in the D16 batch mint PR.)*
 
 *(Filed under working id 8021, reserved by the lead in the eta log, 2026-10-14 10:14:33 BST (a local file). Authority: the maintainer's (by delegation) entry "2026-10-14 10:13:50 BST — Unconsumed worker queues: the finding is WIDER (io too); (a) AMENDED to a DERIVED consumer set; (b) one finding for the class" and its follow-up "2026-10-14 10:36:42 BST" (both `to-lead.md`), which put the unregistered trace handler inside this finding. Every `file:line` was read at `origin/main` `1e260c1553acf39844939fe12da685ccfb835e54`; the run is below. A minter folds the working id into the docs batch.)*
 

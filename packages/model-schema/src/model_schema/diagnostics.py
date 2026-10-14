@@ -156,6 +156,12 @@ class PartitionDiagnostics(BaseModel):
     #: No default — FR-184 makes this the metric's meaning, not its metadata.
     weighting: Weighting
     rows: int = Field(ge=0)
+    #: How many rows FR-111's weight-0 exclusion removed from this partition before any
+    #: metric below was computed (SL-1675, 2026-10-12), so the exclusion is never silent.
+    #: `None` means the artifact predates the rule; `0` means the rule ran and removed
+    #: nothing. Optional because a stored `Diagnostics` written before this field must still
+    #: validate (`extra="forbid"` refuses unknown keys, not absent ones).
+    rows_excluded_zero_weight: int | None = Field(default=None, ge=0)
     ae_overall: float = Field(ge=0.0)
     ae_by_factor: tuple[AeCell, ...] = ()
     lift: tuple[LiftBin, ...] = ()

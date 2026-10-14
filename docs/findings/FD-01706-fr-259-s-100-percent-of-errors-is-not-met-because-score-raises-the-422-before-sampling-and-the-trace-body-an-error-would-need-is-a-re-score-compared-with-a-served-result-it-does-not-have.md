@@ -1,5 +1,5 @@
 ---
-id: FD-8011
+id: FD-1706
 family: finding
 title: FR-259's "100 % of declines and errors" is not met for errors, and the spec and the code disagree on what a trace of an error is
 status: active
@@ -10,10 +10,12 @@ corrected_by: []
 relates: [WK-1178, WK-674, WF-701, FR-259, FR-258, FR-250, FR-256, RL-862, RL-890, RL-1434, FD-1433, NFR-459, NFR-499, P2]
 ---
 
-# FD-8011 — FR-259's "100 % of errors" is not met
+# FD-1706 — FR-259's "100 % of errors" is not met
+
+*(Minted 2026-10-14 as FD-1706 from working id 8011, in the D15 batch mint PR.)*
 
 *(Filed under working id 8011, the next free working id after the lead's free-check, because the
-maintainer's (by delegation) id correction put the first-offered 8007 on FD-8007. A minter folds it
+maintainer's (by delegation) id correction put the first-offered 8007 on FD-1704. A minter folds it
 into the docs batch. Every `file:line` below was read at `origin/main`
 `1e260c1553acf39844939fe12da685ccfb835e54`. The design memo is
 `handover/memo-wf701-deploy-demo-2026-10-14.md`, section C7, in the local tree.)*
