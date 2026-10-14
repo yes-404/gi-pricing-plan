@@ -81,6 +81,27 @@ Each entry is quoted from the record or channel file named, with its author.
    reserved; planner-dpp1fix); G2 rule: if E1 pins two versions of one slug vs an approved
    baseline, the fix slice joins G2 and merges before SL-1543 (no edit to E1 expect=200, no
    re-order, no skip) — sl1543-prep's E1 read pending."*
+4. **The E1 read, and the sequencing it decides** — the lead's from-lead entry "2026-10-14
+   09:44:28 BST" (`channel/from-lead-2026-10-09.md`), item (1), verbatim:
+
+   ```text
+   (1) E1 READ (executor-sl1543-prep, read-only, at main 36e2610a): TODAY E1 passes the SL-1678 guard — RV3 pins built at examples/fremtpl2/journey.py:653-658 from `table_refs` (dict keyed by factor; edits REPLACE the ref at :373 and :401; :728 asserts len(pins.rate_tables) == len(factors)); baseline = seed approved rating_version:fremtpl2-demo@1 (journey.py:1038), one seed @1 ref per slug. UNDER PL-1542 Task 3 B1 (a second `table` step on each seeded table's seed-origin version; check_step_refs_pinned requires every referenced table pinned) RV3 pins e.g. region@1 AND region@2 → `_pins_by_slug` (rating_versions.py:1405) raises 409 at the change-summary draft (:1335-1378) because a baseline exists → E1 expect=200 FAILS. Per the maintainer's 09:42:05 (3): the RL 9996 fix slice (SL 8003) JOINS G2 and merges BEFORE SL-1543. Open sub-question: whether Pins/create_rating_version dedupes IDENTICAL refs (else the seed baseline under B1 could trip it too) → to planner-dpp1fix as a red.
+   ```
+
+   and the maintainer's (by delegation) entry "2026-10-14 09:45:05 BST — PL 9997 DP-1..5 RULED;
+   SL-1543 severity response RULED (amended: no `_minor` name); E1 → SL 8003 on the G2 path
+   CONFIRMED (re lead 09:43:40, 09:44:28)" (`channel/to-lead.md`), its item (C), verbatim:
+
+   ```text
+   **(C) E1:** my 09:42:05 (3) condition is MET by your read (B1 → RV3 pins region@1 + region@2 against approved fremtpl2-demo@1 → `_pins_by_slug` 409 → E1 expect=200 fails). SL 8003 is ON the G2 path and merges BEFORE SL-1543. Identical-ref dedupe: a red in SL 8003, as you said. **Send a revised G2 ETA** with SL 8003 in series (it was about 1 executor-day per PL-1677 :157), together with the #1297 ETA.
+   ```
+
+   The gate-1 order, the maintainer's (by delegation) entry "2026-10-14 09:46:40 BST — ETA
+   received: train timings accepted as working figures; G2 and exit figures NOT adopted as stated;
+   three orders (re lead 09:46:06)", item 1: *"the gate-1 series SL-[…] → SL-[…] → SL 8003 →
+   SL-1543 → SL-[…]"*, accepted there as a working estimate (the three elided ids are slice ids
+   not yet minted on `origin/main`, elided so check 32 does not read them as citations: the
+   WK-1178 import-route slice of #1297, and WK-673's FD-1660 guard and fix slices).
 
 ## Goal
 
@@ -94,10 +115,10 @@ T2. `FD-1679`'s remaining limb, DP-P1, is discharged at the slice's merge.
 
 ## Status
 
-The status is the `status:` field in the header, and nothing else. The plan is filed `draft`: DP-3
-(G2 membership) is open, pending the sl1543-prep read of E1, and is the lead's. DP-1, DP-2 and DP-4
-are the planner's design choices, open for the lead to accept or overrule at the ACK; none changes
-the write set. The slice PR's first commit sets the plan `active`, as for `PL-1677`.
+The status is the `status:` field in the header, and nothing else. The plan is filed `draft`: DP-5
+(what an identical duplicate ref does) is open and blocking, for the decision-maker. DP-3 (G2
+membership) is decided: SL-8003 joins G2 (Context entry 4). DP-1, DP-2 and DP-4 are the planner's
+design choices, open for the lead to accept or overrule at the ACK; none changes the write set. The slice PR's first commit sets the plan `active`, as for `PL-1677`.
 
 ## Activation needs, each with its state at `36e2610a`
 
@@ -107,7 +128,9 @@ the write set. The slice PR's first commit sets the plan `active`, as for `PL-16
 2. **This delta ACKed and minted** (PL-8002 and SL-8003 under minted ids), with the ACK's
    `generated.json` request-and-response check (Context entry 2, item 2) run on the slice's PR, not
    on this plan, since this plan changes no contract (Acceptance 6 is the command). **OPEN.**
-3. **DP-3 decided by the lead** on the sl1543-prep read of E1 (Context entry 2, item 3). **OPEN.**
+3. **DP-3 decided by the lead** on the sl1543-prep read of E1 (Context entry 2, item 3). **MET**:
+   joins G2, the lead's from-lead "2026-10-14 09:44:28 BST" item (1), confirmed by the maintainer's
+   (by delegation) "2026-10-14 09:45:05 BST" item (C) (Context entry 4; §Sequencing).
 4. **No in-flight writer on the write set, or the dispatch record names the definitions.**
    Re-checked by the lead at the GO. At 2026-10-14 09:46 BST (`gh pr list --state open` and
    three-dot `git diff --name-only origin/main...<head>` per branch) the shared paths were:
@@ -119,6 +142,25 @@ the write set. The slice PR's first commit sets the plan `active`, as for `PL-16
    last re-merge of `origin/main`, never hand-merged; `03` is re-anchored by content. **OPEN until
    the GO.**
 5. **A build slot and the single gate** (`RL-1445` item 1). **OPEN.**
+6. **DP-5 ruled** (an identical duplicate ref). **OPEN.** It decides R8's post-fix assert and two
+   lines of `pair_rate_tables` (Task 3 Step 2); E8 (Task 2) runs whatever the ruling.
+
+## Sequencing — G2
+
+**SL-8003 is on the G2 path and merges before `SL-1543`.** The rule, the maintainer's (by
+delegation) 09:42:05 item 3, verbatim: *"if E1's version pins two versions of one slug against an
+approved baseline, the fix slice JOINS the G2 path and merges before SL-1543. SL-1543 must not
+change E1's `expect=200`, re-order the journey to dodge the guard, or skip E1 (no faked step, as in
+my 12 Oct rulings). If E1 is not affected, the fix slice runs in parallel and is off the G2 path."*
+Its condition is met: the lead's from-lead 09:44:28 item (1), *"UNDER PL-1542 Task 3 B1 […] RV3
+pins e.g. region@1 AND region@2 → `_pins_by_slug` (rating_versions.py:1405) raises 409 at the
+change-summary draft (:1335-1378) because a baseline exists → E1 expect=200 FAILS. Per the
+maintainer's 09:42:05 (3): the RL 9996 fix slice (SL 8003) JOINS G2 and merges BEFORE SL-1543"*;
+confirmed by the maintainer's (by delegation) 09:45:05 item (C): *"SL 8003 is ON the G2 path and
+merges BEFORE SL-1543."* Gate-1 order as a working estimate (09:46:40 item 1, Context entry 4):
+SL-8003 is third of five, after the WK-1178 import-route slice and WK-673's FD-1660 guard slice, and
+before `SL-1543`. This plan reads none of the journey itself; the E1 facts are the
+lead's read, quoted.
 
 ## Scope and requirements, each id individually
 
@@ -155,6 +197,7 @@ the write set. The slice PR's first commit sets the plan `active`, as for `PL-16
 | o | The unit tests | `backend/tests/test_change_summary_draft.py` | `_rv`, `_table(slug, version)`, `_changed(slug, before, after, **diff)` (`:27-41`); `RateTableDiff(changed_cells=…)`, the other fields default `None` (`rating.py:1143-1147`) |
 | p | The spec texts | `docs/specs/03-rating-engine.md:142` (FR-242), `:1052` (the §5.1 row) | `:1052` ends with SL-1678's clause from `**409** \`VALIDATION_FAILED\` when the version's pins` through `(**added 2026-10-12, SL-1678, FR-242**)` |
 | q | The journey's E1 | `examples/fremtpl2/journey.py:953-959` (cited by RL-9996; not re-traced here) | E1 calls the draft route with `expect=200` |
+| r | No dedupe of identical refs, by reading | `packages/model-schema/src/model_schema/rating.py:70-85` `Pins`; `backend/src/app/platform/rating_versions.py:307` | `Pins.rate_tables: list[ArtifactRef] = Field(default_factory=list)`, `frozen=True, extra="forbid"`, no validator; create stores `pins=pins.model_dump(mode="json")`. Read only: E8 (Task 2) establishes it by a run |
 
 ## Decision points
 
@@ -163,8 +206,9 @@ the write set. The slice PR's first commit sets the plan `active`, as for `PL-16
 | DP-P1 | (PL-1677's) How the summary pairs versions when a slug carries two | (a′) and the rest, in RL-9996 | — | — | **Ruled (a′)** by RL-9996 (working id), confirmed by the maintainer (by delegation), 09:42:05 item 1 |
 | DP-1 | What the pure pairing in `change_summary.py` returns | (a) `list[RateTableChange]` with `diff` `None` and `pending` `False`; the I/O caller in `rating_versions.py` fills `diff` or `pending` on each entry with both refs by `model_copy(update=…)`; (b) a new internal pair type (step id, slug, two refs) that the caller turns into `RateTableChange` | **(a).** `CLAUDE.md` §2: *"Nobody hand-writes a shape that already exists in `model-schema`"*; (b) is a second shape of the same entry. (a) keeps the pairing pure and testable without a database, as `RL-1498` DP-E1-4 places it, and the caller's loop stays the one place that does I/O | no | the planner (design choice; the lead may overrule) |
 | DP-2 | SL-1678's three test functions after the flip | (a) keep the functions and their fixtures, replace the asserts, and **rename** them to what they now assert; the `LG-` records old name → new name and the old asserts; (b) keep the names, replace the asserts | **(a).** A name saying "is refused" over a 200 assert is a false label; RL-9996 asks for *"same fixtures, new asserts"* and *"recorded in the fix slice's `LG-`"*, which (a) does. `_assert_refused` loses its last caller and is deleted, recorded in the same `LG-` line | no | the planner (design choice; the lead may overrule) |
-| DP-3 | **G2 membership.** Does the fix slice join the G2 path and merge before `SL-1543`? | Per the maintainer's (by delegation) 09:42:05 item 3 (Context entry 2), verbatim: *"if E1's version pins two versions of one slug against an approved baseline, the fix slice JOINS the G2 path and merges before SL-1543. SL-1543 must not change E1's `expect=200`, re-order the journey to dodge the guard, or skip E1 (no faked step, as in my 12 Oct rulings). If E1 is not affected, the fix slice runs in parallel and is off the G2 path."* | **None from the planner: pending the E1 read.** The rule decides it once sl1543-prep reports the version and pins E1 drafts. This plan does not read E1's pins: RL-9996 Interactions says the same (*"This record did not run the journey or trace which version is E1's baseline"*) | **yes** (activation need 3) | **the lead** (09:42:05 item 3: *"yours"*), reported to the maintainer with the version and pins |
+| DP-3 | **G2 membership.** Does the fix slice join the G2 path and merge before `SL-1543`? | (a) joins G2 and merges before `SL-1543`; (b) runs in parallel, off the G2 path — the maintainer's (by delegation) 09:42:05 item 3 picks between them on the E1 read (§Sequencing, verbatim) | — (not the planner's) | — | **Decided (a)** by the lead, from-lead "2026-10-14 09:44:28 BST" item (1), on the 09:42:05 rule; confirmed by the maintainer (by delegation), "2026-10-14 09:45:05 BST" item (C) |
 | DP-4 | The sort position of a null `from_ref` or `to_ref` (RL-9996 rule 4 sorts *"by the `from_ref` and `to_ref` strings"* and is silent on null) | (a) null sorts as the empty string, so before any ref; (b) null sorts after every ref | **(a).** It is total and needs no sentinel, and a one-sided entry is already marked by its text (*"added"* / *"removed"*). R4 asserts its three entries as a set, so neither option makes a red depend on it; U2 fixes only what RL-9996 fixes (step entry before pin entry) | no | the planner (design choice; the lead may overrule) |
+| DP-5 | **An identical duplicate ref:** one side's `pins.rate_tables` lists the same `slug@version` twice (premise r). What does the draft do? RL-9996 is silent: pass 2 defines a pin difference as *"a ref in `pins.rate_tables` on one side and not on the other"* and rule 2 counts *"exactly one ref removed and exactly one added"*, but neither says whether a ref listed twice is one pin or two, and its cases C1–C5 never list one twice. On main the guard refuses it (premise a: `:1416` compares the slug only, so the second, identical ref raises 409) | (a) **one pin**: the draft reads each side's pins as a set; a ref listed twice is the ref once, and duplication alone makes no entry; create unchanged. (b) **a multiset**: a ref listed twice on one side and once on the other is a pin difference, and gets a pin entry of its own (`step_id` null, no diff). (c) **refuse at create**: `POST /api/v1/rating-versions` refuses a pin list carrying one ref twice (a new 422 on create; a `Pins` validator would refuse it at every read of stored rows too). (d) **normalise at create**: create stores each ref once; rows already stored keep their duplicates, so the draft still needs (a) or (b) for them | **None: the lead's instruction is not to pick.** Trade-offs for the ruler: (a) matches FR-1399's exact-ref comparison and is what Task 3 Step 2's sketch does (its two `set(…)` lines, marked); it is silent towards an author who listed a ref twice. (b) names a difference that changes nothing an approver acts on. (c) narrows create, which `RL-1538` kept permissive for two **versions**, and may refuse the B1 baseline (Context entry 4) if the journey builds pins per step; it is a spec change outside RL-9996's T1/T2. (d) changes stored data and leaves the old rows to (a) or (b) | **yes** (activation need 6) | **the decision-maker**, as an `RL-` against WK-673's plan, extending RL-9996 (the lead's instruction, 2026-10-14 09:44:28 BST item (1): *"Open sub-question: whether Pins/create_rating_version dedupes IDENTICAL refs"*; the maintainer's (by delegation) 09:45:05 item (C): *"Identical-ref dedupe: a red in SL 8003"*) |
 
 ## Write set
 
@@ -177,7 +221,7 @@ Copied from RL-9996 "What it obliges" (Context entry 1). Nothing is added.
 | `backend/src/app/platform/change_summary.py` | the pure pairing `pair_rate_tables` (RL-9996 rules 1–3), the sort (rule 4, replacing `:30`), `_table_line` (rule 5) | 3 |
 | `packages/model-schema/src/model_schema/rating.py` `RateTableChange` (`:1174-1190`) | gains `step_id: str \| None = None`; the docstring says what null means (T3) | 3 |
 | `docs/contracts/openapi/generated.json` | regenerated by `scripts/generate-contracts.py`, never hand-edited (T3) | 4 |
-| `backend/tests/test_rating_version_change_summary_route.py` | R1–R7, the flipped SL-1678 tests (R3), a table-step fixture; E1 (G1) and the first-version test (G2) unedited | 2 |
+| `backend/tests/test_rating_version_change_summary_route.py` | R1–R8, E8, the flipped SL-1678 tests (R3), a table-step fixture; E1 (G1) and the first-version test (G2) unedited | 2 |
 | `backend/tests/test_change_summary_draft.py` | U1, U2 | 2 |
 | `docs/specs/03-rating-engine.md` FR-242 (`:142`) and the §5.1 change-summary-draft row (`:1052`) | T1 appended; T2 strikes SL-1678's clause and appends the struck note | 1 |
 | `docs/roadmap.md` SL-8003 row; `docs/ledgers/LG-<working id>` | status lines and the slice ledger (L1 (a′)) | 0, 5 |
@@ -199,7 +243,7 @@ register line is the lead's or the minter's, RL-9996 "What it obliges", third bu
 - [ ] Record the minted ids that replace `<RL>` (RL-9996's) and `<SL>` (this slice's), and the
   date that replaces `<date>`.
 - [ ] `gh pr list --state open`, and grep `to-lead.md` for entries since 2026-10-14 09:42:05 BST
-  that rule on `RL 9996`, `DP-P1`, `FD-1679`, `change summary`, `step_id`, DP-1 to DP-4 or G2.
+  that rule on `RL 9996`, `DP-P1`, `FD-1679`, `change summary`, `step_id`, an identical duplicate ref, DP-1 to DP-5 or G2.
   Name the SHA and the entries read; use the ruled answer where one exists.
 - [ ] Commit the `LG-` scaffold, the SL row's `active` line and this plan's `active` status (L1
   (a′)).
@@ -228,7 +272,7 @@ register line is the lead's or the minter's, RL-9996 "What it obliges", third bu
   `LG-`.
 - [ ] Commit `docs(specs): FR-242's pairing rule and the struck FD-1679 refusal — <SL> (<RL>)`.
 
-### Task 2: The reds — R1 to R7, U1, U2, each red by its cause
+### Task 2: The reds — R1 to R8, U1, U2, each red by its cause, and E8
 
 **Files:** Test `backend/tests/test_rating_version_change_summary_route.py`,
 `backend/tests/test_change_summary_draft.py`.
@@ -311,14 +355,34 @@ register line is the lead's or the minter's, RL-9996 "What it obliges", third bu
     `draft.rate_tables == [step, pin]`. **Red on main by:** the same `ValidationError` (the step
     entry cannot be built on main).
 
+  The identical duplicate ref (DP-5; the lead's 09:44:28 item (1), the maintainer's 09:45:05 item
+  (C)), in the route test file, through `_two_versions_of_one_table`'s fixtures:
+
+  - **E8 — establishes whether `Pins` or create dedupe an identical ref (not a red).**
+    `first = _create_over_http(api_client, headers, algorithm_version=1, pins=_pins(one, one))`
+    (the helper asserts the 201); then, in `database.session()`,
+    `row = await session.get(RatingVersionRow, first)` and assert
+    `row.pins["rate_tables"] == [str(one), str(one)]`. **Expected on main, by reading (premise r):
+    PASSES** — nothing dedupes. If it fails with `[str(one)]`, something dedupes: STOP to the
+    lead, because DP-5 and R8 then change. Keep E8 after the fix; it pins the stored form.
+  - **R8 — a baseline listing one ref twice, as the B1 baseline may.** Algorithms
+    `_table_algorithm(1, {"t": X1, "t_seed": X1})` → `_table_algorithm(2, {"t": X2, "t_seed": X1})`;
+    baseline pins `_pins(X1, X1)` (approved, via `_insert`), candidate pins `_pins(X2, X1)`.
+    **Red on main by the guard on an identical ref:** `assert 409 == 200`, the response text naming
+    `FD-1679` and `at versions {one} and {one}` (the detail's two version numbers equal). **After
+    the fix, under DP-5 (a):** `_entries(body) == [("t", str(X1), str(X2), True)]`. Under any other
+    ruling the ruling states the assert; the red's cause on main is the same. Not counted in the
+    broken-input proof.
+
   Delete `_assert_refused` (no caller after the flip, DP-2 (a)); rewrite the block comment at
   `:387-389` to say the summary pairs by step and by unique slug (RL-9996), and that create still
   accepts such pins.
 
 - [ ] **Step 3: Run them on the base, before any code change:**
   `uv run pytest -q backend/tests/test_rating_version_change_summary_route.py backend/tests/test_change_summary_draft.py`.
-  Expected: R1–R7 and U1–U2 FAIL, each with the failure text in the table, and **every other test
-  in both files PASSES**, including E1 (G1) and the first-version test (G2). Paste each failure
+  Expected: R1–R8 and U1–U2 FAIL, each with the failure text in the table (R8: as stated under it),
+  and **every other test in both files PASSES**, including E8, E1 (G1) and the first-version test
+  (G2). Paste each failure
   line into the `LG-`. A red that fails for another reason (a fixture, 401, 404, a save refusal of
   a `_table_algorithm` body, a status of 409 whose text does not name `FD-1679`) is not a red: fix
   the test first (`README.md` convention 2).
@@ -371,6 +435,8 @@ register line is the lead's or the minter's, RL-9996 "What it obliges", third bu
                   if new is not None:
                       entries.append(RateTableChange(slug=new.slug, step_id=step_id, to_ref=new))
               named.update(ref for ref in (old, new) if ref is not None)
+      # The two set(…) reads are DP-5 (a): a ref listed twice is one pin. Change them, and R8's
+      # assert, if the decision-maker rules otherwise.
       removed = (set(before) - set(after)) - named
       added = (set(after) - set(before)) - named
       for slug in sorted({ref.slug for ref in removed | added}):
@@ -490,9 +556,10 @@ register line is the lead's or the minter's, RL-9996 "What it obliges", third bu
 Each item is checked by a command a fresh reviewer can run from the repository root of the slice
 branch.
 
-1. **Every case answered, every version named:** R1–R7 pass:
+1. **Every case answered, every version named:** R1–R8 and E8 pass:
    `uv run pytest -q backend/tests/test_rating_version_change_summary_route.py` exits 0, and the
-   `LG-` shows each of R1–R7 failing on the base with the failure text of Task 2's table (Step 3)
+   `LG-` shows E8 passing on the base (no dedupe; else the STOP of Task 2), DP-5's ruling quoted
+   beside R8, and each of R1–R8 failing on the base with the failure text of Task 2's table (Step 3)
    and R1, R2, R5, R6 failing again on the broken-input proof (Task 3 Step 6) while E1 passes.
 2. **The text and the order:** U1 and U2 pass:
    `uv run pytest -q backend/tests/test_change_summary_draft.py` exits 0; the `LG-` shows both red
@@ -551,7 +618,8 @@ branch.
 - One PR per slice (L1 (a′)): code, tests, spec texts, regenerated contract, SL status line, one
   `LG-`.
 - `RL-1445` item 1: one full gate at a time; targeted single-file runs only outside it.
-- G2: DP-3, the maintainer's (by delegation) 09:42:05 item 3, quoted in §Decision points.
+- G2: SL-8003 merges before `SL-1543` (§Sequencing; the maintainer's (by delegation) 09:42:05 item 3
+  and 09:45:05 item (C)).
 
 ## Hand-off (not this plan's writes)
 
@@ -565,13 +633,14 @@ branch.
   removed only by SL-8003, so its purpose completes at that merge. The lead's.
 - **FD-1679**: discharged at SL-8003's merge (RL-9996 "What it obliges", third bullet); its
   closure and register line are the lead's or the minter's.
-- **DP-3 / G2** goes to the lead on the sl1543-prep read, and from the lead to the maintainer with
-  the version and pins E1 drafts.
+- **DP-3 / G2**: decided (§Sequencing). The revised G2 ETA with SL-8003 in series is the lead's
+  (09:45:05 item (C)).
+- **DP-5** goes to the decision-maker; its ruling is quoted into the slice's `LG-` at Task 0.
 
 ## Self-review
 
 - **Ruling coverage.** RL-9996's rules 1–5 → Task 3 Steps 2–4; T1, T2 → Task 1; T3 → Task 3
-  Step 1 and Task 4; R1–R7, U1, U2 → Task 2; G1, G2 → Task 2 Step 3, Task 3 Step 5, Acceptance 4;
+  Step 1 and Task 4; R1–R8, E8, U1, U2 → Task 2; G1, G2 → Task 2 Step 3, Task 3 Step 5, Acceptance 4;
   the broken-input proof → Task 3 Step 6; the guard's removal and the flip → Task 2 Step 2, Task 3
   Step 4, Acceptance 3 and 5; `git grep FD-1679 backend/src` empty → Acceptance 3. Each of
   RL-9996's three Acceptance items → R1–R6 (item 1), R3–R5 and G1 (item 2), R1–R5 (item 3).
@@ -586,5 +655,7 @@ branch.
 - **Literals.** Every `file:line` was read at `36e2610a`. Not verified by a run: two table steps
   in one saved algorithm (Task 2 Step 1 says what to do if it is refused).
 - **Convention 4.** `gh pr list --state open` and three-dot diffs read at 2026-10-14 09:46 BST
-  (activation need 4). The to-lead entries read up to "2026-10-14 09:42:05 BST" (the file's last
-  entry when read) and the from-lead entries up to "2026-10-14 09:43:40 BST". Task 0 re-reads both.
+  (activation need 4). The to-lead entries read up to "2026-10-14 09:54:22 BST" and the from-lead
+  entries up to "2026-10-14 09:54:12 BST", both read at 09:55 BST; the ones on this plan's subject
+  are 09:42:05, 09:45:05 (C) and 09:46:40 item 1 (to-lead) and 09:42:42, 09:44:28 (1) and 09:53:28
+  (from-lead). Task 0 re-reads both.
