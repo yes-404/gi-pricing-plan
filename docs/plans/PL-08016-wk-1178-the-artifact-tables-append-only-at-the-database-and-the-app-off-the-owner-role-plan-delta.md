@@ -280,9 +280,11 @@ DP-1 to DP-7 are the first cut's, with their rulings. DP-8 onwards are the re-cu
 
 **Not in either write set:** `packages/**`, `docs/contracts/**`, the frontend.
 
-## S-a (SL-8017) — tasks
+## Tasks
 
-### Task 1: the reds by cause, on the base tree (tests only)
+### S-a (SL-8017)
+
+#### Task 1: the reds by cause, on the base tree (tests only)
 
 **Files:** `backend/tests/test_artifact_immutability.py`.
 
@@ -330,7 +332,7 @@ DP-1 to DP-7 are the first cut's, with their rulings. DP-8 onwards are the re-cu
   `LG-` with the tree. **This is the first owner-write observation on `reference_tables`**
   (E1 has none). Commit (test only).
 
-### Task 2: the declaration, the migration, and W1 to W3
+#### Task 2: the declaration, the migration, and W1 to W3
 
 **Files:** `backend/src/app/db/models.py`; create `backend/migrations/versions/<rev>_artifact_tables_append_only.py`;
 `backend/src/app/platform/rate_tables.py`; `backend/tests/test_artifact_immutability.py`.
@@ -531,7 +533,7 @@ def downgrade() -> None:
 - [ ] **Step 2.9:** `uv run pytest backend/tests/test_artifact_immutability.py -q`: green.
   Commit.
 
-### Task 3: FD-8007's `gip_app` test (DP-1 (a), the ADD)
+#### Task 3: FD-8007's `gip_app` test (DP-1 (a), the ADD)
 
 - [ ] **Step 3.1:** Write `test_a_gip_app_update_on_factors_is_refused_by_the_trigger_not_only_the_grant`
   as the first cut drafted it (two `pytest.raises` blocks; messages `permission denied for
@@ -545,7 +547,7 @@ def downgrade() -> None:
   second, `DID NOT RAISE`. On the Task 2 tree, green. All three lines go into the `LG-`.
   Commit.
 
-### Task 4: the test writers (W4 to W6)
+#### Task 4: the test writers (W4 to W6)
 
 - [ ] **Step 4.1:** After Task 2, run `uv run pytest backend/tests/test_fr240_governance.py -q -k control`,
   `backend/tests/test_rate_table_diff_portfolio.py -q` and
@@ -573,7 +575,7 @@ def downgrade() -> None:
 - [ ] **Step 4.5:** `git grep -nE "UPDATE factors|factors SET|update\(RateTableVersionRow" -- backend`
   prints nothing. The three files are green. Commit.
 
-### Task 5: the spec lines (DP-5 (a)), in the migration's commit range
+#### Task 5: the spec lines (DP-5 (a)), in the migration's commit range
 
 `<date>` is the commit date and `<rev>` Task 2's revision. Escape any `|` as `\|`.
 
@@ -586,7 +588,7 @@ def downgrade() -> None:
 - [ ] **Step 5.4:** `python3 scripts/audit-docs.py` as one gate-2 docs check, and
   `uv run python scripts/req-coverage.py`. Commit.
 
-### Task 6: postgres-pro review and the gate
+#### Task 6: postgres-pro review and the gate
 
 - [ ] **Step 6.1:** Delegate the migration to `postgres-pro`, read-only, as evidence. The
   brief names: the `dev-commands` DSN trap; one head (DP-7); the downgrade restores exactly
@@ -599,9 +601,9 @@ def downgrade() -> None:
   treatment, and report it to the lead before fixing (a fix outside DP-9 to DP-13 needs a
   ruling). Record the rc table.
 
-## S-b (SL-8041) — tasks
+### S-b (SL-8041)
 
-### Task 0: the census, before any edit
+#### Task 0: the census, before any edit
 
 - [ ] **Step 0.1:** At the GO tree, run E6's predicate and
   `git grep -nE "Database\(|create_async_engine|alembic upgrade|GIP_TEST_DATABASE_URL" -- backend/src scripts deploy .github .claude/skills backend/tests/conftest*.py`.
@@ -610,7 +612,7 @@ def downgrade() -> None:
   fixtures). Put the table in the `LG-` before Task 1. An entry that fits neither is reported
   to the lead.
 
-### Task 1: provisioning (DP-15 (a))
+#### Task 1: provisioning (DP-15 (a))
 
 - [ ] **Step 1.1:** Create `deploy/postgres/app-login-role.sql`:
 
@@ -642,7 +644,7 @@ GRANT gip_app TO gip_app_login;
   like 'gip_app%'` and `select pg_has_role('gip_app_login', 'gip_app', 'MEMBER')` into the
   `LG-`.
 
-### Task 2: the two DSNs (DP-16 (a))
+#### Task 2: the two DSNs (DP-16 (a))
 
 - [ ] **Step 2.1:** `config.py`: `database_url`'s default becomes
   `postgresql+asyncpg://gip_app_login:gip_app_login@localhost:5432/gipricing`; add
@@ -655,7 +657,7 @@ GRANT gip_app TO gip_app_login;
   `scripts/demo.py`, each `scripts/` consumer, `dev-commands` "Migrations" (`SKILL.md:932-949`),
   `fastapi-service`'s DSN post-mortem, and `.claude/skills/README.md`, all in the same commit.
 
-### Task 3: the fixtures, and the red run (DP-18 (a), DP-20 (a))
+#### Task 3: the fixtures, and the red run (DP-18 (a), DP-20 (a))
 
 - [ ] **Step 3.1:** `conftest_db.py`: `test_database_url()` stays the owner (teardown and
   catalog); add `test_app_database_url()`, the same database with the login role's credentials
@@ -670,7 +672,7 @@ GRANT gip_app TO gip_app_login;
   `owner_database`, with the reason in its docstring. A failure in application code is a grant
   (Task 5). The whole list goes into the `LG-`.
 
-### Task 4: the startup refusal and the tamper-resistance reds (DP-19 (a), DP-14 (b))
+#### Task 4: the startup refusal and the tamper-resistance reds (DP-19 (a), DP-14 (b))
 
 - [ ] **Step 4.1:** Create `backend/tests/test_application_role.py` with the reds, first:
   - **R-b1** `test_the_application_does_not_connect_as_an_owner_or_a_superuser`: through the
@@ -695,7 +697,7 @@ GRANT gip_app TO gip_app_login;
   application and the test share it). Call it from `main.py`'s startup (`:75`) and
   `worker/entrypoint.py` (`:32`). Green. Commit.
 
-### Task 5: the grants, from the red list (DP-20 (a))
+#### Task 5: the grants, from the red list (DP-20 (a))
 
 - [ ] **Step 5.1:** One migration, `<rev>_application_role_grants.py`. Each `GRANT` line carries
   a comment naming the Task 3.2 test that needed it. Use column privileges where a red shows
@@ -709,7 +711,7 @@ GRANT gip_app TO gip_app_login;
   stays and agrees). Red on the base for every table Task 5.1 changes.
 - [ ] **Step 5.3:** The suite again, in the gate slot: no `permission denied` remains. Commit.
 
-### Task 6: the compose run
+#### Task 6: the compose run
 
 - [ ] **Step 6.1:** On a **separate compose project and a fresh volume**, never the shared stack:
   `docker compose -p gip-sl8041 -f deploy/docker-compose.yml` with the ports remapped through
@@ -723,7 +725,7 @@ GRANT gip_app TO gip_app_login;
   the API or worker logs. Each one is a refused path the suite missed: red first, grant,
   re-run. Then `docker compose -p gip-sl8041 down -v`, on **that project only**.
 
-### Task 7: the spec line, review, gate
+#### Task 7: the spec line, review, gate
 
 - [ ] **Step 7.1: `FR-44`**, appended:
   `*(Amended <date>, WK-1178 SL-8041, on FD-8038.)* **Layer 1 binds.** The application and the worker connect as `gip_app_login`, a member of `gip_app` that owns nothing and is not a superuser; only migrations use the owner (`GIP_MIGRATION_DATABASE_URL`). Startup refuses an owner, a superuser, or a disabled artifact trigger. Every `gip_app` grant is pinned by an exact map over every table. Until this, every grant and revoke here was inert, and the owner could disable the triggers.`
