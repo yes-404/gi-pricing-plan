@@ -50,7 +50,7 @@ verbatim:
 > - A reading that comes out OVER → an FD, not a re-wording.
 
 The same entry's item 1 states the standard this plan applies to every extrapolation:
-*"NFR-467 → PARTIAL-MEASUREMENT: 10M extrapolated from a 2M run (CR-00721:93-97) is not a
+*"NFR-467 → PARTIAL-MEASUREMENT: 10M extrapolated from a 2M run (CR-721:93-97 [the entry writes the id padded; unpadded here per RFC-937 §1.1 rule 2]) is not a
 measurement."* The lead received it in `from-lead-2026-10-09.md`, entry headed
 **"2026-10-14 11:07:28 BST — Lead: RECEIVED the maintainer's (by delegation) 11:06:52 — LINE-READ
 RULED: …"**, item (3): *"NFR-468/470/485/1443 → ONE WK-1178 P2 NFR measurement-sweep slice
