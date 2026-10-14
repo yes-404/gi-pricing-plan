@@ -189,7 +189,7 @@ change in P2.** The remedy shape, exactly as ruled in that entry's item 3 and 4:
    at `backend/src/app/platform/blobs.py:186`, inside `BlobStore.put` (`:140`); no other
    insert into the `blobs` table exists, and `blobs.py:455` (`update(BlobRow)`) only adjusts
    `ref_count` for `retain` and `release`. So the writers are: **`BlobStore.put`**, whose 17 call
-   sites above are the starting population, and, **after SL-1720**, **`promote_upload`** (RL-1722's
+   sites above are the starting population, and, **after SL-1722**, **`promote_upload`** (RL-1724's
    `blob.promote`), which creates the `BlobRow` for a promoted upload without calling `put`. A new
    writer of either kind with neither a `retain` nor a reason fails the check.
 3. **A seeded dry run.** A `collect_garbage(dry_run=True)` report over a seeded database, with one

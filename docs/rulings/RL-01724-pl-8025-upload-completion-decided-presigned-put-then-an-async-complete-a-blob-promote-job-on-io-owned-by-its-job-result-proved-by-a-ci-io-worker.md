@@ -1,5 +1,5 @@
 ---
-id: RL-1722
+id: RL-1724
 family: ruling
 title: WK-1178's upload-completion decision points — (a2) a presigned PUT then an async complete, a blob.promote Job on io; its Job result owns the blob; a pending Blob Upload record authorises it; the slice's one public-path test runs its own io worker in CI
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
@@ -8,22 +8,22 @@ owner: decision-maker
 tree: 4420f91fa4112a1fcabcae23d3d50a1ad4fcbb59
 phase: P2
 work: WK-1178
-slice: SL-1720
+slice: SL-1722
 supersedes: []
 superseded_by: ~
 corrected_by: []
 corrects: ~
-relates: [PL-1719, SL-1720, FR-418, FR-419, FR-420, FR-421, FR-27, FR-405, FR-416, FR-417, FR-436, WK-1178, WK-1251, SL-1258]
+relates: [PL-1721, SL-1722, FR-418, FR-419, FR-420, FR-421, FR-27, FR-405, FR-416, FR-417, FR-436, WK-1178, WK-1251, SL-1258]
 ---
 
-# RL-1722 — PL-1719 DP-U1 to DP-U3: how a presigned upload becomes an owned, content-addressed blob
+# RL-1724 — PL-1721 DP-U1 to DP-U3: how a presigned upload becomes an owned, content-addressed blob
 
-*(Minted 2026-10-14 as RL-1722 from working id 8028, in the D17 batch mint PR.)*
+*(Minted 2026-10-14 as RL-1724 from working id 8028, in the D17 batch mint PR.)*
 
-*Disclosure: drafted under **working id RL-1722**, reserved by the lead (team-lead) on
+*Disclosure: drafted under **working id RL-1724**, reserved by the lead (team-lead) on
 2026-10-14 (`~/gi-pricing-plan.local/handover/eta.md`, the line stamped "2026-10-14 11:09:44
 BST": "RESERVED working id RL 8028 = the upload-completion DP ruling (PL 8025 DP-U1, U1.1, U1.2,
-U2, U3), seat dm-upload"). The plan it rules on, `PL-1719`, and its slice, `SL-1720`, are also
+U2, U3), seat dm-upload"). The plan it rules on, `PL-1721`, and its slice, `SL-1722`, are also
 working ids (reserved "2026-10-14 10:57:11 BST"), filed on
 `origin/pl-8025-wk1178-upload-completion-2026-10-14` @`78e58ff0636a255cc55414f3c8f80b5e26c576b8`.
 FD 8021, FD 8023 and PL 8022 were working ids (minted in D16 as FD-1713, FD-1715 and PL-1714) and are cited in the body only. The lead mints all
@@ -66,7 +66,7 @@ of 2026-10-14 confirming "perTurnEffort":"high" on this transcript).*
   DERIVED check (every `BlobStore.put` call site in backend/src is paired with a `retain` by its
   owning record, or is listed with a reason)"*; and "2026-10-14 10:57:10 BST — FD 8023 MEDIUM +
   trigger CONFIRMED …", item 1, which confirms FD-1715 "MEDIUM latent, owner WK-1251".
-- **The options and the recommendation are the planner's**, `PL-1719` §Decision points (the
+- **The options and the recommendation are the planner's**, `PL-1721` §Decision points (the
   branch named above), read in full; this record rules on them and does not edit the plan.
 
 ## Verified first, at `4420f91f`
@@ -75,7 +75,7 @@ Every line below was read at `origin/main` `4420f91fa4112a1fcabcae23d3d50a1ad4fc
 11:16:29 BST, unmoved since 11:10:21 BST), by `git show origin/main:<path>`, never the root
 checkout.
 
-**PL-1719's premises, confirmed in the owning code:**
+**PL-1721's premises, confirmed in the owning code:**
 
 - **P1 (FR-421 half-built) — confirmed.** `docs/specs/07-platform.md:115` is FR-421: "Large
   uploads use presigned multipart URLs so dataset files do not transit the API process."
@@ -139,14 +139,14 @@ checkout.
   `RoleAssignmentRow` and a `WorkspaceMemberRow`. `principal` (`:330-332`) builds a `Principal`
   in memory and writes nothing.
 
-**Three facts PL-1719 does not state, which change what the slice must build:**
+**Three facts PL-1721 does not state, which change what the slice must build:**
 
 1. **`job_kind` is a PostgreSQL enum.** `backend/src/app/db/models.py:135` `kind:
    Mapped[JobKind] = mapped_column(_pg_enum(JobKind, "job_kind"), ...)`. A `blob.promote` Job's
    INSERT fails with `invalid input value for enum job_kind` unless a migration adds the value.
    The pattern is `backend/migrations/versions/f3a7c1d9e2b4_rate_table_diff_cells_job_kind.py:29-39`:
    `ALTER TYPE job_kind ADD VALUE IF NOT EXISTS …` in `upgrade`, and a `downgrade` that keeps the
-   value with the reason ("PostgreSQL cannot drop an enum value"). PL-1719 Task 3's migration
+   value with the reason ("PostgreSQL cannot drop an enum value"). PL-1721 Task 3's migration
    "creates `blob_uploads`" only.
 2. **`ListParts` pages at 1,000 parts; the route admits 10,000.** S3's `ListParts` returns at
    most 1,000 parts per call and signals more with `IsTruncated`; `parts` is `le=10_000`
@@ -159,7 +159,7 @@ checkout.
 
 **Not verified here:** whether the compose MinIO accepts an `AbortIncompleteMultipartUpload`
 lifecycle action, and what its own stale-multipart-upload expiry is. No spike was run by this
-seat (no code, no tests, by brief). PL-1719 Task 0 is the spike; DP-U1.2 below is ruled so that
+seat (no code, no tests, by brief). PL-1721 Task 0 is the spike; DP-U1.2 below is ruled so that
 either answer leaves the invariant intact.
 
 ## Ruled
@@ -295,7 +295,7 @@ release that would justify it is WK-1251's in any case.
   sets it idempotently on every startup, so it holds under `docker compose up`.
 - **The invariant, binding whatever the spike finds:** the completion deadline is shorter than
   every store-side removal of staged bytes. With a 24-hour deadline and a 2-day rule it holds.
-  PL-1719 Task 0's spike records two facts in the slice's `LG-`: whether the compose MinIO accepts
+  PL-1721 Task 0's spike records two facts in the slice's `LG-`: whether the compose MinIO accepts
   an `AbortIncompleteMultipartUpload` action, and MinIO's own stale-multipart expiry. Then:
   - **The store refuses the action.** The slice sets the expiration-only rule on `staging/`,
     which S3 and MinIO both accept, and the `LG-` records that MinIO's own stale-upload expiry
@@ -311,7 +311,7 @@ release that would justify it is WK-1251's in any case.
 
 ### DP-U1.3 — multipart interplay (no recommendation changed)
 
-Ruled as PL-1719 recommends, option (ii): the Job lists the parts. The client never sends ETags,
+Ruled as PL-1721 recommends, option (ii): the Job lists the parts. The client never sends ETags,
 so the bucket's CORS need not expose `ETag`. The only change is DP-U1 step 2's pagination. The
 copy is the managed copy (step 4). `part_count` is the declared count for a multipart Blob
 Upload, and null for one part (`BlobRef.part_count`, as in `01` §4.2's example).
@@ -324,7 +324,7 @@ worker". Under it, W2 qualifies only if all three of these hold, and the slice i
 three:
 
 1. **The worker is a separate process launched from the unmodified entrypoint:** `uv run celery -A
-   app.worker.entrypoint worker --queues io` (PL-1719's `--pool solo --concurrency 1` are
+   app.worker.entrypoint worker --queues io` (PL-1721's `--pool solo --concurrency 1` are
    permitted: they size the pool and do not touch the registry). The test file never imports
    `app.worker.entrypoint` and never registers a handler. It never calls `execute_job` or any job
    runner. A worker that registers handlers itself does not qualify, because it would hide the
@@ -343,9 +343,9 @@ three:
 
 **Why W2 over W1:** W2 is the only option under which the test that "would have caught it" runs
 on every pull request. W1 runs only with `GIP_DEPLOY_TESTS=1` in a granted build window, never in
-CI. Its helpers also seed by `psql` (PL-1719 DP-U2, W1). The 11:10:26 entry says "W1 (compose)
+CI. Its helpers also seed by `psql` (PL-1721 DP-U2, W1). The 11:10:26 entry says "W1 (compose)
 is not required for this slice". **W3 is not this record's to rule:** the conversion of PL-1714
-E4.3's compose ingest test to the public path is an **acceptance line in SL-1720**, by the
+E4.3's compose ingest test to the public path is an **acceptance line in SL-1722**, by the
 11:10:26 entry, item (b), which the lead queued for D17 (`eta.md`, "2026-10-14 11:10:51 BST").
 
 ### DP-U3 — a worker-side ownership check: **(b) no, for `dataset.ingest`**; one consistency check in the new `blob.promote` handler
@@ -390,20 +390,20 @@ slice's `LG-` names the fixture set. *This reads the maintainer's own word. As a
 the maintainer may overrule it by a dated line, and the lead should route it there for
 acceptance.*
 
-### The spec text (T-text) the slice applies, replacing PL-1719's T1 to T6
+### The spec text (T-text) the slice applies, replacing PL-1721's T1 to T6
 
 The slice's commit replaces `<date>` with its own date, `FR-<n>` with the id that `python3
-scripts/doc-id.py next` returns in that commit, and `RL-1722` with this record's minted id.
-Where this text differs from PL-1719's T-text, this text governs (PL-1719 Task 0, first bullet).
+scripts/doc-id.py next` returns in that commit, and `RL-1724` with this record's minted id.
+Where this text differs from PL-1721's T-text, this text governs (PL-1721 Task 0, first bullet).
 
 **T1 — `07` §3.3, a new row appended after FR-423 (`07-platform.md:117`), with its anchor:**
 
-> | **FR-<n>** | *(appended <date>, WK-1178, `SL-1720`; the completion step FR-421 implies, as `RL-1722` rules `PL-1719` DP-U1 to DP-U3)* **An upload completes into an owned, content-addressed blob.** `POST /api/v1/blobs/upload-url` records a **Blob Upload** in the caller's workspace (the requesting principal, the staging key, the S3 multipart upload id when `parts > 1`, the declared part count, the media type, and a completion deadline 24 hours after it is created) and returns its `id`. `POST /api/v1/blobs/uploads/{id}/complete` reads the Blob Upload only and returns `202` with a Job of kind `blob.promote` on the `io` queue (R1). The Job fails unless its workspace is the Blob Upload's. For a multipart upload it lists every uploaded part, across all pages, and fails with `VALIDATION_FAILED` naming each missing part unless they are exactly parts 1 to the declared count, then completes the multipart upload; for one part it confirms the staged object exists. It reads the object once, streamed in bounded chunks, to compute its SHA-256; copies it server-side to `blob/{sha256[:2]}/{sha256}` unless a blob with that digest is already stored (FR-419); and, in one transaction, writes the `blobs` row if absent (a concurrent promotion of identical bytes is a no-op, not a failure), takes one reference (FR-420) and marks the Blob Upload promoted. A re-run of a promoted Blob Upload returns the same result and takes no second reference. Only after that transaction commits does it delete the staging object. It succeeds with `JobResult(kind="blob", ref=<sha256>)`, which is the blob's owner in the Blob Upload's workspace (§5.1, `GET /api/v1/blobs/{sha256}`), so the digest the client reads from `GET /api/v1/jobs/{id}` is one `01`'s ingest route accepts. The file's bytes never transit the API process (FR-421). A Blob Upload in another workspace, or none, is refused with the same `404` a missing one gets; a completion after the deadline is refused `409 VALIDATION_FAILED`; a repeated completion returns the Job of the first, whatever its state, and a failed promotion ends the Blob Upload. A part below the store's minimum size fails the Job with `VALIDATION_FAILED`. Staging objects and incomplete multipart uploads older than two days are removed by a lifecycle rule on the `staging/` prefix that the platform sets on startup; the completion deadline is always shorter than any removal of staged bytes. Releasing the reference is FR-420's, and is not delivered by this clause. |
+> | **FR-<n>** | *(appended <date>, WK-1178, `SL-1722`; the completion step FR-421 implies, as `RL-1724` rules `PL-1721` DP-U1 to DP-U3)* **An upload completes into an owned, content-addressed blob.** `POST /api/v1/blobs/upload-url` records a **Blob Upload** in the caller's workspace (the requesting principal, the staging key, the S3 multipart upload id when `parts > 1`, the declared part count, the media type, and a completion deadline 24 hours after it is created) and returns its `id`. `POST /api/v1/blobs/uploads/{id}/complete` reads the Blob Upload only and returns `202` with a Job of kind `blob.promote` on the `io` queue (R1). The Job fails unless its workspace is the Blob Upload's. For a multipart upload it lists every uploaded part, across all pages, and fails with `VALIDATION_FAILED` naming each missing part unless they are exactly parts 1 to the declared count, then completes the multipart upload; for one part it confirms the staged object exists. It reads the object once, streamed in bounded chunks, to compute its SHA-256; copies it server-side to `blob/{sha256[:2]}/{sha256}` unless a blob with that digest is already stored (FR-419); and, in one transaction, writes the `blobs` row if absent (a concurrent promotion of identical bytes is a no-op, not a failure), takes one reference (FR-420) and marks the Blob Upload promoted. A re-run of a promoted Blob Upload returns the same result and takes no second reference. Only after that transaction commits does it delete the staging object. It succeeds with `JobResult(kind="blob", ref=<sha256>)`, which is the blob's owner in the Blob Upload's workspace (§5.1, `GET /api/v1/blobs/{sha256}`), so the digest the client reads from `GET /api/v1/jobs/{id}` is one `01`'s ingest route accepts. The file's bytes never transit the API process (FR-421). A Blob Upload in another workspace, or none, is refused with the same `404` a missing one gets; a completion after the deadline is refused `409 VALIDATION_FAILED`; a repeated completion returns the Job of the first, whatever its state, and a failed promotion ends the Blob Upload. A part below the store's minimum size fails the Job with `VALIDATION_FAILED`. Staging objects and incomplete multipart uploads older than two days are removed by a lifecycle rule on the `staging/` prefix that the platform sets on startup; the completion deadline is always shorter than any removal of staged bytes. Releasing the reference is FR-420's, and is not delivered by this clause. |
 
 **T2 — `07` §5.1, the upload-url row (`07-platform.md:327`): a dated line appended to its cell.
 The 2026-09-28 text is not edited:**
 
-> **Amended <date> (WK-1178, `SL-1720`, FR-<n>, `RL-1722`):** the request records a Blob Upload
+> **Amended <date> (WK-1178, `SL-1722`, FR-<n>, `RL-1724`):** the request records a Blob Upload
 > and the response also carries its `id`; `POST /api/v1/blobs/uploads/{id}/complete` (the next
 > row) moves the staged object to its content address and records its owner. The 2026-09-28
 > sentences saying nothing does so, and that such an upload cannot be ingested or downloaded, are
@@ -411,7 +411,7 @@ The 2026-09-28 text is not edited:**
 
 **T3 — `07` §5.1, a new row directly after the upload-url row:**
 
-> | `POST` | `/api/v1/blobs/uploads/{id}/complete` | **202** Complete a Blob Upload → Job `blob.promote` (FR-<n>, FR-421). The Job's result, `JobResult(kind="blob")`, names the digest and is its owner in the caller's workspace. `404` for another workspace's Blob Upload or a missing one; `409 VALIDATION_FAILED` past the completion deadline; a repeat returns the first Job. Requires `dataset:write`. *(appended <date>, WK-1178, `RL-1722`)* |
+> | `POST` | `/api/v1/blobs/uploads/{id}/complete` | **202** Complete a Blob Upload → Job `blob.promote` (FR-<n>, FR-421). The Job's result, `JobResult(kind="blob")`, names the digest and is its owner in the caller's workspace. `404` for another workspace's Blob Upload or a missing one; `409 VALIDATION_FAILED` past the completion deadline; a repeat returns the first Job. Requires `dataset:write`. *(appended <date>, WK-1178, `RL-1724`)* |
 
 **T4 — `07` §5.2, one signature appended under `# backend/app/platform/blobs.py`
 (`07-platform.md:389-392`):**
@@ -422,28 +422,28 @@ The 2026-09-28 text is not edited:**
 list, after `dataset.ingest`.
 
 **T6 — `07` §2, a new glossary row directly after Blob (`07-platform.md:59`).** This is new to
-PL-1719. `spec-change`: "A new term goes in the glossary **before** first use". "Blob Upload" is
+PL-1721. `spec-change`: "A new term goes in the glossary **before** first use". "Blob Upload" is
 used nowhere in `docs/specs` at `4420f91f` (`git grep -n -w -E 'Upload|Uploads' origin/main --
 docs/specs` printed nothing), and platform terms such as Blob, Job and Job Kind are defined in
 `07` §2, not in `00` §2:
 
-> | **Blob Upload** | A pending client upload to the blob store's staging area, recorded when an upload URL is issued: its workspace, principal, staging key, declared parts and completion deadline. Completing it promotes the bytes to a Blob owned in that workspace (FR-<n>). *(appended <date>, WK-1178, `RL-1722`)* |
+> | **Blob Upload** | A pending client upload to the blob store's staging area, recorded when an upload URL is issued: its workspace, principal, staging key, declared parts and completion deadline. Completing it promotes the bytes to a Blob owned in that workspace (FR-<n>). *(appended <date>, WK-1178, `RL-1724`)* |
 
-The term is "Blob Upload", not PL-1719's bare "Upload": "upload" is a verb and an ordinary noun
-throughout the suite. The table name `blob_uploads` and the class `BlobUploadRow` that PL-1719
+The term is "Blob Upload", not PL-1721's bare "Upload": "upload" is a verb and an ordinary noun
+throughout the suite. The table name `blob_uploads` and the class `BlobUploadRow` that PL-1721
 Task 3 already names match this term.
 
 **T7 — `01` §5.1, the ingest row (`01-data-management.md:858`): a dated line appended to its
 cell. The 2026-09-28 text is not edited:**
 
-> **Amended <date> (WK-1178, `SL-1720`, `RL-1722`):** a client obtains an admissible digest
+> **Amended <date> (WK-1178, `SL-1722`, `RL-1724`):** a client obtains an admissible digest
 > through `07` FR-<n>: request an upload URL, upload, complete the Blob Upload, and read the digest
 > from the completing Job's result, which is the owner the rule above admits. The client never
 > names a digest before the platform has computed it.
 
 ## What it obliges
 
-**The slice (`SL-1720`, executor), in addition to PL-1719 Tasks 0 to 4:**
+**The slice (`SL-1722`, executor), in addition to PL-1721 Tasks 0 to 4:**
 
 1. **Apply T1 to T7** in the slice's first commit (spec first), via `spec-change`, with
    `<a id="fr-<n>"></a>` before T1's row.
@@ -457,11 +457,11 @@ cell. The 2026-09-28 text is not edited:**
    route.
 5. **Rewrite the two promises that DP-U3 (b) declines:** `data_handlers.py:122-127` and
    `test_ingest_enqueuers.py`'s docstring. Each cites this record.
-6. **The reds and breakers in the Acceptance section below**, in addition to PL-1719's R1 to R9.
+6. **The reds and breakers in the Acceptance section below**, in addition to PL-1721's R1 to R9.
 
 **The lead:**
 
-- **Mint this record with PL-1719 and SL-1720.** PL-1719's Activation item 1 ("DP-U1 ruled …
+- **Mint this record with PL-1721 and SL-1722.** PL-1721's Activation item 1 ("DP-U1 ruled …
   with DP-U1.1 to DP-U1.3 and DP-U3 in the same `RL-`") and item 2 ("DP-U2 ruled. Under W2, no
   dependency on S4") are discharged by this record once it is minted.
 - **Route the no-seeding carve-out to the maintainer** for a dated acceptance line, as stated
@@ -469,7 +469,7 @@ cell. The 2026-09-28 text is not edited:**
 - **For FD-1715 / WK-1251 (not ruled here, which is the FD's and the maintainer's):** as
   worded, FD-1715's derived check counts `BlobStore.put` call sites. The promotion writes a
   `BlobRow` through `promote_upload`, not `put`. The check needs to count every writer of a
-  `BlobRow` (at this tree, `put` only; after SL-1720, `put` and `promote_upload`), or the
+  `BlobRow` (at this tree, `put` only; after SL-1722, `put` and `promote_upload`), or the
   promotion's retain is outside its sight. It is in sight only because it lives in the same
   module.
 
@@ -486,14 +486,14 @@ ingested Dataset Version, or becomes one in the wrong workspace or from the wron
 test fails.** Each item names the broken input that it must red on. The slice's `LG-` shows each
 red before it is filed (`CLAUDE.md` §13).
 
-1. **The public path (PL-1719 R1, unchanged).** *Violation: any break between upload-url and an
+1. **The public path (PL-1721 R1, unchanged).** *Violation: any break between upload-url and an
    ingested `draft` version.* It is red on `main` by `KeyError: 'id'`, then by FastAPI's own
    `404` for the absent route, then by `api/datasets.py:546`'s "Blob not found". It runs on the
    DP-U2 worker and asserts `queue == "io"` and `status == "succeeded"` for both Jobs.
 2. **The unmodified registry (DP-U2 1).** *Violation: `blob.promote` not registered in
    `entrypoint.py`.* Breaker: delete the registration. R1 must then fail with the promotion Job
    not `succeeded`. A test-assembled registry would pass here, which is why it is not allowed.
-3. **A truncated file (PL-1719 R6).** *Violation: a 2-part Blob Upload with only part 1 sent is
+3. **A truncated file (PL-1721 R6).** *Violation: a 2-part Blob Upload with only part 1 sent is
    promoted.* Breaker: drop the part check. The Job then `succeeded` with the digest of part 1
    alone.
 4. **Pagination (new, R10).** *Violation: the part check reads one page.* A unit test feeds the
@@ -501,7 +501,7 @@ red before it is filed (`CLAUDE.md` §13).
    then 1001–1002) for a declared count of 1002. It asserts success, and asserts refusal when part
    1001 is absent. Breaker: read the first page only. The complete upload is then refused as
    missing 1001–1002.
-5. **Cross-workspace completion (PL-1719 R3).** *Violation: workspace B completes A's Blob
+5. **Cross-workspace completion (PL-1721 R3).** *Violation: workspace B completes A's Blob
    Upload.* Breaker: drop the workspace filter. B then gets `202`.
 6. **Cross-workspace promotion (new, R11, DP-U3).** *Violation: a `blob.promote` Job whose
    workspace differs from its Blob Upload's succeeds.* The test submits the Job directly through
@@ -509,7 +509,7 @@ red before it is filed (`CLAUDE.md` §13).
    and asserts `failed`, with the digest not readable in the Job's workspace. Breaker: remove the
    comparison. The Job then succeeds, and `GET /api/v1/blobs/{sha}` answers `307` to the other
    workspace.
-7. **One reference per Blob Upload (PL-1719 R8, plus new R12).** *Violation: a promotion that
+7. **One reference per Blob Upload (PL-1721 R8, plus new R12).** *Violation: a promotion that
    takes no reference, or a re-run that takes a second one.* After one promotion `ref_count ==
    1`. After running the handler a second time on the same Blob Upload it is still `1`. Breakers:
    drop `retain` (count 0), and drop the promoted-marker read (count 2).
@@ -523,9 +523,9 @@ red before it is filed (`CLAUDE.md` §13).
    `test_upload_to_ingest.py::…` **PASSED**. A `SKIPPED` there fails acceptance.
 10. **No seeding (the carve-out's predicate).** *Violation: R1 seeds a row of a kind its path
     creates.* `git grep -n -E "blob_fixtures|unit_of_work|session\.add|\.execute\(|Database\("
-    <slice head> -- backend/tests/test_upload_to_ingest.py` prints nothing. This is PL-1719
+    <slice head> -- backend/tests/test_upload_to_ingest.py` prints nothing. This is PL-1721
     acceptance item 4's pattern, widened by `Database\(`. The `LG-` lists R1's fixtures.
 11. **The spec text.** `git grep -n "FR-<n>"` (the minted id) at the slice head finds T1 in
     `docs/specs/07-platform.md`, T7 in `docs/specs/01-data-management.md`, and T6's
     `**Blob Upload**` row in `07` §2. `git log` shows the spec commit before every commit that
-    touches `backend/src` (PL-1719 acceptance item 3).
+    touches `backend/src` (PL-1721 acceptance item 3).

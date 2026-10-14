@@ -1,5 +1,5 @@
 ---
-id: FD-1721
+id: FD-1723
 family: finding
 title: Eleven closed Phase 1 requirements were closed with a clause unbuilt or unproven and no closure record gave them a section 13 verdict, so the phase records report coverage the code does not have
 status: active
@@ -10,9 +10,9 @@ corrected_by: []
 relates: [WK-658, WK-659, WK-660, WK-661, WK-664, WK-1178, WK-1251, FR-6, FR-33, FR-41, FR-80, FR-89, FR-100, FR-109, FR-110, FR-123, FR-127, NFR-467, FR-70, FD-1704, FD-1715, FD-1660, FD-1679, CR-721, CR-754, CR-819, CR-822, P1a, P1b]
 ---
 
-# FD-1721 — eleven closed Phase 1 requirements carry an unbuilt or unproven clause, and no closure record gave any of them a verdict
+# FD-1723 — eleven closed Phase 1 requirements carry an unbuilt or unproven clause, and no closure record gave any of them a verdict
 
-*(Minted 2026-10-14 as FD-1721 from working id 8027, in the D17 batch mint PR.)*
+*(Minted 2026-10-14 as FD-1723 from working id 8027, in the D17 batch mint PR.)*
 
 *(Working id 8027, reserved by the lead in `eta.md`, line stamped "2026-10-14 11:06:40 BST". It is not minted. Every `file:line` was read at `origin/main` `4420f91fa4112a1fcabcae23d3d50a1ad4fcbb59` on 2026-10-14, in a worktree of that tree. The two cited clean-ups of the input list are the maintainer's (by delegation) entry "2026-10-14 11:06:52 BST — D-list line-read RULED" in `to-lead.md`, item 2.)*
 

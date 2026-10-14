@@ -1,5 +1,5 @@
 ---
-id: FD-1726
+id: FD-1728
 family: finding
 title: Ten artifact tables declared immutable can be updated, deleted and truncated in place by the owner, with no row or TRUNCATE trigger, so an approved Rating Version's cells and algorithm change with no new version
 status: active
@@ -7,12 +7,12 @@ created: 2026-10-14
 owner: auditor
 tree: 8eaf6d5f9cd4204e1e077b44069d4afd395f1461
 corrected_by: []
-relates: [WK-1178, FD-1704, FD-1727, FR-44, FR-70, FR-229, FR-43, P2]
+relates: [WK-1178, FD-1704, FD-1729, FR-44, FR-70, FR-229, FR-43, P2]
 ---
 
-# FD-1726 — ten immutable artifact tables carry no trigger
+# FD-1728 — ten immutable artifact tables carry no trigger
 
-*(Minted 2026-10-14 as FD-1726 from working id 8037, in the D17 batch mint PR.)*
+*(Minted 2026-10-14 as FD-1728 from working id 8037, in the D17 batch mint PR.)*
 
 *(Filed under working id 8037, reserved by the lead. The raising run is the auditor-fr44 seat's, at `origin/main`
 `8eaf6d5f9cd4204e1e077b44069d4afd395f1461`, on a scratch database migrated to `head` (`d4e81b7a2c95`) and dropped
@@ -102,7 +102,7 @@ exercises it. `rating_versions` was also run (owner `UPDATE 2`, `DELETE 2`, `TRU
 `regression_runs`); it carries `approval_guard` and is not one of the ten.
 
 The `gip_app` attempts in the same file confirm the privilege layer would refuse these writes (`permission denied for table
-…`) **if the application ran as `gip_app`**; it does not, which is FD-1727. The owner writes above are the ones the application
+…`) **if the application ran as `gip_app`**; it does not, which is FD-1729. The owner writes above are the ones the application
 can make today.
 
 ## Why this is the silent-price class
@@ -139,6 +139,6 @@ the only one. The pattern is `backend/tests/test_backtests.py` (the first test i
 
 Carry forward, owner WK-1178: fixed in P2 (D17), by PL 8016's slice S-a (triggers first, effective even for the owner, so it
 closes the live risk fastest; migration-only, low conflict), as ruled at "2026-10-14 12:00:14 BST". The trigger layer is
-tamper-resistant only once S-b (FD-1727) lands: the owner can disable a trigger. It needs a resolution before any P3 start
+tamper-resistant only once S-b (FD-1729) lands: the owner can disable a trigger. It needs a resolution before any P3 start
 (`CLAUDE.md` §14). The event that next confirms or discharges it is the fix's merge, with the owner-write red shown on the
 base tree for each of the eleven tables by cause.
