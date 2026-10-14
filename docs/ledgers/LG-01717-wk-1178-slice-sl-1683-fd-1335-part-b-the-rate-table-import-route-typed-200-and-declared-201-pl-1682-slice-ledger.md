@@ -3,7 +3,7 @@ id: LG-1717
 family: ledger
 title: WK-1178 slice SL-1683 — FD-1335 Part B for the rate-table import route, a typed 200 (ImportPreview) and a declared 201 (RateTableVersion) (PL-1682), slice ledger
 status: closed                 # active → closed (§1.2a)
-created: 2026-10-14
+created: 2026-10-14            # original date 2026-10-12, set at the draft; minted 2026-10-14
 owner: executor
 tree: c26cfdc4d8b6f7e818975d9da1ca084a825611aa
 phase: P2
@@ -17,6 +17,8 @@ relates: [PL-1682, SL-1683, FD-1335, FD-1684, SL-1669, PL-1667, SL-1547, FR-235,
 # LG-1717 — WK-1178 slice SL-1683: the rate-table import route, a typed 200 and a declared 201
 
 Minted 2026-10-14 as LG-1717 from working id 9636, in the SL-1683 PR.
+
+*Disclosure: `created:` is the mint date 2026-10-14; the original date 2026-10-12 was set at the draft and is kept in the field's comment (check 31 requires `created:` to be non-decreasing with the id; the maintainer's (by delegation) "2026-10-14 13:44:39 BST").*
 
 **GO:** the lead's from-lead entry "2026-10-12 07:50:10 BST" (GO SL-1683; the ledger's working id 9636). Authority for the scope: the maintainer's (by delegation) entries in `to-lead.md` "2026-10-12 07:28:38 BST" (flag (1) → (d): type the import 200 first from model-schema types; no cast; S5's gate waits for this slice) and "2026-10-12 07:46:06 BST" (items 1 and 2: DP-1 the 201 typed as RateTableVersion; DP-2 no standalone schema).
 **MERGE-ACK:** not yet given.
