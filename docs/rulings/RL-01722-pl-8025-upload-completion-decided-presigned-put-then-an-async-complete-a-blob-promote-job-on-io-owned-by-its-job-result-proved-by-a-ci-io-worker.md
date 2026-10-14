@@ -113,7 +113,7 @@ checkout.
   (`blobs.py:185-187`); `retain` (`:439-441`); `collect_garbage` (`:379`) selects
   `BlobRow.ref_count == 0, BlobRow.created_at < cutoff`. FD-1715's remedy items 1 and 2, on
   `origin/fd-8023-blob-gc-unretained-2026-10-14` @`b94883a70f5831e65032523bb9b899986e7c38af`
-  (FD 8023's working-id essay under `docs/findings/`, lines 176-180 at `b94883a7`; the file since minted as FD-1715), verbatim: "1. **Retain at every owner.** Every
+  (FD-1715, `docs/findings/FD-01715-only-rating-versions-and-traces-retain-their-blobs-so-a-non-dry-blob-garbage-collection-would-delete-live-dataset-and-job-result-blobs.md:180-184`; quoted as it read at `b94883a7`, before the 11:24:38 widening of item 2 from `BlobStore.put` call sites to every `BlobRow` writer), verbatim: "1. **Retain at every owner.** Every
   blob-owning artifact takes a reference to its blob in the transaction that stores it, and
   releases it when the owner replaces or deletes the blob (row 2). 2. **A derived check, not a
   list.** Every `BlobStore.put` call site in `backend/src` is paired with a `retain` by its
