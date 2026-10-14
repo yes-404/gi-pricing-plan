@@ -152,7 +152,19 @@ that turns it green.
 
 Read only, cited: NFR-457 (`00-overview.md:547`), `07` §1.3 R1 (`07-platform.md:36-37`),
 NFR-467 (`01-data-management.md:1181`), NFR-475 and NFR-476 (the `02` measurement note),
-FR-7, FR-51, FR-62, FR-231, FR-232. **One spec edit only:** the dated clarification on
+FR-7, FR-51, FR-62, FR-231, FR-232.
+
+*(Dated 2026-10-14 by the planner, seat planner-p1fix, before the mint: the citation the sweep
+finds by stamp.)* The maintainer's (by delegation) entry headed **"2026-10-14 11:28:56 BST —
+FD 8027 severity → HIGH (the max of its limbs), per-limb table kept; the FR-127 GLM limb may
+touch G2: CHECK NOW (re lead 11:28:22)"** (FD 8027's ruling, in `to-lead.md`, read in full)
+says, in its LOW-limbs line, verbatim: *"**LOW limbs:** fixed in P2 where small (FR-33, 80,
+123, NFR-467's measurement joins the P2 NFR sweep); else carried with owner at §14."* **This
+plan does not yet carry that measurement:** NFR-467 is in the read-only list above, and its only
+other use is the 11:06:52 entry's item 1 as the extrapolation standard (Context; the NFR-485
+section). The difference is reported to the lead, and this line changes no scope, task or
+acceptance item; adding NFR-467 as a measured requirement is a change of this plan's scope for
+the lead to order. **One spec edit only:** the dated clarification on
 NFR-470's row that DP-3 orders (Task 3, Step 4); it records how the row is read and changes
 neither its subject nor its 1.2× bound. A reading that disagrees with a requirement is an
 `FD-`, never a re-wording (the ruling's third bullet). Two findings already filed from this
