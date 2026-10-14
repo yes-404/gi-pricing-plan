@@ -2843,6 +2843,8 @@ Opened `draft` 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 1
 
 *(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 10:51:08 BST — FR-420 → WK-1251 ACCEPTED; latent blob-GC DATA-LOSS finding: file in D16 (not D17) + a precondition line (re lead after 10:48:32)", item 3, which accepted the line above and ruled this precondition. **Precondition on this Work:** no non-dry `collect_garbage` is wired until every blob-owning artifact retains its blobs, proven by a DERIVED check (every `BlobStore.put` call site in `backend/src` is paired with a `retain` by its owning record, or is listed with a reason), and a dry-run report over a seeded database shows 0 live blobs selected.)*
 
+*(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 11:24:38 BST" (RL 8028 confirmed; FD 8023's check widened), which ruled that the derived check above and this precondition count **every `BlobRow` writer**, not `BlobStore.put` call sites only. The precondition's derived check therefore reads: every writer of a `BlobRow` in `backend/src` is paired with a `retain` by its owning record, or is listed with a reason. At `8eaf6d5f`, `git grep -nE 'BlobRow\(' 8eaf6d5f -- backend/src packages` prints two lines: the class definition (`backend/src/app/db/models.py:316`) and the only constructor, `backend/src/app/platform/blobs.py:186`, inside `BlobStore.put`; after SL 8026 (working id, `RL 8028`'s `blob.promote`), `promote_upload` is a second writer and is counted. FD 8023 carries the same widening.)*
+
 ### WK-1288 — Platform administration views: Settings and System status
 
 ```yaml
