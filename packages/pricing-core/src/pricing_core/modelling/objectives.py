@@ -370,8 +370,12 @@ def _ph_s(y: _Arr, f: _Arr, p: _P) -> tuple[_Arr, _Arr, _Arr]:
 
 
 def _pseudo_huber_loss(y: _Arr, f: _Arr, p: _P) -> _Arr:
-    _, _, s = _ph_s(y, f, p)
-    return p["delta"] ** 2 * (s - 1.0)
+    # `delta**2 * (s - 1)` cancels catastrophically for large delta (FD-1512): its
+    # evaluation error is `delta**2 * eps`, which the derivative check's noise floor does
+    # not model. `delta**2 * (s**2 - 1) = r**2` and `s**2 - 1 = (s - 1)(s + 1)`, so the same
+    # function is `r**2 / (s + 1)`, with no subtraction of near-equal terms.
+    _, r, s = _ph_s(y, f, p)
+    return r**2 / (s + 1.0)
 
 
 def _pseudo_huber_grad(y: _Arr, f: _Arr, p: _P) -> _Arr:
