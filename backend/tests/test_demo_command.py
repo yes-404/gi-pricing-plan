@@ -307,7 +307,13 @@ def test_the_journey_runs_with_a_worker_after_the_postconditions_and_before_the_
         "app.worker.entrypoint",
     ]
     assert "worker" in demo_script.worker_command()
-    assert "default,compute" in demo_script.worker_command()
+    command = demo_script.worker_command()
+    from app.platform.jobs import DEFAULT_QUEUE_FOR_KIND
+    from app.worker.celery_app import RELAY_QUEUE
+
+    expected = {q.value for q in DEFAULT_QUEUE_FOR_KIND.values()} | {RELAY_QUEUE.value}
+    consumed = set(command[command.index("--queues") + 1].split(","))
+    assert consumed >= expected, f"demo worker misses {sorted(expected - consumed)}"
     assert "beat" in demo_script.beat_command()
 
 

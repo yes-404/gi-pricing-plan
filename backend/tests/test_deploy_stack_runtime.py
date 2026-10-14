@@ -25,8 +25,10 @@ import time
 import urllib.request
 from collections.abc import Iterator
 from typing import Any
+from uuid import UUID
 
 import pytest
+from sqlalchemy import select
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 pytestmark = pytest.mark.skipif(
@@ -264,3 +266,221 @@ def test_a_submitted_job_reaches_a_terminal_state_through_the_compose_worker(
         f"job {job['id']} still {status!r} after {JOB_TERMINAL_BOUND_SECONDS}s: "
         "nothing consumed its queue"
     )
+
+
+# -- PL-8022 E4.3 extended: the io and scoring pools, asserting `succeeded` -------------------
+#
+# Run once in S4's build window (the gate does not set GIP_DEPLOY_TESTS), with the whole stack:
+#   GIP_DEPLOY_TESTS=1 GIP_N_SHA=<S4 head> GIP_N1_SHA=<S4 head's parent> \
+#     uv run pytest -q backend/tests/test_deploy_stack_runtime.py \
+#     -k "dataset_ingest or score_batch or sampled_trace or terminal_state"
+# NOT RUN at the red-first prep: no services were started (SL-1258 prep).
+#
+# `succeeded`, not "terminal": `failed` is terminal, and a Job whose kind has no handler goes
+# `failed` through a real worker without ever running (PL-8022 P5; the maintainer's
+# (by delegation) entry "2026-10-14 10:36:42 BST").
+
+#: Per-test bounds, beside JOB_TERMINAL_BOUND_SECONDS; the elapsed time is printed.
+INGEST_BOUND_SECONDS = 90
+SCORE_BATCH_BOUND_SECONDS = 90
+TRACE_BOUND_SECONDS = 60
+
+_ALL_PERMISSIONS = (
+    '["score:execute", "score:batch", "rating:read", "rating:compile", "job:read", '
+    '"dataset:read", "dataset:write"]'
+)
+
+
+def _wait_succeeded(job: dict[str, Any], headers: dict[str, str], bound: int) -> dict[str, Any]:
+    """Poll the Job to a terminal status or the bound, then assert it `succeeded`."""
+    started = time.monotonic()
+    current = job
+    while current["status"] not in _TERMINAL and time.monotonic() < started + bound:
+        time.sleep(1)
+        current = _api("GET", f"/api/v1/jobs/{job['id']}", headers)
+    elapsed = time.monotonic() - started
+    status = current["status"]
+    error = (current.get("error") or {}).get("code")
+    print(
+        f"job {job['id']} kind={job['kind']} queue={job['queue']} -> {status} in {elapsed:.1f}s "
+        f"(bound {bound}s)"
+    )
+    assert status == "succeeded", (
+        f"job {job['id']} ({job['kind']}, queue {job['queue']}) is {status!r} after "
+        f"{bound}s: " + ("never consumed" if status == "queued" else f"error {error}")
+    )
+    return current
+
+
+def _stack_with_seeded_workspace(n: str) -> tuple[str, dict[str, str]]:
+    """Bring up lb and every worker service; seed the bench rating version and a key whose
+    permissions cover these routes. Returns `(workspace_id, headers)`."""
+    _compose(n, "up", "-d", "--wait", "lb", *_worker_services(n))
+    _, headers, _ = _seeded_scoring_request()
+    _compose(
+        n, "exec", "-T", "postgres", "psql", "-U", "gipricing", "-d", "gipricing", "-c",
+        f"UPDATE service_accounts SET permissions = '{_ALL_PERMISSIONS}'::jsonb",
+    )
+    return headers["Workspace-Id"], headers
+
+
+def _worker_services(n: str) -> list[str]:
+    """Every compose service that runs a celery worker (DP-Q1 (b): one per pool), read from
+    `config`, so the test starts whatever the compose file declares and names no pool."""
+    config = json.loads(_compose(n, "config", "--format", "json").stdout)
+    return sorted(
+        name for name, svc in config["services"].items()
+        if "celery" in (svc.get("command") or []) and "worker" in (svc.get("command") or [])
+    )
+
+
+def _seed_blob_inputs(workspace_id: str, csv: bytes, frame_parquet: bytes) -> tuple[str, str]:
+    """Seed, by the backend's own models (psql-equivalent seeding, to be replaced by the public
+    upload path in SL 8026): a Dataset Version that makes the CSV blob readable by the workspace
+    (`blob_readable_by`), and one that carries the scoring table. Returns `(csv_sha, dv_id)`."""
+    harness = _bench()
+    rating = harness._bench_rating()
+    rating._backend_on_path()
+    from pydantic import SecretStr
+
+    from app.config import Environment, Settings
+    from app.db.models import DatasetVersionRow
+    from app.db.session import Database
+    from app.platform.blobs import BlobStore
+    from model_schema import new_uuid7
+
+    settings = Settings(
+        environment=Environment.LOCAL,
+        version="bench",
+        database_url=SecretStr(
+            "postgresql+asyncpg://gipricing:gipricing@127.0.0.1:"
+            f"{_mapped('postgres', 5432)}/gipricing"
+        ),
+        blob_bucket="gip-blobs",
+        blob_endpoint_url=f"http://127.0.0.1:{_mapped('minio', 9000)}",
+    )
+
+    async def seed() -> tuple[str, str]:
+        database, blobs = Database(settings), BlobStore(settings)
+        try:
+            async with database.unit_of_work() as session:
+                csv_ref = await blobs.put(session, csv, "text/csv")
+                frame_ref = await blobs.put(session, frame_parquet, "application/x-parquet")
+                for slug, version, sha, name in (
+                    ("e43-ingest-seed", 1, csv_ref.sha256, "source"),
+                    ("e43-batch-frame", 1, frame_ref.sha256, "scoring_frame"),
+                ):
+                    session.add(DatasetVersionRow(
+                        slug=slug, workspace_id=UUID(workspace_id), dataset_id=new_uuid7(),
+                        version=version, status="draft", created_by=new_uuid7(), currency="GBP",
+                        tables=[{"name": name, "blob": {"sha256": sha}}],
+                    ))
+                await session.flush()
+                row = (await session.execute(
+                    select(DatasetVersionRow.id).where(DatasetVersionRow.slug == "e43-batch-frame")
+                )).scalar_one()
+            return csv_ref.sha256, str(row)
+        finally:
+            await database.dispose()
+
+    return asyncio.run(seed())
+
+
+@pytest.mark.req("FR-415")
+@pytest.mark.req("FR-406")
+def test_a_dataset_ingest_job_succeeds_through_the_compose_io_worker(
+    built_n: str, down: None, beat_fixture: None
+) -> None:
+    """`dataset.ingest` routes to `io` and must reach `succeeded` through the compose io worker.
+
+    SEEDED, TO BE CONVERTED (the maintainer's (by delegation) entry "2026-10-14 11:10:26 BST"):
+    the CSV blob is made readable by a seeded Dataset Version instead of the public upload path.
+    The conversion to upload-url -> PUT -> complete -> POST versions, with no seeding, is an
+    acceptance line of SL 8026. Red cause: a worker that does not consume `io` leaves the Job
+    `queued`.
+    """
+    workspace_id, headers = _stack_with_seeded_workspace(built_n)
+    csv = b"policy_id,exposure,claim_count\nP1,1.0,0\nP2,0.5,1\nP3,1.0,0\n"
+    csv_sha, _ = _seed_blob_inputs(workspace_id, csv, b"PAR1")
+    _api("POST", "/api/v1/datasets", headers, {"slug": "e43-ingest", "currency": "GBP"})
+    job = _api(
+        "POST", "/api/v1/datasets/e43-ingest/versions", headers,
+        {"blob": csv_sha, "filename": "e43.csv"},
+    )
+    assert job["queue"] == "io"
+    _wait_succeeded(job, headers, INGEST_BOUND_SECONDS)
+
+
+@pytest.mark.req("FR-415")
+@pytest.mark.req("FR-406")
+def test_a_score_batch_job_succeeds_through_the_compose_scoring_worker(
+    built_n: str, down: None, beat_fixture: None
+) -> None:
+    """`score.batch` routes to `scoring` and must reach `succeeded`, not merely be consumed.
+
+    A REAL compiled bundle (the bench rating version: real GLM factors) and a real scoring table
+    whose columns are `03` section 4.8's reserved four plus the bundle's inputs. Red cause: a
+    worker that does not consume `scoring` leaves the Job `queued`; a probe with empty
+    parameters was consumed and failed `JOB_HANDLER_FAILED`, which this assert refuses.
+    """
+    import io
+
+    import polars as pl
+
+    harness = _bench()
+    rating = harness._bench_rating()
+    workspace_id, headers = _stack_with_seeded_workspace(built_n)
+    ctx = json.loads(rating._ctx().model_dump_json())
+    rows = 20
+    frame = pl.DataFrame({
+        "quote_id": [f"Q{i:03d}" for i in range(rows)],
+        "purpose": ["new_business"] * rows,
+        "effective_date": [ctx["effective_date"]] * rows,
+        "rating_version_ref": ["rating_version:placeholder@0"] * rows,
+        **{name: [value] * rows for name, value in ctx["inputs"].items()},
+    })
+    buffer = io.BytesIO()
+    frame.write_parquet(buffer, compression="zstd")
+    _, dataset_version_id = _seed_blob_inputs(workspace_id, b"x\n", buffer.getvalue())
+    ref = str(rating._RATING_VERSION_REF)
+    job = _api(
+        "POST", "/api/v1/score/batch", headers,
+        {"dataset_version_id": dataset_version_id, "rating_version_refs": [ref],
+         "table_name": "scoring_frame"},
+    )
+    assert job["queue"] == "scoring"
+    _wait_succeeded(job, headers, SCORE_BATCH_BOUND_SECONDS)
+
+
+@pytest.mark.req("FR-415")
+@pytest.mark.req("FR-406")
+def test_a_sampled_trace_is_produced_through_the_compose_scoring_worker(
+    built_n: str, down: None, beat_fixture: None
+) -> None:
+    """A sampled quote's `score.trace_produce` Job succeeds and the trace is listed with a body.
+
+    Sampled with certainty by raising the workspace's `rating.trace_sample_rate` to 1 (the
+    seeded version declines nothing; the executor confirms the settings key and the row shape at
+    the GO). Two red causes: `scoring` unconsumed (`queued`, "never consumed"), and the handler
+    unregistered (`failed`, `JOB_HANDLER_NOT_REGISTERED`, no trace row).
+    """
+    workspace_id, headers = _stack_with_seeded_workspace(built_n)
+    _compose(
+        built_n, "exec", "-T", "postgres", "psql", "-U", "gipricing", "-d", "gipricing", "-c",
+        "INSERT INTO workspace_settings (id, workspace_id, key, value) "
+        f"VALUES (gen_random_uuid(), '{workspace_id}', 'rating.trace_sample_rate', '1.0'::jsonb)",
+    )
+    harness = _bench()
+    ctx = json.loads(harness._bench_rating()._ctx().model_dump_json())
+    quote = _api("POST", "/api/v1/score", headers, ctx)
+    quote_id = quote.get("quote_id") or ctx["quote_id"]
+    jobs = _api("GET", "/api/v1/jobs?kind=score.trace_produce", headers)["items"]
+    assert jobs, "scoring a sampled quote submitted no score.trace_produce Job"
+    _wait_succeeded(jobs[0], headers, TRACE_BOUND_SECONDS)
+    rows = [
+        r for r in _api("GET", "/api/v1/traces", headers)["items"] if r["quote_id"] == quote_id
+    ]
+    message = f"no complete trace with a body for quote {quote_id}: {rows!r}"
+    assert rows, message
+    assert rows[0]["status"] == "complete", message
+    assert rows[0]["trace"], message

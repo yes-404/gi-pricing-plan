@@ -17,14 +17,20 @@ task it carries is reconstructible from the `outbox` table (FR-422, FR-406).
 
 from __future__ import annotations
 
+from typing import Final
+
 from celery import Celery
 
 from app.config import Settings, load_settings
+from model_schema.jobs import JobQueue
 
-__all__ = ["TASK_RELAY_OUTBOX", "TASK_RUN_JOB", "build_celery"]
+__all__ = ["RELAY_QUEUE", "TASK_RELAY_OUTBOX", "TASK_RUN_JOB", "build_celery"]
 
 TASK_RUN_JOB = "app.worker.run_job"
 TASK_RELAY_OUTBOX = "app.worker.relay_outbox"
+# stub for red-first (SL-1258 prep); replaced at the GO (PL-8022 E4.4: task_default_queue and the
+# beat entry read it).
+RELAY_QUEUE: Final = JobQueue.DEFAULT
 
 
 def build_celery(settings: Settings | None = None) -> Celery:

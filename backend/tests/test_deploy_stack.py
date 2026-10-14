@@ -13,10 +13,14 @@ from __future__ import annotations
 
 import copy
 import pathlib
+import sys
 from typing import Any
 
 import pytest
 import yaml
+
+from app.platform.jobs import DEFAULT_QUEUE_FOR_KIND
+from app.worker.celery_app import RELAY_QUEUE
 
 COMPOSE = pathlib.Path(__file__).resolve().parents[2] / "deploy" / "docker-compose.yml"
 
@@ -41,7 +45,7 @@ def _needs(services: dict[str, Any], name: str) -> set[str]:
 def _runs_alembic(service: dict[str, Any]) -> bool:
     command = service.get("command") or []
     words = command.split() if isinstance(command, str) else command
-    return "alembic" in words
+    return any("alembic" in word for word in words)
 
 
 def api_needs_no_worker(compose: dict[str, Any]) -> list[str]:
@@ -72,35 +76,69 @@ def migrations_are_their_own_step(compose: dict[str, Any]) -> list[str]:
     return problems
 
 
+def _celery_workers(compose: dict[str, Any]) -> dict[str, list[str]]:
+    """Every service whose command runs `celery -A app.worker.entrypoint worker`."""
+    found: dict[str, list[str]] = {}
+    for name, svc in compose["services"].items():
+        command = svc.get("command") or []
+        words = command.split() if isinstance(command, str) else list(command)
+        if "celery" in words and "worker" in words:
+            found[name] = words
+    return found
+
+
+def _queues_of(words: list[str]) -> set[str] | None:
+    """The comma-split argument after `--queues`, or None when the command has none."""
+    if "--queues" not in words:
+        return None
+    return set(words[words.index("--queues") + 1].split(","))
+
+
 def worker_has_a_memory_backstop(compose: dict[str, Any]) -> list[str]:
-    """FR-415: the worker service exists and a memory limit is applied to it."""
-    worker = compose["services"].get("worker", {})
-    command = worker.get("command") or []
-    problems = []
-    if "celery" not in command:
-        problems.append("worker does not run celery")
-    if not worker.get("mem_limit"):
-        problems.append("worker has no mem_limit")
+    """FR-415 (PL-8022 DP-Q1 (b)): at least one worker exists and EVERY worker has a limit."""
+    workers = _celery_workers(compose)
+    problems = [] if workers else ["no worker service runs celery"]
+    problems += [
+        f"{name} has no mem_limit"
+        for name in sorted(workers)
+        if not compose["services"][name].get("mem_limit")
+    ]
     return problems
 
 
-ROUTED_QUEUES = {"default", "compute"}
+def routed_queues() -> set[str]:
+    """Every pool the routing table names, read from the table at call time (PL-8022 E4.2)."""
+    return {q.value for q in DEFAULT_QUEUE_FOR_KIND.values()}
 
 
-def worker_consumes_every_routed_queue(compose: dict[str, Any]) -> list[str]:
-    """FR-415 / PL-1690 E4.2: the worker consumes every queue the platform routes to.
+def consumed_queues(compose: dict[str, Any]) -> set[str]:
+    """The union of `--queues` over every celery worker service."""
+    consumed: set[str] = set()
+    for words in _celery_workers(compose).values():
+        consumed |= _queues_of(words) or set()
+    return consumed
 
-    The outbox relay sends to `default` (the Celery default queue) and the compute kinds to
-    `compute`, so a worker on `compute` alone leaves a Job `queued` for ever.
-    """
-    command = compose["services"].get("worker", {}).get("command") or []
-    if "--queues" not in command:
-        return ["worker names no --queues"]
-    consumed = set(command[command.index("--queues") + 1].split(","))
-    missing = sorted(ROUTED_QUEUES - consumed)
-    extra = sorted(consumed - ROUTED_QUEUES)
-    return [f"queue {q} is routed to and not consumed" for q in missing] + [
-        f"queue {q} is consumed and not routed to" for q in extra
+
+def every_routed_queue_is_consumed(compose: dict[str, Any]) -> list[str]:
+    """FR-415 / PL-8022 E4.2 + E4.4: consumed >= routed | {RELAY_QUEUE}; derived, not listed."""
+    problems = [
+        f"worker service {name} names no --queues"
+        for name, words in sorted(_celery_workers(compose).items())
+        if _queues_of(words) is None
+    ]
+    expected = routed_queues() | {RELAY_QUEUE.value}
+    return problems + [
+        f"queue {q} is routed to and never consumed"
+        for q in sorted(expected - consumed_queues(compose))
+    ]
+
+
+def each_worker_consumes_one_pool(compose: dict[str, Any]) -> list[str]:
+    """FR-405 (PL-8022 DP-Q1 (b)): one service per pool, so each pool is sized independently."""
+    return [
+        f"worker service {name} consumes {len(queues)} queues"
+        for name, words in sorted(_celery_workers(compose).items())
+        if len(queues := _queues_of(words) or set()) > 1
     ]
 
 
@@ -114,7 +152,8 @@ CHECKS = [
     api_needs_no_worker,
     migrations_are_their_own_step,
     worker_has_a_memory_backstop,
-    worker_consumes_every_routed_queue,
+    every_routed_queue_is_consumed,
+    each_worker_consumes_one_pool,
     one_image_three_roles,
 ]
 
@@ -138,8 +177,53 @@ def test_the_worker_service_carries_a_memory_limit() -> None:
 
 
 @pytest.mark.req("FR-415")
-def test_the_worker_consumes_the_default_and_compute_queues() -> None:
-    assert worker_consumes_every_routed_queue(_load()) == []
+def test_every_routed_queue_is_consumed() -> None:
+    assert consumed_queues(_load()) >= routed_queues() | {RELAY_QUEUE.value}, (
+        every_routed_queue_is_consumed(_load())
+    )
+
+
+@pytest.mark.req("FR-405")
+def test_each_worker_service_consumes_one_pool() -> None:
+    assert each_worker_consumes_one_pool(_load()) == []
+
+
+@pytest.mark.req("FR-415")
+def test_the_consumed_set_is_derived_from_the_table_not_copied(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A hard-coded expected set cannot name a pool the table gained after it was written."""
+
+    class _Phantom:
+        value = "phantom"
+
+    from app.platform.jobs import JobKind
+
+    table: dict[Any, Any] = {**DEFAULT_QUEUE_FOR_KIND, JobKind.BLOB_GC: _Phantom()}
+    monkeypatch.setattr(sys.modules[__name__], "DEFAULT_QUEUE_FOR_KIND", table)
+    assert "queue phantom is routed to and never consumed" in every_routed_queue_is_consumed(
+        _load()
+    )
+
+
+@pytest.mark.req("FR-415")
+def test_the_relay_queue_is_asserted_even_when_no_kind_routes_to_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """DP-Q2 (a): route every kind to `compute` and drop `default` from the workers.
+
+    The routed-only form (b) passes on this input; the relay-aware form (a) names `default`.
+    """
+    from app.platform.jobs import JobQueue
+
+    moved = dict.fromkeys(DEFAULT_QUEUE_FOR_KIND, JobQueue.COMPUTE)
+    monkeypatch.setattr(sys.modules[__name__], "DEFAULT_QUEUE_FOR_KIND", moved)
+    compose = copy.deepcopy(_load())
+    _drop_queue_everywhere(compose, "default")
+    assert routed_queues() <= consumed_queues(compose), "form (b) is meant to pass here"
+    assert "queue default is routed to and never consumed" in every_routed_queue_is_consumed(
+        compose
+    )
 
 
 @pytest.mark.req("FR-434")
@@ -172,12 +256,31 @@ def _break_migrate_not_awaited(c: dict[str, Any]) -> None:
 
 
 def _break_no_memory_limit(c: dict[str, Any]) -> None:
-    del c["services"]["worker"]["mem_limit"]
+    for name in _celery_workers(c):
+        del c["services"][name]["mem_limit"]
+        break
 
 
-def _break_worker_drops_default_queue(c: dict[str, Any]) -> None:
-    command = c["services"]["worker"]["command"]
-    command[command.index("--queues") + 1] = "compute"
+def _drop_queue_everywhere(c: dict[str, Any], queue: str) -> None:
+    for name, words in _celery_workers(c).items():
+        queues = (_queues_of(words) or set()) - {queue}
+        words[words.index("--queues") + 1] = ",".join(sorted(queues))
+        c["services"][name]["command"] = words
+
+
+def _break_drop_io_consumer(c: dict[str, Any]) -> None:
+    _drop_queue_everywhere(c, "io")
+
+
+def _break_drop_scoring_consumer(c: dict[str, Any]) -> None:
+    _drop_queue_everywhere(c, "scoring")
+
+
+def _break_worker_consumes_two_pools(c: dict[str, Any]) -> None:
+    name = next(iter(_celery_workers(c)))
+    words = _celery_workers(c)[name]
+    words[words.index("--queues") + 1] = "compute,scoring"
+    c["services"][name]["command"] = words
 
 
 @pytest.mark.req("FR-434")
@@ -190,7 +293,9 @@ def _break_worker_drops_default_queue(c: dict[str, Any]) -> None:
         (_break_api_migrates_at_start, migrations_are_their_own_step),
         (_break_migrate_not_awaited, migrations_are_their_own_step),
         (_break_no_memory_limit, worker_has_a_memory_backstop),
-        (_break_worker_drops_default_queue, worker_consumes_every_routed_queue),
+        (_break_drop_io_consumer, every_routed_queue_is_consumed),
+        (_break_drop_scoring_consumer, every_routed_queue_is_consumed),
+        (_break_worker_consumes_two_pools, each_worker_consumes_one_pool),
     ],
 )
 def test_each_check_goes_red_on_the_break_it_exists_for(breaker: Any, check: Any) -> None:
