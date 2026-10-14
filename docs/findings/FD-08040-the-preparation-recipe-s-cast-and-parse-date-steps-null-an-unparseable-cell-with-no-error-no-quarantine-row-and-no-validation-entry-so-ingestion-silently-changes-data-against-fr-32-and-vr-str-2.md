@@ -27,7 +27,7 @@ Run record: `~/.claude/jobs/b6860f8f/tmp/strictfalse/out.txt` (with `run.py`, `j
 
 ## Finding
 
-**Severity: HIGH, proposed by the auditor (to be ruled), owner WK-1178, fixed in P2.** Run once,
+**Severity: HIGH, proposed by the auditor; RULED HIGH (CONFIRMED on the run) by the maintainer (by delegation), "2026-10-14 12:02:46 BST" in `channel/to-lead.md`, item (1): *"4 bad cells → ingest `succeeded` 4/4/0, no `_rejected` table, exactly 4 nulls written, then dataset.validate PASSED 5/5 approved rules. 01 FR-32 and VR-STR-2 are unmet on the production ingest path. Bad source data reaches pricing models as silent nulls, with a \"validated\" version on top. Owner WK-1178, fixed in P2."* Owner WK-1178, fixed in P2.** Run once,
 through the real path, the result was: **silent**.
 
 An analyst who ingests a file with a recipe `cast` or `parse_date` step gets a Dataset Version
@@ -185,7 +185,9 @@ The following were not run, so they are not evidence either way:
 ## Disposition
 
 **Fix with an owner: WK-1178, in P2** (the maintainer's (by delegation) "2026-10-14 11:52:51 BST"
-item (1)). **The fix's design is a planner decision point against FR-32 and VR-STR-2, and this
+item (1)). **Ruled 2026-10-14 12:02:46 BST by the maintainer (by delegation), `to-lead.md` item (1): the remedy has TWO limbs, both in scope, and the design DP is the planner's (refuse / quarantine / counted coercion).** *(a) the coercion:* `prepare.py:136` and `:142` `strict=False`, and the Job handler (`data_handlers.py:140`) never passes `required_non_null`. *(b) the blind validation:* `dtype_match` passes by construction after the cast, `date_parsed` checks type only, `range` ignores nulls, and `reject_rate` reads an always-empty `_rejected`. **Whatever the design, a coerced cell must produce a validation VERDICT** (a counted check, fail or warn per its declaration), so the version cannot read "validated" over a silent change. That is a constraint on every option in the table below: option A satisfies limb (b) only if the refusal is itself the verdict, and options B and C must add the counted check.
+
+**The fix's design is a planner decision point against FR-32 and VR-STR-2, and this
 finding takes no side.** The options, with what each needs, are:
 
 | | What it does | Needs | Cost |
