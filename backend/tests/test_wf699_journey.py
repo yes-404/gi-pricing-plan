@@ -17,6 +17,7 @@ the test names.
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 from typing import Any
@@ -471,39 +472,69 @@ def test_d7_is_not_a_skip_and_a_skip_without_an_owner_still_fails() -> None:
 def test_d7_splits_the_derived_changes_into_the_journeys_own_effects() -> None:
     """The maintainer's D7 ruling (to-lead "2026-10-12 01:25:10 BST"): attribution decomposes the
     change. The derived changes of a run (`id`, `kind`, `description`) become two groups: what the
-    journey did to the rate tables, and the structure it added, the ladder's mount (DP-1:
-    `step_added`, `<mount_point>: mount added (<ref>)`) among it; a pin on a rate table belongs
-    with the first. If either effect is empty there is nothing to decompose and the journey
-    stops."""
+    journey did to the rate tables, and the structure it added, the ladder's mount among it (DP-1:
+    `step_added`, `<mount_point>: mount added (<ref>)`). The list below is the real
+    `derived_changes` of the journey's D7 run at the SL-1696 gate (demo run `01a13bca-2560-…`,
+    2026-10-14); the mount is `c1` and no `sub_graphs` pin appears, the mount change accounting for
+    it. If either effect is empty there is nothing to decompose and the journey stops."""
+    columns = [
+        "base_premium_minor",
+        "rel_driv_age_band",
+        "rel_veh_age_band",
+        "rel_veh_power_band",
+        "rel_veh_brand",
+        "rel_veh_gas",
+        "rel_area",
+        "rel_region",
+    ]
+    after = [*columns, "ncd_factor", "expense_loading"]
+    product = " * ".join(columns)
+    premium = (
+        f"s_premium: consumes {json.dumps(columns)} → {json.dumps(after)}; "
+        f"expr {product} → {product} * ncd_factor * number(expense_loading)"
+    )
+    repoints = [
+        ("c4", "s_t_area", "area@1", "wf699-area@2"),
+        ("c5", "s_t_driv_age_band", "driv-age-band@1", "wf699-driv-age-band@1"),
+        ("c6", "s_t_region", "region@1", "wf699-region@2"),
+        ("c7", "s_t_veh_age_band", "veh-age-band@1", "wf699-veh-age-band@1"),
+        ("c8", "s_t_veh_brand", "veh-brand@1", "wf699-veh-brand@1"),
+        ("c9", "s_t_veh_gas", "veh-gas@1", "wf699-veh-gas@1"),
+        ("c10", "s_t_veh_power_band", "veh-power-band@1", "wf699-veh-power-band@1"),
+    ]
     derived = [
         {
             "id": "c1",
             "kind": "step_added",
-            "description": "m_ncd: mount added (sub_graph:ncd-ladder@1)",
+            "description": "m_ncd: mount added (sub_graph:ncd-ladder@3)",
         },
+        {"id": "c2", "kind": "step_added", "description": "s_loading: step added"},
+        {"id": "c3", "kind": "step_changed", "description": premium},
+        *(
+            {
+                "id": cid,
+                "kind": "table_repointed",
+                "description": (
+                    f"{step}: rate_table_ref rate_table:fremtpl2-{old} → rate_table:{new}"
+                ),
+            }
+            for cid, step, old, new in repoints
+        ),
         {
-            "id": "c2",
-            "kind": "table_repointed",
-            "description": "s_t_region: rate_table_ref x@1 → x@2",
+            "id": "c11",
+            "kind": "pin",
+            "description": "models pin model:fremtpl2-gbm-130a2e@1 added",
         },
-        {
-            "id": "c3",
-            "kind": "table_repointed",
-            "description": "s_t_area: rate_table_ref y@1 → y@2",
-        },
-        {"id": "c4", "kind": "step_added", "description": "s_loading: step added"},
-        {"id": "c5", "kind": "step_changed", "description": "s_premium: expr a → b"},
-        {"id": "c6", "kind": "pin", "description": "rate_tables pin rate_table:x@2 added"},
     ]
     effects = journey.split_effects(derived)
     assert effects == {
-        journey.EFFECT_RATE_TABLES: ["c2", "c3", "c6"],
-        journey.EFFECT_STRUCTURE: ["c1", "c4", "c5"],
+        journey.EFFECT_RATE_TABLES: [f"c{n}" for n in range(4, 11)],
+        journey.EFFECT_STRUCTURE: ["c1", "c2", "c3", "c11"],
     }
     flat = [cid for ids in effects.values() for cid in ids]
     assert sorted(flat) == sorted(d["id"] for d in derived)  # a partition: none lost, none twice
-    assert journey.split_effects(derived[1:3]) is None  # tables only: nothing else to decompose
-    assert journey.split_effects(derived[3:5]) is None  # structure only
+    assert journey.split_effects(derived[3:10]) is None  # tables only: nothing else to decompose
+    assert journey.split_effects([derived[0], derived[1], derived[2], derived[10]]) is None
     assert journey.split_effects([]) is None
 
 
