@@ -26,7 +26,7 @@ from sqlalchemy.ext.asyncio import (
 from app.config import Settings
 from app.observability.logging import get_logger
 
-__all__ = ["Database", "database_probe"]
+__all__ = ["Database", "database_probe", "reading"]
 
 _log = get_logger("app.db")
 
@@ -79,6 +79,23 @@ class Database:
 
     async def dispose(self) -> None:
         await self._engine.dispose()
+
+
+@asynccontextmanager
+async def reading(source: Database | AsyncSession) -> AsyncIterator[AsyncSession]:
+    """A session to read through: `source` itself when it is one, else a fresh one.
+
+    RL-1685 (PL-1454 DP-1 (a)): the `/score` request takes one request-scoped session and
+    hands it to every read it makes, so a warm quote costs one pool checkout. A caller that
+    has no such session (a worker, a script) passes the `Database` and gets the session it
+    always opened. A borrowed session is **not** closed here: its owner closes it, and
+    closing it mid-request would hand the next read a new connection.
+    """
+    if isinstance(source, AsyncSession):
+        yield source
+        return
+    async with source.session() as session:
+        yield session
 
 
 def database_probe(database: Database) -> Callable[[], Awaitable[str | None]]:

@@ -32,12 +32,14 @@ for that.
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import Depends, Header, Request
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.oidc import OidcVerifier
 from app.auth.service import AuthenticatedIdentity, authenticate_api_key, authenticate_bearer
@@ -47,7 +49,15 @@ from app.db.session import Database
 from app.errors import PlatformError
 from model_schema import ActorKind, Principal
 
-__all__ = ["WORKSPACE_ID_DESCRIPTION", "Caller", "Identity", "IdentityDep", "require_caller"]
+__all__ = [
+    "WORKSPACE_ID_DESCRIPTION",
+    "Caller",
+    "Identity",
+    "IdentityDep",
+    "RequestSessionDep",
+    "request_session",
+    "require_caller",
+]
 
 #: Development-only header. Named so it cannot be mistaken for a supported mechanism.
 #: Its former sibling `x-dev-workspace-id` is gone (W6b-11, 2026-08-26): the dev path
@@ -86,6 +96,21 @@ def _database(request: Request) -> Database:
 
 
 DatabaseDep = Annotated[Database, Depends(_database)]
+
+
+async def request_session(database: DatabaseDep) -> AsyncIterator[AsyncSession]:
+    """The one session a request reads through (RL-1685, PL-1454 DP-1 (a)).
+
+    FastAPI resolves a dependency once per request however many dependencies and handlers
+    name it, so API-key authentication, the permission check, FR-452's limit Setting and the
+    route's own reads share one session and therefore one pool checkout. The session takes a
+    connection only at its first statement and returns it when the request ends.
+    """
+    async with database.session() as session:
+        yield session
+
+
+RequestSessionDep = Annotated[AsyncSession, Depends(request_session)]
 
 
 @dataclass(frozen=True)
@@ -203,6 +228,7 @@ WORKSPACE_ID_DESCRIPTION = (
 async def require_caller(
     request: Request,
     settings: SettingsDep,
+    session: RequestSessionDep,
     workspace_id: Annotated[
         str | None, Header(alias="Workspace-Id", description=WORKSPACE_ID_DESCRIPTION)
     ] = None,
@@ -237,8 +263,12 @@ async def require_caller(
 
     api_key = credential if scheme == "apikey" else request.headers.get("x-api-key")
     if api_key:
-        async with database.unit_of_work() as session:
-            identity = await authenticate_api_key(session, api_key)
+        identity = await authenticate_api_key(session, api_key)
+        if session.dirty:
+            # The throttled `last_used_at` stamp (RL-1685 DP-1 (b)) is the only write this
+            # path makes, and only about once a minute: commit it before the handler's reads.
+            # A request that stamped nothing commits nothing, so it keeps its one connection.
+            await session.commit()
         return _select_workspace(identity, selected)
 
     # The dev path consumes the same `Workspace-Id` header with the same membership
