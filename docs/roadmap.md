@@ -2453,42 +2453,6 @@ relates: [PL-1682, FD-1335, FD-1684, PL-1364, SL-1367, PL-1667, SL-1669, SL-1547
 
 On the maintainer's (by delegation) entry "2026-10-12 07:28:38 BST — S5 flags: (1) NEITHER (a) nor (c): type POST …/import's 200 FIRST in a tiny WK-1178 slice (d), with (a)+tripwire only as a named fallback; …", flag (1): `POST /api/v1/rate-tables/{slug}@{version}/import` publishes its 200 as the existing `model-schema` `ImportPreview` (`diff: RateTableDiff`, `created_by_import: ImportVerdict`; `rating.py:1363`) and its 201 (`confirm: true`) as `RateTableVersion`, in the manual-edit route's form (`response_model=None` with a `responses` map, `api/rate_tables.py:138-147`). No model is added or composed. The route leaves `UNTYPED_2XX_PENDING_PART_B` (`backend/tests/test_contracts.py:3193`, FD-1335 Part B's list, not FD-1366's), and `docs/contracts/openapi/generated.json` and the frontend client are regenerated. Spec first: a dated clause on `03` §5.1's import row (`:1046`, FR-235). Red first by cause: the published 200 has no `$ref` today; the stale-list test after regeneration; a real preview and confirm response round-trip through the published models (a guard, shown red on a planted extra field). `FD-1335` stays active with three routes in its Part B list. The export routes are out of scope (`FD-1684`). WK-675 S5 (`SL-1547`) uses the generated types after this slice merges, and S5's gate waits for it (07:28:38). Plan: Work-plan delta `PL-1682`. **Activation needs:** DP-1 (the 201 published too) and DP-2 (no standalone schema file) MET, both accepted by the maintainer (by delegation), "2026-10-12 07:46:06 BST", items 1 and 2; PL-1682 set `active` in this slice's activation commit; the shared-path census re-checked at the GO (`generated.json` against `SL-1547`; the later PR regenerates); the lead's executor GO. *(Cut 2026-10-12 by the planner under working id 9911, reserved by the lead, from-lead "2026-10-12 07:29:15 BST"; minted 2026-10-12 as SL-1683 from working id 9911, early, on the maintainer's (by delegation) entry "2026-10-12 07:46:06 BST".)*
 
-#### SL-8017 — WK-1178 fix slice (S-a) — FD 8037 and FD-8007: the eleven artifact tables append-only at the database, red first
-
-```yaml
-id: SL-8017
-family: slice
-title: WK-1178 fix slice (S-a) — FD 8037 and FD-8007: the eleven artifact tables append-only at the database, red first
-status: draft                    # draft → active → closed | retired (§1.2a)
-created: 2026-10-14
-owner: planner                   # cut by the planner (draft); lead dispatches (active)
-tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
-phase: P2
-work: WK-1178
-corrected_by: []
-relates: [PL-8016, FD-8007, SL-8041, RL-8001, SL-1274]  # forward-cites kept out until D17 mints them: FD 8037, FD 8038
-```
-
-On the maintainer's (by delegation) entry "2026-10-14 12:00:14 BST" (`to-lead.md`), remedy S-a: FD 8037 (HIGH) and FD-8007, owner WK-1178, P2. One Alembic migration attaches `artifact_append_only()`'s row and `TRUNCATE` triggers to `factors` and eight of the ten tables FD 8037 names; `rate_tables` and `reference_table_versions` get a named column guard (forward-only `current_version`; `draft` to `published` only) plus the `TRUNCATE` trigger, each with its reason. Layer 1 for all eleven is in the same migration and is inert until SL-8041. The append-only set is derived from a declaration on every mapped table, never from grants. The reds are owner `UPDATE`, `DELETE` and `TRUNCATE` refused on each table, red on the base. Every legitimate in-place write is removed or declared (the plan's E4 table: `rate_tables.py:1465` and `:1480`, `reference.py:229`, and four test writers). FD-8007's `gip_app` test (DP-1, ruled). `FR-44`, `FR-70` and `FR-229` get dated lines. Lands right after the G2 merges, before the 4 Nov P2 code freeze. Plan: `PL-8016`, a dated Work-plan delta; DP-8 to DP-13 ruled by the maintainer (by delegation), `to-lead.md` "2026-10-14 12:18:57 BST" item (2) (DP-8's test-file fallback only if G2 slips past S-a's window). *(Cut 2026-10-14 under working id 8017 for FD-8007 alone; re-cut the same day as S-a, on the 12:00:14 entry.)*
-
-#### SL-8041 — WK-1178 fix slice (S-b) — FD 8038: the application connects as a login role with gip_app's grants, never as the owner
-
-```yaml
-id: SL-8041
-family: slice
-title: WK-1178 fix slice (S-b) — FD 8038: the application connects as a login role with gip_app's grants, never as the owner
-status: draft                    # draft → active → closed | retired (§1.2a)
-created: 2026-10-14
-owner: planner                   # cut by the planner (draft); lead dispatches (active)
-tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
-phase: P2
-work: WK-1178
-corrected_by: []
-relates: [PL-8016, FD-8007, SL-8017, SL-1455]  # forward-cites kept out until D17 mints them: FD 8038, FD 8037
-```
-
-On the same entry, remedy S-b: FD 8038 (HIGH), owner WK-1178, P2. The application and the worker connect as `gip_app_login`, a member of `gip_app` provisioned for compose, CI and the shared container; migrations alone use the owner, through a new `GIP_MIGRATION_DATABASE_URL`. The test `database` fixture runs as the login role. The grants are found red first from that run, written as one migration with a test named on each line, and pinned by an exact map over every table. Startup refuses an owner, a superuser or a disabled artifact trigger. The login role cannot `DISABLE TRIGGER`: that is the proof that S-b makes SL-8017's triggers tamper-resistant. After SL-8017, the G2 merges and the `SL-1455` NFR session, before the 4 Nov P2 code freeze, with a full gate and a compose run on a fresh volume. The login role is asserted not superuser, not owner, `NOBYPASSRLS`, and unable to `SET session_replication_role`, red on `main` (the same entry's superuser item). Plan: `PL-8016`; DP-14 to DP-20 ruled by the maintainer (by delegation), `to-lead.md` "2026-10-14 12:18:57 BST" item (2). *(Cut 2026-10-14 under working id 8041, reserved by the lead, `eta.md` "2026-10-14 12:02:15 BST".)*
-
 #### SL-8031 — WK-1178 fix slice — FD 8027's HIGH limbs: a capped GLM spec fits capped (FR-127), and the banding check runs at fit (FR-100)
 
 ```yaml
@@ -2506,6 +2470,66 @@ relates: [PL-1542, SL-1543, PL-1674, SL-1675]
 ```
 
 On the maintainer's (by delegation) entries "2026-10-14 11:06:52 BST" (item 2: *"Any HIGH limb is fixed in P2"*), "2026-10-14 11:28:56 BST" (FD 8027, HIGH; both limbs fixed in P2 under WK-1178, red first) and "2026-10-14 11:29:53 BST" (the FR-127 GLM fix is off the G2 path, conditionally). **FR-127, GLM limb:** `fit_glm` never reads `loss_treatment` (`glm.py:577`), so a capped `GlmSpec` fits uncapped while its spec and `spec_hash` say capped. The fix applies `apply_loss_treatment` (`gbm.py:178`, moved to its own module, `loss_treatment.py`, DP-L1) at the response read, and refuses `spliced` and `excess` by name, as `fit_gbm` does. **The EBM arm too** (DP-L2 (a)): `fit_ebm` ignores `loss_treatment` at `ebm.py:209`, the same class; an auditor adds the limb to FD 8027 before the mint. **FR-100:** `check_banding` (`bandings.py:524`) has no fit-path caller. The fix runs it at each fit entry over the rows fitted, after FR-111's weight-0 exclusion (DP-B1 (a)) and before factor resolution: `BAND_EMPTY` always, `BAND_BELOW_MIN_EXPOSURE` under `fail`, and under `warn` a typed `banding_warnings` field on the three fit results, through `model-schema` with `docs/contracts/` regenerated and the frontend's generated types following (DP-B2 (a)). The fit Job maps `BandingError` to a `409` that carries its code. Reds R1 to R8 are first seen red on main. **DP-G1:** Task 0 Step 3's probe runs before any code; any `BAND_EMPTY` for the A-4 severity GLM is a STOP to the maintainer. **SL-1543's guard test is not touched**; if DP-A4-3 switches to (y), it changes only with this slice's merge. If the 11:29:53 binding condition fires, the FR-127 limb joins G2 and merges before SL-1543 resumes (DP-S1). Plan `PL-8030` (a WK-1178 Work-plan delta; `draft`). **Activation needs:** FD 8027 minted, with its EBM limb; the decision points ruled — MET, every one, by the maintainer's (by delegation) entry "2026-10-14 11:52:51 BST", item (2); the plan made `active` by a dated line; Task 0 Step 3's G2 probe clean for the A-4 severity GLM, or the maintainer's ruling on it; a free build lane. *(Row cut 2026-10-14 by the planner, planner-fd8027; working ids 8031 and 8030 reserved by the lead in `handover/eta.md`.)*
+
+#### SL-8035 — WK-1178 slice — the P2 NFR measurement sweep: NFR-468, NFR-470, NFR-485 and NFR-1443 measured DIAGNOSTIC with pre-registered reading rules; NFR-472's red-first test
+
+```yaml
+id: SL-8035
+family: slice
+title: WK-1178 slice — the P2 NFR measurement sweep: NFR-468, NFR-470, NFR-485 and NFR-1443 measured DIAGNOSTIC with pre-registered reading rules; NFR-472's red-first test
+status: draft                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-14
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 8eaf6d5f9cd4204e1e077b44069d4afd395f1461
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-8034, RL-1441, LG-1444, SL-1259, RL-1614]  # forward-cites kept out until their batch mints them: FD 8046, FD 8047
+```
+
+On the maintainer's (by delegation) entry "2026-10-14 11:06:52 BST — D-list line-read RULED (35 ids; lineread-dlist-2026-10-14.md at ba68a6da) (re lead 11:06)" (`to-lead.md`), item 3: one slice before the code freeze. NFR-468 (`01`: the one-way read, p95 < 300 ms, never computed), NFR-470 (`01`: storage ≤ 1.2× the parquet payload; dedup by content hash), NFR-485 (`02`: 5 M × 60 fit within 32 GB) and NFR-1443 (`03`: the cells-diff page p95 ≤ 300 ms, and the 2× property) are each measured on the shared VM with a committed instrument (`scripts/measure-p2-nfr-sweep.py`; `scripts/bench-model.py --peak hwm`), labelled DIAGNOSTIC, latency figures also "server-side, in-process, excludes network". Thresholds and reading rules are committed before the first run. The contention factor is first re-measured on this box (≥ 3 interleaved ALONE/contended pairs, the max ratio), and the near-bound line is 1 / that factor rounded down, 0.43 until then ("2026-10-14 12:25:22 BST"). A latency reading above that fraction of its budget and within it is NEAR-BOUND and becomes a named extra reading for nfr-bench-1's second session (WK-674 S5's); NFR-485's 5 M × 60 run per arm joins that approved session under `MemoryMax=30G`, by one dated line under `SL-1259`'s row amending its run list (`RL-1614` item 6); this slice does not run them, and a cap-kill becomes an `FD-`. NFR-470 is read on the Dataset Version's own storage, the source upload excluded, with its dedup limb measured, and that reading is written as one dated clarification on NFR-470's row, the slice's only spec edit. NFR-472 is a test gap: one red-first test, red because `replace_rule_set` audits no `before` (`validation_rules.py:894-912`), and its fix; the purge limb and the green-by-construction docstring are `FD 8047`, and NFR-485's construction clause against the code is `FD 8046`. **A reading that comes out OVER goes to the lead for an `FD-`. Its requirement's text is not changed.** Plan: Work-plan delta `PL-8034`. **Activation needs:** DP-1 to DP-7 of `PL-8034` MET, ruled by the maintainer (by delegation), "2026-10-14 12:07:40 BST", DP-1 amended "2026-10-14 12:25:22 BST" (`to-lead.md`); the plan minted or GO'd on its working ids, and `FD 8046`/`FD 8047` minted; a free build lane; the lead's executor GO. *(Cut 2026-10-14 by the planner, seat planner-nfrsweep, under working id 8035, reserved by the lead with `PL-8034`.)*
+
+#### SL-8043 — WK-1178 fix slice — FD 8040: a recipe cell that does not parse is never silently nulled, and validation gives it a verdict (FR-32, VR-STR-2)
+
+```yaml
+id: SL-8043
+family: slice
+title: WK-1178 fix slice — FD 8040, a recipe cell that does not parse is never silently nulled and validation gives it a verdict (FR-32, VR-STR-2)
+status: draft                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-14
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1542, SL-1543]
+```
+
+On the maintainer's (by delegation) entries "2026-10-14 11:52:51 BST" (item (1): the recipe cast silently nulls unparseable values; the fix's design is a planner DP against FR-32 and VR-STR-2), "2026-10-14 12:02:46 BST" (item (1): FD 8040 HIGH, confirmed; owner WK-1178, fixed in P2; two limbs, both in scope) and "2026-10-14 12:23:36 BST" (every DP ruled).
+
+**Limb (a), the coercion:** the recipe's `cast` and `parse_date` run with `strict=False` (`prepare.py:136`, `:142`), so a non-null source cell that does not parse becomes null with no error. The Job path never quarantines anything.
+
+**Limb (b), the blind validation:** `dtype_match` passes by construction, `date_parsed` checks the type only, `range` ignores nulls, and `reject_rate` reads a `_rejected` table that is never written. The auditor's run at `a3fc2e8d` gave ingest `4/4/0`, four nulls written, then validation `pass` 5/5.
+
+**Ruled:**
+- **DP-C1 → (Q), quarantine.** The row's source text goes into `PreparationResult.rejected` (declared, never filled), then into the version's `_rejected` table, named by column and step, and is counted in `rows_rejected`. The quarantine is **complete for each row**, and `rows_read == rows_written + rows_rejected` is asserted.
+- **DP-C3 → (ii).** `reject_rate`, `dtype_match` and `date_parsed` each give a verdict at the declared severity: the last two through `measured.coerced_cells`, even without `reject_rate`. `range` is unchanged, with its guard stated. No tolerance.
+- **DP-C2 → (a).** No handler change.
+
+**Reds:** R1 to R6 are run through `execute_job` over the auditor's 4 rows plus `p5`, each red on main by cause. R6 asserts that after ingest a column's `null_count` equals the source's genuine empty cells only.
+
+**G2 (binding):** before any code, Task 0 Step 3 counts through Polars, with the seed recipe's own cast, over all 678 013 freMTPL2 rows and the seeded 20 000-row sample. A non-zero count is a STOP to the maintainer. The planner's proxy count of 0 is noted, not relied on.
+
+**SL-1543:** its `np.float64(…)` cells were fixed at `4ec537c3`. Whichever of the two merges second re-runs SL-1543's tests and the WF-699 journey test. The roadmap adjacency with SL-8031 is resolved in the P1 PR (12:23:36).
+
+Plan `PL-8042` (a WK-1178 Work-plan delta; `draft`). **Activation needs:**
+- FD 8040 minted;
+- every DP ruled — MET, by the maintainer's (by delegation) entry "2026-10-14 12:23:36 BST";
+- the plan made `active` by a dated line;
+- Task 0 Step 3's G2 probe clean on both populations, or the maintainer's ruling on it;
+- a free build lane.
+
+*(Row cut 2026-10-14 by the planner, planner-fd8040; working ids 8043 and 8042 reserved by the lead.)*
 
 #### SL-8045 — WK-1178 fix slice — the failed-authentication audit: a keyed-workspace refusal's audit row survives the 401, and every failure is counted by reason
 
