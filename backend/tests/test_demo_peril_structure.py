@@ -79,7 +79,8 @@ def _book(
             continue
         mean = 150_000.0 if a else 90_000.0
         amount = int(round(float(_RNG.gamma(shape=2.0 * c, scale=mean / 2.0))) + c)
-        severity = repr(float(amount) / int(c))  # float(), int(): a numpy scalar's repr is 'np.float64(..)', which the cast reads as null
+        # float()/int(): a numpy scalar's repr is 'np.float64(..)', which the cast reads as null
+        severity = repr(float(amount) / int(c))
         if bad_row is not None and not planted:
             severity = "" if bad_row == "null" else "0.0"
             planted = True
