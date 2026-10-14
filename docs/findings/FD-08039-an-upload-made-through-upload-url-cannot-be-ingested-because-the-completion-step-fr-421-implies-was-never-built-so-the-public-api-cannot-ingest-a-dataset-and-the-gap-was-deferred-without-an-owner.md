@@ -166,7 +166,7 @@ of `d068fb00`'s finding and is not a remedy.
 - **Against the silent-wrong-outcome class (FD-1660, FD-1679, HIGH).** This outcome is loud (a
   `404`), so no wrong number is produced. It is HIGH on capability rather than on silence: the
   platform's front door does not open for a client's own file, and the whole lifecycle
-  (`WF-00698` A5 onward) starts there. A loud failure that blocks the primary use is the weaker
+  (`WF-698` A5 onward) starts there. A loud failure that blocks the primary use is the weaker
   claim, and the proposal says so.
 - **The process limb raises it.** A gap that three artifacts (a docstring, a spec row, a PR body)
   all recorded and none owned, for 16 days, is the failure `CLAUDE.md` §14 names. §14 also bars
