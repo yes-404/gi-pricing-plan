@@ -5,21 +5,21 @@ title: WK-1178 slice SL-1455 — NFR-489, the /score request path meets its p99 
 status: active
 created: 2026-10-11
 owner: executor
-tree: d699a561d6a93f33b74beb9c07023f8e655bb8c7
+tree: 5e00fa74f380b201c9f2a8d555822f91eacf2d0e
 phase: P2
 work: WK-1178
 slice: SL-1455
 plans: [PL-1454]
 corrected_by: []
-relates: [PL-1454, FD-1411, SL-1259, RL-1263, RL-921, RL-1379, NFR-489]
+relates: [PL-1454, FD-1411, SL-1259, RL-1263, RL-921, RL-1379, RL-1685, "RL 8024 (working id)", NFR-489]
 ---
 
 # LG-9932 — WK-1178 slice SL-1455: the NFR-489 remedy for `/score`
 
 *(LG-9932 is a working id reserved by the lead; the lead mints it at the merge turn.)* Executed by
 `executor-sl1455` from PL-1454, base `origin/main` `d699a561d6a93f33b74beb9c07023f8e655bb8c7`. Times are
-BST (`TZ=Europe/London date`) unless marked. **This ledger covers Task 0 only** (the GO is "Task 0 only");
-Tasks 1–6 wait on the DP-1…DP-4 ruling from Task 0's record.
+BST (`TZ=Europe/London date`) unless marked. **This ledger covers Tasks 0–3** (the GO was "Task 0 only"; Tasks 1–3 followed once
+RL-1685 ruled DP-1…DP-4 from Task 0's record); Tasks 4–6 are open.
 
 **GO:** `to-lead.md` "2026-10-10 21:38:39 BST — DISPATCH GO: SL-1455 (Task 0; FD-1411's NFR-489 HTTP remedy) and WK-674 S3 (PL-1583); OP-1455-M1/M2/M3; the register :293 record", item 1: "GO SL-1455, Task 0 only (attribution, no fix). Tasks 1–6 wait on DP-1…DP-4, ruled from Task 0's record (need 5). Need 4: Task 0 re-derives bench-rating.py's cites and the model_call scoring path at its base, quoted in the record." Item 5: "MEASUREMENT WINDOW (need 3): the lead owns it. The sweep runs ALONE: both slots, no gate, no SL-1526 proving run, no migrate --verify. Task 0's own timing runs need the same. Book it in eta, with its start and end stamps in the LG." Corrected for Task 4 only by "2026-10-11 11:02:35 BST — DP-S5-a RULED (a) …" item 2 (SL-1455's Task 4 is the FD-1411 remedy proof; the NFR-489 exit verdict is SL-1259's). The timings are DIAGNOSTIC on this box: "2026-10-11 10:57:16 BST" item 3.
 **MERGE-ACK:** not yet given.
@@ -38,11 +38,14 @@ Tasks 1–6 wait on the DP-1…DP-4 ruling from Task 0's record.
 - [x] Task 0, rerun with asyncio debug off — RUN 2026-10-12 02:16:09 – 02:20:29 BST (Build log, last entry); both arms CLEAN by the pre-registered rule.
 - [ ] Task 0, Step 5 — the tabulation: `results.md` is generated (path in the last Build log entry); the one-line (i)–(iii) statements and any rerun are the lead's ruling (asyncio debug mode swamps the run).
 - [ ] Task 0, Step 6 — STOP; hand to the lead for DP-1…DP-4.
-- Tasks 1–6 — not started (need 5).
+- [x] Task 1 — Steps 1–3 committed (`c9a64068`, `1ab36c9f`); Step 4's `--help` recorded; its `--rates 25` run is owed to Task 4's window (Build log, 2026-10-14 audit-fix entry).
+- [x] Task 2 — the timing-free guard, red first (`d943c2d0`, `fecaf7b6`).
+- [x] Task 3 — Steps 1–4 delivered (`0544220a`); Step 5's byte-identity is owed to Task 4's window (Build log).
+- Tasks 4–6 — not started.
 
 ### Gate
 
-Not applicable to Task 0 (no code is committed). The two-half gate is Task 5's.
+Not applicable to Tasks 0–3 beyond the per-task runs in the Build log. The two-half gate is Task 5's.
 
 ### Audit
 
@@ -331,6 +334,16 @@ checks (cost file plus the two new tests) against the new tip, then the Task 4 s
   - **The 375 baseline's source is UNKNOWN, and is not chased (that ruling).** One further observation, not an explanation: in the final test file the second `create_app` in a process showed a baseline of 0, so the 375 may belong to the first `create_app` of a process.
   - **Regression, separate runs at `0544220a`:** `test_score.py` 52 passed; `test_traces.py` 39; `test_score_rate_limit.py` 9 passed, 1 skipped; `test_auth_keys.py` 20; `test_score_compare.py` 20; `test_api_authorisation_sweep.py` 9; `test_bench_rating_header.py` with `test_bench_rating_calls.py` 4. Static: `ruff check backend/src` clean, `mypy` no issues in 239 source files, `lint-imports` 4 kept 0 broken.
   - **Write set, widened by RL-1685 option (i):** `api/score.py`, `api/deps.py`, `api/authz.py`, `auth/service.py`, `db/session.py`, `main.py` and `platform/rate_limit.py` (`enforce` takes a session).
+
+- **2026-10-14 — audit fixes F1–F4 (executor-sl1455b), code commit `5e00fa74`, DB `gipricing_sl-1455_df5ed723`, `run-small.sh`.**
+  - **Task 1 Step 3, the header test's red line.** Script and test at `d943c2d0` (the script as of `c9a64068`), run from a scratch copy: `test_bench_rating_header.py` is `3 failed` — `AssertionError: machine: Intel(R) Xeon(R) CPU @ 2.20GHz, 8 cores, 32.9 GB RAM, 1-minute load average 6.08 at startup / warmup 200 calls, ...` with `assert None` from `re.search('\\bN = 1\\b', ...)`, `SystemExit: 2` for the flag, and `TypeError: _serve() got an unexpected keyword argument 'workers'`. On the branch tip the same file is `3 passed`.
+  - **Task 1 Step 4.** `uv run python scripts/bench-rating.py --help` lists `--http`, `--rates RATES`, `--rung-seconds`, `--port`, `--speedup`, `--dsn`, `--bucket` and `--workers WORKERS` ("N, the uvicorn worker processes of the replica under test (RL-1685)"). The `--rates 25` invocation is **owed to Task 4's window**: `--http` "holds the compose stack exclusively" (its own help text) and spawns a server and a load generator, which this seat does not run beside a held gate (audit F3: "may be recorded as owed to Task 4's window").
+  - **Task 3 Step 5, byte-identity.** **Owed to Task 4's window**, for the same reason: it needs the bench quote scored against a compiled bundle on `main` and on the head, which is the Task 4 fixture. The code-read half: this commit changes `score.py` only by closing the read session before the sampled write, and `deps.py`/`authz.py` only by who closes the session; neither touches `score_one`, `build_scoring_result` or the response serialisation.
+  - **F1, red by cause then green.** `test_request_connections.py::test_an_api_key_request_to_a_require_caller_route_holds_no_connection_in_the_handler` (a second `GET /me` with a Service Account key; `pool.checkedout()` read when the handler begins its own reads): red `assert [1] == [0]` on `cc9512ca` (an unstamped key: the first request commits the `last_used_at` stamp, which releases the connection, so the first version of the test passed for the wrong reason and warms the key first), green `[0]` after `require_caller` closes the request session. `requires()` now depends on `resolve_caller` (the old body), so `/score` keeps its one checkout. The five modules named by the audit (`me.py`, `deployments.py`, `approvals.py`, `demo.py`, `validation.py`) all depend on `require_caller` and are fixed by that one change; the test drives `/me`.
+  - **F2, red by cause then green.** `test_the_sampled_trace_write_starts_with_the_read_session_released` (a decline is sampled at 100 %; `pool.checkedout()` read when `write_pending_trace` is entered): red `assert [1] == [0]`, green `[0]` after `await read_session.close()` precedes the write; the trace row is still written (asserted).
+  - **F4.** `_leave_no_frozen_objects` (autouse, `gc.unfreeze()`) moved from `test_startup_gc_freeze.py` to `conftest.py`; the gc test's docstring no longer states 375 as a fact (its source is UNKNOWN, and the final file read 0).
+  - **Regression, separate runs at `5e00fa74`:** `test_request_connections.py` + `test_startup_gc_freeze.py` + `test_score_request_cost.py` 10 passed; `test_score.py` + `test_traces.py` + `test_score_rate_limit.py` 100 passed, 1 skipped; `test_auth_keys.py` + `test_api_me.py` + `test_api_approvals.py` 123 passed; `test_api_authorisation_sweep.py` + `test_workspace_identity.py` + `test_api_validation_rules.py` 25 passed; `test_deployments.py` + `test_workspace_switch.py` + `test_api_jobs.py` 82 passed. `ruff check backend` clean, `mypy` no issues in 239 source files, `lint-imports` 4 kept 0 broken. The gate is not run.
+  - **Write set, complete:** `api/score.py`, `api/deps.py`, `api/authz.py`, `auth/service.py`, `db/session.py`, `main.py`, `platform/rate_limit.py`, `scripts/bench-rating.py`, `backend/tests/test_score_request_cost.py`, `backend/tests/test_bench_rating_header.py`, `backend/tests/test_startup_gc_freeze.py`, `backend/tests/test_request_connections.py` (new), `backend/tests/conftest.py`, and this ledger.
 
 ## PRs
 
