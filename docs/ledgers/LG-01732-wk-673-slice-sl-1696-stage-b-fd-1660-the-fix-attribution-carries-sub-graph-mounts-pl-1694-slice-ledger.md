@@ -169,6 +169,9 @@ One finding is undispositioned: A1 (LOW; an owner to be named by the lead). A2 t
 
 **Proposed verdict: CLEAN, CONDITIONAL ON A1's owner being named. SL-1696 satisfies PL-1694 Stage B Acceptance 11 to 21 on the evidence above, with the one clause of item 18 deferred (A1); the code is the gated code.** FD-1660's discharge, which the ledger proposes: the auditor concurs on the evidence of items 3 to 5 (L1, L2 and L3 each have a red-by-cause on the unfixed code and a green on the head; DP-3 has R4 and the mount-alone test; the guard is gone; D7 decomposes in the demo), and will set the register row `closed` in place, citing the merge commit and PR, once the lead has merged and given the PR number. That is a register edit after merge, not part of this commit.
 
+- 2026-10-14 — A1 (LOW, PL-1694 Acceptance 18: the D7 split test on the real derived list) — DEFERRED WITH OWNER SL-1543 (WK-673; serialised on examples/fremtpl2/journey.py and backend/tests/test_wf699_journey.py after SL-1696; lands through its own gate), per the lead's from-lead "2026-10-14 20:25:11 BST"; the behaviour is evidenced by the demo's D7 decomposition.
+- 2026-10-14 — Verdict CLEAN — ADOPTED by the lead (team-lead, transcript b6860f8f) at from-lead "2026-10-14 20:25:11 BST", conditional on PR CI python, frontend and docs green.
+
 ## PRs
 
 The SL-1696 PR, branch `sl-1696-wk673-fd1660-fix`, title `SL-1696: …` (RFC-937 §5.1); its number is the lead's to record at the open.
