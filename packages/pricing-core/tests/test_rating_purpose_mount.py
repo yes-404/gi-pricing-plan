@@ -1,0 +1,321 @@
+"""WK-1250 Slice 3 (SL-1341): FR-218's purpose mount and the real check (RL-1344, RL-1628).
+
+Red first (`PL-1629` Tasks 3 and 4, acceptance 4 to 7). A purpose mount is a `sub_graphs`
+entry with `purposes`; in that purpose's graph it RE-PRODUCES a parent name (DP-S3-1 (d)):
+here the cancellation mount reads `expense_factor` and re-produces it halved, so the ladder
+and the payable of a cancellation are the adjusted figures. Each purpose evaluates its own
+graph and algorithm (DP-S3-2 (a) and condition 1).
+
+The fixtures reuse `test_rating_score.py`'s (`_FakeResolver`, `_version`, `_ctx`), so a quote
+here is priced by the same algorithm as the golden test there (payable 1507).
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+import pytest
+from test_rating_score import _ctx, _FakeResolver, _version
+
+from model_schema.rating import RatingAlgorithm
+from model_schema.refs import ArtifactRef
+from model_schema.sub_graphs import SubGraph
+from pricing_core.rating.compile import compile_bundle
+from pricing_core.rating.inline import inline_mounts
+from pricing_core.rating.runtime import CompiledBundle, load_bundle
+from pricing_core.rating.score import score_one
+
+_CANCEL_REF = "sub_graph:cancel-refund@1"
+_NEW_BUSINESS_PAYABLE = 1_507  # the golden quote of `test_rating_score.py`
+
+
+def _cancel_fragment_payload(*, decline: bool) -> dict[str, Any]:
+    steps: list[dict[str, Any]] = [
+        {
+            "step_id": "s_prorata",
+            "type": "expression",
+            "label": "Pro-rata",
+            "expr": "annual * 0.5",
+            "result_type": "decimal",
+            "consumes": ["annual"],
+            "produces": "refund",
+        },
+    ]
+    if decline:
+        # Violated whenever it is evaluated (the condition is false for any positive refund).
+        steps.append(
+            {
+                "step_id": "s_guard",
+                "type": "constraint",
+                "label": "Cancellation guard",
+                "condition": "refund < 0",
+                "on_violation": "decline",
+                "reason_code": "CANCEL_GUARD",
+                "consumes": ["refund"],
+            }
+        )
+    return {
+        "slug": "cancel-refund",
+        "version": 1,
+        "inputs": [{"name": "annual", "type": "decimal"}],
+        "outputs": [{"name": "refund", "type": "decimal", "required": True}],
+        "steps": steps,
+        "change_note": "first cut",
+    }
+
+
+async def _compiled_with_a_mount(
+    purposes: list[str] | None, *, decline: bool = False
+) -> CompiledBundle:
+    return load_bundle(await _bundle_with_a_mount(purposes, decline=decline))
+
+
+async def _bundle_with_a_mount(purposes: list[str] | None, *, decline: bool = False):  # type: ignore[no-untyped-def]
+    resolver = _FakeResolver()
+    algorithm = resolver._payloads["rating_algorithm:score-fixture@1"]
+    mount: dict[str, Any] = {
+        "ref": _CANCEL_REF,
+        "mount_point": "m_cancel",
+        "inputs": {"annual": "expense_factor"},
+        "outputs": {"refund": "expense_factor"},
+    }
+    if purposes is not None:
+        mount["purposes"] = purposes
+    algorithm["sub_graphs"] = [mount]
+    resolver._payloads[_CANCEL_REF] = _cancel_fragment_payload(decline=decline)
+    version = _version()
+    pins = version.pins
+    assert pins is not None
+    version = version.model_copy(
+        update={
+            "pins": pins.model_copy(update={"sub_graphs": [ArtifactRef.parse(_CANCEL_REF)]}),
+        }
+    )
+    return await compile_bundle(version, resolver)
+
+
+def _ladder_ids(result: Any) -> list[tuple[str, int]]:
+    return [(r.rung, r.value_minor) for r in result.premium_ladder]
+
+
+# --- fixture soundness: the same mount, unconditional, compiles and prices today ---------------
+
+
+@pytest.mark.req("FR-217")
+async def test_the_fixture_prices_new_business_with_an_unconditional_re_producing_mount() -> None:
+    """Control: not red. The unconditional form of the fixture is valid today, so a red below
+    is the purpose behaviour's absence, not a broken fixture."""
+    compiled = await _compiled_with_a_mount(None)
+    result = await score_one(compiled, _ctx(purpose="new_business"))
+    assert result.outcome == "quoted"
+    assert result.outputs["payable_premium_minor"] < _NEW_BUSINESS_PAYABLE  # halved factor
+
+
+# --- acceptance 4: the real check -------------------------------------------------------------
+
+
+@pytest.mark.req("FR-218")
+@pytest.mark.parametrize("purpose", ["mid_term_adjustment", "cancellation"])
+async def test_a_version_with_only_an_unconditional_mount_is_refused_by_the_real_check(
+    purpose: str,
+) -> None:
+    """RL-1344 section 3: refused unless the bundle inlines a mount for THIS purpose. The
+    message says no mount for the purpose is inlined, and no longer says "interim"."""
+    compiled = await _compiled_with_a_mount(None)
+    with pytest.raises(ValueError, match="INPUT_CONTRACT_VIOLATION") as refused:
+        await score_one(compiled, _ctx(purpose=purpose))
+    message = str(refused.value)
+    assert "interim" not in message
+    assert purpose in message
+    assert "no mount" in message
+    assert "inlined" in message
+
+
+@pytest.mark.req("FR-218")
+async def test_a_cancellation_only_mount_refuses_a_mid_term_adjustment_quote() -> None:
+    """Acceptance 4 / 5: not bypassable. The cancellation mount does not price the other
+    purpose, and the refusal is the real check's."""
+    compiled = await _compiled_with_a_mount(["cancellation"])
+    with pytest.raises(ValueError, match="INPUT_CONTRACT_VIOLATION") as refused:
+        await score_one(compiled, _ctx(purpose="mid_term_adjustment"))
+    assert "interim" not in str(refused.value)
+    assert "mid_term_adjustment" in str(refused.value)
+
+
+@pytest.mark.req("FR-218")
+async def test_a_cancellation_only_mount_prices_a_cancellation_with_the_mount() -> None:
+    """Acceptance 4 and RL-1628 acceptance 1: the cancellation payable is the adjusted figure."""
+    compiled = await _compiled_with_a_mount(["cancellation"])
+    result = await score_one(compiled, _ctx(purpose="cancellation"), trace=True)
+    assert result.outcome == "quoted"
+    payable = result.outputs["payable_premium_minor"]
+    assert 0 < payable < _NEW_BUSINESS_PAYABLE
+    assert result.trace is not None
+    assert result.trace.ladder_reconciled is True
+    assert "m_cancel__s_prorata" in {s.step_id for s in result.trace.steps}
+
+
+@pytest.mark.req("FR-218")
+async def test_a_cancellation_only_mount_leaves_new_business_exactly_as_without_it() -> None:
+    """Acceptance 4, third bullet: the same payable, the same ladder, the same trace step ids,
+    and none of the cancellation mount's steps (acceptance 5: absent from another purpose)."""
+    from test_rating_score import _compiled
+
+    with_mount = await score_one(
+        await _compiled_with_a_mount(["cancellation"]), _ctx(purpose="new_business"), trace=True
+    )
+    without = await score_one(await _compiled(), _ctx(purpose="new_business"), trace=True)
+    assert with_mount.outputs["payable_premium_minor"] == _NEW_BUSINESS_PAYABLE
+    assert with_mount.outputs == without.outputs
+    assert _ladder_ids(with_mount) == _ladder_ids(without)
+    assert with_mount.trace is not None
+    assert without.trace is not None
+    with_ids = [s.step_id for s in with_mount.trace.steps]
+    assert with_ids == [s.step_id for s in without.trace.steps]
+
+
+@pytest.mark.req("FR-218")
+async def test_a_constraint_inside_a_cancellation_mount_is_evaluated_for_it() -> None:
+    """RL-1628 condition 1: the purpose's own algorithm is what is read. A decline constraint
+    inside the mount is in no base-algorithm read, so only a selector that returns the
+    cancellation algorithm lets the quote be declined with its reason."""
+    compiled = await _compiled_with_a_mount(["cancellation"], decline=True)
+    cancelled = await score_one(compiled, _ctx(purpose="cancellation"))
+    assert cancelled.outcome == "declined"
+    assert cancelled.decline_reasons == ["CANCEL_GUARD"]
+    new_business = await score_one(compiled, _ctx(purpose="new_business"))
+    assert new_business.outcome == "quoted"
+
+
+@pytest.mark.req("FR-218")
+async def test_removing_the_real_check_would_be_caught(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Acceptance 5: with the check neutralised the MTA quote is priced silently, so the
+    refusal test above is the only thing standing between the quote and a mispricing."""
+    import pricing_core.rating.score as score_module
+
+    monkeypatch.setattr(score_module, "_check_purpose_mount", lambda *args, **kwargs: None)
+    compiled = await _compiled_with_a_mount(["cancellation"])
+    result = await score_one(compiled, _ctx(purpose="mid_term_adjustment"))
+    assert result.outcome == "quoted"
+
+
+# --- Task 3: the bundle per purpose -----------------------------------------------------------
+
+
+@pytest.mark.req("FR-218")
+@pytest.mark.req("FR-239")
+async def test_compile_bundle_emits_a_graph_for_exactly_the_selected_purposes() -> None:
+    bundle = await _bundle_with_a_mount(["cancellation"])
+    assert set(bundle.purpose_graphs) == {"cancellation"}
+    assert set(bundle.purpose_graphs["cancellation"].nodes) != set(bundle.graph.nodes)
+    both = await _bundle_with_a_mount(["mid_term_adjustment", "cancellation"])
+    assert set(both.purpose_graphs) == {"mid_term_adjustment", "cancellation"}
+    unconditional = await _bundle_with_a_mount(None)
+    assert unconditional.purpose_graphs == {}
+
+
+@pytest.mark.req("FR-218")
+@pytest.mark.req("FR-239")
+async def test_a_change_to_purposes_alone_changes_the_content_hash() -> None:
+    """RL-1344 acceptance 5, hash half."""
+    one = await _bundle_with_a_mount(["cancellation"])
+    other = await _bundle_with_a_mount(["mid_term_adjustment"])
+    assert one.content_hash != other.content_hash
+
+
+@pytest.mark.req("FR-239")
+async def test_a_version_with_no_purpose_mount_keeps_the_hash_it_had() -> None:
+    """DP-S3-2 (a): `purpose_graphs` is hashed only when non-empty. An unconditional mount's
+    bundle hash is the hash of its graph and pins alone, as at Slice 2."""
+    from pricing_core.rating.compile import bundle_hash
+
+    bundle = await _bundle_with_a_mount(None)
+    assert bundle.content_hash == bundle_hash(bundle.graph, bundle.pins)
+
+
+@pytest.mark.req("FR-218")
+@pytest.mark.req("FR-243")
+async def test_load_bundle_refuses_a_purpose_graph_that_disagrees_with_its_algorithm() -> None:
+    """RL-1628 condition 2 (C1 per purpose graph): `BUNDLE_COMPILE_FAILED`."""
+    bundle = await _bundle_with_a_mount(["cancellation"])
+    graph = bundle.purpose_graphs["cancellation"]
+    nodes = dict(graph.nodes)
+    nodes["m_cancel__renamed"] = nodes.pop("m_cancel__s_prorata")
+    tampered = bundle.model_copy(
+        update={
+            "purpose_graphs": {"cancellation": graph.model_copy(update={"nodes": nodes})},
+        }
+    )
+    with pytest.raises(ValueError, match="BUNDLE_COMPILE_FAILED") as raised:
+        load_bundle(tampered)
+    assert "m_cancel__" in str(raised.value)
+
+
+# --- Task 3: the inliner's `purpose` argument -------------------------------------------------
+
+
+def _purpose_parent() -> RatingAlgorithm:
+    """`factor` has one producer; the cancellation mount reads it and re-produces it."""
+    return RatingAlgorithm.model_validate(
+        {
+            "slug": "motor-gb",
+            "version": 1,
+            "input_contract": [{"name": "years_clean", "type": "int", "nullable": False}],
+            "outputs": [{"name": "premium", "type": "decimal", "required": True}],
+            "steps": [
+                {
+                    "step_id": "s_in_years",
+                    "type": "input",
+                    "label": "Years",
+                    "input_name": "years_clean",
+                    "on_missing": "error",
+                    "produces": "years_clean",
+                },
+                {
+                    "step_id": "s_factor",
+                    "type": "expression",
+                    "label": "Factor",
+                    "expr": "years_clean * 10",
+                    "result_type": "decimal",
+                    "consumes": ["years_clean"],
+                    "produces": "factor",
+                },
+                {
+                    "step_id": "s_out",
+                    "type": "output",
+                    "label": "Premium",
+                    "output_name": "premium",
+                    "rounding": {"mode": "half_even", "dp": 0},
+                    "consumes": ["factor"],
+                },
+            ],
+            "sub_graphs": [
+                {
+                    "ref": _CANCEL_REF,
+                    "mount_point": "m_cancel",
+                    "purposes": ["cancellation"],
+                    "inputs": {"annual": "factor"},
+                    "outputs": {"refund": "factor"},
+                }
+            ],
+        }
+    )
+
+
+@pytest.mark.req("FR-217")
+@pytest.mark.req("FR-218")
+def test_inline_mounts_inlines_a_purpose_mount_for_its_purpose_only() -> None:
+    """`purpose=None` inlines unconditional mounts only (Slice 2's behaviour, the default)."""
+    fragments: dict[str, SubGraph] = {
+        _CANCEL_REF: SubGraph.model_validate(_cancel_fragment_payload(decline=False))
+    }
+    parent = _purpose_parent()
+    base = inline_mounts(parent, fragments, purpose=None)
+    cancellation = inline_mounts(parent, fragments, purpose="cancellation")
+    other = inline_mounts(parent, fragments, purpose="mid_term_adjustment")
+    assert not any(s.step_id.startswith("m_cancel__") for s in base.steps)
+    assert not any(s.step_id.startswith("m_cancel__") for s in other.steps)
+    ids = [s.step_id for s in cancellation.steps]
+    # The re-producing step reads the parent's `factor` and re-produces it before the output.
+    assert "m_cancel__s_prorata" in ids
+    assert ids.index("s_factor") < ids.index("m_cancel__s_prorata") < ids.index("s_out")
