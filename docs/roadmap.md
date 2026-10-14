@@ -2529,7 +2529,7 @@ On the maintainer's (by delegation) entry "2026-10-12 07:46:06 BST — PL 9906/S
 id: SL-1719
 family: slice
 title: WK-1178 fix slice — FD 8049: the score rate-limit test's key expiry is one the pinned clock cannot outrun, and the limiter's key expiry is tested
-status: active                   # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-14
 owner: executor                  # a test-only slice; the lead dispatches (active)
 tree: beee5ebedcfebc03c1658728442827960975392a
@@ -2544,6 +2544,8 @@ The fix of FD 8049 (MEDIUM, owner WK-1178; not on `main` yet, it rides D18). `ba
 (Activated 2026-10-14 as WK-1178's FD 8049 fix slice, on the maintainer's (by delegation) entry "2026-10-14 17:11:47 BST — FD 8049 third strike: NO further re-run and NO merge-past-red; LAND the test-only fix NOW with CI as its gate (no gate-1 cycle); D17 waits for it (re lead's STOP)" (`to-lead.md`). Ledger `LG-1720`.)
 
 (Minted 2026-10-14 as SL-1719 from working id 8051, in the FD 8049 fix PR; ledger LG-1720 from working id 8052.)
+
+(Closed 2026-10-14 as a Slice, closing acts in the slice PR, on the lead's merge; ledger LG-1720 `closed`. Audit written in LG-1720 (Audit section, by `auditor-fd8049`, at f78ab4ce), adopted by the lead; CI python green at run 38607168256. FD 8049's fix: test-only, no `backend/src` change.)
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 

@@ -2,7 +2,7 @@
 id: LG-1720
 family: ledger
 title: WK-1178 slice SL-1719 — FD 8049, the score rate-limit test's key expiry cannot outrun the pinned clock and the limiter's key expiry is tested, slice ledger
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-14
 owner: executor
 tree: beee5ebedcfebc03c1658728442827960975392a
@@ -21,7 +21,7 @@ Minted 2026-10-14 as LG-1720 from working id 8052, with SL-1719 from working id 
 **GO:** the maintainer's (by delegation) entry "2026-10-14 17:11:47 BST" in `to-lead.md` (the fix is test-only; scope exactly: the fixture makes the limiter's TTL 3600, plus the two expiry tests, each red first on a planted no-expire, no change to `backend/src`), with "2026-10-14 16:43:11 BST" (the accepted test form and the expiry-coverage condition) and "2026-10-14 14:30:54 BST" (the FD). The finding is FD 8049, not on `main` yet (it rides D18).
 **CI is the gate:** the maintainer's (by delegation) entry "2026-10-14 17:11:47 BST", ruling (a′): *"FD 8049's fix is TEST-ONLY, so CI's full python run on its PR head IS its gate"*; no gate-1 cycle. ACK: CI python, docs and history green at the head; merge-tree rc 0.
 **MERGE-ACK:** not yet given.
-**Audit:** written 2026-10-14 17:59:52 BST (see `### Audit`); verdict PROPOSED, the lead's to adopt.
+**Audit:** written 2026-10-14 17:59:52 BST (see `### Audit`); verdict PROPOSED, the lead's to adopt. ADOPTED by the lead (team-lead, transcript b6860f8f) at from-lead "2026-10-14 18:00:55 BST", conditional on CI python green; the condition was MET at run 38607168256 (b374d1bb, "5858 passed, 6 skipped").
 
 ## Tasks
 
