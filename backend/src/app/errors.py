@@ -263,6 +263,13 @@ MODELLING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # specific `GLM_*` conditions, the way `VALIDATION_FAILED` sits alongside `01`'s
         # named refusals — glum's own message is carried verbatim in the detail.
         "GLM_FIT_FAILED",
+        # FR-111, SL-1675, 2026-10-12. Raised by `pricing-core`'s one weight rule for all
+        # three fit arms (GLM, GBM, EBM) when the declared weight column holds a negative,
+        # null or non-finite value, or nothing but 0s. Before it, LightGBM fitted on a bad
+        # weight silently, XGBoost raised a library error with no code, and the EBM named it
+        # `EBM_MONOTONE_CONSTRAINT_INCOMPLETE`; the fit handler maps `exc.code` straight into
+        # a `PlatformError`, so an unregistered code would raise from inside the error path.
+        "DECLARED_WEIGHT_INVALID",
     }
 )
 
