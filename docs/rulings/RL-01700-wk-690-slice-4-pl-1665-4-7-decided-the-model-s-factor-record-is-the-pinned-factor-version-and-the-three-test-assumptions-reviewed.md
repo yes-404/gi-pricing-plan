@@ -28,6 +28,10 @@ carries the expression text" — no such record exists) + review of the seat's t
 (a) declared columns = source_columns, (b) loose position assert, (c) Banding.column
 optional."). The lead mints it.*
 
+*Confirmed: dated 2026-10-14, on the maintainer's (by delegation) entry "2026-10-14 10:01:11 BST
+— RL 8001 (WK-690 S4, PL-1665 4.7) CONFIRMED as drafted" (`to-lead.md`): "CONFIRMED, no
+amendment", read at `b20cd23e`; (C′) is right.*
+
 ## How this was ruled
 
 - **The question is the lead's referral**, in the lead's entry "2026-10-14 09:38:35 BST — Lead:

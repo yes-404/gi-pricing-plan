@@ -27,6 +27,16 @@ obliges has no id yet; it is called "the fix slice" below. Two neighbours are on
 branches at this record's tree and are cited by branch and commit, not by id (see
 Interactions).*
 
+*Confirmed: dated 2026-10-14, on the maintainer's (by delegation) entry "2026-10-14 09:42:05 BST
+— RL 9996 (DP-P1) CONFIRMED as drafted" (`to-lead.md`) item 1: "CONFIRMED, no amendment", read
+at `0d8f1288`.*
+
+*Read: dated 2026-10-14, on the maintainer's (by delegation) entry "2026-10-14 10:00:17 BST"
+(`to-lead.md`), DP-5 (a), as a reading of pass 2 and not an extension (no sibling `RL-`): a pin
+difference is a set-membership predicate, so "exactly one ref removed and one added" counts
+distinct refs. `[X@1, X@1]` against `[X@1]` is no difference, and `[X@1, X@1]` → `[X@2]` is one
+entry X 1 → 2 with the cell diff. Recorded in `PL-1701` DP-5.*
+
 ## How this was ruled
 
 - **The decision point is `PL-1677`'s DP-P1** (`docs/plans/PL-01677-…-plan-delta.md:157`),

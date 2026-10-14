@@ -191,6 +191,12 @@ BST — R1b CORRECTED (my 10:09:06 assert could not discriminate)" (`to-lead.md`
 6. **The family-domain sentence alone is not an assert.** `glm.py` appends it to every
    `GLM_FIT_FAILED`.
 
+**R1b's cause and its owed runs: dated 2026-10-14, on the maintainer's (by delegation) entry
+"2026-10-14 11:52:51 BST" item (1) (`to-lead.md`).** The fixture cause is accepted
+(`test_demo_peril_structure.py:81` wrote `"np.float64(…)"`), fixed forward with no force-push.
+Criterion 5 above (the cross-case discrimination run) and the second silent-drop red are owed as
+printed runs in `LG 9879` before SL-1543's GO.
+
 **The guard test: dated 2026-10-14, on the maintainer's (by delegation) entry "2026-10-14 11:29:53
 BST — G2 check result ACCEPTED: the FR-127 GLM fix stays OFF the G2 path, conditionally; the guard
 ADOPTED" (`to-lead.md`).** A slice test, named in `LG 9879`, asserts that the A-4 severity spec's
