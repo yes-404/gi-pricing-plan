@@ -25,6 +25,10 @@ filed on `origin/fd-8007-8011-2026-10-14` @`3d6e0f0a67575e71eae3162566275ef8042b
 into D15. The lead mints both; the mint sweep replaces `RL-8019` and `FD-8011` below with their
 minted ids.*
 
+*Confirmed: dated 2026-10-14, on the maintainer's (by delegation) entry "2026-10-14 10:26:21 BST
+— RL 8019 (FD 8011, FR-259 "errors") CONFIRMED as drafted; (i)–(iii) accepted (re lead 10:25:44)"
+(`to-lead.md`): "RL 8019 @b26af93f: CONFIRMED, reading (c), option A′."*
+
 ## How this was ruled
 
 - **The question is the maintainer's (by delegation), who orders this record.** The entry
