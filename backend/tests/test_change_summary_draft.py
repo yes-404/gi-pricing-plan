@@ -145,7 +145,7 @@ def test_a_parquet_pair_is_named_pending_not_computed() -> None:
 
 
 def test_u1_a_step_entry_names_its_step_in_the_text() -> None:
-    """RL-9996 rule 5: `- age (step t): …` for an entry with a `step_id`; as today without one."""
+    """RL-1707 rule 5: `- age (step t): …` for an entry with a `step_id`; as today without one."""
     entry = RateTableChange(
         slug="age",
         step_id="t",
@@ -162,7 +162,7 @@ def test_u1_a_step_entry_names_its_step_in_the_text() -> None:
 
 
 def test_u2_a_step_entry_sorts_before_a_pin_entry_of_the_same_slug() -> None:
-    """RL-9996 rule 4: slug, then step entries before pin entries."""
+    """RL-1707 rule 4: slug, then step entries before pin entries."""
     step = RateTableChange(
         slug="age",
         step_id="t",

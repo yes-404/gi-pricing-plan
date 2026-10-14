@@ -385,9 +385,9 @@ def test_a_parquet_table_answers_200_with_the_entry_pending(
     assert _snapshot(database, workspace_id, v2.id)[-1] == jobs_before
 
 
-# --- FD-1679 / RL-9996: a version pinning two versions of one rate-table slug ---------------
+# --- FD-1679 / RL-1707: a version pinning two versions of one rate-table slug ---------------
 # `RL-1538` makes such pins valid input, so create accepts them (each test asserts the 201);
-# the drafted summary pairs rate tables by step and by unique slug (RL-9996), names every
+# the drafted summary pairs rate tables by step and by unique slug (RL-1707), names every
 # version and refuses no pin set.
 
 
