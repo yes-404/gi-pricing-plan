@@ -117,6 +117,7 @@ def test_the_write_routes_report_what_was_stored_not_what_was_asked_for(
     assert published["status"] == "published"
 
 
+@pytest.mark.req("FR-15")
 @pytest.mark.req("FR-71")
 def test_the_effective_date_viewer_reads_the_interval_as_half_open(
     api_client: TestClient, admin: dict[str, str]

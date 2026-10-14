@@ -968,6 +968,52 @@ celery -A app.worker.entrypoint beat
 The relay is what moves a committed job to the broker. **Without `beat` running, jobs stay
 `queued` and nothing explains why.**
 
+## Small targeted runs beside a held code gate — `scripts/run-small.sh` (`RL-1626`)
+
+*(Amended 2026-10-14 by the maintainer (by delegation), on the entries "2026-10-14 10:45:59 BST" items 1 and 3 and "2026-10-14 11:34:58 BST" in `to-lead.md`: the script lives in the repository, and this section moved with it in the same commit.)*
+
+`RL-1626` allows a seat to run **at most three named test files** while a **code** gate is held, under five
+conditions: (a) under `nice -n 19 ionice -c3`; (b) through the small-test flock, one run at a time; (c) load1
+below 6 at the start; (d) no database-schema migration; (e) never beside an ALONE or measurement window, and never
+a full suite (a seat that needs one is a gate holder). **A change that needs `alembic upgrade` waits for a gate
+gap**, and the database must already be migrated.
+
+```bash
+scripts/run-small.sh <worktree> <test-file> [<test-file> [<test-file>]]
+# e.g. scripts/run-small.sh /abs/path/to/worktree backend/tests/test_x.py
+```
+
+It runs `uv run --directory <worktree> pytest -q <files>` itself; the command is not an argument. That is what
+lets "at most 3 named files" and "never a migration" be enforced by the script. Test files are relative to the
+worktree or absolute. **It exits with pytest's own exit code.** Each refusal below ends the run before pytest and is
+proven by `backend/tests/test_run_small_script.py`:
+
+| Exit | Refusal |
+|---|---|
+| 64 | no worktree or no test file (usage), or the worktree is not a directory |
+| 65 | the caller's shell exports `GIP_GATE_SLOT`. No seat shell does; only a wrapper that holds a slot |
+| 66 | load1 (first field of `/proc/loadavg`) is not below 6. **Refused, not waited on**: retry later |
+| 67 | any argument names `alembic` (case-insensitive) |
+| 68 | more than 3 test files |
+| 71 | an argument is not an existing `.py` file: a directory, a pytest option or a typo |
+| 72 | a test file resolves (after `realpath`, so a symlink counts) outside `<worktree>` |
+| 73 | a `.py` file is not named `test_*.py` or `*_test.py` (pytest's default `python_files`; `conftest.py` and helpers are refused) |
+| 75 | the small-test flock stayed held for the whole wait (`flock -E 75`, clear of pytest's 0-5) |
+
+Otherwise it takes `/tmp/slots/small-test` with `flock -w 7200 -E 75 <file> <command>` (never `flock --`, which exits 69
+here; an ALONE window holds that slot, so a compliant run waits until the window ends) and runs the command as
+`env GIP_GATE_SLOT=/tmp/slots/small-test nice -n 19 ionice -c3 uv run …`. Setting `GIP_GATE_SLOT` inside the flock is
+what stops the root conftest from also taking gate-1, so a small test is not stalled behind a whole code gate.
+The slot path, the load source and the wait are constants in the script: **no environment variable changes them**
+(a hook a seat could set would bypass the load refusal and the one-at-a-time flock). The script's own test runs a
+`sed`-patched copy.
+
+**A run under `backend/tests` also triggers the per-worktree database teardown**, whatever the file tests: the
+session-scoped autouse fixture `_empty_the_database_after_the_session` (`backend/tests/conftest_db.py:408`, the
+`empty_the_database()` call and its warning at `:432-441`) empties the test database at the end of the session.
+The database must therefore already be migrated and created for the worktree; if it is not, the run still exits with
+pytest's code and only prints a "could not empty the test database" warning.
+
 ## Expensive-run checklist — pytest, gate, frontend as one pattern
 
 **Expensive runs (full suite, full gate, full frontend build) cost 4.5+ cores and 13+ 
@@ -1107,7 +1153,7 @@ build log showing no actual build (wrong cwd), one tmpdir ls -i showing identica
 (collision). This section drafted by executor-h; verified by deputy as measured. Reference: 
 to-lead.md entries 10:55:17, 11:02:41, 11:48:50, 14:33:28 (maintainer instruction).
 
-Verified: 2026-10-10 against the PL 9617 slice branch (based on main fe0b0627; gate wrapper and bare-pytest lock take gate-1 only, RL-1445); previously 2026-10-10 against main db0642c4 (new paragraph: the gate-2 standing rule, one docs check beside one code gate); previously 2026-10-08 against main d85cf854 (new rule: no background process inside a held slot, `fuser` check); previously 2026-10-06 against main a9ef6777 (new section: a slot probe that gates a check); previously 2026-09-29 against main 4819ec88 (gate slot budget 3 → 2 for the 8-vCPU box, WK-1178; the wrapper loop and `conftest.py` `_SLOT_COUNT` re-read together)
+Verified: 2026-10-14 against main 8eaf6d5f (new section: scripts/run-small.sh, RL-1626; its test passes at this tree); previously 2026-10-10 against the PL 9617 slice branch (based on main fe0b0627; gate wrapper and bare-pytest lock take gate-1 only, RL-1445); previously 2026-10-10 against main db0642c4 (new paragraph: the gate-2 standing rule, one docs check beside one code gate); previously 2026-10-08 against main d85cf854 (new rule: no background process inside a held slot, `fuser` check); previously 2026-10-06 against main a9ef6777 (new section: a slot probe that gates a check); previously 2026-09-29 against main 4819ec88 (gate slot budget 3 → 2 for the 8-vCPU box, WK-1178; the wrapper loop and `conftest.py` `_SLOT_COUNT` re-read together)
 Prior: 2026-09-17 against main 71f5a2208c7a92bad486ae128775a4a42c7ebc63
 
 2026-09-06 — the gate body's seven stages now run in parallel inside one slot, each
