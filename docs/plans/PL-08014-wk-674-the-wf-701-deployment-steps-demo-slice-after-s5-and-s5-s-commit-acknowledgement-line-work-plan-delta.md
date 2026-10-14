@@ -29,7 +29,7 @@ relates: [PL-1237, PL-1537, PL-1620, PL-1666, PL-1544, RL-1614, SL-1258, SL-1259
 > [`../roadmap.md`](../roadmap.md): the scripted, rehearsable walk of WF-701's deployment steps;
 > (2) it adds **one dated acceptance line to Slice 5** (`SL-1259`), D5.6 below.
 > **Read `PL-1237` Task 5, then `PL-1537` row 2 (R5.1 to R5.10), then `PL-1620` (D0.1 to D0.3,
-> D5.1 to D5.5), then this file.** For S4's compose, read `PL-1666` and then `PL-1690` (on
+> D5.1 to D5.5), then this file.** For S4's compose, read `PL-1666` and then `PL 1690` (on
 > `origin/docs-d14-2026-10-12`, #1298, not yet on `main`; see activation need 3).
 > REQUIRED SUB-SKILL for SL-8015's executor: subagent-driven-development (recommended) or
 > executing-plans, task by task; steps use checkbox (`- [ ]`) syntax. Bound skills:
@@ -51,7 +51,7 @@ SL 8015 = that demo slice. Seat planner-wf701plan." Written 2026-10-14 (started 
 the planner (planner-wf701plan).
 
 **Trees read.** `origin/main` @`1e260c15` (#1297) for every code and spec citation unless a line
-says otherwise; `PL-1690` and `PL-1688` on `origin/docs-d14-2026-10-12` @`a49c6bc8`; S4's authored
+says otherwise; `PL 1690` and `PL 1688` (written with a space throughout: each is minted only on the D14 branch, #1298, and does not resolve on `main` until D14 merges, so check 32 would read the hyphenated form as a broken citation) on `origin/docs-d14-2026-10-12` @`a49c6bc8`; S4's authored
 branch `origin/sl-1258-wk674-s4` @`e1555803` for `deploy/docker-compose.yml`. **No S5 branch exists
 on `origin` at this writing** (`git branch -r` lists no `sl-1259` ref). The starting point is the
 design memo `~/gi-pricing-plan.local/handover/memo-wf701-deploy-demo-2026-10-14.md` (planner seat
@@ -71,8 +71,9 @@ another file. Each names its author.
   already puts "the monitoring half of WF-701". A3's deployment notification (FR-453, WK-688/P4)
   goes with them."*
 - **The demo must exist — the maintainer (by delegation):** entry "2026-10-14 09:50:52 BST —
-  addendum to 09:50:37 (re lead 09:50:18): the WF-701 deployment-half demo must exist; SL-1695 audit
-  noted", item 2, verbatim: *"the exit demo must walk the deployment steps (A1–A6, C1–C4, C6, C7)
+  addendum to 09:50:37 (re lead 09:50:18): the WF-701 deployment-half demo must exist; SL-[…] audit
+  noted" (the elided id is a slice id the header names, elided so check 32 does not read a
+  quoted header as a citation), item 2, verbatim: *"the exit demo must walk the deployment steps (A1–A6, C1–C4, C6, C7)
   scripted and rehearsable, the same standard as WF-699's journey (no faked step; 12 Oct rulings).
   A planner seat (non-building) now drafts its plan: EITHER as part of S5's acceptance (if S5's
   plan can absorb it without a re-plan) OR as one WK-674 demo slice after S5. Which one is the
@@ -191,12 +192,12 @@ SL-8015:
   `DEFAULT_QUEUE_FOR_KIND[JobKind.SCORE_TRACE_PRODUCE] = JobQueue.SCORING`
   (`backend/src/app/platform/jobs.py:79`), and `submit` uses that map
   (`jobs.py:122`, `queue=queue or DEFAULT_QUEUE_FOR_KIND[kind]`). S4's worker is
-  `--queues compute` at `e1555803` (`deploy/docker-compose.yml:145`), and `PL-1690` E4.2 makes it
+  `--queues compute` at `e1555803` (`deploy/docker-compose.yml:145`), and `PL 1690` E4.2 makes it
   `--queues default,compute` with a shape test asserting the queue set **equals** `{default,
   compute}`. `scripts/demo.py`'s `worker_command()` also consumes `default,compute` only. So on
   both run modes outside the in-process test, a sampled trace stays pending and `GET
   /api/v1/traces` (complete traces only, `backend/src/app/api/traces.py:167`) never returns it:
-  C7 cannot pass. This is the defect class `PL-1690` E4.3 was ruled to catch ("no consumer on a
+  C7 cannot pass. This is the defect class `PL 1690` E4.3 was ruled to catch ("no consumer on a
   queue"). The memo's fresh-stack need (d) assumed E4.2 covered it; it does not. **DP-2.** The same
   holds for `JobQueue.IO` (`DATASET_INGEST`, `EXPORT_REGULATORY`, `BLOB_GC`, `jobs.py:59,85,86`),
   which no WF-701 step needs; it is named for the lead, not taken here.
@@ -206,7 +207,7 @@ SL-8015:
   settings.py:233-241`: *"Unset by default: with no limit the request is admitted without a counter
   call (`RL-1347` rule 2)"*), or the Service Account's own `rate_limit_rps`. The journey creates
   its Service Accounts without `rate_limit_rps`. Task 0 re-reads both at S5's merged tree (S4
-  changes the limiter for the management API, `PL-1690` E4.1), and the journey paces under any
+  changes the limiter for the management API, `PL 1690` E4.1), and the journey paces under any
   limit it finds; it never raises one.
 - **P5 — D5.6's record has an ordering and a shape question S5 must answer.** Today the deploy's
   Audit Event is written **inside** the deploy transaction, with `after=` the `Deployment` model's
@@ -311,7 +312,7 @@ names the second route.
    `api`×2, `worker` (on the queues DP-2 settles), `postgres`, `redis`, `minio`; then
    `uv run python scripts/demo.py --journey wf-701 --target compose`. It seeds through
    `examples/fremtpl2/seed.py`, runs WF-699's journey and then WF-701's over real HTTP to `lb`.
-   Behind `GIP_DEPLOY_TESTS=1` in the test suite, in the form of `PL-1690` E4.3's compose smoke; it
+   Behind `GIP_DEPLOY_TESTS=1` in the test suite, in the form of `PL 1690` E4.3's compose smoke; it
    cannot run in CI, so the `LG-` quotes the build window's run by command, tree and output.
 
 **Task 0 — readiness, at S5's merged tree, before any red** (each result in the `LG-`, by command
@@ -421,14 +422,14 @@ with its failure line as printed; a matching status with a different cause is a 
    journey_wf701.py`; K2's and K1's demo-data files under `examples/fremtpl2/rating/` (new files
    only; no shipped file edited); `scripts/demo.py`; `backend/tests/test_wf701_journey.py`;
    `backend/tests/test_demo_command.py`; the compose runtime test under `backend/tests/` beside
-   `PL-1690` E4.3's; the change DP-2 rules, if it rules it into this slice; and the slice's `LG-`.
+   `PL 1690` E4.3's; the change DP-2 rules, if it rules it into this slice; and the slice's `LG-`.
    It touches no S5 file, no spec, no contract, and not `examples/fremtpl2/journey.py`.
 
 **Activation needs** (each quoted in the GO request):
 
 1. `SL-1259` (S5) **merged** (09:50:52 item 2), with D5.6 met in its `LG-`.
 2. `SL-1258` (S4) merged (implied by 1; named because the compose mode rests on it).
-3. `PL-1690` minted on `main` (D14, #1298), so E4.2's worker and E4.3's smoke are on the tree.
+3. `PL 1690` minted on `main` (D14, #1298), so E4.2's worker and E4.3's smoke are on the tree.
 4. DP-1 to DP-3 ruled (DP-4 to DP-6 are non-blocking; each has a recommendation that stands
    unless ruled otherwise).
 5. FD 8011 filed (its minted id fills the KNOWN GAP line), or resolved.
@@ -445,7 +446,7 @@ green.
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
 | DP-1 | W2 reads "dev-principal auth is REFUSED at startup for environment `prod`". The guard (P1) reads the **process** environment; the demo deploys to the **Environment resource** `prod` in a process whose environment is `dev` (P2). Is that the demo W2 permits? | (a) Yes: process `dev` with dev auth, Environment resources `uat`/`prod` inside it, both printed in the output's first line (T4). (b) No: the process runs `prod`, which needs OIDC through the reference Keycloak, TLS termination and an issuer (`config.py:215-226`) — the memo's DP-W2 (b), which W2 did not choose. | **(a).** It is the only form the shipped guard allows with dev auth, and Keycloak login is not a WF-701 step. | reading of a ruling | **yes** | the maintainer |
-| DP-2 | `score.trace_produce` routes to `scoring` (P3), and neither S4's worker (`PL-1690` E4.2: the set equals `{default, compute}`) nor `demo.py`'s consumes it, so C7 cannot pass outside the in-process test. Who adds the consumer? | (a) **S4**, at its GO (still open): the worker consumes `default,compute,scoring`, E4.2's shape test asserts that set, and E4.3's smoke stands; `demo.py`'s local worker gets `scoring` in SL-8015 (T6). (b) A separate compose `worker-scoring` service (FR-405's pools), added by SL-8015, which then edits S4's compose file after S4 merges. (c) SL-8015 runs a one-off `scoring` worker as a test fixture, as E4.3 runs beat; the demo command starts it too. | **(a).** It is the defect class E4.3 was ruled to catch ("no consumer on a queue"), found before S4's GO, and S4 owns FR-415's worker; (b) widens a demo slice into S4's file, (c) makes the demo pass on a stack the product does not ship. Whether it is also an `FD-` or a backlog row is the lead's (Lean P2 L3). | scope / finding | **yes** (C7 cannot pass otherwise) | the lead at S4's GO; the maintainer if contested |
+| DP-2 | `score.trace_produce` routes to `scoring` (P3), and neither S4's worker (`PL 1690` E4.2: the set equals `{default, compute}`) nor `demo.py`'s consumes it, so C7 cannot pass outside the in-process test. Who adds the consumer? | (a) **S4**, at its GO (still open): the worker consumes `default,compute,scoring`, E4.2's shape test asserts that set, and E4.3's smoke stands; `demo.py`'s local worker gets `scoring` in SL-8015 (T6). (b) A separate compose `worker-scoring` service (FR-405's pools), added by SL-8015, which then edits S4's compose file after S4 merges. (c) SL-8015 runs a one-off `scoring` worker as a test fixture, as E4.3 runs beat; the demo command starts it too. | **(a).** It is the defect class E4.3 was ruled to catch ("no consumer on a queue"), found before S4's GO, and S4 owns FR-415's worker; (b) widens a demo slice into S4's file, (c) makes the demo pass on a stack the product does not ship. Whether it is also an `FD-` or a backlog row is the lead's (Lean P2 L3). | scope / finding | **yes** (C7 cannot pass otherwise) | the lead at S4's GO; the maintainer if contested |
 | DP-3 | D5.6 (W1) records the COMMIT set in `deployment.created`'s after-state. Today that event is written inside the deploy transaction with `after=` the `Deployment` model (P5). How does the set get there? | (a) S5's switch completes its COMMIT round before the deploy transaction commits, and the set is a field added to `Deployment` in `model-schema` (so S5's write set adds `packages/model-schema/` and the regenerated contract). (b) The after-state carries the PREPARE set (known before commit), and the COMMIT set goes on a second, catalogued Audit Event after the switch (a `06` catalogue append, a spec change in S5). (c) The set is a column on the Deployment row, filled after COMMIT, read back through `GET /environments/{env}/deployments`; the after-state names the PREPARE set. | **(a)**, as W1 is worded, **on one condition**: S5's `LG-` states, before the code, what happens if the transaction fails after replicas have switched. If S5 cannot make that safe, it stops and the decision-maker rules (b) or (c) (`CLAUDE.md` §0); no S5 code records a different set under D5.6 without that ruling. | mechanism of a ruling | **yes**, for S5's D5.6 | the decision-maker, at S5's GO |
 | DP-4 | The frame: which version is live and which is the candidate? | (a) `rv3` live, K1 (`min_premium 150 -> 180`) candidate; (b) `fremtpl2-demo@1` live, `rv3` candidate; (c) `rv3` live, another new candidate | **(a)**, subject to Task 0.5; (b) re-deploys a version WF-699 already deployed, which A2 needs to be new | demo design | no | the recommendation stands unless ruled |
 | DP-5 | W3 says "author now on a branch stacked on S5's head", but no S5 branch exists at `1e260c15`, and S4 (`origin/sl-1258-wk674-s4` @`e1555803`) is not GO'd. What is the authoring base? | (a) Branch from `main` now; author T1 to T4 and T6 (no S4 or S5 dependency); re-stack onto S5's head when S5 pushes, then author T5. (b) Stack on S4's authored head now. (c) Wait for S5's branch. | **(a).** It keeps W3's intent (authoring early, GO after S5) without stacking on a branch that is itself unGO'd. | sequencing | no | the lead |
@@ -460,7 +461,7 @@ until each is ruled and the rulings are cited here by a dated activation line.
 - **FD 8011** (C7 errors, MEDIUM, owner WK-1178, the §0 question): filed by an auditor (the lead's
   10:01:48 entry), never by this plan.
 - **D5.6 into S5's `LG-`:** S5's executor, at S5's GO.
-- **DP-2 into S4:** the lead, at S4's GO, if ruled (a); `PL-1690` is frozen once minted, so the
+- **DP-2 into S4:** the lead, at S4's GO, if ruled (a); `PL 1690` is frozen once minted, so the
   change is a dated line in S4's `LG-` or a further delta, the lead's choice.
 - **WK-674's roadmap row** lists this delta's minted id (L5): the lead.
 - **eta.md's row-2 block** already carries W0's +0.5 d / +1 d (the lead's eta line "2026-10-14
