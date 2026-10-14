@@ -566,7 +566,7 @@ works: WK-668, WK-669, WK-670, WK-671, WK-672, WK-673, WK-674, WK-675, WK-690, W
 
 - **G1.** Every P2 Work is resolved: closed by a `CR- kind: work` carrying the maintainer's dated acceptance line, or moved out of P2 by a dated maintainer line. WK-1178, the standing maintenance Work, is exempt and is dispositioned under G3. Check: every `### WK-` section in `## P2` reads `status: closed`, or is WK-1178, or is named in a dated move line.
 - **G2.** The exit demo is `WF-699` end to end on the freMTPL2 seed, with its deploy step: through approved models, a Rating Version compiled with pins, golden quotes, a regression run, a dislocation run with attribution, submission, and approval by a principal who is neither submitter nor author (#861, FR-353), then deployment to `uat` and then `prod` (`07-platform.md` FR-429), from one command to a served page, in Phase 1b's form. It is recorded in a `CR- kind: phase` with the maintainer's acceptance. By CR-1212's accepted P12 resolution, `prod` here is the platform's environment (FR-429), not production packaging.
-  *(Dated line, 2026-10-12, quoting the maintainer's (by delegation) entry "2026-10-12 02:29:16 BST — SL-1527 D7: (A) ACCEPTED; FD owner WK-673 (not WK-1178), MEDIUM; (C) gets its OWN WK-673 slice before G2" (`to-lead.md`) item 3, and the entry "2026-10-12 02:35:40 BST" (the finding re-rated HIGH): G2 also requires WF-699 D7 (the dislocation attribution) to decompose into at least two groups, so **G2 is met only when `SL-1543` AND the `WK-673` slice SL 9850 (working id, `PL 9807`; `FD-1660`) have both merged**. Until then the exit-demo journey runs D7 as one group and prints "SKIPPED D7 decomposition — FD 9804". `PL-1544` is a frozen plan and is not edited: the plan's own Context carries the same condition in `PL 9807`.)*
+  *(Dated line, 2026-10-12, quoting the maintainer's (by delegation) entry "2026-10-12 02:29:16 BST — SL-1527 D7: (A) ACCEPTED; FD owner WK-673 (not WK-1178), MEDIUM; (C) gets its OWN WK-673 slice before G2" (`to-lead.md`) item 3, and the entry "2026-10-12 02:35:40 BST" (the finding re-rated HIGH): G2 also requires WF-699 D7 (the dislocation attribution) to decompose into at least two groups, so **G2 is met only when `SL-1543` AND the `WK-673` slices `SL-1695` (Stage A, the guard) and `SL-1696` (Stage B, the fix; plan `PL-1694`; `FD-1660`) have all merged**. Until then the exit-demo journey runs D7 as one group and prints "SKIPPED D7 decomposition — FD 9804". `PL-1544` is a frozen plan and is not edited: the plan's own Context carries the same condition in `PL-1694`. *(Re-pointed 2026-10-12 by the planner (planner-wk673-recut), by delegation of the lead, from-lead "2026-10-12 08:15:37 BST" (`channel/from-lead-2026-10-09.md`): the slice was SL 9850 (working id) under PL 9807 (working id); RL-1686 DP-S (i) cut it into `SL-1695` (from working id 9851) and `SL-1696` (from working id 9850) under `PL-1694` (from working id 9807), minted early in #1299, and G2 needs both.)*)*
 - **G3.** Every open P2 finding is fixed, carried with a named owner, or accepted by a dated line (`CLAUDE.md` §14). FD-1200 is fixed on main (`e6a9ca71`, FR-351) and FD-1199 is triaged with a root cause or a dated acceptance.
 - **G4.** Every P2 NFR is measured on the exit tree or carried with an owner, per the per-id list in the record.
   *(Amended 2026-09-29, the lead, quoting the maintainer's entry "2026-09-29 16:08:24 BST · maintainer (acting on the maintainer's behalf) · HOST FALLBACK accepted; DEPENDABOT plan approved (the maintainer)", §1. It applies to the near-bound measured verdicts that need a dedicated host: F1 (PL-1237 acceptance item 5), NFR-489, NFR-502, the NFR-493 linearity limb and NFR-494 (item 6). NFR-490 is unaffected. The entry's wording:)*
@@ -699,7 +699,7 @@ From “Workstreams” (line 383): Dislocation with attribution | FR-263, FR-264
 
 *(Amended 2026-09-30 by the lead, on `PL-1267` §Activation item 2 and the maintainer's entry "2026-09-30 02:33:58 BST — MERGE-ACK #844 and ACCEPTANCE of PL-1267 (WK-673 map plan)", whose carry-forward reads "the lead's next roadmap PR adds the plan's ids to `### WK-673`'s "From Workstreams" line".)* FR-224, FR-257 limb (2), `06` FR-364 and FR-231 (finding F-W10-2, the exposure-weight limb only) are added to WK-673's scope, as `PL-1267` proposes. NFR-495 and NFR-496, applied to this Work's artifacts, are added from the same entry's acceptance line, whose Scope clause reads "takes FR-224, FR-257 limb (2), `06` FR-364, FR-231 (the F-W10-2 weight limb) and NFR-495/NFR-496 (applied to this Work's artifacts) from RL-1264 and CR-1212". The line named FR-263 to FR-266 only.
 
-*(Dated line, 2026-10-12, on the lead's entry "2026-10-12 02:45:03 BST" (the eta, a local file) and the maintainer's (by delegation) entries "2026-10-12 02:34:38 BST" and "2026-10-12 02:35:40 BST" in `to-lead.md`: `PL 9807` (a working id; branch `pl-9807-wk673-subgraph-attribution-2026-10-12`) is a Work-plan delta relating `PL-1267`, for the fix of `FD-1660` (attribution ignores sub-graph mounts): a loud guard first, then the fix, in the slice `SL 9850` (working id). The planner's charter limits it to its `SL-` rows, so this one entry on the Work's row is the lead's. Re-point the working ids at the mint.)*
+*(Dated line, 2026-10-12, on the lead's entry "2026-10-12 02:45:03 BST" (the eta, a local file) and the maintainer's (by delegation) entries "2026-10-12 02:34:38 BST" and "2026-10-12 02:35:40 BST" in `to-lead.md`: `PL-1694` (from working id 9807; first filed on branch `pl-9807-wk673-subgraph-attribution-2026-10-12`) is a Work-plan delta relating `PL-1267`, for the fix of `FD-1660` (attribution ignores sub-graph mounts): a loud guard first, in the slice `SL-1695` (from working id 9851), then the fix, in the slice `SL-1696` (from working id 9850), gated right after `SL-1695` merges (`RL-1686` DP-S (i)). The planner's charter limits it to its `SL-` rows, so this one entry on the Work's row is the lead's. *(Re-pointed at the mint 2026-10-12 by the planner (planner-wk673-recut), by delegation of the lead, from-lead "2026-10-12 08:15:37 BST" (`channel/from-lead-2026-10-09.md`); the line read `PL 9807` and `SL 9850` (working ids) before, and named no Stage A slice.)*)*
 
 *(Dated line, 2026-10-12, written by the planner by delegation of the lead, from-lead "2026-10-12 05:58:38 BST" (`channel/from-lead-2026-10-09.md`), on the maintainer's (by delegation) entries "2026-10-12 05:57:57 BST" and "2026-10-12 05:58:56 BST" in `to-lead.md`: `PL-1677` is a Work-plan delta relating `PL-1267`, for the loud guard on FD-1679 (FR-242's drafted change summary pairs rate-table pins by slug alone, so two pinned versions of one slug are silently dropped or mis-paired). It adds the slice `SL-1678`, which merges before `SL-1543`. Its DP-P1, the real pairing fix, stays open for this Work's plan.)*
 
@@ -956,6 +956,42 @@ The loud guard for FD-1679 (HIGH, owner WK-673). `_pins_by_slug` (`backend/src/a
 
 (Closed 2026-10-12 as a Slice, closing acts at the mint turn in the slice PR, on the lead's merge; ledger `LG-1681`, minted from working id 9899; plan `PL-1677` stays `active` for DP-P1. Gate at `d01cf107`: check 31 only, accepted by the lead (from-lead "2026-10-12 07:38:09 BST"). Audit: written 2026-10-12 by `auditor-sl1678`, in `LG-1681`'s Audit section; the lead's verdict is not yet given.)
 
+#### SL-1695 — WK-673 fix slice, Stage A — FD-1660: the loud guard, attribution refuses a sub-graph mount difference with a coded error naming FD-1660, and WF-699 D6 asserts it
+
+```yaml
+id: SL-1695
+family: slice
+title: WK-673 fix slice, Stage A — FD-1660, the loud guard; attribution refuses a sub-graph mount difference with a coded error naming FD-1660, and WF-699 D6 asserts it
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-12
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 50bbdd96b2154cb4eb79ccf91658191e51ab8906
+phase: P2
+work: WK-673
+corrected_by: []
+relates: [PL-1694, FD-1660, PL-1267, SL-1387, SL-1527, SL-1543]
+```
+
+Stage A of the FD-1660 fix (HIGH, owner WK-673), cut as its own slice by RL-1686 DP-S (i), on the maintainer's (by delegation) entries "2026-10-12 02:43:49 BST — DP-G: exemption (i) REFUSED; …" (the guard's scope) and "2026-10-12 07:44:13 BST — Three dropped decision-maker hand-offs: (1) RL 9852 = (A), with 3 conditions; …" item (1) (`to-lead.md`). In `attribute` (`packages/pricing-core/src/pricing_core/rating/analysis.py`, after `_check_groups` `:986`, before `_check_dependence` `:987`), attribution **refuses** when the structural diff carries any `sub_graph_mounts` difference at any K, or either side mounts a sub-graph and K ≥ 2, with an error that is both an `AttributionError` (`VALIDATION_FAILED`) and a `CodedError`, declared in `analysis.py`, whose fixed, input-free text says sub-graph mount differences are not yet attributable, names FD-1660 and says attribution of sub-graph mount changes is unavailable until SL-1696 (minted id), then the `mount_point`s; so `safe_error_text` keeps it and the Dislocation Job's stored error names the finding (condition (a); RL-1686 DP-W write 1). The WF-699 journey's D6 asserts that refusal; D7 prints "SKIPPED D7 — FD-1660 guard", and D8, E4, E6, E8, E9, DEP and S1 print `SKIPPED` lines naming FD-1660 and SL-1696; `test_wf699_journey.py` is updated to assert it, **no test deleted** (condition (b); DP-W write 2); condition (b)'s grep is re-run at the slice's base and recorded in the LG (DP-W write 3). Reds first on `main` by cause (G1 to G4, the text test, the raise-site enumeration, the journey's D6). **Write set:** `analysis.py` (the class and the guard), `packages/pricing-core/tests/test_rating_attribution.py`, `packages/pricing-core/tests/test_quote_input_raise_sites.py` (one case), `examples/fremtpl2/journey.py`, `backend/tests/test_wf699_journey.py`, `examples/fremtpl2/README.md` (one dated sentence), `docs/specs/03-rating-engine.md` (**one dated interim line only**, verbatim from the maintainer's (by delegation) entry "2026-10-12 08:09:39 BST" item 4, under FR-264 and at the end of §4.6), its LG; **not** `backend/src/`, `packages/model-schema/`, `docs/contracts/`, `frontend/`. Requirements: `03` FR-1399 (its existing refusal, no text change), FR-264 and §4.6 (the interim line), FR-266 and FR-1398 (read), FR-217 (read only); `WF-699` D6; NFR-499. Plan `PL-1694` (a WK-673 Work-plan delta relating `PL-1267`; `draft`), Acceptance 1–10, Tasks "SL-1695". **Activation needs:** RL-1686 on `main` (D14, #1298) and this row, SL-1696 and PL-1694 minted (this mint PR), so the guard's text and the `SKIPPED` lines carry SL-1696; **the interim `03` line in Stage A's commit with the code** (the 08:09:39 entry, item 4); SL-1527 on `main` (met); **serialised with SL-1543** on `journey.py` and `test_wf699_journey.py` (the second to merge re-merges `main` and re-runs the journey); a build slot and the single gate. **Merges before SL-1696**, which is gated right after it. *(Row cut 2026-10-12 by the planner, planner-wk673-recut, on RL-1686 DP-S (i); working id 9851 reserved by the lead, named in RL 9852's disclosure. Minted 2026-10-12 as SL-1695 from working id 9851, with PL-1694 from working id 9807 and SL-1696 from working id 9850, in the early-mint PR, on the maintainer's (by delegation) entry "2026-10-12 08:09:39 BST" and the lead's from-lead "2026-10-12 08:09:58 BST"; RL-1686 is minted from working id 9852 in D14. Quoted entry headers keep their working ids.)*
+
+#### SL-1696 — WK-673 fix slice, Stage B — FD-1660: attribution carries sub-graph mounts (a mount is a derived change, a subset carries its mounts and pins; WF-699 D7 decomposes)
+
+```yaml
+id: SL-1696
+family: slice
+title: WK-673 fix slice, Stage B — FD-1660, attribution carries sub-graph mounts (a mount is a derived change, a subset carries its mounts and pins; WF-699 D7 decomposes)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-12
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: fc4401dcad789692f79f6c3ffc058c1c3921b7b9
+phase: P2
+work: WK-673
+corrected_by: []
+relates: [PL-1694, FD-1660, PL-1267, SL-1387, SL-1527, SL-1543]
+```
+
+The fix slice of FD-1660 (HIGH, owner WK-673), on to-lead "2026-10-12 02:29:16 BST — SL-1527 D7: (A) ACCEPTED; FD owner WK-673 (not WK-1178), MEDIUM; (C) gets its OWN WK-673 slice before G2, planned now and run beside SL-1543", "2026-10-12 02:34:38 BST — FD 9804 widened to 3 limbs: ACCEPTED, MEDIUM PROVISIONAL with a named re-rate trigger; PL 9807 as a §1.6 map delta: ACCEPTED" and "2026-10-12 02:35:40 BST — FD 9804 RE-RATED HIGH now (code read), confirmed or reverted by R3; PL 9807 orders a LOUD GUARD first". Attribution (`packages/pricing-core/src/pricing_core/rating/analysis.py`, SL-1387's code) ignores sub-graph mounts: a partial subset keeps the baseline's `sub_graphs` (`_subset_algorithm`, `:742-765`), drops every sub-graph pin (`_subset_pins`, `:768-799`; `_PIN_KINDS`, `:484-489`), and a mount difference is no derived change (`_derive`, `:559-674`). **The fix (Stage B):** per RL-1686 DP-W (a), DP-1 (a), DP-2 (i), DP-3 (i), DP-T: a mount is derived like a step by its `mount_point` (`step_added` / `step_removed` / `step_changed`, never `table_repointed`; no new `DeltaKind`), a subset carries the baseline's mounts with its own mount changes applied and their pins (`sub_graphs` joins `_PIN_KINDS`), `_check_dependence` treats a mount as a node in both directions; `03` FR-1398 and FR-1399 gain T2 and T1 as RL-1686 adopted them; SL-1695's guard, its coded class, its tests' guard assertions and its `SKIPPED` lines are removed or flipped; `WF-699` D7 re-lands the two-group split from `salv-sl1527-d7-2group` @`e14a81e5`. **Write set:** extends SL-1695's in `analysis.py`, `test_rating_attribution.py`, `test_quote_input_raise_sites.py`, `journey.py`, `test_wf699_journey.py` and the README, plus `docs/specs/03-rating-engine.md` (strikes SL-1695's interim line under FR-264 and §4.6 in place, and writes T1, T2) and its LG. Requirements: `03` FR-266, FR-1397, FR-1398, FR-1399, FR-264, FR-217 (read only); NFR-495, NFR-496 applied. Plan `PL-1694` (a WK-673 Work-plan delta relating `PL-1267`; `draft`; every DP ruled by RL-1686 and the maintainer's (by delegation) entries of 02:43:49 and 07:44:13), Acceptance 11–21, Tasks "SL-1696". **Activation needs:** **SL-1695 merged** (the maintainer's (by delegation) entry "2026-10-12 07:44:13 BST" condition (c): *"Stage B is planned NOW and gated right after Stage A on WK-673's lane, as the G2 item it is"*); RL-1686 on `main`; **serialised with SL-1543** on `examples/fremtpl2/journey.py` and `backend/tests/test_wf699_journey.py` (the second to merge re-merges `main` and re-runs the journey); a free build lane. **G2 is met only when SL-1543, SL-1695 and this slice have merged** (02:29:16, item 3; the lead's D13 delta line). *(Row cut 2026-10-12 by the planner, planner-wk673-c; working ids 9850 and 9807 reserved by the lead, `handover/eta.md` 2026-10-12 02:29:58 BST. Re-cut 2026-10-12 by the planner, planner-wk673-recut, on RL-1686 DP-S (i): Stage A moved to its own row, SL-1695, and its exemption clause dropped (DP-G, the maintainer's (by delegation) entry "2026-10-12 02:43:49 BST"); needs amended to "SL-1695 merged". Minted 2026-10-12 as SL-1696 from working id 9850, with PL-1694 from working id 9807 and SL-1695 from working id 9851, in the early-mint PR, on the maintainer's (by delegation) entry "2026-10-12 08:09:39 BST" and the lead's from-lead "2026-10-12 08:09:58 BST"; RL-1686 is minted from working id 9852 in D14. Quoted entry headers keep their working ids.)*
+
 ### WK-674 — Deployment: environments, atomic switchover, rollback, shadow — **and the tenancy mechanics ADR-710 requires**
 
 ```yaml
@@ -1103,6 +1139,8 @@ The compose `api` and `worker` services, the reference identity provider, the me
 
 *Dated 2026-10-12 by the planner: the Work-plan deltas for this slice are `PL-1537` row 1, `PL-1620` (D0.1 to D0.3, D4.1 to D4.3; minted in D11, #1275) and PL-1666 (minted in D13; D0.4, D0.5, D4.4 to D4.6: FD-1650's round-trip test, FR-452's management limb behind its DP-S4-1, and FD-1661 kept out of this slice). The authored branch is `sl-1258-wk674-s4` @`a04ff676`, not activated. This row's status and fields are unchanged.*
 
+*Dated 2026-10-12 by the planner: a further Work-plan delta for this slice, PL-1690 (minted 2026-10-12 as PL-1690 from working id 9898): E4.1, FR-452's management limb as RL-1687 rules it (minted 2026-10-12 as RL-1687 from working id 9876; ACKed by the maintainer's (by delegation) entry "2026-10-12 07:44:13 BST"); E4.2, the `worker` on `--queues default,compute`, an S4 GO condition (the lead's from-lead entry "2026-10-12 05:37:23 BST"); E4.3, the compose smoke proving delivery, with beat as a one-off test fixture (the maintainer's (by delegation) entries "2026-10-12 05:37:42 BST" and "2026-10-12 05:39:20 BST"). This row's status and fields are unchanged.*
+
 #### SL-1259 — Slice 5: atomic switchover, rollback and the measurements (FR-268, FR-269, FR-272 audit and NFR-498 for rollback, NFR-494, NFR-489, NFR-502, NFR-490, NFR-493 linearity limb, NFR-497 mechanism)
 
 ```yaml
@@ -1140,6 +1178,24 @@ relates: [PL-1237]
 ```
 
 Date-based routing and shadow scoring, both built and default off per environment (`RL-1232` Part A, DP-2 (a)), with the audit limb for routing and shadow configuration changes (FR-272, NFR-498). `PL-1237` Task 6. Starts after Slice 5 closes.
+
+#### SL-1689 — the scheduler (beat) and frontend-image row: FR-432's last two limbs (FR-432, FR-413, FR-406; FD-1661)
+
+```yaml
+id: SL-1689
+family: slice
+title: the scheduler (beat) and frontend-image row: FR-432's last two limbs (FR-432, FR-413, FR-406; FD-1661)
+status: draft                  # draft → active → closed | retired (§1.2a)
+created: 2026-10-12
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 604ea084c96efe93f521fb9ba17738e05241e61a
+phase: P2
+work: WK-674
+corrected_by: []
+relates: [PL-1237, PL-1666, SL-1258, FD-1661]
+```
+
+The `scheduler` service (the Celery beat process, which runs the outbox relay today and FR-413's tick when that lands) and the `frontend` image and service, both under the `app` profile on Slice 4's path: FR-432's `scheduler` and `frontend` limbs, which discharge FD-1661 with Slice 4's `worker`. The maintainer (by delegation) placed it in the entries "2026-10-12 02:53:52 BST" item 4 (beat as its own row after S4, serialised on `deploy/docker-compose.yml`) and "2026-10-12 03:09:50 BST" (DP-S4-3 (b): the `frontend` image folds into this row, in P2, with three conditions). Work-plan delta PL-1688 (both of its decision points ruled 05:37:23, so `active` at its mint). **Activation needs:** `SL-1258` merged, with this row's base containing it; `SL-1258`'s worker consuming `default,compute` (DP-B1 ruled (a), an S4 GO condition) and DP-B2 ruled (a), the frontend on `${GIP_WEB_PORT:-5173}`, both in the lead's entry "2026-10-12 05:37:23 BST"; the lane free and serialised on `deploy/docker-compose.yml`; a build window booked for the runtime and fresh-checkout proofs; the maintainer's dispatch GO and the lead's go. Off the exit path. **If the cut ladder takes its lane**, it moves to P3 by the dated line PL-1688 B0.3 pre-names (owner WK-674; discharge event: this row's merge), and is never dropped. *(Cut 2026-10-12 by the planner under working id 9883, reserved by the lead; minted 2026-10-12 as SL-1689 from working id 9883, with PL-1688 from working id 9882.)*
 
 
 ### WK-675 — Frontend: **DAG designer (Vue Flow)**, rate table editor, quote sandbox + ladder waterfall, dislocation views
@@ -2366,7 +2422,7 @@ relates: [FD-1366, FD-1335, PL-1364, SL-1367, SL-1547]
 id: SL-1675
 family: slice
 title: WK-1178 slice — rows whose declared weight is 0 are excluded from the fit and from every diagnostic (FR-111)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-12
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 604ea084c96efe93f521fb9ba17738e05241e61a
@@ -2377,6 +2433,25 @@ relates: [PL-1542, SL-1543, RL-1263]
 ```
 
 On the maintainer's (by delegation) entry "2026-10-12 05:39:20 BST — SL-1543 severity block: (i) a small PRECEDING WK-1178 slice ACCEPTED; …", (i): a row whose declared weight column holds exactly 0 is excluded from the fit and from every diagnostic (FR-171, FR-183), before the family's response-domain check, so FR-111's severity `weight = claim_count` fits the full book on the frequency model's `dataset_version`, split and `holdout_part` (FR-190 untouched, no placeholder response). Each partition's diagnostics report the count excluded (`PartitionDiagnostics.rows_excluded_zero_weight`). A negative or null weight is still refused. Spec first: one dated FR-111 clause. The GLM, GBM and EBM arms and the backtest are all covered, because they share the weight and `_partition`. The A/E definition is not changed (FD 9889 and OQ 9891, filed in D14). Work-plan delta PL-1674 (DP-Z1 ruled (a) by the maintainer (by delegation), "2026-10-12 05:47:19 BST": the view in a later WK-675 frontend row). **Activation needs:** PL-1674 set `active` in this slice's activation commit; the shared-path census on `docs/contracts/` against `SL-1669` and `SL-1549` (the later PR regenerates); the lead's executor GO. It **precedes `SL-1543`'s severity steps**, and G2 slips by it (05:39:20). *(Cut 2026-10-12 by the planner under working id 9887, reserved by the lead; minted 2026-10-12 as SL-1675, early, on the maintainer's (by delegation) GO "2026-10-12 05:47:19 BST".)*
+
+(Closed 2026-10-12 as a Slice, closing acts in the slice PR's mint commit, on the lead's merge turn; ledger `LG-1697`, minted 2026-10-12 from working id 9900. `PL-1674` stays `active`. Audit: written by `auditor-sl1675` in `LG-1697` (Audit section, over `origin/main...origin/sl-1675-wk1178-zero-weight`, PR #1300 head `5a5c9e8f`), verdicts adopted by the lead in the from-lead entry "2026-10-12 08:39:13 BST" (F1, F2, F3 and F4 dispositions there). The finding it discharges is `FD-1698` (minted from working id 9902).)
+#### SL-1683 — WK-1178 fix slice — FD-1335 Part B for the rate-table import route: a typed 200 and a declared 201
+
+```yaml
+id: SL-1683
+family: slice
+title: WK-1178 fix slice — FD-1335 Part B for the rate-table import route: a typed 200 and a declared 201
+status: draft                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-12
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 50bbdd96b2154cb4eb79ccf91658191e51ab8906
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1682, FD-1335, FD-1684, PL-1364, SL-1367, PL-1667, SL-1669, SL-1547]
+```
+
+On the maintainer's (by delegation) entry "2026-10-12 07:28:38 BST — S5 flags: (1) NEITHER (a) nor (c): type POST …/import's 200 FIRST in a tiny WK-1178 slice (d), with (a)+tripwire only as a named fallback; …", flag (1): `POST /api/v1/rate-tables/{slug}@{version}/import` publishes its 200 as the existing `model-schema` `ImportPreview` (`diff: RateTableDiff`, `created_by_import: ImportVerdict`; `rating.py:1363`) and its 201 (`confirm: true`) as `RateTableVersion`, in the manual-edit route's form (`response_model=None` with a `responses` map, `api/rate_tables.py:138-147`). No model is added or composed. The route leaves `UNTYPED_2XX_PENDING_PART_B` (`backend/tests/test_contracts.py:3193`, FD-1335 Part B's list, not FD-1366's), and `docs/contracts/openapi/generated.json` and the frontend client are regenerated. Spec first: a dated clause on `03` §5.1's import row (`:1046`, FR-235). Red first by cause: the published 200 has no `$ref` today; the stale-list test after regeneration; a real preview and confirm response round-trip through the published models (a guard, shown red on a planted extra field). `FD-1335` stays active with three routes in its Part B list. The export routes are out of scope (`FD-1684`). WK-675 S5 (`SL-1547`) uses the generated types after this slice merges, and S5's gate waits for it (07:28:38). Plan: Work-plan delta `PL-1682`. **Activation needs:** DP-1 (the 201 published too) and DP-2 (no standalone schema file) MET, both accepted by the maintainer (by delegation), "2026-10-12 07:46:06 BST", items 1 and 2; PL-1682 set `active` in this slice's activation commit; the shared-path census re-checked at the GO (`generated.json` against `SL-1547`; the later PR regenerates); the lead's executor GO. *(Cut 2026-10-12 by the planner under working id 9911, reserved by the lead, from-lead "2026-10-12 07:29:15 BST"; minted 2026-10-12 as SL-1683 from working id 9911, early, on the maintainer's (by delegation) entry "2026-10-12 07:46:06 BST".)*
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 

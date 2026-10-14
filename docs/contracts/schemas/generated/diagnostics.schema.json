@@ -807,6 +807,19 @@
           "title": "Rows",
           "type": "integer"
         },
+        "rows_excluded_zero_weight": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rows Excluded Zero Weight"
+        },
         "weighting": {
           "$ref": "#/$defs/Weighting"
         }

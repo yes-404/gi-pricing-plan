@@ -460,3 +460,74 @@ def test_fit_ebm_refuses_a_seed_argument() -> None:
     """
     with pytest.raises(TypeError, match="seed"):
         fit_ebm(pl.DataFrame(), _spec(), [], seed=0)  # type: ignore[call-arg]
+
+
+# --------------------------------------------------------------------------------------
+# FR-111 (amended 2026-10-12, SL-1675) — a row whose declared weight is exactly 0 is absent
+# --------------------------------------------------------------------------------------
+
+CLAIM_WEIGHT = WeightSpec(kind="column", column="n_claims")
+
+
+def _zero_weight_book(n: int = 2000, seed: int = 20261012) -> pl.DataFrame:
+    """`_book` with half the rows at weight 0 and a *loud, non-zero* response there.
+
+    Non-zero so the fit runs on main and the comparison with a claims-only fit is a real
+    one: the EBM bins and boosts on those rows even though the loss gives them no weight.
+    """
+    book = _book(n, seed)
+    rng = np.random.default_rng(seed + 1)
+    zero = rng.uniform(0.0, 1.0, n) < 0.5
+    return book.with_columns(
+        pl.Series("n_claims", np.where(zero, 0.0, 1.0)),
+        pl.Series(
+            "claim_count",
+            np.where(zero, rng.uniform(5.0, 9.0, n), book["claim_count"].to_numpy()),
+        ),
+    )
+
+
+@pytest.mark.req("FR-111")
+def test_a_weight_zero_row_does_not_shape_the_ebms_bins() -> None:
+    """The full book fits as the CLAIMS-ONLY book does (05:47:19).
+
+    On main `interpret` refuses a zero `sample_weight` outright (`illegal sample_weight value
+    of zero`, as `EbmFitError`), so the full-frame fit does not exist to compare with.
+    """
+    book = _zero_weight_book()
+    claims_only = book.filter(pl.col("n_claims") > 0)
+    spec = _spec(weight=CLAIM_WEIGHT)
+
+    full = fit_ebm(book, spec, FACTORS, bandings=BANDINGS)
+    reference = fit_ebm(claims_only, spec, FACTORS, bandings=BANDINGS)
+
+    got = np.asarray(predict_ebm(full, claims_only, FACTORS, bandings=BANDINGS))
+    want = np.asarray(predict_ebm(reference, claims_only, FACTORS, bandings=BANDINGS))
+    assert np.allclose(got, want, rtol=1e-9, atol=1e-12), float(np.max(np.abs(got - want)))
+
+
+@pytest.mark.req("FR-111")
+@pytest.mark.parametrize(
+    "bad",
+    [-1.0, None, float("inf"), float("nan")],
+    ids=["negative", "null", "inf", "nan"],
+)
+def test_an_unusable_weight_is_refused_by_the_weight_code(bad: float | None) -> None:
+    """One code for every arm (06:10:04); on main EBM named this
+    `EBM_MONOTONE_CONSTRAINT_INCOMPLETE`."""
+    book = _zero_weight_book(300).with_columns(
+        pl.when(pl.int_range(pl.len()) == 3).then(bad).otherwise(1.0).alias("n_claims")
+    )
+    with pytest.raises(EbmFitError) as refused:
+        fit_ebm(book, _spec(weight=CLAIM_WEIGHT), FACTORS, bandings=BANDINGS)
+    assert refused.value.code == "DECLARED_WEIGHT_INVALID"
+    assert "n_claims" in str(refused.value)
+
+
+@pytest.mark.req("FR-111")
+def test_a_book_of_only_weight_zero_rows_says_so() -> None:
+    book = _zero_weight_book(300).with_columns(pl.lit(0.0).alias("n_claims"))
+    with pytest.raises(EbmFitError) as refused:
+        fit_ebm(book, _spec(weight=CLAIM_WEIGHT), FACTORS, bandings=BANDINGS)
+    assert refused.value.code == "DECLARED_WEIGHT_INVALID"
+    assert "weight 0" in str(refused.value)

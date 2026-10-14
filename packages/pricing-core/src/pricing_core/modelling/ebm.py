@@ -32,6 +32,7 @@ from model_schema import (
 )
 from pricing_core.modelling.errors import FactorResolutionError
 from pricing_core.modelling.factors import resolve_factors
+from pricing_core.modelling.weights import require_usable_weights
 from pricing_core.progress import NullProgress, ProgressCallback
 
 __all__ = ["EbmFitError", "fit_ebm"]
@@ -115,6 +116,9 @@ def fit_ebm(
     """
     report = progress or NullProgress()
     report.check_cancelled()
+    # FR-111: weight-0 rows are absent from the fit; an unusable weight is refused before
+    # `interpret` sees it.
+    data = require_usable_weights(data, spec, EbmFitError).data
     report.update(0.05, "ebm: encoding")
     matrix = resolve_factors(data, factors, bandings=bandings, groupings=groupings)
 
