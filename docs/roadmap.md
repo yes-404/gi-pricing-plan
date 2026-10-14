@@ -2453,6 +2453,24 @@ relates: [PL-1682, FD-1335, FD-1684, PL-1364, SL-1367, PL-1667, SL-1669, SL-1547
 
 On the maintainer's (by delegation) entry "2026-10-12 07:28:38 BST — S5 flags: (1) NEITHER (a) nor (c): type POST …/import's 200 FIRST in a tiny WK-1178 slice (d), with (a)+tripwire only as a named fallback; …", flag (1): `POST /api/v1/rate-tables/{slug}@{version}/import` publishes its 200 as the existing `model-schema` `ImportPreview` (`diff: RateTableDiff`, `created_by_import: ImportVerdict`; `rating.py:1363`) and its 201 (`confirm: true`) as `RateTableVersion`, in the manual-edit route's form (`response_model=None` with a `responses` map, `api/rate_tables.py:138-147`). No model is added or composed. The route leaves `UNTYPED_2XX_PENDING_PART_B` (`backend/tests/test_contracts.py:3193`, FD-1335 Part B's list, not FD-1366's), and `docs/contracts/openapi/generated.json` and the frontend client are regenerated. Spec first: a dated clause on `03` §5.1's import row (`:1046`, FR-235). Red first by cause: the published 200 has no `$ref` today; the stale-list test after regeneration; a real preview and confirm response round-trip through the published models (a guard, shown red on a planted extra field). `FD-1335` stays active with three routes in its Part B list. The export routes are out of scope (`FD-1684`). WK-675 S5 (`SL-1547`) uses the generated types after this slice merges, and S5's gate waits for it (07:28:38). Plan: Work-plan delta `PL-1682`. **Activation needs:** DP-1 (the 201 published too) and DP-2 (no standalone schema file) MET, both accepted by the maintainer (by delegation), "2026-10-12 07:46:06 BST", items 1 and 2; PL-1682 set `active` in this slice's activation commit; the shared-path census re-checked at the GO (`generated.json` against `SL-1547`; the later PR regenerates); the lead's executor GO. *(Cut 2026-10-12 by the planner under working id 9911, reserved by the lead, from-lead "2026-10-12 07:29:15 BST"; minted 2026-10-12 as SL-1683 from working id 9911, early, on the maintainer's (by delegation) entry "2026-10-12 07:46:06 BST".)*
 
+#### SL-8045 — WK-1178 fix slice — the failed-authentication audit: a keyed-workspace refusal's audit row survives the 401, and every failure is counted by reason
+
+```yaml
+id: SL-8045
+family: slice
+title: WK-1178 fix slice — the failed-authentication audit: a keyed-workspace refusal's audit row survives the 401, and every failure is counted by reason
+status: draft                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-14
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-8044]
+```
+
+On the maintainer's (by delegation) entries "2026-10-14 11:08:32 BST — Failed-auth audit rollback: auditor run GO; …", item 2, and "2026-10-14 11:11:50 BST — NFR-519 hold RELEASED (letter reading correct); the failed-auth FD scope set (re lead 11:11)". `07` FR-392 audits failed authentication, but `require_caller` runs `authenticate_api_key` inside a unit of work (`backend/src/app/api/deps.py:240-241`) that rolls back the flushed `principal.auth_failed` row with the 401 (`backend/src/app/db/session.py:68-78`), so a revoked, expired, archived-account or environment-not-granted key leaves no audit row (auditor-failauth's run at `8eaf6d5f`: 576 rows before and after each). The workspace-less failures leave only a log line, and no counter tells a 401 from any 4xx (`backend/src/app/observability/metrics.py:121`). Spec first: a dated amendment on `07` FR-392 and a dated pointer on `06` FR-368 (PL 8044's T1 and T2, as ruled). The fix and its reds are PL 8044's (recommended: the failure row written in its own unit of work after the auth unit rolls back, a 5xx if that write fails, and `gip_auth_failures_total{reason}` for every failure). `backend/tests/test_auth_keys.py:198-212`, green only because it catches inside the unit, is replaced by HTTP reds red on `main` by cause. Work-plan delta PL 8044 (working id); discharges FD 8036 (working id). **Activation needs:** PL 8044's DP-1 to DP-4 ruled in one decision-maker `RL-`; FD 8036 minted (D17); the shared-path census (`deps.py`, `metrics.py`, the two spec files) against whatever is open at GO; PL 8044 set `active` in this slice's activation commit; the lead's GO. Merged before the 4 Nov code freeze. *(Cut 2026-10-14 by the planner, planner-fd8036, under working id 8045, reserved by the lead, eta "2026-10-14 12:07:20 BST".)*
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
