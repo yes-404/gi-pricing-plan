@@ -178,9 +178,18 @@ change in P2.** The remedy shape, exactly as ruled in that entry's item 3 and 4:
 1. **Retain at every owner, and release on replace (`data/ingestion.py:453`).** `correct_schema` replaces a Dataset Version's blob in place (`:456-462`) and never releases the old one; the remedy covers it (confirmed in the 10:57:10 entry).
    **Retain at every owner.** Every blob-owning artifact takes a reference to its blob in the
    transaction that stores it, and releases it when the owner replaces or deletes the blob (row 2).
-2. **A derived check, not a list.** Every `BlobStore.put` call site in `backend/src` is paired with
-   a `retain` by its owning record, **or is listed with a reason**. The 17 writers above are the
-   starting population; a new `put` site with neither fails the check.
+2. **A derived check, not a list.** Every `BlobRow` writer in `backend/src` is paired with
+   a `retain` by its owning record, **or is listed with a reason**. *(Widened 2026-10-14 by the
+   maintainer (by delegation), entry "2026-10-14 11:24:38 BST" in `to-lead.md`, which says the check
+   counts "EVERY writer of a `BlobRow` (at this tree `BlobStore.put`; after SL 8026 also
+   `promote_upload`)", not `put` call sites only.)* At `origin/main` the writer set, from
+   `git grep -nE 'BlobRow\(' origin/main -- backend/src packages`, is one constructor, `BlobRow(`
+   at `backend/src/app/platform/blobs.py:186`, inside `BlobStore.put` (`:140`); no other
+   insert into the `blobs` table exists, and `blobs.py:455` (`update(BlobRow)`) only adjusts
+   `ref_count` for `retain` and `release`. So the writers are: **`BlobStore.put`**, whose 17 call
+   sites above are the starting population, and, **after SL 8026**, **`promote_upload`** (RL 8028's
+   `blob.promote`), which creates the `BlobRow` for a promoted upload without calling `put`. A new
+   writer of either kind with neither a `retain` nor a reason fails the check.
 3. **A seeded dry run.** A `collect_garbage(dry_run=True)` report over a seeded database, with one
    live blob per owner kind past the grace period, selects **0 live blobs**.
 4. **No non-dry GC is wired until both pass.** The precondition line goes on WK-1251's roadmap row
