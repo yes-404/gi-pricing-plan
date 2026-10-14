@@ -272,10 +272,11 @@ def test_postcondition_http_error_is_a_refusal(monkeypatch: pytest.MonkeyPatch) 
 def test_the_journey_flag_names_one_journey_and_defaults_to_none() -> None:
     """DP-b1 (a): `--journey wf-699` is an option of the one command and is off by default
     (every Phase 1 demo would otherwise pay for the whole journey)."""
-    assert demo_script.JOURNEYS == ("wf-699",)
+    assert demo_script.JOURNEYS == ("wf-699", "wf-701")  # PL 8014 T6 adds `wf-701`
     parser = demo_script.build_parser()
     assert parser.parse_args([]).journey is None
     assert parser.parse_args(["--journey", "wf-699"]).journey == "wf-699"
+    assert parser.parse_args(["--journey", "wf-701"]).journey == "wf-701"
     with pytest.raises(SystemExit):
         parser.parse_args(["--journey", "wf-700"])
 
@@ -366,3 +367,72 @@ def test_the_journey_refuses_when_pnpm_is_absent() -> None:
         assert "pnpm" in str(refusal.value)
         patch.setattr(demo_script.sys, "argv", ["demo.py", "--journey", "wf-699"])
         assert demo_script.main() == 1
+
+
+# -- SL-8015: `--journey wf-701` and `--target compose` (PL 8014 T6; R8, R9) --
+
+
+@pytest.mark.req("FR-408")
+def test_the_target_flag_defaults_to_local_and_admits_compose() -> None:
+    """PL 8014 T6: `--target compose` points the journey at the running stack's `lb`; the default
+    is the local API this command starts. Anything else is refused by the parser."""
+    parser = demo_script.build_parser()
+    assert parser.parse_args(["--journey", "wf-701"]).target == "local"
+    assert parser.parse_args(["--journey", "wf-701", "--target", "compose"]).target == "compose"
+    with pytest.raises(SystemExit):
+        parser.parse_args(["--journey", "wf-701", "--target", "kubernetes"])
+
+
+@pytest.mark.req("FR-408")
+def test_a_wf701_failure_prints_the_step_line_and_exits_non_zero(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """R8: a WF-701 failure at A1 reaches `main` as one refusal line that starts `A1:` (the form
+    of PL-1544 Acceptance 6), not the WF-699 sentence."""
+    import sys
+
+    class FailedError(RuntimeError):
+        step, code, status = "A1", "VALIDATION_FAILED", 422
+
+    line = demo_script.journey_failure_line(FailedError(), journey="wf-701")
+    assert line == "A1: VALIDATION_FAILED (HTTP 422)"
+
+    def demo_that_fails_a1(**_kwargs: object) -> int:
+        raise demo_script.DemoRefusedError(line)
+
+    monkeypatch.setattr(demo_script, "demo", demo_that_fails_a1)
+    monkeypatch.setattr(sys, "argv", ["demo.py", "--journey", "wf-701"])
+    assert demo_script.main() == 1
+
+
+@pytest.mark.req("FR-408")
+def test_the_compose_target_refuses_when_the_stack_is_not_up_naming_the_services(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """R9: with none of S4's services running, `--journey wf-701 --target compose` refuses and
+    names every missing service (`lb`, `api`, `worker`, `postgres`, `redis`, `minio`), before
+    anything is seeded."""
+    import subprocess
+    import sys
+
+    def nothing_running(args: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(demo_script.subprocess, "run", nothing_running)
+    monkeypatch.setattr(sys, "argv", ["demo.py", "--journey", "wf-701", "--target", "compose"])
+    assert demo_script.main() == 1
+    err = capsys.readouterr().err
+    for service in ("lb", "api", "worker", "postgres", "redis", "minio"):
+        assert service in err, service
+
+
+@pytest.mark.req("FR-408")
+def test_the_local_worker_consumes_every_queue_the_routing_table_names() -> None:
+    """PL 8014 DP-2 (ruled, derived consumer set): `worker_command()`'s queues are a superset of
+    the queues in `DEFAULT_QUEUE_FOR_KIND`, derived from it and never a hard-coded list. Today
+    `scoring` and `io` are routed to and consumed by nobody, so a sampled trace stays pending."""
+    from app.platform.jobs import DEFAULT_QUEUE_FOR_KIND
+
+    command = demo_script.worker_command()
+    consumed = set(command[command.index("--queues") + 1].split(","))
+    assert consumed >= {queue.value for queue in DEFAULT_QUEUE_FOR_KIND.values()}
