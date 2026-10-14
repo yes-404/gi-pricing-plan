@@ -80,6 +80,7 @@ ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     "sub-graph-body": "first written form — 03 §4.11 (WK-1250 Slice 1, FR-217)",
     "rate-table-version": "first written form of the seed route's 201 (RL-1375 DP-4); the authored rate-table contract is F27(c)'s, never compared",  # noqa: E501 -- RL-1375 DP-4's string, verbatim
     "seed-from-model-request": "first written form — 03 §5.1 seed row (RL-1375 DP-3, FR-230)",
+    "bulk-operation-request": "first written form — 03 §5.1 bulk-operation row (FD-1366 Part B, FR-233)",  # noqa: E501 -- the PL-1667 string
     "environment": "first written form — 07 §4.2 (WK-674 Slice 2, FR-428)",
     "environment-create": "first written form — 07 §5.1 (WK-674 Slice 2, FR-428)",
     "environment-update": "first written form — 07 §5.1 (WK-674 Slice 2, FR-428)",
@@ -3189,7 +3190,6 @@ UNTYPED_2XX_PENDING_PART_B: Final[dict[tuple[str, str, str], str]] = {
     key: _PENDING_2XX
     for key in (
         ("GET", "/api/v1/dataset-versions/{version_id}/rejected", "200"),
-        ("POST", "/api/v1/rate-tables/{slug}@{version}/bulk-operation", "201"),
         ("POST", "/api/v1/rate-tables/{slug}@{version}/import", "200"),
         ("POST", "/api/v1/sources/{source_id}/preview", "200"),
         ("POST", "/api/v1/validation-reports/{report_id}/results/{rule_id}/acknowledge", "201"),
@@ -3199,10 +3199,6 @@ UNTYPED_2XX_PENDING_PART_B: Final[dict[tuple[str, str, str], str]] = {
 #: JSON request bodies published as an open object from `body: dict[str, Any]` (FD-1366).
 #: Temporary: each entry is removed when its route is typed. Keyed `(METHOD, path)`.
 UNTYPED_REQUEST_PENDING: Final[dict[tuple[str, str], str]] = {
-    ("POST", "/api/v1/rate-tables/{slug}@{version}/bulk-operation"): (
-        "pending FD-1366 Part B: BulkOperationBase exists (model_schema/rating.py:1179); "
-        "body: dict[str, Any] (backend/src/app/api/rate_tables.py:128)"
-    ),
     ("POST", "/api/v1/sub-graphs"): (
         "pending FD-1366 Part B: SubGraphCreate exists (model_schema/sub_graphs.py:155); "
         "body: dict[str, Any] (backend/src/app/api/sub_graphs.py:46)"

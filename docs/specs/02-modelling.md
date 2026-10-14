@@ -140,7 +140,7 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 > the gap was one line of translation. `power(k)` remains declared and unbuilt — `GlmSpec`
 > has no spelling for it and no slice has needed one — and is named here under
 > FR-207's staging rule rather than quietly dropped.
-| **FR-111** | Actuarial defaults are applied unless explicitly overridden, and any override is recorded with a justification: **frequency** → Poisson, log link, `offset = log(exposure)`; **severity** → Gamma, log link, `weight = claim_count`; **burning cost** → Tweedie with `1 < p < 2`, log link, `weight = exposure`; **conversion/retention** → binomial, logit link. *(Amended 2026-08-22, WK-661.* **Built for GBMs.** *Until this date `fit_gbm` accepted `spec.weight` and never read it, while `fit_glm`, `fit_ebm` and `compute_diagnostics` all honoured it — so a severity GBM declaring this requirement's own default fitted unweighted, and FR-184 then labelled its diagnostics claim-count-weighted on the strength of a spec the fit had ignored: the label true of the metric and false of the model that produced it. The roadmap's EBM slice record states a dated note to this effect was written on 2026-08-21; no such note existed — `git log -S` shows the phrase entering the repository only in `c2c54a6`, and only in `docs/roadmap.md`. FR-207's obligation is discharged here by building the field rather than by staging it: both backends now weight the training and holdout datasets, and the custom objective and custom eval metric paths — whose `get_weight()` readbacks had existed unfed since the GBM slice — receive the declared column. Measured on a closed-form severity book, the same Gamma fit moves from an unweighted mean of 5.0 to a claim-count-weighted 1.80 on both backends. The interpretation change moves `spec_hash` `v9` to `v10` (FR-206).)* |
+| **FR-111** | Actuarial defaults are applied unless explicitly overridden, and any override is recorded with a justification: **frequency** → Poisson, log link, `offset = log(exposure)`; **severity** → Gamma, log link, `weight = claim_count`; **burning cost** → Tweedie with `1 < p < 2`, log link, `weight = exposure`; **conversion/retention** → binomial, logit link. *(Amended 2026-08-22, WK-661.* **Built for GBMs.** *Until this date `fit_gbm` accepted `spec.weight` and never read it, while `fit_glm`, `fit_ebm` and `compute_diagnostics` all honoured it — so a severity GBM declaring this requirement's own default fitted unweighted, and FR-184 then labelled its diagnostics claim-count-weighted on the strength of a spec the fit had ignored: the label true of the metric and false of the model that produced it. The roadmap's EBM slice record states a dated note to this effect was written on 2026-08-21; no such note existed — `git log -S` shows the phrase entering the repository only in `c2c54a6`, and only in `docs/roadmap.md`. FR-207's obligation is discharged here by building the field rather than by staging it: both backends now weight the training and holdout datasets, and the custom objective and custom eval metric paths — whose `get_weight()` readbacks had existed unfed since the GBM slice — receive the declared column. Measured on a closed-form severity book, the same Gamma fit moves from an unweighted mean of 5.0 to a claim-count-weighted 1.80 on both backends. The interpretation change moves `spec_hash` `v9` to `v10` (FR-206).)* *(Amended 2026-10-12, WK-1178, SL-1675, on the maintainer's (by delegation) entry "2026-10-12 05:39:20 BST", (i).)* **Rows whose declared weight is 0 are excluded from the fit and from every diagnostic (FR-171/FR-183).** A row whose weight column holds exactly 0 carries no information: a non-claimant under severity's `weight = claim_count`, or a zero-exposure row under burning cost's `weight = exposure`. Under a weighted likelihood a weight-0 row contributes nothing; excluding it also removes it from the steps that do not read the weight (binning, cross-validation folds, row counts), which is intended: a row with no information should not shape them. The exclusion is applied **before the family's response-domain check**, so a non-claimant's 0 never reaches the Gamma family. It is also applied before anything else reads the row, and an excluded row's response is never read. Only an exact 0 is excluded. A negative, null or non-finite weight is refused (`DECLARED_WEIGHT_INVALID`), and so is a weight column that is 0 on every row, which would leave nothing to fit. *(Amended 2026-10-12, SL-1675, on the maintainer's (by delegation) entry "2026-10-12 06:37:28 BST": this sentence replaces "A negative or a null weight is still refused.", so the clause names every refusal the code makes.)* FR-111's frequency offset is not a weight, and a zero exposure there is still refused (`OFFSET_REQUIRED_FOR_FREQUENCY`). Each partition's diagnostics report the number of rows excluded for weight 0 (`PartitionDiagnostics.rows_excluded_zero_weight`), so the exclusion is never silent. This clause does not change how any diagnostic is weighted (FR-184). |
 | **FR-112** | Regularisation (L1, L2, elastic net) is supported with a documented path and a cross-validated selection option. The selected penalty and the full CV path are persisted as diagnostics. |
 | **FR-113** | Fitting returns, for every coefficient: estimate, standard error, z/t statistic, p-value, and confidence interval; and for every categorical Factor: the relativity table with the base level marked. These are persisted in the Model artifact (ADR-705) and are re-scorable without `glum`. |
 | **FR-114** | The Tweedie power `p` may be estimated by profile likelihood over a grid, with the profile curve persisted. Estimated `p` is recorded as an estimate with its own uncertainty, not silently baked in as a constant. |
@@ -1697,6 +1697,7 @@ and `backtest.schema.json` is generated from it.
     "partition": {
       "weighting": "exposure",
       "rows": 182_447,
+      "rows_excluded_zero_weight": 0,
       "ae_overall": 1.074,
       "ae_by_factor": [
         {"factor": "driver_age_banded", "level": "17-20", "actual": 0.1912,
@@ -1712,6 +1713,8 @@ and `backtest.schema.json` is generated from it.
   }
 }
 ```
+
+`rows_excluded_zero_weight` is the per-partition count of FR-111's weight-0 exclusions (SL-1675, 2026-10-12). It is `null` on an artifact written before that date, and `0` where the rule ran and excluded nothing.
 
 **Three shape decisions, each made when this was built rather than transcribed:**
 
@@ -2105,7 +2108,7 @@ imported from §4.5 rather than restated — the same catalogue, read two ways.
 `GROUPING_NOT_EXHAUSTIVE`, `CREDIBILITY_VARIANCE_NOT_ESTIMABLE`,
 `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`, `GLM_CV_FOLD_EMPTY`,
 `GLM_TWEEDIE_POWER_GRID_EDGE`, `GLM_DID_NOT_CONVERGE`, `GLM_RANK_DEFICIENT`,
-`GLM_SEPARATION_DETECTED`, `GLM_FIT_FAILED`,
+`GLM_SEPARATION_DETECTED`, `GLM_FIT_FAILED`, `DECLARED_WEIGHT_INVALID`,
 `OFFSET_REQUIRED_FOR_FREQUENCY`,
 `MONOTONE_CONSTRAINT_CONFLICT`, `EARLY_STOPPING_REQUIRES_HOLDOUT`,
 `OBJECTIVE_NOT_APPROVED`, `OBJECTIVE_NOT_APPLICABLE`,
@@ -2180,6 +2183,18 @@ imported from §4.5 rather than restated — the same catalogue, read two ways.
 > a *subclass* of `ValueError`, so the two clauses are not siblings: putting the wider one
 > first turns every singular design into `GLM_FIT_FAILED`, leaving the fit correctly refused
 > and only the diagnosis wrong — which is exactly the tidy-up a later reader would make.
+
+> **`DECLARED_WEIGHT_INVALID` added 2026-10-12 (WK-1178, SL-1675, on the maintainer's (by
+> delegation) entry "2026-10-12 06:10:04 BST", (A)).** One refusal, raised by `pricing-core`'s
+> weight rule before any backend sees the column, for **all three fit arms** (GLM, GBM — both
+> backends — and EBM): the declared weight column holds a negative, null or non-finite
+> value, or nothing but 0s (FR-111's exclusion of weight-0 rows would leave no row). It
+> replaces three answers to the same input: `GLM_FIT_FAILED` carrying `glum`'s "Sample weights
+> must be non-negative" (a negative weight no longer reaches that clause above), a raw
+> `XGBoostError` with no platform code, and `EBM_MONOTONE_CONSTRAINT_INCOMPLETE`; and it
+> closes a fourth, LightGBM fitting on a negative or null weight without refusing. A
+> one-row-at-weight-0 frame is not an error: those rows are excluded and counted (FR-111).
+> Not `GLM_FIT_FAILED` for a GBM: borrowing a GLM code keeps the error lying about its cause.
 
 > **Added 2026-08-22 (WK-661, the EBM slice).** `ebm_monotonicity_verified` refuses to
 > check a constraint naming a feature the fitted tables do not contain: reporting

@@ -6152,12 +6152,14 @@
         "description": "`floor_and_cap`'s parameters (04 §4.4): the clamp bounds, decimal strings.",
         "properties": {
           "cap": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "description": "Exact decimal as a string; never a binary float (FR-10).",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
             "title": "Cap",
             "type": "string"
           },
           "floor": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "description": "Exact decimal as a string; never a binary float (FR-10).",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
             "title": "Floor",
             "type": "string"
           }
@@ -6167,6 +6169,25 @@
           "cap"
         ],
         "title": "FloorAndCapParameters",
+        "type": "object"
+      },
+      "FloorAndCapRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "floor_and_cap",
+            "title": "Kind",
+            "type": "string"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/FloorAndCapParameters"
+          }
+        },
+        "required": [
+          "kind",
+          "parameters"
+        ],
+        "title": "FloorAndCapRequest",
         "type": "object"
       },
       "GbmDiagnostics": {
@@ -11266,6 +11287,18 @@
             "title": "Rows",
             "type": "integer"
           },
+          "rows_excluded_zero_weight": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rows Excluded Zero Weight"
+          },
           "weighting": {
             "$ref": "#/components/schemas/Weighting"
           }
@@ -14095,6 +14128,25 @@
           "base_level"
         ],
         "title": "RebaseToLevelParameters",
+        "type": "object"
+      },
+      "RebaseToLevelRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "rebase_to_level",
+            "title": "Kind",
+            "type": "string"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/RebaseToLevelParameters"
+          }
+        },
+        "required": [
+          "kind",
+          "parameters"
+        ],
+        "title": "RebaseToLevelRequest",
         "type": "object"
       },
       "ReconcileRequest": {
@@ -17430,7 +17482,8 @@
             "type": "object"
           },
           "percentage": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "description": "Exact decimal as a string; never a binary float (FR-10).",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
             "title": "Percentage",
             "type": "string"
           }
@@ -17440,6 +17493,25 @@
           "filter"
         ],
         "title": "UpliftByFilterParameters",
+        "type": "object"
+      },
+      "UpliftByFilterRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "uplift_by_filter",
+            "title": "Kind",
+            "type": "string"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/UpliftByFilterParameters"
+          }
+        },
+        "required": [
+          "kind",
+          "parameters"
+        ],
+        "title": "UpliftByFilterRequest",
         "type": "object"
       },
       "UpliftTableOperation": {
@@ -17474,7 +17546,8 @@
         "description": "`uplift_table`'s parameters (04 §4.4): the percentage, applied to every cell.",
         "properties": {
           "percentage": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "description": "Exact decimal as a string; never a binary float (FR-10).",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
             "title": "Percentage",
             "type": "string"
           }
@@ -17483,6 +17556,25 @@
           "percentage"
         ],
         "title": "UpliftTableParameters",
+        "type": "object"
+      },
+      "UpliftTableRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "uplift_table",
+            "title": "Kind",
+            "type": "string"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/UpliftTableParameters"
+          }
+        },
+        "required": [
+          "kind",
+          "parameters"
+        ],
+        "title": "UpliftTableRequest",
         "type": "object"
       },
       "UploadUrlRequest": {
@@ -31137,7 +31229,7 @@
     },
     "/api/v1/rate-tables/{slug}@{version}/bulk-operation": {
       "post": {
-        "description": "**201** with the new version (FR-233): the operation and its parameters\nrecorded as `created_by_operation` (04 §4.4), the seed anchor inherited and\nproven equal to the baseline's at save time (03 §4.2, FR-234).\n\nThe body is `{\"kind\", \"parameters\"}` — `applied_to` and `result` are server-side:\n`applied_to` names the addressed version, and `result` is computed by the\noperation. Parameters are decimal strings, never floats (R2).",
+        "description": "**201** with the new version (FR-233): the operation and its parameters\nrecorded as `created_by_operation` (04 §4.4), the seed anchor inherited and\nproven equal to the baseline's at save time (03 §4.2, FR-234).\n\nThe body is a `BulkOperationRequest` (`{\"kind\", \"parameters\"}`) — `applied_to`\nand `result` are server-side: `applied_to` names the addressed version, and\n`result` is computed by the operation. Parameters are decimal strings, never floats (R2).",
         "operationId": "bulk_operate_rate_table_api_v1_rate_tables__slug___version__bulk_operation_post",
         "parameters": [
           {
@@ -31181,9 +31273,30 @@
           "content": {
             "application/json": {
               "schema": {
-                "additionalProperties": true,
-                "title": "Body",
-                "type": "object"
+                "discriminator": {
+                  "mapping": {
+                    "floor_and_cap": "#/components/schemas/FloorAndCapRequest",
+                    "rebase_to_level": "#/components/schemas/RebaseToLevelRequest",
+                    "uplift_by_filter": "#/components/schemas/UpliftByFilterRequest",
+                    "uplift_table": "#/components/schemas/UpliftTableRequest"
+                  },
+                  "propertyName": "kind"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/UpliftTableRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/UpliftByFilterRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/FloorAndCapRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RebaseToLevelRequest"
+                  }
+                ],
+                "title": "Body"
               }
             }
           },
@@ -31194,9 +31307,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Bulk Operate Rate Table Api V1 Rate Tables  Slug   Version  Bulk Operation Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/RateTableVersion"
                 }
               }
             },
