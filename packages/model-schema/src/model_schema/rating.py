@@ -1171,6 +1171,43 @@ class RateTableDiffCell(BaseModel):
     weight: Decimal | None = None
 
 
+class RateTableChange(BaseModel):
+    """One rate table whose pinned version differs between the baseline and a version
+    (FR-242's drafted change summary; `RL-1498` DP-E1-5).
+
+    `from_ref` / `to_ref` are the pins on the baseline and on the version; `None` marks a
+    table pinned on one side only. `diff` is the unweighted cell diff (FR-231); it is `None`
+    when `pending` (a `storage: parquet` side is not computed here, FR-232) or when the table
+    is on one side only.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    slug: str
+    from_ref: ArtifactRef | None = None
+    to_ref: ArtifactRef | None = None
+    diff: RateTableDiff | None = None
+    pending: bool = False
+
+
+class ChangeSummaryDraft(BaseModel):
+    """The drafted change summary of a Rating Version (03 FR-242; WF-699 E1; `RL-1498`).
+
+    Drafted from the structural diff (FR-219) and the rate-table diffs (FR-231) against
+    `baseline`, the most recently approved other version of the same algorithm. `baseline` is
+    `None` when there is none; `structural_diff` is `None` when there is no baseline or the
+    baseline has no algorithm. `text` states *what* changed and ends with the empty `Why:` and
+    `Expected impact:` labels for the actuary. Nothing is stored.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    baseline: ArtifactRef | None = None
+    structural_diff: AlgorithmDiff | None = None
+    rate_tables: list[RateTableChange] = Field(default_factory=list)
+    text: str
+
+
 #: The key filter of 03 §5.2: exact-value match over the table's declared keys.
 KeyFilter = dict[str, list[str]]
 
@@ -1198,7 +1235,7 @@ class UpliftTableParameters(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    percentage: Decimal
+    percentage: DecimalStr
 
 
 class UpliftByFilterParameters(BaseModel):
@@ -1206,7 +1243,7 @@ class UpliftByFilterParameters(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    percentage: Decimal
+    percentage: DecimalStr
     filter: KeyFilter
 
 
@@ -1215,8 +1252,8 @@ class FloorAndCapParameters(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    floor: Decimal
-    cap: Decimal
+    floor: DecimalStr
+    cap: DecimalStr
 
 
 class RebaseToLevelParameters(BaseModel):
@@ -1227,24 +1264,66 @@ class RebaseToLevelParameters(BaseModel):
     base_level: KeyFilter
 
 
-class UpliftTableOperation(BulkOperationBase):
+# The request body of `POST .../bulk-operation` (03 §5.1): the record's `kind` and
+# `parameters`, written once. `applied_to` and `result` are the server's, so they are
+# not request fields and `extra="forbid"` refuses them. Each record below inherits its
+# request first, so the pairing is defined once; `BulkOperationBase` stays first in the
+# record's field order (applied_to, result, kind, parameters), which fixes the stored
+# JSON order.
+class UpliftTableRequest(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
     kind: Literal["uplift_table"]
     parameters: UpliftTableParameters
 
 
-class UpliftByFilterOperation(BulkOperationBase):
+class UpliftByFilterRequest(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
     kind: Literal["uplift_by_filter"]
     parameters: UpliftByFilterParameters
 
 
-class FloorAndCapOperation(BulkOperationBase):
+class FloorAndCapRequest(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
     kind: Literal["floor_and_cap"]
     parameters: FloorAndCapParameters
 
 
-class RebaseToLevelOperation(BulkOperationBase):
+class RebaseToLevelRequest(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
     kind: Literal["rebase_to_level"]
     parameters: RebaseToLevelParameters
+
+
+#: The bulk-operation request body (03 §5.1), discriminated on `kind`.
+BulkOperationRequest = Annotated[
+    UpliftTableRequest | UpliftByFilterRequest | FloorAndCapRequest | RebaseToLevelRequest,
+    Field(discriminator="kind"),
+]
+
+#: The wire-parse path for a bulk-operation request — dict in, member out.
+BULK_OPERATION_REQUEST_ADAPTER: Final[TypeAdapter[BulkOperationRequest]] = TypeAdapter(
+    BulkOperationRequest
+)
+
+
+class UpliftTableOperation(UpliftTableRequest, BulkOperationBase):
+    pass
+
+
+class UpliftByFilterOperation(UpliftByFilterRequest, BulkOperationBase):
+    pass
+
+
+class FloorAndCapOperation(FloorAndCapRequest, BulkOperationBase):
+    pass
+
+
+class RebaseToLevelOperation(RebaseToLevelRequest, BulkOperationBase):
+    pass
 
 
 #: The BulkOperation record (04 §4.4), discriminated on `kind`. A version created by a

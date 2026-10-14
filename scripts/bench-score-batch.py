@@ -97,7 +97,8 @@ async def _setup(database: Database, blob_store: BlobStore) -> UUID:
     workspace_id = new_uuid7()
     created_by = new_uuid7()
 
-    await create_algorithm(database, workspace_id, created_by, _algorithm_payload())
+    bench = Principal(kind=ActorKind.USER, id=created_by, display="bench")
+    await create_algorithm(database, workspace_id, bench, _algorithm_payload())
 
     row = RatingVersionRow(
         workspace_id=workspace_id, slug=_SLUG, version=1, status="draft",

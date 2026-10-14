@@ -3,7 +3,7 @@ id: PL-1546
 family: plan
 kind: map
 title: WK-675 — Slices 5 to 11 (editor II, sandbox, compare, rating version list, regression suite view, dislocation views, sub-graph mounting) as rows, after the 2026-10-08 re-plan: Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
 owner: planner
 tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9

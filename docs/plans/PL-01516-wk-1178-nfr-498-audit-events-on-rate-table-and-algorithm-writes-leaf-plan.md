@@ -3,7 +3,7 @@ id: PL-1516
 family: plan
 kind: leaf
 title: WK-1178 — NFR-498 Audit Events on rate table version and rating algorithm writes (NFR-498, FR-368): leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-08            # original date 2026-10-05, set at the draft; minted 2026-10-08
 owner: planner
 tree: 5fe56b87e55b0a29399f96f0af2e7c2e2ef9b72a

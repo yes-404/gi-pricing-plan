@@ -38,6 +38,65 @@ Afterwards a model may be fitted on `@2` and still may not on `@1`.
 Nothing here is injected. freMTPL2 is a public dataset used in dozens of papers, and the
 exposure anomaly is in the file as published.
 
+## The rating algorithm, and the demo portfolio is a sample
+
+After the GLM is approved the seed prices from it. It seeds one Rate Table per Factor of the
+approved GLM (`seed_from_model`, one table each), builds the `fremtpl2-rate` algorithm over them
+(`algorithm.py`: the one definition the seed and the journey share), and creates a Rating Version
+that pins the algorithm, the model and every table. The three continuous columns (`driv_age`,
+`veh_age`, `veh_power`) are banded into five quantile bands each, so all seven Factors are
+rateable; the bands are printed as the seed runs. **The base premium is a simplification
+(frequency GLM × mean severity; no severity model):** `exp(intercept)` times the mean claim
+cost, not a modelled pure premium. Its golden quotes are the GLM's own premiums, computed from the
+fitted coefficients and not from the scored bundle.
+
+**The dislocation and attribution runs go over a 20,000-policy sample, never the full book.**
+The seed builds the sample with evenly spaced integer indices `i * N // n` over the
+checksum-pinned file (a fixed size, a fixed rule, no random seed: the same 20,000 policies every
+run, spanning the whole book), ingests it as its own
+Dataset Version through the same recipe, and records its id in `data/last-seed.json`. The model
+is still fitted on the full book. The sample holds 19,985 policies after the recipe drops the 15
+above exposure 1.05. It is a 20,000-policy deterministic sample spanning the book; its claim
+frequency is within sampling error of the book's (measured -5.1%, 1.6 standard errors on 1,009
+claims). Nothing the demo shows over it is a full-book rate or a full-book timing. The
+cost of a full-book dislocation run is the owned, measured target `PL-1574`; the cost of
+full-book attribution is `FD-1576`.
+
+## The WF-699 journey: one command to a served page
+
+```bash
+uv run python scripts/demo.py --journey wf-699
+```
+
+One command seeds the demo, starts the API, a Celery worker and its outbox relay, then walks
+`WF-699` Phases A to E and its deploy step **over HTTP** (`journey.py`, an `httpx` client of
+`/api/v1`): the rate tables are seeded from the approved GLM and edited, the algorithm is forked
+and its NCD ladder mounted, the version is compiled with every pin, the regression suite runs
+(a deliberate `bonus_malus` inversion fails the declared D4 property, then the fix passes), the
+dislocation run and its attribution are read, the version is submitted, refused once, approved by
+two principals who are neither its submitter nor its author, deployed `dev` → `uat` → `prod`, and
+one quote is scored from `prod`'s live deployment. It ends with the frontend serving a 200
+page: the UI is available for hands-on driving, and is not driven.
+
+**Read the output as a demonstration on a sample.** The D6 dislocation run and the D7
+attribution run go over the 20,000-policy sample of the book described above, never the full
+book; nothing the journey prints is a full-book rate or timing (full-book dislocation cost is
+`PL-1574`, full-book attribution cost `FD-1576`). The NCD ladder's bands (1.00, 1.20 and 1.50 on
+`bonus_malus` 50-99, 100-149 and 150-230) are demo values, not a priced NCD scale. Steps the
+platform does not yet do are printed as `SKIPPED` or `KNOWN GAP` with their owner, never hidden.
+
+**What it needs.** Measured on 2026-10-12 at tree `c960b408f0577bdedf13e72147f892033e6a9627` (full
+seed, no `--rows`) on a Linux host with 8 cores (`nproc`) and 32,870,088 kB of memory
+(`/proc/meminfo` `MemTotal`, 31.3 GiB), Docker running Postgres, Redis, MinIO and the auth provider:
+the command reached the served page 286 s after it started, the journey itself taking 201 s of that
+(it then stays up until Ctrl-C; the run was stopped 13 min 19 s in). **286 s is an observation in a
+functional rehearsal on a shared host, not a timing measurement**, and `NFR-529`'s budget of under
+5 minutes is neither claimed met nor missed by it. Sampled every 15 s across the run, peak host memory
+in use was 9.4 GiB; the host read 6.8 GiB at the start, so the run added about 2.6 GiB (approximate: the
+baseline includes other idle processes on the shared host). The containers summed to at most 1.5 GiB.
+No smaller machine was tried, so this is what one run used, not a minimum. The GBM transparency build
+the journey waits for at C5 took 29 s; its own peak memory is not isolable at 15 s sampling.
+
 ## The data
 
 [OpenML 41214 / 41215](https://www.openml.org/d/41214) — French motor third-party

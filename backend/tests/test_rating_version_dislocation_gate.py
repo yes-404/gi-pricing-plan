@@ -301,7 +301,7 @@ async def test_the_persisted_structural_diff_carries_a_sub_graph_re_point(
     second["sub_graphs"][0]["ref"] = "sub_graph:ncd-ladder@2"
     for body in (first, second):
         await algorithm_service.create_algorithm(
-            database, workspace_id, gate.analyst.id, body
+            database, workspace_id, gate.analyst, body
         )
     await gate.version(algorithm="rating_algorithm:mounting@1", slug="mnt-rv", compile_it=False)
     candidate_id = await gate.version(

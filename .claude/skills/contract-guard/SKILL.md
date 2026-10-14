@@ -279,6 +279,38 @@ entirely — moved between arms so that no arm holds it on both sides — is sti
 nothing, because every layer intersects. That is `OQ-649`, which names the boundary
 explicitly, and it is open.
 
+## The untyped-body guard is a different kind of guard (`FD-1335` Part A, `FD-1366`)
+
+`test_no_json_body_is_untyped` in `backend/tests/test_contracts.py` does not compare two
+documents. It walks the **one** generated OpenAPI document (`docs/contracts/openapi/generated.json`)
+and reports a JSON body whose schema is `{}` (form 1, what a raw `Response` handler publishes) or an
+object with no `properties` and no `$ref`/`allOf`/`anyOf`/`oneOf` (form 2, what `body: dict[str, Any]`
+publishes). A client generated from either types the body `unknown`. **Both sides, one walker**
+(`_untyped_bodies`): every media type of every 2xx response (key = the status), and every
+request-body media type whose name contains `json` (key = the media type).
+
+Four lists hold what it allows, and **each needs the thing that notices it went stale**
+(the section above), here `test_every_untyped_body_exclusion_is_still_untyped`:
+`UNTYPED_2XX_PERMANENT` (stream and file bodies, each reason names its file and line),
+`UNTYPED_2XX_PENDING_PART_B` and `UNTYPED_REQUEST_PENDING` (temporary: a route that is typed
+fails the stale check until its entry is removed, in the same change that types it), and
+`NON_JSON_REQUEST_BODIES` (multipart, pinned exactly by citation so a new non-JSON body is a visible act).
+
+Three things to carry:
+- **Prove each side red on its own.** Remove one request entry on a backup copy and only
+  `[request]` goes red, with exactly that key; plant a stale entry on each list and the stale check
+  names it. A guard whose two sides share one assertion lets one side's state hide in the other's.
+- **The reach control names two real bodies** (`POST /api/v1/score/batch` 202 and
+  `POST /api/v1/score` request), asserted *visited* and *not reported*, so a walker that stopped
+  descending fails on a path.
+- **Its limits.** It reads the top level of the schema only: a `$ref` to an empty `BaseModel` is
+  typed as far as this guard can tell, and a typed-but-open object nested inside a model is not seen.
+  An object with `additionalProperties` and no `properties` *is* form 2 and is reported. Typing a
+  body is a `model_schema` change; the guard cannot say the model is a good one.
+
+A route documented through `responses={200: {"model": M}}` builds the contract and validates
+nothing (`NFR-502`); `backend/tests/outbound_validation_spy.py` counts the calls that would show otherwise.
+
 ## Verified
 
 2026-08-22 — W32-1, the contracts-and-drift-guard slice, which added the `required`,
@@ -319,3 +351,11 @@ reach controls only guard the numbers that live in code.** A slice that changes 
 reaches owes this file a re-read, not just an appended entry — and the corpus figures quoted in
 `test_contracts.py` docstrings move whenever `COMPARED_SLUGS` does, as all nine of them did when
 W32-11 took it from thirteen slugs to fifteen.
+
+2026-10-11 — SL-1367 (`FD-1335` Part A, `FD-1366`), on the tree `origin/main` `99f22479` plus that slice.
+The section above is new, and it was built red first on planted input: a typed `score/batch` body made
+`{}` or an open object, on each side, was the first thing the walker had to report. The lesson to
+carry: **an allow-list of known exceptions is only as honest as its stale check.** Three of the plan's
+twelve pending response entries and two of its five request entries had been typed by other slices
+before this one started, and it was the stale check, not a reading, that said which.
+
