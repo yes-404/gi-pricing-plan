@@ -1160,6 +1160,25 @@ relates: [PL-1237]
 Date-based routing and shadow scoring, both built and default off per environment (`RL-1232` Part A, DP-2 (a)), with the audit limb for routing and shadow configuration changes (FR-272, NFR-498). `PL-1237` Task 6. Starts after Slice 5 closes.
 
 
+#### SL-8015 — WK-674 demo slice — the scripted WF-701 deployment steps (A1–A6, C1–C4, C6, C7) over the Slice 4 path, after Slice 5
+
+```yaml
+id: SL-8015
+family: slice
+title: WK-674 demo slice — the scripted WF-701 deployment steps (A1–A6, C1–C4, C6, C7) over the Slice 4 path, after Slice 5
+status: draft                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-14
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 1e260c1553acf39844939fe12da685ccfb835e54
+phase: P2
+work: WK-674
+corrected_by: []
+relates: [PL-8014, PL-1237, PL-1537, PL-1620, PL-1544, RL-1614, SL-1258, SL-1259]
+```
+
+A scripted, rehearsable journey walks WF-701's deployment steps A1–A6, C1–C4, C6 and C7, in order, on the state WF-699's journey leaves, to WF-699's journey's standard: no faked step, every step asserting its status and a server-side effect read back through another route. Cut as one WK-674 slice after Slice 5 by the maintainer's (by delegation) entry "2026-10-14 10:00:17 BST — RULED: WF-701 demo DP-W0..W5 (memo-wf701-deploy-demo-2026-10-14.md); PL 8002/SL 8003 DP-1, 2, 4, 5 (re lead 09:59:09)", DP-W0 (b), on the requirement of the entry "2026-10-14 09:50:52 BST" item 2 (`to-lead.md`). Two run modes: the in-process test `backend/tests/test_wf701_journey.py` in the normal gate (the replica limbs printed as one ruled `COMPOSE-ONLY` line), and `uv run python scripts/demo.py --journey wf-701 --target compose` against S4's stack with `api`×2, behind `GIP_DEPLOY_TESTS=1`, quoted from a build window. Task 0 at S5's merged tree: the dev-auth guard proven on broken input (`Settings.require_startable`, `backend/src/app/config.py:204-213` at `1e260c15`; DP-W2), compose auth, the `/score` rate limit against C7's 2,000 quotes, and the `score.trace_produce` queue (`scoring`, which no planned worker consumes: `PL-8014` DP-2). C7's 1 % limb is held to the pre-registered band [3, 45] for N = 2,000 at p = 0.01; its declines limb uses its own declining version through the governed path with its own golden (DP-W4); its errors limb is printed as `KNOWN GAP C7-errors` citing FD 8011 (working id, filed by an auditor; DP-W5), resolved before the 12 Nov exit demo. NFR-494 and NFR-489 verdicts are Slice 5's, quoted by tree, never re-measured; no VM. Requirements: `03` FR-250, FR-258, FR-259, FR-262, FR-267, FR-268, FR-272 (audit limb), NFR-494 (functional bound only); `07` FR-429; `06` FR-354. Write set: `examples/fremtpl2/journey_wf701.py`, new demo-data files under `examples/fremtpl2/rating/`, `scripts/demo.py`, `backend/tests/test_wf701_journey.py`, `backend/tests/test_demo_command.py`, a compose runtime test, the slice's `LG-`; no S5 file, spec, contract or `examples/fremtpl2/journey.py`. Work-plan delta `PL-8014` (working id, `draft`), which also adds Slice 5's D5.6 (the COMMIT acknowledgement set in the deployment Audit Event's after-state; DP-W1). **Activation needs:** `SL-1259` merged with D5.6 met; `PL 1690` (minted in D14, #1298) on `main`; `PL-8014` DP-1 to DP-3 ruled; FD 8011 filed; this delta ACKed and minted; a build slot, the single gate and a compose build window. Authoring may start earlier on a branch re-stacked onto S5's head (DP-W3), GO and merge after S5's merge. *(Row cut 2026-10-14 by the planner; working ids 8014 and 8015 reserved by the lead, eta "2026-10-14 10:01:15 BST".)*
+
+
 ### WK-675 — Frontend: **DAG designer (Vue Flow)**, rate table editor, quote sandbox + ladder waterfall, dislocation views
 
 ```yaml
