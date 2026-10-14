@@ -704,4 +704,4 @@ to two, so D7 rates 4 × the 20,000-policy sample (`PL-1577`); the full-book cos
   maintainer (by delegation), 08:09:39 item 4; applied in Context, Write set, activation need 4,
   Acceptance 10 and 20, Stage A Task 2 Step 2b and Stage B Task 1.
 - Open: none of the plan's DPs. Not this plan's: (B) (the decision-maker's, if Stage B slips). This plan stays `draft` until set `active` at activation.
-- Activated 2026-10-12 on the lead's `from-lead` entry "2026-10-12 08:15:37 BST" (GO for SL-1695; ledger LG-9637), the act that dispatched Stage A; `status` set `active` on the SL-1695 branch 2026-10-14, as a status-line edit only, on the maintainer's (by delegation) `to-lead` entry "2026-10-14 12:14:25 BST".
+- Activated 2026-10-12 on the lead's `from-lead` entry "2026-10-12 08:15:37 BST" (GO for SL-1695; ledger LG-1718, minted from working id 9637), the act that dispatched Stage A; `status` set `active` on the SL-1695 branch 2026-10-14, as a status-line edit only, on the maintainer's (by delegation) `to-lead` entry "2026-10-14 12:14:25 BST".
