@@ -46,6 +46,22 @@ The ruling's two precisions and the confirmation's four conditions are carried i
 Status, N2, N4, Steps 2 to 5, Acceptance item 1 (v), Hand-off 3 and Self-review 2. Each edited
 place names RL 8060. RL 8060 is a working id, so it is not in `relates:` until it is minted.)*
 
+*(Amended 2026-10-16 from 10:18 BST, before merge, by the planner (seat planner-8055b), on the
+maintainer's ruling "2026-10-16 10:17:07 BST — Maintainer: DP-1543-APPROVERS → (a): the policy
+governs; PL-1542:444's "two principals" is the plan's error, corrected by a dated line in PL 8055"
+in `~/gi-pricing-plan.local/channel/to-lead.md`, items 1 and 2. **`PL-1542` Task 2 Step 2**
+(`:444` at `origin/main` `0877e6e7`), *"`approval_service.decide` with two principals who are
+neither submitter nor author"*, **is superseded: the Peril Structure is decided by ONE
+approver**, per `docs/specs/06-governance.md:358` (`{"artifact_type": "peril_structure",
+"approvers_required": 1, …}`) and `DEFAULT_POLICY` (`packages/model-schema/src/model_schema/approvals.py:376`,
+its `peril_structure` entry `:422-427`, `approvers_required=1`), both read at `0877e6e7`.
+Neither the spec nor the code supports two. **The one approver is distinct from both the
+submitter and the author**; that separation is the control 06 requires. **The test asserts
+both differences** (the approver's id differs from the submitter's and from the author's)
+**and that the structure reaches `approved` after exactly one `decide`.** `PL-1542`'s body is
+frozen and is not edited; this line is the correction, and the Tasks section below points at
+it.)*
+
 ## Goal
 
 Put `SL-1696`'s audit finding A1 into plan text as `SL-1543`'s owned work. A1 is the one clause
@@ -132,7 +148,9 @@ obliges"). The mint waits for N1 (#1310 merged) and goes with or after RL 8060's
 
 ## Tasks
 
-`PL-1542`'s and `PL-1705`'s tasks stand. This delta adds **Task A**, run after Task 5 of
+`PL-1542`'s and `PL-1705`'s tasks stand, except `PL-1542` Task 2 Step 2's approver count
+(*amended 2026-10-16: one approver, distinct from submitter and author, not two; the dated
+amendment after the header, on the maintainer's 10:17:07 BST ruling*). This delta adds **Task A**, run after Task 5 of
 `PL-1542` (the last task that edits the journey) and before Task 6 (the gate), so the copied list
 is the list `SL-1543`'s head derives (P5).
 
