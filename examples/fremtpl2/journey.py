@@ -77,23 +77,9 @@ SKIPS: Final[tuple[Skip, ...]] = (
     Skip("B9", "KNOWN GAP B9: FD-1490"),
     Skip("B4", "SKIPPED B4 model_call: FD-1456; SL-1543"),
     Skip("C1′", "SKIPPED C1′: FD-1456; SL-1543"),  # noqa: RUF001
-    # D7 should decompose the change (FR-264), but attribution refuses a sub-graph mount
-    # difference until SL-1696 (FD-1660, HIGH, owner WK-673): the maintainer (by delegation)
-    # ruled (A) on 2026-10-12 07:44:13 BST, so the guard fails D6's Job and no Dislocation Run
-    # exists. Every step that needs D6's run is a skip naming the finding; SL-1696 removes them
-    # and restores the steps. G2 is not met until D7 decomposes.
-    Skip("D7", "SKIPPED D7 — FD-1660 guard"),
-    Skip("D8", "SKIPPED D8: FD-1660; SL-1696"),
-    Skip("E4", "SKIPPED E4: FD-1660; SL-1696"),
-    Skip("E6", "SKIPPED E6: FD-1660; SL-1696"),
-    Skip("E8", "SKIPPED E8: FD-1660; SL-1696"),
-    Skip("E9", "SKIPPED E9: FD-1660; SL-1696"),
-    Skip("DEP", "SKIPPED DEP: FD-1660; SL-1696"),
-    Skip("S1", "SKIPPED S1: FD-1660; SL-1696"),
 )
 
-#: An owner is a finding or a Work: `FD-1491`, `WK-685`; the pattern also admits a finding's
-#: working id (`FD 9804` was FD-1660's, before its mint).
+#: An owner is a finding or a Work: `FD-1491`, `WK-685`, or a finding's working id, `FD 9804`.
 _OWNER: Final = re.compile(r"\b(?:FD[- ]|WK-)\d+\b")
 
 
@@ -239,7 +225,6 @@ class _Journey:
         self.result = JourneyResult()
         self.loading_ref: str | None = None
         self.loading_region = ""
-        self.attribution_refused = False  # FD-1660: D6's run was refused, so none exists
 
     # -- plumbing ------------------------------------------------------------------------
     def who(self, name: str) -> dict[str, str]:
@@ -973,13 +958,6 @@ class _Journey:
         self.done("E2", "POST /rating-versions/{id}/submit, the route RL-1524 names")
         self.done("E3", "EVIDENCE_INCOMPLETE: no Dislocation Run for this version yet")
         self.dislocation()
-        if self.attribution_refused:
-            # FD-1660, until SL-1696: no Dislocation Run exists, so E4's resubmission, the
-            # approval it opens (E5's decide, E7's submit need it) and the approved version are
-            # not reachable. Each is printed SKIPPED with the finding, with no live call.
-            for step in ("E4", "E5", "E6", "E7", "E8", "E9"):
-                self.skip(step)
-            return
         first = self.submit("E4", text, expect=200)
         self.done("E4", "dislocation run, resubmitted")
         self.decide("E5", "approver", first["approval_request_id"], "approve")
@@ -1049,6 +1027,16 @@ class _Journey:
                 raise JourneyStepFailed("D6", "ESTIMATE_FAILED", response.status_code)
         raise JourneyStepFailed("D6", "DERIVED_CHANGES_NOT_FOUND")
 
+    def run_dislocation(self, spec: Mapping[str, Any]) -> tuple[str, dict[str, Any]]:
+        """Start a Dislocation Run, wait for its Job and read the run back: its id and body."""
+        accepted = self.req("D6", "analyst", "POST", "/dislocation-runs", expect=202, json=spec)
+        job = self.job_ok("D6", "analyst", accepted)
+        run_id = str(job["result"]["ref"]).split(":", 1)[1]
+        run: dict[str, Any] = self.req(
+            "D7", "analyst", "GET", f"/dislocation-runs/{run_id}", expect=200
+        )
+        return run_id, run
+
     def dislocation(self) -> None:
         spec: dict[str, Any] = {
             "baseline_ref": "rating_version:fremtpl2-demo@1",
@@ -1060,52 +1048,51 @@ class _Journey:
             "band_edges_pct": ["-10", "-5", "0", "5", "10"],
             "mover_threshold_pct": "10",
         }
-        # ONE group of every derived change, at the demo's fork (the baseline has no mount; the
-        # candidate adds the NCD ladder's `m_ncd`). Attribution refuses a sub-graph mount
-        # difference at any group count until SL-1696 (FD-1660, owner WK-673; the maintainer (by
-        # delegation) ruled (A) on 2026-10-12 07:44:13 BST), so the Job FAILS here and D6 asserts
-        # that refusal. SL-1696 restores `job_ok` and D7's two-group run (branch
-        # `salv-sl1527-d7-2group`).
-        # The derived changes are numbered c1, c2, ... (FR-1399) and the estimate refuses a
-        # partition that leaves one out or names one that is not derived, so the count is found
-        # by asking (the estimate does not attribute, so it still answers).
+        # D7 is attribution that decomposes the change (FR-264). The derived changes are numbered
+        # c1, c2, ... but their kinds are only readable from a finished run, so the first run puts
+        # them all in one group (the estimate route refuses a partition that leaves one out or
+        # names one that is not derived, so the count is found by asking), and the second run
+        # splits them into the effects the journey itself made: its rate-table edits, and the
+        # structure it added (the NCD ladder's mount and the expense loading, which depend on one
+        # another and so must share a group). The mount is a derived change of its own (FD-1660).
         everything = [{"name": "the whole fork", "changes": self.derived_changes(spec)}]
-        accepted = self.req(
-            "D6",
-            "analyst",
-            "POST",
-            "/dislocation-runs",
-            expect=202,
-            json={**spec, "change_groups": everything},
-        )
-        job = self.job("D6", "analyst", accepted)
-        error = job.get("error") or {}
-        message = str(error.get("message", ""))
-        if (
-            job["status"] != "failed"
-            or error.get("code") != "VALIDATION_FAILED"
-            or "FD-1660" not in message
-            or "SL-1696" not in message
-        ):
-            raise JourneyStepFailed("D6", "FD_1660_GUARD_NOT_RAISED", detail=message)
+        _, first = self.run_dislocation({**spec, "change_groups": everything})
+        effects = split_effects(first.get("derived_changes") or [])
+        if effects is None:
+            raise JourneyStepFailed("D7", "NO_DECOMPOSITION_MAPPING")
+        groups = [{"name": name, "changes": ids} for name, ids in effects.items()]
+        run_id, run = self.run_dislocation({**spec, "change_groups": groups})
+        self.done("D6", "a 20,000-policy sample of the freMTPL2 book (full-book cost: PL-1574)")
+
+        # The partition, proved from the run as stored: every derived change is in exactly one
+        # group (none lost, none placed twice).
+        placed = [cid for group in run["change_groups"] for cid in group["changes"]]
+        derived_ids = [str(change["id"]) for change in run["derived_changes"]]
+        if sorted(placed) != sorted(derived_ids) or len(set(placed)) != len(placed):
+            raise JourneyStepFailed("D7", "GROUPS_DO_NOT_PARTITION_THE_DERIVED_CHANGES")
+        items = {item["group"]: item for item in run["attribution"]}
+        if set(items) != set(effects):
+            raise JourneyStepFailed("D7", "EFFECT_MISSING_FROM_THE_ATTRIBUTION")
+        summary = run["attribution_summary"]
+        total = int(summary["total_change_minor"])
+        parts = [int(item["shapley_minor"]) for item in items.values()]
+        isolated = [int(item["isolated_minor"]) for item in items.values()]
+        if summary["method"] != "shapley" or sum(parts) != total:
+            raise JourneyStepFailed("D7", "EFFECTS_DO_NOT_SUM_TO_THE_TOTAL")
+        if sum(isolated) + int(summary["residual_minor"]) != total:
+            raise JourneyStepFailed("D7", "ISOLATED_EFFECTS_DO_NOT_RECONCILE")
+        self.req("D7", "analyst", "GET", f"/dislocation-runs/{run_id}/movers", expect=200)
+        shown = "; ".join(f"{name}: {int(items[name]['shapley_minor']):+d}" for name in items)
         self.done(
-            "D6",
-            "refused VALIDATION_FAILED: sub-graph mount changes are not attributable until "
-            "SL-1696 (FD-1660); a 20,000-policy sample of the freMTPL2 book",
+            "D7",
+            f"{run['policy_count']} policies in the sample; {shown}; sum {total:+d} minor units "
+            "(full-book attribution cost: FD-1576)",
         )
-        self.attribution_refused = True
-        self.skip("D7")
-        self.skip("D8")
+        self.done("D8", f"dislocation run {run_id}, attribution cited by id")
         self.skip("D9")
 
     # -- Deploy and the served quote -------------------------------------------------------
     def deploy_and_score(self) -> None:
-        if self.attribution_refused:
-            # FD-1660, until SL-1696: `rv3` was never approved (E9 is a skip), so there is
-            # nothing to deploy or to score from a live deployment.
-            self.skip("DEP")
-            self.skip("S1")
-            return
         ref = f"rating_version:{self.rv3['slug']}@{self.rv3['version']}"
         for env in ("dev", "uat"):
             self.req(
@@ -1243,6 +1230,32 @@ STEP_ORDER: Final = (
     "E1", "E2", "E3", "D6", "D7", "D8", "D9", "E4", "E5", "E6", "E7", "E8", "E9",
     "DEP", "S1",
 )  # fmt: skip
+
+
+#: D7's two effects: what the journey did to the rate tables (A3, A4 and the A-phase seeding), and
+#: the structure it added to the algorithm (the NCD ladder's mount and the expense loading).
+EFFECT_RATE_TABLES: Final = "rate table edits"
+EFFECT_STRUCTURE: Final = "NCD ladder and expense loading"
+
+
+def split_effects(derived: Sequence[Mapping[str, Any]]) -> dict[str, list[str]] | None:
+    """Group a run's derived changes (`DislocationRun.derived_changes`: `id`, `kind`,
+    `description`) into the journey's own effects. The changes to rate tables (a repointed table
+    step, a rate-table pin) are one effect and everything else the fork added or rewired, the
+    ladder's mount included (FD-1660), is the other: that second set depends on itself (the
+    premium step consumes the ladder and the loading), so it is one group by construction, and the
+    first set consumes nothing new. `None` when either effect is empty: the journey then has
+    nothing to decompose."""
+    tables = [
+        str(d["id"])
+        for d in derived
+        if d["kind"] == "table_repointed"
+        or (d["kind"] == "pin" and "rate_table" in str(d["description"]))
+    ]
+    structure = [str(d["id"]) for d in derived if str(d["id"]) not in tables]
+    if not tables or not structure:
+        return None
+    return {EFFECT_RATE_TABLES: tables, EFFECT_STRUCTURE: structure}
 
 
 def _minor(value: Decimal) -> int:
