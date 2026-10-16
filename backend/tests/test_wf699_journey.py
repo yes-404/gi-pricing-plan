@@ -197,6 +197,99 @@ def _seed_module() -> Any:
     return module
 
 
+async def _approved_severity(database: Any, workspace_id: Any, frequency_id: Any) -> Any:
+    """An approved severity GLM over the frequency GLM's Factors (as `fit_severity_glm` copies
+    them), gamma/log with no offset. Its intercept is `ln(_BASE_MINOR) - the frequency intercept`
+    and every level carries relativity 1, so frequency x severity prices a quote exactly as
+    `_BASE_MINOR x Π relativities` did: the journey's premiums keep their magnitude."""
+    import math
+    from copy import deepcopy
+    from decimal import Decimal
+    from uuid import uuid4
+
+    from backend.tests.approved_rows import add_approved
+    from backend.tests.test_demo_rating_evidence import _BASE_MINOR, _INTERCEPT, _fit_result
+
+    from app.db.models import ModelRow
+    from model_schema import GlmSpec, ModelStatus, OffsetSpec, ResponseKind
+
+    intercept = float(Decimal(_BASE_MINOR).ln() - _INTERCEPT)
+    fit = deepcopy(_fit_result())
+    for coefficient in fit["coefficients"]:  # type: ignore[attr-defined]
+        if coefficient["term"] == "intercept":
+            coefficient.update(
+                estimate=intercept, relativity=math.exp(intercept),
+                ci_95=[intercept - 0.02, intercept + 0.02],
+            )
+        else:
+            coefficient.update(estimate=0.0, relativity=1.0, ci_95=[-0.02, 0.02])
+    for levels in fit["relativities"].values():  # type: ignore[attr-defined]
+        for level in levels:
+            level.update(relativity=1.0, estimate=0.0)
+    family = f"fremtpl2-sev-{uuid4().hex[:6]}"
+    async with database.unit_of_work() as session:
+        frequency = await session.get(ModelRow, frequency_id)
+        assert frequency is not None
+        spec = GlmSpec.model_validate(frequency.spec).model_copy(update={
+            "model_family_slug": family, "response": ResponseKind.CLAIM_SEVERITY,
+            "response_column": "claim_severity", "offset": OffsetSpec(), "family": "gamma",
+        })
+        row = await add_approved(
+            session,
+            ModelRow(
+                workspace_id=workspace_id, model_family_slug=family, version=1,
+                status=ModelStatus.APPROVED.value,
+                dataset_version_id=frequency.dataset_version_id,
+                spec=spec.model_dump(mode="json"),
+                spec_hash=f"v3:sha256:{uuid4().hex}{uuid4().hex}", fit_result=fit,
+                diagnostics_id=uuid4(),
+            ),
+        )
+        return row.id
+
+
+async def _approved_structure(
+    database: Any, workspace_id: Any, frequency_id: Any, severity_id: Any
+) -> Any:
+    """The approved AD Peril Structure the seed leaves (`fremtpl2-ad@1`, large loss uncapped), as
+    an `approved` row with its evidence written first; the platform's own composition and
+    approval path is held by `test_demo_peril_structure.py`. Returns its ref."""
+    from datetime import UTC, datetime
+    from decimal import Decimal
+
+    from backend.tests.approved_rows import add_approved
+    from backend.tests.test_demo_rating_evidence import demo_model
+
+    from app.db.models import PerilStructureRow
+    from model_schema import ArtifactRef, LargeLossKind, LargeLossTreatment, new_uuid7
+    from model_schema.perils import PerilComponent, PerilMethod, ReconciledPeril, Reconciliation
+
+    frequency_ref, _ = await demo_model.load_approved_glm(database, workspace_id, frequency_id)
+    severity_ref, _ = await demo_model.load_approved_glm(database, workspace_id, severity_id)
+    component = PerilComponent(
+        peril="AD", method=PerilMethod.FREQUENCY_SEVERITY, frequency_model=frequency_ref,
+        severity_model=severity_ref, large_loss=LargeLossTreatment(kind=LargeLossKind.NONE),
+    )
+    reconciliation = Reconciliation(
+        dataset_version_id=new_uuid7(), part="holdout",
+        perils=(ReconciledPeril(
+            peril="AD", large_loss_kind=LargeLossKind.NONE, modelled_burning_cost=1000
+        ),),
+        observed_burning_cost=1000, modelled_burning_cost=1000, tolerance=Decimal("0.05"),
+        computed_at=datetime.now(UTC),
+    )
+    async with database.unit_of_work() as session:
+        await add_approved(
+            session,
+            PerilStructureRow(
+                workspace_id=workspace_id, slug=demo_model.AD_STRUCTURE_SLUG, version=1,
+                status="approved", perils=[component.model_dump(mode="json")],
+                excluded_perils=[], reconciliation=reconciliation.model_dump(mode="json"),
+            ),
+        )
+    return ArtifactRef(type="peril_structure", slug=demo_model.AD_STRUCTURE_SLUG, version=1)
+
+
 async def _world(database: Any, blob_store: Any, workspace_id: Any) -> dict[str, str]:
     """The state `scripts/demo.py` finds after the seed: the principals, an approved GLM and a
     fitted-but-unapproved model, the seeded Rating Version `fremtpl2-demo@1` (the dislocation
@@ -234,6 +327,8 @@ async def _world(database: Any, blob_store: Any, workspace_id: Any) -> dict[str,
     tables = await demo_model.seed_demo_rate_tables(
         database, Settings(), blob_store, workspace_id, analyst, model_id
     )
+    severity_id = await _approved_severity(database, workspace_id, model_id)
+    structure_ref = await _approved_structure(database, workspace_id, model_id, severity_id)
     await demo_model.create_approved_rating_version(
         database,
         blob_store,
@@ -247,6 +342,8 @@ async def _world(database: Any, blob_store: Any, workspace_id: Any) -> dict[str,
         tables,
         _bandings(),
         _BASE_MINOR,
+        severity_id=severity_id,
+        structure_ref=structure_ref,
     )
 
     # The fitted model stands on the validated portfolio Dataset Version: a model on a Dataset

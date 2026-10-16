@@ -297,7 +297,8 @@ def _with_peril_structure(
     guard = " and ".join(f"{o} != 0" for o in origin)
     steps.append({
         "step_id": "s_premium", "type": "expression", "label": "Premium before rounding",
-        "expr": f"({guard}) ? model_premium * {ratios} : 0", "result_type": "decimal",
+        # Parenthesised whole: the journey appends `* ncd_factor` and `* expense_loading`.
+        "expr": f"(({guard}) ? model_premium * {ratios} : 0)", "result_type": "decimal",
         "consumes": ["model_premium", *pinned, *origin], "produces": "premium_unrounded",
     })
     steps.append({

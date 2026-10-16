@@ -174,7 +174,7 @@ class _Resolver:
 
 
 async def _engine(
-    freq: GlmWorld, sev: GlmWorld, *, edited: bool
+    freq: GlmWorld, sev: GlmWorld, *, edited: bool, premium_suffix: str = ""
 ) -> Any:
     """The compiled, loaded bundle of the builder's own algorithm, over unedited seed tables
     (`edited` False) or with `area` pinned at an edited version 2 against its seed origin 1."""
@@ -198,6 +198,9 @@ async def _engine(
         peril_structure_ref=ArtifactRef.model_validate(STRUCTURE),
         origin_tables=seed_refs,
     )
+    for step in algorithm["steps"]:
+        if step["step_id"] == "s_premium":  # what the journey does: `f"{expr} * ncd_factor"`
+            step["expr"] += premium_suffix
     payloads[ALGORITHM] = algorithm
     version = RatingVersion.model_validate({
         "id": str(uuid4()), "workspace_id": str(uuid4()), "slug": "fremtpl2-demo", "version": 1,
@@ -285,6 +288,19 @@ async def test_premium_is_the_ruled_combination_with_an_edited_cell(
             float(_prediction(freq, sev, age, area, exposure)), rel=1e-12
         )
     assert edited_rows >= 1
+
+
+@pytest.mark.req("FR-222")
+async def test_a_factor_appended_to_the_premium_expression_multiplies_the_whole(
+    freq: GlmWorld, sev: GlmWorld
+) -> None:
+    """The journey forks the algorithm and appends `* ncd_factor` and `* expense_loading` to
+    `s_premium`'s expression. The guard's ternary must not swallow the factor into its `else`."""
+    engine = await _engine(freq, sev, edited=False, premium_suffix=" * 2")
+    age, area, exposure = ROWS[0]
+    result = await _premium(engine, age, area, exposure)
+    expected = _prediction(freq, sev, age, area, exposure) * 2
+    assert float(result["premium_unrounded"]) == pytest.approx(float(expected), rel=1e-12)
 
 
 @pytest.mark.req("FR-222")
