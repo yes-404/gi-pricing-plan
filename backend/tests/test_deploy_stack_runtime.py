@@ -18,6 +18,7 @@ import importlib.util
 import json
 import os
 import pathlib
+import re
 import subprocess
 import tempfile
 import threading
@@ -269,7 +270,12 @@ def test_a_submitted_job_reaches_a_terminal_state_through_the_compose_worker(
         f"job {job['id']} is {status!r} after {JOB_TERMINAL_BOUND_SECONDS}s: "
         + ("never consumed" if status == "queued" else "ran and did not succeed")
     )
-    # The compiled Bundle's blob ref (its hash) is the Job's persisted result.
+    # The compiled Bundle's content hash, as the rating version's read exposes it
+    # (`RatingVersion.bundle.content_hash`; the maintainer's (by delegation) 11:43:57 entry, item 2),
+    # and the Job's persisted result ref (the stored blob).
+    compiled = _api("GET", f"/api/v1/rating-versions/{version_id}", headers)
+    content_hash = (compiled.get("bundle") or {}).get("content_hash", "")
+    assert re.fullmatch(r"sha256:[a-f0-9]{64}", content_hash), f"no compiled-bundle hash: {compiled!r}"
     assert (current.get("result") or {}).get("ref"), f"no compiled-bundle ref on {current!r}"
 
 
