@@ -54,14 +54,19 @@ async def _key(
     archived: bool = False,
     environments: list[str] | None = None,
 ) -> tuple[str, str, ServiceAccountRow]:
-    """A Service Account with one key; returns (full token, secret, account)."""
+    """A Service Account with one key; returns (full token, secret, account).
+
+    The account holds `settings:read`, the permission `GET /api/v1/environments` requires
+    (`api/environments.py:36`). With only `score:execute` a valid key authenticates and is
+    then refused `403` by the route, so R4's valid-key control could never reach `200`.
+    """
     envs = environments or ["prod"]
     async with database.unit_of_work() as session:
         account = ServiceAccountRow(
             workspace_id=workspace_id,
             slug=f"acct-{new_uuid7().hex[-12:]}",
             environments=envs,
-            permissions=["score:execute"],
+            permissions=["settings:read"],
             archived_at=datetime.now(UTC) if archived else None,
         )
         session.add(account)
