@@ -260,6 +260,107 @@ the gc test has both ruled asserts. Hold the ACK for **F1 and F2** (each is a sm
 test); F3 is the executor's ledger edit; F4 is optional. After F1 and F2 land, re-audit the specific
 checks (cost file plus the two new tests) against the new tip, then the Task 4 sweep.
 
+#### Final slice audit, 2026-10-16 (auditor-sl1455c; supersedes the Tasks 1–3 audit's "Tasks 4–6 not audited")
+
+Range: `origin/main...2c0bcc29` with `origin/main` measured as `6b25b9bcf11733fd3aa285ea9757aa7676520749`
+(#1310, fetched 2026-10-16 22:2x BST); the merge base is `0877e6e7a756c4621890713a4d3b016e75e33654`, the main the
+branch re-merged at `49d7f086`. 24 commits, 17 paths. Method: reading plus `git`; **no test, bench or gate run by me**.
+Every verdict below is PROPOSED; the lead decides. I do not set `LG-9932` or `SL-1455` `closed`: the lead's merge does
+that, and the slice's NFR-489 limb is carried (below).
+
+**Gated tree vs this head.** `git diff --name-only 787cfeed 2c0bcc29` prints one path, this ledger
+(`docs/ledgers/LG-09932-…-slice-ledger.md`); `git merge-base --is-ancestor 787cfeed 2c0bcc29` exits 0. Trees:
+`787cfeed^{tree}` `2e5a8121…` (equals the `tree:` in `gate.log:1`), `2c0bcc29^{tree}` `7b3d3ba7…`. So the gate's code
+verdict applies to `2c0bcc29`, docs-only delta.
+
+**Gate (`~/gi-pricing-plan.local/scratch/sl1455-regate/gate.log`, ENDED 2026-10-16 11:05:17 BST).** Read: ruff, mypy,
+import_linter, req_coverage, contracts rc 0; audit_docs rc 1; pytest rc 1 (`13 failed, 5858 passed, 6 skipped`, 
+`gate.log:23`); six frontend stages rc 0; demo rc 124 (the script's own `timeout -s INT`, `demo.log` "journey done",
+"served page … answered 200", "stopped."). The 13 `FAILED` lines are `pytest.log:10221-10233`; I matched them one by one to
+the table in "Re-gate 2026-10-16 (head 787cfeed)" (b): the same 13 node ids, 7 pre-registered and 6 not. The
+maintainer read the 6 and accepted the gate at "2026-10-16 11:11:03 BST" item 1 (each fails `assert result.returncode
+== 0` on audit-docs with exactly the check 31 pair); the incomplete pre-registration is a review miss, recorded in the
+re-gate section (c) as the maintainer's 11:09:05 item (2) asked. **I did not re-derive the six causes from the log; I
+rely on the maintainer's reading and the executor's quoted assert lines.** `pytest -q` prints no per-test names, so the
+new test files (`test_score_request_cost.py`, `test_request_connections.py`, `test_startup_gc_freeze.py`,
+`test_bench_rating_header.py`) are evidenced green by "none of them is among the 13 FAILED" and by the executor's
+per-file runs in the Build log, not by a printed pass line.
+
+**Per-requirement table (scope from `PL-1454` §"Requirement coverage" and Acceptance 1–9).**
+
+| Item | Evidence | Proposed verdict |
+|---|---|---|
+| NFR-489 (`03` §9) p99 < 50 ms / < 15 ms, 25–200 rps | no bench invocation exists for the remedy head; `gate.log:37`: "not measured by this gate"; Task 4 unchecked in the plan; Build log has only Task 0's diagnostic runs (base, not the remedy) | **Deferred with an owner**: the dedicated host (`nfr-bench-1`), Task 4 session, owner the maintainer per `docs/roadmap.md` §G4 (amended 2026-09-29), "to-lead.md 2026-10-16 11:11:03 BST" item 3 and "11:16:35" ("earliest Mon 19 Oct"). Acceptance 2 needs a dated line on `PL-1454` (see F1) |
+| NFR-454 (`00`) held by the same measurement | as NFR-489 | **Deferred with an owner**, same |
+| Acceptance 1 (Task 0 attribution) | Build log: ALONE run 2026-10-11 23:41–00:14 (void as stall diagnosis, asyncio debug), debug-off rerun 2026-10-12 02:16–02:20 (bench arms only, 25 rps, 3 runs, both CLEAN, phase table, py-spy sampling). No debug-off table for the default-live arm or for 50 rps; no one-line "same per-request work" answer for Step 3b; the Task list's Step 5 box is unchecked | **Delivered, partly**: the bench arms' table and events are recorded. The live-arm table and the one-line answer are **not evidenced**; propose **reassigned** with Acceptance 2's live readings to the Task 4 host session (the ruled DP-6 (b) path), and say so in the ledger (F2) |
+| Acceptance 2 (12 invocations) | none | **Deferred with an owner** (as NFR-489) |
+| Acceptance 3 (component half unchanged) | same invocations; none | **Deferred with an owner** (as NFR-489) |
+| Acceptance 4 (timing-free guard, red first) | `test_score_request_cost.py` reds by cause `assert 6 <= 1`, `assert 10 <= 9`, `assert 1 == 0` (Build log, 2026-10-14 Phase 1 reds); file green in the gate (not among the 13); F1/F2 guards in `test_request_connections.py` and the cost file, red by cause `[1] == [0]` | **Delivered and tested** |
+| Acceptance 5 (existing guards pass) | `test_score.py`, `test_traces.py`, `test_score_rate_limit.py` not among the 13; `test_score.py` not in the diff | **Delivered and tested** |
+| Acceptance 6 (harness says what it measures) | `scripts/bench-rating.py:1308` prints "warm (slot hit: version row read only)" beside the cold figure; header prints `N`, `--workers` at `:1104`; header test red then green (Build log 2026-10-14, F3 entry); `--help` run recorded; the `--rates 25` run is owed | **Delivered and tested**, with the one `--http` run owed to Task 4 (same owner) |
+| Acceptance 7 (two-half gate) | `gate.log` above, head `787cfeed`; only the check 31 cascade on working id 9932 is red; 13 of 13 failures are that class | **Delivered**, with the check 31 class standing until LG 9932 is minted (see "Closing acts") |
+| Acceptance 8 (write set) | `git diff --stat origin/main...HEAD` lists 17 paths; the 12 source/test paths are the plan's table plus RL-1685's three admissions plus `conftest.py` and `test_request_connections.py` (F1/F2 fixes of the 14 Oct audit); `docs/INDEX.md`, the plan (`status: active`), `docs/roadmap.md` (row status) and the ledger are the activation and registry; the ledger's write-set line (Build log, F1–F4 entry) lists them | **Delivered** |
+| Acceptance 9 (DP-6 (b)) | the plan's Hand-off item 4 quotes the 09:59:49 ruling and its binding condition and names `PL-1371` §3.8 item 7; **the ledger does not quote it** (grep of the ledger for "Hand-off item 4", "G2 path", "09:59:49": no hit) | **Delivered but untested** as to the ledger clause: the owner is named in the plan, not in this ledger (F3) |
+| FR-243 / NFR-497 / FR-259 preserved | cost-file degrade test (read fails or aborts the shared transaction, 200, `quoted`, no trace row); `test_a_failed_sampling_rate_read…`; sampled write after `read_session.close()` with the trace row asserted | **Delivered and tested** |
+| FR-268 not built | no path touches it | Conforms |
+| Tasks 1–3 findings F1–F4 of the 14 Oct audit | fixed in `5e00fa74` (`require_caller` closes; `requires()` on `resolve_caller`; `read_session.close()` before the sampled write; autouse `gc.unfreeze()` in `conftest.py`), reds by cause in the Build log, F3 ledger edits `7d9f61b7` | **Discharged** (re-audited below) |
+
+**RE-audit of the 14 Oct F1/F2 fixes, at `2c0bcc29`.** Scoped to what changed (`git diff 11677daa 5e00fa74`): read, not
+run. Read at `2c0bcc29`: `deps.py:229` `resolve_caller` (the old body); `deps.py:288-297` `require_caller` depends on it
+and ends `await session.close()`; `authz.py:42` `CallerDep` uses `resolve_caller`; `score.py:570` `await read_session.close()`;
+`conftest.py:91` `gc.unfreeze()` — the split is as the Build log says; the `[1] == [0]` red lines are recorded; both tests were green in the 787cfeed pytest (not among
+the 13). I did not re-read FastAPI's dependency-exit ordering and ran nothing.
+
+**Reachability (charter two-way match).** `git merge-base --is-ancestor <sha> 2c0bcc29` exits 0 for every code or test
+commit the ledger names: `c9a64068`, `1ab36c9f`, `d943c2d0`, `fecaf7b6`, `9777184f`, `051f9b3d`, `0544220a`, `11677daa`,
+`5e00fa74`, `3c0e99a0`, `78177ec8`, `34f08fdb`, `49d7f086`, `787cfeed`. Not ancestors, and each is a reference to a
+record outside this branch, not slice evidence: `c41475c2`/`3200b5a5`/`d87e354d` (the evidence branch
+`evidence/sl-1455-t0-2026-10-11`), `75f9b1ae` (RL 8024's branch), `372fa92e` (an old main commit absent from this
+clone), and eight blobs (`run.sh`, `run2.sh`, `t0_*.py`, …) which `cat-file` reports as blobs by construction.
+
+**Barred word.** `git diff origin/main...2c0bcc29 -U0 | grep '^+' | grep -ciE 'dep''uty'` prints 0; the same over
+`git log origin/main..2c0bcc29 --format=%B` prints 0.
+
+**Merge forecast (information, not a finding).** `git merge-tree --write-tree origin/main 2c0bcc29` exits 1 against
+`6b25b9bc`; the only conflict is `docs/INDEX.md` (generated; take theirs, regenerate under the gate-2 flock). `docs/roadmap.md`
+auto-merges. The maintainer's "11:11:03" item 1 says this slice merges after #1310 in id order.
+
+**Closing acts.** (i) `LG-9932` still reads `status: active`, `tree: 5e00fa74…` (the Task 0 base) and "MERGE-ACK: not yet
+given"; the header says "covers Tasks 0–3"; the Task list says "Tasks 4–6 — not started" and has Step 5/6 boxes open;
+the Gate section says "not applicable to Tasks 0–3" (the re-gate section answers it but the Gate section is not
+updated) — an executor edit (F2). (ii) LG-9932 is a working id: the lead mints it at the merge turn; check 31 stays red on this branch until then,
+by the known class. (iii) RL-1685's `relates` still needs LG-9932 (and RL 8024) added at the mint, as the 14 Oct
+audit said; owner the minter. (iv) `PL-1454` is frozen from its merge: the Acceptance 2 dated line is a delta or ruling,
+not an edit of the plan body. (v) FD-1411's discharge needs SL-1259's NFR-489 verdict or the maintainer's dated line
+(plan Hand-off 2); not discharged by this merge.
+
+**Findings.**
+- **F1 — MEDIUM (process, not code).** The slice cannot reach its own Acceptance 2 before merge: Task 4's measurement
+  is carried to the dedicated host. The plan's Acceptance 2 names the shared VM as the venue ("This sweep runs on the
+  shared VM"); the maintainer's "11:16:35 BST" says Task 4 "needs a dated line on PL-1454 Acceptance 2". No such line
+  is in the repository at `2c0bcc29`. *Failure:* the merge records a Slice closed on a clean audit with an acceptance
+  item whose venue the plan still gets wrong, and the host session has no filed instruction to follow. *Proposed
+  fix:* the maintainer's dated line filed as an RL (the lead routes), before or with the merge; owner the maintainer;
+  until then this stays the open item the NFR-489 verdict waits on.
+- **F2 — LOW (ledger).** The ledger's header, Task list, Gate section and `tree:` are stale as listed under Closing acts (i); and
+  Acceptance 1's live-arm table and one-line answer are neither recorded nor marked owed. *Fix:* an executor edit
+  (or the lead's) marking Tasks 4 and 6 "carried: dedicated host / DP-6 (b)", Step 5/6 per the lead's ruling, the Gate
+  section pointing at the re-gate section, and the live-arm items listed as owed to Task 4.
+- **F3 — LOW (ledger, Acceptance 9).** The ledger does not quote the DP-6 (b) ruling and Hand-off item 4 line. *Fix:* one
+  sentence in the ledger quoting the 2026-10-05 09:59:49 BST ruling's binding condition and naming `PL-1371` §3.8 item 7
+  as the owner of the exit-demo `/score` step.
+- **F4 — INFORMATION.** The gate's pre-registered list was 7 of the 13 known (recorded in the re-gate section (c)); no
+  further action here. Standing: the `gc.freeze()` lifespan call and the 60 s `last_used_at` interval are product
+  behaviour changes (RL-1685 DP-1 (b), DP-4) that the cost file guards; the byte-identity of the `/score` body
+  (Task 3 Step 5) is still owed to Task 4's window and is listed under the same owner.
+
+**Proposed verdict for the lead.** The code half of the slice (Tasks 1–3, the F1–F4 fixes, Acceptance 4–8) is delivered
+and tested, and the gate on `787cfeed` is accepted by the maintainer. **Merge-ready after F2 and F3 (a ledger edit,
+no code) and with F1 filed by the maintainer.** NFR-489 and NFR-454, Acceptance 2 and 3, the `--http` run of
+Acceptance 6, Task 3 Step 5's byte-identity and Acceptance 1's live-arm limb are **deferred with an owner**: the
+dedicated host's Task 4 session, the maintainer. Nothing is "not started" without an owner. Per the maintainer's
+"11:11:03" item 3 the verdict on NFR-489 is not made here and is not implied by this merge.
+
 ### Build log
 
 - **2026-10-11 11:2x — base and set-up.** Worktree `.claude/worktrees/sl-1455`, branch `sl-1455-wk1178-nfr489-http`, base `origin/main` `d699a561d6a93f33b74beb9c07023f8e655bb8c7` (`git -C <wt> rev-parse HEAD` at creation); `uv sync --all-packages` ok. No ref matched the slice before (the planner's draft, `go-request-sl1455-2026-10-10.md` §1).
