@@ -234,7 +234,7 @@ The lead adopted the findings of an independent pre-gate review. Each was verifi
 
 ## Re-merge of main, 2026-10-16 (Europe/London)
 
-- 2026-10-16 10:3x BST: `git merge --no-ff origin/main` (a2f77b2d, #1309 merged) into the branch at 2fad9e21. `merge-tree --write-tree` rc 1 beforehand: one conflict, `docs/INDEX.md` (generated), taken theirs; the regeneration is owed. No conflict in code, docs/specs, docs/contracts, roadmap or register. After the merge `git diff origin/main --name-only` lists no roadmap, register or openapi path: only this slice's own paths differ.
+- 2026-10-16 10:28 BST: `git merge --no-ff origin/main` (a2f77b2d, #1309 merged) into the branch at 2fad9e21. `merge-tree --write-tree` rc 1 beforehand: one conflict, `docs/INDEX.md` (generated), taken theirs; the regeneration is owed. No conflict in code, docs/specs, docs/contracts, roadmap or register. After the merge `git diff origin/main --name-only` lists no roadmap, register or openapi path: only this slice's own paths differ.
 - Overlap with #1309 (`git diff --stat 0877e6e7 a2f77b2d`): `docs/contracts/openapi/generated.json` and `backend/tests/test_contracts.py` are in its change set; this branch edits `test_contracts.py` (6 lines) and has not yet generated `generated.json`, so the upload-url shapes are still missing from it.
 - Owed after GATE END, in addition to the list above: regenerate `docs/INDEX.md` (`doc-index.py` under the gate-2 flock) and `generate-contracts.py` then `--check` against the merged tree.
 
