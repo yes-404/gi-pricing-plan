@@ -3,7 +3,7 @@ id: PL-1714
 family: plan
 kind: map
 title: WK-674 — Slice 4 consumes every routed pool and handles every routed kind: E4.2 amended to a derived consumer set, the io and scoring reds on compose asserting succeeded, the trace handler and its derived guard, demo.py on the same set, and the FR-405 pool split for the maintainer's ruling — Work-plan delta
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-14
 owner: planner
 tree: ba68a6daf3cfb7634258915a6e542bc658ae3f62

@@ -96,6 +96,37 @@ Not yet.
   re-merges `origin/main` and re-runs the other's guard (`test_worker_handler_coverage.py` must see
   `blob.promote` registered).
 
+## Activation (dated 2026-10-16, at `origin/main` `0877e6e7`)
+
+The activation commit flips `PL-1666`, `PL-1690` and `PL-1714` from `draft` to `active` by their
+status lines only (§1.5: a filed plan is frozen). Each trigger, from the maintainer's (by
+delegation) entry "2026-10-16 09:55:22 BST — GO SL-1258 BUILD (WK-674 S4, compose stack +
+FD-1713)" and the lead's "2026-10-16 09:54:55 BST" GO request:
+
+- **PL-1666:** RL-1687 ("What it does not change", around :268) owes it `active` "by its own
+  dated line" once RL-1687 is minted (minted in D14); PL-1690:130 repeats it. RL-1687 is on main.
+- **PL-1690:** its "Decision points" read "None open"; DP-S4-1 is RL-1687's, DP-B1 the lead's.
+- **PL-1714:** its decision points are all ruled (DP-Q1 (b), DP-Q2 (a), DP-Q3 (a), DP-Q4 (b), DP-Q5
+  (a); the maintainer's (by delegation) entries of 2026-10-14 10:36:42 and 10:43:43 BST).
+- **PL 8061** (the PL-1714 delta, unminted) flips once minted, not here.
+
+**DP-E1 (ruled 2026-10-16 09:55:22 BST, condition 3):** no second PR under SL-1258's id. E4.8 is
+not built here. At S4's PR time the lead picks (a) wait for SL-1722 and carry E4.8, or (b) merge
+seeded with E4.8 as its own slice id.
+
+## Build log, 2026-10-16
+
+- Code written without running any test (condition 2: no extra load until SL-1455's GATE END):
+  `deploy/docker-compose.yml` (one `worker-*` service per pool, sizes UNMEASURED, env-overridable),
+  `RELAY_QUEUE` read by `task_default_queue` and the beat entry, `register_trace_handlers()` in
+  the entrypoint (E4.7 (a)), entrypoint docstring (E4.6), `scripts/demo.py` queues derived from
+  the routing table (E4.5), `BLOB_GC` in `LATER_PHASE_KINDS` (its FR-420 line is on main), the
+  `rating.compile` runtime test asserting `succeeded` plus a result ref, and the shape/runtime tests
+  adapted to the `worker-*` names. No migration (S4 adds none; verified: no file under
+  `backend/migrations` is touched).
+- **Not done:** PL-1690 E4.1 (Task C, FR-452 management-API limit; RL-1687) is not in the lead's
+  dispatch (E4.2 to E4.7); see the report to the lead.
+
 ## PRs
 
 None yet.
