@@ -1,5 +1,5 @@
 ---
-id: FD-8006
+id: FD-1703
 family: finding
 title: The job-events stream's data payload is a dict built in the handler that no model-schema model owns
 status: active
@@ -7,10 +7,12 @@ created: 2026-10-14
 owner: auditor
 tree: 36e2610ab8135bc3b3563464e7f5f719713b168b
 corrected_by: []
-relates: [FD-1684, PL-9997, SL-9998, WK-1178]
+relates: [FD-1684, PL-1708, SL-1709, WK-1178]
 ---
 
-# FD-8006 — The job-events stream's `data` payload is a dict built in the handler that no `model-schema` model owns
+# FD-1703 — The job-events stream's `data` payload is a dict built in the handler that no `model-schema` model owns
+
+*(Minted 2026-10-14 as FD-1703 from working id 8006, in the D15 batch mint PR.)*
 
 *(Filed under working id 8006, reserved by the lead, eta "2026-10-14 09:52:44 BST". Text drafted by
 the minter (seat minter-d15) on the maintainer's (by delegation) ruling below. The finding's owner
@@ -29,10 +31,10 @@ reason a shape defined only in a handler cannot be generated into `docs/contract
 frontend client: the frontend cannot type it from the contract. `model-schema` does own the job
 (`Job`, `packages/model-schema/src/model_schema/jobs.py:218`, with `id`, `status`, `progress` and
 `trace_id` among its fields); the event payload is a four-field projection of it that nothing
-names. It is LOW because the wire works and no source caller reads the stream today (`PL-9997`
+names. It is LOW because the wire works and no source caller reads the stream today (`PL-1708`
 premise n). It becomes a real divergence risk the first time a client parses the event.
 
-`PL-9997` DP-4 (i), ruled by the same entry, declares the route's media type `text/event-stream`
+`PL-1708` DP-4 (i), ruled by the same entry, declares the route's media type `text/event-stream`
 with the handler unchanged. That does not type the payload, and the plan's Hand-off raised the
 question and did not decide it.
 

@@ -1,5 +1,5 @@
 ---
-id: PL-9997
+id: PL-1708
 family: plan
 kind: map
 title: WK-1178 — FD-1684's remedy, the four non-JSON routes declare their real media types in the published contract: a dated Work-plan delta
@@ -15,7 +15,9 @@ corrected_by: []
 relates: [FD-1684, FD-1335, PL-1682, SL-1683, PL-1667, SL-1669, PL-1364, SL-1367, SL-1547, RL-1445]
 ---
 
-# PL-9997 — WK-1178, FD-1684's remedy: the four non-JSON routes declare their real media types
+# PL-1708 — WK-1178, FD-1684's remedy: the four non-JSON routes declare their real media types
+
+*(Minted 2026-10-14 as PL-1708 and SL-1709 from working ids 9997 and 9998, in the D15 batch mint PR.)*
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L5
 > (`document-ids.md` §1.6, PL row: *"one plan per Work, slices as rows, no per-slice `leaf`; a
@@ -24,7 +26,7 @@ relates: [FD-1684, FD-1335, PL-1682, SL-1683, PL-1667, SL-1669, PL-1364, SL-1367
 > builds on: `FD-1684` (the finding this slice discharges), `FD-1335`/`PL-1364`/`SL-1367` (Part A,
 > the untyped-body guard whose `UNTYPED_2XX_PERMANENT` list holds the four routes) and
 > `PL-1682`/`SL-1683` (the precedent this delta copies, and the slice it follows on shared files).
-> It adds **one slice row**, `SL-9998`, under `### WK-1178` in [`../roadmap.md`](../roadmap.md).
+> It adds **one slice row**, `SL-1709`, under `### WK-1178` in [`../roadmap.md`](../roadmap.md).
 > REQUIRED SUB-SKILL: subagent-driven-development (recommended) or executing-plans, task by
 > task; steps use checkbox (`- [ ]`) syntax. The executor also binds `test-driven-development`
 > (every acceptance item is seen red **by its cause** before the code that turns it green),
@@ -33,7 +35,7 @@ relates: [FD-1684, FD-1335, PL-1682, SL-1683, PL-1667, SL-1669, PL-1364, SL-1367
 > and `git-hygiene`. Read [`README.md`](README.md)'s five unchecked conventions before the first
 > step. The executor is spawned from `.claude/roles/executor.md`.
 
-Filed under **working id 9997**; its slice row is **SL-9998** (`draft`, working id 9998). Both ids
+Filed under **working id 9997**; its slice row is **SL-1709** (`draft`, working id 9998). Both ids
 were reserved by the lead, `~/gi-pricing-plan.local/handover/eta.md`, line "2026-10-14 09:29:43 BST
 lead: RESERVED working ids PL 9997 (WK-1178 plan delta: FD-1684 remedy — declare the four non-JSON
 media types, red first per route) and SL 9998 (its slice), seat planner-fd1684". Written 2026-10-14
@@ -205,7 +207,7 @@ entries 1 and 3). **DP-1 to DP-5 are ruled** as recommended (the maintainer (by 
 | `.claude/skills/contract-guard/SKILL.md` `:292-296`, its `Verified` section (`.claude/skills/README.md` does not name the list at `36e2610a`) | the list's mention removed, a dated line (DP-3 (i)) | 3 |
 | `docs/contracts/openapi/generated.json` | regenerated, never hand-edited | 3 |
 | `docs/findings/register.md` FD-1684 row | a dated line: the four routes declared | 4 |
-| `docs/roadmap.md` SL-9998 row; `docs/ledgers/LG-<working id>` | status lines and the slice ledger (L1 (a')) | 0, 4 |
+| `docs/roadmap.md` SL-1709 row; `docs/ledgers/LG-<working id>` | status lines and the slice ledger (L1 (a')) | 0, 4 |
 
 **Not in the write set:** the handler bodies; `packages/model-schema/` (no model changes);
 `scripts/generate-contracts.py`; `docs/contracts/openapi/gi-pricing.yaml` (premise o, hand-authored,

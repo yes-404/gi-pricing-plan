@@ -1,5 +1,5 @@
 ---
-id: FD-8023
+id: FD-1715
 family: finding
 title: Only rating versions and traces retain their blobs, so a non-dry blob garbage collection would delete live dataset and job-result blobs
 status: active
@@ -7,10 +7,12 @@ created: 2026-10-14
 owner: auditor
 tree: ba68a6daf3cfb7634258915a6e542bc658ae3f62
 corrected_by: []
-relates: [WK-1251, FR-420, FR-418, FR-419, NFR-530, NFR-459, RL-888, FD-8007, FD-1660, FD-1679, P2]
+relates: [WK-1251, FR-420, FR-418, FR-419, NFR-530, NFR-459, RL-888, FD-1704, FD-1660, FD-1679, P2]
 ---
 
-# FD-8023 — blob GC selects `ref_count == 0`, and 14 of 17 blob writers never raise it
+# FD-1715 — blob GC selects `ref_count == 0`, and 14 of 17 blob writers never raise it
+
+*(Minted 2026-10-14 as FD-1715 from working id 8023, in the D16 batch mint PR.)*
 
 *(Filed under working id 8023, reserved by the lead in `handover/eta.md` ("2026-10-14 10:51:36
 BST"); a minter folds it into the docs batch. Every `file:line` below was read at `origin/main`
@@ -149,8 +151,8 @@ request, job or script in `backend/src` or `packages`. That is the whole basis f
   by an ordinary call on `main`**. This finding is reachable by no call. Nothing runs
   `collect_garbage` outside tests. The silent-change class is HIGH when a user can produce the
   wrong outcome; here a user cannot, so the rating cannot be the same.
-- **Against FD-8007 (MEDIUM, confirmed by the maintainer (by delegation) at "2026-10-14 10:11:47
-  BST").** FD-8007's consequence is a silent changed price, and it needs a write path the
+- **Against FD-1704 (MEDIUM, confirmed by the maintainer (by delegation) at "2026-10-14 10:11:47
+  BST").** FD-1704's consequence is a silent changed price, and it needs a write path the
   application lacks. This finding needs a caller the application lacks. The same shape, so the
   same rating. This one is worse in kind (an S3 object is deleted, and an erased dataset blob cannot
   be recomputed from the pin), and better in scope (one function and one selector, not a
@@ -187,7 +189,7 @@ change in P2.** The remedy shape, exactly as ruled in that entry's item 3 and 4:
    at `backend/src/app/platform/blobs.py:186`, inside `BlobStore.put` (`:140`); no other
    insert into the `blobs` table exists, and `blobs.py:455` (`update(BlobRow)`) only adjusts
    `ref_count` for `retain` and `release`. So the writers are: **`BlobStore.put`**, whose 17 call
-   sites above are the starting population, and, **after SL 8026**, **`promote_upload`** (RL 8028's
+   sites above are the starting population, and, **after SL-1722**, **`promote_upload`** (RL-1724's
    `blob.promote`), which creates the `BlobRow` for a promoted upload without calling `put`. A new
    writer of either kind with neither a `retain` nor a reason fails the check.
 3. **A seeded dry run.** A `collect_garbage(dry_run=True)` report over a seeded database, with one

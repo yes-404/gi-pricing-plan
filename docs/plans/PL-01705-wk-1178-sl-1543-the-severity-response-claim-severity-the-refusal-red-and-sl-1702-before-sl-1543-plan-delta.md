@@ -1,5 +1,5 @@
 ---
-id: PL-8009
+id: PL-1705
 family: plan
 kind: map
 title: WK-1178 — SL-1543 (A-4) since PL-1542 was dated, the severity response claim_severity, the fit's loud refusal red, the synthetic book with the real-seed probe, SL 8003 before SL-1543, and the re-checked premises: a dated delta to PL-1542
@@ -15,7 +15,9 @@ corrected_by: []
 relates: [PL-1542, SL-1543, PL-1674, SL-1675, PL-1677, SL-1678, FD-1679, RL-1538, RL-1459, PL-1544]
 ---
 
-# PL-8009 — WK-1178, SL-1543 (A-4): what has changed since PL-1542 was dated (delta to PL-1542)
+# PL-1705 — WK-1178, SL-1543 (A-4): what has changed since PL-1542 was dated (delta to PL-1542)
+
+*(Minted 2026-10-14 as PL-1705 from working id 8009, in the D15 batch mint PR.)*
 
 > **For agentic workers:** this is a **dated delta** under Lean P2 L5 (`document-ids.md` §1.6,
 > PL row: *"a change is one dated Work-plan delta, a new `PL-` that `relates:` the Work's
@@ -163,13 +165,44 @@ Each red is run once, its failure line copied verbatim into `LG 9879`.
 | R | Test (file) | Exact assert(s) | Expected failure on base, by cause | Status at `c5bc231d` |
 |---|---|---|---|---|
 | R1 (T1) | `test_seed_fits_and_approves_a_severity_glm` (`backend/tests/test_demo_peril_structure.py`), on the synthetic book | the persisted model's spec: `spec.response == ResponseKind.CLAIM_SEVERITY`; `spec.response_column == "claim_severity"`; `spec.family == "gamma"`; `spec.link == "log"`; `spec.weight == WeightSpec(kind="column", column="claim_count")`; `spec.peril == "AD"`; `spec.dataset_version_id`, `spec.split_ref` equal the frequency GLM's; the model is `approved`; each partition's `rows_excluded_zero_weight` equals the synthetic book's `claim_count == 0` count in that partition | `AttributeError` naming `fit_severity_glm` on `examples.fremtpl2.model` — no severity path exists (`PL-1542` Task 1 Step 1's cause, *"no `claim_severity` model"*) | not written |
-| R1b (new, C4) | `test_the_severity_fit_refuses_a_null_or_non_positive_severity_on_a_claim_row` (same file), parametrised over `None`, `0.0` and `-1.0` placed on one `claim_count > 0` row of the synthetic book | `pytest.raises(SystemExit)` around the executor's `fit_severity_glm`; the fit job's `status == JobStatus.FAILED`; its stored error `code == "GLM_FIT_FAILED"`; its detail contains `"glum refused the fit"`; no fitted model row reaches `fitted` | **DP-8009-1.** Under (a), recommended: on base, red by absence (`AttributeError`, as R1); then, once `fit_severity_glm` exists, if the assert passes at its first run, the red **by cause** is shown on deliberately broken input — a scratch, uncommitted planted `drop_nulls()`/`filter(> 0)` on the response in the fit path — printing the test's failure (`DID NOT RAISE <class 'SystemExit'>`) into `LG 9879`, then reverted | not written **Ruled shape (the maintainer (by delegation), "2026-10-14 10:09:06 BST"):** TWO cases, a null `claim_severity` and a `claim_severity` <= 0, each on a `claim_count > 0` row; each asserts code `GLM_FIT_FAILED` plus the family-domain sentence ("Gamma and Tweedie need strictly positive values") in the persisted error. |
+| R1b (new, C4) | `test_the_severity_fit_refuses_a_null_or_non_positive_severity_on_a_claim_row` (same file), parametrised over `None`, `0.0` and `-1.0` placed on one `claim_count > 0` row of the synthetic book | `pytest.raises(SystemExit)` around the executor's `fit_severity_glm`; the fit job's `status == JobStatus.FAILED`; its stored error `code == "GLM_FIT_FAILED"`; its detail contains `"glum refused the fit"`; no fitted model row reaches `fitted` | **DP-8009-1.** Under (a), recommended: on base, red by absence (`AttributeError`, as R1); then, once `fit_severity_glm` exists, if the assert passes at its first run, the red **by cause** is shown on deliberately broken input — a scratch, uncommitted planted `drop_nulls()`/`filter(> 0)` on the response in the fit path — printing the test's failure (`DID NOT RAISE <class 'SystemExit'>`) into `LG 9879`, then reverted | not written **Ruled shape (the maintainer (by delegation), "2026-10-14 10:09:06 BST"):** TWO cases, a null `claim_severity` and a `claim_severity` <= 0, each on a `claim_count > 0` row; each asserts code `GLM_FIT_FAILED` plus the family-domain sentence ("Gamma and Tweedie need strictly positive values") in the persisted error. *Superseded in its assert form by the maintainer's (by delegation) "2026-10-14 11:41:17 BST" (R1b corrected, §"Reds"): the family-domain sentence is appended to every `GLM_FIT_FAILED`, so it cannot tell the causes apart. (a) itself stands.* |
 | R2 (T2) | `test_the_ad_peril_structure_reconciles`, `test_the_ad_peril_structure_is_approved_through_the_workflow` (same file), on the synthetic book | as `PL-1542` Acceptance 2; the approval asserts the structure is `approved` after `decide_and_carry`'s carry (C9), with the approval event and the decision; Acceptance 2's negative grep prints nothing | `AttributeError` naming `create_ad_peril_structure` | not written |
 | R3 (T3) | `test_b4_model_call_references_the_peril_structure` (`backend/tests/test_fremtpl2_algorithm.py`) | exactly one `model_call` step; `call.peril_structure_ref == structure`; `call.model_ref is None`; `call.mode == "exact"`; `set(call.feature_map) == set(_FACTORS)`; `call.result_type in ("decimal", "money_minor")` (`RL-1580`) | `TypeError`: `build_fremtpl2_algorithm()` got an unexpected keyword argument `peril_structure_ref` | **written** (`c5bc231d`); the commit message says it is red by that cause |
 | R4 (T4) | `test_premium_is_the_ruled_combination` (`backend/tests/test_demo_peril_structure.py`) | as `PL-1542` Acceptance 4, with the expected values from `predict_glm` and the table cells, never from the engine; compared after the single half-even rounding, never as the raw decimal string (`LG 9879` Task 0 Step 5 (iii)) | on slice (a)'s algorithm the unedited-table premium is `base × Π relativities`, not the structure's prediction | not written |
 | R5 (T5) | `test_b4_and_c1_are_walked_not_skipped` (`backend/tests/test_wf699_journey.py`), and the edits to `test_wf699_the_skip_and_known_gap_lines_are_exactly_the_ruled_ones` and `test_wf699_journey_runs_end_to_end` | `not [e for e in journey.SKIPS if e.step in {"B4", "C1′"}]`; `not [e for e in journey.SKIPS if "SL-1543" in e.line]`; the ruled-lines list no longer holds `"SKIPPED B4 model_call: FD-1456; SL-1543"` or `"SKIPPED C1′: FD-1456; SL-1543"`; `status[step] == "ok"` for `B4` and `C1′` | `journey.SKIPS` still carries both lines | **written** (`c5bc231d`) |
 
 The executor may rename a test; the ledger then names the new name beside the one here.
+
+**R1b, corrected: dated 2026-10-14, on the maintainer's (by delegation) entry "2026-10-14 11:41:17
+BST — R1b CORRECTED (my 10:09:06 assert could not discriminate)" (`to-lead.md`).** It replaces the
+10:09:06 assert form in the R1b row above. An assert must fail when the cause is different:
+
+1. **Negative control first.** On the clean synthetic book (claimant rows with a valid
+   `claim_severity`), `fit_severity_glm` gives a Job that `succeeded`. This passes before R1b's
+   reds count.
+2. **Case null.** One claimant row's `claim_severity` set null: `GLM_FIT_FAILED`, and the message
+   contains glum's cause text for NaN in y (the `{exc}` part), quoted verbatim in `LG 9879` from the
+   pinned glum/sklearn.
+3. **Case 0 (and −1).** One claimant row's `claim_severity` set to 0: `GLM_FIT_FAILED`, and the
+   message contains the Gamma cause text "out of the valid range for familyGammaDistribution".
+4. **Red by cause.** Each case is red by the scratch silent-drop proof.
+5. **Discrimination.** Each case's assert fails when run against the other case's input, printed
+   in `LG 9879`.
+6. **The family-domain sentence alone is not an assert.** `glm.py` appends it to every
+   `GLM_FIT_FAILED`.
+
+**R1b's cause and its owed runs: dated 2026-10-14, on the maintainer's (by delegation) entry
+"2026-10-14 11:52:51 BST" item (1) (`to-lead.md`).** The fixture cause is accepted
+(`test_demo_peril_structure.py:81` wrote `"np.float64(…)"`), fixed forward with no force-push.
+Criterion 5 above (the cross-case discrimination run) and the second silent-drop red are owed as
+printed runs in `LG 9879` before SL-1543's GO.
+
+**The guard test: dated 2026-10-14, on the maintainer's (by delegation) entry "2026-10-14 11:29:53
+BST — G2 check result ACCEPTED: the FR-127 GLM fix stays OFF the G2 path, conditionally; the guard
+ADOPTED" (`to-lead.md`).** A slice test, named in `LG 9879`, asserts that the A-4 severity spec's
+`loss_treatment.kind == "none"` AND that the AD structure's `large_loss` is the uncapped treatment.
+A capped choice then fails a test. The test changes only together with the FR-127 GLM fix's
+merge, cited in `LG 9879`.
 
 ## Activation needs, each with its state at `1e260c15`
 
@@ -189,10 +222,21 @@ in order.
 
 | DP | Question | Options | Recommendation | Owner | Blocks | Ruled |
 |---|---|---|---|---|---|---|
-| **DP-8009-1** | **What does "Show it red, then green" mean for R1b, if the platform fit already refuses (P6)?** | **(a)** R1b asserts the existing loud refusal (`GLM_FIT_FAILED`, the job `FAILED`, glum's cause in the detail) through `fit_severity_glm` on the synthetic book. Its first red is by absence (no `fit_severity_glm`); its red **by cause** is a broken-input proof: a scratch, uncommitted planted silent drop in the fit path, the test's failure printed into `LG 9879`, then reverted (`CLAUDE.md` §13: *"enforcement is proven on deliberately broken input"*). No new code. If R1b is instead red on base by cause (the null is in fact dropped silently), **STOP to the lead**: the fix is under `packages/` or `backend/src/`, outside this write set. **(b)** An examples-level precondition: `fit_severity_glm` checks the frame (`claim_count > 0` ⇒ `claim_severity` non-null and `> 0`) and raises before the fit job, with its own message. Red by cause on base (no check). Cost: the refusal is the seed's, not "the fit's" as entry 1 says, and it duplicates a refusal the platform already makes. **(c)** A dedicated platform refusal (a named code before glum, in `pricing-core`), red by cause. Cost: a `packages/` write, a permanent error code (`CLAUDE.md` §5) and a spec clause — a preceding slice, as `SL-1675` was, and a G2 slip | **(a).** Entry 1 says *"REFUSED loudly by the fit (not silently dropped)"*; P6 reads that the fit already does so, with glum's cause carried verbatim, and (a) proves it without a write outside `PL-1542`'s set. (b) refuses in the wrong place. (c) builds a second refusal for a case the first already covers, and costs G2 a slice | the maintainer (by delegation), on entry 1 | R1b only | **Ruled (a)**, the maintainer (by delegation), "2026-10-14 10:09:06 BST": assert the EXISTING refusal through `fit_severity_glm` (`glm.py`, the `except ValueError` clause below `LinAlgError`: `GlmFitError("GLM_FIT_FAILED", "glum refused the fit: … Gamma and Tweedie need strictly positive values … and both for nulls. Nothing was estimated.")`). R1b asserts the job fails with code `GLM_FIT_FAILED` AND the persisted error detail contains the family-domain sentence, in TWO cases: a null `claim_severity`, and a `claim_severity` <= 0, each on a row with `claim_count > 0`. Red by cause is the broken-input proof (a scratch silent drop of those rows before the fit makes R1b fail), printed in the `LG-`, then reverted. R1b red on the base tree means STOP (outside the write set). (b) and (c) rejected. |
+| **DP-8009-1** | **What does "Show it red, then green" mean for R1b, if the platform fit already refuses (P6)?** | **(a)** R1b asserts the existing loud refusal (`GLM_FIT_FAILED`, the job `FAILED`, glum's cause in the detail) through `fit_severity_glm` on the synthetic book. Its first red is by absence (no `fit_severity_glm`); its red **by cause** is a broken-input proof: a scratch, uncommitted planted silent drop in the fit path, the test's failure printed into `LG 9879`, then reverted (`CLAUDE.md` §13: *"enforcement is proven on deliberately broken input"*). No new code. If R1b is instead red on base by cause (the null is in fact dropped silently), **STOP to the lead**: the fix is under `packages/` or `backend/src/`, outside this write set. **(b)** An examples-level precondition: `fit_severity_glm` checks the frame (`claim_count > 0` ⇒ `claim_severity` non-null and `> 0`) and raises before the fit job, with its own message. Red by cause on base (no check). Cost: the refusal is the seed's, not "the fit's" as entry 1 says, and it duplicates a refusal the platform already makes. **(c)** A dedicated platform refusal (a named code before glum, in `pricing-core`), red by cause. Cost: a `packages/` write, a permanent error code (`CLAUDE.md` §5) and a spec clause — a preceding slice, as `SL-1675` was, and a G2 slip | **(a).** Entry 1 says *"REFUSED loudly by the fit (not silently dropped)"*; P6 reads that the fit already does so, with glum's cause carried verbatim, and (a) proves it without a write outside `PL-1542`'s set. (b) refuses in the wrong place. (c) builds a second refusal for a case the first already covers, and costs G2 a slice | the maintainer (by delegation), on entry 1 | R1b only | **Ruled (a)**, the maintainer (by delegation), "2026-10-14 10:09:06 BST": assert the EXISTING refusal through `fit_severity_glm` (`glm.py`, the `except ValueError` clause below `LinAlgError`: `GlmFitError("GLM_FIT_FAILED", "glum refused the fit: … Gamma and Tweedie need strictly positive values … and both for nulls. Nothing was estimated.")`). R1b asserts the job fails with code `GLM_FIT_FAILED` AND the persisted error detail contains the family-domain sentence, in TWO cases: a null `claim_severity`, and a `claim_severity` <= 0, each on a row with `claim_count > 0`. Red by cause is the broken-input proof (a scratch silent drop of those rows before the fit makes R1b fail), printed in the `LG-`, then reverted. R1b red on the base tree means STOP (outside the write set). (b) and (c) rejected. *Superseded in its assert form by the maintainer's (by delegation) "2026-10-14 11:41:17 BST" (R1b corrected, §"Reds"): the family-domain sentence is appended to every `GLM_FIT_FAILED`, so it cannot tell the causes apart. (a) itself stands.* |
 
 No other decision is opened. The "probably" in P6 is a reading, and (a)'s STOP clause covers it
 being wrong.
+
+**DP-A4-3's binding condition: dated 2026-10-14, on the maintainer's (by delegation) entry
+"2026-10-14 11:29:53 BST" (`to-lead.md`).** DP-A4-3 stays (x), large loss uncapped, so the FR-127
+GLM fix stays off the G2 path. If Task 0 Step 4's probe fails (`abs(ratio − 1) > 0.05`) and (y)
+capped becomes the answer, SL-1543 STOPs. The FR-127 GLM fix then joins the G2 path and merges
+before SL-1543 resumes, and the G2 ETA is restated. The guard test (§"Reds") holds DP-A4-3 at (x)
+until then.
+
+**DP-8009-1's assert form: dated 2026-10-14, on the maintainer's (by delegation) entry
+"2026-10-14 11:41:17 BST" (`to-lead.md`).** The ruled (a) stands; the assert form in its Ruled
+cell is replaced by R1b, corrected (§"Reds").
 
 ## Tasks
 
@@ -246,6 +290,16 @@ each is checked by a command run from the repository root on the slice's merge t
     `--rows 20000`, each with its command verbatim.
 14. **The signatures (C6).** `LG 9879` quotes `fit_severity_glm`'s and `create_ad_peril_structure`'s
     `def` lines as committed; the next delta to `PL-1542` records them.
+15. **R1b, corrected (dated 2026-10-14, "2026-10-14 11:41:17 BST").** `LG 9879` carries, as
+    printed: the negative control's `succeeded` run on the clean synthetic book, before any red;
+    the null case's and the 0 (and −1) case's `GLM_FIT_FAILED` lines with their cause texts
+    verbatim; each case's silent-drop red; and each case's assert failing on the other case's
+    input. Acceptance 12 is read with this form.
+16. **The guard (dated 2026-10-14, "2026-10-14 11:29:53 BST").** The guard test passes on the
+    slice head, and `LG 9879` names it with its command verbatim.
+17. **The binding condition (dated 2026-10-14, "2026-10-14 11:29:53 BST").** `LG 9879` records
+    Task 0 Step 4's ratio. If `abs(ratio − 1) > 0.05` and (y) is the answer, `LG 9879` records
+    SL-1543's STOP, and the slice does not merge before the FR-127 GLM fix.
 
 ## Hand-off (not this plan's writes)
 
@@ -253,7 +307,7 @@ each is checked by a command run from the repository root on the slice's merge t
    planner writes `docs/roadmap.md` only for rows it cuts, so the line is the lead's.
 2. **The next delta** records the signatures (C6) and DP-8009-1's ruling text, if it is ruled
    after this delta mints.
-3. **Mint.** `PL-8009` mints from working id 8009; `SL 8003`, `PL 8002`, `RL 9996` and `LG 9879`
+3. **Mint.** `PL-1705` mints from working id 8009; `SL 8003`, `PL 8002`, `RL 9996` and `LG 9879`
    are re-pointed where minted by then.
 
 ## Self-review

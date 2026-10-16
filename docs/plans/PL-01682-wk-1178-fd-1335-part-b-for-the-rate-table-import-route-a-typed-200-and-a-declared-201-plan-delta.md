@@ -3,7 +3,7 @@ id: PL-1682
 family: plan
 kind: map
 title: WK-1178 — FD-1335 Part B for the rate-table import route, a typed 200 (ImportPreview) and a declared 201 (RateTableVersion): a dated Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-12
 owner: planner
 tree: 50bbdd96b2154cb4eb79ccf91658191e51ab8906

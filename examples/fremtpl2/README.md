@@ -84,6 +84,7 @@ book; nothing the journey prints is a full-book rate or timing (full-book disloc
 `PL-1574`, full-book attribution cost `FD-1576`). The NCD ladder's bands (1.00, 1.20 and 1.50 on
 `bonus_malus` 50-99, 100-149 and 150-230) are demo values, not a priced NCD scale. Steps the
 platform does not yet do are printed as `SKIPPED` or `KNOWN GAP` with their owner, never hidden.
+(2026-10-12, FD-1660: until SL-1696 merges, attribution refuses a version that changes a sub-graph mount, so the journey's D6 asserts that refusal and the steps that need its run — D7, D8, E4 to E9, DEP and S1 — are printed `SKIPPED` with the finding.)
 
 **What it needs.** Measured on 2026-10-12 at tree `c960b408f0577bdedf13e72147f892033e6a9627` (full
 seed, no `--rows`) on a Linux host with 8 cores (`nproc`) and 32,870,088 kB of memory

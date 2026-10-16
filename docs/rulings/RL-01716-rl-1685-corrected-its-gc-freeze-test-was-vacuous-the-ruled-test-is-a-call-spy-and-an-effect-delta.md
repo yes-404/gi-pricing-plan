@@ -1,5 +1,5 @@
 ---
-id: RL-8024
+id: RL-1716
 family: ruling
 title: RL-1685 corrected — its gc.freeze test ("gc.get_freeze_count() is non-zero once the app has started") was vacuous; the ruled test is a call spy and an effect delta
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
@@ -16,11 +16,13 @@ corrects: RL-1685
 relates: [RL-1685, SL-1455, PL-1454, NFR-489, NFR-454]
 ---
 
-# RL-8024 — RL-1685 corrected: the `gc.freeze()` test could not fail
+# RL-1716 — RL-1685 corrected: the `gc.freeze()` test could not fail
+
+*(Minted 2026-10-14 as RL-1716 from working id 8024, in the D16 batch mint PR.)*
 
 *Disclosure: drafted under **working id RL 8024**, reserved by the lead (team-lead) in
-`~/gi-pricing-plan.local/handover/eta.md` at the 2026-10-14 10:55 line, for D16. The mint sweep
-replaces `RL-8024` here, and in `RL-1685`'s `corrected_by:`, with the minted id.*
+`~/gi-pricing-plan.local/handover/eta.md` at the 2026-10-14 10:55 line, for D16. The D16 mint sweep
+replaced it with `RL-1716` here and in `RL-1685`'s `corrected_by:`.*
 
 ## How this was ruled
 
@@ -34,7 +36,7 @@ replaces `RL-8024` here, and in `RL-1685`'s `corrected_by:`, with the minted id.
   "with a timing-free red-first test that `gc.get_freeze_count()` is non-zero once the app has
   started"), the test that is supposed to prove it.
 - **`RL-1685` is minted and frozen, so its body is not edited.** Its front matter gains
-  `corrected_by: [RL-8024]` (front matter only), as the entry orders.
+  `corrected_by: [RL-1716]` (front matter only), as the entry orders.
 
 ## The probe evidence
 
@@ -91,7 +93,7 @@ So:
 - **SL-1455 Task 3** writes both asserts and shows each red by its stated cause on the base tree
   before the fix.
 - **SL-1455's ledger** records the 375 baseline's source as UNKNOWN.
-- **`RL-1685`** gains `corrected_by: [RL-8024]` in its front matter. Nothing else in it changes.
+- **`RL-1685`** gains `corrected_by: [RL-1716]` in its front matter. Nothing else in it changes.
 
 ## Acceptance — the violation that must become detectable
 
@@ -104,5 +106,5 @@ no freeze anywhere).
 - *Violation: the call moves nothing.* SL-1455's effect test reds on the base tree with a freeze-count
   delta of 0 between the lifespan's start and `yield`; it goes green only when the real
   `gc.freeze()` runs just before `yield`.
-- *Violation: the correction is not linked.* `RL-1685`'s front matter reads `corrected_by: [RL-8024]`
+- *Violation: the correction is not linked.* `RL-1685`'s front matter reads `corrected_by: [RL-1716]`
   (`grep -n '^corrected_by:' docs/rulings/RL-01685-*.md`), and its body is unchanged.

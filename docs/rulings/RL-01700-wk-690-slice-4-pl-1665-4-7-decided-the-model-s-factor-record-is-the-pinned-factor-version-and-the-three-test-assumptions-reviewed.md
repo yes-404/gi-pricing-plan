@@ -1,5 +1,5 @@
 ---
-id: RL-8001
+id: RL-1700
 family: ruling
 title: WK-690 Slice 4, PL-1665 4.7 decided — the fitted Model's factor record is the Factor version its spec pins, proven by a test of the chain and not copied into the fit result; the seat's three test assumptions reviewed (a confirmed, b corrected, c confirmed with four consequences)
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
@@ -16,7 +16,9 @@ corrects: ~
 relates: [PL-1665, PL-1621, RL-1615, RL-1362, SL-1274, FD-1619, OQ-1617, FR-44, FR-87, FR-95, FR-96, FR-97, FR-228, NFR-484]
 ---
 
-# RL-8001 — WK-690 Slice 4: PL-1665 4.7 (RL-1615 need 4.5 (c)) decided, and the seat's test assumptions reviewed
+# RL-1700 — WK-690 Slice 4: PL-1665 4.7 (RL-1615 need 4.5 (c)) decided, and the seat's test assumptions reviewed
+
+*(Minted 2026-10-14 as RL-1700 from working id 8001, in the D15 batch mint PR.)*
 
 *Disclosure: drafted under **working id RL 8001**, reserved by the lead (team-lead) on
 2026-10-14 (`~/gi-pricing-plan.local/handover/eta.md`, the line stamped "2026-10-14 09:38:35
@@ -25,6 +27,10 @@ WK-690 S4 ruling on PL-1665 4.7 / RL-1615 need 4.5(c) ("the fitted Model's facto
 carries the expression text" — no such record exists) + review of the seat's test assumptions
 (a) declared columns = source_columns, (b) loose position assert, (c) Banding.column
 optional."). The lead mints it.*
+
+*Confirmed: dated 2026-10-14, on the maintainer's (by delegation) entry "2026-10-14 10:01:11 BST
+— RL 8001 (WK-690 S4, PL-1665 4.7) CONFIRMED as drafted" (`to-lead.md`): "CONFIRMED, no
+amendment", read at `b20cd23e`; (C′) is right.*
 
 ## How this was ruled
 
@@ -196,7 +202,7 @@ on main, independent of S4.** It is routed, not fixed here:
 One note goes into `02` §4.8, so that a reader knows where a fitted Model's formula is read
 and does not add a copy. The slice applies it, through `spec-change`, in the code's commit:
 
-> **Noted <the slice's commit date> (`RL-8001`): where a fitted Model's factor formula is
+> **Noted <the slice's commit date> (`RL-1700`): where a fitted Model's factor formula is
 > read.** A Model's `spec.factors` pins Factor versions by id, and once the Model is fitted the
 > pin cannot change (the `models_fit_immutable` trigger covers `spec`). The formula of an
 > `expression` Factor is that Factor's `expression` (§4.1), read through the pin:
@@ -233,7 +239,7 @@ Two consequences:
 
 **FR-95 text, appended by the slice** (exact):
 
-> *(Clarified <the slice's commit date>, `RL-8001` (a): "dataset columns only" means the
+> *(Clarified <the slice's commit date>, `RL-1700` (a): "dataset columns only" means the
 > Factor's own `source_columns`. They are the bound symbols of the `factor` profile's parse,
 > so a name the expression reads that is not among them is refused at creation with its
 > position, in `RL-1362` DP-S3-3's form (one field error on `expression`, its message
@@ -300,7 +306,7 @@ with the change:
 **`02` §4.2 text, applied by the slice** (exact). It covers `RL-1615`'s §4.2 disposition and
 this one:
 
-> **Amended <the slice's commit date> (`RL-1615` DP-S4-1; `RL-8001` (c)): a Banding is cut
+> **Amended <the slice's commit date> (`RL-1615` DP-S4-1; `RL-1700` (c)): a Banding is cut
 > over a column or over an expression.** `source_expression` is new. It is the text of the
 > `expression` Factor's formula that the boundaries were cut over, stored as written. Exactly
 > one of `column` and `source_expression` is set, so `column` is null on a Banding cut over an
@@ -312,7 +318,7 @@ this one:
 
 **`03` FR-228 text, appended by the slice** (exact):
 
-> *(Clarified <the slice's commit date>, `RL-8001` (c): "a banded input" is a Banding cut over
+> *(Clarified <the slice's commit date>, `RL-1700` (c): "a banded input" is a Banding cut over
 > a column. A `banding_ref` that names a Banding cut over an `expression` Factor's formula
 > (`02` §4.2 `source_expression`) is refused, naming the key and the Banding, because no input
 > carries the formula's result. A key that needs that result binds the `expression` Factor by
