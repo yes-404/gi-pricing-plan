@@ -280,6 +280,8 @@ Observation, not changed: `GET /me/workspaces` and `POST /me/workspace` depend o
 - `POST /score`: scoring limiter, declares its own 429 (RL-1347), unchanged.
 - The walk test's exclusion list is `_CANNOT_429` in `backend/tests/test_management_429_declared.py`, EXACTLY: `GET /api/v1/auth/config` (not authenticated) and `POST /api/v1/score/batch` (counted by neither limit), each with its reason. The test also fails if an excluded op declares 429. A second test reads each route's dependency tree (`MANAGEMENT_COUNTED_ATTRIBUTE`, stamped by `requires()`, plus `counted_caller`, `counted_identity`, `management_counter` and the scoring limiter) and fails if an excluded op gains a counting dependency or any other op has none. Not yet run; if a route outside the list has no counting dependency the second test names it.
 
+- 2026-10-16 10:40:13 BST: re-merged `origin/main` a2f77b2d (`git merge --no-ff`, no conflicts; `merge-tree` rc 0 before). Merge commit bbed8cc3 (tree ef58066d). Overlap with #1309 (`git diff --stat 0877e6e7 a2f77b2d`, 13 files): none on authz.py, rate_limit.py, settings.py, main.py, score.py or test_score_rate_limit.py. Owed: `docs/INDEX.md` regeneration and `generate-contracts.py --check` (not run: ALONE latency gate in progress).
+
 ## PRs
 
 None yet.
