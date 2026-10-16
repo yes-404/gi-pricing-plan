@@ -1,23 +1,28 @@
 import userEvent from "@testing-library/user-event";
-import { render, screen, within } from "@testing-library/vue";
+import { render, screen, waitFor, within } from "@testing-library/vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ProblemError } from "@/api/problem";
+import type { ScoreComparison } from "@/api/score";
 
 import QuoteSandboxView from "../QuoteSandboxView.vue";
 
 const getRatingVersionByRef = vi.fn();
+const listRatingVersions = vi.fn();
 const getRatingAlgorithm = vi.fn();
 const scoreQuote = vi.fn();
+const scoreCompare = vi.fn();
 
 vi.mock("@/api/ratingVersions", () => ({
   getRatingVersionByRef: (...args: unknown[]) => getRatingVersionByRef(...args),
+  listRatingVersions: (...args: unknown[]) => listRatingVersions(...args),
 }));
 vi.mock("@/api/ratingAlgorithms", () => ({
   getRatingAlgorithm: (...args: unknown[]) => getRatingAlgorithm(...args),
 }));
 vi.mock("@/api/score", () => ({
   scoreQuote: (...args: unknown[]) => scoreQuote(...args),
+  scoreCompare: (...args: unknown[]) => scoreCompare(...args),
 }));
 vi.mock("vue-echarts", () => ({
   default: { name: "VChart", props: ["option"], template: "<div data-testid='chart' />" },
@@ -29,6 +34,13 @@ const RATING = {
   version: 3,
   status: "draft",
   algorithm_ref: "rating_algorithm:motor-gb@2",
+};
+
+const OTHER = {
+  ...RATING,
+  id: "01a04394-338b-7651-9e42-c73ee70396f9",
+  version: 2,
+  status: "approved",
 };
 
 const ALGORITHM = {
@@ -60,6 +72,31 @@ const RESULT = {
   },
 };
 
+const COMPARISON: ScoreComparison = {
+  base: RESULT as ScoreComparison["base"],
+  comparison: {
+    ...(RESULT as ScoreComparison["comparison"]),
+    rating_version_ref: "rating_version:motor-gb@2",
+    premium_ladder: [
+      { rung: "risk_premium", value_minor: 48000 },
+      { rung: "payable_premium", value_minor: 60000 },
+    ],
+  },
+  diff: {
+    unchanged: 1,
+    steps: [
+      {
+        step_id: "s_rate",
+        change: "changed",
+        own_change: true,
+        changed_fields: ["produced"],
+        base: { step_id: "s_rate", type: "rate_table", label: "Rate", consumed: {}, produced: { rate: "1.10" } },
+        comparison: { step_id: "s_rate", type: "rate_table", label: "Rate", consumed: {}, produced: { rate: "1.20" } },
+      },
+    ],
+  },
+};
+
 const props = { slug: "motor-gb", version: "3" };
 const mounted = {
   global: { stubs: { RouterLink: { props: ["to"], template: '<a :href="to"><slot /></a>' } } },
@@ -71,6 +108,13 @@ async function fillAndSubmit(age = "34"): Promise<void> {
   await userEvent.click(screen.getByRole("button", { name: "Score quote" }));
 }
 
+/** Choose the comparison version in the picker; red until the picker exists (PL 8054 Task 2). */
+async function pickComparison(): Promise<void> {
+  await waitFor(() => expect(screen.queryByLabelText("Compare against")).not.toBeNull());
+  await waitFor(() => expect(screen.queryByRole("option", { name: "motor-gb@2 · approved" })).not.toBeNull());
+  await userEvent.selectOptions(screen.getByLabelText("Compare against"), "motor-gb@2 · approved");
+}
+
 function problem(status: number, code: string, detail: string): ProblemError {
   return new ProblemError({ type: "about:blank", title: "Refused", status, code, detail, errors: [] });
 }
@@ -79,6 +123,8 @@ beforeEach(() => {
   getRatingVersionByRef.mockResolvedValue(RATING);
   getRatingAlgorithm.mockResolvedValue(ALGORITHM);
   scoreQuote.mockResolvedValue(RESULT);
+  listRatingVersions.mockResolvedValue([RATING, OTHER]);
+  scoreCompare.mockResolvedValue(COMPARISON);
 });
 afterEach(() => vi.clearAllMocks());
 
@@ -172,5 +218,76 @@ describe("the quote sandbox view", () => {
     getRatingVersionByRef.mockRejectedValue(problem(404, "NOT_FOUND", "no such version"));
     render(QuoteSandboxView, { props, ...mounted });
     expect(await screen.findByRole("alert")).toHaveTextContent("no such version");
+  });
+
+  // PL 8054 Task 2 and Task 3 (SL-1550, WK-675 lane C S7), with RL 8057 DP-1 (a).
+  it("FR-262 C1 (RL 8057 DP-1): the picker excludes the version in view and offers 'No comparison' first", async () => {
+    render(QuoteSandboxView, { props, ...mounted });
+    await screen.findByLabelText("driver_age");
+    const picker = screen.queryByLabelText("Compare against");
+    expect(picker).not.toBeNull();
+    await waitFor(() =>
+      expect(within(picker!).getAllByRole("option").map((o) => o.textContent?.trim())).toEqual([
+        "No comparison",
+        "motor-gb@2 · approved",
+      ]),
+    );
+  });
+
+  it("FR-262 C2: a chosen comparison scores one quote against two versions, with no options in context", async () => {
+    render(QuoteSandboxView, { props, ...mounted });
+    await screen.findByLabelText("driver_age");
+    await pickComparison();
+    await fillAndSubmit();
+    await waitFor(() => expect(scoreCompare).toHaveBeenCalledTimes(1));
+    const [body] = scoreCompare.mock.calls[0] as [Record<string, unknown>];
+    expect(body["base"]).toBe("rating_version:motor-gb@3");
+    expect(body["comparison"]).toBe("rating_version:motor-gb@2");
+    const context = body["context"] as Record<string, unknown>;
+    expect(context["purpose"]).toBe("what_if");
+    expect(context["inputs"]).toEqual({ driver_age: 34, channel: "direct" });
+    expect(context).not.toHaveProperty("options");
+    expect(scoreQuote).not.toHaveBeenCalled();
+  });
+
+  it("FR-262 C3: a per-quote error on the comparison side shows its detail, which names the side", async () => {
+    scoreCompare.mockRejectedValue(
+      problem(422, "INPUT_CONTRACT_VIOLATION", "comparison: driver_age is above its max"),
+    );
+    render(QuoteSandboxView, { props, ...mounted });
+    await screen.findByLabelText("driver_age");
+    await pickComparison();
+    await fillAndSubmit();
+    await waitFor(() =>
+      expect(screen.queryByRole("alert")).toHaveTextContent("comparison: driver_age is above its max"),
+    );
+  });
+
+  it("FR-262 C4: the compare panel mounts under the trace, beside one outcome from the base side", async () => {
+    render(QuoteSandboxView, { props, ...mounted });
+    await screen.findByLabelText("driver_age");
+    await pickComparison();
+    await fillAndSubmit();
+    await waitFor(() =>
+      expect(screen.queryByRole("region", { name: /Compared with rating_version:motor-gb@2/ })).not.toBeNull(),
+    );
+    expect(screen.queryByTestId("outcome")).toHaveTextContent("quoted");
+  });
+
+  it("FR-262 C5 (guard, green on arrival): with no comparison chosen the view scores through scoreQuote only", async () => {
+    render(QuoteSandboxView, { props, ...mounted });
+    await fillAndSubmit();
+    await waitFor(() => expect(scoreQuote).toHaveBeenCalledTimes(1));
+    expect(scoreCompare).not.toHaveBeenCalled();
+  });
+
+  it("FR-262 C6: a refused version list is said so and leaves the sandbox usable", async () => {
+    listRatingVersions.mockRejectedValue(problem(403, "WORKSPACE_SCOPE_DENIED", "no access"));
+    render(QuoteSandboxView, { props, ...mounted });
+    await screen.findByLabelText("driver_age");
+    await waitFor(() =>
+      expect(screen.queryByText(/Versions to compare against could not be loaded/)).not.toBeNull(),
+    );
+    expect(screen.getByRole("button", { name: "Score quote" })).toBeEnabled();
   });
 });

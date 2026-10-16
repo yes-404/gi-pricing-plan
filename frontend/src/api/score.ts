@@ -9,6 +9,10 @@ export type TraceStep = components["schemas"]["TraceStep"];
 /** The request body: the permissive generated set, since `options.trace` defaults (FR-251). */
 export type QuoteContext = requestComponents["schemas"]["QuoteContext"];
 export type QuotePurpose = QuoteContext["purpose"];
+export type ScoreComparison = components["schemas"]["ScoreComparison"];
+export type StepChange = components["schemas"]["StepChange"];
+/** The request body: the permissive generated set, as for QuoteContext. */
+export type ScoreCompareRequest = requestComponents["schemas"]["ScoreCompareRequest"];
 
 /**
  * Score one quote against an explicit Rating Version (03 FR-251, `POST /api/v1/score`).
