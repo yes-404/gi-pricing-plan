@@ -12391,7 +12391,7 @@
       },
       "RateTableChange": {
         "additionalProperties": false,
-        "description": "One rate table whose pinned version differs between the baseline and a version\n(FR-242's drafted change summary; `RL-1498` DP-E1-5).\n\n`from_ref` / `to_ref` are the pins on the baseline and on the version; `None` marks a\ntable pinned on one side only. `diff` is the unweighted cell diff (FR-231); it is `None`\nwhen `pending` (a `storage: parquet` side is not computed here, FR-232) or when the table\nis on one side only.",
+        "description": "One rate table whose pinned version differs between the baseline and a version\n(FR-242's drafted change summary; `RL-1498` DP-E1-5).\n\n`from_ref` / `to_ref` are the pins on the baseline and on the version; `None` marks a\ntable pinned on one side only. `diff` is the unweighted cell diff (FR-231); it is `None`\nwhen `pending` (a `storage: parquet` side is not computed here, FR-232) or when the table\nis on one side only. `step_id` is the `table` step whose rate-table reference this entry\npairs (FR-219's pairing by `step_id`); `None` for a pin no step entry names, paired by slug\nonly when it is the one such ref on each side (`RL-1707`).",
         "properties": {
           "diff": {
             "anyOf": [
@@ -12421,6 +12421,17 @@
           "slug": {
             "title": "Slug",
             "type": "string"
+          },
+          "step_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step Id"
           },
           "to_ref": {
             "anyOf": [
