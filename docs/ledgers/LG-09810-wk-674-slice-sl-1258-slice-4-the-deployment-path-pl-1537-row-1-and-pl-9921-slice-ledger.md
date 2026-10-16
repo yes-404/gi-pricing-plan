@@ -183,6 +183,34 @@ none lists `429`. Owner of the ruling: the lead / the maintainer (by delegation)
 
 **Owed after GATE END, on compose (with `lslocks` clean):** `GIP_DEPLOY_TESTS=1 GIP_N_SHA=<head> GIP_N1_SHA=<parent> uv run pytest -q backend/tests/test_deploy_stack_runtime.py` (all tests, because tests one and two moved too), plus `ruff check`, `mypy`, and the PL-1690 Acceptance 5 red run. None ran: the file is `py_compile`d only. Risks the run decides: (i) the rolling-upgrade test seeds with N's code against N-1's schema; (ii) pre-existing lines over 100 columns at `:392`, `:396`, `:503`, `:526` were not touched.
 
+## Finding (b) fixed inside S4 (the maintainer, 2026-10-16 10:14:17 BST, "FIX INSIDE S4, no FD")
+
+**Ruling (verified against `~/gi-pricing-plan.local/channel/to-lead.md`, entry "2026-10-16 10:14:17 BST — Maintainer: SL-1258 counted_caller before the in-handler 403 — FIX INSIDE S4, no FD"):** a defect in a slice's own unmerged code is fixed in the slice, and `git grep counted_caller origin/main -- backend/src` prints nothing, so there is no finding on main to file. Test first (red-first commit `5618a57b`), then the fix.
+
+**The form chosen, one for all three routes: the handler's service calls the counter after its own permission check.** A new dependency `management_counter()` (`backend/src/app/api/authz.py`) authenticates the caller and returns an awaitable `count` without running it. The route passes it to the service as `count_management=`; the service awaits it on the line after `rbac.require_permission` (`platform/validation_rules.py::create_rule`, after both branches; `platform/deployments.py::_authorised_environment`, which both `submit_request` and `deploy` use, before the retired check). `_count_management_request` already runs at most once per request, so `requires()` plus this form cannot double-count.
+
+**Why this form, not a dependency that checks first.** (1) The permission is not a function of the route alone: a `sql` rule needs `admin:manage_settings` and every other rule `dataset:write` (OQ-559, "instead", not "as well"), and the deployment check takes the Environment row, loaded by the path slug, as its resource. A dependency that checked first would need the body and a second Environment lookup, so the check would live twice (dependency and service) and the two could diverge. In the service it lives once. (2) The service's refusal order stays as `RL-1401` item 3 and `RL-1301` B.2 fixed it (G3 `422`, unknown slug `404`, then the permission), which a dependency running before the body is parsed would change. (3) The count still runs before any write: it sits inside the unit of work before the first row is created, so a `429` writes nothing.
+
+**Counted now:** only a caller who holds the permission. A permitted call that then ends `404`, `409` or `422` is counted once (the check passed; `RL-1687` (1a) refuses to count only `401` and `403`). A `sql` rule refused `409` (the Setting is off) is refused before the permission check and so is not counted; that order is the service's and is unchanged.
+
+**Tests** (`backend/tests/test_management_rate_limit.py`, beside the existing rate-limit tests): `test_a_403_from_an_in_handler_permission_check_is_not_counted` and `test_a_permitted_call_to_an_in_handler_permission_route_is_counted_once`, each parametrised over the three routes. The counter is read as the number of `limiter.admit` calls for the request, before and after: a `403` leaves it unchanged; the positive control moves it by exactly 1. Red-first: the commit `5618a57b` holds the tests alone. **Runs owed after GATE END** (no pytest while SL-1455's gate holds the box): the refusal tests red at `5618a57b` by their assert, green at the fix; the existing rate-limit tests; `ruff`, `mypy`.
+
+**Sweep of every `counted_caller` route** (finding (b)'s third limb). Predicate, run at `7120d200` (the parent of the red-first commit): `git grep -n 'counted_caller' -- backend/src` lists the five consumer files (`api/approvals.py`, `api/demo.py`, `api/deployments.py`, `api/me.py`, `api/validation.py`) plus `authz.py`; in each, a route is counted when a handler parameter is typed with the alias bound to `Depends(counted_caller)` (`AnyCaller` in approvals, demo and deployments; `CallerDep` in `me.py`; `AuthenticatedCaller` in validation), counted by `git show 7120d200:backend/src/app/api/<file>.py | grep -cE '(caller): (AnyCaller|CallerDep|AuthenticatedCaller)\b'`; each handler body and the service it calls were then read for `rbac.require_permission`, `has_permission` and a hand-raised `403`. **9 routes, 3 defective (fixed above), 6 clean.**
+
+| Route | Alias | In-handler permission check | Verdict |
+|---|---|---|---|
+| `POST /validation-rules` | `AuthenticatedCaller` | `platform/validation_rules.py::create_rule`, per rule kind | defective; fixed |
+| `POST /environments/{env}/deployment-requests` | `AnyCaller` | `_authorised_environment` | defective; fixed |
+| `POST /environments/{env}/deployments` | `AnyCaller` | `_authorised_environment` | defective; fixed |
+| `POST /approval-requests` | `AnyCaller` | none; the docstring says submitting is ungated and `platform/approvals.py::submit` has no `require_permission` (the only three in that module are `set_policy`, `decide`, `withdraw`) | clean |
+| `GET /approval-requests` | `AnyCaller` | none | clean |
+| `GET /approval-requests/{id}` | `AnyCaller` | none | clean |
+| `GET /approval-policy` | `AnyCaller` | none (`PUT` uses `requires(admin:manage_roles)`) | clean |
+| `GET /demo/guide` | `AnyCaller` | none | clean |
+| `GET /me` | `CallerDep` | none; `rbac.effective_permissions` reports the set, it enforces nothing | clean |
+
+Observation, not changed: `GET /me/workspaces` and `POST /me/workspace` depend on `IdentityDep`, not `counted_caller`, so neither is counted. Whether they should be is `RL-1687`'s scope question, not this fix's; put to the lead.
+
 ## PRs
 
 None yet.

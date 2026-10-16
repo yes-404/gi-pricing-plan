@@ -24,8 +24,12 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 
 from app.api.approvals import decide_and_carry
-from app.api.authz import requires
-from app.api.authz import counted_caller
+from app.api.authz import (
+    CallerDep,
+    CountAfterCheck,
+    management_counter,
+    requires,
+)
 from app.api.deps import Caller, job_identity
 from app.api.pagination import (
     COUNT_CAP,
@@ -66,7 +70,6 @@ AcknowledgeWarnings = Annotated[
     Caller, Depends(requires(Perm.DATASET_ACKNOWLEDGE_WARNING))
 ]
 #: The one route whose permission is check-dependent; see `create_rule`.
-AuthenticatedCaller = Annotated[Caller, Depends(counted_caller)]
 DecideApprovals = Annotated[Caller, Depends(requires(Perm.APPROVAL_DECIDE))]
 
 
@@ -270,14 +273,19 @@ async def list_rules(
     responses=problems(401, 403, 409, 422),
 )
 async def create_rule(
-    body: RuleCreate, caller: AuthenticatedCaller, database: DatabaseDep, request: Request
+    body: RuleCreate,
+    caller: CallerDep,
+    count: Annotated[CountAfterCheck, Depends(management_counter)],
+    database: DatabaseDep,
+    request: Request,
 ) -> ValidationRule:
     """FR-50 step 1: authored → `draft`.
 
     The permission depends on the *check*, which is why it is not on the route: a
     declarative rule needs `dataset:write`, and a `sql` rule needs `admin:manage_settings`
     **instead** (`01` §4.5 step 5). Requiring both would leave no built-in role able to
-    author one. The service makes the choice, and it fails closed either way.
+    author one. The service makes the choice, and it fails closed either way. It also
+    awaits `count` right after that check, so a `403` is never counted (`RL-1687` (1a)).
     """
     async with database.unit_of_work() as session:
         row = await rule_service.create_rule(
@@ -294,6 +302,7 @@ async def create_rule(
             message=body.message,
             rationale=body.rationale,
             settings=request.app.state.settings,
+            count_management=count,
         )
         return rule_service.to_schema(row)
 

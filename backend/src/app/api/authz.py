@@ -32,7 +32,10 @@ from model_schema import Permission
 __all__ = [
     "MANAGEMENT_RATE_LIMIT_SETTING",
     "PERMISSION_ATTRIBUTE",
+    "CallerDep",
+    "CountAfterCheck",
     "counted_caller",
+    "management_counter",
     "requires",
 ]
 
@@ -95,9 +98,29 @@ async def counted_caller(
 ) -> Caller:
     """`require_caller` plus the management count, for an authenticated route that declares
     no permission (`/me`, `/approval-requests`, ...). A route with a permission uses
-    `requires()`, which counts after its check."""
+    `requires()`, which counts after its check; a route whose service decides the permission
+    uses `management_counter()`."""
     await _count_management_request(request, caller, database, settings)
     return caller
+
+
+#: What a service calls once its own permission check has passed (`RL-1687` (1a)).
+CountAfterCheck = Callable[[], Awaitable[None]]
+
+
+async def management_counter(
+    request: Request, caller: CallerDep, database: DatabaseDep, settings: SettingsDep
+) -> CountAfterCheck:
+    """For a route whose permission is decided inside its service (it depends on the body or
+    on the resource: a `sql` rule needs `admin:manage_settings`, a deployment needs
+    `deployment:promote` on the Environment the path names). Authenticates the caller and
+    returns the count **without running it**: the service awaits it right after its
+    permission check, so a `403` is never counted. The check stays in the service."""
+
+    async def count() -> None:
+        await _count_management_request(request, caller, database, settings)
+
+    return count
 
 
 def requires(
