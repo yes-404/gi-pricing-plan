@@ -39,7 +39,7 @@ planner (seat planner-a1), on the lead's brief of the same morning. **Trees read
 `backend/tests/test_wf699_journey.py` and the ledger `LG-1732`. **No test or code was run at
 planning time**; every claim below about behaviour is a reading of the code at `d85e3d72`.
 
-*(Amended 2026-10-16 09:55 BST, before merge, by the planner (seat planner-8055b), on the lead's
+*(Amended 2026-10-16 from 09:52 BST, before merge, by the planner (seat planner-8055b), on the lead's
 brief: **DP-A1-1 is ruled (a) by RL 8060** (`origin/rl-8060-pl8055-dp-a1-1-2026-10-16`
 @`5b07a5b6`), confirmed by the maintainer in the entry "2026-10-16 09:51:34 BST — Maintainer: RL 8060 (PL 8055 DP-A1-1 → (a)) CONFIRMED" in `~/gi-pricing-plan.local/channel/to-lead.md`.
 The ruling's two precisions and the confirmation's four conditions are carried into the DP row,
