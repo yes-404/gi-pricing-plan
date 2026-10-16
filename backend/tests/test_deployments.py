@@ -535,6 +535,8 @@ async def test_a_deployer_deploys_dev_then_uat_then_prod_with_its_approval(
     assert [d["id"] for d in history.json()["items"]] == [body["id"]]
 
 
+@pytest.mark.req("FR-7")
+@pytest.mark.req("NFR-519")
 @pytest.mark.req("FR-272", "NFR-498")
 @pytest.mark.asyncio
 async def test_a_deployment_commits_with_its_audit_event_or_not_at_all(

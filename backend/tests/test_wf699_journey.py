@@ -46,7 +46,14 @@ def test_wf699_the_skip_and_known_gap_lines_are_exactly_the_ruled_ones() -> None
         "KNOWN GAP B9: FD-1490",
         "SKIPPED B4 model_call: FD-1456; SL-1543",
         "SKIPPED C1′: FD-1456; SL-1543",  # noqa: RUF001
-        "SKIPPED D7 decomposition — FD 9804",
+        "SKIPPED D7 — FD-1660 guard",
+        "SKIPPED D8: FD-1660; SL-1696",
+        "SKIPPED E4: FD-1660; SL-1696",
+        "SKIPPED E6: FD-1660; SL-1696",
+        "SKIPPED E8: FD-1660; SL-1696",
+        "SKIPPED E9: FD-1660; SL-1696",
+        "SKIPPED DEP: FD-1660; SL-1696",
+        "SKIPPED S1: FD-1660; SL-1696",
     ]
     assert not [e for e in journey.SKIPS if e.line.startswith("KNOWN GAP") and "FD-1456" in e.line]
     # `SKIPPED B7: SL-1340` is moot: SL-1340 merged (PL-1544 activation need 18).
@@ -385,11 +392,15 @@ def test_wf699_journey_runs_end_to_end(api_client, database, blob_store, workspa
     assert set(skipped) <= set(status)
     # The deliberate failures were asserted by their codes inside the journey; their statuses are
     # `ok` only because the platform answered exactly that code.
-    for step in ("B6", "C4", "E3", "D4", "E8"):
+    # D6 is `ok` only because its Job FAILED with VALIDATION_FAILED naming FD-1660 and SL-1696
+    # (the guard, SL-1695); E8, which this loop once listed, is now a skip.
+    for step in ("B6", "C4", "E3", "D4", "D6"):
         assert status[step] == "ok", step
-    assert result.rating_version_id is not None
-    assert result.bundle_hash.startswith("sha256:")
-    assert result.prod_premium_minor > 0
+    # FD-1660, until SL-1696: no Dislocation Run, so `rv3` is never approved, deployed or scored.
+    # SL-1696 restores the original asserts (`is not None`, `startswith("sha256:")`, `> 0`).
+    assert result.rating_version_id is None
+    assert result.bundle_hash == ""
+    assert result.prod_premium_minor == 0
     assert any("20,000-policy sample" in line for line in lines)
 
 
@@ -460,14 +471,14 @@ def test_b3_the_fork_puts_a_pinned_as_at_lookup_in_the_premium() -> None:
 
 @pytest.mark.req("FR-264")
 def test_d7_is_a_skip_that_names_its_finding_and_is_never_recorded_as_ok() -> None:
-    """The maintainer's D7 ruling (A), to-lead "2026-10-12 02:29:16 BST": attribution cannot
-    decompose a change that involves a mounted sub-graph, so the journey runs the one-group lump and
-    prints D7's decomposition as SKIPPED with its finding (FD 9804, a working id; owner WK-673).
-    The skip table carries it, the owner check accepts a finding's working id, and G2 is not met
-    until D7 decomposes (the fix is its own WK-673 slice)."""
+    """The maintainer's (by delegation) DP-G, to-lead "2026-10-12 02:43:49 BST", and ruling (A),
+    to-lead "2026-10-12 07:44:13 BST": attribution refuses a sub-graph mount difference until
+    SL-1696, so the Job of D6 fails and the journey prints D7's decomposition as SKIPPED with its
+    finding (FD-1660, owner WK-673). The skip table carries it and the owner check accepts it; G2
+    is not met until D7 decomposes (SL-1696)."""
     (entry,) = [e for e in journey.SKIPS if e.step == "D7"]
-    assert entry.line == "SKIPPED D7 decomposition — FD 9804"
-    journey.check_skip_owners([entry])  # a working id is an owner
+    assert entry.line == "SKIPPED D7 — FD-1660 guard"
+    journey.check_skip_owners([entry])  # a finding is an owner
     with pytest.raises(journey.JourneyStepFailed):
         journey.check_skip_owners([journey.Skip(step="D7", line="SKIPPED D7 decomposition")])
 
