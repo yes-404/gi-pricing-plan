@@ -17,11 +17,11 @@ from fastapi import APIRouter, Depends, Header, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
-from app.api.authz import counted_caller
+from app.api.authz import counted_caller, counted_identity
 from app.api.deps import (
     WORKSPACE_ID_DESCRIPTION,
     Caller,
-    IdentityDep,
+    Identity,
 )
 from app.api.responses import problems
 from app.db.models import (
@@ -40,6 +40,9 @@ __all__ = ["router"]
 router = APIRouter(tags=["governance"])
 
 CallerDep = Annotated[Caller, Depends(counted_caller)]
+#: The two routes a principal reaches before it has a workspace selection: counted with no
+#: workspace (DP-S4-ME (A)).
+IdentityDep = Annotated[Identity, Depends(counted_identity)]
 
 
 def _database(request: Request) -> Database:

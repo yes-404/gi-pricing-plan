@@ -21,13 +21,15 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from typing import Annotated
 
+from uuid import UUID
+
 from fastapi import Depends, Request
 
-from app.api.deps import Caller, SettingsDep, require_caller
+from app.api.deps import Caller, Identity, IdentityDep, SettingsDep, require_caller
 from app.config import Settings
 from app.db.session import Database
 from app.platform import rate_limit, rbac
-from model_schema import Permission
+from model_schema import Permission, Principal
 
 __all__ = [
     "MANAGEMENT_RATE_LIMIT_SETTING",
@@ -35,6 +37,7 @@ __all__ = [
     "CallerDep",
     "CountAfterCheck",
     "counted_caller",
+    "counted_identity",
     "management_counter",
     "requires",
 ]
@@ -67,15 +70,24 @@ _COUNTED_FLAG = "management_rate_limit_counted"
 
 
 async def _count_management_request(
-    request: Request, caller: Caller, database: Database, settings: Settings
+    request: Request,
+    principal: Principal,
+    workspace_id: UUID | None,
+    environment: str | None,
+    database: Database,
+    settings: Settings,
 ) -> None:
     """Count one authenticated management request (FR-452, `RL-1687` (1a), (2a), (3a)).
 
-    Run by the two dependencies every authenticated `/api/v1` route outside the `/score`
-    family goes through, `requires()` (after its permission check) and `counted_caller()`
-    (a route with no permission), so a `401` or a `403` is never counted and a route added
-    later is counted with no edit. At most once per request: a route may carry both.
+    Run by the dependencies every authenticated `/api/v1` route outside the `/score`
+    family goes through, `requires()` (after its permission check), `counted_caller()`
+    (a route with no permission) and `counted_identity()` (the two routes a principal
+    reaches before it has a workspace), so a `401` or a `403` is never counted and a route
+    added later is counted with no edit. At most once per request: a route may carry both.
     `account_limit` is `None` because `rate_limit_rps` is the scoring limit only (3a).
+    `workspace_id` is `None` for an identity route: the Setting then resolves without its
+    workspace layer (the maintainer's (by delegation) entry "2026-10-16 10:31:43 BST",
+    DP-S4-ME (A)).
     """
     if getattr(request.state, _COUNTED_FLAG, False):
         return
@@ -86,10 +98,18 @@ async def _count_management_request(
         settings,
         route="management",
         default_setting=MANAGEMENT_RATE_LIMIT_SETTING,
-        workspace_id=caller.workspace_id,
-        environment=caller.environment,
-        principal=caller.principal,
+        workspace_id=workspace_id,
+        environment=environment,
+        principal=principal,
         account_limit=None,
+    )
+
+
+async def _count_caller(
+    request: Request, caller: Caller, database: Database, settings: Settings
+) -> None:
+    await _count_management_request(
+        request, caller.principal, caller.workspace_id, caller.environment, database, settings
     )
 
 
@@ -100,8 +120,23 @@ async def counted_caller(
     no permission (`/me`, `/approval-requests`, ...). A route with a permission uses
     `requires()`, which counts after its check; a route whose service decides the permission
     uses `management_counter()`."""
-    await _count_management_request(request, caller, database, settings)
+    await _count_caller(request, caller, database, settings)
     return caller
+
+
+async def counted_identity(
+    request: Request, identity: IdentityDep, database: DatabaseDep, settings: SettingsDep
+) -> Identity:
+    """`require_identity` plus the management count, for the two routes a principal reaches
+    before it has a workspace selection (`GET /me/workspaces`, `POST /me/workspace`).
+
+    Counted with `workspace_id=None` and no Environment (an identity has neither): the limit
+    is the environment-variable layer, else the default; a workspace override does not apply
+    (the maintainer's (by delegation) entry "2026-10-16 10:31:43 BST", DP-S4-ME (A))."""
+    await _count_management_request(
+        request, identity.principal, None, None, database, settings
+    )
+    return identity
 
 
 #: What a service calls once its own permission check has passed (`RL-1687` (1a)).
@@ -118,7 +153,7 @@ async def management_counter(
     permission check, so a `403` is never counted. The check stays in the service."""
 
     async def count() -> None:
-        await _count_management_request(request, caller, database, settings)
+        await _count_caller(request, caller, database, settings)
 
     return count
 
@@ -150,7 +185,7 @@ def requires(
                 credential_permissions=caller.permissions,
             )
         if management_counted:
-            await _count_management_request(request, caller, database, settings)
+            await _count_caller(request, caller, database, settings)
         return caller
 
     setattr(dependency, PERMISSION_ATTRIBUTE, permission)
