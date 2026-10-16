@@ -70,3 +70,55 @@ symbols, or `referenced_columns` gains a `symbols` argument. Either way there is
   scripts/generate-contracts.py` and `--check`; (3) ruff, mypy; (4) audit-docs and doc-index under the gate-2 flock;
   (5) the migration round trip in a granted DB window, return codes here; (6) the single-head test.
 - Disclosure: two stray `cd` calls in Bash (2026-10-16 ~09:5x); the session cwd was restored with EnterWorktree.
+
+## Pre-gate self-check — 2026-10-16 (writing only, nothing run)
+
+Read against the maintainer's "2026-10-16 09:51:01 BST" items 1–4 and "09:53:28 BST" first bullet, at tree
+`origin/main...sl-1274-wk690-s4-factor-expression` (base `0877e6e7`). Locators are paths in this branch.
+
+| # | Condition | Status | Locator |
+|---|---|---|---|
+| 09:51 item 1 (CONDITION 1) | A test fails if the ORM and the migrated column disagree on nullability | Present. It asserts `BandingRow.__table__.c.column_name.nullable is True`, then inserts a `BandingRow(column_name=None)` through the ORM and flushes. The `database` fixture (`backend/tests/conftest_db.py:172`) skips unless `alembic_version` has rows, so the insert runs on the migrated schema. An ORM `nullable=False` fails the first assert. A column still NOT NULL fails the flush. Red-first run owed. | `backend/tests/test_expression_factors_api.py:431` (`test_the_orm_and_the_migrated_column_agree_that_column_name_is_nullable`); ORM `backend/src/app/db/models.py:1358` (`Mapped[str \| None]`, `nullable=True`); migration `backend/migrations/versions/f2b6d90a4c17_bandings_column_name_nullable.py` |
+| 09:51 item 2 | FD-1704's fix stays in PL 8016 S-a/S-b | Honoured: no `FD-1704` code in this slice (write-set STOP list below). | this ledger, condition 4 |
+| 09:51 item 3 (DP-7) | Whichever of SL-1274, SL-1722, SL 8017 merges later re-points `down_revision` | Owed, see "DP-7 re-point owed" below. | below |
+| 09:51 item 4 | Activation line in the slice PR citing this GO | Present, citing the GO and the lead's request. | `docs/roadmap.md:1712` |
+| 09:53 bullet 1 | `referenced_columns(symbols=None)`: one parse path | Present. The call is `parse_expression(expression, profile, symbols=symbols, limits=limits)`, so there is no second walk. | `packages/pricing-core/src/pricing_core/data/expressions.py:308-320` |
+| 09:53 bullet 1 | Default-unchanged test in LG 8062 | Present. The recipe call is as before. The `factor` profile without `symbols` still raises `bound symbols`. The `symbols` call returns the read columns. | `packages/pricing-core/tests/test_expression_factors.py:275` (`test_referenced_columns_default_is_unchanged_and_the_symbols_call_resolves`); the old `test_prepare.py:108` and `test_expression_nfrs.py:73` stay unedited |
+| 09:53 bullet 1 | Write-set STOP list: `factors.py`, `platform/modelling.py`, `model_schema/modelling.py`, `02` | None of the four is a STOP: `PL-1665` names all four (see "Write set" above), so the lead's widening was not needed for them. All four are in the diff. | `git diff --stat origin/main...HEAD` |
+
+**Write-set check.** Every changed path is in the "Write set" list above except
+`packages/pricing-core/src/pricing_core/modelling/__init__.py`. It only re-exports the three names the slice
+adds (`is_certainly_numeric`, `normalised_expression`, `source_columns_of`). It is reported to the lead as a
+path in no list; if the lead rules it outside the write set, the fix is to import from the module and drop
+the re-exports.
+
+**Contracts.** Only `docs/contracts/schemas/banding.schema.json` is in the diff, but `Factor`,
+`BandingProposal` and `BandingEvaluation` changed in `model_schema/modelling.py`. `generate-contracts.py`
+may change more files. Owed; the `--check` result decides.
+
+### DP-7 re-point owed
+
+- This slice's migration `f2b6d90a4c17` has `down_revision` `d4e81b7a2c95`. That is the head at `origin/main`
+  `0877e6e7` and the `down_revision` of `e7c3a9b15d82` on `origin/sl-1722-wk1178-fd1730-upload-404`
+  (`backend/migrations/versions/e7c3a9b15d82_blob_uploads.py:23`). Two heads follow if both merge unchanged.
+  `tests/test_repository_invariants.py:357` (`test_the_migration_chain_has_exactly_one_head`) then reds.
+- Owed by whichever of SL-1274 and SL-1722 merges later (and SL 8017 if it adds a migration): set
+  `down_revision` to the earlier one's revision before its gate. This is the only allowed post-gate code
+  change if the earlier merges after the later is gated.
+- Proof it needs, in a small-test slot (RL-1626), with return codes recorded here: `alembic upgrade head`,
+  `tests/test_repository_invariants.py::test_the_migration_chain_has_exactly_one_head`, and
+  `alembic downgrade -1 && alembic upgrade head`. Otherwise the code stays blob-identical to the gated tree.
+- At this tree, no migration on `origin/main` has `down_revision` `d4e81b7a2c95` (`git grep` returned none),
+  so no re-point is due yet.
+
+### Runs owed after GATE END (none run in the window)
+
+1. Red-first for each new test, shown red by its own assert and then green, quoted here. This includes the
+   nullability test with `models.py:1358` reverted to `nullable=False` (it must fail on the first assert),
+   and again with the migration not applied (it must fail on the flush).
+2. Build: `uv sync --all-packages`; `uv run python scripts/generate-contracts.py`, then `--check`.
+3. `uv run ruff check .`, `uv run mypy`, `uv run lint-imports`.
+4. Migration: `alembic upgrade head`, single head, `alembic downgrade -1 && alembic upgrade head`, in a granted
+   DB window.
+5. `flock -w 900 /tmp/slots/gate-2 env -C <wt> python3 scripts/audit-docs.py` and `doc-index.py --check`.
+6. Small-test runs of the three new test files, through `run-small.sh`, with return codes.
