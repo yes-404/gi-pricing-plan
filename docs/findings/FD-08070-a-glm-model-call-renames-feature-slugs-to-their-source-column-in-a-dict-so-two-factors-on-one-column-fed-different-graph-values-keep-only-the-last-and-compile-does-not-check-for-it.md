@@ -187,12 +187,23 @@ unequal values for one column; never a silent pick.**
    normal shared-column case). S4 makes the same collision reachable by a second route (an
    expression factor's source columns are carried as raw keys, a plain factor's slug is renamed to
    the raw column, so both land on one key), which is why the guard travels with S4. This finding
-   **cites** that guard for the predict-time limb and does not repeat it; its own slice keeps the
+   **cites** that guard (SL-1274 `a820d7a3`, `_GlmScorer.predict`, `MODEL_CALL_FEATURE_COLLISION`; read, not run) for the predict-time limb and does not repeat it; its own slice keeps the
    compile-time guard (1 and 3), its severity (HIGH, main's constructed case above) and main's
    two-plain-factor case. The limb is closed when S4 merges with its red-first pair (unequal values
    give the error, equal values price normally); this finding then records it as discharged by
    SL-1274.
-3. **Two graph names onto one slug** (Evidence 4) is refused at compile by the same check.
+3. **Two graph names onto one slug** (Evidence 4, and the GBM arm's only route, Evidence 5(a)) is
+   **this finding's compile-time limb alone, and the predict-time guard cannot catch it.** Read
+   at SL-1274 `a820d7a3` (branch `sl-1274-wk690-s4-factor-expression`, verified by reading
+   `packages/pricing-core/src/pricing_core/rating/runtime.py`): the handler still builds
+   `feature_row = {feature_slug: context[graph_name] for … in step.feature_map.items()}` at
+   `:754-758`, keyed by the `feature_map` **value**, so two graph names that map to one value
+   collapse to one entry (last wins) before `_GlmScorer.predict` is called. The guard there
+   (`MODEL_CALL_FEATURE_COLLISION`, `:826-835`) compares values per **column**, after the
+   rename, over the entries it is handed; the dropped value never reaches it. The remedy is a
+   compile refusal of a `feature_map` in which two keys map to one value (a coded error naming
+   the step and the value, never a quote value, NFR-499); a `feature_map` that names each
+   value once is unaffected. This holds for GLM and GBM alike.
 4. **Scope of the guard, per verdict (Evidence 5).** The predict-time and compile-time guards
    cover: the GLM case (Evidence 3); the GBM arm's two-graph-names-one-slug route (Evidence 5(a),
    which is Evidence 4 and needs nothing new; the GBM arm has no rename to guard); and the
