@@ -3,7 +3,7 @@ id: PL-1721
 family: plan
 kind: map
 title: WK-1178 — the upload-completion step, FR-421's missing half — the completion design as a decision point, the spec text, one public-path HTTP test with no seeding, and slice SL-1722 — Work-plan delta
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-14
 owner: planner
 tree: 4420f91fa4112a1fcabcae23d3d50a1ad4fcbb59
@@ -409,3 +409,10 @@ admissible digest through the public API until SL-1722 is on `main`. Unless it w
 insert a blob and an owner by `psql`, which is the seeding the 10:56:38 entry's item 4 names as
 the reason the gap went unseen. Whether S4's proof seeds, or waits for SL-1722 (DP-U2's W3), is
 the lead's to route; this delta records the dependency and does not decide it.
+
+*Activated 2026-10-16 by the SL-1722 activation commit, on the maintainer's (by delegation) GO
+entry "2026-10-16 09:42:48 BST" in `to-lead.md` (its conditions (a) to (f) bind). Acceptance
+line, per that entry's condition (b) and the 09:40:20 entry: **`SL-1258` owns the conversion of
+PL-1714's E4.3 compose ingest proof** (P10) from seeding an owner by `psql` to walking the public
+upload path once this slice is on `main` (DP-U2's W3). This slice does not edit PL-1714 and does
+not deliver that conversion.*
