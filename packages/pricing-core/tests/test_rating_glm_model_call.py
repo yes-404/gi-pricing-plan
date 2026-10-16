@@ -453,7 +453,7 @@ def _typed_outputs_algorithm(call_type: str, output_type: str) -> dict[str, Any]
 
 
 @pytest.mark.req("FR-227")
-@pytest.mark.parametrize("declared", ["relativity", "percentage", "int"])
+@pytest.mark.parametrize("declared", ["relativity", "percentage", "int", "decimal"])
 def test_a_money_minor_model_call_feeding_a_non_money_output_is_refused(declared: str) -> None:
     """Item 15: refused by `validate_algorithm` with `RATING_TYPE_MISMATCH`, because the
     producer is a `money_minor` `model_call` (`_compatible` itself is unchanged)."""
@@ -466,7 +466,7 @@ def test_a_money_minor_model_call_feeding_a_non_money_output_is_refused(declared
 @pytest.mark.req("FR-227")
 @pytest.mark.parametrize(
     ("call_type", "declared"),
-    [("decimal", "decimal"), ("money_minor", "money_minor"), ("money_minor", "decimal")],
+    [("decimal", "decimal"), ("money_minor", "money_minor")],
 )
 def test_a_legal_model_call_to_output_pairing_saves(call_type: str, declared: str) -> None:
     """The control: the refusal comes from the `money_minor` declaration into a non-money
