@@ -57,6 +57,7 @@ The substrate every other module stands on:
 | **Job Kind** | The typed operation a Job performs (`dataset.ingest`, `blob.promote`, `dataset.validate`, `model.fit`, `objective.certify`, `rating.compile`, `score.batch`, `dislocation.run`, `optimisation.run`, `gipp.check`, `monitor.run`, `dossier.generate`, `export.regulatory`). |
 | **Queue** | A named Celery queue with its own worker pool and resource profile (`default`, `compute`, `scoring`, `io`). |
 | **Blob** | A content-addressed immutable object in the object store, keyed by sha256 (ID-4). |
+| **Blob Upload** | A pending client upload to the blob store's staging area, defined in `00` §2.1; its record is §4.5 and its completion is FR 8058. *(appended 2026-10-16, WK-1178, `SL-1722`)* |
 | **Secret** | A named credential held in the platform's secret backend, referenced by slug. |
 | **Setting** | A typed configuration value resolved by precedence: environment variable → workspace setting → platform default. |
 

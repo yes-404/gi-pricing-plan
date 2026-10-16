@@ -91,6 +91,46 @@ are the maintainer's, in `to-lead.md`:
 `07` §4.5 marks `sha256` and `staging_key` as named by that ruling and the other four as
 executor-named with the 09:44:39 concurrence.
 
+### Pre-gate condition check (executor, 2026-10-16, writing only — no run)
+
+Read at branch head `ac21f3cf` plus this commit, against the maintainer's entries in `to-lead.md`.
+"Read" means read in the file, not run.
+
+| Cond. | Source entry | Status | Locator |
+|---|---|---|---|
+| (a) | 09:42:48 | Red-first commit `3a489dbf` is an ancestor of the branch; the push is confirmed by `git ls-remote`. 10 test functions were added by `ca76bb4e` (the table above). The causes are OWED: not yet run. | `git log origin/main..HEAD`; table above |
+| (b) | 09:42:48 | MET. `PL-1721` front matter `status: active`; the activation note names `SL-1258` as owner of E4.3's conversion. | `docs/plans/PL-01721-…md` :6 and the "Activated 2026-10-16" paragraph |
+| (c) | 09:42:48, 09:44:39, 09:46:32 | MET as written. Six names agree across ORM, migration and spec: `principal_id`, `staging_key`, `s3_upload_id`, `part_count`, `job_id`, `sha256` (FK to `blobs.sha256`). No `digest` or `key` column remains. Rider (2): `07` §4.5 says `s3_upload_id` is the `upload_id` the response returns. Rider (1): see OPEN Q1. | `backend/src/app/db/models.py` `BlobUploadRow`; `backend/migrations/versions/e7c3a9b15d82_blob_uploads.py`; `docs/specs/07-platform.md` §4.5 |
+| (d) | 09:42:48 | MET by reading. Both Jobs are asserted `== "succeeded"` (never "terminal"): the promote Job with `result == {"kind": "blob", "ref": digest}`, the ingest Job with `result["ref"]` starting `dataset_version:`. | `backend/tests/test_upload_to_ingest.py` :150-152, :161-163 |
+| (e) | 09:42:48 | OWED at merge. Shared paths `jobs.py` (+1 line here) and `entrypoint.py` (not touched here); whichever of this and `SL-1258` merges second re-merges and re-gates the touched tests. Merge after D18. | `git diff --stat origin/main...HEAD` |
+| (f) | 09:42:48 | MET. No run in this window. | — |
+| glossary | 09:53:28 | MET after this commit. "Blob Upload" is defined in `00` §2.1 before any other use; `07` §2 now carries a pointer row (the ledger said so, but the row was missing at `ac21f3cf`; added in this commit). | `docs/specs/00-overview.md` §2.1; `docs/specs/07-platform.md` §2 |
+| W2 PASSED | 09:53:28 | NOT MET YET (a run). The W2 fixture `io_worker` calls `pytest.skip` when Redis is unreachable. `python.yml` has a redis service, so CI reads PASSED; a local run must be read as a red if it prints `s`. OPEN Q2. | `backend/tests/test_upload_to_ingest.py` :71-74 |
+
+### DP-7: migration head order (09:51:01, item 3)
+
+`e7c3a9b15d82` (this slice) has `down_revision = "d4e81b7a2c95"`, which is the single head at
+`origin/main` `0877e6e7`. `SL-1274`'s `f2b6d90a4c17` on `origin/sl-1274-wk690-s4-factor-expression`
+also has `down_revision = "d4e81b7a2c95"`. If both reach `main`, there are two heads. Neither has
+merged. `SL 8017` is a working id; its branch `origin/pl-8016-wk1178-fd8007-remedy-2026-10-14`
+adds no migration at the time of reading, so it owes no re-point from this side. Rule (09:51:01):
+whichever merges later re-points its `down_revision` to the earlier one's revision before its gate;
+if the earlier merges after the later is gated, the re-point is the only allowed post-gate code
+change, with a small-test run of `alembic upgrade head`, the single-head test and
+`alembic downgrade -1 && upgrade head`, rc recorded here. Merge order is not decided. **Re-point owed
+by: whichever of `e7c3a9b15d82` / `f2b6d90a4c17` merges second.** Not done in this commit.
+
+### OPEN questions to the lead
+
+1. **Rider (09:44:39 (1)).** `s3_upload_id` reaches the `upload-url` response as `upload_id`, and this
+   slice adds `id` to it. That response (`UploadUrlResponse`) is a hand-written class in
+   `backend/src/app/api/blobs.py`, as it was at `0877e6e7`; it is not in `model-schema`. The
+   rider reads "regenerated into docs/contracts, never hand-written". Not moved here: moving a
+   pre-existing shape into `model-schema` is a wider change than the write set. Lead to rule (STOP to
+   the maintainer if it needs a move).
+2. **A4.** Whether to turn the `io_worker` Redis `pytest.skip` into `pytest.fail`, so that the test
+   cannot be skipped by construction. Not changed: it is stricter than the maintainer's reading rule.
+
 ### Gate
 
 OWED. No gate has run on this branch. Under (f) it runs after SL-1543 and SL-1341 under the
@@ -124,6 +164,14 @@ Conformant by the lead's reading: columns in §4.5, model and migration agree; `
 - The ten reds run at `3a489dbf`, each by node id and cause (condition (a)); R1's later points.
 - `generate-contracts` regeneration and `--check` (A1).
 - `ruff check` after the gate, for A3 (RUF022) and any other (E501 is fixed by A2).
+- After GATE END (SL-1455), in this order, none run in this window:
+  1. Task 0 MinIO spike (library behaviour, per the plan).
+  2. The ten reds at `3a489dbf` by node id with each cause (fill the table; a red by import or fixture error is not red by cause).
+  3. `uv run python scripts/generate-contracts.py` then `--check` (A1; `upload-url` response gains `id`, new route, `blob.promote` in `job.schema.json`).
+  4. `uv run ruff check .` (A3 RUF022; the migration's tuple/format style).
+  5. `run-small` R1–R9, `backend/tests/test_blobs.py`, the single-head migration test.
+  6. W2 `test_upload_to_ingest.py`, read PASSED (not `s`).
+  7. Docs checks under the gate-2 flock: `audit-docs.py`, `doc-index.py --check`.
 - The runs: `run-small` R1–R9, `test_blobs`, one-head; the W2 worker test PASSED, both Jobs `succeeded` with output (d).
 - The breakers (broken-input proofs of the new checks).
 - The FR 8058 marker (`req("FR-<minted>")`) at mint (A5).
