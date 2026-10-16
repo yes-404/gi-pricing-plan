@@ -250,6 +250,8 @@ if red), and re-runs the pinned-hash and quote-form tests** (`test_rating_shadow
 `test_rating_compile_bundle.py`, `test_quote_input_raise_sites.py`, `test_rating_purpose_mount.py`); the second merge's ACK checks the contract
 diff (the maintainer's GO, "4 MET with its caveats"). Neither slice's ledger edits the other's paths to make a conflict disappear.
 
+**Re-merge of `origin/main`, 2026-10-16 10:28 BST (BST)**: merged `origin/main` a2f77b2dcad5aaec41a5f10aa664383caf421e8b (#1309, SL-1702) into this branch with `git merge --no-ff` (`merge-tree --write-tree` rc 1 before; the one conflicting path was `docs/INDEX.md`, resolved by taking main's side, regeneration owed). No other conflicts. Files changed by both #1309 (`0877e6e7..a2f77b2d`) and this slice, auto-merged cleanly: `backend/src/app/platform/change_summary.py`, `docs/contracts/openapi/generated.json`, `docs/specs/03-rating-engine.md`, `packages/model-schema/src/model_schema/rating.py`. **Owed after the SL-1455 GATE END**: (1) `docs/INDEX.md` regeneration under the gate-2 flock; (2) `generate-contracts.py --check` (SL-1702 added `RateTableChange.step_id` to `generated.json` and `rating.py`); (3) the Step 0 reds re-proved on the new base, the 25 reds' causes must not change; then the full gate on the new head after the lead's grant.
+
 ## PRs
 
 One PR for this slice (L1 (a')): opened and merged by the lead; not yet opened.

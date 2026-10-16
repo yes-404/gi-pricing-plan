@@ -1274,12 +1274,15 @@ class RateTableChange(BaseModel):
     `from_ref` / `to_ref` are the pins on the baseline and on the version; `None` marks a
     table pinned on one side only. `diff` is the unweighted cell diff (FR-231); it is `None`
     when `pending` (a `storage: parquet` side is not computed here, FR-232) or when the table
-    is on one side only.
+    is on one side only. `step_id` is the `table` step whose rate-table reference this entry
+    pairs (FR-219's pairing by `step_id`); `None` for a pin no step entry names, paired by slug
+    only when it is the one such ref on each side (`RL-1707`).
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     slug: str
+    step_id: str | None = None
     from_ref: ArtifactRef | None = None
     to_ref: ArtifactRef | None = None
     diff: RateTableDiff | None = None
