@@ -206,6 +206,8 @@ class JourneyResult:
     rating_version_id: UUID | None = None
     bundle_hash: str = ""
     prod_premium_minor: int = 0
+    #: The decomposing D7 run's body as read back (PL 8055 Task A: A1's real derived list).
+    d7_run: dict[str, Any] = field(default_factory=dict)
 
 
 class _Journey:
@@ -1062,6 +1064,7 @@ class _Journey:
             raise JourneyStepFailed("D7", "NO_DECOMPOSITION_MAPPING")
         groups = [{"name": name, "changes": ids} for name, ids in effects.items()]
         run_id, run = self.run_dislocation({**spec, "change_groups": groups})
+        self.result.d7_run = run
         self.done("D6", "a 20,000-policy sample of the freMTPL2 book (full-book cost: PL-1574)")
 
         # The partition, proved from the run as stored: every derived change is in exactly one

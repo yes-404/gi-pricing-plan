@@ -19,7 +19,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 
 import httpx
 import pytest
@@ -253,6 +253,7 @@ async def _world(database: Any, blob_store: Any, workspace_id: Any) -> dict[str,
     # Version that does not exist is flagged, and approval refuses it (ARTIFACT_FLAGGED).
     portfolio_id = new_uuid7()
     family = f"fremtpl2-gbm-{uuid4().hex[:6]}"
+    record["gbm_family"] = family
     async with database.unit_of_work() as session:
         model = ModelRow(
             workspace_id=workspace_id,
@@ -465,15 +466,10 @@ def test_d7_is_not_a_skip_and_a_skip_without_an_owner_still_fails() -> None:
         journey.check_skip_owners([journey.Skip(step="D7", line="SKIPPED D7 decomposition")])
 
 
-@pytest.mark.req("FR-264")
-def test_d7_splits_the_derived_changes_into_the_journeys_own_effects() -> None:
-    """The maintainer's D7 ruling (to-lead "2026-10-12 01:25:10 BST"): attribution decomposes the
-    change. The derived changes of a run (`id`, `kind`, `description`) become two groups: what the
-    journey did to the rate tables, and the structure it added, the ladder's mount (DP-1:
-    `step_added`, `<mount_point>: mount added (<ref>)`) among it; a pin on a rate table belongs
-    with the first. If either effect is empty there is nothing to decompose and the journey
-    stops."""
-    derived = [
+#: The `derived_changes` of the journey's decomposing D7 run in `_world`, as `id`, `kind` and
+#: `description` (`PL-1694` Acceptance 18; PL 8055). `{gbm_family}` stands for `_world`'s
+#: random model family; `test_wf699_journey_runs_end_to_end` asserts this list IS the run's.
+D7_DERIVED_CHANGES: Final[list[dict[str, str]]] = [
         {
             "id": "c1",
             "kind": "step_added",
@@ -493,6 +489,17 @@ def test_d7_splits_the_derived_changes_into_the_journeys_own_effects() -> None:
         {"id": "c5", "kind": "step_changed", "description": "s_premium: expr a → b"},
         {"id": "c6", "kind": "pin", "description": "rate_tables pin rate_table:x@2 added"},
     ]
+
+
+@pytest.mark.req("FR-264")
+def test_d7_splits_the_derived_changes_into_the_journeys_own_effects() -> None:
+    """The maintainer's D7 ruling (to-lead "2026-10-12 01:25:10 BST"): attribution decomposes the
+    change. The derived changes of a run (`id`, `kind`, `description`) become two groups: what the
+    journey did to the rate tables, and the structure it added, the ladder's mount (DP-1:
+    `step_added`, `<mount_point>: mount added (<ref>)`) among it; a pin on a rate table belongs
+    with the first. If either effect is empty there is nothing to decompose and the journey
+    stops."""
+    derived = D7_DERIVED_CHANGES
     effects = journey.split_effects(derived)
     assert effects == {
         journey.EFFECT_RATE_TABLES: ["c2", "c3", "c6"],
