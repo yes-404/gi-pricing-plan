@@ -19,10 +19,12 @@ from uuid import UUID
 
 from algorithm import (
     BASE_LABEL,
+    EXPOSURE,
     FREMTPL2_ALGORITHM_SLUG,
     base_premium_minor,
     build_fremtpl2_algorithm,
     glm_premium_minor,
+    structure_premium_minor,
 )
 from sqlalchemy import select
 
@@ -577,6 +579,15 @@ async def create_ad_peril_structure(
     return structure_id
 
 
+async def peril_structure_ref(database: Database, structure_id: UUID) -> ArtifactRef:
+    """The `peril_structure:{slug}@{version}` ref of a stored Peril Structure."""
+    async with database.session() as session:
+        row = await session.get(PerilStructureRow, structure_id)
+        if row is None:
+            raise RuntimeError(f"the Peril Structure {structure_id} does not exist")
+        return ArtifactRef(type="peril_structure", slug=row.slug, version=row.version)
+
+
 DEMO_SUITE_SLUG: Final = "fremtpl2-rate-suite"
 DEMO_RATING_SLUG: Final = "fremtpl2-demo"
 DEMO_CHANGE_NOTE: Final = (
@@ -709,11 +720,18 @@ class GoldenCase:
 
 
 def demo_golden_cases(
-    fit: GlmFitResult, bandings: dict[str, DemoBanding], base_minor: int
+    fit: GlmFitResult,
+    bandings: dict[str, DemoBanding],
+    base_minor: int,
+    severity: GlmFitResult | None = None,
 ) -> list[GoldenCase]:
     """Three quotes: every Factor at its base level; at its first non-base level; at its last
     level. A banded Factor's raw value is the lower edge of the band it is on, so the cases sit
-    on band edges (PL-1525 Acceptance 3)."""
+    on band edges (PL-1525 Acceptance 3).
+
+    With the severity fit the algorithm is B4's (PL-1542): each premium is the Peril Structure's
+    frequency x severity for one exposure year, and the quotes carry `exposure_years`. Without
+    it, `base x Π relativities` as before."""
     import polars as pl
 
     from pricing_core.modelling.bandings import apply_banding
@@ -726,6 +744,8 @@ def demo_golden_cases(
     cases = []
     for name, pick in picks.items():
         inputs: dict[str, Any] = {"bonus_malus": 100}
+        if severity is not None:
+            inputs[EXPOSURE] = 1.0
         levels_by_factor: dict[str, str] = {}
         for factor in FACTOR_SET:
             level = pick(fit.relativities[factor]).level
@@ -742,9 +762,16 @@ def demo_golden_cases(
                         f"not {level!r}"
                     )
                 inputs[demo.banding.column] = value
-        expected = glm_premium_minor(
-            fit.coefficients, fit.relativities, base_minor, levels_by_factor
-        )
+        if severity is None:
+            expected = glm_premium_minor(
+                fit.coefficients, fit.relativities, base_minor, levels_by_factor
+            )
+        else:
+            expected = structure_premium_minor(
+                (fit.coefficients, fit.relativities),
+                (severity.coefficients, severity.relativities),
+                levels_by_factor,
+            )
         cases.append(GoldenCase(name, inputs, expected))
     return cases
 
@@ -782,13 +809,15 @@ async def save_demo_algorithm(
     database: Database, workspace_id: UUID, analyst: Principal,
     tables: dict[str, ArtifactRef], bandings: dict[str, DemoBanding],
     domains: dict[str, list[str]], base_minor: int,
+    structure_ref: ArtifactRef | None = None,
 ) -> ArtifactRef:
-    """Save the freMTPL2 algorithm through the service; a re-seed's 409 is tolerated."""
+    """Save the freMTPL2 algorithm through the service; a re-seed's 409 is tolerated. With a
+    `structure_ref` it is B4's: a `model_call` on the Peril Structure (PL-1542 Task 3)."""
     if analyst.id is None:
         raise RuntimeError("the demo analyst has no id")
     payload = build_fremtpl2_algorithm(
         tables=tables, bandings={slug: d.banding for slug, d in bandings.items()},
-        base_minor=base_minor, domains=domains,
+        base_minor=base_minor, domains=domains, peril_structure_ref=structure_ref,
     )
     try:
         await algorithm_service.create_algorithm(database, workspace_id, analyst, payload)
@@ -926,8 +955,15 @@ async def create_approved_rating_version(
     tables: dict[str, ArtifactRef],
     bandings: dict[str, DemoBanding],
     base_minor: int,
+    *,
+    severity_id: UUID | None = None,
+    structure_ref: ArtifactRef | None = None,
 ) -> UUID:
     """W7-3: create, submit and approve the demo rating version (FR-440).
+
+    With `severity_id` and `structure_ref` (PL-1542 Tasks 3 and 4) the version is B4's: the
+    algorithm calls the approved Peril Structure, the version pins it beside the GLM, and the
+    golden quotes are the structure's frequency x severity from the two fits' coefficients.
 
     The rating version is priced from the approved GLM: it pins the freMTPL2 algorithm, the
     approved model as `model:{slug}@{version}`, and every seeded Rate Table at its seeded
@@ -940,21 +976,29 @@ async def create_approved_rating_version(
         factor: [r.level for r in fit.relativities[factor]]
         for factor, _ in CATEGORICAL_FACTORS
     }
+    if (severity_id is None) != (structure_ref is None):
+        raise RuntimeError("B4 needs both the severity model and the Peril Structure, or neither")
+    severity_fit = None
+    if severity_id is not None:
+        _, severity_fit = await load_approved_glm(database, workspace_id, severity_id)
     algorithm_ref = await save_demo_algorithm(
-        database, workspace_id, analyst, tables, bandings, domains, base_minor
+        database, workspace_id, analyst, tables, bandings, domains, base_minor, structure_ref
     )
     async with database.unit_of_work() as session:
         row = await rating_versions_service.create_rating_version(
             session, workspace_id=workspace_id, actor=analyst,
             slug=DEMO_RATING_SLUG, dataset_version_id=dataset_version_id, model_ref=model_ref,
             algorithm_ref=algorithm_ref,
-            pins=Pins(rate_tables=list(tables.values()), models=[model_ref]),
+            pins=Pins(
+                rate_tables=list(tables.values()),
+                models=[model_ref] if structure_ref is None else [model_ref, structure_ref],
+            ),
         )
         rating_id = row.id
 
     run_id = await author_demo_rating_evidence(
         database, blob_store, workspace_id, analyst, rating_id,
-        demo_golden_cases(fit, bandings, base_minor),
+        demo_golden_cases(fit, bandings, base_minor, severity_fit),
     )
 
     await submit_and_approve_demo(

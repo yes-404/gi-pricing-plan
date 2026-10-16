@@ -728,6 +728,7 @@ async def run(rows: int | None) -> int:
         demo_base_premium,
         fit_demo_models,
         fit_severity_glm,
+        peril_structure_ref,
         seed_demo_rate_tables,
     )
 
@@ -745,10 +746,11 @@ async def run(rows: int | None) -> int:
     severity = await fit_severity_glm(
         database, blob_store, workspace_id, actuary, approver, approved
     )
-    await create_ad_peril_structure(
+    structure = await create_ad_peril_structure(
         database, blob_store, workspace_id, actuary, approver, approved, severity,
         tolerance=AD_RECONCILIATION_TOLERANCE,
     )
+    structure_ref = await peril_structure_ref(database, structure)
     tables = await seed_demo_rate_tables(
         database, settings, blob_store, workspace_id, analyst, approved
     )
@@ -756,6 +758,8 @@ async def run(rows: int | None) -> int:
     await create_approved_rating_version(
         database, blob_store, workspace_id, analyst, actuary, approver, second_approver,
         second, approved, tables, bandings, base_minor,
+        severity_id=severity,
+        structure_ref=structure_ref,
     )
     print()
 

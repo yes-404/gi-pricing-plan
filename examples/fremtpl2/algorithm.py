@@ -121,6 +121,42 @@ def glm_premium_minor(
     return int((Decimal(base_minor) * total.exp()).quantize(Decimal(1), rounding=ROUND_HALF_EVEN))
 
 
+def _glm_mean(
+    coefficients: Sequence[Coefficient],
+    relativities: Mapping[str, Sequence[RelativityLevel]],
+    levels: Mapping[str, str],
+) -> Decimal:
+    """`exp(intercept + Σ β)` for a quote on `levels`, in Decimal. A base level adds nothing."""
+    estimates = {c.term: Decimal(str(c.estimate)) for c in coefficients}
+    total = estimates["intercept"]
+    for factor, level in levels.items():
+        entry = next((r for r in relativities[factor] if r.level == level), None)
+        if entry is None:
+            raise ValueError(f"factor {factor!r} has no level {level!r} in the fit")
+        if not entry.is_base:
+            total += estimates[f"{factor}[{level}]"]
+    return total.exp()
+
+
+def structure_premium_minor(
+    frequency: tuple[Sequence[Coefficient], Mapping[str, Sequence[RelativityLevel]]],
+    severity: tuple[Sequence[Coefficient], Mapping[str, Sequence[RelativityLevel]]],
+    levels: Mapping[str, str],
+    exposure: Decimal = Decimal(1),
+) -> int:
+    """The AD Peril Structure's premium for a quote (B4, PL-1542 Task 4): frequency x severity,
+    from each fit's own coefficients and never from the scored bundle (PL-1525 Acceptance 3).
+
+    The frequency is an expected count for `exposure` years (its offset is `log(exposure)`),
+    the severity is minor units per claim, and the DP-A4-3 large-loss treatment is `none`, so
+    nothing is restored. Half-even to a whole minor unit, once.
+    """
+    cost = (
+        _glm_mean(*frequency, levels) * exposure * _glm_mean(*severity, levels)
+    )
+    return int(cost.quantize(Decimal(1), rounding=ROUND_HALF_EVEN))
+
+
 def build_fremtpl2_algorithm(
     *,
     tables: Mapping[str, ArtifactRef],
