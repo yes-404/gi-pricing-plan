@@ -26,7 +26,14 @@ from algorithm import (
 )
 from sqlalchemy import select
 
-from app.db.models import BlobRow, DatasetVersionRow, ModelRow, RegressionRunRow
+from app.db.models import (
+    BlobRow,
+    DatasetVersionRow,
+    DiagnosticsRow,
+    ModelRow,
+    PerilStructureRow,
+    RegressionRunRow,
+)
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import approvals as approval_service
@@ -70,6 +77,7 @@ from model_schema import (
     Pins,
     Principal,
     QuoteContext,
+    Reconciliation,
     RegressionSuiteContent,
     RelativityLevel,
     ResponseKind,
@@ -412,7 +420,8 @@ async def _approve_model(
 #: euro cents, null where a policy has no claim.
 SEVERITY_COLUMN: Final = "claim_severity"
 #: DP-A4-3's reconciliation tolerance (the maintainer's (by delegation) ruling; PL-1542 Task 0
-#: Step 4 probes it on the real seed and STOPs above it).
+#: Step 4 probes it on the real seed and STOPs above it). The structure it gates is a
+#: simplification: no large-loss loading (DP-A4-3's words; large loss is uncapped).
 AD_RECONCILIATION_TOLERANCE: Final = Decimal("0.05")
 #: The AD Peril Structure's slug (PL-1542 Task 2); one version per seed workspace.
 AD_STRUCTURE_SLUG: Final = "fremtpl2-ad"
@@ -454,6 +463,14 @@ async def fit_severity_glm(
     )
     severity_id = await _fit(database, blob_store, workspace_id, actuary, spec, "severity GLM")
     print(f"  severity GLM fitted: {severity_id}")
+    async with database.session() as session:
+        payload = (
+            await session.execute(
+                select(DiagnosticsRow.payload).where(DiagnosticsRow.model_id == severity_id)
+            )
+        ).scalar_one()
+    glm = payload["glm"]
+    print(f"  severity GLM deviance {glm['deviance']} AIC {glm['aic']}")
     await _approve_model(
         database, workspace_id, actuary, approver, severity_id,
         change_summary="AD severity, Gamma/log GLM weighted by claim count",
@@ -477,7 +494,8 @@ async def create_ad_peril_structure(
     """PL-1542 Task 2: the AD Peril Structure, reconciled and approved through the workflow.
 
     One `frequency_severity` component over the two approved GLMs, `large_loss` uncapped
-    (DP-A4-3 (x)). The reconciliation runs as the real `PERIL_STRUCTURE_RECONCILE` Job; the
+    (DP-A4-3 (x)), a simplification: no large-loss loading.
+    The reconciliation runs as the real `PERIL_STRUCTURE_RECONCILE` Job; the
     structure is submitted and decided by a Principal who is neither its submitter nor its
     author, and the decision is carried by `perils_service.apply_approval_decision`, the
     service half of `_carry_to_the_artifact`. No status is written directly.
@@ -523,11 +541,27 @@ async def create_ad_peril_structure(
     if status is not JobStatus.SUCCEEDED:
         raise SystemExit(f"peril_structure.reconcile {status.value} — see job")
     print(f"  AD structure reconciled: {reconcile_job}")
+    async with database.session() as session:
+        reconciled = (
+            await session.execute(
+                select(PerilStructureRow.reconciliation).where(
+                    PerilStructureRow.id == structure_id
+                )
+            )
+        ).scalar_one()
+    outcome = Reconciliation.model_validate(reconciled)
+    print(
+        f"  reconciliation ratio {outcome.ratio} status {outcome.status.value} "
+        f"tolerance {outcome.tolerance}"
+    )
 
     async with database.unit_of_work() as session:
         _, request = await perils_service.submit_for_review(
             session, workspace_id=workspace_id, actor=actuary, structure_id=structure_id,
-            change_summary="AD frequency × severity, large loss uncapped (DP-A4-3)",
+            change_summary=(
+                "AD frequency x severity, large loss uncapped (DP-A4-3), "
+                "a simplification: no large-loss loading"
+            ),
         )
         request_id = request.id
     async with database.unit_of_work() as session:

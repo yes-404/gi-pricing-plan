@@ -215,6 +215,38 @@ def _write_book(directory: Path, policies: int) -> None:
     (directory / "freMTPL2sev.arff").write_text("\n".join(sev) + "\n", encoding="utf-8")
 
 
+@pytest.mark.req("FR-111")
+def test_claim_severity_is_the_mean_cost_per_claim_and_null_without_a_claim(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """PL-1705 C2: `claim_severity` is `claim_amount_minor / ClaimNb`, unrounded, null where the
+    policy has no claim, and `claim_amount_minor` stays the integer total (FR-10). Policy 1 has
+    two claims totalling 15,001 cents, which an odd count does not divide: the severity is
+    7,500.5 exactly, not 7,500 or 7,501."""
+    import io
+
+    import polars as pl
+    import seed
+
+    freq = ["@relation freMTPL2freq", "@attribute IDpol numeric", "@attribute ClaimNb numeric",
+            "@data", "1,2", "2,0", "3,1"]
+    sev = ["@relation freMTPL2sev", "@attribute IDpol numeric", "@attribute ClaimAmount numeric",
+           "@data", "1,100.01", "1,50.00", "3,33.33"]
+    (tmp_path / "freMTPL2freq.arff").write_text("\n".join(freq) + "\n", encoding="utf-8")
+    (tmp_path / "freMTPL2sev.arff").write_text("\n".join(sev) + "\n", encoding="utf-8")
+    monkeypatch.setattr(seed, "DATA_DIR", tmp_path)
+
+    frame = pl.read_csv(io.BytesIO(build_csv(None)), infer_schema=False).sort("IDpol")
+    rows = {r["IDpol"]: r for r in frame.iter_rows(named=True)}
+
+    assert rows["1"]["claim_amount_minor"] == "15001"  # the integer total, unchanged
+    assert float(rows["1"]["claim_severity"]) == 15001 / 2 == 7500.5
+    assert rows["2"]["claim_amount_minor"] == "0"
+    assert rows["2"]["claim_severity"] is None  # no claim: null, not 0
+    assert rows["3"]["claim_amount_minor"] == "3333"
+    assert float(rows["3"]["claim_severity"]) == 3333.0
+
+
 @pytest.mark.req("FR-439")
 def test_the_portfolio_sample_is_the_same_policies_every_run(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch

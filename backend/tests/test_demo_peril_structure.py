@@ -28,13 +28,13 @@ from sqlalchemy import select
 
 from app.db.models import (
     ApprovalDecisionRow,
+    ApprovalRequestRow,
     DatasetVersionRow,
     JobRow,
     ModelRow,
     PerilStructureRow,
 )
 from app.db.session import Database
-from app.platform import approvals as approval_service
 from app.platform import jobs as job_service
 from app.platform import modelling as model_service
 from app.platform import perils as perils_service
@@ -43,7 +43,6 @@ from app.worker.data_handlers import register_data_handlers
 from app.worker.model_handlers import register_model_handlers
 from app.worker.tasks import execute_job
 from model_schema import (
-    DecisionKind,
     GlmSpec,
     JobKind,
     JobStatus,
@@ -59,7 +58,7 @@ register_data_handlers()
 register_model_handlers()
 
 SEVERITY_COLUMN = "claim_severity"
-_RNG = np.random.default_rng(20261014)
+BOOK_SEED = 20261014
 
 
 def _book(
@@ -68,9 +67,10 @@ def _book(
     """400 policies over two areas. `claim_severity` = `claim_amount_minor / claim_count`,
     unrounded, and EMPTY (null) where `claim_count` is 0. `bad_row` plants one claimant row whose
     severity is `"null"` (empty) or `"non_positive"` (0.0), the two refusals the fit owes."""
+    rng = np.random.default_rng(BOOK_SEED)
     n = 400
-    area = _RNG.integers(0, 2, n)
-    counts = _RNG.poisson(np.where(area == 1, 0.30, 0.15))
+    area = rng.integers(0, 2, n)
+    counts = rng.poisson(np.where(area == 1, 0.30, 0.15))
     header = "policy_id,exposure_years,area,claim_count,claim_amount_minor,claim_severity\n"
     lines: list[str] = []
     planted = False
@@ -79,7 +79,7 @@ def _book(
             lines.append(f"P{i},1.0,{'urban' if a else 'rural'},0,0,\n")
             continue
         mean = 150_000.0 if a else 90_000.0
-        amount = int(round(float(_RNG.gamma(shape=2.0 * c, scale=mean / 2.0))) + c)
+        amount = int(round(float(rng.gamma(shape=2.0 * c, scale=mean / 2.0))) + c)
         # float()/int(): a numpy scalar's repr is 'np.float64(..)', which the cast reads as null
         severity = repr(float(amount) / int(c))
         if bad_row is not None and not planted:
@@ -132,26 +132,6 @@ async def _version(
     return dataset_id, version_id
 
 
-async def _approve(
-    database: Database, workspace_id: UUID, submitter: Principal, approver: Principal,
-    model_id: UUID,
-) -> None:
-    """The frequency model, approved the way `compare_and_approve` approves (FR-355: a structure
-    over an unapproved component is refused at approval)."""
-    async with database.unit_of_work() as session:
-        _, request = await model_service.submit_for_review(
-            session, workspace_id=workspace_id, actor=submitter, model_id=model_id,
-            change_summary="frequency GLM for the AD structure fixture",
-        )
-        decided = await approval_service.decide(
-            session, workspace_id=workspace_id, request_id=request.id, approver=approver,
-            decision=DecisionKind.APPROVE, comment="fixture",
-        )
-        await model_service.apply_approval_decision(
-            session, workspace_id=workspace_id, actor=approver, request=decided
-        )
-
-
 class _World:
     def __init__(self, **fields: Any) -> None:
         self.__dict__.update(fields)
@@ -162,10 +142,11 @@ async def _world(
     *, bad_row: str | None = None,
 ) -> Any:
     actuary = await _actuary(database, workspace_id)
-    approver_a = await _actuary(database, workspace_id)
-    approver_b = await _actuary(database, workspace_id)
-    for approver in (approver_a, approver_b):
-        await grant("approver", principal_id=approver.id)
+    # ONE approver (06-governance.md:358: peril_structure `approvers_required` 1; the maintainer's
+    # entry "2026-10-16 10:17:07 BST", DP-1543-APPROVERS (a)): distinct from the submitter and
+    # the author, who is the same `actuary`.
+    approver = await _actuary(database, workspace_id)
+    await grant("approver", principal_id=approver.id)
     dataset_id, version_id = await _version(
         database, blob_store, workspace_id, actuary, _book(bad_row=bad_row)
     )
@@ -176,7 +157,7 @@ async def _world(
         _spec(version_id, (area,), split_ref=split, peril="AD"), "frequency",
     )
     return _World(
-        actuary=actuary, approvers=(approver_a, approver_b), dataset_id=dataset_id,
+        actuary=actuary, approver=approver, dataset_id=dataset_id,
         version_id=version_id, factors=(area,), split=split, frequency_id=frequency_id,
     )
 
@@ -194,7 +175,7 @@ async def test_seed_fits_and_approves_a_severity_glm(
     world = await _world(database, blob_store, workspace_id, grant)
 
     severity_id = await demo_model.fit_severity_glm(
-        database, blob_store, workspace_id, world.actuary, world.approvers[0],
+        database, blob_store, workspace_id, world.actuary, world.approver,
         world.frequency_id,
     )
 
@@ -303,11 +284,14 @@ async def _structure_world(
     database: Database, blob_store: BlobStore, workspace_id: UUID, grant: Any
 ) -> Any:
     world = await _world(database, blob_store, workspace_id, grant)
-    await _approve(
-        database, workspace_id, world.actuary, world.approvers[0], world.frequency_id
+    # The frequency model, approved the way `compare_and_approve` approves (FR-355: a structure
+    # over an unapproved component is refused at approval): the seed's own helper.
+    await demo_model._approve_model(
+        database, workspace_id, world.actuary, world.approver, world.frequency_id,
+        change_summary="frequency GLM for the AD structure fixture", comment="fixture",
     )
     world.severity_id = await demo_model.fit_severity_glm(
-        database, blob_store, workspace_id, world.actuary, world.approvers[0],
+        database, blob_store, workspace_id, world.actuary, world.approver,
         world.frequency_id,
     )
     return world
@@ -325,7 +309,7 @@ async def test_the_ad_peril_structure_reconciles(
     world = await _structure_world(database, blob_store, workspace_id, grant)
 
     structure_id = await demo_model.create_ad_peril_structure(
-        database, blob_store, workspace_id, world.actuary, world.approvers[0],
+        database, blob_store, workspace_id, world.actuary, world.approver,
         world.frequency_id, world.severity_id, tolerance=Decimal("0.9"),
     )
 
@@ -351,7 +335,7 @@ async def test_the_ad_peril_structure_is_approved_through_the_workflow(
     world = await _structure_world(database, blob_store, workspace_id, grant)
 
     structure_id = await demo_model.create_ad_peril_structure(
-        database, blob_store, workspace_id, world.actuary, world.approvers[0],
+        database, blob_store, workspace_id, world.actuary, world.approver,
         world.frequency_id, world.severity_id, tolerance=Decimal("0.9"),
     )
 
@@ -370,10 +354,18 @@ async def test_the_ad_peril_structure_is_approved_through_the_workflow(
                 )
             )
         ).scalars().all()
-    assert decisions, "no approval decision recorded: the status was written, not carried"
-    approver_ids = {a.id for a in world.approvers}
-    assert {d.approver_id for d in decisions} <= approver_ids
-    assert world.actuary.id not in {d.approver_id for d in decisions}
+        request = await session.get(ApprovalRequestRow, row.approval_request_id)
+    assert request is not None
+    # ONE approver, the policy's `approvers_required` for peril_structure (06-governance.md:358;
+    # the maintainer's entry "2026-10-16 10:17:07 BST", DP-1543-APPROVERS (a)): exactly one
+    # decide, and the structure is `approved` after it (asserted above on the row).
+    assert len(decisions) == 1, "no decision recorded (status written, not carried) or too many"
+    approver_id = decisions[0].approver_id
+    assert approver_id == world.approver.id
+    # The separation of duties is the control: the approver is neither the request's submitter
+    # nor the structure's author (`actuary` created and submitted it).
+    assert approver_id != request.submitted_by
+    assert approver_id != world.actuary.id
 
 
 @pytest.mark.req("FR-127")
@@ -390,7 +382,7 @@ async def test_guard_dp_a4_3_severity_is_uncapped_until_the_fr_127_glm_fix_merge
     """
     world = await _structure_world(database, blob_store, workspace_id, grant)
     structure_id = await demo_model.create_ad_peril_structure(
-        database, blob_store, workspace_id, world.actuary, world.approvers[0],
+        database, blob_store, workspace_id, world.actuary, world.approver,
         world.frequency_id, world.severity_id, tolerance=Decimal("0.9"),
     )
     async with database.session() as session:
