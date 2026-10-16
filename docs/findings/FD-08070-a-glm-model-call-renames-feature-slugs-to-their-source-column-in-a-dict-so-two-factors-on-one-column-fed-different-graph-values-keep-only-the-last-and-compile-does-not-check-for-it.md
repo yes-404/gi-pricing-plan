@@ -104,14 +104,58 @@ mapped to **one** slug give `feature_row` one entry (`runtime.py:754-758`, the l
 This is a smaller exposure (the author names the slug twice on purpose) and the same guard covers
 it. It was found by reading and is not in the scratch test.
 
-### 5. What was not read
+### 5. The two arms not read first time (read at `origin/main` a2f77b2d; nothing run)
 
-The GBM arm (`_predict_model`) was not read for this finding: it feeds a booster by feature name,
-and no source-column rename is on that path at `a2f77b2d`, but that is a reading from the
-`_GlmScorer` docstring, not a verified absence. The offset model's `columns` merge
-(`runtime.py:879`, `{**source.columns, **columns}`) can map a main-model slug and an offset-model
-slug to one column in the same way; it was not constructed. The slice should treat both as part of
-its scope check.
+**(a) The GBM arm: no source-column rename, so no `:818` collision. Verdict: the same guard,
+and only for the route Evidence 4 already names.** `_predict_model` (`runtime.py:594`) takes the
+GBM branch at `:610-626`. The frame is `pl.DataFrame([dict(feature_row)])` (`:615`), so it is
+keyed by the **feature slug** exactly as `feature_row` was built at `:754-758`; `_GlmScorer.columns`
+and the `:818` comprehension are not on this path. `predict_gbm` is called with `factors=()`
+(`:626`), and with no Factors it reads each `result.feature_order` slug straight off the frame
+(`gbm.py:1240`, the `else` arm: `missing = [slug … if slug not in data.columns]`, then
+`_encode` over `terms={slug: slug …}`). So two Factors on one raw column fed different graph
+values stay two columns for a GBM, and each is read under its own slug; the GLM defect does not
+exist here. The one loss left is upstream of the dispatch and shared by both arms: two graph
+names mapped to **one** slug give `feature_row` one entry (`runtime.py:754-758`, the later
+wins), which is Evidence 4 and is closed by the same compile check, not a new one. Side note,
+not a finding here: a GBM whose spec carries Factors is scored with `factors=()`, so a banded
+Factor's banding is not re-applied on this path; that is a modelling-equivalence question for the
+slice that owns the GBM arm, and it was not pursued.
+
+**(b) The offset-model merge `columns = {**source.columns, **columns}` (`runtime.py:879`).** The
+keys are **slugs**, the values source columns, and in a dict merge the right operand wins: the
+main model's entry beats the offset model's on a shared slug. The merged map is the one
+`_GlmScorer.predict` applies at `:818` (`self.columns`, `:796-826`), and the offset source then
+reads **the same renamed frame** (`offset_source.linear_predictor(frame)`, `:819-821`). Two
+cases, with different verdicts:
+
+1. **Different slugs, one column** (a main slug `m` and an offset-model slug `o`, both
+   `source_columns=(C,)`). The merge keeps both keys; `:818` then collapses them to the one key
+   `C`, later `feature_row` entry wins. This is the Evidence 3 mechanism exactly, with the second
+   Factor in the offset model. **Verdict: the same guard** at predict (unequal values for one
+   column refused). At compile the guard must group over the **offset model's** Factors too:
+   `check_model_call_coverage` groups only the main pin's `factors`
+   (`compile.py:969`, `required_model_inputs(pin.factors, …)`), while the save check admits the
+   offset model's slugs into `feature_map` (`rating_algorithms.py:120-150`, the
+   `offset.kind == "model"` branch), so a compile-time guard that reads only `pin.factors`
+   would miss this route. That is a scope clause on the guard, not a new limb.
+2. **One slug, two columns** (the offset model's Factor `s` reads `A`, the main model's Factor
+   with the same slug `s` reads `B`). `:879` keeps `s -> B` and drops `s -> A` without a word.
+   `feature_row[s]` becomes column `B`; the offset Factor still needs `A`
+   (`factors.py:176-181`, `resolve_factors` reads `source_columns` off the frame). If no other
+   slug supplies `A`, `resolve_factors` raises `FactorResolutionError` (a `ModellingError`,
+   `errors.py:42`), which the handler turns into a coded `model_call` failure
+   (`runtime.py:771-778`): **loud, not a mispricing.** If another slug also maps to `A`, the
+   offset prices on that slug's value: silent and wrong, but it needs a slug shared across two
+   models with different source columns **and** a third mapping onto `A`; this finding
+   constructed neither the case nor a run. **Verdict: a separate limb** — a different
+   mechanism (a static slug-to-column conflict, true of the bundle before any quote, independent
+   of the quote's values), so the predict-time unequal-values guard does not see it (the values
+   it would compare are keyed by column, after the merge has already chosen). Its fix is a
+   bundle-load refusal at `:879`: a slug that maps to two columns across the main and offset
+   models is a malformed bundle (`RATING_VERSION_UNPINNED`-style coded `ValueError`, as `:841-872`
+   refuses the other malformed shapes). Severity is not ruled here; read as MEDIUM at most (a
+   latent trap, loud in the plain case), pending a constructed case.
 
 ## Severity: the reasoning
 
@@ -149,6 +193,25 @@ unequal values for one column; never a silent pick.**
    give the error, equal values price normally); this finding then records it as discharged by
    SL-1274.
 3. **Two graph names onto one slug** (Evidence 4) is refused at compile by the same check.
+4. **Scope of the guard, per verdict (Evidence 5).** The predict-time and compile-time guards
+   cover: the GLM case (Evidence 3); the GBM arm's two-graph-names-one-slug route (Evidence 5(a),
+   which is Evidence 4 and needs nothing new; the GBM arm has no rename to guard); and the
+   offset-model different-slugs-one-column route (Evidence 5(b)1), for which the compile grouping
+   must include the offset model's Factors, not only the main pin's. **Outside the guard, a
+   separate limb:** one slug mapped to two columns across the main and offset models
+   (Evidence 5(b)2), fixed by a bundle-load refusal at `runtime.py:879`; it stays in FD 8070's
+   later limb with the compile-time guard and does not ride the fast fix slice unless a
+   constructed case shows the silent variant.
+5. **Severity is ruled after the scratch run, not on the reading** (the maintainer's entry
+   "2026-10-16 10:52:08 BST"). The scratch run is the second small-slot run after END. **RED as
+   constructed** (age 25 priced as 45, no error): **HIGH**, confirmed by run; the predict-time
+   guard (unequal values for one column: a named refusal; equal values allowed) becomes its own
+   small fix slice off main, owner WK-1178, gated right after SL-1543 and ahead of SL-1722 and
+   SL-1341; SL-1274 then re-merges onto it and drops its own copy of the guard; the compile-time
+   guard stays in this finding's later limb. **GREEN** (the values do not collide as
+   constructed): the auditor states why the reading was wrong and severity drops to **MEDIUM**
+   (a latent trap); the guard stays in SL-1274 as ruled at 10:50:08. The Severity text above is
+   left as filed until that run.
 
 **Proof on a deliberately broken input (CLAUDE.md §13):** the scratch test, red-first. At
 `a2f77b2d` it asserts the defect; after the compile-time guard the same graph must be refused at
