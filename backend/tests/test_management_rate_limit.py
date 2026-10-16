@@ -269,3 +269,76 @@ async def test_a_permitted_call_to_an_in_handler_permission_route_is_counted_onc
 
     assert answered.status_code == permitted_status, answered.text
     assert after - before == 1
+
+
+#: The two identity-level routes (`RL-1687` (3a), precised by the maintainer's (by delegation)
+#: entry "2026-10-16 10:31:43 BST", DP-S4-ME (A)): a principal reaches them before it has a
+#: workspace selection, so they are counted with `workspace_id=None` and the Setting resolves
+#: without the workspace layer (environment variable, then Environment, then the default).
+#: Each carries the request that is answered `200`.
+_IDENTITY_ROUTES = [
+    pytest.param("GET", "/api/v1/me/workspaces", lambda workspace_id: None, id="me-workspaces"),
+    pytest.param(
+        "POST",
+        "/api/v1/me/workspace",
+        lambda workspace_id: {"workspace_id": str(workspace_id)},
+        id="me-workspace",
+    ),
+]
+_ENV_LIMIT_VARIABLE = "GIP_SETTING_PLATFORM_DEFAULT_MANAGEMENT_RATE_LIMIT_RPS"
+
+
+@pytest.mark.req("FR-452")
+@pytest.mark.parametrize(("method", "url", "body"), _IDENTITY_ROUTES)
+async def test_an_identity_route_is_counted_once(
+    client: TestClient,
+    workspace_id: UUID,
+    admin_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+    method: str,
+    url: str,
+    body: Any,
+) -> None:
+    """DP-S4-ME (A): `GET /me/workspaces` and `POST /me/workspace` move the management counter
+    by exactly one. The limit comes from the environment-variable layer (a workspace override
+    does not apply to these routes), so the counter is called with the default-or-env limit.
+    Red: the route takes `IdentityDep` and is never counted, so the counter does not move (0)."""
+    monkeypatch.setenv(_ENV_LIMIT_VARIABLE, "1000")
+    calls = _spy_management_count(client, monkeypatch)
+    identity_headers = {DEV_PRINCIPAL_HEADER: admin_headers[DEV_PRINCIPAL_HEADER]}
+
+    before = len(calls)
+    answered = client.request(method, url, json=body(workspace_id), headers=identity_headers)
+    after = len(calls)
+
+    assert answered.status_code == 200, answered.text
+    assert after - before == 1
+
+
+@pytest.mark.req("FR-452")
+@pytest.mark.parametrize(("method", "url", "body"), _IDENTITY_ROUTES)
+async def test_an_identity_route_ignores_a_workspace_override(
+    client: TestClient,
+    workspace_id: UUID,
+    admin_headers: dict[str, str],
+    set_limit: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    method: str,
+    url: str,
+    body: Any,
+) -> None:
+    """DP-S4-ME (A): the workspace layer is skipped, so a workspace limit of 1 does not refuse
+    the second call and the counter is not asked (the default is unset: no limit, no counter
+    call). Red: the route resolves a workspace (a membership chosen for the principal) and the
+    override of 1 turns the second call into `429`."""
+    await set_limit(1)
+    calls = _spy_management_count(client, monkeypatch)
+    identity_headers = {DEV_PRINCIPAL_HEADER: admin_headers[DEV_PRINCIPAL_HEADER]}
+
+    statuses = [
+        client.request(method, url, json=body(workspace_id), headers=identity_headers).status_code
+        for _ in range(3)
+    ]
+
+    assert statuses == [200, 200, 200]
+    assert calls == []
