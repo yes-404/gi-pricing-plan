@@ -16,7 +16,15 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent))
 
 from arff import to_csv
-from seed import DICTIONARY, PORTFOLIO_ROWS, RENAMES, RULES, build_csv, recipe
+from seed import (
+    DICTIONARY,
+    PORTFOLIO_ROWS,
+    PORTFOLIO_VALIDATED_ROWS,
+    RENAMES,
+    RULES,
+    build_csv,
+    recipe,
+)
 
 #: None is the full book. Measured (LG-1641): every smaller sample has a level fitted below the
 #: relativity floor; only the full book has none.
@@ -348,3 +356,58 @@ def test_the_demo_principals_use_existing_roles_and_cover_the_journey() -> None:
     assert "approver" in DEMO_PRINCIPALS["actuary"]
     assert {"approver", "deployer"} <= set(DEMO_PRINCIPALS["prod_approver"])
     assert not {"approver", "deployer"} & set(DEMO_PRINCIPALS["admin"])
+
+
+@pytest.mark.req("FR-31")
+@pytest.mark.req("FR-32")
+def test_the_seeded_runs_balance_through_their_own_recipes(scratch_seed: Path) -> None:
+    """R8b (PL 8042, SL 8043; DP-S1 (i)): after a real seed run, the version-2 run and the
+    portfolio run each satisfy `rows_read - rows_rejected - Σ removed + Σ added ==
+    rows_written`, read from their run records' `step_counts`. The portfolio's figures are
+    `PORTFOLIO_ROWS - 0 - 15 + 0 == PORTFOLIO_VALIDATED_ROWS`. Skipped in CI with the fetched
+    book, as the seed's other runs are. On main the run has no step counts."""
+    import asyncio
+    import json
+    import os
+    from uuid import UUID
+
+    import seed
+    from backend.tests.test_ingest_coercion import assert_the_rows_balance
+    from sqlalchemy import select
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+    from app.db.models import IngestionRunRow
+
+    assert asyncio.run(seed.run(ROWS_FOR_A_HEALTHY_FIT)) == 0
+    record = json.loads((scratch_seed / "last-seed.json").read_text(encoding="utf-8"))
+    workspace_id = UUID(record["workspace_id"])
+    portfolio_version = UUID(record["portfolio_dataset_version_id"])
+
+    async def runs() -> list[IngestionRunRow]:
+        engine = create_async_engine(os.environ["GIP_DATABASE_URL"])
+        try:
+            async with async_sessionmaker(engine, expire_on_commit=False)() as session:
+                return list(
+                    (
+                        await session.execute(
+                            select(IngestionRunRow).where(
+                                IngestionRunRow.workspace_id == workspace_id
+                            )
+                        )
+                    ).scalars()
+                )
+        finally:
+            await engine.dispose()
+
+    # The runs whose recipe drops implausible exposure: version 2 and the portfolio.
+    dropping = []
+    for run in asyncio.run(runs()):
+        steps = assert_the_rows_balance(run)
+        if any(step["name"] == "filter_rows" for step in steps):
+            dropping.append(run)
+    assert len(dropping) == 2
+    portfolio = next(r for r in dropping if r.dataset_version_id == portfolio_version)
+    removed = portfolio.rows_read - portfolio.rows_rejected - portfolio.rows_written
+    print(f"R8b portfolio: {portfolio.rows_read} - 0 - {removed} + 0 == {portfolio.rows_written}")
+    assert portfolio.rows_read == PORTFOLIO_ROWS
+    assert portfolio.rows_written == PORTFOLIO_VALIDATED_ROWS
