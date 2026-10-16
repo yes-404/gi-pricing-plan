@@ -161,6 +161,28 @@ options, so it is put, not picked." These three routes declare `problems(401, 40
 (`api/validation.py:270`) and `problems(401, 403, 404, 409, 422)` (`api/deployments.py:47`, `:72`);
 none lists `429`. Owner of the ruling: the lead / the maintainer (by delegation).
 
+## DP-S4-SEED (a): the runtime-test seeds go onto the governed path, 2026-10-16 10:18 BST
+
+**Ruling (verified against `~/gi-pricing-plan.local/channel/to-lead.md`, entry "2026-10-16 10:08:52 BST", and item 1 of "2026-10-14 11:43:57 BST"):** the maintainer (by delegation) ruled (a). The defect is the direct DB write (`scripts/bench-rating.py::_seed`), whatever status it writes. (1) Batch and sampled-trace seed an `approved` Rating Version through `demo_model.create_approved_rating_version`. (2) Compile is created through the same services; it may stay a draft only if PL-1690 specifies compiling a draft. (3) The batch assert is `succeeded` and an output row count equal to the input's row count, read from the input. (4) `bench-rating.py::_seed` stays a bench tool; no runtime test imports it.
+
+**Change (writing only; nothing run, a gate was held):** one file, `backend/tests/test_deploy_stack_runtime.py`.
+
+- `_governed_workspace(approved, permissions)` (new, `:120-246` at this commit) replaces `rating._seed`. Principals: the demo seed's `grant_demo_principals`. Model: `test_demo_rating_evidence._approved_model` (as WF-699's `_world` builds it). Rate Tables and algorithm: `examples/fremtpl2/model.py` services. `approved=True` runs `create_approved_rating_version` (create, executed regression evidence, submit, two approvers decide); it then asserts the row's `status` is `approved`. The only direct rows left are the Service Account and its key (no route creates one with `score:execute`, FR-347). The `psql UPDATE service_accounts` widening is gone: the key is created with the permissions the test needs.
+- `_scoring_request` (was `_seeded_scoring_request`): same return shape, now backed by the approved version. It serves `test_the_scoring_api_runs_and_scores_with_no_worker_service` and `test_previous_version_serves_the_migrated_schema_and_rolls_forward_with_no_failures`, which called the bench seed too; item 4 needs them off it.
+- `test_a_score_batch_job_succeeds_through_the_compose_scoring_worker`: approved version; the frame is built from the governed quote's inputs; after `succeeded` it reads the job's summary blob and the output parquet from the store and asserts `output.height == frame.height` and `row_count == frame.height`. `frame.height` is the input's own height, not the literal 20, and the test asserts it is non-zero.
+- `test_a_sampled_trace_is_produced_through_the_compose_scoring_worker`: approved version; the scored body is the governed quote.
+- `test_a_submitted_job_reaches_a_terminal_state_through_the_compose_worker` (the compile test): **DRAFT, created by `rating_versions.create_rating_version`** through the service, not by `_seed`. **PL-1690 specifies no draft-compile line:** `docs/plans/PL-01690-*.md` E4.3 (`:90-109`) says "One cheap Job ... The executor names its kind and queue in the `LG-`", and names no status. By the ruling's own text the approved version would then be used, but **`POST /rating-versions/{id}/compile` refuses any non-draft with 409 `RATING_VERSION_IMMUTABLE`** (`backend/src/app/api/models.py:1297-1300` docstring, `require_compilable` at `:1306`, FR-239, RL-1379), so an approved version cannot be compiled. The draft is the only version this route accepts. Raised to the lead as an open question; the test's docstring cites both.
+- `test_a_dataset_ingest_job_succeeds_through_the_compose_io_worker`: needs only a workspace and a key; it now takes them from the same helper (no bench seed). Its blob seeding (`_put_blob_inputs`, renamed from `_seed_blob_inputs`) is unchanged and stays SL-1722's to convert.
+- Removed: `_bench()` and every `scripts/bench-*.py` import from the test.
+
+**Grep (item 4), at this tree:**
+
+- `git grep -n '\._seed(' -- backend/tests deploy` prints nothing (rc 1): no caller of a bench `_seed`.
+- `git grep -n 'bench-rating\|bench_rating\|bench-deploy-path\|bench_deploy_path' -- backend/tests deploy` prints only `backend/tests/test_bench_deploy_path.py` (`:4`, `:15`, `:19`) and `backend/tests/test_bench_rating_calls.py` (`:1`, `:17`, `:20`): tests OF the bench tools, not runtime tests. `backend/tests/test_deploy_stack_runtime.py` is not in the output.
+- The literal `git grep -n '_seed' -- backend/tests deploy` (as the ruling words it) is a substring match and prints 38 KB of unrelated module-local helpers (`_seed_approved_model`, `_seed_body`, `_seed_rate_table`, ...). In the runtime test it now prints only `from backend.tests.test_wf699_journey import _seed_module`, the demo seed's module loader, not the bench `_seed`. `git grep -n '\b_seed\b' -- backend/tests deploy` lists thirteen files, none of them `test_deploy_stack_runtime.py`.
+
+**Owed after GATE END, on compose (with `lslocks` clean):** `GIP_DEPLOY_TESTS=1 GIP_N_SHA=<head> GIP_N1_SHA=<parent> uv run pytest -q backend/tests/test_deploy_stack_runtime.py` (all tests, because tests one and two moved too), plus `ruff check`, `mypy`, and the PL-1690 Acceptance 5 red run. None ran: the file is `py_compile`d only. Risks the run decides: (i) the rolling-upgrade test seeds with N's code against N-1's schema; (ii) pre-existing lines over 100 columns at `:392`, `:396`, `:503`, `:526` were not touched.
+
 ## PRs
 
 None yet.

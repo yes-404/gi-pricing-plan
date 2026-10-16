@@ -14,7 +14,6 @@ two commits** (Acceptance 12), tagged by SHA; both SHAs are printed for the ledg
 from __future__ import annotations
 
 import asyncio
-import importlib.util
 import json
 import os
 import pathlib
@@ -25,7 +24,7 @@ import threading
 import time
 import urllib.request
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, NamedTuple
 from uuid import UUID
 
 import pytest
@@ -69,17 +68,6 @@ def _get(path: str) -> int:
         return int(response.status)
 
 
-def _bench() -> Any:
-    spec = importlib.util.spec_from_file_location(
-        "bench_deploy_path", ROOT / "scripts" / "bench-deploy-path.py"
-    )
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
 def _mapped(service: str, port: int) -> str:
     out = _compose(os.environ["GIP_N_SHA"], "port", service, str(port)).stdout.strip()
     return out.rsplit(":", 1)[-1]
@@ -101,26 +89,158 @@ def down() -> Iterator[None]:
     _compose(os.environ["GIP_N_SHA"], "down", "-v", "--remove-orphans", check=False)
 
 
-def _seeded_scoring_request() -> tuple[str, dict[str, str], dict[str, Any]]:
-    harness = _bench()
-    rating = harness._bench_rating()
-    dsn = (
-        "postgresql+asyncpg://gipricing:gipricing@127.0.0.1:"
-        f"{_mapped('postgres', 5432)}/gipricing"
+def _compose_settings() -> Any:
+    """Backend `Settings` pointed at the compose stack's published Postgres and MinIO ports."""
+    from pydantic import SecretStr
+
+    from app.config import Environment, Settings
+
+    return Settings(
+        environment=Environment.LOCAL,
+        version="e43",
+        database_url=SecretStr(
+            "postgresql+asyncpg://gipricing:gipricing@127.0.0.1:"
+            f"{_mapped('postgres', 5432)}/gipricing"
+        ),
+        blob_bucket="gip-blobs",
+        blob_endpoint_url=f"http://127.0.0.1:{_mapped('minio', 9000)}",
     )
-    bundle = asyncio.run(
-        rating._serialisable(with_gbm=False, n_expr=rating.N_EXPR_STEPS, rounds=300, rows=5_000)
+
+
+#: What a key may do. `score:execute` and `score:batch` are granted by no builtin role (FR-347),
+#: so the credential is a Service Account whose own `permissions` satisfy the check
+#: (RL-924's `credential_permissions` union).
+_SCORING_PERMISSIONS = ["score:execute"]
+_ALL_PERMISSIONS = [
+    "score:execute", "score:batch", "rating:read", "rating:compile", "job:read",
+    "dataset:read", "dataset:write",
+]
+
+
+class _Workspace(NamedTuple):
+    """A workspace seeded through the governed path, and a key for it."""
+
+    workspace_id: str
+    headers: dict[str, str]
+    rating_version_id: str
+    rating_version_ref: str
+    quote: dict[str, Any]  # a valid `POST /api/v1/score` body for the Rating Version
+
+
+def _governed_workspace(*, approved: bool, permissions: list[str]) -> _Workspace:
+    """Seed a Rating Version the way the platform would have accepted it, then a key.
+
+    SL-1258, DP-S4-SEED (the maintainer's (by delegation) entry "2026-10-16 10:08:52 BST", (a)):
+    no runtime test writes a Rating Version row. The principals are the demo seed's own
+    (`grant_demo_principals`), the Model an approved GLM as WF-699's `_world` builds it, the
+    Rate Tables and the algorithm come from `examples/fremtpl2/model.py`'s services, and
+    `approved=True` runs `create_approved_rating_version` (create, executed regression
+    evidence, submit, two approvers decide). `approved=False` stops after
+    `create_rating_version` and leaves the `draft` the service created: `rating.compile` is
+    refused with 409 `RATING_VERSION_IMMUTABLE` for any other status (`api/models.py`
+    `compile_rating_version`, FR-239), so the compile test cannot take the approved version.
+    Only the credential is a direct row: a Service Account and its key, which no route creates
+    with `score:execute`.
+    """
+    from datetime import UTC, datetime, timedelta
+
+    from backend.tests.test_demo_rating_evidence import (
+        _BASE_MINOR,
+        _QUOTES,
+        _approved_model,
+        _bandings,
+        _raw_inputs,
+        demo_model,
     )
-    workspace_id, api_key = asyncio.run(
-        rating._seed(
-            bundle, dsn=dsn, bucket="gip-blobs",
-            blob_endpoint_url=f"http://127.0.0.1:{_mapped('minio', 9000)}",
-        )
-    )
-    headers = {"X-API-Key": api_key, "Workspace-Id": workspace_id}
-    return f"http://127.0.0.1:{LB_PORT}/api/v1/score", headers, json.loads(
-        rating._ctx().model_dump_json()
-    )
+    from backend.tests.test_wf699_journey import _seed_module
+    from app.auth.api_keys import generate_key
+    from app.db.models import ApiKeyRow, ServiceAccountRow
+    from app.db.session import Database
+    from app.platform import rating_versions as rating_service
+    from app.platform.blobs import BlobStore
+    from model_schema import Pins, new_uuid7
+
+    settings = _compose_settings()
+
+    async def seed() -> _Workspace:
+        database, blobs = Database(settings), BlobStore(settings)
+        try:
+            await blobs.ensure_bucket()
+            workspace_id = new_uuid7()
+            people = await _seed_module().grant_demo_principals(database, workspace_id)
+            analyst, actuary = people["analyst"], people["actuary"]
+            approver, second = people["approver"], people["second_approver"]
+            model_id = await _approved_model(database, workspace_id)
+            tables = await demo_model.seed_demo_rate_tables(
+                database, settings, blobs, workspace_id, analyst, model_id
+            )
+            dataset_version_id = new_uuid7()
+            if approved:
+                rating_id = await demo_model.create_approved_rating_version(
+                    database, blobs, workspace_id, analyst, actuary, approver, second,
+                    dataset_version_id, model_id, tables, _bandings(), _BASE_MINOR,
+                )
+            else:
+                model_ref, fit = await demo_model.load_approved_glm(
+                    database, workspace_id, model_id
+                )
+                domains = {
+                    factor: [r.level for r in fit.relativities[factor]]
+                    for factor, _ in demo_model.CATEGORICAL_FACTORS
+                }
+                algorithm_ref = await demo_model.save_demo_algorithm(
+                    database, workspace_id, analyst, tables, _bandings(), domains, _BASE_MINOR
+                )
+                async with database.unit_of_work() as session:
+                    created = await rating_service.create_rating_version(
+                        session, workspace_id=workspace_id, actor=analyst,
+                        slug=demo_model.DEMO_RATING_SLUG, dataset_version_id=dataset_version_id,
+                        model_ref=model_ref, algorithm_ref=algorithm_ref,
+                        pins=Pins(rate_tables=list(tables.values()), models=[model_ref]),
+                    )
+                    rating_id = created.id
+            async with database.session() as session:
+                row = await rating_service.load_rating_version(
+                    session, workspace_id=workspace_id, rating_version_id=rating_id
+                )
+                ref = f"rating_version:{row.slug}@{row.version}"
+                status = row.status
+            assert status == ("approved" if approved else "draft"), status
+
+            generated = generate_key("uat")
+            async with database.unit_of_work() as session:
+                account = ServiceAccountRow(
+                    workspace_id=workspace_id, slug="e43-scorer", description=None,
+                    environments=["uat"], permissions=permissions, rate_limit_rps=None,
+                )
+                session.add(account)
+                await session.flush()
+                session.add(ApiKeyRow(
+                    service_account_id=account.id, prefix=generated.prefix,
+                    secret_hash=generated.secret_hash, environment=generated.environment,
+                    expires_at=datetime.now(UTC) + timedelta(days=1),
+                ))
+            quote = {
+                "quote_id": "E43-Q1", "purpose": "new_business",
+                "quoted_at": "2026-09-28T09:00:00Z", "effective_date": "2026-10-01",
+                "inputs": _raw_inputs(_QUOTES["base-levels"]),
+                "options": {"rating_version_ref": ref},
+            }
+            print(f"  seeded workspace {workspace_id}: {ref} is {status} (governed path)")
+            return _Workspace(
+                str(workspace_id),
+                {"X-API-Key": generated.value, "Workspace-Id": str(workspace_id)},
+                str(rating_id), ref, quote,
+            )
+        finally:
+            await database.dispose()
+
+    return asyncio.run(seed())
+
+
+def _scoring_request() -> tuple[str, dict[str, str], dict[str, Any]]:
+    ws = _governed_workspace(approved=True, permissions=_SCORING_PERMISSIONS)
+    return f"http://127.0.0.1:{LB_PORT}/api/v1/score", ws.headers, ws.quote
 
 
 def _score(url: str, headers: dict[str, str], body: dict[str, Any]) -> int:
@@ -142,7 +262,7 @@ def test_the_scoring_api_runs_and_scores_with_no_worker_service(
     assert "api" in running
     assert not [s for s in running if s.startswith("worker")]
     assert _get("/readyz") == 200
-    url, headers, body = _seeded_scoring_request()
+    url, headers, body = _scoring_request()
     assert _score(url, headers, body) == 200
 
 
@@ -154,7 +274,7 @@ def test_previous_version_serves_the_migrated_schema_and_rolls_forward_with_no_f
     n1, n = shas
     # 1. Serve N-1 against the old schema (N-1's own migrate step).
     _compose(n1, "up", "-d", "--wait", "--scale", "api=2", "lb")
-    url, headers, body = _seeded_scoring_request()
+    url, headers, body = _scoring_request()
     assert _score(url, headers, body) == 200
     # 2. Run N's migration as its own step. 3. N-1 still serves against the migrated schema.
     _compose(n, "run", "--rm", "--no-deps", "migrate")
@@ -244,15 +364,12 @@ def test_a_submitted_job_reaches_a_terminal_state_through_the_compose_worker(
     """
     n = built_n
     _compose(n, "up", "-d", "--wait", "lb", *_worker_services(n))
-    # Seed a workspace, a draft rating version and a key; the bench seed grants the key only
-    # `score:execute`, so widen it to what this route and the Job read need.
-    _, headers, _ = _seeded_scoring_request()
-    _compose(
-        n, "exec", "-T", "postgres", "psql", "-U", "gipricing", "-d", "gipricing", "-c",
-        "UPDATE service_accounts SET permissions = "
-        "'[\"score:execute\", \"rating:read\", \"rating:compile\", \"job:read\"]'::jsonb",
-    )
-    version_id = _api("GET", "/api/v1/rating-versions", headers)[0]["id"]
+    # A DRAFT Rating Version created by the services (`create_rating_version`), never by a row
+    # write: compile is refused for any other status (409 RATING_VERSION_IMMUTABLE, FR-239), and
+    # PL-1690 E4.3 names no status ("one cheap Job"). The key carries what this route needs.
+    ws = _governed_workspace(approved=False, permissions=_ALL_PERMISSIONS)
+    headers = ws.headers
+    version_id = ws.rating_version_id
     started = time.monotonic()
     job = _api("POST", f"/api/v1/rating-versions/{version_id}/compile", headers)
     assert job["queue"] == "default"
@@ -285,7 +402,7 @@ def test_a_submitted_job_reaches_a_terminal_state_through_the_compose_worker(
 #   GIP_DEPLOY_TESTS=1 GIP_N_SHA=<S4 head> GIP_N1_SHA=<S4 head's parent> \
 #     uv run pytest -q backend/tests/test_deploy_stack_runtime.py \
 #     -k "dataset_ingest or score_batch or sampled_trace or terminal_state"
-# NOT RUN at the red-first prep: no services were started (SL-1258 prep).
+# NOT RUN since the seeds moved onto the governed path (SL-1258, DP-S4-SEED): owed on compose.
 #
 # `succeeded`, not "terminal": `failed` is terminal, and a Job whose kind has no handler goes
 # `failed` through a real worker without ever running (PL-8022 P5; the maintainer's
@@ -295,11 +412,6 @@ def test_a_submitted_job_reaches_a_terminal_state_through_the_compose_worker(
 INGEST_BOUND_SECONDS = 90
 SCORE_BATCH_BOUND_SECONDS = 90
 TRACE_BOUND_SECONDS = 60
-
-_ALL_PERMISSIONS = (
-    '["score:execute", "score:batch", "rating:read", "rating:compile", "job:read", '
-    '"dataset:read", "dataset:write"]'
-)
 
 
 def _wait_succeeded(job: dict[str, Any], headers: dict[str, str], bound: int) -> dict[str, Any]:
@@ -323,16 +435,11 @@ def _wait_succeeded(job: dict[str, Any], headers: dict[str, str], bound: int) ->
     return current
 
 
-def _stack_with_seeded_workspace(n: str) -> tuple[str, dict[str, str]]:
-    """Bring up lb and every worker service; seed the bench rating version and a key whose
-    permissions cover these routes. Returns `(workspace_id, headers)`."""
+def _stack_with_workspace(n: str) -> _Workspace:
+    """Bring up lb and every worker service; seed an APPROVED Rating Version through the
+    governed path and a key whose permissions cover these routes."""
     _compose(n, "up", "-d", "--wait", "lb", *_worker_services(n))
-    _, headers, _ = _seeded_scoring_request()
-    _compose(
-        n, "exec", "-T", "postgres", "psql", "-U", "gipricing", "-d", "gipricing", "-c",
-        f"UPDATE service_accounts SET permissions = '{_ALL_PERMISSIONS}'::jsonb",
-    )
-    return headers["Workspace-Id"], headers
+    return _governed_workspace(approved=True, permissions=_ALL_PERMISSIONS)
 
 
 def _worker_services(n: str) -> list[str]:
@@ -345,31 +452,16 @@ def _worker_services(n: str) -> list[str]:
     )
 
 
-def _seed_blob_inputs(workspace_id: str, csv: bytes, frame_parquet: bytes) -> tuple[str, str]:
+def _put_blob_inputs(workspace_id: str, csv: bytes, frame_parquet: bytes) -> tuple[str, str]:
     """Seed, by the backend's own models (psql-equivalent seeding, to be replaced by the public
     upload path in SL 8026): a Dataset Version that makes the CSV blob readable by the workspace
     (`blob_readable_by`), and one that carries the scoring table. Returns `(csv_sha, dv_id)`."""
-    harness = _bench()
-    rating = harness._bench_rating()
-    rating._backend_on_path()
-    from pydantic import SecretStr
-
-    from app.config import Environment, Settings
     from app.db.models import DatasetVersionRow
     from app.db.session import Database
     from app.platform.blobs import BlobStore
     from model_schema import new_uuid7
 
-    settings = Settings(
-        environment=Environment.LOCAL,
-        version="bench",
-        database_url=SecretStr(
-            "postgresql+asyncpg://gipricing:gipricing@127.0.0.1:"
-            f"{_mapped('postgres', 5432)}/gipricing"
-        ),
-        blob_bucket="gip-blobs",
-        blob_endpoint_url=f"http://127.0.0.1:{_mapped('minio', 9000)}",
-    )
+    settings = _compose_settings()
 
     async def seed() -> tuple[str, str]:
         database, blobs = Database(settings), BlobStore(settings)
@@ -410,9 +502,10 @@ def test_a_dataset_ingest_job_succeeds_through_the_compose_io_worker(
     acceptance line of SL-1722 (the conversion itself is SL-1258's, LG-9810). Red cause: a worker that does not consume `io` leaves the Job
     `queued`.
     """
-    workspace_id, headers = _stack_with_seeded_workspace(built_n)
+    ws = _stack_with_workspace(built_n)
+    workspace_id, headers = ws.workspace_id, ws.headers
     csv = b"policy_id,exposure,claim_count\nP1,1.0,0\nP2,0.5,1\nP3,1.0,0\n"
-    csv_sha, _ = _seed_blob_inputs(workspace_id, csv, b"PAR1")
+    csv_sha, _ = _put_blob_inputs(workspace_id, csv, b"PAR1")
     _api("POST", "/api/v1/datasets", headers, {"slug": "e43-ingest", "currency": "GBP"})
     job = _api(
         "POST", "/api/v1/datasets/e43-ingest/versions", headers,
@@ -429,7 +522,7 @@ def test_a_score_batch_job_succeeds_through_the_compose_scoring_worker(
 ) -> None:
     """`score.batch` routes to `scoring` and must reach `succeeded`, not merely be consumed.
 
-    A REAL compiled bundle (the bench rating version: real GLM factors) and a real scoring table
+    A REAL compiled bundle (the governed approved Rating Version: the freMTPL2 GLM through its seeded rate tables) and a real scoring table
     whose columns are `03` section 4.8's reserved four plus the bundle's inputs. Red cause: a
     worker that does not consume `scoring` leaves the Job `queued`; a probe with empty
     parameters was consumed and failed `JOB_HANDLER_FAILED`, which this assert refuses.
@@ -438,29 +531,65 @@ def test_a_score_batch_job_succeeds_through_the_compose_scoring_worker(
 
     import polars as pl
 
-    harness = _bench()
-    rating = harness._bench_rating()
-    workspace_id, headers = _stack_with_seeded_workspace(built_n)
-    ctx = json.loads(rating._ctx().model_dump_json())
+    from app.db.models import BlobRow
+    from app.db.session import Database
+    from app.platform.blobs import BlobStore, to_ref
+
+    ws = _stack_with_workspace(built_n)
+    quote = ws.quote
     rows = 20
     frame = pl.DataFrame({
         "quote_id": [f"Q{i:03d}" for i in range(rows)],
         "purpose": ["new_business"] * rows,
-        "effective_date": [ctx["effective_date"]] * rows,
+        "effective_date": [quote["effective_date"]] * rows,
         "rating_version_ref": ["rating_version:placeholder@0"] * rows,
-        **{name: [value] * rows for name, value in ctx["inputs"].items()},
+        **{name: [value] * rows for name, value in quote["inputs"].items()},
     })
     buffer = io.BytesIO()
     frame.write_parquet(buffer, compression="zstd")
-    _, dataset_version_id = _seed_blob_inputs(workspace_id, b"x\n", buffer.getvalue())
-    ref = str(rating._RATING_VERSION_REF)
+    _, dataset_version_id = _put_blob_inputs(ws.workspace_id, b"x\n", buffer.getvalue())
     job = _api(
-        "POST", "/api/v1/score/batch", headers,
-        {"dataset_version_id": dataset_version_id, "rating_version_refs": [ref],
+        "POST", "/api/v1/score/batch", ws.headers,
+        {"dataset_version_id": dataset_version_id, "rating_version_refs": [ws.rating_version_ref],
          "table_name": "scoring_frame"},
     )
     assert job["queue"] == "scoring"
-    _wait_succeeded(job, headers, SCORE_BATCH_BOUND_SECONDS)
+    done = _wait_succeeded(job, ws.headers, SCORE_BATCH_BOUND_SECONDS)
+
+    # `succeeded` is not the proof: the output must hold one row per input row. The expected
+    # count is the INPUT's own height, read from the frame sent, never a literal (DP-S4-SEED
+    # (a) item 3), so a changed fixture cannot leave this assert passing vacuously.
+    expected_rows = frame.height
+    assert expected_rows > 0, "the scoring frame is empty: the assert below would be vacuous"
+    summary_sha = (done.get("result") or {}).get("ref")
+    assert summary_sha, f"no batch summary ref on {done!r}"
+
+    async def read_output() -> tuple[dict[str, Any], pl.DataFrame]:
+        settings = _compose_settings()
+        database, blobs = Database(settings), BlobStore(settings)
+        try:
+            async with database.session() as session:
+                summary_row = await session.get(BlobRow, summary_sha)
+                assert summary_row is not None, f"summary blob {summary_sha} not in the store"
+                summary = json.loads(await blobs.read(to_ref(summary_row)))
+                (result,) = summary["results"]
+                output_sha = result["output_blob_sha256"]
+                assert output_sha, f"the batch wrote no output artifact: {result!r}"
+                output_row = await session.get(BlobRow, output_sha)
+                assert output_row is not None, f"output blob {output_sha} not in the store"
+                return result, pl.read_parquet(io.BytesIO(await blobs.read(to_ref(output_row))))
+        finally:
+            await database.dispose()
+
+    result, output = asyncio.run(read_output())
+    print(
+        f"batch input rows={expected_rows} output rows={output.height} "
+        f"summary row_count={result['row_count']}"
+    )
+    assert output.height == expected_rows, (
+        f"batch output has {output.height} rows for {expected_rows} input rows"
+    )
+    assert result["row_count"] == expected_rows, result
 
 
 @pytest.mark.req("FR-415")
@@ -475,14 +604,14 @@ def test_a_sampled_trace_is_produced_through_the_compose_scoring_worker(
     the GO). Two red causes: `scoring` unconsumed (`queued`, "never consumed"), and the handler
     unregistered (`failed`, `JOB_HANDLER_NOT_REGISTERED`, no trace row).
     """
-    workspace_id, headers = _stack_with_seeded_workspace(built_n)
+    ws = _stack_with_workspace(built_n)
+    workspace_id, headers = ws.workspace_id, ws.headers
     _compose(
         built_n, "exec", "-T", "postgres", "psql", "-U", "gipricing", "-d", "gipricing", "-c",
         "INSERT INTO workspace_settings (id, workspace_id, key, value) "
         f"VALUES (gen_random_uuid(), '{workspace_id}', 'rating.trace_sample_rate', '1.0'::jsonb)",
     )
-    harness = _bench()
-    ctx = json.loads(harness._bench_rating()._ctx().model_dump_json())
+    ctx = ws.quote
     quote = _api("POST", "/api/v1/score", headers, ctx)
     quote_id = quote.get("quote_id") or ctx["quote_id"]
     jobs = _api("GET", "/api/v1/jobs?kind=score.trace_produce", headers)["items"]
