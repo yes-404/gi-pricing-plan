@@ -2,7 +2,7 @@
 id: PL-8030
 family: plan
 kind: map
-title: WK-1178 — FD 8027's two HIGH limbs, a capped GLM spec fits capped (FR-127) and the banding check runs at fit (FR-100), SL-8031 — a dated Work-plan delta
+title: WK-1178 — FD-1723's two HIGH limbs, a capped GLM spec fits capped (FR-127) and the banding check runs at fit (FR-100), SL-8031 — a dated Work-plan delta
 status: draft                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-14
 owner: planner
@@ -12,10 +12,10 @@ work: WK-1178
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [PL-1542, SL-1543, PL-1674, SL-1675]
+relates: [PL-1542, SL-1543, PL-1674, SL-1675, FD-1723]
 ---
 
-# PL-8030 — WK-1178: FD 8027's two HIGH limbs. A capped GLM spec fits capped (FR-127), and the banding check runs at fit (FR-100) (SL-8031)
+# PL-8030 — WK-1178: FD-1723's two HIGH limbs. A capped GLM spec fits capped (FR-127), and the banding check runs at fit (FR-100) (SL-8031)
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L5
 > (`document-ids.md` §1.6, PL row: *"one plan per Work, slices as rows, no per-slice `leaf`; a
@@ -49,8 +49,8 @@ reserved by the lead in `handover/eta.md` (team-lead to planner-fd8027, 2026-10-
 SL 8031 reserved for you"). Written 2026-10-14 by the planner (seat planner-fd8027).
 **Tree read:** `origin/main` `8eaf6d5f9cd4204e1e077b44069d4afd395f1461` (#1300, committed
 2026-10-14T11:25:34+01:00). Every `file:line` below is at that tree unless marked otherwise. The
-executor re-reads each one at its base (Task 0). The finding is FD 8027 (working id, not yet
-minted), read in full at `origin/fd-8027-closure-gap-p1-2026-10-14` @`00b683ee`.
+executor re-reads each one at its base (Task 0). The finding is FD-1723 (working id FD 8027 when this plan was
+written; minted in D17, #1307), read in full at `origin/fd-8027-closure-gap-p1-2026-10-14` @`00b683ee`.
 
 ## Authority
 
@@ -80,7 +80,7 @@ Task 5's FR-100 clause, likewise.
   > **Guard ADOPTED** in the SL-1543 GO brief and as a slice test: assert the A-4 severity spec's `loss_treatment.kind == "none"` AND the AD structure's `large_loss` is the uncapped treatment. A capped choice therefore fails a test rather than slipping in. If DP-A4-3 later switches to (y), the test changes only together with the FR-127 fix's merge, cited in the LG.
 
   The FR-110 lines of the 11:28:56 entry (NB θ, `power(k)`) are **not this slice's**. They are a
-  MEDIUM limb of FD 8027 and go into a separate WK-1178 delta.
+  MEDIUM limb of FD-1723 and go into a separate WK-1178 delta.
 - **"2026-10-14 11:52:51 BST — PL 8030/SL 8031 DPs ruled; SL-1543 fixture fix accepted; NEW
   candidate: the recipe cast silently nulls unparseable values (re lead 11:51:03 / 11:52:02)"**,
   item (2), quoted in full (items (1), (3) and (4) are not this plan's):
@@ -109,8 +109,8 @@ Task 5's FR-100 clause, likewise.
   them.]
 
   Every decision point below is therefore ruled, and the plan below is written to those rulings.
-  The EBM limb is **FD 8027's**, added by an auditor before the mint (DP-L2 (a)); this plan
-  does not write it, and the SL-8031 row's activation needs wait for it. FD 8027's file now
+  The EBM limb is **FD-1723's**, added by an auditor before the mint (DP-L2 (a)); this plan
+  does not write it, and the SL-8031 row's activation needs wait for it. FD-1723's file now
   travels in the D17 batch (the entry "2026-10-14 11:57:51 BST", item 2), not on the branch read
   when this plan was first written.
 
@@ -123,7 +123,7 @@ Task 5's FR-100 clause, likewise.
 2. **If DP-A4-3 later switches to (y), capped,** the guard test changes **only in the same merge
    as this slice, or after it**. Both LGs cite that pairing: this slice's LG and the LG of the
    slice that changes the guard. Before this slice merges, a capped A-4 severity GLM would fit
-   uncapped, which is the FD 8027 defect itself.
+   uncapped, which is the FD-1723 defect itself.
 3. **The binding condition.** If PL-1542 Task 0 Step 4's probe fails (|ratio − 1| > 0.05) and
    (y) becomes the answer, SL-1543 STOPs. The FR-127 limb of this slice (Tasks 1 to 3) then joins
    the G2 path and merges **before** SL-1543 resumes. Tasks 1 to 3 are cut so that they can ship
@@ -181,7 +181,7 @@ already does for `FACTOR_RESOLUTION_FAILED`.
   `ebm.py:209` and never reads the treatment
   (`git grep -nEi "loss_treatment" -- packages/pricing-core/src/pricing_core/modelling/ebm.py`
   prints nothing). The arm's error class is `EbmFitError` (`ebm.py:41`). The limb is added to
-  FD 8027 by an auditor before the mint.
+  FD-1723 by an auditor before the mint.
 
 **FR-100.**
 - The requirement (`02-modelling.md:108`, `§3.2`, read in full; no dated amendment sits on the row)
@@ -353,7 +353,7 @@ slice's merge tree.
 
 | Order | Slice | Scope (what the `LG-` quotes) | Requirements, each id | Depends on | Size |
 |---|---|---|---|---|---|
-| 1 | SL-8031 — FD 8027's HIGH limbs: a capped GLM (and EBM) fits capped, and the banding check runs at fit | Tasks 0 to 8 below | `02` §3.5: FR-127 (the GLM arm and the EBM arm, DP-L2 (a)); `02` §3.2: FR-100 (the fit-time check and its `warn` record); `02` FR-207 (the staged-contract note for `banding_warnings`); read only: FR-128, FR-111, FR-161, FR-204 | this delta minted; FD 8027 minted with its EBM limb; every DP ruled (2026-10-14 11:52:51 BST); Task 0 Step 3's probe clean for the A-4 severity GLM, or the maintainer's ruling on it | 2 |
+| 1 | SL-8031 — FD-1723's HIGH limbs: a capped GLM (and EBM) fits capped, and the banding check runs at fit | Tasks 0 to 8 below | `02` §3.5: FR-127 (the GLM arm and the EBM arm, DP-L2 (a)); `02` §3.2: FR-100 (the fit-time check and its `warn` record); `02` FR-207 (the staged-contract note for `banding_warnings`); read only: FR-128, FR-111, FR-161, FR-204 | this delta minted; FD-1723 minted with its EBM limb; every DP ruled (2026-10-14 11:52:51 BST); Task 0 Step 3's probe clean for the A-4 severity GLM, or the maintainer's ruling on it | 2 |
 
 ### Task 0 — re-read at the base, enumerate, and probe (convention 4)
 
@@ -372,7 +372,7 @@ slice's merge tree.
   lead; it is a G2 interaction and its resolution is the maintainer's. A `BAND_EMPTY` on any other
   seed fit is a STOP to the lead, who routes it. On a clean probe the slice proceeds, and its
   merge order against SL-1543 is whichever is ready first (Task 8).
-- [ ] **Step 4.** Read `to-lead.md` from the entry "2026-10-14 11:52:51 BST" onward for any entry on FD 8027,
+- [ ] **Step 4.** Read `to-lead.md` from the entry "2026-10-14 11:52:51 BST" onward for any entry on FD-1723 (FD 8027 before its mint),
   FR-127, FR-100, SL-1543 or this plan. Name each entry in the LG.
 
 ### Task 1 — the FR-127 reds, on main
@@ -589,7 +589,7 @@ limb.
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
 | DP-L1 | Where does `apply_loss_treatment` live once three arms call it? | **(a), ruled:** its own module, `pricing_core/modelling/loss_treatment.py`, taking the arm's error class as `weights.require_usable_weights` does (`weights.py:91-97`); `gbm.py` and `__init__.py` re-export it. | The ruling: *"its own module, taking the arm's error class (the weights.py:91-97 pattern). OK."* `CLAUDE.md` §2 forbids a shape defined twice, and the spec says *"it belongs beside the fit rather than inside it"* (`02:2659-2661`). | design | no — ruled | Ruled 2026-10-14 by the maintainer (by delegation), entry 2026-10-14 11:52:51 BST |
-| DP-L2 | `EbmSpec` inherits `loss_treatment` and `fit_ebm` ignores it (`ebm.py:209`), the same silent class. Does this slice fix the EBM arm too? | **(a), ruled:** yes — one call (Task 3), one red (R4, Task 1), and an auditor adds the EBM limb to FD 8027 before it is minted. | The ruling: *"fix EBM here (ebm.py:209 ignores loss_treatment, the same FR-127 class); an auditor adds the EBM limb to FD 8027 before mint."* | scope | no — ruled; FD 8027's EBM limb is an activation need | Ruled 2026-10-14 by the maintainer (by delegation), entry 2026-10-14 11:52:51 BST |
+| DP-L2 | `EbmSpec` inherits `loss_treatment` and `fit_ebm` ignores it (`ebm.py:209`), the same silent class. Does this slice fix the EBM arm too? | **(a), ruled:** yes — one call (Task 3), one red (R4, Task 1), and an auditor adds the EBM limb to FD-1723 before it is minted. | The ruling: *"fix EBM here (ebm.py:209 ignores loss_treatment, the same FR-127 class); an auditor adds the EBM limb to FD 8027 before mint."* | scope | no — ruled; FD-1723's EBM limb is an activation need | Ruled 2026-10-14 by the maintainer (by delegation), entry 2026-10-14 11:52:51 BST |
 | DP-B1 | Which frame does the fit-time check read? FR-100 says *"the Dataset Version"*; the fit receives the training partition. | **(a), ruled:** the training rows actually fitted, after FR-111's weight-0 exclusion. | A coefficient is estimated from the rows fitted, so a band empty in those rows is the *"coefficient estimated from no data"* that `check_banding`'s docstring names (`bandings.py:536-538`). The FR-100 clarification clause records the reading (Task 5). | design | no — ruled | Ruled 2026-10-14 by the maintainer (by delegation), entry 2026-10-14 11:52:51 BST |
 | DP-B2 | Where does a thin-band **warning** land? `check_banding` returns it, and no fit result has a field for it. | **(a), ruled, as corrected:** a typed field on the three fit results, `banding_warnings: tuple[BandingWarning, ...] = ()`, empty when none. `BandingWarning` is a `model-schema` type with the banding ref (`ArtifactRef`, `banding:{slug}@{version}`), `band_label` and `band_index`, `measure` (the enum `BandingMeasure`: `exposure` or `claim_count`), and `observed` and `minimum` typed as the measure requires (`DecimalStr` for exposure, `int` for a claim count, never a float). `check_banding` returns the same type. Persisted with the model, published in the regenerated contract, and reaching the frontend's generated types (Task 6). This plan first wrote `tuple[str, ...]`; the 12:05:33 entry corrects that reading. | The ruling: FR-100's *"warns (default)"* is the default behaviour, so deferring the warning would leave it unbuilt; *"Through model-schema, with the contract regenerated; the API ACK checks the shape."* The correction: *"'A typed field' means a model-schema type a reviewer or UI can act on, not free text."* | design | no — ruled | Ruled 2026-10-14 by the maintainer (by delegation), entry 2026-10-14 11:52:51 BST; corrected by the entry 2026-10-14 12:05:33 BST, which corrects 11:52:51's DP-B2 as this plan had read it |
 | DP-B3 | Which columns does the thin check read? `one_way` reads an absent column as 0 (`data/profile.py:372-377`). | **(a), ruled:** `check_banding`'s defaults, `exposure_years` and `claim_count`, which the `BandingProposal` also uses (`modelling.py:599-600`); a non-zero floor whose column is absent from the rows is refused by name, never read as 0. | The floor and the stats that set it read the same columns, and the refusal closes the absent-column trap. | design | no — ruled | Ruled 2026-10-14 by the maintainer (by delegation), entry 2026-10-14 11:52:51 BST |
@@ -611,11 +611,11 @@ lead writes any dated line on SL-1543 at dispatch.
 
 ## Hand-off (not this plan's writes)
 
-- **The lead:** mint FD 8027, with its EBM limb, before this delta; GO the executor; relay
+- **The lead:** mint FD-1723, with its EBM limb, before this delta; GO the executor; relay
   Task 0 Step 3's probe result, and any STOP, to the maintainer (DP-G1); run the API ACK on
   `banding_warnings`' shape (DP-B2).
-- **An auditor (DP-L2 (a), ruled):** add the EBM limb (`ebm.py:209`) to FD 8027 before the mint.
-- **FR-110 (FD 8027, MEDIUM):** a separate WK-1178 delta, with the NB θ decision point and Task 0's
+- **An auditor (DP-L2 (a), ruled):** add the EBM limb (`ebm.py:209`) to FD-1723 before the mint.
+- **FR-110 (FD-1723, MEDIUM):** a separate WK-1178 delta, with the NB θ decision point and Task 0's
   `power(k)` check in the pinned glum, per the 11:28:56 entry.
 - **DP-B2 (a)'s follow-on:** a WK-675 frontend row that shows the warnings on the model page. It
   gets its id when it is cut.
@@ -629,7 +629,7 @@ lead writes any dated line on SL-1543 at dispatch.
 - **The 11:52:51 rulings at every site** (amended 2026-10-14, after the entry was logged):
   - DP-L1 (a), the module `loss_treatment.py`: Tasks 2 and 3, Acceptance 8, the write set;
   - DP-L2 (a), the EBM arm in scope: Goal, Evidence, R4 in Task 1, Task 3, Acceptance 7, the
-    write set, the Tasks row, the hand-off (an auditor adds FD 8027's EBM limb before the mint),
+    write set, the Tasks row, the hand-off (an auditor adds FD-1723's EBM limb before the mint),
     and the SL-8031 row's activation needs;
   - DP-B1 (a), the rows fitted after the weight-0 exclusion: Goal, Global Constraints, Tasks 5
     and 7, guard G-W, Acceptance 12;
@@ -696,7 +696,7 @@ lead writes any dated line on SL-1543 at dispatch.
   plan was first written; the entries of 11:31:17, 11:34:03 and 11:34:58 do not rule on this
   subject. For this amendment it was read through the entry "2026-10-14 12:00:14 BST"; of the
   entries after 11:41:12, only "2026-10-14 11:52:51 BST" item (2) rules on this plan, and
-  "2026-10-14 11:57:51 BST" item 2 places FD 8027's file in the D17 batch. For the DP-B2
+  "2026-10-14 11:57:51 BST" item 2 places FD-1723's file in the D17 batch. For the DP-B2
   correction it was read through the entry "2026-10-14 12:05:33 BST" (its last entry when read);
   of the entries after 12:00:14, only 12:05:33's PL 8030 bullet rules on this plan. `gh pr list`
   was not run (no GitHub posts by brief). Task 0 Step 4 re-reads at dispatch.

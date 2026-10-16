@@ -2,7 +2,7 @@
 id: PL-8044
 family: plan
 kind: map
-title: WK-1178 — the failed-authentication audit (FD 8036) — the refusal's audit row survives the 401, the workspace-less failures counted, and slice SL-8045 — Work-plan delta
+title: WK-1178 — the failed-authentication audit (FD-1727) — the refusal's audit row survives the 401, the workspace-less failures counted, and slice SL-8045 — Work-plan delta
 status: draft                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-14
 owner: planner
@@ -12,7 +12,7 @@ work: WK-1178
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [SL-8045]                # FD 8036 is a working id, cited in the body until minted
+relates: [SL-8045, FD-1727]
 ---
 
 # PL-8044 — WK-1178: the failed-authentication audit (Work-plan delta)
@@ -301,7 +301,7 @@ a metric; `docs/specs/07-platform.md` and `docs/specs/06-governance.md` with any
 (different rows; a re-merge, not a conflict, unless a row is shared).
 
 **Out of scope:** FR-392's "session anomalies" and the key creation, rotation and revocation
-audits (not named by FD 8036); `_select_workspace`'s `403` (authorisation, not authentication);
+audits (not named by FD-1727); `_select_workspace`'s `403` (authorisation, not authentication);
 the alert rule on the new counter (FR-443's observability Work).
 
 ## Acceptance Standard
@@ -337,7 +337,7 @@ the alert rule on the new counter (FR-443's observability Work).
 - **No open option remains.** The DP table carries the ruled option only; "Under DP-3 (B)", "for
   the recommended rulings", "PROPOSED" and every reference to a decision-maker `RL-` are gone. The
   rejected options stand at `dc1c9bc6`.
-- **Activation.** Need 1 reads "DPs ruled — MET, 12:18:57"; FD 8036's minting, the census and the
+- **Activation.** Need 1 reads "DPs ruled — MET, 12:18:57"; FD-1727's minting, the census and the
   lead's GO remain open. `SL-8045`'s row in `docs/roadmap.md` says the same.
 - **Literals.** The `file:line` locators are those read at `a3fc2e8d` (*Premises*);
   `service.py:116-118` (the ruling's locator for the bearer log) was re-read at `a3fc2e8d` for this
@@ -352,7 +352,7 @@ the alert rule on the new counter (FR-443's observability Work).
 
 1. **DPs ruled — MET, 12:18:57**: DP-1 to DP-4 and R9, the maintainer's (by delegation) entry
    "2026-10-14 12:18:57 BST" item (1) in `to-lead.md`, quoted under *Authority*.
-2. **FD 8036 minted** (D17), so the `LG-` can name what the merge discharges.
+2. **FD-1727 minted** (D17), so the `LG-` can name what the merge discharges.
 3. **The shared-path census** above, against whatever is open at GO.
 4. **This delta set `active`** in the slice's activation commit, and the lead's GO. Merged before
    the 4 Nov code freeze (fixed in P2, 11:08:32 item 2).
