@@ -36,6 +36,7 @@ from app.db.models import (
 from app.db.session import Database
 from model_schema import GlmSpec, ModelStatus, OffsetSpec, new_uuid7
 from model_schema.modelling import Factor, FactorType
+from model_schema.rating import ImportPreview, RateTableVersion
 
 
 @pytest.fixture
@@ -1025,6 +1026,46 @@ def test_import_previews_a_modified_export(
     assert verdict["content_sha256"] == hashlib.sha256(modified).hexdigest()
     assert verdict["round_trip"] == "passed"
     assert verdict["applied_to"] == f"rate_table:{slug}@1"
+
+
+@pytest.mark.req("FR-451")
+def test_import_publishes_a_typed_200_and_a_typed_201(api_client: TestClient) -> None:
+    operation = api_client.app.openapi()["paths"][
+        "/api/v1/rate-tables/{slug}@{version}/import"
+    ]["post"]
+    preview = operation["responses"]["200"]["content"]["application/json"]["schema"]
+    assert preview["$ref"].endswith("/ImportPreview")
+    created = operation["responses"]["201"]["content"]["application/json"]["schema"]
+    assert created["$ref"].endswith("/RateTableVersion")
+
+
+@pytest.mark.req("FR-235")
+def test_import_responses_round_trip_through_the_published_models(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """A guard: the 200 and the 201 are exactly what the published models describe."""
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+    exported = api_client.get(f"/api/v1/rate-tables/{slug}@1/export/csv", headers=actuary)
+    assert exported.status_code == 200, exported.text
+    modified = exported.content.replace(b"21-24,1.41", b"21-24,1.4500")
+    files = {"file": ("import.csv", modified, "text/csv")}
+
+    previewed = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/import", files=files, headers=actuary
+    )
+    assert previewed.status_code == 200, previewed.text
+    body = previewed.json()
+    assert ImportPreview.model_validate(body).model_dump(mode="json") == body
+
+    confirmed = api_client.post(
+        f"/api/v1/rate-tables/{slug}@1/import",
+        files=files,
+        data={"confirm": "true"},
+        headers=actuary,
+    )
+    assert confirmed.status_code == 201, confirmed.text
+    created = confirmed.json()
+    assert RateTableVersion.model_validate(created).model_dump(mode="json") == created
 
 
 @pytest.mark.req("FR-235")
