@@ -54,6 +54,10 @@ Scratch script, not committed; `compile_bundle` + `load_bundle` over `test_ratin
 - **(ii) The JDM table node reads both.** Evaluating the bundle returned `pinned_factor 1.3` and `origin_factor 1.1` for `channel=direct`.
 - **(iii) The engine's decimal division.** The unguarded expression `100000 * pinned_factor / origin_factor` is refused by compile: `EXPRESSION_UNGUARDED_DIVISION ... (FR-274)`. The guarded form `origin_factor != 0 ? 100000 * pinned_factor / origin_factor : 0` compiles, and the engine returned `__exact__office_premium_minor = '118181.81818181818181818181818'` (and the float twin `118181.81818181818`). Python `Decimal(100000)*Decimal("1.3")/Decimal("1.1")` is `118181.8181818181818181818182` (28 significant digits); both round half-even to 118182, and they differ only at the 1e-23 place, so a golden test compares after the single rounding, not the raw string. Three evaluations were identical (replay-identical True). A non-terminating ratio (1.3/1.1) therefore replays exactly; neither probe fails, so B2 is not required by Task 0 (RL-1538 item 3 STOP not triggered), subject to the end-to-end run in Task 3/4.
 
+## Build log
+
+- **2026-10-16 09:37 BST — the 11:29:53 guard written** (`PL-1705` "The guard test", Acceptance 16): `test_guard_dp_a4_3_severity_is_uncapped_until_the_fr_127_glm_fix_merges` in `backend/tests/test_demo_peril_structure.py`, on the maintainer's (by delegation) entry "2026-10-14 11:29:53 BST" in `to-lead.md`. It asserts the persisted severity model's `GlmSpec.loss_treatment.kind == "none"` and every AD structure peril's `large_loss.kind == LargeLossKind.NONE`. It reads `fit_severity_glm` and `create_ad_peril_structure`, which do not yet exist on this branch, so it is red by absence (as R2) until Tasks 1 and 2 land, then green. It changes only together with the FR-127 GLM fix's merge, cited here. Not yet run (SL-1455 latency window).
+
 ## PRs
 
 - Not yet opened; the lead's merge-turn mint resolves the working id.

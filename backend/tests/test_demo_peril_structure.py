@@ -47,6 +47,7 @@ from model_schema import (
     GlmSpec,
     JobKind,
     JobStatus,
+    LargeLossKind,
     ModelStatus,
     PerilStructureStatus,
     Principal,
@@ -373,3 +374,42 @@ async def test_the_ad_peril_structure_is_approved_through_the_workflow(
     approver_ids = {a.id for a in world.approvers}
     assert {d.approver_id for d in decisions} <= approver_ids
     assert world.actuary.id not in {d.approver_id for d in decisions}
+
+
+@pytest.mark.req("FR-127")
+async def test_guard_dp_a4_3_severity_is_uncapped_until_the_fr_127_glm_fix_merges(
+    database: Database, blob_store: BlobStore, workspace_id: UUID, grant: Any
+) -> None:
+    """THE 11:29:53 GUARD (the maintainer's (by delegation) "2026-10-14 11:29:53 BST" entry in
+    `to-lead.md`; PL-1705 "The guard test"). DP-A4-3 is ruled (x): large loss UNCAPPED, carried
+    by the structure's `large_loss`, never by the severity GlmSpec's `loss_treatment`. The
+    FR-127 GLM fix is off the G2 path only while that holds.
+
+    A tripwire, not a red: it fails the day a capped choice slips in. It changes ONLY together
+    with the FR-127 fix's merge, cited in the LG for SL-1543 (LG 9879 while unminted).
+    """
+    world = await _structure_world(database, blob_store, workspace_id, grant)
+    structure_id = await demo_model.create_ad_peril_structure(
+        database, blob_store, workspace_id, world.actuary, world.approvers,
+        world.frequency_id, world.severity_id, tolerance=Decimal("0.9"),
+    )
+    async with database.session() as session:
+        severity_row = (
+            await session.execute(select(ModelRow).where(ModelRow.id == world.severity_id))
+        ).scalar_one()
+    async with database.unit_of_work() as session:
+        structure = await perils_service.load_structure(
+            session, workspace_id=workspace_id, structure_id=structure_id
+        )
+
+    why = (
+        "DP-A4-3 is ruled (x), large loss UNCAPPED (the maintainer's (by delegation) "
+        "'2026-10-14 11:29:53 BST' entry). A capped choice means the FR-127 GLM fix JOINS the "
+        "G2 path and merges BEFORE SL-1543: STOP, restate the G2 ETA, and change this test "
+        "only with that merge, cited in the LG."
+    )
+    severity_spec = GlmSpec.model_validate(severity_row.spec)
+    assert severity_spec.loss_treatment.kind == "none", f"severity GlmSpec capped. {why}"
+    assert [p.large_loss.kind for p in structure.perils] == [LargeLossKind.NONE], (
+        f"AD structure large_loss is not the uncapped treatment. {why}"
+    )
