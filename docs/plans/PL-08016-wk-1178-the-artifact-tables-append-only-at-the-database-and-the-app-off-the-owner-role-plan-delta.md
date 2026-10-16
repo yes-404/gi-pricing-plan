@@ -379,6 +379,13 @@ allowed.
 5. `updated_at`: free. DELETE / TRUNCATE: refused."*
 The 13:21:41 state rule of the previous commit (`2162b197`) is replaced by what follows, and its
 refusal of `validated → validating` is gone.
+**Item 2's count is corrected**, the maintainer (by delegation), `to-lead.md` "2026-10-16 09:40:20 BST
+— Q1 RULED (P2, PL 8016): 11 + 1 is right, BY DERIVATION, not by count", which *"corrects the
+"(the 12 stand)" clause of my 2026-10-14 13:27:39 entry"*: *"The test enumerates every (from, to)
+pair of the status enum and asserts: refused iff (from, to) is not in VALID_DATASET_TRANSITIONS
+(parametrised from the table itself, not a hand list)"*, and *"The archived-terminal UPDATE case
+stays its own red."* Wherever this plan cites the 13:27:39 entry's item 2, it cites that entry with it.
+*(Amended 2026-10-16, pre-merge, on the 09:40:20 entry, Q1.)*
 
 **The 11 columns updated in place, with their write sites** (census, `rv-writes.md` lines
 109-117, re-read at `a3fc2e8d`): `tables` (`data/ingestion.py:213`, `:462` `correct_schema`;
@@ -451,9 +458,10 @@ plus `dataset_versions_no_truncate`:
 2. **Identity, in every state** (item 1): `to_jsonb(NEW)` minus the 11 and `data_frozen_at`
    must equal the same for `OLD` (DP-9's form; `id`, `workspace_id`, `dataset_id`, `version`,
    `kind`, `source_id`, `slug`, and any column added later).
-3. **`status`** (item 2): `(OLD.status, NEW.status)` must be a pair of
+3. **`status`** (item 2, as corrected by "2026-10-16 09:40:20 BST" Q1): `(OLD.status, NEW.status)` must be a pair of
    `VALID_DATASET_TRANSITIONS`, or unchanged; `archived` has no `UPDATE` at all. The table, in
-   the guard as a `VALUES` list:
+   the guard as a `VALUES` list (`VALID_DATASET_TRANSITIONS`, `packages/model-schema/src/model_schema/datasets.py:86-96`
+   at `origin/main` `0877e6e7`, transcribed; the pin test below holds it to the source):
 
    | From (`OLD.status`) | Allowed `NEW.status` |
    |---|---|
@@ -464,7 +472,9 @@ plus `dataset_versions_no_truncate`:
    | `archived` | none, terminal |
 
    A pin test asserts the guard's set equals `VALID_DATASET_TRANSITIONS` exactly, with no
-   exception.
+   exception. The illegal-transition reds below are generated from the same import, never
+   from this table or a hand list (09:40:20 Q1). *(Amended 2026-10-16, pre-merge, on the
+   09:40:20 entry, Q1.)*
 4. **The data** (item 1): once `OLD.data_frozen_at IS NOT NULL`, every change to `tables`,
    `source_fingerprint`, `totals`, `derived_from`, `library_versions` and `ingestion_run_id` is
    refused, in every state, `draft` included. The ruling names the `tables`, schema
@@ -486,11 +496,19 @@ plus `dataset_versions_no_truncate`:
 
 **The reds**, owner connection, each in a transaction that rolls back, red on the base (the
 write succeeds), one case each:
-- **The illegal transitions** (item 2): the 12 of `2162b197` less `validated → validating`,
-  which item 2 makes legal, so 11: `draft → validated`, `draft → failed`; `validating →
-  archived`; `failed → validated`, `failed → draft`; `validated → draft`, `validated → failed`;
-  `archived → draft`, `archived → validating`, `archived → validated`, `archived → failed`.
-  Plus `archived` terminal: any `UPDATE` of an archived row, `updated_at` alone included.
+- **The illegal transitions** (item 2, as corrected by "2026-10-16 09:40:20 BST" Q1), **by
+  derivation, not by count**: one test, parametrised from `VALID_DATASET_TRANSITIONS` itself
+  (imported from `model_schema.datasets`, not a hand list), enumerates every `(from, to)` pair
+  of `DatasetStatus` with `from ≠ to` and asserts the `UPDATE` of `status` is refused iff the
+  pair is not in `VALID_DATASET_TRANSITIONS`, and succeeds iff it is. **Every pair not in
+  `VALID_DATASET_TRANSITIONS` is refused (11 at main `0877e6e7`)**: 5 statuses give 20 pairs
+  with `from ≠ to`, of which the table allows 9, counted from
+  `git show 0877e6e7:packages/model-schema/src/model_schema/datasets.py | sed -n '86,96p'`.
+  `from = to` is excluded because rule 3 allows an unchanged status; for `archived` it is the
+  case below. Each case's id names the pair.
+- **`archived` terminal**, its own red: any `UPDATE` of an archived row, `updated_at` alone
+  included. *(Amended 2026-10-16, pre-merge, on the 09:40:20 entry, Q1: the hand list of 11,
+  "the 12 of `2162b197` less `validated → validating`", is replaced by the derivation.)*
 - **The FR-53 data red** (item 1, the ruling's own): a version moved `draft → validating →
   draft` refuses an `UPDATE` of `tables`. The same case for each of the other five data columns.
 - **Frozen in every later state:** an `UPDATE` of `tables` on a `validating`, a `validated` and
@@ -700,8 +718,9 @@ for the bootstrap call) are in S-b's write set (plan review R11; 13:21:41 P2 (2)
   - the row-guarded `TRUNCATE` test: each of the six fails `DID NOT RAISE`, or, where an
     existing referencing table's `TRUNCATE` trigger already refuses, the case prints that
     message, and the executor records it as such (plan review R2);
-  - the `dataset_versions` reds of *DP-21's guard*: the 11 illegal transitions and the
-    archived case, the FR-53 data red and its five siblings, the later-state `tables` cases, the
+  - the `dataset_versions` reds of *DP-21's guard*: every pair not in
+    `VALID_DATASET_TRANSITIONS` (11 at main `0877e6e7`, derived from the table; 09:40:20 Q1) and
+    the archived case, the FR-53 data red and its five siblings, the later-state `tables` cases, the
     report-id and profile cases, identity, `DELETE` and `TRUNCATE`, each `DID NOT RAISE`; the
     allowed cases pass (DP-21b as refined, 13:27:39);
   - the grants-derived test (`:396-446`) fails at its guard `:439`, with the eleven only on
@@ -1447,7 +1466,10 @@ Each item can be checked by a fresh reviewer at the slice PR's merge tree, with 
    prints nothing (the set is declared, not written and not grant-derived). Every mapped
    table's declared class and `guards` equal the *Table classification*'s row (plan review R3),
    checked by reading `models.py` against it, `dataset_versions` `guarded` (DP-21). The guard's transition set equals
-   `VALID_DATASET_TRANSITIONS` exactly (the pin test, green; 13:27:39 item 2). Step 6.2's gate
+   `VALID_DATASET_TRANSITIONS` exactly (the pin test, green; 13:27:39 item 2, as corrected by
+   "2026-10-16 09:40:20 BST" Q1), and every pair not in `VALID_DATASET_TRANSITIONS` is refused
+   (11 at main `0877e6e7`), by the test parametrised from the table, each case green by node id;
+   the archived-terminal red is green as its own case. Step 6.2's gate
    shows no refusal but a re-profiling path (13:27:39 item 4), each in the `LG-` with its node id
    and the lead's disposition; the back-filled `data_frozen_at` count is in the `LG-`.
 3. `git grep -nE "UPDATE factors|factors SET|update\(RateTableVersionRow|version_row\.cells =" -- backend`
