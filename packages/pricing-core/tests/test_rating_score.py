@@ -483,8 +483,11 @@ async def test_a_purpose_needing_a_sub_graph_is_refused_when_none_is_mounted(pur
     stranded list-mate, and a guard proven on one limb alone is half-proven."""
     compiled = await _compiled()
     ctx = _ctx(purpose=purpose)
-    with pytest.raises(ValueError, match="INPUT_CONTRACT_VIOLATION"):
+    with pytest.raises(ValueError, match="INPUT_CONTRACT_VIOLATION") as refused:
         await score_one(compiled, ctx)
+    # The real check (RL-1344 section 3): no mount for the purpose is inlined in the bundle.
+    assert "interim" not in str(refused.value)
+    assert "no mount" in str(refused.value)
 
 
 async def _compiled_with_bogus_sub_graph() -> CompiledBundle:
@@ -499,24 +502,18 @@ async def _compiled_with_bogus_sub_graph() -> CompiledBundle:
     return dataclasses.replace(compiled, algorithm=algorithm)
 
 
-@pytest.mark.req("FR-218")
-@pytest.mark.parametrize("purpose", ["mid_term_adjustment", "cancellation"])
-async def test_a_bogus_sub_graph_ref_does_not_satisfy_the_purpose_guard(purpose: str) -> None:
-    """A non-empty `sub_graphs` is a declared reference, not a mounted sub-graph (the finding
-    "CR-838 marks FR-217 delivered, but its pin and bundle-time inlining are not built").
-    With `sub_graph:does-not-exist@1` named, these purposes were priced as new business
-    (1507); they are refused whatever `sub_graphs` holds, until FR-217's inlining exists."""
-    compiled = await _compiled_with_bogus_sub_graph()
-    with pytest.raises(ValueError, match="INPUT_CONTRACT_VIOLATION") as refused:
-        await score_one(compiled, _ctx(purpose=purpose))
-    assert "interim" in str(refused.value)
+# The bogus-reference test (a `sub_graphs` entry naming a sub-graph that does not exist) is
+# deleted: a mount whose sub-graph is not pinned is now refused at compile with
+# `RATING_VERSION_UNPINNED` (Slice 2's G1), so no bundle carries one. It is covered by
+# `test_rating_compile_bundle.py`'s `test_g1_a_mount_whose_version_is_not_pinned_is_refused_with_
+# no_steps` and `test_g1_a_mount_pinned_at_another_version_is_refused`.
 
 
 @pytest.mark.req("FR-218")
 @pytest.mark.parametrize("purpose", ["new_business", "renewal", "what_if"])
 async def test_the_other_purposes_are_unaffected_on_the_same_algorithm(purpose: str) -> None:
-    """Positive control for the test above: the same bogus-ref algorithm still quotes the
-    purposes that need no mounted sub-graph."""
+    """Positive control for the real check: the same bogus-ref algorithm still quotes the
+    purposes that need no purpose mount."""
     compiled = await _compiled_with_bogus_sub_graph()
     result = await score_one(compiled, _ctx(purpose=purpose))
     assert result.outcome == "quoted"
@@ -524,7 +521,7 @@ async def test_the_other_purposes_are_unaffected_on_the_same_algorithm(purpose: 
 
 @pytest.mark.req("FR-218")
 async def test_new_business_is_not_refused_by_the_purpose_guard() -> None:
-    """Positive control: the guard fires on the two gated purposes only."""
+    """Positive control: the real check fires on the two gated purposes only."""
     compiled = await _compiled()
     result = await score_one(compiled, _ctx(purpose="new_business"))
     assert result.outcome == "quoted"
@@ -537,7 +534,7 @@ async def test_the_purpose_guard_would_be_caught_if_removed(
     """A check that has never been seen to fail has not been tested (`CLAUDE.md` §13)."""
     import pricing_core.rating.score as score_module
 
-    monkeypatch.setattr(score_module, "_check_purpose_mount", lambda algorithm, ctx: None)
+    monkeypatch.setattr(score_module, "_check_purpose_mount", lambda bundle, ctx: None)
     compiled = await _compiled()
     result = await score_one(compiled, _ctx(purpose="mid_term_adjustment"))
     assert result.outcome == "quoted", "the patched guard should have let this price silently"
@@ -1013,8 +1010,8 @@ async def test_the_trace_shows_each_inlined_step_attributed_to_its_mount_point()
 
 
 # ---------------------------------------------------------------------------
-# Task 8 (PL 9610): `RL-1242`'s interim refusal stays, and its consequence is pinned so that
-# WK-1250 Slice 3 changes it on purpose (`RL-1344` §4).
+# Task 8 (PL 9610): pinned so that WK-1250 Slice 3 changes it on purpose (`RL-1344` §4); Slice 3
+# (PL-1629 acceptance 8) re-points the first to the real check.
 # ---------------------------------------------------------------------------
 
 
@@ -1023,11 +1020,13 @@ async def test_the_trace_shows_each_inlined_step_attributed_to_its_mount_point()
 async def test_a_version_that_mounts_a_sub_graph_still_refuses_mta_and_cancellation(
     purpose: str,
 ) -> None:
-    """No `purposes` selector exists yet, so a mount does not satisfy the purpose guard."""
+    """The mount has no `purposes`, so under RL-1628 DP-S3-2 (a) it yields no purpose graph: an
+    unconditional mount is not this purpose's, and the real check refuses the quote."""
     compiled = await _compiled_with_a_mounted_sub_graph()
     with pytest.raises(ValueError, match="INPUT_CONTRACT_VIOLATION") as refused:
         await score_one(compiled, _ctx(purpose=purpose, inputs={**_ctx().inputs, "ncd_years": 3}))
-    assert "interim" in str(refused.value)
+    assert "interim" not in str(refused.value)
+    assert "no mount" in str(refused.value)
 
 
 @pytest.mark.req("FR-218")
@@ -1036,7 +1035,8 @@ async def test_a_version_that_mounts_a_sub_graph_still_refuses_mta_and_cancellat
 async def test_an_unconditional_mount_prices_a_new_business_quote_with_the_fragment(
     purpose: str,
 ) -> None:
-    """The consequence PL 9610 states: with no selector, every mount is for every purpose, so a
+    """Kept as it was (PL-1629 acceptance 8; an absent selector keeps every mount's meaning, RL-1344
+    section 2.1): with no selector, every mount is for every purpose, so a
     `new_business` or `renewal` quote on a version that mounts a fragment is priced WITH it."""
     inputs = {**_ctx().inputs, "ncd_years": 3}
     ctx = _ctx(purpose=purpose, inputs=inputs)

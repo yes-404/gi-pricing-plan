@@ -898,7 +898,8 @@ class AlgorithmSubGraphChange(BaseModel):
     """One sub-graph mount that differs between two versions (FR-219; `RL-1309` DP-1 item 3).
 
     `before` / `after` are the mounted versions (`None` where the mount is absent on that side),
-    `ports_changed` says the port map differs, and `steps` is the inner step diff of the two
+    `ports_changed` says the port map differs, `purposes_changed` says the `purposes` selector
+    differs (`RL-1344` acceptance 5), and `steps` is the inner step diff of the two
     pinned fragments, present only when the caller supplied both and the version moved.
     """
 
@@ -908,6 +909,7 @@ class AlgorithmSubGraphChange(BaseModel):
     before: ArtifactRef | None = None
     after: ArtifactRef | None = None
     ports_changed: bool = False
+    purposes_changed: bool = False
     steps: AlgorithmDiff | None = None
 
 
@@ -1037,7 +1039,8 @@ def _diff_mounts(
         o, n = old_by_point.get(point), new_by_point.get(point)
         before, after = (o.ref if o else None), (n.ref if n else None)
         ports_changed = (o.inputs, o.outputs) != (n.inputs, n.outputs) if o and n else False
-        if before == after and not ports_changed:
+        purposes_changed = o.purposes != n.purposes if o and n else False
+        if before == after and not ports_changed and not purposes_changed:
             continue
         inner: AlgorithmDiff | None = None
         if before is not None and after is not None and before != after and fragments:
@@ -1061,6 +1064,7 @@ def _diff_mounts(
                 before=before,
                 after=after,
                 ports_changed=ports_changed,
+                purposes_changed=purposes_changed,
                 steps=inner,
             )
         )

@@ -252,7 +252,7 @@
       },
       "AlgorithmSubGraphChange": {
         "additionalProperties": false,
-        "description": "One sub-graph mount that differs between two versions (FR-219; `RL-1309` DP-1 item 3).\n\n`before` / `after` are the mounted versions (`None` where the mount is absent on that side),\n`ports_changed` says the port map differs, and `steps` is the inner step diff of the two\npinned fragments, present only when the caller supplied both and the version moved.",
+        "description": "One sub-graph mount that differs between two versions (FR-219; `RL-1309` DP-1 item 3).\n\n`before` / `after` are the mounted versions (`None` where the mount is absent on that side),\n`ports_changed` says the port map differs, `purposes_changed` says the `purposes` selector\ndiffers (`RL-1344` acceptance 5), and `steps` is the inner step diff of the two\npinned fragments, present only when the caller supplied both and the version moved.",
         "properties": {
           "after": {
             "anyOf": [
@@ -281,6 +281,11 @@
           "ports_changed": {
             "default": false,
             "title": "Ports Changed",
+            "type": "boolean"
+          },
+          "purposes_changed": {
+            "default": false,
+            "title": "Purposes Changed",
             "type": "boolean"
           },
           "steps": {

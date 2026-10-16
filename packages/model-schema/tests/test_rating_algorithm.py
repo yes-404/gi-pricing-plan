@@ -675,3 +675,17 @@ def test_a_mount_re_producing_a_name_the_parent_already_re_produces_is_a_cycle()
     assert any(isinstance(e, GraphCycleError) for e in _graph_errors(raised)), (
         raised.value.errors()
     )
+
+
+@pytest.mark.req("FR-218")
+@pytest.mark.req("FR-219")
+def test_a_change_to_a_mounts_purposes_alone_appears_in_the_diff_as_a_mount_change() -> None:
+    """RL-1344 acceptance 5, diff half: the selector is part of the algorithm."""
+    before = RatingAlgorithm.model_validate(_purpose_mounted(["cancellation"]))
+    after = RatingAlgorithm.model_validate(_purpose_mounted(["mid_term_adjustment"]))
+    changed = diff_algorithms(before, after)
+    mounts = changed.sub_graph_mounts
+    assert [(c.mount_point, c.purposes_changed, c.ports_changed) for c in mounts] == [
+        ("s_cancel", True, False)
+    ]
+    assert diff_algorithms(before, before).sub_graph_mounts == []
