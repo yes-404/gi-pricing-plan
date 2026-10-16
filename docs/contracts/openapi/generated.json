@@ -8049,6 +8049,24 @@
         "title": "Histogram",
         "type": "object"
       },
+      "ImportPreview": {
+        "additionalProperties": false,
+        "description": "The import preview (03 §5.2): the would-be version's diff plus the verdict.",
+        "properties": {
+          "created_by_import": {
+            "$ref": "#/components/schemas/ImportVerdict"
+          },
+          "diff": {
+            "$ref": "#/components/schemas/RateTableDiff"
+          }
+        },
+        "required": [
+          "diff",
+          "created_by_import"
+        ],
+        "title": "ImportPreview",
+        "type": "object"
+      },
       "ImportVerdict": {
         "additionalProperties": false,
         "description": "The source identity of a version created by import (03 §4.2, 03 §5.2).\n\n`round_trip` is the strict verdict: the file parsed back to exactly the cells it was\nexported from, so an import can never silently drop or re-type a cell. `applied_to`\nnames the addressed baseline version (the import endpoint addresses `{slug}@{version}`),\nso the seed-lineage inheritance check (03 §4.2) is expressible at save time and\nauditable after.",
@@ -32214,13 +32232,21 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Import Rate Table Api V1 Rate Tables  Slug   Version  Import Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ImportPreview"
                 }
               }
             },
             "description": "Successful Response"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateTableVersion"
+                }
+              }
+            },
+            "description": "Created"
           },
           "401": {
             "content": {
