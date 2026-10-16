@@ -183,6 +183,24 @@ Conformant by the lead's reading: columns in §4.5, model and migration agree; `
 - 2026-10-16: red-first commits `ca76bb4e`, `3a489dbf` (08:34Z, 08:36Z); spec `0d4ebd89`; activation `d48705ac`; implementation `0f80af62`; renames `bba89d66` (08:49Z).
 - 2026-10-16: the lead's pre-gate read 09:52:42 BST; this ledger and fixes A2, A6 added by the executor in one commit, writing only (no test run, the SL-1455 latency window being open).
 
+### DP-1722-WIRE: the route shapes move into model-schema (2026-10-16)
+
+- **Ruling A** (the maintainer (by delegation), `to-lead.md` "2026-10-16 10:16:17 BST — Maintainer: DP-1722-WIRE → (a), BOTH shapes of the route move into model-schema inside SL-1722"): both hand-written shapes move into `packages/model-schema` inside SL 1722; the new routes' shapes are model-schema from the start. Wire names stay byte-identical (`key`, `upload_id`, `urls`, `expires_in_s`; `media_type`, `parts` ge=1 le=10000; `frozen`, `extra=forbid`); the API's `key` is not renamed (it is the staging key; the column is `staging_key`). Proof demanded: `generate-contracts.py --check` rc 0, `pnpm generate:api` and type-check rc 0, and a grep showing no `class UploadUrl` left in `backend/src`.
+- **Ruling B** (the lead, `from-lead-2026-10-09.md` "2026-10-16 10:15:52 BST", endorsed by item 4 of ruling A): the `io_worker` fixture (`backend/tests/test_upload_to_ingest.py:63`, used only by the W2 test) changes its Redis-unreachable `pytest.skip` (was :71-74) to `pytest.fail` with the reason. Now at :74-76.
+- **Write-set widening** (ruling A item 1): `packages/model-schema` (new `uploads.py`, two exports in `__init__.py`), `docs/contracts` (regeneration OWED, not hand-edited), plus the registrations the generator's own guards force: `scripts/generate-contracts.py` `GENERATED_SHAPES` (two slugs), `backend/tests/test_contracts.py` `ONE_SIDED_SLUGS` (two first-written-form entries; the guard fails a generated-only slug that is undeclared), `scripts/audit-docs.py` `_CONTRACT_ARTIFACT_PATHS` (two generated schema paths).
+- **Moved classes** (old file:line, at this branch, which is `f1eb0d9b`; main had them at :58 and :65) to new file:line:
+  - `UploadUrlRequest`: `backend/src/app/api/blobs.py:69` to `packages/model-schema/src/model_schema/uploads.py:23`.
+  - `UploadUrlResponse`: `backend/src/app/api/blobs.py:76` to `packages/model-schema/src/model_schema/uploads.py:32`.
+  - The route imports both from `model_schema`; the now-unused `BaseModel` and `ConfigDict` imports in `blobs.py` are dropped.
+- **New wire shapes of the new routes:** none to add. `POST /blobs/uploads/{id}/complete` returns the existing `Job` (202), and the Blob Upload record is not on the wire. The one added field is `UploadUrlResponse.id` (SL 1722's own).
+- **Observed now (git only):** `git grep -n 'class UploadUrl' -- backend/src` prints nothing, rc 1.
+- **OWED after GATE END (SL-1455), none run in this window** (no pytest, uv, mypy, ruff, pnpm, generate-contracts, audit-docs):
+  1. `uv run python scripts/generate-contracts.py`, then `--check` rc 0; the `docs/contracts` diff quoted here, and it must show ONLY the move (`UploadUrlRequest`/`UploadUrlResponse` now also as `schemas/generated/upload-url-request.schema.json` and `upload-url-response.schema.json`, the OpenAPI components unchanged in shape), the one added field `id`, and the new route `POST /blobs/uploads/{upload_id}/complete` (and `blob.promote` in `job.schema.json`). Anything else in the diff is a defect to explain.
+  2. `pnpm --dir frontend generate:api` and `type-check`, rc 0 each.
+  3. `uv run ruff check .`, `uv run mypy`, `uv run lint-imports`.
+  4. `backend/tests/test_contracts.py` (the `ONE_SIDED_SLUGS` guard and the generated-versus-authored comparisons), `backend/tests/test_deployment_route_types.py`, `backend/tests/test_api_blob_uploads.py`; then the W2 `test_upload_to_ingest.py` once with Redis down (the fixture must FAIL with the reason, not skip: a broken-input proof of ruling B) and once up (PASSED).
+  5. Docs checks under the gate-2 flock: `audit-docs.py` (the `_CONTRACT_ARTIFACT_PATHS` entries need the regenerated files to exist), `doc-index.py --check`.
+
 ## PRs
 
 - (none opened yet; the lead opens it.)

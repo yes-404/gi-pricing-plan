@@ -23,7 +23,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request, Response, status
 from fastapi.responses import RedirectResponse
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import Field
 from sqlalchemy import select
 
 from app.api.authz import requires
@@ -40,7 +40,7 @@ from app.platform.blobs import (
     blob_readable_by,
     to_ref,
 )
-from model_schema import Job, JobKind, new_uuid7
+from model_schema import Job, JobKind, UploadUrlRequest, UploadUrlResponse, new_uuid7
 from model_schema import Permission as Perm
 
 __all__ = ["router"]
@@ -64,23 +64,6 @@ def _blob_store(request: Request) -> BlobStore:
 
 DatabaseDep = Annotated[Database, Depends(_database)]
 BlobStoreDep = Annotated[BlobStore, Depends(_blob_store)]
-
-
-class UploadUrlRequest(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    media_type: str
-    parts: Annotated[int, Field(ge=1, le=10_000)] = 1
-
-
-class UploadUrlResponse(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    id: UUID
-    key: str
-    upload_id: str | None
-    urls: list[str]
-    expires_in_s: int
 
 
 @router.post(

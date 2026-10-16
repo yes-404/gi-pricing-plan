@@ -71,7 +71,9 @@ def io_worker(request: pytest.FixtureRequest) -> Iterator[subprocess.Popen[bytes
         client = redis.Redis.from_url(settings.redis_url.get_secret_value())
         client.ping()
     except Exception as exc:
-        pytest.skip(f"Redis not reachable: {type(exc).__name__}")
+        # A fail, not a skip: a skipped worker test reads as a pass (the maintainer (by
+        # delegation) 09:53:28 BST; lead ruling 10:15:52 BST, endorsed at 10:16:17 BST).
+        pytest.fail(f"Redis not reachable, so the io worker cannot start: {type(exc).__name__}")
     client.delete("io")
     env = {
         **os.environ,

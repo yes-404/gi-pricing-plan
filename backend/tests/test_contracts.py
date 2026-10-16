@@ -92,6 +92,8 @@ ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     "approval-withdrawal": "first written form — 06 §5.1 (WK-674 Slice 2, PL-1392 Task 6, FR-357)",
     "approval-request": "generated wins — FD-1416 retired the hand-authored Phase 0 draft",
     "rating-version-create": "first written form — 03 §5.1 create row (RL-1428, FD-1421, FR-237)",
+    "upload-url-request": "first written form — 07 §5.1 (WK-1178 SL-1722, DP-1722-WIRE (a), FR-421)",
+    "upload-url-response": "first written form — 07 §5.1 (WK-1178 SL-1722, DP-1722-WIRE (a), FR-421)",
     "objective-usage": "first written form — FR-164 named the query",
     "oidc-auth-config": "first written form — FR-394 names the contents",
     "problem-detail": "first written form — the RFC 9457 problem shape",

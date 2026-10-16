@@ -396,6 +396,7 @@ from model_schema.transparency import (
     TransparencyKind,
     WorstRegion,
 )
+from model_schema.uploads import UploadUrlRequest, UploadUrlResponse
 from model_schema.validation import (
     ALL_LAYERS,
     BUILTIN_RULES,
@@ -769,6 +770,8 @@ __all__ = [
     "UncertaintyKind",
     "UniversalDiagnostics",
     "UnseenLevelBehaviour",
+    "UploadUrlRequest",
+    "UploadUrlResponse",
     "UpliftByFilterRequest",
     "UpliftTableRequest",
     "ValidationIssue",
