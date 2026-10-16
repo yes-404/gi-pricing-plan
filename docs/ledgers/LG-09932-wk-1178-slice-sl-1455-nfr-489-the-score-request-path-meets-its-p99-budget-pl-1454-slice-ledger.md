@@ -346,6 +346,61 @@ checks (cost file plus the two new tests) against the new tip, then the Task 4 s
   - **Write set, complete:** `api/score.py`, `api/deps.py`, `api/authz.py`, `auth/service.py`, `db/session.py`, `main.py`, `platform/rate_limit.py`, `scripts/bench-rating.py`, `backend/tests/test_score_request_cost.py`, `backend/tests/test_bench_rating_header.py`, `backend/tests/test_startup_gc_freeze.py`, `backend/tests/test_request_connections.py` (new), `backend/tests/conftest.py`, and this ledger.
 - **2026-10-16 09:3x BST — re-merge of `origin/main` before the ALONE re-gate (executor-1455).** `origin/main` `0877e6e7a756c4621890713a4d3b016e75e33654` merged into the branch (a merge, not a rebase) as COMMIT `49d7f086c9dbaf16a6149a7868d68ebc203909e0` (parents `34f08fdb900ba6d75764ba7fb65e7d5016af9c7d`, `0877e6e7`; tree `24b9a12437109a346f3e579da059072773c0eeb1`). Only `docs/INDEX.md` conflicted (taken from `origin/main`, regenerated with `scripts/doc-index.py`). The merge brings in `beee5ebe`, `d657736b` and `0877e6e7`, which the earlier base lacked. **Any earlier sha in this ledger that names the re-gate head or base (`34f08fdb` as head; `ba68a6da` or `372fa92e` as base) is superseded for the re-gate by this entry; the gate head is the head the lead's `EXPECT_HEAD` names, which is this merge plus the commit that adds this entry.** The ledger's Gate section names no head or base, so nothing in it is stale; the re-gate script is `~/gi-pricing-plan.local/scratch/sl1455-regate.sh`.
 
+### Re-gate 2026-10-16 (head 787cfeed)
+
+Recorded by executor-1455b on 2026-10-16, from the primary files under `~/gi-pricing-plan.local/scratch/sl1455-regate/` (below, `gate.log`, `pytest.log`, `audit_docs.log`, `demo.log`) and the channel `~/gi-pricing-plan.local/channel/`. The gate verdict applies to the code at `787cfeedcfad64364157f3bde476c674d287af67` (tree `2e5a8121bfa77353ac3260165cf19313fd390028`, branch `sl-1455-wk1178-nfr489-http`); the commit that adds this section is LG-only and is checked at the ACK as docs-only. Clock: BST = UTC+1.
+
+**(a) The gate.** ALONE gate: `gate.log` START `2026-10-16T08:58:37+00:00` (09:58:37 BST, load 1.83 2.42 2.59), END `2026-10-16T10:05:17+00:00` (11:05:17 BST, load 1.21 0.70 1.21); locks gate-1, gate-2 and small-test held. Preflight: head guard, branch and clean tree ok; `createdb` rc 0; `alembic upgrade` rc 0, 1 head; the four containers healthy; `pg_isready` rc 0.
+
+| Stage | rc |
+|---|---|
+| ruff | 0 |
+| mypy | 0 |
+| import_linter | 0 |
+| audit_docs | 1 (check 31 only, see (b)) |
+| req_coverage | 0 |
+| contracts | 0 |
+| pytest | 1 |
+| pnpm install --frozen-lockfile | 0 |
+| pnpm generate:api | 0 |
+| pnpm lint | 0 |
+| pnpm type-check | 0 |
+| pnpm test | 0 (`fe-test.log`: "Tests  730 passed (730)") |
+| pnpm build | 0 |
+| demo `--journey wf-699` | 124 |
+
+- pytest summary line, verbatim (`gate.log:23`; last line of `pytest.log`): `13 failed, 5858 passed, 6 skipped, 116 warnings in 2363.39s (0:39:23)`.
+- Frontend: 6 of 6 stages rc 0.
+- `gate.log`: "tree after gate: 0 changed path(s)" (the gate left the tree clean).
+- audit_docs rc 1: its `FAILED (2)` block (`audit_docs.log:882`) is exactly two lines, both check 31: "gap in the full allocation between 1730 and 9932" and "id 9932 is `created:` 2026-10-11, earlier than id 1730's 2026-10-14". The check 36 lines in the log are the standing disclosed legacy-form class, not in the `FAILED` block.
+- Demo rc 124 is the stop by design, not a failure: the script runs `timeout -s INT 1500 … scripts/demo.py --journey wf-699` (`sl1455-regate.sh:79`), so the INT after the journey ends the process with 124. `demo.log:708` "journey done in 80s"; `demo.log:716` "served page: http://localhost:5173/ answered 200"; then the clean stop sequence (`demo.log:732-748`, "stopped.").
+
+**(b) Classification of all 13 pytest failures: the check 31 cascade on LG 9932.** LG 9932 is a working id (minted in the slice PR), so main's allocation shows a gap 1730..9932 and 9932's `created:` precedes 1730's. Every failure is a test that runs the real-tree audit and asserts on its exit, and each captured audit output ends in the same two check 31 lines. `pytest.log` `FAILED` lines: 10221-10233.
+
+| # | Test | Evidence in `pytest.log` | On the script's list? |
+|---|---|---|---|
+| 1 | `test_audit_docs_finding_citations.py::test_a_finding_resolved_only_by_a_closure_record_is_not_flagged` | `FAILED (2)` :996 | yes |
+| 2 | `test_audit_docs_ids.py::test_the_real_tree_passes_all_ten_checks` | `FAILED (2)` :1894 | yes |
+| 3 | `test_audit_docs_ids.py::test_doc_id_check_exits_0_on_the_real_tree` | "doc-id.py check: [noncontiguous] docs/INDEX.md has a gap between 1730 and 9932", assert at :1562 | yes |
+| 4 | `test_audit_docs_process_core_digest.py::test_an_unrelated_file_edit_is_the_negative_control_and_stays_green` | `FAILED (2)` :2812 | yes |
+| 5 | `test_audit_docs_process_core_digest.py::test_the_committed_digest_currently_matches_the_committed_spec` | `FAILED (2)` :3710 | yes |
+| 6 | `test_audit_docs_w37_11_ceiling.py::test_audit_docs_end_to_end_exit_0_then_1_then_0_on_an_injected_residue` | `FAILED (2)` :4622 | yes |
+| 7 | `test_doc_index.py::test_an_index_skipping_a_reserved_block_breaks_contiguity` | "the live allocation is not contiguous: [(1730, 9932)]" (test body at :4630) | yes |
+| 8 | `test_register_lint.py::test_check_29_is_wired_into_the_docs_gate` | `FAILED (2)` :5554; `assert result.returncode == 0` at :4672 | NO |
+| 9 | `test_register_lint.py::test_check_29_note_carries_the_residue_line` | `FAILED (2)` :6454; assert at :5572 | NO |
+| 10 | `test_register_lint.py::test_phase1b_residue_count_matches_check_29s_own_count` | `FAILED (2)` :7359; assert at :6477 | NO |
+| 11 | `test_register_owed.py::test_check_29_wiring_is_undisturbed` | `FAILED (2)` :8258; assert at :7376 | NO |
+| 12 | `test_repository_invariants.py::test_money_discipline_is_enforced_by_the_docs_audit` | `FAILED (2)` :9166; assert at :8284 | NO |
+| 13 | `test_repository_invariants.py::test_journey_citations_are_audited_in_ci` | `FAILED (2)` :10087; "assert 1 == 0 … returncode=1" at :10091 | NO |
+
+- Each `FAILED (2)` block above is the same two check 31 lines as `audit_docs.log:882`; I counted 22 check 31 lines under the 11 `FAILED (2)` blocks in `pytest.log`. No other cause appears in any of the 13.
+- Re-verified by the executor (2026-10-16): rows 8 and 9 read in `pytest.log` — the test headers at :4661 and :5562, the `assert result.returncode == 0` lines at :4672 and :5572, and the `FAILED (2)` blocks at :5554 and :6454, which lie inside the respective test sections. The lead's relay (`from-lead-2026-10-09.md`, "## 2026-10-16 11:10:37 BST" item (1)) gave these as "4661+894" and "5562+893", i.e. one line off for the first; the lines above are the file's.
+- Classified: the check 31 cascade on LG 9932; no real red. The 7 pre-registered node ids are rows 1-7 (`sl1455-regate.sh:5-14`); rows 8-13 are the 6 the script did not list.
+
+**(c) The incomplete pre-registered list.** The maintainer's 11:09:05 entry, item (2) (`to-lead.md`, "## 2026-10-16 11:09:05 BST — Maintainer: SL-1455 gate END"): the 14 Oct review accepted a 7-item pre-registered list after SL-1695 had shown 13. The primary records of SL-1695's 13: `from-lead-2026-10-09.md` "## 2026-10-14 12:13:57 BST" (11 named: test_audit_docs_finding_citations x1, test_audit_docs_ids x2, process_core_digest x2, w37_11_ceiling x1, test_doc_index x1, test_register_lint x3, test_register_owed x1; the 135 tests then unrun), "## 2026-10-14 13:26:19 BST" ("the 135 unrun tests: 2 more F (test_repository_invariants.py::test_money_discipline_is_enforced_by_the_docs_audit, ::test_journey_citations_are_audited_in_ci)… TOTAL 13 F, all the unminted LG 9637 check-31 class"), and the re-gate "## 2026-10-14 14:59:47 BST" ("13 failed, 5812 passed, 6 skipped in 4128.41s"). The script's 7 (`sl1455-regate.sh:5-14`) omit exactly SL-1695's last six: register_lint x3, register_owed x1, repository_invariants x2. The list was a review miss in the grant, not a defect of the code: the 6 are the same names as SL-1695's accepted 13, and (b) shows each fails on check 31 and nothing else.
+
+**(d) NFR-489.** Not measured by this gate: `gate.log:37` "NFR-489 p99: not measured by this gate; any shared-VM p99 is DIAGNOSTIC, never a pass (Task 4's ALONE sweep owns it)". No bench script ran (`scripts/bench-rating.py` was not invoked) and `pytest.log` has no p50/p95/p99 output, so no readings exist from this run. NFR-489 stays unevidenced as to the p99 budget; the readings are owed (the Task 4 ALONE sweep, or the dedicated host), per the maintainer's ruling to come. The gate's verdict is on the code and tests, not on the latency.
+
 ## PRs
 
 (none yet; Task 0 is not a PR on its own — the slice's one PR carries this ledger at the slice's end.)
