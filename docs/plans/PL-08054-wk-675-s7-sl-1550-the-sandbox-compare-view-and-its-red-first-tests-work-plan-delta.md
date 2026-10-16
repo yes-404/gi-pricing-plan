@@ -12,7 +12,7 @@ work: WK-675
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [PL-1546, PL-1286, SL-1550, SL-1548, SL-1549, SL-1367, RL-1261, LG-1699, LG-1673]
+relates: [PL-1546, PL-1286, SL-1550, SL-1548, SL-1549, SL-1367, RL-1261, LG-1699, LG-1673, RL 8057]   # RL 8057 in working-id (space) form until the mint, which writes its minted id
 ---
 
 # PL-8054 — WK-675 Slice 7 (SL-1550): the sandbox compare view and its red-first tests (delta to PL-1546)
@@ -49,8 +49,11 @@ points" (both ruled, DP-1's premise corrected); Acceptance items 9 and 10; Globa
 Self-review. **`status:` stays `draft`**: both blocking rows have a resolver, but the maintainer's confirmation of RL 8057 in `to-lead.md`, "2026-10-16 09:49:25 BST — Maintainer: RL 8057 (PL 8054 DP-1 (a), DP-2 (a), SL-1550 lane C S7) CONFIRMED",
 condition (3), reads *"RL 8057 is minted in the next batch in id order, and PL 8054 activates
 only after it is on main."* Its conditions (1) and (2) are carried at T1, Acceptance 9, C1
-and B5, each citing 09:49:25. RL 8057 stays out of `relates:` until it is minted (check 32); the
-mint adds it.
+and B5, each citing 09:49:25. `relates:` names RL 8057 in working-id (space) form, which check
+32 does not resolve; the mint writes its minted id there and at T1. *(Amended 2026-10-16, before
+the mint, by the planner, on the lead's mint-time edit list (lead handover 2026-10-16 §7, "PL 8054
+relates+T1 id"): the sentence read "RL 8057 stays out of `relates:` until it is minted (check 32);
+the mint adds it.")*
 
 ## Why a delta, and not the slice's ledger
 
