@@ -15,7 +15,9 @@ relates: [WK-690]
 *(Filed under working id 8068 (written "FD 8068" in prose), supplied by the lead; a minter folds
 it into the docs batch. Authority: the maintainer's entry "2026-10-16 10:27:41 BST" in
 `channel/to-lead.md` (DP-1274-DIAG, ruled (a)) and the lead's decision point "2026-10-16 10:27:00
-BST" in `channel/from-lead-2026-10-09.md`. Reads were made at `origin/main`
+BST" in `channel/from-lead-2026-10-09.md`, as concurred by the maintainer's entry "2026-10-16
+10:33:35 BST" (the form is a named reason, surfaced and not dropped, on both omission-reason
+enums). Reads were made at `origin/main`
 `a2f77b2dcad5aaec41a5f10aa664383caf421e8b` and at `origin/sl-1274-wk690-s4-factor-expression`
 (head `afcd84fb`), on 2026-10-16 between 10:28 and 10:35 BST. Nothing here was run: every
 statement about behaviour is read from code, and the S4 red tests are the measurement owed.)*
@@ -41,7 +43,15 @@ Both outputs are numbers and neither refuses. That is a silently wrong transpare
 the maintainer ruled a mispricing-class defect that must not ship. The ruling (DP-1274-DIAG (a)):
 **S4 makes each diagnostic that reads `source_columns[0]` omit an `expression` Factor, surfaces the
 omission in the diagnostics output under a named reason code and never drops it silently, and
-carries a red-first test per diagnostic.** This finding is the other half of that ruling: the
+carries a red-first test per diagnostic.** The code S4 uses is
+**`EXPRESSION_FACTOR = "expression_factor"`**, declared on both
+`PermutationOmissionReason` (`packages/model-schema/src/model_schema/diagnostics.py:380`) and
+`PartialDependenceOmissionReason` (`:434`), read at `origin/sl-1274-wk690-s4-factor-expression`
+commit `86e42d79` (an ancestor of that branch's head `49cec47e` read on 2026-10-16 10:4x BST; both
+members carry the comment "Real support is owed (WK-690)" and "Added 2026-10-16, after which an
+older build cannot read the value"). The maintainer's 10:33:35 entry concurs with that form and
+orders the frontend to render `EXPRESSION_FACTOR` as readable text, with its own branch in any
+`switch` over the reasons. This finding is the other half of that ruling: the
 omission is a **gap in what the spec requires**, and the gap needs an owner and a remedy.
 
 ## Evidence
@@ -78,12 +88,39 @@ the two sites become reachable with an expression Factor.
 - This is **reasoned from the code and not measured**. No expression Factor can fit on `main`, and
   S4 has not run. The red-first tests the maintainer ordered are the measurement; this finding
   does not claim a number.
-- Other `source_columns[0]` reads in the tree (`git grep -n 'source_columns\[' <tree> -- packages/pricing-core/src backend/src`
-  on the S4 head) are `backend/src/app/platform/model_specs.py:86` (the complexity estimate),
-  `packages/pricing-core/src/pricing_core/modelling/factors.py:198,313,324`, and
-  `packages/pricing-core/src/pricing_core/rating/runtime.py:877` (only for a factor with exactly
-  one source column). They are **outside this finding** and **not examined**; the first and last
-  are named so that WK-690's later slices read them, not because they are shown wrong.
+- **Two further `source_columns` readers, added 2026-10-16 (BST) before merge on the lead's
+  brief, each read at `origin/main` `a2f77b2d` (`git show a2f77b2d:<path> | grep -n
+  'source_columns\[0\]'` prints `:86` and `:877` respectively):**
+  - `backend/src/app/platform/model_specs.py:86`, in `_estimated_parameters` (`:70-90`):
+    `source = factor.source_columns[0] if factor.source_columns else factor.slug`, then
+    `counts.get(source)` for the distinct count that sizes the parameter estimate. For an
+    `expression` Factor over several columns this counts the first operand's levels, not the
+    expression's. The docstring (`:78-82`) already calls the number "an **estimate**, and named one"
+    that errs conservatively for banding; for an expression Factor the error has **no known
+    direction** (the first operand may have more or fewer levels than the formula's result), so
+    "conservative" is not established. The estimate gates a refusal (`complexity_or_refuse`, `:92`).
+    **Reasoned from code, not run.**
+  - `packages/pricing-core/src/pricing_core/rating/runtime.py:877`: `columns = {f.slug:
+    f.source_columns[0] for f in factors if len(f.source_columns) == 1}`. A one-column expression
+    Factor is mapped to its raw column; `_GlmScorer.predict` (`:817-818`) then renames each
+    `feature_row` key through that map (`self.columns.get(k, k)`). Whether that is right depends on
+    whether a scoring caller supplies the factor's slug or the raw column for an expression
+    Factor, which this audit did **not** establish. The `len == 1` guard prevents the multi-column
+    first-column error and leaves the one-column case unexamined.
+  - **Proposed scope (the maintainer rules each):** `model_specs.py:86` **in** this finding's
+    scope as a third limb owned by WK-690: it is the same defect, the first source column read as
+    the factor, it is reachable the moment S4 lets an expression Factor resolve, and an
+    undercount can let a spec through a gate meant to refuse it; its remedy is the expression's
+    own level count (or an explicit "not estimable" that refuses nothing silently), and it needs
+    its own red test. `runtime.py:877` **out** of this finding, to be examined by the rating-path
+    owner: it sits on the scoring path, which the finding says nothing reads these diagnostics
+    from; it concerns a different artifact (the Rating Version's scorer, not the transparency
+    output) and different requirement text (FR-239's bundle semantics, not FR-174), and it is not
+    shown wrong, so it belongs in its own finding if the examination shows a defect.
+- Other `source_columns[` reads in the tree
+  (`packages/pricing-core/src/pricing_core/modelling/factors.py:190,303,314` at `a2f77b2d`) are
+  **outside this finding** and **not examined**; they are named so that WK-690's later slices read
+  them, not because they are shown wrong.
 
 ### 3. The requirement text, quoted with its locator (`docs/specs/02-modelling.md` at `a2f77b2d`)
 
@@ -169,8 +206,8 @@ applied through the operand columns **jointly**, the way FR-177 does it for a cr
 order for the shuffle; one real row of the held level for the sweep), so no unobserved operand
 combination is scored. Two points for the owner's slice to decide in the spec first (CLAUDE.md
 §0), not here: how a factor that shares an operand column with an expression Factor is reported
-(the FR-178 `operand_of_interaction` rule has no analogue yet), and the reason code that replaces
-S4's omission code once the omission is lifted (FR-177 kept `no_source_column` as a reserved,
+(the FR-178 `operand_of_interaction` rule has no analogue yet), and the reason that replaces
+S4's `EXPRESSION_FACTOR` once the omission is lifted (FR-177 kept `no_source_column` as a reserved,
 no-longer-emitted reason for artifacts already written; the same applies here).
 
 **Proof, on a deliberately broken input (CLAUDE.md §13):** a test **per diagnostic** on an
@@ -188,14 +225,15 @@ no-longer-emitted reason for artifacts already written; the same applies here).
 Each must be shown red against the S4 code and green against the fix.
 
 **The event that next discharges this finding:** the merge of the WK-690 slice that lifts the
-omission, with the four tests recorded in its ledger. Until then S4's omission and its reason
-code are the interim, and the red-first tests S4 carries pin them so that a later change to the
+omission, with the four tests recorded in its ledger. Until then S4's omission and its `EXPRESSION_FACTOR` reason
+are the interim, and the red-first tests S4 carries pin them so that a later change to the
 omission surfaces as a failing test.
 
 **Owed checks (not run: ALONE gate in force):** none of this finding's claims depend on a run.
 Two read-only checks are owed to whoever delivers the remedy: (a) whether `models/{id}/transparency`
 (FR-134 per-factor SHAP dependence) is correct for an expression Factor, not examined here;
-(b) the three other `source_columns[0]` sites in §2 above.
+(b) the `source_columns` sites in §2 above: `model_specs.py:86` (proposed in scope) and
+`runtime.py:877` (proposed out of scope) are stated there, and the `factors.py` sites are not examined.
 
 **Not in this finding.** S4's omission itself (SL-1274, the lead's adoption of DP-1274-DIAG), the
 `is_certainly_numeric` question (DP-1274-NUMERIC), and the interaction-diagnostics work that FR-176
