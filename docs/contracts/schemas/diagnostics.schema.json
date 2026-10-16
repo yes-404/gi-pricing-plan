@@ -163,6 +163,10 @@
           "description": "Explicit; an unweighted metric on an exposure-weighted problem is labelled as such (FR-184)."
         },
         "rows": {"type": "integer", "minimum": 0},
+        "rows_excluded_zero_weight": {
+          "type": ["integer", "null"], "minimum": 0, "default": null,
+          "description": "Rows FR-111's weight-0 exclusion removed from this partition before any metric was computed (SL-1675, 2026-10-12). null = the artifact predates the rule; 0 = the rule ran and removed nothing. Optional: a stored Diagnostics written before this field must still validate."
+        },
         "ae_overall": {"type": "number", "minimum": 0},
         "ae_by_factor": {"type": "array", "items": {"$ref": "#/$defs/AeCell"}},
         "lift": {"type": "array", "items": {"$ref": "#/$defs/LiftBin"}},

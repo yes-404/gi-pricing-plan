@@ -28,12 +28,15 @@ def _request(**context: Any) -> dict[str, Any]:
     }
 
 
-def test_own_change_description_fixes_the_meaning_of_false() -> None:
-    """The deputy's F5 condition: `false` is never worded as "unchanged"."""
+def test_own_change_description_names_the_definition_rule_and_the_note_exclusion() -> None:
+    """RL-1261: `own_change` is read from step definitions, `note` excluded; `false` is never
+    worded as "the step was not edited" or as "no own change attributable from the traces"."""
     description = StepChange.model_fields["own_change"].description
     assert description is not None
-    assert "no own change attributable from the traces" in description
-    assert "unchanged" not in description.lower()
+    assert "definition" in description
+    assert "note" in description
+    assert "attributable from the traces" not in description
+    assert "consumed" in description
 
 
 def test_a_context_naming_its_own_version_is_refused() -> None:

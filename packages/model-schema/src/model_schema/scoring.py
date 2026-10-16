@@ -229,9 +229,9 @@ TraceStepField = Literal["type", "label", "consumed", "produced", "matched", "vi
 
 class StepChange(BaseModel):
     """One step that differs between two Traces (FR-262, `03` §4.10). `own_change` is true
-    when the step was added, removed, or changed while consuming identical inputs. False
-    means no own change attributable from the traces, which is not a claim that the step
-    was not edited."""
+    when the step was added or removed, or changed and its definition differs between the two
+    compiled algorithms (`RL-1261`; `note` does not count). False means the step's own
+    definition is the same on both sides and it differs only through what it consumed."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -240,10 +240,12 @@ class StepChange(BaseModel):
     changed_fields: list[TraceStepField] = Field(default_factory=list)
     own_change: bool = Field(
         description=(
-            "True for an added or removed step, and for a changed step whose consumed inputs "
-            "are identical on both sides. False means no own change attributable from the "
-            "traces; it is not a claim that the step was not edited (a downstream step can be "
-            "edited and also consume a moved value)."
+            "True for an added or removed step, and for a changed step whose definition differs "
+            "between the two compiled algorithms, as the structural diff reports it (a change "
+            "to the step's note alone does not count). False means the step's own definition "
+            "is the same on both sides and it differs in the traces only through what it "
+            "consumed; a definition that changed but whose trace is identical for this quote "
+            "is not listed at all."
         )
     )
     base: TraceStep | None = None
