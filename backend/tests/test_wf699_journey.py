@@ -17,6 +17,7 @@ the test names.
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 from typing import Any, Final
@@ -486,6 +487,34 @@ def test_wf699_journey_runs_end_to_end(api_client, database, blob_store, workspa
     assert result.bundle_hash.startswith("sha256:")
     assert result.prod_premium_minor > 0
     assert any("20,000-policy sample" in line for line in lines)
+
+    # PL-1694 Acceptance 18 (PL 8055 Task A): the split test's list IS this run's derived list.
+    # The world's random model family is the ONE token substituted, by its exact value from
+    # `record` (RL 8060; the maintainer's 2026-10-16 09:54:43 BST condition 2): no pattern.
+    run = result.d7_run
+    real = [
+        {key: str(change[key]) for key in ("id", "kind", "description")}
+        for change in run["derived_changes"]
+    ]
+    expected = [
+        {**row, "description": row["description"].replace("{gbm_family}", record["gbm_family"])}
+        for row in D7_DERIVED_CHANGES
+    ]
+    print(f"D7 gbm_family: {record['gbm_family']}")  # RL 8060 precision 2: the LG records it
+    assert real == expected, json.dumps(real, ensure_ascii=False, indent=1)
+    # The four checks of Acceptance 18, on the real run as stored.
+    effects = journey.split_effects(real)
+    assert effects is not None
+    assert {group["name"]: group["changes"] for group in run["change_groups"]} == effects
+    placed = [cid for ids in effects.values() for cid in ids]
+    assert sorted(placed) == sorted(row["id"] for row in real)
+    assert len(set(placed)) == len(placed)
+    summary = run["attribution_summary"]
+    total = int(summary["total_change_minor"])
+    assert summary["method"] == "shapley"
+    assert sum(int(item["shapley_minor"]) for item in run["attribution"]) == total
+    isolated = sum(int(item["isolated_minor"]) for item in run["attribution"])
+    assert isolated + int(summary["residual_minor"]) == total
 
 
 @pytest.mark.req("FR-221")
