@@ -25,7 +25,8 @@ from sqlalchemy import func, select
 
 from app.api.approvals import decide_and_carry
 from app.api.authz import requires
-from app.api.deps import Caller, job_identity, require_caller
+from app.api.authz import counted_caller
+from app.api.deps import Caller, job_identity
 from app.api.pagination import (
     COUNT_CAP,
     DEFAULT_LIMIT,
@@ -65,7 +66,7 @@ AcknowledgeWarnings = Annotated[
     Caller, Depends(requires(Perm.DATASET_ACKNOWLEDGE_WARNING))
 ]
 #: The one route whose permission is check-dependent; see `create_rule`.
-AuthenticatedCaller = Annotated[Caller, Depends(require_caller)]
+AuthenticatedCaller = Annotated[Caller, Depends(counted_caller)]
 DecideApprovals = Annotated[Caller, Depends(requires(Perm.APPROVAL_DECIDE))]
 
 

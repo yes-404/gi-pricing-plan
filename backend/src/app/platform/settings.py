@@ -241,6 +241,18 @@ REGISTRY: dict[str, SettingDefinition] = _define(
         scope=SettingScope.WORKSPACE_OR_ENVIRONMENT,
     ),
     SettingDefinition(
+        key="platform.default_management_rate_limit_rps",
+        type=SettingType.INT,
+        default=None,
+        description="`07` FR-452's management-API rate limit, in requests per second per "
+        "(Environment, Principal), counted across every authenticated `/api/v1` request "
+        "outside the `/score` family (`RL-1687`). Unset by default: with no limit the request "
+        "is admitted without a counter call. A Service Account's `rate_limit_rps` never "
+        "applies to it.",
+        constraints={"min": 1},
+        scope=SettingScope.WORKSPACE_OR_ENVIRONMENT,
+    ),
+    SettingDefinition(
         key="governance.approval_policy_ref",
         type=SettingType.STRING,
         default="",

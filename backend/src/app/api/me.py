@@ -17,11 +17,11 @@ from fastapi import APIRouter, Depends, Header, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
+from app.api.authz import counted_caller
 from app.api.deps import (
     WORKSPACE_ID_DESCRIPTION,
     Caller,
     IdentityDep,
-    require_caller,
 )
 from app.api.responses import problems
 from app.db.models import (
@@ -39,7 +39,7 @@ __all__ = ["router"]
 
 router = APIRouter(tags=["governance"])
 
-CallerDep = Annotated[Caller, Depends(require_caller)]
+CallerDep = Annotated[Caller, Depends(counted_caller)]
 
 
 def _database(request: Request) -> Database:

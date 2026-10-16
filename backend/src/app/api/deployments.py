@@ -18,8 +18,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, status
 
-from app.api.authz import requires
-from app.api.deps import Caller, DatabaseDep, require_caller
+from app.api.authz import counted_caller, requires
+from app.api.deps import Caller, DatabaseDep
 from app.api.pagination import DEFAULT_LIMIT, MAX_LIMIT, Page
 from app.api.responses import problems
 from app.platform import deployments as service
@@ -35,7 +35,7 @@ __all__ = ["router"]
 
 router = APIRouter(prefix="/environments", tags=["platform"])
 
-AnyCaller = Annotated[Caller, Depends(require_caller)]
+AnyCaller = Annotated[Caller, Depends(counted_caller)]
 ReadHistoryDep = Annotated[Caller, Depends(requires(Permission.RATING_READ))]
 
 

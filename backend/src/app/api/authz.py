@@ -23,12 +23,18 @@ from typing import Annotated
 
 from fastapi import Depends, Request
 
-from app.api.deps import Caller, require_caller
+from app.api.deps import Caller, SettingsDep, require_caller
+from app.config import Settings
 from app.db.session import Database
-from app.platform import rbac
+from app.platform import rate_limit, rbac
 from model_schema import Permission
 
-__all__ = ["PERMISSION_ATTRIBUTE", "requires"]
+__all__ = [
+    "MANAGEMENT_RATE_LIMIT_SETTING",
+    "PERMISSION_ATTRIBUTE",
+    "counted_caller",
+    "requires",
+]
 
 #: Stamped on the dependency `requires()` builds, so a test can ask a route which
 #: permission it enforces instead of inferring it from a status code.
@@ -51,14 +57,63 @@ def _database(request: Request) -> Database:
 DatabaseDep = Annotated[Database, Depends(_database)]
 
 
-def requires(permission: Permission) -> Callable[..., Awaitable[Caller]]:
+#: FR-452's management-API limit (`RL-1687`): the Setting that is its limit.
+MANAGEMENT_RATE_LIMIT_SETTING = "platform.default_management_rate_limit_rps"
+
+_COUNTED_FLAG = "management_rate_limit_counted"
+
+
+async def _count_management_request(
+    request: Request, caller: Caller, database: Database, settings: Settings
+) -> None:
+    """Count one authenticated management request (FR-452, `RL-1687` (1a), (2a), (3a)).
+
+    Run by the two dependencies every authenticated `/api/v1` route outside the `/score`
+    family goes through, `requires()` (after its permission check) and `counted_caller()`
+    (a route with no permission), so a `401` or a `403` is never counted and a route added
+    later is counted with no edit. At most once per request: a route may carry both.
+    `account_limit` is `None` because `rate_limit_rps` is the scoring limit only (3a).
+    """
+    if getattr(request.state, _COUNTED_FLAG, False):
+        return
+    setattr(request.state, _COUNTED_FLAG, True)
+    await rate_limit.enforce(
+        request.app.state.rate_limiter,
+        database,
+        settings,
+        route="management",
+        default_setting=MANAGEMENT_RATE_LIMIT_SETTING,
+        workspace_id=caller.workspace_id,
+        environment=caller.environment,
+        principal=caller.principal,
+        account_limit=None,
+    )
+
+
+async def counted_caller(
+    request: Request, caller: CallerDep, database: DatabaseDep, settings: SettingsDep
+) -> Caller:
+    """`require_caller` plus the management count, for an authenticated route that declares
+    no permission (`/me`, `/approval-requests`, ...). A route with a permission uses
+    `requires()`, which counts after its check."""
+    await _count_management_request(request, caller, database, settings)
+    return caller
+
+
+def requires(
+    permission: Permission, *, management_counted: bool = True
+) -> Callable[..., Awaitable[Caller]]:
     """Build a dependency that refuses unless the caller holds `permission`.
 
     Returns the `Caller` so a handler can depend on this instead of `require_caller` and
-    have both the identity and the check in one place.
+    have both the identity and the check in one place. Once the check passes it counts the
+    request against FR-452's management limit; `management_counted=False` is for the
+    `/score` family only, which the scoring limit counts instead (`RL-1687`).
     """
 
-    async def dependency(caller: CallerDep, database: DatabaseDep) -> Caller:
+    async def dependency(
+        request: Request, caller: CallerDep, database: DatabaseDep, settings: SettingsDep
+    ) -> Caller:
         async with database.session() as session:
             await rbac.require_permission(
                 session,
@@ -71,6 +126,8 @@ def requires(permission: Permission) -> Callable[..., Awaitable[Caller]]:
                 # hold (FR-347) can never be satisfied.
                 credential_permissions=caller.permissions,
             )
+        if management_counted:
+            await _count_management_request(request, caller, database, settings)
         return caller
 
     setattr(dependency, PERMISSION_ATTRIBUTE, permission)
