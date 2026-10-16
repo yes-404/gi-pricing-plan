@@ -40,6 +40,11 @@ BONUS_MALUS: Final = "bonus_malus"
 BONUS_MALUS_RANGE: Final = (50, 230)
 
 #: DP-a2's ruled label. It opens the base step's note and the algorithm's change note.
+#: B4's input and second output (PL-1542 Task 3): the frequency GLM's offset column, and the raw
+#: Peril Structure value beside the payable premium (FR-214, FR-249).
+EXPOSURE: Final = "exposure_years"
+STRUCTURE_PREMIUM: Final = "peril_structure_premium"
+
 BASE_LABEL: Final = "a simplification (frequency GLM \u00d7 mean severity; no severity model)"
 
 
@@ -123,12 +128,21 @@ def build_fremtpl2_algorithm(
     base_minor: int,
     domains: Mapping[str, Sequence[str]],
     version: int = 1,
+    peril_structure_ref: ArtifactRef | None = None,
+    origin_tables: Mapping[str, ArtifactRef] | None = None,
 ) -> dict[str, Any]:
     """The algorithm payload, in the order of `tables` (one seeded table per Factor).
 
     `tables` maps each Factor slug to its seeded Rate Table ref. `bandings` maps each banded
     Factor slug to its Banding (its `column` is the raw input). `domains` maps each
     categorical Factor slug (which is also its column) to the levels the table holds.
+
+    With `peril_structure_ref` the price is B4's (`WF-699`, PL-1542 DP-A4-1 (B), mechanism B1,
+    `RL-1538`): the Peril Structure's risk premium for the quote, times Π(pinned cell ÷
+    seed-origin cell) over the Factors. `origin_tables` maps each Factor slug to its table's
+    seed-origin version (03 §4.2: the lowest-numbered version whose `seeded_from` equals the
+    pinned version's); it defaults to `tables`, an unedited seed, whose ratio is exactly 1.
+    `base_minor` is not read then: the structure replaces the base premium.
     """
     inputs: list[dict[str, Any]] = []
     steps: list[dict[str, Any]] = []
@@ -149,6 +163,11 @@ def build_fremtpl2_algorithm(
                    "description": "non-modelled: a rating-table input, not a model feature"})
     steps.append({"step_id": f"s_in_{BONUS_MALUS}", "type": "input", "label": BONUS_MALUS,
                   "input_name": BONUS_MALUS, "on_missing": "error", "produces": BONUS_MALUS})
+    if peril_structure_ref is not None:
+        inputs.append({"name": EXPOSURE, "type": "decimal", "nullable": False,
+                       "description": "the quote's exposure in years: the frequency offset"})
+        steps.append({"step_id": f"s_in_{EXPOSURE}", "type": "input", "label": EXPOSURE,
+                      "input_name": EXPOSURE, "on_missing": "error", "produces": EXPOSURE})
 
     for factor, banding in bandings.items():
         steps.append({
@@ -157,6 +176,11 @@ def build_fremtpl2_algorithm(
             "expr": band_expression(banding.column, banding), "result_type": "string",
             "consumes": [banding.column], "produces": factor,
         })
+    if peril_structure_ref is not None:
+        return _with_peril_structure(
+            inputs, steps, tables, bandings, peril_structure_ref,
+            origin_tables if origin_tables is not None else tables, version,
+        )
     steps.append({
         "step_id": "s_base", "type": "expression", "label": "Base premium",
         "note": (
@@ -189,6 +213,75 @@ def build_fremtpl2_algorithm(
         "version": version,
         "input_contract": inputs,
         "outputs": [{"name": "payable_premium_minor", "type": "money_minor", "required": True}],
+        "steps": steps,
+        "sub_graphs": [],
+    }
+
+
+def _with_peril_structure(
+    inputs: list[dict[str, Any]],
+    steps: list[dict[str, Any]],
+    tables: Mapping[str, ArtifactRef],
+    bandings: Mapping[str, Banding],
+    structure: ArtifactRef,
+    origin_tables: Mapping[str, ArtifactRef],
+    version: int,
+) -> dict[str, Any]:
+    """B1: `model_call` x Π(pinned ÷ origin), rounded once at the output (FR-226, FR-249).
+
+    The feature map's keys are graph names and its values are the models' Factor slugs
+    (FR-222): a banded Factor's key is its RAW column, because scoring applies the Banding
+    itself, and the exposure maps to the frequency model's offset column.
+    """
+    feature_map = {
+        (bandings[factor].column if factor in bandings else factor): factor for factor in tables
+    }
+    feature_map[EXPOSURE] = EXPOSURE
+    steps.append({
+        "step_id": "s_model", "type": "model_call", "label": "Peril Structure risk premium",
+        "peril_structure_ref": str(structure), "mode": "exact", "feature_map": feature_map,
+        "result_type": "decimal", "consumes": list(feature_map), "produces": "model_premium",
+    })
+    pinned, origin = [], []
+    for factor, ref in tables.items():
+        steps.append({
+            "step_id": f"s_t_{factor}", "type": "table", "label": f"{factor} relativity",
+            "rate_table_ref": str(ref), "key_expr": [factor], "on_miss": "error",
+            "consumes": [factor], "produces": f"rel_{factor}",
+        })
+        steps.append({
+            "step_id": f"s_o_{factor}", "type": "table",
+            "label": f"{factor} seed-origin relativity",
+            "rate_table_ref": str(origin_tables[factor]), "key_expr": [factor],
+            "on_miss": "error", "consumes": [factor], "produces": f"origin_{factor}",
+        })
+        pinned.append(f"rel_{factor}")
+        origin.append(f"origin_{factor}")
+    ratios = " * ".join(f"({p} / {o})" for p, o in zip(pinned, origin, strict=True))
+    guard = " and ".join(f"{o} != 0" for o in origin)
+    steps.append({
+        "step_id": "s_premium", "type": "expression", "label": "Premium before rounding",
+        "expr": f"({guard}) ? model_premium * {ratios} : 0", "result_type": "decimal",
+        "consumes": ["model_premium", *pinned, *origin], "produces": "premium_unrounded",
+    })
+    steps.append({
+        "step_id": "s_out", "type": "output", "label": "Payable premium",
+        "output_name": "payable_premium_minor", "rounding": {"mode": "half_even", "dp": 0},
+        "consumes": ["premium_unrounded"],
+    })
+    steps.append({
+        "step_id": "s_out_model", "type": "output", "label": "Peril Structure premium",
+        "output_name": STRUCTURE_PREMIUM, "rounding": {"mode": "half_even", "dp": 9},
+        "consumes": ["model_premium"],
+    })
+    return {
+        "slug": FREMTPL2_ALGORITHM_SLUG,
+        "version": version,
+        "input_contract": inputs,
+        "outputs": [
+            {"name": "payable_premium_minor", "type": "money_minor", "required": True},
+            {"name": STRUCTURE_PREMIUM, "type": "decimal", "required": True},
+        ],
         "steps": steps,
         "sub_graphs": [],
     }

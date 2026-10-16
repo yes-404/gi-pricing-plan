@@ -439,5 +439,10 @@ def test_b4_model_call_references_the_peril_structure() -> None:
     assert call.peril_structure_ref == structure
     assert call.model_ref is None
     assert call.mode == "exact"
-    assert set(call.feature_map) == set(_FACTORS), "every model feature is named, none implied"
+    # The VALUES are the models' inputs: every Factor slug, and the frequency GLM's exposure
+    # offset (predict raises MODEL_OFFSET_MISSING without it). The KEYS are graph names: a banded
+    # Factor's is its raw column, since scoring applies the Banding itself.
+    assert set(call.feature_map.values()) == {*_FACTORS, "exposure_years"}, "none implied"
+    assert call.feature_map["driv_age"] == "driv_age_band"
+    assert call.feature_map["area"] == "area"
     assert call.result_type in ("decimal", "money_minor"), "RL-1580: declare, do not default"
