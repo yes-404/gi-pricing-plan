@@ -127,6 +127,40 @@ seeded with E4.8 as its own slice id.
 - **Not done:** PL-1690 E4.1 (Task C, FR-452 management-API limit; RL-1687) is not in the lead's
   dispatch (E4.2 to E4.7); see the report to the lead.
 
+## Finding (b), 2026-10-16 10:09 BST: three routes are counted before their in-handler permission check
+
+Read at `origin/sl-1258-wk674-s4` HEAD `9bbdd145`. `_count_management_request`
+(`backend/src/app/api/authz.py:66`) is run by `counted_caller()` (`authz.py:93`, counts at once,
+checks no permission) and by `requires()` (`authz.py:103`, counts at `authz.py:130`, after its own
+permission check). A route that checks its permission inside the handler uses `counted_caller()`, so
+the count runs first. Three POST routes do:
+
+| Route | Dependency | In-handler permission check |
+|---|---|---|
+| `POST /validation-rules` | `AuthenticatedCaller = Depends(counted_caller)` (`api/validation.py:69`, used `:273`) | `platform/validation_rules.py:212` (`admin:manage_settings`, `sql` rule) or `:219` (`dataset:write`), in `create_rule` (`:185`) |
+| `POST /environments/{env}/deployment-requests` | `AnyCaller = Depends(counted_caller)` (`api/deployments.py:38`, used `:50`) | `_authorised_environment` (`platform/deployments.py:77`, `deployment:promote` at `:84`), called from `submit_request` at `:224` |
+| `POST /environments/{env}/deployments` | `AnyCaller` (`api/deployments.py:38`, used `:75`) | the same `_authorised_environment`, called from `deploy` at `:455` |
+
+Counted for a caller later refused `403`: one management request, in the (Environment, Principal)
+one-second window, before the refusal. The `403` still goes out; the refused call also uses a unit of
+the caller's allowance. A caller without the permission can therefore exhaust its own management
+limit by repeated refused calls to these routes. This departs from `RL-1687`'s order, which counts
+"after the route's own permission check" (`docs/rulings/RL-01687-*.md:150-153`, and the amendment
+text at `:239`: "so a `401` or a `403` is never counted"). The `403` from a `requires()` route is
+never counted; the `403` from these three is. The `authz.py:72-76` docstring says the same
+("`counted_caller()` (a route with no permission)"), which these three routes are not.
+
+**Not changed here:** no code is touched by this entry, and the test seeds are not rewritten
+(DP-S4-SEED, pending with the maintainer).
+
+**RL-1687 does not rule whether a `429` must be declared on these routes: UNRULED.**
+`docs/rulings/RL-01687-*.md:304` ("## Raised to the lead (not ruled here)"), first bullet, `:306-309`:
+"**Whether each counted route's OpenAPI entry declares `429`.** ... Recommendation: declare it by
+one mechanism on the included routers, regenerated in the same commit ... It is not in DP-S4-1's
+options, so it is put, not picked." These three routes declare `problems(401, 403, 409, 422)`
+(`api/validation.py:270`) and `problems(401, 403, 404, 409, 422)` (`api/deployments.py:47`, `:72`);
+none lists `429`. Owner of the ruling: the lead / the maintainer (by delegation).
+
 ## PRs
 
 None yet.
