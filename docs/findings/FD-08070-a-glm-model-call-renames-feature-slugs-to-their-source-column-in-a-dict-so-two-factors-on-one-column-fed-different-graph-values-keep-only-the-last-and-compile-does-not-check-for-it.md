@@ -102,8 +102,7 @@ value was discarded.
 Scratch test (written, then run: 2 passed in 11.14s, below): `/home/puzhenhao1989/gi-pricing-plan.local/scratch/fd8070_collision_test.py`.
 It asserts compile accepts the graph, that the three prices (intended, raw-only, adjusted-only)
 are distinguishable, and that the `model_call` returns the adjusted-only price with no
-`MODEL_CALL_ERROR_KEY`. Run it, once the gate has ended, as its header says, through
-`run-small.sh`.
+`MODEL_CALL_ERROR_KEY`. It was run through `run-small.sh` (see the two runs below).
 
 **The run (2026-10-16 11:08:14 to 11:09:20 BST, the small slot, through `run-small.sh`, as the
 lead's entry "2026-10-16 11:10:37 BST" reports it):** "2 passed in 11.14s". The two tests assert
@@ -111,6 +110,13 @@ the defect, so a pass is the defect shown, not a green result for the product: c
 graph; the `model_call` returns `on_adj` (the adjusted-only price) with no `MODEL_CALL_ERROR_KEY`,
 which is not the intended price; the three prices (intended, raw-only, adjusted-only) are
 distinct. The severity no longer rests on the code reading alone.
+
+**Re-run by the auditor, 2026-10-16 22:22:14 BST (Europe/London), against `origin/main`
+`a2f77b2d`'s code (this worktree changes docs only), once through `run-small.sh`:** the scratch
+test copied to `packages/pricing-core/tests/test_fd8070_collision.py` (the copy deleted after the
+run, not committed): `2 passed in 3.16s`, rc 0. **It agrees with the relayed line** ("2 passed in
+11.14s"): same count, same outcome; only the duration differs (load on the box). No raw log of the
+11:08:14 run survived in `scratch/`, which is why the run was repeated.
 
 ### 4. A second route to the same loss: two graph names, one slug
 
