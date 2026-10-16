@@ -7,7 +7,7 @@ created: 2026-10-14
 owner: auditor
 tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
 corrected_by: []
-relates: [WK-1178, FR-32, FR-35, FR-41, FR-50, VR-STR-2, VR-STR-9, FD-8039, FD-1660, FD-1679, FD-8007, P2]
+relates: [WK-1178, FR-32, FR-35, FR-41, FR-50, VR-STR-2, VR-STR-9, FD-1730, FD-1660, FD-1679, FD-1704, P2]
 ---
 
 # FD-8040 — `strict=False` in `prepare.py` turns an unparseable cell into null, and nothing downstream counts it
@@ -92,7 +92,7 @@ and worktree were removed afterwards. The path: a CSV blob put through `BlobStor
 then a `dataset.validate` Job against a five-rule set. **Set-up the run supplies, disclosed:**
 the workspace, role assignments and approver principal were created in-process, and each rule was
 dry-run, submitted and approved by a second principal, because a rule set runs only approved
-rules (`FR-50`). The blob was put in-process, not through `upload-url`, which `FD-8039` shows
+rules (`FR-50`). The blob was put in-process, not through `upload-url`, which `FD-1730` shows
 cannot reach ingestion.
 
 Recipe: `[{"step":"cast","params":{"columns":{"claim_amount":"float64"}}},
@@ -173,7 +173,7 @@ The following were not run, so they are not evidence either way:
   This is the same shape: a data change that no check reports, reached by the first thing an
   analyst does, with a clean report on top of it. The nulls are stored in the version's parquet, so whatever reads the column
   next (a profile, a fit, a split on a date) reads a missing value where the file held a bad one.
-- **Against FD-8007 (MEDIUM).** That one needs a write path the application lacks. This needs only a
+- **Against FD-1704 (MEDIUM).** That one needs a write path the application lacks. This needs only a
   recipe step the spec lists (`FR-35`: `cast`, `parse_date`).
 - **What lowers it:** the damage needs a bad cell to exist, and the version's null counts are
   visible to someone who looks. Neither is a control; the validation report is where a

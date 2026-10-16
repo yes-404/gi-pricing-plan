@@ -34,6 +34,8 @@ here, not copied.)*
 the 10:56:38 entry, item 1, is HIGH). Owner WK-1178, fixed in P2 by SL-1722 (`PL-1721`,
 `RL-1724`) before the 4 Nov code freeze.**
 
+*(Ruled 2026-10-16: the maintainer (by delegation), "2026-10-16 09:23:23 BST — MERGE-ACK #1307" in `to-lead.md`, RULED HIGH, owner WK-1178, fixed in P2 (SL-1722 / RL-1724). The proposal above is kept as written.)*
+
 A file uploaded through the platform's own upload route cannot become a Dataset Version. The
 public API has no sequence of calls that takes a client's file to an ingested dataset:
 
