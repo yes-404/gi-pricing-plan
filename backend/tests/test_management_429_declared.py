@@ -1,11 +1,14 @@
-"""Every counted `/api/v1` operation declares `429` (`RL-1687`; the lead's ruling "2026-10-16
-10:30:18 BST", concurred by the maintainer (by delegation) at 10:30:57 BST; WK-674 Slice 4).
+"""An `/api/v1` operation declares `429` if and only if it can return one (`RL-1687`; the lead's
+ruling "2026-10-16 10:30:18 BST" and its amendment; WK-674 Slice 4).
 
-The management rate limit makes these routes return `429 RATE_LIMITED`; an undeclared status is
-the drift `RL-1347` rule 4 closed for `/score`. One router-level mechanism declares it (`app.main`
-`counted()`), so this test walks the assembled OpenAPI document and holds the whole set, rather
-than one route per test. Excluded: `GET /api/v1/auth/config` (unauthenticated, never counted) and
-the `/score` family (under the scoring limit; `POST /score` declares its own `429`).
+The management limit and the scoring limit make routes return `429 RATE_LIMITED`; an undeclared
+status is the drift `RL-1347` rule 4 closed for `/score`. One router-level mechanism declares it
+(`app.main` `counted()`; `score.router` declares per route because it mixes three cases), and
+this test walks the assembled OpenAPI document and holds the whole set.
+
+`_CANNOT_429` is EXACTLY the operations that cannot return it, each with its reason. The second
+test reads each route's dependency tree and fails if an excluded operation gains a counting
+dependency, or if an operation outside the list has none, so the list cannot rot silently.
 """
 
 from __future__ import annotations
@@ -16,53 +19,97 @@ import pytest
 
 API_PREFIX = "/api/v1"
 _METHODS = frozenset({"get", "put", "post", "delete", "options", "head", "patch", "trace"})
-_EXCLUDED_PATHS = frozenset({f"{API_PREFIX}/auth/config"})
-_SCORE_FAMILY = f"{API_PREFIX}/score"
 
-
-def _is_excluded(path: str) -> bool:
-    return path in _EXCLUDED_PATHS or path == _SCORE_FAMILY or path.startswith(f"{_SCORE_FAMILY}/")
+#: (method, path) -> why it cannot return 429.
+_CANNOT_429: dict[tuple[str, str], str] = {
+    ("get", f"{API_PREFIX}/auth/config"): "not authenticated: no Principal, so nothing to count",
+    ("post", f"{API_PREFIX}/score/batch"): (
+        "`requires(SCORE_BATCH, management_counted=False)` and no scoring limiter: it submits a "
+        "Job and is counted by neither limit"
+    ),
+}
 
 
 @pytest.fixture(scope="module")
-def document() -> dict[str, Any]:
+def app() -> Any:
     from app.config import Environment, Settings
     from app.main import create_app
 
-    document: dict[str, Any] = create_app(
-        Settings(environment=Environment.LOCAL, version="test")
-    ).openapi()
-    return document
+    return create_app(Settings(environment=Environment.LOCAL, version="test"))
 
 
-@pytest.mark.req("FR-452")
-def test_every_counted_api_operation_declares_429(document: dict[str, Any]) -> None:
-    """Red when the router-level mechanism is removed from `app.main`: the first operation
-    without a `429` response is named in the failure."""
-    counted = sorted(
-        (path, method)
+def _operations(document: dict[str, Any]) -> list[tuple[str, str]]:
+    return sorted(
+        (method, path)
         for path, item in document["paths"].items()
-        if path.startswith(f"{API_PREFIX}/") and not _is_excluded(path)
+        if path.startswith(f"{API_PREFIX}/")
         for method in item
         if method in _METHODS
     )
-    assert counted, "no /api/v1 operation was found: the walk is vacuous"
-    missing = [
-        f"{method.upper()} {path}"
-        for path, method in counted
-        if "429" not in document["paths"][path][method].get("responses", {})
-    ]
+
+
+@pytest.mark.req("FR-452")
+def test_every_operation_that_can_return_429_declares_it(app: Any) -> None:
+    """Red when the router-level mechanism is removed from `app.main`: the first operation
+    without a `429` response is named in the failure. An operation in `_CANNOT_429` must NOT
+    declare it (an advertised error it never produces)."""
+    document = app.openapi()
+    operations = _operations(document)
+    assert operations, "no /api/v1 operation was found: the walk is vacuous"
+    missing = []
+    advertised = []
+    for method, path in operations:
+        declares = "429" in document["paths"][path][method].get("responses", {})
+        if (method, path) in _CANNOT_429:
+            if declares:
+                advertised.append(f"{method.upper()} {path}")
+        elif not declares:
+            missing.append(f"{method.upper()} {path}")
     assert not missing, (
-        f"{len(missing)} of {len(counted)} counted operations do not declare 429; "
-        f"first: {missing[0]}"
+        f"{len(missing)} of {len(operations)} operations do not declare 429; first: {missing[0]}"
+    )
+    assert not advertised, f"declares 429 but cannot return it: {advertised}"
+
+
+def _calls(dependant: Any) -> list[Any]:
+    found = []
+    for sub in dependant.dependencies:
+        found.append(sub.call)
+        found.extend(_calls(sub))
+    return found
+
+
+def _counts(call: Any) -> bool:
+    from app.api import authz, score
+
+    if getattr(call, authz.MANAGEMENT_COUNTED_ATTRIBUTE, False):
+        return True
+    return call in (
+        authz.counted_caller,
+        authz.counted_identity,
+        authz.management_counter,
+        score._enforce_score_rate_limit,
     )
 
 
 @pytest.mark.req("FR-452")
-def test_the_429_exclusions_are_real_operations(document: dict[str, Any]) -> None:
-    """The exclusions name paths that exist, so a rename cannot leave a stale exclusion that
-    silently widens the hole. `POST /score` declares its own `429` (`RL-1347`)."""
-    paths = document["paths"]
-    assert f"{API_PREFIX}/auth/config" in paths
-    assert "429" in paths[_SCORE_FAMILY]["post"]["responses"]
-    assert "429" not in paths[f"{API_PREFIX}/auth/config"]["get"]["responses"]
+def test_the_cannot_429_list_matches_the_routes_dependencies(app: Any) -> None:
+    """An excluded operation has no counting dependency; every other `/api/v1` operation has one.
+    Red: an excluded route gains `requires()` / `counted_caller` / the scoring limiter (it can
+    now 429 and must declare it), or a counted route loses its dependency (it should join the
+    list)."""
+    from fastapi.routing import APIRoute
+
+    seen = set()
+    for route in app.routes:
+        if not isinstance(route, APIRoute) or not route.path.startswith(f"{API_PREFIX}/"):
+            continue
+        counted = any(_counts(call) for call in _calls(route.dependant))
+        for method in route.methods:
+            key = (method.lower(), route.path)
+            seen.add(key)
+            if key in _CANNOT_429:
+                assert not counted, f"{method} {route.path} is excluded but now counts"
+            else:
+                assert counted, f"{method} {route.path} has no counting dependency: exclude it?"
+    assert set(_CANNOT_429) <= seen, f"stale exclusions: {sorted(set(_CANNOT_429) - seen)}"

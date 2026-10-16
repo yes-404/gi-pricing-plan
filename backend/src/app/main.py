@@ -139,11 +139,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(TraceMiddleware)
     install_error_handlers(app)
 
-    # FR-452 / RL-1687: every `/api/v1` operation the management rate limit counts can answer
-    # `429 RATE_LIMITED`, so every router the limiter counts is included through this one
-    # function and declares it once, here, rather than per route (the lead's ruling "2026-10-16
-    # 10:30:18 BST"). `score.router` is the only one included without it: the `/score` family
-    # is under the scoring limit and declares its own 429 (RL-1347 rule 4).
+    # FR-452 / RL-1687: an operation declares `429 RATE_LIMITED` iff it can return one (the
+    # lead's ruling "2026-10-16 10:30:18 BST" as amended). Every router the management limiter
+    # counts is included through this one function and declares it once, here, not per route.
+    # `score.router` is the one exception: it mixes the scoring limit (`POST /score`), the
+    # management limit (`POST /score/compare`) and no limit (`POST /score/batch`), so it
+    # declares per route.
     def counted(router: APIRouter) -> None:
         app.include_router(router, prefix=API_PREFIX, responses=problems(429))
 

@@ -462,7 +462,9 @@ def _naming_side(problem: PlatformError, side: str) -> PlatformError:
     "/score/compare",
     summary="Score one Quote Context against two Rating Versions, with a step-level diff",
     status_code=200,
-    responses={**problems(401, 403, 404, 409, 422, 500), 200: {"model": ScoreComparison}},
+    # 429: `RatingReadDep` is `requires(RATING_READ)`, which counts against the management limit
+    # (FR-452); `score.router` is not included through `app.main`'s `counted()`, so it says so here.
+    responses={**problems(401, 403, 404, 409, 422, 429, 500), 200: {"model": ScoreComparison}},
 )
 async def score_compare(
     body: ScoreCompareRequest,

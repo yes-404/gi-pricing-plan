@@ -33,6 +33,7 @@ from model_schema import Permission, Principal
 
 __all__ = [
     "MANAGEMENT_RATE_LIMIT_SETTING",
+    "MANAGEMENT_COUNTED_ATTRIBUTE",
     "PERMISSION_ATTRIBUTE",
     "CallerDep",
     "CountAfterCheck",
@@ -51,6 +52,12 @@ __all__ = [
 #: `requires(Perm.DATASET_READ)` to `require_caller` left all 609 tests green; this
 #: attribute is what makes that visible.
 PERMISSION_ATTRIBUTE = "__gip_permission__"
+
+#: Stamped on the dependency `requires()` builds with whether it counts against the management
+#: limit, so a test can tell a route that can answer `429` from one that cannot without
+#: inferring it from a status code (the lead's amendment, "an operation declares 429 IFF it
+#: can return 429").
+MANAGEMENT_COUNTED_ATTRIBUTE = "__gip_management_counted__"
 
 CallerDep = Annotated[Caller, Depends(require_caller)]
 
@@ -189,4 +196,5 @@ def requires(
         return caller
 
     setattr(dependency, PERMISSION_ATTRIBUTE, permission)
+    setattr(dependency, MANAGEMENT_COUNTED_ATTRIBUTE, management_counted)
     return dependency
