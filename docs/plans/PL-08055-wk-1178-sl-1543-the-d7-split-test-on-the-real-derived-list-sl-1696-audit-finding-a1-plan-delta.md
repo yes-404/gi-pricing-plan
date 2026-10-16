@@ -39,6 +39,13 @@ planner (seat planner-a1), on the lead's brief of the same morning. **Trees read
 `backend/tests/test_wf699_journey.py` and the ledger `LG-1732`. **No test or code was run at
 planning time**; every claim below about behaviour is a reading of the code at `d85e3d72`.
 
+*(Amended 2026-10-16 09:55 BST, before merge, by the planner (seat planner-8055b), on the lead's
+brief: **DP-A1-1 is ruled (a) by RL 8060** (`origin/rl-8060-pl8055-dp-a1-1-2026-10-16`
+@`5b07a5b6`), confirmed by the maintainer in the entry "2026-10-16 09:51:34 BST — Maintainer: RL 8060 (PL 8055 DP-A1-1 → (a)) CONFIRMED" in `~/gi-pricing-plan.local/channel/to-lead.md`.
+The ruling's two precisions and the confirmation's four conditions are carried into the DP row,
+Status, N2, N4, Steps 2 to 5, Acceptance item 1 (v), Hand-off 3 and Self-review 2. Each edited
+place names RL 8060. RL 8060 is a working id, so it is not in `relates:` until it is minted.)*
+
 ## Goal
 
 Put `SL-1696`'s audit finding A1 into plan text as `SL-1543`'s owned work. A1 is the one clause
@@ -99,7 +106,7 @@ that fails **by cause** on `SL-1696`'s hand-written list.
 
 | DP | Question | Options | Recommendation | Owner | Blocks | Ruled |
 |---|---|---|---|---|---|---|
-| **DP-A1-1** | **Which run's `derived_changes` is "the real derived list" of `PL-1694` Acceptance 18?** | **(a)** The decomposing D7 run of `test_wf699_journey_runs_end_to_end`'s own world (`_world`), at `SL-1543`'s head. The split test's literal is copied from it, and the end-to-end test asserts the literal **equals** that run's list (the world's model family substituted, P4). Red by cause on `SL-1696`'s hand-written list (P2); runs in CI on every change; drifts loudly when a later journey edit changes the list. Cost: the red and green need a DB run (N4). **(b)** The demo-seed run, copied as `5debb32a` did, with no equality check. Cost: green on `SL-1696`'s code (P2), so no red by cause; not reproducible in CI (the seed's versions and family, P5); stale silently after `SL-1543`'s journey edits. **(c)** No literal: the split test is folded into the end-to-end test and reads only the live run. Cost: loses the DB-free unit test, and `PL-1694`'s write set says *"no test deleted"* | **(a).** Only (a) gives the red by cause the lead's brief requires, and only (a) keeps Acceptance 18's "copied from a run of the fixed code" true after the copy: the equality check re-proves it on every CI run. (a) is within Acceptance 18's words; it replaces (b)'s source run, which the clause does not name | the decision-maker (`delivery-process.md` §3) | Task A Steps 2–5 | **open** |
+| **DP-A1-1** | **Which run's `derived_changes` is "the real derived list" of `PL-1694` Acceptance 18?** | **(a)** The decomposing D7 run of `test_wf699_journey_runs_end_to_end`'s own world (`_world`), at `SL-1543`'s head. The split test's literal is copied from it, and the end-to-end test asserts the literal **equals** that run's list (the world's model family substituted, P4). Red by cause on `SL-1696`'s hand-written list (P2); runs in CI on every change; drifts loudly when a later journey edit changes the list. Cost: the red and green need a DB run (N4). **(b)** The demo-seed run, copied as `5debb32a` did, with no equality check. Cost: green on `SL-1696`'s code (P2), so no red by cause; not reproducible in CI (the seed's versions and family, P5); stale silently after `SL-1543`'s journey edits. **(c)** No literal: the split test is folded into the end-to-end test and reads only the live run. Cost: loses the DB-free unit test, and `PL-1694`'s write set says *"no test deleted"* | **(a).** Only (a) gives the red by cause the lead's brief requires, and only (a) keeps Acceptance 18's "copied from a run of the fixed code" true after the copy: the equality check re-proves it on every CI run. (a) is within Acceptance 18's words; it replaces (b)'s source run, which the clause does not name | the decision-maker (`delivery-process.md` §3) | Task A Steps 2–5 | **ruled (a)** by RL 8060, confirmed by the maintainer 2026-10-16 09:51:34 BST with four conditions (Steps 2 to 5, Hand-off 3) |
 
 No other decision is opened. Substituting the family token (P4) from `record` rather than by a
 regular expression is not a separate choice: a pattern match would accept any family, and the
@@ -107,7 +114,10 @@ world knows the one it made.
 
 ## Status
 
-`draft` while DP-A1-1 is open. The delta becomes `active` when DP-A1-1 is ruled and it is minted.
+`draft`. **DP-A1-1 is ruled (a)** (RL 8060; amended 2026-10-16), so no decision point is open. The
+delta stays `draft` only until its mint, and becomes `active` at the mint (RL 8060, "What it
+obliges"). The mint waits for N1 (#1310 merged) and goes with or after RL 8060's mint
+(Hand-off 3). `SL-1543`'s GO stays the lead's (N5).
 `SL-1543`'s row in [`../roadmap.md`](../roadmap.md) is not written by this file (Hand-off 1).
 
 ## Activation needs, each with its state at `0877e6e7`
@@ -115,9 +125,9 @@ world knows the one it made.
 | # | Need | State |
 |---|---|---|
 | N1 | **#1310 merged** (`SL-1696`, `PL-1694` Stage B): the D7 block, `split_effects` and the split test exist on `main` | **open**: #1310 is `OPEN`, head `d85e3d72` (`gh pr view 1310`, read 2026-10-16 09:3x BST) |
-| N2 | **DP-A1-1 ruled** | **open** |
+| N2 | **DP-A1-1 ruled** | **met** (amended 2026-10-16): RL 8060 rules (a); the maintainer confirmed it at 09:51:34 BST |
 | N3 | **Serialisation** (`PL-1694` Activation needs, Stage A need 3 `:260`, Stage B need 4 `:278`): `SL-1543` is the second of the two to merge on `examples/fremtpl2/journey.py` and `backend/tests/test_wf699_journey.py`, so it re-merges `main` after N1 and re-runs the journey test and the journey run before its ACK | follows N1 |
-| N4 | **A DB window granted by the lead** for Task A's red run and green run (`seat-brief-common-2026-10-16.md` item 6: no DB window unless granted in writing); each run goes through `run-small.sh`, one test file | not requested |
+| N4 | **A DB window granted by the lead** for Task A's red run and its two green runs (RL 8060 precision 2) (`seat-brief-common-2026-10-16.md` item 6: no DB window unless granted in writing); each run goes through `run-small.sh`, one test file | not requested |
 | N5 | This delta minted; `SL-1543`'s GO stays the lead's (`PL-1705` N5) | — |
 
 ## Tasks
@@ -194,6 +204,7 @@ is the list `SL-1543`'s head derives (P5).
           {**row, "description": row["description"].replace("{gbm_family}", record["gbm_family"])}
           for row in D7_DERIVED_CHANGES
       ]
+      print(f"D7 gbm_family: {record['gbm_family']}")  # RL 8060 precision 2: the LG records it
       assert real == expected, json.dumps(real, ensure_ascii=False, indent=1)
       # The four checks of Acceptance 18, on the real run as stored.
       effects = journey.split_effects(real)
@@ -212,6 +223,13 @@ is the list `SL-1543`'s head derives (P5).
 
   (`import json` joins the imports.)
 
+  **The substitution (RL 8060; the maintainer's condition 2, 2026-10-16 09:51:34 BST).** The one
+  random token that reaches a description is the world's family (RL 8060 V4). It maps to one
+  fixed placeholder, `{gbm_family}`, by its exact value from `record`, at every place it occurs
+  (`str.replace` replaces all). It is never a pattern that matches any random hex, so two rows that
+  name the family both name `{gbm_family}`. Any other random token in a description makes the
+  assert red; that is not by cause, and is a STOP to the lead.
+
 - [ ] **Step 3: Run the red (N4's DB window, through `run-small.sh`).**
 
   Run: `uv run pytest -q backend/tests/test_wf699_journey.py -k end_to_end`
@@ -221,7 +239,10 @@ is the list `SL-1543`'s head derives (P5).
   `5debb32a` read 11 changes on the demo seed). **Not by cause, and a STOP to the lead:** an
   `AttributeError`, `KeyError`, `ImportError`, a fixture or DB error, or a `JourneyStepFailed`
   before D7 records `ok`. Record the run's command, rc and the failing assert's first and last
-  lines verbatim in `SL-1543`'s ledger.
+  lines verbatim in `SL-1543`'s ledger, **and the rows that differ** (the literal's rows not in
+  the real list, and the real list's rows not in the literal). The red is **run**, not only read
+  (the maintainer's condition 1 on RL 8060, 2026-10-16 09:51:34 BST); a red by any other cause is
+  RL 8060's STOP.
 
 - [ ] **Step 4: The green — copy, never write.** Replace `D7_DERIVED_CHANGES`'s rows with the
   JSON the red printed, unchanged except that the world's family (`record["gbm_family"]` of that
@@ -241,15 +262,35 @@ is the list `SL-1543`'s head derives (P5).
 
   **The mount check of `PL-1694` Task 4 Step 2** is kept as one more assert in the split test: the
   row whose description starts `m_ncd: mount` is in `EFFECT_STRUCTURE` and its kind is not
-  `table_repointed`. If the copied list has no such row, STOP to the lead (the fix's derived mount
-  is missing).
+  `table_repointed`.
+
+  **The copy governs (RL 8060 precision 1).** `PL-1694` Acceptance 18's parenthetical predicted
+  `m_ncd: mount added (sub_graph:ncd-ladder@1)`. A fresh world derives `ncd-ladder@3` (the ladder
+  is built three times; RL 8060 V4, V5). Where the copied list differs from the parenthetical,
+  the copied value is right, and that is not a STOP. **This step STOPs to the lead only if** no row's
+  description starts `m_ncd: mount` (the fix's derived mount is missing), **or** that row's kind is
+  `table_repointed`.
 
 - [ ] **Step 5: Run the green and the broken-input check.**
 
-  Run: `uv run pytest -q backend/tests/test_wf699_journey.py` (N4's window).
-  Expected: PASS, rc 0. Then change one character of one `description` in `D7_DERIVED_CHANGES`,
+  All runs are in one DB window (N4), each through `run-small.sh`.
+
+  Run: `uv run pytest -q -rP backend/tests/test_wf699_journey.py -k end_to_end`
+  Expected: PASS, rc 0; the captured output prints `D7 gbm_family: <family>`.
+  **Run the same command a second time** (RL 8060 precision 2; the maintainer's condition 3,
+  2026-10-16 09:51:34 BST). Expected: PASS, rc 0, with a **different** family. Each run makes a fresh
+  workspace and a new family, so two greens prove the substitution and the determinism of the list
+  (RL 8060 V4); one run cannot tell a deterministic list from a lucky one. If the two families are
+  the same, or the second run is red, STOP to the lead.
+
+  Run: `uv run pytest -q backend/tests/test_wf699_journey.py`. Expected: PASS, rc 0 (the split
+  test and the rest of the file).
+
+  Then change one character of one `description` in `D7_DERIVED_CHANGES`,
   run `-k end_to_end` again: FAIL at `assert real == expected` (the check fails on wrong input);
-  revert the scratch edit and confirm `git diff --stat` is empty. Record both runs in the ledger.
+  revert the scratch edit and confirm `git diff --stat` is empty. Record every run in the ledger:
+  the command verbatim and its rc, and for the two `-k end_to_end` greens the two families, beside
+  Step 3's red.
   Commit:
 
   ```bash
@@ -269,8 +310,11 @@ item 1**; it is checked from the repository root on `SL-1543`'s merge tree.
    (iii) `git grep -n 'rate_tables pin rate_table:x@2 added\|rate_table_ref x@1' -- backend/tests/test_wf699_journey.py`
    prints nothing; (iv) `git grep -n 'd7_run' -- examples/fremtpl2/journey.py` prints the field
    and its assignment; (v) `SL-1543`'s ledger carries Step 3's red (rc 1, at
-   `assert real == expected`, the cause stated) and Step 5's green and broken-input runs, each
-   with its command verbatim; (vi) the end-to-end test asserts partition, `method == "shapley"`,
+   `assert real == expected`, the cause stated, the differing rows) and Step 5's runs, each
+   with its command verbatim and its rc: the two `-k end_to_end` greens in one DB window with
+   their two different families (RL 8060 precision 2), the whole-file green and the broken-input
+   red. The mount row is checked as Step 4 states it, not against Acceptance 18's `@1` (RL 8060
+   precision 1); (vi) the end-to-end test asserts partition, `method == "shapley"`,
    the Shapley parts summing to `total_change_minor`, and isolated + residual == total on the
    stored run (Step 2's block, read in the diff).
 
@@ -293,7 +337,8 @@ item 1**; it is checked from the repository root on `SL-1543`'s merge tree.
 2. **The discharge.** `SL-1543`'s auditor records A1 discharged against PL 8055 item 1 in
    `SL-1543`'s ledger audit; `LG-1732` is frozen at its merge and is not edited.
 3. **Mint.** PL 8055 mints from working id 8055 after #1310, so the `LG-1732` cites resolve on
-   `main`.
+   `main`, and with or after RL 8060 (amended 2026-10-16: RL 8060 "What it obliges"; the
+   maintainer's condition 4). RL 8060 joins `relates:` at the mint.
 
 ## Self-review
 
@@ -302,7 +347,8 @@ item 1**; it is checked from the repository root on `SL-1543`'s merge tree.
    plumbing first); serialisation (N3, Global Constraints); activation need #1310 (N1); relates
    `PL-1542`, `PL-1705`, `PL-1694`.
 2. **One decision opened, not picked:** DP-A1-1, three options and a recommendation; `draft`
-   until it is ruled.
+   until it is ruled. *(Amended 2026-10-16: ruled (a) by RL 8060, the recommendation; `draft`
+   until the mint.)*
 3. **Placeholders.** The constant's rows in Step 1 are a move of named lines, and in Step 4 a
    copy of a printed run: both are content the executor reads, not content this plan can know.
    Writing either here would be the hand-written list A1 is about.
