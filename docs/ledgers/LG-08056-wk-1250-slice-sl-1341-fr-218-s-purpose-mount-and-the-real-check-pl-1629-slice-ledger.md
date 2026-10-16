@@ -85,7 +85,7 @@ tests (`backend/tests/test_score_purpose_mount.py`) are written and **delivered 
 
 ### Pre-gate audit (code and spec)
 
-Written 2026-10-16 09:55 BST (by `date`) by `auditor-1341` (the auditor role), reading `git diff origin/main...b0ee492c`
+Written 2026-10-16 09:53 BST (by `date`) by `auditor-1341` (the auditor role), reading `git diff origin/main...b0ee492c`
 (merge-base `0877e6e7`), the plan `PL-1629` at `origin/main`, `RL-1628` at `origin/main`, and the dispatch record (from-lead
 "2026-10-16 09:34:47 BST"; to-lead "2026-10-16 09:35:13 BST"). **No test was run**; the gate half comes after the gate.
 Scope was derived from PL-1629's tasks and acceptance items 1 to 12 first, then evidenced.
