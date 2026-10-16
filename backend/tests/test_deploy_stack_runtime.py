@@ -107,27 +107,28 @@ def _compose_settings() -> Any:
     )
 
 
-#: What a key may do. `score:execute` and `score:batch` are granted by no builtin role (FR-347),
-#: so the credential is a Service Account whose own `permissions` satisfy the check
-#: (RL-924's `credential_permissions` union).
+#: What the scoring key may do. `score:execute` and `score:batch` are granted by no builtin role
+#: (FR-347), so the scoring credential is a Service Account, created through
+#: `POST /api/v1/service-accounts` (FR-389: `ALLOWED_PERMISSIONS` is these two and nothing else).
+#: Every other permission a test needs belongs to a USER principal, never to the key (below).
 _SCORING_PERMISSIONS = ["score:execute"]
-_ALL_PERMISSIONS = [
-    "score:execute", "score:batch", "rating:read", "rating:compile", "job:read",
-    "dataset:read", "dataset:write",
-]
+_BATCH_PERMISSIONS = ["score:execute", "score:batch"]
 
 
 class _Workspace(NamedTuple):
     """A workspace seeded through the governed path, and a key for it."""
 
     workspace_id: str
-    headers: dict[str, str]
+    headers: dict[str, str]  # the scoring Service Account's key (score:execute [+ score:batch])
+    users: dict[str, dict[str, str]]  # demo user principals' development headers, by name
     rating_version_id: str
     rating_version_ref: str
     quote: dict[str, Any]  # a valid `POST /api/v1/score` body for the Rating Version
 
 
-def _governed_workspace(*, approved: bool, permissions: list[str]) -> _Workspace:
+def _governed_workspace(
+    *, approved: bool, scoring: list[str] = _SCORING_PERMISSIONS
+) -> _Workspace:
     """Seed a Rating Version the way the platform would have accepted it, then a key.
 
     SL-1258, DP-S4-SEED (the maintainer's (by delegation) entry "2026-10-16 10:08:52 BST", (a)):
@@ -139,11 +140,13 @@ def _governed_workspace(*, approved: bool, permissions: list[str]) -> _Workspace
     `create_rating_version` and leaves the `draft` the service created: `rating.compile` is
     refused with 409 `RATING_VERSION_IMMUTABLE` for any other status (`api/models.py`
     `compile_rating_version`, FR-239), so the compile test cannot take the approved version.
-    Only the credential is a direct row: a Service Account and its key, which no route creates
-    with `score:execute`.
+    No direct row is written for the credential (the maintainer's (by delegation) entry
+    "2026-10-16 10:31:43 BST", (1a) and (1b)): the scoring key is created through
+    `POST /api/v1/service-accounts` by the `admin` demo principal (`admin:manage_service_accounts`),
+    with only the scoring permissions FR-389 allows. A test that needs any other permission calls
+    with a demo USER principal (`users`, development identity), which really holds it through its
+    built-in role.
     """
-    from datetime import UTC, datetime, timedelta
-
     from backend.tests.test_demo_rating_evidence import (
         _BASE_MINOR,
         _QUOTES,
@@ -153,8 +156,7 @@ def _governed_workspace(*, approved: bool, permissions: list[str]) -> _Workspace
         demo_model,
     )
     from backend.tests.test_wf699_journey import _seed_module
-    from app.auth.api_keys import generate_key
-    from app.db.models import ApiKeyRow, ServiceAccountRow
+    from app.api.deps import DEV_PRINCIPAL_HEADER
     from app.db.session import Database
     from app.platform import rating_versions as rating_service
     from app.platform.blobs import BlobStore
@@ -162,7 +164,7 @@ def _governed_workspace(*, approved: bool, permissions: list[str]) -> _Workspace
 
     settings = _compose_settings()
 
-    async def seed() -> _Workspace:
+    async def seed() -> tuple[UUID, dict[str, dict[str, str]], UUID, str, str]:
         database, blobs = Database(settings), BlobStore(settings)
         try:
             await blobs.ensure_bucket()
@@ -207,39 +209,39 @@ def _governed_workspace(*, approved: bool, permissions: list[str]) -> _Workspace
                 status = row.status
             assert status == ("approved" if approved else "draft"), status
 
-            generated = generate_key("uat")
-            async with database.unit_of_work() as session:
-                account = ServiceAccountRow(
-                    workspace_id=workspace_id, slug="e43-scorer", description=None,
-                    environments=["uat"], permissions=permissions, rate_limit_rps=None,
-                )
-                session.add(account)
-                await session.flush()
-                session.add(ApiKeyRow(
-                    service_account_id=account.id, prefix=generated.prefix,
-                    secret_hash=generated.secret_hash, environment=generated.environment,
-                    expires_at=datetime.now(UTC) + timedelta(days=1),
-                ))
-            quote = {
-                "quote_id": "E43-Q1", "purpose": "new_business",
-                "quoted_at": "2026-09-28T09:00:00Z", "effective_date": "2026-10-01",
-                "inputs": _raw_inputs(_QUOTES["base-levels"]),
-                "options": {"rating_version_ref": ref},
+            users = {
+                name: {DEV_PRINCIPAL_HEADER: str(principal.id), "Workspace-Id": str(workspace_id)}
+                for name, principal in people.items()
             }
-            print(f"  seeded workspace {workspace_id}: {ref} is {status} (governed path)")
-            return _Workspace(
-                str(workspace_id),
-                {"X-API-Key": generated.value, "Workspace-Id": str(workspace_id)},
-                str(rating_id), ref, quote,
-            )
+            return workspace_id, users, rating_id, ref, status
         finally:
             await database.dispose()
 
-    return asyncio.run(seed())
+    workspace_id, users, rating_id, ref, status = asyncio.run(seed())
+    scorer = _create_scorer(users["admin"], scoring)
+    quote = {
+        "quote_id": "E43-Q1", "purpose": "new_business",
+        "quoted_at": "2026-09-28T09:00:00Z", "effective_date": "2026-10-01",
+        "inputs": _raw_inputs(_QUOTES["base-levels"]),
+        "options": {"rating_version_ref": ref},
+    }
+    print(f"  seeded workspace {workspace_id}: {ref} is {status} (governed path)")
+    return _Workspace(str(workspace_id), scorer, users, str(rating_id), ref, quote)
+
+
+def _create_scorer(admin: dict[str, str], permissions: list[str]) -> dict[str, str]:
+    """The scoring key, through the product's own route: `POST /api/v1/service-accounts`, called
+    by a principal holding `admin:manage_service_accounts` (the demo `admin`). Returns the key's
+    request headers."""
+    created = _api(
+        "POST", "/api/v1/service-accounts", admin,
+        {"slug": "e43-scorer", "environments": ["uat"], "permissions": permissions},
+    )
+    return {"X-API-Key": created["keys"][0]["key"], "Workspace-Id": admin["Workspace-Id"]}
 
 
 def _scoring_request() -> tuple[str, dict[str, str], dict[str, Any]]:
-    ws = _governed_workspace(approved=True, permissions=_SCORING_PERMISSIONS)
+    ws = _governed_workspace(approved=True)
     return f"http://127.0.0.1:{LB_PORT}/api/v1/score", ws.headers, ws.quote
 
 
@@ -366,9 +368,11 @@ def test_a_submitted_job_reaches_a_terminal_state_through_the_compose_worker(
     _compose(n, "up", "-d", "--wait", "lb", *_worker_services(n))
     # A DRAFT Rating Version created by the services (`create_rating_version`), never by a row
     # write: compile is refused for any other status (409 RATING_VERSION_IMMUTABLE, FR-239), and
-    # PL-1690 E4.3 names no status ("one cheap Job"). The key carries what this route needs.
-    ws = _governed_workspace(approved=False, permissions=_ALL_PERMISSIONS)
-    headers = ws.headers
+    # PL-1690 E4.3 names no status ("one cheap Job"). The caller is the demo `analyst`, a USER
+    # principal that really holds `rating:compile`, `rating:read` and `job:read` through its
+    # built-in role (the maintainer's (by delegation) entry "2026-10-16 10:31:43 BST", (1b)).
+    ws = _governed_workspace(approved=False)
+    headers = ws.users["analyst"]
     version_id = ws.rating_version_id
     started = time.monotonic()
     job = _api("POST", f"/api/v1/rating-versions/{version_id}/compile", headers)
@@ -435,13 +439,12 @@ def _wait_succeeded(job: dict[str, Any], headers: dict[str, str], bound: int) ->
     return current
 
 
-def _stack_with_workspace(n: str, extra_permissions: tuple[str, ...] = ()) -> _Workspace:
+def _stack_with_workspace(n: str, scoring: list[str] = _SCORING_PERMISSIONS) -> _Workspace:
     """Bring up lb and every worker service; seed an APPROVED Rating Version through the
-    governed path and a key whose permissions cover these routes (plus `extra_permissions`)."""
+    governed path, the scoring key (`scoring` permissions, through the route) and the demo user
+    principals' headers (`ws.users`) for every route that is not a scoring route."""
     _compose(n, "up", "-d", "--wait", "lb", *_worker_services(n))
-    return _governed_workspace(
-        approved=True, permissions=[*_ALL_PERMISSIONS, *extra_permissions]
-    )
+    return _governed_workspace(approved=True, scoring=scoring)
 
 
 def _worker_services(n: str) -> list[str]:
@@ -505,7 +508,7 @@ def test_a_dataset_ingest_job_succeeds_through_the_compose_io_worker(
     `queued`.
     """
     ws = _stack_with_workspace(built_n)
-    workspace_id, headers = ws.workspace_id, ws.headers
+    workspace_id, headers = ws.workspace_id, ws.users["analyst"]  # dataset:write, job:read
     csv = b"policy_id,exposure,claim_count\nP1,1.0,0\nP2,0.5,1\nP3,1.0,0\n"
     csv_sha, _ = _put_blob_inputs(workspace_id, csv, b"PAR1")
     _api("POST", "/api/v1/datasets", headers, {"slug": "e43-ingest", "currency": "GBP"})
@@ -537,7 +540,7 @@ def test_a_score_batch_job_succeeds_through_the_compose_scoring_worker(
     from app.db.session import Database
     from app.platform.blobs import BlobStore, to_ref
 
-    ws = _stack_with_workspace(built_n)
+    ws = _stack_with_workspace(built_n, _BATCH_PERMISSIONS)
     quote = ws.quote
     rows = 20
     frame = pl.DataFrame({
@@ -556,7 +559,8 @@ def test_a_score_batch_job_succeeds_through_the_compose_scoring_worker(
          "table_name": "scoring_frame"},
     )
     assert job["queue"] == "scoring"
-    done = _wait_succeeded(job, ws.headers, SCORE_BATCH_BOUND_SECONDS)
+    # The job is read by the demo `analyst` (`job:read`): the scoring key holds scoring only.
+    done = _wait_succeeded(job, ws.users["analyst"], SCORE_BATCH_BOUND_SECONDS)
 
     # `succeeded` is not the proof: the output must hold one row per input row. The expected
     # count is the INPUT's own height, read from the frame sent, never a literal (DP-S4-SEED
@@ -605,16 +609,19 @@ def test_a_sampled_trace_is_produced_through_the_compose_scoring_worker(
     `PUT /api/v1/settings` (the seeded version declines nothing). Two red causes: `scoring` unconsumed (`queued`, "never consumed"), and the handler
     unregistered (`failed`, `JOB_HANDLER_NOT_REGISTERED`, no trace row).
     """
-    ws = _stack_with_workspace(built_n, ("admin:manage_settings",))
-    headers = ws.headers
+    ws = _stack_with_workspace(built_n)
+    # Three principals, each holding what it calls: the demo `admin` (`admin:manage_settings`)
+    # sets the rate, the scoring key scores, the demo `analyst` (`job:read`, `rating:read`) reads
+    # the Job and the trace (the maintainer's (by delegation) entry "2026-10-16 10:31:43 BST", (1b)).
+    admin, headers = ws.users["admin"], ws.users["analyst"]
     # The governed path (SL-1258, DP-S4-SEED-2 (2)): `PUT /api/v1/settings`
     # (`api/settings.py` `update_settings`, `admin:manage_settings`) validates the key against
     # its declaration (`platform/settings.py` `rating.trace_sample_rate`, FLOAT in [0, 1]).
-    updated = _api("PUT", "/api/v1/settings", headers, {"values": {"rating.trace_sample_rate": 1.0}})
+    updated = _api("PUT", "/api/v1/settings", admin, {"values": {"rating.trace_sample_rate": 1.0}})
     resolved = {r["key"]: r for r in updated}["rating.trace_sample_rate"]
     assert resolved["effective_value"] == 1.0, resolved
     ctx = ws.quote
-    quote = _api("POST", "/api/v1/score", headers, ctx)
+    quote = _api("POST", "/api/v1/score", ws.headers, ctx)
     quote_id = quote.get("quote_id") or ctx["quote_id"]
     jobs = _api("GET", "/api/v1/jobs?kind=score.trace_produce", headers)["items"]
     assert jobs, "scoring a sampled quote submitted no score.trace_produce Job"
