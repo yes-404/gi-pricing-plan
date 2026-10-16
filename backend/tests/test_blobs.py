@@ -319,3 +319,16 @@ async def _age_blob(database: Database, sha256: str, *, days: int) -> None:
             .where(BlobRow.sha256 == sha256)
             .values(created_at=datetime.now(UTC) - timedelta(days=days))
         )
+
+
+@pytest.mark.req("FR-421")
+async def test_ensure_bucket_sets_the_staging_lifecycle_rule(blob_store: BlobStore) -> None:
+    """RL-1724 DP-U1.2: staged objects and incomplete multipart uploads expire after 2 days."""
+    await blob_store.ensure_bucket()
+    config = blob_store._client.get_bucket_lifecycle_configuration(
+        Bucket=blob_store._bucket
+    )
+    prefixes = {
+        rule.get("Filter", {}).get("Prefix") or rule.get("Prefix") for rule in config["Rules"]
+    }
+    assert "staging/" in prefixes
