@@ -66,6 +66,19 @@ T3 anchor `:1154` → `:1195`; FR-218 `:87` unchanged. Each anchor counted exact
 the reads of `bundle.algorithm`/`decision`: `score_one` `:939`, `:962`; `_score_context_sync` `:1132`, `:1143`;
 `_score_batch_row` `:1191`. Not re-measured one by one: the `runtime.py`, `compile.py`, `inline.py` and `rating.py` cites.
 
+**Completion of the `score.py` cites (2026-10-16 10:14 BST by `date`, `executor-1341d`, writing only).** The paragraph above omits five
+of the plan's changed cites. Every `score.py` cite of PL-1629 (`:53`, `:120`, `:258-262`, `:386-392`, `:527`) is now paired with its line in
+`git show c1f7c447:packages/pricing-core/src/pricing_core/rating/score.py` (read by `grep -n` and `sed -n` on that blob; the same lines
+read identically in `0877e6e7`'s blob):
+- `_check_purpose_mount` whole function `:391-421` (the plan's range includes the blank line before and the two after) → `:392-419`;
+  its docstring `:392-410` → `:393-410`; the "interim" message line `:416` → `:417`.
+- `build_scoring_result` reads `:887-902` → `:888-903` (`_check_lookup_misses` `:888`, `_apply_constraints` `:889`, `_ladder_inputs` `:891`,
+  `_build_outputs` `:893`, `_build_trace` `:903`).
+- `score_one` reads `:938`, `:961` → `:939`, `:962` (as above). `_score_context_sync` reads `:1106` → `:1132` (`algorithm = bundle.algorithm`);
+  `:1117-1118` → `:1143-1144` (`bundle.decision.evaluate`, both arms). `_score_batch_row` `:1142` → `:1191` (as above); its def `:1128` → `:1175`.
+- Test-file cites unchanged between `0877e6e7` and `c1f7c447` (`git show <sha>:packages/pricing-core/tests/test_rating_score.py`):
+  `_compiled` `:160`, `_ctx` `:168`, the "interim" asserts `:512` and `:1030`.
+
 ## Proofs run (no full gate; run-small, ≤3 files each, before GATE START)
 
 - model-schema `test_rating_algorithm.py` + `backend/tests/test_contracts.py` + `test_rating_purpose_mount.py`: 230 passed, 2 skipped.
@@ -177,6 +190,65 @@ bytes" is shown by the key's absence from both dumps plus the hash recomputed fr
   Owner: `executor-1341b` or the lead, to paste the quoted failures from the run record; or the gate window re-derives them against
   `77cbf522` with the source reverted. Verdict for that Task 6 limb: **owed, with that owner**.
 
+
+## Gate Step 0 (written 2026-10-16 10:14 BST by `date`, `executor-1341d`; nothing below has been run)
+
+Authority: the maintainer's GO, `to-lead.md` "2026-10-16 09:35:13 BST" (red-first: "the gate re-proves them by cause at Step 0"), and the
+lead's ruling in `from-lead-2026-10-09.md` (entry after the 09:56 response): **SL-1341's red-first quotes are owned by this gate's Step 0**; the
+LG records them then. The run-small output of the prep (`25 failed, 33 passed`, `from-lead` "2026-10-16 09:34:47 BST") is the pre-build
+evidence; the seat's table of node ids was never captured, so the list below is **derived by reading** `77cbf522`'s two test files, and the
+Step 0 run confirms or corrects it.
+
+**What runs.** Against `77cbf522` (the prep commit, before the source changed), not against the gate head: a detached worktree at `77cbf522`
+(`git -C <main checkout> worktree add --detach .claude/worktrees/sl-1341-step0 77cbf522`; setup per `dev-commands`, done outside any ALONE
+gate), then `run-small.sh <that worktree> packages/model-schema/tests/test_rating_algorithm.py packages/pricing-core/tests/test_rating_purpose_mount.py`
+(2 files, no DB; RL-1626). Quote the `-rf` FAILED lines and the `N failed, N passed` line into this section. Expected: `25 failed, 33 passed`.
+The worktree is removed after the quote is pasted.
+
+**The 25 reds, by node and cause** (27 new cases in the two files: 14 + 13; 2 are controls and pass). Causes are the plan's: **(F)** `SubGraphRef`
+has no `purposes` (`extra_forbidden`, or `AttributeError` on read), PL-1629 Task 2 premise d; **(I)** the interim guard (`score.py:392`, message
+"interim" `:417`), premise a. File M = `packages/model-schema/tests/test_rating_algorithm.py`, P = `packages/pricing-core/tests/test_rating_purpose_mount.py`.
+
+| # | Node (`<file>::<test>`) | Cause |
+|---|---|---|
+| 1-5 | M `::test_a_purposes_selector_outside_the_two_admitted_purposes_is_refused[bad0..bad4]` (5 forms) | F: asserts `extra_forbidden` is absent |
+| 6-8 | M `::test_a_purposes_selector_of_the_two_admitted_purposes_is_accepted[good0..good2]` (3 forms) | F: `extra_forbidden` raised on an admitted selector |
+| 9 | M `::test_an_absent_selector_keeps_every_existing_mount_unconditional` | F: `SubGraphRef.purposes` does not exist (`AttributeError`) |
+| 10 | M `::test_a_step_that_runs_for_every_purpose_cannot_consume_a_purpose_only_name` | F: no `GraphUnresolvedRefError`; the field is refused first |
+| 11 | M `::test_a_purpose_mount_may_re_produce_a_parent_name` | F: `extra_forbidden` on a valid input |
+| 12 | M `::test_a_purpose_mount_may_not_reach_the_risk_premium_output` | F: asserts `extra_forbidden` is absent |
+| 13 | M `::test_a_second_re_producer_of_one_name_is_a_cycle` | F: no `GraphCycleError`; the field is refused first |
+| 14 | M `::test_a_mount_re_producing_a_name_the_parent_already_re_produces_is_a_cycle` | F: no `GraphCycleError`; the field is refused first |
+| 15-16 | P `::test_a_version_with_only_an_unconditional_mount_is_refused_by_the_real_check[mid_term_adjustment,cancellation]` | I: the message still says "interim" |
+| 17 | P `::test_a_cancellation_only_mount_refuses_a_mid_term_adjustment_quote` | F (the fixture mounts `purposes`), the first error; the refusal's wording is I |
+| 18 | P `::test_a_cancellation_only_mount_prices_a_cancellation_with_the_mount` | F, then I (the interim guard refuses a cancellation) |
+| 19 | P `::test_a_cancellation_only_mount_leaves_new_business_exactly_as_without_it` | F |
+| 20 | P `::test_a_constraint_inside_a_cancellation_mount_is_evaluated_for_it` | F, then I |
+| 21 | P `::test_removing_the_real_check_would_be_caught` | F (fixture) |
+| 22 | P `::test_compile_bundle_emits_a_graph_for_exactly_the_selected_purposes` | F; `Bundle.purpose_graphs` absent |
+| 23 | P `::test_a_change_to_purposes_alone_changes_the_content_hash` | F |
+| 24 | P `::test_load_bundle_refuses_a_purpose_graph_that_disagrees_with_its_algorithm` | F; `Bundle.purpose_graphs` absent |
+| 25 | P `::test_inline_mounts_inlines_a_purpose_mount_for_its_purpose_only` | F; `inline_mounts` has no `purpose=` |
+
+The two **controls, expected green at `77cbf522`**: P `::test_the_fixture_prices_new_business_with_an_unconditional_re_producing_mount` (the
+test's own docstring: "Control: not red") and P `::test_a_version_with_no_purpose_mount_keeps_the_hash_it_had` (the unconditional mount,
+`bundle_hash(graph, pins)` as before). **Rule for the quote:** for each of the 25, read the first error line; a red whose first error is
+neither F nor I is a plan defect and is reported, not fixed. A control that is red, or a count other than 25, stops the gate before Step 1.
+The rows 17 to 21 name the fixture first; whether the interim guard (I) is reached after it is read from the run, not assumed.
+
+**The 5 route tests, for the small slot first** (`backend/tests/test_score_purpose_mount.py`, DB-backed, so a granted DB window, not run-small
+alone): `::test_score_prices_a_cancellation_with_the_purpose_mount`, `::test_score_prices_new_business_as_if_the_cancellation_mount_were_absent`,
+`::test_score_refuses_a_mid_term_adjustment_the_cancellation_mount_does_not_serve`,
+`::test_score_compare_prices_each_side_by_its_purposes_graph`, `::test_score_compare_refuses_a_mid_term_adjustment_naming_the_failing_side`.
+They run before the full pytest so a route red is read alone. Predicted green (the code exists); a red is a code gap, reported, not fixed in `src`.
+The full gate (`sl1341-gate.sh`, `EXPECT_HEAD` = the head at the lead's grant) then runs every one again.
+
+**Shared paths with SL-1547 (`sl-1547-wk675-s5`, unmerged, draft)**: both edit `model_schema/rating.py`, `rating-algorithm.schema.json` and
+`03-rating-engine.md` at the plan's anchors; this slice also changed `docs/contracts/openapi/generated.json`. **Whichever of the two merges
+second re-merges `origin/main` (a merge, never a rebase), re-runs `python scripts/generate-contracts.py --check` (regenerating `generated.json`
+if red), and re-runs the pinned-hash and quote-form tests** (`test_rating_shadowed_inputs.py`, `test_rating_wire_order.py`,
+`test_rating_compile_bundle.py`, `test_quote_input_raise_sites.py`, `test_rating_purpose_mount.py`); the second merge's ACK checks the contract
+diff (the maintainer's GO, "4 MET with its caveats"). Neither slice's ledger edits the other's paths to make a conflict disappear.
 
 ## PRs
 
