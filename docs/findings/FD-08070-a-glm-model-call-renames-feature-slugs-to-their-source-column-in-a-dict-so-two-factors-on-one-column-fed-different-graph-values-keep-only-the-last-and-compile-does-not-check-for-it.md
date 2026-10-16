@@ -15,12 +15,21 @@ relates: [WK-1178]
 *(Filed under working id 8070 (written "FD 8070" in prose), supplied by the lead. Authority: the
 maintainer's entry "2026-10-16 10:47:33 BST", Observation B, in `channel/to-lead.md`, which sets
 the owner (WK-1178), asks for the severity from a constructed case, and names the remedy. Every
-read below was made at `origin/main` `a2f77b2dcad5aaec41a5f10aa664383caf421e8b`. Nothing was run:
-SL-1455's ALONE gate was in progress, so the scratch test is written and not executed.)*
+read below was made at `origin/main` `a2f77b2dcad5aaec41a5f10aa664383caf421e8b`. **Amended
+2026-10-16, before this finding merges:** the scratch test was written while SL-1455's ALONE gate
+was in progress and run afterwards, in the small slot, 2026-10-16 11:08:14 to 11:09:20 BST
+(reported in the lead's entry "2026-10-16 11:10:37 BST", `from-lead-2026-10-09.md`); its result
+is quoted under Evidence 3 and the severity below is set by it.)*
 
 ## Finding
 
-**Severity: HIGH (proposed; the lead's verdict).** A rating graph that compile accepts today can
+**Severity: HIGH by the 10:52:08 rule, on the run of 2026-10-16 11:08:14 to 11:09:20 BST.** The
+maintainer's rule (entry "2026-10-16 10:52:08 BST", `to-lead.md`) was: a run that is red as
+constructed, with no error, is HIGH. The run is red as constructed: `fd8070_collision_test.py`,
+"2 passed in 11.14s" (the asserts state the defect), compile accepts the graph and the
+`model_call` returns the adjusted value with no `MODEL_CALL_ERROR_KEY`. The maintainer's entry
+"2026-10-16 11:11:03 BST", item 4, records the same: "FD 8070 HIGH (reproduced on main, silent)".
+A rating graph that compile accepts today can
 feed two Factors that share one raw column two different values for one quote, and the GLM then
 prices the quote on one of them for both Factors, with no error and no trace entry. The case is
 constructed in Evidence 3; it needs no unusual input, only a Factor pair the platform already
@@ -90,11 +99,18 @@ written in the other order the quote is priced as a 25-year-old on both. Which v
 property of dict order in the authored JSON, and nothing in the product shows the author that one
 value was discarded.
 
-Scratch test (written, not run): `/home/puzhenhao1989/gi-pricing-plan.local/scratch/fd8070_collision_test.py`.
+Scratch test (written, then run: 2 passed in 11.14s, below): `/home/puzhenhao1989/gi-pricing-plan.local/scratch/fd8070_collision_test.py`.
 It asserts compile accepts the graph, that the three prices (intended, raw-only, adjusted-only)
 are distinguishable, and that the `model_call` returns the adjusted-only price with no
 `MODEL_CALL_ERROR_KEY`. Run it, once the gate has ended, as its header says, through
-`run-small.sh`. Until it has read rc 0 this severity rests on the code reading above.
+`run-small.sh`.
+
+**The run (2026-10-16 11:08:14 to 11:09:20 BST, the small slot, through `run-small.sh`, as the
+lead's entry "2026-10-16 11:10:37 BST" reports it):** "2 passed in 11.14s". The two tests assert
+the defect, so a pass is the defect shown, not a green result for the product: compile accepts the
+graph; the `model_call` returns `on_adj` (the adjusted-only price) with no `MODEL_CALL_ERROR_KEY`,
+which is not the intended price; the three prices (intended, raw-only, adjusted-only) are
+distinct. The severity no longer rests on the code reading alone.
 
 ### 4. A second route to the same loss: two graph names, one slug
 
@@ -164,11 +180,16 @@ met at `a2f77b2d`: a graph that compile accepts feeds the slugs different values
 the result is a number, not an error (`predict` returns, `runtime.py:820-826`). It is not
 CRITICAL on this reading because it needs two Factors on one column **and** two different graph
 values for them; a graph that maps the one raw input to both slugs coincides and is priced
-correctly. The scratch test, once run, moves this from "read" to "shown".
+correctly. The scratch run of 2026-10-16 11:08:14 to 11:09:20 BST moved this from "read" to "shown".
 
 ## Disposition
 
 **Fix with an owner: WK-1178**, in the next D batch (the maintainer's entry places it there).
+**Amended 2026-10-16, on the run:** the predict-time guard is no longer SL-1274's. Per the
+maintainer's entry "2026-10-16 10:52:08 BST" and the red run it names, it is **its own fast fix
+slice, SL 8074 (owner WK-1178; being built off main)**, gated after SL-1543 by the readiness order
+of the entry "2026-10-16 10:52:39 BST"; SL-1274 re-merges onto SL 8074 and drops its own copy of
+the guard. Item 2 below is read with that change.
 
 The requirement is a property of the fix, from the maintainer's ruling: **a guard that refuses
 unequal values for one column; never a silent pick.**
@@ -180,7 +201,9 @@ unequal values for one column; never a silent pick.**
    transforms differently). Otherwise refuse with a coded error that names the step, the two
    slugs and the column, never a quote value (NFR-499). A graph name mapped to two different
    slugs is the same graph value and passes.
-2. **At predict: discharged by S4 (SL-1274, branch `sl-1274-wk690-s4-factor-expression`), not by
+2. **At predict: SL 8074 (the fast fix slice, see the amendment above), no longer S4.** The
+   paragraph below is the text as filed, kept because it records the guard's form and where it
+   was first placed. **At filing: discharged by S4 (SL-1274, branch `sl-1274-wk690-s4-factor-expression`), not by
    this finding's slice.** The maintainer's entry "2026-10-16 10:50:08 BST" (DP-1274-MULTI, (a'))
    moves the predict-time guard into S4: before the frame is built, two inputs that map to one
    column with **unequal** values are refused with a named error; equal values are allowed (the
@@ -221,8 +244,9 @@ unequal values for one column; never a silent pick.**
    SL-1341; SL-1274 then re-merges onto it and drops its own copy of the guard; the compile-time
    guard stays in this finding's later limb. **GREEN** (the values do not collide as
    constructed): the auditor states why the reading was wrong and severity drops to **MEDIUM**
-   (a latent trap); the guard stays in SL-1274 as ruled at 10:50:08. The Severity text above is
-   left as filed until that run.
+   (a latent trap); the guard stays in SL-1274 as ruled at 10:50:08. **Outcome (the run of
+   2026-10-16 11:08:14 to 11:09:20 BST): RED as constructed, so HIGH, and the guard is its own
+   slice, SL 8074.** The Severity text above is set accordingly.
 
 **Proof on a deliberately broken input (CLAUDE.md §13):** the scratch test, red-first. At
 `a2f77b2d` it asserts the defect; after the compile-time guard the same graph must be refused at
