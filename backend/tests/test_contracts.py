@@ -204,6 +204,7 @@ def test_committed_contracts_match_the_models() -> None:
     assert result.returncode == 0, result.stdout + result.stderr
 
 
+@pytest.mark.req("FR-14")
 @pytest.mark.req("FR-451")
 def test_generated_document_is_openapi_31() -> None:
     """OpenAPI 3.1, because it is the version whose schema dialect is JSON Schema 2020-12 —
@@ -3190,7 +3191,6 @@ UNTYPED_2XX_PENDING_PART_B: Final[dict[tuple[str, str, str], str]] = {
     key: _PENDING_2XX
     for key in (
         ("GET", "/api/v1/dataset-versions/{version_id}/rejected", "200"),
-        ("POST", "/api/v1/rate-tables/{slug}@{version}/import", "200"),
         ("POST", "/api/v1/sources/{source_id}/preview", "200"),
         ("POST", "/api/v1/validation-reports/{report_id}/results/{rule_id}/acknowledge", "201"),
     )
@@ -3213,7 +3213,7 @@ UNTYPED_REQUEST_PENDING: Final[dict[tuple[str, str], str]] = {
 #: citation, so a new non-JSON body is a visible act. Keyed `(METHOD, path, media)`.
 NON_JSON_REQUEST_BODIES: Final[dict[tuple[str, str, str], str]] = {
     ("POST", "/api/v1/rate-tables/{slug}@{version}/import", "multipart/form-data"): (
-        "UploadFile with File() and Form() (backend/src/app/api/rate_tables.py:225-226)"
+        "UploadFile with File() and Form() (backend/src/app/api/rate_tables.py:285-286)"
     ),
     ("POST", "/api/v1/sources/{source_id}/preview", "multipart/form-data"): (
         "UploadFile with File() (backend/src/app/api/datasets.py:215)"

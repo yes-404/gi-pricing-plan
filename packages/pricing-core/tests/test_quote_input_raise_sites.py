@@ -60,6 +60,8 @@ _CASES: dict[str, tuple[dict[str, Any], tuple[str, ...], tuple[str, ...]]] = {
 #: Every other raise site under `pricing_core/rating` (a `_raise_named` call, a `CodedError(`
 #: construction, or a `_model_call_failure(` call), with why it is input-free.
 _INPUT_FREE = {
+    # FD-1660's guard: a fixed literal and mount points (authored identifiers), never a value
+    ("rating/analysis.py", "_check_mounts_attributable"): 1,
     ("rating/score.py", "_check_purpose_mount"): 1,  # `purpose` is a closed set of literals
     ("rating/score.py", "_check_billing_surface"): 1,  # names the constant billing-surface keys
     # FR-213's refusal: names the declared step outputs the inputs collide with, never a value
@@ -119,7 +121,13 @@ _INPUT_SITES = {("rating/score.py", "_validate_inputs"), ("rating/score.py", "_r
 
 
 #: `PlatformError` cannot be raised in this package (import-linter), so a hit is a violation.
-_SITE_NAMES = ("_raise_named", "CodedError", "_model_call_failure", "PlatformError")
+_SITE_NAMES = (
+    "_raise_named",
+    "CodedError",
+    "_model_call_failure",
+    "PlatformError",
+    "_MountNotYetAttributable",
+)
 
 
 def _source_files() -> list[Path]:

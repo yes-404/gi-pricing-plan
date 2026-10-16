@@ -224,3 +224,9 @@ nothing):
 **Event that next confirms or discharges it:** the fix slice's merge with the red of step 1 shown
 failing on the base tree by its causes and green after, and `python3 scripts/audit-docs.py` and the
 full `test_artifact_immutability.py` green on the merged tree.
+
+## Addition 2026-10-14: FR-70 joins the artifact-immutability set
+
+FR-70 is immutable by route absence only: no route edits the artifact, and nothing at the database or in a test says so, which is the class this finding names for `factors`. The maintainer (by delegation), "2026-10-14 11:06:52 BST" item 2 in `to-lead.md`, ruled: *"FR-70 is NOT in that FD [FD 8027]: immutability by route absence only is FD 8007/O-1's class. It joins that finding's table set (the artifact-family derivation), with one remedy."* The lead relayed it at "2026-10-14 11:07:28 BST" (`from-lead-2026-10-09.md`): "FR-70 instead joins FD 8007/O-1's artifact-immutability set". So FR-70 is added to the set that remedy step 4 (measure the invariant, not the list) derives from the artifact family, and it takes the one remedy of this finding, not a separate one. This addition changes no severity and no owner (MEDIUM, WK-1178). It is an auditor-owned edit before the finding mints; the FR-70 limb has not been line-read here, and WK-1178's plan delta is where its table row is derived.
+
+*(2026-10-14: per the maintainer's (by delegation) "2026-10-14 12:00:14 BST" (`to-lead.md`), the re-cut remedy: "FD 8007 becomes a limb of S-a/S-b (its revoke matters only after S-b). FR-70 rides S-a.")*
