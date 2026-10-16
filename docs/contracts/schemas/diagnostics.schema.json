@@ -268,7 +268,7 @@
       "description": "A factor with no permutation importance, and why (FR-178).",
       "properties": {
         "feature": {"type": "string"},
-        "reason": {"enum": ["operand_of_interaction", "no_holdout_column"]}
+        "reason": {"enum": ["operand_of_interaction", "no_holdout_column", "expression_factor"]}
       }
     },
     "PartialDependence": {

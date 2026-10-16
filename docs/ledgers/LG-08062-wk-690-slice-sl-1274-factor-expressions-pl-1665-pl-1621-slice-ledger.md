@@ -173,3 +173,40 @@ GATE END. F11 is not adopted (inert), per the lead.
 nullable `column`, `:1147`); the new tests red then green by their own asserts (F1, F5, F6, F8, F9, F12, NUMERIC,
 the weak assert) through `run-small.sh`; the migration round trip on a scratch DB; `audit-docs.py` and
 `doc-index.py --check` under the gate-2 flock. The branch must also re-merge `main` `a2f77b2d` before its gate.
+
+## DP-1274-DIAG (a) — EXPRESSION_FACTOR omission — 2026-10-16 (writing only, nothing run)
+
+Stamps: the maintainer's `to-lead.md` "2026-10-16 10:27:41 BST" (refuse-or-omit with a named reason; red-first
+test per diagnostic) and "2026-10-16 10:33:35 BST" (concurred; render as readable text, own branch, text asserted);
+the lead's approval in `from-lead-2026-10-09.md` "2026-10-16 10:33:20 BST" (the one new member; widened write set).
+Red-first commit `d88d2218` (the four tests only); the change follows in the next commit.
+
+**Change.** One new member `EXPRESSION_FACTOR = "expression_factor"` on each enum; an `expression` Factor is
+omitted from both GBM per-factor blocks instead of reading `source_columns[0]` / `[:1]`.
+
+| What | Where (at the head carrying this entry) |
+|---|---|
+| `PermutationOmissionReason.EXPRESSION_FACTOR` | `packages/model-schema/src/model_schema/diagnostics.py:380` |
+| `PartialDependenceOmissionReason.EXPRESSION_FACTOR` | `packages/model-schema/src/model_schema/diagnostics.py:434` |
+| permutation block omits an expression Factor | `packages/pricing-core/src/pricing_core/modelling/diagnostics.py:958` (before the `source_columns[:1]` read) |
+| partial-dependence loop omits it, no `_sweep` call | `packages/pricing-core/src/pricing_core/modelling/diagnostics.py:1388` (before `_sweep`, which holds `source_columns[0]`) |
+| hand-authored contract enum | `docs/contracts/schemas/diagnostics.schema.json:271` (`PermutationOmission.reason`; the file has no enum for the partial-dependence reason, so there is none to edit) |
+| FR-178 dated amendment (both stamps) | `docs/specs/02-modelling.md:275` |
+| rendered text, permutation | `frontend/src/components/GbmImportanceCharts.vue:109` (own branch, no default hiding it) |
+| rendered text, partial dependence | `frontend/src/components/PartialDependencePanel.vue:78` (own branch; the maintainer's 10:33:35 sentence names GbmImportanceCharts, and this panel switches on the same reason, so it gets the same branch) |
+| tests | `packages/pricing-core/tests/test_expression_factors.py:425`, `:437` (x2 backends); `frontend/src/components/__tests__/GbmImportanceCharts.test.ts` ("names an expression factor's omission in words") asserts the text `computed from a formula`; `PartialDependencePanel.test.ts:81` likewise |
+
+The other `source_columns` readers in the module were read and left: `:565-569`, `_shared_source_columns`,
+`_operand_columns` take sets of columns for cross handling; an expression Factor is skipped before them wherever it
+is not a cross operand, and as an operand all its source columns move together under one order. An expression
+Factor's monotonicity check is skipped with the rest (the `continue`). `rating/runtime.py:877` and
+`platform/model_specs.py:86` are untouched (FD 8068). No test enumerated the reason members; none needed changing.
+
+**Backward compatibility.** An older build cannot read the new value: `expression_factor` fails enum validation
+there, so a diagnostics artifact carrying it does not load on an older build. Older artifacts load unchanged.
+
+**Owed (nothing was run; the ALONE latency gate forbids it).** (1) the new `test_expression_factors.py` tests and
+the FE tests RED at `d88d2218`, GREEN at the next commit; (2) `generate-contracts.py` then `--check` (generated
+copies and `openapi/generated.json` carry the enum); (3) `pnpm generate:api`, FE `type-check` and `test` (the
+test literals type-check only once the client is regenerated); (4) `ruff`, `mypy`, `lint-imports`; (5) `audit-docs.py`
+under the gate-2 flock; (6) the two GBM backends' full `test_gbm.py` / `test_diagnostics.py`.

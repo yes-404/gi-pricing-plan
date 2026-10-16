@@ -106,6 +106,9 @@ function omissionReason(reason: string): string {
   if (reason === "no_holdout_column") {
     return "the holdout has no column for it";
   }
+  if (reason === "expression_factor") {
+    return "it is computed from a formula over several columns, and shuffling one of them is not the factor's own importance";
+  }
   return reason;
 }
 

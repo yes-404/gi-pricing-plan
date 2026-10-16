@@ -145,7 +145,7 @@ describe("GbmImportanceCharts", () => {
       },
     });
     const list = screen.getByRole("list", { name: /permutation omissions/i });
-    expect(list).toHaveTextContent(/half_age: not measured.*formula/i);
+    expect(list).toHaveTextContent(/half_age: not measured.*computed from a formula/i);
     expect(screen.queryByText(/expression_factor/)).not.toBeInTheDocument();
   });
 
