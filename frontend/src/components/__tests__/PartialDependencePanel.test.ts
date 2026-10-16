@@ -78,6 +78,22 @@ describe("PartialDependencePanel", () => {
     expect(screen.queryByText("operand_of_interaction")).not.toBeInTheDocument();
   });
 
+  it("explains an expression_factor omission in words, not by its enum value", () => {
+    render(PartialDependencePanel, {
+      props: {
+        partialDependence: [
+          {
+            factor: "half_age",
+            points: [],
+            omitted: { reason: "expression_factor", levels: null, exposure_share: null },
+          },
+        ],
+      },
+    });
+    expect(screen.getByText(/computed from a formula/i)).toBeInTheDocument();
+    expect(screen.queryByText("expression_factor")).not.toBeInTheDocument();
+  });
+
   it("explains a level_cap omission and says how many levels were dropped", () => {
     render(PartialDependencePanel, { props: { partialDependence: CAPPED } });
     expect(screen.getByText(/most-exposed levels/i)).toBeInTheDocument();

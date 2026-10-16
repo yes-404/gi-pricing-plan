@@ -380,3 +380,63 @@ def test_a_column_named_like_a_function_is_read_but_a_call_of_it_is_not() -> Non
     assert referenced_columns(
         "max(a, b)", profile=GrammarProfile.FACTOR, symbols=symbols
     ) == frozenset({"a", "b"})
+
+
+# -- diagnostics never read an expression Factor's first source column (DP-1274-DIAG) -----------
+
+
+def _diagnosed_expression_gbm(backend: str):  # type: ignore[no-untyped-def]
+    """A GBM fitted on a banded expression Factor, and its diagnostics over the same book.
+
+    `Factor.source_columns[0]` of an expression is only the first column its formula reads, so
+    shuffling it or holding it at a value is not the factor's own perturbation. The
+    diagnostics must omit the factor with a named reason (FR-178), never emit a number.
+    """
+    from pricing_core.modelling import compute_gbm_diagnostics
+
+    banding = _banding()
+    factor = _factor(banding_id=banding.id)
+    spec = GbmSpec(
+        model_type=backend,
+        model_family_slug="half-age-gbm",
+        dataset_version_id=uuid4(),
+        split_ref=SplitRef(split_artifact_id=uuid4()),
+        response_column="claim_count",
+        offset=EXPOSURE,
+        objective=GbmFunctionRef(kind="builtin", name="count:poisson"),
+        categorical_handling="native",
+        hyperparameters={"max_depth": 3, "eta": 0.1, "num_boost_round": 40},
+        early_stopping=None,
+        factors=(factor.id,),
+    )
+    data = _book(6_000)
+    bandings = {banding.id: banding}
+    fit = fit_gbm(data, spec, [factor], bandings=bandings)
+    diagnostics = compute_gbm_diagnostics(
+        fit.result, fit.booster_bytes, spec, [factor],
+        train=data, holdout=data, eval_curve=fit.eval_curve, bandings=bandings,
+    )
+    assert diagnostics.gbm is not None
+    return diagnostics.gbm
+
+
+@pytest.mark.req("FR-178")
+@pytest.mark.parametrize("backend", ["xgboost", "lightgbm"])
+def test_permutation_importance_omits_an_expression_factor_by_name(backend: str) -> None:
+    gbm = _diagnosed_expression_gbm(backend)
+    assert [p.feature for p in gbm.permutation_importances] == [], (
+        "an expression factor got a permutation importance computed from source_columns[0]"
+    )
+    assert [(o.feature, o.reason.value) for o in gbm.permutation_omitted] == [
+        ("half_age", "expression_factor")
+    ]
+
+
+@pytest.mark.req("FR-178")
+@pytest.mark.parametrize("backend", ["xgboost", "lightgbm"])
+def test_partial_dependence_omits_an_expression_factor_by_name(backend: str) -> None:
+    gbm = _diagnosed_expression_gbm(backend)
+    (curve,) = [c for c in gbm.partial_dependence if c.factor == "half_age"]
+    assert curve.points == (), "an expression factor was swept over its raw first column"
+    assert curve.omitted is not None
+    assert curve.omitted.reason.value == "expression_factor"
