@@ -12,9 +12,11 @@ is one limb of the ruling's Ruled table, seen failing first:
 * **versioning** (FR-96) -> a Factor v2 with a changed expression that pins the v1 Banding.
 
 Today every one of these fails at the same point, for the same cause: `Factor` has no
-`expression` field, so the Factor cannot be built (`extra="forbid"`). That is the cause the
-slice removes; the resolution limbs are red behind it by construction, which is why each
-test asserts what it asserts about the *outcome* and not only that something raised.
+`expression` field (`extra="forbid"`). That is the cause the slice removes, so each test
+asserts the field's existence **first** (`_require_the_new_fields`), at its own line, and
+only then builds its input; the resolution limbs are red behind it by construction, which
+is why each test asserts what it asserts about the *outcome* and not only that something
+raised.
 """
 
 from __future__ import annotations
@@ -92,9 +94,26 @@ def _factor(expression: str = EXPRESSION, *, columns: tuple[str, ...] = ("driver
     return Factor(**base)  # type: ignore[arg-type]
 
 
+def _require_the_new_fields() -> None:
+    """The first assert of every test: the cause this slice removes, stated where it fails.
+
+    `PL-1665` 4.1' / 4.3': `Factor.expression` and `Banding.source_expression` do not exist
+    yet, so the helpers below cannot build the input. Asserting the fields first puts the
+    red at the test's own assert, so a later partial fix cannot turn a test green (or move
+    its red elsewhere) for a reason other than the behaviour it names.
+    """
+    assert "expression" in Factor.model_fields, (
+        "PL-1665 4.1': Factor must carry `expression` (FR-95)"
+    )
+    assert "source_expression" in Banding.model_fields, (
+        "PL-1665 4.1': Banding must carry `source_expression` (FR-97)"
+    )
+
+
 @pytest.mark.req("FR-95")
 def test_a_numeric_unbanded_expression_is_refused_naming_fr_210() -> None:
     """`RL-1265` DP-4 (b): the refusal's message names FR-210, and the refusal is by dtype."""
+    _require_the_new_fields()
     factor = _factor()
     with pytest.raises(FactorResolutionError, match="FR-210") as excinfo:
         resolve_factors(_book(200), [factor])
@@ -104,6 +123,7 @@ def test_a_numeric_unbanded_expression_is_refused_naming_fr_210() -> None:
 @pytest.mark.req("FR-95")
 def test_a_string_banded_expression_is_refused() -> None:
     """A category is not banded: the Banding would receive text it cannot cut."""
+    _require_the_new_fields()
     banding = _banding("where(driver_age > 40, region, alt_region)")
     factor = _factor(
         "where(driver_age > 40, region, alt_region)",
@@ -116,6 +136,7 @@ def test_a_string_banded_expression_is_refused() -> None:
 
 @pytest.mark.req("FR-95")
 def test_a_numeric_banded_expression_resolves_through_apply_banding() -> None:
+    _require_the_new_fields()
     banding = _banding()
     factor = _factor(banding_id=banding.id)
     frame = _book(500)
@@ -131,6 +152,7 @@ def test_a_numeric_banded_expression_resolves_through_apply_banding() -> None:
 
 @pytest.mark.req("FR-95")
 def test_a_string_unbanded_expression_is_a_categorical_factor() -> None:
+    _require_the_new_fields()
     expression = "where(driver_age > 40, region, alt_region)"
     factor = _factor(expression, columns=("driver_age", "region", "alt_region"))
     matrix = resolve_factors(_book(500), [factor])
@@ -146,6 +168,7 @@ def test_a_string_unbanded_expression_is_a_categorical_factor() -> None:
 @pytest.mark.req("FR-97")
 def test_a_banding_cut_over_another_expression_is_refused_at_resolution() -> None:
     """`RL-1615` DP-S4-1 (a2): the pin is on the *expression*, not the slug."""
+    _require_the_new_fields()
     banding = _banding("driver_age / 3")
     factor = _factor(banding_id=banding.id)
     with pytest.raises(FactorResolutionError, match="source_expression"):
@@ -155,6 +178,7 @@ def test_a_banding_cut_over_another_expression_is_refused_at_resolution() -> Non
 @pytest.mark.req("FR-97")
 def test_the_expression_match_is_a_normalised_parse_not_a_raw_string() -> None:
     """Two spellings that differ only in white space are one expression."""
+    _require_the_new_fields()
     banding = _banding("driver_age/2")
     factor = _factor("driver_age   /   2", banding_id=banding.id)
     matrix = resolve_factors(_book(100), [factor], bandings={banding.id: banding})
@@ -164,6 +188,7 @@ def test_the_expression_match_is_a_normalised_parse_not_a_raw_string() -> None:
 @pytest.mark.req("FR-96")
 def test_a_new_factor_version_with_a_changed_expression_cannot_pin_the_old_banding() -> None:
     """The mismatch refusal is what makes FR-101's "a Banding version per edit" enforced."""
+    _require_the_new_fields()
     v1_banding = _banding(version=1)
     v2 = _factor("driver_age / 4", version=2, banding_id=v1_banding.id)
     with pytest.raises(FactorResolutionError, match="source_expression"):
@@ -172,6 +197,7 @@ def test_a_new_factor_version_with_a_changed_expression_cannot_pin_the_old_bandi
 
 @pytest.mark.req("FR-95")
 def test_a_glm_on_a_banded_expression_recovers_the_steps_and_marks_a_base() -> None:
+    _require_the_new_fields()
     banding = _banding()
     factor = _factor(banding_id=banding.id)
     spec = GlmSpec(
@@ -193,6 +219,7 @@ def test_a_glm_on_a_banded_expression_recovers_the_steps_and_marks_a_base() -> N
 
 @pytest.mark.req("FR-95")
 def test_a_glm_on_a_string_expression_yields_its_relativity_table() -> None:
+    _require_the_new_fields()
     expression = "where(driver_age > 40, region, alt_region)"
     factor = _factor(expression, columns=("driver_age", "region", "alt_region"))
     spec = GlmSpec(
@@ -212,6 +239,7 @@ def test_a_glm_on_a_string_expression_yields_its_relativity_table() -> None:
 @pytest.mark.parametrize("backend", ["xgboost", "lightgbm"])
 def test_a_gbm_on_a_banded_expression_yields_its_relativity_table(backend: str) -> None:
     """FR-113's table for a GBM is its GLM approximation's (FR-133, FR-137)."""
+    _require_the_new_fields()
     banding = _banding()
     factor = _factor(banding_id=banding.id)
     spec = GbmSpec(

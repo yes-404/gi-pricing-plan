@@ -23,6 +23,7 @@ in the message) are what fail. The two positive-path tests fail on the 422 itsel
 from __future__ import annotations
 
 import asyncio
+import re
 from uuid import uuid4
 
 import pytest
@@ -76,6 +77,28 @@ def _refusal_text(response) -> str:  # type: ignore[no-untyped-def]
     return str(problem)
 
 
+def _assert_positioned(  # type: ignore[no-untyped-def]
+    response, column: int | None = None, names: str | None = None
+) -> None:
+    """`RL-1700` (b): one `FieldError` on `expression`, `VALIDATION_FAILED`, positioned.
+
+    `RL-1362` DP-S3-3 item 1's form: a message that begins `line <L>, column <C>:`. The
+    column is asserted exactly only where the ruling fixes one (`column` is 1-based).
+    """
+    problem = response.json()
+    assert problem["code"] == "VALIDATION_FAILED", problem
+    errors = problem["errors"]
+    assert len(errors) == 1, problem
+    assert errors[0]["field"] == "expression", problem
+    assert errors[0]["code"] == "VALIDATION_FAILED", problem
+    message = errors[0]["message"]
+    assert re.match(r"^line \d+, column \d+: ", message), problem
+    if column is not None:
+        assert message.startswith(f"line 1, column {column}: "), problem
+    if names is not None:
+        assert names in message, problem
+
+
 @pytest.mark.req("FR-95")
 def test_a_banded_expression_factor_is_created(
     api_client: TestClient, actuary: dict[str, str]
@@ -111,9 +134,7 @@ def test_a_parse_error_is_refused_at_creation_with_its_position(
         headers=actuary,
     )
     assert refused.status_code == 422, refused.text
-    text = _refusal_text(refused)
-    assert "expression" in text
-    assert any(word in text.lower() for word in ("position", "column", "col_offset")), text
+    _assert_positioned(refused)  # form only: the SyntaxError offset is CPython's (RL-1700 (b))
 
 
 @pytest.mark.req("FR-95")
@@ -127,8 +148,7 @@ def test_an_undeclared_column_is_refused_at_creation(
         headers=actuary,
     )
     assert refused.status_code == 422, refused.text
-    text = _refusal_text(refused)
-    assert "vehicle_value" in text, text
+    _assert_positioned(refused, column=14, names="vehicle_value")
 
 
 @pytest.mark.req("FR-97")
@@ -240,10 +260,16 @@ def test_a_not_certainly_numeric_root_is_not_refused_at_creation(
 
 @pytest.mark.req("FR-83")
 @pytest.mark.parametrize(
-    "expression", ["driver_age % 2", "driver_age > 40", "frobnicate(driver_age)"]
+    ("expression", "column"),
+    [
+        ("driver_age % 2", None),
+        ("driver_age > 40", None),
+        ("frobnicate(driver_age)", None),
+        ("driver_age * 2 + frobnicate(driver_age)", 18),
+    ],
 )
 def test_the_grammar_refusals_of_the_factor_profile_reach_the_edge(
-    api_client: TestClient, actuary: dict[str, str], expression: str
+    api_client: TestClient, actuary: dict[str, str], expression: str, column: int | None
 ) -> None:
     """`%`, a bare comparison and an unknown function: 422 with the position (`PL-1621` 4.3)."""
     refused = api_client.post(
@@ -252,8 +278,7 @@ def test_the_grammar_refusals_of_the_factor_profile_reach_the_edge(
         headers=actuary,
     )
     assert refused.status_code == 422, refused.text
-    text = _refusal_text(refused)
-    assert any(word in text.lower() for word in ("position", "column", "col_offset")), text
+    _assert_positioned(refused, column=column)
 
 
 @pytest.mark.req("NFR-484")

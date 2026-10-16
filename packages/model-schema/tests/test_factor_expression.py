@@ -47,9 +47,26 @@ def _banding(**over: object) -> Banding:
     return Banding(**base)  # type: ignore[arg-type]
 
 
+def _require_the_new_fields() -> None:
+    """The first assert of every test: the cause this slice removes, stated where it fails.
+
+    `PL-1665` 4.1' / 4.3': `Factor.expression` and `Banding.source_expression` do not exist
+    yet, so the helpers below cannot build the input. Asserting the fields first puts the
+    red at the test's own assert, so a later partial fix cannot turn a test green (or move
+    its red elsewhere) for a reason other than the behaviour it names.
+    """
+    assert "expression" in Factor.model_fields, (
+        "PL-1665 4.1': Factor must carry `expression` (FR-95)"
+    )
+    assert "source_expression" in Banding.model_fields, (
+        "PL-1665 4.1': Banding must carry `source_expression` (FR-97)"
+    )
+
+
 @pytest.mark.req("FR-95")
 def test_an_expression_factor_carries_its_expression_text() -> None:
     """`02` §4.1: the text is stored on the Factor, so it is declared, versioned and audited."""
+    _require_the_new_fields()
     factor = _expression_factor()
     assert factor.expression == "driver_age * vehicle_power"
     assert factor.type is FactorType.EXPRESSION
@@ -58,6 +75,7 @@ def test_an_expression_factor_carries_its_expression_text() -> None:
 @pytest.mark.req("FR-95")
 def test_an_expression_factor_without_an_expression_is_refused() -> None:
     """The same state as a `banding` with no Banding: a name with no transformation behind it."""
+    _require_the_new_fields()
     with pytest.raises(pydantic.ValidationError, match="names no expression"):
         _expression_factor(expression=None)
 
@@ -65,6 +83,7 @@ def test_an_expression_factor_without_an_expression_is_refused() -> None:
 @pytest.mark.req("FR-95")
 def test_a_non_expression_factor_that_names_an_expression_is_refused() -> None:
     """Nothing would evaluate it, and a formula on an artifact that ignores it reads as used."""
+    _require_the_new_fields()
     with pytest.raises(pydantic.ValidationError, match="names an expression"):
         Factor(
             id=uuid4(),
@@ -80,6 +99,7 @@ def test_a_non_expression_factor_that_names_an_expression_is_refused() -> None:
 @pytest.mark.req("FR-95")
 def test_an_expression_factor_declares_the_columns_it_reads() -> None:
     """FR-95's "over dataset columns only": the declared set is `source_columns`, never empty."""
+    _require_the_new_fields()
     with pytest.raises(pydantic.ValidationError, match="source_columns"):
         _expression_factor(source_columns=())
 
@@ -87,6 +107,7 @@ def test_an_expression_factor_declares_the_columns_it_reads() -> None:
 @pytest.mark.req("FR-97")
 def test_banding_id_is_allowed_on_an_expression_factor_and_still_only_on_two_types() -> None:
     """`RL-1615` DP-S4-1 (a2): the Banding is how a numeric result becomes categorical."""
+    _require_the_new_fields()
     pinned = uuid4()
     assert _expression_factor(banding_id=pinned).banding_id == pinned
     with pytest.raises(pydantic.ValidationError, match="names a banding_id"):
@@ -104,6 +125,7 @@ def test_banding_id_is_allowed_on_an_expression_factor_and_still_only_on_two_typ
 @pytest.mark.req("FR-97")
 def test_a_banding_is_cut_over_a_column_or_over_an_expression_never_both_or_neither() -> None:
     """`RL-1615` DP-S4-1: "Exactly one of `Banding.column` and `Banding.source_expression`"."""
+    _require_the_new_fields()
     over_expression = _banding(source_expression="driver_age * vehicle_power")
     assert over_expression.source_expression == "driver_age * vehicle_power"
     assert over_expression.column is None
