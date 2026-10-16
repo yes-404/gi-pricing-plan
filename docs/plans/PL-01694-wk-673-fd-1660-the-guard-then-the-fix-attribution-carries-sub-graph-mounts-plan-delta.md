@@ -3,7 +3,7 @@ id: PL-1694
 family: plan
 kind: map
 title: WK-673 — the FD-1660 fix, two slices: Stage A the loud guard (the refusal names FD-1660 and reaches the Job; WF-699 D6 asserts it), then Stage B the fix (a mount is a derived change, a subset carries its mounts and their pins, and WF-699 D7 decomposes): a dated delta to PL-1267
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-12
 owner: planner
 tree: 50bbdd96b2154cb4eb79ccf91658191e51ab8906
@@ -704,3 +704,4 @@ to two, so D7 rates 4 × the 20,000-policy sample (`PL-1577`); the full-book cos
   maintainer (by delegation), 08:09:39 item 4; applied in Context, Write set, activation need 4,
   Acceptance 10 and 20, Stage A Task 2 Step 2b and Stage B Task 1.
 - Open: none of the plan's DPs. Not this plan's: (B) (the decision-maker's, if Stage B slips). This plan stays `draft` until set `active` at activation.
+- Activated 2026-10-12 on the lead's `from-lead` entry "2026-10-12 08:15:37 BST" (GO for SL-1695; ledger LG-1718, minted from working id 9637), the act that dispatched Stage A; `status` set `active` on the SL-1695 branch 2026-10-14, as a status-line edit only, on the maintainer's (by delegation) `to-lead` entry "2026-10-14 12:14:25 BST".

@@ -41,6 +41,7 @@ from model_schema import JobKind, Permission
 from model_schema.jobs import Job
 from model_schema.rating import (
     BulkOperationRequest,
+    ImportPreview,
     RateTable,
     RateTableCell,
     RateTableDiff,
@@ -266,7 +267,12 @@ async def export_rate_table_xlsx(
 @router.post(
     "/rate-tables/{slug}@{version}/import",
     summary="Preview an import as a diff against the addressed version",
-    responses=problems(401, 403, 404, 413, 422),
+    response_model=None,
+    responses={
+        **problems(401, 403, 404, 413, 422),
+        200: {"model": ImportPreview},
+        201: {"model": RateTableVersion},
+    },
 )
 async def import_rate_table(
     slug: str,
@@ -278,7 +284,7 @@ async def import_rate_table(
     response: Response,
     file: Annotated[UploadFile, File()],
     confirm: Annotated[bool, Form()] = False,
-) -> dict[str, Any]:
+) -> ImportPreview | RateTableVersion:
     """**200** with the would-be version's diff and its strict verdict (FR-235,
     03 §5.1): the file is checked against the addressed version's own domain — same
     keys, same key types, same coverage — and nothing is created.
@@ -309,7 +315,7 @@ async def import_rate_table(
             filename=filename,
             content=content,
         )
-        return preview.model_dump(mode="json")
+        return preview
     assert caller.principal.id is not None
     created = await service.import_confirmed(
         database,
@@ -323,7 +329,7 @@ async def import_rate_table(
         content=content,
     )
     response.status_code = status.HTTP_201_CREATED
-    return created.model_dump(mode="json")
+    return created
 
 
 async def _cells_job_response(

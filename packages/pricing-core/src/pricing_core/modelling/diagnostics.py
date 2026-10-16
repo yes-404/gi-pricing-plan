@@ -80,6 +80,7 @@ from model_schema import (
 )
 from pricing_core.modelling.factors import resolve_factors
 from pricing_core.modelling.predict import predict_ebm, predict_glm, score_fitted
+from pricing_core.modelling.weights import drop_zero_weight_rows
 from pricing_core.progress import NullProgress, ProgressCallback
 
 __all__ = [
@@ -343,10 +344,14 @@ def _partition(
     mu: npt.NDArray[np.float64],
     family: str,
     power: float = 1.5,
+    excluded_zero_weight: int,
     bandings: Mapping[UUID, Banding] | None,
     groupings: Mapping[UUID, Grouping] | None,
 ) -> PartitionDiagnostics:
     """Every universal metric for one partition (FR-171).
+
+    `data` and `mu` arrive **already without** FR-111's weight-0 rows, and
+    `excluded_zero_weight` is how many the caller removed — recorded, never silent.
 
     `mu` is passed in rather than predicted here, and `spec` is the **common** block: this
     is FR-171's "all model types" taken literally. Every metric below — A/E by level,
@@ -443,6 +448,7 @@ def _partition(
     return PartitionDiagnostics(
         weighting=scheme,
         rows=data.height,
+        rows_excluded_zero_weight=excluded_zero_weight,
         ae_overall=ae_overall,
         ae_by_factor=tuple(cells),
         lift=tuple(lift),
@@ -630,6 +636,13 @@ def compute_diagnostics(
     report = progress or NullProgress()
     report.check_cancelled()
     report.update(0.05, "diagnostics: train")
+    # FR-111: weight-0 rows are in no statistic's population, each partition's count of them
+    # is reported, and a FR-116 model offset is filtered with the frame it is aligned to.
+    train_rows = drop_zero_weight_rows(train, spec)
+    holdout_rows = drop_zero_weight_rows(holdout, spec)
+    train, holdout = train_rows.data, holdout_rows.data
+    model_offset_train = train_rows.take(model_offset_train)
+    model_offset_holdout = holdout_rows.take(model_offset_holdout)
     power = _power_of(fit, spec)
     train_part = _partition(
         train, spec, factors,
@@ -637,7 +650,7 @@ def compute_diagnostics(
             fit, train, factors, spec,
             model_offset=model_offset_train, bandings=bandings, groupings=groupings,
         ),
-        family=spec.family, power=power,
+        family=spec.family, power=power, excluded_zero_weight=train_rows.excluded,
         bandings=bandings, groupings=groupings,
     )
     report.check_cancelled()
@@ -648,7 +661,7 @@ def compute_diagnostics(
             fit, holdout, factors, spec,
             model_offset=model_offset_holdout, bandings=bandings, groupings=groupings,
         ),
-        family=spec.family, power=power,
+        family=spec.family, power=power, excluded_zero_weight=holdout_rows.excluded,
         bandings=bandings, groupings=groupings,
     )
 
@@ -779,6 +792,8 @@ def backtest_model(
     report = progress or NullProgress()
     report.check_cancelled()
     report.update(0.1, "backtest: scoring")
+    rows = drop_zero_weight_rows(data, spec)  # FR-111, as at fit time
+    data, model_offset = rows.data, rows.take(model_offset)
     mu = score_fitted(
         fit, spec, data, factors,
         model_offset=model_offset, bandings=bandings, groupings=groupings, booster=booster,
@@ -789,7 +804,7 @@ def backtest_model(
     family, power = _family_of(fit, spec)
     partition = _partition(
         data, spec, factors,
-        mu=mu, family=family, power=power,
+        mu=mu, family=family, power=power, excluded_zero_weight=rows.excluded,
         bandings=bandings, groupings=groupings,
     )
 
@@ -1297,11 +1312,16 @@ def compute_gbm_diagnostics(
     report = progress or NullProgress()
     report.check_cancelled()
     report.update(0.05, "diagnostics: train")
+    # FR-111: weight-0 rows are in no statistic's population (importances, sweeps and
+    # complexity below read the filtered frames), and each partition reports its count.
+    train_rows = drop_zero_weight_rows(train, spec)
+    holdout_rows = drop_zero_weight_rows(holdout, spec)
+    train, holdout = train_rows.data, holdout_rows.data
     train_part = _partition(
         train, spec, factors,
         mu=predict_gbm(result, booster, train, factors,
                        bandings=bandings, groupings=groupings).to_numpy(),
-        family=family, power=power,
+        family=family, power=power, excluded_zero_weight=train_rows.excluded,
         bandings=bandings, groupings=groupings,
     )
     report.check_cancelled()
@@ -1310,7 +1330,7 @@ def compute_gbm_diagnostics(
         holdout, spec, factors,
         mu=predict_gbm(result, booster, holdout, factors,
                        bandings=bandings, groupings=groupings).to_numpy(),
-        family=family, power=power,
+        family=family, power=power, excluded_zero_weight=holdout_rows.excluded,
         bandings=bandings, groupings=groupings,
     )
 
@@ -1440,11 +1460,14 @@ def compute_ebm_diagnostics(
     report = progress or NullProgress()
     report.check_cancelled()
     report.update(0.05, "diagnostics: train")
+    train_rows = drop_zero_weight_rows(train, spec)  # FR-111, as for the other arms
+    holdout_rows = drop_zero_weight_rows(holdout, spec)
+    train, holdout = train_rows.data, holdout_rows.data
     train_part = _partition(
         train, spec, factors,
         mu=predict_ebm(result, train, factors,
                        bandings=bandings, groupings=groupings),
-        family=family, power=power,
+        family=family, power=power, excluded_zero_weight=train_rows.excluded,
         bandings=bandings, groupings=groupings,
     )
     report.check_cancelled()
@@ -1453,7 +1476,7 @@ def compute_ebm_diagnostics(
         holdout, spec, factors,
         mu=predict_ebm(result, holdout, factors,
                        bandings=bandings, groupings=groupings),
-        family=family, power=power,
+        family=family, power=power, excluded_zero_weight=holdout_rows.excluded,
         bandings=bandings, groupings=groupings,
     )
 

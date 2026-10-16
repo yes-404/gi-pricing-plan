@@ -55,7 +55,7 @@ from pricing_core.rating.compile import ArtifactResolver, ResolvedArtifact, comp
 from pricing_core.rating.ladder import RUNG_ORDER
 from pricing_core.rating.runtime import CompiledBundle, load_bundle
 from pricing_core.rating.score import score_batch
-from pricing_core.safe_error import safe_error_text
+from pricing_core.safe_error import CodedError, safe_error_text
 
 __all__ = [
     "AttributionError",
@@ -499,6 +499,21 @@ class AttributionError(ValueError):
         self.code = code
 
 
+class _MountNotYetAttributable(AttributionError, CodedError):  # noqa: N818 (named by PL-1694)
+    """FD-1660's guard (RL-1686 DP-W): an `AttributionError` (code `VALIDATION_FAILED`) that is also
+    a `CodedError`, so `safe_error_text` keeps its text and the Dislocation Job's error names the
+    finding. The text is a fixed literal plus `mount_point`s (authored identifiers), never a quote
+    value (NFR-499). SL-1696 removes it."""
+
+    def __init__(self, reason: str, mount_points: Iterable[str]) -> None:
+        super().__init__(
+            "VALIDATION_FAILED",
+            "VALIDATION_FAILED: sub-graph mount differences are not yet attributable (FD-1660); "
+            "attribution of sub-graph mount changes is unavailable until SL-1696. "
+            f"{reason}: {', '.join(sorted(set(mount_points)))}",
+        )
+
+
 @dataclass(frozen=True)
 class _Change:
     """One derived change and the payload its substitution needs."""
@@ -813,6 +828,25 @@ class _SubsetResolver:
         return await self._inner.resolve(ref)
 
 
+def _check_mounts_attributable(derivation: _Derivation, groups: Sequence[_Group]) -> None:
+    """FD-1660 (RL-1686 DP-G): refuse a mount difference at any K, and any run of two or more groups
+    where either version mounts a sub-graph. The text is a fixed literal plus `mount_point`s."""
+    differing = [
+        m.mount_point
+        for m in diff_algorithms(derivation.baseline, derivation.candidate).sub_graph_mounts
+    ]
+    mounted = [
+        m.mount_point for a in (derivation.baseline, derivation.candidate) for m in a.sub_graphs
+    ]
+    if differing:
+        reason, points = "a mount differs", differing
+    elif mounted and len(groups) >= 2:
+        reason, points = "a sub-graph is mounted and two or more groups are declared", mounted
+    else:
+        return
+    raise _MountNotYetAttributable(reason, points)
+
+
 def _check_dependence(derivation: _Derivation, groups: Sequence[_Group]) -> None:
     """RL-1449 T1: refuse, naming each dependent pair, a group that is not self-contained."""
     changes = derivation.changes
@@ -984,6 +1018,9 @@ async def attribute(
     derivation = await _derive(baseline, candidate, resolver)
     changes = derivation.changes
     groups = _check_groups(changes, spec.change_groups)
+    # FD-1660's loud guard: a sub-graph mount is not yet a derived change or part of a subset, so
+    # a run it would silently misattribute or fail to compile is refused. SL-1696 removes it.
+    _check_mounts_attributable(derivation, groups)
     _check_dependence(derivation, groups)
     k = len(groups)
     full = (1 << k) - 1
