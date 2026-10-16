@@ -76,6 +76,26 @@ Not yet.
 - Compose uses `${GIP_BUILD:-unset}`, not `:?`, because compose interpolates the whole file and
   the default `up` must keep working; the Dockerfile refuses a non-SHA build argument.
 
+## Obligations carried into this slice (dated 2026-10-16, at `origin/main` `0877e6e7`)
+
+- **E4.3's seeded ingest test is this slice's to convert.**
+  `test_a_dataset_ingest_job_succeeds_through_the_compose_io_worker`
+  (`backend/tests/test_deploy_stack_runtime.py`, from PL-1714 E4.3) seeds the blob and its owner by
+  `psql`-style insertion (`_seed_blob_inputs`), because the public upload path has no completion step
+  until SL-1722 merges (PL-1721 P10; the maintainer's (by delegation) entry "2026-10-14 11:10:26 BST"
+  item (b)). Its docstring names the conversion. **Owner of the conversion: SL-1258**, on the
+  maintainer's (by delegation) entry "2026-10-16 09:40:20 BST" ("SL-1258's plan must carry it"):
+  once SL-1722 is on `main`, the test is rewritten to upload-url, PUT, complete, POST versions, with no
+  seeding. If SL-1722 has not merged by the 4 Nov freeze, the P2 closure record lists the seeded test
+  as an open item. PL-1714 line 73 words the conversion as an acceptance line "in SL-1722, not this
+  delta's"; that wording and the 09:40:20 entry differ on the owner. PL-1714 is not edited by this
+  ledger; the lead routes the reconciliation (a PL-1714 plan delta or a ruling).
+- **Shared paths with SL-1722:** `backend/src/app/worker/entrypoint.py` (S4: E4.4, E4.6, E4.7 (a); SL-1722:
+  the `blob.promote` handler) and `backend/src/app/platform/jobs.py` (SL-1722: `BLOB_PROMOTE` route; S4
+  only under DP-Q4 (a) or E4.7, DP-Q4 ruled (b) at 10:43:43 BST). Whichever of the two merges second
+  re-merges `origin/main` and re-runs the other's guard (`test_worker_handler_coverage.py` must see
+  `blob.promote` registered).
+
 ## PRs
 
 None yet.

@@ -396,7 +396,7 @@ def test_a_dataset_ingest_job_succeeds_through_the_compose_io_worker(
     SEEDED, TO BE CONVERTED (the maintainer's (by delegation) entry "2026-10-14 11:10:26 BST"):
     the CSV blob is made readable by a seeded Dataset Version instead of the public upload path.
     The conversion to upload-url -> PUT -> complete -> POST versions, with no seeding, is an
-    acceptance line of SL 8026. Red cause: a worker that does not consume `io` leaves the Job
+    acceptance line of SL-1722 (the conversion itself is SL-1258's, LG-9810). Red cause: a worker that does not consume `io` leaves the Job
     `queued`.
     """
     workspace_id, headers = _stack_with_seeded_workspace(built_n)
