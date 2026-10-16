@@ -231,6 +231,27 @@ none lists `429`. Owner of the ruling: the lead / the maintainer (by delegation)
 
 Observation, not changed: `GET /me/workspaces` and `POST /me/workspace` depend on `IdentityDep`, not `counted_caller`, so neither is counted. Whether they should be is `RL-1687`'s scope question, not this fix's; put to the lead.
 
+## Every accepted direct write in the slice's tests, one table (the maintainer (by delegation), 2026-10-16 10:27:41 BST, Q-a and Q-b)
+
+**Ruling (verified against `~/gi-pricing-plan.local/channel/to-lead.md`, entry "2026-10-16 10:27:41 BST", Q-a and Q-b):** the 10:19:57 "ONE accepted direct write" was scoped to that decision point's seed set; an exception ruled earlier with its own dated basis stands; this ledger lists EVERY accepted direct write in one table, each with its ruling's stamp, and a row without one is a red. `_put_blob_inputs`' write stays and is recorded as "owed to E4.8, FD-1730".
+
+**Predicate (run at the tree of this commit's parent, `9deddd85`):** the added lines of `git diff -U0 origin/main...HEAD -- backend/tests scripts/bench-rating.py scripts/bench-deploy-path.py`, matched with `session\.add|add_all|add_approved|mark_approved|INSERT|UPDATE |psql|insert\(|delete\(|\.execute\(|Row\(`. Hits that are reads (`select`) or prose are not rows.
+
+| # | Where | What it writes | Stamp | Verdict |
+|---|---|---|---|---|
+| 1 | `backend/tests/test_deploy_stack_runtime.py:216`, `:218` `session.add(ServiceAccountRow / ApiKeyRow)` in `_governed_workspace` | the test credential | **10:27:41 BST Q-a** ("An exception ruled earlier with its own dated basis stands (the SA + API-key rows: no route creates a score:execute Service Account, FR-347)"). The EARLIER basis the ruling refers to is **UNSTAMPED**: this ledger's DP-S4-SEED (a) section records the exception but the 10:08:52 entry does not mention it, and a search of `to-lead.md` for `score:execute` finds no earlier ruling on these rows | stands by 10:27:41; earlier stamp NOT FOUND, reported. See the premise note below the table |
+| 2 | `backend/tests/approved_rows.py:78` `add_approved`, reached through `test_demo_rating_evidence._approved_model` from `_governed_workspace` (no direct hit in the changed files; the call is indirect) | approval-evidence rows of the UPSTREAM Model only | **10:19:57 BST point 3** | accepted, scoped |
+| 3 | `backend/tests/test_deploy_stack_runtime.py:478` `session.add(DatasetVersionRow)` in `_put_blob_inputs` | Dataset Version rows making the seeded blobs readable | **09:55:22 BST DP-E1** and **10:27:41 BST Q-b** | owed to E4.8, FD-1730 (the public upload path is broken on main; its fix is SL-1722; the conversion is E4.8's, carried by S4 or its own SL under DP-E1) |
+| 4 | `backend/tests/test_management_rate_limit.py:68` `delete(WorkspaceSettingRow)` in the `limit` fixture's teardown (the set itself goes through `svc.set_workspace_setting`, a service) | removes the workspace's setting rows after the test | **UNSTAMPED** | RED: reported to the lead; no ruling covers it |
+| 5 | `backend/tests/conftest_db.py:219` `grant` (roles, membership, assignment, built-in rules), used by `test_management_rate_limit.py` | the test principal's role and membership | **UNSTAMPED** | not added by this slice (the file is on `origin/main`); listed because the slice's tests use it; reported |
+| - | `scripts/bench-rating.py::_seed` | the bench tool's direct seed | 10:08:52 BST point 4 (stays a bench tool, no runtime test imports it) | not a test |
+
+**Premise note on row 1 (not changed; for the lead).** `POST /api/v1/service-accounts` exists (`backend/src/app/api/service_accounts.py:179`, permission `admin:manage_service_accounts`) and creates a Service Account with `score:execute` and `score:batch` (`ALLOWED_PERMISSIONS`, `:44`). So "no route creates a score:execute Service Account" does not hold as worded. What the route cannot do is create a key with the other permissions `_governed_workspace` grants (`_ALL_PERMISSIONS`, and `admin:manage_settings` for the sampled-trace test), because `ALLOWED_PERMISSIONS` is capped to the two scoring permissions (FR-389). The tests that need only `_SCORING_PERMISSIONS` (`:242`) could use the route. The ruling stands as given; whether the narrower reason should replace the recorded one is the maintainer's (by delegation).
+
+## Q-c: the `/me/workspaces` and `/me/workspace` management count (the maintainer (by delegation), 10:27:41 BST) is BLOCKED on a design choice
+
+**Verified at `9deddd85`:** `GET /me` is counted (`me.py:42` `CallerDep = Annotated[Caller, Depends(counted_caller)]`). `GET /me/workspaces` (`:180`) and `POST /me/workspace` (`:215`) take `IdentityDep` and are NOT counted. The key `(environment, principal)` is available from `Identity`: `principal` is there, and `environment` is `None` for a bearer or development identity, as it already is on those callers' `Caller`. **The limit is not:** `rate_limit.enforce` resolves `platform.default_management_rate_limit_rps` through `settings_service.resolve(session, settings, workspace_id, ...)`, the Setting is declared `WORKSPACE_OR_ENVIRONMENT`, and the workspace layer reads `WorkspaceSettingRow` for a `workspace_id`. `Identity` carries no workspace selection by construction (`deps.py:92`, FR-397): it holds a set of zero or more memberships. No code written; stopped as ordered. Options and the recommendation are in the report to the lead.
+
 ## PRs
 
 None yet.
