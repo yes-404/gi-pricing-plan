@@ -2572,10 +2572,10 @@ The fix of FD 8049 (MEDIUM, owner WK-1178; not on `main` yet, it rides D18). `ba
 
 (Closed 2026-10-14 as a Slice, closing acts in the slice PR, on the lead's merge; ledger LG-1720 `closed`. Audit written in LG-1720 (Audit section, by `auditor-fd8049`, at f78ab4ce), adopted by the lead; CI python green at run 38607168256. FD 8049's fix: test-only, no `backend/src` change.)
 
-#### SL 8064 — WK-1178 fix slice — FD 8063: the python CI job's cheap checks run before the 30-minute pytest, and the job budget is 50 minutes
+#### SL-8064 — WK-1178 fix slice — FD 8063: the python CI job's cheap checks run before the 30-minute pytest, and the job budget is 50 minutes
 
 ```yaml
-id: SL 8064
+id: SL-8064
 family: slice
 title: WK-1178 fix slice — FD 8063: the python CI job's cheap checks run before the 30-minute pytest, and the job budget is 50 minutes
 status: active                   # draft → active → closed | retired (§1.2a)
@@ -2584,7 +2584,7 @@ owner: executor                  # a workflow-only slice; the lead dispatches (a
 phase: P2
 work: WK-1178
 corrected_by: []
-relates: [FD 8063]
+relates: [FD-8063]
 ```
 
 The fix of FD 8063 (MEDIUM, owner WK-1178; filed on its own branch). In `.github/workflows/python.yml` the `Tests` step (`pytest -q`) ran before `Generated contracts are current` and `Requirement coverage`, so a job timeout at 30 minutes cancelled the two cheap checks and the run ended `cancelled`. **Scope, exactly:** (1) the contracts `--check` and req-coverage steps move to before `Tests` (they need no DB); (2) the job's `timeout-minutes` goes 30 → 50; (3) the `Gate summary` step is unchanged (it reads each stage by step id, so order does not matter) and still reports every stage with `if: always()`. Nothing else in the workflow changes; no path filter is touched; pytest is not split or parallelised (a P3 option in FD 8063). Written workflow-only, so CI's own python run on the PR head is its gate: success, with contracts and req_coverage logged before pytest.

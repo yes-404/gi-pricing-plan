@@ -1,5 +1,5 @@
 ---
-id: FD 8063
+id: FD-8063
 family: finding
 title: The python CI job's 30-minute budget is spent by pytest alone, so a timeout cancels the two cheap checks queued behind it and wastes a full cycle on every pull request at risk
 status: active
@@ -7,10 +7,10 @@ created: 2026-10-16
 owner: auditor
 tree: 0877e6e7a756c4621890713a4d3b016e75e33654
 corrected_by: []
-relates: [WK-1178, SL 8064, P2]
+relates: [WK-1178, SL-8064, P2]
 ---
 
-# FD 8063 — `python.yml` runs `pytest -q` first, inside a 30-minute job cap that pytest alone now fills
+# FD-8063 — `python.yml` runs `pytest -q` first, inside a 30-minute job cap that pytest alone now fills
 
 *(Filed under working id 8063, reserved by the lead; a minter folds it into the docs batch.
 Authority: the maintainer's (by delegation) entry "2026-10-16 09:57:34 BST" in
