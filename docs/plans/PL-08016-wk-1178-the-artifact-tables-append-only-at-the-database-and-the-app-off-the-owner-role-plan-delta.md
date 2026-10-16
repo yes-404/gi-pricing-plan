@@ -459,7 +459,12 @@ plus `dataset_versions_no_truncate`:
    must equal the same for `OLD` (DP-9's form; `id`, `workspace_id`, `dataset_id`, `version`,
    `kind`, `source_id`, `slug`, and any column added later).
 3. **`status`** (item 2, as corrected by "2026-10-16 09:40:20 BST" Q1): `(OLD.status, NEW.status)` must be a pair of
-   `VALID_DATASET_TRANSITIONS`, or unchanged; `archived` has no `UPDATE` at all. The table, in
+   `VALID_DATASET_TRANSITIONS`, or unchanged; `archived` has no `UPDATE` at all. **An `UPDATE`
+   that leaves `status` unchanged is not a transition**: this rule does not refuse it, and the
+   other rules still bind it: the data frozen from the first `draft → validating` (rule 4), the
+   report id only out of `validating` (rule 5), `profile_id` `NULL → value` only (rule 6), and
+   `archived` refusing every `UPDATE` (the archived-terminal red). *(Amended 2026-10-16, pre-merge, on the 09:44:25 entry, item 1:
+   "a same-status UPDATE is not a transition".)* The table, in
    the guard as a `VALUES` list (`VALID_DATASET_TRANSITIONS`, `packages/model-schema/src/model_schema/datasets.py:86-96`
    at `origin/main` `0877e6e7`, transcribed; the pin test below holds it to the source):
 
@@ -501,14 +506,32 @@ write succeeds), one case each:
   (imported from `model_schema.datasets`, not a hand list), enumerates every `(from, to)` pair
   of `DatasetStatus` with `from ≠ to` and asserts the `UPDATE` of `status` is refused iff the
   pair is not in `VALID_DATASET_TRANSITIONS`, and succeeds iff it is. **Every pair not in
-  `VALID_DATASET_TRANSITIONS` is refused (11 at main `0877e6e7`)**: 5 statuses give 20 pairs
-  with `from ≠ to`, of which the table allows 9, counted from
-  `git show 0877e6e7:packages/model-schema/src/model_schema/datasets.py | sed -n '86,96p'`.
-  `from = to` is excluded because rule 3 allows an unchanged status; for `archived` it is the
-  case below. Each case's id names the pair.
+  `VALID_DATASET_TRANSITIONS` is refused (11 at main `0877e6e7`, from ≠ to, derived from the
+  imported table)**: the predicate is 20 pairs with `from ≠ to` less the 9 the table allows,
+  read from `git show 0877e6e7:packages/model-schema/src/model_schema/datasets.py | sed -n '86,96p'`.
+  `from = to` is not a transition, so it is not in this test: the unchanged limb has its own
+  pair below, and `archived` its own case. Each case's id names the pair. *(Amended 2026-10-16, pre-merge, on the 09:44:25 entry, item 3:
+  the count is stated as "11 at main 0877e6e7, from ≠ to, derived from the imported table".)*
 - **`archived` terminal**, its own red: any `UPDATE` of an archived row, `updated_at` alone
   included. *(Amended 2026-10-16, pre-merge, on the 09:40:20 entry, Q1: the hand list of 11,
   "the 12 of `2162b197` less `validated → validating`", is replaced by the derivation.)*
+- **The "unchanged" limb of rule 3, a pair** (09:44:25 item 2: *"A permission has no failing
+  case"*):
+  - **(i) permitted, the control:** a same-status `UPDATE` the other rules permit succeeds:
+    `validated → validated` setting `profile_id` `NULL → value` on a data-frozen row. It is
+    **green on the base by design** (the base has no guard, so nothing refuses it) and green
+    after S-a; it is a control, not a red, and it proves rule 3 does not refuse an unchanged
+    status.
+  - **(ii) refused, by the freeze rule:** a same-status `UPDATE` of a frozen data column is
+    refused: `validated → validated` setting `tables` on a data-frozen row. Red on the base by
+    its cause, `DID NOT RAISE` (no guard); after S-a, refused with **rule 4's (the freeze's)
+    message**, naming the column `tables` and the frozen state, asserted verbatim from Task 2's
+    function, **not** a status-transition message. Without (ii), "unchanged" would read as a
+    bypass of the freeze (09:44:25 item 2).
+  - (i) is the *Allowed* list's "`profile_id` `NULL → value` on a frozen row" made
+    same-status, and (ii) the *later-state* `validated` case's `UPDATE`; each carries its own
+    node id naming the limb, so the pair is visible in the `LG-` as the ruling asks.
+  *(Amended 2026-10-16, pre-merge, on the 09:44:25 entry, item 2: the paired test for the "unchanged" limb.)*
 - **The FR-53 data red** (item 1, the ruling's own): a version moved `draft → validating →
   draft` refuses an `UPDATE` of `tables`. The same case for each of the other five data columns.
 - **Frozen in every later state:** an `UPDATE` of `tables` on a `validating`, a `validated` and
@@ -719,10 +742,15 @@ for the bootstrap call) are in S-b's write set (plan review R11; 13:21:41 P2 (2)
     existing referencing table's `TRUNCATE` trigger already refuses, the case prints that
     message, and the executor records it as such (plan review R2);
   - the `dataset_versions` reds of *DP-21's guard*: every pair not in
-    `VALID_DATASET_TRANSITIONS` (11 at main `0877e6e7`, derived from the table; 09:40:20 Q1) and
+    `VALID_DATASET_TRANSITIONS` (11 at main `0877e6e7`, from ≠ to, derived from the imported
+    table; 09:40:20 Q1, 09:44:25 item 3) and
     the archived case, the FR-53 data red and its five siblings, the later-state `tables` cases, the
-    report-id and profile cases, identity, `DELETE` and `TRUNCATE`, each `DID NOT RAISE`; the
-    allowed cases pass (DP-21b as refined, 13:27:39);
+    report-id and profile cases, identity, `DELETE` and `TRUNCATE`, and the unchanged limb's
+    case (ii) (a same-status `validated → validated` `UPDATE` of `tables` on a data-frozen row;
+    09:44:25 item 2), each `DID NOT RAISE`; the allowed cases pass (DP-21b as refined,
+    13:27:39), the unchanged limb's case (i) among them (`validated → validated` with
+    `profile_id` `NULL → value`, green on the base by design: a control). *(Amended 2026-10-16, pre-merge, on the 09:44:25 entry, items 2
+    and 3.)*
   - the grants-derived test (`:396-446`) fails at its guard `:439`, with the eleven only on
     the right-hand side.
   A failure for any other reason is a plan defect: stop and report. Paste the lines into the
@@ -1468,8 +1496,13 @@ Each item can be checked by a fresh reviewer at the slice PR's merge tree, with 
    checked by reading `models.py` against it, `dataset_versions` `guarded` (DP-21). The guard's transition set equals
    `VALID_DATASET_TRANSITIONS` exactly (the pin test, green; 13:27:39 item 2, as corrected by
    "2026-10-16 09:40:20 BST" Q1), and every pair not in `VALID_DATASET_TRANSITIONS` is refused
-   (11 at main `0877e6e7`), by the test parametrised from the table, each case green by node id;
-   the archived-terminal red is green as its own case. Step 6.2's gate
+   (11 at main `0877e6e7`, from ≠ to, derived from the imported table), by the test parametrised
+   from the table, each case green by node id;
+   the archived-terminal red is green as its own case. The unchanged limb's pair is green by
+   node id: (i) the permitted same-status `UPDATE` succeeds (a control, green on the base too),
+   and (ii) the same-status `UPDATE` of a frozen data column is refused with the freeze rule's
+   message, not the status rule's, its base red `DID NOT RAISE` in the `LG-` ("2026-10-16
+   09:44:25 BST", items 2 and 3). Step 6.2's gate
    shows no refusal but a re-profiling path (13:27:39 item 4), each in the `LG-` with its node id
    and the lead's disposition; the back-filled `data_frozen_at` count is in the `LG-`.
 3. `git grep -nE "UPDATE factors|factors SET|update\(RateTableVersionRow|version_row\.cells =" -- backend`
