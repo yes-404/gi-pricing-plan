@@ -30,7 +30,7 @@ Branch `sl-8064-ci-job-budget-2026-10-16`, worktree `.claude/worktrees/sl-8064`,
 
 ## PRs
 
-Not opened yet; the lead joins this branch with FD 8063 and opens the PR.
+Not opened yet. FD 8063 (the finding this slice discharges, filed by the auditor on `fd-8063-ci-job-budget-2026-10-16`) is merged into this branch with a no-ff merge; the lead opens the PR.
 
 ## CI run
 
