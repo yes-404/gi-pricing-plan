@@ -370,3 +370,61 @@ async def test_an_identity_route_keeps_the_process_variable_layer(
 
     assert first.status_code == 200, first.text
     assert second.status_code == 429, second.text
+
+
+class _StubVerifier:
+    """Fixed claims for a bearer caller (as `test_workspace_identity.py`'s stub)."""
+
+    def __init__(self, subject: str) -> None:
+        from app.auth.oidc import TokenClaims
+
+        self._claims = TokenClaims(
+            subject=subject, email="b.bearer@insurer.example", name="B Bearer", groups=(), raw={}
+        )
+
+    @property
+    def issuer(self) -> str:
+        return "https://idp.test.example/realms/gip"
+
+    def verify(self, token: str) -> Any:
+        return self._claims
+
+
+@pytest.mark.req("FR-452")
+@pytest.mark.parametrize(("method", "url", "body"), _IDENTITY_ROUTES)
+async def test_an_identity_route_is_counted_once_for_a_bearer_caller(
+    client: TestClient,
+    database: Database,
+    monkeypatch: pytest.MonkeyPatch,
+    method: str,
+    url: str,
+    body: Any,
+) -> None:
+    """A BEARER caller (no Environment: `RL-1687` (2a) skips that layer for it) is counted once
+    per identity route, the limit resolving process variable -> default (the maintainer's
+    (by delegation) entries "2026-10-16 10:31:43 BST" and "10:36:38 BST", Q2). With the process
+    variable at 1, the second call is `429`. Red: the route is never counted (0 calls, no 429)."""
+    from app.auth.service import authenticate_bearer
+    from app.db.models import WorkspaceMemberRow
+    from model_schema import new_uuid7
+
+    subject = f"bearer-{new_uuid7().hex[-12:]}"
+    verifier = _StubVerifier(subject)
+    member_of = new_uuid7()
+    async with database.unit_of_work() as session:
+        identity = await authenticate_bearer(session, verifier, "t")
+        await workspaces.ensure_workspace(session, workspace_id=member_of)
+        session.add(WorkspaceMemberRow(user_id=identity.principal.id, workspace_id=member_of))
+    client.app.state.oidc_verifier = verifier  # type: ignore[attr-defined]
+    headers = {"Authorization": "Bearer t"}
+    calls = _spy_management_count(client, monkeypatch)
+
+    monkeypatch.setenv(_ENV_LIMIT_VARIABLE, "1000")
+    before = len(calls)
+    answered = client.request(method, url, json=body(member_of), headers=headers)
+    assert answered.status_code == 200, answered.text
+    assert len(calls) - before == 1
+
+    monkeypatch.setenv(_ENV_LIMIT_VARIABLE, "1")
+    refused = client.request(method, url, json=body(member_of), headers=headers)
+    assert refused.status_code == 429, refused.text
