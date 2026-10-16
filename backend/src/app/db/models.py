@@ -2605,11 +2605,12 @@ class BlobUploadRow(Base):
     a `dataset:write` holder in another workspace who learned a key could complete it and own
     the bytes. `workspace_id` is the authorisation boundary for completion; `principal_id` is
     recorded, not checked. `job_id` is set when the upload is completed and makes a repeat
-    completion return the first Job; `sha256` (a foreign key to `blobs.sha256`) is set, in the transaction that writes the `blobs`
-    row and takes its reference, when the promotion has run.
+    completion return the first Job; `sha256` (a foreign key to `blobs.sha256`) is set, in the
+    transaction that writes the `blobs` row and takes its reference, when the promotion has run.
 
-    `s3_upload_id`, `part_count`, `job_id`, `principal_id`, `staging_key` and `sha256` are the
-    executor's names for fields `RL-1724` describes without naming (lead-accepted 2026-10-16).
+    `RL-1724` describes `s3_upload_id`, `part_count`, `job_id` and `principal_id` without naming
+    them: the maintainer concurred in those names (2026-10-16 09:44:39 BST). `sha256` and
+    `staging_key` are the names the maintainer ruled (2026-10-16 09:46:32 BST).
     """
 
     __tablename__ = "blob_uploads"

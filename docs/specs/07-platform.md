@@ -57,7 +57,6 @@ The substrate every other module stands on:
 | **Job Kind** | The typed operation a Job performs (`dataset.ingest`, `blob.promote`, `dataset.validate`, `model.fit`, `objective.certify`, `rating.compile`, `score.batch`, `dislocation.run`, `optimisation.run`, `gipp.check`, `monitor.run`, `dossier.generate`, `export.regulatory`). |
 | **Queue** | A named Celery queue with its own worker pool and resource profile (`default`, `compute`, `scoring`, `io`). |
 | **Blob** | A content-addressed immutable object in the object store, keyed by sha256 (ID-4). |
-| **Blob Upload** | A pending client upload to the blob store's staging area, recorded when an upload URL is issued: its workspace, principal, staging key, declared parts and completion deadline. Completing it promotes the bytes to a Blob owned in that workspace (FR 8058). *(appended 2026-10-16, WK-1178, `RL-1724`)* |
 | **Secret** | A named credential held in the platform's secret backend, referenced by slug. |
 | **Setting** | A typed configuration value resolved by precedence: environment variable → workspace setting → platform default. |
 
@@ -306,24 +305,26 @@ The key value itself appears exactly once, in the creation response (FR-389).
 
 ### 4.5 `Blob Upload` *(appended 2026-10-16, WK-1178, `SL-1722`, FR 8058, `RL-1724`)*
 
-The pending record `POST /api/v1/blobs/upload-url` writes, table `blob_uploads`
+The pending record `POST /api/v1/blobs/upload-url` writes (the term is defined in `00` §2.1), table `blob_uploads`
 (class `BlobUploadRow`). `RL-1724` ("The pending record") lists the fields and describes
-them but does not name every column; the names marked *executor-named* were chosen by the
-executor and accepted by the lead on 2026-10-16.
+them but does not name every column. The names marked *executor-named* were chosen by the
+executor and the maintainer concurred (2026-10-16 09:44:39); `sha256` and `staging_key` are
+named by the maintainer's ruling (2026-10-16 09:46:32). `s3_upload_id` is the `upload_id` the
+`upload-url` response returns: two names for one value, not two values.
 
 | Column | Type | `RL-1724` description |
 |---|---|---|
 | `id` | uuid7, primary key | the Blob Upload's id, returned by `upload-url` and used in `/api/v1/blobs/uploads/{id}/complete` |
 | `workspace_id` | uuid | the caller's workspace |
-| `principal_id` | uuid | the requesting principal *(executor-named)* |
-| `staging_key` | text | the staging key *(executor-named)* |
-| `s3_upload_id` | text, null for one part | the S3 multipart upload id; this is the `upload_id` the `upload-url` response returns *(executor-named)* |
-| `part_count` | integer, `1..10000` | the declared part count *(executor-named)* |
+| `principal_id` | uuid | the requesting principal *(executor-named; the maintainer concurred 2026-10-16 09:44:39)* |
+| `staging_key` | text | the staging key *(named by the maintainer's ruling, 2026-10-16 09:46:32)* |
+| `s3_upload_id` | text, null for one part | the S3 multipart upload id; this is the `upload_id` the `upload-url` response returns *(executor-named; the maintainer concurred 2026-10-16 09:44:39)* |
+| `part_count` | integer, `1..10000` | the declared part count *(executor-named; the maintainer concurred 2026-10-16 09:44:39)* |
 | `media_type` | text | the media type |
 | `created_at` | timestamptz | creation time |
 | `complete_by` | timestamptz | `created_at` + 24 h |
-| `job_id` | uuid, null until completed | the completing Job's id *(executor-named)* |
-| `sha256` | text, null until promoted; foreign key to `blobs.sha256` | the promoted digest, named as the blob's own primary key *(executor-named)* |
+| `job_id` | uuid, null until completed | the completing Job's id *(executor-named; the maintainer concurred 2026-10-16 09:44:39)* |
+| `sha256` | text, null until promoted; foreign key to `blobs.sha256` | the promoted digest, named as the blob's own primary key *(named by the maintainer's ruling, 2026-10-16 09:46:32)* |
 
 ---
 
