@@ -230,6 +230,14 @@ is the list `SL-1543`'s head derives (P5).
   name the family both name `{gbm_family}`. Any other random token in a description makes the
   assert red; that is not by cause, and is a STOP to the lead.
 
+  **The token list (the maintainer's entry "2026-10-16 09:54:43 BST — Maintainer: PL 8055
+  condition 2 reading CONFIRMED — exact-value substitution of the one gbm family token" in
+  `to-lead.md`).** The token list is RL 8060 V4's and has **one entry**: the world's gbm family,
+  `record["gbm_family"]`, replaced by its exact value with `{gbm_family}`. There is **no general
+  mapper**: a general first-appearance mapper would also absorb a new random token without a red.
+  Adding an entry needs a dated line from the lead that cites the red that found it.
+  *(Amended 2026-10-16, before the mint, by the planner, on that 09:54:43 entry.)*
+
 - [ ] **Step 3: Run the red (N4's DB window, through `run-small.sh`).**
 
   Run: `uv run pytest -q backend/tests/test_wf699_journey.py -k end_to_end`
