@@ -455,12 +455,22 @@ def rateable(factors: Sequence[Factor]) -> tuple[Factor, ...]:
 def required_model_inputs(
     factors: Sequence[Factor], feature_order: Sequence[str]
 ) -> tuple[str, ...]:
-    """A model's required inputs: its Factors' slugs, or its `feature_order` without Factors.
+    """A model's required inputs: its Factors' inputs, or its `feature_order` without Factors.
 
     The one definition (PL 9494's DP-1, ruled 2026-10-05). A-2's `feature_map` save check
     tests membership against it; SL 9495's compile check tests completeness against it.
     The offset column is not a required input here: the save check adds it (A-2's R2).
+
+    A plain Factor's input is its slug. **An `expression` Factor's inputs are its source
+    columns, not its slug** (DP-1274-MULTI (a'), ruled 2026-10-16 10:50:08 BST): a formula is
+    evaluated over dataset columns (FR-95), a `feature_map` entry carries one value per name,
+    and the graph can only supply the columns one by one. Each input is listed once, in the
+    order its Factor first names it.
     """
-    if factors:
-        return tuple(factor.slug for factor in factors)
-    return tuple(feature_order)
+    if not factors:
+        return tuple(feature_order)
+    inputs: dict[str, None] = {}
+    for factor in factors:
+        names = factor.source_columns if factor.type is FactorType.EXPRESSION else (factor.slug,)
+        inputs.update(dict.fromkeys(names))
+    return tuple(inputs)

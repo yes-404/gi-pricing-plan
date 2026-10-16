@@ -269,3 +269,42 @@ No `model-schema` shape changes (`feature_map` stays `dict[str, str]`).
 
 FD 8068 and FD 8070 are not touched. **Owed:** nothing run; the red-first fit, pin and quote test of
 `driver_age + vehicle_age`, banded, is owed once the amendment is ruled.
+
+
+## DP-1274-MULTI (a') — Observation A fixed — 2026-10-16 (writing only, nothing run)
+
+**Ruling:** `~/gi-pricing-plan.local/channel/to-lead.md`, "2026-10-16 10:50:08 BST" (DP-1274-MULTI -> (a'), with the
+predict-time collision guard moved INTO S4). It adopts the lead's option (a'): every `expression` Factor contributes
+its source columns, not its slug, to `required_model_inputs`, whatever the column count; a plain Factor keeps its slug.
+`model-schema` is unchanged, and `feature_map` stays `dict[str, str]`.
+
+**Red-first** (`c6ae78c1`): `packages/pricing-core/tests/test_rating_glm_expression_inputs.py` holds the banded
+`driver_age + vehicle_age` fit, pin and quote against `predict_glm`; the one-column `driver_age * 2` case; the unit
+definition of `required_model_inputs`; and the guard pair (unequal values refused by name, equal values score).
+
+**Fix:**
+- `required_model_inputs` (`pricing_core/modelling/factors.py`): an `expression` Factor gives its `source_columns`, every
+  name once, in order. Its consumers were read: compile's FR-240 completeness check
+  (`pricing_core/rating/compile.py`, `check_model_call_coverage`) and the backend's FR-222 membership check
+  (`backend/src/app/platform/rating_algorithms.py`, `_accepted_feature_map_values`) both call it and take the set
+  or the list as it comes, so both follow the new definition with no edit.
+- `_GlmScorer.predict` (`pricing_core/rating/runtime.py`): the renamed row is built key by key; two keys on one column
+  with unequal values raise `PredictionError("MODEL_CALL_FEATURE_COLLISION", ...)`. The handler already turns a
+  `PredictionError` into the `model_call` failure sentinel with the code only (FR-255, NFR-499). The error is new to the
+  module, so it is registered in `03` beside `MODEL_CALL_FEATURE_MAP_INVALID`.
+- Spec: dated amendments to `03` FR-222 and FR-240, and the error code entry (`docs/specs/03-rating-engine.md`).
+
+**Findings.** FD 8070 is not edited here. Per the 10:50:08 entry it keeps the compile-time guard and its two existing
+cases, and cites this slice's guard as discharging its predict-time limb.
+
+**Not covered, for the lead.** The handler builds `feature_row` keyed by the `feature_map` VALUE, so two graph names
+mapped to the same feature name collapse before `predict` sees them (the last one wins). That collapse is not a
+`predict` collision and this guard does not reach it.
+
+### Runs owed after GATE END (none run in the window)
+1. The new test file at `c6ae78c1`: the reds are red there (the two quote cases at compile, with
+   `MODEL_CALL_FEATURE_MAP_INVALID`; the unit definition; the unequal-values case), the equal-values case green.
+2. The same file at the fix commit: all green.
+3. `test_rating_glm_model_call.py`, `test_factor_resolution.py`, `test_rating_compile_completeness.py`, and the backend
+   `test_rating_algorithms.py` (the save check) after the change to `required_model_inputs`.
+4. `ruff check`, `mypy`, `audit-docs.py` (under the gate-2 flock).

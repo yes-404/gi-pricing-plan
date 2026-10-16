@@ -796,8 +796,11 @@ def _model_call_handler(
 class _GlmScorer:
     """One pinned GLM, rebuilt once from the Bundle (FD-1458; NFR-491: no I/O at score).
 
-    `columns` renames what `feature_map` names — a Factor slug (DP-2 (b)) or the offset
-    column — to the frame column `predict_glm` reads (the Factor's `source_columns`).
+    `columns` renames what `feature_map` names — a plain Factor's slug (DP-2 (b)) or the offset
+    column — to the frame column `predict_glm` reads (the Factor's `source_columns`). An
+    `expression` Factor is fed its source columns, which pass through as raw keys
+    (`required_model_inputs`, DP-1274-MULTI (a')); `predict` refuses two keys that land on one
+    column with unequal values.
     """
 
     fit: GlmFitResult
@@ -815,7 +818,21 @@ class _GlmScorer:
         )
 
     def predict(self, feature_row: Mapping[str, Any]) -> float:
-        frame = pl.DataFrame([{self.columns.get(k, k): v for k, v in feature_row.items()}])
+        row: dict[str, Any] = {}
+        for key, value in feature_row.items():
+            column = self.columns.get(key, key)
+            if column in row and row[column] != value:
+                # Never a silent pick (DP-1274-MULTI's condition): a plain Factor's slug renamed
+                # to its source column and a raw key can land on one column. Equal values are
+                # the ordinary shared-column case. The column is named, never a value (NFR-499).
+                raise PredictionError(
+                    "MODEL_CALL_FEATURE_COLLISION",
+                    f"two model inputs map to the column {column!r} with different values "
+                    "(FR-222)",
+                    terms=(column,),
+                )
+            row[column] = value
+        frame = pl.DataFrame([row])
         model_offset = (
             self.offset_source.linear_predictor(frame) if self.offset_source else None
         )
