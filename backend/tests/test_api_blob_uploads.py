@@ -54,7 +54,9 @@ def _upload(client: TestClient, headers: dict[str, str], parts: list[bytes]) -> 
     assert response.status_code == 200, response.text
     body = response.json()
     for url, part in zip(body["urls"], parts, strict=True):
-        assert httpx.put(url, content=part, timeout=60).status_code == 200
+        # A single-part URL signs the media type, so the PUT must send it (FR-421).
+        headers = {"Content-Type": "text/csv"} if len(parts) == 1 else {}
+        assert httpx.put(url, content=part, headers=headers, timeout=60).status_code == 200
     return body.get("id", str(new_uuid7())), body
 
 
@@ -148,7 +150,8 @@ async def test_a_completion_past_the_deadline_is_refused(
     api_client: TestClient, database: Database, writer
 ) -> None:
     """Breaker: drop the `complete_by` check -> 202."""
-    upload_id, _ = _upload(api_client, writer, [_payload()])
+    upload_id, body = _upload(api_client, writer, [_payload()])
+    assert "id" in body, "no Blob Upload was recorded, so there is no deadline to pass"
     async with database.unit_of_work() as session:
         await session.execute(
             text("update blob_uploads set complete_by = now() - interval '1 hour' where id = :id"),
