@@ -60,3 +60,7 @@ None of these has been run: this audit is by reading, `git` and `sed`. Each is *
 4. `… scripts/register-lint.py`.
 
 **Proof, owed at the PR:** the PR's own `python` CI run is success, with `contracts` and `req_coverage` logged before pytest and all eight stages in the Gate summary table. Cite the run id in the "CI run" section above. Until then, the workflow change is unproven in CI.
+
+### Re-merge, 2026-10-16 10:40 BST (Europe/London)
+
+`origin/main` a2f77b2dcad5aaec41a5f10aa664383caf421e8b merged `--no-ff` into this branch (was 806f97a9). `git merge-tree --write-tree` rc 0 before the merge: no conflicts, no hand resolution; `docs/INDEX.md`, the roadmap and the register took the merge result unedited. The INDEX regeneration stays owed (item 1 above).
