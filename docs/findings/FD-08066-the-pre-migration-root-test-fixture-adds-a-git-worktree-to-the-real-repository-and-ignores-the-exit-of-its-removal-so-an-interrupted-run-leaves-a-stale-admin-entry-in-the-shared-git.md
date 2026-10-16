@@ -113,23 +113,50 @@ maintainer's entry orders it after SL-1455's GATE END). The count grows by one p
 
 ## Disposition
 
-**Fix with an owner: WK-1178**, in a small slice (the lead places it in the next D batch). Either
-remedy satisfies the maintainer's ruling; the first is preferred because it removes the shared
-write rather than cleaning it up:
+**Fix with an owner: WK-1178**, in a small slice (the lead places it in the next D batch).
 
-1. **Use a clone, as `scripts/doc-id.py:163-166` does:** `git clone --no-checkout --local ROOT
-   <tmp>/clone`, then `git -C <tmp>/clone checkout --detach <sha>`; delete `<tmp>` with
-   `shutil.rmtree`. A clone owns its object store, so nothing is written to the real `.git`, and
-   an interrupted run leaves only a directory under `/tmp`.
-2. **Or keep the worktree and make the teardown honest:** run `git worktree remove --force` with
-   `check=True` inside the `finally` (so a failure is raised, not dropped), and start the
-   fixture with a `git worktree prune`. This still writes to the shared `.git` and still leaks
-   on a kill.
+**Amended 2026-10-16 (BST), before this finding merges, on the maintainer's entry "2026-10-16
+10:30:57 BST" in `channel/to-lead.md`.** The first draft of this section preferred a clone and
+offered `check=True` only as a second, lesser option, and the entry corrects that ordering. The
+requirement is now stated as a property of the fix and not as a choice of design:
+
+> **The fix must make a failed `git worktree remove` visible.** `check=False` is what swallowed
+> it (`tests/test_doc_id_migrate.py:190-192`). A prune added to the fixture is not enough on its
+> own: it would clean up after a silent failure and leave the failure still silent.
+
+Two remedies satisfy it. Either is acceptable; the slice records which it chose and why.
+
+1. **Keep the worktree and make the teardown loud.** Run `git worktree remove --force` with
+   `check=True` inside the `finally`, so that a non-zero exit is raised and not dropped, and keep
+   `shutil.rmtree(tmp, ignore_errors=True)` in an inner `finally` so the temporary directory is
+   still deleted when the removal raises. **Or**, in place of `check=True`, assert after the
+   teardown that `git worktree list --porcelain` no longer names the worktree path, which also
+   catches a removal that exits 0 and leaves the entry. A `git worktree prune` at the start of
+   the fixture may be added as a clean-up of earlier leaks, **never as the only change**. This
+   remedy still writes to the shared `.git`, and still leaks when the process is killed before
+   the `finally` runs; the loud teardown makes the first of those visible, not the second.
+2. **A clone, as `scripts/doc-id.py:163-166` does,** `git clone --no-checkout --local ROOT
+   <tmp>/clone`, then `git -C <tmp>/clone checkout --detach <sha>`, with `shutil.rmtree` of
+   `<tmp>`. A clone owns its object store, so no admin entry reaches the real `.git`, and a
+   killed run leaves only a directory under `/tmp`. **This is acceptable only if the slice shows
+   it also cannot leave an admin entry:** the proof run below must print nothing from
+   `git worktree prune -n -v` after a killed run, and the fixture must not call
+   `git worktree add` anywhere.
+
+**Creation date, recorded as already corrected.** The maintainer's entry "2026-10-16 10:30:57
+BST" withdraws the date "2026-10-16" given in its 10:26:42 entry: it was read from `ls -ld` on
+`.git/worktrees/<name>`, which is the directory's modification time. The two entries were created
+on 14 Oct, as Evidence 1 above already records from the `gitdir` files' birth times (10:43:49 UTC
+and 12:02:51 UTC). The ruling is unchanged: prune after SL-1455's END, plus this LOW finding.
 
 **Proof, on a deliberately broken input (CLAUDE.md §13):** run the four tests (through the
 small-run script), once normally and once with the process killed during the run; then
 `git worktree prune -n -v` prints **nothing**. Before the fix the killed run must be shown to
-leave an entry, so that the check has printed a failure at least once.
+leave an entry, so that the check has printed a failure at least once. **Added by the amendment
+above:** for remedy 1 the proof also needs a deliberately failing removal (for example, make the
+worktree path unremovable or the `git` call exit non-zero in a test double) and must show that
+the fixture now **raises** where the draft's `check=False` returned silently; a fix whose
+teardown cannot be made to fail loudly on broken input has not shown it is visible.
 
 **The event that next discharges this finding:** the merge of that slice, with the proof run
 recorded in its ledger. Until then the lead's `git worktree prune`, after SL-1455's GATE END,
