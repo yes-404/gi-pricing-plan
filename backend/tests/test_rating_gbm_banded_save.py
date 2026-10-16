@@ -93,7 +93,7 @@ def _step(feature_map: dict[str, str], **ref: str) -> RatingModelCallStep:
     return RatingModelCallStep.model_validate({
         "step_id": "s_risk", "type": "model_call", "label": "Risk", "mode": "exact",
         "feature_map": feature_map, "consumes": sorted(feature_map), "produces": ["risk"],
-        "result_type": "decimal", **({"model_ref": MODEL} if not ref else ref),
+        "result_type": "decimal", **(ref if ref else {"model_ref": MODEL}),
     })
 
 

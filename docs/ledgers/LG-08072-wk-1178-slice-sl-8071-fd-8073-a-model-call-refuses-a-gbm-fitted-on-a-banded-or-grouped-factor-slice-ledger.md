@@ -36,7 +36,7 @@ Not opened yet; the lead opens the PR.
 
 ## Owed after GATE END (item 10)
 
-None run. Each is NOT RUN, not green: the new pricing-core test file and the new backend test file through `run-small.sh` (red on the tests commit, green on the fix commit); the neighbouring `test_rating_runtime.py`, `test_rating_compile_completeness.py` and `test_rating_glm_model_call.py`; `ruff check`, `mypy`, `lint-imports`; `doc-index.py`, `audit-docs.py`, `doc-index.py --check`, `register-lint.py` under the gate-2 flock; worktree setup (`uv sync --all-packages`); the full gate on the lead's grant.
+Still owed: the full gate on the lead's grant; the backend files that need the per-worktree database (`backend/tests/test_rating_algorithms.py`, `backend/tests/test_sub_graphs_api.py` and the DB-fixture tests of `backend/tests/test_rating_glm_model_call.py` error at fixture setup with "the per-worktree test database ... does not exist yet": not a test failure, not green, owed to the gate).
 
 ## Red-first proof by cause, 2026-10-16 (partial; run 2026-10-16 11:13:38 BST)
 
@@ -45,4 +45,12 @@ Detached worktree at `a26e9dfe` (red-first), `run-small.sh`, one file per run, l
 - `run-small.sh <red-wt> packages/pricing-core/tests/test_rating_gbm_banded_refusal.py`: rc 1, `6 failed, 3 passed in 7.98s`. FAILED: case C [xgboost], case C [lightgbm], case A [xgboost], case A [lightgbm], `test_a_grouped_factor_is_refused_too` (each: `Failed: DID NOT RAISE ValueError`, at the test's own assert), `test_a_gbm_fit_error_while_scoring_is_the_named_model_call_failure` (`RuntimeError: {"type":"NodeError",...,"nodeId":"s_risk"}`, the GbmFitError escaping as a node error). Passed: the three controls (never-called pin, plain-factor GBM, GLM on banded). Red by cause.
 - `run-small.sh <red-wt> backend/tests/test_rating_gbm_banded_save.py` (no DB fixtures used): rc 1, `5 failed, 4 passed, 2 warnings in 0.62s`. FAILED: `test_the_code_is_a_rating_error_code` (`'MODEL_CALL_GBM_TRANSFORMED_FACTOR'` not in RATING_ERROR_CODES), case C and case A at save and the grouped test (`DID NOT RAISE PlatformError`), `test_each_component_of_a_peril_structure_is_checked` (`AttributeError: ... has no attribute '_component_model_refs'`, a missing symbol the fix adds, not an import/fixture failure). Passed: four negatives and controls. Red by cause.
 
-NOT RUN (lead PAUSE 11:12:51): green at `481db4c0` for both files, and the neighbours `test_rating_runtime.py`, `test_rating_compile_completeness.py`, `test_rating_glm_model_call.py`. Still owed.
+## Green and neighbours, 2026-10-16 (run 22:20-22:25 BST, tree = merge `9001b01e` of origin/main `6b25b9bc` into `481db4c0`+ledger)
+
+`run-small.sh`, the worktree at the merge, load1 3.8-5.5:
+
+- `backend/tests/test_rating_gbm_banded_save.py` + `packages/pricing-core/tests/test_rating_gbm_banded_refusal.py`: rc 0, `18 passed, 2 warnings in 4.73s` (GREEN on both red-first files).
+- `test_rating_compile.py` + `test_rating_runtime.py` + `test_rating_glm_model_call.py` (pricing-core): rc 0, `81 passed in 3.83s`.
+- `test_rating_mounted_model_call.py` + `test_gbm.py` + `test_rating_score.py` (pricing-core): rc 0, `205 passed in 21.33s`.
+- `backend/tests/test_rating_gbm_banded_save.py` + `test_rating_algorithms.py` + `test_rating_glm_model_call.py`: rc 1, `13 passed, 2 warnings, 23 errors in 10.58s`; every error is "ERROR at setup" of an `api_settings` fixture (per-worktree test database absent; createdb barred while a code gate holds gate-1). No FAILED line.
+- `ruff check .` rc 1 on first run: one SIM212 at `backend/tests/test_rating_gbm_banded_save.py:96` (this slice's own line), fixed to `**(ref if ref else {"model_ref": MODEL})`; rc 0 after. `mypy` rc 0 (240 files); `lint-imports` rc 0 (4 kept, 0 broken). `ruff format --check .` rc 1 on 527 files repo-wide (not part of the CLAUDE.md gate; baseline, not this slice's).
