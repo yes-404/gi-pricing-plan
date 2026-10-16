@@ -55,6 +55,7 @@ from pricing_core.data.splits import assign_folds
 from pricing_core.modelling.diagnostics import deviance
 from pricing_core.modelling.factors import FactorMatrix, resolve_factors
 from pricing_core.modelling.tweedie_density import tweedie_log_density
+from pricing_core.modelling.weights import require_usable_weights
 from pricing_core.progress import NullProgress, ProgressCallback
 
 __all__ = [
@@ -553,6 +554,10 @@ def fit_glm(
 
     report = progress or NullProgress()
     report.check_cancelled()
+    # FR-111: a row whose declared weight is exactly 0 is absent from everything below, and
+    # an unusable (negative, null, non-finite) weight is refused here, before `glum`.
+    rows = require_usable_weights(data, spec, GlmFitError)
+    data, model_offset = rows.data, rows.take(model_offset)
     report.update(0.05, "resolving factors")
     matrix = resolve_factors(data, factors, bandings=bandings, groupings=groupings)
     exposure_series = (
