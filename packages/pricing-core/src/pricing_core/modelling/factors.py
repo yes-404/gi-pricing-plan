@@ -80,8 +80,10 @@ REFUSED_FACTOR_INTENTS: Mapping[FactorIntent, str] = MappingProxyType(
 )
 
 __all__ = [
+    "GBM_MODEL_TYPES",
     "FactorMatrix",
     "FactorResolutionError",
+    "gbm_transformed_factors",
     "rateable",
     "required_model_inputs",
     "resolve_factors",
@@ -347,3 +349,24 @@ def required_model_inputs(
     if factors:
         return tuple(factor.slug for factor in factors)
     return tuple(feature_order)
+
+
+#: The `model_type` values of a GBM (`GbmSpec.model_type`, `GbmFitResult.model_type`).
+GBM_MODEL_TYPES = ("xgboost", "lightgbm")
+
+
+def gbm_transformed_factors(factors: Sequence[Factor]) -> tuple[Factor, ...]:
+    """The Factors of a GBM that a `model_call` cannot score: the banded and the grouped.
+
+    `fit_gbm` bands or groups the raw column and encodes the resulting label ordinally, but a
+    `model_call` scores a GBM with `factors=()` and a Bundle that carries no Bandings or
+    Groupings (`03` FR-222, amended 2026-10-16): the raw value is looked up as if it were
+    the label, so it either raises or, when a label spells another band's number, prices the
+    wrong band without an error. The one definition: the save check and the compile check
+    both refuse a pinned GBM for which this is non-empty (`MODEL_CALL_GBM_TRANSFORMED_FACTOR`).
+    """
+    return tuple(
+        factor
+        for factor in factors
+        if factor.type in (FactorType.BANDING, FactorType.GROUPING)
+    )
