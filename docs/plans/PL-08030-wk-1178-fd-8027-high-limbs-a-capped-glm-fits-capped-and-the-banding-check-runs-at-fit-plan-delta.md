@@ -154,8 +154,14 @@ empty band always refuses the fit with `BAND_EMPTY`. A thin band refuses with
 `BAND_BELOW_MIN_EXPOSURE` when the Banding's `minimums.on_violation` is `fail`. When it is `warn`
 (the default), the fit succeeds and the warning is recorded in a typed `banding_warnings` field
 on the fit result, defined in `model-schema` and published in the regenerated contract (DP-B2
-(a)). The fit Job surfaces each refusal as a `409` problem that carries its `02` §5.1 code, as it
-already does for `FACTOR_RESOLUTION_FAILED`.
+(a)). A refused fit Job ends `failed` and stores the refusal's `02` §5.1 code as its error code,
+as it already does for `FACTOR_RESOLUTION_FAILED`. The `409` is the status of the `PlatformError`
+that Task 7's mapping raises in the handler; the Job does not store it (Acceptance 11).
+*(Amended 2026-10-16, before the mint, by the planner, on the lead's entry "2026-10-16 09:47:16
+BST — Lead: SL 8043 + P1 corrections done; …" in `from-lead-2026-10-09.md`, "OWED AT MINT
+(minter): PL 8030 Goal :157": the sentence read "The fit Job surfaces each refusal as a `409`
+problem that carries its `02` §5.1 code", which a Job-level test cannot observe, the same
+looseness Acceptance 11 corrected.)*
 
 ## Evidence at `8eaf6d5f` (the owning code, read)
 
