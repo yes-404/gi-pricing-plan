@@ -930,6 +930,29 @@ def _severity_in_pence() -> pl.DataFrame:
     return data
 
 
+def _pure_premium_in_pence(n: int = 20_000, seed: int = 20261016) -> pl.DataFrame:
+    """A compound Poisson-Gamma book at power 1.5 (as `test_tweedie_power._tweedie_data`),
+    phi = 20 so that mu is 270 or 448 and about a fifth of the rows are zeros: the zero mass
+    is what gives the profile an interior maximum (the comment above `TWEEDIE_RNG` in
+    `backend/tests/test_model_jobs.py` records the probes). Column `severity` so that the
+    R1 spec's `response_column` is shared by all three arms."""
+    rng = np.random.default_rng(seed)
+    urban = rng.integers(0, 2, n)
+    mu = np.exp(1.0 + 0.5 * urban) * 100.0
+    phi, power = 20.0, 1.5
+    counts = rng.poisson(mu ** (2.0 - power) / ((2.0 - power) * phi))
+    y = rng.gamma(shape=counts * (2.0 - power) / (power - 1.0),
+                  scale=(power - 1.0) * phi * mu ** (power - 1.0))
+    data = pl.DataFrame({
+        "area": ["urban" if u else "rural" for u in urban],
+        "claim_count": np.ones(n),
+        "severity": y,
+        "exposure_years": np.ones(n),
+    })
+    assert (data["severity"] > CAP_MINOR).mean() > 0.10
+    return data
+
+
 def _coefficients(fit: object) -> np.ndarray:
     return np.array([c.estimate for c in fit.result.coefficients])  # type: ignore[attr-defined]
 
@@ -949,8 +972,15 @@ def test_a_capped_glm_spec_is_fitted_on_the_capped_response(arm: str) -> None:
         over.update(select_by="cv", cv=GlmCvSpec(method="random", folds=4,
                                                  alphas=(0.0, 0.01, 0.1, 1.0)))
     if arm == "tweedie":
-        over.update(family="tweedie", tweedie=TweediePowerSpec(p_grid=(1.25, 1.5, 1.75)))
-    data = _severity_in_pence()
+        # NOT the Gamma frame: its true power is 2, so any grid inside (1, 2) is maximised at
+        # its last point and the first `fit_glm` raises GLM_TWEEDIE_POWER_GRID_EDGE, a red
+        # for the wrong cause (`test_tweedie_power.py`, the edge test). The frame below has
+        # a zero mass and an interior power, and the grid brackets it widely.
+        over.update(
+            family="tweedie",
+            tweedie=TweediePowerSpec(p_grid=(1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9)),
+        )
+    data = _pure_premium_in_pence() if arm == "tweedie" else _severity_in_pence()
     factors = [_factor("area", "area")]
 
     treated = fit_glm(data, _spec(loss_treatment=_capped(), **over), factors)
