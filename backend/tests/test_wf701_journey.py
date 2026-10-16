@@ -1,4 +1,4 @@
-"""WF-701 — the deployment steps, walked over HTTP (PL 8014, SL 8015).
+"""WF-701 — the deployment steps, walked over HTTP (PL-1710, SL-1711).
 
 `docs/workflows/WF-00701-deploy-and-monitor.md` is the journey this file proves:
 `examples/fremtpl2/journey_wf701.py` is an `httpx` client of `/api/v1` that walks the deployment
@@ -9,7 +9,7 @@ A client that returns `ok` for every step proves nothing. So each test asserts a
 returned, and the end-to-end test reads every effect back through a route the journey did not
 use to cause it, from the test, not from the journey's own record.
 
-Authored red-first on `main` (T1 to T4 of PL 8014). A2 and C4 (the switch under a concurrent
+Authored red-first on `main` (T1 to T4 of PL-1710). A2 and C4 (the switch under a concurrent
 stream) and C6's replica limb are T5 and wait for Slice 5; the step-order assertion below
 filters them out until T5 removes the filter.
 
@@ -51,21 +51,21 @@ wf699 = _load("journey", "journey.py")
 # Fails at collection while the module does not exist: R1, by its cause.
 wf701 = _load("demo_journey_wf701", "journey_wf701.py")
 
-#: PL 8014 T1: the only two lines a WF-701 run may print as a ruled limb. `RL 8019` is a working
-#: id until the ruling is minted; the mint replaces it here and in the journey.
+#: PL-1710 T1: the only two lines a WF-701 run may print as a ruled limb. The id is the minted one
+#: (RL-1712); the journey prints the same line.
 COMPOSE_ONLY_LINE = "COMPOSE-ONLY A2/C4/C6 replica limb"
 PRECONDITION_LINE = (
     "PRECONDITION dev: a successful deployment to dev before uat (requires_prior_environment, "
     "FR-429)"
 )
-ERRORS_LINE = "C7-errors: refused, not traced (FR-259, RL 8019)"
+ERRORS_LINE = "C7-errors: refused, not traced (FR-259, RL-1712)"
 
 FIRST_LINE = (
     "WF-701 demo: process environment dev with development identity (dev auth); "
     "deployments target the Environment resources uat and prod"
 )
 
-#: T3/T4's order, PL 8014's step table, without A2 and C4 (T5). The dev deployment is NOT a step:
+#: T3/T4's order, PL-1710's step table, without A2 and C4 (T5). The dev deployment is NOT a step:
 #: it is a labelled PRECONDITION (RL, the maintainer's "2026-10-14 11:14:40 BST" ruling (2): the
 #: seeds' `requires_prior_environment`, FR-429, WF-701 §1). C3's limbs and C7's four are separate
 #: steps because each asserts a different server effect.
@@ -77,8 +77,8 @@ STEPS_BEFORE_T5 = [
 
 @pytest.mark.req("FR-259")
 def test_wf701_the_ruled_lines_are_exactly_the_ruled_ones() -> None:
-    """PL 8014 T1 and acceptance 2: two ruled lines and no others, and no `KNOWN GAP C7-errors`
-    (RL 8019 walked the limb)."""
+    """PL-1710 T1 and acceptance 2: two ruled lines and no others, and no `KNOWN GAP C7-errors`
+    (RL-1712 walked the limb)."""
     assert [entry.line for entry in wf701.RULED_LINES] == [COMPOSE_ONLY_LINE, ERRORS_LINE]
     assert not [e for e in wf701.RULED_LINES if "KNOWN GAP" in e.line]
 
@@ -98,7 +98,7 @@ def test_wf701_an_unruled_skip_fails_the_journey() -> None:
 
 @pytest.mark.req("FR-259")
 def test_wf701_reuses_the_wf699_failure_and_skip_types() -> None:
-    """PL 8014 T1: `JourneyStepFailed` and `Skip` are imported from `journey.py`, not defined a
+    """PL-1710 T1: `JourneyStepFailed` and `Skip` are imported from `journey.py`, not defined a
     second time, so the demo command catches one exception type for both journeys."""
     assert wf701.JourneyStepFailed is wf699.JourneyStepFailed
     assert wf701.Skip is wf699.Skip
@@ -173,7 +173,7 @@ def _who(record: dict[str, str], name: str) -> dict[str, str]:
 @pytest.mark.req("FR-429")
 @pytest.mark.req("NFR-494")
 def test_wf701_journey_runs_end_to_end(api_client, database, blob_store, workspace_id) -> None:  # type: ignore[no-untyped-def]
-    """PL 8014 T2 to T4: every in-scope step but A2 and C4 in order (the refusals by problem
+    """PL-1710 T2 to T4: every in-scope step but A2 and C4 in order (the refusals by problem
     `code`), each effect then read back by this test through a route the journey did not use to
     cause it. NFR-494 is carried by the functional bound only; the verdict is Slice 5's."""
     record, result, lines = _walk(api_client, database, blob_store, workspace_id)
@@ -246,7 +246,7 @@ def test_wf701_journey_runs_end_to_end(api_client, database, blob_store, workspa
     assert all(e["after"]["bundle_hash"] == newest["bundle_hash"] for e in for_k1)
 
     # C7 (i), (ii): the traces for K1 on prod, counted by this test, inside the band [3, 45]
-    # and all on K1's hash. N = 2,000 quoted quotes at p = 0.01 (PL 8014 P8).
+    # and all on K1's hash. N = 2,000 quoted quotes at p = 0.01 (PL-1710 P8).
     traces = client.get(
         "/traces",
         params={"rating_version": result.k1_ref, "limit": 200},
@@ -278,7 +278,7 @@ def test_wf701_c7_fails_naming_the_band_when_the_sample_rate_is_zero(  # type: i
     api_client, database, blob_store, workspace_id
 ) -> None:
     """R6: at `rating.trace_sample_rate` 0.0 no quoted trace persists; the count 0 is outside
-    [3, 45], so C7 (i) fails, naming the band. The band is therefore not vacuous (PL 8014 P8)."""
+    [3, 45], so C7 (i) fails, naming the band. The band is therefore not vacuous (PL-1710 P8)."""
     with pytest.raises(wf699.JourneyStepFailed) as failure:
         _walk(api_client, database, blob_store, workspace_id, rate=0.0)
     assert failure.value.step == "C7i"

@@ -272,7 +272,7 @@ def test_postcondition_http_error_is_a_refusal(monkeypatch: pytest.MonkeyPatch) 
 def test_the_journey_flag_names_one_journey_and_defaults_to_none() -> None:
     """DP-b1 (a): `--journey wf-699` is an option of the one command and is off by default
     (every Phase 1 demo would otherwise pay for the whole journey)."""
-    assert demo_script.JOURNEYS == ("wf-699", "wf-701")  # PL 8014 T6 adds `wf-701`
+    assert demo_script.JOURNEYS == ("wf-699", "wf-701")  # PL-1710 T6 adds `wf-701`
     parser = demo_script.build_parser()
     assert parser.parse_args([]).journey is None
     assert parser.parse_args(["--journey", "wf-699"]).journey == "wf-699"
@@ -369,12 +369,12 @@ def test_the_journey_refuses_when_pnpm_is_absent() -> None:
         assert demo_script.main() == 1
 
 
-# -- SL-8015: `--journey wf-701` and `--target compose` (PL 8014 T6; R8, R9) --
+# -- SL-1711: `--journey wf-701` and `--target compose` (PL-1710 T6; R8, R9) --
 
 
 @pytest.mark.req("FR-408")
 def test_the_target_flag_defaults_to_local_and_admits_compose() -> None:
-    """PL 8014 T6: `--target compose` points the journey at the running stack's `lb`; the default
+    """PL-1710 T6: `--target compose` points the journey at the running stack's `lb`; the default
     is the local API this command starts. Anything else is refused by the parser."""
     parser = demo_script.build_parser()
     assert parser.parse_args(["--journey", "wf-701"]).target == "local"
@@ -428,7 +428,7 @@ def test_the_compose_target_refuses_when_the_stack_is_not_up_naming_the_services
 
 @pytest.mark.req("FR-408")
 def test_the_local_worker_consumes_every_queue_the_routing_table_names() -> None:
-    """PL 8014 DP-2 (ruled, derived consumer set): `worker_command()`'s queues are a superset of
+    """PL-1710 DP-2 (ruled, derived consumer set): `worker_command()`'s queues are a superset of
     the queues in `DEFAULT_QUEUE_FOR_KIND`, derived from it and never a hard-coded list. Today
     `scoring` and `io` are routed to and consumed by nobody, so a sampled trace stays pending."""
     from app.platform.jobs import DEFAULT_QUEUE_FOR_KIND

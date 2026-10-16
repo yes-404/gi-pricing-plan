@@ -1,8 +1,9 @@
-"""WF-701 deployment-steps journey — STUB for red-first (SL 8015 prep); replaced at the GO.
+"""WF-701 deployment-steps journey (PL-1710, SL-1711).
 
-No logic. It exists so `backend/tests/test_wf701_journey.py` collects and fails at its own
-asserts (R6, R7, R8 red by cause), not at collection. The interface names are the ones the tests
-use; the GO replaces every body.
+T1 is real: the two ruled lines and the check that refuses any other skip. The step bodies
+(`run_wf701_journey`, T2 to T6) are still the stub of the red-first commit: no logic, so
+`backend/tests/test_wf701_journey.py` collects and fails at its own asserts. The interface names
+are the ones the tests use.
 """
 
 from __future__ import annotations
@@ -13,7 +14,12 @@ from typing import Any
 
 from journey import JourneyStepFailed, Skip  # type: ignore[import-not-found]  # noqa: F401
 
-RULED_LINES: tuple[Skip, ...] = ()
+#: PL-1710 T1 and acceptance 2: the only two lines a WF-701 run may print as a ruled limb. The
+#: second is the walked limb of RL-1712 (FR-259), not a skip, so no `KNOWN GAP` line exists.
+RULED_LINES: tuple[Skip, ...] = (
+    Skip("A2/C4/C6", "COMPOSE-ONLY A2/C4/C6 replica limb"),
+    Skip("C7iv", "C7-errors: refused, not traced (FR-259, RL-1712)"),
+)
 
 
 @dataclass
@@ -29,7 +35,11 @@ class Wf701Result:
 
 
 def check_ruled_lines(entries: list[Skip]) -> None:
-    return None
+    """Fail the journey for the first entry whose line is not one of `RULED_LINES`."""
+    ruled = {entry.line for entry in RULED_LINES}
+    for entry in entries:
+        if entry.line not in ruled:
+            raise JourneyStepFailed(entry.step, "UNRULED_SKIP")
 
 
 def run_wf701_journey(

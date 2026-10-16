@@ -30,6 +30,8 @@ was: docs/workflows/wf-04-deploy-and-monitor.md
 | The actor holds `rating_version:deploy_uat` / `deploy_prod` | `06` FR-345, FR-428 |
 | Service Accounts exist for the Consumer Systems, scoped per environment | `07` FR-389/430 |
 
+*Dated 2026-10-14 (the maintainer's (by delegation) ruling "2026-10-14 11:14:40 BST", item (2), `to-lead.md`): a successful deployment to every predecessor the workspace's environment configuration names for `uat` (the default seed: `dev`) is a precondition of the `uat` deployment, as `07` FR-429 enforces for any configured environment.*
+
 ---
 
 ## 2. Main sequence
@@ -65,6 +67,8 @@ was: docs/workflows/wf-04-deploy-and-monitor.md
 | C5 | Backend | **Auto-creates the template Monitors** for the new deployment, so the structure is never live and unmonitored. | `05` FR-310 |
 | C6 | Consumer System | Live quoting proceeds against the new bundle. | `03` FR-250 |
 | C7 | Backend | Samples 1 % of traces, plus 100 % of declines and errors, and persists them. | `03` FR-259 |
+
+*Dated 2026-10-14 (the maintainer's (by delegation) ruling "2026-10-14 11:14:40 BST", item (1), `to-lead.md`): C2's refusal has two codes under `07` FR-429 as amended 2026-09-28. The deploy route refuses with `PROMOTION_ORDER_VIOLATION`; the approval submission for a `prod` deployment refuses with `EVIDENCE_INCOMPLETE`.*
 
 ### Phase D — The first 48 hours (Pricing Actuary)
 
