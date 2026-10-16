@@ -239,3 +239,33 @@ direction.
 FD 8068 records this limb as discharged by S4; the auditor updates FD 8068, this slice does not edit it. `rating/runtime.py`
 is untouched. **Owed (nothing was run; the ALONE latency gate forbids it):** the new tests RED at `e97b293c` and GREEN
 at the fix commit; `ruff`, `mypy`; `test_model_specs.py` beside them (the existing gate tests must still pass).
+
+## Observation A — a multi-column expression Factor is never scored — 2026-10-16 (writing only, nothing run)
+
+**Ruling:** `~/gi-pricing-plan.local/channel/to-lead.md`, "2026-10-16 10:47:33 BST", Observation A: fix in S4 (not a finding); read
+the plans, cite the line, and if multi-column is IN scope carry every source column, if NOT refuse at model-spec creation.
+
+**Scope, from the plans.** IN scope. `PL-1268` Slice 4 (`docs/plans/PL-01268-wk-690-expression-custom-objectives-map-plan.md:520-521`):
+"`resolve_factors` resolves an `expression` Factor through the `factor` profile over the declared dataset columns only
+(FR-95)" (plural; no one-column limit). `PL-1621` row 1 (`:210`) has "undeclared columns refused at create", and
+`02` FR-95 reads "evaluated over dataset columns only". The code already says so: `model_schema/diagnostics.py:375`
+("a formula over several `source_columns`"), and `factors.py:184` and `:372` iterate every source column. `PL-1621:221`
+and `PL-1665` say nothing that limits an expression to one column. So the model-spec refusal branch does not apply.
+
+**The defect, read in `rating/runtime.py` at 6bd8788b.** `:877` builds `columns` for factors with exactly one source
+column only. `:817-818` (`_GlmScorer.predict`) renames each row key through `columns`. A multi-column expression
+Factor's row key is its slug, which is no frame column, and its source columns are never supplied, so
+`resolve_factors` raises `FactorResolutionError` (`factors.py:184`) on every quote.
+
+**Why the fix is not written here.** The row can only carry the source columns if the graph supplies them, and the
+graph supplies what `feature_map` maps. `required_model_inputs` (`factors.py:455-466`) defines a model's inputs as its
+Factor slugs, and `03` FR-222 (membership, `MODEL_CALL_FEATURE_MAP_INVALID`) and FR-240 (completeness, `RL-1523`)
+both print that definition ("its Factor slugs"). Letting a multi-column expression Factor take its source columns
+instead of its slug changes that one definition, so it needs a dated amendment to `03` FR-222 and FR-240. The brief
+says to stop and report in that case. **Nothing was written but this entry.** The candidate is in the report: an
+`expression` Factor with more than one source column contributes its source columns, not its slug, to
+`required_model_inputs`; the runtime then needs no rename for them (an unknown row key passes through `columns.get(k, k)`).
+No `model-schema` shape changes (`feature_map` stays `dict[str, str]`).
+
+FD 8068 and FD 8070 are not touched. **Owed:** nothing run; the red-first fit, pin and quote test of
+`driver_age + vehicle_age`, banded, is owed once the amendment is ruled.
