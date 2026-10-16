@@ -35,7 +35,9 @@ About three times the correct price, with no error. Case A (raw `driver_age` 25,
 fails loudly: `RuntimeError: {"type":"NodeError","source":"Failed to run custom node handler","nodeId":"s_risk"}`.
 Case B (the graph supplies the band label, the control) and the fixture sanity test pass.
 
-## Evidence (all at `a2f77b2d`)
+## Evidence
+
+All reads at `origin/main` `a2f77b2d`.
 
 1. A GBM with banded or grouped Factors fits, is approved and is pinned: `fit_gbm` resolves and
    encodes bandings ordinally into `categorical_maps` (`gbm.py:636`, `:639`, `:264-355`, `:723`;
@@ -67,6 +69,17 @@ Case B (the graph supplies the band label, the control) and the fixture sanity t
 
 Scratch: `~/gi-pricing-plan.local/scratch/probe_gbm_banded_test.py` (A loud, B control, C silent,
 fixture sanity).
+
+**Re-run by the auditor, 2026-10-16 22:22:42 BST (Europe/London), against `origin/main`
+`a2f77b2d`'s code (this worktree changes docs only), once through `run-small.sh`** (the probe
+copied to `packages/pricing-core/tests/test_probe_gbm_banded.py`, deleted after, not committed):
+`4 failed, 3 passed in 6.75s`, rc 1. The 4 failures are case A (both backends: `RuntimeError:
+{"type":"NodeError","source":"Failed to run custom node handler","nodeId":"s_risk"}`) and case C
+(both backends: `assert 300.3575744628906 == 99.8523941040039` for xgboost, `assert
+300.3562076051003 == 99.84995096284597` for lightgbm, no error key); the 3 passes are case B
+(control, both backends) and the fixture sanity test. **It agrees with the relayed lines to the
+last digit.** No raw log of the 11:08:14 run survived in `scratch/`, which is why the run was
+repeated.
 
 ## Severity: the reasoning
 
