@@ -183,6 +183,26 @@ none lists `429`. Owner of the ruling: the lead / the maintainer (by delegation)
 
 **Owed after GATE END, on compose (with `lslocks` clean):** `GIP_DEPLOY_TESTS=1 GIP_N_SHA=<head> GIP_N1_SHA=<parent> uv run pytest -q backend/tests/test_deploy_stack_runtime.py` (all tests, because tests one and two moved too), plus `ruff check`, `mypy`, and the PL-1690 Acceptance 5 red run. None ran: the file is `py_compile`d only. Risks the run decides: (i) the rolling-upgrade test seeds with N's code against N-1's schema; (ii) pre-existing lines over 100 columns at `:392`, `:396`, `:503`, `:526` were not touched.
 
+## DP-S4-SEED-2: three rulings on the runtime-test seeds, 2026-10-16 10:19:57 BST
+
+**Ruling (verified against `~/gi-pricing-plan.local/channel/to-lead.md`, entry "2026-10-16 10:19:57 BST — Maintainer: DP-S4-SEED-2 (SL-1258 @7120d200)"):** the maintainer (by delegation) ruled three points.
+
+1. **Compile on a SERVICE-created draft: ACCEPTED.** The compile test uses a draft made by `rating_versions.create_rating_version`. `POST /rating-versions/{id}/compile` refuses any status but `draft` (`backend/src/app/api/models.py` `compile_rating_version`, docstring `:1295-1300`, `require_compilable` at `:1306` at main, FR-239, RL-1379), which meets the 10:08:52 condition "only if the spec compiles a draft". This closes the open question raised in the DP-S4-SEED (a) section above.
+2. **`rating.trace_sample_rate` by psql INSERT: REFUSED, not a recorded exception.** The sampled-trace test now sets it through the governed path: `PUT /api/v1/settings` (`backend/src/app/api/settings.py` `update_settings`, `:78`), body `{"values": {"rating.trace_sample_rate": 1.0}}`, permission `admin:manage_settings` (`ManageSettings`, `settings.py:34`). The key is declared at `backend/src/app/platform/settings.py:217` (FLOAT, 0..1), so the declaration's validation, the setting write and the `setting.updated` audit row all run. The test's own Service Account key is created with `admin:manage_settings` added (`_stack_with_workspace(extra_permissions=...)`), for this one test only. The test asserts the response's `effective_value` is `1.0`. No psql or direct write for this key remains.
+3. **`add_approved` for the UPSTREAM Model only: ACCEPTED as a SCOPED exception, the ONE accepted direct write.** `backend/tests/approved_rows.py:78` `add_approved` writes approval-evidence rows directly (evidence written and flushed first, then the row), so it is not the governed decide path. It is reached through `test_demo_rating_evidence._approved_model` (`:150`, call at `:156`), which `_governed_workspace` calls. Reason: item 1 of the 2026-10-14 11:43:57 BST entry governs the Rating Version under test (governed at 7120d200), and WF-699's end-to-end `_world` builds its upstream Model with the same helper. The Rating Version and the compile, batch and trace subjects stay governed.
+
+**Direct-write grep of `backend/tests/test_deploy_stack_runtime.py`** (`grep -n 'psql\|INSERT\|UPDATE\|session.add\|add_approved\|mark_approved'`, at this commit's tree):
+
+| Hit | What it is | Verdict |
+|---|---|---|
+| `psql` / `INSERT` in the sampled-trace test (was `:610-612`) | `workspace_settings` row | REMOVED: replaced by `PUT /api/v1/settings` (ruling 2) |
+| `:216`, `:218` `session.add(ServiceAccountRow / ApiKeyRow)` in `_governed_workspace` | the test credential | Separate, EARLIER-recorded exception (this ledger, DP-S4-SEED (a): no route creates a Service Account with `score:execute`, FR-347). NOT the "one" of ruling 3, which scopes the Model approval write; flagged to the lead for confirmation that 10:19:57 does not withdraw it |
+| `:478` `session.add(DatasetVersionRow)` in `_put_blob_inputs` (ingest and batch blob seeding) | Dataset Version rows making the blobs readable | NOT covered by any ruling in 10:19:57; pre-existing, recorded above as SL-1722's to convert. FLAGGED to the lead |
+| `:458` the word `psql` in `_put_blob_inputs`' docstring | prose only | not a write |
+| `add_approved`, `mark_approved` | no hit in this file; the one use is in `test_demo_rating_evidence._approved_model` | ruling 3 |
+
+**Owed after GATE END, on compose (with `lslocks` clean):** the whole `GIP_DEPLOY_TESTS=1` file (as in the DP-S4-SEED (a) section). The settings change is `py_compile`d only; the risk it leaves is whether the workspace-level value resolves for the key's environment `uat` (`api/score.py:544` resolves with `caller.environment`).
+
 ## Finding (b) fixed inside S4 (the maintainer, 2026-10-16 10:14:17 BST, "FIX INSIDE S4, no FD")
 
 **Ruling (verified against `~/gi-pricing-plan.local/channel/to-lead.md`, entry "2026-10-16 10:14:17 BST — Maintainer: SL-1258 counted_caller before the in-handler 403 — FIX INSIDE S4, no FD"):** a defect in a slice's own unmerged code is fixed in the slice, and `git grep counted_caller origin/main -- backend/src` prints nothing, so there is no finding on main to file. Test first (red-first commit `5618a57b`), then the fix.

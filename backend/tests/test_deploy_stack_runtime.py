@@ -435,11 +435,13 @@ def _wait_succeeded(job: dict[str, Any], headers: dict[str, str], bound: int) ->
     return current
 
 
-def _stack_with_workspace(n: str) -> _Workspace:
+def _stack_with_workspace(n: str, extra_permissions: tuple[str, ...] = ()) -> _Workspace:
     """Bring up lb and every worker service; seed an APPROVED Rating Version through the
-    governed path and a key whose permissions cover these routes."""
+    governed path and a key whose permissions cover these routes (plus `extra_permissions`)."""
     _compose(n, "up", "-d", "--wait", "lb", *_worker_services(n))
-    return _governed_workspace(approved=True, permissions=_ALL_PERMISSIONS)
+    return _governed_workspace(
+        approved=True, permissions=[*_ALL_PERMISSIONS, *extra_permissions]
+    )
 
 
 def _worker_services(n: str) -> list[str]:
@@ -599,18 +601,18 @@ def test_a_sampled_trace_is_produced_through_the_compose_scoring_worker(
 ) -> None:
     """A sampled quote's `score.trace_produce` Job succeeds and the trace is listed with a body.
 
-    Sampled with certainty by raising the workspace's `rating.trace_sample_rate` to 1 (the
-    seeded version declines nothing; the executor confirms the settings key and the row shape at
-    the GO). Two red causes: `scoring` unconsumed (`queued`, "never consumed"), and the handler
+    Sampled with certainty by raising the workspace's `rating.trace_sample_rate` to 1 through
+    `PUT /api/v1/settings` (the seeded version declines nothing). Two red causes: `scoring` unconsumed (`queued`, "never consumed"), and the handler
     unregistered (`failed`, `JOB_HANDLER_NOT_REGISTERED`, no trace row).
     """
-    ws = _stack_with_workspace(built_n)
-    workspace_id, headers = ws.workspace_id, ws.headers
-    _compose(
-        built_n, "exec", "-T", "postgres", "psql", "-U", "gipricing", "-d", "gipricing", "-c",
-        "INSERT INTO workspace_settings (id, workspace_id, key, value) "
-        f"VALUES (gen_random_uuid(), '{workspace_id}', 'rating.trace_sample_rate', '1.0'::jsonb)",
-    )
+    ws = _stack_with_workspace(built_n, ("admin:manage_settings",))
+    headers = ws.headers
+    # The governed path (SL-1258, DP-S4-SEED-2 (2)): `PUT /api/v1/settings`
+    # (`api/settings.py` `update_settings`, `admin:manage_settings`) validates the key against
+    # its declaration (`platform/settings.py` `rating.trace_sample_rate`, FLOAT in [0, 1]).
+    updated = _api("PUT", "/api/v1/settings", headers, {"values": {"rating.trace_sample_rate": 1.0}})
+    resolved = {r["key"]: r for r in updated}["rating.trace_sample_rate"]
+    assert resolved["effective_value"] == 1.0, resolved
     ctx = ws.quote
     quote = _api("POST", "/api/v1/score", headers, ctx)
     quote_id = quote.get("quote_id") or ctx["quote_id"]
