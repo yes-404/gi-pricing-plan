@@ -1,5 +1,5 @@
 import { request } from "./client";
-import type { components } from "./generated/schema";
+import type { components, operations } from "./generated/schema";
 import type { components as requestComponents } from "./generated/schema.requests";
 import type { Job } from "./jobs";
 
@@ -11,16 +11,11 @@ export type RateTableVersion = components["schemas"]["RateTableVersion"];
 export type RateTableDiffCell = components["schemas"]["RateTableDiffCell"];
 export type RateTableDiffCellPage = components["schemas"]["Page_RateTableDiffCell_"];
 export type ImportVerdict = components["schemas"]["ImportVerdict"];
-/**
- * What `POST …/import` answers while `confirm` is false (03 §5.1, `ImportPreview` in model-schema).
- * The route's 200 is still an open object in the contract (`UNTYPED_2XX_PENDING_PART_B`, a hold
- * that is WK-1178's), so this is composed from the generated parts and asserted at one boundary
- * (`previewImport`); it goes when that route is typed.
- */
-export interface ImportPreview {
-  diff: RateTableDiff;
-  created_by_import: ImportVerdict;
-}
+/** What `POST …/import` answers (200) while `confirm` is false (03 §5.1); the 201 is a `RateTableVersion`. */
+export type ImportPreview = components["schemas"]["ImportPreview"];
+type ImportResponses = operations["import_rate_table_api_v1_rate_tables__slug___version__import_post"]["responses"];
+type ImportPreviewResponse = ImportResponses[200]["content"]["application/json"];
+type ImportConfirmResponse = ImportResponses[201]["content"]["application/json"];
 /** `GET …/diff/cells` `against`: `previous`, `seed`, or a version number (FR-231). */
 export type DiffAgainst = string;
 /** A bulk operation's request, discriminated on `kind` (FR-233, `SL-1669`). */
@@ -90,16 +85,16 @@ function uploadForm(file: File, confirm: boolean): FormData {
 }
 
 /** Checks an uploaded CSV against the version and returns the diff it would make; nothing is created (FR-235). */
-export function previewImport(ref: string, file: File): Promise<ImportPreview> {
-  return request<ImportPreview>(`/rate-tables/${ref}/import`, {
+export function previewImport(ref: string, file: File): Promise<ImportPreviewResponse> {
+  return request<ImportPreviewResponse>(`/rate-tables/${ref}/import`, {
     method: "POST",
     body: uploadForm(file, false),
   });
 }
 
 /** Creates the version the same upload previewed (FR-235). */
-export function confirmImport(ref: string, file: File): Promise<RateTableVersion> {
-  return request<RateTableVersion>(`/rate-tables/${ref}/import`, {
+export function confirmImport(ref: string, file: File): Promise<ImportConfirmResponse> {
+  return request<ImportConfirmResponse>(`/rate-tables/${ref}/import`, {
     method: "POST",
     body: uploadForm(file, true),
   });
