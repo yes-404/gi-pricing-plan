@@ -308,10 +308,15 @@ def referenced_columns(
     expression: str,
     *,
     profile: GrammarProfile = GrammarProfile.RECIPE,
+    symbols: frozenset[str] | None = None,
     limits: ExpressionLimits = DEFAULT_LIMITS,
 ) -> frozenset[str]:
-    """Column names an expression reads, for lineage and for pre-flight checks."""
-    tree = parse_expression(expression, profile, limits=limits)
+    """Column names an expression reads, for lineage and for pre-flight checks.
+
+    The `objective` and `factor` profiles cannot be parsed without their bound `symbols`
+    (`RL-1700` (a)); the default `None` leaves the `recipe` profile's call unchanged.
+    """
+    tree = parse_expression(expression, profile, symbols=symbols, limits=limits)
     functions = _functions(profile)
     return frozenset(
         node.id

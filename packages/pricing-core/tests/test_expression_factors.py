@@ -269,3 +269,18 @@ def test_a_gbm_on_a_banded_expression_yields_its_relativity_table(backend: str) 
     table = approximation.result.relativities["half_age"]
     assert {row.level for row in table} == set(banding.labels)
     assert sum(row.is_base for row in table) == 1
+
+
+@pytest.mark.req("FR-95")
+def test_referenced_columns_default_is_unchanged_and_the_symbols_call_resolves() -> None:
+    """`RL-1700` (a): `referenced_columns` gains an optional `symbols`; the default is as it was."""
+    from pricing_core.data.expressions import GrammarProfile, referenced_columns
+
+    assert referenced_columns("a + b * 2") == frozenset({"a", "b"})  # recipe profile
+    with pytest.raises(ValueError, match="bound symbols"):
+        referenced_columns("a + b", profile=GrammarProfile.FACTOR)
+    assert referenced_columns(
+        "where(a > 1, b, c)",
+        profile=GrammarProfile.FACTOR,
+        symbols=frozenset({"a", "b", "c", "d"}),
+    ) == frozenset({"a", "b", "c"})

@@ -24,7 +24,6 @@ declare its own source data out of range. `closed="right"` is the mirror image.
 
 from __future__ import annotations
 
-import ast
 import math
 from collections.abc import Iterable
 from typing import Literal
@@ -46,7 +45,7 @@ from pricing_core.data.expressions import (
     ExpressionError,
     GrammarProfile,
     compile_expression,
-    parse_expression,
+    referenced_columns,
 )
 from pricing_core.data.profile import one_way
 from pricing_core.modelling.errors import BandingError, FactorResolutionError
@@ -84,14 +83,14 @@ def source_columns_of(
         return (over.column,)
     names = frozenset(available)
     try:
-        tree = parse_expression(
-            str(over.source_expression), GrammarProfile.FACTOR, symbols=names
+        read = referenced_columns(
+            str(over.source_expression), profile=GrammarProfile.FACTOR, symbols=names
         )
     except (ExpressionError, SyntaxError) as exc:
         raise FactorResolutionError(
             f"the source_expression {over.source_expression!r} is refused: {exc} (FR-95)."
         ) from exc
-    return tuple(sorted({n.id for n in ast.walk(tree) if isinstance(n, ast.Name)} & names))
+    return tuple(sorted(read))
 
 
 def _cut_values(frame: pl.DataFrame, over: Banding | BandingProposal) -> pl.Series:
