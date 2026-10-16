@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+import uuid
 from uuid import uuid4
 
 import pytest
@@ -31,10 +32,21 @@ from backend.tests.test_api_datasets import _headers
 from backend.tests.test_model_nfrs import _events, _principal_with
 from fastapi.testclient import TestClient
 
+from app.config import Settings
+from app.db.models import BandingRow, ModelRow
 from app.db.session import Database
 from app.platform import modelling as model_service
 from app.platform import transformations as transform_service
-from model_schema import Banding, BandingMethod, Factor, FactorType, new_uuid7
+from model_schema import (
+    Banding,
+    BandingMethod,
+    Factor,
+    FactorType,
+    GlmSpec,
+    ModelStatus,
+    OffsetSpec,
+    new_uuid7,
+)
 
 
 @pytest.fixture
@@ -317,3 +329,124 @@ async def test_banding_created_audits_the_source_expression(
     (event,) = await _events(database, workspace_id, "banding.created")
     assert event.after is not None
     assert event.after["source_expression"] == "driver_age * 2"
+
+
+def _seed_fitted_model(workspace_id, slug: str, factor_ids: list[str]) -> None:  # type: ignore[no-untyped-def]
+    """A `fitted` Model whose spec pins `factor_ids`, on a loop of our own (see `test_api_models`)."""
+    from backend.tests.conftest_db import test_database_url
+
+    spec = GlmSpec(
+        model_family_slug=slug,
+        dataset_version_id=new_uuid7(),
+        response_column="claim_count",
+        offset=OffsetSpec(kind="log_column", column="exposure_years"),
+        factors=tuple(uuid.UUID(f) for f in factor_ids),
+    )
+
+    async def _insert(database: Database) -> None:
+        async with database.unit_of_work() as session:
+            session.add(
+                ModelRow(
+                    workspace_id=workspace_id,
+                    model_family_slug=slug,
+                    version=1,
+                    status=ModelStatus.FITTED.value,
+                    dataset_version_id=spec.dataset_version_id,
+                    spec=spec.model_dump(mode="json"),
+                    spec_hash=f"v3:sha256:{new_uuid7().hex}{new_uuid7().hex}",
+                )
+            )
+
+    loop = asyncio.new_event_loop()
+    try:
+        database = Database(Settings(database_url=test_database_url()))
+        try:
+            loop.run_until_complete(_insert(database))
+        finally:
+            loop.run_until_complete(database.dispose())
+    finally:
+        loop.close()
+
+
+@pytest.mark.req("FR-96")
+def test_a_fitted_models_pin_returns_the_posted_expression_and_a_new_version_does_not_move_it(
+    api_client: TestClient, actuary: dict[str, str], workspace_id
+) -> None:
+    """`PL-1665` 4.7 / `RL-1700` DP 4.7 (C'): the chain, not a copy of the field.
+
+    The Model's factor record is the Factor version its spec pins. Step 4 is what makes this
+    evidence rather than a lookup: a pin that followed the slug would pass steps 1-3.
+    """
+    dataset_id = str(new_uuid7())
+    expression = "driver_age * vehicle_power"
+    slug = f"expr-{new_uuid7().hex[-6:]}"
+    band_slug = f"b-{new_uuid7().hex[-6:]}"
+
+    def _banded(expr: str) -> str:
+        made = api_client.post(
+            "/api/v1/bandings", json=_banding_body(band_slug, dataset_id, expr), headers=actuary
+        )
+        assert made.status_code == 201, made.text
+        return str(made.json()["id"])
+
+    v1 = api_client.post(
+        "/api/v1/factors",
+        json=_factor_body(expression, dataset_id, slug=slug, banding_id=_banded(expression)),
+        headers=actuary,
+    )
+    assert v1.status_code == 201, v1.text
+
+    # 1. A fitted Model whose spec pins that Factor version.
+    family = f"fam-{new_uuid7().hex[-6:]}"
+    _seed_fitted_model(workspace_id, family, [v1.json()["id"]])
+
+    # 2. The Model names the id.
+    model = api_client.get(f"/api/v1/models/{family}", headers=actuary)
+    assert model.status_code == 200, model.text
+    assert v1.json()["id"] in model.json()["spec"]["factors"]
+
+    def _pinned_expression() -> str:
+        listed = api_client.get(f"/api/v1/factors?dataset_id={dataset_id}", headers=actuary)
+        assert listed.status_code == 200, listed.text
+        (pinned,) = [f for f in listed.json() if f["id"] == v1.json()["id"]]
+        return str(pinned["expression"])
+
+    # 3. The pinned Factor carries the text that was posted.
+    assert _pinned_expression() == expression
+
+    # 4. A version 2 with another expression has another id and does not move the pin.
+    changed = "driver_age + vehicle_power"
+    v2 = api_client.post(
+        "/api/v1/factors",
+        json=_factor_body(changed, dataset_id, slug=slug, banding_id=_banded(changed)),
+        headers=actuary,
+    )
+    assert v2.status_code == 201, v2.text
+    assert v2.json()["id"] != v1.json()["id"]
+    assert v2.json()["expression"] == changed
+    assert _pinned_expression() == expression
+
+
+@pytest.mark.req("FR-101")
+async def test_the_orm_and_the_migrated_column_agree_that_column_name_is_nullable(
+    database: Database, workspace_id
+) -> None:
+    """`RL-1700` (c) and the maintainer's 09:51:01 condition 1.
+
+    A Banding cut over an expression has no column. If the ORM said NOT NULL while the
+    migration dropped it (or the reverse), this insert would fail at the ORM or at the
+    database. It runs against the migrated schema, so it fails if either side disagrees.
+    """
+    assert BandingRow.__table__.c.column_name.nullable is True
+    async with database.unit_of_work() as session:
+        session.add(
+            BandingRow(
+                workspace_id=workspace_id,
+                dataset_id=uuid4(),
+                slug=f"b-{uuid4().hex[-6:]}",
+                version=1,
+                column_name=None,
+                body={},
+            )
+        )
+        await session.flush()
