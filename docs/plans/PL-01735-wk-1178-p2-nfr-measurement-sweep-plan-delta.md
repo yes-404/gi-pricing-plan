@@ -1,10 +1,10 @@
 ---
-id: PL-8034
+id: PL-1735
 family: plan
 kind: map
 title: WK-1178 — the P2 NFR measurement sweep (NFR-467, NFR-468, NFR-470, NFR-485, NFR-1443 measured DIAGNOSTIC on the shared VM with pre-registered reading rules; NFR-472's red-first test): a dated Work-plan delta
 status: draft                   # draft → active → superseded | retired (§1.2a)
-created: 2026-10-14
+created: 2026-10-16 # original date 2026-10-14, set at the draft; minted 2026-10-16
 owner: planner
 tree: 8eaf6d5f9cd4204e1e077b44069d4afd395f1461
 phase: P2
@@ -12,16 +12,18 @@ work: WK-1178
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [SL-8035, RL-1441, FD-1439, LG-1444, SL-1391, SL-1259, PL-1620, RL-1614, CR-754, CR-721, LG-730, RL-1724]  # forward-cites kept out until their batch mints them: FD 8046, FD 8047
+relates: [SL-1736, RL-1441, FD-1439, LG-1444, SL-1391, SL-1259, PL-1620, RL-1614, CR-754, CR-721, LG-730, RL-1724]  # forward-cites kept out until their batch mints them: FD 8046, FD 8047
 ---
 
-# PL-8034 — WK-1178, the P2 NFR measurement sweep: a dated Work-plan delta
+# PL-1735 — WK-1178, the P2 NFR measurement sweep: a dated Work-plan delta
+
+*(Minted 2026-10-16 as PL-1735 and SL-1736 from working ids 8034 and 8035, in the P1 batch mint PR.)*
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L5
 > (`document-ids.md` §1.6, PL row: *"one plan per Work, slices as rows, no per-slice `leaf`; a
 > change is one dated Work-plan delta, a new `PL-` that `relates:` the Work's plan"*). WK-1178
 > has no Work plan, so, as for `PL-1667` and `PL-1682`, this delta `relates:` the records it
-> builds on. It adds **one slice row**, `SL-8035`, under `### WK-1178` in
+> builds on. It adds **one slice row**, `SL-1736`, under `### WK-1178` in
 > [`../roadmap.md`](../roadmap.md).
 > REQUIRED SUB-SKILL: subagent-driven-development (recommended) or executing-plans, task by
 > task; steps use checkbox (`- [ ]`) syntax. The executor also binds `test-driven-development`
@@ -33,7 +35,7 @@ relates: [SL-8035, RL-1441, FD-1439, LG-1444, SL-1391, SL-1259, PL-1620, RL-1614
 > a measurement task may be delegated to the `performance-engineer` agent
 > (`.claude/agents/performance-engineer.md`), which gathers and decides nothing.
 
-Filed under **working id 8034**; its slice row is **SL-8035** (`draft`, working id 8035). Both
+Filed under **working id 8034**; its slice row is **SL-1736** (`draft`, working id 8035). Both
 ids were reserved by the lead in the brief that seated this planner (seat planner-nfrsweep).
 Written 2026-10-14 by the planner. **Tree read:** `origin/main` at `8eaf6d5f` (committed
 2026-10-14T11:25:34+01:00). Every `path:line` below is at that tree, unless a line says it
@@ -46,17 +48,17 @@ decision-point rulings** of the maintainer's (by delegation) entry in
 
 > - **DP-1 → (b) 43% = 1/2.3**, on the MEASURED contention factor; cite where 2.3 was measured (run, date, tree) in the plan. A shared-VM reading within that band of its threshold is labelled NEAR-BOUND, not a verdict, and goes to a quiet host. Outside the band, the shared-VM reading stands as DIAGNOSTIC-PASS/OVER with that label.
 > - **DP-2 → (a)** in-process ASGI + real Postgres, labelled "server-side, in-process, excludes network" in every reading. The NFR texts measured here are server-side.
-> - **DP-3 → (b), WITHOUT the retained source upload.** 01 NFR-470 (:1184): "Storage overhead **of a Dataset Version** is ≤ 1.2× the parquet payload; identical tables across versions are deduplicated by content hash". The subject is the version's own storage (its tables + reports + profile vs its parquet payload). The source upload is the promotion Job's blob (RL 8028 O1), not the version's. Measure the dedup limb too (a second version with an identical table adds ~0 bytes for that table). **Write this reading as a dated clarification line on NFR-470 in SL 8035's commit** (spec text, citing this entry), so the pass/fail-deciding reading is in the spec, not only the plan. No RL is needed; this is a reading of the row's own subject.
+> - **DP-3 → (b), WITHOUT the retained source upload.** 01 NFR-470 (:1184): "Storage overhead **of a Dataset Version** is ≤ 1.2× the parquet payload; identical tables across versions are deduplicated by content hash". The subject is the version's own storage (its tables + reports + profile vs its parquet payload). The source upload is the promotion Job's blob (RL 8028 O1), not the version's. Measure the dedup limb too (a second version with an identical table adds ~0 bytes for that table). **Write this reading as a dated clarification line on NFR-470 in SL-1736's commit** (spec text, citing this entry), so the pass/fail-deciding reading is in the spec, not only the plan. No RL is needed; this is a reading of the row's own subject.
 > - **DP-4 → (b):** the 5M run per arm on nfr-bench-1 SESSION 2 under MemoryMax=30G; a cap-kill → an FD. It adds ≈ +30 min/arm to the APPROVED session 2 (not a third session, so within the user's 12 Oct VM approval). Record it as a dated line amending S5's run list (RL-1614), and include it in my 2 h VM heads-up. The 250k–1M curve on the shared VM is a DIAGNOSTIC projection, never a verdict.
 > - **DP-5 → an FD, measure as-is:** NFR-485 names `QuantileDMatrix`/streaming, but the code uses `xgb.DMatrix` (gbm.py:895), LightGBM `free_raw_data=False` (gbm.py:1108) and a dense GLM (glm.py:578). Which side is wrong is the FD's §0 question. The 5M reading answers whether the gap matters.
-> - **DP-6 → a finding:** the purge audit lacks `before` (datasets.py:1051-1055), and test_data_nfrs.py:147 claims coverage it does not assert (green by construction, today's class). One FD, both limbs; NFR-472's red-first test covers the replace_rule_set limb in SL 8035.
+> - **DP-6 → a finding:** the purge audit lacks `before` (datasets.py:1051-1055), and test_data_nfrs.py:147 claims coverage it does not assert (green by construction, today's class). One FD, both limbs; NFR-472's red-first test covers the replace_rule_set limb in SL-1736.
 > - **DP-7 → (a)** an RL-1441 shared-VM quiet window, unless near-bound per DP-1.
 
 Every task, reading rule and acceptance item below is made consistent with them; the options
 no longer open are removed from the decision-point table.
 
 DP-1 was then **amended** by the maintainer's (by delegation) entry headed **"2026-10-14
-12:25:22 BST — PL 8034 DP-1 amended: (b) re-measure the contention factor on THIS box as Task 0,
+12:25:22 BST — PL-1735 DP-1 amended: (b) re-measure the contention factor on THIS box as Task 0,
 with (a) as interim; 0.43 accepted as the conservative rounding (re lead 12:24:58)"**, read in
 full; its two ruling items, verbatim:
 
@@ -74,18 +76,18 @@ Task 0 carries (i); the DP-1 row carries both.
 maintainer's (by delegation) entry headed **"2026-10-14 12:31:22 BST — Three planner choices
 ruled; P1/P2 re-cut OK (re lead 12:30:55)"**, read in full. It **confirms** the two choices this
 plan put to the lead (Self-review, "Readings put to the lead"), and the `SL-1259` line. Its two
-PL 8034 items, verbatim, and the one sentence of its PL 8042 item that is this plan's:
+PL-1735 items, verbatim, and the one sentence of its PL-1737 item that is this plan's:
 
 > - **PL 8034 (a), the Task 0 regime: CONFIRMED.** ALONE = load1 < 1.0 at start; contended = load1 in [1.0, 2.0) at start and < 2.0 at end. The factor calibrates the load regime the sweep itself runs in (its settle ceiling 2.0), which is what the band is for. A contended run outside that regime is excluded and re-run (12:25:22). The provenance (8.58 s @ 1.6 vs 20.01 s @ 8.4, one pair, 4-core) is correctly stated.
 > - **PL 8034 (b), NFR-470's counted overhead: CONFIRMED** = the version's tables + reports + profile; ingestion_runs and audit_events rows EXCLUDED and printed separately (they are platform records, not the version's storage).
 > The S5 run-list amendment as a dated line under SL-1259's roadmap row (RL-1614/PL-1620 frozen): OK.
 
-Its PL 8042 item is otherwise PL 8042's, and its P1/P2 item is the lead's.
+Its PL-1737 item is otherwise PL-1737's, and its P1/P2 item is the lead's.
 
 **Amended again 2026-10-14, before the mint, by the planner (seat planner-p1fix)**, on the
 maintainer's (by delegation) entry headed **"2026-10-14 12:42:55 BST — PL 8042 DP-S1 → (i) a
-column on the run; PL 8034: NFR-467 MEASURED at 10M (re lead 12:42:23)"**, read in full. Its
-item (2), verbatim (item (1) is PL 8042's):
+column on the run; PL-1735: NFR-467 MEASURED at 10M (re lead 12:42:23)"**, read in full. Its
+item (2), verbatim (item (1) is PL-1737's):
 
 > **(2) PL 8034 → ADD NFR-467's measurement, as you recommend.** My 11:06:52 classed it PARTIAL-MEASUREMENT ("10M extrapolated from a 2M run is not a measurement"), and 11:28:56 put it in the sweep. PL 8034 must carry its own instrument, the pre-registered threshold from NFR-467's text, a task and an acceptance item, measured at 10M. If the shared VM cannot hold it, it goes to nfr-bench-1 session 2 with NFR-485's 5M runs. **Restate session 2's total planned duration** in the plan (5M × arms + NFR-467 at 10M + S5's own list), because my 2 h VM heads-up to the user must carry a true duration and cost. If it now exceeds ~6 h, tell me before it is committed.
 
@@ -364,7 +366,7 @@ freMTPL2's two versions (`examples/fremtpl2/seed.py`; README `:26-33`), then ing
   promotion Job's blob (RL 8028 O1), not the version's"*), and the `ingestion_runs` and
   `audit_events` rows naming the version (records of the ingestion Job and the audit trail, not
   the version's storage under the ruling's enumeration). *(Confirmed 2026-10-14 by the
-  maintainer (by delegation), entry "2026-10-14 12:31:22 BST", PL 8034 (b): the counted
+  maintainer (by delegation), entry "2026-10-14 12:31:22 BST", PL-1735 (b): the counted
   overhead is the version's tables + reports + profile; the `ingestion_runs` and
   `audit_events` rows are excluded and printed separately, as platform records, not the
   version's storage.)*
@@ -559,9 +561,9 @@ ruled**; the options the ruling did not take are removed, and each row states th
 
 | # | Question | Ruling in force | Kind | Resolved by |
 |---|---|---|---|---|
-| DP-1 | What does "near-bound" mean on the shared VM, so that G4's "no near-bound pass or fail is claimed from the shared VM" can be pre-registered? | **(b)**, **amended 12:25:22: the factor is re-measured on this box by Task 0**, and the band becomes 1 / (Task 0's max factor), rounded **down** to 2 decimals; **until Task 0 lands, the interim band is 0.43** (the provenance and limits below). Three bands, the line at that fraction of the budget, the inverse of the measured contention factor. A shared-VM latency ≤ 43 % of its budget is **DIAGNOSTIC-PASS**; above 43 % and ≤ 100 % is **NEAR-BOUND**, not a verdict, and goes to a quiet host as a named nfr-bench-1 session 2 extra reading; above 100 % is **DIAGNOSTIC-OVER**, an `FD-` (the OVER section). Interim `NEAR_BOUND_FRACTION = 0.43`, **accepted (12:25:22 (ii)) as the conservative rounding**: below 1/2.3 = 0.4348, it makes the NEAR-BOUND zone slightly **wider** (129 ms against 130.4 ms on a 300 ms budget), so fewer shared-VM readings are called DIAGNOSTIC-PASS. The NFR-1443 ratio has its own bands (either direction under load): ≤ 1.5 DIAGNOSTIC-PASS, 1.5–2.0 NEAR-BOUND, > 2.0 DIAGNOSTIC-OVER. **Where 2.3 was measured:** 2026-08-22, WK-661's audit-remediation slice, the same `propose_grouping` (`hierarchical_clustering`) call on the same fixture (678 013 rows, a 10 000-level categorical): **8.58 s at 1-minute load 1.6 and 20.01 s at load 8.4** (20.01 ÷ 8.58 = 2.33). Primary record: `docs/specs/02-modelling.md:2981-2993` at `a3fc2e8d`, the NFR-477 re-measurement note, landed by `4d00790a` (#133, 2026-08-22T15:05:36+01:00). The note names the machine (Intel Xeon @ 2.20 GHz, 4 cores, 16.4 GB), **not a run id or a tree**; the nearest recorded tree is `4d00790a`, the commit that recorded it. Restated in `.claude/skills/python-test/SKILL.md:748-758` and `.claude/skills/dev-commands/SKILL.md:895-898` (the plan's earlier citation) and cited in `LG-730:1447`, all at `a3fc2e8d`. **Its limits:** one pair of readings, no run id or tree, on the development machine's earlier 4-core, 16.4 GB shape; the box now reads `nproc` 8, 31 GB. One run cannot establish a verdict, which is why Task 0 re-measures it | decision point | Ruled 2026-10-14, the maintainer (by delegation), to-lead entry 12:07:40 BST (quoted in full under Context), DP-1; **amended** 2026-10-14, the same, to-lead entry 12:25:22 BST, items (i) and (ii) (quoted under Context); Task 0's load regime (ALONE load1 < 1.0 at start; contended [1.0, 2.0) at start, < 2.0 at end) **confirmed** 2026-10-14, the same, to-lead entry 12:31:22 BST, PL 8034 (a) |
+| DP-1 | What does "near-bound" mean on the shared VM, so that G4's "no near-bound pass or fail is claimed from the shared VM" can be pre-registered? | **(b)**, **amended 12:25:22: the factor is re-measured on this box by Task 0**, and the band becomes 1 / (Task 0's max factor), rounded **down** to 2 decimals; **until Task 0 lands, the interim band is 0.43** (the provenance and limits below). Three bands, the line at that fraction of the budget, the inverse of the measured contention factor. A shared-VM latency ≤ 43 % of its budget is **DIAGNOSTIC-PASS**; above 43 % and ≤ 100 % is **NEAR-BOUND**, not a verdict, and goes to a quiet host as a named nfr-bench-1 session 2 extra reading; above 100 % is **DIAGNOSTIC-OVER**, an `FD-` (the OVER section). Interim `NEAR_BOUND_FRACTION = 0.43`, **accepted (12:25:22 (ii)) as the conservative rounding**: below 1/2.3 = 0.4348, it makes the NEAR-BOUND zone slightly **wider** (129 ms against 130.4 ms on a 300 ms budget), so fewer shared-VM readings are called DIAGNOSTIC-PASS. The NFR-1443 ratio has its own bands (either direction under load): ≤ 1.5 DIAGNOSTIC-PASS, 1.5–2.0 NEAR-BOUND, > 2.0 DIAGNOSTIC-OVER. **Where 2.3 was measured:** 2026-08-22, WK-661's audit-remediation slice, the same `propose_grouping` (`hierarchical_clustering`) call on the same fixture (678 013 rows, a 10 000-level categorical): **8.58 s at 1-minute load 1.6 and 20.01 s at load 8.4** (20.01 ÷ 8.58 = 2.33). Primary record: `docs/specs/02-modelling.md:2981-2993` at `a3fc2e8d`, the NFR-477 re-measurement note, landed by `4d00790a` (#133, 2026-08-22T15:05:36+01:00). The note names the machine (Intel Xeon @ 2.20 GHz, 4 cores, 16.4 GB), **not a run id or a tree**; the nearest recorded tree is `4d00790a`, the commit that recorded it. Restated in `.claude/skills/python-test/SKILL.md:748-758` and `.claude/skills/dev-commands/SKILL.md:895-898` (the plan's earlier citation) and cited in `LG-730:1447`, all at `a3fc2e8d`. **Its limits:** one pair of readings, no run id or tree, on the development machine's earlier 4-core, 16.4 GB shape; the box now reads `nproc` 8, 31 GB. One run cannot establish a verdict, which is why Task 0 re-measures it | decision point | Ruled 2026-10-14, the maintainer (by delegation), to-lead entry 12:07:40 BST (quoted in full under Context), DP-1; **amended** 2026-10-14, the same, to-lead entry 12:25:22 BST, items (i) and (ii) (quoted under Context); Task 0's load regime (ALONE load1 < 1.0 at start; contended [1.0, 2.0) at start, < 2.0 at end) **confirmed** 2026-10-14, the same, to-lead entry 12:31:22 BST, PL-1735 (a) |
 | DP-2 | At what level are NFR-468 and NFR-1443 timed? | **(a)** in-process ASGI, `httpx.AsyncClient(transport=ASGITransport(app=create_app(...)))` (`backend/src/app/main.py:70`), against the real migrated Postgres. It covers routing, auth, the DB and serialisation, not the socket, and hosts NFR-468's "never computed" guard. **Every reading is labelled "server-side, in-process, excludes network"** | decision point | Ruled 2026-10-14, the maintainer (by delegation), to-lead entry 12:07:40 BST (quoted in full under Context), DP-2 |
-| DP-3 | What does NFR-470's "Storage overhead … ≤ 1.2× the parquet payload" compare, and does the retained source upload count? | **(b), without the retained source upload**: the subject is the Dataset Version's own storage (its tables, reports and profile, and its own rows), read as (payload + overhead) ≤ 1.2 × the parquet payload. The source upload is the promotion Job's blob (RL-1724 DP-U1.1, O1), not the version's, and is not counted. The dedup limb is measured too: a second version with an identical table adds ~0 bytes for that table (read as = 0 new parquet bytes, the NFR-470 section). **The reading is written onto NFR-470's row as a dated clarification in SL-8035's commit** (Task 3, Step 4, exact text there); no `RL-` is needed | design unknown | Ruled 2026-10-14, the maintainer (by delegation), to-lead entry 12:07:40 BST (quoted in full under Context), DP-3; the counted overhead (tables + reports + profile, `ingestion_runs` and `audit_events` excluded and printed) **confirmed** 2026-10-14, the same, to-lead entry 12:31:22 BST, PL 8034 (b) |
+| DP-3 | What does NFR-470's "Storage overhead … ≤ 1.2× the parquet payload" compare, and does the retained source upload count? | **(b), without the retained source upload**: the subject is the Dataset Version's own storage (its tables, reports and profile, and its own rows), read as (payload + overhead) ≤ 1.2 × the parquet payload. The source upload is the promotion Job's blob (RL-1724 DP-U1.1, O1), not the version's, and is not counted. The dedup limb is measured too: a second version with an identical table adds ~0 bytes for that table (read as = 0 new parquet bytes, the NFR-470 section). **The reading is written onto NFR-470's row as a dated clarification in SL-1736's commit** (Task 3, Step 4, exact text there); no `RL-` is needed | design unknown | Ruled 2026-10-14, the maintainer (by delegation), to-lead entry 12:07:40 BST (quoted in full under Context), DP-3; the counted overhead (tables + reports + profile, `ingestion_runs` and `audit_events` excluded and printed) **confirmed** 2026-10-14, the same, to-lead entry 12:31:22 BST, PL-1735 (b) |
 | DP-4 | How is NFR-485 measured at its stated scale (5 M × 60, ≤ 32 GB), when neither host has more than 32 GB? | **(b)**: the shared-VM curve to 1 M is a **DIAGNOSTIC projection, never a verdict**; plus one 5 M × 60 run per arm on nfr-bench-1's **approved session 2** (≈ +30 min per arm, not a third session, so within the user's 12 Oct VM approval), each under `systemd-run --scope -p MemoryMax=30G`. A completed run's `VmHWM` is the measurement; a run killed at the cap is "peak > 30 GB" and becomes an `FD-`. Recorded as a dated line amending S5's run list (Task 4, Step 4), which lives in `RL-1614` "What it obliges" item 6 (`:107-111` at `a3fc2e8d`) and `PL-1620` (Global Constraints `:125-130`, D5.3 `:189-199`); the lead puts it in the 2 h VM heads-up | decision point | Ruled 2026-10-14, the maintainer (by delegation), to-lead entry 12:07:40 BST (quoted in full under Context), DP-4 |
 | DP-5 | NFR-485's mechanism clause names `QuantileDMatrix`/streaming construction; the code uses `xgb.DMatrix` (`gbm.py:895`), LightGBM keeps raw data (`gbm.py:1108`), and the GLM is dense (`glm.py:578`). Which one is wrong? | **An `FD-`, measure as-is**: filed as **`FD 8046`** (working id, D18, `origin/docs-d18-2026-10-14` @`b1ecf56d`); which side is wrong is its `CLAUDE.md` §0 question. This slice changes neither code nor spec; the 5 M reading (DP-4) answers whether the gap matters | fact | Ruled 2026-10-14, the maintainer (by delegation), to-lead entry 12:07:40 BST (quoted in full under Context), DP-5 |
 | DP-6 | The purge limb has the same gap as the rule-set limb (`datasets.py:1051-1055` passes `after` only), and `test_data_nfrs.py:147` names both in its docstring but asserts neither. Is it in this slice? | **One finding, both limbs**: filed as **`FD 8047`** (working id, D18, same branch). NFR-472's red-first test **stays in this slice** for the `replace_rule_set` limb (Task 1); the purge limb and the docstring are `FD 8047`'s, not this slice's | scope | Ruled 2026-10-14, the maintainer (by delegation), to-lead entry 12:07:40 BST (quoted in full under Context), DP-6 |
@@ -596,7 +598,7 @@ No other spec file, and no contract, migration or frontend file.
   - **ALONE run (A):** taken in a lead-granted ALONE window (both gate slots free, no other heavy process), load1 < 1.0 at its start.
   - **Contended run (B):** taken outside an ALONE window, in **the regime the sweep's latency runs will meet**: load1 at its start ≥ 1.0 and < 2.0, the ceiling Tasks 2 and 5 settle the load below before each timed run. **A contended run whose load1 at its start or at its end is ≥ 2.0 is excluded and re-run, never kept;** an ALONE run whose load1 at its start is ≥ 1.0 is likewise excluded and re-run.
   - *(Confirmed 2026-10-14 by the maintainer (by delegation), entry "2026-10-14 12:31:22 BST",
-    PL 8034 (a): ALONE = load1 < 1.0 at start; contended = load1 in [1.0, 2.0) at start and
+    PL-1735 (a): ALONE = load1 < 1.0 at start; contended = load1 in [1.0, 2.0) at start and
     < 2.0 at end. The two bullets above were the planner's pre-registration; they now stand as
     ruled, unchanged.)*
   - **Pairs:** at least **3** A/B pairs, run interleaved A, B, A, B, …; each pair is one A and the next valid B. Every run records load1 at its start and at its end, CPU seconds and wall-clock.
@@ -718,11 +720,11 @@ def _audit_state(version: int, body: Mapping[str, Any]) -> dict[str, Any]:
 **Files:** `scripts/measure-p2-nfr-sweep.py` (`storage` subcommand).
 
 - [ ] **Step 1:** Seed freMTPL2's two versions with `examples/fremtpl2/seed.py`, then ingest the identical source again as a third version.
-- [ ] **Step 2:** The byte accounting, as the NFR-470 section states, printed per version: payload, counted overhead, the ratio, and each excluded figure on its own labelled line (the `ingestion_runs` and `audit_events` rows among them, as confirmed by the 12:31:22 entry, PL 8034 (b)); the third version's new parquet bytes for its identical table printed separately (the dedup limb).
+- [ ] **Step 2:** The byte accounting, as the NFR-470 section states, printed per version: payload, counted overhead, the ratio, and each excluded figure on its own labelled line (the `ingestion_runs` and `audit_events` rows among them, as confirmed by the 12:31:22 entry, PL-1735 (b)); the third version's new parquet bytes for its identical table printed separately (the dedup limb).
 - [ ] **Step 3:** Read by DP-3 (b)'s rule (ratio ≤ 1.2, dedup = 0 new bytes); record in the `LG-` with its band. Commit.
-- [ ] **Step 4: The dated clarification on NFR-470's row (DP-3, ruled; in the slice's commit, whatever the reading).** Follow `spec-change`. In `docs/specs/01-data-management.md`, NFR-470's row (`:1184` at `a3fc2e8d`), append the text below inside the row's second cell, after `(ID-4).` and before the closing ` |`. Substitute the commit date and the **minted** ids for `SL-8035`, `PL-8034` and `RL 8028` (minted as `RL-1724` in D17, #1307; never commit a working id into a spec). No other word of the row changes. Proposed text:
+- [ ] **Step 4: The dated clarification on NFR-470's row (DP-3, ruled; in the slice's commit, whatever the reading).** Follow `spec-change`. In `docs/specs/01-data-management.md`, NFR-470's row (`:1184` at `a3fc2e8d`), append the text below inside the row's second cell, after `(ID-4).` and before the closing ` |`. Substitute the commit date and the **minted** ids for `SL-1736`, `PL-1735` and `RL 8028` (minted as `RL-1724` in D17, #1307; never commit a working id into a spec). No other word of the row changes. Proposed text:
 
-  > *(Clarified &lt;date&gt;, WK-1178, SL-8035, PL-8034 DP-3 (b), on the maintainer's (by delegation) entry "2026-10-14 12:07:40 BST" in `to-lead.md`: **the subject is the Dataset Version's own storage** — its parquet tables, its validation reports and its profile — and the bound reads as that total ≤ 1.2× the parquet payload of its tables. The uploaded source file is not counted: it is the promotion Job's blob (RL 8028, O1), not the version's. The deduplication clause reads: a later version whose table is identical to an earlier version's adds no new parquet bytes for that table.)*
+  > *(Clarified &lt;date&gt;, WK-1178, SL-1736, PL-1735 DP-3 (b), on the maintainer's (by delegation) entry "2026-10-14 12:07:40 BST" in `to-lead.md`: **the subject is the Dataset Version's own storage** — its parquet tables, its validation reports and its profile — and the bound reads as that total ≤ 1.2× the parquet payload of its tables. The uploaded source file is not counted: it is the promotion Job's blob (RL 8028, O1), not the version's. The deduplication clause reads: a later version whose table is identical to an earlier version's adds no new parquet bytes for that table.)*
 
   Then run `python3 scripts/audit-docs.py` through the gate-2 slot (`CLAUDE.md` §0: every spec change runs it before commit).
 
@@ -735,7 +737,7 @@ def _audit_state(version: int, body: Mapping[str, Any]) -> dict[str, Any]:
 - [ ] **Step 3:** Write the DP-4 extra readings for nfr-bench-1 session 2 into the `LG-` as named items, one per arm: the exact commands (`systemd-run --scope -p MemoryMax=30G uv run python scripts/bench-model.py --only glm --rows 5000000 --factors 60 --peak hwm`, and the same with `--only gbm`), the cap, and the reading rule (the NFR-485 section). Commit.
 - [ ] **Step 4: The dated line amending S5's run list (DP-4, ruled).** S5's run list is stated in `RL-1614` "What it obliges" item 6 (`:107-111` at `a3fc2e8d`) and `PL-1620` (`:125-130`, D5.3 `:189-199`), both frozen (`document-ids.md` §1.5), so the line goes under `SL-1259`'s row in `docs/roadmap.md`, after its existing dated line (`:1162` at `a3fc2e8d`). Text, with the minted ids substituted:
 
-  > *Dated &lt;date&gt;, WK-1178's SL-8035 (PL-8034 DP-4 (b)), on the maintainer's (by delegation) entry "2026-10-14 12:07:40 BST" in `to-lead.md`, DP-4: nfr-bench-1 session 2's run list (`RL-1614` item 6; `PL-1620` D5.3) also carries NFR-485's 5 M × 60 runs, one per arm (`bench-model.py --only glm` and `--only gbm`, `--peak hwm`), each under `systemd-run --scope -p MemoryMax=30G`, ≈ +30 min per arm inside the approved session 2, not a third session. A run killed at the cap is reported as "peak > 30 GB" and becomes an `FD-`. The commands are SL-8035's `LG-`'s. This row's status and fields are unchanged.*
+  > *Dated &lt;date&gt;, WK-1178's SL-1736 (PL-1735 DP-4 (b)), on the maintainer's (by delegation) entry "2026-10-14 12:07:40 BST" in `to-lead.md`, DP-4: nfr-bench-1 session 2's run list (`RL-1614` item 6; `PL-1620` D5.3) also carries NFR-485's 5 M × 60 runs, one per arm (`bench-model.py --only glm` and `--only gbm`, `--peak hwm`), each under `systemd-run --scope -p MemoryMax=30G`, ≈ +30 min per arm inside the approved session 2, not a third session. A run killed at the cap is reported as "peak > 30 GB" and becomes an `FD-`. The commands are SL-1736's `LG-`'s. This row's status and fields are unchanged.*
 
   *(Confirmed 2026-10-14 by the maintainer (by delegation), entry "2026-10-14 12:31:22 BST":
   "The S5 run-list amendment as a dated line under SL-1259's roadmap row (RL-1614/PL-1620

@@ -1,10 +1,10 @@
 ---
-id: PL-8044
+id: PL-1739
 family: plan
 kind: map
-title: WK-1178 — the failed-authentication audit (FD-1727) — the refusal's audit row survives the 401, the workspace-less failures counted, and slice SL-8045 — Work-plan delta
+title: WK-1178 — the failed-authentication audit (FD-1727) — the refusal's audit row survives the 401, the workspace-less failures counted, and slice SL-1740 — Work-plan delta
 status: draft                  # draft → active → superseded | retired (§1.2a)
-created: 2026-10-14
+created: 2026-10-16 # original date 2026-10-14, set at the draft; minted 2026-10-16
 owner: planner
 tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
 phase: P2
@@ -12,13 +12,15 @@ work: WK-1178
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [SL-8045, FD-1727]
+relates: [SL-1740, FD-1727]
 ---
 
-# PL-8044 — WK-1178: the failed-authentication audit (Work-plan delta)
+# PL-1739 — WK-1178: the failed-authentication audit (Work-plan delta)
+
+*(Minted 2026-10-16 as PL-1739 and SL-1740 from working ids 8044 and 8045, in the P1 batch mint PR.)*
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L5. WK-1178 is the
-> standing maintenance Work and has no single map plan; this delta cuts one new slice, `SL-8045`,
+> standing maintenance Work and has no single map plan; this delta cuts one new slice, `SL-1740`,
 > and changes no other slice. DP-1 to DP-4 are ruled, by the maintainer (by delegation) directly, in
 > `to-lead.md` "2026-10-14 12:18:57 BST" item (1); that entry is the record and no decision-maker
 > `RL-` is filed. The plan stays `draft` until the slice's activation commit. Required sub-skill
@@ -26,8 +28,8 @@ relates: [SL-8045, FD-1727]
 > Bound skills: `spec-change` (the spec text lands first, in the slice's commit),
 > `fastapi-service`, `python-package`, `python-test`, `dev-commands`, `git-hygiene`.
 
-Working ids PL 8044 and SL 8045, reserved by the lead in `eta.md`, "2026-10-14 12:07:20 BST lead:
-RESERVED working ids PL 8044 + SL 8045 = the FD 8036 fix". Written 2026-10-14 (from 12:07 BST) by
+Working ids PL-1739 and SL-1740, reserved by the lead in `eta.md`, "2026-10-14 12:07:20 BST lead:
+RESERVED working ids PL-1739 + SL-1740 = the FD 8036 fix". Written 2026-10-14 (from 12:07 BST) by
 the planner (planner-fd8036). Evidence was read at `origin/main` `a3fc2e8d`. The auditor's run
 (below) ran at `8eaf6d5f`; `git diff --stat 8eaf6d5f a3fc2e8d` over `backend/src/app/auth`,
 `backend/src/app/api/deps.py`, `backend/src/app/db/session.py`, `backend/src/app/platform/audit.py`,
@@ -46,7 +48,7 @@ back (DP-1 (i)); if that write fails, the caller gets a `5xx`, never a silent `4
 failure keeps a `WARNING` log line with no secret (DP-3 B); `07` FR-392 carries a dated amendment
 and `06` FR-368 a dated pointer (DP-4 (a)); and the two tests that were green only because they
 caught the raise inside the unit are replaced by HTTP reds, each red on `main` by its cause. One
-slice, `SL-8045`.
+slice, `SL-1740`.
 
 ## Authority
 
@@ -192,12 +194,12 @@ this file at `dc1c9bc6`.
 
 Written for DP-1 (i), DP-2 (F1), DP-3 (B) and DP-4 (a), all four ruled; DP-4's ruling keeps it as
 written ("with the T-text as in the plan", 12:18:57 item (1)). `<date>` and the FD id are filled in
-the slice's commit; no `RL-` id is cited, because the rulings are the 12:18:57 entry and PL-8044
+the slice's commit; no `RL-` id is cited, because the rulings are the 12:18:57 entry and PL-1739
 carries them. This plan does not edit `docs/specs/`.
 
 **T1 — a dated amendment appended to `07` FR-392's cell (`docs/specs/07-platform.md:76`):**
 
-> *Amended `<date>` (FD-`<n>`, PL-8044):* **A failed authentication is recorded whether or not it
+> *Amended `<date>` (FD-`<n>`, PL-1739):* **A failed authentication is recorded whether or not it
 > reaches a workspace, and its record survives the refusal.** A failure whose credential resolves to
 > a workspace (an API key that is revoked, expired, belongs to an archived Service Account, or was
 > presented for an environment the account is not granted) writes one `principal.auth_failed` Audit
@@ -221,7 +223,7 @@ carries them. This plan does not edit `docs/specs/`.
 
 ## Tasks
 
-### SL-8045 — the slice row
+### SL-1740 — the slice row
 
 The row is in `docs/roadmap.md` under WK-1178. One PR, one `LG-`, per Lean P2 L1.
 
@@ -283,7 +285,7 @@ R9). Each red's failure on `main` is quoted in the `LG-` by its cause.
 
 The full gate, both halves (CLAUDE.md §11), in a granted slot; the `LG-` names the tree. The `LG-`
 quotes each red and each breaker by cause, the 12:18:57 rulings, and the FD the merge discharges.
-`SL-8045`'s closing lines on `docs/roadmap.md` in the slice PR.
+`SL-1740`'s closing lines on `docs/roadmap.md` in the slice PR.
 
 ## The write set
 
@@ -291,7 +293,7 @@ quotes each red and each breaker by cause, the 12:18:57 rulings, and the FD the 
 only), `backend/src/app/auth/service.py`, `backend/src/app/api/deps.py`,
 `backend/src/app/observability/metrics.py`, `backend/tests/test_auth_failure_audit.py` (new),
 `backend/tests/test_auth_keys.py` (`:198-212` deleted, `:216-238` deleted and replaced by R9 in the new file), the
-slice's `LG-` under `docs/ledgers/`, `docs/roadmap.md` (the `SL-8045` row's closing lines only),
+slice's `LG-` under `docs/ledgers/`, `docs/roadmap.md` (the `SL-1740` row's closing lines only),
 and `docs/INDEX.md` (regenerated). No migration, no `model-schema` change, no contract change: the
 401's problem body is unchanged.
 
@@ -338,7 +340,7 @@ the alert rule on the new counter (FR-443's observability Work).
   the recommended rulings", "PROPOSED" and every reference to a decision-maker `RL-` are gone. The
   rejected options stand at `dc1c9bc6`.
 - **Activation.** Need 1 reads "DPs ruled — MET, 12:18:57"; FD-1727's minting, the census and the
-  lead's GO remain open. `SL-8045`'s row in `docs/roadmap.md` says the same.
+  lead's GO remain open. `SL-1740`'s row in `docs/roadmap.md` says the same.
 - **Literals.** The `file:line` locators are those read at `a3fc2e8d` (*Premises*);
   `service.py:116-118` (the ruling's locator for the bearer log) was re-read at `a3fc2e8d` for this
   amendment: `:116` is the `_log.info("bearer token rejected", …)` call, `:117-118` the raise.
@@ -348,7 +350,7 @@ the alert rule on the new counter (FR-443's observability Work).
 
 ## Activation
 
-`SL-8045` is GO-able when all of these hold:
+`SL-1740` is GO-able when all of these hold:
 
 1. **DPs ruled — MET, 12:18:57**: DP-1 to DP-4 and R9, the maintainer's (by delegation) entry
    "2026-10-14 12:18:57 BST" item (1) in `to-lead.md`, quoted under *Authority*.

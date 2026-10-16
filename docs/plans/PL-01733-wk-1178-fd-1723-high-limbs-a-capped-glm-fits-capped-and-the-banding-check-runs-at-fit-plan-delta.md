@@ -1,10 +1,10 @@
 ---
-id: PL-8030
+id: PL-1733
 family: plan
 kind: map
-title: WK-1178 — FD-1723's two HIGH limbs, a capped GLM spec fits capped (FR-127) and the banding check runs at fit (FR-100), SL-8031 — a dated Work-plan delta
+title: WK-1178 — FD-1723's two HIGH limbs, a capped GLM spec fits capped (FR-127) and the banding check runs at fit (FR-100), SL-1734 — a dated Work-plan delta
 status: draft                  # draft → active → superseded | retired (§1.2a)
-created: 2026-10-14
+created: 2026-10-16 # original date 2026-10-14, set at the draft; minted 2026-10-16
 owner: planner
 tree: 8eaf6d5f9cd4204e1e077b44069d4afd395f1461
 phase: P2
@@ -15,7 +15,9 @@ corrected_by: []
 relates: [PL-1542, SL-1543, PL-1674, SL-1675, FD-1723]
 ---
 
-# PL-8030 — WK-1178: FD-1723's two HIGH limbs. A capped GLM spec fits capped (FR-127), and the banding check runs at fit (FR-100) (SL-8031)
+# PL-1733 — WK-1178: FD-1723's two HIGH limbs. A capped GLM spec fits capped (FR-127), and the banding check runs at fit (FR-100) (SL-1734)
+
+*(Minted 2026-10-16 as PL-1733 and SL-1734 from working ids 8030 and 8031, in the P1 batch mint PR.)*
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L5
 > (`document-ids.md` §1.6, PL row: *"one plan per Work, slices as rows, no per-slice `leaf`; a
@@ -23,7 +25,7 @@ relates: [PL-1542, SL-1543, PL-1674, SL-1675, FD-1723]
 > has no Work plan, so, as for `PL-1674`, this delta `relates:` the records it builds on:
 > `PL-1542` and `SL-1543` (A-4, whose guard test this slice interacts with), and `PL-1674` and
 > `SL-1675` (the FR-111 weight rule, whose `weights.py` is this slice's pattern and whose
-> exclusion runs before both new checks). It adds **one slice row**, SL-8031 (working id), under
+> exclusion runs before both new checks). It adds **one slice row**, SL-1734 (working id), under
 > `### WK-1178` in [`../roadmap.md`](../roadmap.md). REQUIRED SUB-SKILL:
 > subagent-driven-development (recommended) or executing-plans, task by task. Steps use checkbox
 > (`- [ ]`) syntax. The executor also binds:
@@ -46,7 +48,7 @@ relates: [PL-1542, SL-1543, PL-1674, SL-1675, FD-1723]
 
 Filed under **working id 8030**. Its slice row is **working id 8031** (`draft`). Both were
 reserved by the lead in `handover/eta.md` (team-lead to planner-fd8027, 2026-10-14, "PL 8030 /
-SL 8031 reserved for you"). Written 2026-10-14 by the planner (seat planner-fd8027).
+SL-1734 reserved for you"). Written 2026-10-14 by the planner (seat planner-fd8027).
 **Tree read:** `origin/main` `8eaf6d5f9cd4204e1e077b44069d4afd395f1461` (#1300, committed
 2026-10-14T11:25:34+01:00). Every `file:line` below is at that tree unless marked otherwise. The
 executor re-reads each one at its base (Task 0). The finding is FD-1723 (working id FD 8027 when this plan was
@@ -94,7 +96,7 @@ Task 5's FR-100 clause, likewise.
   > - DP-S1 → OK.
 
 - **"2026-10-14 12:05:33 BST — The rename confirmed working; DP-B2's field must be STRUCTURED;
-  run-small verdicts OK; audit:read closed (re lead 12:05:11)"**, its PL 8030 bullet, quoted in
+  run-small verdicts OK; audit:read closed (re lead 12:05:11)"**, its PL-1733 bullet, quoted in
   full (the other bullets are not this plan's). It **corrects** this plan's reading of the
   11:52:51 DP-B2 ruling, which had typed the field `tuple[str, ...]`:
   > - **PL 8030 DP-B2: `banding_warnings: tuple[str, ...]` is NOT what I ruled.** "A typed field" means a model-schema type a reviewer or UI can act on, not free text. Define `BandingWarning` in model-schema with: banding ref, band label/index, `measure` (exposure | claim_count, an enum), observed value, configured minimum (Decimal or int as the measure requires; no float for a count). The fit results carry `banding_warnings: tuple[BandingWarning, ...]`, empty when none. FR-100's text is unchanged. The contract is regenerated and checked at the ACK (response shape). A non-A-4 BAND_EMPTY → STOP to you: OK.
@@ -110,7 +112,7 @@ Task 5's FR-100 clause, likewise.
 
   Every decision point below is therefore ruled, and the plan below is written to those rulings.
   The EBM limb is **FD-1723's**, added by an auditor before the mint (DP-L2 (a)); this plan
-  does not write it, and the SL-8031 row's activation needs wait for it. FD-1723's file now
+  does not write it, and the SL-1734 row's activation needs wait for it. FD-1723's file now
   travels in the D17 batch (the entry "2026-10-14 11:57:51 BST", item 2), not on the branch read
   when this plan was first written.
 
@@ -158,8 +160,8 @@ on the fit result, defined in `model-schema` and published in the regenerated co
 as it already does for `FACTOR_RESOLUTION_FAILED`. The `409` is the status of the `PlatformError`
 that Task 7's mapping raises in the handler; the Job does not store it (Acceptance 11).
 *(Amended 2026-10-16, before the mint, by the planner, on the lead's entry "2026-10-16 09:47:16
-BST — Lead: SL 8043 + P1 corrections done; …" in `from-lead-2026-10-09.md`, "OWED AT MINT
-(minter): PL 8030 Goal :157": the sentence read "The fit Job surfaces each refusal as a `409`
+BST — Lead: SL-1738 + P1 corrections done; …" in `from-lead-2026-10-09.md`, "OWED AT MINT
+(minter): PL-1733 Goal :157": the sentence read "The fit Job surfaces each refusal as a `409`
 problem that carries its `02` §5.1 code", which a Job-level test cannot observe, the same
 looseness Acceptance 11 corrected.)*
 
@@ -239,7 +241,7 @@ Each item is checked by a command that a fresh reviewer can run from the reposit
 slice's merge tree.
 
 1. **This delta passes the docs checks on its own branch.** At the branch head,
-   `python3 scripts/audit-docs.py` prints no line naming this file or the SL-8031 row, apart
+   `python3 scripts/audit-docs.py` prints no line naming this file or the SL-1734 row, apart
    from the working-id lines of checks 31 and 32, which are expected until the ids are minted.
    After minting, `python3 scripts/audit-docs.py`, `python3 scripts/doc-index.py --check` and
    `python3 scripts/register-lint.py` exit 0.
@@ -366,7 +368,7 @@ slice's merge tree.
 
 | Order | Slice | Scope (what the `LG-` quotes) | Requirements, each id | Depends on | Size |
 |---|---|---|---|---|---|
-| 1 | SL-8031 — FD-1723's HIGH limbs: a capped GLM (and EBM) fits capped, and the banding check runs at fit | Tasks 0 to 8 below | `02` §3.5: FR-127 (the GLM arm and the EBM arm, DP-L2 (a)); `02` §3.2: FR-100 (the fit-time check and its `warn` record); `02` FR-207 (the staged-contract note for `banding_warnings`); read only: FR-128, FR-111, FR-161, FR-204 | this delta minted; FD-1723 minted with its EBM limb; every DP ruled (2026-10-14 11:52:51 BST); Task 0 Step 3's probe clean for the A-4 severity GLM, or the maintainer's ruling on it | 2 |
+| 1 | SL-1734 — FD-1723's HIGH limbs: a capped GLM (and EBM) fits capped, and the banding check runs at fit | Tasks 0 to 8 below | `02` §3.5: FR-127 (the GLM arm and the EBM arm, DP-L2 (a)); `02` §3.2: FR-100 (the fit-time check and its `warn` record); `02` FR-207 (the staged-contract note for `banding_warnings`); read only: FR-128, FR-111, FR-161, FR-204 | this delta minted; FD-1723 minted with its EBM limb; every DP ruled (2026-10-14 11:52:51 BST); Task 0 Step 3's probe clean for the A-4 severity GLM, or the maintainer's ruling on it | 2 |
 
 ### Task 0 — re-read at the base, enumerate, and probe (convention 4)
 
@@ -450,7 +452,7 @@ slice's merge tree.
 
 - [ ] *(Amended 2026-10-14, on the maintainer's (by delegation) entry "2026-10-14 12:12:51 BST",
   which rules this task's FR-100 clause.)* **One dated CLARIFICATION clause on the FR-100 row,
-  for DP-B1 and DP-B3 only**, in the form *"Clarified 2026-10-14, SL-8031, on the entry
+  for DP-B1 and DP-B3 only**, in the form *"Clarified 2026-10-14, SL-1734, on the entry
   "2026-10-14 12:12:51 BST""*. It records the two readings that decide warn against fail:
   - DP-B1: the band minimums are evaluated over the rows actually fitted, after FR-111's
     weight-0 exclusion;
@@ -607,7 +609,7 @@ limb.
 | DP-B2 | Where does a thin-band **warning** land? `check_banding` returns it, and no fit result has a field for it. | **(a), ruled, as corrected:** a typed field on the three fit results, `banding_warnings: tuple[BandingWarning, ...] = ()`, empty when none. `BandingWarning` is a `model-schema` type with the banding ref (`ArtifactRef`, `banding:{slug}@{version}`), `band_label` and `band_index`, `measure` (the enum `BandingMeasure`: `exposure` or `claim_count`), and `observed` and `minimum` typed as the measure requires (`DecimalStr` for exposure, `int` for a claim count, never a float). `check_banding` returns the same type. Persisted with the model, published in the regenerated contract, and reaching the frontend's generated types (Task 6). This plan first wrote `tuple[str, ...]`; the 12:05:33 entry corrects that reading. | The ruling: FR-100's *"warns (default)"* is the default behaviour, so deferring the warning would leave it unbuilt; *"Through model-schema, with the contract regenerated; the API ACK checks the shape."* The correction: *"'A typed field' means a model-schema type a reviewer or UI can act on, not free text."* | design | no — ruled | Ruled 2026-10-14 by the maintainer (by delegation), entry 2026-10-14 11:52:51 BST; corrected by the entry 2026-10-14 12:05:33 BST, which corrects 11:52:51's DP-B2 as this plan had read it |
 | DP-B3 | Which columns does the thin check read? `one_way` reads an absent column as 0 (`data/profile.py:372-377`). | **(a), ruled:** `check_banding`'s defaults, `exposure_years` and `claim_count`, which the `BandingProposal` also uses (`modelling.py:599-600`); a non-zero floor whose column is absent from the rows is refused by name, never read as 0. | The floor and the stats that set it read the same columns, and the refusal closes the absent-column trap. | design | no — ruled | Ruled 2026-10-14 by the maintainer (by delegation), entry 2026-10-14 11:52:51 BST |
 | DP-G1 | When may the FR-100 limb merge relative to SL-1543 (G2)? The 11:29:53 entry put only the FR-127 limb off the G2 path. | **Ruled: the probe decides.** Task 0 Step 3's probe runs before any code. Any `BAND_EMPTY` for the A-4 severity GLM is a STOP to the maintainer before code (a G2 interaction). On a clean probe, whichever of this slice and SL-1543 is ready first merges first, and the second re-merges `main` and re-runs the WF-699 journey (Task 8). | The ruling: *"the Task 0 Step 3 probe decides; on ANY BAND_EMPTY for the A-4 severity GLM → STOP to me before code (a G2 interaction)."* | scope | yes, until the probe is clean or the maintainer rules on it | Ruled 2026-10-14 by the maintainer (by delegation), entry 2026-10-14 11:52:51 BST |
-| DP-S1 | If the 11:29:53 condition fires (the FR-127 limb joins G2), how does the FR-127 limb ship ahead? | **(a), ruled:** the lead asks the planner for a re-cut delta: SL-8031 keeps FR-100, and a new row takes Tasks 1 to 3 unchanged. | Tasks 1 to 3 are cut to pass the gate alone. Until the condition fires, one slice, as the lead ordered. | scope | no — ruled; reopened only by the condition | Ruled 2026-10-14 by the maintainer (by delegation), entry 2026-10-14 11:52:51 BST |
+| DP-S1 | If the 11:29:53 condition fires (the FR-127 limb joins G2), how does the FR-127 limb ship ahead? | **(a), ruled:** the lead asks the planner for a re-cut delta: SL-1734 keeps FR-100, and a new row takes Tasks 1 to 3 unchanged. | Tasks 1 to 3 are cut to pass the gate alone. Until the condition fires, one slice, as the lead ordered. | scope | no — ruled; reopened only by the condition | Ruled 2026-10-14 by the maintainer (by delegation), entry 2026-10-14 11:52:51 BST |
 
 A plan is *"`draft` while decision points are open, `active` on freeze"* (`document-ids.md`
 §1.6). Every decision point is ruled, by the maintainer's (by delegation) entry
@@ -618,7 +620,7 @@ gives the GO).
 
 ## The row, cut
 
-SL-8031 is cut under `### WK-1178` in `docs/roadmap.md`, after `SL-1683`, as `draft`. No line is
+SL-1734 is cut under `### WK-1178` in `docs/roadmap.md`, after `SL-1683`, as `draft`. No line is
 written on `SL-1543`'s row. The guard pairing and DP-G1 live here and in this slice's LG, and the
 lead writes any dated line on SL-1543 at dispatch.
 
@@ -643,7 +645,7 @@ lead writes any dated line on SL-1543 at dispatch.
   - DP-L1 (a), the module `loss_treatment.py`: Tasks 2 and 3, Acceptance 8, the write set;
   - DP-L2 (a), the EBM arm in scope: Goal, Evidence, R4 in Task 1, Task 3, Acceptance 7, the
     write set, the Tasks row, the hand-off (an auditor adds FD-1723's EBM limb before the mint),
-    and the SL-8031 row's activation needs;
+    and the SL-1734 row's activation needs;
   - DP-B1 (a), the rows fitted after the weight-0 exclusion: Goal, Global Constraints, Tasks 5
     and 7, guard G-W, Acceptance 12;
   - DP-B2 (a), the typed field through `model-schema`: Goal, Evidence (the contract chain),
@@ -711,6 +713,6 @@ lead writes any dated line on SL-1543 at dispatch.
   entries after 11:41:12, only "2026-10-14 11:52:51 BST" item (2) rules on this plan, and
   "2026-10-14 11:57:51 BST" item 2 places FD-1723's file in the D17 batch. For the DP-B2
   correction it was read through the entry "2026-10-14 12:05:33 BST" (its last entry when read);
-  of the entries after 12:00:14, only 12:05:33's PL 8030 bullet rules on this plan. `gh pr list`
+  of the entries after 12:00:14, only 12:05:33's PL-1733 bullet rules on this plan. `gh pr list`
   was not run (no GitHub posts by brief). Task 0 Step 4 re-reads at dispatch.
 - **Placeholders.** `<slice head>` and `<slice branch>` are values read when the slice runs.

@@ -1,10 +1,10 @@
 ---
-id: PL-8042
+id: PL-1737
 family: plan
 kind: map
-title: WK-1178 — FD 8040's two limbs, a recipe cell that does not parse is never silently nulled and validation gives it a verdict (FR-32, VR-STR-2), SL-8043 — a dated Work-plan delta
+title: WK-1178 — FD 8040's two limbs, a recipe cell that does not parse is never silently nulled and validation gives it a verdict (FR-32, VR-STR-2), SL-1738 — a dated Work-plan delta
 status: draft                  # draft → active → superseded | retired (§1.2a)
-created: 2026-10-14
+created: 2026-10-16 # original date 2026-10-14, set at the draft; minted 2026-10-16
 owner: planner
 tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
 phase: P2
@@ -15,14 +15,16 @@ corrected_by: []
 relates: [PL-1542, SL-1543]
 ---
 
-# PL-8042 — WK-1178: FD 8040, silent coercion. A recipe cell that does not parse is never silently nulled, and validation gives it a verdict (SL-8043)
+# PL-1737 — WK-1178: FD 8040, silent coercion. A recipe cell that does not parse is never silently nulled, and validation gives it a verdict (SL-1738)
+
+*(Minted 2026-10-16 as PL-1737 and SL-1738 from working ids 8042 and 8043, in the P1 batch mint PR.)*
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L5
 > (`document-ids.md` §1.6, PL row: *"one plan per Work, slices as rows, no per-slice `leaf`; a
 > change is one dated Work-plan delta, a new `PL-` that `relates:` the Work's plan"*). WK-1178
-> has no Work plan, so, as for `PL-1674` and PL 8030, this delta `relates:` the records it
+> has no Work plan, so, as for `PL-1674` and PL-1733, this delta `relates:` the records it
 > touches: `PL-1542` and `SL-1543` (A-4, the G2 path, whose seed ingest runs a recipe and whose
-> fixture once relied on the nulling this plan removes). It adds **one slice row**, SL-8043
+> fixture once relied on the nulling this plan removes). It adds **one slice row**, SL-1738
 > (working id), under `### WK-1178` in [`../roadmap.md`](../roadmap.md). REQUIRED SUB-SKILL:
 > subagent-driven-development (recommended) or executing-plans, task by task. Steps use
 > checkbox (`- [ ]`) syntax. The executor also binds:
@@ -86,12 +88,12 @@ row identity; the fifth rules DP-S1.
   > - **G2 condition (binding):** Task 0 re-counts through POLARS, with the same cast the recipe uses, over all 678,013 freMTPL2 rows and the seeded 20k. A non-zero count is a STOP to me before code (it would change the A-4/WF-699 seed's rows). The proxy regex count of 0 is noted, not relied on.
   > - The SL 8043 / SL 8031 roadmap adjacency: both go in P1 and are resolved in that one PR. OK.
 - **"2026-10-14 12:31:22 BST — Three planner choices ruled; P1/P2 re-cut OK (re lead
-  12:30:55)"**, its PL 8042 item, quoted in full (its two PL 8034 items and its P1/P2 item are
+  12:30:55)"**, its PL-1737 item, quoted in full (its two PL-1735 items and its P1/P2 item are
   not this plan's):
   > - **PL 8042, the row conservation: WIDEN it to a full accounting identity, for ALL recipes:** `rows_read − rows_rejected − Σ rows_removed_by_step + Σ rows_added_by_step == rows_written`, where each row-changing step (filter_rows, deduplicate, explode_period, …) records its in/out height in the ingestion run (Polars height before/after the step), visible in the run record. Asserted on the 4-row fixture AND on the G2 seed's v2 + portfolio recipes (which use filter_rows). Asserting only the steps-free recipes would exempt exactly the recipes G2 runs. If per-step counts cannot be recorded without touching the recipe engine beyond FD 8040's write set, the planner says so with file:line, and then the narrower assert + the LG list stands as a carried item, which I rule on then. The S5 run-list amendment as a dated line under SL-1259's roadmap row (RL-1614/PL-1620 frozen): OK.
 - **"2026-10-14 12:42:55 BST — PL 8042 DP-S1 → (i) a column on the run; PL 8034: NFR-467
-  MEASURED at 10M (re lead 12:42:23)"**, item (1), quoted in full (item (2) is PL 8034's):
-  > **(1) DP-S1 → (i)** `step_counts` (JSONB, per step: name, rows_in, rows_out) on IngestionRunRow, with a NEW migration and a dated FR-31 clause (01:83). The write set widens to models.py:921-923, the migration, and the three assertion sites (test_data_jobs.py, test_ingestion.py, examples/fremtpl2/test_seed.py). This is accepted: the run is the provenance record of what ingestion did to the rows, and the engine already measures the heights (prepare.py:119-124), so the only defect is that ingestion.py:171 discards them. **Migration discipline:** one head (FR-417), with a downgrade. SL 8043's migration and P2's S-a/S-b migrations re-point down_revision in merge order; the second to merge re-points, with a single-head check at its gate. R7 (5−3−1+0 == 1), R8a/b and G5 proceed. Task 0's portfolio identity (20000 − 0 − 15 + 0 == 19985) is printed.
+  MEASURED at 10M (re lead 12:42:23)"**, item (1), quoted in full (item (2) is PL-1735's):
+  > **(1) DP-S1 → (i)** `step_counts` (JSONB, per step: name, rows_in, rows_out) on IngestionRunRow, with a NEW migration and a dated FR-31 clause (01:83). The write set widens to models.py:921-923, the migration, and the three assertion sites (test_data_jobs.py, test_ingestion.py, examples/fremtpl2/test_seed.py). This is accepted: the run is the provenance record of what ingestion did to the rows, and the engine already measures the heights (prepare.py:119-124), so the only defect is that ingestion.py:171 discards them. **Migration discipline:** one head (FR-417), with a downgrade. SL-1738's migration and P2's S-a/S-b migrations re-point down_revision in merge order; the second to merge re-points, with a single-head check at its gate. R7 (5−3−1+0 == 1), R8a/b and G5 proceed. Task 0's portfolio identity (20000 − 0 − 15 + 0 == 19985) is printed.
 
 The evidence is the lead's from-lead entry **"2026-10-14 12:02:15 BST"** (in
 `from-lead-2026-10-09.md`), item (1), and the auditor's run it reports,
@@ -290,7 +292,7 @@ Each item is checked by a command that a fresh reviewer can run from the reposit
 slice's merge tree.
 
 1. **This delta passes the docs checks on its own branch.** At the branch head,
-   `python3 scripts/audit-docs.py` prints no line naming this file or the SL-8043 row, apart
+   `python3 scripts/audit-docs.py` prints no line naming this file or the SL-1738 row, apart
    from the working-id lines of checks 31 and 32, which are expected until the ids are minted.
    After minting, `python3 scripts/audit-docs.py`, `python3 scripts/doc-index.py --check` and
    `python3 scripts/register-lint.py` exit 0.
@@ -497,7 +499,7 @@ merge and made `active` by a dated line, and no status is set here.
 
 | Order | Slice | Tasks | Requirements (each id) | Activation needs | Lane |
 |---|---|---|---|---|---|
-| 1 | SL-8043 — FD 8040: a recipe cell that does not parse is never silently nulled, and validation gives it a verdict | Tasks 0 to 7 below | `01` §3.1: FR-32 (the quarantine, and the Job path); `01` §4.4: VR-STR-2, VR-STR-5 and VR-STR-9 (catalogue rules; the checks that give the verdict); `01` §3.2: FR-35 (the steps whose behaviour changes); `01` §3.1: FR-31 (the run's record; its dated clause, DP-S1 (i)); read only: FR-45, FR-46, VR-STR-3 | FD 8040 minted; every DP ruled — MET, by the maintainer's (by delegation) entries "2026-10-14 12:23:36 BST" and, for DP-S1, "2026-10-14 12:42:55 BST"; this delta minted and made `active` by a dated line; Task 0 Step 3's G2 probe clean on both populations, or the maintainer's ruling on it; a free build lane | 1 |
+| 1 | SL-1738 — FD 8040: a recipe cell that does not parse is never silently nulled, and validation gives it a verdict | Tasks 0 to 7 below | `01` §3.1: FR-32 (the quarantine, and the Job path); `01` §4.4: VR-STR-2, VR-STR-5 and VR-STR-9 (catalogue rules; the checks that give the verdict); `01` §3.2: FR-35 (the steps whose behaviour changes); `01` §3.1: FR-31 (the run's record; its dated clause, DP-S1 (i)); read only: FR-45, FR-46, VR-STR-3 | FD 8040 minted; every DP ruled — MET, by the maintainer's (by delegation) entries "2026-10-14 12:23:36 BST" and, for DP-S1, "2026-10-14 12:42:55 BST"; this delta minted and made `active` by a dated line; Task 0 Step 3's G2 probe clean on both populations, or the maintainer's ruling on it; a free build lane | 1 |
 
 ### Task 0 — re-read at the base, enumerate, and probe (convention 4)
 
@@ -689,7 +691,7 @@ auditor's `RECIPE`, through `execute_job`, as the 12:23:36 entry orders.
   edited (DP-S1 (i), ruled 12:42:55). Proposed text, with the commit date and the minted ids
   substituted:
 
-  > *(Amended &lt;date&gt;, WK-1178, SL-8043, PL-8042 DP-S1 (i), on the maintainer's (by
+  > *(Amended &lt;date&gt;, WK-1178, SL-1738, PL-1737 DP-S1 (i), on the maintainer's (by
   > delegation) entries "2026-10-14 12:31:22 BST" and "2026-10-14 12:42:55 BST" in
   > `to-lead.md`: a run also records `step_counts`, one entry per recipe step in order, each
   > with the step's `name`, its `rows_in` and `rows_out` (the table's row count before and
@@ -777,14 +779,14 @@ auditor's `RECIPE`, through `execute_job`, as the 12:23:36 entry orders.
   per step in order, with the ruled keys `name` (`step`), `rows_in` (`rows_before`) and
   `rows_out` (`rows_after`), plus `rows_rejected`, the one count the identity cannot derive
   from the other three (a quarantine is not a removal); `[]` with no recipe. *(Ruled 2026-10-14
-  by the maintainer's (by delegation) entry "2026-10-14 13:21:41 BST — MERGE-ACK #1302 (D15) + eight pending rulings (re lead 12:46:13 → 13:15:54)", its PL 8042 line, verbatim: **PL 8042 (a) `rows_rejected` per step: ACCEPTED** (a quarantine is not a removal; the identity needs it).)* The identity
+  by the maintainer's (by delegation) entry "2026-10-14 13:21:41 BST — MERGE-ACK #1302 (D15) + eight pending rulings (re lead 12:46:13 → 13:15:54)", its PL-1737 line, verbatim: **PL 8042 (a) `rows_rejected` per step: ACCEPTED** (a quarantine is not a removal; the identity needs it).)* The identity
   helper derives each step's removed and added rows by Task 4's formula from these four.
 - [ ] **The migration** (the 12:42:55 entry's migration discipline; `07` FR-417):
   - one new revision under `backend/migrations/versions/` adding `step_counts` to
     `ingestion_runs` as JSONB, not null, server default `'[]'`, so existing rows read `[]`;
     with a `downgrade()` that drops the column;
   - its `down_revision` is the single head of `main` at the slice's base;
-  - **re-point in merge order:** SL-8043's migration and P2's S-a/S-b migrations (PL 8016) are
+  - **re-point in merge order:** SL-1738's migration and P2's S-a/S-b migrations (PL 8016) are
     parented on the same head while they run. Whichever merges **second** re-merges `main` and
     re-points its `down_revision` to the head the first one landed;
   - **the single-head check at that slice's gate:** `scripts/run-small.sh` over
@@ -861,9 +863,9 @@ columns are a contract change: STOP to the lead.
 - **The lead:** mint FD 8040 (auditor-upload404's record) before this delta. GO the executor.
   Relay Task 0 Step 3's probe output, and any STOP, to the maintainer (DP-G2, binding).
   DP-S1 was ruled (i) at 12:42:55; nothing waits on it.
-- **SL-8043 and PL 8016's S-a/S-b:** their migrations re-point `down_revision` in merge order;
+- **SL-1738 and PL 8016's S-a/S-b:** their migrations re-point `down_revision` in merge order;
   the second to merge runs the single-head check at its gate (Task 5).
-- **The P1 batch:** SL-8043's roadmap row sits next to SL-8031's (PL 8030), both before
+- **The P1 batch:** SL-1738's roadmap row sits next to SL-1734's (PL-1733), both before
   `### WK-1250`. The 12:23:36 entry rules that this adjacency is resolved in that one PR.
 
 ## Self-review
@@ -890,7 +892,7 @@ columns are a contract change: STOP to the lead.
     Hand-off); the FR-31 clause with its proposed text (Task 3); the widened write set (write
     set); R7, R8a/b and G5 proceed, the (iii) fallback removed (R1, R7, R8, Tasks row);
     Task 0's portfolio identity printed (Task 0 Step 3);
-  - the entry's S5 sentence is PL 8034's, not this plan's.
+  - the entry's S5 sentence is PL-1735's, not this plan's.
 - **Spec coverage.** The plan names each requirement with its section:
   - FR-32 (`01` §3.1): the quarantine, and the Job path;
   - VR-STR-2, VR-STR-5 and VR-STR-9 (`01` §4.4): the checks that give the verdict;
@@ -931,7 +933,7 @@ columns are a contract change: STOP to the lead.
   - *"G2 condition (binding)"*, Polars over 678 013 rows and the seeded 20k: DP-G2, Task 0
     Step 3, "The G2 interaction" (the proxy noted, not relied on), Acceptance 11 and the
     Tasks row;
-  - the roadmap adjacency of SL-8043 and SL-8031, resolved in the one P1 PR: "Hand-off".
+  - the roadmap adjacency of SL-1738 and SL-1734, resolved in the one P1 PR: "Hand-off".
 
   Each DP row's "Resolved by" cell carries its ruling, and the refused options are kept only as
   a record.
@@ -966,7 +968,7 @@ columns are a contract change: STOP to the lead.
 - **Convention 4.** `to-lead.md` was read through the entry "2026-10-14 12:23:36 BST", and
   again, for the amendments, through "2026-10-14 12:42:55 BST". Only the
   11:52:51 entry (item (1)), the 12:02:46 entry (item (1)), the 12:23:36 entry, the
-  12:31:22 entry (its PL 8042 item) and the 12:42:55 entry (item (1)) rule on this subject.
+  12:31:22 entry (its PL-1737 item) and the 12:42:55 entry (item (1)) rule on this subject.
   `gh pr list` was not run, because the brief allows no GitHub posts. Task 0 Step 4 re-reads at
   dispatch.
 - **Placeholders.** `<slice head>` and `<slice branch>` are values read when the slice runs.
