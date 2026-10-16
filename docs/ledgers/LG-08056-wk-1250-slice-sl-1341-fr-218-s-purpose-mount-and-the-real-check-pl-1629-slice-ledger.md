@@ -5,7 +5,7 @@ title: WK-1250 slice SL-1341 — FR-218's purpose mount and the real check (reti
 status: active                 # active → closed (§1.2a)
 created: 2026-10-16
 owner: executor
-tree: 658c4cd67d8cab11a02be35a4ad100ab2eacb26a
+tree: 5576628141a98b5ce768096a7a0e96b212f1f761
 phase: P2
 work: WK-1250
 slice: SL-1341
@@ -33,9 +33,9 @@ and whichever of the two merges second re-merges and re-runs `generate-contracts
 | Task | Commit | State |
 |---|---|---|
 | 1 spec: RL-1628 T1, T2, T3 (+ the `CompiledBundle` field note in `03` §5.x) | `aa482243` | done; audit-docs rc 0 |
-| 2 `SubGraphRef.purposes`, FR-212 per purpose, R1 | feat(model-schema) | done |
-| 3 `inline_mounts(purpose=)`, `Bundle.purpose_graphs`, `bundle_hash`, `load_bundle` per purpose | feat(pricing-core) | done |
-| 4 the real check and one selector for every algorithm/decision read; interim tests rewritten | feat(pricing-core) | done |
+| 2 `SubGraphRef.purposes`, FR-212 per purpose, R1 | `c06677f6` | done |
+| 3 `inline_mounts(purpose=)`, `Bundle.purpose_graphs`, `bundle_hash`, `load_bundle` per purpose | `53019ea3` | done |
+| 4 the real check and one selector for every algorithm/decision read; interim tests rewritten | `e17a0f62` (pricing-core), `f534d6d8` (backend route tests) | done |
 | 5 FR-218 strike; `RL-1242` `status: retired` (status line only; RL-1628 names the writer) | `658c4cd6` | done |
 | 6 full gate; backend route tests run | — | **not done** (gate barred; route tests need the DB) |
 
@@ -142,6 +142,41 @@ Scope was derived from PL-1629's tasks and acceptance items 1 to 12 first, then 
 
 **Proposed verdict: conformant pending the gate, with A-1 and A-2 (medium) to close first** (one test each, no code change expected),
 and A-3 to A-9 recorded. If the lead prefers, A-1 and A-2 may be carried to the gate window as `delivered but untested` with an owner.
+
+### Executor response to the pre-gate audit (2026-10-16 09:56 BST, `executor-1341c`; writing only, nothing run)
+
+The lead's verdicts: A-1, A-2, A-4, A-6, A-9 close now; A-3, A-5, A-7, A-8 noted, no action (A-3 is the recorded
+deviation: two new test files instead of the plan's named ones, coverage by id unchanged). Each new test names its
+audit item in its docstring and carries the plan's requirement markers. **None has been run.** Predicted result on the
+current head for each is **GREEN** (the code exists); a red would be a code gap, to be reported, not fixed in `src`.
+
+| Item | New test node | Predicted | Basis |
+|---|---|---|---|
+| A-1 | `test_rating_purpose_mount.py::test_a_batch_row_under_a_purpose_mount_is_priced_by_the_purposes_graph` | green | `_score_batch_row` reads `bundle.evaluation_for(ctx.purpose)`; the real check is in `_score_context_sync`; cancellation row equals `score_one`'s payable, new business 1507, mid-term row an error row naming the purpose |
+| A-1 | `test_rating_purpose_mount.py::test_a_batch_row_reads_the_purposes_algorithm_for_its_decision` | green | the decline constraint exists only in the cancellation mount |
+| A-2 | `test_rating_compile_bundle.py::test_g1_a_purpose_mount_whose_version_is_not_pinned_is_refused[not_pinned, pinned_at_another_version]` | green (one risk: reuses the purpose-mount fixture with `pinned=` varied, so a fixture error would show as a different code, not the pin refusal) | `mounted_fragments` refuses before the purpose graphs are built |
+| A-4 | `test_rating_purpose_mount.py::test_the_serialised_bytes_of_a_bundle_with_no_purpose_mount_omit_the_key` | green | `Bundle._without_an_empty_purpose_graphs`; the hash is recomputed from the serialised parts, not by `bundle_hash` |
+| A-9 | `backend/tests/test_change_summary_purposes.py` (2 nodes) | green | `_structural_lines` `(purposes changed)` clause; no DB |
+
+A-4 finding kept: no pinned-bytes fixture of a stored pre-slice bundle exists in the repository, so "equals the pre-slice
+bytes" is shown by the key's absence from both dumps plus the hash recomputed from the pre-slice canonical form.
+`_bundle_with_a_mount` gained a `pinned=` parameter (default the one cancel ref) so A-2 reuses its fixture; every existing caller is unchanged.
+
+**A-6, the ledger record.**
+- Header `tree:` is now `5576628141a98b5ce768096a7a0e96b212f1f761`, the tree of `658c4cd6` (`git rev-parse 658c4cd6^{tree}`),
+  the last code-and-spec commit. Trees of the others: `c06677f6` `5fe9885d`, `53019ea3` `8d39cbf7`, `e17a0f62` `b7537f59`,
+  `f534d6d8` `0c1852c5`, `458d056b` (the audit's head) `26d8e2fc`.
+- Task commits are in the table above (all ancestors of `458d056b`).
+- **Premises a to h at the base `c1f7c447`** (`git show c1f7c447:<path>`, locators in the Stale cites section): a the interim guard
+  `score.py:392` (message "interim" `:417`); b called at `:942` and `:1134`; c `QuotePurpose` five values `scoring.py:45`, `QuoteContext.purpose` `:106`;
+  d `SubGraphRef` has `inputs`/`outputs` and no `purposes` (`rating.py:460-461`); e the interim tests `test_rating_score.py:512`, `:1030` ("interim" asserts);
+  f FR-218's interim clause present in `03` row 87 ("an interim rule, `RL-1242`"); g `Bundle` `compile.py:632`, `bundle_hash(graph, pins)` `:661`;
+  h `CompiledBundle` `runtime.py:941`. Each held at the base; this is a re-read of the cited line, not of the full clause.
+- **Red-first quotes: NOT recorded here, and not fabricated.** The red-first tests were committed at `77cbf522` (SL-1341 prep). The red run's
+  output (the dispatch entry's "25 reds by cause") was not captured in this ledger by the executor that ran it, and this seat ran nothing.
+  Owner: `executor-1341b` or the lead, to paste the quoted failures from the run record; or the gate window re-derives them against
+  `77cbf522` with the source reverted. Verdict for that Task 6 limb: **owed, with that owner**.
+
 
 ## PRs
 

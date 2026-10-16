@@ -12,10 +12,14 @@ here is priced by the same algorithm as the golden test there (payable 1507).
 
 from __future__ import annotations
 
+import hashlib
+import json
 from typing import Any
 
+import polars as pl
 import pytest
 from test_rating_score import _ctx, _FakeResolver, _version
+from test_rating_score_batch import _ctx_to_row
 
 from model_schema.rating import RatingAlgorithm
 from model_schema.refs import ArtifactRef
@@ -23,7 +27,7 @@ from model_schema.sub_graphs import SubGraph
 from pricing_core.rating.compile import compile_bundle
 from pricing_core.rating.inline import inline_mounts
 from pricing_core.rating.runtime import CompiledBundle, load_bundle
-from pricing_core.rating.score import score_one
+from pricing_core.rating.score import score_batch, score_one
 
 _CANCEL_REF = "sub_graph:cancel-refund@1"
 _NEW_BUSINESS_PAYABLE = 1_507  # the golden quote of `test_rating_score.py`
@@ -70,7 +74,9 @@ async def _compiled_with_a_mount(
     return load_bundle(await _bundle_with_a_mount(purposes, decline=decline))
 
 
-async def _bundle_with_a_mount(purposes: list[str] | None, *, decline: bool = False):  # type: ignore[no-untyped-def]
+async def _bundle_with_a_mount(  # type: ignore[no-untyped-def]
+    purposes: list[str] | None, *, decline: bool = False, pinned: tuple[str, ...] = (_CANCEL_REF,)
+):
     resolver = _FakeResolver()
     algorithm = resolver._payloads["rating_algorithm:score-fixture@1"]
     mount: dict[str, Any] = {
@@ -88,7 +94,9 @@ async def _bundle_with_a_mount(purposes: list[str] | None, *, decline: bool = Fa
     assert pins is not None
     version = version.model_copy(
         update={
-            "pins": pins.model_copy(update={"sub_graphs": [ArtifactRef.parse(_CANCEL_REF)]}),
+            "pins": pins.model_copy(
+                update={"sub_graphs": [ArtifactRef.parse(ref) for ref in pinned]}
+            ),
         }
     )
     return await compile_bundle(version, resolver)
@@ -231,6 +239,77 @@ async def test_a_version_with_no_purpose_mount_keeps_the_hash_it_had() -> None:
 
     bundle = await _bundle_with_a_mount(None)
     assert bundle.content_hash == bundle_hash(bundle.graph, bundle.pins)
+
+
+# --- SL-1341 pre-gate audit A-1 / A-4 (LG 8056): the batch path and the serialised bytes -------
+
+@pytest.mark.req("FR-218")
+async def test_a_batch_row_under_a_purpose_mount_is_priced_by_the_purposes_graph() -> None:
+    """A-1, acceptance 4's batch path (`score_batch` -> `_score_context_sync`/`_score_batch_row`):
+    a cancellation row is priced by the cancellation graph (the payable `score_one` gives, below
+    new business), a new-business row by the base graph (1507), and a mid-term adjustment row,
+    which no mount serves, is that row's error row naming the purpose, never the base price."""
+    compiled = await _compiled_with_a_mount(["cancellation"])
+    contexts = [
+        _ctx(quote_id="C1", purpose="cancellation"),
+        _ctx(quote_id="N1", purpose="new_business"),
+        _ctx(quote_id="M1", purpose="mid_term_adjustment"),
+    ]
+    frame = pl.DataFrame([_ctx_to_row(c) for c in contexts]).lazy()
+    rows = {r["quote_id"]: r for r in score_batch(compiled, frame).collect().to_dicts()}
+
+    single = await score_one(compiled, _ctx(quote_id="C1", purpose="cancellation"))
+    cancelled = json.loads(rows["C1"]["outputs_json"])["payable_premium_minor"]
+    assert rows["C1"]["outcome"] == "quoted"
+    assert 0 < cancelled < _NEW_BUSINESS_PAYABLE
+    assert cancelled == single.outputs["payable_premium_minor"]
+    assert json.loads(rows["N1"]["outputs_json"])["payable_premium_minor"] == _NEW_BUSINESS_PAYABLE
+    assert rows["M1"]["outcome"] == "error"
+    assert rows["M1"]["outputs_json"] is None
+    assert "mid_term_adjustment" in (rows["M1"]["error_message"] or "")
+
+
+@pytest.mark.req("FR-218")
+async def test_a_batch_row_reads_the_purposes_algorithm_for_its_decision() -> None:
+    """A-1: the decline constraint lives only inside the cancellation mount, so a batch
+    cancellation row is declined with its reason only if the batch path reads the purpose's
+    algorithm (`bundle.evaluation_for(ctx.purpose)`), and a new-business row is not."""
+    compiled = await _compiled_with_a_mount(["cancellation"], decline=True)
+    frame = pl.DataFrame(
+        [
+            _ctx_to_row(_ctx(quote_id="C1", purpose="cancellation")),
+            _ctx_to_row(_ctx(quote_id="N1", purpose="new_business")),
+        ]
+    ).lazy()
+    rows = {r["quote_id"]: r for r in score_batch(compiled, frame).collect().to_dicts()}
+    assert rows["C1"]["outcome"] == "declined"
+    assert rows["N1"]["outcome"] == "quoted"
+
+
+@pytest.mark.req("FR-239")
+async def test_the_serialised_bytes_of_a_bundle_with_no_purpose_mount_omit_the_key() -> None:
+    """A-4 (LG 8056): `bundle_hash`'s default is not the proof (see the test above); the stored
+    bytes are. An empty `purpose_graphs` is absent from the JSON and from the python dump, the
+    bundle still round-trips, and a bundle that does select a purpose carries the key."""
+    from pricing_core.rating.compile import Bundle
+
+    bundle = await _bundle_with_a_mount(None)
+    assert bundle.purpose_graphs == {}
+    assert "purpose_graphs" not in json.loads(bundle.model_dump_json())
+    assert "purpose_graphs" not in bundle.model_dump()
+    assert Bundle.model_validate_json(bundle.model_dump_json()) == bundle
+    selected = await _bundle_with_a_mount(["cancellation"])
+    assert set(json.loads(selected.model_dump_json())["purpose_graphs"]) == {"cancellation"}
+    # The hash of an unconditional-mount bundle is the sha256 of the pre-slice canonical form
+    # (graph and pins only), computed here from the serialised bytes, not by `bundle_hash`.
+    bundle = await _bundle_with_a_mount(None)
+    pins = bundle.pins.model_dump()
+    if not pins["sub_graphs"]:
+        pins.pop("sub_graphs")
+    canonical = json.dumps(
+        {"graph": bundle.graph.model_dump(), "pins": pins}, sort_keys=True, separators=(",", ":")
+    )
+    assert bundle.content_hash == "sha256:" + hashlib.sha256(canonical.encode()).hexdigest()
 
 
 @pytest.mark.req("FR-218")
