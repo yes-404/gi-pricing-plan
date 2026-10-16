@@ -271,7 +271,7 @@ async def test_a_permitted_call_to_an_in_handler_permission_route_is_counted_onc
     assert after - before == 1
 
 
-#: The two identity-level routes (`RL-1687` (3a), precised by the maintainer's (by delegation)
+#: The two identity-level routes (`RL-1687` (2a), precised by the maintainer's (by delegation)
 #: entry "2026-10-16 10:31:43 BST", DP-S4-ME (A)): a principal reaches them before it has a
 #: workspace selection, so they are counted with `workspace_id=None` and the Setting resolves
 #: without the workspace layer (environment variable, then Environment, then the default).
@@ -342,3 +342,31 @@ async def test_an_identity_route_ignores_a_workspace_override(
 
     assert statuses == [200, 200, 200]
     assert calls == []
+
+
+@pytest.mark.req("FR-452")
+@pytest.mark.parametrize(("method", "url", "body"), _IDENTITY_ROUTES)
+async def test_an_identity_route_keeps_the_process_variable_layer(
+    client: TestClient,
+    workspace_id: UUID,
+    admin_headers: dict[str, str],
+    set_limit: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    method: str,
+    url: str,
+    body: Any,
+) -> None:
+    """Only the workspace layer is skipped (the lead's message, pending the maintainer's
+    confirmation): the process-variable layer (FR-446, `GIP_SETTING_<KEY>`) still applies, and
+    it outranks a workspace value. Process variable 1 with a workspace override of 1000: the
+    second call is `429`. Red: the whole resolve is skipped (no limit), or the workspace value
+    is read, and the second call is `200`."""
+    await set_limit(1000)
+    monkeypatch.setenv(_ENV_LIMIT_VARIABLE, "1")
+    identity_headers = {DEV_PRINCIPAL_HEADER: admin_headers[DEV_PRINCIPAL_HEADER]}
+
+    first = client.request(method, url, json=body(workspace_id), headers=identity_headers)
+    second = client.request(method, url, json=body(workspace_id), headers=identity_headers)
+
+    assert first.status_code == 200, first.text
+    assert second.status_code == 429, second.text
