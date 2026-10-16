@@ -220,6 +220,20 @@ async def test_case_a_a_raw_value_into_a_banded_gbm_is_refused_at_compile(backen
     assert "banding" in message
 
 
+@pytest.mark.req("FR-222", "FR-240", "NFR-499")
+async def test_the_gbm_factor_refusal_message_is_exactly_its_structural_fields() -> None:
+    """The raise site is `_INPUT_FREE` in test_quote_input_raise_sites.py: the text is the step id,
+    the pinned model ref and the Factor slug and kind, so no quote-row value can appear in it."""
+    world = _age_world("xgboost")
+    with pytest.raises(ValueError, match=CODE) as caught:
+        await compile_bundle(_version(), _Resolver(world))
+    assert str(caught.value) == (
+        f"MODEL_CALL_GBM_TRANSFORMED_FACTOR: step 's_risk': {MODEL_REF} is a GBM fitted on banded "
+        f"or grouped Factors [{world.factor.slug} (banding)], which a model_call cannot score: "
+        "the Bundle carries no Bandings or Groupings for a GBM (FR-222, FR-240)"
+    )
+
+
 @pytest.mark.req("FR-222", "FR-240")
 async def test_a_grouped_factor_is_refused_too() -> None:
     """The same defect for a grouped Factor (a raw level equal to a group name)."""

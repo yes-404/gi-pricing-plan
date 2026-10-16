@@ -34,6 +34,21 @@ Branch `sl-8071-wk1178-gbm-banded-refusal-2026-10-16`, worktree `.claude/worktre
 
 Not opened yet; the lead opens the PR.
 
+## Gate red fixed, 2026-10-17 (the maintainer 00:07:43 BST ruling)
+
+The SL 8071 gate's one real red was `test_quote_input_raise_sites.py::test_every_quote_input_raise_site_has_a_sentinel_case`: the new `_raise_named` site in `check_model_call_gbm_factors` was unregistered. The raise call, verbatim:
+
+```python
+_raise_named(
+    "MODEL_CALL_GBM_TRANSFORMED_FACTOR",
+    f"step {step.step_id!r}: {model_ref} is a GBM fitted on banded or grouped "
+    f"Factors [{named}], which a model_call cannot score: the Bundle carries "
+    "no Bandings or Groupings for a GBM (FR-222, FR-240)",
+)
+```
+
+Form: an `_INPUT_FREE` entry, not a sentinel case. The site runs at compile time over the algorithm and its pins before any quote exists, and the text carries only the step id, the pinned model ref, and each Factor's slug and kind (`named` is `slug (type)`); no field comes from a quote row. `test_the_gbm_factor_refusal_message_is_exactly_its_structural_fields` pins the whole text.
+
 ## Owed after GATE END (item 10)
 
 Still owed: the full gate on the lead's grant; the backend files that need the per-worktree database (`backend/tests/test_rating_algorithms.py`, `backend/tests/test_sub_graphs_api.py` and the DB-fixture tests of `backend/tests/test_rating_glm_model_call.py` error at fixture setup with "the per-worktree test database ... does not exist yet": not a test failure, not green, owed to the gate).
