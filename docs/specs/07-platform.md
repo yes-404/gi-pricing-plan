@@ -54,9 +54,10 @@ The substrate every other module stands on:
 | **Workspace** | The top-level **organisational** container inside one tenant's deployment — a business unit or line of business (FR-16, ADR-710). All artifacts belong to exactly one, and it scopes RBAC, settings and the audit chain. The tenancy boundary is the deployment, not this. |
 | **Principal** | An authenticated identity: User or Service Account (`06` §2). |
 | **Job** | A tracked asynchronous unit of work with a uniform lifecycle, progress, logs, cancellation, and a result reference. |
-| **Job Kind** | The typed operation a Job performs (`dataset.ingest`, `dataset.validate`, `model.fit`, `objective.certify`, `rating.compile`, `score.batch`, `dislocation.run`, `optimisation.run`, `gipp.check`, `monitor.run`, `dossier.generate`, `export.regulatory`). |
+| **Job Kind** | The typed operation a Job performs (`dataset.ingest`, `blob.promote`, `dataset.validate`, `model.fit`, `objective.certify`, `rating.compile`, `score.batch`, `dislocation.run`, `optimisation.run`, `gipp.check`, `monitor.run`, `dossier.generate`, `export.regulatory`). |
 | **Queue** | A named Celery queue with its own worker pool and resource profile (`default`, `compute`, `scoring`, `io`). |
 | **Blob** | A content-addressed immutable object in the object store, keyed by sha256 (ID-4). |
+| **Blob Upload** | A pending client upload to the blob store's staging area, recorded when an upload URL is issued: its workspace, principal, staging key, declared parts and completion deadline. Completing it promotes the bytes to a Blob owned in that workspace (FR 8058). *(appended 2026-10-16, WK-1178, `RL-1724`)* |
 | **Secret** | A named credential held in the platform's secret backend, referenced by slug. |
 | **Setting** | A typed configuration value resolved by precedence: environment variable → workspace setting → platform default. |
 
@@ -115,6 +116,7 @@ The substrate every other module stands on:
 | **FR-421** | Large uploads use presigned multipart URLs so dataset files do not transit the API process. |
 | **FR-422** | **Redis** provides the Celery broker, the rating `Bundle` cache (`03` FR-268, FR-243), and short-lived response caches. Nothing durable lives only in Redis — every cached value is reconstructible from PostgreSQL and the blob store. |
 | **FR-423** | Backups: PostgreSQL continuous archiving with PITR (RPO ≤ 15 min, NFR-460); blob store versioning and replication. A documented, tested restore procedure is part of the deliverable, not an afterthought. |
+| <a id="fr-8058"></a>**FR 8058** | *(appended 2026-10-16, WK-1178, `SL-1722`; the completion step FR-421 implies, as `RL-1724` rules `PL-1721` DP-U1 to DP-U3)* **An upload completes into an owned, content-addressed blob.** `POST /api/v1/blobs/upload-url` records a **Blob Upload** in the caller's workspace (the requesting principal, the staging key, the S3 multipart upload id when `parts > 1`, the declared part count, the media type, and a completion deadline 24 hours after it is created) and returns its `id`. `POST /api/v1/blobs/uploads/{id}/complete` reads the Blob Upload only and returns `202` with a Job of kind `blob.promote` on the `io` queue (R1). The Job fails unless its workspace is the Blob Upload's. For a multipart upload it lists every uploaded part, across all pages, and fails with `VALIDATION_FAILED` naming each missing part unless they are exactly parts 1 to the declared count, then completes the multipart upload; for one part it confirms the staged object exists. It reads the object once, streamed in bounded chunks, to compute its SHA-256; copies it server-side to `blob/{sha256[:2]}/{sha256}` unless a blob with that digest is already stored (FR-419); and, in one transaction, writes the `blobs` row if absent (a concurrent promotion of identical bytes is a no-op, not a failure), takes one reference (FR-420) and marks the Blob Upload promoted. A re-run of a promoted Blob Upload returns the same result and takes no second reference. Only after that transaction commits does it delete the staging object. It succeeds with `JobResult(kind="blob", ref=<sha256>)`, which is the blob's owner in the Blob Upload's workspace (§5.1, `GET /api/v1/blobs/{sha256}`), so the digest the client reads from `GET /api/v1/jobs/{id}` is one `01`'s ingest route accepts. The file's bytes never transit the API process (FR-421). A Blob Upload in another workspace, or none, is refused with the same `404` a missing one gets; a completion after the deadline is refused `409 VALIDATION_FAILED`; a repeated completion returns the Job of the first, whatever its state, and a failed promotion ends the Blob Upload. A part below the store's minimum size fails the Job with `VALIDATION_FAILED`. Staging objects and incomplete multipart uploads older than two days are removed by a lifecycle rule on the `staging/` prefix that the platform sets on startup; the completion deadline is always shorter than any removal of staged bytes. Releasing the reference is FR-420's, and is not delivered by this clause. |
 
 > *(Recorded 2026-08-27, W6b-23 — OQ-650 decided 2026-08-26 (c).)* A stored artifact is
 > validated on write against whatever the model said that day, then parsed again on read
@@ -302,6 +304,27 @@ The key value itself appears exactly once, in the creation response (FR-389).
 
 > **Amended 2026-10-10 (WK-674 Slice 3, `PL-1583`; `RL-1311` item 2).** The example above is not rewritten. The resolution's `candidates` gain an `environment_setting` source, between `env` and `workspace`. The request takes an optional Environment (its slug). With none, the Environment layer is skipped and no `environment_setting` candidate is reported. With one, every layer's candidate is reported, the Environment setting included. An Environment setting is stored one row per (Environment, key): `environment_id`, `key`, `value`, `updated_by`, `updated_at`; the pair is unique.
 
+### 4.5 `Blob Upload` *(appended 2026-10-16, WK-1178, `SL-1722`, FR 8058, `RL-1724`)*
+
+The pending record `POST /api/v1/blobs/upload-url` writes, table `blob_uploads`
+(class `BlobUploadRow`). `RL-1724` ("The pending record") lists the fields and describes
+them but does not name every column; the names marked *executor-named* were chosen by the
+executor and accepted by the lead on 2026-10-16.
+
+| Column | Type | `RL-1724` description |
+|---|---|---|
+| `id` | uuid7, primary key | the Blob Upload's id, returned by `upload-url` and used in `/api/v1/blobs/uploads/{id}/complete` |
+| `workspace_id` | uuid | the caller's workspace |
+| `principal_id` | uuid | the requesting principal *(executor-named)* |
+| `key` | text | the staging key |
+| `s3_upload_id` | text, null for one part | the S3 multipart upload id; this is the `upload_id` the `upload-url` response returns *(executor-named)* |
+| `part_count` | integer, `1..10000` | the declared part count *(executor-named)* |
+| `media_type` | text | the media type |
+| `created_at` | timestamptz | creation time |
+| `complete_by` | timestamptz | `created_at` + 24 h |
+| `job_id` | uuid, null until completed | the completing Job's id *(executor-named)* |
+| `digest` | text, null until promoted | the promoted digest *(executor-named)* |
+
 ---
 
 ## 5. Interfaces
@@ -324,7 +347,8 @@ The key value itself appears exactly once, in the creation response (FR-389).
 | `POST` | `/api/v1/service-accounts/{id}/rotate` | Rotate with an overlap window; the body names the Environment whose key is rotated *(amended 2026-10-10, WK-674 Slice 3, DP-S3E-2 (a))* |
 | `DELETE` | `/api/v1/service-accounts/{id}/keys/{prefix}` | Revoke |
 | `GET`/`PUT` | `/api/v1/settings` | Read effective settings with sources; update workspace settings |
-| `POST` | `/api/v1/blobs/upload-url` | Presigned multipart upload (FR-421). **Amended 2026-09-28 (WK-1178, #869's ingest finding):** the object lands on a staging key, and nothing yet moves it to its content address or creates its `blobs` row: the completion step FR-421 implies has no endpoint. So an upload made through this URL cannot yet be ingested or downloaded as a blob. The completion step, and the owner it would record, are unbuilt and are a spec change of their own. |
+| `POST` | `/api/v1/blobs/upload-url` | Presigned multipart upload (FR-421). **Amended 2026-09-28 (WK-1178, #869's ingest finding):** the object lands on a staging key, and nothing yet moves it to its content address or creates its `blobs` row: the completion step FR-421 implies has no endpoint. So an upload made through this URL cannot yet be ingested or downloaded as a blob. The completion step, and the owner it would record, are unbuilt and are a spec change of their own. **Amended 2026-10-16 (WK-1178, `SL-1722`, FR 8058, `RL-1724`):** the request records a Blob Upload and the response also carries its `id`; `POST /api/v1/blobs/uploads/{id}/complete` (the next row) moves the staged object to its content address and records its owner. The 2026-09-28 sentences saying nothing does so, and that such an upload cannot be ingested or downloaded, are superseded. |
+| `POST` | `/api/v1/blobs/uploads/{id}/complete` | **202** Complete a Blob Upload → Job `blob.promote` (FR 8058, FR-421). The Job's result, `JobResult(kind="blob")`, names the digest and is its owner in the caller's workspace. `404` for another workspace's Blob Upload or a missing one; `409 VALIDATION_FAILED` past the completion deadline; a repeat returns the first Job. Requires `dataset:write`. *(appended 2026-10-16, WK-1178, `RL-1724`)* |
 | `GET` | `/api/v1/blobs/{sha256}` | Download (permission-checked, redirect to presigned URL). **Amended 2026-09-28 (WK-1178, the deputy's blob-route ruling of that day, #865's blob-route finding):** `dataset:read` alone was never enough, because `blobs` has no workspace column. A blob is served only if an owner in the caller's workspace references it — a Dataset Version's table, or a Job's `JobResult(kind="blob")` — and never if a quote-input store references it (a scoring trace now; WK-672 Slice 3's case store when it lands), whose bodies are read through their own workspace-scoped APIs. This is the obligation `03` NFR-499 carries as clarified by RL-917. Every refusal is the same `404` a missing blob gets, so the route does not confirm that a digest exists. |
 | `GET` | `/healthz` | Liveness — is the process alive? (FR-444) |
 | `GET` | `/readyz` | Readiness — database, Redis, blob store reachability (FR-444) |
@@ -389,6 +413,7 @@ class JobProgress(ProgressCallback):
 # backend/app/platform/blobs.py
 async def put(content: bytes | AsyncIterator[bytes], media_type: str) -> BlobRef
 async def presign_upload(media_type: str, parts: int) -> PresignedUpload
+async def promote_upload(upload_id: UUID) -> BlobRef   # FR 8058; runs in the blob.promote Job; idempotent per Blob Upload
 async def open(ref: BlobRef) -> AsyncIterator[bytes]
 
 # backend/app/platform/secrets.py
