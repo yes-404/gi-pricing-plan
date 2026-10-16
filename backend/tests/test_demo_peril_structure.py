@@ -1,9 +1,9 @@
 """The demo seeds an approved severity GLM and an approved AD Peril Structure (PL-1542
 Acceptance 1 and 2; WK-1178 A-4, Tasks 1 and 2).
 
-PREP BRANCH: red-first tests only. `examples/fremtpl2/model.py` has neither `fit_severity_glm`
-nor `create_ad_peril_structure` yet; the signatures below are the tests' proposal, shaped after
-`_fit` and `compare_and_approve`, and are recorded in the slice ledger.
+`examples/fremtpl2/model.py` carries `fit_severity_glm` and `create_ad_peril_structure` (Tasks 1
+and 2); their signatures are recorded in the slice ledger. The two were red by absence on the
+prep branch (`AttributeError`, recorded in LG 9879).
 
 The book is a small synthetic one, DB-backed, so it runs in CI; the real 20 000-row probe and
 the rehearsal on the full seed are Task 0 Step 4 and the demo run, not this file. Severity is
@@ -195,7 +195,7 @@ async def test_seed_fits_and_approves_a_severity_glm(
 
     severity_id = await demo_model.fit_severity_glm(
         database, blob_store, workspace_id, world.actuary, world.approvers[0],
-        world.version_id, world.split, world.factors,
+        world.frequency_id,
     )
 
     async with database.session() as session:
@@ -308,7 +308,7 @@ async def _structure_world(
     )
     world.severity_id = await demo_model.fit_severity_glm(
         database, blob_store, workspace_id, world.actuary, world.approvers[0],
-        world.version_id, world.split, world.factors,
+        world.frequency_id,
     )
     return world
 
@@ -325,7 +325,7 @@ async def test_the_ad_peril_structure_reconciles(
     world = await _structure_world(database, blob_store, workspace_id, grant)
 
     structure_id = await demo_model.create_ad_peril_structure(
-        database, blob_store, workspace_id, world.actuary, world.approvers,
+        database, blob_store, workspace_id, world.actuary, world.approvers[0],
         world.frequency_id, world.severity_id, tolerance=Decimal("0.9"),
     )
 
@@ -351,7 +351,7 @@ async def test_the_ad_peril_structure_is_approved_through_the_workflow(
     world = await _structure_world(database, blob_store, workspace_id, grant)
 
     structure_id = await demo_model.create_ad_peril_structure(
-        database, blob_store, workspace_id, world.actuary, world.approvers,
+        database, blob_store, workspace_id, world.actuary, world.approvers[0],
         world.frequency_id, world.severity_id, tolerance=Decimal("0.9"),
     )
 
@@ -390,7 +390,7 @@ async def test_guard_dp_a4_3_severity_is_uncapped_until_the_fr_127_glm_fix_merge
     """
     world = await _structure_world(database, blob_store, workspace_id, grant)
     structure_id = await demo_model.create_ad_peril_structure(
-        database, blob_store, workspace_id, world.actuary, world.approvers,
+        database, blob_store, workspace_id, world.actuary, world.approvers[0],
         world.frequency_id, world.severity_id, tolerance=Decimal("0.9"),
     )
     async with database.session() as session:

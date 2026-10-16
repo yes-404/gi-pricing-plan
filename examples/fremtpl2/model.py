@@ -34,6 +34,7 @@ from app.platform import comparison as comparison_service
 from app.platform import datasets as dataset_service
 from app.platform import jobs as job_service
 from app.platform import modelling as model_service
+from app.platform import perils as perils_service
 from app.platform import rate_tables as rate_table_service
 from app.platform import rating_algorithms as algorithm_service
 from app.platform import rating_versions as rating_versions_service
@@ -60,14 +61,20 @@ from model_schema import (
     GlmSpec,
     JobKind,
     JobStatus,
+    LargeLossKind,
+    LargeLossTreatment,
     MonotonicDirection,
     OffsetSpec,
+    PerilComponent,
+    PerilMethod,
     Pins,
     Principal,
     QuoteContext,
     RegressionSuiteContent,
     RelativityLevel,
+    ResponseKind,
     SplitRef,
+    WeightSpec,
     new_uuid7,
 )
 from pricing_core.rating.compile import Bundle
@@ -359,19 +366,38 @@ async def compare_and_approve(
         raise SystemExit(f"model.compare {status.value} — see job")
     print(f"  comparison ran: {compare_job}")
 
+    await _approve_model(
+        database, workspace_id, actuary, approver, glm_id,
+        change_summary="AD frequency, GLM selected over the GBM on transparency grounds",
+        comment="GLM approved for the demo rating version",
+    )
+    print(f"  GLM approved: {glm_id}")
+    return glm_id
+
+
+async def _approve_model(
+    database: Database,
+    workspace_id: UUID,
+    submitter: Principal,
+    approver: Principal,
+    model_id: UUID,
+    *,
+    change_summary: str,
+    comment: str,
+) -> None:
+    """Submit a fitted model for review and approve it through the platform's services."""
     async with database.unit_of_work() as session:
         _, request = await model_service.submit_for_review(
-            session, workspace_id=workspace_id, actor=actuary, model_id=glm_id,
-            change_summary="AD frequency, GLM selected over the GBM on transparency grounds",
+            session, workspace_id=workspace_id, actor=submitter, model_id=model_id,
+            change_summary=change_summary,
         )
         request_id = request.id
-    print(f"  GLM submitted for review: {request_id}")
+    print(f"  model {model_id} submitted for review: {request_id}")
 
     async with database.unit_of_work() as session:
         request = await approval_service.decide(
             session, workspace_id=workspace_id, request_id=request_id,
-            approver=approver, decision=DecisionKind.APPROVE,
-            comment="GLM approved for the demo rating version",
+            approver=approver, decision=DecisionKind.APPROVE, comment=comment,
         )
         # The service `decide` moves the *request*; the API route's
         # `_carry_to_the_artifact` moves the artifact. The seed drives the services, so it
@@ -380,8 +406,141 @@ async def compare_and_approve(
         await model_service.apply_approval_decision(
             session, workspace_id=workspace_id, actor=approver, request=request
         )
-    print(f"  GLM approved: {glm_id}")
-    return glm_id
+
+
+#: The severity response column the seed's `build_csv` derives (PL-1705 C2): per-claim mean cost,
+#: euro cents, null where a policy has no claim.
+SEVERITY_COLUMN: Final = "claim_severity"
+#: DP-A4-3's reconciliation tolerance (the maintainer's (by delegation) ruling; PL-1542 Task 0
+#: Step 4 probes it on the real seed and STOPs above it).
+AD_RECONCILIATION_TOLERANCE: Final = Decimal("0.05")
+#: The AD Peril Structure's slug (PL-1542 Task 2); one version per seed workspace.
+AD_STRUCTURE_SLUG: Final = "fremtpl2-ad"
+
+
+async def fit_severity_glm(
+    database: Database,
+    blob_store: BlobStore,
+    workspace_id: UUID,
+    actuary: Principal,
+    approver: Principal,
+    frequency_id: UUID,
+) -> UUID:
+    """PL-1542 Task 1: fit and approve the AD severity GLM, Gamma/log, weighted by claim count.
+
+    It fits the full book on the frequency GLM's own Dataset Version, split and factors
+    (PL-1705 C1): FR-190's shared-holdout rule then holds by construction, and the policies
+    with no claim carry weight 0 and are excluded and counted by the fit (SL-1675). The spec
+    declares no `loss_treatment` (`kind == "none"`): large loss is the structure's
+    `large_loss`, uncapped (DP-A4-3 (x), the guard in `test_demo_peril_structure.py`).
+    """
+    async with database.session() as session:
+        frequency = await session.get(ModelRow, frequency_id)
+        if frequency is None:
+            raise RuntimeError(f"the frequency model {frequency_id} does not exist")
+        frequency_spec = GlmSpec.model_validate(frequency.spec)
+    spec = GlmSpec(
+        model_family_slug=f"fremtpl2-severity-{new_uuid7().hex[-6:]}",
+        dataset_version_id=frequency_spec.dataset_version_id,
+        split_ref=frequency_spec.split_ref,
+        peril=frequency_spec.peril,
+        response=ResponseKind.CLAIM_SEVERITY,
+        response_column=SEVERITY_COLUMN,
+        weight=WeightSpec(kind="column", column="claim_count"),
+        family="gamma",
+        link="log",
+        factors=frequency_spec.factors,
+        seed=FIT_SEED,
+    )
+    severity_id = await _fit(database, blob_store, workspace_id, actuary, spec, "severity GLM")
+    print(f"  severity GLM fitted: {severity_id}")
+    await _approve_model(
+        database, workspace_id, actuary, approver, severity_id,
+        change_summary="AD severity, Gamma/log GLM weighted by claim count",
+        comment="severity GLM approved for the AD Peril Structure",
+    )
+    print(f"  severity GLM approved: {severity_id}")
+    return severity_id
+
+
+async def create_ad_peril_structure(
+    database: Database,
+    blob_store: BlobStore,
+    workspace_id: UUID,
+    actuary: Principal,
+    approver: Principal,
+    frequency_id: UUID,
+    severity_id: UUID,
+    *,
+    tolerance: Decimal,
+) -> UUID:
+    """PL-1542 Task 2: the AD Peril Structure, reconciled and approved through the workflow.
+
+    One `frequency_severity` component over the two approved GLMs, `large_loss` uncapped
+    (DP-A4-3 (x)). The reconciliation runs as the real `PERIL_STRUCTURE_RECONCILE` Job; the
+    structure is submitted and decided by a Principal who is neither its submitter nor its
+    author, and the decision is carried by `perils_service.apply_approval_decision`, the
+    service half of `_carry_to_the_artifact`. No status is written directly.
+    """
+    frequency_ref, _ = await load_approved_glm(database, workspace_id, frequency_id)
+    severity_ref, _ = await load_approved_glm(database, workspace_id, severity_id)
+    async with database.unit_of_work() as session:
+        row = await perils_service.create_structure(
+            session, workspace_id=workspace_id, actor=actuary,
+            slug=AD_STRUCTURE_SLUG,
+            perils=[
+                PerilComponent(
+                    peril="AD",
+                    method=PerilMethod.FREQUENCY_SEVERITY,
+                    frequency_model=frequency_ref,
+                    severity_model=severity_ref,
+                    large_loss=LargeLossTreatment(kind=LargeLossKind.NONE),
+                )
+            ],
+            excluded_perils=[],
+        )
+        structure_id = row.id
+
+    async with database.unit_of_work() as session:
+        reserved = await perils_service.request_reconciliation(
+            session, workspace_id=workspace_id, actor=actuary,
+            structure_id=structure_id, tolerance=tolerance,
+        )
+        job = await job_service.submit(
+            session, JobKind.PERIL_STRUCTURE_RECONCILE,
+            {
+                "workspace_id": str(workspace_id),
+                "actor": actuary.model_dump(mode="json"),
+                **perils_service.reconcile_payload(
+                    reserved, tolerance=tolerance,
+                    observed_column="claim_amount_minor", exposure_column="exposure_years",
+                ),
+            },
+            actuary, workspace_id=workspace_id,
+        )
+        reconcile_job = job.id
+    status = await execute_job(database, reconcile_job, blob_store)
+    if status is not JobStatus.SUCCEEDED:
+        raise SystemExit(f"peril_structure.reconcile {status.value} — see job")
+    print(f"  AD structure reconciled: {reconcile_job}")
+
+    async with database.unit_of_work() as session:
+        _, request = await perils_service.submit_for_review(
+            session, workspace_id=workspace_id, actor=actuary, structure_id=structure_id,
+            change_summary="AD frequency × severity, large loss uncapped (DP-A4-3)",
+        )
+        request_id = request.id
+    async with database.unit_of_work() as session:
+        request = await approval_service.decide(
+            session, workspace_id=workspace_id, request_id=request_id,
+            approver=approver, decision=DecisionKind.APPROVE,
+            comment="AD Peril Structure approved for the demo rating version",
+        )
+        await perils_service.apply_approval_decision(
+            session, workspace_id=workspace_id, actor=approver, request=request
+        )
+    print(f"  AD structure approved: {structure_id}")
+    return structure_id
 
 
 DEMO_SUITE_SLUG: Final = "fremtpl2-rate-suite"

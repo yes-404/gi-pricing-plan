@@ -77,6 +77,7 @@ NUMERIC = {
     "bonus_malus": "int",
     "density": "int",
     "claim_amount_minor": "int",
+    "claim_severity": "float",
 }
 
 #: VR-ACT-2's bound. An annual motor policy cannot be on risk for two years.
@@ -147,6 +148,16 @@ def build_csv(rows: int | None) -> bytes:
     joined = (
         frame.join(totals, on="IDpol", how="left")
         .with_columns(pl.col("claim_amount_minor").fill_null(0))
+        # The severity response (PL-1705 C2): mean cost per claim in euro cents, Polars true
+        # division, no rounding, null where the policy has no claim (the weight-0 rows the
+        # severity fit excludes). `claim_amount_minor` is unchanged (FR-10). ClaimNb is read as
+        # Float64 because the raw column is text and its spelling ("1" or "1.0") is the file's.
+        .with_columns(
+            pl.when(pl.col("ClaimNb").cast(pl.Float64) > 0)
+            .then(pl.col("claim_amount_minor") / pl.col("ClaimNb").cast(pl.Float64))
+            .otherwise(None)
+            .alias("claim_severity")
+        )
         .with_columns(pl.col("claim_amount_minor").cast(pl.Utf8))
     )
     if rows is not None:
@@ -205,6 +216,11 @@ DICTIONARY: dict[str, dict[str, Any]] = {
     "claim_amount_minor": {
         "description": "Total incurred, euro cents",
         "semantic_type": "money",
+    },
+    "claim_severity": {
+        "description": "Mean incurred per claim, euro cents; null where the policy has no claim",
+        "semantic_type": "continuous",
+        "unit": "euro cents",
     },
     "area": {
         "description": "Population-density band of the community",
@@ -704,11 +720,14 @@ async def run(rows: int | None) -> int:
     # approval. `Path(__file__).parent` is on sys.path (the seed's own import shim), so
     # `model` — not `examples.fremtpl2.model` — is the importable name here.
     from model import (
+        AD_RECONCILIATION_TOLERANCE,
         compare_and_approve,
+        create_ad_peril_structure,
         create_approved_rating_version,
         create_demo_bandings,
         demo_base_premium,
         fit_demo_models,
+        fit_severity_glm,
         seed_demo_rate_tables,
     )
 
@@ -722,6 +741,14 @@ async def run(rows: int | None) -> int:
         fitted["glm"], fitted["gbm"],
     )
     print(f"  approved model: {approved}")
+    # PL-1542 Tasks 1 and 2: the AD severity GLM and the Peril Structure over both GLMs.
+    severity = await fit_severity_glm(
+        database, blob_store, workspace_id, actuary, approver, approved
+    )
+    await create_ad_peril_structure(
+        database, blob_store, workspace_id, actuary, approver, approved, severity,
+        tolerance=AD_RECONCILIATION_TOLERANCE,
+    )
     tables = await seed_demo_rate_tables(
         database, settings, blob_store, workspace_id, analyst, approved
     )
