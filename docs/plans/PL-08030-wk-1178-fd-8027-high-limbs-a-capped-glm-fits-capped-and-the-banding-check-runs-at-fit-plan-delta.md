@@ -273,9 +273,16 @@ slice's merge tree.
     never a string of prose). On main R7 fails with an `AttributeError` on the absent field, and
     the LG names it as that cause. *(Amended 2026-10-14, on the 12:05:33 entry.)*
 11. **The fit Job surfaces the refusal (R8, red on main).** A fit Job over a Banding with an empty
-    band ends with status **`failed`**, its stored error code is **`BAND_EMPTY`**, and the problem
-    status is `409`. On main the Job **succeeds**, so the assert on `failed` is the red. A test
-    that asserts only a terminal state is not this test.
+    band ends with status **`failed`**, and its stored error code is **`BAND_EMPTY`**. On main the
+    Job **succeeds**, so the assert on `failed` is the red. A test that asserts only a terminal
+    state is not this test. The `409` is the status of the `PlatformError` that Task 7's mapping
+    raises in the handler; the Job does not store it (`JobError` carries `code`, `message`,
+    `retryable`, `detail` and `trace_id`, `packages/model-schema/src/model_schema/jobs.py:173-187`,
+    and the worker stores `exc.code`, `backend/src/app/worker/tasks.py:197-232`, both at `0877e6e7`),
+    and no HTTP response carries a fit Job's refusal, so R8 does not assert it. *(Amended
+    2026-10-16, before the mint, by the planner (seat planner-p1b), on the lead's brief of
+    2026-10-16 item 2: the line read "and the problem status is `409`", which a Job-level test
+    cannot observe. Task 7's mapping and R8 are unchanged.)*
 12. **The guards stay green, at base and at head.** A `none` GLM fit has coefficients identical
     to main's. A Banding that fits its frame reports nothing (`test_bandings.py:410`). FR-111's
     weight-0 exclusion runs **before** the banding check, so a band reached only by weight-0 rows

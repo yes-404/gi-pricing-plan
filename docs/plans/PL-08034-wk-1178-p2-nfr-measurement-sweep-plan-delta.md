@@ -96,6 +96,13 @@ write set; the Hand-off; and the Self-review. The dated lines that
 record the three confirmations are at Task 0 Step 2, the NFR-470 section, DP-3, Task 3 Step 2,
 Task 4 Step 4, the write set and the Self-review.
 
+**Corrected 2026-10-16, before the mint, by the planner (seat planner-p1b)**, on the lead's
+brief of 2026-10-16 item 1. `FD 8046` and `FD 8047` moved from the D17 docs batch to D18 (D17's
+commit `965e86a4`, "docs(findings): move FD 8040, 8046, 8047 to D18"); they are on
+`origin/docs-d18-2026-10-14` @`b1ecf56d`. Scope, DP-5, DP-6 and the Hand-off now say D18. Task 0
+Step 1 now says the plan merges before D18 (mint order P1 → D18 → P2, the maintainer's (by
+delegation) entry "2026-10-16 09:40:20 BST"); what the step requires is unchanged.
+
 ## Context — the ruling this delta records
 
 The authority is the maintainer's (by delegation) entry in
@@ -181,8 +188,8 @@ and the scope table above carries it.
 NFR-470's row that DP-3 orders (Task 3, Step 4); it records how the row is read and changes
 neither its subject nor its 1.2× bound. A reading that disagrees with a requirement is an
 `FD-`, never a re-wording (the ruling's third bullet). Two findings already filed from this
-plan's reading, both working ids in the D17 docs batch (`origin/docs-d17-2026-10-14` @`f5c9539a`,
-not yet on `main`): **`FD 8046`** (DP-5: NFR-485's construction clause against the code) and
+plan's reading, both working ids in the D18 docs batch (`origin/docs-d18-2026-10-14` @`b1ecf56d`,
+not yet on `main`; moved there from D17 by D17's commit `965e86a4`): **`FD 8046`** (DP-5: NFR-485's construction clause against the code) and
 **`FD 8047`** (DP-6: the purge audit's missing `before`, and `test_data_nfrs.py:147`'s
 docstring claiming coverage it does not assert).
 
@@ -556,8 +563,8 @@ ruled**; the options the ruling did not take are removed, and each row states th
 | DP-2 | At what level are NFR-468 and NFR-1443 timed? | **(a)** in-process ASGI, `httpx.AsyncClient(transport=ASGITransport(app=create_app(...)))` (`backend/src/app/main.py:70`), against the real migrated Postgres. It covers routing, auth, the DB and serialisation, not the socket, and hosts NFR-468's "never computed" guard. **Every reading is labelled "server-side, in-process, excludes network"** | decision point | Ruled 2026-10-14, the maintainer (by delegation), to-lead entry 12:07:40 BST (quoted in full under Context), DP-2 |
 | DP-3 | What does NFR-470's "Storage overhead … ≤ 1.2× the parquet payload" compare, and does the retained source upload count? | **(b), without the retained source upload**: the subject is the Dataset Version's own storage (its tables, reports and profile, and its own rows), read as (payload + overhead) ≤ 1.2 × the parquet payload. The source upload is the promotion Job's blob (RL-1724 DP-U1.1, O1), not the version's, and is not counted. The dedup limb is measured too: a second version with an identical table adds ~0 bytes for that table (read as = 0 new parquet bytes, the NFR-470 section). **The reading is written onto NFR-470's row as a dated clarification in SL-8035's commit** (Task 3, Step 4, exact text there); no `RL-` is needed | design unknown | Ruled 2026-10-14, the maintainer (by delegation), to-lead entry 12:07:40 BST (quoted in full under Context), DP-3; the counted overhead (tables + reports + profile, `ingestion_runs` and `audit_events` excluded and printed) **confirmed** 2026-10-14, the same, to-lead entry 12:31:22 BST, PL 8034 (b) |
 | DP-4 | How is NFR-485 measured at its stated scale (5 M × 60, ≤ 32 GB), when neither host has more than 32 GB? | **(b)**: the shared-VM curve to 1 M is a **DIAGNOSTIC projection, never a verdict**; plus one 5 M × 60 run per arm on nfr-bench-1's **approved session 2** (≈ +30 min per arm, not a third session, so within the user's 12 Oct VM approval), each under `systemd-run --scope -p MemoryMax=30G`. A completed run's `VmHWM` is the measurement; a run killed at the cap is "peak > 30 GB" and becomes an `FD-`. Recorded as a dated line amending S5's run list (Task 4, Step 4), which lives in `RL-1614` "What it obliges" item 6 (`:107-111` at `a3fc2e8d`) and `PL-1620` (Global Constraints `:125-130`, D5.3 `:189-199`); the lead puts it in the 2 h VM heads-up | decision point | Ruled 2026-10-14, the maintainer (by delegation), to-lead entry 12:07:40 BST (quoted in full under Context), DP-4 |
-| DP-5 | NFR-485's mechanism clause names `QuantileDMatrix`/streaming construction; the code uses `xgb.DMatrix` (`gbm.py:895`), LightGBM keeps raw data (`gbm.py:1108`), and the GLM is dense (`glm.py:578`). Which one is wrong? | **An `FD-`, measure as-is**: filed as **`FD 8046`** (working id, D17, `origin/docs-d17-2026-10-14` @`f5c9539a`); which side is wrong is its `CLAUDE.md` §0 question. This slice changes neither code nor spec; the 5 M reading (DP-4) answers whether the gap matters | fact | Ruled 2026-10-14, the maintainer (by delegation), to-lead entry 12:07:40 BST (quoted in full under Context), DP-5 |
-| DP-6 | The purge limb has the same gap as the rule-set limb (`datasets.py:1051-1055` passes `after` only), and `test_data_nfrs.py:147` names both in its docstring but asserts neither. Is it in this slice? | **One finding, both limbs**: filed as **`FD 8047`** (working id, D17, same branch). NFR-472's red-first test **stays in this slice** for the `replace_rule_set` limb (Task 1); the purge limb and the docstring are `FD 8047`'s, not this slice's | scope | Ruled 2026-10-14, the maintainer (by delegation), to-lead entry 12:07:40 BST (quoted in full under Context), DP-6 |
+| DP-5 | NFR-485's mechanism clause names `QuantileDMatrix`/streaming construction; the code uses `xgb.DMatrix` (`gbm.py:895`), LightGBM keeps raw data (`gbm.py:1108`), and the GLM is dense (`glm.py:578`). Which one is wrong? | **An `FD-`, measure as-is**: filed as **`FD 8046`** (working id, D18, `origin/docs-d18-2026-10-14` @`b1ecf56d`); which side is wrong is its `CLAUDE.md` §0 question. This slice changes neither code nor spec; the 5 M reading (DP-4) answers whether the gap matters | fact | Ruled 2026-10-14, the maintainer (by delegation), to-lead entry 12:07:40 BST (quoted in full under Context), DP-5 |
+| DP-6 | The purge limb has the same gap as the rule-set limb (`datasets.py:1051-1055` passes `after` only), and `test_data_nfrs.py:147` names both in its docstring but asserts neither. Is it in this slice? | **One finding, both limbs**: filed as **`FD 8047`** (working id, D18, same branch). NFR-472's red-first test **stays in this slice** for the `replace_rule_set` limb (Task 1); the purge limb and the docstring are `FD 8047`'s, not this slice's | scope | Ruled 2026-10-14, the maintainer (by delegation), to-lead entry 12:07:40 BST (quoted in full under Context), DP-6 |
 | DP-7 | Does NFR-1443's "on a quiet box" require nfr-bench-1, or can the shared VM in an `RL-1441` quiet window ("the gate slots free, no other heavy process") satisfy it? | **(a)**: the shared-VM reading, taken in an `RL-1441` quiet window with the load settled below 2.0 before each run, is the reading, **unless it is NEAR-BOUND per DP-1**, when it joins nfr-bench-1 session 2 as a named extra reading | decision point | Ruled 2026-10-14, the maintainer (by delegation), to-lead entry 12:07:40 BST (quoted in full under Context), DP-7 |
 
 ## Write set
@@ -583,7 +590,7 @@ No other spec file, and no contract, migration or frontend file.
 
 ### Task 0: Preconditions, the contention factor re-measured on this box, and pre-registration
 
-- [ ] **Step 1:** Confirm this plan is on `main` with all seven DP rows ruled (the "Resolved by" column: the maintainer's (by delegation) entries of 2026-10-14 12:07:40 BST and, for DP-1, 12:25:22 BST), and that `FD 8046` and `FD 8047` are minted (Scope). If not, stop.
+- [ ] **Step 1:** Confirm this plan is on `main` with all seven DP rows ruled (the "Resolved by" column: the maintainer's (by delegation) entries of 2026-10-14 12:07:40 BST and, for DP-1, 12:25:22 BST), and that `FD 8046` and `FD 8047` are minted on `main` (Scope). This plan merges before them (mint order P1 → D18 → P2, the maintainer's (by delegation) entry "2026-10-16 09:40:20 BST"), so the slice's GO waits for D18's merge. If either is not on `main`, stop.
 - [ ] **Step 2: Pre-register the factor's reading rule, before its first run (DP-1, 12:25:22 (i)).** Add a `contention` subcommand to `scripts/measure-p2-nfr-sweep.py` with these module-level constants, and commit it (**pre-registration P0**); the `LG-` cites P0's sha, and every factor run's start stamp is later than P0's `%aI`:
   - **The fixed benchmark:** `uv run python scripts/bench-model.py --only proposals` at its defaults (678 013 rows, `--levels 10000`, `--groups 20`), reading only the line `NFR-477 propose_grouping hierarchical_clustering` (wall-clock and CPU seconds) — the same call on the same fixture that produced 8.58 s and 20.01 s on 2026-08-22. **Its tree** is P0's commit, printed with `git rev-parse HEAD` at every run; the factor runs never span a commit.
   - **ALONE run (A):** taken in a lead-granted ALONE window (both gate slots free, no other heavy process), load1 < 1.0 at its start.
@@ -796,7 +803,7 @@ def _audit_state(version: int, body: Mapping[str, Any]) -> dict[str, Any]:
 
 - The lead: a dated line on WK-1178's row that lists this delta, when it is accepted (the planner writes only the `SL-` row).
 - The lead: NFR-485's two 5 M runs (and any NEAR-BOUND latency reading the slice names, and NFR-467's 10 M run if Task 5a names it) in the 2 h nfr-bench-1 VM heads-up (DP-4), with session 2's duration and cost from "nfr-bench-1 session 2 — the total planned duration": 3.9 h committed, at most 5.15 h; ≈ $1.35, at most ≈ $1.78 (the 12:42:55 entry). Session 2 runs them only if `SL-1259`'s dated line (Task 4, Step 4) is on `main` by then, or the lead adds them to the session's brief directly.
-- `FD 8046` (DP-5) and `FD 8047` (DP-6) are filed (D17); their rulings, severities and owners are the auditor's and the lead's, not this slice's.
+- `FD 8046` (DP-5) and `FD 8047` (DP-6) are filed (D18); their rulings, severities and owners are the auditor's and the lead's, not this slice's.
 
 ## Self-review
 
