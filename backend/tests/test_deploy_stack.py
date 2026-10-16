@@ -51,10 +51,8 @@ def _runs_alembic(service: dict[str, Any]) -> bool:
 def api_needs_no_worker(compose: dict[str, Any]) -> list[str]:
     """FR-434 / NFR-534: `api` starts, and keeps serving, with `worker` absent."""
     services = compose["services"]
-    return [
-        f"api needs {name}"
-        for name in sorted(_needs(services, "api") & {"worker"})
-    ]
+    workers = set(_celery_workers(compose))
+    return [f"api needs {name}" for name in sorted(_needs(services, "api") & workers)]
 
 
 def migrations_are_their_own_step(compose: dict[str, Any]) -> list[str]:
@@ -144,8 +142,9 @@ def each_worker_consumes_one_pool(compose: dict[str, Any]) -> list[str]:
 
 def one_image_three_roles(compose: dict[str, Any]) -> list[str]:
     services = compose["services"]
-    images = {services[n].get("image") for n in ("api", "worker", "migrate")}
-    return [] if len(images) == 1 else [f"api/worker/migrate use {len(images)} images"]
+    names = ["api", "migrate", *_celery_workers(compose)]
+    images = {services[n].get("image") for n in names}
+    return [] if len(images) == 1 else [f"{'/'.join(names)} use {len(images)} images"]
 
 
 CHECKS = [
@@ -244,7 +243,7 @@ def test_the_default_up_is_still_only_the_backing_services() -> None:
 
 
 def _break_api_imports_worker(c: dict[str, Any]) -> None:
-    c["services"]["api"]["depends_on"]["worker"] = {"condition": "service_started"}
+    c["services"]["api"]["depends_on"]["worker-compute"] = {"condition": "service_started"}
 
 
 def _break_api_migrates_at_start(c: dict[str, Any]) -> None:

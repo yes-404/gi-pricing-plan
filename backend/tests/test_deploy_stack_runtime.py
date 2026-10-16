@@ -139,7 +139,7 @@ def test_the_scoring_api_runs_and_scores_with_no_worker_service(
     _compose(n, "up", "-d", "--wait", "lb")  # api via lb's dependency; `worker` is never named
     running = _compose(n, "ps", "--status", "running", "--format", "{{.Service}}").stdout.split()
     assert "api" in running
-    assert "worker" not in running
+    assert not [s for s in running if s.startswith("worker")]
     assert _get("/readyz") == 200
     url, headers, body = _seeded_scoring_request()
     assert _score(url, headers, body) == 200
@@ -207,7 +207,7 @@ def beat_fixture(built_n: str) -> Iterator[None]:
     process no Job ever leaves the outbox. It is stopped in teardown.
     """
     started = _compose(
-        built_n, "run", "--rm", "-d", "worker",
+        built_n, "run", "--rm", "-d", "worker-default",
         "celery", "-A", "app.worker.entrypoint", "beat", "--schedule", "/tmp/celerybeat-schedule",
     )
     container = started.stdout.strip().splitlines()[-1]
@@ -242,7 +242,7 @@ def test_a_submitted_job_reaches_a_terminal_state_through_the_compose_worker(
     the bound.
     """
     n = built_n
-    _compose(n, "up", "-d", "--wait", "lb", "worker")
+    _compose(n, "up", "-d", "--wait", "lb", *_worker_services(n))
     # Seed a workspace, a draft rating version and a key; the bench seed grants the key only
     # `score:execute`, so widen it to what this route and the Job read need.
     _, headers, _ = _seeded_scoring_request()
@@ -255,17 +255,22 @@ def test_a_submitted_job_reaches_a_terminal_state_through_the_compose_worker(
     started = time.monotonic()
     job = _api("POST", f"/api/v1/rating-versions/{version_id}/compile", headers)
     assert job["queue"] == "default"
-    status = job["status"]
+    current = job
     deadline = started + JOB_TERMINAL_BOUND_SECONDS
-    while status not in _TERMINAL and time.monotonic() < deadline:
+    while current["status"] not in _TERMINAL and time.monotonic() < deadline:
         time.sleep(1)
-        status = _api("GET", f"/api/v1/jobs/{job['id']}", headers)["status"]
+        current = _api("GET", f"/api/v1/jobs/{job['id']}", headers)
+    status = current["status"]
     elapsed = time.monotonic() - started
     print(f"job {job['id']} kind={job['kind']} queue={job['queue']} -> {status} in {elapsed:.1f}s")
-    assert status in _TERMINAL, (
-        f"job {job['id']} still {status!r} after {JOB_TERMINAL_BOUND_SECONDS}s: "
-        "nothing consumed its queue"
+    # `succeeded`, not merely terminal: `failed` is terminal too (the maintainer's (by delegation)
+    # entries "2026-10-14 10:13:50 BST", "10:36:42 BST" and "11:43:57 BST" item 2).
+    assert status == "succeeded", (
+        f"job {job['id']} is {status!r} after {JOB_TERMINAL_BOUND_SECONDS}s: "
+        + ("never consumed" if status == "queued" else "ran and did not succeed")
     )
+    # The compiled Bundle's blob ref (its hash) is the Job's persisted result.
+    assert (current.get("result") or {}).get("ref"), f"no compiled-bundle ref on {current!r}"
 
 
 # -- PL-8022 E4.3 extended: the io and scoring pools, asserting `succeeded` -------------------

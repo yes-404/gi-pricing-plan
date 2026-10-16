@@ -205,11 +205,21 @@ def demo_env() -> dict[str, str]:
     }
 
 
+def demo_queues() -> list[str]:
+    """Every queue the platform routes a Job to, plus the relay's: read from the routing table,
+    never listed here, so a new pool is consumed by the demo without an edit (PL-1714 E4.5).
+    Imported inside the function: the demo script is not otherwise coupled to the backend."""
+    from app.platform.jobs import DEFAULT_QUEUE_FOR_KIND
+    from app.worker.celery_app import RELAY_QUEUE
+
+    return sorted({q.value for q in DEFAULT_QUEUE_FOR_KIND.values()} | {RELAY_QUEUE.value})
+
+
 def worker_command() -> list[str]:
     """The Celery worker the journey needs. The API only writes an outbox row for a Job
     (`07` FR-406); with no worker the first 202 never completes and the journey would wait for
-    ever. `default` carries the compile, `compute` the regression, rate-table diff and
-    dislocation Jobs (`app/platform/jobs.py`)."""
+    ever. One process consumes every pool: this is the local demo, not the deployed topology,
+    whose per-pool sizing (FR-405) is `deploy/docker-compose.yml`'s."""
     return [
         "uv",
         "run",
@@ -218,7 +228,7 @@ def worker_command() -> list[str]:
         "app.worker.entrypoint",
         "worker",
         "--queues",
-        "default,compute",
+        ",".join(demo_queues()),
         "--concurrency",
         "2",
     ]
@@ -389,7 +399,7 @@ def demo(*, rows: int | None, skip_seed: bool, frontend: bool, journey: str | No
             worker_env = {**env, "PYTHONPATH": str(ROOT / "backend" / "src")}
             worker_process = started_here.enter_context(
                 background(
-                    worker_command(), step="Celery worker (default, compute)", env=worker_env
+                    worker_command(), step=f"Celery worker ({', '.join(demo_queues())})", env=worker_env
                 )
             )
             beat_process = started_here.enter_context(

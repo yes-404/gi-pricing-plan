@@ -6,7 +6,7 @@
 
 name: gi-pricing
 
-# The deployment path (WK-674 Slice 4). `api`, `worker` and `migrate` are one image run under
+# The deployment path (WK-674 Slice 4). `api`, the `worker-*` services and `migrate` are one image run under
 # three commands (`deploy/Dockerfile`), behind the `app` profile: the default `up` stays the
 # three backing services every contributor needs, and `--profile app` adds the path.
 x-gip-env: &gip-env
@@ -112,7 +112,7 @@ services:
       postgres: {condition: service_healthy}
 
   # FR-434 / NFR-534: the scoring API deploys and scales on its own. It does not depend on
-  # `worker`, and `docker compose --profile app up api` starts it with no worker present.
+  # any `worker-*`, and `docker compose --profile app up api` starts it with no worker present.
   # Replicas: `docker compose --profile app up --scale api=<n>`; they sit behind `lb`.
   api:
     profiles: ["app"]
@@ -132,24 +132,45 @@ services:
     # FD-1211 (R4.2): the design is FINALIZE, then REPLACE. On stop the process gets SIGTERM,
     # uvicorn drains and the interpreter exits normally (`test_deploy_shutdown.py` proves a
     # process that has loaded FD-1199's extensions does so cleanly, N times); the container is
-    # then replaced, never reused. `worker` below does the same through Celery's warm shutdown.
+    # then replaced, never reused. The workers below do the same through Celery's warm shutdown.
     stop_grace_period: 20s
 
-  # FR-415: the worker service FR-412's memory half applies to. `mem_limit` is the hard
-  # backstop; the per-Job `resource_budget.memory_gb` is checked inside the process
-  # (`app.worker.progress`) and fails the Job naming the budget before the kernel does.
-  worker:
+  # FR-415 / FR-405: one worker service per pool, all from the one image, so each pool is sized
+  # independently (PL-1714 DP-Q1 (b), the maintainer's (by delegation) entry 2026-10-14 10:43:43).
+  # A fit on `compute` then cannot starve a `score.batch` on `scoring`. Every `--queues` set is
+  # one pool; `test_deploy_stack.py` derives the expected set from `DEFAULT_QUEUE_FOR_KIND`, so
+  # a new pool without a service here goes red. The concurrency and `mem_limit` figures are
+  # UNMEASURED starting values, env-overridable; measured sizing is S5's and the NFR session's.
+  # `mem_limit` is the hard backstop; the per-Job `resource_budget.memory_gb` (FR-412) is checked
+  # inside the process (`app.worker.progress`) and fails the Job naming the budget first.
+  # `default` also carries the outbox relay's tasks (`RELAY_QUEUE`).
+  worker-compute: &gip-worker
     profiles: ["app"]
     image: gi-pricing-app:${GIP_BUILD:-unset}
     build: *gip-build
-    command: ["celery", "-A", "app.worker.entrypoint", "worker", "--queues", "compute", "--concurrency", "2"]
+    command: ["celery", "-A", "app.worker.entrypoint", "worker", "--queues", "compute", "--concurrency", "${GIP_WORKER_COMPUTE_CONCURRENCY:-2}"]
     environment: *gip-env
-    mem_limit: ${GIP_WORKER_MEM_LIMIT:-4g}
+    mem_limit: ${GIP_WORKER_COMPUTE_MEM_LIMIT:-4g}
     depends_on:
       migrate: {condition: service_completed_successfully}
       redis: {condition: service_healthy}
       minio: {condition: service_healthy}
     stop_grace_period: 20s
+
+  worker-scoring:
+    <<: *gip-worker
+    command: ["celery", "-A", "app.worker.entrypoint", "worker", "--queues", "scoring", "--concurrency", "${GIP_WORKER_SCORING_CONCURRENCY:-4}"]
+    mem_limit: ${GIP_WORKER_SCORING_MEM_LIMIT:-2g}
+
+  worker-io:
+    <<: *gip-worker
+    command: ["celery", "-A", "app.worker.entrypoint", "worker", "--queues", "io", "--concurrency", "${GIP_WORKER_IO_CONCURRENCY:-4}"]
+    mem_limit: ${GIP_WORKER_IO_MEM_LIMIT:-2g}
+
+  worker-default:
+    <<: *gip-worker
+    command: ["celery", "-A", "app.worker.entrypoint", "worker", "--queues", "default", "--concurrency", "${GIP_WORKER_DEFAULT_CONCURRENCY:-2}"]
+    mem_limit: ${GIP_WORKER_DEFAULT_MEM_LIMIT:-2g}
 
   # The stated topology (PL-1537 R4.3): one nginx, round-robin over the `api` replicas.
   lb:

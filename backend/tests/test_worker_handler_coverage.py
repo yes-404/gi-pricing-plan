@@ -30,13 +30,16 @@ ENTRYPOINT = (
 #: verified against `docs/roadmap.md` (PL-8022 E4.7's table). A P1a, P1b or P2 kind may never be
 #: listed. OBLIGATION (PL-8022 DP-Q4 (b)): the first later-phase slice that adds a route
 #: submitting a listed kind makes `jobs.submit` refuse it (DP-Q4 (a)).
-#: `BLOB_GC` is listed only once the dated roadmap line placing FR-420 (DP-Q5 (a)) is on main.
+#: `BLOB_GC`: the dated roadmap line placing FR-420 under WK-1251 (DP-Q5 (a); the maintainer's
+#: (by delegation) entry "2026-10-14 10:51:08 BST") is on main (`docs/roadmap.md`, WK-1251). No
+#: handler may be registered for it: the stale-entry assert below fails if one is.
 LATER_PHASE_KINDS: dict[JobKind, tuple[str, str, str]] = {
     JobKind.OPTIMISATION_RUN: ("P4", "WK-684", "04 FR-284"),
     JobKind.GIPP_CHECK: ("P4", "WK-685", "04 FR-294"),
     JobKind.MONITOR_RUN: ("P4", "WK-687", "05 FR-307"),
     JobKind.DOSSIER_GENERATE: ("P3", "WK-680", "06 FR-376"),
     JobKind.EXPORT_REGULATORY: ("P3", "WK-681", "06 FR-382"),
+    JobKind.BLOB_GC: ("P3", "WK-1251", "07 FR-420"),
 }
 
 CURRENT_OR_EARLIER_PHASES = {"P1a", "P1b", "P2"}
