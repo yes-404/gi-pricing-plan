@@ -166,3 +166,106 @@ async def test_management_rate_limit_never_counts_an_unauthenticated_or_refused_
     assert [client.get(JOBS_URL, headers=headers).status_code for _ in range(3)] == [403] * 3
     # The count is still untouched: the principal's first permitted read is admitted.
     assert client.get(ME_URL, headers=headers).status_code != 429
+
+
+def _spy_management_count(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """Record each time the limiter is asked to admit a management request (the counter)."""
+    calls: list[str] = []
+    limiter = client.app.state.rate_limiter  # type: ignore[attr-defined]
+    real_admit = limiter.admit
+
+    async def admit(route: str, *args: Any, **kwargs: Any) -> bool:
+        calls.append(route)
+        return bool(await real_admit(route, *args, **kwargs))
+
+    monkeypatch.setattr(limiter, "admit", admit)
+    return calls
+
+
+#: The three routes whose permission is decided inside the handler's service (`RL-1687` (1a):
+#: "a 401 or a 403 is never counted"), each with the one permission that admits it and the
+#: status a permitted call ends in (a ghost Rating Version is a 404 *after* the permission).
+_IN_HANDLER_ROUTES = [
+    pytest.param(
+        "/api/v1/validation-rules",
+        lambda: {
+            "slug": "counted-rule",
+            "layer": "structural",
+            "check": "not_null",
+            "severity": "fail",
+            "target": {"table": "exposure", "column": "policy_id"},
+            "params": {"columns": ["policy_id"], "key_columns": ["policy_id"]},
+        },
+        "dataset:write",
+        201,
+        id="validation-rules",
+    ),
+    pytest.param(
+        "/api/v1/environments/uat/deployment-requests",
+        lambda: {"rating_version_ref": "rating_version:ghost@1", "change_summary": "review"},
+        "deployment:promote",
+        404,
+        id="deployment-requests",
+    ),
+    pytest.param(
+        "/api/v1/environments/uat/deployments",
+        lambda: {"rating_version_ref": "rating_version:ghost@1", "reason": "release"},
+        "deployment:promote",
+        404,
+        id="deployments",
+    ),
+]
+
+
+@pytest.mark.req("FR-452")
+@pytest.mark.parametrize(("url", "body", "permission", "permitted_status"), _IN_HANDLER_ROUTES)
+async def test_a_403_from_an_in_handler_permission_check_is_not_counted(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    set_limit: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    url: str,
+    body: Any,
+    permission: str,
+    permitted_status: int,
+) -> None:
+    """A caller without the route's permission gets `403` and the management counter is
+    unchanged (read before and after). Red: `counted_caller` counts at the dependency, before
+    the handler's own check, so the refused call moves the counter by one."""
+    await set_limit(1000)
+    headers = _account(client, admin_headers, permissions=("job:read",), slug="refused-client")
+    calls = _spy_management_count(client, monkeypatch)
+
+    before = len(calls)
+    refused = client.post(url, json=body(), headers=headers)
+    after = len(calls)
+
+    assert refused.status_code == 403, refused.text
+    assert after == before
+
+
+@pytest.mark.req("FR-452")
+@pytest.mark.parametrize(("url", "body", "permission", "permitted_status"), _IN_HANDLER_ROUTES)
+async def test_a_permitted_call_to_an_in_handler_permission_route_is_counted_once(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    set_limit: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    url: str,
+    body: Any,
+    permission: str,
+    permitted_status: int,
+) -> None:
+    """Positive control for the test above: a caller holding the permission moves the counter
+    by exactly one, whatever the handler then answers. Red: the move to count-after-the-check
+    drops the count (0) or doubles it (2)."""
+    await set_limit(1000)
+    headers = _account(client, admin_headers, permissions=(permission,), slug="permitted-client")
+    calls = _spy_management_count(client, monkeypatch)
+
+    before = len(calls)
+    answered = client.post(url, json=body(), headers=headers)
+    after = len(calls)
+
+    assert answered.status_code == permitted_status, answered.text
+    assert after - before == 1
