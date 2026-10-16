@@ -7,9 +7,9 @@ no longer the column the factor meant.
 
 **Five** of FR-83's eight types resolve today: `identity`, `banding`, `grouping`,
 `interaction` — the last since FR-92 on 2026-08-18, which this docstring did not
-record until 2026-08-22 — and `expression`, since 2026-10-16 (`RL-1615`). A resolver that silently returned the raw column for a `spline`
-would produce a fit nobody could tell from a correct one, so the other four are refused by
-name (FR-208).
+record until 2026-08-22 — and `expression`, since 2026-10-16 (`RL-1615`). A resolver that
+silently returned the raw column for a `spline` would produce a fit nobody could tell from a
+correct one, so the other four are refused by name (FR-208).
 
 The four refused do not share a reason, and the message says which applies (OQ-571,
 decided 2026-08-22):
@@ -380,6 +380,14 @@ def _expression_series(
     except (ExpressionError, SyntaxError) as exc:
         raise FactorResolutionError(
             f"factor {factor.slug!r} has an expression the `factor` profile refuses: {exc}"
+        ) from exc
+    except pl.exceptions.PolarsError as exc:
+        # The grammar admits the text, but the engine refuses it over these dtypes
+        # (`region * 2` on a string column). Unwrapped, that surfaced as a 500.
+        raise FactorResolutionError(
+            f"factor {factor.slug!r} has an expression this dataset version cannot "
+            f"evaluate: {exc} (FR-95). The columns it reads have dtypes the formula does "
+            "not accept."
         ) from exc
     numeric = result.dtype.is_numeric()
     if factor.banding_id is None:

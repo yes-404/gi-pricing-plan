@@ -31,9 +31,10 @@ import pytest
 from backend.tests.test_api_datasets import _headers
 from backend.tests.test_model_nfrs import _events, _principal_with
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 from app.config import Settings
-from app.db.models import BandingRow, ModelRow
+from app.db.models import AuditEventRow, BandingRow, ModelRow
 from app.db.session import Database
 from app.platform import modelling as model_service
 from app.platform import transformations as transform_service
@@ -87,6 +88,31 @@ def _refusal_text(response) -> str:  # type: ignore[no-untyped-def]
     problem = response.json()
     assert problem["code"] == "VALIDATION_FAILED", problem
     return str(problem)
+
+
+class _RollBack(Exception):
+    """Raised inside a unit of work to end it by rolling back, never by committing.
+
+    A Banding over an expression has a NULL `column_name`. Such a row, once committed, stays in
+    the shared test database for as long as the schema does (and an old build cannot read it),
+    so the tests that need one assert inside the transaction and then roll it back.
+    """
+
+
+async def _events_in_session(session, workspace_id, action: str):  # type: ignore[no-untyped-def]
+    """The Audit Events one action wrote **in this open transaction** (not yet committed)."""
+    return list(
+        (
+            await session.execute(
+                select(AuditEventRow).where(
+                    AuditEventRow.workspace_id == workspace_id,
+                    AuditEventRow.action == action,
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
 
 
 def _assert_positioned(  # type: ignore[no-untyped-def]
@@ -249,6 +275,30 @@ def test_a_certainly_numeric_expression_without_a_banding_is_refused_naming_fr_2
 
 
 @pytest.mark.req("FR-95")
+def test_a_binop_root_over_strings_is_still_refused_as_certainly_numeric(
+    api_client: TestClient, actuary: dict[str, str]
+) -> None:
+    """`DP-1274-NUMERIC` (a), ruled 2026-10-16 10:27:41 BST: pinned, not accidental.
+
+    `region + alt_region` is a string concatenation in polars, but `is_certainly_numeric`
+    treats every arithmetic root as a number, which is FR-95's literal wording. The 422 is
+    over-refusal, and fail-safe: it never misprices. Whether the operands should be typed
+    first is an open question (the OQ for option (b)), not this test's.
+    """
+    refused = api_client.post(
+        "/api/v1/factors",
+        json=_factor_body(
+            "region + alt_region",
+            str(new_uuid7()),
+            source_columns=["region", "alt_region"],
+        ),
+        headers=actuary,
+    )
+    assert refused.status_code == 422, refused.text
+    assert "FR-210" in _refusal_text(refused)
+
+
+@pytest.mark.req("FR-95")
 @pytest.mark.parametrize(
     "expression",
     [
@@ -321,18 +371,23 @@ async def test_banding_created_audits_the_source_expression(
         source_expression="driver_age * 2", method=BandingMethod.MANUAL,
         boundaries=(0.0, 50.0, 100.0), labels=("low", "high"),
     )
-    async with database.unit_of_work() as session:
-        await transform_service.create_banding(
-            session, workspace_id=workspace_id, actor=actor, banding=banding
-        )
+    # Asserted inside the transaction, which is then rolled back: the Banding's row has a NULL
+    # `column_name` and must never be committed (see `_RollBack`).
+    with pytest.raises(_RollBack):
+        async with database.unit_of_work() as session:
+            await transform_service.create_banding(
+                session, workspace_id=workspace_id, actor=actor, banding=banding
+            )
+            (event,) = await _events_in_session(session, workspace_id, "banding.created")
+            assert event.after is not None
+            assert event.after["source_expression"] == "driver_age * 2"
+            raise _RollBack
 
-    (event,) = await _events(database, workspace_id, "banding.created")
-    assert event.after is not None
-    assert event.after["source_expression"] == "driver_age * 2"
+    assert await _events(database, workspace_id, "banding.created") == []
 
 
 def _seed_fitted_model(workspace_id, slug: str, factor_ids: list[str]) -> None:  # type: ignore[no-untyped-def]
-    """A `fitted` Model whose spec pins `factor_ids`, on a loop of our own (see `test_api_models`)."""
+    """A `fitted` Model whose spec pins `factor_ids`, on a loop of our own (`test_api_models`)."""
     from backend.tests.conftest_db import test_database_url
 
     spec = GlmSpec(
@@ -438,15 +493,19 @@ async def test_the_orm_and_the_migrated_column_agree_that_column_name_is_nullabl
     database. It runs against the migrated schema, so it fails if either side disagrees.
     """
     assert BandingRow.__table__.c.column_name.nullable is True
-    async with database.unit_of_work() as session:
-        session.add(
-            BandingRow(
-                workspace_id=workspace_id,
-                dataset_id=uuid4(),
-                slug=f"b-{uuid4().hex[-6:]}",
-                version=1,
-                column_name=None,
-                body={},
+    # The flush is what meets the migrated schema (an `IntegrityError` there is the database
+    # saying NOT NULL); the transaction is then rolled back, so no NULL row is ever committed.
+    with pytest.raises(_RollBack):
+        async with database.unit_of_work() as session:
+            session.add(
+                BandingRow(
+                    workspace_id=workspace_id,
+                    dataset_id=uuid4(),
+                    slug=f"b-{uuid4().hex[-6:]}",
+                    version=1,
+                    column_name=None,
+                    body={},
+                )
             )
-        )
-        await session.flush()
+            await session.flush()
+            raise _RollBack

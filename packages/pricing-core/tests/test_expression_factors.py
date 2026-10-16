@@ -21,6 +21,7 @@ raised.
 
 from __future__ import annotations
 
+import math
 from uuid import uuid4
 
 import numpy as np
@@ -30,6 +31,7 @@ import pytest
 from model_schema import (
     Banding,
     BandingMethod,
+    BandingProposal,
     Factor,
     FactorType,
     GbmFunctionRef,
@@ -40,10 +42,12 @@ from model_schema import (
     new_uuid7,
 )
 from pricing_core.modelling import (
+    BandingError,
     FactorResolutionError,
     build_glm_approximation,
     fit_gbm,
     fit_glm,
+    propose_banding,
     resolve_factors,
 )
 
@@ -130,7 +134,10 @@ def test_a_string_banded_expression_is_refused() -> None:
         columns=("driver_age", "region", "alt_region"),
         banding_id=banding.id,
     )
-    with pytest.raises(FactorResolutionError, match="half_age"):
+    with pytest.raises(
+        FactorResolutionError,
+        match=r"half_age.*String result and pins a banding\. A category is not banded",
+    ):
         resolve_factors(_book(200), [factor], bandings={banding.id: banding})
 
 
@@ -284,3 +291,92 @@ def test_referenced_columns_default_is_unchanged_and_the_symbols_call_resolves()
         profile=GrammarProfile.FACTOR,
         symbols=frozenset({"a", "b", "c", "d"}),
     ) == frozenset({"a", "b", "c"})
+
+
+# -- the engine refuses what the grammar admits (review F6) --------------------------------------
+
+
+@pytest.mark.req("FR-95")
+def test_an_expression_the_engine_cannot_evaluate_is_a_named_resolution_failure() -> None:
+    """`region * 2` parses (arithmetic over a declared column) and polars refuses it over a
+    string column. Unwrapped, that `InvalidOperationError` reached the caller as a 500."""
+    _require_the_new_fields()
+    factor = _factor("region * 2", columns=("region",))
+    with pytest.raises(FactorResolutionError, match=r"(?s)half_age.*cannot evaluate.*FR-95"):
+        resolve_factors(_book(200), [factor])
+
+
+@pytest.mark.req("FR-95")
+def test_a_proposal_over_an_expression_the_engine_cannot_evaluate_is_a_named_failure() -> None:
+    _require_the_new_fields()
+    proposal = BandingProposal(
+        dataset_version_id=uuid4(), source_expression="region * 2", method=BandingMethod.EQUAL_WIDTH
+    )
+    with pytest.raises(FactorResolutionError, match=r"(?s)region \* 2.*cannot be evaluated"):
+        propose_banding(_book(200), proposal, dataset_id=DATASET, slug="b")
+
+
+# -- non-finite values at propose (review F8) ----------------------------------------------------
+
+
+def _inverse_book() -> pl.DataFrame:
+    return pl.DataFrame({"x": [0.0, 1.0, 2.0, 4.0, 5.0, 10.0]})  # 1 / x: inf, 1, .5, .25, .2, .1
+
+
+@pytest.mark.req("FR-98")
+def test_an_infinite_value_is_dropped_not_cut_at() -> None:
+    """`1 / x` is `inf` where x is 0. The range is that of the finite values, [0.1, 1.0]."""
+    _require_the_new_fields()
+    proposal = BandingProposal(
+        dataset_version_id=uuid4(),
+        source_expression="1 / x",
+        method=BandingMethod.EQUAL_WIDTH,
+        n_bands=2,
+    )
+    banding = propose_banding(_inverse_book(), proposal, dataset_id=DATASET, slug="b")
+    assert banding.boundaries == pytest.approx((0.1, 0.55, 1.0))
+    assert all(math.isfinite(b) for b in banding.boundaries)
+
+
+@pytest.mark.req("FR-98")
+@pytest.mark.parametrize(
+    ("frame", "expression", "counts"),
+    [
+        (pl.DataFrame({"x": [0.0, 0.0, 0.0]}), "x / x", "0 null, 3 NaN, 0 infinite"),
+        (pl.DataFrame({"x": [0.0, 0.0, 0.0]}), "1 / x", "0 null, 0 NaN, 3 infinite"),
+        (pl.DataFrame({"x": pl.Series([None, None], dtype=pl.Float64)}), "x", "2 null, 0 NaN"),
+    ],
+)
+def test_the_refusal_says_which_kind_of_non_value_the_column_is_made_of(
+    frame: pl.DataFrame, expression: str, counts: str
+) -> None:
+    """A NaN is a computed non-number and a NULL is a missing value: different faults, and the
+    refusal used to call both "no non-null numeric values"."""
+    _require_the_new_fields()
+    proposal = BandingProposal(
+        dataset_version_id=uuid4(),
+        source_expression=expression,
+        method=BandingMethod.EQUAL_WIDTH,
+    )
+    with pytest.raises(BandingError, match="no finite numeric values") as excinfo:
+        propose_banding(frame, proposal, dataset_id=DATASET, slug="b")
+    assert counts in str(excinfo.value)
+
+
+# -- a column named like a function (review F12) -------------------------------------------------
+
+
+@pytest.mark.req("FR-95")
+def test_a_column_named_like_a_function_is_read_but_a_call_of_it_is_not() -> None:
+    from pricing_core.data.expressions import GrammarProfile, referenced_columns
+
+    symbols = frozenset({"max", "a", "b"})
+    assert referenced_columns("max + a", profile=GrammarProfile.FACTOR, symbols=symbols) == (
+        frozenset({"max", "a"})
+    )
+    assert referenced_columns(
+        "max(a, b) + max", profile=GrammarProfile.FACTOR, symbols=symbols
+    ) == frozenset({"a", "b", "max"})
+    assert referenced_columns(
+        "max(a, b)", profile=GrammarProfile.FACTOR, symbols=symbols
+    ) == frozenset({"a", "b"})

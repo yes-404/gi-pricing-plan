@@ -12,7 +12,7 @@ the old schema cannot hold one, and a banding row cannot be deleted (FR-101).
 
 Revision ID: f2b6d90a4c17
 Revises: d4e81b7a2c95
-Create Date: 2026-10-16 10:30:00+00:00
+Create Date: 2026-10-16 09:32:28.290223+00:00
 """
 
 from __future__ import annotations

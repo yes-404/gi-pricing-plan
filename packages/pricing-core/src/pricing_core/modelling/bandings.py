@@ -113,6 +113,12 @@ def _cut_values(frame: pl.DataFrame, over: Banding | BandingProposal) -> pl.Seri
         raise FactorResolutionError(
             f"the source_expression {over.source_expression!r} is refused: {exc} (FR-95)."
         ) from exc
+    except pl.exceptions.PolarsError as exc:
+        raise FactorResolutionError(
+            f"the source_expression {over.source_expression!r} cannot be evaluated over this "
+            f"dataset version: {exc} (FR-95). The columns it reads have dtypes the formula "
+            "does not accept."
+        ) from exc
 
 
 def propose_banding(
@@ -140,13 +146,24 @@ def propose_banding(
             "them. Persist the boundaries directly instead.",
         )
     column = _subject(proposal)
-    values = _cut_values(frame, proposal).cast(pl.Float64)
-    finite = values.drop_nulls().drop_nans()
-    if finite.len() == 0:
+    raw = _cut_values(frame, proposal).cast(pl.Float64)
+    n_null = raw.null_count()
+    n_nan = int(raw.is_nan().sum())
+    n_infinite = int(raw.is_infinite().sum())
+    # Only finite values can be a boundary or a range: an infinite value (`1 / x` where x is
+    # 0) would put `inf` into the cut points, and the Banding's own validator would refuse
+    # the result far from its cause. Dropped to null *in place*, so the values stay aligned
+    # with the exposure and claim columns.
+    values = raw.to_frame("v").select(
+        pl.when(pl.col("v").is_finite()).then(pl.col("v")).otherwise(None).alias("v")
+    )["v"]
+    if values.null_count() == values.len():
         raise BandingError(
             "FACTOR_RESOLUTION_FAILED",
-            f"{column!r} has no non-null numeric values in this dataset version, so there "
-            "is no range to cut.",
+            f"{column!r} has no finite numeric values in this dataset version, so there "
+            f"is no range to cut ({n_null} null, {n_nan} NaN, {n_infinite} infinite of "
+            f"{raw.len()} rows). A NaN is a computed non-number (`0 / 0`, say), not a "
+            "missing value; check the expression or the column.",
         )
 
     exposure = (

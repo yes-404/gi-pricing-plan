@@ -157,7 +157,7 @@ class Factor(BaseModel):
     #: `02` §4.1, added 2026-10-16 (`RL-1615`). The formula an `expression` Factor *is*,
     #: stored as written, parsed in the `factor` profile over `source_columns` (FR-95). It
     #: is stored on the Factor so it is declared, versioned (FR-96) and audited.
-    expression: str | None = None
+    expression: str | None = Field(default=None, max_length=2000)
     #: `02` §4.1, added 2026-08-18. The Factors an `interaction` crosses, in the order they
     #: are crossed. **Factors, not columns**: every place the specification names an
     #: interaction it names factors — §4.4's `interaction_constraints`, §4.9's
@@ -370,7 +370,7 @@ class Banding(BaseModel):
     column: str | None = None
     #: The text of the `expression` Factor's formula the boundaries were cut over, stored as
     #: written. Resolution compares it with the Factor's `expression` as a normalised parse.
-    source_expression: str | None = None
+    source_expression: str | None = Field(default=None, max_length=2000)
     method: BandingMethod
     method_params: dict[str, float] = Field(default_factory=dict)
     #: The version the boundaries and `band_stats` were derived on (FR-99). `None`
@@ -614,7 +614,7 @@ class BandingProposal(BaseModel):
     #: (i)): the proposal is cut over a dataset column or over an `expression` Factor's
     #: formula, which is parsed by the one parser in the `factor` profile.
     column: str | None = None
-    source_expression: str | None = None
+    source_expression: str | None = Field(default=None, max_length=2000)
     method: BandingMethod
     n_bands: int = Field(default=10, ge=1, le=200)
     #: Method-specific knobs: `min_claims_per_band` for `credibility`, and the exposure /

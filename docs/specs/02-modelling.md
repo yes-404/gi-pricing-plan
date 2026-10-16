@@ -424,7 +424,7 @@ Two things about the example above, so a reader does not take either for a promi
   **Amended 2026-10-16 (`RL-1615` DP-S4-1; WK-690 Slice 4): `expression` now exists on
   the type.** It is the formula an `expression` Factor is, stored as written, parsed in the
   `factor` profile over `source_columns` (FR-95). Exactly the `expression` type carries it,
-  and the type requires it. `banding_id` is allowed on `banding` **and** `expression`: a
+  and the type requires it. It is at most 2000 characters, as `Objective.loss` is (§4.6). `banding_id` is allowed on `banding` **and** `expression`: a
   Banding is how a numeric result becomes categorical (FR-97). The sentence above is left as
   the record of what was believed.
 
@@ -473,7 +473,8 @@ empty on the next.
 
 > **Amended 2026-10-16 (`RL-1615` DP-S4-1; `RL-1700` (c)): a Banding is cut over a column or over an expression.**
 > `source_expression` is new. It is the text of the `expression` Factor's formula that the
-> boundaries were cut over, stored as written. Exactly one of `column` and
+> boundaries were cut over, stored as written, at most 2000 characters (on `BandingProposal`
+> too). Exactly one of `column` and
 > `source_expression` is set, so `column` is null on a Banding cut over an expression. The
 > example above, with `column` set, is the column case. A Banding with `source_expression`
 > is applied only to the result of an `expression` Factor whose `expression` parses to the

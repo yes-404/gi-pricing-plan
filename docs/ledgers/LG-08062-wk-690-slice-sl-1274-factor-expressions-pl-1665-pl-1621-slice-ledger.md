@@ -122,3 +122,54 @@ may change more files. Owed; the `--check` result decides.
    DB window.
 5. `flock -w 900 /tmp/slots/gate-2 env -C <wt> python3 scripts/audit-docs.py` and `doc-index.py --check`.
 6. Small-test runs of the three new test files, through `run-small.sh`, with return codes.
+
+## Pre-gate review fixes — 2026-10-16 (writing only, nothing run)
+
+Source: the lead's verdicts on auditor-1274's read-only review of `afcd84fb`, `from-lead-2026-10-09.md`
+"2026-10-16 10:27:00 BST" (the SL-1274 bullet); the maintainer's `to-lead.md`
+"2026-10-16 10:27:41 BST" (DP-1274-DIAG, DP-1274-NUMERIC). Each row was checked against the code before
+it was changed. Line numbers are at the head that carries this entry.
+
+**Rulings recorded.** The lead's write-set ruling of "2026-10-16 10:14:37 BST":
+`packages/pricing-core/src/pricing_core/modelling/__init__.py` is accepted in this slice's write set (it only adds
+`source_columns_of`, `is_certainly_numeric` and `normalised_expression` to the import block and `__all__`). The
+lead widened the write set to `packages/model-schema/tests/test_factor.py` ("2026-10-16 10:27:00 BST", F1).
+
+| Item | Stamp | Change |
+|---|---|---|
+| F1 | lead 10:27:00 | `packages/model-schema/tests/test_factor.py`: the EXPRESSION arm of `test_every_other_type_still_requires_a_source_column` and of `test_only_an_interaction_may_source_no_columns` now supplies `expression`, so each fails by its own message (`source_columns`), not by the required-arm check that runs first. |
+| F2 | lead 10:27:00 | `backend/src/app/platform/modelling.py`: `FactorType` before `FieldError` in the `model_schema` import (I001). |
+| F3 | lead 10:27:00 | E501: `pricing_core/modelling/factors.py` module docstring re-wrapped; `backend/tests/test_expression_factors_api.py` `_seed_fitted_model` docstring shortened. (The `def` line with a `# type: ignore` pragma is exempt.) |
+| F5 | lead 10:27:00 | `test_expression_factors_api.py`: the nullability test and `test_banding_created_audits_the_source_expression` assert inside the unit of work and end it with `_RollBack`, so no NULL `column_name` row is committed. Both failure modes stay detectable: the ORM `nullable` assert, and the flush meeting the migrated schema. The audit assert reads the event in the open transaction (`_events_in_session`) and the test then checks none was committed. |
+| F6 | lead 10:27:00 | `factors.py` `_expression_series` and `bandings.py` `_cut_values` catch `pl.exceptions.PolarsError` and raise `FactorResolutionError`. Tests: `region * 2` at resolution and at propose (`test_expression_factors.py`). |
+| F8 | lead 10:27:00 | `bandings.py` `propose_banding`: non-finite values (inf and NaN) are set to null in place (aligned with the exposure and claim columns); the all-non-finite refusal counts null, NaN and infinite separately. Tests: `1 / x` with a zero, and three count-text cases. |
+| F9 | lead 10:27:00 | `model_schema/modelling.py`: `max_length=2000` on `Factor.expression`, `Banding.source_expression`, `BandingProposal.source_expression`, as `objectives.py` `loss`. Test: 2000 accepted, 2001 refused, on all three. `02` §4.1 and §4.2 amendments say so. |
+| F12 | lead 10:27:00 | `pricing_core/data/expressions.py` `referenced_columns`: a name is excluded only in call position (`Call.func`, the identity `_check_symbols` already uses), not when it equals a function name. Test: a column named `max`. This also changes the `recipe` profile's lineage for a bare name equal to a function name, which it used to drop. |
+| F13 | lead 10:27:00 | `f2b6d90a4c17` header `Create Date` is the commit time from `date -u` (see the commit). The earlier value was an estimate. |
+| F14 | lead 10:27:00 | Recorded here, below. |
+| Weak assert | lead 10:27:00 | `test_a_string_banded_expression_is_refused` matches the refusal's own wording ("String result and pins a banding. A category is not banded"). |
+| DP-1274-NUMERIC (a) | maintainer 10:27:41 | `test_a_binop_root_over_strings_is_still_refused_as_certainly_numeric`: `region + alt_region` is 422 naming FR-210. FR-95 literal; over-refusal is fail-safe. The OQ for option (b) and the FD are another seat's, not this slice's. |
+| DP-1274-DIAG (a) | maintainer 10:27:41 | **Not done: stopped.** The omission needs a new reason member in `model_schema/diagnostics.py`, a shape change; see the report to the lead. |
+
+F4 (regeneration of `docs/contracts/`, with `test_contracts.py:1147` on the nullable `column`) stays owed after
+GATE END. F11 is not adopted (inert), per the lead.
+
+### F14: rollback hazards of the shape change
+
+- **An old build cannot read the new keys.** `Factor`, `Banding` and `BandingProposal` are `extra="forbid"`, so a
+  build from before this slice that reads a stored Factor carrying `expression`, or a Banding carrying
+  `source_expression` (with `column` null), fails validation. Rolling the code back is not safe once such a row exists.
+- **The downgrade fails once an expression Banding exists.** `f2b6d90a4c17.downgrade()` re-imposes NOT NULL on
+  `bandings.column_name`; a Banding over an expression has NULL there, and a banding row cannot be deleted
+  (FR-101), so `alembic downgrade -1` aborts. This is intended (loud, not lossy), and it means a rollback needs a
+  forward fix, not a downgrade.
+- **The API tests that POST an expression Banding commit a NULL `column_name` row** into the shared test
+  database (`test_a_banded_expression_factor_is_created` and three others); those cannot be rolled back, as they go
+  through HTTP. The two tests above that talk to the session directly do not commit one.
+
+### Runs owed after GATE END (added by this entry)
+
+`ruff check .`, `mypy`, `lint-imports`; `generate-contracts.py` and `--check` (and `test_contracts.py` on the
+nullable `column`, `:1147`); the new tests red then green by their own asserts (F1, F5, F6, F8, F9, F12, NUMERIC,
+the weak assert) through `run-small.sh`; the migration round trip on a scratch DB; `audit-docs.py` and
+`doc-index.py --check` under the gate-2 flock. The branch must also re-merge `main` `a2f77b2d` before its gate.

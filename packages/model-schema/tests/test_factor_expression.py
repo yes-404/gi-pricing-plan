@@ -14,7 +14,7 @@ from uuid import uuid4
 import pydantic
 import pytest
 
-from model_schema import Banding, BandingMethod, Factor, FactorType
+from model_schema import Banding, BandingMethod, BandingProposal, Factor, FactorType
 
 DATASET = uuid4()
 
@@ -137,3 +137,35 @@ def test_a_banding_is_cut_over_a_column_or_over_an_expression_never_both_or_neit
         _banding(column="driver_age", source_expression="driver_age * 2")
     with pytest.raises(pydantic.ValidationError, match="exactly one"):
         _banding()
+
+
+@pytest.mark.req("FR-95")
+def test_an_expression_text_is_bounded_on_all_three_carriers() -> None:
+    """A text is stored and echoed, so it is bounded as `Objective.loss` is (`max_length=2000`).
+
+    The boundary: 2000 characters are accepted and 2001 are refused, on the Factor's
+    `expression`, the Banding's `source_expression` and the proposal's `source_expression`.
+    """
+    _require_the_new_fields()
+    at_limit = "driver_age" + " + 1" * 497  # 10 + 4 * 497 = 1998 chars, then padded to 2000
+    at_limit = at_limit + " " * (2000 - len(at_limit))
+    assert len(at_limit) == 2000
+    too_long = at_limit + " "
+    assert len(too_long) == 2001
+
+    assert _expression_factor(expression=at_limit).expression == at_limit
+    with pytest.raises(pydantic.ValidationError, match="at most 2000"):
+        _expression_factor(expression=too_long)
+
+    assert _banding(source_expression=at_limit).source_expression == at_limit
+    with pytest.raises(pydantic.ValidationError, match="at most 2000"):
+        _banding(source_expression=too_long)
+
+    version = uuid4()
+    method = BandingMethod.EQUAL_WIDTH
+    accepted = BandingProposal(
+        dataset_version_id=version, method=method, source_expression=at_limit
+    )
+    assert accepted.source_expression == at_limit
+    with pytest.raises(pydantic.ValidationError, match="at most 2000"):
+        BandingProposal(dataset_version_id=version, method=method, source_expression=too_long)
