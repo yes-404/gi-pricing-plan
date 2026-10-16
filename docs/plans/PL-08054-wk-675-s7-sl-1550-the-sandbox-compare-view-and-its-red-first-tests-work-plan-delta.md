@@ -3,7 +3,7 @@ id: PL-8054
 family: plan
 kind: map
 title: WK-675 — Slice 7 (SL-1550), the sandbox compare view: its components, its own_change label rule and its red-first tests: a dated Work-plan delta to PL-1546
-status: active                  # draft → active → superseded | retired (§1.2a)
+status: draft                   # draft → active → superseded | retired (§1.2a)
 created: 2026-10-16
 owner: planner
 tree: 0877e6e7a756c4621890713a4d3b016e75e33654
@@ -46,8 +46,10 @@ premise: `GET /api/v1/rating-versions` has **no** `03` §5.1 row. The changes, e
 *(amended … RL 8057)* at its site: Context 5 and 7; the Files table (`03-rating-engine.md`);
 Task 2 Step T1 (the §5.1 row, verbatim); C1 and B5 tied to RL 8057's Acceptance; §"Decision
 points" (both ruled, DP-1's premise corrected); Acceptance items 9 and 10; Global Constraints;
-Self-review; `status: active` (every blocking row has a resolver, `document-ids.md` §1.4
-"Freeze is mechanical"). RL 8057 stays out of `relates:` until it is minted (check 32); the
+Self-review. **`status:` stays `draft`**: both blocking rows have a resolver, but the maintainer's confirmation of RL 8057 in `to-lead.md`, "2026-10-16 09:49:25 BST — Maintainer: RL 8057 (PL 8054 DP-1 (a), DP-2 (a), SL-1550 lane C S7) CONFIRMED",
+condition (3), reads *"RL 8057 is minted in the next batch in id order, and PL 8054 activates
+only after it is on main."* Its conditions (1) and (2) are carried at T1, Acceptance 9, C1
+and B5, each citing 09:49:25. RL 8057 stays out of `relates:` until it is minted (check 32); the
 mint adds it.
 
 ## Why a delta, and not the slice's ledger
@@ -98,6 +100,11 @@ precedent is `PL-1668`, the same kind of delta for S5 (row 1).
 7. **Activation needs, each read on `docs/roadmap.md` at this tree:** `SL-1548` (S6)
    `status: closed`; `SL-1549` (S7b) `status: closed`; `SL-1367` `status: closed`; `RL-1261`
    `status: active`. All are met. **`SL-1550` stays `draft` until DP-1 and DP-2 are ruled.**
+   **Added need (amended 2026-10-16, on the maintainer's confirmation of RL 8057 in `to-lead.md`, "2026-10-16 09:49:25 BST — Maintainer: RL 8057 (PL 8054 DP-1 (a), DP-2 (a), SL-1550 lane C S7) CONFIRMED", condition (3)):** RL 8057 is minted, in the
+   next batch in id order, and is on `origin/main`. **This plan moves `draft → active` only
+   then**, and SL-1550 is not GO'd before it. Check (the title's last clause, which no mint rewrites):
+   `git grep -l 'the sandbox compare shows only what this quote shows' origin/main -- docs/rulings`
+   prints one file, and its `id:` is a minted `RL-` id.
    *(amended 2026-10-16 by the planner (seat planner-8054b), pre-merge, applying RL 8057, working id)*: both are ruled (a) by RL 8057. `SL-1550`'s `draft → active` is the lead's at GO;
    this plan does not edit its row.
 
@@ -329,7 +336,7 @@ directly above the `GET /api/v1/rating-versions/{slug}@{version}` row (`03:1051`
 | `GET` | `/api/v1/rating-versions` | List the caller's workspace's Rating Versions, every status, ordered by `version` (FR-262: the Quote Sandbox's comparison picker); requires `rating:read`. **200** with a `RatingVersion[]` (§4.3), unpaginated; 401; 403. Built in Phase 1b (FR-440); records an existing route, declared 2026-10-16 (RL 8057, working id), owner WK-675. S10 (`SL-1552`) amends this row with its own FR and the list view's needs; it does not add a second row |
 ```
 
-- **Same commit as the first call.** T1 lands in the commit that first calls
+- **Same commit as the first call** (condition (1) of the maintainer's confirmation of RL 8057 in `to-lead.md`, "2026-10-16 09:49:25 BST — Maintainer: RL 8057 (PL 8054 DP-1 (a), DP-2 (a), SL-1550 lane C S7) CONFIRMED"). T1 lands in the commit that first calls
   `listRatingVersions` from `QuoteSandboxView.vue` (the picker's green step below), never
   before it and never after (`CLAUDE.md` §2). If RL 8057 is minted before SL-1550's PR, write
   its minted id in place of "RL 8057, working id"; otherwise the mint rewrites it.
@@ -353,7 +360,7 @@ no existing test: today's view calls neither export.
 
 | Test | What it does | Assert | Red cause, on `origin/main`'s view |
 |---|---|---|---|
-| C1 | Render; `await screen.findByLabelText("driver_age")`; `picker = screen.queryByLabelText("Compare against")` | `expect(picker).not.toBeNull()`; then its options' text equals `["No comparison", "motor-gb@2 · approved"]` (the version in view is excluded) | No control is labelled "Compare against": `QuoteSandboxView.vue:128-158` renders only `QuoteForm` and the result column. **Broken-input proof for the `LG-`** (RL 8057 Acceptance 2) *(amended 2026-10-16 by the planner (seat planner-8054b), pre-merge, applying RL 8057, working id)*: drop the `comparable` filter (offer `versions` unfiltered), and C1 goes red at the options' text assert, because `motor-gb@3 · …` is offered |
+| C1 | Render; `await screen.findByLabelText("driver_age")`; `picker = screen.queryByLabelText("Compare against")` | `expect(picker).not.toBeNull()`; then its options' text equals `["No comparison", "motor-gb@2 · approved"]` (the version in view is excluded) | No control is labelled "Compare against": `QuoteSandboxView.vue:128-158` renders only `QuoteForm` and the result column. C1 holds condition (2) of the maintainer's `to-lead.md` entry "2026-10-16 09:49:25 BST": the version in view is **excluded** and "No comparison" is **first**. **Broken-input proof for the `LG-`** (RL 8057 Acceptance 2) *(amended 2026-10-16 by the planner (seat planner-8054b), pre-merge, applying RL 8057, working id)*: drop the `comparable` filter (offer `versions` unfiltered), and C1 goes red at the options' text assert, because `motor-gb@3 · …` is offered |
 | C2 | Select `motor-gb@2 · approved`, then `fillAndSubmit()` (`:68-72`) | `await waitFor(() => expect(scoreCompare).toHaveBeenCalledTimes(1))`; the body has `base: "rating_version:motor-gb@3"`, `comparison: "rating_version:motor-gb@2"`, `context.purpose: "what_if"`, `context.inputs: { driver_age: 34, channel: "direct" }`; `expect(body.context).not.toHaveProperty("options")` (03:1060's 422); `expect(scoreQuote).not.toHaveBeenCalled()` | After C1's picker lands, `score()` (`:62-68`) still calls `scoreQuote`, so `scoreCompare` has 0 calls |
 | C3 | `scoreCompare.mockRejectedValue(problem(422, "INPUT_CONTRACT_VIOLATION", "comparison: driver_age is above its max"))` (`problem` is `:74-76`); select a comparison; submit | `await waitFor(() => expect(screen.queryByRole("alert")).toHaveTextContent("comparison: driver_age is above its max"))` | `scoreQuote` is called and resolves `RESULT`, so no alert renders |
 | C5 (guard) | No comparison chosen; `fillAndSubmit()` | `await waitFor(() => expect(scoreQuote).toHaveBeenCalledTimes(1))`; `expect(scoreCompare).not.toHaveBeenCalled()` | **Green on arrival, by design**: it holds today's path. Broken-input proof for the `LG-`: make `score()` always call `scoreCompare`, and C5 goes red at `not.toHaveBeenCalled()` |
@@ -407,7 +414,7 @@ never in scope.
 | B2 | the `s_ipt` row has text `Changed through its inputs`, and the same `toBeNull()` |
 | B3 | the `s_new` row has `Added in comparison`, its `Base produced` cell is `—` and its `Comparison produced` cell is `{"loading":"1.05"}` |
 | B4 | the `m_ncd__s_cap` row exists, shows `m_ncd__s_cap` verbatim and has `Edited; its inputs also changed` |
-| B5 (DP-2, RL 8057) | the table's accessible name contains `11 steps unchanged for this quote`; the body has exactly 5 rows, in fixture order (`s_rate`, `s_total`, `s_ipt`, `m_ncd__s_cap`, `s_new`): only `diff.steps` become rows. **Broken-input proof for the `LG-`** (RL 8057 Acceptance 3 and 4) *(amended 2026-10-16 by the planner (seat planner-8054b), pre-merge, applying RL 8057, working id)*: (i) append one row not in `diff.steps`, and B5 goes red at the row count; (ii) drop "for this quote" from the caption, and B5 goes red at the accessible-name assert |
+| B5 (DP-2, RL 8057; condition (2) of the maintainer's `to-lead.md` entry "2026-10-16 09:49:25 BST": the caption keeps "for this quote") | the table's accessible name contains `11 steps unchanged for this quote`; the body has exactly 5 rows, in fixture order (`s_rate`, `s_total`, `s_ipt`, `m_ncd__s_cap`, `s_new`): only `diff.steps` become rows. **Broken-input proof for the `LG-`** (RL 8057 Acceptance 3 and 4) *(amended 2026-10-16 by the planner (seat planner-8054b), pre-merge, applying RL 8057, working id)*: (i) append one row not in `diff.steps`, and B5 goes red at the row count; (ii) drop "for this quote" from the caption, and B5 goes red at the accessible-name assert |
 | B6 | `const summary = screen.queryByRole("table", { name: "Both results" }); expect(summary).not.toBeNull()` (red on the stub at this assert); it shows both refs, `quoted` and `declined`, and `formatAmount(63000)` and `formatAmount(60000)` |
 
 Then mount it in the view and add **C4** to `QuoteSandboxView.test.ts`: select a comparison,
@@ -426,7 +433,9 @@ both. If both are ruled (a), the design above applies as written.
 *(amended 2026-10-16 by the planner (seat planner-8054b), pre-merge, applying RL 8057, working id)* **Both are ruled (a) by RL 8057.** The design applies as written, plus Task 2 Step T1.
 DP-1's premise is corrected: the route is generated and used, but **undeclared in `03` §5.1
 until T1** (RL 8057 "Verified first" item 7). DP-2 answers `RL-1261:100-104` for WK-675; no open
-question is raised. No row is open, so the plan is `active`.
+question is raised. No row is open, but the plan stays `draft` until RL 8057 is minted and on
+`origin/main` (Context 7's added need; the maintainer's `to-lead.md` entry "2026-10-16 09:49:25
+BST", condition (3)).
 
 | DP | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
@@ -455,8 +464,8 @@ question is raised. No row is open, so the plan is `active`.
 8. **The gate is green on the slice's merge tree** (`PL-1546` item 8): the `CLAUDE.md` §11
    commands, both halves, each rc 0, against `origin/main...<slice branch>`, in a gate slot the
    lead grants.
-9. **T1 is in the spec (DP-1, RL 8057 Acceptance 1)** *(amended 2026-10-16 by the planner (seat planner-8054b), pre-merge, applying RL 8057, working id)*: this command prints T1's
-   row and only it:
+9. **T1 is in the spec, exactly one row (DP-1, RL 8057 Acceptance 1; condition (1) of the maintainer's `to-lead.md` entry "2026-10-16 09:49:25 BST")** *(amended 2026-10-16 by the planner (seat planner-8054b), pre-merge, applying RL 8057, working id)*: this command prints
+   exactly one line, T1's row:
 
    ```
    git grep -nE '^\| `GET` \| `/api/v1/rating-versions` \|' -- docs/specs/03-rating-engine.md
