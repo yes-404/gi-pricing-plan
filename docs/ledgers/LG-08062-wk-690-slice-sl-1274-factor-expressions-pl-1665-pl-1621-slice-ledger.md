@@ -210,3 +210,11 @@ the FE tests RED at `d88d2218`, GREEN at the next commit; (2) `generate-contract
 copies and `openapi/generated.json` carry the enum); (3) `pnpm generate:api`, FE `type-check` and `test` (the
 test literals type-check only once the client is regenerated); (4) `ruff`, `mypy`, `lint-imports`; (5) `audit-docs.py`
 under the gate-2 flock; (6) the two GBM backends' full `test_gbm.py` / `test_diagnostics.py`.
+
+**2026-10-16 10:41 BST — re-merge of `origin/main` `a2f77b2d`.** `git merge-tree --write-tree origin/main HEAD` at
+`86e42d79` returned rc 0 (no conflicts); `git merge --no-ff origin/main` then merged clean, tree `498888d1`, the tree
+the dry run predicted. Conflicts: none, so no hand resolution. The new head is the merge commit this entry rides in
+(its sha is read from `git log`, not pasted here). Files #1309's range (`0877e6e7..a2f77b2d`) touches that the slice
+also touches: `docs/roadmap.md` and `docs/specs/03-rating-engine.md`; both merged without a conflict. **Owed (nothing
+was run; the ALONE latency gate forbids it):** `docs/INDEX.md` regeneration (`doc-index.py`, then `--check`, under
+the gate-2 flock) and `generate-contracts.py --check`; both after GATE END.
