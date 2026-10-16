@@ -24,7 +24,9 @@ declare its own source data out of range. `closed="right"` is the mirror image.
 
 from __future__ import annotations
 
+import ast
 import math
+from collections.abc import Iterable
 from typing import Literal
 from uuid import UUID
 
@@ -40,6 +42,12 @@ from model_schema import (
     OneWayRow,
     new_uuid7,
 )
+from pricing_core.data.expressions import (
+    ExpressionError,
+    GrammarProfile,
+    compile_expression,
+    parse_expression,
+)
 from pricing_core.data.profile import one_way
 from pricing_core.modelling.errors import BandingError, FactorResolutionError
 
@@ -48,12 +56,64 @@ __all__ = [
     "band_statistics",
     "check_banding",
     "propose_banding",
+    "source_columns_of",
 ]
 
 #: `credibility` merging stops here rather than at one band. A single band is not a
 #: banding; it is the column removed from the model, which is a decision an actuary makes
 #: rather than one a merge loop reaches.
 _MIN_BANDS = 2
+
+
+def _subject(over: Banding | BandingProposal) -> str:
+    """What a banding is cut over, for a message: its column or its expression's text."""
+    return over.column if over.column is not None else str(over.source_expression)
+
+
+def source_columns_of(
+    over: Banding | BandingProposal, available: Iterable[str]
+) -> tuple[str, ...]:
+    """The dataset columns a banding (or proposal) reads, among `available` (`RL-1615`).
+
+    A column banding reads its column. An expression banding reads the columns its
+    expression names, parsed by the one parser in the `factor` profile with the dataset
+    version's columns as the bound symbols: a name that is not among them is refused with
+    its position (FR-95).
+    """
+    if over.column is not None:
+        return (over.column,)
+    names = frozenset(available)
+    try:
+        tree = parse_expression(
+            str(over.source_expression), GrammarProfile.FACTOR, symbols=names
+        )
+    except (ExpressionError, SyntaxError) as exc:
+        raise FactorResolutionError(
+            f"the source_expression {over.source_expression!r} is refused: {exc} (FR-95)."
+        ) from exc
+    return tuple(sorted({n.id for n in ast.walk(tree) if isinstance(n, ast.Name)} & names))
+
+
+def _cut_values(frame: pl.DataFrame, over: Banding | BandingProposal) -> pl.Series:
+    """The values a banding is cut over: a column, or an expression's result (`RL-1615`)."""
+    if over.column is not None:
+        if over.column not in frame.columns:
+            raise FactorResolutionError(
+                f"cannot band {over.column!r}: this dataset version does not have it (FR-87)."
+            )
+        return frame[over.column]
+    try:
+        return frame.with_columns(
+            compile_expression(
+                str(over.source_expression),
+                profile=GrammarProfile.FACTOR,
+                symbols=frozenset(frame.columns),
+            ).alias("_cut_over")
+        )["_cut_over"]
+    except (ExpressionError, SyntaxError) as exc:
+        raise FactorResolutionError(
+            f"the source_expression {over.source_expression!r} is refused: {exc} (FR-95)."
+        ) from exc
 
 
 def propose_banding(
@@ -80,13 +140,8 @@ def propose_banding(
             "judgement, and inventing some to be edited would put the platform's name on "
             "them. Persist the boundaries directly instead.",
         )
-    column = proposal.column
-    if column not in frame.columns:
-        raise FactorResolutionError(
-            f"cannot band {column!r}: this dataset version does not have it (FR-87)."
-        )
-
-    values = frame[column].cast(pl.Float64)
+    column = _subject(proposal)
+    values = _cut_values(frame, proposal).cast(pl.Float64)
     finite = values.drop_nulls().drop_nans()
     if finite.len() == 0:
         raise BandingError(
@@ -114,7 +169,8 @@ def propose_banding(
         slug=slug,
         dataset_id=dataset_id,
         version=1,
-        column=column,
+        column=proposal.column,
+        source_expression=proposal.source_expression,
         method=proposal.method,
         method_params=_method_params(proposal, boundaries),
         derived_on_dataset_version_id=proposal.dataset_version_id,
@@ -190,7 +246,7 @@ def _boundaries(
     if len(cuts) < 2:
         raise BandingError(
             "FACTOR_RESOLUTION_FAILED",
-            f"{proposal.column!r} takes too few distinct values to cut into bands: every "
+            f"{_subject(proposal)!r} takes too few distinct values to cut into bands: every "
             "proposed boundary collapsed onto the same point. Treat it as a categorical "
             "factor, or band it manually.",
         )
@@ -364,7 +420,7 @@ def _tree(
     if not thresholds:
         raise BandingError(
             "FACTOR_RESOLUTION_FAILED",
-            f"a tree on {proposal.column!r} found no split that reduces weighted error — "
+            f"a tree on {_subject(proposal)!r} found no split that reduces weighted error — "
             "the response does not vary with this column in this dataset version. "
             "Quantile boundaries would have returned something, which is why this refuses "
             "instead.",
@@ -455,7 +511,7 @@ def apply_banding(series: pl.Series, banding: Banding) -> pl.Series:
         if banding.null_level is None:
             raise FactorResolutionError(
                 f"banding {banding.slug!r} met {int(missing.sum())} null value(s) in "
-                f"{banding.column!r} and declares no `null_level` (FR-97). A missing "
+                f"{_subject(banding)!r} and declares no `null_level` (FR-97). A missing "
                 "value is not a band; give the banding a null level or filter the rows."
             )
         out[missing] = banding.null_level
@@ -479,7 +535,7 @@ def _resolve_edge(
         offending = series.cast(pl.Float64).to_numpy()[mask]
         raise FactorResolutionError(
             f"banding {banding.slug!r}: {int(mask.sum())} value(s) of "
-            f"{banding.column!r} fall {edge} the banded range (boundary {boundary:g}, "
+            f"{_subject(banding)!r} fall {edge} the banded range (boundary {boundary:g}, "
             f"e.g. {float(offending[0]):g}), and `{edge}_range` is `error` "
             "(FR-97). The policy exists so this cannot pass silently."
         )
@@ -509,7 +565,7 @@ def band_statistics(
     In **band order**, not the alphabetical order a group-by returns: `10-14` sorts before
     `5-9` as text, and a relativity chart with its bands shuffled is read as noise.
     """
-    banded = frame.with_columns(apply_banding(frame[banding.column], banding).alias("_band"))
+    banded = frame.with_columns(apply_banding(_cut_values(frame, banding), banding).alias("_band"))
     summary = one_way(
         banded,
         column="_band",

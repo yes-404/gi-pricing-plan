@@ -9,6 +9,7 @@ from pricing_core.modelling.bandings import (
     band_statistics,
     check_banding,
     propose_banding,
+    source_columns_of,
 )
 from pricing_core.modelling.comparison import ComparisonCandidate, compare_models
 from pricing_core.modelling.diagnostics import (
@@ -29,7 +30,13 @@ from pricing_core.modelling.errors import (
     ObjectiveError,
     RoundBudgetExceededError,
 )
-from pricing_core.modelling.factors import FactorMatrix, rateable, resolve_factors
+from pricing_core.modelling.factors import (
+    FactorMatrix,
+    is_certainly_numeric,
+    normalised_expression,
+    rateable,
+    resolve_factors,
+)
 from pricing_core.modelling.gbm import (
     SUPPORTED_GBM_OBJECTIVES,
     GbmFit,
@@ -116,9 +123,11 @@ __all__ = [
     "fit_gbm",
     "fit_glm",
     "grouping_evidence",
+    "is_certainly_numeric",
     "linear_predictor",
     "make_lgb_objective",
     "make_xgb_objective",
+    "normalised_expression",
     "objective_family",
     "predict_gbm",
     "predict_glm",
@@ -126,6 +135,7 @@ __all__ = [
     "propose_grouping",
     "rateable",
     "resolve_factors",
+    "source_columns_of",
     "tree_summary",
     "unit_deviance",
 ]

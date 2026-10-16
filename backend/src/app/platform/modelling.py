@@ -45,6 +45,7 @@ from model_schema import (
     Diagnostics,
     EbmFitResult,
     Factor,
+    FieldError,
     FactorType,
     FitResult,
     GbmFitResult,
@@ -63,6 +64,8 @@ from model_schema import (
     Permission,
     Principal,
 )
+from pricing_core.data.expressions import ExpressionError, GrammarProfile, parse_expression
+from pricing_core.modelling import is_certainly_numeric, normalised_expression
 from pricing_core.modelling.factors import FactorResolutionError
 
 __all__ = [
@@ -233,6 +236,8 @@ async def create_factor(
     await rbac.require_permission(
         session, workspace_id=workspace_id, principal=actor, permission=Permission.MODEL_FIT
     )
+    if factor.type is FactorType.EXPRESSION:
+        await _require_a_creatable_expression(session, workspace_id=workspace_id, factor=factor)
 
     version = 1 + (
         await session.execute(
@@ -261,9 +266,85 @@ async def create_factor(
         action="factor.created",
         entity_ref=f"factor:{factor.slug}@{version}",
         after={"slug": factor.slug, "version": version, "type": factor.type.value,
-               "intent": factor.intent.value, "prohibited": factor.prohibited},
+               "intent": factor.intent.value, "prohibited": factor.prohibited,
+               "expression": factor.expression},
     )
     return row
+
+
+async def _require_a_creatable_expression(
+    session: AsyncSession, *, workspace_id: UUID, factor: Factor
+) -> None:
+    """`RL-1615` DP-S4-2 (creation): 422 at the edge, before anything is stored.
+
+    Four refusals: a parse error or an undeclared column (FR-95), both in `RL-1362` DP-S3-3's
+    positioned form (`RL-1700` (b)); a pinned Banding whose `source_expression` differs from
+    the expression; and an expression that is certainly numeric and pins no Banding (FR-210).
+    The platform raises them rather than a validator on `Factor`, because a request-validation
+    422 drops a message that carries a position or a column name. The bound symbols are the
+    Factor's own `source_columns`: "dataset columns only" (`RL-1700` (a)).
+    """
+    expression = factor.expression
+    assert expression is not None  # `Factor` refuses an expression type without one
+    symbols = frozenset(factor.source_columns)
+    line: int | None = None
+    column: int | None = None
+    reason: str | None = None
+    try:
+        parse_expression(expression, GrammarProfile.FACTOR, symbols=symbols)
+    except ExpressionError as exc:
+        line, column = exc.lineno, None if exc.col_offset is None else exc.col_offset + 1
+        reason = str(exc)
+    except SyntaxError as exc:
+        line, column, reason = exc.lineno, exc.offset, exc.msg
+    if reason is not None:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "The expression is outside the factor grammar",
+            422,
+            "`02` §4.6's `factor` profile refused the expression (FR-95).",
+            errors=(
+                FieldError(
+                    field="expression",
+                    code="VALIDATION_FAILED",
+                    message=reason if line is None else f"line {line}, column {column}: {reason}",
+                ),
+            ),
+        )
+
+    if factor.banding_id is None:
+        if is_certainly_numeric(expression, symbols):
+            raise PlatformError(
+                "VALIDATION_FAILED",
+                "A numeric expression must be banded",
+                422,
+                f"The expression {expression!r} is certainly numeric and names no banding_id. "
+                "A continuous Factor cannot be rated or reviewed until FR-210 is delivered: "
+                "pin a Banding cut over this expression (`02` FR-97).",
+            )
+        return
+
+    banding = (
+        await transformations.load_bandings(
+            session, workspace_id=workspace_id, ids=[factor.banding_id]
+        )
+    )[factor.banding_id]
+    cut_over = banding.source_expression
+    try:
+        same = cut_over is not None and normalised_expression(
+            cut_over, symbols
+        ) == normalised_expression(expression, symbols)
+    except (ExpressionError, SyntaxError):
+        same = False
+    if not same:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "The pinned banding was cut over another expression",
+            422,
+            f"The expression is {expression!r} and the pinned banding's source_expression is "
+            f"{cut_over!r}. The two must parse to the same expression, so a new expression "
+            "needs a new Banding version (FR-96, FR-101).",
+        )
 
 
 async def list_factors(
