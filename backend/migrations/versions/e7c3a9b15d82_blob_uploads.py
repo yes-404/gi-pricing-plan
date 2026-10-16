@@ -32,7 +32,7 @@ def upgrade() -> None:
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column("workspace_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("principal_id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("key", sa.String(255), nullable=False),
+        sa.Column("staging_key", sa.String(255), nullable=False),
         sa.Column("s3_upload_id", sa.String(255), nullable=True),
         sa.Column("part_count", sa.Integer(), nullable=False),
         sa.Column("media_type", sa.String(255), nullable=False),
@@ -42,7 +42,7 @@ def upgrade() -> None:
         ),
         sa.Column("complete_by", sa.DateTime(timezone=True), nullable=False),
         sa.Column("job_id", postgresql.UUID(as_uuid=True), nullable=True),
-        sa.Column("digest", sa.String(64), nullable=True),
+        sa.Column("sha256", sa.String(64), sa.ForeignKey("blobs.sha256"), nullable=True),
         sa.CheckConstraint(
             "part_count BETWEEN 1 AND 10000", name=op.f("ck_blob_uploads_part_count_in_range")
         ),

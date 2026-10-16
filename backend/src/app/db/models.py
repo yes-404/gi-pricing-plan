@@ -2605,10 +2605,10 @@ class BlobUploadRow(Base):
     a `dataset:write` holder in another workspace who learned a key could complete it and own
     the bytes. `workspace_id` is the authorisation boundary for completion; `principal_id` is
     recorded, not checked. `job_id` is set when the upload is completed and makes a repeat
-    completion return the first Job; `digest` is set, in the transaction that writes the `blobs`
+    completion return the first Job; `sha256` (a foreign key to `blobs.sha256`) is set, in the transaction that writes the `blobs`
     row and takes its reference, when the promotion has run.
 
-    `s3_upload_id`, `part_count`, `job_id`, `principal_id`, `key` and `digest` are the
+    `s3_upload_id`, `part_count`, `job_id`, `principal_id`, `staging_key` and `sha256` are the
     executor's names for fields `RL-1724` describes without naming (lead-accepted 2026-10-16).
     """
 
@@ -2617,7 +2617,7 @@ class BlobUploadRow(Base):
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
     workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     principal_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
-    key: Mapped[str] = mapped_column(String(255), nullable=False)
+    staging_key: Mapped[str] = mapped_column(String(255), nullable=False)
     s3_upload_id: Mapped[str | None] = mapped_column(String(255))
     part_count: Mapped[int] = mapped_column(Integer, nullable=False)
     media_type: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -2626,7 +2626,7 @@ class BlobUploadRow(Base):
     )
     complete_by: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     job_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
-    digest: Mapped[str | None] = mapped_column(String(64))
+    sha256: Mapped[str | None] = mapped_column(String(64), ForeignKey("blobs.sha256"))
 
     __table_args__ = (
         CheckConstraint("part_count BETWEEN 1 AND 10000", name="part_count_in_range"),

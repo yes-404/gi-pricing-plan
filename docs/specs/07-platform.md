@@ -316,14 +316,14 @@ executor and accepted by the lead on 2026-10-16.
 | `id` | uuid7, primary key | the Blob Upload's id, returned by `upload-url` and used in `/api/v1/blobs/uploads/{id}/complete` |
 | `workspace_id` | uuid | the caller's workspace |
 | `principal_id` | uuid | the requesting principal *(executor-named)* |
-| `key` | text | the staging key |
+| `staging_key` | text | the staging key *(executor-named)* |
 | `s3_upload_id` | text, null for one part | the S3 multipart upload id; this is the `upload_id` the `upload-url` response returns *(executor-named)* |
 | `part_count` | integer, `1..10000` | the declared part count *(executor-named)* |
 | `media_type` | text | the media type |
 | `created_at` | timestamptz | creation time |
 | `complete_by` | timestamptz | `created_at` + 24 h |
 | `job_id` | uuid, null until completed | the completing Job's id *(executor-named)* |
-| `digest` | text, null until promoted | the promoted digest *(executor-named)* |
+| `sha256` | text, null until promoted; foreign key to `blobs.sha256` | the promoted digest, named as the blob's own primary key *(executor-named)* |
 
 ---
 

@@ -106,7 +106,7 @@ async def upload_url(
         id=new_uuid7(),
         workspace_id=caller.workspace_id,
         principal_id=caller.principal.id,
-        key=presigned.key,
+        staging_key=presigned.key,
         s3_upload_id=presigned.upload_id,
         part_count=body.parts,
         media_type=body.media_type,

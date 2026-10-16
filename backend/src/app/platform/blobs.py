@@ -337,11 +337,11 @@ class BlobStore:
                 raise PlatformError(
                     "NOT_FOUND", "Blob Upload not found", 404, f"No Blob Upload {upload_id}."
                 )
-            if upload.digest is not None:
-                promoted = await session.get(BlobRow, upload.digest)
+            if upload.sha256 is not None:
+                promoted = await session.get(BlobRow, upload.sha256)
                 assert promoted is not None
                 return to_ref(promoted)
-            key, s3_upload_id = upload.key, upload.s3_upload_id
+            key, s3_upload_id = upload.staging_key, upload.s3_upload_id
             part_count, media_type = upload.part_count, upload.media_type
 
         await asyncio.to_thread(self._complete_staged, key, s3_upload_id, part_count)
@@ -362,7 +362,7 @@ class BlobStore:
         async with database.unit_of_work() as session:
             locked = await session.get(BlobUploadRow, upload_id, with_for_update=True)
             assert locked is not None
-            if locked.digest is None:
+            if locked.sha256 is None:
                 await session.execute(
                     pg_insert(BlobRow)
                     .values(
@@ -375,7 +375,7 @@ class BlobStore:
                     .on_conflict_do_nothing(index_elements=["sha256"])
                 )
                 await retain(session, digest)
-                locked.digest = digest
+                locked.sha256 = digest
             row = await session.get(BlobRow, digest)
             assert row is not None
             ref = to_ref(row)
