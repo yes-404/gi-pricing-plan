@@ -236,7 +236,7 @@ the re-merge. `jobs.py` stays out of `SL-1258`'s write set (DP-Q4 (b)).
 
 ## Acceptance Standard
 
-1. **This delta passes the docs checks on its own branch**, the working-id lines excepted (check 32's `PL-8061 does not resolve in docs/INDEX.md` and check 39's stale `docs/INDEX.md`, both cleared at mint):
+1. **This delta passes the docs checks on its own branch**, the working-id lines excepted (check 32's "does not resolve in docs/INDEX.md" on this plan's own id and check 39's stale `docs/INDEX.md`, both cleared at mint):
    `python3 scripts/audit-docs.py` exits 0 apart from them.
 2. **E4.8, no blob seeding in the ingest test:** at `SL-1258`'s head that contains E4.8,
    ```
