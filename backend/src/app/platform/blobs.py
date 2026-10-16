@@ -55,12 +55,13 @@ from model_schema import BlobRef, JobSource, Principal, new_uuid7
 if TYPE_CHECKING:  # pragma: no cover
     from app.db.session import Database
     from mypy_boto3_s3.client import S3Client
+    from mypy_boto3_s3.type_defs import PartTypeDef
 
 __all__ = [
     "QUOTE_INPUT_BLOB_COLUMNS",
-    "BlobStore",
     "STAGING_EXPIRY_DAYS",
     "UPLOAD_COMPLETE_WITHIN",
+    "BlobStore",
     "GarbageCollectionReport",
     "PresignedUpload",
     "blob_key",
@@ -79,6 +80,7 @@ _CHUNK_SIZE: Final = 1024 * 1024  # 1 MiB
 #: must stay shorter than this, whatever the store does.
 STAGING_EXPIRY_DAYS: Final = 2
 UPLOAD_COMPLETE_WITHIN: Final = timedelta(hours=24)
+_STAGING_RULE_ID: Final = "expire-staging"  # the bucket lifecycle rule this module owns
 
 
 def blob_key(sha256: str) -> str:
@@ -146,19 +148,30 @@ class BlobStore:
                 self._client.head_bucket(Bucket=self._bucket)
             except ClientError:
                 self._client.create_bucket(Bucket=self._bucket)
+            # `put_bucket_lifecycle_configuration` replaces every rule on the bucket, so read
+            # first and replace only this module's rule, by its ID: an operator's own rules
+            # survive a restart.
+            try:
+                existing = self._client.get_bucket_lifecycle_configuration(Bucket=self._bucket)
+                kept = [r for r in existing.get("Rules", []) if r.get("ID") != _STAGING_RULE_ID]
+            except ClientError as exc:
+                if exc.response.get("Error", {}).get("Code") != "NoSuchLifecycleConfiguration":
+                    raise
+                kept = []
             self._client.put_bucket_lifecycle_configuration(
                 Bucket=self._bucket,
                 LifecycleConfiguration={
                     "Rules": [
+                        *kept,
                         {
-                            "ID": "expire-staging",
+                            "ID": _STAGING_RULE_ID,
                             "Status": "Enabled",
                             "Filter": {"Prefix": "staging/"},
                             "Expiration": {"Days": STAGING_EXPIRY_DAYS},
                             "AbortIncompleteMultipartUpload": {
                                 "DaysAfterInitiation": STAGING_EXPIRY_DAYS
                             },
-                        }
+                        },
                     ]
                 },
             )
@@ -398,7 +411,7 @@ class BlobStore:
                 ) from exc
             return
 
-        parts: list[dict[str, Any]] = []
+        parts: list[PartTypeDef] = []
         marker = 0
         try:
             while True:
@@ -414,7 +427,12 @@ class BlobStore:
                 raise
             # A re-run after S3 completed the upload but before the row committed: the
             # multipart upload is gone and the object is whole.
-            self._client.head_object(Bucket=self._bucket, Key=key)
+            try:
+                self._client.head_object(Bucket=self._bucket, Key=key)
+            except ClientError as head_exc:
+                raise _validation(
+                    "The upload is missing", f"No object was uploaded to {key}."
+                ) from head_exc
             return
 
         present = {int(part["PartNumber"]) for part in parts}

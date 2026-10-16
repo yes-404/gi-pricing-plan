@@ -32,8 +32,8 @@ def upgrade() -> None:
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column("workspace_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("principal_id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("staging_key", sa.String(255), nullable=False),
-        sa.Column("s3_upload_id", sa.String(255), nullable=True),
+        sa.Column("staging_key", sa.Text(), nullable=False),
+        sa.Column("s3_upload_id", sa.Text(), nullable=True),
         sa.Column("part_count", sa.Integer(), nullable=False),
         sa.Column("media_type", sa.String(255), nullable=False),
         sa.Column(

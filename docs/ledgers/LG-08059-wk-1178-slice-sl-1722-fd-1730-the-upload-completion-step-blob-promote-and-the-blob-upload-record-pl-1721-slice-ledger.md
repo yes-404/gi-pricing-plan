@@ -201,6 +201,37 @@ Conformant by the lead's reading: columns in §4.5, model and migration agree; `
   4. `backend/tests/test_contracts.py` (the `ONE_SIDED_SLUGS` guard and the generated-versus-authored comparisons), `backend/tests/test_deployment_route_types.py`, `backend/tests/test_api_blob_uploads.py`; then the W2 `test_upload_to_ingest.py` once with Redis down (the fixture must FAIL with the reason, not skip: a broken-input proof of ruling B) and once up (PASSED).
   5. Docs checks under the gate-2 flock: `audit-docs.py` (the `_CONTRACT_ARTIFACT_PATHS` entries need the regenerated files to exist), `doc-index.py --check`.
 
+### Pre-gate review fixes (executor, 2026-10-16, writing only — no run)
+
+The lead adopted the findings of an independent pre-gate review. Each was verified against the code first; every one was real. Branch `sl-1722-wk1178-fd1730-upload-404`, from `63d26b48`. Line numbers are at this commit.
+
+| Finding | Lead verdict | Change |
+|---|---|---|
+| F2 two `ONE_SIDED_SLUGS` lines were 101 and 102 characters (`pyproject.toml` `line-length = 100`; measured by character, not byte) | fix | `backend/tests/test_contracts.py:95-100`: each value wrapped in parentheses |
+| F3 `__all__` unsorted (RUF022: SCREAMING_CASE, then CamelCase, then the rest) | fix | `backend/src/app/platform/blobs.py:60-64`: `STAGING_EXPIRY_DAYS`, `UPLOAD_COMPLETE_WITHIN` now follow `QUOTE_INPUT_BLOB_COLUMNS` and precede `BlobStore` |
+| F4 `parts: list[dict[str, Any]]` extended with `list[PartTypeDef]`, an `arg-type` error under `mypy --strict` (TypedDict is not a `dict[str, Any]`) | fix, no cast | `blobs.py:58` imports `PartTypeDef` under `TYPE_CHECKING`; `blobs.py:414` `parts: list[PartTypeDef]`. The repo had no earlier boto3 type-def use (`git grep -n TypeDef -- backend/src` printed nothing before this change) |
+| F5 multi-line `get_bucket_lifecycle_configuration(...)` that fits one line | fix | `backend/tests/test_blobs.py:329`: one line, as `ruff format` writes it |
+| F6 `NoSuchUpload` branch: `head_object` unguarded, a raw `ClientError` on a 404 | fix + test | `blobs.py:431-436`: guarded; raises `_validation("The upload is missing", ...)`, the same failure the single-part branch raises |
+| F7 `put_bucket_lifecycle_configuration` replaces every rule on the bucket | fix + test | `blobs.py:83` `_STAGING_RULE_ID`; `blobs.py:151-177`: read the configuration, drop only the rule with this ID, write it back with ours; `NoSuchLifecycleConfiguration` means no other rules |
+| F8 `staging_key` and `s3_upload_id` were `String(255)`; `07` §4.5 says text | fix, spec unchanged | `backend/src/app/db/models.py:2621-2622` `Text`; `backend/migrations/versions/e7c3a9b15d82_blob_uploads.py:35-36` `sa.Text()` (the revision is new on this branch, absent from `origin/main`, so it is edited in place) |
+| F9 `assert "2" in job["error"]["detail"]` | fix | `backend/tests/test_api_blob_uploads.py:202`: `== "Expected parts 1 to 2; missing part(s) 2."`, the exact text `_complete_staged` builds |
+| Q3 `07` §5.1 `upload-url` row: the 2026-09-28 sentences | superseded, struck | `docs/specs/07-platform.md:352`: the clause "and nothing yet moves it ... a spec change of their own." is struck with `~~...~~` and a dated tag. "The object lands on a staging key" is still true and stays |
+
+**Tests added** (all in `backend/tests/`, each with a named breaker):
+
+- (a) `test_api_blob_uploads.py:206` `test_a_repeated_completion_after_a_failed_promotion_returns_the_first_job` (RL-1724 "Repeat completion").
+- (b) `test_api_blob_uploads.py:235` `test_another_principal_with_write_in_the_workspace_may_complete` (RL-1724 "Who may complete"). No principal check was added to the route.
+- (c) `test_blobs.py:395` `test_completing_a_finished_multipart_upload_again_finds_the_object` (the `NoSuchUpload` retry), and `test_blobs.py:409` `test_a_gone_multipart_upload_with_no_object_is_the_named_failure` (F6).
+- F7: `test_blobs.py:337` `test_ensure_bucket_keeps_a_rule_it_does_not_own` (also calls `ensure_bucket` twice: our rule is replaced, not duplicated) and `test_blobs.py:361` `test_ensure_bucket_sets_the_rule_on_a_bucket_with_no_configuration`.
+
+**OWED after GATE END (SL-1455); none of these was run in this window** (no pytest, uv, mypy, ruff, generate-contracts, audit-docs):
+
+1. `uv run python scripts/generate-contracts.py`, then `--check` rc 0. The generated `upload-url-request` and `upload-url-response` schemas and `generated.json` are not committed yet. The `job.schema.json` `blob.promote` line must come from the generator, never from a hand edit.
+2. `uv run ruff check .` and `uv run ruff format --check` (the wrapped `ONE_SIDED_SLUGS` values and the new test bodies are hand-formatted); `uv run mypy` (F4: `part["PartNumber"]` and `part["ETag"]` are `NotRequired` keys on `PartTypeDef`; F7: `LifecycleRuleOutputTypeDef` rules passed back as `LifecycleRuleUnionTypeDef`); `uv run lint-imports`.
+3. The new tests, red first then green. Red: revert `blobs.py` for F6 and F7 and the F8 `Text` change is covered by the migration run; the API tests (a) and (b) are expected green at once, as they pin behaviour the route already has. Then `backend/tests/test_blobs.py`, `test_api_blob_uploads.py`, `test_contracts.py`.
+4. `alembic upgrade head` on a fresh database, 1 head (F8 edits a revision in place), and the DP-7 head-order check.
+5. Docs checks under the gate-2 flock: `audit-docs.py` (07 §5.1 strike), `doc-index.py --check`.
+
 ## PRs
 
 - (none opened yet; the lead opens it.)

@@ -2618,8 +2618,8 @@ class BlobUploadRow(Base):
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
     workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     principal_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
-    staging_key: Mapped[str] = mapped_column(String(255), nullable=False)
-    s3_upload_id: Mapped[str | None] = mapped_column(String(255))
+    staging_key: Mapped[str] = mapped_column(Text, nullable=False)
+    s3_upload_id: Mapped[str | None] = mapped_column(Text)
     part_count: Mapped[int] = mapped_column(Integer, nullable=False)
     media_type: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(

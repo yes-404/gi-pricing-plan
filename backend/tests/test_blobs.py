@@ -10,6 +10,7 @@ import hashlib
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from botocore.exceptions import ClientError
 from sqlalchemy import select, update
 
 from app.db.models import AuditEventRow, BlobRow
@@ -325,10 +326,97 @@ async def _age_blob(database: Database, sha256: str, *, days: int) -> None:
 async def test_ensure_bucket_sets_the_staging_lifecycle_rule(blob_store: BlobStore) -> None:
     """RL-1724 DP-U1.2: staged objects and incomplete multipart uploads expire after 2 days."""
     await blob_store.ensure_bucket()
-    config = blob_store._client.get_bucket_lifecycle_configuration(
-        Bucket=blob_store._bucket
-    )
+    config = blob_store._client.get_bucket_lifecycle_configuration(Bucket=blob_store._bucket)
     prefixes = {
         rule.get("Filter", {}).get("Prefix") or rule.get("Prefix") for rule in config["Rules"]
     }
     assert "staging/" in prefixes
+
+
+@pytest.mark.req("FR-421")
+async def test_ensure_bucket_keeps_a_rule_it_does_not_own(blob_store: BlobStore) -> None:
+    """Breaker: PUT the lifecycle configuration without reading it -> the operator's rule is
+    gone after a restart, and so is every other rule on the bucket."""
+    client, bucket = blob_store._client, blob_store._bucket
+    foreign = {
+        "ID": "operator-expire-tmp",
+        "Status": "Enabled",
+        "Filter": {"Prefix": "tmp/"},
+        "Expiration": {"Days": 9},
+    }
+    client.put_bucket_lifecycle_configuration(
+        Bucket=bucket, LifecycleConfiguration={"Rules": [foreign]}
+    )
+    try:
+        await blob_store.ensure_bucket()
+        await blob_store.ensure_bucket()  # idempotent: our rule is replaced, not duplicated
+        ids = [r["ID"] for r in client.get_bucket_lifecycle_configuration(Bucket=bucket)["Rules"]]
+        assert sorted(ids) == ["expire-staging", "operator-expire-tmp"]
+    finally:
+        client.delete_bucket_lifecycle(Bucket=bucket)
+        await blob_store.ensure_bucket()
+
+
+@pytest.mark.req("FR-421")
+async def test_ensure_bucket_sets_the_rule_on_a_bucket_with_no_configuration(
+    blob_store: BlobStore,
+) -> None:
+    """A bucket with no lifecycle configuration answers `NoSuchLifecycleConfiguration`; that is
+    the first-start case, not an error."""
+    client, bucket = blob_store._client, blob_store._bucket
+    client.delete_bucket_lifecycle(Bucket=bucket)
+    await blob_store.ensure_bucket()
+    rules = client.get_bucket_lifecycle_configuration(Bucket=bucket)["Rules"]
+    assert [r["ID"] for r in rules] == ["expire-staging"]
+
+
+def _client_error(code: str, operation: str) -> ClientError:
+    return ClientError({"Error": {"Code": code, "Message": code}}, operation)
+
+
+class _StagedStub:
+    """Stands in for the S3 client where the real store cannot be made to answer as needed."""
+
+    def __init__(self, *, list_parts: Exception, head: Exception | None) -> None:
+        self._list_parts, self._head = list_parts, head
+        self.head_calls = 0
+
+    def list_parts(self, **_: object) -> dict[str, object]:
+        raise self._list_parts
+
+    def head_object(self, **_: object) -> dict[str, object]:
+        self.head_calls += 1
+        if self._head is not None:
+            raise self._head
+        return {}
+
+
+@pytest.mark.req("FR-421")
+async def test_completing_a_finished_multipart_upload_again_finds_the_object(
+    blob_store: BlobStore,
+) -> None:
+    """S3 completed the upload but the row did not commit: the multipart upload is gone
+    (`NoSuchUpload`) and the object is whole, so the retry succeeds.
+
+    Breaker: re-raise `NoSuchUpload` -> the retry fails for ever on a promoted object."""
+    stub = _StagedStub(list_parts=_client_error("NoSuchUpload", "ListParts"), head=None)
+    blob_store._client = stub
+    blob_store._complete_staged("staging/k", "gone", 2)
+    assert stub.head_calls == 1
+
+
+@pytest.mark.req("FR-421")
+async def test_a_gone_multipart_upload_with_no_object_is_the_named_failure(
+    blob_store: BlobStore,
+) -> None:
+    """Breaker: leave the `head_object` after `NoSuchUpload` unguarded -> a raw `ClientError`
+    reaches the Job as an unclassified failure."""
+    stub = _StagedStub(
+        list_parts=_client_error("NoSuchUpload", "ListParts"),
+        head=_client_error("404", "HeadObject"),
+    )
+    blob_store._client = stub
+    with pytest.raises(PlatformError) as caught:
+        blob_store._complete_staged("staging/k", "gone", 2)
+    assert caught.value.code == "VALIDATION_FAILED"
+    assert caught.value.title == "The upload is missing"

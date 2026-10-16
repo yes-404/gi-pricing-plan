@@ -199,7 +199,52 @@ async def test_a_missing_part_fails_the_promotion_by_name(
     job = api_client.get(f"/api/v1/jobs/{completed.json()['id']}", headers=writer).json()
     assert status is JobStatus.FAILED
     assert job["error"]["code"] == "VALIDATION_FAILED"
-    assert "2" in job["error"]["detail"]
+    assert job["error"]["detail"] == "Expected parts 1 to 2; missing part(s) 2."
+
+
+@pytest.mark.req("FR-421")
+async def test_a_repeated_completion_after_a_failed_promotion_returns_the_first_job(
+    api_client: TestClient, database: Database, blob_store: BlobStore, writer
+) -> None:
+    """RL-1724 "Repeat completion": the first Job, whatever its state; a failed promotion
+    ends the Blob Upload and does not start a second Job.
+
+    Breaker: start a new Job when the recorded one is `failed` -> two Job ids."""
+    response = api_client.post(
+        "/api/v1/blobs/upload-url", json={"media_type": "text/csv", "parts": 2}, headers=writer
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert httpx.put(body["urls"][0], content=b"x" * 5 * 1024 * 1024, timeout=60).status_code == 200
+    first = _complete(api_client, writer, body["id"])
+    assert first.status_code == 202, first.text
+    assert await _run(database, blob_store, first.json()["id"]) is JobStatus.FAILED
+    second = _complete(api_client, writer, body["id"])
+    assert second.status_code == 202, second.text
+    assert second.json()["id"] == first.json()["id"]
+    assert second.json()["status"] == "failed"
+    count = await _scalar(
+        database,
+        "select count(*) from jobs where kind = 'blob.promote' and workspace_id = :w",
+        w=writer["Workspace-Id"],
+    )
+    assert count == 1
+
+
+@pytest.mark.req("FR-421")
+async def test_another_principal_with_write_in_the_workspace_may_complete(
+    api_client: TestClient, writer, workspace_id, grant
+) -> None:
+    """RL-1724 "Who may complete": any caller with `dataset:write` in the Blob Upload's
+    workspace, not only the principal that requested it.
+
+    Breaker: add a `principal_id == caller` check to the completion lookup -> 404/403."""
+    upload_id, _ = _upload(api_client, writer, [_payload()])
+    colleague = new_uuid7()
+    await grant("analyst", principal_id=colleague)
+    other = {DEV_PRINCIPAL_HEADER: str(colleague), "Workspace-Id": str(workspace_id)}
+    response = _complete(api_client, other, upload_id)
+    assert response.status_code == 202, response.text
 
 
 @pytest.mark.req("FR-419")
