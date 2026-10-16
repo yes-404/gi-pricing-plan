@@ -74,6 +74,7 @@ already carries, and you must not strip, any of:
 - the single `flock` — two non-blocking attempts with `-E 99`, then one blocking wait.
   `-E 99` is load-bearing: `flock -n`'s busy-lock code is otherwise `1`, the same value a
   failing command returns, and the loop then re-runs the whole gate on every slot.
+- **one gate-1 flock across BOTH halves.** Hold the slot from the first Python stage to the last frontend command; a release between the halves lets a queued run in, and "a free slot between gate halves is not a release". Do not take the slot twice. *(Amended 2026-10-14 by the maintainer, dated line by delegation, on the entry "2026-10-14 10:45:59 BST — Your two process corrections ACCEPTED; root cause: neither rule is in a role or skill file → fix the FILES in D16 (re lead 10:45:15)" in `to-lead.md`, item 2.)*
 
 This file used to restate that list as seven bare commands. It had already drifted from
 the skill in two ways — no thread caps, no per-worktree database — which is the whole
