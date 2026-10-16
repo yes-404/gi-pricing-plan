@@ -32,8 +32,10 @@ from app.platform import settings as settings_service
 from app.platform.modelling import resolve_offset_model, to_factor
 from model_schema import (
     FITTABLE_OBJECTIVE_STATUSES,
+    ColumnProfile,
     DatasetStatus,
     Factor,
+    FactorType,
     GbmSpec,
     GlmSpec,
     JobSource,
@@ -67,6 +69,39 @@ async def _limits(
     return max_factors.effective_value, min_exposure.effective_value
 
 
+def _expression_levels(factor: Factor, columns: dict[str, ColumnProfile]) -> int | None:
+    """An upper bound on the distinct values of an `expression` Factor, or `None`.
+
+    **The rule: the product, over the factor's source columns, of each column's level
+    count** — `distinct_count`, plus one for the null when the column has nulls, because
+    `distinct_count` excludes them and an expression may map a null to a value of its own.
+
+    **Why it never undercounts.** An expression is a function of one row's values in its
+    source columns (FR-95: "evaluated over dataset columns only"), so it
+    cannot take more distinct values than those columns take distinct *combinations*, and
+    the product bounds the number of combinations. A pinned Banding (FR-97) maps the
+    expression's values onto bands: a function of the values again, so no more bands are
+    populated than values exist. A numeric result with no Banding is refused (FR-95
+    at creation for a certainly-numeric root, FR-208 at resolution for the rest, both naming
+    FR-210), so the bound never has to cover a continuous result.
+
+    **Over-counts, by design.** Correlated columns have fewer combinations than the
+    product, and a banding collapses many values to a few. Both over-estimate, which is
+    fail-safe: the estimate gates a *refusal*, and an over-count refuses a spec that might
+    have fitted, where an under-count lets through one that cannot.
+
+    `None` where a source column is absent from the profile: no count means no bound, and
+    the caller refuses rather than guess a number.
+    """
+    levels = 1
+    for name in factor.source_columns:
+        column = columns.get(name)
+        if column is None:
+            return None
+        levels *= column.distinct_count + (1 if column.null_count else 0)
+    return levels
+
+
 def _estimated_parameters(factors: list[Factor], profile: Profile | None) -> int:
     """Fitted parameters a spec would spend, from the profile rather than the data.
 
@@ -79,14 +114,35 @@ def _estimated_parameters(factors: list[Factor], profile: Profile | None) -> int
     is over-counted here, so the gate is conservative in the direction that refuses a spec
     which would in fact have fitted. The diagnostics record the true count after the fit
     (FR-185), and that is the number a reviewer reads.
+
+    **An expression Factor is counted by `_expression_levels`, never from
+    `source_columns[0]`.** The first column alone under-counts a formula over several, and
+    an under-count weakens the refusal this estimate feeds (the maintainer, 2026-10-16
+    10:42:37, Q1; `LG-8062`). Where that bound is unknown the factor adds the one parameter
+    any factor adds and `_unbounded_expressions` reports it so the gate can refuse.
     """
-    counts = {c.name: c.distinct_count for c in profile.columns} if profile else {}
+    columns = {c.name: c for c in profile.columns} if profile else {}
     total = 1  # the intercept
     for factor in factors:
-        source = factor.source_columns[0] if factor.source_columns else factor.slug
-        distinct = counts.get(source)
+        distinct: int | None
+        if factor.type is FactorType.EXPRESSION:
+            distinct = _expression_levels(factor, columns)
+        else:
+            source = factor.source_columns[0] if factor.source_columns else factor.slug
+            column = columns.get(source)
+            distinct = column.distinct_count if column else None
         total += max(distinct - 1, 1) if distinct and distinct > 1 else 1
     return total
+
+
+def _unbounded_expressions(factors: list[Factor], profile: Profile | None) -> list[str]:
+    """Slugs of expression Factors whose level count the profile cannot bound."""
+    columns = {c.name: c for c in profile.columns} if profile else {}
+    return [
+        f.slug
+        for f in factors
+        if f.type is FactorType.EXPRESSION and _expression_levels(f, columns) is None
+    ]
 
 
 def complexity_or_refuse(
@@ -133,6 +189,25 @@ def complexity_or_refuse(
                         f"workspace's {min_exposure_per_parameter} (FR-185). The "
                         "parameter count is estimated from the version's profile, so a "
                         "banded factor is counted at its unbanded levels."
+                    ),
+                )
+            )
+
+    if min_exposure_per_parameter is not None:
+        # An expression whose levels cannot be bounded makes `parameters` a floor, not an
+        # estimate, so the exposure test above proves nothing for it. Refuse — but only
+        # where a limit is set: with none there is no gate to weaken (OQ-580).
+        for slug in _unbounded_expressions(factors, profile):
+            problems.append(
+                SpecProblem(
+                    kind=SpecProblemKind.COMPLEXITY_LIMIT,
+                    subject=slug,
+                    message=(
+                        f"the expression factor {slug!r} reads a column the version's "
+                        "profile does not cover, so its level count cannot be bounded and "
+                        "the parameter estimate would under-count (FR-185). Profile the "
+                        "column, or the spec cannot be checked against "
+                        "modelling.min_exposure_per_parameter."
                     ),
                 )
             )

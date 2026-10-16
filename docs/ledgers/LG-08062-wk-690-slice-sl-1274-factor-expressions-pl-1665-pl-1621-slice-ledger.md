@@ -218,3 +218,24 @@ the dry run predicted. Conflicts: none, so no hand resolution. The new head is t
 also touches: `docs/roadmap.md` and `docs/specs/03-rating-engine.md`; both merged without a conflict. **Owed (nothing
 was run; the ALONE latency gate forbids it):** `docs/INDEX.md` regeneration (`doc-index.py`, then `--check`, under
 the gate-2 flock) and `generate-contracts.py --check`; both after GATE END.
+
+**2026-10-16 BST — the estimate never undercounts an expression Factor (the maintainer, 10:42:37, Q1).** The ruling
+fixed FD 8068's `model_specs.py` limb IN S4, not as a deferred limb: `_estimated_parameters` sized every factor from
+`source_columns[0]`, which under-counts a formula over several columns, and the estimate gates `complexity_or_refuse`,
+so the under-count weakened a refusal. The red-first test is `backend/tests/test_model_specs_expression_estimate.py`
+(commit `e97b293c`): a 10 x 10 two-column expression over a floor of 10.5 is refused, the same spec at exactly 10.0 is
+accepted. The fix commit follows it.
+
+*The rule* (docstring of `_expression_levels` in `backend/src/app/platform/model_specs.py`): an expression Factor is
+counted at the **product of its source columns' level counts** (`distinct_count`, plus one for a column that has nulls),
+because a function of a row's values cannot take more distinct values than the columns take combinations (FR-95:
+evaluated over dataset columns only), and a pinned Banding maps those values onto no more bands. A numeric result with
+no Banding is refused upstream (FR-95 at creation, FR-208 at resolution), so no continuous result needs bounding. Where
+a source column is absent from the profile the bound is unknown, and the gate refuses the spec with a
+`complexity_limit` problem naming the factor, but only when `modelling.min_exposure_per_parameter` is set (no limit
+means no gate, OQ-580). Correlated columns and banding make the product an over-estimate, which is the fail-safe
+direction.
+
+FD 8068 records this limb as discharged by S4; the auditor updates FD 8068, this slice does not edit it. `rating/runtime.py`
+is untouched. **Owed (nothing was run; the ALONE latency gate forbids it):** the new tests RED at `e97b293c` and GREEN
+at the fix commit; `ruff`, `mypy`; `test_model_specs.py` beside them (the existing gate tests must still pass).
