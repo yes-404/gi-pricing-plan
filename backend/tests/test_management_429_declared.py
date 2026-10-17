@@ -13,9 +13,12 @@ dependency, or if an operation outside the list has none, so the list cannot rot
 
 from __future__ import annotations
 
+from collections.abc import Iterator, Sequence
 from typing import Any
 
 import pytest
+from fastapi.routing import APIRoute
+from starlette.routing import BaseRoute
 
 API_PREFIX = "/api/v1"
 _METHODS = frozenset({"get", "put", "post", "delete", "options", "head", "patch", "trace"})
@@ -71,6 +74,28 @@ def test_every_operation_that_can_return_429_declares_it(app: Any) -> None:
     assert not advertised, f"declares 429 but cannot return it: {advertised}"
 
 
+def _flattened_operations(
+    routes: Sequence[BaseRoute], prefix: str = ""
+) -> Iterator[tuple[str, str, APIRoute]]:
+    """Every `(METHOD, path, route)`, descending into included routers.
+
+    FastAPI wraps `include_router` in an `_IncludedRouter` that holds the included router's routes
+    as `original_router.routes` and the include's `prefix` in `include_context`, so `app.routes`
+    alone shows none of the `/api/v1` operations (the same descent as
+    `test_api_authorisation_sweep._flattened_operations`).
+    """
+    for route in routes:
+        original = getattr(route, "original_router", None)
+        if original is not None:
+            yield from _flattened_operations(
+                original.routes,
+                prefix + route.include_context.prefix,  # type: ignore[attr-defined]
+            )
+        elif isinstance(route, APIRoute) and route.include_in_schema:
+            for method in sorted(route.methods):
+                yield method, prefix + route.path, route
+
+
 def _calls(dependant: Any) -> list[Any]:
     found = []
     for sub in dependant.dependencies:
@@ -98,18 +123,15 @@ def test_the_cannot_429_list_matches_the_routes_dependencies(app: Any) -> None:
     Red: an excluded route gains `requires()` / `counted_caller` / the scoring limiter (it can
     now 429 and must declare it), or a counted route loses its dependency (it should join the
     list)."""
-    from fastapi.routing import APIRoute
-
     seen = set()
-    for route in app.routes:
-        if not isinstance(route, APIRoute) or not route.path.startswith(f"{API_PREFIX}/"):
+    for method, path, route in _flattened_operations(app.routes):
+        if not path.startswith(f"{API_PREFIX}/"):
             continue
         counted = any(_counts(call) for call in _calls(route.dependant))
-        for method in route.methods:
-            key = (method.lower(), route.path)
-            seen.add(key)
-            if key in _CANNOT_429:
-                assert not counted, f"{method} {route.path} is excluded but now counts"
-            else:
-                assert counted, f"{method} {route.path} has no counting dependency: exclude it?"
+        key = (method.lower(), path)
+        seen.add(key)
+        if key in _CANNOT_429:
+            assert not counted, f"{method} {path} is excluded but now counts"
+        else:
+            assert counted, f"{method} {path} has no counting dependency: exclude it?"
     assert set(_CANNOT_429) <= seen, f"stale exclusions: {sorted(set(_CANNOT_429) - seen)}"
