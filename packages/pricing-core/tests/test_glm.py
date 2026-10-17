@@ -39,9 +39,10 @@ from pricing_core.modelling.factors import FactorResolutionError, resolve_factor
 
 
 def _factor(slug: str, column: str, **over: object) -> Factor:
+    fields: dict[str, object] = {"type": FactorType.IDENTITY, **over}
     return Factor(
         id=uuid4(), slug=slug, dataset_id=uuid4(), version=1,
-        type=FactorType.IDENTITY, source_columns=(column,), **over,
+        source_columns=(column,), **fields,
     )
 
 
