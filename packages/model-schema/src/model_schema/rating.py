@@ -11,7 +11,6 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from decimal import Decimal
 from enum import StrEnum
 from itertools import pairwise
 from typing import Annotated, Any, Final, Literal, Protocol
@@ -30,7 +29,7 @@ from pydantic import (
 
 from model_schema.graph_errors import GraphCycleError, GraphUnresolvedRefError
 from model_schema.input_free import InputFreeError
-from model_schema.money import DecimalStr
+from model_schema.money import DecimalStr, SchemaDecimal
 from model_schema.refs import ArtifactRef, BlobRef, Slug
 from model_schema.regression import GoldenQuoteEvidence
 from model_schema.scoring import MountPurpose
@@ -296,8 +295,8 @@ class InputContractField(BaseModel):
     name: str
     type: RatingInputType
     nullable: bool = False
-    min: Decimal | int | None = None
-    max: Decimal | int | None = None
+    min: SchemaDecimal | int | None = None
+    max: SchemaDecimal | int | None = None
     pattern: str | None = None
     domain: list[str] | None = None
     description: str | None = None
@@ -1178,8 +1177,8 @@ class RateTableValue(BaseModel):
     name: str
     type: RateTableValueType
     unit: str
-    min: Decimal | int | None = None
-    max: Decimal | int | None = None
+    min: SchemaDecimal | int | None = None
+    max: SchemaDecimal | int | None = None
 
 
 class RateTableCell(RootModel[dict[str, str]]):
@@ -1237,10 +1236,10 @@ class RateTableDiff(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     changed_cells: int = Field(ge=0)
-    max_abs_change_pct: Decimal | None = None
-    exposure_weighted_mean_change_pct: Decimal | None = None
-    portfolio_exposure: Decimal | None = None
-    matched_exposure: Decimal | None = None
+    max_abs_change_pct: SchemaDecimal | None = None
+    exposure_weighted_mean_change_pct: SchemaDecimal | None = None
+    portfolio_exposure: SchemaDecimal | None = None
+    matched_exposure: SchemaDecimal | None = None
 
 
 class RateTableDiffCell(BaseModel):
@@ -1260,11 +1259,11 @@ class RateTableDiffCell(BaseModel):
 
     key: dict[str, str]
     change: Literal["added", "removed", "changed"]
-    baseline_value: Decimal | None = None
-    current_value: Decimal | None = None
-    abs_change: Decimal | None = None
-    rel_change_pct: Decimal | None = None
-    weight: Decimal | None = None
+    baseline_value: SchemaDecimal | None = None
+    current_value: SchemaDecimal | None = None
+    abs_change: SchemaDecimal | None = None
+    rel_change_pct: SchemaDecimal | None = None
+    weight: SchemaDecimal | None = None
 
 
 class RateTableChange(BaseModel):

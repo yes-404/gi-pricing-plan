@@ -61,7 +61,7 @@ from model_schema.modelling import (
 from model_schema.perils import LargeLossKind, PerilMethod, PerilStructure
 from model_schema.rating import RatingAlgorithm, RatingModelCallStep
 from pricing_core.modelling.errors import ModellingError
-from pricing_core.modelling.gbm import load_gbm_booster, predict_gbm
+from pricing_core.modelling.gbm import GbmFitError, load_gbm_booster, predict_gbm
 from pricing_core.modelling.predict import PredictionError, linear_predictor, predict_glm
 from pricing_core.rating.compile import (
     Bundle,
@@ -768,10 +768,15 @@ def _model_call_handler(
                 )
         except _ModelCallRefusal as refusal:
             return _model_call_failure(step, str(refusal), context)
-        except (ModellingError, PredictionError) as exc:
+        except (ModellingError, PredictionError, GbmFitError) as exc:
             # The code only: a `PredictionError`'s own text can carry a quote's value (an unseen
             # factor level, `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`), and a coded error keeps its text
             # as it stands (NFR-499, RL-917), so the model's text is never passed on.
+            # `GbmFitError` is neither of the other two (all three subclass `RuntimeError`
+            # directly), and `predict_gbm` raises it for an unseen level: uncaught here, it
+            # surfaced as the zen binding's generic `NodeError`, with no code (SL 8071). It is
+            # caught by name, not by making it a `ModellingError`, because the fit handlers
+            # and `transparency.py` catch and raise it on their own terms.
             return _model_call_failure(
                 step,
                 f"{exc.code}: {ref_str} could not be scored for this quote (FR-255)",
