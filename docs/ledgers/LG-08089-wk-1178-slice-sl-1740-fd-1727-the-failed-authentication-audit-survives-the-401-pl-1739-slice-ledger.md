@@ -89,3 +89,17 @@ arise there.
 - R11 note: the failure path takes **two sequential** checkouts (the rollback returns the
   connection; the audit write takes another), never two held at once. `test_score_request_cost.py`'s
   `MAX_CHECKOUTS == 1` is for the success path; R11 asserts the maximum held at once is 1.
+
+## R11 refinement, 2026-10-17 18:20 BST (the maintainer's ruling to the lead, relayed in the executor-1740d brief)
+
+The removed success-path R11 test is restored as two: `/score` success asserts total checkouts 1 and
+max held 1 (SL-1455's rule); `GET /environments` success asserts max held 1 only, because that route
+opens its own sessions and three sequential checkouts are legal (the rule is concurrency). The
+failing-path asserts (max held 1, total 2) are unchanged.
+
+DB window 3 (2026-10-17, small-test slot, per-worktree DB, dropped rc 0): `test_auth_failure_audit.py`
+at this tree, **16 passed** (rc 0), in 11.35 s.
+
+## PRs
+
+Not opened yet; the lead opens the PR.

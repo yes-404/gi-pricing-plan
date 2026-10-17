@@ -10,10 +10,21 @@ separate unit (DP-1 (i)) but a rejected token resolves to no workspace, so it wr
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import pytest
+from backend.tests.test_score import (  # noqa: F401  (fixtures, imported the way sibling files do)
+    SCORE_URL,
+    SCORED_REF,
+    _quote,
+    _set_trace_sample_rate,
+    admin_headers,
+    compiled_version,
+    scoring_headers,
+)
 from fastapi.testclient import TestClient
 from sqlalchemy import event, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -291,16 +302,10 @@ async def test_r8_a_failing_audit_write_on_the_bearer_path_cannot_arise(
     assert await _all_events(database) == before
 
 
-async def test_r11_a_failed_api_key_request_never_holds_two_pool_connections(
-    client: TestClient, database: Database, workspace_id
-) -> None:
-    """SL-1455's one-connection rule (`deps.py` `require_caller` docstring), on the failure path.
-
-    The checkout counting pattern of `test_score_request_cost.py`, with check-in as well: the
-    rollback returns the connection before the audit write takes one, so the two are
-    sequential and at most one is ever held.
-    """
-    token, _, _ = await _key(database, workspace_id, revoked=True)
+@contextmanager
+def _pool_counts(client: TestClient) -> Iterator[dict[str, int]]:
+    """Pool checkouts and the most held at once, over the block (the `test_score_request_cost.py`
+    checkout counting, with check-in as well)."""
     engine = client.app.state.database.engine.sync_engine  # type: ignore[attr-defined]
     seen = {"held": 0, "max_held": 0, "checkouts": 0}
 
@@ -315,18 +320,67 @@ async def test_r11_a_failed_api_key_request_never_holds_two_pool_connections(
     event.listen(engine, "checkout", _checkout)
     event.listen(engine, "checkin", _checkin)
     try:
-        response = _get(client, token)
+        yield seen
     finally:
         event.remove(engine, "checkout", _checkout)
         event.remove(engine, "checkin", _checkin)
 
+
+async def test_r11_a_failed_api_key_request_never_holds_two_pool_connections(
+    client: TestClient, database: Database, workspace_id
+) -> None:
+    """SL-1455's one-connection rule (`deps.py` `require_caller` docstring), on the failure path.
+
+    The rollback returns the connection before the audit write takes one, so the two are
+    sequential and at most one is ever held.
+    """
+    token, _, _ = await _key(database, workspace_id, revoked=True)
+    with _pool_counts(client) as seen:
+        response = _get(client, token)
+
     assert response.status_code == 401
     assert seen["max_held"] == 1, seen
     # R11 (a): the rollback returns the connection, the audit write takes exactly one more.
-    # The success path total of 1 is held by `test_score_request_cost.py` (MAX_CHECKOUTS) on
-    # /score; `GET /environments` takes three (its handler opens its own sessions).
     assert seen["checkouts"] == 2, seen
     assert len(await _failure_rows(database, workspace_id)) == 1
+
+
+async def test_r11_a_successful_score_request_takes_one_checkout_and_holds_one(
+    client: TestClient,
+    database: Database,
+    workspace_id,
+    scoring_headers: dict[str, str],  # noqa: F811
+    compiled_version,  # noqa: F811
+) -> None:
+    """The success path on `/score`: total 1 (SL-1455's rule) and never two held at once."""
+    await _set_trace_sample_rate(database, workspace_id, 0.0)
+    body = _quote({"rating_version_ref": SCORED_REF})
+    warm = client.post(SCORE_URL, json=body, headers=scoring_headers)
+    assert warm.status_code == 200, warm.text
+
+    with _pool_counts(client) as seen:
+        response = client.post(SCORE_URL, json=body, headers=scoring_headers)
+
+    assert response.status_code == 200, response.text
+    assert seen["checkouts"] == 1, seen
+    assert seen["max_held"] == 1, seen
+
+
+async def test_r11_a_successful_environments_request_never_holds_two_pool_connections(
+    client: TestClient, database: Database, workspace_id
+) -> None:
+    """The success path on `GET /environments`: the concurrency rule only.
+
+    That handler opens its own sessions, so three sequential checkouts are legal (the rule is
+    concurrency, the maintainer's 2026-10-17 18:20 ruling); its total of 3 is an observation
+    and is not asserted.
+    """
+    token, _, _ = await _key(database, workspace_id)
+    with _pool_counts(client) as seen:
+        response = _get(client, token)
+
+    assert response.status_code == 200, response.text
+    assert seen["max_held"] == 1, seen
 
 
 # -- R9: no secret in any failure row, and the rows exist ----------------------------------
