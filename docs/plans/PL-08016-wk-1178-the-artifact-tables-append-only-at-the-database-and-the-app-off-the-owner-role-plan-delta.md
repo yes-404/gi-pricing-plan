@@ -121,7 +121,7 @@ owner's credential.
    app can still do every write it legitimately does (red-first per refused path). Higher blast
    radius: it lands AFTER G2 and the SL-1455 NFR session (it touches every DB path), before the
    freeze, with a full gate + compose run.
-   - FD 8007 becomes a limb of S-a/S-b (its revoke matters only after S-b). FR-70 rides S-a.
+   - FD-1704 becomes a limb of S-a/S-b (its revoke matters only after S-b). FR-70 rides S-a.
    - A DECISION POINT for the planner: the owner can still `ALTER TABLE … DISABLE TRIGGER`, so
    S-b is what makes the trigger layer tamper-resistant; state that dependency in the FD."*
    The same entry's (A) and (B) agree FD-1728 (O-1; working id 8037) and FD-1729 (the root cause; working id 8038), both
@@ -149,7 +149,7 @@ owner's credential.
    `fd-8036-failed-auth-audit-2026-10-14` under working ids 8037 and 8038, not pushed when this
    plan was written, and minted in D17 (#1307, `0877e6e7`). FR-70 rides S-a (authority 1), as the maintainer (by delegation) placed it
    at "2026-10-14 11:06:52 BST", item 2: *"FR-70 is NOT in that FD: immutability by route absence
-   only is FD 8007/O-1's class. It joins that finding's table set (the artifact-family derivation),
+   only is FD-1704/O-1's class. It joins that finding's table set (the artifact-family derivation),
    with one remedy."*
 7. **The maintainer (by delegation), `to-lead.md` entry "2026-10-14 12:18:57 BST — PL 8044/SL
    8045 (failed-auth fix) and PL 8016 re-cut DPs RULED by me directly (no DM needed); superuser
@@ -161,7 +161,7 @@ owner's credential.
    scheduled AFTER the G2 merges, so models.py's G2 heat is not a conflict at its build time. The
    fallback (a test-file map) only if G2 slips past S-a's window; the planner states that switch.
    - DP-9 (forward-only guard on rate_tables.current_version), DP-10 (blob before row,
-   rate_tables.py:1480), DP-11 (publish-only guard, reference.py:229), DP-14 (FD 8038 states the
+   rate_tables.py:1480), DP-11 (publish-only guard, reference.py:229), DP-14 (FD-1729 states the
    DISABLE TRIGGER dependency + a startup check): as recommended.
    - **DP-15:** one idempotent provisioning SQL; my GO will NAME the target (the shared DB
    container), applied once, with before/after `\du` and grant read-backs in the LG.
@@ -172,7 +172,7 @@ owner's credential.
    the app today can bypass ALL triggers via `session_replication_role`, not only DISABLE
    TRIGGER. **S-b's startup refusal and test MUST assert the app's login role is NOT superuser,
    NOT the table owner, has NOBYPASSRLS, and cannot SET session_replication_role** (a red: the SET
-   attempted as the login role → refused). FD 8038's text states the superuser fact, measured by
+   attempted as the login role → refused). FD-1729's text states the superuser fact, measured by
    auditor-failauth with the query and output, and its HIGH stands."*
    This entry is the record for every DP it rules; no decision-maker `RL-` is written. The
    superuser item is S-b's **R-b6** (Task 4).
