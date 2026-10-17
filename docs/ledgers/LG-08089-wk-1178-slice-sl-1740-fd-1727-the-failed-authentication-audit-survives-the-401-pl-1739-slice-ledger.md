@@ -100,6 +100,12 @@ failing-path asserts (max held 1, total 2) are unchanged.
 DB window 3 (2026-10-17, small-test slot, per-worktree DB, dropped rc 0): `test_auth_failure_audit.py`
 at this tree, **16 passed** (rc 0), in 11.35 s.
 
+2026-10-17 21:23 BST, executor-1740f, on the maintainer's ruling "2026-10-17 21:20:40 BST" (to-lead.md), test-only, at 7f9b5b53:
+
+1. `test_auth_oidc.py::test_rejection_reasons_are_not_returned_to_the_caller`: security read first. The 401 is `AuthenticationFailed.__init__` (`backend/src/app/auth/service.py:107-127`, `super().__init__(code, "Authentication failed", 401, "The credential presented was not accepted. Quote the trace id when reporting it.")`); the reason is only an attribute for `record_auth_failure`. Bearer raise at service.py:178, API-key raises at 244, 253, 257, 265, 269, 277: none passes reason text into the body (code and detail identical to origin/main's `_unauthenticated`). Re-pointed from `_unauthenticated().to_problem()` (asserts on detail: no "signature", no "expired") to `AuthenticationFailed("UNAUTHENTICATED", reason).to_problem()` for every `AuthFailureReason`, same two detail asserts plus status 401 and `reason.value` absent from the whole serialised body (stronger). 10 passed, rc 0.
+2. `test_worker_raise_sites.py::_SITES`: the census differs by one key, `(service.py, _unauthenticated, <dynamic>)`, gone because the helper was replaced; the refusals remain, raised as `AuthenticationFailed` at the lines above, whose fixed detail is built in `__init__` through `super().__init__` (outside `_CALLEES`). Entry removed with a comment. 3 passed, rc 0.
+3. `RatingDesignView.test.ts` --maxWorkers=2, solo, no vitest running: sl-1547 (4c45b8f2) 7 passed rc 0; this tree (7f9b5b53) first run 1 failed/6 passed rc 1 (FR-1530: `Unable to find a label with the text of: input step Driver age (s_in_age)`), reruns 7 passed twice.
+
 ## PRs
 
 Not opened yet; the lead opens the PR.
