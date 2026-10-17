@@ -1044,7 +1044,7 @@ def downgrade() -> None:
   as the first cut drafted it (two `pytest.raises` blocks; messages `permission denied for
   table factors` and `factors is append-only: UPDATE rejected (01 FR-42, FR-43)`; then
   `has_table_privilege('gip_app', 'factors', 'UPDATE')` is `False` and the body is unchanged).
-  The code is at `e29de1bc`, `docs/plans/PL-08016-…-plan-delta.md:227-274`; copy it from there
+  The code is at `e29de1bc`, the first cut's plan file (working id 8016, lines 227-274); copy it from there
   and do not retype it. Before running, confirm that `database.session()` leaves a failed
   transaction uncommitted (`test_transformations.py:538-551` relies on it); if not, STOP.
 - [ ] **Step 3.2:** On the Task 1 commit (before the migration), the test is red at the first
