@@ -46,11 +46,38 @@ Quoted from `PL-1546`'s order table, row 1: "SL-1547 — S5: Editor II: diff sha
 
 ### Gate
 
-Not yet run.
+Proof-pair gate-1b (isolated: redis /2 and /4, buckets `gip-test-blobs-gate-1b` and `gip-blobs-demo-gate-1b`) at head `4c45b8f28e73db46f7bceaf9c0d75046e93448dc`, tree `b206c4e1077af7f1648d695f7f4c97c12145ee81`, START 2026-10-17T19:13:41Z, END 2026-10-17T20:27:40Z (logs: `~/gi-pricing-plan.local/scratch/sl1547-gate/`, `gate.log`). Static: ruff, mypy, import_linter, req_coverage, contracts rc 0; `audit_docs` rc 1 with exactly the two check-31 lines (expected until the mint). pytest: 13 failed, 5955 passed, 6 skipped; the 13 are the audit-docs cascade (each shells `audit-docs`; the cause is check 31). Frontend: install, generate:api, lint, type-check, build rc 0 and the tree unchanged after the gate; `pnpm test` rc 1 on one test only, `RatingDesignView.test.ts` FR-1530, classified a main flake counted against neither slice (the maintainer (by delegation) 2026-10-17 21:24:40 item (3); the lead's 21:28:51 verdict). Demo: designed stop 20:27:34Z, `--journey wf-699` rc 0. The gate acceptance is the lead's and the maintainer's to give. OWED, now closed by this audit's gate-2 block: the INDEX/audit/doc-index/register-lint runs.
 
 ### Audit
 
-Not yet written.
+*(Written by `auditor-1547`, 2026-10-17, on head `4c45b8f28e73db46f7bceaf9c0d75046e93448dc`, tree `b206c4e1077af7f1648d695f7f4c97c12145ee81`, range `origin/main...4c45b8f2`, `origin/main` = `9469721d` at fetch, `git merge-tree --write-tree origin/main 4c45b8f2` rc 0. Code read-only; no test run by the auditor; the gate is the lead's.)*
+
+**1. Change set** (`git diff --stat origin/main...4c45b8f2`, 38 paths, +1871 -41): `model-schema` `rating.py` (`ordered`), `regression.py` (`levels` grid), `pricing-core` `properties.py`/`replay.py`/`testing.py`, the authored `rating-algorithm.schema.json` and `regression-run.schema.json`, regenerated `openapi/generated.json` and `regression-run.schema.json`, `03` FR-213/FR-261, frontend api (`rateTables.ts`, `client.ts`), `components/rating/` (diff panel, bulk dialog, import/export, helpers), `QuoteForm`/`quoteForm.ts`, `RateTableEditorView.vue`, tests, roadmap, INDEX, this ledger. No backend source file.
+
+**2. Obligations (derived from `PL-1546` Acceptance 1-8, `PL-1668` Acceptance 1-8 and `RL-1613` first, then evidenced):**
+- **PL-1668 A1** hash unchanged: `packages/pricing-core/tests/test_rating_ordered_input.py:58-62` asserts `_hash(ordered=None) == _SCORE_FIXTURE_HASH` and the explicit `False` case; `git diff origin/main...4c45b8f2 -- test_rating_shadowed_inputs.py test_rating_wire_order.py` prints nothing; red-first proof is in the build log. DELIVERED.
+- **A2** opt-in enters the hash: `:66-69`. DELIVERED.
+- **A3** refusals: `packages/model-schema/tests/test_rating_ordered_input.py:44-55` (int, string, enum with no domain, enum with `[]`), each asserting `InputFreeError`. DELIVERED.
+- **A4** no input sweepable unasked: `backend/tests/test_regression_suites.py:330-336` keeps `not-orderable` unchanged and adds `unordered-enum` and `ordered-enum-with-a-bound`. DELIVERED (a backend DB test; passed in the gate pytest).
+- **A5** declared order and a planted inversion: `pricing-core` test `:125-136` (`broken_at == ("low","mid")`, counterexample `["mid","high"]`). DELIVERED.
+- **A6** contracts: `contracts.log` "49 generated contracts match the models"; `grep -c '"ordered"'` on `rating-algorithm.schema.json` = 2; `generate:api` left the tree unchanged. DELIVERED.
+- **A7** nothing typed on bulk-operation: `git diff` of `backend/src/app/api/rate_tables.py` is empty; `test_contracts.py:83` is the existing `bulk-operation-request` entry, no new entry in either pending list. DELIVERED.
+- **A8** drift rule: this ledger names S5 as merging second against `SL-1548`; the frontend suite ran on the merge tree (123 files; only FR-1530 red), type-check rc 0. DELIVERED.
+- **PL-1546 item 1** docs checks: see section 4. **Item 2** this ledger. **Item 4** met (A6). **Item 5** no chart added (shading and a paged panel only; no NFR-463 test needed). **Item 6** `OQ-1223` struck at `docs/open-questions.md:138`. **Item 7** is S7's. **Item 8** gate: see section 4.
+- **PL-1546 item 3** (a frontend `*.test.ts` names each FR): FR-231, FR-232, FR-233, FR-235, FR-25 and NFR-463 are named (`grep -rlE '<id>[^0-9]' frontend/src --include=*.test.ts`); **FR-230 is named by no frontend test** (only `backend/tests/test_wf699_journey.py:329` and `test_demo_rating_evidence.py:181`). Verdict: **delivered but untested at the frontend** (the seed-diff view is exercised by the FR-231/232 tests of the same panel); see finding A1.
+
+**3. CSV import path (CLAUDE.md section 7 and the trust boundary).** The S5 client (`RateTableImportExport.vue`, `rateTables.ts:80-104`) only sends the file as multipart (`accept=".csv,text/csv"` is a UI hint) and holds no number; bulk-operation values stay trimmed strings (`bulkOperation.ts`: "Decimals stay the strings typed"). Server side (not in this diff): `operations.py:868-877` `_parse_csv` rejects non-UTF-8 and empty files; values go through `Decimal(raw)` (`:307`, `:393`), with `InvalidOperation` turned into a validation issue; no `float(` in the module. Money rule: PASS. Validation: strict round trip at preview and confirm (`rate_tables.py` handler docstring), keys checked against the version's domain. Gap: see finding A2.
+
+**4. Gate and docs checks.** Gate: see `### Gate` (head and tree named; head = the audited head). Gate-2 block at `4c45b8f2`/tree `b206c4e1`: see the result line in section 6 (run after this edit, so its tree is the audit commit's).
+
+**5. Findings.**
+- **A1 (LOW, fix before merge):** FR-230 has no frontend test naming it, so `PL-1546` Acceptance 3 reads as unmet. Smallest fix: name `FR-230` in the diff panel test title (`RateTableDiffPanel.test.ts`) where the seed diff is asserted, or record the backend tests as the evidence by a lead ruling.
+- **A2 (MEDIUM, pre-existing, not S5's; owner WK-1178, lead to file):** `POST .../import` declares 413 (`rate_tables.py:272`) but the handler does `content = await file.read()` with no size cap and `_parse_csv`/`_parse_xlsx` take whole bytes; the datasets upload has its cap (`data/formats.py:65`). An oversized upload is read into memory. Not constructed or run.
+- **A3 (LOW, observation):** `Decimal("NaN")`/`Decimal("Infinity")` parse; whether the bounds check refuses them was not read. Not constructed or run.
+- **A4 (LOW, fixed here):** this ledger's `### Gate` and `### Audit` said `Not yet`; updated. The front-matter `tree:` is the activation base commit `3b2081b7` (a commit sha, as in other ledgers); left as is, because the convention for a re-merged branch is not stated in `document-ids.md`; the audited tree is named above.
+- **A5 (record):** the brief relayed "static rc 0"; the log shows `audit_docs` rc 1 (check 31 only, expected pre-mint). The FR-1530 solo 7/7 re-run is the lead's relay (21:28:51 entry); I did not find its log and did not verify it.
+
+**6. Proposed verdict:** all PL-1668 acceptance items evidenced; one requirement-level gap, FR-230's frontend test naming (A1, delivered but untested), to fix or rule before the PR; A2 is a pre-existing finding for the lead to file. Proposal only; the lead adopts, amends or rejects. MERGE-ACK: not yet given.
 
 ### Build log
 
