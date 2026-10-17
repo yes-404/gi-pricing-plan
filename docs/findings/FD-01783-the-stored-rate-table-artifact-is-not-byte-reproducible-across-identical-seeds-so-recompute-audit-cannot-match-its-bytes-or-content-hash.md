@@ -1,5 +1,5 @@
 ---
-id: FD-8092
+id: FD-1783
 family: finding
 title: The stored rate-table artifact is not byte-reproducible across identical seeds, so recompute-audit cannot match its bytes or content hash
 status: active
@@ -10,7 +10,9 @@ corrected_by: []
 relates: [WK-1178, SL-1543, FR-11, NFR-481]
 ---
 
-# FD-8092 — The stored rate-table artifact is not byte-reproducible across identical seeds, so recompute-audit cannot match its bytes or content hash
+# FD-1783 — The stored rate-table artifact is not byte-reproducible across identical seeds, so recompute-audit cannot match its bytes or content hash
+
+*(Minted 2026-10-17 as FD-1783 from working id 8092, in the D20 batch mint PR.)*
 
 ## Finding
 
@@ -35,7 +37,7 @@ Two full seeds of the same tree produce rate-table cell values that differ in th
 
 **3. Two-process probe** (lead's scratchpad `fitdet/`, run on `main` `9469721d`, threads unset, `nproc` 8, OpenBLAS 8 threads; `cmp.py` re-run by this auditor over the saved outputs): four GLM fits of one spec; max |Δcoef| against fit 1: `3.552713678800501e-15` (glm2), `6.661338147750939e-16` (glm3), `3.3306690738754696e-15` (glm4), 9 terms each, the intercept carrying the max in each; the XGBoost booster sha256 of two fits is **identical** (`gbm identical: True`). So the jitter is in the GLM solve (a thread-count-dependent BLAS reduction order is the natural suspect; this is a hypothesis, no probe varied the thread count), not in the boosters.
 
-**4. Precision FR search** (`grep -rniE` over `docs/specs/` for relativity, rate-table or materialisation precision, decimal places, quantise, significant digits at `cb5aa322`): **no FR sets a precision for a materialised relativity or rate-table cell value.** FR-245 (`03-rating-engine.md`) fixes the Decimal context for monetary arithmetic (28 significant digits, `ROUND_HALF_EVEN`), which governs evaluation, not what a fit writes into a cell; FR-21 (`00-overview.md`) refuses a float at the exact-decimal types. The stored cell value is a string of a float's shortest repr (see the values above). A quantisation precision is therefore a design choice the specs leave open and goes to a P3 open question, **OQ-8093**.
+**4. Precision FR search** (`grep -rniE` over `docs/specs/` for relativity, rate-table or materialisation precision, decimal places, quantise, significant digits at `cb5aa322`): **no FR sets a precision for a materialised relativity or rate-table cell value.** FR-245 (`03-rating-engine.md`) fixes the Decimal context for monetary arithmetic (28 significant digits, `ROUND_HALF_EVEN`), which governs evaluation, not what a fit writes into a cell; FR-21 (`00-overview.md`) refuses a float at the exact-decimal types. The stored cell value is a string of a float's shortest repr (see the values above). A quantisation precision is therefore a design choice the specs leave open and goes to a P3 open question, **OQ-1784**.
 
 ## Notes: decile tie-breaking
 
@@ -45,7 +47,7 @@ The decile diagnostics (item 2) move by the same mechanism and are not a second 
 
 **Deferred with an owner: WK-1178**, Phase 3 timing as WK-1178 sets it. Remedy options, **not picked**:
 
-- **(a)** Quantise relativities at materialisation to a declared precision, so that last-digit jitter cannot reach the stored bytes. The precision is OQ-8093, a P3 open question (no FR sets one; item 4). Risk to weigh: a quantisation edge can still split two near-equal values onto different sides, and the quantised value differs from the fit by up to the precision, which NFR-481 and FR-245 consumers must accept.
+- **(a)** Quantise relativities at materialisation to a declared precision, so that last-digit jitter cannot reach the stored bytes. The precision is OQ-1784, a P3 open question (no FR sets one; item 4). Risk to weigh: a quantisation edge can still split two near-equal values onto different sides, and the quantised value differs from the fit by up to the precision, which NFR-481 and FR-245 consumers must accept.
 - **(b)** Make thread counts deterministic (pin BLAS and library threads for fits), so the reduction order is fixed. Cheaper to state, but it binds to library versions and CPU behaviour (an identical thread count on a different CPU or BLAS build need not give identical bits) and costs fit speed.
 
 The event that next discharges it: a ruling or fix slice that picks a remedy, with a test that seeds twice and compares the stored rate-table bytes and content hash for equality (and, if tolerance is chosen instead, a spec change that says the artifact is reproducible to a tolerance and not byte for byte). The pence-impact measurement (a rating run over both seeds) is part of that slice's evidence.

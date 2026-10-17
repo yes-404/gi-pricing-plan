@@ -1,5 +1,5 @@
 ---
-id: FD-8086
+id: FD-1780
 family: finding
 title: A model_call's feature-collision check compares with `!=`, so two equal NaN values on one column raise the collision
 status: active
@@ -10,7 +10,9 @@ corrected_by: []
 relates: [WK-1178, SL-1761, FD-1753]
 ---
 
-# FD-8086 — A model_call's feature-collision check compares with `!=`, so two equal NaN values on one column raise the collision
+# FD-1780 — A model_call's feature-collision check compares with `!=`, so two equal NaN values on one column raise the collision
+
+*(Minted 2026-10-17 as FD-1780 from working id 8086, in the D20 batch mint PR.)*
 
 ## Finding
 

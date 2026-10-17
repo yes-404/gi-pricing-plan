@@ -1,5 +1,5 @@
 ---
-id: FD-8087
+id: FD-1781
 family: finding
 title: A TypeError raised in score escapes the property runner's except clause and reaches SanitisedError, which drops its message
 status: active
@@ -10,7 +10,9 @@ corrected_by: []
 relates: [WK-1178, SL-1543, WK-673]
 ---
 
-# FD-8087 — A TypeError raised in score escapes the property runner's except clause and reaches SanitisedError, which drops its message
+# FD-1781 — A TypeError raised in score escapes the property runner's except clause and reaches SanitisedError, which drops its message
+
+*(Minted 2026-10-17 as FD-1781 from working id 8087, in the D20 batch mint PR.)*
 
 ## Finding
 
