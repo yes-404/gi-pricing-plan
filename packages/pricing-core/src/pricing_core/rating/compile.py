@@ -983,6 +983,19 @@ def _model_factors(resolved: ResolvedArtifact) -> tuple[Factor, ...]:
     return factors
 
 
+def _model_slugs(resolved: ResolvedArtifact) -> set[str]:
+    """The feature slugs a pinned model reads: required inputs, offset model's, offset column."""
+    fit_result = resolved.payload.get("fit_result")
+    order = fit_result.get("feature_order", ()) if isinstance(fit_result, dict) else ()
+    slugs = set(required_model_inputs(resolved.factors, order))
+    if resolved.offset_source is not None:
+        slugs |= _model_slugs(resolved.offset_source)
+    column = (resolved.payload.get("spec") or {}).get("offset", {}).get("column")
+    if column:
+        slugs.add(column)
+    return slugs
+
+
 def check_model_call_columns(
     algorithm: RatingAlgorithm, resolved_pins: Mapping[str, ResolvedArtifact]
 ) -> None:
@@ -990,39 +1003,55 @@ def check_model_call_columns(
 
     `predict` keys the feature row by feature slug and then renames each slug to its Factor's
     source column, so two graph names that reach one slug, or two slugs that share one source
-    column, collapse to the last value with no error. Per `model_ref` step, the graph names
-    that reach one column (or one slug, for a Factor over several columns or a GBM feature)
-    must be one name. A graph name mapped to two slugs is one value and passes; two names that
-    are both outputs of `input` steps reading the same `input_name` are one value too and are
-    left to the score-time guard (`MODEL_CALL_FEATURE_COLLISION`), which compares values.
-    A `peril_structure_ref` step is not grouped here. The message names authored identifiers,
-    never a quote value (NFR-499).
+    column, collapse to the last value with no error. Per model the step scores, the graph
+    names that reach one column (or one slug, for a Factor over several columns or a GBM
+    feature) must be one name; a graph name mapped to two slugs is one value and passes. A
+    `peril_structure_ref` step is grouped per component model, with that component's offset
+    model, because each component scorer renames only its own slugs (the ruling of
+    "2026-10-17 11:15:37 BST", Q2). Two names are one value only when both are `input` steps
+    with the same `input_name` and `on_missing` (Q1); the score-time guard
+    (`MODEL_CALL_FEATURE_COLLISION`) stays the backstop. The message names authored
+    identifiers, never a quote value (NFR-499).
     """
     produced_by: dict[str, Any] = {}
     for step in algorithm.steps:
         for name in _produced_names(step):
             produced_by[name] = step
     for step in algorithm.steps:
-        if not isinstance(step, RatingModelCallStep) or step.model_ref is None:
+        if not isinstance(step, RatingModelCallStep):
             continue
-        columns = {
-            factor.slug: factor.source_columns[0]
-            for factor in _model_factors(resolved_pins[str(step.model_ref)])
-            if len(factor.source_columns) == 1
-        }
-        reached: dict[str, tuple[set[str], set[str]]] = {}
-        for name, slug in step.feature_map.items():
-            names, slugs = reached.setdefault(columns.get(slug, slug), (set(), set()))
-            names.add(name)
-            slugs.add(slug)
-        for column, (names, slugs) in sorted(reached.items()):
-            if len(names) > 1 and not _same_input(names, produced_by):
-                _raise_named(
-                    "MODEL_CALL_FEATURE_MAP_INVALID",
-                    f"step {step.step_id!r}: {sorted(names)} are different graph values fed to "
-                    f"{sorted(slugs)} of {step.model_ref}, which score one column {column!r}; "
-                    "the model would price on only one of them (FR-222, FR-240)",
-                )
+        if step.model_ref is not None:
+            scored = [(step.model_ref, resolved_pins[str(step.model_ref)], False)]
+        else:
+            assert step.peril_structure_ref is not None  # exactly one is set (FR-222)
+            structure = PerilStructure.model_validate(
+                resolved_pins[str(step.peril_structure_ref)].payload
+            )
+            scored = [
+                (ref, resolved_pins[str(ref)], True) for ref in peril_component_refs(structure)
+            ]
+        for model_ref, pin, restrict in scored:
+            columns = {
+                factor.slug: factor.source_columns[0]
+                for factor in _model_factors(pin)
+                if len(factor.source_columns) == 1
+            }
+            takes = _model_slugs(pin)
+            reached: dict[str, tuple[set[str], set[str]]] = {}
+            for name, slug in step.feature_map.items():
+                if restrict and slug not in takes:
+                    continue
+                names, slugs = reached.setdefault(columns.get(slug, slug), (set(), set()))
+                names.add(name)
+                slugs.add(slug)
+            for column, (names, slugs) in sorted(reached.items()):
+                if len(names) > 1 and not _same_input(names, produced_by):
+                    _raise_named(
+                        "MODEL_CALL_FEATURE_MAP_INVALID",
+                        f"step {step.step_id!r}: {sorted(names)} are different graph values fed "
+                        f"to {sorted(slugs)} of {model_ref}, which score one column {column!r}; "
+                        "the model would price on only one of them (FR-222, FR-240)",
+                    )
 
 
 def _produced_names(step: Any) -> list[str]:
@@ -1031,11 +1060,14 @@ def _produced_names(step: Any) -> list[str]:
 
 
 def _same_input(names: set[str], produced_by: Mapping[str, Any]) -> bool:
-    """True when every name is an `input` step's output and all read the same `input_name`."""
+    """True when every name is an `input` step's output with one `input_name` and `on_missing`.
+
+    The step carries no default of its own: a default comes from the input contract by
+    `input_name`, so the same `input_name` has the same default.
+    """
     steps = [produced_by.get(name) for name in names]
-    return all(isinstance(s, RatingInputStep) for s in steps) and (
-        len({s.input_name for s in steps if isinstance(s, RatingInputStep)}) == 1
-    )
+    inputs = [s for s in steps if isinstance(s, RatingInputStep)]
+    return len(inputs) == len(steps) and len({(s.input_name, s.on_missing) for s in inputs}) == 1
 
 
 async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> Bundle:

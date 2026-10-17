@@ -27,7 +27,7 @@ Branch `sl-8074-wk1178-fd8070-column-collision-2026-10-16`, worktree `.claude/wo
 - **Red-first commit (tests only):** `packages/pricing-core/tests/test_rating_column_collision.py`, four tests. Two of them were red for the wrong reason (compile's completeness check refused first, or the bundle could not be built); corrected in the fix commit, the assertions unchanged: a third graph name covers the second Factor, and the score-time tests build their bundle with the compile guard bypassed.
 - **Fix commit:** `_GlmScorer.predict` in `pricing_core/rating/runtime.py` (SL-1274's `MODEL_CALL_FEATURE_COLLISION` guard, verbatim); `check_model_call_columns` in `pricing_core/rating/compile.py`, called after `check_model_call_coverage`; its raise site is listed in `_INPUT_FREE` of `test_quote_input_raise_sites.py`.
 - **Spec:** `03` FR-222 and FR-240 dated amendments and the owned-codes entry for `MODEL_CALL_FEATURE_COLLISION`.
-- **Open decision points (the lead's):** `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl8074-dps.md`, Q1 (the `input`-step pair) and Q2 (peril components grouped per model). The unimplemented branches are named in the roadmap block.
+- **Decision points, ruled:** Q1 (b) precised and Q2 (b), the entry headed "2026-10-17 11:15:37 BST" in `to-lead.md`. The compile guard exempts only `input` steps with one `input_name` and `on_missing`, and groups a Peril Structure step per component Model with its offset Model. Tests: three Q1 cases and two Q2 cases in `test_rating_column_collision.py`. `test_rating_compile_completeness.py`'s helper-spy test now accepts the second reader of `required_model_inputs`.
 
 ## PRs
 

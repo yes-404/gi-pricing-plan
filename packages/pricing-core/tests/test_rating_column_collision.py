@@ -9,6 +9,7 @@ ordinary shared-column case); compile refuses what the graph shows with
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
@@ -22,10 +23,20 @@ from test_rating_glm_model_call import (
 )
 
 from model_schema import Banding, BandingMethod, Factor, FactorType, GlmSpec, OffsetSpec
+from model_schema.perils import (
+    LargeLossKind,
+    LargeLossTreatment,
+    PerilComponent,
+    PerilMethod,
+    PerilStructure,
+)
+from model_schema.rating import RatingAlgorithm
+from model_schema.refs import ArtifactRef
 from pricing_core.modelling import fit_glm
 from pricing_core.modelling.predict import PredictionError
 from pricing_core.rating import compile as compile_module
 from pricing_core.rating import runtime
+from pricing_core.rating.compile import ResolvedArtifact, check_model_call_columns
 
 COLLISION = "MODEL_CALL_FEATURE_COLLISION"
 INVALID = r"^MODEL_CALL_FEATURE_MAP_INVALID: "
@@ -56,10 +67,13 @@ def two_factors_one_column_world() -> GlmWorld:
     return GlmWorld(spec, fit.result, tuple(factors), tuple(bandings), ())
 
 
-def algorithm(feature_map: dict[str, str]) -> dict[str, Any]:
+def algorithm(
+    feature_map: dict[str, str], aliases: tuple[tuple[str, str, str], ...] = ()
+) -> dict[str, Any]:
     """input `driver_age` -> expressions `driver_age_adj` (+20), `driver_age_hi` (+30) -> call.
 
-    An expression step is present only when `feature_map` reads its name.
+    An expression step is present only when `feature_map` reads its name. Each alias is an extra
+    `input` step: (produced name, `input_name`, `on_missing`).
     """
     extra = [
         {"step_id": f"s_{name}", "type": "expression", "label": name,
@@ -68,10 +82,16 @@ def algorithm(feature_map: dict[str, str]) -> dict[str, Any]:
         for name, plus in (("driver_age_adj", 20), ("driver_age_hi", 30))
         if name in feature_map
     ]
+    extra += [
+        {"step_id": f"s_{produces}", "type": "input", "label": produces, "input_name": input_name,
+         "on_missing": on_missing, "produces": produces}
+        for produces, input_name, on_missing in aliases
+    ]
     return {
         "slug": "glm-golden", "version": 1,
         "input_contract": [
             {"name": "driver_age", "type": "int", "nullable": False, "min": 17, "max": 99},
+            {"name": "vehicle_age", "type": "int", "nullable": False, "min": 0, "max": 40},
         ],
         "outputs": [{"name": "risk_out", "type": "decimal", "required": True}],
         "steps": [
@@ -152,3 +172,99 @@ async def test_equal_values_for_one_column_score_normally_at_predict(
     scorer = runtime._glm_scorer(MODEL_REF, bundle.resolved_payloads)
     got = scorer.predict({"age_fine": 33.0, "age_coarse": 33.0})
     assert got == pytest.approx(world.predict(driver_age=33.0), rel=1e-12)
+
+
+ALIAS_MAP = {"driver_age": "age_fine", "driver_age_b": "age_coarse"}
+
+
+@pytest.mark.req("FR-240", "FR-222")
+async def test_two_input_steps_with_one_input_name_and_on_missing_compile(world: GlmWorld) -> None:
+    """RL ruling Q1 (i): an identical value-determining definition is one value."""
+    alias = (("driver_age_b", "driver_age", "error"),)
+    await compiled_bundle(world, algorithm(ALIAS_MAP, alias))
+
+
+@pytest.mark.req("FR-240", "FR-222")
+async def test_two_input_steps_with_one_input_name_and_different_on_missing_are_refused(
+    world: GlmWorld,
+) -> None:
+    """Q1 (ii): a missing input yields a default or a null, so the values can differ."""
+    alias = (("driver_age_b", "driver_age", "null"),)
+    with pytest.raises(ValueError, match=INVALID) as caught:
+        await compiled_bundle(world, algorithm(ALIAS_MAP, alias))
+    assert "driver_age_b" in str(caught.value)
+
+
+@pytest.mark.req("FR-240", "FR-222")
+async def test_two_input_steps_with_different_input_names_are_refused(world: GlmWorld) -> None:
+    """Q1 (iii): two raw inputs are independent values."""
+    alias = (("driver_age_b", "vehicle_age", "error"),)
+    with pytest.raises(ValueError, match=INVALID):
+        await compiled_bundle(world, algorithm(ALIAS_MAP, alias))
+
+
+# --- Q2: a Peril Structure step is grouped per component model ---------------------------------
+
+FREQ = "model:ad-freq@1"
+SEV = "model:ad-sev@1"
+STRUCTURE = "peril_structure:motor-perils@1"
+
+
+def _factor(slug: str) -> Factor:
+    return Factor(
+        id=uuid4(), slug=slug, dataset_id=DATASET, version=1, type=FactorType.IDENTITY,
+        source_columns=("driver_age",),
+    )
+
+
+def _pin(*slugs: str) -> ResolvedArtifact:
+    return ResolvedArtifact(
+        status="approved", payload={"fit_result": {"feature_order": []}},
+        factors=tuple(_factor(slug) for slug in slugs),
+    )
+
+
+def _peril_pins(freq: tuple[str, ...], sev: tuple[str, ...]) -> dict[str, ResolvedArtifact]:
+    structure = PerilStructure(
+        id=uuid4(), slug="motor-perils", version=1,
+        perils=(
+            PerilComponent(
+                peril="AD", method=PerilMethod.FREQUENCY_SEVERITY,
+                frequency_model=ArtifactRef.model_validate(FREQ),
+                severity_model=ArtifactRef.model_validate(SEV),
+                large_loss=LargeLossTreatment(kind=LargeLossKind.NONE),
+            ),
+        ),
+        created_at=datetime(2026, 10, 1, tzinfo=UTC),
+    )
+    return {
+        STRUCTURE: ResolvedArtifact(status="approved", payload=structure.model_dump(mode="json")),
+        FREQ: _pin(*freq),
+        SEV: _pin(*sev),
+    }
+
+
+def _peril_algorithm(feature_map: dict[str, str]) -> RatingAlgorithm:
+    payload = algorithm(feature_map)
+    step = next(s for s in payload["steps"] if s["step_id"] == "s_risk")
+    del step["model_ref"]
+    step["peril_structure_ref"] = STRUCTURE
+    return RatingAlgorithm.model_validate(payload)
+
+
+@pytest.mark.req("FR-240", "FR-222")
+def test_frequency_and_severity_banding_one_column_differently_compile() -> None:
+    """Q2: each component scorer renames only its own slugs, so the two never share a frame."""
+    pins = _peril_pins(freq=("age_fine",), sev=("age_coarse",))
+    fmap = {"driver_age": "age_fine", "driver_age_adj": "age_coarse"}
+    check_model_call_columns(_peril_algorithm(fmap), pins)  # no raise
+
+
+@pytest.mark.req("FR-240", "FR-222")
+def test_a_collision_inside_one_component_is_refused() -> None:
+    pins = _peril_pins(freq=("age_fine", "age_coarse"), sev=("age_sev",))
+    fmap = {"driver_age": "age_fine", "driver_age_adj": "age_coarse", "driver_age_hi": "age_sev"}
+    with pytest.raises(ValueError, match=INVALID) as caught:
+        check_model_call_columns(_peril_algorithm(fmap), pins)
+    assert str(FREQ) in str(caught.value)
+    assert "age_coarse" in str(caught.value)

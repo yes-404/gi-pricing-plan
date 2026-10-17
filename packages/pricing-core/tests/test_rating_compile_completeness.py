@@ -181,4 +181,5 @@ async def test_the_compile_check_calls_the_one_required_inputs_helper(
 
     monkeypatch.setattr(compile_module, "required_model_inputs", spy)
     await compile_bundle(_version(), _glm_world(FULL_MAP))
-    assert calls == [("driver_age_band", "area_group")]
+    # Both compile checks (completeness, and FD-8070's column grouping) read the one definition.
+    assert set(calls) == {("driver_age_band", "area_group")}
