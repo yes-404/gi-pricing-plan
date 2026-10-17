@@ -100,6 +100,10 @@ _INPUT_FREE = {
     # WK-1178 SL-1541 (FR-240): step id, refs, peril, role, feature slugs: authored identifiers
     # at compile time, never a quote
     ("rating/compile.py", "check_model_call_coverage"): 1,
+    # WK-1178 SL-8071 (FR-222, FR-240; the maintainer 2026-10-17 00:07:43 BST): compile time over
+    # the model structure, before any quote exists: step id, pinned model ref, Factor slug and kind
+    # only (`test_the_gbm_factor_refusal_message_is_exactly_its_structural_fields` pins the text)
+    ("rating/compile.py", "check_model_call_gbm_factors"): 1,
     ("rating/compile.py", "_refuse_peril_model_calls"): 1,  # :815 step id, ref, names
     ("rating/compile.py", "_resolve_peril_components"): 3,  # refs, fields at fault, peril, status
     # mount point, port and value names (WK-1250 Slice 2)

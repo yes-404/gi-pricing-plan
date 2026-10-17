@@ -2581,6 +2581,29 @@ The fix of FD-1747 (MEDIUM, owner WK-1178; not on `main` yet, it rides D18). `ba
 
 (Closed 2026-10-14 as a Slice, closing acts in the slice PR, on the lead's merge; ledger LG-1720 `closed`. Audit written in LG-1720 (Audit section, by `auditor-fd8049`, at f78ab4ce), adopted by the lead; CI python green at run 38607168256. FD-1747's fix: test-only, no `backend/src` change.)
 
+#### SL-1758 — WK-1178 fix slice — FD-1754: a model_call refuses a GBM fitted on a banded or grouped Factor, and a GbmFitError while scoring is a named failure
+
+```yaml
+id: SL-1758
+family: slice
+title: WK-1178 fix slice — FD-1754: a model_call refuses a GBM fitted on a banded or grouped Factor, and a GbmFitError while scoring is a named failure
+status: closed                   # draft → active → closed | retired (§1.2a)
+created: 2026-10-17 # original date 2026-10-16, set at the activation; minted 2026-10-17
+owner: executor                  # the lead dispatches (active)
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: []
+```
+
+The interim fix of FD-1754 (FD-1754, merged in D18 (#1319); HIGH, the silent case C reproduced; owner WK-1178). A GBM fitted on a banded or grouped Factor fits, approves and pins, but a GBM pin carries no Bandings or Groupings into the Bundle and the runtime scores it with `factors=()`: a raw value is looked up as the band label, which raises `GbmFitError` (loud, and an unnamed engine node error) or, when a label spells another band's number, prices the wrong band with no error (silent). **Scope, exactly:** (1) a `model_call` step whose pinned GBM has a banded or grouped Factor is refused with `MODEL_CALL_GBM_TRANSFORMED_FACTOR`, at the save check (`check_model_call_feature_maps`, so at all three save routes) and at compile (`check_model_call_gbm_factors`); for a `peril_structure_ref` step each component model; (2) the refusal is keyed on the step, **never on the pin**: a Rating Version that pins a banded GBM no `model_call` reaches (WF-699 C1, C5) saves and compiles as before; (3) `GbmFitError` is caught in the `model_call` handler beside `ModellingError` and `PredictionError`, so it is the step's `MODEL_CALL_FAILED` failure naming its code; (4) `03` FR-222 and FR-240 carry the dated amendment and the code is in the owned-codes list. **Out of scope:** carrying the GBM's Factors, Bandings and Groupings in the Bundle with a renamer (a design choice, a decision point in FD-1754, owner WK-673); SL-1543 is not blocked, because its B4 calls the Peril Structure's GLMs. Red-first: the tests commit precedes the fix commit.
+
+(Activated 2026-10-16 as WK-1178's FD-1754 fix slice, on the maintainer's (by delegation) entry "2026-10-16 10:59:28 BST — Maintainer: the GBM model_call defect — the reading is accepted; disposition fixed now, severity on the run", item 1 (`to-lead.md`). Ledger `LG-1759`.)
+
+(Minted 2026-10-17 as SL-1758 from working id 8071, in the SL-1758 PR; ledger LG-1759 from working id 8072; FD-1754 was minted from working id 8073 in the D18 batch mint PR.)
+
+(Closed 2026-10-17 as a Slice on a clean audit: audit written in LG-1759 (Audit section, by `auditor-8071`, at d3d03fbb), adopted by the lead 2026-10-17 13:21:31 BST; the re-gate accepted in `to-lead.md` "2026-10-17 12:38:39 BST". MERGE-ACK: not yet given.)
+
 #### SL-1734 — WK-1178 fix slice — FD-1723's HIGH limbs: a capped GLM spec fits capped (FR-127), and the banding check runs at fit (FR-100)
 
 ```yaml
