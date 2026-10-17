@@ -570,3 +570,39 @@ def test_a_grouping_maps_one_value_exactly_as_it_maps_a_column(world: World) -> 
         for value in ("N1", "S2", "B1", "B5", "B9", "ZZ", "1", "1.5"):
             single, column = pl.Series("v", [value]), pl.Series("v", [value, value])
             assert outcome(single, grouping) == outcome(column, grouping)
+
+
+@pytest.mark.req("FR-104")
+def test_apply_grouping_reproduces_every_recorded_expectation_of_c62f1ff6() -> None:
+    """The batch path is unchanged by the single-value branch: 1 443 inputs (seed 20261017, three
+    unseen-level behaviours, 0/1/2/5 values of strings, ints, floats, bool and null) with the
+    outputs and refusal texts `groupings.py` gave at `c62f1ff6` (the base of SL-8099), stored as
+    data, not as a copied module. Captured once with
+    `packages/pricing-core/tests/data/make_apply_grouping_fixture.py` (its docstring has the
+    command)."""
+    import json
+
+    from pricing_core.modelling.groupings import apply_grouping
+
+    fixture = json.loads(
+        (Path(__file__).parent / "data" / "apply_grouping_c62f1ff6.json").read_text()
+    )
+    groupings = [
+        Grouping(
+            id=uuid4(), slug="g", dataset_id=DATASET, version=1, column="c",
+            method=GroupingMethod.MANUAL, mapping=fixture["mapping"],
+            unseen_level_behaviour=UnseenLevelBehaviour(spec["behaviour"]),
+            default_target_level=spec["default"],
+        )
+        for spec in fixture["groupings"]
+    ]
+    assert len(fixture["cases"]) == 1_443
+    for case in fixture["cases"]:
+        series = pl.Series("col", case["values"], dtype=None if case["values"] else pl.String)
+        try:
+            got: dict[str, Any] = {
+                "levels": apply_grouping(series, groupings[case["grouping"]]).to_list()
+            }
+        except FactorResolutionError as error:
+            got = {"refusal": [type(error).__name__, str(error)]}
+        assert got == case["expected"], case

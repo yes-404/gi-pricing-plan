@@ -1,0 +1,15295 @@
+{
+"mapping": {
+"a": "X",
+"b": "X",
+"c": "Y",
+"1": "Z",
+"1.0": "Z",
+"true": "Y"
+},
+"groupings": [
+{
+"behaviour": "error",
+"default": null
+},
+{
+"behaviour": "map_to_default",
+"default": "Y"
+},
+{
+"behaviour": "map_to_base",
+"default": null
+}
+],
+"cases": [
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true,
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1,
+true
+],
+"expected": {
+"levels": [
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"b",
+"c"
+],
+"expected": {
+"levels": [
+"X",
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c",
+"a"
+],
+"expected": {
+"levels": [
+"Y",
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"b",
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null,
+1.0
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null,
+1
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"b",
+"c"
+],
+"expected": {
+"levels": [
+"X",
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"b",
+"b"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"b",
+"d",
+"b",
+"a",
+"b"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0,
+1.0
+],
+"expected": {
+"levels": [
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null,
+1.0
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e",
+"b"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"a",
+"a"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null,
+true
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0,
+true
+],
+"expected": {
+"levels": [
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+1,
+1
+],
+"expected": {
+"levels": [
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1,
+1
+],
+"expected": {
+"levels": [
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"b",
+"b"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0,
+1
+],
+"expected": {
+"levels": [
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null,
+true
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"a",
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null,
+"b"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"a",
+"a"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e",
+"a"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"d",
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0,
+1.0,
+1,
+1.0,
+1
+],
+"expected": {
+"levels": [
+"Z",
+"Z",
+"Z",
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"a",
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0,
+1.0
+],
+"expected": {
+"levels": [
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"a",
+"b"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"a",
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"b",
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"c",
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"a",
+"a"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null,
+"a"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"a",
+"b"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"c",
+"b"
+],
+"expected": {
+"levels": [
+"Y",
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e",
+"a"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c",
+"b"
+],
+"expected": {
+"levels": [
+"Y",
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"b",
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"b",
+"b"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"e",
+"a"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true,
+true
+],
+"expected": {
+"levels": [
+"Y",
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c",
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e",
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c",
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+null,
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 2 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"e",
+"a",
+"b",
+"e",
+"b"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null,
+true
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true,
+true
+],
+"expected": {
+"levels": [
+"Y",
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+1,
+true
+],
+"expected": {
+"levels": [
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0,
+1.0
+],
+"expected": {
+"levels": [
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c",
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1,
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e",
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d', 'e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0,
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"a",
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e",
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+null,
+"a"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"b",
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c",
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0,
+true
+],
+"expected": {
+"levels": [
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null,
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 2 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"a",
+"a",
+null,
+null,
+"a"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 2 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c",
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"d",
+"c"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0,
+true
+],
+"expected": {
+"levels": [
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0,
+1
+],
+"expected": {
+"levels": [
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['d'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"e",
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e",
+"c"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e",
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"e",
+"c"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e",
+"c",
+"e",
+"b",
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null,
+"c",
+"b",
+"a",
+"a"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null,
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 2 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true,
+true
+],
+"expected": {
+"levels": [
+"Y",
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e",
+"c"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+1,
+true
+],
+"expected": {
+"levels": [
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met level(s) ['e'] in 'c' that it does not map, and its unseen-level behaviour is `error` (FR-104). Re-derive the grouping on this version, or declare where an unknown level should go."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+null,
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 0,
+"values": [
+"d",
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 0,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"a",
+"c"
+],
+"expected": {
+"levels": [
+"X",
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"c",
+"b",
+null,
+"c",
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"b",
+"e"
+],
+"expected": {
+"levels": [
+"X",
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0,
+1.0
+],
+"expected": {
+"levels": [
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"c",
+"d",
+"c",
+"e",
+"a"
+],
+"expected": {
+"levels": [
+"Y",
+"Y",
+"Y",
+"Y",
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null,
+1
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b",
+"c"
+],
+"expected": {
+"levels": [
+"X",
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null,
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+1,
+true
+],
+"expected": {
+"levels": [
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b",
+"e"
+],
+"expected": {
+"levels": [
+"X",
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"a",
+"a"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1,
+1
+],
+"expected": {
+"levels": [
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"a",
+"c"
+],
+"expected": {
+"levels": [
+"X",
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"b",
+"d"
+],
+"expected": {
+"levels": [
+"X",
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true,
+true
+],
+"expected": {
+"levels": [
+"Y",
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"e",
+"c"
+],
+"expected": {
+"levels": [
+"Y",
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true,
+true
+],
+"expected": {
+"levels": [
+"Y",
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d",
+"d"
+],
+"expected": {
+"levels": [
+"Y",
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b",
+"e",
+"b",
+"e",
+"e"
+],
+"expected": {
+"levels": [
+"X",
+"Y",
+"X",
+"Y",
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d",
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+null,
+"d",
+null,
+"e",
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 3 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null,
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 2 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"e",
+null,
+"a",
+null,
+"c"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 2 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"a",
+"a"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b",
+"d"
+],
+"expected": {
+"levels": [
+"X",
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"a",
+"b"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0,
+1.0
+],
+"expected": {
+"levels": [
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null,
+"c"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null,
+"c",
+"c",
+"e",
+"a"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"e",
+"e"
+],
+"expected": {
+"levels": [
+"Y",
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0,
+1.0
+],
+"expected": {
+"levels": [
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d",
+"b"
+],
+"expected": {
+"levels": [
+"Y",
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"e",
+null,
+"e",
+"a",
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 2 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0,
+1
+],
+"expected": {
+"levels": [
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null,
+1
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"b",
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"a",
+"d",
+"d",
+null,
+"c"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"e",
+"d",
+null,
+"c",
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 2 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null,
+null,
+1.0,
+1,
+true
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 2 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0,
+true
+],
+"expected": {
+"levels": [
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b",
+"a"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+1,
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d",
+"b"
+],
+"expected": {
+"levels": [
+"Y",
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"b",
+null,
+"c",
+"b",
+"c"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b",
+"b"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"c",
+"d"
+],
+"expected": {
+"levels": [
+"Y",
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"e",
+"b"
+],
+"expected": {
+"levels": [
+"Y",
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0,
+1
+],
+"expected": {
+"levels": [
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0,
+1.0,
+null,
+null,
+true
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 2 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d",
+"a",
+"e",
+null,
+"b"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"a",
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"c",
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"c",
+"b"
+],
+"expected": {
+"levels": [
+"Y",
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"e",
+"a"
+],
+"expected": {
+"levels": [
+"Y",
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b",
+"d",
+"d",
+null,
+"c"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true,
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"b",
+"c"
+],
+"expected": {
+"levels": [
+"X",
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b",
+"c"
+],
+"expected": {
+"levels": [
+"X",
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1,
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"a",
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d",
+"b"
+],
+"expected": {
+"levels": [
+"Y",
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"c",
+"c"
+],
+"expected": {
+"levels": [
+"Y",
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null,
+"c"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1,
+true
+],
+"expected": {
+"levels": [
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"e",
+"d",
+"d",
+"d",
+"b"
+],
+"expected": {
+"levels": [
+"Y",
+"Y",
+"Y",
+"Y",
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"c",
+"e",
+"c",
+"d",
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+null,
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 2 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+"b",
+"b"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+1.0,
+true
+],
+"expected": {
+"levels": [
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 1,
+"values": [
+null,
+1.0
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 1,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+true,
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a",
+"e"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d",
+"b",
+"c",
+"b",
+"b"
+],
+"expected": {
+"levels": [
+"X",
+"X",
+"Y",
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null,
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a",
+"e"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d",
+"a"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c",
+"b"
+],
+"expected": {
+"levels": [
+"Y",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+true,
+true
+],
+"expected": {
+"levels": [
+"Y",
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a",
+"b"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b",
+"b"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+true,
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b",
+"d"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a",
+"e",
+null,
+null,
+"a"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 2 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0,
+1.0
+],
+"expected": {
+"levels": [
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"a",
+"b",
+null,
+"b",
+"a"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a",
+"b",
+"e",
+null,
+"a"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a",
+"e",
+"e",
+null,
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 2 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c",
+"e",
+"e",
+"e",
+"b"
+],
+"expected": {
+"levels": [
+"Y",
+"X",
+"X",
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a",
+"a"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null,
+"a"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"e",
+"d"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d",
+"d"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"d",
+null,
+"e",
+"d",
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d",
+"a",
+"b",
+"c",
+"c"
+],
+"expected": {
+"levels": [
+"X",
+"X",
+"X",
+"Y",
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c",
+"e",
+null,
+"a",
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 2 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"c",
+"d"
+],
+"expected": {
+"levels": [
+"Y",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0,
+true
+],
+"expected": {
+"levels": [
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"e",
+"a"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"b",
+"e"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d",
+"e",
+"a",
+"d",
+"c"
+],
+"expected": {
+"levels": [
+"X",
+"X",
+"X",
+"X",
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b",
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b",
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a",
+"e"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0,
+true
+],
+"expected": {
+"levels": [
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null,
+true
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d",
+"c"
+],
+"expected": {
+"levels": [
+"X",
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d",
+"c",
+null,
+"e",
+"a"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b",
+"b"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b",
+"e",
+null,
+"e",
+"c"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"c",
+"e"
+],
+"expected": {
+"levels": [
+"Y",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"e",
+"c"
+],
+"expected": {
+"levels": [
+"X",
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null,
+"e"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1,
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0,
+1
+],
+"expected": {
+"levels": [
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a",
+"d",
+"d",
+"e",
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c",
+"e",
+"e",
+"a",
+"b"
+],
+"expected": {
+"levels": [
+"Y",
+"X",
+"X",
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+null,
+"c",
+"b",
+"c",
+"d"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"b",
+"b"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a",
+"d",
+"d",
+"c",
+"a"
+],
+"expected": {
+"levels": [
+"X",
+"X",
+"X",
+"Y",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"e",
+"b"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"e",
+null,
+"e",
+"a",
+"b"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0,
+true
+],
+"expected": {
+"levels": [
+"Z",
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+true,
+true
+],
+"expected": {
+"levels": [
+"Y",
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c",
+"a"
+],
+"expected": {
+"levels": [
+"Y",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c",
+"d",
+"b",
+"a",
+"d"
+],
+"expected": {
+"levels": [
+"Y",
+"X",
+"X",
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"e",
+"d"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a",
+"a"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"b"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"e",
+"e"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"e",
+"e"
+],
+"expected": {
+"levels": [
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+1
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null,
+"a"
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c"
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c",
+"d"
+],
+"expected": {
+"levels": [
+"Y",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"c",
+"e",
+"e",
+"b",
+"b"
+],
+"expected": {
+"levels": [
+"Y",
+"X",
+"X",
+"X",
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+1.0
+],
+"expected": {
+"levels": [
+"Z"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"a",
+"c"
+],
+"expected": {
+"levels": [
+"X",
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+true
+],
+"expected": {
+"levels": [
+"Y"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"e"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [],
+"expected": {
+"levels": []
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+null
+],
+"expected": {
+"refusal": [
+"FactorResolutionError",
+"grouping 'g' met 1 null value(s) in 'c'. `02` \u00a74.3 gives a Grouping no null level \u2014 a missing vehicle group is not a group, and mapping it to one would price it as though it were known."
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"d"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+},
+{
+"grouping": 2,
+"values": [
+"a"
+],
+"expected": {
+"levels": [
+"X"
+]
+}
+}
+]
+}
