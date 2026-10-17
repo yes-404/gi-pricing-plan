@@ -124,8 +124,8 @@ the two sites become reachable with an expression Factor.
 
 ### 3. The requirement text, quoted with its locator (`docs/specs/02-modelling.md` at `a2f77b2d`)
 
-`FR-MODEL-33` is a pre-migration id. `docs/REDIRECTS.csv:707` maps it:
-`FR-MODEL-33,FR-132,docs/specs/02-modelling.md,...`. Its current id is **FR-132**. FR-132 is the
+The scoped id this finding first cited is a pre-migration id. `docs/REDIRECTS.csv:707` maps it
+(row elided here: its first cell is the legacy scoped id) to `FR-132,docs/specs/02-modelling.md`. Its current id is **FR-132**. FR-132 is the
 *existence* rule for the transparency artifact, and it is **not** the clause an expression Factor
 leaves undelivered (see "Which clause" below). The clauses that are:
 

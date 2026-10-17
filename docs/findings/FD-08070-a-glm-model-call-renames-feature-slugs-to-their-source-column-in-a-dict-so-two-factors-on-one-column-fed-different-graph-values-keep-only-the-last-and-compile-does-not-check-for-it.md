@@ -264,3 +264,10 @@ recorded in its ledger.
 
 **Not in this finding.** Observation A (a multi-column expression factor missing from the `:877`
 map), which the maintainer's entry places inside S4.
+
+**Amended 2026-10-17, on the maintainer's entry "2026-10-17 11:15:37 BST" in `to-lead.md`**
+(heading: "Maintainer: SL 8074 (FD 8070 HIGH) Q1 → (b) with a precision; Q2 → (b)"). Q1 → (b),
+precised: the compile exemption holds only for two `input` steps with the same `input_name` AND
+the same `on_missing` (and the same default value where `on_missing="default"`); any other pair
+is refused. Q2 → (b): the collision check is per component model plus its offset model. The
+entry supersedes the interim build and says this Disposition cites it.

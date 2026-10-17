@@ -69,9 +69,9 @@ because the code holds only the prefix; the prefix is what finds the code.
 ### 2. `fbb5555b` is the fixture's input
 
 `git log -1 fbb5555b` is `#772 (rebased) (#781)`, 2026-09-17 10:51:52 +0100, the last commit
-before the NT-0019 doc-id migration landed. `_PRE_MIGRATION_SHA` (`:156`) is that SHA. The
+before the RFC-937 doc-id migration landed (`docs/REDIRECTS.csv:1611` maps the legacy note id to RFC-937). `_PRE_MIGRATION_SHA` (`:156`) is that SHA. The
 tests read real pre-migration content from the checked-out tree (`_discover_closure_records`,
-`_discover_plan_reviews`, `_discover_multi_ruling_files`, and `docs/audit/plan-reviews.md`).
+`_discover_plan_reviews`, `_discover_multi_ruling_files`, and the pre-migration plan-reviews file, which `docs/REDIRECTS.csv:2108` maps to `docs/closures/INDEX.md#plan-reviewsmd`).
 Nothing runs *at* the commit; it is only read.
 
 ### 3. Why the directory is gone and the entry is not
