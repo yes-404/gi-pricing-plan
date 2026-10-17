@@ -337,12 +337,16 @@ def _engine_context(algorithm: RatingAlgorithm, ctx: QuoteContext) -> dict[str, 
     inputs = dict(ctx.inputs)
     for name in decimal_inputs & inputs.keys():
         value = inputs[name]
-        if isinstance(value, Decimal):
+        if isinstance(value, (Decimal, float)):
             as_float = float(value)
-            if Decimal(repr(as_float)) != value:
+            # A float is already what crosses, so only finiteness can fail; a Decimal must
+            # also round-trip.
+            if not math.isfinite(as_float) or (
+                isinstance(value, Decimal) and Decimal(repr(as_float)) != value
+            ):
                 _raise_named(
                     "INPUT_CONTRACT_VIOLATION",
-                    f"input {name!r} is not exactly representable as a float (FR-273)",
+                    f"input {name!r} is not exactly representable as a finite float (FR-273)",
                 )
             inputs[name] = as_float
     return {"effective_date": ctx.effective_date.isoformat(), "purpose": ctx.purpose, **inputs}

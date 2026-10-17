@@ -422,10 +422,21 @@ async def _approve_model(
 #: The severity response column the seed's `build_csv` derives (PL-1705 C2): per-claim mean cost,
 #: euro cents, null where a policy has no claim.
 SEVERITY_COLUMN: Final = "claim_severity"
-#: DP-A4-3's reconciliation tolerance (the maintainer's (by delegation) ruling; PL-1542 Task 0
-#: Step 4 probes it on the real seed and STOPs above it). The structure it gates is a
-#: simplification: no large-loss loading (DP-A4-3's words; large loss is uncapped).
-AD_RECONCILIATION_TOLERANCE: Final = Decimal("0.05")
+#: DP-A4-3's reconciliation tolerance, set to 0.5 by the maintainer (by delegation)'s DP-1543-B
+#: ruling (A) of 2026-10-17 16:27:10 BST, superseding RL-1459's 0.05: accepts ratios in
+#: [0.5, 1.5]. The width comes from the failure mode, not the fit: a peril of cost share s
+#: counted twice gives about 1 + s, so 1.5 refuses any duplicated peril with s >= 0.5, while
+#: 3 sd (0.485, K=100 holdout draws) stays below 0.5, so noise cannot fail a correct structure.
+#: The structure it gates is a simplification: no large-loss loading (large loss is uncapped).
+AD_RECONCILIATION_TOLERANCE: Final = Decimal("0.5")
+#: The evidence the tolerance rests on, printed with every seed's reconcile line (DP-1543-B):
+#: K=100 re-draws of the holdout split on the full book (scratch/sl1543-cw/measure.json,
+#: key iii_A, and window.log), so a reader sees the ratio next to the noise it should be read against.
+AD_RECONCILIATION_EVIDENCE: Final = (
+    "  K=100 holdout re-draws (full book): ratio mean 0.9816, sd_A 0.1616, 3 sd 0.485 < "
+    f"{AD_RECONCILIATION_TOLERANCE}; in-sample (train) ratio 0.9697, bias_train 0.0303 "
+    "(PL-1705 delta, LG-9879)"
+)
 #: The AD Peril Structure's slug (PL-1542 Task 2); one version per seed workspace.
 AD_STRUCTURE_SLUG: Final = "fremtpl2-ad"
 
@@ -557,6 +568,7 @@ async def create_ad_peril_structure(
         f"  reconciliation ratio {outcome.ratio} status {outcome.status.value} "
         f"tolerance {outcome.tolerance}"
     )
+    print(AD_RECONCILIATION_EVIDENCE)
 
     async with database.unit_of_work() as session:
         _, request = await perils_service.submit_for_review(
