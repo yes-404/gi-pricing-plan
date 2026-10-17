@@ -2,7 +2,7 @@
 id: FD-1741
 family: finding
 title: The python CI job's 30-minute budget is spent by pytest alone, so a timeout cancels the two cheap checks queued behind it and wastes a full cycle on every pull request at risk
-status: active
+status: closed
 created: 2026-10-17 # original date 2026-10-16, set at the draft; minted 2026-10-17
 owner: auditor
 tree: 0877e6e7a756c4621890713a4d3b016e75e33654
