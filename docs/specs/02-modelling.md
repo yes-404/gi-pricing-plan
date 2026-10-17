@@ -2660,6 +2660,13 @@ def reconcile(assembled: pl.DataFrame, *, observed: NDArray[float64],
 > the response at fit time, and it belongs beside the fit rather than inside it, because
 > the GLM path will need the same function.
 >
+> > *(Dated note, 2026-10-17, SL-1734, on the GO "2026-10-17 13:23:18 BST" (FD-1723, DP-L1 and
+> > DP-L2 (a) ruled).)* The function now lives in `pricing_core/modelling/loss_treatment.py` and takes
+> > the calling arm's fit-error class, as `require_usable_weights` does. The GLM arm (`fit_glm`) and
+> > the EBM arm (`fit_ebm`) apply it at their response read, so a capped spec is fitted on the capped
+> > response on every arm, and `spliced` and `excess` are refused by name with
+> > `LOSS_TREATMENT_UNIMPLEMENTED` on every arm. FR-127's row is unchanged: it already required this.
+>
 > > **A defect in this function, found and fixed 2026-08-18 (WK-661, custom objectives).**
 > > `predict_gbm`'s LightGBM branch applied `np.exp` to the raw score unconditionally,
 > > though `_OBJECTIVES` carried the inverse link as its third element and its own comment
