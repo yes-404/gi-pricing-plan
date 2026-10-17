@@ -74,3 +74,5 @@ Each new test of `test_rating_column_collision.py` shown able to fail by cause: 
 - **A4:** status `closed` was set by the minter in `LG-1762`, `SL-1761`; the evidence above supports it as a slice close (clean audit; Gate accepted) with the lead's merge still to come.
 
 **6. Proposed verdict:** all obligations delivered and evidenced; no requirement without evidence. Proposal only; the lead adopts, amends or rejects. MERGE-ACK: not yet given.
+
+**Lead verdict (2026-10-17 14:33:41 BST, the lead, transcript 1b92c2a6):** the auditor's proposal ADOPTED — all obligations delivered and evidenced; the stacked-gate argument holds (5/5 slice blobs = 69c682df, the accepted gate); A1 fixed; A2 (NaN !=, LOW) → FD 8086 in D20; A3 disclosed in FD-1753 item 3; A4 the closed status stands. MERGE-ACK: not yet given.
