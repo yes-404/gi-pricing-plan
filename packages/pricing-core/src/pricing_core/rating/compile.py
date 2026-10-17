@@ -112,71 +112,55 @@ def producer_types(
     return types
 
 
-def _money_model_call_names(steps: Sequence[RatingStep]) -> set[str]:
-    """Names whose latest producer is a `money_minor` `model_call` (a later producer wins)."""
-    money: set[str] = set()
-    for step in steps:
-        is_money_call = isinstance(step, RatingModelCallStep) and step.result_type == "money_minor"
-        for name in _as_list(step.produces):
-            if is_money_call:
-                money.add(name)
-            else:
-                money.discard(name)
-    return money
-
-
-def model_call_money_issues(
-    steps: Sequence[RatingStep], outputs: Sequence[tuple[str, str, str, str]]
-) -> list[ValidationIssue]:
-    """FR-227 (`PL-1464` item 15): a `money_minor` value produced by a `model_call` that feeds
-    an output declared other than `decimal` or `money_minor` is refused.
-
-    Scoped to the `model_call` producer on purpose: `_compatible` still treats every numeric
-    type as interchangeable, so an `expression` producer keeps today's behaviour. Same
-    `(step_id, output name, declared type, feeding name)` rows as `output_type_issues`.
-    """
-    money = _money_model_call_names(steps)
-    return [
-        ValidationIssue(
-            code="RATING_TYPE_MISMATCH",
-            message=(
-                f"output {output_name!r} is declared {declared_type!r} but its producing "
-                "step is a model_call declared money_minor; a money_minor model_call feeds "
-                "a decimal or money_minor output (FR-227)"
-            ),
-            step_id=step_id,
-            field="outputs",
-        )
-        for step_id, output_name, declared_type, fed_by in outputs
-        if fed_by in money and declared_type not in ("decimal", "money_minor")
-    ]
-
-
 def _producer_types(algo: RatingAlgorithm) -> dict[str, str]:
     """`producer_types` over an algorithm: its input contract types its input steps."""
     return producer_types(algo.steps, {f.name: f.type.value for f in algo.input_contract})
 
 
-def _compatible(producer: str, declared: str) -> bool:
+#: OQ-1560 B3 (decided 2026-10-05 17:42:06 BST): numeric pairs that widen without a unit change.
+_WIDENING = frozenset({
+    ("int", "decimal"), ("count", "decimal"), ("relativity", "decimal"),
+    ("percentage", "decimal"), ("count", "int"),
+})
+
+
+def _compatible(producer: str, declared: str, *, at_output_step: bool) -> bool:
+    """FR-227: may a value of type `producer` be declared as `declared`?
+
+    `money_minor` is closed both ways (the maintainer (by delegation), 2026-10-05 17:36:28 BST,
+    FD-1424): a value leaves it only into `money_minor`, and enters it only from `money_minor`
+    or, at an output step (FR-226's one rounding point), from `decimal`. `int` into
+    `money_minor` is refused (A1): money enters a computation through an explicit
+    `money_minor` expression step. Every other numeric pair is widening only (OQ-1560 B3,
+    17:42:06 BST); a pair with a non-numeric type matches only by equality.
+    """
     if producer == declared:
         return True
-    # Numeric values are interchangeable at save time; the bundle compilation resolves
-    # the exact unit. A string produced into a money_minor output is a clear mismatch.
-    return producer in _NUMERIC and declared in _NUMERIC
+    if producer == "money_minor":
+        return False
+    if declared == "money_minor":
+        return producer == "decimal" and at_output_step
+    return (producer, declared) in _WIDENING
 
 
 def output_type_issues(
-    types: Mapping[str, str], outputs: Sequence[tuple[str, str, str, str]]
+    types: Mapping[str, str],
+    outputs: Sequence[tuple[str, str, str, str]],
+    *,
+    at_output_step: bool,
 ) -> list[ValidationIssue]:
     """FR-227: each declared output's type is compatible with its producing step's.
 
     Each output is `(step_id to report, output name, declared type, name that feeds it)`.
     An output whose feeding name has no statically-known type is not checked here.
+    `at_output_step` is True for an algorithm's `output` step and False for a Sub-graph port.
     """
     issues: list[ValidationIssue] = []
     for step_id, output_name, declared_type, fed_by in outputs:
         producer_type = types.get(fed_by)
-        if producer_type is not None and not _compatible(producer_type, declared_type):
+        if producer_type is not None and not _compatible(
+            producer_type, declared_type, at_output_step=at_output_step
+        ):
             issues.append(
                 ValidationIssue(
                     code="RATING_TYPE_MISMATCH",
@@ -203,10 +187,7 @@ def _check_result_types(algo: RatingAlgorithm) -> list[ValidationIssue]:
         if declared is None or not consumed:
             continue
         outputs.append((step.step_id, step.output_name, declared.type, consumed[0]))
-    return [
-        *output_type_issues(_producer_types(algo), outputs),
-        *model_call_money_issues(algo.steps, outputs),
-    ]
+    return output_type_issues(_producer_types(algo), outputs, at_output_step=True)
 
 
 def fragment_output_type_issues(
@@ -235,7 +216,7 @@ def fragment_output_type_issues(
         for port in output_ports
         if port.name in produced_by
     ]
-    return [*output_type_issues(types, outputs), *model_call_money_issues(steps, outputs)]
+    return output_type_issues(types, outputs, at_output_step=False)
 
 
 def _check_clamp_placement(algo: RatingAlgorithm) -> list[ValidationIssue]:
@@ -699,7 +680,7 @@ def _refuse_mount_port_type_mismatch(
             declared, produced = ports.get(port), types.get(value)
             if declared is None or produced is None:
                 continue
-            if not _compatible(produced, declared):
+            if not _compatible(produced, declared, at_output_step=False):
                 _raise_named(
                     "RATING_TYPE_MISMATCH",
                     f"mount {mount.mount_point!r} maps {value!r}, which yields {produced!r}, to "

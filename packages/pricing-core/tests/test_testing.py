@@ -506,9 +506,16 @@ class _VariantResolver(_FakeResolver):
                 *payload["steps"],
                 {"step_id": "s_in_promo", "type": "input", "label": "Promo",
                  "input_name": "promo", "on_missing": "null", "produces": "promo"},
+                # SL-1563 sweep hit 2 (PL-1562 item 7, 2026-10-17 13:31:51 BST): an `int` input
+                # into a `money_minor` output is refused (D10, OQ-1560 A1); money enters through
+                # this explicit `money_minor` expression step. `RatingInputType` has no
+                # `money_minor` member, so the input itself stays `int`.
+                {"step_id": "s_promo_money", "type": "expression", "label": "Promo money",
+                 "expr": "promo", "result_type": "money_minor", "consumes": ["promo"],
+                 "produces": "promo_money"},
                 {"step_id": "s_out_promo", "type": "output", "label": "Promo out",
                  "output_name": optional_output, "rounding": {"mode": "half_even", "dp": 0},
-                 "consumes": ["promo"]},
+                 "consumes": ["promo_money"]},
             ]
         payload["input_contract"] = [
             f for f in payload["input_contract"] if f["name"] not in _CLAMP_INPUTS
