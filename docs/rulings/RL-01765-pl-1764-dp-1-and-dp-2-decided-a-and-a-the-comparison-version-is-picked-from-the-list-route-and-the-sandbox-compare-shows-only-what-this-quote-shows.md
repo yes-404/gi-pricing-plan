@@ -3,7 +3,7 @@ id: RL-1765
 family: ruling
 title: PL-1764 DP-1 and DP-2 decided (a) and (a) — the comparison version is picked from the Rating Version list route, which gets its §5.1 row first; the sandbox compare shows only what this quote shows
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-10-16
+created: 2026-10-17          # original date 2026-10-16, set at the filing; minted 2026-10-17
 owner: decision-maker
 tree: 0877e6e7a756c4621890713a4d3b016e75e33654
 phase: P2
