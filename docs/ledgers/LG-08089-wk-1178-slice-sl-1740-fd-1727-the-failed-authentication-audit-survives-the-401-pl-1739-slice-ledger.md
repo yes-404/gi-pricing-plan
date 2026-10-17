@@ -66,8 +66,17 @@ arise there.
 - [x] Task 3 — implementation: `AuthFailureReason`, `AuthenticationFailed`, `record_auth_failure`
   (`auth/service.py`); the catch in `resolve_caller` and the identity dependency (`api/deps.py`);
   `gip_auth_failures_total` (`observability/metrics.py`).
-- [ ] The DB runs (RED on `95ccb7c6`'s parent code, GREEN at the head): owed after TRIAL END, in the
-  DB window the lead grants. **Not run.**
+- [x] The DB runs (2026-10-17, small-test slot, per-worktree DB from template `gipricing`, dropped rc 0
+  both times). Window 1, 18:15:34–18:16:19 BST: RED with `backend/src` from `96ee0572^`,
+  `test_auth_failure_audit.py` **13 failed, 2 passed** (rc 1; both R11 tests among the failures);
+  GREEN at head, `test_auth_keys.py` **18 passed** (rc 0), `test_auth_failure_audit.py` 6 failed / 9
+  passed (rc 1). Five were a test defect (the file read `prometheus_client`'s default `REGISTRY`, not
+  `app.observability.metrics.REGISTRY`; fixed in the import). The sixth was a new success-path R11
+  test on `GET /environments`: `{'checkouts': 3}`, `assert 3 == 1`, because that route's handler opens
+  its own sessions; the success-path total of 1 is `test_score_request_cost.py`'s (`MAX_CHECKOUTS`, on
+  `/score`), so the test was removed and the failing-path `checkouts == 2` kept. Window 2,
+  18:16:55–18:17:11 BST: the file at that tree **14 passed, 1 failed** (the removed test), rc 1.
+  The file after the removal was not re-run (no window left): owed to the gate.
 - [ ] Task 4 — gate, closing acts, audit.
 
 ## Build log

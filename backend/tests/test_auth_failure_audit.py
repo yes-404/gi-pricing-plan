@@ -15,7 +15,6 @@ from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
-from prometheus_client import REGISTRY
 from sqlalchemy import event, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,6 +23,7 @@ from app.config import Settings
 from app.db.models import ApiKeyRow, AuditEventRow, ServiceAccountRow
 from app.db.session import Database
 from app.main import create_app
+from app.observability.metrics import REGISTRY
 from model_schema import new_uuid7
 
 pytestmark = pytest.mark.req("FR-392")
@@ -322,6 +322,10 @@ async def test_r11_a_failed_api_key_request_never_holds_two_pool_connections(
 
     assert response.status_code == 401
     assert seen["max_held"] == 1, seen
+    # R11 (a): the rollback returns the connection, the audit write takes exactly one more.
+    # The success path total of 1 is held by `test_score_request_cost.py` (MAX_CHECKOUTS) on
+    # /score; `GET /environments` takes three (its handler opens its own sessions).
+    assert seen["checkouts"] == 2, seen
     assert len(await _failure_rows(database, workspace_id)) == 1
 
 
