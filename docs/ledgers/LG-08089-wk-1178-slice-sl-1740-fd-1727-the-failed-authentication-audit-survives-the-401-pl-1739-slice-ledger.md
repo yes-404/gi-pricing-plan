@@ -5,7 +5,7 @@ title: WK-1178 slice SL-1740 — FD-1727, the failed-authentication audit row su
 status: active                 # active → closed (§1.2a)
 created: 2026-10-17
 owner: executor
-tree: 2859fcc7545a7d974a0fb2ef19676aa7c3f4ca80
+tree: bf7686504d7b11954760de0440ed56608c722655
 phase: P2
 work: WK-1178
 slice: SL-1740
@@ -76,7 +76,7 @@ arise there.
   its own sessions; the success-path total of 1 is `test_score_request_cost.py`'s (`MAX_CHECKOUTS`, on
   `/score`), so the test was removed and the failing-path `checkouts == 2` kept. Window 2,
   18:16:55–18:17:11 BST: the file at that tree **14 passed, 1 failed** (the removed test), rc 1.
-  The file after the removal was not re-run (no window left): owed to the gate.
+  The file after the removal was not re-run (no window left): owed to the gate. *(Discharged: window 3 below, 16 passed; and the proof gate ran it, no failure in it. Auditor-1740, 2026-10-17.)*
 - [ ] Task 4 — gate, closing acts, audit.
 
 ## Build log
@@ -109,3 +109,93 @@ at this tree, **16 passed** (rc 0), in 11.35 s.
 ## PRs
 
 Not opened yet; the lead opens the PR.
+
+## Gate, 2026-10-17 (isolated proof-pair gate-1; read by auditor-1740 from `scratch/sl1740-gate/`)
+
+Gate head `7f9b5b5303d984b356592de886259cf80e536477`, tree `401152b5fd1e35a70d40d232503936c5d043c364`
+(`gate.log` START line), START 19:13:41Z → END 20:19:26Z. ruff, mypy, import_linter, req_coverage, contracts, FE
+lint / type-check / build rc 0; `audit_docs` rc 1 (`FAILED (1): check 31: gap in the full allocation between
+1771 and 8089`, a working-id artefact); pytest rc 1, `15 failed, 5942 passed, 6 skipped`; `pnpm test` rc 1
+(`1 failed | 115 passed`, FR-1530 only); demo designed stop 20:19:19Z, rc 0. Of the 15: 13 are the root-`tests/`
+docs-tooling cascade of the check-31 line; 2 were slice-caused
+(`test_auth_oidc.py::test_rejection_reasons_are_not_returned_to_the_caller`,
+`test_worker_raise_sites.py::test_every_quote_input_coded_raise_site_in_the_backend_is_accounted_for`), fixed
+test-only at `0724b8e9` (above) and accepted by the maintainer, "2026-10-17 21:24:40 BST" (no re-gate; the
+PR's CI is the remaining proof). FR-1530 is a main flake (FD 8103), counted against neither slice.
+
+## Audit
+
+*(Written by `auditor-1740`, 2026-10-17 (TZ=Europe/London), on head `0724b8e9543fe0560d862aa5abf3a2286c29112b`
+tree `bf7686504d7b11954760de0440ed56608c722655`, range `origin/main...0724b8e9`. Code read-only; no test run by
+the auditor; the gate is the lead's.)*
+
+**1. Change set** (`git diff --stat origin/main...0724b8e9`, 13 paths, +763 -125): `api/deps.py`,
+`auth/service.py`, `observability/metrics.py`; tests `test_auth_failure_audit.py` (new), `test_auth_keys.py`,
+`test_auth_oidc.py`, `test_worker_raise_sites.py`; specs `06` (FR-368 pointer), `07` (FR-392); PL-1739 delta,
+roadmap, INDEX, this ledger. Nothing outside scope. `7f9b5b53..0724b8e9` (gate head to head) touches only
+`test_auth_oidc.py`, `test_worker_raise_sites.py` and this ledger (`git diff --stat`), so the gate ran all `src`.
+
+**2. Obligations, derived from PL-1739's Acceptance Standard, FD-1727's Disposition and the rulings first:**
+- **Acc. 3, spec first:** FR-392 amendment `4dfdd9f0` and the activation `28f63769` are ancestors of the first
+  `backend/src` commit `96ee0572` (`merge-base --is-ancestor` rc 0 each); FR-392 names `gip_auth_failures_total`
+  (`07-platform.md:76`). **Met.**
+- **Acc. 5:** `git grep test_a_failed_authentication_is_audited HEAD -- backend/tests` prints nothing; the
+  new file's only `unit_of_work` is the fixture setup (`:78`), no `pytest.raises` inside a unit. **Met.**
+- **Acc. 6:** `git grep audit.record HEAD -- auth/service.py` prints one line, `:150` inside
+  `record_auth_failure`. **Met.**
+- **FD Disposition, "the `principal.auth_failed` row survives the request's rollback":** R1, R2, R3 (x2) assert
+  a real HTTP 401 and exactly one row with the reason in `after` (R1 also the trace id); read the asserts at
+  `:135-185`. API-key branch: `deps.py` `rollback` / `begin` / `record_auth_failure` / `commit` then raise,
+  as ruled 14:41:18 (DP-1 (b)). **Met.**
+- **Limb 3, counted by reason, closed label set:** `AuthFailureReason` has 8 members; R5, R6, R7, R10 (set equal
+  to `EIGHT_REASONS`, no key material in labels). Workspace-less failures write no row, a WARNING and a count.
+  **Met.**
+- **DP-2 F1, a lost write is a 5xx:** R8 (audit raises: >=500, still counted) and R8 commit-limb (>=500, no
+  row); the code has no `try/except` around the write. **Met.**
+- **R11, one connection:** failing path max held 1, total 2; `/score` success total 1, max held 1;
+  `/environments` max held 1. Window 3: 16 passed. **Met.**
+- **Limb 4, FR-392 / FR-368 cross-reference:** `06-platform` FR-368 pointed, FR-392 amended. **Met.**
+- **Acc. 1, 2:** check 31 is the one audit-docs failure, as expected; DP rulings quoted above. **Met.**
+- **Acc. 4, per-test red-on-main by cause, and R4 / R8 / R10 breakers:** the ledger carries one aggregate
+  (`13 failed, 2 passed`, window 1), no per-test causes and no breaker runs. **Delivered but evidence thin**
+  (finding B1).
+- **Acc. 7, full gate at the slice head:** gate ran at `7f9b5b53`, not `0724b8e9`; the delta is two test files,
+  accepted without re-gate by the maintainer (21:24:40). **Met by ruling**, PR CI outstanding.
+- **Second site (`require_identity`, `deps.py:149-168`, used by `/me`):** both branches changed, no test in the
+  new file reaches them (finding B2). **Delivered but untested.**
+
+**3. The 401 body, re-read independently (bearer and API-key).** `AuthenticationFailed.__init__`
+(`auth/service.py:107-127`) calls `PlatformError.__init__` with the fixed title `Authentication failed` and the
+fixed detail; `reason` and `workspace_id` are instance attributes. `to_problem` (`errors.py:476-486`) emits only
+`type`, `title`, `status`, `code`, `detail`, `instance`, `errors` (empty, never set here), `trace_id`;
+`_handle_platform_error` (`:498`) adds `exc.headers` (empty). All seven raise sites (`service.py:178, 244, 253,
+257, 265, 269, 277`) pass the reason only as the enum argument. No other consumer of `.reason` outside
+`auth/service.py` reads an `AuthenticationFailed`. **No response body or header carries the failure reason.**
+Residual, pre-existing and unchanged from `origin/main`: the `code` differs by case (`TOKEN_EXPIRED`,
+`API_KEY_EXPIRED`, `ENVIRONMENT_SCOPE_DENIED`, `API_KEY_INVALID`, `UNAUTHENTICATED`), so the code coarsely
+discloses expired / scope-denied; the diff keeps each code exactly (compare the removed `_unauthenticated(...)`
+arguments). Not a regression of this slice.
+
+**4. The two fix commits (`0724b8e9`).** `test_rejection_reasons_are_not_returned_to_the_caller` is stricter than
+before (status 401 and `reason.value` absent from the whole serialised body, for every reason) but now runs on
+the exception object, not on a real HTTP response (B3). `_SITES`: the `_unauthenticated` entry was removed with
+a comment; the census no longer sees the fixed-detail built in `AuthenticationFailed.__init__`.
+
+**5. Findings.**
+- **B1 (LOW):** Acc. 4's per-test red-by-cause and breaker evidence is not in the ledger. Owner: the lead
+  decides: accept the aggregate or add a table before close.
+- **B2 (MEDIUM, delivered but untested):** the identity-only dependency's two catch-and-record sites
+  (`require_identity`, `/me`) have no test; a regression there (row lost, counter missing) would pass. Owner:
+  the lead decides: a test now, or a deferral row owned by WK-1178.
+- **B3 (LOW, observation):** the security guard on the 401 body no longer exercises the real response path; a
+  future handler that adds the reason to a problem extension would not fail it. R1 to R3 assert on status and
+  code only. Owner: lead decides whether to file.
+- **B4 (LOW, observation):** `test_worker_raise_sites` no longer covers the 401 detail text; the fixed-detail
+  rule for auth refusals now rests on one `__init__` and the test in B3.
+- **B5 (LOW, fixed here):** front-matter `tree:` was the base-merge tree `2859fcc7`; set to `bf768650...`. The
+  "owed to the gate" line is discharged (note added); a Gate section added. Task 4 stays open until the lead's
+  closing acts.
+
+**6. Proposed verdict:** all FD-1727 obligations delivered and evidenced except B1 (thin) and B2 (untested
+second site); no requirement without a verdict. Proposal only; the lead adopts, amends or rejects.
+MERGE-ACK: not yet given. Status left `active`.
