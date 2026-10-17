@@ -119,6 +119,7 @@ the two sites become reachable with an expression Factor.
     from; it concerns a different artifact (the Rating Version's scorer, not the transparency
     output) and different requirement text (FR-239's bundle semantics, not FR-174), and it is not
     shown wrong, so it belongs in its own finding if the examination shows a defect.
+  - **Ruled 2026-10-16 10:42:37 BST** (`to-lead.md`, "2026-10-16 10:42:37 BST — Maintainer: FD 8068 Q1 → fixed IN S4 (not a deferred limb)"): *"FD 8068 records it as discharged by S4, not as a 3rd open limb."* The `model_specs.py:86` undercount is therefore discharged by S4 (SL-1274, WK-690 Slice 4) — its estimate for an expression Factor must never be below the true count, with a red-first test that a spec over the limit only because of an expression Factor is refused — and is not a third open limb owned by WK-690. The proposed-scope text above is kept as filed. `runtime.py:877` is unchanged by this line.
 - Other `source_columns[` reads in the tree
   (`packages/pricing-core/src/pricing_core/modelling/factors.py:190,303,314` at `a2f77b2d`) are
   **outside this finding** and **not examined**; they are named so that WK-690's later slices read
