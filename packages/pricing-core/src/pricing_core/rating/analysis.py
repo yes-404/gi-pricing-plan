@@ -47,6 +47,7 @@ from model_schema.rating import (
     RatingStepBase,
     RatingTableStep,
     RatingVersion,
+    SubGraphRef,
     diff_algorithms,
 )
 from model_schema.refs import ArtifactRef
@@ -55,7 +56,7 @@ from pricing_core.rating.compile import ArtifactResolver, ResolvedArtifact, comp
 from pricing_core.rating.ladder import RUNG_ORDER
 from pricing_core.rating.runtime import CompiledBundle, load_bundle
 from pricing_core.rating.score import score_batch
-from pricing_core.safe_error import CodedError, safe_error_text
+from pricing_core.safe_error import safe_error_text
 
 __all__ = [
     "AttributionError",
@@ -486,6 +487,7 @@ _PIN_KINDS: Final[tuple[str, ...]] = (
     "models",
     "reference_tables",
     "custom_objectives",
+    "sub_graphs",
 )
 _ATTRIBUTION_FAILED: Final = "ATTRIBUTION_RECONCILIATION_FAILED"
 
@@ -499,21 +501,6 @@ class AttributionError(ValueError):
         self.code = code
 
 
-class _MountNotYetAttributable(AttributionError, CodedError):  # noqa: N818 (named by PL-1694)
-    """FD-1660's guard (RL-1686 DP-W): an `AttributionError` (code `VALIDATION_FAILED`) that is also
-    a `CodedError`, so `safe_error_text` keeps its text and the Dislocation Job's error names the
-    finding. The text is a fixed literal plus `mount_point`s (authored identifiers), never a quote
-    value (NFR-499). SL-1696 removes it."""
-
-    def __init__(self, reason: str, mount_points: Iterable[str]) -> None:
-        super().__init__(
-            "VALIDATION_FAILED",
-            "VALIDATION_FAILED: sub-graph mount differences are not yet attributable (FD-1660); "
-            "attribution of sub-graph mount changes is unavailable until SL-1696. "
-            f"{reason}: {', '.join(sorted(set(mount_points)))}",
-        )
-
-
 @dataclass(frozen=True)
 class _Change:
     """One derived change and the payload its substitution needs."""
@@ -522,6 +509,8 @@ class _Change:
     step_id: str | None = None
     old_step: RatingStepBase | None = None  # the baseline's step (changed or removed)
     new_step: RatingStepBase | None = None  # the candidate's step (added or changed)
+    old_mount: SubGraphRef | None = None  # the baseline's mount (changed or removed)
+    new_mount: SubGraphRef | None = None  # the candidate's mount (added or changed)
     pin: tuple[str, ArtifactRef, bool] | None = None  # (pin list, ref, added) of a `pin` change
     fields: tuple[InterfaceDelta, ...] = ()  # input-contract deltas this change carries
     outputs: tuple[InterfaceDelta, ...] = ()  # output deltas this change carries
@@ -529,6 +518,24 @@ class _Change:
     @property
     def id(self) -> str:
         return self.delta.id
+
+    @property
+    def node_id(self) -> str | None:
+        """The graph node this change is about: its step's id, or its mount's `mount_point`."""
+        return self.step_id if self.step_id is not None else self.mount_point
+
+    @property
+    def mount_point(self) -> str | None:
+        mount = self.new_mount or self.old_mount
+        return mount.mount_point if mount is not None else None
+
+    def produces(self, *, new: bool) -> list[str]:
+        """The parent names this change's step, or mount, produces on the candidate's side
+        (`new`) or the baseline's."""
+        step, mount = (self.new_step, self.new_mount) if new else (self.old_step, self.old_mount)
+        if step is not None:
+            return _as_names(step.produces)
+        return list(mount.outputs.values()) if mount is not None else []
 
     def step(self) -> RatingStepBase | None:
         """The step as the side that declares it holds it (the candidate's, else the baseline's)."""
@@ -614,14 +621,43 @@ async def _derive(
             )
         )
 
-    # Pin differences no step change accounts for are their own changes (FR-1399).
+    # A mount is a node of the parent's graph: derived like a step, by its `mount_point` (T1).
+    base_mounts = {m.mount_point: m for m in base_alg.sub_graphs}
+    cand_mounts = {m.mount_point: m for m in cand_alg.sub_graphs}
+    for mount in diff.sub_graph_mounts:
+        point = mount.mount_point
+        old_mount, new_mount = base_mounts.get(point), cand_mounts.get(point)
+        if mount.before is None:
+            kind = "step_added"
+            text = f"{point}: mount added ({mount.after})"
+        elif mount.after is None:
+            kind = "step_removed"
+            text = f"{point}: mount removed ({mount.before})"
+        elif mount.before == mount.after:
+            kind = "step_changed"
+            text = f"{point}: mount ports re-mapped ({mount.after})"
+        else:
+            kind = "step_changed"
+            text = f"{point}: mount {mount.before} → {mount.after}"
+            if mount.ports_changed:
+                text += "; ports re-mapped"
+        drafts.append(
+            _Change(
+                BundleDelta(id="", kind=kind, description=text),
+                old_mount=old_mount,
+                new_mount=new_mount,
+            )
+        )
+    drafts.sort(key=lambda c: c.node_id or "")
+
+    # Pin differences no step or mount change accounts for are their own changes (FR-1399).
     step_refs = {
         ref
         for c in drafts
         for s in (c.old_step, c.new_step)
         if s is not None and (named := _step_ref(s)) is not None
         for ref in (named[1],)
-    }
+    } | {m.ref for c in drafts for m in (c.old_mount, c.new_mount) if m is not None}
     pin_changes: list[_Change] = []
     if baseline.pins is not None and candidate.pins is not None:
         for name in _PIN_KINDS:
@@ -754,24 +790,38 @@ def _merged(
     return out
 
 
+def _applied_by_node(members: Sequence[_Change]) -> tuple[dict[str, str], dict[str, str]]:
+    """The steps' and the mounts' applied maps (`_APPLIED`) for the changes in `members`."""
+    steps = {
+        c.step_id: _APPLIED.get(c.delta.kind, "changed") for c in members if c.step_id is not None
+    }
+    mounts = {
+        c.mount_point: _APPLIED.get(c.delta.kind, "changed")
+        for c in members
+        if c.mount_point is not None
+    }
+    return steps, mounts
+
+
 def _subset_algorithm(
     derivation: _Derivation, members: Sequence[_Change], *, every_change: bool
 ) -> RatingAlgorithm:
-    """RL-1449 DP-1 (c): the baseline with each member's step, contract and output differences
-    applied, so no members is the baseline and every change the candidate (T3)."""
+    """RL-1449 DP-1 (c): the baseline with each member's step, mount, contract and output
+    differences applied, so no members is the baseline and every change the candidate (T3)."""
     base, cand = derivation.baseline, derivation.candidate
     if not members:
         return base
     if every_change:
         return cand
-    steps_applied = {
-        c.step_id: _APPLIED.get(c.delta.kind, "changed") for c in members if c.step_id is not None
-    }
+    steps_applied, mounts_applied = _applied_by_node(members)
     fields = {d.name: d.change for c in members for d in c.fields}
     outputs = {d.name: d.change for c in members for d in c.outputs}
     return base.model_copy(
         update={
             "steps": _merged(base.steps, cand.steps, lambda s: s.step_id, steps_applied),
+            "sub_graphs": _merged(
+                base.sub_graphs, cand.sub_graphs, lambda m: m.mount_point, mounts_applied
+            ),
             "input_contract": _merged(
                 base.input_contract, cand.input_contract, lambda f: f.name, fields
             ),
@@ -788,8 +838,9 @@ def _subset_pins(
     *,
     every_change: bool,
 ) -> Pins:
-    """The baseline's pins, with a pin the candidate dropped removed once no step in the subset
-    names it, each ref a subset step names added, and the `pin` changes in the subset applied."""
+    """The baseline's pins, with a pin the candidate dropped removed once no step or mount in the
+    subset names it, each ref a subset step or mount names added, and the `pin` changes in the
+    subset applied."""
     if not members:
         return baseline
     if every_change:
@@ -798,6 +849,7 @@ def _subset_pins(
     for step in algorithm.steps:
         if (named := _step_ref(step)) is not None:
             needed[named[0]].append(named[1])
+    needed["sub_graphs"] += [m.ref for m in algorithm.sub_graphs]
     pin_removed = {(c.pin[0], c.pin[1]) for c in members if c.pin and not c.pin[2]}
     pin_added = {(c.pin[0], c.pin[1]) for c in members if c.pin and c.pin[2]}
     lists: dict[str, list[ArtifactRef]] = {}
@@ -828,58 +880,33 @@ class _SubsetResolver:
         return await self._inner.resolve(ref)
 
 
-def _check_mounts_attributable(derivation: _Derivation, groups: Sequence[_Group]) -> None:
-    """FD-1660 (RL-1686 DP-G): refuse a mount difference at any K, and any run of two or more groups
-    where either version mounts a sub-graph. The text is a fixed literal plus `mount_point`s."""
-    differing = [
-        m.mount_point
-        for m in diff_algorithms(derivation.baseline, derivation.candidate).sub_graph_mounts
-    ]
-    mounted = [
-        m.mount_point for a in (derivation.baseline, derivation.candidate) for m in a.sub_graphs
-    ]
-    if differing:
-        reason, points = "a mount differs", differing
-    elif mounted and len(groups) >= 2:
-        reason, points = "a sub-graph is mounted and two or more groups are declared", mounted
-    else:
-        return
-    raise _MountNotYetAttributable(reason, points)
-
-
 def _check_dependence(derivation: _Derivation, groups: Sequence[_Group]) -> None:
     """RL-1449 T1: refuse, naming each dependent pair, a group that is not self-contained."""
     changes = derivation.changes
     pairs: set[tuple[str, str]] = set()
-    base_steps = list(derivation.baseline.steps)
+    base, cand = derivation.baseline, derivation.candidate
     for _, members in groups:
         ids = {c.id for c in members}
-        applied = {
-            c.step_id: _APPLIED.get(c.delta.kind, "changed")
-            for c in members
-            if c.step_id is not None
-        }
-        steps = _merged(base_steps, list(derivation.candidate.steps), lambda s: s.step_id, applied)
-        produced = {n for s in steps for n in _as_names(s.produces)}
-        for step in steps:
-            for name in _as_names(step.consumes):
+        steps_applied, mounts_applied = _applied_by_node(members)
+        # A mount is a node: it consumes the parent names its `inputs` map to and produces those
+        # its `outputs` map to (DP-3).
+        nodes = [
+            (s.step_id, _as_names(s.consumes), _as_names(s.produces))
+            for s in _merged(base.steps, cand.steps, lambda s: s.step_id, steps_applied)
+        ] + [
+            (m.mount_point, list(m.inputs.values()), list(m.outputs.values()))
+            for m in _merged(
+                base.sub_graphs, cand.sub_graphs, lambda m: m.mount_point, mounts_applied
+            )
+        ]
+        produced = {name for _, _, names in nodes for name in names}
+        for node_id, consumes, _ in nodes:
+            for name in consumes:
                 if name in produced:
                     continue
-                consumer = next((c for c in changes if c.step_id == step.step_id), None)
-                producer = next(
-                    (
-                        c
-                        for c in changes
-                        if c.new_step is not None and name in _as_names(c.new_step.produces)
-                    ),
-                    None,
-                ) or next(
-                    (
-                        c
-                        for c in changes
-                        if c.old_step is not None and name in _as_names(c.old_step.produces)
-                    ),
-                    None,
+                consumer = next((c for c in changes if c.node_id == node_id), None)
+                producer = next((c for c in changes if name in c.produces(new=True)), None) or next(
+                    (c for c in changes if name in c.produces(new=False)), None
                 )
                 if consumer is not None and producer is not None:
                     pairs.add((consumer.id, producer.id))
@@ -1018,9 +1045,6 @@ async def attribute(
     derivation = await _derive(baseline, candidate, resolver)
     changes = derivation.changes
     groups = _check_groups(changes, spec.change_groups)
-    # FD-1660's loud guard: a sub-graph mount is not yet a derived change or part of a subset, so
-    # a run it would silently misattribute or fail to compile is refused. SL-1696 removes it.
-    _check_mounts_attributable(derivation, groups)
     _check_dependence(derivation, groups)
     k = len(groups)
     full = (1 << k) - 1
