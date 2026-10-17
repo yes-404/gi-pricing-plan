@@ -412,3 +412,49 @@ def test_the_demo_principals_use_existing_roles_and_cover_the_journey() -> None:
     assert "approver" in DEMO_PRINCIPALS["actuary"]
     assert {"approver", "deployer"} <= set(DEMO_PRINCIPALS["prod_approver"])
     assert not {"approver", "deployer"} & set(DEMO_PRINCIPALS["admin"])
+
+
+@pytest.mark.req("FR-190")
+def test_the_ad_tolerance_accepts_the_measured_ratio_and_refuses_a_duplicated_peril() -> None:
+    """DP-1543-B (A): the seed's declared tolerance is 0.5 (accepts ratios in [0.5, 1.5]).
+
+    The measured demo ratio 1.117 (K=100 mean 0.9816, sd 0.1616) passes; a structure that
+    counts the book twice (ratio about 2.2) or duplicates the dominant peril (> 1.5) fails,
+    so the check bites at the width the failure mode sets, not the fit.
+    """
+    import datetime as dt
+    from decimal import Decimal
+
+    from model import AD_RECONCILIATION_TOLERANCE
+
+    from model_schema import (
+        LargeLossKind,
+        ReconciledPeril,
+        Reconciliation,
+        ReconciliationStatus,
+        new_uuid7,
+    )
+
+    def reconcile(modelled: int) -> Reconciliation:
+        return Reconciliation(
+            dataset_version_id=new_uuid7(),
+            part="holdout",
+            perils=(
+                ReconciledPeril(
+                    peril="AD", large_loss_kind=LargeLossKind.NONE, modelled_burning_cost=modelled
+                ),
+            ),
+            observed_burning_cost=1_000_000,
+            modelled_burning_cost=modelled,
+            tolerance=AD_RECONCILIATION_TOLERANCE,
+            computed_at=dt.datetime(2026, 10, 17, tzinfo=dt.UTC),
+        )
+
+    assert AD_RECONCILIATION_TOLERANCE == Decimal("0.5")
+    measured = reconcile(1_117_460)
+    assert measured.ratio == Decimal("1.117460")
+    assert measured.status is ReconciliationStatus.PASS
+    assert reconcile(500_000).status is ReconciliationStatus.PASS
+    duplicated = reconcile(2_200_000)
+    assert duplicated.status is ReconciliationStatus.FAIL
+    assert reconcile(1_500_001).status is ReconciliationStatus.FAIL
