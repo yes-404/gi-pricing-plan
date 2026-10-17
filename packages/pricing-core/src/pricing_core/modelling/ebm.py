@@ -32,6 +32,7 @@ from model_schema import (
 )
 from pricing_core.modelling.errors import FactorResolutionError
 from pricing_core.modelling.factors import resolve_factors
+from pricing_core.modelling.loss_treatment import apply_loss_treatment
 from pricing_core.modelling.weights import require_usable_weights
 from pricing_core.progress import NullProgress, ProgressCallback
 
@@ -206,7 +207,9 @@ def fit_ebm(
         if spec.weight.kind == "column"
         else None
     )
-    y = data[spec.response_column].cast(pl.Float64).to_numpy()
+    y = apply_loss_treatment(
+        data[spec.response_column].cast(pl.Float64).to_numpy(), spec.loss_treatment, EbmFitError
+    )
     x = np.column_stack(columns)
 
     # The fitting stack is a call-site import: `07` NFR-535 keeps the scoring path

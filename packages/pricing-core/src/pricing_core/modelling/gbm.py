@@ -53,7 +53,6 @@ from model_schema import (
     GbmFunctionRef,
     GbmSpec,
     Grouping,
-    LossTreatment,
     MetricDirection,
     MonotonicDirection,
     ObjectiveBackend,
@@ -63,6 +62,7 @@ from model_schema import (
 )
 from pricing_core.modelling.errors import ObjectiveError
 from pricing_core.modelling.factors import FactorMatrix, resolve_factors
+from pricing_core.modelling.loss_treatment import apply_loss_treatment
 from pricing_core.modelling.metrics import evaluate_metric
 from pricing_core.modelling.objectives import (
     ObjectiveFns,
@@ -89,7 +89,6 @@ __all__ = [
     "SUPPORTED_GBM_OBJECTIVES",
     "GbmFit",
     "GbmFitError",
-    "apply_loss_treatment",
     "fit_gbm",
     "load_gbm_booster",
     "objective_family",
@@ -173,32 +172,6 @@ class GbmFit:
     #: `compute_gbm_diagnostics` is a separate call — handing it back is what lets the
     #: caller place it where the requirement says without the fit reaching into diagnostics.
     eval_curve: tuple[GbmEvalPoint, ...] = ()
-
-
-def apply_loss_treatment(response: np.ndarray, treatment: LossTreatment) -> np.ndarray:
-    """FR-127: large-loss treatment is applied to the **response**, at fit time.
-
-    Not to the dataset. `01` VR-ACT-10 flags large losses and never removes them, so one
-    validated Dataset Version serves many capping assumptions without re-ingestion — which
-    is only true while the assumption is applied here.
-
-    `spliced` and `excess` are declared by FR-127 and implemented by nothing. They are
-    refused by name rather than treated as `none`: fitting an uncapped model under a spec
-    that says otherwise would be wrong in the one direction nobody checks, since the spec
-    is what `spec_hash` and the model document both report.
-    """
-    if treatment.kind == "none":
-        return response
-    if treatment.kind == "capped":
-        capped = np.minimum(response, float(treatment.cap_minor or 0))
-        return np.asarray(capped, dtype=np.float64)
-    raise GbmFitError(
-        "LOSS_TREATMENT_UNIMPLEMENTED",
-        f"loss treatment {treatment.kind!r} is declared by FR-127 and built by no "
-        "slice yet. Refused rather than applied as 'none', which would fit an uncapped "
-        "model under a spec that records a treatment.",
-        terms=[treatment.kind],
-    )
 
 
 def _offset(data: pl.DataFrame, offset: OffsetSpec, *, what: str) -> np.ndarray | None:
@@ -642,7 +615,7 @@ def fit_gbm(
     weights = _weights(data, spec.weight)
 
     response = data[spec.response_column].cast(pl.Float64).to_numpy()
-    response = apply_loss_treatment(response, spec.loss_treatment)
+    response = apply_loss_treatment(response, spec.loss_treatment, GbmFitError)
 
     fns = _compile_custom(spec, objective)
     resolved_metrics = _resolve_metrics(spec, metrics)
@@ -682,7 +655,8 @@ def fit_gbm(
         holdout_matrix = resolve_factors(holdout, factors, bandings=bandings, groupings=groupings)
         vx = _encode(holdout_matrix, factors, maps=encodings, bandings=bandings).x
         vy = apply_loss_treatment(
-            holdout[spec.response_column].cast(pl.Float64).to_numpy(), spec.loss_treatment
+            holdout[spec.response_column].cast(pl.Float64).to_numpy(), spec.loss_treatment,
+            GbmFitError,
         )
         # The holdout is weighted too, and for the same reason FR-183 gives for
         # reporting both partitions: a curve whose train half is weighted and whose holdout

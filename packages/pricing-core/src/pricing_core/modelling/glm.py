@@ -54,6 +54,7 @@ from model_schema import (
 from pricing_core.data.splits import assign_folds
 from pricing_core.modelling.diagnostics import deviance
 from pricing_core.modelling.factors import FactorMatrix, resolve_factors
+from pricing_core.modelling.loss_treatment import apply_loss_treatment
 from pricing_core.modelling.tweedie_density import tweedie_log_density
 from pricing_core.modelling.weights import require_usable_weights
 from pricing_core.progress import NullProgress, ProgressCallback
@@ -574,7 +575,9 @@ def fit_glm(
             "there is nothing to estimate.",
         )
 
-    response = data[spec.response_column].cast(pl.Float64).to_numpy()
+    response = apply_loss_treatment(
+        data[spec.response_column].cast(pl.Float64).to_numpy(), spec.loss_treatment, GlmFitError
+    )
     x = design.to_numpy()
 
     offset = None
