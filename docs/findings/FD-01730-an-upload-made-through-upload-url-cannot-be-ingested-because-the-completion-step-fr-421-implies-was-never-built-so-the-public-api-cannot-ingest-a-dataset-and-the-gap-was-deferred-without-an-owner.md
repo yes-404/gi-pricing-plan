@@ -34,6 +34,8 @@ here, not copied.)*
 the 10:56:38 entry, item 1, is HIGH). Owner WK-1178, fixed in P2 by SL-1722 (`PL-1721`,
 `RL-1724`) before the 4 Nov code freeze.**
 
+*(Ruled 2026-10-16: the maintainer (by delegation), "2026-10-16 09:23:23 BST — MERGE-ACK #1307" in `to-lead.md`, RULED HIGH, owner WK-1178, fixed in P2 (SL-1722 / RL-1724). The proposal above is kept as written.)*
+
 A file uploaded through the platform's own upload route cannot become a Dataset Version. The
 public API has no sequence of calls that takes a client's file to an ingested dataset:
 
@@ -203,3 +205,28 @@ acceptance line.
 **Not in this finding.** FD-1715 (blob garbage collection) is related, not the same: its widened
 derived check already counts `promote_upload` as a `BlobRow` writer after `SL-1722`, so the two
 land together.
+
+## Addition 2026-10-16: the relation to FD-1713
+
+`PL-1721`'s Activation need 4 requires this finding to state its relation to FD-1713, and until
+this section the finding named FD-1713 only as provenance (the "Filed under working id 8039"
+note above). The relation:
+
+- **FD-1713 is the deployed-stack half of the same gap; this finding does not depend on it to be
+  fixed, and it does not fix it.** The public upload path needs an `io` consumer twice: for the
+  `blob.promote` Job (the completion step) and for the `dataset.ingest` Job. FD-1713 records that
+  no worker command in the repository consumes `io`, and that S4 (WK-674) discharges it before
+  the P2 code freeze, with the compose worker(s) consuming every pool in the routing table.
+- **Under W2 (RL-1724, DP-U2) SL-1722's test brings its own `io` worker.** The test launches a
+  separate process from the unmodified entrypoint (`--queues io`) and asserts both Jobs ended
+  `queue == "io"` and `succeeded`. RL-1724 also requires `blob.promote` to be registered in
+  `entrypoint.py`, because a worker that registered handlers itself would hide the
+  unregistered-handler defect FD-1713 found.
+- **A deployed or compose stack has an `io` consumer only once S4 discharges FD-1713.** Until
+  then the upload path works in the test and in CI, and not on `docker compose up`: a completed
+  upload would leave its `blob.promote` Job `queued`.
+- **Consequence for discharge.** SL-1722 merging with its test green discharges this finding as
+  written above. It does not discharge FD-1713, and the compose limb stays open under FD-1713's
+  own owner (WK-674) and event.
+
+Reason for the addition: `PL-1721` Activation need 4. The body above is unchanged.
