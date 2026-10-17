@@ -81,6 +81,21 @@ item 11 option (b), reported to the lead for an auditor to file; the slice conti
 refused pair is involved. Script: `~/gi-pricing-plan.local/scratch/sl1563-dbwin/item11.py`, run with
 `uv run --directory <detached worktree at 713d296a> python -I`; rc 0.
 
+### DB window 1 and backend sweep start (executor-1563db, 2026-10-17 13:58-14:02 BST)
+
+- Probe plugin proof (`probe_compat.py`, run through `run-small.sh` over `test_testing.py` and
+  `test_rating_glm_model_call.py` in a detached worktree at 713d296a with those two files from ac7d0f0e): it
+  logged hit 2 (`int->money_minor` in `test_testing.py`) and hit 1 (`money_minor->decimal` in
+  `test_rating_glm_model_call.py`), so it sees a refusal. Log: `scratch/sl1563-dbwin/proof.log`.
+- Red-first, item 4, base ac7d0f0e with `test_sub_graphs_api.py` from 3a19a47d: `test_a_sub_graph_port_feeding_money_minor_into_decimal_is_refused`
+  FAILED `assert 201 == 422`, the quoted red. (Two other failures there were `BLOB_NOT_FOUND`, the template-DB `blobs` trap, a wrong-cause red.)
+- Window 1 at 3a19a47d (tree a828ea0f), own DB, `truncate blobs cascade`, bucket `gip-test-sl1563`: `test_sub_graphs_api.py` 32 passed,
+  `test_sub_graphs_service.py` 12 passed, `test_rating_algorithms.py` 24 passed; END rc=0.
+- Sweep hits in window 1 (all three are deliberate negative tests asserting `422 RATING_TYPE_MISMATCH`; not fixed, STOP to the lead per PL-1562 item 7):
+  `test_sub_graphs_api.py::test_an_output_port_type_mismatch_is_refused_rating_type_mismatch` (`string->money_minor`),
+  `test_sub_graphs_api.py::test_a_sub_graph_port_feeding_money_minor_into_decimal_is_refused` (`money_minor->decimal`, item 4's test),
+  `test_sub_graphs_service.py::test_a_refused_write_leaves_no_row_and_no_event` (`string->money_minor`).
+
 ## Owed
 
 Full two-half gate (grant needed), backend DB tests (item 4, `test_sub_graphs_service.py`,
