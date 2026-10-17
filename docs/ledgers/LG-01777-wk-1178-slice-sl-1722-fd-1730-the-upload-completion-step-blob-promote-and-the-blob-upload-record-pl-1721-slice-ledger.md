@@ -2,7 +2,7 @@
 id: LG-1777
 family: ledger
 title: WK-1178 slice SL-1722 — FD-1730, the upload-completion step (blob.promote and the Blob Upload record), PL-1721 slice ledger
-status: active                 # active → closed (§1.2a)
+status: closed                   # active → closed (§1.2a)
 created: 2026-10-17            # original date 2026-10-16, set at the draft; minted 2026-10-17
 owner: executor
 tree: bba89d66f28fb469e27b25cede67086d518c95ec
