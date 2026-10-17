@@ -415,3 +415,92 @@ async def test_guard_dp_a4_3_severity_is_uncapped_until_the_fr_127_glm_fix_merge
     assert [p.large_loss.kind for p in structure.perils] == [LargeLossKind.NONE], (
         f"AD structure large_loss is not the uncapped treatment. {why}"
     )
+
+
+@pytest.mark.req("FR-222")
+async def test_the_b4_rating_version_scores_the_structure_premium(
+    database: Database, blob_store: BlobStore, workspace_id: UUID, grant: Any
+) -> None:
+    """PL-1542 Task 4 / PL-1705 Task 0 Step 4 (Q3 (c)): the ONE DB-backed B4 scored-premium case.
+
+    The rating version is built the way the seed builds it (a seeded `area` Rate Table, the B4
+    algorithm over the approved Peril Structure, a `rating.compile` Job), then a quote is scored
+    through the stored bundle. The expected premium is frequency x severity computed HERE, in
+    Decimal, from the two approved fits' stored coefficients; it is not read back from the
+    scored bundle and not from `structure_premium_minor`. The seed tables are unedited, so every
+    ratio is exactly 1 and the premium is the structure's prediction. The pure B4 goldens stay in
+    `packages/pricing-core/tests/test_demo_b4_premium.py`.
+
+    WRITTEN, NOT YET RUN (the DB window owes it): its expectation is derived, not observed."""
+    from decimal import ROUND_HALF_EVEN
+
+    from app.config import Settings
+    from app.platform import rating_versions as rating_service
+    from app.worker.rating_handlers import register_rating_handlers
+    from model_schema import ArtifactRef, Pins, QuoteContext
+    from pricing_core.rating.properties import payable_minor
+    from pricing_core.rating.score import score_one
+
+    register_rating_handlers()
+    world = await _structure_world(database, blob_store, workspace_id, grant)
+    structure_id = await demo_model.create_ad_peril_structure(
+        database, blob_store, workspace_id, world.actuary, world.approver,
+        world.frequency_id, world.severity_id, tolerance=Decimal("0.9"),
+    )
+    structure_ref = await demo_model.peril_structure_ref(database, structure_id)
+    freq_ref, freq_fit = await demo_model.load_approved_glm(
+        database, workspace_id, world.frequency_id
+    )
+    _, sev_fit = await demo_model.load_approved_glm(database, workspace_id, world.severity_id)
+
+    table_version = await demo_model.rate_table_service.seed_from_model(
+        database, workspace_id, world.actuary, Settings(), blob_store,
+        slug=demo_model.table_slug("area"), model_ref=freq_ref, factor="area",
+        change_note="B4 DB case: area table seeded from the approved frequency GLM",
+    )
+    tables = {
+        "area": ArtifactRef(
+            type="rate_table", slug=table_version.slug, version=table_version.version
+        )
+    }
+    levels = [r.level for r in freq_fit.relativities["area"]]
+    algorithm_ref = await demo_model.save_demo_algorithm(
+        database, workspace_id, world.actuary, tables, {}, {"area": levels}, 0, structure_ref
+    )
+    async with database.unit_of_work() as session:
+        row = await rating_service.create_rating_version(
+            session, workspace_id=workspace_id, actor=world.actuary,
+            slug=demo_model.DEMO_RATING_SLUG, dataset_version_id=world.version_id,
+            model_ref=freq_ref, algorithm_ref=algorithm_ref,
+            pins=Pins(rate_tables=list(tables.values()), models=[freq_ref, structure_ref]),
+        )
+        rating_id = row.id
+        rating_ref = ArtifactRef(type="rating_version", slug=row.slug, version=row.version)
+    compiled = await demo_model._run_job(
+        database, blob_store, workspace_id, world.actuary, JobKind.RATING_COMPILE,
+        {"rating_version_id": str(rating_id)},
+    )
+    assert compiled is JobStatus.SUCCEEDED
+    bundle = await demo_model._load_compiled(database, blob_store, workspace_id, rating_id)
+
+    def _mean(fit: Any, level: str) -> Decimal:
+        """exp(intercept + the level's coefficient): a base level has no `area[...]` term."""
+        estimates = {c.term: Decimal(repr(c.estimate)) for c in fit.coefficients}
+        return (estimates["intercept"] + estimates.get(f"area[{level}]", Decimal(0))).exp()
+
+    scored_levels = set()
+    for level in levels:
+        context = QuoteContext.model_validate({
+            "purpose": "new_business", "quoted_at": "2026-09-28T09:00:00",
+            "effective_date": "2026-10-01",
+            "inputs": {"area": level, "bonus_malus": 100, "exposure_years": 1.0},
+            "options": {"rating_version_ref": str(rating_ref)},
+        })
+        expected = int(
+            (_mean(freq_fit, level) * _mean(sev_fit, level)).quantize(
+                Decimal(1), rounding=ROUND_HALF_EVEN
+            )
+        )
+        assert payable_minor(await score_one(bundle, context)) == expected, level
+        scored_levels.add(expected)
+    assert len(scored_levels) == len(levels)  # the two levels price differently
