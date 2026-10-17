@@ -116,3 +116,7 @@ Full two-half gate (grant needed), the auditor's re-check, the mint step.
 ## PRs
 
 None opened by the executor; the lead opens and merges. Branch `sl-1563-wk1178-fd1424-prep-2026-10-16`.
+
+## Delta — literal code assert (2026-10-17)
+
+Named delta, per the maintainer (by delegation) entry "2026-10-17 14:12:05 BST — Maintainer: SL-1563 review hit → (b); sweep DONE noted" in `to-lead.md`: a one-line literal assert `saved.json()["code"] == "RATING_TYPE_MISMATCH"`, guarded to the `type_mismatch` param, added to `backend/tests/test_rating_algorithm_validate.py::test_the_first_reported_issue_is_the_code_save_refuses_with`, applied before the gate so the gate covers it; no separate small run.
