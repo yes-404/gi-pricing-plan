@@ -116,13 +116,13 @@ async def test_management_rate_limit_is_separate_from_scoring(
 ) -> None:
     """With the management limit exhausted, `POST /score` by the same Principal, under its own
     limit, is admitted. Red: one shared counter."""
-    headers = _account(
-        client, admin_headers, permissions=("score:execute", "job:read"), rate_limit_rps=5
-    )
+    # A Service Account holds `score:execute` only (`ALLOWED_PERMISSIONS`, FR-389), so its
+    # management reads go to `ME_URL`, which counts and needs no permission.
+    headers = _account(client, admin_headers, permissions=("score:execute",), rate_limit_rps=5)
     await set_limit(1)
 
-    assert client.get(JOBS_URL, headers=headers).status_code != 429
-    assert client.get(JOBS_URL, headers=headers).status_code == 429
+    assert client.get(ME_URL, headers=headers).status_code != 429
+    assert client.get(ME_URL, headers=headers).status_code == 429
     # Admitted by the limiter: it reaches the handler and is refused there for a reason that has
     # nothing to do with the limit (no live Rating Version).
     assert client.post("/api/v1/score", json=QUOTE, headers=headers).status_code != 429
@@ -135,7 +135,7 @@ async def test_management_rate_limit_ignores_the_accounts_scoring_rate(
     """(3a): an account with `rate_limit_rps` = 1 and the Setting unset makes three management
     calls in one window: all admitted, and Redis is not called. Red: the account's rate applied
     to the management counter."""
-    headers = _account(client, admin_headers, permissions=("job:read",), rate_limit_rps=1)
+    headers = _account(client, admin_headers, permissions=("score:execute",), rate_limit_rps=1)
     calls: list[str] = []
     limiter = client.app.state.rate_limiter  # type: ignore[attr-defined]
     real_admit = limiter.admit
@@ -146,7 +146,9 @@ async def test_management_rate_limit_ignores_the_accounts_scoring_rate(
 
     monkeypatch.setattr(limiter, "admit", admit)
 
-    statuses = [client.get(JOBS_URL, headers=headers).status_code for _ in range(3)]
+    # A Service Account's own `rate_limit_rps` does not govern the management counter
+    # (FR-452, 2026-10-12 amendment): three counted reads past a rate of 1, none refused.
+    statuses = [client.get(ME_URL, headers=headers).status_code for _ in range(3)]
     assert 429 not in statuses
     assert calls == []
 
@@ -180,6 +182,21 @@ def _spy_management_count(client: TestClient, monkeypatch: pytest.MonkeyPatch) -
 
     monkeypatch.setattr(limiter, "admit", admit)
     return calls
+
+
+#: The built-in role that holds each in-handler permission (`BUILTIN_ROLES`): a Service Account
+#: can hold neither (`ALLOWED_PERMISSIONS`, FR-389), so these routes are driven by user
+#: principals.
+_ROLE_HOLDING = {"dataset:write": "analyst", "deployment:promote": "deployer"}
+
+
+async def _user_headers(grant: Any, workspace_id: UUID, role: str) -> dict[str, str]:
+    """A fresh user Principal holding `role` in the workspace; return its dev headers."""
+    from model_schema import new_uuid7
+
+    user_id = new_uuid7()
+    await grant(role, principal_id=user_id)
+    return {DEV_PRINCIPAL_HEADER: str(user_id), "Workspace-Id": str(workspace_id)}
 
 
 #: The three routes whose permission is decided inside the handler's service (`RL-1687` (1a):
@@ -221,7 +238,9 @@ _IN_HANDLER_ROUTES = [
 @pytest.mark.parametrize(("url", "body", "permission", "permitted_status"), _IN_HANDLER_ROUTES)
 async def test_a_403_from_an_in_handler_permission_check_is_not_counted(
     client: TestClient,
+    workspace_id: UUID,
     admin_headers: dict[str, str],
+    grant: Any,
     set_limit: Any,
     monkeypatch: pytest.MonkeyPatch,
     url: str,
@@ -233,7 +252,8 @@ async def test_a_403_from_an_in_handler_permission_check_is_not_counted(
     unchanged (read before and after). Red: `counted_caller` counts at the dependency, before
     the handler's own check, so the refused call moves the counter by one."""
     await set_limit(1000)
-    headers = _account(client, admin_headers, permissions=("job:read",), slug="refused-client")
+    # `auditor` holds the read permissions only: it passes authentication and lacks `permission`.
+    headers = await _user_headers(grant, workspace_id, "auditor")
     calls = _spy_management_count(client, monkeypatch)
 
     before = len(calls)
@@ -248,7 +268,9 @@ async def test_a_403_from_an_in_handler_permission_check_is_not_counted(
 @pytest.mark.parametrize(("url", "body", "permission", "permitted_status"), _IN_HANDLER_ROUTES)
 async def test_a_permitted_call_to_an_in_handler_permission_route_is_counted_once(
     client: TestClient,
+    workspace_id: UUID,
     admin_headers: dict[str, str],
+    grant: Any,
     set_limit: Any,
     monkeypatch: pytest.MonkeyPatch,
     url: str,
@@ -260,7 +282,7 @@ async def test_a_permitted_call_to_an_in_handler_permission_route_is_counted_onc
     by exactly one, whatever the handler then answers. Red: the move to count-after-the-check
     drops the count (0) or doubles it (2)."""
     await set_limit(1000)
-    headers = _account(client, admin_headers, permissions=(permission,), slug="permitted-client")
+    headers = await _user_headers(grant, workspace_id, _ROLE_HOLDING[permission])
     calls = _spy_management_count(client, monkeypatch)
 
     before = len(calls)

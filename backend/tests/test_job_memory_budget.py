@@ -8,6 +8,8 @@ configured and never read is worse than none (FR-415). These tests need no datab
 from __future__ import annotations
 
 import asyncio
+import threading
+from collections.abc import Iterator
 from typing import Any
 
 import pytest
@@ -19,12 +21,37 @@ from model_schema import new_uuid7
 GIB = 1024**3
 
 
-def _progress(**budget: Any) -> JobProgress:
+@pytest.fixture
+def cancellation_loop(monkeypatch: pytest.MonkeyPatch) -> Iterator[asyncio.AbstractEventLoop]:
+    """A running loop and a cancellation reader that reports "not requested".
+
+    `check_cancelled()` goes on from the budget check to the cancellation poll, which
+    schedules `_read_cancellation()` on the loop and waits for it. A loop that never runs
+    would block that wait; the reader is stubbed so no database is needed, and the tests
+    still drive `check_cancelled()` end to end.
+    """
+
+    async def not_requested(self: JobProgress) -> bool:
+        return False
+
+    monkeypatch.setattr(JobProgress, "_read_cancellation", not_requested)
+    loop = asyncio.new_event_loop()
+    thread = threading.Thread(target=loop.run_forever, daemon=True)
+    thread.start()
+    try:
+        yield loop
+    finally:
+        loop.call_soon_threadsafe(loop.stop)
+        thread.join(timeout=5)
+        loop.close()
+
+
+def _progress(loop: asyncio.AbstractEventLoop | None = None, **budget: Any) -> JobProgress:
     # `database` is never touched by the budget check; the loop is only stored.
     return JobProgress(
         new_uuid7(),
         None,  # type: ignore[arg-type]
-        asyncio.new_event_loop(),
+        loop or asyncio.new_event_loop(),
         **budget,
     )
 
@@ -44,20 +71,24 @@ def test_a_job_over_its_memory_budget_is_terminated_naming_the_budget(monkeypatc
 
 
 @pytest.mark.req("FR-412")
-def test_a_job_within_its_memory_budget_is_not_stopped(monkeypatch) -> None:
+def test_a_job_within_its_memory_budget_is_not_stopped(
+    monkeypatch, cancellation_loop: asyncio.AbstractEventLoop
+) -> None:
     monkeypatch.setattr(progress_module, "_resident_bytes", lambda: 1 * GIB)
-    _progress(memory_gb=2.0).check_cancelled()
+    _progress(cancellation_loop, memory_gb=2.0).check_cancelled()
 
 
 @pytest.mark.req("FR-412")
-def test_no_memory_budget_reads_no_memory(monkeypatch) -> None:
+def test_no_memory_budget_reads_no_memory(
+    monkeypatch, cancellation_loop: asyncio.AbstractEventLoop
+) -> None:
     """A Job without a memory budget must not pay for a /proc read at every checkpoint."""
 
     def boom() -> int:
         raise AssertionError("resident memory read with no memory budget")
 
     monkeypatch.setattr(progress_module, "_resident_bytes", boom)
-    _progress().check_cancelled()
+    _progress(cancellation_loop).check_cancelled()
 
 
 @pytest.mark.req("FR-412")

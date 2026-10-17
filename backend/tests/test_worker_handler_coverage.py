@@ -66,14 +66,22 @@ def entrypoint_registrars() -> list[tuple[str, str]]:
     return calls
 
 
-def kinds_registered_by(
-    registrars: list[tuple[str, str]], monkeypatch: pytest.MonkeyPatch
-) -> set[JobKind]:
-    """Run the registrars against an empty registry, so other tests' registrations do not count."""
-    monkeypatch.setattr(handlers, "HANDLERS", {})
-    for module, function in registrars:
-        getattr(importlib.import_module(module), function)()
-    return set(handlers.HANDLERS)
+def kinds_registered_by(registrars: list[tuple[str, str]]) -> set[JobKind]:
+    """Run the registrars against an empty registry, so other tests' registrations do not count.
+
+    The registry is emptied and restored **in place**: several handler modules bind
+    `HANDLERS` by name (`from app.worker.handlers import HANDLERS`), so a rebinding of
+    `handlers.HANDLERS` would leave them reading, and skipping on, the original dict.
+    """
+    saved = dict(handlers.HANDLERS)
+    handlers.HANDLERS.clear()
+    try:
+        for module, function in registrars:
+            getattr(importlib.import_module(module), function)()
+        return set(handlers.HANDLERS)
+    finally:
+        handlers.HANDLERS.clear()
+        handlers.HANDLERS.update(saved)
 
 
 def kinds_without_a_handler(registered: set[JobKind]) -> list[str]:
@@ -102,33 +110,27 @@ def allow_list_problems(
 
 @pytest.mark.req("FR-405")
 @pytest.mark.req("FR-406")
-def test_every_routed_kind_has_a_handler_in_the_production_entrypoint(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    registered = kinds_registered_by(entrypoint_registrars(), monkeypatch)
+def test_every_routed_kind_has_a_handler_in_the_production_entrypoint() -> None:
+    registered = kinds_registered_by(entrypoint_registrars())
     missing = kinds_without_a_handler(registered)
     assert missing == [], f"routed kinds with no handler in the production entrypoint: {missing}"
 
 
 @pytest.mark.req("FR-405")
-def test_the_allow_list_names_only_later_phase_kinds_without_a_handler(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    registered = kinds_registered_by(entrypoint_registrars(), monkeypatch)
+def test_the_allow_list_names_only_later_phase_kinds_without_a_handler() -> None:
+    registered = kinds_registered_by(entrypoint_registrars())
     assert allow_list_problems(registered, LATER_PHASE_KINDS) == []
 
 
 @pytest.mark.req("FR-405")
-def test_the_guard_names_the_kinds_of_a_dropped_registrar(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_the_guard_names_the_kinds_of_a_dropped_registrar() -> None:
     """Breaker: drop each registrar in turn; the guard names exactly the kinds it alone adds."""
     registrars = entrypoint_registrars()
     assert registrars, "the entrypoint calls no register_*_handlers"
-    full = kinds_registered_by(registrars, monkeypatch)
+    full = kinds_registered_by(registrars)
     for dropped in registrars:
         rest = [r for r in registrars if r != dropped]
-        without = kinds_registered_by(rest, monkeypatch)
+        without = kinds_registered_by(rest)
         lost = {k.value for k in full - without if k in DEFAULT_QUEUE_FOR_KIND}
         assert lost <= set(kinds_without_a_handler(without)), dropped
 
