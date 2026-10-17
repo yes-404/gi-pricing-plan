@@ -142,3 +142,36 @@ def test_a_parquet_pair_is_named_pending_not_computed() -> None:
     line = next(line for line in draft.text.splitlines() if "big" in line)
     assert "pending" in line
     assert "/api/v1/rate-tables/big@2/diff?against=1" in line
+
+
+def test_u1_a_step_entry_names_its_step_in_the_text() -> None:
+    """RL-1707 rule 5: `- age (step t): …` for an entry with a `step_id`; as today without one."""
+    entry = RateTableChange(
+        slug="age",
+        step_id="t",
+        from_ref=_table("age", 1),
+        to_ref=_table("age", 2),
+        diff=RateTableDiff(changed_cells=1),
+    )
+
+    draft = draft_change_summary(_rv(1), AlgorithmDiff(), [entry])
+
+    assert "- age (step t): version 1 -> 2, 1 cell(s) changed." in draft.text.splitlines()
+    plain = draft_change_summary(_rv(1), AlgorithmDiff(), [_changed("age", 1, 2, changed_cells=1)])
+    assert "- age: version 1 -> 2, 1 cell(s) changed." in plain.text.splitlines()
+
+
+def test_u2_a_step_entry_sorts_before_a_pin_entry_of_the_same_slug() -> None:
+    """RL-1707 rule 4: slug, then step entries before pin entries."""
+    step = RateTableChange(
+        slug="age",
+        step_id="t",
+        from_ref=_table("age", 1),
+        to_ref=_table("age", 2),
+        diff=RateTableDiff(changed_cells=1),
+    )
+    pin = RateTableChange(slug="age", from_ref=None, to_ref=_table("age", 5))
+
+    draft = draft_change_summary(_rv(1), AlgorithmDiff(), [pin, step])
+
+    assert draft.rate_tables == [step, pin]

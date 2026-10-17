@@ -42,7 +42,7 @@ from app.platform import sub_graphs as sub_graphs_service
 from app.platform import transformations as transform_service
 from app.platform import transparency as transparency_service
 from app.platform.blobs import BlobStore
-from app.platform.change_summary import draft_change_summary
+from app.platform.change_summary import draft_change_summary, pair_rate_tables
 from app.platform.modelling import load_factors, resolve_offset_model, to_factor, to_model
 from model_schema import (
     ApprovalPolicy,
@@ -1333,8 +1333,10 @@ async def draft_change_summary_for(
     other version of its algorithm (`_baseline`); `RL-1498`. Writes nothing.
 
     A version without an `algorithm_ref` or `pins` has nothing to diff: 409
-    `RATING_VERSION_UNPINNED`. Rate tables are paired by slug across the two versions'
-    pins; two versions of one slug on either side: 409 `VALIDATION_FAILED` (FD-1679). A pair
+    `RATING_VERSION_UNPINNED`. Rate tables are paired by
+    `change_summary.pair_rate_tables` (RL-1707): through the `table` step that names them, then a
+    pin no step entry names by slug where it is the one such ref on each side. No pin set is
+    refused. A pair
     with a `storage: parquet` side is returned `pending`, not computed, so no
     Job is created (FR-232); the rest are the unweighted diff of `rate_tables.diff`.
     """
@@ -1375,55 +1377,34 @@ async def draft_change_summary_for(
             session, workspace_id=workspace_id, rating_version=baseline_row
         )
         structural = None if previous is None else diff_algorithms(previous, candidate)
-        before = _pins_by_slug(baseline_row.pins)
-        after = _pins_by_slug(row.pins)
+        before = _rate_table_pins(baseline_row.pins)
+        after = _rate_table_pins(row.pins)
     changes: list[RateTableChange] = []
-    for slug in sorted(before.keys() | after.keys()):
-        old, new = before.get(slug), after.get(slug)
-        if old == new:
-            continue
+    for entry in pair_rate_tables(previous, candidate, before, after):
+        old, new = entry.from_ref, entry.to_ref
         if old is None or new is None:
-            changes.append(RateTableChange(slug=slug, from_ref=old, to_ref=new))
+            changes.append(entry)
         elif await rate_tables_service.diff_needs_job(
-            database, workspace_id, slug, new.version, old.version
+            database, workspace_id, new.slug, new.version, old.version
         ):
-            changes.append(RateTableChange(slug=slug, from_ref=old, to_ref=new, pending=True))
+            changes.append(entry.model_copy(update={"pending": True}))
         else:
             diff = await rate_tables_service.diff(
                 database,
                 workspace_id,
-                slug,
+                new.slug,
                 new.version,
                 old.version,
                 blob_store=blob_store,
                 cache=None,
             )
-            changes.append(RateTableChange(slug=slug, from_ref=old, to_ref=new, diff=diff))
+            changes.append(entry.model_copy(update={"diff": diff}))
     return draft_change_summary(baseline_ref, structural, changes)
 
 
-def _pins_by_slug(pins: dict[str, Any] | None) -> dict[str, ArtifactRef]:
-    """A version's pinned rate tables by slug; a version without pins pins none.
-
-    Refuses a version pinning two versions of one slug (FD-1679): pairing by slug would keep
-    one of them and silently drop or mis-pair the other's change. `RL-1538` makes such pins
-    valid input, so create accepts them; the pairing rule is WK-673's DP-P1.
-    """
-    if pins is None:
-        return {}
-    by_slug: dict[str, ArtifactRef] = {}
-    for ref in Pins.model_validate(pins).rate_tables:
-        if ref.slug in by_slug:
-            raise PlatformError(
-                "VALIDATION_FAILED",
-                "Two versions of one rate table are pinned",
-                409,
-                f"The pins carry rate table {ref.slug!r} at versions "
-                f"{by_slug[ref.slug].version} and {ref.version}; the change summary pairs "
-                "rate tables by slug and cannot pair these (FD-1679).",
-            )
-        by_slug[ref.slug] = ref
-    return by_slug
+def _rate_table_pins(pins: dict[str, Any] | None) -> list[ArtifactRef]:
+    """A version's pinned rate tables, in stored order; a version without pins pins none."""
+    return [] if pins is None else list(Pins.model_validate(pins).rate_tables)
 
 
 def _compared(quote: GoldenQuote) -> dict[str, Any]:
