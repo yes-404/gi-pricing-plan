@@ -2795,6 +2795,28 @@ On the same entry, remedy S-b: FD-1729 (HIGH), owner WK-1178, P2. The applicatio
 
 (Minted 2026-10-17 as SL-1771 from working id 8041, with PL-1769 from working id 8016, in plans batch P2 mint PR.)
 
+#### SL-1773 — WK-1178 fix slice — FD 8097: a scalar one-row GLM predict for model_call, bit-identical to the polars path
+
+```yaml
+id: SL-1773
+family: slice
+title: WK-1178 fix slice — FD 8097: a scalar one-row GLM predict for model_call, bit-identical to the polars path
+status: closed                   # draft → active → closed | retired (§1.2a)
+created: 2026-10-17
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 9469721db3d26480824cc1d715da2ec4ca9044d0
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1772, SL-1543, SL-1274, SL-1341]
+```
+
+On the maintainer's ruling of 2026-10-17 20:48:15 BST (the SL-1543 diagnosis accepted), item 2: fix (A) as its own small slice. FD 8097 (HIGH, WK-1178): a `model_call` to a GLM costs ~16.9 ms/quote through a one-row polars `collect` in `resolve_factors` (8.6× main), on the production `/score` and batch paths, NFR-489-relevant, blocking G2. `_GlmScorer.predict` (`packages/pricing-core/src/pricing_core/rating/runtime.py:822` on `9469721d`) gets a scalar one-row path with no polars frame; `predict_glm` stays for batches. Proof: a parity test, red first, asserting exact `==` of every predicted value against the polars path over the demo goldens and the seed's dislocation portfolio quotes, with the same `PredictionError` codes on the refusals; a diagnostic per-quote timing, printed, never asserted. `float` return and Decimal composition unchanged. (B), (D) and (E) are refused; (C) runs as data only. Gate on a free slot after the proof pair. SL-1543 keeps B4, waits for this merge, then re-merges and re-gates SOLO. Plan: `PL-1772`. Ledger: LG 8100, filed by the executor at build. *(Cut 2026-10-17 under working id 8099, reserved by the lead.)*
+
+(Activated 2026-10-17 as WK-1178's FD 8097 fix slice, on the maintainer's "plan + GO now" (2026-10-17 20:48:15 BST, ruling item 2), with `PL-1772` activated in the same commit.)
+
+Minted 2026-10-17 from working id 8099 on the maintainer's re-allocation (to-lead 2026-10-17 21:30:18 BST).
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
