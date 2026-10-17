@@ -7,7 +7,7 @@ created: 2026-10-14
 owner: auditor
 tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
 corrected_by: []
-relates: [WK-1178, PL-8034, SL-8035, NFR-485, NFR-475, P2]
+relates: [WK-1178, PL-1735, SL-1736, NFR-485, NFR-475, P2]
 ---
 
 # FD-8046 — NFR-485's construction clause and the code's construction disagree
@@ -17,7 +17,7 @@ Authority: the maintainer's (by delegation) entry "2026-10-14 12:07:40 BST" in
 `channel/to-lead.md`, DP-5, verbatim: *"an FD, measure as-is: NFR-485 names
 `QuantileDMatrix`/streaming, but the code uses `xgb.DMatrix` (gbm.py:895), LightGBM
 `free_raw_data=False` (gbm.py:1108) and a dense GLM (glm.py:578). Which side is wrong is the FD's
-§0 question. The 5M reading answers whether the gap matters."* Plan context: PL 8034 at
+§0 question. The 5M reading answers whether the gap matters."* Plan context: PL 1735 at
 `origin/pl-8034-wk1178-p2-nfr-sweep-2026-10-14` @14b6d79ad5cb. Every citation below was read at
 `origin/main` `a3fc2e8dd384de6abf909f662f43011b8078fb4e`.)*
 
@@ -64,7 +64,7 @@ clause also names a mechanism where the requirement's purpose is the budget; if 
 requirement. Under this reading the remedy is a dated amendment narrowing the clause to the budget
 (and to the GBM paths, if the GLM is exempt), kept append-only.
 
-**What distinguishes them is a measurement, not an argument**, and PL 8034 already schedules it:
+**What distinguishes them is a measurement, not an argument**, and PL 1735 already schedules it:
 DP-4 (b) in the 12:07:40 entry puts a 5 M run per arm on nfr-bench-1 session 2 under
 `MemoryMax=30G`, and a cap-kill is an FD. A 5 M run that stays inside 32 GB makes the budget clause
 met and moves the dispute to whether the method clause was ever a requirement in its own right
@@ -86,6 +86,6 @@ verdict, and does not answer this.
 
 ## Disposition
 
-The event that next discharges it: the SL 8035 5 M reading on nfr-bench-1 session 2, then a
+The event that next discharges it: the SL 1736 5 M reading on nfr-bench-1 session 2, then a
 maintainer ruling on Reading 1 or 2, then either the construction fix or a dated NFR-485
 amendment, whichever is ruled.

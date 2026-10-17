@@ -7,7 +7,7 @@ created: 2026-10-14
 owner: auditor
 tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
 corrected_by: []
-relates: [WK-1178, PL-8034, SL-8035, NFR-472, FR-7, FR-81, P2]
+relates: [WK-1178, PL-1735, SL-1736, NFR-472, FR-7, FR-81, P2]
 ---
 
 # FD-8047 — a purge audits no `before`, and the NFR-472 test is green by construction
@@ -43,7 +43,7 @@ the case where a before state matters most. The `@1` in the `entity_ref` is a li
 dataset's version; whether that is intended was not checked.
 
 The adjacent limb of the same clause: `replace_rule_set` (`platform/validation_rules.py:894-909`)
-also passes `after` only. NFR-472's red-first test in SL 8035 covers that limb; this finding does
+also passes `after` only. NFR-472's red-first test in SL 1736 covers that limb; this finding does
 not duplicate it, and a fix to one must not be reported as closing the other.
 
 ### Limb 2 — `test_data_nfrs.py:147` claims coverage it does not assert
@@ -76,10 +76,10 @@ Re-runnable at `a3fc2e8d`: `git show a3fc2e8d:backend/src/app/platform/datasets.
 - Against LOW: the missing `before` is on an erasure in an audit chain whose purpose is
   reconstruction, and the false coverage marker is the class (a passing check that cannot fail)
   that hid this limb.
-- Re-rate trigger: HIGH if the SL 8035 red-first test finds a second event class with no `before`.
+- Re-rate trigger: HIGH if the SL 1736 red-first test finds a second event class with no `before`.
 
 ## Disposition
 
 The event that next discharges it: the WK-1178 slice that passes `before` on the purge event and
 adds a per-class assertion for acknowledgements, dictionary edits, rule-set changes and purges,
-each red on the pre-fix tree. The rule-set assertion is SL 8035's.
+each red on the pre-fix tree. The rule-set assertion is SL 1736's.
