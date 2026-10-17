@@ -719,7 +719,8 @@
       "enum": [
         "level_cap",
         "no_source_column",
-        "operand_of_interaction"
+        "operand_of_interaction",
+        "expression_factor"
       ],
       "title": "PartialDependenceOmissionReason",
       "type": "string"
@@ -906,7 +907,8 @@
       "description": "Why a factor has no permutation importance (FR-178).",
       "enum": [
         "operand_of_interaction",
-        "no_holdout_column"
+        "no_holdout_column",
+        "expression_factor"
       ],
       "title": "PermutationOmissionReason",
       "type": "string"

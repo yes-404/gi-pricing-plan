@@ -308,3 +308,16 @@ mapped to the same feature name collapse before `predict` sees them (the last on
 3. `test_rating_glm_model_call.py`, `test_factor_resolution.py`, `test_rating_compile_completeness.py`, and the backend
    `test_rating_algorithms.py` (the save check) after the change to `required_model_inputs`.
 4. `ruff check`, `mypy`, `audit-docs.py` (under the gate-2 flock).
+
+## PRs
+
+Not opened yet. The lead opens the PR; SL 8074 (FD 8070) is unmerged and carries the same `_GlmScorer.predict` collision guard and the same `MODEL_CALL_FEATURE_COLLISION` entry in `03`; per the 2026-10-16 10:52:08 BST ruling this slice drops its copy when SL 8074 is on main.
+
+## Re-merge and first runs — 2026-10-17 (executor-1274b)
+
+Re-merge of `origin/main` `ebe3292c` (merge `8c487a87`), no conflicts. Small runs through `run-small.sh` only; the DB-backed backend tests and the full gate are not run (SL 8074's gate holds gate-1).
+- Scoring probe (`scratch/probe_expr_scoring_test.py`, copied in, run, removed): with `test_rating_glm_model_call.py` and `test_factor_resolution.py`, 40 passed, rc 0. A one-column banded expression prices on the transformed value.
+- `test_rating_glm_expression_inputs.py` was red on its own fixtures: a banding slug with `_`, and `"risk" not in result` against the failure sentinel (which zeroes the produced names). Both fixed; 25 passed with `test_quote_input_raise_sites.py`.
+- `test_expression_factors.py::test_an_infinite_value_is_dropped_not_cut_at` failed: `band_statistics` cut the infinite value that `propose_banding` dropped. Fixed in `bandings.py`; 51 passed with `test_bandings.py`.
+- `docs/contracts/` regenerated (`generate-contracts.py`, `--check` rc 0); the authored `banding.schema.json` gains `maxLength: 2000` on `source_expression` so `test_contracts.py` (171 passed) sees both sides agree.
+- ruff and mypy clean; `lint-imports` 4 kept, 0 broken.

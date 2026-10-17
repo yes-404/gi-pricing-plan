@@ -9,7 +9,7 @@
   "allOf": [{"$ref": "common/artifact-envelope.schema.json"}],
   "properties": {
     "column": {"type": ["string", "null"], "description": "The dataset column the boundaries were cut over; null on a Banding cut over an `expression` Factor's formula. Exactly one of `column` and `source_expression` is set (amended 2026-10-16, WK-690 Slice 4, RL-1615 DP-S4-1 and RL-1700 (c))."},
-    "source_expression": {"type": ["string", "null"], "description": "The text of the `expression` Factor's formula the boundaries were cut over, stored as written (02 §4.2). Null on a Banding cut over a column. Resolution applies the Banding only to an `expression` Factor whose `expression` parses to the same tree."},
+    "source_expression": {"type": ["string", "null"], "maxLength": 2000, "description": "The text of the `expression` Factor's formula the boundaries were cut over, stored as written (02 §4.2). Null on a Banding cut over a column. Resolution applies the Banding only to an `expression` Factor whose `expression` parses to the same tree."},
     "method": {"enum": ["manual", "equal_width", "quantile", "exposure_quantile", "tree", "credibility"]},
     "method_params": {"type": "object"},
     "derived_on_dataset_version_id": {"type": "string", "format": "uuid"},

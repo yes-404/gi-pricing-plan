@@ -215,8 +215,16 @@
       "type": "string"
     },
     "column": {
-      "title": "Column",
-      "type": "string"
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Column"
     },
     "dataset_id": {
       "format": "uuid",
@@ -283,6 +291,19 @@
       "title": "Slug",
       "type": "string"
     },
+    "source_expression": {
+      "anyOf": [
+        {
+          "maxLength": 2000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Expression"
+    },
     "version": {
       "minimum": 1,
       "title": "Version",
@@ -294,7 +315,6 @@
     "slug",
     "dataset_id",
     "version",
-    "column",
     "method",
     "boundaries",
     "labels"

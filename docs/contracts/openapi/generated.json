@@ -1208,8 +1208,15 @@
             "type": "string"
           },
           "column": {
-            "title": "Column",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column"
           },
           "dataset_id": {
             "format": "uuid",
@@ -1274,6 +1281,18 @@
             "title": "Slug",
             "type": "string"
           },
+          "source_expression": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Expression"
+          },
           "version": {
             "minimum": 1.0,
             "title": "Version",
@@ -1285,7 +1304,6 @@
           "slug",
           "dataset_id",
           "version",
-          "column",
           "method",
           "boundaries",
           "labels"
@@ -1403,8 +1421,15 @@
             "type": "string"
           },
           "column": {
-            "title": "Column",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column"
           },
           "dataset_version_id": {
             "format": "uuid",
@@ -1447,11 +1472,22 @@
           "slug": {
             "title": "Slug",
             "type": "string"
+          },
+          "source_expression": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Expression"
           }
         },
         "required": [
           "dataset_version_id",
-          "column",
           "method",
           "slug"
         ],
@@ -5842,6 +5878,18 @@
             "format": "uuid",
             "title": "Dataset Id",
             "type": "string"
+          },
+          "expression": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expression"
           },
           "grouping_id": {
             "anyOf": [
@@ -11218,7 +11266,8 @@
         "enum": [
           "level_cap",
           "no_source_column",
-          "operand_of_interaction"
+          "operand_of_interaction",
+          "expression_factor"
         ],
         "title": "PartialDependenceOmissionReason",
         "type": "string"
@@ -11598,7 +11647,8 @@
         "description": "Why a factor has no permutation importance (FR-178).",
         "enum": [
           "operand_of_interaction",
-          "no_holdout_column"
+          "no_holdout_column",
+          "expression_factor"
         ],
         "title": "PermutationOmissionReason",
         "type": "string"
