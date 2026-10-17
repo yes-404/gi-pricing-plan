@@ -1,21 +1,23 @@
 ---
-id: LG-8072
+id: LG-1759
 family: ledger
-title: WK-1178 slice SL-8071 — FD-8073, a model_call refuses a GBM fitted on a banded or grouped Factor, slice ledger
+title: WK-1178 slice SL-1758 — FD-1754, a model_call refuses a GBM fitted on a banded or grouped Factor, slice ledger
 status: closed                 # active → closed (§1.2a)
-created: 2026-10-16
+created: 2026-10-17 # original date 2026-10-16, set at the filing; minted 2026-10-17
 owner: executor
 phase: P2
 work: WK-1178
-slice: SL-8071
+slice: SL-1758
 plans: []
 corrected_by: []
-relates: [SL-8071]
+relates: [SL-1758]
 ---
 
-# LG-8072 — WK-1178 slice SL-8071: a model_call refuses a GBM on a banded or grouped Factor
+# LG-1759 — WK-1178 slice SL-1758: a model_call refuses a GBM on a banded or grouped Factor
 
-**GO:** the maintainer's (by delegation) entry "2026-10-16 10:59:28 BST — Maintainer: the GBM model_call defect — the reading is accepted; disposition fixed now, severity on the run", item 1, in `to-lead.md`; the probe evidence is the lead's entry "2026-10-16 10:59:07 BST" in `from-lead-2026-10-09.md`. The finding is FD 8073 (FD 1754 in D18, unmerged), HIGH on the probe run (case C red, a silent mispricing).
+*(Minted 2026-10-17 as LG-1759 from working id 8072, with SL-1758 (working id 8071), in the SL-1758 PR; FD-1754 was minted from working id 8073 in the D18 batch mint PR.)*
+
+**GO:** the maintainer's (by delegation) entry "2026-10-16 10:59:28 BST — Maintainer: the GBM model_call defect — the reading is accepted; disposition fixed now, severity on the run", item 1, in `to-lead.md`; the probe evidence is the lead's entry "2026-10-16 10:59:07 BST" in `from-lead-2026-10-09.md`. The finding is FD-1754 (FD 1754 in D18, unmerged), HIGH on the probe run (case C red, a silent mispricing).
 **Gate:** none granted. The box was held by an ALONE latency gate when this was written; every run is owed (below).
 **MERGE-ACK:** not yet given.
 **Audit:** written below (`auditor-8071`, 2026-10-17), on head `d3d03fbb`.
@@ -36,7 +38,7 @@ Not opened yet; the lead opens the PR.
 
 ## Gate red fixed, 2026-10-17 (the maintainer 00:07:43 BST ruling)
 
-The SL 8071 gate's one real red was `test_quote_input_raise_sites.py::test_every_quote_input_raise_site_has_a_sentinel_case`: the new `_raise_named` site in `check_model_call_gbm_factors` was unregistered. The raise call, verbatim:
+The SL-1758 gate's one real red was `test_quote_input_raise_sites.py::test_every_quote_input_raise_site_has_a_sentinel_case`: the new `_raise_named` site in `check_model_call_gbm_factors` was unregistered. The raise call, verbatim:
 
 ```python
 _raise_named(
@@ -76,7 +78,7 @@ Detached worktree at `a26e9dfe` (red-first), `run-small.sh`, one file per run, l
 
 **1. Change set** (`git diff --stat origin/main...d3d03fbb`, 12 paths, +756 −18): `errors.py`, `rating_algorithms.py`, `factors.py`, `compile.py`, `runtime.py`, `03-rating-engine.md`, `roadmap.md`, `INDEX.md`, this ledger, and three test files (`test_rating_gbm_banded_save.py`, `test_rating_gbm_banded_refusal.py`, `test_quote_input_raise_sites.py`). Nothing outside the slice's scope.
 
-**2. Obligations, derived from FD 8073's Disposition items 1-2 and SL-8071's scope block, then evidenced** (verdict per row; the lead's to adopt):
+**2. Obligations, derived from FD-1754's Disposition items 1-2 and SL-1758's scope block, then evidenced** (verdict per row; the lead's to adopt):
 - **(1) compile refusal, per component of a peril structure:** `compile.py` `check_model_call_gbm_factors`, called in `compile_bundle` after `check_model_call_coverage`; pins checked via `fit_result.model_type in GBM_MODEL_TYPES`. Tests: case C and A (xgboost, lightgbm), grouped, exact message. **Met.**
 - **(1) save refusal at all three routes:** `rating_algorithms.py` `_refuse_gbm_transformed_factors`, called from `check_model_call_feature_maps`; that function is called from `rating_algorithms.py` (algorithm save) and `sub_graphs.py` (two calls: create and new version). **Met.** A non-existent model saves (R1; test `test_a_model_that_does_not_exist_yet_saves`).
 - **(2) keyed on the step, never the pin:** both checks iterate `RatingModelCallStep` only; tests `test_a_banded_gbm_pinned_but_never_called_still_compiles`, `test_a_banded_gbm_with_no_model_call_step_saves`; GLM on banded and GBM on plain Factors still compile and save. **Met.**
@@ -90,9 +92,11 @@ Detached worktree at `a26e9dfe` (red-first), `run-small.sh`, one file per run, l
 **4. Gate at `d3d03fbb` (tree `72fd9f6c`, clean after: "0 changed path(s)").** From `scratch/sl8071-gate/gate.log`: preflight ok; ruff rc 0, mypy rc 0, import_linter rc 0, req_coverage rc 0, contracts rc 0; frontend install, generate:api, lint, type-check, test, build all rc 0; **audit_docs rc 1** (`audit_docs.log`: FAILED (1): `check 31: gap in the full allocation between 1740 and 8071` only: the working-id gap, expected while 8071/8072 are unminted); **pytest rc 1, `13 failed, 5886 passed, 4 skipped` (0:53:51)**. The 13 FAILED names are the audit-docs-on-the-real-tree cascade of that one check 31 gap (`test_audit_docs_*`, `test_doc_index`, `test_register_lint`, `test_register_owed`, `test_repository_invariants`), and are identical to the 16 Oct gate's (`sl8071-gate-e2914d90-2026-10-16/pytest.log`) except that run's 14th, `test_every_quote_input_raise_site_has_a_sentinel_case`, which is **absent** now: the raise-site red is fixed. Demo `wf-699`: rc 124 as designed (the timeout ends the stack), `journey done in 284s`; the only `FAIL` text in `demo.log` is line 41, a designed refusal (`VALIDATION_HAS_FAILURES`). The 23 backend DB fixture errors of the pre-gate small runs are not present: the gate had its database.
 
 **5. Findings.**
-- **F1 (fixed in this commit):** this ledger's GO paragraph and SL-8071's roadmap block said FD 8073 was "to be filed" with severity "the run's". It is HIGH, minted in D18 as FD 1754 (unmerged). Both unmerged slice records are corrected here, citing "FD 8073 (FD 1754 in D18, unmerged)".
-- **F2 (owned, no new row):** interaction, spline, polynomial and expression Factors on a GBM may carry the same defect; FD 8073 Disposition item 4 owns it ("for the planner and the maintainer", not read or run). Not widened by this slice.
-- **F3 (owned):** real support for a banded GBM in a `model_call` is FD 8073 Disposition item 3, owner WK-673.
+- **F1 (fixed in this commit):** this ledger's GO paragraph and SL-1758's roadmap block said FD-1754 was "to be filed" with severity "the run's". It is HIGH, minted in D18 as FD 1754 (unmerged). Both unmerged slice records are corrected here, citing "FD-1754 (FD 1754 in D18, unmerged)".
+- **F2 (owned, no new row):** interaction, spline, polynomial and expression Factors on a GBM may carry the same defect; FD-1754 Disposition item 4 owns it ("for the planner and the maintainer", not read or run). Not widened by this slice.
+- **F3 (owned):** real support for a banded GBM in a `model_call` is FD-1754 Disposition item 3, owner WK-673.
 - **F4 (disclosed, not this slice's):** the 13 pytest FAILED lines resolve when the working ids are minted at the PR; the re-check is `audit-docs` check 31 green after the mint.
 
 **6. Proposed verdict:** all obligations delivered and evidenced; no requirement left without evidence. Proposal only: acceptance of the merge is the lead's, and the MERGE-ACK line stays pending until the maintainer's dated entry.
+
+**Lead verdict (2026-10-17 13:21:31 BST, the lead, transcript 1b92c2a6):** the auditor's proposal ADOPTED — all obligations delivered and evidenced; spot-verified at d3d03fbb: compile.py:1130 calls check_model_call_gbm_factors; rating_algorithms.py:262 calls _refuse_gbm_transformed_factors; test_quote_input_raise_sites.py:106 registers the new site. MERGE-ACK: not yet given.
