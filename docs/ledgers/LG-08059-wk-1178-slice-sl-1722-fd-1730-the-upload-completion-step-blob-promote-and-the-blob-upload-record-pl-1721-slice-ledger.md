@@ -256,6 +256,11 @@ The lead adopted the findings of an independent pre-gate review. Each was verifi
 - **Breakers:** the plan's breakers (Task 2 table, R3 to R9) are one-line mutations of the implementation, each shown red against a database. The tests that carry them are already written; no further test-writing is owed. Running them needs the DB window.
 - **Deleted `07` §2 "Blob Upload" pointer row:** the row (added in f1eb0d9b) said only "defined in `00` §2.1; its record is §4.5 and its completion is FR 8058", so check 13 (`audit-docs.py:3986`, a term is not redefined in a module glossary once `00` defines it) was right to refuse it and its content lives in `00` §2.1:137 and `07` §4.5 / FR 8058. **But** RL-1724 acceptance item 11 (line 530) requires "T6's `**Blob Upload**` row in `07` §2" to be found at the slice head, so the deletion conflicts with the ruling as written. Not restored here; for the audit.
 
+## Rulings DP-1722-A and DP-1722-B, 2026-10-17 (executor-1722db)
+
+- **DP-1722-A (a)** (the maintainer (by delegation), `to-lead.md` "2026-10-17 13:05:25 BST — Maintainer: SL-1722 DP-A → (a); DP-B → (a)"): MinIO accepts the `staging/` rule and the 2-day `Expiration` is VERIFIED on read-back; the `AbortIncompleteMultipartUpload` clause is UNVERIFIED on MinIO (it is not echoed); the rule is still set, because it is S3's contract (PL-1721 DP-U1.2 anticipated this); Task 3 never relies on reading the abort back.
+- **DP-1722-B (a)** (same entry): no `07` §2 row for "Blob Upload" — `CLAUDE.md` §7 makes `00-overview.md` §2 the one glossary (a new term goes there first), `00` §2.1 :137 defines Blob Upload, and a `07` §2 row would be the second copy that `audit-docs.py` check 13 refuses; RL-1724 acceptance item 11's intent (the term defined before first use) is met by `00` §2.1 plus `07` §4.5 / FR 8058.
+
 ## PRs
 
 - (none opened yet; the lead opens it.)
