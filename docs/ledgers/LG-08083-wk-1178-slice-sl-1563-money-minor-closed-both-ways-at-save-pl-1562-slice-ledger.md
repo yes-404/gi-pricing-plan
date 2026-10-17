@@ -38,7 +38,8 @@ written in the activation commit `fe91ffec`.
 - **Sweep hit 2, PL-1562 item 7, ruled 2026-10-17 13:31:51:** `test_testing.py` `_variant`'s `optional_output`
   branch fed an `int` input `promo` into a `money_minor` output (D10). Red: `RATING_TYPE_MISMATCH: output
   'extra_minor' is declared 'money_minor' but its producing step yields 'int' (FR-227)`. **Deviation
-  from the ruling's literal form:** `RatingInputType` (`model_schema/rating.py`) has no `money_minor`
+  from the ruling's literal form, confirmed by the maintainer at 2026-10-17 13:40:06 BST (the 13:31:51 form
+  had a false premise):** `RatingInputType` (`model_schema/rating.py`) has no `money_minor`
   member, so `promo` stays `int` and an explicit `money_minor` expression step (`s_promo_money`) feeds
   the output (OQ-1560 A1's form). The fail and pass asserts are unchanged and green.
 
