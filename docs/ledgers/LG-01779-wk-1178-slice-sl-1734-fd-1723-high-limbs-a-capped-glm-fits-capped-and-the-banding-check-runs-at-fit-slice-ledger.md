@@ -1,5 +1,5 @@
 ---
-id: LG-8082
+id: LG-1779
 family: ledger
 title: WK-1178 slice SL-1734 — FD-1723's HIGH limbs, a capped GLM and EBM fit capped (FR-127) and the banding check runs at fit (FR-100), slice ledger
 status: active                 # active → closed (§1.2a)
@@ -13,7 +13,9 @@ corrected_by: []
 relates: [SL-1734, PL-1733, FD-1723]
 ---
 
-# LG-8082 — WK-1178 slice SL-1734: FD-1723's HIGH limbs (FR-127 GLM and EBM, FR-100 at fit)
+# LG-1779 — WK-1178 slice SL-1734: FD-1723's HIGH limbs (FR-127 GLM and EBM, FR-100 at fit)
+
+*(Minted 2026-10-17 as LG-1779 from working id 8082, in the SL-1734 PR; SL-1734 and PL-1733 were minted from working ids 8031 and 8030 in the P1 batch mint PR.)*
 
 **GO:** the maintainer's entry "2026-10-17 13:23:18 BST" in `to-lead.md` (GO SL-1734, PL-1733: needs 1–2 met, Task 0 Step 3's G2 probe first as the in-slice STOP, census mechanical, contracts regenerate on the later PR).
 **Gate:** gate 1 @`d1884116` (16:24 to 17:28 BST, `scratch/sl1734-gate/`) RED: the `_fit` banding sink, the input-free raise at `modelling.py:365`, four frontend fixtures; fixed at `5e08d5ce` (executor-1734f). Gate 2 @`5e08d5ce` (tree `22c1e8d065fac74be3d8c4fbdf079fdb93456d76`, 16:53:27 to 17:54:18Z, `scratch/sl1734b-gate/`): ruff, mypy, import_linter, req_coverage, contracts rc 0; frontend install, generate:api, lint, type-check, test, build rc 0; demo designed stop, `--journey wf-699` rc 0; audit_docs rc 1 (the working-id check 31, expected); pytest rc 1 `14 failed, 5901 passed, 4 skipped` = 13 docs-check cascade plus `test_worker_raise_sites` (the census missed `safe_error_detail(exc)`). `a261c2bf` (executor-1734g) is a test-list change only, accepted with no re-gate by the maintainer ("2026-10-17 18:56:17 BST", condition met at "2026-10-17 18:59:23 BST").
@@ -151,6 +153,8 @@ Not opened yet; the lead opens the PR.
 
 ## Audit
 
+**Lead verdict (2026-10-17 19:02:44 BST, the lead, transcript 1b92c2a6):** the auditor's proposal ADOPTED (the maintainer confirmed) — PL-1733 delivered and evidenced; gate 2 @5e08d5ce accepted with the test-list fix a261c2bf (safe_error_detail read, no leak); F1/F2 accepted deltas; F3/F4 recorded; A17 = full PR CI on the merged tree. MERGE-ACK: not yet given.
+
 *(Written by `auditor-1734`, 2026-10-17, on head `a261c2bf4a79437d9fedf171eb61d2a070f2923e`, range `origin/main...a261c2bf` (merge-base `6bdd2571`; `origin/main` is now `9469721d`, so main has moved and the re-merge at mint is owed). Code read-only; no test run by the auditor; gate logs in `gi-pricing-plan.local/scratch/sl1734-gate/` and `sl1734b-gate/`.)*
 
 **1. Change set** (`git diff --stat origin/main...a261c2bf`, 28 paths, +1298 −71): `loss_treatment.py` (new), `glm.py`, `ebm.py`, `gbm.py`, `bandings.py`, `errors.py`, `modelling/__init__.py`, model-schema `modelling.py` and `__init__.py`, `model_handlers.py`, spec `02-modelling.md`, the two regenerated contracts, tests (`test_glm`, `test_ebm`, `test_gbm`, `test_bandings`, `test_banding_warnings`, `test_model_jobs`, `test_error_sinks`, `test_worker_raise_sites`), three frontend test fixtures, this ledger, INDEX, roadmap and PL-1733's `draft` to `active`. No file of SL-1543's write set (`git diff --name-only` filtered for it: none).
@@ -185,3 +189,9 @@ Not opened yet; the lead opens the PR.
 - **F6 (owned):** the 13 docs-check cascade pytest failures resolve at the mint (check 31); the lead re-checks on the minted tree.
 
 **6. Proposed verdict:** all PL-1733 obligations delivered and evidenced, with A3 and A15 as recorded deltas (F1, F2) and A17 deferred to the lead's mint-tree gate and full PR CI. No requirement without a verdict. Proposal only: the MERGE-ACK stays "not yet given"; status stays `active`.
+
+## Recorded deltas (mint, 2026-10-17)
+
+- **F1 (A3, spec-after-code order):** accepted as a recorded delta by the maintainer (2026-10-17 19:03 BST, via the lead's MINT BLOCKS FIXED entry context): the squash lands spec and code as one commit, so the merged state is consistent. No rework.
+- **F2 (A15, frontend diff not empty):** authorised by the maintainer's "2026-10-17 17:31:25 BST" item 3(a); three test/fixture files, no non-test `frontend/` file. Recorded under "Gate-red fixes".
+- **F3 (test strength) and F4 (`BandingError` two bases):** recorded, not widened here.
