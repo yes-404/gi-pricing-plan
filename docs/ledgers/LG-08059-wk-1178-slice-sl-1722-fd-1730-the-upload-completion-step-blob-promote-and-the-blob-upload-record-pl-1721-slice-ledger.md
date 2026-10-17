@@ -316,6 +316,47 @@ Still OWED: the full two-half gate (a grant, S-13); the W2 test's both-Jobs-`suc
 - **Plan cell change** (the maintainer (by delegation), `to-lead.md` "2026-10-17 13:45:30 BST — Maintainer: SL-1722 DP-1722-C (breaker R7) → (b)"; option (a) refused): PL-1721's R7 breaker cell ("skip the existence check → a second `put` and a primary-key error") is read as: **skip the existence check → the second promotion issues an object-store copy**, which `test_identical_bytes_promote_to_one_blob` now asserts with a spy on `BlobStore._client.copy` (`copies == [f"blob/{sha[:2]}/{sha}"]`). The primary-key error belongs to the `on_conflict_do_nothing` guard (R7b, kept as a second breaker). The frozen plan is not edited; this line is the delta.
 - Commit `01a79def` (tree `9d5cab1a`), window 13:46:06 to 13:48:35, beside a code gate, load1 at start 4.73, own database `gipricing_sl1722_w1`: `green` `34 passed, 1 warning in 16.60s`; **R7** (`stored = False`) `1 failed` with `AssertionError: assert ['blob/84/844…'] == ['blob/84/844…']` (two copies recorded where one is asserted); R7b, R3 to R6, R8, R9 each `1 failed` by the causes in the table above; after the reverts, 0 dirty paths and `green-after` `34 passed, 1 warning in 18.01s`; rc 0.
 
+## Audit
+
+*(Written by `auditor-1722`, 2026-10-17 (Europe/London), on head `3db47be0e24d8774860457f4c8e73261ac17cfc3` (tree `2389ee95cf19aafa74fb49fcee176fa4f89b8c9f`), range `origin/main...3db47be0`, `origin/main` = `9469721d` at fetch. Code read-only; no test run by the auditor; no DB; the gate is the lead's. Scope derived first from `PL-1721`'s Acceptance Standard (items 1 to 10), `FD-1730`'s Disposition and the maintainer's entries in `to-lead.md` since 2026-10-16, then evidenced.)*
+
+**1. Change set** (`git diff --stat origin/main...3db47be0`, 28 paths, +1639 -41): `api/blobs.py`, `platform/blobs.py`, `db/models.py`, migration `e7c3a9b15d82`, `worker/data_handlers.py`, `platform/jobs.py` (+1), `model-schema` `uploads.py`, five backend test files, `docs/contracts` (regenerated), `07`/`00`/`01` specs, `audit-docs.py` and `generate-contracts.py` registrations, `tests/test_audit_docs_ids.py`, this ledger, `PL-1721`, `INDEX.md`.
+
+**2. The post-gate delta.** `git diff --name-only 5d07fb29 3db47be0` prints one path, `tests/test_audit_docs_ids.py` (+6 -1: `84` becomes `86`, with a dated comment naming the two generated `upload-url-*` schemas). One commit in `5d07fb29..3db47be0`. The maintainer's blob proof (16:14:44: gated `5d07fb29` + that file) **holds**. The 15:43:21 premise (add the two paths to `_CONTRACT_ARTIFACT_PATHS`) was corrected by the maintainer at 16:14:44; `63d26b48` had already listed them.
+
+**3. Acceptance Standard, evidenced at `3db47be0`:**
+
+| # | Item | Evidence | Verdict |
+|---|---|---|---|
+| 1 | docs checks apart from check 31 | gate `audit_docs.log`: `FAILED (2)`, both check 31 (`gap between 1757 and 8059`; `8059 created 2026-10-16 earlier than 1757's 2026-10-17`), cleared by the mint | delivered; re-run in section 6 |
+| 2 | DP-U1..U3 rulings | `RL-1724`; DP-1722-A/B/C/WIRE rulings quoted in this ledger (13:05:25, 13:45:30, 10:16:17) | delivered |
+| 3 | spec first | `git log origin/main..HEAD -- docs/specs` earliest `0d4ebd89` (08:45:59Z) precedes every `backend/src` commit (`0f80af62` 08:49:05Z, `bba89d66`); FR 8058 row `07-platform.md:118`, section 4.5 `:306`, `01-data-management.md:858` | delivered |
+| 4 | R1, no seeding; both Jobs `succeeded` | `git grep` of `blob_fixtures\|unit_of_work\|session.add\|execute(` in `test_upload_to_ingest.py` at `3db47be0`: rc 1, none; gate pytest: the file is not among the 14 FAILED; window 2 `1 passed`, `-rs` no skip; test asserts `succeeded` + output (ledger condition (d), lines 150-163 as the ledger reads them; asserts not re-read by the auditor beyond that) | delivered |
+| 5 | R2..R9 + lifecycle test | windows 1/2 (34 passed); breakers R3..R9 red by named cause; R7 re-read per DP-1722-C (b) | delivered |
+| 6 | no upload byte through the API | `git grep "put_object\|upload_part\|\.put(" 3db47be0 -- backend/src/app/api/blobs.py`: rc 1 | delivered |
+| 7 | contract | gate `contracts.rc` 0 (`--check`); `generated.json` contains `/api/v1/blobs/uploads/{id}/complete` (and `UploadUrlResponse` text at 20090) | delivered |
+| 8 | migration | `down_revision = "d4e81b7a2c95"`, `downgrade` drops `blob_uploads` (`e7c3a9b15d82:23,52-55`); window 2 up/down/up rc 0, 1 head; gate preflight 1 head | delivered |
+| 9 | full gate, both halves | gate at `5d07fb29` (tree `ee93844d`): ruff, mypy, import_linter, req_coverage, contracts rc 0; frontend 6/6 rc 0; pytest `14 failed, 5880 passed, 6 skipped` (section 4); demo, section 5 | delivered with the reds classified; see A2 |
+| 10 | deferral closed | `git grep` of the two deferral phrases in `backend/src` at `3db47be0`: rc 1 | delivered |
+
+**4. The 14 pytest reds at `5d07fb29`, classified.** 13 are the check-31 cascade (`gap in the full allocation between 1757 and 8059` / `live allocation is not contiguous: [(1757, 8059)]`: the working id `8059` is unminted): sampled by reading `pytest.log` at the first (`:997`), the `test_doc_index` one (`:4706-4736`) and the repeats at `:1895`, `:2889`; they clear at the mint. The 14th, `test_audit_docs_ids.py::test_widening_the_scope_roots_reaches_every_non_markdown_file_the_register_exempts`, `assert 86 == 84` (`pytest.log:1991`), was the only-new red: slice-caused, solo-reproduced 15:42:48 (the maintainer, 15:43:21), fixed by `3db47be0`, fix accepted 16:14:44 with blob proof, no re-gate. The auditor did not re-run it.
+
+**5. Demo stage.** `demo.py --journey wf-699` rc=124 (the 1500 s cap, 14:45:10 to 15:10:17Z). `demo.log`: `journey done in 329s` (`:1668`), `served page ... answered 200` (`:1676`), zero `job not found`; the server then ran to the cap because the early-stop form was not yet in use (accepted for later gates at 15:42:35). Reads as the journey completing, not a stall.
+
+**6. Pair-trial and shared-broker note.** The gate ran paired on gate-1b (14:26:05 to 16:10:17 BST). The broker was found SHARED at 17:58 BST (Redis db 0 for both gates). **The maintainer ruled 18:00 that earlier verdicts stand (the reds were deterministic and slice-caused; passes stay passes).** Recorded as ruled; no re-gate.
+
+**7. Findings.**
+- **A1 (MEDIUM, owed, already deferred with owner):** no `req("FR-<minted>")` marker for FR 8058 anywhere in `backend/tests` at `3db47be0` (`git grep 8058 -- backend/tests`: none). The id is unminted; the SL-1722 PR adds it at the mint (lead verdict on A5, pre-gate read). `req-coverage` must evidence FR-<minted> on the PR; not evidenced today. Verdict: **deferred with owner (executor at the mint)**.
+- **A2 (LOW):** the demo stage ended on the cap (rc=124), not on a designed stop; section 5 reads it as pass. The lead should confirm the gate-log row is accepted as such (the 18:00 ruling covers reds and passes; a cap-ended demo is neither named).
+- **A3 (LOW, stale text, not fixed here):** this ledger's first reds table (ten rows, cause `OWED: run`), its `### Gate` ("OWED. No gate has run") and `### OWED` lists predate the windows and the gate; the later sections supersede them. Left as written (an append-only record); the mint should set `status` and not rely on them.
+- **A4 (MEDIUM, disclosed, from the ledger):** the `AbortIncompleteMultipartUpload` clause is UNVERIFIED on MinIO (DP-1722-A (a)); the 2-day `Expiration` is verified. Accepted by the maintainer 13:05:25.
+- **A5 (LOW):** the 14 reds and the demo cap were measured while the broker was shared; section 6 stands as ruled.
+- **A6 (note):** DP-7: `e7c3a9b15d82` and `SL-1274`'s `f2b6d90a4c17` share `down_revision d4e81b7a2c95`; whichever merges second re-points before its gate. `origin/main` was not re-read for a new head by the auditor.
+
+**8. Requirements without evidence:** FR 8058's test marker (A1): **deferred with an owner** (the mint). None "not started"; none "delivered but untested" beyond A1.
+
+**9. Proposed verdict:** all ten acceptance items delivered and evidenced; the post-gate change is one test file and the blob proof holds; one requirement-marker deferral with owner (A1). **Proposed: ACCEPT as a clean slice audit.** Proposal only; the lead adopts, amends or rejects. MERGE-ACK: not yet given. Status stays `active`; no mint done.
+
 ## PRs
 
 - (none opened yet; the lead opens it.)
