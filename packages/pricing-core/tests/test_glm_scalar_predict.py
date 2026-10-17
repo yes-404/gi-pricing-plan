@@ -415,3 +415,158 @@ def test_every_seed_portfolio_row_scores_bit_identically(
         row for row in rows if not _same(world.scalar(row), world.frame(row))
     ]
     assert not mismatches, f"{len(mismatches)} rows differ, first {mismatches[0]}"
+
+
+# --- the refusals of a factor kind the resolver does not resolve ------------------------------
+
+
+@pytest.mark.req("FR-208")
+@pytest.mark.parametrize(
+    "kind",
+    [FactorType.SPLINE, FactorType.POLYNOMIAL, FactorType.OFFSET, FactorType.EXPRESSION],
+)
+def test_a_factor_kind_the_resolver_refuses_is_refused_identically_on_both_paths(
+    world: World, kind: FactorType
+) -> None:
+    """The scalar path has no factor logic of its own: it reads `resolve_factor_columns`, so
+    every kind is covered or refused exactly as the frame path does, with no per-scorer choice
+    to make at bundle load (PL-8098 constraint 5, met by construction)."""
+    try:
+        odd = _factor("odd", "vehicle_value", type=kind)
+    except ValueError:
+        pytest.skip(f"the Factor shape refuses a bare {kind.value!r} before any resolver sees it")
+    variant = World(
+        world.fit, world.spec, (odd,), world.bandings, world.groupings
+    )
+    with pytest.raises(FactorResolutionError) as frame_error:
+        variant.frame(QUOTES[0])
+    with pytest.raises(FactorResolutionError) as scalar_error:
+        variant.scalar(QUOTES[0])
+    assert str(scalar_error.value) == str(frame_error.value)
+
+
+# --- the wiring: `_GlmScorer.predict` is the scalar path ---------------------------------------
+
+
+def _scorer(world: World, offset_source: Any = None) -> Any:
+    from pricing_core.rating.runtime import _GlmScorer
+
+    columns = {f.slug: f.source_columns[0] for f in world.factors if len(f.source_columns) == 1}
+    return _GlmScorer(
+        world.fit, world.spec, world.factors, world.bandings, world.groupings, columns,
+        offset_source,
+    )
+
+
+def _no_frame_resolution(*_: Any, **__: Any) -> Any:
+    raise AssertionError("resolve_factors was called: the frame path ran")
+
+
+@pytest.mark.req("FR-222")
+@pytest.mark.req("FR-193")
+def test_a_model_call_scores_without_the_frame_resolution(
+    world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With `resolve_factors` patched to raise, the scorer still scores — and the frame path,
+    run beside it, is the one that trips the patch."""
+    from pricing_core.modelling import predict as predict_module
+
+    scorer = _scorer(world)
+    expected = [world.frame(quote) for quote in QUOTES]
+    monkeypatch.setattr(predict_module, "resolve_factors", _no_frame_resolution)
+
+    assert [scorer.predict(quote) for quote in QUOTES] == expected
+    with pytest.raises(AssertionError, match="frame path ran"):
+        world.frame(QUOTES[0])
+
+
+@pytest.mark.req("FR-116")
+def test_a_model_offset_scorer_scores_without_the_frame_resolution(
+    world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from pricing_core.modelling import predict as predict_module
+
+    residual = world.with_spec(
+        offset=OffsetSpec(kind="model", offset_model_ref="model:source@1")  # type: ignore[arg-type]
+    )
+    scorer = _scorer(residual, offset_source=_scorer(world))
+    expected = [residual.frame(quote, world.frame_eta(quote)) for quote in QUOTES[:4]]
+    monkeypatch.setattr(predict_module, "resolve_factors", _no_frame_resolution)
+
+    assert [scorer.predict(quote) for quote in QUOTES[:4]] == expected
+
+
+@pytest.mark.req("FR-222")
+def test_the_scorer_keeps_its_renames_and_its_collision_refusal(world: World) -> None:
+    """`feature_map` names (a Factor slug) reach the source column; two names for one column
+    with different values are still `MODEL_CALL_FEATURE_COLLISION`."""
+    scorer = _scorer(world)
+    by_slug = {
+        "age_band": QUOTES[1]["driver_age"], "region_group": QUOTES[1]["region"],
+        "veh_band": QUOTES[1]["veh_age"], "brand_group": QUOTES[1]["brand"],
+        "vehicle_value": QUOTES[1]["vehicle_value"], "fuel": QUOTES[1]["fuel"],
+        "exposure_years": QUOTES[1]["exposure_years"],
+    }
+    assert _same(scorer.predict(by_slug), world.frame(QUOTES[1]))
+    clash = {**by_slug, "driver_age": QUOTES[1]["driver_age"] + 1.0}
+    assert _code(lambda: scorer.predict(clash)) == "MODEL_CALL_FEATURE_COLLISION"
+
+
+# --- diagnostic: ms/quote on both paths (asserts nothing about time) ---------------------------
+
+
+def print_timing(world: World, rows: list[dict[str, Any]], label: str) -> None:
+    """Print ms/quote for the frame path and the scalar path over `rows`, with the tree and
+    the box. A figure to read, never an assertion: this box is shared and a time assert on it
+    is a flake (FD-8097's 16.9 ms was a loaded-box sample, 2.0 ms on main)."""
+    import os
+    import subprocess
+    import time
+
+    def per_quote(call: Any) -> float:
+        start = time.perf_counter()
+        for row in rows:
+            call(row)
+        return (time.perf_counter() - start) / len(rows) * 1e3
+
+    tree = subprocess.run(
+        ["git", "-C", str(_REPO), "rev-parse", "HEAD"], capture_output=True, text=True
+    ).stdout.strip()
+    frame_ms = per_quote(world.frame)
+    scalar_ms = per_quote(world.scalar)
+    print(
+        f"\nGLM_PREDICT_TIMING {label}: head={tree} nproc={os.cpu_count()} "
+        f"load1={os.getloadavg()[0]:.2f} polars_max_threads={os.environ.get('POLARS_MAX_THREADS')}"
+        f" quotes={len(rows)} frame_ms_per_quote={frame_ms:.4f} "
+        f"scalar_ms_per_quote={scalar_ms:.4f} ratio={frame_ms / scalar_ms:.1f}x"
+    )
+
+
+@pytest.mark.req("NFR-489")
+def test_print_the_per_quote_cost_of_both_paths(
+    world: World,
+    demo: tuple[World, list[dict[str, Any]], list[dict[str, Any]]],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with capsys.disabled():
+        print_timing(world, list(QUOTES[:4]) * 250, "synthetic")
+        print_timing(demo[0], demo[2], "seed-portfolio")
+
+
+@pytest.mark.req("FR-104")
+def test_a_grouping_maps_one_value_exactly_as_it_maps_a_column(world: World) -> None:
+    """`apply_grouping` reads a single value without a lazy `collect` (FD-8097) and a column
+    through `unique` + `replace_strict`; both come from `_targets`, and this holds them equal —
+    the mapped level, the fallback for an unseen level, and the refusal text."""
+    from pricing_core.modelling.groupings import apply_grouping
+
+    def outcome(series: pl.Series, grouping: Grouping) -> tuple[str, Any]:
+        try:
+            return "level", apply_grouping(series, grouping)[0]
+        except FactorResolutionError as error:
+            return "refusal", str(error)
+
+    for grouping in world.groupings.values():
+        for value in ("N1", "S2", "B1", "B5", "B9", "ZZ", "1", "1.5"):
+            single, column = pl.Series("v", [value]), pl.Series("v", [value, value])
+            assert outcome(single, grouping) == outcome(column, grouping)

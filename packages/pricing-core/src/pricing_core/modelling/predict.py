@@ -46,8 +46,8 @@ __all__ = [
     "linear_predictor_row",
     "predict_ebm",
     "predict_glm",
-    "predict_glm_row",
     "predict_glm_interval",
+    "predict_glm_row",
     "score_fitted",
 ]
 
@@ -127,6 +127,8 @@ def _design_columns(
     One definition of the term grammar (`_DUMMY`) and of `MODEL_TERM_UNRESOLVED`, so the frame
     path and the one-row path cannot build different designs from one model.
     """
+    #: A factor's levels as text, cast once however many of its dummies there are.
+    as_text: dict[str, pl.Series] = {}
     for coefficient in fit.coefficients:
         term = coefficient.term
         if term == "intercept":
@@ -145,7 +147,9 @@ def _design_columns(
                     "prediction toward the base level.",
                     terms=[term],
                 )
-            indicator = (column_of(column).cast(pl.String) == level).cast(pl.Float64)
+            if column not in as_text:
+                as_text[column] = column_of(column).cast(pl.String)
+            indicator = (as_text[column] == level).cast(pl.Float64)
             yield coefficient, indicator.to_numpy()
             continue
 
