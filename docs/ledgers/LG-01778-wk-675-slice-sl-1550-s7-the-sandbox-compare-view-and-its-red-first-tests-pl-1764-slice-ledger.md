@@ -2,7 +2,7 @@
 id: LG-1778
 family: ledger
 title: WK-675 slice SL-1550 — S7, the sandbox compare view and its red-first tests (PL-1764), slice ledger
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-17 # original date 2026-10-17, set at the filing; minted 2026-10-17
 owner: executor
 phase: P2
