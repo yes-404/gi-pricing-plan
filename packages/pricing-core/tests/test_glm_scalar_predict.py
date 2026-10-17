@@ -1,4 +1,4 @@
-"""The scalar one-row GLM predict is bit-identical to the polars path (PL-8098, FD-8097).
+"""The scalar one-row GLM predict is bit-identical to the polars path (PL-1772, FD 8097 (filed in D21)).
 
 `model_call` scores one quote through one GLM. The frame path builds a one-row polars frame and
 runs a lazy `collect` per quote (`resolve_factors`); the scalar path (`predict_glm_row`) must
@@ -430,7 +430,7 @@ def test_a_factor_kind_the_resolver_refuses_is_refused_identically_on_both_paths
 ) -> None:
     """The scalar path has no factor logic of its own: it reads `resolve_factor_columns`, so
     every kind is covered or refused exactly as the frame path does, with no per-scorer choice
-    to make at bundle load (PL-8098 constraint 5, met by construction)."""
+    to make at bundle load (PL-1772 constraint 5, met by construction)."""
     try:
         odd = _factor("odd", "vehicle_value", type=kind)
     except ValueError:
@@ -518,7 +518,7 @@ def test_the_scorer_keeps_its_renames_and_its_collision_refusal(world: World) ->
 def print_timing(world: World, rows: list[dict[str, Any]], label: str) -> None:
     """Print ms/quote for the frame path and the scalar path over `rows`, with the tree and
     the box. A figure to read, never an assertion: this box is shared and a time assert on it
-    is a flake (FD-8097's 16.9 ms was a loaded-box sample, 2.0 ms on main)."""
+    is a flake (FD 8097 (filed in D21)'s 16.9 ms was a loaded-box sample, 2.0 ms on main)."""
     import os
     import subprocess
     import time
@@ -555,7 +555,7 @@ def test_print_the_per_quote_cost_of_both_paths(
 
 @pytest.mark.req("FR-104")
 def test_a_grouping_maps_one_value_exactly_as_it_maps_a_column(world: World) -> None:
-    """`apply_grouping` reads a single value without a lazy `collect` (FD-8097) and a column
+    """`apply_grouping` reads a single value without a lazy `collect` (FD 8097 (filed in D21)) and a column
     through `unique` + `replace_strict`; both come from `_targets`, and this holds them equal —
     the mapped level, the fallback for an unseen level, and the refusal text."""
     from pricing_core.modelling.groupings import apply_grouping
@@ -576,7 +576,7 @@ def test_a_grouping_maps_one_value_exactly_as_it_maps_a_column(world: World) -> 
 def test_apply_grouping_reproduces_every_recorded_expectation_of_c62f1ff6() -> None:
     """The batch path is unchanged by the single-value branch: 1 443 inputs (seed 20261017, three
     unseen-level behaviours, 0/1/2/5 values of strings, ints, floats, bool and null) with the
-    outputs and refusal texts `groupings.py` gave at `c62f1ff6` (the base of SL-8099), stored as
+    outputs and refusal texts `groupings.py` gave at `c62f1ff6` (the base of SL-1773), stored as
     data, not as a copied module. Captured once with
     `packages/pricing-core/tests/data/make_apply_grouping_fixture.py` (its docstring has the
     command)."""

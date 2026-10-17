@@ -538,7 +538,7 @@ def apply_grouping(series: pl.Series, grouping: Grouping) -> pl.Series:
             "it were known."
         )
     # One value (the scoring path's one-row frame) is read directly: `unique` and
-    # `replace_strict` each run a lazy `collect` per call, which is the cost FD-8097 measured.
+    # `replace_strict` each run a lazy `collect` per call, which is the cost FD 8097 (filed in D21) measured.
     # The rule below is the same for one value or a million.
     levels = text.to_list() if text.len() == 1 else text.unique().to_list()
     targets = _targets(levels, grouping)

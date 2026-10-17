@@ -839,7 +839,7 @@ class _GlmScorer:
                 )
             row[column] = value
         # One quote, one GLM: the scalar path (`predict_glm_row`), bit-identical to the one-row
-        # frame it replaces and without its per-call lazy `collect` (FD-8097).
+        # frame it replaces and without its per-call lazy `collect` (FD 8097 (filed in D21)).
         model_offset = (
             self.offset_source.linear_predictor_row(row) if self.offset_source else None
         )

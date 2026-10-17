@@ -1,8 +1,8 @@
 ---
-id: PL-8098
+id: PL-1772
 family: plan
 kind: map
-title: WK-1178 — a scalar one-row GLM predict for model_call, bit-identical to the polars path (SL-8099) — a dated Work-plan delta
+title: WK-1178 — a scalar one-row GLM predict for model_call, bit-identical to the polars path (SL-1773) — a dated Work-plan delta
 status: active                  # draft → active → superseded | retired (§1.2a) — activated 2026-10-17 on the maintainer's "plan + GO now" (2026-10-17 20:48:15 BST); no decision point is open
 created: 2026-10-17
 owner: planner
@@ -12,20 +12,22 @@ work: WK-1178
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [SL-8099, FD-8097, SL-1543, SL-1274, SL-1341, SL-1547, SL-1258, SL-1740, FR-11, FR-188, FR-193, FR-222, NFR-489]
+relates: [SL-1773, SL-1543, SL-1274, SL-1341, SL-1547, SL-1258, SL-1740, FR-11, FR-188, FR-193, FR-222, NFR-489]
 ---
 
-# PL-8098 — WK-1178: a scalar one-row GLM predict for `model_call`, bit-identical to the polars path (SL-8099)
+# PL-1772 — WK-1178: a scalar one-row GLM predict for `model_call`, bit-identical to the polars path (SL-1773)
+
+Minted 2026-10-17 from working id 8098 on the maintainer's re-allocation (to-lead 2026-10-17 21:30:18 BST).
 
 > **For agentic workers:** a **dated Work-plan delta** under Lean P2 L5 (`document-ids.md`
-> §1.6, PL row). It carries one fix slice, SL 8099 (roadmap row under WK-1178). The executor
+> §1.6, PL row). It carries one fix slice, SL-1773 (roadmap row under WK-1178). The executor
 > is spawned from `.claude/roles/executor.md` and binds `test-driven-development`,
 > `python-test`, `python-package`, `dev-commands` and `git-hygiene`. Its ledger is
-> **LG 8100**, filed by the executor at build; this plan names it and does not create it.
+> **LG-1774**, filed by the executor at build; this plan names it and does not create it.
 
 Written 2026-10-17 20:51 BST by the planner (planner-fix) on the lead's brief
 `brief-planner-fix-2026-10-17.md`. Evidence read at `origin/main` `9469721d`. Working ids
-PL 8098, SL 8099, LG 8100 are the lead's (`from-lead-2026-10-09.md:5201`).
+PL-1772, SL-1773, LG-1774 are the lead's (`from-lead-2026-10-09.md:5201`).
 
 ## The ruling this plan carries out
 
@@ -64,7 +66,7 @@ identical outputs) is kept by proof, not argument.
 
 **Not in scope, refused by the ruling:** (B) batching `model_call` across quotes; (D)
 shrinking the demo portfolio or journey; (E) raising the gate demo cap. **(C)** —
-`POLARS_MAX_THREADS=1` — may be run once as a measurement and recorded in LG 8100 as data;
+`POLARS_MAX_THREADS=1` — may be run once as a measurement and recorded in LG-1774 as data;
 it is not a fix and ships no config change.
 
 **No spec change.** FR-193, FR-222 and NFR-489 already state what is required; this changes
@@ -103,10 +105,10 @@ bit-identical, that is a STOP and a report, not a tolerance (the ruling says exa
 
 A pre-merge dated delta, written 2026-10-17 21:34 BST on branch
 `pl-8098-glm-scalar-predict-2026-10-17` at `a4ca8b00`. The plan is unmerged, so this edit is
-allowed. Authority: the maintainer's entry "2026-10-17 21:26:31 BST — Maintainer: SL 8099
+allowed. Authority: the maintainer's entry "2026-10-17 21:26:31 BST — Maintainer: SL-1773
 @a7977a49 — both departures ACCEPTED with conditions; the parity limb must be shown RUN" in
 `to-lead.md`, conditions (1) and (2), and its refinement "2026-10-17 21:26:53 BST —
-Maintainer: SL 8099 refinement: the old apply_grouping behaviour pinned as FIXTURE
+Maintainer: SL-1773 refinement: the old apply_grouping behaviour pinned as FIXTURE
 expectations (not a copied module)".
 
 1. **Constraint 5 is replaced.** Old: "an unsupported factor kind keeps the frame path,
@@ -131,7 +133,7 @@ expectations (not a copied module)".
    21:26:31 (1) stand as written there: the `test_groupings*.py` single-file runs at the
    head, the full gate as the batch-path proof, and one LG line naming the widening and the
    stamp.
-3. **SL-1274.** Whichever of SL 8099 and SL-1274 merges second adds **expression-kind parity
+3. **SL-1274.** Whichever of SL-1773 and SL-1274 merges second adds **expression-kind parity
    CASES** to the scalar-path tests (bit-identical scores for `expression` factors, as for
    the covered kinds). It does not add a frame-path list: none exists after this delta.
 
@@ -146,7 +148,7 @@ decision point the executor rules.
 ## Acceptance Standard
 
 1. **Red first (iii).** The first commit adds the parity test and a scalar entry point that
-   raises `NotImplementedError`; run through `run-small.sh`, it is red. LG 8100 records that
+   raises `NotImplementedError`; run through `run-small.sh`, it is red. LG-1774 records that
    run's rc and FAILED line, the commit sha and the tree.
 2. **Bit-identical (i).** One test asserts `scalar == frame` (Python `==` on the `float`, no
    `approx`, no tolerance) for every predicted value over:
@@ -162,7 +164,7 @@ decision point the executor rules.
    reports: the DB lane is the lead's to grant.
 3. **Diagnostic timing (ii).** A test or a script under the slice prints ms/quote for both
    paths over the seed quotes, with the tree sha and `nproc`. It asserts nothing about time.
-   Its output goes into LG 8100 verbatim. (C), if run, is a third printed column.
+   Its output goes into LG-1774 verbatim. (C), if run, is a third printed column.
 4. **The wiring.** `_GlmScorer.predict` calls the scalar path; a test proves a
    `model_call` to a GLM no longer calls `resolve_factors` (patched to raise) while the
    frame path still does.
@@ -198,18 +200,18 @@ its local ref (local = origin for every branch below).
 
 1. **Red first.** Add the parity test (Acceptance 2) and a scalar entry point beside
    `linear_predictor` in `modelling/predict.py` that raises `NotImplementedError`. Run it
-   (Acceptance 5): red. Commit. Record in LG 8100.
+   (Acceptance 5): red. Commit. Record in LG-1774.
 2. **The scalar path.** Implement it under the design constraints. Run the parity test
    until it is green with exact equality. Commit.
 3. **The wiring.** `_GlmScorer.predict` and its `offset_source` use it; the load-time
    choice for unsupported kinds; the wiring test (Acceptance 4). Commit.
 4. **Timing.** The diagnostic (Acceptance 3); (C) once if wanted, as data. Commit.
 5. **Census and gate.** Re-run the census at the base; report; the gate when granted.
-   Close the LG 8100 entry.
+   Close the LG-1774 entry.
 
 ## Sequencing
 
-SL 8099 goes first. After it merges, SL-1543 re-merges main and re-gates SOLO with B4 kept
+SL-1773 goes first. After it merges, SL-1543 re-merges main and re-gates SOLO with B4 kept
 (ruling item 3). The ruling's item 4 (one DB-lane run of `test_wf699 -k end_to_end`,
 printing the failing goldens) is separate and is not part of this slice.
 
