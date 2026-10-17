@@ -3,7 +3,7 @@ id: PL-8098
 family: plan
 kind: map
 title: WK-1178 — a scalar one-row GLM predict for model_call, bit-identical to the polars path (SL-8099) — a dated Work-plan delta
-status: active                  # draft → active → superseded | retired (§1.2a) — activated 2026-10-17 on the maintainer's "plan + GO now" (~20:48 BST); no decision point is open
+status: active                  # draft → active → superseded | retired (§1.2a) — activated 2026-10-17 on the maintainer's "plan + GO now" (2026-10-17 20:48:15 BST); no decision point is open
 created: 2026-10-17
 owner: planner
 tree: 9469721db3d26480824cc1d715da2ec4ca9044d0
@@ -29,7 +29,7 @@ PL 8098, SL 8099, LG 8100 are the lead's (`from-lead-2026-10-09.md:5201`).
 
 ## The ruling this plan carries out
 
-The maintainer, ~20:48 BST 2026-10-17, verbatim (relayed in the brief; the lead's channel
+The maintainer, 2026-10-17 20:48:15 BST, verbatim (relayed in the brief; the lead's channel
 line `from-lead-2026-10-09.md:5201` records the same routing):
 
 > "SL-1543 diagnosis ACCEPTED: 1. An FD HIGH (WK-1178): a model_call to a GLM costs ~16.9

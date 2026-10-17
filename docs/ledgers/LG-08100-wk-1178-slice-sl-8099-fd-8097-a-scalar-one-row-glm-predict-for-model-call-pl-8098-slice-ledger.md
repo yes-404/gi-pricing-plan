@@ -16,7 +16,7 @@ relates: [PL-8098, SL-8099, FD-8097, FR-193, FR-222]
 
 # LG-8100 — WK-1178 slice SL-8099: the scalar one-row GLM predict
 
-**GO:** the maintainer's "plan + GO now" (~20:48 BST 2026-10-17, ruling item 2), relayed in the lead's brief `brief-executor-8099-2026-10-17.md` (2026-10-17 20:54:33 BST).
+**GO:** the maintainer's "plan + GO now" (2026-10-17 20:48:15 BST, ruling item 2), relayed in the lead's brief `brief-executor-8099-2026-10-17.md` (2026-10-17 20:54:33 BST).
 **MERGE-ACK:** not yet given.
 
 ## Tasks
