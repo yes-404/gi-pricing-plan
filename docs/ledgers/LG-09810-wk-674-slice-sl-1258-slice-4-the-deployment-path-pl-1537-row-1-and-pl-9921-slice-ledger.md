@@ -282,6 +282,107 @@ Observation, not changed: `GET /me/workspaces` and `POST /me/workspace` depend o
 
 - 2026-10-16 10:40:13 BST: re-merged `origin/main` a2f77b2d (`git merge --no-ff`, no conflicts; `merge-tree` rc 0 before). Merge commit bbed8cc3 (tree ef58066d). Overlap with #1309 (`git diff --stat 0877e6e7 a2f77b2d`, 13 files): none on authz.py, rate_limit.py, settings.py, main.py, score.py or test_score_rate_limit.py. Owed: `docs/INDEX.md` regeneration and `generate-contracts.py --check` (not run: ALONE latency gate in progress).
 
+## Re-merge 2026-10-17 (2026-10-17 19:41:37 BST): `origin/main` 9469721d into `c27cf2b2`, SL-1455's per-request session against SL-1258's management count
+
+Executor-1258m. Brief: the lead's, 2026-10-17 19:37:47 BST; authority: the maintainer to the lead, 2026-10-17 ~19:38 BST ("A per-hunk table for authz.py / score.py / rate_limit.py; any behaviour-changing resolution → STOP to me. SL-1455's one-session-per-request + resolve_caller must survive intact, quoted."). Merge: `git merge --no-ff origin/main` on `c27cf2b2`; four conflicted files (`docs/INDEX.md` taken from `origin/main`, regenerated below; `authz.py`, `score.py`, `rate_limit.py` by hand). The hand resolution is proved by this slice's own SOLO gate on the merged head, not by this table alone.
+
+**What SL-1455 (#1323, merge `9c602fec`) changed** (`git show 9c602fec --stat`): `api/authz.py` 52, `api/deps.py` 59, `api/score.py` 106, `platform/rate_limit.py` 14. In short: `request_session` is the one session per request (`RequestSessionDep`); `resolve_caller` authenticates through it and leaves it open; `require_caller` closes it after; `requires()` reads its permission through it and closes it unless `keep_session=True` (`/score`); `rate_limit.enforce` takes the request `session`, not `Database`.
+
+**Hunk table.** Behaviour change on either side? = does the resolution change what any request does that either parent did (a count, a refusal, a status, a connection held).
+
+| # | file:line (merge-conflict hunk) | ours (SL-1258) | theirs (main, SL-1455) | resolution | why | behaviour change? |
+|---|---|---|---|---|---|---|
+| 1 | `authz.py` imports (:27) | imports `Identity`, `IdentityDep`, `SettingsDep`, `require_caller`, `Settings`, `Database`, `rate_limit`, `Principal`; `__all__` of 8 names | imports `RequestSessionDep`, `resolve_caller`; `__all__` of 2 names | both-combined; `Database` import dropped (nothing uses it now); `Request` and `AsyncSession` imports added | union of what both sides' code needs | no |
+| 2 | `authz.py` (:61) `CallerDep`, `_database`/`DatabaseDep`, counting helpers | `CallerDep` = `require_caller`; `DatabaseDep`; `_count_management_request`, `_count_caller`, `counted_caller`, `counted_identity`, `management_counter` all take `database: Database`; `enforce(..., database, ...)` | `CallerDep` = `resolve_caller` (no `DatabaseDep`) | both-combined. `CallerDep` stays `require_caller` (ours): every counting dependency and every external user of `CallerDep` (`deployments.py`, `validation.py`) keeps the contract "session closed after resolve, the handler runs on its own". The helpers take `session: RequestSessionDep` and pass it to `enforce` (theirs). `DatabaseDep` removed (unused; `rate_limit.enforce` no longer takes a `Database`). `_count_management_request` ends with `await session.close()` | `enforce` now reads the Setting through the request session (theirs, forced by the `rate_limit.py` signature). Closing after the count keeps ours' old effect: `database.session()` released its connection when the count finished, so a counting dependency holds no pool slot for the handler. The already-counted early return also closes, so a second counting dependency on a route leaves nothing open | no: the same counts, 429s and Setting reads; the same one connection released as before |
+| 3 | `authz.py` (:187) `requires()` | `requires(permission, *, management_counted=True)`; opens `database.session()` for the check, then counts via `_count_caller(..., database, settings)` | `requires(permission, *, keep_session=False)`; check through `RequestSessionDep`, then `session.close()` unless `keep_session` | both-combined: `requires(permission, *, keep_session=False, management_counted=True)`; depends on `resolve_caller` (theirs, not `CallerDep`: the check reads through the still-open session), check through `session`, then `if management_counted: count (closes the session) elif not keep_session: close`. `MANAGEMENT_COUNTED_ATTRIBUTE` stamp kept (ours) | each limb of each side survives: the count after the check (ours), the check on the request session and `keep_session` (theirs). `keep_session=True` is documented as used with `management_counted=False` because a count closes the session it reads through | no. `/score` is `keep_session=True, management_counted=False` (hunk 5): the session stays open, no count, as on main. All other routes: check, count, release, as on `c27cf2b2` but with one checkout fewer |
+| 4 | `rate_limit.py:128` `enforce` docstring | adds the sentence on `workspace_id=None` | adds the paragraph on `session` | both-combined (the two docstring additions, no code in the hunk). The non-conflicting code hunks merged clean: `workspace_id: UUID \| None` (ours) with `session: AsyncSession` and no `database.session()` (theirs) | docstring only | no |
+| 5 | `score.py:140` `ScoreExecuteDep` | `requires(SCORE_EXECUTE, management_counted=False)` | `requires(SCORE_EXECUTE, keep_session=True)` | both-combined: `requires(SCORE_EXECUTE, keep_session=True, management_counted=False)`; the comment extended with the `management_counted=False` reason | `/score` is counted by the scoring limit (ours), and its reads continue on the request session (theirs). `_enforce_score_rate_limit` already took `session` (theirs, merged clean) | no. `ScoreBatchDep` (`management_counted=False`, ours) merged clean and closes the session after the check (theirs' default) |
+
+No hunk needed a choice of one side's behaviour; no STOP.
+
+**SL-1455's `request_session` and `resolve_caller`, quoted from `origin/main` 9469721d, `backend/src/app/api/deps.py:102` and `:229`** (`git show origin/main:backend/src/app/api/deps.py`):
+
+```python
+async def request_session(database: DatabaseDep) -> AsyncIterator[AsyncSession]:
+    """The one session a request reads through (RL-1685, PL-1454 DP-1 (a)).
+
+    FastAPI resolves a dependency once per request however many dependencies and handlers
+    name it, so API-key authentication, the permission check, FR-452's limit Setting and the
+    route's own reads share one session and therefore one pool checkout. The session takes a
+    connection only at its first statement and returns it when the request ends.
+    """
+    async with database.session() as session:
+        yield session
+```
+
+```python
+async def resolve_caller(
+    request: Request,
+    settings: SettingsDep,
+    session: RequestSessionDep,
+    workspace_id: Annotated[
+        str | None, Header(alias="Workspace-Id", description=WORKSPACE_ID_DESCRIPTION)
+    ] = None,
+) -> Caller:
+    """Resolve the caller, or refuse — leaving the request session as it found it.
+
+    Only `requires()` depends on this directly, because it reads the permission through the
+    same session next and releases it itself (RL-1685, PL-1454 DP-1 (a)). Every other route
+    depends on `require_caller`, which closes the session this one may have left open.
+    """
+    # Taken as `str | None` and parsed here rather than annotated `UUID | None`: FastAPI
+    # would answer a malformed UUID with a bare `422` outside the platform error
+    # catalogue, and FR-397 requires the refusal to be a typed platform error.
+    selected: UUID | None = None
+    if workspace_id is not None:
+        try:
+            selected = UUID(workspace_id)
+        except ValueError as exc:
+            raise PlatformError(
+                "WORKSPACE_SCOPE_DENIED",
+                "Workspace scope denied",
+                403,
+                "The Workspace-Id header must be a UUID.",
+            ) from exc
+
+    authorization = request.headers.get("authorization", "")
+    scheme, _, credential = authorization.partition(" ")
+    scheme = scheme.lower()
+
+    database: Database = request.app.state.database
+
+    if scheme == "bearer" and credential:
+        verifier: OidcVerifier = request.app.state.oidc_verifier
+        async with database.unit_of_work() as session:
+            identity = await authenticate_bearer(session, verifier, credential)
+        return _select_workspace(identity, selected)
+
+    api_key = credential if scheme == "apikey" else request.headers.get("x-api-key")
+    if api_key:
+        identity = await authenticate_api_key(session, api_key)
+        if session.dirty:
+            # The throttled `last_used_at` stamp (RL-1685 DP-1 (b)) is the only write this
+            # path makes, and only about once a minute: commit it before the handler's reads.
+            # A request that stamped nothing commits nothing, so it keeps its one connection.
+            await session.commit()
+        return _select_workspace(identity, selected)
+
+    # The dev path consumes the same `Workspace-Id` header with the same membership
+    # check as the bearer and API-key paths above. An earlier version of this comment
+    # said the dev path read "a different header for a different purpose" — that was
+    # true before W6b-11 (2026-08-26) removed `x-dev-workspace-id`, and describes no
+    # code that exists now.
+    return await _development_caller(request, settings, database, selected)
+```
+
+**After the merge, in this worktree's `backend/src/app/api/deps.py`:** `git diff origin/main -- backend/src/app/api/deps.py` is empty (the file is identical to main's); `diff` of the two quoted definitions against main's: rc 0 for both. No SL-1258 change touches `deps.py`.
+
+**One session per request, by call site (merged `authz.py`, `score.py`, `rate_limit.py`):** `authz.py` and `rate_limit.py` call no `database.session()`, `unit_of_work()` or `resolve_caller` (apart from `requires()`'s `Depends(resolve_caller)`); `score.py` keeps main's two `database.unit_of_work()` sites unchanged by this merge (`git diff origin/main -- score.py` touches neither): the sampled-trace write, which main keeps on its own connection for FR-259's failure isolation, and the `/score/batch` Job submit (writes, after the check closed the session); every other site names `RequestSessionDep` (`counted_caller`, `counted_identity`, `management_counter`, `requires`, `_enforce_score_rate_limit`), which FastAPI resolves once per request. `rate_limit.enforce` opens none.
+
+**Checks on this merge (tree: the working tree of `sl-1258-wk674-s4` on top of the pre-merge head `c27cf2b2`, before the merge commit):** ruff check and ruff format --check on `authz.py` rc 0; `ruff check` on `score.py`, `rate_limit.py` rc 0 (`ruff format` is not clean on `origin/main`'s own `rate_limit.py` and `score.py`, so those two were not reformatted: no churn in lines this merge did not touch); `uv run mypy` rc 0 (240 source files); `backend/tests/test_management_429_declared.py` 2 passed through `run-small.sh`. `backend/tests/test_api_authorisation_sweep.py` was also run and all 9 of its DB tests errored with `GIP_TEST_DATABASE_URL is not set, and the per-worktree test database ... does not exist yet`: not run, owed to the SOLO gate (no DB lane granted).
+
+**AC2 gate stage (PL-1714 Acceptance Standard item 2):** added to `sl1258-gate.sh` after the python static checks. Pass condition: `git grep` rc 1 and `lines=0`. A dry run at `c27cf2b2` prints one hit, `backend/tests/test_deploy_stack_runtime.py:360` (a docstring: "A shape test proves `--queues default,compute` is declared"), so the stage as written reads rc 0 and will not pass: reported to the lead, not edited.
+
 ## PRs
 
 None yet.

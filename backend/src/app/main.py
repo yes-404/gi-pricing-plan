@@ -9,6 +9,7 @@ fails inside another middleware must still produce a problem response carrying a
 
 from __future__ import annotations
 
+import gc
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -108,6 +109,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # so an unavailable Redis does not stop startup; the limiter fails open.
         redis_client = build_redis_client(settings.redis_url.get_secret_value())
         running.state.rate_limiter = RateLimiter(redis_client)
+        # RL-1685 (PL-1454 DP-4): everything built above lives for the process. Moving it
+        # into the permanent generation takes it out of every later gen2 collection, whose
+        # pause (about 200 to 300 ms on the Task 0 record) was the request-path stall.
+        # Last, so the freeze covers the whole start-up and nothing built after it escapes it.
+        gc.freeze()
         yield
         health.clear_probes()
         await redis_client.aclose()

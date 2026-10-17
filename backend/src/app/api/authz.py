@@ -23,10 +23,18 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import Depends, Request
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import Caller, Identity, IdentityDep, SettingsDep, require_caller
+from app.api.deps import (
+    Caller,
+    Identity,
+    IdentityDep,
+    RequestSessionDep,
+    SettingsDep,
+    require_caller,
+    resolve_caller,
+)
 from app.config import Settings
-from app.db.session import Database
 from app.platform import rate_limit, rbac
 from model_schema import Permission, Principal
 
@@ -58,15 +66,10 @@ PERMISSION_ATTRIBUTE = "__gip_permission__"
 #: can return 429").
 MANAGEMENT_COUNTED_ATTRIBUTE = "__gip_management_counted__"
 
+#: `require_caller`, which closes the request session after resolving (the handler then runs on
+#: its own sessions, holding no second connection). `requires()` alone depends on `resolve_caller`,
+#: because it reads its permission through that same, still-open session next (RL-1685).
 CallerDep = Annotated[Caller, Depends(require_caller)]
-
-
-def _database(request: Request) -> Database:
-    database: Database = request.app.state.database
-    return database
-
-
-DatabaseDep = Annotated[Database, Depends(_database)]
 
 
 #: FR-452's management-API limit (`RL-1687`): the Setting that is its limit.
@@ -80,7 +83,7 @@ async def _count_management_request(
     principal: Principal,
     workspace_id: UUID | None,
     environment: str | None,
-    database: Database,
+    session: AsyncSession,
     settings: Settings,
 ) -> None:
     """Count one authenticated management request (FR-452, `RL-1687` (1a), (2a), (3a)).
@@ -96,11 +99,12 @@ async def _count_management_request(
     DP-S4-ME (A)).
     """
     if getattr(request.state, _COUNTED_FLAG, False):
+        await session.close()
         return
     setattr(request.state, _COUNTED_FLAG, True)
     await rate_limit.enforce(
         request.app.state.rate_limiter,
-        database,
+        session,
         settings,
         route="management",
         default_setting=MANAGEMENT_RATE_LIMIT_SETTING,
@@ -109,29 +113,30 @@ async def _count_management_request(
         principal=principal,
         account_limit=None,
     )
+    await session.close()
 
 
 async def _count_caller(
-    request: Request, caller: Caller, database: Database, settings: Settings
+    request: Request, caller: Caller, session: AsyncSession, settings: Settings
 ) -> None:
     await _count_management_request(
-        request, caller.principal, caller.workspace_id, caller.environment, database, settings
+        request, caller.principal, caller.workspace_id, caller.environment, session, settings
     )
 
 
 async def counted_caller(
-    request: Request, caller: CallerDep, database: DatabaseDep, settings: SettingsDep
+    request: Request, caller: CallerDep, session: RequestSessionDep, settings: SettingsDep
 ) -> Caller:
     """`require_caller` plus the management count, for an authenticated route that declares
     no permission (`/me`, `/approval-requests`, ...). A route with a permission uses
     `requires()`, which counts after its check; a route whose service decides the permission
     uses `management_counter()`."""
-    await _count_caller(request, caller, database, settings)
+    await _count_caller(request, caller, session, settings)
     return caller
 
 
 async def counted_identity(
-    request: Request, identity: IdentityDep, database: DatabaseDep, settings: SettingsDep
+    request: Request, identity: IdentityDep, session: RequestSessionDep, settings: SettingsDep
 ) -> Identity:
     """`require_identity` plus the management count, for the two routes a principal reaches
     before it has a workspace selection (`GET /me/workspaces`, `POST /me/workspace`).
@@ -139,9 +144,7 @@ async def counted_identity(
     Counted with `workspace_id=None` and no Environment (an identity has neither): the limit
     is the environment-variable layer, else the default; a workspace override does not apply
     (the maintainer's (by delegation) entry "2026-10-16 10:31:43 BST", DP-S4-ME (A))."""
-    await _count_management_request(
-        request, identity.principal, None, None, database, settings
-    )
+    await _count_management_request(request, identity.principal, None, None, session, settings)
     return identity
 
 
@@ -150,7 +153,7 @@ CountAfterCheck = Callable[[], Awaitable[None]]
 
 
 async def management_counter(
-    request: Request, caller: CallerDep, database: DatabaseDep, settings: SettingsDep
+    request: Request, caller: CallerDep, session: RequestSessionDep, settings: SettingsDep
 ) -> CountAfterCheck:
     """For a route whose permission is decided inside its service (it depends on the body or
     on the resource: a `sql` rule needs `admin:manage_settings`, a deployment needs
@@ -159,13 +162,13 @@ async def management_counter(
     permission check, so a `403` is never counted. The check stays in the service."""
 
     async def count() -> None:
-        await _count_caller(request, caller, database, settings)
+        await _count_caller(request, caller, session, settings)
 
     return count
 
 
 def requires(
-    permission: Permission, *, management_counted: bool = True
+    permission: Permission, *, keep_session: bool = False, management_counted: bool = True
 ) -> Callable[..., Awaitable[Caller]]:
     """Build a dependency that refuses unless the caller holds `permission`.
 
@@ -173,25 +176,36 @@ def requires(
     have both the identity and the check in one place. Once the check passes it counts the
     request against FR-452's management limit; `management_counted=False` is for the
     `/score` family only, which the scoring limit counts instead (`RL-1687`).
+
+    The check reads through the request's session (`RequestSessionDep`). By default the
+    check, and the management count if any, then release that session's connection, as the
+    check always did, so a handler that runs long does not hold a pool slot it no longer
+    needs. `keep_session=True` is for the one route whose own reads continue on the same
+    session and connection (`/score`, RL-1685 PL-1454 DP-1 (a)); it is used with
+    `management_counted=False`, since a management count closes the session it reads through.
     """
 
     async def dependency(
-        request: Request, caller: CallerDep, database: DatabaseDep, settings: SettingsDep
+        caller: Annotated[Caller, Depends(resolve_caller)],
+        request: Request,
+        session: RequestSessionDep,
+        settings: SettingsDep,
     ) -> Caller:
-        async with database.session() as session:
-            await rbac.require_permission(
-                session,
-                workspace_id=caller.workspace_id,
-                principal=caller.principal,
-                permission=permission,
-                # RL-924: the set this credential actually authenticated with, passed
-                # rather than re-derived. A Service Account's grants live on its own record
-                # and reach no role, so without this a permission only a Service Account may
-                # hold (FR-347) can never be satisfied.
-                credential_permissions=caller.permissions,
-            )
+        await rbac.require_permission(
+            session,
+            workspace_id=caller.workspace_id,
+            principal=caller.principal,
+            permission=permission,
+            # RL-924: the set this credential actually authenticated with, passed
+            # rather than re-derived. A Service Account's grants live on its own record
+            # and reach no role, so without this a permission only a Service Account may
+            # hold (FR-347) can never be satisfied.
+            credential_permissions=caller.permissions,
+        )
         if management_counted:
-            await _count_caller(request, caller, database, settings)
+            await _count_caller(request, caller, session, settings)
+        elif not keep_session:
+            await session.close()
         return caller
 
     setattr(dependency, PERMISSION_ATTRIBUTE, permission)

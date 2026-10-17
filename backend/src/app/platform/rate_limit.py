@@ -21,9 +21,9 @@ from uuid import UUID
 
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings
-from app.db.session import Database
 from app.errors import PlatformError
 from app.observability import metrics
 from app.observability.logging import get_logger
@@ -111,7 +111,7 @@ class RateLimiter:
 
 async def enforce(
     limiter: RateLimiter,
-    database: Database,
+    session: AsyncSession,
     settings: Settings,
     *,
     route: str,
@@ -127,13 +127,15 @@ async def enforce(
     `default_setting` resolved for the caller's Environment, else none — and with none the
     request is admitted without a counter call (RL-1347 rule 2). A `workspace_id` of `None` resolves
     without the workspace layer (an identity route, before any workspace is selected).
+
+    The Setting is read through `session`, the request's own (RL-1685, PL-1454 DP-1 (a)):
+    this function opens none, so the limit read costs the request no pool checkout.
     """
     limit = account_limit
     if limit is None:
-        async with database.session() as session:
-            resolved = await settings_service.resolve(
-                session, settings, workspace_id, default_setting, environment
-            )
+        resolved = await settings_service.resolve(
+            session, settings, workspace_id, default_setting, environment
+        )
         limit = resolved.effective_value
     if limit is None:
         return
