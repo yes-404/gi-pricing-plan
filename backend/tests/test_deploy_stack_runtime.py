@@ -357,7 +357,7 @@ def _api(method: str, path: str, headers: dict[str, str], body: Any = None) -> A
 def test_a_submitted_job_reaches_a_terminal_state_through_the_compose_worker(
     built_n: str, down: None, beat_fixture: None
 ) -> None:
-    """A shape test proves `--queues default,compute` is declared; this proves it is delivered.
+    """A shape test proves the declared queue list is set; this proves it is delivered.
 
     The Job is `rating.compile` (queue `default`, `platform/jobs.py` `DEFAULT_QUEUE_FOR_KIND`):
     the one cheap kind whose own queue is the one a `compute`-only worker does not consume.

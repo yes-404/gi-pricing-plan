@@ -383,6 +383,8 @@ async def resolve_caller(
 
 **AC2 gate stage (PL-1714 Acceptance Standard item 2):** added to `sl1258-gate.sh` after the python static checks. Pass condition: `git grep` rc 1 and `lines=0`. A dry run at `c27cf2b2` prints one hit, `backend/tests/test_deploy_stack_runtime.py:360` (a docstring: "A shape test proves `--queues default,compute` is declared"), so the stage as written reads rc 0 and will not pass: reported to the lead, not edited.
 
+AC2's grep is literal; prose hit at :360 reworded, not a code change (the maintainer's ruling relayed in the lead's brief of 2026-10-17 19:43:48 BST, ruling stamped ~19:44 BST: option (a); (b) refused as it weakens the check, (c) refused as a red-by-design stage hides future hits).
+
 ## PRs
 
 None yet.
