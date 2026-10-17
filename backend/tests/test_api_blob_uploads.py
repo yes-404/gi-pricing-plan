@@ -252,8 +252,17 @@ async def test_another_principal_with_write_in_the_workspace_may_complete(
 async def test_identical_bytes_promote_to_one_blob(
     api_client: TestClient, database: Database, blob_store: BlobStore, writer
 ) -> None:
-    """Breaker: skip the existence check -> a second `put` and a primary-key error."""
+    """Breakers: skip the existence check -> a second object-store copy (counted below);
+    drop `on_conflict_do_nothing` -> a primary-key error."""
     payload = _payload()
+    copies: list[str] = []
+    real_copy = blob_store._client.copy
+
+    def spy(source, bucket, key, *args, **kwargs):
+        copies.append(key)
+        return real_copy(source, bucket, key, *args, **kwargs)
+
+    blob_store._client.copy = spy  # type: ignore[method-assign]
     digests = []
     keys = []
     for _ in range(2):
@@ -269,6 +278,8 @@ async def test_identical_bytes_promote_to_one_blob(
         )
     assert digests[0] == digests[1]
     sha = digests[0]
+    # The second promotion finds the content stored and copies nothing.
+    assert copies == [f"blob/{sha[:2]}/{sha}"]
     assert await _scalar(database, "select count(*) from blobs where sha256 = :s", s=sha) == 1
     assert await _scalar(database, "select ref_count from blobs where sha256 = :s", s=sha) == 2
     listed = blob_store._client.list_objects_v2(
