@@ -1525,7 +1525,7 @@ relates: [PL-1286, PL-1371]
 
 `PL-1286` S7, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. The compare view over `POST /score/compare`; `own_change: false` never rendered as "unchanged". **Activation needs:** S6 and S7b closed; `SL-1367` merged. Lane or team fixed at GO. **Not on the automatic cut ladder** (rung 9 is OFF; to the maintainer if rungs 1–7 are spent). *(Cut 2026-10-08 by the planner under working id 9465, reserved by the lead; minted 2026-10-10 as SL-1550 in the D2 batch mint.)*
 
-(Activated 2026-10-17 on the maintainer's `to-lead.md` entry "2026-10-17 16:35:35 BST — Maintainer: #1325 read-back VERIFIED; GO SL-1550 (PL-1764)" and the 2026-10-16 09:49:25 BST confirmation of RL-1765 (lane C). `PL-1764` activated with it; its item 7 needs are met: `SL-1548`, `SL-1549` and `SL-1367` closed, `RL-1261` active, and need (3), `RL-1765`, on `origin/main` at `1959b861`. Ledger: working id LG 8091. The prep at `b9ef0bd6` is the red-first record.)
+(Activated 2026-10-17 on the maintainer's `to-lead.md` entry "2026-10-17 16:35:35 BST — Maintainer: #1325 read-back VERIFIED; GO SL-1550 (PL-1764)" and the 2026-10-16 09:49:25 BST confirmation of RL-1765 (lane C). `PL-1764` activated with it; its item 7 needs are met: `SL-1548`, `SL-1549` and `SL-1367` closed, `RL-1261` active, and need (3), `RL-1765`, on `origin/main` at `1959b861`. Ledger: `LG-1778` (minted 2026-10-17 from working id 8091). The prep at `b9ef0bd6` is the red-first record.)
 
 #### SL-1551 — Slice 8: Dislocation views (FR-263, FR-264, FR-265, FR-266)
 

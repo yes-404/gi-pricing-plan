@@ -1,11 +1,10 @@
 ---
-id: LG-8091
+id: LG-1778
 family: ledger
 title: WK-675 slice SL-1550 — S7, the sandbox compare view and its red-first tests (PL-1764), slice ledger
 status: active                 # active → closed (§1.2a)
-created: 2026-10-17
+created: 2026-10-17 # original date 2026-10-17, set at the filing; minted 2026-10-17
 owner: executor
-tree: 6c5278b558e9b8015788c1e08037ef02c57d9afd
 phase: P2
 work: WK-675
 slice: SL-1550
@@ -14,9 +13,9 @@ corrected_by: []
 relates: [PL-1764, PL-1546, PL-1286, SL-1550, SL-1548, SL-1549, SL-1367, RL-1261, RL-1765, FR-262]
 ---
 
-# LG-8091 — WK-675 slice SL-1550: S7, the sandbox compare view
+# LG-1778 — WK-675 slice SL-1550: S7, the sandbox compare view
 
-*(Working id 8091, reserved 2026-10-17 16:36:43 BST. Quoted entries and command output keep the form they were written under.)*
+*(Minted 2026-10-17 as LG-1778 from working id 8091, reserved 2026-10-17 16:36:43 BST. Quoted entries and command output keep the form they were written under.)*
 
 **GO:** the maintainer's `to-lead.md` entry "2026-10-17 16:35:35 BST — Maintainer: #1325 read-back VERIFIED; GO SL-1550 (PL-1764)", with the 2026-10-16 09:49:25 BST confirmation of RL-1765 (conditions (1)–(3)). `RL-1765` is on `origin/main` at `1959b861`.
 **MERGE-ACK:** not yet given.
@@ -52,9 +51,11 @@ The two test files' fixture step kinds were not in the generated `TraceStepType`
 | `cap` | `constraint` | 03 §3.2 `constraint` row (`on_violation` clamp) |
 | `loading` | `expression` | ruled by the maintainer via the lead, 2026-10-17 ~18:40 BST: it consumes `{}` and produces a constant, and a `table` step needs a key (03 §3.2); the other three mappings were accepted as cited |
 
+The `loading` row was corrected by executor-1550g (bundled in `d5fc7bd5`) to carry the maintainer's ruling.
+
 Every fixture step also gained `elapsed_us: 0` (required by the generated `TraceStep`). Test files only.
 
-Red-first re-proof: with `src/api/score.ts`, `QuoteComparison.vue`, `stepChange.ts` and `QuoteSandboxView.vue` set back to their `8bcddabe` (stub) content and the fixed tests kept, vitest on the three slice test files gave 17 failed, 14 passed. A1-A6 fail on `AssertionError: expected '' to be 'Added in comparison'` (and the like); B1-B6, C1, C4 and C6 on `AssertionError: expected null not to be null` (no "Step differences" table). At the head the whole suite passes (118 files, 748 tests). The files were restored; nothing from the scratch state was committed.
+Red-first re-proof: with `src/api/score.ts`, `QuoteComparison.vue`, `stepChange.ts` and `QuoteSandboxView.vue` set back to their `8bcddabe` (stub) content and the fixed tests kept, vitest on the three slice test files gave 17 failed, 14 passed. The 17 failing tests are A1-A6, B1-B6, C1, C2, C3, C4 and C6 (C5 passes red-first by design: it is a negative assert, `not.toHaveBeenCalled`, proven by broken-input variant (b) at `QuoteSandboxView.test.ts:281`, see the Red-first record). A1-A6 fail on `AssertionError: expected '' to be 'Added in comparison'` (and the like); B1-B6, C1, C4 and C6 (and C2, C3 at `pickComparison`, `:113`) on `AssertionError: expected null not to be null` (no "Step differences" table). At the head the whole suite passes (118 files, 748 tests). The files were restored; nothing from the scratch state was committed.
 
 The broker re-run (`backend/tests/test_celery_broker.py`, Redis db 5): 3 passed. `redis-effective.py` prints the Settings default bucket `gip-blobs` because only the test reads `GIP_TEST_BUCKET`.
 
@@ -67,6 +68,8 @@ Gate run by the lead at `1ab31bca` (tree `d2db18d3786a251ee99a7fb973eb465987d1ed
 None yet: the branch `sl-1550-wk675-s7-prep-2026-10-16` is pushed; the lead opens the PR after the gate.
 
 ## Audit
+
+**Lead verdict (2026-10-17 18:45:18 BST, the lead, transcript 1b92c2a6):** the auditor's proposal ADOPTED (the maintainer confirmed) — PL-1764 items 1–10 delivered and evidenced; the python half @1ab31bca stands (broker red = shared broker, isolated re-run 3 passed); the FE fixture fix d9619139 test-only, red-first re-proven, C5 a negative assert proven by variant (b) at b9ef0bd6; A3/A4 fixed at mint; A2 = the PR CI read at the ACK. MERGE-ACK: not yet given.
 
 *(Written by `auditor-1550`, 2026-10-17, on head `d96191398985c228fb34e6df3e17c92d064c157d`, range `origin/main...d9619139`. Code read-only; no test run by the auditor; the gate is the lead's. The worktree carried one uncommitted edit to this ledger's `loading` row (the maintainer's ruling), committed with this audit.)*
 
@@ -87,12 +90,12 @@ None yet: the branch `sl-1550-wk675-s7-prep-2026-10-16` is pushed; the lead open
 
 **3. Fixture kinds (d9619139).** The `loading` to `expression` row now cites the maintainer's ruling; the other three cite 03 §3.2 and `score.py:846-849`, which I checked name the emitted `step.type`. Test files only; the `1ab31bca..d9619139` diff confirms.
 
-**4. Gate at `1ab31bca`.** ruff, mypy, import_linter, req_coverage, contracts rc 0 (`scratch/sl1550-gate/*.rc`). `audit_docs` rc 1 with one FAILED block, verbatim: `FAILED (1):  - check 31: gap in the full allocation between 1771 and 8091` (a working-id artefact until LG 8091 is minted). pytest rc 1, `14 failed, 5929 passed, 6 skipped`: 13 are the `test_audit_docs_*`, `test_doc_index`, `test_register_*`, `test_repository_invariants` cascade of check 31; the 14th, `backend/tests/test_celery_broker.py::test_publisher_puts_a_readable_message_on_the_named_queue`, passes isolated on Redis db 5 (`scratch/sl1550g/broker.log:14`, `3 passed`): the shared-broker mechanism, environmental, not a slice file. Demo: `grep -c 'job not found'` = 0.
+**4. Gate at `1ab31bca`.** ruff, mypy, import_linter, req_coverage, contracts rc 0 (`scratch/sl1550-gate/*.rc`). `audit_docs` rc 1 with one FAILED block, verbatim: `FAILED (1):  - check 31: gap in the full allocation between 1771 and 8091` (a working-id artefact until the ledger was minted as LG-1778). pytest rc 1, `14 failed, 5929 passed, 6 skipped`: 13 are the `test_audit_docs_*`, `test_doc_index`, `test_register_*`, `test_repository_invariants` cascade of check 31; the 14th, `backend/tests/test_celery_broker.py::test_publisher_puts_a_readable_message_on_the_named_queue`, passes isolated on Redis db 5 (`scratch/sl1550g/broker.log:14`, `3 passed`): the shared-broker mechanism, environmental, not a slice file. Demo: `grep -c 'job not found'` = 0.
 
 **5. Findings.**
 - **A1 (LOW, fixed here):** the Gate line read "Owed ... Audit: not yet" after the gate was accepted; updated above. MERGE-ACK left "not yet given".
 - **A2 (LOW, observation):** acceptance 8's frontend half has no lead-run gate on `d9619139`; the PR CI must be read before the lead's merge, and the quote-form re-merge rule (PL-1764 Global Constraints) needs `origin/main` re-merged and the sandbox tests re-run if main moved the quote form since `1ab31bca`.
-- **A3 (LOW, observation):** the Red-first record's re-proof prose names C1, C4, C6 for the 17 reds; C2 and C3 are the other two (they fail at `pickComparison`, `:113`). The count adds up; the prose is partial.
-- **A4 (LOW, observation):** front matter `tree:` is `6c5278b5...`, a pre-gate tree; it is the executor's stamp and not re-derived here.
+- **A3 (LOW, observation):** the Red-first record's re-proof prose names C1, C4, C6 for the 17 reds; C2 and C3 are the other two (they fail at `pickComparison`, `:113`). The count adds up; the prose is partial. **Fixed at mint** (see the re-proof paragraph).
+- **A4 (LOW, observation):** front matter `tree:` was `6c5278b5...`, a pre-gate tree. **Fixed at mint:** the field is removed (a ledger's tree cannot name the commit that carries it; the gated tree `d2db18d3...` is in the Gate section).
 
 **6. Proposed verdict:** every requirement of FR-262's view limb and every Acceptance item has evidence; none undelivered, none deferred, none reassigned. Item 8's frontend half is delivered-but-awaiting-CI (verdict "delivered, evidence pending the PR run"). Proposal only; the lead adopts, amends or rejects. MERGE-ACK: not yet given.
