@@ -261,6 +261,56 @@ The lead adopted the findings of an independent pre-gate review. Each was verifi
 - **DP-1722-A (a)** (the maintainer (by delegation), `to-lead.md` "2026-10-17 13:05:25 BST — Maintainer: SL-1722 DP-A → (a); DP-B → (a)"): MinIO accepts the `staging/` rule and the 2-day `Expiration` is VERIFIED on read-back; the `AbortIncompleteMultipartUpload` clause is UNVERIFIED on MinIO (it is not echoed); the rule is still set, because it is S3's contract (PL-1721 DP-U1.2 anticipated this); Task 3 never relies on reading the abort back.
 - **DP-1722-B (a)** (same entry): no `07` §2 row for "Blob Upload" — `CLAUDE.md` §7 makes `00-overview.md` §2 the one glossary (a new term goes there first), `00` §2.1 :137 defines Blob Upload, and a `07` §2 row would be the second copy that `audit-docs.py` check 13 refuses; RL-1724 acceptance item 11's intent (the term defined before first use) is met by `00` §2.1 plus `07` §4.5 / FR 8058.
 
+## Scoped DB windows, 2026-10-17 (executor-1722db, `TZ=Europe/London`)
+
+Authority: the maintainer's DB-WINDOW LANE ruling (`to-lead.md`, "2026-10-17 13:19:48 BST — Maintainer: MERGE-ACK #1319 (D18) now; a DB-WINDOW LANE beside the code gate"). Each window: the `small-test` slot, its own database made by `createdb -T gipricing` and dropped on exit, a hard `timeout`, started at load1 < 8. All three ran **beside a code gate** (gate-1 held by another seat's gate); load1 at start 3.29 to 4.52. The script is local (`gi-pricing-plan.local/scratch/sl1722-dbwin.sh`, modes `reds`, `w1`, `w2`); logs in `gi-pricing-plan.local/scratch/sl1722-dbwin/<mode>/`.
+
+**Window reds — `3a489dbf`** (detached worktree `.claude/worktrees/sl-1722-reds`, tree `1145506e`; the template database, no `alembic upgrade` because that tree predates `e7c3a9b15d82`). 13:33:33 to 13:34:09, rc 1: `10 failed, 1 warning in 19.34s`. The ten, each red by cause (not by import or fixture error); the cause is the assertion/exception line of `--tb=line`:
+
+| # | Node | Cause at `3a489dbf` |
+|---|---|---|
+| 1 | `test_api_blob_uploads.py::test_upload_url_records_an_upload_and_returns_its_id` | `KeyError: 'id'` (the response has no `id`), :86 |
+| 2 | `…::test_completing_another_workspaces_upload_is_the_missing_404` | the control `POST …/uploads/{id}/complete` is `404 NOT_FOUND`, `assert 404 == 202`: route absent, :109 |
+| 3 | `…::test_a_completion_past_the_deadline_is_refused` | "no Blob Upload was recorded, so there is no deadline to pass" (`upload_id: None` in the response), :154 |
+| 4 | `…::test_a_repeated_completion_returns_the_first_job` | route absent, `404`, :172 |
+| 5 | `…::test_a_missing_part_fails_the_promotion_by_name` | route absent, `404`, :197 |
+| 6 | `…::test_identical_bytes_promote_to_one_blob` | route absent, `404`, :218 |
+| 7 | `…::test_a_promoted_blob_is_retained` | route absent, `404`, :246 |
+| 8 | `…::test_a_promoted_digest_downloads_only_in_its_workspace` | route absent, `404`, :261 |
+| 9 | `test_blobs.py::test_ensure_bucket_sets_the_staging_lifecycle_rule` | `botocore ClientError NoSuchLifecycleConfiguration` |
+| 10 | `test_upload_to_ingest.py::test_a_file_uploaded_through_the_public_api_ingests_to_a_succeeded_version` | `KeyError: 'id'`, :141 |
+
+(Rows 1 to 8 are in file order, which the line numbers confirm.)
+
+**Window 1 — head.** First run at `e0b740c7` (tree `ec4f62ea`): `2 failed, 32 passed` on `test_api_blob_uploads.py` + `test_blobs.py`. Three defects in the slice's own tests, none in the implementation, each fixed in a test-only commit:
+
+| Defect | Evidence | Fix |
+|---|---|---|
+| R3 built the foreign caller with the `admin` role, which holds no dataset write: the foreign `complete` was `403`, not the `404` under test (so the R3 breaker was red for the wrong reason in that run) | `assert 403 == 404`; `BUILTIN_ROLES["admin"]` is read plus admin permissions | role `analyst`, like the `writer` fixture (`63d191a9`) |
+| R6 read the prose from `job["error"]["detail"]`, which is `{}`; `tasks.py` stores `exc.detail or exc.title` in `message` | `assert {} == 'Expected parts 1 to 2; missing part(s) 2.'` | read `job["error"]["message"]` (`63d191a9`) |
+| R3 compared the two `404` bodies including `trace_id`, which is per request | `{'trace_id': …} != {'trace_id': …}` | leave `trace_id` out with `detail` and `instance` (`2638ef0b`) |
+
+The three `404` bodies differ in `detail`/`instance` (they name the id) and `trace_id` only; every other field is equal.
+
+At `2638ef0b` (tree `1bfd13d6`), 13:39:42 to 13:42:22, rc 0: alembic `upgrade head` rc 0 on the window's own database; `green` `34 passed, 1 warning in 18.79s` (no skip); the breakers below; `green-after` (after all reverts, 0 dirty paths) `34 passed, 1 warning in 12.79s`.
+
+| # | Breaker (one-line mutation, reverted by `git checkout`) | Run | Red by cause |
+|---|---|---|---|
+| R3 | drop the `upload.workspace_id != caller.workspace_id` filter in `api/blobs.py` | `1 failed` | `assert 202 == 404` |
+| R4 | `if datetime.now(UTC) > upload.complete_by:` to `if False:` | `1 failed` | the Job is accepted (`202` body, `status: queued`) where a `409` is asserted, :161 |
+| R5 | `if upload.job_id is not None:` to `if False:` | `1 failed` | two different Job ids, :175 |
+| R6 | `if missing or extra:` to `if False:` in `platform/blobs.py` | `1 failed` | `JobStatus.SUCCEEDED is JobStatus.FAILED`, :200 |
+| R7 | `stored = await session.get(BlobRow, digest) is not None` to `stored = False` (the plan's "skip the existence check") | **`1 passed` — NOT red** | see below |
+| R7b | remove `.on_conflict_do_nothing(index_elements=["sha256"])` | `1 failed` | `IntegrityError … sqlstate 23505, constraint pk_blobs`, `FAILED` where `SUCCEEDED`, :264 |
+| R8 | drop `await retain(session, digest)` | `1 failed` | `assert 0 == 1` (`ref_count`) |
+| R9 | the Job-result owner in `blob_readable_by` matches `ref: "x"` | `1 failed` | `assert 404 == 307` |
+
+**R7 finding (for the lead; not decided here).** The plan's R7 breaker ("skip the existence check → a second `put` and a primary-key error") is not what the code does: with the check skipped, `promote_upload` copies the staged object over the same content address (the same bytes, so the same object), and the `blobs` insert is `on_conflict_do_nothing`, so nothing fails. The existence check in `promote_upload` is an optimisation of the copy that no assertion in `test_identical_bytes_promote_to_one_blob` can see (still one row, `ref_count == 2`, one object under `blob/`). The guard the test does carry is `on_conflict_do_nothing` (R7b, red). Options: (a) accept R7b as R7's breaker and amend the plan's cell in a delta (about 10 min); (b) add an assertion that the second promotion issues no `copy` (about 30 min, a mock or a call count on the client); recommended (a), since the copy is idempotent and an unobservable optimisation is not a contract. Standing by.
+
+**Window 2 — head `2638ef0b`** (tree `1bfd13d6`), 13:42:42 to 13:43:34, rc 0, own database `gipricing_sl1722_w2`: `alembic upgrade head` rc 0; `downgrade -1` rc 0 (`e7c3a9b15d82 -> d4e81b7a2c95`); `upgrade head` rc 0; `alembic heads`: `e7c3a9b15d82 (head)`, 1 head; `test_upload_to_ingest.py` `1 passed, 1 warning in 13.83s` (run with `-rs`: no skip, so PASSED); `test_contracts.py` `171 passed, 2 skipped, 1 warning in 13.10s` (run without `-rs`: the two skips' reasons are not recorded here); `tests/test_repository_invariants.py::test_the_migration_chain_has_exactly_one_head` `1 passed in 0.71s`.
+
+Still OWED: the full two-half gate (a grant, S-13); the W2 test's both-Jobs-`succeeded`-with-output reading (d) beyond PASSED; the FR 8058 marker at the mint (A5); the mint; the audit.
+
 ## PRs
 
 - (none opened yet; the lead opens it.)
