@@ -1,7 +1,7 @@
 """SL-1543 (A): the demo algorithm's `exposure_years` is bounded by the model's training domain.
 
-Pure - no database. The bounds come from `seed.MIN_EXPOSURE` / `seed.MAX_EXPOSURE`, the cleaned
-training sample's own range, so a quote the model never saw is refused rather than priced.
+Pure - no database. The bounds come from `algorithm.MIN_EXPOSURE` / `algorithm.MAX_EXPOSURE`, the
+cleaned training sample's own range, so a quote the model never saw is refused rather than priced.
 """
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ def test_an_exposure_outside_the_training_domain_is_refused_by_name(exposure: st
 
 @pytest.mark.req("FR-111")
 def test_the_exposure_bounds_are_the_training_domain_constants() -> None:
-    from seed import MAX_EXPOSURE, MIN_EXPOSURE
+    from algorithm import MAX_EXPOSURE, MIN_EXPOSURE
 
     field = next(i for i in _demo_algorithm().input_contract if i.name == "exposure_years")
     assert (field.min, field.max) == (Decimal(MIN_EXPOSURE), Decimal(str(MAX_EXPOSURE)))

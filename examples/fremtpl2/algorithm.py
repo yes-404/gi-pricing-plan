@@ -22,8 +22,6 @@ from collections.abc import Mapping, Sequence
 from decimal import ROUND_HALF_EVEN, Decimal
 from typing import Any, Final
 
-from seed import MAX_EXPOSURE, MIN_EXPOSURE
-
 from model_schema import (
     AboveRangePolicy,
     ArtifactRef,
@@ -32,6 +30,16 @@ from model_schema import (
     Coefficient,
     RelativityLevel,
 )
+
+#: VR-ACT-2's bound. An annual motor policy cannot be on risk for two years.
+MAX_EXPOSURE: Final = 1.05
+
+#: The smallest exposure the cleaned training sample keeps (1/366 of a year: one day), the lower
+#: end of the model's training domain (SL-1543 (A)). A string, so the declared bound is exact
+#: rather than a float's repr. **Measured, not derived**, 2026-10-17:
+#: `build_csv(PORTFOLIO_ROWS)` over the sha256-pinned book, then the minimum of `Exposure`
+#: among the rows with `Exposure <= MAX_EXPOSURE` (19 985 rows) = 0.00273224043715847.
+MIN_EXPOSURE: Final = "0.00273224043715847"
 
 FREMTPL2_ALGORITHM_SLUG: Final = "fremtpl2-rate"
 
