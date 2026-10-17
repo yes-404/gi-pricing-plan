@@ -1,4 +1,4 @@
-"""Blob Upload route shapes (`07` §5.1, FR-421; the Blob Upload record is FR 8058's).
+"""Blob Upload route shapes (`07` §5.1, FR-421; the Blob Upload record is FR-1776's).
 
 The request and the response of `POST /blobs/upload-url`. They were hand-written in the API
 module until SL 1722, which moved them here (the maintainer (by delegation), 2026-10-16
