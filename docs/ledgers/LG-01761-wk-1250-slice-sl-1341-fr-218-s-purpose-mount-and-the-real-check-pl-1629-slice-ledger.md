@@ -2,7 +2,7 @@
 id: LG-1761
 family: ledger
 title: WK-1250 slice SL-1341 — FR-218's purpose mount and the real check (retires RL-1242), PL-1629 slice ledger
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-17 # original date 2026-10-16, set at the filing; minted 2026-10-17
 owner: executor
 tree: 5576628141a98b5ce768096a7a0e96b212f1f761
@@ -326,6 +326,12 @@ Last pytest line, verbatim: `5 passed, 1 warning in 13.54s` (rc 0). The five rou
 - **F6 (low):** commit `658c4cd6`'s trailer is the pre-ruling form; commits already made are not rewritten (the maintainer 2026-10-17 11:06:41).
 
 **7. Proposed verdict:** conformant. All 12 acceptance items are evidenced or conditional on the SL-1547 merge order; F1 and F3 are docs-only fixes for this ledger, F2 needs an owner before the PR. Proposal only: the lead's verdict adopts or amends it, `status` stays `active`, and the MERGE-ACK line stays "not yet given".
+
+**F3 discharged (2026-10-17, `executor-1341f5`).** Acceptance 8's two statements: (1) the deleted bogus-reference test is covered by Slice 2's G1 tests `test_g1_a_mount_whose_version_is_not_pinned_is_refused_with_no_steps` (`packages/pricing-core/tests/test_rating_compile_bundle.py:383`) and `test_g1_a_mount_pinned_at_another_version_is_refused` (`:391`), named in the comment at `packages/pricing-core/tests/test_rating_score.py:505-509`; (2) `test_an_unconditional_mount_prices_a_new_business_quote_with_the_fragment` (`packages/pricing-core/tests/test_rating_score.py:1035`) was kept unchanged: it is not in the range `origin/main...e66eff03`.
+
+**F5 discharged (2026-10-17, `executor-1341f5`; the maintainer 13:58:04 BST, F5 (b)).** RL-1628 DP-S3-2 condition 1's red-first case is `test_a_clamp_inside_a_cancellation_mount_appears_in_the_cancellation_ladder` (`packages/pricing-core/tests/test_rating_purpose_mount.py`, commit `a4bce7c7`): a cancellation mount holding a clamping `constraint` step, whose clamp (`CANCEL_CLAMP`) is the `constraints` rung's operation in the cancellation quote's ladder and in no new-business ladder. With `CompiledBundle.evaluation_for` bypassed to return the base pair (scratch edit, reverted, `git diff` empty after), it is RED by cause: `AssertionError: assert 'none' == 'clamp'` (the clamp is absent from the cancellation ladder), beside the four tests that already failed under the bypass. At head: 17 passed (`run-small.sh`, one file); ruff check and mypy rc 0. The fixture replaces the base `s_clamp` in the clamp variant, because two re-producers of `office_premium_minor` form a cycle (FR-212). Test-only, no re-gate; the gated tree `c949a0e8` plus this file.
+
+**Lead verdict (2026-10-17 13:59:02 BST, the lead, transcript 1b92c2a6):** the auditor's proposal ADOPTED — CONFORMANT, F5 discharged by the added RL-1628 condition-1 case (the maintainer 13:58:04 (b)); F1 fixed in the audit; F3 fixed here; F2 → an FD in the next D batch (MEDIUM, owner WK-1250); F4/F6 recorded, no action. MERGE-ACK: not yet given.
 
 ## PRs
 
