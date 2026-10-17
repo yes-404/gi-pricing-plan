@@ -32,7 +32,8 @@ relates: [PL-1237, PL-1537, PL-1620, PL-1710, PL-1735, PL-1454, PL-1714, RL-1614
 > points (DP-S5-Q1, Q2, Q4, Q5, Q7) that the maintainer asked to see with this draft. All five
 > were ruled (a) on 2026-10-17 (§"Rulings recorded"); their consequences are D5.12 to D5.14. A
 > sixth, DP-S5-Q8, was raised at the 2026-10-17 review of this draft: D5.14's branch under DP-E1 (a),
-> which the Q7 ruling leaves unanswered. It is **open**.
+> which the Q7 ruling leaves unanswered. It was ruled (a) for both DP-E1 branches the same day
+> (§"Rulings recorded"), so D5.14 is one design.
 > REQUIRED SUB-SKILL for S5's executor: subagent-driven-development (recommended) or
 > executing-plans. Bound skills, unchanged from `PL-1620`: `python-test`,
 > `test-driven-development` (every red seen red **by its cause**), `dev-commands`,
@@ -113,12 +114,11 @@ tree.
    quoted D5.7 line, and `SL-1259`'s roadmap row carries a dated line naming this delta's minted
    id (Hand-off).
 4. **Every decision point has a resolver's dated line before S5's GO.** For each of DP-S5-Q1,
-   Q2, Q5 and Q7 (Q4 is answered by this file's existence once ruled), and DP-S5-Q8 under DP-E1
-   (a), S5's `LG-` quotes the
+   Q2, Q5 and Q7 (Q4 is answered by this file's existence once ruled), and DP-S5-Q8, S5's `LG-` quotes the
    ruling entry by its header, verbatim, before its first code commit. The entry is to-lead
    "2026-10-17 11:22:47 BST — Maintainer: SL-1259 (S5) DPs ruled; CORRECTION of my 16 Oct
    22:22:44 item 2 (it overreached RL-1614)" for all five (§"Rulings recorded"); for Q7 the
-   `LG-` also quotes the lead's DP-E1 pick, and under DP-E1 (a) the entry that rules DP-S5-Q8.
+   `LG-` also quotes the lead's DP-E1 pick, and for Q8 the entry to-lead "2026-10-17 13:06:07 BST".
 5. **Slice 5's own acceptance** is `PL-1537` Acceptance item 5 as changed by `PL-1620` D5.1 to
    D5.5, `PL-1710` D5.6 and this file's D5.7 to D5.14, item by item, at S5's merge tree.
 6. **The gate is green on S5's merge tree**: the `CLAUDE.md` §11 commands, both halves, each exit
@@ -219,7 +219,7 @@ Each premise names the tree it was read at. "S4" is `de92620a`; "SL-1455" is `2f
 
 | Order | Slice | Scope (what the `LG-` quotes) | Requirements, each id | Depends on | Size |
 |---|---|---|---|---|---|
-| 1 | `SL-1259` — Slice 5 (changed) | `PL-1537` row 2, `PL-1620` D5.1 to D5.5, `PL-1710` D5.6, **plus D5.7 to D5.14 below** | unchanged from `PL-1620`: `03` FR-268, FR-269, FR-272 (audit limb for rollback), NFR-489, NFR-490, NFR-493 (linearity limb), NFR-494, NFR-497 (mechanism), NFR-498 (rollback limb), NFR-502; `07` FR-452 (the rollback route's count, D5.10; cited, not added) | `SL-1258` merged; **`SL-1455` merged (D5.7)**; DP-S5-Q1, Q2 and Q7 ruled; DP-S5-Q8 ruled (under DP-E1 (a) only); `PL-1710` DP-3's pre-build statement written | + one dependency, + four acceptance lines, write set + up to 5 paths |
+| 1 | `SL-1259` — Slice 5 (changed) | `PL-1537` row 2, `PL-1620` D5.1 to D5.5, `PL-1710` D5.6, **plus D5.7 to D5.14 below** | unchanged from `PL-1620`: `03` FR-268, FR-269, FR-272 (audit limb for rollback), NFR-489, NFR-490, NFR-493 (linearity limb), NFR-494, NFR-497 (mechanism), NFR-498 (rollback limb), NFR-502; `07` FR-452 (the rollback route's count, D5.10; cited, not added) | `SL-1258` merged; **`SL-1455` merged (D5.7)**; DP-S5-Q1, Q2 and Q7 ruled; DP-S5-Q8 ruled; `PL-1710` DP-3's pre-build statement written | + one dependency, + four acceptance lines, write set + up to 5 paths |
 
 ### Slice 5 (`SL-1259`) — changes since `PL-1710`
 
@@ -269,7 +269,7 @@ Each premise names the tree it was read at. "S4" is `de92620a`; "SL-1455" is `2f
   `approved_rows.add_approved`, citing "2026-10-16 10:19:57 BST" item 3. `bench-rating.py::_seed`
   is never imported by a test (10:08:52 item 4); S5's `LG-` carries that grep. How S5 reaches
   S4's private `_governed_workspace` (`backend/tests/test_deploy_stack_runtime.py:129` at S4) is
-  DP-S5-Q7, ruled (a) under DP-E1 (b): D5.14.
+  DP-S5-Q7 (a) under DP-E1 (b) and DP-S5-Q8 (a) for both branches: D5.14.
 
 **Dated line, 2026-10-17, carrying the 11:22:47 BST rulings** (the maintainer (by delegation),
 §"Rulings recorded"; each cites the entry, no separate record):
@@ -285,17 +285,14 @@ Each premise names the tree it was read at. "S4" is `de92620a`; "SL-1455" is `2f
   under it the after-state records **per-process** COMMIT acknowledgements, and "every replica
   switched" means every process of every container acknowledged. This changes D5.9's audit set
   (the D5.6 set) and the suppressed-COMMIT red, which names the container and the process.
-- **D5.14 — where S5's runtime tests live, in both DP-E1 branches.** DP-E1's (a)/(b) is the
-  lead's, at S4's PR time (to-lead "2026-10-16 09:55:22 BST" item (3)), and this delta does not
-  pick it. D5.14 is D5.11's answer to how S5 reaches `_governed_workspace`.
-  - **Under DP-E1 (b)** (S4 merges seeded; E4.8 is its own slice) — DP-S5-Q7 (a), ruled: S5's
-    runtime tests go in a NEW module; the shared helpers (`test_deploy_stack_runtime.py:118-246`
-    at S4) move to a test-helper module; whichever of E4.8's slice and S5 merges second re-runs
-    the other's named tests.
-  - **Under DP-E1 (a)** (S4 waits for `SL-1722` and carries E4.8 itself): DP-S5-Q7 is moot (no
-    second slice edits the file), but the helper-access question is not. It is **DP-S5-Q8,
-    open**; the recommended answer is the same new module and helper move as under (b), with no
-    second-merge re-run. Until Q8 is ruled, S5 is not GO-ready under DP-E1 (a).
+- **D5.14 — S5's runtime tests in a new module, in both DP-E1 branches** (DP-S5-Q7 (a) and
+  DP-S5-Q8 (a); dated line, 2026-10-17, citing to-lead "2026-10-17 13:06:07 BST — Maintainer: DP-S5-Q8 → (a) for BOTH DP-E1 branches"). S5's
+  runtime tests go in a NEW module; S4's private helpers (`test_deploy_stack_runtime.py:118-246`
+  at S4: `_governed_workspace`, `_Workspace`, `_scoring_request`) move to a shared test-helper
+  module, imported by both. This holds whichever of DP-E1 (a)/(b) the lead picks at S4's PR, so
+  S5's design does not wait on that pick. **Under DP-E1 (b) only**, the Q7 second-merge re-run
+  still applies: whichever of E4.8's slice and S5 merges second re-runs the other's named tests.
+  This is D5.11's answer to how S5 reaches `_governed_workspace`.
 
 Nothing else in Slice 5 changes. `SL-1711` (`PL-1710`) is unchanged; it still follows S5.
 
@@ -308,7 +305,7 @@ Nothing else in Slice 5 changes. `SL-1711` (`PL-1710`) is unchanged; it still fo
 | DP-S5-Q4 | The vehicle for S5's changes: `PL-1710` is on `main` (`status: draft`), and S5's premises moved. | (a) **This new dated Work-plan delta** (`PL 8077`), relating `PL-1237`, under Lean P2 L5. (b) Fold the items into `PL-1710` before its activation line. (c) S5's `LG-` states them as executor premises at the GO. | **(a).** (b) is refused mechanically: a plan is `frozen` by family (`document-ids.md:49`) and check 34 (`:230`) passes only `status:`, `superseded_by:` and `corrected_by:` changes against the merge-base. (c) puts a write-set and scope change (D5.8, DP-S5-Q1, Q2) in an executor's record, which is the planner's and the decision-maker's to state (`delivery-process.md` §3, as `planner.md` cites it). `PL-1710`'s activation line stays the lead's; this delta does not need it, but S5's GO needs D5.6 binding, so it needs that line. | process | no (this file is the answer if ruled (a)) | **Ruled (a)**, the maintainer (by delegation), to-lead "2026-10-17 11:22:47 BST" |
 | DP-S5-Q5 | Is the dated line from the maintainer's (by delegation) entry "2026-10-14 12:07:40 BST" DP-4 (*"Record it as a dated line amending S5's run list (RL-1614)"*) written on a branch, or owed? **Grep first**, verbatim: `git grep -n -i -e '12:07:40' -e 'session 2' origin/main -- docs/rulings docs/plans docs/roadmap.md docs/ledgers docs/findings` at `055b5e6b` (44 lines). Result: no line under `SL-1259`'s row (its one dated line is `docs/roadmap.md:1192`); the hits are `PL-1735` (minted from `PL 8034`), which **plans** the line: Task 4 Step 4 (`PL-1735` `:738-740`), text pre-written, placed *"under `SL-1259`'s row in `docs/roadmap.md`"*, owned by `SL-1736`, confirmed by the maintainer's (by delegation) entry "2026-10-14 12:31:22 BST" (`PL-1735` `:742-744`). `SL-1736` is `status: draft` (its row, `docs/roadmap.md:2603`). The same predicate over every `origin` branch head is the owed second half (Hand-off item 1). | (a) **Owed by `SL-1736`, as `PL-1735` plans it**: the line lands with SL-1736's PR, and S5's `LG-` quotes it, or quotes `PL-1735`'s pre-written text and the 12:07:40 entry if SL-1736 has not merged by S5's GO. (b) **Write it now** in this delta's batch, under `SL-1259`'s row, and strike it from SL-1736's write set by a dated line. (c) Leave it to S5's `LG-` only. | **(a).** It is planned, owned and confirmed; moving it would make two records own one line. The run list S5 books on nfr-bench-1 session 2 is then the 11:02:35 ruling's item 3 as `RL-1614` quotes it (`:56`), `PL-1620` D5.3, plus `PL-1735` DP-4's two NFR-485 5 M × 60 runs (≈ +30 min per arm) and any named NEAR-BOUND extras (`PL-1735:521-533`: session 2 *"3.9 h committed, at most 5.15 h"*). S5's `LG-` lists them when it books the window. | record keeping | no | **Ruled (a)**, the maintainer (by delegation), to-lead "2026-10-17 11:22:47 BST" |
 | DP-S5-Q7 | Under DP-E1 (b) (the maintainer's (by delegation) entry "2026-10-16 09:55:22 BST" item (3): *"S4 merges seeded, and E4.8 becomes its OWN slice id (minted in the next batch, owner WK-674)"*), E4.8's slice and S5 both edit `backend/tests/test_deploy_stack_runtime.py`. Which goes first? DP-E1's (a)/(b) is the lead's, at S4's PR time, and is not yet picked. Under (a) the question does not arise (E4.8 lands inside S4). | (a) **No ordering constraint; S5 writes its runtime tests in a new module** (for example `backend/tests/test_deploy_switch_runtime.py`) and touches the shared file only to move `_governed_workspace`, `_Workspace` and `_scoring_request` (`test_deploy_stack_runtime.py:118-246` at S4) into a shared test-helper module; whichever of E4.8's slice and S5 merges second re-merges and re-runs the other's named tests, as `PL 8061` E4.9 does for the shared entrypoint. (b) **E4.8's slice first**, then S5 (E4.8 needs only `SL-1722`; S5 needs S4 and SL-1455, so this is the likely order anyway). (c) **S5 first**; E4.8's slice rebases onto it. | **(a), with (b)'s order expected.** It removes the conflict instead of scheduling it: S5's tests are about the switch, not the stack, and need the helper, not the file; importing a private name across test modules (the other way out) leaves the helper owned by one file and edited by two slices. Under (a) the only shared edit is a move, red-checked by both slices' named tests at the second merge. | sequencing | **yes**, under DP-E1 (b) only | **Ruled (a) under DP-E1 (b)**, the maintainer (by delegation), to-lead "2026-10-17 11:22:47 BST"; moot under DP-E1 (a), the lead's pick at S4's PR time |
-| DP-S5-Q8 | Under DP-E1 (a) (S4 carries E4.8 itself, to-lead "2026-10-16 09:55:22 BST" item (3)), how does S5 reach S4's private `_governed_workspace`, `_Workspace` and `_scoring_request` (`test_deploy_stack_runtime.py:118-246` at S4)? The 11:22:47 entry rules Q7 for DP-E1 (b) only and calls it *"Moot if the lead rules DP-E1 (a)"*: that removes the ordering conflict, not D5.11's helper question. Raised at the 2026-10-17 review of this draft (seat `planner-8077b`); put to the lead by SendMessage on 2026-10-17, between 13:02:52 and 13:06:59 BST (the two `date` readings around it). | (a) **Same as Q7 (a)**: S5's runtime tests in a NEW module; the helpers move to a test-helper module; no second-merge re-run (no second slice). (b) S5 adds its runtime tests to `test_deploy_stack_runtime.py` itself; no move. (c) S5's new module imports the private names from `test_deploy_stack_runtime.py`. | **(a).** One D5.14 design for both DP-E1 branches, so S5's slice design does not hang on a pick made later at S4's PR. The Q7 basis holds in both branches: S5's tests are about the switch, not the stack, and need the helper, not the file. (c) leaves a helper owned by one file and imported by another, which Q7 (a) was ruled to avoid; (b) puts switch tests in the stack file. | sequencing / test layout | **yes**, for S5's GO under DP-E1 (a) only | **Open** — the lead routes it |
+| DP-S5-Q8 | Under DP-E1 (a) (S4 carries E4.8 itself, to-lead "2026-10-16 09:55:22 BST" item (3)), how does S5 reach S4's private `_governed_workspace`, `_Workspace` and `_scoring_request` (`test_deploy_stack_runtime.py:118-246` at S4)? The 11:22:47 entry rules Q7 for DP-E1 (b) only and calls it *"Moot if the lead rules DP-E1 (a)"*: that removes the ordering conflict, not D5.11's helper question. Raised at the 2026-10-17 review of this draft (seat `planner-8077b`); put to the lead by SendMessage on 2026-10-17, between 13:02:52 and 13:06:59 BST (the two `date` readings around it). | (a) **Same as Q7 (a)**: S5's runtime tests in a NEW module; the helpers move to a test-helper module; no second-merge re-run (no second slice). (b) S5 adds its runtime tests to `test_deploy_stack_runtime.py` itself; no move. (c) S5's new module imports the private names from `test_deploy_stack_runtime.py`. | **(a).** One D5.14 design for both DP-E1 branches, so S5's slice design does not hang on a pick made later at S4's PR. The Q7 basis holds in both branches: S5's tests are about the switch, not the stack, and need the helper, not the file. (c) leaves a helper owned by one file and imported by another, which Q7 (a) was ruled to avoid; (b) puts switch tests in the stack file. | sequencing / test layout | **yes**, for S5's GO under DP-E1 (a) only | **Ruled (a) for both DP-E1 branches**, the maintainer (by delegation), to-lead "2026-10-17 13:06:07 BST" |
 
 ## Rulings recorded (2026-10-17)
 
@@ -340,19 +337,23 @@ ruling is read with its row. Recorded by the planner, seat `planner-8077`.
   NEW module; the shared helpers (test_deploy_stack_runtime.py :118-246) move to a test-helper
   module; the second to merge re-runs the other's named tests. Moot if the lead rules DP-E1
   (a)."* DP-E1's (a)/(b) is still the lead's, at S4's PR time (Hand-off item 4); until it is
-  picked, D5.14 binds only under (b). Carried into D5.14 and D5.11.
+  picked, Q7's second-merge re-run binds only under (b); D5.14's module layout binds in both, by DP-S5-Q8. Carried into D5.14 and D5.11.
+
+- **DP-S5-Q8: ruled (a), for both DP-E1 branches.** By the maintainer (by delegation), to-lead "2026-10-17 13:06:07 BST — Maintainer: DP-S5-Q8 → (a) for BOTH DP-E1 branches". Verbatim: *"S5's runtime tests go in a NEW module; S4's private helpers
+  (test_deploy_stack_runtime.py :118-246: _governed_workspace etc.) move to a shared test-helper
+  module, imported by both. ONE D5.14, so S5's design does not wait on DP-E1. (b) grows one file
+  both slices edit; (c) is a cross-file private import. PL 8077 carries ONE D5.14 (not two
+  branches) as a dated line citing this entry. Under DP-E1 (b) the second-merge re-run from Q7
+  still applies."* Carried into D5.14 (one design), D5.11 and the Tasks row.
 
 **Status.** A plan is "`draft` while decision points are open, `active` on freeze"
-(`document-ids.md` §1.6, the PL `map`/`leaf` row). With the five rulings above, one decision
-point is still open: **DP-S5-Q8** (raised 2026-10-17 at review), blocking S5's GO under DP-E1 (a)
-only. This delta stays `draft` until it is ruled; activation is then at the mint, and the
-lead's. When Q8 is ruled, its ruling is recorded here as a dated line, in the form above, before
-the mint. **Prepared activation line**, for the
+(`document-ids.md` §1.6, the PL `map`/`leaf` row). With the six rulings above, no decision
+point is open. This delta still stays `draft`: activation is at the mint, and the lead's. **Prepared activation line**, for the
 lead to apply at the mint (status line only; the body is unchanged), in the form `PL-1620` used:
 
 > **Activation (2026-10-__, in the <batch> mint PR).** DP-S5-Q1, Q2, Q4, Q5 and Q7 were ruled by
-> the maintainer (by delegation), to-lead "2026-10-17 11:22:47 BST", and DP-S5-Q8 by <resolver>,
-> "<entry header>" (§"Rulings recorded"), so no decision point is open and this plan goes `active` here (status line only; its body is
+> the maintainer (by delegation), to-lead "2026-10-17 11:22:47 BST", and DP-S5-Q8 by the maintainer (by
+> delegation), to-lead "2026-10-17 13:06:07 BST" (§"Rulings recorded"), so no decision point is open and this plan goes `active` here (status line only; its body is
 > unchanged). Filed under working id 8077; minted as PL-____.
 
 ## Hand-off (not this plan's writes)
@@ -364,7 +365,7 @@ lead to apply at the mint (status line only; the body is unchanged), in the form
    earlier dated line on that row does (`docs/roadmap.md:1192`): the planner, in the mint batch,
    with the minted id (a working id there would red check 31).
 3. **`PL-1710`'s activation line** (D5.6 binding for S5): the lead.
-4. **DP-E1's (a)/(b)**: the lead, at S4's PR time. **DP-S5-Q8**: the lead routes it (D5.14).
+4. **DP-E1's (a)/(b)**: the lead, at S4's PR time. DP-S5-Q8 is ruled for both branches, so D5.14 does not wait on it.
 5. **The P7 reading** (22:22:44 item 2 beside `RL-1614`): ruled by the maintainer (by
    delegation) in the 11:22:47 entry's CORRECTION (P7): SL-1455's sweep is the FD-1411 remedy
    proof only; the NFR-489 exit verdict stays S5's. RL 8076's minting (the next D batch)
@@ -388,11 +389,11 @@ lead to apply at the mint (status line only; the body is unchanged), in the form
   the five dated lines checked against the entry, clause by clause; `RL-1614` cites made exact
   (the quoted 11:02:35 ruling's items vs the record's own numbered decision, P7, D5.12, DP-S5-Q5);
   Q3 (the lead, `from-lead-2026-10-09.md` "2026-10-16 10:30:18 BST") and Q6 (the maintainer,
-  "2026-10-16 10:29:56 BST") confirmed ruled; DP-S5-Q8 raised and D5.14 written for both DP-E1
-  branches.
+  "2026-10-16 10:29:56 BST") confirmed ruled; DP-S5-Q8 raised, then ruled (a) for both DP-E1 branches
+  (to-lead "2026-10-17 13:06:07 BST"; re-read at 13:07:31 BST), so D5.14 is one design.
 - **Placeholders.** "<S5's LG>" and "<S5's branch>" are read at the slice. The example module
   name in DP-S5-Q7 (a) is illustrative, not a commitment. The prepared activation line's date,
-  batch, minted id and Q8's resolver and entry are blanks for the lead at the mint. No other.
+  batch and minted id are blanks for the lead at the mint. No other.
 - **Literals** were read at the trees named in the header, by path and line: every route,
   setting key, function, file line and count.
 - **Not done here:** no code, no ruling, no edit to a frozen plan or to the roadmap.
