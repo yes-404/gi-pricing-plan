@@ -561,14 +561,15 @@ def check_banding(
     min_exposure = minimums.min_exposure_per_band if min_exposure is None else min_exposure
     min_claims = minimums.min_claims_per_band if min_claims is None else min_claims
     fail_on_thin = (minimums.on_violation == "fail") if fail_on_thin is None else fail_on_thin
-    floors = ((min_exposure > 0, exposure_column), (min_claims > 0, claim_count_column))
-    for floor, column in floors:
-        if floor and column not in frame.columns:
+    floors = ((min_exposure, exposure_column), (min_claims, claim_count_column))
+    for floor_value, column in floors:
+        if floor_value > 0 and column not in frame.columns:
             raise BandingError(
                 "FACTOR_RESOLUTION_FAILED",
-                f"banding {banding.slug!r} sets a minimum on {column!r}, which this dataset "
-                "version does not have (FR-100). An absent column would be read as 0 and every "
-                "band reported thin; the check is refused rather than guessed.",
+                f"banding {banding.slug!r} sets a minimum of {floor_value} on {column!r}, "
+                "which this dataset version does not have (FR-100). An absent column would be "
+                "read as 0 and every band reported thin; the check is refused rather than "
+                "guessed.",
             )
     stats = band_statistics(
         frame,

@@ -58,6 +58,60 @@ veh_power_band: boundaries=[4.0, 5.0, 6.0, 7.0, 8.0, 15.0] labels=['4-4', '5-5',
   severity-claims-only-train: OK warnings=()
 ```
 
+- **The probe file** (`backend/tests/test_zz_g2_probe.py` while it ran, then moved out of the tree and deleted from it; sha256 `2dc627852d0a7858841bf1b58ae8da61a8e26ebba43726e7bea4d5b7f233bdc1` of the content below, in which the `OUT` path is the seat's scratchpad):
+
+```python
+"""SL-1734 Task 0 Step 3 G2 probe. READ-ONLY, NOT COMMITTED."""
+import io, sys, uuid
+from pathlib import Path
+import polars as pl
+
+WT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(WT / "examples" / "fremtpl2"))
+sys.path.insert(0, str(WT / "backend" / "src"))
+OUT = Path("/tmp/claude-1000/-home-puzhenhao1989-gi-pricing-plan/a0ce4038-148b-4ee1-855a-3f3d3ef0d61f/scratchpad/g2-probe.txt")
+
+
+def test_probe():
+    import seed
+    import model as seedmodel
+    seed.DATA_DIR = Path("/home/puzhenhao1989/gi-pricing-plan/examples/fremtpl2/data")
+    from pricing_core.data.splits import partition
+    from pricing_core.modelling.bandings import check_banding, propose_banding
+    from model_schema import BandingProposal, BandingMethod
+
+    lines = []
+    raw = pl.read_csv(io.BytesIO(seed.build_csv(None)), infer_schema=False)
+    import re
+    snake = lambda c: re.sub(r"(?<!^)(?=[A-Z])", "_", c).lower()
+    cols = {c: seed.RENAMES.get(snake(c), snake(c)) for c in raw.columns}
+    df = raw.rename({k: v for k, v in cols.items() if k != v})
+    casts = {"float": pl.Float64, "int": pl.Int64}
+    df = df.with_columns([pl.col(c).cast(casts[t]) for c, t in seed.NUMERIC.items() if c in df.columns])
+    lines.append(f"columns: {df.columns}")
+    lines.append(f"raw rows {df.height}")
+    df = df.filter(pl.col("exposure_years") <= seed.MAX_EXPOSURE)
+    lines.append(f"validated v2 rows {df.height}")
+    parts = partition(df, method="random", seed=seedmodel.SPLIT_SEED, fractions={"train": 0.75, "test": 0.25})
+    train = parts["train"]
+    sev = train.filter(pl.col("claim_count") > 0)
+    lines.append(f"train {train.height}; claims-only severity train {sev.height}")
+    for slug, col in seedmodel.CONTINUOUS_FACTORS:
+        b = propose_banding(
+            df,
+            BandingProposal(dataset_version_id=uuid.uuid4(), column=col, method=seedmodel.BANDING_METHOD, n_bands=seedmodel.BAND_COUNT),
+            dataset_id=uuid.uuid4(), slug=f"probe-{col}",
+        )
+        lines.append(f"{slug}: boundaries={list(b.boundaries)} labels={list(b.labels)} minimums={b.minimums}")
+        for name, fr in (("frequency-train", train), ("severity-claims-only-train", sev)):
+            try:
+                w = check_banding(fr, b)
+                lines.append(f"  {name}: OK warnings={w!r}")
+            except Exception as e:  # noqa: BLE001
+                lines.append(f"  {name}: RAISED {type(e).__name__} code={getattr(e,'code',None)} {e}")
+    OUT.write_text("\n".join(lines) + "\n")
+```
+
 No `BAND_EMPTY`, so no STOP. Not measured: the `--rows` sampled seed. The seed's default minimums are 0, so nothing is thin either.
 - **Step 4, `to-lead.md` entries since "2026-10-14 11:52:51 BST" on FD-1723 (FD 8027), FR-127, FR-100, SL-1543 or this plan:** "2026-10-14 11:52:51 BST" (DPs ruled), "2026-10-14 12:12:51 BST" (FR-100 clarification clause for DP-B1 and DP-B3; the typed `BandingWarning`), "2026-10-14 13:55:54 BST" (FD 8027 severities, the severity rule), and "2026-10-17 13:23:18 BST" (the GO).
 
@@ -74,7 +128,9 @@ No `BAND_EMPTY`, so no STOP. Not measured: the `--rows` sampled seed. The seed's
 - **Contracts:** `scripts/generate-contracts.py` regenerated `docs/contracts/openapi/generated.json` and `docs/contracts/schemas/generated/model.schema.json`; `--check` rc 0; `test_contracts.py` needed no hand-authored change.
 - **Spec (`02-modelling.md`):** the dated clarification on the FR-100 row (DP-B1, DP-B3); the `banding_warnings` paragraph and the `"banding_warnings": []` field in the §4.8 GBM example; the §5.2 `check_banding` signature amended in place and `check_fit_bandings` added; the FR-207 staged-contract entry; the FR-127 dated note under the `apply_loss_treatment` paragraph.
 - **Deltas against the plan, named:** (1) `test_bandings.py` asserted the warning *text* (`"below the minimum" in w`), which a typed record cannot satisfy; that one assertion now checks `measure == "claim_count"` and `observed < minimum` (the plan said the asserts at `:365` and `:403` keep a non-empty tuple, which they do). (2) The warnings are built by `check_banding` itself, so the refusal text for `BAND_BELOW_MIN_EXPOSURE` is rendered by a private `_describe`.
+- **Named delta: `packages/pricing-core/tests/test_bandings.py:369`.** The plan task that makes `check_banding` return typed records is Task 6, the `pricing_core/modelling/bandings.py` item; that item says `:365` and `:403` keep their asserts (a non-empty tuple) and `:386`, `:406`, `:413` keep `== ()`, and it does not mention `:369`. Old line, verbatim: `    assert all("below the minimum" in w for w in warnings)`. New line: `    assert all(w.measure == "claim_count" and w.observed < w.minimum for w in warnings)`. A `BandingWarning` is not a string, so the old assert cannot hold. The new one is not looser: it asserts the measure and that each record is truly below its floor, which the text check did not. The `:365` assert (`assert warnings`) is unchanged.
 - **Proof so far (all through `run-small.sh`):** `test_glm.py` + `test_ebm.py` + `test_gbm.py` 235 passed; `test_bandings.py` + `test_banding_warnings.py` + `backend/tests/test_contracts.py` 209 passed, 2 skipped. `ruff check packages backend` clean; `mypy` clean over 241 files.
+- **DP-1734-A ruled (a) at 2026-10-17 13:48:36 BST:** reuse `FACTOR_RESOLUTION_FAILED` for a non-zero banding floor on an absent column; `check_banding`'s detail now names the column and the floor value; `test_bandings.py::test_a_non_zero_floor_on_an_absent_column_is_refused_naming_column_and_floor` asserts the code and the column, red first (cause: the detail named `claim_count` but not the floor `37`), then green (`test_bandings.py` 29 passed).
 
 ## PRs
 
