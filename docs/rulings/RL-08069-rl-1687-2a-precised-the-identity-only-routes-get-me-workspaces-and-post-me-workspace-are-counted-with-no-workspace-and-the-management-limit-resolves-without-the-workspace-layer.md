@@ -145,7 +145,12 @@ and RL-1687's **Consequences, stated**, lines 210-213, verbatim:
 RL-1687 (3a), the Service Account `rate_limit_rps` clause (lines 188-190), is untouched by this
 record and not changed by it.
 
-## Ruled (the maintainer, 2026-10-16 10:31:43 BST and 10:36:38 BST)
+## Ruled
+
+*Ruled by the maintainer, 2026-10-16 10:31:43 BST and 10:36:38 BST (`to-lead.md`). The
+heading was "Ruled (the maintainer, 2026-10-16 10:31:43 BST and 10:36:38 BST)" until
+2026-10-17; check 37 matches the RL template's heading `Ruled` exactly, so the attribution
+moved here.*
 
 For the two identity-only routes, `GET /api/v1/me/workspaces` and `POST /api/v1/me/workspace`:
 
@@ -202,3 +207,27 @@ For the two identity-only routes, `GET /api/v1/me/workspaces` and `POST /api/v1/
   in the slice's `LG-`.
 - **Until this record is minted**, SL-1258 cites the maintainer's entries "2026-10-16 10:31:43
   BST" and "2026-10-16 10:36:38 BST" (`to-lead.md`).
+
+## Acceptance — the violation that must become detectable
+
+Derived from the two entries' own words, with no new decision: 10:31:43, *"Red per route;
+the LG states the resolve path"*; 10:36:38, *"the per-route reds cover a bearer caller"*.
+
+The violation: either identity-only route, `GET /api/v1/me/workspaces` or
+`POST /api/v1/me/workspace`, is not counted by FR-452's management-API limit for a caller with
+no workspace (the case option (B) was refused for: *"(B) leaves users silently uncounted"*),
+or SL-1258's `LG-` does not state the resolve path.
+
+- *Violation: with `platform.default_management_rate_limit_rps` set and a bearer caller over
+  it, `GET /api/v1/me/workspaces` is admitted instead of refused by the management limit.*
+  One test, red on that input.
+- *Violation: the same for `POST /api/v1/me/workspace`.* A second test, red on that input.
+- *Violation: SL-1258's `LG-` does not state the resolve path for these two routes — process
+  variable → Environment → default for a caller with a key verified for an Environment, and
+  process variable → default for a bearer or development caller.* No script checks this; it is
+  checked by reading the ledger at SL-1258's audit and at the lead's ACK.
+
+The two tests are SL-1258's to write and to show red (`CLAUDE.md` §13); this record names
+them and runs nothing. The entries rule no separate test for item 2's skipped workspace layer
+(a workspace-level value not applied to these routes); that is evidenced by the `LG-`'s stated
+resolve path, and this record adds no test the entries did not rule.
