@@ -121,7 +121,7 @@ async def test_management_rate_limit_is_separate_from_scoring(
     headers = _account(client, admin_headers, permissions=("score:execute",), rate_limit_rps=5)
     await set_limit(1)
 
-    assert client.get(ME_URL, headers=headers).status_code != 429
+    assert client.get(ME_URL, headers=headers).status_code == 200
     assert client.get(ME_URL, headers=headers).status_code == 429
     # Admitted by the limiter: it reaches the handler and is refused there for a reason that has
     # nothing to do with the limit (no live Rating Version).
@@ -149,7 +149,7 @@ async def test_management_rate_limit_ignores_the_accounts_scoring_rate(
     # A Service Account's own `rate_limit_rps` does not govern the management counter
     # (FR-452, 2026-10-12 amendment): three counted reads past a rate of 1, none refused.
     statuses = [client.get(ME_URL, headers=headers).status_code for _ in range(3)]
-    assert 429 not in statuses
+    assert statuses == [200, 200, 200]
     assert calls == []
 
 
