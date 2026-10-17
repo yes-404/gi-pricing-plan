@@ -573,4 +573,4 @@ rulings that bind this delta's content and were not yet at a site in it.)*
   enum member, setting key and default in the step table and premises.
 - **Not done here:** the memo's §3 shape argument and ETA figures, which W0 has ruled.
 
-*Activated 2026-10-17 on the maintainer's YES for D21 (relayed by the lead, 2026-10-17 ~19:33 BST: "PL 8077 + RL 8076 + PL-1710's activation → D21: YES"). No other change to this plan.*
+*Activated 2026-10-17 on the maintainer's YES for D21 (relayed by the lead, 2026-10-17 19:32:51 BST: "PL 8077 + RL 8076 + PL-1710's activation → D21: YES"). No other change to this plan.*
