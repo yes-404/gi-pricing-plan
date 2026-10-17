@@ -311,7 +311,11 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
         fit_glm,
         linear_predictor,
     )
-    from pricing_core.modelling.errors import NonFiniteDerivativeError, RoundBudgetExceededError
+    from pricing_core.modelling.errors import (
+        BandingError,
+        NonFiniteDerivativeError,
+        RoundBudgetExceededError,
+    )
     from pricing_core.modelling.factors import FactorResolutionError
 
     # The offset-from-another-model arrays (FR-116): the referenced fit's linear
@@ -403,6 +407,13 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
         # FR-165: an objective that overflowed or ran past its round budget. Both are
         # `CodedError`s whose text names the round and the fields and holds no input value
         # (FD-1219, DP-S2-4), so `str(exc)` is safe to persist as the detail.
+        raise PlatformError(
+            exc.code, f"The {spec.model_type} model could not be fitted", 409, str(exc)
+        ) from exc
+    except BandingError as exc:
+        # FR-100: an empty band, or a band below a floor configured to fail. Named rather than
+        # caught as a `ModellingError`, which would also take `FactorResolutionError` below
+        # and change its detail text.
         raise PlatformError(
             exc.code, f"The {spec.model_type} model could not be fitted", 409, str(exc)
         ) from exc

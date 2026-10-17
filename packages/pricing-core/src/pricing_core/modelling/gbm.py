@@ -60,6 +60,7 @@ from model_schema import (
     ResponseKind,
     WeightSpec,
 )
+from pricing_core.modelling.bandings import check_fit_bandings
 from pricing_core.modelling.errors import ObjectiveError
 from pricing_core.modelling.factors import FactorMatrix, resolve_factors
 from pricing_core.modelling.loss_treatment import apply_loss_treatment
@@ -605,6 +606,8 @@ def fit_gbm(
         holdout = require_usable_weights(
             holdout, spec, GbmFitError, what="the holdout"
         ).data
+    # FR-100 over the rows fitted (after the weight-0 exclusion): empty refused, thin recorded.
+    banding_warnings = check_fit_bandings(data, factors, bandings)
     report.update(0.05, "resolving factors")
     matrix = resolve_factors(data, factors, bandings=bandings, groupings=groupings)
 
@@ -703,6 +706,7 @@ def fit_gbm(
             fit_seconds=elapsed,
             library_versions=versions,
             dropped_eval_metrics=dropped,
+            banding_warnings=banding_warnings,
         ),
         booster_bytes=payload,
         eval_curve=curve,

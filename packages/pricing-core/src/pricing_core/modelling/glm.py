@@ -52,6 +52,7 @@ from model_schema import (
     TweedieProfilePoint,
 )
 from pricing_core.data.splits import assign_folds
+from pricing_core.modelling.bandings import check_fit_bandings
 from pricing_core.modelling.diagnostics import deviance
 from pricing_core.modelling.factors import FactorMatrix, resolve_factors
 from pricing_core.modelling.loss_treatment import apply_loss_treatment
@@ -559,6 +560,9 @@ def fit_glm(
     # an unusable (negative, null, non-finite) weight is refused here, before `glum`.
     rows = require_usable_weights(data, spec, GlmFitError)
     data, model_offset = rows.data, rows.take(model_offset)
+    # FR-100, over the rows actually fitted (after the weight-0 exclusion above): an empty band
+    # is refused before `glum`, a thin one is recorded on the fit result.
+    banding_warnings = check_fit_bandings(data, factors, bandings)
     report.update(0.05, "resolving factors")
     matrix = resolve_factors(data, factors, bandings=bandings, groupings=groupings)
     exposure_series = (
@@ -730,6 +734,7 @@ def fit_glm(
             iterations=int(getattr(estimator, "n_iter_", 0) or 0),
             fit_seconds=round(elapsed, 3),
             coefficients=coefficients,
+            banding_warnings=banding_warnings,
             relativities=relativities,
             dispersion=_dispersion(estimator, x, response, weights=weights, offset=offset),
             deviance=None,

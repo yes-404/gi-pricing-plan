@@ -364,7 +364,7 @@ def test_a_thin_band_warns_by_default_and_fails_when_configured() -> None:
 
     warnings = check_banding(frame, banding, min_claims=10_000)
     assert warnings
-    assert all("below the minimum" in w for w in warnings)
+    assert all(w.measure == "claim_count" and w.observed < w.minimum for w in warnings)
 
     with pytest.raises(BandingError) as caught:
         check_banding(frame, banding, min_claims=10_000, fail_on_thin=True)

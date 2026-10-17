@@ -30,6 +30,7 @@ from model_schema import (
     FactorType,
     Grouping,
 )
+from pricing_core.modelling.bandings import check_fit_bandings
 from pricing_core.modelling.errors import FactorResolutionError
 from pricing_core.modelling.factors import resolve_factors
 from pricing_core.modelling.loss_treatment import apply_loss_treatment
@@ -120,6 +121,8 @@ def fit_ebm(
     # FR-111: weight-0 rows are absent from the fit; an unusable weight is refused before
     # `interpret` sees it.
     data = require_usable_weights(data, spec, EbmFitError).data
+    # FR-100 over the rows fitted (after the weight-0 exclusion): empty refused, thin recorded.
+    banding_warnings = check_fit_bandings(data, factors, bandings)
     report.update(0.05, "ebm: encoding")
     matrix = resolve_factors(data, factors, bandings=bandings, groupings=groupings)
 
@@ -288,4 +291,5 @@ def fit_ebm(
         rows=data.height,
         fit_seconds=time.monotonic() - start,
         library_versions={"interpret": importlib.metadata.version("interpret-core")},
+        banding_warnings=banding_warnings,
     )
