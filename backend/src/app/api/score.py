@@ -52,14 +52,15 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.authz import requires
-from app.api.deps import Caller, SettingsDep, job_identity
+from app.api.deps import Caller, RequestSessionDep, SettingsDep, job_identity
 from app.api.rating_algorithms import RatingReadDep
 from app.api.responses import problems
 from app.config import Settings
 from app.db.models import BlobRow, DeploymentRow, EnvironmentRow
-from app.db.session import Database
+from app.db.session import Database, reading
 from app.errors import PlatformError
 from app.observability.logging import get_logger
 from app.observability.metrics import ladder_reconciliation_failed
@@ -136,17 +137,19 @@ def _bundle_slot(request: Request) -> BundleSlot:
 DatabaseDep = Annotated[Database, Depends(_database)]
 BlobStoreDep = Annotated[BlobStore, Depends(_blob_store)]
 BundleSlotDep = Annotated[BundleSlot, Depends(_bundle_slot)]
-ScoreExecuteDep = Annotated[Caller, Depends(requires(Permission.SCORE_EXECUTE))]
+#: `keep_session`: `/score`'s own reads continue on the request session the check used, so a
+#: warm quote takes one pool checkout (RL-1685, PL-1454 DP-1 (a)).
+ScoreExecuteDep = Annotated[Caller, Depends(requires(Permission.SCORE_EXECUTE, keep_session=True))]
 
 
 async def _enforce_score_rate_limit(
-    request: Request, caller: ScoreExecuteDep, database: DatabaseDep, settings: SettingsDep
+    request: Request, caller: ScoreExecuteDep, session: RequestSessionDep, settings: SettingsDep
 ) -> None:
     """FR-452's scoring limit: after authentication and `score:execute`, before any scoring,
     so a 401 or 403 is never counted and a refused request scores nothing (RL-1347 rule 4)."""
     await rate_limit.enforce(
         request.app.state.rate_limiter,
-        database,
+        session,
         settings,
         route="score",
         default_setting="scoring.default_client_rate_limit_rps",
@@ -194,7 +197,7 @@ def _required_ref(ctx: QuoteContext, live_ref: ArtifactRef | None = None) -> Art
 
 
 async def _serving_ref(
-    database: Database, caller: Caller, ctx: QuoteContext
+    session: AsyncSession, caller: Caller, ctx: QuoteContext
 ) -> tuple[ArtifactRef, UUID | None]:
     """The ref to score and the Deployment that serves it, resolved together and once.
 
@@ -211,19 +214,18 @@ async def _serving_ref(
     """
     live: tuple[str, UUID] | None = None
     if caller.environment is not None:
-        async with database.session() as session:
-            found = (
-                await session.execute(
-                    select(DeploymentRow.rating_version_ref, DeploymentRow.id)
-                    .join(EnvironmentRow, EnvironmentRow.id == DeploymentRow.environment_id)
-                    .where(
-                        DeploymentRow.workspace_id == caller.workspace_id,
-                        EnvironmentRow.slug == caller.environment,
-                    )
-                    .order_by(DeploymentRow.deployed_at.desc(), DeploymentRow.id.desc())
-                    .limit(1)
+        found = (
+            await session.execute(
+                select(DeploymentRow.rating_version_ref, DeploymentRow.id)
+                .join(EnvironmentRow, EnvironmentRow.id == DeploymentRow.environment_id)
+                .where(
+                    DeploymentRow.workspace_id == caller.workspace_id,
+                    EnvironmentRow.slug == caller.environment,
                 )
-            ).one_or_none()
+                .order_by(DeploymentRow.deployed_at.desc(), DeploymentRow.id.desc())
+                .limit(1)
+            )
+        ).one_or_none()
         if found is not None:
             live = (found[0], found[1])
     ref = _required_ref(ctx, ArtifactRef.parse(live[0]) if live is not None else None)
@@ -245,7 +247,7 @@ def _with_resolved_ref(ctx: QuoteContext, ref: ArtifactRef) -> QuoteContext:
 
 
 async def _fetch_bundle(
-    database: Database,
+    source: Database | AsyncSession,
     blob_store: BlobStore,
     slot: BundleSlot,
     *,
@@ -271,8 +273,11 @@ async def _fetch_bundle(
     the authoritative row on *this* call, never served from a memo of an earlier one. A
     slot hit still calls `slot.put` to refresh the ref→hash memo `_compiled_for`'s
     degradation path depends on; a miss falls through to the blob read exactly as before.
+
+    `source` is the request's session on `/score` (one pool checkout for the whole request,
+    RL-1685) and the `Database` for a worker or the governance gate, which have no request.
     """
-    async with database.session() as session:
+    async with reading(source) as session:
         row = await rating_versions_service.resolve_rating_version_ref(
             session, workspace_id=workspace_id, ref=ref
         )
@@ -312,7 +317,7 @@ async def _fetch_bundle(
 
 
 async def _compiled_for(
-    database: Database,
+    source: Database | AsyncSession,
     blob_store: BlobStore,
     slot: BundleSlot,
     *,
@@ -334,7 +339,7 @@ async def _compiled_for(
     """
     try:
         return await _fetch_bundle(
-            database, blob_store, slot, workspace_id=workspace_id, ref=ref
+            source, blob_store, slot, workspace_id=workspace_id, ref=ref
         )
     except PlatformError:
         raise
@@ -392,6 +397,7 @@ async def score(
     ctx: QuoteContext,
     caller: ScoreExecuteDep,
     _rate_limit: ScoreRateLimitDep,
+    session: RequestSessionDep,
     database: DatabaseDep,
     blob_store: BlobStoreDep,
     slot: BundleSlotDep,
@@ -407,9 +413,9 @@ async def score(
     A decline is **not** an error: `build_scoring_result` sets `outcome = "declined"` with a
     populated ladder, and FR-256 makes that a 200.
     """
-    ref, deployment_id = await _serving_ref(database, caller, ctx)
+    ref, deployment_id = await _serving_ref(session, caller, ctx)
     compiled = await _compiled_for(
-        database, blob_store, slot, workspace_id=caller.workspace_id, ref=ref
+        session, blob_store, slot, workspace_id=caller.workspace_id, ref=ref
     )
     trace = ctx.options.trace if ctx.options is not None else False
     # `score_one` refuses a context without `options.rating_version_ref` and reads the ref it
@@ -427,7 +433,9 @@ async def score(
             _record_ladder_refusal(caller, compiled, ref, problem)
         raise problem from exc
 
-    await _maybe_sample_trace(database, settings, caller, ctx, result, deployment_id)
+    await _maybe_sample_trace(
+        database, settings, caller, ctx, result, deployment_id, read_session=session
+    )
 
     return Response(content=result.model_dump_json(), media_type="application/json")
 
@@ -524,6 +532,8 @@ async def _maybe_sample_trace(
     ctx: QuoteContext,
     result: ScoringResult,
     deployment_id: UUID | None = None,
+    *,
+    read_session: AsyncSession | None = None,
 ) -> None:
     """FR-259's sampling decision, and the pending-row write it leads to (WK-671 Task 4B,
     RL-862). `result` is already untraced — this never sets `trace=True`; a sampled
@@ -535,9 +545,14 @@ async def _maybe_sample_trace(
     write failed — FR-259's persistence is a monitoring concern (`03`:175), and losing
     one sample is a smaller failure than refusing to answer a quote the platform already
     successfully priced.
+
+    The sampling rate is a read, and goes through `read_session`, the request's own, when the
+    route has one (RL-1685, PL-1454 DP-1 (a)); only a sampled outcome opens the write's own
+    `unit_of_work`, which keeps FR-259's failure isolation: the write commits or fails on its
+    own connection, never on the session the quote's reads used.
     """
     try:
-        async with database.unit_of_work() as session:
+        async with reading(read_session or database) as session:
             # FR-430/FR-431: monitoring configuration is per Environment (DP-S3-3 (a)).
             rate = await settings_service.resolve(
                 session,
@@ -546,24 +561,29 @@ async def _maybe_sample_trace(
                 "rating.trace_sample_rate",
                 caller.environment,
             )
-            sampled, reason = traces_service.decide_sampling(
-                result.outcome, rate.effective_value, roll=random.random()
+        sampled, reason = traces_service.decide_sampling(
+            result.outcome, rate.effective_value, roll=random.random()
+        )
+        if not sampled or reason is None:
+            return
+        if read_session is not None:
+            # Release the read connection before the write takes its own: a request holds at
+            # most one (audit of SL-1455, F2). The quote's reads are finished.
+            await read_session.close()
+        if caller.environment is None:
+            # RL-916 part 3: `None` here is an impossible state, not a value to
+            # stamp — it is indistinguishable from Correction 2's batch marker
+            # (Task 4A), and a mislabelled row is permanent (`TRACE_RETENTION_FLOOR`,
+            # `UPDATE` revoked). Unreachable under the current permission model
+            # (`score:execute` has no builtin role and no roles API grants it), but
+            # raising rather than stamping keeps it unreachable by construction. The
+            # enclosing `try` degrades this to "logged, quote still served" — the
+            # correct outcome for a caller this should never happen to.
+            raise RuntimeError(
+                "sampled real-time trace has no caller.environment; refusing to write "
+                "a row indistinguishable from a batch-produced one"
             )
-            if not sampled or reason is None:
-                return
-            if caller.environment is None:
-                # RL-916 part 3: `None` here is an impossible state, not a value to
-                # stamp — it is indistinguishable from Correction 2's batch marker
-                # (Task 4A), and a mislabelled row is permanent (`TRACE_RETENTION_FLOOR`,
-                # `UPDATE` revoked). Unreachable under the current permission model
-                # (`score:execute` has no builtin role and no roles API grants it), but
-                # raising rather than stamping keeps it unreachable by construction. The
-                # enclosing `try` degrades this to "logged, quote still served" — the
-                # correct outcome for a caller this should never happen to.
-                raise RuntimeError(
-                    "sampled real-time trace has no caller.environment; refusing to write "
-                    "a row indistinguishable from a batch-produced one"
-                )
+        async with database.unit_of_work() as session:
             row = await traces_service.write_pending_trace(
                 session,
                 workspace_id=caller.workspace_id,
