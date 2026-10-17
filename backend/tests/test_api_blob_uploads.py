@@ -114,7 +114,7 @@ async def test_completing_another_workspaces_upload_is_the_missing_404(
         await rbac.seed_builtin_roles(session, other)
         role = (
             await session.execute(
-                select(RoleRow).where(RoleRow.workspace_id == other, RoleRow.slug == "admin")
+                select(RoleRow).where(RoleRow.workspace_id == other, RoleRow.slug == "analyst")
             )
         ).scalar_one()
         session.add(
@@ -199,7 +199,7 @@ async def test_a_missing_part_fails_the_promotion_by_name(
     job = api_client.get(f"/api/v1/jobs/{completed.json()['id']}", headers=writer).json()
     assert status is JobStatus.FAILED
     assert job["error"]["code"] == "VALIDATION_FAILED"
-    assert job["error"]["detail"] == "Expected parts 1 to 2; missing part(s) 2."
+    assert job["error"]["message"] == "Expected parts 1 to 2; missing part(s) 2."
 
 
 @pytest.mark.req("FR-421")
