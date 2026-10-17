@@ -21,7 +21,7 @@ relates: [PL-1764, PL-1546, PL-1286, SL-1550, SL-1548, SL-1549, SL-1367, RL-1261
 **GO:** the maintainer's `to-lead.md` entry "2026-10-17 16:35:35 BST — Maintainer: #1325 read-back VERIFIED; GO SL-1550 (PL-1764)", with the 2026-10-16 09:49:25 BST confirmation of RL-1765 (conditions (1)–(3)). `RL-1765` is on `origin/main` at `1959b861`.
 **MERGE-ACK:** not yet given.
 
-## Entries
+## Tasks
 
 ### Red-first record (prep `8bcddabe`, `b9ef0bd6`)
 
@@ -44,3 +44,7 @@ PL-1764 and the SL-1550 roadmap row `draft` → `active`, status lines and a dat
 ### Gate
 
 Owed: the lead's two-half gate on a free slot. Audit: not yet.
+
+## PRs
+
+None yet: the branch `sl-1550-wk675-s7-prep-2026-10-16` is pushed; the lead opens the PR after the gate.
