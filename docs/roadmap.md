@@ -2757,6 +2757,46 @@ The fix of FD-1741 (MEDIUM, owner WK-1178; filed on its own branch). In `.github
 
 (Activated 2026-10-16 as WK-1178's FD-1741 fix slice, on the maintainer's ruling "2026-10-16 09:57:34 BST — RULING — the python CI job budget (#1309's cancelled run): finding MEDIUM, owner WK-1178, fix now" (`to-lead.md`). Ledger `LG-1743`.)
 
+#### SL-1770 — WK-1178 fix slice (S-a) — FD-1728 and FD-1704: the eleven artifact tables append-only at the database, red first
+
+```yaml
+id: SL-1770
+family: slice
+title: WK-1178 fix slice (S-a) — FD-1728 and FD-1704: the eleven artifact tables append-only at the database, red first
+status: draft                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-17 # original date 2026-10-14, set at the draft; minted 2026-10-17
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1769, FD-1704, SL-1771, RL-1700, SL-1274, FD-1728, FD-1729]
+```
+
+On the maintainer's (by delegation) entry "2026-10-14 12:00:14 BST" (`to-lead.md`), remedy S-a: FD-1728 (HIGH) and FD-1704, owner WK-1178, P2. One Alembic migration attaches `artifact_append_only()`'s row and `TRUNCATE` triggers to `factors` and eight of the ten tables FD-1728 names; `rate_tables` and `reference_table_versions` get a named column guard (forward-only `current_version`; `draft` to `published` only) plus the `TRUNCATE` trigger, each with its reason. Layer 1 for all eleven is in the same migration and is inert until SL-1771. The append-only set is derived from a declaration on every mapped table, never from grants. The reds are owner `UPDATE`, `DELETE` and `TRUNCATE` refused on each table, red on the base. Every legitimate in-place write is removed or declared (the plan's E4 table: `rate_tables.py:1465` and `:1480`, `reference.py:229`, and four test writers). FD-1704's `gip_app` test (DP-1, ruled). `FR-44`, `FR-70` and `FR-229` get dated lines. Lands right after the G2 merges, before the 4 Nov P2 code freeze. Plan: `PL-1769`, a dated Work-plan delta; DP-8 to DP-13 ruled by the maintainer (by delegation), `to-lead.md` "2026-10-14 12:18:57 BST" item (2) (DP-8's test-file fallback only if G2 slips past S-a's window). *(Cut 2026-10-14 under working id 8017 for FD-1704 alone; re-cut the same day as S-a, on the 12:00:14 entry.)* *(Amended 2026-10-14 by the planner, on the plan review of PL-1769 ordered by the maintainer's (by delegation) entry "2026-10-14 12:27:51 BST", findings accepted by the lead: the same migration adds the `TRUNCATE` trigger to the six tables that carry only a row guard (`approval_requests`, `blobs`, `deployment_requests`, `rating_versions`, `validation_rule_sets`, `validation_rules`), which closes `rating_versions`' `TRUNCATE` gap and classes the six `guarded` (plan review R2, 2026-10-14); every mapped table's class and reason is PL-1769's 59-row *Table classification* (plan review R3, 2026-10-14); the owner reds are one case per table and statement (plan review R10, 2026-10-14). `dataset_versions` is `guarded` (DP-21, the maintainer (by delegation), `to-lead.md` "2026-10-14 12:42:33 BST") (DP-21b, "2026-10-14 13:21:41 BST", refined "2026-10-14 13:27:39 BST"): its data frozen from the first `draft → validating`, forever, FR-53's return to `draft` included; `status` per `VALID_DATASET_TRANSITIONS`; the report id moves only out of `validating`; re-profiling after the freeze refused and reported as a `CLAUDE.md` §0 item; a red per illegal transition and the FR-53 data red.)* *(Amended 2026-10-14 by the planner, on the maintainer's (by delegation) entry "2026-10-14 15:14:52 BST": (3) the report rows confirmed separate, no STOP; (4) re-profiling a frozen version REMOVED: the guard allows `profile_id` only `NULL → value` after the freeze, `store_profile` (`profiles.py:58`) refuses a re-point with `PROFILE_ALREADY_SET` (`409`) in this slice, red first, and `01` FR-60 gets a dated clarification, "the profile is computed once per Dataset Version; a frozen version is never re-profiled"; (A) the provenance columns frozen with the data, ACKed; (B) `data_frozen_at` ACKed, with a back-fill red on a seeded FR-53 returned-to-draft row.)* *(Amended 2026-10-14 by the planner, on the maintainer's (by delegation) entry "2026-10-14 15:32:52 BST": the refusal reuses the existing `DATASET_VERSION_IMMUTABLE` (`409`) with a detail naming FR-60, not `PROFILE_ALREADY_SET`; `errors.py` and `01` §5.1 are not edited.)*
+
+(Minted 2026-10-17 as SL-1770 from working id 8017, with PL-1769 from working id 8016, in plans batch P2 mint PR.)
+
+#### SL-1771 — WK-1178 fix slice (S-b) — FD-1729: the application connects as a login role with gip_app's grants, never as the owner
+
+```yaml
+id: SL-1771
+family: slice
+title: WK-1178 fix slice (S-b) — FD-1729: the application connects as a login role with gip_app's grants, never as the owner
+status: draft                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-17 # original date 2026-10-14, set at the draft; minted 2026-10-17
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1769, FD-1704, SL-1770, SL-1455, FD-1729, FD-1728]
+```
+
+On the same entry, remedy S-b: FD-1729 (HIGH), owner WK-1178, P2. The application and the worker connect as `gip_app_login`, a member of `gip_app` provisioned for compose, CI and the shared container; migrations alone use the owner, through a new `GIP_MIGRATION_DATABASE_URL`. The test `database` fixture runs as the login role. The grants are found red first from that run, written as one migration with a test named on each line, and pinned by an exact map over every table. Startup refuses an owner, a superuser or a disabled artifact trigger. The login role cannot `DISABLE TRIGGER`: that is the proof that S-b makes SL-1770's triggers tamper-resistant. After SL-1770, the G2 merges and the `SL-1455` NFR session, before the 4 Nov P2 code freeze, with a full gate and a compose run on a fresh volume. The login role is asserted not superuser, not owner, `NOBYPASSRLS`, and unable to `SET session_replication_role`, red on `main` (the same entry's superuser item). Plan: `PL-1769`; DP-14 to DP-20 ruled by the maintainer (by delegation), `to-lead.md` "2026-10-14 12:18:57 BST" item (2). *(Cut 2026-10-14 under working id 8041, reserved by the lead, `eta.md` "2026-10-14 12:02:15 BST".)* *(Amended 2026-10-14 by the planner, on the same plan review: every test connection built from `test_database_url()` (37 files) moves to the login role, and an owner connection is named with a reason (plan review R1, 2026-10-14); one membership predicate, P-own (`pg_has_role(…, 'MEMBER')` against owners, superusers and `BYPASSRLS` roles), everywhere (plan review R4, 2026-10-14); the startup trigger check asserts each declared trigger exists with `tgenabled IN ('O','A')` and a pinned function-body hash (plan review R5, 2026-10-14); the red-run grants are diffed against the write-site census in the `LG-` (plan review R6, 2026-10-14); provisioning converges with an unconditional `ALTER ROLE … NOREPLICATION …` and is proved by two runs, rc 0, on a separate compose project (plan review R7, 2026-10-14); a stated, rehearsed rollback, a non-default password on the shared container, set as a pre-hashed SCRAM verifier (plan review R8, 2026-10-14); unused `jobs` and `outbox` `DELETE` revoked (plan review R9, 2026-10-14); the implicit `SELECT`s, `tenant_marker`, the worker check inside `asyncio.run` and `examples/fremtpl2/seed.py` as a DSN consumer in the tasks (plan review R11, 2026-10-14). the five write paths with no production caller are not granted (DP-22, the same entry); every test connection goes through the login role but for one listed owner-only fixture, each user by node id (12:42:33; 13:21:41); `examples/fremtpl2/seed.py` runs as the login role with only its bootstrap (`grant_demo_principals`) on the owner connection (13:21:41); compose binds every published port to `127.0.0.1`, applied to the running shared stack only as a GO-time act the maintainer names (the same entry).)*
+
+(Minted 2026-10-17 as SL-1771 from working id 8041, with PL-1769 from working id 8016, in plans batch P2 mint PR.)
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
