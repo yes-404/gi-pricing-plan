@@ -5,21 +5,22 @@ title: WK-1178 slice SL-1455 — NFR-489, the /score request path meets its p99 
 status: active
 created: 2026-10-11
 owner: executor
-tree: 5e00fa74f380b201c9f2a8d555822f91eacf2d0e
+tree: 2e5a8121bfa77353ac3260165cf19313fd390028
 phase: P2
 work: WK-1178
 slice: SL-1455
 plans: [PL-1454]
 corrected_by: []
-relates: [PL-1454, FD-1411, SL-1259, RL-1263, RL-921, RL-1379, RL-1685, "RL 8024 (working id)", NFR-489]
+relates: [PL-1454, FD-1411, SL-1259, RL-1263, RL-921, RL-1379, RL-1685, "RL 8024 (working id)", RL-8076, NFR-489]
 ---
 
 # LG-9932 — WK-1178 slice SL-1455: the NFR-489 remedy for `/score`
 
 *(LG-9932 is a working id reserved by the lead; the lead mints it at the merge turn.)* Executed by
 `executor-sl1455` from PL-1454, base `origin/main` `d699a561d6a93f33b74beb9c07023f8e655bb8c7`. Times are
-BST (`TZ=Europe/London date`) unless marked. **This ledger covers Tasks 0–3** (the GO was "Task 0 only"; Tasks 1–3 followed once
-RL-1685 ruled DP-1…DP-4 from Task 0's record); Tasks 4–6 are open.
+BST (`TZ=Europe/London date`) unless marked. **This ledger covers Tasks 0–3 as built, the re-gate of 2026-10-16 and the final slice audit** (the GO was "Task 0 only"; Tasks 1–3 followed once
+RL-1685 ruled DP-1…DP-4 from Task 0's record). Tasks 4 and 6 are carried, not open without an owner (Task list below); the
+front-matter `tree:` is the code tree gated at `787cfeed` (the re-gate section), not the Task 0 base it once named.
 
 **GO:** `to-lead.md` "2026-10-10 21:38:39 BST — DISPATCH GO: SL-1455 (Task 0; FD-1411's NFR-489 HTTP remedy) and WK-674 S3 (PL-1583); OP-1455-M1/M2/M3; the register :293 record", item 1: "GO SL-1455, Task 0 only (attribution, no fix). Tasks 1–6 wait on DP-1…DP-4, ruled from Task 0's record (need 5). Need 4: Task 0 re-derives bench-rating.py's cites and the model_call scoring path at its base, quoted in the record." Item 5: "MEASUREMENT WINDOW (need 3): the lead owns it. The sweep runs ALONE: both slots, no gate, no SL-1526 proving run, no migrate --verify. Task 0's own timing runs need the same. Book it in eta, with its start and end stamps in the LG." Corrected for Task 4 only by "2026-10-11 11:02:35 BST — DP-S5-a RULED (a) …" item 2 (SL-1455's Task 4 is the FD-1411 remedy proof; the NFR-489 exit verdict is SL-1259's). The timings are DIAGNOSTIC on this box: "2026-10-11 10:57:16 BST" item 3.
 **MERGE-ACK:** not yet given.
@@ -41,11 +42,25 @@ RL-1685 ruled DP-1…DP-4 from Task 0's record); Tasks 4–6 are open.
 - [x] Task 1 — Steps 1–3 committed (`c9a64068`, `1ab36c9f`); Step 4's `--help` recorded; its `--rates 25` run is owed to Task 4's window (Build log, 2026-10-14 audit-fix entry).
 - [x] Task 2 — the timing-free guard, red first (`d943c2d0`, `fecaf7b6`).
 - [x] Task 3 — Steps 1–4 delivered (`0544220a`); Step 5's byte-identity is owed to Task 4's window (Build log).
-- Tasks 4–6 — not started.
+- [ ] Task 4 — **carried: the dedicated host's Task 4 session (nfr-bench-1), owner the maintainer** (lead verdicts, `from-lead-2026-10-09.md` "2026-10-16 22:22:11 BST"; the maintainer's 11:11:03 item 3 and 11:16:35). Owed to it: the NFR-489 and NFR-454 remedy-proof readings (the FD-1411 remedy proof only; the NFR-489 exit verdict stays SL-1259's, RL-1614, per the maintainer's correction "2026-10-17 11:22:47 BST"), Acceptance 2 and 3, the `--http` `--rates 25` run (Acceptance 6), Task 1 Step 4's one-line fetch run, Task 3 Step 5's byte-identity, and Acceptance 1's default-live arm limb (below). The shared-VM venue named in Acceptance 2 is superseded for this by RL 8076 (audit F1, discharged).
+- [x] Task 5 — the two-half gate: run as the ALONE re-gate at `787cfeed` (Re-gate section); the maintainer accepted it.
+- [ ] Task 6 — **carried: DP-6 (b)**, not this slice's. Under DP-6 (b) the scripted journey's `/score` step is built and accepted by the plan for `PL-1371` §3.8 item 7 (Acceptance 9 below).
+- **Acceptance 1, default-live arm — OWED to Task 4.** The debug-off table for the default-live arm (and for 50 rps) and the one-line "same per-request work" answer for Step 3b are not recorded here; they travel with Acceptance 2's live readings to the dedicated-host session. Task 0 Step 5's tabulation is therefore recorded for the bench arms only.
 
 ### Gate
 
-Not applicable to Tasks 0–3 beyond the per-task runs in the Build log. The two-half gate is Task 5's.
+The per-task runs are in the Build log. The two-half gate is Task 5's and ran as the ALONE re-gate at `787cfeed` — see "Re-gate 2026-10-16 (head 787cfeed)" below for its stage rcs, the 13 pytest failures (all the check 31 cascade on this ledger's working id), and the NFR-489 line ("not measured by this gate").
+
+### Acceptance 9 (DP-6 (b)) — the ruling and the owner
+
+DP-6 was ruled (b) by the maintainer (by delegation), `to-lead.md` entry headed "2026-10-05 09:59:49 BST — A10 early ACCEPTED …". Its binding condition, verbatim: "item 7's record names NFR-489 (p99 < 50 ms with GBM, < 15 ms without, per replica) as an ACCEPTANCE of the demo's own /score call on the G2 path, measured uncontended, ≥3 runs. So the demo path cannot fall between the two owners." PL-1454 Hand-off item 4 line: "Until it is planned, the exit-demo `/score` risk is owned by WK-1178 through that item, not by this slice." The owner of the scripted journey's `/score` step is the plan for `PL-1371` §3.8 item 7 ("Exit demo (b): the scripted `WF-699` journey", WK-1178, unplanned); this slice touches neither `scripts/demo.py` nor `backend/tests/test_demo_command.py`.
+
+### Audit findings of the final slice audit (2026-10-16), disposition
+
+- **F1 (MEDIUM, process): discharged by RL 8076** — the maintainer's dated line of 2026-10-16 22:22:44 BST (`to-lead.md`), which supersedes PL-1454's shared-VM host clause for Task 4's Acceptance 2 and 3 sweep (nfr-bench-1, "measured, dedicated host (G4 discharge)", conditions (a)–(c)); the plan body is frozen from its merge and stays as written. Its item 2 was corrected on 2026-10-17 11:22:47 BST: the sweep is the G4 discharge of the FD-1411 remedy proof, not the NFR-489 exit verdict. Lead verdict: `from-lead-2026-10-09.md` "2026-10-16 22:23:23 BST".
+- **F2 (LOW, ledger): fixed here** — the header, the Task list (Tasks 4–6), the Gate section, front-matter `tree:` and the default-live arm are updated above.
+- **F3 (LOW, ledger): fixed here** — the DP-6 (b) ruling and the Hand-off item 4 line are quoted in the preceding subsection.
+
 
 ### Audit
 
