@@ -1,27 +1,29 @@
 ---
-id: FD-8063
+id: FD-1741
 family: finding
 title: The python CI job's 30-minute budget is spent by pytest alone, so a timeout cancels the two cheap checks queued behind it and wastes a full cycle on every pull request at risk
 status: active
-created: 2026-10-16
+created: 2026-10-17 # original date 2026-10-16, set at the draft; minted 2026-10-17
 owner: auditor
 tree: 0877e6e7a756c4621890713a4d3b016e75e33654
 corrected_by: []
-relates: [WK-1178, SL-8064, P2]
+relates: [WK-1178, SL-1742, P2]
 ---
 
-# FD-8063 — `python.yml` runs `pytest -q` first, inside a 30-minute job cap that pytest alone now fills
+# FD-1741 — `python.yml` runs `pytest -q` first, inside a 30-minute job cap that pytest alone now fills
+
+*(Minted 2026-10-17 as FD-1741 from working id 8063, with SL-1742 (working id 8064) and LG-1743 (working id 8065), in the SL-1742 PR.)*
 
 *(Filed under working id 8063, reserved by the lead; a minter folds it into the docs batch.
 Authority: the maintainer's (by delegation) entry "2026-10-16 09:57:34 BST" in
 `channel/to-lead.md`, which fixes the severity (MEDIUM), the owner (WK-1178), the fix (one small
-slice, SL 8064) and the P3 option recorded below. Reads were made at `origin/main`
+slice, SL-1742) and the P3 option recorded below. Reads were made at `origin/main`
 `0877e6e7a756c4621890713a4d3b016e75e33654`; the log lines are read from the run, not copied.)*
 
 ## Finding
 
 **Severity: MEDIUM, as ruled by the maintainer (by delegation): a throughput loss that recurs on
-every pull request, not a false green. Owner WK-1178, fixed by SL 8064.**
+every pull request, not a false green. Owner WK-1178, fixed by SL-1742.**
 
 The `python` job of `.github/workflows/python.yml` carries `timeout-minutes: 30` at job level
 (`:94`). Inside it, the Tests step (`uv run pytest -q`, `:298-302`) runs **before** the step
@@ -83,7 +85,7 @@ re-run, and the two checks it skips are the two that cost about a minute.
 
 ## Disposition
 
-**Fix with an owner: WK-1178, as one small slice, SL 8064** (one PR, one SL, lean P2), next after
+**Fix with an owner: WK-1178, as one small slice, SL-1742** (one PR, one SL, lean P2), next after
 #1310 in the merge order, by the maintainer's (by delegation) "2026-10-16 09:57:34 BST" entry:
 
 1. **Move** the contracts `--check` and requirement-coverage steps to **before** Tests (they need
@@ -94,7 +96,7 @@ re-run, and the two checks it skips are the two that cost about a minute.
 3. The **Gate summary** step still reports every stage, and its `if:` conditions still run after a
    failure. The slice's ledger cites a CI run with all stages present.
 
-**The event that next discharges this finding:** the merge of SL 8064 with its own `python` CI run
+**The event that next discharges this finding:** the merge of SL-1742 with its own `python` CI run
 green and the contracts and requirement-coverage steps logged **before** pytest.
 
 **P3 option, recorded and not taken now (owner WK-1178):** split or parallelise pytest (xdist, or
@@ -104,4 +106,4 @@ shared-database flakiness at the 4 Nov code freeze. If the suite keeps growing, 
 option that stops the budget being re-raised.
 
 **Not in this finding.** The suite's speed itself, and any test-selection policy, are not
-changed by SL 8064.
+changed by SL-1742.
