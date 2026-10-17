@@ -2690,6 +2690,27 @@ relates: [PL-1739, FD-1727]
 
 On the maintainer's (by delegation) entries "2026-10-14 11:08:32 BST — Failed-auth audit rollback: auditor run GO; …", item 2, and "2026-10-14 11:11:50 BST — NFR-519 hold RELEASED (letter reading correct); the failed-auth FD scope set (re lead 11:11)". `07` FR-392 audits failed authentication, but `require_caller` runs `authenticate_api_key` inside a unit of work (`backend/src/app/api/deps.py:240-241`) that rolls back the flushed `principal.auth_failed` row with the 401 (`backend/src/app/db/session.py:68-78`), so a revoked, expired, archived-account or environment-not-granted key leaves no audit row (auditor-failauth's run at `8eaf6d5f`: 576 rows before and after each). The workspace-less failures leave only a log line, and no counter tells a 401 from any 4xx (`backend/src/app/observability/metrics.py:121`). Spec first: a dated amendment on `07` FR-392 and a dated pointer on `06` FR-368 (PL-1739's T1 and T2, as ruled). The fix and its reds are PL-1739's, as ruled by the maintainer (by delegation) directly in `to-lead.md` "2026-10-14 12:18:57 BST" item (1): the failure row written in its own unit of work after the auth unit rolls back, surviving a real HTTP 401 (DP-1 (i)); a 5xx, never a silent 401, if that write fails (DP-2 F1); `gip_auth_failures_total{reason}` for every failure over a closed set of eight labels, with no key material, prefix or principal in a label, and the bearer path's INFO line raised to WARNING (DP-3 B); the T-text on `07` FR-392 and `06` FR-368 as written (DP-4 (a)); and the vacuous secret test replaced by one that first produces failure events (R9). `backend/tests/test_auth_keys.py:198-212` and `:216-238`, green only because they catch inside the unit, are replaced by HTTP reds red on `main` by cause. Work-plan delta PL-1739 (working id); discharges FD-1727 (working id). **Activation needs:** DPs ruled — MET, 12:18:57 (PL-1739's DP-1 to DP-4, the 12:18:57 entry named above, item (1)); FD-1727 minted (D17); the shared-path census (`deps.py`, `metrics.py`, the two spec files) against whatever is open at GO; PL-1739 set `active` in this slice's activation commit; the lead's GO. Merged before the 4 Nov code freeze. *(Cut 2026-10-14 by the planner, planner-fd8036, under working id 8045, reserved by the lead, eta "2026-10-14 12:07:20 BST".)*
 
+#### SL-1742 — WK-1178 fix slice — FD-1741: the python CI job's cheap checks run before the 30-minute pytest, and the job budget is 50 minutes
+
+```yaml
+id: SL-1742
+family: slice
+title: WK-1178 fix slice — FD-1741: the python CI job's cheap checks run before the 30-minute pytest, and the job budget is 50 minutes
+status: closed                   # draft → active → closed | retired (§1.2a)
+created: 2026-10-17 # original date 2026-10-16, set at the draft; minted 2026-10-17
+owner: executor                  # a workflow-only slice; the lead dispatches (active)
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1741]
+```
+
+*(Minted 2026-10-17 as SL-1742 from working id 8064, in the SL-1742 PR; FD-1741 from working id 8063 and LG-1743 from working id 8065.)*
+
+The fix of FD-1741 (MEDIUM, owner WK-1178; filed on its own branch). In `.github/workflows/python.yml` the `Tests` step (`pytest -q`) ran before `Generated contracts are current` and `Requirement coverage`, so a job timeout at 30 minutes cancelled the two cheap checks and the run ended `cancelled`. **Scope, exactly:** (1) the contracts `--check` and req-coverage steps move to before `Tests` (they need no DB); (2) the job's `timeout-minutes` goes 30 → 50; (3) the `Gate summary` step is unchanged (it reads each stage by step id, so order does not matter) and still reports every stage with `if: always()`. Nothing else in the workflow changes; no path filter is touched; pytest is not split or parallelised (a P3 option in FD-1741). Written workflow-only, so CI's own python run on the PR head is its gate: success, with contracts and req_coverage logged before pytest.
+
+(Activated 2026-10-16 as WK-1178's FD-1741 fix slice, on the maintainer's ruling "2026-10-16 09:57:34 BST — RULING — the python CI job budget (#1309's cancelled run): finding MEDIUM, owner WK-1178, fix now" (`to-lead.md`). Ledger `LG-1743`.)
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
