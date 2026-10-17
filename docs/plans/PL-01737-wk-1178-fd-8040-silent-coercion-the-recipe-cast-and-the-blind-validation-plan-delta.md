@@ -2,7 +2,7 @@
 id: PL-1737
 family: plan
 kind: map
-title: WK-1178 — FD-1744's two limbs, a recipe cell that does not parse is never silently nulled and validation gives it a verdict (FR-32, VR-STR-2), SL-1738 — a dated Work-plan delta
+title: WK-1178 — FD 8040's two limbs, a recipe cell that does not parse is never silently nulled and validation gives it a verdict (FR-32, VR-STR-2), SL-1738 — a dated Work-plan delta
 status: draft                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-16 # original date 2026-10-14, set at the draft; minted 2026-10-16
 owner: planner
@@ -15,7 +15,7 @@ corrected_by: []
 relates: [PL-1542, SL-1543]
 ---
 
-# PL-1737 — WK-1178: FD-1744, silent coercion. A recipe cell that does not parse is never silently nulled, and validation gives it a verdict (SL-1738)
+# PL-1737 — WK-1178: FD 8040, silent coercion. A recipe cell that does not parse is never silently nulled, and validation gives it a verdict (SL-1738)
 
 *(Minted 2026-10-16 as PL-1737 and SL-1738 from working ids 8042 and 8043, in the P1 batch mint PR.)*
 
@@ -54,7 +54,7 @@ set widened as that entry accepts; the migration discipline (Task 5); the (iii) 
 removed.
 **Tree read:** `origin/main` `a3fc2e8dd384de6abf909f662f43011b8078fb4e` (committed
 2026-10-14T11:55:40+01:00). Every `file:line` below is at that tree. The executor re-reads each
-one at its base (Task 0). The finding is **FD-1744** (working id 8040 until the D18 mint of 2026-10-17), filed by auditor-upload404 on
+one at its base (Task 0). The finding is **FD 8040** (working id), filed by auditor-upload404 on
 `fd-8039-upload-404-2026-10-14`; that branch was not on `origin` when this plan was written
 (`git ls-remote --heads origin` listed no `fd-8039` or `fd-8040` head), so the finding's text is
 taken from the lead's report and the maintainer's ruling below, and Task 0 re-reads the FD once
@@ -221,7 +221,7 @@ ingest `null_count` is 0 in every column.
   The table was created by `backend/migrations/versions/902093cc0437_data_ingestion_runs.py:24`.
   The run is read back by `rejected_rows` (`api/dataset_versions.py:418-452`), whose untyped
   `dict[str, Any]` (`:420`) returns the three counts and `reject_rate` (`:446-452`).
-- **So recording the counts in the run record is outside FD-1744's write set.** It needs a
+- **So recording the counts in the run record is outside FD 8040's write set.** It needs a
   column on `IngestionRunRow` and a migration, neither in this plan's write set as first cut.
   That was DP-S1, put to the maintainer as the 12:31:22 entry ordered, and **ruled (i) at
   12:42:55**: the write set widens to them.
@@ -499,12 +499,12 @@ merge and made `active` by a dated line, and no status is set here.
 
 | Order | Slice | Tasks | Requirements (each id) | Activation needs | Lane |
 |---|---|---|---|---|---|
-| 1 | SL-1738 — FD-1744: a recipe cell that does not parse is never silently nulled, and validation gives it a verdict | Tasks 0 to 7 below | `01` §3.1: FR-32 (the quarantine, and the Job path); `01` §4.4: VR-STR-2, VR-STR-5 and VR-STR-9 (catalogue rules; the checks that give the verdict); `01` §3.2: FR-35 (the steps whose behaviour changes); `01` §3.1: FR-31 (the run's record; its dated clause, DP-S1 (i)); read only: FR-45, FR-46, VR-STR-3 | FD-1744 minted; every DP ruled — MET, by the maintainer's (by delegation) entries "2026-10-14 12:23:36 BST" and, for DP-S1, "2026-10-14 12:42:55 BST"; this delta minted and made `active` by a dated line; Task 0 Step 3's G2 probe clean on both populations, or the maintainer's ruling on it; a free build lane | 1 |
+| 1 | SL-1738 — FD 8040: a recipe cell that does not parse is never silently nulled, and validation gives it a verdict | Tasks 0 to 7 below | `01` §3.1: FR-32 (the quarantine, and the Job path); `01` §4.4: VR-STR-2, VR-STR-5 and VR-STR-9 (catalogue rules; the checks that give the verdict); `01` §3.2: FR-35 (the steps whose behaviour changes); `01` §3.1: FR-31 (the run's record; its dated clause, DP-S1 (i)); read only: FR-45, FR-46, VR-STR-3 | FD 8040 minted; every DP ruled — MET, by the maintainer's (by delegation) entries "2026-10-14 12:23:36 BST" and, for DP-S1, "2026-10-14 12:42:55 BST"; this delta minted and made `active` by a dated line; Task 0 Step 3's G2 probe clean on both populations, or the maintainer's ruling on it; a free build lane | 1 |
 
 ### Task 0 — re-read at the base, enumerate, and probe (convention 4)
 
 - [ ] **Step 1.** Re-read every `file:line` this plan cites at the slice's base, and record in the
-  LG each one that moved. Re-read FD-1744 in full once it is on `origin`, and record its limbs.
+  LG each one that moved. Re-read FD 8040 in full once it is on `origin`, and record its limbs.
 - [ ] **Step 2.** Enumerate, and record in the LG:
   - every `strict=False` cast or parse in `packages/*/src` and `backend/src`:
     `git grep -nE "strict=False" -- packages/*/src backend/src`, keeping only the
@@ -838,7 +838,7 @@ auditor's `RECIPE`, through `execute_job`, as the 12:23:36 entry orders.
 - The `LG-`.
 
 **Widened by DP-S1 (i), accepted by the maintainer's (by delegation) entry "2026-10-14
-12:42:55 BST"** (beyond FD-1744's first-cut write set):
+12:42:55 BST"** (beyond FD 8040's first-cut write set):
 - `backend/src/app/db/models.py:921-923`: the `step_counts` column on `IngestionRunRow`;
 - one new migration under `backend/migrations/versions/` (one head, with a downgrade);
 - `backend/tests/test_data_jobs.py` and `backend/tests/test_ingestion.py` (G5's helper called
@@ -860,7 +860,7 @@ columns are a contract change: STOP to the lead.
 
 ## Hand-off (not this plan's writes)
 
-- **The lead:** mint FD-1744 (auditor-upload404's record) before this delta. GO the executor.
+- **The lead:** mint FD 8040 (auditor-upload404's record) before this delta. GO the executor.
   Relay Task 0 Step 3's probe output, and any STOP, to the maintainer (DP-G2, binding).
   DP-S1 was ruled (i) at 12:42:55; nothing waits on it.
 - **SL-1738 and PL 8016's S-a/S-b:** their migrations re-point `down_revision` in merge order;

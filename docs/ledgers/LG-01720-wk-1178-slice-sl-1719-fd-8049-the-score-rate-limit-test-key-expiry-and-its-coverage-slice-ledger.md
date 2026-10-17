@@ -11,7 +11,7 @@ work: WK-1178
 slice: SL-1719
 plans: []
 corrected_by: []
-relates: [SL-1719, FD-1747, FR-452, FR-430, RL-1347]
+relates: [SL-1719, FD 8049, FR-452, FR-430, RL-1347]
 ---
 
 # LG-1720 — WK-1178 slice SL-1719: the score rate-limit test's key expiry
