@@ -357,6 +357,18 @@ def test_an_empty_band_always_fails() -> None:
 
 
 @pytest.mark.req("FR-100")
+def test_a_non_zero_floor_on_an_absent_column_is_refused_naming_column_and_floor() -> None:
+    """DP-1734-A (a): reuse FACTOR_RESOLUTION_FAILED; the detail names the column and the floor."""
+    frame = _book().drop("claim_count")
+    banding = propose_banding(frame, _proposal(), dataset_id=DATASET, slug="age-5")
+    with pytest.raises(BandingError) as caught:
+        check_banding(frame, banding, min_claims=37)
+    assert caught.value.code == "FACTOR_RESOLUTION_FAILED"
+    assert "claim_count" in str(caught.value)
+    assert "37" in str(caught.value)
+
+
+@pytest.mark.req("FR-100")
 def test_a_thin_band_warns_by_default_and_fails_when_configured() -> None:
     """FR-100's own wording: warns (default) or fails (if configured)."""
     frame = _book()
