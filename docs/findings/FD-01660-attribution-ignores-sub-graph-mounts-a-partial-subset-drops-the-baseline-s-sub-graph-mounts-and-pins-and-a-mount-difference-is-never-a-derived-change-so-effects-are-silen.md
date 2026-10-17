@@ -2,7 +2,7 @@
 id: FD-1660
 family: finding
 title: Attribution ignores sub-graph mounts: a partial subset drops the baseline's sub-graph mounts and pins, and a mount difference is never a derived change, so effects are silently misattributed
-status: active
+status: closed
 created: 2026-10-12
 owner: auditor
 tree: fc4401dcad789692f79f6c3ffc058c1c3921b7b9
@@ -37,3 +37,7 @@ Found by SL-1527 (LG-1647) at WF-699 D7, widened by the planner of the `WK-673` 
 - **G2 gains this slice** (a dated line under `docs/roadmap.md` G2). SL-1527 merges first with one group and prints "SKIPPED D7 decomposition — FD 9804".
 
 Per `CLAUDE.md` §14 it is HIGH in P2 and needs a resolution before any P3 start. Event that next confirms or discharges it: `SL 9850`'s merge with R1 to R3 red on `fc4401dc` by their causes and green after. Filed by the executor from the entries, 2026-10-12.
+
+## Resolution
+
+**Resolved 2026-10-16** by #1310 (`6b25b9bcf11733fd3aa285ea9757aa7676520749`, SL-1696, LG-1732), merged 22:18:33 BST on the maintainer's merge-ACK (`to-lead.md`, entry "2026-10-16 22:17:50 BST"). Re-read at `origin/main` `055b5e6b74f9d4b10f6df54570e33ed2805ae9a8`, `packages/pricing-core/src/pricing_core/rating/analysis.py`: limb 3, `_derive` derives each `diff.sub_graph_mounts` difference as a `step_added`, `step_removed` or `step_changed` change (:625-640); limb 1, `_subset_algorithm` merges `sub_graphs` by `mount_point` from the members applied (:822); limb 2, `_PIN_KINDS` carries `sub_graphs` (:490) and the subset pins add each held mount's ref (:852). Tests in `packages/pricing-core/tests/test_rating_attribution.py`: `test_mount_repoint_plus_table_edit_attributes_each_effect_to_its_own_change`, `test_mount_added_two_groups_returns_and_reconciles`, `test_mount_removed_two_groups_returns_and_reconciles`, `test_baseline_mount_k2_every_subset_inlines_the_baselines_mount`, `test_each_subset_pins_only_the_sub_graphs_of_the_mounts_it_holds`; the file ran 43 passed at this tree. Deferred with owner SL-1543: the D7 real-derived-list fixture (PL-1694 Acceptance 18, LG-1732 A1).
