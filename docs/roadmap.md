@@ -2519,7 +2519,7 @@ On the maintainer's (by delegation) entry "2026-10-12 07:28:38 BST — S5 flags:
 id: SL-1709
 family: slice
 title: WK-1178 fix slice — FD-1684: the four non-JSON routes declare their real media types
-status: active                    # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-14
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 36e2610ab8135bc3b3563464e7f5f719713b168b

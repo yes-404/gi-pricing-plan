@@ -2,7 +2,7 @@
 id: LG-1775
 family: ledger
 title: WK-1178 slice SL-1709 — FD-1684, the four non-JSON routes declare their real media types, slice ledger
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-17
 owner: executor
 phase: P2
