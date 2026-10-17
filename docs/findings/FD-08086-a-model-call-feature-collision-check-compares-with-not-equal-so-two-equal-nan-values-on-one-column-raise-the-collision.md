@@ -7,7 +7,7 @@ created: 2026-10-17
 owner: auditor
 tree: cf509df89dbebff329bb6b319bcc9bcd2a2c2352
 corrected_by: []
-relates: [WK-1178, SL-1761, FD-1753, FD-8070]
+relates: [WK-1178, SL-1761, FD-1753]
 ---
 
 # FD-8086 — A model_call's feature-collision check compares with `!=`, so two equal NaN values on one column raise the collision
