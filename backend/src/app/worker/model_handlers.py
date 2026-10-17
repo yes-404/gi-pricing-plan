@@ -72,6 +72,7 @@ from model_schema import (
     new_uuid7,
 )
 from pricing_core import ProgressCallback, ScaledProgress
+from pricing_core.safe_error import safe_error_detail
 
 __all__ = ["register_model_handlers"]
 
@@ -413,9 +414,12 @@ def _fit(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
     except BandingError as exc:
         # FR-100: an empty band, or a band below a floor configured to fail. Named rather than
         # caught as a `ModellingError`, which would also take `FactorResolutionError` below
-        # and change its detail text.
+        # and change its detail text. Its text goes through the allow-list (NFR-499).
         raise PlatformError(
-            exc.code, f"The {spec.model_type} model could not be fitted", 409, str(exc)
+            exc.code,
+            f"The {spec.model_type} model could not be fitted",
+            409,
+            safe_error_detail(exc),
         ) from exc
     except FactorResolutionError as exc:
         raise PlatformError(

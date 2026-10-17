@@ -362,7 +362,7 @@ class _BandingWarningBase(BaseModel):
     @classmethod
     def _is_a_banding_reference(cls, value: ArtifactRef) -> ArtifactRef:
         if value.type != "banding":
-            raise InputFreeError(f"a banding warning names a banding, not a {value.type!r}")
+            raise InputFreeError("a banding warning names a banding, not another artifact type")
         return value
 
 
