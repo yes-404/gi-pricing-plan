@@ -1,9 +1,9 @@
 ---
-id: LG-8083
+id: LG-1774
 family: ledger
 title: WK-1178 slice SL-1563 — money_minor closed both ways at save, the numeric type check (PL-1562), slice ledger
-status: active                 # active → closed (§1.2a)
-created: 2026-10-17
+status: closed                 # active → closed (§1.2a)
+created: 2026-10-17   # filed 2026-10-17 under working id 8083; minted 2026-10-17 as LG-1774
 owner: executor
 tree: 6bdd2571c9069c163ecab248630e75f93be280be
 phase: P2
@@ -14,10 +14,12 @@ corrected_by: []
 relates: [FD-1424, RL-1564, OQ-1560, PL-1627, RL-1445, FR-227, FR-226]
 ---
 
-# LG-8083 — WK-1178 slice SL-1563: money_minor closed both ways at save
+# LG-1774 — WK-1178 slice SL-1563: money_minor closed both ways at save
 
 Executed by executor-1563 from PL-1562 (with PL-1627 §A's delta). Branch
 `sl-1563-wk1178-fd1424-prep-2026-10-16`, merged with `origin/main` 6bdd2571. Times are BST.
+
+**The mint.** Minted 2026-10-17 as LG-1774 from working id 8083 (allocation: `handover/eta.md` "MINT ALLOCATION continued"; its PR merges after SL-1543's LG 1772 and PL 1773). The gate and audit entries below were written under the working id and are not edited for it.
 
 **GO:** `to-lead.md` "2026-10-17 13:23:18 BST — Maintainer: GO SL-1563 …" and RL-1445 (a)/(b),
 written in the activation commit `fe91ffec`.
@@ -136,7 +138,7 @@ Named delta, per the maintainer (by delegation) entry "2026-10-17 14:12:05 BST �
 - **Item 8:** `git grep "the bundle compilation resolves" -- packages/pricing-core/src` prints nothing; `_compatible`'s docstring states the rule and cites 17:36:28 and 17:42:06. **Met.**
 - **Item 9 (gate):** see section 4. **Met, with the cascade.**
 - **Item 10 (write set):** section 1; every extra path has a ruling. **Met.**
-- **Item 11 (/score vs batch):** the ledger records the differing values (`18` vs `"18"`), option (b). The finding is `FD 1767` (on `origin/main` at `1959b861`, MEDIUM). **Met; the ledger does not cite FD 1767 (A1).**
+- **Item 11 (/score vs batch):** the ledger records the differing values (`18` vs `"18"`), option (b). The finding is `FD-1767` (on `origin/main` at `1959b861`, MEDIUM). **Met; the ledger does not cite FD-1767 (A1).**
 - **Item 12 (a)(b)(c):** (a) `test_a_fragment_with_a_decimal_money_port_saves`; (b) `test_a_decimal_into_a_money_minor_output_step_rounds_once` asserts `served == 1358`, `type(served) is int`, and `test_a_second_rounding_would_differ_from_the_single_one` asserts `1357.840 -> 1358` against the double-rounded `1357`; (c) `test_a_mounted_decimal_port_rounds_once_at_the_parent_output` exists (`SL-1340` merged first, #1263, so this slice owed it). **Met; the ledger does not name (b)/(c) (A1).**
 
 **3. Named deltas against their rulings:**
@@ -150,11 +152,13 @@ Named delta, per the maintainer (by delegation) entry "2026-10-17 14:12:05 BST �
 **4. Gate at `3e8cc2f4`** (`scratch/sl1563-gate/`, gate-1b 16:13:04-17:18:13 BST; START tree `5ae23b6e` = this head's tree): ruff, mypy, import_linter, req_coverage, contracts rc 0; frontend lint, type-check, test, build rc 0; `audit_docs` rc 1 with one line, `check 31: gap in the full allocation between 1757 and 8083` (working-id artefact, clears at mint); pytest rc 1, `13 failed, 5987 passed, 6 skipped`, the 13 FAILED names all `test_audit_docs_*`, `test_doc_index`, `test_register_*`, `test_repository_invariants` (the docs-audit cascade). Accepted by the maintainer ("green apart from the cascade; only-new 0"). The auditor did not re-derive "only-new 0" by diffing the 13 names against a baseline.
 
 **5. Findings.**
-- **A1 (LOW, fixed here):** the ledger's `Owed` section ("Full two-half gate ... the auditor's re-check") was stale after the gate, and it records no gate rc, no item 12 (b)/(c), no item 5/6 tests and no FD 1767; sections 2 and 4 above carry them. The executor's body is not edited.
+- **A1 (LOW, fixed here):** the ledger's `Owed` section ("Full two-half gate ... the auditor's re-check") was stale after the gate, and it records no gate rc, no item 12 (b)/(c), no item 5/6 tests and no FD-1767; sections 2 and 4 above carry them. The executor's body is not edited.
 - **A2 (LOW, observation):** the branch is behind `origin/main` (`6bdd2571` vs `9469721d`); `docs/INDEX.md` will conflict and is regenerated at merge (common brief item 5); not tested here.
 - **A3 (LOW, observation):** `_NUMERIC` is now used by no code in `compile.py`; it stays as the vocabulary `score.py:993` and `test_rating_score_batch_outputs.py:227` cite. No action.
-- **A4 (disclosed):** item 11's difference is FD 1767, already registered; it is not this slice's to fix.
+- **A4 (disclosed):** item 11's difference is FD-1767, already registered; it is not this slice's to fix.
 
-**6. Requirements without evidence:** none. PL-1562 items 1-12 are delivered and tested; FR-227's amendment is delivered. Owed: the mint of `LG-8083`/`SL-1563` (clears check 31 and the cascade), the lead's merge.
+**6. Requirements without evidence:** none. PL-1562 items 1-12 are delivered and tested; FR-227's amendment is delivered. Owed: the mint of `LG-1774`/`SL-1563` (clears check 31 and the cascade), the lead's merge.
 
 **7. Proposed verdict:** all obligations delivered and evidenced; no unevidenced requirement. Proposal only; the lead adopts, amends or rejects. Status left `active`. MERGE-ACK: not yet given.
+
+**Lead verdict (2026-10-17 17:24:19 BST, the lead, transcript 1b92c2a6):** the auditor's proposal ADOPTED — all PL-1562 items and the FR-227 amendment delivered and evidenced; the gate @3e8cc2f4 accepted (only-new 0 vs the accepted cascade, lead-verified by comm); A1–A4 LOW recorded, no action before merge. MERGE-ACK: not yet given.
