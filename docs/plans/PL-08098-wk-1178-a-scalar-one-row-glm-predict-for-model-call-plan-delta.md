@@ -94,9 +94,46 @@ bit-identical, that is a STOP and a report, not a tolerance (the ruling says exa
    On `9469721d` the kinds are `identity`, `banding`, `grouping`, `interaction`. A scorer
    whose factors include a kind the scalar path does not cover keeps the frame path, chosen
    once in `_load_glm_scorers`, never per quote, and a test names that choice. (SL-1274 adds
-   `expression` factors — see the census.)
+   `expression` factors — see the census.) **Replaced by the Delta 2026-10-17 below; the
+   text above is kept as the record of what was planned.**
 6. **Return type unchanged:** `float`, read by `_decimal` at `runtime.py`. No Decimal or
    rounding change.
+
+## Delta 2026-10-17 — no load-time fallback; the apply_grouping widening
+
+A pre-merge dated delta, written 2026-10-17 21:34 BST on branch
+`pl-8098-glm-scalar-predict-2026-10-17` at `a4ca8b00`. The plan is unmerged, so this edit is
+allowed. Authority: the maintainer's entry "2026-10-17 21:26:31 BST — Maintainer: SL 8099
+@a7977a49 — both departures ACCEPTED with conditions; the parity limb must be shown RUN" in
+`to-lead.md`, conditions (1) and (2), and its refinement "2026-10-17 21:26:53 BST —
+Maintainer: SL 8099 refinement: the old apply_grouping behaviour pinned as FIXTURE
+expectations (not a copied module)".
+
+1. **Constraint 5 is replaced.** Old: "an unsupported factor kind keeps the frame path,
+   chosen at bundle load". New: **the scalar path reads the frame path's own resolution
+   (`resolve_factor_columns`), so every factor kind is covered or refused identically on
+   both paths.** There is no load-time choice in `_load_glm_scorers`. Task 3's "the
+   load-time choice for unsupported kinds" and the census row's "load-time frame-path list
+   (constraint 5)" fall away with it. The constraint is held by two tests in
+   `packages/pricing-core/tests/test_glm_scalar_predict.py` at `a4ca8b00`:
+   - `test_every_factor_kind_scores_bit_identically` — the covered kinds (`identity`,
+     `banding`, `grouping`, `interaction`) score bit-identically;
+   - `test_a_factor_kind_the_resolver_refuses_is_refused_identically_on_both_paths` — the
+     all-kinds refusal test, parametrised over `spline`, `polynomial`, `offset`,
+     `expression`: the same `FactorResolutionError` text on both paths.
+2. **The apply_grouping widening is accepted scope** (condition (1) of 21:26:31). The
+   single-value branch in `apply_grouping` (`packages/pricing-core/src/pricing_core/modelling/groupings.py`)
+   is shared with the batch path. The old behaviour is pinned as fixture expectations (inputs
+   → outputs and refusal texts captured from `c62f1ff6`), not a copied module (21:26:53):
+   test `test_apply_grouping_reproduces_every_recorded_expectation_of_c62f1ff6` in
+   `packages/pricing-core/tests/test_glm_scalar_predict.py`, data file
+   `packages/pricing-core/tests/data/apply_grouping_c62f1ff6.json`. The other conditions of
+   21:26:31 (1) stand as written there: the `test_groupings*.py` single-file runs at the
+   head, the full gate as the batch-path proof, and one LG line naming the widening and the
+   stamp.
+3. **SL-1274.** Whichever of SL 8099 and SL-1274 merges second adds **expression-kind parity
+   CASES** to the scalar-path tests (bit-identical scores for `expression` factors, as for
+   the covered kinds). It does not add a frame-path list: none exists after this delta.
 
 ## Decision points
 
