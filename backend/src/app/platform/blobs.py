@@ -53,9 +53,10 @@ from app.platform import audit
 from model_schema import BlobRef, JobSource, Principal, new_uuid7
 
 if TYPE_CHECKING:  # pragma: no cover
-    from app.db.session import Database
     from mypy_boto3_s3.client import S3Client
     from mypy_boto3_s3.type_defs import PartTypeDef
+
+    from app.db.session import Database
 
 __all__ = [
     "QUOTE_INPUT_BLOB_COLUMNS",
