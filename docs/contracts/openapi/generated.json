@@ -14262,6 +14262,20 @@
             "title": "Dataset Version Id",
             "type": "string"
           },
+          "imputed_rows": {
+            "default": 0,
+            "description": "Holdout rows whose observed amount was unknown and was imputed at the known-amount mean severity (FR-190, SL-1543 DP-4). 0 when none.",
+            "minimum": 0.0,
+            "title": "Imputed Rows",
+            "type": "integer"
+          },
+          "imputed_share": {
+            "default": "0",
+            "description": "The imputed rows' share of the observed loss, an exact ratio in [0, 1] (not money). Defaulted with `imputed_rows`: reconciliations stored before these fields existed carry neither and load as 'nothing imputed'.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+            "title": "Imputed Share",
+            "type": "string"
+          },
           "modelled_burning_cost": {
             "description": "Amount in minor units (pence/cents) of the workspace currency.",
             "minimum": 0.0,

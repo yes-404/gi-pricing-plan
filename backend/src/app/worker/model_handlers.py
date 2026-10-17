@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import io
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -1345,6 +1346,23 @@ def register_model_handlers() -> None:
         register_handler(JobKind.METRIC_CERTIFY, _certify_metric)
 
 
+def _claim_count_column(structure: PerilStructure, candidates: Mapping[str, Any]) -> str | None:
+    """The column that counts claims, for FR-190's imputation of unknown observed amounts.
+
+    A severity model is weighted by claim count (FR-111), so its weight column *is* the
+    claim-count column. Exactly one distinct column across the structure's severity models is
+    used; none, or several that disagree, give `None` -- reconciliation then refuses an
+    unknown amount by name rather than imputing from a column it had to guess (FR-190).
+    """
+    columns = {
+        weight.column
+        for peril in structure.perils
+        if peril.severity_model is not None
+        and (weight := candidates[str(peril.severity_model)].spec.weight).kind == "column"
+    }
+    return columns.pop() if len(columns) == 1 else None
+
+
 def _reconcile(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
     """`peril_structure.reconcile` — FR-190's coherence check, FR-128's basis.
 
@@ -1482,6 +1500,13 @@ def _reconcile(parameters: dict[str, Any], callback: ProgressCallback) -> JobRes
             exc.code, "A peril component could not be scored", 409, str(exc)
         ) from exc
 
+    claim_column = _claim_count_column(structure, candidates)
+    claim_count = (
+        holdout[claim_column].cast(pl.Float64).to_numpy()
+        if claim_column is not None and claim_column in holdout.columns
+        else None
+    )
+
     try:
         assembled = assemble_risk_premium(predictions)
         result = reconcile(
@@ -1490,6 +1515,7 @@ def _reconcile(parameters: dict[str, Any], callback: ProgressCallback) -> JobRes
             exposure=holdout[exposure_column].cast(pl.Float64).to_numpy(),
             tolerance=tolerance,
             treatments={p.peril: p.large_loss.kind for p in structure.perils},
+            claim_count=claim_count,
         )
     except ModellingError as exc:
         # `pricing-core` names the failure; the platform gives it the HTTP shape, so the
@@ -1522,6 +1548,8 @@ def _reconcile(parameters: dict[str, Any], callback: ProgressCallback) -> JobRes
                     modelled_burning_cost=result.modelled_burning_cost,
                     tolerance=result.tolerance,
                     computed_at=datetime.now(UTC),
+                    imputed_rows=result.imputed_rows,
+                    imputed_share=result.imputed_share,
                 ),
                 job_id=UUID(parameters["job_id"]) if parameters.get("job_id") else None,
             )

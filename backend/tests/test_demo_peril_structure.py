@@ -329,6 +329,10 @@ async def test_the_ad_peril_structure_reconciles(
         )
     assert structure.reconciliation is not None
     assert structure.reconciliation.status.value == "pass"
+    # DP-4 (a): the counts are persisted by the real Job; this book has no unknown observed
+    # amount, so nothing was imputed (and `_reconcile` wired the severity weight column through).
+    assert structure.reconciliation.imputed_rows == 0
+    assert structure.reconciliation.imputed_share == Decimal(0)
     assert [p.method.value for p in structure.perils] == ["frequency_severity"]
     assert [p.peril for p in structure.perils] == ["AD"]
 

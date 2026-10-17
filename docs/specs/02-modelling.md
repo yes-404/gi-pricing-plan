@@ -1556,11 +1556,17 @@ backends; `best_iteration` is what `predict_gbm` passes as `iteration_range` /
                 "modelled_burning_cost": 1_000}],
     "observed_burning_cost": 18_412, "modelled_burning_cost": 18_337,
     "ratio": "0.995927", "tolerance": "0.02", "status": "pass",
-    "computed_at": "2026-08-18T09:14:02Z"
+    "computed_at": "2026-08-18T09:14:02Z",
+    "imputed_rows": 0, "imputed_share": "0"
   },
   "status": "approved"
 }
 ```
+
+*(Amended 2026-10-17, SL-1543, DP-4 (a): `imputed_rows` (integer) and `imputed_share` (an exact
+ratio in [0, 1], decimal string, not money) carry FR-190's imputation counts on the persisted
+reconciliation. Both default to `0` / `"0"` and are not required, so a reconciliation stored
+before they existed still loads as "nothing imputed".)*
 
 **Six corrections, 2026-08-18 (WK-661, the peril-structure slice).** §4.10 printed an example
 and defined no contract; `peril-structure.schema.json` is generated from the built type, and
