@@ -156,6 +156,7 @@ def _governed_workspace(
         demo_model,
     )
     from backend.tests.test_wf699_journey import _seed_module
+
     from app.api.deps import DEV_PRINCIPAL_HEADER
     from app.db.session import Database
     from app.platform import rating_versions as rating_service
@@ -392,11 +393,14 @@ def test_a_submitted_job_reaches_a_terminal_state_through_the_compose_worker(
         + ("never consumed" if status == "queued" else "ran and did not succeed")
     )
     # The compiled Bundle's content hash, as the rating version's read exposes it
-    # (`RatingVersion.bundle.content_hash`; the maintainer's (by delegation) 11:43:57 entry, item 2),
+    # (`RatingVersion.bundle.content_hash`; the maintainer's (by delegation) 11:43:57 entry,
+    # item 2),
     # and the Job's persisted result ref (the stored blob).
     compiled = _api("GET", f"/api/v1/rating-versions/{version_id}", headers)
     content_hash = (compiled.get("bundle") or {}).get("content_hash", "")
-    assert re.fullmatch(r"sha256:[a-f0-9]{64}", content_hash), f"no compiled-bundle hash: {compiled!r}"
+    assert re.fullmatch(r"sha256:[a-f0-9]{64}", content_hash), (
+        f"no compiled-bundle hash: {compiled!r}"
+    )
     assert (current.get("result") or {}).get("ref"), f"no compiled-bundle ref on {current!r}"
 
 
@@ -504,8 +508,8 @@ def test_a_dataset_ingest_job_succeeds_through_the_compose_io_worker(
     SEEDED, TO BE CONVERTED (the maintainer's (by delegation) entry "2026-10-14 11:10:26 BST"):
     the CSV blob is made readable by a seeded Dataset Version instead of the public upload path.
     The conversion to upload-url -> PUT -> complete -> POST versions, with no seeding, is an
-    acceptance line of SL-1722 (the conversion itself is SL-1258's, LG-9810). Red cause: a worker that does not consume `io` leaves the Job
-    `queued`.
+    acceptance line of SL-1722 (the conversion itself is SL-1258's, LG-9810). Red cause: a
+    worker that does not consume `io` leaves the Job `queued`.
     """
     ws = _stack_with_workspace(built_n)
     workspace_id, headers = ws.workspace_id, ws.users["analyst"]  # dataset:write, job:read
@@ -527,10 +531,11 @@ def test_a_score_batch_job_succeeds_through_the_compose_scoring_worker(
 ) -> None:
     """`score.batch` routes to `scoring` and must reach `succeeded`, not merely be consumed.
 
-    A REAL compiled bundle (the governed approved Rating Version: the freMTPL2 GLM through its seeded rate tables) and a real scoring table
-    whose columns are `03` section 4.8's reserved four plus the bundle's inputs. Red cause: a
-    worker that does not consume `scoring` leaves the Job `queued`; a probe with empty
-    parameters was consumed and failed `JOB_HANDLER_FAILED`, which this assert refuses.
+    A REAL compiled bundle (the governed approved Rating Version: the freMTPL2 GLM through
+    its seeded rate tables) and a real scoring table whose columns are `03` section 4.8's
+    reserved four plus the bundle's inputs. Red cause: a worker that does not consume
+    `scoring` leaves the Job `queued`; a probe with empty parameters was consumed and failed
+    `JOB_HANDLER_FAILED`, which this assert refuses.
     """
     import io
 
@@ -606,13 +611,15 @@ def test_a_sampled_trace_is_produced_through_the_compose_scoring_worker(
     """A sampled quote's `score.trace_produce` Job succeeds and the trace is listed with a body.
 
     Sampled with certainty by raising the workspace's `rating.trace_sample_rate` to 1 through
-    `PUT /api/v1/settings` (the seeded version declines nothing). Two red causes: `scoring` unconsumed (`queued`, "never consumed"), and the handler
-    unregistered (`failed`, `JOB_HANDLER_NOT_REGISTERED`, no trace row).
+    `PUT /api/v1/settings` (the seeded version declines nothing). Two red causes: `scoring`
+    unconsumed (`queued`, "never consumed"), and the handler unregistered
+    (`failed`, `JOB_HANDLER_NOT_REGISTERED`, no trace row).
     """
     ws = _stack_with_workspace(built_n)
     # Three principals, each holding what it calls: the demo `admin` (`admin:manage_settings`)
     # sets the rate, the scoring key scores, the demo `analyst` (`job:read`, `rating:read`) reads
-    # the Job and the trace (the maintainer's (by delegation) entry "2026-10-16 10:31:43 BST", (1b)).
+    # the Job and the trace (the maintainer's (by delegation) entry "2026-10-16 10:31:43 BST",
+    # (1b)).
     admin, headers = ws.users["admin"], ws.users["analyst"]
     # The governed path (SL-1258, DP-S4-SEED-2 (2)): `PUT /api/v1/settings`
     # (`api/settings.py` `update_settings`, `admin:manage_settings`) validates the key against

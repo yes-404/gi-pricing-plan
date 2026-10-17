@@ -20,7 +20,6 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from typing import Annotated
-
 from uuid import UUID
 
 from fastapi import Depends, Request
@@ -32,8 +31,8 @@ from app.platform import rate_limit, rbac
 from model_schema import Permission, Principal
 
 __all__ = [
-    "MANAGEMENT_RATE_LIMIT_SETTING",
     "MANAGEMENT_COUNTED_ATTRIBUTE",
+    "MANAGEMENT_RATE_LIMIT_SETTING",
     "PERMISSION_ATTRIBUTE",
     "CallerDep",
     "CountAfterCheck",

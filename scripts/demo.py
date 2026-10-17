@@ -399,7 +399,9 @@ def demo(*, rows: int | None, skip_seed: bool, frontend: bool, journey: str | No
             worker_env = {**env, "PYTHONPATH": str(ROOT / "backend" / "src")}
             worker_process = started_here.enter_context(
                 background(
-                    worker_command(), step=f"Celery worker ({', '.join(demo_queues())})", env=worker_env
+                    worker_command(),
+                    step=f"Celery worker ({', '.join(demo_queues())})",
+                    env=worker_env,
                 )
             )
             beat_process = started_here.enter_context(

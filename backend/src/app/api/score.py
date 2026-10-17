@@ -136,7 +136,9 @@ def _bundle_slot(request: Request) -> BundleSlot:
 DatabaseDep = Annotated[Database, Depends(_database)]
 BlobStoreDep = Annotated[BlobStore, Depends(_blob_store)]
 BundleSlotDep = Annotated[BundleSlot, Depends(_bundle_slot)]
-ScoreExecuteDep = Annotated[Caller, Depends(requires(Permission.SCORE_EXECUTE, management_counted=False))]
+ScoreExecuteDep = Annotated[
+    Caller, Depends(requires(Permission.SCORE_EXECUTE, management_counted=False))
+]
 
 
 async def _enforce_score_rate_limit(
@@ -160,7 +162,9 @@ async def _enforce_score_rate_limit(
 #: The route declares `ScoreExecuteDep` itself, so the authorisation sweep sees its
 #: permission; the limiter reuses that one resolved dependency and adds no second check.
 ScoreRateLimitDep = Annotated[None, Depends(_enforce_score_rate_limit)]
-ScoreBatchDep = Annotated[Caller, Depends(requires(Permission.SCORE_BATCH, management_counted=False))]
+ScoreBatchDep = Annotated[
+    Caller, Depends(requires(Permission.SCORE_BATCH, management_counted=False))
+]
 
 
 def _required_ref(ctx: QuoteContext, live_ref: ArtifactRef | None = None) -> ArtifactRef:
