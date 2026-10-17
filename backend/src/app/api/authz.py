@@ -21,10 +21,9 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from typing import Annotated
 
-from fastapi import Depends, Request
+from fastapi import Depends
 
-from app.api.deps import Caller, require_caller
-from app.db.session import Database
+from app.api.deps import Caller, RequestSessionDep, resolve_caller
 from app.platform import rbac
 from model_schema import Permission
 
@@ -40,37 +39,38 @@ __all__ = ["PERMISSION_ATTRIBUTE", "requires"]
 #: attribute is what makes that visible.
 PERMISSION_ATTRIBUTE = "__gip_permission__"
 
-CallerDep = Annotated[Caller, Depends(require_caller)]
+CallerDep = Annotated[Caller, Depends(resolve_caller)]
 
 
-def _database(request: Request) -> Database:
-    database: Database = request.app.state.database
-    return database
-
-
-DatabaseDep = Annotated[Database, Depends(_database)]
-
-
-def requires(permission: Permission) -> Callable[..., Awaitable[Caller]]:
+def requires(
+    permission: Permission, *, keep_session: bool = False
+) -> Callable[..., Awaitable[Caller]]:
     """Build a dependency that refuses unless the caller holds `permission`.
 
     Returns the `Caller` so a handler can depend on this instead of `require_caller` and
     have both the identity and the check in one place.
+
+    The check reads through the request's session (`RequestSessionDep`). By default the
+    check then releases that session's connection, as it always did, so a handler that runs
+    long does not hold a pool slot it no longer needs. `keep_session=True` is for the one
+    route whose own reads continue on the same session and connection (`/score`, RL-1685
+    PL-1454 DP-1 (a)).
     """
 
-    async def dependency(caller: CallerDep, database: DatabaseDep) -> Caller:
-        async with database.session() as session:
-            await rbac.require_permission(
-                session,
-                workspace_id=caller.workspace_id,
-                principal=caller.principal,
-                permission=permission,
-                # RL-924: the set this credential actually authenticated with, passed
-                # rather than re-derived. A Service Account's grants live on its own record
-                # and reach no role, so without this a permission only a Service Account may
-                # hold (FR-347) can never be satisfied.
-                credential_permissions=caller.permissions,
-            )
+    async def dependency(caller: CallerDep, session: RequestSessionDep) -> Caller:
+        await rbac.require_permission(
+            session,
+            workspace_id=caller.workspace_id,
+            principal=caller.principal,
+            permission=permission,
+            # RL-924: the set this credential actually authenticated with, passed
+            # rather than re-derived. A Service Account's grants live on its own record
+            # and reach no role, so without this a permission only a Service Account may
+            # hold (FR-347) can never be satisfied.
+            credential_permissions=caller.permissions,
+        )
+        if not keep_session:
+            await session.close()
         return caller
 
     setattr(dependency, PERMISSION_ATTRIBUTE, permission)
