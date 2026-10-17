@@ -70,10 +70,21 @@ RL-1564 Form A applied to FR-227's row (`03-rating-engine.md`) after A-2's exist
 amendment, dated 2026-10-17 (the applying commit). RL-1564 calls it FR-227's first dated
 amendment; it is the second, A-2's (2026-10-10) being already on the row.
 
+### Item 11: /score vs batch, read-only (executor-1563db, 2026-10-17 13:53 BST, head 713d296a)
+
+One allowed widening, `int` and `count` step into a declared `decimal` output, built from
+`test_rating_score_batch_outputs.py` `_probe_payload` (`result_type` set to the producer type,
+declared `decimal`, expr `driver_age`), compiled (accepted at save), then `score_one` and
+`score_batch` over three rows. `/score` served the JSON integer (`18`, `22`, `25`, python `int`);
+batch served the decimal string (`"18"`, `"22"`, `"25"`). **They differ for an allowed pair**: PL-1562
+item 11 option (b), reported to the lead for an auditor to file; the slice continues. No stored
+refused pair is involved. Script: `~/gi-pricing-plan.local/scratch/sl1563-dbwin/item11.py`, run with
+`uv run --directory <detached worktree at 713d296a> python -I`; rc 0.
+
 ## Owed
 
 Full two-half gate (grant needed), backend DB tests (item 4, `test_sub_graphs_service.py`,
-`test_rating_algorithms.py`), item 11's read-only comparison, the auditor's re-check, the mint step.
+`test_rating_algorithms.py`), the auditor's re-check, the mint step.
 
 ## PRs
 
