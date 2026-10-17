@@ -245,6 +245,17 @@ The lead adopted the findings of an independent pre-gate review. Each was verifi
 - DP-7: `e7c3a9b15d82` has `down_revision = "d4e81b7a2c95"`, the single head at `origin/main` 055b5e6b. `SL-1274` (`f2b6d90a4c17`) and `SL 8017` are not on main. Re-point NOT owed now.
 - Still OWED (DB or the lead's window): the ten reds by cause, `test_api_blob_uploads.py`, `test_blobs.py`, `test_upload_to_ingest.py` (W2, read PASSED), `alembic upgrade head` and `downgrade -1 && upgrade head`, the single-head test, `pnpm generate:api` and `type-check`, FR 8058 marker at mint (A5), the mint.
 
+## Owed non-DB items, 2026-10-17 (executor-1722b, `TZ=Europe/London`)
+
+- Re-merge of `origin/main` (ebe3292c) into 4f7332fe: one conflict, `docs/INDEX.md`, taken theirs and regenerated under the gate-2 flock; pushed as db0e5f20.
+- `pnpm --dir frontend generate:api` rc 0; `pnpm --dir frontend type-check` rc 0 (`vue-tsc --build --force`), at db0e5f20.
+- **Task 0 MinIO spike** (compose container `gi-pricing-minio-1`, `minio/minio:latest`, image `sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e`, server `RELEASE.2025-09-07T16-13-09Z`). Throwaway bucket `spike-sl1722-throwaway`, created and deleted by the script; the repo's own `BlobStore.ensure_bucket` was run twice against it, then `get_bucket_lifecycle_configuration` read:
+  - after the 1st call: `[{"Expiration": {"Days": 2}, "ID": "expire-staging", "Filter": {"Prefix": "staging/"}, "Status": "Enabled"}]`
+  - after the 2nd call: 1 rule, identical to the 1st (idempotent).
+  - **Answer:** `put_bucket_lifecycle_configuration` with the `AbortIncompleteMultipartUpload` clause is **accepted** (no refusal), and the `staging/` rule reads back, but the read-back carries **only `Expiration`**: the `AbortIncompleteMultipartUpload` clause is not returned by this MinIO. Whether it is stored and ignored or dropped is not established by this read. DP-U1.2's abort-incomplete-uploads effect is therefore unverified on MinIO; the 2-day object expiry is verified. `test_ensure_bucket_sets_the_staging_lifecycle_rule` asserts the `staging/` prefix only, so it does not depend on the clause.
+- **Breakers:** the plan's breakers (Task 2 table, R3 to R9) are one-line mutations of the implementation, each shown red against a database. The tests that carry them are already written; no further test-writing is owed. Running them needs the DB window.
+- **Deleted `07` §2 "Blob Upload" pointer row:** the row (added in f1eb0d9b) said only "defined in `00` §2.1; its record is §4.5 and its completion is FR 8058", so check 13 (`audit-docs.py:3986`, a term is not redefined in a module glossary once `00` defines it) was right to refuse it and its content lives in `00` §2.1:137 and `07` §4.5 / FR 8058. **But** RL-1724 acceptance item 11 (line 530) requires "T6's `**Blob Upload**` row in `07` §2" to be found at the slice head, so the deletion conflicts with the ruling as written. Not restored here; for the audit.
+
 ## PRs
 
 - (none opened yet; the lead opens it.)
