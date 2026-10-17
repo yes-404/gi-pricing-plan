@@ -32,3 +32,16 @@ Branch `sl-8074-wk1178-fd8070-column-collision-2026-10-16`, worktree `.claude/wo
 ## PRs
 
 Not opened yet; the lead opens the PR.
+
+## Red proof, 2026-10-17
+
+Each new test of `test_rating_column_collision.py` shown able to fail by cause: one temporary break of `pricing_core/rating/compile.py` at a time, run through `run-small.sh`, the file restored by `git checkout` after each (the tree clean against the head).
+
+| Break | rc | Red test(s) |
+|---|---|---|
+| (a) `_same_input` drops the `on_missing` comparison | 1 | `test_two_input_steps_with_one_input_name_and_different_on_missing_are_refused` (`DID NOT RAISE ValueError`); 1 failed, 8 passed |
+| (b) any two `input` steps are one value | 1 | the `different_on_missing` test and `test_two_input_steps_with_different_input_names_are_refused` (`DID NOT RAISE ValueError`); 2 failed, 7 passed |
+| (c) a Peril Structure grouped over the union of its components | 1 | `test_frequency_and_severity_banding_one_column_differently_compile` and `test_a_collision_inside_one_component_is_refused` (the message names the structure, not the component); 2 failed, 7 passed |
+| (d) no grouping inside a component | 1 | `test_a_collision_inside_one_component_is_refused` (`DID NOT RAISE ValueError`); 1 failed, 8 passed |
+
+`test_the_compile_check_calls_the_one_required_inputs_helper` now asserts the exact list `[x, x]`: `check_model_call_coverage`, then `check_model_call_columns`; a third call fails it.

@@ -181,5 +181,6 @@ async def test_the_compile_check_calls_the_one_required_inputs_helper(
 
     monkeypatch.setattr(compile_module, "required_model_inputs", spy)
     await compile_bundle(_version(), _glm_world(FULL_MAP))
-    # Both compile checks (completeness, and FD-8070's column grouping) read the one definition.
-    assert set(calls) == {("driver_age_band", "area_group")}
+    # Exactly two readers, in order: `check_model_call_coverage`, then FD-8070's
+    # `check_model_call_columns` (via `_model_slugs`); a third call fails this.
+    assert calls == [("driver_age_band", "area_group")] * 2
