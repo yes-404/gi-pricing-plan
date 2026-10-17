@@ -2600,6 +2600,25 @@ relates: [PL-1542, SL-1543, PL-1674, SL-1675, FD-1723]
 
 On the maintainer's (by delegation) entries "2026-10-14 11:06:52 BST" (item 2: *"Any HIGH limb is fixed in P2"*), "2026-10-14 11:28:56 BST" (FD-1723, HIGH; both limbs fixed in P2 under WK-1178, red first) and "2026-10-14 11:29:53 BST" (the FR-127 GLM fix is off the G2 path, conditionally). **FR-127, GLM limb:** `fit_glm` never reads `loss_treatment` (`glm.py:577`), so a capped `GlmSpec` fits uncapped while its spec and `spec_hash` say capped. The fix applies `apply_loss_treatment` (`gbm.py:178`, moved to its own module, `loss_treatment.py`, DP-L1) at the response read, and refuses `spliced` and `excess` by name, as `fit_gbm` does. **The EBM arm too** (DP-L2 (a)): `fit_ebm` ignores `loss_treatment` at `ebm.py:209`, the same class; an auditor adds the limb to FD-1723 before the mint. **FR-100:** `check_banding` (`bandings.py:524`) has no fit-path caller. The fix runs it at each fit entry over the rows fitted, after FR-111's weight-0 exclusion (DP-B1 (a)) and before factor resolution: `BAND_EMPTY` always, `BAND_BELOW_MIN_EXPOSURE` under `fail`, and under `warn` a typed `banding_warnings` field on the three fit results, through `model-schema` with `docs/contracts/` regenerated and the frontend's generated types following (DP-B2 (a)). The fit Job maps `BandingError` to a `409` that carries its code. Reds R1 to R8 are first seen red on main. **DP-G1:** Task 0 Step 3's probe runs before any code; any `BAND_EMPTY` for the A-4 severity GLM is a STOP to the maintainer. **SL-1543's guard test is not touched**; if DP-A4-3 switches to (y), it changes only with this slice's merge. If the 11:29:53 binding condition fires, the FR-127 limb joins G2 and merges before SL-1543 resumes (DP-S1). Plan `PL-1733` (a WK-1178 Work-plan delta; `draft`). **Activation needs:** FD-1723 minted, with its EBM limb; the decision points ruled — MET, every one, by the maintainer's (by delegation) entry "2026-10-14 11:52:51 BST", item (2); the plan made `active` by a dated line; Task 0 Step 3's G2 probe clean for the A-4 severity GLM, or the maintainer's ruling on it; a free build lane. *(Row cut 2026-10-14 by the planner, planner-fd8027; working ids 8031 and 8030 reserved by the lead in `handover/eta.md`.)*
 
+#### SL-8074 — WK-1178 fix slice — FD 8070: a model_call never prices a Model on one of two different values for one column
+
+```yaml
+id: SL-8074
+family: slice
+title: WK-1178 fix slice — FD 8070: a model_call never prices a Model on one of two different values for one column
+status: active                   # draft → active → closed | retired (§1.2a)
+created: 2026-10-17
+owner: executor                  # the lead dispatches (active)
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: []
+```
+
+The fix of FD 8070 (HIGH by run, owner WK-1178). A GLM `model_call` renames each feature slug to its Factor's source column in a dict, so two slugs on one column, fed different graph values, keep only the last and price the quote on it, with no error; compile checks membership and completeness only. **Scope:** (1) score time, `_GlmScorer.predict` refuses unequal values for one column with `MODEL_CALL_FEATURE_COLLISION` (SL-1274's guard, taken verbatim; SL-1274 drops its copy when it re-merges); (2) compile, `check_model_call_columns` refuses, with `MODEL_CALL_FEATURE_MAP_INVALID`, a `model_ref` step whose `feature_map` feeds different graph names to one column or slug of its Model or its offset Model; (3) `03` FR-222 and FR-240 amended. **Left open for the lead:** the pair of `input` steps reading one `input_name` (the compile guard passes it; the score guard compares values) and the `peril_structure_ref` step (not grouped at compile). FD 8070's separate limb (one slug on two columns across the main and offset models) is not in this slice.
+
+(Activated 2026-10-17 as WK-1178's FD 8070 fix slice, on the maintainer's (by delegation) entries "2026-10-16 10:52:08 BST — Maintainer: FD 8070 — severity ruled after the run; IF it confirms, the predict-time guard is its OWN fast fix slice, not deferred to SL-1274" and "2026-10-17 11:08:04 BST — Maintainer: TODAY'S MODE — full parallel until the user's pause (supersedes the 11:06:41 provisional mode); the LANE PLAN" (lane A) (`to-lead.md`). Ledger `LG 8075`.)
+
 #### SL-1736 — WK-1178 slice — the P2 NFR measurement sweep: NFR-467, NFR-468, NFR-470, NFR-485 and NFR-1443 measured DIAGNOSTIC with pre-registered reading rules; NFR-472's red-first test
 
 ```yaml
