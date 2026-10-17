@@ -138,7 +138,7 @@ removed. The migration path, run as the owner, is asserted separately so the two
 
 ## Disposition
 
-Carry forward, owner WK-1178: fixed in P2 (D17), by PL 8016's slice S-b, ruled at "2026-10-14 12:00:14 BST". FD-1728 (S-a)
+Carry forward, owner WK-1178: fixed in P2 (D17), by PL-1769's slice S-b (SL-1771), ruled at "2026-10-14 12:00:14 BST". FD-1728 (S-a)
 is first and independent; FD-1704's revoke becomes meaningful only after this lands. It needs a resolution before any P3
 start (`CLAUDE.md` §14). The event that next confirms or discharges it is the merge of S-b with the three reds above shown
 on the base tree by cause.
