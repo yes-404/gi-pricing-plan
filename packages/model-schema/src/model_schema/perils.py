@@ -43,7 +43,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
 from model_schema.input_free import InputFreeError, identifier
-from model_schema.money import DecimalStr, MoneyMinor
+from model_schema.money import DecimalStr, MoneyMinor, SchemaDecimal
 from model_schema.refs import ArtifactRef, BlobRef, Slug
 
 __all__ = [
@@ -358,7 +358,7 @@ class Reconciliation(BaseModel):
 
     @computed_field  # type: ignore[prop-decorator]
     @property
-    def ratio(self) -> Decimal:
+    def ratio(self) -> SchemaDecimal:
         """Modelled over observed. Derived, so it cannot disagree with its own inputs."""
         return (
             Decimal(self.modelled_burning_cost)
