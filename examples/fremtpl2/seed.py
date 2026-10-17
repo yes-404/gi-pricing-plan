@@ -147,10 +147,20 @@ def build_csv(rows: int | None) -> bytes:
     )
     joined = (
         frame.join(totals, on="IDpol", how="left")
-        .with_columns(pl.col("claim_amount_minor").fill_null(0))
+        # FR-111 (SL-1543): no severity record means a true 0 only for a policy with no claim.
+        # A claimant (ClaimNb > 0) with none has an UNKNOWN amount - 9 116 of the 34 060 -
+        # which is null, never 0: the data holds no zero amount, and a 0 would be a nil
+        # settlement the Gamma fit refuses and the mean severity base counts as a claim cost.
+        .with_columns(
+            pl.when(pl.col("ClaimNb").cast(pl.Float64) > 0)
+            .then(pl.col("claim_amount_minor"))
+            .otherwise(pl.col("claim_amount_minor").fill_null(0))
+            .alias("claim_amount_minor")
+        )
         # The severity response (PL-1705 C2): mean cost per claim in euro cents, Polars true
         # division, no rounding, null where the policy has no claim (the weight-0 rows the
-        # severity fit excludes). `claim_amount_minor` is unchanged (FR-10). ClaimNb is read as
+        # severity fit excludes) or its amount is unknown (the rows it excludes and counts).
+        # A known `claim_amount_minor` is unchanged (FR-10). ClaimNb is read as
         # Float64 because the raw column is text and its spelling ("1" or "1.0") is the file's.
         .with_columns(
             pl.when(pl.col("ClaimNb").cast(pl.Float64) > 0)
@@ -214,11 +224,14 @@ DICTIONARY: dict[str, dict[str, Any]] = {
         "semantic_type": "ordinal",
     },
     "claim_amount_minor": {
-        "description": "Total incurred, euro cents",
+        "description": "Total incurred, euro cents; null where a claimant has no severity record",
         "semantic_type": "money",
     },
     "claim_severity": {
-        "description": "Mean incurred per claim, euro cents; null where the policy has no claim",
+        "description": (
+            "Mean incurred per claim, euro cents; null where the policy has no claim "
+            "or its amount is unknown"
+        ),
         "semantic_type": "continuous",
         "unit": "euro cents",
     },

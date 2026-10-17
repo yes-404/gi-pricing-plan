@@ -126,6 +126,18 @@ def test_base_premium_is_exp_intercept_times_mean_claim_cost_to_whole_minor_unit
     )
 
 
+def test_mean_claim_cost_is_over_known_amounts_only() -> None:
+    """FR-111 (SL-1543): a claimant whose amount is unknown (None) is in neither the numerator
+    nor the denominator; counting its claims against a missing amount is what pulled the demo's
+    base 27% low. Known: 300 + 100 over 2 + 1 claims = 133.33...; the 2 claims of the policy
+    with an unknown amount are not counted."""
+    got = demo_algorithm.mean_claim_cost_minor(
+        amounts=[300, None, 100, 0],
+        claim_counts=[2, 2, 1, 0],
+    )
+    assert got == Decimal(400) / Decimal(3)
+
+
 def _fixture_algorithm() -> dict[str, Any]:
     bandings = {
         "driv_age_band": _banding(

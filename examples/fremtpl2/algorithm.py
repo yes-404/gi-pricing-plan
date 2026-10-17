@@ -92,6 +92,17 @@ def _null_level(banding: Banding) -> str:
     return _quote(banding.null_level)
 
 
+def mean_claim_cost_minor(amounts: Sequence[int | None], claim_counts: Sequence[int]) -> Decimal:
+    """Σ amount ÷ Σ claim_count over the policies whose amount is KNOWN (FR-111, SL-1543).
+
+    A `None` amount is a claimant with no severity record: unknown, not nil. Its claims are
+    left out of the denominator as its amount is out of the numerator, so an unknown amount
+    cannot pull the mean down.
+    """
+    known = [(a, n) for a, n in zip(amounts, claim_counts, strict=True) if a is not None]
+    return Decimal(sum(a for a, _ in known)) / Decimal(sum(n for _, n in known))
+
+
 def base_premium_minor(intercept: Decimal, mean_claim_minor: Decimal) -> int:
     """`exp(intercept) x mean claim cost`, in Decimal, half-even to whole minor units (DP-a2)."""
     return int((intercept.exp() * mean_claim_minor).quantize(Decimal(1), rounding=ROUND_HALF_EVEN))

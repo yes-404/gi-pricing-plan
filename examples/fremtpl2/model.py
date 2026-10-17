@@ -24,6 +24,7 @@ from algorithm import (
     base_premium_minor,
     build_fremtpl2_algorithm,
     glm_premium_minor,
+    mean_claim_cost_minor,
     structure_premium_minor,
 )
 from sqlalchemy import select
@@ -697,14 +698,12 @@ async def demo_base_premium(
             session, blob_store, portfolio_table(version)["blob"]["sha256"], "The seed's table"
         )
     frame = pl.read_parquet(io.BytesIO(raw)).select("claim_amount_minor", "claim_count")
-    totals = frame.select(
-        pl.col("claim_amount_minor").cast(pl.Int64).sum().alias("amount"),
-        pl.col("claim_count").cast(pl.Int64).sum().alias("claims"),
-    ).row(0, named=True)
-    mean_claim = Decimal(totals["amount"]) / Decimal(totals["claims"])
+    amounts = frame["claim_amount_minor"].cast(pl.Int64).to_list()
+    counts = frame["claim_count"].cast(pl.Int64).to_list()
+    mean_claim = mean_claim_cost_minor(amounts, counts)
     base = base_premium_minor(Decimal(str(intercept)), mean_claim)
     print(f"  base premium {base} minor units = exp({intercept}) x mean claim cost "
-          f"{mean_claim:.2f} ({totals['amount']} / {totals['claims']} claims on {version_id}); "
+          f"{mean_claim:.2f} (known amounts only; {amounts.count(None)} unknown on {version_id}); "
           f"{BASE_LABEL}")
     return base
 
