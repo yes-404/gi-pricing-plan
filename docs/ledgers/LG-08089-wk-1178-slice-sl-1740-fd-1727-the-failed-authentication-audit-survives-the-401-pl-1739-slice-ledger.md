@@ -199,3 +199,25 @@ a comment; the census no longer sees the fixed-detail built in `AuthenticationFa
 **6. Proposed verdict:** all FD-1727 obligations delivered and evidenced except B1 (thin) and B2 (untested
 second site); no requirement without a verdict. Proposal only; the lead adopts, amends or rejects.
 MERGE-ACK: not yet given. Status left `active`.
+
+## Delta — audit findings B1 to B3 (executor-1740t, brief `brief-executor-1740t-2026-10-17`, lead verdict stamp 2026-10-17 22:46:44 BST)
+
+Appended, nothing above edited. Tree: base `e13d64a1`. Test files and this ledger only; no `backend/src` change.
+
+**B1 — every red in the window-gate `pytest.log`** (`/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1740-gate/pytest.log`, final line `15 failed, 5942 passed, 6 skipped` in 53:10, `pytest.rc` 1, gate at `7f9b5b53`). Predicate: `grep -n '^FAILED' pytest.log`, 15 lines.
+
+| # | Red | Cause | Fix |
+|---|---|---|---|
+| 1 | `backend/tests/test_auth_oidc.py::test_rejection_reasons_are_not_returned_to_the_caller` | slice-caused: imported `_unauthenticated`, removed from `app.auth.service` (`ImportError`, log :96) | `0724b8e9` re-points it at `AuthenticationFailed` |
+| 2 | `backend/tests/test_worker_raise_sites.py::test_every_quote_input_coded_raise_site_in_the_backend_is_accounted_for` | slice-caused: `_SITES` still listed the removed `_unauthenticated` site (log :107-112) | `0724b8e9` removes the entry |
+| 3-15 | thirteen `tests/` reds: `test_audit_docs_finding_citations`, `test_audit_docs_ids` (2), `test_audit_docs_process_core_digest` (2), `test_audit_docs_w37_11_ceiling`, `test_doc_index`, `test_register_lint` (3), `test_register_owed`, `test_repository_invariants` (2) | cascade: each runs `audit-docs.py`, `doc-id.py check` or the INDEX contiguity on the real tree, and fails on check 31 `gap in the full allocation between 1771 and 8089` (the unminted working id LG 8089); the `audit_docs.log` has the same single failure | none in the slice: discharged when the id is minted (`audit_docs.rc` 1 is the expected check 31 only, Acc. 1) |
+
+Rows 3-15 were classified from the `gap ... between 1771 and 8089` text in each block (`grep -c` of that text over the log: 22 hits, several tests print it twice); none of the 13 failure texts names anything else. Reds 1 and 2 are the two the maintainer accepted without re-gate (21:24:40).
+
+**B1 — R4 / R8 / R10 breaker evidence (PL-1739 Acc. 4): NOT SHOWN.** No breaker run exists in this ledger, in `scratch/sl1740-gate/` or in a commit message (`git log --all -i --grep=breaker` names only other slices). Showing one needs a planted `backend/src` change (R4: record unconditionally; R8: swallow the audit error; R10: add a label) and a DB window, both outside this brief (test files and this ledger only; the DB window opens after "SL-1258 GATE END"). Owed: the lead decides whether to grant a window for them or accept the gap.
+
+**B2 — the identity-only dependency.** New `backend/tests/test_auth_failure_identity.py`, `test_b2_*`: `GET /api/v1/me/workspaces` (served by `require_identity`) on the bearer branch (401, `UNAUTHENTICATED`, the fixed detail, counter +1, audit log untouched) and the API-key branch (401, `API_KEY_INVALID`, fixed detail, counter +1, exactly one row `after == {"reason": "key revoked"}` with the response's `x-trace-id`), plus the valid-key guard (200, no row). Helpers and fixtures are `test_auth_failure_audit.py`'s; no model-schema shape is hand-written.
+
+**B3 — the 401 over HTTP.** Same file, `test_b3_*`: for every `AuthFailureReason` member (eight) on both `/api/v1/environments` and `/api/v1/me/workspaces`, the response is 401/403, the reason's counter moved by 1 (so the case really reached that reason), and neither `reason.value` nor `reason.name` appears as a whole token in the body or headers. Whole-token, because the response `code` `API_KEY_EXPIRED` legitimately ends in the member name `KEY_EXPIRED`.
+
+**Runs: OWED.** Both B2 and B3 are DB-backed; no DB window was open when this delta was committed. B3's negative control (plant the reason into `AuthenticationFailed`'s detail, local only, show red, revert) is owed with them.
