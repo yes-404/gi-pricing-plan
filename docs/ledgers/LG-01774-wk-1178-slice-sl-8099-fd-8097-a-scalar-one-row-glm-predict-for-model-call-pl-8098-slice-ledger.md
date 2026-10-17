@@ -86,3 +86,5 @@ PR number and merge commit: filled at the PR open and the merge (the lead opens 
 - **A4:** the ledger's front-matter `status: closed` was set by the minter, as in LG-1762 A4; the evidence supports it as a slice close (clean audit, Gate accepted) with the lead's merge still to come. Status not changed here.
 
 **6. Proposed verdict:** all obligations delivered and evidenced; no requirement without evidence; no requirement needing one of the four verdicts. Proposal only; the lead adopts, amends or rejects. MERGE-ACK: not yet given.
+
+Post-CI 2026-10-17: three comment/docstring lines rewrapped to the 100-char limit (ruff E501 in #1327 run 39072578330); no code tokens (the maintainer's (a), 22:44:39 BST)

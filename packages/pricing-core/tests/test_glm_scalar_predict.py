@@ -1,4 +1,5 @@
-"""The scalar one-row GLM predict is bit-identical to the polars path (PL-1772, FD 8097 (filed in D21)).
+"""The scalar one-row GLM predict is bit-identical to the polars path
+(PL-1772, FD 8097 (filed in D21)).
 
 `model_call` scores one quote through one GLM. The frame path builds a one-row polars frame and
 runs a lazy `collect` per quote (`resolve_factors`); the scalar path (`predict_glm_row`) must
@@ -555,9 +556,9 @@ def test_print_the_per_quote_cost_of_both_paths(
 
 @pytest.mark.req("FR-104")
 def test_a_grouping_maps_one_value_exactly_as_it_maps_a_column(world: World) -> None:
-    """`apply_grouping` reads a single value without a lazy `collect` (FD 8097 (filed in D21)) and a column
-    through `unique` + `replace_strict`; both come from `_targets`, and this holds them equal —
-    the mapped level, the fallback for an unseen level, and the refusal text."""
+    """`apply_grouping` reads a single value without a lazy `collect` (FD 8097 (filed in D21)) and a
+    column through `unique` + `replace_strict`; both come from `_targets`, and this holds them
+    equal — the mapped level, the fallback for an unseen level, and the refusal text."""
     from pricing_core.modelling.groupings import apply_grouping
 
     def outcome(series: pl.Series, grouping: Grouping) -> tuple[str, Any]:
