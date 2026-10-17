@@ -658,6 +658,15 @@ class Bundle(BaseModel):
         return dumped
 
 
+def _canonical_default(value: object) -> str:
+    """`json.dumps`' fallback for the one type a graph holds that JSON has no form for: a
+    `Decimal` (a `decimal` input's declared `min` / `max`) is its exact string. Any other type
+    raises `TypeError` naming it - never a catch-all `str()`, which would hash a repr silently."""
+    if isinstance(value, Decimal):
+        return str(value)
+    raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
+
+
 def bundle_hash(graph: JdmGraph, pins: Pins) -> str:
     """A reproducible content hash from the graph and the pins (FR-239).
 
@@ -665,6 +674,10 @@ def bundle_hash(graph: JdmGraph, pins: Pins) -> str:
     and any prior `content_hash` — hashing a timestamp would break reproducibility. Per
     DP1 and FR-239, the hash is reproducible from the pins and the graph (03 §5.2,
     corrected 2026-08-27, F-W9-3-2).
+
+    A `Decimal` in the graph hashes as its string (`_canonical_default`). No stored hash
+    changes: a `Decimal` there made `json.dumps` raise before, so no bundle containing one was
+    ever hashed, and the `default` is never called for any value that serialised.
     """
     pins_dump = pins.model_dump()
     if not pins_dump["sub_graphs"]:
@@ -675,6 +688,7 @@ def bundle_hash(graph: JdmGraph, pins: Pins) -> str:
         {"graph": graph.model_dump(), "pins": pins_dump},
         sort_keys=True,
         separators=(",", ":"),
+        default=_canonical_default,
     )
     return "sha256:" + hashlib.sha256(canonical.encode()).hexdigest()
 
