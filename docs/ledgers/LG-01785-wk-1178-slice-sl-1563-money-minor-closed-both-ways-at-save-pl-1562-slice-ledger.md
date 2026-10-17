@@ -1,9 +1,9 @@
 ---
-id: LG-1774
+id: LG-1785
 family: ledger
 title: WK-1178 slice SL-1563 — money_minor closed both ways at save, the numeric type check (PL-1562), slice ledger
 status: closed                 # active → closed (§1.2a)
-created: 2026-10-17   # filed 2026-10-17 under working id 8083; minted 2026-10-17 as LG-1774
+created: 2026-10-17   # filed 2026-10-17 under working id 8083; minted 2026-10-17 as LG-1785 (re-minted from LG-1774)
 owner: executor
 tree: 6bdd2571c9069c163ecab248630e75f93be280be
 phase: P2
@@ -14,12 +14,12 @@ corrected_by: []
 relates: [FD-1424, RL-1564, OQ-1560, PL-1627, RL-1445, FR-227, FR-226]
 ---
 
-# LG-1774 — WK-1178 slice SL-1563: money_minor closed both ways at save
+# LG-1785 — WK-1178 slice SL-1563: money_minor closed both ways at save
 
 Executed by executor-1563 from PL-1562 (with PL-1627 §A's delta). Branch
 `sl-1563-wk1178-fd1424-prep-2026-10-16`, merged with `origin/main` 6bdd2571. Times are BST.
 
-**The mint.** Minted 2026-10-17 as LG-1774 from working id 8083 (allocation: `handover/eta.md` "MINT ALLOCATION continued"; its PR merges after SL-1543's LG 1772 and PL 1773). The gate and audit entries below were written under the working id and are not edited for it.
+**The mint.** Minted 2026-10-17 as LG-1785 from working id 8083 (allocation: `handover/eta.md` "MINT ALLOCATION continued"; its PR merges after SL-1543's LG 1772 and PL 1773). The gate and audit entries below were written under the working id and are not edited for it. Re-minted 2026-10-17 LG-1774 → LG-1785 on the maintainer's re-allocation (to-lead 2026-10-17 21:30:18 BST): 1774 went to SL 8099's ledger.
 
 **GO:** `to-lead.md` "2026-10-17 13:23:18 BST — Maintainer: GO SL-1563 …" and RL-1445 (a)/(b),
 written in the activation commit `fe91ffec`.
@@ -157,7 +157,7 @@ Named delta, per the maintainer (by delegation) entry "2026-10-17 14:12:05 BST �
 - **A3 (LOW, observation):** `_NUMERIC` is now used by no code in `compile.py`; it stays as the vocabulary `score.py:993` and `test_rating_score_batch_outputs.py:227` cite. No action.
 - **A4 (disclosed):** item 11's difference is FD-1767, already registered; it is not this slice's to fix.
 
-**6. Requirements without evidence:** none. PL-1562 items 1-12 are delivered and tested; FR-227's amendment is delivered. Owed: the mint of `LG-1774`/`SL-1563` (clears check 31 and the cascade), the lead's merge.
+**6. Requirements without evidence:** none. PL-1562 items 1-12 are delivered and tested; FR-227's amendment is delivered. Owed: the mint of `LG-1785`/`SL-1563` (clears check 31 and the cascade), the lead's merge.
 
 **7. Proposed verdict:** all obligations delivered and evidenced; no unevidenced requirement. Proposal only; the lead adopts, amends or rejects. Status left `active`. MERGE-ACK: not yet given.
 
