@@ -333,6 +333,24 @@ Last pytest line, verbatim: `5 passed, 1 warning in 13.54s` (rc 0). The five rou
 
 **Lead verdict (2026-10-17 13:59:02 BST, the lead, transcript 1b92c2a6):** the auditor's proposal ADOPTED — CONFORMANT, F5 discharged by the added RL-1628 condition-1 case (the maintainer 13:58:04 (b)); F1 fixed in the audit; F3 fixed here; F2 → an FD in the next D batch (MEDIUM, owner WK-1250); F4/F6 recorded, no action. MERGE-ACK: not yet given.
 
+## Re-merge onto main and the (b) proof (2026-10-17 15:55 BST, `executor-1341b`)
+
+Order (c) then (b), once, on a main carrying SL-1758 (`539a654f`) and SL-1761 (`8804230b`): `git merge --no-ff origin/main` into `94bc4a23`, merge commit `a5be3455`. One non-mechanical conflict, `compile.py`; `docs/INDEX.md` taken from main (regenerated after the trial gate ends).
+
+**Resolution.** All four model_call checks run inside `for each in every_inlined:` — `_refuse_control_factor_model_calls`, `check_model_call_coverage`, `check_model_call_gbm_factors` (SL-1758) and `check_model_call_columns` (SL-1761). Main called the last two on `inlined` alone; the slice's side had the loop with the first three.
+
+**Diff vs both parents.** (1) Against the gated side `c949a0e8`: the multiset of changed lines in `compile.py`, `git diff c949a0e8 HEAD` against `git diff a2f77b2d origin/main` (main's own change since the common base), differs by exactly two lines — `check_model_call_columns` and `check_model_call_gbm_factors` appear inside the loop at HEAD and outside it (called on `inlined`) in main. (2) Against `origin/main`: 76 changed lines, all the slice's purpose-mount code plus the loop. The same comparison for `backend/src/app/api/score.py`, `docs/specs/03-rating-engine.md`, `packages/model-schema/src/model_schema/rating.py` and `packages/pricing-core/src/pricing_core/rating/runtime.py` is identical to main's delta: those four are main's changes laid over `c949a0e8` with nothing added.
+
+**Blob proof, with its two qualifications.** Over the slice's 19 own paths (`git diff --name-only a2f77b2d c949a0e8`) HEAD equals `c949a0e8` except: `compile.py` (above); the four files just named (main's delta); `test_rating_purpose_mount.py` (the F5 case, commit `a4bce7c7`, pushed after the gated head, identical lines to `git diff c949a0e8 a4bce7c7`); and this ledger (renamed on mint, extended after the gate). Outside those 19 paths HEAD differs from `origin/main` in `docs/roadmap.md`, this ledger and the new test file only. So the tree is `c949a0e8` + `compile.py` + the two new tests + F5 + the ledger/roadmap rows; everything else is main. The brief's phrase "c949a0e8 + compile.py + the new tests" omits the F5 test and the ledger/roadmap close rows, which are post-gate commits on the branch.
+
+**Red-first, two tests** (`packages/pricing-core/tests/test_rating_purpose_mount_model_call_checks.py`, a `cancellation` mount whose fragment holds the offending model_call; the base graph is clean). With the check moved outside the loop (scratch edit, reverted; `cmp` to the saved resolved file identical after): gbm check outside — `test_a_mounted_banded_gbm_model_call_is_refused_at_compile` RED `Failed: DID NOT RAISE ValueError`, collision test green; columns check outside — `test_a_mounted_column_collision_is_refused_at_compile` RED `Failed: DID NOT RAISE ValueError`, gbm test green; both outside — both RED the same way. At the resolved head: 2 passed. The collision check runs meaningfully per purpose graph (the test is red without it), so the STOP condition did not arise. Small runs at the resolved head (one `run-small.sh` call of up to three files each): `test_rating_compile*.py` (4 files) 88 + `test_rating_compile_fr240.py`, `test_rating_gbm_banded_refusal.py`, `test_rating_column_collision.py` 34 + `test_rating_purpose_mount.py`, `test_quote_input_raise_sites.py`, the new file 38 — all rc 0. ruff, mypy and lint-imports rc 0.
+
+**`93f6ece3` stamps.** Its commit time is 2026-10-17 12:59:38 UTC = 13:59:38 BST; the maintainer's hold is 14:00:10 BST (32 seconds after). Its resolution is not evidence here; this proof is a fresh resolution on `origin/main` `8804230b`, with the two checks re-derived and shown red.
+
+**Owed.** The 5 `backend/tests/test_score_purpose_mount.py` route tests (DB) re-run at the new head, in a DB window; the docs checks and the `docs/INDEX.md` regeneration, after TRIAL END. Nothing here is a gate.
+
+**The close stands on this proof (executor's statement, 2026-10-17 15:55 BST):** the re-merged tree carries the SL-1758 and SL-1761 checks on every purpose graph and the slice's behaviour as gated, with the only difference from the gated side being the two moved calls. Acceptance of `93f6ece3`'s handling is the maintainer's line, not this one.
+
 ## PRs
 
 One PR for this slice (L1 (a')): opened and merged by the lead; not yet opened.
