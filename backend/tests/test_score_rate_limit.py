@@ -52,7 +52,7 @@ QUOTE = {
 
 def _app_client(api_settings: Settings, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
     # The clock is pinned, so the window key never changes; the key's real-time expiry must
-    # not run out under it, or a stall of more than 2 s resets the counter (FD 8049).
+    # not run out under it, or a stall of more than 2 s resets the counter (FD-1747).
     monkeypatch.setattr(rate_limit, "_KEY_TTL_SECONDS", 3600)
     with TestClient(create_app(api_settings), raise_server_exceptions=False) as client:
         client.app.state.rate_limiter.clock = lambda: FIXED_SECOND  # type: ignore[attr-defined]
@@ -301,7 +301,7 @@ _EXPIRY_PRINCIPAL = Principal(kind=ActorKind.SERVICE_ACCOUNT, id=UUID(int=1719),
 async def test_an_admitted_request_leaves_a_key_with_a_bounded_expiry(
     api_settings: Settings,
 ) -> None:
-    """FD 8049: the counter key must expire, or old windows never leave Redis.
+    """FD-1747: the counter key must expire, or old windows never leave Redis.
 
     Red on broken input: with `pipe.expire` removed `PTTL` is -1.
     """
@@ -324,7 +324,7 @@ async def test_an_admitted_request_leaves_a_key_with_a_bounded_expiry(
 async def test_an_expired_key_is_gone_and_the_next_admit_counts_one(
     api_settings: Settings, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """FD 8049: with a 1 s expiry the key disappears, and the counter restarts at 1.
+    """FD-1747: with a 1 s expiry the key disappears, and the counter restarts at 1.
 
     A bounded `EXISTS` poll (deadline 3 s), never a fixed sleep. Red on broken input: with
     `pipe.expire` removed the key never goes and the second admit counts 2.
