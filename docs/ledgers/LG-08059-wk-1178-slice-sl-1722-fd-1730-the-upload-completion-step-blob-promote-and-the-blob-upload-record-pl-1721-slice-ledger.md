@@ -311,6 +311,11 @@ At `2638ef0b` (tree `1bfd13d6`), 13:39:42 to 13:42:22, rc 0: alembic `upgrade he
 
 Still OWED: the full two-half gate (a grant, S-13); the W2 test's both-Jobs-`succeeded`-with-output reading (d) beyond PASSED; the FR 8058 marker at the mint (A5); the mint; the audit.
 
+## Delta 2026-10-17 13:5x BST (executor-1722db): R7 per DP-1722-C
+
+- **Plan cell change** (the maintainer (by delegation), `to-lead.md` "2026-10-17 13:45:30 BST — Maintainer: SL-1722 DP-1722-C (breaker R7) → (b)"; option (a) refused): PL-1721's R7 breaker cell ("skip the existence check → a second `put` and a primary-key error") is read as: **skip the existence check → the second promotion issues an object-store copy**, which `test_identical_bytes_promote_to_one_blob` now asserts with a spy on `BlobStore._client.copy` (`copies == [f"blob/{sha[:2]}/{sha}"]`). The primary-key error belongs to the `on_conflict_do_nothing` guard (R7b, kept as a second breaker). The frozen plan is not edited; this line is the delta.
+- Commit `01a79def` (tree `9d5cab1a`), window 13:46:06 to 13:48:35, beside a code gate, load1 at start 4.73, own database `gipricing_sl1722_w1`: `green` `34 passed, 1 warning in 16.60s`; **R7** (`stored = False`) `1 failed` with `AssertionError: assert ['blob/84/844…'] == ['blob/84/844…']` (two copies recorded where one is asserted); R7b, R3 to R6, R8, R9 each `1 failed` by the causes in the table above; after the reverts, 0 dirty paths and `green-after` `34 passed, 1 warning in 18.01s`; rc 0.
+
 ## PRs
 
 - (none opened yet; the lead opens it.)
