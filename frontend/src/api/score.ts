@@ -27,3 +27,20 @@ export function scoreQuote(body: QuoteContext, signal?: AbortSignal): Promise<Sc
     ...(signal ? { signal } : {}),
   });
 }
+
+/**
+ * Score one quote against two Rating Versions with a step-level trace diff (03 FR-262,
+ * `POST /api/v1/score/compare`). `context` never carries `options.rating_version_ref`: the
+ * route refuses it with 422, because `base` and `comparison` name the versions (03:1060).
+ * A per-quote error on either side rejects with a `ProblemError` whose detail names the side.
+ */
+export function scoreCompare(
+  body: ScoreCompareRequest,
+  signal?: AbortSignal,
+): Promise<ScoreComparison> {
+  return request<ScoreComparison>("/score/compare", {
+    method: "POST",
+    body,
+    ...(signal ? { signal } : {}),
+  });
+}
