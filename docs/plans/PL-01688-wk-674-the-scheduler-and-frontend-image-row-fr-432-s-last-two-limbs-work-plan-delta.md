@@ -3,7 +3,7 @@ id: PL-1688
 family: plan
 kind: map
 title: WK-674 — the scheduler (beat) and frontend-image row, FR-432's last two limbs and FD-1661's discharge, cut as SL-1689 — Work-plan delta
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-12
 owner: planner
 tree: 604ea084c96efe93f521fb9ba17738e05241e61a
@@ -258,6 +258,8 @@ the PL `map`/`leaf` row). Both decision points are ruled (05:37:23), and no deci
 So this plan goes `active` at its mint by a status line. The branch keeps `status: draft` until
 then. DP-B1's ruling is an `SL-1258` GO condition. It is carried in `SL-1258`'s activation paper
 and in `PL-1666`'s successor delta, which is written when RL-1687 lands (the lead, 05:37).
+
+**Activation (2026-10-17, in the D19 batch mint PR).** Both decision points are ruled (05:37:23), so no decision point is open, and this plan goes `active` here (status line only; its body is unchanged), as the paragraph above says it does at its mint. The maintainer's entry "2026-10-17 13:04:49 BST" in `to-lead.md` records "PL-1688/PL-1714 activation owed in D19".
 
 ## The row, cut
 

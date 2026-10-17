@@ -3,7 +3,7 @@ id: PL-1714
 family: plan
 kind: map
 title: WK-674 — Slice 4 consumes every routed pool and handles every routed kind: E4.2 amended to a derived consumer set, the io and scoring reds on compose asserting succeeded, the trace handler and its derived guard, demo.py on the same set, and the FR-405 pool split for the maintainer's ruling — Work-plan delta
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-14
 owner: planner
 tree: ba68a6daf3cfb7634258915a6e542bc658ae3f62
@@ -420,3 +420,5 @@ list with **E4.2 read as this file's E4.2**, plus E4.3 extended, E4.4 (as DP-Q2 
 E4.7 (with DP-Q5 resolved for its green); FD-1713 minted, so the `LG-` can name what
 the merge discharges; and the lead's GO.
 `PL-1690` stays as its own status line says; this delta does not change it.
+
+**Activation (2026-10-17, in the D19 batch mint PR).** The "At this delta's mint, and once DP-Q1 is ruled" condition above is met: DP-Q1 was ruled (b) in the maintainer's entry "2026-10-14 10:43:43 BST" in `to-lead.md`, and this delta is minted. This plan goes `active` here (status line only; its body is unchanged), as the maintainer's entry "2026-10-16 09:55:22 BST" condition (1) directs and the entry "2026-10-17 13:04:49 BST" records as owed in D19. Activated 2026-10-17 in D19: both conditions met — DP-Q1 ruled (b) 2026-10-14 10:43:43 BST, and the mint per the maintainer's 2026-10-17 13:04:49 "owed in D19"; confirmed by the maintainer, no veto, in the entry "2026-10-17 14:25:00 BST" in `to-lead.md`.
