@@ -48,6 +48,7 @@ __all__ = [
     "MoneyMinor",
     "PositionalDecimalStr",
     "Relativity",
+    "SchemaDecimal",
     "apply_factor",
     "to_minor",
 ]
@@ -66,6 +67,37 @@ class _DecimalStrSchema:
             "description": "Exact decimal as a string; never a binary float (FR-10).",
         }
 
+
+#: The string pattern Pydantic <= 2.13 put on a bare `Decimal`'s JSON Schema string branch and
+#: 2.14 stopped emitting: it refuses `"abc"`, `"1.2.3"` and a lone sign or point.
+_DECIMAL_STRING_PATTERN = r"^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$"
+
+
+class _DecimalStringPattern:
+    """Restore `_DECIMAL_STRING_PATTERN` on every string branch of a bare `Decimal`'s schema.
+
+    Pydantic 2.14 renders a `Decimal` as `{"type": "string"}` with no pattern, which loosens
+    a published money-semantic contract (the contract is byte-identical to the one 2.13
+    generated; `test_decimal_contract_pattern.py` holds it there). Applies in validation
+    mode (`anyOf` number/string) and serialization mode (string) alike.
+    """
+
+    @classmethod
+    def __get_pydantic_json_schema__(
+        cls, schema: core_schema.CoreSchema, handler: GetJsonSchemaHandler
+    ) -> JsonSchemaValue:
+        js = handler(schema)
+        for branch in (*js.get("anyOf", ()), js):
+            if branch.get("type") == "string":
+                branch.setdefault("pattern", _DECIMAL_STRING_PATTERN)
+        return js
+
+
+#: A `Decimal` that keeps Pydantic's own wire shape (number-or-string on input, string on
+#: output) with the string pattern pinned explicitly, so a Pydantic upgrade cannot drop it.
+#: Use `DecimalStr` for a new field; this type exists for contract fields published as the
+#: bare-`Decimal` shape.
+SchemaDecimal = Annotated[Decimal, _DecimalStringPattern()]
 
 #: An amount in minor units (pence/cents). Strict: a float is a validation error.
 MoneyMinor = Annotated[
