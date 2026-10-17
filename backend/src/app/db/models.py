@@ -2598,7 +2598,7 @@ class DislocationRunRow(Base):
 
 class BlobUploadRow(Base):
     """A Blob Upload: a client upload to the staging area, recorded when its URL is issued
-    (`07` §4.5, FR 8058, `RL-1724`).
+    (`07` §4.5, FR-1776, `RL-1724`).
 
     Written by `POST /api/v1/blobs/upload-url` in the caller's unit of work, so that the staging
     key is known to the platform and not only to the client that received it: without this row

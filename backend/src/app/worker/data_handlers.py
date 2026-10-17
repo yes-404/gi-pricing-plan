@@ -158,7 +158,7 @@ def _ingest(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult
 
 
 def _promote(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
-    """`blob.promote` — a completed Blob Upload to an owned, content-addressed blob (FR 8058).
+    """`blob.promote` — a completed Blob Upload to an owned, content-addressed blob (FR-1776).
 
     The result, `JobResult(kind="blob")`, is the blob's owner in the Blob Upload's workspace
     (`blob_readable_by`), so the digest is one the ingest route admits.

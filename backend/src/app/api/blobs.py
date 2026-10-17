@@ -3,7 +3,7 @@
 | Method | Path | Purpose |
 |---|---|---|
 | `POST` | `/blobs/upload-url` | Presigned upload so large files bypass the API process |
-| `POST` | `/blobs/uploads/{id}/complete` | Complete a Blob Upload: a `blob.promote` Job (FR 8058) |
+| `POST` | `/blobs/uploads/{id}/complete` | Complete a Blob Upload: a `blob.promote` Job (FR-1776) |
 | `GET` | `/blobs/{sha256}` | Download, permission-checked, as a presigned redirect |
 
 Declared by `07` §5.1 and reassigned to WK-660 by the endpoint audit: a dataset version's
@@ -81,7 +81,7 @@ async def upload_url(
     one, which is the difference between content addressing and client-supplied naming.
     The request records a Blob Upload in the caller's workspace and returns its `id`;
     `POST /blobs/uploads/{id}/complete` moves the staged object to its content address and
-    records its owner (FR 8058).
+    records its owner (FR-1776).
     """
     presigned = await blob_store.presign_upload(body.media_type, body.parts)
     created = datetime.now(UTC)
@@ -116,7 +116,7 @@ async def upload_url(
 async def complete_upload(
     upload_id: UUID, caller: WriteDatasets, database: DatabaseDep, response: Response
 ) -> Job:
-    """**202** with the `blob.promote` Job (FR 8058, `07` R1).
+    """**202** with the `blob.promote` Job (FR-1776, `07` R1).
 
     Reads the Blob Upload only; the Job does the S3 work, so no upload byte crosses this
     process. Another workspace's Blob Upload is the same `404` as a missing one. A repeat

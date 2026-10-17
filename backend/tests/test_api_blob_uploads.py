@@ -74,6 +74,7 @@ async def _scalar(database: Database, sql: str, **params):
         return (await session.execute(text(sql), params)).scalar_one_or_none()
 
 
+@pytest.mark.req("FR-1776")
 @pytest.mark.req("FR-421")
 async def test_upload_url_records_an_upload_and_returns_its_id(
     api_client: TestClient, database: Database, writer, workspace_id
@@ -93,6 +94,7 @@ async def test_upload_url_records_an_upload_and_returns_its_id(
     assert row == f"{workspace_id}|2|{body['upload_id']}"
 
 
+@pytest.mark.req("FR-1776")
 @pytest.mark.req("FR-421")
 async def test_completing_another_workspaces_upload_is_the_missing_404(
     api_client: TestClient, database: Database, writer, principal
@@ -145,6 +147,7 @@ async def test_completing_another_workspaces_upload_is_the_missing_404(
     assert jobs == 0, "a refused completion left a Job on the Blob Upload"
 
 
+@pytest.mark.req("FR-1776")
 @pytest.mark.req("FR-421")
 async def test_a_completion_past_the_deadline_is_refused(
     api_client: TestClient, database: Database, writer
@@ -162,6 +165,7 @@ async def test_a_completion_past_the_deadline_is_refused(
     assert response.json()["code"] == "VALIDATION_FAILED"
 
 
+@pytest.mark.req("FR-1776")
 @pytest.mark.req("FR-421")
 async def test_a_repeated_completion_returns_the_first_job(
     api_client: TestClient, database: Database, writer
@@ -181,6 +185,7 @@ async def test_a_repeated_completion_returns_the_first_job(
     assert count == 1
 
 
+@pytest.mark.req("FR-1776")
 @pytest.mark.req("FR-421")
 async def test_a_missing_part_fails_the_promotion_by_name(
     api_client: TestClient, database: Database, blob_store: BlobStore, writer
@@ -202,6 +207,7 @@ async def test_a_missing_part_fails_the_promotion_by_name(
     assert job["error"]["message"] == "Expected parts 1 to 2; missing part(s) 2."
 
 
+@pytest.mark.req("FR-1776")
 @pytest.mark.req("FR-421")
 async def test_a_repeated_completion_after_a_failed_promotion_returns_the_first_job(
     api_client: TestClient, database: Database, blob_store: BlobStore, writer
@@ -231,6 +237,7 @@ async def test_a_repeated_completion_after_a_failed_promotion_returns_the_first_
     assert count == 1
 
 
+@pytest.mark.req("FR-1776")
 @pytest.mark.req("FR-421")
 async def test_another_principal_with_write_in_the_workspace_may_complete(
     api_client: TestClient, writer, workspace_id, grant
@@ -248,6 +255,7 @@ async def test_another_principal_with_write_in_the_workspace_may_complete(
 
 
 @pytest.mark.req("FR-419")
+@pytest.mark.req("FR-1776")
 @pytest.mark.req("FR-421")
 async def test_identical_bytes_promote_to_one_blob(
     api_client: TestClient, database: Database, blob_store: BlobStore, writer
@@ -292,6 +300,7 @@ async def test_identical_bytes_promote_to_one_blob(
 
 
 @pytest.mark.req("FR-420")
+@pytest.mark.req("FR-1776")
 @pytest.mark.req("FR-421")
 async def test_a_promoted_blob_is_retained(
     api_client: TestClient, database: Database, blob_store: BlobStore, writer
@@ -307,6 +316,7 @@ async def test_a_promoted_blob_is_retained(
     assert await _scalar(database, "select ref_count from blobs where sha256 = :s", s=sha) == 1
 
 
+@pytest.mark.req("FR-1776")
 @pytest.mark.req("FR-421")
 async def test_a_promoted_digest_downloads_only_in_its_workspace(
     api_client: TestClient, database: Database, blob_store: BlobStore, writer, principal

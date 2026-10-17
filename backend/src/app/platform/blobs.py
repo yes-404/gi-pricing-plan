@@ -291,7 +291,7 @@ class BlobStore:
         without the bytes, and asking the client for the digest first would let it choose
         one. The route records a Blob Upload for the result (`BlobUploadRow`), and
         `promote_upload` later moves the staged object to its content address and writes its
-        `blobs` row (FR 8058).
+        `blobs` row (FR-1776).
         """
         if parts < 1:
             raise ValueError("parts must be at least 1")
@@ -335,7 +335,7 @@ class BlobStore:
         )
 
     async def promote_upload(self, database: Database, upload_id: UUID) -> BlobRef:
-        """Move a completed Blob Upload to its content address and own it (FR 8058).
+        """Move a completed Blob Upload to its content address and own it (FR-1776).
 
         Runs in the `blob.promote` Job, never in a request (`07` R1). The staged bytes are read
         once, streamed, to compute the SHA-256; the object is copied server-side to

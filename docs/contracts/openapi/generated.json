@@ -20087,7 +20087,7 @@
     },
     "/api/v1/blobs/upload-url": {
       "post": {
-        "description": "FR-421.\n\nThe digest is not known until the bytes exist, so the object lands on a staging key, not\nat its content address. Asking the client for the digest up front would let it choose\none, which is the difference between content addressing and client-supplied naming.\nThe request records a Blob Upload in the caller's workspace and returns its `id`;\n`POST /blobs/uploads/{id}/complete` moves the staged object to its content address and\nrecords its owner (FR 8058).",
+        "description": "FR-421.\n\nThe digest is not known until the bytes exist, so the object lands on a staging key, not\nat its content address. Asking the client for the digest up front would let it choose\none, which is the difference between content addressing and client-supplied naming.\nThe request records a Blob Upload in the caller's workspace and returns its `id`;\n`POST /blobs/uploads/{id}/complete` moves the staged object to its content address and\nrecords its owner (FR-1776).",
         "operationId": "upload_url_api_v1_blobs_upload_url_post",
         "parameters": [
           {
@@ -20184,7 +20184,7 @@
     },
     "/api/v1/blobs/uploads/{upload_id}/complete": {
       "post": {
-        "description": "**202** with the `blob.promote` Job (FR 8058, `07` R1).\n\nReads the Blob Upload only; the Job does the S3 work, so no upload byte crosses this\nprocess. Another workspace's Blob Upload is the same `404` as a missing one. A repeat\nreturns the first Job, whatever its state: the row is locked while the Job is created, so\ntwo concurrent completions cannot make two.",
+        "description": "**202** with the `blob.promote` Job (FR-1776, `07` R1).\n\nReads the Blob Upload only; the Job does the S3 work, so no upload byte crosses this\nprocess. Another workspace's Blob Upload is the same `404` as a missing one. A repeat\nreturns the first Job, whatever its state: the row is locked while the Job is created, so\ntwo concurrent completions cannot make two.",
         "operationId": "complete_upload_api_v1_blobs_uploads__upload_id__complete_post",
         "parameters": [
           {

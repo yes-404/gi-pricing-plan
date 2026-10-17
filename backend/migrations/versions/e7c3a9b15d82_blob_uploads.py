@@ -1,6 +1,6 @@
 """blob uploads: the pending record of a presigned upload, and the blob.promote Job Kind
 
-`07` §4.5, FR 8058, `RL-1724` (WK-1178, `SL-1722`). One row per Blob Upload, written when
+`07` §4.5, FR-1776, `RL-1724` (WK-1178, `SL-1722`). One row per Blob Upload, written when
 `POST /api/v1/blobs/upload-url` issues the URLs: workspace, principal, staging key, the S3
 multipart upload id (null for one part), the declared part count, the media type, the
 completion deadline, the completing Job's id and the promoted digest (both null until set).

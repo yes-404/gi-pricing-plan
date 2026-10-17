@@ -1,9 +1,9 @@
 ---
-id: LG-8059
+id: LG-1777
 family: ledger
 title: WK-1178 slice SL-1722 — FD-1730, the upload-completion step (blob.promote and the Blob Upload record), PL-1721 slice ledger
 status: active                 # active → closed (§1.2a)
-created: 2026-10-16
+created: 2026-10-17            # original date 2026-10-16, set at the draft; minted 2026-10-17
 owner: executor
 tree: bba89d66f28fb469e27b25cede67086d518c95ec
 phase: P2
@@ -11,12 +11,12 @@ work: WK-1178
 slice: SL-1722
 plans: [PL-1721]
 corrected_by: []
-relates: [PL-1721, SL-1722, FD-1730, RL-1724, FR-421, FR 8058, SL-1258]
+relates: [PL-1721, SL-1722, FD-1730, RL-1724, FR-421, FR-1776, SL-1258]
 ---
 
-# LG 8059 — SL-1722: the upload-completion step
+# LG-1777 — SL-1722: the upload-completion step
 
-Working id 8059 (space form, unminted). Branch `sl-1722-wk1178-fd1730-upload-404`, worktree
+*(Minted 2026-10-17 as LG-1777 from working id 8059, with FR-1776 (working id 8058), in the SL-1722 PR; FR-1776 is a requirement row of `07` §3, per the FR 9940 → FR-1636 precedent.)* Branch `sl-1722-wk1178-fd1730-upload-404`, worktree
 `.claude/worktrees/sl-1722`. Plan `PL-1721` (`active`, activated at `d48705ac`), binding `RL-1724`.
 
 **GO:** the maintainer's entry "2026-10-16 09:42:48 BST — Maintainer: GO SL-1722 BUILD (FD-1730
@@ -38,7 +38,7 @@ upload-404 fix, PL-1721, WK-1178 P2)" in `to-lead.md`. Conditions, in its words 
 `PL-1721` / `SL-1722`: the completion step `FR-421` implies and was never built (`FD-1730`) —
 `POST /api/v1/blobs/uploads/{id}/complete` returning 202 and a `blob.promote` Job on the `io`
 queue; the `blob_uploads` table (`BlobUploadRow`, migration `e7c3a9b15d82` on `d4e81b7a2c95`);
-the staging lifecycle rule; the Job result owned by the caller's workspace. Requirement: FR 8058
+the staging lifecycle rule; the Job result owned by the caller's workspace. Requirement: FR-1776
 (working id; spec commit `0d4ebd89`, `07` §2, §4.5, §5.1, §5.2), with `FR-421`. Glossary term
 "Blob Upload": `00` §2.1 (authoritative), pointed at from `07` §2 (added in this ledger's
 audit follow-up, A6).
@@ -57,6 +57,8 @@ Discharged so far, in order (commit, first line):
 
 **The ten reds at `3a489dbf`, by node id** (every test the red-first commits add; the
 cause column is to be filled from the run — see OWED):
+
+**Superseded at mint (2026-10-17, A3):** this section predates the scoped DB windows and the gate; it is kept as written (append-only). The current state is in `## Scoped DB windows, 2026-10-17`, `## Delta 2026-10-17 13:5x BST` and `## Audit` below. (The cause column was filled there.)
 
 | # | Node id | Cause at `3a489dbf` |
 |---|---|---|
@@ -133,6 +135,8 @@ by: whichever of `e7c3a9b15d82` / `f2b6d90a4c17` merges second.** Not done in th
 
 ### Gate
 
+**Superseded at mint (2026-10-17, A3):** this section predates the scoped DB windows and the gate; it is kept as written (append-only). The current state is in `## Scoped DB windows, 2026-10-17`, `## Delta 2026-10-17 13:5x BST` and `## Audit` below.
+
 OWED. No gate has run on this branch. Under (f) it runs after SL-1543 and SL-1341 under the
 standard grant terms. Reading rule adopted at A4: Acceptance 3 (the W2 worker test) must read
 PASSED, never skipped, with both Jobs `succeeded` and output.
@@ -149,7 +153,7 @@ The lead's pre-gate read, "2026-10-16 09:52:42 BST — Lead: SL-1722 PRE-GATE RE
 | A2 | `db/models.py` ~:2608 130-character line (E501); a stale "executor's names … (lead-accepted)" sentence after the rename. | MEDIUM; fix before the gate. | Done in this commit: line wrapped; the sentence now says the maintainer concurred (09:44:39) and ruled `sha256`/`staging_key` (09:46:32). |
 | A3 | `blobs.py` `__all__` order (RUF022). | Confirm with ruff after GATE END; fix if red. | OWED. |
 | A4 | The W2 test skips if Redis or MinIO is unreachable. | MEDIUM; adopted as a gate-reading rule: Acceptance 4 reads PASSED, never skipped. | Reading rule recorded in Gate. |
-| A5 | No FR 8058 marker (`req("FR-<minted>")`). | Deferred with owner: the SL-1722 PR adds it at its mint, before merge; `req-coverage` must evidence it on the PR. | OWED: at mint. |
+| A5 | No FR-1776 marker (`req("FR-<minted>")`). | Deferred with owner: the SL-1722 PR adds it at its mint, before merge; `req-coverage` must evidence it on the PR. | OWED: at mint. |
 | A6 | "Blob Upload" is added to `07` §2 only; `CLAUDE.md` §7 puts a new term in `00` §2 first. | Owed before the gate. | Done in this commit: entry added to `00` §2.1; `07` §2 now points at it. |
 | A7 | The red-first commits `ca76bb4e` / `3a489dbf` pre-date the GO (09:42:48). | LG note. | Recorded: the commits are 08:34:02Z and 08:36:09Z (`%aI`); the GO is 09:42:48 BST. Acceptance 3 requires only the spec before the source, which holds (`0d4ebd89` before `0f80af62`). |
 | A8 | An orphan multipart upload is bounded by the 2-day lifecycle. | Accepted. | — |
@@ -159,6 +163,8 @@ Conformant by the lead's reading: columns in §4.5, model and migration agree; `
 15 changed paths all in the write set.
 
 ### OWED
+
+**Superseded at mint (2026-10-17, A3):** this section predates the scoped DB windows and the gate; it is kept as written (append-only). The current state is in `## Scoped DB windows, 2026-10-17`, `## Delta 2026-10-17 13:5x BST` and `## Audit` below.
 
 - Task 0 spike (library behaviour, per the plan).
 - The ten reds run at `3a489dbf`, each by node id and cause (condition (a)); R1's later points.
@@ -174,7 +180,7 @@ Conformant by the lead's reading: columns in §4.5, model and migration agree; `
   7. Docs checks under the gate-2 flock: `audit-docs.py`, `doc-index.py --check`.
 - The runs: `run-small` R1–R9, `test_blobs`, one-head; the W2 worker test PASSED, both Jobs `succeeded` with output (d).
 - The breakers (broken-input proofs of the new checks).
-- The FR 8058 marker (`req("FR-<minted>")`) at mint (A5).
+- The FR-1776 marker (`req("FR-<minted>")`) at mint (A5).
 - The mint: working ids to minted ids; `status: closed` only at slice close.
 - Merge after D18 and after `SL-1258` order is settled (e).
 
@@ -243,7 +249,7 @@ The lead adopted the findings of an independent pre-gate review. Each was verifi
 - 2026-10-17 11:3x BST (executor-1722): `git merge --no-ff origin/main` (055b5e6b) into a030b5ce; no conflict. Non-DB items run on the merged tree: `generate-contracts.py` regenerated `generated.json`, `job.schema.json` (`blob.promote`) and the two `upload-url-*` schemas, then `--check` rc 0 (51 match); `ruff check .` found I001 (`blobs.py` TYPE_CHECKING imports) and RUF022 (`model_schema/__init__.py` `__all__`), both fixed by `--fix`, rc 0 after; `mypy` rc 0; `lint-imports` rc 0 (4 kept); `doc-index.py` regenerated, `--check` rc 0; `register-lint.py` rc 0.
 - `audit-docs.py`: check 13 was red (`07` §2 "Blob Upload" pointer row re-stated a term `00` §2.1 defines); the row is deleted, `00` §2.1 stays the one definition. Check 31 (gap between 1740 and the working id 8059) stays red until the mint; expected.
 - DP-7: `e7c3a9b15d82` has `down_revision = "d4e81b7a2c95"`, the single head at `origin/main` 055b5e6b. `SL-1274` (`f2b6d90a4c17`) and `SL 8017` are not on main. Re-point NOT owed now.
-- Still OWED (DB or the lead's window): the ten reds by cause, `test_api_blob_uploads.py`, `test_blobs.py`, `test_upload_to_ingest.py` (W2, read PASSED), `alembic upgrade head` and `downgrade -1 && upgrade head`, the single-head test, `pnpm generate:api` and `type-check`, FR 8058 marker at mint (A5), the mint.
+- Still OWED (DB or the lead's window): the ten reds by cause, `test_api_blob_uploads.py`, `test_blobs.py`, `test_upload_to_ingest.py` (W2, read PASSED), `alembic upgrade head` and `downgrade -1 && upgrade head`, the single-head test, `pnpm generate:api` and `type-check`, FR-1776 marker at mint (A5), the mint.
 
 ## Owed non-DB items, 2026-10-17 (executor-1722b, `TZ=Europe/London`)
 
@@ -254,12 +260,12 @@ The lead adopted the findings of an independent pre-gate review. Each was verifi
   - after the 2nd call: 1 rule, identical to the 1st (idempotent).
   - **Answer:** `put_bucket_lifecycle_configuration` with the `AbortIncompleteMultipartUpload` clause is **accepted** (no refusal), and the `staging/` rule reads back, but the read-back carries **only `Expiration`**: the `AbortIncompleteMultipartUpload` clause is not returned by this MinIO. Whether it is stored and ignored or dropped is not established by this read. DP-U1.2's abort-incomplete-uploads effect is therefore unverified on MinIO; the 2-day object expiry is verified. `test_ensure_bucket_sets_the_staging_lifecycle_rule` asserts the `staging/` prefix only, so it does not depend on the clause.
 - **Breakers:** the plan's breakers (Task 2 table, R3 to R9) are one-line mutations of the implementation, each shown red against a database. The tests that carry them are already written; no further test-writing is owed. Running them needs the DB window.
-- **Deleted `07` §2 "Blob Upload" pointer row:** the row (added in f1eb0d9b) said only "defined in `00` §2.1; its record is §4.5 and its completion is FR 8058", so check 13 (`audit-docs.py:3986`, a term is not redefined in a module glossary once `00` defines it) was right to refuse it and its content lives in `00` §2.1:137 and `07` §4.5 / FR 8058. **But** RL-1724 acceptance item 11 (line 530) requires "T6's `**Blob Upload**` row in `07` §2" to be found at the slice head, so the deletion conflicts with the ruling as written. Not restored here; for the audit.
+- **Deleted `07` §2 "Blob Upload" pointer row:** the row (added in f1eb0d9b) said only "defined in `00` §2.1; its record is §4.5 and its completion is FR-1776", so check 13 (`audit-docs.py:3986`, a term is not redefined in a module glossary once `00` defines it) was right to refuse it and its content lives in `00` §2.1:137 and `07` §4.5 / FR-1776. **But** RL-1724 acceptance item 11 (line 530) requires "T6's `**Blob Upload**` row in `07` §2" to be found at the slice head, so the deletion conflicts with the ruling as written. Not restored here; for the audit.
 
 ## Rulings DP-1722-A and DP-1722-B, 2026-10-17 (executor-1722db)
 
 - **DP-1722-A (a)** (the maintainer (by delegation), `to-lead.md` "2026-10-17 13:05:25 BST — Maintainer: SL-1722 DP-A → (a); DP-B → (a)"): MinIO accepts the `staging/` rule and the 2-day `Expiration` is VERIFIED on read-back; the `AbortIncompleteMultipartUpload` clause is UNVERIFIED on MinIO (it is not echoed); the rule is still set, because it is S3's contract (PL-1721 DP-U1.2 anticipated this); Task 3 never relies on reading the abort back.
-- **DP-1722-B (a)** (same entry): no `07` §2 row for "Blob Upload" — `CLAUDE.md` §7 makes `00-overview.md` §2 the one glossary (a new term goes there first), `00` §2.1 :137 defines Blob Upload, and a `07` §2 row would be the second copy that `audit-docs.py` check 13 refuses; RL-1724 acceptance item 11's intent (the term defined before first use) is met by `00` §2.1 plus `07` §4.5 / FR 8058.
+- **DP-1722-B (a)** (same entry): no `07` §2 row for "Blob Upload" — `CLAUDE.md` §7 makes `00-overview.md` §2 the one glossary (a new term goes there first), `00` §2.1 :137 defines Blob Upload, and a `07` §2 row would be the second copy that `audit-docs.py` check 13 refuses; RL-1724 acceptance item 11's intent (the term defined before first use) is met by `00` §2.1 plus `07` §4.5 / FR-1776.
 
 ## Scoped DB windows, 2026-10-17 (executor-1722db, `TZ=Europe/London`)
 
@@ -309,7 +315,7 @@ At `2638ef0b` (tree `1bfd13d6`), 13:39:42 to 13:42:22, rc 0: alembic `upgrade he
 
 **Window 2 — head `2638ef0b`** (tree `1bfd13d6`), 13:42:42 to 13:43:34, rc 0, own database `gipricing_sl1722_w2`: `alembic upgrade head` rc 0; `downgrade -1` rc 0 (`e7c3a9b15d82 -> d4e81b7a2c95`); `upgrade head` rc 0; `alembic heads`: `e7c3a9b15d82 (head)`, 1 head; `test_upload_to_ingest.py` `1 passed, 1 warning in 13.83s` (run with `-rs`: no skip, so PASSED); `test_contracts.py` `171 passed, 2 skipped, 1 warning in 13.10s` (run without `-rs`: the two skips' reasons are not recorded here); `tests/test_repository_invariants.py::test_the_migration_chain_has_exactly_one_head` `1 passed in 0.71s`.
 
-Still OWED: the full two-half gate (a grant, S-13); the W2 test's both-Jobs-`succeeded`-with-output reading (d) beyond PASSED; the FR 8058 marker at the mint (A5); the mint; the audit.
+Still OWED: the full two-half gate (a grant, S-13); the W2 test's both-Jobs-`succeeded`-with-output reading (d) beyond PASSED; the FR-1776 marker at the mint (A5); the mint; the audit.
 
 ## Delta 2026-10-17 13:5x BST (executor-1722db): R7 per DP-1722-C
 
@@ -317,6 +323,8 @@ Still OWED: the full two-half gate (a grant, S-13); the W2 test's both-Jobs-`suc
 - Commit `01a79def` (tree `9d5cab1a`), window 13:46:06 to 13:48:35, beside a code gate, load1 at start 4.73, own database `gipricing_sl1722_w1`: `green` `34 passed, 1 warning in 16.60s`; **R7** (`stored = False`) `1 failed` with `AssertionError: assert ['blob/84/844…'] == ['blob/84/844…']` (two copies recorded where one is asserted); R7b, R3 to R6, R8, R9 each `1 failed` by the causes in the table above; after the reverts, 0 dirty paths and `green-after` `34 passed, 1 warning in 18.01s`; rc 0.
 
 ## Audit
+
+**Lead verdict (2026-10-17 18:18:12 BST, the lead, transcript 1b92c2a6):** the auditor's proposal ADOPTED (the maintainer confirmed 18:18:36) — PL-1721 AC 1–10 met; the gate @5d07fb29 + the test fix 3db47be0 accepted by blob proof; A1 marker added and A3 corrected at mint; A2 demo = PASS (the old script's cap stop, journey done, page 200); A4 disclosed and accepted 13:05:25; A6 SL-1274 re-points its down_revision. MERGE-ACK: not yet given.
 
 *(Written by `auditor-1722`, 2026-10-17 (Europe/London), on head `3db47be0e24d8774860457f4c8e73261ac17cfc3` (tree `2389ee95cf19aafa74fb49fcee176fa4f89b8c9f`), range `origin/main...3db47be0`, `origin/main` = `9469721d` at fetch. Code read-only; no test run by the auditor; no DB; the gate is the lead's. Scope derived first from `PL-1721`'s Acceptance Standard (items 1 to 10), `FD-1730`'s Disposition and the maintainer's entries in `to-lead.md` since 2026-10-16, then evidenced.)*
 
@@ -330,7 +338,7 @@ Still OWED: the full two-half gate (a grant, S-13); the W2 test's both-Jobs-`suc
 |---|---|---|---|
 | 1 | docs checks apart from check 31 | gate `audit_docs.log`: `FAILED (2)`, both check 31 (`gap between 1757 and 8059`; `8059 created 2026-10-16 earlier than 1757's 2026-10-17`), cleared by the mint | delivered; re-run in section 6 |
 | 2 | DP-U1..U3 rulings | `RL-1724`; DP-1722-A/B/C/WIRE rulings quoted in this ledger (13:05:25, 13:45:30, 10:16:17) | delivered |
-| 3 | spec first | `git log origin/main..HEAD -- docs/specs` earliest `0d4ebd89` (08:45:59Z) precedes every `backend/src` commit (`0f80af62` 08:49:05Z, `bba89d66`); FR 8058 row `07-platform.md:118`, section 4.5 `:306`, `01-data-management.md:858` | delivered |
+| 3 | spec first | `git log origin/main..HEAD -- docs/specs` earliest `0d4ebd89` (08:45:59Z) precedes every `backend/src` commit (`0f80af62` 08:49:05Z, `bba89d66`); FR-1776 row `07-platform.md:118`, section 4.5 `:306`, `01-data-management.md:858` | delivered |
 | 4 | R1, no seeding; both Jobs `succeeded` | `git grep` of `blob_fixtures\|unit_of_work\|session.add\|execute(` in `test_upload_to_ingest.py` at `3db47be0`: rc 1, none; gate pytest: the file is not among the 14 FAILED; window 2 `1 passed`, `-rs` no skip; test asserts `succeeded` + output (ledger condition (d), lines 150-163 as the ledger reads them; asserts not re-read by the auditor beyond that) | delivered |
 | 5 | R2..R9 + lifecycle test | windows 1/2 (34 passed); breakers R3..R9 red by named cause; R7 re-read per DP-1722-C (b) | delivered |
 | 6 | no upload byte through the API | `git grep "put_object\|upload_part\|\.put(" 3db47be0 -- backend/src/app/api/blobs.py`: rc 1 | delivered |
@@ -346,14 +354,14 @@ Still OWED: the full two-half gate (a grant, S-13); the W2 test's both-Jobs-`suc
 **6. Pair-trial and shared-broker note.** The gate ran paired on gate-1b (14:26:05 to 16:10:17 BST). The broker was found SHARED at 17:58 BST (Redis db 0 for both gates). **The maintainer ruled 18:00 that earlier verdicts stand (the reds were deterministic and slice-caused; passes stay passes).** Recorded as ruled; no re-gate.
 
 **7. Findings.**
-- **A1 (MEDIUM, owed, already deferred with owner):** no `req("FR-<minted>")` marker for FR 8058 anywhere in `backend/tests` at `3db47be0` (`git grep 8058 -- backend/tests`: none). The id is unminted; the SL-1722 PR adds it at the mint (lead verdict on A5, pre-gate read). `req-coverage` must evidence FR-<minted> on the PR; not evidenced today. Verdict: **deferred with owner (executor at the mint)**.
+- **A1 (MEDIUM, owed, already deferred with owner):** no `req("FR-<minted>")` marker for FR-1776 anywhere in `backend/tests` at `3db47be0` (`git grep 8058 -- backend/tests`: none). The id is unminted; the SL-1722 PR adds it at the mint (lead verdict on A5, pre-gate read). `req-coverage` must evidence FR-<minted> on the PR; not evidenced today. Verdict: **deferred with owner (executor at the mint)**.
 - **A2 (LOW):** the demo stage ended on the cap (rc=124), not on a designed stop; section 5 reads it as pass. The lead should confirm the gate-log row is accepted as such (the 18:00 ruling covers reds and passes; a cap-ended demo is neither named).
 - **A3 (LOW, stale text, not fixed here):** this ledger's first reds table (ten rows, cause `OWED: run`), its `### Gate` ("OWED. No gate has run") and `### OWED` lists predate the windows and the gate; the later sections supersede them. Left as written (an append-only record); the mint should set `status` and not rely on them.
 - **A4 (MEDIUM, disclosed, from the ledger):** the `AbortIncompleteMultipartUpload` clause is UNVERIFIED on MinIO (DP-1722-A (a)); the 2-day `Expiration` is verified. Accepted by the maintainer 13:05:25.
 - **A5 (LOW):** the 14 reds and the demo cap were measured while the broker was shared; section 6 stands as ruled.
 - **A6 (note):** DP-7: `e7c3a9b15d82` and `SL-1274`'s `f2b6d90a4c17` share `down_revision d4e81b7a2c95`; whichever merges second re-points before its gate. `origin/main` was not re-read for a new head by the auditor.
 
-**8. Requirements without evidence:** FR 8058's test marker (A1): **deferred with an owner** (the mint). None "not started"; none "delivered but untested" beyond A1.
+**8. Requirements without evidence:** FR-1776's test marker (A1): **deferred with an owner** (the mint). None "not started"; none "delivered but untested" beyond A1.
 
 **9. Proposed verdict:** all ten acceptance items delivered and evidenced; the post-gate change is one test file and the blob proof holds; one requirement-marker deferral with owner (A1). **Proposed: ACCEPT as a clean slice audit.** Proposal only; the lead adopts, amends or rejects. MERGE-ACK: not yet given. Status stays `active`; no mint done.
 
