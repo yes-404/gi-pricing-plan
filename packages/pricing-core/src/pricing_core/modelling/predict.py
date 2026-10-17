@@ -17,6 +17,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterator, Mapping, Sequence
 from statistics import NormalDist
+from typing import Any
 from uuid import UUID
 
 import numpy as np
@@ -42,8 +43,10 @@ __all__ = [
     "PredictionError",
     "detect_quantile_crossing",
     "linear_predictor",
+    "linear_predictor_row",
     "predict_ebm",
     "predict_glm",
+    "predict_glm_row",
     "predict_glm_interval",
     "score_fitted",
 ]
@@ -255,6 +258,32 @@ def predict_glm(
         ),
         spec.link,
     )
+
+
+def linear_predictor_row(
+    fit: GlmFitResult,
+    row: Mapping[str, Any],
+    factors: Sequence[Factor],
+    spec: GlmSpec,
+    *,
+    model_offset: np.ndarray | None = None,
+    bandings: Mapping[UUID, Banding] | None = None,
+    groupings: Mapping[UUID, Grouping] | None = None,
+) -> npt.NDArray[np.float64]:
+    raise NotImplementedError
+
+
+def predict_glm_row(
+    fit: GlmFitResult,
+    row: Mapping[str, Any],
+    factors: Sequence[Factor],
+    spec: GlmSpec,
+    *,
+    model_offset: np.ndarray | None = None,
+    bandings: Mapping[UUID, Banding] | None = None,
+    groupings: Mapping[UUID, Grouping] | None = None,
+) -> float:
+    raise NotImplementedError
 
 
 def predict_glm_interval(
