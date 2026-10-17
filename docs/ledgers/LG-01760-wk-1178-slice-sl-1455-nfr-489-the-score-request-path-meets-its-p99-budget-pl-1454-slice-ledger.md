@@ -11,7 +11,7 @@ work: WK-1178
 slice: SL-1455
 plans: [PL-1454]
 corrected_by: []
-relates: [PL-1454, FD-1411, SL-1259, RL-1263, RL-921, RL-1379, RL-1685, "RL 8024 (working id)", RL-1755, NFR-489]
+relates: [PL-1454, FD-1411, SL-1259, RL-1263, RL-921, RL-1379, RL-1685, RL-1716, RL-1755, NFR-489]
 ---
 
 # LG-1760 — WK-1178 slice SL-1455: the NFR-489 remedy for `/score`
@@ -99,7 +99,7 @@ Steps 1–3, Task 3 Steps 1–5) and `RL-1685` "Ruled" 1 (a)(b), 3, 4 and "What 
 | T3 S4: regression files pass | Build log: `test_score.py` 52, `test_traces.py` 39, `test_score_rate_limit.py` 9+1 skipped, `test_auth_keys.py` 20, `test_score_compare.py` 20, `test_api_authorisation_sweep.py` 9, bench 4 | Recorded, **not re-run by me** |
 | T3 S5: byte-identity of the `/score` body, `main` vs head | no entry | **Not evidenced**: owed (F3) |
 | RL-1685 obliges: write set widening recorded in the LG | Build log last bullet lists seven source files | Delivered (the two new tests and the bench are not in that list: F3) |
-| RL-1685 obliges: LG-1760's minted id into RL-1685 `relates` | owed at the mint (minter); LG-1760's own `relates` does not carry RL-1685 or RL 8024 | **Reassigned to the minter**, with F3's LG-side fix |
+| RL-1685 obliges: LG-1760's minted id into RL-1685 `relates` | owed at the mint (minter); LG-1760's own `relates` does not carry RL-1685 or RL 8024 (since minted as RL-1716) | **Reassigned to the minter**, with F3's LG-side fix |
 
 **Four-verdict note for the lead:** T1 S1/S2/S2b and T1 S4, T3 S5 are *delivered but untested* or *not
 evidenced*; they are Task 4's run and a ledger entry, not missing code.
@@ -127,9 +127,9 @@ step). Recorded red on base: `assert [] == [True]`. (2) EFFECT: no spy; `before 
 permanent generation back. Remaining caveat: **F4**.
 
 Note on source: RL-1685's own form (count non-zero once started) is correctly **not** used; it is vacuous
-and the correcting RL 8024 (working id, `origin/docs-d16-2026-10-14` `75f9b1ae`) is not yet at `origin/main`.
+and the correcting RL-1716 (minted 2026-10-14 from working id 8024, branch `origin/docs-d16-2026-10-14` `75f9b1ae`) is now at `origin/main`.
 Until it merges, `docs/rulings/RL-01685-…` still says the vacuous form, and this slice's test follows the
-maintainer's entry, not the merged ruling text. The lead should keep the merge order RL 8024 before or with this slice.
+maintainer's entry, not the merged ruling text. The lead should keep the merge order RL 8024 (since minted as RL-1716) before or with this slice.
 
 #### 3. The design risks, checked in the code
 
@@ -214,8 +214,8 @@ Clean over the range (added lines and every commit message).
   started" (F3).
 - **Minted-id relation:** RL-1685's front matter says "and LG working id 9932, added at its mint", and its
   "What it obliges" says the LG's minter adds it. That edit (`relates:` on `docs/rulings/RL-01685-…`) is owed at the mint of
-  LG-1760; it is a front-matter-only change to a frozen record (the same form as the correcting RL's own
-  `corrected_by`). Today `relates` lists neither the LG nor RL 8024 on either side.
+  LG 9932 (minted as LG-1760, 2026-10-17); it is a front-matter-only change to a frozen record (the same form as the correcting RL's own
+  `corrected_by`). Today `relates` lists neither the LG nor RL 8024 (since minted as RL-1716) on either side.
 
 #### Findings
 
@@ -253,7 +253,7 @@ Clean over the range (added lines and every commit message).
   (ii) No Build log entry for **Task 1** (commits `c9a64068`, `1ab36c9f`): no recorded red of the header
   test on the base `_serve`/`main` (the commit order `d943c2d0` then `1ab36c9f` suggests it was red, but the
   failure line is not recorded), no `--help` or `--rates 25` run (Step 4). (iii) No **Task 3 Step 5**
-  byte-identity entry. (iv) `relates:` lacks RL-1685 and RL 8024. (v) The write-set line omits the three
+  byte-identity entry. (iv) `relates:` lacks RL-1685 and RL 8024 (since minted as RL-1716). (v) The write-set line omits the three
   tests and the bench. (vi) The `tree:` header is the Task 0 base, `d699a561`.
   *Fix:* an executor edit to the ledger before the ACK; (ii) and (iii) may be recorded as "owed to Task 4's
   window" rather than back-filled.
@@ -313,7 +313,7 @@ per-file runs in the Build log, not by a printed pass line.
 | Acceptance 4 (timing-free guard, red first) | `test_score_request_cost.py` reds by cause `assert 6 <= 1`, `assert 10 <= 9`, `assert 1 == 0` (Build log, 2026-10-14 Phase 1 reds); file green in the gate (not among the 13); F1/F2 guards in `test_request_connections.py` and the cost file, red by cause `[1] == [0]` | **Delivered and tested** |
 | Acceptance 5 (existing guards pass) | `test_score.py`, `test_traces.py`, `test_score_rate_limit.py` not among the 13; `test_score.py` not in the diff | **Delivered and tested** |
 | Acceptance 6 (harness says what it measures) | `scripts/bench-rating.py:1308` prints "warm (slot hit: version row read only)" beside the cold figure; header prints `N`, `--workers` at `:1104`; header test red then green (Build log 2026-10-14, F3 entry); `--help` run recorded; the `--rates 25` run is owed | **Delivered and tested**, with the one `--http` run owed to Task 4 (same owner) |
-| Acceptance 7 (two-half gate) | `gate.log` above, head `787cfeed`; only the check 31 cascade on working id 9932 is red; 13 of 13 failures are that class | **Delivered**, with the check 31 class standing until LG-1760 is minted (see "Closing acts") |
+| Acceptance 7 (two-half gate) | `gate.log` above, head `787cfeed`; only the check 31 cascade on working id 9932 is red; 13 of 13 failures are that class | **Delivered**, with the check 31 class standing until LG 9932 is minted (minted as LG-1760, 2026-10-17) (see "Closing acts") |
 | Acceptance 8 (write set) | `git diff --stat origin/main...HEAD` lists 17 paths; the 12 source/test paths are the plan's table plus RL-1685's three admissions plus `conftest.py` and `test_request_connections.py` (F1/F2 fixes of the 14 Oct audit); `docs/INDEX.md`, the plan (`status: active`), `docs/roadmap.md` (row status) and the ledger are the activation and registry; the ledger's write-set line (Build log, F1–F4 entry) lists them | **Delivered** |
 | Acceptance 9 (DP-6 (b)) | the plan's Hand-off item 4 quotes the 09:59:49 ruling and its binding condition and names `PL-1371` §3.8 item 7; **the ledger does not quote it** (grep of the ledger for "Hand-off item 4", "G2 path", "09:59:49": no hit) | **Delivered but untested** as to the ledger clause: the owner is named in the plan, not in this ledger (F3) |
 | FR-243 / NFR-497 / FR-259 preserved | cost-file degrade test (read fails or aborts the shared transaction, 200, `quoted`, no trace row); `test_a_failed_sampling_rate_read…`; sampled write after `read_session.close()` with the trace row asserted | **Delivered and tested** |
@@ -330,7 +330,7 @@ the 13). I did not re-read FastAPI's dependency-exit ordering and ran nothing.
 commit the ledger names: `c9a64068`, `1ab36c9f`, `d943c2d0`, `fecaf7b6`, `9777184f`, `051f9b3d`, `0544220a`, `11677daa`,
 `5e00fa74`, `3c0e99a0`, `78177ec8`, `34f08fdb`, `49d7f086`, `787cfeed`. Not ancestors, and each is a reference to a
 record outside this branch, not slice evidence: `c41475c2`/`3200b5a5`/`d87e354d` (the evidence branch
-`evidence/sl-1455-t0-2026-10-11`), `75f9b1ae` (RL 8024's branch), `372fa92e` (an old main commit absent from this
+`evidence/sl-1455-t0-2026-10-11`), `75f9b1ae` (RL 8024's branch (since minted as RL-1716)), `372fa92e` (an old main commit absent from this
 clone), and eight blobs (`run.sh`, `run2.sh`, `t0_*.py`, …) which `cat-file` reports as blobs by construction.
 
 **Barred word.** `git diff origin/main...2c0bcc29 -U0 | grep '^+' | grep -ciE 'dep''uty'` prints 0; the same over
@@ -343,8 +343,8 @@ auto-merges. The maintainer's "11:11:03" item 1 says this slice merges after #13
 **Closing acts.** (i) `LG-1760` still reads `status: active`, `tree: 5e00fa74…` (the Task 0 base) and "MERGE-ACK: not yet
 given"; the header says "covers Tasks 0–3"; the Task list says "Tasks 4–6 — not started" and has Step 5/6 boxes open;
 the Gate section says "not applicable to Tasks 0–3" (the re-gate section answers it but the Gate section is not
-updated) — an executor edit (F2). (ii) LG-1760 is a working id: the lead mints it at the merge turn; check 31 stays red on this branch until then,
-by the known class. (iii) RL-1685's `relates` still needs LG-1760 (and RL 8024) added at the mint, as the 14 Oct
+updated) — an executor edit (F2). (ii) LG 9932 is a working id (minted as LG-1760, 2026-10-17): the lead mints it at the merge turn; check 31 stays red on this branch until then,
+by the known class. (iii) RL-1685's `relates` still needs LG 9932 (minted as LG-1760, 2026-10-17) (and RL 8024 (since minted as RL-1716)) added at the mint, as the 14 Oct
 audit said; owner the minter. (iv) `PL-1454` is frozen from its merge: the Acceptance 2 dated line is a delta or ruling,
 not an edit of the plan body. (v) FD-1411's discharge needs SL-1259's NFR-489 verdict or the maintainer's dated line
 (plan Hand-off 2); not discharged by this merge.
@@ -491,7 +491,7 @@ Recorded by executor-1455b on 2026-10-16, from the primary files under `~/gi-pri
 - audit_docs rc 1: its `FAILED (2)` block (`audit_docs.log:882`) is exactly two lines, both check 31: "gap in the full allocation between 1730 and 9932" and "id 9932 is `created:` 2026-10-11, earlier than id 1730's 2026-10-14". The check 36 lines in the log are the standing disclosed legacy-form class, not in the `FAILED` block.
 - Demo rc 124 is the stop by design, not a failure: the script runs `timeout -s INT 1500 … scripts/demo.py --journey wf-699` (`sl1455-regate.sh:79`), so the INT after the journey ends the process with 124. `demo.log:708` "journey done in 80s"; `demo.log:716` "served page: http://localhost:5173/ answered 200"; then the clean stop sequence (`demo.log:732-748`, "stopped.").
 
-**(b) Classification of all 13 pytest failures: the check 31 cascade on LG-1760.** LG-1760 is a working id (minted in the slice PR), so main's allocation shows a gap 1730..9932 and 9932's `created:` precedes 1730's. Every failure is a test that runs the real-tree audit and asserts on its exit, and each captured audit output ends in the same two check 31 lines. `pytest.log` `FAILED` lines: 10221-10233.
+**(b) Classification of all 13 pytest failures: the check 31 cascade on LG 9932.** LG 9932 is a working id (minted in the slice PR; minted as LG-1760, 2026-10-17), so main's allocation shows a gap 1730..9932 and 9932's `created:` precedes 1730's. Every failure is a test that runs the real-tree audit and asserts on its exit, and each captured audit output ends in the same two check 31 lines. `pytest.log` `FAILED` lines: 10221-10233.
 
 | # | Test | Evidence in `pytest.log` | On the script's list? |
 |---|---|---|---|
