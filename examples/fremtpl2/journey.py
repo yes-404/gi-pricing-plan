@@ -296,8 +296,18 @@ class _Journey:
             params={"status": "approved", "limit": 100},
             expect=200,
         )["items"]
+        # The frequency GLM, by what its spec declares: `/models` is newest first and the demo
+        # approves a severity GLM after it, so the first GLM is not the frequency one. The demo's
+        # frequency spec (`model.py` `fit_demo_models`) sets no `response` and names the count
+        # column; the severity spec sets `response` to `claim_severity` (SL-1543, 21:09:30 BST).
         glm = next(
-            (m for m in approved if (m.get("fit_result") or {}).get("model_type") == "glm"), None
+            (
+                m
+                for m in approved
+                if (m.get("fit_result") or {}).get("model_type") == "glm"
+                and (m.get("spec") or {}).get("response_column") == "claim_count"
+            ),
+            None,
         )
         if glm is None:
             raise JourneyStepFailed("A0", "NO_APPROVED_GLM")

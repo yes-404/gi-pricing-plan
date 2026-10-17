@@ -582,6 +582,35 @@ def test_b3_the_fork_puts_a_pinned_as_at_lookup_in_the_premium() -> None:
     assert seeded["steps"][1]["expr"] == "base_premium_minor * rel_region"  # the seed is untouched
 
 
+def test_discover_picks_the_frequency_glm_by_its_declared_response_not_by_order() -> None:
+    """SL-1543 (maintainer, 2026-10-17 21:09:30 BST): `/models` is newest first, and the B4 world
+    approves a severity GLM AFTER the frequency GLM. `discover()` must still return the
+    frequency GLM: the one whose spec declares the claim-count response. Fed a stub list, no DB."""
+
+    def model(family: str, response_column: str, response: str | None) -> dict[str, Any]:
+        return {
+            "model_family_slug": family, "version": 1,
+            "spec": {"response": response, "response_column": response_column},
+            "fit_result": {"model_type": "glm", "relativities": {"area": []}},
+        }
+
+    severity = model("fremtpl2-sev-aaaaaa", "claim_severity", "claim_severity")
+    frequency = model("fremtpl2-glm-bbbbbb", "claim_count", None)
+    gbm = {
+        "model_family_slug": "fremtpl2-gbm-cccccc", "version": 1,
+        "fit_result": {"model_type": "xgboost"},
+    }
+
+    def stub(step: str, who: str, method: str, path: str, **kw: Any) -> dict[str, Any]:
+        status = kw["params"]["status"]
+        return {"items": [severity, frequency] if status == "approved" else [gbm]}
+
+    walk = object.__new__(journey._Journey)
+    walk.req = stub  # type: ignore[method-assign]
+    walk.discover()
+    assert walk.glm_ref == "model:fremtpl2-glm-bbbbbb@1"
+
+
 @pytest.mark.req("FR-264")
 def test_d7_is_not_a_skip_and_a_skip_without_an_owner_still_fails() -> None:
     """D7 decomposes now (FD-1660, SL-1696): the skip table no longer carries it, so
@@ -596,25 +625,133 @@ def test_d7_is_not_a_skip_and_a_skip_without_an_owner_still_fails() -> None:
 #: `description` (`PL-1694` Acceptance 18; PL 8055). `{gbm_family}` stands for `_world`'s
 #: random model family; `test_wf699_journey_runs_end_to_end` asserts this list IS the run's.
 D7_DERIVED_CHANGES: Final[list[dict[str, str]]] = [
-        {
-            "id": "c1",
-            "kind": "step_added",
-            "description": "m_ncd: mount added (sub_graph:ncd-ladder@1)",
-        },
-        {
-            "id": "c2",
-            "kind": "table_repointed",
-            "description": "s_t_region: rate_table_ref x@1 → x@2",
-        },
-        {
-            "id": "c3",
-            "kind": "table_repointed",
-            "description": "s_t_area: rate_table_ref y@1 → y@2",
-        },
-        {"id": "c4", "kind": "step_added", "description": "s_loading: step added"},
-        {"id": "c5", "kind": "step_changed", "description": "s_premium: expr a → b"},
-        {"id": "c6", "kind": "pin", "description": "rate_tables pin rate_table:x@2 added"},
-    ]
+    {
+        "id": "c1",
+        "kind": "step_added",
+        "description": (
+            "m_ncd: mount added (sub_graph:ncd-ladder@3)"
+        ),
+    },
+    {
+        "id": "c2",
+        "kind": "step_added",
+        "description": (
+            "s_loading: step added"
+        ),
+    },
+    {
+        "id": "c3",
+        "kind": "table_repointed",
+        "description": (
+            "s_o_area: rate_table_ref rate_table:fremtpl2-area@1 → rate_table:wf699-area@1"
+        ),
+    },
+    {
+        "id": "c4",
+        "kind": "table_repointed",
+        "description": (
+            "s_o_driv_age_band: rate_table_ref rate_table:fremtpl2-driv-age-band@1 → rate_table:wf699-driv-age-band@1"  # noqa: E501
+        ),
+    },
+    {
+        "id": "c5",
+        "kind": "table_repointed",
+        "description": (
+            "s_o_region: rate_table_ref rate_table:fremtpl2-region@1 → rate_table:wf699-region@1"
+        ),
+    },
+    {
+        "id": "c6",
+        "kind": "table_repointed",
+        "description": (
+            "s_o_veh_age_band: rate_table_ref rate_table:fremtpl2-veh-age-band@1 → rate_table:wf699-veh-age-band@1"  # noqa: E501
+        ),
+    },
+    {
+        "id": "c7",
+        "kind": "table_repointed",
+        "description": (
+            "s_o_veh_brand: rate_table_ref rate_table:fremtpl2-veh-brand@1 → rate_table:wf699-veh-brand@1"  # noqa: E501
+        ),
+    },
+    {
+        "id": "c8",
+        "kind": "table_repointed",
+        "description": (
+            "s_o_veh_gas: rate_table_ref rate_table:fremtpl2-veh-gas@1 → rate_table:wf699-veh-gas@1"
+        ),
+    },
+    {
+        "id": "c9",
+        "kind": "table_repointed",
+        "description": (
+            "s_o_veh_power_band: rate_table_ref rate_table:fremtpl2-veh-power-band@1 → rate_table:wf699-veh-power-band@1"  # noqa: E501
+        ),
+    },
+    {
+        "id": "c10",
+        "kind": "step_changed",
+        "description": (
+            "s_premium: consumes [\"model_premium\", \"rel_driv_age_band\", \"rel_veh_age_band\", \"rel_veh_power_band\", \"rel_veh_brand\", \"rel_veh_gas\", \"rel_area\", \"rel_region\", \"origin_driv_age_band\", \"origin_veh_age_band\", \"origin_veh_power_band\", \"origin_veh_brand\", \"origin_veh_gas\", \"origin_area\", \"origin_region\"] → [\"model_premium\", \"rel_driv_age_band\", \"rel_veh_age_band\", \"rel_veh_power_band\", \"rel_veh_brand\", \"rel_veh_gas\", \"rel_area\", \"rel_region\", \"origin_driv_age_band\", \"origin_veh_age_band\", \"origin_veh_power_band\", \"origin_veh_brand\", \"origin_veh_gas\", \"origin_area\", \"origin_region\", \"ncd_factor\", \"expense_loading\"]; expr ((origin_driv_age_band != 0 and origin_veh_age_band != 0 and origin_veh_power_band != 0 and origin_veh_brand != 0 and origin_veh_gas != 0 and origin_area != 0 and origin_region != 0) ? model_premium * (rel_driv_age_band / origin_driv_age_band) * (rel_veh_age_band / origin_veh_age_band) * (rel_veh_power_band / origin_veh_power_band) * (rel_veh_brand / origin_veh_brand) * (rel_veh_gas / origin_veh_gas) * (rel_area / origin_area) * (rel_region / origin_region) : 0) → ((origin_driv_age_band != 0 and origin_veh_age_band != 0 and origin_veh_power_band != 0 and origin_veh_brand != 0 and origin_veh_gas != 0 and origin_area != 0 and origin_region != 0) ? model_premium * (rel_driv_age_band / origin_driv_age_band) * (rel_veh_age_band / origin_veh_age_band) * (rel_veh_power_band / origin_veh_power_band) * (rel_veh_brand / origin_veh_brand) * (rel_veh_gas / origin_veh_gas) * (rel_area / origin_area) * (rel_region / origin_region) : 0) * ncd_factor * number(expense_loading)"  # noqa: E501
+        ),
+    },
+    {
+        "id": "c11",
+        "kind": "table_repointed",
+        "description": (
+            "s_t_area: rate_table_ref rate_table:fremtpl2-area@1 → rate_table:wf699-area@2"
+        ),
+    },
+    {
+        "id": "c12",
+        "kind": "table_repointed",
+        "description": (
+            "s_t_driv_age_band: rate_table_ref rate_table:fremtpl2-driv-age-band@1 → rate_table:wf699-driv-age-band@1"  # noqa: E501
+        ),
+    },
+    {
+        "id": "c13",
+        "kind": "table_repointed",
+        "description": (
+            "s_t_region: rate_table_ref rate_table:fremtpl2-region@1 → rate_table:wf699-region@2"
+        ),
+    },
+    {
+        "id": "c14",
+        "kind": "table_repointed",
+        "description": (
+            "s_t_veh_age_band: rate_table_ref rate_table:fremtpl2-veh-age-band@1 → rate_table:wf699-veh-age-band@1"  # noqa: E501
+        ),
+    },
+    {
+        "id": "c15",
+        "kind": "table_repointed",
+        "description": (
+            "s_t_veh_brand: rate_table_ref rate_table:fremtpl2-veh-brand@1 → rate_table:wf699-veh-brand@1"  # noqa: E501
+        ),
+    },
+    {
+        "id": "c16",
+        "kind": "table_repointed",
+        "description": (
+            "s_t_veh_gas: rate_table_ref rate_table:fremtpl2-veh-gas@1 → rate_table:wf699-veh-gas@1"
+        ),
+    },
+    {
+        "id": "c17",
+        "kind": "table_repointed",
+        "description": (
+            "s_t_veh_power_band: rate_table_ref rate_table:fremtpl2-veh-power-band@1 → rate_table:wf699-veh-power-band@1"  # noqa: E501
+        ),
+    },
+    {
+        "id": "c18",
+        "kind": "pin",
+        "description": (
+            "models pin model:{gbm_family}@1 added"
+        ),
+    },
+]
 
 
 @pytest.mark.req("FR-264")
@@ -628,13 +765,19 @@ def test_d7_splits_the_derived_changes_into_the_journeys_own_effects() -> None:
     derived = D7_DERIVED_CHANGES
     effects = journey.split_effects(derived)
     assert effects == {
-        journey.EFFECT_RATE_TABLES: ["c2", "c3", "c6"],
-        journey.EFFECT_STRUCTURE: ["c1", "c4", "c5"],
+        journey.EFFECT_RATE_TABLES: [f"c{n}" for n in (*range(3, 10), *range(11, 18))],
+        journey.EFFECT_STRUCTURE: ["c1", "c2", "c10", "c18"],
     }
     flat = [cid for ids in effects.values() for cid in ids]
     assert sorted(flat) == sorted(d["id"] for d in derived)  # a partition: none lost, none twice
-    assert journey.split_effects(derived[1:3]) is None  # tables only: nothing else to decompose
-    assert journey.split_effects(derived[3:5]) is None  # structure only
+    ids = {row["id"]: row for row in derived}
+    tables = [ids[cid] for cid in effects[journey.EFFECT_RATE_TABLES]]
+    structure = [ids[cid] for cid in effects[journey.EFFECT_STRUCTURE]]
+    assert journey.split_effects(tables) is None  # tables only: nothing else to decompose
+    assert journey.split_effects(structure) is None  # structure only
+    (mount,) = [row for row in derived if row["description"].startswith("m_ncd: mount")]
+    assert mount["id"] in effects[journey.EFFECT_STRUCTURE]
+    assert mount["kind"] != "table_repointed"
     assert journey.split_effects([]) is None
 
 
