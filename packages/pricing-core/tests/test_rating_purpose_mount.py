@@ -33,6 +33,30 @@ _CANCEL_REF = "sub_graph:cancel-refund@1"
 _NEW_BUSINESS_PAYABLE = 1_507  # the golden quote of `test_rating_score.py`
 
 
+def _cancel_clamp_fragment_payload() -> dict[str, Any]:
+    """A mount that only clamps the office premium it is handed (a re-producing clamp)."""
+    return {
+        "slug": "cancel-refund",
+        "version": 1,
+        "inputs": [{"name": "annual", "type": "money_minor"}],
+        "outputs": [{"name": "refund", "type": "money_minor", "required": True}],
+        "steps": [
+            {
+                "step_id": "s_clamp",
+                "type": "constraint",
+                "label": "Cancellation cap",
+                "condition": "annual <= 1000",
+                "on_violation": "clamp",
+                "clamp_bounds": {"max": "1000"},
+                "reason_code": "CANCEL_CLAMP",
+                "consumes": ["annual"],
+                "produces": "refund",
+            }
+        ],
+        "change_note": "first cut",
+    }
+
+
 def _cancel_fragment_payload(*, decline: bool) -> dict[str, Any]:
     steps: list[dict[str, Any]] = [
         {
@@ -69,26 +93,37 @@ def _cancel_fragment_payload(*, decline: bool) -> dict[str, Any]:
 
 
 async def _compiled_with_a_mount(
-    purposes: list[str] | None, *, decline: bool = False
+    purposes: list[str] | None, *, decline: bool = False, clamp: bool = False
 ) -> CompiledBundle:
-    return load_bundle(await _bundle_with_a_mount(purposes, decline=decline))
+    return load_bundle(await _bundle_with_a_mount(purposes, decline=decline, clamp=clamp))
 
 
 async def _bundle_with_a_mount(  # type: ignore[no-untyped-def]
-    purposes: list[str] | None, *, decline: bool = False, pinned: tuple[str, ...] = (_CANCEL_REF,)
+    purposes: list[str] | None,
+    *,
+    decline: bool = False,
+    clamp: bool = False,
+    pinned: tuple[str, ...] = (_CANCEL_REF,),
 ):
     resolver = _FakeResolver()
     algorithm = resolver._payloads["rating_algorithm:score-fixture@1"]
     mount: dict[str, Any] = {
         "ref": _CANCEL_REF,
         "mount_point": "m_cancel",
-        "inputs": {"annual": "expense_factor"},
-        "outputs": {"refund": "expense_factor"},
+        "inputs": {"annual": "office_premium_minor" if clamp else "expense_factor"},
+        "outputs": {"refund": "office_premium_minor" if clamp else "expense_factor"},
     }
     if purposes is not None:
         mount["purposes"] = purposes
     algorithm["sub_graphs"] = [mount]
-    resolver._payloads[_CANCEL_REF] = _cancel_fragment_payload(decline=decline)
+    if clamp:
+        # Two re-producers of one name form a cycle (each depends on the other), so the mount's
+        # clamp REPLACES the base minimum-premium clamp: the base graph has no clamp, the
+        # cancellation graph has the mount's.
+        algorithm["steps"] = [st for st in algorithm["steps"] if st["step_id"] != "s_clamp"]
+    resolver._payloads[_CANCEL_REF] = (
+        _cancel_clamp_fragment_payload() if clamp else _cancel_fragment_payload(decline=decline)
+    )
     version = _version()
     pins = version.pins
     assert pins is not None
@@ -196,6 +231,28 @@ async def test_a_constraint_inside_a_cancellation_mount_is_evaluated_for_it() ->
 
 
 @pytest.mark.req("FR-218")
+async def test_a_clamp_inside_a_cancellation_mount_appears_in_the_cancellation_ladder() -> None:
+    """RL-1628 DP-S3-2 condition 1, red first as the maintainer ruled it (to-lead 2026-10-17
+    13:58:04 BST, F5 (b)): a cancellation mount containing a clamping `constraint` step, whose
+    clamp appears in the cancellation quote's ladder. The clamp is in no base-algorithm read,
+    so a selector that returned the base algorithm would price the cancellation with no clamp
+    in its ladder."""
+    compiled = await _compiled_with_a_mount(["cancellation"], clamp=True)
+    cancelled = await score_one(compiled, _ctx(purpose="cancellation"), trace=True)
+    assert cancelled.outcome == "quoted"
+    constraints = next(r for r in cancelled.premium_ladder if r.rung == "constraints")
+    assert constraints.operation is not None
+    assert constraints.operation.kind == "clamp"
+    assert constraints.operation.applied == ["CANCEL_CLAMP"]
+    assert cancelled.trace is not None
+    assert cancelled.trace.ladder_reconciled is True
+    new_business = await score_one(compiled, _ctx(purpose="new_business"), trace=True)
+    assert new_business.outcome == "quoted"
+    assert new_business.outputs["payable_premium_minor"] == _NEW_BUSINESS_PAYABLE
+    assert "CANCEL_CLAMP" not in str(new_business.premium_ladder)
+
+
+@pytest.mark.req("FR-218")
 async def test_removing_the_real_check_would_be_caught(monkeypatch: pytest.MonkeyPatch) -> None:
     """Acceptance 5: with the check neutralised the MTA quote is priced silently, so the
     refusal test above is the only thing standing between the quote and a mispricing."""
@@ -242,6 +299,7 @@ async def test_a_version_with_no_purpose_mount_keeps_the_hash_it_had() -> None:
 
 
 # --- SL-1341 pre-gate audit A-1 / A-4 (LG 8056): the batch path and the serialised bytes -------
+
 
 @pytest.mark.req("FR-218")
 async def test_a_batch_row_under_a_purpose_mount_is_priced_by_the_purposes_graph() -> None:
