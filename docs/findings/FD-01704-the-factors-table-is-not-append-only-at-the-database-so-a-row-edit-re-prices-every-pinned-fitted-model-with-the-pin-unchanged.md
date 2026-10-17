@@ -43,9 +43,9 @@ UPDATE red must fail at the database layer, not only through the derived test se
 *Refined by the maintainer's (by delegation) entries "2026-10-14 10:29:14 BST" (PL 8016 DP-1 (a):
 after the REVOKE the privilege check fires before the trigger, so the two FR-44 layers are proven by
 two separate observations; the append-only set is derived from the artifact family, never from
-grants) and "2026-10-14 12:00:14 BST" item (A)–(B) (this finding becomes a limb of PL 8016's re-cut
+grants) and "2026-10-14 12:00:14 BST" item (A)–(B) (this finding becomes a limb of PL-1769's re-cut
 slices S-a, triggers first, and S-b, least privilege; its revoke matters only after S-b, because the
-app connects as the table owner). PL 8016 is a working id in a later batch.*
+app connects as the table owner). PL 8016 was a working id, minted as PL-1769.*
 
 `factors` is the one artifact table of the modelling module that has neither layer of FR-43/FR-44. A
 Model pins its Factors by row id, and a fitted Model's spec cannot change, so the *pin* is immutable
