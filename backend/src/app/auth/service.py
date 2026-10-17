@@ -13,7 +13,7 @@ caller nothing they can act on that the trace id does not already give them.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import select
@@ -30,6 +30,9 @@ from model_schema import ActorKind, JobSource, Principal
 __all__ = ["AuthenticatedIdentity", "authenticate_api_key", "authenticate_bearer"]
 
 _log = get_logger("app.auth")
+
+#: RL-1685 (PL-1454 DP-1 (b)): the longest a key's `last_used_at` may lag the real last use.
+LAST_USED_WRITE_INTERVAL = timedelta(seconds=60)
 
 #: The Principal an authentication *failure* is recorded against. The caller is by
 #: definition unidentified, and attributing the event to the identity they claimed would
@@ -235,8 +238,12 @@ async def authenticate_api_key(
         )
         raise _unauthenticated("ENVIRONMENT_SCOPE_DENIED")
 
-    key.last_used_at = now
-    await session.flush()
+    # RL-1685 (PL-1454 DP-1 (b)): `last_used_at` is a "when was this key last seen" stamp for
+    # an operator, not an audit trail, so it is written only when it is unset or older than
+    # `LAST_USED_WRITE_INTERVAL`. An UPDATE on every request is a commit, a row lock and a
+    # WAL record per quote, on the hot path of NFR-489.
+    if key.last_used_at is None or now - key.last_used_at >= LAST_USED_WRITE_INTERVAL:
+        key.last_used_at = now
 
     return AuthenticatedIdentity(
         principal=Principal(
