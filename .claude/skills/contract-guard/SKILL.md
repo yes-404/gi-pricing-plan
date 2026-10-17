@@ -289,9 +289,8 @@ publishes). A client generated from either types the body `unknown`. **Both side
 (`_untyped_bodies`): every media type of every 2xx response (key = the status), and every
 request-body media type whose name contains `json` (key = the media type).
 
-Four lists hold what it allows, and **each needs the thing that notices it went stale**
+Three lists hold what it allows, and **each needs the thing that notices it went stale**
 (the section above), here `test_every_untyped_body_exclusion_is_still_untyped`:
-`UNTYPED_2XX_PERMANENT` (stream and file bodies, each reason names its file and line),
 `UNTYPED_2XX_PENDING_PART_B` and `UNTYPED_REQUEST_PENDING` (temporary: a route that is typed
 fails the stale check until its entry is removed, in the same change that types it), and
 `NON_JSON_REQUEST_BODIES` (multipart, pinned exactly by citation so a new non-JSON body is a visible act).
@@ -312,6 +311,8 @@ A route documented through `responses={200: {"model": M}}` builds the contract a
 nothing (`NFR-502`); `backend/tests/outbound_validation_spy.py` counts the calls that would show otherwise.
 
 ## Verified
+
+2026-10-17 — SL-1709 (PL-1708), FD-1684: a stream or file route declares its media type in the route decorator (`response_class` plus a `responses` 200 entry), so it is never an allow-list entry; `UNTYPED_2XX_PERMANENT` was removed with its four routes (audit export, rate-table CSV and XLSX export, job events). Confirmed by `test_every_untyped_body_exclusion_is_still_untyped` going red once the four routes were declared, and green after the list was removed.
 
 2026-08-22 — W32-1, the contracts-and-drift-guard slice, which added the `required`,
 `additionalProperties` and scalar-constraint comparisons and the meta-guards that control them.
