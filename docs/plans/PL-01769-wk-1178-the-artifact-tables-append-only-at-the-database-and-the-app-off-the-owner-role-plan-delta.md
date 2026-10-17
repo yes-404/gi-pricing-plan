@@ -1,10 +1,10 @@
 ---
-id: PL-8016
+id: PL-1769
 family: plan
 kind: map
-title: WK-1178 — the artifact tables append-only at the database (SL-8017) and the application off the owner role (SL-8041) — a dated Work-plan delta
+title: WK-1178 — the artifact tables append-only at the database (SL-1770) and the application off the owner role (SL-1771) — a dated Work-plan delta
 status: draft                   # draft → active → superseded | retired (§1.2a) — DP-1 to DP-7 ruled at 10:29:14, DP-8 to DP-20 at 12:18:57, DP-21 and DP-22 (plan review, 2026-10-14) at 12:42:33, DP-21b at 13:21:41, refined at 13:27:39 and 15:14:52; activation is the lead's
-created: 2026-10-14
+created: 2026-10-17          # original date 2026-10-14, set at the filing; minted 2026-10-17
 owner: planner
 tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
 phase: P2
@@ -12,17 +12,19 @@ work: WK-1178
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [FD-1704, RL-1700, SL-8017, SL-8041, SL-1274, SL-1455, FD-1728, FD-1729, FR-43, FR-44, FR-70, FR-88, FR-96, FR-229, FR-240, FR-370, RL-1615]
+relates: [FD-1704, RL-1700, SL-1770, SL-1771, SL-1274, SL-1455, FD-1728, FD-1729, FR-43, FR-44, FR-70, FR-88, FR-96, FR-229, FR-240, FR-370, RL-1615]
 ---
 
-# PL-8016 — WK-1178: the artifact tables append-only at the database (SL-8017), and the application off the owner role (SL-8041)
+# PL-1769 — WK-1178: the artifact tables append-only at the database (SL-1770), and the application off the owner role (SL-1771)
+
+*(Minted 2026-10-17 as PL-1769 from working id 8016, with SL-1770 from working id 8017 and SL-1771 from working id 8041, in plans batch P2 mint PR.)*
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L5
 > (`document-ids.md` §1.6, PL row: *"one plan per Work, slices as rows, no per-slice `leaf`; a
 > change is one dated Work-plan delta, a new `PL-` that `relates:` the Work's plan"*). WK-1178
 > has no Work plan, so, as for `PL-1667`, this delta `relates:` the records it builds on. It
 > carries **two slice rows** under `### WK-1178` in [`../roadmap.md`](../roadmap.md): **S-a =
-> SL-8017** (the triggers) and **S-b = SL-8041** (least privilege). Each slice is its own PR and
+> SL-1770** (the triggers) and **S-b = SL-1771** (least privilege). Each slice is its own PR and
 > its own `LG-`, which quotes its row in the *Slices* table below as its scope.
 > REQUIRED SUB-SKILL: subagent-driven-development (recommended) or executing-plans, task by
 > task; steps use checkbox (`- [ ]`) syntax. The executor also binds `test-driven-development`
@@ -36,10 +38,10 @@ relates: [FD-1704, RL-1700, SL-8017, SL-8041, SL-1274, SL-1455, FD-1728, FD-1729
 ## Re-cut record
 
 Filed under **working id 8016**, re-cut in place while unminted and undated. The first cut
-(seat planner-fd8007, tree `1e260c15`, one slice SL-8017 over `factors` only) is at
+(seat planner-fd8007, tree `1e260c15`, one slice SL-1770 over `factors` only) is at
 `origin/pl-8016-wk1178-fd8007-remedy-2026-10-14` @`e29de1bc`; this commit replaces it. Its
 DP-1 to DP-7 keep their numbers and their rulings (Decision points); DP-4 is superseded by
-DP-8. **SL-8017** is re-cut to S-a. **SL-8041** is new, reserved by the lead (`eta.md` entry
+DP-8. **SL-1770** is re-cut to S-a. **SL-1771** is new, reserved by the lead (`eta.md` entry
 "2026-10-14 12:02:15 BST", item (1): *"SL 8041 = PL 8016 re-cut S-b (least privilege)"*).
 Re-cut 2026-10-14 by the planner (seat planner-pl8016r). **Tree read:** `origin/main`
 `a3fc2e8dd384de6abf909f662f43011b8078fb4e`. Every `file:line` below was read at that tree
@@ -86,7 +88,7 @@ at Task 0, so the slice record does not depend on a scratch path.
 
 ## Goal
 
-**S-a (SL-8017).** Every artifact table carries both of `FR-44`'s layers. That is `factors`
+**S-a (SL-1770).** Every artifact table carries both of `FR-44`'s layers. That is `factors`
 and the ten tables FD-1728 names (`rate_tables`, `rate_table_versions`, `rate_table_cells`,
 `rating_algorithms`, `sub_graph_versions`, `regression_suites`, `regression_suite_versions`,
 `reference_tables`, `reference_table_versions`, `reference_rows`). The trigger refuses an
@@ -95,7 +97,7 @@ base first. The append-only set is **derived from a declaration on every mapped 
 from grants, so a new artifact table that is not protected fails a test on the day it lands.
 The three legitimate in-place writes are each removed or declared with a reason.
 
-**S-b (SL-8041).** The application and the worker connect as a login role that holds
+**S-b (SL-1771).** The application and the worker connect as a login role that holds
 `gip_app`'s grants, and only migrations connect as the owner. The process refuses to start
 when `current_user` owns the schema or is a superuser. Every grant the application needs is
 found **red first**, by running the suite as that role. Only S-b makes S-a tamper-resistant,
@@ -285,8 +287,8 @@ keep the revisions that no `down_revision` names.
 
 | Slice | Scope | Requirements | Depends on | Order and lane |
 |---|---|---|---|---|
-| **S-a = SL-8017** — the triggers | One Alembic migration. The `artifact_append_only()` pair goes on the nine append-only tables (`factors`, `rate_table_cells`, `rate_table_versions`, `rating_algorithms`, `reference_rows`, `reference_tables`, `regression_suite_versions`, `regression_suites`, `sub_graph_versions`). A column guard plus the `TRUNCATE` trigger go on `rate_tables` (W1) and `reference_table_versions` (W3). `dataset_versions` gets a guard that freezes its data from the first validation, with a `data_frozen_at` marker column, plus the `TRUNCATE` trigger (DP-21, ruled guarded 12:42:33; DP-21b, 13:21:41, refined 13:27:39). The `TRUNCATE` trigger also goes on the six tables that carry only a row guard (`approval_requests`, `blobs`, `deployment_requests`, `rating_versions`, `validation_rule_sets`, `validation_rules`), which are classed `guarded` (plan review R2, 2026-10-14). Every table's class and reason is the *Table classification* below (plan review R3). Layer 1 for all eleven: `factors` loses `UPDATE`; the ten get `SELECT, INSERT`, and the two guarded tables also get a column `UPDATE` on their allow-listed columns (DP-12). The append-only set is derived from a declaration on every mapped table (DP-8). W2 is removed in `rate_tables.py`. W4 to W6 are rewritten to insert. FD-1704's DP-1 `gip_app` test. `FR-44`, `FR-70` and `FR-229` dated lines. | `01` FR-43, FR-44, FR-70; `03` FR-229 and R1 (`03-rating-engine.md:41`); `06` FR-370 (the layer-1 form) | G2's merges on `main` (the maintainer's "right after the G2 merges"); `FD-1704`, `FD-1728` minted | first; lane: backend migrations. If `SL-1274` also adds a migration, DP-7 applies |
-| **S-b = SL-8041** — least privilege | A login role that is a member of `gip_app`, provisioned for compose, CI and the shared container; `GIP_DATABASE_URL` is the application's DSN and a new `GIP_MIGRATION_DATABASE_URL` is the owner's, read only by `migrations/env.py` and owner-only tooling (DP-16). The test `database` fixture runs as the login role, and a new `owner_database` fixture is used for teardown, catalog checks and DDL (DP-18); every test connection built from `test_database_url()` moves to the login role with it, and a test keeps the owner only by name, with a reason (plan review R1, 2026-10-14). The grants are found red first from that run, diffed against the census, and written as one migration that also revokes every grant no census row or red needs, pinned by an exact grant map over every table (DP-20; plan review R6, R9). A startup refusal under the one membership predicate P-own (owner, superuser or `BYPASSRLS` role) and when a declared trigger is missing, not enabled or has a changed function body, in the API and the worker (DP-19, DP-14; plan review R4, R5). The tamper-resistance proof: the login role cannot `DISABLE TRIGGER` (DP-14). A convergent provisioning script with a stated rollback (plan review R7, R8). A compose run on a fresh volume. | `01` FR-43, FR-44; `06` FR-370 (*"the application role holds `INSERT` and `SELECT` only"*); NFR-458 | S-a merged (S-b's grant map includes S-a's grants); G2's merges; the `SL-1455` NFR session finished (it touches every DB path, so it must not move a measured baseline); `FD-1729` minted | second, and before the 4 Nov P2 code freeze. It runs the full gate **and** a compose run |
+| **S-a = SL-1770** — the triggers | One Alembic migration. The `artifact_append_only()` pair goes on the nine append-only tables (`factors`, `rate_table_cells`, `rate_table_versions`, `rating_algorithms`, `reference_rows`, `reference_tables`, `regression_suite_versions`, `regression_suites`, `sub_graph_versions`). A column guard plus the `TRUNCATE` trigger go on `rate_tables` (W1) and `reference_table_versions` (W3). `dataset_versions` gets a guard that freezes its data from the first validation, with a `data_frozen_at` marker column, plus the `TRUNCATE` trigger (DP-21, ruled guarded 12:42:33; DP-21b, 13:21:41, refined 13:27:39). The `TRUNCATE` trigger also goes on the six tables that carry only a row guard (`approval_requests`, `blobs`, `deployment_requests`, `rating_versions`, `validation_rule_sets`, `validation_rules`), which are classed `guarded` (plan review R2, 2026-10-14). Every table's class and reason is the *Table classification* below (plan review R3). Layer 1 for all eleven: `factors` loses `UPDATE`; the ten get `SELECT, INSERT`, and the two guarded tables also get a column `UPDATE` on their allow-listed columns (DP-12). The append-only set is derived from a declaration on every mapped table (DP-8). W2 is removed in `rate_tables.py`. W4 to W6 are rewritten to insert. FD-1704's DP-1 `gip_app` test. `FR-44`, `FR-70` and `FR-229` dated lines. | `01` FR-43, FR-44, FR-70; `03` FR-229 and R1 (`03-rating-engine.md:41`); `06` FR-370 (the layer-1 form) | G2's merges on `main` (the maintainer's "right after the G2 merges"); `FD-1704`, `FD-1728` minted | first; lane: backend migrations. If `SL-1274` also adds a migration, DP-7 applies |
+| **S-b = SL-1771** — least privilege | A login role that is a member of `gip_app`, provisioned for compose, CI and the shared container; `GIP_DATABASE_URL` is the application's DSN and a new `GIP_MIGRATION_DATABASE_URL` is the owner's, read only by `migrations/env.py` and owner-only tooling (DP-16). The test `database` fixture runs as the login role, and a new `owner_database` fixture is used for teardown, catalog checks and DDL (DP-18); every test connection built from `test_database_url()` moves to the login role with it, and a test keeps the owner only by name, with a reason (plan review R1, 2026-10-14). The grants are found red first from that run, diffed against the census, and written as one migration that also revokes every grant no census row or red needs, pinned by an exact grant map over every table (DP-20; plan review R6, R9). A startup refusal under the one membership predicate P-own (owner, superuser or `BYPASSRLS` role) and when a declared trigger is missing, not enabled or has a changed function body, in the API and the worker (DP-19, DP-14; plan review R4, R5). The tamper-resistance proof: the login role cannot `DISABLE TRIGGER` (DP-14). A convergent provisioning script with a stated rollback (plan review R7, R8). A compose run on a fresh volume. | `01` FR-43, FR-44; `06` FR-370 (*"the application role holds `INSERT` and `SELECT` only"*); NFR-458 | S-a merged (S-b's grant map includes S-a's grants); G2's merges; the `SL-1455` NFR session finished (it touches every DB path, so it must not move a measured baseline); `FD-1729` minted | second, and before the 4 Nov P2 code freeze. It runs the full gate **and** a compose run |
 
 **Why two slices, in this order** (the maintainer's cut, restated as dependencies): the
 trigger binds every caller, the owner included, so S-a closes the silent-price risk without
@@ -641,7 +643,7 @@ layer holds the line until then.
 
 ## Write set
 
-**S-a (SL-8017)**
+**S-a (SL-1770)**
 
 | File | Change | Task |
 |---|---|---|
@@ -653,9 +655,9 @@ layer holds the line until then.
 | `backend/tests/test_fr240_governance.py`, `test_model_jobs.py`, `test_model_jobs_gbm.py` | W4 (DP-2, DP-3) | 4 |
 | `backend/tests/test_rate_table_diff_portfolio.py`, `test_rating_version_change_summary_route.py` | W5, W6 (DP-13) | 4 |
 | `docs/specs/01-data-management.md` (`FR-44` `:106`, `FR-60` `:161` (15:14:52 (4)(c)), `FR-70` `:177`, §5.1's error-code list `:931-937`), `docs/specs/03-rating-engine.md` (`FR-229` `:122`) | dated lines (DP-5) | 5 |
-| `docs/ledgers/LG-<id>.md`, `docs/roadmap.md` (SL-8017's status line) | the slice's paperwork (Lean P2 L1) | all |
+| `docs/ledgers/LG-<id>.md`, `docs/roadmap.md` (SL-1770's status line) | the slice's paperwork (Lean P2 L1) | all |
 
-**S-b (SL-8041)**
+**S-b (SL-1771)**
 
 | File | Change | Task |
 |---|---|---|
@@ -668,7 +670,7 @@ layer holds the line until then.
 | `.github/workflows/python.yml` (`:290-306`), the `scripts/` consumers the census lists | DP-16 | 2 |
 | `.claude/skills/dev-commands/SKILL.md` ("Migrations", `:932-949`), `.claude/skills/fastapi-service/SKILL.md` (the DSN post-mortem), `.claude/skills/README.md` | the new variables, same commit (`CLAUDE.md` §12) | 2 |
 | `docs/specs/01-data-management.md` (`FR-44`), `docs/specs/07-platform.md` (wherever the census finds the DSN specified) | dated lines (DP-5) | 7 |
-| `docs/ledgers/LG-<id>.md`, `docs/roadmap.md` (SL-8041's status line) | paperwork | all |
+| `docs/ledgers/LG-<id>.md`, `docs/roadmap.md` (SL-1771's status line) | paperwork | all |
 
 `examples/fremtpl2/seed.py` (`run`, `:420-427`: the owner `Database` for `grant_demo_principals`
 only), its README, and `backend/tests/test_wf699_journey.py` (`:227`, `:518`: `owner_database`
@@ -678,7 +680,7 @@ for the bootstrap call) are in S-b's write set (plan review R11; 13:21:41 P2 (2)
 
 ## Tasks
 
-### S-a (SL-8017)
+### S-a (SL-1770)
 
 #### Task 1: the reds by cause, on the base tree (tests only)
 
@@ -690,7 +692,7 @@ for the bootstrap call) are in S-b's write set (plan review R11; 13:21:41 P2 (2)
   lists from this plan. `factors`, in the `bandings` form:
 
 ```python
-    #: **Added 2026-10-14 (WK-1178, SL-8017, FD-1704).** A Model pins its Factors by row id,
+    #: **Added 2026-10-14 (WK-1178, SL-1770, FD-1704).** A Model pins its Factors by row id,
     #: so an edited row re-prices every pinned fitted Model with the pin unchanged.
     "factors": (
         "INSERT INTO factors (id, workspace_id, dataset_id, slug, version, body) "
@@ -838,7 +840,7 @@ async def test_the_declarations_cover_every_table_in_the_database(database: Data
   (`GIP_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing_<wt> uv run --directory <wt>/backend alembic revision -m "artifact tables append only"`)
   and replace the body. Its docstring states FD-1728 and FD-1704, why the ten had neither
   layer, why `factors` rode `models`' grant (`b2c3d4e5f6a7:89`), W1 to W3 and their treatments,
-  and that **the grants are inert until SL-8041** (FD-1729).
+  and that **the grants are inert until SL-1771** (FD-1729).
 
 ```python
 APP_ROLE = "gip_app"
@@ -918,7 +920,7 @@ def upgrade() -> None:
               BEFORE TRUNCATE ON {table}
               FOR EACH STATEMENT EXECUTE FUNCTION artifact_append_only();
         """)
-    # Layer 1 (DP-12). Inert until SL-8041: the application connects as the owner (FD-1729).
+    # Layer 1 (DP-12). Inert until SL-1771: the application connects as the owner (FD-1729).
     op.execute(f"REVOKE UPDATE, DELETE ON factors FROM {APP_ROLE}")
     for table in NEWLY_GRANTED:
         op.execute(f"GRANT SELECT, INSERT ON {table} TO {APP_ROLE}")
@@ -1083,15 +1085,15 @@ def downgrade() -> None:
 `<date>` is the commit date and `<rev>` Task 2's revision. Escape any `|` as `\|`.
 
 - [ ] **Step 5.1: `FR-44`** (`01-data-management.md:106`), appended:
-  `*(Amended <date>, WK-1178 SL-8017, on FD-1728 and FD-1704.)* **The set is declared, not derived from grants.** Eleven artifact tables were outside it: ten had no grant and no trigger, so a grants-derived set could not see them, and `factors` held `UPDATE` beside `models`. Every mapped table now declares `append_only`, `guarded` (a named narrower trigger and a reason) or `mutable` (a reason); a table that declares nothing fails a test. `<rev>` attaches both triggers to the nine new append-only tables, a forward-only guard to `rate_tables.current_version` and a `draft`-to-`published` guard to `reference_table_versions.status`. Layer 1 binds only once the application stops connecting as the owner (FD-1729, SL-8041).`
+  `*(Amended <date>, WK-1178 SL-1770, on FD-1728 and FD-1704.)* **The set is declared, not derived from grants.** Eleven artifact tables were outside it: ten had no grant and no trigger, so a grants-derived set could not see them, and `factors` held `UPDATE` beside `models`. Every mapped table now declares `append_only`, `guarded` (a named narrower trigger and a reason) or `mutable` (a reason); a table that declares nothing fails a test. `<rev>` attaches both triggers to the nine new append-only tables, a forward-only guard to `rate_tables.current_version` and a `draft`-to-`published` guard to `reference_table_versions.status`. Layer 1 binds only once the application stops connecting as the owner (FD-1729, SL-1771).`
 - [ ] **Step 5.2: `FR-70`** (`:177`), appended:
-  `*(Amended <date>, WK-1178 SL-8017.)* Enforced in the database: `reference_table_versions` may move only `draft` to `published`, and `reference_tables` and `reference_rows` are append-only (`<rev>`).`
+  `*(Amended <date>, WK-1178 SL-1770.)* Enforced in the database: `reference_table_versions` may move only `draft` to `published`, and `reference_tables` and `reference_rows` are append-only (`<rev>`).`
 - [ ] **Step 5.3: `FR-229`** (`03-rating-engine.md:122`), appended:
-  `*(Amended <date>, WK-1178 SL-8017, on FD-1728.)* Enforced in the database: `rate_table_versions` and `rate_table_cells` are append-only, and `rate_tables` may only move `current_version` forward (`<rev>`).`
+  `*(Amended <date>, WK-1178 SL-1770, on FD-1728.)* Enforced in the database: `rate_table_versions` and `rate_table_cells` are append-only, and `rate_tables` may only move `current_version` forward (`<rev>`).`
 - [ ] **Step 5.4: `FR-60`** (`01-data-management.md:161`), a dated clarification, through the
   `spec-change` skill (the maintainer (by delegation), "2026-10-14 15:14:52 BST", (4)(c): *"it
   decides refuse/allow, so it goes in the spec, per my 12:07:40 rule"*), appended:
-  `*(Clarified <date>, WK-1178 SL-8017, on the maintainer's (by delegation) "2026-10-14 15:14:52 BST" ruling.)* **The profile is computed once per Dataset Version; a frozen version is never re-profiled.** A version's data freezes at its first `draft → validating` (`00` §2: the version is an immutable snapshot that carries its profile). A profile may still be recorded once after that if none was, and a second one is refused with `DATASET_VERSION_IMMUTABLE` (`409`).`
+  `*(Clarified <date>, WK-1178 SL-1770, on the maintainer's (by delegation) "2026-10-14 15:14:52 BST" ruling.)* **The profile is computed once per Dataset Version; a frozen version is never re-profiled.** A version's data freezes at its first `draft → validating` (`00` §2: the version is an immutable snapshot that carries its profile). A profile may still be recorded once after that if none was, and a second one is refused with `DATASET_VERSION_IMMUTABLE` (`409`).`
   *(The refused code amended 2026-10-14, on the maintainer (by delegation), `to-lead.md` "2026-10-14 15:32:52 BST".)*
 - ~~**Step 5.5:** `01` §5.1's *"Error codes owned by this module"* list (`:931-937`) gains
   `PROFILE_ALREADY_SET`, in the same commit as `errors.py` (Step 2.10). If `spec-change` or the
@@ -1115,7 +1117,7 @@ def downgrade() -> None:
   treatment, and report it to the lead before fixing (a fix outside DP-9 to DP-13 needs a
   ruling). Record the rc table.
 
-### S-b (SL-8041)
+### S-b (SL-1771)
 
 #### Task 0: the census, before any edit
 
@@ -1468,7 +1470,7 @@ GRANT gip_app TO gip_app_login;
 #### Task 7: the spec line, review, gate
 
 - [ ] **Step 7.1: `FR-44`**, appended:
-  `*(Amended <date>, WK-1178 SL-8041, on FD-1729.)* **Layer 1 binds.** The application and the worker connect as `gip_app_login`, a member of `gip_app` that owns nothing and is not a superuser; only migrations use the owner (`GIP_MIGRATION_DATABASE_URL`). Startup refuses an owner, a superuser, or a disabled artifact trigger. Every `gip_app` grant is pinned by an exact map over every table. Until this, every grant and revoke here was inert, and the owner could disable the triggers.`
+  `*(Amended <date>, WK-1178 SL-1771, on FD-1729.)* **Layer 1 binds.** The application and the worker connect as `gip_app_login`, a member of `gip_app` that owns nothing and is not a superuser; only migrations use the owner (`GIP_MIGRATION_DATABASE_URL`). Startup refuses an owner, a superuser, or a disabled artifact trigger. Every `gip_app` grant is pinned by an exact map over every table. Until this, every grant and revoke here was inert, and the owner could disable the triggers.`
   The census decides whether `07-platform.md` also names the DSN. If it does, that clause gets
   a dated line in the same commit.
 - [ ] **Step 7.2:** postgres-pro reviews the grant map and the provisioning file (evidence).
@@ -1480,7 +1482,7 @@ GRANT gip_app TO gip_app_login;
 Each item can be checked by a fresh reviewer at the slice PR's merge tree, with the range
 `origin/main...<slice branch>` named.
 
-**SL-8017 (S-a)**
+**SL-1770 (S-a)**
 
 1. The `LG-` carries, at the named base tree, every red of S-a Task 1.4 (the exact-grant line,
    27 owner `DID NOT RAISE` cases, one per table and statement of the nine (plan review R10,
@@ -1523,7 +1525,7 @@ Each item can be checked by a fresh reviewer at the slice PR's merge tree, with 
 7. The postgres-pro review is in the `LG-`; the full gate rc table is all 0; `python3
    scripts/audit-docs.py` exits 0 on the merge tree.
 
-**SL-8041 (S-b)**
+**SL-1771 (S-b)**
 
 8. The `LG-` carries Task 0's census table and the census copy (Step 0.2), Task 3.2's red list
    with its class per line, **Task 5.1's census diff** (plan review R6), Task 1.3's
@@ -1560,11 +1562,11 @@ Each item can be checked by a fresh reviewer at the slice PR's merge tree, with 
 
 ## Activation needs
 
-- **SL-8017:** G2's merges on `main`; `FD-1704` and `FD-1728` minted (the `LG-`, docstrings
+- **SL-1770:** G2's merges on `main`; `FD-1704` and `FD-1728` minted (the `LG-`, docstrings
   and migration cite minted ids); DP-8 to DP-13 ruled (`to-lead.md` "2026-10-14 12:18:57 BST" item (2)), quoted in the `LG-`, with DP-8's switch read at the GO (Task 2.2);
   DP-21 ruled guarded (`to-lead.md` "2026-10-14 12:42:33 BST") and DP-21b ruled ("2026-10-14 13:21:41 BST", refined
   "2026-10-14 13:27:39 BST"), quoted in the `LG-`; a gate slot for Task 6.2.
-- **SL-8041:** SL-8017 merged; the `SL-1455` NFR session finished; `FD-1729` minted, and it
+- **SL-1771:** SL-1770 merged; the `SL-1455` NFR session finished; `FD-1729` minted, and it
   states that the owner can `DISABLE TRIGGER`, so S-b makes S-a tamper-resistant (authority 1
   and 2); DP-14 to DP-20 ruled (the same entry); DP-22 ruled not granted (12:42:33); the
   maintainer's GO names DP-15's target, the shared container, **and requires a
