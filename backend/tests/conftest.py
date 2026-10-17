@@ -6,6 +6,8 @@ them for every test module without each one importing them.
 
 from __future__ import annotations
 
+import gc
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -79,6 +81,14 @@ def _isolate_probes():
     clear_probes()
     yield
     clear_probes()
+
+
+@pytest.fixture(autouse=True)
+def _leave_no_frozen_objects():
+    """An app lifespan calls `gc.freeze()` (PL-1454 DP-4); the permanent generation is
+    process-wide, so hand it back as found after every test rather than let it leak."""
+    yield
+    gc.unfreeze()
 
 
 # Re-exported so pytest registers them as fixtures for the whole package.

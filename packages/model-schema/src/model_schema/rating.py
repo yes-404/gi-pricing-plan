@@ -11,7 +11,6 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from decimal import Decimal
 from enum import StrEnum
 from itertools import pairwise
 from typing import Annotated, Any, Final, Literal, Protocol
@@ -30,7 +29,7 @@ from pydantic import (
 
 from model_schema.graph_errors import GraphCycleError, GraphUnresolvedRefError
 from model_schema.input_free import InputFreeError
-from model_schema.money import DecimalStr
+from model_schema.money import DecimalStr, SchemaDecimal
 from model_schema.refs import ArtifactRef, BlobRef, Slug
 from model_schema.regression import GoldenQuoteEvidence
 
@@ -295,8 +294,8 @@ class InputContractField(BaseModel):
     name: str
     type: RatingInputType
     nullable: bool = False
-    min: Decimal | int | None = None
-    max: Decimal | int | None = None
+    min: SchemaDecimal | int | None = None
+    max: SchemaDecimal | int | None = None
     pattern: str | None = None
     domain: list[str] | None = None
     description: str | None = None
@@ -1082,8 +1081,8 @@ class RateTableValue(BaseModel):
     name: str
     type: RateTableValueType
     unit: str
-    min: Decimal | int | None = None
-    max: Decimal | int | None = None
+    min: SchemaDecimal | int | None = None
+    max: SchemaDecimal | int | None = None
 
 
 class RateTableCell(RootModel[dict[str, str]]):
@@ -1141,10 +1140,10 @@ class RateTableDiff(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     changed_cells: int = Field(ge=0)
-    max_abs_change_pct: Decimal | None = None
-    exposure_weighted_mean_change_pct: Decimal | None = None
-    portfolio_exposure: Decimal | None = None
-    matched_exposure: Decimal | None = None
+    max_abs_change_pct: SchemaDecimal | None = None
+    exposure_weighted_mean_change_pct: SchemaDecimal | None = None
+    portfolio_exposure: SchemaDecimal | None = None
+    matched_exposure: SchemaDecimal | None = None
 
 
 class RateTableDiffCell(BaseModel):
@@ -1164,11 +1163,11 @@ class RateTableDiffCell(BaseModel):
 
     key: dict[str, str]
     change: Literal["added", "removed", "changed"]
-    baseline_value: Decimal | None = None
-    current_value: Decimal | None = None
-    abs_change: Decimal | None = None
-    rel_change_pct: Decimal | None = None
-    weight: Decimal | None = None
+    baseline_value: SchemaDecimal | None = None
+    current_value: SchemaDecimal | None = None
+    abs_change: SchemaDecimal | None = None
+    rel_change_pct: SchemaDecimal | None = None
+    weight: SchemaDecimal | None = None
 
 
 class RateTableChange(BaseModel):
@@ -1178,12 +1177,15 @@ class RateTableChange(BaseModel):
     `from_ref` / `to_ref` are the pins on the baseline and on the version; `None` marks a
     table pinned on one side only. `diff` is the unweighted cell diff (FR-231); it is `None`
     when `pending` (a `storage: parquet` side is not computed here, FR-232) or when the table
-    is on one side only.
+    is on one side only. `step_id` is the `table` step whose rate-table reference this entry
+    pairs (FR-219's pairing by `step_id`); `None` for a pin no step entry names, paired by slug
+    only when it is the one such ref on each side (`RL-1707`).
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     slug: str
+    step_id: str | None = None
     from_ref: ArtifactRef | None = None
     to_ref: ArtifactRef | None = None
     diff: RateTableDiff | None = None

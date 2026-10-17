@@ -3,7 +3,7 @@ id: PL-1454
 family: plan
 kind: leaf
 title: WK-1178 — NFR-489 remedy, the /score request path meets its p99 budget at 25 to 200 rps (NFR-489, NFR-454, NFR-497, FR-243, FR-259): leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-06            # original date 2026-10-04, set at the draft; minted 2026-10-06
 owner: planner
 tree: 47d770e8fcbd2410fa101019ed8cf3aae69a1baa
