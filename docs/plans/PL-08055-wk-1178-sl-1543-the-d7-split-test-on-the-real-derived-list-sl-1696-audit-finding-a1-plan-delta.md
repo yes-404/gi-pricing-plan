@@ -73,7 +73,7 @@ numbers marked `@20ec89f6` are read at `SL-1543`'s head (`sl-1543-prep-on-1300`,
 - **R1 — DP-Q2 → (a): Acceptance 4 reads `payable_premium_minor`.** The maintainer's entry
   "2026-10-17 11:18:51 BST — Maintainer: SL-1543 DP-Q2 → (a), DP-Q3 → (c); both carried in PL 8055
   (no new record)" in `~/gi-pricing-plan.local/channel/to-lead.md`, item Q2, verbatim: *"Acceptance
-  4 (PL-01542 :248/:251, :461-462) reads the builder's `payable_premium_minor`, the last rung the
+  4 (PL-1542 :248/:251, :461-462) [the entry pads the id; written unpadded here for check 32] reads the builder's `payable_premium_minor`, the last rung the
   builder declares (examples/fremtpl2/algorithm.py ~:301-323). `risk_premium_minor` survives only
   in the committed v1/v2 demo ladders, and those are not this builder's output. No code change, no
   contract or hash change, no window re-run."* Checked: `algorithm.py` declares
