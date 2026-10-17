@@ -2603,25 +2603,6 @@ The interim fix of FD-1754 (FD-1754, merged in D18 (#1319); HIGH, the silent cas
 
 (Closed 2026-10-17 as a Slice on a clean audit: audit written in LG-1759 (Audit section, by `auditor-8071`, at d3d03fbb), adopted by the lead 2026-10-17 13:21:31 BST; the re-gate accepted in `to-lead.md` "2026-10-17 12:38:39 BST". MERGE-ACK: not yet given.)
 
-#### SL-8071 — WK-1178 fix slice — FD 8073: a model_call refuses a GBM fitted on a banded or grouped Factor, and a GbmFitError while scoring is a named failure
-
-```yaml
-id: SL-8071
-family: slice
-title: WK-1178 fix slice — FD 8073: a model_call refuses a GBM fitted on a banded or grouped Factor, and a GbmFitError while scoring is a named failure
-status: active                   # draft → active → closed | retired (§1.2a)
-created: 2026-10-16
-owner: executor                  # the lead dispatches (active)
-phase: P2
-work: WK-1178
-corrected_by: []
-relates: []
-```
-
-The interim fix of FD 8073 (FD 1754 in D18, unmerged; HIGH, the silent case C reproduced; owner WK-1178). A GBM fitted on a banded or grouped Factor fits, approves and pins, but a GBM pin carries no Bandings or Groupings into the Bundle and the runtime scores it with `factors=()`: a raw value is looked up as the band label, which raises `GbmFitError` (loud, and an unnamed engine node error) or, when a label spells another band's number, prices the wrong band with no error (silent). **Scope, exactly:** (1) a `model_call` step whose pinned GBM has a banded or grouped Factor is refused with `MODEL_CALL_GBM_TRANSFORMED_FACTOR`, at the save check (`check_model_call_feature_maps`, so at all three save routes) and at compile (`check_model_call_gbm_factors`); for a `peril_structure_ref` step each component model; (2) the refusal is keyed on the step, **never on the pin**: a Rating Version that pins a banded GBM no `model_call` reaches (WF-699 C1, C5) saves and compiles as before; (3) `GbmFitError` is caught in the `model_call` handler beside `ModellingError` and `PredictionError`, so it is the step's `MODEL_CALL_FAILED` failure naming its code; (4) `03` FR-222 and FR-240 carry the dated amendment and the code is in the owned-codes list. **Out of scope:** carrying the GBM's Factors, Bandings and Groupings in the Bundle with a renamer (a design choice, a decision point in FD 8073, owner WK-673); SL-1543 is not blocked, because its B4 calls the Peril Structure's GLMs. Red-first: the tests commit precedes the fix commit.
-
-(Activated 2026-10-16 as WK-1178's FD 8073 fix slice, on the maintainer's (by delegation) entry "2026-10-16 10:59:28 BST — Maintainer: the GBM model_call defect — the reading is accepted; disposition fixed now, severity on the run", item 1 (`to-lead.md`). Ledger `LG 8072`.)
-
 #### SL-1734 — WK-1178 fix slice — FD-1723's HIGH limbs: a capped GLM spec fits capped (FR-127), and the banding check runs at fit (FR-100)
 
 ```yaml
@@ -2642,14 +2623,14 @@ relates: [PL-1542, SL-1543, PL-1674, SL-1675, FD-1723]
 
 On the maintainer's (by delegation) entries "2026-10-14 11:06:52 BST" (item 2: *"Any HIGH limb is fixed in P2"*), "2026-10-14 11:28:56 BST" (FD-1723, HIGH; both limbs fixed in P2 under WK-1178, red first) and "2026-10-14 11:29:53 BST" (the FR-127 GLM fix is off the G2 path, conditionally). **FR-127, GLM limb:** `fit_glm` never reads `loss_treatment` (`glm.py:577`), so a capped `GlmSpec` fits uncapped while its spec and `spec_hash` say capped. The fix applies `apply_loss_treatment` (`gbm.py:178`, moved to its own module, `loss_treatment.py`, DP-L1) at the response read, and refuses `spliced` and `excess` by name, as `fit_gbm` does. **The EBM arm too** (DP-L2 (a)): `fit_ebm` ignores `loss_treatment` at `ebm.py:209`, the same class; an auditor adds the limb to FD-1723 before the mint. **FR-100:** `check_banding` (`bandings.py:524`) has no fit-path caller. The fix runs it at each fit entry over the rows fitted, after FR-111's weight-0 exclusion (DP-B1 (a)) and before factor resolution: `BAND_EMPTY` always, `BAND_BELOW_MIN_EXPOSURE` under `fail`, and under `warn` a typed `banding_warnings` field on the three fit results, through `model-schema` with `docs/contracts/` regenerated and the frontend's generated types following (DP-B2 (a)). The fit Job maps `BandingError` to a `409` that carries its code. Reds R1 to R8 are first seen red on main. **DP-G1:** Task 0 Step 3's probe runs before any code; any `BAND_EMPTY` for the A-4 severity GLM is a STOP to the maintainer. **SL-1543's guard test is not touched**; if DP-A4-3 switches to (y), it changes only with this slice's merge. If the 11:29:53 binding condition fires, the FR-127 limb joins G2 and merges before SL-1543 resumes (DP-S1). Plan `PL-1733` (a WK-1178 Work-plan delta; `draft`). **Activation needs:** FD-1723 minted, with its EBM limb; the decision points ruled — MET, every one, by the maintainer's (by delegation) entry "2026-10-14 11:52:51 BST", item (2); the plan made `active` by a dated line; Task 0 Step 3's G2 probe clean for the A-4 severity GLM, or the maintainer's ruling on it; a free build lane. *(Row cut 2026-10-14 by the planner, planner-fd8027; working ids 8031 and 8030 reserved by the lead in `handover/eta.md`.)*
 
-#### SL-8074 — WK-1178 fix slice — FD 8070: a model_call never prices a Model on one of two different values for one column
+#### SL-1761 — WK-1178 fix slice — FD-1753: a model_call never prices a Model on one of two different values for one column
 
 ```yaml
-id: SL-8074
+id: SL-1761
 family: slice
-title: WK-1178 fix slice — FD 8070: a model_call never prices a Model on one of two different values for one column
-status: active                   # draft → active → closed | retired (§1.2a)
-created: 2026-10-17
+title: WK-1178 fix slice — FD-1753: a model_call never prices a Model on one of two different values for one column
+status: closed                   # draft → active → closed | retired (§1.2a)
+created: 2026-10-17 # original date 2026-10-17, set at the activation; minted 2026-10-17
 owner: executor                  # the lead dispatches (active)
 phase: P2
 work: WK-1178
@@ -2657,9 +2638,11 @@ corrected_by: []
 relates: []
 ```
 
-The fix of FD 8070 (HIGH by run, owner WK-1178). A GLM `model_call` renames each feature slug to its Factor's source column in a dict, so two slugs on one column, fed different graph values, keep only the last and price the quote on it, with no error; compile checks membership and completeness only. **Scope:** (1) score time, `_GlmScorer.predict` refuses unequal values for one column with `MODEL_CALL_FEATURE_COLLISION` (SL-1274's guard, taken verbatim; SL-1274 drops its copy when it re-merges); (2) compile, `check_model_call_columns` refuses, with `MODEL_CALL_FEATURE_MAP_INVALID`, a `model_ref` step whose `feature_map` feeds different graph names to one column or slug of its Model or its offset Model; (3) `03` FR-222 and FR-240 amended. **Ruled 2026-10-17** (the entry headed "2026-10-17 11:15:37 BST — Maintainer: SL 8074 (FD 8070 HIGH) Q1 → (b) with a precision; Q2 → (b)"): two graph names are one value only when both are `input` steps with the same `input_name` and `on_missing`, and a `peril_structure_ref` step is grouped per component Model with its offset Model. FD 8070's separate limb (one slug on two columns across the main and offset models) is not in this slice.
+The fix of FD-1753 (HIGH by run, owner WK-1178). A GLM `model_call` renames each feature slug to its Factor's source column in a dict, so two slugs on one column, fed different graph values, keep only the last and price the quote on it, with no error; compile checks membership and completeness only. **Scope:** (1) score time, `_GlmScorer.predict` refuses unequal values for one column with `MODEL_CALL_FEATURE_COLLISION` (SL-1274's guard, taken verbatim; SL-1274 drops its copy when it re-merges); (2) compile, `check_model_call_columns` refuses, with `MODEL_CALL_FEATURE_MAP_INVALID`, a `model_ref` step whose `feature_map` feeds different graph names to one column or slug of its Model or its offset Model; (3) `03` FR-222 and FR-240 amended. **Ruled 2026-10-17** (the entry headed "2026-10-17 11:15:37 BST — Maintainer: SL 8074 (FD-1753 HIGH) Q1 → (b) with a precision; Q2 → (b)"): two graph names are one value only when both are `input` steps with the same `input_name` and `on_missing`, and a `peril_structure_ref` step is grouped per component Model with its offset Model. FD-1753's separate limb (one slug on two columns across the main and offset models) is not in this slice.
 
-(Activated 2026-10-17 as WK-1178's FD 8070 fix slice, on the maintainer's (by delegation) entries "2026-10-16 10:52:08 BST — Maintainer: FD 8070 — severity ruled after the run; IF it confirms, the predict-time guard is its OWN fast fix slice, not deferred to SL-1274" and "2026-10-17 11:08:04 BST — Maintainer: TODAY'S MODE — full parallel until the user's pause (supersedes the 11:06:41 provisional mode); the LANE PLAN" (lane A) (`to-lead.md`). Ledger `LG 8075`.)
+(Activated 2026-10-17 as WK-1178's FD-1753 fix slice, on the maintainer's (by delegation) entries "2026-10-16 10:52:08 BST — Maintainer: FD-1753 — severity ruled after the run; IF it confirms, the predict-time guard is its OWN fast fix slice, not deferred to SL-1274" and "2026-10-17 11:08:04 BST — Maintainer: TODAY'S MODE — full parallel until the user's pause (supersedes the 11:06:41 provisional mode); the LANE PLAN" (lane A) (`to-lead.md`). Ledger `LG 8075`.)
+
+(Minted 2026-10-17 as SL-1761 from working id 8074, in the SL-1761 PR; ledger LG-1762 from working id 8075; FD-1753 was minted from working id 8070 in the D18 batch mint PR.)
 
 #### SL-1736 — WK-1178 slice — the P2 NFR measurement sweep: NFR-467, NFR-468, NFR-470, NFR-485 and NFR-1443 measured DIAGNOSTIC with pre-registered reading rules; NFR-472's red-first test
 

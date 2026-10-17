@@ -1,21 +1,23 @@
 ---
-id: LG-8075
+id: LG-1762
 family: ledger
-title: WK-1178 slice SL-8074 — FD-8070, a model_call never prices a Model on one of two different values for one column, slice ledger
-status: active                 # active → closed (§1.2a)
-created: 2026-10-17
+title: WK-1178 slice SL-1761 — FD-1753, a model_call never prices a Model on one of two different values for one column, slice ledger
+status: closed                 # active → closed (§1.2a)
+created: 2026-10-17 # original date 2026-10-17, set at the filing; minted 2026-10-17
 owner: executor
 phase: P2
 work: WK-1178
-slice: SL-8074
+slice: SL-1761
 plans: []
 corrected_by: []
-relates: [SL-8074]
+relates: [SL-1761]
 ---
 
-# LG-8075 — WK-1178 slice SL-8074: a model_call never prices a Model on one of two different values for one column
+# LG-1762 — WK-1178 slice SL-1761: a model_call never prices a Model on one of two different values for one column
 
-**GO:** the maintainer's (by delegation) entries "2026-10-16 10:52:08 BST" and "2026-10-17 11:08:04 BST" (lane A) in `to-lead.md`. The finding is FD 8070 (`origin/fd-8070-slug-column-collision-2026-10-16`, HIGH by the run of 2026-10-16 11:08:14 BST).
+*(Minted 2026-10-17 as LG-1762 from working id 8075, with SL-1761 (working id 8074), in the SL-1761 PR; FD-1753 was minted from working id 8070 in the D18 batch mint PR.)*
+
+**GO:** the maintainer's (by delegation) entries "2026-10-16 10:52:08 BST" and "2026-10-17 11:08:04 BST" (lane A) in `to-lead.md`. The finding is FD-1753 (`origin/fd-8070-slug-column-collision-2026-10-16`, HIGH by the run of 2026-10-16 11:08:14 BST).
 **Gate:** none granted to this seat; the full gate is owed and is the lead's to grant.
 **MERGE-ACK:** not yet given.
 **Audit:** not yet.
