@@ -975,6 +975,69 @@ def check_model_call_coverage(
                 )
 
 
+def _model_factors(resolved: ResolvedArtifact) -> tuple[Factor, ...]:
+    """A pinned model's Factors and those of the offset model it reads, which `predict` merges."""
+    factors = resolved.factors
+    if resolved.offset_source is not None:
+        factors = (*factors, *_model_factors(resolved.offset_source))
+    return factors
+
+
+def check_model_call_columns(
+    algorithm: RatingAlgorithm, resolved_pins: Mapping[str, ResolvedArtifact]
+) -> None:
+    """Refuse a `model_call` that feeds one model input from two different graph values (FD-8070).
+
+    `predict` keys the feature row by feature slug and then renames each slug to its Factor's
+    source column, so two graph names that reach one slug, or two slugs that share one source
+    column, collapse to the last value with no error. Per `model_ref` step, the graph names
+    that reach one column (or one slug, for a Factor over several columns or a GBM feature)
+    must be one name. A graph name mapped to two slugs is one value and passes; two names that
+    are both outputs of `input` steps reading the same `input_name` are one value too and are
+    left to the score-time guard (`MODEL_CALL_FEATURE_COLLISION`), which compares values.
+    A `peril_structure_ref` step is not grouped here. The message names authored identifiers,
+    never a quote value (NFR-499).
+    """
+    produced_by: dict[str, Any] = {}
+    for step in algorithm.steps:
+        for name in _produced_names(step):
+            produced_by[name] = step
+    for step in algorithm.steps:
+        if not isinstance(step, RatingModelCallStep) or step.model_ref is None:
+            continue
+        columns = {
+            factor.slug: factor.source_columns[0]
+            for factor in _model_factors(resolved_pins[str(step.model_ref)])
+            if len(factor.source_columns) == 1
+        }
+        reached: dict[str, tuple[set[str], set[str]]] = {}
+        for name, slug in step.feature_map.items():
+            names, slugs = reached.setdefault(columns.get(slug, slug), (set(), set()))
+            names.add(name)
+            slugs.add(slug)
+        for column, (names, slugs) in sorted(reached.items()):
+            if len(names) > 1 and not _same_input(names, produced_by):
+                _raise_named(
+                    "MODEL_CALL_FEATURE_MAP_INVALID",
+                    f"step {step.step_id!r}: {sorted(names)} are different graph values fed to "
+                    f"{sorted(slugs)} of {step.model_ref}, which score one column {column!r}; "
+                    "the model would price on only one of them (FR-222, FR-240)",
+                )
+
+
+def _produced_names(step: Any) -> list[str]:
+    produces = getattr(step, "produces", [])
+    return [produces] if isinstance(produces, str) else list(produces)
+
+
+def _same_input(names: set[str], produced_by: Mapping[str, Any]) -> bool:
+    """True when every name is an `input` step's output and all read the same `input_name`."""
+    steps = [produced_by.get(name) for name in names]
+    return all(isinstance(s, RatingInputStep) for s in steps) and (
+        len({s.input_name for s in steps if isinstance(s, RatingInputStep)}) == 1
+    )
+
+
 async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> Bundle:
     """Compile a pinned `RatingVersion` to a self-contained Bundle (FR-239/240).
 
@@ -1080,6 +1143,7 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
     await _refuse_control_factor_keys(version, payloads, resolver)
     _refuse_control_factor_model_calls(inlined, resolved_pins)
     check_model_call_coverage(inlined, resolved_pins)
+    check_model_call_columns(inlined, resolved_pins)
 
     graph = to_jdm(inlined)
     return Bundle(
@@ -1102,6 +1166,7 @@ __all__ = [
     "ValidationIssue",
     "assert_integer_minor_round_trip",
     "bundle_hash",
+    "check_model_call_columns",
     "check_model_call_coverage",
     "check_step_refs_pinned",
     "compile_bundle",

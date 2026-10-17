@@ -60,6 +60,9 @@ _CASES: dict[str, tuple[dict[str, Any], tuple[str, ...], tuple[str, ...]]] = {
 #: Every other raise site under `pricing_core/rating` (a `_raise_named` call, a `CodedError(`
 #: construction, or a `_model_call_failure(` call), with why it is input-free.
 _INPUT_FREE = {
+    # FD-8070's refusal: the step id, graph names, feature slugs and column, all authored
+    # identifiers, never a quote value (test_rating_column_collision.py)
+    ("rating/compile.py", "check_model_call_columns"): 1,
     ("rating/score.py", "_check_purpose_mount"): 1,  # `purpose` is a closed set of literals
     ("rating/score.py", "_check_billing_surface"): 1,  # names the constant billing-surface keys
     # FR-213's refusal: names the declared step outputs the inputs collide with, never a value

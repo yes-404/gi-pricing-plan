@@ -24,6 +24,7 @@ from test_rating_glm_model_call import (
 from model_schema import Banding, BandingMethod, Factor, FactorType, GlmSpec, OffsetSpec
 from pricing_core.modelling import fit_glm
 from pricing_core.modelling.predict import PredictionError
+from pricing_core.rating import compile as compile_module
 from pricing_core.rating import runtime
 
 COLLISION = "MODEL_CALL_FEATURE_COLLISION"
@@ -56,7 +57,17 @@ def two_factors_one_column_world() -> GlmWorld:
 
 
 def algorithm(feature_map: dict[str, str]) -> dict[str, Any]:
-    """input `driver_age` -> expression `driver_age_adj` (+20) -> model_call under `feature_map`."""
+    """input `driver_age` -> expressions `driver_age_adj` (+20), `driver_age_hi` (+30) -> call.
+
+    An expression step is present only when `feature_map` reads its name.
+    """
+    extra = [
+        {"step_id": f"s_{name}", "type": "expression", "label": name,
+         "expr": f"driver_age + {plus}", "result_type": "int",
+         "consumes": ["driver_age"], "produces": name}
+        for name, plus in (("driver_age_adj", 20), ("driver_age_hi", 30))
+        if name in feature_map
+    ]
     return {
         "slug": "glm-golden", "version": 1,
         "input_contract": [
@@ -66,9 +77,7 @@ def algorithm(feature_map: dict[str, str]) -> dict[str, Any]:
         "steps": [
             {"step_id": "s_age", "type": "input", "label": "Age", "input_name": "driver_age",
              "on_missing": "error", "produces": "driver_age"},
-            {"step_id": "s_adj", "type": "expression", "label": "Adjusted age",
-             "expr": "driver_age + 20", "result_type": "int",
-             "consumes": ["driver_age"], "produces": "driver_age_adj"},
+            *extra,
             {"step_id": "s_risk", "type": "model_call", "label": "Risk",
              "model_ref": MODEL_REF, "mode": "exact", "result_type": "decimal",
              "feature_map": feature_map,
@@ -85,6 +94,15 @@ def world() -> GlmWorld:
     return two_factors_one_column_world()
 
 
+async def _bundle_bypassing_the_compile_guard(
+    world: GlmWorld, monkeypatch: pytest.MonkeyPatch
+) -> Any:
+    """A bundle whose map the compile guard would refuse, as one compiled before the guard was."""
+    monkeypatch.setattr(compile_module, "check_model_call_columns", lambda *_: None)
+    fmap = {"driver_age": "age_fine", "driver_age_adj": "age_coarse"}
+    return await compiled_bundle(world, algorithm(fmap))
+
+
 @pytest.mark.req("FR-240", "FR-222")
 async def test_two_factors_on_one_column_fed_different_graph_names_is_refused_at_compile(
     world: GlmWorld,
@@ -95,14 +113,15 @@ async def test_two_factors_on_one_column_fed_different_graph_names_is_refused_at
         await compiled_bundle(world, algorithm(fmap))
     message = str(caught.value)
     assert "'s_risk'" in message
-    assert "age_fine" in message and "age_coarse" in message
+    assert "age_fine" in message
+    assert "age_coarse" in message
     assert "driver_age" in message  # the shared column is named
 
 
 @pytest.mark.req("FR-240", "FR-222")
 async def test_two_graph_names_onto_one_feature_is_refused_at_compile(world: GlmWorld) -> None:
     """`feature_row` is keyed by the feature, so the second graph name used to replace the first."""
-    fmap = {"driver_age": "age_fine", "driver_age_adj": "age_fine"}
+    fmap = {"driver_age": "age_fine", "driver_age_adj": "age_fine", "driver_age_hi": "age_coarse"}
     with pytest.raises(ValueError, match=INVALID) as caught:
         await compiled_bundle(world, algorithm(fmap))
     message = str(caught.value)
@@ -112,22 +131,24 @@ async def test_two_graph_names_onto_one_feature_is_refused_at_compile(world: Glm
 
 @pytest.mark.req("FR-222", "FR-255")
 async def test_unequal_values_for_one_column_are_refused_by_name_at_predict(
-    world: GlmWorld,
+    world: GlmWorld, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A bundle that bypassed compile: the scorer itself never picks one value silently."""
-    fmap = {"driver_age": "age_fine"}  # compiles; the scorer is then handed two slugs directly
-    bundle = await compiled_bundle(world, algorithm(fmap))
+    bundle = await _bundle_bypassing_the_compile_guard(world, monkeypatch)
     scorer = runtime._glm_scorer(MODEL_REF, bundle.resolved_payloads)
     with pytest.raises(PredictionError) as caught:
         scorer.predict({"age_fine": 25.0, "age_coarse": 45.0})
     assert caught.value.code == COLLISION
     assert "driver_age" in str(caught.value)
-    assert "25" not in str(caught.value) and "45" not in str(caught.value)  # NFR-499
+    assert "25" not in str(caught.value)  # NFR-499
+    assert "45" not in str(caught.value)
 
 
 @pytest.mark.req("FR-222")
-async def test_equal_values_for_one_column_score_normally_at_predict(world: GlmWorld) -> None:
-    bundle = await compiled_bundle(world, algorithm({"driver_age": "age_fine"}))
+async def test_equal_values_for_one_column_score_normally_at_predict(
+    world: GlmWorld, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    bundle = await _bundle_bypassing_the_compile_guard(world, monkeypatch)
     scorer = runtime._glm_scorer(MODEL_REF, bundle.resolved_payloads)
     got = scorer.predict({"age_fine": 33.0, "age_coarse": 33.0})
     assert got == pytest.approx(world.predict(driver_age=33.0), rel=1e-12)

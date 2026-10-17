@@ -815,7 +815,21 @@ class _GlmScorer:
         )
 
     def predict(self, feature_row: Mapping[str, Any]) -> float:
-        frame = pl.DataFrame([{self.columns.get(k, k): v for k, v in feature_row.items()}])
+        row: dict[str, Any] = {}
+        for key, value in feature_row.items():
+            column = self.columns.get(key, key)
+            if column in row and row[column] != value:
+                # Never a silent pick (FD-8070): two slugs renamed to one source column, or a
+                # slug and a raw key of that column. Equal values are the ordinary shared-column
+                # case. The column is named, never a value (NFR-499).
+                raise PredictionError(
+                    "MODEL_CALL_FEATURE_COLLISION",
+                    f"two model inputs map to the column {column!r} with different values "
+                    "(FR-222)",
+                    terms=(column,),
+                )
+            row[column] = value
+        frame = pl.DataFrame([row])
         model_offset = (
             self.offset_source.linear_predictor(frame) if self.offset_source else None
         )
