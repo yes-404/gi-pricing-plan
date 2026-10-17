@@ -40,7 +40,8 @@ async def _compiled_with_a_decimal_input() -> CompiledBundle:
 @pytest.mark.req("FR-273")
 async def test_a_decimal_input_reaches_the_engine_on_the_sync_path() -> None:
     ctx = _ctx(inputs={**_INPUTS, "exposure_years": Decimal("0.75")})
-    assert ctx.options is not None and ctx.options.rating_version_ref is not None
+    assert ctx.options is not None
+    assert ctx.options.rating_version_ref is not None
     result = _score_context_sync(
         await _compiled_with_a_decimal_input(), ctx, ctx.options.rating_version_ref
     )
@@ -63,7 +64,8 @@ async def test_a_decimal_input_that_is_not_lossless_as_a_float_is_refused_by_nam
 ) -> None:
     bundle = await _compiled_with_a_decimal_input()
     ctx = _ctx(inputs={**_INPUTS, "exposure_years": value})
-    assert ctx.options is not None and ctx.options.rating_version_ref is not None
+    assert ctx.options is not None
+    assert ctx.options.rating_version_ref is not None
     with pytest.raises(ValueError, match=r"INPUT_CONTRACT_VIOLATION.*'exposure_years'") as info:
         _score_context_sync(bundle, ctx, ctx.options.rating_version_ref)
     assert str(value) not in str(info.value)  # NFR-499: no quote value in the message

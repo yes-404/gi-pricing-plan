@@ -123,7 +123,8 @@ def make_scorer(
 def coerce_inputs(
     contract: Sequence[InputContractField], context: QuoteContext
 ) -> QuoteContext:
-    """`decimal` inputs read back from JSON are strings; the engine path takes `Decimal`."""
+    """`decimal` inputs read back from JSON are strings; they become `Decimal`, which
+    `_engine_context` hands the engine as a float (FR-273)."""
     coerced = dict(context.inputs)
     for field in contract:
         value = coerced.get(field.name)

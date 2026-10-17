@@ -741,7 +741,9 @@ async def run(rows: int | None) -> int:
         demo_base_premium,
         fit_demo_models,
         fit_severity_glm,
+        load_approved_glm,
         peril_structure_ref,
+        refuse_degenerate_fit,
         seed_demo_rate_tables,
     )
 
@@ -755,6 +757,10 @@ async def run(rows: int | None) -> int:
         fitted["glm"], fitted["gbm"],
     )
     print(f"  approved model: {approved}")
+    # A degenerate fit is refused here, before the severity fit and the Peril Structure: their
+    # reconciliation raises first on a fit that is degenerate (SL-1543 RED 3).
+    _, approved_fit = await load_approved_glm(database, workspace_id, approved)
+    refuse_degenerate_fit(approved_fit.relativities)
     # PL-1542 Tasks 1 and 2: the AD severity GLM and the Peril Structure over both GLMs.
     severity = await fit_severity_glm(
         database, blob_store, workspace_id, actuary, approver, approved

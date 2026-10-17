@@ -100,6 +100,11 @@ Scratch script, not committed; `compile_bundle` + `load_bundle` over `test_ratin
   - **Handler.** `model_handlers._reconcile` passes `claim_count` (the holdout's severity-weight column, cast to Float64) to `pricing_core.reconcile` and stores `imputed_rows` / `imputed_share` on the `Reconciliation`. The column comes from `_claim_count_column`: the one distinct `weight.column` across the structure's severity models; none, or several that disagree, give None, and `reconcile` then refuses an unknown amount by name instead of guessing a column. Tests: `backend/tests/test_reconcile_claim_count.py` (pure, 5 cases; written after the helper, so NOT red-first); `test_the_ad_peril_structure_reconciles` now asserts the persisted counts are 0 (DB window; this seeded book has no unknown observed amount, so the imputing path through the Job is covered by the core tests only, a gap named, not closed).
   - **Spec.** `02-modelling.md` section 4.10: example shows the two fields, with a dated amendment line.
 
+- **2026-10-17 BST - RED 1 and RED 3 of the 14:25 diagnosis fixed (executor-1543fix), on the maintainer's entries "2026-10-17 14:27:46 BST" and "2026-10-17 14:30:39 BST" in `to-lead.md`.**
+  - **RED 1 (a non-money `decimal` input crashed the engine with `TypeError ... unsupported type Decimal`).** `pricing_core/rating/score.py` `_engine_context(algorithm, ctx)`, one function for `score_one` and `_score_context_sync`, crosses only `Decimal` values of `decimal`-declared inputs as `float`, refusing a value with `Decimal(repr(float(d))) != d` as `INPUT_CONTRACT_VIOLATION` naming the input. Money is never converted. Tests, red first (`test_rating_score_decimal_input.py`, commit test-only, 4 failed with the `TypeError`), then green. Spec: dated amendment line under 03 FR-273. The zen probe matched RL-1312's table (`scratch/sl1543-zen-decimal.md`).
+  - **RED 3.** `examples/fremtpl2/seed.py` now calls `load_approved_glm` and `refuse_degenerate_fit` straight after `compare_and_approve`; the later call in `seed_demo_rate_tables` is kept as the guard for any other caller. Owed DB test: `examples/fremtpl2/test_seed.py::test_a_small_seed_is_refused_for_its_degenerate_fit`. NOT RUN.
+  - **RED 2** is not ruled; nothing touched.
+
 ## PRs
 
 - Not yet opened; the lead's merge-turn mint resolves the working id.
