@@ -19,7 +19,8 @@ relates: [SL-1709, PL-1708, FD-1684]
 
 **GO:** the maintainer's entry "2026-10-17 13:09:07 BST — Maintainer: SL-1709 GO CONFIRMED" in `to-lead.md`; the lead dispatched executor-1709. Need 6 (census) accepted by the maintainer, by message to the lead, 2026-10-17 (read 13:10 BST).
 **MERGE-ACK:** not yet given.
-**Audit:** not yet.
+**Gate:** accepted at `3b54ec82` — gate-1 14:26:05→15:45:10 BST (pair trial), the FAILED set is the accepted check-31 cascade exactly (only-new 0); see the Audit section for the shared-broker sentence.
+**Audit:** written by `auditor-1709`, 2026-10-17 (below); proposed verdict only.
 
 ## Census (activation need 6), 2026-10-17 ~13:08 BST, `origin/main` ebe3292c
 
@@ -90,3 +91,32 @@ GET /api/v1/rate-tables/{slug}@{version}/export/xlsx 200 application/json
 | 4 | `test_api_jobs.py::test_events_publish_text_event_stream` | `assert {'application/json'} == {'text/event-stream'}` | pass |
 
 Exactly those four failed on main; no other test in the three files failed in either run; no timing-sensitive failure, so no alone re-run. The two content-type asserts added to existing tests passed on the slice. The detached worktree `sl-1709-main` was removed. **Still owed:** the full two-half gate incl. frontend `generate:api` and type-check.
+
+## Audit
+
+*(Written by `auditor-1709`, 2026-10-17, on head `3b54ec82a980effe4b23449605635c113a9846c6`, range `origin/main...3b54ec82` (`origin/main` = `9469721d` at fetch). Code read-only; no test run, no DB, no mint; the gate is the lead's.)*
+
+**1. Change set** (`git diff --stat origin/main...3b54ec82`, 15 paths, +218 -50): `api/audit.py`, `api/jobs.py`, `api/rate_tables.py` (decorators only), `06-governance.md` §5.1, `docs/contracts/openapi/generated.json`, `test_contracts.py`, three route test files, `contract-guard/SKILL.md`, the register row, the roadmap SL row, PL-1708 (status), `INDEX.md`, this ledger. Nothing outside PL-1708's write set; `git diff --name-only origin/main...3b54ec82 -- docs/contracts` prints exactly `docs/contracts/openapi/generated.json` (AC 8); `-- packages/model-schema` prints nothing (AC 7, first clause).
+
+**2. Obligations**, derived from PL-1708's Acceptance Standard, FD-1684's Disposition and the 2026-10-14 09:45:05 BST rulings (DP-1..5 as recommended) first, then evidenced:
+- **AC 1 (the event):** FD-1684's sweep predicate, verbatim, run on `git show 3b54ec82:docs/contracts/openapi/generated.json`: no output. **Met.**
+- **AC 2:** the plan's command on the same blob prints, per route, `text/csv` / spreadsheetml (`schema` `string`+`binary`) / `application/x-ndjson`+`text/csv` / `text/event-stream`, no `application/json` key. **Met.**
+- **AC 3:** Reds 1-4 are the DB-window rows above; red on `6bdd2571` by cause (`{'application/json'}` on the left), green on `35b305c3`; the tests' asserts read in the diff (`set(content) == {...}` plus the schema). The tests are request-free `openapi()` reads; the `4`-route set matches the Goal. **Met** (the DB window predates the final head by one docs-only commit, `3b54ec82` touches the ledger only, `git diff 35b305c3..3b54ec82 --stat` is the ledger).
+- **AC 4:** `test_api_audit.py:202` `startswith("application/x-ndjson")`, `test_api_rate_tables.py:1014-1017` equals the spreadsheetml type, the CSV assert at `:972` pre-exists; passed in the DB-window green run. The two new lines' planted reds: the red run on `6bdd2571` covers the contract tests; the ledger does not print a planted red for the two new `content-type` lines (they are wire asserts on routes whose wire does not change, so they cannot fail on `main` by cause). **Met, with F2.**
+- **AC 5:** `UNTYPED_2XX_PERMANENT` is gone from `test_contracts.py` (list, membership test, stale-list term, reason loop all removed in the diff). The literal command `grep -n UNTYPED_2XX_PERMANENT backend/tests/test_contracts.py .claude/skills/contract-guard/SKILL.md` is NOT empty: it prints `SKILL.md:315`, the new Verified entry that names the removed symbol (F1). The stale-list red (cause quoted in the Tasks list) and the planted `test_no_json_body_is_untyped[response]` red naming the CSV route are quoted in this ledger. **Met in substance; literal command fails (F1).**
+- **AC 6:** `git diff --numstat` on the three route test files: 12/0, 10/0, 25/0 (adds only). `git diff -U1` of `backend/src/app/api/*.py` shows `response_class=` and `responses=` lines only, the handler bodies untouched; `Response`/`StreamingResponse` were already imported. **Met.**
+- **AC 7:** `generate-contracts.py --check` rc 0 and `pnpm generate:api` rc 0 with `tree after gate: 0 changed path(s)` in the gate log. **Met.**
+- **AC 9 (gate):** below.
+- **DP-5:** `06:606` carries a dated clause only (diff above), no FR renumbered. **Met.** **Register:** FD-1684's row has the dated 2026-10-17 line and keeps the Decision cell; the FD stays open until merge (the event is "run on main"). `register-lint.py` rc 0 per the ledger; re-run below.
+- **Requirements without evidence:** none. No FR is added; FR-451 is the marker on the new tests.
+
+**3. Gate at `3b54ec82`** (`scratch/sl1709-gate/gate.log`, START head `3b54ec82a980effe4b23449605635c113a9846c6`, tree `99e4afdb5e070916579c696c7cad6370d1e31cbc`, clean tree at preflight): ruff, mypy, import_linter, req_coverage, contracts rc 0; frontend install, generate:api, lint, type-check, test, build rc 0; `audit_docs` rc 1 and `pytest` rc 1 (`13 failed, 5869 passed, 6 skipped`). The 13 FAILED names are the `test_audit_docs_*`/`test_doc_index`/`test_register_*`/`test_repository_invariants` cascade, and `sort -u` of them diffs empty against SL-1758's gate list (`scratch/sl8071-gate/pytest.log`). Demo rc 124 is the designed stop (`journey done in 426s`); the one `FAIL` text is the designed `VALIDATION_HAS_FAILURES` refusal.
+**Shared-broker sentence (the maintainer's ruling of 2026-10-17 18:00 BST):** this gate ran paired and the broker was found shared at 17:58 BST (Redis db 0 for both gates); the maintainer ruled that earlier verdicts stand, the reds being deterministic and slice-caused and the passes staying passes. Recorded; not re-gated.
+
+**4. Findings.**
+- **F1 (LOW):** `.claude/skills/contract-guard/SKILL.md:315` names `UNTYPED_2XX_PERMANENT`, so AC 5's literal grep is not empty. The entry is a dated Verified note about the removal; the symbol itself is gone. Owner: the lead decides whether to reword the note (one line) or accept the grep as stale text of the plan.
+- **F2 (LOW):** AC 4 asks for the two new `content-type` lines' planted reds in the ledger; none is printed (the wire is unchanged, so no red on `main` exists). Disclosed; no behaviour is unevidenced since the green run passed them.
+- **F3 (LOW):** the Tasks list above still says "Premise k is stale"; the later "Correction" paragraph reverses it. Both stay in place by design (the correction is the record); a reader must take the later one.
+- **F4 (observation):** the DB-window evidence is at `35b305c3`, the gate at `3b54ec82`; the difference is the ledger file only (`git diff --stat 35b305c3 3b54ec82`), so no source drift.
+
+**5. Proposed verdict:** all obligations delivered and evidenced; no requirement without a verdict; three LOW findings, none blocking. Proposal only; the lead adopts, amends or rejects. MERGE-ACK: not yet given. Status stays `active`; no mint.
