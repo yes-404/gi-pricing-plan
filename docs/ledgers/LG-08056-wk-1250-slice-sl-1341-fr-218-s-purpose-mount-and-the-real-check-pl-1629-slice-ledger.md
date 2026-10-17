@@ -252,6 +252,36 @@ diff (the maintainer's GO, "4 MET with its caveats"). Neither slice's ledger edi
 
 **Re-merge of `origin/main`, 2026-10-16 10:28 BST (BST)**: merged `origin/main` a2f77b2dcad5aaec41a5f10aa664383caf421e8b (#1309, SL-1702) into this branch with `git merge --no-ff` (`merge-tree --write-tree` rc 1 before; the one conflicting path was `docs/INDEX.md`, resolved by taking main's side, regeneration owed). No other conflicts. Files changed by both #1309 (`0877e6e7..a2f77b2d`) and this slice, auto-merged cleanly: `backend/src/app/platform/change_summary.py`, `docs/contracts/openapi/generated.json`, `docs/specs/03-rating-engine.md`, `packages/model-schema/src/model_schema/rating.py`. **Owed after the SL-1455 GATE END**: (1) `docs/INDEX.md` regeneration under the gate-2 flock; (2) `generate-contracts.py --check` (SL-1702 added `RateTableChange.step_id` to `generated.json` and `rating.py`); (3) the Step 0 reds re-proved on the new base, the 25 reds' causes must not change; then the full gate on the new head after the lead's grant.
 
+**Step 0 run, 2026-10-17 13:05 BST (BST), `executor-1341pr`** (lead's GO, 2026-10-17). Command: `run-small.sh .claude/worktrees/sl-1341-step0 packages/model-schema/tests/test_rating_algorithm.py packages/pricing-core/tests/test_rating_purpose_mount.py` in a detached worktree at `77cbf522`; rc 1; final line `25 failed, 33 passed in 12.03s` (the expected count). The 25 FAILED lines, verbatim from the run's `-rf` summary (`scratch/sl1341-step0.txt`); the per-node cause (F or I) of the table above was not re-read here, only the count and node ids:
+
+```text
+FAILED packages/model-schema/tests/test_rating_algorithm.py::test_a_purposes_selector_outside_the_two_admitted_purposes_is_refused[bad0]
+FAILED packages/model-schema/tests/test_rating_algorithm.py::test_a_purposes_selector_outside_the_two_admitted_purposes_is_refused[bad1]
+FAILED packages/model-schema/tests/test_rating_algorithm.py::test_a_purposes_selector_outside_the_two_admitted_purposes_is_refused[bad2]
+FAILED packages/model-schema/tests/test_rating_algorithm.py::test_a_purposes_selector_outside_the_two_admitted_purposes_is_refused[bad3]
+FAILED packages/model-schema/tests/test_rating_algorithm.py::test_a_purposes_selector_outside_the_two_admitted_purposes_is_refused[bad4]
+FAILED packages/model-schema/tests/test_rating_algorithm.py::test_a_purposes_selector_of_the_two_admitted_purposes_is_accepted[good0]
+FAILED packages/model-schema/tests/test_rating_algorithm.py::test_a_purposes_selector_of_the_two_admitted_purposes_is_accepted[good1]
+FAILED packages/model-schema/tests/test_rating_algorithm.py::test_a_purposes_selector_of_the_two_admitted_purposes_is_accepted[good2]
+FAILED packages/model-schema/tests/test_rating_algorithm.py::test_an_absent_selector_keeps_every_existing_mount_unconditional
+FAILED packages/model-schema/tests/test_rating_algorithm.py::test_a_step_that_runs_for_every_purpose_cannot_consume_a_purpose_only_name
+FAILED packages/model-schema/tests/test_rating_algorithm.py::test_a_purpose_mount_may_re_produce_a_parent_name
+FAILED packages/model-schema/tests/test_rating_algorithm.py::test_a_purpose_mount_may_not_reach_the_risk_premium_output
+FAILED packages/model-schema/tests/test_rating_algorithm.py::test_a_second_re_producer_of_one_name_is_a_cycle
+FAILED packages/model-schema/tests/test_rating_algorithm.py::test_a_mount_re_producing_a_name_the_parent_already_re_produces_is_a_cycle
+FAILED packages/pricing-core/tests/test_rating_purpose_mount.py::test_a_version_with_only_an_unconditional_mount_is_refused_by_the_real_check[mid_term_adjustment]
+FAILED packages/pricing-core/tests/test_rating_purpose_mount.py::test_a_version_with_only_an_unconditional_mount_is_refused_by_the_real_check[cancellation]
+FAILED packages/pricing-core/tests/test_rating_purpose_mount.py::test_a_cancellation_only_mount_refuses_a_mid_term_adjustment_quote
+FAILED packages/pricing-core/tests/test_rating_purpose_mount.py::test_a_cancellation_only_mount_prices_a_cancellation_with_the_mount
+FAILED packages/pricing-core/tests/test_rating_purpose_mount.py::test_a_cancellation_only_mount_leaves_new_business_exactly_as_without_it
+FAILED packages/pricing-core/tests/test_rating_purpose_mount.py::test_a_constraint_inside_a_cancellation_mount_is_evaluated_for_it
+FAILED packages/pricing-core/tests/test_rating_purpose_mount.py::test_removing_the_real_check_would_be_caught
+FAILED packages/pricing-core/tests/test_rating_purpose_mount.py::test_compile_bundle_emits_a_graph_for_exactly_the_selected_purposes
+FAILED packages/pricing-core/tests/test_rating_purpose_mount.py::test_a_change_to_purposes_alone_changes_the_content_hash
+FAILED packages/pricing-core/tests/test_rating_purpose_mount.py::test_load_bundle_refuses_a_purpose_graph_that_disagrees_with_its_algorithm
+FAILED packages/pricing-core/tests/test_rating_purpose_mount.py::test_inline_mounts_inlines_a_purpose_mount_for_its_purpose_only
+```
+
 ## PRs
 
 One PR for this slice (L1 (a')): opened and merged by the lead; not yet opened.
