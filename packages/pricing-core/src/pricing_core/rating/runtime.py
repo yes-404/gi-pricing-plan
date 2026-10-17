@@ -61,7 +61,7 @@ from model_schema.modelling import (
 from model_schema.perils import LargeLossKind, PerilMethod, PerilStructure
 from model_schema.rating import RatingAlgorithm, RatingModelCallStep
 from pricing_core.modelling.errors import ModellingError
-from pricing_core.modelling.gbm import load_gbm_booster, predict_gbm
+from pricing_core.modelling.gbm import GbmFitError, load_gbm_booster, predict_gbm
 from pricing_core.modelling.predict import PredictionError, linear_predictor, predict_glm
 from pricing_core.rating.compile import (
     Bundle,
@@ -768,10 +768,15 @@ def _model_call_handler(
                 )
         except _ModelCallRefusal as refusal:
             return _model_call_failure(step, str(refusal), context)
-        except (ModellingError, PredictionError) as exc:
+        except (ModellingError, PredictionError, GbmFitError) as exc:
             # The code only: a `PredictionError`'s own text can carry a quote's value (an unseen
             # factor level, `UNSEEN_LEVEL_BEHAVIOUR_REQUIRED`), and a coded error keeps its text
             # as it stands (NFR-499, RL-917), so the model's text is never passed on.
+            # `GbmFitError` is neither of the other two (all three subclass `RuntimeError`
+            # directly), and `predict_gbm` raises it for an unseen level: uncaught here, it
+            # surfaced as the zen binding's generic `NodeError`, with no code (SL 8071). It is
+            # caught by name, not by making it a `ModellingError`, because the fit handlers
+            # and `transparency.py` catch and raise it on their own terms.
             return _model_call_failure(
                 step,
                 f"{exc.code}: {ref_str} could not be scored for this quote (FR-255)",
@@ -815,7 +820,21 @@ class _GlmScorer:
         )
 
     def predict(self, feature_row: Mapping[str, Any]) -> float:
-        frame = pl.DataFrame([{self.columns.get(k, k): v for k, v in feature_row.items()}])
+        row: dict[str, Any] = {}
+        for key, value in feature_row.items():
+            column = self.columns.get(key, key)
+            if column in row and row[column] != value:
+                # Never a silent pick (FD-8070): two slugs renamed to one source column, or a
+                # slug and a raw key of that column. Equal values are the ordinary shared-column
+                # case. The column is named, never a value (NFR-499).
+                raise PredictionError(
+                    "MODEL_CALL_FEATURE_COLLISION",
+                    f"two model inputs map to the column {column!r} with different values "
+                    "(FR-222)",
+                    terms=(column,),
+                )
+            row[column] = value
+        frame = pl.DataFrame([row])
         model_offset = (
             self.offset_source.linear_predictor(frame) if self.offset_source else None
         )

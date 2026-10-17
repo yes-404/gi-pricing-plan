@@ -87,6 +87,8 @@ on this box are named with underscores rather than the hyphens `basename "$PWD"`
 (`gipricing_w37_6_gate_base` beside `gipricing_wt-d8-fix`), which is the residue of people
 working around this by hand and not agreeing on how.
 
+**The template DB `gipricing` is migrations-only at main's head: rebuilt (`dropdb`, `createdb`, `alembic upgrade head`) after a migration lands, never seeded.** Rows other than `alembic_version` and migration-inserted rows (`environments`, `tenant_marker`), or `BLOB_NOT_FOUND` on a clone, mean template drift: a stale `blobs` row makes a fixture `put` dedup to an object missing from the test bucket, a wrong-cause red. Rebuilt 2026-10-17 at `d4e81b7a2c95` (main `cf509df8`), as the lead and the maintainer's ruling report it; not re-read by this author.
+
 **The per-worktree name is `gipricing_<leaf>_<hash>`: the leaf directory name plus the first
 8 hex characters of the SHA-1 of the full resolved checkout path.** `WT` above and
 `_worktree_database_name()` in `backend/tests/conftest_db.py` compute the same string, and
@@ -1078,6 +1080,8 @@ where the tree did not change:
 Verified: 2026-09-17
 
 ## Verified
+
+2026-10-17, against main `cf509df89dbebff329bb6b319bcc9bcd2a2c2352`. **The template-DB paragraph was added** (the maintainer's ruling, relayed by the lead): `gipricing` is migrations-only, rebuilt after a migration, never seeded. The rebuild at `d4e81b7a2c95` is the lead's report; this author did not query the database.
 
 2026-10-14, against main `ba68a6daf3cfb7634258915a6e542bc658ae3f62`. **The one-flock-across-both-halves line was added.** The `RL-1626` small-run section moves to `scripts/run-small.sh`'s own commit (the maintainer's (by delegation) entry "2026-10-14 11:34:58 BST").
 
