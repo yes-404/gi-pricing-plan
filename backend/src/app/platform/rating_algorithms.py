@@ -24,6 +24,7 @@ from app.platform.perils import load_structure_by_ref
 from model_schema import (
     MODEL_SPEC_ADAPTER,
     ArtifactRef,
+    GbmSpec,
     GraphCycleError,
     GraphUnresolvedRefError,
     JobSource,
@@ -41,7 +42,7 @@ from model_schema.rating import (
     diff_algorithms,
     graph_invariant_issues,
 )
-from pricing_core.modelling.factors import required_model_inputs
+from pricing_core.modelling.factors import gbm_transformed_factors, required_model_inputs
 from pricing_core.rating.compile import validate_algorithm
 
 __all__ = [
@@ -151,15 +152,11 @@ async def _accepted_feature_map_values(
     return accepted
 
 
-async def _accepted_by_a_component(
+async def _component_model_refs(
     session: AsyncSession, workspace_id: UUID, ref: ArtifactRef
-) -> set[str] | None:
-    """What a `peril_structure_ref` step's `feature_map` may name: the UNION of what each
-    component model accepts (`RL-1459` DP-A3-7 (a)). One map feeds every component, and the
-    frequency GLM's offset column is not a severity input, so a value passes when at least one
-    component accepts it. `None` when the structure, or any of its components, does not exist
-    yet (R1): then no value can be judged, and compile refuses a missing pin.
-    """
+) -> list[ArtifactRef] | None:
+    """A Peril Structure's distinct component model refs, in peril order; `None` when the
+    structure does not exist yet (R1)."""
     row = await load_structure_by_ref(
         session, workspace_id=workspace_id, slug=ref.slug, version=ref.version
     )
@@ -171,6 +168,21 @@ async def _accepted_by_a_component(
         for model_ref in (peril.frequency_model, peril.severity_model, peril.burning_cost_model):
             if model_ref is not None and model_ref not in components:
                 components.append(model_ref)
+    return components
+
+
+async def _accepted_by_a_component(
+    session: AsyncSession, workspace_id: UUID, ref: ArtifactRef
+) -> set[str] | None:
+    """What a `peril_structure_ref` step's `feature_map` may name: the UNION of what each
+    component model accepts (`RL-1459` DP-A3-7 (a)). One map feeds every component, and the
+    frequency GLM's offset column is not a severity input, so a value passes when at least one
+    component accepts it. `None` when the structure, or any of its components, does not exist
+    yet (R1): then no value can be judged, and compile refuses a missing pin.
+    """
+    components = await _component_model_refs(session, workspace_id, ref)
+    if components is None:
+        return None
     seen: set[str] = set()
     accepted: set[str] = set()
     for model_ref in components:
@@ -179,6 +191,54 @@ async def _accepted_by_a_component(
             return None
         accepted |= values
     return accepted
+
+
+async def _gbm_transformed_factor_slugs(
+    session: AsyncSession, workspace_id: UUID, ref: ArtifactRef
+) -> list[str]:
+    """The `slug (type)` of each banded or grouped Factor of `ref`, when `ref` is a GBM.
+
+    Empty for a GLM or an EBM, for a GBM with only plain Factors, and for a Model that does
+    not exist yet (R1: an algorithm saves before its models do; compile refuses it).
+    """
+    row = await session.scalar(
+        select(ModelRow).where(
+            ModelRow.workspace_id == workspace_id,
+            ModelRow.model_family_slug == ref.slug,
+            ModelRow.version == ref.version,
+        )
+    )
+    if row is None:
+        return []
+    spec = MODEL_SPEC_ADAPTER.validate_python(row.spec)
+    if not isinstance(spec, GbmSpec):
+        return []
+    factors = await load_factors(session, workspace_id=workspace_id, factor_ids=list(spec.factors))
+    return [f"{factor.slug} ({factor.type.value})" for factor in gbm_transformed_factors(factors)]
+
+
+async def _refuse_gbm_transformed_factors(
+    session: AsyncSession, workspace_id: UUID, step: RatingModelCallStep
+) -> None:
+    """FR-222 as amended 2026-10-16: a `model_call` may not pin a GBM with a banded or grouped
+    Factor (`MODEL_CALL_GBM_TRANSFORMED_FACTOR`, 422). A Peril Structure is checked on each
+    component model; one that does not exist yet saves, and compile refuses it."""
+    if step.model_ref is not None:
+        models: list[ArtifactRef] = [step.model_ref]
+    else:
+        assert step.peril_structure_ref is not None  # exactly one is set (FR-222)
+        models = await _component_model_refs(session, workspace_id, step.peril_structure_ref) or []
+    for model_ref in models:
+        named = await _gbm_transformed_factor_slugs(session, workspace_id, model_ref)
+        if named:
+            raise PlatformError(
+                "MODEL_CALL_GBM_TRANSFORMED_FACTOR",
+                "A model_call cannot score a GBM fitted on banded or grouped Factors",
+                422,
+                f"Step {step.step_id!r} pins {model_ref}, a GBM fitted on {', '.join(named)}. "
+                "The Bundle carries no Bandings or Groupings for a GBM, so a raw value would "
+                "be read as a band label and could price the wrong band (FR-222).",
+            )
 
 
 async def check_model_call_feature_maps(
@@ -192,10 +252,14 @@ async def check_model_call_feature_maps(
     (`PL-1465` item 16, `RL-1459` DP-A3-7 (a)).
 
     **Membership only, not completeness**: an unmapped Factor is compile's to refuse (PL 9494).
+
+    The same pass refuses a pinned GBM with a banded or grouped Factor, with
+    `MODEL_CALL_GBM_TRANSFORMED_FACTOR` (FR-222 as amended 2026-10-16), whatever the map says.
     """
     for step in steps:
         if not isinstance(step, RatingModelCallStep):
             continue
+        await _refuse_gbm_transformed_factors(session, workspace_id, step)
         if step.model_ref is not None:
             subject, whose = step.model_ref, "Factor slugs or its offset column"
             accepted = await _accepted_feature_map_values(session, workspace_id, subject, set())

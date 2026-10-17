@@ -47,7 +47,11 @@ from model_schema.rating import (
 )
 from model_schema.refs import ArtifactRef
 from model_schema.sub_graphs import SubGraph, SubGraphInputPort
-from pricing_core.modelling.factors import required_model_inputs
+from pricing_core.modelling.factors import (
+    GBM_MODEL_TYPES,
+    gbm_transformed_factors,
+    required_model_inputs,
+)
 from pricing_core.rating.authored import authored_expression_fields
 from pricing_core.rating.inline import inline_mounts, mounted_fragments
 from pricing_core.rating.ladder import RUNG_ORDER, output_steps_by_name, rung_output_name
@@ -975,6 +979,48 @@ def check_model_call_coverage(
                 )
 
 
+def check_model_call_gbm_factors(
+    algorithm: RatingAlgorithm, resolved_pins: Mapping[str, ResolvedArtifact]
+) -> None:
+    """Refuse a `model_call` whose pinned GBM has a banded or grouped Factor (FR-222, FR-240).
+
+    A GBM pin carries no Bandings or Groupings into the Bundle (`_carry_glm_inputs`), and the
+    runtime scores it with `factors=()`: the raw value a quote supplies is looked up as the
+    band label the booster was fitted on. That raises for a value that is no label, and prices
+    the wrong band, silently, for a value that spells another band's label. Refusing the pin
+    is the interim: nothing that can misprice is compiled (`MODEL_CALL_GBM_TRANSFORMED_FACTOR`,
+    the 2026-10-16 10:59:28 BST entry, item 1). A `peril_structure_ref` step is checked on each
+    component model. The message names the step, the model and the Factors, never a quote
+    value (NFR-499). A GLM pin is unaffected: it carries its Bandings and Groupings.
+    """
+    for step in algorithm.steps:
+        if not isinstance(step, RatingModelCallStep):
+            continue
+        if step.model_ref is not None:
+            models = [step.model_ref]
+        else:
+            assert step.peril_structure_ref is not None  # exactly one is set (FR-222)
+            structure = PerilStructure.model_validate(
+                resolved_pins[str(step.peril_structure_ref)].payload
+            )
+            models = peril_component_refs(structure)
+        for model_ref in models:
+            pin = resolved_pins[str(model_ref)]
+            fit_result = pin.payload.get("fit_result")
+            model_type = fit_result.get("model_type") if isinstance(fit_result, dict) else None
+            if model_type not in GBM_MODEL_TYPES:
+                continue
+            transformed = gbm_transformed_factors(pin.factors)
+            if transformed:
+                named = ", ".join(f"{factor.slug} ({factor.type.value})" for factor in transformed)
+                _raise_named(
+                    "MODEL_CALL_GBM_TRANSFORMED_FACTOR",
+                    f"step {step.step_id!r}: {model_ref} is a GBM fitted on banded or grouped "
+                    f"Factors [{named}], which a model_call cannot score: the Bundle carries "
+                    "no Bandings or Groupings for a GBM (FR-222, FR-240)",
+                )
+
+
 def _model_factors(resolved: ResolvedArtifact) -> tuple[Factor, ...]:
     """A pinned model's Factors and those of the offset model it reads, which `predict` merges."""
     factors = resolved.factors
@@ -1081,7 +1127,8 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
     Every `table`, `lookup` and `model_call` step's ref is pinned at its exact version
     (FR-237, `check_step_refs_pinned`). Every `model_call` `feature_map` maps each input its
     pinned model requires, per component for a Peril Structure (FR-240,
-    `check_model_call_coverage`).
+    `check_model_call_coverage`), and no pinned GBM has a banded or grouped Factor (FR-222,
+    `check_model_call_gbm_factors`).
     Each sub-graph mount is resolved from the version's pins (`RL-1309` G1) and inlined at its
     mount point (FR-217, `inline_mounts`), and every check above runs over the **inlined**
     algorithm, so a fragment's steps, references and expressions are checked as the parent's.
@@ -1175,6 +1222,7 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
     await _refuse_control_factor_keys(version, payloads, resolver)
     _refuse_control_factor_model_calls(inlined, resolved_pins)
     check_model_call_coverage(inlined, resolved_pins)
+    check_model_call_gbm_factors(inlined, resolved_pins)
     check_model_call_columns(inlined, resolved_pins)
 
     graph = to_jdm(inlined)
@@ -1200,6 +1248,7 @@ __all__ = [
     "bundle_hash",
     "check_model_call_columns",
     "check_model_call_coverage",
+    "check_model_call_gbm_factors",
     "check_step_refs_pinned",
     "compile_bundle",
     "fragment_output_type_issues",
