@@ -982,7 +982,7 @@ Stage A of the FD-1660 fix (HIGH, owner WK-673), cut as its own slice by RL-1686
 id: SL-1696
 family: slice
 title: WK-673 fix slice, Stage B — FD-1660, attribution carries sub-graph mounts (a mount is a derived change, a subset carries its mounts and pins; WF-699 D7 decomposes)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-12
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: fc4401dcad789692f79f6c3ffc058c1c3921b7b9
@@ -994,13 +994,17 @@ relates: [PL-1694, FD-1660, PL-1267, SL-1387, SL-1527, SL-1543]
 
 The fix slice of FD-1660 (HIGH, owner WK-673), on to-lead "2026-10-12 02:29:16 BST — SL-1527 D7: (A) ACCEPTED; FD owner WK-673 (not WK-1178), MEDIUM; (C) gets its OWN WK-673 slice before G2, planned now and run beside SL-1543", "2026-10-12 02:34:38 BST — FD 9804 widened to 3 limbs: ACCEPTED, MEDIUM PROVISIONAL with a named re-rate trigger; PL 9807 as a §1.6 map delta: ACCEPTED" and "2026-10-12 02:35:40 BST — FD 9804 RE-RATED HIGH now (code read), confirmed or reverted by R3; PL 9807 orders a LOUD GUARD first". Attribution (`packages/pricing-core/src/pricing_core/rating/analysis.py`, SL-1387's code) ignores sub-graph mounts: a partial subset keeps the baseline's `sub_graphs` (`_subset_algorithm`, `:742-765`), drops every sub-graph pin (`_subset_pins`, `:768-799`; `_PIN_KINDS`, `:484-489`), and a mount difference is no derived change (`_derive`, `:559-674`). **The fix (Stage B):** per RL-1686 DP-W (a), DP-1 (a), DP-2 (i), DP-3 (i), DP-T: a mount is derived like a step by its `mount_point` (`step_added` / `step_removed` / `step_changed`, never `table_repointed`; no new `DeltaKind`), a subset carries the baseline's mounts with its own mount changes applied and their pins (`sub_graphs` joins `_PIN_KINDS`), `_check_dependence` treats a mount as a node in both directions; `03` FR-1398 and FR-1399 gain T2 and T1 as RL-1686 adopted them; SL-1695's guard, its coded class, its tests' guard assertions and its `SKIPPED` lines are removed or flipped; `WF-699` D7 re-lands the two-group split from `salv-sl1527-d7-2group` @`e14a81e5`. **Write set:** extends SL-1695's in `analysis.py`, `test_rating_attribution.py`, `test_quote_input_raise_sites.py`, `journey.py`, `test_wf699_journey.py` and the README, plus `docs/specs/03-rating-engine.md` (strikes SL-1695's interim line under FR-264 and §4.6 in place, and writes T1, T2) and its LG. Requirements: `03` FR-266, FR-1397, FR-1398, FR-1399, FR-264, FR-217 (read only); NFR-495, NFR-496 applied. Plan `PL-1694` (a WK-673 Work-plan delta relating `PL-1267`; `draft`; every DP ruled by RL-1686 and the maintainer's (by delegation) entries of 02:43:49 and 07:44:13), Acceptance 11–21, Tasks "SL-1696". **Activation needs:** **SL-1695 merged** (the maintainer's (by delegation) entry "2026-10-12 07:44:13 BST" condition (c): *"Stage B is planned NOW and gated right after Stage A on WK-673's lane, as the G2 item it is"*); RL-1686 on `main`; **serialised with SL-1543** on `examples/fremtpl2/journey.py` and `backend/tests/test_wf699_journey.py` (the second to merge re-merges `main` and re-runs the journey); a free build lane. **G2 is met only when SL-1543, SL-1695 and this slice have merged** (02:29:16, item 3; the lead's D13 delta line). *(Row cut 2026-10-12 by the planner, planner-wk673-c; working ids 9850 and 9807 reserved by the lead, `handover/eta.md` 2026-10-12 02:29:58 BST. Re-cut 2026-10-12 by the planner, planner-wk673-recut, on RL-1686 DP-S (i): Stage A moved to its own row, SL-1695, and its exemption clause dropped (DP-G, the maintainer's (by delegation) entry "2026-10-12 02:43:49 BST"); needs amended to "SL-1695 merged". Minted 2026-10-12 as SL-1696 from working id 9850, with PL-1694 from working id 9807 and SL-1695 from working id 9851, in the early-mint PR, on the maintainer's (by delegation) entry "2026-10-12 08:09:39 BST" and the lead's from-lead "2026-10-12 08:09:58 BST"; RL-1686 is minted from working id 9852 in D14. Quoted entry headers keep their working ids.)*
 
+*(Dated line, 2026-10-14: SL-1696 is `active`, built under the maintainer's (by delegation) early-build GO, the maintainer's (by delegation) `to-lead` entry "2026-10-14 15:25:12 BST". Conditions: (a) no gate, PR or status change until SL-1695 merged, lifted when it merged as `beee5ebedcfebc03c1658728442827960975392a`; (b) re-merge SL-1695 if its head changed before its merge, it did not; (c) after the merge, re-merge `origin/main`, re-run the reds and targeted tests, then report gate-ready; (d) the interim 03 FR-264 / §4.6 line is struck in place with `~~…~~` and a dated note, checked at ACK; (e) the reds shown red by cause against `f704f20f` before the fix. Ledger working id 8050, minted as LG-1732 in the SL-1696 PR (`docs/ledgers/LG-01732-…`).)*
+
+(Closed 2026-10-14 as a Slice, closing acts in the slice PR, on the lead's merge; ledger LG-1732 `closed`, minted 2026-10-14 from working id 8050. Gate at `279970f5`: Step 0 (condition (e)) passed, ruff, mypy, import_linter, req_coverage, contracts and the frontend half exit 0, the demo's D7 decomposes and the page answers 200; `audit-docs` and 13 audit-on-the-real-tree tests were red only on check 31's working-id gap (the cascade this mint clears). The interim `03` FR-264 / §4.6 line is struck in place, with a dated note. Audit to be written in LG-1732 (Audit section, by `auditor-sl1696`). **FD-1660 is proposed for discharge in LG-1732**: the discharge is the auditor's proposal and the lead's record. **Owed, not in this PR:** the D7 split test's real-derived-list fixture (LG-1732), owed to SL-1543 (20:25:11), through its own gate. `PL-1694` stays `active`: no clause of the plan retires it at Stage B, and it is a delta to the still-active `PL-1267`.)
+
 #### SL-1702 — WK-673 fix slice — RL-1707 / FD-1679: FR-242's drafted change summary pairs a rate table's versions through the `table` step that names them, and refuses no pin set
 
 ```yaml
 id: SL-1702
 family: slice
 title: WK-673 fix slice — RL-1707 / FD-1679, FR-242's drafted change summary pairs a rate table's versions through the table step that names them, and refuses no pin set
-status: draft                    # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-14
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 36e2610ab8135bc3b3563464e7f5f719713b168b
@@ -1011,6 +1015,10 @@ relates: [PL-1701, RL-1707, FD-1679, PL-1267, PL-1677, SL-1678, LG-1681, RL-1498
 ```
 
 The fix RL-1707 (minted from working id 9996; `PL-1677`'s DP-P1, ruled (a′)) obliges, confirmed by the maintainer's (by delegation) entry "2026-10-14 09:42:05 BST — RL 9996 (DP-P1) CONFIRMED as drafted; fix slice to be cut now; G2 conditional; SL-[…] fact corrected (re lead 09:41:01)" (the elided id is an unminted slice id in the entry header, elided so check 32 does not read it as a citation) (`to-lead.md`). `GET /api/v1/rating-versions/{id}/change-summary-draft` pairs a rate table's versions in two passes: each `table` step by `step_id`, as FR-219 pairs steps; then a pin difference no step entry names, by slug only where it is the one such ref on each side, else one entry per ref. No pin set is refused: SL-1678's guard (`_pins_by_slug`, `backend/src/app/platform/rating_versions.py:1405-1426` at `36e2610a`) is deleted and its three tests flipped to RL-1707's cases C3b and C3c. `RateTableChange` gains `step_id: str | None = None`; `docs/contracts/openapi/generated.json` is regenerated, and the frontend change is the VCS-ignored regenerated client only. Write set, exactly RL-1707 "What it obliges": `rating_versions.py` (`draft_change_summary_for`, `_pins_by_slug` deleted), `backend/src/app/platform/change_summary.py` (the pure pairing, the sort, `_table_line`), `packages/model-schema/src/model_schema/rating.py`, `generated.json`, `backend/tests/test_rating_version_change_summary_route.py`, `backend/tests/test_change_summary_draft.py`, `03` FR-242 (T1) and the §5.1 change-summary-draft row (T2), and the slice's `LG-`. Reds first on `main`, each by its cause: R1–R5 and R8 by the guard's 409, R6 by slug pairing, R7 and U1–U2 by the missing field; E1 and the first-version test stay green unedited; a broken-input proof. Requirements: `03` FR-242 (drafting limb); FR-219, FR-231, FR-232, FR-237 and FR-1399 read only. Discharges FD-1679's remaining limb, DP-P1. Work-plan delta `PL-1701` (minted from working id 8002, `draft`). **On the G2 path: merges before `SL-1543`.** The rule is the maintainer's (by delegation) 09:42:05 item 3: *"if E1's version pins two versions of one slug against an approved baseline, the fix slice JOINS the G2 path and merges before SL-1543. SL-1543 must not change E1's `expect=200`, re-order the journey to dodge the guard, or skip E1 (no faked step, as in my 12 Oct rulings). If E1 is not affected, the fix slice runs in parallel and is off the G2 path."* Its condition is met by the lead's E1 read, from-lead "2026-10-14 09:44:28 BST" item (1) (under PL-1542 Task 3 B1, RV3 pins two versions of one slug against the approved baseline, so the guard answers E1 with 409), and confirmed by the maintainer's (by delegation) entry "2026-10-14 09:45:05 BST" item (C): *"SL 8003 is ON the G2 path and merges BEFORE SL-1543. Identical-ref dedupe: a red in SL 8003, as you said."* Also red first: E8 establishes whether create dedupes an identical `slug@version` listed twice, and R8 shows the guard refusing one; what the draft does with it is `PL-1701`'s DP-5, ruled (a) set semantics by the maintainer (by delegation), "2026-10-14 10:00:17 BST" (B). **Activation needs:** RL-1707 minted; DP-5 ruled; this delta ACKed and minted; no in-flight writer on the write set, or the dispatch record names it (`generated.json` and `03` are shared with in-flight branches, `PL-1701` activation need 4); a build slot and the single gate (`RL-1445` item 1). *(Row cut 2026-10-14 by the planner; working ids 8002 and 8003 reserved by the lead, eta "2026-10-14 09:42:42 BST".)*
+
+*(Dated line, 2026-10-14, `executor-sl1702`: activated at GO, the maintainer's (by delegation) entry "2026-10-14 13:32:07 BST" (`to-lead.md`), relayed by the lead; plan `PL-1701` set `active` in the same commit.)*
+
+*(Closed 2026-10-14 as a Slice, closing acts in the slice PR, on the lead's merge; ledger `LG-1731`, minted from working id 8048; plan `PL-1701`. Audit: written 2026-10-14 by `auditor-sl1702` at `ce26e05a`, in `LG-1731`'s Audit section, proposed CLEAN and adopted conditionally by the lead. Gate at `3e087672`: audit-docs check 31 only after the docs fixes; one pytest failure outside the docs-audit tests (the FD 8049 rate-limit flake) and one FE failure (RatingDesignView FR-1530, classified main's flake), both in the ledger's Gate section.)*
 
 ### WK-674 — Deployment: environments, atomic switchover, rollback, shadow — **and the tenancy mechanics ADR-710 requires**
 
@@ -2522,6 +2530,31 @@ relates: [PL-1708, FD-1684, FD-1335, PL-1682, SL-1683, PL-1364, SL-1367, SL-1547
 
 On the maintainer's (by delegation) entry "2026-10-12 07:46:06 BST — PL 9906/SL 9911/FD 9912: ACK + early mint as PL-1682/SL-1683/FD-1684 after #1295/#1296; …", items 3 and 4 (WK-1178 owns all four limbs) and its remedy row: `GET /api/v1/rate-tables/{slug}@{version}/export/csv`, `…/export/xlsx`, `GET /api/v1/audit/export` and `GET /api/v1/jobs/{job_id}/events` each declare their real 200 media type, so `docs/contracts/openapi/generated.json` reads `text/csv`, the spreadsheetml type, `text/csv` and `application/x-ndjson`, and `text/event-stream`, with no `application/json` entry and a non-empty schema on each. The handler bodies and the wire do not change. Red first, one contract test per route, each red on `main` by its cause (the published 200 has a single `application/json` key); the stale-list test red after regeneration; the two wire tests without a `content-type` assert gain one. The four routes leave `UNTYPED_2XX_PERMANENT` (`backend/tests/test_contracts.py:3169-3183`), and `generated.json` and the frontend client are regenerated. The event: `FD-1684`'s sweep predicate prints no line. Plan: Work-plan delta `PL-1708`. **Activation needs:** DP-1 (the declaration form), DP-2 (the schemas), DP-3 (the emptied list removed), DP-4 (route 4 declared, not rewritten) and DP-5 (a dated clause on `06:606` only) accepted or overruled (**all five ruled as recommended**, the maintainer (by delegation), "2026-10-14 09:45:05 BST" (A)); `FD-1684` on `main` (#1297); `SL-1683` merged first, or `RL-1445` item 2's conditions in the dispatch record (shared `api/rate_tables.py`, `test_contracts.py`, `generated.json`); PL-1708 set `active` in this slice's activation commit; the shared-path census re-checked at the GO; the lead's executor GO. *(Cut 2026-10-14 by the planner under working id 9998, reserved by the lead, eta "2026-10-14 09:29:43 BST".)*
 
+#### SL-1722 — WK-1178 fix slice — the upload-completion step: an upload becomes an owned, content-addressed blob, proven by one public-path HTTP test with no seeding
+
+```yaml
+id: SL-1722
+family: slice
+title: WK-1178 fix slice — the upload-completion step: an upload becomes an owned, content-addressed blob, proven by one public-path HTTP test with no seeding
+status: draft                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-14
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 4420f91fa4112a1fcabcae23d3d50a1ad4fcbb59
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1721, SL-1258]
+```
+
+*(Minted 2026-10-14 as SL-1722 from working id 8026, in the D17 batch mint PR.)*
+
+On the maintainer's (by delegation) entry "2026-10-14 10:56:38 BST — Upload-completion gap: owner WK-1178, FIXED IN P2 (spec first, off the G2 path); 2nd-pass counts noted (re lead 10:56:05)", items 2 to 4. `07` FR-421 is half-built: `POST /api/v1/blobs/upload-url` returns a staging key, and nothing completes the upload, hashes it, moves it to its content address, writes its `blobs` row or records an owner, so `POST /api/v1/datasets/{slug}/versions` refuses every publicly uploaded file with the missing-blob `404` (`backend/src/app/api/datasets.py:543-546`). Spec first: a new `07` FR for the completion step, the `07` §5.1 upload-url row's dated line and a new `complete` row, and `01`'s ingest row amended to cite the FR, in the slice's commit. The completion design is PL-1721's DP-U1 (recommended: `complete` returns `202` with a `blob.promote` Job on `io`, whose blob result is the owner the allow-list already admits; the blob is retained, per FD-1715's rule). ONE HTTP test walks upload-url → PUT to MinIO → complete → POST versions → ingest `succeeded` on a real worker with no DB seeding, and the route-level reds are listed in PL-1721. Off the G2 path; never displaces a G2 gate; merged before the 4 Nov code freeze. Work-plan delta PL-1721 (minted from working id 8025). **Activation needs:** DP-U1 ruled by a high-effort decision-maker in a separate CLI; DP-U2 ruled (where the test's `io` worker comes from: recommended, the test starts its own; otherwise `SL-1258` merged first); the upload-completion FD minted (D16 or D17), naming #883's unowned deferral and its relation to FD-1713 (minted from working id 8021); the shared-path census against `SL-1258` and any open slice regenerating `docs/contracts/` or adding a migration; PL-1721 set `active` in this slice's activation commit; the lead's GO. *(Cut 2026-10-14 by the planner under working id 8026, reserved by the lead, eta "2026-10-14 10:57:11 BST".)*
+
+*Dated 2026-10-14 by the planner, on the lead's order in this batch, an ACCEPTANCE line, checked at this slice's ACK:* **Acceptance — E4.3's compose ingest test converted.** `PL-1714` E4.3's compose ingest test (`test_a_dataset_ingest_job_succeeds_through_the_compose_io_worker`, seeded by `psql` until this slice lands; its seeding comment names SL-1722) is converted to the public upload path: `POST /api/v1/blobs/upload-url` → `PUT` → complete → `POST /api/v1/datasets/{slug}/versions`, with no `psql` seeding. If this slice has not merged by the 4 Nov freeze, the P2 closure record lists the seeded test as an open item. Authority, the maintainer's (by delegation) entry "2026-10-14 11:10:26 BST — Upload plan, the two points: "real io worker" defined (W2 OK, conditional); E4.3 may seed now, with the conversion an OBLIGATION (re lead 11:09:44)", item (b), verbatim: *"the conversion is an ACCEPTANCE line in SL 8026 ("E4.3's compose ingest test is converted to upload-url → PUT → complete → POST versions, with no psql seeding"), not only a dated line, so it is checked at SL 8026's ACK. If SL 8026 has not merged by the 4 Nov freeze, the P2 closure record lists the seeded test as an open item."*
+
+*Dated 2026-10-14 by the planner, on the maintainer's (by delegation) entry "2026-10-14 11:24:38 BST — RL 8028 (upload completion) CONFIRMED as drafted; the no-seeding carve-out ACCEPTED; FD 8023's check widened (re lead 11:24:06)":* RL-1724 (minted from working id 8028) "CONFIRMED, no amendment". This slice's one public-path test binds the carve-out as written: "no `blob_fixtures` import, no `Database` session, and only the listed fixtures. The LG names the fixture set."
+
+*Dated 2026-10-14 by the planner, on the maintainer's (by delegation) entry "2026-10-14 11:55:21 BST — MERGE-ACK #1301 (SL-1549, WK-675 S7b); upload-404 → its OWN FD; DISK: worktree sweep now (re lead 11:53:48 / 11:53:20)":* "A SEPARATE FD, as you recommend, in D17, proposed HIGH, discharged by SL 8026." That FD is FD-1730 (minted from working id 8039).
 
 #### SL-1719 — WK-1178 fix slice — FD 8049: the score rate-limit test's key expiry is one the pinned clock cannot outrun, and the limiter's key expiry is tested
 
@@ -2546,6 +2579,136 @@ The fix of FD 8049 (MEDIUM, owner WK-1178; not on `main` yet, it rides D18). `ba
 (Minted 2026-10-14 as SL-1719 from working id 8051, in the FD 8049 fix PR; ledger LG-1720 from working id 8052.)
 
 (Closed 2026-10-14 as a Slice, closing acts in the slice PR, on the lead's merge; ledger LG-1720 `closed`. Audit written in LG-1720 (Audit section, by `auditor-fd8049`, at f78ab4ce), adopted by the lead; CI python green at run 38607168256. FD 8049's fix: test-only, no `backend/src` change.)
+
+#### SL-1734 — WK-1178 fix slice — FD-1723's HIGH limbs: a capped GLM spec fits capped (FR-127), and the banding check runs at fit (FR-100)
+
+```yaml
+id: SL-1734
+family: slice
+title: WK-1178 fix slice — FD-1723's HIGH limbs, a capped GLM spec fits capped (FR-127) and the banding check runs at fit (FR-100)
+status: draft                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-16 # original date 2026-10-14, set at the draft; minted 2026-10-16
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 8eaf6d5f9cd4204e1e077b44069d4afd395f1461
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1542, SL-1543, PL-1674, SL-1675, FD-1723]
+```
+
+*(Minted 2026-10-16 as PL-1733 and SL-1734 from working ids 8030 and 8031, in the P1 batch mint PR.)*
+
+On the maintainer's (by delegation) entries "2026-10-14 11:06:52 BST" (item 2: *"Any HIGH limb is fixed in P2"*), "2026-10-14 11:28:56 BST" (FD-1723, HIGH; both limbs fixed in P2 under WK-1178, red first) and "2026-10-14 11:29:53 BST" (the FR-127 GLM fix is off the G2 path, conditionally). **FR-127, GLM limb:** `fit_glm` never reads `loss_treatment` (`glm.py:577`), so a capped `GlmSpec` fits uncapped while its spec and `spec_hash` say capped. The fix applies `apply_loss_treatment` (`gbm.py:178`, moved to its own module, `loss_treatment.py`, DP-L1) at the response read, and refuses `spliced` and `excess` by name, as `fit_gbm` does. **The EBM arm too** (DP-L2 (a)): `fit_ebm` ignores `loss_treatment` at `ebm.py:209`, the same class; an auditor adds the limb to FD-1723 before the mint. **FR-100:** `check_banding` (`bandings.py:524`) has no fit-path caller. The fix runs it at each fit entry over the rows fitted, after FR-111's weight-0 exclusion (DP-B1 (a)) and before factor resolution: `BAND_EMPTY` always, `BAND_BELOW_MIN_EXPOSURE` under `fail`, and under `warn` a typed `banding_warnings` field on the three fit results, through `model-schema` with `docs/contracts/` regenerated and the frontend's generated types following (DP-B2 (a)). The fit Job maps `BandingError` to a `409` that carries its code. Reds R1 to R8 are first seen red on main. **DP-G1:** Task 0 Step 3's probe runs before any code; any `BAND_EMPTY` for the A-4 severity GLM is a STOP to the maintainer. **SL-1543's guard test is not touched**; if DP-A4-3 switches to (y), it changes only with this slice's merge. If the 11:29:53 binding condition fires, the FR-127 limb joins G2 and merges before SL-1543 resumes (DP-S1). Plan `PL-1733` (a WK-1178 Work-plan delta; `draft`). **Activation needs:** FD-1723 minted, with its EBM limb; the decision points ruled — MET, every one, by the maintainer's (by delegation) entry "2026-10-14 11:52:51 BST", item (2); the plan made `active` by a dated line; Task 0 Step 3's G2 probe clean for the A-4 severity GLM, or the maintainer's ruling on it; a free build lane. *(Row cut 2026-10-14 by the planner, planner-fd8027; working ids 8031 and 8030 reserved by the lead in `handover/eta.md`.)*
+
+#### SL-1736 — WK-1178 slice — the P2 NFR measurement sweep: NFR-467, NFR-468, NFR-470, NFR-485 and NFR-1443 measured DIAGNOSTIC with pre-registered reading rules; NFR-472's red-first test
+
+```yaml
+id: SL-1736
+family: slice
+title: WK-1178 slice — the P2 NFR measurement sweep: NFR-467, NFR-468, NFR-470, NFR-485 and NFR-1443 measured DIAGNOSTIC with pre-registered reading rules; NFR-472's red-first test
+status: draft                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-16 # original date 2026-10-14, set at the draft; minted 2026-10-16
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 8eaf6d5f9cd4204e1e077b44069d4afd395f1461
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1735, RL-1441, LG-1444, SL-1259, RL-1614]  # forward-cites kept out until their batch mints them: FD 8046, FD 8047
+```
+
+*(Minted 2026-10-16 as PL-1735 and SL-1736 from working ids 8034 and 8035, in the P1 batch mint PR.)*
+
+On the maintainer's (by delegation) entry "2026-10-14 11:06:52 BST — D-list line-read RULED (35 ids; lineread-dlist-2026-10-14.md at ba68a6da) (re lead 11:06)" (`to-lead.md`), item 3: one slice before the code freeze. NFR-468 (`01`: the one-way read, p95 < 300 ms, never computed), NFR-470 (`01`: storage ≤ 1.2× the parquet payload; dedup by content hash), NFR-485 (`02`: 5 M × 60 fit within 32 GB) and NFR-1443 (`03`: the cells-diff page p95 ≤ 300 ms, and the 2× property) are each measured on the shared VM with a committed instrument (`scripts/measure-p2-nfr-sweep.py`; `scripts/bench-model.py --peak hwm`), labelled DIAGNOSTIC, latency figures also "server-side, in-process, excludes network". Thresholds and reading rules are committed before the first run. The contention factor is first re-measured on this box (≥ 3 interleaved ALONE/contended pairs, the max ratio), and the near-bound line is 1 / that factor rounded down, 0.43 until then ("2026-10-14 12:25:22 BST"). A latency reading above that fraction of its budget and within it is NEAR-BOUND and becomes a named extra reading for nfr-bench-1's second session (WK-674 S5's); NFR-485's 5 M × 60 run per arm joins that approved session under `MemoryMax=30G`, by one dated line under `SL-1259`'s row amending its run list (`RL-1614` item 6); this slice does not run them, and a cap-kill becomes an `FD-`. NFR-470 is read on the Dataset Version's own storage, the source upload excluded, with its dedup limb measured, and that reading is written as one dated clarification on NFR-470's row, the slice's only spec edit. NFR-472 is a test gap: one red-first test, red because `replace_rule_set` audits no `before` (`validation_rules.py:894-912`), and its fix; the purge limb and the green-by-construction docstring are `FD 8047`, and NFR-485's construction clause against the code is `FD 8046`. **A reading that comes out OVER goes to the lead for an `FD-`. Its requirement's text is not changed.** Plan: Work-plan delta `PL-1735`. **Activation needs:** DP-1 to DP-7 of `PL-1735` MET, ruled by the maintainer (by delegation), "2026-10-14 12:07:40 BST", DP-1 amended "2026-10-14 12:25:22 BST" (`to-lead.md`); the plan minted or GO'd on its working ids, and `FD 8046`/`FD 8047` minted; a free build lane; the lead's executor GO. *(Cut 2026-10-14 by the planner, seat planner-nfrsweep, under working id 8035, reserved by the lead with `PL-1735`.)*
+
+*(Amended 2026-10-14 by the planner, planner-p1fix, before the mint, on the maintainer's (by delegation) entry "2026-10-14 12:42:55 BST", item (2): NFR-467 is added, measured at 10 M rows (not extrapolated) on the shared VM with its own instrument and the threshold from its row and 2026-08-14 amendment, `PL-1735` Task 5a; nfr-bench-1 session 2 is the fallback. Session 2's planned total is restated in the plan: 3.9 h committed, at most 5.15 h.)*
+
+#### SL-1738 — WK-1178 fix slice — FD 8040: a recipe cell that does not parse is never silently nulled, and validation gives it a verdict (FR-32, VR-STR-2)
+
+```yaml
+id: SL-1738
+family: slice
+title: WK-1178 fix slice — FD 8040, a recipe cell that does not parse is never silently nulled and validation gives it a verdict (FR-32, VR-STR-2)
+status: draft                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-16 # original date 2026-10-14, set at the draft; minted 2026-10-16
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1542, SL-1543]
+```
+
+*(Minted 2026-10-16 as PL-1737 and SL-1738 from working ids 8042 and 8043, in the P1 batch mint PR.)*
+
+On the maintainer's (by delegation) entries "2026-10-14 11:52:51 BST" (item (1): the recipe cast silently nulls unparseable values; the fix's design is a planner DP against FR-32 and VR-STR-2), "2026-10-14 12:02:46 BST" (item (1): FD 8040 HIGH, confirmed; owner WK-1178, fixed in P2; two limbs, both in scope) and "2026-10-14 12:23:36 BST" (every DP ruled).
+
+**Limb (a), the coercion:** the recipe's `cast` and `parse_date` run with `strict=False` (`prepare.py:136`, `:142`), so a non-null source cell that does not parse becomes null with no error. The Job path never quarantines anything.
+
+**Limb (b), the blind validation:** `dtype_match` passes by construction, `date_parsed` checks the type only, `range` ignores nulls, and `reject_rate` reads a `_rejected` table that is never written. The auditor's run at `a3fc2e8d` gave ingest `4/4/0`, four nulls written, then validation `pass` 5/5.
+
+**Ruled:**
+- **DP-C1 → (Q), quarantine.** The row's source text goes into `PreparationResult.rejected` (declared, never filled), then into the version's `_rejected` table, named by column and step, and is counted in `rows_rejected`. The quarantine is **complete for each row**, and `rows_read == rows_written + rows_rejected` is asserted.
+- **The identity, widened** (the maintainer's (by delegation) entry "2026-10-14 12:31:22 BST"): for every recipe, `rows_read − rows_rejected − Σ rows_removed_by_step + Σ rows_added_by_step == rows_written`, with each step's in/out Polars height recorded in the ingestion run. It is asserted on the fixture (R1, and R7 through `filter_rows`) and on the G2 seed's version-2 and portfolio recipe (R8, `seed.py:96-118`). The engine already measures the heights (`prepare.py:119-124`); recording them **in the run** needs `models.py` and a migration: **DP-S1, ruled (i)** by the maintainer's (by delegation) entry "2026-10-14 12:42:55 BST": a `step_counts` JSONB column on `IngestionRunRow` (per step: name, rows_in, rows_out), a new migration (one head, a downgrade; re-pointed in merge order against PL 8016's S-a/S-b, with a single-head check at the second one's gate) and a dated FR-31 clause. The widened write set (`models.py`, the migration, `test_data_jobs.py`, `test_ingestion.py`, `examples/fremtpl2/test_seed.py`) is accepted.
+- **DP-C3 → (ii).** `reject_rate`, `dtype_match` and `date_parsed` each give a verdict at the declared severity: the last two through `measured.coerced_cells`, even without `reject_rate`. `range` is unchanged, with its guard stated. No tolerance.
+- **DP-C2 → (a).** No handler change.
+
+**Reds:** R1 to R8 are run through `execute_job` over the auditor's 4 rows plus `p5` (R8 over the seed's own recipe), each red on main by cause. R6 asserts that after ingest a column's `null_count` equals the source's genuine empty cells only.
+
+**G2 (binding):** before any code, Task 0 Step 3 counts through Polars, with the seed recipe's own cast, over all 678 013 freMTPL2 rows and the seeded 20 000-row sample. A non-zero count is a STOP to the maintainer. The planner's proxy count of 0 is noted, not relied on.
+
+**SL-1543:** its `np.float64(…)` cells were fixed at `4ec537c3`. Whichever of the two merges second re-runs SL-1543's tests and the WF-699 journey test. The roadmap adjacency with SL-1734 is resolved in the P1 PR (12:23:36).
+
+Plan `PL-1737` (a WK-1178 Work-plan delta; `draft`). **Activation needs:**
+- FD 8040 minted;
+- every DP ruled — MET, by the maintainer's (by delegation) entry "2026-10-14 12:23:36 BST";
+- the plan made `active` by a dated line;
+- Task 0 Step 3's G2 probe clean on both populations, or the maintainer's ruling on it;
+- a free build lane.
+
+*(Row cut 2026-10-14 by the planner, planner-fd8040; working ids 8043 and 8042 reserved by the lead.)*
+*(Amended 2026-10-14 by the planner, planner-p1fix, before merge, on the maintainer's (by delegation) entry "2026-10-14 12:31:22 BST": the identity widened, R7 and R8, DP-S1.)*
+*(Amended again 2026-10-14 by the planner, planner-p1fix, before merge, on the maintainer's (by delegation) entry "2026-10-14 12:42:55 BST": DP-S1 ruled (i), the write set widened.)*
+
+#### SL-1740 — WK-1178 fix slice — the failed-authentication audit: a keyed-workspace refusal's audit row survives the 401, and every failure is counted by reason
+
+```yaml
+id: SL-1740
+family: slice
+title: WK-1178 fix slice — the failed-authentication audit: a keyed-workspace refusal's audit row survives the 401, and every failure is counted by reason
+status: draft                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-16 # original date 2026-10-14, set at the draft; minted 2026-10-16
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1739, FD-1727]
+```
+
+*(Minted 2026-10-16 as PL-1739 and SL-1740 from working ids 8044 and 8045, in the P1 batch mint PR.)*
+
+On the maintainer's (by delegation) entries "2026-10-14 11:08:32 BST — Failed-auth audit rollback: auditor run GO; …", item 2, and "2026-10-14 11:11:50 BST — NFR-519 hold RELEASED (letter reading correct); the failed-auth FD scope set (re lead 11:11)". `07` FR-392 audits failed authentication, but `require_caller` runs `authenticate_api_key` inside a unit of work (`backend/src/app/api/deps.py:240-241`) that rolls back the flushed `principal.auth_failed` row with the 401 (`backend/src/app/db/session.py:68-78`), so a revoked, expired, archived-account or environment-not-granted key leaves no audit row (auditor-failauth's run at `8eaf6d5f`: 576 rows before and after each). The workspace-less failures leave only a log line, and no counter tells a 401 from any 4xx (`backend/src/app/observability/metrics.py:121`). Spec first: a dated amendment on `07` FR-392 and a dated pointer on `06` FR-368 (PL-1739's T1 and T2, as ruled). The fix and its reds are PL-1739's, as ruled by the maintainer (by delegation) directly in `to-lead.md` "2026-10-14 12:18:57 BST" item (1): the failure row written in its own unit of work after the auth unit rolls back, surviving a real HTTP 401 (DP-1 (i)); a 5xx, never a silent 401, if that write fails (DP-2 F1); `gip_auth_failures_total{reason}` for every failure over a closed set of eight labels, with no key material, prefix or principal in a label, and the bearer path's INFO line raised to WARNING (DP-3 B); the T-text on `07` FR-392 and `06` FR-368 as written (DP-4 (a)); and the vacuous secret test replaced by one that first produces failure events (R9). `backend/tests/test_auth_keys.py:198-212` and `:216-238`, green only because they catch inside the unit, are replaced by HTTP reds red on `main` by cause. Work-plan delta PL-1739 (working id); discharges FD-1727 (working id). **Activation needs:** DPs ruled — MET, 12:18:57 (PL-1739's DP-1 to DP-4, the 12:18:57 entry named above, item (1)); FD-1727 minted (D17); the shared-path census (`deps.py`, `metrics.py`, the two spec files) against whatever is open at GO; PL-1739 set `active` in this slice's activation commit; the lead's GO. Merged before the 4 Nov code freeze. *(Cut 2026-10-14 by the planner, planner-fd8036, under working id 8045, reserved by the lead, eta "2026-10-14 12:07:20 BST".)*
+
+#### SL-1742 — WK-1178 fix slice — FD-1741: the python CI job's cheap checks run before the 30-minute pytest, and the job budget is 50 minutes
+
+```yaml
+id: SL-1742
+family: slice
+title: WK-1178 fix slice — FD-1741: the python CI job's cheap checks run before the 30-minute pytest, and the job budget is 50 minutes
+status: closed                   # draft → active → closed | retired (§1.2a)
+created: 2026-10-17 # original date 2026-10-16, set at the draft; minted 2026-10-17
+owner: executor                  # a workflow-only slice; the lead dispatches (active)
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1741]
+```
+
+*(Minted 2026-10-17 as SL-1742 from working id 8064, in the SL-1742 PR; FD-1741 from working id 8063 and LG-1743 from working id 8065.)*
+
+The fix of FD-1741 (MEDIUM, owner WK-1178; filed on its own branch). In `.github/workflows/python.yml` the `Tests` step (`pytest -q`) ran before `Generated contracts are current` and `Requirement coverage`, so a job timeout at 30 minutes cancelled the two cheap checks and the run ended `cancelled`. **Scope, exactly:** (1) the contracts `--check` and req-coverage steps move to before `Tests` (they need no DB); (2) the job's `timeout-minutes` goes 30 → 50; (3) the `Gate summary` step is unchanged (it reads each stage by step id, so order does not matter) and still reports every stage with `if: always()`. Nothing else in the workflow changes; no path filter is touched; pytest is not split or parallelised (a P3 option in FD-1741). Written workflow-only, so CI's own python run on the PR head is its gate: success, with contracts and req_coverage logged before pytest.
+
+(Activated 2026-10-16 as WK-1178's FD-1741 fix slice, on the maintainer's ruling "2026-10-16 09:57:34 BST — RULING — the python CI job budget (#1309's cancelled run): finding MEDIUM, owner WK-1178, fix now" (`to-lead.md`). Ledger `LG-1743`.)
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
@@ -2765,6 +2928,8 @@ phase: P3
 
 From “Workstreams” (line 469): **Approvals inbox with inline evidence** | FR-358 — "the screen where the platform earns its keep"
 
+*(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 10:57:10 BST — FD 8023 MEDIUM + trigger CONFIRMED; the D-list line-read GO (closed-phase + P2-scope only); later-phase D lines GO (re lead 10:56:41)", item 4 ("dated roadmap lines placing each on its module's Work … No line-read is needed: they are spec-only until their phase"): `06` NFR-524 (the approvals inbox loads in < 1 s; full evidence renders progressively) join this Work's requirement list — it is the approvals inbox. Placement only: nothing is built ahead of this Work's phase (`CLAUDE.md` §0).)*
+
 
 ### WK-679 — Audit explorer, chain verification, export
 
@@ -2781,6 +2946,8 @@ phase: P3
 From “Workstreams” (line 470): Audit explorer, chain verification, export | FR-368, FR-369, FR-370, FR-371, FR-372, FR-374, FR-375
 
 *(Dated 2026-09-30 by the lead, on the maintainer's entry "2026-09-30 11:56:33 BST — DECISIONS: slice order after the split; FR-384 confirmed; FR-383 and FR-385 owners": `06` FR-383 (the uniform per-artifact history view, `06` line 179, route `06` §5.1 line 542) was held by no roadmap row. It is **owned by this Work** — its content (versions, transitions, actors, timestamps, justifications, diffs) is audit-derived. It joins this Work's requirement list by a dated amendment when its map plan is cut.)*
+
+*(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 10:57:10 BST — FD 8023 MEDIUM + trigger CONFIRMED; the D-list line-read GO (closed-phase + P2-scope only); later-phase D lines GO (re lead 10:56:41)", item 4 ("dated roadmap lines placing each on its module's Work … No line-read is needed: they are spec-only until their phase"): `06` NFR-521 (audit retention ≥ 7 years; the hash chain verifiable over the whole retained range) join this Work's requirement list — it is chain verification over the audit log. Placement only: nothing is built ahead of this Work's phase (`CLAUDE.md` §0).)*
 
 
 ### WK-680 — Dossier generation, commentary blocks, PDF, point-in-time regeneration
@@ -2799,6 +2966,8 @@ From “Workstreams” (line 471): Dossier generation, commentary blocks, PDF, p
 
 *(Dated 2026-09-30 by the lead, on the maintainer's entries "2026-09-30 11:52:53 BST — #983's closure sweep: accepted (no §13 verdict owed); DECISIONS on the recurrence and FR-384" and "2026-09-30 11:56:33 BST — DECISIONS: slice order after the split; FR-384 confirmed; FR-383 and FR-385 owners": `06` FR-384 (artifact dependencies / blast radius, route `GET /api/v1/artifacts/{ref}/dependencies`, `06` §5.1; view "Dependencies", `06` §5.3 line 588) was held by no roadmap row (`PL-1237` line 525). It is **owned by this Work**, confirmed by the maintainer, with two conditions: (i) this Work's map plan builds FR-384 — the dependency graph, its route and the view — in its **first slice**, before FR-379's bundle and FR-380's as-at regeneration, which reuse its down traversal; (ii) WK-681 reuses that slice for FR-382 and builds no second traversal. FR-384 joins this Work's requirement list by a dated amendment when its map plan is cut.)*
 
+*(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 10:57:10 BST — FD 8023 MEDIUM + trigger CONFIRMED; the D-list line-read GO (closed-phase + P2-scope only); later-phase D lines GO (re lead 10:56:41)", item 4 ("dated roadmap lines placing each on its module's Work … No line-read is needed: they are spec-only until their phase"): `06` NFR-522 (a full Rating Version's dossier in < 2 min, byte-reproducible) join this Work's requirement list — it is dossier generation. Placement only: nothing is built ahead of this Work's phase (`CLAUDE.md` §0).)*
+
 
 ### WK-681 — Regulatory evidence export
 
@@ -2813,6 +2982,8 @@ phase: P3
 ```
 
 From “Workstreams” (line 472): Regulatory evidence export | FR-382
+
+*(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 10:57:10 BST — FD 8023 MEDIUM + trigger CONFIRMED; the D-list line-read GO (closed-phase + P2-scope only); later-phase D lines GO (re lead 10:56:41)", item 4 ("dated roadmap lines placing each on its module's Work … No line-read is needed: they are spec-only until their phase"): `06` NFR-523 (a one-year regulatory export in < 30 min, self-contained) join this Work's requirement list — it is the regulatory export. Placement only: nothing is built ahead of this Work's phase (`CLAUDE.md` §0).)*
 
 
 ### WK-682 — Model risk tiering, if OQ-636 is accepted
@@ -2863,7 +3034,11 @@ Opened `draft` 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 1
 
 *(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 10:51:08 BST — FR-420 → WK-1251 ACCEPTED; latent blob-GC DATA-LOSS finding: file in D16 (not D17) + a precondition line (re lead after 10:48:32)", item 3, which accepted the line above and ruled this precondition. **Precondition on this Work:** no non-dry `collect_garbage` is wired until every blob-owning artifact retains its blobs, proven by a DERIVED check (every `BlobStore.put` call site in `backend/src` is paired with a `retain` by its owning record, or is listed with a reason), and a dry-run report over a seeded database shows 0 live blobs selected.)*
 
-*(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 11:24:38 BST" (RL 8028 confirmed; FD-1715's check widened), which ruled that the derived check above and this precondition count **every `BlobRow` writer**, not `BlobStore.put` call sites only. The precondition's derived check therefore reads: every writer of a `BlobRow` in `backend/src` is paired with a `retain` by its owning record, or is listed with a reason. At `8eaf6d5f`, `git grep -nE 'BlobRow\(' 8eaf6d5f -- backend/src packages` prints two lines: the class definition (`backend/src/app/db/models.py:316`) and the only constructor, `backend/src/app/platform/blobs.py:186`, inside `BlobStore.put`; after SL 8026 (working id, `RL 8028`'s `blob.promote`), `promote_upload` is a second writer and is counted. FD-1715 carries the same widening.)*
+*(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 11:24:38 BST" (RL-1724 confirmed; FD-1715's check widened), which ruled that the derived check above and this precondition count **every `BlobRow` writer**, not `BlobStore.put` call sites only. The precondition's derived check therefore reads: every writer of a `BlobRow` in `backend/src` is paired with a `retain` by its owning record, or is listed with a reason. At `8eaf6d5f`, `git grep -nE 'BlobRow\(' 8eaf6d5f -- backend/src packages` prints two lines: the class definition (`backend/src/app/db/models.py:316`) and the only constructor, `backend/src/app/platform/blobs.py:186`, inside `BlobStore.put`; after SL-1722 (minted from working id 8026, `RL-1724`'s `blob.promote`), `promote_upload` is a second writer and is counted. FD-1715 carries the same widening.)*
+
+*(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 11:00:31 BST — Line-read rulings: NFR-519 → marker only; FR-423 → WK-1251 (P3) with NFR-530, plus a no-real-data precondition (re lead 11:00)", and the maintainer's (by delegation) entry "2026-10-14 11:06:52 BST — D-list line-read RULED (35 ids; lineread-dlist-2026-10-14.md at ba68a6da) (re lead 11:06)", item 4: `07` FR-423 (PITR archiving, blob versioning/replication, a documented and tested restore) and FR-424, FR-425, FR-426 (a pluggable secret backend, secrets resolved at use, never logged or audited) are **NOT DELIVERED and owned by this Work, in P3**. NFR-530 (the CI restore exercise) is already this Work's (`CR-1247` Proposal 7, above). This supersedes `RS-708` line 241's "not started … deployment, Phase 2" for FR-423 by this dated assignment. The P2 closure record lists FR-423 and FR-424–426 as "deferred with owner WK-1251" (`CLAUDE.md` §13).)*
+
+*(Dated 2026-10-14 by the lead, same two entries: **BINDING PRECONDITION**, as widened by 11:06:52 item 4: "No non-public data AND no production credentials or secrets are loaded into any deployed environment until FR-423, FR-424–426 and NFR-530 are delivered." It is also carried in the P2 closure record's open-items list. P2's demo uses freMTPL2, which is public, so it is unaffected.)*
 
 ### WK-1288 — Platform administration views: Settings and System status
 
@@ -2955,6 +3130,8 @@ phase: P4
 
 From “Workstreams” (line 495): Optimisation runs, constraints, binding analysis, frontier | FR-284, FR-285, FR-286, FR-287, FR-288, FR-289, FR-290, FR-291, FR-292, FR-293
 
+*(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 10:57:10 BST — FD 8023 MEDIUM + trigger CONFIRMED; the D-list line-read GO (closed-phase + P2-scope only); later-phase D lines GO (re lead 10:56:41)", item 4 ("dated roadmap lines placing each on its module's Work … No line-read is needed: they are spec-only until their phase"): `04` NFR-503 (a 1.3 M-policy, 400-segment run in < 15 min incl. Monte Carlo), NFR-505 (run determinism to 1e-9), NFR-506 (infeasibility detected and explained within 60 s) and NFR-507 (the run, materialisation-acceptance and GIPP-result Audit Events; its materialisation limb is evidenced with `WK-686` and its GIPP limb with `WK-685`, this Work owning the row) join this Work's requirement list — each is a property of an optimisation run. Placement only: nothing is built ahead of this Work's phase (`CLAUDE.md` §0).)*
+
 
 ### WK-685 — GIPP checks, price-walking, disparity reporting
 
@@ -2969,6 +3146,8 @@ phase: P4
 ```
 
 From “Workstreams” (line 496): GIPP checks, price-walking, disparity reporting | FR-294, FR-297, FR-298, FR-299, FR-300, FR-301, FR-302
+
+*(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 10:57:10 BST — FD 8023 MEDIUM + trigger CONFIRMED; the D-list line-read GO (closed-phase + P2-scope only); later-phase D lines GO (re lead 10:56:41)", item 4 ("dated roadmap lines placing each on its module's Work … No line-read is needed: they are spec-only until their phase"): `04` FR-295 (ENBP through the most-used new-business channel when the original is unavailable), FR-296 (the GIPP check records its product scope) and NFR-508 (GIPP evidence retained ≥ 7 years, exportable) join this Work's requirement list — each is a GIPP-check or GIPP-evidence property, this Work's title. Placement only: nothing is built ahead of this Work's phase (`CLAUDE.md` §0).)*
 
 
 ### WK-686 — Materialisation into rate tables
@@ -2985,6 +3164,8 @@ phase: P4
 
 From “Workstreams” (line 497): Materialisation into rate tables | FR-303, FR-304, FR-305, FR-306
 
+*(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 10:57:10 BST — FD 8023 MEDIUM + trigger CONFIRMED; the D-list line-read GO (closed-phase + P2-scope only); later-phase D lines GO (re lead 10:56:41)", item 4 ("dated roadmap lines placing each on its module's Work … No line-read is needed: they are spec-only until their phase"): `04` NFR-509 (no optimisation output reaches a live price except through `03`'s approval path; no write path from this module to a Deployment) join this Work's requirement list — it is the materialisation boundary. Placement only: nothing is built ahead of this Work's phase (`CLAUDE.md` §0).)*
+
 
 ### WK-687 — Monitoring: monitors, drift, A/E, demand, rate achieved, operational
 
@@ -2999,6 +3180,12 @@ phase: P4
 ```
 
 From “Workstreams” (line 498): Monitoring: monitors, drift, A/E, demand, rate achieved, operational | `05` FR-307, FR-308, FR-309, FR-310, FR-311, FR-312, FR-313, FR-314, FR-315, FR-316, FR-317, FR-318, FR-319, FR-320, FR-321, FR-322, FR-323, FR-324, FR-325, FR-326, FR-327, FR-328, FR-329, FR-330, FR-331, FR-332, FR-333
+
+*(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 10:57:10 BST — FD 8023 MEDIUM + trigger CONFIRMED; the D-list line-read GO (closed-phase + P2-scope only); later-phase D lines GO (re lead 10:56:41)", item 4 ("dated roadmap lines placing each on its module's Work … No line-read is needed: they are spec-only until their phase"): `05` NFR-510 (a weekly run over 400 k quotes and 1 200 claims in < 10 min), NFR-511 (monitoring off the scoring latency path), NFR-513 (metric identity with validation/diagnostics by a shared suite), NFR-515 (metric history indefinite; evidence blobs ≥ 13 months), NFR-516 (monitor, rebaseline, threshold, alert-state and refit Audit Events; its alert limb is evidenced with `WK-688`, this Work owning the row) and NFR-517 (an outage loses no data; a missed run is backfillable) join this Work's requirement list — each is a property of a monitoring run or its record. Placement only: nothing is built ahead of this Work's phase (`CLAUDE.md` §0).)*
+
+*(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 11:06:52 BST — D-list line-read RULED (35 ids; lineread-dlist-2026-10-14.md at ba68a6da) (re lead 11:06)", item 4: "FR-441, 442 (log correlation beyond trace_id; OpenTelemetry spans) → the observability Work the roadmap names for 07 §… The planner cites the row; if none exists, P4 with WK-687." No roadmap row names an observability Work (`grep -niE 'observab|opentelemetry' docs/roadmap.md` finds none on a `WK-` heading at this batch's base), so `07` FR-441 (structured JSON logging with `trace_id`, `workspace_id`, `principal_id`, `job_id` and the entity reference) and FR-442 (OpenTelemetry spans across request, queue hop, worker and `pricing-core`) are **owned by this Work, in P4**. Placement only.)*
+
+*(Dated 2026-10-14 by the planner, a transcription for the lead, on the maintainer's (by delegation) entry "2026-10-14 11:52:51 BST — PL 8030/SL 8031 DPs ruled; SL-1543 fixture fix accepted; NEW candidate: the recipe cast silently nulls unparseable values (re lead 11:51:03 / 11:52:02)", item (3): "FR-441/442 → WK-687 (P4) accepted, since no observability Work exists.")*
 
 
 ### WK-688 — Alerting lifecycle and routing
@@ -3016,6 +3203,8 @@ phase: P4
 From “Workstreams” (line 499): Alerting lifecycle and routing | FR-334, FR-335, FR-336, FR-337, FR-338, FR-453 (added 2026-09-29, `CR-1247` Proposal 5: both limbs, alert routing and deployment notifications)
 
 **FR-453, both limbs** (`07`: signed webhooks for alert routing and for deployment notifications, with retries, backoff and observable delivery status) *(added 2026-09-29 on `CR-1247`, and the maintainer's entry "2026-09-29 17:27:28 BST · maintainer (acting on the maintainer's behalf) · ACCEPTANCES: the WK-672 Work close (#906) and plan review 16 (#905), per proposal", §2 row 5: "Accepted. OQ-1233 → (b): FR-453 (both limbs) is named on WK-688's row, and the OQ moves to Before Phase 4. FR-272's notification limb is deferred to P4. OQ-1234 (before WK-674 Slice 2) and OQ-1235 (before Slice 3) are ruled by the decision-maker.")*. So `03` FR-272's notification limb is delivered here, in P4, through FR-453's deployment-notification limb. WK-674 delivers FR-272's Audit Event limb in P2 (`RL-1232` DP-4).
+
+*(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 10:57:10 BST — FD 8023 MEDIUM + trigger CONFIRMED; the D-list line-read GO (closed-phase + P2-scope only); later-phase D lines GO (re lead 10:56:41)", item 4 ("dated roadmap lines placing each on its module's Work … No line-read is needed: they are spec-only until their phase"): `05` NFR-514 (alert delivery within 5 minutes of the run; routing failures retried with backoff and surfaced) join this Work's requirement list — it is alert routing. Placement only: nothing is built ahead of this Work's phase (`CLAUDE.md` §0).)*
 
 
 ### WK-689 — Dashboards and monitoring packs
@@ -3046,6 +3235,8 @@ it promised.
 rating structure with no monitoring is the least comfortable state the platform can be in.
 
 ---
+
+*(Dated 2026-10-14 by the lead, on the maintainer's (by delegation) entry "2026-10-14 10:57:10 BST — FD 8023 MEDIUM + trigger CONFIRMED; the D-list line-read GO (closed-phase + P2-scope only); later-phase D lines GO (re lead 10:56:41)", item 4 ("dated roadmap lines placing each on its module's Work … No line-read is needed: they are spec-only until their phase"): `05` NFR-512 (dashboard reads < 500 ms from persisted Monitoring Results; no on-request metric computation) join this Work's requirement list — it is a dashboard property. Placement only: nothing is built ahead of this Work's phase (`CLAUDE.md` §0).)*
 
 ## 10. Decision gates
 

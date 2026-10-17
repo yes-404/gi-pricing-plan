@@ -3,7 +3,7 @@ id: PL-1701
 family: plan
 kind: map
 title: WK-673 — RL-1707's DP-P1 fix, FR-242's drafted change summary pairs a rate table's versions through the table step that names them and refuses no pin set, and SL-1678's guard is removed (SL-1702): a dated delta to PL-1267
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-14
 owner: planner
 tree: 36e2610ab8135bc3b3563464e7f5f719713b168b
