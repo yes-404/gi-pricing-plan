@@ -41,6 +41,23 @@ PL-1764 and the SL-1550 roadmap row `draft` → `active`, status lines and a dat
 
 "RL 8057" / "PL 8054" → `RL-1765` / `PL-1764` at `docs/specs/03-rating-engine.md` §5.1 (the rating-versions list row) and six frontend lines: `QuoteComparison.vue:6`, `QuoteComparison.test.ts:9`/`:130`, `stepChange.test.ts:7`, `QuoteSandboxView.test.ts:111`/`:223`/`:224`. Comments and test titles only. Single-file vitest after the change: `stepChange.test.ts` 6 passed, `QuoteComparison.test.ts` 6 passed, `QuoteSandboxView.test.ts` 19 passed. `generate:api`: `git status --porcelain frontend/src/api` empty.
 
+### Fixture step kinds and the red-first re-proof (executor-1550g, 2026-10-17, on `1ab31bca`)
+
+The two test files' fixture step kinds were not in the generated `TraceStepType` union. The engine emits the algorithm step's declared type (`packages/pricing-core/src/pricing_core/rating/score.py:846-849`, `type=step.type`), and `docs/specs/03-rating-engine.md` §3.2 (lines 92-104) names exactly seven; `packages/model-schema/src/model_schema/scoring.py:79` mirrors them.
+
+| Fixture kind | Now | Citation |
+|---|---|---|
+| `rate_table` | `table` | 03 §3.2 `table` row; FR-220 |
+| `arithmetic` | `expression` | 03 §3.2 `expression` row |
+| `cap` | `constraint` | 03 §3.2 `constraint` row (`on_violation` clamp) |
+| `loading` | `expression` | no emitted kind of that name; a computed value, a judgment call between `expression` and `table` that no assertion depends on |
+
+Every fixture step also gained `elapsed_us: 0` (required by the generated `TraceStep`). Test files only.
+
+Red-first re-proof: with `src/api/score.ts`, `QuoteComparison.vue`, `stepChange.ts` and `QuoteSandboxView.vue` set back to their `8bcddabe` (stub) content and the fixed tests kept, vitest on the three slice test files gave 17 failed, 14 passed. A1-A6 fail on `AssertionError: expected '' to be 'Added in comparison'` (and the like); B1-B6, C1, C4 and C6 on `AssertionError: expected null not to be null` (no "Step differences" table). At the head the whole suite passes (118 files, 748 tests). The files were restored; nothing from the scratch state was committed.
+
+The broker re-run (`backend/tests/test_celery_broker.py`, Redis db 5): 3 passed. `redis-effective.py` prints the Settings default bucket `gip-blobs` because only the test reads `GIP_TEST_BUCKET`.
+
 ### Gate
 
 Owed: the lead's two-half gate on a free slot. Audit: not yet.

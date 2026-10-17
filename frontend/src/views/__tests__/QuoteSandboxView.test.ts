@@ -68,7 +68,7 @@ const RESULT = {
     rating_version_ref: "rating_version:motor-gb@3",
     bundle_hash: `sha256:${"c".repeat(64)}`,
     ladder_reconciled: true,
-    steps: [{ step_id: "s_in", type: "input", label: "Driver age", consumed: {}, produced: { driver_age: 34 } }],
+    steps: [{ step_id: "s_in", type: "input", label: "Driver age", elapsed_us: 0, consumed: {}, produced: { driver_age: 34 } }],
   },
 };
 
@@ -90,8 +90,8 @@ const COMPARISON: ScoreComparison = {
         change: "changed",
         own_change: true,
         changed_fields: ["produced"],
-        base: { step_id: "s_rate", type: "rate_table", label: "Rate", consumed: {}, produced: { rate: "1.10" } },
-        comparison: { step_id: "s_rate", type: "rate_table", label: "Rate", consumed: {}, produced: { rate: "1.20" } },
+        base: { step_id: "s_rate", type: "table", label: "Rate", elapsed_us: 0, consumed: {}, produced: { rate: "1.10" } },
+        comparison: { step_id: "s_rate", type: "table", label: "Rate", elapsed_us: 0, consumed: {}, produced: { rate: "1.20" } },
       },
     ],
   },
