@@ -2610,7 +2610,7 @@ The interim fix of FD-1754 (FD-1754, merged in D18 (#1319); HIGH, the silent cas
 id: SL-1734
 family: slice
 title: WK-1178 fix slice — FD-1723's HIGH limbs, a capped GLM spec fits capped (FR-127) and the banding check runs at fit (FR-100)
-status: active                   # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-16 # original date 2026-10-14, set at the draft; minted 2026-10-16
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 8eaf6d5f9cd4204e1e077b44069d4afd395f1461

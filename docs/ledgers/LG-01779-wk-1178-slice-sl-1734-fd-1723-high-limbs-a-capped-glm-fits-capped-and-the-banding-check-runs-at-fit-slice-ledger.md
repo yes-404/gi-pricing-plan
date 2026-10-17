@@ -2,7 +2,7 @@
 id: LG-1779
 family: ledger
 title: WK-1178 slice SL-1734 — FD-1723's HIGH limbs, a capped GLM and EBM fit capped (FR-127) and the banding check runs at fit (FR-100), slice ledger
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-17
 owner: executor
 phase: P2
