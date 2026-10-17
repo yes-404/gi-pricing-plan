@@ -132,7 +132,7 @@ def test_schema_decimal_accepts_exact_values(good):
 
 
 @pytest.mark.req("FR-10")
-@pytest.mark.parametrize("bad", ["abc", "1.2.3", "+", "", "NaN-ish"])
+@pytest.mark.parametrize("bad", ["abc", "1.2.3", "--1", "+", "", "NaN-ish"])
 def test_schema_decimal_refuses_non_decimal_strings(bad):
     with pytest.raises(ValidationError):
         TypeAdapter(SchemaDecimal).validate_python(bad)
