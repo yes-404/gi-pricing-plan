@@ -450,7 +450,7 @@ def test_the_ad_tolerance_accepts_the_measured_ratio_and_refuses_a_duplicated_pe
             computed_at=dt.datetime(2026, 10, 17, tzinfo=dt.UTC),
         )
 
-    assert AD_RECONCILIATION_TOLERANCE == Decimal("0.5")
+    assert Decimal("0.5") == AD_RECONCILIATION_TOLERANCE
     measured = reconcile(1_117_460)
     assert measured.ratio == Decimal("1.117460")
     assert measured.status is ReconciliationStatus.PASS

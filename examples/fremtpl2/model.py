@@ -431,7 +431,7 @@ SEVERITY_COLUMN: Final = "claim_severity"
 AD_RECONCILIATION_TOLERANCE: Final = Decimal("0.5")
 #: The evidence the tolerance rests on, printed with every seed's reconcile line (DP-1543-B):
 #: K=100 re-draws of the holdout split on the full book (scratch/sl1543-cw/measure.json,
-#: key iii_A, and window.log), so a reader sees the ratio next to the noise it should be read against.
+#: key iii_A, and window.log), so a reader sees the ratio next to the noise it is read against.
 AD_RECONCILIATION_EVIDENCE: Final = (
     "  K=100 holdout re-draws (full book): ratio mean 0.9816, sd_A 0.1616, 3 sd 0.485 < "
     f"{AD_RECONCILIATION_TOLERANCE}; in-sample (train) ratio 0.9697, bias_train 0.0303 "
