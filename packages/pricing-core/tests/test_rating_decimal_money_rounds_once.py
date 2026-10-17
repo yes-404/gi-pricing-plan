@@ -86,12 +86,18 @@ async def test_a_mounted_decimal_port_rounds_once_at_the_parent_output() -> None
         ],
         "change_note": "first cut",
     }
-    payload = _decimal_expressions(_chain_algorithm(factors=[
-        ("office_premium", "{prev} * 123.44", "half_even"),
-    ]))
+    # No intermediate rung output: the ladder (R3/R4) would replay a rounded rung, and the point
+    # is that nothing rounds before the parent's output step.
+    payload = _chain_algorithm(factors=[])
+    payload["steps"] = [s for s in payload["steps"] if s["step_id"] != "s_out_risk"]
+    payload["steps"].insert(-1, {
+        "step_id": "s_office", "type": "expression", "label": "Office premium",
+        "expr": "risk_premium_minor * 123.44", "result_type": "decimal",
+        "consumes": ["risk_premium_minor"], "produces": "office_premium",
+    })
     payload["sub_graphs"] = [{
         "ref": _FRAGMENT_REF, "mount_point": "m_port",
-        "inputs": {"base": "office_premium_minor"}, "outputs": {"scaled": "mounted_total"},
+        "inputs": {"base": "office_premium"}, "outputs": {"scaled": "mounted_total"},
     }]
     next(s for s in payload["steps"] if s["step_id"] == "s_out_payable")["consumes"] = [
         "mounted_total"
