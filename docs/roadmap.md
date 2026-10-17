@@ -2795,6 +2795,26 @@ On the same entry, remedy S-b: FD-1729 (HIGH), owner WK-1178, P2. The applicatio
 
 (Minted 2026-10-17 as SL-1771 from working id 8041, with PL-1769 from working id 8016, in plans batch P2 mint PR.)
 
+#### SL-8108 — WK-1178 fix slice — FD 8106: a rate table refuses a non-finite decimal (NaN, sNaN, ±Infinity) as a named FR-234 issue, never a 500
+
+```yaml
+id: SL-8108
+family: slice
+title: WK-1178 fix slice — FD 8106: a rate table refuses a non-finite decimal (NaN, sNaN, ±Infinity) as a named FR-234 issue, never a 500
+status: active                   # draft → active → closed | retired (§1.2a)
+created: 2026-10-17
+owner: planner                   # cut by the planner; lead dispatches (active)
+tree: 9469721db3d26480824cc1d715da2ec4ca9044d0
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-8107, SL-1543, FR-234]
+```
+
+The fix of FD 8106 (filed in D21; HIGH, owner WK-1178), planned in PL 8107. `Decimal(raw)` in `packages/pricing-core/src/pricing_core/rate_tables/operations.py` `_value_issue` (:307) catches only `InvalidOperation`, so `"NaN"`, `"sNaN"`, `"Infinity"` and `"-Infinity"` parse: an unbounded or one-sided column stores them, and a NaN against a bound raises an uncaught `InvalidOperation` (a 500). **Scope, exactly:** one finite check (`Decimal.is_finite()`), before the bounds compare, at `_value_issue` (:307, which every save path runs: import, seed, bulk operations, manual edits) and at `_index_rows` (:393, the diff path), returning FR-234's existing `OUT_OF_BOUNDS` with the message `value '<raw>' for key <key> is not a finite decimal number`; :311's "is not a decimal number" stays for a string that does not parse. Red first in `packages/pricing-core/tests/test_rate_table_operations.py`: the four strings refused on unbounded, one-sided and bounded columns, and NaN with bounds a named issue, not an exception. No spec, contract, route or migration change (FR-234's text does not require one; PL 8107 DP-2). The committed seed/demo tables hold no non-finite value (PL 8107's census: 18 files, 3552 cells, 0). Gate: one full gate on a free slot after SL-1543 merges. Ledger LG 8109, filed by the executor.
+
+(Activated 2026-10-17 as WK-1178's FD 8106 fix slice, on the maintainer's ruling "2026-10-17 22:51:59 BST — Maintainer: FD 8106 → HIGH (verified by me); its own fix slice in P2, scheduled after the G2 path" (`to-lead.md`): "FIX: its OWN small slice in P2 (before the 4 Nov code freeze), planned + GO'd now, gated AFTER the G2 path (SL 8099 → SL-1543)". Plan PL 8107, activated in the same commit.)
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
