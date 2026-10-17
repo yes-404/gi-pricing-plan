@@ -1,9 +1,9 @@
 ---
-id: LG-9932
+id: LG-1760
 family: ledger
 title: WK-1178 slice SL-1455 — NFR-489, the /score request path meets its p99 budget at 25 to 200 rps (PL-1454 slice ledger)
 status: active
-created: 2026-10-11
+created: 2026-10-17 # original date 2026-10-11, set at the filing; minted 2026-10-17
 owner: executor
 tree: 2e5a8121bfa77353ac3260165cf19313fd390028
 phase: P2
@@ -11,12 +11,12 @@ work: WK-1178
 slice: SL-1455
 plans: [PL-1454]
 corrected_by: []
-relates: [PL-1454, FD-1411, SL-1259, RL-1263, RL-921, RL-1379, RL-1685, "RL 8024 (working id)", RL-8076, NFR-489]
+relates: [PL-1454, FD-1411, SL-1259, RL-1263, RL-921, RL-1379, RL-1685, "RL 8024 (working id)", RL-1755, NFR-489]
 ---
 
-# LG-9932 — WK-1178 slice SL-1455: the NFR-489 remedy for `/score`
+# LG-1760 — WK-1178 slice SL-1455: the NFR-489 remedy for `/score`
 
-*(LG-9932 is a working id reserved by the lead; the lead mints it at the merge turn.)* Executed by
+*(Minted 2026-10-17 as LG-1760 from working id 9932, in the SL-1455 PR; RL-1755 was minted from working id 8076 in the D18 batch mint PR.)* Executed by
 `executor-sl1455` from PL-1454, base `origin/main` `d699a561d6a93f33b74beb9c07023f8e655bb8c7`. Times are
 BST (`TZ=Europe/London date`) unless marked. **This ledger covers Tasks 0–3 as built, the re-gate of 2026-10-16 and the final slice audit** (the GO was "Task 0 only"; Tasks 1–3 followed once
 RL-1685 ruled DP-1…DP-4 from Task 0's record). Tasks 4 and 6 are carried, not open without an owner (Task list below); the
@@ -42,7 +42,7 @@ front-matter `tree:` is the code tree gated at `787cfeed` (the re-gate section),
 - [x] Task 1 — Steps 1–3 committed (`c9a64068`, `1ab36c9f`); Step 4's `--help` recorded; its `--rates 25` run is owed to Task 4's window (Build log, 2026-10-14 audit-fix entry).
 - [x] Task 2 — the timing-free guard, red first (`d943c2d0`, `fecaf7b6`).
 - [x] Task 3 — Steps 1–4 delivered (`0544220a`); Step 5's byte-identity is owed to Task 4's window (Build log).
-- [ ] Task 4 — **carried: the dedicated host's Task 4 session (nfr-bench-1), owner the maintainer** (lead verdicts, `from-lead-2026-10-09.md` "2026-10-16 22:22:11 BST"; the maintainer's 11:11:03 item 3 and 11:16:35). Owed to it: the NFR-489 and NFR-454 remedy-proof readings (the FD-1411 remedy proof only; the NFR-489 exit verdict stays SL-1259's, RL-1614, per the maintainer's correction "2026-10-17 11:22:47 BST"), Acceptance 2 and 3, the `--http` `--rates 25` run (Acceptance 6), Task 1 Step 4's one-line fetch run, Task 3 Step 5's byte-identity, and Acceptance 1's default-live arm limb (below). The shared-VM venue named in Acceptance 2 is superseded for this by RL 8076 (audit F1, discharged).
+- [ ] Task 4 — **carried: the dedicated host's Task 4 session (nfr-bench-1), owner the maintainer** (lead verdicts, `from-lead-2026-10-09.md` "2026-10-16 22:22:11 BST"; the maintainer's 11:11:03 item 3 and 11:16:35). Owed to it: the NFR-489 and NFR-454 remedy-proof readings (the FD-1411 remedy proof only; the NFR-489 exit verdict stays SL-1259's, RL-1614, per the maintainer's correction "2026-10-17 11:22:47 BST"), Acceptance 2 and 3, the `--http` `--rates 25` run (Acceptance 6), Task 1 Step 4's one-line fetch run, Task 3 Step 5's byte-identity, and Acceptance 1's default-live arm limb (below). The shared-VM venue named in Acceptance 2 is superseded for this by RL-1755 (audit F1, discharged).
 - [x] Task 5 — the two-half gate: run as the ALONE re-gate at `787cfeed` (Re-gate section); the maintainer accepted it.
 - [ ] Task 6 — **carried: DP-6 (b)**, not this slice's. Under DP-6 (b) the scripted journey's `/score` step is built and accepted by the plan for `PL-1371` §3.8 item 7 (Acceptance 9 below).
 - **Acceptance 1, default-live arm — OWED to Task 4.** The debug-off table for the default-live arm (and for 50 rps) and the one-line "same per-request work" answer for Step 3b are not recorded here; they travel with Acceptance 2's live readings to the dedicated-host session. Task 0 Step 5's tabulation is therefore recorded for the bench arms only.
@@ -57,7 +57,7 @@ DP-6 was ruled (b) by the maintainer (by delegation), `to-lead.md` entry headed 
 
 ### Audit findings of the final slice audit (2026-10-16), disposition
 
-- **F1 (MEDIUM, process): discharged by RL 8076** — the maintainer's dated line of 2026-10-16 22:22:44 BST (`to-lead.md`), which supersedes PL-1454's shared-VM host clause for Task 4's Acceptance 2 and 3 sweep (nfr-bench-1, "measured, dedicated host (G4 discharge)", conditions (a)–(c)); the plan body is frozen from its merge and stays as written. Its item 2 was corrected on 2026-10-17 11:22:47 BST: the sweep is the G4 discharge of the FD-1411 remedy proof, not the NFR-489 exit verdict. Lead verdict: `from-lead-2026-10-09.md` "2026-10-16 22:23:23 BST".
+- **F1 (MEDIUM, process): discharged by RL-1755** — the maintainer's dated line of 2026-10-16 22:22:44 BST (`to-lead.md`), which supersedes PL-1454's shared-VM host clause for Task 4's Acceptance 2 and 3 sweep (nfr-bench-1, "measured, dedicated host (G4 discharge)", conditions (a)–(c)); the plan body is frozen from its merge and stays as written. Its item 2 was corrected on 2026-10-17 11:22:47 BST: the sweep is the G4 discharge of the FD-1411 remedy proof, not the NFR-489 exit verdict. Lead verdict: `from-lead-2026-10-09.md` "2026-10-16 22:23:23 BST".
 - **F2 (LOW, ledger): fixed here** — the header, the Task list (Tasks 4–6), the Gate section, front-matter `tree:` and the default-live arm are updated above.
 - **F3 (LOW, ledger): fixed here** — the DP-6 (b) ruling and the Hand-off item 4 line are quoted in the preceding subsection.
 
@@ -99,7 +99,7 @@ Steps 1–3, Task 3 Steps 1–5) and `RL-1685` "Ruled" 1 (a)(b), 3, 4 and "What 
 | T3 S4: regression files pass | Build log: `test_score.py` 52, `test_traces.py` 39, `test_score_rate_limit.py` 9+1 skipped, `test_auth_keys.py` 20, `test_score_compare.py` 20, `test_api_authorisation_sweep.py` 9, bench 4 | Recorded, **not re-run by me** |
 | T3 S5: byte-identity of the `/score` body, `main` vs head | no entry | **Not evidenced**: owed (F3) |
 | RL-1685 obliges: write set widening recorded in the LG | Build log last bullet lists seven source files | Delivered (the two new tests and the bench are not in that list: F3) |
-| RL-1685 obliges: LG 9932's minted id into RL-1685 `relates` | owed at the mint (minter); LG 9932's own `relates` does not carry RL-1685 or RL 8024 | **Reassigned to the minter**, with F3's LG-side fix |
+| RL-1685 obliges: LG-1760's minted id into RL-1685 `relates` | owed at the mint (minter); LG-1760's own `relates` does not carry RL-1685 or RL 8024 | **Reassigned to the minter**, with F3's LG-side fix |
 
 **Four-verdict note for the lead:** T1 S1/S2/S2b and T1 S4, T3 S5 are *delivered but untested* or *not
 evidenced*; they are Task 4's run and a ledger entry, not missing code.
@@ -214,7 +214,7 @@ Clean over the range (added lines and every commit message).
   started" (F3).
 - **Minted-id relation:** RL-1685's front matter says "and LG working id 9932, added at its mint", and its
   "What it obliges" says the LG's minter adds it. That edit (`relates:` on `docs/rulings/RL-01685-…`) is owed at the mint of
-  LG 9932; it is a front-matter-only change to a frozen record (the same form as the correcting RL's own
+  LG-1760; it is a front-matter-only change to a frozen record (the same form as the correcting RL's own
   `corrected_by`). Today `relates` lists neither the LG nor RL 8024 on either side.
 
 #### Findings
@@ -248,7 +248,7 @@ Clean over the range (added lines and every commit message).
   *Proposed fix:* when the outcome is sampled and before the write, `await read_session.close()` (the
   handler does not use the session after this call), which keeps the unsampled hot path at one checkout and
   the write at one at a time; add a test that a sampled outcome never has two connections checked out together.
-- **F3 — LOW (ledger).** `LG-9932` is stale against its own build. (i) The header and the Task list say "This
+- **F3 — LOW (ledger).** `LG-1760` is stale against its own build. (i) The header and the Task list say "This
   ledger covers Task 0 only" and "Tasks 1–6 — not started"; the Gate section says "Not applicable to Task 0".
   (ii) No Build log entry for **Task 1** (commits `c9a64068`, `1ab36c9f`): no recorded red of the header
   test on the base `_serve`/`main` (the commit order `d943c2d0` then `1ab36c9f` suggests it was red, but the
@@ -280,11 +280,11 @@ checks (cost file plus the two new tests) against the new tip, then the Task 4 s
 Range: `origin/main...2c0bcc29` with `origin/main` measured as `6b25b9bcf11733fd3aa285ea9757aa7676520749`
 (#1310, fetched 2026-10-16 22:2x BST); the merge base is `0877e6e7a756c4621890713a4d3b016e75e33654`, the main the
 branch re-merged at `49d7f086`. 24 commits, 17 paths. Method: reading plus `git`; **no test, bench or gate run by me**.
-Every verdict below is PROPOSED; the lead decides. I do not set `LG-9932` or `SL-1455` `closed`: the lead's merge does
+Every verdict below is PROPOSED; the lead decides. I do not set `LG-1760` or `SL-1455` `closed`: the lead's merge does
 that, and the slice's NFR-489 limb is carried (below).
 
 **Gated tree vs this head.** `git diff --name-only 787cfeed 2c0bcc29` prints one path, this ledger
-(`docs/ledgers/LG-09932-…-slice-ledger.md`); `git merge-base --is-ancestor 787cfeed 2c0bcc29` exits 0. Trees:
+(`docs/ledgers/LG-01760-…-slice-ledger.md`); `git merge-base --is-ancestor 787cfeed 2c0bcc29` exits 0. Trees:
 `787cfeed^{tree}` `2e5a8121…` (equals the `tree:` in `gate.log:1`), `2c0bcc29^{tree}` `7b3d3ba7…`. So the gate's code
 verdict applies to `2c0bcc29`, docs-only delta.
 
@@ -313,7 +313,7 @@ per-file runs in the Build log, not by a printed pass line.
 | Acceptance 4 (timing-free guard, red first) | `test_score_request_cost.py` reds by cause `assert 6 <= 1`, `assert 10 <= 9`, `assert 1 == 0` (Build log, 2026-10-14 Phase 1 reds); file green in the gate (not among the 13); F1/F2 guards in `test_request_connections.py` and the cost file, red by cause `[1] == [0]` | **Delivered and tested** |
 | Acceptance 5 (existing guards pass) | `test_score.py`, `test_traces.py`, `test_score_rate_limit.py` not among the 13; `test_score.py` not in the diff | **Delivered and tested** |
 | Acceptance 6 (harness says what it measures) | `scripts/bench-rating.py:1308` prints "warm (slot hit: version row read only)" beside the cold figure; header prints `N`, `--workers` at `:1104`; header test red then green (Build log 2026-10-14, F3 entry); `--help` run recorded; the `--rates 25` run is owed | **Delivered and tested**, with the one `--http` run owed to Task 4 (same owner) |
-| Acceptance 7 (two-half gate) | `gate.log` above, head `787cfeed`; only the check 31 cascade on working id 9932 is red; 13 of 13 failures are that class | **Delivered**, with the check 31 class standing until LG 9932 is minted (see "Closing acts") |
+| Acceptance 7 (two-half gate) | `gate.log` above, head `787cfeed`; only the check 31 cascade on working id 9932 is red; 13 of 13 failures are that class | **Delivered**, with the check 31 class standing until LG-1760 is minted (see "Closing acts") |
 | Acceptance 8 (write set) | `git diff --stat origin/main...HEAD` lists 17 paths; the 12 source/test paths are the plan's table plus RL-1685's three admissions plus `conftest.py` and `test_request_connections.py` (F1/F2 fixes of the 14 Oct audit); `docs/INDEX.md`, the plan (`status: active`), `docs/roadmap.md` (row status) and the ledger are the activation and registry; the ledger's write-set line (Build log, F1–F4 entry) lists them | **Delivered** |
 | Acceptance 9 (DP-6 (b)) | the plan's Hand-off item 4 quotes the 09:59:49 ruling and its binding condition and names `PL-1371` §3.8 item 7; **the ledger does not quote it** (grep of the ledger for "Hand-off item 4", "G2 path", "09:59:49": no hit) | **Delivered but untested** as to the ledger clause: the owner is named in the plan, not in this ledger (F3) |
 | FR-243 / NFR-497 / FR-259 preserved | cost-file degrade test (read fails or aborts the shared transaction, 200, `quoted`, no trace row); `test_a_failed_sampling_rate_read…`; sampled write after `read_session.close()` with the trace row asserted | **Delivered and tested** |
@@ -340,11 +340,11 @@ clone), and eight blobs (`run.sh`, `run2.sh`, `t0_*.py`, …) which `cat-file` r
 `6b25b9bc`; the only conflict is `docs/INDEX.md` (generated; take theirs, regenerate under the gate-2 flock). `docs/roadmap.md`
 auto-merges. The maintainer's "11:11:03" item 1 says this slice merges after #1310 in id order.
 
-**Closing acts.** (i) `LG-9932` still reads `status: active`, `tree: 5e00fa74…` (the Task 0 base) and "MERGE-ACK: not yet
+**Closing acts.** (i) `LG-1760` still reads `status: active`, `tree: 5e00fa74…` (the Task 0 base) and "MERGE-ACK: not yet
 given"; the header says "covers Tasks 0–3"; the Task list says "Tasks 4–6 — not started" and has Step 5/6 boxes open;
 the Gate section says "not applicable to Tasks 0–3" (the re-gate section answers it but the Gate section is not
-updated) — an executor edit (F2). (ii) LG-9932 is a working id: the lead mints it at the merge turn; check 31 stays red on this branch until then,
-by the known class. (iii) RL-1685's `relates` still needs LG-9932 (and RL 8024) added at the mint, as the 14 Oct
+updated) — an executor edit (F2). (ii) LG-1760 is a working id: the lead mints it at the merge turn; check 31 stays red on this branch until then,
+by the known class. (iii) RL-1685's `relates` still needs LG-1760 (and RL 8024) added at the mint, as the 14 Oct
 audit said; owner the minter. (iv) `PL-1454` is frozen from its merge: the Acceptance 2 dated line is a delta or ruling,
 not an edit of the plan body. (v) FD-1411's discharge needs SL-1259's NFR-489 verdict or the maintainer's dated line
 (plan Hand-off 2); not discharged by this merge.
@@ -491,7 +491,7 @@ Recorded by executor-1455b on 2026-10-16, from the primary files under `~/gi-pri
 - audit_docs rc 1: its `FAILED (2)` block (`audit_docs.log:882`) is exactly two lines, both check 31: "gap in the full allocation between 1730 and 9932" and "id 9932 is `created:` 2026-10-11, earlier than id 1730's 2026-10-14". The check 36 lines in the log are the standing disclosed legacy-form class, not in the `FAILED` block.
 - Demo rc 124 is the stop by design, not a failure: the script runs `timeout -s INT 1500 … scripts/demo.py --journey wf-699` (`sl1455-regate.sh:79`), so the INT after the journey ends the process with 124. `demo.log:708` "journey done in 80s"; `demo.log:716` "served page: http://localhost:5173/ answered 200"; then the clean stop sequence (`demo.log:732-748`, "stopped.").
 
-**(b) Classification of all 13 pytest failures: the check 31 cascade on LG 9932.** LG 9932 is a working id (minted in the slice PR), so main's allocation shows a gap 1730..9932 and 9932's `created:` precedes 1730's. Every failure is a test that runs the real-tree audit and asserts on its exit, and each captured audit output ends in the same two check 31 lines. `pytest.log` `FAILED` lines: 10221-10233.
+**(b) Classification of all 13 pytest failures: the check 31 cascade on LG-1760.** LG-1760 is a working id (minted in the slice PR), so main's allocation shows a gap 1730..9932 and 9932's `created:` precedes 1730's. Every failure is a test that runs the real-tree audit and asserts on its exit, and each captured audit output ends in the same two check 31 lines. `pytest.log` `FAILED` lines: 10221-10233.
 
 | # | Test | Evidence in `pytest.log` | On the script's list? |
 |---|---|---|---|
@@ -511,7 +511,7 @@ Recorded by executor-1455b on 2026-10-16, from the primary files under `~/gi-pri
 
 - Each `FAILED (2)` block above is the same two check 31 lines as `audit_docs.log:882`; I counted 22 check 31 lines under the 11 `FAILED (2)` blocks in `pytest.log`. No other cause appears in any of the 13.
 - Re-verified by the executor (2026-10-16): rows 8 and 9 read in `pytest.log` — the test headers at :4661 and :5562, the `assert result.returncode == 0` lines at :4672 and :5572, and the `FAILED (2)` blocks at :5554 and :6454, which lie inside the respective test sections. The lead's relay (`from-lead-2026-10-09.md`, "## 2026-10-16 11:10:37 BST" item (1)) gave these as "4661+894" and "5562+893", i.e. one line off for the first; the lines above are the file's.
-- Classified: the check 31 cascade on LG 9932; no real red. The 7 pre-registered node ids are rows 1-7 (`sl1455-regate.sh:5-14`); rows 8-13 are the 6 the script did not list.
+- Classified: the check 31 cascade on LG-1760; no real red. The 7 pre-registered node ids are rows 1-7 (`sl1455-regate.sh:5-14`); rows 8-13 are the 6 the script did not list.
 
 **(c) The incomplete pre-registered list.** The maintainer's 11:09:05 entry, item (2) (`to-lead.md`, "## 2026-10-16 11:09:05 BST — Maintainer: SL-1455 gate END"): the 14 Oct review accepted a 7-item pre-registered list after SL-1695 had shown 13. The primary records of SL-1695's 13: `from-lead-2026-10-09.md` "## 2026-10-14 12:13:57 BST" (11 named: test_audit_docs_finding_citations x1, test_audit_docs_ids x2, process_core_digest x2, w37_11_ceiling x1, test_doc_index x1, test_register_lint x3, test_register_owed x1; the 135 tests then unrun), "## 2026-10-14 13:26:19 BST" ("the 135 unrun tests: 2 more F (test_repository_invariants.py::test_money_discipline_is_enforced_by_the_docs_audit, ::test_journey_citations_are_audited_in_ci)… TOTAL 13 F, all the unminted LG 9637 check-31 class"), and the re-gate "## 2026-10-14 14:59:47 BST" ("13 failed, 5812 passed, 6 skipped in 4128.41s"). The script's 7 (`sl1455-regate.sh:5-14`) omit exactly SL-1695's last six: register_lint x3, register_owed x1, repository_invariants x2. The list was a review miss in the grant, not a defect of the code: the 6 are the same names as SL-1695's accepted 13, and (b) shows each fails on check 31 and nothing else.
 
