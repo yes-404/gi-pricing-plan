@@ -39,7 +39,9 @@ the typed /movers row as need + scope + a DP in-slice vs separate backend slice 
 `brief-planner-s8-2026-10-17.md`. **Tree read:** `origin/main`
 `9469721db3d26480824cc1d715da2ec4ca9044d0` (#1326, 2026-10-17T16:56:51+01:00). Every
 `file:line` below was read at that tree unless a branch is named. **No test was run at planning
-time.** **`status: draft`**: DP-S8-1 blocks (§"Decision points").
+time.** **`status: draft`**: DP-S8-1 blocks (§"Decision points"). *(Amended 2026-10-17 by the
+planner (seat planner-s8b), pre-merge: both DPs are ruled (a), §"Decision points"; the plan
+stays `draft` until it is minted, in order, and then goes `active`.)*
 
 ## Authority
 
@@ -119,7 +121,8 @@ row says is a new `PL-` that `relates:` the Work's plan. The precedents are `PL-
    scope:* `DislocationTotals.change_pct`, `DislocationBand.mean_change_pct`,
    `SegmentSlice.mean_change_pct` and `AttributionItem.mean_change_pct` are `float | None`
    (`dislocation.py:84`, `:105`, `:113`, `:163`); the lead may route that to an owner. The new
-   row does not copy it.
+   row does not copy it. *(Routed 2026-10-17 by the maintainer's 19:41:48 BST entry: a LOW FD,
+   working id FD 8096, owner WK-1178, in batch D21. S8's scope is not widened.)*
 6. **Three in-flight slices regenerate `generated.json`.** `git diff --name-only
    origin/main...origin/<branch> -- docs/contracts packages/model-schema/src`, at the heads read
    2026-10-17: `sl-1547-wk675-s5` @`4c45b8f2` (generated.json, `rating.py`, `regression.py`, two
@@ -167,7 +170,11 @@ tasks must contain and their order.
    is (candidate − baseline) ÷ baseline × 100 computed exactly on the integers and written as a
    positional decimal string rounded once to 6 places **away from zero**, so a mover never reads
    below `mover_threshold_pct` (the rule `abs_change_pct_quantiles` uses for the same reason,
-   `:705`). *This rounding is a design choice: DP-S8-2.* §5.1's `/movers` row (`:1067`) names the
+   `:705`). *This rounding is a design choice: DP-S8-2, ruled (a) — 6 places, `ROUND_UP`,
+   `PositionalDecimalStr`.* The amendment lands in `docs/specs/03-rating-engine.md` §4.6
+   (heading "4.6 `DislocationRun`", the "Bands and movers" paragraph at `:705`) **in S8's own
+   commit**, per `.claude/skills/spec-change`, citing the maintainer's 2026-10-17 19:41:48 BST
+   entry; this plan does not edit the spec. §5.1's `/movers` row (`:1067`) names the
    response as an array of `DislocationMover`. Dated *(Amended 2026-10-…, WK-675 Slice 8,
    PL 8095)* at each site.
 2. **`model-schema`.** In `dislocation.py`, a `DislocationMover` with every stored column typed:
@@ -189,7 +196,10 @@ tasks must contain and their order.
    blob's columns are unchanged).
 5. **Tests, red first.** A route test, `@pytest.mark.req("FR-263")`, asserts each typed field on
    a mover from a seeded run, `change_pct`'s string for a value that rounds (red on a
-   half-even or toward-zero implementation), and that a portfolio column arrives under `columns`
+   half-even or toward-zero implementation), an **edge-of-threshold case** (a mover whose
+   exact percentage equals `mover_threshold_pct`, and one just above it whose exact value is
+   not a 6-place decimal: each is selected and each `change_pct` reads ≥ the threshold after
+   `ROUND_UP`; red on a toward-zero implementation; DP-S8-2 (a)), and that a portfolio column arrives under `columns`
    and not at the top level. A `model-schema` test refuses a float `change_pct` and a bare extra
    top-level key (`extra="forbid"`). Broken-input run of each recorded in the `LG-`.
 
@@ -205,12 +215,29 @@ commit older than Task 1's** (Acceptance 5). Each chart has its `RL-1307` access
 
 Planner does not rule these (`delivery-process.md` §3). **DP-S8-1 blocks** (it decides whether
 this slice is one PR or two, and which record carries Task 1); this plan is `draft` until it is
-ruled. DP-S8-2 blocks Task 1 only.
+ruled. DP-S8-2 blocks Task 1 only. *(Both ruled (a), 2026-10-17; the dated lines are below the
+table.)*
 
 | DP | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| **DP-S8-1** | Is the typed movers row built **inside S8** or in **a separate small backend slice first**? | **(a) In-slice.** Task 1 is S8's first task, in S8's one PR (L1 (a')). Paths: `03` §4.6/§5.1, `dislocation.py`, `__init__.py`, `api/dislocation_runs.py`, its test, `generated.json`, plus S8's frontend. Gate cost: **one** two-half gate (the maintainer's 2026-10-17 18:56:17 entry measured a re-gate at 60.9 min; the 01:54:02 entry priced the row at "~1 h later in the consumer slice"). Ids: none new. Order: S8's single PR merges after S5 (`SL-1547`) and S7 (`SL-1550`) by item D, so it is likely the later of any `generated.json` pair and re-merges + re-runs both generators once, on a larger PR. Ruling text: matches Q5's *"Owner = SL-1551 itself"*; does **not** match the letter of 01:54:02's *"ACTIVATION NEED … no frontend code may read /movers before the typed row is merged"* — an activation need cannot be met inside the slice it gates — so that line is re-read as an in-slice order gate (Acceptance 5), which only its author can confirm. **(b) A separate backend slice ahead of S8** (cut by this delta's batch: one new `SL-` + its `LG-`, WK-675, rung 7 with S8). Paths: Task 1's backend paths only. Gate cost: **two** two-half gates (the backend slice needs the frontend half too, because `generate:api` changes the client S8 type-checks against), plus a second PR, ACK and merge. Ids: one `SL-`, one `LG-` in a mint batch. Order: ready as soon as minted and GO'd (needs: `SL-1388`, met), so it could run while S5/S7 finish; its small PR re-merges cheaply against `SL-1547`/`SL-1341`/`SL-1274`. Ruling text: matches 01:54:02's letter exactly; moves Q5's owner from `SL-1551` to a sibling WK-675 slice, which Q5's author confirms. **(c) WK-673 builds it** (the route's original slice's Work). Excluded: Q5 rules the owner is WK-675, and lanec-next §3 confirms no other Work's surface holds it. | **(a), with Acceptance 5 as the order gate.** The scarce resource this week is gate time (to-lead 19:32:51: SOLO gates queued SL-1543 → the SL-1740 + SL-1547 pair → SL-1258); (b) spends a second full gate and two ids to land ~1 h of backend work alone. (a) holds the hard gate's purpose — no hand-written type, money typed — by command (Acceptance 4, 5), and the 01:54:02 entry already priced the work "in the consumer slice". The 10-16 Q5 is the later statement and names `SL-1551` itself. **Fallback: (b)**, if the maintainer holds 01:54:02's letter. | decision point | yes | open — the decision-maker, with the maintainer's confirmation of how 01:54:02's activation-need line reads |
-| **DP-S8-2** | How is a mover's `change_pct` rounded and written? `03` §4.6 is silent (Context 3) | **(a)** Exact fraction, rounded once to 6 places **away from zero**, `PositionalDecimalStr`: a mover never reads below its threshold; mirrors `abs_change_pct_quantiles`' "toward +∞" on the absolute value. **(b)** 6 places, `ROUND_HALF_EVEN`, `PositionalDecimalStr`: the usual display rounding; a mover at exactly the threshold after rounding down can read under it. **(c)** `DecimalStr` with no rounding (a terminating decimal only when `baseline_minor`'s prime factors allow; otherwise a cut is still needed, so this is (a) or (b) in disguise) | **(a).** It keeps the displayed value consistent with the membership test FR-263's threshold made, the property §4.6 already chose for the quantiles. (c) is not a real option. | decision point | yes — Task 1 | open — the decision-maker |
+| **DP-S8-1** | Is the typed movers row built **inside S8** or in **a separate small backend slice first**? | **(a) In-slice.** Task 1 is S8's first task, in S8's one PR (L1 (a')). Paths: `03` §4.6/§5.1, `dislocation.py`, `__init__.py`, `api/dislocation_runs.py`, its test, `generated.json`, plus S8's frontend. Gate cost: **one** two-half gate (the maintainer's 2026-10-17 18:56:17 entry measured a re-gate at 60.9 min; the 01:54:02 entry priced the row at "~1 h later in the consumer slice"). Ids: none new. Order: S8's single PR merges after S5 (`SL-1547`) and S7 (`SL-1550`) by item D, so it is likely the later of any `generated.json` pair and re-merges + re-runs both generators once, on a larger PR. Ruling text: matches Q5's *"Owner = SL-1551 itself"*; does **not** match the letter of 01:54:02's *"ACTIVATION NEED … no frontend code may read /movers before the typed row is merged"* — an activation need cannot be met inside the slice it gates — so that line is re-read as an in-slice order gate (Acceptance 5), which only its author can confirm. **(b) A separate backend slice ahead of S8** (cut by this delta's batch: one new `SL-` + its `LG-`, WK-675, rung 7 with S8). Paths: Task 1's backend paths only. Gate cost: **two** two-half gates (the backend slice needs the frontend half too, because `generate:api` changes the client S8 type-checks against), plus a second PR, ACK and merge. Ids: one `SL-`, one `LG-` in a mint batch. Order: ready as soon as minted and GO'd (needs: `SL-1388`, met), so it could run while S5/S7 finish; its small PR re-merges cheaply against `SL-1547`/`SL-1341`/`SL-1274`. Ruling text: matches 01:54:02's letter exactly; moves Q5's owner from `SL-1551` to a sibling WK-675 slice, which Q5's author confirms. **(c) WK-673 builds it** (the route's original slice's Work). Excluded: Q5 rules the owner is WK-675, and lanec-next §3 confirms no other Work's surface holds it. | **(a), with Acceptance 5 as the order gate.** The scarce resource this week is gate time (to-lead 19:32:51: SOLO gates queued SL-1543 → the SL-1740 + SL-1547 pair → SL-1258); (b) spends a second full gate and two ids to land ~1 h of backend work alone. (a) holds the hard gate's purpose — no hand-written type, money typed — by command (Acceptance 4, 5), and the 01:54:02 entry already priced the work "in the consumer slice". The 10-16 Q5 is the later statement and names `SL-1551` itself. **Fallback: (b)**, if the maintainer holds 01:54:02's letter. | decision point | yes | **RULED (a)**, 2026-10-17 19:41:48 BST, the maintainer (see the dated line below the table) |
+| **DP-S8-2** | How is a mover's `change_pct` rounded and written? `03` §4.6 is silent (Context 3) | **(a)** Exact fraction, rounded once to 6 places **away from zero**, `PositionalDecimalStr`: a mover never reads below its threshold; mirrors `abs_change_pct_quantiles`' "toward +∞" on the absolute value. **(b)** 6 places, `ROUND_HALF_EVEN`, `PositionalDecimalStr`: the usual display rounding; a mover at exactly the threshold after rounding down can read under it. **(c)** `DecimalStr` with no rounding (a terminating decimal only when `baseline_minor`'s prime factors allow; otherwise a cut is still needed, so this is (a) or (b) in disguise) | **(a).** It keeps the displayed value consistent with the membership test FR-263's threshold made, the property §4.6 already chose for the quantiles. (c) is not a real option. | decision point | yes — Task 1 | **RULED (a)**, 2026-10-17 19:41:48 BST, the maintainer (see the dated line below the table) |
+
+**Rulings, dated 2026-10-17** (recorded pre-merge by the planner, seat planner-s8b). Source:
+the maintainer's `to-lead.md` entry "2026-10-17 19:41:48 BST — Maintainer: PL 8095 (S8) DPs —
+DP-S8-1 (a), DP-S8-2 (a) + a spec line; dislocation floats → a LOW FD".
+
+- **DP-S8-1 → (a)**: S8 builds the typed `/movers` row itself (Task 1). The entry reads the
+  2026-10-10 01:54:02 BST hard gate (*"no frontend code may read /movers before the typed row is
+  merged"*) by its purpose, verbatim: *"no frontend code is ever written against, or lands on
+  main reading, an untyped /movers."* Acceptance 5's ancestor check plus the single squash merge
+  meets it; (b) is not needed.
+- **DP-S8-2 → (a)**: `change_pct` is computed at read to 6 places, `ROUND_UP` (away from zero),
+  `PositionalDecimalStr` — the quantiles' rule — so a selected mover never displays below its
+  threshold. A one-line dated amendment to `docs/specs/03-rating-engine.md` §4.6 lands in S8's
+  commit (Task 1.1), and a test pins a value at the threshold edge (Task 1.5, Acceptance 7).
+- **Not S8's scope:** the `float | None` pct fields in `dislocation.py` (Context 5) go to a LOW
+  FD, working id FD 8096, owner WK-1178, in batch D21. S8 is not widened.
 
 ## Cut-ladder note
 
@@ -252,7 +279,11 @@ Each item is checked by a command a fresh reviewer can run from the repository r
    --include=*.test.ts` prints a file for each of FR-263, FR-264, FR-265 and FR-266 (checked per
    id), and the route test carries `@pytest.mark.req("FR-263")`.
 7. **`change_pct` is held by test at its rounding edge** (DP-S8-2): the route test's rounding case
-   is listed in the `LG-` with its red on the broken implementation.
+   is listed in the `LG-` with its red on the broken implementation; so is its
+   edge-of-threshold case (Task 1.5: a mover exactly at `mover_threshold_pct`, and one just above
+   it, each reading ≥ the threshold after `ROUND_UP`), red on a toward-zero implementation; and
+   `git diff origin/main...HEAD -- docs/specs/03-rating-engine.md` shows §4.6's dated
+   `change_pct` line (DP-S8-2 (a), 2026-10-17 19:41:48 BST).
 8. **Every chart has its accessible table** (`PL-1546` item 5, NFR-463), and
    `accessibility-tester`'s report is quoted in the `LG-`.
 9. **The gate is green on the slice's merge tree** (`PL-1546` item 8): the `CLAUDE.md` §11
