@@ -3,7 +3,7 @@ id: PL-1710
 family: plan
 kind: map
 title: WK-674 — the scripted WF-701 deployment-steps demo, cut as one slice after Slice 5 (SL-1711), and Slice 5's one added acceptance line (the COMMIT acknowledgement set in the deployment Audit Event's after-state) — Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-14
 owner: planner
 tree: 1e260c1553acf39844939fe12da685ccfb835e54
@@ -572,3 +572,5 @@ rulings that bind this delta's content and were not yet at a site in it.)*
 - **Literals** were read at `1e260c15` (or the named branch) by path and line: every route, code,
   enum member, setting key and default in the step table and premises.
 - **Not done here:** the memo's §3 shape argument and ETA figures, which W0 has ruled.
+
+*Activated 2026-10-17 on the maintainer's YES for D21 (relayed by the lead, 2026-10-17 ~19:33 BST: "PL 8077 + RL 8076 + PL-1710's activation → D21: YES"). No other change to this plan.*
