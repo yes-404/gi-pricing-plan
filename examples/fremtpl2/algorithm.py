@@ -22,6 +22,8 @@ from collections.abc import Mapping, Sequence
 from decimal import ROUND_HALF_EVEN, Decimal
 from typing import Any, Final
 
+from seed import MAX_EXPOSURE, MIN_EXPOSURE
+
 from model_schema import (
     AboveRangePolicy,
     ArtifactRef,
@@ -212,7 +214,9 @@ def build_fremtpl2_algorithm(
                   "input_name": BONUS_MALUS, "on_missing": "error", "produces": BONUS_MALUS})
     if peril_structure_ref is not None:
         inputs.append({"name": EXPOSURE, "type": "decimal", "nullable": False,
-                       "description": "the quote's exposure in years: the frequency offset"})
+                       "min": MIN_EXPOSURE, "max": str(MAX_EXPOSURE),
+                       "description": "the quote's exposure in years: the frequency offset; "
+                                      "bounded by the model's training domain"})
         steps.append({"step_id": f"s_in_{EXPOSURE}", "type": "input", "label": EXPOSURE,
                       "input_name": EXPOSURE, "on_missing": "error", "produces": EXPOSURE})
 

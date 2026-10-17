@@ -83,6 +83,13 @@ NUMERIC = {
 #: VR-ACT-2's bound. An annual motor policy cannot be on risk for two years.
 MAX_EXPOSURE = 1.05
 
+#: The smallest exposure the cleaned training sample keeps (1/366 of a year: one day), the lower
+#: end of the model's training domain (SL-1543 (A)). A string, so the declared bound is exact
+#: rather than a float's repr. **Measured, not derived**, 2026-10-17:
+#: `build_csv(PORTFOLIO_ROWS)` over the sha256-pinned book, then the minimum of `Exposure`
+#: among the rows with `Exposure <= MAX_EXPOSURE` (19 985 rows) = 0.00273224043715847.
+MIN_EXPOSURE: Final = "0.00273224043715847"
+
 #: The demo portfolio (PL-1577, R6 = (A1)): a 20,000-row sample of the book, named as a sample
 #: everywhere it is shown. Reproducible without a random seed: the size is fixed, the rule is
 #: `build_csv`'s deterministic every-nth-row, and the input is sha256-pinned (`fetch.py`).
