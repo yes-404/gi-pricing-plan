@@ -24,7 +24,7 @@ relates: [PL-1542, PL-1705, PL-1694, SL-1543, SL-1696]
 > It does not replace
 > [`PL-1542`](PL-01542-wk-1178-a-4-the-exit-demo-walks-wf-699-s-peril-structure-path-leaf-plan.md)
 > or `PL-1705`; their bodies are frozen and are not edited. It adds no slice row. It adds **one
-> task and one acceptance item** to `SL-1543`. **Read `PL-1542`, then `PL-1705`, then
+> task and one acceptance item** to `SL-1543`. *(Amended 2026-10-17: two tasks, A and B, and two items; R1 to R4 after this header.)* **Read `PL-1542`, then `PL-1705`, then
 > [`PL-1694`](PL-01694-wk-673-fd-1660-the-guard-then-the-fix-attribution-carries-sub-graph-mounts-plan-delta.md)
 > Acceptance 18 and its Stage B Task 4, then this file. Where they differ, this file is the
 > latest statement for the task it adds.** The executor of `SL-1543` binds what `PL-1542`'s
@@ -61,6 +61,69 @@ both differences** (the approver's id differs from the submitter's and from the 
 **and that the structure reaches `approved` after exactly one `decide`.** `PL-1542`'s body is
 frozen and is not edited; this line is the correction, and the Tasks section below points at
 it.)*
+
+*(Amended 2026-10-17 from 11:30 BST, before merge, by the planner (seat planner-8055), on four
+entries. **This delta now carries three SL-1543 rulings and one write-set widening as dated
+lines, R1 to R4**, at the maintainer's direction in R1's entry: *"both go into PL 8055 (SL-1543's
+delta, still unminted) as two dated lines citing this entry. No separate RL or FD."* Line
+numbers marked `@20ec89f6` are read at `SL-1543`'s head (`sl-1543-prep-on-1300`,
+`20ec89f659895b3ddb97506f82fb00ce9dd1b86e`); those marked `@main` at `origin/main`
+`055b5e6b` (#1317). Each is carried into the text it changes, named after each line.)*
+
+- **R1 — DP-Q2 → (a): Acceptance 4 reads `payable_premium_minor`.** The maintainer's entry
+  "2026-10-17 11:18:51 BST — Maintainer: SL-1543 DP-Q2 → (a), DP-Q3 → (c); both carried in PL 8055
+  (no new record)" in `~/gi-pricing-plan.local/channel/to-lead.md`, item Q2, verbatim: *"Acceptance
+  4 (PL-01542 :248/:251, :461-462) reads the builder's `payable_premium_minor`, the last rung the
+  builder declares (examples/fremtpl2/algorithm.py ~:301-323). `risk_premium_minor` survives only
+  in the committed v1/v2 demo ladders, and those are not this builder's output. No code change, no
+  contract or hash change, no window re-run."* Checked: `algorithm.py` declares
+  `payable_premium_minor` at `:306` and `:319` `@20ec89f6`; `PL-1542` names `risk_premium_minor`
+  at `:248`, `:251` and `:461`. **Where carried:** Acceptance Standard (the R1 line) and Tasks
+  (the opening paragraph).
+- **R2 — DP-Q3 → (c): one B4 scored-premium DB case in `test_demo_peril_structure.py`.** The same
+  entry, item Q3, verbatim: *"Add ONE B4 scored-premium DB case to test_demo_peril_structure.py
+  (already one of the owed window's 3 files). test_demo_rating_evidence.py stays on its
+  no-structure branch (both-or-neither, model.py:979); that branch is retained and still worth
+  testing. The pure B4 goldens stay in packages/pricing-core/tests/test_demo_b4_premium.py."*
+  Checked `@20ec89f6`: `model.py:979-980` raises `"B4 needs both the severity model and the Peril
+  Structure, or neither"`; all three test files exist. **Where carried:** Tasks (the opening
+  paragraph, `PL-1542` Task 4 Step 2's target) and Acceptance Standard (the R2 line).
+- **R3 — census DP → (c): a declared severity population (FR-111), and the seed writes unknown as
+  null.** The maintainer's entry "2026-10-17 11:23:17 BST — Maintainer: SL-1543 census DP → (c): a
+  declared severity population (FR-111) AND the seed writes unknown as null — both in SL-1543" in
+  `to-lead.md`, items 1 to 5, verbatim:
+  *"1. 02 FR-111, a dated amendment through spec-change: the severity model's population is
+  claim_count > 0 AND a KNOWN positive amount. Rows outside it are EXCLUDED and COUNTED (the count
+  is reported in the fit's evidence), extending SL-1675's declared-weight-0 mechanism. Never
+  silent. 2. seed.py writes claim_amount_minor = NULL (unknown) for a claimant with no sev row, not
+  0. claim_severity is then null for them, and the mean-severity base is computed over known
+  amounts only. Frequency is unaffected (claim_count unchanged). 3. Re-derive and pin, with the
+  deltas recorded: the goldens and demo values this changes (the mean-severity base; any ladder or
+  golden that read it). 4. The open item, the 1 policy with fewer sev rows than ClaimNb: KEPT. Its
+  recorded amounts are real, it is 1 of 24,944 claimants, and its understatement is stated in the
+  LG with its IDpol. Not worth a rule. 5. Red-first: a seed test (no sev row → null, not 0); a fit
+  test (population excludes the unknown rows and reports the count; a zero-amount row is refused,
+  not silently dropped); the mean-severity base computed over known amounts."*
+  The facts it accepts (the same entry): the 9116 (full) / 266 (`--rows 20000`) rows are exactly
+  the claimants with no freMTPL2sev row; every sev amount is ≥ 1.0; the 0 is made by
+  `seed.py:149-150` (left join + `fill_null(0)`, `:150` `@20ec89f6`); the base on `main` is about
+  27% low (€1659.44 vs €2265.43). It **supersedes the outcome of `PL-1705` Task 0 Step 3** (the
+  census and its STOP, `PL-1705` `:250-255`): the STOP was taken and is now ruled. **Where
+  carried:** Task B (new), Acceptance Standard (PL 8055 item 2), Global Constraints.
+- **R4 — the write set widened.** The lead's entry "2026-10-17 11:23:48 BST — LEAD RULING (dated
+  line): SL-1543's write set is WIDENED, on the maintainer's to-lead "2026-10-17 11:23:17 BST"
+  (census DP → (c))" in `~/gi-pricing-plan.local/channel/from-lead-2026-10-09.md`, verbatim:
+  *"SL-1543 (WK-1178, G2) may now also write: `examples/fremtpl2/seed.py` (claim_amount_minor NULL
+  for a claimant with no sev row, :149-150); the mean-severity base computation in
+  `examples/fremtpl2/model.py` (:482-495, over known amounts only); `docs/specs/02-modelling.md`
+  FR-111 (a dated amendment via spec-change: severity population = claim_count > 0 AND a known
+  positive amount; rows outside EXCLUDED and COUNTED in the fit evidence, extending SL-1675's
+  weight-0 mechanism); the code that implements that exclusion + count in the severity fit; and
+  the goldens/demo values those change (deltas recorded; STOP to the maintainer with the count if
+  the churn is large)."* Checked: `model.py:482-495` `@main` is `demo_base_premium`'s docstring
+  and frame read (Σ `claim_amount_minor` ÷ Σ `claim_count`, the sum at `:496-499` `@main`); the
+  same function starts at `:682` `@20ec89f6`. **Where carried:** Task B Files and Global
+  Constraints.
 
 ## Goal
 
@@ -150,7 +213,17 @@ obliges"). The mint waits for N1 (#1310 merged) and goes with or after RL 8060's
 
 `PL-1542`'s and `PL-1705`'s tasks stand, except `PL-1542` Task 2 Step 2's approver count
 (*amended 2026-10-16: one approver, distinct from submitter and author, not two; the dated
-amendment after the header, on the maintainer's 10:17:07 BST ruling*). This delta adds **Task A**, run after Task 5 of
+amendment after the header, on the maintainer's 10:17:07 BST ruling*).
+*(Amended 2026-10-17, R1 to R3 after the header.)* Three more exceptions: **`PL-1542` Task 4 Step 1**
+asserts on `payable_premium_minor`, not `risk_premium_minor` (R1); **`PL-1542` Task 4 Step 2**
+no longer re-derives `test_demo_rating_evidence.py`'s goldens for B4: that file stays on its
+no-structure branch, and the step's target becomes **ONE B4 scored-premium DB case added to
+`backend/tests/test_demo_peril_structure.py`**, its expectation computed independently as Step 1's
+are; the pure B4 goldens stay in `packages/pricing-core/tests/test_demo_b4_premium.py` (R2); and
+**`PL-1705` Task 0 Step 3's STOP** is ruled, its outcome being **Task B** below (R3). Task B runs
+first among the tasks that write code, before `PL-1542` Task 1 (the severity GLM reads the
+population Task B declares), with its spec step before any code (`PL-1705`'s spec-first order).
+This delta also adds **Task A**, run after Task 5 of
 `PL-1542` (the last task that edits the journey) and before Task 6 (the gate), so the copied list
 is the list `SL-1543`'s head derives (P5).
 
@@ -324,6 +397,52 @@ is the list `SL-1543`'s head derives (P5).
   git -C <wt> commit -m "test(journey): the D7 split test holds the real derived list, tied to the run (A1, PL 8055)"
   ```
 
+### Task B: the severity population declared, the seed's unknown amount null (R3, R4; *added 2026-10-17*)
+
+**Files** (R4's widened write set; anything outside it is a STOP to the lead):
+- Modify: `docs/specs/02-modelling.md` FR-111 — a dated amendment, through `.claude/skills/spec-change`.
+- Modify: `examples/fremtpl2/seed.py` — the `fill_null(0)` at `:150` `@20ec89f6`, and the data
+  dictionary's `claim_amount_minor` / `claim_severity` descriptions (`:216-`, `:220-223`
+  `@20ec89f6`; the latter says *"null where the policy has no claim"*, which becomes false).
+- Modify: `examples/fremtpl2/model.py` — `demo_base_premium` (`:682-` `@20ec89f6`), the
+  mean-severity base over known amounts only.
+- Modify: the severity fit's exclusion and count, where SL-1675's weight-0 exclusion lives
+  (`rows_excluded_zero_weight`, `packages/pricing-core/src/pricing_core/modelling/diagnostics.py:451`
+  `@20ec89f6`).
+- Modify: the goldens and demo values the base changes (R3 item 3); tests: `examples/fremtpl2/test_seed.py`
+  and the fit's test file.
+
+- [ ] **Step 1 (spec first).** Amend FR-111 with a dated line citing R3: the severity model's
+  population is `claim_count > 0` **and** a known positive amount; a claimant row with an unknown
+  (null) amount is **excluded and counted**, the count reported in the fit's evidence, extending
+  SL-1675's weight-0 clause; a claimant row with a known amount of 0 is **refused**, not dropped
+  (R3 item 5). Run `audit-docs.py` under the gate-2 flock. **STOP to the lead** if the count needs a
+  new `model-schema` field (for example a sibling of `rows_excluded_zero_weight` in
+  `PartitionDiagnostics`, `packages/model-schema/src/model_schema/diagnostics.py:164` `@20ec89f6`):
+  R4 names "the code that implements that exclusion + count", not a contract change, and a
+  contract change regenerates `docs/contracts/` (FR-451). Which field carries the count is not ruled
+  here.
+- [ ] **Step 2 (seed, red first).** In `test_seed.py`, write a test that a claimant with no sev row
+  gets `claim_amount_minor` null, not 0, and `claim_severity` null, with `claim_count` unchanged.
+  Run it (`run-small.sh`, one file) and record the red: rc 1 at the null assert, the value 0.
+  Change `seed.py:150` (`@20ec89f6`) to keep the null; run green. Check that the seeded rules
+  reading `claim_amount_minor` (`severity-outlier`, `:318-323` `@20ec89f6`) and the column's type
+  rule accept a null; if one refuses it, STOP to the lead rather than loosen a rule.
+- [ ] **Step 3 (fit, red first).** Write the fit tests R3 item 5 names: the population excludes
+  the unknown-amount claimant rows and reports their count; a known zero-amount claimant row is
+  refused, not silently dropped. Record each red by cause, then implement, then green.
+- [ ] **Step 4 (the base, red first).** Write a test that `demo_base_premium`'s mean claim cost is
+  Σ known amounts ÷ Σ `claim_count` **over the rows with a known amount** (the unknown rows leave
+  both sums). Record the red, change the computation, green. Record in the ledger the old and new
+  mean (the maintainer's figures, R3: €1659.44 vs €2265.43) as measured, with the
+  command.
+- [ ] **Step 5 (goldens).** List every golden and demo value the new base changes (R3 item 3) with
+  its old and new value. **If the churn is large, STOP to the maintainer with the count before
+  re-deriving** (R4). Otherwise re-derive each independently, never by reading the engine's
+  output back (`PL-1542` Task 4 Step 2's rule), and record the deltas.
+- [ ] **Step 6 (the kept policy).** State in the ledger the 1 policy with fewer sev rows than
+  `ClaimNb`, by its `IDpol`, and its understatement (R3 item 4). No rule and no code for it.
+
 ## Acceptance Standard
 
 `PL-1542`'s and `PL-1705`'s acceptance items stand. This delta adds one item, cited as **PL 8055
@@ -344,6 +463,23 @@ item 1**; it is checked from the repository root on `SL-1543`'s merge tree.
    the Shapley parts summing to `total_change_minor`, and isolated + residual == total on the
    stored run (Step 2's block, read in the diff).
 
+*(Amended 2026-10-17, R1 to R3 after the header.)* **`PL-1542` Acceptance 4 (R1):** both bullets
+(`PL-1542` `:248`, `:251`) are read with `payable_premium_minor` in place of `risk_premium_minor`;
+nothing else in the item changes, and no code, contract, hash or window re-run follows. **`PL-1542`
+Task 4 Step 2's evidence (R2):** `git grep -n 'def test_' -- backend/tests/test_demo_peril_structure.py`
+prints the one added B4 scored-premium case, and `backend/tests/test_demo_rating_evidence.py` keeps
+its no-structure branch. This delta adds one more item, **PL 8055 item 2**:
+
+2. **R3 discharged: the severity population is declared and the seed's unknown amount is null.**
+   (i) `git grep -n 'KNOWN positive amount\|known positive amount' -- docs/specs/02-modelling.md`
+   prints FR-111's dated amendment, citing the maintainer's 11:23:17 BST entry;
+   (ii) `git grep -n 'fill_null(0)' -- examples/fremtpl2/seed.py` prints no line that fills
+   `claim_amount_minor`; (iii) the ledger carries Steps 2 to 4's reds (rc 1, by cause) and greens,
+   each with its command verbatim and rc, through `run-small.sh` or the granted window;
+   (iv) the ledger lists every changed golden and demo value with old and new values (Step 5), and
+   the kept policy's `IDpol` and understatement (Step 6); (v) `python3 scripts/audit-docs.py` has
+   no finding on FR-111 beyond the working-id class.
+
 ## Global Constraints
 
 - **Serialised** on `examples/fremtpl2/journey.py` and `backend/tests/test_wf699_journey.py`
@@ -355,6 +491,12 @@ item 1**; it is checked from the repository root on `SL-1543`'s merge tree.
   (`seat-brief-common-2026-10-16.md` item 6; `executor.md`).
 - `backend/src/`, `packages/` and `docs/contracts/` are not written by Task A; if one must change,
   STOP to the lead.
+- **Task B writes only R4's widened set** (*added 2026-10-17*): `seed.py`, `demo_base_premium` in
+  `model.py`, 02 FR-111, the severity fit's exclusion-and-count code, and the goldens and demo
+  values those change. A `model-schema` field or a `docs/contracts/` change is a STOP to the lead
+  (Task B Step 1). Large golden churn is a STOP to the maintainer with the count (R4).
+- **No silent filter** (R3 item 1, "Never silent"; `PL-1705` Task 0 Step 3): every excluded row is
+  counted, and a known zero amount is refused.
 
 ## Hand-off (not this plan's writes)
 
@@ -384,3 +526,7 @@ item 1**; it is checked from the repository root on `SL-1543`'s merge tree.
    `field(default_factory=…)`; `run["derived_changes"]`, `run["change_groups"]`,
    `run["attribution"]` and `run["attribution_summary"]` with the keys used in Step 2 are the
    ones `dislocation` reads at `:1068-1082`.
+6. **The 2026-10-17 lines (R1 to R4).** Each quotes its entry verbatim and names where it is
+   carried. No decision is opened: the one choice the rulings leave unnamed, which field carries
+   Task B's count, is a STOP to the lead (Task B Step 1), not a pick. The D18 FD for the 27%-low
+   base on `main` (R3's note) is the auditor's record, not this plan's.
