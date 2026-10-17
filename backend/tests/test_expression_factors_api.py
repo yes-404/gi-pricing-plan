@@ -90,7 +90,7 @@ def _refusal_text(response) -> str:  # type: ignore[no-untyped-def]
     return str(problem)
 
 
-class _RollBack(Exception):
+class _RollBackError(Exception):
     """Raised inside a unit of work to end it by rolling back, never by committing.
 
     A Banding over an expression has a NULL `column_name`. Such a row, once committed, stays in
@@ -372,8 +372,8 @@ async def test_banding_created_audits_the_source_expression(
         boundaries=(0.0, 50.0, 100.0), labels=("low", "high"),
     )
     # Asserted inside the transaction, which is then rolled back: the Banding's row has a NULL
-    # `column_name` and must never be committed (see `_RollBack`).
-    with pytest.raises(_RollBack):
+    # `column_name` and must never be committed (see `_RollBackError`).
+    async def _create_then_roll_back() -> None:
         async with database.unit_of_work() as session:
             await transform_service.create_banding(
                 session, workspace_id=workspace_id, actor=actor, banding=banding
@@ -381,7 +381,10 @@ async def test_banding_created_audits_the_source_expression(
             (event,) = await _events_in_session(session, workspace_id, "banding.created")
             assert event.after is not None
             assert event.after["source_expression"] == "driver_age * 2"
-            raise _RollBack
+            raise _RollBackError
+
+    with pytest.raises(_RollBackError):
+        await _create_then_roll_back()
 
     assert await _events(database, workspace_id, "banding.created") == []
 
@@ -495,7 +498,7 @@ async def test_the_orm_and_the_migrated_column_agree_that_column_name_is_nullabl
     assert BandingRow.__table__.c.column_name.nullable is True
     # The flush is what meets the migrated schema (an `IntegrityError` there is the database
     # saying NOT NULL); the transaction is then rolled back, so no NULL row is ever committed.
-    with pytest.raises(_RollBack):
+    async def _flush_then_roll_back() -> None:
         async with database.unit_of_work() as session:
             session.add(
                 BandingRow(
@@ -508,4 +511,7 @@ async def test_the_orm_and_the_migrated_column_agree_that_column_name_is_nullabl
                 )
             )
             await session.flush()
-            raise _RollBack
+            raise _RollBackError
+
+    with pytest.raises(_RollBackError):
+        await _flush_then_roll_back()

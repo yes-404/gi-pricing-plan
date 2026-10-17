@@ -64,7 +64,7 @@ def _expression_world(
     """One banded `expression` Factor, cut over the formula's result (FR-95, FR-97)."""
     labels = tuple(f"e{i}" for i in range(len(boundaries) - 1))
     banding = Banding(
-        id=uuid4(), slug=f"{slug}-steps", dataset_id=DATASET, version=1,
+        id=uuid4(), slug=f"{slug.replace('_', '-')}-steps", dataset_id=DATASET, version=1,
         source_expression=expression, method=BandingMethod.MANUAL,
         boundaries=boundaries, labels=labels,
     )
@@ -194,7 +194,8 @@ async def test_two_inputs_on_one_column_with_unequal_values_are_refused_by_name(
         compiled, driver_age=30, age_raw=50, region="N1", exposure_years=1.0
     )
     assert COLLISION in result[MODEL_CALL_ERROR_KEY]
-    assert "risk" not in result
+    # The failure carries the code only (NFR-499): no column name, no value in the text.
+    assert "age_raw" not in result[MODEL_CALL_ERROR_KEY]
 
 
 @pytest.mark.req("FR-222", "FR-255")

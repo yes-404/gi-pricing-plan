@@ -548,6 +548,7 @@ def demo_golden_cases(
                         f"{factor}: the edge value {value} falls in band {labelled!r}, "
                         f"not {level!r}"
                     )
+                assert demo.banding.column is not None  # a column Banding, as the example builds
                 inputs[demo.banding.column] = value
         expected = glm_premium_minor(
             fit.coefficients, fit.relativities, base_minor, levels_by_factor

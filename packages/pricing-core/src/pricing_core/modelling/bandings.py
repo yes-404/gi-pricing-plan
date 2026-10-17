@@ -581,7 +581,14 @@ def band_statistics(
     In **band order**, not the alphabetical order a group-by returns: `10-14` sorts before
     `5-9` as text, and a relativity chart with its bands shuffled is read as noise.
     """
-    banded = frame.with_columns(apply_banding(_cut_values(frame, banding), banding).alias("_band"))
+    cut = _cut_values(frame, banding)
+    if cut.dtype.is_float():
+        # An infinite or NaN result (`1 / x` where x is 0) is dropped when the cut points are
+        # proposed (FR-98), so the statistics leave its rows out too: it is no band's value,
+        # and `above_range: error` would otherwise refuse the proposal it came from.
+        keep = cut.is_null() | cut.is_finite()
+        frame, cut = frame.filter(keep), cut.filter(keep)
+    banded = frame.with_columns(apply_banding(cut, banding).alias("_band"))
     summary = one_way(
         banded,
         column="_band",
