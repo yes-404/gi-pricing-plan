@@ -284,6 +284,14 @@ FAILED packages/pricing-core/tests/test_rating_purpose_mount.py::test_load_bundl
 FAILED packages/pricing-core/tests/test_rating_purpose_mount.py::test_inline_mounts_inlines_a_purpose_mount_for_its_purpose_only
 ```
 
+## DB window: the 5 route tests (2026-10-17 13:50 BST, `executor-1341db`)
+
+Scoped DB window beside a code gate, in the `small-test` slot (the maintainer's DB-WINDOW LANE ruling, `to-lead.md` "2026-10-17 13:19:48 BST"). load1 at start 6.74. Head `332136b6f0c2bf129d017a385125927891c382e9`, tree `311a76888674e062162cad8a0913f3d26fe4ed96`. Own database `gipricing_sl-1341_dbwin` from the template, `alembic upgrade head` rc 0, 1 head, database dropped on exit (rc 0). Green only was required: the Step 0 reds are recorded above (`25 failed, 33 passed`).
+
+Command: `EXPECT_HEAD=332136b6f0c2bf129d017a385125927891c382e9 bash ~/gi-pricing-plan.local/scratch/sl1341-dbwin.sh` (runs `timeout 900 uv run --directory <wt> pytest -q -rf -p no:cacheprovider <wt>/backend/tests/test_score_purpose_mount.py`).
+
+Last pytest line, verbatim: `5 passed, 1 warning in 13.54s` (rc 0). The five route tests, from `delivered but untested` to green: `test_score_prices_a_cancellation_with_the_purpose_mount`, `test_score_prices_new_business_as_if_the_cancellation_mount_were_absent`, `test_score_refuses_a_mid_term_adjustment_the_cancellation_mount_does_not_serve`, `test_score_compare_prices_each_side_by_its_purposes_graph`, `test_score_compare_refuses_a_mid_term_adjustment_naming_the_failing_side`.
+
 ## PRs
 
 One PR for this slice (L1 (a')): opened and merged by the lead; not yet opened.
