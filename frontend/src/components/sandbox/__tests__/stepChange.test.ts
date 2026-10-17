@@ -4,7 +4,7 @@ import type { StepChange } from "@/api/score";
 
 import { stepChangeLabel } from "../stepChange";
 
-// PL 8054 Task 1 (SL-1550, WK-675 lane C S7): the label a compare row carries for one
+// PL-1764 Task 1 (SL-1550, WK-675 lane C S7): the label a compare row carries for one
 // StepChange. `own_change: false` means the definition is the same on both sides and the step
 // moved only through what it consumed (03 §4.10; RL-1261).
 

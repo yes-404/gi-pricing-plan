@@ -108,7 +108,7 @@ async function fillAndSubmit(age = "34"): Promise<void> {
   await userEvent.click(screen.getByRole("button", { name: "Score quote" }));
 }
 
-/** Choose the comparison version in the picker; red until the picker exists (PL 8054 Task 2). */
+/** Choose the comparison version in the picker; red until the picker exists (PL-1764 Task 2). */
 async function pickComparison(): Promise<void> {
   await waitFor(() => expect(screen.queryByLabelText("Compare against")).not.toBeNull());
   await waitFor(() => expect(screen.queryByRole("option", { name: "motor-gb@2 · approved" })).not.toBeNull());
@@ -220,8 +220,8 @@ describe("the quote sandbox view", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("no such version");
   });
 
-  // PL 8054 Task 2 and Task 3 (SL-1550, WK-675 lane C S7), with RL 8057 DP-1 (a).
-  it("FR-262 C1 (RL 8057 DP-1): the picker excludes the version in view and offers 'No comparison' first", async () => {
+  // PL-1764 Task 2 and Task 3 (SL-1550, WK-675 lane C S7), with RL-1765 DP-1 (a).
+  it("FR-262 C1 (RL-1765 DP-1): the picker excludes the version in view and offers 'No comparison' first", async () => {
     render(QuoteSandboxView, { props, ...mounted });
     await screen.findByLabelText("driver_age");
     const picker = screen.queryByLabelText("Compare against");

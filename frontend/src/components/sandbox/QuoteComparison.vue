@@ -3,7 +3,7 @@
  * The compare panel (03 FR-262, §4.10): both results side by side, then the step differences.
  * The comparison side is summarised here and not through `QuoteOutcome`, whose heading id and
  * test id would be duplicated on the page. Rows are the response's `diff.steps` in its order;
- * nothing is re-sorted or added (RL 8057 DP-2).
+ * nothing is re-sorted or added (RL-1765 DP-2).
  */
 import type { ScoreComparison, ScoringResult, StepChange } from "@/api/score";
 

@@ -6,7 +6,7 @@ import type { ScoreComparison } from "@/api/score";
 import QuoteComparison from "../QuoteComparison.vue";
 import { formatAmount } from "../ladder";
 
-// PL 8054 Task 3 (SL-1550, WK-675 lane C S7), with RL 8057 DP-2 (a): only diff.steps become
+// PL-1764 Task 3 (SL-1550, WK-675 lane C S7), with RL-1765 DP-2 (a): only diff.steps become
 // rows, and the caption keeps "for this quote".
 
 const COMPARISON: ScoreComparison = {
@@ -127,7 +127,7 @@ describe("QuoteComparison", () => {
     expect(within(row!).getByText("Edited; its inputs also changed")).toBeInTheDocument();
   });
 
-  it("FR-262 B5 (RL 8057 DP-2): the caption keeps 'for this quote' and only diff.steps become rows", () => {
+  it("FR-262 B5 (RL-1765 DP-2): the caption keeps 'for this quote' and only diff.steps become rows", () => {
     show();
     const table = screen.queryByRole("table", { name: /11 steps unchanged for this quote/ });
     expect(table).not.toBeNull();
