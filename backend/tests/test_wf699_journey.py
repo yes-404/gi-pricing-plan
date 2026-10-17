@@ -46,14 +46,6 @@ def test_wf699_the_skip_and_known_gap_lines_are_exactly_the_ruled_ones() -> None
         "KNOWN GAP B9: FD-1490",
         "SKIPPED B4 model_call: FD-1456; SL-1543",
         "SKIPPED C1′: FD-1456; SL-1543",  # noqa: RUF001
-        "SKIPPED D7 — FD-1660 guard",
-        "SKIPPED D8: FD-1660; SL-1696",
-        "SKIPPED E4: FD-1660; SL-1696",
-        "SKIPPED E6: FD-1660; SL-1696",
-        "SKIPPED E8: FD-1660; SL-1696",
-        "SKIPPED E9: FD-1660; SL-1696",
-        "SKIPPED DEP: FD-1660; SL-1696",
-        "SKIPPED S1: FD-1660; SL-1696",
     ]
     assert not [e for e in journey.SKIPS if e.line.startswith("KNOWN GAP") and "FD-1456" in e.line]
     # `SKIPPED B7: SL-1340` is moot: SL-1340 merged (PL-1544 activation need 18).
@@ -392,15 +384,11 @@ def test_wf699_journey_runs_end_to_end(api_client, database, blob_store, workspa
     assert set(skipped) <= set(status)
     # The deliberate failures were asserted by their codes inside the journey; their statuses are
     # `ok` only because the platform answered exactly that code.
-    # D6 is `ok` only because its Job FAILED with VALIDATION_FAILED naming FD-1660 and SL-1696
-    # (the guard, SL-1695); E8, which this loop once listed, is now a skip.
-    for step in ("B6", "C4", "E3", "D4", "D6"):
+    for step in ("B6", "C4", "E3", "D4", "E8"):
         assert status[step] == "ok", step
-    # FD-1660, until SL-1696: no Dislocation Run, so `rv3` is never approved, deployed or scored.
-    # SL-1696 restores the original asserts (`is not None`, `startswith("sha256:")`, `> 0`).
-    assert result.rating_version_id is None
-    assert result.bundle_hash == ""
-    assert result.prod_premium_minor == 0
+    assert result.rating_version_id is not None
+    assert result.bundle_hash.startswith("sha256:")
+    assert result.prod_premium_minor > 0
     assert any("20,000-policy sample" in line for line in lines)
 
 
@@ -470,17 +458,53 @@ def test_b3_the_fork_puts_a_pinned_as_at_lookup_in_the_premium() -> None:
 
 
 @pytest.mark.req("FR-264")
-def test_d7_is_a_skip_that_names_its_finding_and_is_never_recorded_as_ok() -> None:
-    """The maintainer's (by delegation) DP-G, to-lead "2026-10-12 02:43:49 BST", and ruling (A),
-    to-lead "2026-10-12 07:44:13 BST": attribution refuses a sub-graph mount difference until
-    SL-1696, so the Job of D6 fails and the journey prints D7's decomposition as SKIPPED with its
-    finding (FD-1660, owner WK-673). The skip table carries it and the owner check accepts it; G2
-    is not met until D7 decomposes (SL-1696)."""
-    (entry,) = [e for e in journey.SKIPS if e.step == "D7"]
-    assert entry.line == "SKIPPED D7 — FD-1660 guard"
-    journey.check_skip_owners([entry])  # a finding is an owner
+def test_d7_is_not_a_skip_and_a_skip_without_an_owner_still_fails() -> None:
+    """D7 decomposes now (FD-1660, SL-1696): the skip table no longer carries it, so
+    `test_wf699_journey_runs_end_to_end` records it `ok` only because its two-group run
+    reconciled; and the owner check still refuses a skip that names no finding or Work."""
+    assert not [e for e in journey.SKIPS if e.step == "D7"]
     with pytest.raises(journey.JourneyStepFailed):
         journey.check_skip_owners([journey.Skip(step="D7", line="SKIPPED D7 decomposition")])
+
+
+@pytest.mark.req("FR-264")
+def test_d7_splits_the_derived_changes_into_the_journeys_own_effects() -> None:
+    """The maintainer's D7 ruling (to-lead "2026-10-12 01:25:10 BST"): attribution decomposes the
+    change. The derived changes of a run (`id`, `kind`, `description`) become two groups: what the
+    journey did to the rate tables, and the structure it added, the ladder's mount (DP-1:
+    `step_added`, `<mount_point>: mount added (<ref>)`) among it; a pin on a rate table belongs
+    with the first. If either effect is empty there is nothing to decompose and the journey
+    stops."""
+    derived = [
+        {
+            "id": "c1",
+            "kind": "step_added",
+            "description": "m_ncd: mount added (sub_graph:ncd-ladder@1)",
+        },
+        {
+            "id": "c2",
+            "kind": "table_repointed",
+            "description": "s_t_region: rate_table_ref x@1 → x@2",
+        },
+        {
+            "id": "c3",
+            "kind": "table_repointed",
+            "description": "s_t_area: rate_table_ref y@1 → y@2",
+        },
+        {"id": "c4", "kind": "step_added", "description": "s_loading: step added"},
+        {"id": "c5", "kind": "step_changed", "description": "s_premium: expr a → b"},
+        {"id": "c6", "kind": "pin", "description": "rate_tables pin rate_table:x@2 added"},
+    ]
+    effects = journey.split_effects(derived)
+    assert effects == {
+        journey.EFFECT_RATE_TABLES: ["c2", "c3", "c6"],
+        journey.EFFECT_STRUCTURE: ["c1", "c4", "c5"],
+    }
+    flat = [cid for ids in effects.values() for cid in ids]
+    assert sorted(flat) == sorted(d["id"] for d in derived)  # a partition: none lost, none twice
+    assert journey.split_effects(derived[1:3]) is None  # tables only: nothing else to decompose
+    assert journey.split_effects(derived[3:5]) is None  # structure only
+    assert journey.split_effects([]) is None
 
 
 @pytest.mark.req("FR-257")
