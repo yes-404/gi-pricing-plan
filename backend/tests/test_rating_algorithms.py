@@ -272,6 +272,34 @@ def test_an_unknown_field_named_cycle_note_is_validation_failed(
     assert response.json()["code"] == "VALIDATION_FAILED"
 
 
+@pytest.mark.req("FR-10")
+@pytest.mark.parametrize("bound", ["min", "max"])
+@pytest.mark.parametrize("bad", ["abc", "1.2.3", "--1", ""])
+def test_a_non_decimal_input_bound_is_refused_at_the_route_naming_the_field(
+    api_client, workspace_id, principal, grant, bound, bad
+) -> None:
+    """SchemaDecimal (pydantic 2.14 pattern, PR 1321) still refuses what DecimalStr refused,
+    now at the HTTP route: a 422 problem whose field errors name the bound."""
+    body = valid_algorithm()
+    body["input_contract"][0][bound] = bad
+    response = _post(api_client, workspace_id, principal, grant, body)
+    assert response.status_code == 422, response.text
+    problem = response.json()
+    assert problem["code"] == "VALIDATION_FAILED"
+    prefix = f"input_contract.0.{bound}"
+    assert any(e["field"].startswith(prefix) for e in problem["errors"]), problem["errors"]
+
+
+@pytest.mark.req("FR-10")
+def test_a_decimal_string_input_bound_is_accepted_at_the_route(
+    api_client, workspace_id, principal, grant
+) -> None:
+    body = valid_algorithm()
+    body["input_contract"][0]["min"] = "12.30"
+    response = _post(api_client, workspace_id, principal, grant, body)
+    assert response.status_code == 201, response.text
+
+
 @pytest.mark.req("FR-214")
 def test_a_declared_output_without_an_output_step_is_validation_failed(
     api_client, workspace_id, principal, grant
