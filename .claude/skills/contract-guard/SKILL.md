@@ -312,7 +312,7 @@ nothing (`NFR-502`); `backend/tests/outbound_validation_spy.py` counts the calls
 
 ## Verified
 
-2026-10-17 — SL-1709 (PL-1708), FD-1684: a stream or file route declares its media type in the route decorator (`response_class` plus a `responses` 200 entry), so it is never an allow-list entry; `UNTYPED_2XX_PERMANENT` was removed with its four routes (audit export, rate-table CSV and XLSX export, job events). Confirmed by `test_every_untyped_body_exclusion_is_still_untyped` going red once the four routes were declared, and green after the list was removed.
+2026-10-17 — SL-1709 (PL-1708), FD-1684: a stream or file route declares its media type in the route decorator (`response_class` plus a `responses` 200 entry), so it is never an allow-list entry; the permanent 2xx allow-list for stream and file bodies was removed with its four routes (audit export, rate-table CSV and XLSX export, job events). Re-verified at mint on tree 94e1a827 (the merge of `origin/main` into the slice). Confirmed by `test_every_untyped_body_exclusion_is_still_untyped` going red once the four routes were declared, and green after the list was removed.
 
 2026-08-22 — W32-1, the contracts-and-drift-guard slice, which added the `required`,
 `additionalProperties` and scalar-constraint comparisons and the meta-guards that control them.

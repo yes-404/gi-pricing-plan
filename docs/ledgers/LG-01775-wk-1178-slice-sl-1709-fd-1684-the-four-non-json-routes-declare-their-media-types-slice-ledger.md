@@ -1,5 +1,5 @@
 ---
-id: LG-8081
+id: LG-1775
 family: ledger
 title: WK-1178 slice SL-1709 — FD-1684, the four non-JSON routes declare their real media types, slice ledger
 status: active                 # active → closed (§1.2a)
@@ -13,9 +13,9 @@ corrected_by: []
 relates: [SL-1709, PL-1708, FD-1684]
 ---
 
-# LG-8081 — WK-1178 slice SL-1709: the four non-JSON routes declare their media types
+# LG-1775 — WK-1178 slice SL-1709: the four non-JSON routes declare their media types
 
-*(Working id LG 8081, reserved by the lead in `eta.md`, 2026-10-17 13:10 BST.)*
+*(Working id LG 8081, reserved by the lead in `eta.md`, 2026-10-17 13:10 BST. Minted 2026-10-17 as LG-1775 from working id 8081, in the SL-1709 PR; SL-1709 and PL-1708 already carried their final ids.)*
 
 **GO:** the maintainer's entry "2026-10-17 13:09:07 BST — Maintainer: SL-1709 GO CONFIRMED" in `to-lead.md`; the lead dispatched executor-1709. Need 6 (census) accepted by the maintainer, by message to the lead, 2026-10-17 (read 13:10 BST).
 **MERGE-ACK:** not yet given.
@@ -46,7 +46,7 @@ Branch `sl-1709-wk1178-fd1684-prep-2026-10-16`, worktree `.claude/worktrees/sl-1
 - Task 1: `06` §5.1 audit-export row, dated clause.
 - Task 2: decorators on the four routes (`response_class` + a 200 `content` entry); handler bodies unchanged. Reds 1–4 are DB-fixture tests and **cannot run here** (no per-worktree test database): they are owed for a DB window.
 - Task 3: `generate-contracts.py` changed only `generated.json`, only the four 200 blocks. `test_every_untyped_body_exclusion_is_still_untyped` was red by its cause ("no longer untyped, remove from the 2xx lists", the four keys) before `UNTYPED_2XX_PERMANENT` was removed; `test_contracts.py` then 171 passed, 2 skipped. Standing guard shown able to fail: with route 1 undeclared and regenerated, `test_no_json_body_is_untyped[response]` failed naming `('response','GET','/api/v1/rate-tables/{slug}@{version}/export/csv','200')`; reverted, `--check` clean. FD-1684's sweep predicate prints no line.
-- Premise k is stale: `test_export_xlsx_parses_to_the_seeded_cells` and `test_json_export_is_line_delimited` already assert `content-type` on `main`, so no guard line was added.
+- Premise k is stale *(corrected by the "Correction to the Tasks list above" paragraph in the Task 0 section below; take that one)*: `test_export_xlsx_parses_to_the_seeded_cells` and `test_json_export_is_line_delimited` already assert `content-type` on `main`, so no guard line was added.
 - Task 4 register line on FD-1684's row; full gate owed.
 
 ## PRs
@@ -94,6 +94,8 @@ Exactly those four failed on main; no other test in the three files failed in ei
 
 ## Audit
 
+**Lead verdict (2026-10-17 18:17:40 BST, the lead, transcript 1b92c2a6):** the auditor's proposal ADOPTED AMENDED (the maintainer confirmed 18:18) — PL-1708 AC 1–9 and the FD-1684 Disposition delivered and evidenced; the gate @3b54ec82 accepted (FAILED set = SL-1758's 13, identical); F1 reworded, F2 planted red shown, F3 corrected at mint; F4 an observation. MERGE-ACK: not yet given.
+
 *(Written by `auditor-1709`, 2026-10-17, on head `3b54ec82a980effe4b23449605635c113a9846c6`, range `origin/main...3b54ec82` (`origin/main` = `9469721d` at fetch). Code read-only; no test run, no DB, no mint; the gate is the lead's.)*
 
 **1. Change set** (`git diff --stat origin/main...3b54ec82`, 15 paths, +218 -50): `api/audit.py`, `api/jobs.py`, `api/rate_tables.py` (decorators only), `06-governance.md` §5.1, `docs/contracts/openapi/generated.json`, `test_contracts.py`, three route test files, `contract-guard/SKILL.md`, the register row, the roadmap SL row, PL-1708 (status), `INDEX.md`, this ledger. Nothing outside PL-1708's write set; `git diff --name-only origin/main...3b54ec82 -- docs/contracts` prints exactly `docs/contracts/openapi/generated.json` (AC 8); `-- packages/model-schema` prints nothing (AC 7, first clause).
@@ -120,3 +122,10 @@ Exactly those four failed on main; no other test in the three files failed in ei
 - **F4 (observation):** the DB-window evidence is at `35b305c3`, the gate at `3b54ec82`; the difference is the ledger file only (`git diff --stat 35b305c3 3b54ec82`), so no source drift.
 
 **5. Proposed verdict:** all obligations delivered and evidenced; no requirement without a verdict; three LOW findings, none blocking. Proposal only; the lead adopts, amends or rejects. MERGE-ACK: not yet given. Status stays `active`; no mint.
+
+## Mint-time items, 2026-10-17 (executor minter-1709, on the merge of origin/main into the slice, 94e1a827)
+
+- **F1:** `.claude/skills/contract-guard/SKILL.md` Verified line reworded so it no longer names the removed list's symbol; `grep -n UNTYPED_2XX_PERMANENT backend/tests/test_contracts.py .claude/skills/contract-guard/SKILL.md` prints nothing (rc 1) on this tree.
+- **F2 (AC 4 planted red):** in a scratch copy of `docs/contracts/openapi/generated.json` (outside the worktree, discarded) the `GET /api/v1/audit/export` 200 content was changed from `text/csv` / `application/x-ndjson` to a wrong, undeclared `application/json` with an empty schema. FD-1684's sweep predicate (`python3 -c "import json;d=json.load(open(<file>));[print(m.upper(),p,k,media) for p,i in d['paths'].items() for m,op in i.items() if isinstance(op,dict) and 'responses' in op for k,v in op['responses'].items() if k.startswith('2') for media,s in v.get('content',{}).items() if s.get('schema')=={}]"`) printed on the copy: `GET /api/v1/audit/export 200 application/json`; on the committed file it prints nothing. (The predicate keys on an empty schema, so the planted value carries `{}`; a media-type rename alone with a typed schema would not trip it.)
+- **F3:** the Tasks line "Premise k is stale" now cites the later Correction paragraph.
+- **Check 31:** a gap below LG-1775 is expected until the two earlier-numbered mint PRs (SL-1543's and SL-1563's) merge.
