@@ -131,6 +131,7 @@ No `BAND_EMPTY`, so no STOP. Not measured: the `--rows` sampled seed. The seed's
 - **Named delta: `packages/pricing-core/tests/test_bandings.py:369`.** The plan task that makes `check_banding` return typed records is Task 6, the `pricing_core/modelling/bandings.py` item; that item says `:365` and `:403` keep their asserts (a non-empty tuple) and `:386`, `:406`, `:413` keep `== ()`, and it does not mention `:369`. Old line, verbatim: `    assert all("below the minimum" in w for w in warnings)`. New line: `    assert all(w.measure == "claim_count" and w.observed < w.minimum for w in warnings)`. A `BandingWarning` is not a string, so the old assert cannot hold. The new one is not looser: it asserts the measure and that each record is truly below its floor, which the text check did not. The `:365` assert (`assert warnings`) is unchanged.
 - **Proof so far (all through `run-small.sh`):** `test_glm.py` + `test_ebm.py` + `test_gbm.py` 235 passed; `test_bandings.py` + `test_banding_warnings.py` + `backend/tests/test_contracts.py` 209 passed, 2 skipped. `ruff check packages backend` clean; `mypy` clean over 241 files.
 - **DP-1734-A ruled (a) at 2026-10-17 13:48:36 BST:** reuse `FACTOR_RESOLUTION_FAILED` for a non-zero banding floor on an absent column; `check_banding`'s detail now names the column and the floor value; `test_bandings.py::test_a_non_zero_floor_on_an_absent_column_is_refused_naming_column_and_floor` asserts the code and the column, red first (cause: the detail named `claim_count` but not the floor `37`), then green (`test_bandings.py` 29 passed).
+- **R8 (the DB window, `small-test` slot, one hold, 2026-10-17 13:55 BST; script `~/gi-pricing-plan.local/scratch/sl1734b-dbwin.sh`):** `test_a_fit_over_a_banding_with_an_empty_band_fails_with_band_empty`. At the base `7aa2b6e0` (the slice's parent before `9270bb0d`, detached worktree, tree `c555bac4`) RED by cause: `assert <JobStatus.SUCCEEDED> is <JobStatus.FAILED>` (the Job succeeds over an empty band). At head `fff53c72` (tree `2b5b85fb`) GREEN: 1 passed. Method delta: the template database holds 33 `blobs` rows whose objects are absent from the test bucket, so the fixture's `put` dedups to a missing object (`BLOB_NOT_FOUND` in the ingest Job, red by the wrong cause); the window truncates `blobs` CASCADE in its own cloned database and uses its own bucket (`GIP_TEST_BUCKET`).
 
 ## PRs
 
@@ -138,6 +139,5 @@ Not opened yet; the lead opens the PR.
 
 ## Owed (the lead's grant)
 
-- **DB-needing:** R8 `backend/tests/test_model_jobs.py::` the fit Job over an empty band (written in the prep, not run: it needs the per-worktree database).
 - **Frontend half:** `pnpm --dir frontend install --frozen-lockfile`, `generate:api`, `lint`, `type-check`, `test` (`models.test-d.ts` reads the regenerated types); no `frontend/` file is edited.
 - **The full Python gate**, and the WF-699 journey re-run on the merge tree by whichever of this slice and SL-1543 merges second (Task 8).
