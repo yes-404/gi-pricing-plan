@@ -238,6 +238,13 @@ The lead adopted the findings of an independent pre-gate review. Each was verifi
 - Overlap with #1309 (`git diff --stat 0877e6e7 a2f77b2d`): `docs/contracts/openapi/generated.json` and `backend/tests/test_contracts.py` are in its change set; this branch edits `test_contracts.py` (6 lines) and has not yet generated `generated.json`, so the upload-url shapes are still missing from it.
 - Owed after GATE END, in addition to the list above: regenerate `docs/INDEX.md` (`doc-index.py` under the gate-2 flock) and `generate-contracts.py` then `--check` against the merged tree.
 
+## Re-merge of main, 2026-10-17 (Europe/London)
+
+- 2026-10-17 11:3x BST (executor-1722): `git merge --no-ff origin/main` (055b5e6b) into a030b5ce; no conflict. Non-DB items run on the merged tree: `generate-contracts.py` regenerated `generated.json`, `job.schema.json` (`blob.promote`) and the two `upload-url-*` schemas, then `--check` rc 0 (51 match); `ruff check .` found I001 (`blobs.py` TYPE_CHECKING imports) and RUF022 (`model_schema/__init__.py` `__all__`), both fixed by `--fix`, rc 0 after; `mypy` rc 0; `lint-imports` rc 0 (4 kept); `doc-index.py` regenerated, `--check` rc 0; `register-lint.py` rc 0.
+- `audit-docs.py`: check 13 was red (`07` §2 "Blob Upload" pointer row re-stated a term `00` §2.1 defines); the row is deleted, `00` §2.1 stays the one definition. Check 31 (gap between 1740 and the working id 8059) stays red until the mint; expected.
+- DP-7: `e7c3a9b15d82` has `down_revision = "d4e81b7a2c95"`, the single head at `origin/main` 055b5e6b. `SL-1274` (`f2b6d90a4c17`) and `SL 8017` are not on main. Re-point NOT owed now.
+- Still OWED (DB or the lead's window): the ten reds by cause, `test_api_blob_uploads.py`, `test_blobs.py`, `test_upload_to_ingest.py` (W2, read PASSED), `alembic upgrade head` and `downgrade -1 && upgrade head`, the single-head test, `pnpm generate:api` and `type-check`, FR 8058 marker at mint (A5), the mint.
+
 ## PRs
 
 - (none opened yet; the lead opens it.)
