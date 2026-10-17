@@ -2695,7 +2695,7 @@ On the maintainer's (by delegation) entries "2026-10-14 11:08:32 BST — Failed-
 id: SL-1742
 family: slice
 title: WK-1178 fix slice — FD-1741: the python CI job's cheap checks run before the 30-minute pytest, and the job budget is 50 minutes
-status: active                   # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-17 # original date 2026-10-16, set at the draft; minted 2026-10-17
 owner: executor                  # a workflow-only slice; the lead dispatches (active)
 phase: P2

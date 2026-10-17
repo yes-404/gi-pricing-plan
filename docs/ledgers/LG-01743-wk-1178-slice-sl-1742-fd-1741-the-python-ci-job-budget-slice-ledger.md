@@ -97,3 +97,5 @@ Sweep predicate, verbatim: `git grep -n -I -E '(FD§SL§LG)[ -]0*(8063§8064§80
 **Checks run at this tree** (`flock -w 900 /tmp/slots/gate-2`, `env -C` the worktree, 2026-10-17): `doc-index.py` rc 0 (INDEX regenerated, no row change expected); `audit-docs.py` rc 0 and `register-lint.py` rc 0 at the committed tree (the commit's report to the lead carries the final lines).
 
 **Proposed verdict: CLEAN. SL-1742 satisfies FD-1741's remedy on the evidence above; the workflow change is the proven change.** Lead's adoption line to follow.
+
+**Lead adoption (2026-10-17 11:50:16 BST, the lead, transcript 99374ddb):** the auditor's proposed verdict CLEAN is ADOPTED as written (obligations 1–6 met; INFO A1–A4 accepted; A2 discharged in this commit: SL-1742 `status: closed` in docs/roadmap.md; A3 — FD-1741's register row is closed after the merge, citing the PR and the merge commit). Proof read by the lead from the job log of python run 39024391811: req-coverage 10:19:37Z before pytest; "5878 passed, 6 skipped, 116 warnings in 1656.96s (0:27:36)"; "GATE: pass — 8 of 8 stages passed".
