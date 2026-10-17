@@ -16,9 +16,9 @@ relates: [SL-1734, PL-1733, FD-1723]
 # LG-8082 — WK-1178 slice SL-1734: FD-1723's HIGH limbs (FR-127 GLM and EBM, FR-100 at fit)
 
 **GO:** the maintainer's entry "2026-10-17 13:23:18 BST" in `to-lead.md` (GO SL-1734, PL-1733: needs 1–2 met, Task 0 Step 3's G2 probe first as the in-slice STOP, census mechanical, contracts regenerate on the later PR).
-**Gate:** none granted to this seat; the full gate (both halves) and the DB tests below are owed.
+**Gate:** gate 1 @`d1884116` (16:24 to 17:28 BST, `scratch/sl1734-gate/`) RED: the `_fit` banding sink, the input-free raise at `modelling.py:365`, four frontend fixtures; fixed at `5e08d5ce` (executor-1734f). Gate 2 @`5e08d5ce` (tree `22c1e8d065fac74be3d8c4fbdf079fdb93456d76`, 16:53:27 to 17:54:18Z, `scratch/sl1734b-gate/`): ruff, mypy, import_linter, req_coverage, contracts rc 0; frontend install, generate:api, lint, type-check, test, build rc 0; demo designed stop, `--journey wf-699` rc 0; audit_docs rc 1 (the working-id check 31, expected); pytest rc 1 `14 failed, 5901 passed, 4 skipped` = 13 docs-check cascade plus `test_worker_raise_sites` (the census missed `safe_error_detail(exc)`). `a261c2bf` (executor-1734g) is a test-list change only, accepted with no re-gate by the maintainer ("2026-10-17 18:56:17 BST", condition met at "2026-10-17 18:59:23 BST").
 **MERGE-ACK:** not yet given.
-**Audit:** not yet.
+**Audit:** written below (auditor-1734, 2026-10-17, head `a261c2bf`); proposed verdict only.
 
 ## Tasks
 
@@ -137,7 +137,51 @@ No `BAND_EMPTY`, so no STOP. Not measured: the `--rows` sampled seed. The seed's
 
 Not opened yet; the lead opens the PR.
 
-## Owed (the lead's grant)
+## Owed
 
-- **Frontend half:** `pnpm --dir frontend install --frozen-lockfile`, `generate:api`, `lint`, `type-check`, `test` (`models.test-d.ts` reads the regenerated types); no `frontend/` file is edited.
-- **The full Python gate**, and the WF-699 journey re-run on the merge tree by whichever of this slice and SL-1543 merges second (Task 8).
+- **The 13 docs-check cascade pytest failures** resolve when the working ids are minted at the PR (`audit-docs` check 31 green after the mint); re-check on the minted tree.
+- **WF-699 journey re-run** on the merge tree by whichever of this slice and SL-1543 merges second (Task 8).
+- **Full PR CI** on the opened PR (the maintainer, "2026-10-17 18:56:17 BST").
+
+## Gate-red fixes (after the first gate)
+
+- **`5e08d5ce`** (executor-1734f): R1 `BandingError` is also a `CodedError` and `_fit` persists `safe_error_detail(exc)` (sentinel test `test_a_banding_refusal_in_a_fit_keeps_its_text_and_no_row_value`); R2 the banding-warning reference message in `errors.py`/`modelling.py` is a literal; R3 `banding_warnings` has a default (case (a) of the maintainer's "2026-10-17 17:31:25 BST" item 3), so four frontend fixtures gain `banding_warnings: []`, no contract change.
+- **Named delta against Acceptance 15** (`git diff --stat origin/main...<slice branch> -- frontend/` must print nothing): it prints three test/fixture files (`EbmShapePanel.test.ts`, `GbmFitPanel.test.ts`, `views/__tests__/fixtures.ts`), authorised by item 3(a) of that entry; no non-test `frontend/` file is edited.
+- **`a261c2bf`** (executor-1734g): `test_worker_raise_sites.py` `_SITES` for `model_handlers.py::_fit` gains `safe_error_detail(exc)`; `safe_error.py:180-186` read.
+
+## Audit
+
+*(Written by `auditor-1734`, 2026-10-17, on head `a261c2bf4a79437d9fedf171eb61d2a070f2923e`, range `origin/main...a261c2bf` (merge-base `6bdd2571`; `origin/main` is now `9469721d`, so main has moved and the re-merge at mint is owed). Code read-only; no test run by the auditor; gate logs in `gi-pricing-plan.local/scratch/sl1734-gate/` and `sl1734b-gate/`.)*
+
+**1. Change set** (`git diff --stat origin/main...a261c2bf`, 28 paths, +1298 −71): `loss_treatment.py` (new), `glm.py`, `ebm.py`, `gbm.py`, `bandings.py`, `errors.py`, `modelling/__init__.py`, model-schema `modelling.py` and `__init__.py`, `model_handlers.py`, spec `02-modelling.md`, the two regenerated contracts, tests (`test_glm`, `test_ebm`, `test_gbm`, `test_bandings`, `test_banding_warnings`, `test_model_jobs`, `test_error_sinks`, `test_worker_raise_sites`), three frontend test fixtures, this ledger, INDEX, roadmap and PL-1733's `draft` to `active`. No file of SL-1543's write set (`git diff --name-only` filtered for it: none).
+
+**2. Obligations, derived from PL-1733's Acceptance Standard, FD-1723's Disposition (FR-127 GLM and EBM, FR-100: "FIXED IN P2 under WK-1178, red first") and the rulings, then evidenced** (verdict per row; the lead's to adopt):
+- **A4/A5 capped GLM fits capped (fixed, cv, tweedie):** `glm.py:582` applies `apply_loss_treatment`; `test_glm.py:963` asserts coefficients equal the hand-capped fit to atol 1e-10, differ from uncapped, and the cv alpha and tweedie power equal. Red by cause recorded at base (coefficients `[6.0979, -0.5692]` against `[5.5265, -0.2125]`). **Met.**
+- **A6 `spliced`/`excess` refused by name on GLM:** `test_glm.py:1004`. **Met.**
+- **A7 EBM arm:** `ebm.py:213`; `test_ebm.py:553` (term scores equal hand-capped, differ from uncapped) and `:570` (refusal by name, code asserted). **Met.**
+- **A8 one function:** `git grep -nE "def apply_loss_treatment" -- packages` prints one line, `loss_treatment.py:20`; `glm.py:58`, `gbm.py:66`, `ebm.py:36` import it; `test_gbm.py:603, :630` unchanged. **Met.**
+- **A9 empty band refuses every fit:** `test_glm.py:1035`, `test_ebm.py:586`, `test_gbm.py:2635` (both backends) assert `BAND_EMPTY`. **Met.**
+- **A10 thin band: fail refuses, warn records a typed warning:** `test_glm.py:1059, :1077` (type of `observed`/`minimum` asserted `int` / `Decimal`), and the EBM and GBM equivalents. **Met.**
+- **A11 the fit Job fails with `BAND_EMPTY`:** `test_model_jobs.py:603` asserts `FAILED` (not merely terminal); red at base and green at head recorded in the Tasks section (R8). The auditor did not re-run it. **Met** on the ledger's record (delivered, evidence is the lead's DB window, not re-measured).
+- **A12 guards:** weight-0 band `test_glm.py:1045`; a band that fits reports nothing `test_bandings.py:422`. The "a `none` GLM fit is identical to main's" guard rests on the existing GLM suite staying green (gate 2: no GLM failure), not on a dedicated before/after comparison. **Met, thinly** (finding F3).
+- **A13 SL-1543's guard untouched:** no write-set file in the diff. **Met.**
+- **A14 contract:** the plan's python check printed `OK` on this tree; `generate-contracts.py --check` rc 0 in gate 2; `test_banding_warnings.py:69` loads a pre-slice record with no key. **Met.**
+- **A15 frontend:** gate 2 frontend install, generate:api, type-check, test, build rc 0 on `5e08d5ce`. The literal `git diff --stat ... -- frontend/` is not empty (finding F2). **Met with a ruled delta.**
+- **A16 probe gated the code:** ledger Task 0 Step 3 carries the per-Banding output verbatim, all `OK`; first code commit `e7b96a8d` is after it. **Met.**
+- **A3 spec first:** NOT met as written (finding F1).
+- **A17 the gate is green on the merge tree:** not met on a single tree: gate 2 ran at `5e08d5ce` (tree `22c1e8d0`), 14 pytest failures (13 working-id cascade, expected until the mint, plus `test_worker_raise_sites`, fixed by `a261c2bf` and verified only by the lead's single-file runs, which the auditor did not repeat). **Deferred with owner:** the lead, at the mint tree and full PR CI.
+- **A1/A2 docs checks on the plan:** see section 4.
+
+**3. Red-first record.** Prep commits `496954c8`, `905dc150`, `cab355ad` (tests, unrun) precede the code commits `e7b96a8d` (FR-127) and `9270bb0d` (FR-100); `git merge-base --is-ancestor` for each of `496954c8 cab355ad e7b96a8d 7aa2b6e0 9270bb0d 86d5425e fff53c72 5e08d5ce a261c2bf` against `a261c2bf`: plus `6f41adf5`: all rc 0, run by the auditor. `6f41adf5` (red) precedes `fff53c72` (fix) for DP-1734-A.
+
+**4. Safe-error read (the maintainer's 18:56:17 condition, read independently).** `pricing_core/safe_error.py:180-186`: `safe_error_detail` returns `_validation_detail(exc)` for a `ValidationError` (built from the error count, title and `include_input`-free bounds), `str(exc)` for a `CodedError`, else `""`. `BandingError(ModellingError, CodedError)` (`errors.py`), so its detail is `str(exc)`, the message alone. The 15 `BandingError(` sites in `bandings.py` (lines 87, 102, 183, 195, 201, 213, 238, 266, 327, 334, 349, 375, 567, 583, 605) were each read: messages carry the code, a column name, a banding slug, band labels, the floor value (an actuary-set minimum) and, at `:213-215`, the min and max of the training column (an aggregate range, not a row), and `_describe` carries a band label, an aggregate exposure or claim count and the floor. None interpolates a value from a quote input; the fit path takes a training frame, not a Quote Context. **No banding message can carry a quote input value.** Pre-existing sites (`:87-375`) are unchanged in this diff except where noted.
+
+**5. Findings.**
+- **F1 (LOW, acceptance deviation):** Acceptance 3 requires the spec commits before or with the code. Code `e7b96a8d` precedes spec `7aa2b6e0` (FR-127 note), and `9270bb0d` precedes `86d5425e` (FR-100, §4.8, §5.2, FR-207). The slice squash-merges as one PR, so the merged state is consistent. Proposed: lead accepts as a recorded delta; no rework.
+- **F2 (LOW, ruled delta, now recorded):** Acceptance 15's empty `frontend/` diff is false: three test/fixture files change (4 lines), authorised by the maintainer's "2026-10-17 17:31:25 BST" item 3(a). Recorded above under "Gate-red fixes".
+- **F3 (LOW, test strength):** (a) `test_a_banding_refusal_in_a_fit_keeps_its_text_and_no_row_value` puts its sentinel in an unrelated column of an all-null frame, so it proves the allow-list keeps the refusal text and drops nothing it was never given; it does not exercise a refusal whose message could interpolate a row value. The safety argument rests on the section 4 read, not on that test. (b) The A12 "`none` fit identical to main" guard has no dedicated before/after test. Neither blocks the merge. Proposed: carry as a note; no new FD.
+- **F4 (INFO):** `BandingError` now has two bases whose `__init__` differ; `CodedError`'s docstring says the text is `CODE: message`, while `BandingError`'s `str` is the message alone (the code is a separate attribute). Consumers using `safe_error_detail` get the message; none was found that expects the prefix. Not widened here.
+- **F5 (fixed in this commit):** the ledger's Gate line, Audit line and Owed list were stale (said "none granted", "not yet", frontend half and full gate "owed"); the gate record and the post-gate fixes (`5e08d5ce`, `a261c2bf`) were absent. Updated above; the ledger has no `tree` front-matter field, and its re-merge note names `origin/main` `6bdd2571`, which is the merge-base, not the current `9469721d`.
+- **F6 (owned):** the 13 docs-check cascade pytest failures resolve at the mint (check 31); the lead re-checks on the minted tree.
+
+**6. Proposed verdict:** all PL-1733 obligations delivered and evidenced, with A3 and A15 as recorded deltas (F1, F2) and A17 deferred to the lead's mint-tree gate and full PR CI. No requirement without a verdict. Proposal only: the MERGE-ACK stays "not yet given"; status stays `active`.
