@@ -1,16 +1,18 @@
 ---
-id: FD-8047
+id: FD-1746
 family: finding
 title: The dataset purge audit event carries no before state, and the test that claims to cover NFR-472's five event classes asserts only one transition
 status: active
-created: 2026-10-14
+created: 2026-10-17 # original date 2026-10-14, set at the filing; minted 2026-10-17
 owner: auditor
 tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
 corrected_by: []
 relates: [WK-1178, PL-1735, SL-1736, NFR-472, FR-7, FR-81, P2]
 ---
 
-# FD-8047 — a purge audits no `before`, and the NFR-472 test is green by construction
+# FD-1746 — a purge audits no `before`, and the NFR-472 test is green by construction
+
+*(Minted 2026-10-17 as FD-1746 from working id 8047, in the D18 batch mint PR.)*
 
 *(Filed under working id 8047, reserved by the lead; a minter folds it into the docs batch.
 Authority: the maintainer's (by delegation) entry "2026-10-14 12:07:40 BST" in

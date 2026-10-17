@@ -1,16 +1,18 @@
 ---
-id: FD-8049
+id: FD-1747
 family: finding
 title: The score rate-limit test pins the limiter's clock beside a real-time 2-second Redis expiry, so a stall of more than 2 seconds between requests resets the counter and the 4th request is admitted
 status: active
-created: 2026-10-14
+created: 2026-10-17 # original date 2026-10-14, set at the filing; minted 2026-10-17
 owner: auditor
 tree: beee5ebedcfebc03c1658728442827960975392a
 corrected_by: []
 relates: [WK-1178, FR-452, FR-430, RL-1347, P2]
 ---
 
-# FD-8049 — the rate-limit flake: a pinned window key beside a real 2-second TTL
+# FD-1747 — the rate-limit flake: a pinned window key beside a real 2-second TTL
+
+*(Minted 2026-10-17 as FD-1747 from working id 8049, in the D18 batch mint PR.)*
 
 *(Filed under working id 8049, reserved by the lead; a minter folds it into the docs batch.
 Authority: the maintainer's (by delegation) entry "2026-10-14 14:30:54 BST" in
@@ -69,7 +71,7 @@ A red-first regression test belongs with the fix: a test that deletes the key be
 (`redis.delete`, no sleep) is red on today's tree only if it asserts the TTL-independence; the cheaper
 red is asserting `await redis.ttl(key) > 60` after one request, red at 2.
 
-### Condition on the fix — expiry must stay tested (2026-10-14 16:42:26 BST; the maintainer's (by delegation) ruling accepting FD-8049, in `to-lead.md`, entry "2026-10-14 16:43:11 BST — FD 8049 accepted + the expiry-coverage condition", which restates the ruling first sent after 16:41:40)
+### Condition on the fix — expiry must stay tested (2026-10-14 16:42:26 BST; the maintainer's (by delegation) ruling accepting FD-1747, in `to-lead.md`, entry "2026-10-14 16:43:11 BST — FD 8049 accepted + the expiry-coverage condition", which restates the ruling first sent after 16:41:40)
 
 Patching `_KEY_TTL_SECONDS` to 3600 in the fixture is the allowed "TTL the pinned clock cannot
 outrun", **on condition it leaves the limiter's key expiry covered.** Checked by reading

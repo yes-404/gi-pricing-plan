@@ -1,16 +1,18 @@
 ---
-id: FD-8040
+id: FD-1744
 family: finding
 title: The Preparation Recipe's cast and parse_date steps null an unparseable cell with no error, no quarantine row and no validation entry, so ingestion silently changes data against FR-32 and VR-STR-2
 status: active
-created: 2026-10-14
+created: 2026-10-17 # original date 2026-10-14, set at the filing; minted 2026-10-17
 owner: auditor
 tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
 corrected_by: []
 relates: [WK-1178, FR-32, FR-35, FR-41, FR-50, VR-STR-2, VR-STR-9, FD-1730, FD-1660, FD-1679, FD-1704, P2]
 ---
 
-# FD-8040 — `strict=False` in `prepare.py` turns an unparseable cell into null, and nothing downstream counts it
+# FD-1744 — `strict=False` in `prepare.py` turns an unparseable cell into null, and nothing downstream counts it
+
+*(Minted 2026-10-17 as FD-1744 from working id 8040, in the D18 batch mint PR.)*
 
 *(Filed under working id 8040, reserved by the lead; a minter folds it into the docs batch.
 Authority: the maintainer's (by delegation) entry "2026-10-14 11:52:51 BST" in

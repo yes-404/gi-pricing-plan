@@ -1,5 +1,5 @@
 ---
-id: FD-8078
+id: FD-1756
 family: finding
 title: Polars 2 and PyArrow 26 are pending majors of the core data stack (Dependabot #1316 and #1315) and need a library-spike over our data paths before any bump, so they are deferred to Phase 3 under WK-1178
 status: active
@@ -10,7 +10,9 @@ corrected_by: []
 relates: [WK-1178, FD-1240, P3]
 ---
 
-# FD-8078 — Polars 2 and PyArrow 26: pending majors of the core data stack, spike first, deferred to Phase 3
+# FD-1756 — Polars 2 and PyArrow 26: pending majors of the core data stack, spike first, deferred to Phase 3
+
+*(Minted 2026-10-17 as FD-1756 from working id 8078, in the D18 batch mint PR.)*
 
 *(Filed under working id 8078, reserved by the lead in `eta.md` "2026-10-17 11:13:28 BST"; a minter folds it into the next docs batch. Authority: the maintainer's entry "2026-10-17 11:12:48 BST" in `channel/to-lead.md`, the #1315/#1316 bullet, read in full. Every fact below was read on 2026-10-17 from `origin/main` `055b5e6b74f9d4b10f6df54570e33ed2805ae9a8`, from `gh pr view`, PyPI and the GitHub releases API, not from the lead's relay.)*
 

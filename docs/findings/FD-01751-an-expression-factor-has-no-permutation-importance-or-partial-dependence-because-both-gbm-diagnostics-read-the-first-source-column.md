@@ -1,16 +1,18 @@
 ---
-id: FD-8068
+id: FD-1751
 family: finding
 title: An expression Factor has no permutation importance or partial dependence, because both GBM diagnostics read the first source column and S4 omits the factor under a named reason
 status: active
-created: 2026-10-16
+created: 2026-10-17 # original date 2026-10-16, set at the filing; minted 2026-10-17
 owner: auditor
 tree: a2f77b2dcad5aaec41a5f10aa664383caf421e8b
 corrected_by: []
 relates: [WK-690]
 ---
 
-# FD-8068 — `diagnostics.py` cannot measure an `expression` Factor; FR-174's per-factor diagnostics are undelivered for it
+# FD-1751 — `diagnostics.py` cannot measure an `expression` Factor; FR-174's per-factor diagnostics are undelivered for it
+
+*(Minted 2026-10-17 as FD-1751 from working id 8068, in the D18 batch mint PR.)*
 
 *(Filed under working id 8068 (written "FD 8068" in prose), supplied by the lead; a minter folds
 it into the docs batch. Authority: the maintainer's entry "2026-10-16 10:27:41 BST" in

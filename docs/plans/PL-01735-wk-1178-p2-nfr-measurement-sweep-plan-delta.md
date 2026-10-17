@@ -12,7 +12,7 @@ work: WK-1178
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [SL-1736, RL-1441, FD-1439, LG-1444, SL-1391, SL-1259, PL-1620, RL-1614, CR-754, CR-721, LG-730, RL-1724]  # forward-cites kept out until their batch mints them: FD 8046, FD 8047
+relates: [SL-1736, RL-1441, FD-1439, LG-1444, SL-1391, SL-1259, PL-1620, RL-1614, CR-754, CR-721, LG-730, RL-1724, FD-1745, FD-1746]
 ---
 
 # PL-1735 — WK-1178, the P2 NFR measurement sweep: a dated Work-plan delta
@@ -99,11 +99,15 @@ record the three confirmations are at Task 0 Step 2, the NFR-470 section, DP-3, 
 Task 4 Step 4, the write set and the Self-review.
 
 **Corrected 2026-10-16, before the mint, by the planner (seat planner-p1b)**, on the lead's
-brief of 2026-10-16 item 1. `FD 8046` and `FD 8047` moved from the D17 docs batch to D18 (D17's
+brief of 2026-10-16 item 1. `FD-1745` and `FD-1746` moved from the D17 docs batch to D18 (D17's
 commit `965e86a4`, "docs(findings): move FD 8040, 8046, 8047 to D18"); they are on
 `origin/docs-d18-2026-10-14` @`b1ecf56d`. Scope, DP-5, DP-6 and the Hand-off now say D18. Task 0
 Step 1 now says the plan merges before D18 (mint order P1 → D18 → P2, the maintainer's (by
 delegation) entry "2026-10-16 09:40:20 BST"); what the step requires is unchanged.
+
+**Cites re-pointed 2026-10-17, at the D18 mint.** Working ids 8046 and 8047 are minted as `FD-1745` and `FD-1746`;
+every live cite of the two working ids in this plan now names the minted id, and the two are in `relates`.
+The quoted commit subject above keeps its text.
 
 ## Context — the ruling this delta records
 
@@ -191,8 +195,8 @@ NFR-470's row that DP-3 orders (Task 3, Step 4); it records how the row is read 
 neither its subject nor its 1.2× bound. A reading that disagrees with a requirement is an
 `FD-`, never a re-wording (the ruling's third bullet). Two findings already filed from this
 plan's reading, both working ids in the D18 docs batch (`origin/docs-d18-2026-10-14` @`b1ecf56d`,
-not yet on `main`; moved there from D17 by D17's commit `965e86a4`): **`FD 8046`** (DP-5: NFR-485's construction clause against the code) and
-**`FD 8047`** (DP-6: the purge audit's missing `before`, and `test_data_nfrs.py:147`'s
+not yet on `main`; moved there from D17 by D17's commit `965e86a4`): **`FD-1745`** (DP-5: NFR-485's construction clause against the code) and
+**`FD-1746`** (DP-6: the purge audit's missing `before`, and `test_data_nfrs.py:147`'s
 docstring claiming coverage it does not assert).
 
 ## The six requirements — spec row, owning code, existing evidence, and the instrument
@@ -399,12 +403,12 @@ and **no `before=`**, so `before` takes its default `None` (`backend/src/app/pla
 The other four limbs, for comparison: a dataset transition passes `before` and `after`
 (`backend/src/app/platform/datasets.py:591-594`); an acknowledgement does
 (`validation.py:326-329`); a dictionary edit does (`datasets.py:299-302`); a **purge passes
-`after` only** (`datasets.py:1051-1055`) — that limb is `FD 8047` (DP-6), not this slice's fix.
+`after` only** (`datasets.py:1051-1055`) — that limb is `FD-1746` (DP-6), not this slice's fix.
 
 **Existing evidence.** `backend/tests/test_data_nfrs.py:147`
 `test_every_dataset_transition_emits_an_audit_event_with_before_and_after` names rule-set
 changes and purges in its docstring but asserts only the draft→validating event (`:179`). No
-test asserts on `validation_rule_set.replaced`. The docstring's unasserted claim is `FD 8047`'s
+test asserts on `validation_rule_set.replaced`. The docstring's unasserted claim is `FD-1746`'s
 second limb (DP-6). `CR-721:129` claims the replacement *"writes
 through `audit.record`"*: an event is emitted; its `before` is not.
 
@@ -433,7 +437,7 @@ the same way (*"Measured by extrapolation — 173 s of 600 s, 16.0 GB of 32 GB"*
 `lgb.Dataset(..., free_raw_data=False)` (`gbm.py:1106-1108`), which keeps the raw array. GLM:
 a hand-built dense one-hot `pl.DataFrame` (`modelling/glm.py:235-259`) turned into a dense
 array, `x = design.to_numpy()` (`glm.py:578`). **The mechanism the clause names is not the
-mechanism the code uses** — DP-5, ruled: `FD 8046` asks which side is wrong; this slice
+mechanism the code uses** — DP-5, ruled: `FD-1745` asks which side is wrong; this slice
 measures the code as it stands and changes neither.
 
 **Existing evidence.** `scripts/bench-model.py` (`--only glm|gbm|curve`, `--rows`,
@@ -458,7 +462,7 @@ adds them to session 2's run list by a dated line.
 arm. On the shared VM: a measured peak is recorded; a projection is recorded and not read. On
 nfr-bench-1 session 2: a completed run's `VmHWM` ≤ 32 GB is a PASS for that arm, > 32 GB is
 OVER; **a run killed at the 30 GB cap is reported as "peak > 30 GB" and goes to the lead for an
-`FD-`** (DP-4). Either reading is also evidence for `FD 8046` (*"The 5M reading answers whether
+`FD-`** (DP-4). Either reading is also evidence for `FD-1745` (*"The 5M reading answers whether
 the gap matters"*). nfr-bench-1 is used not for quietness (bytes are not slowed by load) but
 for **RAM**.
 
@@ -565,8 +569,8 @@ ruled**; the options the ruling did not take are removed, and each row states th
 | DP-2 | At what level are NFR-468 and NFR-1443 timed? | **(a)** in-process ASGI, `httpx.AsyncClient(transport=ASGITransport(app=create_app(...)))` (`backend/src/app/main.py:70`), against the real migrated Postgres. It covers routing, auth, the DB and serialisation, not the socket, and hosts NFR-468's "never computed" guard. **Every reading is labelled "server-side, in-process, excludes network"** | decision point | Ruled 2026-10-14, the maintainer (by delegation), to-lead entry 12:07:40 BST (quoted in full under Context), DP-2 |
 | DP-3 | What does NFR-470's "Storage overhead … ≤ 1.2× the parquet payload" compare, and does the retained source upload count? | **(b), without the retained source upload**: the subject is the Dataset Version's own storage (its tables, reports and profile, and its own rows), read as (payload + overhead) ≤ 1.2 × the parquet payload. The source upload is the promotion Job's blob (RL-1724 DP-U1.1, O1), not the version's, and is not counted. The dedup limb is measured too: a second version with an identical table adds ~0 bytes for that table (read as = 0 new parquet bytes, the NFR-470 section). **The reading is written onto NFR-470's row as a dated clarification in SL-1736's commit** (Task 3, Step 4, exact text there); no `RL-` is needed | design unknown | Ruled 2026-10-14, the maintainer (by delegation), to-lead entry 12:07:40 BST (quoted in full under Context), DP-3; the counted overhead (tables + reports + profile, `ingestion_runs` and `audit_events` excluded and printed) **confirmed** 2026-10-14, the same, to-lead entry 12:31:22 BST, PL-1735 (b) |
 | DP-4 | How is NFR-485 measured at its stated scale (5 M × 60, ≤ 32 GB), when neither host has more than 32 GB? | **(b)**: the shared-VM curve to 1 M is a **DIAGNOSTIC projection, never a verdict**; plus one 5 M × 60 run per arm on nfr-bench-1's **approved session 2** (≈ +30 min per arm, not a third session, so within the user's 12 Oct VM approval), each under `systemd-run --scope -p MemoryMax=30G`. A completed run's `VmHWM` is the measurement; a run killed at the cap is "peak > 30 GB" and becomes an `FD-`. Recorded as a dated line amending S5's run list (Task 4, Step 4), which lives in `RL-1614` "What it obliges" item 6 (`:107-111` at `a3fc2e8d`) and `PL-1620` (Global Constraints `:125-130`, D5.3 `:189-199`); the lead puts it in the 2 h VM heads-up | decision point | Ruled 2026-10-14, the maintainer (by delegation), to-lead entry 12:07:40 BST (quoted in full under Context), DP-4 |
-| DP-5 | NFR-485's mechanism clause names `QuantileDMatrix`/streaming construction; the code uses `xgb.DMatrix` (`gbm.py:895`), LightGBM keeps raw data (`gbm.py:1108`), and the GLM is dense (`glm.py:578`). Which one is wrong? | **An `FD-`, measure as-is**: filed as **`FD 8046`** (working id, D18, `origin/docs-d18-2026-10-14` @`b1ecf56d`); which side is wrong is its `CLAUDE.md` §0 question. This slice changes neither code nor spec; the 5 M reading (DP-4) answers whether the gap matters | fact | Ruled 2026-10-14, the maintainer (by delegation), to-lead entry 12:07:40 BST (quoted in full under Context), DP-5 |
-| DP-6 | The purge limb has the same gap as the rule-set limb (`datasets.py:1051-1055` passes `after` only), and `test_data_nfrs.py:147` names both in its docstring but asserts neither. Is it in this slice? | **One finding, both limbs**: filed as **`FD 8047`** (working id, D18, same branch). NFR-472's red-first test **stays in this slice** for the `replace_rule_set` limb (Task 1); the purge limb and the docstring are `FD 8047`'s, not this slice's | scope | Ruled 2026-10-14, the maintainer (by delegation), to-lead entry 12:07:40 BST (quoted in full under Context), DP-6 |
+| DP-5 | NFR-485's mechanism clause names `QuantileDMatrix`/streaming construction; the code uses `xgb.DMatrix` (`gbm.py:895`), LightGBM keeps raw data (`gbm.py:1108`), and the GLM is dense (`glm.py:578`). Which one is wrong? | **An `FD-`, measure as-is**: filed as **`FD-1745`** (working id, D18, `origin/docs-d18-2026-10-14` @`b1ecf56d`); which side is wrong is its `CLAUDE.md` §0 question. This slice changes neither code nor spec; the 5 M reading (DP-4) answers whether the gap matters | fact | Ruled 2026-10-14, the maintainer (by delegation), to-lead entry 12:07:40 BST (quoted in full under Context), DP-5 |
+| DP-6 | The purge limb has the same gap as the rule-set limb (`datasets.py:1051-1055` passes `after` only), and `test_data_nfrs.py:147` names both in its docstring but asserts neither. Is it in this slice? | **One finding, both limbs**: filed as **`FD-1746`** (working id, D18, same branch). NFR-472's red-first test **stays in this slice** for the `replace_rule_set` limb (Task 1); the purge limb and the docstring are `FD-1746`'s, not this slice's | scope | Ruled 2026-10-14, the maintainer (by delegation), to-lead entry 12:07:40 BST (quoted in full under Context), DP-6 |
 | DP-7 | Does NFR-1443's "on a quiet box" require nfr-bench-1, or can the shared VM in an `RL-1441` quiet window ("the gate slots free, no other heavy process") satisfy it? | **(a)**: the shared-VM reading, taken in an `RL-1441` quiet window with the load settled below 2.0 before each run, is the reading, **unless it is NEAR-BOUND per DP-1**, when it joins nfr-bench-1 session 2 as a named extra reading | decision point | Ruled 2026-10-14, the maintainer (by delegation), to-lead entry 12:07:40 BST (quoted in full under Context), DP-7 |
 
 ## Write set
@@ -592,7 +596,7 @@ No other spec file, and no contract, migration or frontend file.
 
 ### Task 0: Preconditions, the contention factor re-measured on this box, and pre-registration
 
-- [ ] **Step 1:** Confirm this plan is on `main` with all seven DP rows ruled (the "Resolved by" column: the maintainer's (by delegation) entries of 2026-10-14 12:07:40 BST and, for DP-1, 12:25:22 BST), and that `FD 8046` and `FD 8047` are minted on `main` (Scope). This plan merges before them (mint order P1 → D18 → P2, the maintainer's (by delegation) entry "2026-10-16 09:40:20 BST"), so the slice's GO waits for D18's merge. If either is not on `main`, stop.
+- [ ] **Step 1:** Confirm this plan is on `main` with all seven DP rows ruled (the "Resolved by" column: the maintainer's (by delegation) entries of 2026-10-14 12:07:40 BST and, for DP-1, 12:25:22 BST), and that `FD-1745` and `FD-1746` are minted on `main` (Scope). This plan merges before them (mint order P1 → D18 → P2, the maintainer's (by delegation) entry "2026-10-16 09:40:20 BST"), so the slice's GO waits for D18's merge. If either is not on `main`, stop.
 - [ ] **Step 2: Pre-register the factor's reading rule, before its first run (DP-1, 12:25:22 (i)).** Add a `contention` subcommand to `scripts/measure-p2-nfr-sweep.py` with these module-level constants, and commit it (**pre-registration P0**); the `LG-` cites P0's sha, and every factor run's start stamp is later than P0's `%aI`:
   - **The fixed benchmark:** `uv run python scripts/bench-model.py --only proposals` at its defaults (678 013 rows, `--levels 10000`, `--groups 20`), reading only the line `NFR-477 propose_grouping hierarchical_clustering` (wall-clock and CPU seconds) — the same call on the same fixture that produced 8.58 s and 20.01 s on 2026-08-22. **Its tree** is P0's commit, printed with `git rev-parse HEAD` at every run; the factor runs never span a commit.
   - **ALONE run (A):** taken in a lead-granted ALONE window (both gate slots free, no other heavy process), load1 < 1.0 at its start.
@@ -805,14 +809,14 @@ def _audit_state(version: int, body: Mapping[str, Any]) -> dict[str, Any]:
 
 - The lead: a dated line on WK-1178's row that lists this delta, when it is accepted (the planner writes only the `SL-` row).
 - The lead: NFR-485's two 5 M runs (and any NEAR-BOUND latency reading the slice names, and NFR-467's 10 M run if Task 5a names it) in the 2 h nfr-bench-1 VM heads-up (DP-4), with session 2's duration and cost from "nfr-bench-1 session 2 — the total planned duration": 3.9 h committed, at most 5.15 h; ≈ $1.35, at most ≈ $1.78 (the 12:42:55 entry). Session 2 runs them only if `SL-1259`'s dated line (Task 4, Step 4) is on `main` by then, or the lead adds them to the session's brief directly.
-- `FD 8046` (DP-5) and `FD 8047` (DP-6) are filed (D18); their rulings, severities and owners are the auditor's and the lead's, not this slice's.
+- `FD-1745` (DP-5) and `FD-1746` (DP-6) are filed (D18); their rulings, severities and owners are the auditor's and the lead's, not this slice's.
 
 ## Self-review
 
 - **Coverage.** Each of the five ids in the ruling's item 3 has a section with its verbatim row, its owning code and its existing evidence. Each of the four measured NFRs has an instrument, a corpus, a pre-registered threshold and reading rule, and a quiet-host statement. NFR-472 has its red-first test, the red's cause, and its fix. "OVER → an FD" is one shared section.
 - **Literals checked against `8eaf6d5f`.** These were checked: the route paths, `DEFAULT_LIMIT = 50`, `rate_tables.cell_threshold` at 250 000, `decide_storage_mode`, `replace_rule_set`'s `audit.record` call with no `before`, `audit.record`'s `before=None` default, `_approved_rule`'s signature, the PUT body shape (`rules`, `rule_id`, `enabled`), the action string `validation_rule_set.replaced` and its entity ref form, `create_app`, `TARGET_FACTORS = 60`, `xgb.DMatrix` at `gbm.py:895`, and `x = design.to_numpy()` at `glm.py:578`.
 - **Not verified here.** `backend/tests/conftest.py`'s app and DSN fixtures (Task 2, Step 1 names that file as the authority). The `systemd-run` cap on nfr-bench-1 (DP-4 (b); the session's set-up seat checks it there).
-- **Amendment of 2026-10-14 (the 12:07:40 BST rulings), checked at `a3fc2e8d`.** Every DP row states one ruling and its resolver; no option the ruling did not take remains. Each consequence is carried into a task and an acceptance item: DP-1's bands and its 12:25:22 re-measure (Task 0, Steps 2 to 4; Tasks 2, 5, 6; Acceptance 3, 5), DP-2's label (Tasks 2, 5; Acceptance 5), DP-3's reading and the NFR-470 clarification (Task 3, Steps 2 to 4; write set; Acceptance 3, 5, 6), DP-4's session 2 runs and the `SL-1259` dated line (Task 4, Steps 3 and 4; write set; Acceptance 7), DP-5 and DP-6 as `FD 8046` and `FD 8047` (Scope; the NFR-472 and NFR-485 sections), DP-7's quiet window (NFR-1443 section; Task 5). The 2.3 factor is traced past `dev-commands` to its primary record (DP-1 row). Line numbers in the amended text cited "at `a3fc2e8d`" were read there; between `8eaf6d5f` and `a3fc2e8d` none of the code files this plan cites changed, and `03-rating-engine.md`'s NFR-1443 row moved from `:1518` to `:1519`.
+- **Amendment of 2026-10-14 (the 12:07:40 BST rulings), checked at `a3fc2e8d`.** Every DP row states one ruling and its resolver; no option the ruling did not take remains. Each consequence is carried into a task and an acceptance item: DP-1's bands and its 12:25:22 re-measure (Task 0, Steps 2 to 4; Tasks 2, 5, 6; Acceptance 3, 5), DP-2's label (Tasks 2, 5; Acceptance 5), DP-3's reading and the NFR-470 clarification (Task 3, Steps 2 to 4; write set; Acceptance 3, 5, 6), DP-4's session 2 runs and the `SL-1259` dated line (Task 4, Steps 3 and 4; write set; Acceptance 7), DP-5 and DP-6 as `FD-1745` and `FD-1746` (Scope; the NFR-472 and NFR-485 sections), DP-7's quiet window (NFR-1443 section; Task 5). The 2.3 factor is traced past `dev-commands` to its primary record (DP-1 row). Line numbers in the amended text cited "at `a3fc2e8d`" were read there; between `8eaf6d5f` and `a3fc2e8d` none of the code files this plan cites changed, and `03-rating-engine.md`'s NFR-1443 row moved from `:1518` to `:1519`.
 - **Readings put to the lead.** (i) The 2.3 factor's limits and the 0.43 rounding were put to the lead and ruled at 12:25:22: Task 0 re-measures the factor, and 0.43 is accepted as the interim, conservative rounding. **The planner's own pre-registration in Task 0, Step 2, open to the lead's correction before P0:** the named benchmark, the ALONE limit load1 < 1.0, and the contended regime load1 in [1.0, 2.0) at start and < 2.0 at end, taken from Tasks 2 and 5's settle ceiling. (ii) NFR-470's counted overhead follows the ruling's enumeration (*"its tables + reports + profile"*), so the `ingestion_runs` and `audit_events` rows are excluded and printed apart.
 - **Confirmed 2026-10-14 by the maintainer (by delegation), entry "2026-10-14 12:31:22 BST"** (recorded by the planner, seat planner-p1fix, before the mint): (a) the Task 0 regime — ALONE = load1 < 1.0 at start; contended = load1 in [1.0, 2.0) at start and < 2.0 at end — **CONFIRMED** (Task 0 Step 2, DP-1 row); (b) NFR-470's counted overhead = the version's tables + reports + profile, with the `ingestion_runs` and `audit_events` rows excluded and printed — **CONFIRMED** (the NFR-470 section, DP-3 row, Task 3 Step 2); and the S5 run-list line under `SL-1259`'s row: **OK** (Task 4 Step 4, write set). Neither choice is now open to correction before P0; both stand as ruled, and no task's text changed beyond these dated lines.
 - **The 12:42:55 entry, item (2), at every site** (amended 2026-10-14 by the planner, seat planner-p1fix, before the mint): *"its own instrument"*: the `profile` subcommand (the NFR-467 section, Task 5a, write set, Acceptance 4); *"the pre-registered threshold from NFR-467's text"*: the row and its 2026-08-14 amendment quoted verbatim, time ≤ 300 s by DP-1's bands and memory r < 5.0 read as the amendment's own "sub-linear" (the NFR-467 section; `NFR_467_RULE` at P1, Task 5a Step 1); *"a task and an acceptance item"*: Task 5a, Acceptance 10 (and 5); *"measured at 10M"*: 10 000 000 rows, never extrapolated (Goal, Acceptance 10); *"If the shared VM cannot hold it, it goes to nfr-bench-1 session 2"*: the shared VM, with the sizing (5.5 GB parquet, 8–13 GB generation peak, under 2 GB profiling, against 31 GB and 15 GB free disk) and two guards, session 2 the fallback (the NFR-467 section); *"Restate session 2's total planned duration"*: its section, with the arithmetic, 3.9 h committed and 5.15 h at most, under ~6 h, with its cost (and Task 6 Step 3, Hand-off). The memory reading's 5.0 is the planner's reading of the row's "does not scale" through its amendment's "sub-linear"; the row states no number, and a tighter bound would be one this plan invented. **It stays flagged DERIVED, not specified**; it was **accepted as pre-registered** by the maintainer's (by delegation) entry "2026-10-14 13:21:41 BST" (*"ACCEPT r < 5.0 as the literal reading of "sub-linear" … with the reading flagged as derived, not specified"*), recorded at the threshold in the NFR-467 section.

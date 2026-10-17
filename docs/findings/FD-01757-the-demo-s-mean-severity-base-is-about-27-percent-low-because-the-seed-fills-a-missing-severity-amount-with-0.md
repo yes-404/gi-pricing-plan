@@ -1,5 +1,5 @@
 ---
-id: FD-8079
+id: FD-1757
 family: finding
 title: The demo's mean-severity base is about 27% low, because the seed fills a missing freMTPL2sev amount with 0
 status: active
@@ -10,7 +10,9 @@ corrected_by: []
 relates: [WK-673, SL-1543]
 ---
 
-# FD-8079 — The demo's mean-severity base is about 27% low
+# FD-1757 — The demo's mean-severity base is about 27% low
+
+*(Minted 2026-10-17 as FD-1757 from working id 8079, in the D18 batch mint PR.)*
 
 ## Finding
 

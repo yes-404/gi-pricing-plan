@@ -1,16 +1,18 @@
 ---
-id: FD-8066
+id: FD-1749
 family: finding
 title: The pre_migration_root test fixture adds a git worktree to the real repository and ignores the exit of its removal, so an interrupted run leaves a stale admin entry in the shared .git
 status: active
-created: 2026-10-16
+created: 2026-10-17 # original date 2026-10-16, set at the filing; minted 2026-10-17
 owner: auditor
 tree: a2f77b2dcad5aaec41a5f10aa664383caf421e8b
 corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-8066 — `tests/test_doc_id_migrate.py::pre_migration_root` runs `git worktree add` against the real repository, and its teardown cannot fail loudly
+# FD-1749 — `tests/test_doc_id_migrate.py::pre_migration_root` runs `git worktree add` against the real repository, and its teardown cannot fail loudly
+
+*(Minted 2026-10-17 as FD-1749 from working id 8066, in the D18 batch mint PR.)*
 
 *(Filed under working id 8066 (written "FD 8066" in prose), supplied by the lead; a minter folds it
 into the docs batch. Authority: the maintainer's entry "2026-10-16 10:26:42 BST" in

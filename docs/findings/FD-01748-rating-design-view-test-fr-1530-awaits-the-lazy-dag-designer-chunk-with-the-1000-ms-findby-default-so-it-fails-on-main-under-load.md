@@ -1,16 +1,18 @@
 ---
-id: FD-8053
+id: FD-1748
 family: finding
 title: RatingDesignView.test.ts FR-1530 awaits the lazily imported DagDesigner chunk with findByLabelText's 1000 ms default, so it fails on main under load
 status: active
-created: 2026-10-14
+created: 2026-10-17 # original date 2026-10-14, set at the filing; minted 2026-10-17
 owner: auditor
 tree: beee5ebedcfebc03c1658728442827960975392a
 corrected_by: []
-relates: [WK-1178, FD-8049, FR-1530, P2]
+relates: [WK-1178, FD-1747, FR-1530, P2]
 ---
 
-# FD-8053 — a 1000 ms wait races a lazy chunk: FR-1530 fails on main when the box is loaded
+# FD-1748 — a 1000 ms wait races a lazy chunk: FR-1530 fails on main when the box is loaded
+
+*(Minted 2026-10-17 as FD-1748 from working id 8053, in the D18 batch mint PR.)*
 
 *(Filed under working id 8053, reserved by the lead; a minter folds it into the docs batch.
 Authority: the maintainer's (by delegation) entry "2026-10-14 17:51:06 BST — SL-1702's FE red:
@@ -100,4 +102,4 @@ Limit of the sweep: it covers `frontend/src` test files at the stated tree; it d
 
 The event that next discharges it: the WK-1178 slice in P2 that awaits the lazy chunk in
 `RatingDesignView.test.ts`, red first with a delayed-import mock, and no timeout change. Same
-family as FD-8049 (a test racing a time-dependent resource), different mechanism.
+family as FD-1747 (a test racing a time-dependent resource), different mechanism.

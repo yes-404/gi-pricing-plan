@@ -1,16 +1,18 @@
 ---
-id: FD-8046
+id: FD-1745
 family: finding
 title: NFR-485 names QuantileDMatrix/streaming construction, but the code builds a dense xgb.DMatrix, a LightGBM Dataset that keeps its raw data, and a dense GLM design matrix, and which side is wrong is open
 status: active
-created: 2026-10-14
+created: 2026-10-17 # original date 2026-10-14, set at the filing; minted 2026-10-17
 owner: auditor
 tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
 corrected_by: []
 relates: [WK-1178, PL-1735, SL-1736, NFR-485, NFR-475, P2]
 ---
 
-# FD-8046 — NFR-485's construction clause and the code's construction disagree
+# FD-1745 — NFR-485's construction clause and the code's construction disagree
+
+*(Minted 2026-10-17 as FD-1745 from working id 8046, in the D18 batch mint PR.)*
 
 *(Filed under working id 8046, reserved by the lead; a minter folds it into the docs batch.
 Authority: the maintainer's (by delegation) entry "2026-10-14 12:07:40 BST" in

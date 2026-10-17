@@ -1,16 +1,18 @@
 ---
-id: FD-8073
+id: FD-1754
 family: finding
 title: A GBM model_call on a banded or grouped Factor scores with factors=() over the graph's raw value
 status: active
-created: 2026-10-16
+created: 2026-10-17 # original date 2026-10-16, set at the filing; minted 2026-10-17
 owner: auditor
 tree: a2f77b2dcad5aaec41a5f10aa664383caf421e8b
 corrected_by: []
 relates: [WK-1178, WK-673]
 ---
 
-# FD-8073 — a GBM `model_call` prices a banded or grouped Factor on the wrong value, silently
+# FD-1754 — a GBM `model_call` prices a banded or grouped Factor on the wrong value, silently
+
+*(Minted 2026-10-17 as FD-1754 from working id 8073, in the D18 batch mint PR.)*
 
 *(Filed under working id 8073 (written "FD 8073" in prose), reserved by the lead. Authority: the
 maintainer's entries "2026-10-16 10:59:28 BST" (reading accepted, disposition, severity rule) and

@@ -1,16 +1,18 @@
 ---
-id: FD-8070
+id: FD-1753
 family: finding
 title: A GLM model_call renames feature slugs to their source column in a dict, so two Factors on one column that are fed different graph values keep only the last, and compile does not check for it
 status: active
-created: 2026-10-16
+created: 2026-10-17 # original date 2026-10-16, set at the filing; minted 2026-10-17
 owner: auditor
 tree: a2f77b2dcad5aaec41a5f10aa664383caf421e8b
 corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-8070 — `_GlmScorer.predict` collapses two feature slugs that name one source column, silently
+# FD-1753 — `_GlmScorer.predict` collapses two feature slugs that name one source column, silently
+
+*(Minted 2026-10-17 as FD-1753 from working id 8070, in the D18 batch mint PR.)*
 
 *(Filed under working id 8070 (written "FD 8070" in prose), supplied by the lead. Authority: the
 maintainer's entry "2026-10-16 10:47:33 BST", Observation B, in `channel/to-lead.md`, which sets
@@ -239,7 +241,7 @@ unequal values for one column; never a silent pick.**
    offset-model different-slugs-one-column route (Evidence 5(b)1), for which the compile grouping
    must include the offset model's Factors, not only the main pin's. **Outside the guard, a
    separate limb:** one slug mapped to two columns across the main and offset models
-   (Evidence 5(b)2), fixed by a bundle-load refusal at `runtime.py:879`; it stays in FD 8070's
+   (Evidence 5(b)2), fixed by a bundle-load refusal at `runtime.py:879`; it stays in FD-1753's
    later limb with the compile-time guard and does not ride the fast fix slice unless a
    constructed case shows the silent variant.
 5. **Severity is ruled after the scratch run, not on the reading** (the maintainer's entry

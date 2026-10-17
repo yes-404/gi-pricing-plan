@@ -1,9 +1,9 @@
 ---
-id: RL-8069
+id: RL-1752
 family: ruling
 title: RL-1687 (2a) precised — the identity-only routes GET /me/workspaces and POST /me/workspace are counted by the management-API limit with no workspace, and its Setting resolves without the workspace layer for them (DP-S4-ME → (A))
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
-created: 2026-10-16
+created: 2026-10-17 # original date 2026-10-16, set at the filing; minted 2026-10-17
 owner: decision-maker
 tree: a2f77b2dcad5aaec41a5f10aa664383caf421e8b
 phase: P2
@@ -16,7 +16,9 @@ corrects: ~
 relates: [RL-1687, PL-1666, SL-1258, FR-452, FR-446, FR-397, FR-396, RL-1311, RL-1347]
 ---
 
-# RL-8069 — RL-1687 (2a) precised: the identity-only routes count with no workspace
+# RL-1752 — RL-1687 (2a) precised: the identity-only routes count with no workspace
+
+*(Minted 2026-10-17 as RL-1752 from working id 8069, in the D18 batch mint PR.)*
 
 *Disclosure: drafted under **working id RL 8069**, reserved by the lead in
 `~/gi-pricing-plan.local/handover/eta.md` (line 1968 at the time of writing): "8069 RL (precises
