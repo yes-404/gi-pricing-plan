@@ -134,9 +134,9 @@ async def test_completing_another_workspaces_upload_is_the_missing_404(
     missing = _complete(api_client, foreign, str(new_uuid7()))
     assert refused.status_code == 404
     assert refused.json().keys() == missing.json().keys()
-    assert {k: v for k, v in refused.json().items() if k not in {"detail", "instance"}} == {
-        k: v for k, v in missing.json().items() if k not in {"detail", "instance"}
-    }
+    assert {
+        k: v for k, v in refused.json().items() if k not in {"detail", "instance", "trace_id"}
+    } == {k: v for k, v in missing.json().items() if k not in {"detail", "instance", "trace_id"}}
     jobs = await _scalar(
         database,
         "select count(*) from blob_uploads where id = :id and job_id is not null",
