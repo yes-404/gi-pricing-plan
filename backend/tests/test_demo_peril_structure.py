@@ -259,9 +259,19 @@ async def test_a_clean_severity_book_fits(
 
 
 @pytest.mark.req("FR-111")
-@pytest.mark.parametrize(
-    ("bad_row", "other"), [("null", "non_positive"), ("non_positive", "null")]
-)
+async def test_a_claimant_row_with_an_unknown_severity_is_excluded_not_refused(
+    database: Database, blob_store: BlobStore, workspace_id: UUID, grant: Any
+) -> None:
+    """FR-111 as amended 2026-10-17 (SL-1543, the maintainer's (by delegation) "11:23:17 BST"):
+    a claimant whose severity is NULL is an unknown amount, outside the severity population,
+    so it is excluded and counted and the fit succeeds. Written in the red-first order, not run
+    here: it needs the DB window. (Before the amendment this row was refused.)"""
+    status, error, _ = await _severity_fit(database, blob_store, workspace_id, grant, "null")
+    assert status is JobStatus.SUCCEEDED, error
+
+
+@pytest.mark.req("FR-111")
+@pytest.mark.parametrize(("bad_row", "other"), [("non_positive", "null")])
 async def test_a_claimant_row_without_a_positive_severity_fails_the_fit_with_its_own_cause(
     database: Database, blob_store: BlobStore, workspace_id: UUID, grant: Any,
     bad_row: str, other: str,
