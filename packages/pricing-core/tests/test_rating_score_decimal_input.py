@@ -71,3 +71,24 @@ async def test_a_decimal_input_that_is_not_lossless_as_a_float_is_refused_by_nam
     assert str(value) not in str(info.value)  # NFR-499: no quote value in the message
     with pytest.raises(ValueError, match=r"INPUT_CONTRACT_VIOLATION.*'exposure_years'"):
         await score_one(bundle, ctx)
+
+
+@pytest.mark.req("FR-273")
+@pytest.mark.parametrize("value", [1, 0.75])
+async def test_an_int_or_float_on_a_decimal_input_that_is_exact_passes(value: float) -> None:
+    result = await score_one(
+        await _compiled_with_a_decimal_input(), _ctx(inputs={**_INPUTS, "exposure_years": value})
+    )
+    assert result.outputs["payable_premium_minor"] == 5250
+
+
+@pytest.mark.req("FR-273")
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+async def test_a_non_finite_float_on_a_decimal_input_is_refused_by_name(value: float) -> None:
+    bundle = await _compiled_with_a_decimal_input()
+    ctx = _ctx(inputs={**_INPUTS, "exposure_years": value})
+    assert ctx.options is not None
+    assert ctx.options.rating_version_ref is not None
+    with pytest.raises(ValueError, match=r"INPUT_CONTRACT_VIOLATION.*'exposure_years'") as info:
+        _score_context_sync(bundle, ctx, ctx.options.rating_version_ref)
+    assert str(value) not in str(info.value)
