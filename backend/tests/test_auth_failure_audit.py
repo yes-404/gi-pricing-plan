@@ -1,8 +1,10 @@
 """A failed authentication is recorded and its record survives the refusal (FR-392).
 
-PL-8044 / SL-8045 (FD 8036). Every test goes through the HTTP harness, so the 401 escapes
-the request's unit of work exactly as in production; none calls `authenticate_api_key`
-inside a unit of work that would swallow the raise and commit.
+PL-1739 / SL-1740 (FD-1727). Every test goes through the HTTP harness, so the 401 escapes
+the request exactly as in production; none calls `authenticate_api_key` inside a unit of
+work that would swallow the raise and commit. The API-key row is written on the request's own
+session after it rolls back (DP-1 (b), ruled 2026-10-17 14:41:18); the bearer path keeps a
+separate unit (DP-1 (i)) but a rejected token resolves to no workspace, so it writes no row.
 """
 
 from __future__ import annotations
@@ -14,7 +16,8 @@ from uuid import UUID
 import pytest
 from fastapi.testclient import TestClient
 from prometheus_client import REGISTRY
-from sqlalchemy import func, select
+from sqlalchemy import event, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.api_keys import generate_key, parse_key
 from app.config import Settings
@@ -259,6 +262,69 @@ async def test_r8_a_failing_failure_audit_is_a_5xx_and_still_counted(
     assert response.status_code >= 500
 
 
+async def test_r8_a_failing_commit_of_the_failure_row_is_a_5xx_and_leaves_no_row(
+    client: TestClient, database: Database, workspace_id, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """DP-2 F1 for the request-session commit: a lost commit is never swallowed into a 401."""
+    token, _, _ = await _key(database, workspace_id, revoked=True)
+
+    async def boom(self: AsyncSession) -> None:
+        raise RuntimeError("commit failed")
+
+    monkeypatch.setattr(AsyncSession, "commit", boom)
+
+    response = _get(client, token)
+
+    assert response.status_code >= 500
+    monkeypatch.undo()
+    assert await _failure_rows(database, workspace_id) == []
+
+
+async def test_r8_a_failing_audit_write_on_the_bearer_path_cannot_arise(
+    client: TestClient, database: Database
+) -> None:
+    """A rejected token resolves to no workspace, so the bearer path writes no row at all."""
+    before = await _all_events(database)
+
+    assert _get(client, "garbage.token.value", scheme="Bearer").status_code == 401
+
+    assert await _all_events(database) == before
+
+
+async def test_r11_a_failed_api_key_request_never_holds_two_pool_connections(
+    client: TestClient, database: Database, workspace_id
+) -> None:
+    """SL-1455's one-connection rule (`deps.py` `require_caller` docstring), on the failure path.
+
+    The checkout counting pattern of `test_score_request_cost.py`, with check-in as well: the
+    rollback returns the connection before the audit write takes one, so the two are
+    sequential and at most one is ever held.
+    """
+    token, _, _ = await _key(database, workspace_id, revoked=True)
+    engine = client.app.state.database.engine.sync_engine  # type: ignore[attr-defined]
+    seen = {"held": 0, "max_held": 0, "checkouts": 0}
+
+    def _checkout(*_args: object, **_kwargs: object) -> None:
+        seen["checkouts"] += 1
+        seen["held"] += 1
+        seen["max_held"] = max(seen["max_held"], seen["held"])
+
+    def _checkin(*_args: object, **_kwargs: object) -> None:
+        seen["held"] -= 1
+
+    event.listen(engine, "checkout", _checkout)
+    event.listen(engine, "checkin", _checkin)
+    try:
+        response = _get(client, token)
+    finally:
+        event.remove(engine, "checkout", _checkout)
+        event.remove(engine, "checkin", _checkin)
+
+    assert response.status_code == 401
+    assert seen["max_held"] == 1, seen
+    assert len(await _failure_rows(database, workspace_id)) == 1
+
+
 # -- R9: no secret in any failure row, and the rows exist ----------------------------------
 
 
@@ -324,8 +390,20 @@ async def test_r10_the_label_set_is_closed_and_carries_no_key_material(
             assert needle not in values
             assert needle not in logged
 
-    from app.auth.service import AuthFailureReason, record_auth_failure
+    from app.auth.service import AuthenticationFailed, AuthFailureReason, record_auth_failure
 
     assert {r.value for r in AuthFailureReason} == EIGHT_REASONS
-    with pytest.raises(Exception):  # noqa: B017 - any refusal of a non-member value
-        await record_auth_failure(database, object())  # type: ignore[arg-type]
+    before = {s.labels["reason"]: s.value for s in samples}
+    async with database.session() as session:
+        with pytest.raises(ValueError, match="not a valid AuthFailureReason"):
+            await record_auth_failure(
+                session,
+                AuthenticationFailed("API_KEY_INVALID", "raw detail"),  # type: ignore[arg-type]
+            )
+    after = {
+        s.labels["reason"]: s.value
+        for family in REGISTRY.collect()
+        for s in family.samples
+        if s.name == METRIC
+    }
+    assert after == before
