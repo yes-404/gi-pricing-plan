@@ -96,10 +96,22 @@ refused pair is involved. Script: `~/gi-pricing-plan.local/scratch/sl1563-dbwin/
   `test_sub_graphs_api.py::test_a_sub_graph_port_feeding_money_minor_into_decimal_is_refused` (`money_minor->decimal`, item 4's test),
   `test_sub_graphs_service.py::test_a_refused_write_leaves_no_row_and_no_event` (`string->money_minor`).
 
+### Backend sweep, windows 2-7 (executor-1563db, 2026-10-17 14:02-14:11 BST, head 276e6a9b)
+
+The lead's ruling (2026-10-17, relayed): a refused `_compatible` call inside a test that asserts that refusal and passes is not a
+sweep hit; a hit is a refused call in a test that fails, or in a fixture whose test expects success. The three window-1 refusals
+above are therefore "logged by the probe, deliberate refusal tests, not hits". Windows (own DB, blobs truncated, bucket
+`gip-test-sl1563`, probe loaded, each END rc=0, alembic 1 head): w2 `test_fr240_governance` 9, `test_rating_version_dislocation_gate` 25,
+`test_bundle_slot` 17; w3 `test_rating_version_change_summary_route` 21, `test_custom_objectives` 31, `test_score_as_at` 8; w4 `test_score` 52,
+`test_dislocation_runs` 24, `test_fremtpl2_algorithm` 13; w5 `test_rating_algorithm_validate` 15, `test_rating_versions` 48,
+`test_regression_runs` 13; w6 `test_rating_version_compile` 25, `test_regression_suites` 15, `test_score_compare` 21; w7 `test_wf699_journey` 12
+(all passed). Probe refusals logged: only `test_rating_algorithm_validate.py::test_a_type_mismatch_is_reported_on_its_step` and
+`::test_the_first_reported_issue_is_the_code_save_refuses_with[type_mismatch]` (`string->money_minor`, deliberate, passing); no other file logged any.
+**Hits: 0.** Item 4, `test_sub_graphs_service.py` and `test_rating_algorithms.py` are no longer owed.
+
 ## Owed
 
-Full two-half gate (grant needed), backend DB tests (item 4, `test_sub_graphs_service.py`,
-`test_rating_algorithms.py`), the auditor's re-check, the mint step.
+Full two-half gate (grant needed), the auditor's re-check, the mint step.
 
 ## PRs
 
