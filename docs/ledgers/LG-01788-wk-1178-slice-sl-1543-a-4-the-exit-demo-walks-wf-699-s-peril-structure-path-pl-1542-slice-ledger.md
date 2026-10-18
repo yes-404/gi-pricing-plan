@@ -126,6 +126,9 @@ Scratch script, not committed; `compile_bundle` + `load_bundle` over `test_ratin
   - **Fix.** `examples/fremtpl2/journey.py` `discover()` selects the GLM whose `spec.response_column` is `claim_count` (the demo's frequency spec, `model.py` `fit_demo_models`; the severity spec declares `response: claim_severity`, `response_column: claim_severity`), never by list order. Green after.
   - **The D7 list.** One DB window (sl-1543 30213cb3 plus this change): `test_wf699_journey_runs_end_to_end` reached D7 and printed an 18-row `derived_changes` list; `c19` and `c20` (the frequency GLM pin removed, the severity GLM pin added) are gone. Every one of the 18 rows is one of the rows traced in the local `scratch/sl1543-d7.md`. `D7_DERIVED_CHANGES` is that list, the world's gbm family as `{gbm_family}` (`fremtpl2-gbm-4dcdac` in the run); the split test's expected groups are written from its ids (PL-1787 Task A Step 4: tables `c3`-`c9` and `c11`-`c17`; structure `c1`, `c2`, `c10`, `c18`), with the mount assert.
 
+- **2026-10-18 BST - the host-bound golden (executor-1543g): ruling (c) per to-lead 2026-10-18 07:49:34 BST; (a) maxulp 4, (b) same-host exact, red-first plant quoted; PR #1335 CI run 39103889366 was the trigger.**
+  - Test file only (`backend/tests/test_severity_population_golden.py`); no src change. (a) `MAIN_ESTIMATES` kept, compared by `np.testing.assert_array_max_ulp(..., maxulp=4)`, `spec_hash` exact; NFR-481 (`docs/specs/02-modelling.md:2974`, 1e-10) is the governed precision. (b) `test_unknown_amount_rows_are_excluded_without_touching_the_fit`: exact `repr` equality with unknown-amount rows appended, levels asserted a subset of the book's; the count is read from `weights._exclude` (`excluded_unknown`), the fit result carrying none. Red-first: plant `keep = keep & ~null` removed in `weights.py` gave `GlmFitError: ... Input y contains NaN`; reverted, green.
+
 ## PRs
 
 - Not yet opened; the lead's merge-turn mint resolves the working id.
