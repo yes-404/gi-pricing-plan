@@ -59,6 +59,7 @@ Recorded below once reported to the lead.
 Per PL-1766 (§"Slice 5 (`SL-1259`) — changes since `PL-1710`", D5.6 to D5.14) and `PL-1620` D5.1 to D5.5. **Held pending the DP-3 ruling:** D5.6, D5.9 and everything on the switch/rollback path. Task rows are appended here as each task starts.
 
 - **D5.13 — `WEB_CONCURRENCY` on the compose `api` service (`deploy/docker-compose.yml`), default 1 (`GIP_API_WEB_CONCURRENCY`).** Static check `api_declares_its_worker_count` in `backend/tests/test_deploy_stack.py`, red first (2 failed, 18 passed), then green (20 passed, rc 0, via run-small). The static shape is proven; the observed N per container and the bench's void rule are **UNPROVEN** until the SOLO gate (no stack run granted).
+- **D5.14 — Slice 4's runtime-test helpers moved to `backend/tests/deploy_stack_helpers.py` under public names** (`compose`, `mapped`, `compose_settings`, `Workspace`, `governed_workspace`, `create_scorer`, `scoring_request`, `api`, the permission lists, `ROOT`, `LB_PORT`, `PROJECT`), moved verbatim; `test_deploy_stack_runtime.py` imports them under its old private names so its bodies are unchanged. Proof: `test_deploy_stack_runtime.py` + `test_deploy_stack.py` import and collect (run-small: 20 passed, 7 skipped, rc 0); `ruff check` clean. The runtime behaviour is **UNPROVEN** until the SOLO gate. S5's new runtime-test module is NOT created yet: it would hold only D5.6/D5.9 tests, which wait on the (A)/(B) answer.
 
 ## PRs
 
