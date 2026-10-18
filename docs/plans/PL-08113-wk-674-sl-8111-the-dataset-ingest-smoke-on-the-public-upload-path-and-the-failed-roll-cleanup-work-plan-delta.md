@@ -3,7 +3,7 @@ id: PL-8113
 family: plan
 kind: map
 title: WK-674 — SL-8111, the compose dataset-ingest smoke on the public upload path (E4.8) and a failed api roll that removes its own new replicas — a dated Work-plan delta
-status: draft                  # draft → active → superseded | retired (§1.2a) — active only on the maintainer's one-line GO (to-lead 2026-10-18 03:11:40 BST, item 1)
+status: active                 # draft → active → superseded | retired (§1.2a) — active 2026-10-18 on the maintainer, to-lead 2026-10-18 03:19:27 BST (GO)
 created: 2026-10-18
 owner: planner
 tree: 8cfa1c96d13f67d52eeb3bbdfe54ffdc2d848725

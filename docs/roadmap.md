@@ -1256,7 +1256,7 @@ A scripted, rehearsable journey walks WF-701's deployment steps A1–A6, C1–C4
 id: SL-8111
 family: slice
 title: the compose dataset-ingest smoke on the public upload path (E4.8) and a failed api roll that removes its own new replicas (FR-415, FR-406, FR-1776, NFR-531)
-status: draft                    # draft → active → closed | retired (§1.2a)
+status: active                   # draft → active → closed | retired (§1.2a) — active 2026-10-18 on the maintainer, to-lead 2026-10-18 03:19:27 BST (GO)
 created: 2026-10-18
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 8cfa1c96d13f67d52eeb3bbdfe54ffdc2d848725
