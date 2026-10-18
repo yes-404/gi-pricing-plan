@@ -13,6 +13,7 @@ refused with `MODEL_CALL_FEATURE_COLLISION`; equal values are the ordinary share
 
 from __future__ import annotations
 
+import copy
 from typing import Any
 from uuid import uuid4
 
@@ -33,6 +34,7 @@ from pricing_core.modelling import fit_glm
 from pricing_core.modelling.factors import required_model_inputs
 from pricing_core.rating import runtime
 from pricing_core.rating.runtime import MODEL_CALL_ERROR_KEY, load_bundle
+from pricing_core.safe_error import CodedError
 
 COLLISION = "MODEL_CALL_FEATURE_COLLISION"
 
@@ -186,39 +188,57 @@ _COLLIDING = _algorithm(
 )
 
 
-@pytest.mark.req("FR-222", "FR-255")
-async def test_two_inputs_on_one_column_with_unequal_values_are_refused_by_name() -> None:
-    world = glm_world()
-    compiled = load_bundle(await compiled_bundle(world, _COLLIDING))
-    result = await _value(
-        compiled, driver_age=30, age_raw=50, region="N1", exposure_years=1.0
-    )
-    assert COLLISION in result[MODEL_CALL_ERROR_KEY]
-    # The failure carries the code only (NFR-499): no column name, no value in the text.
-    assert "age_raw" not in result[MODEL_CALL_ERROR_KEY]
+def _shared_input_algorithm() -> dict[str, Any]:
+    """`_COLLIDING`, but `age_raw`'s step reads the same `input_name` (and `on_missing`) as the
+    `driver_age` step: one value reaching two slugs of one column (FR-240, Q1(b))."""
+    algorithm = copy.deepcopy(_COLLIDING)
+    algorithm["input_contract"] = [
+        item for item in algorithm["input_contract"] if item["name"] != "age_raw"
+    ]
+    for step in algorithm["steps"]:
+        if step["step_id"] == "s_age_raw":
+            step["input_name"] = "driver_age"
+    return algorithm
 
 
-@pytest.mark.req("FR-222", "FR-255")
-async def test_two_inputs_on_one_column_with_equal_values_score_normally() -> None:
+@pytest.mark.req("FR-222", "FR-240", "FR-255", "NFR-499")
+async def test_compile_refuses_two_distinct_steps_on_one_column_naming_it_and_no_value() -> None:
+    """B governs at compile (the maintainer's ruling 2026-10-18 16:04:05 BST, over the
+    2026-10-17 11:15:37 BST Q1(b)): two graph steps with different `input_name`s are refused
+    whether or not their values happen to be equal; the message names the column, no value."""
+    with pytest.raises(CodedError) as excinfo:
+        await compiled_bundle(glm_world(), _COLLIDING)
+    message = str(excinfo.value)
+    assert message.startswith("MODEL_CALL_FEATURE_MAP_INVALID")
+    assert "driver_age" in message
+    assert "age_raw" in message
+
+
+@pytest.mark.req("FR-222", "FR-240", "FR-255")
+async def test_inputs_of_one_input_step_definition_on_one_column_compile_and_score_normally() -> (
+    None
+):
+    """The exempt pair (same `input_name`, same `on_missing`) compiles and prices as the
+    equal-value shared-column case always did."""
     world = glm_world()
-    compiled = load_bundle(await compiled_bundle(world, _COLLIDING))
-    result = await _value(
-        compiled, driver_age=30, age_raw=30, region="N1", exposure_years=1.0
-    )
+    compiled = load_bundle(await compiled_bundle(world, _shared_input_algorithm()))
+    result = await _value(compiled, driver_age=30, region="N1", exposure_years=1.0)
     assert MODEL_CALL_ERROR_KEY not in result
     expected = world.predict(driver_age=30.0, region="N1", exposure_years=1.0)
     assert result["risk"] == pytest.approx(expected, rel=1e-12)
 
 
 @pytest.mark.req("FR-222", "FR-255", "NFR-499")
-async def test_the_collision_error_names_the_column_and_never_the_values() -> None:
-    """At the scorer: the refusal is a coded `PredictionError` that names the column and
-    carries neither value (NFR-499)."""
+async def test_the_predict_time_backstop_refuses_unequal_values_by_column_name() -> None:
+    """The defence in depth (FR-222): a scorer built from resolved payloads WITHOUT
+    `compile_bundle` (which would refuse `_COLLIDING`) still refuses two inputs on one column
+    with unequal values, with a coded `PredictionError` naming the column and carrying
+    neither value (NFR-499)."""
     from pricing_core.modelling.predict import PredictionError
 
     world = glm_world()
-    bundle = await compiled_bundle(world, _COLLIDING)
-    scorer = runtime._glm_scorer(MODEL_REF, bundle.resolved_payloads)
+    payloads = (await compiled_bundle(world)).resolved_payloads
+    scorer = runtime._glm_scorer(MODEL_REF, payloads)
     row = {"age_band": 31.0, "driver_age": 57.0, "region_group": "N1", "exposure_years": 1.0}
     with pytest.raises(PredictionError) as excinfo:
         scorer.predict(row)
@@ -226,3 +246,5 @@ async def test_the_collision_error_names_the_column_and_never_the_values() -> No
     assert "driver_age" in str(excinfo.value)
     assert "31" not in str(excinfo.value)
     assert "57" not in str(excinfo.value)
+    equal = {**row, "age_band": 31.0, "driver_age": 31.0}
+    assert scorer.predict(equal) is not None
