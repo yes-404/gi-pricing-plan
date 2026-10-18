@@ -34,6 +34,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PgUUID  # noqa: N811
@@ -920,6 +921,12 @@ class IngestionRunRow(Base):
     rows_rejected: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     reject_sample: Mapped[list[dict[str, Any]]] = mapped_column(
         JSONB, nullable=False, default=list
+    )
+    # FR-31 (DP-S1 (i)): one entry per recipe step, in order — name, rows_in, rows_out and
+    # rows_rejected — so rows read - rejected - removed + added == rows written is checkable
+    # from the run alone. `[]` for a run with no recipe.
+    step_counts: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
     )
     bytes_read: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     duration_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
