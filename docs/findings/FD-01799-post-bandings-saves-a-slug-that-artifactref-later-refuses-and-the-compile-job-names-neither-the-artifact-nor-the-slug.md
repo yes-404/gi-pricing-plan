@@ -2,7 +2,7 @@
 id: FD-1799
 family: finding
 title: POST /bandings saves a slug that ArtifactRef later refuses, and the compile Job names neither the artifact nor the slug
-status: active
+status: closed
 created: 2026-10-18   # filed 2026-10-17 under working id 8102; minted 2026-10-18 as FD-1799
 owner: auditor
 tree: 9469721db3d26480824cc1d715da2ec4ca9044d0
