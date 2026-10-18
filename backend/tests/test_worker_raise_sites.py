@@ -180,7 +180,9 @@ _SITES: dict[_Key, tuple[frozenset[str], str]] = {
         "`ModellingError` on the model path (test_error_sinks.py `_SINKS`); no Quote Context",
     ),
     ("backend/src/app/worker/model_handlers.py", "_fit", _DYNAMIC): (
-        frozenset({"spec.model_type", "str(exc)"}),
+        # safe_error_detail: ValidationError bounds/fixed text, a CodedError's str, else "" --
+        # pricing_core/safe_error.py:180-186; the maintainer's 2026-10-17 ~18:57 ruling (SL-1734).
+        frozenset({"safe_error_detail(exc)", "spec.model_type", "str(exc)"}),
         "a named fit refusal on the model path (test_error_sinks.py `_SINKS`); no Quote Context",
     ),
     ("backend/src/app/worker/model_handlers.py", "_reconcile", _DYNAMIC): (

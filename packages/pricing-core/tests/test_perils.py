@@ -19,6 +19,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 import numpy as np
+import polars as pl
 import pytest
 
 from model_schema import BlobRef, LargeLossKind, LargeLossTreatment, PerilMethod
@@ -288,4 +289,70 @@ def test_nothing_observed_is_refused_rather_than_divided_by() -> None:
             exposure=np.array([1.0]),
             tolerance=Decimal("0.02"),
             treatments={"WINDSCREEN": LargeLossKind.NONE},
+        )
+
+
+# -- unknown-amount claimants (FR-190 imputation, SL-1543 DP-3 E) ----------------------------
+
+
+def _four_rows() -> pl.DataFrame:
+    return assemble_risk_premium([_windscreen([200.0, 200.0, 200.0, 200.0])])
+
+
+@pytest.mark.req("FR-190")
+def test_an_unknown_observed_amount_without_claim_counts_is_a_named_refusal() -> None:
+    """An unknown (NaN) observed amount used to escape as a bare arithmetic error from
+    `_to_minor`; with nothing to impute from it is a named reconciliation refusal."""
+    with pytest.raises(ModellingError, match="unknown"):
+        reconcile(
+            _four_rows(),
+            observed=np.array([100.0, np.nan, 300.0, 0.0]),
+            exposure=np.ones(4),
+            tolerance=Decimal("0.02"),
+            treatments={"WINDSCREEN": LargeLossKind.NONE},
+        )
+
+
+@pytest.mark.req("FR-190")
+def test_an_unknown_claimant_is_imputed_at_the_known_mean_severity_and_counted() -> None:
+    """Known claimants: 100 over 1 claim and 300 over 1 claim, so mean severity 200. The
+    unknown claimant has 2 claims: imputed 2 x 200 = 400. Observed 100+400+300+0 = 800 over
+    4 exposure = 200, equal to the modelled 200: ratio 1. The imputed share is 400/800."""
+    result = reconcile(
+        _four_rows(),
+        observed=np.array([100.0, np.nan, 300.0, 0.0]),
+        exposure=np.ones(4),
+        tolerance=Decimal("0.02"),
+        treatments={"WINDSCREEN": LargeLossKind.NONE},
+        claim_count=np.array([1.0, 2.0, 1.0, 0.0]),
+    )
+    assert result.observed_burning_cost == 200
+    assert result.ratio == Decimal("1.000000")
+    assert result.imputed_rows == 1
+    assert result.imputed_share == Decimal("0.5")
+
+
+@pytest.mark.req("FR-190")
+def test_no_unknown_amounts_means_nothing_imputed() -> None:
+    result = reconcile(
+        _four_rows(),
+        observed=np.array([100.0, 200.0, 300.0, 200.0]),
+        exposure=np.ones(4),
+        tolerance=Decimal("0.02"),
+        treatments={"WINDSCREEN": LargeLossKind.NONE},
+        claim_count=np.array([1.0, 1.0, 1.0, 1.0]),
+    )
+    assert (result.imputed_rows, result.imputed_share) == (0, Decimal(0))
+
+
+@pytest.mark.req("FR-190")
+def test_a_population_with_no_known_amount_cannot_be_imputed() -> None:
+    with pytest.raises(ModellingError, match="no known"):
+        reconcile(
+            _four_rows(),
+            observed=np.array([np.nan, np.nan, np.nan, np.nan]),
+            exposure=np.ones(4),
+            tolerance=Decimal("0.02"),
+            treatments={"WINDSCREEN": LargeLossKind.NONE},
+            claim_count=np.array([1.0, 1.0, 1.0, 1.0]),
         )
