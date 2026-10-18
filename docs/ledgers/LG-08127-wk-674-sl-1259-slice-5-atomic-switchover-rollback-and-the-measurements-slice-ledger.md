@@ -52,7 +52,9 @@ The maintainer (by delegation), to-lead "2026-10-18 22:59:56 BST — Maintainer:
 
 ## Startup-load verification
 
-Recorded below once reported to the lead.
+Reported to the lead 2026-10-18 (stop clause of 22:59:56). Finding: at 84b0ff57 no process holds a `live` reference; `main.py:84`'s lifespan loads no Deployment; `BundleSlot` (`main.py:213`) is a ref→hash memo, "NOT the environment → current hash pointer"; `api/score.py:221-236` reads the latest committed `DeploymentRow` on every default-live request. **Ruled (A)** by the maintainer, to-lead "2026-10-18 23:03:15 BST — Maintainer: SL-1259 STOP resolved → (A), S5 builds the per-process `live` ref WITH its startup load; FD 8129 raised in scope; `deployment.switched` accepted": S5 builds the per-process `live` ref with a startup load from the latest committed Deployment, red first; (B) refused. **Trade-off, stated:** a process that is alive but missed COMMIT serves the previous version until restart; remedy FD 8129 (MEDIUM, WK-674, before the 12 Nov exit demo), filed by the lead. `deployment.switched` is accepted (entity_ref `environment:<slug>`; before null; after {deployment_ref, committed, unacknowledged}, ids only; own transaction after COMMIT; actor the deploying Principal); rollback reuses it. Catalogue: a dated amendment to 03 :1024 and the 06 catalogue append, in S5's commit.
+
+**Executor design pick, for audit (no heartbeat, no lease):** the processes a switch expects are the PREPARE message's receivers (`publish`'s count); names come from a Redis roster (joined at subscribe, left at clean shutdown). When every receiver acknowledged, extra roster names (a crashed process's) are pruned; when the round is short they are reported, possibly stale, and nothing is pruned. Implemented in `backend/src/app/platform/deployment_switch.py`.
 
 ## Tasks
 
@@ -64,3 +66,5 @@ Per PL-1766 (§"Slice 5 (`SL-1259`) — changes since `PL-1710`", D5.6 to D5.14)
 ## PRs
 
 None yet. The slice stops at PR-READY; the lead opens the PR.
+
+- **T1 — the switch core** (`deployment_switch.py`, `test_deployment_switch.py`): 10 tests, in-memory transport, no DB or Redis. Red first (collection error: module absent), then green (run-small, 27 passed with `test_bundle_slot.py`). `ruff check` and `ruff format` clean, `mypy` rc 0, `lint-imports` 4 kept. The Redis transport is not yet written or proved.
