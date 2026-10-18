@@ -143,7 +143,7 @@ does not change the scope. Every site, with its verdict:
 | `operations.py:307` `_value_issue` | a cell value on every save: import (`_checked_import` → `validate_rate_table` :953), seed (`seed_from_model` → :252), bulk operations (`_validate_result` :554), manual edits (`apply_cell_edits` :590, which runs `_value_issue`) | **The fix.** The finite check goes here, before the bounds compare. |
 | `operations.py:393` `_index_rows` | a stored cell value, for every diff (`_diff_cells` :414–415, so `diff_cells`, `diff_vs_previous`, `diff_vs_seed`) | **The fix (hardening).** Same predicate, same message, raised as `ValueError("OUT_OF_BOUNDS: …")`; reachable only on a row stored before this slice (DP-1). |
 | `operations.py:166` `extract_relativity_table` | a fitted relativity, `Decimal(str(float))`: `inf`/`nan` become `Infinity`/`NaN` | Covered: `seed_from_model` validates the result at :252, which is the :307 fix. Tested (Acceptance 3c). |
-| `operations.py:673` `_transform_rows`, `:740` `uplift_by_filter`, `:812`/`:819` `rebase_to_level` | stored cell values | Covered: inputs were validated at save, and each operation's result is validated by `_validate_result` (:554 → :307), so a non-finite result (e.g. a NaN percentage from a Python caller) is refused there. No change. |
+| `operations.py:673` `_transform_rows`, `:740` `uplift_by_filter`, `:812`/`:819` `rebase_to_level` | stored cell values | Covered: inputs were validated at save, and each operation's result is validated by `_validate_result` (:554 → :307), so a non-finite result is refused there; a NaN percentage never reaches it, because `UpliftTableParameters.percentage` (`DecimalStr`) refuses a non-finite percentage first (corrected 2026-10-18 on the maintainer's to-lead 2026-10-18 04:37:16 BST). No change. |
 | `operations.py:428` (`raw_weight`), `weights.py:219–220` | portfolio exposure weights, not rate-table input | Out of scope: `03` §4.8's `exposure_years` read refuses NaN/infinite already (`docs/specs/03-rating-engine.md:711`). |
 | `operations.py:479`, `:481`, `:712`, `:734` (and `:821`) | constants and arithmetic | Not a parse. |
 
@@ -216,8 +216,9 @@ None is open or blocking.
    (the manual-edit path);
    (e) `import_from_csv` with an `Infinity` cell raises `ValueError` starting
    `OUT_OF_BOUNDS:` (the import path);
-   (f) `uplift_table` with `percentage=Decimal("NaN")` raises `ValueError` starting
-   `OUT_OF_BOUNDS:` (a bulk operation, via `_validate_result`);
+   (f) replaced by the green pin `test_a_bulk_operation_cannot_be_given_a_non_finite_percentage`:
+   `UpliftTableParameters.percentage` (`DecimalStr`) refuses a non-finite percentage before
+   `_validate_result` is reached (corrected 2026-10-18 on the maintainer's to-lead 2026-10-18 04:37:16 BST);
    (g) `diff_cells` with a baseline cell `"NaN"` raises `ValueError` starting
    `OUT_OF_BOUNDS:` and containing `not a finite decimal number` (the diff path, :393);
    (h) a string that does not parse (`"abc"`) still gives :311's `is not a decimal number`.
