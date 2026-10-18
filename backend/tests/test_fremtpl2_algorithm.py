@@ -51,7 +51,7 @@ def _banding(
 ) -> Banding:
     return Banding(
         id=UUID("00000000-0000-0000-0000-0000000000b1"),
-        slug=f"{column}-banding",
+        slug=f"{column.replace('_', '-')}-banding",
         dataset_id=_DATASET,
         version=1,
         column=column,
