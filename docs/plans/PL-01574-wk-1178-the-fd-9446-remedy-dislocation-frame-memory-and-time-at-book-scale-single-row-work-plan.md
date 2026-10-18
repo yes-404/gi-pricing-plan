@@ -3,7 +3,7 @@ id: PL-1574
 family: plan
 kind: map
 title: WK-1178 — the FD-1573 remedy, dislocation_frame's memory and time at book scale (a profiling spike first, then the measured fix): single-row Work plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-10            # original date 2026-10-10, set at the draft; minted 2026-10-10
 owner: planner
 tree: 61e2a8d9d06087cadd3760e9668b3caff881b85c

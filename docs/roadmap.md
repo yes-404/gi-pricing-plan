@@ -2411,7 +2411,7 @@ relates: [RL-1343, FD-1333, RL-1329, RL-1365, SL-1367]
 id: SL-1575
 family: slice
 title: WK-1178 fix slice — FD-1573, dislocation_frame's memory and time at book scale (a profiling spike first, then the measured fix)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-10            # original date 2026-10-10, set at the draft; minted 2026-10-10
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 61e2a8d9d06087cadd3760e9668b3caff881b85c
@@ -2424,6 +2424,8 @@ relates: [PL-1371, SL-1387, SL-1388, SL-1526]
 *Disclosure: cut under working id 9448; minted as SL-1575 on 2026-10-10, in the D5 batch mint PR.*
 
 The FD-1573 remedy, proposed on the maintainer's entry "2026-10-10 00:08:17 BST — USER: go ahead. FD 9446 on the measured curve, a remedy-slice proposal, and the Friday re-baseline (after S3's merge, in W3)" [FD 9446 is minted as FD-1573], item 2: owner the lead, placed before `SL-1526` in the exit-demo chain. `WF-699` D6's dislocation run goes through `dislocation_frame` (WK-673 S4's handler), which scores the book twice and retains every policy's validated ladder from both passes; peak RSS was logged linear at about 31 KiB per policy (`50-sb-200k`, `60-sb-400k`, tree `f59b546e`), so about 20.3 GiB is derived for the 678,013-policy book. Task 0 is a 1-hour profiling spike at 20,000 and 200,000 policies, using the standard library only, with a decision rule stated in advance. Only if it confirms retention (H1) does Task 1 make `_score_pass` keep rung values instead of `LadderRung` objects, with the frame unchanged value for value. Task 2 is the after-measurement. Single-row Work plan PL-1574, `draft`. It is not in the `compile.py` serial set; its serial set is `analysis.py`, after S3 (`SL-1387`). **Activation needs:** FD-1573 minted HIGH; PL-1574's DP-1 to DP-3 ruled; `SL-1387` merged; the lead's go. *(Cut 2026-10-10 by the planner (planner-remedy) under working id 9448, reserved by the lead.)*
+
+(Activated 2026-10-18 on the maintainer's GO, to-lead "2026-10-18 22:50:32 BST — Maintainer: the duplicate-mint anomaly ruled; GO SL-1259, SL-1770, SL-1738, SL-1575 (with conditions)"; dispatched by the lead, transcript 34b896f2.)
 
 #### SL-1600 — WK-1178 fix slice — FD-1589 row 8, remedy (c), slice A: an input-free marker for authored model-schema validator messages
 
