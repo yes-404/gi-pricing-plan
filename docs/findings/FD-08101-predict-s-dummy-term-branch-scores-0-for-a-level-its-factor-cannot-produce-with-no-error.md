@@ -67,7 +67,7 @@ At `origin/main` 9469721d (read by the author, not taken from the trace note):
 
 ## Disposition
 
-Deferred with an owner: WK-1178. **Not in SL 8099's scope** (that slice is FD-8097's timing
+Deferred with an owner: WK-1178, due before the P2 close. **Not in SL 8099's scope** (that slice is FD-8097's timing
 fix). Decision on the option belongs to the lead or an RL; this record picks none. The event
 that next discharges it: a merged change adding the domain check, or a dated ruling accepting
 the absence.

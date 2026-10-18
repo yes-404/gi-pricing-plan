@@ -7,7 +7,7 @@ created: 2026-10-17
 owner: auditor
 tree: 9469721db3d26480824cc1d715da2ec4ca9044d0
 corrected_by: []
-relates: [WK-1178, WK-675, PL-8095, FR-21]
+relates: [WK-1178, WK-675, FR-21]
 ---
 
 # FD-8096 — The dislocation run's percentage fields are float while the movers' change_pct is a decimal string
@@ -17,7 +17,7 @@ relates: [WK-1178, WK-675, PL-8095, FR-21]
 **LOW; owner WK-1178; verdict deferred with an owner** (the maintainer to the lead, about
 19:42 BST on 2026-10-17: "The dislocation.py float pct fields → a LOW FD (WK-1178) in D21; do
 not widen S8"). Four fields of the dislocation run are typed `float | None`, while the S8
-delta (PL 8095, `origin/pl-1551-s8-delta-2026-10-17`) rules the new movers row's `change_pct`
+delta (PL 8095 (lane C S8 delta, unminted), `origin/pl-1551-s8-delta-2026-10-17`) rules the new movers row's `change_pct`
 as `PositionalDecimalStr`, rounded to 6 places toward +∞. One route family would then carry
 two types for the same quantity, a percentage change.
 
