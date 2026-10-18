@@ -1250,6 +1250,24 @@ A scripted, rehearsable journey walks WF-701's deployment steps A1–A6, C1–C4
 
 *Dated 2026-10-14 by the planner (minter-d16e, the D16 rulings sweep): the activation need "`PL-1710` DP-1 to DP-3 ruled" reads as the maintainer's (by delegation) entry "2026-10-14 10:14:13 BST" (`to-lead.md`) gives it: DP-1 (a) and DP-2 (a, the derived set of "2026-10-14 10:13:50 BST") ruled; DP-3 (a) CONDITIONAL, ruled at S5's GO. Under the entry "2026-10-14 11:14:40 BST": C2 is walked as 422 `EVIDENCE_INCOMPLETE` at the prod Deployment Request submission (`07` FR-429 as amended), the `dev` deployment is a labelled PRECONDITION step, and the unapproved-to-`uat` negative is an FR-238 extra, so the Requirements add `03` FR-238; the write set adds the two dated lines in `docs/workflows/WF-00701-deploy-and-monitor.md` that entry orders (C2's two codes; the §1 precondition row) and nothing else under `docs/`. The "analyst 200" probe closes in this slice's `LG-` on its run output (entries "2026-10-14 11:45:50 BST" item 2 and "2026-10-14 11:52:51 BST" item (4)). `PL-1710` carries each at its site.*
 
+#### SL-8111 — the compose dataset-ingest smoke on the public upload path (E4.8) and a failed api roll that removes its own new replicas (FR-415, FR-406, FR-1776, NFR-531)
+
+```yaml
+id: SL-8111
+family: slice
+title: the compose dataset-ingest smoke on the public upload path (E4.8) and a failed api roll that removes its own new replicas (FR-415, FR-406, FR-1776, NFR-531)
+status: draft                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-18
+owner: planner                   # cut by the planner (draft); lead dispatches (active)
+tree: 8cfa1c96d13f67d52eeb3bbdfe54ffdc2d848725
+phase: P2
+work: WK-674
+corrected_by: []
+relates: [PL-8113, PL-1237, PL-1714, SL-1258, SL-1722]
+```
+
+E4.8 as PL 8061 specifies it: `test_a_dataset_ingest_job_succeeds_through_the_compose_io_worker` walks upload-url → PUT → complete → POST versions through `lb`, with no seeded blob or Dataset Version, both Jobs `succeeded` on the compose `io` worker, red first by cause. And FD 8112 (filed in D21): `deploy/roll-api.sh` gets an EXIT trap that, once the scale-out has happened and before the old replicas are stopped, removes the new ids on failure, with a red-first never-healthy-image test. Cut as its own WK-674 slice by the maintainer's (by delegation) entry "2026-10-18 03:11:40 BST — Maintainer: SL-1258 audit @2134a9b6 (audited e2a2f79e) — lead verdict CONFIRMED with two amendments" (`to-lead.md`), items 1 and 3, on DP-E1 (b) of the entry "2026-10-16 09:55:22 BST", condition (3). Work-plan delta PL 8113. Starts after SL-1258 merges; **due before the code freeze, Wed 4 Nov 2026, firm** (§12 row 2's deployment path, item 1). Activation: the maintainer's one-line GO.
+
 
 ### WK-675 — Frontend: **DAG designer (Vue Flow)**, rate table editor, quote sandbox + ladder waterfall, dislocation views
 
