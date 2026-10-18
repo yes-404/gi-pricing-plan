@@ -1153,7 +1153,7 @@ Carved from `SL-1257` on the maintainer's entry "2026-09-30 23:57:25 BST — DEC
 id: SL-1258
 family: slice
 title: Slice 4: the deployment path (FR-437, FR-412 memory half, FR-415, FR-434, FR-435, NFR-531, NFR-534, FD-1211)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-09-29
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 0d5b0765f76320518bfe76ddb30e5013525797c0
@@ -1170,6 +1170,8 @@ The compose `api` and `worker` services, the reference identity provider, the me
 *Dated 2026-10-12 by the planner: a further Work-plan delta for this slice, PL-1690 (minted 2026-10-12 as PL-1690 from working id 9898): E4.1, FR-452's management limb as RL-1687 rules it (minted 2026-10-12 as RL-1687 from working id 9876; ACKed by the maintainer's (by delegation) entry "2026-10-12 07:44:13 BST"); E4.2, the `worker` on `--queues default,compute`, an S4 GO condition (the lead's from-lead entry "2026-10-12 05:37:23 BST"); E4.3, the compose smoke proving delivery, with beat as a one-off test fixture (the maintainer's (by delegation) entries "2026-10-12 05:37:42 BST" and "2026-10-12 05:39:20 BST"). This row's status and fields are unchanged.*
 
 *Dated 2026-10-14 by the planner: a further Work-plan delta for this slice, PL-1714 (working id 8022, reserved by the lead in `eta.md` "2026-10-14 10:32:05 BST"). It replaces `PL-1690` E4.2 with a derived consumer set: every queue `DEFAULT_QUEUE_FOR_KIND` routes to is consumed, asserted `⊇`, never as literals; it adds the `io` and `scoring` delivery proofs (`dataset.ingest`, `score.batch`) to E4.3, `scripts/demo.py` on the same set, the trace handler's registration and a derived guard that every routed kind has a production handler or a verified later-phase entry (DP-Q3, ruled), and the FR-405 pool split as DP-Q1 for the maintainer's ruling. On the maintainer's (by delegation) entries "2026-10-14 10:13:50 BST" item (a) and "2026-10-14 10:36:42 BST" (the red asserts `succeeded`); it discharges FD-1713. This row's status and fields are unchanged.*
+
+*Dated 2026-10-18 by the executor (minter-1258), at the mint: the row was `draft` in this file (the slice ran `active` on its ledger and plans, never flipped here); it is set `closed` on the clean slice audit (`LG-1792`, auditor-1258, at `e2a2f79e`) and the lead's verdict, the maintainer's (by delegation) MINT GO "2026-10-18 03:38:37 BST". `PL-1791` (minted from working id 8061) and `LG-1792` (from working id 9810) are minted with this close. MERGE-ACK: not yet given. E4.8, the conversion of the seeded compose ingest test to the public upload path, is `SL 8111` (planned, `PL 8113`), not this slice's (DP-E1 (b), "2026-10-18 03:11:40 BST").*
 
 #### SL-1259 — Slice 5: atomic switchover, rollback and the measurements (FR-268, FR-269, FR-272 audit and NFR-498 for rollback, NFR-494, NFR-489, NFR-502, NFR-490, NFR-493 linearity limb, NFR-497 mechanism)
 
@@ -2837,6 +2839,24 @@ On the maintainer's ruling of 2026-10-17 20:48:15 BST (the SL-1543 diagnosis acc
 (Activated 2026-10-17 as WK-1178's FD 8097 fix slice, on the maintainer's "plan + GO now" (2026-10-17 20:48:15 BST, ruling item 2), with `PL-1772` activated in the same commit.)
 
 Minted 2026-10-17 from working id 8099 on the maintainer's re-allocation (to-lead 2026-10-17 21:30:18 BST).
+
+#### SL-1806 — WK-1178 fix slice — FD-1799: Banding and Grouping slugs typed `Slug`, a bad slug refused 422 at POST (FR-101, FR-108, FR-98, FR-105, FR-451)
+
+```yaml
+id: SL-1806
+family: slice
+title: WK-1178 fix slice — FD-1799, Banding and Grouping slugs typed `Slug`, a bad slug refused 422 at POST (FR-101, FR-108, FR-98, FR-105, FR-451)
+status: closed  # draft → active → closed | retired (§1.2a)
+created: 2026-10-18
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 8ac6290b63a27a3161f447259bf58d215e6e5837
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1805, SL-1734, SL-1758, FD-1384]
+```
+
+On the maintainer's entry "2026-10-18 03:02:03 BST — Maintainer: #1331 — attribution correction ACCEPTED; fix (A) now; FD 8102 carries (C) with a deadline; the process line ADOPTED" (`to-lead.md`), item 3: FD-1799's (filed in D21) close. `Banding.slug`, `Grouping.slug` (`packages/model-schema/src/model_schema/modelling.py:407`, `:557` on `8ac6290b`) and the two proposal request slugs (`backend/src/app/api/models.py:250`, `:254`) are typed `Slug` (`refs.py:62`, the `00` §4.2 ID-3 / §4.3 grammar). `POST /bandings`, `/groupings`, `/bandings/propose` and `/groupings/propose` refuse a bad slug with 422 `VALIDATION_FAILED`, `errors[].field` `slug`, `errors[].code` `STRING_PATTERN_MISMATCH`. That code is named in a dated `02` §5.1 amendment first. The contracts are regenerated. There is one red-first API test per route. `check_banding` (`bandings.py:590`) is unchanged. MEDIUM; **due before the P2 code freeze, Wed 4 Nov 2026**. Work-plan delta PL-1805 (DP-1: an already-stored bad slug, census first; DP-2: FD-1799's compile-error limb). Ledger LG-1807. Activation: the maintainer's one-line GO. *Activated 2026-10-18 on the maintainer, to-lead 2026-10-18 04:42:19 BST (GO; DP-1 (a) with Task 0 in two limbs, (c)/(d) refused; DP-2 (i), the named compile error stays FD-1799's residue, WK-1178, due before the P2 close; the WF-699 demo must pass in this slice's gate).*
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 

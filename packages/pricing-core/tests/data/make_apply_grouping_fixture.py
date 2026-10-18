@@ -34,7 +34,7 @@ VALUES = ["a", "b", "c", "d", "e", None, 1, 1.0, True]
 
 def build(spec: dict) -> Grouping:
     return Grouping(
-        id=uuid4(), slug="g", dataset_id=uuid4(), version=1, column="c",
+        id=uuid4(), slug="grp", dataset_id=uuid4(), version=1, column="c",
         method=GroupingMethod.MANUAL, mapping=MAPPING,
         unseen_level_behaviour=UnseenLevelBehaviour(spec["behaviour"]),
         default_target_level=spec["default"],

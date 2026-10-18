@@ -13,6 +13,7 @@ facts it needs through arguments and through `app.api.approvals`' fan-out.
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from typing import Any
 from uuid import UUID
 
@@ -75,11 +76,19 @@ def _require_rating_version(ref: ArtifactRef, *, what: str) -> None:
 
 
 async def _authorised_environment(
-    session: AsyncSession, *, workspace_id: UUID, actor: Principal, slug: str, lock: bool = False
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    actor: Principal,
+    slug: str,
+    lock: bool = False,
+    count_management: Callable[[], Awaitable[None]] | None = None,
 ) -> EnvironmentRow:
     """The target Environment, after `deployment:promote` with it as the resource and after
     the retired check (`RL-1301` B.2; `RL-1401` item 3: after the permission, before the
-    Rating Version is read). An unknown slug is 404 (`RL-1401` T3)."""
+    Rating Version is read). An unknown slug is 404 (`RL-1401` T3). `count_management`, when
+    given, is awaited right after the permission check passes (`RL-1687` (1a): a `403` is
+    never counted)."""
     env = await environments._load(session, slug, lock=lock)
     await rbac.require_permission(
         session,
@@ -88,6 +97,8 @@ async def _authorised_environment(
         permission=Permission.DEPLOYMENT_PROMOTE,
         resource=rbac.ResourceRef(scope_type=ScopeType.ENVIRONMENT, scope_id=env.id),
     )
+    if count_management is not None:
+        await count_management()
     environments._require_not_retired(env, "deployed to")
     return env
 
@@ -210,6 +221,7 @@ async def submit_request(
     actor: Principal,
     environment: str,
     body: DeploymentRequestCreate,
+    count_management: Callable[[], Awaitable[None]] | None = None,
 ) -> DeploymentRequest:
     """Write a Deployment Request with its evidence **once**, and submit it (`RL-1301` A).
 
@@ -222,7 +234,12 @@ async def submit_request(
     # Locked: the version is numbered per Environment, so two submissions into one
     # Environment serialise rather than racing for the same `@n`.
     env = await _authorised_environment(
-        session, workspace_id=workspace_id, actor=actor, slug=environment, lock=True
+        session,
+        workspace_id=workspace_id,
+        actor=actor,
+        slug=environment,
+        lock=True,
+        count_management=count_management,
     )
     ref = body.rating_version_ref
     await _approved_compiled_version(session, workspace_id=workspace_id, ref=ref)
@@ -442,6 +459,7 @@ async def deploy(
     actor: Principal,
     environment: str,
     body: DeploymentCreate,
+    count_management: Callable[[], Awaitable[None]] | None = None,
 ) -> Deployment:
     """Bind an `approved`, compiled Rating Version to an Environment (FR-267, FR-272).
 
@@ -453,7 +471,11 @@ async def deploy(
     ref = body.rating_version_ref
     _require_rating_version(ref, what="A deploy")
     env = await _authorised_environment(
-        session, workspace_id=workspace_id, actor=actor, slug=environment
+        session,
+        workspace_id=workspace_id,
+        actor=actor,
+        slug=environment,
+        count_management=count_management,
     )
     _, bundle_hash = await _approved_compiled_version(session, workspace_id=workspace_id, ref=ref)
 

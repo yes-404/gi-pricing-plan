@@ -1,5 +1,5 @@
 """The scalar one-row GLM predict is bit-identical to the polars path
-(PL-1772, FD 8097 (filed in D21)).
+(PL-1772, FD-1797 (filed in D21)).
 
 `model_call` scores one quote through one GLM. The frame path builds a one-row polars frame and
 runs a lazy `collect` per quote (`resolve_factors`); the scalar path (`predict_glm_row`) must
@@ -519,7 +519,7 @@ def test_the_scorer_keeps_its_renames_and_its_collision_refusal(world: World) ->
 def print_timing(world: World, rows: list[dict[str, Any]], label: str) -> None:
     """Print ms/quote for the frame path and the scalar path over `rows`, with the tree and
     the box. A figure to read, never an assertion: this box is shared and a time assert on it
-    is a flake (FD 8097 (filed in D21)'s 16.9 ms was a loaded-box sample, 2.0 ms on main)."""
+    is a flake (FD-1797 (filed in D21)'s 16.9 ms was a loaded-box sample, 2.0 ms on main)."""
     import os
     import subprocess
     import time
@@ -556,7 +556,7 @@ def test_print_the_per_quote_cost_of_both_paths(
 
 @pytest.mark.req("FR-104")
 def test_a_grouping_maps_one_value_exactly_as_it_maps_a_column(world: World) -> None:
-    """`apply_grouping` reads a single value without a lazy `collect` (FD 8097 (filed in D21)) and a
+    """`apply_grouping` reads a single value without a lazy `collect` (FD-1797 (filed in D21)) and a
     column through `unique` + `replace_strict`; both come from `_targets`, and this holds them
     equal — the mapped level, the fallback for an unseen level, and the refusal text."""
     from pricing_core.modelling.groupings import apply_grouping
@@ -590,7 +590,7 @@ def test_apply_grouping_reproduces_every_recorded_expectation_of_c62f1ff6() -> N
     )
     groupings = [
         Grouping(
-            id=uuid4(), slug="g", dataset_id=DATASET, version=1, column="c",
+            id=uuid4(), slug="grp", dataset_id=DATASET, version=1, column="c",
             method=GroupingMethod.MANUAL, mapping=fixture["mapping"],
             unseen_level_behaviour=UnseenLevelBehaviour(spec["behaviour"]),
             default_target_level=spec["default"],

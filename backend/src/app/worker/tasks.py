@@ -147,12 +147,13 @@ async def execute_job(
             build=f"{settings.version}+{settings.build}",
         )
 
-    budget = (row.resource_budget or {}).get("wall_clock_s")
+    budget = row.resource_budget or {}
     progress = JobProgress(
         job_id,
         database,
         asyncio.get_running_loop(),
-        wall_clock_s=budget,
+        wall_clock_s=budget.get("wall_clock_s"),
+        memory_gb=budget.get("memory_gb"),
         # Built here, once, when the caller did not supply one. A handler building its own
         # picks up ambient settings and reads a different bucket than the one written to.
         blob_store=blob_store or BlobStore(settings),
@@ -189,7 +190,7 @@ async def execute_job(
                     code="JOB_RESOURCE_BUDGET_EXCEEDED",
                     message=str(exc),
                     retryable=False,
-                    detail={"wall_clock_s": exc.wall_clock_s, "elapsed_s": round(exc.elapsed_s)},
+                    detail=exc.detail(),
                     trace_id=current_trace_id(),
                 ),
             )

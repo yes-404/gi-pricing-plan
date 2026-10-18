@@ -138,8 +138,12 @@ DatabaseDep = Annotated[Database, Depends(_database)]
 BlobStoreDep = Annotated[BlobStore, Depends(_blob_store)]
 BundleSlotDep = Annotated[BundleSlot, Depends(_bundle_slot)]
 #: `keep_session`: `/score`'s own reads continue on the request session the check used, so a
-#: warm quote takes one pool checkout (RL-1685, PL-1454 DP-1 (a)).
-ScoreExecuteDep = Annotated[Caller, Depends(requires(Permission.SCORE_EXECUTE, keep_session=True))]
+#: warm quote takes one pool checkout (RL-1685, PL-1454 DP-1 (a)). `management_counted=False`:
+#: the scoring limit counts this route, not FR-452's management limit (`RL-1687`).
+ScoreExecuteDep = Annotated[
+    Caller,
+    Depends(requires(Permission.SCORE_EXECUTE, keep_session=True, management_counted=False)),
+]
 
 
 async def _enforce_score_rate_limit(
@@ -163,7 +167,9 @@ async def _enforce_score_rate_limit(
 #: The route declares `ScoreExecuteDep` itself, so the authorisation sweep sees its
 #: permission; the limiter reuses that one resolved dependency and adds no second check.
 ScoreRateLimitDep = Annotated[None, Depends(_enforce_score_rate_limit)]
-ScoreBatchDep = Annotated[Caller, Depends(requires(Permission.SCORE_BATCH))]
+ScoreBatchDep = Annotated[
+    Caller, Depends(requires(Permission.SCORE_BATCH, management_counted=False))
+]
 
 
 def _required_ref(ctx: QuoteContext, live_ref: ArtifactRef | None = None) -> ArtifactRef:
@@ -470,7 +476,9 @@ def _naming_side(problem: PlatformError, side: str) -> PlatformError:
     "/score/compare",
     summary="Score one Quote Context against two Rating Versions, with a step-level diff",
     status_code=200,
-    responses={**problems(401, 403, 404, 409, 422, 500), 200: {"model": ScoreComparison}},
+    # 429: `RatingReadDep` is `requires(RATING_READ)`, which counts against the management limit
+    # (FR-452); `score.router` is not included through `app.main`'s `counted()`, so it says so here.
+    responses={**problems(401, 403, 404, 409, 422, 429, 500), 200: {"model": ScoreComparison}},
 )
 async def score_compare(
     body: ScoreCompareRequest,
