@@ -14,6 +14,7 @@ two commits** (Acceptance 12), tagged by SHA; both SHAs are printed for the ledg
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import os
 import pathlib
@@ -588,23 +589,38 @@ def test_a_dataset_ingest_job_succeeds_through_the_compose_io_worker(
 ) -> None:
     """`dataset.ingest` routes to `io` and must reach `succeeded` through the compose io worker.
 
-    SEEDED, TO BE CONVERTED (the maintainer's (by delegation) entry "2026-10-14 11:10:26 BST"):
-    the CSV blob is made readable by a seeded Dataset Version instead of the public upload path.
-    The conversion to upload-url -> PUT -> complete -> POST versions, with no seeding, is an
-    acceptance line of SL-1722 (the conversion itself is SL-1258's, LG-9810). Red cause: a
-    worker that does not consume `io` leaves the Job `queued`.
+    The CSV goes in by the public upload path, with no seeding (PL 8061 E4.8, carried by
+    PL 8113 / SL 8111; the maintainer's (by delegation) entry "2026-10-18 03:11:40 BST", DP-E1
+    (b)): upload-url -> PUT to the presigned URL -> complete (a `blob.promote` Job on `io`) ->
+    POST versions (a `dataset.ingest` Job on `io`). Both Jobs must reach `succeeded` with their
+    output asserted. Red cause: a worker that does not consume `io` leaves a Job `queued`.
     """
     ws = _stack_with_workspace(built_n)
-    workspace_id, headers = ws.workspace_id, ws.users["analyst"]  # dataset:write, job:read
+    headers = ws.users["analyst"]  # dataset:write, job:read
     csv = b"policy_id,exposure,claim_count\nP1,1.0,0\nP2,0.5,1\nP3,1.0,0\n"
-    csv_sha, _ = _put_blob_inputs(workspace_id, csv, b"PAR1")
     _api("POST", "/api/v1/datasets", headers, {"slug": "e43-ingest", "currency": "GBP"})
+    # One part is enough: the multipart path is SL-1722's R1 to prove; this proves the io worker.
+    upload = _api(
+        "POST", "/api/v1/blobs/upload-url", headers, {"media_type": "text/csv", "parts": 1}
+    )
+    # The presigned single-part URL signs the media type, so the PUT sends it; no auth headers.
+    put = urllib.request.Request(
+        upload["urls"][0], data=csv, headers={"Content-Type": "text/csv"}, method="PUT"
+    )
+    with urllib.request.urlopen(put, timeout=60) as response:
+        assert response.status == 200
+    promote = _api("POST", f"/api/v1/blobs/uploads/{upload['id']}/complete", headers)
+    assert promote["queue"] == "io"
+    promoted = _wait_succeeded(promote, headers, INGEST_BOUND_SECONDS)
+    csv_sha = hashlib.sha256(csv).hexdigest()
+    assert promoted["result"] == {"kind": "blob", "ref": csv_sha}
     job = _api(
         "POST", "/api/v1/datasets/e43-ingest/versions", headers,
         {"blob": csv_sha, "filename": "e43.csv"},
     )
     assert job["queue"] == "io"
-    _wait_succeeded(job, headers, INGEST_BOUND_SECONDS)
+    ingested = _wait_succeeded(job, headers, INGEST_BOUND_SECONDS)
+    assert ingested["result"]["ref"].startswith("dataset_version:")
 
 
 @pytest.mark.req("FR-415")
