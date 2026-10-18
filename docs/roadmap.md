@@ -2537,7 +2537,7 @@ On the maintainer's (by delegation) entry "2026-10-12 07:46:06 BST — PL 9906/S
 id: SL-1722
 family: slice
 title: WK-1178 fix slice — the upload-completion step: an upload becomes an owned, content-addressed blob, proven by one public-path HTTP test with no seeding
-status: draft                    # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-14
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 4420f91fa4112a1fcabcae23d3d50a1ad4fcbb59
