@@ -52,6 +52,8 @@ Written by the auditor.
 - `test_fremtpl2_algorithm.py:54` → `column.replace('_', '-')`; `test_bandings.py:209` `"v"` → `"vv"`.
 - Contracts: `generate-contracts.py` wrote 3 files, 6 insertions, all `"pattern": "^[a-z0-9][a-z0-9-]{1,62}$"`: `schemas/generated/banding.schema.json` (1), `grouping.schema.json` (1), `openapi/generated.json` (4: Banding, Grouping, the two proposal requests). `--check` rc 0 (51 match).
 - The census is vacuous on `gipricing` (both tables empty, PL-8115 Task 0). The gate's demo census (`sl8116-democensus.sql`, after WF-699, before teardown) makes it non-vacuous: rows > 0, non-matching = 0. No released deployment holds data (03:02:03 ruling).
+- Golden by token substitution (the maintainer, to-lead "2026-10-18 04:49:43 BST": all 271 occurrences; the 04:45:56 entry's five line numbers were the first five of 271). `packages/pricing-core/tests/data/apply_grouping_c62f1ff6.json`, not regenerated. BEFORE: `'g'` 271 lines, `'grp'` 0, 15294 lines (`grep -c "'g'"`, `grep -c "'grp'"`, `wc -l`). AFTER: `'g'` 0, `'grp'` 271, 15294 lines. `git diff --word-diff=porcelain` on the file: 271 `-'g'` and 271 `+'grp'`, no other token; `--numstat` 271 271. Generator slug `make_apply_grouping_fixture.py:37` and `test_glm_scalar_predict.py:593` are `"grp"` (one line each). `run-small.sh packages/pricing-core/tests/test_glm_scalar_predict.py`: `35 passed, 3 skipped` (the file that reads the golden).
+- `ruff check .` rc 0. `ruff format --check` reports drift on the changed test files, and also on untouched `test_glm.py` and `test_api_datasets.py`: pre-existing, not part of the gate.
 
 ## PRs
 

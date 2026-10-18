@@ -590,7 +590,7 @@ def test_apply_grouping_reproduces_every_recorded_expectation_of_c62f1ff6() -> N
     )
     groupings = [
         Grouping(
-            id=uuid4(), slug="g", dataset_id=DATASET, version=1, column="c",
+            id=uuid4(), slug="grp", dataset_id=DATASET, version=1, column="c",
             method=GroupingMethod.MANUAL, mapping=fixture["mapping"],
             unseen_level_behaviour=UnseenLevelBehaviour(spec["behaviour"]),
             default_target_level=spec["default"],
