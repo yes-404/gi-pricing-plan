@@ -36,7 +36,10 @@ export function setWorkspaceId(id: string | null): void {
 
 export interface RequestOptions {
   readonly method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  /** A `FormData` goes as multipart, with the boundary the browser writes; anything else as JSON. */
   readonly body?: unknown;
+  /** `text` reads the body as it is, for a download such as a CSV export; the default is JSON. */
+  readonly responseType?: "json" | "text";
   readonly query?: Record<string, string | number | undefined>;
   /**
    * `00` §5.4 — sent on every POST that creates a Job or artifact. A double-clicked
@@ -54,7 +57,8 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   }
 
   const headers: Record<string, string> = { Accept: "application/json" };
-  if (options.body !== undefined) headers["Content-Type"] = "application/json";
+  const multipart = options.body instanceof FormData;
+  if (options.body !== undefined && !multipart) headers["Content-Type"] = "application/json";
   if (options.idempotencyKey) headers["Idempotency-Key"] = options.idempotencyKey;
   if (currentWorkspaceId) headers["Workspace-Id"] = currentWorkspaceId;
   if (currentAccessToken) headers["Authorization"] = `Bearer ${currentAccessToken}`;
@@ -64,12 +68,15 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   const response = await fetch(url, {
     method: options.method ?? "GET",
     headers,
-    ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
+    ...(options.body === undefined
+      ? {}
+      : { body: options.body instanceof FormData ? options.body : JSON.stringify(options.body) }),
     ...(options.signal ? { signal: options.signal } : {}),
   });
 
   if (!response.ok) throw new ProblemError(await readProblem(response));
   if (response.status === 204) return undefined as T;
+  if (options.responseType === "text") return (await response.text()) as T;
   return (await response.json()) as T;
 }
 

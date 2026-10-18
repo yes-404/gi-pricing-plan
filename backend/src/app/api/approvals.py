@@ -24,8 +24,8 @@ from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.authz import requires
-from app.api.deps import Caller, require_caller
+from app.api.authz import counted_caller, requires
+from app.api.deps import Caller
 from app.api.pagination import (
     COUNT_CAP,
     DEFAULT_LIMIT,
@@ -63,7 +63,7 @@ __all__ = ["decide_and_carry", "router"]
 
 router = APIRouter(tags=["governance"])
 
-AnyCaller = Annotated[Caller, Depends(require_caller)]
+AnyCaller = Annotated[Caller, Depends(counted_caller)]
 Decider = Annotated[Caller, Depends(requires(Permission.APPROVAL_DECIDE))]
 PolicyAdmin = Annotated[Caller, Depends(requires(Permission.ADMIN_MANAGE_ROLES))]
 

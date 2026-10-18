@@ -19,14 +19,24 @@ from uuid import UUID
 
 from algorithm import (
     BASE_LABEL,
+    EXPOSURE,
     FREMTPL2_ALGORITHM_SLUG,
     base_premium_minor,
     build_fremtpl2_algorithm,
     glm_premium_minor,
+    mean_claim_cost_minor,
+    structure_premium_minor,
 )
 from sqlalchemy import select
 
-from app.db.models import BlobRow, DatasetVersionRow, ModelRow, RegressionRunRow
+from app.db.models import (
+    BlobRow,
+    DatasetVersionRow,
+    DiagnosticsRow,
+    ModelRow,
+    PerilStructureRow,
+    RegressionRunRow,
+)
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import approvals as approval_service
@@ -34,6 +44,7 @@ from app.platform import comparison as comparison_service
 from app.platform import datasets as dataset_service
 from app.platform import jobs as job_service
 from app.platform import modelling as model_service
+from app.platform import perils as perils_service
 from app.platform import rate_tables as rate_table_service
 from app.platform import rating_algorithms as algorithm_service
 from app.platform import rating_versions as rating_versions_service
@@ -60,14 +71,21 @@ from model_schema import (
     GlmSpec,
     JobKind,
     JobStatus,
+    LargeLossKind,
+    LargeLossTreatment,
     MonotonicDirection,
     OffsetSpec,
+    PerilComponent,
+    PerilMethod,
     Pins,
     Principal,
     QuoteContext,
+    Reconciliation,
     RegressionSuiteContent,
     RelativityLevel,
+    ResponseKind,
     SplitRef,
+    WeightSpec,
     new_uuid7,
 )
 from pricing_core.rating.compile import Bundle
@@ -359,19 +377,38 @@ async def compare_and_approve(
         raise SystemExit(f"model.compare {status.value} — see job")
     print(f"  comparison ran: {compare_job}")
 
+    await _approve_model(
+        database, workspace_id, actuary, approver, glm_id,
+        change_summary="AD frequency, GLM selected over the GBM on transparency grounds",
+        comment="GLM approved for the demo rating version",
+    )
+    print(f"  GLM approved: {glm_id}")
+    return glm_id
+
+
+async def _approve_model(
+    database: Database,
+    workspace_id: UUID,
+    submitter: Principal,
+    approver: Principal,
+    model_id: UUID,
+    *,
+    change_summary: str,
+    comment: str,
+) -> None:
+    """Submit a fitted model for review and approve it through the platform's services."""
     async with database.unit_of_work() as session:
         _, request = await model_service.submit_for_review(
-            session, workspace_id=workspace_id, actor=actuary, model_id=glm_id,
-            change_summary="AD frequency, GLM selected over the GBM on transparency grounds",
+            session, workspace_id=workspace_id, actor=submitter, model_id=model_id,
+            change_summary=change_summary,
         )
         request_id = request.id
-    print(f"  GLM submitted for review: {request_id}")
+    print(f"  model {model_id} submitted for review: {request_id}")
 
     async with database.unit_of_work() as session:
         request = await approval_service.decide(
             session, workspace_id=workspace_id, request_id=request_id,
-            approver=approver, decision=DecisionKind.APPROVE,
-            comment="GLM approved for the demo rating version",
+            approver=approver, decision=DecisionKind.APPROVE, comment=comment,
         )
         # The service `decide` moves the *request*; the API route's
         # `_carry_to_the_artifact` moves the artifact. The seed drives the services, so it
@@ -380,8 +417,188 @@ async def compare_and_approve(
         await model_service.apply_approval_decision(
             session, workspace_id=workspace_id, actor=approver, request=request
         )
-    print(f"  GLM approved: {glm_id}")
-    return glm_id
+
+
+#: The severity response column the seed's `build_csv` derives (PL-1705 C2): per-claim mean cost,
+#: euro cents, null where a policy has no claim.
+SEVERITY_COLUMN: Final = "claim_severity"
+#: DP-A4-3's reconciliation tolerance, set to 0.5 by the maintainer (by delegation)'s DP-1543-B
+#: ruling (A) of 2026-10-17 16:27:10 BST, superseding RL-1459's 0.05: accepts ratios in
+#: [0.5, 1.5]. The width comes from the failure mode, not the fit: a peril of cost share s
+#: counted twice gives about 1 + s, so 1.5 refuses any duplicated peril with s >= 0.5, while
+#: 3 sd (0.485, K=100 holdout draws) stays below 0.5, so noise cannot fail a correct structure.
+#: The structure it gates is a simplification: no large-loss loading (large loss is uncapped).
+AD_RECONCILIATION_TOLERANCE: Final = Decimal("0.5")
+#: The evidence the tolerance rests on, printed with every seed's reconcile line (DP-1543-B):
+#: K=100 re-draws of the holdout split on the full book (scratch/sl1543-cw/measure.json,
+#: key iii_A, and window.log), so a reader sees the ratio next to the noise it is read against.
+AD_RECONCILIATION_EVIDENCE: Final = (
+    "  K=100 holdout re-draws (full book): ratio mean 0.9816, sd_A 0.1616, 3 sd 0.485 < "
+    f"{AD_RECONCILIATION_TOLERANCE}; in-sample (train) ratio 0.9697, bias_train 0.0303 "
+    "(PL-1705 delta, LG-9879)"
+)
+#: The AD Peril Structure's slug (PL-1542 Task 2); one version per seed workspace.
+AD_STRUCTURE_SLUG: Final = "fremtpl2-ad"
+
+
+async def fit_severity_glm(
+    database: Database,
+    blob_store: BlobStore,
+    workspace_id: UUID,
+    actuary: Principal,
+    approver: Principal,
+    frequency_id: UUID,
+) -> UUID:
+    """PL-1542 Task 1: fit and approve the AD severity GLM, Gamma/log, weighted by claim count.
+
+    It fits the full book on the frequency GLM's own Dataset Version, split and factors
+    (PL-1705 C1): FR-190's shared-holdout rule then holds by construction, and the policies
+    with no claim carry weight 0 and are excluded and counted by the fit (SL-1675). The spec
+    declares no `loss_treatment` (`kind == "none"`): large loss is the structure's
+    `large_loss`, uncapped (DP-A4-3 (x), the guard in `test_demo_peril_structure.py`).
+    """
+    async with database.session() as session:
+        frequency = await session.get(ModelRow, frequency_id)
+        if frequency is None:
+            raise RuntimeError(f"the frequency model {frequency_id} does not exist")
+        frequency_spec = GlmSpec.model_validate(frequency.spec)
+    spec = GlmSpec(
+        model_family_slug=f"fremtpl2-severity-{new_uuid7().hex[-6:]}",
+        dataset_version_id=frequency_spec.dataset_version_id,
+        split_ref=frequency_spec.split_ref,
+        peril=frequency_spec.peril,
+        response=ResponseKind.CLAIM_SEVERITY,
+        response_column=SEVERITY_COLUMN,
+        weight=WeightSpec(kind="column", column="claim_count"),
+        family="gamma",
+        link="log",
+        factors=frequency_spec.factors,
+        seed=FIT_SEED,
+    )
+    severity_id = await _fit(database, blob_store, workspace_id, actuary, spec, "severity GLM")
+    print(f"  severity GLM fitted: {severity_id}")
+    async with database.session() as session:
+        payload = (
+            await session.execute(
+                select(DiagnosticsRow.payload).where(DiagnosticsRow.model_id == severity_id)
+            )
+        ).scalar_one()
+    glm = payload["glm"]
+    print(f"  severity GLM deviance {glm['deviance']} AIC {glm['aic']}")
+    await _approve_model(
+        database, workspace_id, actuary, approver, severity_id,
+        change_summary="AD severity, Gamma/log GLM weighted by claim count",
+        comment="severity GLM approved for the AD Peril Structure",
+    )
+    print(f"  severity GLM approved: {severity_id}")
+    return severity_id
+
+
+async def create_ad_peril_structure(
+    database: Database,
+    blob_store: BlobStore,
+    workspace_id: UUID,
+    actuary: Principal,
+    approver: Principal,
+    frequency_id: UUID,
+    severity_id: UUID,
+    *,
+    tolerance: Decimal,
+) -> UUID:
+    """PL-1542 Task 2: the AD Peril Structure, reconciled and approved through the workflow.
+
+    One `frequency_severity` component over the two approved GLMs, `large_loss` uncapped
+    (DP-A4-3 (x)), a simplification: no large-loss loading.
+    The reconciliation runs as the real `PERIL_STRUCTURE_RECONCILE` Job; the
+    structure is submitted and decided by a Principal who is neither its submitter nor its
+    author, and the decision is carried by `perils_service.apply_approval_decision`, the
+    service half of `_carry_to_the_artifact`. No status is written directly.
+    """
+    frequency_ref, _ = await load_approved_glm(database, workspace_id, frequency_id)
+    severity_ref, _ = await load_approved_glm(database, workspace_id, severity_id)
+    async with database.unit_of_work() as session:
+        row = await perils_service.create_structure(
+            session, workspace_id=workspace_id, actor=actuary,
+            slug=AD_STRUCTURE_SLUG,
+            perils=[
+                PerilComponent(
+                    peril="AD",
+                    method=PerilMethod.FREQUENCY_SEVERITY,
+                    frequency_model=frequency_ref,
+                    severity_model=severity_ref,
+                    large_loss=LargeLossTreatment(kind=LargeLossKind.NONE),
+                )
+            ],
+            excluded_perils=[],
+        )
+        structure_id = row.id
+
+    async with database.unit_of_work() as session:
+        reserved = await perils_service.request_reconciliation(
+            session, workspace_id=workspace_id, actor=actuary,
+            structure_id=structure_id, tolerance=tolerance,
+        )
+        job = await job_service.submit(
+            session, JobKind.PERIL_STRUCTURE_RECONCILE,
+            {
+                "workspace_id": str(workspace_id),
+                "actor": actuary.model_dump(mode="json"),
+                **perils_service.reconcile_payload(
+                    reserved, tolerance=tolerance,
+                    observed_column="claim_amount_minor", exposure_column="exposure_years",
+                ),
+            },
+            actuary, workspace_id=workspace_id,
+        )
+        reconcile_job = job.id
+    status = await execute_job(database, reconcile_job, blob_store)
+    if status is not JobStatus.SUCCEEDED:
+        raise SystemExit(f"peril_structure.reconcile {status.value} — see job")
+    print(f"  AD structure reconciled: {reconcile_job}")
+    async with database.session() as session:
+        reconciled = (
+            await session.execute(
+                select(PerilStructureRow.reconciliation).where(
+                    PerilStructureRow.id == structure_id
+                )
+            )
+        ).scalar_one()
+    outcome = Reconciliation.model_validate(reconciled)
+    print(
+        f"  reconciliation ratio {outcome.ratio} status {outcome.status.value} "
+        f"tolerance {outcome.tolerance}"
+    )
+    print(AD_RECONCILIATION_EVIDENCE)
+
+    async with database.unit_of_work() as session:
+        _, request = await perils_service.submit_for_review(
+            session, workspace_id=workspace_id, actor=actuary, structure_id=structure_id,
+            change_summary=(
+                "AD frequency x severity, large loss uncapped (DP-A4-3), "
+                "a simplification: no large-loss loading"
+            ),
+        )
+        request_id = request.id
+    async with database.unit_of_work() as session:
+        request = await approval_service.decide(
+            session, workspace_id=workspace_id, request_id=request_id,
+            approver=approver, decision=DecisionKind.APPROVE,
+            comment="AD Peril Structure approved for the demo rating version",
+        )
+        await perils_service.apply_approval_decision(
+            session, workspace_id=workspace_id, actor=approver, request=request
+        )
+    print(f"  AD structure approved: {structure_id}")
+    return structure_id
+
+
+async def peril_structure_ref(database: Database, structure_id: UUID) -> ArtifactRef:
+    """The `peril_structure:{slug}@{version}` ref of a stored Peril Structure."""
+    async with database.session() as session:
+        row = await session.get(PerilStructureRow, structure_id)
+        if row is None:
+            raise RuntimeError(f"the Peril Structure {structure_id} does not exist")
+        return ArtifactRef(type="peril_structure", slug=row.slug, version=row.version)
 
 
 DEMO_SUITE_SLUG: Final = "fremtpl2-rate-suite"
@@ -493,14 +710,12 @@ async def demo_base_premium(
             session, blob_store, portfolio_table(version)["blob"]["sha256"], "The seed's table"
         )
     frame = pl.read_parquet(io.BytesIO(raw)).select("claim_amount_minor", "claim_count")
-    totals = frame.select(
-        pl.col("claim_amount_minor").cast(pl.Int64).sum().alias("amount"),
-        pl.col("claim_count").cast(pl.Int64).sum().alias("claims"),
-    ).row(0, named=True)
-    mean_claim = Decimal(totals["amount"]) / Decimal(totals["claims"])
+    amounts = frame["claim_amount_minor"].cast(pl.Int64).to_list()
+    counts = frame["claim_count"].cast(pl.Int64).to_list()
+    mean_claim = mean_claim_cost_minor(amounts, counts)
     base = base_premium_minor(Decimal(str(intercept)), mean_claim)
     print(f"  base premium {base} minor units = exp({intercept}) x mean claim cost "
-          f"{mean_claim:.2f} ({totals['amount']} / {totals['claims']} claims on {version_id}); "
+          f"{mean_claim:.2f} (known amounts only; {amounts.count(None)} unknown on {version_id}); "
           f"{BASE_LABEL}")
     return base
 
@@ -516,11 +731,18 @@ class GoldenCase:
 
 
 def demo_golden_cases(
-    fit: GlmFitResult, bandings: dict[str, DemoBanding], base_minor: int
+    fit: GlmFitResult,
+    bandings: dict[str, DemoBanding],
+    base_minor: int,
+    severity: GlmFitResult | None = None,
 ) -> list[GoldenCase]:
     """Three quotes: every Factor at its base level; at its first non-base level; at its last
     level. A banded Factor's raw value is the lower edge of the band it is on, so the cases sit
-    on band edges (PL-1525 Acceptance 3)."""
+    on band edges (PL-1525 Acceptance 3).
+
+    With the severity fit the algorithm is B4's (PL-1542): each premium is the Peril Structure's
+    frequency x severity for one exposure year, and the quotes carry `exposure_years`. Without
+    it, `base x Π relativities` as before."""
     import polars as pl
 
     from pricing_core.modelling.bandings import apply_banding
@@ -533,6 +755,8 @@ def demo_golden_cases(
     cases = []
     for name, pick in picks.items():
         inputs: dict[str, Any] = {"bonus_malus": 100}
+        if severity is not None:
+            inputs[EXPOSURE] = 1.0
         levels_by_factor: dict[str, str] = {}
         for factor in FACTOR_SET:
             level = pick(fit.relativities[factor]).level
@@ -549,9 +773,16 @@ def demo_golden_cases(
                         f"not {level!r}"
                     )
                 inputs[demo.banding.column] = value
-        expected = glm_premium_minor(
-            fit.coefficients, fit.relativities, base_minor, levels_by_factor
-        )
+        if severity is None:
+            expected = glm_premium_minor(
+                fit.coefficients, fit.relativities, base_minor, levels_by_factor
+            )
+        else:
+            expected = structure_premium_minor(
+                (fit.coefficients, fit.relativities),
+                (severity.coefficients, severity.relativities),
+                levels_by_factor,
+            )
         cases.append(GoldenCase(name, inputs, expected))
     return cases
 
@@ -589,13 +820,15 @@ async def save_demo_algorithm(
     database: Database, workspace_id: UUID, analyst: Principal,
     tables: dict[str, ArtifactRef], bandings: dict[str, DemoBanding],
     domains: dict[str, list[str]], base_minor: int,
+    structure_ref: ArtifactRef | None = None,
 ) -> ArtifactRef:
-    """Save the freMTPL2 algorithm through the service; a re-seed's 409 is tolerated."""
+    """Save the freMTPL2 algorithm through the service; a re-seed's 409 is tolerated. With a
+    `structure_ref` it is B4's: a `model_call` on the Peril Structure (PL-1542 Task 3)."""
     if analyst.id is None:
         raise RuntimeError("the demo analyst has no id")
     payload = build_fremtpl2_algorithm(
         tables=tables, bandings={slug: d.banding for slug, d in bandings.items()},
-        base_minor=base_minor, domains=domains,
+        base_minor=base_minor, domains=domains, peril_structure_ref=structure_ref,
     )
     try:
         await algorithm_service.create_algorithm(database, workspace_id, analyst, payload)
@@ -733,8 +966,15 @@ async def create_approved_rating_version(
     tables: dict[str, ArtifactRef],
     bandings: dict[str, DemoBanding],
     base_minor: int,
+    *,
+    severity_id: UUID | None = None,
+    structure_ref: ArtifactRef | None = None,
 ) -> UUID:
     """W7-3: create, submit and approve the demo rating version (FR-440).
+
+    With `severity_id` and `structure_ref` (PL-1542 Tasks 3 and 4) the version is B4's: the
+    algorithm calls the approved Peril Structure, the version pins it beside the GLM, and the
+    golden quotes are the structure's frequency x severity from the two fits' coefficients.
 
     The rating version is priced from the approved GLM: it pins the freMTPL2 algorithm, the
     approved model as `model:{slug}@{version}`, and every seeded Rate Table at its seeded
@@ -747,21 +987,29 @@ async def create_approved_rating_version(
         factor: [r.level for r in fit.relativities[factor]]
         for factor, _ in CATEGORICAL_FACTORS
     }
+    if (severity_id is None) != (structure_ref is None):
+        raise RuntimeError("B4 needs both the severity model and the Peril Structure, or neither")
+    severity_fit = None
+    if severity_id is not None:
+        _, severity_fit = await load_approved_glm(database, workspace_id, severity_id)
     algorithm_ref = await save_demo_algorithm(
-        database, workspace_id, analyst, tables, bandings, domains, base_minor
+        database, workspace_id, analyst, tables, bandings, domains, base_minor, structure_ref
     )
     async with database.unit_of_work() as session:
         row = await rating_versions_service.create_rating_version(
             session, workspace_id=workspace_id, actor=analyst,
             slug=DEMO_RATING_SLUG, dataset_version_id=dataset_version_id, model_ref=model_ref,
             algorithm_ref=algorithm_ref,
-            pins=Pins(rate_tables=list(tables.values()), models=[model_ref]),
+            pins=Pins(
+                rate_tables=list(tables.values()),
+                models=[model_ref] if structure_ref is None else [model_ref, structure_ref],
+            ),
         )
         rating_id = row.id
 
     run_id = await author_demo_rating_evidence(
         database, blob_store, workspace_id, analyst, rating_id,
-        demo_golden_cases(fit, bandings, base_minor),
+        demo_golden_cases(fit, bandings, base_minor, severity_fit),
     )
 
     await submit_and_approve_demo(

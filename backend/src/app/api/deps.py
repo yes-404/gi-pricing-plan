@@ -42,7 +42,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.oidc import OidcVerifier
-from app.auth.service import AuthenticatedIdentity, authenticate_api_key, authenticate_bearer
+from app.auth.service import (
+    AuthenticatedIdentity,
+    AuthenticationFailed,
+    authenticate_api_key,
+    authenticate_bearer,
+    record_auth_failure,
+)
 from app.config import Settings
 from app.db.models import WorkspaceMemberRow
 from app.db.session import Database
@@ -140,8 +146,12 @@ async def require_identity(
 
     if scheme == "bearer" and credential:
         verifier: OidcVerifier = request.app.state.oidc_verifier
-        async with database.unit_of_work() as session:
-            identity = await authenticate_bearer(session, verifier, credential)
+        try:
+            async with database.unit_of_work() as session:
+                identity = await authenticate_bearer(session, verifier, credential)
+        except AuthenticationFailed as failure:
+            await _record_failure_in_own_unit(database, failure)
+            raise
         # `identity.workspaces` was read at authentication time; pass it through as-is
         # rather than inventing a second source (`test_workspace_selection.py:46-50`
         # re-authenticates for exactly this reason).
@@ -149,8 +159,12 @@ async def require_identity(
 
     api_key = credential if scheme == "apikey" else request.headers.get("x-api-key")
     if api_key:
-        async with database.unit_of_work() as session:
-            identity = await authenticate_api_key(session, api_key)
+        try:
+            async with database.unit_of_work() as session:
+                identity = await authenticate_api_key(session, api_key)
+        except AuthenticationFailed as failure:
+            await _record_failure_in_own_unit(database, failure)
+            raise
         # A Service Account has exactly one workspace by construction — the single id
         # `authenticate_api_key` already read is its membership set.
         return Identity(principal=identity.principal, workspaces=identity.workspaces)
@@ -226,6 +240,17 @@ WORKSPACE_ID_DESCRIPTION = (
 )
 
 
+async def _record_failure_in_own_unit(database: Database, failure: AuthenticationFailed) -> None:
+    """Record a failed authentication in a unit of its own (PL-1739 DP-1 (i)).
+
+    Called after the authentication unit has rolled back, so the committed transaction holds
+    the failure row and nothing else. Used where authentication has its own unit of work: the
+    bearer path, and the identity-only dependency, which has no request session.
+    """
+    async with database.unit_of_work() as session:
+        await record_auth_failure(session, failure)
+
+
 async def resolve_caller(
     request: Request,
     settings: SettingsDep,
@@ -263,13 +288,28 @@ async def resolve_caller(
 
     if scheme == "bearer" and credential:
         verifier: OidcVerifier = request.app.state.oidc_verifier
-        async with database.unit_of_work() as session:
-            identity = await authenticate_bearer(session, verifier, credential)
+        try:
+            async with database.unit_of_work() as session:
+                identity = await authenticate_bearer(session, verifier, credential)
+        except AuthenticationFailed as failure:
+            await _record_failure_in_own_unit(database, failure)
+            raise
         return _select_workspace(identity, selected)
 
     api_key = credential if scheme == "apikey" else request.headers.get("x-api-key")
     if api_key:
-        identity = await authenticate_api_key(session, api_key)
+        try:
+            identity = await authenticate_api_key(session, api_key)
+        except AuthenticationFailed as failure:
+            # PL-1739 DP-1 (b), ruled for this path 2026-10-17 14:41:18: nothing else has run
+            # on the request session, so end its transaction (discarding anything partial),
+            # write the failure on the same session — one pool connection, as below — and
+            # commit before the 401 escapes. A write that fails is a 5xx, never a 401 (DP-2).
+            await session.rollback()
+            await session.begin()
+            await record_auth_failure(session, failure)
+            await session.commit()
+            raise
         if session.dirty:
             # The throttled `last_used_at` stamp (RL-1685 DP-1 (b)) is the only write this
             # path makes, and only about once a minute: commit it before the handler's reads.

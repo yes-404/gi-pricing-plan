@@ -261,6 +261,19 @@
           "title": "Rows",
           "type": "integer"
         },
+        "rows_excluded_unknown_response": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rows Excluded Unknown Response"
+        },
         "rows_excluded_zero_weight": {
           "anyOf": [
             {

@@ -1236,7 +1236,7 @@ def test_the_page_costs_the_same_number_of_statements_at_any_size(
     assert large.status_code == 200, large.text
     assert len(small.json()["items"]) == 3
     assert len(large.json()["items"]) == 10
-    # Eight, not five. FR-55's "one further aggregate" budgets the *page's* queries,
+    # Nine, not five. FR-55's "one further aggregate" budgets the *page's* queries,
     # and four of these are it: the row query, the capped count, `_latest_versions` and
     # `_last_validated`. The fifth is `requires(DATASET_READ)`'s role-assignment lookup,
     # and the sixth is the `workspace_members` read in identity resolution (W6b-11): the
@@ -1245,13 +1245,18 @@ def test_the_page_costs_the_same_number_of_statements_at_any_size(
     # page and of this slice. The seventh and eighth are OQ-552 (a)'s owner
     # resolution (W6b-21): one `users` query and one `service_accounts` query, both
     # `WHERE id IN (...)` over the page's owners, size-independent by the same argument
-    # as `_latest_versions`. Counted rather than filtered out, because a listener that
-    # only counts the statements it expects cannot catch an N+1 in one it does not.
-    assert at_three == at_ten == 8, (
+    # as `_latest_versions`. The ninth is the `workspace_settings` SELECT of the management
+    # rate limit (FR-452): `requires()` now counts the caller, and `rate_limit.enforce`
+    # resolves `platform.default_management_rate_limit_rps` through `settings.resolve`, one
+    # keyed read paid by every route here, independent of the page. Counted rather than
+    # filtered out, because a listener that only counts the statements it expects cannot
+    # catch an N+1 in one it does not.
+    assert at_three == at_ten == 9, (
         f"a page costs {at_three} statements at 3 rows and {at_ten} at 10; the budget is "
-        "eight — the memberships read, the permission check, the row query, the capped "
+        "nine — the memberships read, the permission check, the row query, the capped "
         "count, the latest-version aggregate, the last-validated aggregate, the users "
-        f"owner lookup and the service-accounts owner lookup.\n{statements!r}"
+        "owner lookup, the service-accounts owner lookup and the workspace_settings "
+        f"SELECT of the management rate limit (FR-452).\n{statements!r}"
     )
 
 

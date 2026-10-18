@@ -18,8 +18,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, status
 
-from app.api.authz import requires
-from app.api.deps import Caller, DatabaseDep, require_caller
+from app.api.authz import CallerDep, CountAfterCheck, management_counter, requires
+from app.api.deps import Caller, DatabaseDep
 from app.api.pagination import DEFAULT_LIMIT, MAX_LIMIT, Page
 from app.api.responses import problems
 from app.platform import deployments as service
@@ -35,7 +35,7 @@ __all__ = ["router"]
 
 router = APIRouter(prefix="/environments", tags=["platform"])
 
-AnyCaller = Annotated[Caller, Depends(require_caller)]
+CountDep = Annotated[CountAfterCheck, Depends(management_counter)]
 ReadHistoryDep = Annotated[Caller, Depends(requires(Permission.RATING_READ))]
 
 
@@ -47,7 +47,11 @@ ReadHistoryDep = Annotated[Caller, Depends(requires(Permission.RATING_READ))]
     responses=problems(401, 403, 404, 409, 422),
 )
 async def submit_deployment_request(
-    env: str, body: DeploymentRequestCreate, caller: AnyCaller, database: DatabaseDep
+    env: str,
+    body: DeploymentRequestCreate,
+    caller: CallerDep,
+    count: CountDep,
+    database: DatabaseDep,
 ) -> DeploymentRequest:
     """**201**. **403** without `deployment:promote` on this Environment; **404** for an unknown
     Environment or Rating Version; **409** `VALIDATION_FAILED` for a retired Environment or a
@@ -61,6 +65,7 @@ async def submit_deployment_request(
             actor=caller.principal,
             environment=env,
             body=body,
+            count_management=count,
         )
 
 
@@ -72,7 +77,11 @@ async def submit_deployment_request(
     responses=problems(401, 403, 404, 409, 422),
 )
 async def create_deployment(
-    env: str, body: DeploymentCreate, caller: AnyCaller, database: DatabaseDep
+    env: str,
+    body: DeploymentCreate,
+    caller: CallerDep,
+    count: CountDep,
+    database: DatabaseDep,
 ) -> Deployment:
     """**201**. **409** `DEPLOY_REQUIRES_APPROVAL` for a gated target without an approved,
     unexecuted request; **409** `PROMOTION_ORDER_VIOLATION`; the Rating Version and Environment
@@ -84,6 +93,7 @@ async def create_deployment(
             actor=caller.principal,
             environment=env,
             body=body,
+            count_management=count,
         )
 
 
