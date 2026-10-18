@@ -239,3 +239,13 @@ Appended, nothing above edited; this section supersedes the "NOT SHOWN" and "Run
 | R10 | `service.py:143`: `auth_failures.labels(reason=failure.detail or reason.value).inc()` (the raw detail as the label; the key-prefix variant of the same plan sentence was not run) | `test_r10_the_label_set_is_closed_and_carries_no_key_material` (also R5, R6, R7, R8, whose counter reads move off the named label) | `AssertionError: assert 'The credential presented was not accepted. Quote the trace id when reporting it.' in {'account_archived', 'bearer_expired', 'bearer_rejected', 'environment_not_granted', 'invalid_key', 'key_expired', ...}` | `5 failed, 11 passed`, rc 1 |
 
 After each revert the unplanted file was green (`16 passed`). The R10 key-prefix label breaker is not shown separately; the raw-detail one is.
+
+## Delta — the R10 key-prefix label breaker (executor-1740k, lead written grant 2026-10-18)
+
+Appended, nothing above edited. Tree: head `a96527033581674fb834dc4eb876547291027606`, `backend/src` unchanged. Window: load1 2.04 and 26 GB available at the start (01:34 BST); own database `gipricing_sl1740k`, `GIP_REDIS_URL=redis://localhost:6379/13`, `GIP_TEST_BUCKET=gip-test-blobs-1740k`; one file per run through `run-small.sh`.
+
+| Row | Plant (local, reverted) | Test shown red | Failing assert, verbatim | Run |
+|---|---|---|---|---|
+| R10 | `service.py`: `authenticate_api_key` stores the parsed key's `prefix` in a module global; `record_auth_failure` labels `auth_failures.labels(reason=_PLANT_PREFIX or reason.value).inc()` (the key prefix as the label) | `test_r10_the_label_set_is_closed_and_carries_no_key_material` (also R5, R6, R7, R8, whose counter reads move off the named label) | `AssertionError: assert 'cb3b47b1' in {'account_archived', 'bearer_expired', 'bearer_rejected', 'environment_not_granted', 'invalid_key', 'key_expired', ...}`; R5, R6, R7, R8: `AssertionError: assert (0.0 - 0.0) == 1` | `5 failed, 11 passed`, rc 1 |
+
+After `git restore -- backend/src` `git status --porcelain` printed nothing and the file was green (`16 passed`, rc 0). The R7 red is partly an artefact of the plant's stale global (a bearer failure after a keyed one reuses the last prefix); the R10 assert is the one that names the prefix. Cleanup: `dropdb` rc 0, `FLUSHDB -n 13` rc 0, bucket removed through the MinIO API (`mc rb --force`, rc 0); `mc ls g/` no longer lists `gip-test-blobs-1740k`.
