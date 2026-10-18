@@ -30,7 +30,7 @@ Filed 2026-10-18 under working id 8127 (lead-reserved in eta.md). Executor seat 
 
 ## PL-1710 DP-3 pre-build statement (D5.9)
 
-**Status: submitted to the decision-maker; NOT ruled. No code for D5.6, the switch, PREPARE, COMMIT or REVERT is written until it is.**
+**Status: submitted to the decision-maker and answered: DP-3 is ruled (b), DB-first (section below). The F1–F3 text is the ORIGINAL statement under (a), recorded as sent.**
 
 Facts: today `deploy()` (`backend/src/app/platform/deployments.py:455-577`) flushes the `DeploymentRow`, then `audit.record(deployment.created, after=Deployment)` in the SAME session; the route's commit is after return. No PREPARE/COMMIT mechanism exists (`git grep` at 84b0ff57). Proposed order in the deploy transaction: flush row → PREPARE round (every process hydrates the bundle off-loop and acks; nothing swapped) → COMMIT round (every process swaps its one `live` ref, acks) → `audit.record` with `after.commit_acks` = the per-process set {container, process} → transaction commit.
 
@@ -42,7 +42,17 @@ Failure cases, all loud, none silent:
 
 **Residual risk, stated:** F3 with an unreachable process leaves a window of mixed versions until reconcile; it cannot be made atomic without two-phase commit against Postgres. If that is unsafe, the decision-maker rules (b) or (c) per DP-3's condition (`PL-1710` :477).
 
-**Lead's note (2026-10-18):** the lead does not OK this; whether F3 is "safe" is the decision-maker's. Until ruled: no code for D5.6, no switch/PREPARE/COMMIT/REVERT path, no new reconcile mechanism.
+## DP-3 ruling (b), DB-first
+
+The maintainer (by delegation), to-lead "2026-10-18 22:59:56 BST — Maintainer: SL-1259 (S5) DP-3 → (b), the condition of 2026-10-14 10:14:13 item 3 NOT met by (a); DB-first ordering": *"Under (a) the switch happens BEFORE the deploy transaction commits, so F3 (the DB commit fails after the COMMIT acks, or a REVERT is incomplete) leaves processes serving a version **that no Deployment row and no Audit Event records**. For a governed platform an unaudited live version is the one outcome that is never acceptable."* (c) is excluded by fact: `deployments` is append-only (`deployments_no_modify`, c4a81f6d2e95 :214).
+
+**Why F3 under (a) was rejected:** the record could be behind reality, with a live version no row or event names.
+
+**Order as ruled:** (1) PREPARE; short → no row, no event, a 5xx naming the missing processes. (2) The deploy transaction commits: the row plus \`deployment.created\`, whose after-state carries the PREPARE set. (3) COMMIT round. (4) A second, catalogued Audit Event after the switch records the COMMIT set and the unacknowledged processes, ids only (a \`06\` catalogue append by the spec-change procedure in S5's own commit); the response reports per process {committed, unacknowledged}. No REVERT in the commit path. No heartbeat reconcile in S5 (an FD, MEDIUM, owner WK-674, filed by the lead). D5.6's after-state is the PREPARE set; \`PL-1710\` is cited, not edited. S5 verifies that a process loads the latest committed Deployment at startup, and stops if it does not (see "Startup-load verification").
+
+## Startup-load verification
+
+Recorded below once reported to the lead.
 
 ## Tasks
 
