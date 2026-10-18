@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import json
 import os
 import pathlib
 import subprocess
 import sys
 import textwrap
+from collections.abc import Sequence
 from datetime import date
 from decimal import Decimal
 from fractions import Fraction
@@ -388,6 +390,171 @@ def test_origin_rung_compares_unrounded_as_decimals_not_strings() -> None:
     assert analysis._origin_rung(a, c) == "payable_premium"
     d = [_rung("risk_premium", 100, "100")]
     assert analysis._origin_rung(a, d) == "payable_premium"  # present in one ladder only
+
+
+# ---------------------------------------------------------------------------
+# FD-1573 Task 1: `_score_pass` retains rung values, not `LadderRung` objects.
+# ---------------------------------------------------------------------------
+
+
+# `_old_*` below are a verbatim copy of `_origin_rung`, `_score_pass` and `dislocation_frame` as
+# they stood at origin/main 84b0ff5765e55bc8edd139cd22bb57cd474de807 (PL-1574 Task 1 Step 1), kept
+# as the value-for-value reference; only the names (`_old_` prefix) and the `analysis.` qualifiers
+# differ.
+def _old_origin_rung(baseline: Sequence[LadderRung], candidate: Sequence[LadderRung]) -> str | None:
+    """The first rung, in `RUNG_ORDER`, present in one ladder only or differing in `value_minor`
+    or in `unrounded_minor` (a `Decimal`: `Decimal("100") == Decimal("100.0")`)."""
+    base = {r.rung: r for r in baseline}
+    cand = {r.rung: r for r in candidate}
+    for name in analysis.RUNG_ORDER:
+        b, c = base.get(name), cand.get(name)
+        if b is None and c is None:
+            continue
+        if b is None or c is None or b.value_minor != c.value_minor:
+            return name
+        if b.unrounded_minor != c.unrounded_minor:  # Decimal values; None only equals None
+            return name
+    return None
+
+
+def _old_score_pass(
+    bundle: CompiledBundle,
+    portfolio: pl.LazyFrame,
+    columns: Sequence[str],
+    spec: DislocationSpec,
+    ref: object,
+) -> dict[str, dict[str, Any]]:
+    """One pass: only `quote_id` and the contract's declared inputs reach the engine (RL-1394)."""
+    declared = [f.name for f in bundle.algorithm.input_contract if f.name in columns]
+    frame = portfolio.select(["quote_id", *declared]).with_columns(
+        pl.lit(spec.purpose).alias("purpose"),
+        pl.lit(spec.as_at.isoformat()).alias("effective_date"),
+        pl.lit(str(ref)).alias("rating_version_ref"),
+    )
+    out: dict[str, dict[str, Any]] = {}
+    for row in analysis.score_batch(bundle, frame).collect().iter_rows(named=True):
+        ladder: list[LadderRung] = []
+        premium: int | None = None
+        if row["outcome"] == "quoted":
+            ladder = [LadderRung.model_validate(r) for r in json.loads(row["premium_ladder_json"])]
+            payable = [r for r in ladder if r.rung == "payable_premium"]
+            if not payable:
+                raise ValueError("dislocation: a quoted row carries no payable_premium rung")
+            premium = int(payable[0].value_minor)
+        out[row["quote_id"]] = {
+            "outcome": row["outcome"],
+            "error_code": row["error_code"],
+            "minor": premium,
+            "ladder": ladder,
+        }
+    return out
+
+
+def _old_dislocation_frame(
+    baseline: CompiledBundle,
+    candidate: CompiledBundle,
+    portfolio: pl.LazyFrame,
+    spec: DislocationSpec,
+) -> pl.DataFrame:
+    """One row per policy, sorted by `quote_id` (RL-1402 DP-S2-1, S2): both passes' outcome,
+    payable premium in integer minor units, the change, the rung it originated at, then every
+    portfolio column. Each pass is given only its own contract's declared inputs."""
+    schema = portfolio.collect_schema()
+    for name in analysis._FRAME_COLUMNS:
+        if name in schema:
+            raise analysis.PortfolioFrameError(
+                f"portfolio column {name!r} collides with the run's frame"
+            )
+    checked = analysis.read_portfolio(portfolio, segments=spec.segments).collect()
+    columns = schema.names()
+    base = _old_score_pass(baseline, portfolio, columns, spec, spec.baseline_ref)
+    cand = _old_score_pass(candidate, portfolio, columns, spec, spec.candidate_ref)
+
+    rows: list[dict[str, Any]] = []
+    for quote_id in sorted(base):
+        b, c = base[quote_id], cand[quote_id]
+        both = b["minor"] is not None and c["minor"] is not None
+        rows.append(
+            {
+                "quote_id": quote_id,
+                "baseline_outcome": b["outcome"],
+                "candidate_outcome": c["outcome"],
+                "baseline_minor": b["minor"],
+                "candidate_minor": c["minor"],
+                "change_minor": c["minor"] - b["minor"] if both else None,
+                "baseline_error_code": b["error_code"],
+                "candidate_error_code": c["error_code"],
+                "origin_rung": _old_origin_rung(b["ladder"], c["ladder"]) if both else None,
+            }
+        )
+    frame = pl.DataFrame(
+        rows,
+        schema={
+            "quote_id": pl.String,
+            "baseline_outcome": pl.String,
+            "candidate_outcome": pl.String,
+            "baseline_minor": pl.Int64,
+            "candidate_minor": pl.Int64,
+            "change_minor": pl.Int64,
+            "baseline_error_code": pl.String,
+            "candidate_error_code": pl.String,
+            "origin_rung": pl.String,
+        },
+    )
+    return frame.join(checked, on="quote_id", how="left", maintain_order="left").sort("quote_id")
+
+
+def _book_2000() -> tuple[CompiledBundle, CompiledBundle, pl.LazyFrame, DislocationSpec]:
+    """2,000 distinct policies; the candidate moves the direct channel's expense factor, so
+    `origin_rung` is exercised, and a second tiny move shows in `unrounded_minor` only."""
+    n = 2000
+    book = _policies(
+        quote_id=[f"Q{i:05d}" for i in range(n)],
+        exposure_years=[1.0] * n,
+        driver_age=[17 + i % 83 for i in range(n)],
+        channel=["direct" if i % 2 == 0 else "broker" for i in range(n)],
+        min_premium_minor=[0] * n,
+        sanity_cap_minor=[999_999_999] * n,
+        sanity_floor_minor=[0] * n,
+    )
+    base = _compiled_from(_algorithm_payload())
+    cand = _compiled_from(_algorithm_payload(), expense_direct="1.2")
+    return base, cand, book, _spec()
+
+
+@pytest.mark.req("NFR-495")
+def test_dislocation_frame_output_unchanged_on_the_fixture_book() -> None:
+    """The new retention gives the frame the old code gave, value for value."""
+    baseline, candidate, book, spec = _book_2000()
+    new = analysis.dislocation_frame(baseline, candidate, book, spec)
+    old = _old_dislocation_frame(baseline, candidate, book, spec)
+    assert old.equals(new)
+    assert set(new["origin_rung"].drop_nulls()) == {"office_premium"}  # the book exercises it
+
+    # A move in `unrounded_minor` alone: the expense factor 1.1 -> 1.10001 leaves some policies'
+    # rounded premium unchanged, yet their origin rung is still the office premium.
+    nudged = _compiled_from(_algorithm_payload(), expense_direct="1.10001")
+    new = analysis.dislocation_frame(baseline, nudged, book, spec)
+    old = _old_dislocation_frame(baseline, nudged, book, spec)
+    assert old.equals(new)
+    unrounded_only = new.filter((pl.col("change_minor") == 0) & pl.col("origin_rung").is_not_null())
+    assert unrounded_only.height > 0
+
+
+def test_dislocation_frame_retains_no_ladder_objects() -> None:
+    """_score_pass keeps (value_minor, unrounded_minor) per rung, never a LadderRung."""
+    baseline, _candidate, book, spec = _book_2000()
+    out = analysis._score_pass(
+        baseline, book, book.collect_schema().names(), spec, spec.baseline_ref
+    )
+    quoted = [v for v in out.values() if v["outcome"] == "quoted"]
+    assert quoted
+    assert all("ladder" not in v for v in quoted)
+    assert all(
+        isinstance(name, str) and isinstance(pair, tuple) and len(pair) == 2
+        for v in quoted
+        for name, pair in v["rungs"].items()
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -154,20 +154,34 @@ def read_portfolio(portfolio: pl.LazyFrame, *, segments: Sequence[str] = ()) -> 
     )
 
 
+_RungValues = dict[str, tuple[int, object]]
+"""A ladder as `{rung: (value_minor, unrounded_minor)}`: what `_origin_rung_of` compares, kept
+instead of the validated `LadderRung` objects, which cost most of a policy's retained memory
+(FD-1573: both passes' ladders are held at once)."""
+
+
+def _rung_values(ladder: Sequence[LadderRung]) -> _RungValues:
+    return {r.rung: (r.value_minor, r.unrounded_minor) for r in ladder}
+
+
+def _origin_rung_of(baseline: _RungValues, candidate: _RungValues) -> str | None:
+    """The first rung, in `RUNG_ORDER`, present in one ladder only or differing in `value_minor`
+    or in `unrounded_minor` (compared as the validated values, never as strings)."""
+    for name in RUNG_ORDER:
+        b, c = baseline.get(name), candidate.get(name)
+        if b is None and c is None:
+            continue
+        if b is None or c is None or b[0] != c[0]:
+            return name
+        if b[1] != c[1]:  # Decimal values; None only equals None
+            return name
+    return None
+
+
 def _origin_rung(baseline: Sequence[LadderRung], candidate: Sequence[LadderRung]) -> str | None:
     """The first rung, in `RUNG_ORDER`, present in one ladder only or differing in `value_minor`
     or in `unrounded_minor` (a `Decimal`: `Decimal("100") == Decimal("100.0")`)."""
-    base = {r.rung: r for r in baseline}
-    cand = {r.rung: r for r in candidate}
-    for name in RUNG_ORDER:
-        b, c = base.get(name), cand.get(name)
-        if b is None and c is None:
-            continue
-        if b is None or c is None or b.value_minor != c.value_minor:
-            return name
-        if b.unrounded_minor != c.unrounded_minor:  # Decimal values; None only equals None
-            return name
-    return None
+    return _origin_rung_of(_rung_values(baseline), _rung_values(candidate))
 
 
 def _score_pass(
@@ -186,7 +200,7 @@ def _score_pass(
     )
     out: dict[str, dict[str, Any]] = {}
     for row in score_batch(bundle, frame).collect().iter_rows(named=True):
-        ladder: list[LadderRung] = []
+        rungs: _RungValues = {}
         premium: int | None = None
         if row["outcome"] == "quoted":
             ladder = [LadderRung.model_validate(r) for r in json.loads(row["premium_ladder_json"])]
@@ -194,11 +208,12 @@ def _score_pass(
             if not payable:
                 raise ValueError("dislocation: a quoted row carries no payable_premium rung")
             premium = int(payable[0].value_minor)
+            rungs = _rung_values(ladder)
         out[row["quote_id"]] = {
             "outcome": row["outcome"],
             "error_code": row["error_code"],
             "minor": premium,
-            "ladder": ladder,
+            "rungs": rungs,
         }
     return out
 
@@ -235,7 +250,7 @@ def dislocation_frame(
                 "change_minor": c["minor"] - b["minor"] if both else None,
                 "baseline_error_code": b["error_code"],
                 "candidate_error_code": c["error_code"],
-                "origin_rung": _origin_rung(b["ladder"], c["ladder"]) if both else None,
+                "origin_rung": _origin_rung_of(b["rungs"], c["rungs"]) if both else None,
             }
         )
     frame = pl.DataFrame(
