@@ -387,6 +387,8 @@ AC2's grep is literal; prose hit at :360 reworded, not a code change (the mainta
 
 **Rolling `api` roll = scale-out-then-in (NFR-531; mechanism: compose scale + container ids).** The smoke's roll (`up --scale api=2`) recreated both replicas at once: ~23.3 s with no healthy replica, 765 failed requests (to-lead.md 2026-10-18 01:33:32 BST, the cause reading; option (a) ruled 01:33:49 BST). `_roll_api` in `backend/tests/test_deploy_stack_runtime.py` now runs `up -d --no-deps --no-recreate --scale api=4 api`, waits (bounded 180 s, loud) until both new containers are healthy by id, then `docker stop` + `docker rm` the old ones one at a time, ending at api=2; `deploy/README.md` documents the same sequence; no `lb.conf` change. The test keeps `failed == 0` and adds an overlap assert: a sampler counts healthy `api` containers (`docker ps --filter health=healthy`, project-labelled) every 0.1 s across the roll and asserts `min >= 1`. Proof is the SL-1258 SOLO re-gate; not run here.
 
+**One roll script, and a permanent per-failure record (NFR-531).** The roll sequence lives only in `deploy/roll-api.sh`; the README points at it and `test_deploy_stack_runtime.py` calls it by subprocess (to-lead.md 2026-10-18 01:38:19 BST). Run 2 at 2b92457d had 1 failed request (min healthy 2 over 189 samples); no fix is made before the evidence names H1 or H2, so the client loop now records each failed request's UTC ms timestamp, error class and elapsed time beside the roll step lines (01:40:16 BST; the network-disconnect drain and the lb non_idempotent retry are refused).
+
 ## PRs
 
 None yet.

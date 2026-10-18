@@ -22,8 +22,10 @@ import subprocess
 import tempfile
 import threading
 import time
+import urllib.error
 import urllib.request
 from collections.abc import Iterator
+from datetime import UTC, datetime
 from typing import Any, NamedTuple
 from uuid import UUID
 
@@ -284,27 +286,40 @@ def _api_containers(*, healthy_only: bool = False) -> list[str]:
     return out.split()
 
 
-def _roll_api(sha: str, replicas: int, *, timeout: float = 180.0) -> None:
-    """Health-gated roll (SL-1258; the maintainer's ruling, to-lead.md 2026-10-18 01:33:49 BST).
+def _roll_api(sha: str, *, timeout: float = 180.0) -> list[tuple[str, str]]:
+    """Run `deploy/roll-api.sh` (SL-1258) and return its step lines as (HH:MM:SS.mmm UTC, line).
 
-    Scale out beside the old replicas (`--no-recreate` leaves them running), wait until every
-    NEW container reports healthy (by container id, bounded, failing loud), then stop and remove
-    the OLD ones one at a time (SIGTERM within the service's stop grace period), ending at
-    `replicas`. A plain `up --scale api=<n>` recreates every replica at once, leaving none healthy
-    until the new ones pass their healthcheck (765 failed requests, ~23 s, observed).
+    The roll itself, and the sequence it runs, live in the script alone; this only calls it.
     """
-    old = _api_containers()
-    _compose(sha, "up", "-d", "--no-deps", "--no-recreate", "--scale", f"api={replicas * 2}", "api")
-    new = [c for c in _api_containers() if c not in old]
-    assert len(new) == replicas, f"expected {replicas} new api containers, got {new}"
-    deadline = time.monotonic() + timeout
-    while not set(new) <= set(_api_containers(healthy_only=True)):
-        if time.monotonic() > deadline:
-            raise AssertionError(f"new api containers {new} not healthy within {timeout}s")
-        time.sleep(1)
-    for container in old:
-        subprocess.run(["docker", "stop", container], check=True, capture_output=True)
-        subprocess.run(["docker", "rm", container], check=True, capture_output=True)
+    result = subprocess.run(
+        [str(ROOT / "deploy" / "roll-api.sh"), "-t", str(int(timeout)), PROJECT,
+         str(ROOT / "deploy" / "docker-compose.yml"),
+         str(ROOT / "deploy" / "docker-compose.isolated.yml")],
+        env={**os.environ, "GIP_BUILD": sha, "GIP_LB_PORT": LB_PORT},
+        check=True, capture_output=True, text=True,
+    )
+    steps = []
+    for line in result.stdout.splitlines():
+        parts = line.split(" ", 2)
+        steps.append((parts[1], line))
+    return steps
+
+
+def _utc_now() -> str:
+    """Wall-clock UTC to the millisecond, `YYYY-MM-DDTHH:MM:SS.mmm`."""
+    return datetime.now(UTC).isoformat(timespec="milliseconds").removesuffix("+00:00")
+
+
+def _error_class(exc: BaseException) -> str:
+    """The failed-request class the permanent record names (to-lead.md 2026-10-18 01:40:16 BST)."""
+    if isinstance(exc, urllib.error.HTTPError):
+        return f"HTTP status {exc.code}"
+    reason = exc.reason if isinstance(exc, urllib.error.URLError) else exc
+    if isinstance(reason, ConnectionResetError):
+        return "connection reset"
+    if isinstance(reason, TimeoutError):
+        return "connect timeout" if isinstance(exc, urllib.error.URLError) else "read timeout"
+    return f"other: {type(reason).__name__}"
 
 
 @pytest.mark.req("NFR-531")
@@ -321,16 +336,18 @@ def test_previous_version_serves_the_migrated_schema_and_rolls_forward_with_no_f
     _compose(n, "run", "--rm", "--no-deps", "migrate")
     assert _score(url, headers, body) == 200
     # 4. Roll the api replicas from N-1 to N under load, counting failed requests.
-    failures = 0
+    # One record per failed request: when (UTC, ms), what class of error, and how long it took.
+    failures: list[str] = []
     stop = threading.Event()
 
     def load() -> None:
-        nonlocal failures
         while not stop.is_set():
+            started = time.monotonic()
             try:
                 _score(url, headers, body)
-            except Exception:
-                failures += 1
+            except Exception as exc:
+                elapsed = time.monotonic() - started
+                failures.append(f"{_utc_now()} {_error_class(exc)} elapsed={elapsed * 1000:.0f}ms")
             time.sleep(0.02)
 
     # The overlap: the number of healthy api containers, sampled every 0.1 s across the roll.
@@ -345,20 +362,29 @@ def test_previous_version_serves_the_migrated_schema_and_rolls_forward_with_no_f
     for t in threads:
         t.start()
     try:
-        _roll_api(n, 2)
+        steps = _roll_api(n)
     finally:
         stop.set()
         for t in threads:
             t.join()
     print(
         f"healthy api replicas across the roll: min={min(healthy_counts, default=0)} "
-        f"over {len(healthy_counts)} samples; failed requests={failures}"
+        f"over {len(healthy_counts)} samples; failed requests={len(failures)}"
     )
+    # The roll steps and the failed requests, in time order (both are UTC wall-clock).
+    record = sorted(
+        steps + [(f.split("T", 1)[1][:12], f"FAILED REQUEST {f}") for f in failures],
+        key=lambda entry: entry[0],
+    )
+    print("\n".join(line for _, line in record))
     assert healthy_counts, "the overlap sampler took no samples"
     assert min(healthy_counts) >= 1, (
         f"no healthy api replica at some instant of the roll: min={min(healthy_counts)}"
     )
-    assert failures == 0, f"{failures} failed requests while rolling {n1} to {n}"
+    assert not failures, (
+        f"{len(failures)} failed requests while rolling {n1} to {n}; the record, in time order:\n"
+        + "\n".join(line for _, line in record)
+    )
     assert len(_api_containers()) == 2
     assert _score(url, headers, body) == 200
 

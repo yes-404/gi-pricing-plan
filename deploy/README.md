@@ -117,12 +117,9 @@ docker compose -f deploy/docker-compose.yml --profile app up -d --wait --scale a
 ```
 
 - **Rolling `api` to a new image is health-gated** (NFR-531). A plain `up --scale api=2`
-  recreates every replica at once, so none is healthy until the new ones pass their
-  healthcheck. Instead: `GIP_BUILD=<new> docker compose … up -d --no-deps --no-recreate
-  --scale api=4 api`; wait until both new containers (by id) report healthy, failing the roll
-  after a bounded timeout; then `docker stop` and `docker rm` the old containers one at a time,
-  ending at `api=2`. `lb` re-resolves `api` every second and retries the next upstream, so it
-  needs no change. `_roll_api` in `backend/tests/test_deploy_stack_runtime.py` runs this sequence.
+  recreates every replica at once, so none is healthy until the new ones pass their healthcheck.
+  Run `GIP_BUILD=<new> deploy/roll-api.sh [-t <seconds>] <project> <compose-file>...`. `lb`
+  re-resolves `api` every second and retries the next upstream, so it needs no change.
 - **`migrate`** is a one-shot step (FR-435). `api` and `worker` wait for it to exit 0; nothing
   migrates at application start.
 - **`api`** has no dependency on `worker` (FR-434): `up api lb` starts the scoring API with no
