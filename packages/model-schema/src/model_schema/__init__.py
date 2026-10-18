@@ -82,6 +82,7 @@ from model_schema.deployments import (
     EnvironmentCreate,
     EnvironmentUpdate,
     LiveDeployment,
+    RollbackCreate,
     SwitchReport,
 )
 from model_schema.diagnostics import (
@@ -728,6 +729,7 @@ __all__ = [
     "ResponseKind",
     "RetryPolicy",
     "RetryState",
+    "RollbackCreate",
     "RoundSpec",
     "RuleOutcome",
     "RuleResult",

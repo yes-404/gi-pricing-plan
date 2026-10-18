@@ -181,6 +181,7 @@ GENERATED_SHAPES: dict[str, str] = {
     # outcome of its switch) and the `after` of `deployment.switched`.
     "deployment-created": "DeploymentCreated",
     "switch-report": "SwitchReport",
+    "rollback-create": "RollbackCreate",
     "deployment-request": "DeploymentRequest",
     "deployment-request-create": "DeploymentRequestCreate",
     # Added 2026-10-04 (WK-674 Slice 2, PL-1392 Task 5, Acceptance 16): the body of

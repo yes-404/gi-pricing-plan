@@ -57,6 +57,12 @@ ROWS: tuple[Row, ...] = (
         "DeploymentRequest",
     ),
     Row("POST", "/api/v1/environments/{env}/deployments", "DeploymentCreate", "DeploymentCreated"),
+    Row(
+        "POST",
+        "/api/v1/environments/{env}/deployments/rollback",
+        "RollbackCreate",
+        "DeploymentCreated",
+    ),
     Row("GET", "/api/v1/environments/{env}/deployments", None, "Deployment", paged=True),
     # Row 9: the body and (FD-1416, PL-1528) the 2xx are typed.
     Row("POST", "/api/v1/approval-requests", "ApprovalSubmission", "ApprovalRequest"),
@@ -314,16 +320,16 @@ def _environment_operations(document: dict[str, Any]) -> set[tuple[str, str]]:
 
 @pytest.mark.req("FR-428")
 def test_the_route_set_is_pinned(document: dict[str, Any]) -> None:
-    """The operations under `/api/v1/environments` equal the Route table's seven rows plus
+    """The operations under `/api/v1/environments` equal the Route table's eight rows plus
     `SETTINGS_ROUTES`' two, exactly.
 
     A route added or removed unchecked fails here naming it.
     """
     live = _environment_operations(document)
     expected = {(row.method, row.path) for row in ENVIRONMENT_ROWS}
-    assert len(expected) == 7
+    assert len(expected) == 8
     union = expected | SETTINGS_ROUTES
-    assert len(union) == 9
+    assert len(union) == 10
     assert live == union, (
         f"extra: {sorted(live - union)}; missing: {sorted(union - live)}"
     )
@@ -516,7 +522,10 @@ def test_each_untyped_2xx_of_the_deployment_routes_is_refused_by_name(
     original = _sources()["deployments.py"]
     for broken, shown in (
         (original.replace(") -> DeploymentCreated:\n", "):\n", 1), "None"),
-        (original.replace(") -> DeploymentCreated:\n", ") -> dict[str, Any]:\n", 1), "dict[str, Any]"),
+        (
+            original.replace(") -> DeploymentCreated:\n", ") -> dict[str, Any]:\n", 1),
+            "dict[str, Any]",
+        ),
     ):
         assert broken != original
         assert any(f"returns {shown}" in p for p in ast_problems({"deployments.py": broken}))

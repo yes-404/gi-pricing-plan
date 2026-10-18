@@ -4,6 +4,7 @@
 |---|---|---|
 | `POST` | `/api/v1/environments/{env}/deployment-requests` | Submit a Deployment Request |
 | `POST` | `/api/v1/environments/{env}/deployments` | Deploy an approved version |
+| `POST` | `/api/v1/environments/{env}/deployments/rollback` | Roll back (`deployment:promote`) |
 | `GET` | `/api/v1/environments/{env}/deployments` | History, newest first (`rating:read`) |
 
 The two writes are **handler-guarded**, not `requires(...)`: `deployment:promote` is checked with
@@ -30,6 +31,7 @@ from model_schema import (
     DeploymentRequest,
     DeploymentRequestCreate,
     Permission,
+    RollbackCreate,
 )
 
 __all__ = ["router"]
@@ -92,6 +94,36 @@ async def create_deployment(
     **503** `DEPLOY_SWITCH_INCOMPLETE` when a subscribed process did not acknowledge PREPARE (no
     Deployment is written)."""
     return await service.deploy_and_switch(
+        database,
+        workspace_id=caller.workspace_id,
+        actor=caller.principal,
+        environment=env,
+        body=body,
+        count_management=count,
+        switch=getattr(request.app.state, "switch", None),
+    )
+
+
+@router.post(
+    "/{env}/deployments/rollback",
+    summary="Roll an environment back to an earlier Rating Version",
+    status_code=status.HTTP_201_CREATED,
+    response_model=DeploymentCreated,
+    responses=problems(401, 403, 404, 409, 422, 503),
+)
+async def rollback_deployment(
+    env: str,
+    body: RollbackCreate,
+    request: Request,
+    caller: CallerDep,
+    count: CountDep,
+    database: DatabaseDep,
+) -> DeploymentCreated:
+    """**201** with the new Deployment and `switch` (`03` FR-269). Needs `deployment:promote` on
+    the Environment and no new approval. **409** `VALIDATION_FAILED` when the Rating Version was
+    never deployed to this Environment; **422** for a non-Rating-Version reference; **503**
+    `DEPLOY_SWITCH_INCOMPLETE` when a subscribed process did not acknowledge PREPARE."""
+    return await service.rollback_and_switch(
         database,
         workspace_id=caller.workspace_id,
         actor=caller.principal,

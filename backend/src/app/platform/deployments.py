@@ -56,6 +56,7 @@ from model_schema import (
     Permission,
     Principal,
     PromotionSkip,
+    RollbackCreate,
     ScopeType,
     SwitchReport,
     new_uuid7,
@@ -69,6 +70,8 @@ __all__ = [
     "deploy_and_switch",
     "list_deployments",
     "resolve_artifact_ref",
+    "rollback",
+    "rollback_and_switch",
     "submit_request",
 ]
 
@@ -484,6 +487,41 @@ async def apply_approval_decision(
 # -- the Deployment -----------------------------------------------------------------------
 
 
+async def _prepare(
+    switch: SwitchTransport | None,
+    *,
+    workspace_id: UUID,
+    environment: str,
+    deployment_id: UUID,
+    ref: ArtifactRef,
+    bundle_hash: str,
+) -> tuple[frozenset[str], SwitchMessage | None]:
+    """PREPARE (`PL-1766` D5.9): the processes that hydrated the bundle, and the COMMIT message
+    to send after the transaction commits. A short round raises `DEPLOY_SWITCH_INCOMPLETE`,
+    naming who did not acknowledge; nothing has been swapped and the caller writes no row."""
+    if switch is None:
+        return frozenset(), None
+    message = SwitchMessage(
+        switch_id=str(new_uuid7()),
+        phase="prepare",
+        workspace_id=workspace_id,
+        environment=environment,
+        deployment_id=deployment_id,
+        rating_version_ref=str(ref),
+        bundle_hash=bundle_hash,
+    )
+    try:
+        prepared = await prepare_round(switch, message, timeout=PREPARE_TIMEOUT_SECONDS)
+    except SwitchIncompleteError as short:
+        raise PlatformError(
+            "DEPLOY_SWITCH_INCOMPLETE",
+            "The deployment switch did not complete PREPARE",
+            503,
+            f"No Deployment was written. {short}",
+        ) from short
+    return prepared, SwitchMessage(**{**message.__dict__, "phase": "commit"})
+
+
 async def deploy(
     session: AsyncSession,
     *,
@@ -583,28 +621,14 @@ async def deploy(
     ).scalar_one_or_none()
     request_ref = None if request_row is None else _request_ref(request_row)
     deployment_id = new_uuid7()
-    prepared: frozenset[str] = frozenset()
-    commit_message: SwitchMessage | None = None
-    if switch is not None:
-        message = SwitchMessage(
-            switch_id=str(new_uuid7()),
-            phase="prepare",
-            workspace_id=workspace_id,
-            environment=env.slug,
-            deployment_id=deployment_id,
-            rating_version_ref=str(ref),
-            bundle_hash=bundle_hash,
-        )
-        try:
-            prepared = await prepare_round(switch, message, timeout=PREPARE_TIMEOUT_SECONDS)
-        except SwitchIncompleteError as short:
-            raise PlatformError(
-                "DEPLOY_SWITCH_INCOMPLETE",
-                "The deployment switch did not complete PREPARE",
-                503,
-                f"No Deployment was written. {short}",
-            ) from short
-        commit_message = SwitchMessage(**{**message.__dict__, "phase": "commit"})
+    prepared, commit_message = await _prepare(
+        switch,
+        workspace_id=workspace_id,
+        environment=env.slug,
+        deployment_id=deployment_id,
+        ref=ref,
+        bundle_hash=bundle_hash,
+    )
     row = DeploymentRow(
         id=deployment_id,
         workspace_id=workspace_id,
@@ -659,6 +683,133 @@ async def deploy_and_switch(
     """
     async with database.unit_of_work() as session:
         deployed = await deploy(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            environment=environment,
+            body=body,
+            count_management=count_management,
+            switch=switch,
+        )
+    report = await complete_switch(
+        database, deployed, workspace_id=workspace_id, actor=actor, switch=switch
+    )
+    return DeploymentCreated(**deployed.deployment.model_dump(), switch=report)
+
+
+async def rollback(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    actor: Principal,
+    environment: str,
+    body: RollbackCreate,
+    count_management: Callable[[], Awaitable[None]] | None = None,
+    switch: SwitchTransport | None = None,
+) -> Deployed:
+    """Roll an Environment back to a Rating Version it was deployed with before (FR-269).
+
+    The same operation as a deploy, aimed at an earlier version and with no new approval: the
+    target was approved when it was first deployed here, and the new Deployment row records the
+    bundle hash that earlier Deployment recorded. `deployment:promote` is checked like a
+    deploy's. The Audit Event is `deployment.rolled_back` (FR-272, NFR-498), `before` the
+    Deployment that was live and `after` the new one with its PREPARE set, in this transaction;
+    the switch follows the commit as for a deploy (`complete_switch`).
+    """
+    ref = body.rating_version_ref
+    _require_rating_version(ref, what="A rollback")
+    env = await _authorised_environment(
+        session,
+        workspace_id=workspace_id,
+        actor=actor,
+        slug=environment,
+        count_management=count_management,
+    )
+    target = (
+        await session.execute(
+            select(DeploymentRow)
+            .where(
+                DeploymentRow.workspace_id == workspace_id,
+                DeploymentRow.environment_id == env.id,
+                DeploymentRow.rating_version_ref == str(ref),
+            )
+            .order_by(DeploymentRow.deployed_at.desc(), DeploymentRow.id.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if target is None:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "Nothing to roll back to",
+            409,
+            f"{ref} was never deployed to {env.slug!r}. A rollback names a Rating Version this "
+            "Environment has been deployed with.",
+        )
+    previous = (
+        await session.execute(
+            select(DeploymentRow)
+            .where(
+                DeploymentRow.workspace_id == workspace_id,
+                DeploymentRow.environment_id == env.id,
+            )
+            .order_by(DeploymentRow.deployed_at.desc(), DeploymentRow.id.desc())
+            .limit(1)
+        )
+    ).scalar_one()
+    deployment_id = new_uuid7()
+    prepared, commit_message = await _prepare(
+        switch,
+        workspace_id=workspace_id,
+        environment=env.slug,
+        deployment_id=deployment_id,
+        ref=ref,
+        bundle_hash=target.bundle_hash,
+    )
+    row = DeploymentRow(
+        id=deployment_id,
+        workspace_id=workspace_id,
+        environment_id=env.id,
+        rating_version_ref=str(ref),
+        bundle_hash=target.bundle_hash,
+        deployed_by=actor.id,
+        reason=body.reason,
+        deployment_request_id=None,
+    )
+    session.add(row)
+    await session.flush()
+    await session.refresh(row)
+    model = _to_deployment(row, env.slug, None)
+    await audit.record(
+        session,
+        workspace_id=workspace_id,
+        actor=actor,
+        source=JobSource.API,
+        action="deployment.rolled_back",
+        entity_ref=f"environment:{env.slug}",
+        before=_to_deployment(
+            previous,
+            env.slug,
+            await _request_ref_of(session, previous.deployment_request_id),
+        ).model_dump(mode="json"),
+        after={**model.model_dump(mode="json"), "prepared": sorted(prepared)},
+        justification=body.reason,
+    )
+    return Deployed(model, prepared, commit_message)
+
+
+async def rollback_and_switch(
+    database: Database,
+    *,
+    workspace_id: UUID,
+    actor: Principal,
+    environment: str,
+    body: RollbackCreate,
+    count_management: Callable[[], Awaitable[None]] | None = None,
+    switch: SwitchTransport | None = None,
+) -> DeploymentCreated:
+    """Roll back, then switch: `deploy_and_switch`'s order for a rollback (FR-268, FR-269)."""
+    async with database.unit_of_work() as session:
+        deployed = await rollback(
             session,
             workspace_id=workspace_id,
             actor=actor,

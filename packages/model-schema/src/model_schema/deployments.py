@@ -38,6 +38,7 @@ __all__ = [
     "EnvironmentCreate",
     "EnvironmentUpdate",
     "LiveDeployment",
+    "RollbackCreate",
     "SwitchReport",
 ]
 
@@ -145,6 +146,19 @@ class DeploymentCreated(Deployment):
     after its transaction committed, the outcome of the switch (`03` FR-268)."""
 
     switch: SwitchReport
+
+
+class RollbackCreate(BaseModel):
+    """The body of `POST /api/v1/environments/{env}/deployments/rollback` (`03` FR-269).
+
+    Names a Rating Version that was deployed to this Environment before. It needs no new
+    approval: it was approved when it was first deployed.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    rating_version_ref: ArtifactRef
+    reason: str = Field(min_length=1)
 
 
 class DeploymentCreate(BaseModel):

@@ -95,10 +95,14 @@ HANDLER_GUARDED: dict[tuple[str, str], tuple[tuple[str, int, str], ...]] = {
     # `requires(...)`. Both reach the one check in `_authorised_environment` (WK-674 Slice 2,
     # PL-1392 Task 5).
     ("POST", "/api/v1/environments/{env}/deployments"): (
-        ("platform/deployments.py", 93, "require_permission("),
+        ("platform/deployments.py", 128, "require_permission("),
     ),
     ("POST", "/api/v1/environments/{env}/deployment-requests"): (
-        ("platform/deployments.py", 93, "require_permission("),
+        ("platform/deployments.py", 128, "require_permission("),
+    ),
+    # PL-1766 D5.10 (WK-674 Slice 5): the rollback route checks the same permission.
+    ("POST", "/api/v1/environments/{env}/deployments/rollback"): (
+        ("platform/deployments.py", 128, "require_permission("),
     ),
 }
 
@@ -300,6 +304,10 @@ RESOURCE_BACKED: dict[tuple[str, str], tuple[dict[str, str], dict[str, Any]]] = 
     ("POST", "/api/v1/environments/{env}/deployment-requests"): (
         {"env": "dev"},
         {"rating_version_ref": "rating_version:sweep-version@1"},
+    ),
+    ("POST", "/api/v1/environments/{env}/deployments/rollback"): (
+        {"env": "dev"},
+        {"rating_version_ref": "rating_version:sweep-version@1", "reason": "sweep"},
     ),
 }
 
