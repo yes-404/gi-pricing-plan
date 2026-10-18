@@ -127,7 +127,9 @@ MEDIUM (loud, no mispricing); owner WK-1178; due **before the P2 code freeze, We
 2026**, not deferred past it. Its own slice: SL 8116 under PL 8115 (reserved; its fix slice
 gets its own GO). Option (b) stays open for rows already stored and is not ruled here.
 
-## Disposition (as filed 2026-10-17; the Close above supersedes its "deferred" wording)
+## Disposition
+
+(As filed 2026-10-17; the Close above supersedes the "deferred" wording that follows.)
 
 Deferred with an owner: WK-1178. Decision on the option is the lead's or an RL's; this record
 picks none. The event that next discharges it: a merged change adding the pattern and/or the
