@@ -14,7 +14,7 @@ relates: [WK-1178, FD-1803, SL-1810, PL-1809]
 
 ## Finding
 
-**Severity MEDIUM, proposed by the auditor (the ruling gave none; the lead gives the verdict). Owner auditor (ruled); work item WK-1178.**
+**Severity MEDIUM, owner auditor, work item WK-1178, due before the P2 code freeze (Wed 4 Nov 2026)** (the maintainer, to-lead "2026-10-18 15:22:32 BST", Q1). MEDIUM and not HIGH because in P2 the only stores are dev/demo databases and #1341 stops new writes.
 Source: the maintainer's entry "2026-10-18 12:18:08 BST" (`to-lead.md`), item 2: "The live-DB census of
 existing rate tables for non-finite values: ONE FD, owner auditor, in D22. It needs a live database,
 not a slice gate."
@@ -45,8 +45,11 @@ before `c1a9c430` that still exists (a gate or demo database is dropped at its E
 not reachable; which databases qualify is the census runner's to list and quote). Report table slug, version, storage mode and cell count; a
 parquet version needs its blob read. It reads; it writes nothing. It needs a live database and is not a slice gate.
 
+## Escalation (ruled, 15:22:32 BST Q1)
+
+- If the census finds ANY stored non-finite rate-table value, this finding becomes **HIGH** (a NaN premium is a silent mispricing), and a remedy (refuse at load, or a data migration with a dated note) is owed before the P2 close.
+- If it finds none, the finding closes with the census query, its count and the databases it ran on quoted.
+
 ## Disposition
 
-Deferred with an owner: auditor. The event that next discharges it: the census run against the live
-database with its counts quoted (zero is a valid result), after which this row is set `closed`; a
-non-zero count opens a remediation finding naming the tables. Filed under working id 8118.
+Deferred with an owner: auditor (WK-1178), due before the code freeze. The event that next discharges it: the census run against a live database with its query, count and databases quoted, then the Escalation above. Filed under working id 8118.
