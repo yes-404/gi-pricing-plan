@@ -474,6 +474,16 @@ Disclosed, from the same runs:
 - **Closing acts (#1324):** this ledger `status: closed`; the SL-1258 roadmap row `status: closed`. MERGE-ACK: not yet given.
 - **Code comments that still cite the working ids (listed, not edited):** `backend/tests/test_bench_deploy_path.py:1` (working id 9921, hyphen form), `backend/tests/test_deploy_stack_runtime.py:594` (working id 9810, hyphen form), and `scripts/bench-deploy-path.py:10` (working id 9921, space form; outside the swept directories).
 
+## E4.9 — merge-second re-run of SL-1722's guards (2026-10-18; the maintainer (by delegation), to-lead 03:49:30 BST and 03:55:06 BST)
+
+SL-1722 merged first (#1329, `39da0e1b`), so SL-1258 re-runs its guards. The list is `git diff --name-only bdff304a 39da0e1b -- backend/tests 'packages/*/tests'` (the #1329 squash alone; the `packages/*/tests` glob matched nothing). Each file ran once, single-file, via `run-small.sh` in an item-15 window (load1 1.24 and 1.87 at the two starts, ≥ 20 GB free; own DB `gipricing_e49_1258`, redis db 12, bucket `gip-test-blobs-e49`, dropped / flushed / removed through the MinIO API after each window).
+
+- **First run, head `68266da4`:** `test_api_blob_uploads.py` 10 passed; `test_blobs.py` 24 passed; `test_ingest_enqueuers.py` 2 passed; `test_upload_to_ingest.py` 1 passed; **`test_contracts.py` RED**: `test_committed_contracts_match_the_models` (1 failed, 170 passed, 2 skipped): `docs/contracts/openapi/generated.json` out of date with the models, the `29f6dbb6` merge having taken a textual union of a file both sides changed.
+- **Regeneration (ruling 03:55:06 BST):** `scripts/generate-contracts.py` at `68266da4`; commit `docs/contracts/` only; `git diff --stat HEAD^ HEAD`: 1 file, 15 insertions. Key diff before vs after: `paths` changed `/api/v1/blobs/uploads/{upload_id}/complete` only (added response `429` "Rate limited" → `ProblemDetail`); `components.schemas` no key added, removed or changed; no other top-level key changed. The 429 is SL-1258's management limiter (`counted(blobs.router)`, E4.1) on SL-1722's route. `generate-contracts.py --check`: rc 0 (51 match).
+- **Re-run, head `aa84151ddc2b687ec9428815653cd340b49bacea`:** `test_api_blob_uploads.py` 10 passed; `test_blobs.py` 24 passed; `test_contracts.py` 171 passed, 2 skipped; `test_ingest_enqueuers.py` 2 passed; `test_upload_to_ingest.py` 1 passed. All green.
+- **Extra, outside E4.9** (the first range over-spanned SL-1773 and SL-1709): `test_api_audit.py` 13, `test_api_jobs.py` 22, `test_api_rate_tables.py` 71, all passed at `68266da4`.
+- **Discharge:** E4.9 of `PL-1791` is discharged by SL-1258 as the merge-second slice. No re-gate (ruling item 4); PR CI is the proof.
+
 ## PRs
 
 None yet.
