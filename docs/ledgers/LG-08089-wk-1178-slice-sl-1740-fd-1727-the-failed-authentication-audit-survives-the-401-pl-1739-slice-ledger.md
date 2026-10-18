@@ -221,3 +221,21 @@ Rows 3-15 were classified from the `gap ... between 1771 and 8089` text in each 
 **B3 — the 401 over HTTP.** Same file, `test_b3_*`: for every `AuthFailureReason` member (eight) on both `/api/v1/environments` and `/api/v1/me/workspaces`, the response is 401/403, the reason's counter moved by 1 (so the case really reached that reason), and neither `reason.value` nor `reason.name` appears as a whole token in the body or headers. Whole-token, because the response `code` `API_KEY_EXPIRED` legitimately ends in the member name `KEY_EXPIRED`.
 
 **Runs: OWED.** Both B2 and B3 are DB-backed; no DB window was open when this delta was committed. B3's negative control (plant the reason into `AuthenticationFailed`'s detail, local only, show red, revert) is owed with them.
+
+## Delta — runs of B2/B3 and the R4/R8/R10 breakers (executor-1740w, lead written grant 2026-10-18, brief `brief-executor-1740t-2026-10-17`, lead verdict stamp 2026-10-17 22:46:44 BST)
+
+Appended, nothing above edited; this section supersedes the "NOT SHOWN" and "Runs: OWED" lines of the delta above. Tree: base `ab5c1425e309d7514147b73197e9c1312152cde8`, `backend/src` unchanged (every plant below was LOCAL ONLY and reverted with `git restore -- backend/src`; `git status --porcelain` printed nothing after each). Window: load1 1.94 and 25 GB available at the start (01:23 BST); own database `gipricing_sl-8045-prep_8e86bc0e`, `GIP_REDIS_URL=redis://localhost:6379/13`, `GIP_TEST_BUCKET=gip-test-blobs-1740w`; every run through `run-small.sh`, one file per run.
+
+**Runs on the unplanted tree.** `backend/tests/test_auth_failure_identity.py`: `20 passed`, rc 0. `backend/tests/test_auth_failure_audit.py`: `16 passed`, rc 0. No other test file changed since `e13d64a1`.
+
+**B3 negative control.** Plant: `service.py:124` detail `... reporting it.` became `... reporting it. " + reason.value`. `test_auth_failure_identity.py`: `18 failed, 2 passed`, rc 1. The 16 `test_b3_*` cases (8 reasons x 2 routes) fail, for example `AssertionError: key_revoked` on `assert not <re.Match object; span=(222, 233), match='key_revoked'>`, and `AssertionError: environment_not_granted` on `match='environment_not_granted'`; the 2 other reds are the B2 fixed-detail asserts (`test_b2_a_rejected_bearer_on_the_identity_route_is_401_counted_and_writes_no_row`, `test_b2_a_revoked_key_on_the_identity_route_is_401_and_leaves_one_audit_row`). The 2 passes are the audit-log-untouched and valid-key tests, which never read the detail. Reverted, porcelain clean.
+
+**B1 — PL-1739 Acc. 4 breakers, each run on `backend/tests/test_auth_failure_audit.py`.**
+
+| Row | Plant (local, reverted) | Test shown red | Failing assert, verbatim | Run |
+|---|---|---|---|---|
+| R4 | `deps.py` `resolve_caller`: after a successful `authenticate_api_key`, `record_auth_failure(...)` for the key's workspace, then `session.commit()` | `test_r4_a_valid_key_writes_no_failure_row` (also `test_r11_a_successful_score_request_takes_one_checkout_and_holds_one`, the extra connection) | `assert [<app.db.mode...7fa3cd697080>] == []`; R11: `AssertionError: {'held': 0, 'max_held': 1, 'checkouts': 2}` / `assert 2 == 1` | `2 failed, 14 passed`, rc 1 |
+| R8 | `service.py` `record_auth_failure`: `try: await audit.record(...) except Exception: pass` | `test_r8_a_failing_failure_audit_is_a_5xx_and_still_counted` | `assert 401 >= 500` | `1 failed, 15 passed`, rc 1 |
+| R10 | `service.py:143`: `auth_failures.labels(reason=failure.detail or reason.value).inc()` (the raw detail as the label; the key-prefix variant of the same plan sentence was not run) | `test_r10_the_label_set_is_closed_and_carries_no_key_material` (also R5, R6, R7, R8, whose counter reads move off the named label) | `AssertionError: assert 'The credential presented was not accepted. Quote the trace id when reporting it.' in {'account_archived', 'bearer_expired', 'bearer_rejected', 'environment_not_granted', 'invalid_key', 'key_expired', ...}` | `5 failed, 11 passed`, rc 1 |
+
+After each revert the unplanted file was green (`16 passed`). The R10 key-prefix label breaker is not shown separately; the raw-detail one is.
