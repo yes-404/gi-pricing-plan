@@ -7,7 +7,7 @@ created: 2026-10-18
 owner: auditor
 tree: 0a13415851a0a75d0ab8734fe8a02b2b6739e78a
 corrected_by: []
-relates: [WK-674, NFR-531, SL-8111, PL-8113]
+relates: [WK-674, NFR-531]
 ---
 
 # FD-8112 — A failed api roll leaves never-healthy replicas in DNS rotation, so the failed roll degrades a working service
@@ -57,7 +57,7 @@ the trap, by cause.
 
 ## Disposition
 
-Deferred with an owner: WK-674, in the scope of SL 8111 under PL 8113 (active), due before the
+Deferred with an owner: WK-674, in the scope of SL 8111 / PL 8113 (planned; unminted, so not in front matter), due before the
 code freeze, Wed 4 Nov 2026. The event that next discharges it: SL 8111 merging with the trap and
 its red-first test, or a dated ruling accepting the absence. SL-1258 is not changed for it and
 merges as gated. Filed under working id 8112.
