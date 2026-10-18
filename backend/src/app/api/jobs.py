@@ -254,7 +254,14 @@ async def cancel_job(job_id: UUID, caller: CancelJobs, database: DatabaseDep) ->
 @router.get(
     "/{job_id}/events",
     summary="SSE stream of progress updates",
-    responses=problems(401, 403, 404, 422),
+    response_class=Response,
+    responses={
+        **problems(401, 403, 404, 422),
+        200: {
+            "description": "Server-sent progress events",
+            "content": {"text/event-stream": {"schema": {"type": "string"}}},
+        },
+    },
 )
 async def stream_job_events(
     job_id: UUID,

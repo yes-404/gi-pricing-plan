@@ -3,7 +3,7 @@ id: PL-1708
 family: plan
 kind: map
 title: WK-1178 — FD-1684's remedy, the four non-JSON routes declare their real media types in the published contract: a dated Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-14
 owner: planner
 tree: 36e2610ab8135bc3b3563464e7f5f719713b168b
@@ -116,7 +116,7 @@ The wire does not change. Every handler body stays as it is. The four routes lea
 ## Status
 
 The status is the `status:` field in the header, and nothing else. **The scope is ruled** (Context,
-entries 1 and 3). **DP-1 to DP-5 are ruled** as recommended (the maintainer (by delegation), "2026-10-14 09:45:05 BST" (A); the Decision points table's "Ruled" column). The plan stays `draft` until the slice's activation commit sets it `active`.
+entries 1 and 3). **DP-1 to DP-5 are ruled** as recommended (the maintainer (by delegation), "2026-10-14 09:45:05 BST" (A); the Decision points table's "Ruled" column). The plan stays `draft` until the slice's activation commit sets it `active`. *(Activated 2026-10-17 13:11 BST by the executor's activation commit: the maintainer's GO of record "2026-10-17 13:09:07 BST" (SL-1709 GO CONFIRMED) and the lead's dispatch.)*
 
 ## Activation needs, each with its state at `36e2610a`
 
