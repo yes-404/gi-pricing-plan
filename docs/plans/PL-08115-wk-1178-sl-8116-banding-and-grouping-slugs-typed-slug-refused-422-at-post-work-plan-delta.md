@@ -227,6 +227,36 @@ missing boundary check, and limb 2 is that `rating.compile` names no artifact
    groupings WHERE slug !~ '^[a-z0-9][a-z0-9-]{1,62}$' OR body->>'slug' !~
    '^[a-z0-9][a-z0-9-]{1,62}$';`. It returns counts only, with no values (NFR-499 spirit).
    Quote the output into LG 8117.
+   **Task 0 record — dated 2026-10-18 (activate-8115, an executor seat), on the tree of commit `5290e635b35acb0a867e62f048464fa9a3634758` (this branch, after the activation commit); the DB limb ran on the live `gipricing` database of `gi-pricing-postgres-1`, read-only (`PGOPTIONS=-c default_transaction_read_only=on`, one statement per call, no transaction left open: `pg_stat_activity` shows 0 `idle in transaction` sessions naming `bandings`).**
+
+   *Limb 1 — stored slugs outside `^[a-z0-9][a-z0-9-]{1,62}$`.* The slug lives in two places per table, the `slug` column and `body->>'slug'` (`backend/src/app/db/models.py:1356` `BandingRow`, `:1384` `GroupingRow`). Each query is `SELECT '<label>', count(*) FILTER (WHERE <expr> !~ '^[a-z0-9][a-z0-9-]{1,62}$'), count(*) FROM <table>` (a NULL `body->>'slug'` is also counted as a miss):
+
+   | Table | Expression | Non-matching | Rows in table |
+   |---|---|---|---|
+   | `bandings` | `slug` | 0 | 0 |
+   | `bandings` | `body->>'slug'` | 0 | 0 |
+   | `groupings` | `slug` | 0 | 0 |
+   | `groupings` | `body->>'slug'` | 0 | 0 |
+
+   The plan's own combined query (this task, above) returns `bandings 0` and `groupings 0`. **Every count is zero, and both tables are empty on this database**, so the zero is vacuous: it shows that nothing is stranded on `gipricing`, and it says nothing about a database that holds data. No other database on the instance holds the table (`psql -l`: `gipricing`, `postgres`, templates). The STOP condition of DP-1 (a) does not fire.
+
+   *Limb 2 — code census.* Predicate 1 (every construction): an AST walk (`ast.Call` whose callee is the name `Banding`, `Grouping`, `BandingProposal` or `GroupingProposal`, over `git grep -l -E "\b(Banding|Grouping)(Proposal)?\b" -- backend packages examples scripts` `*.py` at this tree), reading each call's `slug=` keyword; 58 calls. Predicate 2 (the slug passed to the builders): `git grep -n -E "propose_(banding|grouping)[a-z_]*\(|..."` over `backend/tests scripts examples backend/src/app/api/models.py`, plus the HTTP bodies of `backend/tests/test_api_transformations.py`. A `*Proposal` has no `slug` field (`slug=None` in the walk); the slug enters through `propose_banding(..., slug=)` and `propose_grouping(..., slug=)` (`pricing_core/modelling/bandings.py:122`, `groupings.py:222`, both pass their `slug` argument through) and through `BandingProposalRequest.slug` / `GroupingProposalRequest.slug` (`backend/src/app/api/models.py:250`, `:254`).
+
+   *Sites that do not satisfy the grammar (test fixtures only; `backend/src`, `examples/`, `scripts/` have none):*
+
+   | Site | Slug | Breaks | Fix (test-only, asserts unchanged) |
+   |---|---|---|---|
+   | `backend/tests/test_fremtpl2_algorithm.py:54` | `f"{column}-banding"`, `column` is `driv_age`, `veh_age`, `veh_power` | `_` | derive `column.replace("_", "-")` |
+   | `packages/pricing-core/tests/data/make_apply_grouping_fixture.py:36` | `"g"` | length 1 (the grammar needs 2 to 63) | a two-character slug |
+   | `packages/pricing-core/tests/test_glm_scalar_predict.py:592` | `"g"` | length 1 | a two-character slug |
+   | `packages/pricing-core/tests/test_bandings.py:209` | `"v"` | length 1 | a two-character slug |
+
+   The length-1 sites are a second class the plan's P7 predicate (an underscore search) does not see. **`make_apply_grouping_fixture.py` is a golden-file generator:** the committed `packages/pricing-core/tests/data/apply_grouping_c62f1ff6.json` carries the slug inside its expected error text (`grouping 'g' met 1 null value(s) ...`, lines 56, 126, 150, 173, 185 at this tree). Changing the generator's slug changes that golden file, so the fix there is a regenerated oracle rather than a one-token edit. It is the one fixture where "asserts unchanged" needs the lead's reading: the executor reports it before the change.
+
+   *Sites that satisfy the grammar:* the literals `"amt"`, `"area"`, `"age"`, `"vg"`, `"terr"`, `"age-band"`, `"age-bands"`, `"age-steps"`, `"veh-steps"`, `"region-ns"`, `"brand-groups"`, `"region-inland-coastal"`, `"licence-years"`, `"exposure-halves"`, `"fine-steps"`, `"coarse-steps"`, `"driver-age-actuarial"` and the `f"<word>-{uuid4().hex[..]}"` forms (`amt-`, `area-`, `age-`, `region-`, `text-`, `age-banded-`, `age-naked-`, `driver-age-`; hex has no `_`) in `backend/tests/test_model_jobs.py:628`, `test_model_nfrs.py:272`/`:280`, `test_rate_table_diff_portfolio.py:284`/`:307`/`:1786`, `test_transformations.py` (`:275`, `:327`, `:380`, `:411`, `:600`, the `_banding` base at `:55`, the grouping `slug` variable at `:114`), `test_api_transformations.py` (`:68`, `:99`, `:165`, `:179`, `:200`), and the `pricing-core` tests listed by Predicate 1; `examples/fremtpl2/model.py:251` builds `fremtpl2-{column.replace('_', '-')}-banding`; `scripts/bench-model.py:301`/`:314` pass `"amt"` and `"terr"`; `test_rating_gbm_banded_refusal.py:59` replaces `_` with `-`. `test_rating_column_collision.py:59` has `age_fine` / `age_coarse`, which are **Factor** slugs, not Banding or Grouping. `test_transformations.py:541` writes the literal `'rewritten'` in raw SQL, which conforms. Sites that build their slug from a variable (`test_transformations.py:71` `**base`, `test_bandings.py:82`, `test_groupings.py:115`, `test_rate_table_weights.py:67`) take it from a literal in the same file that is in the list above.
+
+   *Caveat, per the plan's Acceptance 4:* this census lists the constructions found by a name-and-keyword walk. A Banding built from a dict that another helper assembles, or by `model_validate`, is not reached by it, and Acceptance 4's grep at the slice head is the closing check.
+
 1. **Base.** Branch from the current `origin/main`. Quote the head.
 2. **Census of fixtures.** Run P7's two greps and read each hit. List each Banding or Grouping
    site that has `_` in LG 8117.
