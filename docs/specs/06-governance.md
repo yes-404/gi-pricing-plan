@@ -603,7 +603,7 @@ Generated sections, in order (R3). Each cites the artifacts it drew from.
 | `GET` | `/api/v1/audit?actor=&entity=&action=&from=&to=&q=` | Query the audit log (FR-371) |
 | `GET` | `/api/v1/audit/verify?from=&to=` | Verify the hash chain (FR-372) |
 | `POST` | `/api/v1/audit/anchor` | Export a signed chain head for external anchoring (FR-373) |
-| `GET` | `/api/v1/audit/export` | Export CSV/JSON |
+| `GET` | `/api/v1/audit/export` | Export CSV/JSON *(Amended 2026-10-17, SL-1709, FD-1684: **200** `text/csv` for `format=csv` (the default), or JSON Lines, `application/x-ndjson`, one audit event per line, for `format=json`.)* |
 | `POST` | `/api/v1/dossiers` | **202** Generate a dossier for an artifact (FR-376) |
 | `GET` | `/api/v1/dossiers/{id}?format=html\|pdf\|bundle` | Render / export (FR-379) |
 | `POST` | `/api/v1/dossiers/{id}/commentary` | Add/update an attributed Commentary Block (FR-377) |

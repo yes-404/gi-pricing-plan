@@ -1,9 +1,9 @@
 ---
-id: LG-8089
+id: LG-1790
 family: ledger
 title: WK-1178 slice SL-1740 — FD-1727, the failed-authentication audit row survives the 401 and every failure is counted (PL-1739), slice ledger
-status: active                 # active → closed (§1.2a)
-created: 2026-10-17
+status: closed                 # active → closed (§1.2a)
+created: 2026-10-18               # filed 2026-10-17 under working id 8089; minted 2026-10-18 as LG-1790
 owner: executor
 tree: bf7686504d7b11954760de0440ed56608c722655
 phase: P2
@@ -14,7 +14,7 @@ corrected_by: []
 relates: [PL-1739, FD-1727, SL-1455, LG-1760, RL-1685, FR-392, FR-368, NFR-519]
 ---
 
-# LG-8089 — WK-1178 slice SL-1740: the failed-authentication audit
+# LG-1790 — WK-1178 slice SL-1740: the failed-authentication audit
 
 Executed by executor-1740b from PL-1739. Base: `origin/main` `9c602fec` (SL-1455, #1323) merged
 into the prep branch at `95ccb7c6` (tree `2859fcc7`). Times are BST.
@@ -249,3 +249,5 @@ Appended, nothing above edited. Tree: head `a96527033581674fb834dc4eb87654729102
 | R10 | `service.py`: `authenticate_api_key` stores the parsed key's `prefix` in a module global; `record_auth_failure` labels `auth_failures.labels(reason=_PLANT_PREFIX or reason.value).inc()` (the key prefix as the label) | `test_r10_the_label_set_is_closed_and_carries_no_key_material` (also R5, R6, R7, R8, whose counter reads move off the named label) | `AssertionError: assert 'cb3b47b1' in {'account_archived', 'bearer_expired', 'bearer_rejected', 'environment_not_granted', 'invalid_key', 'key_expired', ...}`; R5, R6, R7, R8: `AssertionError: assert (0.0 - 0.0) == 1` | `5 failed, 11 passed`, rc 1 |
 
 After `git restore -- backend/src` `git status --porcelain` printed nothing and the file was green (`16 passed`, rc 0). The R7 red is partly an artefact of the plant's stale global (a bearer failure after a keyed one reuses the last prefix); the R10 assert is the one that names the prefix. Cleanup: `dropdb` rc 0, `FLUSHDB -n 13` rc 0, bucket removed through the MinIO API (`mc rb --force`, rc 0); `mc ls g/` no longer lists `gip-test-blobs-1740k`.
+
+Minted 2026-10-18 as LG-1790 from working id 8089. Closing acts 2026-10-18 by the minter (executor-role mint step): this ledger `status: closed`, the SL-1740 roadmap row `status: closed`. MERGE-ACK: not yet given.
