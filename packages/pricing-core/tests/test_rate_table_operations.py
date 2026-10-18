@@ -23,17 +23,24 @@ from model_schema.modelling import (
     RelativityLevel,
 )
 from model_schema.rating import (
+    RateTableCell,
     RateTableKey,
+    RateTableStorageMode,
     RateTableValue,
+    RateTableVersion,
 )
 from model_schema.refs import ArtifactRef
 from pricing_core.rate_tables.operations import (
     SeedResult,
+    apply_cell_edits,
     check_model_approved,
+    diff_cells,
     diff_vs_previous,
     diff_vs_seed,
     extract_relativity_table,
+    import_from_csv,
     seed_from_model,
+    uplift_table,
     validate_rate_table,
 )
 
@@ -510,3 +517,124 @@ def test_a_pinned_factor_slug_outside_the_factor_grammar_is_refused_by_name(slug
         _seed(model, slug, [_factor(slug)])
     assert repr(slug) in str(caught.value)
     assert not str(caught.value).partition(": ")[0].isupper()
+
+
+# --- FR-234: every value is a finite decimal (FD 8106, SL 8108) -----------------------
+
+_NON_FINITE = ("NaN", "sNaN", "Infinity", "-Infinity", "inf", "-nan")
+
+#: The three value columns FR-234 distinguishes: unbounded, one-sided, two-sided.
+_COLUMNS = {
+    "unbounded": {},
+    "min_only": {"min": Decimal("0.2")},
+    "min_and_max": {"min": Decimal("0.2"), "max": Decimal("5.0")},
+}
+
+
+def _bounded_value(bounds: dict[str, Decimal]) -> RateTableValue:
+    return RateTableValue(name="relativity", type="relativity", unit="factor", **bounds)
+
+
+def _cells_with(raw: str) -> list[dict[str, str]]:
+    return [
+        {"driver_age_band": "17-20", "relativity": raw},
+        {"driver_age_band": "21-24", "relativity": "1.41"},
+        {"driver_age_band": "25-29", "relativity": "1.12"},
+    ]
+
+
+def _rows_version(raw: str = "1.92", **bounds: Decimal) -> RateTableVersion:
+    return RateTableVersion(
+        slug="motor-driver-age-relativity",
+        version=1,
+        rateable=True,
+        storage=RateTableStorageMode.ROWS,
+        keys=[_key()],
+        value=_bounded_value(bounds),
+        rows=_cells_with(raw),
+        change_note="finite-decimal test version",
+    )
+
+
+@pytest.mark.req("FR-234")
+class TestEveryValueIsAFiniteDecimal:
+    """A non-finite decimal is a named `OUT_OF_BOUNDS` refusal, never a pass or a 500."""
+
+    @pytest.mark.parametrize("column", sorted(_COLUMNS))
+    @pytest.mark.parametrize("raw", _NON_FINITE)
+    def test_a_non_finite_value_is_refused_by_name(self, raw: str, column: str) -> None:
+        issues = validate_rate_table(
+            _cells_with(raw),
+            [_key()],
+            _bounded_value(_COLUMNS[column]),
+            key_domains=_domain(),
+        )
+        assert len(issues) == 1
+        assert issues[0].code == "OUT_OF_BOUNDS"
+        assert issues[0].field == "relativity"
+        assert issues[0].message.endswith("is not a finite decimal number")
+
+    def test_nan_with_bounds_is_a_named_issue_not_an_exception(self) -> None:
+        issues = validate_rate_table(
+            _cells_with("NaN"),
+            [_key()],
+            _bounded_value(_COLUMNS["min_and_max"]),
+            key_domains=_domain(),
+        )
+        assert [i.code for i in issues] == ["OUT_OF_BOUNDS"]
+
+    def test_an_unparseable_value_keeps_its_own_message(self) -> None:
+        issues = validate_rate_table(_cells_with("abc"), [_key()], _value(), key_domains=_domain())
+        assert len(issues) == 1
+        assert issues[0].message.endswith("is not a decimal number")
+
+    def test_the_value_bounds_cannot_themselves_be_non_finite(self) -> None:
+        """The bounds test of PL 8107: no `min`/`max` input reaches a comparison as non-finite."""
+        for bound in ("min", "max"):
+            for raw in (
+                float("inf"),
+                float("-inf"),
+                float("nan"),
+                Decimal("Infinity"),
+                Decimal("NaN"),
+                "Infinity",
+                "NaN",
+            ):
+                with pytest.raises(ValueError, match=bound):
+                    RateTableValue(name="r", type="relativity", unit="factor", **{bound: raw})
+            for literal in ("1e999", "-1e999", '"Infinity"', "Infinity"):
+                with pytest.raises(ValueError, match=bound):
+                    RateTableValue.model_validate_json(
+                        '{"name":"r","type":"relativity","unit":"factor",'
+                        + f'"{bound}":{literal}'
+                        + "}"
+                    )
+
+    @pytest.mark.parametrize("relativity", [float("inf"), float("nan")])
+    def test_seeding_a_non_finite_relativity_is_refused(self, relativity: float) -> None:
+        levels = (RelativityLevel(level="17-20", relativity=relativity, estimate=0.65),)
+        model = _glm_model(ModelStatus.APPROVED, {"driver_age_band": levels})
+        with pytest.raises(ValueError, match=r"^OUT_OF_BOUNDS:"):
+            _seed(model, "driver_age_band", [_factor("driver_age_band")])
+
+    def test_a_manual_edit_to_nan_is_a_named_edit_issue(self) -> None:
+        edit = RateTableCell({"driver_age_band": "17-20", "relativity": "NaN"})
+        result = apply_cell_edits(_rows_version(), [edit])
+        assert [i.code for i in result.issues] == ["OUT_OF_BOUNDS"]
+        assert result.cells == ()
+
+    def test_an_imported_infinity_is_refused(self) -> None:
+        content = b"driver_age_band,relativity\n17-20,Infinity\n21-24,1.41\n25-29,1.12\n"
+        with pytest.raises(ValueError, match=r"^OUT_OF_BOUNDS:"):
+            import_from_csv(_rows_version(), content, filename="import.csv")
+
+    def test_a_bulk_operation_cannot_be_given_a_non_finite_percentage(self) -> None:
+        """Pinned, green already: the operation record's schema refuses it before FR-234's
+        result check runs, so a bulk operation has no other way to a non-finite result."""
+        with pytest.raises(ValueError, match="finite number"):
+            uplift_table(_rows_version(), percentage=Decimal("NaN"))
+
+    def test_a_diff_over_a_stored_non_finite_cell_is_named(self) -> None:
+        """`_index_rows` hardening: a row stored before the rule is a named refusal."""
+        with pytest.raises(ValueError, match=r"^OUT_OF_BOUNDS:.*not a finite decimal number"):
+            diff_cells(_cells_with("NaN"), _cells_with("1.92"), [_key()], _value())
