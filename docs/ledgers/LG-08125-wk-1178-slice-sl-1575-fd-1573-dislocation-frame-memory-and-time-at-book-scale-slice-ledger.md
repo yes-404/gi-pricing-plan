@@ -38,7 +38,7 @@ Quoted from `PL-1574` (Tasks table, row 1):
 - [x] **Task 0 Step 2, smoke at 1,000 policies:** rc 0, 11 lines in the plan's stage order (`spike-1k.jsonl`; run at load1 4.23, outside a slot, accepted by the lead as a smoke).
 - [x] **Task 0 Step 3, the two runs** (below).
 - [x] **Task 0 Step 4, the decision rule** (below): H1 CONFIRMED.
-- [ ] Task 1: `_score_pass` retains rung values, not `LadderRung` objects (H1 confirmed, so it applies).
+- [x] Task 1: `_score_pass` retains rung values, not `LadderRung` objects (H1 confirmed, so it applies): commit `2ff1f69b`.
 - [ ] Task 2: the after-measurement and the gate.
 
 ### Gate
@@ -96,6 +96,16 @@ Conditions were load1 < 2.0 and available memory ≥ 12 GiB, checked at the STAR
 - **H2 (transient `.collect()`) not indicated:** the VmHWM step from pass2.score_batch.start to .collected is +304,696 KiB, far smaller than the two retention steps. (The rule reads "the largest single step"; the largest steps are the retained ones, not the collect.)
 - **H3 (JSON/Pydantic re-parse ≥ 20 % of a pass) not indicated:** 200k: (480.44 − 431.65) / (480.44 − 4.93) = 10.3 %; 20k: (107.27 − 98.75) / (107.27 − 20.84) = 9.9 %. Both are below 20 %.
 - **Derived full book** (not measured): 33,123 B × 678,013 = about 22.5 GB, about 20.9 GiB, which matches FD-1573's about 20 GiB. 200k time 1,032 s derives about 58.3 min for 678,013 at this rate.
+
+#### 2026-10-18 — Task 1, `_score_pass` retains rung values (commit `2ff1f69bc9e3bac3b3945065b6fb3fcd9c488253`, tree `c662ae07805719aaecefd98eff7f0cfdd289dc80`)
+
+Files: `packages/pricing-core/src/pricing_core/rating/analysis.py`, `packages/pricing-core/tests/test_rating_dislocation.py`. Each run is the whole test file (42 tests) through `run-small.sh`, on this worktree.
+
+- **Red first:** `test_dislocation_frame_retains_no_ladder_objects` failed on `assert all("ladder" not in v for v in quoted)`; the other 41 passed, `unchanged_on_the_fixture_book` included (1 failed, 41 passed).
+- **Change:** `_RungValues`, `_rung_values`, `_origin_rung_of` as the plan gives them; `_origin_rung` delegates; `_score_pass` stores `"rungs"`; the row loop calls `_origin_rung_of`. After the change: 42 passed.
+- **Plan deviation, disclosed:** the plan's fixture says both bundles differ in an `unrounded_minor` only. The `expense_direct="1.2"` candidate moves values too, so on its own it cannot fail the proof. The unchanged test therefore also compares a second candidate, `expense_direct="1.10001"` (default 1.1), measured to leave 880 of 2,000 policies with `change_minor == 0` and a non-null `origin_rung` (the `unrounded_minor` move alone).
+- **Broken-input proof:** with the `if b[1] != c[1]: return name` branch deleted from `_origin_rung_of`, the file gave `1 failed, 41 passed`: `FAILED test_dislocation_frame_output_unchanged_on_the_fixture_book`, on `assert old.equals(new)`. The branch is restored (`diff` against the saved copy is empty).
+- **Static checks:** `ruff check .` rc 0 ("All checks passed!"); `ruff format --check` on the two files rc 0; `mypy` (the configured `files`, which do not include tests) rc 0, "Success: no issues found in 243 source files". The test module's `_old_*` copy is formatted by ruff, and its names and `analysis.` qualifiers are the only edits from the base code.
 
 ## PRs
 
