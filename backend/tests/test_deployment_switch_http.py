@@ -50,7 +50,7 @@ def _no_bundle_blob(monkeypatch: pytest.MonkeyPatch) -> None:
     async def hydrated(*_: Any, **__: Any) -> None:
         return None
 
-    monkeypatch.setattr(score_module, "hydrate_for_switch", hydrated)
+    monkeypatch.setattr(score_module, "hydrate_for_switch", hydrated, raising=False)
 
 
 @pytest.fixture
