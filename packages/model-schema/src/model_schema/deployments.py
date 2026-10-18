@@ -125,16 +125,11 @@ class Deployment(BaseModel):
 
 
 class SwitchReport(BaseModel):
-    """Which processes switched to a Deployment and which did not (`03` FR-268; WK-674 Slice 5).
+    """Which processes switched to a Deployment and what became of each (`03` FR-268).
 
     The `after` of the `deployment.switched` Audit Event and the switch half of the deploy
-    response. Process ids only, never values: a process is `<hostname>:<pid>:<start epoch>`, the
-    hostname being the container (the replica). `receivers` is how many live subscribers
-    received PREPARE. Each name has one status: `committed` (swapped its `live` reference);
-    `possibly_stale` (acknowledged PREPARE but not COMMIT: either crashed since or alive and
-    still serving the previous version until it restarts, which a missing heartbeat cannot
-    tell apart; FD 8129); `pruned_stale` (on the roster but silent while every receiver
-    acknowledged: the ghost of a crashed process, removed from the roster).
+    response. Its terms (`receivers`, `committed`, `possibly_stale`, `pruned_stale`) are defined
+    once, in `03` §5.1's list of this Work's audit actions.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")

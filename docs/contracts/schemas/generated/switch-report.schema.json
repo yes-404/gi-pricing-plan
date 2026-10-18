@@ -1,6 +1,6 @@
 {
   "additionalProperties": false,
-  "description": "Which processes switched to a Deployment and which did not (`03` FR-268; WK-674 Slice 5).\n\nThe `after` of the `deployment.switched` Audit Event and the switch half of the deploy\nresponse. Process ids only, never values: a process is `<hostname>:<pid>:<start epoch>`, the\nhostname being the container (the replica). `receivers` is how many live subscribers\nreceived PREPARE. Each name has one status: `committed` (swapped its `live` reference);\n`possibly_stale` (acknowledged PREPARE but not COMMIT: either crashed since or alive and\nstill serving the previous version until it restarts, which a missing heartbeat cannot\ntell apart; FD 8129); `pruned_stale` (on the roster but silent while every receiver\nacknowledged: the ghost of a crashed process, removed from the roster).",
+  "description": "Which processes switched to a Deployment and what became of each (`03` FR-268).\n\nThe `after` of the `deployment.switched` Audit Event and the switch half of the deploy\nresponse. Its terms (`receivers`, `committed`, `possibly_stale`, `pruned_stale`) are defined\nonce, in `03` §5.1's list of this Work's audit actions.",
   "properties": {
     "deployment_ref": {
       "description": "The Deployment (its id) the processes switch to.",
