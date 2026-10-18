@@ -35,8 +35,8 @@ from app.platform.deployment_switch import (
     SwitchMember,
     SwitchMessage,
     SwitchSubscription,
+    build_switch_client,
 )
-from app.platform.rate_limit import build_redis_client
 
 # The Slice 2 deployment tests' fixtures and helpers, shared rather than copied.
 api_settings = _deployments.api_settings
@@ -80,7 +80,7 @@ class _Peer:
         self._loop = asyncio.new_event_loop()
         self._thread = threading.Thread(target=self._loop.run_forever, daemon=True)
         self._thread.start()
-        self._client = build_redis_client(settings.redis_url.get_secret_value())
+        self._client = build_switch_client(settings.redis_url.get_secret_value())
         transport = RedisSwitchTransport(
             self._client, f"{settings.environment.value}:{settings.tenant_id}"
         )

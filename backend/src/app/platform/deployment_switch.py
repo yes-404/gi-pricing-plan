@@ -61,6 +61,7 @@ __all__ = [
     "SwitchMessage",
     "SwitchSubscription",
     "SwitchTransport",
+    "build_switch_client",
     "commit_round",
     "prepare_round",
     "process_id",
@@ -315,6 +316,19 @@ PREPARE_TIMEOUT_SECONDS = 10.0
 COMMIT_TIMEOUT_SECONDS = 10.0
 _ACK_POLL_SECONDS = 0.02
 _ACK_TTL_SECONDS = 120
+
+
+def build_switch_client(url: str) -> Redis:
+    """The switch's own Redis client: not the rate limiter's.
+
+    `rate_limit.build_redis_client` sets a 50 ms socket timeout so a hung Redis costs a request
+    little (RL-1347 rule 5). A subscription blocks reading its channel for as long as nothing is
+    published, so on that client it would raise a timeout every 50 ms and stop listening; found
+    the first time it ran against Redis. This one connects within 5 s and reads without a limit,
+    and pings an idle connection every 30 s.
+    """
+    client: Redis = Redis.from_url(url, socket_connect_timeout=5, health_check_interval=30)
+    return client
 
 
 class RedisSwitchTransport:

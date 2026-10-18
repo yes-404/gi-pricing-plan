@@ -61,6 +61,7 @@ from app.platform.deployment_switch import (
     SwitchMember,
     SwitchMessage,
     SwitchSubscription,
+    build_switch_client,
     process_id,
 )
 from app.platform.rate_limit import RateLimiter, build_redis_client
@@ -124,8 +125,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # process therefore serves the latest committed Deployment of every Environment.
         # Unlike the rate limiter this does not fail open: a process that cannot subscribe
         # would silently miss every switch, so it does not start.
+        switch_client = build_switch_client(settings.redis_url.get_secret_value())
         switch = RedisSwitchTransport(
-            redis_client, f"{settings.environment.value}:{settings.tenant_id}"
+            switch_client, f"{settings.environment.value}:{settings.tenant_id}"
         )
 
         async def hydrate(message: SwitchMessage) -> None:
@@ -133,7 +135,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
         subscription = SwitchSubscription(
             switch,
-            redis_client,
+            switch_client,
             SwitchMember(process_id(), running.state.live_refs, hydrate),
         )
         await subscription.start()
@@ -148,6 +150,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         yield
         health.clear_probes()
         await subscription.stop()
+        await switch_client.aclose()
         await redis_client.aclose()
         await database.dispose()
 
