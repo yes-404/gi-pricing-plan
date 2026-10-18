@@ -2,7 +2,7 @@
 id: FD-1803
 family: finding
 title: Rate tables accept non-finite decimals - NaN, sNaN and Infinity pass validate_rate_table
-status: active
+status: closed
 created: 2026-10-18   # filed 2026-10-17 under working id 8106; minted 2026-10-18 as FD-1803
 owner: auditor
 tree: 9469721db3d26480824cc1d715da2ec4ca9044d0
