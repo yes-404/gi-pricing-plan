@@ -390,3 +390,21 @@ One PR for this slice (L1 (a')): opened and merged by the lead; not yet opened.
 **Gate evidence read.** `gate.log` START head `880c2fc0`, tree `6f855be5`, "head guard ok", "clean tree ok", "tree after gate: 0 changed path(s)"; `pytest.log`: `13 failed, 6299 passed, 4 skipped`, the 13 are `test_audit_docs_*`, `test_doc_index`, `test_register_*`, `test_repository_invariants` (the real-tree audit cascade of check 31's 1790..1808 gap); none touches the rating path.
 
 **Proposed verdict (the lead's to issue):** the delta is conformant. The compile.py resolution equals main plus the slice's own change; the new test asserts the refusal codes; the re-mint is complete. MERGE-ACK: not yet given.
+
+## Re-merge d9a8b716 — hunk attribution (F1) (2026-10-18 12:20 BST, `ledger-1341`)
+
+Appended record; no earlier section is edited. Closes F1 of the Delta audit above, on `to-lead.md` "2026-10-18 12:14:09 BST" (F1 written into this ledger before the PR) and the check of "2026-10-18 09:23:11 BST"; the hunk-by-hunk attribution is ruling "2026-10-18 09:10:58 BST" item 3.
+
+**Parents.** `d9a8b716` = merge of `788f36c1` (main: carries SL-1543 `4a53f194` #1335 and SL-1563 `57c2ea77` #1333) into `cf2d477b` (the slice; its own `compile.py` change is `8804230b..f269c5ca`, i.e. `53019ea3` and the earlier slice commits). `git show --cc d9a8b716 -- …/rating/compile.py` has exactly **one** combined hunk (`grep -c '^@@@'` = 1): the `bundle_hash` region. Every other `compile.py` hunk merged cleanly.
+
+| `compile.py` region (HEAD lines) | Origin |
+|---|---|
+| `_canonical_default` (new function, ~l.666), its docstring paragraph in `bundle_hash`, `default=_canonical_default` | SL-1543 (#1335, `4a53f194`) — main side of the conflict |
+| `bundle_hash` signature (`purpose_graphs` argument), the docstring sentence on purpose graphs, `hashed` dict and its `purpose_graphs` entry | SL-1341 — slice side of the conflict |
+| `json.dumps(hashed, …)` replacing the inline dict | both: SL-1341 changed the first argument, SL-1543 added `default=`; resolved as the union |
+| `output_type_issues` / `_producer_types` / `_compatible` / `fragment_output_type_issues` / `_refuse_mount_port_type_mismatch` (old l.119–243, 706) | SL-1563 (#1333, `57c2ea77`) — clean merge, untouched by the slice |
+| import list (l.26, l.65), `selected_purposes`, `Bundle.purpose_graphs` and its serializer, the `for each in every_inlined` loops in `compile_bundle` (13 hunks) | SL-1341 — clean merge |
+
+**Numstat pair (run 2026-10-18).** `git diff --numstat origin/main 880c2fc0 -- …/rating/compile.py` = `57	20`; `git diff --numstat 8804230b f269c5ca -- …/rating/compile.py` = `57	20`. (`origin/main` has moved on since the merge; `788f36c1`, the merged main, gives the same `57	20`. `git diff --numstat d9a8b716^2 d9a8b716` also `57 20`.) The Delta audit's line-level comparison (the 77 changed lines of the two diffs byte-identical, `cmp` rc 0) is its "compile.py" paragraph.
+
+**No behaviour beyond the union.** HEAD's `compile.py` is main plus the slice's own hunks and nothing else: no line of SL-1543's or SL-1563's change is deleted or altered, and the slice adds only its own. A version with no purpose mount still hashes as before (`purpose_graphs` is hashed only when non-empty).
