@@ -1153,7 +1153,7 @@ Carved from `SL-1257` on the maintainer's entry "2026-09-30 23:57:25 BST — DEC
 id: SL-1258
 family: slice
 title: Slice 4: the deployment path (FR-437, FR-412 memory half, FR-415, FR-434, FR-435, NFR-531, NFR-534, FD-1211)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-09-29
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 0d5b0765f76320518bfe76ddb30e5013525797c0
@@ -1170,6 +1170,8 @@ The compose `api` and `worker` services, the reference identity provider, the me
 *Dated 2026-10-12 by the planner: a further Work-plan delta for this slice, PL-1690 (minted 2026-10-12 as PL-1690 from working id 9898): E4.1, FR-452's management limb as RL-1687 rules it (minted 2026-10-12 as RL-1687 from working id 9876; ACKed by the maintainer's (by delegation) entry "2026-10-12 07:44:13 BST"); E4.2, the `worker` on `--queues default,compute`, an S4 GO condition (the lead's from-lead entry "2026-10-12 05:37:23 BST"); E4.3, the compose smoke proving delivery, with beat as a one-off test fixture (the maintainer's (by delegation) entries "2026-10-12 05:37:42 BST" and "2026-10-12 05:39:20 BST"). This row's status and fields are unchanged.*
 
 *Dated 2026-10-14 by the planner: a further Work-plan delta for this slice, PL-1714 (working id 8022, reserved by the lead in `eta.md` "2026-10-14 10:32:05 BST"). It replaces `PL-1690` E4.2 with a derived consumer set: every queue `DEFAULT_QUEUE_FOR_KIND` routes to is consumed, asserted `⊇`, never as literals; it adds the `io` and `scoring` delivery proofs (`dataset.ingest`, `score.batch`) to E4.3, `scripts/demo.py` on the same set, the trace handler's registration and a derived guard that every routed kind has a production handler or a verified later-phase entry (DP-Q3, ruled), and the FR-405 pool split as DP-Q1 for the maintainer's ruling. On the maintainer's (by delegation) entries "2026-10-14 10:13:50 BST" item (a) and "2026-10-14 10:36:42 BST" (the red asserts `succeeded`); it discharges FD-1713. This row's status and fields are unchanged.*
+
+*Dated 2026-10-18 by the executor (minter-1258), at the mint: the row was `draft` in this file (the slice ran `active` on its ledger and plans, never flipped here); it is set `closed` on the clean slice audit (`LG-1792`, auditor-1258, at `e2a2f79e`) and the lead's verdict, the maintainer's (by delegation) MINT GO "2026-10-18 03:38:37 BST". `PL-1791` (minted from working id 8061) and `LG-1792` (from working id 9810) are minted with this close. MERGE-ACK: not yet given. E4.8, the conversion of the seeded compose ingest test to the public upload path, is `SL 8111` (planned, `PL 8113`), not this slice's (DP-E1 (b), "2026-10-18 03:11:40 BST").*
 
 #### SL-1259 — Slice 5: atomic switchover, rollback and the measurements (FR-268, FR-269, FR-272 audit and NFR-498 for rollback, NFR-494, NFR-489, NFR-502, NFR-490, NFR-493 linearity limb, NFR-497 mechanism)
 

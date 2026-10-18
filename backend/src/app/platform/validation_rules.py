@@ -20,7 +20,7 @@ caller can route around:
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
@@ -197,8 +197,13 @@ async def create_rule(
     message: str = "",
     rationale: str = "",
     settings: Any = None,
+    count_management: Callable[[], Awaitable[None]] | None = None,
 ) -> ValidationRuleRow:
     """Author a rule into `draft` (FR-50 step 1).
+
+    `count_management`, when given, is awaited right after the permission check passes, so
+    the route counts a request against FR-452's limit only once it is permitted (`RL-1687`
+    (1a): a `403` is never counted).
 
     Editing an approved rule is not an update — it allocates the next version, leaving the
     approved one exactly as the reports that cite it described.
@@ -222,6 +227,8 @@ async def create_rule(
             principal=actor,
             permission=Permission.DATASET_WRITE,
         )
+    if count_management is not None:
+        await count_management()
 
     if catalogue_id is not None:
         try:
