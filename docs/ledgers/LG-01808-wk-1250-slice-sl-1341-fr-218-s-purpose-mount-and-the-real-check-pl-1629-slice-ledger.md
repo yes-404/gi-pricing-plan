@@ -1,9 +1,9 @@
 ---
-id: LG-1761
+id: LG-1808
 family: ledger
 title: WK-1250 slice SL-1341 — FR-218's purpose mount and the real check (retires RL-1242), PL-1629 slice ledger
 status: closed                 # active → closed (§1.2a)
-created: 2026-10-17 # original date 2026-10-16, set at the filing; minted 2026-10-17
+created: 2026-10-18 # original date 2026-10-16, set at the filing; minted 2026-10-17 as LG 1761; re-minted 2026-10-18
 owner: executor
 tree: 5576628141a98b5ce768096a7a0e96b212f1f761
 phase: P2
@@ -14,9 +14,9 @@ corrected_by: []
 relates: [PL-1629, RL-1344, RL-1628, RL-1242, RL-1571, LG-1588, SL-1341, FR-218, FR-212, FR-217, FR-239]
 ---
 
-# LG-1761 — SL-1341: FR-218's purpose mount and the real check
+# LG-1808 — SL-1341: FR-218's purpose mount and the real check
 
-*(Minted 2026-10-17 as LG-1761 from working id 8056, in the SL-1341 PR. The code-comment cites `LG 8056` in four test files are left as written: editing them would move non-docs blobs off the gated `c949a0e8`.)*
+*(Minted 2026-10-17 as LG 1761 from working id 8056, in the SL-1341 PR; re-minted 2026-10-18 as LG-1808, because LG 1761 collided with main's SL-1761 (the maintainer, to-lead "2026-10-18 09:10:58 BST"). The code-comment cites `LG 8056` in four test files are left as written: editing them would move non-docs blobs off the gated `c949a0e8`.)*
 
 Executed by `executor-1341b` (sonnet, medium) from **PL-1629** (`active`), binding **RL-1344** §2, §3, §4 (Slice 3 bullet) and
 **RL-1628** (T1 to T3, "What it obliges"). Branch `sl-1341-wk1250-s3-purpose-mount`, worktree `.claude/worktrees/sl-1341`,

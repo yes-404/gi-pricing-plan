@@ -2839,7 +2839,7 @@ relates: [PL-1254]
 
 `PL-1254` Task 3. ~~Blocked on DP-2 (open).~~ *DP-2 ruled 2026-09-30 by `RL-1344` (mint batch 12); still waits on the slices before it.* Minted as `SL-1341` at this PR's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `8cef871d` (1339 onward). *(Dated line, 2026-10-12, the note `PL-1629` says it owes this row at the mint (its lines 22 to 23), which D12 missed: **leaf plan: `PL-1629`**.)*
 
-**Closed 2026-10-17** on a conformant slice audit (`auditor-1341`, `LG-1761` "## Audit") and the lead's verdict (`LG-1761`, 2026-10-17 13:59:02 BST); the F5 red-first case is added. MERGE-ACK: pending (the lead's merge, then the maintainer's line). Ledger: `LG-1761`.
+**Closed 2026-10-17** on a conformant slice audit (`auditor-1341`, `LG-1808` "## Audit") and the lead's verdict (`LG-1808`, 2026-10-17 13:59:02 BST); the F5 red-first case is added. MERGE-ACK: pending (the lead's merge, then the maintainer's line). Ledger: `LG-1808`.
 
 
 
