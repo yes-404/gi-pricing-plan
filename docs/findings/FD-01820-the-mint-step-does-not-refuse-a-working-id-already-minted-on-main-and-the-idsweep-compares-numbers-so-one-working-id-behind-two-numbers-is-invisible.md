@@ -1,16 +1,16 @@
 ---
-id: FD-8123
+id: FD-1820
 family: finding
 title: The mint step does not refuse a working id already minted on main, and the idsweep compares numbers, so one working id behind two minted numbers is invisible
 status: active
-created: 2026-10-18   # filed 2026-10-18 under working id 8123
+created: 2026-10-18   # filed 2026-10-18 under working id 8123; minted 2026-10-18 as FD-1820
 owner: auditor
 tree: 3421b26b4cb7b622f9af55ca3e32ba8383e8ea4d
 corrected_by: []
-relates: [WK-1178, PL-1766, PL-1794, RL-1755, RL-1793, RL-8122, RL-8124]
+relates: [WK-1178, PL-1766, PL-1794, RL-1755, RL-1793, RL-1819, RL-1821]
 ---
 
-# FD-8123 — The mint step does not refuse a working id already minted on main
+# FD-1820 — The mint step does not refuse a working id already minted on main
 
 ## Finding
 
@@ -30,12 +30,12 @@ Read at `origin/main` 84b0ff5765e55bc8edd139cd22bb57cd474de807:
 - Working id 8076: `RL-1755` (#1319, active) and `RL-1793` (#1338, active, "filed 2026-10-16 under
   working id 8076; minted 2026-10-18 as RL-1793").
 - The bodies differ only by id re-points and the Minted provenance line (38 and 14 lines of `diff` output, 20 and 8 differing lines; method in
-  `RL-8122`).
+  `RL-1819`).
 - The lead's D21 ACK (09:55:06) did not catch it, for the reason above.
 - **A second constraint surfaced while correcting it:** `corrects:` is a scalar
   (`scripts/_docid.py` `_opt_str_field`) and audit-docs check 34 requires each `corrected_by:` target to
   `corrects:` back to the frozen file's own id, so one RL cannot correct two records; the pair needed
-  `RL-8122` and `RL-8124`. This is a tooling limit the correction route has, recorded here so a
+  `RL-1819` and `RL-1821`. This is a tooling limit the correction route has, recorded here so a
   future multi-target correction does not rediscover it.
 
 ## Remedy (ruled)
