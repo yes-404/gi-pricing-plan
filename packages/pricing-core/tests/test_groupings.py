@@ -563,7 +563,7 @@ def test_unimplemented_methods_are_refused_by_name(
     method: GroupingMethod, fragment: str
 ) -> None:
     with pytest.raises(GroupingError, match=fragment):
-        propose_grouping(_book(), _proposal(method=method), dataset_id=DATASET, slug="x")
+        propose_grouping(_book(), _proposal(method=method), dataset_id=DATASET, slug="xx")
 
 
 @pytest.mark.req("FR-104")

@@ -397,6 +397,27 @@ async def test_g1_a_mount_pinned_at_another_version_is_refused() -> None:
 
 
 @pytest.mark.req("FR-217")
+@pytest.mark.req("FR-218")
+@pytest.mark.req("FR-237")
+@pytest.mark.parametrize(
+    "pinned",
+    [(), ("sub_graph:cancel-refund@5",)],
+    ids=["not_pinned", "pinned_at_another_version"],
+)
+async def test_g1_a_purpose_mount_whose_version_is_not_pinned_is_refused(
+    pinned: tuple[str, ...],
+) -> None:
+    """SL-1341 pre-gate audit A-2 (LG 8056), PL-1629 acceptance 6: Slice 2's two G1 refusals
+    (the two tests above) re-run with a `purposes` selector on the mount. The fixture is the
+    one `test_rating_purpose_mount.py` compiles cleanly when pinned; only the pins differ, so
+    the refusal is the pin check's and a purpose-only mount is no exception to it."""
+    from test_rating_purpose_mount import _bundle_with_a_mount
+
+    with pytest.raises(ValueError, match="RATING_VERSION_UNPINNED"):
+        await _bundle_with_a_mount(["cancellation"], pinned=pinned)
+
+
+@pytest.mark.req("FR-217")
 @pytest.mark.req("FR-237")
 @pytest.mark.parametrize("step", [
     {"step_id": "s_tab", "type": "table", "label": "t", "rate_table_ref": "rate_table:other@1",

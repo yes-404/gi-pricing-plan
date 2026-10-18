@@ -2840,6 +2840,24 @@ On the maintainer's ruling of 2026-10-17 20:48:15 BST (the SL-1543 diagnosis acc
 
 Minted 2026-10-17 from working id 8099 on the maintainer's re-allocation (to-lead 2026-10-17 21:30:18 BST).
 
+#### SL-1806 — WK-1178 fix slice — FD-1799: Banding and Grouping slugs typed `Slug`, a bad slug refused 422 at POST (FR-101, FR-108, FR-98, FR-105, FR-451)
+
+```yaml
+id: SL-1806
+family: slice
+title: WK-1178 fix slice — FD-1799, Banding and Grouping slugs typed `Slug`, a bad slug refused 422 at POST (FR-101, FR-108, FR-98, FR-105, FR-451)
+status: closed  # draft → active → closed | retired (§1.2a)
+created: 2026-10-18
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 8ac6290b63a27a3161f447259bf58d215e6e5837
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1805, SL-1734, SL-1758, FD-1384]
+```
+
+On the maintainer's entry "2026-10-18 03:02:03 BST — Maintainer: #1331 — attribution correction ACCEPTED; fix (A) now; FD 8102 carries (C) with a deadline; the process line ADOPTED" (`to-lead.md`), item 3: FD-1799's (filed in D21) close. `Banding.slug`, `Grouping.slug` (`packages/model-schema/src/model_schema/modelling.py:407`, `:557` on `8ac6290b`) and the two proposal request slugs (`backend/src/app/api/models.py:250`, `:254`) are typed `Slug` (`refs.py:62`, the `00` §4.2 ID-3 / §4.3 grammar). `POST /bandings`, `/groupings`, `/bandings/propose` and `/groupings/propose` refuse a bad slug with 422 `VALIDATION_FAILED`, `errors[].field` `slug`, `errors[].code` `STRING_PATTERN_MISMATCH`. That code is named in a dated `02` §5.1 amendment first. The contracts are regenerated. There is one red-first API test per route. `check_banding` (`bandings.py:590`) is unchanged. MEDIUM; **due before the P2 code freeze, Wed 4 Nov 2026**. Work-plan delta PL-1805 (DP-1: an already-stored bad slug, census first; DP-2: FD-1799's compile-error limb). Ledger LG-1807. Activation: the maintainer's one-line GO. *Activated 2026-10-18 on the maintainer, to-lead 2026-10-18 04:42:19 BST (GO; DP-1 (a) with Task 0 in two limbs, (c)/(d) refused; DP-2 (i), the named compile error stays FD-1799's residue, WK-1178, due before the P2 close; the WF-699 demo must pass in this slice's gate).*
+
 #### SL-1810 — WK-1178 fix slice — FD-1803: a rate table refuses a non-finite decimal (NaN, sNaN, ±Infinity) as a named FR-234 issue, never a 500
 
 ```yaml
@@ -2934,7 +2952,7 @@ relates: [PL-1254]
 id: SL-1341
 family: slice
 title: Slice 3: FR-218's purpose mount and the real check (retires `RL-1242`)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-09-30
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 8cef871d4ec30869dc3ef20559f3cac64e239a5c
@@ -2945,6 +2963,8 @@ relates: [PL-1254]
 ```
 
 `PL-1254` Task 3. ~~Blocked on DP-2 (open).~~ *DP-2 ruled 2026-09-30 by `RL-1344` (mint batch 12); still waits on the slices before it.* Minted as `SL-1341` at this PR's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `8cef871d` (1339 onward). *(Dated line, 2026-10-12, the note `PL-1629` says it owes this row at the mint (its lines 22 to 23), which D12 missed: **leaf plan: `PL-1629`**.)*
+
+**Closed 2026-10-17** on a conformant slice audit (`auditor-1341`, `LG-1808` "## Audit") and the lead's verdict (`LG-1808`, 2026-10-17 13:59:02 BST); the F5 red-first case is added. MERGE-ACK: pending (the lead's merge, then the maintainer's line). Ledger: `LG-1808`.
 
 
 
