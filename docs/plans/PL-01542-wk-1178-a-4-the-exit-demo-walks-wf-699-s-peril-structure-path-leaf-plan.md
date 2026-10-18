@@ -3,7 +3,7 @@ id: PL-1542
 family: plan
 kind: leaf
 title: WK-1178 — A-4, the exit demo walks WF-699's Peril Structure path (a severity GLM, the AD Peril Structure reconciled and approved, B4's model_call, the C1 pin): leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
 owner: planner
 tree: 137bc817ef1fb40ea57e9053e0ad40b73bdff3a8
