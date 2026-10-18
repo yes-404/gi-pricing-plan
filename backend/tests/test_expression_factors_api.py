@@ -43,6 +43,7 @@ from model_schema import (
     BandingMethod,
     Factor,
     FactorType,
+    GlmFitResult,
     GlmSpec,
     ModelStatus,
     OffsetSpec,
@@ -413,7 +414,9 @@ def _seed_fitted_model(workspace_id, slug: str, factor_ids: list[str]) -> None: 
                     spec=spec.model_dump(mode="json"),
                     spec_hash=f"v3:sha256:{new_uuid7().hex}{new_uuid7().hex}",
                     # `ck_models_fitted_model_has_a_fit_result` and its diagnostics twin.
-                    fit_result={"fitted": True},
+                    fit_result=GlmFitResult(
+                        converged=True, iterations=1, fit_seconds=0.0
+                    ).model_dump(mode="json"),
                     diagnostics_id=new_uuid7(),
                 )
             )
