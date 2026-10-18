@@ -199,6 +199,12 @@ class JobRow(Base):
             "trace_id IS NULL OR trace_id ~ '^[0-9a-f]{32}$'",
             name="trace_id_is_w3c_hex",
         ),
+        {
+            "info": {
+                "immutability": "mutable",
+                "reason": "the Job's lifecycle (jobs.py:214-287; worker/progress.py:200)",
+            }
+        },
     )
 
 
@@ -254,6 +260,11 @@ class AuditEventRow(Base):
             name="prev_event_hash_format",
         ),
         CheckConstraint("sequence >= 1", name="sequence_positive"),
+        {
+            "info": {
+                "immutability": "append_only",
+            }
+        },
     )
 
 
@@ -310,6 +321,12 @@ class OutboxRow(Base):
             "(status = 'published') = (published_at IS NOT NULL)",
             name="published_iff_timestamped",
         ),
+        {
+            "info": {
+                "immutability": "mutable",
+                "reason": "the relay marks each row (outbox.py:112-134)",
+            }
+        },
     )
 
 
@@ -348,6 +365,13 @@ class BlobRow(Base):
         # left to explain it.
         CheckConstraint("ref_count >= 0", name="ref_count_non_negative"),
         Index("ix_blobs_ref_count_created_at", "ref_count", "created_at"),
+        {
+            "info": {
+                "immutability": "guarded",
+                "guards": ["blobs_content_immutable"],
+                "reason": "only ref_count may move (a1b2c3d4e5f6:55-69)",
+            }
+        },
     )
 
 
@@ -386,6 +410,15 @@ class JobLogRow(Base):
     __table_args__ = (
         # The only query: one job's lines in insertion order.
         Index("ix_job_logs_job_id_seq", "job_id", "seq"),
+        {
+            "info": {
+                "immutability": "mutable",
+                "reason": (
+                    "INSERT-only in application code at a3fc2e8d; append-only enforcement "
+                    "deferred (PL-1769 plan review R3)"
+                ),
+            }
+        },
     )
 
 
@@ -415,6 +448,12 @@ class UserRow(Base):
     __table_args__ = (
         # Scoped to the issuer: two providers may legitimately use the same `sub`.
         UniqueConstraint("issuer", "subject", name="uq_users_issuer_subject"),
+        {
+            "info": {
+                "immutability": "mutable",
+                "reason": "the OIDC login upserts the user (auth/service.py:166-170)",
+            }
+        },
     )
 
 
@@ -442,6 +481,15 @@ class ServiceAccountRow(Base):
 
     __table_args__ = (
         UniqueConstraint("workspace_id", "slug", name="uq_service_accounts_workspace_slug"),
+        {
+            "info": {
+                "immutability": "mutable",
+                "reason": (
+                    "INSERT-only in application code at a3fc2e8d; append-only enforcement "
+                    "deferred (PL-1769 plan review R3)"
+                ),
+            }
+        },
     )
 
 
@@ -476,6 +524,15 @@ class ApiKeyRow(Base):
         UniqueConstraint("prefix", name="uq_api_keys_prefix"),
         Index("ix_api_keys_service_account_id", "service_account_id"),
         CheckConstraint("secret_hash ~ '^sha256:[a-f0-9]{64}$'", name="secret_hash_format"),
+        {
+            "info": {
+                "immutability": "mutable",
+                "reason": (
+                    "rotation, revocation and last-use stamping update the key row "
+                    "(api/service_accounts.py:301, :363; auth/service.py:238)"
+                ),
+            }
+        },
     )
 
 
@@ -500,7 +557,18 @@ class WorkspaceRow(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
 
-    __table_args__ = (UniqueConstraint("slug", name="uq_workspaces_slug"),)
+    __table_args__ = (
+        UniqueConstraint("slug", name="uq_workspaces_slug"),
+        {
+            "info": {
+                "immutability": "mutable",
+                "reason": (
+                    "INSERT-only in application code at a3fc2e8d; append-only enforcement "
+                    "deferred (PL-1769 plan review R3)"
+                ),
+            }
+        },
+    )
 
 
 class WorkspaceMemberRow(Base):
@@ -530,6 +598,15 @@ class WorkspaceMemberRow(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "workspace_id", name="uq_workspace_members_user_workspace"),
         Index("ix_workspace_members_user_id", "user_id"),
+        {
+            "info": {
+                "immutability": "mutable",
+                "reason": (
+                    "INSERT-only in application code at a3fc2e8d; append-only enforcement "
+                    "deferred (PL-1769 plan review R3)"
+                ),
+            }
+        },
     )
 
 
@@ -561,6 +638,12 @@ class WorkspaceSettingRow(Base):
 
     __table_args__ = (
         UniqueConstraint("workspace_id", "key", name="uq_workspace_settings_workspace_key"),
+        {
+            "info": {
+                "immutability": "mutable",
+                "reason": "a setting's value is replaced (settings.py:549-551)",
+            }
+        },
     )
 
 
@@ -588,7 +671,18 @@ class RoleRow(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
 
-    __table_args__ = (UniqueConstraint("workspace_id", "slug", name="uq_roles_workspace_slug"),)
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "slug", name="uq_roles_workspace_slug"),
+        {
+            "info": {
+                "immutability": "mutable",
+                "reason": (
+                    "INSERT-only in application code at a3fc2e8d; append-only enforcement "
+                    "deferred (PL-1769 plan review R3)"
+                ),
+            }
+        },
+    )
 
 
 class RoleAssignmentRow(Base):
@@ -641,6 +735,15 @@ class RoleAssignmentRow(Base):
             "NOT break_glass OR (expires_at IS NOT NULL AND reason IS NOT NULL)",
             name="break_glass_is_time_boxed_and_justified",
         ),
+        {
+            "info": {
+                "immutability": "mutable",
+                "reason": (
+                    "INSERT-only in application code at a3fc2e8d; append-only enforcement "
+                    "deferred (PL-1769 plan review R3)"
+                ),
+            }
+        },
     )
 
 
@@ -689,6 +792,16 @@ class ApprovalRequestRow(Base):
         ),
         Index("ix_approval_requests_workspace_status", "workspace_id", "status"),
         CheckConstraint("approvers_required >= 1", name="approvers_required_positive"),
+        {
+            "info": {
+                "immutability": "guarded",
+                "guards": ["approval_guard"],
+                "reason": (
+                    "the request's lifecycle moves under approval_guard's flag_only mode "
+                    "(a9f3c6d21b87:100)"
+                ),
+            }
+        },
     )
 
 
@@ -714,6 +827,15 @@ class ApprovalDecisionRow(Base):
     __table_args__ = (
         UniqueConstraint("request_id", "approver_id", name="uq_approval_decisions_one_each"),
         Index("ix_approval_decisions_request", "request_id"),
+        {
+            "info": {
+                "immutability": "mutable",
+                "reason": (
+                    "INSERT-only in application code at a3fc2e8d; append-only enforcement "
+                    "deferred (PL-1769 plan review R3)"
+                ),
+            }
+        },
     )
 
 
@@ -726,6 +848,17 @@ class ApprovalPolicyRow(Base):
     policy: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        {
+            "info": {
+                "immutability": "mutable",
+                "reason": (
+                    "set_policy replaces a workspace's policy in place (approvals.py:221-226)"
+                ),
+            }
+        },
     )
 
 
@@ -757,6 +890,15 @@ class SourceRow(Base):
             "credentials_secret_ref IS NULL OR credentials_secret_ref LIKE 'secret:%'",
             name="credentials_are_referenced_not_stored",
         ),
+        {
+            "info": {
+                "immutability": "mutable",
+                "reason": (
+                    "INSERT-only in application code at a3fc2e8d; append-only enforcement "
+                    "deferred (PL-1769 plan review R3)"
+                ),
+            }
+        },
     )
 
 
@@ -798,6 +940,16 @@ class DatasetRow(Base):
     __table_args__ = (
         UniqueConstraint("workspace_id", "slug", name="uq_datasets_workspace_slug"),
         CheckConstraint("currency ~ '^[A-Z]{3}$'", name="currency_is_iso_4217"),
+        {
+            "info": {
+                "immutability": "mutable",
+                "reason": (
+                    "a named container that holds no data (CLAUDE.md §7); its dictionary, "
+                    "owner and rule set change (datasets.py:291, :352; "
+                    "validation_rules.py:892)"
+                ),
+            }
+        },
     )
 
 
@@ -862,6 +1014,10 @@ class DatasetVersionRow(Base):
         onupdate=func.now(),
     )
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    #: When the data froze: the first move out of `draft` into validation (DP-21, ruled
+    #: "2026-10-14 13:27:39 BST"). **Set by `dataset_versions_snapshot_guard()`, never by the
+    #: application** (nothing assigns it), and never changed after. Read-only here.
+    data_frozen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     #: The previous version id in the same dataset, null on version 1.
     parent_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
     labels: Mapped[dict[str, str]] = mapped_column(JSONB, nullable=False, default=dict)
@@ -885,6 +1041,17 @@ class DatasetVersionRow(Base):
             "period_to IS NULL OR period_from IS NULL OR period_to >= period_from",
             name="period_is_ordered",
         ),
+        {
+            "info": {
+                "immutability": "guarded",
+                "guards": ["dataset_versions_snapshot_guard"],
+                "reason": (
+                    "'the immutable snapshot' (00 §2, CLAUDE.md §7): the data frozen from the "
+                    "first draft → validating, forever; status per VALID_DATASET_TRANSITIONS; "
+                    "the report id moves only out of validating (13:27:39)"
+                ),
+            }
+        },
     )
 
 
@@ -945,6 +1112,15 @@ class IngestionRunRow(Base):
         Index("ix_ingestion_runs_dataset", "dataset_id"),
         CheckConstraint("rows_read >= 0 AND rows_written >= 0 AND rows_rejected >= 0",
                         name="row_counts_non_negative"),
+        {
+            "info": {
+                "immutability": "mutable",
+                "reason": (
+                    "INSERT-only in application code at a3fc2e8d; append-only enforcement "
+                    "deferred (PL-1769 plan review R3)"
+                ),
+            }
+        },
     )
 
 
@@ -965,6 +1141,11 @@ class ReferenceTableRow(Base):
 
     __table_args__ = (
         UniqueConstraint("workspace_id", "slug", name="uq_reference_tables_workspace_slug"),
+        {
+            "info": {
+                "immutability": "append_only",
+            }
+        },
     )
 
 
@@ -995,6 +1176,13 @@ class ReferenceTableVersionRow(Base):
     __table_args__ = (
         UniqueConstraint("reference_table_id", "version", name="uq_reference_versions"),
         CheckConstraint("version >= 1", name="reference_version_starts_at_one"),
+        {
+            "info": {
+                "immutability": "guarded",
+                "guards": ["reference_table_versions_publish_only"],
+                "reason": "DP-11",
+            }
+        },
     )
 
 
@@ -1025,6 +1213,11 @@ class ReferenceRowRow(Base):
             "effective_to IS NULL OR effective_to > effective_from",
             name="effective_interval_is_ordered",
         ),
+        {
+            "info": {
+                "immutability": "append_only",
+            }
+        },
     )
 
 
@@ -1075,6 +1268,11 @@ class ValidationReportRow(Base):
             "rule_count >= fail_count + warn_count + error_count",
             name="counts_do_not_exceed_the_rules",
         ),
+        {
+            "info": {
+                "immutability": "append_only",
+            }
+        },
     )
 
 
@@ -1108,6 +1306,11 @@ class AcknowledgementRow(Base):
         ),
         Index("ix_acknowledgements_version", "dataset_version_id"),
         CheckConstraint("length(justification) > 0", name="justification_is_not_empty"),
+        {
+            "info": {
+                "immutability": "append_only",
+            }
+        },
     )
 
 
@@ -1138,6 +1341,11 @@ class ProfileRow(Base):
     __table_args__ = (
         Index("ix_profiles_version", "dataset_version_id", "created_at"),
         CheckConstraint("row_count >= 0", name="profile_row_count_is_not_negative"),
+        {
+            "info": {
+                "immutability": "append_only",
+            }
+        },
     )
 
 
@@ -1221,6 +1429,13 @@ class ValidationRuleRow(Base):
             "builtin IS FALSE OR catalogue_id IS NOT NULL",
             name="builtin_rule_names_its_catalogue_entry",
         ),
+        {
+            "info": {
+                "immutability": "guarded",
+                "guards": ["approval_guard"],
+                "reason": "lifecycle under approval_guard",
+            }
+        },
     )
 
 
@@ -1255,6 +1470,13 @@ class ValidationRuleSetRow(Base):
     __table_args__ = (
         UniqueConstraint("workspace_id", "slug", "version", name="uq_rule_set_version"),
         CheckConstraint("version >= 1", name="rule_set_version_starts_at_one"),
+        {
+            "info": {
+                "immutability": "guarded",
+                "guards": ["approval_guard"],
+                "reason": "under approval_guard",
+            }
+        },
     )
 
 
@@ -1281,6 +1503,15 @@ class SubjectPurgeRow(Base):
 
     __table_args__ = (
         Index("ix_subject_purges_dataset", "workspace_id", "dataset_id"),
+        {
+            "info": {
+                "immutability": "mutable",
+                "reason": (
+                    "INSERT-only in application code at a3fc2e8d; append-only enforcement "
+                    "deferred (PL-1769 plan review R3)"
+                ),
+            }
+        },
     )
 
 
@@ -1309,6 +1540,15 @@ class DatasetSplitRow(Base):
 
     __table_args__ = (
         UniqueConstraint("parent_version_id", "name", name="uq_dataset_splits_parent_name"),
+        {
+            "info": {
+                "immutability": "mutable",
+                "reason": (
+                    "INSERT-only in application code at a3fc2e8d; append-only enforcement "
+                    "deferred (PL-1769 plan review R3)"
+                ),
+            }
+        },
     )
 
 
@@ -1335,6 +1575,11 @@ class FactorRow(Base):
         UniqueConstraint("workspace_id", "slug", "version", name="uq_factors_slug_version"),
         CheckConstraint("version >= 1", name="factor_version_starts_at_one"),
         Index("ix_factors_dataset", "workspace_id", "dataset_id"),
+        {
+            "info": {
+                "immutability": "append_only",
+            }
+        },
     )
 
 
@@ -1365,6 +1610,11 @@ class BandingRow(Base):
         UniqueConstraint("workspace_id", "slug", "version", name="uq_bandings_slug_version"),
         CheckConstraint("version >= 1", name="banding_version_starts_at_one"),
         Index("ix_bandings_dataset", "workspace_id", "dataset_id"),
+        {
+            "info": {
+                "immutability": "append_only",
+            }
+        },
     )
 
 
@@ -1394,6 +1644,11 @@ class GroupingRow(Base):
         UniqueConstraint("workspace_id", "slug", "version", name="uq_groupings_slug_version"),
         CheckConstraint("version >= 1", name="grouping_version_starts_at_one"),
         Index("ix_groupings_dataset", "workspace_id", "dataset_id"),
+        {
+            "info": {
+                "immutability": "append_only",
+            }
+        },
     )
 
 
@@ -1470,6 +1725,13 @@ class ModelRow(Base):
         # Supersession asks "which earlier versions of this family are approved?" on every
         # approval, and archiving asks the same question of one family.
         Index("ix_models_family_status", "workspace_id", "model_family_slug", "status"),
+        {
+            "info": {
+                "immutability": "guarded",
+                "guards": ["approval_guard", "models_fit_immutable", "models_fitted_undeletable"],
+                "reason": "the fit is frozen once recorded, the lifecycle moves",
+            }
+        },
     )
 
 
@@ -1505,6 +1767,11 @@ class ModelComparisonRow(Base):
             unique=True,
             postgresql_where=job_id.isnot(None),
         ),
+        {
+            "info": {
+                "immutability": "append_only",
+            }
+        },
     )
 
 
@@ -1550,6 +1817,11 @@ class BacktestRow(Base):
             unique=True,
             postgresql_where=job_id.isnot(None),
         ),
+        {
+            "info": {
+                "immutability": "append_only",
+            }
+        },
     )
 
 
@@ -1580,6 +1852,11 @@ class TransparencyArtifactRow(Base):
 
     __table_args__ = (
         Index("ix_transparency_model", "workspace_id", "model_id", "created_at"),
+        {
+            "info": {
+                "immutability": "append_only",
+            }
+        },
     )
 
 
@@ -1612,6 +1889,11 @@ class DiagnosticsRow(Base):
     __table_args__ = (
         UniqueConstraint("model_id", name="uq_diagnostics_model"),
         Index("ix_diagnostics_workspace", "workspace_id"),
+        {
+            "info": {
+                "immutability": "append_only",
+            }
+        },
     )
 
 
@@ -1680,6 +1962,17 @@ class PerilStructureRow(Base):
             name="reconciled_peril_structure_has_a_reconciliation",
         ),
         Index("ix_peril_structures_slug_status", "workspace_id", "slug", "status"),
+        {
+            "info": {
+                "immutability": "guarded",
+                "guards": [
+                    "approval_guard",
+                    "peril_structures_composition_immutable",
+                    "peril_structures_reconciled_undeletable",
+                ],
+                "reason": "the composition is frozen, the lifecycle moves",
+            }
+        },
     )
 
 
@@ -1777,6 +2070,17 @@ class CustomObjectiveRow(Base):
             name="custom_objective_fields_follow_kind",
         ),
         Index("ix_custom_objectives_slug_status", "workspace_id", "slug", "status"),
+        {
+            "info": {
+                "immutability": "guarded",
+                "guards": [
+                    "approval_guard",
+                    "custom_objectives_definition_immutable",
+                    "custom_objectives_undeletable",
+                ],
+                "reason": "as 9",
+            }
+        },
     )
 
 
@@ -1817,6 +2121,11 @@ class ObjectiveCertificateRow(Base):
             "custom_objective_id",
             "certified_at",
         ),
+        {
+            "info": {
+                "immutability": "append_only",
+            }
+        },
     )
 
 
@@ -1913,6 +2222,17 @@ class CustomMetricRow(Base):
             name="certified_metric_has_a_certificate",
         ),
         Index("ix_custom_metrics_slug_status", "workspace_id", "slug", "status"),
+        {
+            "info": {
+                "immutability": "guarded",
+                "guards": [
+                    "approval_guard",
+                    "custom_metrics_definition_immutable",
+                    "custom_metrics_undeletable",
+                ],
+                "reason": "the definition is frozen, the lifecycle moves",
+            }
+        },
     )
 
 
@@ -1954,6 +2274,11 @@ class MetricCertificateRow(Base):
             "custom_metric_id",
             "certified_at",
         ),
+        {
+            "info": {
+                "immutability": "append_only",
+            }
+        },
     )
 
 
@@ -2000,6 +2325,16 @@ class RatingVersionRow(Base):
     __table_args__ = (
         UniqueConstraint("workspace_id", "slug", "version", name="uq_rating_versions_slug_version"),
         Index("ix_rating_versions_workspace", "workspace_id", "slug"),
+        {
+            "info": {
+                "immutability": "guarded",
+                "guards": ["approval_guard"],
+                "reason": (
+                    "lifecycle and compiled bundle under approval_guard; the TRUNCATE gap "
+                    "(E1) closed"
+                ),
+            }
+        },
     )
 
 
@@ -2031,6 +2366,11 @@ class RatingAlgorithmRow(Base):
             "workspace_id", "slug", "version", name="uq_rating_algorithms_slug_version"
         ),
         Index("ix_rating_algorithms_workspace", "workspace_id", "slug"),
+        {
+            "info": {
+                "immutability": "append_only",
+            }
+        },
     )
 
 
@@ -2058,6 +2398,13 @@ class RateTableRow(Base):
     __table_args__ = (
         UniqueConstraint("workspace_id", "slug", name="uq_rate_tables_workspace_slug"),
         Index("ix_rate_tables_workspace", "workspace_id", "slug"),
+        {
+            "info": {
+                "immutability": "guarded",
+                "guards": ["rate_tables_pointer_only"],
+                "reason": "DP-9",
+            }
+        },
     )
 
 
@@ -2094,6 +2441,11 @@ class RateTableVersionRow(Base):
             "rate_table_id", "version_number", name="uq_rate_table_versions_table_version"
         ),
         Index("ix_rate_table_versions_table", "rate_table_id"),
+        {
+            "info": {
+                "immutability": "append_only",
+            }
+        },
     )
 
 
@@ -2114,6 +2466,11 @@ class RateTableCellRow(Base):
     __table_args__ = (
         UniqueConstraint("version_id", "key", name="uq_rate_table_cells_version_key"),
         Index("ix_rate_table_cells_version", "version_id"),
+        {
+            "info": {
+                "immutability": "append_only",
+            }
+        },
     )
 
 
@@ -2143,6 +2500,11 @@ class RegressionSuiteRow(Base):
         UniqueConstraint(
             "workspace_id", "algorithm_slug", name="uq_regression_suites_algorithm"
         ),
+        {
+            "info": {
+                "immutability": "append_only",
+            }
+        },
     )
 
 
@@ -2173,6 +2535,11 @@ class RegressionSuiteVersionRow(Base):
 
     __table_args__ = (
         UniqueConstraint("suite_id", "version", name="uq_regression_suite_versions_version"),
+        {
+            "info": {
+                "immutability": "append_only",
+            }
+        },
     )
 
 
@@ -2215,6 +2582,15 @@ class RegressionRunRow(Base):
             "rating_version_id", "bundle_hash", "suite_content_hash", "finished_at",
         ),
         Index("ix_regression_runs_cases_blob_sha256", "cases_blob_sha256"),
+        {
+            "info": {
+                "immutability": "mutable",
+                "reason": (
+                    "INSERT-only in application code at a3fc2e8d; append-only enforcement "
+                    "deferred (PL-1769 plan review R3)"
+                ),
+            }
+        },
     )
 
 
@@ -2350,6 +2726,12 @@ class ScoringTraceRow(Base):
         # digest (the quote-input refusal, `07` §5.1 2026-09-28); unindexed, that is a
         # sequential scan of every trace (#868, the deputy's ruling of 18:55:39 BST).
         Index("ix_scoring_traces_blob_sha256", "blob_sha256"),
+        {
+            "info": {
+                "immutability": "mutable",
+                "reason": "a pending trace is replaced",
+            }
+        },
     )
 
 
@@ -2366,7 +2748,18 @@ class TenantMarkerRow(Base):
     id: Mapped[int] = mapped_column(SmallInteger, primary_key=True, autoincrement=False)
     tenant_id: Mapped[str] = mapped_column(Text, nullable=False)
 
-    __table_args__ = (CheckConstraint("id = 1", name="single_row"),)
+    __table_args__ = (
+        CheckConstraint("id = 1", name="single_row"),
+        {
+            "info": {
+                "immutability": "mutable",
+                "reason": (
+                    "read-only in application code at a3fc2e8d (SELECT at startup); append- "
+                    "only enforcement deferred (PL-1769 plan review R3)"
+                ),
+            }
+        },
+    )
 
 
 def approval_guarded_tables() -> set[str]:
@@ -2410,6 +2803,11 @@ class SubGraphVersionRow(Base):
             "workspace_id", "slug", "version", name="uq_sub_graph_versions_slug_version"
         ),
         Index("ix_sub_graph_versions_workspace", "workspace_id", "slug"),
+        {
+            "info": {
+                "immutability": "append_only",
+            }
+        },
     )
 
 
@@ -2439,6 +2837,12 @@ class EnvironmentRow(Base):
     __table_args__ = (
         UniqueConstraint("slug", name="uq_environments_slug"),
         CheckConstraint("promotion_order >= 1", name="promotion_order_positive"),
+        {
+            "info": {
+                "immutability": "mutable",
+                "reason": "renamed and retired in place (environments.py:262-373)",
+            }
+        },
     )
 
 
@@ -2466,6 +2870,12 @@ class EnvironmentSettingRow(Base):
 
     __table_args__ = (
         UniqueConstraint("environment_id", "key", name="uq_environment_settings_environment_key"),
+        {
+            "info": {
+                "immutability": "mutable",
+                "reason": "a setting's value is replaced (settings.py:603-611)",
+            }
+        },
     )
 
 
@@ -2514,6 +2924,13 @@ class DeploymentRequestRow(Base):
             name="status_known",
         ),
         Index("ix_deployment_requests_environment", "environment_id"),
+        {
+            "info": {
+                "immutability": "guarded",
+                "guards": ["approval_guard"],
+                "reason": "lifecycle under approval_guard (c4a81f6d2e95)",
+            }
+        },
     )
 
 
@@ -2547,6 +2964,11 @@ class DeploymentRow(Base):
     __table_args__ = (
         CheckConstraint("bundle_hash ~ '^sha256:[a-f0-9]{64}$'", name="bundle_hash_format"),
         Index("ix_deployments_environment", "workspace_id", "environment_id", "deployed_at"),
+        {
+            "info": {
+                "immutability": "append_only",
+            }
+        },
     )
 
 
@@ -2593,6 +3015,15 @@ class DislocationRunRow(Base):
             "workspace_id", "candidate_ref", "candidate_bundle_hash",
         ),
         Index("ix_dislocation_runs_movers_blob_sha256", "movers_blob_sha256"),
+        {
+            "info": {
+                "immutability": "mutable",
+                "reason": (
+                    "INSERT-only in application code at a3fc2e8d; append-only enforcement "
+                    "deferred (PL-1769 plan review R3)"
+                ),
+            }
+        },
     )
 
 
@@ -2631,4 +3062,14 @@ class BlobUploadRow(Base):
 
     __table_args__ = (
         CheckConstraint("part_count BETWEEN 1 AND 10000", name="part_count_in_range"),
+        {
+            "info": {
+                "immutability": "mutable",
+                "reason": (
+                    "job_id and sha256 are set in place when the upload is completed "
+                    "(api/blobs.py, FR-1776); added after PL-1769's 59-row classification, "
+                    "classed by the executor, lead to confirm"
+                ),
+            }
+        },
     )
