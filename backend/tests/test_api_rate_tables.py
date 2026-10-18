@@ -978,6 +978,27 @@ def test_export_csv_returns_the_seeded_cells(
     )
 
 
+@pytest.mark.req("FR-451")
+def test_export_csv_publishes_text_csv(api_client: TestClient) -> None:
+    """FD-1684: the route declares the media type it sends, not an empty JSON body."""
+    content = api_client.app.openapi()["paths"][
+        "/api/v1/rate-tables/{slug}@{version}/export/csv"
+    ]["get"]["responses"]["200"]["content"]
+    assert set(content) == {"text/csv"}
+    assert content["text/csv"]["schema"] == {"type": "string"}
+
+
+@pytest.mark.req("FR-451")
+def test_export_xlsx_publishes_the_spreadsheetml_type(api_client: TestClient) -> None:
+    """FD-1684: the XLSX is a zip archive, so the schema is binary, not decoded text (DP-2)."""
+    xlsx = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    content = api_client.app.openapi()["paths"][
+        "/api/v1/rate-tables/{slug}@{version}/export/xlsx"
+    ]["get"]["responses"]["200"]["content"]
+    assert set(content) == {xlsx}
+    assert content[xlsx]["schema"] == {"type": "string", "format": "binary"}
+
+
 @pytest.mark.req("FR-235")
 def test_export_xlsx_parses_to_the_seeded_cells(
     api_client: TestClient, workspace_id, actuary
@@ -990,6 +1011,10 @@ def test_export_xlsx_parses_to_the_seeded_cells(
     )
 
     assert response.status_code == 200, response.text
+    assert (
+        response.headers["content-type"]
+        == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
     workbook = load_workbook(io.BytesIO(response.content), read_only=True)
     sheet = workbook.active
     assert [row for row in sheet.iter_rows(values_only=True)] == [

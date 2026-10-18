@@ -134,6 +134,7 @@ term must be added here before it is used in any other document.**
 | **Acknowledgement** | An audited record of a Pricing Actuary accepting a `warn` outcome, with a mandatory justification. Required before a `warn`-carrying Dataset Version reaches `validated`. |
 | **Profile** | Computed descriptive statistics for a Dataset Version: per-column distributions, missingness, cardinality, one-way exposure/claim summaries. |
 | **PSI** | Population Stability Index — distributional distance of a column between two Dataset Versions (or a live population vs a reference). |
+| **Blob Upload** | A pending client upload to the blob store's staging area, recorded when an upload URL is issued: its workspace, principal, staging key, declared parts and completion deadline. Completing it promotes the bytes to a content-addressed Blob owned in that workspace (`07` §4.5, FR-1776). *(appended 2026-10-16, WK-1178, `SL-1722`, `RL-1724`)* |
 
 ### 2.2 Modelling layer
 

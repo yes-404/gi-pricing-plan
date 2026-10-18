@@ -1,0 +1,22 @@
+{
+  "additionalProperties": false,
+  "description": "The body of `POST /blobs/upload-url`.",
+  "properties": {
+    "media_type": {
+      "title": "Media Type",
+      "type": "string"
+    },
+    "parts": {
+      "default": 1,
+      "maximum": 10000,
+      "minimum": 1,
+      "title": "Parts",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "media_type"
+  ],
+  "title": "UploadUrlRequest",
+  "type": "object"
+}
