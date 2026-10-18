@@ -301,6 +301,8 @@ cases, and cites this slice's guard as discharging its predict-time limb.
 mapped to the same feature name collapse before `predict` sees them (the last one wins). That collapse is not a
 `predict` collision and this guard does not reach it.
 
+- 2026-10-18 16:21:10 BST — fix-1274: the guard pair above ("equal values score") is superseded for different graph steps by to-lead "2026-10-17 11:15:37 BST" (Q1(b)); the predict-time guard remains as the backstop (this entry; ruling: to-lead "2026-10-18 16:04:05 BST", DP-1274-COLLIDE option 1). The `03` FR-222 and FR-240 DP-1274-MULTI inserts carry the same dated line.
+
 ### Runs owed after GATE END (none run in the window)
 1. The new test file at `c6ae78c1`: the reds are red there (the two quote cases at compile, with
    `MODEL_CALL_FEATURE_MAP_INVALID`; the unit definition; the unequal-values case), the equal-values case green.
@@ -323,3 +325,5 @@ Re-merge of `origin/main` `ebe3292c` (merge `8c487a87`), no conflicts. Small run
 - ruff and mypy clean; `lint-imports` 4 kept, 0 broken.
 
 - 2026-10-18 14:50:09 BST — executor-1274r: the "Not done: stopped" on DP-1274-DIAG (a) above is stale. DP-1274-DIAG was ruled (a) at to-lead "2026-10-16 10:27:41 BST" (refuse-or-omit with a named reason plus an owned FD) and its form concurred at "2026-10-16 10:33:35 BST" (`EXPRESSION_FACTOR` on both omission-reason enums); the slice builds to both. Re-merged onto origin/main d0d6a265 under the maintainer entries "2026-10-18 14:45:19 BST" and "2026-10-18 14:47:38 BST".
+
+- 2026-10-18 16:21:10 BST — fix-1274 (executor, Sonnet 5.5) on `8bd04267`, after GATE END: the gate's 48 failures were 13 in the docs-suite tests (`tests/`, which read the working ids) and 35 in the slice's code and tests; these are the 35, fixed under to-lead "2026-10-18 16:04:05 BST": (1) the 3 collision tests in `test_rating_glm_expression_inputs.py` now follow B at compile (distinct-step pair refused with `MODEL_CALL_FEATURE_MAP_INVALID`, naming the column and no value; same `input_name` and `on_missing` compiles and prices; the predict-time guard tested on a scorer built from resolved payloads without `compile_bundle`, `MODEL_CALL_FEATURE_COLLISION`), no product code change; (2) the supersession lines above and in `03`; (3) `FactorCreate` takes `expression`, bound from `Factor.model_fields`, and `docs/contracts/openapi/generated.json` is regenerated (27 API tests: the slice's feature was unreachable over HTTP); (4) three slug fixtures made valid typed slugs; (5) `test_glm.py` now states FR-208's amended verdict; (6) `test_error_sinks.py`: four sink keys (six sites) given `_SINKS` entries and sentinel tests. A full re-gate is owed (logic changed).
