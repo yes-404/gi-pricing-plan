@@ -154,6 +154,10 @@ class Factor(BaseModel):
     #: would change meaning the next time someone re-cut a boundary.
     banding_id: UUID | None = None
     grouping_id: UUID | None = None
+    #: `02` §4.1, added 2026-10-16 (`RL-1615`). The formula an `expression` Factor *is*,
+    #: stored as written, parsed in the `factor` profile over `source_columns` (FR-95). It
+    #: is stored on the Factor so it is declared, versioned (FR-96) and audited.
+    expression: str | None = Field(default=None, max_length=2000)
     #: `02` §4.1, added 2026-08-18. The Factors an `interaction` crosses, in the order they
     #: are crossed. **Factors, not columns**: every place the specification names an
     #: interaction it names factors — §4.4's `interaction_constraints`, §4.9's
@@ -177,6 +181,7 @@ class Factor(BaseModel):
         required = {
             FactorType.BANDING: ("banding_id", self.banding_id),
             FactorType.GROUPING: ("grouping_id", self.grouping_id),
+            FactorType.EXPRESSION: ("expression", self.expression),
         }.get(self.type)
         if required is not None and required[1] is None:
             raise ValueError(
@@ -184,15 +189,19 @@ class Factor(BaseModel):
                 f"{required[0]} (`02` §4.1). The transformation is what the factor *is*; "
                 "without it the factor is its raw column under another name."
             )
-        for field, value, owner in (
-            ("banding_id", self.banding_id, FactorType.BANDING),
-            ("grouping_id", self.grouping_id, FactorType.GROUPING),
+        for field, value, owners in (
+            # `RL-1615` DP-S4-1: an `expression` Factor may pin a Banding, which is how
+            # its numeric result becomes categorical.
+            ("banding_id", self.banding_id, (FactorType.BANDING, FactorType.EXPRESSION)),
+            ("grouping_id", self.grouping_id, (FactorType.GROUPING,)),
+            ("expression", self.expression, (FactorType.EXPRESSION,)),
         ):
-            if value is not None and self.type is not owner:
+            if value is not None and self.type not in owners:
                 raise ValueError(
-                    f"factor {self.slug!r} is of type {self.type.value!r} and names a "
-                    f"{field}. Nothing would apply it, and a transformation recorded on an "
-                    "artifact that ignores it reads as one the model used."
+                    f"factor {self.slug!r} is of type {self.type.value!r} and names "
+                    f"{'an' if field == 'expression' else 'a'} {field}. Nothing would apply "
+                    "it, and a transformation recorded on an artifact that ignores it reads "
+                    "as one the model used."
                 )
         self._the_interaction_arm()
         self._columns_match_the_type()
@@ -407,7 +416,12 @@ class Banding(BaseModel):
     slug: Slug
     dataset_id: UUID
     version: int = Field(ge=1)
-    column: str
+    #: Exactly one of `column` and `source_expression` is set (`RL-1615` DP-S4-1; `02`
+    #: §4.2). `column` is null on a Banding cut over an `expression` Factor's result.
+    column: str | None = None
+    #: The text of the `expression` Factor's formula the boundaries were cut over, stored as
+    #: written. Resolution compares it with the Factor's `expression` as a normalised parse.
+    source_expression: str | None = Field(default=None, max_length=2000)
     method: BandingMethod
     method_params: dict[str, float] = Field(default_factory=dict)
     #: The version the boundaries and `band_stats` were derived on (FR-99). `None`
@@ -433,6 +447,12 @@ class Banding(BaseModel):
 
     @model_validator(mode="after")
     def _boundaries_and_labels_describe_the_same_bands(self) -> Banding:
+        if (self.column is None) == (self.source_expression is None):
+            raise InputFreeError(
+                "a banding is cut over exactly one of a dataset column and an expression "
+                "Factor's formula (`02` §4.2): set `column` or `source_expression`, never both "
+                "and never neither."
+            )
         if any(
             later <= earlier
             for earlier, later in zip(self.boundaries, self.boundaries[1:], strict=False)
@@ -641,7 +661,11 @@ class BandingProposal(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     dataset_version_id: UUID
-    column: str
+    #: Exactly one of `column` and `source_expression` (`02` §4.2; `RL-1615` accepted cost
+    #: (i)): the proposal is cut over a dataset column or over an `expression` Factor's
+    #: formula, which is parsed by the one parser in the `factor` profile.
+    column: str | None = None
+    source_expression: str | None = Field(default=None, max_length=2000)
     method: BandingMethod
     n_bands: int = Field(default=10, ge=1, le=200)
     #: Method-specific knobs: `min_claims_per_band` for `credibility`, and the exposure /
@@ -654,6 +678,16 @@ class BandingProposal(BaseModel):
     null_level: str | None = None
     below_range: BelowRangePolicy = BelowRangePolicy.ERROR
     above_range: AboveRangePolicy = AboveRangePolicy.ERROR
+
+    @model_validator(mode="after")
+    def _cut_over_exactly_one(self) -> BandingProposal:
+        if (self.column is None) == (self.source_expression is None):
+            raise InputFreeError(
+                "a banding proposal is cut over exactly one of a dataset column and an "
+                "expression Factor's formula (`02` §4.2): set `column` or "
+                "`source_expression`, never both and never neither."
+            )
+        return self
 
 
 class GroupingProposal(BaseModel):

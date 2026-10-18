@@ -1734,18 +1734,22 @@ Minted as `SL-1273` at #943's merge turn, 2026-09-30, with `python3 scripts/doc-
 id: SL-1274
 family: slice
 title: Slice 4: `expression` Factors (FR-95, FR-208's expression arm)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-09-30
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: dee49f781fd23f9df2e72161885c77fa17a6f1ab
 phase: P2
 work: WK-690
 corrected_by: []
-relates: [PL-1268]
+relates: [PL-1268, PL-1621, PL-1665, RL-1615, RL-1700]
 ```
 
 `Factor` gains the expression field and its validator arm. `resolve_factors` resolves it through the `factor` profile, and a numeric result is refused by name, with the message naming FR-210 (`RL-1265` DP-4). `PL-1268` Slice 4. It waits only on Slice 1, and on a free lane under `RL-1263`.
 Minted as `SL-1274` at #943's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `08bd1c5a` (working id 9953 before the mint).
+
+(Activated 2026-10-16 on the maintainer's entry "2026-10-16 09:51:01 BST — GO SL-1274 BUILD (WK-690 S4, factor expressions)" (`to-lead.md`) and the lead's request "2026-10-16 09:50:29 BST" (`from-lead`). The write set is widened at the GO to `RL-1700`'s list, `backend/src/app/db/models.py` included. `PL-1621`, `PL-1665` and `PL-1268` are `active`. FD-1704's fix is not this slice's.)
+
+(Closed 2026-10-18 as a Slice by fix4-1274's closing acts (LG-1817 minted from working id 8062), on the pre-PR audit of LG-1817 (auditor-1274, "## Audit", 2026-10-18 18:18:08 BST; head `ebcb6eaa`): F-C1, F-C2 and F-C3 are answered in LG-1817, F-C2's migration hazard (a bare NotNullViolation on `f2b6d90a4c17`'s downgrade) is fixed red-first at `68eb62a7` and proved in the round-trip window written in LG-1817, on the maintainer's "2026-10-18 18:20:40 BST" (`to-lead.md`). MERGE-ACK: not yet given.)
 
 #### SL-1275 — Slice 5: the authoring view, and `WF-702` Route B end to end (`02` §5.3)
 

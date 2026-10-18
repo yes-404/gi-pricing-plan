@@ -1355,7 +1355,7 @@ class BandingRow(Base):
     dataset_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     slug: Mapped[str] = mapped_column(String(64), nullable=False)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
-    column_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    column_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
     body: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()

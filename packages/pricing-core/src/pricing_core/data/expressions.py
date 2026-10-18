@@ -308,15 +308,23 @@ def referenced_columns(
     expression: str,
     *,
     profile: GrammarProfile = GrammarProfile.RECIPE,
+    symbols: frozenset[str] | None = None,
     limits: ExpressionLimits = DEFAULT_LIMITS,
 ) -> frozenset[str]:
-    """Column names an expression reads, for lineage and for pre-flight checks."""
-    tree = parse_expression(expression, profile, limits=limits)
-    functions = _functions(profile)
+    """Column names an expression reads, for lineage and for pre-flight checks.
+
+    The `objective` and `factor` profiles cannot be parsed without their bound `symbols`
+    (`RL-1700` (a)); the default `None` leaves the `recipe` profile's call unchanged.
+    """
+    tree = parse_expression(expression, profile, symbols=symbols, limits=limits)
+    # The names in **call position** are functions; a bare name that happens to equal a
+    # function's (a column called `max`) is a column and is read. `_check_symbols` draws the
+    # same line, by the same `Call.func` identity.
+    called = {id(n.func) for n in ast.walk(tree) if isinstance(n, ast.Call)}
     return frozenset(
         node.id
         for node in ast.walk(tree)
-        if isinstance(node, ast.Name) and node.id not in functions
+        if isinstance(node, ast.Name) and id(node) not in called
     )
 
 

@@ -229,6 +229,7 @@ def build_fremtpl2_algorithm(
                       "input_name": EXPOSURE, "on_missing": "error", "produces": EXPOSURE})
 
     for factor, banding in bandings.items():
+        assert banding.column is not None  # a column Banding; the example has no expression one
         steps.append({
             "step_id": f"s_band_{factor}", "type": "expression",
             "label": f"{banding.column} to its band",

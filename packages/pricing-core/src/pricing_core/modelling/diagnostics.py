@@ -954,6 +954,17 @@ def _permutation_importances(
                 )
             )
             continue
+        # DP-1274-DIAG (FR-178): an `expression` factor reads several source columns through
+        # its formula, and `source_columns[:1]` below would shuffle only the first. That is
+        # a number for the wrong quantity, so the factor is omitted with a named reason.
+        if factor.type is FactorType.EXPRESSION:
+            omitted.append(
+                PermutationOmission(
+                    feature=factor.slug,
+                    reason=PermutationOmissionReason.EXPRESSION_FACTOR,
+                )
+            )
+            continue
         # FR-177: a cross is permuted through every operand source column under ONE shared
         # order, which permutes the operand *pairs* -- exactly a permutation of the
         # resolved cross column, so no unseen pair is ever built.
@@ -1371,6 +1382,18 @@ def compute_gbm_diagnostics(
                     factor=factor.slug,
                     omitted=PartialDependenceOmission(
                         reason=PartialDependenceOmissionReason.OPERAND_OF_INTERACTION,
+                    ),
+                )
+            )
+            continue
+        # DP-1274-DIAG (FR-178): `_sweep` holds `source_columns[0]`, which is not an
+        # `expression` factor's input. Omitted with its reason and no points.
+        if factor.type is FactorType.EXPRESSION:
+            dependence.append(
+                PartialDependence(
+                    factor=factor.slug,
+                    omitted=PartialDependenceOmission(
+                        reason=PartialDependenceOmissionReason.EXPRESSION_FACTOR,
                     ),
                 )
             )

@@ -188,6 +188,11 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         1, "`glum`'s refusal of a fit; model path, not a quote"),
     ("packages/pricing-core/src/pricing_core/safe_error.py", "safe_error_detail", "str(exc)"): (
         1, "the allow-list itself: reached only for a `CodedError`, whose text is input-free"),
+    ("packages/pricing-core/src/pricing_core/safe_error.py", "_expression_detail", "str(exc)"): (
+        1, "the allow-list itself: an `ExpressionError`'s text, raised where no frame is in scope "
+        "(test_every_expression_error_is_raised_where_no_row_value_is_in_scope)"),
+    ("packages/pricing-core/src/pricing_core/safe_error.py", "_expression_detail", "{exc}"): (
+        1, "the allow-list itself: the same text with its position (as above)"),
     ("packages/pricing-core/src/pricing_core/rating/compile.py", "_check_vocabulary", "{exc}"): (
         1, "compile time, artifact-level: no quote is involved"),
     ("packages/pricing-core/src/pricing_core/rating/score.py", "_failing_node", "str(exc)"): (
@@ -287,6 +292,126 @@ def test_a_banding_refusal_in_a_fit_keeps_its_text_and_no_row_value() -> None:
     assert isinstance(refused.value, CodedError)
     assert "'age'" in detail, "control: the allow-list keeps the refusal's own text"
     assert _SENTINEL not in detail
+
+
+_REFUSED_FORMULA = "__import__('os')"
+
+
+@pytest.mark.req("NFR-499", "FR-95")
+def test_an_expression_refusal_over_a_dataset_keeps_its_text_and_no_row_value() -> None:
+    """The six wrapped sites of an `expression` Factor or Banding (`bandings._cut_values` x2,
+    `bandings.source_columns_of`, `factors._expression_series` x2; the sixth is the creation
+    sink below): each keeps the grammar text and the engine's dtype prose, and a sentinel in
+    the dataset's rows is in none, because the text goes through `safe_error_text`."""
+    from uuid import uuid4
+
+    from model_schema import Factor, FactorType
+    from pricing_core.modelling import FactorResolutionError, resolve_factors, source_columns_of
+
+    frame = pl.DataFrame({"region": [_SENTINEL] * 3, "age": [30.0, 40.0, 50.0]})
+    dataset = uuid4()
+
+    def factor(expression: str) -> Factor:
+        return Factor(
+            id=uuid4(), slug="expr-factor", dataset_id=dataset, version=1,
+            type=FactorType.EXPRESSION, source_columns=("region",), expression=expression,
+            banding_id=uuid4(),
+        )
+
+    def proposal(expression: str) -> BandingProposal:
+        return BandingProposal(
+            dataset_version_id=dataset, source_expression=expression,
+            method=BandingMethod.EQUAL_WIDTH,
+        )
+
+    refusals: list[FactorResolutionError] = []
+    for expression in (_REFUSED_FORMULA, "region * 2"):  # grammar arm, then the engine's dtype arm
+        for attempt in (
+            lambda e=expression: resolve_factors(frame, [factor(e)]),
+            lambda e=expression: propose_banding(frame, proposal(e), dataset_id=dataset, slug="s"),
+        ):
+            with pytest.raises(FactorResolutionError) as refused:
+                attempt()
+            refusals.append(refused.value)
+    with pytest.raises(FactorResolutionError) as refused:
+        source_columns_of(proposal(_REFUSED_FORMULA), frame.columns)
+    refusals.append(refused.value)
+    assert len(refusals) == 5
+    for refusal in refusals:
+        assert _SENTINEL not in str(refusal)
+    assert "'__import__' is not an allowed function" in str(refusals[0]), (
+        "control: the grammar arm keeps the author's own text"
+    )
+    assert "dtypes" in str(refusals[2]), "control: the dtype arm keeps the engine's own text"
+
+
+@pytest.mark.req("NFR-499", "FR-95")
+def test_every_expression_error_is_raised_where_no_row_value_is_in_scope() -> None:
+    """Why `safe_error` may keep an `ExpressionError`'s text: every function in
+    `pricing_core/data/expressions.py` that constructs one takes an expression and column
+    names, never a polars frame or series, so no row value can reach its message."""
+    path = _ROOT / "packages/pricing-core/src/pricing_core/data/expressions.py"
+    assert _expression_error_scopes_with_data(path.read_text(encoding="utf-8")) == []
+    # Positive control: the predicate sees a function that takes a frame and raises one.
+    leaky = (
+        "import polars as pl\n"
+        "def evaluate(frame: pl.DataFrame):\n"
+        "    raise ExpressionError(f'bad {frame}')\n"
+    )
+    assert _expression_error_scopes_with_data(leaky) == ["evaluate"]
+
+
+def _expression_error_scopes_with_data(source: str) -> list[str]:
+    """Names of functions that construct an `ExpressionError` and take a polars frame, series
+    or lazy frame (any parameter annotated `pl.DataFrame`, `pl.Series` or `pl.LazyFrame`)."""
+    tree = ast.parse(source)
+    leaking: list[str] = []
+    for function in ast.walk(tree):
+        if not isinstance(function, ast.FunctionDef | ast.AsyncFunctionDef):
+            continue
+        raises = any(
+            isinstance(node, ast.Call)
+            and (getattr(node.func, "id", None) or getattr(node.func, "attr", None))
+            == "ExpressionError"
+            for node in ast.walk(function)
+        )
+        takes_data = any(
+            any(
+                isinstance(part, ast.Attribute)
+                and part.attr in ("DataFrame", "Series", "LazyFrame")
+                for part in ast.walk(argument.annotation)
+            )
+            for argument in (*function.args.args, *function.args.kwonlyargs)
+            if argument.annotation is not None
+        )
+        if raises and takes_data:
+            leaking.append(function.name)
+    return leaking
+
+
+@pytest.mark.req("NFR-499", "FR-95")
+def test_an_expression_factor_refusal_at_creation_carries_the_formula_and_no_row() -> None:
+    """`_require_a_creatable_expression` reads no dataset: it answers the formula's own
+    grammar refusal, positioned (RL-1700 (b))."""
+    import asyncio
+    from uuid import uuid4
+
+    from app.errors import PlatformError
+    from app.platform.modelling import _require_a_creatable_expression
+    from model_schema import Factor, FactorType
+
+    factor = Factor(
+        id=uuid4(), slug="expr-factor", dataset_id=uuid4(), version=1,
+        type=FactorType.EXPRESSION, source_columns=("region",), expression=_REFUSED_FORMULA,
+    )
+    with pytest.raises(PlatformError) as refused:
+        asyncio.run(
+            _require_a_creatable_expression(None, workspace_id=uuid4(), factor=factor)  # type: ignore[arg-type]
+        )
+    (error,) = refused.value.errors
+    assert error.field == "expression"
+    assert error.message.startswith("line 1, column ")
+    assert _SENTINEL not in error.message
 
 
 @pytest.mark.req("NFR-499")

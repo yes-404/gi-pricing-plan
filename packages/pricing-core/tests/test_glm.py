@@ -275,25 +275,17 @@ def test_the_superseded_offset_arm_stays_in_the_closed_set() -> None:
 
 
 @pytest.mark.req("FR-208")
-def test_an_expression_factor_can_be_declared_and_can_never_be_resolved() -> None:
-    """FR-208 states this verdict rather than leaving it to be discovered.
-
-    `FactorType.EXPRESSION` is a live member of FR-83's closed set and `Factor` carries
-    no field to hold the expression, so the type is selectable and the payload cannot be
-    supplied. OQ-582 (decided 2026-08-17) called that contained rather than corrected:
-    the refusal is at resolution, which is the boundary where an unresolved factor would
-    otherwise become a fit nobody could tell from a correct one. The field and its validator
-    arm are Phase 1b's, with the rest of the expression work.
-    """
-    factor = Factor(
-        id=uuid4(), slug="age_over_ncd", dataset_id=uuid4(), version=1,
-        type=FactorType.EXPRESSION, source_columns=("driv_age",),
-    )
-    assert not hasattr(factor, "expression"), (
-        "an `expression` field would make this factor resolvable and FR-208 wrong"
-    )
-    with pytest.raises(FactorResolutionError, match="'expression'"):
-        resolve_factors(_frequency_data(100), [factor])
+def test_an_expression_factor_with_no_expression_is_refused_by_the_validator() -> None:
+    """FR-208 as amended 2026-10-16 (`RL-1615`, `RL-1700`, WK-690 Slice 4): the `expression`
+    arm resolves, because `Factor` carries `expression`. The verdict that used to be stated
+    here, an expression Factor that is selectable and can never be resolved, is gone; its
+    replacement is that an `expression` Factor naming no formula cannot be built at all, so
+    an unresolvable one never reaches resolution."""
+    with pytest.raises(ValueError, match="names no expression"):
+        Factor(
+            id=uuid4(), slug="age-over-ncd", dataset_id=uuid4(), version=1,
+            type=FactorType.EXPRESSION, source_columns=("driv_age",),
+        )
 
 
 @pytest.mark.req("FR-89")

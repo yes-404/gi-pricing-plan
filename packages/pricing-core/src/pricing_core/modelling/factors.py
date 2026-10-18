@@ -5,11 +5,11 @@ where "the column moved or changed type" is discovered. `02` FR-87 says resoluti
 fails loudly, and the reason is that the alternative is a model fitted on a column that is
 no longer the column the factor meant.
 
-**Four** of FR-83's eight types resolve today: `identity`, `banding`, `grouping` and
+**Five** of FR-83's eight types resolve today: `identity`, `banding`, `grouping`,
 `interaction` — the last since FR-92 on 2026-08-18, which this docstring did not
-record until 2026-08-22. A resolver that silently returned the raw column for a `spline`
-would produce a fit nobody could tell from a correct one, so the other four are refused by
-name (FR-208).
+record until 2026-08-22 — and `expression`, since 2026-10-16 (`RL-1615`). A resolver that
+silently returned the raw column for a `spline` would produce a fit nobody could tell from a
+correct one, so the other four are refused by name (FR-208).
 
 The four refused do not share a reason, and the message says which applies (OQ-571,
 decided 2026-08-22):
@@ -17,7 +17,8 @@ decided 2026-08-22):
 - `spline` and `polynomial` are **not built**. Both stay in FR-83's declared set and
   are gated on FR-210, because no continuous Factor can be rated or reviewed yet —
   FR-113's relativity table is categorical-only and `03` FR-230 seeds from it.
-- `expression` is **not built**, owned by WK-690 with the rest of §4.6's grammar.
+- `expression` resolves (WK-690 Slice 4, `RL-1615`): through the `factor` profile over the
+  Factor's declared `source_columns`, then by the result's dtype — see `_expression_series`.
 - `offset` is **superseded** (FR-209). Its refusal is permanent, not pending: an
   offset is declared on the spec through `OffsetSpec`, and a Factor type meaning the same
   thing was a second mechanism for a solved problem. The arm stays in the enum and in the
@@ -34,6 +35,7 @@ differ only in rateability, which `rateable()` below decides for `03`.
 
 from __future__ import annotations
 
+import ast
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from types import MappingProxyType
@@ -42,9 +44,16 @@ from uuid import UUID
 import polars as pl
 
 from model_schema import Banding, Factor, FactorIntent, FactorType, Grouping
+from pricing_core.data.expressions import (
+    ExpressionError,
+    GrammarProfile,
+    compile_expression,
+    parse_expression,
+)
 from pricing_core.modelling.bandings import apply_banding
 from pricing_core.modelling.errors import FactorResolutionError
 from pricing_core.modelling.groupings import apply_grouping
+from pricing_core.safe_error import safe_error_text
 
 #: FR-83 arms refused **permanently** rather than pending a slice, so the refusal must
 #: not say "yet" (FR-209, OQ-571 decided 2026-08-22). A set rather than a single
@@ -215,8 +224,10 @@ def resolve_factor_columns(
         if factor.type is FactorType.INTERACTION:
             continue
 
-        source = factor.source_columns[0]
-        if factor.type is FactorType.IDENTITY:
+        source = factor.source_columns[0] if factor.source_columns else ""
+        if factor.type is FactorType.EXPRESSION:
+            series = _expression_series(frame, factor, bandings)
+        elif factor.type is FactorType.IDENTITY:
             series = frame[source]
         elif factor.type is FactorType.BANDING:
             banding = _banding(bandings, factor)
@@ -365,7 +376,115 @@ def _grouping(available: Mapping[UUID, Grouping], factor: Factor) -> Grouping:
     return available[factor.grouping_id]
 
 
-def _column_matches(declared: str, source: str, factor: Factor, *, kind: str) -> None:
+def normalised_expression(expression: str, symbols: frozenset[str]) -> str:
+    """The expression's parse, dumped: the comparison `RL-1615` DP-S4-1 rules.
+
+    An AST dump rather than the raw text, so white space is not a difference. Parsed in the
+    `factor` profile over the Factor's declared columns (FR-95), the one parser.
+    """
+    return ast.dump(parse_expression(expression, GrammarProfile.FACTOR, symbols=symbols).body)
+
+
+#: The functions whose result is a number whatever their arguments are (`RL-1615` DP-S4-2).
+NUMERIC_ONLY_FUNCTIONS = frozenset({"log", "exp", "sqrt", "abs", "clip", "log1p", "expm1"})
+
+
+def is_certainly_numeric(expression: str, symbols: frozenset[str]) -> bool:
+    """Whether the text alone decides the result is a number (`RL-1615` DP-S4-2, creation).
+
+    Certainly numeric means the root is an arithmetic operator (`+ - * / **`, unary `-`), a
+    numeric literal, or a numeric-only function. A bare symbol and a `where`, `min` or `max`
+    at the root are **not**: their type is the column's, which only a Dataset Version knows.
+    """
+    root = parse_expression(expression, GrammarProfile.FACTOR, symbols=symbols).body
+    if isinstance(root, ast.BinOp):
+        return True
+    if isinstance(root, ast.UnaryOp):
+        return isinstance(root.op, ast.USub)
+    if isinstance(root, ast.Constant):
+        return isinstance(root.value, (int, float)) and not isinstance(root.value, bool)
+    if isinstance(root, ast.Call):
+        return isinstance(root.func, ast.Name) and root.func.id in NUMERIC_ONLY_FUNCTIONS
+    return False
+
+
+def _expression_series(
+    frame: pl.DataFrame, factor: Factor, bandings: Mapping[UUID, Banding]
+) -> pl.Series:
+    """An `expression` Factor's design series, by the result's dtype (`RL-1615` DP-S4-2).
+
+    Numeric and banded -> `apply_banding`; string and unbanded -> categorical; numeric and
+    unbanded -> refused naming FR-210 (`RL-1265` DP-4); string and banded -> refused, because
+    a category is not banded. The pinned Banding must have been cut over this very
+    expression (`source_expression`, compared as a normalised parse).
+    """
+    symbols = frozenset(factor.source_columns)
+    try:
+        assert factor.expression is not None  # `Factor` refuses an expression type without one
+        result = frame.with_columns(
+            compile_expression(
+                factor.expression, profile=GrammarProfile.FACTOR, symbols=symbols
+            ).alias("_expression_result")
+        )["_expression_result"]
+    except (ExpressionError, SyntaxError) as exc:
+        raise FactorResolutionError(
+            f"factor {factor.slug!r} has an expression the `factor` profile refuses: "
+            f"{safe_error_text(exc)}"
+        ) from exc
+    except pl.exceptions.PolarsError as exc:
+        # The grammar admits the text, but the engine refuses it over these dtypes
+        # (`region * 2` on a string column). Unwrapped, that surfaced as a 500.
+        raise FactorResolutionError(
+            f"factor {factor.slug!r} has an expression this dataset version cannot "
+            f"evaluate: {safe_error_text(exc)} (FR-95). The columns it reads have dtypes the "
+            "formula does not accept."
+        ) from exc
+    numeric = result.dtype.is_numeric()
+    if factor.banding_id is None:
+        if numeric:
+            raise FactorResolutionError(
+                f"factor {factor.slug!r} is an expression with a numeric result and no "
+                "banding. A continuous Factor cannot be rated or reviewed until FR-210 is "
+                "delivered, so pin a Banding cut over this expression (`02` FR-97)."
+            )
+        return result
+    if not numeric:
+        raise FactorResolutionError(
+            f"factor {factor.slug!r} is an expression with a {result.dtype} result and pins "
+            "a banding. A category is not banded; drop the banding_id (FR-95)."
+        )
+    banding = _banding(bandings, factor)
+    _expression_matches(banding, factor)
+    return apply_banding(result, banding)
+
+
+def _expression_matches(banding: Banding, factor: Factor) -> None:
+    """The pinned Banding was cut over this Factor's expression, not another (`RL-1615`)."""
+    symbols = frozenset(factor.source_columns)
+    cut_over = banding.source_expression
+    try:
+        assert factor.expression is not None
+        same = cut_over is not None and normalised_expression(
+            cut_over, symbols
+        ) == normalised_expression(factor.expression, symbols)
+    except (ExpressionError, SyntaxError):
+        same = False
+    if not same:
+        raise FactorResolutionError(
+            f"factor {factor.slug!r} has the expression {factor.expression!r} and pins a "
+            f"banding whose source_expression is {cut_over!r}. The two must parse to the "
+            "same expression: a banding cut over one formula applied to another produces "
+            "bands, a fit, and nonsense (FR-97, FR-101)."
+        )
+
+
+def _column_matches(declared: str | None, source: str, factor: Factor, *, kind: str) -> None:
+    if declared is None:
+        raise FactorResolutionError(
+            f"factor {factor.slug!r} sources {source!r} and pins a {kind} cut over an "
+            "expression (`source_expression`), not a column. A banding of a formula applies "
+            "only to the result of the `expression` Factor it was cut over (FR-97)."
+        )
     if declared != source:
         raise FactorResolutionError(
             f"factor {factor.slug!r} sources {source!r} and pins a {kind} of "
@@ -386,15 +505,25 @@ def rateable(factors: Sequence[Factor]) -> tuple[Factor, ...]:
 def required_model_inputs(
     factors: Sequence[Factor], feature_order: Sequence[str]
 ) -> tuple[str, ...]:
-    """A model's required inputs: its Factors' slugs, or its `feature_order` without Factors.
+    """A model's required inputs: its Factors' inputs, or its `feature_order` without Factors.
 
     The one definition (PL 9494's DP-1, ruled 2026-10-05). A-2's `feature_map` save check
     tests membership against it; SL 9495's compile check tests completeness against it.
     The offset column is not a required input here: the save check adds it (A-2's R2).
+
+    A plain Factor's input is its slug. **An `expression` Factor's inputs are its source
+    columns, not its slug** (DP-1274-MULTI (a'), ruled 2026-10-16 10:50:08 BST): a formula is
+    evaluated over dataset columns (FR-95), a `feature_map` entry carries one value per name,
+    and the graph can only supply the columns one by one. Each input is listed once, in the
+    order its Factor first names it.
     """
-    if factors:
-        return tuple(factor.slug for factor in factors)
-    return tuple(feature_order)
+    if not factors:
+        return tuple(feature_order)
+    inputs: dict[str, None] = {}
+    for factor in factors:
+        names = factor.source_columns if factor.type is FactorType.EXPRESSION else (factor.slug,)
+        inputs.update(dict.fromkeys(names))
+    return tuple(inputs)
 
 
 #: The `model_type` values of a GBM (`GbmSpec.model_type`, `GbmFitResult.model_type`).

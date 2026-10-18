@@ -805,8 +805,11 @@ def _model_call_handler(
 class _GlmScorer:
     """One pinned GLM, rebuilt once from the Bundle (FD-1458; NFR-491: no I/O at score).
 
-    `columns` renames what `feature_map` names — a Factor slug (DP-2 (b)) or the offset
-    column — to the frame column `predict_glm` reads (the Factor's `source_columns`).
+    `columns` renames what `feature_map` names — a plain Factor's slug (DP-2 (b)) or the offset
+    column — to the frame column `predict_glm` reads (the Factor's `source_columns`). An
+    `expression` Factor is fed its source columns, which pass through as raw keys
+    (`required_model_inputs`, DP-1274-MULTI (a')); `predict` refuses two keys that land on one
+    column with unequal values.
     """
 
     fit: GlmFitResult

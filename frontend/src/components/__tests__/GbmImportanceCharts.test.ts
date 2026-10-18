@@ -137,6 +137,18 @@ describe("GbmImportanceCharts", () => {
     expect(screen.queryByText("operand_of_interaction")).not.toBeInTheDocument();
   });
 
+  it("names an expression factor's omission in words, not by its enum value", () => {
+    render(GbmImportanceCharts, {
+      props: {
+        ...props(),
+        permutationOmitted: [{ feature: "half_age", reason: "expression_factor" }],
+      },
+    });
+    const list = screen.getByRole("list", { name: /permutation omissions/i });
+    expect(list).toHaveTextContent(/half_age: not measured.*computed from a formula/i);
+    expect(screen.queryByText(/expression_factor/)).not.toBeInTheDocument();
+  });
+
   it("shows no omission note when nothing was omitted", () => {
     render(GbmImportanceCharts, { props: props() });
     expect(screen.queryByRole("list", { name: /permutation omissions/i })).toBeNull();
