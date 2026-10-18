@@ -3,7 +3,7 @@ id: PL-1769
 family: plan
 kind: map
 title: WK-1178 — the artifact tables append-only at the database (SL-1770) and the application off the owner role (SL-1771) — a dated Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a) — DP-1 to DP-7 ruled at 10:29:14, DP-8 to DP-20 at 12:18:57, DP-21 and DP-22 (plan review, 2026-10-14) at 12:42:33, DP-21b at 13:21:41, refined at 13:27:39 and 15:14:52; activation is the lead's
+status: active                  # draft → active → superseded | retired (§1.2a) — DP-1 to DP-7 ruled at 10:29:14, DP-8 to DP-20 at 12:18:57, DP-21 and DP-22 (plan review, 2026-10-14) at 12:42:33, DP-21b at 13:21:41, refined at 13:27:39 and 15:14:52; activation is the lead's
 created: 2026-10-17          # original date 2026-10-14, set at the filing; minted 2026-10-17
 owner: planner
 tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
