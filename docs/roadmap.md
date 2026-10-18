@@ -2614,7 +2614,7 @@ The interim fix of FD-1754 (FD-1754, merged in D18 (#1319); HIGH, the silent cas
 id: SL-1734
 family: slice
 title: WK-1178 fix slice — FD-1723's HIGH limbs, a capped GLM spec fits capped (FR-127) and the banding check runs at fit (FR-100)
-status: draft                    # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-16 # original date 2026-10-14, set at the draft; minted 2026-10-16
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 8eaf6d5f9cd4204e1e077b44069d4afd395f1461
@@ -2625,6 +2625,8 @@ relates: [PL-1542, SL-1543, PL-1674, SL-1675, FD-1723]
 ```
 
 *(Minted 2026-10-16 as PL-1733 and SL-1734 from working ids 8030 and 8031, in the P1 batch mint PR.)*
+
+*(Activated 2026-10-17 as the FD-1723 HIGH-limbs fix slice, on the maintainer (by delegation)'s GO, "2026-10-17 13:23:18 BST — Maintainer: GO SL-1563 … GO SL-1734 (PL-1733: needs 1–2 met; Task 0 Step 3 G2 probe FIRST as the in-slice STOP; census mechanical; contracts regenerate on the later PR)"; Task 0 Step 3's G2 probe ran clean the same day (recorded in the slice ledger).)*
 
 On the maintainer's (by delegation) entries "2026-10-14 11:06:52 BST" (item 2: *"Any HIGH limb is fixed in P2"*), "2026-10-14 11:28:56 BST" (FD-1723, HIGH; both limbs fixed in P2 under WK-1178, red first) and "2026-10-14 11:29:53 BST" (the FR-127 GLM fix is off the G2 path, conditionally). **FR-127, GLM limb:** `fit_glm` never reads `loss_treatment` (`glm.py:577`), so a capped `GlmSpec` fits uncapped while its spec and `spec_hash` say capped. The fix applies `apply_loss_treatment` (`gbm.py:178`, moved to its own module, `loss_treatment.py`, DP-L1) at the response read, and refuses `spliced` and `excess` by name, as `fit_gbm` does. **The EBM arm too** (DP-L2 (a)): `fit_ebm` ignores `loss_treatment` at `ebm.py:209`, the same class; an auditor adds the limb to FD-1723 before the mint. **FR-100:** `check_banding` (`bandings.py:524`) has no fit-path caller. The fix runs it at each fit entry over the rows fitted, after FR-111's weight-0 exclusion (DP-B1 (a)) and before factor resolution: `BAND_EMPTY` always, `BAND_BELOW_MIN_EXPOSURE` under `fail`, and under `warn` a typed `banding_warnings` field on the three fit results, through `model-schema` with `docs/contracts/` regenerated and the frontend's generated types following (DP-B2 (a)). The fit Job maps `BandingError` to a `409` that carries its code. Reds R1 to R8 are first seen red on main. **DP-G1:** Task 0 Step 3's probe runs before any code; any `BAND_EMPTY` for the A-4 severity GLM is a STOP to the maintainer. **SL-1543's guard test is not touched**; if DP-A4-3 switches to (y), it changes only with this slice's merge. If the 11:29:53 binding condition fires, the FR-127 limb joins G2 and merges before SL-1543 resumes (DP-S1). Plan `PL-1733` (a WK-1178 Work-plan delta; `draft`). **Activation needs:** FD-1723 minted, with its EBM limb; the decision points ruled — MET, every one, by the maintainer's (by delegation) entry "2026-10-14 11:52:51 BST", item (2); the plan made `active` by a dated line; Task 0 Step 3's G2 probe clean for the A-4 severity GLM, or the maintainer's ruling on it; a free build lane. *(Row cut 2026-10-14 by the planner, planner-fd8027; working ids 8031 and 8030 reserved by the lead in `handover/eta.md`.)*
 
