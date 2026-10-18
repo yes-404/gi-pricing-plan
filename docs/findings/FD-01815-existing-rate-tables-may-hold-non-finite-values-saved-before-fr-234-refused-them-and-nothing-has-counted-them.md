@@ -1,16 +1,16 @@
 ---
-id: FD-8118
+id: FD-1815
 family: finding
 title: Existing rate tables may hold non-finite values saved before FR-234 refused them, and nothing has counted them
 status: active
-created: 2026-10-18   # filed 2026-10-18 under working id 8118
+created: 2026-10-18   # filed 2026-10-18 under working id 8118; minted 2026-10-18
 owner: auditor
 tree: 79f1dede2d24d2c21871372fcc53515bd2c532a5
 corrected_by: []
 relates: [WK-1178, FD-1803, SL-1810, PL-1809]
 ---
 
-# FD-8118 — Existing rate tables may hold non-finite values saved before FR-234 refused them
+# FD-1815 — Existing rate tables may hold non-finite values saved before FR-234 refused them
 
 ## Finding
 

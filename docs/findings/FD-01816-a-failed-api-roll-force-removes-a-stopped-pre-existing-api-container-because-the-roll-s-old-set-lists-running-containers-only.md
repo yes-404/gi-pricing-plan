@@ -1,16 +1,16 @@
 ---
-id: FD-8119
+id: FD-1816
 family: finding
 title: A failed api roll force-removes a stopped pre-existing api container, because the roll's old set lists running containers only
 status: active
-created: 2026-10-18   # filed 2026-10-18 under working id 8119
+created: 2026-10-18   # filed 2026-10-18 under working id 8119; minted 2026-10-18
 owner: auditor
 tree: a67748dbaebd514dab76ae96c01b32b487c29855
 corrected_by: []
 relates: [WK-674, FD-1804, SL-1813, PL-1812, NFR-531]
 ---
 
-# FD-8119 — A failed api roll force-removes a stopped pre-existing api container
+# FD-1816 — A failed api roll force-removes a stopped pre-existing api container
 
 ## Finding
 
