@@ -1,10 +1,10 @@
 ---
-id: PL-8061
+id: PL-1791
 family: plan
 kind: map
 title: WK-674 — SL-1258 owns the conversion of E4.3's seeded compose ingest test to the public upload path, red first by cause, once SL-1722 is on main; and the shared entrypoint with SL-1722, merge-second re-runs the other's guard — a dated Work-plan delta to PL-1714
 status: draft                  # draft → active → superseded | retired (§1.2a)
-created: 2026-10-16
+created: 2026-10-18          # original date 2026-10-16, set at the filing; minted 2026-10-18
 owner: planner
 tree: 0877e6e7a756c4621890713a4d3b016e75e33654
 phase: P2
@@ -15,7 +15,7 @@ corrected_by: []
 relates: [PL-1714, PL-1690, PL-1666, PL-1721, SL-1258, SL-1722]
 ---
 
-# PL 8061 — WK-674, SL-1258 owns the E4.3 ingest conversion; the shared entrypoint with SL-1722 (delta to PL-1714)
+# PL-1791 — WK-674, SL-1258 owns the E4.3 ingest conversion; the shared entrypoint with SL-1722 (delta to PL-1714)
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L5 (`document-ids.md`
 > §1.6, PL row: *"a change is one dated Work-plan delta, a new `PL-` that `relates:` the Work's
@@ -25,6 +25,8 @@ relates: [PL-1714, PL-1690, PL-1666, PL-1721, SL-1258, SL-1722]
 > to `SL-1258`. **Read `PL-1666`, then `PL-1690`, then `PL-1714`, then this file.** Where they
 > differ, this file is the latest statement for what it changes. REQUIRED SUB-SKILL and bound
 > skills: `PL-1666`'s list, unchanged; the executor is spawned from `.claude/roles/executor.md`.
+
+Minted 2026-10-18 from working id 8061 as PL-1791, merged into the SL-1258 branch and minted in its mint commit (the maintainer (by delegation), to-lead 2026-10-18 03:38:37 BST and 03:19:27 BST).
 
 Filed under **working id 8061**, reserved by the lead in `~/gi-pricing-plan.local/handover/eta.md`
 at "2026-10-16 09:46:46 BST". Written 2026-10-16 from 09:48 BST (`TZ=Europe/London date`) by the
@@ -142,7 +144,7 @@ No requirement id is added or removed. E4.8 keeps the test's markers, `req("FR-4
 
 ### Slice 4 (`SL-1258`) — changes since `PL-1714`
 
-- **E4.8 — the conversion of E4.3's ingest test to the public upload path.** Owner `SL-1258` (the
+- **E4.8 — the conversion of E4.3's ingest test to the public upload path.** Owner `SL-1258` at filing; re-pointed at the mint to **SL 8111 (planned, PL 8113)** (the maintainer (by delegation), to-lead 2026-10-18 03:11:40 BST, DP-E1 (b)) (the
   09:40:20 entry). Built only once `SL-1722` is on `main` and in `SL-1258`'s base (§Ordering).
   - **The rewrite**, in `backend/tests/test_deploy_stack_runtime.py`, same test name, same markers,
     same `_stack_with_seeded_workspace` (P3), no `_seed_blob_inputs` call. All requests go

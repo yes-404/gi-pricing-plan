@@ -1,9 +1,9 @@
 ---
-id: LG-9810
+id: LG-1792
 family: ledger
-title: WK-674 slice SL-1258 — Slice 4, the deployment path (PL-1537 row 1 and PL 9921 changes) (slice ledger)
-status: active                 # active → closed (§1.2a) — set `closed` only at slice close
-created: 2026-10-11
+title: WK-674 slice SL-1258 — Slice 4, the deployment path (PL-1537 row 1 and PL-1620 changes) (slice ledger)
+status: closed                 # active → closed (§1.2a)
+created: 2026-10-18          # original date 2026-10-11, set at the filing under working id 9810; minted 2026-10-18
 owner: executor
 tree: d699a561d6a93f33b74beb9c07023f8e655bb8c7
 phase: P2
@@ -14,16 +14,18 @@ corrected_by: []
 relates: [PL-1237, PL-1537, SL-1258, FR-412, FR-415, FR-434, FR-435, FR-437, FR-452, NFR-531, NFR-534, FD-1211]
 ---
 
-# LG-9810 — WK-674 slice SL-1258: Slice 4, the deployment path
+# LG-1792 — WK-674 slice SL-1258: Slice 4, the deployment path
 
-Working id 9810 (lead-reserved); minted with its batch. Executed by `executor-wk674s4`, base
+Filed 2026-10-11 under working id 9810 (lead-reserved); minted 2026-10-18 as LG-1792. Executed by `executor-wk674s4`, base
 `origin/main` `d699a561d6a93f33b74beb9c07023f8e655bb8c7`, branch `sl-1258-wk674-s4`. **Opened as
 AUTHORED, not activated (brief wave 2, 2026-10-11); since built, gated and re-gated: see
-"Gate" and "Audit" below, and the dated sections that follow.** PL 9921 (working id) is not minted; this ledger cites it by working id until it
-is, and `PL-9921`'s changes for this slice are D0.1 to D0.3 and D4.1 to D4.3.
+"Gate" and "Audit" below, and the dated sections that follow.** PL 9921 (working id) was minted as `PL-1620` in D11 (#1275); this ledger cited it by working id until
+the mint, and `PL-1620`'s changes for this slice are D0.1 to D0.3 and D4.1 to D4.3.
 
 **GO:** the maintainer's (by delegation) entry "2026-10-16 09:55:22 BST — GO SL-1258 BUILD (WK-674 S4, compose stack + FD-1713)" (see "Activation" below).
 **MERGE-ACK:** not yet given.
+
+Minted 2026-10-18 as LG-1792 from working id 9810 (the maintainer (by delegation), to-lead 2026-10-18 03:38:37 BST), in its own commit after the merges of `origin/pl-8061-pl1714-delta-2026-10-16` and `origin/main`.
 
 ## Tasks
 
@@ -35,7 +37,7 @@ which FR-412's memory half is applied; `api` with no compute pool (FR-434, NFR-5
 a pre-deploy step (FR-435, NFR-531); FD-1211's process lifecycle; the reference Keycloak
 (FR-437); the load harness. Requirements, each id: FR-434, FR-435, FR-437, FR-412 (memory half),
 FR-415 (worker service), FR-452 (management-API limb), NFR-531, NFR-534, register FD-1211.
-PL 9921 changes for this slice: D0.1 (S4 on P2's exit path), D4.1 (R4.1 re-derived against S3's
+PL-1620 changes for this slice: D0.1 (S4 on P2's exit path), D4.1 (R4.1 re-derived against S3's
 limiter at the base), D4.2 (the harness prints issued and offered rate and the error count; a
 short run is void), D4.3 (shared paths named at GO).
 
@@ -284,7 +286,7 @@ Observation, not changed: `GET /me/workspaces` and `POST /me/workspace` depend o
 
 ## Re-merge 2026-10-17 (2026-10-17 19:41:37 BST): `origin/main` 9469721d into `c27cf2b2`, SL-1455's per-request session against SL-1258's management count
 
-Executor-1258m. Brief: the lead's, 2026-10-17 19:37:47 BST; authority: the maintainer to the lead, 2026-10-17 ~19:38 BST ("A per-hunk table for authz.py / score.py / rate_limit.py; any behaviour-changing resolution → STOP to me. SL-1455's one-session-per-request + resolve_caller must survive intact, quoted."). Merge: `git merge --no-ff origin/main` on `c27cf2b2`; four conflicted files (`docs/INDEX.md` taken from `origin/main`, regenerated below; `authz.py`, `score.py`, `rate_limit.py` by hand). The hand resolution is proved by this slice's own SOLO gate on the merged head, not by this table alone.
+Executor-1258m. Brief: the lead's, 2026-10-17 19:37:47 BST; authority: the maintainer to the lead, 2026-10-17 19:37:20 BST ("A per-hunk table for authz.py / score.py / rate_limit.py; any behaviour-changing resolution → STOP to me. SL-1455's one-session-per-request + resolve_caller must survive intact, quoted."). Merge: `git merge --no-ff origin/main` on `c27cf2b2`; four conflicted files (`docs/INDEX.md` taken from `origin/main`, regenerated below; `authz.py`, `score.py`, `rate_limit.py` by hand). The hand resolution is proved by this slice's own SOLO gate on the merged head, not by this table alone.
 
 **What SL-1455 (#1323, merge `9c602fec`) changed** (`git show 9c602fec --stat`): `api/authz.py` 52, `api/deps.py` 59, `api/score.py` 106, `platform/rate_limit.py` 14. In short: `request_session` is the one session per request (`RequestSessionDep`); `resolve_caller` authenticates through it and leaves it open; `require_caller` closes it after; `requires()` reads its permission through it and closes it unless `keep_session=True` (`/score`); `rate_limit.enforce` takes the request `session`, not `Database`.
 
@@ -383,7 +385,7 @@ async def resolve_caller(
 
 **AC2 gate stage (PL-1714 Acceptance Standard item 2):** added to `sl1258-gate.sh` after the python static checks. Pass condition: `git grep` rc 1 and `lines=0`. A dry run at `c27cf2b2` prints one hit, `backend/tests/test_deploy_stack_runtime.py:360` (a docstring: "A shape test proves `--queues default,compute` is declared"), so the stage as written reads rc 0 and will not pass: reported to the lead, not edited.
 
-AC2's grep is literal; prose hit at :360 reworded, not a code change (the maintainer's ruling relayed in the lead's brief of 2026-10-17 19:43:48 BST, ruling stamped ~19:44 BST: option (a); (b) refused as it weakens the check, (c) refused as a red-by-design stage hides future hits).
+AC2's grep is literal; prose hit at :360 reworded, not a code change (the maintainer's ruling relayed in the lead's brief of 2026-10-17 19:43:48 BST, ruling stamped 19:43:35 BST: option (a); (b) refused as it weakens the check, (c) refused as a red-by-design stage hides future hits).
 
 **Rolling `api` roll = scale-out-then-in (NFR-531; mechanism: compose scale + container ids).** The smoke's roll (`up --scale api=2`) recreated both replicas at once: ~23.3 s with no healthy replica, 765 failed requests (to-lead.md 2026-10-18 01:33:32 BST, the cause reading; option (a) ruled 01:33:49 BST). `_roll_api` in `backend/tests/test_deploy_stack_runtime.py` now runs `up -d --no-deps --no-recreate --scale api=4 api`, waits (bounded 180 s, loud) until both new containers are healthy by id, then `docker stop` + `docker rm` the old ones one at a time, ending at api=2; `deploy/README.md` documents the same sequence; no `lb.conf` change. The test keeps `failed == 0` and adds an overlap assert: a sampler counts healthy `api` containers (`docker ps --filter health=healthy`, project-labelled) every 0.1 s across the roll and asserts `min >= 1`. Proof is the SL-1258 SOLO re-gate; not run here.
 
@@ -446,6 +448,10 @@ Written 2026-10-18 by redfirst-1258 for the audit's F1. Method: each test file w
 | PL-1690 item 3 | `..::test_management_rate_limit_never_counts_an_unauthenticated_or_refused_request` | same | same `PlatformError` line | passes |
 | PL-1690 item 3 | `..::test_management_rate_limit_ignores_the_accounts_scoring_rate` (3a) | same | **not red at the parent** (1 passed of 18): with the Setting unset the test asserts three management calls are not 429, which the parent also satisfies; it goes red only on a break that counts the account's scoring rate | passes |
 | PL-1666 item 3 | `test_migration_environment_settings.py::test_environment_settings_round_trip_leaves_api_keys_unchanged` | `e1555803` (the test's commit), with a scratch line appended to `c5a91e7d3b26`'s `upgrade()`: `UPDATE api_keys SET environment = environment \|\| 'x'` (reverted: the worktree was removed) | `AssertionError: api_keys rows differ after upgrade: [(UUID('01a14ccb-...'), ..., 'dev', ...)] != ...` / `At index 0 diff: (... 'devx', ...)` | passes (19 passed) |
+| PL-1690 item 5 (compose delivery smoke) | `test_deploy_stack_runtime.py::test_a_submitted_job_reaches_a_terminal_state_through_the_compose_worker` | `e1555803` (red A), one SOLO compose window 2026-10-18 02:23:52 to 02:27:12 UTC (1 failed, 2 deselected in 179.04s) | `AssertionError: job 01a14cd4-94a5-7bb3-b707-a3eacdac9969 still 'queued' after 60s: nothing consumed its queue` | passes at `756fc944` (1 passed, 5 deselected in 52.33s) |
+| PL-1714 item 4 (io/scoring compose tests) | the four compose-worker tests of `test_deploy_stack_runtime.py` (`..._through_the_compose_worker`, `..._ingest_job_succeeds_through_the_compose_io_worker`, `..._score_batch_job_succeeds_through_the_compose_scoring_worker`, `..._sampled_trace_is_produced_through_the_compose_scoring_worker`) | `037d6963` (red B), same window, 02:27:14 to 02:33:10 UTC (4 failed, 2 deselected in 338.42s) | `AssertionError: job 01a14cd8-ee65-74be-bbea-3e8faa956c12 (score.batch, queue scoring) is 'queued' after 90s: never consumed`; the first test fails with the item A line, `still 'queued' after 60s: nothing consumed its queue` | 4 passed at `756fc944` (4 passed, 2 deselected in 224.09s) |
+
+The two compose rows are from the logs under `~/gi-pricing-plan.local/scratch/sl1258-composereds/` (`reds.log`, `itemA-red-e1555803.log`, `itemB-red-037d6963.log`, `itemA-green-head.log`, `itemB-green-head.log`); the maintainer (by delegation) accepted them at to-lead 2026-10-18 03:38:37 BST, with the minio guard, the teardown and 0 containers left as reported.
 
 Disclosed, from the same runs:
 
@@ -458,6 +464,15 @@ Disclosed, from the same runs:
 - **3a, a regression guard proven by a plant (2026-10-18, on `0735f25a`, local only, reverted).** 3a is not red at its parent (the parent passes it with the Setting unset); it guards the head. The plant: `backend/src/app/api/authz.py` made to pass `account_limit=caller.rate_limit_rps` (instead of `None`) to `rate_limit.enforce` for a caller-based count. Run alone, `test_management_rate_limit.py::test_management_rate_limit_ignores_the_accounts_scoring_rate` (own database `gipricing_rf2_3a`, redis db 12, bucket `gip-test-blobs-rf2`): **red**, `backend/tests/test_management_rate_limit.py:152: AssertionError`, `1 failed, 1 warning in 2.13s`; the captured requests are `GET /api/v1/me` 200, then 429, 429 (the account's rate of 1 applied to the management counter). Reverted with `git restore -- backend/src`, `git status --porcelain` empty, re-run: `1 passed, 1 warning in 1.98s`. Database dropped, bucket removed through the MinIO API.
 - **Side finding, one line:** `6cc9f7dd`'s original rate-limit file is red from the `job:read` fixture defect (the `422` in the disclosure above), fixed at `74ec5ea0`.
 - **Side finding, one line:** the `e1555803` breaker test (`test_each_check_goes_red_on_the_break_it_exists_for[_break_api_migrates_at_start-migrations_are_their_own_step]`) is red for its own reason, a breaker defect, and passes with `037d6963`'s file.
+
+## Mint, 2026-10-18 (minter-1258; the maintainer (by delegation), to-lead 2026-10-18 03:38:37 BST and 03:11:40 BST)
+
+- **F3 discharged:** the two estimated stamps are now the exact to-lead stamps, "2026-10-17 19:37:20 BST" (the re-merge section) and "19:43:35 BST" (the AC2 paragraph).
+- **F4:** one line in `deploy/README.md` beside the `roll-api.sh` usage line names the missing rollback and FD 8112 (filed in D21; its fix is SL 8111). No code change in this slice.
+- **F5 (record):** the lead re-upped the shared stack from `tools-main` (the lead's entry "2026-10-18 03:05:37 BST" in `from-lead-2026-10-09.md`): keycloak bind source `tools-main/deploy/keycloak-local`, 4 healthy, the gate databases dropped; the compose-reds window's own end state (`reds.log`) is 4 healthy `gi-pricing-*` containers, project `gi-pricing` on `tools-main/deploy/docker-compose.yml`.
+- **F6 (record):** the 13 pytest failures whose check 31/32 inputs were the unminted working ids 9810 and 9921 are expected to resolve at the mint (9810 minted as LG-1792, 9921 already `PL-1620`); `audit-docs` after the mint is quoted in the mint commit's report to the lead, not asserted here.
+- **Closing acts (#1324):** this ledger `status: closed`; the SL-1258 roadmap row `status: closed`. MERGE-ACK: not yet given.
+- **Code comments that still cite the working ids (listed, not edited):** `backend/tests/test_bench_deploy_path.py:1` (working id 9921, hyphen form), `backend/tests/test_deploy_stack_runtime.py:594` (working id 9810, hyphen form), and `scripts/bench-deploy-path.py:10` (working id 9921, space form; outside the swept directories).
 
 ## PRs
 
