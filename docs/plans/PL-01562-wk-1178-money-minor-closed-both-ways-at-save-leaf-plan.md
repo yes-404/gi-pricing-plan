@@ -3,7 +3,7 @@ id: PL-1562
 family: plan
 kind: leaf
 title: WK-1178 — money_minor closed both ways at save, the numeric type-check fix (FR-227, FR-226): leaf plan
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
 owner: planner
 tree: 4d3be1414ad4dacdaa0c14ef49fb21853adbaed6

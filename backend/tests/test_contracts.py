@@ -3317,3 +3317,37 @@ def test_the_score_responses_document_their_models() -> None:
             (field.alias or key) for key, field in getattr(model_schema, name).model_fields.items()
         }
         assert set(components[name]["properties"]) == fields, name
+
+
+@pytest.mark.req("FR-261")
+def test_the_authored_regression_run_grid_enum_equals_the_models_literal_exactly() -> None:
+    """`regression-run.schema.json` is hand-edited and outside the drift check (RL-1613's
+    `grid: levels`; the maintainer's 2026-10-12 07:19:31 BST condition): its `grid` values must be
+    the model's `PropertyResult.grid` values, no more and no fewer."""
+    import typing
+
+    from model_schema.regression import PropertyResult
+
+    annotation = PropertyResult.model_fields["grid"].annotation
+    model_values = {
+        value
+        for arm in typing.get_args(annotation)
+        for value in (typing.get_args(arm) or (arm,))
+        if value is not type(None)
+    }
+
+    def grid_enums(node: Any) -> list[list[Any]]:
+        found: list[list[Any]] = []
+        if isinstance(node, dict):
+            grid = node.get("properties", {}).get("grid")
+            if isinstance(grid, dict) and "enum" in grid:
+                found.append(grid["enum"])
+            for child in node.values():
+                found += grid_enums(child)
+        elif isinstance(node, list):
+            for child in node:
+                found += grid_enums(child)
+        return found
+
+    (enum,) = grid_enums(_load(AUTHORED / "regression-run.schema.json"))
+    assert {value for value in enum if value is not None} == model_values

@@ -25,6 +25,7 @@ from prometheus_client.openmetrics.exposition import CONTENT_TYPE_LATEST
 __all__ = [
     "CONTENT_TYPE_LATEST",
     "REGISTRY",
+    "auth_failures",
     "blob_bytes",
     "blob_objects",
     "job_duration_seconds",
@@ -60,6 +61,14 @@ _request_seconds = Histogram(
     "HTTP request duration by route template and method.",
     ("route", "method"),
     buckets=_LATENCY_BUCKETS,
+    registry=REGISTRY,
+)
+
+auth_failures = Counter(
+    "gip_auth_failures_total",
+    "Failed authentications by reason (07 FR-392). `reason` is the closed set of "
+    "`app.auth.service.AuthFailureReason`, never the presented credential.",
+    ("reason",),
     registry=REGISTRY,
 )
 

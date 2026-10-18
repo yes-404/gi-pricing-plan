@@ -14,7 +14,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 
 from app.api import (
     approvals,
@@ -46,7 +46,7 @@ from app.api import (
     validation,
 )
 from app.api import settings as settings_api
-from app.api.responses import without_fastapi_validation_error
+from app.api.responses import problems, without_fastapi_validation_error
 from app.auth.oidc import OidcVerifier
 from app.config import Settings, load_settings
 from app.db.session import Database, database_probe
@@ -145,34 +145,43 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(TraceMiddleware)
     install_error_handlers(app)
 
+    # FR-452 / RL-1687: an operation declares `429 RATE_LIMITED` iff it can return one (the
+    # lead's ruling "2026-10-16 10:30:18 BST" as amended). Every router the management limiter
+    # counts is included through this one function and declares it once, here, not per route.
+    # `score.router` is the one exception: it mixes the scoring limit (`POST /score`), the
+    # management limit (`POST /score/compare`) and no limit (`POST /score/batch`), so it
+    # declares per route.
+    def counted(router: APIRouter) -> None:
+        app.include_router(router, prefix=API_PREFIX, responses=problems(429))
+
     app.include_router(health.router)
-    app.include_router(jobs.router, prefix=API_PREFIX)
-    app.include_router(service_accounts.router, prefix=API_PREFIX)
-    app.include_router(environments.router, prefix=API_PREFIX)
-    app.include_router(environment_settings.router, prefix=API_PREFIX)
-    app.include_router(deployments.router, prefix=API_PREFIX)
-    app.include_router(settings_api.router, prefix=API_PREFIX)
-    app.include_router(me.router, prefix=API_PREFIX)
-    app.include_router(audit.router, prefix=API_PREFIX)
-    app.include_router(approvals.router, prefix=API_PREFIX)
+    counted(jobs.router)
+    counted(service_accounts.router)
+    counted(environments.router)
+    counted(environment_settings.router)
+    counted(deployments.router)
+    counted(settings_api.router)
+    counted(me.router)
+    counted(audit.router)
+    counted(approvals.router)
     # `01` — Data. Order matters only for readability; FastAPI matches on the full path.
-    app.include_router(blobs.router, prefix=API_PREFIX)
-    app.include_router(demo.router, prefix=API_PREFIX)
-    app.include_router(models.router, prefix=API_PREFIX)
-    app.include_router(rating_algorithms.router, prefix=API_PREFIX)
-    app.include_router(sub_graphs.router, prefix=API_PREFIX)
-    app.include_router(rate_tables.router, prefix=API_PREFIX)
-    app.include_router(regression_suites.router, prefix=API_PREFIX)
-    app.include_router(dislocation_runs.router, prefix=API_PREFIX)
-    app.include_router(peril_structures.router, prefix=API_PREFIX)
-    app.include_router(custom_objectives.router, prefix=API_PREFIX)
-    app.include_router(custom_metrics.router, prefix=API_PREFIX)
-    app.include_router(datasets.router, prefix=API_PREFIX)
-    app.include_router(dataset_versions.router, prefix=API_PREFIX)
-    app.include_router(validation.router, prefix=API_PREFIX)
-    app.include_router(reference_tables.router, prefix=API_PREFIX)
+    counted(blobs.router)
+    counted(demo.router)
+    counted(models.router)
+    counted(rating_algorithms.router)
+    counted(sub_graphs.router)
+    counted(rate_tables.router)
+    counted(regression_suites.router)
+    counted(dislocation_runs.router)
+    counted(peril_structures.router)
+    counted(custom_objectives.router)
+    counted(custom_metrics.router)
+    counted(datasets.router)
+    counted(dataset_versions.router)
+    counted(validation.router)
+    counted(reference_tables.router)
     app.include_router(score.router, prefix=API_PREFIX)
-    app.include_router(traces.router, prefix=API_PREFIX)
+    counted(traces.router)
     app.add_api_route(
         "/version",
         health.version_route(settings),

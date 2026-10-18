@@ -116,7 +116,7 @@ async def enforce(
     *,
     route: str,
     default_setting: str,
-    workspace_id: UUID,
+    workspace_id: UUID | None,
     environment: str | None,
     principal: Principal,
     account_limit: int | None,
@@ -125,7 +125,8 @@ async def enforce(
 
     The limit is the account's own `rate_limit_rps` when set, else the Setting
     `default_setting` resolved for the caller's Environment, else none — and with none the
-    request is admitted without a counter call (RL-1347 rule 2).
+    request is admitted without a counter call (RL-1347 rule 2). A `workspace_id` of `None` resolves
+    without the workspace layer (an identity route, before any workspace is selected).
 
     The Setting is read through `session`, the request's own (RL-1685, PL-1454 DP-1 (a)):
     this function opens none, so the limit read costs the request no pool checkout.

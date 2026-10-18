@@ -20,7 +20,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
 
-from app.api.deps import Caller, require_caller
+from app.api.authz import counted_caller
+from app.api.deps import Caller
 from app.api.responses import problems
 from app.config import Settings
 from app.demo.guide import GuideSourceMissingError, build_guide
@@ -50,7 +51,7 @@ def demo_enabled(request: Request) -> None:
 
 router = APIRouter(prefix="/demo", tags=["demo"], dependencies=[Depends(demo_enabled)])
 
-AnyCaller = Annotated[Caller, Depends(require_caller)]
+AnyCaller = Annotated[Caller, Depends(counted_caller)]
 
 
 @router.get(

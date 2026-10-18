@@ -17,14 +17,21 @@ task it carries is reconstructible from the `outbox` table (FR-422, FR-406).
 
 from __future__ import annotations
 
+from typing import Final
+
 from celery import Celery
 
 from app.config import Settings, load_settings
+from model_schema.jobs import JobQueue
 
-__all__ = ["TASK_RELAY_OUTBOX", "TASK_RUN_JOB", "build_celery"]
+__all__ = ["RELAY_QUEUE", "TASK_RELAY_OUTBOX", "TASK_RUN_JOB", "build_celery"]
 
 TASK_RUN_JOB = "app.worker.run_job"
 TASK_RELAY_OUTBOX = "app.worker.relay_outbox"
+# The queue the outbox relay rides (FR-406), named once: `task_default_queue` and the beat entry
+# in `entrypoint.py` read it, and `test_deploy_stack.py` asserts it is consumed even if no
+# kind routes to it (PL-1714 E4.4).
+RELAY_QUEUE: Final = JobQueue.DEFAULT
 
 
 def build_celery(settings: Settings | None = None) -> Celery:
@@ -49,7 +56,7 @@ def build_celery(settings: Settings | None = None) -> Celery:
         # second means it waits behind the first while another worker sits idle.
         worker_prefetch_multiplier=1,
         broker_connection_retry_on_startup=True,
-        task_default_queue="default",
+        task_default_queue=RELAY_QUEUE.value,
         # How long the broker waits for an ack before redelivering a message. Celery's
         # default is one hour; a `dislocation.run` Job is admitted up to
         # `DISLOCATION_SINGLE_JOB_MAX_HOURS` (4) of work, so a default timeout would hand the

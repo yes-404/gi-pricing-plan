@@ -75,8 +75,6 @@ SKIPS: Final[tuple[Skip, ...]] = (
     Skip("E7", "SKIPPED E7 Commentary Block: Phase 3; WK-680"),
     Skip("A6", "KNOWN GAP A6: FD-1491"),
     Skip("B9", "KNOWN GAP B9: FD-1490"),
-    Skip("B4", "SKIPPED B4 model_call: FD-1456; SL-1543"),
-    Skip("C1′", "SKIPPED C1′: FD-1456; SL-1543"),  # noqa: RUF001
 )
 
 #: An owner is a finding or a Work: `FD-1491`, `WK-685`, or a finding's working id, `FD 9804`.
@@ -126,6 +124,9 @@ LADDER_DEFECT_MIDDLE: Final = "0.90"
 LADDER_MIDDLE_EDGES: Final = (100, 150)
 
 #: B3's reference rows are in force from this date; a quote dated before it finds no row.
+#: The declared output the rounding assertion (B8) and the golden quotes read.
+PAYABLE: Final = "payable_premium_minor"
+
 EFFECTIVE_FROM: Final = "2020-01-01"
 BEFORE_EFFECTIVE_FROM: Final = "2019-06-01"
 #: One region's loading rises to 1.05 on this date, after every golden and demo quote date; a
@@ -206,6 +207,8 @@ class JourneyResult:
     rating_version_id: UUID | None = None
     bundle_hash: str = ""
     prod_premium_minor: int = 0
+    #: The decomposing D7 run's body as read back (PL 8055 Task A: A1's real derived list).
+    d7_run: dict[str, Any] = field(default_factory=dict)
 
 
 class _Journey:
@@ -225,6 +228,8 @@ class _Journey:
         self.result = JourneyResult()
         self.loading_ref: str | None = None
         self.loading_region = ""
+        self.structure_ref = ""
+        self.structure: dict[str, Any] = {}
 
     # -- plumbing ------------------------------------------------------------------------
     def who(self, name: str) -> dict[str, str]:
@@ -291,8 +296,18 @@ class _Journey:
             params={"status": "approved", "limit": 100},
             expect=200,
         )["items"]
+        # The frequency GLM, by what its spec declares: `/models` is newest first and the demo
+        # approves a severity GLM after it, so the first GLM is not the frequency one. The demo's
+        # frequency spec (`model.py` `fit_demo_models`) sets no `response` and names the count
+        # column; the severity spec sets `response` to `claim_severity` (SL-1543, 21:09:30 BST).
         glm = next(
-            (m for m in approved if (m.get("fit_result") or {}).get("model_type") == "glm"), None
+            (
+                m
+                for m in approved
+                if (m.get("fit_result") or {}).get("model_type") == "glm"
+                and (m.get("spec") or {}).get("response_column") == "claim_count"
+            ),
+            None,
         )
         if glm is None:
             raise JourneyStepFailed("A0", "NO_APPROVED_GLM")
@@ -317,6 +332,9 @@ class _Journey:
     def phase_a(self) -> None:
         slugs = {f: "wf699-" + f.replace("_", "-") for f in self.factors}
         self.table_refs: dict[str, str] = {}
+        #: Each table's seed-origin version: B1 prices a quote against the cell it was seeded
+        #: with (03 §4.2), so the algorithm reads the origin beside the pinned version.
+        self.seed_refs: dict[str, str] = {}
         seed_notes: list[str] = []
         for factor, slug in slugs.items():
             seeded = self.req(
@@ -338,6 +356,7 @@ class _Journey:
             ):
                 raise JourneyStepFailed("A1", "SEED_NOT_RECORDED")
             self.table_refs[factor] = f"rate_table:{slug}@{seeded['version']}"
+            self.seed_refs[factor] = self.table_refs[factor]
             seed_notes.append(seeded.get("change_note", ""))
         self.done("A1", f"{len(slugs)} tables, one per rateable Factor of the approved GLM")
         self.done("A2")
@@ -465,7 +484,7 @@ class _Journey:
             json=floaty,
         )
         self.skip("B9")
-        self.skip("B4")
+        self.check_b4()
         self.reference_table()
 
     def fork(self, *, version: int, ladder_ref: str | None) -> dict[str, Any]:
@@ -481,8 +500,11 @@ class _Journey:
         payload["outputs"] = [dict(out) for out in payload["outputs"]]
         for step in payload["steps"]:
             if step["type"] == "table":
-                factor = step["step_id"].removeprefix("s_t_")
-                step["rate_table_ref"] = self.table_refs[factor]
+                # `s_t_<factor>` reads the pinned version, `s_o_<factor>` its seed origin (B1).
+                if step["step_id"].startswith("s_t_"):
+                    step["rate_table_ref"] = self.table_refs[step["step_id"].removeprefix("s_t_")]
+                else:
+                    step["rate_table_ref"] = self.seed_refs[step["step_id"].removeprefix("s_o_")]
         if ladder_ref is not None:
             payload["sub_graphs"] = [
                 {
@@ -522,6 +544,85 @@ class _Journey:
                         step["expr"] = f"{step['expr']} * number(expense_loading)"
                         step["consumes"] = [*step["consumes"], "expense_loading"]
         return payload
+
+    def pinned_tables(self) -> list[str]:
+        """Every table version the algorithm reads: the pinned ones and their seed origins."""
+        return list(dict.fromkeys([*self.table_refs.values(), *self.seed_refs.values()]))
+
+    def check_b4(self) -> None:
+        """B4 (`WF-699` :59): the seeded algorithm adds a `model_call` on the approved Peril
+        Structure, `mode: exact`, with an explicit feature map. The precondition (:28) is read
+        from the structure itself: `approved`, with a passing reconciliation."""
+        calls = [step for step in self.seeded["steps"] if step["type"] == "model_call"]
+        if len(calls) != 1 or not calls[0].get("peril_structure_ref"):
+            raise JourneyStepFailed("B4", "NO_PERIL_STRUCTURE_MODEL_CALL")
+        (call,) = calls
+        if call["mode"] != "exact" or not call["feature_map"]:
+            raise JourneyStepFailed("B4", "MODEL_CALL_NOT_EXACT_WITH_A_FEATURE_MAP")
+        self.structure_ref = str(call["peril_structure_ref"])
+        slug, _, version = self.structure_ref.removeprefix("peril_structure:").rpartition("@")
+        found = self.req(
+            "B4", "analyst", "GET", "/peril-structures", params={"slug": slug}, expect=200
+        )["items"]
+        (listed,) = [item for item in found if item["version"] == int(version)]
+        self.structure = self.req(
+            "B4", "analyst", "GET", f"/peril-structures/{listed['id']}", expect=200
+        )
+        if self.structure["status"] != "approved":
+            raise JourneyStepFailed("B4", "PERIL_STRUCTURE_NOT_APPROVED")
+        if (self.structure.get("reconciliation") or {}).get("status") != "pass":
+            raise JourneyStepFailed("B4", "PERIL_STRUCTURE_RECONCILIATION_NOT_PASSING")
+        self.done(
+            "B4",
+            f"model_call on {self.structure_ref}: exact, {len(call['feature_map'])} features "
+            "mapped; the structure is approved with a passing reconciliation",
+        )
+
+    def check_c1_prime(self) -> None:
+        """C1-prime (`WF-699` :70): the version pins the structure beside the models, and compile
+        refuses a version that pins a structure which is not approved (FR-237, FR-240): a draft
+        of the same composition, pinned by a version of its own, fails with `PIN_NOT_APPROVED`."""
+        if self.structure_ref not in self.rv1["pins"]["models"]:
+            raise JourneyStepFailed("C1′", "PINS_DO_NOT_ECHO_THE_STRUCTURE")  # noqa: RUF001
+        draft_slug = "wf699-unapproved-structure"
+        draft = self.req(
+            "C1′",  # noqa: RUF001
+            "analyst",
+            "POST",
+            "/peril-structures",
+            expect=201,
+            json={
+                "slug": draft_slug,
+                "perils": self.structure["perils"],
+                "excluded_perils": self.structure.get("excluded_perils", []),
+            },
+        )
+        pinned = self.req(
+            "C1′",  # noqa: RUF001
+            "analyst",
+            "POST",
+            "/rating-versions",
+            expect=201,
+            json={
+                "slug": "fremtpl2-wf699-unapproved-structure",
+                "dataset_version_id": self.rv1["dataset_version_id"],
+                "model_ref": self.glm_ref,
+                "algorithm_ref": self.rv1["algorithm_ref"],
+                "pins": {
+                    **self.rv1["pins"],
+                    "models": [
+                        self.glm_ref,
+                        self.structure_ref,
+                        f"peril_structure:{draft_slug}@{draft['version']}",
+                    ],
+                },
+            },
+        )
+        self.compile("C1′", pinned, expect_failure="PIN_NOT_APPROVED")  # noqa: RUF001
+        self.done(
+            "C1′",  # noqa: RUF001
+            f"{self.structure_ref} pinned; a draft structure pin fails PIN_NOT_APPROVED",
+        )
 
     def reference_table(self) -> None:
         """B3: a reference table created over HTTP by the seeded admin through the existing
@@ -645,8 +746,8 @@ class _Journey:
                 "model_ref": self.glm_ref,
                 "algorithm_ref": f"rating_algorithm:{saved['slug']}@{saved['version']}",
                 "pins": {
-                    "rate_tables": list(self.table_refs.values()),
-                    "models": [self.glm_ref, self.gbm_ref],
+                    "rate_tables": self.pinned_tables(),
+                    "models": [self.glm_ref, self.gbm_ref, self.structure_ref],
                     "reference_tables": [self.loading_ref] if self.loading_ref else [],
                     "sub_graphs": [ladder_ref],
                 },
@@ -684,7 +785,8 @@ class _Journey:
         self.done("B2", f"{len(contract)} inputs declared: types, ranges, domains, nullability")
 
         kinds = [step["type"] for step in stored["steps"]]
-        wanted = {"table": len(self.factors), "lookup": 1, "output": 1}
+        # B1: each Factor is read twice, at its pinned version and at its seed origin.
+        wanted = {"table": 2 * len(self.factors), "model_call": 1, "lookup": 1, "output": 2}
         if any(kinds.count(kind) != count for kind, count in wanted.items()) or (
             "expression" not in kinds
         ):
@@ -692,13 +794,13 @@ class _Journey:
         self.done(
             "B5",
             f"{kinds.count('table')} table steps, {kinds.count('expression')} expression steps, "
-            "the lookup and the output",
+            "the model_call, the lookup and the outputs",
         )
 
-        (output,) = [step for step in stored["steps"] if step["type"] == "output"]
+        (output,) = [step for step in stored["steps"] if step.get("output_name") == PAYABLE]
         if output.get("rounding") != {"mode": "half_even", "dp": 0}:
             raise JourneyStepFailed("B8", "ROUNDING_NOT_HALF_EVEN_0DP_ONCE")
-        self.done("B8", "one output step, rounding half_even at 0 dp: rounded exactly once")
+        self.done("B8", "one payable output step, rounding half_even at 0 dp: rounded exactly once")
 
     def compile(
         self, step: str, version: Mapping[str, Any], *, expect_failure: str | None = None
@@ -717,9 +819,11 @@ class _Journey:
     # -- Phase C: compile and pin ------------------------------------------------------------
     def phase_c(self) -> None:
         self.rv1 = self.build_version("RV1", LADDER_BANDS["middle"], "the NCD ladder, demo bands")
-        self.skip("C1′")  # noqa: RUF001
+        self.check_c1_prime()
         pins = self.rv1["pins"]
-        if self.gbm_ref not in pins["models"] or len(pins["rate_tables"]) != len(self.factors):
+        if self.gbm_ref not in pins["models"] or len(pins["rate_tables"]) != len(
+            self.pinned_tables()
+        ):
             raise JourneyStepFailed("C1", "PINS_DO_NOT_ECHO_THE_REQUEST")
         self.done("C1", "the version pins the algorithm, every table, both models and the ladder")
         self.compile("C2", self.rv1, expect_failure="PIN_NOT_APPROVED")
@@ -1062,6 +1166,7 @@ class _Journey:
             raise JourneyStepFailed("D7", "NO_DECOMPOSITION_MAPPING")
         groups = [{"name": name, "changes": ids} for name, ids in effects.items()]
         run_id, run = self.run_dislocation({**spec, "change_groups": groups})
+        self.result.d7_run = run
         self.done("D6", "a 20,000-policy sample of the freMTPL2 book (full-book cost: PL-1574)")
 
         # The partition, proved from the run as stored: every derived change is in exactly one

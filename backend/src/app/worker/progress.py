@@ -20,6 +20,7 @@ second turns a fit into a database benchmark.
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 from collections.abc import Coroutine
 from datetime import UTC, datetime
@@ -52,20 +53,36 @@ _WRITE_TIMEOUT_S: Final = 30.0
 
 
 class JobBudgetExceededError(Exception):
-    """The job exceeded its wall-clock budget (FR-412).
+    """The job exceeded a resource budget (FR-412): wall clock or memory.
 
     Distinct from `JobCancelled`: a cancelled job was stopped by a person and is not a
     failure, while a job that outran its budget is one, and the error must name the budget
-    rather than surfacing as an opaque kill.
+    rather than surfacing as an opaque kill. `budget` is the `ResourceBudget` field it
+    names; `detail()` is the structured payload the Job's error carries.
     """
 
-    def __init__(self, wall_clock_s: int, elapsed_s: float) -> None:
-        super().__init__(
-            f"job exceeded its wall-clock budget of {wall_clock_s}s "
-            f"(elapsed {elapsed_s:.0f}s)"
-        )
-        self.wall_clock_s = wall_clock_s
-        self.elapsed_s = elapsed_s
+    def __init__(self, budget: str, limit: float, observed: float) -> None:
+        if budget == "wall_clock_s":
+            message = (
+                f"job exceeded its wall-clock budget of {limit:.0f}s (elapsed {observed:.0f}s)"
+            )
+        else:
+            message = f"job exceeded its memory budget of {limit:g} GB (resident {observed:.2f} GB)"
+        super().__init__(message)
+        self.budget = budget
+        self.limit = limit
+        self.observed = observed
+
+    def detail(self) -> dict[str, float]:
+        if self.budget == "wall_clock_s":
+            return {"wall_clock_s": int(self.limit), "elapsed_s": round(self.observed)}
+        return {"memory_gb": self.limit, "observed_gb": round(self.observed, 2)}
+
+
+def _resident_bytes() -> int:
+    """This process's resident set, from `/proc/self/statm` (the worker runs on Linux)."""
+    with open("/proc/self/statm", "rb") as handle:
+        return int(handle.read().split()[1]) * os.sysconf("SC_PAGE_SIZE")
 
 
 class JobProgress:
@@ -82,6 +99,7 @@ class JobProgress:
         loop: asyncio.AbstractEventLoop,
         *,
         wall_clock_s: int | None = None,
+        memory_gb: float | None = None,
         blob_store: BlobStore | None = None,
     ) -> None:
         self._job_id = job_id
@@ -89,6 +107,7 @@ class JobProgress:
         self._blob_store = blob_store
         self._loop = loop
         self._wall_clock_s = wall_clock_s
+        self._memory_gb = memory_gb
         self._started = time.monotonic()
         self._last_write = 0.0
         self._last_cancel_poll = 0.0
@@ -179,11 +198,14 @@ class JobProgress:
     # -- internals ----------------------------------------------------------------------
 
     def _check_budget(self) -> None:
-        if self._wall_clock_s is None:
-            return
-        elapsed = time.monotonic() - self._started
-        if elapsed > self._wall_clock_s:
-            raise JobBudgetExceededError(self._wall_clock_s, elapsed)
+        if self._wall_clock_s is not None:
+            elapsed = time.monotonic() - self._started
+            if elapsed > self._wall_clock_s:
+                raise JobBudgetExceededError("wall_clock_s", self._wall_clock_s, elapsed)
+        if self._memory_gb is not None:
+            resident_gb = _resident_bytes() / 1024**3
+            if resident_gb > self._memory_gb:
+                raise JobBudgetExceededError("memory_gb", self._memory_gb, resident_gb)
 
     def _run[T](self, coro: Coroutine[Any, Any, T]) -> T:
         """Run a coroutine on the owning loop from this (worker) thread."""

@@ -3,7 +3,7 @@ id: PL-1668
 family: plan
 kind: map
 title: WK-675 — Slice 5 (SL-1547) after RL-1613 and the 02:58:33 DP-0 ruling, the contract-changing ordered input, the bulk-operation typing dependency, and the S5/S6 drift rule: a dated Work-plan delta to PL-1546
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-12
 owner: planner
 tree: fc4401dcad789692f79f6c3ffc058c1c3921b7b9

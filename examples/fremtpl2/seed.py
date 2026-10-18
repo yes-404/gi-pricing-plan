@@ -30,6 +30,8 @@ from uuid import UUID
 sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "backend" / "src"))
 
+# The exposure bounds live in algorithm.py, which must not import this module.
+from algorithm import MAX_EXPOSURE
 from arff import to_csv
 
 DATA_DIR = Path(__file__).parent / "data"
@@ -77,10 +79,8 @@ NUMERIC = {
     "bonus_malus": "int",
     "density": "int",
     "claim_amount_minor": "int",
+    "claim_severity": "float",
 }
-
-#: VR-ACT-2's bound. An annual motor policy cannot be on risk for two years.
-MAX_EXPOSURE = 1.05
 
 #: The demo portfolio (PL-1577, R6 = (A1)): a 20,000-row sample of the book, named as a sample
 #: everywhere it is shown. Reproducible without a random seed: the size is fixed, the rule is
@@ -146,7 +146,27 @@ def build_csv(rows: int | None) -> bytes:
     )
     joined = (
         frame.join(totals, on="IDpol", how="left")
-        .with_columns(pl.col("claim_amount_minor").fill_null(0))
+        # FR-111 (SL-1543): no severity record means a true 0 only for a policy with no claim.
+        # A claimant (ClaimNb > 0) with none has an UNKNOWN amount - 9 116 of the 34 060 -
+        # which is null, never 0: the data holds no zero amount, and a 0 would be a nil
+        # settlement the Gamma fit refuses and the mean severity base counts as a claim cost.
+        .with_columns(
+            pl.when(pl.col("ClaimNb").cast(pl.Float64) > 0)
+            .then(pl.col("claim_amount_minor"))
+            .otherwise(pl.col("claim_amount_minor").fill_null(0))
+            .alias("claim_amount_minor")
+        )
+        # The severity response (PL-1705 C2): mean cost per claim in euro cents, Polars true
+        # division, no rounding, null where the policy has no claim (the weight-0 rows the
+        # severity fit excludes) or its amount is unknown (the rows it excludes and counts).
+        # A known `claim_amount_minor` is unchanged (FR-10). ClaimNb is read as
+        # Float64 because the raw column is text and its spelling ("1" or "1.0") is the file's.
+        .with_columns(
+            pl.when(pl.col("ClaimNb").cast(pl.Float64) > 0)
+            .then(pl.col("claim_amount_minor") / pl.col("ClaimNb").cast(pl.Float64))
+            .otherwise(None)
+            .alias("claim_severity")
+        )
         .with_columns(pl.col("claim_amount_minor").cast(pl.Utf8))
     )
     if rows is not None:
@@ -203,8 +223,16 @@ DICTIONARY: dict[str, dict[str, Any]] = {
         "semantic_type": "ordinal",
     },
     "claim_amount_minor": {
-        "description": "Total incurred, euro cents",
+        "description": "Total incurred, euro cents; null where a claimant has no severity record",
         "semantic_type": "money",
+    },
+    "claim_severity": {
+        "description": (
+            "Mean incurred per claim, euro cents; null where the policy has no claim "
+            "or its amount is unknown"
+        ),
+        "semantic_type": "continuous",
+        "unit": "euro cents",
     },
     "area": {
         "description": "Population-density band of the community",
@@ -704,11 +732,17 @@ async def run(rows: int | None) -> int:
     # approval. `Path(__file__).parent` is on sys.path (the seed's own import shim), so
     # `model` — not `examples.fremtpl2.model` — is the importable name here.
     from model import (
+        AD_RECONCILIATION_TOLERANCE,
         compare_and_approve,
+        create_ad_peril_structure,
         create_approved_rating_version,
         create_demo_bandings,
         demo_base_premium,
         fit_demo_models,
+        fit_severity_glm,
+        load_approved_glm,
+        peril_structure_ref,
+        refuse_degenerate_fit,
         seed_demo_rate_tables,
     )
 
@@ -722,6 +756,19 @@ async def run(rows: int | None) -> int:
         fitted["glm"], fitted["gbm"],
     )
     print(f"  approved model: {approved}")
+    # A degenerate fit is refused here, before the severity fit and the Peril Structure: their
+    # reconciliation raises first on a fit that is degenerate (SL-1543 RED 3).
+    _, approved_fit = await load_approved_glm(database, workspace_id, approved)
+    refuse_degenerate_fit(approved_fit.relativities)
+    # PL-1542 Tasks 1 and 2: the AD severity GLM and the Peril Structure over both GLMs.
+    severity = await fit_severity_glm(
+        database, blob_store, workspace_id, actuary, approver, approved
+    )
+    structure = await create_ad_peril_structure(
+        database, blob_store, workspace_id, actuary, approver, approved, severity,
+        tolerance=AD_RECONCILIATION_TOLERANCE,
+    )
+    structure_ref = await peril_structure_ref(database, structure)
     tables = await seed_demo_rate_tables(
         database, settings, blob_store, workspace_id, analyst, approved
     )
@@ -729,6 +776,8 @@ async def run(rows: int | None) -> int:
     await create_approved_rating_version(
         database, blob_store, workspace_id, analyst, actuary, approver, second_approver,
         second, approved, tables, bandings, base_minor,
+        severity_id=severity,
+        structure_ref=structure_ref,
     )
     print()
 

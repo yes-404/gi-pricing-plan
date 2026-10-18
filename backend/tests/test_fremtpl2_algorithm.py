@@ -126,6 +126,18 @@ def test_base_premium_is_exp_intercept_times_mean_claim_cost_to_whole_minor_unit
     )
 
 
+def test_mean_claim_cost_is_over_known_amounts_only() -> None:
+    """FR-111 (SL-1543): a claimant whose amount is unknown (None) is in neither the numerator
+    nor the denominator; counting its claims against a missing amount is what pulled the demo's
+    base 27% low. Known: 300 + 100 over 2 + 1 claims = 133.33...; the 2 claims of the policy
+    with an unknown amount are not counted."""
+    got = demo_algorithm.mean_claim_cost_minor(
+        amounts=[300, None, 100, 0],
+        claim_counts=[2, 2, 1, 0],
+    )
+    assert got == Decimal(400) / Decimal(3)
+
+
 def _fixture_algorithm() -> dict[str, Any]:
     bandings = {
         "driv_age_band": _banding(
@@ -406,3 +418,43 @@ def test_generated_categorical_inputs_lie_in_their_declared_domains() -> None:
         for case in cases for name, domain in domains.items() if case.inputs[name] not in domain
     }
     assert outside == set()
+
+
+@pytest.mark.req("FR-222")
+def test_b4_model_call_references_the_peril_structure() -> None:
+    """PL-1542 Acceptance 3 (B4, `WF-699`): the builder emits exactly one `model_call` step
+    that references the AD Peril Structure, in `exact` mode, with a feature map naming every
+    model feature explicitly, and a declared `result_type` (RL-1580's point: left `None` the
+    engine rounds the prediction at the step, which FR-226 forbids before the output).
+
+    Red first, by cause: on the base tree the builder emits no `model_call` and takes no
+    `peril_structure_ref`."""
+    structure = ArtifactRef(type="peril_structure", slug="fremtpl2-ad", version=1)
+    tables = {
+        factor: ArtifactRef(
+            type="rate_table", slug=f"fremtpl2-{factor.replace('_', '-')}", version=1
+        )
+        for factor in _FACTORS
+    }
+    payload = demo_algorithm.build_fremtpl2_algorithm(
+        tables=tables,
+        bandings=_BANDED,
+        base_minor=25000,
+        domains=_DOMAINS,
+        peril_structure_ref=structure,
+    )
+    algorithm = RatingAlgorithm.model_validate(payload)
+
+    calls = [step for step in algorithm.steps if step.type == "model_call"]
+    assert len(calls) == 1, "B4 needs exactly one model_call step"
+    call = calls[0]
+    assert call.peril_structure_ref == structure
+    assert call.model_ref is None
+    assert call.mode == "exact"
+    # The VALUES are the models' inputs: every Factor slug, and the frequency GLM's exposure
+    # offset (predict raises MODEL_OFFSET_MISSING without it). The KEYS are graph names: a banded
+    # Factor's is its raw column, since scoring applies the Banding itself.
+    assert set(call.feature_map.values()) == {*_FACTORS, "exposure_years"}, "none implied"
+    assert call.feature_map["driv_age"] == "driv_age_band"
+    assert call.feature_map["area"] == "area"
+    assert call.result_type in ("decimal", "money_minor"), "RL-1580: declare, do not default"
