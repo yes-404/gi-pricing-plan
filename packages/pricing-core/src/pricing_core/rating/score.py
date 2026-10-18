@@ -322,6 +322,36 @@ def _as_decimal(value: Any) -> Decimal:
     return value if isinstance(value, Decimal) else Decimal(str(value))
 
 
+def _engine_context(algorithm: RatingAlgorithm, ctx: QuoteContext) -> dict[str, Any]:
+    """The mapping the engine evaluates: the quote's inputs, with each `Decimal` in a
+    `decimal`-declared input crossed as the `float` the JSON path delivers (FR-273).
+
+    The binding refuses a `Decimal` (`TypeError`), so a non-money `decimal` input is the one
+    value that crosses as a float; money stays integer minor units and is never converted. The
+    crossing is checked lossless, `Decimal(repr(float(d))) == d`, and a value that fails it
+    (more than about 15 significant digits, NaN, infinity) is refused by name, never rounded.
+    The message names the input, never its value (NFR-499)."""
+    decimal_inputs = {
+        f.name for f in algorithm.input_contract if f.type == RatingInputType.DECIMAL
+    }
+    inputs = dict(ctx.inputs)
+    for name in decimal_inputs & inputs.keys():
+        value = inputs[name]
+        if isinstance(value, (Decimal, float)):
+            as_float = float(value)
+            # A float is already what crosses, so only finiteness can fail; a Decimal must
+            # also round-trip.
+            if not math.isfinite(as_float) or (
+                isinstance(value, Decimal) and Decimal(repr(as_float)) != value
+            ):
+                _raise_named(
+                    "INPUT_CONTRACT_VIOLATION",
+                    f"input {name!r} is not exactly representable as a finite float (FR-273)",
+                )
+            inputs[name] = as_float
+    return {"effective_date": ctx.effective_date.isoformat(), "purpose": ctx.purpose, **inputs}
+
+
 # ---------------------------------------------------------------------------
 # FR-255 category 1: contract violation.
 # ---------------------------------------------------------------------------
@@ -952,9 +982,7 @@ async def score_one(
             "scoring against",
         )
 
-    context = {
-        "effective_date": ctx.effective_date.isoformat(), "purpose": ctx.purpose, **ctx.inputs
-    }
+    context = _engine_context(algorithm, ctx)
     _check_as_at_values(algorithm, context)
 
     t_eval = time.perf_counter()
@@ -1135,9 +1163,7 @@ def _score_context_sync(
     _check_billing_surface(ctx)
     _check_no_shadowed_produced_names(algorithm, ctx.inputs)
 
-    context = {
-        "effective_date": ctx.effective_date.isoformat(), "purpose": ctx.purpose, **ctx.inputs
-    }
+    context = _engine_context(algorithm, ctx)
     _check_as_at_values(algorithm, context)
     try:
         out = bundle.decision.evaluate(context, {"trace": trace}) if trace else (

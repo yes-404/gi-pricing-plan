@@ -175,7 +175,10 @@
         "grid": {
           "anyOf": [
             {
-              "const": "uniform+sampled",
+              "enum": [
+                "uniform+sampled",
+                "levels"
+              ],
               "type": "string"
             },
             {

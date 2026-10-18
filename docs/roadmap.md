@@ -1455,7 +1455,7 @@ maintainer's agreement and the lead's go.
 id: SL-1547
 family: slice
 title: Slice 5: Editor II — diff shading, bulk operations, CSV import and export (FR-230, FR-231, FR-232, FR-233, FR-235)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
@@ -1466,6 +1466,10 @@ relates: [PL-1286, PL-1371]
 ```
 
 `PL-1286` S5, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. Diff-vs-previous and diff-vs-seed shading through the paged cells route, the exposure-weight column, the bulk-operation dialog, CSV import confirmation and export, and DP-3's order. **Activation needs:** S4 closed; OQ-1223 decided (DP-3); the FD-1366 bulk-operation typing slice merged (`SL-1669`, named at the D13 mint). Lane or team fixed at GO. *(Cut 2026-10-08 by the planner under working id 9468, reserved by the lead; minted 2026-10-10 as SL-1547 in the D2 batch mint.)*
+
+(Activated 2026-10-12 on the lead's from-lead entry "2026-10-12 06:54:14 BST" (GO S5 SL-1547; lane C; readiness at `3b2081b7`: `PL-1668`'s needs 1–6 met — `SL-1559` closed, `OQ-1223` decided by `RL-1613`, `SL-1391` closed, `SL-1669` merged #1293, `SL-1548` merged #1291, `PL-1668` on main). `PL-1668` set `active` in this activation commit, its status line only; it amends `PL-1546` row 1: the bulk-operation typing need is `SL-1669` (merged), and the slice carries `RL-1613`'s contract-changing scope (R5.4–R5.9). `PL-1546` stays `active`. Ledger working id 9904, reserved by the lead.)
+
+(Closed 2026-10-17 on the slice audit and the lead's verdict (`from-lead-2026-10-09.md`, "Lead VERDICT on SL-1547's audit" and "2026-10-17 22:51:15 BST"); ledger LG-1786, minted 2026-10-17 from working id 9904. The MERGE-ACK is not yet given.)
 
 #### SL-1548 — Slice 6: Sandbox — quote form, ladder waterfall and trace (FR-213, FR-247, FR-248, FR-249, FR-251, FR-252, FR-255, FR-256, FR-258)
 
@@ -2020,7 +2024,7 @@ relates: [FD-1357, RL-1361, PL-1267]
 id: SL-1563
 family: slice
 title: WK-1178 fix slice — money_minor closed both ways at save, the numeric type check
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-10  # original date 2026-10-05, set at the draft; minted 2026-10-10
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 4d3be1414ad4dacdaa0c14ef49fb21853adbaed6
@@ -2031,6 +2035,9 @@ relates: [RL-1263, PL-1371]
 ```
 
 The FD-1424 fix (MEDIUM, LATENT; owner WK-1178), on the maintainer's (by delegation) entry "2026-10-05 17:36:28 BST — FD 9549 (#1197 @9c8a52c6): MEDIUM LATENT confirmed; disposition (a) narrowed, with money_minor CLOSED both ways; batch 2 agreed". FR-227's save-time check treats every pair of `_NUMERIC` types as interchangeable (`compile.py:124-129`), so a `money_minor` value can be declared into `decimal`, `relativity`, `percentage`, `count` or `int`, and the reverse. This slice closes `money_minor` in both directions: out only into `money_minor`, for every producer; in only from `money_minor`, or from `decimal` at an output step (FR-226). Red first, one red per refused direction on `output_type_issues`, `_check_result_types` and `fragment_output_type_issues`, plus a sweep showing that no committed algorithm or fixture newly fails (a STOP if one does). `int`→`money_minor` and the non-money pairs were OQ-1560's. *(Dated note, 2026-10-05: OQ-1560 was decided at 17:42:06 BST as A1 + B3: `int`→`money_minor` is refused, and only the widenings `int`/`count`/`relativity`/`percentage`→`decimal` and `count`→`int` are allowed. The sweep runs before the reds, and a hit is a STOP to the maintainer.)* A-2's `model_call` refusal (#1178 item 15) is the overlap: whichever lands second leaves one refusal. Open: DP-1, `decimal` into a `money_minor` sub-graph output port, the maintainer's (by delegation). *(Dated note, 2026-10-11, planner-9813: "Open: DP-1" is stale. DP-1 was ruled (ii) on 2026-10-05 (17:50:43 BST) and DP-2 (r) (17:54:12 BST), both recorded in RL-1564, Ruled items 3 and 5 (`docs/rulings/RL-01564-money-minor-closed-both-ways-at-save-sub-graph-ports-carry-decimal-and-fr-227-takes-t1-to-t4.md:152`, `:173`); no DP is open. The write set gains `packages/pricing-core/tests/test_rating_glm_model_call.py` `:456`, `:463` and `:469` only (DP-7 (i), the maintainer's (by delegation) entry "2026-10-11 11:48:00 BST") and the mount-port caller `compile.py:702` (SL-1340 merged first); the dated delta PL-1627 carries both.)* Leaf plan PL-1562 (`draft`). **Activation needs:** FD-1424 minted; OQ-1560 decided on main (#1200); DP-1 ruled; the emergency slice (SL-1427) merged, then lane B's order (the FD-1420 fix, then this, unless PL-1454 is ready first); the lead's go in an activation PR. *(Filed 2026-10-05 under working ids 9522 (this row) and 9521 (the plan), reserved by the lead.)*
+(Activated 2026-10-17 as WK-1178's money_minor fix slice (FD-1424, PL-1562), on the maintainer's GO, `to-lead.md` "2026-10-17 13:23:18 BST — Maintainer: GO SL-1563 (PL-1562: needs 1–5 met as cited; …)" [elided at the ellipsis]; activation need 6 is that GO plus `RL-1445`'s same-Work lines: (a) file sets resolved by the contention rules — the one shared path with the merged A-2 is `compile.py`, serialised (this slice lands second and removes A-2's `model_call`-only branch), and PL 9610's mount-port caller of `_compatible` passes `at_output_step=False`; (b) no plan dependency either way: neither slice consumes the other's output. `PL-1562` set `active` in this slice branch's activation commit.)
+
+(Closed 2026-10-17 as a Slice on a clean audit: audit written in LG-1785 (Audit section, by `auditor-1563`, at 3e8cc2f4), adopted by the lead 2026-10-17 17:24:19 BST; the gate at 3e8cc2f4 accepted by the maintainer. Ledger LG-1785, minted 2026-10-17 from working id 8083. MERGE-ACK: not yet given.)
 
 #### SL-1409 — WK-1178 fix slice — FD-1356: a validation rule is approved only through the approval workflow
 
@@ -2290,21 +2297,25 @@ The maintainer's (by delegation) decision "2026-10-05 18:51:33 BST — Save-time
 id: SL-1543
 family: slice
 title: WK-1178 A-4 — the exit demo walks WF-699's Peril Structure path (a severity GLM, the AD Peril Structure reconciled and approved, B4's model_call, the C1 pin)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 137bc817ef1fb40ea57e9053e0ad40b73bdff3a8
 phase: P2
 work: WK-1178
 corrected_by: []
-relates: [PL-1371, FD-1209, FD-1374, RL-1263, RL-1343]
+relates: [PL-1371, PL-1542, FD-1209, FD-1374, RL-1263, RL-1343]
 ```
 
 Option A's fourth build slice (the maintainer's entry "2026-10-05 16:43:31 BST — THE MAINTAINER'S DECISION (asked live): G2 takes OPTION A, WF-699's literal Peril Structure path is BUILT IN P2; and the FD 9605 approval, now on the record", item 1). The freMTPL2 seed fits a severity GLM (`02` FR-111), and builds, reconciles (FR-190) and approves through the workflow the AD Peril Structure (FR-188, FR-191). Exit-demo slice (a)'s algorithm gains `WF-699` B4's `model_call` on the structure (`03` FR-222), combined with the seeded tables as the double-count ruling decides. Slice (b)'s journey pins the structure at C1 (FR-237) and no longer prints B4 or C1′ as `SKIPPED`. When it merges, G2's `WF-699` literal path is complete. It is its own slice, not an edit to PL-1525 or PL-1544, so those two keep no plan dependency on the A chain. Leaf plan PL-1542, `draft`: the double count (DP-A4-1), where the structure is made (DP-A4-2) and its large-loss treatment and severity factors (DP-A4-3) are open. **Activation needs:** DP-A4-1 ruled by the maintainer (by delegation) (item 4: "ruled BEFORE A-4's plan activates"); A-1 (SL-1462), A-2 (SL-1463) and A-3 (SL-1466) merged, all working ids; exit-demo slices (a) (SL-1526) and (b) (SL-1527) merged, also working ids; DP-A4-2 and DP-A4-3 ruled; the lead's go. *(Cut 2026-10-05 by the planner on the lead's order (prep wave, section AM), under working id 9594, reserved by the lead.)*
 
 *Dated 2026-10-12 by the planner, on the maintainer's (by delegation) entry "2026-10-12 05:39:20 BST", (i): a new activation need for this slice's severity steps — **SL-1675 (PL-1674) merged first**, which excludes weight-0 rows from the fit and every diagnostic so the severity GLM fits the full book. Until then this slice runs only its non-severity Task 0 steps, and G2 slips by SL-1675. This row's status and other fields are unchanged.*
 
+(Activated 2026-10-12 as WK-1178 Option A, A-4, on the lead's from-lead entry "2026-10-12 05:31:21 BST" (GO SL-1543; readiness found activation needs 1-7 MET at `604ea084`). `PL-1542` set `active` in this slice branch's activation commit; ledger working id 9879, reserved by the lead. **G2 is not met when this slice merges:** the maintainer's (by delegation) entry in `to-lead.md` "2026-10-12 03:54:25 BST" holds G2 open until WK-673's SL 9850 (the D7 decomposition) merges, so PL-1542 Goal's sentence "When this slice merges, G2 is met" is stale.)
+
 *(Dated line, 2026-10-14, the lead: the PL-1542 dated delta PL-1705 records the maintainer's (by delegation) rulings of "2026-10-14 09:45:05 BST" (B) and (C) — the `claim_severity` response and SL-1702 merging before this slice on G2 — and the P3/P5 premise changes; PL-1542's frozen body is unchanged.)*
+
+*(Closed 2026-10-18 as a Slice, closing acts in the slice PR, on the lead's merge; ledger LG-1788 `closed`, minted 2026-10-18 from working id 9879, with PL-1787 (working id 8055) and OQ-1789 (working id 8110). SOLO gate-1 at `5a5cb2e7` (END 2026-10-18T00:12:18Z, accepted at to-lead "2026-10-18 01:13:14 BST"); the audit is CONFIRMED (to-lead "2026-10-18 01:21:11 BST"), findings A1 to A7 answered in LG-1788. The demo budget is OQ-1789, interim (a), owned by the WK-674 NFR sweep. MERGE-ACK: not yet given.)*
 
 #### SL-1536 — WK-1178 fix slice — FD-1374: a rating step reads only the names it declares (FR-246 enforced)
 
