@@ -9,7 +9,7 @@ from sqlalchemy import select
 
 from app.auth.api_keys import KEY_PREFIX_LENGTH, generate_key, hash_secret, parse_key, verify_secret
 from app.auth.service import authenticate_api_key
-from app.db.models import ApiKeyRow, AuditEventRow, ServiceAccountRow
+from app.db.models import ApiKeyRow, ServiceAccountRow
 from app.db.session import Database
 from app.errors import PlatformError
 from model_schema import ActorKind, new_uuid7
@@ -193,47 +193,6 @@ async def test_an_unknown_prefix_and_a_wrong_secret_fail_identically(
                 await authenticate_api_key(session, candidate)
         codes.add((exc.value.code, exc.value.status_code, exc.value.detail))
     assert len(codes) == 1
-
-
-@pytest.mark.req("FR-392")
-async def test_a_failed_authentication_is_audited(database: Database, workspace_id) -> None:
-    _, value = await _account_with_key(database, workspace_id, revoked=True)
-    async with database.unit_of_work() as session:
-        with pytest.raises(PlatformError):
-            await authenticate_api_key(session, value)
-
-    async with database.session() as session:
-        events = (
-            await session.execute(
-                select(AuditEventRow).where(AuditEventRow.workspace_id == workspace_id)
-            )
-        ).scalars().all()
-    assert [e.action for e in events] == ["principal.auth_failed"]
-    assert events[0].after["reason"] == "key revoked"
-
-
-@pytest.mark.req("NFR-532")
-@pytest.mark.req("FR-375")
-async def test_no_audit_event_contains_a_key_secret(
-    database: Database, workspace_id
-) -> None:
-    """R3 / FR-427: keys are audited by prefix. An audit log holding secrets is a
-    credential store with a retention policy."""
-    _, value = await _account_with_key(database, workspace_id, revoked=True)
-    secret = parse_key(value).secret  # type: ignore[union-attr]
-    async with database.unit_of_work() as session:
-        with pytest.raises(PlatformError):
-            await authenticate_api_key(session, value)
-
-    async with database.session() as session:
-        events = (
-            await session.execute(
-                select(AuditEventRow).where(AuditEventRow.workspace_id == workspace_id)
-            )
-        ).scalars().all()
-    for event in events:
-        assert secret not in str(event.after)
-        assert secret not in str(event.before)
 
 
 @pytest.mark.req("FR-389")

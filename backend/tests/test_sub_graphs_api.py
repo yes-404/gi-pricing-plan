@@ -385,3 +385,21 @@ async def test_a_sub_graph_version_whose_model_call_names_a_raw_column_is_refuse
     )
     assert saved.status_code == 201, saved.text
     assert saved.json()["version"] == 2
+
+
+# --- SL-1563 (PL-1562 item 4; FD-1424): money_minor is closed at a Sub-graph port ----------------
+
+
+def test_a_sub_graph_port_feeding_money_minor_into_decimal_is_refused(
+    api_client: TestClient, headers
+) -> None:
+    """D1 end to end: a `money_minor` expression into a `decimal` output port answers 422
+    `RATING_TYPE_MISMATCH`, as the non-numeric pair above does (`fragment_output_type_issues`
+    through `_check`). Red at the base: 201. The status is asserted first so that a 201 fails
+    on it, not on a missing `code` key."""
+    bad = create()
+    bad["outputs"][0]["type"] = "decimal"
+    bad["steps"] = [_expression("money_minor")]
+    response = api_client.post("/api/v1/sub-graphs", json=bad, headers=headers)
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "RATING_TYPE_MISMATCH"

@@ -94,6 +94,10 @@ class ReconciliationResult:
     modelled_burning_cost: int
     tolerance: Decimal
     ratio: Decimal
+    #: FR-190's imputation, counted: rows whose observed amount was unknown and was imputed,
+    #: and the share of the (imputed) observed loss they carry. `0` and `0` when none.
+    imputed_rows: int = 0
+    imputed_share: Decimal = Decimal(0)
 
     @property
     def status(self) -> str:
@@ -157,6 +161,7 @@ def reconcile(
     exposure: npt.NDArray[np.float64],
     tolerance: Decimal,
     treatments: Mapping[str, LargeLossKind],
+    claim_count: npt.NDArray[np.float64] | None = None,
 ) -> ReconciliationResult:
     """FR-190 — modelled against observed burning cost, within a declared tolerance.
 
@@ -168,6 +173,14 @@ def reconcile(
     `treatments` is required rather than derived from the frame because the frame carries
     numbers and not their provenance. A peril whose treatment nobody supplied would be
     recorded as `none`, and that is a claim about how the number was produced.
+
+    **Unknown observed amounts (NaN) are imputed here, in reconciliation only, never in
+    fitting** (FR-190, SL-1543 DP-3): an unknown-amount claimant's observed amount is its
+    `claim_count` times the known-amount mean severity of this same population (known amounts
+    over the claims that carry them). That is unbiased if amounts are missing at random.
+    Dropping those rows instead would remove claimants from both sides and bias observed over
+    predicted low. The imputed row count and the imputed share of observed loss are returned.
+    Without `claim_count` an unknown amount is refused, not guessed.
     """
     if tolerance <= 0:
         raise ModellingError(
@@ -189,6 +202,7 @@ def reconcile(
             f"entry per assembled row ({assembled.height})",
         )
 
+    observed, imputed_rows, imputed_share = _impute_unknown_amounts(observed, claim_count)
     observed_minor = _to_minor(float(np.sum(observed)) / exposure_total)
     if observed_minor <= 0:
         raise ModellingError(
@@ -231,10 +245,46 @@ def reconcile(
         modelled_burning_cost=modelled_minor,
         tolerance=tolerance,
         ratio=ratio,
+        imputed_rows=imputed_rows,
+        imputed_share=imputed_share,
     )
 
 
 # -- internals -----------------------------------------------------------------------------
+
+
+def _impute_unknown_amounts(
+    observed: npt.NDArray[np.float64], claim_count: npt.NDArray[np.float64] | None
+) -> tuple[npt.NDArray[np.float64], int, Decimal]:
+    """`observed` with each unknown (NaN) amount set to `claim_count` x the known mean severity.
+
+    Returns the filled array, the number of rows imputed and their share of the filled total.
+    """
+    unknown = np.isnan(observed)
+    if not unknown.any():
+        return observed, 0, Decimal(0)
+    if claim_count is None or claim_count.size != observed.size:
+        raise ModellingError(
+            "PERIL_STRUCTURE_RECONCILIATION_FAILED",
+            f"{int(unknown.sum())} observed amount(s) are unknown and no claim counts were "
+            "supplied to impute them from; an unknown amount is not guessed (FR-190)",
+        )
+    known_claims = float(np.sum(claim_count[~unknown]))
+    if known_claims <= 0:
+        raise ModellingError(
+            "PERIL_STRUCTURE_RECONCILIATION_FAILED",
+            "no known-amount claim in the reconciliation population, so there is no mean "
+            "severity to impute an unknown amount from (FR-190)",
+        )
+    mean_severity = float(np.sum(observed[~unknown])) / known_claims
+    filled = np.where(unknown, claim_count * mean_severity, observed)
+    total = float(np.sum(filled))
+    share = (
+        Decimal(repr(float(np.sum(filled[unknown])) / total)).quantize(Decimal("0.000001"))
+        if total > 0
+        else Decimal(0)
+    )
+    return filled, int(unknown.sum()), share
 
 
 def _cost(prediction: PerilPrediction) -> npt.NDArray[np.float64]:
