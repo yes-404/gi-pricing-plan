@@ -7,7 +7,7 @@ created: 2026-10-17
 owner: auditor
 tree: 9469721db3d26480824cc1d715da2ec4ca9044d0
 corrected_by: []
-relates: [WK-1178, SL-1543, SL-8099, FR-222]
+relates: [WK-1178, SL-1543, PL-1772, SL-1773, LG-1774, FR-222]
 ---
 
 # FD-8101 — Predict's dummy-term branch scores 0 for a level its factor cannot produce, with no error
@@ -71,3 +71,7 @@ Deferred with an owner: WK-1178. **Not in SL 8099's scope** (that slice is FD-80
 fix). Decision on the option belongs to the lead or an RL; this record picks none. The event
 that next discharges it: a merged change adding the domain check, or a dated ruling accepting
 the absence.
+
+Cited by #1327 / 3999e0e2dc217def6d0e1e1a82dee2c37afad1f9 (PL-1772 / SL-1773 / LG-1774) as outside that slice's
+scope; **not fixed by it** (the ledger and plan do not list this finding as discharged). The link is made from
+this side (the maintainer, `to-lead.md` "2026-10-17 21:35:45 BST").

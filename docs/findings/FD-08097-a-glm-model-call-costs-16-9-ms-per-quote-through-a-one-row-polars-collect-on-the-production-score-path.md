@@ -7,7 +7,7 @@ created: 2026-10-17
 owner: auditor
 tree: 9469721db3d26480824cc1d715da2ec4ca9044d0
 corrected_by: []
-relates: [WK-1178, SL-1543, PL-8098, SL-8099, NFR-489]
+relates: [WK-1178, SL-1543, PL-1772, SL-1773, LG-1774, NFR-489]
 ---
 
 # FD-8097 — A GLM model_call costs 16.9 ms per quote through a one-row polars collect on the production score path
@@ -83,3 +83,7 @@ separately and is not claimed here.
 
 Fix owned by its own slice (PL 8098 / SL 8099). Discharged when SL 8099 merges with the
 bit-identical test and a per-quote timing at or below main's ~2 ms. Filed under working id 8097.
+
+Fixed by #1327 / 3999e0e2dc217def6d0e1e1a82dee2c37afad1f9 (PL-1772 / SL-1773 / LG-1774; the slice cites this
+finding as "FD 8097 (filed in D21)"; the maintainer, `to-lead.md` "2026-10-17 21:35:45 BST": the link is
+made from this side, the slice's frozen bodies are not re-pointed).
