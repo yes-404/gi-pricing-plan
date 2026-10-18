@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import enum
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -127,17 +128,21 @@ class SwitchReport(BaseModel):
     """Which processes switched to a Deployment and which did not (`03` FR-268; WK-674 Slice 5).
 
     The `after` of the `deployment.switched` Audit Event and the switch half of the deploy
-    response. Process ids only, never values: a process is `<container>:<pid>`, the container
-    being the replica. A process in `unacknowledged` is alive and subscribed but did not
-    acknowledge COMMIT, so it serves the previous version until it restarts (FD 8129).
+    response. Process ids only, never values: a process is `<hostname>:<pid>:<start epoch>`, the
+    hostname being the container (the replica). `receivers` is how many live subscribers
+    received PREPARE. Each name has one status: `committed` (swapped its `live` reference);
+    `possibly_stale` (acknowledged PREPARE but not COMMIT: either crashed since or alive and
+    still serving the previous version until it restarts, which a missing heartbeat cannot
+    tell apart; FD 8129); `pruned_stale` (on the roster but silent while every receiver
+    acknowledged: the ghost of a crashed process, removed from the roster).
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     deployment_ref: UUID = Field(description="The Deployment (its id) the processes switch to.")
-    committed: list[str] = Field(description="Processes that swapped their `live` reference.")
-    unacknowledged: list[str] = Field(
-        description="Processes that acknowledged PREPARE but not COMMIT."
+    receivers: int = Field(ge=0, description="Live subscribers that received PREPARE.")
+    processes: dict[str, Literal["committed", "possibly_stale", "pruned_stale"]] = Field(
+        description="Each named process and what became of it."
     )
 
 

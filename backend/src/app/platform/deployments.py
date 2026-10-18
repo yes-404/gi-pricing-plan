@@ -36,6 +36,7 @@ from app.platform import approvals, audit, environments, rbac
 from app.platform.deployment_switch import (
     COMMIT_TIMEOUT_SECONDS,
     PREPARE_TIMEOUT_SECONDS,
+    PrepareOutcome,
     SwitchIncompleteError,
     SwitchMessage,
     SwitchTransport,
@@ -91,6 +92,8 @@ class Deployed:
 
     deployment: Deployment
     prepared: frozenset[str]
+    receivers: int
+    pruned_stale: frozenset[str]
     commit_message: SwitchMessage | None
 
 
@@ -495,12 +498,12 @@ async def _prepare(
     deployment_id: UUID,
     ref: ArtifactRef,
     bundle_hash: str,
-) -> tuple[frozenset[str], SwitchMessage | None]:
+) -> tuple[PrepareOutcome, SwitchMessage | None]:
     """PREPARE (`PL-1766` D5.9): the processes that hydrated the bundle, and the COMMIT message
     to send after the transaction commits. A short round raises `DEPLOY_SWITCH_INCOMPLETE`,
     naming who did not acknowledge; nothing has been swapped and the caller writes no row."""
     if switch is None:
-        return frozenset(), None
+        return PrepareOutcome(frozenset(), 0, frozenset()), None
     message = SwitchMessage(
         switch_id=str(new_uuid7()),
         phase="prepare",
@@ -511,7 +514,7 @@ async def _prepare(
         bundle_hash=bundle_hash,
     )
     try:
-        prepared = await prepare_round(switch, message, timeout=PREPARE_TIMEOUT_SECONDS)
+        outcome = await prepare_round(switch, message, timeout=PREPARE_TIMEOUT_SECONDS)
     except SwitchIncompleteError as short:
         raise PlatformError(
             "DEPLOY_SWITCH_INCOMPLETE",
@@ -519,7 +522,7 @@ async def _prepare(
             503,
             f"No Deployment was written. {short}",
         ) from short
-    return prepared, SwitchMessage(**{**message.__dict__, "phase": "commit"})
+    return outcome, SwitchMessage(**{**message.__dict__, "phase": "commit"})
 
 
 async def deploy(
@@ -621,7 +624,7 @@ async def deploy(
     ).scalar_one_or_none()
     request_ref = None if request_row is None else _request_ref(request_row)
     deployment_id = new_uuid7()
-    prepared, commit_message = await _prepare(
+    prepare, commit_message = await _prepare(
         switch,
         workspace_id=workspace_id,
         environment=env.slug,
@@ -657,10 +660,12 @@ async def deploy(
             env.slug,
             await _request_ref_of(session, previous.deployment_request_id),
         ).model_dump(mode="json"),
-        after={**model.model_dump(mode="json"), "prepared": sorted(prepared)},
+        after={**model.model_dump(mode="json"), "prepared": sorted(prepare.prepared)},
         justification=body.reason,
     )
-    return Deployed(model, prepared, commit_message)
+    return Deployed(
+        model, prepare.prepared, prepare.receivers, prepare.pruned_stale, commit_message
+    )
 
 
 async def deploy_and_switch(
@@ -757,7 +762,7 @@ async def rollback(
         )
     ).scalar_one()
     deployment_id = new_uuid7()
-    prepared, commit_message = await _prepare(
+    prepare, commit_message = await _prepare(
         switch,
         workspace_id=workspace_id,
         environment=env.slug,
@@ -791,10 +796,12 @@ async def rollback(
             env.slug,
             await _request_ref_of(session, previous.deployment_request_id),
         ).model_dump(mode="json"),
-        after={**model.model_dump(mode="json"), "prepared": sorted(prepared)},
+        after={**model.model_dump(mode="json"), "prepared": sorted(prepare.prepared)},
         justification=body.reason,
     )
-    return Deployed(model, prepared, commit_message)
+    return Deployed(
+        model, prepare.prepared, prepare.receivers, prepare.pruned_stale, commit_message
+    )
 
 
 async def rollback_and_switch(
@@ -848,8 +855,12 @@ async def complete_switch(
             _log.exception("COMMIT round failed for deployment %s", deployment.id)
     report = SwitchReport(
         deployment_ref=deployment.id,
-        committed=sorted(committed),
-        unacknowledged=sorted(unacknowledged),
+        receivers=deployed.receivers,
+        processes={
+            **dict.fromkeys(sorted(deployed.pruned_stale), "pruned_stale"),
+            **dict.fromkeys(sorted(unacknowledged), "possibly_stale"),
+            **dict.fromkeys(sorted(committed), "committed"),
+        },
     )
     if switch is not None:
         async with database.unit_of_work() as session:

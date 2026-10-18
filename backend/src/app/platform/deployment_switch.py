@@ -35,6 +35,7 @@ import json
 import logging
 import os
 import socket
+import time
 from collections import OrderedDict
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import asdict, dataclass
@@ -53,6 +54,7 @@ __all__ = [
     "CommitOutcome",
     "LiveEntry",
     "LiveRefs",
+    "PrepareOutcome",
     "RedisSwitchTransport",
     "SwitchIncompleteError",
     "SwitchMember",
@@ -73,9 +75,16 @@ def _awaited[T](call: Awaitable[T] | T) -> Awaitable[T]:
     return cast("Awaitable[T]", call)
 
 
+_STARTED_AT = int(time.time())
+
+
 def process_id() -> str:
-    """The name of this process in a switch: its container (the replica) and its pid."""
-    return f"{socket.gethostname()}:{os.getpid()}"
+    """The name of this process incarnation in a switch: `<hostname>:<pid>:<start epoch>`.
+
+    The hostname is the container (the replica). The start epoch makes a restarted process a new
+    name, so it is never confused with its own ghost in the roster. No secrets, no values.
+    """
+    return f"{socket.gethostname()}:{os.getpid()}:{_STARTED_AT}"
 
 
 @dataclass(frozen=True)
@@ -199,9 +208,20 @@ class SwitchIncompleteError(Exception):
         self.receivers = receivers
         super().__init__(
             f"{len(self.acknowledged)} of {receivers} subscribed processes acknowledged PREPARE; "
-            f"unacknowledged (a stale roster name may be among them): "
+            f"possibly stale (unacknowledged; a ghost of a crashed process may be among them): "
             f"{sorted(self.unacknowledged)}"
         )
+
+
+@dataclass(frozen=True)
+class PrepareOutcome:
+    """A full PREPARE: who acknowledged, how many received it, and which roster names were
+    ghosts of crashed processes and were pruned (`pruned_stale`, the maintainer's
+    "2026-10-18 23:07:57 BST" ruling)."""
+
+    prepared: frozenset[str]
+    receivers: int
+    pruned_stale: frozenset[str]
 
 
 @dataclass(frozen=True)
@@ -212,8 +232,14 @@ class CommitOutcome:
 
 async def prepare_round(
     transport: SwitchTransport, message: SwitchMessage, *, timeout: float
-) -> frozenset[str]:
-    """PREPARE: the set of processes that hydrated the bundle and acknowledged.
+) -> PrepareOutcome:
+    """PREPARE: the processes that hydrated the bundle and acknowledged.
+
+    The expected count is `publish`'s receiver count; names come from the roster. Every
+    receiver acknowledged: the other roster names are ghosts, pruned and reported
+    `pruned_stale`. Short: `SwitchIncompleteError`, every unacknowledged roster name reported
+    `possibly_stale` and none dropped (a ghost and a live-but-silent process cannot be told
+    apart without a heartbeat).
 
     No receivers is an empty set, not a refusal: a process started later loads the latest
     committed Deployment itself.
@@ -222,9 +248,10 @@ async def prepare_round(
     acked = await transport.acks(message.switch_id, "prepare", receivers, timeout)
     roster = await transport.roster()
     if len(acked) >= receivers:
-        if stale := roster - acked:
-            await transport.drop_from_roster(stale)
-        return frozenset(acked)
+        stale = frozenset(roster - acked)
+        if stale:
+            await transport.drop_from_roster(set(stale))
+        return PrepareOutcome(frozenset(acked), receivers, stale)
     raise SwitchIncompleteError(
         acknowledged=acked, unacknowledged=roster - acked, receivers=receivers
     )
@@ -293,19 +320,20 @@ _ACK_TTL_SECONDS = 120
 class RedisSwitchTransport:
     """The switch channel on Redis: a pub/sub channel, a roster set, one ack set per round.
 
-    Scoped by the deployment's tenant, so two stacks on one Redis never hear each other. Acks
+    Namespaced per platform environment and tenant (`<environment>:<tenant>`), so two stacks on
+    one Redis never hear each other. Acks
     are polled while a round waits; that is the coordinator's own wait, not a process
     heartbeat.
     """
 
-    def __init__(self, client: Redis, tenant_id: str) -> None:
+    def __init__(self, client: Redis, namespace: str) -> None:
         self._client = client
-        self.channel = f"gip:switch:{tenant_id}"
-        self._roster_key = f"gip:switch:{tenant_id}:roster"
-        self._tenant_id = tenant_id
+        self.channel = f"gip:switch:{namespace}"
+        self._roster_key = f"gip:switch:{namespace}:roster"
+        self._namespace = namespace
 
     def _ack_key(self, switch_id: str, phase: str) -> str:
-        return f"gip:switch:{self._tenant_id}:acks:{switch_id}:{phase}"
+        return f"gip:switch:{self._namespace}:acks:{switch_id}:{phase}"
 
     async def publish(self, message: SwitchMessage) -> int:
         return int(await _awaited(self._client.publish(self.channel, message.to_json())))

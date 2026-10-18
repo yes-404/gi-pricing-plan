@@ -12,35 +12,38 @@
     },
     "SwitchReport": {
       "additionalProperties": false,
-      "description": "Which processes switched to a Deployment and which did not (`03` FR-268; WK-674 Slice 5).\n\nThe `after` of the `deployment.switched` Audit Event and the switch half of the deploy\nresponse. Process ids only, never values: a process is `<container>:<pid>`, the container\nbeing the replica. A process in `unacknowledged` is alive and subscribed but did not\nacknowledge COMMIT, so it serves the previous version until it restarts (FD 8129).",
+      "description": "Which processes switched to a Deployment and which did not (`03` FR-268; WK-674 Slice 5).\n\nThe `after` of the `deployment.switched` Audit Event and the switch half of the deploy\nresponse. Process ids only, never values: a process is `<hostname>:<pid>:<start epoch>`, the\nhostname being the container (the replica). `receivers` is how many live subscribers\nreceived PREPARE. Each name has one status: `committed` (swapped its `live` reference);\n`possibly_stale` (acknowledged PREPARE but not COMMIT: either crashed since or alive and\nstill serving the previous version until it restarts, which a missing heartbeat cannot\ntell apart; FD 8129); `pruned_stale` (on the roster but silent while every receiver\nacknowledged: the ghost of a crashed process, removed from the roster).",
       "properties": {
-        "committed": {
-          "description": "Processes that swapped their `live` reference.",
-          "items": {
-            "type": "string"
-          },
-          "title": "Committed",
-          "type": "array"
-        },
         "deployment_ref": {
           "description": "The Deployment (its id) the processes switch to.",
           "format": "uuid",
           "title": "Deployment Ref",
           "type": "string"
         },
-        "unacknowledged": {
-          "description": "Processes that acknowledged PREPARE but not COMMIT.",
-          "items": {
+        "processes": {
+          "additionalProperties": {
+            "enum": [
+              "committed",
+              "possibly_stale",
+              "pruned_stale"
+            ],
             "type": "string"
           },
-          "title": "Unacknowledged",
-          "type": "array"
+          "description": "Each named process and what became of it.",
+          "title": "Processes",
+          "type": "object"
+        },
+        "receivers": {
+          "description": "Live subscribers that received PREPARE.",
+          "minimum": 0,
+          "title": "Receivers",
+          "type": "integer"
         }
       },
       "required": [
         "deployment_ref",
-        "committed",
-        "unacknowledged"
+        "receivers",
+        "processes"
       ],
       "title": "SwitchReport",
       "type": "object"

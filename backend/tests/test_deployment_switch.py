@@ -85,7 +85,8 @@ async def test_a_switch_swaps_every_process_and_names_the_committed_set() -> Non
     bus = _Bus()
     for pid in ("api-1:1", "api-1:2", "api-2:1"):
         bus.join(pid)
-    prepared = await prepare_round(bus, _message("prepare"), timeout=0.1)
+    outcome = await prepare_round(bus, _message("prepare"), timeout=0.1)
+    prepared = outcome.prepared
     assert prepared == {"api-1:1", "api-1:2", "api-2:1"}
     assert all(m.live.get(WS, "uat") == OLD for m in bus.members.values()), "PREPARE swaps nothing"
     outcome = await commit_round(bus, _message("commit"), prepared, timeout=0.1)
@@ -112,7 +113,7 @@ async def test_a_partial_commit_names_the_unacknowledged_process_and_leaves_it_o
     bus = _Bus()
     for pid in ("api-1:1", "api-1:2"):
         bus.join(pid)
-    prepared = await prepare_round(bus, _message("prepare"), timeout=0.1)
+    prepared = (await prepare_round(bus, _message("prepare"), timeout=0.1)).prepared
     bus.mute.add(("api-1:2", "commit"))
     outcome = await commit_round(bus, _message("commit"), prepared, timeout=0.1)
     assert outcome.committed == {"api-1:1"}
@@ -144,8 +145,10 @@ async def test_a_stale_roster_entry_is_pruned_when_every_receiver_acknowledged()
     bus = _Bus()
     bus.join("api-1:1")
     bus._roster.add("api-9:7")  # a crashed process that never left the roster
-    prepared = await prepare_round(bus, _message("prepare"), timeout=0.1)
-    assert prepared == {"api-1:1"}
+    outcome = await prepare_round(bus, _message("prepare"), timeout=0.1)
+    assert outcome.prepared == {"api-1:1"}
+    assert outcome.receivers == 1
+    assert outcome.pruned_stale == {"api-9:7"}
     assert await bus.roster() == {"api-1:1"}
 
 
@@ -187,4 +190,28 @@ async def test_concurrent_switches_for_different_environments_do_not_interfere()
     a, b = await asyncio.gather(
         prepare_round(bus, msg_uat, timeout=0.1), prepare_round(bus, msg_prod, timeout=0.1)
     )
-    assert a == b == {"api-1:1"}
+    assert a.prepared == b.prepared == {"api-1:1"}
+
+
+async def test_a_restart_is_a_new_name_and_its_ghost_is_pruned_on_the_next_full_ack() -> None:
+    """Condition 4 (d) of the maintainer's "2026-10-18 23:07:57 BST" ruling."""
+    bus = _Bus()
+    bus.join("api-1:100:1700000000")
+    # The process crashes: it stops receiving, but its roster entry stays.
+    del bus.members["api-1:100:1700000000"]
+    bus.join("api-1:200:1700000500")  # the restart: same container, new pid and start epoch
+    assert "api-1:100:1700000000" in await bus.roster()
+    outcome = await prepare_round(bus, _message("prepare"), timeout=0.1)
+    assert outcome.prepared == {"api-1:200:1700000500"}
+    assert outcome.pruned_stale == {"api-1:100:1700000000"}
+    assert await bus.roster() == {"api-1:200:1700000500"}
+
+
+def test_a_process_id_names_the_container_the_pid_and_the_start() -> None:
+    from app.platform.deployment_switch import process_id
+
+    host, pid, started = process_id().rsplit(":", 2)
+    assert host
+    assert pid.isdigit()
+    assert started.isdigit()
+    assert process_id() == process_id(), "stable for one incarnation"

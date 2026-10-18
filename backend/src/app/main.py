@@ -124,7 +124,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # process therefore serves the latest committed Deployment of every Environment.
         # Unlike the rate limiter this does not fail open: a process that cannot subscribe
         # would silently miss every switch, so it does not start.
-        switch = RedisSwitchTransport(redis_client, settings.tenant_id)
+        switch = RedisSwitchTransport(
+            redis_client, f"{settings.environment.value}:{settings.tenant_id}"
+        )
 
         async def hydrate(message: SwitchMessage) -> None:
             await score.hydrate_for_switch(database, blob_store, running.state.bundle_slot, message)

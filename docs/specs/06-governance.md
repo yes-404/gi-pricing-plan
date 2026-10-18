@@ -531,7 +531,7 @@ Generated sections, in order (R3). Each cites the artifacts it drew from.
 
 ### 4.5 `AuditEvent`
 
-*(Dated note, 2026-10-18, WK-674 Slice 5, on the maintainer's (by delegation) entry "2026-10-18 23:03:15 BST" in `to-lead.md`: this module keeps no table of action names; each module names the actions it emits where it specifies them. The action `deployment.switched` (FR-268) is `03`'s, named once in `03` §5.1's list of this Work's audit actions; it is chained and verified like every other event here.)*
+*(Dated note, 2026-10-18, WK-674 Slice 5, on the maintainer's (by delegation) entry "2026-10-18 23:03:15 BST" in `to-lead.md`: this module keeps no table of action names; each module names the actions it emits where it specifies them. The action `deployment.switched` (FR-268) is `03`'s, named once in `03` §5.1's list of this Work's audit actions; it is chained and verified like every other event here. Its `after` is a `SwitchReport`: `receivers`, the live subscribers that received PREPARE, and `processes`, each process (`<hostname>:<pid>:<start epoch>`, ids only) with one status. **`committed`**: the process swapped its `live` reference and acknowledged. **`possibly_stale`**: the process acknowledged PREPARE but not COMMIT; it either crashed since or is alive and still serves the previous version until it restarts, and without a heartbeat the two cannot be told apart, so it is never dropped from the report (FD 8129 is the remedy). **`pruned_stale`**: the process was on the roster but did not acknowledge while every receiver did, so it is the ghost of a crashed process and was removed from the roster. Ruled by the maintainer (by delegation), "2026-10-18 23:07:57 BST" in `to-lead.md`.)*
 
 ```json
 {
