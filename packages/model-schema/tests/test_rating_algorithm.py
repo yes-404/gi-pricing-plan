@@ -530,3 +530,162 @@ def test_the_diff_names_an_added_or_removed_mount_and_a_changed_port_map() -> No
     data["sub_graphs"][0]["inputs"] = {"ncd_years": "driver_age"}
     remapped = diff_algorithms(_repointed(4), RatingAlgorithm.model_validate(data))
     assert [c.ports_changed for c in remapped.sub_graph_mounts] == [True]
+
+
+# --- WK-1250 Slice 3 (SL-1341): SubGraphRef.purposes and FR-212 per purpose --------------------
+# (RL-1344 section 2 and acceptance 1 and 4; RL-1628 DP-S3-1 (d): R1, Limit 2)
+
+from model_schema.graph_errors import GraphCycleError  # noqa: E402
+
+
+def _purpose_mounted(
+    purposes: list[str] | None,
+    *,
+    name: str = "expense_factor",
+    mount_point: str = "s_cancel",
+) -> dict:
+    """`valid_algorithm()` with its one mount replaced by a mount that RE-PRODUCES `name`.
+
+    DP-S3-1 (d): the mount maps an input port and an output port to the same parent name.
+    `expense_factor` has one producer (`s_expense`) and no re-producer, so Limit 2 is met.
+    """
+    data = valid_algorithm()
+    mount: dict = {
+        "ref": "sub_graph:motor-cancellation@1",
+        "mount_point": mount_point,
+        "inputs": {"annual": name},
+        "outputs": {"refund": name},
+    }
+    if purposes is not None:
+        mount["purposes"] = purposes
+    data["sub_graphs"] = [mount]
+    return data
+
+
+def _graph_errors(raised: pytest.ExceptionInfo[ValidationError]) -> list[BaseException]:
+    return [e["ctx"]["error"] for e in raised.value.errors() if "ctx" in e]
+
+
+@pytest.mark.req("FR-218")
+@pytest.mark.parametrize(
+    "bad",
+    [["renewal"], ["what_if"], ["new_business"], [], ["cancellation", "cancellation"]],
+)
+def test_a_purposes_selector_outside_the_two_admitted_purposes_is_refused(
+    bad: list[str],
+) -> None:
+    """RL-1344 acceptance 1: refused by the selector's own rule, not by `extra="forbid"`."""
+    with pytest.raises(ValidationError) as raised:
+        RatingAlgorithm.model_validate(_purpose_mounted(bad))
+    types = {e["type"] for e in raised.value.errors()}
+    assert "extra_forbidden" not in types, f"the field does not exist yet: {types}"
+    assert any("purposes" in str(e["loc"]) for e in raised.value.errors())
+
+
+@pytest.mark.req("FR-218")
+@pytest.mark.parametrize(
+    "good",
+    [["mid_term_adjustment"], ["cancellation"], ["mid_term_adjustment", "cancellation"]],
+)
+def test_a_purposes_selector_of_the_two_admitted_purposes_is_accepted(good: list[str]) -> None:
+    algorithm = RatingAlgorithm.model_validate(_purpose_mounted(good))
+    assert algorithm.sub_graphs[0].purposes == good
+
+
+@pytest.mark.req("FR-218")
+def test_an_absent_selector_keeps_every_existing_mount_unconditional() -> None:
+    algorithm = RatingAlgorithm.model_validate(_purpose_mounted(None))
+    assert algorithm.sub_graphs[0].purposes is None
+
+
+@pytest.mark.req("FR-212")
+@pytest.mark.req("FR-218")
+def test_a_step_that_runs_for_every_purpose_cannot_consume_a_purpose_only_name() -> None:
+    """RL-1344 acceptance 4 / RL-1628 P1: `RATING_GRAPH_UNRESOLVED_REF`, per purpose graph.
+
+    `ncd_factor` is produced only by the cancellation mount, and `s_office` runs for every
+    purpose, so the base graph has no producer of it.
+    """
+    data = _mounted(outputs={"ncd_factor": "ncd_factor"})
+    data["sub_graphs"][0]["purposes"] = ["cancellation"]
+    with pytest.raises(ValidationError) as raised:
+        RatingAlgorithm.model_validate(data)
+    assert any(isinstance(e, GraphUnresolvedRefError) for e in _graph_errors(raised)), (
+        raised.value.errors()
+    )
+
+
+@pytest.mark.req("FR-212")
+@pytest.mark.req("FR-218")
+def test_a_purpose_mount_may_re_produce_a_parent_name() -> None:
+    """RL-1628 DP-S3-1 (d): accepted in the cancellation graph, and in the base graph without it."""
+    algorithm = RatingAlgorithm.model_validate(_purpose_mounted(["cancellation"]))
+    assert algorithm.sub_graphs[0].outputs == {"refund": "expense_factor"}
+
+
+@pytest.mark.req("FR-212")
+@pytest.mark.req("FR-218")
+def test_a_purpose_mount_may_not_reach_the_risk_premium_output() -> None:
+    """R1 (RL-1628): one risk price. `VALIDATION_FAILED`, naming the mount and the output."""
+    data = _purpose_mounted(["cancellation"], name="risk_premium_minor")
+    data["outputs"].append(
+        {"name": "risk_premium_minor", "type": "money_minor", "required": True}
+    )
+    data["steps"].append(
+        {"step_id": "s_out_rp", "type": "output", "label": "Risk premium",
+         "output_name": "risk_premium_minor", "rounding": {"mode": "half_even", "dp": 0},
+         "consumes": ["risk_premium_minor"]}
+    )
+    with pytest.raises(ValidationError) as raised:
+        RatingAlgorithm.model_validate(data)
+    types = {e["type"] for e in raised.value.errors()}
+    assert "extra_forbidden" not in types, f"the field does not exist yet: {types}"
+    message = str(raised.value)
+    assert "s_cancel" in message
+    assert "risk_premium_minor" in message
+    assert not any(
+        isinstance(e, (GraphCycleError, GraphUnresolvedRefError)) for e in _graph_errors(raised)
+    )
+
+
+@pytest.mark.req("FR-212")
+@pytest.mark.req("FR-218")
+def test_a_second_re_producer_of_one_name_is_a_cycle() -> None:
+    """Limit 2 (RL-1628): `RATING_GRAPH_CYCLIC`, by FR-212 as it stands."""
+    data = _purpose_mounted(["cancellation"])
+    data["sub_graphs"].append(
+        {"ref": "sub_graph:motor-cancellation@2", "mount_point": "s_cancel2",
+         "purposes": ["cancellation"],
+         "inputs": {"annual": "expense_factor"}, "outputs": {"refund": "expense_factor"}}
+    )
+    with pytest.raises(ValidationError) as raised:
+        RatingAlgorithm.model_validate(data)
+    assert any(isinstance(e, GraphCycleError) for e in _graph_errors(raised)), (
+        raised.value.errors()
+    )
+
+
+@pytest.mark.req("FR-212")
+@pytest.mark.req("FR-218")
+def test_a_mount_re_producing_a_name_the_parent_already_re_produces_is_a_cycle() -> None:
+    """Limit 2: `s_minprem` re-produces `office_premium_minor`, so the mount may not."""
+    data = _purpose_mounted(["cancellation"], name="office_premium_minor")
+    with pytest.raises(ValidationError) as raised:
+        RatingAlgorithm.model_validate(data)
+    assert any(isinstance(e, GraphCycleError) for e in _graph_errors(raised)), (
+        raised.value.errors()
+    )
+
+
+@pytest.mark.req("FR-218")
+@pytest.mark.req("FR-219")
+def test_a_change_to_a_mounts_purposes_alone_appears_in_the_diff_as_a_mount_change() -> None:
+    """RL-1344 acceptance 5, diff half: the selector is part of the algorithm."""
+    before = RatingAlgorithm.model_validate(_purpose_mounted(["cancellation"]))
+    after = RatingAlgorithm.model_validate(_purpose_mounted(["mid_term_adjustment"]))
+    changed = diff_algorithms(before, after)
+    mounts = changed.sub_graph_mounts
+    assert [(c.mount_point, c.purposes_changed, c.ports_changed) for c in mounts] == [
+        ("s_cancel", True, False)
+    ]
+    assert diff_algorithms(before, before).sub_graph_mounts == []

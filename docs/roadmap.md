@@ -2930,7 +2930,7 @@ relates: [PL-1254]
 id: SL-1341
 family: slice
 title: Slice 3: FR-218's purpose mount and the real check (retires `RL-1242`)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-09-30
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 8cef871d4ec30869dc3ef20559f3cac64e239a5c
@@ -2941,6 +2941,8 @@ relates: [PL-1254]
 ```
 
 `PL-1254` Task 3. ~~Blocked on DP-2 (open).~~ *DP-2 ruled 2026-09-30 by `RL-1344` (mint batch 12); still waits on the slices before it.* Minted as `SL-1341` at this PR's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `8cef871d` (1339 onward). *(Dated line, 2026-10-12, the note `PL-1629` says it owes this row at the mint (its lines 22 to 23), which D12 missed: **leaf plan: `PL-1629`**.)*
+
+**Closed 2026-10-17** on a conformant slice audit (`auditor-1341`, `LG-1808` "## Audit") and the lead's verdict (`LG-1808`, 2026-10-17 13:59:02 BST); the F5 red-first case is added. MERGE-ACK: pending (the lead's merge, then the maintainer's line). Ledger: `LG-1808`.
 
 
 

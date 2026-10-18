@@ -1,0 +1,410 @@
+---
+id: LG-1808
+family: ledger
+title: WK-1250 slice SL-1341 — FR-218's purpose mount and the real check (retires RL-1242), PL-1629 slice ledger
+status: closed                 # active → closed (§1.2a)
+created: 2026-10-18 # original date 2026-10-16, set at the filing; minted 2026-10-17 as LG 1761; re-minted 2026-10-18
+owner: executor
+tree: 5576628141a98b5ce768096a7a0e96b212f1f761
+phase: P2
+work: WK-1250
+slice: SL-1341
+plans: [PL-1629]
+corrected_by: []
+relates: [PL-1629, RL-1344, RL-1628, RL-1242, RL-1571, LG-1588, SL-1341, FR-218, FR-212, FR-217, FR-239]
+---
+
+# LG-1808 — SL-1341: FR-218's purpose mount and the real check
+
+*(Minted 2026-10-17 as LG 1761 from working id 8056, in the SL-1341 PR; re-minted 2026-10-18 as LG-1808, because LG 1761 collided with main's SL-1761 (the maintainer, to-lead "2026-10-18 09:10:58 BST"). The code-comment cites `LG 8056` in four test files are left as written: editing them would move non-docs blobs off the gated `c949a0e8`.)*
+
+Executed by `executor-1341b` (sonnet, medium) from **PL-1629** (`active`), binding **RL-1344** §2, §3, §4 (Slice 3 bullet) and
+**RL-1628** (T1 to T3, "What it obliges"). Branch `sl-1341-wk1250-s3-purpose-mount`, worktree `.claude/worktrees/sl-1341`,
+base `origin/main` `0877e6e7` merged at `c1f7c447`.
+**GO:** the maintainer (by delegation), `to-lead.md` "2026-10-16 09:35:13 BST"; the lead's request in
+`from-lead-2026-10-09.md`, entry "SL-1341 … GO-READY". That entry is the dispatch record (need 3).
+**MERGE-ACK:** at the lead's merge turn (not yet).
+
+**Dispatch-record locators** (the GO entry carries them by locator at `origin/main` `0877e6e7`): `RL-1344` §2 (`:113-133`),
+§3 (`:134-153`), §4's Slice 3 bullet (`:154-172`); `RL-1628` "What it obliges" (`:150-168`), with acceptance 9's writer at `:224`.
+Conditions of the GO: SL-1566's `score.py` edits make the plan's cites stale (recorded below); `sl-1547-wk675-s5` is not touched,
+and whichever of the two merges second re-merges and re-runs `generate-contracts`.
+
+## Tasks
+
+| Task | Commit | State |
+|---|---|---|
+| 1 spec: RL-1628 T1, T2, T3 (+ the `CompiledBundle` field note in `03` §5.x) | `aa482243` | done; audit-docs rc 0 |
+| 2 `SubGraphRef.purposes`, FR-212 per purpose, R1 | `c06677f6` | done |
+| 3 `inline_mounts(purpose=)`, `Bundle.purpose_graphs`, `bundle_hash`, `load_bundle` per purpose | `53019ea3` | done |
+| 4 the real check and one selector for every algorithm/decision read; interim tests rewritten | `e17a0f62` (pricing-core), `f534d6d8` (backend route tests) | done |
+| 5 FR-218 strike; `RL-1242` `status: retired` (status line only; RL-1628 names the writer) | `658c4cd6` | done |
+| 6 full gate; backend route tests run | — | **not done** (gate barred; route tests need the DB) |
+
+**Beyond the plan's text** (the two changes ruled on in the next section; the rest below is in the plan). `AlgorithmSubGraphChange.purposes_changed` (and its change-summary wording): without it a change
+to `purposes` alone was not in `diff_algorithms`, failing RL-1344 acceptance 5. `backend/src/app/api/score.py`'s compare route
+reads the purpose's algorithm for its trace diff. `MountPurpose` is stated once beside `QuotePurpose`. The hand-authored
+`rating-algorithm.schema.json` carries `purposes`; `docs/contracts/openapi/generated.json` regenerated.
+
+## Out-of-plan changes (for the auditor to rule on)
+
+1. `backend/src/app/api/score.py`, `score_compare`: `algorithms.append(compiled.evaluation_for(body.context.purpose).algorithm)`
+   instead of `compiled.algorithm`. Reason: the trace being diffed was produced by the purpose's algorithm, so the diff must read the
+   same one. Plan clause: RL-1628 DP-S3-2 condition 1 ("every read of `bundle.algorithm` … goes through" the selector), carried by
+   PL-1629 Task 4 Step 3 (P5); the plan's list of reads named only `score.py`.
+2. `AlgorithmSubGraphChange.purposes_changed` (`model_schema/rating.py`), set in `_diff_mounts`, one change-summary clause
+   (`backend/src/app/platform/change_summary.py`), the test `test_a_change_to_a_mounts_purposes_alone_appears_in_the_diff_as_a_mount_change`,
+   and the regenerated `docs/contracts/openapi/generated.json`. Reason: before it, a change to `purposes` alone produced no mount
+   change in `diff_algorithms`. Plan clause: PL-1629 acceptance 7 / RL-1344 acceptance 5 ("a change to a mount's `purposes` alone
+   appears in `diff_algorithms` as a mount change"); no task named the diff code.
+
+## Stale cites (plan/ruling cite → at base `c1f7c447`)
+
+`docs/specs/03-rating-engine.md`: RL-1628 T1 find `:340` → `:341`; T1 anchor `:349` → `:350`; T2 anchor `:943` → `:980`;
+T3 anchor `:1154` → `:1195`; FR-218 `:87` unchanged. Each anchor counted exactly once at the base.
+`packages/pricing-core/src/pricing_core/rating/score.py` (changed by SL-1566, `cad75a7e`):
+`_check_purpose_mount` `:391` → `:392`; its calls `:941` → `:942` (`score_one` `:919` → `:920`) and `:1108` → `:1134`
+(`_score_context_sync` `:1090` → `:1116`); `build_scoring_result` `:873` → `:874`; `_score_batch_row` `:1128` → `:1175`;
+the reads of `bundle.algorithm`/`decision`: `score_one` `:939`, `:962`; `_score_context_sync` `:1132`, `:1143`;
+`_score_batch_row` `:1191`. Not re-measured one by one: the `runtime.py`, `compile.py`, `inline.py` and `rating.py` cites.
+
+**Completion of the `score.py` cites (2026-10-16 10:14 BST by `date`, `executor-1341d`, writing only).** The paragraph above omits five
+of the plan's changed cites. Every `score.py` cite of PL-1629 (`:53`, `:120`, `:258-262`, `:386-392`, `:527`) is now paired with its line in
+`git show c1f7c447:packages/pricing-core/src/pricing_core/rating/score.py` (read by `grep -n` and `sed -n` on that blob; the same lines
+read identically in `0877e6e7`'s blob):
+- `_check_purpose_mount` whole function `:391-421` (the plan's range includes the blank line before and the two after) → `:392-419`;
+  its docstring `:392-410` → `:393-410`; the "interim" message line `:416` → `:417`.
+- `build_scoring_result` reads `:887-902` → `:888-903` (`_check_lookup_misses` `:888`, `_apply_constraints` `:889`, `_ladder_inputs` `:891`,
+  `_build_outputs` `:893`, `_build_trace` `:903`).
+- `score_one` reads `:938`, `:961` → `:939`, `:962` (as above). `_score_context_sync` reads `:1106` → `:1132` (`algorithm = bundle.algorithm`);
+  `:1117-1118` → `:1143-1144` (`bundle.decision.evaluate`, both arms). `_score_batch_row` `:1142` → `:1191` (as above); its def `:1128` → `:1175`.
+- Test-file cites unchanged between `0877e6e7` and `c1f7c447` (`git show <sha>:packages/pricing-core/tests/test_rating_score.py`):
+  `_compiled` `:160`, `_ctx` `:168`, the "interim" asserts `:512` and `:1030`.
+
+## Proofs run (no full gate; run-small, ≤3 files each, before GATE START)
+
+- model-schema `test_rating_algorithm.py` + `backend/tests/test_contracts.py` + `test_rating_purpose_mount.py`: 230 passed, 2 skipped.
+- `test_rating_score.py` + `test_rating_compile_bundle.py` + `test_rating_inline.py`: 100 passed.
+- `test_rating_runtime.py` + `test_quote_input_raise_sites.py` + `test_rating_shadowed_inputs.py`: 45 passed.
+- `test_rating_wire_order.py` + `test_rating_mounted_model_call.py`: 17 passed. `test_input_free_raises.py` + `test_rating_algorithm_draft.py`: 8 passed.
+- ruff and mypy on the touched files: rc 0. `generate-contracts.py --check`: rc 0. `audit-docs`, `doc-index`, `req-coverage`: rc 0.
+- Acceptance 5 (not bypassable): `test_removing_the_real_check_would_be_caught` and `test_the_purpose_guard_would_be_caught_if_removed`
+  patch `_check_purpose_mount` out and see the MTA quote priced; the patch is in the test, never committed.
+- Acceptance 7, existing hashes: `test_rating_wire_order.py` and `test_rating_shadowed_inputs.py` pass unmodified; the re-run against
+  WK-675 S5 (`SL-1547`) belongs to whichever slice merges second.
+
+## Verdicts
+
+FR-218's authoring half: delivered (the purpose mount, FR-212 per purpose, the real check, the interim rule's retirement); the route
+tests (`backend/tests/test_score_purpose_mount.py`) are written and **delivered but untested** until a DB window runs them.
+
+### Pre-gate audit (code and spec)
+
+Written 2026-10-16 09:53 BST (by `date`) by `auditor-1341` (the auditor role), reading `git diff origin/main...b0ee492c`
+(merge-base `0877e6e7`), the plan `PL-1629` at `origin/main`, `RL-1628` at `origin/main`, and the dispatch record (from-lead
+"2026-10-16 09:34:47 BST"; to-lead "2026-10-16 09:35:13 BST"). **No test was run**; the gate half comes after the gate.
+Scope was derived from PL-1629's tasks and acceptance items 1 to 12 first, then evidenced.
+
+**Checked and conformant.**
+- Write set: every changed path is in PL-1629's file table or Tasks 1 to 6, except the two ruled on below and the test files (A-3).
+  `docs/INDEX.md`, `generated.json` and `rating-algorithm.schema.json` are Task 2 Step 4 and Task 5 outputs.
+- T1, T2 and T3: each block of `RL-1628` (`<date>` replaced by 2026-10-16) is a verbatim substring of `03-rating-engine.md` at
+  `b0ee492c` (checked by script, 3 of 3 found). The extra `CompiledBundle` note (`03` §4.x, one clause) is Task 1's "any other site".
+- FR-218: the `RL-1242` amendment is wrapped in `~~ ~~` and followed by a dated strike citing `RL-1242:83-85` and `SL-1341`; the
+  `RL-1344` clause gets a dated "Delivered" note (Task 1, bullet 1). FR-218's own text is otherwise unchanged.
+- `RL-1242`: the diff is the `status:` line only (`active` to `retired`); commit `658c4cd6` cites RL-1628.
+- Hash and bytes: `Bundle._without_an_empty_purpose_graphs` drops an empty `purpose_graphs` from the dump, and `bundle_hash` adds the key
+  only when non-empty. The pinned-hash tests (`test_rating_shadowed_inputs.py`, `test_rating_wire_order.py`) are not in the diff
+  (unmodified, acceptance 7); they and `test_rating_compile_bundle.py` `:510` are the proofs the gate must show green.
+- Acceptance to test node, in `packages/pricing-core/tests/test_rating_purpose_mount.py` (P), `packages/model-schema/tests/test_rating_algorithm.py` (M),
+  `backend/tests/test_score_purpose_mount.py` (B): 2 selector: M `test_a_purposes_selector_outside_the_two_admitted_purposes_is_refused`
+  (5 forms), M `..._of_the_two_admitted_purposes_is_accepted` (3 forms), M `test_an_absent_selector_keeps_every_existing_mount_unconditional`;
+  3: M `test_a_step_that_runs_for_every_purpose_cannot_consume_a_purpose_only_name`, `..._may_not_reach_the_risk_premium_output`,
+  `test_a_second_re_producer_of_one_name_is_a_cycle`, `test_a_mount_re_producing_a_name_the_parent_already_re_produces_is_a_cycle`;
+  4: P `test_a_cancellation_only_mount_refuses_a_mid_term_adjustment_quote`, `..._prices_a_cancellation_with_the_mount`,
+  `..._leaves_new_business_exactly_as_without_it`, B `test_score_*`, `test_score_compare_*`; 5: P `test_removing_the_real_check_would_be_caught`
+  and `test_the_purpose_guard_would_be_caught_if_removed`; 7: M `test_a_change_to_a_mounts_purposes_alone_appears_in_the_diff_as_a_mount_change`,
+  P `test_a_change_to_purposes_alone_changes_the_content_hash`; 8: `test_rating_score.py` rewritten (bogus test deleted, G1 tests named in a comment);
+  RL-1628 condition 1: P `test_a_constraint_inside_a_cancellation_mount_is_evaluated_for_it`; condition 2: P `test_load_bundle_refuses_a_purpose_graph_that_disagrees_with_its_algorithm`.
+  `test_quote_input_raise_sites.py` is not in the diff (raise-site count unchanged, acceptance 8).
+
+**Findings.**
+
+| Id | Severity | Finding |
+|---|---|---|
+| A-1 | medium | **Acceptance 4 names the batch path; no test reaches it.** `_score_batch_row` was edited (`bundle.evaluation_for(ctx.purpose)` for `_outputs_json`) and `_score_context_sync` gained the real check, yet no new test calls `score_batch`/`_score_context_sync` with a purpose. The `grep -n "batch"` over both new test files returns nothing. Gap: delivered but untested. Owner: executor, one test (a cancellation-only mount, MTA row refused, cancellation row priced) before the gate. |
+| A-2 | medium | **Acceptance 6 (G1 re-run with a selector on the mount) has no node.** The comment in `test_rating_score.py` `:505-510` names Slice 2's two G1 tests, which carry no `purposes`. No test in the diff compiles a purpose mount whose version is not in `Pins.sub_graphs` and expects `RATING_VERSION_UNPINNED`. The code path is shared, so the risk is low, but the item says "with a selector". |
+| A-3 | low | **Test placement differs from the plan.** Task 3 names `test_rating_inline.py`, `test_rating_compile_bundle.py`, `test_rating_runtime.py`; Task 4 names `backend/tests/test_score.py`. The executor used two new files (`test_rating_purpose_mount.py`, `test_score_purpose_mount.py`), from the prep commit `77cbf522`. Coverage by id is unchanged. Record in the ledger as a deviation; no code change. |
+| A-4 | low | **The hash-unchanged test is a tautology.** `test_a_version_with_no_purpose_mount_keeps_the_hash_it_had` asserts `bundle.content_hash == bundle_hash(bundle.graph, bundle.pins)`, which holds for any implementation of the new default. The real proofs are the unmodified pinned-hash tests. No test asserts the serialised bytes of an empty-`purpose_graphs` bundle omit the key (the `model_serializer` is untested directly). The gate must show the pinned-hash tests green; recommend one `"purpose_graphs" not in json.loads(bundle.model_dump_json())` assert. |
+| A-5 | low | **RL-1628 condition 1 red-first names a clamp in the ladder; the test uses a decline.** `test_a_constraint_inside_a_cancellation_mount_is_evaluated_for_it` proves the purpose's algorithm is read (a `CANCEL_GUARD` decline), not that a clamp reaches the ladder. Same selector, so low. |
+| A-6 | low | **The ledger is short of PL-1629 Task 6's list.** Tasks 2 to 4 carry a commit subject, not a SHA (`c06677f6`, `53019ea3`, `e17a0f62`, `f534d6d8` exist and are ancestors of `b0ee492c`); premises a to h are not recorded; the red-first quotes are not in the ledger (the dispatch entry says 25 reds by cause); the header `tree:` is a commit (`658c4cd6`), not a tree. |
+| A-7 | low | **Reads of `bundle.algorithm` outside the Locators remain.** `testing.py:259,264`, `replay.py:68,76`, `analysis.py:180` read `input_contract` and `outputs` from the base algorithm. `inline_mounts` rebuilds `steps` only, so these are purpose-independent; condition 1 binds the Locators' scoring rows. Observation, no action; the compare route is ruled on below. |
+| A-8 | low | **`FR-218`'s strike sits in the penultimate commit.** Acceptance 9 says "the slice's final commit"; `658c4cd6` is final among the code and spec commits, and `b0ee492c` adds the ledger only. Conformant in intent; the lead may read the ledger commit as outside "final". |
+
+**Out-of-plan edits: proposed verdicts (the lead adopts or rejects).**
+1. `backend/src/app/api/score.py` `score_compare`, `compiled.algorithm` to `compiled.evaluation_for(body.context.purpose).algorithm`:
+   **in scope, as necessary to acceptance 4.** Acceptance 4 requires the real check "through `POST /api/v1/score/compare`", and
+   RL-1628 condition 1 says the trace uses "the algorithm that was evaluated". The compare route diffs traces whose step ids are the
+   purpose graph's; reading the base algorithm would mis-attribute them. The plan's file list named only the pricing-core `score.py`; the
+   route is the same read. B `test_score_compare_prices_each_side_by_its_purposes_graph` covers it.
+2. `AlgorithmSubGraphChange.purposes_changed` (+ `_diff_mounts`, one `change_summary.py` clause, the test, `generated.json`):
+   **in scope, as necessary to acceptance 7.** Acceptance 7 (RL-1344 acceptance 5): "a change to a mount's `purposes` alone appears in
+   `diff_algorithms` as a mount change". Before the edit `_diff_mounts` skipped a mount whose ref and ports were equal, so the item could not
+   pass; the plan assumed Slice 2's limb covered it and named no task. The new field is a `model-schema` shape (`default False`,
+   backward compatible) and `generated.json` was regenerated. The `change_summary.py` clause has no test (A-9, low, below).
+   Note for the second-to-merge rule: both edits touch files `sl-1547-wk675-s5` also edits (`rating.py`, `generated.json`).
+   A-9 (low): no test asserts the `(purposes changed)` wording in `change_summary.py`.
+
+**Proposed verdict: conformant pending the gate, with A-1 and A-2 (medium) to close first** (one test each, no code change expected),
+and A-3 to A-9 recorded. If the lead prefers, A-1 and A-2 may be carried to the gate window as `delivered but untested` with an owner.
+
+### Executor response to the pre-gate audit (2026-10-16 09:56 BST, `executor-1341c`; writing only, nothing run)
+
+The lead's verdicts: A-1, A-2, A-4, A-6, A-9 close now; A-3, A-5, A-7, A-8 noted, no action (A-3 is the recorded
+deviation: two new test files instead of the plan's named ones, coverage by id unchanged). Each new test names its
+audit item in its docstring and carries the plan's requirement markers. **None has been run.** Predicted result on the
+current head for each is **GREEN** (the code exists); a red would be a code gap, to be reported, not fixed in `src`.
+
+| Item | New test node | Predicted | Basis |
+|---|---|---|---|
+| A-1 | `test_rating_purpose_mount.py::test_a_batch_row_under_a_purpose_mount_is_priced_by_the_purposes_graph` | green | `_score_batch_row` reads `bundle.evaluation_for(ctx.purpose)`; the real check is in `_score_context_sync`; cancellation row equals `score_one`'s payable, new business 1507, mid-term row an error row naming the purpose |
+| A-1 | `test_rating_purpose_mount.py::test_a_batch_row_reads_the_purposes_algorithm_for_its_decision` | green | the decline constraint exists only in the cancellation mount |
+| A-2 | `test_rating_compile_bundle.py::test_g1_a_purpose_mount_whose_version_is_not_pinned_is_refused[not_pinned, pinned_at_another_version]` | green (one risk: reuses the purpose-mount fixture with `pinned=` varied, so a fixture error would show as a different code, not the pin refusal) | `mounted_fragments` refuses before the purpose graphs are built |
+| A-4 | `test_rating_purpose_mount.py::test_the_serialised_bytes_of_a_bundle_with_no_purpose_mount_omit_the_key` | green | `Bundle._without_an_empty_purpose_graphs`; the hash is recomputed from the serialised parts, not by `bundle_hash` |
+| A-9 | `backend/tests/test_change_summary_purposes.py` (2 nodes) | green | `_structural_lines` `(purposes changed)` clause; no DB |
+
+A-4 finding kept: no pinned-bytes fixture of a stored pre-slice bundle exists in the repository, so "equals the pre-slice
+bytes" is shown by the key's absence from both dumps plus the hash recomputed from the pre-slice canonical form.
+`_bundle_with_a_mount` gained a `pinned=` parameter (default the one cancel ref) so A-2 reuses its fixture; every existing caller is unchanged.
+
+**A-6, the ledger record.**
+- Header `tree:` is now `5576628141a98b5ce768096a7a0e96b212f1f761`, the tree of `658c4cd6` (`git rev-parse 658c4cd6^{tree}`),
+  the last code-and-spec commit. Trees of the others: `c06677f6` `5fe9885d`, `53019ea3` `8d39cbf7`, `e17a0f62` `b7537f59`,
+  `f534d6d8` `0c1852c5`, `458d056b` (the audit's head) `26d8e2fc`.
+- Task commits are in the table above (all ancestors of `458d056b`).
+- **Premises a to h at the base `c1f7c447`** (`git show c1f7c447:<path>`, locators in the Stale cites section): a the interim guard
+  `score.py:392` (message "interim" `:417`); b called at `:942` and `:1134`; c `QuotePurpose` five values `scoring.py:45`, `QuoteContext.purpose` `:106`;
+  d `SubGraphRef` has `inputs`/`outputs` and no `purposes` (`rating.py:460-461`); e the interim tests `test_rating_score.py:512`, `:1030` ("interim" asserts);
+  f FR-218's interim clause present in `03` row 87 ("an interim rule, `RL-1242`"); g `Bundle` `compile.py:632`, `bundle_hash(graph, pins)` `:661`;
+  h `CompiledBundle` `runtime.py:941`. Each held at the base; this is a re-read of the cited line, not of the full clause.
+- **Red-first quotes: NOT recorded here, and not fabricated.** The red-first tests were committed at `77cbf522` (SL-1341 prep). The red run's
+  output (the dispatch entry's "25 reds by cause") was not captured in this ledger by the executor that ran it, and this seat ran nothing.
+  Owner: `executor-1341b` or the lead, to paste the quoted failures from the run record; or the gate window re-derives them against
+  `77cbf522` with the source reverted. Verdict for that Task 6 limb: **owed, with that owner**.
+
+
+## Gate Step 0 (written 2026-10-16 10:14 BST by `date`, `executor-1341d`; nothing below has been run)
+
+Authority: the maintainer's GO, `to-lead.md` "2026-10-16 09:35:13 BST" (red-first: "the gate re-proves them by cause at Step 0"), and the
+lead's ruling in `from-lead-2026-10-09.md` (entry after the 09:56 response): **SL-1341's red-first quotes are owned by this gate's Step 0**; the
+LG records them then. The run-small output of the prep (`25 failed, 33 passed`, `from-lead` "2026-10-16 09:34:47 BST") is the pre-build
+evidence; the seat's table of node ids was never captured, so the list below is **derived by reading** `77cbf522`'s two test files, and the
+Step 0 run confirms or corrects it.
+
+**What runs.** Against `77cbf522` (the prep commit, before the source changed), not against the gate head: a detached worktree at `77cbf522`
+(`git -C <main checkout> worktree add --detach .claude/worktrees/sl-1341-step0 77cbf522`; setup per `dev-commands`, done outside any ALONE
+gate), then `run-small.sh <that worktree> packages/model-schema/tests/test_rating_algorithm.py packages/pricing-core/tests/test_rating_purpose_mount.py`
+(2 files, no DB; RL-1626). Quote the `-rf` FAILED lines and the `N failed, N passed` line into this section. Expected: `25 failed, 33 passed`.
+The worktree is removed after the quote is pasted.
+
+**The 25 reds, by node and cause** (27 new cases in the two files: 14 + 13; 2 are controls and pass). Causes are the plan's: **(F)** `SubGraphRef`
+has no `purposes` (`extra_forbidden`, or `AttributeError` on read), PL-1629 Task 2 premise d; **(I)** the interim guard (`score.py:392`, message
+"interim" `:417`), premise a. File M = `packages/model-schema/tests/test_rating_algorithm.py`, P = `packages/pricing-core/tests/test_rating_purpose_mount.py`.
+
+| # | Node (`<file>::<test>`) | Cause |
+|---|---|---|
+| 1-5 | M `::test_a_purposes_selector_outside_the_two_admitted_purposes_is_refused[bad0..bad4]` (5 forms) | F: asserts `extra_forbidden` is absent |
+| 6-8 | M `::test_a_purposes_selector_of_the_two_admitted_purposes_is_accepted[good0..good2]` (3 forms) | F: `extra_forbidden` raised on an admitted selector |
+| 9 | M `::test_an_absent_selector_keeps_every_existing_mount_unconditional` | F: `SubGraphRef.purposes` does not exist (`AttributeError`) |
+| 10 | M `::test_a_step_that_runs_for_every_purpose_cannot_consume_a_purpose_only_name` | F: no `GraphUnresolvedRefError`; the field is refused first |
+| 11 | M `::test_a_purpose_mount_may_re_produce_a_parent_name` | F: `extra_forbidden` on a valid input |
+| 12 | M `::test_a_purpose_mount_may_not_reach_the_risk_premium_output` | F: asserts `extra_forbidden` is absent |
+| 13 | M `::test_a_second_re_producer_of_one_name_is_a_cycle` | F: no `GraphCycleError`; the field is refused first |
+| 14 | M `::test_a_mount_re_producing_a_name_the_parent_already_re_produces_is_a_cycle` | F: no `GraphCycleError`; the field is refused first |
+| 15-16 | P `::test_a_version_with_only_an_unconditional_mount_is_refused_by_the_real_check[mid_term_adjustment,cancellation]` | I: the message still says "interim" |
+| 17 | P `::test_a_cancellation_only_mount_refuses_a_mid_term_adjustment_quote` | F (the fixture mounts `purposes`), the first error; the refusal's wording is I |
+| 18 | P `::test_a_cancellation_only_mount_prices_a_cancellation_with_the_mount` | F, then I (the interim guard refuses a cancellation) |
+| 19 | P `::test_a_cancellation_only_mount_leaves_new_business_exactly_as_without_it` | F |
+| 20 | P `::test_a_constraint_inside_a_cancellation_mount_is_evaluated_for_it` | F, then I |
+| 21 | P `::test_removing_the_real_check_would_be_caught` | F (fixture) |
+| 22 | P `::test_compile_bundle_emits_a_graph_for_exactly_the_selected_purposes` | F; `Bundle.purpose_graphs` absent |
+| 23 | P `::test_a_change_to_purposes_alone_changes_the_content_hash` | F |
+| 24 | P `::test_load_bundle_refuses_a_purpose_graph_that_disagrees_with_its_algorithm` | F; `Bundle.purpose_graphs` absent |
+| 25 | P `::test_inline_mounts_inlines_a_purpose_mount_for_its_purpose_only` | F; `inline_mounts` has no `purpose=` |
+
+The two **controls, expected green at `77cbf522`**: P `::test_the_fixture_prices_new_business_with_an_unconditional_re_producing_mount` (the
+test's own docstring: "Control: not red") and P `::test_a_version_with_no_purpose_mount_keeps_the_hash_it_had` (the unconditional mount,
+`bundle_hash(graph, pins)` as before). **Rule for the quote:** for each of the 25, read the first error line; a red whose first error is
+neither F nor I is a plan defect and is reported, not fixed. A control that is red, or a count other than 25, stops the gate before Step 1.
+The rows 17 to 21 name the fixture first; whether the interim guard (I) is reached after it is read from the run, not assumed.
+
+**The 5 route tests, for the small slot first** (`backend/tests/test_score_purpose_mount.py`, DB-backed, so a granted DB window, not run-small
+alone): `::test_score_prices_a_cancellation_with_the_purpose_mount`, `::test_score_prices_new_business_as_if_the_cancellation_mount_were_absent`,
+`::test_score_refuses_a_mid_term_adjustment_the_cancellation_mount_does_not_serve`,
+`::test_score_compare_prices_each_side_by_its_purposes_graph`, `::test_score_compare_refuses_a_mid_term_adjustment_naming_the_failing_side`.
+They run before the full pytest so a route red is read alone. Predicted green (the code exists); a red is a code gap, reported, not fixed in `src`.
+The full gate (`sl1341-gate.sh`, `EXPECT_HEAD` = the head at the lead's grant) then runs every one again.
+
+**Shared paths with SL-1547 (`sl-1547-wk675-s5`, unmerged, draft)**: both edit `model_schema/rating.py`, `rating-algorithm.schema.json` and
+`03-rating-engine.md` at the plan's anchors; this slice also changed `docs/contracts/openapi/generated.json`. **Whichever of the two merges
+second re-merges `origin/main` (a merge, never a rebase), re-runs `python scripts/generate-contracts.py --check` (regenerating `generated.json`
+if red), and re-runs the pinned-hash and quote-form tests** (`test_rating_shadowed_inputs.py`, `test_rating_wire_order.py`,
+`test_rating_compile_bundle.py`, `test_quote_input_raise_sites.py`, `test_rating_purpose_mount.py`); the second merge's ACK checks the contract
+diff (the maintainer's GO, "4 MET with its caveats"). Neither slice's ledger edits the other's paths to make a conflict disappear.
+
+**Re-merge of `origin/main`, 2026-10-16 10:28 BST (BST)**: merged `origin/main` a2f77b2dcad5aaec41a5f10aa664383caf421e8b (#1309, SL-1702) into this branch with `git merge --no-ff` (`merge-tree --write-tree` rc 1 before; the one conflicting path was `docs/INDEX.md`, resolved by taking main's side, regeneration owed). No other conflicts. Files changed by both #1309 (`0877e6e7..a2f77b2d`) and this slice, auto-merged cleanly: `backend/src/app/platform/change_summary.py`, `docs/contracts/openapi/generated.json`, `docs/specs/03-rating-engine.md`, `packages/model-schema/src/model_schema/rating.py`. **Owed after the SL-1455 GATE END**: (1) `docs/INDEX.md` regeneration under the gate-2 flock; (2) `generate-contracts.py --check` (SL-1702 added `RateTableChange.step_id` to `generated.json` and `rating.py`); (3) the Step 0 reds re-proved on the new base, the 25 reds' causes must not change; then the full gate on the new head after the lead's grant.
+
+**Step 0 run, 2026-10-17 13:05 BST (BST), `executor-1341pr`** (lead's GO, 2026-10-17). Command: `run-small.sh .claude/worktrees/sl-1341-step0 packages/model-schema/tests/test_rating_algorithm.py packages/pricing-core/tests/test_rating_purpose_mount.py` in a detached worktree at `77cbf522`; rc 1; final line `25 failed, 33 passed in 12.03s` (the expected count). The 25 FAILED lines, verbatim from the run's `-rf` summary (`scratch/sl1341-step0.txt`); the per-node cause (F or I) of the table above was not re-read here, only the count and node ids:
+
+```text
+FAILED packages/model-schema/tests/test_rating_algorithm.py::test_a_purposes_selector_outside_the_two_admitted_purposes_is_refused[bad0]
+FAILED packages/model-schema/tests/test_rating_algorithm.py::test_a_purposes_selector_outside_the_two_admitted_purposes_is_refused[bad1]
+FAILED packages/model-schema/tests/test_rating_algorithm.py::test_a_purposes_selector_outside_the_two_admitted_purposes_is_refused[bad2]
+FAILED packages/model-schema/tests/test_rating_algorithm.py::test_a_purposes_selector_outside_the_two_admitted_purposes_is_refused[bad3]
+FAILED packages/model-schema/tests/test_rating_algorithm.py::test_a_purposes_selector_outside_the_two_admitted_purposes_is_refused[bad4]
+FAILED packages/model-schema/tests/test_rating_algorithm.py::test_a_purposes_selector_of_the_two_admitted_purposes_is_accepted[good0]
+FAILED packages/model-schema/tests/test_rating_algorithm.py::test_a_purposes_selector_of_the_two_admitted_purposes_is_accepted[good1]
+FAILED packages/model-schema/tests/test_rating_algorithm.py::test_a_purposes_selector_of_the_two_admitted_purposes_is_accepted[good2]
+FAILED packages/model-schema/tests/test_rating_algorithm.py::test_an_absent_selector_keeps_every_existing_mount_unconditional
+FAILED packages/model-schema/tests/test_rating_algorithm.py::test_a_step_that_runs_for_every_purpose_cannot_consume_a_purpose_only_name
+FAILED packages/model-schema/tests/test_rating_algorithm.py::test_a_purpose_mount_may_re_produce_a_parent_name
+FAILED packages/model-schema/tests/test_rating_algorithm.py::test_a_purpose_mount_may_not_reach_the_risk_premium_output
+FAILED packages/model-schema/tests/test_rating_algorithm.py::test_a_second_re_producer_of_one_name_is_a_cycle
+FAILED packages/model-schema/tests/test_rating_algorithm.py::test_a_mount_re_producing_a_name_the_parent_already_re_produces_is_a_cycle
+FAILED packages/pricing-core/tests/test_rating_purpose_mount.py::test_a_version_with_only_an_unconditional_mount_is_refused_by_the_real_check[mid_term_adjustment]
+FAILED packages/pricing-core/tests/test_rating_purpose_mount.py::test_a_version_with_only_an_unconditional_mount_is_refused_by_the_real_check[cancellation]
+FAILED packages/pricing-core/tests/test_rating_purpose_mount.py::test_a_cancellation_only_mount_refuses_a_mid_term_adjustment_quote
+FAILED packages/pricing-core/tests/test_rating_purpose_mount.py::test_a_cancellation_only_mount_prices_a_cancellation_with_the_mount
+FAILED packages/pricing-core/tests/test_rating_purpose_mount.py::test_a_cancellation_only_mount_leaves_new_business_exactly_as_without_it
+FAILED packages/pricing-core/tests/test_rating_purpose_mount.py::test_a_constraint_inside_a_cancellation_mount_is_evaluated_for_it
+FAILED packages/pricing-core/tests/test_rating_purpose_mount.py::test_removing_the_real_check_would_be_caught
+FAILED packages/pricing-core/tests/test_rating_purpose_mount.py::test_compile_bundle_emits_a_graph_for_exactly_the_selected_purposes
+FAILED packages/pricing-core/tests/test_rating_purpose_mount.py::test_a_change_to_purposes_alone_changes_the_content_hash
+FAILED packages/pricing-core/tests/test_rating_purpose_mount.py::test_load_bundle_refuses_a_purpose_graph_that_disagrees_with_its_algorithm
+FAILED packages/pricing-core/tests/test_rating_purpose_mount.py::test_inline_mounts_inlines_a_purpose_mount_for_its_purpose_only
+```
+
+## DB window: the 5 route tests (2026-10-17 13:50 BST, `executor-1341db`)
+
+Scoped DB window beside a code gate, in the `small-test` slot (the maintainer's DB-WINDOW LANE ruling, `to-lead.md` "2026-10-17 13:19:48 BST"). load1 at start 6.74. Head `332136b6f0c2bf129d017a385125927891c382e9`, tree `311a76888674e062162cad8a0913f3d26fe4ed96`. Own database `gipricing_sl-1341_dbwin` from the template, `alembic upgrade head` rc 0, 1 head, database dropped on exit (rc 0). Green only was required: the Step 0 reds are recorded above (`25 failed, 33 passed`).
+
+Command: `EXPECT_HEAD=332136b6f0c2bf129d017a385125927891c382e9 bash ~/gi-pricing-plan.local/scratch/sl1341-dbwin.sh` (runs `timeout 900 uv run --directory <wt> pytest -q -rf -p no:cacheprovider <wt>/backend/tests/test_score_purpose_mount.py`).
+
+Last pytest line, verbatim: `5 passed, 1 warning in 13.54s` (rc 0). The five route tests, from `delivered but untested` to green: `test_score_prices_a_cancellation_with_the_purpose_mount`, `test_score_prices_new_business_as_if_the_cancellation_mount_were_absent`, `test_score_refuses_a_mid_term_adjustment_the_cancellation_mount_does_not_serve`, `test_score_compare_prices_each_side_by_its_purposes_graph`, `test_score_compare_refuses_a_mid_term_adjustment_naming_the_failing_side`.
+
+## Audit
+
+*(Written by `auditor-1341` (the auditor role), 2026-10-17 13:55 BST by `date`, on head `e66eff03f7ca2678f5211658f86ac1190db6c3c2`, tree `865fe5a275f0506fab56b4833a2be910c2eefc0d`, range `origin/main...e66eff03`, `origin/main` = `6bdd2571` (= the merge-base, so the range is the slice alone). Scope derived from PL-1629's acceptance items 1 to 12 first, then evidenced. No test was run by this seat; the gate and the DB window below are read from their logs.)*
+
+**1. Change set** (`git diff --stat origin/main...e66eff03`, 20 paths, +1453 −118): the spec (`03`), `RL-1242` (status line), `model_schema/rating.py` and `scoring.py`, `pricing_core/rating/{compile,inline,runtime,score}.py`, `backend/.../score.py` and `change_summary.py`, `rating-algorithm.schema.json`, `generated.json`, `INDEX.md`, this ledger, and six test files. Every path is in PL-1629's file table, Tasks 1 to 6, or the two out-of-plan changes ruled on below.
+
+**2. Acceptance, evidenced** (verdict per row; the lead's to adopt):
+- **1 Spec: met.** FR-218's `RL-1242` clause is `~~ ~~`-struck with a dated strike citing `RL-1242:83-85` and `SL-1341`; the `RL-1344` clause carries a dated "Delivered" note; T1 to T3 present (the pre-gate audit's 3 of 3 verbatim check); `RL-1242`'s diff is the `status:` line only, commit `658c4cd6` cites RL-1628. The docs check: section 5.
+- **2 Selector: met.** model-schema `test_a_purposes_selector_outside_the_two_admitted_purposes_is_refused` (5 forms), `..._of_the_two_admitted_purposes_is_accepted` (3), `test_an_absent_selector_keeps_every_existing_mount_unconditional`; red at `77cbf522`, `25 failed, 33 passed` (Step 0 above, `scratch/sl1341-step0.txt`).
+- **3 FR-212 per purpose and R1: met.** `graph_invariant_issues` runs `_graph_pass_issues` once per selected purpose and once unconditionally; tests `..._cannot_consume_a_purpose_only_name`, `..._may_not_reach_the_risk_premium_output`, `test_a_second_re_producer_of_one_name_is_a_cycle`, `test_a_mount_re_producing_a_name_the_parent_already_re_produces_is_a_cycle`.
+- **4 Real check: met.** `score.py` `_check_purpose_mount(bundle, ctx)` refuses when `ctx.purpose` is not in `bundle.purposes`; message has "no mount ... inlined", no "interim" (read: `test_a_version_with_only_an_unconditional_mount_is_refused_by_the_real_check` asserts all four). `score_one`, `_score_context_sync` and `_score_batch_row` read `bundle.evaluation_for(ctx.purpose)`. New-business equality asserts payable, outputs, ladder ids and trace step ids (`test_a_cancellation_only_mount_leaves_new_business_exactly_as_without_it`). Batch: `test_a_batch_row_under_a_purpose_mount_is_priced_by_the_purposes_graph`, `..._reads_the_purposes_algorithm_for_its_decision` (closes pre-gate A-1). Routes: 5 tests in `backend/tests/test_score_purpose_mount.py`, `5 passed` in the DB window above (head `332136b6`, whose non-docs blobs equal this head's).
+- **5 Not bypassable: met, one note (F4).** A cancellation-only mount's steps are absent from the MTA graph (`inline_mounts(purpose=...)` skips a mount whose `purposes` lacks the purpose) and the MTA quote is refused by item 4's check (`test_a_cancellation_only_mount_refuses_a_mid_term_adjustment_quote`).
+- **6 G1 with a selector: met.** `test_rating_compile_bundle.py::test_g1_a_purpose_mount_whose_version_is_not_pinned_is_refused` (2 params; closes A-2), asserts `RATING_VERSION_UNPINNED`.
+- **7 Diff and hash: met for this slice; the SL-1547 limb is conditional.** `purposes_changed` in `_diff_mounts` and test `test_a_change_to_a_mounts_purposes_alone_appears_in_the_diff_as_a_mount_change`; `test_a_change_to_purposes_alone_changes_the_content_hash`; `bundle_hash` adds `purpose_graphs` only when non-empty; the byte-level key omission is asserted (`test_the_serialised_bytes_of_a_bundle_with_no_purpose_mount_omit_the_key`, closes A-4). The pinned-hash tests (`test_rating_shadowed_inputs.py`, `test_rating_wire_order.py`) and `test_quote_input_raise_sites.py` are not in the range (unmodified) and were green in the gate. SL-1547 is not merged on `origin/main` (only its mint, `3519a919`), so the "re-run S5's hash test" duty falls to whichever merges second (the GO's condition).
+- **8 Interim tests: met, ledger statements owed (F3).** The bogus-reference test is deleted with a code comment naming Slice 2's G1 tests; the `"interim"` asserts at the two cited places are replaced by `"interim" not in` and `"no mount" in`; `("rating/score.py","_check_purpose_mount"): 1` unchanged.
+- **9 `RL-1242` retired: met.** Status line only, in `658c4cd6`, which is the last code-and-spec commit (the ledger commits follow it, as pre-gate A-8 noted).
+- **10 Coverage and verdict: met.** `req_coverage` rc 0 in the gate; the Verdicts section records FR-218's authoring half delivered, and the route tests are now green (section 4).
+- **11 Gate: met, with F1** (section 4). **12 MERGE-ACK:** not yet given.
+
+**3. Out-of-plan changes: proposed verdicts.** (1) `score_compare` reads `compiled.evaluation_for(purpose).algorithm`: in scope, necessary to acceptance 4 and RL-1628 condition 1. (2) `AlgorithmSubGraphChange.purposes_changed` and the `(purposes changed)` clause: in scope, necessary to acceptance 7; now tested (`backend/tests/test_change_summary_purposes.py`, 2 tests, closes A-9). Remaining reads of `bundle.algorithm` (`testing.py`, `replay.py`, `analysis.py:181`) read `input_contract`/`outputs` only, which are purpose-independent (checked by `git grep` at this head).
+
+**4. Gate.** Accepted by the maintainer, `to-lead.md` "2026-10-16 23:23:45 BST", at `c949a0e8` (tree `0ebe37e4155c02bf80b9a53f6baaa2998c5b0ca6`), from `scratch/sl1341-gate/gate.log`: ruff, mypy, import_linter, req_coverage, contracts rc 0; audit_docs rc 1 (checks 32 and 39); `pytest.log` `13 failed, 5894 passed, 6 skipped` (all 13 are `tests/test_audit_docs_*`, `test_register_*`, `test_repository_invariants.py`, the docs real-tree tests); frontend install, generate:api, lint, type-check, test (`730 passed`), build rc 0; demo rc 124 is the SIGINT stop after the journey's 200. **No-re-gate proof, re-done by this seat:** the 11 non-docs paths in `git diff --name-only c949a0e8 e66eff03` all have a blob at `e66eff03` equal to `origin/main`'s (0 differ), so nothing the slice owns moved after the gate.
+
+**5. Docs check** (`flock -w 900 /tmp/slots/gate-2 env -C <wt> python3 scripts/audit-docs.py`, with this section added, one run): rc 1, `FAILED (1)`: `check 31: gap in the full allocation between 1757 and 1761`, the one expected red (the ids 1758 to 1760 are the unmerged sibling slices'; it clears when they land or at the lead's merge order). Checks 32 and 39, red at the gate, are green here (the working id is minted and `INDEX.md` regenerated).
+
+**6. Findings.**
+- **F1 (medium, fix before the PR): acceptance 11 asks the ledger to quote every rc, the `N passed` line and `HEAD`; the gate result is only in `scratch/` and the channel.** Section 4 above now carries the figures; the lead may prefer the maintainer's entry cited by time as well.
+- **F2 (medium, delivered but untested, owner: the lead to file a finding; the second-to-merge rule does not cover it): `analysis.py:635-644` (attribution, SL-1696, merged as #1310 after this slice's gate) words a mount with `before == after` as "mount ports re-mapped".** With `purposes_changed` a `purposes`-only change reaches that branch, so the attribution text names ports for a purposes change. Wording only, no pricing effect, and no test crosses the two. The slice cannot edit `analysis.py` without a re-gate (the blob proof), so a follow-up slice owns it.
+- **F3 (low):** acceptance 8's ledger statements are absent: it must name the Slice 2 test covering the bogus reference (the code comment does, the ledger does not) and say `test_an_unconditional_mount_prices_a_new_business_quote_with_the_fragment` was kept unchanged (it is not in the range). Docs-only, fix in this ledger.
+- **F4 (low):** acceptance 5's "with the check removed locally, a test fails" is shown by `test_removing_the_real_check_would_be_caught`, which monkeypatches the check out and asserts the MTA quote is priced; the failing run of the refusal test with the edit applied is not quoted. Equivalent in content; disclosed.
+- **F5 (low, pre-gate A-5 stands):** condition 1's red-first names a ladder clamp; the test uses a decline. Same selector.
+- **F6 (low):** commit `658c4cd6`'s trailer is the pre-ruling form; commits already made are not rewritten (the maintainer 2026-10-17 11:06:41).
+
+**7. Proposed verdict:** conformant. All 12 acceptance items are evidenced or conditional on the SL-1547 merge order; F1 and F3 are docs-only fixes for this ledger, F2 needs an owner before the PR. Proposal only: the lead's verdict adopts or amends it, `status` stays `active`, and the MERGE-ACK line stays "not yet given".
+
+**F3 discharged (2026-10-17, `executor-1341f5`).** Acceptance 8's two statements: (1) the deleted bogus-reference test is covered by Slice 2's G1 tests `test_g1_a_mount_whose_version_is_not_pinned_is_refused_with_no_steps` (`packages/pricing-core/tests/test_rating_compile_bundle.py:383`) and `test_g1_a_mount_pinned_at_another_version_is_refused` (`:391`), named in the comment at `packages/pricing-core/tests/test_rating_score.py:505-509`; (2) `test_an_unconditional_mount_prices_a_new_business_quote_with_the_fragment` (`packages/pricing-core/tests/test_rating_score.py:1035`) was kept unchanged: it is not in the range `origin/main...e66eff03`.
+
+**F5 discharged (2026-10-17, `executor-1341f5`; the maintainer 13:58:04 BST, F5 (b)).** RL-1628 DP-S3-2 condition 1's red-first case is `test_a_clamp_inside_a_cancellation_mount_appears_in_the_cancellation_ladder` (`packages/pricing-core/tests/test_rating_purpose_mount.py`, commit `a4bce7c7`): a cancellation mount holding a clamping `constraint` step, whose clamp (`CANCEL_CLAMP`) is the `constraints` rung's operation in the cancellation quote's ladder and in no new-business ladder. With `CompiledBundle.evaluation_for` bypassed to return the base pair (scratch edit, reverted, `git diff` empty after), it is RED by cause: `AssertionError: assert 'none' == 'clamp'` (the clamp is absent from the cancellation ladder), beside the four tests that already failed under the bypass. At head: 17 passed (`run-small.sh`, one file); ruff check and mypy rc 0. The fixture replaces the base `s_clamp` in the clamp variant, because two re-producers of `office_premium_minor` form a cycle (FR-212). Test-only, no re-gate; the gated tree `c949a0e8` plus this file.
+
+**Lead verdict (2026-10-17 13:59:02 BST, the lead, transcript 1b92c2a6):** the auditor's proposal ADOPTED — CONFORMANT, F5 discharged by the added RL-1628 condition-1 case (the maintainer 13:58:04 (b)); F1 fixed in the audit; F3 fixed here; F2 → an FD in the next D batch (MEDIUM, owner WK-1250); F4/F6 recorded, no action. MERGE-ACK: not yet given.
+
+## Re-merge onto main and the (b) proof (2026-10-17 15:55 BST, `executor-1341b`)
+
+Order (c) then (b), once, on a main carrying SL-1758 (`539a654f`) and SL-1761 (`8804230b`): `git merge --no-ff origin/main` into `94bc4a23`, merge commit `a5be3455`. One non-mechanical conflict, `compile.py`; `docs/INDEX.md` taken from main (regenerated after the trial gate ends).
+
+**Resolution.** All four model_call checks run inside `for each in every_inlined:` — `_refuse_control_factor_model_calls`, `check_model_call_coverage`, `check_model_call_gbm_factors` (SL-1758) and `check_model_call_columns` (SL-1761). Main called the last two on `inlined` alone; the slice's side had the loop with the first three.
+
+**Diff vs both parents.** (1) Against the gated side `c949a0e8`: the multiset of changed lines in `compile.py`, `git diff c949a0e8 HEAD` against `git diff a2f77b2d origin/main` (main's own change since the common base), differs by exactly two lines — `check_model_call_columns` and `check_model_call_gbm_factors` appear inside the loop at HEAD and outside it (called on `inlined`) in main. (2) Against `origin/main`: 76 changed lines, all the slice's purpose-mount code plus the loop. The same comparison for `backend/src/app/api/score.py`, `docs/specs/03-rating-engine.md`, `packages/model-schema/src/model_schema/rating.py` and `packages/pricing-core/src/pricing_core/rating/runtime.py` is identical to main's delta: those four are main's changes laid over `c949a0e8` with nothing added.
+
+**Blob proof, with its two qualifications.** Over the slice's 19 own paths (`git diff --name-only a2f77b2d c949a0e8`) HEAD equals `c949a0e8` except: `compile.py` (above); the four files just named (main's delta); `test_rating_purpose_mount.py` (the F5 case, commit `a4bce7c7`, pushed after the gated head, identical lines to `git diff c949a0e8 a4bce7c7`); and this ledger (renamed on mint, extended after the gate). Outside those 19 paths HEAD differs from `origin/main` in `docs/roadmap.md`, this ledger and the new test file only. So the tree is `c949a0e8` + `compile.py` + the two new tests + F5 + the ledger/roadmap rows; everything else is main. The brief's phrase "c949a0e8 + compile.py + the new tests" omits the F5 test and the ledger/roadmap close rows, which are post-gate commits on the branch.
+
+**Red-first, two tests** (`packages/pricing-core/tests/test_rating_purpose_mount_model_call_checks.py`, a `cancellation` mount whose fragment holds the offending model_call; the base graph is clean). With the check moved outside the loop (scratch edit, reverted; `cmp` to the saved resolved file identical after): gbm check outside — `test_a_mounted_banded_gbm_model_call_is_refused_at_compile` RED `Failed: DID NOT RAISE ValueError`, collision test green; columns check outside — `test_a_mounted_column_collision_is_refused_at_compile` RED `Failed: DID NOT RAISE ValueError`, gbm test green; both outside — both RED the same way. At the resolved head: 2 passed. The collision check runs meaningfully per purpose graph (the test is red without it), so the STOP condition did not arise. Small runs at the resolved head (one `run-small.sh` call of up to three files each): `test_rating_compile*.py` (4 files) 88 + `test_rating_compile_fr240.py`, `test_rating_gbm_banded_refusal.py`, `test_rating_column_collision.py` 34 + `test_rating_purpose_mount.py`, `test_quote_input_raise_sites.py`, the new file 38 — all rc 0. ruff, mypy and lint-imports rc 0.
+
+**`93f6ece3` stamps.** Its commit time is 2026-10-17 12:59:38 UTC = 13:59:38 BST; the maintainer's hold is 14:00:10 BST (32 seconds after). Its resolution is not evidence here; this proof is a fresh resolution on `origin/main` `8804230b`, with the two checks re-derived and shown red.
+
+**Owed.** The 5 `backend/tests/test_score_purpose_mount.py` route tests (DB) re-run at the new head, in a DB window; the docs checks and the `docs/INDEX.md` regeneration, after TRIAL END. Nothing here is a gate.
+
+**The close stands on this proof (executor's statement, 2026-10-17 15:55 BST):** the re-merged tree carries the SL-1758 and SL-1761 checks on every purpose graph and the slice's behaviour as gated, with the only difference from the gated side being the two moved calls. Acceptance of `93f6ece3`'s handling is the maintainer's line, not this one.
+
+## PRs
+
+One PR for this slice (L1 (a')): opened and merged by the lead; not yet opened.
+
+## Delta audit
+
+*(Written by `auditor-1341d` (the auditor role, sonnet), 2026-10-18 11:56 BST by `date`, read-only (git / grep / Read) on head `880c2fc0cd0ff31104e2d42c0b1fa6882d1423ef`, tree `6f855be5a3ff9a74a8ede4453af0397833747501`. Range `94bc4a23..880c2fc0` (the close, to the re-gated head); the first audit is above and is not re-run. `origin/main` was `788f36c1` at the last merge and has since moved to `48d4cf01`.)*
+
+**Delta commits.**
+
+| Commit | What | Authority | Evidence |
+|---|---|---|---|
+| `a5be3455` | merge `origin/main` (`8804230b`) into the closed head | the executor's re-merge, accepted by the maintainer (by delegation) 2026-10-18 09:23:11 | parents `94bc4a23` + `8804230b` |
+| `e00b264f` | new test file `test_rating_purpose_mount_model_call_checks.py`, +124 | the (b) proof ordered with the re-merge; `every_inlined` runs `check_model_call_gbm_factors` and `check_model_call_columns` on each purpose graph (`compile.py`, the loop after `_refuse_control_factor_key`s); not named in `PL-1629`, which predates both checks | see "The test" below |
+| `f269c5ca` | ledger: "Re-merge onto main and the (b) proof" section | as `e00b264f` | +18 lines |
+| `cf2d477b` | re-mint LG 1761 to `LG-1808` | maintainer ruling 2026-10-18 09:10:58 item 1; accepted 09:15:06 and 09:23:11 | see "The re-mint" below |
+| `d9a8b716` | merge `origin/main` (`788f36c1`); `compile.py` conflict hand-resolved | ruling 09:10:58 item 3; accepted 09:23:11 | see "compile.py" below |
+| `880c2fc0` | regenerate `docs/INDEX.md` | item 17 of the common brief | INDEX hunk is 11 lines in `git diff 788f36c1 880c2fc0 --stat` |
+
+**compile.py.** `git diff --numstat origin/main 880c2fc0 -- …/rating/compile.py` = `57 20`, and `git diff --numstat 8804230b f269c5ca` on the same path = `57 20`. I did not stop at the counts: the changed lines of the two diffs (`+`/`-` lines, headers dropped, 77 lines) are byte-identical (`cmp` rc 0). Main changed this file twice between `8804230b` and `788f36c1` (`57c2ea77` SL-1563, `4a53f194` SL-1543); `git diff 788f36c1 880c2fc0 -- compile.py` (read in full) holds only the slice's own hunks: the `pydantic` import list, `selected_purposes`, `Bundle.purpose_graphs` and its wrap serializer, `bundle_hash`'s optional argument, and the two `for each in every_inlined` loops. No line of SL-1563's or SL-1543's change is deleted or altered, so nothing of main is lost and nothing beyond the union is added.
+
+**The test (`e00b264f`).** Two tests, both `@pytest.mark.req("FR-222", "FR-240", "FR-218")` (the three ids exist in `03-rating-engine.md`). The base algorithm is clean; the offending `model_call` sits in a `cancellation`-only fragment. Test 1 `pytest.raises(ValueError, match=GBM_CODE)` where `GBM_CODE` is `^MODEL_CALL_GBM_TRANSFORMED_FACTOR: ` (`test_rating_gbm_banded_refusal.py:50`) and asserts the factor slug is in the message. Test 2 matches `^MODEL_CALL_FEATURE_MAP_INVALID: ` and asserts both column names (`age_fine`, `age_coarse`) in the message. Both assert the refusal code, and the red-first claim (check moved outside the loop makes each red) is in the ledger's re-merge section; I did not re-run it (no pytest before GATE-2 GO). The gate's `pytest.log` lists 13 failures and neither new test is among them (`-q` does not name passes; "passed" for these two is inferred from the 6299 total, not read by name).
+
+**The re-mint.** Front matter `id: LG-1808`, `created: 2026-10-18` with the history in the comment; heading `# LG-1808`; the file renamed (`similarity 98%`); `docs/roadmap.md` cites re-pointed (2 lines in the diff). `git grep -n -E "LG[ -]?0?1761" (the pattern, spelled so) 880c2fc0` = 2 hits, both in the ledger, both quoted history: line 6 (front-matter comment "minted … as LG 1761") and line 19 (the mint note naming the collision). No live cite. Main's `SL-1761` and `LG-1762` files are not in the `788f36c1..880c2fc0` diff. `LG-1808` is not on `origin/main`. The `idsweep.sh` run is the lead's.
+
+**Findings.**
+- **F1 (low, record).** The ledger records the first re-merge (`a5be3455`) but not the second (`d9a8b716`): ruling 09:10:58 item 3 asks for hunk-by-hunk attribution (SL-1341 / SL-1543 / SL-1563), and it exists only as the maintainer's numstat check in `to-lead.md` 09:23:11 and this audit. Proposed: the lead accepts this audit's "compile.py" paragraph as the attribution (all hunks SL-1341's; none of SL-1543's or SL-1563's touched).
+- **F2 (info).** Front matter `tree:` is `5576628141a98b5ce768096a7a0e96b212f1f761`, the first gated tree, not `6f855be5…`; the gate that covers this head is `scratch/sl1341-gate` (START head `880c2fc0`, tree `6f855be5`). The field is the gated-tree-at-close; not edited here (a closed record).
+- **F3 (info).** `d9a8b716`'s commit time is not in the ledger either; no harm.
+- No finding above low.
+
+**Unevidenced, four verdicts.**
+- The 5 `test_score_purpose_mount.py` route tests (DB) at `880c2fc0`: the maintainer's 09:23:11 entry says item 21 incl. DB route files green, zeros quoted; I did not read that run's output. **Delivered but untested by me**; the evidence is the executor's run and the maintainer's entry.
+- Both new tests passed at `880c2fc0` (by name): **delivered but untested by name** (see above).
+- PR-CI condition (no check-31 row, none of the 13 after SL 8116 merges): **deferred, owner the lead**, at the PR's CI.
+
+**Gate evidence read.** `gate.log` START head `880c2fc0`, tree `6f855be5`, "head guard ok", "clean tree ok", "tree after gate: 0 changed path(s)"; `pytest.log`: `13 failed, 6299 passed, 4 skipped`, the 13 are `test_audit_docs_*`, `test_doc_index`, `test_register_*`, `test_repository_invariants` (the real-tree audit cascade of check 31's 1790..1808 gap); none touches the rating path.
+
+**Proposed verdict (the lead's to issue):** the delta is conformant. The compile.py resolution equals main plus the slice's own change; the new test asserts the refusal codes; the re-mint is complete. MERGE-ACK: not yet given.
+
+## Re-merge d9a8b716 — hunk attribution (F1) (2026-10-18 12:20 BST, `ledger-1341`)
+
+Appended record; no earlier section is edited. Closes F1 of the Delta audit above, on `to-lead.md` "2026-10-18 12:14:09 BST" (F1 written into this ledger before the PR) and the check of "2026-10-18 09:23:11 BST"; the hunk-by-hunk attribution is ruling "2026-10-18 09:10:58 BST" item 3.
+
+**Parents.** `d9a8b716` = merge of `788f36c1` (main: carries SL-1543 `4a53f194` #1335 and SL-1563 `57c2ea77` #1333) into `cf2d477b` (the slice; its own `compile.py` change is `8804230b..f269c5ca`, i.e. `53019ea3` and the earlier slice commits). `git show --cc d9a8b716 -- …/rating/compile.py` has exactly **one** combined hunk (`grep -c '^@@@'` = 1): the `bundle_hash` region. Every other `compile.py` hunk merged cleanly.
+
+| `compile.py` region (HEAD lines) | Origin |
+|---|---|
+| `_canonical_default` (new function, ~l.666), its docstring paragraph in `bundle_hash`, `default=_canonical_default` | SL-1543 (#1335, `4a53f194`) — main side of the conflict |
+| `bundle_hash` signature (`purpose_graphs` argument), the docstring sentence on purpose graphs, `hashed` dict and its `purpose_graphs` entry | SL-1341 — slice side of the conflict |
+| `json.dumps(hashed, …)` replacing the inline dict | both: SL-1341 changed the first argument, SL-1543 added `default=`; resolved as the union |
+| `output_type_issues` / `_producer_types` / `_compatible` / `fragment_output_type_issues` / `_refuse_mount_port_type_mismatch` (old l.119–243, 706) | SL-1563 (#1333, `57c2ea77`) — clean merge, untouched by the slice |
+| import list (l.26, l.65), `selected_purposes`, `Bundle.purpose_graphs` and its serializer, the `for each in every_inlined` loops in `compile_bundle` (13 hunks) | SL-1341 — clean merge |
+
+**Numstat pair (run 2026-10-18).** `git diff --numstat origin/main 880c2fc0 -- …/rating/compile.py` = `57	20`; `git diff --numstat 8804230b f269c5ca -- …/rating/compile.py` = `57	20`. (`origin/main` has moved on since the merge; `788f36c1`, the merged main, gives the same `57	20`. `git diff --numstat d9a8b716^2 d9a8b716` also `57 20`.) The Delta audit's line-level comparison (the 77 changed lines of the two diffs byte-identical, `cmp` rc 0) is its "compile.py" paragraph.
+
+**No behaviour beyond the union.** HEAD's `compile.py` is main plus the slice's own hunks and nothing else: no line of SL-1543's or SL-1563's change is deleted or altered, and the slice adds only its own. A version with no purpose mount still hashes as before (`purpose_graphs` is hashed only when non-empty).

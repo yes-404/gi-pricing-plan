@@ -503,7 +503,9 @@ async def score_compare(
             )
         except PlatformError as exc:
             raise _naming_side(exc, side) from exc
-        algorithms.append(compiled.algorithm)
+        # The algorithm that is evaluated for this purpose (RL-1628 condition 1), which the
+        # trace's step ids and the diff are read against.
+        algorithms.append(compiled.evaluation_for(body.context.purpose).algorithm)
         ctx = body.context.model_copy(
             update={"options": QuoteContextOptions(trace=True, rating_version_ref=ref)}
         )
