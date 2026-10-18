@@ -390,6 +390,64 @@ def test_previous_version_serves_the_migrated_schema_and_rolls_forward_with_no_f
     assert _score(url, headers, body) == 200
 
 
+def _api_containers_all_states() -> list[str]:
+    """Ids of every `api` container of the test project, running or not (`docker ps -a`)."""
+    out = subprocess.run(
+        [
+            "docker", "ps", "-a", "-q",
+            "--filter", f"label=com.docker.compose.project={PROJECT}",
+            "--filter", "label=com.docker.compose.service=api",
+        ],
+        check=True, capture_output=True, text=True,
+    ).stdout
+    return out.split()
+
+
+@pytest.mark.req("NFR-531")
+def test_a_failed_api_roll_leaves_the_pre_roll_replicas_and_no_never_healthy_one(
+    shas: tuple[str, str], down: None, tmp_path: pathlib.Path
+) -> None:
+    """FD 8112: a roll whose new replicas never pass their healthcheck, before the old ones are
+    stopped, returns the project to its pre-roll replicas (PL 8113; the maintainer's (by
+    delegation) entry "2026-10-18 03:11:40 BST", item 3). No shipped compose file changes: an
+    extra file in `tmp_path` makes the `api` healthcheck always fail, which stands for an image
+    whose healthcheck never passes."""
+    n1, n = shas
+    _compose(n1, "up", "-d", "--wait", "--scale", "api=2", "lb")
+    old = sorted(_api_containers())
+    assert len(old) == 2
+    never_healthy = tmp_path / "docker-compose.never-healthy.yml"
+    never_healthy.write_text(
+        "services:\n"
+        "  api:\n"
+        "    healthcheck:\n"
+        "      test: [\"CMD-SHELL\", \"exit 1\"]\n"
+        "      interval: 2s\n"
+        "      timeout: 2s\n"
+        "      retries: 1\n"
+    )
+    result = subprocess.run(
+        [
+            str(ROOT / "deploy" / "roll-api.sh"), "-t", "30", PROJECT,
+            str(ROOT / "deploy" / "docker-compose.yml"),
+            str(ROOT / "deploy" / "docker-compose.isolated.yml"),
+            str(never_healthy),
+        ],
+        env={**os.environ, "GIP_BUILD": n, "GIP_LB_PORT": LB_PORT},
+        capture_output=True, text=True,
+    )
+    print(result.stdout, result.stderr)
+    assert result.returncode != 0, "the roll must fail when no new replica turns healthy"
+    remaining = sorted(_api_containers_all_states())
+    assert remaining == old, (
+        f"a failed roll must leave exactly the pre-roll api containers {old}, found {remaining}"
+    )
+    assert sorted(_api_containers(healthy_only=True)) == old
+    url, headers, body = _scoring_request()
+    statuses = [_score(url, headers, body) for _ in range(20)]
+    assert statuses == [200] * 20, f"requests through lb after the failed roll: {statuses}"
+
+
 # -- PL-1690 E4.3: delivery, not declaration -------------------------------------------------
 
 #: The bound inside which a submitted Job must leave `queued`: NFR-527's 5 s submit-to-running
