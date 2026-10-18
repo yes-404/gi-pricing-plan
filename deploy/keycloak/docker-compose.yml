@@ -1,0 +1,43 @@
+# REFERENCE Keycloak deployment (FR-437). An example the deployer operates, patches and is
+# accountable for — not a platform component this project secures. See README.md.
+#
+# Production mode (`start`, not `start-dev`): TLS terminates at the proxy in front of it,
+# its own database is separate from the platform's, and nothing here is a default credential —
+# every secret is required from the environment and compose refuses to start without it.
+name: gi-pricing-keycloak-reference
+
+services:
+  keycloak-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KC_DB_PASSWORD:?set KC_DB_PASSWORD}
+      POSTGRES_DB: keycloak
+    volumes: ["kcdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  keycloak:
+    # Pin the version you have reviewed; the deployer owns upgrades and CVE response.
+    image: quay.io/keycloak/keycloak:26.7
+    command: ["start"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD:?set KC_DB_PASSWORD}
+      KC_HOSTNAME: ${KC_HOSTNAME:?set KC_HOSTNAME to the public issuer host}
+      KC_PROXY_HEADERS: xforwarded        # TLS terminates at the proxy in front
+      KC_HTTP_ENABLED: "true"             # plain HTTP to the proxy only; never published
+      KC_HEALTH_ENABLED: "true"
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_ADMIN_USER:?set KC_ADMIN_USER}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD:?set KC_ADMIN_PASSWORD}
+    expose: ["8080"]
+    depends_on:
+      keycloak-db: {condition: service_healthy}
+
+volumes:
+  kcdata:

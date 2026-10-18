@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildInputs, type ContractField } from "../quoteForm";
+import { buildInputs, type ContractField, fieldHint } from "../quoteForm";
 
 const FIELDS: ContractField[] = [
   { name: "driver_age", type: "int", nullable: false, min: 17, max: 99 },
@@ -62,5 +62,29 @@ describe("building a quote's inputs from the input contract (FR-213)", () => {
     expect(built.problems).toEqual({});
     expect(built.inputs["driver_age"]).toBe(5);
     expect(built.inputs["channel"]).toBe("elsewhere");
+  });
+});
+
+describe("fieldHint", () => {
+  it("says an input's type, range and optionality, as before", () => {
+    expect(fieldHint({ name: "driver_age", type: "int", nullable: false, min: 17, max: 99 })).toBe(
+      "int, range 17 to 99",
+    );
+    expect(fieldHint({ name: "postcode", type: "string", nullable: true })).toBe("string, optional");
+  });
+
+  it("leaves an unordered enum's hint alone", () => {
+    expect(fieldHint({ name: "channel", type: "enum", nullable: false, domain: ["direct", "broker"] })).toBe("enum");
+  });
+
+  it("shows an ordered enum's levels in the declared order, lowest first (RL-1613)", () => {
+    const field: ContractField = {
+      name: "cover",
+      type: "enum",
+      nullable: false,
+      domain: ["third_party", "tpft", "comprehensive"],
+      ordered: true,
+    };
+    expect(fieldHint(field)).toBe("enum, levels lowest to highest: third_party < tpft < comprehensive");
   });
 });

@@ -1978,6 +1978,49 @@
         "title": "CheckStatus",
         "type": "string"
       },
+      "ClaimCountBandingWarning": {
+        "additionalProperties": false,
+        "description": "A band whose claim count is below `min_claims_per_band`: whole claims.",
+        "properties": {
+          "band_index": {
+            "minimum": 0.0,
+            "title": "Band Index",
+            "type": "integer"
+          },
+          "band_label": {
+            "title": "Band Label",
+            "type": "string"
+          },
+          "banding": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "measure": {
+            "const": "claim_count",
+            "default": "claim_count",
+            "title": "Measure",
+            "type": "string"
+          },
+          "minimum": {
+            "minimum": 0.0,
+            "title": "Minimum",
+            "type": "integer"
+          },
+          "observed": {
+            "minimum": 0.0,
+            "title": "Observed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "banding",
+          "band_label",
+          "band_index",
+          "observed",
+          "minimum"
+        ],
+        "title": "ClaimCountBandingWarning",
+        "type": "object"
+      },
       "Coefficient": {
         "additionalProperties": false,
         "description": "One fitted term, with the uncertainty `02` R5 requires of every estimate.",
@@ -5228,6 +5271,28 @@
         "additionalProperties": false,
         "description": "What an EBM fit returns and the Model stores (ADR-705, FR-140).\n\n`02` §4.8: the fit result *is* the model. An EBM is its additive shape functions —\nscoring reproduces `intercept + Σ term scores` exactly, each term a lookup against\nits feature's bins — so this declarative artifact alone rescores the model by a\nprocess that never ran `interpret` (there is no booster blob and no serialised\nestimator to version).",
         "properties": {
+          "banding_warnings": {
+            "default": [],
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "claim_count": "#/components/schemas/ClaimCountBandingWarning",
+                  "exposure": "#/components/schemas/ExposureBandingWarning"
+                },
+                "propertyName": "measure"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/ExposureBandingWarning"
+                },
+                {
+                  "$ref": "#/components/schemas/ClaimCountBandingWarning"
+                }
+              ]
+            },
+            "title": "Banding Warnings",
+            "type": "array"
+          },
           "best_iteration": {
             "minimum": 0.0,
             "title": "Best Iteration",
@@ -5806,6 +5871,51 @@
         "title": "ExcludedPeril",
         "type": "object"
       },
+      "ExposureBandingWarning": {
+        "additionalProperties": false,
+        "description": "A band whose exposure is below `min_exposure_per_band`: exact decimals (FR-10).",
+        "properties": {
+          "band_index": {
+            "minimum": 0.0,
+            "title": "Band Index",
+            "type": "integer"
+          },
+          "band_label": {
+            "title": "Band Label",
+            "type": "string"
+          },
+          "banding": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "measure": {
+            "const": "exposure",
+            "default": "exposure",
+            "title": "Measure",
+            "type": "string"
+          },
+          "minimum": {
+            "description": "Exact decimal as a string; never a binary float (FR-10).",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+            "title": "Minimum",
+            "type": "string"
+          },
+          "observed": {
+            "description": "Exact decimal as a string; never a binary float (FR-10).",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+            "title": "Observed",
+            "type": "string"
+          }
+        },
+        "required": [
+          "banding",
+          "band_label",
+          "band_index",
+          "observed",
+          "minimum"
+        ],
+        "title": "ExposureBandingWarning",
+        "type": "object"
+      },
       "Factor": {
         "additionalProperties": false,
         "description": "A named, versioned transformation over dataset columns (FR-83, FR-96).\n\nDefined against a **Dataset**, resolved against a specific **version** at fit time\n(FR-87) — so a factor outlives the version it was first used on, and a column that\nchanged dtype fails loudly at resolution rather than quietly changing the model.",
@@ -6323,6 +6433,28 @@
         "additionalProperties": false,
         "description": "What a GBM fit returns and the Model stores (ADR-705, FR-125).\n\nThe booster is a **content-addressed blob in the backend's own JSON or text format**,\nnever a pickle — `booster_format` has no spelling for one, so the persistence layer's\nrefusal is not the only thing between a Model and an artifact that executes on load.\n\nEverything needed to score is here beside it: feature order, dtype expectations,\ncategorical encoding maps, the monotone constraint vector, the pinned library version,\nand — required, not optional — the `base_margin` construction. FR-126 is emphatic\nabout the last one because omitting the offset at scoring time fails *silently* on both\nbackends, and differently.\n\nThe evaluation curve is **not** here. FR-174 names it a GBM-specific *diagnostic*\nand asks for train and holdout side by side, which is FR-183's shape; it lives on\n`GbmDiagnostics`, and `fit_gbm` returns it beside this artifact for the caller to place\nthere. `best_iteration` stays, because scoring needs it and diagnostics are not loaded\nto score. (`diagnostics.schema.json` had it this way from Phase 0; this is the code\nagreeing with it rather than the schema being edited to match.)",
         "properties": {
+          "banding_warnings": {
+            "default": [],
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "claim_count": "#/components/schemas/ClaimCountBandingWarning",
+                  "exposure": "#/components/schemas/ExposureBandingWarning"
+                },
+                "propertyName": "measure"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/ExposureBandingWarning"
+                },
+                {
+                  "$ref": "#/components/schemas/ClaimCountBandingWarning"
+                }
+              ]
+            },
+            "title": "Banding Warnings",
+            "type": "array"
+          },
           "base_margin": {
             "$ref": "#/components/schemas/OffsetSpec"
           },
@@ -6921,6 +7053,28 @@
         "additionalProperties": false,
         "description": "What a fit returns and the Model stores (ADR-705).\n\nData, never a pickled estimator: `PICKLE_PERSISTENCE_REFUSED` is an error code this\nmodule owns, and a Model must be re-scorable by a process that never ran `glum`.",
         "properties": {
+          "banding_warnings": {
+            "default": [],
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "claim_count": "#/components/schemas/ClaimCountBandingWarning",
+                  "exposure": "#/components/schemas/ExposureBandingWarning"
+                },
+                "propertyName": "measure"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/ExposureBandingWarning"
+                },
+                {
+                  "$ref": "#/components/schemas/ClaimCountBandingWarning"
+                }
+              ]
+            },
+            "title": "Banding Warnings",
+            "type": "array"
+          },
           "coefficients": {
             "default": [],
             "items": {
@@ -8172,6 +8326,10 @@
             "title": "Nullable",
             "type": "boolean"
           },
+          "ordered": {
+            "title": "Ordered",
+            "type": "boolean"
+          },
           "pattern": {
             "anyOf": [
               {
@@ -8260,6 +8418,10 @@
           "nullable": {
             "default": false,
             "title": "Nullable",
+            "type": "boolean"
+          },
+          "ordered": {
+            "title": "Ordered",
             "type": "boolean"
           },
           "pattern": {
@@ -11306,6 +11468,18 @@
             "title": "Rows",
             "type": "integer"
           },
+          "rows_excluded_unknown_response": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rows Excluded Unknown Response"
+          },
           "rows_excluded_zero_weight": {
             "anyOf": [
               {
@@ -12167,7 +12341,10 @@
           "grid": {
             "anyOf": [
               {
-                "const": "uniform+sampled",
+                "enum": [
+                  "uniform+sampled",
+                  "levels"
+                ],
                 "type": "string"
               },
               {
@@ -14249,6 +14426,20 @@
           "dataset_version_id": {
             "format": "uuid",
             "title": "Dataset Version Id",
+            "type": "string"
+          },
+          "imputed_rows": {
+            "default": 0,
+            "description": "Holdout rows whose observed amount was unknown and was imputed at the known-amount mean severity (FR-190, SL-1543 DP-4). 0 when none.",
+            "minimum": 0.0,
+            "title": "Imputed Rows",
+            "type": "integer"
+          },
+          "imputed_share": {
+            "default": "0",
+            "description": "The imputed rows' share of the observed loss, an exact ratio in [0, 1] (not money). Defaulted with `imputed_rows`: reconciliations stored before these fields existed carry neither and load as 'nothing imputed'.",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+            "title": "Imputed Share",
             "type": "string"
           },
           "modelled_burning_cost": {
@@ -18357,6 +18548,21 @@
               }
             },
             "description": "Not permitted"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "The workspace approval policy",
@@ -18451,6 +18657,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Replace the workspace approval policy",
@@ -18612,6 +18833,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "List approval requests",
@@ -18737,6 +18973,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Submit an artifact for approval",
@@ -18848,6 +19099,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "One request with its decisions",
@@ -18985,6 +19251,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Approve, reject or request changes",
@@ -19122,6 +19403,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Withdraw before deployment (FR-357)",
@@ -19351,6 +19647,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Query the audit log",
@@ -19503,6 +19814,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Export the audit log as CSV or JSON",
@@ -19590,6 +19916,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Recompute the hash chain (FR-372)",
@@ -19720,6 +20061,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "List bandings",
@@ -19830,6 +20186,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Persist a Banding",
@@ -19957,6 +20328,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Recompute band statistics for edited boundaries",
@@ -20084,6 +20470,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Propose banding boundaries",
@@ -20181,6 +20582,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Presigned upload URL",
@@ -20308,6 +20724,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Complete a Blob Upload",
@@ -20424,6 +20855,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Download a blob",
@@ -20594,6 +21040,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "List the workspace's Custom Metrics",
@@ -20719,6 +21180,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Create or version a Custom Metric",
@@ -20830,6 +21306,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "A Custom Metric",
@@ -20941,6 +21432,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "The latest certificate for a Custom Metric",
@@ -21068,6 +21574,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Run the certificate checks over a Custom Metric",
@@ -21207,6 +21728,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Submit a Custom Metric for approval",
@@ -21319,6 +21855,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "What was fitted under this Custom Metric",
@@ -21489,6 +22040,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "List the workspace's Custom Objectives",
@@ -21614,6 +22180,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Create or version a Custom Objective",
@@ -21726,6 +22307,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "A Custom Objective",
@@ -21838,6 +22434,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "The latest certificate for a Custom Objective",
@@ -21975,6 +22586,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Run the certificate checks over a Custom Objective",
@@ -22102,6 +22728,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Derive gradient and hessian from a loss expression",
@@ -22239,6 +22880,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Submit a Custom Objective for approval",
@@ -22351,6 +23007,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "What was fitted under this Custom Objective",
@@ -22463,6 +23134,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Dataset version detail by id",
@@ -22585,6 +23271,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Profile comparison / PSI",
@@ -22723,6 +23424,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Derive a version",
@@ -22846,6 +23562,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Lineage graph",
@@ -22968,6 +23699,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "One-way summary for a column",
@@ -23080,6 +23826,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Profile artifact",
@@ -23194,6 +23955,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Quarantined rows",
@@ -23310,6 +24086,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Splits recorded on this version",
@@ -23445,6 +24236,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Record a named split",
@@ -23582,6 +24388,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Change a version's status",
@@ -23720,6 +24541,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Run validation",
@@ -23835,6 +24671,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Validation report history",
@@ -23980,6 +24831,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "List datasets",
@@ -24089,6 +24955,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Create a dataset",
@@ -24226,6 +25107,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Change a dataset's owner",
@@ -24336,6 +25232,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Dataset detail",
@@ -24457,6 +25368,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Replace the data dictionary",
@@ -24567,6 +25493,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Read a dataset's rule set",
@@ -24701,6 +25642,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Replace a dataset's rule set",
@@ -24855,6 +25811,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Version timeline",
@@ -24990,6 +25961,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Start an ingestion run",
@@ -25109,6 +26095,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Dataset version detail",
@@ -25254,6 +26255,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Correct the inferred schema",
@@ -25341,6 +26357,21 @@
               }
             },
             "description": "Not found"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "What is testable today, derived from the repository (FR-409)",
@@ -25453,6 +26484,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Start a Dislocation Run",
@@ -25565,6 +26611,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "The estimated cost of a Dislocation Run, before launch",
@@ -25677,6 +26738,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Read a Dislocation Run",
@@ -25794,6 +26870,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Read a Dislocation Run's movers, joined to the portfolio's columns",
@@ -25909,6 +27000,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "List environments",
@@ -26019,6 +27125,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Create an environment",
@@ -26155,6 +27276,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Submit a deployment request",
@@ -26294,6 +27430,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Deployment history for an environment",
@@ -26428,6 +27579,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Deploy an approved version",
@@ -26564,6 +27730,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Rename an environment",
@@ -26690,6 +27871,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Retire an environment",
@@ -26789,6 +27985,21 @@
               }
             },
             "description": "Not found"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Effective settings for one environment with every layer's candidate",
@@ -26912,6 +28123,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Update environment settings",
@@ -27022,6 +28248,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "List factors",
@@ -27117,6 +28358,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Create or version a Factor",
@@ -27226,6 +28482,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "List groupings",
@@ -27336,6 +28607,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Persist a Grouping",
@@ -27463,6 +28749,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Recompute the change in fit for an edited mapping",
@@ -27590,6 +28891,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Propose a grouping",
@@ -27769,6 +29085,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "List jobs",
@@ -27880,6 +29211,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Job detail with progress and result",
@@ -28007,6 +29353,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Request cooperative cancellation (FR-401)",
@@ -28119,6 +29480,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "SSE stream of progress updates",
@@ -28274,6 +29650,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Captured log lines (FR-402)",
@@ -28345,6 +29736,21 @@
               }
             },
             "description": "Not permitted"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Current principal, roles and effective permissions",
@@ -28442,6 +29848,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Choose the workspace to act in",
@@ -28482,6 +29903,21 @@
               }
             },
             "description": "Authentication failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "The workspaces this principal may act in",
@@ -28594,6 +30030,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Validate a model spec without fitting",
@@ -28764,6 +30215,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "List models",
@@ -28897,6 +30363,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Fit a model",
@@ -29009,6 +30490,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "A stored backtest",
@@ -29136,6 +30632,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Compare two or more models on their shared holdout",
@@ -29248,6 +30759,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "A stored model comparison",
@@ -29393,6 +30919,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Archive a model",
@@ -29530,6 +31071,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Backtest a model against another dataset version",
@@ -29667,6 +31223,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Score rows with a fitted model",
@@ -29822,6 +31393,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Submit a model for approval",
@@ -29934,6 +31520,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "A model's transparency artifact",
@@ -30069,6 +31670,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Build a transparency artifact for a non-GLM model",
@@ -30197,6 +31813,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Model artifact",
@@ -30325,6 +31956,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Model diagnostics",
@@ -30495,6 +32141,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "List the workspace's Peril Structures",
@@ -30620,6 +32281,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Create or version a Peril Structure",
@@ -30732,6 +32408,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "A Peril Structure and its reconciliation",
@@ -30869,6 +32560,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Reconcile modelled risk premium against observed burning cost",
@@ -31006,6 +32712,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Submit a Peril Structure for approval",
@@ -31142,6 +32863,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Seed a rate table version from an approved model",
@@ -31288,6 +33024,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Preview or create a Rate Table Version from manual cell edits",
@@ -31393,6 +33144,21 @@
               }
             },
             "description": "Not found"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Read one Rate Table Version's definition, without its cells",
@@ -31561,6 +33327,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Apply a bulk operation to a rate table version",
@@ -31724,6 +33505,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Page through one Rate Table Version's cells, either storage, no Job",
@@ -31899,6 +33695,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Cell diff of a rate table version against a baseline",
@@ -32117,6 +33928,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "The changed cells of a rate table diff, one cursor page at a time",
@@ -32222,6 +34048,21 @@
               }
             },
             "description": "Not found"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Export the version's cells as CSV",
@@ -32328,6 +34169,21 @@
               }
             },
             "description": "Not found"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Export the version's cells as XLSX",
@@ -32483,6 +34339,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Preview an import as a diff against the addressed version",
@@ -32595,6 +34466,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Create or version a Rating Algorithm",
@@ -32692,6 +34578,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Validate an unsaved Rating Algorithm without saving it",
@@ -32812,6 +34713,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Read one Rating Algorithm version",
@@ -32943,6 +34859,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Structural diff between two algorithm versions",
@@ -33019,6 +34950,21 @@
               }
             },
             "description": "Not permitted"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "List rating versions",
@@ -33114,6 +35060,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Create a draft rating version",
@@ -33211,6 +35172,21 @@
               }
             },
             "description": "Not found"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Get a rating version",
@@ -33338,6 +35314,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Draft a rating version's change summary",
@@ -33465,6 +35456,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Compile a rating version to a self-contained Bundle",
@@ -33577,6 +35583,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Run the Regression Suite against a rating version",
@@ -33699,6 +35720,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Read a regression run",
@@ -33821,6 +35857,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Read a regression run's case log",
@@ -33958,6 +36009,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Submit a rating version for approval",
@@ -34078,6 +36144,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Get a rating version by its slug@version",
@@ -34169,6 +36250,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "List declared reference tables",
@@ -34278,6 +36374,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Declare a reference table",
@@ -34426,6 +36537,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Point lookup, as at a date",
@@ -34541,6 +36667,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "The version timeline",
@@ -34675,6 +36816,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Load a reference table version",
@@ -34794,6 +36950,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Publish a reference table version",
@@ -34947,6 +37118,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Rows of a pinned version, optionally as at a date",
@@ -35068,6 +37254,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Create a new Regression Suite version",
@@ -35188,6 +37389,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Read a Regression Suite version",
@@ -35600,6 +37816,21 @@
             },
             "description": "Request validation failed"
           },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
+          },
           "500": {
             "content": {
               "application/json": {
@@ -35726,6 +37957,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Create a service account",
@@ -35846,6 +38092,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Revoke a key immediately",
@@ -35980,6 +38241,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Rotate the key with an overlap window",
@@ -36055,6 +38331,21 @@
               }
             },
             "description": "Not permitted"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Effective settings with their resolution source",
@@ -36169,6 +38460,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Update workspace settings",
@@ -36244,6 +38550,21 @@
               }
             },
             "description": "Not permitted"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "List sources",
@@ -36354,6 +38675,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Register a source",
@@ -36505,6 +38841,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Preview a source without creating a version",
@@ -36619,6 +38970,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Create a Sub-graph",
@@ -36758,6 +39124,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "List a Sub-graph's versions",
@@ -36894,6 +39275,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Write the next version of a Sub-graph",
@@ -37014,6 +39410,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Read one Sub-graph version",
@@ -37194,6 +39605,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Sampled production traces",
@@ -37305,6 +39731,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Full validation report",
@@ -37454,6 +39895,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Acknowledge a validation warning",
@@ -37604,6 +40060,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "List validation rules",
@@ -37612,7 +40083,7 @@
         ]
       },
       "post": {
-        "description": "FR-50 step 1: authored → `draft`.\n\nThe permission depends on the *check*, which is why it is not on the route: a\ndeclarative rule needs `dataset:write`, and a `sql` rule needs `admin:manage_settings`\n**instead** (`01` §4.5 step 5). Requiring both would leave no built-in role able to\nauthor one. The service makes the choice, and it fails closed either way.",
+        "description": "FR-50 step 1: authored → `draft`.\n\nThe permission depends on the *check*, which is why it is not on the route: a\ndeclarative rule needs `dataset:write`, and a `sql` rule needs `admin:manage_settings`\n**instead** (`01` §4.5 step 5). Requiring both would leave no built-in role able to\nauthor one. The service makes the choice, and it fails closed either way. It also\nawaits `count` right after that check, so a `403` is never counted (`RL-1687` (1a)).",
         "operationId": "create_rule_api_v1_validation_rules_post",
         "parameters": [
           {
@@ -37714,6 +40185,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Create a custom validation rule",
@@ -37841,6 +40327,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Approve a rule in review",
@@ -37994,6 +40495,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Dry-run a rule against a version",
@@ -38131,6 +40647,21 @@
               }
             },
             "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
           }
         },
         "summary": "Submit a rule for approval",

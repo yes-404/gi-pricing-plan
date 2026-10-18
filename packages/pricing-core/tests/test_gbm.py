@@ -17,6 +17,7 @@ LightGBM's `Booster.predict` has no offset parameter at all — the signature is
 from __future__ import annotations
 
 import hashlib
+from decimal import Decimal
 from typing import Any
 from uuid import uuid4
 
@@ -29,6 +30,7 @@ from model_schema import (
     Applicability,
     Banding,
     BandingMethod,
+    BandingMinimums,
     CustomMetric,
     CustomObjective,
     DroppedEvalMetric,
@@ -53,7 +55,7 @@ from model_schema import (
     WeightSpec,
     YDomain,
 )
-from pricing_core.modelling import gbm
+from pricing_core.modelling import BandingError, gbm
 from pricing_core.modelling.gbm import GbmFitError, fit_gbm, predict_gbm
 
 BACKENDS = ["xgboost", "lightgbm"]
@@ -2606,3 +2608,61 @@ def test_an_all_zero_weight_holdout_is_refused_by_the_weight_code(backend: str) 
     assert refused.value.code == "DECLARED_WEIGHT_INVALID"
     assert "the holdout" in str(refused.value)
     assert "weight 0" in str(refused.value)
+
+
+# --------------------------------------------------------------------------------------
+# FR-100 (SL-8031, red first) — the banding check runs at fit, on both backends
+# --------------------------------------------------------------------------------------
+
+AGE_BANDING = Banding(
+    id=uuid4(), slug="age-band", dataset_id=uuid4(), version=1,
+    column="driv_age", method=BandingMethod.MANUAL,
+    boundaries=(17.0, 30.0, 50.0, 80.0), labels=("17-29", "30-49", "50-79"),
+)
+BANDED_FACTORS = [
+    _factor("area", "area"),
+    _factor("age_band", "driv_age", type=FactorType.BANDING, banding_id=AGE_BANDING.id),
+]
+
+
+def _fit_banded(backend: str, data: pl.DataFrame, banding: Banding) -> Any:
+    spec = _spec(backend, factors=tuple(f.id for f in BANDED_FACTORS))
+    return fit_gbm(data, spec, BANDED_FACTORS, bandings={banding.id: banding})
+
+
+@pytest.mark.req("FR-100")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_banding_whose_data_moved_is_refused_at_fit(backend: str) -> None:
+    """R5: one band is reached by no fitted row. On main this fits."""
+    moved = _frequency_data(2_000).filter(
+        (pl.col("driv_age") < 30) | (pl.col("driv_age") >= 50))
+    with pytest.raises(BandingError) as refused:
+        _fit_banded(backend, moved, AGE_BANDING)
+    assert refused.value.code == "BAND_EMPTY"
+
+
+@pytest.mark.req("FR-100")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_thin_band_under_fail_refuses_the_fit(backend: str) -> None:
+    """R6."""
+    strict = AGE_BANDING.model_copy(update={"minimums": BandingMinimums(
+        min_claims_per_band=1_000_000, on_violation="fail")})
+    with pytest.raises(BandingError) as refused:
+        _fit_banded(backend, _frequency_data(2_000), strict)
+    assert refused.value.code == "BAND_BELOW_MIN_EXPOSURE"
+
+
+@pytest.mark.req("FR-100")
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_a_thin_band_under_warn_fits_and_records_a_typed_warning(backend: str) -> None:
+    """R7: on main the first line raises `AttributeError` (no such field)."""
+    banding = AGE_BANDING.model_copy(update={"minimums": BandingMinimums(
+        min_exposure_per_band=Decimal(1_000_000))})
+    warnings = _fit_banded(backend, _frequency_data(2_000), banding).result.banding_warnings
+    assert len(warnings) == len(banding.labels)
+    for index, warning in enumerate(warnings):
+        assert str(warning.banding) == f"banding:{banding.slug}@{banding.version}"
+        assert (warning.band_label, warning.band_index) == (banding.labels[index], index)
+        assert warning.measure == "exposure"
+        assert type(warning.observed) is Decimal
+        assert warning.minimum == Decimal(1_000_000)

@@ -50,16 +50,19 @@ def environment_only_key(monkeypatch: pytest.MonkeyPatch) -> str:
 
 
 @pytest.mark.req("FR-446")
-def test_scope_defaults_to_workspace_only_and_two_keys_are_declared_environment_capable() -> None:
+def test_scope_defaults_to_workspace_only_and_three_keys_are_declared_environment_capable() -> None:
     assert SettingDefinition(
         key="x", type=SettingType.INT, default=1, description="d"
     ).scope is SettingScope.WORKSPACE
     environment_capable = {
         k for k, d in svc.REGISTRY.items() if d.scope is not SettingScope.WORKSPACE
     }
+    # The third key is `platform.default_management_rate_limit_rps`: FR-448 declares it
+    # workspace- or environment-capable (docs/specs/07-platform.md:174).
     assert environment_capable == {
         "rating.trace_sample_rate",
         "scoring.default_client_rate_limit_rps",
+        "platform.default_management_rate_limit_rps",
     }
     for key in environment_capable:
         assert svc.REGISTRY[key].scope is SettingScope.WORKSPACE_OR_ENVIRONMENT

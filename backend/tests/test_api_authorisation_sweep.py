@@ -82,23 +82,23 @@ NO_PERMISSION_REQUIRED = {
 #:   left), each raising `WORKSPACE_SCOPE_DENIED`.
 HANDLER_GUARDED: dict[tuple[str, str], tuple[tuple[str, int, str], ...]] = {
     ("POST", "/api/v1/validation-rules"): (
-        ("platform/validation_rules.py", 212, "require_permission("),
-        ("platform/validation_rules.py", 219, "require_permission("),
+        ("platform/validation_rules.py", 217, "require_permission("),
+        ("platform/validation_rules.py", 224, "require_permission("),
     ),
     ("POST", "/api/v1/me/workspace"): (
-        ("api/me.py", 241, "WORKSPACE_SCOPE_DENIED"),
-        ("api/me.py", 251, "WORKSPACE_SCOPE_DENIED"),
-        ("api/me.py", 260, "WORKSPACE_SCOPE_DENIED"),
+        ("api/me.py", 244, "WORKSPACE_SCOPE_DENIED"),
+        ("api/me.py", 254, "WORKSPACE_SCOPE_DENIED"),
+        ("api/me.py", 263, "WORKSPACE_SCOPE_DENIED"),
     ),
     # `deployment:promote` with the Environment as the resource (`RL-1301` B.2): the Environment
     # row the resource names is loaded in the handler, so neither route carries a bare
     # `requires(...)`. Both reach the one check in `_authorised_environment` (WK-674 Slice 2,
     # PL-1392 Task 5).
     ("POST", "/api/v1/environments/{env}/deployments"): (
-        ("platform/deployments.py", 84, "require_permission("),
+        ("platform/deployments.py", 93, "require_permission("),
     ),
     ("POST", "/api/v1/environments/{env}/deployment-requests"): (
-        ("platform/deployments.py", 84, "require_permission("),
+        ("platform/deployments.py", 93, "require_permission("),
     ),
 }
 

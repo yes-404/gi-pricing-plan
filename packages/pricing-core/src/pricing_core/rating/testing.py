@@ -18,7 +18,7 @@ import string
 from collections.abc import Callable, Sequence
 from datetime import date, datetime
 from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
-from typing import Any, Literal
+from typing import Any
 
 import hypothesis
 from hypothesis import Phase, Verbosity, given, settings
@@ -48,6 +48,7 @@ from pricing_core.rating.properties import (
     make_scorer,
     monotone_field,
     monotone_has_comparable_pair,
+    property_grid,
 )
 from pricing_core.rating.runtime import CompiledBundle
 
@@ -274,9 +275,7 @@ def run_regression(
     counterexamples: dict[str, QuoteContext] = {}
     for prop in suite.properties:
         check = prop.check
-        grid: Literal["uniform+sampled"] | None = (
-            "uniform+sampled" if check.kind == "monotone" else None
-        )
+        grid = property_grid(check, contract)
         if all(case_holds(check, c, score, contract, seed=seed, outputs=outputs) for c in cases):
             if check.kind == "monotone" and not monotone_has_comparable_pair(
                 check, contract, cases, score, seed
