@@ -31,21 +31,37 @@ from model_schema import (
     ValidationReport,
     new_uuid7,
 )
+from model_schema.datasets import VALID_DATASET_TRANSITIONS, DatasetStatus
 
 ACTOR = Principal(kind=ActorKind.USER, id=new_uuid7(), display="a@insurer.example")
 
 #: Layer 1 holds these and nothing else. Ordered as the database reports them.
+#:
+#: **Added 2026-10-18 (WK-1178, SL-1770, FD-1704, FD-1728) as a temporary red:** the eleven
+#: tables FD-1704 and FD-1728 name, so this list shows layer 1's state on the base. PL-1769 Task 2
+#: replaces this constant with the set derived from the ORM declaration (DP-8).
 APPEND_ONLY_TABLES = (
     "audit_events",
     "backtests",
     "bandings",
     "deployments",
     "diagnostics",
+    "factors",
     "groupings",
     "metric_certificates",
     "model_comparisons",
     "objective_certificates",
     "profiles",
+    "rate_table_cells",
+    "rate_table_versions",
+    "rate_tables",
+    "rating_algorithms",
+    "reference_rows",
+    "reference_table_versions",
+    "reference_tables",
+    "regression_suite_versions",
+    "regression_suites",
+    "sub_graph_versions",
     "transparency_artifacts",
     "validation_acknowledgements",
     "validation_reports",
@@ -296,11 +312,88 @@ async def test_the_application_role_holds_only_select_and_insert(
 
 # -- Every artifact table, not the three anybody had counted (FR-44) ------------------
 
-#: One insertable row per table `e1f2a3b4c5d6` repaired. None of these tables carries a
-#: foreign key, so a bare `INSERT` is enough to give the row trigger something to refuse —
-#: the artifact's real production path is exercised by its own module's tests, and what is
-#: under test here is the table, not the writer.
-_APPEND_ONLY_ROWS: dict[str, str] = {
+
+class _RollbackError(Exception):
+    """Raised on purpose to end a probe's transaction by rolling it back."""
+
+
+async def _probe(
+    database: Database,
+    probe: list[tuple[str, dict]],
+    setup: list[tuple[str, dict]] | None = None,
+) -> DBAPIError | None:
+    """Run `setup`, then `probe`, in **one transaction that always rolls back**.
+
+    Returns the database's refusal of a `probe` statement, or `None` when every statement was
+    applied. A refusal of a `setup` statement is a defect in the arrangement and fails the test
+    on the spot, so a red can never be a red for the wrong reason. Rolling back matters on the
+    base tree, where a `TRUNCATE` that nothing refuses would otherwise empty a real table.
+    """
+    stage = failed_in = "setup"
+    outcome: DBAPIError | None = None
+    try:
+        async with database.unit_of_work() as session:
+            for sql, params in setup or []:
+                await session.execute(text(sql), params)
+            stage = "probe"
+            for sql, params in probe:
+                await session.execute(text(sql), params)
+            raise _RollbackError
+    except _RollbackError:
+        pass
+    except DBAPIError as refused:
+        outcome = refused
+        failed_in = stage
+    if outcome is not None:
+        assert failed_in == "probe", f"the arrangement itself was refused: {outcome}"
+    return outcome
+
+
+def _sqlstate(refused: DBAPIError) -> str | None:
+    return getattr(refused.orig, "sqlstate", None) or getattr(
+        getattr(refused.orig, "__cause__", None), "sqlstate", None
+    )
+
+
+def _assert_refused(refused: DBAPIError | None, what: str) -> str:
+    """The trigger refused it: `insufficient_privilege`, not a constraint or a typo."""
+    assert refused is not None, f"DID NOT RAISE: {what}"
+    assert _sqlstate(refused) == "42501", f"{what}: refused for another reason: {refused}"
+    return str(refused)
+
+
+async def _referencing_closure(database: Database, table: str) -> str:
+    """`table` plus every table that references it by foreign key, transitively, for a `TRUNCATE`.
+
+    PostgreSQL refuses a `TRUNCATE` of a referenced table on the foreign key before any trigger
+    runs. Naming the referencing tables gets the statement to the trigger. Read from
+    `pg_constraint`, never written out per table, so a foreign key added later is followed.
+    """
+    async with database.session() as session:
+        names = (
+            await session.execute(
+                text("""
+                    WITH RECURSIVE r(oid) AS (
+                        SELECT c.oid FROM pg_class c
+                        WHERE c.relname = :t AND c.relnamespace = 'public'::regnamespace
+                        UNION
+                        SELECT con.conrelid FROM pg_constraint con
+                        JOIN r ON con.confrelid = r.oid WHERE con.contype = 'f'
+                    )
+                    SELECT c.relname FROM r JOIN pg_class c ON c.oid = r.oid ORDER BY 1
+                """),
+                {"t": table},
+            )
+        ).scalars().all()
+    assert table in names, table
+    return ", ".join(names)
+
+
+#: One insertable row per table `e1f2a3b4c5d6` repaired, then the eleven of FD-1704/FD-1728.
+#: A value is one statement, or a tuple of statements that run in order (a table whose row needs
+#: its parent first). Bare `INSERT`s: the artifact's real production path is exercised by its own
+#: module's tests, and what is under test here is the table, not the writer.
+_APPEND_ONLY_ROWS: dict[str, str | tuple[str, ...]] = {
     #: **Added 2026-08-23 (W32-6).** `backtests` was in `APPEND_ONLY_TABLES` above — so the
     #: grants and the both-triggers checks covered it — and absent from this list, which is
     #: the only one that makes a trigger *fire*. Every other locked table had its refusal
@@ -340,49 +433,104 @@ _APPEND_ONLY_ROWS: dict[str, str] = {
         "INSERT INTO transparency_artifacts (id, workspace_id, model_id, payload) "
         "VALUES (:id, :ws, gen_random_uuid(), :body)"
     ),
+    #: **Added 2026-10-18 (WK-1178, SL-1770, FD-1704, FD-1728).** The nine below are
+    #: `append_only` after SL-1770; `rate_tables` and `reference_table_versions` are `guarded`
+    #: and have their own rows in `_GUARDED_ROWS`. A Model pins its Factors by row id, so an
+    #: edited `factors` row re-prices every pinned fitted Model with the pin unchanged.
+    "factors": (
+        "INSERT INTO factors (id, workspace_id, dataset_id, slug, version, body) "
+        "VALUES (:id, :ws, gen_random_uuid(), :slug, 1, :body)"
+    ),
+    "rate_table_cells": (
+        "INSERT INTO rate_table_cells (id, version_id, key, value) "
+        "VALUES (:id, gen_random_uuid(), CAST('[\"a\"]' AS jsonb), CAST('\"1.0\"' AS jsonb))"
+    ),
+    "rate_table_versions": (
+        "INSERT INTO rate_table_versions (id, workspace_id, rate_table_id, version_number, "
+        "storage, definition, change_note, created_by) "
+        "VALUES (:id, :ws, gen_random_uuid(), 1, 'rows', :body, 'n', gen_random_uuid())"
+    ),
+    "rating_algorithms": (
+        "INSERT INTO rating_algorithms (id, workspace_id, slug, version, content, created_by) "
+        "VALUES (:id, :ws, :slug, 1, :body, gen_random_uuid())"
+    ),
+    "reference_rows": (
+        "INSERT INTO reference_rows (id, reference_table_version_id, key, payload, "
+        "effective_from) VALUES (:id, gen_random_uuid(), 'k', :body, DATE '2026-01-01')"
+    ),
+    "reference_tables": (
+        "INSERT INTO reference_tables (id, workspace_id, slug, key_columns, payload_columns) "
+        "VALUES (:id, :ws, :slug, CAST('[]' AS jsonb), CAST('[]' AS jsonb))"
+    ),
+    #: `regression_suite_versions.suite_id` is the one foreign key among the eleven (E4).
+    "regression_suites": (
+        "INSERT INTO regression_suites (id, workspace_id, slug, algorithm_slug, created_by) "
+        "VALUES (:id, :ws, :slug, 'alg-' || :slug, gen_random_uuid())"
+    ),
+    "regression_suite_versions": (
+        "INSERT INTO regression_suites (id, workspace_id, slug, algorithm_slug, created_by) "
+        "VALUES (:id, :ws, :slug, 'alg-' || :slug, gen_random_uuid())",
+        "INSERT INTO regression_suite_versions (id, suite_id, version, content, content_hash, "
+        "change_note, created_by) VALUES (:id, :id, 1, :body, 'sha256:' || repeat('a', 64), "
+        "'n', gen_random_uuid())",
+    ),
+    "sub_graph_versions": (
+        "INSERT INTO sub_graph_versions (id, workspace_id, slug, version, content, change_note, "
+        "created_by) VALUES (:id, :ws, :slug, 1, :body, 'n', gen_random_uuid())"
+    ),
 }
 
 
+def _row_params(workspace_id, row_id) -> dict:
+    return {
+        "id": row_id,
+        "ws": workspace_id,
+        "slug": f"s-{row_id.hex[-8:]}",
+        "body": '{"stored": true}',
+    }
+
+
+def _statements(entry: str | tuple[str, ...]) -> list[str]:
+    return [entry] if isinstance(entry, str) else list(entry)
+
+
+#: The statements a table refuses once it is `append_only`.
+_APPEND_ONLY_STATEMENTS = ("UPDATE", "DELETE", "TRUNCATE")
+
+_CASES = [
+    pytest.param(table, statement, id=f"{table}-{statement}")
+    for table in sorted(_APPEND_ONLY_ROWS)
+    for statement in _APPEND_ONLY_STATEMENTS
+]
+
+
 @pytest.mark.req("FR-44")
-@pytest.mark.parametrize("table", sorted(_APPEND_ONLY_ROWS))
+@pytest.mark.parametrize(("table", "statement"), _CASES)
 async def test_an_artifact_cannot_be_rewritten_from_the_owner_connection(
-    database: Database, workspace_id, table: str
+    database: Database, workspace_id, table: str, statement: str
 ) -> None:
-    """The six tables that had the grants and not the trigger, each refusing all three.
+    """Each artifact table refuses each of `UPDATE`, `DELETE` and `TRUNCATE`, one case apiece.
 
     Every session here connects as the **owner**, which is the case layer 1 cannot reach:
     `REVOKE UPDATE` from a table's owner does nothing, because ownership carries implicit
-    privileges. Before `e1f2a3b4c5d6` these six `UPDATE`s all succeeded — three of them
-    against evidence something is approved against (`02` §4.8 makes diagnostics the
-    condition of `fitted`; `06` §3.3 makes a comparison required evidence for a Model
-    approval), and `TRUNCATE` succeeded against three of them as well.
+    privileges. One case per (table, statement), not a loop inside a test (plan review R10,
+    PL-1769): a loop ends at its first `DID NOT RAISE` and hides the rest, and the red of this
+    slice is exactly 27 of them at once.
     """
     row_id = new_uuid7()
+    params = _row_params(workspace_id, row_id)
     async with database.unit_of_work() as session:
-        await session.execute(
-            text(_APPEND_ONLY_ROWS[table]),
-            {
-                "id": row_id,
-                "ws": workspace_id,
-                "slug": f"s-{row_id.hex[-8:]}",
-                "body": '{"stored": true}',
-            },
-        )
+        for insert in _statements(_APPEND_ONLY_ROWS[table]):
+            await session.execute(text(insert), params)
 
-    # `deployments` is the one table here that something references
-    # (`scoring_traces.deployment_id`), and PostgreSQL refuses a `TRUNCATE` of a referenced
-    # table on the foreign key before any trigger runs. Naming the referencing table too gets
-    # the statement to the trigger.
-    truncated = f"{table}, scoring_traces" if table == "deployments" else table
-    for statement in (
-        f"UPDATE {table} SET workspace_id = workspace_id WHERE id = :id",
-        f"DELETE FROM {table} WHERE id = :id",
-        f"TRUNCATE {truncated}",  # a row trigger does not fire on this, which is why two exist
-    ):
-        with pytest.raises(DBAPIError) as refused:
-            async with database.unit_of_work() as session:
-                await session.execute(text(statement), {"id": row_id})
-        assert "append-only" in str(refused.value), statement
+    sql = {
+        "UPDATE": f"UPDATE {table} SET id = id WHERE id = :id",
+        "DELETE": f"DELETE FROM {table} WHERE id = :id",
+        # a row trigger does not fire on this, which is why two exist
+        "TRUNCATE": f"TRUNCATE {await _referencing_closure(database, table)}",
+    }[statement]
+    refused = await _probe(database, [(sql, {"id": row_id})])
+    assert "append-only" in _assert_refused(refused, f"{table}: {sql}")
 
     async with database.session() as session:
         survived = (
@@ -391,6 +539,116 @@ async def test_an_artifact_cannot_be_rewritten_from_the_owner_connection(
             )
         ).scalar_one()
     assert survived == 1
+
+
+#: **Added 2026-10-18 (SL-1770, DP-9, DP-11).** The two `guarded` tables of the eleven. Each
+#: entry is the arrangement; `case` below says what is then attempted.
+_GUARDED_ROWS: dict[str, str] = {
+    "rate_tables": (
+        "INSERT INTO rate_tables (id, workspace_id, slug, current_version, created_by) "
+        "VALUES (:id, :ws, :slug, 3, gen_random_uuid())"
+    ),
+    "reference_table_versions": (
+        "INSERT INTO reference_table_versions (id, workspace_id, reference_table_id, "
+        "version, status) VALUES (:id, :ws, gen_random_uuid(), 1, :status)"
+    ),
+}
+
+#: (table, case id, row status, statement, refused?). `rate_tables` moves forward on
+#: `current_version` and nothing else (DP-9); `reference_table_versions` goes `draft` to
+#: `published` and nothing else (DP-11, FR-70). The allowed cases are controls: green on the base
+#: because nothing guards, and they must stay green after SL-1770.
+_GUARDED_CASES = [
+    (
+        "rate_tables", "edit-slug", None,
+        "UPDATE rate_tables SET slug = slug || 'x' WHERE id = :id", True,
+    ),
+    ("rate_tables", "delete", None, "DELETE FROM rate_tables WHERE id = :id", True),
+    ("rate_tables", "truncate", None, "TRUNCATE rate_tables", True),
+    (
+        "rate_tables", "version-forward", None,
+        "UPDATE rate_tables SET current_version = current_version + 1 WHERE id = :id", False,
+    ),
+    (
+        "rate_tables", "version-backward", None,
+        "UPDATE rate_tables SET current_version = current_version - 1 WHERE id = :id", True,
+    ),
+    (
+        "reference_table_versions", "edit-note", "draft",
+        "UPDATE reference_table_versions SET source_note = 'x' WHERE id = :id", True,
+    ),
+    (
+        "reference_table_versions", "delete", "draft",
+        "DELETE FROM reference_table_versions WHERE id = :id", True,
+    ),
+    ("reference_table_versions", "truncate", "draft", "TRUNCATE reference_table_versions", True),
+    (
+        "reference_table_versions", "publish", "draft",
+        "UPDATE reference_table_versions SET status = 'published' WHERE id = :id", False,
+    ),
+    (
+        "reference_table_versions", "unpublish", "published",
+        "UPDATE reference_table_versions SET status = 'draft' WHERE id = :id", True,
+    ),
+]
+
+
+@pytest.mark.req("FR-44")
+@pytest.mark.parametrize(
+    ("table", "status", "statement", "refused"),
+    [pytest.param(t, s, sql, r, id=f"{t}-{c}") for t, c, s, sql, r in _GUARDED_CASES],
+)
+async def test_a_guarded_artifact_moves_only_forward_from_the_owner_connection(
+    database: Database, workspace_id, table: str, status: str | None, statement: str,
+    refused: bool,
+) -> None:
+    """`rate_tables` and `reference_table_versions` keep their one legitimate in-place write.
+
+    `current_version` is also the version allocator and `publish_version` is FR-70's
+    independent approval, so neither table can be plainly append-only (E4, W1 and W3). Each is
+    `guarded`: one named column moves one named way, and every other `UPDATE`, every `DELETE`
+    and `TRUNCATE` is refused. As the owner, so layer 1 cannot be what refuses.
+    """
+    row_id = new_uuid7()
+    params = {**_row_params(workspace_id, row_id), "status": status}
+    insert = _GUARDED_ROWS[table]
+    arrange = [(insert, {k: v for k, v in params.items() if f":{k}" in insert})]
+    probe = [(statement, {"id": row_id} if ":id" in statement else {})]
+    outcome = await _probe(database, probe, arrange)
+    if refused:
+        _assert_refused(outcome, f"{table}: {statement}")
+    else:
+        assert outcome is None, f"{table}: {statement} was refused: {outcome}"
+
+
+#: The six tables that carry a row guard and no `TRUNCATE` trigger today (plan review R2).
+_ROW_GUARDED_ONLY = (
+    "approval_requests",
+    "blobs",
+    "deployment_requests",
+    "rating_versions",
+    "validation_rule_sets",
+    "validation_rules",
+)
+
+
+@pytest.mark.req("FR-44")
+@pytest.mark.parametrize("table", _ROW_GUARDED_ONLY)
+async def test_a_row_guarded_table_refuses_truncate_from_the_owner_connection(
+    database: Database, table: str
+) -> None:
+    """A row guard does not fire on `TRUNCATE`: six tables had one and could still be emptied.
+
+    The table is truncated together with every table that references it, read from
+    `pg_constraint`, in a transaction that rolls back. Where a referencing table's own `TRUNCATE`
+    trigger already refuses, that message is the one printed here (plan review R2); the catalog
+    test `<table>_no_truncate` is the table-specific proof.
+    """
+    sql = f"TRUNCATE {await _referencing_closure(database, table)}"
+    refused = await _probe(database, [(sql, {})])
+    message = _assert_refused(refused, sql)
+    assert "append-only" in message, message
+    print(f"{table}: {message.splitlines()[0] if message else message}")
 
 
 @pytest.mark.req("FR-44")
@@ -444,3 +702,274 @@ async def test_every_table_the_grants_call_append_only_carries_both_triggers(
         if row_triggers < 1 or statement_triggers < 1
     ]
     assert missing == [], f"append-only tables missing a trigger: {missing}"
+
+
+# -- `dataset_versions`: the immutable snapshot, guarded (DP-21; FD-1728) ---------------
+#
+# Added 2026-10-18 (WK-1178, SL-1770). `dataset_versions` is "the immutable snapshot" of
+# `CLAUDE.md` §7 and `00` §2, yet the application updates eleven columns in place. The
+# maintainer (by delegation) ruled it `guarded`: the DATA frozen from the first
+# `draft -> validating`, for ever (`to-lead.md` "2026-10-14 13:27:39 BST"); `status` follows
+# `VALID_DATASET_TRANSITIONS` (corrected by "2026-10-16 09:40:20 BST" Q1: derived, not counted);
+# the report id moves only out of `validating`; `profile_id` only `NULL -> value` after the
+# freeze. Every case runs as the owner, in a transaction that rolls back, and is arranged
+# through *allowed* transitions only, so no arrangement depends on the guard's own column.
+
+_DS_INSERT = (
+    "INSERT INTO dataset_versions (id, slug, workspace_id, dataset_id, version, status, kind, "
+    "tables, library_versions, labels, schema_version, currency, created_by) "
+    "VALUES (:id, :slug, :ws, gen_random_uuid(), 1, 'draft', 'ingested', "
+    "CAST('[]' AS jsonb), CAST('{}' AS jsonb), CAST('{}' AS jsonb), 1, 'GBP', "
+    "gen_random_uuid())"
+)
+
+#: How to reach a status through allowed transitions only. `validated` needs its report id
+#: (`validated_names_its_report`); it is set on the way out of `validating`, which is when the
+#: ruling lets the report id move. `archived` takes its `archived_at` in the same `UPDATE`.
+_TO_VALIDATING = "UPDATE dataset_versions SET status = 'validating' WHERE id = :id"
+_TO_VALIDATED = (
+    "UPDATE dataset_versions SET status = 'validated', "
+    "validation_report_id = gen_random_uuid() WHERE id = :id"
+)
+_TO_FAILED = "UPDATE dataset_versions SET status = 'failed' WHERE id = :id"
+_BACK_TO_DRAFT = (
+    "UPDATE dataset_versions SET status = 'draft', validation_report_id = NULL WHERE id = :id"
+)
+_TO_ARCHIVED = (
+    "UPDATE dataset_versions SET status = 'archived', archived_at = now() WHERE id = :id"
+)
+
+_PATH_TO: dict[str, tuple[str, ...]] = {
+    "draft": (),
+    "validating": (_TO_VALIDATING,),
+    "validated": (_TO_VALIDATING, _TO_VALIDATED),
+    "failed": (_TO_VALIDATING, _TO_FAILED),
+    "archived": (_TO_ARCHIVED,),
+    #: FR-53: `validated -> validating -> draft`. The data stays frozen.
+    "returned-to-draft": (_TO_VALIDATING, _BACK_TO_DRAFT),
+}
+
+#: One new value per data column the ruling freezes (`tables`, `source_fingerprint`, `totals`,
+#: `derived_from`, `library_versions`, `ingestion_run_id`).
+_FROZEN_DATA_WRITES: dict[str, str] = {
+    "tables": "tables = CAST('[{\"name\": \"x\"}]' AS jsonb)",
+    "source_fingerprint": "source_fingerprint = CAST('{\"sha\": \"x\"}' AS jsonb)",
+    "totals": "totals = CAST('{\"rows\": 1}' AS jsonb)",
+    "derived_from": "derived_from = CAST('{\"parent\": \"x\"}' AS jsonb)",
+    "library_versions": "library_versions = CAST('{\"polars\": \"1\"}' AS jsonb)",
+    "ingestion_run_id": "ingestion_run_id = gen_random_uuid()",
+}
+
+
+def _ds_params(workspace_id) -> dict:
+    row_id = new_uuid7()
+    return {"id": row_id, "ws": workspace_id, "slug": f"s-{row_id.hex[-8:]}"}
+
+
+async def _ds_probe(
+    database: Database, workspace_id, reach: str, *statements: str
+) -> DBAPIError | None:
+    """Arrange a `dataset_versions` row in `reach`, then attempt `statements`, rolled back."""
+    params = _ds_params(workspace_id)
+    arrange = [(_DS_INSERT, params)] + [(sql, params) for sql in _PATH_TO[reach]]
+    return await _probe(database, [(sql, params) for sql in statements], arrange)
+
+
+def _status_set(target: str) -> str:
+    """The `UPDATE` that sets `status` to `target`, valid on every constraint but the guard.
+
+    `validated` carries a report id (`validated_names_its_report`), so a refusal of the
+    transition is the guard's, never the check constraint's.
+    """
+    extra = (
+        ", validation_report_id = COALESCE(validation_report_id, gen_random_uuid())"
+        if target == "validated"
+        else ", archived_at = now()" if target == "archived" else ""
+    )
+    return f"UPDATE dataset_versions SET status = '{target}'{extra} WHERE id = :id"
+
+
+_STATUSES = [status.value for status in DatasetStatus]
+_PAIRS = [
+    pytest.param(source, target, id=f"{source}->{target}")
+    for source in _STATUSES
+    for target in _STATUSES
+    if source != target
+]
+
+
+@pytest.mark.req("FR-44")
+@pytest.mark.parametrize(("source", "target"), _PAIRS)
+async def test_a_dataset_version_status_follows_the_transition_table_exactly(
+    database: Database, workspace_id, source: str, target: str
+) -> None:
+    """Refused iff the pair is not in `VALID_DATASET_TRANSITIONS`; applied iff it is.
+
+    Parametrised from the imported table itself (the maintainer (by delegation), "2026-10-16
+    09:40:20 BST" Q1: *by derivation, not by count*): every `(from, to)` pair of `DatasetStatus`
+    with `from != to`. Eleven of the twenty are refused at main `0877e6e7`; the nine allowed
+    ones are controls that pass on the base and must stay green.
+    """
+    allowed = DatasetStatus(target) in VALID_DATASET_TRANSITIONS[DatasetStatus(source)]
+    outcome = await _ds_probe(database, workspace_id, source, _status_set(target))
+    if allowed:
+        assert outcome is None, f"{source} -> {target} is in the table but was refused: {outcome}"
+    else:
+        _assert_refused(outcome, f"{source} -> {target}")
+
+
+@pytest.mark.req("FR-44")
+async def test_an_archived_dataset_version_takes_no_update_at_all(
+    database: Database, workspace_id
+) -> None:
+    """`archived` is terminal: even `updated_at` alone is refused (09:40:20 Q1)."""
+    outcome = await _ds_probe(
+        database, workspace_id, "archived",
+        "UPDATE dataset_versions SET updated_at = now() WHERE id = :id",
+    )
+    _assert_refused(outcome, "UPDATE of an archived dataset version")
+
+
+@pytest.mark.req("FR-44")
+async def test_an_unchanged_status_is_not_a_transition_and_is_not_refused_as_one(
+    database: Database, workspace_id
+) -> None:
+    """The control of the "unchanged" limb (09:44:25 item 2): the other rules still decide.
+
+    `validated -> validated` setting `profile_id` `NULL -> value` on a data-frozen row is
+    permitted. Green on the base (nothing guards) and green after SL-1770; its pair below is
+    the one that is refused, so rule 3 cannot be read as a bypass of the freeze.
+    """
+    outcome = await _ds_probe(
+        database, workspace_id, "validated",
+        "UPDATE dataset_versions SET status = 'validated', profile_id = gen_random_uuid() "
+        "WHERE id = :id",
+    )
+    assert outcome is None, f"a same-status profile_id NULL -> value was refused: {outcome}"
+
+
+@pytest.mark.req("FR-44")
+async def test_an_unchanged_status_does_not_unfreeze_the_data(
+    database: Database, workspace_id
+) -> None:
+    """The refused half of the pair: `validated -> validated` setting `tables` is the freeze's."""
+    outcome = await _ds_probe(
+        database, workspace_id, "validated",
+        "UPDATE dataset_versions SET status = 'validated', "
+        "tables = CAST('[{\"name\": \"x\"}]' AS jsonb) WHERE id = :id",
+    )
+    _assert_refused(outcome, "validated -> validated setting tables on a frozen row")
+
+
+@pytest.mark.req("FR-44")
+@pytest.mark.parametrize("column", sorted(_FROZEN_DATA_WRITES))
+async def test_a_version_returned_to_draft_by_fr_53_keeps_its_data_frozen(
+    database: Database, workspace_id, column: str
+) -> None:
+    """The ruling's own red: the data freezes at the first validation and stays frozen.
+
+    FR-53 sends a version back to `draft` and flags the Models fitted on it; it does not let
+    the data change under them. `draft` is not "never validated".
+    """
+    outcome = await _ds_probe(
+        database, workspace_id, "returned-to-draft",
+        f"UPDATE dataset_versions SET {_FROZEN_DATA_WRITES[column]} WHERE id = :id",
+    )
+    _assert_refused(outcome, f"{column} on a version returned to draft")
+
+
+@pytest.mark.req("FR-44")
+@pytest.mark.parametrize("state", ["validating", "validated", "failed"])
+async def test_the_data_of_a_dataset_version_is_frozen_in_every_later_state(
+    database: Database, workspace_id, state: str
+) -> None:
+    outcome = await _ds_probe(
+        database, workspace_id, state,
+        f"UPDATE dataset_versions SET {_FROZEN_DATA_WRITES['tables']} WHERE id = :id",
+    )
+    _assert_refused(outcome, f"tables on a {state} version")
+
+
+@pytest.mark.req("FR-44")
+async def test_the_data_of_a_never_validated_draft_may_still_change(
+    database: Database, workspace_id
+) -> None:
+    """Ingestion, `correct_schema`, derivation and the split write `tables` pre-validation."""
+    outcome = await _ds_probe(
+        database, workspace_id, "draft",
+        f"UPDATE dataset_versions SET {_FROZEN_DATA_WRITES['tables']} WHERE id = :id",
+        f"UPDATE dataset_versions SET {_FROZEN_DATA_WRITES['totals']} WHERE id = :id",
+    )
+    assert outcome is None, f"a pre-validation data write was refused: {outcome}"
+
+
+@pytest.mark.req("FR-44")
+@pytest.mark.parametrize("state", ["draft", "validated"])
+async def test_the_report_id_moves_only_out_of_validating(
+    database: Database, workspace_id, state: str
+) -> None:
+    """`draft -> draft` and `validated -> validated` may not change `validation_report_id`."""
+    outcome = await _ds_probe(
+        database, workspace_id, state,
+        "UPDATE dataset_versions SET validation_report_id = gen_random_uuid() WHERE id = :id",
+    )
+    _assert_refused(outcome, f"validation_report_id on a {state} version")
+
+
+@pytest.mark.req("FR-44")
+async def test_a_frozen_dataset_version_is_never_re_profiled_at_the_database(
+    database: Database, workspace_id
+) -> None:
+    """`profile_id` is `NULL -> value` once after the freeze; a re-point is refused (15:14:52)."""
+    params = _ds_params(workspace_id)
+    arrange = [(_DS_INSERT, params)] + [(sql, params) for sql in _PATH_TO["validated"]]
+    arrange.append(
+        ("UPDATE dataset_versions SET profile_id = gen_random_uuid() WHERE id = :id", params)
+    )
+    outcome = await _probe(
+        database,
+        [("UPDATE dataset_versions SET profile_id = gen_random_uuid() WHERE id = :id", params)],
+        arrange,
+    )
+    _assert_refused(outcome, "a profile re-point on a data-frozen version")
+
+
+@pytest.mark.req("FR-44")
+async def test_a_dataset_version_keeps_its_identity(database: Database, workspace_id) -> None:
+    outcome = await _ds_probe(
+        database, workspace_id, "draft",
+        "UPDATE dataset_versions SET slug = slug || 'x' WHERE id = :id",
+    )
+    _assert_refused(outcome, "an identity column of a draft dataset version")
+
+
+@pytest.mark.req("FR-44")
+@pytest.mark.parametrize("statement", ["DELETE", "TRUNCATE"])
+async def test_a_dataset_version_is_never_deleted_or_truncated(
+    database: Database, workspace_id, statement: str
+) -> None:
+    sql = {
+        "DELETE": "DELETE FROM dataset_versions WHERE id = :id",
+        "TRUNCATE": f"TRUNCATE {await _referencing_closure(database, 'dataset_versions')}",
+    }[statement]
+    outcome = await _ds_probe(database, workspace_id, "draft", sql)
+    _assert_refused(outcome, sql)
+
+
+@pytest.mark.req("FR-44")
+async def test_fr_53_may_revalidate_a_validated_version_and_move_the_report_id(
+    database: Database, workspace_id
+) -> None:
+    """Allowed, green before and after: `validated -> validating -> validated` (new report) and
+    `validating -> draft` (report cleared). The report id moves only out of `validating`.
+    """
+    new_report = (
+        "UPDATE dataset_versions SET status = 'validated', "
+        "validation_report_id = gen_random_uuid() WHERE id = :id"
+    )
+    revalidate = await _ds_probe(
+        database, workspace_id, "validated", _TO_VALIDATING, new_report
+    )
+    assert revalidate is None, f"FR-53 re-validation was refused: {revalidate}"
+    back = await _ds_probe(database, workspace_id, "validated", _TO_VALIDATING, _BACK_TO_DRAFT)
+    assert back is None, f"FR-53's return to draft was refused: {back}"
