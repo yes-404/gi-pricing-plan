@@ -42,6 +42,7 @@ export const GBM_MODEL: Model = {
   },
   fit_result: {
     model_type: "lightgbm",
+    banding_warnings: [],
     booster_blob: { sha256: "a".repeat(64), bytes: 184320, media_type: "text/plain" },
     booster_format: "lightgbm_text",
     feature_order: ["driver_age_banded"],
@@ -139,6 +140,7 @@ export const EBM_MODEL: Model = {
   },
   fit_result: {
     model_type: "ebm",
+    banding_warnings: [],
     objective: "rmse",
     link: "identity",
     intercept: 6.8142,

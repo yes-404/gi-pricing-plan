@@ -13,7 +13,13 @@ import { computed, reactive, ref } from "vue";
 import type { QuotePurpose } from "@/api/score";
 import FormField from "@/components/FormField.vue";
 
-import { buildInputs, type ContractField, type QuoteFormSubmit, type RawValue } from "./quoteForm";
+import {
+  buildInputs,
+  type ContractField,
+  fieldHint,
+  type QuoteFormSubmit,
+  type RawValue,
+} from "./quoteForm";
 
 const props = defineProps<{
   fields: readonly ContractField[];
@@ -36,14 +42,7 @@ const effectiveDate = ref(new Date().toISOString().slice(0, 10));
 const problems = ref<Record<string, string>>({});
 
 const hints = computed(() =>
-  Object.fromEntries(
-    props.fields.map((field) => {
-      const parts: string[] = [field.type];
-      if (field.min != null || field.max != null) parts.push(`range ${field.min ?? "…"} to ${field.max ?? "…"}`);
-      if (field.nullable) parts.push("optional");
-      return [field.name, parts.join(", ")];
-    }),
-  ),
+  Object.fromEntries(props.fields.map((field) => [field.name, fieldHint(field)])),
 );
 
 function submit(): void {

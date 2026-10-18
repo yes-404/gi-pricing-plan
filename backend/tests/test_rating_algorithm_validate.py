@@ -147,6 +147,8 @@ def test_the_first_reported_issue_is_the_code_save_refuses_with(
     assert report.status_code == 200, report.text
     assert saved.status_code == 422, saved.text
     assert report.json()["issues"][0]["code"] == saved.json()["code"]
+    if name == "type_mismatch":
+        assert saved.json()["code"] == "RATING_TYPE_MISMATCH"
 
 
 @pytest.mark.req("FR-1607")

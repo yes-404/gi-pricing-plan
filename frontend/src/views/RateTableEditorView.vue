@@ -20,9 +20,13 @@ import {
   type RateTable,
   type RateTableCell,
   type RateTableDiff,
+  type RateTableVersion,
 } from "@/api/rateTables";
 import { getRatingVersionByRef, type RatingVersion } from "@/api/ratingVersions";
+import BulkOperationDialog from "@/components/rating/BulkOperationDialog.vue";
+import RateTableDiffPanel from "@/components/rating/RateTableDiffPanel.vue";
 import RateTableGrid from "@/components/rating/RateTableGrid.vue";
+import RateTableImportExport from "@/components/rating/RateTableImportExport.vue";
 
 const props = defineProps<{ slug: string; version: string; tableSlug: string }>();
 
@@ -194,6 +198,21 @@ async function confirm(): Promise<void> {
 function discard(): void {
   diff.value = null;
 }
+
+/** A bulk operation or an import made the next version: show it, as a confirmed edit does. */
+async function onCreated(made: RateTableVersion): Promise<void> {
+  tableVersion.value = made.version;
+  edited.value = {};
+  changeNote.value = "";
+  diff.value = null;
+  cellErrors.value = {};
+  created.value = `Created ${props.tableSlug}@${made.version}`;
+  try {
+    await loadTable();
+  } catch (error) {
+    fail(error);
+  }
+}
 </script>
 
 <template>
@@ -342,6 +361,18 @@ function discard(): void {
           </button>
         </div>
       </section>
+
+      <div class="mt-8 space-y-6">
+        <RateTableDiffPanel :table-ref="tableRef" />
+        <BulkOperationDialog
+          :table-ref="tableRef"
+          @created="onCreated"
+        />
+        <RateTableImportExport
+          :table-ref="tableRef"
+          @created="onCreated"
+        />
+      </div>
     </template>
   </section>
 </template>

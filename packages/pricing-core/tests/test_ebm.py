@@ -4,6 +4,7 @@ verbatim, the round-trip identity, constraints, weights, seed. The platform seam
 from __future__ import annotations
 
 from collections.abc import Sequence
+from decimal import Decimal
 from uuid import uuid4
 
 import numpy as np
@@ -14,6 +15,7 @@ from interpret.glassbox import ExplainableBoostingRegressor
 from model_schema import (
     Banding,
     BandingMethod,
+    BandingMinimums,
     EbmCategoricalBins,
     EbmFeatureBins,
     EbmFitResult,
@@ -21,9 +23,11 @@ from model_schema import (
     EbmSpec,
     Factor,
     FactorType,
+    LossTreatment,
     SplitRef,
     WeightSpec,
 )
+from pricing_core.modelling import BandingError
 from pricing_core.modelling.ebm import EbmFitError, fit_ebm
 from pricing_core.modelling.factors import resolve_factors
 from pricing_core.modelling.predict import PredictionError, predict_ebm
@@ -531,3 +535,83 @@ def test_a_book_of_only_weight_zero_rows_says_so() -> None:
         fit_ebm(book, _spec(weight=CLAIM_WEIGHT), FACTORS, bandings=BANDINGS)
     assert refused.value.code == "DECLARED_WEIGHT_INVALID"
     assert "weight 0" in str(refused.value)
+
+
+# --------------------------------------------------------------------------------------
+# FR-127 (SL-8031, red first) — a capped EbmSpec fits capped
+# --------------------------------------------------------------------------------------
+
+CAP = 1
+
+
+def _scores(fit: object) -> np.ndarray:
+    return np.concatenate([np.asarray(t.scores, dtype=float).ravel()
+                           for t in fit.terms])  # type: ignore[attr-defined]
+
+
+@pytest.mark.req("FR-127")
+def test_a_capped_ebm_spec_is_fitted_on_the_capped_response() -> None:
+    """R4: every term score equals the hand-capped fit's (same `random_state`), and differs
+    from the uncapped fit's. On main the treated fit equals the uncapped one."""
+    data = _book()
+    assert (data["claim_count"] > CAP).mean() > 0.10
+    capped = LossTreatment(kind="capped", cap_minor=CAP, restoration_loading=1.02)
+    treated = fit_ebm(data, _spec(loss_treatment=capped), FACTORS, bandings=BANDINGS)
+    by_hand = fit_ebm(
+        data.with_columns(pl.col("claim_count").clip(upper_bound=float(CAP))),
+        _spec(), FACTORS, bandings=BANDINGS)
+    uncapped = fit_ebm(data, _spec(), FACTORS, bandings=BANDINGS)
+    assert np.allclose(_scores(treated), _scores(by_hand), rtol=0, atol=1e-10)
+    assert not np.allclose(_scores(treated), _scores(uncapped), rtol=0, atol=1e-6)
+
+
+@pytest.mark.req("FR-127")
+@pytest.mark.parametrize("kind", ["spliced", "excess"])
+def test_an_ebm_loss_treatment_this_slice_does_not_implement_is_refused_by_name(
+    kind: str,
+) -> None:
+    """R4, refusal limb: `EbmFitError`, code `LOSS_TREATMENT_UNIMPLEMENTED`, kind named."""
+    spec = _spec(loss_treatment=LossTreatment(kind=kind, cap_minor=CAP))
+    with pytest.raises(EbmFitError, match=kind) as refused:
+        fit_ebm(_book(), spec, FACTORS, bandings=BANDINGS)
+    assert refused.value.code == "LOSS_TREATMENT_UNIMPLEMENTED"
+
+
+# --------------------------------------------------------------------------------------
+# FR-100 (SL-8031, red first) — the banding check runs at fit
+# --------------------------------------------------------------------------------------
+
+
+@pytest.mark.req("FR-100")
+def test_a_banding_whose_data_moved_is_refused_at_fit() -> None:
+    """R5: the 25-34 band is reached by no fitted row. On main this fits."""
+    moved = _book().filter((pl.col("age") < 25.0) | (pl.col("age") >= 35.0))
+    with pytest.raises(BandingError) as refused:
+        fit_ebm(moved, _spec(), FACTORS, bandings=BANDINGS)
+    assert refused.value.code == "BAND_EMPTY"
+
+
+@pytest.mark.req("FR-100")
+def test_a_thin_band_under_fail_refuses_the_fit() -> None:
+    """R6."""
+    strict = AGE_BANDING.model_copy(update={"minimums": BandingMinimums(
+        min_claims_per_band=1_000_000, on_violation="fail")})
+    with pytest.raises(BandingError) as refused:
+        fit_ebm(_book(), _spec(), FACTORS, bandings={strict.id: strict})
+    assert refused.value.code == "BAND_BELOW_MIN_EXPOSURE"
+
+
+@pytest.mark.req("FR-100")
+def test_a_thin_band_under_warn_fits_and_records_a_typed_warning() -> None:
+    """R7: on main the first line raises `AttributeError` (no such field)."""
+    banding = AGE_BANDING.model_copy(update={"minimums": BandingMinimums(
+        min_exposure_per_band=Decimal(1_000_000))})
+    fit = fit_ebm(_book(), _spec(), FACTORS, bandings={banding.id: banding})
+    warnings = fit.banding_warnings
+    assert len(warnings) == len(banding.labels)
+    for index, warning in enumerate(warnings):
+        assert str(warning.banding) == f"banding:{banding.slug}@{banding.version}"
+        assert (warning.band_label, warning.band_index) == (banding.labels[index], index)
+        assert warning.measure == "exposure"
+        assert type(warning.observed) is Decimal
+        assert warning.minimum == Decimal(1_000_000)
