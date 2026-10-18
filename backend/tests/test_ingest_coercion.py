@@ -253,3 +253,139 @@ async def test_the_identity_holds_on_the_g2_seed_recipe(
     assert (run.rows_read, run.rows_rejected, run.rows_written) == (6, 0, 4)
     assert run.rows_written == 6 - 0 - 2 + 0
     assert_row_identity(run)
+
+
+# -- limb (b): validation gives the quarantined cells a verdict (R4, R5) -------------------
+
+_T = {"table": "policy_exposure"}
+_RULES: dict[str, tuple[str, str, dict[str, Any], dict[str, Any]]] = {
+    # slug: (layer, check, target, params)
+    "dtype": (
+        "structural", "dtype_match", _T,
+        {"columns": {"claim_amount": "float64", "start_date": "date"}},
+    ),
+    "datep": ("structural", "date_parsed", _T, {"columns": ["start_date"]}),
+    "cols": (
+        "structural", "column_presence", _T,
+        {"columns": ["policy_id", "claim_amount", "start_date"]},
+    ),
+    "claim-nonneg": (
+        "actuarial_sanity", "range", {"table": "policy_exposure", "column": "claim_amount"},
+        {"min_inclusive": 0, "key_columns": ["policy_id"]},
+    ),
+    "reject-rate": ("structural", "reject_rate", _T, {}),
+}
+
+
+async def _validate_with(
+    database: Database, blob_store: BlobStore, workspace_id, actor: Principal,
+    version: DatasetVersionRow, severities: dict[str, str],
+):
+    """Approve the named rules at the given severities as the dataset's Rule Set, validate."""
+    from backend.tests.approved_rows import add_approved
+
+    from app.db.models import ValidationRuleRow, ValidationRuleSetRow
+    from app.platform import validation as validation_service
+
+    async with database.unit_of_work() as session:
+        rule_ids = []
+        for slug, severity in severities.items():
+            layer, check, target, params = _RULES[slug]
+            rule = ValidationRuleRow(
+                workspace_id=workspace_id, slug=f"{slug}-{new_uuid7().hex[-6:]}", version=1,
+                layer=layer, check=check, severity=severity,
+                body={"target": target, "params": params, "scope": {}, "tolerance": {},
+                      "message": slug, "rationale": slug},
+                status="approved", authored_by=actor.id, approved_by=new_uuid7(),
+                dry_run_report_id=new_uuid7(),
+            )
+            await add_approved(session, rule)
+            rule_ids.append(str(rule.id))
+        await add_approved(
+            session,
+            ValidationRuleSetRow(
+                workspace_id=workspace_id, dataset_id=version.dataset_id,
+                slug=str(version.dataset_id), version=1, body={"rule_ids": rule_ids},
+                status="approved",
+            ),
+        )
+        job = await job_service.submit(
+            session, JobKind.DATASET_VALIDATE,
+            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+             "dataset_version_id": str(version.id)},
+            actor, workspace_id=workspace_id,
+        )
+    await execute_job(database, job.id, blob_store)
+    async with database.session() as session:
+        report_id = (
+            await validation_service.reports_for_version(
+                session, workspace_id=workspace_id, version_id=version.id
+            )
+        )[0].id
+        return await validation_service.load_report(
+            session, workspace_id=workspace_id, report_id=report_id
+        )
+
+
+def _result(report, slug_prefix: str):
+    rule_slugs = {r.rule_id: r for r in report.results}
+    return next(r for r in rule_slugs.values() if r.rule_slug.startswith(slug_prefix))
+
+
+@pytest.mark.req("FR-32")
+@pytest.mark.req("FR-46")
+async def test_validation_fails_a_version_whose_cells_were_quarantined(
+    database: Database, blob_store: BlobStore, workspace_id, actor
+) -> None:
+    """R4: the report is overall `fail`, with the three verdicts of Acceptance 8."""
+    from model_schema import OverallOutcome
+
+    version, _ = await _ingest(database, blob_store, workspace_id, actor, CSV, RECIPE)
+    report = await _validate_with(
+        database, blob_store, workspace_id, actor, version, dict.fromkeys(_RULES, "fail")
+    )
+    assert report.overall is OverallOutcome.FAIL
+    assert _result(report, "reject-rate").measured["rejected_rows"] == 3
+    assert _result(report, "reject-rate").measured["rows_read"] == 5
+    assert _result(report, "dtype").measured["coerced_cells"] == {
+        "claim_amount": 2, "start_date": 1,
+    }
+    assert _result(report, "datep").measured["coerced_cells"] == {"start_date": 1}
+
+
+@pytest.mark.req("FR-46")
+async def test_the_declared_severity_decides_without_reject_rate(
+    database: Database, blob_store: BlobStore, workspace_id, actor
+) -> None:
+    """R5: with `reject-rate` out of the Rule Set, `warn` gives a warning verdict that blocks
+    promotion until acknowledged, and `fail` gives `fail`."""
+    from app.errors import PlatformError
+    from app.platform import validation as validation_service
+    from model_schema import OverallOutcome
+
+    version, _ = await _ingest(database, blob_store, workspace_id, actor, CSV, RECIPE)
+    report = await _validate_with(
+        database, blob_store, workspace_id, actor, version, {"dtype": "warn", "datep": "warn"}
+    )
+    assert report.overall is OverallOutcome.PASS_WITH_WARNINGS
+
+    # The report row is stored; promotion is refused while the warnings are unacknowledged.
+    async with database.session() as session:
+        report_id = (
+            await validation_service.reports_for_version(
+                session, workspace_id=workspace_id, version_id=version.id
+            )
+        )[0].id
+    with pytest.raises(PlatformError) as excinfo:
+        async with database.unit_of_work() as session:
+            await validation_service.promote_using_report(
+                session, workspace_id=workspace_id, actor=actor,
+                version_id=version.id, report_id=report_id,
+            )
+    assert excinfo.value.code == "WARN_NOT_ACKNOWLEDGED"
+
+    version, _ = await _ingest(database, blob_store, workspace_id, actor, CSV, RECIPE)
+    report = await _validate_with(
+        database, blob_store, workspace_id, actor, version, {"dtype": "fail", "datep": "warn"}
+    )
+    assert report.overall is OverallOutcome.FAIL
