@@ -3,7 +3,7 @@ id: PL-1794
 family: plan
 kind: map
 title: WK-674 — Slice 5 (SL-1259) before its GO, with SL-1455 merged as a formal dependency, the premises Slice 4 and SL-1455 changed, and five decision points — a dated Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: retired                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-18   # filed 2026-10-17 under working id 8077; minted 2026-10-18 as PL-1794
 owner: planner
 tree: 055b5e6b74f9d4b10f6df54570e33ed2805ae9a8
@@ -11,7 +11,7 @@ phase: P2
 work: WK-674
 supersedes: []
 superseded_by: ~
-corrected_by: []
+corrected_by: [RL-8124]
 relates: [PL-1237, PL-1537, PL-1620, PL-1710, PL-1735, PL-1454, PL-1714, RL-1614, RL-1685, RL-1687, SL-1258, SL-1259, SL-1455, SL-1711, SL-1736, SL-1722]
 ---
 
