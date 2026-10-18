@@ -1,16 +1,16 @@
 ---
-id: FD-8104
+id: FD-1801
 family: finding
 title: Data-dependent tests skip silently in CI because examples/fremtpl2/data is gitignored and no workflow step fetches it
 status: active
-created: 2026-10-17
+created: 2026-10-18   # filed 2026-10-17 under working id 8104; minted 2026-10-18 as FD-1801
 owner: auditor
 tree: 9469721db3d26480824cc1d715da2ec4ca9044d0
 corrected_by: []
-relates: [WK-1178, FD-8103]
+relates: [WK-1178, FD-1800]
 ---
 
-# FD-8104 — Data-dependent tests skip silently in CI because examples/fremtpl2/data is gitignored and no workflow step fetches it
+# FD-1801 — Data-dependent tests skip silently in CI because examples/fremtpl2/data is gitignored and no workflow step fetches it
 
 ## Finding
 

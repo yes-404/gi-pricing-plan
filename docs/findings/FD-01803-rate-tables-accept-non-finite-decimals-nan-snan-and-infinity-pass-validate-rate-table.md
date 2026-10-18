@@ -1,22 +1,22 @@
 ---
-id: FD-8106
+id: FD-1803
 family: finding
 title: Rate tables accept non-finite decimals - NaN, sNaN and Infinity pass validate_rate_table
 status: active
-created: 2026-10-17
+created: 2026-10-18   # filed 2026-10-17 under working id 8106; minted 2026-10-18 as FD-1803
 owner: auditor
 tree: 9469721db3d26480824cc1d715da2ec4ca9044d0
 corrected_by: []
-relates: [WK-1178, FD-8105]
+relates: [WK-1178, FD-1802]
 ---
 
-# FD-8106 — Rate tables accept non-finite decimals
+# FD-1803 — Rate tables accept non-finite decimals
 
 ## Finding
 
 **HIGH; owner WK-1178; verdict deferred with an owner. The fix is its own P2 slice, SL 8108 / PL 8107
 (planned; GO 22:51:59), gated after SL 8099 → SL-1543.** Authority: the maintainer's entry
-"2026-10-17 22:51:59 BST" (`to-lead.md`: FD 8106 → HIGH, verified) and the lead's
+"2026-10-17 22:51:59 BST" (`to-lead.md`: FD-1803 → HIGH, verified) and the lead's
 "2026-10-17 22:51:15 BST" entry in `from-lead-2026-10-09.md` (A3). A rate table's value is a rating
 relativity; a stored `NaN` or `Infinity` reaches the rating path.
 

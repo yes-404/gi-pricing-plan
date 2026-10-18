@@ -1,16 +1,16 @@
 ---
-id: FD-8101
+id: FD-1798
 family: finding
 title: Predict's dummy-term branch scores 0 for a level its factor cannot produce, with no error
 status: active
-created: 2026-10-17
+created: 2026-10-18   # filed 2026-10-17 under working id 8101; minted 2026-10-18 as FD-1798
 owner: auditor
 tree: 9469721db3d26480824cc1d715da2ec4ca9044d0
 corrected_by: []
 relates: [WK-1178, SL-1543, PL-1772, SL-1773, LG-1774, FR-222]
 ---
 
-# FD-8101 — Predict's dummy-term branch scores 0 for a level its factor cannot produce, with no error
+# FD-1798 — Predict's dummy-term branch scores 0 for a level its factor cannot produce, with no error
 
 ## Finding
 
@@ -62,12 +62,12 @@ At `origin/main` 9469721d (read by the author, not taken from the trace note):
    level must be producible by its Factor (a `BANDING` factor's band labels, a `GROUPING`'s
    groups, a categorical column's observed levels); otherwise a named error.
 2. **Per-call guard in `_term_vectors`**: refuse when a dummy term meets an `IDENTITY` numeric
-   column. Smaller, but pays per quote on the hot path FD-8097 is cutting.
+   column. Smaller, but pays per quote on the hot path FD-1797 is cutting.
 3. **Leave, record only**: rely on the API's closed write path. Cheapest; defence in depth stays absent.
 
 ## Disposition
 
-Deferred with an owner: WK-1178, due before the P2 close. **Not in SL 8099's scope** (that slice is FD-8097's timing
+Deferred with an owner: WK-1178, due before the P2 close. **Not in SL 8099's scope** (that slice is FD-1797's timing
 fix). Decision on the option belongs to the lead or an RL; this record picks none. The event
 that next discharges it: a merged change adding the domain check, or a dated ruling accepting
 the absence.

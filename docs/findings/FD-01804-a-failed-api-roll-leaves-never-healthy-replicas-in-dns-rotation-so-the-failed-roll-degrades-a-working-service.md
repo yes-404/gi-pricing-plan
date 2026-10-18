@@ -1,16 +1,16 @@
 ---
-id: FD-8112
+id: FD-1804
 family: finding
 title: A failed api roll leaves never-healthy replicas in DNS rotation, so the failed roll degrades a working service
 status: active
-created: 2026-10-18
+created: 2026-10-18   # filed 2026-10-18 under working id 8112; minted 2026-10-18 as FD-1804
 owner: auditor
 tree: 0a13415851a0a75d0ab8734fe8a02b2b6739e78a
 corrected_by: []
 relates: [WK-674, NFR-531]
 ---
 
-# FD-8112 — A failed api roll leaves never-healthy replicas in DNS rotation, so the failed roll degrades a working service
+# FD-1804 — A failed api roll leaves never-healthy replicas in DNS rotation, so the failed roll degrades a working service
 
 ## Finding
 

@@ -1,16 +1,16 @@
 ---
-id: FD-8096
+id: FD-1796
 family: finding
 title: The dislocation run's percentage fields are float while the movers' change_pct is a decimal string
 status: active
-created: 2026-10-17
+created: 2026-10-18   # filed 2026-10-17 under working id 8096; minted 2026-10-18 as FD-1796
 owner: auditor
 tree: 9469721db3d26480824cc1d715da2ec4ca9044d0
 corrected_by: []
 relates: [WK-1178, WK-675, FR-21]
 ---
 
-# FD-8096 — The dislocation run's percentage fields are float while the movers' change_pct is a decimal string
+# FD-1796 — The dislocation run's percentage fields are float while the movers' change_pct is a decimal string
 
 ## Finding
 

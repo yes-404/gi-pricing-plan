@@ -1,16 +1,16 @@
 ---
-id: FD-8094
+id: FD-1795
 family: finding
 title: The FD-1684 media-type sweep predicate keys on an empty response schema, so a wrong media type on a typed schema trips nothing
 status: active
-created: 2026-10-17
+created: 2026-10-18   # filed 2026-10-17 under working id 8094; minted 2026-10-18 as FD-1795
 owner: auditor
 tree: 9469721db3d26480824cc1d715da2ec4ca9044d0
 corrected_by: []
 relates: [WK-1178, SL-1709, PL-1708, FD-1684]
 ---
 
-# FD-8094 — The FD-1684 media-type sweep predicate keys on an empty response schema, so a wrong media type on a typed schema trips nothing
+# FD-1795 — The FD-1684 media-type sweep predicate keys on an empty response schema, so a wrong media type on a typed schema trips nothing
 
 ## Finding
 

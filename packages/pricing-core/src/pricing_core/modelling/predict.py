@@ -307,7 +307,7 @@ def linear_predictor_row(
     """`linear_predictor` for one quote, as a shape-`(1,)` array, with no frame rebuilt.
 
     Scoring one row through `linear_predictor` costs a lazy `with_columns` + `collect` in
-    `resolve_factors` per call (FD 8097 (filed in D21): ~16.9 ms a quote on a loaded box, 59% of a
+    `resolve_factors` per call (FD-1797 (filed in D21): ~16.9 ms a quote on a loaded box, 59% of a
     dislocation run). This reads the same resolution (`resolve_factor_columns`), the same
     coefficient walk (`_design_columns`), the same sum (`_accumulate`) and the same offset
     (`_offset`) from the one-row frame `pl.DataFrame([row])` that path builds — it does not

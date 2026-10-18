@@ -1,16 +1,16 @@
 ---
-id: FD-8105
+id: FD-1802
 family: finding
 title: Both upload routes (rate-table import, source preview) declare 413 and read the whole body with no size cap
 status: active
-created: 2026-10-17
+created: 2026-10-18   # filed 2026-10-17 under working id 8105; minted 2026-10-18 as FD-1802
 owner: auditor
 tree: 9469721db3d26480824cc1d715da2ec4ca9044d0
 corrected_by: []
-relates: [WK-1178, FD-8106]
+relates: [WK-1178, FD-1803]
 ---
 
-# FD-8105 — Both upload routes declare 413 and read the whole body with no size cap
+# FD-1802 — Both upload routes declare 413 and read the whole body with no size cap
 
 ## Finding
 

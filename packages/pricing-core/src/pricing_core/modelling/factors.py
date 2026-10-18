@@ -120,7 +120,7 @@ class FactorColumns:
     `produced` holds the columns a transformation made (a band, a group, a cross), by name;
     every other term reads the caller's own column. `resolve_factors` appends them to a copy of
     the frame; a caller that scores one row reads them directly, because appending is a lazy
-    `with_columns` + `collect` per call (FD 8097 (filed in D21)).
+    `with_columns` + `collect` per call (FD-1797 (filed in D21)).
     """
 
     produced: dict[str, pl.Series]

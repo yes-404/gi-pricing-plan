@@ -1,9 +1,9 @@
 ---
-id: RL-8076
+id: RL-1793
 family: ruling
 title: PL-1454 Task 4's acceptance sweep runs on the dedicated host nfr-bench-1, and its reading there is the G4 discharge for the FD-1411 remedy proof; the NFR-489 exit verdict stays SL-1259's per RL-1614 (precises PL-1454 Acceptance 2 and Task 4's host; G4 discharge event met)
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-10-16            # original date 2026-10-16, the maintainer's dated line; drafted 2026-10-17
+created: 2026-10-18   # filed 2026-10-16 under working id 8076; minted 2026-10-18 as RL-1793
 owner: decision-maker
 tree: 055b5e6b74f9d4b10f6df54570e33ed2805ae9a8
 phase: P2
@@ -15,7 +15,7 @@ corrected_by: []
 relates: [PL-1454, SL-1455, WK-1178, NFR-489, NFR-454, RL-1614, FD-1411]
 ---
 
-# RL-8076 — PL-1454 Task 4's acceptance sweep runs on the dedicated host, and its reading is the G4 discharge for the FD-1411 remedy proof
+# RL-1793 — PL-1454 Task 4's acceptance sweep runs on the dedicated host, and its reading is the G4 discharge for the FD-1411 remedy proof
 
 **Precises PL-1454 Acceptance 2 and Task 4's host; G4 discharge event met.**
 
@@ -72,10 +72,10 @@ this record's tree (055b5e6b, tree f394adecbe0382f790c6402b2558fbd4eec302c9):
   entry's citation; the drafter did not re-read it.
 
 The correction, verbatim (`to-lead.md` `:25217`–`:25218`; the entry's other lines rule
-SL-1259's DPs into PL 8077 and are not this record's):
+SL-1259's DPs into PL-1794 and are not this record's):
 
 > ## 2026-10-17 11:22:47 BST — Maintainer: SL-1259 (S5) DPs ruled; CORRECTION of my 16 Oct 22:22:44 item 2 (it overreached RL-1614)
-> CORRECTION: my 22:22:44 item 2 said SL-1455's dedicated-host sweep "IS the NFR-489 verdict". RL-1614 (on main; my own 11 Oct ruling) says SL-1259 holds P2's NFR-489 EXIT verdict on the exit tree, and SL-1455's Task 4 sweep is the FD-1411 REMEDY PROOF only, with "no two competing verdicts". I did not re-read RL-1614 before writing 22:22:44. CORRECTED: on nfr-bench-1, SL-1455's sweep is the G4 discharge for the FD-1411 remedy proof (a near-bound pass or fail may be claimed FOR THE REMEDY). The NFR-489 exit verdict stays S5's. RL 8076's text says exactly this and cites RL-1614.
+> CORRECTION: my 22:22:44 item 2 said SL-1455's dedicated-host sweep "IS the NFR-489 verdict". RL-1614 (on main; my own 11 Oct ruling) says SL-1259 holds P2's NFR-489 EXIT verdict on the exit tree, and SL-1455's Task 4 sweep is the FD-1411 REMEDY PROOF only, with "no two competing verdicts". I did not re-read RL-1614 before writing 22:22:44. CORRECTED: on nfr-bench-1, SL-1455's sweep is the G4 discharge for the FD-1411 remedy proof (a near-bound pass or fail may be claimed FOR THE REMEDY). The NFR-489 exit verdict stays S5's. RL-1793's text says exactly this and cites RL-1614.
 
 The drafter checked RL-1614 at origin/main 055b5e6b
 (`docs/rulings/RL-01614-dp-s5-a-decided-a-sl-1259-holds-the-nfr-489-exit-verdict-and-sl-1455-s-task-4-sweep-is-the-fd-1411-remedy-proof.md`):

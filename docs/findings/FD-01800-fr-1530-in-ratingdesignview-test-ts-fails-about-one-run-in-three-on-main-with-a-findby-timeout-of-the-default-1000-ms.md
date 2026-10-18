@@ -1,16 +1,16 @@
 ---
-id: FD-8103
+id: FD-1800
 family: finding
 title: FR-1530 in RatingDesignView.test.ts fails about one run in three on main, with a findBy timeout of the default 1000 ms
 status: active
-created: 2026-10-17
+created: 2026-10-18   # filed 2026-10-17 under working id 8103; minted 2026-10-18 as FD-1800
 owner: auditor
 tree: 9469721db3d26480824cc1d715da2ec4ca9044d0
 corrected_by: []
 relates: [WK-1178, SL-1740, SL-1547]
 ---
 
-# FD-8103 — FR-1530 in RatingDesignView.test.ts fails about one run in three on main, with a findBy timeout of the default 1000 ms
+# FD-1800 — FR-1530 in RatingDesignView.test.ts fails about one run in three on main, with a findBy timeout of the default 1000 ms
 
 ## Finding
 
