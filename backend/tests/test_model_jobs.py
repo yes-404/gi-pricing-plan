@@ -34,12 +34,15 @@ from app.platform import diagnostics as diagnostics_service
 from app.platform import jobs as job_service
 from app.platform import modelling as model_service
 from app.platform import rbac
+from app.platform import transformations as transform_service
 from app.platform.blobs import BlobStore
 from app.worker.data_handlers import register_data_handlers
 from app.worker.model_handlers import register_model_handlers
 from app.worker.tasks import execute_job
 from model_schema import (
     ActorKind,
+    Banding,
+    BandingMethod,
     DatasetStatus,
     Factor,
     FactorType,
@@ -594,6 +597,79 @@ async def test_a_factor_from_another_dataset_is_refused(
                 spec=_spec(version_id, (foreign,)),
             )
     assert refused.value.code == "FACTOR_RESOLUTION_FAILED"
+
+
+@pytest.mark.req("FR-100")
+async def test_a_fit_over_a_banding_with_an_empty_band_fails_with_band_empty(
+    database: Database, blob_store: BlobStore, workspace_id
+) -> None:
+    """R8 (SL-8031): the fit Job surfaces `check_banding`'s refusal.
+
+    `very-high` (300 000 to 600 000 minor units) is reached by no row of `BOOK`, whose
+    amounts are 100 000 and 200 000. The banded factor is the model's only factor, so
+    nothing but the empty band can make the fit fail: on main the Job SUCCEEDS, and the
+    assert on `FAILED` is the red. An assert on "a terminal state" would not be.
+
+    The Job row stores `code`, `message` and `retryable`, not an HTTP status, so the 409
+    the plan names is the handler mapping's (`model_handlers.py`) and is not readable here.
+    """
+    from app.db.models import JobRow
+
+    actor = await _actuary(database, workspace_id)
+    dataset_id = await _dataset(database, blob_store, workspace_id, actor)
+    version_id = await _validated_version(
+        database, blob_store, workspace_id, actor, dataset_id
+    )
+    split = await _split(database, blob_store, workspace_id, actor, version_id)
+
+    async with database.unit_of_work() as session:
+        banding = await transform_service.create_banding(
+            session, workspace_id=workspace_id, actor=actor,
+            banding=Banding(
+                id=uuid4(), slug=f"amt-{uuid4().hex[-6:]}", dataset_id=dataset_id,
+                version=1, column="claim_amount_minor", method=BandingMethod.MANUAL,
+                boundaries=(0.0, 150_000.0, 300_000.0, 600_000.0),
+                labels=("low", "high", "very-high"),
+            ),
+        )
+        banding_id = banding.id
+    async with database.unit_of_work() as session:
+        factor = await model_service.create_factor(
+            session, workspace_id=workspace_id, actor=actor,
+            factor=Factor(
+                id=uuid4(), slug="amount-band", dataset_id=dataset_id, version=1,
+                type=FactorType.BANDING, source_columns=("claim_amount_minor",),
+                banding_id=banding_id,
+            ),
+        )
+        factor_id = factor.id
+
+    async with database.unit_of_work() as session:
+        row, should_fit = await model_service.reserve_model(
+            session, workspace_id=workspace_id, actor=actor,
+            spec=_spec(version_id, (factor_id,), split_ref=split),
+        )
+        assert should_fit is True
+        job = await job_service.submit(
+            session,
+            JobKind.MODEL_FIT,
+            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
+             "model_id": str(row.id)},
+            actor,
+            workspace_id=workspace_id,
+        )
+
+    status = await execute_job(database, job.id, blob_store)
+    assert status is JobStatus.FAILED, (
+        "FR-100: an empty band always fails the fit; on main this Job succeeds"
+    )
+    async with database.session() as session:
+        job_row = await session.get(JobRow, job.id)
+    assert job_row is not None
+    assert job_row.error is not None
+    assert job_row.error["code"] == "BAND_EMPTY"
+    assert "very-high" in job_row.error["message"]
+    assert job_row.error["retryable"] is False
 
 
 @pytest.mark.req("FR-204")

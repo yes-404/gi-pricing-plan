@@ -23,6 +23,7 @@ const SPEC: EbmSpec = {
 
 const FIT: EbmFitResult = {
   model_type: "ebm",
+  banding_warnings: [],
   objective: "rmse",
   link: "identity",
   intercept: -2.4181,

@@ -60,6 +60,7 @@ DEFAULT_QUEUE_FOR_KIND: dict[JobKind, JobQueue] = {
     JobKind.DATASET_VALIDATE: JobQueue.COMPUTE,
     JobKind.DATASET_PROFILE: JobQueue.COMPUTE,
     JobKind.DATASET_DERIVE: JobQueue.COMPUTE,
+    JobKind.BLOB_PROMOTE: JobQueue.IO,
     JobKind.MODEL_FIT: JobQueue.COMPUTE,
     JobKind.MODEL_TRANSPARENCY: JobQueue.COMPUTE,
     JobKind.MODEL_BACKTEST: JobQueue.COMPUTE,
