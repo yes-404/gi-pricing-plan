@@ -14,7 +14,8 @@ relates: [WK-1178, FD-1384, RL-1383, SL-1543, NFR-499]
 
 ## Finding
 
-**MEDIUM; owner WK-1178; verdict deferred with an owner.** Two defects in one chain, the
+**MEDIUM; owner WK-1178; verdict deferred with an owner, now with a deadline: before the P2
+code freeze (Wed 4 Nov 2026), see Close.** Two defects in one chain, the
 maintainer's entry "2026-10-17 21:04:43 BST" (`to-lead.md`, item 3): a validation missing at the
 write boundary, and a cause that is not usable when the failure surfaces. Neither mispriced a
 quote; both fail loudly, late.
@@ -24,6 +25,8 @@ quote; both fail loudly, late.
 2. **Unusable cause.** A GLM pinned to that Banding fails `rating.compile`. The Job carries code
    `BUNDLE_COMPILE_FAILED` and a detail that keeps the rule's text but names no artifact type,
    slug or version.
+
+A second symptom surfaced on 2026-10-18, below: the same missing check, hit on the GBM path.
 
 Observed in SL-1543's test world: Banding `driv_age-banding` saved, compile `ValueError` "not a
 valid artifact reference: the slug is outside the artifact type's slug grammar". (That slug
@@ -63,6 +66,25 @@ At `origin/main` 9469721d (docs-d21 @50bc0ca2 contains it), read by the author:
   allow-list forbids echoing input, so the fix has to name the offender from the carried item,
   not from the exception.
 
+## Second symptom (2026-10-18)
+
+The maintainer's entry "2026-10-18 03:02:03 BST" (`to-lead.md`, items 1 and 3), on SL-1734's
+#1331 CI. SL-1734's 9270bb0d made `fit_gbm` run the FR-100 banding check
+(`gbm.py:610` → `check_fit_bandings` → `check_banding`), and `check_banding` builds
+`ArtifactRef(type="banding", slug=banding.slug, version=banding.version)` at
+`packages/pricing-core/src/pricing_core/modelling/bandings.py:590`. SL-1758's fixture
+(`test_rating_gbm_banded_refusal.py:53-54`) names the bandings `driver_age-bands` and
+`veh_power-bands`; `_` is outside the `banding` slug grammar (`refs.py:38` `_SLUG`), so the
+check raised a raw `ArtifactRef` `ValidationError` instead of the 7 cases' original refusal
+codes. First red at c3cc2694; 49aaf6e4 and f40d130b are both 7F/3P. The test was a fixture
+fault, fixed test-only (fix (A) of that entry; (B) refused).
+
+The product exposure is the same gap as the first limb, read at `origin/main` 8ac6290b:
+`Banding.slug` is `slug: str` at `packages/model-schema/src/model_schema/modelling.py:407`,
+`Grouping.slug` likewise at `:557`, and `POST /bandings` persists a slug as given. After SL-1734 a
+user can persist `driver_age-bands` and then meet a raw `ValidationError` fitting a GBM with it:
+a user-reachable, opaque failure on a core path. Loud, not a mispricing, nothing released yet.
+
 ## Other artifact types with the same gap (checked, not widened)
 
 Slug fields read at 9469721d. "Pattern at write" = the request or model type carries a slug
@@ -96,8 +118,17 @@ Grouping slug refused there fails the same way.
 - **(c) Both.** (a) closes the cause for new writes; (b) covers rows already stored and any
   future type with the same gap.
 
-## Disposition
+## Close (ruled 2026-10-18)
+
+The maintainer's entry "2026-10-18 03:02:03 BST", item 3, rules the close as option (a), the
+cause: `Banding.slug` and `Grouping.slug` typed `Slug` in `model_schema`, refused 422 at
+`POST` with a typed code, `docs/contracts/` regenerated, and a red-first test at the API.
+MEDIUM (loud, no mispricing); owner WK-1178; due **before the P2 code freeze, Wed 4 Nov
+2026**, not deferred past it. Its own slice: SL 8116 under PL 8115 (reserved; its fix slice
+gets its own GO). Option (b) stays open for rows already stored and is not ruled here.
+
+## Disposition (as filed 2026-10-17; the Close above supersedes its "deferred" wording)
 
 Deferred with an owner: WK-1178. Decision on the option is the lead's or an RL's; this record
 picks none. The event that next discharges it: a merged change adding the pattern and/or the
-named compile error, or a dated ruling accepting the absence. Filed under working id 8102.
+named compile error, or a dated ruling accepting the absence. Filed under working id 8102; second symptom and Close appended 2026-10-18.
