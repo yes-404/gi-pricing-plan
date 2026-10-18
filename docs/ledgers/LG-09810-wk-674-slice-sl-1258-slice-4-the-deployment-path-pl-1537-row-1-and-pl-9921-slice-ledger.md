@@ -455,6 +455,10 @@ Disclosed, from the same runs:
 - **Not run:** the `3ca5b80e` and `5618a57b` red-first commits of finding (b) and the `/me` count; the table does not cover them.
 - **PL-1714 item 7, dated lines.** The maintainer (by delegation), `to-lead.md` entry "2026-10-14 10:13:50 BST — Unconsumed worker queues: the finding is WIDER (io too); (a) AMENDED to a DERIVED consumer set": amends `PL-1690` E4.2 from `{default, compute}` to a set derived from `DEFAULT_QUEUE_FOR_KIND`; the entry "2026-10-14 10:36:42 BST — Unregistered trace handler: DP-Q3 → S4; ... my 10:13:50 'terminal state' CORRECTED to `succeeded`" corrects the compose reds to `status == succeeded` and rules DP-Q3; `PL-1714` is the plan for both.
 
+- **3a, a regression guard proven by a plant (2026-10-18, on `0735f25a`, local only, reverted).** 3a is not red at its parent (the parent passes it with the Setting unset); it guards the head. The plant: `backend/src/app/api/authz.py` made to pass `account_limit=caller.rate_limit_rps` (instead of `None`) to `rate_limit.enforce` for a caller-based count. Run alone, `test_management_rate_limit.py::test_management_rate_limit_ignores_the_accounts_scoring_rate` (own database `gipricing_rf2_3a`, redis db 12, bucket `gip-test-blobs-rf2`): **red**, `backend/tests/test_management_rate_limit.py:152: AssertionError`, `1 failed, 1 warning in 2.13s`; the captured requests are `GET /api/v1/me` 200, then 429, 429 (the account's rate of 1 applied to the management counter). Reverted with `git restore -- backend/src`, `git status --porcelain` empty, re-run: `1 passed, 1 warning in 1.98s`. Database dropped, bucket removed through the MinIO API.
+- **Side finding, one line:** `6cc9f7dd`'s original rate-limit file is red from the `job:read` fixture defect (the `422` in the disclosure above), fixed at `74ec5ea0`.
+- **Side finding, one line:** the `e1555803` breaker test (`test_each_check_goes_red_on_the_break_it_exists_for[_break_api_migrates_at_start-migrations_are_their_own_step]`) is red for its own reason, a breaker defect, and passes with `037d6963`'s file.
+
 ## PRs
 
 None yet.
