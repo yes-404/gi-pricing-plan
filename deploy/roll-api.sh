@@ -7,7 +7,9 @@
 # containers report healthy (by container id, bounded, failing loud), then stops and removes the
 # old ones one at a time, ending at two replicas on the new image. A plain `up --scale api=2`
 # recreates every replica at once, leaving none healthy until the new ones pass their healthcheck.
-# It never pulls, builds or prunes, and touches no project but the one given.
+# It never pulls, builds or prunes, and touches no project but the one given. A failure before the
+# first old replica is stopped removes the new replicas and leaves the old ones; after that it
+# fails loud and is not undone.
 set -euo pipefail
 
 REPLICAS=2
@@ -34,6 +36,25 @@ say() { echo "roll-api $(date -u +%H:%M:%S.%3N) $*"; }
 mapfile -t old < <(api_ids)
 say "old api containers: ${old[*]:-none}"
 
+# Until the first old replica is stopped, a failed roll returns to the pre-roll replicas: the new
+# ones are derived again here (`new` may be unset or short), the exit status is the original one.
+cleanup_new() {
+  local status=$? c
+  local -a added left
+  [[ $status -ne 0 ]] || return 0
+  mapfile -t added < <(comm -13 <(printf '%s\n' "${old[@]}" | sort) \
+    <(docker ps -aq --filter "label=com.docker.compose.project=$project" \
+        --filter "label=com.docker.compose.service=api" | sort))
+  for c in "${added[@]}"; do
+    docker rm -f "$c" >/dev/null || true
+    say "cleanup: removed new $c"
+  done
+  mapfile -t left < <(api_ids)
+  say "cleanup: api containers now: ${left[*]:-none}"
+  exit "$status"
+}
+trap cleanup_new EXIT
+
 say "scaling out to $((REPLICAS * 2)) beside the old ones"
 "${compose[@]}" up -d --no-deps --no-recreate --scale "api=$((REPLICAS * 2))" api >/dev/null
 
@@ -50,6 +71,7 @@ for c in "${new[@]}"; do
 done
 say "new api containers healthy"
 
+trap - EXIT # from here a failure is loud and not undone: removing the new ones could leave none
 for c in "${old[@]}"; do
   docker stop "$c" >/dev/null
   say "stopped old $c"

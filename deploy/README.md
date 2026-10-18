@@ -120,7 +120,8 @@ docker compose -f deploy/docker-compose.yml --profile app up -d --wait --scale a
   recreates every replica at once, so none is healthy until the new ones pass their healthcheck.
   Run `GIP_BUILD=<new> deploy/roll-api.sh [-t <seconds>] <project> <compose-file>...`. `lb`
   re-resolves `api` every second and retries the next upstream, so it needs no change.
-  `roll-api.sh` fails loud and does not roll back: a failure after the scale-out leaves the new replicas running and in DNS rotation (FD-1804, filed in D21; its fix is SL 8111).
+  `roll-api.sh` fails loud, and a failed roll before the old replicas are stopped returns to the
+  pre-roll replicas, removing the new ones.
 - **`migrate`** is a one-shot step (FR-435). `api` and `worker` wait for it to exit 0; nothing
   migrates at application start.
 - **`api`** has no dependency on `worker` (FR-434): `up api lb` starts the scoring API with no
