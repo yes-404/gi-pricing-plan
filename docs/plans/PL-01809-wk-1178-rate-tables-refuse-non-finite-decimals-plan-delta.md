@@ -1,10 +1,10 @@
 ---
-id: PL-8107
+id: PL-1809
 family: plan
 kind: map
-title: WK-1178 — a rate table refuses a non-finite decimal (NaN, sNaN, ±Infinity) as a named FR-234 issue, never a 500 (SL-8108) — a dated Work-plan delta
+title: WK-1178 — a rate table refuses a non-finite decimal (NaN, sNaN, ±Infinity) as a named FR-234 issue, never a 500 (SL-1810) — a dated Work-plan delta
 status: active                  # draft → active → superseded | retired (§1.2a) — activated 2026-10-17 on the maintainer's "planned + GO'd now" (2026-10-17 22:51:59 BST), re-cut spec-first on the 22:56:37 BST confirmation; no decision point is open
-created: 2026-10-17
+created: 2026-10-18   # filed 2026-10-17 under working id 8107; minted 2026-10-18 as PL-1809
 owner: planner
 tree: 9469721db3d26480824cc1d715da2ec4ca9044d0
 phase: P2
@@ -12,21 +12,21 @@ work: WK-1178
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [SL-8108, SL-1543, FR-228, FR-229, FR-230, FR-231, FR-233, FR-234, FR-235]
+relates: [SL-1810, SL-1543, FR-228, FR-229, FR-230, FR-231, FR-233, FR-234, FR-235]
 ---
 
-# PL-8107 — WK-1178: a rate table refuses a non-finite decimal as a named FR-234 issue (SL-8108)
+# PL-1809 — WK-1178: a rate table refuses a non-finite decimal as a named FR-234 issue (SL-1810)
 
 > **For agentic workers:** a **dated Work-plan delta** under Lean P2 L5 (`document-ids.md`
-> §1.6, PL row). It carries one fix slice, SL 8108 (roadmap row under WK-1178). The executor
+> §1.6, PL row). It carries one fix slice, SL-1810 (roadmap row under WK-1178). The executor
 > is spawned from `.claude/roles/executor.md` and binds `test-driven-development`,
 > `python-test`, `python-package`, `dev-commands` and `git-hygiene`. Its ledger is
-> **LG 8109**, filed by the executor at build; this plan names it and does not create it.
+> **LG-1811**, filed by the executor at build; this plan names it and does not create it.
 
 Written 2026-10-17 22:59 BST by the planner (seat planner-8107) on the lead's brief
 `brief-planner-8107-2026-10-17.md`. Evidence read at `origin/main` `9469721d`. Every
-`file:line` below is at that tree. Working ids PL 8107, SL 8108, LG 8109 are the lead's
-(`eta.md` entry 22:52:26, as the brief relays it). The finding is FD 8106 (filed in D21).
+`file:line` below is at that tree. Working ids PL 8107, SL 8108, LG 8109 (the lead's,
+`eta.md` entry 22:52:26, as the brief relays it) were minted 2026-10-18 as PL-1809, SL-1810, LG-1811. The finding is FD-1803 (filed in D21).
 **Re-cut 2026-10-17 23:04 BST** by the same seat, before any merge, spec-first, on the
 maintainer's 22:56:37 BST confirmation (next section); the first cut is at `98942ea5`.
 
@@ -82,7 +82,7 @@ comparison, so the uncaught `InvalidOperation` (a 500) cannot happen.
 FR-234 (`docs/specs/03-rating-engine.md:127`), verbatim at `9469721d`: *"Rate tables
 validate on save: complete coverage of the declared key domain (or an explicit default
 row), no null values, values within declared bounds, and no key duplication."* It names
-null, bounds, coverage and duplicates, and says nothing about finiteness (FD 8106 (filed in
+null, bounds, coverage and duplicates, and says nothing about finiteness (FD-1803 (filed in
 D21), its "FR-234" section). For an unbounded column "within declared bounds" is vacuous, so
 a refusal of `Infinity` there is a new rule. Per `CLAUDE.md` §0 it goes into the spec first.
 
@@ -127,15 +127,15 @@ the amendment and is not edited. No §10 open question is raised or closed.
 (`CLAUDE.md` §2). The branch may carry the red-first commit separately (Acceptance 1). The
 squash-merge makes the slice one commit on main. If the lead reads "the same slice commit"
 as one commit on the branch too, the executor squashes locally before the PR and records
-the red run's sha in LG 8109 before it squashes.
+the red run's sha in LG-1811 before it squashes.
 
 ## The parse-site census — `Decimal(` under `rate_tables/`, at `9469721d`
 
-**The scope is FD 8106's list** (its Evidence section; predicate verbatim there:
+**The scope is FD-1803's list** (its Evidence section; predicate verbatim there:
 `git grep -n 'Decimal(' origin/main -- packages/pricing-core/src/pricing_core/rate_tables`):
 `operations.py` :166, :307, :393, :428, :479, :481, :673, :712, :734, :740, :812, :819;
 `weights.py` :219, :220. The same predicate run in this worktree also hits `operations.py:821`
-(`quotient != Decimal(1)`), a constant, not a parse. FD 8106's list leaves it out, and that
+(`quotient != Decimal(1)`), a constant, not a parse. FD-1803's list leaves it out, and that
 does not change the scope. Every site, with its verdict:
 
 | Site | What it parses | Verdict |
@@ -201,7 +201,7 @@ None is open or blocking.
 2. **Red first (i).** On that commit, run through
    `~/gi-pricing-plan.local/handover/run-small.sh` on the one test file, the tests are red:
    the unbounded and one-sided `Infinity` cases return no issue, and NaN-with-bounds raises
-   `decimal.InvalidOperation`. LG 8109 records the rc, the FAILED lines verbatim, the commit
+   `decimal.InvalidOperation`. LG-1811 records the rc, the FAILED lines verbatim, the commit
    sha and the tree.
 3. **The tests (i)**, in `packages/pricing-core/tests/test_rate_table_operations.py`, each
    with `@pytest.mark.req("FR-234")`:
@@ -227,7 +227,7 @@ None is open or blocking.
 4. **Green.** After the code commit, the same run-small on the same file: rc 0. The full
    file passes.
 5. **The census (ii)** is re-run at the build's base (command below) and its output line
-   goes into LG 8109 verbatim: `0 non-finite`. Any non-zero count is a STOP and a report.
+   goes into LG-1811 verbatim: `0 non-finite`. Any non-zero count is a STOP and a report.
 6. **One commit on main.** The PR's squash carries the FR-234 hunk, the tests and the code
    together (`CLAUDE.md` §2). No other `docs/specs/` hunk.
 7. **Gate.** One full gate (both halves, `dev-commands`) on a free slot **after SL-1543
@@ -270,16 +270,16 @@ may grant it, and a hit is a STOP.
 
 1. **Spec first, red first.** Write the FR-234 amendment verbatim (`spec-change`), then the
    tests (Acceptance 3); no code change. Run the docs check (Acceptance 1) and the tests
-   (Acceptance 2): red. Commit. Record both in LG 8109.
+   (Acceptance 2): red. Commit. Record both in LG-1811.
 2. **The fix.** The helper and the two sites (constraints 2–5). Run (Acceptance 4): green.
    Commit.
 3. **Census and gate.** Re-run the census (Acceptance 5); the gate when granted after
-   SL-1543 merges (Acceptance 7). Close the LG 8109 entry. The PR squashes to one commit
+   SL-1543 merges (Acceptance 7). Close the LG-1811 entry. The PR squashes to one commit
    (Acceptance 6).
 
 ## Sequencing
 
-SL 8099 (being minted, not yet on main) → SL-1543 → **SL 8108**. SL 8108 may be built and run its
+SL 8099 (being minted, not yet on main) → SL-1543 → **SL-1810**. SL-1810 may be built and run its
 small runs at any time; its gate waits for SL-1543's merge (the ruling's order). It edits
 `rate_tables/operations.py` and one test file only; no G2-path slice touches either at
 `9469721d` (SL 8099's change set, `git diff --stat origin/main...origin/sl-8099-glm-scalar-predict`,
@@ -289,8 +289,8 @@ is under `modelling/`, `rating/runtime.py` and its own tests).
 
 - The spec hunk comes first and is written out verbatim, with the issue text for both cases.
 - Every acceptance item is a command or a recorded run.
-- Every `Decimal(` hit under `rate_tables/` (FD 8106's list, plus :821) is listed with a
+- Every `Decimal(` hit under `rate_tables/` (FD-1803's list, plus :821) is listed with a
   verdict; none is a range.
 - No contract, route or migration change; DP-1 names what would change a route.
 - `RateTableValue.min`/`max` are cited at `rating.py:1084–1085`, not the brief's :1104–1105.
-- FD 8106 is cited in prose only and is not in `relates:` (the maintainer, 22:41:59).
+- FD-1803 is cited in prose only and is not in `relates:` (the maintainer, 22:41:59).

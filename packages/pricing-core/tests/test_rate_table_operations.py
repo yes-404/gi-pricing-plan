@@ -520,7 +520,7 @@ def test_a_pinned_factor_slug_outside_the_factor_grammar_is_refused_by_name(slug
     assert not str(caught.value).partition(": ")[0].isupper()
 
 
-# --- FR-234: every value is a finite decimal (FD 8106, SL 8108) -----------------------
+# --- FR-234: every value is a finite decimal (FD-1803, SL-1810) -----------------------
 
 _NON_FINITE = ("NaN", "sNaN", "Infinity", "-Infinity", "inf", "-nan")
 
@@ -590,7 +590,7 @@ class TestEveryValueIsAFiniteDecimal:
         assert issues[0].message.endswith("is not a decimal number")
 
     def test_the_value_bounds_cannot_themselves_be_non_finite(self) -> None:
-        """The bounds test of PL 8107: no `min`/`max` input reaches a comparison as non-finite."""
+        """The bounds test of PL-1809: no `min`/`max` input reaches a comparison as non-finite."""
         for bound in ("min", "max"):
             for raw in (
                 float("inf"),
