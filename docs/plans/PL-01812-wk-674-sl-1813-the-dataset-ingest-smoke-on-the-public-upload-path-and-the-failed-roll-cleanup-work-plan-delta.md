@@ -1,10 +1,10 @@
 ---
-id: PL-8113
+id: PL-1812
 family: plan
 kind: map
-title: WK-674 — SL-8111, the compose dataset-ingest smoke on the public upload path (E4.8) and a failed api roll that removes its own new replicas — a dated Work-plan delta
+title: WK-674 — SL-1813, the compose dataset-ingest smoke on the public upload path (E4.8) and a failed api roll that removes its own new replicas — a dated Work-plan delta
 status: active                 # draft → active → superseded | retired (§1.2a) — active 2026-10-18 on the maintainer, to-lead 2026-10-18 03:19:27 BST (GO)
-created: 2026-10-18
+created: 2026-10-18                # minted 2026-10-18; filed 2026-10-18 as working id 8113
 owner: planner
 tree: 8cfa1c96d13f67d52eeb3bbdfe54ffdc2d848725
 phase: P2
@@ -12,22 +12,22 @@ work: WK-674
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [SL-8111, SL-1258, SL-1722, PL-1714, PL-1237, FR-1776, FR-415, FR-406, FR-435, NFR-531]
+relates: [SL-1813, SL-1258, SL-1722, PL-1714, PL-1237, FR-1776, FR-415, FR-406, FR-435, NFR-531]
 ---
 
-# PL 8113 — WK-674: the dataset-ingest smoke on the public upload path, and the failed-roll cleanup (SL 8111)
+# PL-1812 — WK-674: the dataset-ingest smoke on the public upload path, and the failed-roll cleanup (SL-1813)
 
 > **For agentic workers:** a **dated Work-plan delta** under Lean P2 L5 (`document-ids.md`
-> §1.6, PL row). It carries one slice, SL 8111 (roadmap row under WK-674, `draft`). The
+> §1.6, PL row). It carries one slice, SL-1813 (roadmap row under WK-674, `draft`). The
 > executor is spawned from `.claude/roles/executor.md` and binds `test-driven-development`,
-> `python-test`, `dev-commands` and `git-hygiene`. Its ledger is **LG 8114**, filed by the
+> `python-test`, `dev-commands` and `git-hygiene`. Its ledger is **LG-1814**, filed by the
 > executor at build; this plan names it and does not create it.
 
 Written 2026-10-18 03:15 BST by the planner (planner-8111) on the lead's brief
 `brief-planner-8111-2026-10-18.md`. Evidence read at `origin/main` `8cfa1c96`, at
 `origin/sl-1258-wk674-s4` `2134a9b6` (the audited code head is `e2a2f79e`), and at
-`origin/pl-8061-pl1714-delta-2026-10-16` `33446114`. Working ids PL 8113, SL 8111 and
-LG 8114 are the lead's (`eta.md`). FD 8112 is filed in D21; this plan cites it and does not
+`origin/pl-8061-pl1714-delta-2026-10-16` `33446114`. Working ids PL-1812, SL-1813 and
+LG-1814 are the lead's (`eta.md`). FD-1804 is filed in D21; this plan cites it and does not
 file it.
 
 ## The rulings this plan carries out
@@ -37,12 +37,12 @@ All in `~/gi-pricing-plan.local/channel/to-lead.md`, read in full:
 - **"2026-10-18 03:11:40 BST — Maintainer: SL-1258 audit @2134a9b6 (audited e2a2f79e) — lead
   verdict CONFIRMED with two amendments"**, item 1, verbatim: *"DP-E1: (b) CONFIRMED. SL-1258
   merges with the seeded dataset-ingest smoke; E4.8 (the conversion to upload-url / PUT /
-  complete, possible since SL-1722 merged at 39da0e1b) becomes SL 8111, owner WK-674, DUE
+  complete, possible since SL-1722 merged at 39da0e1b) becomes SL-1813, owner WK-674, DUE
   BEFORE the code freeze (Wed 4 Nov). "Or listed at the P2 close" is NOT accepted as an
   alternative: it is §12 row 2's deployment path, so it lands. Its plan gets a GO from me in
-  the usual one line."* Item 3 (F4) rules the finding that is FD 8112 (filed in D21):
+  the usual one line."* Item 3 (F4) rules the finding that is FD-1804 (filed in D21):
   *"a failed api roll leaves never-healthy replicas in DNS rotation", MEDIUM … owner WK-674,
-  fixed in SL 8111's scope or alongside it. The fix: an EXIT trap in roll-api.sh that, once
+  fixed in SL-1813's scope or alongside it. The fix: an EXIT trap in roll-api.sh that, once
   the scale-out has happened and before the old ones are stopped, stops and removes the NEW
   container ids on failure, returning to the pre-roll 2, plus a red-first failure-path test
   (e.g. an image whose healthcheck never passes)."*
@@ -74,7 +74,7 @@ rotation. The Work's goal is PL-1237's, unchanged.
 - **P2 — E4.8 is already specified.** PL 8061 (unminted, `33446114`) §"Slice 4 — changes
   since PL-1714", E4.8: the five-step rewrite, both Jobs asserted `succeeded` with their
   output, the docstring change, Red A and Red B, and where it runs. This plan **carries that
-  text as SL 8111's scope unchanged except for its owner** (SL-1258 → SL 8111, by DP-E1 (b)).
+  text as SL-1813's scope unchanged except for its owner** (SL-1258 → SL-1813, by DP-E1 (b)).
   E4.9 (the shared-entrypoint rule) stays with PL 8061 and SL-1258.
 - **P3 — the public path is on main.** At `8cfa1c96`: `POST /api/v1/blobs/upload-url`
   (`backend/src/app/api/blobs.py:70`) takes `UploadUrlRequest` (`media_type`, `parts`, default
@@ -97,7 +97,7 @@ rotation. The Work's goal is PL-1237's, unchanged.
 
 ## Scope
 
-**(i) E4.8**, as PL 8061 specifies it (P2), owner SL 8111. **(ii) FD 8112's fix:**
+**(i) E4.8**, as PL 8061 specifies it (P2), owner SL-1813. **(ii) FD-1804's fix:**
 
 1. **The trap.** `deploy/roll-api.sh` arms `trap … EXIT` immediately **before** the scale-out
    (`:38`), so a failure inside `up` itself is covered. On a non-zero exit the handler stops
@@ -109,7 +109,7 @@ rotation. The Work's goal is PL-1237's, unchanged.
    with no cleanup, and the script's header comment says so in one sentence.
 2. **No other script change.** The success-path sequence, its step lines and the
    timeout are unchanged (01:44:33 item 2). `deploy/lb.conf` is unchanged.
-3. **The README.** The line F4 lands at SL-1258's mint (naming FD 8112) is replaced by one
+3. **The README.** The line F4 lands at SL-1258's mint (naming FD-1804) is replaced by one
    sentence: a failed roll before the old replicas are stopped returns to the pre-roll
    replicas.
 
@@ -131,13 +131,13 @@ to the old ids alone is a STOP for the decision-maker, not a choice the executor
    pytest -q backend/tests/test_deploy_stack_runtime.py -k dataset_ingest` fails at step 2
    with `KeyError: 'id'` (P4). Red B: on the slice head, with the `io` worker service
    stopped, the `blob.promote` Job fails `_wait_succeeded` with `never consumed`. Any other
-   failure is a test defect. LG 8114 quotes both, each with its tree.
+   failure is a test defect. LG-1814 quotes both, each with its tree.
 2. **Green, E4.8.** On the slice head with every worker service up, the same command exits 0
    and prints both Jobs `succeeded` with kind, queue, elapsed and bound; the `blob.promote`
    result is `{"kind": "blob", "ref": <sha256 of the CSV>}`. PL 8061 Acceptance item 2's
    `ast` check, run on `backend/tests/test_deploy_stack_runtime.py` at the slice head, prints
    `[]` and exits 0.
-3. **Red first, FD 8112.** A new test in `backend/tests/test_deploy_stack_runtime.py`
+3. **Red first, FD-1804.** A new test in `backend/tests/test_deploy_stack_runtime.py`
    (behind `GIP_DEPLOY_TESTS=1`, marked `req("NFR-531")`) brings up the 2-replica stack, then
    runs `deploy/roll-api.sh -t 30` with an extra compose file written to `tmp_path` that sets
    the `api` healthcheck to a command that always fails (the "image whose healthcheck never
@@ -145,8 +145,8 @@ to the old ids alone is a STOP for the decision-maker, not a choice the executor
    project's `api` containers afterwards are exactly the old ids, both `healthy`; none of the
    new ids exists (`docker ps -a`); and 20 requests through `lb` all succeed. Committed and
    run **before** the trap: red at the slice head without the trap, by the cause "4 api
-   containers remain" (the new-ids assert). LG 8114 quotes the FAILED line and the tree.
-4. **Green, FD 8112.** With the trap, the test in item 3 passes, and the script's output
+   containers remain" (the new-ids assert). LG-1814 quotes the FAILED line and the tree.
+4. **Green, FD-1804.** With the trap, the test in item 3 passes, and the script's output
    carries one `cleanup: removed new <id>` line per new id.
 5. **NFR-531 unchanged.** `test_previous_version_serves_the_migrated_schema_and_rolls_forward_with_no_failures`
    passes at the slice head with `failed requests=0` and min healthy ≥ 1, quoted.
@@ -163,36 +163,36 @@ to the old ids alone is a STOP for the decision-maker, not a choice the executor
 1. **Base.** Branch from the `main` that contains SL-1258 and SL-1722; quote the head and
    `git merge-base --is-ancestor` for both merge commits.
 2. **E4.8 red.** Rewrite the ingest test (PL 8061 E4.8 steps 1-5; request field names read
-   from `UploadUrlRequest` at the base and quoted in LG 8114). Commit. Red A, then Red B
+   from `UploadUrlRequest` at the base and quoted in LG-1814). Commit. Red A, then Red B
    (Acceptance 1).
 3. **E4.8 green.** Fix only the test until Acceptance 2 holds. Commit.
-4. **FD 8112 red.** Add the never-healthy failure-path test (Acceptance 3). Commit. Run it
+4. **FD-1804 red.** Add the never-healthy failure-path test (Acceptance 3). Commit. Run it
    against the untrapped script: red.
-5. **FD 8112 green.** Add the trap and the README sentence (Scope (ii)). Commit. Acceptance 4,
+5. **FD-1804 green.** Add the trap and the README sentence (Scope (ii)). Commit. Acceptance 4,
    5 and 6.
-6. **Gate.** Acceptance 7 when granted. Close the LG 8114 entry.
+6. **Gate.** Acceptance 7 when granted. Close the LG-1814 entry.
 
 ## Sequencing
 
 - **After SL-1258 merges.** `deploy/roll-api.sh`, the compose test file's roll helpers and
-  the seeded test exist only on SL-1258's branch (P1, P5). SL 8111 branches from the `main`
+  the seeded test exist only on SL-1258's branch (P1, P5). SL-1813 branches from the `main`
   that contains both SL-1258 and SL-1722.
 - **Due before the code freeze, Wed 4 Nov 2026, firm** (03:11:40 item 1). It is not an item a
   P2 closure may list instead.
 - **S5 (SL-1259):** PL-1766 DP-S5-Q7, ruled (a) under DP-E1 (b): S5 writes its runtime tests in
-  a new module; whichever of SL 8111 and SL-1259 merges second re-merges and re-runs the
+  a new module; whichever of SL-1813 and SL-1259 merges second re-merges and re-runs the
   other's named tests. That binds here unchanged.
 
 ## Activation
 
 The maintainer's one-line GO (03:11:40 item 1). This plan stays `draft` until that line; its
-activation commit sets `PL-8113` and `SL-8111` `active` by their status lines only, citing it.
+activation commit sets `PL-1812` and `SL-1813` `active` by their status lines only, citing it.
 
 ## Self-review before freeze
 
 - Every acceptance item is a command or a recorded run; none asserts a time.
-- No number range; every id listed singly. FD 8112 and PL 8061 are cited in space form, out of
-  `relates:` (FD 8112 by the brief; PL 8061 because it is unminted and would not resolve).
+- No number range; every id listed singly. FD-1804 and PL 8061 are cited in space form, out of
+  `relates:` (FD-1804 by the brief; PL 8061 because it is unminted and would not resolve).
 - **Open for the lead:** PL 8061's E4.8 still names SL-1258 as owner; 09:55:22 (3) says
   *"Under (b), E4.3 ownership moves to the new SL in PL 8061 before S4's PR."* This plan does
   not edit PL 8061; that edit (pre-merge, so permitted) is the lead's to route.

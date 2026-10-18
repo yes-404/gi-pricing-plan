@@ -408,8 +408,8 @@ def _api_containers_all_states() -> list[str]:
 def test_a_failed_api_roll_leaves_the_pre_roll_replicas_and_no_never_healthy_one(
     shas: tuple[str, str], down: None, tmp_path: pathlib.Path
 ) -> None:
-    """FD 8112: a roll whose new replicas never pass their healthcheck, before the old ones are
-    stopped, returns the project to its pre-roll replicas (PL 8113; the maintainer's (by
+    """FD-1804: a roll whose new replicas never pass their healthcheck, before the old ones are
+    stopped, returns the project to its pre-roll replicas (PL-1812; the maintainer's (by
     delegation) entry "2026-10-18 03:11:40 BST", item 3). No shipped compose file changes: an
     extra file in `tmp_path` makes the `api` healthcheck always fail, which stands for an image
     whose healthcheck never passes."""
@@ -649,7 +649,7 @@ def test_a_dataset_ingest_job_succeeds_through_the_compose_io_worker(
     """`dataset.ingest` routes to `io` and must reach `succeeded` through the compose io worker.
 
     The CSV goes in by the public upload path, with no seeding (PL 8061 E4.8, carried by
-    PL 8113 / SL 8111; the maintainer's (by delegation) entry "2026-10-18 03:11:40 BST", DP-E1
+    PL-1812 / SL-1813; the maintainer's (by delegation) entry "2026-10-18 03:11:40 BST", DP-E1
     (b)): upload-url -> PUT to the presigned URL -> complete (a `blob.promote` Job on `io`) ->
     POST versions (a `dataset.ingest` Job on `io`). Both Jobs must reach `succeeded` with their
     output asserted. Red cause: a worker that does not consume `io` leaves a Job `queued`.
