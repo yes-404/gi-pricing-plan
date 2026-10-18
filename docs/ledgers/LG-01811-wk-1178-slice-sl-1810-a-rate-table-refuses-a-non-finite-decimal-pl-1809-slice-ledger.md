@@ -18,7 +18,7 @@ relates: [FR-234]
 
 *(Minted 2026-10-18 as PL-1809, SL-1810 and LG-1811 from the lead's working ids PL 8107, SL 8108 and LG 8109; section 3 below records the re-point and keeps the working ids it re-pointed.)*
 
-**Base:** merge `e5e8cca2` of `origin/main` `4a53f19492ad73ebfb699cabcab19765c68a5a76` into the branch. Commit 1 is `0ac06deb`; commit 2 (the code) follows. The two are not squashed locally.
+**Base:** merge `e5e8cca2` of `origin/main` `4a53f19492ad73ebfb699cabcab19765c68a5a76` into the branch. Commit 1 is `0ac06deb`; commit 2 (the code) is `06c0ec31`. The two are not squashed locally.
 
 ## Assumptions and build-time lines
 
@@ -44,6 +44,41 @@ Pattern: `git grep -n "Decimal(" -- packages/pricing-core/src/pricing_core/rate_
 - Red, `0ac06deb` plus the merge, run-small on `packages/pricing-core/tests/test_rate_table_operations.py`: `24 failed, 36 passed in 4.93s`.
 - Green, the code commit, same file: `60 passed in 1.90s`. Also green: `test_rate_table_bulk_ops.py`, `test_rate_table_weights.py`, `test_demo_b4_premium.py` (73 passed) and `test_rating_compile_bundle.py`, `test_rating_runtime.py`, `test_rating_lookup_as_at.py` (67 passed).
 - DB-backed rate-table tests (`backend/tests/test_rate_tables_service.py`, `test_api_rate_tables.py`) not run: no backend code changed; owed to the gate.
+
+### Red-run record (A1; added 2026-10-18 by the re-merge seat)
+
+The red run is the tree of `e5e8cca2` (the merge of `origin/main` `4a53f194` into the branch after commit 1 and the plan correction `c575e5bc`), tree `28809ff688ebe8ba9e0e8fac70035a6da5dcee05`; commit 2 `06c0ec31` is its child, tree `0b2592b6ff678871914e1ccc2208d86f90bd2e7f`. The build-time log of that run was not kept, so it was reproduced 2026-10-18: `operations.py` and `test_rate_table_operations.py` taken from `e5e8cca2` (`git show e5e8cca2:<path>`) into this worktree at head `20c63fcf` (the rest of the tree is the re-merged head), then `run-small.sh <worktree> packages/pricing-core/tests/test_rate_table_operations.py`, rc 1, `24 failed, 36 passed in 2.59s` (the build-time count, `24 failed, 36 passed`, is reproduced). The two files were then restored with `git checkout HEAD --`. The FAILED lines, verbatim:
+
+```text
+FAILED packages/pricing-core/tests/test_rate_table_operations.py::TestEveryValueIsAFiniteDecimal::test_a_non_finite_value_is_refused_by_name[NaN-min_and_max]
+FAILED packages/pricing-core/tests/test_rate_table_operations.py::TestEveryValueIsAFiniteDecimal::test_a_non_finite_value_is_refused_by_name[NaN-min_only]
+FAILED packages/pricing-core/tests/test_rate_table_operations.py::TestEveryValueIsAFiniteDecimal::test_a_non_finite_value_is_refused_by_name[NaN-unbounded]
+FAILED packages/pricing-core/tests/test_rate_table_operations.py::TestEveryValueIsAFiniteDecimal::test_a_non_finite_value_is_refused_by_name[sNaN-min_and_max]
+FAILED packages/pricing-core/tests/test_rate_table_operations.py::TestEveryValueIsAFiniteDecimal::test_a_non_finite_value_is_refused_by_name[sNaN-min_only]
+FAILED packages/pricing-core/tests/test_rate_table_operations.py::TestEveryValueIsAFiniteDecimal::test_a_non_finite_value_is_refused_by_name[sNaN-unbounded]
+FAILED packages/pricing-core/tests/test_rate_table_operations.py::TestEveryValueIsAFiniteDecimal::test_a_non_finite_value_is_refused_by_name[Infinity-min_and_max]
+FAILED packages/pricing-core/tests/test_rate_table_operations.py::TestEveryValueIsAFiniteDecimal::test_a_non_finite_value_is_refused_by_name[Infinity-min_only]
+FAILED packages/pricing-core/tests/test_rate_table_operations.py::TestEveryValueIsAFiniteDecimal::test_a_non_finite_value_is_refused_by_name[Infinity-unbounded]
+FAILED packages/pricing-core/tests/test_rate_table_operations.py::TestEveryValueIsAFiniteDecimal::test_a_non_finite_value_is_refused_by_name[-Infinity-min_and_max]
+FAILED packages/pricing-core/tests/test_rate_table_operations.py::TestEveryValueIsAFiniteDecimal::test_a_non_finite_value_is_refused_by_name[-Infinity-min_only]
+FAILED packages/pricing-core/tests/test_rate_table_operations.py::TestEveryValueIsAFiniteDecimal::test_a_non_finite_value_is_refused_by_name[-Infinity-unbounded]
+FAILED packages/pricing-core/tests/test_rate_table_operations.py::TestEveryValueIsAFiniteDecimal::test_a_non_finite_value_is_refused_by_name[inf-min_and_max]
+FAILED packages/pricing-core/tests/test_rate_table_operations.py::TestEveryValueIsAFiniteDecimal::test_a_non_finite_value_is_refused_by_name[inf-min_only]
+FAILED packages/pricing-core/tests/test_rate_table_operations.py::TestEveryValueIsAFiniteDecimal::test_a_non_finite_value_is_refused_by_name[inf-unbounded]
+FAILED packages/pricing-core/tests/test_rate_table_operations.py::TestEveryValueIsAFiniteDecimal::test_a_non_finite_value_is_refused_by_name[-nan-min_and_max]
+FAILED packages/pricing-core/tests/test_rate_table_operations.py::TestEveryValueIsAFiniteDecimal::test_a_non_finite_value_is_refused_by_name[-nan-min_only]
+FAILED packages/pricing-core/tests/test_rate_table_operations.py::TestEveryValueIsAFiniteDecimal::test_a_non_finite_value_is_refused_by_name[-nan-unbounded]
+FAILED packages/pricing-core/tests/test_rate_table_operations.py::TestEveryValueIsAFiniteDecimal::test_nan_with_bounds_is_a_named_issue_not_an_exception
+FAILED packages/pricing-core/tests/test_rate_table_operations.py::TestEveryValueIsAFiniteDecimal::test_seeding_a_non_finite_relativity_is_refused[inf]
+FAILED packages/pricing-core/tests/test_rate_table_operations.py::TestEveryValueIsAFiniteDecimal::test_seeding_a_non_finite_relativity_is_refused[nan]
+FAILED packages/pricing-core/tests/test_rate_table_operations.py::TestEveryValueIsAFiniteDecimal::test_a_manual_edit_to_nan_is_a_named_edit_issue
+FAILED packages/pricing-core/tests/test_rate_table_operations.py::TestEveryValueIsAFiniteDecimal::test_an_imported_infinity_is_refused
+FAILED packages/pricing-core/tests/test_rate_table_operations.py::TestEveryValueIsAFiniteDecimal::test_a_diff_over_a_stored_non_finite_cell_is_named
+```
+
+### Acceptance 5 census line (A1)
+
+`python3 -I census.py <worktree>` (PL-1809's script, "The seed/demo census (ii)") re-run 2026-10-18 on the re-merged tree, rc 0, output verbatim: `18 files 3552 value cells 0 non-finite`. It is the same line PL-1809 records at `9469721d`.
 
 ## Tasks
 
@@ -79,12 +114,12 @@ None opened by the executor; the lead opens the PR after the gate.
 
 **4. Requirements without evidence, four verdicts:**
 - *FR-234, the finiteness clause:* delivered and tested (code `operations.py:316-323`, `:414-417`; tests above; red/green recorded; gate accepted by ruling 11:29:02).
-- *PL-1809 Acceptance 5 (census output line `0 non-finite` copied into this ledger at build):* **delivered but not recorded here.** The plan's census (`18 files 3552 value cells 0 non-finite`) exists in PL-1809; the build-base re-run is not in this ledger. Owner: the lead's mint edit (add the line) or the executor.
+- *PL-1809 Acceptance 5 (census output line `0 non-finite` copied into this ledger at build):* **delivered; the line is recorded here under "Acceptance 5 census line (A1)" (was: not recorded here).** The plan's census (`18 files 3552 value cells 0 non-finite`) exists in PL-1809; the build-base re-run is not in this ledger. Owner: the lead's mint edit (add the line) or the executor.
 - *Backend route-level test of the new message on the import/seed/bulk 422:* **deferred, owner the lead / the next backend slice** (existing `test_rate_tables_service.py` / `test_api_rate_tables.py` ran in the gate; none asserts the new text); not required by PL-1809 Acceptance 3.
 - *Live-database census of stored rate tables (PL-1809, DB lane):* **deferred, owner the lead** (a DB-lane action; a hit would be a STOP and a finding under DP-1).
 
 **5. Findings.**
-- **A1 (LOW):** this ledger's red/green record is thinner than PL-1809 Acceptance 2 asks: no FAILED lines verbatim, no tree for the red run, commit 2's sha `06c0ec31` unnamed, and the "Base" paragraph still says commit 2 "follows". The Acceptance 5 census line is also absent. Fix at the lead's mint edit; recorded here.
+- **A1 (LOW):** this ledger's red/green record is thinner than PL-1809 Acceptance 2 asks: no FAILED lines verbatim, no tree for the red run, commit 2's sha `06c0ec31` unnamed, and the "Base" paragraph still says commit 2 "follows". The Acceptance 5 census line is also absent. Fix at the lead's mint edit; recorded here. **Fixed 2026-10-18 in the ledger commit after the mint (the lead's verdict "2026-10-18 12:16:55 BST"): see "Red-run record (A1)" and "Acceptance 5 census line (A1)" above, and "Base" now names `06c0ec31`.**
 - **A2 (LOW):** tests (d) and (e) assert code/prefix only; the message text is pinned only through (a), (g), (h). Acceptable: one predicate and one message helper serve all paths.
 - **A3 (observation, DP-1):** a diff over a legacy stored non-finite value answers 500 with a named cause in the log; no committed table holds one (PL-1809 census 0 of 3552). Unchanged by this slice, by design.
 - **A4 (observation):** the amendment is dated 2026-10-18 while PL-1809's hunk says 2026-10-17; permitted by the plan. The mint should keep the spec date as written.
