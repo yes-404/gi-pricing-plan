@@ -36,7 +36,7 @@ def _expression_factor(**over: object) -> Factor:
 def _banding(**over: object) -> Banding:
     base: dict[str, object] = {
         "id": uuid4(),
-        "slug": "age_x_power_bands",
+        "slug": "age-x-power-bands",
         "dataset_id": DATASET,
         "version": 1,
         "method": BandingMethod.MANUAL,

@@ -313,7 +313,7 @@ def test_a_proposal_over_an_expression_the_engine_cannot_evaluate_is_a_named_fai
         dataset_version_id=uuid4(), source_expression="region * 2", method=BandingMethod.EQUAL_WIDTH
     )
     with pytest.raises(FactorResolutionError, match=r"(?s)region \* 2.*cannot be evaluated"):
-        propose_banding(_book(200), proposal, dataset_id=DATASET, slug="b")
+        propose_banding(_book(200), proposal, dataset_id=DATASET, slug="bb")
 
 
 # -- non-finite values at propose (review F8) ----------------------------------------------------
@@ -333,7 +333,7 @@ def test_an_infinite_value_is_dropped_not_cut_at() -> None:
         method=BandingMethod.EQUAL_WIDTH,
         n_bands=2,
     )
-    banding = propose_banding(_inverse_book(), proposal, dataset_id=DATASET, slug="b")
+    banding = propose_banding(_inverse_book(), proposal, dataset_id=DATASET, slug="bb")
     assert banding.boundaries == pytest.approx((0.1, 0.55, 1.0))
     assert all(math.isfinite(b) for b in banding.boundaries)
 
@@ -359,7 +359,7 @@ def test_the_refusal_says_which_kind_of_non_value_the_column_is_made_of(
         method=BandingMethod.EQUAL_WIDTH,
     )
     with pytest.raises(BandingError, match="no finite numeric values") as excinfo:
-        propose_banding(frame, proposal, dataset_id=DATASET, slug="b")
+        propose_banding(frame, proposal, dataset_id=DATASET, slug="bb")
     assert counts in str(excinfo.value)
 
 
