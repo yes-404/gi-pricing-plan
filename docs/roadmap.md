@@ -2858,6 +2858,28 @@ relates: [PL-1805, SL-1734, SL-1758, FD-1384]
 
 On the maintainer's entry "2026-10-18 03:02:03 BST — Maintainer: #1331 — attribution correction ACCEPTED; fix (A) now; FD 8102 carries (C) with a deadline; the process line ADOPTED" (`to-lead.md`), item 3: FD-1799's (filed in D21) close. `Banding.slug`, `Grouping.slug` (`packages/model-schema/src/model_schema/modelling.py:407`, `:557` on `8ac6290b`) and the two proposal request slugs (`backend/src/app/api/models.py:250`, `:254`) are typed `Slug` (`refs.py:62`, the `00` §4.2 ID-3 / §4.3 grammar). `POST /bandings`, `/groupings`, `/bandings/propose` and `/groupings/propose` refuse a bad slug with 422 `VALIDATION_FAILED`, `errors[].field` `slug`, `errors[].code` `STRING_PATTERN_MISMATCH`. That code is named in a dated `02` §5.1 amendment first. The contracts are regenerated. There is one red-first API test per route. `check_banding` (`bandings.py:590`) is unchanged. MEDIUM; **due before the P2 code freeze, Wed 4 Nov 2026**. Work-plan delta PL-1805 (DP-1: an already-stored bad slug, census first; DP-2: FD-1799's compile-error limb). Ledger LG-1807. Activation: the maintainer's one-line GO. *Activated 2026-10-18 on the maintainer, to-lead 2026-10-18 04:42:19 BST (GO; DP-1 (a) with Task 0 in two limbs, (c)/(d) refused; DP-2 (i), the named compile error stays FD-1799's residue, WK-1178, due before the P2 close; the WF-699 demo must pass in this slice's gate).*
 
+#### SL-1810 — WK-1178 fix slice — FD-1803: a rate table refuses a non-finite decimal (NaN, sNaN, ±Infinity) as a named FR-234 issue, never a 500
+
+```yaml
+id: SL-1810
+family: slice
+title: WK-1178 fix slice — FD-1803: a rate table refuses a non-finite decimal (NaN, sNaN, ±Infinity) as a named FR-234 issue, never a 500
+status: closed                   # draft → active → closed | retired (§1.2a)
+created: 2026-10-18   # filed 2026-10-17 under working id 8108; minted 2026-10-18 as SL-1810
+owner: planner                   # cut by the planner; lead dispatches (active)
+tree: 9469721db3d26480824cc1d715da2ec4ca9044d0
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1809, SL-1543, FR-234]
+```
+
+The fix of FD-1803 (filed in D21; HIGH, owner WK-1178), planned in PL-1809. `Decimal(raw)` in `packages/pricing-core/src/pricing_core/rate_tables/operations.py` `_value_issue` (:307) catches only `InvalidOperation`, so `"NaN"`, `"sNaN"`, `"Infinity"` and `"-Infinity"` parse: an unbounded or one-sided column stores them, and a NaN against a bound raises an uncaught `InvalidOperation` (a 500). **Scope, exactly:** one finite check (`Decimal.is_finite()`), before the bounds compare, at `_value_issue` (:307, which every save path runs: import, seed, bulk operations, manual edits) and at `_index_rows` (:393, the diff path), returning FR-234's existing `OUT_OF_BOUNDS` with the message `value '<raw>' for key <key> is not a finite decimal number`; :311's "is not a decimal number" stays for a string that does not parse. **Spec first:** FR-234 says nothing about finiteness, so its dated amendment ("every value is a finite decimal", wording verbatim in PL-1809) is the slice's first hunk, and the code follows; spec, tests and code land as one commit on main (the maintainer, "2026-10-17 22:56:37 BST", Correction 3). Red first in `packages/pricing-core/tests/test_rate_table_operations.py`: the four strings refused on unbounded, one-sided and bounded columns, and NaN with bounds a named issue, not an exception. No contract, route or migration change. The committed seed/demo tables hold no non-finite value (PL-1809's census: 18 files, 3552 cells, 0). Gate: one full gate on a free slot after SL-1543 merges. Ledger LG-1811, filed by the executor.
+
+(Activated 2026-10-17 as WK-1178's FD-1803 fix slice, on the maintainer's ruling "2026-10-17 22:51:59 BST — Maintainer: FD 8106 → HIGH (verified by me); its own fix slice in P2, scheduled after the G2 path" (`to-lead.md`): "FIX: its OWN small slice in P2 (before the 4 Nov code freeze), planned + GO'd now, gated AFTER the G2 path (SL 8099 → SL-1543)". Plan PL-1809, activated in the same commit; re-cut spec-first before merge on the maintainer's "2026-10-17 22:56:37 BST" confirmation.)
+
+(Closed 2026-10-18 as a Slice on a clean audit at 7e3b5098 (findings A1 to A4; the lead's verdict "2026-10-18 12:16:55 BST" in `from-lead-2026-10-09.md`): A1 fixed in LG-1811, A2 ruled into the slice by the maintainer ("2026-10-18 12:18:08 BST" in `to-lead.md`) and delivered as test-only commit d2e0fcaa; audit and window results written in LG-1811 (minted 2026-10-18 from working id 8109). MERGE-ACK: not yet given.)
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
