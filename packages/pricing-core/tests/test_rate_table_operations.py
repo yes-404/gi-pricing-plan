@@ -6,6 +6,7 @@ pure: cells are rows of decimal strings (R2), weights are supplied by the caller
 nothing here touches a database.
 """
 
+import re
 from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import uuid4
@@ -620,12 +621,21 @@ class TestEveryValueIsAFiniteDecimal:
     def test_a_manual_edit_to_nan_is_a_named_edit_issue(self) -> None:
         edit = RateTableCell({"driver_age_band": "17-20", "relativity": "NaN"})
         result = apply_cell_edits(_rows_version(), [edit])
-        assert [i.code for i in result.issues] == ["OUT_OF_BOUNDS"]
+        assert [(i.index, i.code, i.message) for i in result.issues] == [
+            (
+                0,
+                "OUT_OF_BOUNDS",
+                "value 'NaN' for key ('17-20',) is not a finite decimal number",
+            )
+        ]
         assert result.cells == ()
 
     def test_an_imported_infinity_is_refused(self) -> None:
         content = b"driver_age_band,relativity\n17-20,Infinity\n21-24,1.41\n25-29,1.12\n"
-        with pytest.raises(ValueError, match=r"^OUT_OF_BOUNDS:"):
+        message = (
+            "OUT_OF_BOUNDS: value 'Infinity' for key ('17-20',) is not a finite decimal number"
+        )
+        with pytest.raises(ValueError, match=f"^{re.escape(message)}$"):
             import_from_csv(_rows_version(), content, filename="import.csv")
 
     def test_a_bulk_operation_cannot_be_given_a_non_finite_percentage(self) -> None:
