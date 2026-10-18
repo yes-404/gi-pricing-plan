@@ -241,6 +241,18 @@ REGISTRY: dict[str, SettingDefinition] = _define(
         scope=SettingScope.WORKSPACE_OR_ENVIRONMENT,
     ),
     SettingDefinition(
+        key="platform.default_management_rate_limit_rps",
+        type=SettingType.INT,
+        default=None,
+        description="`07` FR-452's management-API rate limit, in requests per second per "
+        "(Environment, Principal), counted across every authenticated `/api/v1` request "
+        "outside the `/score` family (`RL-1687`). Unset by default: with no limit the request "
+        "is admitted without a counter call. A Service Account's `rate_limit_rps` never "
+        "applies to it.",
+        constraints={"min": 1},
+        scope=SettingScope.WORKSPACE_OR_ENVIRONMENT,
+    ),
+    SettingDefinition(
         key="governance.approval_policy_ref",
         type=SettingType.STRING,
         default="",
@@ -369,13 +381,15 @@ async def _environment_value(
 async def resolve(
     session: AsyncSession,
     settings: Settings,
-    workspace_id: UUID,
+    workspace_id: UUID | None,
     key: str,
     environment: str | None = None,
 ) -> SettingResolution:
     """Resolve one setting through the four layers (FR-446).
 
-    With no `environment` the Environment layer is skipped and not reported.
+    With no `environment` the Environment layer is skipped and not reported. With no
+    `workspace_id` the workspace layer is skipped (the management count of the two identity
+    routes, before a workspace is selected); it is still reported, with no value.
     """
     definition = REGISTRY.get(key)
     if definition is None:
@@ -383,14 +397,16 @@ async def resolve(
 
     env_value = _env_candidate(settings, definition)
     environment_value = await _environment_value(session, environment, key)
-    workspace_value = (
-        await session.execute(
-            select(WorkspaceSettingRow.value).where(
-                WorkspaceSettingRow.workspace_id == workspace_id,
-                WorkspaceSettingRow.key == key,
+    workspace_value = None
+    if workspace_id is not None:
+        workspace_value = (
+            await session.execute(
+                select(WorkspaceSettingRow.value).where(
+                    WorkspaceSettingRow.workspace_id == workspace_id,
+                    WorkspaceSettingRow.key == key,
+                )
             )
-        )
-    ).scalar_one_or_none()
+        ).scalar_one_or_none()
 
     return _resolution(definition, env_value, workspace_value, environment, environment_value)
 
