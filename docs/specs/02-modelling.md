@@ -1833,13 +1833,13 @@ imported from §4.5 rather than restated — the same catalogue, read two ways.
 |---|---|---|
 | `POST` | `/api/v1/factors` | Create/version a Factor (FR-83) |
 | `GET` | `/api/v1/factors?dataset_id=` | List factors with intent, monotonic direction, prohibited flag. Filters by Dataset **id**, as its two siblings below do; an unrecognised query parameter is a 422 naming it, never an unfiltered list |
-| `POST` | `/api/v1/bandings/propose` | Propose boundaries by method against a dataset version (FR-98) |
+| `POST` | `/api/v1/bandings/propose` | Propose boundaries by method against a dataset version (FR-98) *Amended 2026-10-18 (SL-1806, FD-1799): a `slug` that `00` §4.2 ID-3 / §4.3's pattern does not admit is refused **422** `VALIDATION_FAILED`, `errors[].field` `slug`, `errors[].code` `STRING_PATTERN_MISMATCH` (to-lead 2026-10-18 03:02:03 BST item 3).* |
 | `POST` | `/api/v1/bandings/evaluate` | Recompute band statistics for **edited** boundaries, persisting nothing (FR-102) |
-| `POST` | `/api/v1/bandings` | **201** Persist a Banding (with editable boundaries) |
+| `POST` | `/api/v1/bandings` | **201** Persist a Banding (with editable boundaries) *Amended 2026-10-18 (SL-1806, FD-1799): a `slug` that `00` §4.2 ID-3 / §4.3's pattern does not admit is refused **422** `VALIDATION_FAILED`, `errors[].field` `slug`, `errors[].code` `STRING_PATTERN_MISMATCH` (to-lead 2026-10-18 03:02:03 BST item 3).* |
 | `GET` | `/api/v1/bandings?dataset_id=` | List bandings, latest version first |
-| `POST` | `/api/v1/groupings/propose` | Propose a grouping by method (FR-105) |
+| `POST` | `/api/v1/groupings/propose` | Propose a grouping by method (FR-105) *Amended 2026-10-18 (SL-1806, FD-1799): a `slug` that `00` §4.2 ID-3 / §4.3's pattern does not admit is refused **422** `VALIDATION_FAILED`, `errors[].field` `slug`, `errors[].code` `STRING_PATTERN_MISMATCH` (to-lead 2026-10-18 03:02:03 BST item 3).* |
 | `POST` | `/api/v1/groupings/evaluate` | Recompute the deviance/df evidence for an **edited** mapping (FR-102) |
-| `POST` | `/api/v1/groupings` | **201** Persist a Grouping |
+| `POST` | `/api/v1/groupings` | **201** Persist a Grouping *Amended 2026-10-18 (SL-1806, FD-1799): a `slug` that `00` §4.2 ID-3 / §4.3's pattern does not admit is refused **422** `VALIDATION_FAILED`, `errors[].field` `slug`, `errors[].code` `STRING_PATTERN_MISMATCH` (to-lead 2026-10-18 03:02:03 BST item 3).* |
 | `GET` | `/api/v1/groupings?dataset_id=` | List groupings, latest version first |
 | `POST` | `/api/v1/model-specs/validate` | **200** with `SpecValidation` — `ok` plus every problem, never only the first. A spec that merely cannot be fitted is not a bad *request*, so it is not a 4xx; a spec naming a version that does not exist is a 404 (FR-153, FR-185) |
 | `POST` | `/api/v1/models` | **202** Fit → Job; returns existing model on `spec_hash` match (FR-204) |

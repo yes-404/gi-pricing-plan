@@ -39,7 +39,7 @@ from __future__ import annotations
 import heapq
 import json
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
 from typing import Any
@@ -739,7 +739,7 @@ def _model_call_handler(
     step is compiled with an explicit `result_type`, so its unrounded behaviour is in its
     bytes and hash; a GLM step without one rounds like any other.
     """
-    glm_scorers = scorers if scorers is not None else _load_glm_scorers(algorithm, payloads)
+    glm_scorers = scorers if scorers is not None else _load_glm_scorers([algorithm], payloads)
     steps_by_id = {
         step.step_id: step
         for step in algorithm.steps
@@ -839,7 +839,7 @@ class _GlmScorer:
                 )
             row[column] = value
         # One quote, one GLM: the scalar path (`predict_glm_row`), bit-identical to the one-row
-        # frame it replaces and without its per-call lazy `collect` (FD 8097 (filed in D21)).
+        # frame it replaces and without its per-call lazy `collect` (FD-1797 (filed in D21)).
         model_offset = (
             self.offset_source.linear_predictor_row(row) if self.offset_source else None
         )
@@ -903,11 +903,12 @@ def _glm_scorer(ref: str, payloads: Mapping[str, Any]) -> _GlmScorer:
 
 
 def _load_glm_scorers(
-    algorithm: RatingAlgorithm, payloads: Mapping[str, Any]
+    algorithms: Sequence[RatingAlgorithm], payloads: Mapping[str, Any]
 ) -> dict[str, _GlmScorer]:
-    """Rebuild every pinned GLM once per loaded bundle (the `_load_boosters` of the GLM arm)."""
+    """Rebuild every pinned GLM once per loaded bundle (the `_load_boosters` of the GLM arm),
+    over the base algorithm and every purpose's: a ref pinned in two graphs is built once."""
     scorers: dict[str, _GlmScorer] = {}
-    for step in algorithm.steps:
+    for step in (s for algorithm in algorithms for s in algorithm.steps):
         if not isinstance(step, RatingModelCallStep):
             continue
         ref_of_step = step.model_ref or step.peril_structure_ref
@@ -922,7 +923,7 @@ def _load_glm_scorers(
 
 
 def _load_boosters(
-    algorithm: RatingAlgorithm, payloads: Mapping[str, Any]
+    algorithms: Sequence[RatingAlgorithm], payloads: Mapping[str, Any]
 ) -> dict[str, object]:
     """Deserialise every pinned GBM's booster once (RL-874). Not a cache: this runs once
     per `load_bundle` call, and `load_bundle` itself consults no cache (RL-876).
@@ -933,9 +934,12 @@ def _load_boosters(
     this object's life where mutating it (`Booster.set_param`) is safe. `predict_gbm`
     deliberately does *not* repeat this on every call against an already-loaded booster;
     see its own docstring for the crash that discipline avoids.
+
+    Boosters are shared across the base algorithm and every purpose's, keyed by ref
+    (`RL-1628` condition 1): a ref pinned in two graphs is deserialised once.
     """
     boosters: dict[str, object] = {}
-    for step in algorithm.steps:
+    for step in (s for algorithm in algorithms for s in algorithm.steps):
         if not isinstance(step, RatingModelCallStep):
             continue
         step_ref = step.model_ref if step.model_ref is not None else step.peril_structure_ref
@@ -960,6 +964,15 @@ def _load_boosters(
 
 
 @dataclass(frozen=True)
+class PurposeEvaluation:
+    """What one graph of a bundle is evaluated by: its decision (whose engine carries its own
+    `model_call` handler) and the inlined algorithm the handler, the checks and the trace read."""
+
+    decision: Any
+    algorithm: RatingAlgorithm
+
+
+@dataclass(frozen=True)
 class CompiledBundle:
     """A loaded, executable bundle (FR-243). Never serialised (RL-867).
 
@@ -979,6 +992,13 @@ class CompiledBundle:
     decision: Any  # zen.ZenDecision — the binding exports no importable type for it
     algorithm: RatingAlgorithm
     boosters: Mapping[str, object]
+    purposes: Mapping[str, PurposeEvaluation] = field(default_factory=dict)
+
+    def evaluation_for(self, purpose: str) -> PurposeEvaluation:
+        """The decision and algorithm a quote of `purpose` is evaluated by (`RL-1628`
+        condition 1): the purpose's own when a mount selects it, the base pair otherwise. Every
+        read of the algorithm or decision while scoring goes through this one selector."""
+        return self.purposes.get(purpose) or PurposeEvaluation(self.decision, self.algorithm)
 
 
 def _check_graph_matches_inlined_algorithm(graph: JdmGraph, algorithm: RatingAlgorithm) -> None:
@@ -1016,23 +1036,42 @@ def load_bundle(bundle: Bundle) -> CompiledBundle:
     is the inlined one. A bundle with no mounts re-inlines to itself. Refuses with
     `BUNDLE_COMPILE_FAILED` a bundle whose graph and re-inlined algorithm disagree on their
     nodes (RL-1571 C1), before the engine is built.
+
+    **One evaluation per graph** (FR-218; `RL-1628` DP-S3-2): the base graph's, and one per key of
+    `bundle.purpose_graphs`, re-inlined with that purpose and checked by the same C1. Each has its
+    own decision and `model_call` handler; boosters and GLM scorers are built once and shared.
     """
     stored = RatingAlgorithm.model_validate(bundle.resolved_payloads[bundle.algorithm_ref])
     fragments = mounted_fragments(stored, bundle.pins, bundle.resolved_payloads)
     algorithm = inline_mounts(stored, fragments)
+    purpose_algorithms = {
+        purpose: inline_mounts(stored, fragments, purpose) for purpose in bundle.purpose_graphs
+    }
     _check_graph_matches_inlined_algorithm(bundle.graph, algorithm)
-    check_step_refs_pinned(algorithm, bundle.pins)
-    boosters = _load_boosters(algorithm, bundle.resolved_payloads)
-    handler = _model_call_handler(algorithm, bundle.resolved_payloads, boosters)
-    wire = to_wire(bundle.graph, bundle.resolved_payloads)
+    for purpose, purpose_graph in bundle.purpose_graphs.items():
+        _check_graph_matches_inlined_algorithm(purpose_graph, purpose_algorithms[purpose])
+    every = [algorithm, *purpose_algorithms.values()]
+    for each in every:
+        check_step_refs_pinned(each, bundle.pins)
+    boosters = _load_boosters(every, bundle.resolved_payloads)
+    scorers = _load_glm_scorers(every, bundle.resolved_payloads)
 
-    engine = zen.ZenEngine({"customHandler": handler})
-    decision = engine.create_decision(json.dumps(wire))
-    decision.validate()
+    def evaluation(graph: JdmGraph, inlined: RatingAlgorithm) -> PurposeEvaluation:
+        handler = _model_call_handler(inlined, bundle.resolved_payloads, boosters, scorers)
+        wire = to_wire(graph, bundle.resolved_payloads)
+        engine = zen.ZenEngine({"customHandler": handler})
+        decision = engine.create_decision(json.dumps(wire))
+        decision.validate()
+        return PurposeEvaluation(decision, inlined)
 
+    base = evaluation(bundle.graph, algorithm)
     return CompiledBundle(
         content_hash=bundle.content_hash,
-        decision=decision,
-        algorithm=algorithm,
+        decision=base.decision,
+        algorithm=base.algorithm,
         boosters=boosters,
+        purposes={
+            purpose: evaluation(graph, purpose_algorithms[purpose])
+            for purpose, graph in bundle.purpose_graphs.items()
+        },
     )

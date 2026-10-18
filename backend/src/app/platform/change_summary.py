@@ -141,7 +141,8 @@ def _structural_lines(diff: AlgorithmDiff) -> list[str]:
     ]
     lines += [
         f"Sub-graph mount {mount.mount_point} changed: {mount.before} -> {mount.after}"
-        f"{' (ports changed)' if mount.ports_changed else ''}."
+        f"{' (ports changed)' if mount.ports_changed else ''}"
+        f"{' (purposes changed)' if mount.purposes_changed else ''}."
         for mount in sorted(diff.sub_graph_mounts, key=lambda m: m.mount_point)
     ]
     lines += [

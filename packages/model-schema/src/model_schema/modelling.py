@@ -404,7 +404,7 @@ class Banding(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     id: UUID
-    slug: str
+    slug: Slug
     dataset_id: UUID
     version: int = Field(ge=1)
     column: str
@@ -554,7 +554,7 @@ class Grouping(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     id: UUID
-    slug: str
+    slug: Slug
     dataset_id: UUID
     version: int = Field(ge=1)
     column: str
