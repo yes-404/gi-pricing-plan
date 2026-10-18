@@ -7,7 +7,7 @@ created: 2026-10-18   # filed 2026-10-18 under working id 8119
 owner: auditor
 tree: a67748dbaebd514dab76ae96c01b32b487c29855
 corrected_by: []
-relates: [WK-674, FD-1804, SL-1813, PL-1812, NFR-531]
+relates: [WK-674, FD-1804, NFR-531]
 ---
 
 # FD-8119 — A failed api roll force-removes a stopped pre-existing api container
@@ -18,7 +18,7 @@ relates: [WK-674, FD-1804, SL-1813, PL-1812, NFR-531]
 "2026-10-18 14:33:47 BST" (`to-lead.md`), item 1 (A4 of SL 8111's audit). API containers are
 stateless, so the impact is a stopped replica lost, not data; no price is affected.
 
-The EXIT trap that FD-1804's fix adds to `deploy/roll-api.sh` (SL-1813, PR #1342) derives the
+The EXIT trap that FD-1804's fix adds to `deploy/roll-api.sh` (SL 1813, PR #1342) derives the
 containers to remove as "every api container now present minus `old`". `old` comes from `api_ids`,
 which lists **running** containers only; the removal list comes from `docker ps -aq`, which includes
 stopped ones. So on a failed roll a **stopped** api container that existed before the roll is not in
@@ -40,7 +40,7 @@ head `99cc5243`):
 
 Build `old` from the same `-a` listing the cleanup uses, or exclude by creation time after the roll's
 start. **Red test first:** a stopped pre-roll api container survives a failed roll. Not widened into
-SL-1813: a deploy-logic change would cost another SOLO compose gate.
+SL 1813: a deploy-logic change would cost another SOLO compose gate.
 
 ## Disposition
 
