@@ -29,6 +29,7 @@
         "dataset.validate",
         "dataset.profile",
         "dataset.derive",
+        "blob.promote",
         "model.fit",
         "model.transparency",
         "model.backtest",

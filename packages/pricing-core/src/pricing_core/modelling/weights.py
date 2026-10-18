@@ -25,7 +25,7 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 
-from model_schema import ModelSpecCommon
+from model_schema import ModelSpecCommon, ResponseKind
 
 #: The platform error code for a weight column that cannot be fitted on (`02` §5.1).
 WEIGHT_INVALID_CODE = "DECLARED_WEIGHT_INVALID"
@@ -41,7 +41,11 @@ class WeightExclusion:
 
     data: pl.DataFrame
     keep: npt.NDArray[np.bool_]
+    #: Rows removed for weight 0.
     excluded: int
+    #: Rows removed because the response is unknown (FR-111, SL-1543): `None` when the spec
+    #: is not a `claim_severity` fit, where the rule does not apply.
+    excluded_unknown: int | None = None
 
     def take(self, array: np.ndarray | None) -> np.ndarray | None:
         """`array` restricted to the kept rows; `None` stays `None`.
@@ -66,11 +70,28 @@ def _weights(data: pl.DataFrame, spec: ModelSpecCommon) -> npt.NDArray[np.float6
     return data[str(spec.weight.column)].cast(pl.Float64).to_numpy()
 
 
-def _exclude(data: pl.DataFrame, keep: npt.NDArray[np.bool_]) -> WeightExclusion:
+def _exclude(
+    data: pl.DataFrame, keep: npt.NDArray[np.bool_], spec: ModelSpecCommon
+) -> WeightExclusion:
+    """`keep` is the weight mask; a `claim_severity` fit also drops its unknown-amount rows.
+
+    FR-111's severity population is `claim_count > 0` and a known amount. A weight-0 row is
+    counted as weight-0 and its response is never read; of the rest, a null response is
+    unknown and excluded. A known amount that is not positive is left in, for the family's
+    response-domain check to refuse — it is not unknown, and is never dropped here.
+    """
+    zero_weight = int(keep.size - np.count_nonzero(keep))
+    unknown: int | None = None
+    if spec.response is ResponseKind.CLAIM_SEVERITY and spec.response_column in data.columns:
+        null = data[spec.response_column].is_null().to_numpy()
+        unknown_rows = keep & null
+        unknown = int(np.count_nonzero(unknown_rows))
+        keep = keep & ~null
     return WeightExclusion(
         data=data.filter(pl.Series(keep)) if not keep.all() else data,
         keep=keep,
-        excluded=int(keep.size - np.count_nonzero(keep)),
+        excluded=zero_weight,
+        excluded_unknown=unknown,
     )
 
 
@@ -84,8 +105,8 @@ def drop_zero_weight_rows(data: pl.DataFrame, spec: ModelSpecCommon) -> WeightEx
     if spec.weight.kind == "column" and str(spec.weight.column) in data.columns:
         weights = _weights(data, spec)
         assert weights is not None
-        return _exclude(data, weights != 0.0)
-    return _exclude(data, np.ones(data.height, dtype=np.bool_))
+        return _exclude(data, weights != 0.0, spec)
+    return _exclude(data, np.ones(data.height, dtype=np.bool_), spec)
 
 
 def require_usable_weights(
@@ -102,7 +123,7 @@ def require_usable_weights(
     """
     weights = _weights(data, spec)
     if weights is None:
-        return _exclude(data, np.ones(data.height, dtype=np.bool_))
+        return _exclude(data, np.ones(data.height, dtype=np.bool_), spec)
     column = str(spec.weight.column)
 
     unusable = ~np.isfinite(weights) | (weights < 0.0)
@@ -116,11 +137,12 @@ def require_usable_weights(
             "guessed at. Nothing was estimated.",
         )
 
-    kept = _exclude(data, weights != 0.0)
+    kept = _exclude(data, weights != 0.0, spec)
     if kept.data.height == 0:
         raise error(
             WEIGHT_INVALID_CODE,
-            f"every row of {what} was excluded for weight 0: the declared weight column "
-            f"{column!r} holds nothing else (FR-111). Nothing was estimated.",
+            f"every row of {what} was excluded (FR-111): for weight 0, or for an unknown "
+            f"severity amount. The declared weight column {column!r} leaves nothing else to "
+            "fit. Nothing was estimated.",
         )
     return kept

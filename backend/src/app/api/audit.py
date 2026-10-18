@@ -237,7 +237,17 @@ async def verify_chain(caller: ReadAudit, database: DatabaseDep) -> ChainVerific
 @router.get(
     "/export",
     summary="Export the audit log as CSV or JSON",
-    responses=problems(400, 401, 403, 422),
+    response_class=StreamingResponse,
+    responses={
+        **problems(400, 401, 403, 422),
+        200: {
+            "description": "The log as CSV, or as JSON Lines (one event per line)",
+            "content": {
+                "text/csv": {"schema": {"type": "string"}},
+                "application/x-ndjson": {"schema": {"type": "string"}},
+            },
+        },
+    },
 )
 async def export_audit(
     caller: ReadAudit,

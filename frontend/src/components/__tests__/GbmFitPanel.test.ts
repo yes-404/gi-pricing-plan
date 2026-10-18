@@ -26,6 +26,7 @@ const SPEC: GbmSpec = {
 
 const FIT: GbmFitResult = {
   model_type: "lightgbm",
+  banding_warnings: [],
   booster_blob: { sha256: "b".repeat(64), bytes: 184320, media_type: "text/plain" },
   booster_format: "lightgbm_text",
   feature_order: ["driver_age_banded", "vehicle_group_rated", "region_grouped"],

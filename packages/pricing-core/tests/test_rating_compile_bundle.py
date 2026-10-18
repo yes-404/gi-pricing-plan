@@ -550,3 +550,55 @@ async def test_g4_a_sub_graph_pin_compiles_regardless_of_status_and_the_exemptio
     )
     with pytest.raises(ValueError, match="PIN_NOT_APPROVED"):
         await compile_bundle(_mounted_version(), resolver)
+
+
+#: `bundle_hash` of `_version()` over `_resolver()`, taken from `compile.py` BEFORE the Decimal
+#: handling was added (SL-1543), by compiling that pair with the unchanged code and printing
+#: `content_hash`. The change must not move it: a hash that never held a Decimal is unchanged.
+_PINNED_PRE_DECIMAL_HASH = "sha256:a41bf21924281a0da969e7f17ec9bad5b1e4a8d218e7c4f3f456243c0f9bb66a"
+
+
+@pytest.mark.req("FR-239")
+async def test_an_existing_bundles_content_hash_is_byte_identical() -> None:
+    bundle = await compile_bundle(_version(), _resolver())
+    assert bundle.content_hash == _PINNED_PRE_DECIMAL_HASH
+
+
+async def _compile_with_decimal_bound() -> Bundle:
+    payload = valid_algorithm_payload()
+    payload["input_contract"].append(
+        {"name": "exposure_years", "type": "decimal", "nullable": False,
+         "min": "0.00273224043715847", "max": "1.05"}
+    )
+    resolver = FakeResolver({
+        "rating_algorithm:motor-gb@14": payload,
+        "rate_table:motor-expense@3": {"rateable": True, "rows": []},
+        "model:motor-ad-frequency@7": {
+            "model_type": "gbm", "status": "approved",
+            "feature_map": {"driver_age": "driver_age", "rating_area": "rating_area"},
+        },
+        "reference_table:ons-postcode-directory@7": {"rows": []},
+    })
+    return await compile_bundle(_version(), resolver)
+
+
+@pytest.mark.req("FR-239")
+async def test_a_decimal_input_bound_hashes_deterministically() -> None:
+    """A declared `decimal` bound is a `Decimal` in the graph; it hashes, and the same twice."""
+    first = await _compile_with_decimal_bound()
+    second = await _compile_with_decimal_bound()
+    assert first.content_hash == second.content_hash
+    assert first.content_hash != _PINNED_PRE_DECIMAL_HASH
+
+
+@pytest.mark.req("FR-239")
+def test_a_non_decimal_unserialisable_value_in_the_graph_is_refused_by_type() -> None:
+    from datetime import date
+
+    class _Graph:
+        def model_dump(self) -> dict:
+            return {"when": date(2026, 1, 1)}
+
+    pins = _version().pins
+    with pytest.raises(TypeError, match="date"):
+        bundle_hash(_Graph(), pins)  # type: ignore[arg-type]

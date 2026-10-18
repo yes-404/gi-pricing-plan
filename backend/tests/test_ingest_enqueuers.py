@@ -4,8 +4,9 @@ The worker's ingest handler has no ownership check of its own, by design: `blobs
 workspace column, and whether a workspace may read a digest is decided once, at the ingest
 route (`api/datasets.py::start_ingestion`, through `blob_readable_by`). That is sound only while
 the route is the only enqueuer. A second one, a new internal caller or a second route, would
-bypass the check without any test failing, so this test fails the moment one appears; the
-worker-side check arrives with an owner record (the upload-completion finding in #869).
+bypass the check without any test failing, so this test fails the moment one appears. A
+worker-side check was considered when the Blob Upload landed and declined (RL-1724 DP-U3
+(b)): this census already closes the bypass it would guard.
 
 The scan is by AST and **fails closed**: it flags every *reference* to the job kind, not only a
 call handed it, so `kind = JobKind.DATASET_INGEST` followed by `submit(session, kind, ...)` and

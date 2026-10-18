@@ -203,8 +203,15 @@ def test_rejection_reasons_are_not_returned_to_the_caller(
     verifier: OidcVerifier, rsa_key
 ) -> None:
     """The reason is logged, never surfaced — it tells an attacker what to fix next."""
-    from app.auth.service import _unauthenticated
+    from app.auth.service import AuthenticationFailed, AuthFailureReason
 
-    problem = _unauthenticated().to_problem()
-    assert "signature" not in (problem.detail or "").lower()
-    assert "expired" not in (problem.detail or "").lower()
+    # Every reason, bearer and API-key alike: the reason rides on the exception for the
+    # caller to record (FR-392) and never reaches the 401 body (SL-1740 re-point of the
+    # old `_unauthenticated()` check, same meaning).
+    for reason in AuthFailureReason:
+        problem = AuthenticationFailed("UNAUTHENTICATED", reason).to_problem()
+        body = problem.model_dump_json().lower()
+        assert problem.status == 401
+        assert reason.value not in body
+        assert "signature" not in (problem.detail or "").lower()
+        assert "expired" not in (problem.detail or "").lower()

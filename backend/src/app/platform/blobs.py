@@ -35,11 +35,13 @@ from botocore.client import Config as BotoConfig
 from botocore.exceptions import ClientError
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings
 from app.db.models import (
     BlobRow,
+    BlobUploadRow,
     DatasetVersionRow,
     JobRow,
     RegressionRunRow,
@@ -52,9 +54,14 @@ from model_schema import BlobRef, JobSource, Principal, new_uuid7
 
 if TYPE_CHECKING:  # pragma: no cover
     from mypy_boto3_s3.client import S3Client
+    from mypy_boto3_s3.type_defs import PartTypeDef
+
+    from app.db.session import Database
 
 __all__ = [
     "QUOTE_INPUT_BLOB_COLUMNS",
+    "STAGING_EXPIRY_DAYS",
+    "UPLOAD_COMPLETE_WITHIN",
     "BlobStore",
     "GarbageCollectionReport",
     "PresignedUpload",
@@ -68,6 +75,13 @@ __all__ = [
 _log = get_logger("app.blobs")
 
 _CHUNK_SIZE: Final = 1024 * 1024  # 1 MiB
+
+#: `RL-1724` DP-U1.2. Staged bytes and incomplete multipart uploads older than this are removed
+#: by a lifecycle rule on `staging/`. The completion deadline (24 h, `UPLOAD_COMPLETE_WITHIN`)
+#: must stay shorter than this, whatever the store does.
+STAGING_EXPIRY_DAYS: Final = 2
+UPLOAD_COMPLETE_WITHIN: Final = timedelta(hours=24)
+_STAGING_RULE_ID: Final = "expire-staging"  # the bucket lifecycle rule this module owns
 
 
 def blob_key(sha256: str) -> str:
@@ -123,13 +137,45 @@ class BlobStore:
         )
 
     async def ensure_bucket(self) -> None:
-        """Create the bucket when absent. Idempotent, so startup can always call it."""
+        """Create the bucket when absent and set the staging lifecycle rule.
+
+        Idempotent, so startup can always call it. The rule (`RL-1724` DP-U1.2) expires
+        `staging/` objects and aborts incomplete multipart uploads after `STAGING_EXPIRY_DAYS`;
+        it is set here, not by an operator, so it holds under `docker compose up`.
+        """
 
         def _ensure() -> None:
             try:
                 self._client.head_bucket(Bucket=self._bucket)
             except ClientError:
                 self._client.create_bucket(Bucket=self._bucket)
+            # `put_bucket_lifecycle_configuration` replaces every rule on the bucket, so read
+            # first and replace only this module's rule, by its ID: an operator's own rules
+            # survive a restart.
+            try:
+                existing = self._client.get_bucket_lifecycle_configuration(Bucket=self._bucket)
+                kept = [r for r in existing.get("Rules", []) if r.get("ID") != _STAGING_RULE_ID]
+            except ClientError as exc:
+                if exc.response.get("Error", {}).get("Code") != "NoSuchLifecycleConfiguration":
+                    raise
+                kept = []
+            self._client.put_bucket_lifecycle_configuration(
+                Bucket=self._bucket,
+                LifecycleConfiguration={
+                    "Rules": [
+                        *kept,
+                        {
+                            "ID": _STAGING_RULE_ID,
+                            "Status": "Enabled",
+                            "Filter": {"Prefix": "staging/"},
+                            "Expiration": {"Days": STAGING_EXPIRY_DAYS},
+                            "AbortIncompleteMultipartUpload": {
+                                "DaysAfterInitiation": STAGING_EXPIRY_DAYS
+                            },
+                        },
+                    ]
+                },
+            )
 
         await asyncio.to_thread(_ensure)
 
@@ -243,9 +289,9 @@ class BlobStore:
         The digest is not known until the client has uploaded, so the object lands under a
         staging key rather than at `blob/{sha}`: presigning the content address is impossible
         without the bytes, and asking the client for the digest first would let it choose
-        one. Nothing in this codebase yet moves a staging object to its content address or
-        creates its `blobs` row (the completion step FR-421 implies is not built), so a
-        client upload cannot become an ingestible blob through this path today.
+        one. The route records a Blob Upload for the result (`BlobUploadRow`), and
+        `promote_upload` later moves the staged object to its content address and writes its
+        `blobs` row (FR-1776).
         """
         if parts < 1:
             raise ValueError("parts must be at least 1")
@@ -287,6 +333,151 @@ class BlobStore:
         return PresignedUpload(
             upload_id=upload_id, key=staging_key, urls=tuple(urls), expires_in_s=expires_in_s
         )
+
+    async def promote_upload(self, database: Database, upload_id: UUID) -> BlobRef:
+        """Move a completed Blob Upload to its content address and own it (FR-1776).
+
+        Runs in the `blob.promote` Job, never in a request (`07` R1). The staged bytes are read
+        once, streamed, to compute the SHA-256; the object is copied server-side to
+        `blob/{sha[:2]}/{sha}` unless a blob with that digest is stored (FR-419); then, in one
+        transaction, the `blobs` row is written if absent, one reference is taken (FR-420) and
+        the Blob Upload is marked promoted. Only after that commit is the staging object
+        deleted. Idempotent per Blob Upload: a re-run of a promoted one returns the same ref and
+        takes no second reference.
+        """
+        async with database.session() as session:
+            upload = await session.get(BlobUploadRow, upload_id)
+            if upload is None:
+                raise PlatformError(
+                    "NOT_FOUND", "Blob Upload not found", 404, f"No Blob Upload {upload_id}."
+                )
+            if upload.sha256 is not None:
+                promoted = await session.get(BlobRow, upload.sha256)
+                assert promoted is not None
+                return to_ref(promoted)
+            key, s3_upload_id = upload.staging_key, upload.s3_upload_id
+            part_count, media_type = upload.part_count, upload.media_type
+
+        await asyncio.to_thread(self._complete_staged, key, s3_upload_id, part_count)
+        digest, size = await asyncio.to_thread(self._hash_object, key)
+        content_key = blob_key(digest)
+
+        async with database.session() as session:
+            stored = await session.get(BlobRow, digest) is not None
+        if not stored:
+            await asyncio.to_thread(
+                self._client.copy,
+                {"Bucket": self._bucket, "Key": key},
+                self._bucket,
+                content_key,
+                ExtraArgs={"ContentType": media_type, "MetadataDirective": "REPLACE"},
+            )
+
+        async with database.unit_of_work() as session:
+            locked = await session.get(BlobUploadRow, upload_id, with_for_update=True)
+            assert locked is not None
+            if locked.sha256 is None:
+                await session.execute(
+                    pg_insert(BlobRow)
+                    .values(
+                        sha256=digest,
+                        bytes_=size,
+                        media_type=media_type,
+                        part_count=part_count if part_count > 1 else None,
+                        ref_count=0,
+                    )
+                    .on_conflict_do_nothing(index_elements=["sha256"])
+                )
+                await retain(session, digest)
+                locked.sha256 = digest
+            row = await session.get(BlobRow, digest)
+            assert row is not None
+            ref = to_ref(row)
+
+        await asyncio.to_thread(self._client.delete_object, Bucket=self._bucket, Key=key)
+        return ref
+
+    def _complete_staged(self, key: str, s3_upload_id: str | None, part_count: int) -> None:
+        """Finish the staged object, or fail with `VALIDATION_FAILED` naming what is wrong.
+
+        A multipart upload must have exactly parts 1 to `part_count`: S3 would complete from
+        whatever parts it holds, promoting a truncated file as whole.
+        """
+        if s3_upload_id is None:
+            try:
+                self._client.head_object(Bucket=self._bucket, Key=key)
+            except ClientError as exc:
+                raise _validation(
+                    "The upload is missing", f"No object was uploaded to {key}."
+                ) from exc
+            return
+
+        parts: list[PartTypeDef] = []
+        marker = 0
+        try:
+            while True:
+                page = self._client.list_parts(
+                    Bucket=self._bucket, Key=key, UploadId=s3_upload_id, PartNumberMarker=marker
+                )
+                parts.extend(page.get("Parts", []))
+                if not page.get("IsTruncated"):
+                    break
+                marker = page["NextPartNumberMarker"]
+        except ClientError as exc:
+            if exc.response.get("Error", {}).get("Code") != "NoSuchUpload":
+                raise
+            # A re-run after S3 completed the upload but before the row committed: the
+            # multipart upload is gone and the object is whole.
+            try:
+                self._client.head_object(Bucket=self._bucket, Key=key)
+            except ClientError as head_exc:
+                raise _validation(
+                    "The upload is missing", f"No object was uploaded to {key}."
+                ) from head_exc
+            return
+
+        present = {int(part["PartNumber"]) for part in parts}
+        missing = [n for n in range(1, part_count + 1) if n not in present]
+        extra = sorted(present - set(range(1, part_count + 1)))
+        if missing or extra:
+            raise _validation(
+                "The upload's parts are not the declared parts",
+                f"Expected parts 1 to {part_count}; missing part(s) "
+                f"{', '.join(map(str, missing)) or 'none'}"
+                + (f"; unexpected part(s) {', '.join(map(str, extra))}" if extra else "")
+                + ".",
+            )
+        try:
+            self._client.complete_multipart_upload(
+                Bucket=self._bucket,
+                Key=key,
+                UploadId=s3_upload_id,
+                MultipartUpload={
+                    "Parts": [
+                        {"PartNumber": int(part["PartNumber"]), "ETag": part["ETag"]}
+                        for part in sorted(parts, key=lambda p: int(p["PartNumber"]))
+                    ]
+                },
+            )
+        except ClientError as exc:
+            if exc.response.get("Error", {}).get("Code") == "EntityTooSmall":
+                raise _validation(
+                    "A part is below the store's minimum size",
+                    "Every part but the last must be at least 5 MiB.",
+                ) from exc
+            raise
+
+    def _hash_object(self, key: str) -> tuple[str, int]:
+        """SHA-256 and size of the object at `key`, read once in `_CHUNK_SIZE` pieces."""
+        stream = self._client.get_object(Bucket=self._bucket, Key=key)["Body"]
+        digest, size = hashlib.sha256(), 0
+        try:
+            while chunk := stream.read(_CHUNK_SIZE):
+                digest.update(chunk)
+                size += len(chunk)
+        finally:
+            stream.close()
+        return digest.hexdigest(), size
 
     # -- scratch (RL-857 §4, `docs/rulings/RL-00857-d6-chunk-checkpointed-resume
     # -built-in-the-job-handler-and-keyed-on-content-not-on-the-job.md`): a `score.batch` chunk
@@ -463,6 +654,10 @@ async def _adjust_ref_count(session: AsyncSession, sha256: str, delta: int) -> i
             "BLOB_NOT_FOUND", "Blob not found", 404, f"No blob with digest {sha256}."
         )
     return int(row[0])
+
+
+def _validation(title: str, detail: str) -> PlatformError:
+    return PlatformError("VALIDATION_FAILED", title, 422, detail)
 
 
 def to_ref(row: BlobRow) -> BlobRef:

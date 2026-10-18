@@ -62,7 +62,11 @@ from model_schema.perils import LargeLossKind, PerilMethod, PerilStructure
 from model_schema.rating import RatingAlgorithm, RatingModelCallStep
 from pricing_core.modelling.errors import ModellingError
 from pricing_core.modelling.gbm import GbmFitError, load_gbm_booster, predict_gbm
-from pricing_core.modelling.predict import PredictionError, linear_predictor, predict_glm
+from pricing_core.modelling.predict import (
+    PredictionError,
+    linear_predictor_row,
+    predict_glm_row,
+)
 from pricing_core.rating.compile import (
     Bundle,
     JdmGraph,
@@ -723,7 +727,7 @@ def _model_call_handler(
     raw bytes, so N quotes against one `CompiledBundle` deserialise the booster once, not N
     times. A GLM pin scores through `scorers[ref]`, rebuilt once from the Factors, Bandings and
     Groupings the Bundle carries beside the Model (FD-1458; FR-222, FR-239, NFR-491), and
-    `predict_glm` per quote.
+    `predict_glm_row` per quote.
 
     **Rounding is the step's `result_type`'s to decide (the maintainer's (by delegation) entry
     headed "2026-10-10 00:40:31 BST — RULING: A-2 item 15. NEITHER (i) nor (ii)…").** A GBM
@@ -813,9 +817,9 @@ class _GlmScorer:
     columns: Mapping[str, str]
     offset_source: _GlmScorer | None
 
-    def linear_predictor(self, frame: pl.DataFrame) -> Any:
-        return linear_predictor(
-            self.fit, frame, self.factors, self.spec, bandings=self.bandings,
+    def linear_predictor_row(self, row: Mapping[str, Any]) -> Any:
+        return linear_predictor_row(
+            self.fit, row, self.factors, self.spec, bandings=self.bandings,
             groupings=self.groupings,
         )
 
@@ -834,15 +838,14 @@ class _GlmScorer:
                     terms=(column,),
                 )
             row[column] = value
-        frame = pl.DataFrame([row])
+        # One quote, one GLM: the scalar path (`predict_glm_row`), bit-identical to the one-row
+        # frame it replaces and without its per-call lazy `collect` (FD 8097 (filed in D21)).
         model_offset = (
-            self.offset_source.linear_predictor(frame) if self.offset_source else None
+            self.offset_source.linear_predictor_row(row) if self.offset_source else None
         )
-        return float(
-            predict_glm(
-                self.fit, frame, self.factors, self.spec, model_offset=model_offset,
-                bandings=self.bandings, groupings=self.groupings,
-            )[0]
+        return predict_glm_row(
+            self.fit, row, self.factors, self.spec, model_offset=model_offset,
+            bandings=self.bandings, groupings=self.groupings,
         )
 
 

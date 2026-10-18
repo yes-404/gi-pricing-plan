@@ -19,8 +19,11 @@
           "min": {"type": "number"}, "max": {"type": "number"},
           "pattern": {"type": "string"},
           "domain": {"type": "array", "items": {"type": "string"}},
+          "ordered": {"type": "boolean", "default": false, "description": "An enum input's domain list order is its declared level order, lowest first (FR-213, RL-1613). Omitted while false, so an input that never declares it keeps its bundle hash."},
           "description": {"type": "string"}
-        }
+        },
+        "if": {"required": ["ordered"], "properties": {"ordered": {"const": true}}},
+        "then": {"required": ["domain"], "properties": {"type": {"const": "enum"}, "domain": {"minItems": 1}}}
       }
     },
     "outputs": {

@@ -3,7 +3,7 @@ id: PL-1733
 family: plan
 kind: map
 title: WK-1178 — FD-1723's two HIGH limbs, a capped GLM spec fits capped (FR-127) and the banding check runs at fit (FR-100), SL-1734 — a dated Work-plan delta
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-16 # original date 2026-10-14, set at the draft; minted 2026-10-16
 owner: planner
 tree: 8eaf6d5f9cd4204e1e077b44069d4afd395f1461

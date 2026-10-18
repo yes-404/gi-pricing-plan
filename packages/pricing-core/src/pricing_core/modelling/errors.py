@@ -50,8 +50,12 @@ class FactorResolutionError(ModellingError):
         super().__init__("FACTOR_RESOLUTION_FAILED", message, terms=terms)
 
 
-class BandingError(ModellingError):
-    """A Banding that cannot be proposed, applied or fitted on (`BAND_*`)."""
+class BandingError(ModellingError, CodedError):
+    """A Banding that cannot be proposed, applied or fitted on (`BAND_*`).
+
+    Also a `CodedError`, so the backend keeps its text through `safe_error_detail` (NFR-499):
+    the text names a column, a band label and a dataset range, never a quote input.
+    """
 
 
 class GroupingError(ModellingError):

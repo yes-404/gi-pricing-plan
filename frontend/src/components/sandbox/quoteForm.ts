@@ -4,6 +4,19 @@ import type { QuotePurpose } from "@/api/score";
 /** One declared Rating Input (03 FR-213), as the algorithm read returns it. */
 export type ContractField = RatingAlgorithm["input_contract"][number];
 
+/**
+ * The hint under an input: its type, any declared range, whether it is optional and, for an
+ * `ordered` enum, its levels in declared order (03 FR-213, `RL-1613`). Display only: the order
+ * is the contract's `domain` as returned, never a sort made here.
+ */
+export function fieldHint(field: ContractField): string {
+  const parts: string[] = [field.type];
+  if (field.min != null || field.max != null) parts.push(`range ${field.min ?? "…"} to ${field.max ?? "…"}`);
+  if (field.ordered && field.domain?.length) parts.push(`levels lowest to highest: ${field.domain.join(" < ")}`);
+  if (field.nullable) parts.push("optional");
+  return parts.join(", ");
+}
+
 /** What the form holds per field: a text box's string, or a checkbox's boolean. */
 export type RawValue = string | boolean;
 
