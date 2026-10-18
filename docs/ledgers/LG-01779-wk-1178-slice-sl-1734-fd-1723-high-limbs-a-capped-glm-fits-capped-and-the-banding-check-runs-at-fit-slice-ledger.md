@@ -195,3 +195,5 @@ Not opened yet; the lead opens the PR.
 - **F1 (A3, spec-after-code order):** accepted as a recorded delta by the maintainer (2026-10-17 19:03 BST, via the lead's MINT BLOCKS FIXED entry context): the squash lands spec and code as one commit, so the merged state is consistent. No rework.
 - **F2 (A15, frontend diff not empty):** authorised by the maintainer's "2026-10-17 17:31:25 BST" item 3(a); three test/fixture files, no non-test `frontend/` file. Recorded under "Gate-red fixes".
 - **F3 (test strength) and F4 (`BandingError` two bases):** recorded, not widened here.
+
+- Post-PR CI 2026-10-18: the SL-1758 fixture's banding slugs made grammar-valid (test-only; a semantic merge conflict with this slice's fit-time banding check, first red at c3cc2694; the maintainer, to-lead 2026-10-18 03:02:03 BST)
