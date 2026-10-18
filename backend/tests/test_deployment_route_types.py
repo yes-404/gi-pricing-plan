@@ -56,7 +56,7 @@ ROWS: tuple[Row, ...] = (
         "DeploymentRequestCreate",
         "DeploymentRequest",
     ),
-    Row("POST", "/api/v1/environments/{env}/deployments", "DeploymentCreate", "Deployment"),
+    Row("POST", "/api/v1/environments/{env}/deployments", "DeploymentCreate", "DeploymentCreated"),
     Row("GET", "/api/v1/environments/{env}/deployments", None, "Deployment", paged=True),
     # Row 9: the body and (FD-1416, PL-1528) the 2xx are typed.
     Row("POST", "/api/v1/approval-requests", "ApprovalSubmission", "ApprovalRequest"),
@@ -515,8 +515,8 @@ def test_each_untyped_2xx_of_the_deployment_routes_is_refused_by_name(
 
     original = _sources()["deployments.py"]
     for broken, shown in (
-        (original.replace(") -> Deployment:\n", "):\n", 1), "None"),
-        (original.replace(") -> Deployment:\n", ") -> dict[str, Any]:\n", 1), "dict[str, Any]"),
+        (original.replace(") -> DeploymentCreated:\n", "):\n", 1), "None"),
+        (original.replace(") -> DeploymentCreated:\n", ") -> dict[str, Any]:\n", 1), "dict[str, Any]"),
     ):
         assert broken != original
         assert any(f"returns {shown}" in p for p in ast_problems({"deployments.py": broken}))

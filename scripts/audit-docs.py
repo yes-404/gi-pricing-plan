@@ -2687,6 +2687,9 @@ _CONTRACT_ARTIFACT_PATHS: Final = (
     # 2026-10-16, DP-1722-WIRE (a) (WK-1178 SL-1722)
     "docs/contracts/schemas/generated/upload-url-request.schema.json",
     "docs/contracts/schemas/generated/upload-url-response.schema.json",
+    # 2026-10-18, PL-1766 D5.6 (WK-674 Slice 5)
+    "docs/contracts/schemas/generated/deployment-created.schema.json",
+    "docs/contracts/schemas/generated/switch-report.schema.json",
     "docs/contracts/schemas/generated/problem-detail.schema.json",
     "docs/contracts/schemas/generated/profile.schema.json",
     "docs/contracts/schemas/generated/transparency-artifact.schema.json",

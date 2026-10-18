@@ -1,0 +1,35 @@
+{
+  "additionalProperties": false,
+  "description": "Which processes switched to a Deployment and which did not (`03` FR-268; WK-674 Slice 5).\n\nThe `after` of the `deployment.switched` Audit Event and the switch half of the deploy\nresponse. Process ids only, never values: a process is `<container>:<pid>`, the container\nbeing the replica. A process in `unacknowledged` is alive and subscribed but did not\nacknowledge COMMIT, so it serves the previous version until it restarts (FD 8129).",
+  "properties": {
+    "committed": {
+      "description": "Processes that swapped their `live` reference.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Committed",
+      "type": "array"
+    },
+    "deployment_ref": {
+      "description": "The Deployment (its id) the processes switch to.",
+      "format": "uuid",
+      "title": "Deployment Ref",
+      "type": "string"
+    },
+    "unacknowledged": {
+      "description": "Processes that acknowledged PREPARE but not COMMIT.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Unacknowledged",
+      "type": "array"
+    }
+  },
+  "required": [
+    "deployment_ref",
+    "committed",
+    "unacknowledged"
+  ],
+  "title": "SwitchReport",
+  "type": "object"
+}

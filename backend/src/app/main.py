@@ -55,6 +55,14 @@ from app.observability.logging import configure_logging, get_logger
 from app.observability.middleware import TraceMiddleware
 from app.platform.blobs import BlobStore, blob_probe
 from app.platform.bundle_slot import BundleSlot
+from app.platform.deployment_switch import (
+    LiveRefs,
+    RedisSwitchTransport,
+    SwitchMember,
+    SwitchMessage,
+    SwitchSubscription,
+    process_id,
+)
 from app.platform.rate_limit import RateLimiter, build_redis_client
 from app.platform.settings import validate_setting_overrides
 from app.platform.tenancy import require_tenant_binding
@@ -109,6 +117,27 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # so an unavailable Redis does not stop startup; the limiter fails open.
         redis_client = build_redis_client(settings.redis_url.get_secret_value())
         running.state.rate_limiter = RateLimiter(redis_client)
+        # FR-268 (PL-1766 D5.8, the maintainer's 2026-10-18 23:03:15 BST ruling (A)): this
+        # process answers the deployment switch and holds its own `live` reference. Subscribe
+        # first, then load: the DB is ahead of or equal to any COMMIT (DB first), so loading
+        # last can only catch up, never lose a deployment that committed in between. A fresh
+        # process therefore serves the latest committed Deployment of every Environment.
+        # Unlike the rate limiter this does not fail open: a process that cannot subscribe
+        # would silently miss every switch, so it does not start.
+        switch = RedisSwitchTransport(redis_client, settings.tenant_id)
+
+        async def hydrate(message: SwitchMessage) -> None:
+            await score.hydrate_for_switch(database, blob_store, running.state.bundle_slot, message)
+
+        subscription = SwitchSubscription(
+            switch,
+            redis_client,
+            SwitchMember(process_id(), running.state.live_refs, hydrate),
+        )
+        await subscription.start()
+        async with database.session() as session:
+            await running.state.live_refs.load_latest(session)
+        running.state.switch = switch
         # RL-1685 (PL-1454 DP-4): everything built above lives for the process. Moving it
         # into the permanent generation takes it out of every later gen2 collection, whose
         # pause (about 200 to 300 ms on the Task 0 record) was the request-path stall.
@@ -116,6 +145,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         gc.freeze()
         yield
         health.clear_probes()
+        await subscription.stop()
         await redis_client.aclose()
         await database.dispose()
 
@@ -211,6 +241,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # lifetime `blob_store` has. Deliberately *not* per request: a slot rebuilt per call
     # holds nothing, which is the state option (a) was rejected for (RL-882).
     app.state.bundle_slot = BundleSlot(capacity=settings.bundle_slot_capacity)
+    # This process's `live` reference (FR-268). Empty until the lifespan loads the latest
+    # committed Deployments; written afterwards only by a COMMIT this process acknowledged.
+    app.state.live_refs = LiveRefs()
 
     _log.info(
         "application configured",

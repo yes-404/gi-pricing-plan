@@ -13,7 +13,9 @@ facts it needs through arguments and through `app.api.approvals`' fan-out.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
@@ -31,11 +33,21 @@ from app.db.models import (
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import approvals, audit, environments, rbac
+from app.platform.deployment_switch import (
+    COMMIT_TIMEOUT_SECONDS,
+    PREPARE_TIMEOUT_SECONDS,
+    SwitchIncompleteError,
+    SwitchMessage,
+    SwitchTransport,
+    commit_round,
+    prepare_round,
+)
 from model_schema import (
     ApprovalStatus,
     ArtifactRef,
     Deployment,
     DeploymentCreate,
+    DeploymentCreated,
     DeploymentRequest,
     DeploymentRequestCreate,
     DeploymentRequestEvidence,
@@ -45,18 +57,38 @@ from model_schema import (
     Principal,
     PromotionSkip,
     ScopeType,
+    SwitchReport,
+    new_uuid7,
     promotion_order_refusal,
 )
 
 __all__ = [
+    "Deployed",
     "apply_approval_decision",
     "deploy",
+    "deploy_and_switch",
     "list_deployments",
     "resolve_artifact_ref",
     "submit_request",
 ]
 
 _CREATED = "deployment_request.created"
+_SWITCHED = "deployment.switched"
+_log = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class Deployed:
+    """A Deployment written in the caller's transaction, and what is owed after it commits.
+
+    `prepared` is the PREPARE set (the `after` of `deployment.created` carries it);
+    `commit_message` is the COMMIT round to send once the transaction has committed, or `None`
+    when no switch is configured (an app with no Redis lifespan).
+    """
+
+    deployment: Deployment
+    prepared: frozenset[str]
+    commit_message: SwitchMessage | None
 
 
 # -- shared checks ------------------------------------------------------------------------
@@ -460,8 +492,15 @@ async def deploy(
     environment: str,
     body: DeploymentCreate,
     count_management: Callable[[], Awaitable[None]] | None = None,
-) -> Deployment:
+    switch: SwitchTransport | None = None,
+) -> Deployed:
     """Bind an `approved`, compiled Rating Version to an Environment (FR-267, FR-272).
+
+    With a `switch`, PREPARE runs here, after every refusal and before the row is written
+    (`PL-1766` D5.9): a short PREPARE raises `DEPLOY_SWITCH_INCOMPLETE` naming the processes
+    that did not acknowledge, and this transaction rolls back with no row and no event. COMMIT is
+    not sent from here: it follows the commit (`deploy_and_switch`), so a process never serves a
+    version no Deployment row records (DP-3 (b), DB first).
 
     A gated target needs an **approved** Deployment Request, executed exactly once by a
     conditional `UPDATE`; FR-429's predicate is re-evaluated from the request's **pinned**
@@ -543,7 +582,31 @@ async def deploy(
         )
     ).scalar_one_or_none()
     request_ref = None if request_row is None else _request_ref(request_row)
+    deployment_id = new_uuid7()
+    prepared: frozenset[str] = frozenset()
+    commit_message: SwitchMessage | None = None
+    if switch is not None:
+        message = SwitchMessage(
+            switch_id=str(new_uuid7()),
+            phase="prepare",
+            workspace_id=workspace_id,
+            environment=env.slug,
+            deployment_id=deployment_id,
+            rating_version_ref=str(ref),
+            bundle_hash=bundle_hash,
+        )
+        try:
+            prepared = await prepare_round(switch, message, timeout=PREPARE_TIMEOUT_SECONDS)
+        except SwitchIncompleteError as short:
+            raise PlatformError(
+                "DEPLOY_SWITCH_INCOMPLETE",
+                "The deployment switch did not complete PREPARE",
+                503,
+                f"No Deployment was written. {short}",
+            ) from short
+        commit_message = SwitchMessage(**{**message.__dict__, "phase": "commit"})
     row = DeploymentRow(
+        id=deployment_id,
         workspace_id=workspace_id,
         environment_id=env.id,
         rating_version_ref=str(ref),
@@ -570,10 +633,86 @@ async def deploy(
             env.slug,
             await _request_ref_of(session, previous.deployment_request_id),
         ).model_dump(mode="json"),
-        after=model.model_dump(mode="json"),
+        after={**model.model_dump(mode="json"), "prepared": sorted(prepared)},
         justification=body.reason,
     )
-    return model
+    return Deployed(model, prepared, commit_message)
+
+
+async def deploy_and_switch(
+    database: Database,
+    *,
+    workspace_id: UUID,
+    actor: Principal,
+    environment: str,
+    body: DeploymentCreate,
+    count_management: Callable[[], Awaitable[None]] | None = None,
+    switch: SwitchTransport | None = None,
+) -> DeploymentCreated:
+    """Deploy, then switch: the whole of FR-268's DB-first order (DP-3 (b)).
+
+    PREPARE and the Deployment row are `deploy`'s, in one transaction that commits when this
+    block exits. COMMIT is sent after that commit, and `deployment.switched` records, in its
+    own transaction, who swapped and who did not. No revert: a process that did not acknowledge
+    COMMIT is alive and still serving the previous version until it restarts (FD 8129), and the
+    event and the response name it.
+    """
+    async with database.unit_of_work() as session:
+        deployed = await deploy(
+            session,
+            workspace_id=workspace_id,
+            actor=actor,
+            environment=environment,
+            body=body,
+            count_management=count_management,
+            switch=switch,
+        )
+    report = await complete_switch(
+        database, deployed, workspace_id=workspace_id, actor=actor, switch=switch
+    )
+    return DeploymentCreated(**deployed.deployment.model_dump(), switch=report)
+
+
+async def complete_switch(
+    database: Database,
+    deployed: Deployed,
+    *,
+    workspace_id: UUID,
+    actor: Principal,
+    switch: SwitchTransport | None,
+) -> SwitchReport:
+    """COMMIT the prepared processes and write `deployment.switched` (shared with rollback)."""
+    deployment = deployed.deployment
+    committed: frozenset[str] = frozenset()
+    unacknowledged = deployed.prepared
+    if switch is not None and deployed.commit_message is not None:
+        try:
+            outcome = await commit_round(
+                switch, deployed.commit_message, deployed.prepared, timeout=COMMIT_TIMEOUT_SECONDS
+            )
+            committed, unacknowledged = outcome.committed, outcome.unacknowledged
+        except Exception:
+            # The row is committed, so the record must not be skipped: every prepared process
+            # is reported unacknowledged and the failure is logged.
+            _log.exception("COMMIT round failed for deployment %s", deployment.id)
+    report = SwitchReport(
+        deployment_ref=deployment.id,
+        committed=sorted(committed),
+        unacknowledged=sorted(unacknowledged),
+    )
+    if switch is not None:
+        async with database.unit_of_work() as session:
+            await audit.record(
+                session,
+                workspace_id=workspace_id,
+                actor=actor,
+                source=JobSource.API,
+                action=_SWITCHED,
+                entity_ref=f"environment:{deployment.environment}",
+                before=None,
+                after=report.model_dump(mode="json"),
+            )
+    return report
 
 
 def _not_approved(named: ArtifactRef | None, why: str) -> PlatformError:

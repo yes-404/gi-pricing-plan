@@ -112,9 +112,12 @@ class LiveRefs:
             live.set(workspace_id, environment, LiveEntry(deployment_id, ref, bundle_hash))
         return live
 
-    @classmethod
-    async def load_latest(cls, session: AsyncSession) -> LiveRefs:
-        """The startup load: the latest committed Deployment of every Environment."""
+    async def load_latest(self, session: AsyncSession) -> None:
+        """The startup load: the latest committed Deployment of every Environment, into `self`.
+
+        The DB is ahead of or equal to any COMMIT a process has acknowledged (DB first), so
+        this never moves a reference backwards.
+        """
         result = await session.execute(
             select(
                 DeploymentRow.workspace_id,
@@ -131,7 +134,8 @@ class LiveRefs:
                 DeploymentRow.id.desc(),
             )
         )
-        return cls.from_latest((r[0], r[1], r[2], r[3], r[4]) for r in result.all())
+        for workspace_id, environment, deployment_id, ref, bundle_hash in result.all():
+            self.set(workspace_id, environment, LiveEntry(deployment_id, ref, bundle_hash))
 
 
 @dataclass(frozen=True)
