@@ -236,14 +236,14 @@ async def test_the_identity_holds_on_the_g2_seed_recipe(
         sys.path.pop(0)
 
     source_name = {target: source for source, target in RENAMES.items()}
-    header = [source_name.get(column, column) for column in NUMERIC]
+    header = ["IDpol", *(source_name.get(column, column) for column in NUMERIC)]
     over = float(MAX_EXPOSURE) + 1.0
     rows = []
     for index in range(6):
         values = {column: "3" if kind == "int" else "0.5" for column, kind in NUMERIC.items()}
         if index < 2:
             values["exposure_years"] = str(over)
-        rows.append(",".join(values[column] for column in NUMERIC))
+        rows.append(",".join([str(index + 1), *(values[column] for column in NUMERIC)]))
     payload = ("\n".join([",".join(header), *rows]) + "\n").encode()
 
     _, run = await _ingest(
