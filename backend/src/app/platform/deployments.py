@@ -39,7 +39,7 @@ from app.platform.deployment_switch import (
     PrepareOutcome,
     SwitchIncompleteError,
     SwitchMessage,
-    SwitchTransport,
+    SwitchRegistry,
     commit_round,
     prepare_round,
 )
@@ -491,7 +491,7 @@ async def apply_approval_decision(
 
 
 async def _prepare(
-    switch: SwitchTransport | None,
+    switch: SwitchRegistry | None,
     *,
     workspace_id: UUID,
     environment: str,
@@ -514,7 +514,9 @@ async def _prepare(
         bundle_hash=bundle_hash,
     )
     try:
-        outcome = await prepare_round(switch, message, timeout=PREPARE_TIMEOUT_SECONDS)
+        outcome = await prepare_round(
+            switch.for_environment(environment), message, timeout=PREPARE_TIMEOUT_SECONDS
+        )
     except SwitchIncompleteError as short:
         raise PlatformError(
             "DEPLOY_SWITCH_INCOMPLETE",
@@ -533,7 +535,7 @@ async def deploy(
     environment: str,
     body: DeploymentCreate,
     count_management: Callable[[], Awaitable[None]] | None = None,
-    switch: SwitchTransport | None = None,
+    switch: SwitchRegistry | None = None,
 ) -> Deployed:
     """Bind an `approved`, compiled Rating Version to an Environment (FR-267, FR-272).
 
@@ -676,7 +678,7 @@ async def deploy_and_switch(
     environment: str,
     body: DeploymentCreate,
     count_management: Callable[[], Awaitable[None]] | None = None,
-    switch: SwitchTransport | None = None,
+    switch: SwitchRegistry | None = None,
 ) -> DeploymentCreated:
     """Deploy, then switch: the whole of FR-268's DB-first order (DP-3 (b)).
 
@@ -710,7 +712,7 @@ async def rollback(
     environment: str,
     body: RollbackCreate,
     count_management: Callable[[], Awaitable[None]] | None = None,
-    switch: SwitchTransport | None = None,
+    switch: SwitchRegistry | None = None,
 ) -> Deployed:
     """Roll an Environment back to a Rating Version it was deployed with before (FR-269).
 
@@ -812,7 +814,7 @@ async def rollback_and_switch(
     environment: str,
     body: RollbackCreate,
     count_management: Callable[[], Awaitable[None]] | None = None,
-    switch: SwitchTransport | None = None,
+    switch: SwitchRegistry | None = None,
 ) -> DeploymentCreated:
     """Roll back, then switch: `deploy_and_switch`'s order for a rollback (FR-268, FR-269)."""
     async with database.unit_of_work() as session:
@@ -837,7 +839,7 @@ async def complete_switch(
     *,
     workspace_id: UUID,
     actor: Principal,
-    switch: SwitchTransport | None,
+    switch: SwitchRegistry | None,
 ) -> SwitchReport:
     """COMMIT the prepared processes and write `deployment.switched` (shared with rollback)."""
     deployment = deployed.deployment
@@ -846,7 +848,10 @@ async def complete_switch(
     if switch is not None and deployed.commit_message is not None:
         try:
             outcome = await commit_round(
-                switch, deployed.commit_message, deployed.prepared, timeout=COMMIT_TIMEOUT_SECONDS
+                switch.for_environment(deployment.environment),
+                deployed.commit_message,
+                deployed.prepared,
+                timeout=COMMIT_TIMEOUT_SECONDS,
             )
             committed, unacknowledged = outcome.committed, outcome.unacknowledged
         except Exception:

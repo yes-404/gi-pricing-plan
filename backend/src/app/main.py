@@ -15,6 +15,7 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import APIRouter, FastAPI
+from sqlalchemy import select
 
 from app.api import (
     approvals,
@@ -49,6 +50,7 @@ from app.api import settings as settings_api
 from app.api.responses import problems, without_fastapi_validation_error
 from app.auth.oidc import OidcVerifier
 from app.config import Settings, load_settings
+from app.db.models import EnvironmentRow
 from app.db.session import Database, database_probe
 from app.errors import install_error_handlers
 from app.observability.logging import configure_logging, get_logger
@@ -57,7 +59,7 @@ from app.platform.blobs import BlobStore, blob_probe
 from app.platform.bundle_slot import BundleSlot
 from app.platform.deployment_switch import (
     LiveRefs,
-    RedisSwitchTransport,
+    RedisSwitch,
     SwitchMember,
     SwitchMessage,
     SwitchSubscription,
@@ -126,9 +128,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # Unlike the rate limiter this does not fail open: a process that cannot subscribe
         # would silently miss every switch, so it does not start.
         switch_client = build_switch_client(settings.redis_url.get_secret_value())
-        switch = RedisSwitchTransport(
-            switch_client, f"{settings.environment.value}:{settings.tenant_id}"
-        )
+        switch = RedisSwitch(switch_client, f"{settings.environment.value}:{settings.tenant_id}")
+        # One channel per platform Environment (`dev`, `uat`, `prod`, ...). An Environment
+        # created after this process started is not subscribed until it restarts: a deploy into
+        # it names no such process, and FD 8129 covers the gap.
+        async with database.session() as session:
+            environments = list(
+                (
+                    await session.execute(
+                        select(EnvironmentRow.slug).where(EnvironmentRow.retired_at.is_(None))
+                    )
+                ).scalars()
+            )
 
         async def hydrate(message: SwitchMessage) -> None:
             await score.hydrate_for_switch(database, blob_store, running.state.bundle_slot, message)
@@ -137,6 +148,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             switch,
             switch_client,
             SwitchMember(process_id(), running.state.live_refs, hydrate),
+            environments,
         )
         await subscription.start()
         async with database.session() as session:

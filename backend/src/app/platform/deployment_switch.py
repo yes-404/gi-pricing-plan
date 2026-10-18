@@ -55,10 +55,12 @@ __all__ = [
     "LiveEntry",
     "LiveRefs",
     "PrepareOutcome",
+    "RedisSwitch",
     "RedisSwitchTransport",
     "SwitchIncompleteError",
     "SwitchMember",
     "SwitchMessage",
+    "SwitchRegistry",
     "SwitchSubscription",
     "SwitchTransport",
     "build_switch_client",
@@ -334,10 +336,11 @@ def build_switch_client(url: str) -> Redis:
 class RedisSwitchTransport:
     """The switch channel on Redis: a pub/sub channel, a roster set, one ack set per round.
 
-    Namespaced per platform environment and tenant (`<environment>:<tenant>`), so two stacks on
-    one Redis never hear each other. Acks
-    are polled while a round waits; that is the coordinator's own wait, not a process
-    heartbeat.
+    One transport is one platform Environment's (`dev`, `uat`, `prod`, ...) switch, namespaced
+    `<GIP_ENVIRONMENT>:<tenant>:<environment slug>` (the maintainer's "2026-10-18" answer on
+    scope, relayed by the lead): the stack prefix keeps two stacks on one Redis apart, and the
+    slug keeps a `uat` deploy from reaching a process that serves only `prod`. Acks are polled
+    while a round waits; that is the coordinator's own wait, not a process heartbeat.
     """
 
     def __init__(self, client: Redis, namespace: str) -> None:
@@ -387,28 +390,59 @@ class RedisSwitchTransport:
         await _awaited(self._client.srem(self._roster_key, process))
 
 
-class SwitchSubscription:
-    """A process's subscription: listens on the channel and answers for its `SwitchMember`.
+class SwitchRegistry(Protocol):
+    """The switch for every Environment: what the deploy service is given."""
 
-    `start` returns only once the channel's SUBSCRIBE is confirmed and the process is on the
-    roster, so a PREPARE published after `start` returns is received (and counted) here.
+    def for_environment(self, environment: str) -> SwitchTransport: ...
+
+
+class RedisSwitch:
+    """The Redis switch of one stack: a `RedisSwitchTransport` per Environment slug."""
+
+    def __init__(self, client: Redis, stack: str) -> None:
+        self._client = client
+        self._stack = stack
+
+    def for_environment(self, environment: str) -> RedisSwitchTransport:
+        return RedisSwitchTransport(self._client, f"{self._stack}:{environment}")
+
+
+class SwitchSubscription:
+    """A process's subscriptions, one channel per Environment it serves, answering for its
+    `SwitchMember`.
+
+    `start` returns only once every channel's SUBSCRIBE is confirmed and the process is on every
+    roster, so a PREPARE published after `start` returns is received (and counted) here. A
+    process serving several Environments appears in each roster.
     """
 
     def __init__(
-        self, transport: RedisSwitchTransport, client: Redis, member: SwitchMember
+        self,
+        switch: RedisSwitch,
+        client: Redis,
+        member: SwitchMember,
+        environments: Iterable[str],
     ) -> None:
-        self._transport = transport
-        self._client = client
+        self._switch = switch
         self._member = member
+        self._transports = {env: switch.for_environment(env) for env in environments}
         self._pubsub = client.pubsub()
         self._task: asyncio.Task[None] | None = None
 
     async def start(self) -> None:
-        await self._pubsub.subscribe(self._transport.channel)
-        confirmed = await self._pubsub.get_message(ignore_subscribe_messages=False, timeout=5.0)
-        if confirmed is None or confirmed.get("type") != "subscribe":
-            raise RuntimeError(f"the switch channel {self._transport.channel} was not confirmed")
-        await self._transport.join(self._member.process)
+        if not self._transports:
+            return
+        channels = [t.channel for t in self._transports.values()]
+        await self._pubsub.subscribe(*channels)
+        confirmed: set[str] = set()
+        while len(confirmed) < len(channels):
+            reply = await self._pubsub.get_message(ignore_subscribe_messages=False, timeout=5.0)
+            if reply is None:
+                raise RuntimeError(f"the switch channels {channels} were not confirmed")
+            if reply.get("type") == "subscribe":
+                confirmed.add(str(reply["channel"]))
+        for transport in self._transports.values():
+            await transport.join(self._member.process)
         self._task = asyncio.create_task(self._listen(), name="deployment-switch-subscriber")
 
     async def _listen(self) -> None:
@@ -417,8 +451,9 @@ class SwitchSubscription:
                 continue
             try:
                 message = SwitchMessage.from_json(raw["data"])
-                if await self._member.handle(message):
-                    await self._transport.acknowledge(
+                transport = self._transports.get(message.environment)
+                if transport is not None and await self._member.handle(message):
+                    await transport.acknowledge(
                         message.switch_id, message.phase, self._member.process
                     )
             except Exception:
@@ -429,6 +464,7 @@ class SwitchSubscription:
             self._task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await self._task
-        with contextlib.suppress(Exception):
-            await self._transport.leave(self._member.process)
+        for transport in self._transports.values():
+            with contextlib.suppress(Exception):
+                await transport.leave(self._member.process)
         await self._pubsub.aclose()  # type: ignore[no-untyped-call]

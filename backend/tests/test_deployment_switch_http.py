@@ -31,7 +31,7 @@ from app.db.models import AuditEventRow, DeploymentRow
 from app.main import create_app
 from app.platform.deployment_switch import (
     LiveRefs,
-    RedisSwitchTransport,
+    RedisSwitch,
     SwitchMember,
     SwitchMessage,
     SwitchSubscription,
@@ -76,18 +76,17 @@ class _Peer:
         hydrate: Callable[[SwitchMessage], Awaitable[None]],
         *,
         deaf_to_commit: bool = False,
+        environments: tuple[str, ...] = ("dev", "uat", "prod"),
     ) -> None:
         self._loop = asyncio.new_event_loop()
         self._thread = threading.Thread(target=self._loop.run_forever, daemon=True)
         self._thread.start()
         self._client = build_switch_client(settings.redis_url.get_secret_value())
-        transport = RedisSwitchTransport(
-            self._client, f"{settings.environment.value}:{settings.tenant_id}"
-        )
+        switch = RedisSwitch(self._client, f"{settings.environment.value}:{settings.tenant_id}")
         kind = _DeafToCommit if deaf_to_commit else SwitchMember
         self.process = process
         self._subscription = SwitchSubscription(
-            transport, self._client, kind(process, LiveRefs(), hydrate)
+            switch, self._client, kind(process, LiveRefs(), hydrate), environments
         )
         asyncio.run_coroutine_threadsafe(self._subscription.start(), self._loop).result(10)
 
@@ -223,3 +222,23 @@ async def test_a_rollback_emits_rolled_back_then_switched_and_swaps_live(
         headers=deployer.headers,
     )
     assert never.status_code == 409, never.text
+
+
+@pytest.mark.req("FR-268")
+@pytest.mark.asyncio
+async def test_a_deploy_is_not_acknowledged_by_a_process_serving_only_another_environment(
+    client: TestClient, api_settings: Settings, database: Any, workspace_id: UUID, seat: Any
+) -> None:
+    """The maintainer's scope answer: one channel and roster per platform Environment. A
+    `prod`-only subscriber that could not hydrate neither receives a `dev` PREPARE nor blocks it."""
+    deployer = await seat("deployer")
+    ref = await approved_version(database, workspace_id, deployer.id)
+    peer = _Peer(api_settings, "prod-only:7:1", _cannot_hydrate, environments=("prod",))
+    try:
+        done = deploy(client, deployer, "dev", ref)
+    finally:
+        peer.stop()
+    assert done.status_code == 201, done.text
+    switch = done.json()["switch"]
+    assert "prod-only:7:1" not in switch["processes"]
+    assert switch["receivers"] == 1
