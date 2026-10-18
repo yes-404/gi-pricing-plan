@@ -6120,6 +6120,18 @@
             "title": "Dataset Id",
             "type": "string"
           },
+          "expression": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expression"
+          },
           "grouping_id": {
             "anyOf": [
               {
