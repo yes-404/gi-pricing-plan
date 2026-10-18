@@ -354,3 +354,39 @@ Order (c) then (b), once, on a main carrying SL-1758 (`539a654f`) and SL-1761 (`
 ## PRs
 
 One PR for this slice (L1 (a')): opened and merged by the lead; not yet opened.
+
+## Delta audit
+
+*(Written by `auditor-1341d` (the auditor role, sonnet), 2026-10-18 11:56 BST by `date`, read-only (git / grep / Read) on head `880c2fc0cd0ff31104e2d42c0b1fa6882d1423ef`, tree `6f855be5a3ff9a74a8ede4453af0397833747501`. Range `94bc4a23..880c2fc0` (the close, to the re-gated head); the first audit is above and is not re-run. `origin/main` was `788f36c1` at the last merge and has since moved to `48d4cf01`.)*
+
+**Delta commits.**
+
+| Commit | What | Authority | Evidence |
+|---|---|---|---|
+| `a5be3455` | merge `origin/main` (`8804230b`) into the closed head | the executor's re-merge, accepted by the maintainer (by delegation) 2026-10-18 09:23:11 | parents `94bc4a23` + `8804230b` |
+| `e00b264f` | new test file `test_rating_purpose_mount_model_call_checks.py`, +124 | the (b) proof ordered with the re-merge; `every_inlined` runs `check_model_call_gbm_factors` and `check_model_call_columns` on each purpose graph (`compile.py`, the loop after `_refuse_control_factor_key`s); not named in `PL-1629`, which predates both checks | see "The test" below |
+| `f269c5ca` | ledger: "Re-merge onto main and the (b) proof" section | as `e00b264f` | +18 lines |
+| `cf2d477b` | re-mint LG 1761 to `LG-1808` | maintainer ruling 2026-10-18 09:10:58 item 1; accepted 09:15:06 and 09:23:11 | see "The re-mint" below |
+| `d9a8b716` | merge `origin/main` (`788f36c1`); `compile.py` conflict hand-resolved | ruling 09:10:58 item 3; accepted 09:23:11 | see "compile.py" below |
+| `880c2fc0` | regenerate `docs/INDEX.md` | item 17 of the common brief | INDEX hunk is 11 lines in `git diff 788f36c1 880c2fc0 --stat` |
+
+**compile.py.** `git diff --numstat origin/main 880c2fc0 -- …/rating/compile.py` = `57 20`, and `git diff --numstat 8804230b f269c5ca` on the same path = `57 20`. I did not stop at the counts: the changed lines of the two diffs (`+`/`-` lines, headers dropped, 77 lines) are byte-identical (`cmp` rc 0). Main changed this file twice between `8804230b` and `788f36c1` (`57c2ea77` SL-1563, `4a53f194` SL-1543); `git diff 788f36c1 880c2fc0 -- compile.py` (read in full) holds only the slice's own hunks: the `pydantic` import list, `selected_purposes`, `Bundle.purpose_graphs` and its wrap serializer, `bundle_hash`'s optional argument, and the two `for each in every_inlined` loops. No line of SL-1563's or SL-1543's change is deleted or altered, so nothing of main is lost and nothing beyond the union is added.
+
+**The test (`e00b264f`).** Two tests, both `@pytest.mark.req("FR-222", "FR-240", "FR-218")` (the three ids exist in `03-rating-engine.md`). The base algorithm is clean; the offending `model_call` sits in a `cancellation`-only fragment. Test 1 `pytest.raises(ValueError, match=GBM_CODE)` where `GBM_CODE` is `^MODEL_CALL_GBM_TRANSFORMED_FACTOR: ` (`test_rating_gbm_banded_refusal.py:50`) and asserts the factor slug is in the message. Test 2 matches `^MODEL_CALL_FEATURE_MAP_INVALID: ` and asserts both column names (`age_fine`, `age_coarse`) in the message. Both assert the refusal code, and the red-first claim (check moved outside the loop makes each red) is in the ledger's re-merge section; I did not re-run it (no pytest before GATE-2 GO). The gate's `pytest.log` lists 13 failures and neither new test is among them (`-q` does not name passes; "passed" for these two is inferred from the 6299 total, not read by name).
+
+**The re-mint.** Front matter `id: LG-1808`, `created: 2026-10-18` with the history in the comment; heading `# LG-1808`; the file renamed (`similarity 98%`); `docs/roadmap.md` cites re-pointed (2 lines in the diff). `git grep -n -E "LG[ -]?0?1761" (the pattern, spelled so) 880c2fc0` = 2 hits, both in the ledger, both quoted history: line 6 (front-matter comment "minted … as LG 1761") and line 19 (the mint note naming the collision). No live cite. Main's `SL-1761` and `LG-1762` files are not in the `788f36c1..880c2fc0` diff. `LG-1808` is not on `origin/main`. The `idsweep.sh` run is the lead's.
+
+**Findings.**
+- **F1 (low, record).** The ledger records the first re-merge (`a5be3455`) but not the second (`d9a8b716`): ruling 09:10:58 item 3 asks for hunk-by-hunk attribution (SL-1341 / SL-1543 / SL-1563), and it exists only as the maintainer's numstat check in `to-lead.md` 09:23:11 and this audit. Proposed: the lead accepts this audit's "compile.py" paragraph as the attribution (all hunks SL-1341's; none of SL-1543's or SL-1563's touched).
+- **F2 (info).** Front matter `tree:` is `5576628141a98b5ce768096a7a0e96b212f1f761`, the first gated tree, not `6f855be5…`; the gate that covers this head is `scratch/sl1341-gate` (START head `880c2fc0`, tree `6f855be5`). The field is the gated-tree-at-close; not edited here (a closed record).
+- **F3 (info).** `d9a8b716`'s commit time is not in the ledger either; no harm.
+- No finding above low.
+
+**Unevidenced, four verdicts.**
+- The 5 `test_score_purpose_mount.py` route tests (DB) at `880c2fc0`: the maintainer's 09:23:11 entry says item 21 incl. DB route files green, zeros quoted; I did not read that run's output. **Delivered but untested by me**; the evidence is the executor's run and the maintainer's entry.
+- Both new tests passed at `880c2fc0` (by name): **delivered but untested by name** (see above).
+- PR-CI condition (no check-31 row, none of the 13 after SL 8116 merges): **deferred, owner the lead**, at the PR's CI.
+
+**Gate evidence read.** `gate.log` START head `880c2fc0`, tree `6f855be5`, "head guard ok", "clean tree ok", "tree after gate: 0 changed path(s)"; `pytest.log`: `13 failed, 6299 passed, 4 skipped`, the 13 are `test_audit_docs_*`, `test_doc_index`, `test_register_*`, `test_repository_invariants` (the real-tree audit cascade of check 31's 1790..1808 gap); none touches the rating path.
+
+**Proposed verdict (the lead's to issue):** the delta is conformant. The compile.py resolution equals main plus the slice's own change; the new test asserts the refusal codes; the re-mint is complete. MERGE-ACK: not yet given.
