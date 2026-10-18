@@ -11,10 +11,15 @@ import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 
 import { getRatingAlgorithm, type RatingAlgorithm } from "@/api/ratingAlgorithms";
-import { getRatingVersionByRef, type RatingVersion } from "@/api/ratingVersions";
+import {
+  getRatingVersionByRef,
+  listRatingVersions,
+  type RatingVersion,
+} from "@/api/ratingVersions";
 import { ProblemError } from "@/api/problem";
-import { scoreQuote, type ScoringResult } from "@/api/score";
+import { scoreCompare, scoreQuote, type ScoreComparison, type ScoringResult } from "@/api/score";
 import { parseRef } from "@/components/dag/graph";
+import QuoteComparison from "@/components/sandbox/QuoteComparison.vue";
 import LadderWaterfall from "@/components/sandbox/LadderWaterfall.vue";
 import QuoteError from "@/components/sandbox/QuoteError.vue";
 import QuoteForm from "@/components/sandbox/QuoteForm.vue";
@@ -34,6 +39,13 @@ const scoring = ref(false);
 const result = ref<ScoringResult | null>(null);
 const scoreProblem = ref<ProblemError | null>(null);
 
+const versions = ref<RatingVersion[]>([]);
+const versionsProblem = ref<ProblemError | null>(null);
+const comparisonRef = ref("");
+const comparison = ref<ScoreComparison | null>(null);
+/** Every version but the one in view (FR-262: "any accessible Rating Version"). */
+const comparable = computed(() => versions.value.filter((v) => v.id !== rating.value?.id));
+
 const versionRef = computed(() => `rating_version:${props.slug}@${props.version}`);
 
 onMounted(async () => {
@@ -45,6 +57,12 @@ onMounted(async () => {
       algorithm.value = await getRatingAlgorithm(ref_.slug, ref_.version);
     } else {
       pinsNoAlgorithm.value = true;
+    }
+    try {
+      versions.value = await listRatingVersions();
+    } catch (error) {
+      if (error instanceof ProblemError) versionsProblem.value = error;
+      else throw error;
     }
   } catch (error) {
     if (error instanceof ProblemError) loadProblem.value = error;
@@ -58,14 +76,29 @@ async function score(form: QuoteFormSubmit): Promise<void> {
   scoring.value = true;
   scoreProblem.value = null;
   result.value = null;
+  comparison.value = null;
   try {
-    result.value = await scoreQuote({
+    const context = {
       purpose: form.purpose,
       quoted_at: new Date().toISOString(),
       effective_date: form.effective_date,
       inputs: form.inputs,
-      options: { rating_version_ref: versionRef.value, trace: true },
-    });
+    };
+    if (comparisonRef.value === "") {
+      result.value = await scoreQuote({
+        ...context,
+        options: { rating_version_ref: versionRef.value, trace: true },
+      });
+    } else {
+      // No `options` key: base and comparison name the versions (03:1060).
+      const response = await scoreCompare({
+        context,
+        base: versionRef.value,
+        comparison: comparisonRef.value,
+      });
+      result.value = response.base;
+      comparison.value = response;
+    }
   } catch (error) {
     if (error instanceof ProblemError) scoreProblem.value = error;
     else throw error;
@@ -129,11 +162,43 @@ async function score(form: QuoteFormSubmit): Promise<void> {
         v-else
         class="mt-6 grid gap-8 lg:grid-cols-[22rem_1fr]"
       >
-        <QuoteForm
-          :fields="algorithm.input_contract"
-          :submitting="scoring"
-          @submit="score"
-        />
+        <div class="space-y-6">
+          <div>
+            <label
+              for="compare-against"
+              class="block text-sm font-medium"
+            >Compare against</label>
+            <select
+              id="compare-against"
+              v-model="comparisonRef"
+              class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            >
+              <option value="">
+                No comparison
+              </option>
+              <option
+                v-for="v in comparable"
+                :key="v.id"
+                :value="`rating_version:${v.slug}@${v.version}`"
+              >
+                {{ v.slug }}@{{ v.version }} · {{ v.status }}
+              </option>
+            </select>
+            <p
+              v-if="versionsProblem"
+              role="status"
+              class="mt-1 text-sm text-slate-600"
+            >
+              Versions to compare against could not be loaded:
+              {{ versionsProblem.problem.detail }}
+            </p>
+          </div>
+          <QuoteForm
+            :fields="algorithm.input_contract"
+            :submitting="scoring"
+            @submit="score"
+          />
+        </div>
 
         <div class="space-y-8">
           <QuoteError
@@ -146,6 +211,10 @@ async function score(form: QuoteFormSubmit): Promise<void> {
             <TraceTimeline
               v-if="result.trace"
               :trace="result.trace"
+            />
+            <QuoteComparison
+              v-if="comparison"
+              :comparison="comparison"
             />
           </template>
           <p
