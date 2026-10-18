@@ -1455,7 +1455,7 @@ maintainer's agreement and the lead's go.
 id: SL-1547
 family: slice
 title: Slice 5: Editor II — diff shading, bulk operations, CSV import and export (FR-230, FR-231, FR-232, FR-233, FR-235)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
@@ -1466,6 +1466,10 @@ relates: [PL-1286, PL-1371]
 ```
 
 `PL-1286` S5, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. Diff-vs-previous and diff-vs-seed shading through the paged cells route, the exposure-weight column, the bulk-operation dialog, CSV import confirmation and export, and DP-3's order. **Activation needs:** S4 closed; OQ-1223 decided (DP-3); the FD-1366 bulk-operation typing slice merged (`SL-1669`, named at the D13 mint). Lane or team fixed at GO. *(Cut 2026-10-08 by the planner under working id 9468, reserved by the lead; minted 2026-10-10 as SL-1547 in the D2 batch mint.)*
+
+(Activated 2026-10-12 on the lead's from-lead entry "2026-10-12 06:54:14 BST" (GO S5 SL-1547; lane C; readiness at `3b2081b7`: `PL-1668`'s needs 1–6 met — `SL-1559` closed, `OQ-1223` decided by `RL-1613`, `SL-1391` closed, `SL-1669` merged #1293, `SL-1548` merged #1291, `PL-1668` on main). `PL-1668` set `active` in this activation commit, its status line only; it amends `PL-1546` row 1: the bulk-operation typing need is `SL-1669` (merged), and the slice carries `RL-1613`'s contract-changing scope (R5.4–R5.9). `PL-1546` stays `active`. Ledger working id 9904, reserved by the lead.)
+
+(Closed 2026-10-17 on the slice audit and the lead's verdict (`from-lead-2026-10-09.md`, "Lead VERDICT on SL-1547's audit" and "2026-10-17 22:51:15 BST"); ledger LG-1786, minted 2026-10-17 from working id 9904. The MERGE-ACK is not yet given.)
 
 #### SL-1548 — Slice 6: Sandbox — quote form, ladder waterfall and trace (FR-213, FR-247, FR-248, FR-249, FR-251, FR-252, FR-255, FR-256, FR-258)
 
