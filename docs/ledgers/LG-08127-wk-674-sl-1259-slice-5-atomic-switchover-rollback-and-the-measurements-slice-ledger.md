@@ -58,6 +58,8 @@ Recorded below once reported to the lead.
 
 Per PL-1766 (§"Slice 5 (`SL-1259`) — changes since `PL-1710`", D5.6 to D5.14) and `PL-1620` D5.1 to D5.5. **Held pending the DP-3 ruling:** D5.6, D5.9 and everything on the switch/rollback path. Task rows are appended here as each task starts.
 
+- **D5.13 — `WEB_CONCURRENCY` on the compose `api` service (`deploy/docker-compose.yml`), default 1 (`GIP_API_WEB_CONCURRENCY`).** Static check `api_declares_its_worker_count` in `backend/tests/test_deploy_stack.py`, red first (2 failed, 18 passed), then green (20 passed, rc 0, via run-small). The static shape is proven; the observed N per container and the bench's void rule are **UNPROVEN** until the SOLO gate (no stack run granted).
+
 ## PRs
 
 None yet. The slice stops at PR-READY; the lead opens the PR.
