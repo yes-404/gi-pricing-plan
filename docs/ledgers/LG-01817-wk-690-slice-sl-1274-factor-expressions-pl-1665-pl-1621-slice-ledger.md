@@ -2,10 +2,10 @@
 id: LG-1817
 family: ledger
 title: WK-690 slice SL-1274 — S4, expression Factors (PL-1621, PL-1665), slice ledger
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-18   # filed 2026-10-16 under working id 8062; minted 2026-10-18 as LG-1817
 owner: executor
-tree: 81fabac462f4c8c6cee901b07aae85bfad334522
+tree: b84983a1f8c07425b494669b7b642ad997ce12db
 phase: P2
 work: WK-690
 slice: SL-1274
@@ -315,7 +315,7 @@ mapped to the same feature name collapse before `predict` sees them (the last on
 
 ## PRs
 
-Not opened yet. The lead opens the PR; SL 8074 (FD 8070) is unmerged and carries the same `_GlmScorer.predict` collision guard and the same `MODEL_CALL_FEATURE_COLLISION` entry in `03`; per the 2026-10-16 10:52:08 BST ruling this slice drops its copy when SL 8074 is on main.
+None opened by the executor; the lead opens the PR after the closing acts. SL 8074 (FD 8070) is unmerged and carries the same `_GlmScorer.predict` collision guard and the same `MODEL_CALL_FEATURE_COLLISION` entry in `03`; per the 2026-10-16 10:52:08 BST ruling this slice drops its copy when SL 8074 is on main.
 
 ## Re-merge and first runs — 2026-10-17 (executor-1274b)
 
