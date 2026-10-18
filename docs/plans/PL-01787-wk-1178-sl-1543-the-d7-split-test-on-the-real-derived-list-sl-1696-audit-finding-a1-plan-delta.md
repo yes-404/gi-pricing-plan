@@ -3,7 +3,7 @@ id: PL-1787
 family: plan
 kind: map
 title: WK-1178 — SL-1543 owns SL-1696's audit finding A1, the D7 split test on the real derived list (PL-1694 Acceptance 18), red first by cause against SL-1696's hand-written list — a dated Work-plan delta to PL-1542 and PL-1705
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-18             # filed 2026-10-16 under working id 8055; minted 2026-10-18 as PL-1787
 owner: planner
 tree: 0877e6e7a756c4621890713a4d3b016e75e33654
@@ -18,6 +18,8 @@ relates: [PL-1542, PL-1705, PL-1694, SL-1543, SL-1696]
 # PL-1787 — WK-1178, SL-1543 owns A1: the D7 split test on the real derived list (delta to PL-1542 and PL-1705)
 
 Minted 2026-10-18 from working id 8055 (merged from `origin/pl-8055-sl1543-a1-delta-2026-10-16` at `a86d39b9` into the SL-1543 branch, with the slice's mint).
+
+Activated 2026-10-18 (the maintainer, to-lead 2026-10-18 05:48:03 BST; the 03:49:30 precedent): A1 discharged by SL-1543 (the 01:21:11 mint).
 
 > **For agentic workers:** this is a **dated delta** under Lean P2 L5 (`document-ids.md` §1.6,
 > PL row: *"a change is one dated Work-plan delta, a new `PL-` that `relates:` the Work's
