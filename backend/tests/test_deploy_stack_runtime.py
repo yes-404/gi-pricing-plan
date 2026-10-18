@@ -269,6 +269,44 @@ def test_the_scoring_api_runs_and_scores_with_no_worker_service(
     assert _score(url, headers, body) == 200
 
 
+def _api_containers(*, healthy_only: bool = False) -> list[str]:
+    """Ids of the running `api` containers of the test project (optionally only healthy ones)."""
+    filters = [
+        f"label=com.docker.compose.project={PROJECT}",
+        "label=com.docker.compose.service=api",
+    ]
+    if healthy_only:
+        filters.append("health=healthy")
+    out = subprocess.run(
+        ["docker", "ps", "-q", *(a for f in filters for a in ("--filter", f))],
+        check=True, capture_output=True, text=True,
+    ).stdout
+    return out.split()
+
+
+def _roll_api(sha: str, replicas: int, *, timeout: float = 180.0) -> None:
+    """Health-gated roll (SL-1258; the maintainer's ruling, to-lead.md 2026-10-18 01:33:49 BST).
+
+    Scale out beside the old replicas (`--no-recreate` leaves them running), wait until every
+    NEW container reports healthy (by container id, bounded, failing loud), then stop and remove
+    the OLD ones one at a time (SIGTERM within the service's stop grace period), ending at
+    `replicas`. A plain `up --scale api=<n>` recreates every replica at once, leaving none healthy
+    until the new ones pass their healthcheck (765 failed requests, ~23 s, observed).
+    """
+    old = _api_containers()
+    _compose(sha, "up", "-d", "--no-deps", "--no-recreate", "--scale", f"api={replicas * 2}", "api")
+    new = [c for c in _api_containers() if c not in old]
+    assert len(new) == replicas, f"expected {replicas} new api containers, got {new}"
+    deadline = time.monotonic() + timeout
+    while not set(new) <= set(_api_containers(healthy_only=True)):
+        if time.monotonic() > deadline:
+            raise AssertionError(f"new api containers {new} not healthy within {timeout}s")
+        time.sleep(1)
+    for container in old:
+        subprocess.run(["docker", "stop", container], check=True, capture_output=True)
+        subprocess.run(["docker", "rm", container], check=True, capture_output=True)
+
+
 @pytest.mark.req("NFR-531")
 @pytest.mark.req("FR-435")
 def test_previous_version_serves_the_migrated_schema_and_rolls_forward_with_no_failures(
@@ -295,14 +333,33 @@ def test_previous_version_serves_the_migrated_schema_and_rolls_forward_with_no_f
                 failures += 1
             time.sleep(0.02)
 
-    thread = threading.Thread(target=load)
-    thread.start()
+    # The overlap: the number of healthy api containers, sampled every 0.1 s across the roll.
+    healthy_counts: list[int] = []
+
+    def sample() -> None:
+        while not stop.is_set():
+            healthy_counts.append(len(_api_containers(healthy_only=True)))
+            time.sleep(0.1)
+
+    threads = [threading.Thread(target=load), threading.Thread(target=sample)]
+    for t in threads:
+        t.start()
     try:
-        _compose(n, "up", "-d", "--wait", "--no-deps", "--scale", "api=2", "api")
+        _roll_api(n, 2)
     finally:
         stop.set()
-        thread.join()
+        for t in threads:
+            t.join()
+    print(
+        f"healthy api replicas across the roll: min={min(healthy_counts, default=0)} "
+        f"over {len(healthy_counts)} samples; failed requests={failures}"
+    )
+    assert healthy_counts, "the overlap sampler took no samples"
+    assert min(healthy_counts) >= 1, (
+        f"no healthy api replica at some instant of the roll: min={min(healthy_counts)}"
+    )
     assert failures == 0, f"{failures} failed requests while rolling {n1} to {n}"
+    assert len(_api_containers()) == 2
     assert _score(url, headers, body) == 200
 
 

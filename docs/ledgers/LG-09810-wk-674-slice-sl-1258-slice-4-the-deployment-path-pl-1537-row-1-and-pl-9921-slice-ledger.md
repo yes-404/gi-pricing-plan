@@ -385,6 +385,8 @@ async def resolve_caller(
 
 AC2's grep is literal; prose hit at :360 reworded, not a code change (the maintainer's ruling relayed in the lead's brief of 2026-10-17 19:43:48 BST, ruling stamped ~19:44 BST: option (a); (b) refused as it weakens the check, (c) refused as a red-by-design stage hides future hits).
 
+**Rolling `api` roll = scale-out-then-in (NFR-531; mechanism: compose scale + container ids).** The smoke's roll (`up --scale api=2`) recreated both replicas at once: ~23.3 s with no healthy replica, 765 failed requests (to-lead.md 2026-10-18 01:33:32 BST, the cause reading; option (a) ruled 01:33:49 BST). `_roll_api` in `backend/tests/test_deploy_stack_runtime.py` now runs `up -d --no-deps --no-recreate --scale api=4 api`, waits (bounded 180 s, loud) until both new containers are healthy by id, then `docker stop` + `docker rm` the old ones one at a time, ending at api=2; `deploy/README.md` documents the same sequence; no `lb.conf` change. The test keeps `failed == 0` and adds an overlap assert: a sampler counts healthy `api` containers (`docker ps --filter health=healthy`, project-labelled) every 0.1 s across the roll and asserts `min >= 1`. Proof is the SL-1258 SOLO re-gate; not run here.
+
 ## PRs
 
 None yet.
