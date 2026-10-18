@@ -7,8 +7,9 @@ stored in the row's `body` as `source_expression`, as every other field of the a
 No line in `backend/src` reads `column_name`, and every existing row keeps its value. A DDL
 change is not refused by the append-only row triggers.
 
-Downgrade re-imposes NOT NULL, so it fails loudly if an expression Banding has been stored:
-the old schema cannot hold one, and a banding row cannot be deleted (FR-101).
+Downgrade re-imposes NOT NULL, so it **refuses before altering** if an expression Banding
+has been stored, naming how many: the old schema cannot hold one, and a banding row cannot be
+deleted (FR-101). It never deletes or converts a row.
 
 Revision ID: f2b6d90a4c17
 Revises: e7c3a9b15d82
@@ -35,6 +36,18 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    expression_bandings = (
+        op.get_bind()
+        .execute(sa.text("SELECT count(*) FROM bandings WHERE column_name IS NULL"))
+        .scalar_one()
+    )
+    if expression_bandings:
+        raise RuntimeError(
+            "cannot downgrade f2b6d90a4c17 (bandings.column_name back to NOT NULL): "
+            f"{expression_bandings} banding row(s) are cut over an expression and have no "
+            "column. They must be removed or re-cut over a column before this downgrade "
+            "can run; a banding is append-only (FR-101), so nothing was changed."
+        )
     op.alter_column(
         "bandings", "column_name", existing_type=sa.String(length=128), nullable=False
     )
