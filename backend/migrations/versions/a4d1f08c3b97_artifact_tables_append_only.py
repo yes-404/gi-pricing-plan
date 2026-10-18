@@ -192,6 +192,9 @@ def snapshot_guard_function() -> str:
 CREATE OR REPLACE FUNCTION dataset_versions_snapshot_guard() RETURNS trigger AS $fn$
 DECLARE
   col text;
+  -- Frozen once the marker is set. A row outside `draft` with no marker was INSERTed there (no
+  -- production path does it): it has been through validation, so it is frozen too.
+  was_frozen boolean;
 BEGIN
   IF TG_OP = 'DELETE' THEN
     RAISE EXCEPTION
@@ -199,6 +202,8 @@ BEGIN
       USING ERRCODE = 'insufficient_privilege',
             HINT = 'A Dataset Version is archived, never deleted; Models were fitted on it.';
   END IF;
+
+  was_frozen := OLD.data_frozen_at IS NOT NULL OR OLD.status <> 'draft';
 
   IF OLD.status = 'archived' THEN
     RAISE EXCEPTION
@@ -235,7 +240,7 @@ BEGIN
     NEW.data_frozen_at := now();
   END IF;
 
-  IF OLD.data_frozen_at IS NOT NULL THEN
+  IF was_frozen THEN
     FOREACH col IN ARRAY {_array(FROZEN_DATA_COLUMNS)} LOOP
       IF to_jsonb(NEW) -> col IS DISTINCT FROM to_jsonb(OLD) -> col THEN
         RAISE EXCEPTION
@@ -255,7 +260,7 @@ BEGIN
       USING ERRCODE = 'insufficient_privilege';
   END IF;
 
-  IF OLD.data_frozen_at IS NOT NULL AND OLD.profile_id IS NOT NULL
+  IF was_frozen AND OLD.profile_id IS NOT NULL
      AND NEW.profile_id IS DISTINCT FROM OLD.profile_id THEN
     RAISE EXCEPTION
       'dataset_versions: the profile of a data-frozen version is set once and never re-pointed (01 FR-60): UPDATE rejected'
