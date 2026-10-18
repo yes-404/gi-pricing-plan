@@ -1179,7 +1179,7 @@ The compose `api` and `worker` services, the reference identity provider, the me
 id: SL-1259
 family: slice
 title: Slice 5: atomic switchover, rollback and the measurements (FR-268, FR-269, FR-272 audit and NFR-498 for rollback, NFR-494, NFR-489, NFR-502, NFR-490, NFR-493 linearity limb, NFR-497 mechanism)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                 # draft → active → closed | retired (§1.2a)
 created: 2026-09-29
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 0d5b0765f76320518bfe76ddb30e5013525797c0
@@ -1190,6 +1190,7 @@ relates: [PL-1237]
 ```
 
 Atomic switchover and rollback on the Slice 4 path, with the rollback's audit limb (FR-272, NFR-498), the F1 acceptance test and the measured verdicts. NFR-497's degraded read is kept reachable against the `live` reference; the availability verdict is the lead's at the close. `PL-1237` Task 5. Starts after Slice 4 closes; its measured verdicts wait on a dedicated host (maintainer-owned).
+(Activated 2026-10-18 on the maintainer's GO, to-lead "2026-10-18 22:50:32 BST — Maintainer: the duplicate-mint anomaly ruled; GO SL-1259, SL-1770, SL-1738, SL-1575 (with conditions)"; dispatched by the lead, transcript 34b896f2.)
 
 *Dated 2026-10-12 by the planner: the Work-plan deltas for this slice are `PL-1537` row 2 and `PL-1620` (D0.1 to D0.3, D5.1 to D5.5; minted in D11, #1275). `PL-1620` DP-S5-a is ruled (a) by `RL-1614`. This row's status and fields are unchanged.*
 
