@@ -73,9 +73,12 @@ def test_downgrade_refuses_naming_the_count_and_alters_nothing(
         migration.downgrade()
 
     message = str(refused.value)
-    assert message.startswith("cannot downgrade f2b6d90a4c17"), message
-    assert "3 banding" in message, message
-    assert "removed or re-cut" in message, message
+    assert message.startswith("Cannot downgrade below f2b6d90a4c17"), message
+    assert "3 banding(s)" in message, message
+    # No remedy that cannot work: a Banding is append-only, so it is neither removed nor re-cut.
+    assert "restore from a backup" in message, message
+    assert "removed or re-cut" not in message, message
+    assert message.endswith("Nothing was changed."), message
     # Refused before altering, and the question asked was a count, not a read of any value.
     assert recorder.altered == []
     assert len(recorder.statements) == 1

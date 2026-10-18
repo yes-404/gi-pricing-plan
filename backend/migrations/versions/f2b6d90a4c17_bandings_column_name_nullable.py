@@ -43,10 +43,11 @@ def downgrade() -> None:
     )
     if expression_bandings:
         raise RuntimeError(
-            "cannot downgrade f2b6d90a4c17 (bandings.column_name back to NOT NULL): "
-            f"{expression_bandings} banding row(s) are cut over an expression and have no "
-            "column. They must be removed or re-cut over a column before this downgrade "
-            "can run; a banding is append-only (FR-101), so nothing was changed."
+            "Cannot downgrade below f2b6d90a4c17: "
+            f"{expression_bandings} banding(s) are cut over an expression (column_name is NULL). "
+            "Bandings are append-only (FR-101), so they cannot be removed or rewritten by a "
+            "migration; restore from a backup taken before this revision to go below it. "
+            "Nothing was changed."
         )
     op.alter_column(
         "bandings", "column_name", existing_type=sa.String(length=128), nullable=False
