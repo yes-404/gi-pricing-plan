@@ -641,8 +641,10 @@ async def test_the_two_changed_approval_routes_return_exactly_the_declared_keys(
     exercised through a Deployment Request put back in `review` by a fixture after its
     approval request was withdrawn (a row in `review` otherwise always holds its open request,
     which is why the generic route refuses it)."""
-    # Its Rating Version carries a hash and no blob, which no process can hydrate; the switch
-    # is proved in `test_deployment_switch_http.py`.
+    # This test pins the approval routes' keys, not the switch. Its Rating Version carries a hash
+    # and no blob, which no process can hydrate, so the 503 is the new code behaving correctly;
+    # `test_deployments.py`'s `client` fixture does the same. The switch is proved in
+    # `test_deployment_switch_http.py`.
     client.app.state.switch = None
     from uuid import uuid4
 
