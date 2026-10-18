@@ -2,7 +2,7 @@
 id: RL-1793
 family: ruling
 title: PL-1454 Task 4's acceptance sweep runs on the dedicated host nfr-bench-1, and its reading there is the G4 discharge for the FD-1411 remedy proof; the NFR-489 exit verdict stays SL-1259's per RL-1614 (precises PL-1454 Acceptance 2 and Task 4's host; G4 discharge event met)
-status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
+status: retired                # active → superseded | retired (§1.2a) — a ruling opens active
 created: 2026-10-18   # filed 2026-10-16 under working id 8076; minted 2026-10-18 as RL-1793
 owner: decision-maker
 tree: 055b5e6b74f9d4b10f6df54570e33ed2805ae9a8
@@ -11,7 +11,7 @@ work: WK-1178
 slice: SL-1455
 supersedes: []
 superseded_by: ~
-corrected_by: []
+corrected_by: [RL-1819]
 relates: [PL-1454, SL-1455, WK-1178, NFR-489, NFR-454, RL-1614, FD-1411]
 ---
 
