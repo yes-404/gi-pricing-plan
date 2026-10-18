@@ -2594,3 +2594,41 @@ class DislocationRunRow(Base):
         ),
         Index("ix_dislocation_runs_movers_blob_sha256", "movers_blob_sha256"),
     )
+
+
+class BlobUploadRow(Base):
+    """A Blob Upload: a client upload to the staging area, recorded when its URL is issued
+    (`07` §4.5, FR-1776, `RL-1724`).
+
+    Written by `POST /api/v1/blobs/upload-url` in the caller's unit of work, so that the staging
+    key is known to the platform and not only to the client that received it: without this row
+    a `dataset:write` holder in another workspace who learned a key could complete it and own
+    the bytes. `workspace_id` is the authorisation boundary for completion; `principal_id` is
+    recorded, not checked. `job_id` is set when the upload is completed and makes a repeat
+    completion return the first Job; `sha256` (a foreign key to `blobs.sha256`) is set, in the
+    transaction that writes the `blobs` row and takes its reference, when the promotion has run.
+
+    `RL-1724` describes `s3_upload_id`, `part_count`, `job_id` and `principal_id` without naming
+    them: the maintainer concurred in those names (2026-10-16 09:44:39 BST). `sha256` and
+    `staging_key` are the names the maintainer ruled (2026-10-16 09:46:32 BST).
+    """
+
+    __tablename__ = "blob_uploads"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    principal_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    staging_key: Mapped[str] = mapped_column(Text, nullable=False)
+    s3_upload_id: Mapped[str | None] = mapped_column(Text)
+    part_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    media_type: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    complete_by: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    job_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True))
+    sha256: Mapped[str | None] = mapped_column(String(64), ForeignKey("blobs.sha256"))
+
+    __table_args__ = (
+        CheckConstraint("part_count BETWEEN 1 AND 10000", name="part_count_in_range"),
+    )

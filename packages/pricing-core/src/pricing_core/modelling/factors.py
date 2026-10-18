@@ -88,10 +88,14 @@ REFUSED_FACTOR_INTENTS: Mapping[FactorIntent, str] = MappingProxyType(
 )
 
 __all__ = [
+    "GBM_MODEL_TYPES",
+    "FactorColumns",
     "FactorMatrix",
     "FactorResolutionError",
+    "gbm_transformed_factors",
     "rateable",
     "required_model_inputs",
+    "resolve_factor_columns",
     "resolve_factors",
 ]
 
@@ -117,14 +121,38 @@ class FactorMatrix:
         return tuple(self.terms.values())
 
 
-def resolve_factors(
+@dataclass(frozen=True, slots=True)
+class FactorColumns:
+    """What resolving factors against a frame **adds** to it, without building the new frame.
+
+    `produced` holds the columns a transformation made (a band, a group, a cross), by name;
+    every other term reads the caller's own column. `resolve_factors` appends them to a copy of
+    the frame; a caller that scores one row reads them directly, because appending is a lazy
+    `with_columns` + `collect` per call (FD-1797 (filed in D21)).
+    """
+
+    produced: dict[str, pl.Series]
+    terms: dict[str, str]
+    categorical: tuple[str, ...]
+
+    def column(self, frame: pl.DataFrame, name: str) -> pl.Series:
+        """The resolved column `name`: the produced one, else the caller's own."""
+        produced = self.produced.get(name)
+        return produced if produced is not None else frame[name]
+
+
+def resolve_factor_columns(
     frame: pl.DataFrame,
     factors: Sequence[Factor],
     *,
     bandings: Mapping[UUID, Banding] | None = None,
     groupings: Mapping[UUID, Grouping] | None = None,
-) -> FactorMatrix:
-    """Build the design columns for `factors` against this frame.
+) -> FactorColumns:
+    """Resolve `factors` against this frame: the one resolution every caller shares.
+
+    Returns what the factors **add** — `resolve_factors` appends it to a frame, a one-row
+    scorer reads it directly (`predict_glm_row`). Every refusal below is raised from here, so
+    the two cannot disagree about what is refused.
 
     `bandings` and `groupings` are the artifacts the factors pin, passed in by id for the
     same reason `fit_glm` takes its factors explicitly: resolving an id needs a database,
@@ -248,8 +276,28 @@ def resolve_factors(
         terms[factor.slug] = column
         categorical.append(column)
 
-    out = frame.with_columns(list(produced.values())) if produced else frame
-    return FactorMatrix(frame=out, terms=terms, categorical=tuple(categorical))
+    return FactorColumns(produced=produced, terms=terms, categorical=tuple(categorical))
+
+
+def resolve_factors(
+    frame: pl.DataFrame,
+    factors: Sequence[Factor],
+    *,
+    bandings: Mapping[UUID, Banding] | None = None,
+    groupings: Mapping[UUID, Grouping] | None = None,
+) -> FactorMatrix:
+    """Build the design columns for `factors` against this frame.
+
+    The resolution, and every refusal, is `resolve_factor_columns`'s; this appends what it
+    produced to the caller's frame.
+    """
+    resolved = resolve_factor_columns(frame, factors, bandings=bandings, groupings=groupings)
+    produced = list(resolved.produced.values())
+    return FactorMatrix(
+        frame=frame.with_columns(produced) if produced else frame,
+        terms=resolved.terms,
+        categorical=resolved.categorical,
+    )
 
 
 #: What separates two operands' levels in a crossed level label. A pipe with spaces rather
@@ -474,3 +522,24 @@ def required_model_inputs(
         names = factor.source_columns if factor.type is FactorType.EXPRESSION else (factor.slug,)
         inputs.update(dict.fromkeys(names))
     return tuple(inputs)
+
+
+#: The `model_type` values of a GBM (`GbmSpec.model_type`, `GbmFitResult.model_type`).
+GBM_MODEL_TYPES = ("xgboost", "lightgbm")
+
+
+def gbm_transformed_factors(factors: Sequence[Factor]) -> tuple[Factor, ...]:
+    """The Factors of a GBM that a `model_call` cannot score: the banded and the grouped.
+
+    `fit_gbm` bands or groups the raw column and encodes the resulting label ordinally, but a
+    `model_call` scores a GBM with `factors=()` and a Bundle that carries no Bandings or
+    Groupings (`03` FR-222, amended 2026-10-16): the raw value is looked up as if it were
+    the label, so it either raises or, when a label spells another band's number, prices the
+    wrong band without an error. The one definition: the save check and the compile check
+    both refuse a pinned GBM for which this is non-empty (`MODEL_CALL_GBM_TRANSFORMED_FACTOR`).
+    """
+    return tuple(
+        factor
+        for factor in factors
+        if factor.type in (FactorType.BANDING, FactorType.GROUPING)
+    )

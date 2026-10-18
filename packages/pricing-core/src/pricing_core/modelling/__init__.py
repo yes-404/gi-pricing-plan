@@ -41,7 +41,6 @@ from pricing_core.modelling.gbm import (
     SUPPORTED_GBM_OBJECTIVES,
     GbmFit,
     GbmFitError,
-    apply_loss_treatment,
     fit_gbm,
     objective_family,
     predict_gbm,
@@ -60,6 +59,7 @@ from pricing_core.modelling.groupings import (
     grouping_evidence,
     propose_grouping,
 )
+from pricing_core.modelling.loss_treatment import apply_loss_treatment
 from pricing_core.modelling.objectives import (
     ObjectiveFns,
     certify_objective,

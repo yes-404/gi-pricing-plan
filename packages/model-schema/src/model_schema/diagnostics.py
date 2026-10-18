@@ -162,6 +162,11 @@ class PartitionDiagnostics(BaseModel):
     #: nothing. Optional because a stored `Diagnostics` written before this field must still
     #: validate (`extra="forbid"` refuses unknown keys, not absent ones).
     rows_excluded_zero_weight: int | None = Field(default=None, ge=0)
+    #: How many rows FR-111's severity-population rule removed because the response is
+    #: unknown (null) under `response = claim_severity` (SL-1543, 2026-10-17). `None` means
+    #: the artifact predates the rule or the fit is not a severity fit; `0` means the rule ran
+    #: and removed nothing. A known amount that is not positive is refused, never counted here.
+    rows_excluded_unknown_response: int | None = Field(default=None, ge=0)
     ae_overall: float = Field(ge=0.0)
     ae_by_factor: tuple[AeCell, ...] = ()
     lift: tuple[LiftBin, ...] = ()

@@ -139,9 +139,9 @@ def test_row_quantiles_and_exposure_quantiles_disagree_on_a_skewed_book() -> Non
     """If they agreed the previous test would prove nothing about which one ran."""
     frame = _book()
     by_rows = propose_banding(
-        frame, _proposal(method=BandingMethod.QUANTILE), dataset_id=DATASET, slug="a"
+        frame, _proposal(method=BandingMethod.QUANTILE), dataset_id=DATASET, slug="aa"
     )
-    by_exposure = propose_banding(frame, _proposal(), dataset_id=DATASET, slug="b")
+    by_exposure = propose_banding(frame, _proposal(), dataset_id=DATASET, slug="bb")
     assert by_rows.boundaries != by_exposure.boundaries
 
 
@@ -207,7 +207,7 @@ def test_band_statistics_come_back_in_band_order() -> None:
         }
     )
     banding = Banding(
-        id=uuid4(), slug="v", dataset_id=DATASET, version=1, column="v",
+        id=uuid4(), slug="vv", dataset_id=DATASET, version=1, column="v",
         method=BandingMethod.MANUAL, boundaries=(0.0, 5.0, 10.0, 15.0, 20.0),
         labels=("0-4", "5-9", "10-14", "15+"),
     )
@@ -219,7 +219,7 @@ def test_a_manual_banding_has_nothing_to_propose() -> None:
     """Inventing boundaries to be edited would put the platform's name on the actuary's."""
     with pytest.raises(BandingError, match="nothing to propose"):
         propose_banding(
-            _book(), _proposal(method=BandingMethod.MANUAL), dataset_id=DATASET, slug="m"
+            _book(), _proposal(method=BandingMethod.MANUAL), dataset_id=DATASET, slug="mm"
         )
 
 
@@ -271,14 +271,14 @@ def test_a_tree_banding_refuses_a_book_it_cannot_weight_or_split_on() -> None:
             _book().drop("claim_count"),
             _proposal(method=BandingMethod.TREE),
             dataset_id=DATASET,
-            slug="t",
+            slug="tt",
         )
     with pytest.raises(BandingError, match="exposure-weighted"):
         propose_banding(
             _book().drop("exposure_years"),
             _proposal(method=BandingMethod.TREE),
             dataset_id=DATASET,
-            slug="t",
+            slug="tt",
         )
 
 
@@ -286,7 +286,7 @@ def test_a_tree_banding_refuses_a_book_it_cannot_weight_or_split_on() -> None:
 def test_exposure_quantiles_refuse_a_book_with_no_exposure_column() -> None:
     frame = _book().drop("exposure_years")
     with pytest.raises(BandingError, match="exposure_quantile"):
-        propose_banding(frame, _proposal(), dataset_id=DATASET, slug="x")
+        propose_banding(frame, _proposal(), dataset_id=DATASET, slug="xx")
 
 
 # --- applying ---------------------------------------------------------------------------
@@ -357,6 +357,18 @@ def test_an_empty_band_always_fails() -> None:
 
 
 @pytest.mark.req("FR-100")
+def test_a_non_zero_floor_on_an_absent_column_is_refused_naming_column_and_floor() -> None:
+    """DP-1734-A (a): reuse FACTOR_RESOLUTION_FAILED; the detail names the column and the floor."""
+    frame = _book().drop("claim_count")
+    banding = propose_banding(frame, _proposal(), dataset_id=DATASET, slug="age-5")
+    with pytest.raises(BandingError) as caught:
+        check_banding(frame, banding, min_claims=37)
+    assert caught.value.code == "FACTOR_RESOLUTION_FAILED"
+    assert "claim_count" in str(caught.value)
+    assert "37" in str(caught.value)
+
+
+@pytest.mark.req("FR-100")
 def test_a_thin_band_warns_by_default_and_fails_when_configured() -> None:
     """FR-100's own wording: warns (default) or fails (if configured)."""
     frame = _book()
@@ -364,7 +376,7 @@ def test_a_thin_band_warns_by_default_and_fails_when_configured() -> None:
 
     warnings = check_banding(frame, banding, min_claims=10_000)
     assert warnings
-    assert all("below the minimum" in w for w in warnings)
+    assert all(w.measure == "claim_count" and w.observed < w.minimum for w in warnings)
 
     with pytest.raises(BandingError) as caught:
         check_banding(frame, banding, min_claims=10_000, fail_on_thin=True)

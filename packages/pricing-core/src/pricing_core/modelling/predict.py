@@ -15,8 +15,9 @@ because a coefficient silently dropped is a prediction that looks fine and is wr
 from __future__ import annotations
 
 import re
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from statistics import NormalDist
+from typing import Any
 from uuid import UUID
 
 import numpy as np
@@ -36,15 +37,17 @@ from model_schema import (
     Grouping,
     ModelSpec,
 )
-from pricing_core.modelling.factors import resolve_factors
+from pricing_core.modelling.factors import resolve_factor_columns, resolve_factors
 
 __all__ = [
     "PredictionError",
     "detect_quantile_crossing",
     "linear_predictor",
+    "linear_predictor_row",
     "predict_ebm",
     "predict_glm",
     "predict_glm_interval",
+    "predict_glm_row",
     "score_fitted",
 ]
 
@@ -107,17 +110,35 @@ def _term_vectors(
     megabytes to compute a dot product that needs one column at a time.
     """
     matrix = resolve_factors(data, factors, bandings=bandings, groupings=groupings)
+    yield from _design_columns(
+        fit, matrix.terms, lambda name: matrix.frame[name], data.height
+    )
 
+
+def _design_columns(
+    fit: GlmFitResult,
+    terms: Mapping[str, str],
+    column_of: Callable[[str], pl.Series],
+    height: int,
+) -> Iterator[tuple[Coefficient, npt.NDArray[np.float64]]]:
+    """The coefficient walk `_term_vectors` and `predict_glm_row` share: one column of `X` per
+    coefficient, in coefficient order, from whichever resolved columns the caller reads.
+
+    One definition of the term grammar (`_DUMMY`) and of `MODEL_TERM_UNRESOLVED`, so the frame
+    path and the one-row path cannot build different designs from one model.
+    """
+    #: A factor's levels as text, cast once however many of its dummies there are.
+    as_text: dict[str, pl.Series] = {}
     for coefficient in fit.coefficients:
         term = coefficient.term
         if term == "intercept":
-            yield coefficient, np.ones(data.height, dtype=np.float64)
+            yield coefficient, np.ones(height, dtype=np.float64)
             continue
 
         match = _DUMMY.match(term)
         if match is not None:
             slug, level = match.group("slug"), match.group("level")
-            column = matrix.terms.get(slug)
+            column = terms.get(slug)
             if column is None:
                 raise PredictionError(
                     "MODEL_TERM_UNRESOLVED",
@@ -126,11 +147,13 @@ def _term_vectors(
                     "prediction toward the base level.",
                     terms=[term],
                 )
-            indicator = (matrix.frame[column].cast(pl.String) == level).cast(pl.Float64)
+            if column not in as_text:
+                as_text[column] = column_of(column).cast(pl.String)
+            indicator = (as_text[column] == level).cast(pl.Float64)
             yield coefficient, indicator.to_numpy()
             continue
 
-        column = matrix.terms.get(term)
+        column = terms.get(term)
         if column is None:
             raise PredictionError(
                 "MODEL_TERM_UNRESOLVED",
@@ -138,7 +161,7 @@ def _term_vectors(
                 "resolves.",
                 terms=[term],
             )
-        yield coefficient, matrix.frame[column].cast(pl.Float64).to_numpy()
+        yield coefficient, column_of(column).cast(pl.Float64).to_numpy()
 
 
 def _offset(
@@ -215,15 +238,29 @@ def linear_predictor(
     fitted GLM's linear predictor, resolved by the backend and required when
     `spec.offset.kind == "model"`.
     """
-    eta = np.zeros(data.height, dtype=np.float64)
-    for coefficient, vector in _term_vectors(
-        fit, data, factors, bandings=bandings, groupings=groupings
-    ):
-        eta += coefficient.estimate * vector
+    return _accumulate(
+        _term_vectors(fit, data, factors, bandings=bandings, groupings=groupings),
+        data.height,
+        lambda: _offset(data, spec, model_offset),
+    )
 
-    offset = _offset(data, spec, model_offset)
-    if offset is not None:
-        eta += offset
+
+def _accumulate(
+    vectors: Iterable[tuple[Coefficient, npt.NDArray[np.float64]]],
+    height: int,
+    offset: Callable[[], npt.NDArray[np.float64] | None],
+) -> npt.NDArray[np.float64]:
+    """`η = Σ βⱼxⱼ + offset`, in coefficient order — the one place the sum is written.
+
+    The offset is a callable so that it is read **after** the terms, as it always was: a term
+    that cannot be resolved is refused before an offset that cannot be read.
+    """
+    eta = np.zeros(height, dtype=np.float64)
+    for coefficient, vector in vectors:
+        eta += coefficient.estimate * vector
+    offset_values = offset()
+    if offset_values is not None:
+        eta += offset_values
     return eta
 
 
@@ -255,6 +292,58 @@ def predict_glm(
         ),
         spec.link,
     )
+
+
+def linear_predictor_row(
+    fit: GlmFitResult,
+    row: Mapping[str, Any],
+    factors: Sequence[Factor],
+    spec: GlmSpec,
+    *,
+    model_offset: np.ndarray | None = None,
+    bandings: Mapping[UUID, Banding] | None = None,
+    groupings: Mapping[UUID, Grouping] | None = None,
+) -> npt.NDArray[np.float64]:
+    """`linear_predictor` for one quote, as a shape-`(1,)` array, with no frame rebuilt.
+
+    Scoring one row through `linear_predictor` costs a lazy `with_columns` + `collect` in
+    `resolve_factors` per call (FD-1797 (filed in D21): ~16.9 ms a quote on a loaded box, 59% of a
+    dislocation run). This reads the same resolution (`resolve_factor_columns`), the same
+    coefficient walk (`_design_columns`), the same sum (`_accumulate`) and the same offset
+    (`_offset`) from the one-row frame `pl.DataFrame([row])` that path builds — it does not
+    append the produced columns to it. Every operation is therefore the frame path's, on the
+    same values in the same order: the result is bit-identical, which
+    `test_glm_scalar_predict.py` holds exactly.
+    """
+    frame = pl.DataFrame([dict(row)])
+    resolved = resolve_factor_columns(frame, factors, bandings=bandings, groupings=groupings)
+    return _accumulate(
+        _design_columns(fit, resolved.terms, lambda name: resolved.column(frame, name), 1),
+        1,
+        lambda: _offset(frame, spec, model_offset),
+    )
+
+
+def predict_glm_row(
+    fit: GlmFitResult,
+    row: Mapping[str, Any],
+    factors: Sequence[Factor],
+    spec: GlmSpec,
+    *,
+    model_offset: np.ndarray | None = None,
+    bandings: Mapping[UUID, Banding] | None = None,
+    groupings: Mapping[UUID, Grouping] | None = None,
+) -> float:
+    """`μ` for one quote: `predict_glm`'s value for a one-row frame, as a `float` (FR-193).
+
+    The link is inverted by `_inverse_link` on the shape-`(1,)` `η` — never `math.exp`, whose
+    last bit can differ from NumPy's.
+    """
+    eta = linear_predictor_row(
+        fit, row, factors, spec, model_offset=model_offset, bandings=bandings,
+        groupings=groupings,
+    )
+    return float(_inverse_link(eta, spec.link)[0])
 
 
 def predict_glm_interval(

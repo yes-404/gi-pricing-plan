@@ -19,8 +19,11 @@
           "min": {"type": "number"}, "max": {"type": "number"},
           "pattern": {"type": "string"},
           "domain": {"type": "array", "items": {"type": "string"}},
+          "ordered": {"type": "boolean", "default": false, "description": "An enum input's domain list order is its declared level order, lowest first (FR-213, RL-1613). Omitted while false, so an input that never declares it keeps its bundle hash."},
           "description": {"type": "string"}
-        }
+        },
+        "if": {"required": ["ordered"], "properties": {"ordered": {"const": true}}},
+        "then": {"required": ["domain"], "properties": {"type": {"const": "enum"}, "domain": {"minItems": 1}}}
       }
     },
     "outputs": {
@@ -95,7 +98,8 @@
           "ref": {"$ref": "common/artifact-ref.schema.json"},
           "mount_point": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$", "description": "No '__' (the namespace separator; RL 9586)."},
           "inputs": {"type": "object", "additionalProperties": {"type": "string"}, "description": "Input port to the parent value it consumes."},
-          "outputs": {"type": "object", "additionalProperties": {"type": "string"}, "description": "Output port to the parent name it produces."}
+          "outputs": {"type": "object", "additionalProperties": {"type": "string"}, "description": "Output port to the parent name it produces."},
+          "purposes": {"type": "array", "items": {"enum": ["mid_term_adjustment", "cancellation"]}, "minItems": 1, "uniqueItems": true, "description": "The quote purposes the mount is inlined for (FR-218, RL-1344 section 2). Absent: mounted for every purpose."}
         }
       }
     }

@@ -31,6 +31,7 @@ from sqlalchemy import select
 
 from app.config import Settings
 from app.db.models import (
+    FactorRow,
     JobRow,
     ModelRow,
     RateTableRow,
@@ -39,8 +40,11 @@ from app.db.models import (
 )
 from app.db.session import Database
 from app.platform import rating_versions as rating_service
+from app.platform import transformations as transform_service
 from model_schema import (
     ArtifactRef,
+    Factor,
+    FactorType,
     JobKind,
     JobStatus,
     ModelStatus,
@@ -147,10 +151,44 @@ def _raw_inputs(levels: dict[str, str]) -> dict[str, object]:
     return inputs
 
 
+async def _banded_factor(session, workspace_id, analyst, slug: str) -> object:  # type: ignore[no-untyped-def]
+    """A BANDING Factor over its saved, pinned Banding, built the way the demo builds it
+    (`examples/fremtpl2/model.py` `create_demo_bandings` + `_create_factor`, lines 175-188 and
+    247-280 at the SL-1543 base): `create_banding` persists the Banding, and the Factor is
+    `FactorType.BANDING` over the Banding's column with `banding_id` set. The hand-made fit
+    below has `slug[label]` dummy terms over band labels, which only a banded Factor can
+    produce; an IDENTITY Factor scores every one of them as 0 (the 20:56:36 BST ruling)."""
+    # The demo's grammar-valid slug (`examples/fremtpl2/model.py:269`): the fixture's own
+    # `<column>-banding` has an underscore, which `ArtifactRef` refuses for a `banding` at compile.
+    banding = _BANDED[slug].model_copy(
+        update={"slug": f"fremtpl2-{slug.replace('_', '-')}-banding"}
+    )
+    saved = await transform_service.create_banding(
+        session, workspace_id=workspace_id, actor=analyst, banding=banding
+    )
+    factor = Factor(
+        id=new_uuid7(), slug=slug, dataset_id=banding.dataset_id, version=1,
+        type=FactorType.BANDING, source_columns=(banding.column,), banding_id=saved.id,
+    )
+    row = FactorRow(
+        workspace_id=workspace_id, dataset_id=factor.dataset_id, slug=slug, version=1,
+        body=factor.model_dump(mode="json", exclude={"id", "version", "dataset_id"}),
+    )
+    session.add(row)
+    await session.flush()
+    return row.id
+
+
 async def _approved_model(database: Database, workspace_id) -> object:
     family = f"fremtpl2-glm-{uuid4().hex[:6]}"
+    analyst = await _principal(database, workspace_id, "analyst")
     async with database.unit_of_work() as session:
-        pinned = [await _ensure_factor(session, workspace_id, slug, 1) for slug in _FACTORS]
+        pinned = [
+            await _banded_factor(session, workspace_id, analyst, slug)
+            if slug in _BANDED
+            else await _ensure_factor(session, workspace_id, slug, 1)
+            for slug in _FACTORS
+        ]
         spec = _glm_spec(family, new_uuid7())
         spec["factors"] = [str(factor_id) for factor_id in pinned]
         row = await add_approved(

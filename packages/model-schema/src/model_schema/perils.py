@@ -43,7 +43,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
 from model_schema.input_free import InputFreeError, identifier
-from model_schema.money import DecimalStr, MoneyMinor
+from model_schema.money import DecimalStr, MoneyMinor, SchemaDecimal
 from model_schema.refs import ArtifactRef, BlobRef, Slug
 
 __all__ = [
@@ -318,6 +318,24 @@ class Reconciliation(BaseModel):
         description="Declared fractional tolerance on |ratio - 1| (FR-190)."
     )
     computed_at: _datetime.datetime
+    imputed_rows: int = Field(
+        default=0,
+        ge=0,
+        description=(
+            "Holdout rows whose observed amount was unknown and was imputed at the "
+            "known-amount mean severity (FR-190, SL-1543 DP-4). 0 when none."
+        ),
+    )
+    imputed_share: DecimalStr = Field(
+        default=Decimal(0),
+        ge=0,
+        le=1,
+        description=(
+            "The imputed rows' share of the observed loss, an exact ratio in [0, 1] "
+            "(not money). Defaulted with `imputed_rows`: reconciliations stored before "
+            "these fields existed carry neither and load as 'nothing imputed'."
+        ),
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -340,7 +358,7 @@ class Reconciliation(BaseModel):
 
     @computed_field  # type: ignore[prop-decorator]
     @property
-    def ratio(self) -> Decimal:
+    def ratio(self) -> SchemaDecimal:
         """Modelled over observed. Derived, so it cannot disagree with its own inputs."""
         return (
             Decimal(self.modelled_burning_cost)

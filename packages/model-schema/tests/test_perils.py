@@ -304,6 +304,54 @@ def test_a_reconciliation_round_trips_through_its_own_serialised_form() -> None:
     assert Reconciliation.model_validate(tampered).ratio == original.ratio
 
 
+#: A `Reconciliation` as main 055b5e6b serialised it (before `imputed_rows` / `imputed_share`
+#: existed): produced by importing that commit's `model_schema/perils.py` (`git archive
+#: 055b5e6b packages/model-schema/src`, `PYTHONPATH` pointed at it, the module file asserted
+#: free of "imputed") and dumping `model_dump(mode="json")` of the `_reconciliation()` values
+#: below with fixed id and clock. Stored rows in `peril_structures.reconciliation` look so.
+_RECONCILIATION_AT_055B5E6B: dict[str, object] = {
+    "computed_at": "2026-08-18T00:00:00Z",
+    "dataset_version_id": "01900000-0000-7000-8000-000000000001",
+    "modelled_burning_cost": 18337,
+    "observed_burning_cost": 18412,
+    "part": "holdout",
+    "perils": [
+        {"large_loss_kind": "none", "modelled_burning_cost": 15000, "peril": "AD"},
+        {"large_loss_kind": "none", "modelled_burning_cost": 3337, "peril": "WINDSCREEN"},
+    ],
+    "ratio": "0.995927",
+    "status": "pass",
+    "tolerance": "0.02",
+}
+
+
+@pytest.mark.req("FR-190")
+def test_a_reconciliation_stored_before_the_imputation_fields_still_loads() -> None:
+    """DP-4 (a): `imputed_rows` / `imputed_share` have defaults, because persisted rows
+    (`extra="forbid"`) carry neither and must keep loading as "nothing was imputed"."""
+    loaded = Reconciliation.model_validate(_RECONCILIATION_AT_055B5E6B)
+    assert loaded.imputed_rows == 0
+    assert loaded.imputed_share == Decimal(0)
+    assert loaded.ratio == Decimal("0.995927")
+    assert loaded.status is ReconciliationStatus.PASS
+
+
+@pytest.mark.req("FR-190")
+def test_the_imputation_counts_round_trip_as_exact_strings() -> None:
+    """The share is an exact ratio on the wire (a string), not a float and not money."""
+    original = _reconciliation(imputed_rows=3, imputed_share=Decimal("0.012500"))
+    payload = original.model_dump(mode="json")
+    assert payload["imputed_rows"] == 3
+    assert payload["imputed_share"] == "0.012500"
+    assert Reconciliation.model_validate(payload) == original
+    with pytest.raises(pydantic.ValidationError):
+        _reconciliation(imputed_share=0.5)
+    with pytest.raises(pydantic.ValidationError):
+        _reconciliation(imputed_rows=-1)
+    with pytest.raises(pydantic.ValidationError):
+        _reconciliation(imputed_share=Decimal("1.5"))
+
+
 @pytest.mark.req("FR-190")
 def test_outside_the_declared_tolerance_is_a_fail() -> None:
     reconciliation = _reconciliation(

@@ -3,7 +3,7 @@ id: PL-1739
 family: plan
 kind: map
 title: WK-1178 — the failed-authentication audit (FD-1727) — the refusal's audit row survives the 401, the workspace-less failures counted, and slice SL-1740 — Work-plan delta
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-16 # original date 2026-10-14, set at the draft; minted 2026-10-16
 owner: planner
 tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e

@@ -322,6 +322,36 @@ def _as_decimal(value: Any) -> Decimal:
     return value if isinstance(value, Decimal) else Decimal(str(value))
 
 
+def _engine_context(algorithm: RatingAlgorithm, ctx: QuoteContext) -> dict[str, Any]:
+    """The mapping the engine evaluates: the quote's inputs, with each `Decimal` in a
+    `decimal`-declared input crossed as the `float` the JSON path delivers (FR-273).
+
+    The binding refuses a `Decimal` (`TypeError`), so a non-money `decimal` input is the one
+    value that crosses as a float; money stays integer minor units and is never converted. The
+    crossing is checked lossless, `Decimal(repr(float(d))) == d`, and a value that fails it
+    (more than about 15 significant digits, NaN, infinity) is refused by name, never rounded.
+    The message names the input, never its value (NFR-499)."""
+    decimal_inputs = {
+        f.name for f in algorithm.input_contract if f.type == RatingInputType.DECIMAL
+    }
+    inputs = dict(ctx.inputs)
+    for name in decimal_inputs & inputs.keys():
+        value = inputs[name]
+        if isinstance(value, (Decimal, float)):
+            as_float = float(value)
+            # A float is already what crosses, so only finiteness can fail; a Decimal must
+            # also round-trip.
+            if not math.isfinite(as_float) or (
+                isinstance(value, Decimal) and Decimal(repr(as_float)) != value
+            ):
+                _raise_named(
+                    "INPUT_CONTRACT_VIOLATION",
+                    f"input {name!r} is not exactly representable as a finite float (FR-273)",
+                )
+            inputs[name] = as_float
+    return {"effective_date": ctx.effective_date.isoformat(), "purpose": ctx.purpose, **inputs}
+
+
 # ---------------------------------------------------------------------------
 # FR-255 category 1: contract violation.
 # ---------------------------------------------------------------------------
@@ -389,33 +419,26 @@ def _validate_inputs(algorithm: RatingAlgorithm, inputs: Mapping[str, Any]) -> N
                 )
 
 
-def _check_purpose_mount(algorithm: RatingAlgorithm, ctx: QuoteContext) -> None:
-    """FR-218: an MTA or cancellation quote is refused, whatever the algorithm mounts, until
-    sub-graph inlining (FR-217) is built.
+def _check_purpose_mount(bundle: CompiledBundle, ctx: QuoteContext) -> None:
+    """FR-218's real check (`RL-1344` section 3; it retires `RL-1242`'s interim refusal): an MTA
+    or cancellation quote is refused unless the bundle inlines a mount for its purpose.
 
-    FR-218 prices these purposes with a separately-versioned pro-rata / refund sub-graph
-    mounted only for them. No slice builds that mounting yet: `compile_bundle` never reads
-    `sub_graphs`, so the engine never evaluates any sub-graph and no rating version can
-    actually mount one. An earlier form of this guard
-    refused only when `algorithm.sub_graphs` was empty, calling a non-empty list a
-    "conservative, forward-safe approximation". That was false: a non-empty list is only a
-    declared reference, not a mounted sub-graph, so an algorithm naming a sub-graph that
-    does not exist (or is never inlined) passed the guard and a cancellation or MTA was
-    priced as new business, the silent failure FR-218 names (payable 1507). The finding is
-    "CR-838 marks FR-217 delivered, but its pin and bundle-time inlining are not built".
-
-    Refusing every such quote is the only truthful check available today, and it is interim:
-    when FR-217's inlining exists, this becomes a check that the mounted sub-graph is the
-    one this purpose needs.
+    FR-218 prices these purposes with a separately-versioned pro-rata / refund sub-graph mounted
+    only for them. The bundle carries a graph for each purpose some mount selects
+    (`Bundle.purpose_graphs`, `CompiledBundle.purposes`); a version that mounts nothing for this
+    purpose has none, and pricing the quote by the base graph would price it as new business,
+    which FR-218 names as the failure this check exists to prevent (payable 1507). An
+    unconditional mount does not satisfy it: it is inlined for every purpose, so it is not this
+    purpose's.
     """
-    if ctx.purpose in ("mid_term_adjustment", "cancellation"):
+    gated = ctx.purpose in ("mid_term_adjustment", "cancellation")
+    if gated and ctx.purpose not in bundle.purposes:
         _raise_named(
             "INPUT_CONTRACT_VIOLATION",
-            f"purpose={ctx.purpose!r} requires a mounted sub-graph (FR-218), and sub-graph "
-            "inlining (FR-217) is not built yet, so no rating version can mount one — "
-            "refused rather than priced as new business, which FR-218 names as the "
-            "failure this refusal exists to prevent. This refusal is interim until "
-            "FR-217's inlining is built",
+            f"purpose={ctx.purpose!r} requires a sub-graph mount for that purpose (FR-218), and "
+            f"no mount for {ctx.purpose!r} is inlined in the bundle — refused rather than "
+            "priced as new business, which FR-218 names as the failure this check exists to "
+            "prevent",
         )
 
 
@@ -884,13 +907,16 @@ def build_scoring_result(
     here; callers own their own timing (`score_one` sets it after this returns, via
     `model_copy`, since `ScoringResult` is frozen).
     """
+    # The algorithm that was evaluated: the purpose's own when a mount selects the purpose
+    # (`RL-1628` condition 1), so a clamp inside a purpose mount is in the ladder.
+    algorithm = bundle.evaluation_for(ctx.purpose).algorithm
     _check_model_call_sentinel(result)
-    _check_lookup_misses(bundle.algorithm, result)
-    decline_reasons, clamp_reason_codes = _apply_constraints(bundle.algorithm, result)
+    _check_lookup_misses(algorithm, result)
+    decline_reasons, clamp_reason_codes = _apply_constraints(algorithm, result)
 
-    ladder_inputs = _ladder_inputs(bundle.algorithm, result, clamp_reason_codes)
+    ladder_inputs = _ladder_inputs(algorithm, result, clamp_reason_codes)
     ladder = _build_ladder(ladder_inputs, clamp_reason_codes)
-    outputs = _build_outputs(bundle.algorithm, result)
+    outputs = _build_outputs(algorithm, result)
     if not reconcile_ladder(ladder, ladder_inputs):
         # RL-1346: a quote whose ladder does not reconcile is not served, on every path and in
         # every Environment, whatever the trace-sampling rate. The one raise site. The message
@@ -900,7 +926,7 @@ def build_scoring_result(
     trace_obj: Trace | None = None
     if engine_trace is not None:
         trace_obj = _build_trace(
-            bundle.algorithm, engine_trace, rating_version_ref, bundle.content_hash,
+            algorithm, engine_trace, rating_version_ref, bundle.content_hash,
             ctx.quote_id,
         )
 
@@ -936,10 +962,11 @@ async def score_one(
     enforced at the import level as well as behaviourally.
     """
     t_start = time.perf_counter()
-    algorithm = bundle.algorithm
+    evaluation = bundle.evaluation_for(ctx.purpose)
+    algorithm = evaluation.algorithm
 
     _validate_inputs(algorithm, ctx.inputs)
-    _check_purpose_mount(algorithm, ctx)
+    _check_purpose_mount(bundle, ctx)
     _check_billing_surface(ctx)
     _check_no_shadowed_produced_names(algorithm, ctx.inputs)
 
@@ -952,14 +979,12 @@ async def score_one(
             "scoring against",
         )
 
-    context = {
-        "effective_date": ctx.effective_date.isoformat(), "purpose": ctx.purpose, **ctx.inputs
-    }
+    context = _engine_context(algorithm, ctx)
     _check_as_at_values(algorithm, context)
 
     t_eval = time.perf_counter()
     try:
-        out = await bundle.decision.async_evaluate(context, {"trace": trace})
+        out = await evaluation.decision.async_evaluate(context, {"trace": trace})
     except RuntimeError as exc:
         _reraise_engine_failure(algorithm, exc)
     eval_ms = (time.perf_counter() - t_eval) * 1000
@@ -1129,19 +1154,18 @@ def _score_context_sync(
     is called exactly as before. Raises what that path raises — the `_raise_named`
     `ValueError`s and the engine's `RuntimeError` — for the caller to isolate per quote.
     """
-    algorithm = bundle.algorithm
+    evaluation = bundle.evaluation_for(ctx.purpose)
+    algorithm = evaluation.algorithm
     _validate_inputs(algorithm, ctx.inputs)
-    _check_purpose_mount(algorithm, ctx)
+    _check_purpose_mount(bundle, ctx)
     _check_billing_surface(ctx)
     _check_no_shadowed_produced_names(algorithm, ctx.inputs)
 
-    context = {
-        "effective_date": ctx.effective_date.isoformat(), "purpose": ctx.purpose, **ctx.inputs
-    }
+    context = _engine_context(algorithm, ctx)
     _check_as_at_values(algorithm, context)
     try:
-        out = bundle.decision.evaluate(context, {"trace": trace}) if trace else (
-            bundle.decision.evaluate(context)
+        out = evaluation.decision.evaluate(context, {"trace": trace}) if trace else (
+            evaluation.decision.evaluate(context)
         )
     except RuntimeError as exc:
         _reraise_engine_failure(algorithm, exc)
@@ -1188,7 +1212,6 @@ def _score_batch_row(bundle: CompiledBundle, row: Mapping[str, Any]) -> dict[str
     raw_quote_id = row.get("quote_id")
     quote_id = None if raw_quote_id is None else str(raw_quote_id)
     rating_version_ref_str = row.get("rating_version_ref")
-    algorithm = bundle.algorithm
     try:
         ctx = _row_to_ctx(row)
         assert ctx.options is not None
@@ -1206,7 +1229,7 @@ def _score_batch_row(bundle: CompiledBundle, row: Mapping[str, Any]) -> dict[str
     # first `try` lets through for the same reason.
     try:
         premium_ladder_json = _ladder_json(scored.premium_ladder)
-        outputs_json = _outputs_json(algorithm, scored.outputs)
+        outputs_json = _outputs_json(bundle.evaluation_for(ctx.purpose).algorithm, scored.outputs)
     except NotImplementedError:
         raise
     except Exception as exc:  # FR-255: anything this row's serialisation raises

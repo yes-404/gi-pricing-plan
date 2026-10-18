@@ -12,7 +12,6 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import datetime
-from typing import Literal
 
 from model_schema.refs import ArtifactRef
 from model_schema.regression import (
@@ -30,6 +29,7 @@ from pricing_core.rating.properties import (
     counterexample_points,
     make_scorer,
     monotone_has_comparable_pair,
+    property_grid,
 )
 from pricing_core.rating.runtime import CompiledBundle
 
@@ -77,9 +77,7 @@ def replay_cases(
     results: list[PropertyResult] = []
     for prop in suite.properties:
         check = prop.check
-        grid: Literal["uniform+sampled"] | None = (
-            "uniform+sampled" if check.kind == "monotone" else None
-        )
+        grid = property_grid(check, contract)
         persisted = cases.counterexamples.get(prop.name)
         failing = next(
             (

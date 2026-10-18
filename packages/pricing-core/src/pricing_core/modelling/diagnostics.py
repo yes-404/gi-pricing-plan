@@ -345,13 +345,15 @@ def _partition(
     family: str,
     power: float = 1.5,
     excluded_zero_weight: int,
+    excluded_unknown_response: int | None,
     bandings: Mapping[UUID, Banding] | None,
     groupings: Mapping[UUID, Grouping] | None,
 ) -> PartitionDiagnostics:
     """Every universal metric for one partition (FR-171).
 
     `data` and `mu` arrive **already without** FR-111's weight-0 rows, and
-    `excluded_zero_weight` is how many the caller removed — recorded, never silent.
+    `excluded_zero_weight` and `excluded_unknown_response` are how many the caller removed,
+    for FR-111's two exclusions — recorded, never silent.
 
     `mu` is passed in rather than predicted here, and `spec` is the **common** block: this
     is FR-171's "all model types" taken literally. Every metric below — A/E by level,
@@ -449,6 +451,7 @@ def _partition(
         weighting=scheme,
         rows=data.height,
         rows_excluded_zero_weight=excluded_zero_weight,
+        rows_excluded_unknown_response=excluded_unknown_response,
         ae_overall=ae_overall,
         ae_by_factor=tuple(cells),
         lift=tuple(lift),
@@ -651,6 +654,7 @@ def compute_diagnostics(
             model_offset=model_offset_train, bandings=bandings, groupings=groupings,
         ),
         family=spec.family, power=power, excluded_zero_weight=train_rows.excluded,
+        excluded_unknown_response=train_rows.excluded_unknown,
         bandings=bandings, groupings=groupings,
     )
     report.check_cancelled()
@@ -662,6 +666,7 @@ def compute_diagnostics(
             model_offset=model_offset_holdout, bandings=bandings, groupings=groupings,
         ),
         family=spec.family, power=power, excluded_zero_weight=holdout_rows.excluded,
+        excluded_unknown_response=holdout_rows.excluded_unknown,
         bandings=bandings, groupings=groupings,
     )
 
@@ -805,6 +810,7 @@ def backtest_model(
     partition = _partition(
         data, spec, factors,
         mu=mu, family=family, power=power, excluded_zero_weight=rows.excluded,
+        excluded_unknown_response=rows.excluded_unknown,
         bandings=bandings, groupings=groupings,
     )
 
@@ -1333,6 +1339,7 @@ def compute_gbm_diagnostics(
         mu=predict_gbm(result, booster, train, factors,
                        bandings=bandings, groupings=groupings).to_numpy(),
         family=family, power=power, excluded_zero_weight=train_rows.excluded,
+        excluded_unknown_response=train_rows.excluded_unknown,
         bandings=bandings, groupings=groupings,
     )
     report.check_cancelled()
@@ -1342,6 +1349,7 @@ def compute_gbm_diagnostics(
         mu=predict_gbm(result, booster, holdout, factors,
                        bandings=bandings, groupings=groupings).to_numpy(),
         family=family, power=power, excluded_zero_weight=holdout_rows.excluded,
+        excluded_unknown_response=holdout_rows.excluded_unknown,
         bandings=bandings, groupings=groupings,
     )
 
@@ -1491,6 +1499,7 @@ def compute_ebm_diagnostics(
         mu=predict_ebm(result, train, factors,
                        bandings=bandings, groupings=groupings),
         family=family, power=power, excluded_zero_weight=train_rows.excluded,
+        excluded_unknown_response=train_rows.excluded_unknown,
         bandings=bandings, groupings=groupings,
     )
     report.check_cancelled()
@@ -1500,6 +1509,7 @@ def compute_ebm_diagnostics(
         mu=predict_ebm(result, holdout, factors,
                        bandings=bandings, groupings=groupings),
         family=family, power=power, excluded_zero_weight=holdout_rows.excluded,
+        excluded_unknown_response=holdout_rows.excluded_unknown,
         bandings=bandings, groupings=groupings,
     )
 

@@ -248,3 +248,90 @@ def test_the_published_contract_carries_all_four_declared_routes() -> None:
     ):
         assert path in document["paths"], path
         assert "post" in document["paths"][path], path
+
+
+_BAD_BANDING_SLUG = "driver_age-bands"
+_BAD_GROUPING_SLUG = "vehicle_group-groups"
+
+
+def _assert_slug_refused(refused, slug: str) -> None:
+    """422, the typed code, the field, and a message that does not echo the input (NFR-499)."""
+    assert refused.status_code == 422, refused.text
+    problem = refused.json()
+    assert problem["code"] == "VALIDATION_FAILED"
+    slug_errors = [e for e in problem["errors"] if e["field"] == "slug"]
+    assert [e["code"] for e in slug_errors] == ["STRING_PATTERN_MISMATCH"], problem
+    assert slug not in refused.text
+
+
+@pytest.mark.req("FR-101")
+def test_a_banding_with_an_inadmissible_slug_is_refused_at_post(
+    api_client: TestClient, actuary: dict[str, str]
+) -> None:
+    dataset_id = str(new_uuid7())
+    refused = api_client.post(
+        "/api/v1/bandings",
+        json=_banding_body(_BAD_BANDING_SLUG, dataset_id),
+        headers=actuary,
+    )
+    _assert_slug_refused(refused, _BAD_BANDING_SLUG)
+
+    listed = api_client.get(
+        "/api/v1/bandings", params={"dataset_id": dataset_id}, headers=actuary
+    )
+    assert listed.status_code == 200
+    assert [row for row in listed.json() if row["slug"] == _BAD_BANDING_SLUG] == []
+
+
+@pytest.mark.req("FR-108")
+def test_a_grouping_with_an_inadmissible_slug_is_refused_at_post(
+    api_client: TestClient, actuary: dict[str, str]
+) -> None:
+    dataset_id = str(new_uuid7())
+    refused = api_client.post(
+        "/api/v1/groupings",
+        json=_grouping_body(_BAD_GROUPING_SLUG, dataset_id),
+        headers=actuary,
+    )
+    _assert_slug_refused(refused, _BAD_GROUPING_SLUG)
+
+    listed = api_client.get(
+        "/api/v1/groupings", params={"dataset_id": dataset_id}, headers=actuary
+    )
+    assert listed.status_code == 200
+    assert [row for row in listed.json() if row["slug"] == _BAD_GROUPING_SLUG] == []
+
+
+@pytest.mark.req("FR-98")
+def test_a_banding_proposal_with_an_inadmissible_slug_is_refused(
+    api_client: TestClient, actuary: dict[str, str]
+) -> None:
+    refused = api_client.post(
+        "/api/v1/bandings/propose",
+        json={
+            "slug": _BAD_BANDING_SLUG,
+            "dataset_version_id": str(new_uuid7()),
+            "column": "driver_age",
+            "method": "equal_width",
+        },
+        headers=actuary,
+    )
+    _assert_slug_refused(refused, _BAD_BANDING_SLUG)
+
+
+@pytest.mark.req("FR-105")
+def test_a_grouping_proposal_with_an_inadmissible_slug_is_refused(
+    api_client: TestClient, actuary: dict[str, str]
+) -> None:
+    refused = api_client.post(
+        "/api/v1/groupings/propose",
+        json={
+            "slug": _BAD_GROUPING_SLUG,
+            "dataset_version_id": str(new_uuid7()),
+            "column": "region",
+            "method": "credibility_weighted",
+            "unseen_level_behaviour": "map_to_default",
+        },
+        headers=actuary,
+    )
+    _assert_slug_refused(refused, _BAD_GROUPING_SLUG)

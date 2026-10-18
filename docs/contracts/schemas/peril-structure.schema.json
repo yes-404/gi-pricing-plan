@@ -117,7 +117,15 @@
           "enum": ["pass", "fail"],
           "description": "DERIVED from |ratio - 1| against `tolerance`, on the same terms as `ratio` above."
         },
-        "computed_at": {"type": "string", "format": "date-time"}
+        "computed_at": {"type": "string", "format": "date-time"},
+        "imputed_rows": {
+          "type": "integer", "minimum": 0, "default": 0,
+          "description": "Holdout rows whose observed amount was unknown and was imputed at the known-amount mean severity (FR-190, SL-1543 DP-4). Not required: a reconciliation stored before this field existed omits it and loads as 0."
+        },
+        "imputed_share": {
+          "$ref": "common/money.schema.json#/$defs/Decimal",
+          "description": "The imputed rows' share of the observed loss, an exact ratio in [0, 1] as a decimal string (not money). Default \"0\"; not required, for the same reason as `imputed_rows`."
+        }
       }
     }
   },

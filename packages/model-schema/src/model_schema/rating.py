@@ -11,10 +11,9 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from decimal import Decimal
 from enum import StrEnum
 from itertools import pairwise
-from typing import Annotated, Any, Final, Literal, Protocol
+from typing import Annotated, Any, Final, Literal, Protocol, Self
 from uuid import UUID
 
 from pydantic import (
@@ -30,9 +29,10 @@ from pydantic import (
 
 from model_schema.graph_errors import GraphCycleError, GraphUnresolvedRefError
 from model_schema.input_free import InputFreeError
-from model_schema.money import DecimalStr
+from model_schema.money import DecimalStr, SchemaDecimal
 from model_schema.refs import ArtifactRef, BlobRef, Slug
 from model_schema.regression import GoldenQuoteEvidence
+from model_schema.scoring import MountPurpose
 
 
 class RatingVersionStatus(StrEnum):
@@ -287,19 +287,39 @@ class RatingInputType(StrEnum):
     ENUM = "enum"
 
 
+def _ordered_may_be_absent(schema: dict[str, Any]) -> None:
+    """`ordered` is left out of a dump while false, so the schema neither requires it nor
+    declares a default a client would take to be present (`openapi-typescript` types a response
+    property with a default as always present)."""
+    required: list[str] = schema.get("required", [])
+    if "ordered" in required:
+        required.remove("ordered")
+    schema["properties"]["ordered"].pop("default", None)
+
+
 class InputContractField(BaseModel):
     """One Rating Input (FR-213): name, type, nullability, range or domain, description."""
 
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid", json_schema_extra=_ordered_may_be_absent)
 
     name: str
     type: RatingInputType
     nullable: bool = False
-    min: Decimal | int | None = None
-    max: Decimal | int | None = None
+    min: SchemaDecimal | int | None = None
+    max: SchemaDecimal | int | None = None
     pattern: str | None = None
     domain: list[str] | None = None
+    #: Left out of every dump while false, so an input that never declares it keeps its stored
+    #: form and its bundle's `content_hash` (RL-1613 ruling item 2 (i)); the schema stays typed.
+    ordered: bool = Field(default=False, exclude_if=lambda declared: not declared)
     description: str | None = None
+
+    @model_validator(mode="after")
+    def _ordered_needs_an_enum_domain(self) -> Self:
+        """`ordered` declares that `domain`'s list order is the level order (FR-213, RL-1613)."""
+        if self.ordered and (self.type is not RatingInputType.ENUM or not self.domain):
+            raise InputFreeError("ordered is valid only on an enum with a non-empty domain")
+        return self
 
 
 def _reject_float_type(value: str) -> str:
@@ -451,6 +471,11 @@ class SubGraphRef(BaseModel):
     the parent's graph: it consumes the parent values `inputs` maps its input ports to, and
     produces the parent names `outputs` maps its output ports to (`RL-1309` DP-3; RL 9586).
     Whether the maps are complete against the pinned version's ports is compile's to check.
+
+    `purposes` selects the quote purposes the mount is inlined for (`RL-1344` section 2): absent,
+    it is mounted for every purpose; present, it is the non-empty, duplicate-free subset of
+    `mid_term_adjustment` and `cancellation`. A purpose mount re-produces a parent name
+    (`RL-1628`, DP-S3-1 (d)): it maps an input port and an output port to the same name.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -459,6 +484,21 @@ class SubGraphRef(BaseModel):
     mount_point: str = Field(pattern=_MOUNT_POINT)
     inputs: dict[str, str] = Field(default_factory=dict)
     outputs: dict[str, str] = Field(default_factory=dict)
+    purposes: list[MountPurpose] | None = None
+
+    @field_validator("purposes")
+    @classmethod
+    def _purposes_are_non_empty_and_distinct(
+        cls, value: list[MountPurpose] | None
+    ) -> list[MountPurpose] | None:
+        """`RL-1344` section 2.2: absent means always mounted; present, non-empty, no duplicates."""
+        if value is None:
+            return value
+        if not value:
+            raise InputFreeError("purposes must not be empty; omit it to mount for every purpose")
+        if len(set(value)) != len(value):
+            raise InputFreeError("purposes must not repeat a purpose")
+        return value
 
     @field_validator("mount_point")
     @classmethod
@@ -615,6 +655,10 @@ class RatingAlgorithm(RatingAlgorithmDraft):
         return seen
 
 
+_RISK_PREMIUM_OUTPUT: Final = "risk_premium_minor"
+"""The declared output that carries the one risk price (FR-218, `RL-1628` R1)."""
+
+
 def graph_invariant_issues(draft: RatingAlgorithmDraft) -> list[ValidationIssue]:
     """Every graph-invariant breach of `draft`, located, in the order saving checks them.
 
@@ -622,6 +666,11 @@ def graph_invariant_issues(draft: RatingAlgorithmDraft) -> list[ValidationIssue]
     first issue returned, and the validate route (RL-1474) reports all of them. A
     duplicated `step_id` ends the check (the graph cannot be indexed); an ambiguous
     producer is only reported when there is no cycle (no topological order exists).
+
+    FR-212 holds for each purpose's graph (`RL-1344` section 3): the steps with the mounts
+    selected for that purpose, once per purpose some mount selects, and then the steps with the
+    unconditional mounts alone, which is what every other purpose is priced by. An algorithm
+    with no purpose mount has the one graph, and is checked exactly as before.
     """
     steps = draft.steps
     issues: list[ValidationIssue] = []
@@ -641,11 +690,7 @@ def graph_invariant_issues(draft: RatingAlgorithmDraft) -> list[ValidationIssue]
     # A mount is a node (RL-1309 DP-3 items 2 to 4): its `mount_point` is unique among the
     # step_ids and the other mounts, it consumes its mapped inputs and produces its mapped
     # outputs, and the checks below count it. The orphan check stays on real steps.
-    mounts = [
-        _MountNode(m.mount_point, list(m.inputs.values()), list(m.outputs.values()))
-        for m in draft.sub_graphs
-    ]
-    mount_points = [m.step_id for m in mounts]
+    mount_points = [m.mount_point for m in draft.sub_graphs]
     if len(mount_points) != len(set(mount_points)) or set(mount_points) & seen:
         issues.append(
             ValidationIssue(
@@ -658,6 +703,43 @@ def graph_invariant_issues(draft: RatingAlgorithmDraft) -> list[ValidationIssue]
         )
     if issues:
         return issues
+
+    selected = sorted({p for m in draft.sub_graphs for p in m.purposes or []})
+    purpose_only: dict[str, list[str]] = {}
+    for m in draft.sub_graphs:
+        for name in m.outputs.values():
+            purpose_only.setdefault(name, []).extend(m.purposes or [])
+
+    found: dict[tuple[str, str, str | None], ValidationIssue] = {}
+    for purpose in [*selected, None]:
+        mounts = [
+            _MountNode(m.mount_point, list(m.inputs.values()), list(m.outputs.values()))
+            for m in draft.sub_graphs
+            if m.purposes is None or (purpose is not None and purpose in m.purposes)
+        ]
+        purpose_mounts = {
+            m.mount_point for m in draft.sub_graphs if m.purposes is not None
+        }
+        for issue in _graph_pass_issues(draft, mounts, purpose_mounts, purpose_only):
+            found.setdefault((issue.code, issue.message, issue.step_id), issue)
+    return list(found.values())
+
+
+def _graph_pass_issues(
+    draft: RatingAlgorithmDraft,
+    mounts: list[_MountNode],
+    purpose_mounts: set[str],
+    purpose_only: Mapping[str, list[str]],
+) -> list[ValidationIssue]:
+    """FR-212/214/215 over `draft.steps` and the given `mounts`: one purpose's graph.
+
+    `purpose_mounts` are the mount points that carry a `purposes` selector; none of their steps
+    may reach the risk-premium output (`RL-1628` R1). `purpose_only` maps a parent name to the
+    purposes of the mounts that produce it, so an unresolved name can say which purpose graph
+    produces it.
+    """
+    steps = draft.steps
+    issues: list[ValidationIssue] = []
     nodes: list[_Node] = [*steps, *mounts]
 
     produced = _produced_by(nodes)
@@ -687,7 +769,7 @@ def graph_invariant_issues(draft: RatingAlgorithmDraft) -> list[ValidationIssue]
                         code="RATING_GRAPH_UNRESOLVED_REF",
                         message=(
                             f"step {node.step_id!r} consumes undefined value {name!r} "
-                            "(FR-212)"
+                            "(FR-212)" + _only_in(purpose_only.get(name))
                         ),
                         step_id=node.step_id,
                     )
@@ -777,7 +859,36 @@ def graph_invariant_issues(draft: RatingAlgorithmDraft) -> list[ValidationIssue]
                     step_id=step.step_id,
                 )
             )
+
+    # One risk price (FR-218, RL-1628 R1): no step of a purpose mount reaches the output that
+    # carries the risk premium.
+    risk_outputs = {
+        s.step_id
+        for s in steps
+        if isinstance(s, RatingOutputStep) and s.output_name == _RISK_PREMIUM_OUTPUT
+    }
+    for node in mounts:
+        if node.step_id in purpose_mounts and risk_outputs & RatingAlgorithm._reachable(
+            {node.step_id}, step_by_id, produced, consumed
+        ):
+            issues.append(
+                ValidationIssue(
+                    code="VALIDATION_FAILED",
+                    message=(
+                        f"purpose mount {node.step_id!r} reaches the {_RISK_PREMIUM_OUTPUT!r} "
+                        "output: one risk price (FR-218)"
+                    ),
+                    step_id=node.step_id,
+                )
+            )
     return issues
+
+
+def _only_in(purposes: list[str] | None) -> str:
+    """The suffix naming the purpose graphs that produce an otherwise unresolved name."""
+    if not purposes:
+        return ""
+    return f"; only a mount for {', '.join(sorted(set(purposes)))} produces it (FR-218)"
 
 
 class AlgorithmStepChange(BaseModel):
@@ -806,7 +917,8 @@ class AlgorithmSubGraphChange(BaseModel):
     """One sub-graph mount that differs between two versions (FR-219; `RL-1309` DP-1 item 3).
 
     `before` / `after` are the mounted versions (`None` where the mount is absent on that side),
-    `ports_changed` says the port map differs, and `steps` is the inner step diff of the two
+    `ports_changed` says the port map differs, `purposes_changed` says the `purposes` selector
+    differs (`RL-1344` acceptance 5), and `steps` is the inner step diff of the two
     pinned fragments, present only when the caller supplied both and the version moved.
     """
 
@@ -816,6 +928,7 @@ class AlgorithmSubGraphChange(BaseModel):
     before: ArtifactRef | None = None
     after: ArtifactRef | None = None
     ports_changed: bool = False
+    purposes_changed: bool = False
     steps: AlgorithmDiff | None = None
 
 
@@ -945,7 +1058,8 @@ def _diff_mounts(
         o, n = old_by_point.get(point), new_by_point.get(point)
         before, after = (o.ref if o else None), (n.ref if n else None)
         ports_changed = (o.inputs, o.outputs) != (n.inputs, n.outputs) if o and n else False
-        if before == after and not ports_changed:
+        purposes_changed = o.purposes != n.purposes if o and n else False
+        if before == after and not ports_changed and not purposes_changed:
             continue
         inner: AlgorithmDiff | None = None
         if before is not None and after is not None and before != after and fragments:
@@ -969,6 +1083,7 @@ def _diff_mounts(
                 before=before,
                 after=after,
                 ports_changed=ports_changed,
+                purposes_changed=purposes_changed,
                 steps=inner,
             )
         )
@@ -1082,8 +1197,8 @@ class RateTableValue(BaseModel):
     name: str
     type: RateTableValueType
     unit: str
-    min: Decimal | int | None = None
-    max: Decimal | int | None = None
+    min: SchemaDecimal | int | None = None
+    max: SchemaDecimal | int | None = None
 
 
 class RateTableCell(RootModel[dict[str, str]]):
@@ -1141,10 +1256,10 @@ class RateTableDiff(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     changed_cells: int = Field(ge=0)
-    max_abs_change_pct: Decimal | None = None
-    exposure_weighted_mean_change_pct: Decimal | None = None
-    portfolio_exposure: Decimal | None = None
-    matched_exposure: Decimal | None = None
+    max_abs_change_pct: SchemaDecimal | None = None
+    exposure_weighted_mean_change_pct: SchemaDecimal | None = None
+    portfolio_exposure: SchemaDecimal | None = None
+    matched_exposure: SchemaDecimal | None = None
 
 
 class RateTableDiffCell(BaseModel):
@@ -1164,11 +1279,11 @@ class RateTableDiffCell(BaseModel):
 
     key: dict[str, str]
     change: Literal["added", "removed", "changed"]
-    baseline_value: Decimal | None = None
-    current_value: Decimal | None = None
-    abs_change: Decimal | None = None
-    rel_change_pct: Decimal | None = None
-    weight: Decimal | None = None
+    baseline_value: SchemaDecimal | None = None
+    current_value: SchemaDecimal | None = None
+    abs_change: SchemaDecimal | None = None
+    rel_change_pct: SchemaDecimal | None = None
+    weight: SchemaDecimal | None = None
 
 
 class RateTableChange(BaseModel):

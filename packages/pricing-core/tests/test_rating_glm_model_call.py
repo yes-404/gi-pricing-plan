@@ -310,10 +310,11 @@ async def test_a_model_call_equals_predict_glm_at_full_precision(world: GlmWorld
         exposure_years=quote["exposure_years"],
     )
     assert expected != round(expected, 6)  # the comparison below cannot pass by rounding
-    for result_type in ("decimal", "money_minor"):
-        algorithm = algorithm_payload(result_type=result_type)
-        compiled = load_bundle(await compiled_bundle(world, algorithm))
-        assert (await _value(compiled, **quote))["risk"] == pytest.approx(expected, rel=1e-14)
+    # SL-1563 sweep hit 1 (PL-1562 item 7, ruled 2026-10-17 13:31:51 BST): the `money_minor`
+    # iteration fed a `decimal` output, D1, now refused; a `money_minor` output would round.
+    algorithm = algorithm_payload(result_type="decimal")
+    compiled = load_bundle(await compiled_bundle(world, algorithm))
+    assert (await _value(compiled, **quote))["risk"] == pytest.approx(expected, rel=1e-14)
 
 
 @pytest.mark.req("FR-239")
@@ -453,20 +454,21 @@ def _typed_outputs_algorithm(call_type: str, output_type: str) -> dict[str, Any]
 
 
 @pytest.mark.req("FR-227")
-@pytest.mark.parametrize("declared", ["relativity", "percentage", "int"])
+@pytest.mark.parametrize("declared", ["relativity", "percentage", "int", "decimal"])
 def test_a_money_minor_model_call_feeding_a_non_money_output_is_refused(declared: str) -> None:
     """Item 15: refused by `validate_algorithm` with `RATING_TYPE_MISMATCH`, because the
-    producer is a `money_minor` `model_call` (`_compatible` itself is unchanged)."""
+    producer is a `money_minor` `model_call`. The general rule (SL-1563) refuses it through
+    `producer_types`; the message names the producing type, no longer the step kind."""
     algorithm = RatingAlgorithm.model_validate(_typed_outputs_algorithm("money_minor", declared))
     issues = validate_algorithm(algorithm)
     assert [issue.code for issue in issues] == ["RATING_TYPE_MISMATCH"]
-    assert "model_call" in issues[0].message
+    assert "money_minor" in issues[0].message
 
 
 @pytest.mark.req("FR-227")
 @pytest.mark.parametrize(
     ("call_type", "declared"),
-    [("decimal", "decimal"), ("money_minor", "money_minor"), ("money_minor", "decimal")],
+    [("decimal", "decimal"), ("money_minor", "money_minor")],
 )
 def test_a_legal_model_call_to_output_pairing_saves(call_type: str, declared: str) -> None:
     """The control: the refusal comes from the `money_minor` declaration into a non-money

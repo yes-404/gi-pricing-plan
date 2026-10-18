@@ -1,0 +1,11 @@
+# Overlay for the runtime tests (`backend/tests/test_deploy_stack_runtime.py`): the dev stack
+# on a contributor's machine already holds 5432, 6379 and 9000, so a test project must not
+# publish them. Each backing service gets an ephemeral host port instead (`docker compose
+# port <service> <port>` reports it), and `GIP_LB_PORT` moves the load balancer.
+services:
+  postgres:
+    ports: !override ["127.0.0.1::5432"]
+  redis:
+    ports: !override ["127.0.0.1::6379"]
+  minio:
+    ports: !override ["127.0.0.1::9000"]

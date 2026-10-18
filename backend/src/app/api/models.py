@@ -101,6 +101,7 @@ from model_schema import (
     RatingVersion,
     RatingVersionCreate,
     RegressionRun,
+    Slug,
     SpecValidation,
     TransparencyArtifact,
 )
@@ -247,11 +248,11 @@ class BandingProposalRequest(BandingProposal):
     day store it.
     """
 
-    slug: str
+    slug: Slug
 
 
 class GroupingProposalRequest(GroupingProposal):
-    slug: str
+    slug: Slug
 
 
 class ModelSpecValidate(BaseModel):

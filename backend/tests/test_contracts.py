@@ -92,6 +92,12 @@ ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     "approval-withdrawal": "first written form — 06 §5.1 (WK-674 Slice 2, PL-1392 Task 6, FR-357)",
     "approval-request": "generated wins — FD-1416 retired the hand-authored Phase 0 draft",
     "rating-version-create": "first written form — 03 §5.1 create row (RL-1428, FD-1421, FR-237)",
+    "upload-url-request": (
+        "first written form — 07 §5.1 (WK-1178 SL-1722, DP-1722-WIRE (a), FR-421)"
+    ),
+    "upload-url-response": (
+        "first written form — 07 §5.1 (WK-1178 SL-1722, DP-1722-WIRE (a), FR-421)"
+    ),
     "objective-usage": "first written form — FR-164 named the query",
     "oidc-auth-config": "first written form — FR-394 names the contents",
     "problem-detail": "first written form — the RFC 9457 problem shape",
@@ -1659,7 +1665,6 @@ _COMPARED_CONSTRAINTS: Final[frozenset[str]] = frozenset(
 #: both directions.
 ONE_SIDED_KEYWORDS: Final[dict[tuple[str, str], frozenset[str]]] = {
     ("banding", "band_stats.[].frequency"): frozenset({"minimum"}),
-    ("banding", "slug"): frozenset({"pattern"}),
     ("custom-objective", "applicability.backends"): frozenset({"minItems"}),
     ("custom-objective", "applicability.responses"): frozenset({"minItems"}),
     ("dataset-version", "tables"): frozenset({"minItems"}),
@@ -1676,7 +1681,6 @@ ONE_SIDED_KEYWORDS: Final[dict[tuple[str, str], frozenset[str]]] = {
     ("grouping", "evidence.target_level_stats.[].severity_ci"): frozenset(
         {"minItems", "maxItems"}
     ),
-    ("grouping", "slug"): frozenset({"pattern"}),
     ("job", "error.code"): frozenset({"pattern"}),
     ("job", "result.kind"): frozenset({"pattern"}),
     ("model", "fit_result.bins.[].cuts"): frozenset({"minItems"}),
@@ -3165,24 +3169,6 @@ def test_the_untyped_body_predicates_pass_typed_bodies() -> None:
         }
 
 
-#: 2xx responses that are streams or files, so no JSON shape exists to publish. Permanent.
-#: Keyed `(METHOD, path, status)`; each reason names the file and line that makes it so.
-UNTYPED_2XX_PERMANENT: Final[dict[tuple[str, str, str], str]] = {
-    ("GET", "/api/v1/audit/export", "200"): (
-        "StreamingResponse, application/x-ndjson (backend/src/app/api/audit.py:280) or "
-        "text/csv (backend/src/app/api/audit.py:308)"
-    ),
-    ("GET", "/api/v1/jobs/{job_id}/events", "200"): (
-        "StreamingResponse, text/event-stream (backend/src/app/api/jobs.py:310)"
-    ),
-    ("GET", "/api/v1/rate-tables/{slug}@{version}/export/csv", "200"): (
-        "Response, text/csv (backend/src/app/api/rate_tables.py:184)"
-    ),
-    ("GET", "/api/v1/rate-tables/{slug}@{version}/export/xlsx", "200"): (
-        "Response, the spreadsheetml media type (backend/src/app/api/rate_tables.py:206-207)"
-    ),
-}
-
 #: 2xx responses published as an object with no properties, to be typed by FD-1335 Part B (or by
 #: the WK-675 slice that consumes the route, which removes its entry in the same change).
 #: Temporary: the list empties as the routes are typed, and FD-1335 closes when it is empty.
@@ -3229,8 +3215,7 @@ def _guard_remainder(document: dict[str, Any]) -> set[tuple[str, str, str, str]]
     remainder = set()
     for side, method, path, key, _form in _untyped_bodies(document):
         listed = (
-            (method, path, key) in UNTYPED_2XX_PERMANENT
-            or (method, path, key) in UNTYPED_2XX_PENDING_PART_B
+            (method, path, key) in UNTYPED_2XX_PENDING_PART_B
             if side == "response"
             else (method, path) in UNTYPED_REQUEST_PENDING
         )
@@ -3272,18 +3257,15 @@ def test_every_untyped_body_exclusion_is_still_untyped() -> None:
     reported = _untyped_bodies(_load(OPENAPI))
     responses = {(m, p, k) for s, m, p, k, _ in reported if s == "response"}
     requests = {(m, p) for s, m, p, _k, _ in reported if s == "request"}
-    stale_2xx = (set(UNTYPED_2XX_PERMANENT) | set(UNTYPED_2XX_PENDING_PART_B)) - responses
+    stale_2xx = set(UNTYPED_2XX_PENDING_PART_B) - responses
     assert not stale_2xx, f"no longer untyped, remove from the 2xx lists: {sorted(stale_2xx)}"
     stale_requests = set(UNTYPED_REQUEST_PENDING) - requests
     assert not stale_requests, f"no longer untyped, remove: {sorted(stale_requests)}"
-    assert not set(UNTYPED_2XX_PERMANENT) & set(UNTYPED_2XX_PENDING_PART_B)
 
     for reason in UNTYPED_2XX_PENDING_PART_B.values():
         assert "pending FD-1335 part B" in reason
     for reason in UNTYPED_REQUEST_PENDING.values():
         assert "pending FD-1366 Part B" in reason
-    for key, reason in UNTYPED_2XX_PERMANENT.items():
-        assert re.search(r"\.py:\d+", reason), f"{key}: the reason names no file and line"
 
 
 @pytest.mark.req("FR-451")
@@ -3335,3 +3317,37 @@ def test_the_score_responses_document_their_models() -> None:
             (field.alias or key) for key, field in getattr(model_schema, name).model_fields.items()
         }
         assert set(components[name]["properties"]) == fields, name
+
+
+@pytest.mark.req("FR-261")
+def test_the_authored_regression_run_grid_enum_equals_the_models_literal_exactly() -> None:
+    """`regression-run.schema.json` is hand-edited and outside the drift check (RL-1613's
+    `grid: levels`; the maintainer's 2026-10-12 07:19:31 BST condition): its `grid` values must be
+    the model's `PropertyResult.grid` values, no more and no fewer."""
+    import typing
+
+    from model_schema.regression import PropertyResult
+
+    annotation = PropertyResult.model_fields["grid"].annotation
+    model_values = {
+        value
+        for arm in typing.get_args(annotation)
+        for value in (typing.get_args(arm) or (arm,))
+        if value is not type(None)
+    }
+
+    def grid_enums(node: Any) -> list[list[Any]]:
+        found: list[list[Any]] = []
+        if isinstance(node, dict):
+            grid = node.get("properties", {}).get("grid")
+            if isinstance(grid, dict) and "enum" in grid:
+                found.append(grid["enum"])
+            for child in node.values():
+                found += grid_enums(child)
+        elif isinstance(node, list):
+            for child in node:
+                found += grid_enums(child)
+        return found
+
+    (enum,) = grid_enums(_load(AUTHORED / "regression-run.schema.json"))
+    assert {value for value in enum if value is not None} == model_values

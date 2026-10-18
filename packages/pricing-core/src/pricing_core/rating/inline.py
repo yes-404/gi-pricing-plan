@@ -226,13 +226,22 @@ def mounted_fragments(
     return fragments
 
 
-def inline_mounts(
-    algorithm: RatingAlgorithm, fragments: Mapping[str, SubGraph]
-) -> RatingAlgorithm:
-    """The algorithm with every mount replaced by its fragment's namespaced steps.
+def selected_purposes(algorithm: RatingAlgorithm) -> list[str]:
+    """The purposes some mount selects, sorted: the purposes that have a graph of their own
+    (FR-218; `RL-1628` DP-S3-2 (a)). Empty for an algorithm with no purpose mount."""
+    return sorted({p for mount in algorithm.sub_graphs for p in mount.purposes or []})
 
-    `fragments` is keyed by `str(ArtifactRef)`, the key `resolved_payloads` uses. An algorithm
-    with no mounts is returned as it is.
+
+def inline_mounts(
+    algorithm: RatingAlgorithm, fragments: Mapping[str, SubGraph], purpose: str | None = None
+) -> RatingAlgorithm:
+    """The algorithm with its mounts replaced by their fragments' namespaced steps.
+
+    `fragments` is keyed by `str(ArtifactRef)`, the key `resolved_payloads` uses. `purpose` is
+    the quote purpose the graph is for: a mount with no `purposes` is inlined for every graph,
+    and a purpose mount only for a graph whose purpose it selects (FR-218), so `purpose=None`
+    is the base graph with the unconditional mounts alone. An algorithm with no mounts is
+    returned as it is.
     """
     if not algorithm.sub_graphs:
         return algorithm
@@ -240,6 +249,8 @@ def inline_mounts(
     inlined: list[RatingStep] = []
     new_names: set[str] = set()
     for mount in algorithm.sub_graphs:
+        if mount.purposes is not None and purpose not in mount.purposes:
+            continue
         fragment = fragments.get(str(mount.ref))
         if fragment is None:
             _raise_named(

@@ -151,7 +151,7 @@ auditor, or a regulator:
 
 | ID | Requirement |
 |---|---|
-| **FR-368** | Every governed state change, permission change, acknowledgement, approval decision, deployment, rollback, suppression, and data purge emits an Audit Event, written in the same transaction as the change (R2). |
+| **FR-368** | Every governed state change, permission change, acknowledgement, approval decision, deployment, rollback, suppression, and data purge emits an Audit Event, written in the same transaction as the change (R2). *Pointer added 2026-10-17 (FD-1727):* failed authentication is audited under `07` FR-392, which states its scope (failures that resolve to a workspace) and its own-transaction rule. It is not a governed state change, so this row's same-transaction clause (R2) does not govern it. |
 | **FR-369** | An Audit Event records: actor (Principal), timestamp (UTC), action, entity reference (`{type}:{slug}@{version}`), before state, after state, justification where the action requires one, `trace_id`, and source (`ui` / `api` / `job` / `system`). |
 | **FR-370** | The audit table is append-only enforced at the **database privilege level** — the application role holds `INSERT` and `SELECT` only, with `UPDATE`/`DELETE` revoked (NFR-458). |
 | **FR-371** | The audit log is queryable by actor, entity, action, time range, and free text over justifications, with cursor pagination and export to CSV/JSON. |
@@ -603,7 +603,7 @@ Generated sections, in order (R3). Each cites the artifacts it drew from.
 | `GET` | `/api/v1/audit?actor=&entity=&action=&from=&to=&q=` | Query the audit log (FR-371) |
 | `GET` | `/api/v1/audit/verify?from=&to=` | Verify the hash chain (FR-372) |
 | `POST` | `/api/v1/audit/anchor` | Export a signed chain head for external anchoring (FR-373) |
-| `GET` | `/api/v1/audit/export` | Export CSV/JSON |
+| `GET` | `/api/v1/audit/export` | Export CSV/JSON *(Amended 2026-10-17, SL-1709, FD-1684: **200** `text/csv` for `format=csv` (the default), or JSON Lines, `application/x-ndjson`, one audit event per line, for `format=json`.)* |
 | `POST` | `/api/v1/dossiers` | **202** Generate a dossier for an artifact (FR-376) |
 | `GET` | `/api/v1/dossiers/{id}?format=html\|pdf\|bundle` | Render / export (FR-379) |
 | `POST` | `/api/v1/dossiers/{id}/commentary` | Add/update an attributed Commentary Block (FR-377) |

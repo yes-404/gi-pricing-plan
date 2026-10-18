@@ -23,7 +23,16 @@ from decimal import Decimal
 from typing import Any, NoReturn, Protocol
 
 import zen
-from pydantic import BaseModel, ConfigDict, SerializationInfo, ValidationError, field_serializer
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SerializationInfo,
+    SerializerFunctionWrapHandler,
+    ValidationError,
+    field_serializer,
+    model_serializer,
+)
 
 from model_schema.modelling import Banding, Factor, FactorIntent, Grouping
 from model_schema.perils import LargeLossKind, PerilStructure
@@ -47,9 +56,13 @@ from model_schema.rating import (
 )
 from model_schema.refs import ArtifactRef
 from model_schema.sub_graphs import SubGraph, SubGraphInputPort
-from pricing_core.modelling.factors import required_model_inputs
+from pricing_core.modelling.factors import (
+    GBM_MODEL_TYPES,
+    gbm_transformed_factors,
+    required_model_inputs,
+)
 from pricing_core.rating.authored import authored_expression_fields
-from pricing_core.rating.inline import inline_mounts, mounted_fragments
+from pricing_core.rating.inline import inline_mounts, mounted_fragments, selected_purposes
 from pricing_core.rating.ladder import RUNG_ORDER, output_steps_by_name, rung_output_name
 from pricing_core.rating.references import STAMPED_DATE, referenced_names
 from pricing_core.rating.vocabulary import check_allow_list
@@ -112,71 +125,55 @@ def producer_types(
     return types
 
 
-def _money_model_call_names(steps: Sequence[RatingStep]) -> set[str]:
-    """Names whose latest producer is a `money_minor` `model_call` (a later producer wins)."""
-    money: set[str] = set()
-    for step in steps:
-        is_money_call = isinstance(step, RatingModelCallStep) and step.result_type == "money_minor"
-        for name in _as_list(step.produces):
-            if is_money_call:
-                money.add(name)
-            else:
-                money.discard(name)
-    return money
-
-
-def model_call_money_issues(
-    steps: Sequence[RatingStep], outputs: Sequence[tuple[str, str, str, str]]
-) -> list[ValidationIssue]:
-    """FR-227 (`PL-1464` item 15): a `money_minor` value produced by a `model_call` that feeds
-    an output declared other than `decimal` or `money_minor` is refused.
-
-    Scoped to the `model_call` producer on purpose: `_compatible` still treats every numeric
-    type as interchangeable, so an `expression` producer keeps today's behaviour. Same
-    `(step_id, output name, declared type, feeding name)` rows as `output_type_issues`.
-    """
-    money = _money_model_call_names(steps)
-    return [
-        ValidationIssue(
-            code="RATING_TYPE_MISMATCH",
-            message=(
-                f"output {output_name!r} is declared {declared_type!r} but its producing "
-                "step is a model_call declared money_minor; a money_minor model_call feeds "
-                "a decimal or money_minor output (FR-227)"
-            ),
-            step_id=step_id,
-            field="outputs",
-        )
-        for step_id, output_name, declared_type, fed_by in outputs
-        if fed_by in money and declared_type not in ("decimal", "money_minor")
-    ]
-
-
 def _producer_types(algo: RatingAlgorithm) -> dict[str, str]:
     """`producer_types` over an algorithm: its input contract types its input steps."""
     return producer_types(algo.steps, {f.name: f.type.value for f in algo.input_contract})
 
 
-def _compatible(producer: str, declared: str) -> bool:
+#: OQ-1560 B3 (decided 2026-10-05 17:42:06 BST): numeric pairs that widen without a unit change.
+_WIDENING = frozenset({
+    ("int", "decimal"), ("count", "decimal"), ("relativity", "decimal"),
+    ("percentage", "decimal"), ("count", "int"),
+})
+
+
+def _compatible(producer: str, declared: str, *, at_output_step: bool) -> bool:
+    """FR-227: may a value of type `producer` be declared as `declared`?
+
+    `money_minor` is closed both ways (the maintainer (by delegation), 2026-10-05 17:36:28 BST,
+    FD-1424): a value leaves it only into `money_minor`, and enters it only from `money_minor`
+    or, at an output step (FR-226's one rounding point), from `decimal`. `int` into
+    `money_minor` is refused (A1): money enters a computation through an explicit
+    `money_minor` expression step. Every other numeric pair is widening only (OQ-1560 B3,
+    17:42:06 BST); a pair with a non-numeric type matches only by equality.
+    """
     if producer == declared:
         return True
-    # Numeric values are interchangeable at save time; the bundle compilation resolves
-    # the exact unit. A string produced into a money_minor output is a clear mismatch.
-    return producer in _NUMERIC and declared in _NUMERIC
+    if producer == "money_minor":
+        return False
+    if declared == "money_minor":
+        return producer == "decimal" and at_output_step
+    return (producer, declared) in _WIDENING
 
 
 def output_type_issues(
-    types: Mapping[str, str], outputs: Sequence[tuple[str, str, str, str]]
+    types: Mapping[str, str],
+    outputs: Sequence[tuple[str, str, str, str]],
+    *,
+    at_output_step: bool,
 ) -> list[ValidationIssue]:
     """FR-227: each declared output's type is compatible with its producing step's.
 
     Each output is `(step_id to report, output name, declared type, name that feeds it)`.
     An output whose feeding name has no statically-known type is not checked here.
+    `at_output_step` is True for an algorithm's `output` step and False for a Sub-graph port.
     """
     issues: list[ValidationIssue] = []
     for step_id, output_name, declared_type, fed_by in outputs:
         producer_type = types.get(fed_by)
-        if producer_type is not None and not _compatible(producer_type, declared_type):
+        if producer_type is not None and not _compatible(
+            producer_type, declared_type, at_output_step=at_output_step
+        ):
             issues.append(
                 ValidationIssue(
                     code="RATING_TYPE_MISMATCH",
@@ -203,10 +200,7 @@ def _check_result_types(algo: RatingAlgorithm) -> list[ValidationIssue]:
         if declared is None or not consumed:
             continue
         outputs.append((step.step_id, step.output_name, declared.type, consumed[0]))
-    return [
-        *output_type_issues(_producer_types(algo), outputs),
-        *model_call_money_issues(algo.steps, outputs),
-    ]
+    return output_type_issues(_producer_types(algo), outputs, at_output_step=True)
 
 
 def fragment_output_type_issues(
@@ -235,7 +229,7 @@ def fragment_output_type_issues(
         for port in output_ports
         if port.name in produced_by
     ]
-    return [*output_type_issues(types, outputs), *model_call_money_issues(steps, outputs)]
+    return output_type_issues(types, outputs, at_output_step=False)
 
 
 def _check_clamp_placement(algo: RatingAlgorithm) -> list[ValidationIssue]:
@@ -642,8 +636,19 @@ class Bundle(BaseModel):
     graph: JdmGraph
     resolved_payloads: dict[str, Any]
     pins: Pins
+    purpose_graphs: dict[str, JdmGraph] = Field(default_factory=dict)
     content_hash: str
     compiled_at: datetime
+
+    @model_serializer(mode="wrap")
+    def _without_an_empty_purpose_graphs(self, handler: SerializerFunctionWrapHandler) -> Any:
+        """`graph` is the base graph; one more graph per purpose a mount selects (`RL-1628`
+        DP-S3-2 (a)). A version with no purpose mount serialises as it did before the field, so
+        recompiling it gives byte-identical bundle bytes (FR-239, as for `pins`)."""
+        data = handler(self)
+        if not data.get("purpose_graphs"):
+            data.pop("purpose_graphs", None)
+        return data
 
     @field_serializer("pins")
     def _pins_without_an_empty_sub_graphs(
@@ -658,23 +663,43 @@ class Bundle(BaseModel):
         return dumped
 
 
-def bundle_hash(graph: JdmGraph, pins: Pins) -> str:
+def _canonical_default(value: object) -> str:
+    """`json.dumps`' fallback for the one type a graph holds that JSON has no form for: a
+    `Decimal` (a `decimal` input's declared `min` / `max`) is its exact string. Any other type
+    raises `TypeError` naming it - never a catch-all `str()`, which would hash a repr silently."""
+    if isinstance(value, Decimal):
+        return str(value)
+    raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
+
+
+def bundle_hash(
+    graph: JdmGraph, pins: Pins, purpose_graphs: Mapping[str, JdmGraph] | None = None
+) -> str:
     """A reproducible content hash from the graph and the pins (FR-239).
 
     The hash covers the graph and the pinned artifact references, excluding `compiled_at`
     and any prior `content_hash` — hashing a timestamp would break reproducibility. Per
     DP1 and FR-239, the hash is reproducible from the pins and the graph (03 §5.2,
-    corrected 2026-08-27, F-W9-3-2).
+    corrected 2026-08-27, F-W9-3-2). The purpose graphs (FR-218; `RL-1628` DP-S3-2 (a)) are
+    covered only when there are any, so a version with no purpose mount hashes as it always did.
+
+    A `Decimal` in the graph hashes as its string (`_canonical_default`). No stored hash
+    changes: a `Decimal` there made `json.dumps` raise before, so no bundle containing one was
+    ever hashed, and the `default` is never called for any value that serialised.
     """
     pins_dump = pins.model_dump()
     if not pins_dump["sub_graphs"]:
         # `Pins` had four lists before WK-1250 Slice 2. A version that pins no sub-graph hashes
         # as it always did, so every stored `content_hash` stays reproducible from its pins.
         del pins_dump["sub_graphs"]
+    hashed: dict[str, Any] = {"graph": graph.model_dump(), "pins": pins_dump}
+    if purpose_graphs:
+        hashed["purpose_graphs"] = {p: g.model_dump() for p, g in purpose_graphs.items()}
     canonical = json.dumps(
-        {"graph": graph.model_dump(), "pins": pins_dump},
+        hashed,
         sort_keys=True,
         separators=(",", ":"),
+        default=_canonical_default,
     )
     return "sha256:" + hashlib.sha256(canonical.encode()).hexdigest()
 
@@ -699,7 +724,7 @@ def _refuse_mount_port_type_mismatch(
             declared, produced = ports.get(port), types.get(value)
             if declared is None or produced is None:
                 continue
-            if not _compatible(produced, declared):
+            if not _compatible(produced, declared, at_output_step=False):
                 _raise_named(
                     "RATING_TYPE_MISMATCH",
                     f"mount {mount.mount_point!r} maps {value!r}, which yields {produced!r}, to "
@@ -975,6 +1000,143 @@ def check_model_call_coverage(
                 )
 
 
+def check_model_call_gbm_factors(
+    algorithm: RatingAlgorithm, resolved_pins: Mapping[str, ResolvedArtifact]
+) -> None:
+    """Refuse a `model_call` whose pinned GBM has a banded or grouped Factor (FR-222, FR-240).
+
+    A GBM pin carries no Bandings or Groupings into the Bundle (`_carry_glm_inputs`), and the
+    runtime scores it with `factors=()`: the raw value a quote supplies is looked up as the
+    band label the booster was fitted on. That raises for a value that is no label, and prices
+    the wrong band, silently, for a value that spells another band's label. Refusing the pin
+    is the interim: nothing that can misprice is compiled (`MODEL_CALL_GBM_TRANSFORMED_FACTOR`,
+    the 2026-10-16 10:59:28 BST entry, item 1). A `peril_structure_ref` step is checked on each
+    component model. The message names the step, the model and the Factors, never a quote
+    value (NFR-499). A GLM pin is unaffected: it carries its Bandings and Groupings.
+    """
+    for step in algorithm.steps:
+        if not isinstance(step, RatingModelCallStep):
+            continue
+        if step.model_ref is not None:
+            models = [step.model_ref]
+        else:
+            assert step.peril_structure_ref is not None  # exactly one is set (FR-222)
+            structure = PerilStructure.model_validate(
+                resolved_pins[str(step.peril_structure_ref)].payload
+            )
+            models = peril_component_refs(structure)
+        for model_ref in models:
+            pin = resolved_pins[str(model_ref)]
+            fit_result = pin.payload.get("fit_result")
+            model_type = fit_result.get("model_type") if isinstance(fit_result, dict) else None
+            if model_type not in GBM_MODEL_TYPES:
+                continue
+            transformed = gbm_transformed_factors(pin.factors)
+            if transformed:
+                named = ", ".join(f"{factor.slug} ({factor.type.value})" for factor in transformed)
+                _raise_named(
+                    "MODEL_CALL_GBM_TRANSFORMED_FACTOR",
+                    f"step {step.step_id!r}: {model_ref} is a GBM fitted on banded or grouped "
+                    f"Factors [{named}], which a model_call cannot score: the Bundle carries "
+                    "no Bandings or Groupings for a GBM (FR-222, FR-240)",
+                )
+
+
+def _model_factors(resolved: ResolvedArtifact) -> tuple[Factor, ...]:
+    """A pinned model's Factors and those of the offset model it reads, which `predict` merges."""
+    factors = resolved.factors
+    if resolved.offset_source is not None:
+        factors = (*factors, *_model_factors(resolved.offset_source))
+    return factors
+
+
+def _model_slugs(resolved: ResolvedArtifact) -> set[str]:
+    """The feature slugs a pinned model reads: required inputs, offset model's, offset column."""
+    fit_result = resolved.payload.get("fit_result")
+    order = fit_result.get("feature_order", ()) if isinstance(fit_result, dict) else ()
+    slugs = set(required_model_inputs(resolved.factors, order))
+    if resolved.offset_source is not None:
+        slugs |= _model_slugs(resolved.offset_source)
+    column = (resolved.payload.get("spec") or {}).get("offset", {}).get("column")
+    if column:
+        slugs.add(column)
+    return slugs
+
+
+def check_model_call_columns(
+    algorithm: RatingAlgorithm, resolved_pins: Mapping[str, ResolvedArtifact]
+) -> None:
+    """Refuse a `model_call` that feeds one model input from two different graph values (FD-8070).
+
+    `predict` keys the feature row by feature slug and then renames each slug to its Factor's
+    source column, so two graph names that reach one slug, or two slugs that share one source
+    column, collapse to the last value with no error. Per model the step scores, the graph
+    names that reach one column (or one slug, for a Factor over several columns or a GBM
+    feature) must be one name; a graph name mapped to two slugs is one value and passes. A
+    `peril_structure_ref` step is grouped per component model, with that component's offset
+    model, because each component scorer renames only its own slugs (the ruling of
+    "2026-10-17 11:15:37 BST", Q2). Two names are one value only when both are `input` steps
+    with the same `input_name` and `on_missing` (Q1); the score-time guard
+    (`MODEL_CALL_FEATURE_COLLISION`) stays the backstop. The message names authored
+    identifiers, never a quote value (NFR-499).
+    """
+    produced_by: dict[str, Any] = {}
+    for step in algorithm.steps:
+        for name in _produced_names(step):
+            produced_by[name] = step
+    for step in algorithm.steps:
+        if not isinstance(step, RatingModelCallStep):
+            continue
+        if step.model_ref is not None:
+            scored = [(step.model_ref, resolved_pins[str(step.model_ref)], False)]
+        else:
+            assert step.peril_structure_ref is not None  # exactly one is set (FR-222)
+            structure = PerilStructure.model_validate(
+                resolved_pins[str(step.peril_structure_ref)].payload
+            )
+            scored = [
+                (ref, resolved_pins[str(ref)], True) for ref in peril_component_refs(structure)
+            ]
+        for model_ref, pin, restrict in scored:
+            columns = {
+                factor.slug: factor.source_columns[0]
+                for factor in _model_factors(pin)
+                if len(factor.source_columns) == 1
+            }
+            takes = _model_slugs(pin)
+            reached: dict[str, tuple[set[str], set[str]]] = {}
+            for name, slug in step.feature_map.items():
+                if restrict and slug not in takes:
+                    continue
+                names, slugs = reached.setdefault(columns.get(slug, slug), (set(), set()))
+                names.add(name)
+                slugs.add(slug)
+            for column, (names, slugs) in sorted(reached.items()):
+                if len(names) > 1 and not _same_input(names, produced_by):
+                    _raise_named(
+                        "MODEL_CALL_FEATURE_MAP_INVALID",
+                        f"step {step.step_id!r}: {sorted(names)} are different graph values fed "
+                        f"to {sorted(slugs)} of {model_ref}, which score one column {column!r}; "
+                        "the model would price on only one of them (FR-222, FR-240)",
+                    )
+
+
+def _produced_names(step: Any) -> list[str]:
+    produces = getattr(step, "produces", [])
+    return [produces] if isinstance(produces, str) else list(produces)
+
+
+def _same_input(names: set[str], produced_by: Mapping[str, Any]) -> bool:
+    """True when every name is an `input` step's output with one `input_name` and `on_missing`.
+
+    The step carries no default of its own: a default comes from the input contract by
+    `input_name`, so the same `input_name` has the same default.
+    """
+    steps = [produced_by.get(name) for name in names]
+    inputs = [s for s in steps if isinstance(s, RatingInputStep)]
+    return len(inputs) == len(steps) and len({(s.input_name, s.on_missing) for s in inputs}) == 1
+
+
 async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> Bundle:
     """Compile a pinned `RatingVersion` to a self-contained Bundle (FR-239/240).
 
@@ -986,7 +1148,8 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
     Every `table`, `lookup` and `model_call` step's ref is pinned at its exact version
     (FR-237, `check_step_refs_pinned`). Every `model_call` `feature_map` maps each input its
     pinned model requires, per component for a Peril Structure (FR-240,
-    `check_model_call_coverage`).
+    `check_model_call_coverage`), and no pinned GBM has a banded or grouped Factor (FR-222,
+    `check_model_call_gbm_factors`).
     Each sub-graph mount is resolved from the version's pins (`RL-1309` G1) and inlined at its
     mount point (FR-217, `inline_mounts`), and every check above runs over the **inlined**
     algorithm, so a fragment's steps, references and expressions are checked as the parent's.
@@ -1030,19 +1193,27 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
     fragments = mounted_fragments(
         algorithm, pins, {key: artifact.payload for key, artifact in mounted.items()}
     )
+    # The base graph (unconditional mounts) and one more per purpose some mount selects (FR-218,
+    # `RL-1628` DP-S3-2 (a)). Every check runs over every one, so a fragment refused for one
+    # purpose is refused at compile.
     inlined = inline_mounts(algorithm, fragments)
+    purpose_inlined = {
+        p: inline_mounts(algorithm, fragments, p) for p in selected_purposes(algorithm)
+    }
+    every_inlined = [inlined, *purpose_inlined.values()]
     _refuse_mount_port_type_mismatch(algorithm, fragments)
 
-    issues = validate_algorithm(inlined)
-    if issues:
-        _raise_named(issues[0].code, issues[0].message)
-    try:
-        check_model_reference_mode(version, inlined)
-    except ModelReferenceModeError as exc:
-        # NFR-499: kept by class, not by shape; its text is the step id and the two modes.
-        _raise_named("MODEL_REFERENCE_MODE_INCONSISTENT", str(exc))
-    check_step_refs_pinned(inlined, pins)
-    _refuse_peril_model_calls(inlined)
+    for each in every_inlined:
+        issues = validate_algorithm(each)
+        if issues:
+            _raise_named(issues[0].code, issues[0].message)
+        try:
+            check_model_reference_mode(version, each)
+        except ModelReferenceModeError as exc:
+            # NFR-499: kept by class, not by shape; its text is the step id and the two modes.
+            _raise_named("MODEL_REFERENCE_MODE_INCONSISTENT", str(exc))
+        check_step_refs_pinned(each, pins)
+        _refuse_peril_model_calls(each)
 
     payloads: dict[str, Any] = {str(version.algorithm_ref): resolved_algorithm.payload}
     all_refs: list[ArtifactRef] = [
@@ -1078,16 +1249,21 @@ async def compile_bundle(version: RatingVersion, resolver: ArtifactResolver) -> 
             component_refs.append(ArtifactRef.model_validate(component_ref))
     await _refuse_unapproved_objectives(version, payloads, resolver, component_refs)
     await _refuse_control_factor_keys(version, payloads, resolver)
-    _refuse_control_factor_model_calls(inlined, resolved_pins)
-    check_model_call_coverage(inlined, resolved_pins)
+    for each in every_inlined:
+        _refuse_control_factor_model_calls(each, resolved_pins)
+        check_model_call_coverage(each, resolved_pins)
+        check_model_call_gbm_factors(each, resolved_pins)
+        check_model_call_columns(each, resolved_pins)
 
     graph = to_jdm(inlined)
+    purpose_graphs = {p: to_jdm(a) for p, a in purpose_inlined.items()}
     return Bundle(
         algorithm_ref=str(version.algorithm_ref),
         graph=graph,
         resolved_payloads=payloads,
         pins=pins,
-        content_hash=bundle_hash(graph, pins),
+        purpose_graphs=purpose_graphs,
+        content_hash=bundle_hash(graph, pins, purpose_graphs),
         compiled_at=datetime.now(UTC),
     )
 
@@ -1102,7 +1278,9 @@ __all__ = [
     "ValidationIssue",
     "assert_integer_minor_round_trip",
     "bundle_hash",
+    "check_model_call_columns",
     "check_model_call_coverage",
+    "check_model_call_gbm_factors",
     "check_step_refs_pinned",
     "compile_bundle",
     "fragment_output_type_issues",

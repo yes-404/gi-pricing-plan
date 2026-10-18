@@ -32,7 +32,7 @@ from model_schema.input_free import InputFreeError
 from model_schema.money import DecimalStr
 from model_schema.prediction import UncertaintyBasis
 from model_schema.profiles import OneWayRow
-from model_schema.refs import BlobRef, ModelRef, Slug
+from model_schema.refs import ArtifactRef, BlobRef, ModelRef, Slug
 
 __all__ = [
     "FIT_RESULT_ADAPTER",
@@ -346,6 +346,57 @@ class BandingMinimums(BaseModel):
     on_violation: Literal["warn", "fail"] = "warn"
 
 
+class BandingMeasure(enum.StrEnum):
+    """Which floor of `BandingMinimums` a band fell below (FR-100)."""
+
+    EXPOSURE = "exposure"
+    CLAIM_COUNT = "claim_count"
+
+
+class _BandingWarningBase(BaseModel):
+    """What FR-100's `warn` records about one thin band, before the measure fixes the types.
+
+    A reviewer or a UI acts on these fields, so they are typed rather than rendered text.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    #: The Banding version checked: on the wire the ID-3 string `banding:{slug}@{version}`.
+    banding: ArtifactRef
+    #: One of `Banding.labels`, and its position in them (the labels are unique).
+    band_label: str
+    band_index: int = Field(ge=0)
+
+    @field_validator("banding")
+    @classmethod
+    def _is_a_banding_reference(cls, value: ArtifactRef) -> ArtifactRef:
+        if value.type != "banding":
+            raise InputFreeError("a banding warning names a banding, not another artifact type")
+        return value
+
+
+class ExposureBandingWarning(_BandingWarningBase):
+    """A band whose exposure is below `min_exposure_per_band`: exact decimals (FR-10)."""
+
+    measure: Literal[BandingMeasure.EXPOSURE] = BandingMeasure.EXPOSURE
+    observed: DecimalStr
+    minimum: DecimalStr
+
+
+class ClaimCountBandingWarning(_BandingWarningBase):
+    """A band whose claim count is below `min_claims_per_band`: whole claims."""
+
+    measure: Literal[BandingMeasure.CLAIM_COUNT] = BandingMeasure.CLAIM_COUNT
+    #: Strict: pydantic's lax int takes `Decimal("3")` and `3.0`, and a count is neither.
+    observed: int = Field(ge=0, strict=True)
+    minimum: int = Field(ge=0, strict=True)
+
+
+BandingWarning = Annotated[
+    ExposureBandingWarning | ClaimCountBandingWarning, Field(discriminator="measure")
+]
+
+
 class Banding(BaseModel):
     """A continuous column mapped to ordered, exhaustive, non-overlapping bands (§4.2).
 
@@ -362,7 +413,7 @@ class Banding(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     id: UUID
-    slug: str
+    slug: Slug
     dataset_id: UUID
     version: int = Field(ge=1)
     #: Exactly one of `column` and `source_expression` is set (`RL-1615` DP-S4-1; `02`
@@ -523,7 +574,7 @@ class Grouping(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     id: UUID
-    slug: str
+    slug: Slug
     dataset_id: UUID
     version: int = Field(ge=1)
     column: str
@@ -1606,6 +1657,7 @@ class GlmFitResult(BaseModel):
     iterations: int = Field(ge=0)
     fit_seconds: float = Field(ge=0.0)
     coefficients: tuple[Coefficient, ...] = ()
+    banding_warnings: tuple[BandingWarning, ...] = ()
     relativities: dict[str, tuple[RelativityLevel, ...]] = Field(default_factory=dict)
     #: The scale parameter φ. Estimated for Gamma, Gaussian, inverse-Gaussian and
     #: Tweedie; fixed at 1 for Poisson and binomial, where it is not a free parameter.
@@ -1727,6 +1779,9 @@ class GbmFitResult(BaseModel):
     #: is all of them but the LightGBM-stopping-on-a-custom-metric case, and on every
     #: artifact written before 2026-08-22.
     dropped_eval_metrics: tuple[DroppedEvalMetric, ...] = ()
+    #: FR-100. One record per breached floor per band under `warn`; empty on every fit with
+    #: no violation and on every artifact written before 2026-10-17.
+    banding_warnings: tuple[BandingWarning, ...] = ()
 
     @model_validator(mode="after")
     def _the_constraint_vector_is_aligned_with_the_feature_order(self) -> GbmFitResult:
@@ -1850,6 +1905,8 @@ class EbmFitResult(BaseModel):
     rows: int = Field(default=0, ge=0)
     fit_seconds: float = Field(ge=0.0)
     library_versions: dict[str, str] = Field(default_factory=dict)
+    #: FR-100; see `GbmFitResult.banding_warnings`.
+    banding_warnings: tuple[BandingWarning, ...] = ()
 
     @model_validator(mode="after")
     def _bins_align_with_the_feature_order(self) -> EbmFitResult:

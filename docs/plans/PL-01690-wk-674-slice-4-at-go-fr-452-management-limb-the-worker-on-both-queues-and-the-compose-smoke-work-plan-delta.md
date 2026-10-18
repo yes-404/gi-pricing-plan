@@ -3,7 +3,7 @@ id: PL-1690
 family: plan
 kind: map
 title: WK-674 — Slice 4 (deployment path) at GO: the FR-452 management limb as RL-1687 rules it, the worker on both queues, and the compose smoke that proves delivery — Work-plan delta
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-12
 owner: planner
 tree: 604ea084c96efe93f521fb9ba17738e05241e61a

@@ -11,7 +11,7 @@ Downgrade re-imposes NOT NULL, so it fails loudly if an expression Banding has b
 the old schema cannot hold one, and a banding row cannot be deleted (FR-101).
 
 Revision ID: f2b6d90a4c17
-Revises: d4e81b7a2c95
+Revises: e7c3a9b15d82
 Create Date: 2026-10-16 09:32:28.290223+00:00
 """
 
@@ -23,7 +23,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "f2b6d90a4c17"
-down_revision: str | None = "d4e81b7a2c95"
+down_revision: str | None = "e7c3a9b15d82"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
