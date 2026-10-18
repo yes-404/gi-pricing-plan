@@ -117,8 +117,30 @@ after). Start 2026-10-18 23:25:16 BST, load1 2.26, available 25 GiB, gate-1 free
 - **Cleanup**: `redis-cli -n 13 dbsize` = 0 after FLUSHDB; bucket removed through the MinIO API (`mc rb --force`, rc 0) and
   `mc ls g/` lists `aud933-bucket`, `gip-bench-compiled-for`, `gip-bench-score-batch`, `gip-blobs`, `gip-test-blobs`, no
   `gip-test-blobs-1738`; `select count(*) from pg_database where datname in ('gip_test_1738','gip_mig_1738')` = 0. END 23:26:49 BST.
-- **Reds at base for the backend set: not taken** (no base checkout run in a DB window); the pricing-core R2 set was red at base
-  (5 failed). **R8b (the seed's run) is owed**: it needs the local stack, which is not granted.
+- **Reds at base for the backend set (Task 1/2), taken.** Detached worktree at `84b0ff5765e55bc8edd139cd22bb57cd474de807` with only
+  `backend/tests/test_ingest_coercion.py` copied in (the G5 helper calls in the other two files were not copied: they need the same
+  file's helper and are covered by the head run). Own DB `gip_test_1738b` (`-T template0`, `alembic upgrade head` at base head
+  `f2b6d90a4c17`, rc 0), redis db 13, bucket `gip-test-blobs-1738b`; start 2026-10-18 23:28:19 BST, load1 2.96, available 23 GiB.
+  `run-small` rc 1, `7 failed`, each for its stated cause:
+  - R1 `test_unparseable_cells_are_quarantined_with_their_source_text`: `assert ['policy_exposure'] == ['policy_exposure', '_rejected']`
+    (no `_rejected` table).
+  - R6 `test_a_null_after_ingest_is_a_source_null_and_nothing_else`: `assert 2 == 0` (`null_count` of `claim_amount` is the bad-cell count 2).
+  - R3 `test_a_later_step_cannot_launder_a_coercion`: `assert ['p1', 'p2', 'p3', 'p4', 'p5'] == ['p1', 'p4']` (`fill_null` resurrects the bad rows).
+  - R7 `test_the_identity_holds_through_a_row_removing_step`: `assert ['p1', 'p5'] == ['p1']` (the clean-table assert precedes the
+    step-count assert here, so it is the first to fail; `p5`'s bad date is nulled and kept; the step-count assert is not reached).
+  - R8a `test_the_identity_holds_on_the_g2_seed_recipe`: `AttributeError: 'IngestionRunRow' object has no attribute 'step_counts'`.
+  - R4 `test_validation_fails_a_version_whose_cells_were_quarantined`: `assert <OverallOutcome.PASS: 'pass'> is <OverallOutcome.FAIL: 'fail'>`.
+  - R5 `test_the_declared_severity_decides_without_reject_rate`: `assert <OverallOutcome.PASS: 'pass'> is <OverallOutcome.PASS_WITH_WARNINGS: ...>`.
+  Cleanup: `redis-cli -n 13 dbsize` = 0; bucket removed through the MinIO API, `mc ls g/` shows no `gip-test-blobs-1738b`; `pg_database`
+  count for `gip_test_1738`, `gip_mig_1738`, `gip_test_1738b` = 0; `docker inspect` of postgres, redis, minio and keycloak shows no bind
+  source under the base worktree (0 matches); worktree removed.
+- **idsweep** (`idsweep.sh origin/sl-1738-wk1178-fd1744-coercion`), whole output: `main: 1818 pairs; duplicate numbers: ` /
+  `CROSS-BRANCH (same number, different id): ` — both empty. **req-coverage** (`scripts/req-coverage.py`, rc 0): `FR-31  6 test file(s)`,
+  `FR-32  26 test file(s)`, `FR-46  19 test file(s)`; VR-STR-2 is not a marker id in this suite (the markers carry FR-32 and FR-45).
+- **OWED, R8b** (needs the local stack; the gate's demo stage runs it): `GIP_REDIS_URL=redis://localhost:6379/<slot db> uv run --directory <wt> pytest -q examples/fremtpl2/test_seed.py -k test_every_seeded_ingestion_run_balances_its_rows -s`
+  (skipped by its fixture unless `examples/fremtpl2/data/*.arff` is fetched and Postgres/MinIO are up); it must print one
+  `run: <read> - <rejected> - <removed> + <added> == <written>` line per run, including the portfolio's `20000 - 0 - 0 + 0`-shaped line
+  whose `rows_written` is 19985.
 
 ## PRs
 
