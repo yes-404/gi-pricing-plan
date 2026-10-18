@@ -3,7 +3,7 @@ id: PL-8115
 family: plan
 kind: map
 title: WK-1178 — SL-8116, Banding and Grouping slugs typed `Slug` and a bad slug refused 422 at POST (FD 8102's close) — a dated Work-plan delta
-status: draft                  # draft → active → superseded | retired (§1.2a) — draft until the maintainer's one-line GO and DP-1 / DP-2 ruled
+status: active                 # draft → active → superseded | retired (§1.2a) — activated 2026-10-18 on the maintainer's GO; DP-1 / DP-2 ruled
 created: 2026-10-18
 owner: planner
 tree: 8ac6290b63a27a3161f447259bf58d215e6e5837
@@ -166,6 +166,8 @@ with a 500. The maintainer decides.
 | **(c)** A rewrite migration, `_` → `-`. | Data change | Stored rows keep working. | It edits rows that PL-1769 makes append-only. It breaks every `ArtifactRef` and Model pin that names the old slug. The new slug can collide with an existing one (FR-101 versioning). **Not recommended.** |
 | **(d)** A lenient read type for stored rows. | Two shapes | No data change. | It defines one shape twice (`CLAUDE.md` §2: *"a diverged shape is a mispricing"*). The bad slug still fails at `ArtifactRef`. **Not recommended.** |
 
+**Ruled — dated 2026-10-18, on the maintainer, to-lead 2026-10-18 04:42:19 BST (GO; DP-1 (a) with Task 0 in two limbs, (c)/(d) refused; DP-2 (i), the named compile error stays FD 8102's residue, WK-1178, due before the P2 close; the WF-699 demo must pass in this slice's gate): DP-1 is (a), no migration, after a read-only census with Task 0 in two limbs: (1) the SQL census of stored banding and grouping slugs on the dev database `gipricing`; (2) a CODE census of every place that builds a Banding or Grouping slug, test fixtures included. Any non-conforming fixture is fixed test-only in this slice, asserts unchanged. If limb (1) is non-zero, the executor STOPS and (b) becomes the DP. (c) and (d) are refused.**
+
 **Recommendation: (a), with (b) as the fallback when the census is not zero.** The census
 query is in Task 0. It is read-only, and the lead must grant it (DB lane, common brief item
 12). If every database reads 0, the slice lands with no migration, and LG 8117 quotes the
@@ -180,6 +182,7 @@ missing boundary check, and limb 2 is that `rating.compile` names no artifact
   residue (owner WK-1178), or the maintainer accepts that limb 2 is absent with a dated line.
   **Recommended.** It is the ruled scope, and after this slice no write route can produce the
   limb-2 input for banding or grouping.
+- **Ruled — dated 2026-10-18, on the maintainer, to-lead 2026-10-18 04:42:19 BST (GO; DP-1 (a) with Task 0 in two limbs, (c)/(d) refused; DP-2 (i), the named compile error stays FD 8102's residue, WK-1178, due before the P2 close; the WF-699 demo must pass in this slice's gate): DP-2 is (i).** The named compile error stays FD 8102's second limb as a named residue, owner WK-1178, due before the P2 close (not accepted as absent). The WF-699 demo must pass in this slice's gate.
 - **(ii)** Add FD 8102 option (b) to SL 8116: a named, input-free compile error that carries
   the artifact type and pin. This is wider: it touches the rating path and needs its own
   red-first test.
@@ -243,7 +246,7 @@ write to `bandings` or `groupings` rows.
 
 ## Activation
 
-DRAFT. Activation needs: (1) the maintainer's one-line GO; (2) DP-1 and DP-2 ruled. The
+ACTIVE. *Dated 2026-10-18, on the maintainer, to-lead 2026-10-18 04:42:19 BST (GO; DP-1 (a) with Task 0 in two limbs, (c)/(d) refused; DP-2 (i), the named compile error stays FD 8102's residue, WK-1178, due before the P2 close; the WF-699 demo must pass in this slice's gate):* the one-line GO is given and DP-1 and DP-2 are ruled (below). The
 activation commit sets `status: active` here and on the SL 8116 row.
 
 ## Self-review before freeze

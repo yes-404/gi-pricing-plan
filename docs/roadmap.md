@@ -2829,7 +2829,7 @@ Minted 2026-10-17 from working id 8099 on the maintainer's re-allocation (to-lea
 id: SL-8116
 family: slice
 title: WK-1178 fix slice — FD 8102, Banding and Grouping slugs typed `Slug`, a bad slug refused 422 at POST (FR-101, FR-108, FR-98, FR-105, FR-451)
-status: draft                    # draft → active → closed | retired (§1.2a)
+status: active                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-18
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 8ac6290b63a27a3161f447259bf58d215e6e5837
@@ -2839,7 +2839,7 @@ corrected_by: []
 relates: [PL-8115, SL-1734, SL-1758, FD-1384]
 ```
 
-On the maintainer's entry "2026-10-18 03:02:03 BST — Maintainer: #1331 — attribution correction ACCEPTED; fix (A) now; FD 8102 carries (C) with a deadline; the process line ADOPTED" (`to-lead.md`), item 3: FD 8102's (filed in D21) close. `Banding.slug`, `Grouping.slug` (`packages/model-schema/src/model_schema/modelling.py:407`, `:557` on `8ac6290b`) and the two proposal request slugs (`backend/src/app/api/models.py:250`, `:254`) are typed `Slug` (`refs.py:62`, the `00` §4.2 ID-3 / §4.3 grammar). `POST /bandings`, `/groupings`, `/bandings/propose` and `/groupings/propose` refuse a bad slug with 422 `VALIDATION_FAILED`, `errors[].field` `slug`, `errors[].code` `STRING_PATTERN_MISMATCH`. That code is named in a dated `02` §5.1 amendment first. The contracts are regenerated. There is one red-first API test per route. `check_banding` (`bandings.py:590`) is unchanged. MEDIUM; **due before the P2 code freeze, Wed 4 Nov 2026**. Work-plan delta PL 8115 (DP-1: an already-stored bad slug, census first; DP-2: FD 8102's compile-error limb). Ledger LG 8117. Activation: the maintainer's one-line GO.
+On the maintainer's entry "2026-10-18 03:02:03 BST — Maintainer: #1331 — attribution correction ACCEPTED; fix (A) now; FD 8102 carries (C) with a deadline; the process line ADOPTED" (`to-lead.md`), item 3: FD 8102's (filed in D21) close. `Banding.slug`, `Grouping.slug` (`packages/model-schema/src/model_schema/modelling.py:407`, `:557` on `8ac6290b`) and the two proposal request slugs (`backend/src/app/api/models.py:250`, `:254`) are typed `Slug` (`refs.py:62`, the `00` §4.2 ID-3 / §4.3 grammar). `POST /bandings`, `/groupings`, `/bandings/propose` and `/groupings/propose` refuse a bad slug with 422 `VALIDATION_FAILED`, `errors[].field` `slug`, `errors[].code` `STRING_PATTERN_MISMATCH`. That code is named in a dated `02` §5.1 amendment first. The contracts are regenerated. There is one red-first API test per route. `check_banding` (`bandings.py:590`) is unchanged. MEDIUM; **due before the P2 code freeze, Wed 4 Nov 2026**. Work-plan delta PL 8115 (DP-1: an already-stored bad slug, census first; DP-2: FD 8102's compile-error limb). Ledger LG 8117. Activation: the maintainer's one-line GO. *Activated 2026-10-18 on the maintainer, to-lead 2026-10-18 04:42:19 BST (GO; DP-1 (a) with Task 0 in two limbs, (c)/(d) refused; DP-2 (i), the named compile error stays FD 8102's residue, WK-1178, due before the P2 close; the WF-699 demo must pass in this slice's gate).*
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
