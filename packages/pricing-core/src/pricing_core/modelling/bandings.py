@@ -57,6 +57,7 @@ from pricing_core.data.expressions import (
 )
 from pricing_core.data.profile import one_way
 from pricing_core.modelling.errors import BandingError, FactorResolutionError
+from pricing_core.safe_error import safe_error_text
 
 __all__ = [
     "apply_banding",
@@ -97,7 +98,8 @@ def source_columns_of(
         )
     except (ExpressionError, SyntaxError) as exc:
         raise FactorResolutionError(
-            f"the source_expression {over.source_expression!r} is refused: {exc} (FR-95)."
+            f"the source_expression {over.source_expression!r} is refused: "
+            f"{safe_error_text(exc)} (FR-95)."
         ) from exc
     return tuple(sorted(read))
 
@@ -120,13 +122,14 @@ def _cut_values(frame: pl.DataFrame, over: Banding | BandingProposal) -> pl.Seri
         )["_cut_over"]
     except (ExpressionError, SyntaxError) as exc:
         raise FactorResolutionError(
-            f"the source_expression {over.source_expression!r} is refused: {exc} (FR-95)."
+            f"the source_expression {over.source_expression!r} is refused: "
+            f"{safe_error_text(exc)} (FR-95)."
         ) from exc
     except pl.exceptions.PolarsError as exc:
         raise FactorResolutionError(
             f"the source_expression {over.source_expression!r} cannot be evaluated over this "
-            f"dataset version: {exc} (FR-95). The columns it reads have dtypes the formula "
-            "does not accept."
+            f"dataset version: {safe_error_text(exc)} (FR-95). The columns it reads have dtypes "
+            "the formula does not accept."
         ) from exc
 
 

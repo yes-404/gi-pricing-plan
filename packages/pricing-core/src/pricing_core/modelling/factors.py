@@ -53,6 +53,7 @@ from pricing_core.data.expressions import (
 from pricing_core.modelling.bandings import apply_banding
 from pricing_core.modelling.errors import FactorResolutionError
 from pricing_core.modelling.groupings import apply_grouping
+from pricing_core.safe_error import safe_error_text
 
 #: FR-83 arms refused **permanently** rather than pending a slice, so the refusal must
 #: not say "yet" (FR-209, OQ-571 decided 2026-08-22). A set rather than a single
@@ -427,15 +428,16 @@ def _expression_series(
         )["_expression_result"]
     except (ExpressionError, SyntaxError) as exc:
         raise FactorResolutionError(
-            f"factor {factor.slug!r} has an expression the `factor` profile refuses: {exc}"
+            f"factor {factor.slug!r} has an expression the `factor` profile refuses: "
+            f"{safe_error_text(exc)}"
         ) from exc
     except pl.exceptions.PolarsError as exc:
         # The grammar admits the text, but the engine refuses it over these dtypes
         # (`region * 2` on a string column). Unwrapped, that surfaced as a 500.
         raise FactorResolutionError(
             f"factor {factor.slug!r} has an expression this dataset version cannot "
-            f"evaluate: {exc} (FR-95). The columns it reads have dtypes the formula does "
-            "not accept."
+            f"evaluate: {safe_error_text(exc)} (FR-95). The columns it reads have dtypes the "
+            "formula does not accept."
         ) from exc
     numeric = result.dtype.is_numeric()
     if factor.banding_id is None:

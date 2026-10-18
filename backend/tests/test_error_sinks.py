@@ -84,10 +84,6 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         1, "a custom metric's own declaration error (RL-917's artifact path); no Quote Context"),
     ("backend/src/app/platform/modelling.py", "resolve_offset_model", "str(exc)"): (
         1, "`FactorResolutionError`: names a factor and a dataset version; model path"),
-    ("backend/src/app/platform/modelling.py", "_require_a_creatable_expression", "str(exc)"): (
-        1, "`ExpressionError`: the grammar refusal of an author's own `expression` Factor text, "
-        "positioned by design (RL-1700 (b)); no dataset row reaches it, no Quote Context: "
-        "test_an_expression_factor_refusal_at_creation_carries_the_formula_and_no_row"),
     ("backend/src/app/platform/objectives.py", "_validated", "{exc}"): (
         1, "a custom objective's own declaration error; no Quote Context"),
     ("backend/src/app/platform/objectives.py", "_require_the_grammar", "str(exc)"): (
@@ -184,27 +180,19 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         1, "a dataset validation rule's failure text; Dataset Version path, not a quote"),
     ("packages/pricing-core/src/pricing_core/data/validate.py", "_sql", "{exc}"): (
         1, "a dataset validation rule's DuckDB error; Dataset Version path, not a quote"),
-    ("packages/pricing-core/src/pricing_core/modelling/bandings.py", "_cut_values", "{exc}"): (
-        2, "an author's own `source_expression` refusal, and the engine's dtype refusal of it "
-        "over a dataset version; model path, not a quote: "
-        "test_an_expression_refusal_over_a_dataset_keeps_its_text_and_no_row_value"),
-    ("packages/pricing-core/src/pricing_core/modelling/bandings.py", "source_columns_of",
-     "{exc}"): (
-        1, "an author's own `source_expression` refusal, positioned; no dataset row reaches it: "
-        "test_an_expression_refusal_over_a_dataset_keeps_its_text_and_no_row_value"),
     ("packages/pricing-core/src/pricing_core/modelling/ebm.py", "fit_ebm", "{exc}"): (
         1, "`interpret`'s refusal of a fit; model path, not a quote"),
-    ("packages/pricing-core/src/pricing_core/modelling/factors.py", "_expression_series",
-     "{exc}"): (
-        2, "an `expression` Factor's own grammar refusal, and the engine's dtype refusal of it "
-        "over a dataset version; model path, not a quote: "
-        "test_an_expression_refusal_over_a_dataset_keeps_its_text_and_no_row_value"),
     ("packages/pricing-core/src/pricing_core/modelling/glm.py", "decode_covariance", "{exc}"): (
         1, "a stored covariance blob's decode error; model path, not a quote"),
     ("packages/pricing-core/src/pricing_core/modelling/glm.py", "fit_glm", "{exc}"): (
         1, "`glum`'s refusal of a fit; model path, not a quote"),
     ("packages/pricing-core/src/pricing_core/safe_error.py", "safe_error_detail", "str(exc)"): (
         1, "the allow-list itself: reached only for a `CodedError`, whose text is input-free"),
+    ("packages/pricing-core/src/pricing_core/safe_error.py", "_expression_detail", "str(exc)"): (
+        1, "the allow-list itself: an `ExpressionError`'s text, raised where no frame is in scope "
+        "(test_every_expression_error_is_raised_where_no_row_value_is_in_scope)"),
+    ("packages/pricing-core/src/pricing_core/safe_error.py", "_expression_detail", "{exc}"): (
+        1, "the allow-list itself: the same text with its position (as above)"),
     ("packages/pricing-core/src/pricing_core/rating/compile.py", "_check_vocabulary", "{exc}"): (
         1, "compile time, artifact-level: no quote is involved"),
     ("packages/pricing-core/src/pricing_core/rating/score.py", "_failing_node", "str(exc)"): (
@@ -311,8 +299,10 @@ _REFUSED_FORMULA = "__import__('os')"
 
 @pytest.mark.req("NFR-499", "FR-95")
 def test_an_expression_refusal_over_a_dataset_keeps_its_text_and_no_row_value() -> None:
-    """The four `FactorResolutionError` sinks of an `expression` Factor or Banding: each keeps
-    its own text, the formula or the dtypes, and a sentinel in the dataset's rows is in none."""
+    """The six wrapped sites of an `expression` Factor or Banding (`bandings._cut_values` x2,
+    `bandings.source_columns_of`, `factors._expression_series` x2; the sixth is the creation
+    sink below): each keeps the grammar text and the engine's dtype prose, and a sentinel in
+    the dataset's rows is in none, because the text goes through `safe_error_text`."""
     from uuid import uuid4
 
     from model_schema import Factor, FactorType
@@ -353,6 +343,50 @@ def test_an_expression_refusal_over_a_dataset_keeps_its_text_and_no_row_value() 
         "control: the grammar arm keeps the author's own text"
     )
     assert "dtypes" in str(refusals[2]), "control: the dtype arm keeps the engine's own text"
+
+
+@pytest.mark.req("NFR-499", "FR-95")
+def test_every_expression_error_is_raised_where_no_row_value_is_in_scope() -> None:
+    """Why `safe_error` may keep an `ExpressionError`'s text: every function in
+    `pricing_core/data/expressions.py` that constructs one takes an expression and column
+    names, never a polars frame or series, so no row value can reach its message."""
+    path = _ROOT / "packages/pricing-core/src/pricing_core/data/expressions.py"
+    assert _expression_error_scopes_with_data(path.read_text(encoding="utf-8")) == []
+    # Positive control: the predicate sees a function that takes a frame and raises one.
+    leaky = (
+        "import polars as pl\n"
+        "def evaluate(frame: pl.DataFrame):\n"
+        "    raise ExpressionError(f'bad {frame}')\n"
+    )
+    assert _expression_error_scopes_with_data(leaky) == ["evaluate"]
+
+
+def _expression_error_scopes_with_data(source: str) -> list[str]:
+    """Names of functions that construct an `ExpressionError` and take a polars frame, series
+    or lazy frame (any parameter annotated `pl.DataFrame`, `pl.Series` or `pl.LazyFrame`)."""
+    tree = ast.parse(source)
+    leaking: list[str] = []
+    for function in ast.walk(tree):
+        if not isinstance(function, ast.FunctionDef | ast.AsyncFunctionDef):
+            continue
+        raises = any(
+            isinstance(node, ast.Call)
+            and (getattr(node.func, "id", None) or getattr(node.func, "attr", None))
+            == "ExpressionError"
+            for node in ast.walk(function)
+        )
+        takes_data = any(
+            any(
+                isinstance(part, ast.Attribute)
+                and part.attr in ("DataFrame", "Series", "LazyFrame")
+                for part in ast.walk(argument.annotation)
+            )
+            for argument in (*function.args.args, *function.args.kwonlyargs)
+            if argument.annotation is not None
+        )
+        if raises and takes_data:
+            leaking.append(function.name)
+    return leaking
 
 
 @pytest.mark.req("NFR-499", "FR-95")

@@ -67,6 +67,7 @@ from model_schema import (
 from pricing_core.data.expressions import ExpressionError, GrammarProfile, parse_expression
 from pricing_core.modelling import is_certainly_numeric, normalised_expression
 from pricing_core.modelling.factors import FactorResolutionError
+from pricing_core.safe_error import safe_error_detail
 
 __all__ = [
     "SPEC_HASH_VERSION",
@@ -293,8 +294,7 @@ async def _require_a_creatable_expression(
     try:
         parse_expression(expression, GrammarProfile.FACTOR, symbols=symbols)
     except ExpressionError as exc:
-        line, column = exc.lineno, None if exc.col_offset is None else exc.col_offset + 1
-        reason = str(exc)
+        reason = safe_error_detail(exc)  # already positioned: `line N, column M: message`
     except SyntaxError as exc:
         line, column, reason = exc.lineno, exc.offset, exc.msg
     if reason is not None:
