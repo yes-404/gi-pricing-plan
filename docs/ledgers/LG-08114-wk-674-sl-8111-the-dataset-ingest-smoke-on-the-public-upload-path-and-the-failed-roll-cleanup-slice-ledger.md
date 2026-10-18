@@ -41,7 +41,49 @@ PHASE A — writing only (2026-10-18).
 - **Commit 2 — FD 8112 failed-roll test, red first, not run:** `c708bfba3e7e69320d73097fcae7b67cce728bbf`. Committed
   before any trap; no change to `deploy/` yet.
 
-**PHASE B owed:** Red A, Red B, FD 8112 red, the trap, the greens, NFR-531, shellcheck.
+PHASE B — the `GIP_DEPLOY_TESTS=1` runs (2026-10-18 12:19–12:40 BST; written by `executor-8111b`
+under the lead's grant in `brief-executor-8111b-2026-10-18.md`). Every run: isolated project
+`gip-s4-runtime` (own postgres/redis/minio on ephemeral ports, `lb` on 18000); gate-1 and
+gate-1b free at each start; load1 at start 2.78–5.66 except NFR-531 (2.66, `small-test` free).
+
+- **Red A, first run (a test defect, not the planned red).** Test at `51ad8a3a`, image
+  `e2a2f79e0bba9f05b29ee585b52a9248899e4cf3`, `-k dataset_ingest`: rc 1, `socket.gaierror: [Errno -2]
+  Name or service not known` at the PUT — the presigned URL names the compose-internal
+  `minio:9000`, which the test process cannot resolve. Not `KeyError: 'id'`: the old image does
+  return `urls`, so the failure came earlier than step 2's `upload['id']`.
+- **Fix, test only** (`576c0294725366d36e16eca64f213f315e552b65`): connect to the published
+  MinIO port (`_mapped('minio', 9000)`) and send the signed `Host: minio:9000` header unchanged.
+- **Red A** (test with the fix, image `e2a2f79e`): rc 1, `E       KeyError: 'id'`, 55.86s.
+- **Red B** (image and tree `51ad8a3a` + the same fix, `worker-io` left out of `_worker_services`
+  by a scratch plugin not committed): rc 1, `AssertionError: job 01a14ec1-98a4-766f-b635-439dc909a9b7
+  (blob.promote, queue io) is 'queued' after 90s: never consumed`.
+- **Green, E4.8** (tree `576c0294`, every worker up): rc 0, `1 passed in 63.43s`;
+  `job 01a14ec4-1cf7-7b6f-833d-56344c1bc29e kind=blob.promote queue=io -> succeeded in 1.0s (bound 90s)`;
+  `job 01a14ec4-2159-77ac-bbd9-db2026c58a12 kind=dataset.ingest queue=io -> succeeded in 2.1s (bound 90s)`.
+  The `ast` check of PL 8061 Acceptance 2 at `576c0294`: `[]`, rc 0; `git grep` shows both routes
+  at `:663` and `:676`.
+- **Red, FD 8112** (tree `576c0294`, untrapped `roll-api.sh`). First run: rc 1, `docker compose …
+  up -d --wait --scale api=2 lb` returned non-zero in the test's setup, not reproduced by the same
+  command by hand or on the re-run (cause unknown, recorded). Re-run: rc 1, `FAIL: 30a7a4712d2c not
+  healthy within 30s`, then `AssertionError: a failed roll must leave exactly the pre-roll api
+  containers ['54ade431c576', '9875870a0677'], found ['30a7a4712d2c', '54ade431c576', '8d65b5425209',
+  '9875870a0677']` — the planned cause, four containers remain.
+- **The trap + README sentence** (`f950840a3bfb8e956fa86d45d43456fef8d617f6`): `cleanup_new` on `EXIT`,
+  armed before the scale-out, cleared before the first old stop.
+- **Green, FD 8112** (tree `f950840a`): rc 0, `1 passed in 85.78s`; output
+  `FAIL: 03ee49e152b3 not healthy within 30s`, `cleanup: removed new 03ee49e152b3`,
+  `cleanup: removed new 07ec2a8ee4d1`, `cleanup: api containers now: 174ea5906811 5e748816f69c`.
+- **NFR-531** (`-k previous_version_serves`, tree `f950840a`, load1 2.66 at start, `small-test` free):
+  rc 0, `healthy api replicas across the roll: min=2 over 155 samples; failed requests=0`.
+- **Script:** `bash -n deploy/roll-api.sh` rc 0; `shellcheck`: absent (`command not found`, rc 127).
+  `ruff check .` rc 0; `mypy` rc 0; `ruff format --check backend/tests/test_deploy_stack_runtime.py`
+  rc 1, and the file at `eea416ca` (before this slice) is also not format-clean (18 hunks at the
+  head), so it is not reformatted here.
+- **After:** no container of this project remains; keycloak bind
+  `/home/puzhenhao1989/gi-pricing-plan/.claude/worktrees/tools-main/deploy/keycloak-local`; the four
+  `gi-pricing-app:<sha>` tags built here were removed; `/` at 79% after, 74% before.
+
+**Owed:** Acceptance 7, the SOLO compose-changer gate (the lead's).
 
 ## PRs
 
