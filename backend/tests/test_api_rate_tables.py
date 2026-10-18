@@ -2091,6 +2091,59 @@ def test_manual_edit_out_of_bounds_values_each_name_their_edit(
     ]
 
 
+@pytest.mark.req("FR-234")
+@pytest.mark.parametrize("raw", ["NaN", "sNaN", "Infinity", "-Infinity"])
+def test_manual_edit_refuses_a_non_finite_value_by_name(
+    api_client: TestClient, workspace_id, actuary, raw: str
+) -> None:
+    """FD-1803: a NaN or infinite relativity is a 422 field error naming the key and the
+    submitted value, never a saved version or a 500."""
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+    before = _version_count(slug)
+
+    response = _post_edit(
+        api_client, slug, actuary, edits=[{"driver_age_band": "17-20", "relativity": raw}]
+    )
+
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "RATE_TABLE_INCOMPLETE"
+    assert [(e["field"], e["code"], e["message"]) for e in response.json()["errors"]] == [
+        (
+            "edits.0.relativity",
+            "OUT_OF_BOUNDS",
+            f"value {raw!r} for key ('17-20',) is not a finite decimal number",
+        )
+    ]
+    assert _version_count(slug) == before
+
+
+@pytest.mark.req("FR-234")
+@pytest.mark.req("FR-235")
+def test_import_refuses_a_non_finite_value_by_name(
+    api_client: TestClient, workspace_id, actuary
+) -> None:
+    """FD-1803: an imported `Infinity` is a 422 `RATE_TABLE_INCOMPLETE` whose detail names the
+    key and the value, for the preview and for the confirm alike."""
+    slug, _ = _seeded_table(api_client, workspace_id, actuary)
+    before = _version_count(slug)
+    content = b"driver_age_band,relativity\n17-20,Infinity\n21-24,1.41\n25-29,1.12\n"
+
+    for confirm in ("false", "true"):
+        response = api_client.post(
+            f"/api/v1/rate-tables/{slug}@1/import",
+            files={"file": ("import.csv", content, "text/csv")},
+            data={"confirm": confirm},
+            headers=actuary,
+        )
+
+        assert response.status_code == 422, response.text
+        assert response.json()["code"] == "RATE_TABLE_INCOMPLETE"
+        assert response.json()["detail"] == (
+            "value 'Infinity' for key ('17-20',) is not a finite decimal number"
+        )
+    assert _version_count(slug) == before
+
+
 @pytest.mark.req("FR-229")
 def test_rate_table_isolation_on_the_manual_edit_route(
     api_client: TestClient, workspace_id, actuary
