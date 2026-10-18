@@ -3,7 +3,7 @@ id: PL-1791
 family: plan
 kind: map
 title: WK-674 — SL-1258 owns the conversion of E4.3's seeded compose ingest test to the public upload path, red first by cause, once SL-1722 is on main; and the shared entrypoint with SL-1722, merge-second re-runs the other's guard — a dated Work-plan delta to PL-1714
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-18          # original date 2026-10-16, set at the filing; minted 2026-10-18
 owner: planner
 tree: 0877e6e7a756c4621890713a4d3b016e75e33654
@@ -16,6 +16,8 @@ relates: [PL-1714, PL-1690, PL-1666, PL-1721, SL-1258, SL-1722]
 ---
 
 # PL-1791 — WK-674, SL-1258 owns the E4.3 ingest conversion; the shared entrypoint with SL-1722 (delta to PL-1714)
+
+*Activated 2026-10-18 (the maintainer, to-lead 2026-10-18 03:49:30 BST): E4.8 carried by PL 8113 / SL 8111 (03:11:40); E4.9 discharged by SL-1258 as merge-second.*
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L5 (`document-ids.md`
 > §1.6, PL row: *"a change is one dated Work-plan delta, a new `PL-` that `relates:` the Work's
