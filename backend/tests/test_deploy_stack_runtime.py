@@ -24,6 +24,7 @@ import tempfile
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from collections.abc import Iterator
 from datetime import UTC, datetime
@@ -662,8 +663,13 @@ def test_a_dataset_ingest_job_succeeds_through_the_compose_io_worker(
         "POST", "/api/v1/blobs/upload-url", headers, {"media_type": "text/csv", "parts": 1}
     )
     # The presigned single-part URL signs the media type, so the PUT sends it; no auth headers.
+    # The URL is signed for the compose-internal host (`minio:9000`), which the test process
+    # cannot resolve: connect to the published port and send the signed Host header unchanged.
+    signed = urllib.parse.urlsplit(upload["urls"][0])
+    target = signed._replace(netloc=f"127.0.0.1:{_mapped('minio', 9000)}").geturl()
     put = urllib.request.Request(
-        upload["urls"][0], data=csv, headers={"Content-Type": "text/csv"}, method="PUT"
+        target, data=csv, headers={"Content-Type": "text/csv", "Host": signed.netloc},
+        method="PUT",
     )
     with urllib.request.urlopen(put, timeout=60) as response:
         assert response.status == 200
