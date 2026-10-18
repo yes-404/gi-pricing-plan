@@ -73,6 +73,7 @@ from model_schema.demo import (
 from model_schema.deployments import (
     Deployment,
     DeploymentCreate,
+    DeploymentCreated,
     DeploymentRequest,
     DeploymentRequestCreate,
     DeploymentRequestEvidence,
@@ -81,6 +82,7 @@ from model_schema.deployments import (
     EnvironmentCreate,
     EnvironmentUpdate,
     LiveDeployment,
+    SwitchReport,
 )
 from model_schema.diagnostics import (
     AeCell,
@@ -531,6 +533,7 @@ __all__ = [
     "DemoWorkstream",
     "Deployment",
     "DeploymentCreate",
+    "DeploymentCreated",
     "DeploymentRequest",
     "DeploymentRequestCreate",
     "DeploymentRequestEvidence",
@@ -760,6 +763,7 @@ __all__ = [
     "SubGraphCreate",
     "SubGraphInputPort",
     "SubGraphRef",
+    "SwitchReport",
     "TemplateParameter",
     "Trace",
     "TraceDiff",

@@ -29,6 +29,8 @@ There is no heartbeat and no lease.
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import json
 import logging
 import os
@@ -36,21 +38,26 @@ import socket
 from collections import OrderedDict
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import asdict, dataclass
-from typing import Literal, Protocol
+from typing import Literal, Protocol, cast
 from uuid import UUID
 
+from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import DeploymentRow, EnvironmentRow
 
 __all__ = [
+    "COMMIT_TIMEOUT_SECONDS",
+    "PREPARE_TIMEOUT_SECONDS",
     "CommitOutcome",
     "LiveEntry",
     "LiveRefs",
+    "RedisSwitchTransport",
     "SwitchIncompleteError",
     "SwitchMember",
     "SwitchMessage",
+    "SwitchSubscription",
     "SwitchTransport",
     "commit_round",
     "prepare_round",
@@ -58,6 +65,12 @@ __all__ = [
 ]
 
 _log = logging.getLogger(__name__)
+
+
+def _awaited[T](call: Awaitable[T] | T) -> Awaitable[T]:
+    """redis-py types its set and pub/sub commands as `Awaitable[T] | T` (one stub for the sync
+    and async clients); on the asyncio client every one of them is awaitable."""
+    return cast("Awaitable[T]", call)
 
 
 def process_id() -> str:
@@ -263,3 +276,113 @@ class SwitchMember:
             return False
         self.live.set(prepared.workspace_id, prepared.environment, prepared.entry())
         return True
+
+
+#: How long a round waits for its acknowledgements. Fixed, not configuration: a PREPARE that
+#: needs longer than this is a process that cannot hydrate in the time NFR-494 allows.
+PREPARE_TIMEOUT_SECONDS = 10.0
+COMMIT_TIMEOUT_SECONDS = 10.0
+_ACK_POLL_SECONDS = 0.02
+_ACK_TTL_SECONDS = 120
+
+
+class RedisSwitchTransport:
+    """The switch channel on Redis: a pub/sub channel, a roster set, one ack set per round.
+
+    Scoped by the deployment's tenant, so two stacks on one Redis never hear each other. Acks
+    are polled while a round waits; that is the coordinator's own wait, not a process
+    heartbeat.
+    """
+
+    def __init__(self, client: Redis, tenant_id: str) -> None:
+        self._client = client
+        self.channel = f"gip:switch:{tenant_id}"
+        self._roster_key = f"gip:switch:{tenant_id}:roster"
+        self._tenant_id = tenant_id
+
+    def _ack_key(self, switch_id: str, phase: str) -> str:
+        return f"gip:switch:{self._tenant_id}:acks:{switch_id}:{phase}"
+
+    async def publish(self, message: SwitchMessage) -> int:
+        return int(await _awaited(self._client.publish(self.channel, message.to_json())))
+
+    async def acks(self, switch_id: str, phase: str, want: int, timeout: float) -> set[str]:
+        key = self._ack_key(switch_id, phase)
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + timeout
+        while True:
+            got = {
+                m.decode() if isinstance(m, bytes) else str(m)
+                for m in await _awaited(self._client.smembers(key))
+            }
+            if len(got) >= want or loop.time() >= deadline:
+                return got
+            await asyncio.sleep(_ACK_POLL_SECONDS)
+
+    async def roster(self) -> set[str]:
+        return {
+            m.decode() if isinstance(m, bytes) else str(m)
+            for m in await _awaited(self._client.smembers(self._roster_key))
+        }
+
+    async def drop_from_roster(self, ids: set[str]) -> None:
+        if ids:
+            await _awaited(self._client.srem(self._roster_key, *ids))
+
+    async def acknowledge(self, switch_id: str, phase: str, process: str) -> None:
+        key = self._ack_key(switch_id, phase)
+        await _awaited(self._client.sadd(key, process))
+        await _awaited(self._client.expire(key, _ACK_TTL_SECONDS))
+
+    async def join(self, process: str) -> None:
+        await _awaited(self._client.sadd(self._roster_key, process))
+
+    async def leave(self, process: str) -> None:
+        await _awaited(self._client.srem(self._roster_key, process))
+
+
+class SwitchSubscription:
+    """A process's subscription: listens on the channel and answers for its `SwitchMember`.
+
+    `start` returns only once the channel's SUBSCRIBE is confirmed and the process is on the
+    roster, so a PREPARE published after `start` returns is received (and counted) here.
+    """
+
+    def __init__(
+        self, transport: RedisSwitchTransport, client: Redis, member: SwitchMember
+    ) -> None:
+        self._transport = transport
+        self._client = client
+        self._member = member
+        self._pubsub = client.pubsub()
+        self._task: asyncio.Task[None] | None = None
+
+    async def start(self) -> None:
+        await self._pubsub.subscribe(self._transport.channel)
+        confirmed = await self._pubsub.get_message(ignore_subscribe_messages=False, timeout=5.0)
+        if confirmed is None or confirmed.get("type") != "subscribe":
+            raise RuntimeError(f"the switch channel {self._transport.channel} was not confirmed")
+        await self._transport.join(self._member.process)
+        self._task = asyncio.create_task(self._listen(), name="deployment-switch-subscriber")
+
+    async def _listen(self) -> None:
+        async for raw in self._pubsub.listen():
+            if raw.get("type") != "message":
+                continue
+            try:
+                message = SwitchMessage.from_json(raw["data"])
+                if await self._member.handle(message):
+                    await self._transport.acknowledge(
+                        message.switch_id, message.phase, self._member.process
+                    )
+            except Exception:
+                _log.exception("deployment switch message not handled")
+
+    async def stop(self) -> None:
+        if self._task is not None:
+            self._task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._task
+        with contextlib.suppress(Exception):
+            await self._transport.leave(self._member.process)
+        await self._pubsub.aclose()  # type: ignore[no-untyped-call]

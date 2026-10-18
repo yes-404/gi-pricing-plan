@@ -29,6 +29,7 @@ from model_schema.refs import ArtifactRef, Slug
 __all__ = [
     "Deployment",
     "DeploymentCreate",
+    "DeploymentCreated",
     "DeploymentRequest",
     "DeploymentRequestCreate",
     "DeploymentRequestEvidence",
@@ -37,6 +38,7 @@ __all__ = [
     "EnvironmentCreate",
     "EnvironmentUpdate",
     "LiveDeployment",
+    "SwitchReport",
 ]
 
 _BUNDLE_HASH = r"^sha256:[a-f0-9]{64}$"
@@ -118,6 +120,31 @@ class Deployment(BaseModel):
             "`deployment` policy entry (RL-1301 A.5)."
         ),
     )
+
+
+class SwitchReport(BaseModel):
+    """Which processes switched to a Deployment and which did not (`03` FR-268; WK-674 Slice 5).
+
+    The `after` of the `deployment.switched` Audit Event and the switch half of the deploy
+    response. Process ids only, never values: a process is `<container>:<pid>`, the container
+    being the replica. A process in `unacknowledged` is alive and subscribed but did not
+    acknowledge COMMIT, so it serves the previous version until it restarts (FD 8129).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    deployment_ref: UUID = Field(description="The Deployment (its id) the processes switch to.")
+    committed: list[str] = Field(description="Processes that swapped their `live` reference.")
+    unacknowledged: list[str] = Field(
+        description="Processes that acknowledged PREPARE but not COMMIT."
+    )
+
+
+class DeploymentCreated(Deployment):
+    """The `201` body of `POST /api/v1/environments/{env}/deployments`: the Deployment and,
+    after its transaction committed, the outcome of the switch (`03` FR-268)."""
+
+    switch: SwitchReport
 
 
 class DeploymentCreate(BaseModel):
