@@ -22,7 +22,7 @@ from uuid import UUID
 import polars as pl
 
 from app.data.ingestion import PARQUET_MEDIA_TYPE, ingest_upload
-from app.db.models import BlobRow, DatasetRow, DatasetVersionRow
+from app.db.models import BlobRow, BlobUploadRow, DatasetRow, DatasetVersionRow
 from app.errors import PlatformError
 from app.observability.logging import get_logger
 from app.platform import datasets as dataset_service
@@ -123,8 +123,9 @@ def _ingest(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult
             # this workspace may read the digest is decided at the only enqueuer, the ingest
             # route (`api/datasets.py::start_ingestion`, through `blob_readable_by`). That the
             # route is the only enqueuer under `backend/src` is pinned by
-            # `backend/tests/test_ingest_enqueuers.py`. The worker-side check arrives with the
-            # owner record the upload-completion finding in #869 calls for.
+            # `backend/tests/test_ingest_enqueuers.py`. A worker-side check was considered when
+            # the Blob Upload landed and declined: `RL-1724` DP-U3 (b), because the census
+            # already closes the bypass it would guard.
             row = await session.get(BlobRow, parameters["blob"])
             if row is None:
                 raise PlatformError(
@@ -154,6 +155,35 @@ def _ingest(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult
     _profile_version(progress, workspace_id=workspace_id, actor=actor, version_id=version_id)
     progress.update(1.0, "done")
     return JobResult(kind="artifact", ref=f"dataset_version:{version_id}")
+
+
+def _promote(parameters: dict[str, Any], callback: ProgressCallback) -> JobResult:
+    """`blob.promote` — a completed Blob Upload to an owned, content-addressed blob (FR-1776).
+
+    The result, `JobResult(kind="blob")`, is the blob's owner in the Blob Upload's workspace
+    (`blob_readable_by`), so the digest is one the ingest route admits.
+    """
+    progress = _bridge(callback)
+    workspace_id = _workspace(parameters)
+    upload_id = UUID(parameters["upload_id"])
+
+    async def work() -> str:
+        async with progress.database.session() as session:
+            upload = await session.get(BlobUploadRow, upload_id)
+            if upload is None or upload.workspace_id != workspace_id:
+                raise PlatformError(
+                    "NOT_FOUND",
+                    "Blob Upload not found",
+                    404,
+                    f"No Blob Upload {upload_id} in this workspace.",
+                )
+        ref = await progress.blob_store.promote_upload(progress.database, upload_id)
+        return ref.sha256
+
+    progress.update(0.05, "promoting the upload")
+    digest = progress.run_on_loop(work())
+    progress.update(1.0, "done")
+    return JobResult(kind="blob", ref=digest)
 
 
 def _profile_version(
@@ -445,6 +475,7 @@ def register_data_handlers() -> None:
     """
     for kind, handler in (
         (JobKind.DATASET_INGEST, _ingest),
+        (JobKind.BLOB_PROMOTE, _promote),
         (JobKind.DATASET_VALIDATE, _validate),
         (JobKind.DATASET_PROFILE, _profile),
         (JobKind.DATASET_DERIVE, _derive),

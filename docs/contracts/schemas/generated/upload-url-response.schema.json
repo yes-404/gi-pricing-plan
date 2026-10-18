@@ -1,0 +1,46 @@
+{
+  "additionalProperties": false,
+  "description": "The 200 of `POST /blobs/upload-url`: the Blob Upload `id` and the presigned parts.",
+  "properties": {
+    "expires_in_s": {
+      "title": "Expires In S",
+      "type": "integer"
+    },
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "key": {
+      "title": "Key",
+      "type": "string"
+    },
+    "upload_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Upload Id"
+    },
+    "urls": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Urls",
+      "type": "array"
+    }
+  },
+  "required": [
+    "id",
+    "key",
+    "upload_id",
+    "urls",
+    "expires_in_s"
+  ],
+  "title": "UploadUrlResponse",
+  "type": "object"
+}

@@ -45,6 +45,7 @@ class JobKind(enum.StrEnum):
     DATASET_VALIDATE = "dataset.validate"
     DATASET_PROFILE = "dataset.profile"
     DATASET_DERIVE = "dataset.derive"
+    BLOB_PROMOTE = "blob.promote"
     MODEL_FIT = "model.fit"
     MODEL_TRANSPARENCY = "model.transparency"
     MODEL_BACKTEST = "model.backtest"
