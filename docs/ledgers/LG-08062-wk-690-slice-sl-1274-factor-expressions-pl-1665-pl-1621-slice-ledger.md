@@ -364,3 +364,32 @@ Also `docs/contracts/schemas/banding.schema.json`, `diagnostics.schema.json` and
 - **F-C3 (LOW).** The `## PRs` section still reads "Not opened yet"; the front matter `tree:` field (`81fabac4…`) was not re-derived. Both are for the mint/PR seat's closing acts.
 
 **Docs checks (under the gate-2 flock, on this tree plus this section):** `audit-docs.py` rc 1, `FAILED (2)`: the two check-31 lines on id 8062 only (gap between 1816 and 8062; `created:` 2026-10-16 before id 1816's 2026-10-18), the same two as the re-gate. `register-lint.py` rc 0 (0 violations). `idsweep.sh origin/sl-1274-wk690-s4-factor-expression`: 1816 pairs, no duplicate, no CROSS-BRANCH.
+
+## Correction and per-item disposition of the owed lists — 2026-10-18 18:22:27 BST (fix4-1274, executor, Sonnet 5.5)
+
+Under to-lead "2026-10-18 18:20:40 BST" (the audit's F-C1 and F-C2 adopted), on head `9af5e9e0`. Appended; no earlier entry is edited.
+
+### F-C1 — the record of `ff32b172` and the rulings after `8bd04267`
+
+- **`ff32b172`** (`fix(safe-error)`): the six expression sinks are wrapped in four functions (`bandings.source_columns_of`, `bandings._cut_values` (two sites), `factors._expression_series` (two sites), `modelling._require_a_creatable_expression`/the resolver in `backend/src/app/platform/modelling.py`); `ExpressionError` joins `safe_error`'s allow-list (message and the two position attributes kept; evaluation-time polars/arrow errors stay redacted); the six `_SINKS` entries in `backend/tests/test_error_sinks.py` are removed.
+- **Rulings, by stamp (all in `to-lead.md`):** "2026-10-18 16:25:55 BST" (sinks wrapped, not registered; `ExpressionError` on the allow-list; the `FactorCreate.expression` shape accepted); "16:26:29" (DB proofs, option (a), a granted own-DB window); "16:29:04" ((A) timing accepted for the scoring path only; the re-merge is not docs-only and comes before the window); "16:29:54" (`_SINKS`: remove the six entries; item (4) of 16:25:55 corrected); "16:34:28" (window 1 = data only; fix2 (i)–(iv); a second window on the merged head); "16:40:28" (merged head verified; fix3, the seed built from model-schema; a third window); "16:45:50" (window 3 green; GO the re-gate); "18:14:54" (re-gate green; GO audit, mint, PR); "18:20:40" (audit adopted; this fix4).
+- **The three own-DB windows** (results as the rulings above and the entries "16:36:50", "16:41:40" record them; the window logs are the lead's, not re-read here): window 1 on the unmerged `ff32b172`, two files skipped, the API file 29 of 30 (one red: the seed's `ck_models_fitted_model_has_a_fit_result`); window 2 on the merged head, red on the seed's hand-written `fit_result` (a 500 from `FIT_RESULT_ADAPTER`); window 3 on `ebcb6eaa`, run 1 `53 passed` (api 30, error_sinks 11, api_models 12), run 2 `36 passed` (api_transformations 11, rating_version_compile 25), 0 skipped, 89 = collect-only 89, zeros quoted in the 16:45:50 ruling.
+- **Correction:** the entry "2026-10-18 16:21:10 BST" item (6) (`test_error_sinks.py`: four sink keys given `_SINKS` entries and sentinel tests) is **superseded** by "2026-10-18 16:29:54 BST": the sites are wrapped, not listed, and the six entries are removed. The sentinel tests stay.
+
+### F-C2 — "Runs owed after GATE END", item by item
+
+Evidence for "discharged by the re-gate" is `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1274-regate/` at head `ebcb6eaa` (END 17:14:23Z): `ruff.rc` 0, `mypy.rc` 0, `import_linter.rc` 0, `contracts.rc` 0, `req_coverage.rc` 0, `pytest.log` `13 failed, 6464 passed, 12 skipped` (the 13 = the working-id cascade set), `audit_docs.log` `FAILED (2)` (the two check-31 lines on id 8062), frontend gate rows 0.
+
+| List (heading) | Item | Disposition |
+|---|---|---|
+| 2026-10-16 "Runs owed" (DP-7 area) | 1 red-first for each new test | **red by commit, not by run**, except the two failures quoted in the entry "Re-merge and first runs" (the slug/sentinel fixtures; `test_an_infinite_value_is_dropped_not_cut_at`). Green: discharged by the re-gate pytest (all but the 13 cascade). The nullability test with `models.py:1358` reverted was not run: red by commit, not by run |
+| same | 2 build, `generate-contracts.py`, `--check` | discharged by `contracts.rc` 0 (re-gate) |
+| same | 3 ruff, mypy, lint-imports | discharged by the three `.rc` files, 0 |
+| same | 4 `alembic upgrade head`, single head, `downgrade -1 && upgrade head` | upgrade and single head discharged (`pre-heads.log` shows `f2b6d90a4c17 (head)`; the re-gate's upgrade ran). **The round trip is not discharged**: it is carried to the window of this fix4, steps 3–6 (the entry below) |
+| same | 5 audit-docs, `doc-index.py --check` | audit-docs discharged by the re-gate (`FAILED (2)`, the id-8062 cascade only); `--check` re-run at the mint |
+| same | 6 small runs of the three new files | discharged by the re-gate pytest, and by window 3 for the API/sinks files |
+| 2026-10-16 "Runs owed (added by this entry)" | ruff/mypy/lint-imports; contracts and `test_contracts.py:1147`; the new tests red then green (F1, F5, F6, F8, F9, F12, NUMERIC, weak assert); round trip on a scratch DB; audit-docs, `--check`; re-merge before the gate | tools, contracts, audit: discharged by the re-gate as above. Red then green: **red by commit, not by run**; green discharged by the re-gate pytest. Round trip: carried to fix4's window. Re-merge: done (`8c487a87`, `a38690cd`; main `33668af9`) |
+| 2026-10-16 DP-1274-DIAG (a) | the new tests RED at `e97b293c`, GREEN at the next commit | **red by commit, not by run**; FE and backend green discharged by the re-gate |
+| 2026-10-16 DP-1274-MULTI, "Runs owed" | 1 the reds are red at `c6ae78c1`; 2 all green at the fix commit; 3 the four neighbouring files; 4 ruff, mypy, audit-docs | 1: **red by commit, not by run** (the 2026-10-17 entry quotes the file red on its own fixtures, not the designed reds); 2–3: discharged by the re-gate pytest and, for the collision tests, by the audit's A1; 4: discharged by the re-gate |
+
+Nothing is carried without an owner except the round trip, owned by this fix4 (fix4-1274).
