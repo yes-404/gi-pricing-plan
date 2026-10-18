@@ -30,6 +30,7 @@ this factor alone, not the deviance the eventual multi-factor model will report.
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from uuid import UUID
 
 import numpy as np
@@ -536,13 +537,29 @@ def apply_grouping(series: pl.Series, grouping: Grouping) -> pl.Series:
             "vehicle group is not a group, and mapping it to one would price it as though "
             "it were known."
         )
+    # One value (the scoring path's one-row frame) is read directly: `unique` and
+    # `replace_strict` each run a lazy `collect` per call, which is the cost FD 8097 (filed in D21)
+    # measured.
+    # The rule below is the same for one value or a million.
+    levels = text.to_list() if text.len() == 1 else text.unique().to_list()
+    targets = _targets(levels, grouping)
+    if not targets:
+        return text.rename(series.name)
+    if text.len() == 1:
+        return pl.Series(series.name, [targets[levels[0]]], dtype=pl.String)
+    return text.replace_strict(targets, return_dtype=pl.String).rename(series.name)
+
+
+def _targets(levels: Sequence[str], grouping: Grouping) -> dict[str, str | None]:
+    """The target Level of every distinct source Level, or the refusal for an unseen one.
+
+    The one statement of the unseen-level behaviour (FR-104): `apply_grouping` reads it for a
+    column's distinct levels and for a single scored value alike.
+    """
     unseen = sorted(
-        {
-            value
-            for value in text.unique().to_list()
-            if value is not None and value not in grouping.mapping
-        }
+        {value for value in levels if value is not None and value not in grouping.mapping}
     )
+    fallback: str | None = None
     if unseen:
         if grouping.unseen_level_behaviour is UnseenLevelBehaviour.ERROR:
             raise FactorResolutionError(
@@ -556,13 +573,7 @@ def apply_grouping(series: pl.Series, grouping: Grouping) -> pl.Series:
             if grouping.unseen_level_behaviour is UnseenLevelBehaviour.MAP_TO_DEFAULT
             else grouping.target_levels[0]
         )
-    else:
-        fallback = None
-
-    mapped = text.replace_strict(
-        grouping.mapping, default=fallback, return_dtype=pl.String
-    )
-    return mapped.rename(series.name)
+    return {value: grouping.mapping.get(value, fallback) for value in levels}
 
 
 def grouping_evidence(

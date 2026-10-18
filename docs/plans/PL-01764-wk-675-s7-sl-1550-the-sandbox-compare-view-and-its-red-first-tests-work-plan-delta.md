@@ -3,7 +3,7 @@ id: PL-1764
 family: plan
 kind: map
 title: WK-675 — Slice 7 (SL-1550), the sandbox compare view: its components, its own_change label rule and its red-first tests: a dated Work-plan delta to PL-1546
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-17          # original date 2026-10-16, set at the filing; minted 2026-10-17
 owner: planner
 tree: 0877e6e7a756c4621890713a4d3b016e75e33654

@@ -1978,6 +1978,49 @@
         "title": "CheckStatus",
         "type": "string"
       },
+      "ClaimCountBandingWarning": {
+        "additionalProperties": false,
+        "description": "A band whose claim count is below `min_claims_per_band`: whole claims.",
+        "properties": {
+          "band_index": {
+            "minimum": 0.0,
+            "title": "Band Index",
+            "type": "integer"
+          },
+          "band_label": {
+            "title": "Band Label",
+            "type": "string"
+          },
+          "banding": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "measure": {
+            "const": "claim_count",
+            "default": "claim_count",
+            "title": "Measure",
+            "type": "string"
+          },
+          "minimum": {
+            "minimum": 0.0,
+            "title": "Minimum",
+            "type": "integer"
+          },
+          "observed": {
+            "minimum": 0.0,
+            "title": "Observed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "banding",
+          "band_label",
+          "band_index",
+          "observed",
+          "minimum"
+        ],
+        "title": "ClaimCountBandingWarning",
+        "type": "object"
+      },
       "Coefficient": {
         "additionalProperties": false,
         "description": "One fitted term, with the uncertainty `02` R5 requires of every estimate.",
@@ -5228,6 +5271,28 @@
         "additionalProperties": false,
         "description": "What an EBM fit returns and the Model stores (ADR-705, FR-140).\n\n`02` §4.8: the fit result *is* the model. An EBM is its additive shape functions —\nscoring reproduces `intercept + Σ term scores` exactly, each term a lookup against\nits feature's bins — so this declarative artifact alone rescores the model by a\nprocess that never ran `interpret` (there is no booster blob and no serialised\nestimator to version).",
         "properties": {
+          "banding_warnings": {
+            "default": [],
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "claim_count": "#/components/schemas/ClaimCountBandingWarning",
+                  "exposure": "#/components/schemas/ExposureBandingWarning"
+                },
+                "propertyName": "measure"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/ExposureBandingWarning"
+                },
+                {
+                  "$ref": "#/components/schemas/ClaimCountBandingWarning"
+                }
+              ]
+            },
+            "title": "Banding Warnings",
+            "type": "array"
+          },
           "best_iteration": {
             "minimum": 0.0,
             "title": "Best Iteration",
@@ -5806,6 +5871,51 @@
         "title": "ExcludedPeril",
         "type": "object"
       },
+      "ExposureBandingWarning": {
+        "additionalProperties": false,
+        "description": "A band whose exposure is below `min_exposure_per_band`: exact decimals (FR-10).",
+        "properties": {
+          "band_index": {
+            "minimum": 0.0,
+            "title": "Band Index",
+            "type": "integer"
+          },
+          "band_label": {
+            "title": "Band Label",
+            "type": "string"
+          },
+          "banding": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "measure": {
+            "const": "exposure",
+            "default": "exposure",
+            "title": "Measure",
+            "type": "string"
+          },
+          "minimum": {
+            "description": "Exact decimal as a string; never a binary float (FR-10).",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+            "title": "Minimum",
+            "type": "string"
+          },
+          "observed": {
+            "description": "Exact decimal as a string; never a binary float (FR-10).",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+            "title": "Observed",
+            "type": "string"
+          }
+        },
+        "required": [
+          "banding",
+          "band_label",
+          "band_index",
+          "observed",
+          "minimum"
+        ],
+        "title": "ExposureBandingWarning",
+        "type": "object"
+      },
       "Factor": {
         "additionalProperties": false,
         "description": "A named, versioned transformation over dataset columns (FR-83, FR-96).\n\nDefined against a **Dataset**, resolved against a specific **version** at fit time\n(FR-87) — so a factor outlives the version it was first used on, and a column that\nchanged dtype fails loudly at resolution rather than quietly changing the model.",
@@ -6323,6 +6433,28 @@
         "additionalProperties": false,
         "description": "What a GBM fit returns and the Model stores (ADR-705, FR-125).\n\nThe booster is a **content-addressed blob in the backend's own JSON or text format**,\nnever a pickle — `booster_format` has no spelling for one, so the persistence layer's\nrefusal is not the only thing between a Model and an artifact that executes on load.\n\nEverything needed to score is here beside it: feature order, dtype expectations,\ncategorical encoding maps, the monotone constraint vector, the pinned library version,\nand — required, not optional — the `base_margin` construction. FR-126 is emphatic\nabout the last one because omitting the offset at scoring time fails *silently* on both\nbackends, and differently.\n\nThe evaluation curve is **not** here. FR-174 names it a GBM-specific *diagnostic*\nand asks for train and holdout side by side, which is FR-183's shape; it lives on\n`GbmDiagnostics`, and `fit_gbm` returns it beside this artifact for the caller to place\nthere. `best_iteration` stays, because scoring needs it and diagnostics are not loaded\nto score. (`diagnostics.schema.json` had it this way from Phase 0; this is the code\nagreeing with it rather than the schema being edited to match.)",
         "properties": {
+          "banding_warnings": {
+            "default": [],
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "claim_count": "#/components/schemas/ClaimCountBandingWarning",
+                  "exposure": "#/components/schemas/ExposureBandingWarning"
+                },
+                "propertyName": "measure"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/ExposureBandingWarning"
+                },
+                {
+                  "$ref": "#/components/schemas/ClaimCountBandingWarning"
+                }
+              ]
+            },
+            "title": "Banding Warnings",
+            "type": "array"
+          },
           "base_margin": {
             "$ref": "#/components/schemas/OffsetSpec"
           },
@@ -6921,6 +7053,28 @@
         "additionalProperties": false,
         "description": "What a fit returns and the Model stores (ADR-705).\n\nData, never a pickled estimator: `PICKLE_PERSISTENCE_REFUSED` is an error code this\nmodule owns, and a Model must be re-scorable by a process that never ran `glum`.",
         "properties": {
+          "banding_warnings": {
+            "default": [],
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "claim_count": "#/components/schemas/ClaimCountBandingWarning",
+                  "exposure": "#/components/schemas/ExposureBandingWarning"
+                },
+                "propertyName": "measure"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/ExposureBandingWarning"
+                },
+                {
+                  "$ref": "#/components/schemas/ClaimCountBandingWarning"
+                }
+              ]
+            },
+            "title": "Banding Warnings",
+            "type": "array"
+          },
           "coefficients": {
             "default": [],
             "items": {
@@ -8632,6 +8786,7 @@
           "dataset.validate",
           "dataset.profile",
           "dataset.derive",
+          "blob.promote",
           "model.fit",
           "model.transparency",
           "model.backtest",
@@ -17619,6 +17774,7 @@
       },
       "UploadUrlRequest": {
         "additionalProperties": false,
+        "description": "The body of `POST /blobs/upload-url`.",
         "properties": {
           "media_type": {
             "title": "Media Type",
@@ -17640,10 +17796,16 @@
       },
       "UploadUrlResponse": {
         "additionalProperties": false,
+        "description": "The 200 of `POST /blobs/upload-url`: the Blob Upload `id` and the presigned parts.",
         "properties": {
           "expires_in_s": {
             "title": "Expires In S",
             "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
           },
           "key": {
             "title": "Key",
@@ -17669,6 +17831,7 @@
           }
         },
         "required": [
+          "id",
           "key",
           "upload_id",
           "urls",
@@ -19433,11 +19596,18 @@
         "responses": {
           "200": {
             "content": {
-              "application/json": {
-                "schema": {}
+              "application/x-ndjson": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
               }
             },
-            "description": "Successful Response"
+            "description": "The log as CSV, or as JSON Lines (one event per line)"
           },
           "400": {
             "content": {
@@ -20089,7 +20259,7 @@
     },
     "/api/v1/blobs/upload-url": {
       "post": {
-        "description": "FR-421.\n\nThe digest is not known until the bytes exist, so the object lands on a staging key, not\nat its content address. Asking the client for the digest up front would let it choose\none, which is the difference between content addressing and client-supplied naming.\nNothing yet moves a staging object to its content address or creates its `blobs` row\n(the completion step FR-421 implies is not built), so an upload made through this URL\ncannot be ingested or downloaded as a blob today.",
+        "description": "FR-421.\n\nThe digest is not known until the bytes exist, so the object lands on a staging key, not\nat its content address. Asking the client for the digest up front would let it choose\none, which is the difference between content addressing and client-supplied naming.\nThe request records a Blob Upload in the caller's workspace and returns its `id`;\n`POST /blobs/uploads/{id}/complete` moves the staged object to its content address and\nrecords its owner (FR-1776).",
         "operationId": "upload_url_api_v1_blobs_upload_url_post",
         "parameters": [
           {
@@ -20179,6 +20349,133 @@
           }
         },
         "summary": "Presigned upload URL",
+        "tags": [
+          "blobs"
+        ]
+      }
+    },
+    "/api/v1/blobs/uploads/{upload_id}/complete": {
+      "post": {
+        "description": "**202** with the `blob.promote` Job (FR-1776, `07` R1).\n\nReads the Blob Upload only; the Job does the S3 work, so no upload byte crosses this\nprocess. Another workspace's Blob Upload is the same `404` as a missing one. A repeat\nreturns the first Job, whatever its state: the row is locked while the Job is created, so\ntwo concurrent completions cannot make two.",
+        "operationId": "complete_upload_api_v1_blobs_uploads__upload_id__complete_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "upload_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Upload Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          }
+        },
+        "summary": "Complete a Blob Upload",
         "tags": [
           "blobs"
         ]
@@ -27920,11 +28217,13 @@
         "responses": {
           "200": {
             "content": {
-              "application/json": {
-                "schema": {}
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
               }
             },
-            "description": "Successful Response"
+            "description": "Server-sent progress events"
           },
           "401": {
             "content": {
@@ -32036,11 +32335,13 @@
         "responses": {
           "200": {
             "content": {
-              "application/json": {
-                "schema": {}
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
               }
             },
-            "description": "Successful Response"
+            "description": "The version's cells as CSV (FR-235)"
           },
           "401": {
             "content": {
@@ -32139,11 +32440,14 @@
         "responses": {
           "200": {
             "content": {
-              "application/json": {
-                "schema": {}
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
               }
             },
-            "description": "Successful Response"
+            "description": "The version's cells as XLSX (FR-235)"
           },
           "401": {
             "content": {

@@ -19,12 +19,15 @@ import logging
 from collections import Counter
 from pathlib import Path
 
+import polars as pl
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import BaseModel, ValidationError, field_validator
 
+from model_schema import BandingMethod, BandingProposal
 from model_schema.input_free import InputFreeError
-from pricing_core.safe_error import CodedError
+from pricing_core.modelling import BandingError, propose_banding
+from pricing_core.safe_error import CodedError, safe_error_detail
 
 _ROOT = Path(__file__).resolve().parents[2]
 #: The scope is DERIVED by glob, so a new file is covered by default (maintainer, 2026-09-29,
@@ -267,6 +270,23 @@ def test_every_failure_sink_on_a_quote_input_path_is_accounted_for() -> None:
         "under app.platform.safe_exception / pricing_core.safe_error, give it a sentinel test, "
         "and list it in _SINKS"
     )
+
+
+@pytest.mark.req("NFR-499")
+def test_a_banding_refusal_in_a_fit_keeps_its_text_and_no_row_value() -> None:
+    """The `BandingError` arm of `model_handlers._fit` persists `safe_error_detail(exc)`."""
+    from uuid import uuid4
+
+    frame = pl.DataFrame({"age": [None, None], "note": [_SENTINEL, _SENTINEL]})
+    proposal = BandingProposal(
+        dataset_version_id=uuid4(), column="age", method=BandingMethod.EQUAL_WIDTH
+    )
+    with pytest.raises(BandingError) as refused:
+        propose_banding(frame, proposal, dataset_id=uuid4(), slug="age")
+    detail = safe_error_detail(refused.value)
+    assert isinstance(refused.value, CodedError)
+    assert "'age'" in detail, "control: the allow-list keeps the refusal's own text"
+    assert _SENTINEL not in detail
 
 
 @pytest.mark.req("NFR-499")

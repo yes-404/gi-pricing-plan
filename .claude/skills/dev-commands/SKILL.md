@@ -1056,6 +1056,35 @@ diagnostic enabled mid-pytest; (2) by git-logging when the build output vanished
 two concurrent slots' mktemp calls returning the same dir (verified with `ls -i` on 
 identical inodes).
 
+## Two code-gate slots, and what each must own
+
+Rulings: the maintainer (by delegation), `to-lead.md` 2026-10-17 16:12 BST (the adoption, relayed in `from-lead-2026-10-09.md` at "16:13:41 BST: PAIR TRIAL ADOPTED"), 17:58:43 BST and 18:03:09 BST.
+
+**Slots.** `/tmp/slots/gate-1` and `/tmp/slots/gate-1b` are the two code-gate slots; a gate runs only on one it holds. Each gate has its own slot, its own database and its own demo database, and the demo runs under `/tmp/slots/demo` (the demo-stage lock). Conditions, each a ruling and not a preference:
+
+- **A measurement gate runs ALONE** (no other gate, docs check or DB window).
+- **Memory:** start a gate only with MemAvailable of 8 GB or more; below 4 GB the newest gate is parked as NOT RUN.
+- **Beside two held gates:** at most one gate-2 docs check and at most one DB window (small-test slot, load1 below 8).
+- **A failure seen only in a paired run re-runs solo before it counts.** Passes stand (cross-gate interference loses or steals jobs; it does not fake a pass).
+- **SL-1258 always runs SOLO** (it changes the compose stack by design). After it merges, the compose reference moves with main.
+
+**Per-slot isolation (why: the 2026-10-17 17:58 BST verdict was SHARED).** Until then every gate's pytest and demo used Redis db 0 and the queues `default`/`compute` (`config.py` `redis_url` default; `celery_app.py`; the demo worker runs `--queues default,compute`), and an SL-1543 demo job went missing while another gate's pytest ran. The gate template now sets, per slot:
+
+| What | gate-1 | gate-1b |
+|---|---|---|
+| `GIP_REDIS_URL` for pytest | db 1 | db 2 |
+| `GIP_REDIS_URL` for the demo | db 3 | db 4 |
+| `GIP_TEST_BUCKET` | `gip-test-blobs-gate-1` | `gip-test-blobs-gate-1b` |
+| demo `GIP_BLOB_BUCKET` | `gip-blobs-demo-gate-1` | `gip-blobs-demo-gate-1b` |
+
+An unknown slot exits 3. The demo db is `FLUSHDB`'d at demo start and again after its stop; both buckets are force-removed at START and END. The isolation line in the gate log prints the **effective** values, as the app resolves them (`Settings().redis_url`, masked), inside the gate's env and the demo worker's env, because a variable nobody reads would pass by luck (`config.py` reads `GIP_` through `env_prefix`, and an environment variable beats the `.env` file).
+
+**Pairing resumes only on a paired run that meets all of (a)–(e):** (a) no `default`/`compute` keys in db 0 throughout (the pair-sampler); (b) zero "job not found" in both demo logs and both worker logs; (c) both demos reach their designed stop; (d) the effective-URL line above; (e) before any paired START the lead checks that both branches' `deploy/docker-compose.yml` and the files it bind-mounts (`deploy/keycloak-local`) are byte-identical to `origin/main`, and logs it; if either differs, that gate runs SOLO. The frontend half and library caches are uncovered (low risk).
+
+**`LOKY_MAX_CPU_COUNT=2` in every gate script** (`export` after `GIP_GATE_SLOT`): the maintainer's load alert of 2026-10-17 17:35 BST (`from-lead-2026-10-09.md`, "17:36:03 BST — load alert 17:35", item 2). It caps joblib/loky workers per gate (the load alert's remedy); it discharges the WK-1178 LOKY item. Running scripts are not edited (bash reads a script incrementally).
+
+**Two runs of one tree never agree on hashes — do not diff them without the noise floor.** Measured by the SL-1543 hash diff (`from-lead-2026-10-09.md`, "17:16:54 BST", ruled 17:17:40 BST): uuid7 ids embedded in model specs make `spec_hash` and the bundle hash differ between two seeds of the same tree; model specs differ at 1e-7 to 1e-6 (fit float jitter); covariance and diagnostic blobs carry a random 6-hex slug suffix. Compare A against B **and** B against a second run of B: only rows that differ in A≠B and not in B≠C are signal. The deterministic rows (rate tables and versions, goldens, factors, bandings, datasets, peril structures, validation rules) matched run to run.
+
 ## Fail-closed wrapper pattern
 
 A wrapper prints its own `<NAME>_EXIT=<n>` line; an empty inner exit or `collected != ran`
@@ -1161,7 +1190,7 @@ build log showing no actual build (wrong cwd), one tmpdir ls -i showing identica
 (collision). This section drafted by executor-h; verified by deputy as measured. Reference: 
 to-lead.md entries 10:55:17, 11:02:41, 11:48:50, 14:33:28 (maintainer instruction).
 
-Verified: 2026-10-14 against main 8eaf6d5f (new section: scripts/run-small.sh, RL-1626; its test passes at this tree); previously 2026-10-10 against the PL 9617 slice branch (based on main fe0b0627; gate wrapper and bare-pytest lock take gate-1 only, RL-1445); previously 2026-10-10 against main db0642c4 (new paragraph: the gate-2 standing rule, one docs check beside one code gate); previously 2026-10-08 against main d85cf854 (new rule: no background process inside a held slot, `fuser` check); previously 2026-10-06 against main a9ef6777 (new section: a slot probe that gates a check); previously 2026-09-29 against main 4819ec88 (gate slot budget 3 → 2 for the 8-vCPU box, WK-1178; the wrapper loop and `conftest.py` `_SLOT_COUNT` re-read together)
+Verified: 2026-10-17 against main 9469721d (the tree of merge 40bb4694 on docs-d20-2026-10-17) (new section: two code-gate slots, per-slot isolation, LOKY_MAX_CPU_COUNT, run-to-run hash noise; the rulings are cited in it, not re-run here); previously 2026-10-14 against main 8eaf6d5f (new section: scripts/run-small.sh, RL-1626; its test passes at this tree); previously 2026-10-10 against the PL 9617 slice branch (based on main fe0b0627; gate wrapper and bare-pytest lock take gate-1 only, RL-1445); previously 2026-10-10 against main db0642c4 (new paragraph: the gate-2 standing rule, one docs check beside one code gate); previously 2026-10-08 against main d85cf854 (new rule: no background process inside a held slot, `fuser` check); previously 2026-10-06 against main a9ef6777 (new section: a slot probe that gates a check); previously 2026-09-29 against main 4819ec88 (gate slot budget 3 → 2 for the 8-vCPU box, WK-1178; the wrapper loop and `conftest.py` `_SLOT_COUNT` re-read together)
 Prior: 2026-09-17 against main 71f5a2208c7a92bad486ae128775a4a42c7ebc63
 
 2026-09-06 — the gate body's seven stages now run in parallel inside one slot, each

@@ -25,6 +25,8 @@ declare its own source data out of range. `closed="right"` is the mirror image.
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping, Sequence
+from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
@@ -33,10 +35,17 @@ import polars as pl
 
 from model_schema import (
     AboveRangePolicy,
+    ArtifactRef,
     Banding,
+    BandingMeasure,
     BandingMethod,
     BandingProposal,
+    BandingWarning,
     BelowRangePolicy,
+    ClaimCountBandingWarning,
+    ExposureBandingWarning,
+    Factor,
+    FactorType,
     OneWayRow,
     new_uuid7,
 )
@@ -47,6 +56,7 @@ __all__ = [
     "apply_banding",
     "band_statistics",
     "check_banding",
+    "check_fit_bandings",
     "propose_banding",
 ]
 
@@ -525,12 +535,12 @@ def check_banding(
     frame: pl.DataFrame,
     banding: Banding,
     *,
-    min_exposure: float | None = None,
-    min_claims: float | None = None,
+    min_exposure: Decimal | None = None,
+    min_claims: int | None = None,
     exposure_column: str = "exposure_years",
     claim_count_column: str = "claim_count",
     fail_on_thin: bool | None = None,
-) -> tuple[str, ...]:
+) -> tuple[BandingWarning, ...]:
     """FR-100, against a specific Dataset Version.
 
     **An empty band always raises**, whatever the configuration says: a level no row reaches
@@ -541,11 +551,26 @@ def check_banding(
     the configured floor is a property of the artifact a reviewer can read rather than an
     argument at one call site. The keyword arguments override it, which is what a
     what-if evaluation needs.
+
+    The warnings are typed records, one per breached floor per band (`BandingWarning`):
+    exposure compared and reported as an exact `Decimal`, a claim count as an `int`. A
+    non-zero floor whose column the frame lacks is refused by name, because `one_way` would
+    read the absent column as 0 and report every band thin (or none, for a floor of 0).
     """
     minimums = banding.minimums
-    min_exposure = float(minimums.min_exposure_per_band) if min_exposure is None else min_exposure
+    min_exposure = minimums.min_exposure_per_band if min_exposure is None else min_exposure
     min_claims = minimums.min_claims_per_band if min_claims is None else min_claims
     fail_on_thin = (minimums.on_violation == "fail") if fail_on_thin is None else fail_on_thin
+    floors = ((min_exposure, exposure_column), (min_claims, claim_count_column))
+    for floor_value, column in floors:
+        if floor_value > 0 and column not in frame.columns:
+            raise BandingError(
+                "FACTOR_RESOLUTION_FAILED",
+                f"banding {banding.slug!r} sets a minimum of {floor_value} on {column!r}, "
+                "which this dataset version does not have (FR-100). An absent column would be "
+                "read as 0 and every band reported thin; the check is refused rather than "
+                "guessed.",
+            )
     stats = band_statistics(
         frame,
         banding,
@@ -562,23 +587,61 @@ def check_banding(
             "matrix, and a coefficient estimated from no data is not an estimate.",
         )
 
-    warnings: list[str] = []
+    reference = ArtifactRef(type="banding", slug=banding.slug, version=banding.version)
+    warnings: list[BandingWarning] = []
     for row in stats:
-        exposure = float(row.exposure_years)
-        if min_exposure > 0 and exposure < min_exposure:
-            warnings.append(
-                f"band {row.level!r} holds {exposure:,.1f} exposure years, below the "
-                f"minimum of {min_exposure:,.1f}."
-            )
+        index = banding.labels.index(row.level)
+        if min_exposure > 0 and row.exposure_years < min_exposure:
+            warnings.append(ExposureBandingWarning(
+                banding=reference, band_label=row.level, band_index=index,
+                observed=row.exposure_years, minimum=min_exposure,
+            ))
         if min_claims > 0 and row.claim_count < min_claims:
-            warnings.append(
-                f"band {row.level!r} holds {row.claim_count} claim(s), below the minimum "
-                f"of {min_claims:,.0f}."
-            )
+            warnings.append(ClaimCountBandingWarning(
+                banding=reference, band_label=row.level, band_index=index,
+                observed=row.claim_count, minimum=min_claims,
+            ))
     if warnings and fail_on_thin:
         raise BandingError(
             "BAND_BELOW_MIN_EXPOSURE",
             f"banding {banding.slug!r} has bands below the configured minimums and this "
-            f"workspace fails rather than warns (FR-100): {'; '.join(warnings)}",
+            f"workspace fails rather than warns (FR-100): "
+            f"{'; '.join(_describe(warning) for warning in warnings)}",
         )
+    return tuple(warnings)
+
+
+def _describe(warning: BandingWarning) -> str:
+    """One readable line for a warning, for the refusal text only; the record is the data."""
+    unit = "exposure years" if warning.measure is BandingMeasure.EXPOSURE else "claim(s)"
+    return (
+        f"band {warning.band_label!r} holds {warning.observed} {unit}, "
+        f"below the minimum of {warning.minimum}."
+    )
+
+
+def check_fit_bandings(
+    data: pl.DataFrame,
+    factors: Sequence[Factor],
+    bandings: Mapping[UUID, Banding] | None,
+) -> tuple[BandingWarning, ...]:
+    """FR-100 at fit time: `check_banding` once per distinct Banding the fitted factors use.
+
+    `data` is the rows the arm fits, after FR-111's weight-0 exclusion, so a band reached
+    only by weight-0 rows is empty (the coefficient would be estimated from no data). A
+    banding an operand of an interaction uses is reached through `factors` like any other.
+    A banding the mapping lacks, or whose column the frame lacks, is left to
+    `resolve_factors`, which refuses both by name right after this call.
+    """
+    mapping = bandings or {}
+    warnings: list[BandingWarning] = []
+    seen: set[UUID] = set()
+    for factor in factors:
+        if factor.type is not FactorType.BANDING or factor.banding_id in seen:
+            continue
+        banding = mapping.get(factor.banding_id) if factor.banding_id else None
+        if banding is None or banding.column not in data.columns:
+            continue
+        seen.add(banding.id)
+        warnings.extend(check_banding(data, banding))
     return tuple(warnings)
