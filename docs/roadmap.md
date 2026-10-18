@@ -2286,7 +2286,7 @@ The maintainer's (by delegation) decision "2026-10-05 18:51:33 BST — Save-time
 id: SL-1543
 family: slice
 title: WK-1178 A-4 — the exit demo walks WF-699's Peril Structure path (a severity GLM, the AD Peril Structure reconciled and approved, B4's model_call, the C1 pin)
-status: active                 # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-09            # original date 2026-10-05, set at the draft; minted 2026-10-09
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 137bc817ef1fb40ea57e9053e0ad40b73bdff3a8
@@ -2303,6 +2303,8 @@ Option A's fourth build slice (the maintainer's entry "2026-10-05 16:43:31 BST �
 (Activated 2026-10-12 as WK-1178 Option A, A-4, on the lead's from-lead entry "2026-10-12 05:31:21 BST" (GO SL-1543; readiness found activation needs 1-7 MET at `604ea084`). `PL-1542` set `active` in this slice branch's activation commit; ledger working id 9879, reserved by the lead. **G2 is not met when this slice merges:** the maintainer's (by delegation) entry in `to-lead.md` "2026-10-12 03:54:25 BST" holds G2 open until WK-673's SL 9850 (the D7 decomposition) merges, so PL-1542 Goal's sentence "When this slice merges, G2 is met" is stale.)
 
 *(Dated line, 2026-10-14, the lead: the PL-1542 dated delta PL-1705 records the maintainer's (by delegation) rulings of "2026-10-14 09:45:05 BST" (B) and (C) — the `claim_severity` response and SL-1702 merging before this slice on G2 — and the P3/P5 premise changes; PL-1542's frozen body is unchanged.)*
+
+*(Closed 2026-10-18 as a Slice, closing acts in the slice PR, on the lead's merge; ledger LG-1788 `closed`, minted 2026-10-18 from working id 9879, with PL-1787 (working id 8055) and OQ-1789 (working id 8110). SOLO gate-1 at `5a5cb2e7` (END 2026-10-18T00:12:18Z, accepted at to-lead "2026-10-18 01:13:14 BST"); the audit is CONFIRMED (to-lead "2026-10-18 01:21:11 BST"), findings A1 to A7 answered in LG-1788. The demo budget is OQ-1789, interim (a), owned by the WK-674 NFR sweep. MERGE-ACK: not yet given.)*
 
 #### SL-1536 — WK-1178 fix slice — FD-1374: a rating step reads only the names it declares (FR-246 enforced)
 

@@ -1,10 +1,10 @@
 ---
-id: PL-8055
+id: PL-1787
 family: plan
 kind: map
 title: WK-1178 — SL-1543 owns SL-1696's audit finding A1, the D7 split test on the real derived list (PL-1694 Acceptance 18), red first by cause against SL-1696's hand-written list — a dated Work-plan delta to PL-1542 and PL-1705
 status: draft                  # draft → active → superseded | retired (§1.2a)
-created: 2026-10-16
+created: 2026-10-18             # filed 2026-10-16 under working id 8055; minted 2026-10-18 as PL-1787
 owner: planner
 tree: 0877e6e7a756c4621890713a4d3b016e75e33654
 phase: P2
@@ -15,7 +15,9 @@ corrected_by: []
 relates: [PL-1542, PL-1705, PL-1694, SL-1543, SL-1696]
 ---
 
-# PL 8055 — WK-1178, SL-1543 owns A1: the D7 split test on the real derived list (delta to PL-1542 and PL-1705)
+# PL-1787 — WK-1178, SL-1543 owns A1: the D7 split test on the real derived list (delta to PL-1542 and PL-1705)
+
+Minted 2026-10-18 from working id 8055 (merged from `origin/pl-8055-sl1543-a1-delta-2026-10-16` at `a86d39b9` into the SL-1543 branch, with the slice's mint).
 
 > **For agentic workers:** this is a **dated delta** under Lean P2 L5 (`document-ids.md` §1.6,
 > PL row: *"a change is one dated Work-plan delta, a new `PL-` that `relates:` the Work's
@@ -41,14 +43,14 @@ planning time**; every claim below about behaviour is a reading of the code at `
 
 *(Amended 2026-10-16 from 09:52 BST, before merge, by the planner (seat planner-8055b), on the lead's
 brief: **DP-A1-1 is ruled (a) by RL 8060** (`origin/rl-8060-pl8055-dp-a1-1-2026-10-16`
-@`5b07a5b6`), confirmed by the maintainer in the entry "2026-10-16 09:51:34 BST — Maintainer: RL 8060 (PL 8055 DP-A1-1 → (a)) CONFIRMED" in `~/gi-pricing-plan.local/channel/to-lead.md`.
+@`5b07a5b6`), confirmed by the maintainer in the entry "2026-10-16 09:51:34 BST — Maintainer: RL 8060 (PL-1787 DP-A1-1 → (a)) CONFIRMED" in `~/gi-pricing-plan.local/channel/to-lead.md`.
 The ruling's two precisions and the confirmation's four conditions are carried into the DP row,
 Status, N2, N4, Steps 2 to 5, Acceptance item 1 (v), Hand-off 3 and Self-review 2. Each edited
 place names RL 8060. RL 8060 is a working id, so it is not in `relates:` until it is minted.)*
 
 *(Amended 2026-10-16 from 10:18 BST, before merge, by the planner (seat planner-8055b), on the
 maintainer's ruling "2026-10-16 10:17:07 BST — Maintainer: DP-1543-APPROVERS → (a): the policy
-governs; PL-1542:444's "two principals" is the plan's error, corrected by a dated line in PL 8055"
+governs; PL-1542:444's "two principals" is the plan's error, corrected by a dated line in PL-1787"
 in `~/gi-pricing-plan.local/channel/to-lead.md`, items 1 and 2. **`PL-1542` Task 2 Step 2**
 (`:444` at `origin/main` `0877e6e7`), *"`approval_service.decide` with two principals who are
 neither submitter nor author"*, **is superseded: the Peril Structure is decided by ONE
@@ -64,14 +66,14 @@ it.)*
 
 *(Amended 2026-10-17 from 11:30 BST, before merge, by the planner (seat planner-8055), on four
 entries. **This delta now carries three SL-1543 rulings and one write-set widening as dated
-lines, R1 to R4**, at the maintainer's direction in R1's entry: *"both go into PL 8055 (SL-1543's
+lines, R1 to R4**, at the maintainer's direction in R1's entry: *"both go into PL-1787 (SL-1543's
 delta, still unminted) as two dated lines citing this entry. No separate RL or FD."* Line
 numbers marked `@20ec89f6` are read at `SL-1543`'s head (`sl-1543-prep-on-1300`,
 `20ec89f659895b3ddb97506f82fb00ce9dd1b86e`); those marked `@main` at `origin/main`
 `055b5e6b` (#1317). Each is carried into the text it changes, named after each line.)*
 
 - **R1 — DP-Q2 → (a): Acceptance 4 reads `payable_premium_minor`.** The maintainer's entry
-  "2026-10-17 11:18:51 BST — Maintainer: SL-1543 DP-Q2 → (a), DP-Q3 → (c); both carried in PL 8055
+  "2026-10-17 11:18:51 BST — Maintainer: SL-1543 DP-Q2 → (a), DP-Q3 → (c); both carried in PL-1787
   (no new record)" in `~/gi-pricing-plan.local/channel/to-lead.md`, item Q2, verbatim: *"Acceptance
   4 (PL-1542 :248/:251, :461-462) [the entry pads the id; written unpadded here for check 32] reads the builder's `payable_premium_minor`, the last rung the
   builder declares (examples/fremtpl2/algorithm.py ~:301-323). `risk_premium_minor` survives only
@@ -109,7 +111,7 @@ numbers marked `@20ec89f6` are read at `SL-1543`'s head (`sl-1543-prep-on-1300`,
   `seed.py:149-150` (left join + `fill_null(0)`, `:150` `@20ec89f6`); the base on `main` is about
   27% low (€1659.44 vs €2265.43). It **supersedes the outcome of `PL-1705` Task 0 Step 3** (the
   census and its STOP, `PL-1705` `:250-255`): the STOP was taken and is now ruled. **Where
-  carried:** Task B (new), Acceptance Standard (PL 8055 item 2), Global Constraints.
+  carried:** Task B (new), Acceptance Standard (PL-1787 item 2), Global Constraints.
 - **R4 — the write set widened.** The lead's entry "2026-10-17 11:23:48 BST — LEAD RULING (dated
   line): SL-1543's write set is WIDENED, on the maintainer's to-lead "2026-10-17 11:23:17 BST"
   (census DP → (c))" in `~/gi-pricing-plan.local/channel/from-lead-2026-10-09.md`, verbatim:
@@ -271,7 +273,7 @@ is the list `SL-1543`'s head derives (P5).
 
   ```python
   #: The `derived_changes` of the journey's decomposing D7 run in `_world`, as `id`, `kind` and
-  #: `description` (`PL-1694` Acceptance 18; PL 8055). `{gbm_family}` stands for `_world`'s
+  #: `description` (`PL-1694` Acceptance 18; PL-1787). `{gbm_family}` stands for `_world`'s
   #: random model family; `test_wf699_journey_runs_end_to_end` asserts this list IS the run's.
   D7_DERIVED_CHANGES: Final[list[dict[str, str]]] = [
       # the six rows of d85e3d72 :479-496, unchanged
@@ -285,7 +287,7 @@ is the list `SL-1543`'s head derives (P5).
 - [ ] **Step 2: Write the red.** At the end of `test_wf699_journey_runs_end_to_end`, add:
 
   ```python
-      # PL-1694 Acceptance 18 (PL 8055): the split test's list IS this run's derived list.
+      # PL-1694 Acceptance 18 (PL-1787): the split test's list IS this run's derived list.
       run = result.d7_run
       real = [
           {key: str(change[key]) for key in ("id", "kind", "description")}
@@ -321,7 +323,7 @@ is the list `SL-1543`'s head derives (P5).
   name the family both name `{gbm_family}`. Any other random token in a description makes the
   assert red; that is not by cause, and is a STOP to the lead.
 
-  **The token list (the maintainer's entry "2026-10-16 09:54:43 BST — Maintainer: PL 8055
+  **The token list (the maintainer's entry "2026-10-16 09:54:43 BST — Maintainer: PL-1787
   condition 2 reading CONFIRMED — exact-value substitution of the one gbm family token" in
   `to-lead.md`).** The token list is RL 8060 V4's and has **one entry**: the world's gbm family,
   `record["gbm_family"]`, replaced by its exact value with `{gbm_family}`. There is **no general
@@ -394,7 +396,7 @@ is the list `SL-1543`'s head derives (P5).
 
   ```bash
   git -C <wt> add examples/fremtpl2/journey.py backend/tests/test_wf699_journey.py
-  git -C <wt> commit -m "test(journey): the D7 split test holds the real derived list, tied to the run (A1, PL 8055)"
+  git -C <wt> commit -m "test(journey): the D7 split test holds the real derived list, tied to the run (A1, PL-1787)"
   ```
 
 ### Task B: the severity population declared, the seed's unknown amount null (R3, R4; *added 2026-10-17*)
@@ -445,7 +447,7 @@ is the list `SL-1543`'s head derives (P5).
 
 ## Acceptance Standard
 
-`PL-1542`'s and `PL-1705`'s acceptance items stand. This delta adds one item, cited as **PL 8055
+`PL-1542`'s and `PL-1705`'s acceptance items stand. This delta adds one item, cited as **PL-1787
 item 1**; it is checked from the repository root on `SL-1543`'s merge tree.
 
 1. **A1 discharged: the D7 split test is built on the real derived list (`PL-1694` Acceptance
@@ -468,7 +470,7 @@ item 1**; it is checked from the repository root on `SL-1543`'s merge tree.
 nothing else in the item changes, and no code, contract, hash or window re-run follows. **`PL-1542`
 Task 4 Step 2's evidence (R2):** `git grep -n 'def test_' -- backend/tests/test_demo_peril_structure.py`
 prints the one added B4 scored-premium case, and `backend/tests/test_demo_rating_evidence.py` keeps
-its no-structure branch. This delta adds one more item, **PL 8055 item 2**:
+its no-structure branch. This delta adds one more item, **PL-1787 item 2**:
 
 2. **R3 discharged: the severity population is declared and the seed's unknown amount is null.**
    (i) `git grep -n 'KNOWN positive amount\|known positive amount' -- docs/specs/02-modelling.md`
@@ -502,15 +504,15 @@ its no-structure branch. This delta adds one more item, **PL 8055 item 2**:
 
 1. **The roadmap.** `SL-1543`'s row gains a dated line naming this delta, A1 and needs N1, N2 and
    N4; this planner writes `docs/roadmap.md` only for rows it cuts, so the line is the lead's.
-2. **The discharge.** `SL-1543`'s auditor records A1 discharged against PL 8055 item 1 in
+2. **The discharge.** `SL-1543`'s auditor records A1 discharged against PL-1787 item 1 in
    `SL-1543`'s ledger audit; `LG-1732` is frozen at its merge and is not edited.
-3. **Mint.** PL 8055 mints from working id 8055 after #1310, so the `LG-1732` cites resolve on
+3. **Mint.** PL-1787 mints from working id 8055 after #1310, so the `LG-1732` cites resolve on
    `main`, and with or after RL 8060 (amended 2026-10-16: RL 8060 "What it obliges"; the
    maintainer's condition 4). RL 8060 joins `relates:` at the mint.
 
 ## Self-review
 
-1. **The brief's items.** One task (Task A) and one acceptance item (PL 8055 item 1); red-first
+1. **The brief's items.** One task (Task A) and one acceptance item (PL-1787 item 1); red-first
    by cause on `SL-1696`'s hand-written list (Step 3), not on a missing name (Step 1 lands the
    plumbing first); serialisation (N3, Global Constraints); activation need #1310 (N1); relates
    `PL-1542`, `PL-1705`, `PL-1694`.
