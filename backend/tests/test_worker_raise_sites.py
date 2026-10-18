@@ -121,10 +121,10 @@ _SITES: dict[_Key, tuple[frozenset[str], str]] = {
         frozenset({"detail", "problem.status_code", "problem.title"}),
         "re-wraps a `PlatformError` `_as_platform_error` built, prefixing `base` or `comparison`",
     ),
-    ("backend/src/app/auth/service.py", "_unauthenticated", _DYNAMIC): (
-        frozenset(),
-        "a fixed 401 detail chosen by the caller of the helper; no interpolation",
-    ),
+    # SL-1740: the `_unauthenticated` helper's site is gone, not its refusals. Every 401 is
+    # still raised, now as `raise AuthenticationFailed(...)` (auth/service.py:178, 244, 253,
+    # 257, 265, 269, 277), whose fixed detail is built once in `AuthenticationFailed.__init__`
+    # via `super().__init__` (an attribute call, outside `_CALLEES`); no interpolation.
     ("backend/src/app/platform/jobs.py", "transition", _DYNAMIC): (
         frozenset({"row.status.value", "to_status.value"}),
         "two Job status names",
