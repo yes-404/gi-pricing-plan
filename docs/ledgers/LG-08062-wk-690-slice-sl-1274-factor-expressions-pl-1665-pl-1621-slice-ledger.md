@@ -321,3 +321,5 @@ Re-merge of `origin/main` `ebe3292c` (merge `8c487a87`), no conflicts. Small run
 - `test_expression_factors.py::test_an_infinite_value_is_dropped_not_cut_at` failed: `band_statistics` cut the infinite value that `propose_banding` dropped. Fixed in `bandings.py`; 51 passed with `test_bandings.py`.
 - `docs/contracts/` regenerated (`generate-contracts.py`, `--check` rc 0); the authored `banding.schema.json` gains `maxLength: 2000` on `source_expression` so `test_contracts.py` (171 passed) sees both sides agree.
 - ruff and mypy clean; `lint-imports` 4 kept, 0 broken.
+
+- 2026-10-18 14:50:09 BST — executor-1274r: the "Not done: stopped" on DP-1274-DIAG (a) above is stale. DP-1274-DIAG was ruled (a) at to-lead "2026-10-16 10:27:41 BST" (refuse-or-omit with a named reason plus an owned FD) and its form concurred at "2026-10-16 10:33:35 BST" (`EXPRESSION_FACTOR` on both omission-reason enums); the slice builds to both. Re-merged onto origin/main d0d6a265 under the maintainer entries "2026-10-18 14:45:19 BST" and "2026-10-18 14:47:38 BST".
