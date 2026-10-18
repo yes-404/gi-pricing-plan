@@ -29,8 +29,8 @@ relates: [RL-1793, RL-8124, PL-1766, RL-1755, FD-8123]
   scalar: `scripts/_docid.py` `_opt_str_field` returns nothing for a non-string, and check 34 in
   `scripts/audit-docs.py` fails a `corrected_by:` entry whose target's `corrects:` is not the
   frozen file's own id. So the correction is split by target: this record (`RL-8122`) corrects
-  `RL-1793`; `RL-8124` corrects the other. Each cites the other. The lead ruled the split on
-  2026-10-18 and the mint waits on the maintainer's word.
+  `RL-1793`; `RL-8124` corrects the other. Each cites the other. The split is ruled in the maintainer's (by delegation) entry "2026-10-18 22:56:00 BST" (option A, two
+  correcting RLs); this record and `RL 8124` cite each other, `22:50:32` and `22:56:00`.
 
 ## The anomaly
 
@@ -38,13 +38,20 @@ Working id 8077 was minted twice: `PL-1766` (#1325, `status: active`) and `PL-17
 `status: draft`). Working id 8076 likewise: `RL-1755` (#1319, active) and `RL-1793` (#1338,
 active). Both pairs were read at `origin/main` 84b0ff5765e55bc8edd139cd22bb57cd474de807.
 
-The bodies are **identical apart from id re-points and the Minted provenance line**. Measured with
-`diff` of the text after the front matter: `PL-1794` against `PL-1766` 38 diff lines, `RL-1793`
-against `RL-1755` 14 diff lines. Every hunk is one of: the heading id; the `*(Minted … as PL-1766 /
-RL-1755 …)*` line that only the canonical record carries; a cross-reference written as the unminted
-working id in one and the minted id in the other (`RL 8076` against `RL-1793`, `PL 8077` against
-`PL-1794`); the activation block's placeholder dates and `PL-____` in `PL-1794` against the filled
-ones in `PL-1766`. No substantive clause differs.
+The bodies are **identical apart from id re-points and the mint-provenance line; no substantive text
+differs.** Method: the text after the second `---` line of each file
+(`awk 'c>=2;/^---$/&&c<2{c++}' <file>`), compared with `diff`. `PL-1794` (383 lines) against
+`PL-1766` (385): 38 lines of `diff` output, 20 differing lines (9 and 11). `RL-1793` (114) against
+`RL-1755` (116): 14 lines of output, 8 differing lines (3 and 5). Every hunk is one of: the heading id;
+the `*(Minted … as PL-1766 / RL-1755 …)*` line that only the canonical record carries; a cross-reference
+written as the unminted working id in one and the minted id in the other (`RL 8076` against `RL-1793`,
+`PL 8077` against `PL-1794`); the activation block's placeholder dates and `PL-____` in `PL-1794`
+against the filled ones in `PL-1766`. The long CORRECTION line of `RL-1793` (line 62 against 64) is
+token-identical.
+
+The 22:50:32 entry said "`diff` after front matter: 0 lines". That was an instrument error, corrected by
+the maintainer's (by delegation) entry "2026-10-18 22:56:00 BST": its strip emptied both files, so two
+empty streams were compared. The ruling's conclusion stands; only its evidence is corrected.
 
 ## Ruled
 

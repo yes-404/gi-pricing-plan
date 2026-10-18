@@ -29,7 +29,7 @@ Read at `origin/main` 84b0ff5765e55bc8edd139cd22bb57cd474de807:
   "filed 2026-10-17 under working id 8077; minted 2026-10-18 as PL-1794").
 - Working id 8076: `RL-1755` (#1319, active) and `RL-1793` (#1338, active, "filed 2026-10-16 under
   working id 8076; minted 2026-10-18 as RL-1793").
-- The bodies differ only by id re-points and the Minted provenance line (38 and 14 diff lines; see
+- The bodies differ only by id re-points and the Minted provenance line (38 and 14 lines of `diff` output, 20 and 8 differing lines; method in
   `RL-8122`).
 - The lead's D21 ACK (09:55:06) did not catch it, for the reason above.
 - **A second constraint surfaced while correcting it:** `corrects:` is a scalar
