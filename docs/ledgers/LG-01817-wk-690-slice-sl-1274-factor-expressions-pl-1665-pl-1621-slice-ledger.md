@@ -5,7 +5,7 @@ title: WK-690 slice SL-1274 — S4, expression Factors (PL-1621, PL-1665), slice
 status: closed                 # active → closed (§1.2a)
 created: 2026-10-18   # filed 2026-10-16 under working id 8062; minted 2026-10-18 as LG-1817
 owner: executor
-tree: b84983a1f8c07425b494669b7b642ad997ce12db
+tree: 942938808fba7adfd9a1f77001831969324ee024
 phase: P2
 work: WK-690
 slice: SL-1274
@@ -408,3 +408,13 @@ Under to-lead "2026-10-18 18:20:40 BST" (3)–(4); closes the round trip carried
 **Part 2 — GREEN.** `upgrade head` rc 0, current `f2b6d90a4c17 (head)`; one expression Banding inserted the same way (`rt-86f672`, `column_name= None`); `alembic downgrade -1` rc 1 with `RuntimeError: cannot downgrade f2b6d90a4c17 (bandings.column_name back to NOT NULL): 1 banding row(s) are cut over an expression and have no column. They must be removed or re-cut over a column before this downgrade can run; a banding is append-only (FR-101), so nothing was changed.`; `alembic current` stayed `f2b6d90a4c17 (head)`. Row removed as above (`DELETE 1`); `downgrade -1` rc 0 (current `e7c3a9b15d82`); `upgrade head` rc 0 (current `f2b6d90a4c17 (head)`).
 
 **Close.** `dropdb -U gipricing gipricing_sl-1274_rt` rc 0; the window used no Redis, `redis-cli -n 1 flushdb` OK. Zeros: `redis-cli -n 1 dbsize` = 0; `select count(*) from pg_database where datname = 'gipricing_sl-1274_rt'` = 0. The window ran as two `flock` holds (part 1; part 2 with its close), not one, because a shell cannot hold the lock between tool calls; only this seat's own database was touched between them.
+
+## Reworded refusal, window part 2 re-run — 2026-10-18 18:29:37 BST (fix4-1274, executor, Sonnet 5.5)
+
+Under to-lead "2026-10-18 18:26:07 BST" (the maintainer, option (a)): the refusal of the entry above offered a remedy that cannot work, because a Banding is append-only (FR-101) — there is no platform delete path, `bandings_no_modify` forbids DELETE, and a re-cut appends. **That entry's message text ("removed or re-cut over a column") and its green-window quote are superseded by this entry.** One code commit, `5b429136`, holds the new message and the test assert (`test_downgrade_refuses_naming_the_count_and_alters_nothing` now asserts the start `Cannot downgrade below f2b6d90a4c17`, `3 banding(s)`, `restore from a backup`, no `removed or re-cut`, the end `Nothing was changed.`; the first version was red at `4c3f9dec` as recorded above). Run through `run-small.sh`: 2 passed, rc 0; `ruff check .` rc 0; `mypy` rc 0 (243 files); `ruff format --check` clean on the test. Order note: this commit follows the mint commit `49b2ab1c` (the orders for it arrived after the mint was pushed; no history was rewritten).
+
+**Window part 2 on `5b4291360a3b8aaeab893289967775649f903292`** (`flock -w 900 /tmp/slots/verify-1`, 2026-10-18 18:29:06 to 18:29:24 BST, load1 2.74, `free -g` available 24; fresh `createdb -U gipricing -T gipricing gipricing_sl-1274_rt`): `upgrade head` rc 0, current `f2b6d90a4c17 (head)`; one expression Banding through `create_banding` (`rt-ba6982`, `column_name= None`); `alembic downgrade -1` rc 1:
+`RuntimeError: Cannot downgrade below f2b6d90a4c17: 1 banding(s) are cut over an expression (column_name is NULL). Bandings are append-only (FR-101), so they cannot be removed or rewritten by a migration; restore from a backup taken before this revision to go below it. Nothing was changed.`
+`alembic current` after it: `f2b6d90a4c17 (head)`. Then, **TEST-HARNESS ONLY, in this throwaway database, never a product or runbook path**, to clear the test row: `begin; alter table bandings disable trigger bandings_no_modify; delete from bandings; alter table bandings enable trigger bandings_no_modify; commit;` → `DELETE 1`, `select count(*) from bandings` 0, `tgenabled` `O` (restored). The same bypass was used in the earlier windows of this slice (same DB name, each dropped). Then `downgrade -1` rc 0 (current `e7c3a9b15d82`), `upgrade head` rc 0 (current `f2b6d90a4c17 (head)`). Close: `dropdb` rc 0; `redis-cli -n 1 flushdb` OK (no Redis was used); zeros: `redis-cli -n 1 dbsize` = 0, `pg_database` count for `gipricing_sl-1274_rt` = 0.
+
+The open design question (is a downgrade below an append-only-artifact migration a supported operation) goes to `open-questions.md` in the next docs batch (D23, owner auditor), per the same ruling; not filed here.
