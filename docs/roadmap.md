@@ -2523,7 +2523,7 @@ On the maintainer's (by delegation) entry "2026-10-12 07:28:38 BST — S5 flags:
 id: SL-1709
 family: slice
 title: WK-1178 fix slice — FD-1684: the four non-JSON routes declare their real media types
-status: draft                    # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-14
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 36e2610ab8135bc3b3563464e7f5f719713b168b
@@ -2533,7 +2533,7 @@ corrected_by: []
 relates: [PL-1708, FD-1684, FD-1335, PL-1682, SL-1683, PL-1364, SL-1367, SL-1547]
 ```
 
-On the maintainer's (by delegation) entry "2026-10-12 07:46:06 BST — PL 9906/SL 9911/FD 9912: ACK + early mint as PL-1682/SL-1683/FD-1684 after #1295/#1296; …", items 3 and 4 (WK-1178 owns all four limbs) and its remedy row: `GET /api/v1/rate-tables/{slug}@{version}/export/csv`, `…/export/xlsx`, `GET /api/v1/audit/export` and `GET /api/v1/jobs/{job_id}/events` each declare their real 200 media type, so `docs/contracts/openapi/generated.json` reads `text/csv`, the spreadsheetml type, `text/csv` and `application/x-ndjson`, and `text/event-stream`, with no `application/json` entry and a non-empty schema on each. The handler bodies and the wire do not change. Red first, one contract test per route, each red on `main` by its cause (the published 200 has a single `application/json` key); the stale-list test red after regeneration; the two wire tests without a `content-type` assert gain one. The four routes leave `UNTYPED_2XX_PERMANENT` (`backend/tests/test_contracts.py:3169-3183`), and `generated.json` and the frontend client are regenerated. The event: `FD-1684`'s sweep predicate prints no line. Plan: Work-plan delta `PL-1708`. **Activation needs:** DP-1 (the declaration form), DP-2 (the schemas), DP-3 (the emptied list removed), DP-4 (route 4 declared, not rewritten) and DP-5 (a dated clause on `06:606` only) accepted or overruled (**all five ruled as recommended**, the maintainer (by delegation), "2026-10-14 09:45:05 BST" (A)); `FD-1684` on `main` (#1297); `SL-1683` merged first, or `RL-1445` item 2's conditions in the dispatch record (shared `api/rate_tables.py`, `test_contracts.py`, `generated.json`); PL-1708 set `active` in this slice's activation commit; the shared-path census re-checked at the GO; the lead's executor GO. *(Cut 2026-10-14 by the planner under working id 9998, reserved by the lead, eta "2026-10-14 09:29:43 BST".)*
+On the maintainer's (by delegation) entry "2026-10-12 07:46:06 BST — PL 9906/SL 9911/FD 9912: ACK + early mint as PL-1682/SL-1683/FD-1684 after #1295/#1296; …", items 3 and 4 (WK-1178 owns all four limbs) and its remedy row: `GET /api/v1/rate-tables/{slug}@{version}/export/csv`, `…/export/xlsx`, `GET /api/v1/audit/export` and `GET /api/v1/jobs/{job_id}/events` each declare their real 200 media type, so `docs/contracts/openapi/generated.json` reads `text/csv`, the spreadsheetml type, `text/csv` and `application/x-ndjson`, and `text/event-stream`, with no `application/json` entry and a non-empty schema on each. The handler bodies and the wire do not change. Red first, one contract test per route, each red on `main` by its cause (the published 200 has a single `application/json` key); the stale-list test red after regeneration; the two wire tests without a `content-type` assert gain one. The four routes leave `UNTYPED_2XX_PERMANENT` (`backend/tests/test_contracts.py:3169-3183`), and `generated.json` and the frontend client are regenerated. The event: `FD-1684`'s sweep predicate prints no line. Plan: Work-plan delta `PL-1708`. **Activation needs:** DP-1 (the declaration form), DP-2 (the schemas), DP-3 (the emptied list removed), DP-4 (route 4 declared, not rewritten) and DP-5 (a dated clause on `06:606` only) accepted or overruled (**all five ruled as recommended**, the maintainer (by delegation), "2026-10-14 09:45:05 BST" (A)); `FD-1684` on `main` (#1297); `SL-1683` merged first, or `RL-1445` item 2's conditions in the dispatch record (shared `api/rate_tables.py`, `test_contracts.py`, `generated.json`); PL-1708 set `active` in this slice's activation commit; the shared-path census re-checked at the GO; the lead's executor GO. *(Cut 2026-10-14 by the planner under working id 9998, reserved by the lead, eta "2026-10-14 09:29:43 BST".)* *(Activated 2026-10-17 13:11 BST: the maintainer's GO of record "2026-10-17 13:09:07 BST" and the lead's dispatch to executor-1709; need 6's census accepted by the maintainer, by message to the lead, 2026-10-17.)*
 
 #### SL-1722 — WK-1178 fix slice — the upload-completion step: an upload becomes an owned, content-addressed blob, proven by one public-path HTTP test with no seeding
 
@@ -2541,7 +2541,7 @@ On the maintainer's (by delegation) entry "2026-10-12 07:46:06 BST — PL 9906/S
 id: SL-1722
 family: slice
 title: WK-1178 fix slice — the upload-completion step: an upload becomes an owned, content-addressed blob, proven by one public-path HTTP test with no seeding
-status: draft                    # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-14
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 4420f91fa4112a1fcabcae23d3d50a1ad4fcbb59
@@ -2798,6 +2798,28 @@ relates: [PL-1769, FD-1704, SL-1770, SL-1455, FD-1729, FD-1728]
 On the same entry, remedy S-b: FD-1729 (HIGH), owner WK-1178, P2. The application and the worker connect as `gip_app_login`, a member of `gip_app` provisioned for compose, CI and the shared container; migrations alone use the owner, through a new `GIP_MIGRATION_DATABASE_URL`. The test `database` fixture runs as the login role. The grants are found red first from that run, written as one migration with a test named on each line, and pinned by an exact map over every table. Startup refuses an owner, a superuser or a disabled artifact trigger. The login role cannot `DISABLE TRIGGER`: that is the proof that S-b makes SL-1770's triggers tamper-resistant. After SL-1770, the G2 merges and the `SL-1455` NFR session, before the 4 Nov P2 code freeze, with a full gate and a compose run on a fresh volume. The login role is asserted not superuser, not owner, `NOBYPASSRLS`, and unable to `SET session_replication_role`, red on `main` (the same entry's superuser item). Plan: `PL-1769`; DP-14 to DP-20 ruled by the maintainer (by delegation), `to-lead.md` "2026-10-14 12:18:57 BST" item (2). *(Cut 2026-10-14 under working id 8041, reserved by the lead, `eta.md` "2026-10-14 12:02:15 BST".)* *(Amended 2026-10-14 by the planner, on the same plan review: every test connection built from `test_database_url()` (37 files) moves to the login role, and an owner connection is named with a reason (plan review R1, 2026-10-14); one membership predicate, P-own (`pg_has_role(…, 'MEMBER')` against owners, superusers and `BYPASSRLS` roles), everywhere (plan review R4, 2026-10-14); the startup trigger check asserts each declared trigger exists with `tgenabled IN ('O','A')` and a pinned function-body hash (plan review R5, 2026-10-14); the red-run grants are diffed against the write-site census in the `LG-` (plan review R6, 2026-10-14); provisioning converges with an unconditional `ALTER ROLE … NOREPLICATION …` and is proved by two runs, rc 0, on a separate compose project (plan review R7, 2026-10-14); a stated, rehearsed rollback, a non-default password on the shared container, set as a pre-hashed SCRAM verifier (plan review R8, 2026-10-14); unused `jobs` and `outbox` `DELETE` revoked (plan review R9, 2026-10-14); the implicit `SELECT`s, `tenant_marker`, the worker check inside `asyncio.run` and `examples/fremtpl2/seed.py` as a DSN consumer in the tasks (plan review R11, 2026-10-14). the five write paths with no production caller are not granted (DP-22, the same entry); every test connection goes through the login role but for one listed owner-only fixture, each user by node id (12:42:33; 13:21:41); `examples/fremtpl2/seed.py` runs as the login role with only its bootstrap (`grant_demo_principals`) on the owner connection (13:21:41); compose binds every published port to `127.0.0.1`, applied to the running shared stack only as a GO-time act the maintainer names (the same entry).)*
 
 (Minted 2026-10-17 as SL-1771 from working id 8041, with PL-1769 from working id 8016, in plans batch P2 mint PR.)
+
+#### SL-1773 — WK-1178 fix slice — FD 8097: a scalar one-row GLM predict for model_call, bit-identical to the polars path
+
+```yaml
+id: SL-1773
+family: slice
+title: WK-1178 fix slice — FD 8097: a scalar one-row GLM predict for model_call, bit-identical to the polars path
+status: closed                   # draft → active → closed | retired (§1.2a)
+created: 2026-10-17
+owner: planner                   # cut in the map plan (draft); lead dispatches (active)
+tree: 9469721db3d26480824cc1d715da2ec4ca9044d0
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1772, SL-1543, SL-1274, SL-1341]
+```
+
+On the maintainer's ruling of 2026-10-17 20:48:15 BST (the SL-1543 diagnosis accepted), item 2: fix (A) as its own small slice. FD 8097 (HIGH, WK-1178): a `model_call` to a GLM costs ~16.9 ms/quote through a one-row polars `collect` in `resolve_factors` (8.6× main), on the production `/score` and batch paths, NFR-489-relevant, blocking G2. `_GlmScorer.predict` (`packages/pricing-core/src/pricing_core/rating/runtime.py:822` on `9469721d`) gets a scalar one-row path with no polars frame; `predict_glm` stays for batches. Proof: a parity test, red first, asserting exact `==` of every predicted value against the polars path over the demo goldens and the seed's dislocation portfolio quotes, with the same `PredictionError` codes on the refusals; a diagnostic per-quote timing, printed, never asserted. `float` return and Decimal composition unchanged. (B), (D) and (E) are refused; (C) runs as data only. Gate on a free slot after the proof pair. SL-1543 keeps B4, waits for this merge, then re-merges and re-gates SOLO. Plan: `PL-1772`. Ledger: LG 8100, filed by the executor at build. *(Cut 2026-10-17 under working id 8099, reserved by the lead.)*
+
+(Activated 2026-10-17 as WK-1178's FD 8097 fix slice, on the maintainer's "plan + GO now" (2026-10-17 20:48:15 BST, ruling item 2), with `PL-1772` activated in the same commit.)
+
+Minted 2026-10-17 from working id 8099 on the maintainer's re-allocation (to-lead 2026-10-17 21:30:18 BST).
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 

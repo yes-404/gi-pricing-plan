@@ -221,7 +221,14 @@ async def bulk_operate_rate_table(
 @router.get(
     "/rate-tables/{slug}@{version}/export/csv",
     summary="Export the version's cells as CSV",
-    responses=problems(401, 403, 404),
+    response_class=Response,
+    responses={
+        **problems(401, 403, 404),
+        200: {
+            "description": "The version's cells as CSV (FR-235)",
+            "content": {"text/csv": {"schema": {"type": "string"}}},
+        },
+    },
 )
 async def export_rate_table_csv(
     slug: str,
@@ -242,7 +249,18 @@ async def export_rate_table_csv(
 @router.get(
     "/rate-tables/{slug}@{version}/export/xlsx",
     summary="Export the version's cells as XLSX",
-    responses=problems(401, 403, 404),
+    response_class=Response,
+    responses={
+        **problems(401, 403, 404),
+        200: {
+            "description": "The version's cells as XLSX (FR-235)",
+            "content": {
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                    "schema": {"type": "string", "format": "binary"}
+                }
+            },
+        },
+    },
 )
 async def export_rate_table_xlsx(
     slug: str,
