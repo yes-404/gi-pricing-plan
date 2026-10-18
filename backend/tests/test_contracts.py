@@ -1665,7 +1665,6 @@ _COMPARED_CONSTRAINTS: Final[frozenset[str]] = frozenset(
 #: both directions.
 ONE_SIDED_KEYWORDS: Final[dict[tuple[str, str], frozenset[str]]] = {
     ("banding", "band_stats.[].frequency"): frozenset({"minimum"}),
-    ("banding", "slug"): frozenset({"pattern"}),
     ("custom-objective", "applicability.backends"): frozenset({"minItems"}),
     ("custom-objective", "applicability.responses"): frozenset({"minItems"}),
     ("dataset-version", "tables"): frozenset({"minItems"}),
@@ -1682,7 +1681,6 @@ ONE_SIDED_KEYWORDS: Final[dict[tuple[str, str], frozenset[str]]] = {
     ("grouping", "evidence.target_level_stats.[].severity_ci"): frozenset(
         {"minItems", "maxItems"}
     ),
-    ("grouping", "slug"): frozenset({"pattern"}),
     ("job", "error.code"): frozenset({"pattern"}),
     ("job", "result.kind"): frozenset({"pattern"}),
     ("model", "fit_result.bins.[].cuts"): frozenset({"minItems"}),
