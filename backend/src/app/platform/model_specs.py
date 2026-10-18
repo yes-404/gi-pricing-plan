@@ -118,7 +118,7 @@ def _estimated_parameters(factors: list[Factor], profile: Profile | None) -> int
     **An expression Factor is counted by `_expression_levels`, never from
     `source_columns[0]`.** The first column alone under-counts a formula over several, and
     an under-count weakens the refusal this estimate feeds (the maintainer, 2026-10-16
-    10:42:37, Q1; `LG-8062`). Where that bound is unknown the factor adds the one parameter
+    10:42:37, Q1; `LG-1817`). Where that bound is unknown the factor adds the one parameter
     any factor adds and `_unbounded_expressions` reports it so the gate can refuse.
     """
     columns = {c.name: c for c in profile.columns} if profile else {}

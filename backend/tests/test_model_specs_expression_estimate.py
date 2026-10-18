@@ -4,7 +4,7 @@
 it sized every factor from `source_columns[0]`, which is right for an identity factor and
 under-counts an expression: a formula over two columns can take as many levels as the
 columns' combinations. An under-count *weakens a refusal*, so it is a defect and not a
-rounding (the maintainer, 2026-10-16 10:42:37, Q1; `LG-8062`).
+rounding (the maintainer, 2026-10-16 10:42:37, Q1; `LG-1817`).
 
 Pure tests: `complexity_or_refuse` takes the factors and a profile, no database.
 """

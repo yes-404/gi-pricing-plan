@@ -5,7 +5,7 @@ NOT NULL on such a table failed with a bare `NotNullViolation` and no reason (WK
 audit F-C2, to-lead "2026-10-18 18:20:40 BST"). The migration must count those rows, name the
 count (never a value) and stop before the `ALTER`; it must never delete or convert data (a
 Banding is append-only, FR-101). These tests run the real `downgrade()` against a recording
-`op`; `alembic downgrade -1` against a real database is the round-trip window in `LG-8062`.
+`op`; `alembic downgrade -1` against a real database is the round-trip window in `LG-1817`.
 """
 
 from __future__ import annotations

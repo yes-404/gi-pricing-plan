@@ -1,9 +1,9 @@
 ---
-id: LG-8062
+id: LG-1817
 family: ledger
 title: WK-690 slice SL-1274 — S4, expression Factors (PL-1621, PL-1665), slice ledger
 status: active                 # active → closed (§1.2a)
-created: 2026-10-16
+created: 2026-10-18   # filed 2026-10-16 under working id 8062; minted 2026-10-18 as LG-1817
 owner: executor
 tree: 81fabac462f4c8c6cee901b07aae85bfad334522
 phase: P2
@@ -14,7 +14,9 @@ corrected_by: []
 relates: [PL-1621, PL-1665, PL-1268, SL-1274, RL-1615, RL-1700, FD-1704, FD-1619, FR-95, FR-97, FR-208]
 ---
 
-# LG 8062 — SL-1274: expression Factors
+# LG-1817 — SL-1274: expression Factors
+
+*(Minted 2026-10-18 as LG-1817 from the working id 8062 by the mint commit of the fix4-1274 seat, under to-lead "2026-10-18 18:20:40 BST" (5). The entries below keep the working id 8062 they were written under.)*
 
 Working id 8062 (space form, unminted). Branch `sl-1274-wk690-s4-factor-expression`, worktree
 `.claude/worktrees/sl-1274`, base `origin/main` `0877e6e7`. Plans `PL-1621` row 1, `PL-1665` S4 (4.1′, 4.3′,
