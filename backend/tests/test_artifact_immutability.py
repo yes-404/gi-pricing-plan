@@ -18,6 +18,7 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
+from app.db.models import Base
 from app.db.session import Database
 from app.platform import datasets, profiles, validation
 from model_schema import (
@@ -35,37 +36,20 @@ from model_schema.datasets import VALID_DATASET_TRANSITIONS, DatasetStatus
 
 ACTOR = Principal(kind=ActorKind.USER, id=new_uuid7(), display="a@insurer.example")
 
-#: Layer 1 holds these and nothing else. Ordered as the database reports them.
-#:
-#: **Added 2026-10-18 (WK-1178, SL-1770, FD-1704, FD-1728) as a temporary red:** the eleven
-#: tables FD-1704 and FD-1728 name, so this list shows layer 1's state on the base. PL-1769 Task 2
-#: replaces this constant with the set derived from the ORM declaration (DP-8).
-APPEND_ONLY_TABLES = (
-    "audit_events",
-    "backtests",
-    "bandings",
-    "deployments",
-    "diagnostics",
-    "factors",
-    "groupings",
-    "metric_certificates",
-    "model_comparisons",
-    "objective_certificates",
-    "profiles",
-    "rate_table_cells",
-    "rate_table_versions",
-    "rate_tables",
-    "rating_algorithms",
-    "reference_rows",
-    "reference_table_versions",
-    "reference_tables",
-    "regression_suite_versions",
-    "regression_suites",
-    "sub_graph_versions",
-    "transparency_artifacts",
-    "validation_acknowledgements",
-    "validation_reports",
-)
+
+
+def _declared(kind: str) -> tuple[str, ...]:
+    """The tables whose ORM declaration says `kind` (DP-8): derived, never restated.
+
+    Every mapped table declares `immutability` in `__table_args__` (`app/db/models.py`); a table
+    that declares nothing fails `test_every_mapped_table_declares_its_immutability`. The set of
+    tables Layer 1 locks is therefore read from where the table is written, and a new artifact
+    table cannot be forgotten silently (FD-1728). It replaces the list that was written out here,
+    which had thirteen names and was why eleven artifact tables were missed.
+    """
+    return tuple(
+        sorted(t.name for t in Base.metadata.sorted_tables if t.info.get("immutability") == kind)
+    )
 
 
 async def _grant(database: Database, workspace_id) -> None:
@@ -289,12 +273,12 @@ async def test_the_application_role_holds_only_select_and_insert(
     pass unnoticed, since the triggers would still refuse and every test above would stay
     green while the first layer was gone.
 
-    The list is written out rather than derived, and that is the point: the trigger test
-    below *derives* its table list from these grants, so a table quietly regranted `UPDATE`
-    would drop out of its set and be checked by nobody. This test is what notices.
+    The set is derived from the ORM declaration (DP-8), **not from these grants**, and that is
+    the point: a table quietly regranted `UPDATE` stays in the declared set and is noticed here.
+    The grants-derived trigger test this replaces dropped such a table out of its own set.
     """
     async with database.session() as session:
-        for table in APPEND_ONLY_TABLES:
+        for table in _declared("append_only"):
             granted = {
                 row[0]
                 for row in (
@@ -394,7 +378,7 @@ async def _referencing_closure(database: Database, table: str) -> str:
 #: its parent first). Bare `INSERT`s: the artifact's real production path is exercised by its own
 #: module's tests, and what is under test here is the table, not the writer.
 _APPEND_ONLY_ROWS: dict[str, str | tuple[str, ...]] = {
-    #: **Added 2026-08-23 (W32-6).** `backtests` was in `APPEND_ONLY_TABLES` above — so the
+    #: **Added 2026-08-23 (W32-6).** `backtests` was in the append-only set above — so the
     #: grants and the both-triggers checks covered it — and absent from this list, which is
     #: the only one that makes a trigger *fire*. Every other locked table had its refusal
     #: observed and this one did not.
@@ -621,6 +605,53 @@ async def test_a_guarded_artifact_moves_only_forward_from_the_owner_connection(
         assert outcome is None, f"{table}: {statement} was refused: {outcome}"
 
 
+@pytest.mark.req("FR-44")
+async def test_a_gip_app_update_on_factors_is_refused_by_the_trigger_not_only_the_grant(
+    database: Database, workspace_id
+) -> None:
+    """FD-1704 and the maintainer's ADD (PL-1769 DP-1 (a)): the planted UPDATE is refused.
+
+    Two observations, told apart by message and not by SQLSTATE (both are 42501): the grant
+    refuses `gip_app` first, and the trigger refuses it again when a later migration grants
+    `UPDATE` back. That second case is the one a grants-derived set could not see.
+    """
+    row_id = new_uuid7()
+    row = _row_params(workspace_id, row_id)
+    async with database.unit_of_work() as session:
+        await session.execute(text(str(_APPEND_ONLY_ROWS["factors"])), row)
+    planted = text("UPDATE factors SET body = '{\"rewritten\": true}' WHERE id = :id")
+
+    async def as_gip_app(*, reopen_layer_1: bool) -> None:
+        # `database.session()` never commits, so neither the role switch nor the GRANT survives.
+        async with database.session() as session:
+            if reopen_layer_1:
+                await session.execute(text("GRANT UPDATE ON factors TO gip_app"))
+            await session.execute(text("SET LOCAL ROLE gip_app"))
+            await session.execute(planted, {"id": row_id})
+
+    # Layer 1: the grant.
+    with pytest.raises(DBAPIError) as by_grant:
+        await as_gip_app(reopen_layer_1=False)
+    assert "permission denied for table factors" in str(by_grant.value)
+
+    # Layer 2: the trigger, with layer 1 reopened inside this transaction only.
+    with pytest.raises(DBAPIError) as by_trigger:
+        await as_gip_app(reopen_layer_1=True)
+    assert "factors is append-only: UPDATE rejected (01 FR-42, FR-43)" in str(by_trigger.value)
+
+    async with database.session() as session:
+        leaked = (
+            await session.execute(
+                text("SELECT has_table_privilege('gip_app', 'factors', 'UPDATE')")
+            )
+        ).scalar_one()
+        body = (
+            await session.execute(text("SELECT body FROM factors WHERE id = :id"), {"id": row_id})
+        ).scalar_one()
+    assert leaked is False
+    assert body == {"stored": True}
+
+
 #: The six tables that carry a row guard and no `TRUNCATE` trigger today (plan review R2).
 _ROW_GUARDED_ONLY = (
     "approval_requests",
@@ -652,56 +683,137 @@ async def test_a_row_guarded_table_refuses_truncate_from_the_owner_connection(
 
 
 @pytest.mark.req("FR-44")
-async def test_every_table_the_grants_call_append_only_carries_both_triggers(
+def test_every_mapped_table_declares_its_immutability() -> None:
+    """A table that declares nothing fails here on the day it is added (FD-1728)."""
+    failures = []
+    for table in Base.metadata.sorted_tables:
+        kind = table.info.get("immutability")
+        if kind not in {"append_only", "guarded", "mutable"}:
+            failures.append(f"{table.name}: immutability={kind!r}")
+        elif kind != "append_only" and not table.info.get("reason"):
+            failures.append(f"{table.name}: {kind} without a reason")
+        elif kind == "guarded" and not table.info.get("guards"):
+            failures.append(f"{table.name}: guarded without its named guard triggers")
+    assert failures == []
+
+
+@pytest.mark.req("FR-44")
+async def test_the_declarations_cover_every_table_in_the_database(database: Database) -> None:
+    """Closed both ways against `pg_class`: nothing is undeclared, nothing declared is absent."""
+    async with database.session() as session:
+        public = {
+            row[0]
+            for row in (
+                await session.execute(
+                    text("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
+                )
+            ).all()
+        }
+    assert public - {"alembic_version"} == {t.name for t in Base.metadata.sorted_tables}
+
+
+async def _triggers(database: Database, tables: tuple[str, ...]) -> dict[str, dict[str, set[str]]]:
+    """`{table: {"row": {names}, "statement": {names}}}` for the non-internal triggers."""
+    found: dict[str, dict[str, set[str]]] = {t: {"row": set(), "statement": set()} for t in tables}
+    async with database.session() as session:
+        rows = (
+            await session.execute(
+                text("""
+                    SELECT c.relname, t.tgname, (t.tgtype & 1 = 1) AS is_row
+                    FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid
+                    WHERE c.relnamespace = 'public'::regnamespace AND NOT t.tgisinternal
+                      AND c.relname = ANY(:tables)
+                """),
+                {"tables": list(tables)},
+            )
+        ).all()
+    for table, name, is_row in rows:
+        found[table]["row" if is_row else "statement"].add(name)
+    return found
+
+
+@pytest.mark.req("FR-44")
+async def test_every_declared_append_only_table_carries_both_triggers(
     database: Database,
 ) -> None:
     """The check that catches the *next* table, rather than the six this slice found.
 
-    FR-44 was raised naming three tables, measured by hand. Measuring the invariant
-    instead of re-reading the list found three more — `bandings`, `groupings` and
-    `objective_certificates` each had the `TRUNCATE` half and not the row half, and
-    `c3d4e5f6a7b8` claimed in a comment that a direct `UPDATE` was refused while it was not.
-    Nothing could fail while that was untrue.
+    The set is the ORM declaration's (DP-8), not the grants': a table whose grants were widened
+    by a later migration is still in it. Each carries `<table>_no_modify` (a row trigger) and
+    `<table>_no_truncate` (a statement trigger): a row trigger does not fire on `TRUNCATE`.
+    """
+    declared = _declared("append_only")
+    # Guard against the derivation going quiet: an empty set passes every assertion below.
+    assert len(declared) >= 22, declared
+    found = await _triggers(database, declared)
+    missing = [
+        t
+        for t in declared
+        if f"{t}_no_modify" not in found[t]["row"]
+        or f"{t}_no_truncate" not in found[t]["statement"]
+    ]
+    assert missing == [], f"append-only tables missing a trigger: {missing}"
 
-    So the table list is **derived**: a table whose grants say `SELECT, INSERT` and nothing
-    else is a table the schema has declared append-only, and it must carry both triggers.
-    `blobs` and `custom_objectives` are correctly outside the set — both hold `UPDATE` for a
-    stated reason, and both have their own narrower trigger.
+
+@pytest.mark.req("FR-44")
+async def test_every_guarded_table_carries_its_named_guards_and_the_truncate_trigger(
+    database: Database,
+) -> None:
+    """Each `guarded` table: every guard its declaration names is a row trigger, plus
+    `<table>_no_truncate` (plan review R2: red on the base for the six row-guarded tables)."""
+    guarded = _declared("guarded")
+    assert len(guarded) >= 13, guarded
+    found = await _triggers(database, guarded)
+    missing = []
+    for table in guarded:
+        info = next(t.info for t in Base.metadata.sorted_tables if t.name == table)
+        for guard in info["guards"]:
+            if guard not in found[table]["row"]:
+                missing.append(f"{table}: row trigger {guard}")
+        if f"{table}_no_truncate" not in found[table]["statement"]:
+            missing.append(f"{table}: {table}_no_truncate")
+    assert missing == []
+
+
+@pytest.mark.req("FR-44")
+async def test_the_two_guarded_artifacts_grant_the_application_one_column_update(
+    database: Database,
+) -> None:
+    """Layer 1 for `rate_tables` and `reference_table_versions` (DP-12): the one column that moves.
+
+    Table-level `UPDATE` is not granted (the exact-grant test would see it); the column
+    privilege is what the guarded transition needs, and it is pinned here exactly.
     """
     async with database.session() as session:
         rows = (
             await session.execute(
                 text("""
-                    SELECT g.table_name,
-                           count(*) FILTER (WHERE t.tgtype & 1 = 1) AS row_triggers,
-                           count(*) FILTER (WHERE t.tgtype & 1 = 0) AS statement_triggers
-                    FROM (
-                        SELECT table_name
-                        FROM information_schema.role_table_grants
-                        WHERE grantee = 'gip_app'
-                        GROUP BY table_name
-                        HAVING string_agg(DISTINCT privilege_type, ',' ORDER BY privilege_type)
-                               = 'INSERT,SELECT'
-                    ) g
-                    JOIN pg_class c
-                      ON c.relname = g.table_name AND c.relnamespace = 'public'::regnamespace
-                    LEFT JOIN pg_trigger t ON t.tgrelid = c.oid AND NOT t.tgisinternal
-                    GROUP BY g.table_name
-                    ORDER BY g.table_name
+                    SELECT table_name, array_agg(column_name::text ORDER BY column_name)
+                    FROM information_schema.column_privileges
+                    WHERE grantee = 'gip_app' AND privilege_type = 'UPDATE'
+                      AND table_name IN ('rate_tables', 'reference_table_versions')
+                    GROUP BY table_name
                 """)
             )
         ).all()
-
-    # Guard against the query itself going quiet: an empty or shrunken result would pass
-    # every assertion below while proving nothing.
-    assert {row[0] for row in rows} == set(APPEND_ONLY_TABLES)
-
-    missing = [
-        (table, row_triggers, statement_triggers)
-        for table, row_triggers, statement_triggers in rows
-        if row_triggers < 1 or statement_triggers < 1
-    ]
-    assert missing == [], f"append-only tables missing a trigger: {missing}"
+    assert dict(rows) == {
+        "rate_tables": ["current_version", "updated_at"],
+        "reference_table_versions": ["status"],
+    }
+    async with database.session() as session:
+        table_level = {
+            row[0]
+            for row in (
+                await session.execute(
+                    text("""
+                        SELECT DISTINCT privilege_type FROM information_schema.table_privileges
+                        WHERE grantee = 'gip_app'
+                          AND table_name IN ('rate_tables', 'reference_table_versions')
+                    """)
+                )
+            ).all()
+        }
+    assert table_level == {"SELECT", "INSERT"}
 
 
 # -- `dataset_versions`: the immutable snapshot, guarded (DP-21; FD-1728) ---------------
