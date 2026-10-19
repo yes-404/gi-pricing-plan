@@ -3,7 +3,7 @@ id: PL-1769
 family: plan
 kind: map
 title: WK-1178 — the artifact tables append-only at the database (SL-1770) and the application off the owner role (SL-1771) — a dated Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a) — DP-1 to DP-7 ruled at 10:29:14, DP-8 to DP-20 at 12:18:57, DP-21 and DP-22 (plan review, 2026-10-14) at 12:42:33, DP-21b at 13:21:41, refined at 13:27:39 and 15:14:52; activation is the lead's
+status: active                  # draft → active → superseded | retired (§1.2a) — DP-1 to DP-7 ruled at 10:29:14, DP-8 to DP-20 at 12:18:57, DP-21 and DP-22 (plan review, 2026-10-14) at 12:42:33, DP-21b at 13:21:41, refined at 13:27:39 and 15:14:52; activation is the lead's
 created: 2026-10-17          # original date 2026-10-14, set at the filing; minted 2026-10-17
 owner: planner
 tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
@@ -630,6 +630,17 @@ guards** are the row-trigger names the declaration's `"guards"` lists; every `ap
 | 57 | `workspace_members` | mutable — **INSERT-only** | — | INS (`workspaces.py:115`; seed only, DP-22) | deferred (below) |
 | 58 | `workspace_settings` | mutable | — | INS; UPD(`value`) | a setting's value is replaced (`settings.py:549-551`) |
 | 59 | `workspaces` | mutable — **INSERT-only** | — | INS (`workspaces.py:44`; seed only, DP-22) | deferred (below) |
+
+**Dated addition, 2026-10-19 (row 60; the 59-row table above is unchanged).** `blob_uploads`
+(`BlobUploadRow`, `backend/src/app/db/models.py`, `__tablename__ = "blob_uploads"`) was mapped by
+`e7c3a9b15d82` after the 59-row classification was taken. The maintainer (by delegation) confirmed
+`mutable` in `to-lead.md` "2026-10-18 23:27:47 BST", on the condition that no artifact row derives
+its identity from `blob_uploads` after promotion. Counts with this row: **22 `append_only`, 13
+`guarded`, 25 `mutable`** (of the 25: 13 INSERT-only, 1 read-only, 11 updated in place).
+
+| # | Table | Class | Row guards | Writes (census) | Reason |
+|---|---|---|---|---|---|
+| 60 | `blob_uploads` | mutable | — | INS; UPD(`job_id`, `sha256`) | a staging receipt: completion sets `job_id` and `sha256` in place (`api/blobs.py`, `platform/blobs.py` `promote_upload`); the content-addressed blob is the artifact, and every consumer pins it by its own `sha256` |
 
 **The 13 INSERT-only tables and `tenant_marker`: deferred, with an owner.** Their declaration
 is `mutable` because the catalog leaves them so and none is in the maintainer's ruled set
