@@ -210,52 +210,6 @@ def governed_workspace(*, approved: bool, scoring: list[str] = SCORING_PERMISSIO
     return Workspace(str(workspace_id), scorer, users, str(rating_id), ref, quote)
 
 
-def approve_draft(ws: Workspace) -> None:
-    """Approve the draft `governed_workspace(approved=False)` left, the SAME Rating Version.
-
-    PL-1766 D5.11 (the maintainer's entry "2026-10-19 03:23:43 BST", fix A): the evidence step
-    `create_approved_rating_version` runs is `author_demo_rating_evidence` (it compiles the
-    draft through the `rating.compile` Job, then runs the regression), then
-    `submit_and_approve_demo` (submit through the gate, two approvers decide). Both are the
-    example's own functions, called on the existing version rather than a second one.
-    """
-    from backend.tests.test_demo_rating_evidence import _BASE_MINOR, _bandings, demo_model
-    from backend.tests.test_wf699_journey import _seed_module
-    from sqlalchemy import select
-
-    from app.db.models import ModelRow
-    from app.db.session import Database
-    from app.platform.blobs import BlobStore
-
-    settings = compose_settings()
-    workspace_id, rating_id = UUID(ws.workspace_id), UUID(ws.rating_version_id)
-
-    async def approve() -> None:
-        database, blobs = Database(settings), BlobStore(settings)
-        try:
-            await blobs.ensure_bucket()
-            people = await _seed_module().grant_demo_principals(database, workspace_id)
-            async with database.session() as session:
-                model_id = (
-                    await session.execute(
-                        select(ModelRow.id).where(ModelRow.workspace_id == workspace_id)
-                    )
-                ).scalar_one()
-            _, fit = await demo_model.load_approved_glm(database, workspace_id, model_id)
-            await demo_model.author_demo_rating_evidence(
-                database, blobs, workspace_id, people["analyst"], rating_id,
-                demo_model.demo_golden_cases(fit, _bandings(), _BASE_MINOR),
-            )  # fmt: skip
-            await demo_model.submit_and_approve_demo(
-                database, blobs, workspace_id, people["actuary"], people["approver"],
-                people["second_approver"], rating_id,
-            )  # fmt: skip
-        finally:
-            await database.dispose()
-
-    asyncio.run(approve())
-
-
 def create_scorer(admin: dict[str, str], permissions: list[str]) -> dict[str, str]:
     """The scoring key, through the product's own route: `POST /api/v1/service-accounts`, called
     by a principal holding `admin:manage_service_accounts` (the demo `admin`). Returns the key's
