@@ -449,11 +449,11 @@ _APPEND_ONLY_ROWS: dict[str, str | tuple[str, ...]] = {
     #: `regression_suite_versions.suite_id` is the one foreign key among the eleven (E4).
     "regression_suites": (
         "INSERT INTO regression_suites (id, workspace_id, slug, algorithm_slug, created_by) "
-        "VALUES (:id, :ws, :slug, 'alg-' || :slug, gen_random_uuid())"
+        "VALUES (:id, :ws, :slug, 'alg-' || CAST(:slug AS varchar), gen_random_uuid())"
     ),
     "regression_suite_versions": (
         "INSERT INTO regression_suites (id, workspace_id, slug, algorithm_slug, created_by) "
-        "VALUES (:id, :ws, :slug, 'alg-' || :slug, gen_random_uuid())",
+        "VALUES (:id, :ws, :slug, 'alg-' || CAST(:slug AS varchar), gen_random_uuid())",
         "INSERT INTO regression_suite_versions (id, suite_id, version, content, content_hash, "
         "change_note, created_by) VALUES (:id, :id, 1, :body, 'sha256:' || repeat('a', 64), "
         "'n', gen_random_uuid())",
