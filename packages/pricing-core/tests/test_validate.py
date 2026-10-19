@@ -22,7 +22,12 @@ from model_schema import (
     ValidationRule,
     ValidationRuleSet,
 )
-from pricing_core.data.validate import CHECKS, register_check, run_validation
+from pricing_core.data.validate import (
+    CHECKS,
+    ValidationContext,
+    register_check,
+    run_validation,
+)
 
 EXPOSURE = pl.DataFrame(
     {
@@ -545,3 +550,67 @@ def test_distributional_rules_answer_from_a_stored_profile() -> None:
     assert outcomes["volume-shift"].measured["reference_rows"] == 400
     # Neither skipped, which is the claim: no reference frame was supplied.
     assert all(r.outcome is not RuleOutcome.SKIPPED for r in report.results)
+
+
+# -- FR-32 / FD-1744 limb (b): validation counts what the recipe quarantined ----------------
+
+_CLEAN = pl.DataFrame({"k": ["a"], "claim_amount": [1.5], "start_date": [None]}).cast(
+    {"start_date": pl.Date}
+)
+_REJECTED = pl.DataFrame(
+    {
+        "k": ["b", "c", "d"],
+        "_reject_reason": ["r", "r", "r"],
+        "_reject_column": ["claim_amount", "claim_amount", "start_date"],
+        "_reject_step": ["cast", "cast", "parse_date"],
+    }
+)
+
+
+def _outcome(check: str, tables: dict[str, pl.DataFrame], params: dict):
+    rule = _rule(check, layer=ValidationLayer.STRUCTURAL, params=params)
+    return CHECKS[check](rule, tables, ValidationContext(reference_tables={}, reference_frames={}))
+
+
+@pytest.mark.req("FR-32")
+def test_dtype_match_counts_the_cells_the_recipe_quarantined() -> None:
+    declared = {"claim_amount": "float64", "start_date": "date"}
+    tables = {"policy_exposure": _CLEAN, "_rejected": _REJECTED}
+    outcome = _outcome("dtype_match", tables, {"columns": declared})
+    assert outcome.measured["coerced_cells"] == {"claim_amount": 2, "start_date": 1}
+    assert outcome.violating_rows == 3
+
+    clean = _outcome("dtype_match", {"policy_exposure": _CLEAN}, {"columns": declared})
+    assert clean.measured["coerced_cells"] == {}
+    assert clean.violating_rows == 0
+
+
+@pytest.mark.req("FR-32")
+def test_date_parsed_counts_the_cells_the_recipe_quarantined() -> None:
+    tables = {"policy_exposure": _CLEAN, "_rejected": _REJECTED}
+    outcome = _outcome("date_parsed", tables, {"columns": ["start_date"]})
+    assert outcome.measured["coerced_cells"] == {"start_date": 1}
+    assert outcome.violating_rows == 1
+
+
+@pytest.mark.req("FR-32")
+def test_a_required_null_reject_is_not_a_coerced_cell() -> None:
+    """Only `cast` and `parse_date` rejects are coercions; a required-column null is VR-STR-3's."""
+    rejected = _REJECTED.with_columns(pl.lit("required_non_null").alias("_reject_step"))
+    tables = {"policy_exposure": _CLEAN, "_rejected": rejected}
+    outcome = _outcome("dtype_match", tables, {"columns": {"claim_amount": "float64"}})
+    assert outcome.measured["coerced_cells"] == {}
+
+
+@pytest.mark.req("FR-32")
+def test_range_ignores_a_genuine_null_and_that_is_safe_under_the_quarantine() -> None:
+    """G4: a coerced null never reaches `range` (the row is quarantined, DP-C3 (ii)), so its
+    null-ignoring cannot hide a coercion; a null that must not be null is VR-STR-3's verdict."""
+    frame = pl.DataFrame({"k": ["a", "b"], "claim_amount": [None, 5.0]})
+    rule = _rule(
+        "range",
+        target={"table": "policy_exposure", "column": "claim_amount"},
+        params={"min_inclusive": 0, "key_columns": ["k"]},
+    )
+    ctx = ValidationContext(reference_tables={}, reference_frames={})
+    assert CHECKS["range"](rule, {"policy_exposure": frame}, ctx).violating_rows == 0

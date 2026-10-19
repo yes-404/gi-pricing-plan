@@ -80,8 +80,8 @@ used here unchanged. Additional terms owned by this module:
 | **FR-28** | The platform accepts CSV, TSV, parquet, and Excel (`.xlsx`, first sheet or a named sheet) for `upload`/`object_store` sources, and any query result for `sql`. Compressed variants (`.gz`, `.zst`) are transparently handled. |
 | **FR-29** | On first ingestion the platform **infers** a candidate schema (column names, dtypes, nullability, cardinality, candidate keys, date formats) and presents it for confirmation. The user may correct any inference before the version leaves `draft`. Subsequent versions of the same Dataset default to the previous version's schema. |
 | **FR-30** | Column names are normalised to `snake_case` on ingest; the original name is retained in the Data Dictionary as `source_name`. The normalisation is deterministic and collision-detecting (a collision is an ingestion error, not a silent rename). |
-| **FR-31** | Ingestion records, per run: rows read, rows written, rows rejected with reject reason and a sample, bytes read, duration, source fingerprint (file sha256 / query text hash + extraction timestamp), and library versions. |
-| **FR-32** | Rows that cannot be parsed at all (malformed CSV, unparseable dates in a required date column) are **rejected to a quarantine table** stored with the version rather than dropped silently. A version with rejects can still be validated; a configurable rule (`ingest.reject_rate`) fails it above a threshold. |
+| **FR-31** | Ingestion records, per run: rows read, rows written, rows rejected with reject reason and a sample, bytes read, duration, source fingerprint (file sha256 / query text hash + extraction timestamp), and library versions. *(Amended 2026-10-18, WK-1178, SL-1738, PL-1737 DP-S1 (i), on the maintainer's (by delegation) entries "2026-10-14 12:31:22 BST" and "2026-10-14 12:42:55 BST" in `to-lead.md`: a run also records `step_counts`, one entry per recipe step in order, each with the step's `name`, its `rows_in` and `rows_out` (the table's row count before and after the step) and its `rows_rejected` (the source rows the step quarantined). Its rows then balance: rows read − rows rejected − Σ rows removed by steps + Σ rows added by steps = rows written, where a step's removed or added rows are its change in row count net of its quarantine.)* |
+| **FR-32** | Rows that cannot be parsed at all (malformed CSV, unparseable dates in a required date column) are **rejected to a quarantine table** stored with the version rather than dropped silently. A version with rejects can still be validated; a configurable rule (`ingest.reject_rate`) fails it above a threshold. *(Amended 2026-10-18, WK-1178, SL-1738, PL-1737, FD-1744, on the maintainer's (by delegation) entries "2026-10-14 12:02:46 BST" item (1) and "2026-10-14 12:23:36 BST": a non-null source cell that does not survive a recipe `cast` or `parse_date` is a row "that cannot be parsed". The whole row goes to the quarantine table as its source text, with the column and the step named; the quarantine is complete for each row — no partially cast row, and no row derived from it, is written. For every recipe, rows read − rows rejected − Σ rows removed by step + Σ rows added by step = rows written (the maintainer's (by delegation) entry "2026-10-14 12:31:22 BST"). This holds on the Job path whatever columns are required (DP-C2 (a)).)* |
 | **FR-33** | Ingestion is resumable and idempotent: re-running an Ingestion Run with the same `Idempotency-Key` and unchanged source fingerprint returns the original Dataset Version rather than creating another. *Amended 2026-08-23 (`07` OQ-647): the key never expires, and a Run that **failed terminally releases it** — re-running after a failure ingests rather than handing back the failure, which is what "resumable" was always claiming. A Run that succeeded returns its Dataset Version however long ago it ran. This index is a second one over the same header and follows `07` FR-414 rather than restating it.* |
 | **FR-34** | **Ingestion produces full snapshots** (OQ-558, decided 2026-08-14). A Dataset Version is always a complete, independently validatable body of data — never a delta against a predecessor. Should an `append` mode be added later (Phase 2), it must still **materialise a complete, content-addressed version** so that FR-4 immutability and the validation model are unaffected and only the *cost* of producing it changes. Content-addressing (ID-4) already deduplicates unchanged parquet parts across versions, so most of the storage saving is available without an append mode at all. |
 
@@ -297,6 +297,11 @@ the single answer to whether the data is fittable *(OQ-565, decided 2026-08-19)*
 }
 ```
 
+> **Amended 2026-10-18 (WK-1178, SL-1738, FD-1744).** The `_rejected` table is all text (the
+> source's own cells) and carries three reason columns: `_reject_reason`, `_reject_column`
+> (the column whose value failed the row) and `_reject_step` (`cast`, `parse_date` or
+> `required_non_null`), on the maintainer's (by delegation) entry "2026-10-14 12:23:36 BST".
+
 > **Amended 2026-08-26 (W6b-19).** OQ-568, decided (c): a version carries its
 > envelope inline, and the example above now shows every field the envelope contributes.
 > Per-field semantics: `slug` is the dataset's slug — a version is addressed as
@@ -389,10 +394,10 @@ Rule IDs here are stable and referenced by workflows and by the UI.
 | Rule | Default severity | Check |
 |---|---|---|
 | `VR-STR-1` column-presence | fail | Every column declared in the schema exists |
-| `VR-STR-2` dtype-match | fail | Each column's Arrow dtype matches the declaration (no silent coercion) |
+| `VR-STR-2` dtype-match | fail | Each column's Arrow dtype matches the declaration (no silent coercion) *(Amended 2026-10-18, WK-1178, SL-1738, FD-1744, on the maintainer's (by delegation) entry "2026-10-14 12:23:36 BST" (DP-C3 (ii)): it also counts the cells quarantined because of each declared column (`measured.coerced_cells`), violating at its declared severity whether or not the Rule Set carries `reject_rate`; there is no tolerance parameter.)* |
 | `VR-STR-3` nullability | fail | Columns declared non-nullable contain no nulls |
 | `VR-STR-4` primary-key-unique | fail | Declared primary key is unique and non-null (policy id × exposure period) |
-| `VR-STR-5` date-parse | fail | All date columns parsed to `date32`/`timestamp` with no fallback-to-string |
+| `VR-STR-5` date-parse | fail | All date columns parsed to `date32`/`timestamp` with no fallback-to-string *(Amended 2026-10-18, WK-1178, SL-1738, FD-1744, on the maintainer's (by delegation) entry "2026-10-14 12:23:36 BST" (DP-C3 (ii)): it also counts the cells quarantined because of each declared column (`measured.coerced_cells`), violating at its declared severity whether or not the Rule Set carries `reject_rate`; there is no tolerance parameter.)* |
 | `VR-STR-6` encoding | warn | No mojibake / invalid UTF-8 sequences in string columns |
 | `VR-STR-7` allowed-values | fail | Categorical columns contain only values in the declared domain |
 | `VR-STR-8` no-unexpected-columns | warn | No columns present that are absent from the schema |
@@ -954,6 +959,9 @@ def apply_recipe(
     *,
     progress: ProgressCallback | None = None,
 ) -> PreparationResult:            # .tables, .rejected, .stats
+# Amended 2026-10-18 (FD-1744, SL-1738): .rejected is now filled — each quarantined row's source text,
+# named by the step that failed it (FR-32); .stats["steps"] gains rows_rejected/rows_removed/rows_added.
+# The signature is unchanged.
 
 # packages/pricing-core/src/pricing_core/data/validate.py
 def run_validation(

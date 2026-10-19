@@ -2716,7 +2716,7 @@ On the maintainer's (by delegation) entry "2026-10-14 11:06:52 BST — D-list li
 id: SL-1738
 family: slice
 title: WK-1178 fix slice — FD-1744, a recipe cell that does not parse is never silently nulled and validation gives it a verdict (FR-32, VR-STR-2)
-status: draft                    # draft → active → closed | retired (§1.2a)
+status: closed                    # draft → active → closed | retired (§1.2a)
 created: 2026-10-16 # original date 2026-10-14, set at the draft; minted 2026-10-16
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
@@ -2756,6 +2756,8 @@ Plan `PL-1737` (a WK-1178 Work-plan delta; `draft`). **Activation needs:**
 *(Row cut 2026-10-14 by the planner, planner-fd8040; working ids 8043 and 8042 reserved by the lead.)*
 *(Amended 2026-10-14 by the planner, planner-p1fix, before merge, on the maintainer's (by delegation) entry "2026-10-14 12:31:22 BST": the identity widened, R7 and R8, DP-S1.)*
 *(Amended again 2026-10-14 by the planner, planner-p1fix, before merge, on the maintainer's (by delegation) entry "2026-10-14 12:42:55 BST": DP-S1 ruled (i), the write set widened.)*
+(Activated 2026-10-18 on the maintainer's GO, to-lead "2026-10-18 22:50:32 BST — Maintainer: the duplicate-mint anomaly ruled; GO SL-1259, SL-1770, SL-1738, SL-1575 (with conditions)"; dispatched by the lead, transcript 34b896f2.)
+(Closed 2026-10-19 as a Slice by exec-1738r's closing acts (LG-1822 minted from working id 8128), on the pre-PR audit of LG-1822 (auditor-1738, "## Audit", 2026-10-19 01:12:51 BST; head `0fbea8ad`), CLEAN, adopted by the lead (from-lead "2026-10-19 01:13:36 BST"); F4 answered in LG-1822. MERGE-ACK: not yet given.)
 
 #### SL-1740 — WK-1178 fix slice — the failed-authentication audit: a keyed-workspace refusal's audit row survives the 401, and every failure is counted by reason
 

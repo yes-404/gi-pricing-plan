@@ -11,6 +11,9 @@ Downgrade re-imposes NOT NULL, so it **refuses before altering** if an expressio
 has been stored, naming how many: the old schema cannot hold one, and a banding row cannot be
 deleted (FR-101). It never deletes or converts a row.
 
+Conditionally irreversible (FR-416): reversible until an expression Banding exists, irreversible
+after, because a Banding is append-only (FR-101) and the old schema cannot hold one.
+
 Revision ID: f2b6d90a4c17
 Revises: e7c3a9b15d82
 Create Date: 2026-10-16 09:32:28.290223+00:00

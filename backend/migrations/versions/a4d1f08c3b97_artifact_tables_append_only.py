@@ -45,7 +45,7 @@ changes none of them. The only information dropped is `data_frozen_at`, which is
 second `upgrade()` re-computes it from `status` and the audit chain by the same back-fill.
 
 Revision ID: a4d1f08c3b97
-Revises: f2b6d90a4c17
+Revises: 5c8e3b71d094
 Create Date: 2026-10-18 23:10:00.000000+00:00
 """
 
@@ -56,7 +56,7 @@ from collections.abc import Sequence
 from alembic import op
 
 revision: str = "a4d1f08c3b97"
-down_revision: str | None = "f2b6d90a4c17"
+down_revision: str | None = "5c8e3b71d094"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

@@ -62,6 +62,7 @@ def _downgrade_with(null_rows: int, monkeypatch: pytest.MonkeyPatch) -> _Op:
     return recorder
 
 
+@pytest.mark.req("FR-416")
 def test_downgrade_refuses_naming_the_count_and_alters_nothing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -86,6 +87,7 @@ def test_downgrade_refuses_naming_the_count_and_alters_nothing(
     assert "column_name is null" in recorder.statements[0].lower()
 
 
+@pytest.mark.req("FR-416")
 def test_downgrade_with_no_expression_banding_re_imposes_not_null(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
