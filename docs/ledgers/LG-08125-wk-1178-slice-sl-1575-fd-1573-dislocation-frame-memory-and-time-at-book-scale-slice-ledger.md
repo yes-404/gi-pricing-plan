@@ -138,6 +138,28 @@ The QUIET leg is **8.1 % slower** than the LOADED one; peak memory agrees within
 
 The lead's relayed pass2 figures (455.36 against 487.51) do not match the LOADED table: 967.96 − 486.01 = 481.95, so the pass2 difference is −26.59 s, not −32 s. Pass1 scoring was slower and pass2 scoring faster in the quiet leg, which is not what a load effect alone would suggest; it is recorded as run-to-run variance, which the rule above covers: time claims need at least 2 runs per leg, and memory is the stable metric.
 
+#### 2026-10-19 04:34 BST — the maintainer's interpretation of acceptance 3/4 and the decision rule for the QUIET block
+
+PL-1574 is frozen, so what follows is an **interpretation** of its acceptance items 3 and 4, not an amendment; it rides D26 as an RL. The maintainer's entry in `to-lead.md`, quoted in full:
+
+> **2026-10-19 04:34:00 BST — Maintainer: SL-1575 acceptance 3/4 — interpretation and decision rule (PL-1574 is frozen: this is an interpretation, recorded in LG 8125; it rides D26 as an RL)**
+> - **Correction accepted:** pass2 −26.59 s, not −32 s. The FINAL 12 addendum is right to fix it.
+> - **Item 4's "Task 0's" (PL-1574 :145-146) = the QUIET before-legs** on 50476d3f under the v2 protocol: the 04:11 leg (1116.35 s) plus before #2. Task 0's LOADED leg (1032.39 s) is the measurement the QUIET re-run was ordered to replace; it is recorded, not compared against.
+> - **Decision rule for item 4** (B1, B2 = before-legs; A1, A2 = after-legs at e73ecd65 or the final head):
+>   - **PASS** if mean(A) ≤ max(B1, B2);
+>   - **FAIL** ("a slower fix") if min(A) > max(B1, B2);
+>   - otherwise **INCONCLUSIVE**: one more B and one more A in the same block, then re-apply.
+>   - Report all four values plus the mean and the spread.
+> - **Item 3 (memory, :141):** decided on VmHWM from the same block. ONE after-run suffices if it falls > ~4% below the before-legs' mean. Otherwise report the change as within noise, against the item's own wording.
+> - **Order accepted:**
+>   1. SL-1770's 6.2 re-gate (script for GO);
+>   2. one QUIET block of B2, A1, A2, each ALONE, in one window, ABAB-adjacent order **B2 → A1 → A2** (two worktrees prepared before the first START);
+>   3. then acceptance 5 (R6-size under inv-rss.sh, alone);
+>   4. then the full gate on the final head.
+> - **Acceptance 5:** send me the exact R6 ruling text the seat says it needs (its stamp, or "not found"). Do not proceed on a guess.
+
+Reading, for the block script `scratch/sl1575-quiet-block.sh`: (1) item 4's "Task 0's" means the QUIET before-legs (the 04:11 leg and before #2, B2), not the LOADED 1,032.39 s leg; (2) item 4 is decided by the PASS / FAIL / INCONCLUSIVE rule above; (3) item 3 (memory) is decided on VmHWM from the same block; (4) order B2 → A1 → A2, each alone, one window, two worktrees prepared before the first START.
+
 ## PRs
 
 None yet.
