@@ -61,6 +61,7 @@ def _api_containers() -> set[str]:
 def _wait_succeeded(job: dict[str, Any], headers: dict[str, str]) -> dict[str, Any]:
     """The Job once it has `succeeded` with an output: a merely terminal Job is not enough."""
     deadline = time.monotonic() + COMPILE_BOUND_SECONDS
+    current = job
     while time.monotonic() < deadline:
         current = api("GET", f"/api/v1/jobs/{job['id']}", headers)
         if current["status"] == "succeeded":
@@ -69,7 +70,11 @@ def _wait_succeeded(job: dict[str, Any], headers: dict[str, str]) -> dict[str, A
             return current
         assert current["status"] not in {"failed", "cancelled"}, current
         time.sleep(1)
-    raise AssertionError(f"compile job {job['id']} did not succeed in {COMPILE_BOUND_SECONDS}s")
+    raise AssertionError(
+        f"compile job {job['id']} did not succeed in {COMPILE_BOUND_SECONDS}s; last seen: "
+        f"status={current.get('status')!r} result={current.get('result')!r} "
+        f"error={current.get('error')!r} job={current!r}"
+    )
 
 
 def test_a_deploy_switches_every_api_process_and_a_default_live_quote_is_served() -> None:
