@@ -31,11 +31,38 @@ Base: `origin/main` `84b0ff5765e55bc8edd139cd22bb57cd474de807`. Branch `sl-1770-
 
 ### Task list
 
-(entries follow; the order is the plan's)
+The plan's order, each task with the commit(s) that delivered it (`git log --no-merges --format='%h %s' origin/main..HEAD` at `dc0ff6ec`; the commit subjects name the task):
+
+| PL-1769 task | Commit(s) |
+|---|---|
+| Task 1 — the reds by cause, on the base tree | `dda1aae9` (eleven tables and `dataset_versions`, reds by cause), `b0c58e96` (cast the seed slug; the 6 test-defect reds) |
+| Task 2 — the declaration, the migration, W1 to W3 | `cbe27461` (migration `a4d1f08c3b97`), `0cc298a6` (declaration-derived tests, Tasks 2.3, 2.10), `fbbadef5` (snapshot guard treats a non-draft row as frozen) |
+| Task 3 — FD-1704's `gip_app` test | `0cc298a6` |
+| Task 4 — the test writers (W4 to W6) | `81a927cf`, `565f1e5d` (Task 4.4), `cc0b3068` |
+| Task 5 — the spec lines | `0a39bd4f` (FR-44, FR-60, FR-70, FR-229 dated lines) |
+| Task 6 — postgres-pro review and the gate | `c20673f1` (Step 6.1: snapshot-guard column pin), gate below; `4d85952e` (test fix after the gate) |
+| Plan activation, ledger and audit records | `66bee3c7`, `d4de84ad`, `500ef639`, `5dd3abc7`, `dc0ff6ec` |
 
 ### Gate
 
-(to be filled at the slice PR's head)
+**Gate v2 of record, Task 6.2 re-gate** (to-lead.md "2026-10-19 06:24:32 BST"): head `500ef63990956531be8a165f460ac46e2794a686`, tree `048b2fb1c0350022c29cb8b6a4df659a41f74cc9`, branch `sl-1770-wk1178-append-only-db`. Logs: `~/gi-pricing-plan.local/scratch/sl1770-regate/` (`gate.log`, `*.rc`, `pytest.log`, `demo.log`, `audit_docs.log`, `rt-schema-1.sql`, `rt-schema-2.sql`); script `~/gi-pricing-plan.local/scratch/sl1770-gate.sh` (v1 to v2: `sl1770-gate.v1-to-v2.diff`). START (`gate.log`:1) 2026-10-19T04:02:15+00:00; the END line, verbatim: `END 2026-10-19T05:23:33+00:00 2.85 2.11 1.94 (date l1 l5 l15)`.
+
+| Stage | rc / reading |
+|---|---|
+| alembic upgrade head; alembic heads | rc=0; 1 head, `a4d1f08c3b97` |
+| round trip (down to `5c8e3b71d094`, up again) | each step rc=0; **`cmp rc=1`**. Raw `diff rt-schema-1.sql rt-schema-2.sql`: 4 `<`/`>` lines (diff output 8 lines): `5c5` and `4035c4035`, `\restrict` and `\unrestrict` keys only. With `grep -v '^\\\(un\)\?restrict '` applied to both dumps, the diff is 0 lines (re-run at the closing: that is the only reading I made of the dumps). Ruled PASS, the `cmp rc=1` an instrument false red (to-lead.md "06:24:32": *"The schema is identical"*) |
+| ruff; mypy; import_linter | 0; 0; 0 |
+| doc_index; req_coverage; contracts | 0; 0; 0 |
+| audit_docs | **rc=1**: `check 31: gap in the full allocation between 1823 and 8126` — the working id of this ledger; clears at the mint (the log also carries a `check 32` line for `docs/REDIRECTS.csv:314: FD-1075`, which I did not trace; not found whether it is main's baseline) |
+| pytest | **rc=1**: `14 failed, 6586 passed, 18 skipped, 132 warnings in 3261.50s (0:54:21)`. 13 are the working-id cascade (audit-docs-derived tests under `tests/`), all present as expected; the 14th, `backend/tests/test_model_lifecycle.py::test_a_model_whose_dataset_lost_its_standing_cannot_be_approved`, was a test defect, fixed in `4d85952e` |
+| frontend: install, generate:api, lint, type-check, test (`--maxWorkers=2`), build | rc=0 each; `tree after gate: 0 changed path(s)` |
+| demo `wf-699` | rc=0; **journey 1075 s** (`demo.log`:4576 `journey done in 1075s`), **demo seconds 1248**, **dislocation #1 453 s**; D7 `ok`, sum `+489842011` minor units |
+| keycloak restore from tools-main | rc=0; bind source `/home/puzhenhao1989/gi-pricing-plan/.claude/worktrees/tools-main/deploy/keycloak-local` (under tools-main) |
+| cleanup | dropdb ×3 rc=0; redis db 1 and 3 FLUSHDB rc=0; both buckets removed rc=0; zeros: `own-DB count=0 redis RT db 1 dbsize=0 redis RD db 3 dbsize=0` |
+
+**Ruling** (to-lead.md "06:24:32"): GREEN except one test-only fix, no re-gate. **Standing from it:** every round-trip stage compares with `grep -v '^\\\(un\)\?restrict '` and records the raw diff line count beside the verdict.
+
+**Test fix** (to-lead.md "2026-10-19 06:27:12 BST", accepted): commit `4d85952e`; `run-small.sh … backend/tests/test_model_lifecycle.py` rc 0, `17 passed, 1 warning in 17.36s`; dropdb rc 0, `count(*) … datname like '%sl-1770%'` = 0 (the Build log entry of 06:26 has the detail). The accepted fix is the only non-docs change after `500ef639`. `ruff format --check` on that file was red before the fix (baseline, left by the maintainer).
 
 ### Audit
 
@@ -74,6 +101,11 @@ head `500ef639` (to-lead.md "2026-10-19 06:24:32 BST", GREEN but one test fix), 
 - **F5 (info), the mint.** `audit-docs.py` rc 1 is the 8126 check-31 gap (working id, per the gate entry); it clears at the mint. Not re-run here.
 
 **Proposal:** CLEAN with F1 and F2 recorded (no finding changes code). Verdict, the closing acts and the mint are the lead's.
+
+**Lead verdict lines on the audit** (from-lead "2026-10-19 07:05:22 BST", recorded by the executor; the verdict is the lead's):
+- **F1 recorded.** The acceptance-3 predicate `git grep -nE "UPDATE factors|factors SET|update\(RateTableVersionRow|version_row\.cells =" -- backend` prints two lines at `dc0ff6ec`, both non-writes. `backend/tests/test_artifact_immutability.py:624`: `planted = text("UPDATE factors SET body = '{\"rewritten\": true}' WHERE id = :id")` plants the `UPDATE` to prove the database refuses it (Step 4.5; the line was `:622` at `cc0b3068`). `backend/tests/test_rate_tables_service.py:198`: `assert version_row.cells == wire.cells.model_dump(mode="json")` is a comparison that the `version_row\.cells =` alternative also matches. No code change.
+- **F2 recorded.** `### Gate` and `### Tasks` filled from `to-lead.md` "06:24:32 BST", "06:27:12 BST", the gate's log directory and `git log`; the gate rc table is no longer only in the channel.
+- **F4: deferred with an owner, SL-1771** (owner by the lead's verdict, 2026-10-19 (from-lead), not named in PL-1769). The basis is indirect. PL-1769:69 reads *"`FOR UPDATE` sites, the per-table privileges the application needs), built at `a3fc2e8d` by a"*, completing *"The census is the review's write-site table (about 140 application write sites, 19"* in the line before it, and assigns that census to S-b: *"S-b's executor copies it into its `LG-` at Task 0"*. SL-1771's job is moving the application off the owner role (`docs/roadmap.md` :2829, *"SL-1771 — WK-1178 fix slice (S-b) — FD-1729: the application connects as a login role with gip_app's grants, never as the owner"*). So the application role's refusal of `SELECT … FOR UPDATE` at `modelling.py:1240` and `:1452` (audit F4; the postgres-pro note of Step 6.1 (3)) is a consequence SL-1771 must verify. PL-1769 does not itself assign the refusal.
 
 ### Build log
 
