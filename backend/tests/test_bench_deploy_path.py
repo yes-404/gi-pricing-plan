@@ -58,3 +58,22 @@ def test_a_run_short_of_its_conditions_is_void(rung, running, why) -> None:
     out = _record(_harness(), rung, running=running)
     assert out["void"] is True
     assert any(why in reason for reason in out["void_reasons"])
+
+
+@pytest.mark.req("NFR-489")
+def test_a_run_whose_observed_worker_count_differs_from_the_declared_one_is_void() -> None:
+    """PL-1766 D5.13 (DP-S5-Q2 (a)): the bench observes N per container and voids a mismatch."""
+    harness = _harness()
+    observed = harness.observed_workers({"a1:10:1": "committed", "a1:11:1": "committed"})
+    assert observed == {"a1": 2}
+    out = harness.record(
+        rung=_rung(), replicas=1, running=1, workers=1, tree="t", reading="exit", observed=observed
+    )
+    assert out["void"] is True
+    assert any("observed workers" in reason for reason in out["void_reasons"])
+    agreed = harness.record(
+        rung=_rung(), replicas=1, running=1, workers=2, tree="t", reading="exit", observed=observed
+    )
+    assert agreed["void"] is False
+    assert agreed["reading"] == "exit"
+    assert _record(harness, _rung())["reading"] == "diagnostic", "an explicit ref is never the exit"
