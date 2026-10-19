@@ -148,4 +148,101 @@ Recorded after the PR exists.
 
 ## Audit
 
-Not yet.
+Pre-PR slice audit by `auditor-1738` (sonnet), 2026-10-19 01:11 BST, range `origin/main...HEAD` with `origin/main` =
+`1fca3fc85710bdb19aab00efe7b9bf361d571a23`. **Tree audited:** HEAD `0fbea8ad2e141be0fca248ca3f83dff4dd61a1b0`, tree
+`117a911d718db15a846d1ef0bbb5be6c4b4e3a6c`. **Gate of record:** `68bd622c2f59e42686545db691d61fb2c156596c`, tree
+`c1881612b13b9994476c5ea889598fc62794d112`. Between them only the merge `7354ff9d` (main `1fca3fc8`), INDEX `bf8459c9`, the
+mint `c5d1b9ea` and INDEX `0fbea8ad`; `git diff --name-only 68bd622c HEAD | grep -vE '^docs/'` prints only
+`backend/migrations/versions/f2b6d90a4c17_…py` (docstring only), `backend/tests/test_bandings_downgrade_refusal.py` and
+`deploy/README.md`, all from main, none this slice's. This audit proposes; the verdict is the lead's. No `status:` line was changed.
+
+**A. Plan → evidence (PL-1737, Tasks 0–7 and Acceptance 1–15).** Reachability: `for s in $(git log --no-merges --format=%h
+origin/main..HEAD); do git merge-base --is-ancestor $s HEAD; done` → rc 0 for all 12 (35eb8186, 119306ab, 05d5727c, 222ce881,
+581681e0, ac2849f0, 662bd6b3, 422a57ec, 68bd622c, bf8459c9, c5d1b9ea, 0fbea8ad).
+
+| Plan item | Evidence | Result |
+|---|---|---|
+| T0 step 3 / Acc 11 (G2 probe before code) | LG "Task 0 Step 3"; activation 35eb8186 and probe precede 119306ab | met; the LG output is condensed, not one line per column (F3) |
+| T0 step 2 enumeration | LG "Task 0 Step 2"; `git grep -nE "strict=False" -- 'packages/*/src' backend/src \| grep -E '\.cast\(\|strptime'` at HEAD → empty | met |
+| T1 R1 / Acc 4 | `test_ingest_coercion.py::test_unparseable_cells_are_quarantined_with_their_source_text`; base red `assert ['policy_exposure'] == ['policy_exposure','_rejected']` (LG) | met |
+| T1 R6 / Acc 5 | `::test_a_null_after_ingest_is_a_source_null_and_nothing_else`; base red `assert 2 == 0` | met |
+| T1 R3 / Acc 7 | `::test_a_later_step_cannot_launder_a_coercion`; base red `['p1','p2','p3','p4','p5'] == ['p1','p4']` | met |
+| T1 R2 + completeness + step-count / Acc 6 | `packages/pricing-core/tests/test_prepare.py` (req FR-32, lines 349–452); LG "R2 set red at base: 5 failed, then 64 passed" | met |
+| T1 G1 | `test_an_empty_or_null_cell_is_null_not_a_coercion` and R6's second ingest | met |
+| T1 R7 / Acc 14 | `::test_the_identity_holds_through_a_row_removing_step`; base red `['p1','p5'] == ['p1']` (first assert differs from the plan's "no step counts"; LG says why) | met |
+| T1 R8a / Acc 15 | `::test_the_identity_holds_on_the_g2_seed_recipe`; base red `AttributeError … 'step_counts'` | met |
+| T1 R8b / Acc 15 | `examples/fremtpl2/test_seed.py::test_every_seeded_ingestion_run_balances_its_rows`; run `…/scratch/sl1738-r8b/r8b.log`: `run: 678013 - 0 - 0 + 0 == 678013`, `run: 678013 - 0 - 571 + 0 == 677442`, `run: 20000 - 0 - 15 + 0 == 19985`, `1 passed, 16 deselected`, rc 0, on head 68bd622c tree c1881612 | met (the LG still lists it as OWED, F4) |
+| T2 R4 / Acc 8 | `::test_validation_fails_a_version_whose_cells_were_quarantined`; base red `PASS is FAIL` | met |
+| T2 R5 / Acc 9 | `::test_the_declared_severity_decides_without_reject_rate`; base red `PASS is PASS_WITH_WARNINGS` (plan's "warn" is the enum `pass_with_warnings`, noted in the LG) | met |
+| T2 G4 | `test_validate.py` `test_range_ignores_a_genuine_null…` (req FR-32, line 575–605 block) | met |
+| T3 / Acc 3 (spec) | see C; ordering F1 | met, ordering deviates |
+| T4 / Acc 12 | `ingest.py:248-249` define the two literals once; `validate.py` and `prepare.py` import them; tests spell them | met for `src`; F2 for the plan's predicate |
+| T5 / Acc 4, G3 | `ingestion.py` diff: `PreparationResult` kept, `_quarantine()` concat, `step_counts` written; `correct_schema` and `data_handlers.py` absent from `git diff --stat` | met |
+| T5 migration | see D | met |
+| T6 | `validate.py` `_coerced_cells`, `dtype_match` and `date_parsed` report `coerced_cells`; `range` and `reject_rate` untouched; unit tests `test_validate.py` (req FR-32) | met; no recorded base-red for these two unit tests (F4) |
+| G2, G5 | `test_data_jobs.py::_ingest`, `test_ingestion.py` (required-null reject, `pseudonymise` recipe) call `assert_row_identity`; LG "Guards" lists them | met |
+| T7 / Acc 13 | gate rows, see F; wf-699 journey `demo.py --journey wf-699 rc=0`. No SL-1543 re-run record in the LG | met for wf-699; SL-1543's test file is not on this tree, carried to whichever merges second |
+
+**B. FD-1744's limbs.** FD file `docs/findings/FD-01744-…` quotes the 12:02:46 ruling (a) the coercion, (b) the blind validation.
+Limb (a): fix `119306ab` + `05d5727c`; red-first R1/R3/R6/R7/R8a/R2 per the table (seven backend reds at base,
+`7 failed`, each for its stated cause, LG "Reds at base"). Limb (b): fix `222ce881`; red-first R4/R5 (backend, at base) and
+`test_validate.py` units (no separate base record, F4).
+
+**C. Spec amendments.** `git diff origin/main...HEAD -- docs/specs`: FR-31 and FR-32 cells keep their sentences and gain an
+*(Amended 2026-10-18 …)* clause each; VR-STR-2 and VR-STR-5 rows gain dated clauses (`coerced_cells`, no tolerance); a dated §4.2
+block names `_reject_reason`, `_reject_column`, `_reject_step`; a dated §5.2 comment. No id added, renumbered or struck; no
+other spec file touched. Markers: FR-31, FR-32 and FR-46 carry the new tests (`grep -n "mark.req" -- <the five test
+files>`); gate `req-coverage` rc 0.
+
+**D. Migration `5c8e3b71d094`.** `down_revision = "f2b6d90a4c17"` (the sole earlier head, the file is the only revision naming it);
+`upgrade` adds JSONB NOT NULL default `'[]'`, `downgrade` drops the column. Single head: `tests/test_repository_invariants.py::
+test_the_migration_chain_has_exactly_one_head` is not among the gate's 13 FAILED ids (a quick regex of mine listed a second
+"head" `a1b2c3d4e5f6`, an artifact of my parser on multi-parent revisions, not used as evidence). Docstring against FR-416 as
+amended (07-platform.md:110): it is a plain reversible migration (it introduces no append-only artifact data), the docstring
+states the downgrade drops the column and that every figure is recomputable from the stored recipe (FR-41); it does not use the
+word "reversible" (F5). The LG records `upgrade head`, `downgrade -1`, `upgrade head` all rc 0 on a fresh DB.
+
+**E. Shapes and money.** `git grep -n -E "step_counts|IngestionRun" -- packages/model-schema docs/contracts` → empty: no
+model-schema shape for the run exists to duplicate, and `step_counts` is `list[dict[str, Any]]` like `reject_sample` beside it
+(plan: no model-schema change). New fixtures are Polars/CSV literals in the tests, not API shapes. No money type touched.
+
+**F. Gate rows** (`/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1738-gate/`, tree c1881612). `diff <(grep -E '^FAILED'
+…/sl1274-regate/pytest.log | cut -d' ' -f2 | sort) <(grep -E '^FAILED' …/sl1738-gate/pytest.log | cut -d' ' -f2 | sort)` → empty
+(rc 0), 13 ids on each side, all in the check-31 / audit-docs class; `13 failed, 6479 passed, 18 skipped`. ruff, mypy,
+import-linter, contracts, req-coverage rc 0; audit-docs rc 1 with `FAILED (1): check 31: gap in the full allocation between 1818
+and 8128` only (the working id, now minted); demo `--journey wf-699` rc 0, D7 `ok 19985 policies in the sample`, zeros `own-DB
+count=0 redis RT db 1 dbsize=0 redis RD db 3 dbsize=0`. In that gate the R8b row printed `FAIL: …/examples/fremtpl2/data already
+exists, not touched` (a fixture precondition, not a test result); the separate R8b-only run (`sl1738-r8b`, head 68bd622c, tree
+c1881612) passed: `1 passed, 16 deselected`, 0 pytest skips or errors (the three "skipped" lines in its log are the validation
+report's `skipped vehicle-brand-mix`), sha256 of both `.arff` files MATCH `fetch.py`.
+
+**G. This ledger.** Rulings cited by stamp (22:50:32 GO; 12:02:46, 12:23:36, 12:31:22, 12:42:55). `git grep -n -E 'LG[ -]0?8128'`
+at HEAD → no hit (the body sentence now reads "Working id (lead-reserved)."): the mint re-pointed every cite. R8b OWED is
+discharged by the run in F but the LG body still says OWED (F4).
+
+**Docs checks at HEAD (one gate-2 flock block, gate-1 and gate-2 free beforehand):** `doc-index.py --check` rc 0 (INDEX.md
+byte-stable); `audit-docs.py` rc 0 (no FAILED block); `register-lint.py` rc 0 (0 violations; residue line 263 of 325, not a
+violation).
+
+**Findings (all proposals to the lead):**
+
+- **F1 (low).** Acceptance 3 says the spec clauses land "before or with the code, never after". `git log --format='%h %aI %s'
+  origin/main..HEAD -- docs/specs/01-data-management.md` shows `581681e0` (22:06:00Z) after the three code commits `119306ab`
+  (22:01:25Z), `05d5727c` (22:03:12Z), `222ce881` (22:04:12Z). One PR, squash-merged, so the merged tree has spec and code
+  together; propose *accept* with this line as the record.
+- **F2 (low).** Acceptance 12's predicate (`git grep -nE '"_reject_(column|step)"' -- packages backend/src`) also prints test
+  literals (`test_prepare.py:346,361,…`, `test_validate.py:564,565,599`). `src` defines each literal once (`ingest.py:248-249`)
+  and imports it elsewhere. Propose *accept* (the plan's predicate was wider than its intent) or have the tests import the constants.
+- **F3 (low).** Acceptance 11 wants one verbatim line per cast column and population; the LG prints a condensed form with
+  "(each of the 9 NUMERIC columns) nulled_by_cast=0". Counts are zero on both populations and the identity lines match
+  (`678013 - 0 - 571 + 0 == 677442`, `20000 - 0 - 15 + 0 == 19985`), so no STOP is implied.
+- **F4 (low, ledger completeness).** The LG does not yet carry: the R8b printed lines (it says OWED), the gate rows, a base-red
+  line for the `test_validate.py` unit tests of `dtype_match`/`date_parsed`, or the Task 7 SL-1543 re-run note. Evidence for the
+  first two is in F above; propose the lead's closing acts add or cite it.
+- **F5 (info).** The migration's `Create Date` (`2026-10-18 23:40:00 +00:00`) is later than its commit (`05d5727c`,
+  22:03:12Z); metadata only. Its docstring never says "reversible" in so many words, though it describes the downgrade.
+- **Observation.** `_coercion_failures` builds `pl.Series([False] * before.height)` per parsing step (a Python list of the table
+  height); the 678 013-row seed ran through the gate's demo without issue, so it is noted, not a finding.
+
+No requirement is left without evidence, so no §13 verdict on an unevidenced requirement is proposed. **Proposed overall: CLEAN
+with F1–F5 low/info, none blocking.**
