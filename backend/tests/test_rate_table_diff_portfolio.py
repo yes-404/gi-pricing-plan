@@ -428,7 +428,7 @@ async def test_seeded_banding_and_grouping_tables_are_weighted(
         await _diff(database, workspace_id, blob_store, age_table, portfolio, version=version)
     assert refused.value.status_code == 422
     assert refused.value.code == "VALIDATION_FAILED"
-    assert "age_banded" in (refused.value.detail or "")
+    assert "portfolio column 'age_banded' is absent" in (refused.value.detail or "")
 
 
 @pytest.mark.req("FR-231")
