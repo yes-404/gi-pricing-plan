@@ -28,8 +28,16 @@ Two limbs, one remedy:
    process serves the previous version until restart'."
 2. **Environment created after a process starts.** The lead's relay of exec-1259's report "23:39:02"
    (`handover/eta.md` :2117, entry 2026-10-18 23:39:33 BST): "an Environment created after a process
-   starts is not subscribed (no live ref, no roster entry) until restart". The report itself was not
-   found as a `to-lead.md` entry; this limb rests on the relay and on the ruled design (see Evidence).
+   starts is not subscribed (no live ref, no roster entry) until restart". The report itself was never
+   a `to-lead.md` entry (it was an in-process message), so `eta.md` :2117 is only where the claim was
+   first relayed. **The claim is cited to code** (maintainer's entry "2026-10-19 01:45:24 BST",
+   `to-lead.md`, D25): at commit 19d139e6 (SL-1259's branch `sl-1259-wk674-s5`, not yet on main),
+   `backend/src/app/platform/deployment_switch.py` :428 in `SwitchSubscription.__init__`
+   (:419-430) reads `self._transports = {env: switch.for_environment(env) for env in environments}`,
+   fixed from the `environments` passed at construction; `start()` (:432-446) reads
+   `channels = [t.channel for t in self._transports.values()]` (:435), subscribes to those
+   (:436) and `await transport.join(self._member.process)` for each of those (:444-445). No other
+   method adds a transport.
 
 **The visible signal until a reconcile exists is `possibly_stale`.** The maintainer's entry "2026-10-18
 23:07:57 BST", condition 5: "FD 8129's text (D25) cites this: possibly_stale is the visible signal until
@@ -74,8 +82,8 @@ them. So the finding is about the ruled design, and main is the baseline it regr
   startup (23:24:34 entry: "A process that serves several environments subscribes to each of its
   environment channels and appears in each roster"). A later Environment has no channel
   subscription, no `live` ref and no roster SET entry in that process; it appears in no
-  `deployment.switched` list for it either, so even `possibly_stale` cannot name it. This limb is the
-  weaker one: it rests on exec-1259's report as relayed, and no source entry was read.
+  `deployment.switched` list for it either, so even `possibly_stale` cannot name it. This limb is
+  cited to code: `SwitchSubscription.__init__` and `start()` at 19d139e6 (limb 2 above).
 
 **Cost of the regression.** Main's per-request read costs a database query per default-live request; the
 per-process ref removes it for NFR-489. The ruling (23:03:15) accepts that trade and records the lost
