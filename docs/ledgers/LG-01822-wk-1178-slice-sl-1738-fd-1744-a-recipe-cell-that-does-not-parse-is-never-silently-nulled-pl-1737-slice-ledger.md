@@ -1,5 +1,5 @@
 ---
-id: LG-8128
+id: LG-1822
 family: ledger
 title: WK-1178 slice SL-1738 — FD-1744, a recipe cell that does not parse is never silently nulled and validation gives it a verdict (PL-1737) (slice ledger)
 status: active                 # active → closed (§1.2a)
@@ -14,7 +14,7 @@ corrected_by: []
 relates: [PL-1737, SL-1738, FD-1744, FR-31, FR-32]
 ---
 
-# LG-8128 — WK-1178 slice SL-1738: FD-1744, limb (a) the coercion and limb (b) the blind validation
+# LG-1822 — WK-1178 slice SL-1738: FD-1744, limb (a) the coercion and limb (b) the blind validation
 
 Working id (lead-reserved). Executed by `exec-1738`, branch `sl-1738-wk1178-fd1744-coercion`, base `origin/main`
 `84b0ff5765e55bc8edd139cd22bb57cd474de807`. **Authority:** the maintainer, to-lead "2026-10-18 22:50:32 BST" (GO SL-1738);
