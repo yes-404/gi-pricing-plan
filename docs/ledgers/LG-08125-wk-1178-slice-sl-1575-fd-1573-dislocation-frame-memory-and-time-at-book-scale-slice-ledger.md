@@ -107,6 +107,26 @@ Files: `packages/pricing-core/src/pricing_core/rating/analysis.py`, `packages/pr
 - **Broken-input proof:** with the `if b[1] != c[1]: return name` branch deleted from `_origin_rung_of`, the file gave `1 failed, 41 passed`: `FAILED test_dislocation_frame_output_unchanged_on_the_fixture_book`, on `assert old.equals(new)`. The branch is restored (`diff` against the saved copy is empty).
 - **Static checks:** `ruff check .` rc 0 ("All checks passed!"); `ruff format --check` on the two files rc 0; `mypy` (the configured `files`, which do not include tests) rc 0, "Success: no issues found in 243 source files". The test module's `_old_*` copy is formatted by ruff, and its names and `analysis.` qualifiers are the only edits from the base code.
 
+#### 2026-10-19 04:33 BST — the QUIET 200k before-leg and the comparison rule for Task 2's after-leg
+
+Source: the maintainer's entry "2026-10-19 04:31:13 BST — Maintainer: SL-1575 QUIET 200k before-leg END ruled + the comparison rule for Task 2" in `~/gi-pricing-plan.local/channel/to-lead.md` (local, not in the repository), read by the executor.
+
+**QUIET before-leg** (protocol `scratch/sl1575-quiet.sh` v2, sha256 `3d050ea80ce6fe3a7624e7c8b02428b6a7027fef0329860b3cba367954e93084`; output `~/gi-pricing-plan.local/scratch/sl1575-quiet/spike-200k.jsonl`; run START 03:11:51Z, END 03:30:36Z): load1 at START 1.47 (END load3 1.53 2.45 2.47); `dislocation_frame.returned` t_s **1116.35 s**; VmHWM **6,385,760 KiB**; rows 200000; rc 0. Both legs are on the base code (before Task 1).
+
+| Before-leg | load1 | `dislocation_frame.returned` | VmHWM KiB | rc |
+|---|---|---|---|---|
+| Task 0, LOADED (above) | 3.14 | 1,032.39 s | 6,469,204 | 0 |
+| QUIET (this entry) | 1.47 | 1,116.35 s | 6,385,760 | 0 |
+
+The QUIET leg is **8.1 % slower** than the LOADED one; peak memory agrees within **1.3 %**. Run-to-run time noise on this box is therefore at least 8 %, larger than the load effect; peak memory is the stable quantity.
+
+**Binding comparison rule for the after-leg (quoted from the entry):**
+- "(a) the after-leg uses the SAME protocol (sl1575-quiet.sh v2, quiet wait, both slots, same command);"
+- "(b) a **memory** claim (VmHWM) may rest on ONE quiet after-run against this before-leg, if the change exceeds 3× the observed 1.3% spread (> ~4%);"
+- "(c) a **time** claim needs ≥ 2 quiet runs per leg (this before-leg + one more, and 2 after), reported as both values per leg, and an improvement larger than the larger leg's spread. Otherwise the time result is "within noise", not a gain."
+
+**Acceptance line this maps onto** (`PL-1574`, `docs/plans/PL-01574-…-single-row-work-plan.md:145-146`): "4. **Time is measured, not asserted**: the same run's `dislocation_frame` wall time at 200,000 is no more than Task 0's (a slower fix fails this item)." **It is time-based**, so under rule (c) **a second quiet before-leg is owed** before Task 2's after-run (two quiet runs per leg), and the after-leg needs two quiet runs. Item 3 (`:141`, memory) is a memory claim and falls under rule (b): one quiet after-run against the leg above, if VmHWM drops by more than about 4 %. Task 2 has no code change of its own (`PL-1574:478-484`: after-measurement, then the gate); the code of Task 1 (`2ff1f69b`) is already on the branch.
+
 ## PRs
 
 None yet.
