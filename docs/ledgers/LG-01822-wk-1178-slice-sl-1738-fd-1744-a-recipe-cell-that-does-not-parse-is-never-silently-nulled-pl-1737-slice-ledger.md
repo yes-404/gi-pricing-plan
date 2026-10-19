@@ -2,10 +2,10 @@
 id: LG-1822
 family: ledger
 title: WK-1178 slice SL-1738 — FD-1744, a recipe cell that does not parse is never silently nulled and validation gives it a verdict (PL-1737) (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-18
 owner: executor
-tree: ~
+tree: c1881612b13b9994476c5ea889598fc62794d112
 phase: P2
 work: WK-1178
 slice: SL-1738
@@ -145,6 +145,34 @@ after). Start 2026-10-18 23:25:16 BST, load1 2.26, available 25 GiB, gate-1 free
 ## PRs
 
 Recorded after the PR exists.
+
+## Closing acts (2026-10-19, exec-1738r) — answers audit finding F4
+
+Written by `exec-1738r` (Sonnet 5.5) on the lead's dispatch (from-lead "2026-10-19 01:13:36 BST"), after the audit commit `b81c67b5`
+and above `## Audit`, which this entry does not edit. The earlier build-log line "OWED, R8b" is superseded by (a).
+
+- **(a) R8b DISCHARGED.** The R8b-only run `scratch/sl1738-r8b/` (`gate.log`, `r8b.log`, head `68bd622c`): `r8b.log:77`
+  `PASSED examples/fremtpl2/test_seed.py::test_every_seeded_ingestion_run_balances_its_rows`, `:78` `1 passed, 16 deselected in 59.76s`.
+  Both arff sha256 values MATCH fetch.py's digests (`sl1738-r8b/gate.log:19-20`: freq `a45363e0…`, sev `04763201…`). The maintainer's GREEN of
+  2026-10-19, to-lead "2026-10-19 00:59:00 BST — Maintainer: SL-1738 GATE GREEN (the 00:54:57 gate + the R8b-only run at 00:57:58)"
+  (preceded by the 00:55:58 entry that ruled the R8b-only run). The gate's own R8b row was a false RED from the gate script's stage order
+  (the demo's fetch had created `examples/fremtpl2/data`), not a test result.
+- **(b) The gate rows, by reference.** `scratch/sl1738-gate/gate.log`, END 2026-10-19 00:54:57 BST (`2026-10-18T23:54:57+00:00`), head
+  `68bd622c`. Rows: ruff rc 0; mypy rc 0; import_linter rc 0; req_coverage rc 0; contracts rc 0; **pytest rc 1, `13 failed, 6479 passed,
+  18 skipped`** (the check-31 class: the 13 FAILED ids are identical to `sl1274-regate`'s, per the maintainer's 00:55:58 entry); **audit_docs rc 1,
+  `FAILED (1)` = `check 31: gap in the full allocation between 1818 and 8128`** (the working-id 8128 gap, closed by this mint);
+  frontend half 6/6 rc 0 (install, generate:api, lint, type-check, test, build); demo `demo.py --journey wf-699` rc 0, 1313 s
+  (the journey itself `1176s`); D7 ok; zeros clean (own-DB count 0, redis dbsize 0).
+- **(c) Task 7, the SL-1543 note** (`PL-1737` Task 7, second bullet, lines 826-828: whichever of this slice and SL-1543 merges second re-merges
+  `main`, re-runs `backend/tests/test_wf699_journey.py` and `test_demo_peril_structure.py`, and records both here). SL-1543 is
+  `status: closed` on `origin/main` (`docs/roadmap.md:2323-2326` at `1fca3fc8`), so **this slice merges second**; the re-merge of
+  `main` `1fca3fc8` is the merge commit `7354ff9d`. The gate's pytest at `68bd622c` ran `test_wf699_journey_runs_end_to_end`
+  (`sl1738-gate/pytest.log:10211`, 21.68 s call) and the wf-699 demo journey rc 0 (above); neither it nor `test_demo_peril_structure.py` is among
+  the 13 FAILED ids (0 matches for `wf699` or `demo_peril` in the `^FAILED` lines). Neither file was re-run at the re-merged head `0fbea8ad`
+  (the maintainer's GO of 2026-10-19 00:59:56 BST: no re-gate), so that pair is evidenced at `68bd622c`, not at the merged head.
+- **(d) The two `test_validate.py` unit tests: base-red record NOT RECORDED.** The tests are delivered and green (the file passes in the
+  item-21 run), but no run of them against the base was recorded, so red-first is **unevidenced** for those two. Nothing was
+  reconstructed or run for this entry (lead's instruction).
 
 ## Audit
 
