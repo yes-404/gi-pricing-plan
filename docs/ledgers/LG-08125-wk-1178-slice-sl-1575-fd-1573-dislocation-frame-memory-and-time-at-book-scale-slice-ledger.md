@@ -226,6 +226,37 @@ Reason given: B2 is a slower-biased baseline, and a slower baseline favours PASS
 - **Acceptance 5 path:** not touched. acc5 ran `cost --policies 19985 --runs 1` (above); `cmd_cost` (:645-702) calls neither `_pass`, `_ladder_pass` nor `replay_values` (the only callers of `_pass` are in `cmd_replay`), and the diff hunks are `@@ -719,0 +720,26 @@` and `@@ -721,2 +747 @@` / `@@ -731,2 +756,2 @@` inside `_ladder_pass`/`_pass`. acc5 stands.
 - **Provisioning gap (R2):** `freMTPL2sev.arff` was never copied into this worktree (the 3 seed FAILED, 3 ERRORs and the 65 s demo exit); copied from tools-main, `cmp` equal, sha256 `047632016b87e132247124f449a95d6d0e9f8ba05f2fe0947ef76ab8aaa10e0a` on both; the re-gate script's preflight now aborts unless both `.arff` files exist.
 
+## Audit
+
+Auditor seat, 2026-10-19, range `origin/main...HEAD` (HEAD at read: `2bd1c68559caeeb8784a34bc0e6f78a223f98961`, changed: this ledger, `docs/INDEX.md`, `docs/roadmap.md`, PL-1574's `status`, `analysis.py`, `test_rating_dislocation.py`, `scripts/measure-attribution-cost.py`). Scope derived from PL-1574's acceptance items 1-6 (`PL-1574:125-154`) first, then evidence. Gate of record: the full gate at 2bd1c685, tree 686f0688, END 2026-10-19T10:26:57Z, `scratch/sl1575-gate/gate.log`, rows read by the auditor.
+
+| # | Acceptance item | Evidence | Verdict |
+|---|---|---|---|
+| 1 | Task 0 spike filed before code | Build log, Task 0 entry: both runs' tables, tree 50476d3f, stamps, load1, "H1 CONFIRMED" with arithmetic; commits 893a0313/98641ac8 precede 2ff1f69b | met |
+| 2 | Output unchanged, value for value | Build log, Task 1 entry: red `test_dislocation_frame_retains_no_ladder_objects` first; `unchanged_on_the_fixture_book` passes; broken-input proof (branch deleted, `1 failed, 41 passed`, restored). The plan's flip-`unrounded_minor` fixture deviation is disclosed there | met |
+| 3 | Memory measured | `to-lead.md` "2026-10-19 06:58:33 BST"; primary `scratch/sl1575-quiet-A/spike-200k-A{1,2}.jsonl` (`dislocation_frame.returned`): A1 VmHWM 1,555,116 KiB, A2 1,501,344 KiB, mean 1,528,230, against before-legs B1 6,385,760 / B2 6,408,564 (mean 6,397,162): −76.1 % (bar ~4 %). Rung cross-check A1 = B2 = 1,000,000 | met (PASS, maintainer 06:58:33) |
+| 4 | Time no more than Task 0's | Same primary files: A1 875.87 s, A2 797.81 s, mean 836.84 s; B1 1116.35 s, B2 1011.73 s (B2 disclosed-contaminated, guard not engaged: mean(A) ≤ B1). Rule of 04:34:00 BST: mean(A) ≤ max(B) → PASS. Task 0's LOADED 1032.39 s is recorded, not compared | met (PASS, maintainer 06:58:33) |
+| 5 | R6-size cost run | Build log, "08:41 BST" entry: `inv-rss.sh acc5 cost --policies 19985 --runs 1`, k=3..6 = 382.01 / 728.97 / 1420.44 / 2728.02 s (all ≤ 3600 s), `ru_maxrss_KiB=2476624` (2.36 GiB ≤ 15.5 GiB), rc 0. Maintainer PASS at 08:37:07 BST; split per checkpoint Q1: limb (A) 19,985 here, limb (B) the full 678,013-policy book **OWED** to the dedicated host before the P2 close, owner = SL-1575's Work | limb A met; limb B **deferred with an owner** |
+| 6 | Gate green | Gate of record, rows below | met, one standing red cleared by the mint (see below) |
+
+**Gate rows (2bd1c685, read from `gate.log` / `pytest.log` / `demo.log`):** preflight both `.arff` ok; slots gate-1 and gate-1b held; alembic 1 head `a4d1f08c3b97`; round trip cmp rc 0; ruff, mypy, import_linter, doc_index, req_coverage, contracts rc 0; frontend six commands rc 0; demo rc 0, journey 1128 s (`demo.log:4745`, ≤ ~1300 s), dislocation #1 427 s (≤ 550 s), D7 ok; keycloak bind source under tools-main; zeros 0; tree after gate: 0 changed paths. **pytest rc 1: 13 failed, 6618 passed** (`pytest.log` summary). `audit_docs` rc 1, FAILED(2): check 31 only (the 1825→8125 gap and the `created:` order), which the mint clears.
+
+**Failure-set check:** the 13 FAILED test ids are a subset of run 1's 17 (`comm -13` of run 1 against the gate: empty). The four absent from the gate are `test_rating_attribution` ×1 and `test_seed` ×3, the two fixed causes. The 13 left are audit-docs-driven tests (`pytest.log` carries 34 `check 31` lines; first at `:1012`); their cause is the working id 8125, not code. **They are red at this head and turn green only at the mint**; the mint's own docs block must show them so, otherwise the gate row is carried, not delivered.
+
+**Run 1 (564a6d76) RED, causes and fixes:**
+- **R1, the ladder consumer defect (fixed, 72f6088e).** FD-1573's `_score_pass` holds `rungs`, no `"ladder"` key; `scripts/measure-attribution-cost.py` `replay_values` read `ladder` (`KeyError`), failing `test_rating_attribution.py::test_replay_that_differs_from_a_true_rerate_is_detected_and_recorded`. The script now builds its own `_ladder_pass`; the frame shape (the −76 % result) is unchanged. Executor's entry is the "Gate RED at 564a6d76" item above (consumers table, red → green `43 passed`). Acceptance 5 is not on the changed path: `cmd_cost` has no changed line (maintainer read, 09:56:49 BST). No FD, by ruling (R1e).
+- **R2, provisioning gap (fixed).** `freMTPL2sev.arff` was never copied into the worktree (3 seed FAILED, 3 ERRORs, the 65 s demo exit); copied from tools-main, `cmp` equal, and the gate script's preflight (`:63`) aborts unless both `.arff` files exist (executor's entry above).
+- **Cascade:** run 1's remaining failures were the check-31 set above.
+
+**Auditor findings:**
+1. **Comment-only, gate script.** `scratch/sl1575-gate.sh:6` says "no process substitution"; `:85` (`cmp -s <(grep …) <(grep …)`) uses it. The comment is false; the code is correct and ran rc 0. No effect on any verdict.
+2. **Ledger gap, owed to the executor before the mint.** This ledger does not carry acceptance 3/4 (the four legs, the two decisions, the 06:58:33 stamp; the maintainer ordered "Record in LG 8125"; `grep -c "875.87\|797.81\|836.84"` on this file = 0 before this section) or a Gate entry: its `### Gate` still reads "Not yet run" and `### Audit` under Tasks "Not yet run", and the Task list still shows Task 2 unchecked. Items 3/4 are now recorded in the table above from the primary files; the stale placeholders stay for the closing acts.
+3. **Disclosure, not a defect.** Acceptance 5 ran the first 19,985 rows by quote_id (option (a), 07:06:05 BST), not the seed's sampled set; and cost doubles per k (k=7 projects ≈ 5,400 s, over 60 min), routed to D26 as an OQ owned by the planner. Neither moves a verdict.
+
+**Requirements without evidence:** none among items 1-4 and 6. Item 5 limb B (the 678,013-policy full book): **deferred with an owner** (SL-1575's Work, before the P2 close, the dedicated host).
+
+**Proposed verdict: CLEAN**, conditional on the closing acts: the ledger's Gate, Task 2 and acceptance 3/4 lines written, and the mint turning the 13 audit-docs-driven pytest failures and `audit_docs` FAILED(2) green. The verdict is the lead's to adopt.
+
 ## PRs
 
 None yet.
