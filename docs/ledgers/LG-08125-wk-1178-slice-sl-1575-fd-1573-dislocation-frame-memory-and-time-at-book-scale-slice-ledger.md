@@ -127,6 +127,17 @@ The QUIET leg is **8.1 % slower** than the LOADED one; peak memory agrees within
 
 **Acceptance line this maps onto** (`PL-1574`, `docs/plans/PL-01574-…-single-row-work-plan.md:145-146`): "4. **Time is measured, not asserted**: the same run's `dislocation_frame` wall time at 200,000 is no more than Task 0's (a slower fix fails this item)." **It is time-based**, so under rule (c) **a second quiet before-leg is owed** before Task 2's after-run (two quiet runs per leg), and the after-leg needs two quiet runs. Item 3 (`:141`, memory) is a memory claim and falls under rule (b): one quiet after-run against the leg above, if VmHWM drops by more than about 4 %. Task 2 has no code change of its own (`PL-1574:478-484`: after-measurement, then the gate); the code of Task 1 (`2ff1f69b`) is already on the branch.
 
+**Stage breakdown, QUIET against LOADED, as observed and UNEXPLAINED (no causal claim).** Figures read from `spike-200k.jsonl` (QUIET) and the Task 0 table above (LOADED):
+
+| Interval | LOADED | QUIET | QUIET − LOADED |
+|---|---|---|---|
+| `pass1.score_batch.collected` t_s | 431.65 s | 538.17 s | +106.52 s |
+| pass1 scoring, start → collected | 426.72 s (431.65 − 4.93) | 530.05 s (538.17 − 8.12) | +103.33 s |
+| pass2 scoring, start → collected | 481.95 s (967.96 − 486.01) | 455.36 s (1,055.11 − 599.75) | −26.59 s |
+| `dislocation_frame.returned` t_s | 1,032.39 s | 1,116.35 s | +83.96 s |
+
+The lead's relayed pass2 figures (455.36 against 487.51) do not match the LOADED table: 967.96 − 486.01 = 481.95, so the pass2 difference is −26.59 s, not −32 s. Pass1 scoring was slower and pass2 scoring faster in the quiet leg, which is not what a load effect alone would suggest; it is recorded as run-to-run variance, which the rule above covers: time claims need at least 2 runs per leg, and memory is the stable metric.
+
 ## PRs
 
 None yet.
