@@ -2,8 +2,8 @@
 id: LG-1824
 family: ledger
 title: WK-674 slice SL-1259 — Slice 5, atomic switchover, rollback and the measurements (PL-1766) (slice ledger)
-status: active                 # active → closed (§1.2a)
-created: 2026-10-18
+status: closed                 # active → closed (§1.2a)
+created: 2026-10-19 # filed 2026-10-18 under working id 8127; minted 2026-10-19 as LG-1824
 owner: executor
 tree: 3421b26b4cb7b622f9af55ca3e32ba8383e8ea4d
 phase: P2

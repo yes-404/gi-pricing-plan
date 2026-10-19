@@ -1179,7 +1179,7 @@ The compose `api` and `worker` services, the reference identity provider, the me
 id: SL-1259
 family: slice
 title: Slice 5: atomic switchover, rollback and the measurements (FR-268, FR-269, FR-272 audit and NFR-498 for rollback, NFR-494, NFR-489, NFR-502, NFR-490, NFR-493 linearity limb, NFR-497 mechanism)
-status: active                 # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-09-29
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 0d5b0765f76320518bfe76ddb30e5013525797c0
@@ -1191,8 +1191,10 @@ relates: [PL-1237]
 
 Atomic switchover and rollback on the Slice 4 path, with the rollback's audit limb (FR-272, NFR-498), the F1 acceptance test and the measured verdicts. NFR-497's degraded read is kept reachable against the `live` reference; the availability verdict is the lead's at the close. `PL-1237` Task 5. Starts after Slice 4 closes; its measured verdicts wait on a dedicated host (maintainer-owned).
 (Activated 2026-10-18 on the maintainer's GO, to-lead "2026-10-18 22:50:32 BST — Maintainer: the duplicate-mint anomaly ruled; GO SL-1259, SL-1770, SL-1738, SL-1575 (with conditions)"; dispatched by the lead, transcript 34b896f2.)
+(Closed 2026-10-19 as a Slice by minter-1259's closing acts (LG-1824 minted from working id 8127), on the pre-PR audit of LG-1824 ("## Audit", auditor, 2026-10-19 04:33 BST, and its "Second pass — D5.8 write-set walk", auditor-1259w, 2026-10-19 04:42:07 BST; range `origin/main...43b1f231`), adopted by the lead (from-lead "2026-10-19 04:40:22 BST", amended "04:41:38 BST"); the measured NFR verdicts are deferred with an owner (LG-1824 "## Closing acts"). MERGE-ACK: not yet given.)
 
 *Dated 2026-10-12 by the planner: the Work-plan deltas for this slice are `PL-1537` row 2 and `PL-1620` (D0.1 to D0.3, D5.1 to D5.5; minted in D11, #1275). `PL-1620` DP-S5-a is ruled (a) by `RL-1614`. This row's status and fields are unchanged.*
+*Dated 2026-10-19 by the executor (PL-1766 Hand-off item 2): this slice's Work-plan delta is `PL-1766` (Slice 5 before its GO, SL-1455 as a formal dependency, the S4 premises and five decision points); like the planner's line above, it is recorded on this row and changes no field of it.*
 
 #### SL-1260 — Slice 6: date-based routing and shadow scoring (FR-270, FR-271, FR-272 audit and NFR-498 for routing and shadow)
 
