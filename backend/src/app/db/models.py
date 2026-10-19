@@ -3067,8 +3067,8 @@ class BlobUploadRow(Base):
                 "immutability": "mutable",
                 "reason": (
                     "job_id and sha256 are set in place when the upload is completed "
-                    "(api/blobs.py, FR-1776); added after PL-1769's 59-row classification, "
-                    "classed by the executor, lead to confirm"
+                    "(api/blobs.py, FR-1776); a staging receipt: no artifact keys on its id "
+                    "after promotion, the blob is pinned by its own sha256 (PL-1769 row 60)"
                 ),
             }
         },

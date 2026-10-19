@@ -631,6 +631,17 @@ guards** are the row-trigger names the declaration's `"guards"` lists; every `ap
 | 58 | `workspace_settings` | mutable | — | INS; UPD(`value`) | a setting's value is replaced (`settings.py:549-551`) |
 | 59 | `workspaces` | mutable — **INSERT-only** | — | INS (`workspaces.py:44`; seed only, DP-22) | deferred (below) |
 
+**Dated addition, 2026-10-19 (row 60; the 59-row table above is unchanged).** `blob_uploads`
+(`BlobUploadRow`, `backend/src/app/db/models.py`, `__tablename__ = "blob_uploads"`) was mapped by
+`e7c3a9b15d82` after the 59-row classification was taken. The maintainer (by delegation) confirmed
+`mutable` in `to-lead.md` "2026-10-18 23:27:47 BST", on the condition that no artifact row derives
+its identity from `blob_uploads` after promotion. Counts with this row: **22 `append_only`, 13
+`guarded`, 25 `mutable`** (of the 25: 13 INSERT-only, 1 read-only, 11 updated in place).
+
+| # | Table | Class | Row guards | Writes (census) | Reason |
+|---|---|---|---|---|---|
+| 60 | `blob_uploads` | mutable | — | INS; UPD(`job_id`, `sha256`) | a staging receipt: completion sets `job_id` and `sha256` in place (`api/blobs.py`, `platform/blobs.py` `promote_upload`); the content-addressed blob is the artifact, and every consumer pins it by its own `sha256` |
+
 **The 13 INSERT-only tables and `tenant_marker`: deferred, with an owner.** Their declaration
 is `mutable` because the catalog leaves them so and none is in the maintainer's ruled set
 (`factors` and the ten). Each `reason` reads *"INSERT-only (read-only for `tenant_marker`) in
