@@ -23,6 +23,9 @@ from typing import Final
 import polars as pl
 
 __all__ = [
+    "REJECT_COLUMN_COLUMN",
+    "REJECT_REASON_COLUMN",
+    "REJECT_STEP_COLUMN",
     "ColumnMapping",
     "ColumnNameCollisionError",
     "InferredColumn",
@@ -240,6 +243,10 @@ class RejectPartition:
 #: The column added to quarantined rows saying why they were rejected. Underscore-prefixed
 #: so it cannot collide with a normalised source column, which never starts with one.
 REJECT_REASON_COLUMN: Final = "_reject_reason"
+#: The column whose value failed the row, and the step that failed it (`cast`, `parse_date`
+#: or `required_non_null`). `_rejected` is a text table, so these are text too.
+REJECT_COLUMN_COLUMN: Final = "_reject_column"
+REJECT_STEP_COLUMN: Final = "_reject_step"
 
 
 def partition_rejects(
@@ -257,7 +264,9 @@ def partition_rejects(
     required = required_non_null or []
     if not required:
         return RejectPartition(clean=frame, rejected=frame.head(0).with_columns(
-            pl.lit(None, dtype=pl.String).alias(REJECT_REASON_COLUMN)
+            pl.lit(None, dtype=pl.String).alias(REJECT_REASON_COLUMN),
+            pl.lit(None, dtype=pl.String).alias(REJECT_COLUMN_COLUMN),
+            pl.lit(None, dtype=pl.String).alias(REJECT_STEP_COLUMN),
         ))
 
     missing = [c for c in required if c not in frame.columns]
@@ -265,16 +274,19 @@ def partition_rejects(
         raise ValueError(f"required columns absent from the frame: {missing}")
 
     reason = pl.lit(None, dtype=pl.String)
+    failed_column = pl.lit(None, dtype=pl.String)
     for column in reversed(required):
-        reason = (
-            pl.when(pl.col(column).is_null())
-            .then(pl.lit(f"{column} is null"))
-            .otherwise(reason)
-        )
+        is_null = pl.col(column).is_null()
+        reason = pl.when(is_null).then(pl.lit(f"{column} is null")).otherwise(reason)
+        failed_column = pl.when(is_null).then(pl.lit(column)).otherwise(failed_column)
 
-    annotated = frame.with_columns(reason.alias(REJECT_REASON_COLUMN))
-    rejected = annotated.filter(pl.col(REJECT_REASON_COLUMN).is_not_null())
+    annotated = frame.with_columns(
+        reason.alias(REJECT_REASON_COLUMN), failed_column.alias(REJECT_COLUMN_COLUMN)
+    )
+    rejected = annotated.filter(pl.col(REJECT_REASON_COLUMN).is_not_null()).with_columns(
+        pl.lit("required_non_null").alias(REJECT_STEP_COLUMN)
+    )
     clean = annotated.filter(pl.col(REJECT_REASON_COLUMN).is_null()).drop(
-        REJECT_REASON_COLUMN
+        REJECT_REASON_COLUMN, REJECT_COLUMN_COLUMN
     )
     return RejectPartition(clean=clean, rejected=rejected)
