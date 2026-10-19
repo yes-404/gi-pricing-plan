@@ -22,7 +22,12 @@ import urllib.request
 from typing import Any
 
 import pytest
-from backend.tests.deploy_stack_helpers import LB_PORT, PROJECT, governed_workspace
+from backend.tests.deploy_stack_helpers import (
+    LB_PORT,
+    PROJECT,
+    approve_draft,
+    governed_workspace,
+)
 from backend.tests.deploy_stack_helpers import api as _stack_api
 
 pytestmark = pytest.mark.skipif(
@@ -53,23 +58,32 @@ def _api_containers() -> set[str]:
     return set(out.split())
 
 
-def _wait_succeeded(job: dict[str, Any], headers: dict[str, str]) -> None:
+def _wait_succeeded(job: dict[str, Any], headers: dict[str, str]) -> dict[str, Any]:
+    """The Job once it has `succeeded` with an output: a merely terminal Job is not enough."""
     deadline = time.monotonic() + COMPILE_BOUND_SECONDS
     while time.monotonic() < deadline:
         current = api("GET", f"/api/v1/jobs/{job['id']}", headers)
         if current["status"] == "succeeded":
-            return
+            assert current["result"], current
+            assert current["result"]["ref"], current
+            return current
         assert current["status"] not in {"failed", "cancelled"}, current
         time.sleep(1)
     raise AssertionError(f"compile job {job['id']} did not succeed in {COMPILE_BOUND_SECONDS}s")
 
 
 def test_a_deploy_switches_every_api_process_and_a_default_live_quote_is_served() -> None:
-    ws = governed_workspace(approved=True)
+    # `rating.compile` is refused with 409 `RATING_VERSION_IMMUTABLE` unless the version is a
+    # draft (FR-239, `require_compilable`), so the route compiles the draft, and the SAME version
+    # is then approved (D5.11, fix A).
+    ws = governed_workspace(approved=False)
     analyst, deployer = ws.users["analyst"], ws.users["deployer"]
-    _wait_succeeded(
-        api("POST", f"/api/v1/rating-versions/{ws.rating_version_id}/compile", analyst), analyst
-    )
+    rating_path = f"/api/v1/rating-versions/{ws.rating_version_id}"
+    compiled = _wait_succeeded(api("POST", f"{rating_path}/compile", analyst), analyst)
+    produced = api("GET", rating_path, analyst)["bundle"]["blob_sha256"]
+    assert produced in compiled["result"]["ref"], (produced, compiled["result"])
+    approve_draft(ws)
+    assert api("GET", rating_path, analyst)["status"] == "approved"
     done: dict[str, Any] = {}
     for environment in ("dev", "uat"):  # the promotion order
         done = api(
@@ -78,6 +92,13 @@ def test_a_deploy_switches_every_api_process_and_a_default_live_quote_is_served(
             deployer,
             {"rating_version_ref": ws.rating_version_ref, "reason": "D5.11"},
         )
+    # The deployment's compiled output is the one the ROUTE's compile Job produced: the evidence
+    # step compiles the draft again, and this fails if that replaced it. Never loosen it.
+    deployed = api("GET", rating_path, analyst)["bundle"]
+    assert deployed["blob_sha256"] == produced, (deployed, produced)
+    assert done["bundle_hash"].removeprefix("sha256:") == deployed["content_hash"].removeprefix(
+        "sha256:"
+    ), (done["bundle_hash"], deployed)
     switch = done["switch"]
     containers = _api_containers()
     assert containers, "no api container is running for this project"
