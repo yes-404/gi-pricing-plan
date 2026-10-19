@@ -39,7 +39,7 @@ Base: `origin/main` `84b0ff5765e55bc8edd139cd22bb57cd474de807`. Branch `sl-1770-
 
 ### Audit
 
-Pre-PR slice audit by `auditor-1770` (sonnet, medium), 2026-10-19 07:20 BST, range `origin/main...sl-1770-wk1178-append-only-db`;
+Pre-PR slice audit by `auditor-1770` (sonnet, medium), 2026-10-19 07:04 BST, range `origin/main...sl-1770-wk1178-append-only-db`;
 `origin/main` = `aea6f160b3a50e9d38dc591713bd85e4daed4b8e` = merge-base (`git merge-base origin/main HEAD`, after `git fetch origin`).
 **Tree audited:** HEAD `4d85952e03895ec631d71d31a6cd223fc740e4c5`, tree `4c0a1cfe8b7d20be1e164cf2ed4c14b0b6dbc452`. **Gate of record:**
 head `500ef639` (to-lead.md "2026-10-19 06:24:32 BST", GREEN but one test fix), fix `4d85952e` accepted ("06:27:12 BST"). Post-gate predicate
