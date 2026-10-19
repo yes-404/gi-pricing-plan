@@ -17,7 +17,7 @@ relates: [PL-1574, LG-1826, WK-1178]
 
 # RL-8133 — SL-1575 acceptance 5 runs as option (a), a 19,985-row slice of the pinned book, with the corrected argv `acc5 cost --policies 19985 --runs 1`
 
-Filed 2026-10-19 under working id 8133 (a working id until a later seat mints it). The ruling is the maintainer's (by delegation).
+Filed 2026-10-19 under working id 8133 (a working id until a later seat mints it). The ruling is the maintainer's (by delegation). Its sources are the entries "2026-10-19 07:06:05 BST" and its CORRECTION "2026-10-19 07:06:58 BST" in `~/gi-pricing-plan.local/channel/to-lead.md`.
 
 ## How this was ruled
 

@@ -17,7 +17,7 @@ relates: [PL-1574, LG-1826, WK-1178]
 
 # RL-8130 — SL-1575 acceptance item 4: "Task 0's" means the quiet before-legs, and the decision rule is PASS, FAIL or INCONCLUSIVE on four timings
 
-Filed 2026-10-19 under working id 8130 (a working id until a later seat mints it). The ruling is the maintainer's (by delegation).
+Filed 2026-10-19 under working id 8130 (a working id until a later seat mints it). The ruling is the maintainer's (by delegation). Its source is the entry "2026-10-19 04:34:00 BST" in `~/gi-pricing-plan.local/channel/to-lead.md`.
 
 ## How this was ruled
 

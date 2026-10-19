@@ -17,7 +17,7 @@ relates: [PL-1237, PL-1620, LG-1824, WK-674]
 
 # RL-8131 — The PL-1237 carry form applies equally to O4 and NFR-501 under D5.3 (PL-1620), extending the deferral form for SL-1259
 
-Filed 2026-10-19 under working id 8131 (a working id until a later seat mints it). The ruling is the maintainer's (by delegation).
+Filed 2026-10-19 under working id 8131 (a working id until a later seat mints it). The ruling is the maintainer's (by delegation). Its source is the entry "2026-10-19 04:41:23 BST" in `~/gi-pricing-plan.local/channel/to-lead.md`.
 
 ## How this was ruled
 

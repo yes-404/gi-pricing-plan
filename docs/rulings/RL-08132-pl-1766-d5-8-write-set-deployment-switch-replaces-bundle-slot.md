@@ -17,7 +17,7 @@ relates: [PL-1766, LG-1824, WK-674]
 
 # RL-8132 — PL-1766 D5.8 write set: deployment_switch.py replaces bundle_slot.py as the switch-core home (distinct concerns, verified bbc3f774)
 
-Filed 2026-10-19 under working id 8132 (a working id until a later seat mints it). The ruling is the maintainer's (by delegation).
+Filed 2026-10-19 under working id 8132 (a working id until a later seat mints it). The ruling is the maintainer's (by delegation). Its source is the entry "2026-10-19 04:43:27 BST" in `~/gi-pricing-plan.local/channel/to-lead.md`.
 
 ## How this was ruled
 
