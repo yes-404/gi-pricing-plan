@@ -103,3 +103,37 @@ for path in sys.argv[4:]:
 ```
 
 Output of `python3 -I astcmp.py <wt> fb29f8b7 70a0af0d <4 paths>`: `EQUAL` for all four files. Enforcement on broken input: the same script against a scratch copy of `main.py` with the `__all__` literal changed printed `UNEQUAL   backend/src/app/main.py`; the copy was not committed. (2) `generate-contracts.py --check`: `54 generated contracts match the models`, rc 0. (3) `ruff check` on the 4 files: `All checks passed!`, rc 0; `mypy` on the 4 files: `Success: no issues found in 4 source files`, rc 0. (4) `git grep -n __doc__ 70a0af0d -- backend/src`: no hit (rc 1), so nothing in `backend/src` reads a docstring through `__doc__`; the OpenAPI description of a route function is read by FastAPI, and (2) shows the generated contracts unchanged.
+
+- **2026-10-19 — D5.11 fix A: the switch test is given a TEST-supplied beat (`beat_fixture`); the deploy compose still has none.** Cause of the 03:36:33 BST switch-only red (the compile Job stayed `queued`): the bring-up has no beat process, so no Job leaves the outbox (`beat_fixture` docstring: "without a beat process no Job ever leaves the outbox"). Authority: to-lead 2026-10-19 03:38:42 and 03:40:19 BST. `_build_from_commit`, `built_n` and `beat_fixture` moved VERBATIM from `backend/tests/test_deploy_stack_runtime.py` to `backend/tests/deploy_stack_helpers.py`; the smoke module imports them; `test_deploy_switch_runtime.py` takes `built_n` and `beat_fixture`. **D5.11 is therefore proven with a TEST-supplied beat. The deployed compose stack still lacks a beat (FD-1661, MEDIUM, WK-674). No claim is made that the deploy compose runs Jobs by itself.** Other changes in the helpers module: imports `tempfile`, `collections.abc.Iterator`, `pytest`; and `_compose = compose` (the moved text calls `_compose`). In the smoke module: the `tempfile` import removed, three names imported (`_build_from_commit` plain; `beat_fixture` and `built_n` with `# noqa: F401`, fixtures used by name), and `# noqa: F811` on the five test signatures that name the fixtures as parameters.
+  Proof 1, byte identity of each moved definition (decorators included) at 1f6934db (smoke file) vs the helpers file at this commit. Script `proof.py (scratchpad)` run as `python3 -I`:
+
+```python
+import ast, subprocess, sys
+W = "/home/puzhenhao1989/gi-pricing-plan/.claude/worktrees/sl-1259"
+def seg(src, name):
+    t = ast.parse(src)
+    for n in t.body:
+        if isinstance(n, ast.FunctionDef) and n.name == name:
+            lines = src.splitlines(keepends=True)
+            start = min([n.lineno] + [d.lineno for d in n.decorator_list])
+            return "".join(lines[start - 1:n.end_lineno])
+H = subprocess.run(["git", "-C", W, "show", "1f6934dbda78862dd269c404b6ebd718a4e744d1:backend/tests/test_deploy_stack_runtime.py"], capture_output=True, text=True, check=True).stdout
+H2 = open(W + "/backend/tests/deploy_stack_helpers.py").read()
+ok = True
+for name in ("_build_from_commit", "built_n", "beat_fixture"):
+    a, b = seg(H, name), seg(H2, name)
+    same = a.encode() == b.encode()
+    print(f"{name}: H len={len(a)} H2 len={len(b)} byte-identical={same}")
+    ok &= same
+sys.exit(0 if ok else 1)
+```
+
+Output:
+
+```
+_build_from_commit: H len=609 H2 len=609 byte-identical=True
+built_n: H len=171 H2 len=171 byte-identical=True
+beat_fixture: H len=702 H2 len=702 byte-identical=True
+```
+
+  A per-function `diff` of the two segments printed `diff empty` for each of the three.

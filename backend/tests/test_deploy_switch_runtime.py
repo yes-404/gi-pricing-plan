@@ -26,6 +26,8 @@ from backend.tests.deploy_stack_helpers import (
     LB_PORT,
     PROJECT,
     approve_draft,
+    beat_fixture,  # noqa: F401  (pytest fixture, used by name)
+    built_n,  # noqa: F401  (pytest fixture, used by name)
     governed_workspace,
 )
 from backend.tests.deploy_stack_helpers import api as _stack_api
@@ -77,7 +79,9 @@ def _wait_succeeded(job: dict[str, Any], headers: dict[str, str]) -> dict[str, A
     )
 
 
-def test_a_deploy_switches_every_api_process_and_a_default_live_quote_is_served() -> None:
+def test_a_deploy_switches_every_api_process_and_a_default_live_quote_is_served(
+    built_n: str, beat_fixture: None  # noqa: F811
+) -> None:
     # `rating.compile` is refused with 409 `RATING_VERSION_IMMUTABLE` unless the version is a
     # draft (FR-239, `require_compilable`), so the route compiles the draft, and the SAME version
     # is then approved (D5.11, fix A).

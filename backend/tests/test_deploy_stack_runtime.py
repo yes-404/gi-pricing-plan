@@ -20,7 +20,6 @@ import os
 import pathlib
 import re
 import subprocess
-import tempfile
 import threading
 import time
 import urllib.error
@@ -42,6 +41,9 @@ from backend.tests.deploy_stack_helpers import (
     LB_PORT,
     PROJECT,
     ROOT,
+    _build_from_commit,
+    beat_fixture,  # noqa: F401  (pytest fixture, used by name)
+    built_n,  # noqa: F401  (pytest fixture, used by name)
 )
 from backend.tests.deploy_stack_helpers import (
     SCORING_PERMISSIONS as _SCORING_PERMISSIONS,
@@ -72,20 +74,6 @@ from sqlalchemy import select
 pytestmark = pytest.mark.skipif(
     os.environ.get("GIP_DEPLOY_TESTS") != "1", reason="runtime deploy test: set GIP_DEPLOY_TESTS=1"
 )
-
-
-def _build_from_commit(sha: str) -> None:
-    """Build `gi-pricing-app:<sha>` from `git archive <sha>`, so the image is that commit's."""
-    with tempfile.TemporaryDirectory() as tmp:
-        archive = subprocess.run(
-            ["git", "-C", str(ROOT), "archive", sha], check=True, capture_output=True
-        ).stdout
-        subprocess.run(["tar", "-x", "-C", tmp], input=archive, check=True)
-        subprocess.run(
-            ["docker", "build", "-f", "deploy/Dockerfile", "--build-arg", f"GIP_BUILD={sha}",
-             "-t", f"gi-pricing-app:{sha}", "."],
-            cwd=tmp, check=True,
-        )
 
 
 def _get(path: str) -> int:
@@ -317,36 +305,10 @@ JOB_TERMINAL_BOUND_SECONDS = 60
 _TERMINAL = {"succeeded", "failed", "cancelled"}
 
 
-@pytest.fixture
-def built_n() -> str:
-    """Only image N: the delivery proof does not need N-1."""
-    n = os.environ["GIP_N_SHA"]
-    _build_from_commit(n)
-    return n
-
-
-@pytest.fixture
-def beat_fixture(built_n: str) -> Iterator[None]:
-    """Beat as a one-off TEST FIXTURE from the slice's image, not a compose service (SL-1689's).
-
-    The outbox relay is a beat schedule entry (`app.worker.entrypoint`), so without a beat
-    process no Job ever leaves the outbox. It is stopped in teardown.
-    """
-    started = _compose(
-        built_n, "run", "--rm", "-d", "worker-default",
-        "celery", "-A", "app.worker.entrypoint", "beat", "--schedule", "/tmp/celerybeat-schedule",
-    )
-    container = started.stdout.strip().splitlines()[-1]
-    try:
-        yield
-    finally:
-        subprocess.run(["docker", "rm", "-f", container], check=False, capture_output=True)
-
-
 @pytest.mark.req("FR-415")
 @pytest.mark.req("FR-406")
 def test_a_submitted_job_reaches_a_terminal_state_through_the_compose_worker(
-    built_n: str, down: None, beat_fixture: None
+    built_n: str, down: None, beat_fixture: None  # noqa: F811
 ) -> None:
     """A shape test proves the declared queue list is set; this proves it is delivered.
 
@@ -492,7 +454,7 @@ def _put_blob_inputs(workspace_id: str, csv: bytes, frame_parquet: bytes) -> tup
 @pytest.mark.req("FR-415")
 @pytest.mark.req("FR-406")
 def test_a_dataset_ingest_job_succeeds_through_the_compose_io_worker(
-    built_n: str, down: None, beat_fixture: None
+    built_n: str, down: None, beat_fixture: None  # noqa: F811
 ) -> None:
     """`dataset.ingest` routes to `io` and must reach `succeeded` through the compose io worker.
 
@@ -538,7 +500,7 @@ def test_a_dataset_ingest_job_succeeds_through_the_compose_io_worker(
 @pytest.mark.req("FR-415")
 @pytest.mark.req("FR-406")
 def test_a_score_batch_job_succeeds_through_the_compose_scoring_worker(
-    built_n: str, down: None, beat_fixture: None
+    built_n: str, down: None, beat_fixture: None  # noqa: F811
 ) -> None:
     """`score.batch` routes to `scoring` and must reach `succeeded`, not merely be consumed.
 
@@ -617,7 +579,7 @@ def test_a_score_batch_job_succeeds_through_the_compose_scoring_worker(
 @pytest.mark.req("FR-415")
 @pytest.mark.req("FR-406")
 def test_a_sampled_trace_is_produced_through_the_compose_scoring_worker(
-    built_n: str, down: None, beat_fixture: None
+    built_n: str, down: None, beat_fixture: None  # noqa: F811
 ) -> None:
     """A sampled quote's `score.trace_produce` Job succeeds and the trace is listed with a body.
 

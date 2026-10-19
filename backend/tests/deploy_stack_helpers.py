@@ -14,9 +14,13 @@ import json
 import os
 import pathlib
 import subprocess
+import tempfile
 import urllib.request
+from collections.abc import Iterator
 from typing import Any, NamedTuple
 from uuid import UUID
+
+import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 LB_PORT = os.environ.get("GIP_LB_PORT", "18000")
@@ -279,3 +283,48 @@ def api(method: str, path: str, headers: dict[str, str], body: Any = None) -> An
     )
     with urllib.request.urlopen(request, timeout=10) as response:
         return json.loads(response.read())
+
+
+# Moved verbatim from `test_deploy_stack_runtime.py` (SL-1259 D5.11 fix A, to-lead 03:40:19 BST):
+# the switch test needs the same test-supplied beat. `_compose` is the name the moved text uses.
+_compose = compose
+
+
+def _build_from_commit(sha: str) -> None:
+    """Build `gi-pricing-app:<sha>` from `git archive <sha>`, so the image is that commit's."""
+    with tempfile.TemporaryDirectory() as tmp:
+        archive = subprocess.run(
+            ["git", "-C", str(ROOT), "archive", sha], check=True, capture_output=True
+        ).stdout
+        subprocess.run(["tar", "-x", "-C", tmp], input=archive, check=True)
+        subprocess.run(
+            ["docker", "build", "-f", "deploy/Dockerfile", "--build-arg", f"GIP_BUILD={sha}",
+             "-t", f"gi-pricing-app:{sha}", "."],
+            cwd=tmp, check=True,
+        )
+
+
+@pytest.fixture
+def built_n() -> str:
+    """Only image N: the delivery proof does not need N-1."""
+    n = os.environ["GIP_N_SHA"]
+    _build_from_commit(n)
+    return n
+
+
+@pytest.fixture
+def beat_fixture(built_n: str) -> Iterator[None]:
+    """Beat as a one-off TEST FIXTURE from the slice's image, not a compose service (SL-1689's).
+
+    The outbox relay is a beat schedule entry (`app.worker.entrypoint`), so without a beat
+    process no Job ever leaves the outbox. It is stopped in teardown.
+    """
+    started = _compose(
+        built_n, "run", "--rm", "-d", "worker-default",
+        "celery", "-A", "app.worker.entrypoint", "beat", "--schedule", "/tmp/celerybeat-schedule",
+    )
+    container = started.stdout.strip().splitlines()[-1]
+    try:
+        yield
+    finally:
+        subprocess.run(["docker", "rm", "-f", container], check=False, capture_output=True)
