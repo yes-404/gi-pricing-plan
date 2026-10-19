@@ -2,7 +2,7 @@
 id: LG-8125
 family: ledger
 title: WK-1178 slice SL-1575 — FD-1573, dislocation_frame's memory and time at book scale (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-18
 owner: executor
 tree: 50476d3f5ef181453b890196ec9637306df4b81e
@@ -39,15 +39,31 @@ Quoted from `PL-1574` (Tasks table, row 1):
 - [x] **Task 0 Step 3, the two runs** (below).
 - [x] **Task 0 Step 4, the decision rule** (below): H1 CONFIRMED.
 - [x] Task 1: `_score_pass` retains rung values, not `LadderRung` objects (H1 confirmed, so it applies): commit `2ff1f69b`.
-- [ ] Task 2: the after-measurement and the gate.
+- [x] Task 2: the after-measurement and the gate: the four QUIET legs ("2026-10-19 06:58:33 BST — A-only QUIET" below), acceptance 5 ("08:41 BST" below) and the gate of record at `2bd1c685` (### Gate).
 
 ### Gate
 
-Not yet run.
+The gate of record: the full gate at head `2bd1c68559caeeb8784a34bc0e6f78a223f98961`, tree `686f06880f3faa3227ea34dddebef701b9a378aa`, END 2026-10-19T10:26:57Z (`scratch/sl1575-gate/gate.log`, read-only; read by the executor at the closing acts and by the maintainer, to-lead "2026-10-19 11:27:29 BST", GREEN, proceed to audit and mint).
+
+| Row | Result | Limit or rule |
+|---|---|---|
+| Preflight | both `.arff` files ok; alembic 1 head, `a4d1f08c3b97` | — |
+| Round trip, `\restrict` lines filtered | cmp rc 0; raw diff 4 lines | — |
+| ruff, mypy, import_linter, doc_index, req_coverage, contracts | rc 0 each | — |
+| pytest | 13 failed, 6618 passed, 13 skipped | the 13 equal the check-31 cascade set |
+| Frontend | six commands, rc 0 | — |
+| Journey | 1128 s (`demo.log:4745`; the gate's wrapper line `demo seconds` reads 1258) | ≤ ~1300 s |
+| Dislocation #1 | 427 s | ≤ 550 s |
+| D7 | ok, 19985 policies in the sample | — |
+| Keycloak | bind source under tools-main | — |
+| Zeros | own-DB 0, redis db 1 0, redis db 3 0 | 0 |
+| audit_docs | rc 1, FAILED(2): check 31 only, the 1825→8125 gap and the `created:` order | cleared by the mint |
+
+The 13 pytest failures and `audit_docs` FAILED(2) are red at this head because of the working id 8125 and turn green at the mint; the mint's own docs block shows it.
 
 ### Audit
 
-Not yet run.
+Written in the `## Audit` section below (auditor seat, 2026-10-19, range `origin/main...HEAD`; proposed verdict CLEAN, adopted by the lead).
 
 ### Build log
 
@@ -187,6 +203,21 @@ Reason given: B2 is a slower-biased baseline, and a slower baseline favours PASS
 - **A1 crash and cause (to-lead "2026-10-19 05:05:35 BST", ruled):** the repro at 20k (`scratch/sl1575-repro/spike-20k.err`) shows `task-9447/spike.py:73 rungs = sum(len(v["ladder"]) …)` raising `KeyError: 'ladder'`. The cause is the spike instrument: `pricing_core/rating/analysis.py` at 50476d3f:201 returns `"ladder"`; Task 1 at e73ecd65:216 returns `"rungs"`. **No FD.** B1 and B2 stand (the edit touches only a post-collection summary line).
 - **Fix (key-compatible, one instrument for both trees):** `task-9447/spike.py:73` now reads `v.get("rungs", v.get("ladder"))`; JSONL field names unchanged. sha256 before `1b1bee35ea5d97bf5ddfea74b8b0fa0c14f82418b39488f06ceca95184988721`, **after `0be5f6b8ebbaeb3a13be131b488ddbee3fcbc542a01952f010c6ce9cfaf3525e`**; `python3 -m py_compile` rc 0. The spike was not run.
 - **Required cross-check (before A1/A2 are read):** A1's summed rung count (`pass1.retained` `rungs=`) at 200k must EQUAL B2's at 200k; a difference is a finding against Task 1, not a pass.
+
+#### 2026-10-19 06:58:33 BST — A-only QUIET block END: the four legs and the two decisions (items 3 and 4 PASS)
+
+Recorded as the maintainer ordered (to-lead "2026-10-19 06:58:33 BST": "Record in LG 8125: the four legs, these two decisions and this stamp"). Primary: `scratch/sl1575-quiet-A/spike-200k-A{1,2}.jsonl` (`dislocation_frame.returned`), both `.err` files 0 bytes, both STARTs pinned spike sha256 `0be5f6b8…`, head `e73ecd65`; A-block END 05:58:05Z, rc 0.
+
+| Leg | Tree | load1 | `dislocation_frame.returned` | VmHWM (KiB) |
+|---|---|---|---|---|
+| B1 (before) | 50476d3f | — | 1116.35 s | 6,385,760 |
+| B2 (before; disclosed contaminated, accepted 05:01:56 BST) | 50476d3f | — | 1011.73 s | 6,408,564 |
+| A1 (after) | e73ecd65 | 1.58 | 875.87 s | 1,555,116 |
+| A2 (after) | e73ecd65 | 1.95 | 797.81 s | 1,501,344 |
+
+- **Rung cross-check:** A1 rungs 1,000,000 = B2 rungs 1,000,000; the instrument is valid across trees.
+- **Item 4 (time, rule of 04:34:00 BST):** mean(A) 836.84 s ≤ max(B1, B2) = 1116.35 s: **PASS**. Both A legs are below min(B); the B2 guard (04:39:35 BST) is not engaged, since mean(A) ≤ B1.
+- **Item 3 (memory):** mean(A) 1,528,230 KiB against mean(B) 6,397,162 KiB = −76.1 %, past the ~4 % bar: **PASS**.
 
 #### 2026-10-19 08:41 BST — Acceptance 5, the R6 cost run: PASS (maintainer, `to-lead.md` "2026-10-19 08:37:07 BST")
 
