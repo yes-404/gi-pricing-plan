@@ -131,7 +131,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         switch = RedisSwitch(switch_client, f"{settings.environment.value}:{settings.tenant_id}")
         # One channel per platform Environment (`dev`, `uat`, `prod`, ...). An Environment
         # created after this process started is not subscribed until it restarts: a deploy into
-        # it names no such process. That gap is part of FD 8129 (MEDIUM, WK-674).
+        # it names no such process. That gap is part of FD-1823 (MEDIUM, WK-674).
         async with database.session() as session:
             environments = list(
                 (

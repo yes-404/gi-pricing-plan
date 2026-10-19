@@ -16,7 +16,7 @@ behind what a process serves.
 **What is given up.** `/score` used to read the latest committed Deployment on every request
 (`api/score.py`), so convergence was immediate. A process that is alive but missed COMMIT now
 serves the previous version until it restarts (and loads the latest committed Deployment). The
-event and the response name it; the remedy is FD 8129 (MEDIUM, WK-674, before the 12 Nov exit
+event and the response name it; the remedy is FD-1823 (MEDIUM, WK-674, before the 12 Nov exit
 demo), not built here.
 
 **Who is expected to acknowledge.** The processes that received the PREPARE message

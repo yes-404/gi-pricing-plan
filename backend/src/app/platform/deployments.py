@@ -685,7 +685,7 @@ async def deploy_and_switch(
     PREPARE and the Deployment row are `deploy`'s, in one transaction that commits when this
     block exits. COMMIT is sent after that commit, and `deployment.switched` records, in its
     own transaction, who swapped and who did not. No revert: a process that did not acknowledge
-    COMMIT is alive and still serving the previous version until it restarts (FD 8129), and the
+    COMMIT is alive and still serving the previous version until it restarts (FD-1823), and the
     event and the response name it.
     """
     async with database.unit_of_work() as session:
