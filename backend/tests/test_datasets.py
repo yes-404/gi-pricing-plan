@@ -290,7 +290,11 @@ async def test_a_passing_acknowledged_report_validates_the_version(
 async def test_a_validated_version_cannot_exist_without_a_report(
     database: Database, workspace_id
 ) -> None:
-    """Negative, at the database: the check constraint is what survives a stray UPDATE."""
+    """Negative, at the database: the check constraint is what survives a stray UPDATE.
+
+    The UPDATE goes through `validating`, the only way out of `draft` that `dataset_versions`'
+    snapshot guard allows (SL-1770); a direct `draft -> validated` is the guard's refusal, not
+    the constraint's."""
     actor = await _analyst(database, workspace_id)
     dataset_id = await _dataset(database, workspace_id, actor)
     async with database.unit_of_work() as session:
@@ -300,6 +304,12 @@ async def test_a_validated_version_cannot_exist_without_a_report(
             )
         ).id
 
+    async with database.unit_of_work() as session:
+        await session.execute(
+            text("UPDATE dataset_versions SET status = 'validating' WHERE id = :id").bindparams(
+                id=version_id
+            )
+        )
     with pytest.raises(IntegrityError):
         async with database.unit_of_work() as session:
             await session.execute(
