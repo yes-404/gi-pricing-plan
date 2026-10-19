@@ -4349,6 +4349,77 @@
         "title": "DeploymentCreate",
         "type": "object"
       },
+      "DeploymentCreated": {
+        "additionalProperties": false,
+        "description": "The `201` body of `POST /api/v1/environments/{env}/deployments`: the Deployment and,\nafter its transaction committed, the outcome of the switch (`03` FR-268).",
+        "properties": {
+          "bundle_hash": {
+            "description": "The Rating Version's compiled Bundle hash (FR-239).",
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "title": "Bundle Hash",
+            "type": "string"
+          },
+          "deployed_at": {
+            "format": "date-time",
+            "title": "Deployed At",
+            "type": "string"
+          },
+          "deployed_by": {
+            "format": "uuid",
+            "title": "Deployed By",
+            "type": "string"
+          },
+          "deployment_request_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArtifactRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The approved Deployment Request executed; null only for a target with no `deployment` policy entry (RL-1301 A.5)."
+          },
+          "environment": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Environment",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "rating_version_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "switch": {
+            "$ref": "#/components/schemas/SwitchReport"
+          },
+          "workspace_id": {
+            "format": "uuid",
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "workspace_id",
+          "environment",
+          "rating_version_ref",
+          "bundle_hash",
+          "deployed_by",
+          "deployed_at",
+          "reason",
+          "switch"
+        ],
+        "title": "DeploymentCreated",
+        "type": "object"
+      },
       "DeploymentRequest": {
         "additionalProperties": false,
         "description": "The artifact that precedes a gated deploy (`03` §4.12, RL-1301 A).",
@@ -15485,6 +15556,26 @@
         "title": "RoleAssignmentView",
         "type": "object"
       },
+      "RollbackCreate": {
+        "additionalProperties": false,
+        "description": "The body of `POST /api/v1/environments/{env}/deployments/rollback` (`03` FR-269).\n\nNames a Rating Version that was deployed to this Environment before. It needs no new\napproval: it was approved when it was first deployed.",
+        "properties": {
+          "rating_version_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "reason": {
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rating_version_ref",
+          "reason"
+        ],
+        "title": "RollbackCreate",
+        "type": "object"
+      },
       "RotateKey": {
         "additionalProperties": false,
         "description": "FR-430: rotation acts on the key of one named Environment (DP-S3E-2 (a)).",
@@ -17064,6 +17155,44 @@
           "change_summary"
         ],
         "title": "SubmitPerilStructure",
+        "type": "object"
+      },
+      "SwitchReport": {
+        "additionalProperties": false,
+        "description": "Which processes switched to a Deployment and what became of each (`03` FR-268).\n\nThe `after` of the `deployment.switched` Audit Event and the switch half of the deploy\nresponse. Its terms (`receivers`, `committed`, `possibly_stale`, `pruned_stale`) are defined\nonce, in `03` §5.1's list of this Work's audit actions.",
+        "properties": {
+          "deployment_ref": {
+            "description": "The Deployment (its id) the processes switch to.",
+            "format": "uuid",
+            "title": "Deployment Ref",
+            "type": "string"
+          },
+          "processes": {
+            "additionalProperties": {
+              "enum": [
+                "committed",
+                "possibly_stale",
+                "pruned_stale"
+              ],
+              "type": "string"
+            },
+            "description": "Each named process and what became of it.",
+            "title": "Processes",
+            "type": "object"
+          },
+          "receivers": {
+            "description": "Live subscribers that received PREPARE.",
+            "minimum": 0.0,
+            "title": "Receivers",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deployment_ref",
+          "receivers",
+          "processes"
+        ],
+        "title": "SwitchReport",
         "type": "object"
       },
       "SwitchWorkspaceRequest": {
@@ -27542,7 +27671,7 @@
         ]
       },
       "post": {
-        "description": "**201**. **409** `DEPLOY_REQUIRES_APPROVAL` for a gated target without an approved,\nunexecuted request; **409** `PROMOTION_ORDER_VIOLATION`; the Rating Version and Environment\nrefusals of the request route; **422** for a non-Rating-Version reference.",
+        "description": "**201** with the Deployment and `switch`: the processes that swapped to it and the ones\nthat did not (`03` FR-268). **409** `DEPLOY_REQUIRES_APPROVAL` for a gated target without an\napproved, unexecuted request; **409** `PROMOTION_ORDER_VIOLATION`; the Rating Version and\nEnvironment refusals of the request route; **422** for a non-Rating-Version reference;\n**503** `DEPLOY_SWITCH_INCOMPLETE` when a subscribed process did not acknowledge PREPARE (no\nDeployment is written).",
         "operationId": "create_deployment_api_v1_environments__env__deployments_post",
         "parameters": [
           {
@@ -27588,7 +27717,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Deployment"
+                  "$ref": "#/components/schemas/DeploymentCreated"
                 }
               }
             },
@@ -27683,9 +27812,190 @@
               }
             },
             "description": "Rate limited"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not ready"
           }
         },
         "summary": "Deploy an approved version",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/environments/{env}/deployments/rollback": {
+      "post": {
+        "description": "**201** with the new Deployment and `switch` (`03` FR-269). Needs `deployment:promote` on\nthe Environment and no new approval. **409** `VALIDATION_FAILED` when the Rating Version was\nnever deployed to this Environment; **422** for a non-Rating-Version reference; **503**\n`DEPLOY_SWITCH_INCOMPLETE` when a subscribed process did not acknowledge PREPARE.",
+        "operationId": "rollback_deployment_api_v1_environments__env__deployments_rollback_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "title": "Env",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RollbackCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeploymentCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not ready"
+          }
+        },
+        "summary": "Roll an environment back to an earlier Rating Version",
         "tags": [
           "platform"
         ]

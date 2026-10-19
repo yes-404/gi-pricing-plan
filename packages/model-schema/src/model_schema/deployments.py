@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import enum
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -29,6 +30,7 @@ from model_schema.refs import ArtifactRef, Slug
 __all__ = [
     "Deployment",
     "DeploymentCreate",
+    "DeploymentCreated",
     "DeploymentRequest",
     "DeploymentRequestCreate",
     "DeploymentRequestEvidence",
@@ -37,6 +39,8 @@ __all__ = [
     "EnvironmentCreate",
     "EnvironmentUpdate",
     "LiveDeployment",
+    "RollbackCreate",
+    "SwitchReport",
 ]
 
 _BUNDLE_HASH = r"^sha256:[a-f0-9]{64}$"
@@ -118,6 +122,43 @@ class Deployment(BaseModel):
             "`deployment` policy entry (RL-1301 A.5)."
         ),
     )
+
+
+class SwitchReport(BaseModel):
+    """Which processes switched to a Deployment and what became of each (`03` FR-268).
+
+    The `after` of the `deployment.switched` Audit Event and the switch half of the deploy
+    response. Its terms (`receivers`, `committed`, `possibly_stale`, `pruned_stale`) are defined
+    once, in `03` §5.1's list of this Work's audit actions.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    deployment_ref: UUID = Field(description="The Deployment (its id) the processes switch to.")
+    receivers: int = Field(ge=0, description="Live subscribers that received PREPARE.")
+    processes: dict[str, Literal["committed", "possibly_stale", "pruned_stale"]] = Field(
+        description="Each named process and what became of it."
+    )
+
+
+class DeploymentCreated(Deployment):
+    """The `201` body of `POST /api/v1/environments/{env}/deployments`: the Deployment and,
+    after its transaction committed, the outcome of the switch (`03` FR-268)."""
+
+    switch: SwitchReport
+
+
+class RollbackCreate(BaseModel):
+    """The body of `POST /api/v1/environments/{env}/deployments/rollback` (`03` FR-269).
+
+    Names a Rating Version that was deployed to this Environment before. It needs no new
+    approval: it was approved when it was first deployed.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    rating_version_ref: ArtifactRef
+    reason: str = Field(min_length=1)
 
 
 class DeploymentCreate(BaseModel):

@@ -1179,7 +1179,7 @@ The compose `api` and `worker` services, the reference identity provider, the me
 id: SL-1259
 family: slice
 title: Slice 5: atomic switchover, rollback and the measurements (FR-268, FR-269, FR-272 audit and NFR-498 for rollback, NFR-494, NFR-489, NFR-502, NFR-490, NFR-493 linearity limb, NFR-497 mechanism)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                 # draft → active → closed | retired (§1.2a)
 created: 2026-09-29
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 0d5b0765f76320518bfe76ddb30e5013525797c0
@@ -1190,8 +1190,11 @@ relates: [PL-1237]
 ```
 
 Atomic switchover and rollback on the Slice 4 path, with the rollback's audit limb (FR-272, NFR-498), the F1 acceptance test and the measured verdicts. NFR-497's degraded read is kept reachable against the `live` reference; the availability verdict is the lead's at the close. `PL-1237` Task 5. Starts after Slice 4 closes; its measured verdicts wait on a dedicated host (maintainer-owned).
+(Activated 2026-10-18 on the maintainer's GO, to-lead "2026-10-18 22:50:32 BST — Maintainer: the duplicate-mint anomaly ruled; GO SL-1259, SL-1770, SL-1738, SL-1575 (with conditions)"; dispatched by the lead, transcript 34b896f2.)
+(Closed 2026-10-19 as a Slice by minter-1259's closing acts (LG-1824 minted from working id 8127), on the pre-PR audit of LG-1824 ("## Audit", auditor, 2026-10-19 04:33 BST, and its "Second pass — D5.8 write-set walk", auditor-1259w, 2026-10-19 04:42:07 BST; range `origin/main...43b1f231`), adopted by the lead (from-lead "2026-10-19 04:40:22 BST", amended "04:41:38 BST"); the measured NFR verdicts are deferred with an owner (LG-1824 "## Closing acts"). MERGE-ACK: not yet given.)
 
 *Dated 2026-10-12 by the planner: the Work-plan deltas for this slice are `PL-1537` row 2 and `PL-1620` (D0.1 to D0.3, D5.1 to D5.5; minted in D11, #1275). `PL-1620` DP-S5-a is ruled (a) by `RL-1614`. This row's status and fields are unchanged.*
+*Dated 2026-10-19 by the executor (PL-1766 Hand-off item 2): this slice's Work-plan delta is `PL-1766` (Slice 5 before its GO, SL-1455 as a formal dependency, the S4 premises and five decision points); like the planner's line above, it is recorded on this row and changes no field of it.*
 
 #### SL-1260 — Slice 6: date-based routing and shadow scoring (FR-270, FR-271, FR-272 audit and NFR-498 for routing and shadow)
 
@@ -2718,7 +2721,7 @@ On the maintainer's (by delegation) entry "2026-10-14 11:06:52 BST — D-list li
 id: SL-1738
 family: slice
 title: WK-1178 fix slice — FD-1744, a recipe cell that does not parse is never silently nulled and validation gives it a verdict (FR-32, VR-STR-2)
-status: draft                    # draft → active → closed | retired (§1.2a)
+status: closed                    # draft → active → closed | retired (§1.2a)
 created: 2026-10-16 # original date 2026-10-14, set at the draft; minted 2026-10-16
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
@@ -2758,6 +2761,8 @@ Plan `PL-1737` (a WK-1178 Work-plan delta; `draft`). **Activation needs:**
 *(Row cut 2026-10-14 by the planner, planner-fd8040; working ids 8043 and 8042 reserved by the lead.)*
 *(Amended 2026-10-14 by the planner, planner-p1fix, before merge, on the maintainer's (by delegation) entry "2026-10-14 12:31:22 BST": the identity widened, R7 and R8, DP-S1.)*
 *(Amended again 2026-10-14 by the planner, planner-p1fix, before merge, on the maintainer's (by delegation) entry "2026-10-14 12:42:55 BST": DP-S1 ruled (i), the write set widened.)*
+(Activated 2026-10-18 on the maintainer's GO, to-lead "2026-10-18 22:50:32 BST — Maintainer: the duplicate-mint anomaly ruled; GO SL-1259, SL-1770, SL-1738, SL-1575 (with conditions)"; dispatched by the lead, transcript 34b896f2.)
+(Closed 2026-10-19 as a Slice by exec-1738r's closing acts (LG-1822 minted from working id 8128), on the pre-PR audit of LG-1822 (auditor-1738, "## Audit", 2026-10-19 01:12:51 BST; head `0fbea8ad`), CLEAN, adopted by the lead (from-lead "2026-10-19 01:13:36 BST"); F4 answered in LG-1822. MERGE-ACK: not yet given.)
 
 #### SL-1740 — WK-1178 fix slice — the failed-authentication audit: a keyed-workspace refusal's audit row survives the 401, and every failure is counted by reason
 

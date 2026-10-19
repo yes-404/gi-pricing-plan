@@ -118,7 +118,14 @@ services:
     profiles: ["app"]
     image: gi-pricing-app:${GIP_BUILD:-unset}
     build: *gip-build
-    environment: *gip-env
+    # PL-1766 D5.13 (DP-S5-Q2 (a)): the uvicorn process count N per container is declared here,
+    # not left to uvicorn's default. uvicorn reads `WEB_CONCURRENCY`, so the image's `CMD` is
+    # unchanged. The default 1 is what ran before; a bench that raises it declares N, observes
+    # it, and voids a reading whose observed N differs. The "replica" is the container; each
+    # process under it is a separate subscriber.
+    environment:
+      <<: *gip-env
+      WEB_CONCURRENCY: ${GIP_API_WEB_CONCURRENCY:-1}
     expose: ["8000"]
     depends_on:
       migrate: {condition: service_completed_successfully}

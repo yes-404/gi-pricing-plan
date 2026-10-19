@@ -11,6 +11,7 @@ import io
 
 import polars as pl
 import pytest
+from backend.tests.test_ingest_coercion import assert_row_identity
 from sqlalchemy import select
 
 from app.data.ingestion import ingest_upload
@@ -152,6 +153,7 @@ async def test_unusable_rows_are_quarantined_with_the_version(
     assert run.rows_written == 2
     assert run.rows_rejected == 1
     assert run.reject_sample[0]["_reject_reason"] == "exposure_start is null"
+    assert_row_identity(run)  # G5: a required-null reject counts in rows_rejected
 
 
 @pytest.mark.req("FR-31")
@@ -476,6 +478,7 @@ async def test_pseudonymising_the_column_lets_the_upload_through(
         )
     assert outcome.version.version == 1
     assert outcome.run.rows_written == 2
+    assert_row_identity(outcome.run)  # G5: a recipe with no row-changing step
 
 
 @pytest.mark.req("FR-40")

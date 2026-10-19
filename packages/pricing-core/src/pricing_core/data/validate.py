@@ -38,6 +38,7 @@ from model_schema import (
     ValidationRule,
     ValidationRuleSet,
 )
+from pricing_core.data.ingest import REJECT_COLUMN_COLUMN, REJECT_STEP_COLUMN
 from pricing_core.data.profile import TOP_LEVELS
 from pricing_core.progress import ProgressCallback
 
@@ -255,6 +256,30 @@ def _allowed_values(
     )
 
 
+def _coerced_cells(
+    tables: Mapping[str, pl.DataFrame], rule: ValidationRule, columns: Sequence[str]
+) -> dict[str, int]:
+    """Per declared column, the cells the recipe quarantined because of it (FR-32).
+
+    A cell that did not survive a `cast` or `parse_date` leaves its whole row in the version's
+    `_rejected` table, so the clean column is typed and null-free of it and a dtype check on
+    the clean table alone cannot see it. Only columns with a non-zero count are listed, so a
+    clean version reports `{}`.
+    """
+    rejected = tables.get(rule.params.get("rejected_table", "_rejected"))
+    if rejected is None or not {REJECT_COLUMN_COLUMN, REJECT_STEP_COLUMN} <= set(rejected.columns):
+        return {}
+    counts = (
+        rejected.filter(
+            pl.col(REJECT_STEP_COLUMN).is_in(["cast", "parse_date"])
+            & pl.col(REJECT_COLUMN_COLUMN).is_in(list(columns))
+        )
+        .group_by(REJECT_COLUMN_COLUMN)
+        .len()
+    )
+    return {name: int(n) for name, n in counts.sort(REJECT_COLUMN_COLUMN).iter_rows()}
+
+
 @register_check("dtype_match")
 def _dtype_match(
     rule: ValidationRule, tables: Mapping[str, pl.DataFrame], ctx: ValidationContext
@@ -278,17 +303,20 @@ def _dtype_match(
         for name, expected in declared.items()
         if name in frame.columns and str(frame.schema[name]).lower() != expected.lower()
     }
+    coerced = _coerced_cells(tables, rule, list(declared))
+    cells = sum(coerced.values())
     return CheckOutcome(
-        violating_rows=len(mismatched),
-        measured={"mismatched_columns": mismatched},
+        violating_rows=len(mismatched) + cells,
+        measured={"mismatched_columns": mismatched, "coerced_cells": coerced},
         threshold={"columns": dict(declared)},
         detail=(
-            f"{len(mismatched)} column(s) do not match their declared dtype"
-            if mismatched
+            f"{len(mismatched)} column(s) do not match their declared dtype and "
+            f"{cells} cell(s) were quarantined as unparseable"
+            if mismatched or cells
             else "every declared column matches its dtype"
         ),
         # A column-level check emits `{"column": name}` — the column is the offending row.
-        offending_sample=tuple({"column": name} for name in sorted(mismatched)),
+        offending_sample=tuple({"column": name} for name in sorted({*mismatched, *coerced})),
     )
 
 
@@ -312,15 +340,21 @@ def _date_parsed(
         for name in columns
         if name in frame.columns and frame.schema[name] not in (pl.Date, pl.Datetime)
     )
+    coerced = _coerced_cells(tables, rule, columns)
+    cells = sum(coerced.values())
     return CheckOutcome(
-        violating_rows=len(unparsed),
+        violating_rows=len(unparsed) + cells,
         measured={
-            "unparsed_columns": {name: str(frame.schema[name]) for name in unparsed}
+            "unparsed_columns": {name: str(frame.schema[name]) for name in unparsed},
+            "coerced_cells": coerced,
         },
         threshold={"columns": list(columns)},
-        detail=f"{len(unparsed)} declared date column(s) did not parse to a date type",
+        detail=(
+            f"{len(unparsed)} declared date column(s) did not parse to a date type"
+            + (f" and {cells} cell(s) were quarantined as unparseable" if cells else "")
+        ),
         # A column-level check emits `{"column": name}` — the column is the offending row.
-        offending_sample=tuple({"column": name} for name in unparsed),
+        offending_sample=tuple({"column": name} for name in sorted({*unparsed, *coerced})),
     )
 
 

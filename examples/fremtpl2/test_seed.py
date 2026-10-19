@@ -186,6 +186,52 @@ def test_the_seed_reruns_against_a_seeded_database(scratch_seed: Path) -> None:
     assert second["analyst_id"] == first["analyst_id"]
 
 
+@pytest.mark.req("FR-32")
+@pytest.mark.req("FR-31")
+def test_every_seeded_ingestion_run_balances_its_rows(scratch_seed: Path) -> None:
+    """R8b (FD-1744, SL-1738, PL-1737 DP-S1 (i)): the accounting identity, read from each
+    ingestion run the seed made, and the portfolio's own figure (20 000 - 0 - 15 + 0 = 19 985).
+
+    Needs the local stack, so CI skips it; the LG carries the printed lines."""
+    import asyncio
+
+    import seed
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    assert asyncio.run(seed.run(ROWS_FOR_A_HEALTHY_FIT)) == 0
+
+    async def runs() -> list[tuple[int, int, int, list[dict[str, int]]]]:
+        import os
+
+        engine = create_async_engine(os.environ["GIP_DATABASE_URL"])
+        try:
+            async with engine.connect() as connection:
+                rows = await connection.execute(
+                    text(
+                        "select rows_read, rows_rejected, rows_written, step_counts "
+                        "from ingestion_runs"
+                    )
+                )
+                return [tuple(row) for row in rows]
+        finally:
+            await engine.dispose()
+
+    found = asyncio.run(runs())
+    assert found
+    for rows_read, rows_rejected, rows_written, steps in found:
+        removed = added = 0
+        for step in steps:
+            delta = step["rows_out"] - (step["rows_in"] - step["rows_rejected"])
+            removed += max(-delta, 0)
+            added += max(delta, 0)
+        print(f"  run: {rows_read} - {rows_rejected} - {removed} + {added} == {rows_written}")
+        assert rows_read - rows_rejected - removed + added == rows_written
+    portfolio = [r for r in found if r[0] == PORTFOLIO_ROWS]
+    assert portfolio
+    assert all(r[2] == 19_985 for r in portfolio)
+
+
 def test_a_small_seed_is_refused_for_its_degenerate_fit(scratch_seed: Path) -> None:
     """At 2 000 rows area[F] has no claims and fits to a relativity of 1.4e-07 (golden premium
     0 minor units; the engine cannot score it). The seed stops, naming the level, rather than
