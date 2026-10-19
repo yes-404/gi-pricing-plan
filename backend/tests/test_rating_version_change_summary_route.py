@@ -343,7 +343,9 @@ def test_a_parquet_table_answers_200_with_the_entry_pending(
         _seed_table_version(database, workspace_id, principal, slug, blob_store, _SOFTENED)
     )
 
-    async def make_parquet() -> None:
+    async def make_parquet() -> int:
+        """A stored version is append-only at the database (SL-1770): the parquet version is a
+        new one, a copy of `two` with the storage changed, never `two` rewritten."""
         async with database.unit_of_work() as session:
             table = await session.scalar(
                 select(RateTableRow).where(
@@ -358,9 +360,31 @@ def test_a_parquet_table_answers_200_with_the_entry_pending(
                 )
             )
             assert version is not None
-            version.storage = "parquet"
+            latest = await session.scalar(
+                select(func.max(RateTableVersionRow.version_number)).where(
+                    RateTableVersionRow.rate_table_id == table.id
+                )
+            )
+            assert latest is not None
+            session.add(
+                RateTableVersionRow(
+                    workspace_id=version.workspace_id,
+                    rate_table_id=version.rate_table_id,
+                    version_number=latest + 1,
+                    storage="parquet",
+                    definition=version.definition,
+                    change_note=version.change_note,
+                    seeded_from=version.seeded_from,
+                    cells=version.cells,
+                    created_by_operation=version.created_by_operation,
+                    created_by_import=version.created_by_import,
+                    created_by_edit=version.created_by_edit,
+                    created_by=version.created_by,
+                )
+            )
+            return latest + 1
 
-    _run(make_parquet())
+    parquet = _run(make_parquet())
     _save_algorithms(api_client, headers, _algorithm(1), _algorithm(2))
     _run(
         _insert(
@@ -371,7 +395,7 @@ def test_a_parquet_table_answers_200_with_the_entry_pending(
     v2 = _run(
         _insert(
             database, workspace_id, principal, version=2, algorithm_version=2,
-            pins=_pins(ArtifactRef(type="rate_table", slug=slug, version=two)),
+            pins=_pins(ArtifactRef(type="rate_table", slug=slug, version=parquet)),
         )
     )
     jobs_before = _snapshot(database, workspace_id, v2.id)[-1]

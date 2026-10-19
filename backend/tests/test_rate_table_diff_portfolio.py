@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable
 from decimal import Decimal
 from typing import Any
 from uuid import UUID, uuid4
@@ -38,10 +39,12 @@ from backend.tests.test_rate_tables_service import (
 )
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings
 from app.db.models import (
     BlobRow,
+    DatasetVersionRow,
     JobRow,
     RateTableRow,
     RateTableVersionRow,
@@ -153,8 +156,6 @@ async def ingest_portfolio(
             workspace_id=workspace_id,
         )
     assert await execute_job(database, job.id, blob_store) is JobStatus.SUCCEEDED
-    from app.db.models import DatasetVersionRow
-
     async with database.session() as session:
         return (
             await session.execute(
@@ -241,11 +242,68 @@ async def _identity_table(
     )
 
 
+async def _force_validated(session: AsyncSession, version_id: UUID) -> None:
+    """Mark an ingested version `validated` without running the rules (the rows under test
+    would fail them): through `validating`, the only path `00` §2's transition table has from
+    `draft`, which `dataset_versions`' guard enforces on the owner connection too."""
+    for status, extra in (("validating", {}), ("validated", {"validation_report_id": uuid4()})):
+        await session.execute(
+            update(DatasetVersionRow)
+            .where(DatasetVersionRow.id == version_id)
+            .values(status=status, **extra)
+        )
+
+
+async def _insert_shaped_copies(
+    session: AsyncSession, workspace_id: UUID, slug: str, shape: Callable[[dict[str, Any]], None]
+) -> int:
+    """Re-insert every version of the table with `shape` applied to its definition, as the next
+    versions in order, and return the number of the last copy: the version the call under test
+    names, `previous` being the copy of the one before. A stored version is append-only at the
+    database (`rate_table_versions`, SL-1770), so a test that needs a definition no route can
+    write inserts new versions; it never rewrites the one the route returned."""
+    table = await session.scalar(
+        select(RateTableRow).where(
+            RateTableRow.workspace_id == workspace_id, RateTableRow.slug == slug
+        )
+    )
+    assert table is not None
+    versions = (
+        await session.execute(
+            select(RateTableVersionRow)
+            .where(RateTableVersionRow.rate_table_id == table.id)
+            .order_by(RateTableVersionRow.version_number)
+        )
+    ).scalars().all()
+    last = versions[-1].version_number
+    for source in versions:
+        definition = json.loads(json.dumps(source.definition))
+        shape(definition)
+        session.add(
+            RateTableVersionRow(
+                workspace_id=source.workspace_id,
+                rate_table_id=source.rate_table_id,
+                version_number=last + source.version_number,
+                storage=source.storage,
+                definition=definition,
+                change_note=source.change_note,
+                seeded_from=source.seeded_from,
+                cells=source.cells,
+                created_by_operation=source.created_by_operation,
+                created_by_import=source.created_by_import,
+                created_by_edit=source.created_by_edit,
+                created_by=source.created_by,
+            )
+        )
+    await session.flush()
+    return last + versions[-1].version_number
+
+
 async def _diff(database: Database, workspace_id: UUID, blob_store: BlobStore, slug: str,
                 portfolio: UUID | None, cache: DiffCache | None = None,
-                against: Any = "previous") -> RateTableDiff:
+                against: Any = "previous", version: int = 2) -> RateTableDiff:
     return await svc.diff(
-        database, workspace_id, slug, 2, against, blob_store=blob_store, cache=cache,
+        database, workspace_id, slug, version, against, blob_store=blob_store, cache=cache,
         portfolio_dataset_version_id=portfolio,
     )
 
@@ -362,27 +420,12 @@ async def test_seeded_banding_and_grouping_tables_are_weighted(
     # Strip `factor_ref` from the stored definitions: the key is then joined by its own name,
     # `age_banded`, which the portfolio has no column of.
     async with database.unit_of_work() as session:
-        row = await session.scalar(
-            select(RateTableRow).where(
-                RateTableRow.workspace_id == workspace_id, RateTableRow.slug == age_table
-            )
-        )
-        assert row is not None
-        for version in (
-            await session.execute(
-                select(RateTableVersionRow).where(RateTableVersionRow.rate_table_id == row.id)
-            )
-        ).scalars():
-            definition = json.loads(json.dumps(version.definition))
+        def _shape(definition: dict[str, Any]) -> None:
             for key in definition["keys"]:
                 key.pop("factor_ref", None)
-            await session.execute(
-                update(RateTableVersionRow)
-                .where(RateTableVersionRow.id == version.id)
-                .values(definition=definition)
-            )
+        version = await _insert_shaped_copies(session, workspace_id, age_table, _shape)
     with pytest.raises(PlatformError) as refused:
-        await _diff(database, workspace_id, blob_store, age_table, portfolio)
+        await _diff(database, workspace_id, blob_store, age_table, portfolio, version=version)
     assert refused.value.status_code == 422
     assert refused.value.code == "VALIDATION_FAILED"
     assert "age_banded" in (refused.value.detail or "")
@@ -470,28 +513,13 @@ async def test_a_dangling_ref_is_404_naming_key_and_ref(
     slug = await _identity_table(database, workspace_id, principal, blob_store)
     dangling = "factor:nowhere@7" if kind == "factor_ref" else "banding:nowhere@7"
     async with database.unit_of_work() as session:
-        row = await session.scalar(
-            select(RateTableRow).where(
-                RateTableRow.workspace_id == workspace_id, RateTableRow.slug == slug
-            )
-        )
-        assert row is not None
-        for version in (
-            await session.execute(
-                select(RateTableVersionRow).where(RateTableVersionRow.rate_table_id == row.id)
-            )
-        ).scalars():
-            definition = json.loads(json.dumps(version.definition))
+        def _shape(definition: dict[str, Any]) -> None:
             for key in definition["keys"]:
                 key.pop("factor_ref", None)
                 key[kind] = dangling
-            await session.execute(
-                update(RateTableVersionRow)
-                .where(RateTableVersionRow.id == version.id)
-                .values(definition=definition)
-            )
+        version = await _insert_shaped_copies(session, workspace_id, slug, _shape)
     with pytest.raises(PlatformError) as refused:
-        await _diff(database, workspace_id, blob_store, slug, portfolio)
+        await _diff(database, workspace_id, blob_store, slug, portfolio, version=version)
     assert (refused.value.code, refused.value.status_code) == ("NOT_FOUND", 404)
     assert "driver_age_band" in (refused.value.detail or "")
     assert dangling in (refused.value.detail or "")
@@ -512,14 +540,8 @@ async def test_null_and_negative_exposure_are_422_naming_the_column(
     version_id = await ingest_portfolio(
         database, blob_store, workspace_id, actor, dataset_id, negative
     )
-    from app.db.models import DatasetVersionRow
-
     async with database.unit_of_work() as session:
-        await session.execute(
-            update(DatasetVersionRow)
-            .where(DatasetVersionRow.id == version_id)
-            .values(status="validated", validation_report_id=uuid4())
-        )
+        await _force_validated(session, version_id)
     with pytest.raises(PlatformError) as refused:
         await _diff(database, workspace_id, blob_store, slug, version_id)
     assert (refused.value.code, refused.value.status_code) == ("VALIDATION_FAILED", 422)
@@ -811,27 +833,12 @@ async def test_a_dangling_ref_is_a_synchronous_404_before_any_job(
     )
     dangling = "factor:nowhere@7" if kind == "factor_ref" else "banding:nowhere@7"
     async with database.unit_of_work() as session:
-        row = await session.scalar(
-            select(RateTableRow).where(
-                RateTableRow.workspace_id == workspace_id, RateTableRow.slug == slug
-            )
-        )
-        assert row is not None
-        for version in (
-            await session.execute(
-                select(RateTableVersionRow).where(RateTableVersionRow.rate_table_id == row.id)
-            )
-        ).scalars():
-            definition = json.loads(json.dumps(version.definition))
+        def _shape(definition: dict[str, Any]) -> None:
             for key in definition["keys"]:
                 key.pop("factor_ref", None)
                 key[kind] = dangling
-            await session.execute(
-                update(RateTableVersionRow)
-                .where(RateTableVersionRow.id == version.id)
-                .values(definition=definition)
-            )
-    url = _diff_url(slug) if route == "diff" else _cells_url(slug)
+        version = await _insert_shaped_copies(session, workspace_id, slug, _shape)
+    url = _diff_url(slug, version) if route == "diff" else _cells_url(slug, version)
     before = await _job_count(database)
     response = api_client.get(
         url, params={"against": "previous", "portfolio": str(portfolio)},
@@ -1540,14 +1547,8 @@ async def test_a_portfolio_refusal_that_reads_the_content_is_the_jobs_validation
         portfolio = await ingest_portfolio(
             database, blob_store, workspace_id, actor, dataset_id, payload
         )
-        from app.db.models import DatasetVersionRow
-
         async with database.unit_of_work() as session:  # the exposure rule refuses it at validation
-            await session.execute(
-                update(DatasetVersionRow)
-                .where(DatasetVersionRow.id == portfolio)
-                .values(status="validated", validation_report_id=uuid4())
-            )
+            await _force_validated(session, portfolio)
     else:
         portfolio = await validated_portfolio(database, blob_store, workspace_id, actor, payload)
     slug = await _identity_table(database, workspace_id, principal, blob_store)
@@ -1791,27 +1792,12 @@ async def test_a_non_numeric_banded_column_fails_the_job(
         )
         stored = (await transformation_service.list_bandings(
             session, workspace_id=workspace_id, dataset_id=dataset_id))[0]
-        row = await session.scalar(
-            select(RateTableRow).where(
-                RateTableRow.workspace_id == workspace_id, RateTableRow.slug == slug
-            )
-        )
-        assert row is not None
-        for version in (
-            await session.execute(
-                select(RateTableVersionRow).where(RateTableVersionRow.rate_table_id == row.id)
-            )
-        ).scalars():
-            definition = json.loads(json.dumps(version.definition))
+        def _shape(definition: dict[str, Any]) -> None:
             for key in definition["keys"]:
                 key.pop("factor_ref", None)
                 key["banding_ref"] = f"banding:{stored.slug}@{stored.version}"
-            await session.execute(
-                update(RateTableVersionRow)
-                .where(RateTableVersionRow.id == version.id)
-                .values(definition=definition)
-            )
-    url = _diff_url(slug) if route == "diff" else _cells_url(slug)
+        version = await _insert_shaped_copies(session, workspace_id, slug, _shape)
+    url = _diff_url(slug, version) if route == "diff" else _cells_url(slug, version)
     accepted = api_client.get(
         url, params={"against": "previous", "portfolio": str(portfolio)},
         headers=_headers(principal.id, workspace_id),
