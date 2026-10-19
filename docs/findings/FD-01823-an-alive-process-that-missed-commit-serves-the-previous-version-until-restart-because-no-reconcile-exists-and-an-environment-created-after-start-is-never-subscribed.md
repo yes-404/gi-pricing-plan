@@ -1,5 +1,5 @@
 ---
-id: FD-8129
+id: FD-1823
 family: finding
 title: An alive process that missed COMMIT serves the previous version until restart, because no reconcile exists, and an Environment created after a process starts is never subscribed
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-674, SL-1259, PL-1237, PL-1710, PL-1766, RL-876]
 ---
 
-# FD-8129 — An alive process that missed COMMIT serves the previous version until restart
+# FD-1823 — An alive process that missed COMMIT serves the previous version until restart
 
 ## Finding
 
@@ -103,4 +103,4 @@ can restart them.
 
 Deferred with an owner: WK-674. The event that next discharges it: a merged reconcile with the two
 red-first tests above, or a dated ruling accepting the absence. Due before the 12 Nov exit demo. Filed
-under working id 8129.
+under working id 8129; minted `FD-1823` at its merge turn, 2026-10-19 (`doc-id.py next --ref origin/main` at `7fd0fa73`).
