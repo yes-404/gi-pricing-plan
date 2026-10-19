@@ -1,5 +1,5 @@
 ---
-id: LG-8126
+id: LG-1825
 family: ledger
 title: WK-1178 slice SL-1770 — S-a, the artifact tables append-only at the database (PL-1769), slice ledger
 status: active                 # active → closed (§1.2a)
@@ -14,9 +14,9 @@ corrected_by: []
 relates: [PL-1769, SL-1770, FD-1704, FD-1728]
 ---
 
-# LG-8126 — WK-1178 slice SL-1770: S-a, the artifact tables append-only at the database
+# LG-1825 — WK-1178 slice SL-1770: S-a, the artifact tables append-only at the database
 
-*(Working id 8126, reserved by the lead; not yet minted.)*
+*(Filed 2026-10-19 under working id 8126, reserved by the lead; minted 2026-10-19 as LG-1825.)*
 
 **GO:** to-lead.md "2026-10-18 22:50:32 BST — Maintainer: the duplicate-mint anomaly ruled; GO SL-1259, SL-1770, SL-1738, SL-1575 (with conditions)".
 **MERGE-ACK:** not yet given.
