@@ -76,3 +76,30 @@ None yet. The slice stops at PR-READY; the lead opens the PR.
 - **T7 — the DB+Redis window (granted in writing by the lead, 2026-10-18; own DB `gipricing_sl-1259_2ccd468a` from `template0`, alembic head `f2b6d90a4c17`, Redis db 15, bucket `gip-test-blobs-1259`, every pytest through `run-small`).** Start: `flock -n /tmp/slots/gate-1 true` rc 0, load1 2.67, available 25 GiB. **Reds first** on a detached scratch worktree at `725a9edd` (before the wiring) with only `build_switch_client` added: `test_deployment_switch_http.py` 4 FAILED, each for its own reason: `assert 201 == 503` (a short PREPARE still wrote the row), `KeyError: 'switch'`, `AttributeError: 'State' object has no attribute 'live_refs'`, and the rollback route `assert 404 == 201`. **At head:** the same file passed, `test_deployments.py` 52 passed, `test_score.py` 52 passed, `test_api_authorisation_sweep.py` + `test_deployment_route_types.py` 26 passed and 1 failed, `test_traces.py` + `test_api_approvals.py` + `test_management_rate_limit.py` 154 passed. The one failure, `test_the_two_changed_approval_routes_return_exactly_the_declared_keys`, was a deploy of a hash-only bundle answering 503 (nothing can hydrate it); its test now sets `client.app.state.switch = None` like `test_deployments.py`. **A real bug found by running:** the subscription used the rate limiter's 50 ms socket-timeout client, so its blocking pub/sub read timed out and the listener died; the switch now has its own client (`build_switch_client`). **Scope:** per the maintainer's answer (relayed by the lead) the channel, roster and acks are keyed `<GIP_ENVIRONMENT>:<tenant>:<environment slug>`, a process subscribes to every non-retired Environment at startup (an Environment created later is not subscribed until restart: the FD-1823 gap), and a red proves a `prod`-only subscriber neither receives nor blocks a `dev` deploy; after the change `test_deployment_switch_http.py` + `test_deployment_switch.py` 17 passed. **Breach disclosed:** that last run started when `flock -n /tmp/slots/gate-1 true` returned rc 1 (gate-1 had been taken since my start check); it was one 25 s run-small of two files and I did not re-check the slot before it. **Not re-run after the scope change:** the full set above and `test_deployment_route_types.py` with the `switch = None` fix; they are owed once gate-1 is free. Cleanup: `redis-cli -n 15 dbsize` = 0, `pg_database` count for the DB = 0, the bucket removed through `mc rb` (absent from `mc ls g/`), the scratch worktree removed (no shared container binds under it).
 
 - **T8 — the owed full re-run at head `0161e6be` (DB/Redis window granted in writing by the lead, 2026-10-19 01:06:23 BST; own DB `gipricing_sl-1259_2ccd468a` from `template0`, alembic head `f2b6d90a4c17` rc 0, Redis db 15, bucket `gip-test-blobs-1259`; every pytest through `run-small` on the worktree at `0161e6bed259caddd0c600e8cb949650694f0053`, with `flock -n /tmp/slots/gate-1 true` rc 0 re-checked before each run).** R1 `test_deployments.py` + `test_score.py`: rc 0, 104 passed. R2 `test_api_authorisation_sweep.py` + `test_deployment_route_types.py`: rc 0, 27 passed (the `switch = None` fix included). R3 `test_traces.py` + `test_api_approvals.py` + `test_management_rate_limit.py`: rc 0, 154 passed. R4 `test_deployment_switch_http.py` + `test_deployment_switch.py`: rc 0, 17 passed. No FAILED line in any run. **Disclosed:** R3 started with available memory 7 GiB (`free -g`), below the grant's 8 GiB floor; load1 was 2.75, the run passed, and the floor was missed on a start reading I printed but did not act on. Cleanup: `redis-cli -n 15 dbsize` = 0, `pg_database` count for the DB = 0, the bucket removed through `mc rb` (absent from `mc ls g/`).
+
+- **T9 — the code-side FD-1823 re-point, 2026-10-19 (the maintainer's ruling "2026-10-19 03:30:56 BST", option A).** Four mentions, comment and docstring text only, commit `70a0af0d`: `backend/src/app/api/score.py` (`_serving_ref` docstring), `main.py` (a `#` comment), `platform/deployment_switch.py` (module docstring), `platform/deployments.py` (`deploy_and_switch` docstring). Proof, no python-half re-gate. (1) AST equality with docstrings stripped, `fb29f8b7` against `70a0af0d`, the script verbatim:
+
+```python
+"""Compare each file at <rev_a> and <rev_b> (or a working path) after stripping docstrings."""
+import ast, subprocess, sys
+
+def strip(tree):
+    for n in ast.walk(tree):
+        if isinstance(n, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            b = n.body
+            if b and isinstance(b[0], ast.Expr) and isinstance(getattr(b[0], "value", None), ast.Constant) and isinstance(b[0].value.value, str):
+                n.body = b[1:] or [ast.Pass()]
+    return ast.dump(tree, include_attributes=False)
+
+def show(wt, rev, path):
+    return subprocess.run(["/usr/bin/git", "-C", wt, "show", f"{rev}:{path}"], check=True, capture_output=True, text=True).stdout
+
+wt, a, b = sys.argv[1:4]
+for path in sys.argv[4:]:
+    src_b = open(path.split("=", 1)[1]).read() if "=" in path else show(wt, b, path)
+    path = path.split("=", 1)[0]
+    same = strip(ast.parse(show(wt, a, path))) == strip(ast.parse(src_b))
+    print(("EQUAL   " if same else "UNEQUAL ") + path)
+```
+
+Output of `python3 -I astcmp.py <wt> fb29f8b7 70a0af0d <4 paths>`: `EQUAL` for all four files. Enforcement on broken input: the same script against a scratch copy of `main.py` with the `__all__` literal changed printed `UNEQUAL   backend/src/app/main.py`; the copy was not committed. (2) `generate-contracts.py --check`: `54 generated contracts match the models`, rc 0. (3) `ruff check` on the 4 files: `All checks passed!`, rc 0; `mypy` on the 4 files: `Success: no issues found in 4 source files`, rc 0. (4) `git grep -n __doc__ 70a0af0d -- backend/src`: no hit (rc 1), so nothing in `backend/src` reads a docstring through `__doc__`; the OpenAPI description of a route function is read by FastAPI, and (2) shows the generated contracts unchanged.
