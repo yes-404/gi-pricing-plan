@@ -42,6 +42,19 @@ async def store_profile(
             f"No version {profile.dataset_version_id} in this workspace.",
         )
 
+    if version.data_frozen_at is not None and version.profile_id is not None:
+        # The data froze at the first validation and the profile is part of the immutable
+        # snapshot (`00` §2): computed once, never re-pointed (`01` FR-60, clarified
+        # 2026-10-14). `dataset_versions_snapshot_guard()` refuses the same write at the
+        # database; refusing here first keeps a raw trigger exception from becoming a 500.
+        raise PlatformError(
+            "DATASET_VERSION_IMMUTABLE",
+            "This version's profile is already recorded",
+            409,
+            "The profile of a data-frozen Dataset Version cannot be re-pointed; profiles are "
+            "computed once, FR-60.",
+        )
+
     row = ProfileRow(
         id=profile.id,
         workspace_id=workspace_id,
@@ -53,8 +66,9 @@ async def store_profile(
     )
     session.add(row)
     # The version names its current profile so that "the profile of @12" is a lookup
-    # rather than a search with a tie-break. Re-profiling adds a row and re-points; the
-    # superseded profile stays, because a comparison may cite it.
+    # rather than a search with a tie-break. Before the data freezes, re-profiling adds a row
+    # and re-points; the superseded profile stays, because a comparison may cite it. After the
+    # freeze it is refused above.
     version.profile_id = profile.id
     await session.flush()
 

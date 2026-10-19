@@ -45,6 +45,7 @@ from model_schema import (
     BandingMethod,
     DatasetStatus,
     Factor,
+    FactorIntent,
     FactorType,
     GlmSpec,
     JobKind,
@@ -193,7 +194,10 @@ async def _dataset(database: Database, blob_store, workspace_id, actor: Principa
     return await _seed_dataset_and_rules(database, blob_store, workspace_id, actor)
 
 
-async def _factor(database: Database, workspace_id, actor, dataset_id, slug, column) -> UUID:
+async def _factor(
+    database: Database, workspace_id, actor, dataset_id, slug, column,
+    *, intent: FactorIntent = FactorIntent.RISK,
+) -> UUID:
     async with database.unit_of_work() as session:
         row = await model_service.create_factor(
             session,
@@ -201,7 +205,7 @@ async def _factor(database: Database, workspace_id, actor, dataset_id, slug, col
             actor=actor,
             factor=Factor(
                 id=uuid4(), slug=slug, dataset_id=dataset_id, version=1,
-                type=FactorType.IDENTITY, source_columns=(column,),
+                type=FactorType.IDENTITY, source_columns=(column,), intent=intent,
             ),
         )
         return row.id
