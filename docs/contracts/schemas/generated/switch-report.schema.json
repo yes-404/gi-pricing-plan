@@ -1,0 +1,38 @@
+{
+  "additionalProperties": false,
+  "description": "Which processes switched to a Deployment and what became of each (`03` FR-268).\n\nThe `after` of the `deployment.switched` Audit Event and the switch half of the deploy\nresponse. Its terms (`receivers`, `committed`, `possibly_stale`, `pruned_stale`) are defined\nonce, in `03` §5.1's list of this Work's audit actions.",
+  "properties": {
+    "deployment_ref": {
+      "description": "The Deployment (its id) the processes switch to.",
+      "format": "uuid",
+      "title": "Deployment Ref",
+      "type": "string"
+    },
+    "processes": {
+      "additionalProperties": {
+        "enum": [
+          "committed",
+          "possibly_stale",
+          "pruned_stale"
+        ],
+        "type": "string"
+      },
+      "description": "Each named process and what became of it.",
+      "title": "Processes",
+      "type": "object"
+    },
+    "receivers": {
+      "description": "Live subscribers that received PREPARE.",
+      "minimum": 0,
+      "title": "Receivers",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "deployment_ref",
+    "receivers",
+    "processes"
+  ],
+  "title": "SwitchReport",
+  "type": "object"
+}

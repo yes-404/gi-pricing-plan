@@ -56,7 +56,13 @@ ROWS: tuple[Row, ...] = (
         "DeploymentRequestCreate",
         "DeploymentRequest",
     ),
-    Row("POST", "/api/v1/environments/{env}/deployments", "DeploymentCreate", "Deployment"),
+    Row("POST", "/api/v1/environments/{env}/deployments", "DeploymentCreate", "DeploymentCreated"),
+    Row(
+        "POST",
+        "/api/v1/environments/{env}/deployments/rollback",
+        "RollbackCreate",
+        "DeploymentCreated",
+    ),
     Row("GET", "/api/v1/environments/{env}/deployments", None, "Deployment", paged=True),
     # Row 9: the body and (FD-1416, PL-1528) the 2xx are typed.
     Row("POST", "/api/v1/approval-requests", "ApprovalSubmission", "ApprovalRequest"),
@@ -314,16 +320,16 @@ def _environment_operations(document: dict[str, Any]) -> set[tuple[str, str]]:
 
 @pytest.mark.req("FR-428")
 def test_the_route_set_is_pinned(document: dict[str, Any]) -> None:
-    """The operations under `/api/v1/environments` equal the Route table's seven rows plus
+    """The operations under `/api/v1/environments` equal the Route table's eight rows plus
     `SETTINGS_ROUTES`' two, exactly.
 
     A route added or removed unchecked fails here naming it.
     """
     live = _environment_operations(document)
     expected = {(row.method, row.path) for row in ENVIRONMENT_ROWS}
-    assert len(expected) == 7
+    assert len(expected) == 8
     union = expected | SETTINGS_ROUTES
-    assert len(union) == 9
+    assert len(union) == 10
     assert live == union, (
         f"extra: {sorted(live - union)}; missing: {sorted(union - live)}"
     )
@@ -515,8 +521,11 @@ def test_each_untyped_2xx_of_the_deployment_routes_is_refused_by_name(
 
     original = _sources()["deployments.py"]
     for broken, shown in (
-        (original.replace(") -> Deployment:\n", "):\n", 1), "None"),
-        (original.replace(") -> Deployment:\n", ") -> dict[str, Any]:\n", 1), "dict[str, Any]"),
+        (original.replace(") -> DeploymentCreated:\n", "):\n", 1), "None"),
+        (
+            original.replace(") -> DeploymentCreated:\n", ") -> dict[str, Any]:\n", 1),
+            "dict[str, Any]",
+        ),
     ):
         assert broken != original
         assert any(f"returns {shown}" in p for p in ast_problems({"deployments.py": broken}))
@@ -632,6 +641,11 @@ async def test_the_two_changed_approval_routes_return_exactly_the_declared_keys(
     exercised through a Deployment Request put back in `review` by a fixture after its
     approval request was withdrawn (a row in `review` otherwise always holds its open request,
     which is why the generic route refuses it)."""
+    # This test pins the approval routes' keys, not the switch. Its Rating Version carries a hash
+    # and no blob, which no process can hydrate, so the 503 is the new code behaving correctly;
+    # `test_deployments.py`'s `client` fixture does the same. The switch is proved in
+    # `test_deployment_switch_http.py`.
+    client.app.state.switch = None
     from uuid import uuid4
 
     from backend.tests.test_deployments import (

@@ -147,6 +147,22 @@ def one_image_three_roles(compose: dict[str, Any]) -> list[str]:
     return [] if len(images) == 1 else [f"{'/'.join(names)} use {len(images)} images"]
 
 
+def api_declares_its_worker_count(compose: dict[str, Any]) -> list[str]:
+    """PL-1766 D5.13 (DP-S5-Q2 (a)): the `api` service sets `WEB_CONCURRENCY` itself, so the
+    process count N per container is declared in compose, not left to uvicorn's default, and
+    the image's `CMD` is untouched (uvicorn reads the variable)."""
+    api = compose["services"]["api"]
+    declared = (api.get("environment") or {}).get("WEB_CONCURRENCY")
+    problems: list[str] = []
+    if declared is None:
+        problems.append("api does not set WEB_CONCURRENCY")
+    elif not str(declared).startswith("${") and not str(declared).isdigit():
+        problems.append(f"api WEB_CONCURRENCY is {declared!r}, not an integer or an interpolation")
+    if any("--workers" in str(w) for w in api.get("command") or []):
+        problems.append("api passes --workers: the count must come from WEB_CONCURRENCY alone")
+    return problems
+
+
 CHECKS = [
     api_needs_no_worker,
     migrations_are_their_own_step,
@@ -154,6 +170,7 @@ CHECKS = [
     every_routed_queue_is_consumed,
     each_worker_consumes_one_pool,
     one_image_three_roles,
+    api_declares_its_worker_count,
 ]
 
 
@@ -230,6 +247,11 @@ def test_api_worker_and_migrate_are_one_image() -> None:
     assert one_image_three_roles(_load()) == []
 
 
+@pytest.mark.req("NFR-489")
+def test_api_declares_its_worker_count_through_web_concurrency() -> None:
+    assert api_declares_its_worker_count(_load()) == []
+
+
 @pytest.mark.req("FR-434")
 @pytest.mark.req("FR-435")
 def test_the_default_up_is_still_only_the_backing_services() -> None:
@@ -260,6 +282,14 @@ def _break_no_memory_limit(c: dict[str, Any]) -> None:
         break
 
 
+def _break_api_without_web_concurrency(c: dict[str, Any]) -> None:
+    del c["services"]["api"]["environment"]["WEB_CONCURRENCY"]
+
+
+def _break_api_passes_workers_flag(c: dict[str, Any]) -> None:
+    c["services"]["api"]["command"] = ["uvicorn", "app.main:create_app", "--workers", "4"]
+
+
 def _drop_queue_everywhere(c: dict[str, Any], queue: str) -> None:
     for name, words in _celery_workers(c).items():
         queues = (_queues_of(words) or set()) - {queue}
@@ -285,6 +315,7 @@ def _break_worker_consumes_two_pools(c: dict[str, Any]) -> None:
 @pytest.mark.req("FR-434")
 @pytest.mark.req("FR-435")
 @pytest.mark.req("FR-415")
+@pytest.mark.req("NFR-489")
 @pytest.mark.parametrize(
     ("breaker", "check"),
     [
@@ -295,6 +326,8 @@ def _break_worker_consumes_two_pools(c: dict[str, Any]) -> None:
         (_break_drop_io_consumer, every_routed_queue_is_consumed),
         (_break_drop_scoring_consumer, every_routed_queue_is_consumed),
         (_break_worker_consumes_two_pools, each_worker_consumes_one_pool),
+        (_break_api_without_web_concurrency, api_declares_its_worker_count),
+        (_break_api_passes_workers_flag, api_declares_its_worker_count),
     ],
 )
 def test_each_check_goes_red_on_the_break_it_exists_for(breaker: Any, check: Any) -> None:

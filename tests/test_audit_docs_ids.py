@@ -2140,7 +2140,12 @@ def test_widening_the_scope_roots_reaches_every_non_markdown_file_the_register_e
     # `upload-url-request` and `upload-url-response` schemas, already named in
     # `_CONTRACT_ARTIFACT_PATHS` by commit 63d26b48 (the register was updated, this count was not),
     # registered for F83's reason.
-    assert len(non_markdown) == 86, len(non_markdown)
+    # 86 became 89 (WK-674 Slice 5, SL-1259, PL-1766, 2026-10-19; the maintainer's (by delegation)
+    # entry "2026-10-19 02:45:42 BST" item 3; `non_markdown` diffed against 7fd0fa73): the generated
+    # `docs/contracts/schemas/generated/switch-report.schema.json`,
+    # `docs/contracts/schemas/generated/deployment-created.schema.json` and
+    # `docs/contracts/schemas/generated/rollback-create.schema.json`, registered for F83's reason.
+    assert len(non_markdown) == 89, len(non_markdown)
     assert set(non_markdown) <= rels
 
     # Named individually, so the proof is "one of the 63" and not "63 of something".

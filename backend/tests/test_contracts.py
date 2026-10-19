@@ -92,6 +92,9 @@ ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     "approval-withdrawal": "first written form — 06 §5.1 (WK-674 Slice 2, PL-1392 Task 6, FR-357)",
     "approval-request": "generated wins — FD-1416 retired the hand-authored Phase 0 draft",
     "rating-version-create": "first written form — 03 §5.1 create row (RL-1428, FD-1421, FR-237)",
+    "switch-report": "first written form — 03 §5.1 (WK-674 Slice 5, PL-1766, FR-268)",
+    "deployment-created": "first written form — 03 §5.1 (WK-674 Slice 5, PL-1766, FR-268)",
+    "rollback-create": "first written form — 03 §5.1 (WK-674 Slice 5, PL-1766 D5.10, FR-269)",
     "upload-url-request": (
         "first written form — 07 §5.1 (WK-1178 SL-1722, DP-1722-WIRE (a), FR-421)"
     ),

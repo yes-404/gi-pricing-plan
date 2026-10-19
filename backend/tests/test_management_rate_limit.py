@@ -199,7 +199,7 @@ async def _user_headers(grant: Any, workspace_id: UUID, role: str) -> dict[str, 
     return {DEV_PRINCIPAL_HEADER: str(user_id), "Workspace-Id": str(workspace_id)}
 
 
-#: The three routes whose permission is decided inside the handler's service (`RL-1687` (1a):
+#: The four routes whose permission is decided inside the handler's service (`RL-1687` (1a):
 #: "a 401 or a 403 is never counted"), each with the one permission that admits it and the
 #: status a permitted call ends in (a ghost Rating Version is a 404 *after* the permission).
 _IN_HANDLER_ROUTES = [
@@ -230,6 +230,15 @@ _IN_HANDLER_ROUTES = [
         "deployment:promote",
         404,
         id="deployments",
+    ),
+    # WK-674 Slice 5, PL-1766 D5.10 (FR-452): the rollback route counts as S4's two POST routes
+    # do. A permitted call to a never-deployed version is a 409, after the count.
+    pytest.param(
+        "/api/v1/environments/uat/deployments/rollback",
+        lambda: {"rating_version_ref": "rating_version:ghost@1", "reason": "regression"},
+        "deployment:promote",
+        409,
+        id="rollback",
     ),
 ]
 
