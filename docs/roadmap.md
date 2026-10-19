@@ -2813,7 +2813,7 @@ The fix of FD-1741 (MEDIUM, owner WK-1178; filed on its own branch). In `.github
 id: SL-1770
 family: slice
 title: WK-1178 fix slice (S-a) — FD-1728 and FD-1704: the eleven artifact tables append-only at the database, red first
-status: active                   # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-17 # original date 2026-10-14, set at the draft; minted 2026-10-17
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
@@ -2828,6 +2828,8 @@ On the maintainer's (by delegation) entry "2026-10-14 12:00:14 BST" (`to-lead.md
 (Activated 2026-10-18 on the maintainer's GO, to-lead "2026-10-18 22:50:32 BST — Maintainer: the duplicate-mint anomaly ruled; GO SL-1259, SL-1770, SL-1738, SL-1575 (with conditions)"; dispatched by the lead, transcript 34b896f2.)
 
 (Minted 2026-10-17 as SL-1770 from working id 8017, with PL-1769 from working id 8016, in plans batch P2 mint PR.)
+
+(Closed 2026-10-19 as a Slice by the mint step's closing acts (LG-1825 minted from working id 8126), on the pre-PR slice audit of LG-1825 ("### Audit", auditor-1770, 2026-10-19 07:04 BST; range `origin/main...sl-1770-wk1178-append-only-db`), adopted CLEAN by the lead and accepted by the maintainer (by delegation) (to-lead "2026-10-19 07:06:05 BST"); F4 (the FOR UPDATE refusal under the app role) is deferred with owner SL-1771 (LG-1825 "### Audit"). MERGE-ACK: not yet given.)
 
 #### SL-1771 — WK-1178 fix slice (S-b) — FD-1729: the application connects as a login role with gip_app's grants, never as the owner
 

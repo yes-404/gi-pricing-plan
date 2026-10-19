@@ -2,7 +2,7 @@
 id: LG-1825
 family: ledger
 title: WK-1178 slice SL-1770 — S-a, the artifact tables append-only at the database (PL-1769), slice ledger
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-19
 owner: executor
 tree: fbbadef54adcd247a2d59cc86861c19c376a495c
