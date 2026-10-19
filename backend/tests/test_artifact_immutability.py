@@ -11,14 +11,16 @@ not that the right thing can.
 
 from __future__ import annotations
 
+import importlib.util
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
-from app.db.models import Base
+from app.db.models import Base, DatasetVersionRow
 from app.db.session import Database
 from app.platform import datasets, profiles, validation
 from model_schema import (
@@ -1085,3 +1087,20 @@ async def test_fr_53_may_revalidate_a_validated_version_and_move_the_report_id(
     assert revalidate is None, f"FR-53 re-validation was refused: {revalidate}"
     back = await _ds_probe(database, workspace_id, "validated", _TO_VALIDATING, _BACK_TO_DRAFT)
     assert back is None, f"FR-53's return to draft was refused: {back}"
+
+
+@pytest.mark.req("FR-43")
+def test_the_snapshot_guard_names_only_columns_that_exist() -> None:
+    """The guard compares `to_jsonb(NEW) - <columns>` and names the frozen data by column. A
+    name that no longer matches a `DatasetVersionRow` column removes nothing from either side,
+    so the comparison passes where it should refuse: the migration's lists are held to the
+    model (the postgres-pro review of `a4d1f08c3b97`, PL-1769 Step 6.1)."""
+    path = next(Path(__file__).resolve().parents[1].glob("migrations/versions/a4d1f08c3b97_*.py"))
+    spec = importlib.util.spec_from_file_location("a4d1f08c3b97_pin", path)
+    assert spec is not None
+    assert spec.loader is not None
+    migration = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(migration)
+    columns = {column.name for column in DatasetVersionRow.__table__.columns}
+    assert set(migration.MOVING_COLUMNS) <= columns
+    assert set(migration.FROZEN_DATA_COLUMNS) <= set(migration.MOVING_COLUMNS)
