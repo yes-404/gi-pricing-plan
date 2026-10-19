@@ -208,6 +208,24 @@ Reason given: B2 is a slower-biased baseline, and a slower baseline favours PASS
   - (b) **Lead swap inside k5:** lead-15's first command was 07:30:47 BST, while k5 ran (`to-lead.md` "2026-10-19 07:30:26 BST", amending 07:13). A lead start can only slow a run, which biases toward FAIL, and peak RSS is unaffected. k5 (1420.4 s) is ≈1.95× k4, in line with the trend: no visible effect (08:37:07).
   - (c) **Observation, not a finding against this slice:** cost is roughly ×2 per k (382 → 729 → 1420 → 2728 s). k=7 projects to ≈5,400 s, over 60 min; the limit above k=6 is unmeasured. Routed to D26 as an OQ, owner planner: *"is k ≤ 6 the product bound for attribution sets, or does FR-263 need a k ceiling?"* No spec or plan edit here (PL-1574 is frozen).
 
+#### 2026-10-19 BST — Gate RED at 564a6d76: the `ladder` consumer defect, fixed (maintainer ruling `to-lead.md` "2026-10-19 09:50:47 BST", R1/R2)
+
+- **Defect:** FD-1573's change made `_score_pass` (`packages/pricing-core/src/pricing_core/rating/analysis.py`) hold `rungs` (`_rung_values` dicts) instead of `LadderRung` lists. `scripts/measure-attribution-cost.py` `replay_values` still read `b["ladder"]` / `c["ladder"]` (`KeyError: 'ladder'`). The gate's red: `FAILED packages/pricing-core/tests/test_rating_attribution.py::test_replay_that_differs_from_a_true_rerate_is_detected_and_recorded` (`pytest.log:10625`).
+- **Consumers** (`git grep -n '_score_pass\|dislocation_frame' HEAD -- '*.py'`, code uses only; the rest are prose mentions):
+
+  | Consumer | Reads |
+  |---|---|
+  | `analysis.py` `dislocation_frame` (:236-237, :242-253) | `outcome`, `error_code`, `minor`, `rungs` |
+  | `analysis.py` attribution (:1104, :1112-1131) | `minor` |
+  | `backend/src/app/worker/dislocation_handlers.py:305` | calls `dislocation_frame`; reads the returned frame's columns, not the dicts |
+  | `scripts/measure-attribution-cost.py` `portfolio_for` (:493) | calls `dislocation_frame`; reads `baseline_minor` |
+  | `scripts/measure-attribution-cost.py` `_pass` (was :722-732) | called `_score_pass`; fed `replay_values`, which read **`ladder`** (the only reader) and `minor` |
+
+- **Fix:** `_score_pass`/`dislocation_frame` are unchanged (no `ladder` key, no `LadderRung` lists: the −76% memory result stands). The script gets its own `_ladder_pass` (`{"minor", "ladder"}` per policy, via `score_batch`), and `_pass` calls it. One file, +29/−4.
+- **Red → green:** red `FAILED packages/pricing-core/tests/test_rating_attribution.py::test_replay_that_differs_from_a_true_rerate_is_detected_and_recorded` (gate `pytest.log:10625`); green `uv run pytest -q packages/pricing-core/tests/test_rating_attribution.py` → `43 passed in 29.67s`; `ruff check` and `ruff format --check` on the script clean; `mypy` → `Success: no issues found in 244 source files`.
+- **Acceptance 5 path:** not touched. acc5 ran `cost --policies 19985 --runs 1` (above); `cmd_cost` (:645-702) calls neither `_pass`, `_ladder_pass` nor `replay_values` (the only callers of `_pass` are in `cmd_replay`), and the diff hunks are `@@ -719,0 +720,26 @@` and `@@ -721,2 +747 @@` / `@@ -731,2 +756,2 @@` inside `_ladder_pass`/`_pass`. acc5 stands.
+- **Provisioning gap (R2):** `freMTPL2sev.arff` was never copied into this worktree (the 3 seed FAILED, 3 ERRORs and the 65 s demo exit); copied from tools-main, `cmp` equal, sha256 `047632016b87e132247124f449a95d6d0e9f8ba05f2fe0947ef76ab8aaa10e0a` on both; the re-gate script's preflight now aborts unless both `.arff` files exist.
+
 ## PRs
 
 None yet.
