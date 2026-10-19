@@ -124,6 +124,9 @@ docker compose -f deploy/docker-compose.yml --profile app up -d --wait --scale a
   pre-roll replicas, removing the new ones.
 - **`migrate`** is a one-shot step (FR-435). `api` and `worker` wait for it to exit 0; nothing
   migrates at application start.
+  Take a database backup before you run `migrate` against a database that holds production
+  artifacts (`07` FR-416, as amended): a conditionally irreversible migration can be undone only by
+  restoring that backup.
 - **`api`** has no dependency on `worker` (FR-434): `up api lb` starts the scoring API with no
   compute worker present (NFR-534). `lb` is the stated topology: one nginx, round-robin over the
   `api` replicas through Docker DNS (`deploy/lb.conf`).

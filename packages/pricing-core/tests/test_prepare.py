@@ -339,3 +339,118 @@ def test_a_changed_recipe_produces_a_different_artifact() -> None:
     without = run_and_hash([{"step": "filter_rows",
                              "params": {"expression": "exposure_years > 0"}}])
     assert with_filter != without
+
+
+# -- FR-32 / FD-1744: a cell that does not parse is quarantined, never silently nulled ---
+
+_REJECT_COLUMNS = ["_reject_reason", "_reject_column", "_reject_step"]
+
+
+@pytest.mark.req("FR-32")
+def test_a_cast_that_cannot_parse_a_cell_quarantines_the_whole_row() -> None:
+    """R2, case 1: `abc` is not a float, so its row leaves the table as source text."""
+    frame = pl.DataFrame({"k": ["a", "b"], "x": ["1.5", "abc"]})
+    result = apply_recipe(
+        {"t": frame}, [{"step": "cast", "table": "t", "params": {"columns": {"x": "float64"}}}]
+    )
+    assert result.tables["t"].to_dict(as_series=False) == {"k": ["a"], "x": [1.5]}
+    assert result.rejected is not None
+    assert result.rejected.columns == ["k", "x", *_REJECT_COLUMNS]
+    row = result.rejected.row(0, named=True)
+    assert (row["k"], row["x"]) == ("b", "abc")
+    assert (row["_reject_column"], row["_reject_step"]) == ("x", "cast")
+    assert "'abc'" in row["_reject_reason"]
+
+
+@pytest.mark.req("FR-32")
+def test_a_date_that_cannot_parse_quarantines_the_whole_row() -> None:
+    """R2, case 2: 2024-02-30 matches the format but is not a date."""
+    frame = pl.DataFrame({"k": ["a", "b"], "d": ["2024-01-15", "2024-02-30"]})
+    result = apply_recipe(
+        {"t": frame},
+        [{"step": "parse_date", "table": "t", "params": {"column": "d", "format": "%Y-%m-%d"}}],
+    )
+    assert result.tables["t"]["k"].to_list() == ["a"]
+    assert result.rejected is not None
+    row = result.rejected.row(0, named=True)
+    assert (row["k"], row["d"]) == ("b", "2024-02-30")
+    assert (row["_reject_column"], row["_reject_step"]) == ("d", "parse_date")
+
+
+@pytest.mark.req("FR-32")
+def test_the_quarantine_is_complete_for_each_row() -> None:
+    """R2, completeness: b's cast succeeds and its date fails; b is rejected as its SOURCE
+    text (`x == "2.5"`), and no cast value, partial row or derivative of it is written."""
+    frame = pl.DataFrame(
+        {"k": ["a", "b"], "x": ["1.5", "2.5"], "d": ["2024-01-15", "2024-13-01"]}
+    )
+    result = apply_recipe(
+        {"t": frame},
+        [
+            {"step": "cast", "table": "t", "params": {"columns": {"x": "float64"}}},
+            {"step": "parse_date", "table": "t", "params": {"column": "d", "format": "%Y-%m-%d"}},
+        ],
+    )
+    assert result.tables["t"]["k"].to_list() == ["a"]
+    assert result.rejected is not None
+    row = result.rejected.row(0, named=True)
+    assert (row["k"], row["x"], row["d"]) == ("b", "2.5", "2024-13-01")
+    assert (row["_reject_column"], row["_reject_step"]) == ("d", "parse_date")
+    assert "_source_row" not in result.tables["t"].columns
+    assert "_source_row" not in result.rejected.columns
+
+
+@pytest.mark.req("FR-32")
+def test_a_row_failing_two_columns_is_quarantined_once_under_the_first() -> None:
+    frame = pl.DataFrame({"k": ["a"], "x": ["zz"], "y": ["yy"]})
+    result = apply_recipe(
+        {"t": frame},
+        [{"step": "cast", "table": "t", "params": {"columns": {"x": "int", "y": "int"}}}],
+    )
+    assert result.tables["t"].height == 0
+    assert result.rejected is not None
+    assert result.rejected.height == 1
+    assert result.rejected["_reject_column"].to_list() == ["x"]
+
+
+@pytest.mark.req("FR-32")
+def test_an_empty_or_null_cell_is_null_not_a_coercion() -> None:
+    """G1: a cell that was already null before the cast is written null, never rejected."""
+    frame = pl.DataFrame({"k": ["a", "b"], "x": ["1.5", None]})
+    result = apply_recipe(
+        {"t": frame}, [{"step": "cast", "table": "t", "params": {"columns": {"x": "float64"}}}]
+    )
+    assert result.rejected is None
+    assert result.tables["t"]["x"].to_list() == [1.5, None]
+
+
+@pytest.mark.req("FR-32")
+def test_step_counts_balance_the_rows_through_a_row_changing_step() -> None:
+    """R2, step-count case: cast 4 -> 3 (1 rejected), deduplicate 3 -> 2, filter 2 -> 1."""
+    frame = pl.DataFrame({"k": ["a", "b", "c", "d"], "x": ["1", "1", "abc", "5"]})
+    result = apply_recipe(
+        {"t": frame},
+        [
+            {"step": "cast", "table": "t", "params": {"columns": {"x": "int"}}},
+            {"step": "deduplicate", "table": "t", "params": {"columns": ["x"]}},
+            {"step": "filter_rows", "table": "t", "params": {"expression": "x <= 3"}},
+        ],
+    )
+    steps = result.stats["steps"]
+    assert [
+        (s["step"], s["rows_before"], s["rows_after"], s["rows_rejected"],
+         s["rows_removed"], s["rows_added"])
+        for s in steps
+    ] == [
+        ("cast", 4, 3, 1, 0, 0),
+        ("deduplicate", 3, 2, 0, 1, 0),
+        ("filter_rows", 2, 1, 0, 1, 0),
+    ]
+    assert 4 - 1 - 2 + 0 == 1 == result.tables["t"].height
+
+
+@pytest.mark.req("FR-32")
+def test_deduplicate_without_columns_ignores_the_private_source_row_index() -> None:
+    frame = pl.DataFrame({"k": ["a", "a"], "x": ["1", "1"]})
+    result = apply_recipe({"t": frame}, [{"step": "deduplicate", "table": "t", "params": {}}])
+    assert result.tables["t"].height == 1
