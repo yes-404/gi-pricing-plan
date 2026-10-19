@@ -1,9 +1,9 @@
 ---
-id: LG-8125
+id: LG-1826
 family: ledger
 title: WK-1178 slice SL-1575 — FD-1573, dislocation_frame's memory and time at book scale (slice ledger)
 status: closed                 # active → closed (§1.2a)
-created: 2026-10-18
+created: 2026-10-19
 owner: executor
 tree: 50476d3f5ef181453b890196ec9637306df4b81e
 phase: P2
@@ -14,9 +14,9 @@ corrected_by: []
 relates: [PL-1574, SL-1575, SL-1387, FD-1573, NFR-493]
 ---
 
-# LG-8125 — WK-1178 slice SL-1575: FD-1573, dislocation_frame's memory and time at book scale
+# LG-1826 — WK-1178 slice SL-1575: FD-1573, dislocation_frame's memory and time at book scale
 
-Filed 2026-10-18 under working id 8125 (lead-reserved in eta.md); executed by `exec-1575`, base `origin/main` `84b0ff5765e55bc8edd139cd22bb57cd474de807`, branch `sl-1575-wk1178-dislocation-memory`.
+Filed 2026-10-18 under working id 8125 (lead-reserved in eta.md); minted 2026-10-19 as LG-1826 (history lines below that quote "LG 8125" or "8125" quote the maintainer's or the gate's text of the day and name this ledger by its working id); executed by `exec-1575`, base `origin/main` `84b0ff5765e55bc8edd139cd22bb57cd474de807`, branch `sl-1575-wk1178-dislocation-memory`.
 
 **GO:** the maintainer's entry "2026-10-18 22:50:32 BST — Maintainer: the duplicate-mint anomaly ruled; GO SL-1259, SL-1770, SL-1738, SL-1575 (with conditions)"; for this slice: "SL-1575 (PL-1574, the FD-1573 HIGH remedy). GO; Acceptance 5 split per checkpoint Q1 (the 20k sample here, the full book on nfr-bench-1 when it exists)."
 **Activation need "FD-1573 minted with HIGH":** met by the maintainer's entry "2026-10-10 21:36:36 BST", item 1: "SL-1575's 'minted HIGH' text predates R6 and is stale. That need is met by FD-1573 being minted at all." (FD-1573's severity is LOW, re-rated 2026-10-11.)

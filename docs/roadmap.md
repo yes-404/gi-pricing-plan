@@ -2430,7 +2430,7 @@ The FD-1573 remedy, proposed on the maintainer's entry "2026-10-10 00:08:17 BST 
 
 (Activated 2026-10-18 on the maintainer's GO, to-lead "2026-10-18 22:50:32 BST — Maintainer: the duplicate-mint anomaly ruled; GO SL-1259, SL-1770, SL-1738, SL-1575 (with conditions)"; dispatched by the lead, transcript 34b896f2.)
 
-(Closed 2026-10-19 as a Slice by the mint step's closing acts (LG-8125), on the pre-PR slice audit of LG-8125 ("## Audit", auditor seat, 2026-10-19; range `origin/main...sl-1575-wk1178-dislocation-memory`), proposed CLEAN and carried to the mint on the maintainer's entry (to-lead "2026-10-19 11:27:29 BST", gate GREEN at `2bd1c685`). Acceptance 5 limb (B), the full 678,013-policy book, is deferred with owner SL-1575's Work, before the P2 close, on the dedicated host (LG-8125 "## Audit", row 5). MERGE-ACK: not yet given.)
+(Closed 2026-10-19 as a Slice by the mint step's closing acts (LG-1826 minted from working id 8125), on the pre-PR slice audit of LG-1826 ("## Audit", auditor seat, 2026-10-19; range `origin/main...sl-1575-wk1178-dislocation-memory`), proposed CLEAN and carried to the mint on the maintainer's entry (to-lead "2026-10-19 11:27:29 BST", gate GREEN at `2bd1c685`). Acceptance 5 limb (B), the full 678,013-policy book, is deferred with owner SL-1575's Work, before the P2 close, on the dedicated host (LG-8125 "## Audit", row 5). MERGE-ACK: not yet given.)
 
 #### SL-1600 — WK-1178 fix slice — FD-1589 row 8, remedy (c), slice A: an input-free marker for authored model-schema validator messages
 
