@@ -201,3 +201,92 @@ Auditor, 2026-10-19 04:33 BST (`TZ=Europe/London`). Range `origin/main...43b1f23
 ### Docs checks
 
 At the pre-commit tree (gate-1 and gate-2 both free, checked first): `python3 scripts/audit-docs.py` rc 1 with exactly two FAILED lines, both check 31 — "gap in the full allocation between 1823 and 8127" and "id 8127 is `created:` 2026-10-18, earlier than id 1823's 2026-10-19" — the unminted working id, expected until the mint; `python3 scripts/doc-index.py --check` rc 0 ("INDEX.md: OK (byte-stable)"). No check-32 red.
+
+### Second pass — D5.8 write-set walk (auditor-1259w, 2026-10-19 04:42:07 BST)
+
+Tree: branch HEAD `bbc3f774629a5d6e8ca749eb4c029d732815c26b` (worktree `sl-1259`, status clean before this edit). Read-only; nothing run.
+
+**D5.8 as defined** (`PL-1766` D5.8, quoted): `PL-1537`'s S5 set (`api/deployments.py`, `platform/deployments.py`, `errors.py`, `03-rating-engine.md`, `openapi/generated.json`, `backend/tests/`) plus `api/score.py`, `main.py`, `platform/bundle_slot.py`, `config.py`; `packages/model-schema/src/model_schema/deployments.py` and the regenerated contract; `scripts/bench-deploy-path.py`, possibly `scripts/bench-rating.py`, `deploy/Dockerfile` or `deploy/docker-compose.yml`. As ruled 2026-10-17: `deploy/docker-compose.yml` in, `deploy/Dockerfile` out; `bench-rating.py` "possibly". "Any path outside it is a stop to the lead, not a widening."
+
+**Predicate** (change set, the range): `git -C <wt> diff --name-only origin/main...HEAD | sort` (35 paths). D5.8 list written to a file with full paths (the shorthand names expanded to `backend/src/app/...`), plus two expansions of mine: every branch path under `backend/tests/` (D5.8 names the directory) and under `docs/contracts/schemas/generated/` (D5.8's "regenerated contract"). `comm -12` of the two sorted lists = **26** paths. Whether the generated schemas count as "the regenerated contract" is a reading I made; the lead should confirm it.
+
+**In the branch, not in D5.8 (9):**
+- `backend/src/app/platform/deployment_switch.py` — new production module, **OUTSIDE D5.8**. D5.8 names `platform/bundle_slot.py`, `config.py` for the lifespan subscriber; the subscriber is in this new file instead.
+- `packages/model-schema/src/model_schema/__init__.py`, `scripts/generate-contracts.py`, `scripts/audit-docs.py`, `tests/test_audit_docs_ids.py` — code or tooling outside D5.8.
+- `docs/specs/06-governance.md`, `docs/roadmap.md`, `docs/INDEX.md`, this ledger — docs; D5.8 lists only `03-rating-engine.md` among specs.
+
+**In D5.8, not in the branch (3):** `backend/src/app/platform/bundle_slot.py`, `backend/src/app/config.py`, `scripts/bench-rating.py` (the last is "possibly"; `deploy/Dockerfile` is out and untouched).
+
+**Write walk** — predicate, run over `HEAD` in `backend/src packages/model-schema/src scripts/bench-deploy-path.py`:
+`git -C <wt> grep -n -E '(live_refs\.(set|load_latest|clear|pop|discard)|\.live\.set\(|self\._live\[[^]]*\] *=|_live\.(pop|clear|update)|\.sadd\(|\.srem\(|drop_from_roster\(|join_roster|leave_roster|\.set\(.*entry|LiveRefs\(\)|load_latest\()' HEAD -- backend/src packages/model-schema/src scripts/bench-deploy-path.py`
+gave 12 hits. I added `live.set` at :124, which the predicate misses, and the two `transport.join`/`.leave` callers found with `git grep -n -E 'join\(|\.leave\(' ... deployment_switch.py`. Declarations (:127 `def load_latest`, :200 and :377 `drop_from_roster` def) and the ack-key `sadd` at :383 (an ack set, not the roster) are excluded. **12 writes walked.**
+
+| # | file:line | enclosing function | what | D5.8 path |
+|---|---|---|---|---|
+| 1 | `platform/deployment_switch.py:117` | `LiveRefs.set` | writes the live-ref map | OUTSIDE D5.8 (new file) |
+| 2 | `platform/deployment_switch.py:124` | `LiveRefs.from_latest` | sets on a fresh local instance | OUTSIDE D5.8 (new file) |
+| 3 | `platform/deployment_switch.py:150` | `LiveRefs.load_latest` | startup load into `self` | OUTSIDE D5.8 (new file) |
+| 4 | `platform/deployment_switch.py:311` | `SwitchMember.handle` | live-ref set on COMMIT | OUTSIDE D5.8 (new file) |
+| 5 | `platform/deployment_switch.py:379` | `RedisSwitchTransport.drop_from_roster` | roster `srem` | OUTSIDE D5.8 (new file) |
+| 6 | `platform/deployment_switch.py:387` | `RedisSwitchTransport.join` | roster `sadd` | OUTSIDE D5.8 (new file) |
+| 7 | `platform/deployment_switch.py:390` | `RedisSwitchTransport.leave` | roster `srem` | OUTSIDE D5.8 (new file) |
+| 8 | `platform/deployment_switch.py:256` | `prepare_round` | calls roster prune | OUTSIDE D5.8 (new file) |
+| 9 | `platform/deployment_switch.py:445` | `SwitchSubscription.start` | calls `join` | OUTSIDE D5.8 (new file) |
+| 10 | `platform/deployment_switch.py:469` | `SwitchSubscription.stop` | calls `leave` | OUTSIDE D5.8 (new file) |
+| 11 | `main.py:155` | `create_app.lifespan` | calls `live_refs.load_latest` | `main.py` — in D5.8 |
+| 12 | `main.py:263` | `create_app` | constructs the empty `LiveRefs()` | `main.py` — in D5.8 |
+
+Result: **10 of 12 writes fall OUTSIDE D5.8** by path, all in one file, `backend/src/app/platform/deployment_switch.py`. The two in D5.8 are `main.py` call sites. `api/score.py`, `api/deployments.py` and `platform/deployments.py` hold no live-ref or roster write: `score.py` only reads (`live_refs.get` :236) and `platform/deployments.py` has only DB `session.add` rows (:359, :647, :785). Ruling for the lead: D5.8 says an outside path is "a stop to the lead, not a widening"; no ruling widening it to `deployment_switch.py` was found in the files I read.
+
+## Closing acts (exec-1259c, 2026-10-19 04:45:43 BST)
+
+Written by the executor seat exec-1259c under the maintainer's light-seat rule (to-lead 2026-10-19 04:39:47 BST): read and edit only; no test, check, build or DB was run for this section. Sources: the lead's verdicts (from-lead 04:40:22, amended 04:41:38) and the maintainer's entries "2026-10-19 04:35:24 BST", "04:41:23 BST" and "04:43:27 BST" in `to-lead.md`.
+
+### §13 verdicts (the lead's; owner and due as corrected by to-lead 04:41:23)
+
+Common form (PL-1237:128-131): **deferred with an owner — measured diagnostic, carried.** Owner: **WK-674 NFR measurement session on nfr-bench-1 — owner row to be added in D26** (no roadmap row names it: `grep -n 'nfr-bench-1' docs/roadmap.md` at bbc3f774 hits only :2710 and :2712, NFR-467/468 prose). VM coordination (user action): the maintainer. Discharge event: a dedicated host (nfr-bench-1).
+
+- **NFR-489** — deferred with an owner — measured diagnostic, carried; owner WK-674 NFR measurement session on nfr-bench-1 (owner row to be added in D26), VM coordination (user action): the maintainer; **due before the 12 Nov exit demo** (`docs/roadmap.md` §12 row 2 exit criterion, user 14 Oct 09:50). Ruling used: **DP-S5-a ruled (a)** (to-lead "2026-10-11 11:02:35 BST", RL-1614; PL-1620 §DP-S5-a): S5 holds the exit verdict on the S4 replicated path; SL-1455's sweep is FD-1411's remedy proof only. DP-3 reading: replicas under DP-3 as ruled (PL-1620 Acceptance 5; PL-1454 DP-3 (a) one process or (b) N uvicorn workers, N stated). No `--governed` run is recorded here.
+- **NFR-490** — deferred with an owner — measured diagnostic, carried; owner WK-674 NFR measurement session on nfr-bench-1 (owner row to be added in D26), VM coordination (user action): the maintainer; due before P2 close. Keeps PL-1237 Task 5's form (FAIL with figures if red), PL-1620:193.
+- **NFR-493** (linearity limb) — deferred with an owner — measured diagnostic, carried; owner WK-674 NFR measurement session on nfr-bench-1 (owner row to be added in D26), VM coordination (user action): the maintainer; due before P2 close.
+- **NFR-494** — deferred with an owner — measured diagnostic, carried; owner WK-674 NFR measurement session on nfr-bench-1 (owner row to be added in D26), VM coordination (user action): the maintainer; due before P2 close.
+- **NFR-501** — deferred with an owner — measured diagnostic, carried; owner WK-674 NFR measurement session on nfr-bench-1 (owner row to be added in D26), VM coordination (user action): the maintainer; due before P2 close. The carry form's extension to NFR-501 rests on PL-1620 D5.3 (:189-199) and is **ruled** in to-lead "2026-10-19 04:41:23 BST"; it rides D26 as an RL.
+- **NFR-502** — deferred with an owner — measured diagnostic, carried; owner WK-674 NFR measurement session on nfr-bench-1 (owner row to be added in D26), VM coordination (user action): the maintainer; due before P2 close.
+- **F1 test** (≥3 runs per n ∈ {2,4,8}) — deferred with an owner — measured diagnostic, carried; owner WK-674 NFR measurement session on nfr-bench-1 (owner row to be added in D26), VM coordination (user action): the maintainer; due before P2 close. The carry form names F1 directly (PL-1237:128-131).
+- **O4 ladder bench** (LG-1363 §O4) — deferred with an owner — measured diagnostic, carried; owner WK-674 NFR measurement session on nfr-bench-1 (owner row to be added in D26), VM coordination (user action): the maintainer; due before P2 close. Extension of the carry form to O4 rests on D5.3 and is **ruled** in to-lead "2026-10-19 04:41:23 BST".
+- **D5.12 script's governed run** — script delivered but untested (the measured run is not owed before merge, PL-1766:279-283); the run is deferred to nfr-bench-1, same owner and due as NFR-489 (it is the P2 NFR-489 exit verdict).
+- **Adopted as delivered and tested** (to-lead 04:41:23 accepts): FR-268, FR-269, FR-272/NFR-498 rollback limb, NFR-497, D5.11, D5.13 (static), D5.14.
+- **FR-452 / D5.10:** owed by SL-1259 before the PR; the two-case test is written (below), **not run**.
+
+### A2 — gate evidence table (to-lead 04:35:24 item 2; cited from the logs, not re-run)
+
+Logs are under `/home/puzhenhao1989/gi-pricing-plan.local/scratch/`.
+
+| Run | Tree | END line (verbatim) | Verdict rows | Log | Ruled |
+|---|---|---|---|---|---|
+| Full gate | 19d139e6 | `END 2026-10-19T02:17:33+00:00 2.69 2.01 2.10 (date l1 l5 l15)` | ruff 0, mypy 0, import_linter 0, req_coverage 0, contracts 0; audit_docs rc 1; pytest rc 1 "16 failed, 6479 passed, 18 skipped, 132 warnings in 3299.25s (0:54:59)" (13 cascade + 3 test-only reds, later fixed test-side); frontend install/generate:api/lint/type-check/test/build all rc 0, tree after gate 0 changed paths; compose smoke "7 passed, 1 warning in 425.67s" PASS; switch runtime "1 failed" FAIL (the D5.11 symptom); demo journey `journey done in 1221s` (demo.log:5094), demo seconds 1358, dislocation #1 467 s, D7 ok +489842011; zeros all 0 | `sl1259-gate/gate.log` (+ `pytest.log`, `demo.log`) | to-lead 2026-10-19 03:18:08 BST |
+| Run-small, sinks | 1f6934db | NOT FOUND: run-small writes no END line; last line of the log is `11 passed, 4 warnings in 4.80s` (started waiting on `/tmp/slots/small-test` at 03:32:09, load 1.46) | `backend/tests/test_error_sinks.py` 11 passed | `sl1259-runsmall-sinks.log` | to-lead 2026-10-19 03:33:30 BST ((c)+(a) accepted at H 1f6934db) |
+| switch3 | ef2f0462 | `END 2026-10-19T02:54:58+00:00 4.06 4.02 2.95 (date l1 l5 l15)` | compose smoke "7 passed, 1 warning in 477.85s" PASS; switch runtime "1 failed, 1 warning in 29.72s" FAIL (diagnosed: no beat in the bring-up; FD-1661); jobs rows=3; teardown, zeros 0 | `sl1259-gate-switch3/gate.log` (+ `switch.log`, `jobs.txt`, `stack.log`) | to-lead "2026-10-19 03:55:35 BST", header quoted in full: "Maintainer: SL-1259 switch3 END read — SMOKE PASS accepted; the switch FAILS on the REQUIRED byte-identity assert (working as designed). STOP: no edit before options" (to-lead.md:27438) |
+| switch4 | 4a3bd4a5 | `END 2026-10-19T03:05:15+00:00 2.57 1.99 2.20 (date l1 l5 l15)` | switch runtime "1 passed, 1 warning in 26.99s" PASS (`switch.log:85`); jobs.txt exactly 2 jobs (`rating.compile`, `rating.regression`, both 0.1.0+4a3bd4a5); deployed-bundle.json 26035 bytes, compiled_at inside the compile Job's window; teardown, zeros 0 | `sl1259-gate-switch4/gate.log` (+ `switch.log`, `jobs.txt`, `deployed-bundle.json`) | to-lead "2026-10-19 04:05:43 BST" (header: "Maintainer: SL-1259 D5.11 PROVEN at H3 4a3bd4a5 (switch4 END 03:05:15Z) — ruled"; D5.11 PROVEN, with a TEST-supplied beat; FD-1661 open); re-merge onto aea6f160, no python-half re-gate: to-lead 2026-10-19 04:06:08 BST |
+
+Note on the switch3 row: switch3's own END is ruled by the 03:55:35 entry above (smoke PASS accepted; the switch fails the byte-identity assert); the 04:05:43 entry then names switch3 (smoke 7 passed @ef2f0462) in the evidence set. The 03:18:08 entry's "Open before SL-1259's PR" list (3 test-only reds; D5.11) is what the later rows discharge. The merged-head proof is this PR's full CI suite (to-lead 04:06:08).
+
+### A3 — D5.7, quoted from PL-1766:230-232
+
+> - **D5.7 — SL-1455 merged is a "Depends on" of Slice 5** (Q6, the maintainer's 10:29:56 entry:
+>   *"SL-1455 becomes a formal Depends-on of S5 in the delta, because S5's NFR-489 exit reading
+>   builds on SL-1455's measured path"*). It was an order only: `RL-1614`, recording the 11:02:35
+
+(PL-1766 Acceptance item 3: `git grep -n 'D5.7' -- <this LG>` prints the quoted D5.7 line. The Q6 entry is to-lead "2026-10-18 10:29:56 BST"; the needs census above reads SL-1455 as merged (#1323, 9c602fec).)
+
+### D5.8 ruling
+
+To-lead "2026-10-19 04:43:27 BST" rules the D5.8 write-set STOP: `backend/src/app/platform/deployment_switch.py` is in D5.8 in place of `platform/bundle_slot.py` for the switch core and live ref (`bundle_slot.py` stays the bundle cache, untouched); the four registration edits (model_schema/__init__.py, scripts/generate-contracts.py, scripts/audit-docs.py, tests/test_audit_docs_ids.py) are in; the `docs/specs/06-governance.md` +2 is in as a pointer only (23:22:15 ruling), ACCEPTED as a pointer by to-lead "2026-10-19 04:44:06 BST" (header: "Maintainer: SL-1259 06-governance +1 line ACCEPTED as a pointer (04:43:27 condition 3 holds). It names 03 §5.1 as the sole definer of `deployment.switched`, and the chaining clause restates existing behaviour"); backend tests and `docs/contracts/schemas/generated/*` are confirmed as D5.8's tests and regenerated contract. Commit fae910ae's "D5.8" citation predates the ruling; no amend.
+
+### A1 / D5.10 — the rollback FR-452 test (written, NOT run)
+
+`backend/tests/test_management_rate_limit.py`: a fourth parameter `id="rollback"` on `_IN_HANDLER_ROUTES` (POST `/api/v1/environments/uat/deployments/rollback`, permission `deployment:promote`, permitted status 409 for a never-deployed version, which is raised after the count). It runs through the two existing `FR-452` tests: `test_a_403_from_an_in_handler_permission_check_is_not_counted[rollback]` (403 leaves the counter unchanged) and `test_a_permitted_call_to_an_in_handler_permission_route_is_counted_once[rollback]` (a permitted rollback adds exactly 1). Written during the QUIET block (no pytest allowed), so first delivered-untested. **Discharged 2026-10-19:** the window (to-lead "2026-10-19 06:26:22 BST": 20 passed incl. `[rollback]` x2, logs `scratch/sl1259-a1/window/`) ran it green, and the red-first (to-lead "2026-10-19 06:28:53 BST", accepted: `deployments.py:132` `count_management=count,` removed gives 1 failed, `assert (0 - 0) == 1`; restored gives 20 passed; dropdb count 0; logs `scratch/sl1259-a1/redfirst/`) is quoted below.
+
+**A1 DB window, 2026-10-19 06:25 BST (exec, on the maintainer's order "2026-10-19 05:10:12 BST", item 2; full log `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1259-a1/window/full.log`, `run.out`, `run.err`):** (1) `docker exec gi-pricing-postgres-1 createdb -U gipricing -T template0 gipricing_sl-1259_2ccd468a`, 06:25:02 BST, rc=0. (2) `GIP_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing_sl-1259_2ccd468a uv run --directory <worktree> alembic upgrade head`, 06:25:02 BST, rc=0; `alembic heads` rc=0: `5c8e3b71d094 (head)` (one head). (3) `run-small.sh <worktree> backend/tests/test_management_rate_limit.py` at `bbc3f774` plus uncommitted edits, 06:25:10–06:25:31 BST, rc=0: `20 passed, 1 warning in 10.60s`. The run is `-q`, so the output carries no test ids (`grep -c rollback run.out` = 0); the `rollback` param is inside those 20 (the earlier attempt had the same 20 collected items, all erroring at the fixture), not named in the output. (4) `dropdb -U gipricing gipricing_sl-1259_2ccd468a`, 06:25:35 BST, rc=0; `select count(*) from pg_database where datname like '%sl-1259%'` = `0`. A1 is now delivered and run green; the red-first evidence (route's `count_management` removed) is still owed.
+
+**A1 red-first window, 2026-10-19 06:27 BST (exec, on the maintainer's order to-lead "2026-10-19 06:26:22 BST"; full log `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1259-a1/redfirst/full.log`, `run-red.out`, `run-green.out`):** (1) database `gipricing_sl-1259_2ccd468a` created (`docker exec … createdb -T template0`, rc=0), `alembic upgrade head` rc=0, `alembic heads` = `5c8e3b71d094 (head)` (one head). (2) Removed, in the worktree only and uncommitted, the rollback route's `count_management=count,` at `backend/src/app/api/deployments.py:132` (inside `rollback_deployment`, passed to `service.rollback_and_switch`). (3) `run-small.sh <worktree> backend/tests/test_management_rate_limit.py`: rc=1, `1 failed, 19 passed, 1 warning in 9.95s`; failing test `test_a_permitted_call_to_an_in_handler_permission_route_is_counted_once[rollback]`, assert line `E       assert (0 - 0) == 1`. (4) `git restore backend/src/app/api/deployments.py` (diff empty, 0 bytes); re-run rc=0, `20 passed, 1 warning in 9.98s`. (5) `dropdb gipricing_sl-1259_2ccd468a` rc=0; `select count(*) from pg_database where datname like '%sl-1259%'` = `0`. The red-first evidence owed above is discharged: the route's count removed fails exactly the [rollback] counter assert, and restoring it passes.
