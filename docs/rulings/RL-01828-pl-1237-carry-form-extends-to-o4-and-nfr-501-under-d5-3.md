@@ -1,9 +1,9 @@
 ---
-id: RL-8131
+id: RL-1828
 family: ruling
 title: The PL-1237 carry form applies equally to O4 and NFR-501 under D5.3 (PL-1620), extending the deferral form for SL-1259
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-10-19   # filed 2026-10-19 under working id 8131
+created: 2026-10-19   # filed 2026-10-19 under working id 8131; minted 2026-10-19 as RL-1828
 owner: decision-maker
 tree: 1aab7a21fc5732ac6c0ea0c47d02ac4980638220
 phase: P2
@@ -15,13 +15,13 @@ corrected_by: []
 relates: [PL-1237, PL-1620, LG-1824, WK-674]
 ---
 
-# RL-8131 — The PL-1237 carry form applies equally to O4 and NFR-501 under D5.3 (PL-1620), extending the deferral form for SL-1259
+# RL-1828 — The PL-1237 carry form applies equally to O4 and NFR-501 under D5.3 (PL-1620), extending the deferral form for SL-1259
 
 Filed 2026-10-19 under working id 8131 (a working id until a later seat mints it). The ruling is the maintainer's (by delegation). Its source is the entry "2026-10-19 04:41:23 BST" in `~/gi-pricing-plan.local/channel/to-lead.md`.
 
 ## How this was ruled
 
-The source is the entry "2026-10-19 04:41:23 BST" in `~/gi-pricing-plan.local/channel/to-lead.md`. The file is local, so the whole entry is quoted below, copied from it by `sed`. The entry asks that this ruling ride D26 as an RL beside the SL-1575 one (RL 8130).
+The source is the entry "2026-10-19 04:41:23 BST" in `~/gi-pricing-plan.local/channel/to-lead.md`. The file is local, so the whole entry is quoted below, copied from it by `sed`. The entry asks that this ruling ride D26 as an RL beside the SL-1575 one (RL-1827).
 
 ## Verified first, at 1aab7a21fc5732ac6c0ea0c47d02ac4980638220
 

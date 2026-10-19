@@ -1,9 +1,9 @@
 ---
-id: RL-8133
+id: RL-1830
 family: ruling
 title: SL-1575 acceptance 5 runs as option (a), a 19,985-row slice of the pinned book, with the corrected argv `acc5 cost --policies 19985 --runs 1`
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-10-19   # filed 2026-10-19 under working id 8133
+created: 2026-10-19   # filed 2026-10-19 under working id 8133; minted 2026-10-19 as RL-1830
 owner: decision-maker
 tree: 1aab7a21fc5732ac6c0ea0c47d02ac4980638220
 phase: P2
@@ -15,7 +15,7 @@ corrected_by: []
 relates: [PL-1574, LG-1826, WK-1178]
 ---
 
-# RL-8133 — SL-1575 acceptance 5 runs as option (a), a 19,985-row slice of the pinned book, with the corrected argv `acc5 cost --policies 19985 --runs 1`
+# RL-1830 — SL-1575 acceptance 5 runs as option (a), a 19,985-row slice of the pinned book, with the corrected argv `acc5 cost --policies 19985 --runs 1`
 
 Filed 2026-10-19 under working id 8133 (a working id until a later seat mints it). The ruling is the maintainer's (by delegation). Its sources are the entries "2026-10-19 07:06:05 BST" and its CORRECTION "2026-10-19 07:06:58 BST" in `~/gi-pricing-plan.local/channel/to-lead.md`.
 

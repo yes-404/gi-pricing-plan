@@ -1,9 +1,9 @@
 ---
-id: RL-8130
+id: RL-1827
 family: ruling
 title: SL-1575 acceptance item 4: "Task 0's" means the quiet before-legs, and the decision rule is PASS, FAIL or INCONCLUSIVE on four timings
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-10-19   # filed 2026-10-19 under working id 8130
+created: 2026-10-19   # filed 2026-10-19 under working id 8130; minted 2026-10-19 as RL-1827
 owner: decision-maker
 tree: 1aab7a21fc5732ac6c0ea0c47d02ac4980638220
 phase: P2
@@ -15,7 +15,7 @@ corrected_by: []
 relates: [PL-1574, LG-1826, WK-1178]
 ---
 
-# RL-8130 — SL-1575 acceptance item 4: "Task 0's" means the quiet before-legs, and the decision rule is PASS, FAIL or INCONCLUSIVE on four timings
+# RL-1827 — SL-1575 acceptance item 4: "Task 0's" means the quiet before-legs, and the decision rule is PASS, FAIL or INCONCLUSIVE on four timings
 
 Filed 2026-10-19 under working id 8130 (a working id until a later seat mints it). The ruling is the maintainer's (by delegation). Its source is the entry "2026-10-19 04:34:00 BST" in `~/gi-pricing-plan.local/channel/to-lead.md`.
 
@@ -53,7 +53,7 @@ The quoted entry is the rule; this record adds no second statement of it.
 
 - `LG-1826` records the interpretation (the entry says LG 8125 does).
 - `PL-1574` is **not** edited (a frozen plan, `CLAUDE.md` §12).
-- Acceptance 5 is decided by RL 8133, not here.
+- Acceptance 5 is decided by RL-1830, not here.
 
 ## Acceptance — the violation that must become detectable
 

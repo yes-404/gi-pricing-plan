@@ -1,9 +1,9 @@
 ---
-id: RL-8132
+id: RL-1829
 family: ruling
 title: PL-1766 D5.8 write set: deployment_switch.py replaces bundle_slot.py as the switch-core home (distinct concerns, verified bbc3f774)
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-10-19   # filed 2026-10-19 under working id 8132
+created: 2026-10-19   # filed 2026-10-19 under working id 8132; minted 2026-10-19 as RL-1829
 owner: decision-maker
 tree: 1aab7a21fc5732ac6c0ea0c47d02ac4980638220
 phase: P2
@@ -15,7 +15,7 @@ corrected_by: []
 relates: [PL-1766, LG-1824, WK-674]
 ---
 
-# RL-8132 — PL-1766 D5.8 write set: deployment_switch.py replaces bundle_slot.py as the switch-core home (distinct concerns, verified bbc3f774)
+# RL-1829 — PL-1766 D5.8 write set: deployment_switch.py replaces bundle_slot.py as the switch-core home (distinct concerns, verified bbc3f774)
 
 Filed 2026-10-19 under working id 8132 (a working id until a later seat mints it). The ruling is the maintainer's (by delegation). Its source is the entry "2026-10-19 04:43:27 BST" in `~/gi-pricing-plan.local/channel/to-lead.md`.
 
