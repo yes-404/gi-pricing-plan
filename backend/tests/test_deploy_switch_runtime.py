@@ -17,16 +17,28 @@ import json
 import os
 import subprocess
 import time
+import urllib.error
 import urllib.request
 from typing import Any
 
 import pytest
-from backend.tests.deploy_stack_helpers import LB_PORT, PROJECT, api, governed_workspace
+from backend.tests.deploy_stack_helpers import LB_PORT, PROJECT, governed_workspace
+from backend.tests.deploy_stack_helpers import api as _stack_api
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("GIP_DEPLOY_TESTS") != "1", reason="runtime deploy test: set GIP_DEPLOY_TESTS=1"
 )
 COMPILE_BOUND_SECONDS = 120
+
+
+def api(method: str, path: str, headers: dict[str, str], body: Any = None) -> Any:
+    """`deploy_stack_helpers.api`, printing the status and JSON body of any non-2xx response
+    before it raises, so a refused call in the SOLO gate names its problem detail."""
+    try:
+        return _stack_api(method, path, headers, body)
+    except urllib.error.HTTPError as error:
+        print(f"{method} {path} -> {error.code}: {error.read().decode(errors='replace')}")
+        raise
 
 
 def _api_containers() -> set[str]:

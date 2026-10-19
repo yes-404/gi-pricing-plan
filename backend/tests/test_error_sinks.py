@@ -59,6 +59,19 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         "and test_score.py::test_a_422_for_a_bad_input_names_the_field_and_carries_no_value"),
     ("backend/src/app/api/score.py", "_maybe_sample_trace", "exc_info"): (
         1, "test_score.py::test_a_trace_sampling_failure_logs_no_quote_input"),
+    ("backend/src/app/platform/deployment_switch.py", "_listen", "exception"): (
+        1, "`.exception(` writes the traceback to the log and echoes nothing into a response; "
+        "the Redis SwitchMessage consumer, whose payload is deploy-time ids, not quote input "
+        "(maintainer's ruling, 2026-10-19 02:45:42 BST, item 1 (a))"),
+    ("backend/src/app/platform/deployment_switch.py", "handle", "exception"): (
+        1, "`.exception(` writes the traceback to the log and echoes nothing into a response; "
+        "PREPARE hydration of an approved deployment's artifacts (`hydrate_for_switch` reads "
+        "only the Rating Version row, the blob row and the blob store), not request input "
+        "(maintainer's ruling, 2026-10-19 02:45:42 BST, item 1 (b))"),
+    ("backend/src/app/platform/deployments.py", "complete_switch", "exception"): (
+        1, "`.exception(` writes the traceback to the log and echoes nothing into a response; "
+        "the deploy route's COMMIT round, not a quote input "
+        "(maintainer's ruling, 2026-10-19 02:45:42 BST, item 1 (c))"),
     ("backend/src/app/observability/middleware.py", "dispatch", "exc_info"): (
         1, "this file: test_an_unexpected_request_failure_logs_no_input"),
     ("backend/src/app/platform/outbox.py", "relay_once", "last_error"): (
