@@ -1,5 +1,5 @@
 ---
-id: LG-8127
+id: LG-1824
 family: ledger
 title: WK-674 slice SL-1259 — Slice 5, atomic switchover, rollback and the measurements (PL-1766) (slice ledger)
 status: active                 # active → closed (§1.2a)
@@ -14,9 +14,9 @@ corrected_by: []
 relates: [PL-1766, PL-1710, PL-1620, PL-1537, PL-1237, SL-1259, SL-1258, SL-1455]
 ---
 
-# LG-8127 — WK-674 slice SL-1259: Slice 5
+# LG-1824 — WK-674 slice SL-1259: Slice 5
 
-Filed 2026-10-18 under working id 8127 (lead-reserved in eta.md). Executor seat `exec-1259`, base `origin/main` 84b0ff5765e55bc8edd139cd22bb57cd474de807, branch `sl-1259-wk674-s5`.
+Filed 2026-10-18 under working id 8127 (lead-reserved in eta.md); minted 2026-10-19 as LG-1824. Executor seat `exec-1259`, base `origin/main` 84b0ff5765e55bc8edd139cd22bb57cd474de807, branch `sl-1259-wk674-s5`.
 
 **GO:** the maintainer's (by delegation) entry "2026-10-18 22:50:32 BST — Maintainer: the duplicate-mint anomaly ruled; GO SL-1259, SL-1770, SL-1738, SL-1575 (with conditions)". **MERGE-ACK:** not yet given.
 
@@ -167,7 +167,7 @@ Auditor, 2026-10-19 04:33 BST (`TZ=Europe/London`). Range `origin/main...43b1f23
 ### Claims checked against the primary source
 
 1. **Production code since `19d139e6` changed only in comments and docstrings: CONFIRMED by reading.** `git diff -U0 19d139e6..4a3bd4a5` over `backend/src`, `packages`, `scripts`, `deploy`, `examples` prints exactly four changed lines, each `FD 8129` → `FD-1823`: `api/score.py:230` and `platform/deployments.py:688` (inside the `_serving_ref` and `deploy_and_switch` docstrings), `platform/deployment_switch.py:19` (the module docstring, closing `"""` at :28), `main.py:134` (a `#` comment). No non-comment production change. The re-merge `4a3bd4a5..40f84d7c` touches `backend/src/app/data/ingestion.py`, `db/models.py`, two migrations and `packages/pricing-core/src/pricing_core/data/{ingest,prepare,validate}.py` — all main's (SL-1738), none SL-1259's; the migration `5c8e3b71d094` has `down_revision` `f2b6d90a4c17` (the head this slice's DB window ran at), so it extends the same chain. I did not re-run the AST script; T9's `EQUAL` ×4 (`fb29f8b7`↔`70a0af0d`) plus my reading of the diff agree.
-2. **LG-8127 records D5.11 as proven with a TEST-supplied beat and FD-1661 open: CONFIRMED** — the entry "2026-10-19 — D5.11 fix A" above: "D5.11 is therefore proven with a TEST-supplied beat. The deployed compose stack still lacks a beat (FD-1661, MEDIUM, WK-674)". The register row for FD-1661 (`docs/findings/register.md:356`) is MEDIUM, owner WK-674, no closing marker. The re-merge entry is present (the "04:12 BST" entry: merge `40f84d7c`, pre-merge `4a3bd4a5`, base `84b0ff57`, two-sided set, INDEX regenerated, hunks quoted).
+2. **LG-1824 records D5.11 as proven with a TEST-supplied beat and FD-1661 open: CONFIRMED** — the entry "2026-10-19 — D5.11 fix A" above: "D5.11 is therefore proven with a TEST-supplied beat. The deployed compose stack still lacks a beat (FD-1661, MEDIUM, WK-674)". The register row for FD-1661 (`docs/findings/register.md:356`) is MEDIUM, owner WK-674, no closing marker. The re-merge entry is present (the "04:12 BST" entry: merge `40f84d7c`, pre-merge `4a3bd4a5`, base `84b0ff57`, two-sided set, INDEX regenerated, hunks quoted).
 3. **The proof of D5.11 "proven" is by the maintainer's reading, not in this ledger.** The ledger does not itself carry the `switch.log:85` line or the `deployed-bundle.json` hash/compile-window check; they are in "04:05:43" only (see finding A2).
 
 ### Scope table (requirements, each id), with proposed verdicts

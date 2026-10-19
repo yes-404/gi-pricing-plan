@@ -3,7 +3,7 @@
 `PL-1766` D5.6, D5.8, D5.9 and D5.10, under the maintainer's rulings of "2026-10-18 22:59:56 BST"
 (DB first), "23:03:15 BST" ((A): a per-process `live` reference with a startup load) and
 "23:07:57 BST" (the expected-process rule). **Written red first**: these were run on the commit
-before the wiring and failed for their own reason, then run at head (`LG-8127`).
+before the wiring and failed for their own reason, then run at head (`LG-1824`).
 
 Needs the database and the Redis the lifespan subscribes to: it runs only in a window that is
 granted. The app's own process is one subscriber; a `_Peer` is another, on its own event loop in
