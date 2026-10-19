@@ -39,7 +39,41 @@ Base: `origin/main` `84b0ff5765e55bc8edd139cd22bb57cd474de807`. Branch `sl-1770-
 
 ### Audit
 
-(written by the auditor)
+Pre-PR slice audit by `auditor-1770` (sonnet, medium), 2026-10-19 07:20 BST, range `origin/main...sl-1770-wk1178-append-only-db`;
+`origin/main` = `aea6f160b3a50e9d38dc591713bd85e4daed4b8e` = merge-base (`git merge-base origin/main HEAD`, after `git fetch origin`).
+**Tree audited:** HEAD `4d85952e03895ec631d71d31a6cd223fc740e4c5`, tree `4c0a1cfe8b7d20be1e164cf2ed4c14b0b6dbc452`. **Gate of record:**
+head `500ef639` (to-lead.md "2026-10-19 06:24:32 BST", GREEN but one test fix), fix `4d85952e` accepted ("06:27:12 BST"). Post-gate predicate
+`git log --no-merges --format= --name-only 500ef639..HEAD ^origin/main -- ':!docs' | sort -u` prints only `backend/tests/test_model_lifecycle.py`
+(the accepted fix). This audit proposes; the verdict is the lead's. No `status:` line was changed. No test, gate or DB was run.
+
+**Reachability.** `git merge-base --is-ancestor <sha> HEAD` rc 0 for all 14 SHAs this ledger and the log name (fbbadef5, dda1aae9, cc0b3068,
+81a927cf, 565f1e5d, b0c58e96, 500ef639, 9661e89f, c13a32fc, 4d85952e, cbe27461, 0cc298a6, 0a39bd4f, c20673f1).
+
+**Plan (PL-1769 Acceptance 1-7) to evidence.**
+
+| Item | Evidence | Result |
+|---|---|---|
+| 1 reds on base | LG "Task 1.4": 70 failed / 44 passed at `dda1aae9`, by cause (64 DID NOT RAISE, 2 grant/trigger-set, 6 test defects fixed `b0c58e96`) | met in summary; per-table/per-statement node ids not itemised in the LG (F2) |
+| 2 declared set, pin test, transitions | `git grep -nE '^APPEND_ONLY_TABLES\|HAVING string_agg' -- backend/tests/test_artifact_immutability.py` rc 1, no output; `test_a_dataset_version_status_follows_the_transition_table_exactly` (:917, imports `VALID_DATASET_TRANSITIONS`), `test_an_archived_dataset_version_takes_no_update_at_all` (:936), same-status (:948), FR-53 draft (:980), frozen data (:997), no re-profile (:1034); LG: 119 passed at `cc0b3068` | met; the back-filled `data_frozen_at` count the item requires is not in the LG (F2) |
+| 3 | `git grep -nE "UPDATE factors\|factors SET\|update\(RateTableVersionRow\|version_row\.cells =" -- backend` prints 2 lines, not nothing (F1) | met in substance, not literally |
+| 4 | LG: `test_fr240_governance` 9, `test_rate_table_diff_portfolio` 70, `test_rating_version_change_summary_route` 21 passed; Task 4.4 broken-input lines present | met |
+| 5 one migration, one head | `git diff --name-status origin/main...HEAD -- backend/migrations/versions` = `A a4d1f08c3b97_artifact_tables_append_only.py` only; one head `a4d1f08c3b97`; LG down/up snapshot equality (diff 0, cmp rc 0) | met; Task 2.7/2.8 catalog outputs are summarised, not quoted (F2) |
+| 6 spec lines | `git diff origin/main...HEAD -- docs/specs` adds the dated FR-44, FR-60, FR-70, FR-229 lines in the same range as the migration | met |
+| 6b | `test_profile_refusal.py` 3 passed (LG); `git grep -n PROFILE_ALREADY_SET -- backend docs/specs` rc 1 (nothing); `DATASET_VERSION_IMMUTABLE` and `FR-60` both hit in `profiles.py` (:51, :35) | met; Step 2.8b back-fill red/green not in the LG (F2) |
+| 7 review, gate, audit-docs | postgres-pro review in LG (Step 6.1); gate rc table only in to-lead.md "06:24:32" (ruff/mypy/lint-imports/doc_index/req_coverage/contracts 0, frontend 0, demo journey 1075 s, round trip a filtered-diff PASS, audit_docs rc 1 = the 8126 check-31 gap only); LG `### Gate` still reads "(to be filled ...)" (F2) | met in the channel; not yet in the ledger |
+
+**DP-7 (migration chain).** `a4d1f08c3b97` has `down_revision = "5c8e3b71d094"` (`ingestion_runs_step_counts`, `backend/migrations/versions/5c8e3b71d094_ingestion_runs_step_counts.py` on `origin/main`);
+`git grep -n "down_revision.*5c8e3b71d094" origin/main -- backend/migrations/versions` prints nothing (no other child on main);
+`git diff --name-status <merge-base> origin/main -- backend/migrations/versions` is empty (merge-base = main tip). **No re-point needed.**
+
+**Findings.**
+- **F1 (low), acceptance 3 predicate.** `backend/tests/test_artifact_immutability.py:624` is the prohibition test that plants `UPDATE factors SET body` to prove the database refuses it (LG Step 4.5 says so); `backend/tests/test_rate_tables_service.py:198` is `assert version_row.cells == wire.cells.model_dump(...)`, a comparison, matched by the `version_row\.cells =` alternative. Neither writes an artifact row. Proposal: the lead records the predicate's two false positives in the LG; no code change.
+- **F2 (low), the LG is thinner than the acceptance standard asks.** `### Gate` and `### Tasks` are placeholders; missing from the LG body: item 2's back-filled `data_frozen_at` count, item 5's Task 2.7/2.8 catalog outputs, item 6b's Step 2.8b red/green, item 1's per-node-id red list, the gate rc table. The channel entries carry the gate result. Proposal: before the PR, the executor copies the 06:24:32 rc table and the 06:27:12 fix into `### Gate`; the rest is delivered-but-undocumented-in-the-LG (verdict: delivered, evidence in the LG to be completed; not "not started").
+- **F3 (info), `ruff format --check`.** The LG records `test_model_lifecycle.py` already red at 500ef639 (24 hunks, none from the fix); the maintainer left it as baseline (06:27:12). Not re-run here.
+- **F4 (info), S-b carry-over.** postgres-pro (LG Step 6.1 (3)) notes `SELECT ... FOR UPDATE` on the nine `SELECT, INSERT` tables would be refused for the application role; `modelling.py` `with_for_update` at :1240 and :1452 to be checked in SL-1771. Not this slice's.
+- **F5 (info), the mint.** `audit-docs.py` rc 1 is the 8126 check-31 gap (working id, per the gate entry); it clears at the mint. Not re-run here.
+
+**Proposal:** CLEAN with F1 and F2 recorded (no finding changes code). Verdict, the closing acts and the mint are the lead's.
 
 ### Build log
 
