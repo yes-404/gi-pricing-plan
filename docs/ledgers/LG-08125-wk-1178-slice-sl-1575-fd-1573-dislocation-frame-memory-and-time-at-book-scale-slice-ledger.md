@@ -160,6 +160,54 @@ PL-1574 is frozen, so what follows is an **interpretation** of its acceptance it
 
 Reading, for the block script `scratch/sl1575-quiet-block.sh`: (1) item 4's "Task 0's" means the QUIET before-legs (the 04:11 leg and before #2, B2), not the LOADED 1,032.39 s leg; (2) item 4 is decided by the PASS / FAIL / INCONCLUSIVE rule above; (3) item 3 (memory) is decided on VmHWM from the same block; (4) order B2 → A1 → A2, each alone, one window, two worktrees prepared before the first START.
 
+#### 2026-10-19 04:44:47 BST — QUIET block: B2 disclosed-contaminated, light-seat overlap disclosed, and Acceptance 5's R6 (three maintainer entries)
+
+**1. B2 is DISCLOSED-CONTAMINATED** (the maintainer's entry in `to-lead.md`, "2026-10-19 04:39:35 BST — Maintainer: SL-1575 QUIET block, B2 is DISCLOSED-CONTAMINATED (the maintainer's own act)"). Lead 13 was started at 03:38:43Z, two minutes into B2 (START B2 03:36:47Z); at 04:39 BST `ps` showed `claude` (PID 1068114) at 38% CPU beside spike.py (158%), load 3.68 2.85 2.58, which breaks B2's ALONE condition. The binding guard, as the entry states it:
+
+> - if item 4 passes **only because of B2** (mean(A) > B1 = 1116.35 s), B2 is RE-RUN alone before any decision;
+> - if mean(A) ≤ B1, the result stands, with B2 recorded as disclosed;
+> - item 3 (VmHWM) is unaffected by CPU contention, so B2's VmHWM stands.
+
+Reason given: B2 is a slower-biased baseline, and a slower baseline favours PASS under item 4's rule (mean(A) ≤ max(B)).
+
+**2. Disclosed overlap** (the maintainer's entry "2026-10-19 04:39:47 BST — Maintainer: READ-IN OK (lead 9a873d42, PID 1068114)"): during the QUIET block, at most two light seats, READ or EDIT only, no tests, checks, builds, uv sync or DB. The maintainer's reading: A-leg contention biases toward FAIL (conservative), and B2 is already guarded (item 1). Seats and their own stamps (BST):
+
+- exec-1770f: 04:40:53–04:41:55 and 04:42:22–04:42:34, idle after 04:42:34; TaskStopped 04:44:36 (from-lead "2026-10-19 04:44:36 BST"), so seated 04:40:53–04:44:36
+- auditor-1259w: 04:41:04–04:42:07, idle after 04:42:07; TaskStopped 04:44:36 (same entry), so seated 04:41:04–04:44:36
+- exec-1259c: 04:44:14–04:45:43 (TaskStopped 04:46:06; from-lead "2026-10-19 04:46:06 BST")
+- exec-1575n: 04:44:28–04:44:47 (TaskStopped 04:45:12; from-lead "2026-10-19 04:45:12 BST")
+- exec-1770g: 04:45:13–04:45:22 (TaskStopped 04:45:33; from-lead "2026-10-19 04:45:33 BST")
+(Sources: from-lead-2026-10-09.md entries 04:44:36, 04:45:12, 04:45:33, 04:46:06; lead-handover-2026-10-18.md :581-596. The heading's earlier typed stamp "04:45" was replaced with the read stamp 04:44:47.)
+
+**3. Acceptance 5 / R6** (the maintainer's entry "2026-10-19 04:36:34 BST", Acceptance 5 bullet): R6 = (A1) per `to-lead.md` "2026-10-10 00:27:18 BST — RULING: R6 = (A1), a 20,000-policy demo portfolio built by the seed's existing sampler" (line 20671 of the file at this read), and the cost run uses the built 19,985-row portfolio (`to-lead.md` "2026-10-11 19:36:01 BST", line 22477: stage d stays on the 19,985-row portfolio, not the full book). `PL-1574`'s "R6 size pending" (`docs/plans/PL-01574-…-single-row-work-plan.md:111-114`, `:144`) predates that ruling. Recorded here; no plan edit (`PL-1574` is frozen).
+
+#### 2026-10-19 05:08 BST — QUIET block END, B2 accepted, the A1 crash and its cause
+
+- **Block END:** rc=1, 04:01:15Z (lead handover FINAL 13). **B2 accepted** (to-lead "2026-10-19 05:01:56 BST"): `dislocation_frame.returned` 1011.73 s, VmHWM 6,408,564 KiB; B1 1116.35 s, 6,385,760 KiB. A1 at e73ecd65 crashed rc 1 after `pass1.score_batch.collected` t_s 433.89; A2 did not run. Items 3 and 4 undecided.
+- **A1 crash and cause (to-lead "2026-10-19 05:05:35 BST", ruled):** the repro at 20k (`scratch/sl1575-repro/spike-20k.err`) shows `task-9447/spike.py:73 rungs = sum(len(v["ladder"]) …)` raising `KeyError: 'ladder'`. The cause is the spike instrument: `pricing_core/rating/analysis.py` at 50476d3f:201 returns `"ladder"`; Task 1 at e73ecd65:216 returns `"rungs"`. **No FD.** B1 and B2 stand (the edit touches only a post-collection summary line).
+- **Fix (key-compatible, one instrument for both trees):** `task-9447/spike.py:73` now reads `v.get("rungs", v.get("ladder"))`; JSONL field names unchanged. sha256 before `1b1bee35ea5d97bf5ddfea74b8b0fa0c14f82418b39488f06ceca95184988721`, **after `0be5f6b8ebbaeb3a13be131b488ddbee3fcbc542a01952f010c6ce9cfaf3525e`**; `python3 -m py_compile` rc 0. The spike was not run.
+- **Required cross-check (before A1/A2 are read):** A1's summed rung count (`pass1.retained` `rungs=`) at 200k must EQUAL B2's at 200k; a difference is a finding against Task 1, not a pass.
+
+#### 2026-10-19 08:41 BST — Acceptance 5, the R6 cost run: PASS (maintainer, `to-lead.md` "2026-10-19 08:37:07 BST")
+
+- **Argv (as corrected by `to-lead.md` "2026-10-19 07:06:58 BST"):** `inv-rss.sh acc5 cost --policies 19985 --runs 1` (`ks` default "3,4,5,6"), run under the gate-1 + gate-1b slot flocks. Script `scratch/sl1575-acc5/inv-rss.sh`; outputs `scratch/sl1575-acc5/out/{progress.log,acc5.jsonl,acc5.rss,acc5.err}`. Tree `0022257cb142683a824c244cfc78f91c19398f44` (the `tree` field of every `acc5.jsonl` row).
+- **START / END (`progress.log`):** START 2026-10-19T06:07:23Z (07:07:23 BST) load1=1.17; END 2026-10-19T07:36:26Z (08:36:26 BST) load1=2.94, rc=0.
+- **Per dislocation run (`acc5.jsonl`, one row per k, `--runs 1`):**
+
+  | k | seconds | load1 | stamp (UTC) |
+  |---|---|---|---|
+  | 3 | 382.01 | 2.96 | 06:15:08 |
+  | 4 | 728.97 | 2.32 | 06:27:17 |
+  | 5 | 1420.44 | 2.97 | 06:50:58 |
+  | 6 | 2728.02 | 2.94 | 07:36:26 |
+
+- **Peak RSS (`acc5.rss`):** `ru_maxrss_KiB=2476624` = 2.36 GiB. Reading: it is `getrusage(RUSAGE_CHILDREN)`, the largest waited-for descendant (the measuring python), not a sum over the process tree. `acc5.err` is 0 B.
+- **Limit (PL-1574:555, quoted):** *"peak RSS ≤ 15.5 GiB and ≤ 60 min per dislocation run at the R6 size"*. Every k ≤ 3600 s and 2.36 GiB ≤ 15.5 GiB. **Verdict: PASS** (maintainer, 08:37:07 BST).
+- **Disclosures:**
+  - (a) **Option (a) slice:** the run used the first 19,985 rows by quote_id, not the seed's sampled set (`seed.py` `build_portfolio_csv`), per `to-lead.md` "2026-10-19 07:06:05 BST". An interpretation of R6's size; it rides D26 with the other rulings.
+  - (b) **Lead swap inside k5:** lead-15's first command was 07:30:47 BST, while k5 ran (`to-lead.md` "2026-10-19 07:30:26 BST", amending 07:13). A lead start can only slow a run, which biases toward FAIL, and peak RSS is unaffected. k5 (1420.4 s) is ≈1.95× k4, in line with the trend: no visible effect (08:37:07).
+  - (c) **Observation, not a finding against this slice:** cost is roughly ×2 per k (382 → 729 → 1420 → 2728 s). k=7 projects to ≈5,400 s, over 60 min; the limit above k=6 is unmeasured. Routed to D26 as an OQ, owner planner: *"is k ≤ 6 the product bound for attribution sets, or does FR-263 need a k ceiling?"* No spec or plan edit here (PL-1574 is frozen).
+
 ## PRs
 
 None yet.
