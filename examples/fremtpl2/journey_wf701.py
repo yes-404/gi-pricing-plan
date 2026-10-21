@@ -29,11 +29,13 @@ verdicts are Slice 5's, on the dedicated host.
 from __future__ import annotations
 
 import json
+import re
 import sys
 import threading
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
+from decimal import Decimal
 from fractions import Fraction
 from math import comb
 from pathlib import Path
@@ -79,7 +81,7 @@ STEP_ORDER: Final = (
 
 # -- the pre-registered volumes (PL-1710 DP-6, P8) ------------------------------------------------
 
-COMPARE_POLICIES: Final = 200  # A5; grown only by `_pick_a6`'s rule, recorded
+COMPARE_POLICIES: Final = 200  # A5: K real freMTPL2 policies (PL-1710:303), fixed
 C6_QUOTES: Final = 50
 C7_QUOTES: Final = 2000
 C7_RATE: Final = Fraction(1, 100)  # `rating.trace_sample_rate`'s default
@@ -180,33 +182,84 @@ def payable_minor(result: Mapping[str, Any]) -> int:
     return int(rung["value_minor"])
 
 
-def contract_sample(
-    input_contract: Sequence[Mapping[str, Any]], template: Mapping[str, Any], count: int
-) -> list[dict[str, Any]]:
-    """`count` distinct input sets spread over the contract's declared domains, deterministic:
-    an enum cycles its domain, an int field steps through its `min..max` range, each at its own
-    stride, so the sample is a spread and not a column. A field the contract declares without a
-    domain or int range (`current_premium_minor`, the decimal exposure) keeps the template's
-    value. No random number is drawn."""
-    rows: list[dict[str, Any]] = []
-    strides = (1, 3, 7, 11, 13, 17, 19, 23)
-    for i in range(count):
-        row = dict(template)
-        for j, field_ in enumerate(input_contract):
-            name = str(field_["name"])
-            stride = strides[j % len(strides)]
-            if field_.get("domain") is not None:
-                domain = list(field_["domain"])
-                row[name] = domain[(i * stride) % len(domain)]
-            elif (
-                field_.get("type") == "int"
-                and field_.get("min") is not None
-                and field_.get("max") is not None
-            ):
-                low, high = int(field_["min"]), int(field_["max"])
-                row[name] = low + (i * stride * 37) % (high - low + 1)
-        rows.append(row)
+def portfolio_policies() -> list[dict[str, str]]:
+    """The seed's portfolio Dataset Version as raw rows (`seed.build_csv(PORTFOLIO_ROWS)`, the
+    sha256-pinned public freMTPL2 file) after v2's `exposure_years <= MAX_EXPOSURE` step, in
+    ascending policy id. A read of the public file, not a service import or a row write."""
+    import csv
+    import io
+    from decimal import Decimal
+
+    import seed
+    from algorithm import MAX_EXPOSURE
+
+    reader = csv.DictReader(io.StringIO(seed.build_csv(seed.PORTFOLIO_ROWS).decode("utf-8")))
+    bound = Decimal(str(MAX_EXPOSURE))
+    rows = [row for row in reader if Decimal(row["Exposure"]) <= bound]
+    rows.sort(key=lambda row: int(row["IDpol"]))
     return rows
+
+
+def _snake(name: str) -> str:
+    return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
+
+
+def _contract_value(field_: Mapping[str, Any], raw: str) -> Any:
+    """`raw` as the contract field's value, or a ValueError naming why it is outside."""
+    kind = field_.get("type")
+    if field_.get("domain") is not None:
+        if raw not in field_["domain"]:
+            raise ValueError(f"{raw!r} is not in the domain")
+        return raw
+    if kind == "int":
+        number = Decimal(raw)
+        if number != number.to_integral_value():
+            raise ValueError(f"{raw!r} is not an integer")
+        value: Any = int(number)
+        low, high = field_.get("min"), field_.get("max")
+        if (low is not None and value < int(low)) or (high is not None and value > int(high)):
+            raise ValueError(f"{raw!r} is outside {low}..{high}")
+        return value
+    if kind == "decimal":
+        number = Decimal(raw)
+        low, high = field_.get("min"), field_.get("max")
+        if (low is not None and number < Decimal(str(low))) or (
+            high is not None and number > Decimal(str(high))
+        ):
+            raise ValueError(f"{raw!r} is outside {low}..{high}")
+        return raw
+    return raw
+
+
+def policy_inputs(
+    input_contract: Sequence[Mapping[str, Any]],
+    template: Mapping[str, Any],
+    policies: Sequence[Mapping[str, str]],
+    count: int,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """The first `count` of `policies` (already in ascending policy id) as `/score` inputs: each
+    contract field that has a dataset column of its name (`seed.RENAMES` applied) takes the real
+    value; a field with none (`current_premium_minor`) keeps the template's. A real value outside
+    its contract is returned as a failure line, never replaced: it is a finding for the lead."""
+    import seed
+
+    rows: list[dict[str, Any]] = []
+    failures: list[str] = []
+    for policy in policies[:count]:
+        columns = {
+            seed.RENAMES.get(_snake(key), _snake(key)): value for key, value in policy.items()
+        }
+        row = dict(template)
+        for field_ in input_contract:
+            name = str(field_["name"])
+            if name not in columns:
+                continue
+            try:
+                row[name] = _contract_value(field_, columns[name])
+            except ValueError as exc:
+                failures.append(f"policy {policy['IDpol']} {name}: {exc}")
+        rows.append(row)
+    return rows, failures
 
 
 # -- the result -----------------------------------------------------------------------------------
@@ -851,36 +904,37 @@ class _Wf701:
         self.start("A5")
         template = self.context["inputs"]
         base = {k: v for k, v in self.context.items() if k != "inputs"}
-        count = COMPARE_POLICIES
+        # K = 200 real policies, the first by policy id of the portfolio the seed registered; a
+        # real row outside the contract is a finding (PL-1710:303), never replaced.
+        policies, failures = policy_inputs(
+            self.algorithm["input_contract"], template, portfolio_policies(), COMPARE_POLICIES
+        )
+        if failures:
+            raise JourneyStepFailed(
+                "A5", "REAL_POLICY_OUTSIDE_CONTRACT", detail=f"{len(failures)}: {failures[:5]}"
+            )
         best: tuple[float, dict[str, Any], dict[str, Any]] | None = None
         changed = total = 0
-        while best is None and count <= 10 * COMPARE_POLICIES:
-            # A6 needs a quote where K1 binds the minimum premium and rv3 does not (Task 0.5):
-            # the sample grows and the final K is recorded; a quote is never made up.
-            policies = contract_sample(self.algorithm["input_contract"], template, count)
-            changed = total = 0
-            for inputs in policies:
-                context = {**base, "inputs": inputs}
-                both = self.compare(context)
-                total += 1
-                before, after = payable_minor(both["base"]), payable_minor(both["comparison"])
-                if before != after:
-                    changed += 1
-                    move = abs(after - before) / before if before else 0.0
-                    if (
-                        binds_min_premium(both["comparison"])
-                        and not binds_min_premium(both["base"])
-                        and (best is None or move > best[0])
-                    ):
-                        best = (move, context, both)
-            if best is None:
-                count *= 2
+        for inputs in policies:
+            context = {**base, "inputs": inputs}
+            both = self.compare(context)
+            total += 1
+            before, after = payable_minor(both["base"]), payable_minor(both["comparison"])
+            if before != after:
+                changed += 1
+                move = abs(after - before) / before if before else 0.0
+                if (
+                    binds_min_premium(both["comparison"])
+                    and not binds_min_premium(both["base"])
+                    and (best is None or move > best[0])
+                ):
+                    best = (move, context, both)
         if changed == 0:
             raise JourneyStepFailed("A5", "NO_PREMIUM_DIFFERS")
         self.result.a5_totals = {"compared": total, "changed": changed}
         self.done(
             "A5",
-            f"{total} contract-domain policies compared, {changed} premiums differ (K = {count})",
+            f"{total} real freMTPL2 policies compared, {changed} premiums differ",
         )
         if best is None:
             raise JourneyStepFailed("A6", "NO_QUOTE_BINDS_THE_NEW_MINIMUM")

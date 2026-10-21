@@ -140,33 +140,48 @@ def test_the_minimum_premium_is_read_from_the_constraints_rung() -> None:
     assert not j.binds_min_premium({"premium_ladder": [{"rung": "payable_premium"}]})
 
 
-def test_the_contract_sample_reads_a_contract_as_the_api_returns_it() -> None:
-    """The API echoes every constraint key, `None` when the field declares none."""
-    contract: list[dict[str, Any]] = [
-        {"name": "area", "type": "enum", "domain": list("AB"), "min": None, "max": None},
-        {"name": "bonus_malus", "type": "int", "domain": None, "min": 50, "max": 150},
-        {"name": "current_premium_minor", "type": "int", "domain": None, "min": None, "max": None},
-        {"name": "exposure_years", "type": "decimal", "domain": None, "min": "0.0027", "max": "1"},
-    ]
-    rows = j.contract_sample(contract, {"current_premium_minor": 55000, "exposure_years": "1"}, 20)
-    assert {row["exposure_years"] for row in rows} == {"1"}
-    assert {row["area"] for row in rows} == {"A", "B"}
-    assert all(50 <= row["bonus_malus"] <= 150 for row in rows)
-    assert {row["current_premium_minor"] for row in rows} == {55000}
+_CONTRACT: list[dict[str, Any]] = [
+    {"name": "area", "type": "enum", "domain": list("AB"), "min": None, "max": None},
+    {"name": "bonus_malus", "type": "int", "domain": None, "min": 50, "max": 150},
+    {"name": "current_premium_minor", "type": "int", "domain": None, "min": None, "max": None},
+    {"name": "exposure_years", "type": "decimal", "domain": None, "min": "0.0027", "max": "1.05"},
+]
 
 
-def test_the_contract_sample_is_deterministic_and_spread() -> None:
-    contract: list[dict[str, Any]] = [
-        {"name": "area", "type": "enum", "domain": list("ABCDEF")},
-        {"name": "bonus_malus", "type": "int", "min": 50, "max": 150},
-        {"name": "current_premium_minor", "type": "int", "min": 0},
+def _policy(idpol: int, **over: str) -> dict[str, str]:
+    return {"IDpol": str(idpol), "Area": "A", "BonusMalus": "60", "Exposure": "0.5", **over}
+
+
+def test_policy_inputs_map_real_columns_and_keep_the_template_elsewhere() -> None:
+    rows, failures = j.policy_inputs(
+        _CONTRACT, {"current_premium_minor": 55000}, [_policy(1), _policy(2, Area="B")], 5
+    )
+    assert failures == []
+    assert [r["area"] for r in rows] == ["A", "B"]
+    assert rows[0] == {
+        "current_premium_minor": 55000,
+        "area": "A",
+        "bonus_malus": 60,
+        "exposure_years": "0.5",
+    }
+
+
+def test_policy_inputs_take_the_first_k_in_the_order_given() -> None:
+    rows, _ = j.policy_inputs(
+        _CONTRACT, {}, [_policy(i, BonusMalus=str(50 + i)) for i in range(9)], 3
+    )
+    assert [r["bonus_malus"] for r in rows] == [50, 51, 52]
+
+
+def test_a_real_value_outside_the_contract_is_a_failure_never_replaced() -> None:
+    """Broken input: a domain miss, an out-of-range int and a non-integer each name the policy."""
+    bad = [_policy(7, Area="Z"), _policy(8, BonusMalus="350"), _policy(9, BonusMalus="60.5")]
+    _, failures = j.policy_inputs(_CONTRACT, {}, bad, 3)
+    assert [f.split(":")[0] for f in failures] == [
+        "policy 7 area",
+        "policy 8 bonus_malus",
+        "policy 9 bonus_malus",
     ]
-    first = j.contract_sample(contract, {"current_premium_minor": 55000}, 200)
-    assert first == j.contract_sample(contract, {"current_premium_minor": 55000}, 200)
-    assert len({json.dumps(row, sort_keys=True) for row in first}) > 100
-    assert {row["area"] for row in first} == set("ABCDEF")
-    assert all(50 <= row["bonus_malus"] <= 150 for row in first)
-    assert {row["current_premium_minor"] for row in first} == {55000}
 
 
 @pytest.mark.req("FR-250")
