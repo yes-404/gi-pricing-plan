@@ -61,3 +61,10 @@ Quoted from PL-1710: the Tasks table row 2 and the section "SL-1711 — the slic
 ## PRs
 
 (none; the lead opens the PR)
+
+## Journey DB run 1 under option (a) — exec-1711e, sl-1711 head 3d97bcbd (tree f76925b0), 2026-10-21 20:30-20:33 BST
+
+- **Change:** `backend/tests/test_wf701_journey.py` gains `_full_level_world()`, a context manager that patches the shared `_DOMAINS` and `_ESTIMATES` (not edited on disk) for the `_world` build only, with the dataset's own levels (the shared two levels stay first, further levels sorted, fixed estimates; no refit). A no-DB check: the patched `_fit_result()` covers all 200 first policies (0 missing; 11/2/6/22 levels for `veh_brand`/`veh_gas`/`area`/`region`), the shared dicts are restored after it. **Added runtime:** about 9 s for the portfolio read and no fit; the run took 80 s against 85 s before.
+- **Window:** own DB `gipricing_sl-1711_3d97bcbd` from template0; ONE `alembic upgrade head` (rc 0, under `small-test`); `alembic heads` = `alembic current` = `a4d1f08c3b97` before the test. Redis db 12, load1 5.57, gate-1 free. Run 1 of 4 (3 unused): `run-small` on `backend/tests/test_wf701_journey.py` + `backend/tests/test_demo_command.py`, rc 1, 39 passed, 2 failed in 80 s, log `~/gi-pricing-plan.local/scratch/sl1711e-1.log`.
+- **Result:** `REAL_POLICY_OUTSIDE_CONTRACT` is gone. A5 now fails one step later: `INPUT_CONTRACT_VIOLATION (HTTP 422)`, `base: input 'exposure_years' must be numeric`. Cause: `_contract_value` (`examples/fremtpl2/journey_wf701.py`) returns the raw CSV string for a `decimal` field, and `pricing_core/rating/score.py:383-384` accepts only int, float or Decimal. A fix is outside this slice's brief (the file is `journey_wf701.py`, and `test_policy_inputs_map_real_columns…` asserts the string `"0.5"`); stopped and reported.
+- **Cleanup:** dropdb rc 0, `pg_database` count 0, db 12 `DBSIZE` 0.
