@@ -140,6 +140,19 @@ def test_the_minimum_premium_is_read_from_the_constraints_rung() -> None:
     assert not j.binds_min_premium({"premium_ladder": [{"rung": "payable_premium"}]})
 
 
+def test_the_contract_sample_reads_a_contract_as_the_api_returns_it() -> None:
+    """The API echoes every constraint key, `None` when the field declares none."""
+    contract: list[dict[str, Any]] = [
+        {"name": "area", "type": "enum", "domain": list("AB"), "min": None, "max": None},
+        {"name": "bonus_malus", "type": "int", "domain": None, "min": 50, "max": 150},
+        {"name": "current_premium_minor", "type": "int", "domain": None, "min": None, "max": None},
+    ]
+    rows = j.contract_sample(contract, {"current_premium_minor": 55000}, 20)
+    assert {row["area"] for row in rows} == {"A", "B"}
+    assert all(50 <= row["bonus_malus"] <= 150 for row in rows)
+    assert {row["current_premium_minor"] for row in rows} == {55000}
+
+
 def test_the_contract_sample_is_deterministic_and_spread() -> None:
     contract: list[dict[str, Any]] = [
         {"name": "area", "type": "enum", "domain": list("ABCDEF")},
@@ -163,11 +176,16 @@ def test_k1_is_the_minimum_premium_of_the_shipped_change() -> None:
     k1: dict[str, Any] = json.loads(j.K1_FILE.read_text(encoding="utf-8"))
     v2 = json.loads((rating / "fremtpl2-rate.rating-algorithm.v2.json").read_text(encoding="utf-8"))
     shipped = next(s for s in v2["steps"] if s["step_id"] == "s_floor")
-    step = k1["add_step"]
+    step, office, payable = k1["add_steps"]
     assert step["clamp_bounds"] == shipped["clamp_bounds"]
     assert step["reason_code"] == shipped["reason_code"]
     assert step["on_violation"] == "clamp"
     assert k1["after"] == "s_premium"
+    # FR-240: the clamped name is the last pre-`constraints` rung's source; the payable
+    # reads a later one.
+    assert office["output_name"] == "office_premium_minor"
+    assert office["consumes"] == step["produces"] == ["premium_unrounded"]
+    assert k1["rewire"] == [{"step_id": "s_out", "consumes": [payable["produces"]]}]
 
 
 @pytest.mark.req("FR-259")

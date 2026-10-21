@@ -194,10 +194,10 @@ def contract_sample(
         for j, field_ in enumerate(input_contract):
             name = str(field_["name"])
             stride = strides[j % len(strides)]
-            if "domain" in field_:
+            if field_.get("domain") is not None:
                 domain = list(field_["domain"])
                 row[name] = domain[(i * stride) % len(domain)]
-            elif "min" in field_ and "max" in field_:
+            elif field_.get("min") is not None and field_.get("max") is not None:
                 low, high = int(field_["min"]), int(field_["max"])
                 row[name] = low + (i * stride * 37) % (high - low + 1)
         rows.append(row)
@@ -359,7 +359,10 @@ class _Wf701:
         }
         steps = [dict(step) for step in body["steps"]]
         at = next(i for i, s in enumerate(steps) if s["step_id"] == patch["after"]) + 1
-        steps = [*steps[:at], dict(patch["add_step"]), *steps[at:]]
+        added = [dict(s) for s in patch.get("add_steps") or [patch["add_step"]]]
+        steps = [*steps[:at], *added, *steps[at:]]
+        for change in patch.get("rewire", []):
+            steps = [{**s, **change} if s["step_id"] == change["step_id"] else s for s in steps]
         version = self.next_algorithm_version
         self.next_algorithm_version += 1
         saved = self.req(
@@ -476,7 +479,7 @@ class _Wf701:
         return str(listed["items"][0]["rating_version_ref"])
 
     def dislocation(self, label: str, version: Mapping[str, Any]) -> None:
-        spec = {
+        spec: dict[str, Any] = {
             "baseline_ref": self.live_prod_ref(),
             "candidate_ref": f"rating_version:{version['slug']}@{version['version']}",
             "portfolio_dataset_version_id": self.record["portfolio_dataset_version_id"],
@@ -486,8 +489,27 @@ class _Wf701:
             "band_edges_pct": ["-10", "-5", "0", "5", "10"],
             "mover_threshold_pct": "10",
         }
+        # K1 is several dependent steps, and attribution refuses dependent changes in separate
+        # groups (FR-1399): the whole fork is one group, as WF-699's journey names it.
+        spec["change_groups"] = [{"name": "the whole fork", "changes": self.derived_changes(spec)}]
         accepted = self.req(label, "analyst", "POST", "/dislocation-runs", expect=202, json=spec)
         self.job_ok(label, "analyst", accepted)
+
+    def derived_changes(self, spec: Mapping[str, Any]) -> list[str]:
+        """The ids `c1..ck` of the changes between the baseline and the candidate: the smallest
+        `k` the estimate route accepts as a partition (WF-699's probe, `journey.py`)."""
+        for count in range(1, 80):
+            ids = [f"c{i}" for i in range(1, count + 1)]
+            response = self.client.post(
+                "/dislocation-runs/estimate",
+                headers=self.who("analyst"),
+                json={**spec, "change_groups": [{"name": "the whole fork", "changes": ids}]},
+            )
+            if response.status_code == 200:
+                return ids
+            if response.status_code != 422:
+                raise JourneyStepFailed("D6", "ESTIMATE_FAILED", response.status_code)
+        raise JourneyStepFailed("D6", "DERIVED_CHANGES_NOT_FOUND")
 
     def submit(self, label: str, version: Mapping[str, Any], text: str) -> str:
         first = self.req(

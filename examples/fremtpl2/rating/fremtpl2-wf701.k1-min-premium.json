@@ -1,16 +1,56 @@
 {
- "note": "WF-701 candidate K1 (SL-1711): the live algorithm plus a minimum premium of 180 (fremtpl2-rate.changes.json, 'min_premium 150 -> 180'; the live algorithm has no floor, so the clamp is added, not replaced). One step is added after the premium and before its output; nothing else moves.",
+ "note": "WF-701 candidate K1 (SL-1711): the live algorithm plus a minimum premium of 180 (fremtpl2-rate.changes.json, 'min_premium 150 -> 180'; the live algorithm has no floor, so the clamp is added, not replaced). The premium ladder (FR-240, FR-247) can place a clamp only on the source of the last rung before 'constraints', so the clamped premium is also declared as the office_premium rung and the payable reads a later name; the premium itself is unchanged above the floor.",
  "after": "s_premium",
- "add_step": {
-  "step_id": "s_floor",
-  "type": "constraint",
-  "label": "Minimum premium",
-  "condition": "premium_unrounded >= 18000",
-  "on_violation": "clamp",
-  "clamp_bounds": {"min": "18000"},
-  "reason_code": "MIN_PREMIUM_APPLIED",
-  "consumes": ["premium_unrounded"],
-  "produces": ["premium_unrounded"]
- },
- "change_note": "WF-701 K1: minimum premium 180"
+ "change_note": "WF-701 K1: minimum premium 180",
+ "add_steps": [
+  {
+   "step_id": "s_floor",
+   "type": "constraint",
+   "label": "Minimum premium",
+   "condition": "premium_unrounded >= 18000",
+   "on_violation": "clamp",
+   "clamp_bounds": {
+    "min": "18000"
+   },
+   "reason_code": "MIN_PREMIUM_APPLIED",
+   "consumes": [
+    "premium_unrounded"
+   ],
+   "produces": [
+    "premium_unrounded"
+   ]
+  },
+  {
+   "step_id": "s_out_office",
+   "type": "output",
+   "label": "Office premium",
+   "output_name": "office_premium_minor",
+   "rounding": {
+    "mode": "half_even",
+    "dp": 0
+   },
+   "consumes": [
+    "premium_unrounded"
+   ]
+  },
+  {
+   "step_id": "s_payable",
+   "type": "expression",
+   "label": "Payable premium value",
+   "expr": "premium_unrounded * 1",
+   "result_type": "decimal",
+   "consumes": [
+    "premium_unrounded"
+   ],
+   "produces": "payable_value"
+  }
+ ],
+ "rewire": [
+  {
+   "step_id": "s_out",
+   "consumes": [
+    "payable_value"
+   ]
+  }
+ ]
 }
