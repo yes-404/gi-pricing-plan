@@ -1,7 +1,7 @@
 ---
 id: FD-8144
 family: finding
-title: The no-GBM /score arm has never met NFR-489's 15 ms, and the remedy leaves about 13 ms of fixed handler overhead
+title: NFR-489's no-GBM p99 < 15 ms: no recorded reading meets it, and the remedy leaves about 13 ms of fixed handler overhead
 status: active
 created: 2026-10-21
 owner: auditor
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-674, SL-1455, RL-1685, FD-1411, LG-1760]
 ---
 
-# FD-8144 — The no-GBM /score arm has never met NFR-489's 15 ms
+# FD-8144 — NFR-489's no-GBM p99 < 15 ms: no recorded reading meets it
 
 ## Finding
 
