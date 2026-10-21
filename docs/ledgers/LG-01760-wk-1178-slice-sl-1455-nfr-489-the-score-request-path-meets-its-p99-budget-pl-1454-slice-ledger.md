@@ -656,3 +656,35 @@ Written **before the first timed command** of this session. Authority: the maint
 - Whether the budget includes background sampling is a spec question (the maintainer's item (3)), not decided here.
 
 **Invocations planned (one rung each, 25 rps, all four arms of `--http --rates 25 --workers 4`):** A = localhost reference (a fresh one, so the three share a session), B = container-IP DSN, C = `GIP_SETTING_RATING_TRACE_SAMPLE_RATE=0`. Stop on a harness failure; no tuning and no repeat within this window.
+
+### Readings — H1 and H2 diagnosis session, 2026-10-21 ("diagnosis, not a verdict")
+
+Appended after the pre-registration at `4f6d8ee27b7bd598f4b67709c2a8da2d8345572f`; nothing above is edited. **Not a verdict, not an NFR-489 exit reading, and no tuning.** Host `nfr-bench-1`, tree `44c18e11ca028d25c8b4c9d92077cc0f3622ef8e` (`git status --short` 0 lines), scratch DB `gipricing_sl1455_t4_1792592230`, **N = 4** (header line 2 of every `.out`: `replica: N = 4 uvicorn worker process(es); NFR-489/454 are read per replica at this N`). Logs: `~/gi-pricing-plan.local/scratch/nfr1b-2026-10-21/` (copies of `~/logs/nfr1b/` on the host); every `.err` is 0 bytes; every `harness_rc` is 0.
+
+**H1, Test 1 — 200 × `SELECT 1`, one asyncpg connection, 20 warm-up calls, two passes of each route (`h1_select1.out`, load1 0.10 before and after, `pgrep -c pytest` 0):**
+
+| route | pass | p50 ms | p95 ms | p99 ms | mean ms |
+|---|---|---|---|---|---|
+| `localhost:5432` (docker-proxy) | 1a / 1b / 2a / 2b | 0.175 / 0.142 / 0.208 / 0.143 | 0.333 / 0.314 / 0.431 / 0.195 | 0.708 / 0.494 / 0.631 / 0.348 | 0.201 / 0.163 / 0.232 / 0.151 |
+| `172.18.0.4:5432` (container IP) | 1a / 1b / 2a / 2b | 0.081 / 0.080 / 0.124 / 0.073 | 0.103 / 0.097 / 0.160 / 0.098 | 0.146 / 0.116 / 0.213 / 0.137 | 0.085 / 0.083 / 0.116 / 0.077 |
+
+Per-round-trip mean difference, localhost minus container IP: 0.116 / 0.080 / 0.116 / 0.074 ms. At the diagnosis file's 13 round trips that is **about 1.0 to 1.5 ms**, under the pre-registered 3 ms kill line for the micro half.
+
+**H1, Test 2 and H2, Test 2 — the three rungs, 25 rps, no-GBM arms only (each cell n = 500, errors 0; "bench" = first row, "default-live" = second row, as in invocation 01):**
+
+| invocation | DSN host / env | window BST | load1 before → after | bench p50 / p99 / handler mean / handler p99 ms | default-live p50 / p99 / handler mean / handler p99 ms |
+|---|---|---|---|---|---|
+| A | `localhost`, default rate 0.01 | 15:39:46 → 15:43:57 | 0.08 → 0.85 | 19.955 / 29.905 / 17.688 / 27.350 | 19.737 / 24.438 / 17.436 / 21.600 |
+| B | `172.18.0.4`, default rate 0.01 | 15:44:15 → 15:48:24 | 0.66 → 1.15 | 18.428 / 25.735 / 16.089 / 22.550 | 18.888 / 28.932 / 16.588 / 26.170 |
+| C | `localhost`, `GIP_SETTING_RATING_TRACE_SAMPLE_RATE=0` | 15:48:55 → 15:53:06 | 0.70 → 0.84 | 20.054 / 24.077 / 17.470 / 21.580 | 20.089 / 23.930 / 17.555 / 21.270 |
+
+Reference, invocation 01 (`localhost`, default rate, a different moment): 20.915 / 26.364 / 18.378 / 23.060 and 20.625 / 24.979 / 18.110 / 21.640. Rung load during the arms: A 1.14 → 0.96 and 0.96 → 0.92; B 1.63 → 1.39 and 1.39 → 1.15; C 1.08 → 0.77 and 0.77 → 0.84. **B ran with a higher in-rung load than A and C**, and the quiet condition (a) was met only at the start (load1 < 1.0). Per-invocation `free -m`, `pgrep -c pytest` (0 before and after each) and the `ps` top-5 are in each `.rec`; the protocol gap (no mid-run `ps`) is unchanged. All six no-GBM cells are **OVER** the 15 ms budget.
+
+**H2, Test 1 — `scoring_traces` rows (by `psql` count, before → after each invocation):** A 22 → 46 (**+24**, in two new workspaces: 14 and 10 rows); B 46 → 70 (**+24**, new workspaces 8 and 16); C 70 → 70 (**+0**). Each invocation issues 2000 timed requests across its four arms (plus warm-up), so +24 is about 1.2 %, near the 1 % default; the diagnosis file's "about 5 per arm" is the right order of magnitude. Declined outcomes would add rows regardless of the rate (`platform/traces.py:94-95`); C's +0 shows none occurred.
+
+**Readings, in the order of the pre-registered kill conditions:**
+- **H1.** The micro half's cost difference (about 1.0 to 1.5 ms over 13 round trips) is under the 3 ms line. The rung half is mixed: the container-IP rung's no-GBM p50 is 1.5 ms (bench) and 0.8 ms (default-live) below A's, and its handler mean is 1.6 ms and 0.8 ms below A's; the 1 ms "within" line is crossed on one arm and not the other, and B's in-rung load was higher. The docker-proxy relay accounts for roughly 1 to 1.5 ms of the ~13 ms fixed overhead, **not for most of it**, on this evidence.
+- **H2.** Rate 0 removes the persisted traces (+0 rows) but leaves the median where it was (20.05 and 20.09 ms against A's 19.96 and 19.74 ms). The bench-arm p99 is 24.077 ms against A's 29.905 ms (the reference 01 was 26.364 ms), the default-live p99 is 23.930 ms against A's 24.438 ms; the pre-registered 2 ms line is crossed on one arm only, and A's bench-arm p99 is the highest of the six runs. This is **not** a clean decisive result: n = 500 per arm and a single repeat each.
+- **Neither route brings the no-GBM p99 under 15 ms.** The lowest no-GBM p99 across the three invocations is 21.270 ms server-side (handler) and 23.930 ms client-side. Per-request time outside `score_one` stays near 12 ms in all three (handler mean 16.1 to 17.7 ms against `score_one` mean 5.3 ms in invocation 01).
+
+**Not run, as the brief said:** a repeat of any rung, a combined container-IP + rate-0 rung, py-spy, per-statement timing, and the H3/H4/H5 tests. The scratch database is left on the host; the three compose services are up and idle; the VM is neither powered off nor deleted.
