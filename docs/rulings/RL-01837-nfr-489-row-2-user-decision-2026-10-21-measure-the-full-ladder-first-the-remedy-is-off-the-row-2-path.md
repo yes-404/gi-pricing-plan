@@ -1,25 +1,27 @@
 ---
-id: RL-8149
+id: RL-1837
 family: ruling
 title: "NFR-489 / roadmap §12 row 2, the user's decision of 2026-10-21: measure the full ladder (25 → 200 rps, both arms) first; the remedy is built off the row-2 path; the budget is not changed now (16:03:00 supersedes the 16:00:01 plan)"
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-10-21   # filed 2026-10-21 under working id 8149; not minted
+created: 2026-10-21   # filed 2026-10-21 under working id 8149; minted as RL-1837 2026-10-21
 owner: decision-maker
 tree: 57adb9e2a1efe01b07fa005a2ac1b738dfb45f93
 phase: P2
-work: WK-1178
+work: WK-674
 slice: SL-1455
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [WK-674, FD-1836, RL-1685, RL-1755, LG-1760, PL-1454]
+relates: [WK-1178, FD-1836, RL-1685, RL-1755, LG-1760, PL-1454]
 ---
 
-# RL-8149 — NFR-489 / roadmap §12 row 2, the user's decision of 2026-10-21: measure the full ladder first; the remedy is off the row-2 path; the budget is not changed now
+# RL-1837 — NFR-489 / roadmap §12 row 2, the user's decision of 2026-10-21: measure the full ladder first; the remedy is off the row-2 path; the budget is not changed now
 
-Filed 2026-10-21 under working id 8149 (a working id until a later seat mints it). **This is a record of a decision already made, not a new ruling** (`docs/process/document-ids.md` §1.6, RL: the maintainer may author one on scope; CLAUDE.md §13, "a decision already made is an RL-"). **The decision is the user's**, relayed by the maintainer (by delegation). The decision-maker seat writing this record decides nothing in it.
+Filed 2026-10-21 under working id 8149; minted as RL-1837 on 2026-10-21. **This is a record of a decision already made, not a new ruling** (`docs/process/document-ids.md` §1.6, RL: the maintainer may author one on scope; CLAUDE.md §13, "a decision already made is an RL-"). **The decision is the user's**, relayed by the maintainer (by delegation). The decision-maker seat writing this record decides nothing in it.
 
 `work:` is `WK-1178` because `SL-1455` is a WK-1178 slice (`docs/roadmap.md`:2134 at 57adb9e2, "SL-1455 — WK-1178 fix slice"). `WK-674` is in `relates:` because FD 1836 names it as owner ("**HIGH; owner WK-674** (SL-1455's remedy; `docs/roadmap.md` §12 row 2 …)", FD-1836:17 at `origin/d29-records-2026-10-21` b49d3957). This record does not resolve that difference; it reports it.
+
+**Mint note (2026-10-21, minted as RL-1837):** the paragraph above describes the front matter as filed under working id 8149. On the maintainer's ruling of 2026-10-21 16:13 the minted record sets `work: WK-674` and carries `WK-1178` in `relates:`; the difference the paragraph reports is resolved that way.
 
 ## How this was decided — the sequence
 
