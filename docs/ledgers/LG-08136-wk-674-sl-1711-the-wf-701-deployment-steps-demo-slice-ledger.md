@@ -50,6 +50,14 @@ Quoted from PL-1710: the Tasks table row 2 and the section "SL-1711 — the slic
 - **WF-701's two dated lines** (11:14:40 ruling items (1) and (2)) in `docs/workflows/WF-00701-deploy-and-monitor.md`: the §1 precondition row and the C2 note.
 - **Owed to the DB lane (grant needed):** `backend/tests/test_wf701_journey.py` (the end-to-end test and R6), `backend/tests/test_demo_command.py` (its 2 DB tests), `backend/tests/test_api_jobs.py` (Task 0.1). **Owed to the compose window:** T5's A2/C4/replica C6 reds and greens, R5 on the stack, R7 (decline floor removed in a scratch copy), T7 and the rehearsal.
 
+## Journey DB run 1 — exec-1711d, sl-1711 head 0476f3c2 (tree f1fcd69d), 2026-10-21 16:35-16:40 BST
+
+- **Window:** own DB `gipricing_sl-1711_0476f3c2` from template0; ONE `alembic upgrade head` (rc 0, under `small-test`); `alembic heads` = `alembic current` = `a4d1f08c3b97` before the test. Redis db 12, load1 5.83. Run 1 of 4 (3 unused): `run-small` on `backend/tests/test_wf701_journey.py` + `backend/tests/test_demo_command.py`, rc 1, 39 passed, 2 failed in 85 s, log `~/gi-pricing-plan.local/scratch/sl1711d-1.log`. Cleanup: dropdb rc 0, `pg_database` count 0, db 12 `DBSIZE` 0.
+- **Failures:** `test_wf701_journey_runs_end_to_end` and `test_c7_fails_naming_the_band_when_the_sample_rate_is_zero`, both at A5: `REAL_POLICY_OUTSIDE_CONTRACT`, 416 field failures. A4 had passed. A5 onwards is unexercised.
+- **Cause (read-only check, no DB):** not a missing base level. `_relativities` (`packages/pricing-core/src/pricing_core/modelling/glm.py:935`) emits the base first (`is_base=True`), and `model.py:987-990` takes every level of it. The test world is hand-built: `test_wf699_journey._world` uses `test_demo_rating_evidence._fit_result()` over `test_fremtpl2_algorithm._DOMAINS` (`:199-204`): `veh_brand` B1,B2; `veh_gas` Diesel,Regular; `area` A,B; `region` R11,R24. The contract domains are those two levels per factor.
+- **Count (reproduced from `portfolio_policies()`, first 200 by IDpol, against those domains):** 416 field failures over 185 of 200 policies, exactly the logged 416. `area` 150 (C 49, D 53, E 37, F 11), `region` 123 (15 levels, R82 15), `veh_brand` 143 (B12 130, B3 4, B4 3, B5 2, B11 2, B13 1, B6 1), `veh_gas` 0. Against the real book's base by exposure (B1, Regular, C, R24): 49 failures are on a base level (`area` C) and 367 on other levels. The fixture's own bases (B1, Diesel, A, R11) never fail.
+- **Fix site (not applied):** the fixture domains in `backend/tests/test_fremtpl2_algorithm.py`/`test_demo_rating_evidence.py`, shared with other tests, or a world built in `test_wf701_journey.py` from a full-level fit. PL-1710 item 8 write set (`PL-01710`:448-452) names `test_wf701_journey.py`, not those files. Needs a ruling.
+
 ## PRs
 
 (none; the lead opens the PR)
