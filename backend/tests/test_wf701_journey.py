@@ -20,6 +20,9 @@ from __future__ import annotations
 
 import json
 import sys
+from collections.abc import Iterator
+from contextlib import contextmanager
+from decimal import Decimal
 from fractions import Fraction
 from pathlib import Path
 from typing import Any
@@ -217,6 +220,38 @@ def test_k2_adds_one_declining_constraint_with_a_reason_code() -> None:
     assert 140 < low <= high <= 150  # above the limit, inside the contract's 50..150
 
 
+#: The four categorical Factors and the freMTPL2 column each reads (`seed.RENAMES` applied).
+_CATEGORICAL = {"veh_brand": "VehBrand", "veh_gas": "VehGas", "area": "Area", "region": "Region"}
+
+
+@contextmanager
+def _full_level_world() -> Iterator[None]:
+    """The WF-699 world with every level the real portfolio carries (the maintainer's entry
+    "2026-10-21 16:45:14 BST", option (a)): the shared `_DOMAINS` and `_ESTIMATES` hold two levels
+    per Factor, so the contract A5 draws real policies against refused 185 of the first 200. The
+    domains here are the dataset's own levels, not a refit: the shared two levels stay first (so
+    each base level and every existing relativity is unchanged) and each further level is
+    appended in sorted order with a fixed estimate. The shared dicts are patched for the run and
+    restored; neither fixture file is edited."""
+    from unittest.mock import patch
+
+    from backend.tests.test_demo_rating_evidence import _ESTIMATES
+    from backend.tests.test_fremtpl2_algorithm import _DOMAINS
+
+    policies = j.portfolio_policies()
+    domains: dict[str, list[str]] = {}
+    estimates: dict[str, dict[str, Decimal]] = {}
+    for factor, column in _CATEGORICAL.items():
+        extra = sorted({row[column] for row in policies} - set(_DOMAINS[factor]))
+        domains[factor] = [*_DOMAINS[factor], *extra]
+        estimates[factor] = {
+            **_ESTIMATES[factor],
+            **{level: Decimal(i % 9 - 4) / Decimal(100) for i, level in enumerate(extra)},
+        }
+    with patch.dict(_DOMAINS, domains), patch.dict(_ESTIMATES, estimates):
+        yield
+
+
 def _run_in_process(
     api_client: Any,
     database: Any,
@@ -238,7 +273,8 @@ def _run_in_process(
     from app.worker.tasks import execute_job
 
     loop = asyncio.get_event_loop()
-    record = loop.run_until_complete(_world(database, blob_store, workspace_id))
+    with _full_level_world():
+        record = loop.run_until_complete(_world(database, blob_store, workspace_id))
     register_rating_handlers()
     register_dislocation_handlers()
     register_rate_table_handlers()
