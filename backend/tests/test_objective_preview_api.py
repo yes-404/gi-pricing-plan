@@ -42,10 +42,11 @@ async def fitter(database: Database, workspace_id: Any) -> dict[str, str]:
 
 async def _counts(database: Database) -> tuple[int, int, int]:
     async with database.session() as session:
-        return tuple(  # type: ignore[return-value]
+        counts = [
             (await session.execute(text(f"SELECT count(*) FROM {table}"))).scalar_one()
             for table in ("custom_objectives", "objective_certificates", "audit_events")
-        )
+        ]
+    return counts[0], counts[1], counts[2]
 
 
 @pytest.mark.req("FR-8140")

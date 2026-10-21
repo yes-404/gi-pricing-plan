@@ -20,7 +20,6 @@ therefore sets the workspace policy to two approvers, which is the workspace's o
 
 from __future__ import annotations
 
-import asyncio
 from uuid import UUID
 
 import pytest
@@ -34,15 +33,14 @@ from backend.tests.test_model_lifecycle import _principal_with
 from fastapi.testclient import TestClient
 
 from app.config import Settings
-from app.db.models import ApprovalPolicyRow
 from app.db.session import Database
-from model_schema import DEFAULT_POLICY, ApprovalPolicy, new_uuid7
+from model_schema import new_uuid7
 
 OBJECTIVES = "/api/v1/custom-objectives"
 
 
-def _run_job(job_id: str) -> None:
-    """Run a submitted Job to its end on a loop of our own, as the worker would."""
+async def _run_job(job_id: str) -> None:
+    """Run a submitted Job to its end on the test's own loop, as the worker would."""
     from backend.tests.conftest_db import test_blob_bucket, test_database_url
 
     from app.platform.blobs import BlobStore
@@ -51,30 +49,12 @@ def _run_job(job_id: str) -> None:
     from model_schema import JobStatus
 
     register_model_handlers()
-
-    async def _run() -> None:
-        database = Database(Settings(database_url=test_database_url()))
-        try:
-            store = BlobStore(Settings(blob_bucket=test_blob_bucket()))
-            assert await execute_job(database, UUID(job_id), store) is JobStatus.SUCCEEDED
-        finally:
-            await database.dispose()
-
-    loop = asyncio.new_event_loop()
+    database = Database(Settings(database_url=test_database_url()))
     try:
-        loop.run_until_complete(_run())
+        store = BlobStore(Settings(blob_bucket=test_blob_bucket()))
+        assert await execute_job(database, UUID(job_id), store) is JobStatus.SUCCEEDED
     finally:
-        loop.close()
-
-
-async def _two_approvers_required(database: Database, workspace_id: UUID) -> None:
-    entry = DEFAULT_POLICY.entry_for("custom_objective")
-    assert entry is not None
-    policy = ApprovalPolicy(policies=(entry.model_copy(update={"approvers_required": 2}),))
-    async with database.unit_of_work() as session:
-        session.add(
-            ApprovalPolicyRow(workspace_id=workspace_id, policy=policy.model_dump(mode="json"))
-        )
+        await database.dispose()
 
 
 @pytest.mark.req("FR-163")
@@ -82,7 +62,6 @@ async def test_wf702_route_b_expression_objective_from_create_to_two_approvals(
     api_client: TestClient, database: Database, workspace_id: UUID
 ) -> None:
     await _set_flag(database, workspace_id, True)
-    await _two_approvers_required(database, workspace_id)
     author = await _principal_holding(
         database,
         workspace_id,
@@ -124,7 +103,7 @@ async def test_wf702_route_b_expression_objective_from_create_to_two_approvals(
     # because convexity is `violated` (non-convex asymmetric loss), never `failed` (FR-152).
     certify = api_client.post(f"{OBJECTIVES}/{objective_id}/certify", json={}, headers=author)
     assert certify.status_code == 202, certify.text
-    _run_job(certify.json()["id"])
+    await _run_job(certify.json()["id"])
     certificate = api_client.get(f"{OBJECTIVES}/{objective_id}/certificate", headers=author)
     assert certificate.status_code == 200, certificate.text
     result = certificate.json()["result"]
@@ -135,7 +114,9 @@ async def test_wf702_route_b_expression_objective_from_create_to_two_approvals(
         "certified"
     )
 
-    # B4.1 — submit with the certificate attached; the request needs two approvals.
+    # B4.1 / B4.2 — submit with the certificate attached. The default policy asks one Approver
+    # and the latest certificate's convexity is `violated`, so the request needs one more: two
+    # (FR-152, FR-163).
     submitted = api_client.post(
         f"{OBJECTIVES}/{objective_id}/submit",
         json={"change_summary": "Asymmetric burning cost: under-pricing penalised twice."},
@@ -144,9 +125,9 @@ async def test_wf702_route_b_expression_objective_from_create_to_two_approvals(
     assert submitted.status_code == 200, submitted.text
     assert submitted.json()["status"] == "review"
     request_id = submitted.json()["approval_request_id"]
+    decide = f"/api/v1/approval-requests/{request_id}/decide"
 
     # B4.3 / B4.6 — two non-author Approvers; the first leaves it in review, the second approves.
-    decide = f"/api/v1/approval-requests/{request_id}/decide"
     one = api_client.post(decide, json={"decision": "approve"}, headers=first)
     assert one.status_code == 200, one.text
     assert one.json()["status"] == "review"
