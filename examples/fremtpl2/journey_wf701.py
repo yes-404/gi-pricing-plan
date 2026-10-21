@@ -119,6 +119,11 @@ def check_trace_count(count: int, *, band: tuple[int, int] = C7_BAND) -> None:
         )
 
 
+def traces_not_in(earlier: set[str], traces: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    """The traces whose `id` is not in `earlier`: what a step sampled, not what stood before it."""
+    return [dict(t) for t in traces if str(t["id"]) not in earlier]
+
+
 _SKIP_PREFIXES: Final = ("SKIPPED", "KNOWN GAP", "COMPOSE-ONLY", "C7-errors")
 
 
@@ -1085,10 +1090,13 @@ class _Wf701:
 
     def c7(self) -> None:
         self.start("C7(i)")
+        # The band is about THIS step's quotes: traces of K1 that earlier steps sampled (a decline
+        # is always sampled) or that another test left are settled first and not counted.
+        earlier = {str(t["id"]) for t in self.stable_traces("C7(i)", self.k1_ref)}
         for _ in range(C7_QUOTES):
             if self.score("C7(i)", self.prod_key, self.context)["outcome"] != "quoted":
                 raise JourneyStepFailed("C7(i)", "NOT_QUOTED")
-        traces = self.stable_traces("C7(i)", self.k1_ref)
+        traces = traces_not_in(earlier, self.stable_traces("C7(i)", self.k1_ref))
         self.result.c7_count = len(traces)
         outside = float(outside_band_probability(C7_QUOTES, C7_RATE, C7_BAND))
         check_trace_count(len(traces))

@@ -151,6 +151,15 @@ _CONTRACT: list[dict[str, Any]] = [
 ]
 
 
+def test_c7_counts_only_the_traces_a_step_sampled() -> None:
+    """The band is about C7(i)'s own 2000 quotes: a trace that stood before the step (a decline an
+    earlier step sampled at the 100 % floor) is not one of them."""
+    standing = [{"id": "a"}, {"id": "b"}]
+    after = [*standing, {"id": "c"}]
+    assert [t["id"] for t in j.traces_not_in({"a", "b"}, after)] == ["c"]
+    assert j.traces_not_in({"a", "b", "c"}, after) == []
+
+
 def _policy(idpol: int, **over: str) -> dict[str, str]:
     return {"IDpol": str(idpol), "Area": "A", "BonusMalus": "60", "Exposure": "0.5", **over}
 
