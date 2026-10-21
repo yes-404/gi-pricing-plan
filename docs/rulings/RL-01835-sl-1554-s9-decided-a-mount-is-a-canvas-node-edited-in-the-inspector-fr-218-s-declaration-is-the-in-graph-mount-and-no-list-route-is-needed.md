@@ -1,5 +1,5 @@
 ---
-id: RL-8143
+id: RL-1835
 family: ruling
 title: SL-1554 (WK-675 S9) decided — a pinned sub-graph mount is its own node on the designer canvas, edited in the inspector, a purpose mount marked on the node; FR-218's mount declaration is the in-graph mount's `purposes` and is in scope, the Rating Version's pin is not; no list route is needed, the picker offers the Rating Version's sub-graph pins
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
@@ -15,9 +15,9 @@ corrected_by: []
 relates: [PL-1546, PL-1286, SL-1554, WK-675, WK-1250, FR-217, FR-218, FR-219, FR-212, FR-237, FR-1607, NFR-463, RL-1309, RL-1344, RL-1628, RL-1473]
 ---
 
-# RL-8143 — SL-1554 (WK-675 S9): the three open points of sub-graph mounting in the designer
+# RL-1835 — SL-1554 (WK-675 S9): the three open points of sub-graph mounting in the designer
 
-Filed 2026-10-21 under **working id RL 8143** (a working id until a later seat mints it), by
+Disclosure: drafted as **working id RL-1835**; minted as RL-1835 on 2026-10-21, in the D29 batch mint PR. Drafted by
 the decision-maker seat dm-8143. The maintainer adopts, amends or rejects this draft before
 the mint; until then it binds nothing.
 

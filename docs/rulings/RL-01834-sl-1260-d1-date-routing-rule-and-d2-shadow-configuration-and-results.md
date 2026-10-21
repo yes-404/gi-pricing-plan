@@ -1,9 +1,9 @@
 ---
-id: RL-8142
+id: RL-1834
 family: ruling
 title: "SL-1260 D1 and D2: date routing is an append-only per-Environment rule written by PUT .../routing under deployment:promote (FR-270 clarified), and the shadow configuration is an append-only per-Environment record behind two Environment-only flags"
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-10-21   # filed 2026-10-21 under working id 8142
+created: 2026-10-21   # drafted 2026-10-21 as working id 8142; minted 2026-10-21
 owner: decision-maker
 tree: 11bddecb9bcafd315617c2d5d198598c6ecfad33
 phase: P2
@@ -15,9 +15,9 @@ corrected_by: []
 relates: [PL-1237, PL-1537, PL-1620, RL-1311, RL-1232, WK-674]
 ---
 
-# RL-8142 — SL-1260 D1 and D2: date routing is an append-only per-Environment rule written by PUT .../routing under deployment:promote (FR-270 clarified), and the shadow configuration is an append-only per-Environment record behind two Environment-only flags
+# RL-1834 — SL-1260 D1 and D2: date routing is an append-only per-Environment rule written by PUT .../routing under deployment:promote (FR-270 clarified), and the shadow configuration is an append-only per-Environment record behind two Environment-only flags
 
-Filed 2026-10-21 under working id 8142 (a working id until a later seat mints it). It is a
+Disclosure: drafted as working id 8142; minted as RL-1834 on 2026-10-21, in the D29 batch mint PR. It was a
 decision-maker draft. The maintainer adopts, amends or rejects it before the mint.
 
 ## How this was ruled
@@ -134,9 +134,9 @@ so FR-270's "at deployment time" would otherwise describe a check that never run
 leave the code and the requirement disagreeing (CLAUDE.md §0). The requirement is not reworded.
 SL-1260's commit appends this to the FR-270 row of `03-rating-engine.md` §3.10, verbatim:
 
-> *(Clarified 2026-10-21, WK-674 Slice 6, `RL-8142` D1: "deployment time" is the time a date range is assigned to a deployed version. A range is part of the Environment's routing rule, written by `PUT /api/v1/environments/{env}/routing` under `deployment:promote`, not part of a Deployment. A rule whose ranges overlap is refused there with 409 `DEPLOY_DATE_RANGE_OVERLAP` and nothing is written. A range may name only a Rating Version deployed to that Environment. Routing is used only while the Environment's routing flag is on, and only for a quote that names no Rating Version.)*
+> *(Clarified 2026-10-21, WK-674 Slice 6, `RL-1834` D1: "deployment time" is the time a date range is assigned to a deployed version. A range is part of the Environment's routing rule, written by `PUT /api/v1/environments/{env}/routing` under `deployment:promote`, not part of a Deployment. A rule whose ranges overlap is refused there with 409 `DEPLOY_DATE_RANGE_OVERLAP` and nothing is written. A range may name only a Rating Version deployed to that Environment. Routing is used only while the Environment's routing flag is on, and only for a quote that names no Rating Version.)*
 
-`RL-8142` in that text becomes this ruling's minted id when it is minted (the standing mint grep).
+`RL-1834` in that text becomes this ruling's minted id when it is minted (the standing mint grep).
 
 **(b) The negative test that no unpromoted version is ever selected.** One new file,
 `backend/tests/test_routing.py`, marked for FR-270. Fixture: Environments `uat` and `prod` of one

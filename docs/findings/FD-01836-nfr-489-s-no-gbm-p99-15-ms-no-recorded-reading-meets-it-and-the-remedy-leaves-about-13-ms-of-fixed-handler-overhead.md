@@ -1,5 +1,5 @@
 ---
-id: FD-8144
+id: FD-1836
 family: finding
 title: NFR-489's no-GBM p99 < 15 ms: no recorded reading meets it, and the remedy leaves about 13 ms of fixed handler overhead
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-674, SL-1455, RL-1685, FD-1411, LG-1760]
 ---
 
-# FD-8144 — NFR-489's no-GBM p99 < 15 ms: no recorded reading meets it
+# FD-1836 — NFR-489's no-GBM p99 < 15 ms: no recorded reading meets it
 
 ## Finding
 
@@ -91,4 +91,4 @@ Open, owner WK-674. This record gives no verdict and no remedy: `docs/roadmap.md
 pending the H1 and H2 readings (the maintainer, "2026-10-21 15:31:24 BST", item (4)). If H1 or H2 brings
 the no-GBM p99 under 15 ms through configuration or deployment topology, the ETA stands; if not, a remedy
 slice or a budget change is the user's decision (row 2's scope is the user's, set 14 Oct), put to the user
-with measured options. Filed under working id 8144.
+with measured options. Filed as working id 8144; minted FD-1836 on 2026-10-21, in the D29 batch mint PR.
