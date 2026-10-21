@@ -3,7 +3,7 @@ id: PL-1737
 family: plan
 kind: map
 title: WK-1178 — FD 8040's two limbs, a recipe cell that does not parse is never silently nulled and validation gives it a verdict (FR-32, VR-STR-2), SL-1738 — a dated Work-plan delta
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-16 # original date 2026-10-14, set at the draft; minted 2026-10-16
 owner: planner
 tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e

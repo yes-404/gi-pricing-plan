@@ -25,6 +25,8 @@ declare its own source data out of range. `closed="right"` is the mirror image.
 from __future__ import annotations
 
 import math
+from collections.abc import Iterable, Mapping, Sequence
+from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
@@ -33,27 +35,102 @@ import polars as pl
 
 from model_schema import (
     AboveRangePolicy,
+    ArtifactRef,
     Banding,
+    BandingMeasure,
     BandingMethod,
     BandingProposal,
+    BandingWarning,
     BelowRangePolicy,
+    ClaimCountBandingWarning,
+    ExposureBandingWarning,
+    Factor,
+    FactorType,
     OneWayRow,
     new_uuid7,
 )
+from pricing_core.data.expressions import (
+    ExpressionError,
+    GrammarProfile,
+    compile_expression,
+    referenced_columns,
+)
 from pricing_core.data.profile import one_way
 from pricing_core.modelling.errors import BandingError, FactorResolutionError
+from pricing_core.safe_error import safe_error_text
 
 __all__ = [
     "apply_banding",
     "band_statistics",
     "check_banding",
+    "check_fit_bandings",
     "propose_banding",
+    "source_columns_of",
 ]
 
 #: `credibility` merging stops here rather than at one band. A single band is not a
 #: banding; it is the column removed from the model, which is a decision an actuary makes
 #: rather than one a merge loop reaches.
 _MIN_BANDS = 2
+
+
+def _subject(over: Banding | BandingProposal) -> str:
+    """What a banding is cut over, for a message: its column or its expression's text."""
+    return over.column if over.column is not None else str(over.source_expression)
+
+
+def source_columns_of(
+    over: Banding | BandingProposal, available: Iterable[str]
+) -> tuple[str, ...]:
+    """The dataset columns a banding (or proposal) reads, among `available` (`RL-1615`).
+
+    A column banding reads its column. An expression banding reads the columns its
+    expression names, parsed by the one parser in the `factor` profile with the dataset
+    version's columns as the bound symbols: a name that is not among them is refused with
+    its position (FR-95).
+    """
+    if over.column is not None:
+        return (over.column,)
+    names = frozenset(available)
+    try:
+        read = referenced_columns(
+            str(over.source_expression), profile=GrammarProfile.FACTOR, symbols=names
+        )
+    except (ExpressionError, SyntaxError) as exc:
+        raise FactorResolutionError(
+            f"the source_expression {over.source_expression!r} is refused: "
+            f"{safe_error_text(exc)} (FR-95)."
+        ) from exc
+    return tuple(sorted(read))
+
+
+def _cut_values(frame: pl.DataFrame, over: Banding | BandingProposal) -> pl.Series:
+    """The values a banding is cut over: a column, or an expression's result (`RL-1615`)."""
+    if over.column is not None:
+        if over.column not in frame.columns:
+            raise FactorResolutionError(
+                f"cannot band {over.column!r}: this dataset version does not have it (FR-87)."
+            )
+        return frame[over.column]
+    try:
+        return frame.with_columns(
+            compile_expression(
+                str(over.source_expression),
+                profile=GrammarProfile.FACTOR,
+                symbols=frozenset(frame.columns),
+            ).alias("_cut_over")
+        )["_cut_over"]
+    except (ExpressionError, SyntaxError) as exc:
+        raise FactorResolutionError(
+            f"the source_expression {over.source_expression!r} is refused: "
+            f"{safe_error_text(exc)} (FR-95)."
+        ) from exc
+    except pl.exceptions.PolarsError as exc:
+        raise FactorResolutionError(
+            f"the source_expression {over.source_expression!r} cannot be evaluated over this "
+            f"dataset version: {safe_error_text(exc)} (FR-95). The columns it reads have dtypes "
+            "the formula does not accept."
+        ) from exc
 
 
 def propose_banding(
@@ -80,19 +157,25 @@ def propose_banding(
             "judgement, and inventing some to be edited would put the platform's name on "
             "them. Persist the boundaries directly instead.",
         )
-    column = proposal.column
-    if column not in frame.columns:
-        raise FactorResolutionError(
-            f"cannot band {column!r}: this dataset version does not have it (FR-87)."
-        )
-
-    values = frame[column].cast(pl.Float64)
-    finite = values.drop_nulls().drop_nans()
-    if finite.len() == 0:
+    column = _subject(proposal)
+    raw = _cut_values(frame, proposal).cast(pl.Float64)
+    n_null = raw.null_count()
+    n_nan = int(raw.is_nan().sum())
+    n_infinite = int(raw.is_infinite().sum())
+    # Only finite values can be a boundary or a range: an infinite value (`1 / x` where x is
+    # 0) would put `inf` into the cut points, and the Banding's own validator would refuse
+    # the result far from its cause. Dropped to null *in place*, so the values stay aligned
+    # with the exposure and claim columns.
+    values = raw.to_frame("v").select(
+        pl.when(pl.col("v").is_finite()).then(pl.col("v")).otherwise(None).alias("v")
+    )["v"]
+    if values.null_count() == values.len():
         raise BandingError(
             "FACTOR_RESOLUTION_FAILED",
-            f"{column!r} has no non-null numeric values in this dataset version, so there "
-            "is no range to cut.",
+            f"{column!r} has no finite numeric values in this dataset version, so there "
+            f"is no range to cut ({n_null} null, {n_nan} NaN, {n_infinite} infinite of "
+            f"{raw.len()} rows). A NaN is a computed non-number (`0 / 0`, say), not a "
+            "missing value; check the expression or the column.",
         )
 
     exposure = (
@@ -114,7 +197,8 @@ def propose_banding(
         slug=slug,
         dataset_id=dataset_id,
         version=1,
-        column=column,
+        column=proposal.column,
+        source_expression=proposal.source_expression,
         method=proposal.method,
         method_params=_method_params(proposal, boundaries),
         derived_on_dataset_version_id=proposal.dataset_version_id,
@@ -190,7 +274,7 @@ def _boundaries(
     if len(cuts) < 2:
         raise BandingError(
             "FACTOR_RESOLUTION_FAILED",
-            f"{proposal.column!r} takes too few distinct values to cut into bands: every "
+            f"{_subject(proposal)!r} takes too few distinct values to cut into bands: every "
             "proposed boundary collapsed onto the same point. Treat it as a categorical "
             "factor, or band it manually.",
         )
@@ -364,7 +448,7 @@ def _tree(
     if not thresholds:
         raise BandingError(
             "FACTOR_RESOLUTION_FAILED",
-            f"a tree on {proposal.column!r} found no split that reduces weighted error — "
+            f"a tree on {_subject(proposal)!r} found no split that reduces weighted error — "
             "the response does not vary with this column in this dataset version. "
             "Quantile boundaries would have returned something, which is why this refuses "
             "instead.",
@@ -455,7 +539,7 @@ def apply_banding(series: pl.Series, banding: Banding) -> pl.Series:
         if banding.null_level is None:
             raise FactorResolutionError(
                 f"banding {banding.slug!r} met {int(missing.sum())} null value(s) in "
-                f"{banding.column!r} and declares no `null_level` (FR-97). A missing "
+                f"{_subject(banding)!r} and declares no `null_level` (FR-97). A missing "
                 "value is not a band; give the banding a null level or filter the rows."
             )
         out[missing] = banding.null_level
@@ -479,7 +563,7 @@ def _resolve_edge(
         offending = series.cast(pl.Float64).to_numpy()[mask]
         raise FactorResolutionError(
             f"banding {banding.slug!r}: {int(mask.sum())} value(s) of "
-            f"{banding.column!r} fall {edge} the banded range (boundary {boundary:g}, "
+            f"{_subject(banding)!r} fall {edge} the banded range (boundary {boundary:g}, "
             f"e.g. {float(offending[0]):g}), and `{edge}_range` is `error` "
             "(FR-97). The policy exists so this cannot pass silently."
         )
@@ -509,7 +593,14 @@ def band_statistics(
     In **band order**, not the alphabetical order a group-by returns: `10-14` sorts before
     `5-9` as text, and a relativity chart with its bands shuffled is read as noise.
     """
-    banded = frame.with_columns(apply_banding(frame[banding.column], banding).alias("_band"))
+    cut = _cut_values(frame, banding)
+    if cut.dtype.is_float():
+        # An infinite or NaN result (`1 / x` where x is 0) is dropped when the cut points are
+        # proposed (FR-98), so the statistics leave its rows out too: it is no band's value,
+        # and `above_range: error` would otherwise refuse the proposal it came from.
+        keep = cut.is_null() | cut.is_finite()
+        frame, cut = frame.filter(keep), cut.filter(keep)
+    banded = frame.with_columns(apply_banding(cut, banding).alias("_band"))
     summary = one_way(
         banded,
         column="_band",
@@ -525,12 +616,12 @@ def check_banding(
     frame: pl.DataFrame,
     banding: Banding,
     *,
-    min_exposure: float | None = None,
-    min_claims: float | None = None,
+    min_exposure: Decimal | None = None,
+    min_claims: int | None = None,
     exposure_column: str = "exposure_years",
     claim_count_column: str = "claim_count",
     fail_on_thin: bool | None = None,
-) -> tuple[str, ...]:
+) -> tuple[BandingWarning, ...]:
     """FR-100, against a specific Dataset Version.
 
     **An empty band always raises**, whatever the configuration says: a level no row reaches
@@ -541,11 +632,26 @@ def check_banding(
     the configured floor is a property of the artifact a reviewer can read rather than an
     argument at one call site. The keyword arguments override it, which is what a
     what-if evaluation needs.
+
+    The warnings are typed records, one per breached floor per band (`BandingWarning`):
+    exposure compared and reported as an exact `Decimal`, a claim count as an `int`. A
+    non-zero floor whose column the frame lacks is refused by name, because `one_way` would
+    read the absent column as 0 and report every band thin (or none, for a floor of 0).
     """
     minimums = banding.minimums
-    min_exposure = float(minimums.min_exposure_per_band) if min_exposure is None else min_exposure
+    min_exposure = minimums.min_exposure_per_band if min_exposure is None else min_exposure
     min_claims = minimums.min_claims_per_band if min_claims is None else min_claims
     fail_on_thin = (minimums.on_violation == "fail") if fail_on_thin is None else fail_on_thin
+    floors = ((min_exposure, exposure_column), (min_claims, claim_count_column))
+    for floor_value, column in floors:
+        if floor_value > 0 and column not in frame.columns:
+            raise BandingError(
+                "FACTOR_RESOLUTION_FAILED",
+                f"banding {banding.slug!r} sets a minimum of {floor_value} on {column!r}, "
+                "which this dataset version does not have (FR-100). An absent column would be "
+                "read as 0 and every band reported thin; the check is refused rather than "
+                "guessed.",
+            )
     stats = band_statistics(
         frame,
         banding,
@@ -562,23 +668,61 @@ def check_banding(
             "matrix, and a coefficient estimated from no data is not an estimate.",
         )
 
-    warnings: list[str] = []
+    reference = ArtifactRef(type="banding", slug=banding.slug, version=banding.version)
+    warnings: list[BandingWarning] = []
     for row in stats:
-        exposure = float(row.exposure_years)
-        if min_exposure > 0 and exposure < min_exposure:
-            warnings.append(
-                f"band {row.level!r} holds {exposure:,.1f} exposure years, below the "
-                f"minimum of {min_exposure:,.1f}."
-            )
+        index = banding.labels.index(row.level)
+        if min_exposure > 0 and row.exposure_years < min_exposure:
+            warnings.append(ExposureBandingWarning(
+                banding=reference, band_label=row.level, band_index=index,
+                observed=row.exposure_years, minimum=min_exposure,
+            ))
         if min_claims > 0 and row.claim_count < min_claims:
-            warnings.append(
-                f"band {row.level!r} holds {row.claim_count} claim(s), below the minimum "
-                f"of {min_claims:,.0f}."
-            )
+            warnings.append(ClaimCountBandingWarning(
+                banding=reference, band_label=row.level, band_index=index,
+                observed=row.claim_count, minimum=min_claims,
+            ))
     if warnings and fail_on_thin:
         raise BandingError(
             "BAND_BELOW_MIN_EXPOSURE",
             f"banding {banding.slug!r} has bands below the configured minimums and this "
-            f"workspace fails rather than warns (FR-100): {'; '.join(warnings)}",
+            f"workspace fails rather than warns (FR-100): "
+            f"{'; '.join(_describe(warning) for warning in warnings)}",
         )
+    return tuple(warnings)
+
+
+def _describe(warning: BandingWarning) -> str:
+    """One readable line for a warning, for the refusal text only; the record is the data."""
+    unit = "exposure years" if warning.measure is BandingMeasure.EXPOSURE else "claim(s)"
+    return (
+        f"band {warning.band_label!r} holds {warning.observed} {unit}, "
+        f"below the minimum of {warning.minimum}."
+    )
+
+
+def check_fit_bandings(
+    data: pl.DataFrame,
+    factors: Sequence[Factor],
+    bandings: Mapping[UUID, Banding] | None,
+) -> tuple[BandingWarning, ...]:
+    """FR-100 at fit time: `check_banding` once per distinct Banding the fitted factors use.
+
+    `data` is the rows the arm fits, after FR-111's weight-0 exclusion, so a band reached
+    only by weight-0 rows is empty (the coefficient would be estimated from no data). A
+    banding an operand of an interaction uses is reached through `factors` like any other.
+    A banding the mapping lacks, or whose column the frame lacks, is left to
+    `resolve_factors`, which refuses both by name right after this call.
+    """
+    mapping = bandings or {}
+    warnings: list[BandingWarning] = []
+    seen: set[UUID] = set()
+    for factor in factors:
+        if factor.type is not FactorType.BANDING or factor.banding_id in seen:
+            continue
+        banding = mapping.get(factor.banding_id) if factor.banding_id else None
+        if banding is None or banding.column not in data.columns:
+            continue
+        seen.add(banding.id)
+        warnings.extend(check_banding(data, banding))
     return tuple(warnings)

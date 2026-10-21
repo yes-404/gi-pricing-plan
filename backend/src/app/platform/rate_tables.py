@@ -1423,6 +1423,16 @@ async def _persist_new_version(
         value=derived.value,
         default_row=derived.default_row,
     ).model_dump()
+    # A parquet version's body is written BEFORE its row and the row is inserted complete: the
+    # row is never updated, because `rate_table_versions` is append-only at the database
+    # (FD-1728, PL-1769 DP-10). The `rows` branch needs the row's id, so it stays after the flush.
+    blob_ref: BlobRef | None = None
+    if storage_mode != "rows":
+        blob_ref = await blob_store.put(
+            session,
+            _cells_to_parquet(cells, derived.keys, derived.value.name),
+            "application/parquet",
+        )
     version_row = RateTableVersionRow(
         workspace_id=table_row.workspace_id,
         rate_table_id=table_row.id,
@@ -1430,6 +1440,7 @@ async def _persist_new_version(
         storage=storage_mode,
         definition=definition,
         change_note=derived.change_note,
+        cells=blob_ref.model_dump(mode="json") if blob_ref is not None else None,
         seeded_from=(
             derived.seeded_from.model_dump(mode="json")
             if derived.seeded_from is not None
@@ -1463,7 +1474,6 @@ async def _persist_new_version(
             f"{derived.slug}@{version_number} already exists in this workspace.",
         ) from exc
     table_row.current_version = version_number
-    blob_ref: BlobRef | None = None
     if storage_mode == "rows":
         session.add_all(
             RateTableCellRow(version_id=version_row.id, key=key, value=value)
@@ -1471,13 +1481,6 @@ async def _persist_new_version(
                 cells, derived.keys, derived.value.name
             )
         )
-    else:
-        blob_ref = await blob_store.put(
-            session,
-            _cells_to_parquet(cells, derived.keys, derived.value.name),
-            "application/parquet",
-        )
-        version_row.cells = blob_ref.model_dump(mode="json")
     await session.flush()
     created = _stored_version(version_row, cells)
     await audit.record(

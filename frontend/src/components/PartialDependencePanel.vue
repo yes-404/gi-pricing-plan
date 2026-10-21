@@ -75,6 +75,9 @@ function explain(omission: NonNullable<PartialDependence["omitted"]>): string {
   if (omission.reason === "operand_of_interaction") {
     return "The factor is an operand of an interaction and is not swept alone: holding one operand fixed recombines the pair into cells the model never saw, which it refuses. The interaction is the term the model carries.";
   }
+  if (omission.reason === "expression_factor") {
+    return "The factor is computed from a formula over several columns, so holding one of them at a value is not the factor's own curve. It is not swept.";
+  }
   return omission.reason;
 }
 </script>

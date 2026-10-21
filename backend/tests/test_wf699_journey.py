@@ -17,9 +17,10 @@ the test names.
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 
 import httpx
 import pytest
@@ -44,8 +45,6 @@ def test_wf699_the_skip_and_known_gap_lines_are_exactly_the_ruled_ones() -> None
         "SKIPPED E7 Commentary Block: Phase 3; WK-680",
         "KNOWN GAP A6: FD-1491",
         "KNOWN GAP B9: FD-1490",
-        "SKIPPED B4 model_call: FD-1456; SL-1543",
-        "SKIPPED C1′: FD-1456; SL-1543",  # noqa: RUF001
     ]
     assert not [e for e in journey.SKIPS if e.line.startswith("KNOWN GAP") and "FD-1456" in e.line]
     # `SKIPPED B7: SL-1340` is moot: SL-1340 merged (PL-1544 activation need 18).
@@ -199,6 +198,99 @@ def _seed_module() -> Any:
     return module
 
 
+async def _approved_severity(database: Any, workspace_id: Any, frequency_id: Any) -> Any:
+    """An approved severity GLM over the frequency GLM's Factors (as `fit_severity_glm` copies
+    them), gamma/log with no offset. Its intercept is `ln(_BASE_MINOR) - the frequency intercept`
+    and every level carries relativity 1, so frequency x severity prices a quote exactly as
+    `_BASE_MINOR x Π relativities` did: the journey's premiums keep their magnitude."""
+    import math
+    from copy import deepcopy
+    from decimal import Decimal
+    from uuid import uuid4
+
+    from backend.tests.approved_rows import add_approved
+    from backend.tests.test_demo_rating_evidence import _BASE_MINOR, _INTERCEPT, _fit_result
+
+    from app.db.models import ModelRow
+    from model_schema import GlmSpec, ModelStatus, OffsetSpec, ResponseKind
+
+    intercept = float(Decimal(_BASE_MINOR).ln() - _INTERCEPT)
+    fit = deepcopy(_fit_result())
+    for coefficient in fit["coefficients"]:  # type: ignore[attr-defined]
+        if coefficient["term"] == "intercept":
+            coefficient.update(
+                estimate=intercept, relativity=math.exp(intercept),
+                ci_95=[intercept - 0.02, intercept + 0.02],
+            )
+        else:
+            coefficient.update(estimate=0.0, relativity=1.0, ci_95=[-0.02, 0.02])
+    for levels in fit["relativities"].values():  # type: ignore[attr-defined]
+        for level in levels:
+            level.update(relativity=1.0, estimate=0.0)
+    family = f"fremtpl2-sev-{uuid4().hex[:6]}"
+    async with database.unit_of_work() as session:
+        frequency = await session.get(ModelRow, frequency_id)
+        assert frequency is not None
+        spec = GlmSpec.model_validate(frequency.spec).model_copy(update={
+            "model_family_slug": family, "response": ResponseKind.CLAIM_SEVERITY,
+            "response_column": "claim_severity", "offset": OffsetSpec(), "family": "gamma",
+        })
+        row = await add_approved(
+            session,
+            ModelRow(
+                workspace_id=workspace_id, model_family_slug=family, version=1,
+                status=ModelStatus.APPROVED.value,
+                dataset_version_id=frequency.dataset_version_id,
+                spec=spec.model_dump(mode="json"),
+                spec_hash=f"v3:sha256:{uuid4().hex}{uuid4().hex}", fit_result=fit,
+                diagnostics_id=uuid4(),
+            ),
+        )
+        return row.id
+
+
+async def _approved_structure(
+    database: Any, workspace_id: Any, frequency_id: Any, severity_id: Any
+) -> Any:
+    """The approved AD Peril Structure the seed leaves (`fremtpl2-ad@1`, large loss uncapped), as
+    an `approved` row with its evidence written first; the platform's own composition and
+    approval path is held by `test_demo_peril_structure.py`. Returns its ref."""
+    from datetime import UTC, datetime
+    from decimal import Decimal
+
+    from backend.tests.approved_rows import add_approved
+    from backend.tests.test_demo_rating_evidence import demo_model
+
+    from app.db.models import PerilStructureRow
+    from model_schema import ArtifactRef, LargeLossKind, LargeLossTreatment, new_uuid7
+    from model_schema.perils import PerilComponent, PerilMethod, ReconciledPeril, Reconciliation
+
+    frequency_ref, _ = await demo_model.load_approved_glm(database, workspace_id, frequency_id)
+    severity_ref, _ = await demo_model.load_approved_glm(database, workspace_id, severity_id)
+    component = PerilComponent(
+        peril="AD", method=PerilMethod.FREQUENCY_SEVERITY, frequency_model=frequency_ref,
+        severity_model=severity_ref, large_loss=LargeLossTreatment(kind=LargeLossKind.NONE),
+    )
+    reconciliation = Reconciliation(
+        dataset_version_id=new_uuid7(), part="holdout",
+        perils=(ReconciledPeril(
+            peril="AD", large_loss_kind=LargeLossKind.NONE, modelled_burning_cost=1000
+        ),),
+        observed_burning_cost=1000, modelled_burning_cost=1000, tolerance=Decimal("0.05"),
+        computed_at=datetime.now(UTC),
+    )
+    async with database.unit_of_work() as session:
+        await add_approved(
+            session,
+            PerilStructureRow(
+                workspace_id=workspace_id, slug=demo_model.AD_STRUCTURE_SLUG, version=1,
+                status="approved", perils=[component.model_dump(mode="json")],
+                excluded_perils=[], reconciliation=reconciliation.model_dump(mode="json"),
+            ),
+        )
+    return ArtifactRef(type="peril_structure", slug=demo_model.AD_STRUCTURE_SLUG, version=1)
+
+
 async def _world(database: Any, blob_store: Any, workspace_id: Any) -> dict[str, str]:
     """The state `scripts/demo.py` finds after the seed: the principals, an approved GLM and a
     fitted-but-unapproved model, the seeded Rating Version `fremtpl2-demo@1` (the dislocation
@@ -236,6 +328,8 @@ async def _world(database: Any, blob_store: Any, workspace_id: Any) -> dict[str,
     tables = await demo_model.seed_demo_rate_tables(
         database, Settings(), blob_store, workspace_id, analyst, model_id
     )
+    severity_id = await _approved_severity(database, workspace_id, model_id)
+    structure_ref = await _approved_structure(database, workspace_id, model_id, severity_id)
     await demo_model.create_approved_rating_version(
         database,
         blob_store,
@@ -249,12 +343,15 @@ async def _world(database: Any, blob_store: Any, workspace_id: Any) -> dict[str,
         tables,
         _bandings(),
         _BASE_MINOR,
+        severity_id=severity_id,
+        structure_ref=structure_ref,
     )
 
     # The fitted model stands on the validated portfolio Dataset Version: a model on a Dataset
     # Version that does not exist is flagged, and approval refuses it (ARTIFACT_FLAGGED).
     portfolio_id = new_uuid7()
     family = f"fremtpl2-gbm-{uuid4().hex[:6]}"
+    record["gbm_family"] = family
     async with database.unit_of_work() as session:
         model = ModelRow(
             workspace_id=workspace_id,
@@ -384,12 +481,40 @@ def test_wf699_journey_runs_end_to_end(api_client, database, blob_store, workspa
     assert set(skipped) <= set(status)
     # The deliberate failures were asserted by their codes inside the journey; their statuses are
     # `ok` only because the platform answered exactly that code.
-    for step in ("B6", "C4", "E3", "D4", "E8"):
+    for step in ("B4", "C1′", "B6", "C4", "E3", "D4", "E8"):  # noqa: RUF001
         assert status[step] == "ok", step
     assert result.rating_version_id is not None
     assert result.bundle_hash.startswith("sha256:")
     assert result.prod_premium_minor > 0
     assert any("20,000-policy sample" in line for line in lines)
+
+    # PL-1694 Acceptance 18 (PL 8055 Task A): the split test's list IS this run's derived list.
+    # The world's random model family is the ONE token substituted, by its exact value from
+    # `record` (RL 8060; the maintainer's 2026-10-16 09:54:43 BST condition 2): no pattern.
+    run = result.d7_run
+    real = [
+        {key: str(change[key]) for key in ("id", "kind", "description")}
+        for change in run["derived_changes"]
+    ]
+    expected = [
+        {**row, "description": row["description"].replace("{gbm_family}", record["gbm_family"])}
+        for row in D7_DERIVED_CHANGES
+    ]
+    print(f"D7 gbm_family: {record['gbm_family']}")  # RL 8060 precision 2: the LG records it
+    assert real == expected, json.dumps(real, ensure_ascii=False, indent=1)
+    # The four checks of Acceptance 18, on the real run as stored.
+    effects = journey.split_effects(real)
+    assert effects is not None
+    assert {group["name"]: group["changes"] for group in run["change_groups"]} == effects
+    placed = [cid for ids in effects.values() for cid in ids]
+    assert sorted(placed) == sorted(row["id"] for row in real)
+    assert len(set(placed)) == len(placed)
+    summary = run["attribution_summary"]
+    total = int(summary["total_change_minor"])
+    assert summary["method"] == "shapley"
+    assert sum(int(item["shapley_minor"]) for item in run["attribution"]) == total
+    isolated = sum(int(item["isolated_minor"]) for item in run["attribution"])
+    assert isolated + int(summary["residual_minor"]) == total
 
 
 @pytest.mark.req("FR-221")
@@ -457,6 +582,35 @@ def test_b3_the_fork_puts_a_pinned_as_at_lookup_in_the_premium() -> None:
     assert seeded["steps"][1]["expr"] == "base_premium_minor * rel_region"  # the seed is untouched
 
 
+def test_discover_picks_the_frequency_glm_by_its_declared_response_not_by_order() -> None:
+    """SL-1543 (maintainer, 2026-10-17 21:09:30 BST): `/models` is newest first, and the B4 world
+    approves a severity GLM AFTER the frequency GLM. `discover()` must still return the
+    frequency GLM: the one whose spec declares the claim-count response. Fed a stub list, no DB."""
+
+    def model(family: str, response_column: str, response: str | None) -> dict[str, Any]:
+        return {
+            "model_family_slug": family, "version": 1,
+            "spec": {"response": response, "response_column": response_column},
+            "fit_result": {"model_type": "glm", "relativities": {"area": []}},
+        }
+
+    severity = model("fremtpl2-sev-aaaaaa", "claim_severity", "claim_severity")
+    frequency = model("fremtpl2-glm-bbbbbb", "claim_count", None)
+    gbm = {
+        "model_family_slug": "fremtpl2-gbm-cccccc", "version": 1,
+        "fit_result": {"model_type": "xgboost"},
+    }
+
+    def stub(step: str, who: str, method: str, path: str, **kw: Any) -> dict[str, Any]:
+        status = kw["params"]["status"]
+        return {"items": [severity, frequency] if status == "approved" else [gbm]}
+
+    walk = object.__new__(journey._Journey)
+    walk.req = stub  # type: ignore[method-assign]
+    walk.discover()
+    assert walk.glm_ref == "model:fremtpl2-glm-bbbbbb@1"
+
+
 @pytest.mark.req("FR-264")
 def test_d7_is_not_a_skip_and_a_skip_without_an_owner_still_fails() -> None:
     """D7 decomposes now (FD-1660, SL-1696): the skip table no longer carries it, so
@@ -467,6 +621,139 @@ def test_d7_is_not_a_skip_and_a_skip_without_an_owner_still_fails() -> None:
         journey.check_skip_owners([journey.Skip(step="D7", line="SKIPPED D7 decomposition")])
 
 
+#: The `derived_changes` of the journey's decomposing D7 run in `_world`, as `id`, `kind` and
+#: `description` (`PL-1694` Acceptance 18; PL 8055). `{gbm_family}` stands for `_world`'s
+#: random model family; `test_wf699_journey_runs_end_to_end` asserts this list IS the run's.
+D7_DERIVED_CHANGES: Final[list[dict[str, str]]] = [
+    {
+        "id": "c1",
+        "kind": "step_added",
+        "description": (
+            "m_ncd: mount added (sub_graph:ncd-ladder@3)"
+        ),
+    },
+    {
+        "id": "c2",
+        "kind": "step_added",
+        "description": (
+            "s_loading: step added"
+        ),
+    },
+    {
+        "id": "c3",
+        "kind": "table_repointed",
+        "description": (
+            "s_o_area: rate_table_ref rate_table:fremtpl2-area@1 → rate_table:wf699-area@1"
+        ),
+    },
+    {
+        "id": "c4",
+        "kind": "table_repointed",
+        "description": (
+            "s_o_driv_age_band: rate_table_ref rate_table:fremtpl2-driv-age-band@1 → rate_table:wf699-driv-age-band@1"  # noqa: E501
+        ),
+    },
+    {
+        "id": "c5",
+        "kind": "table_repointed",
+        "description": (
+            "s_o_region: rate_table_ref rate_table:fremtpl2-region@1 → rate_table:wf699-region@1"
+        ),
+    },
+    {
+        "id": "c6",
+        "kind": "table_repointed",
+        "description": (
+            "s_o_veh_age_band: rate_table_ref rate_table:fremtpl2-veh-age-band@1 → rate_table:wf699-veh-age-band@1"  # noqa: E501
+        ),
+    },
+    {
+        "id": "c7",
+        "kind": "table_repointed",
+        "description": (
+            "s_o_veh_brand: rate_table_ref rate_table:fremtpl2-veh-brand@1 → rate_table:wf699-veh-brand@1"  # noqa: E501
+        ),
+    },
+    {
+        "id": "c8",
+        "kind": "table_repointed",
+        "description": (
+            "s_o_veh_gas: rate_table_ref rate_table:fremtpl2-veh-gas@1 → rate_table:wf699-veh-gas@1"
+        ),
+    },
+    {
+        "id": "c9",
+        "kind": "table_repointed",
+        "description": (
+            "s_o_veh_power_band: rate_table_ref rate_table:fremtpl2-veh-power-band@1 → rate_table:wf699-veh-power-band@1"  # noqa: E501
+        ),
+    },
+    {
+        "id": "c10",
+        "kind": "step_changed",
+        "description": (
+            "s_premium: consumes [\"model_premium\", \"rel_driv_age_band\", \"rel_veh_age_band\", \"rel_veh_power_band\", \"rel_veh_brand\", \"rel_veh_gas\", \"rel_area\", \"rel_region\", \"origin_driv_age_band\", \"origin_veh_age_band\", \"origin_veh_power_band\", \"origin_veh_brand\", \"origin_veh_gas\", \"origin_area\", \"origin_region\"] → [\"model_premium\", \"rel_driv_age_band\", \"rel_veh_age_band\", \"rel_veh_power_band\", \"rel_veh_brand\", \"rel_veh_gas\", \"rel_area\", \"rel_region\", \"origin_driv_age_band\", \"origin_veh_age_band\", \"origin_veh_power_band\", \"origin_veh_brand\", \"origin_veh_gas\", \"origin_area\", \"origin_region\", \"ncd_factor\", \"expense_loading\"]; expr ((origin_driv_age_band != 0 and origin_veh_age_band != 0 and origin_veh_power_band != 0 and origin_veh_brand != 0 and origin_veh_gas != 0 and origin_area != 0 and origin_region != 0) ? model_premium * (rel_driv_age_band / origin_driv_age_band) * (rel_veh_age_band / origin_veh_age_band) * (rel_veh_power_band / origin_veh_power_band) * (rel_veh_brand / origin_veh_brand) * (rel_veh_gas / origin_veh_gas) * (rel_area / origin_area) * (rel_region / origin_region) : 0) → ((origin_driv_age_band != 0 and origin_veh_age_band != 0 and origin_veh_power_band != 0 and origin_veh_brand != 0 and origin_veh_gas != 0 and origin_area != 0 and origin_region != 0) ? model_premium * (rel_driv_age_band / origin_driv_age_band) * (rel_veh_age_band / origin_veh_age_band) * (rel_veh_power_band / origin_veh_power_band) * (rel_veh_brand / origin_veh_brand) * (rel_veh_gas / origin_veh_gas) * (rel_area / origin_area) * (rel_region / origin_region) : 0) * ncd_factor * number(expense_loading)"  # noqa: E501
+        ),
+    },
+    {
+        "id": "c11",
+        "kind": "table_repointed",
+        "description": (
+            "s_t_area: rate_table_ref rate_table:fremtpl2-area@1 → rate_table:wf699-area@2"
+        ),
+    },
+    {
+        "id": "c12",
+        "kind": "table_repointed",
+        "description": (
+            "s_t_driv_age_band: rate_table_ref rate_table:fremtpl2-driv-age-band@1 → rate_table:wf699-driv-age-band@1"  # noqa: E501
+        ),
+    },
+    {
+        "id": "c13",
+        "kind": "table_repointed",
+        "description": (
+            "s_t_region: rate_table_ref rate_table:fremtpl2-region@1 → rate_table:wf699-region@2"
+        ),
+    },
+    {
+        "id": "c14",
+        "kind": "table_repointed",
+        "description": (
+            "s_t_veh_age_band: rate_table_ref rate_table:fremtpl2-veh-age-band@1 → rate_table:wf699-veh-age-band@1"  # noqa: E501
+        ),
+    },
+    {
+        "id": "c15",
+        "kind": "table_repointed",
+        "description": (
+            "s_t_veh_brand: rate_table_ref rate_table:fremtpl2-veh-brand@1 → rate_table:wf699-veh-brand@1"  # noqa: E501
+        ),
+    },
+    {
+        "id": "c16",
+        "kind": "table_repointed",
+        "description": (
+            "s_t_veh_gas: rate_table_ref rate_table:fremtpl2-veh-gas@1 → rate_table:wf699-veh-gas@1"
+        ),
+    },
+    {
+        "id": "c17",
+        "kind": "table_repointed",
+        "description": (
+            "s_t_veh_power_band: rate_table_ref rate_table:fremtpl2-veh-power-band@1 → rate_table:wf699-veh-power-band@1"  # noqa: E501
+        ),
+    },
+    {
+        "id": "c18",
+        "kind": "pin",
+        "description": (
+            "models pin model:{gbm_family}@1 added"
+        ),
+    },
+]
+
+
 @pytest.mark.req("FR-264")
 def test_d7_splits_the_derived_changes_into_the_journeys_own_effects() -> None:
     """The maintainer's D7 ruling (to-lead "2026-10-12 01:25:10 BST"): attribution decomposes the
@@ -475,35 +762,22 @@ def test_d7_splits_the_derived_changes_into_the_journeys_own_effects() -> None:
     `step_added`, `<mount_point>: mount added (<ref>)`) among it; a pin on a rate table belongs
     with the first. If either effect is empty there is nothing to decompose and the journey
     stops."""
-    derived = [
-        {
-            "id": "c1",
-            "kind": "step_added",
-            "description": "m_ncd: mount added (sub_graph:ncd-ladder@1)",
-        },
-        {
-            "id": "c2",
-            "kind": "table_repointed",
-            "description": "s_t_region: rate_table_ref x@1 → x@2",
-        },
-        {
-            "id": "c3",
-            "kind": "table_repointed",
-            "description": "s_t_area: rate_table_ref y@1 → y@2",
-        },
-        {"id": "c4", "kind": "step_added", "description": "s_loading: step added"},
-        {"id": "c5", "kind": "step_changed", "description": "s_premium: expr a → b"},
-        {"id": "c6", "kind": "pin", "description": "rate_tables pin rate_table:x@2 added"},
-    ]
+    derived = D7_DERIVED_CHANGES
     effects = journey.split_effects(derived)
     assert effects == {
-        journey.EFFECT_RATE_TABLES: ["c2", "c3", "c6"],
-        journey.EFFECT_STRUCTURE: ["c1", "c4", "c5"],
+        journey.EFFECT_RATE_TABLES: [f"c{n}" for n in (*range(3, 10), *range(11, 18))],
+        journey.EFFECT_STRUCTURE: ["c1", "c2", "c10", "c18"],
     }
     flat = [cid for ids in effects.values() for cid in ids]
     assert sorted(flat) == sorted(d["id"] for d in derived)  # a partition: none lost, none twice
-    assert journey.split_effects(derived[1:3]) is None  # tables only: nothing else to decompose
-    assert journey.split_effects(derived[3:5]) is None  # structure only
+    ids = {row["id"]: row for row in derived}
+    tables = [ids[cid] for cid in effects[journey.EFFECT_RATE_TABLES]]
+    structure = [ids[cid] for cid in effects[journey.EFFECT_STRUCTURE]]
+    assert journey.split_effects(tables) is None  # tables only: nothing else to decompose
+    assert journey.split_effects(structure) is None  # structure only
+    (mount,) = [row for row in derived if row["description"].startswith("m_ncd: mount")]
+    assert mount["id"] in effects[journey.EFFECT_STRUCTURE]
+    assert mount["kind"] != "table_repointed"
     assert journey.split_effects([]) is None
 
 
@@ -584,3 +858,12 @@ async def test_a_non_glm_stand_in_without_a_transparency_artifact_is_refused(
             )
     assert refused.value.code == "EVIDENCE_INCOMPLETE"
     assert "transparency artifact names it" in (refused.value.detail or "")
+
+
+@pytest.mark.req("FR-222")
+def test_b4_and_c1_are_walked_not_skipped() -> None:
+    """PL-1542 Acceptance 6: the journey no longer declares B4 or C1' as skips, and no skip
+    line names SL-1543 as its owner. Red first, by cause: on the base tree `journey.SKIPS`
+    still carries `SKIPPED B4 model_call: FD-1456; SL-1543` and `SKIPPED C1': ...`."""
+    assert not [e for e in journey.SKIPS if e.step in {"B4", "C1′"}]  # noqa: RUF001
+    assert not [e for e in journey.SKIPS if "SL-1543" in e.line]

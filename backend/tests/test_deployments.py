@@ -55,6 +55,10 @@ def client(api_settings: Settings):
     from app.main import create_app
 
     with TestClient(create_app(api_settings), raise_server_exceptions=False) as c:
+        # PL-1766: these tests exercise the deploy governance (approval, order, audit) over
+        # Rating Versions whose bundle is a hash with no blob, which no process can hydrate. The
+        # switch they would trigger is proved in `test_deployment_switch_http.py`.
+        c.app.state.switch = None  # type: ignore[attr-defined]
         yield c
 
 

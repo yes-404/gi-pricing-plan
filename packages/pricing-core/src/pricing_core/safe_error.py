@@ -15,6 +15,8 @@ What is kept, and why each is input-free:
   its text, so a library's `ValueError("FOO: secret")` is not one. Every raise site that can
   concern a quote input names the field, the constraint and the bounds, never the value; a test
   enumerates those sites by AST and fails when one is added without a case.
+* **An `ExpressionError`**: a grammar refusal of the author's own expression text, with its
+  `ast` position (`line N, column M: message`). Its raise sites read no frame.
 * **A `ValidationError`**, rebuilt from its parts and never from its text: each failing location
   kept only for the parts that are field names a model declares (a dict key or an extra key
   becomes `<key>`; a list index is kept), the error `type`, the declared constraint bounds in its
@@ -42,6 +44,7 @@ from typing import Any
 from pydantic import BaseModel, ValidationError
 
 from model_schema.input_free import InputFreeError
+from pricing_core.data.expressions import ExpressionError
 
 __all__ = [
     "CodedError",
@@ -177,12 +180,30 @@ def _validation_detail(exc: ValidationError) -> str:
     return f"{exc.error_count()} validation error(s) for {exc.title}: " + "; ".join(problems)
 
 
+def _expression_detail(exc: ExpressionError) -> str:
+    """An `ExpressionError`'s message with its `ast` position, `line N, column M: message`.
+
+    Kept because it is a grammar refusal of the author's own expression text: it is raised
+    in `pricing_core.data.expressions`, whose functions take an expression and its column
+    *names*, never a frame, so no row value can reach it (a test reads the raise sites).
+    The position is the form `RL-1700` (b) requires of a refused Factor expression.
+    """
+    if exc.lineno is None:
+        return str(exc)
+    where = f"line {exc.lineno}"
+    if exc.col_offset is not None:
+        where += f", column {exc.col_offset + 1}"
+    return f"{where}: {exc}"
+
+
 def safe_error_detail(exc: BaseException) -> str:
     """The text of `exc` that is safe to keep, without the type name; `""` when none is."""
     if isinstance(exc, ValidationError):
         return _validation_detail(exc)
     if isinstance(exc, CodedError):
         return str(exc)
+    if isinstance(exc, ExpressionError):
+        return _expression_detail(exc)
     return ""
 
 

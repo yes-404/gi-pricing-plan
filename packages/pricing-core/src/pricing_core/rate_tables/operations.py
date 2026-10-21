@@ -287,6 +287,15 @@ def _row_key(row: CellRow, key_names: Sequence[str], index: int | None = None) -
     return tuple(row[key] for key in key_names)
 
 
+def _non_finite_message(raw: str, key_values: KeyTuple) -> str:
+    """FR-234's issue text for a value that parses but is NaN, sNaN or infinite.
+
+    One format for the save-time check (`_value_issue`) and the diff's stored-row read
+    (`_index_rows`), so the two sites cannot diverge.
+    """
+    return f"value {raw!r} for key {key_values} is not a finite decimal number"
+
+
 def _value_issue(
     row: CellRow, value: RateTableValue, key_names: Sequence[str]
 ) -> ValidationIssue | None:
@@ -309,6 +318,12 @@ def _value_issue(
         return ValidationIssue(
             code=OUT_OF_BOUNDS,
             message=f"value {raw!r} for key {key_values} is not a decimal number",
+            field=value.name,
+        )
+    if not decimal_value.is_finite():
+        return ValidationIssue(
+            code=OUT_OF_BOUNDS,
+            message=_non_finite_message(raw, key_values),
             field=value.name,
         )
     if value.min is not None and decimal_value < value.min:
@@ -388,11 +403,19 @@ def validate_rate_table(
 def _index_rows(
     cells: Cells, key_names: Sequence[str], value_name: str
 ) -> dict[KeyTuple, Decimal]:
-    """Map each row's key to its value. Callers hand validated cells (unique keys)."""
-    return {
-        _row_key(row, key_names, index): Decimal(row[value_name])
-        for index, row in enumerate(cells)
-    }
+    """Map each row's key to its value. Callers hand validated cells (unique keys).
+
+    A stored non-finite value (a row saved before FR-234 refused them) raises a named
+    `ValueError("OUT_OF_BOUNDS: …")`, never a bare decimal comparison error.
+    """
+    index_: dict[KeyTuple, Decimal] = {}
+    for index, row in enumerate(cells):
+        key = _row_key(row, key_names, index)
+        value = Decimal(row[value_name])
+        if not value.is_finite():
+            raise ValueError(f"{OUT_OF_BOUNDS}: {_non_finite_message(row[value_name], key)}")
+        index_[key] = value
+    return index_
 
 
 def _diff_cells(
@@ -711,7 +734,6 @@ def uplift_table(
     rows = _rows_of(table)
     factor = Decimal(1) + percentage
     new_rows, changed = _transform_rows(rows, table.value.name, lambda old: old * factor)
-    _validate_result(new_rows, table)
     operation = UpliftTableOperation(
         kind="uplift_table",
         parameters=UpliftTableParameters(percentage=percentage),
@@ -720,6 +742,7 @@ def uplift_table(
             changed_cells=changed, new_version=_ref(table, table.version + 1)
         ),
     )
+    _validate_result(new_rows, table)
     return _new_version(
         table, new_rows, f"uplift_table: percentage={percentage}", operation
     )
@@ -746,7 +769,6 @@ def uplift_by_filter(
                 changed += 1
         else:
             new_rows.append(row)
-    _validate_result(new_rows, table)
     operation = UpliftByFilterOperation(
         kind="uplift_by_filter",
         parameters=UpliftByFilterParameters(percentage=percentage, filter=filter),
@@ -755,6 +777,7 @@ def uplift_by_filter(
             changed_cells=changed, new_version=_ref(table, table.version + 1)
         ),
     )
+    _validate_result(new_rows, table)
     return _new_version(
         table,
         new_rows,

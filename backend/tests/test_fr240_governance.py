@@ -9,6 +9,7 @@ slice's base in the ledger (`LG-1533`, build log).
 from __future__ import annotations
 
 import asyncio
+import json
 from typing import Any
 from uuid import UUID
 
@@ -38,14 +39,24 @@ from backend.tests.test_rating_version_compile import (
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import ModelRow
+from app.db.models import FactorRow, ModelRow, RateTableRow, RateTableVersionRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import approvals as approval_service
 from app.platform import modelling as service
 from app.platform.blobs import BlobStore
 from app.worker.rating_handlers import register_rating_handlers
-from model_schema import DecisionKind, JobStatus, ModelFlag, ModelStatus, ObjectiveStatus, new_uuid7
+from model_schema import (
+    DecisionKind,
+    Factor,
+    FactorIntent,
+    FactorType,
+    JobStatus,
+    ModelFlag,
+    ModelStatus,
+    ObjectiveStatus,
+    new_uuid7,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -245,15 +256,30 @@ def test_an_overridden_flag_never_reaches_compile(
 # -- A control-intent Factor: the seed route and the compile Job (FR-88, DP-3, DP-4) -------
 
 
-async def _make_control(session: AsyncSession, workspace_id: Any, slug: str) -> None:
-    """Flip the workspace's Factor `slug` to `intent: control`, the way a later edit would."""
-    await session.execute(
-        text(
-            "UPDATE factors SET body = jsonb_set(body, '{intent}', '\"control\"') "
-            "WHERE workspace_id = :w AND slug = :slug"
-        ),
-        {"w": workspace_id, "slug": slug},
+async def _control_version(session: AsyncSession, workspace_id: Any, slug: str) -> int:
+    """Insert the next version of the workspace's Factor `slug` with `intent: control`, the way a
+    later edit would (`factors` is append-only at the database, SL-1770: a Factor is versioned,
+    never flipped), and return its version number."""
+    latest = await session.scalar(
+        select(FactorRow)
+        .where(FactorRow.workspace_id == workspace_id, FactorRow.slug == slug)
+        .order_by(FactorRow.version.desc())
+        .limit(1)
     )
+    version = 1 if latest is None else latest.version + 1
+    dataset_id = new_uuid7() if latest is None else latest.dataset_id
+    factor = Factor(
+        id=new_uuid7(), slug=slug, dataset_id=dataset_id, version=version,
+        type=FactorType.IDENTITY, source_columns=(slug,), intent=FactorIntent.CONTROL,
+    )
+    session.add(
+        FactorRow(
+            workspace_id=workspace_id, dataset_id=dataset_id, slug=slug, version=version,
+            body=factor.model_dump(mode="json", exclude={"id", "version", "dataset_id"}),
+        )
+    )
+    await session.flush()
+    return version
 
 
 @pytest.mark.req("FR-88")
@@ -264,12 +290,15 @@ def test_the_seed_route_refuses_a_control_factor_with_its_code(
 ) -> None:
     _run(grant("pricing_actuary"))
     family = f"mf-{new_uuid7().hex[-8:]}"
-    _seed_approved_model(workspace_id, family, _LEVELS)
+    control: dict[str, int] = {}
 
-    async def _flip(session: AsyncSession) -> None:
-        await _make_control(session, workspace_id, "driver_age_band")
+    async def _insert(session: AsyncSession) -> None:
+        control["version"] = await _control_version(session, workspace_id, "driver_age_band")
 
-    _run_with_database(_flip)
+    _run_with_database(_insert)
+    _seed_approved_model(
+        workspace_id, family, _LEVELS, factor_versions={"driver_age_band": control["version"]}
+    )
     response = api_client.post(
         f"/api/v1/rate-tables/{_table_slug()}/seed-from-model",
         json=_seed_body(family),
@@ -294,14 +323,49 @@ def test_a_compile_over_a_control_keyed_table_fails_with_its_code(
         )
     )
 
-    async def _flip() -> None:
+    async def _rebind() -> int:
+        """A new rate-table version whose key names a control version of its Factor."""
         async with database.unit_of_work() as session:
-            await _make_control(session, workspace_id, "driver_age_band")
+            control = await _control_version(session, workspace_id, "driver_age_band")
+            table = await session.scalar(
+                select(RateTableRow).where(
+                    RateTableRow.workspace_id == workspace_id,
+                    RateTableRow.slug == seeded.slug,
+                )
+            )
+            assert table is not None
+            source = await session.scalar(
+                select(RateTableVersionRow).where(
+                    RateTableVersionRow.rate_table_id == table.id,
+                    RateTableVersionRow.version_number == seeded.version,
+                )
+            )
+            assert source is not None
+            definition = json.loads(json.dumps(source.definition))
+            for key in definition["keys"]:
+                key["factor_ref"] = f"factor:driver_age_band@{control}"
+            session.add(
+                RateTableVersionRow(
+                    workspace_id=source.workspace_id,
+                    rate_table_id=source.rate_table_id,
+                    version_number=seeded.version + 1,
+                    storage=source.storage,
+                    definition=definition,
+                    change_note=source.change_note,
+                    seeded_from=source.seeded_from,
+                    cells=source.cells,
+                    created_by_operation=source.created_by_operation,
+                    created_by_import=source.created_by_import,
+                    created_by_edit=source.created_by_edit,
+                    created_by=source.created_by,
+                )
+            )
+            return seeded.version + 1
 
-    _run(_flip())
+    rebound = _run(_rebind())
     job_row = _compile_with_pins(
         api_client, principal, workspace_id, database, blob_store,
-        rate_tables=[f"rate_table:{seeded.slug}@{seeded.version}"],
+        rate_tables=[f"rate_table:{seeded.slug}@{rebound}"],
     )
     assert job_row.status is JobStatus.FAILED
     assert job_row.error["code"] == "CONTROL_FACTOR_IN_RATEABLE_PATH"
@@ -338,10 +402,11 @@ def test_a_compile_over_a_gbm_fitted_on_a_control_factor_fails_with_its_code(
     _run(grant("analyst"))
 
     async def _arrange() -> str:
-        model_id, fit_status = await _fitted_gbm(database, blob_store, workspace_id)
+        model_id, fit_status = await _fitted_gbm(
+            database, blob_store, workspace_id, area_intent=FactorIntent.CONTROL
+        )
         assert fit_status is JobStatus.SUCCEEDED
         async with database.unit_of_work() as session:
-            await _make_control(session, workspace_id, "area")
             row = await session.get(ModelRow, model_id)
             assert row is not None
             await mark_approved(session, row)

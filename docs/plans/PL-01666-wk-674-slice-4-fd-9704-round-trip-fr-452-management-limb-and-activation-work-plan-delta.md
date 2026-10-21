@@ -3,7 +3,7 @@ id: PL-1666
 family: plan
 kind: map
 title: WK-674 — Slice 4 (deployment path) at GO readiness: FD-1650's migration round trip, the FR-452 management limb's decision point, and the activation paper — Work-plan delta
-status: draft                  # draft → active → superseded | retired (§1.2a)
+status: active                 # draft → active → superseded | retired (§1.2a)
 created: 2026-10-12
 owner: planner
 tree: fc4401dcad789692f79f6c3ffc058c1c3921b7b9

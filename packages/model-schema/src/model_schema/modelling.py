@@ -32,7 +32,7 @@ from model_schema.input_free import InputFreeError
 from model_schema.money import DecimalStr
 from model_schema.prediction import UncertaintyBasis
 from model_schema.profiles import OneWayRow
-from model_schema.refs import BlobRef, ModelRef, Slug
+from model_schema.refs import ArtifactRef, BlobRef, ModelRef, Slug
 
 __all__ = [
     "FIT_RESULT_ADAPTER",
@@ -154,6 +154,10 @@ class Factor(BaseModel):
     #: would change meaning the next time someone re-cut a boundary.
     banding_id: UUID | None = None
     grouping_id: UUID | None = None
+    #: `02` §4.1, added 2026-10-16 (`RL-1615`). The formula an `expression` Factor *is*,
+    #: stored as written, parsed in the `factor` profile over `source_columns` (FR-95). It
+    #: is stored on the Factor so it is declared, versioned (FR-96) and audited.
+    expression: str | None = Field(default=None, max_length=2000)
     #: `02` §4.1, added 2026-08-18. The Factors an `interaction` crosses, in the order they
     #: are crossed. **Factors, not columns**: every place the specification names an
     #: interaction it names factors — §4.4's `interaction_constraints`, §4.9's
@@ -177,6 +181,7 @@ class Factor(BaseModel):
         required = {
             FactorType.BANDING: ("banding_id", self.banding_id),
             FactorType.GROUPING: ("grouping_id", self.grouping_id),
+            FactorType.EXPRESSION: ("expression", self.expression),
         }.get(self.type)
         if required is not None and required[1] is None:
             raise ValueError(
@@ -184,15 +189,19 @@ class Factor(BaseModel):
                 f"{required[0]} (`02` §4.1). The transformation is what the factor *is*; "
                 "without it the factor is its raw column under another name."
             )
-        for field, value, owner in (
-            ("banding_id", self.banding_id, FactorType.BANDING),
-            ("grouping_id", self.grouping_id, FactorType.GROUPING),
+        for field, value, owners in (
+            # `RL-1615` DP-S4-1: an `expression` Factor may pin a Banding, which is how
+            # its numeric result becomes categorical.
+            ("banding_id", self.banding_id, (FactorType.BANDING, FactorType.EXPRESSION)),
+            ("grouping_id", self.grouping_id, (FactorType.GROUPING,)),
+            ("expression", self.expression, (FactorType.EXPRESSION,)),
         ):
-            if value is not None and self.type is not owner:
+            if value is not None and self.type not in owners:
                 raise ValueError(
-                    f"factor {self.slug!r} is of type {self.type.value!r} and names a "
-                    f"{field}. Nothing would apply it, and a transformation recorded on an "
-                    "artifact that ignores it reads as one the model used."
+                    f"factor {self.slug!r} is of type {self.type.value!r} and names "
+                    f"{'an' if field == 'expression' else 'a'} {field}. Nothing would apply "
+                    "it, and a transformation recorded on an artifact that ignores it reads "
+                    "as one the model used."
                 )
         self._the_interaction_arm()
         self._columns_match_the_type()
@@ -337,6 +346,57 @@ class BandingMinimums(BaseModel):
     on_violation: Literal["warn", "fail"] = "warn"
 
 
+class BandingMeasure(enum.StrEnum):
+    """Which floor of `BandingMinimums` a band fell below (FR-100)."""
+
+    EXPOSURE = "exposure"
+    CLAIM_COUNT = "claim_count"
+
+
+class _BandingWarningBase(BaseModel):
+    """What FR-100's `warn` records about one thin band, before the measure fixes the types.
+
+    A reviewer or a UI acts on these fields, so they are typed rather than rendered text.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    #: The Banding version checked: on the wire the ID-3 string `banding:{slug}@{version}`.
+    banding: ArtifactRef
+    #: One of `Banding.labels`, and its position in them (the labels are unique).
+    band_label: str
+    band_index: int = Field(ge=0)
+
+    @field_validator("banding")
+    @classmethod
+    def _is_a_banding_reference(cls, value: ArtifactRef) -> ArtifactRef:
+        if value.type != "banding":
+            raise InputFreeError("a banding warning names a banding, not another artifact type")
+        return value
+
+
+class ExposureBandingWarning(_BandingWarningBase):
+    """A band whose exposure is below `min_exposure_per_band`: exact decimals (FR-10)."""
+
+    measure: Literal[BandingMeasure.EXPOSURE] = BandingMeasure.EXPOSURE
+    observed: DecimalStr
+    minimum: DecimalStr
+
+
+class ClaimCountBandingWarning(_BandingWarningBase):
+    """A band whose claim count is below `min_claims_per_band`: whole claims."""
+
+    measure: Literal[BandingMeasure.CLAIM_COUNT] = BandingMeasure.CLAIM_COUNT
+    #: Strict: pydantic's lax int takes `Decimal("3")` and `3.0`, and a count is neither.
+    observed: int = Field(ge=0, strict=True)
+    minimum: int = Field(ge=0, strict=True)
+
+
+BandingWarning = Annotated[
+    ExposureBandingWarning | ClaimCountBandingWarning, Field(discriminator="measure")
+]
+
+
 class Banding(BaseModel):
     """A continuous column mapped to ordered, exhaustive, non-overlapping bands (§4.2).
 
@@ -353,10 +413,15 @@ class Banding(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     id: UUID
-    slug: str
+    slug: Slug
     dataset_id: UUID
     version: int = Field(ge=1)
-    column: str
+    #: Exactly one of `column` and `source_expression` is set (`RL-1615` DP-S4-1; `02`
+    #: §4.2). `column` is null on a Banding cut over an `expression` Factor's result.
+    column: str | None = None
+    #: The text of the `expression` Factor's formula the boundaries were cut over, stored as
+    #: written. Resolution compares it with the Factor's `expression` as a normalised parse.
+    source_expression: str | None = Field(default=None, max_length=2000)
     method: BandingMethod
     method_params: dict[str, float] = Field(default_factory=dict)
     #: The version the boundaries and `band_stats` were derived on (FR-99). `None`
@@ -382,6 +447,12 @@ class Banding(BaseModel):
 
     @model_validator(mode="after")
     def _boundaries_and_labels_describe_the_same_bands(self) -> Banding:
+        if (self.column is None) == (self.source_expression is None):
+            raise InputFreeError(
+                "a banding is cut over exactly one of a dataset column and an expression "
+                "Factor's formula (`02` §4.2): set `column` or `source_expression`, never both "
+                "and never neither."
+            )
         if any(
             later <= earlier
             for earlier, later in zip(self.boundaries, self.boundaries[1:], strict=False)
@@ -503,7 +574,7 @@ class Grouping(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     id: UUID
-    slug: str
+    slug: Slug
     dataset_id: UUID
     version: int = Field(ge=1)
     column: str
@@ -590,7 +661,11 @@ class BandingProposal(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     dataset_version_id: UUID
-    column: str
+    #: Exactly one of `column` and `source_expression` (`02` §4.2; `RL-1615` accepted cost
+    #: (i)): the proposal is cut over a dataset column or over an `expression` Factor's
+    #: formula, which is parsed by the one parser in the `factor` profile.
+    column: str | None = None
+    source_expression: str | None = Field(default=None, max_length=2000)
     method: BandingMethod
     n_bands: int = Field(default=10, ge=1, le=200)
     #: Method-specific knobs: `min_claims_per_band` for `credibility`, and the exposure /
@@ -603,6 +678,16 @@ class BandingProposal(BaseModel):
     null_level: str | None = None
     below_range: BelowRangePolicy = BelowRangePolicy.ERROR
     above_range: AboveRangePolicy = AboveRangePolicy.ERROR
+
+    @model_validator(mode="after")
+    def _cut_over_exactly_one(self) -> BandingProposal:
+        if (self.column is None) == (self.source_expression is None):
+            raise InputFreeError(
+                "a banding proposal is cut over exactly one of a dataset column and an "
+                "expression Factor's formula (`02` §4.2): set `column` or "
+                "`source_expression`, never both and never neither."
+            )
+        return self
 
 
 class GroupingProposal(BaseModel):
@@ -1572,6 +1657,7 @@ class GlmFitResult(BaseModel):
     iterations: int = Field(ge=0)
     fit_seconds: float = Field(ge=0.0)
     coefficients: tuple[Coefficient, ...] = ()
+    banding_warnings: tuple[BandingWarning, ...] = ()
     relativities: dict[str, tuple[RelativityLevel, ...]] = Field(default_factory=dict)
     #: The scale parameter φ. Estimated for Gamma, Gaussian, inverse-Gaussian and
     #: Tweedie; fixed at 1 for Poisson and binomial, where it is not a free parameter.
@@ -1693,6 +1779,9 @@ class GbmFitResult(BaseModel):
     #: is all of them but the LightGBM-stopping-on-a-custom-metric case, and on every
     #: artifact written before 2026-08-22.
     dropped_eval_metrics: tuple[DroppedEvalMetric, ...] = ()
+    #: FR-100. One record per breached floor per band under `warn`; empty on every fit with
+    #: no violation and on every artifact written before 2026-10-17.
+    banding_warnings: tuple[BandingWarning, ...] = ()
 
     @model_validator(mode="after")
     def _the_constraint_vector_is_aligned_with_the_feature_order(self) -> GbmFitResult:
@@ -1816,6 +1905,8 @@ class EbmFitResult(BaseModel):
     rows: int = Field(default=0, ge=0)
     fit_seconds: float = Field(ge=0.0)
     library_versions: dict[str, str] = Field(default_factory=dict)
+    #: FR-100; see `GbmFitResult.banding_warnings`.
+    banding_warnings: tuple[BandingWarning, ...] = ()
 
     @model_validator(mode="after")
     def _bins_align_with_the_feature_order(self) -> EbmFitResult:

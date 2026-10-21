@@ -51,7 +51,6 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.authz import requires
@@ -59,7 +58,7 @@ from app.api.deps import Caller, RequestSessionDep, SettingsDep, job_identity
 from app.api.rating_algorithms import RatingReadDep
 from app.api.responses import problems
 from app.config import Settings
-from app.db.models import BlobRow, DeploymentRow, EnvironmentRow
+from app.db.models import BlobRow
 from app.db.session import Database, reading
 from app.errors import PlatformError
 from app.observability.logging import get_logger
@@ -71,6 +70,7 @@ from app.platform import settings as settings_service
 from app.platform import traces as traces_service
 from app.platform.blobs import BlobStore, to_ref
 from app.platform.bundle_slot import BundleSlot
+from app.platform.deployment_switch import LiveRefs, SwitchMessage
 from app.platform.safe_exception import safe_job_exc_info
 from model_schema import (
     ArtifactRef,
@@ -137,9 +137,21 @@ def _bundle_slot(request: Request) -> BundleSlot:
 DatabaseDep = Annotated[Database, Depends(_database)]
 BlobStoreDep = Annotated[BlobStore, Depends(_blob_store)]
 BundleSlotDep = Annotated[BundleSlot, Depends(_bundle_slot)]
+
+
+def _live_refs(request: Request) -> LiveRefs:
+    live: LiveRefs = request.app.state.live_refs
+    return live
+
+
+LiveRefsDep = Annotated[LiveRefs, Depends(_live_refs)]
 #: `keep_session`: `/score`'s own reads continue on the request session the check used, so a
-#: warm quote takes one pool checkout (RL-1685, PL-1454 DP-1 (a)).
-ScoreExecuteDep = Annotated[Caller, Depends(requires(Permission.SCORE_EXECUTE, keep_session=True))]
+#: warm quote takes one pool checkout (RL-1685, PL-1454 DP-1 (a)). `management_counted=False`:
+#: the scoring limit counts this route, not FR-452's management limit (`RL-1687`).
+ScoreExecuteDep = Annotated[
+    Caller,
+    Depends(requires(Permission.SCORE_EXECUTE, keep_session=True, management_counted=False)),
+]
 
 
 async def _enforce_score_rate_limit(
@@ -163,7 +175,9 @@ async def _enforce_score_rate_limit(
 #: The route declares `ScoreExecuteDep` itself, so the authorisation sweep sees its
 #: permission; the limiter reuses that one resolved dependency and adds no second check.
 ScoreRateLimitDep = Annotated[None, Depends(_enforce_score_rate_limit)]
-ScoreBatchDep = Annotated[Caller, Depends(requires(Permission.SCORE_BATCH))]
+ScoreBatchDep = Annotated[
+    Caller, Depends(requires(Permission.SCORE_BATCH, management_counted=False))
+]
 
 
 def _required_ref(ctx: QuoteContext, live_ref: ArtifactRef | None = None) -> ArtifactRef:
@@ -196,40 +210,37 @@ def _required_ref(ctx: QuoteContext, live_ref: ArtifactRef | None = None) -> Art
     return ref
 
 
-async def _serving_ref(
-    session: AsyncSession, caller: Caller, ctx: QuoteContext
+def _serving_ref(
+    live_refs: LiveRefs, caller: Caller, ctx: QuoteContext
 ) -> tuple[ArtifactRef, UUID | None]:
     """The ref to score and the Deployment that serves it, resolved together and once.
 
-    `RL-1380` (#974): the Deployment is read here, before the bundle, and the value is carried
-    to the trace write and never re-read, so a Deployment recorded while the quote is in
-    flight does not relink its trace (`03` FR-268). For a default-live quote it is the
-    caller's Environment's live Deployment (the latest, `03` §4.12); for an explicit ref it
-    is that Deployment only when it serves exactly that Rating Version (type, slug and
-    version), else `None`: a what-if quote is not pretended to be a served one. A caller with
-    no Environment (a bearer caller) has no live Deployment to resolve.
+    `live` is this process's own reference (`platform.deployment_switch.LiveRefs`), read once
+    here at request start and never re-read (FR-268, `PL-1766` D5.8, the maintainer's
+    "2026-10-18 23:03:15 BST" ruling (A)): a switch committing while the quote is in flight
+    does not relink its trace. For a default-live quote it is the caller's Environment's live
+    Deployment; for an explicit ref it is that Deployment only when it serves exactly that
+    Rating Version (type, slug and version), else `None`: a what-if quote is not pretended to be
+    a served one. A caller with no Environment (a bearer caller) has no live Deployment.
+
+    **The trade-off that ruling states:** this used to read the latest committed Deployment
+    from Postgres on every request, so a deployment converged at once. A process that is alive
+    but missed the COMMIT now serves the previous version until it restarts and loads the latest
+    committed Deployment. The deploy response and `deployment.switched` name such a process;
+    the remedy is FD-1823 (MEDIUM, WK-674, before the 12 Nov exit demo).
 
     Deliberately **not** inside `_fetch_bundle` or `_compiled_for`: the governance gate and
     both workers call those and must not change with this (`PL-1392` Acceptance 17).
     """
-    live: tuple[str, UUID] | None = None
-    if caller.environment is not None:
-        found = (
-            await session.execute(
-                select(DeploymentRow.rating_version_ref, DeploymentRow.id)
-                .join(EnvironmentRow, EnvironmentRow.id == DeploymentRow.environment_id)
-                .where(
-                    DeploymentRow.workspace_id == caller.workspace_id,
-                    EnvironmentRow.slug == caller.environment,
-                )
-                .order_by(DeploymentRow.deployed_at.desc(), DeploymentRow.id.desc())
-                .limit(1)
-            )
-        ).one_or_none()
-        if found is not None:
-            live = (found[0], found[1])
-    ref = _required_ref(ctx, ArtifactRef.parse(live[0]) if live is not None else None)
-    served_by = live[1] if live is not None and live[0] == str(ref) else None
+    entry = (
+        live_refs.get(caller.workspace_id, caller.environment)
+        if caller.environment is not None
+        else None
+    )
+    ref = _required_ref(ctx, ArtifactRef.parse(entry.rating_version_ref) if entry else None)
+    served_by = (
+        entry.deployment_id if entry is not None and entry.rating_version_ref == str(ref) else None
+    )
     return ref, served_by
 
 
@@ -316,6 +327,29 @@ async def _fetch_bundle(
     return compiled
 
 
+async def hydrate_for_switch(
+    database: Database, blob_store: BlobStore, slot: BundleSlot, message: SwitchMessage
+) -> None:
+    """PREPARE's hydration (`PL-1766` D5.9): load the bundle a Deployment names into this
+    process's slot, and refuse (so the process does not acknowledge) when what was loaded is
+    not the bundle the Deployment recorded."""
+    compiled = await _fetch_bundle(
+        database,
+        blob_store,
+        slot,
+        workspace_id=message.workspace_id,
+        ref=ArtifactRef.parse(message.rating_version_ref),
+    )
+    if f"sha256:{compiled.content_hash.removeprefix('sha256:')}" != message.bundle_hash:
+        raise PlatformError(
+            "BUNDLE_COMPILE_FAILED",
+            "The bundle does not match the Deployment",
+            409,
+            f"{message.rating_version_ref} hydrated to {compiled.content_hash}, but the "
+            f"Deployment records {message.bundle_hash}.",
+        )
+
+
 async def _compiled_for(
     source: Database | AsyncSession,
     blob_store: BlobStore,
@@ -338,9 +372,7 @@ async def _compiled_for(
     way: serving one would not be degradation, it would be invention.
     """
     try:
-        return await _fetch_bundle(
-            source, blob_store, slot, workspace_id=workspace_id, ref=ref
-        )
+        return await _fetch_bundle(source, blob_store, slot, workspace_id=workspace_id, ref=ref)
     except PlatformError:
         raise
     except Exception:
@@ -376,9 +408,7 @@ def _as_platform_error(exc: ValueError) -> PlatformError | None:
         )
     if not separator or code not in _PER_QUOTE_CODES:
         return None
-    return PlatformError(
-        code, code.replace("_", " ").title(), _PER_QUOTE_STATUS, detail or None
-    )
+    return PlatformError(code, code.replace("_", " ").title(), _PER_QUOTE_STATUS, detail or None)
 
 
 @router.post(
@@ -401,6 +431,7 @@ async def score(
     database: DatabaseDep,
     blob_store: BlobStoreDep,
     slot: BundleSlotDep,
+    live_refs: LiveRefsDep,
     settings: SettingsDep,
 ) -> Response:
     """Score one quote (FR-250/251).
@@ -413,7 +444,7 @@ async def score(
     A decline is **not** an error: `build_scoring_result` sets `outcome = "declined"` with a
     populated ladder, and FR-256 makes that a 200.
     """
-    ref, deployment_id = await _serving_ref(session, caller, ctx)
+    ref, deployment_id = _serving_ref(live_refs, caller, ctx)
     compiled = await _compiled_for(
         session, blob_store, slot, workspace_id=caller.workspace_id, ref=ref
     )
@@ -470,7 +501,9 @@ def _naming_side(problem: PlatformError, side: str) -> PlatformError:
     "/score/compare",
     summary="Score one Quote Context against two Rating Versions, with a step-level diff",
     status_code=200,
-    responses={**problems(401, 403, 404, 409, 422, 500), 200: {"model": ScoreComparison}},
+    # 429: `RatingReadDep` is `requires(RATING_READ)`, which counts against the management limit
+    # (FR-452); `score.router` is not included through `app.main`'s `counted()`, so it says so here.
+    responses={**problems(401, 403, 404, 409, 422, 429, 500), 200: {"model": ScoreComparison}},
 )
 async def score_compare(
     body: ScoreCompareRequest,
@@ -495,7 +528,9 @@ async def score_compare(
             )
         except PlatformError as exc:
             raise _naming_side(exc, side) from exc
-        algorithms.append(compiled.algorithm)
+        # The algorithm that is evaluated for this purpose (RL-1628 condition 1), which the
+        # trace's step ids and the diff are read against.
+        algorithms.append(compiled.evaluation_for(body.context.purpose).algorithm)
         ctx = body.context.model_copy(
             update={"options": QuoteContextOptions(trace=True, rating_version_ref=ref)}
         )

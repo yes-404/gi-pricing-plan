@@ -2,7 +2,7 @@
 id: RL-1242
 family: ruling
 title: FR-218 gains an interim rule — until FR-217's inlining is built, every MTA and cancellation quote is refused
-status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
+status: retired                # active → superseded | retired (§1.2a) — a ruling opens active
 created: 2026-09-29
 owner: decision-maker
 tree: ac8ab519c8e46141e81cb5ca6f48da9afaa35075

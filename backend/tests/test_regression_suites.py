@@ -330,7 +330,10 @@ def _algorithm(input_field: dict[str, Any]) -> dict[str, Any]:
     ({"type": "int", "min": 5, "max": 9}, {"lower": "3", "upper": "4"}),  # empty
     ({"type": "decimal", "min": "0.004", "max": "0.006"}, {}),            # no two-place value
     ({"type": "string"}, {}),                                             # not orderable
-], ids=["lone-bound", "outside-contract", "empty", "no-two-place", "not-orderable"])
+    ({"type": "enum", "domain": ["a", "b"]}, {}),                         # an unordered enum
+    ({"type": "enum", "domain": ["a", "b"], "ordered": True}, {"lower": "1"}),  # bound on levels
+], ids=["lone-bound", "outside-contract", "empty", "no-two-place", "not-orderable",
+        "unordered-enum", "ordered-enum-with-a-bound"])
 async def test_an_invalid_monotone_bound_is_a_422_at_declaration_and_no_job_exists(
     client: TestClient, database: Database, workspace_id: UUID, analyst: Principal,
     field: dict[str, Any], check: dict[str, Any],

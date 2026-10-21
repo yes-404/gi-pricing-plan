@@ -14,7 +14,8 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
+from sqlalchemy import select
 
 from app.api import (
     approvals,
@@ -46,15 +47,25 @@ from app.api import (
     validation,
 )
 from app.api import settings as settings_api
-from app.api.responses import without_fastapi_validation_error
+from app.api.responses import problems, without_fastapi_validation_error
 from app.auth.oidc import OidcVerifier
 from app.config import Settings, load_settings
+from app.db.models import EnvironmentRow
 from app.db.session import Database, database_probe
 from app.errors import install_error_handlers
 from app.observability.logging import configure_logging, get_logger
 from app.observability.middleware import TraceMiddleware
 from app.platform.blobs import BlobStore, blob_probe
 from app.platform.bundle_slot import BundleSlot
+from app.platform.deployment_switch import (
+    LiveRefs,
+    RedisSwitch,
+    SwitchMember,
+    SwitchMessage,
+    SwitchSubscription,
+    build_switch_client,
+    process_id,
+)
 from app.platform.rate_limit import RateLimiter, build_redis_client
 from app.platform.settings import validate_setting_overrides
 from app.platform.tenancy import require_tenant_binding
@@ -109,6 +120,40 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # so an unavailable Redis does not stop startup; the limiter fails open.
         redis_client = build_redis_client(settings.redis_url.get_secret_value())
         running.state.rate_limiter = RateLimiter(redis_client)
+        # FR-268 (PL-1766 D5.8, the maintainer's 2026-10-18 23:03:15 BST ruling (A)): this
+        # process answers the deployment switch and holds its own `live` reference. Subscribe
+        # first, then load: the DB is ahead of or equal to any COMMIT (DB first), so loading
+        # last can only catch up, never lose a deployment that committed in between. A fresh
+        # process therefore serves the latest committed Deployment of every Environment.
+        # Unlike the rate limiter this does not fail open: a process that cannot subscribe
+        # would silently miss every switch, so it does not start.
+        switch_client = build_switch_client(settings.redis_url.get_secret_value())
+        switch = RedisSwitch(switch_client, f"{settings.environment.value}:{settings.tenant_id}")
+        # One channel per platform Environment (`dev`, `uat`, `prod`, ...). An Environment
+        # created after this process started is not subscribed until it restarts: a deploy into
+        # it names no such process. That gap is part of FD-1823 (MEDIUM, WK-674).
+        async with database.session() as session:
+            environments = list(
+                (
+                    await session.execute(
+                        select(EnvironmentRow.slug).where(EnvironmentRow.retired_at.is_(None))
+                    )
+                ).scalars()
+            )
+
+        async def hydrate(message: SwitchMessage) -> None:
+            await score.hydrate_for_switch(database, blob_store, running.state.bundle_slot, message)
+
+        subscription = SwitchSubscription(
+            switch,
+            switch_client,
+            SwitchMember(process_id(), running.state.live_refs, hydrate),
+            environments,
+        )
+        await subscription.start()
+        async with database.session() as session:
+            await running.state.live_refs.load_latest(session)
+        running.state.switch = switch
         # RL-1685 (PL-1454 DP-4): everything built above lives for the process. Moving it
         # into the permanent generation takes it out of every later gen2 collection, whose
         # pause (about 200 to 300 ms on the Task 0 record) was the request-path stall.
@@ -116,6 +161,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         gc.freeze()
         yield
         health.clear_probes()
+        await subscription.stop()
+        await switch_client.aclose()
         await redis_client.aclose()
         await database.dispose()
 
@@ -145,34 +192,43 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(TraceMiddleware)
     install_error_handlers(app)
 
+    # FR-452 / RL-1687: an operation declares `429 RATE_LIMITED` iff it can return one (the
+    # lead's ruling "2026-10-16 10:30:18 BST" as amended). Every router the management limiter
+    # counts is included through this one function and declares it once, here, not per route.
+    # `score.router` is the one exception: it mixes the scoring limit (`POST /score`), the
+    # management limit (`POST /score/compare`) and no limit (`POST /score/batch`), so it
+    # declares per route.
+    def counted(router: APIRouter) -> None:
+        app.include_router(router, prefix=API_PREFIX, responses=problems(429))
+
     app.include_router(health.router)
-    app.include_router(jobs.router, prefix=API_PREFIX)
-    app.include_router(service_accounts.router, prefix=API_PREFIX)
-    app.include_router(environments.router, prefix=API_PREFIX)
-    app.include_router(environment_settings.router, prefix=API_PREFIX)
-    app.include_router(deployments.router, prefix=API_PREFIX)
-    app.include_router(settings_api.router, prefix=API_PREFIX)
-    app.include_router(me.router, prefix=API_PREFIX)
-    app.include_router(audit.router, prefix=API_PREFIX)
-    app.include_router(approvals.router, prefix=API_PREFIX)
+    counted(jobs.router)
+    counted(service_accounts.router)
+    counted(environments.router)
+    counted(environment_settings.router)
+    counted(deployments.router)
+    counted(settings_api.router)
+    counted(me.router)
+    counted(audit.router)
+    counted(approvals.router)
     # `01` — Data. Order matters only for readability; FastAPI matches on the full path.
-    app.include_router(blobs.router, prefix=API_PREFIX)
-    app.include_router(demo.router, prefix=API_PREFIX)
-    app.include_router(models.router, prefix=API_PREFIX)
-    app.include_router(rating_algorithms.router, prefix=API_PREFIX)
-    app.include_router(sub_graphs.router, prefix=API_PREFIX)
-    app.include_router(rate_tables.router, prefix=API_PREFIX)
-    app.include_router(regression_suites.router, prefix=API_PREFIX)
-    app.include_router(dislocation_runs.router, prefix=API_PREFIX)
-    app.include_router(peril_structures.router, prefix=API_PREFIX)
-    app.include_router(custom_objectives.router, prefix=API_PREFIX)
-    app.include_router(custom_metrics.router, prefix=API_PREFIX)
-    app.include_router(datasets.router, prefix=API_PREFIX)
-    app.include_router(dataset_versions.router, prefix=API_PREFIX)
-    app.include_router(validation.router, prefix=API_PREFIX)
-    app.include_router(reference_tables.router, prefix=API_PREFIX)
+    counted(blobs.router)
+    counted(demo.router)
+    counted(models.router)
+    counted(rating_algorithms.router)
+    counted(sub_graphs.router)
+    counted(rate_tables.router)
+    counted(regression_suites.router)
+    counted(dislocation_runs.router)
+    counted(peril_structures.router)
+    counted(custom_objectives.router)
+    counted(custom_metrics.router)
+    counted(datasets.router)
+    counted(dataset_versions.router)
+    counted(validation.router)
+    counted(reference_tables.router)
     app.include_router(score.router, prefix=API_PREFIX)
-    app.include_router(traces.router, prefix=API_PREFIX)
+    counted(traces.router)
     app.add_api_route(
         "/version",
         health.version_route(settings),
@@ -202,6 +258,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # lifetime `blob_store` has. Deliberately *not* per request: a slot rebuilt per call
     # holds nothing, which is the state option (a) was rejected for (RL-882).
     app.state.bundle_slot = BundleSlot(capacity=settings.bundle_slot_capacity)
+    # This process's `live` reference (FR-268). Empty until the lifespan loads the latest
+    # committed Deployments; written afterwards only by a COMMIT this process acknowledged.
+    app.state.live_refs = LiveRefs()
 
     _log.info(
         "application configured",

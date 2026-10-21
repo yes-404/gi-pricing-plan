@@ -10,6 +10,7 @@ without uncertainty is not an estimate.
 from __future__ import annotations
 
 import math
+from decimal import Decimal
 from uuid import uuid4
 
 import numpy as np
@@ -17,24 +18,31 @@ import polars as pl
 import pytest
 
 from model_schema import (
+    Banding,
+    BandingMethod,
+    BandingMinimums,
     Coefficient,
     Factor,
     FactorIntent,
     FactorType,
+    GlmCvSpec,
     GlmSpec,
+    LossTreatment,
     MonotonicDirection,
     OffsetSpec,
+    TweediePowerSpec,
     WeightSpec,
 )
 from model_schema.input_free import InputFreeError
-from pricing_core.modelling import GlmFitError, fit_glm
+from pricing_core.modelling import BandingError, GlmFitError, fit_glm
 from pricing_core.modelling.factors import FactorResolutionError, resolve_factors
 
 
 def _factor(slug: str, column: str, **over: object) -> Factor:
+    fields: dict[str, object] = {"type": FactorType.IDENTITY, **over}
     return Factor(
         id=uuid4(), slug=slug, dataset_id=uuid4(), version=1,
-        type=FactorType.IDENTITY, source_columns=(column,), **over,
+        source_columns=(column,), **fields,
     )
 
 
@@ -267,25 +275,17 @@ def test_the_superseded_offset_arm_stays_in_the_closed_set() -> None:
 
 
 @pytest.mark.req("FR-208")
-def test_an_expression_factor_can_be_declared_and_can_never_be_resolved() -> None:
-    """FR-208 states this verdict rather than leaving it to be discovered.
-
-    `FactorType.EXPRESSION` is a live member of FR-83's closed set and `Factor` carries
-    no field to hold the expression, so the type is selectable and the payload cannot be
-    supplied. OQ-582 (decided 2026-08-17) called that contained rather than corrected:
-    the refusal is at resolution, which is the boundary where an unresolved factor would
-    otherwise become a fit nobody could tell from a correct one. The field and its validator
-    arm are Phase 1b's, with the rest of the expression work.
-    """
-    factor = Factor(
-        id=uuid4(), slug="age_over_ncd", dataset_id=uuid4(), version=1,
-        type=FactorType.EXPRESSION, source_columns=("driv_age",),
-    )
-    assert not hasattr(factor, "expression"), (
-        "an `expression` field would make this factor resolvable and FR-208 wrong"
-    )
-    with pytest.raises(FactorResolutionError, match="'expression'"):
-        resolve_factors(_frequency_data(100), [factor])
+def test_an_expression_factor_with_no_expression_is_refused_by_the_validator() -> None:
+    """FR-208 as amended 2026-10-16 (`RL-1615`, `RL-1700`, WK-690 Slice 4): the `expression`
+    arm resolves, because `Factor` carries `expression`. The verdict that used to be stated
+    here, an expression Factor that is selectable and can never be resolved, is gone; its
+    replacement is that an `expression` Factor naming no formula cannot be built at all, so
+    an unresolvable one never reaches resolution."""
+    with pytest.raises(ValueError, match="names no expression"):
+        Factor(
+            id=uuid4(), slug="age-over-ncd", dataset_id=uuid4(), version=1,
+            type=FactorType.EXPRESSION, source_columns=("driv_age",),
+        )
 
 
 @pytest.mark.req("FR-89")
@@ -903,3 +903,184 @@ def test_a_zero_exposure_offset_is_still_refused_it_is_not_a_weight() -> None:
     with pytest.raises(GlmFitError) as refused:
         fit_glm(data, _spec(), [_factor("area", "area")])
     assert refused.value.code == "OFFSET_REQUIRED_FOR_FREQUENCY"
+
+
+# --------------------------------------------------------------------------------------
+# FR-127 (SL-8031, red first) — a capped GlmSpec fits capped
+# --------------------------------------------------------------------------------------
+
+CAP_MINOR = 300
+
+
+def _capped() -> LossTreatment:
+    return LossTreatment(kind="capped", cap_minor=CAP_MINOR, restoration_loading=1.02)
+
+
+def _severity_in_pence() -> pl.DataFrame:
+    """`scale=100` puts the mean near 270-445, so a cap of 300 binds on well over 10 % of rows."""
+    data = _gamma_severity(2_000, scale=100.0)
+    assert (data["severity"] > CAP_MINOR).mean() > 0.10
+    return data
+
+
+def _pure_premium_in_pence(n: int = 20_000, seed: int = 20261016) -> pl.DataFrame:
+    """A compound Poisson-Gamma book at power 1.5 (as `test_tweedie_power._tweedie_data`),
+    phi = 20 so that mu is 270 or 448 and about a fifth of the rows are zeros: the zero mass
+    is what gives the profile an interior maximum (the comment above `TWEEDIE_RNG` in
+    `backend/tests/test_model_jobs.py` records the probes). Column `severity` so that the
+    R1 spec's `response_column` is shared by all three arms."""
+    rng = np.random.default_rng(seed)
+    urban = rng.integers(0, 2, n)
+    mu = np.exp(1.0 + 0.5 * urban) * 100.0
+    phi, power = 20.0, 1.5
+    counts = rng.poisson(mu ** (2.0 - power) / ((2.0 - power) * phi))
+    y = rng.gamma(shape=counts * (2.0 - power) / (power - 1.0),
+                  scale=(power - 1.0) * phi * mu ** (power - 1.0))
+    data = pl.DataFrame({
+        "area": ["urban" if u else "rural" for u in urban],
+        "claim_count": np.ones(n),
+        "severity": y,
+        "exposure_years": np.ones(n),
+    })
+    assert (data["severity"] > CAP_MINOR).mean() > 0.10
+    return data
+
+
+def _coefficients(fit: object) -> np.ndarray:
+    return np.array([c.estimate for c in fit.result.coefficients])  # type: ignore[attr-defined]
+
+
+@pytest.mark.req("FR-127")
+@pytest.mark.parametrize("arm", ["fixed", "cv", "tweedie"])
+def test_a_capped_glm_spec_is_fitted_on_the_capped_response(arm: str) -> None:
+    """R1/R2: every consumer of the response inside `fit_glm` sees the cap.
+
+    Asserted as an equivalence, as `test_gbm.py` asserts FR-127: a `capped` spec fitted on
+    raw data equals a `none` spec fitted on data capped by hand. On main the treated fit
+    equals the UNCAPPED one, because `fit_glm` never reads `loss_treatment`.
+    """
+    over: dict[str, object] = {"family": "gamma", "response_column": "severity",
+                               "offset": OffsetSpec(kind="none")}
+    if arm == "cv":
+        over.update(select_by="cv", cv=GlmCvSpec(method="random", folds=4,
+                                                 alphas=(0.0, 0.01, 0.1, 1.0)))
+    if arm == "tweedie":
+        # NOT the Gamma frame: its true power is 2, so any grid inside (1, 2) is maximised at
+        # its last point and the first `fit_glm` raises GLM_TWEEDIE_POWER_GRID_EDGE, a red
+        # for the wrong cause (`test_tweedie_power.py`, the edge test). The frame below has
+        # a zero mass and an interior power, and the grid brackets it widely.
+        over.update(
+            family="tweedie",
+            tweedie=TweediePowerSpec(p_grid=(1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9)),
+        )
+    data = _pure_premium_in_pence() if arm == "tweedie" else _severity_in_pence()
+    factors = [_factor("area", "area")]
+
+    treated = fit_glm(data, _spec(loss_treatment=_capped(), **over), factors)
+    by_hand = fit_glm(
+        data.with_columns(pl.col("severity").clip(upper_bound=float(CAP_MINOR))),
+        _spec(**over), factors,
+    )
+    uncapped = fit_glm(data, _spec(**over), factors)
+
+    assert np.allclose(_coefficients(treated), _coefficients(by_hand), rtol=0, atol=1e-10)
+    assert not np.allclose(_coefficients(treated), _coefficients(uncapped), rtol=0, atol=1e-6)
+    if arm == "cv":
+        assert treated.cv.selected_alpha == by_hand.cv.selected_alpha  # type: ignore[union-attr]
+    if arm == "tweedie":
+        assert treated.result.tweedie.estimated_power == by_hand.result.tweedie.estimated_power  # type: ignore[union-attr]
+
+
+@pytest.mark.req("FR-127")
+@pytest.mark.parametrize("kind", ["spliced", "excess"])
+def test_a_glm_loss_treatment_this_slice_does_not_implement_is_refused_by_name(kind: str) -> None:
+    """R3: `spliced` and `excess` are declared and built by nothing, so the GLM refuses
+    them with the kind in the message instead of fitting uncapped under a spec that says
+    otherwise (`fit_gbm` already does this)."""
+    spec = _spec(family="gamma", response_column="severity", offset=OffsetSpec(kind="none"),
+                 loss_treatment=LossTreatment(kind=kind, cap_minor=CAP_MINOR))
+    with pytest.raises(GlmFitError, match=kind) as refused:
+        fit_glm(_severity_in_pence(), spec, [_factor("area", "area")])
+    assert refused.value.code == "LOSS_TREATMENT_UNIMPLEMENTED"
+
+
+# --------------------------------------------------------------------------------------
+# FR-100 (SL-8031, red first) — the banding check runs at fit
+# --------------------------------------------------------------------------------------
+
+AGE_BANDING = Banding(
+    id=uuid4(), slug="age-band", dataset_id=uuid4(), version=1,
+    column="driv_age", method=BandingMethod.MANUAL,
+    boundaries=(17.0, 30.0, 50.0, 80.0), labels=("17-29", "30-49", "50-79"),
+)
+
+
+def _age_band_factor() -> Factor:
+    return _factor("age_band", "driv_age", type=FactorType.BANDING, banding_id=AGE_BANDING.id)
+
+
+def _fit_banded(data: pl.DataFrame, banding: Banding, spec: GlmSpec | None = None) -> object:
+    return fit_glm(data, spec or _spec(), [_age_band_factor()], bandings={banding.id: banding})
+
+
+@pytest.mark.req("FR-100")
+def test_a_banding_whose_data_moved_is_refused_at_fit() -> None:
+    """R5: the middle band is reached by no row of the fitted frame. FR-100: empty bands
+    always fail. On main the fit returns a coefficient for a level estimated from nothing."""
+    moved = _frequency_data(4_000).filter((pl.col("driv_age") < 30) | (pl.col("driv_age") >= 50))
+    with pytest.raises(BandingError) as refused:
+        _fit_banded(moved, AGE_BANDING)
+    assert refused.value.code == "BAND_EMPTY"
+
+
+@pytest.mark.req("FR-100")
+def test_a_band_reached_only_by_weight_zero_rows_is_empty() -> None:
+    """Guard G-W: FR-111's weight-0 exclusion runs BEFORE the banding check (DP-B1), so a
+    band that only declared-weight-0 rows reach is empty. Red on main with the rest of R5."""
+    data = _severity_book(None, n=3_000).with_columns(
+        pl.when((pl.col("driv_age") >= 30) & (pl.col("driv_age") < 50))
+        .then(0.0).otherwise(pl.col("claim_count")).alias("claim_count"),
+        pl.col("cost").fill_null(1.0),
+    )
+    with pytest.raises(BandingError) as refused:
+        _fit_banded(data, AGE_BANDING, _severity_spec())
+    assert refused.value.code == "BAND_EMPTY"
+
+
+@pytest.mark.req("FR-100")
+def test_a_thin_band_under_fail_refuses_the_fit() -> None:
+    """R6: `minimums.on_violation == "fail"` and every band below the claims floor."""
+    strict = AGE_BANDING.model_copy(update={"minimums": BandingMinimums(
+        min_claims_per_band=1_000_000, on_violation="fail")})
+    with pytest.raises(BandingError) as refused:
+        _fit_banded(_frequency_data(4_000), strict)
+    assert refused.value.code == "BAND_BELOW_MIN_EXPOSURE"
+
+
+@pytest.mark.req("FR-100")
+@pytest.mark.parametrize(
+    ("measure", "minimums", "value_type", "floor"),
+    [
+        ("claim_count", BandingMinimums(min_claims_per_band=1_000_000), int, 1_000_000),
+        ("exposure", BandingMinimums(min_exposure_per_band=Decimal(1_000_000)),
+         Decimal, Decimal(1_000_000)),
+    ],
+)
+def test_a_thin_band_under_warn_fits_and_the_fit_result_records_a_typed_warning(
+    measure: str, minimums: BandingMinimums, value_type: type, floor: object
+) -> None:
+    """R7: warn is FR-100's default; the fit succeeds and the warning is data, not prose.
+
+    On main the first line raises `AttributeError`: the fit result has no such field.
+    """
+    banding = AGE_BANDING.model_copy(update={"minimums": minimums})
+    fit = _fit_banded(_frequency_data(4_000), banding)
+    warnings = fit.result.banding_warnings  # type: ignore[attr-defined]
+    assert len(warnings) == len(banding.labels)
+    for index, warning in enumerate(warnings):
+        assert str(warning.banding) == f"banding:{banding.slug}@{banding.version}"
+        assert (warning.band_label, warning.band_index) == (banding.labels[index], index)
+        assert warning.measure == measure
+        assert type(warning.observed) is value_type
+        assert warning.minimum == floor
+        assert type(warning.minimum) is value_type

@@ -57,7 +57,8 @@ class GbmWorld:
                  boundaries: tuple[float, ...], lo: int, hi: int) -> None:
         self.column = column
         self.banding = Banding(
-            id=uuid4(), slug=f"{column}-bands", dataset_id=DATASET, version=1, column=column,
+            id=uuid4(), slug=f"{column.replace('_', '-')}-bands", dataset_id=DATASET, version=1,
+            column=column,
             method=BandingMethod.MANUAL, boundaries=boundaries, labels=labels,
         )
         self.factor = Factor(

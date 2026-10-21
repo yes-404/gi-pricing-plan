@@ -176,6 +176,12 @@ GENERATED_SHAPES: dict[str, str] = {
     "environment-update": "EnvironmentUpdate",
     "deployment": "Deployment",
     "deployment-create": "DeploymentCreate",
+    # Added 2026-10-18 (WK-674 Slice 5, PL-1766 D5.6, the maintainer's (by delegation) rulings of
+    # 22:59:56 and 23:03:15 BST): the 201 of `POST .../deployments` (the Deployment and the
+    # outcome of its switch) and the `after` of `deployment.switched`.
+    "deployment-created": "DeploymentCreated",
+    "switch-report": "SwitchReport",
+    "rollback-create": "RollbackCreate",
     "deployment-request": "DeploymentRequest",
     "deployment-request-create": "DeploymentRequestCreate",
     # Added 2026-10-04 (WK-674 Slice 2, PL-1392 Task 5, Acceptance 16): the body of
@@ -189,6 +195,11 @@ GENERATED_SHAPES: dict[str, str] = {
     # Added 2026-10-05 (WK-1178, the FD-1421 fix, RL-1428): the body of `POST /rating-versions`,
     # moved out of the API module. First written form, no hand-authored counterpart.
     "rating-version-create": "RatingVersionCreate",
+    # Added 2026-10-16 (WK-1178 SL-1722, DP-1722-WIRE (a), the maintainer (by delegation) 10:16:17
+    # BST): the request and response of `POST /blobs/upload-url`, moved out of the API module.
+    # First written form, no hand-authored counterpart; the response gains `id`.
+    "upload-url-request": "UploadUrlRequest",
+    "upload-url-response": "UploadUrlResponse",
 }
 
 

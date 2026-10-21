@@ -471,3 +471,19 @@ async def test_a_coded_error_does_not_carry_the_exception_it_replaced() -> None:
     assert engine_caught.value.__suppress_context__ is True
     assert _SENTINEL not in str(engine_caught.value)
 
+
+@pytest.mark.req("NFR-499", "NFR-483")
+def test_an_expression_error_keeps_its_text_and_its_position() -> None:
+    """`ExpressionError` is a grammar refusal of the author's own expression text: its message
+    and its `ast` position are kept (RL-1700 (b)); an unpositioned one keeps the message."""
+    import ast
+
+    from pricing_core.data.expressions import ExpressionError
+
+    node = ast.parse("a + b", mode="eval").body
+    positioned = ExpressionError("'+' is refused", node=node)
+    assert safe_error_detail(positioned) == "line 1, column 1: '+' is refused"
+    assert safe_error_text(positioned) == "ExpressionError: line 1, column 1: '+' is refused"
+    assert safe_error_detail(ExpressionError("no position")) == "no position"
+    # A library error with the same message shape is still reduced to its type.
+    assert safe_error_detail(ValueError("'+' is refused")) == ""

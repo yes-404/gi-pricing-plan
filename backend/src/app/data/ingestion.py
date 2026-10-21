@@ -160,6 +160,8 @@ async def ingest_upload(
 
     frame = frame.rename(mapping.rename_map)
     rows_read = frame.height
+    recipe_rejected: pl.DataFrame | None = None
+    step_counts: list[dict[str, Any]] = []
 
     # Before the reject partition: a recipe that parses a date or fills a null changes
     # which rows are rejectable, and running it afterwards would quarantine rows the
@@ -168,7 +170,7 @@ async def ingest_upload(
         from pricing_core.data.prepare import RecipeError, apply_recipe
 
         try:
-            frame = apply_recipe({table_name: frame}, list(recipe)).tables[table_name]
+            prepared = apply_recipe({table_name: frame}, list(recipe))
         except RecipeError as exc:
             raise PlatformError(
                 "VALIDATION_FAILED",
@@ -177,6 +179,17 @@ async def ingest_upload(
                 f"{exc} No version was created — a partially prepared version is one "
                 "whose parquet does not match what its recipe says was done (FR-41).",
             ) from exc
+        frame = prepared.tables[table_name]
+        recipe_rejected = prepared.rejected
+        step_counts = [
+            {
+                "name": entry["step"],
+                "rows_in": entry["rows_before"],
+                "rows_out": entry["rows_after"],
+                "rows_rejected": entry["rows_rejected"],
+            }
+            for entry in prepared.stats["steps"]
+        ]
 
     await _refuse_direct_identifiers(
         session, workspace_id=workspace_id, dataset_id=dataset_id,
@@ -184,6 +197,7 @@ async def ingest_upload(
     )
 
     partition = partition_rejects(frame, required_non_null=required_non_null)
+    rejected = _quarantine(recipe_rejected, partition.rejected)
     schema = infer_schema(partition.clean)
 
     version = await datasets.new_version(
@@ -201,11 +215,11 @@ async def ingest_upload(
             source_names=mapping.source_names,
         )
     ]
-    if partition.rejected.height:
+    if rejected.height:
         # FR-32: the quarantine is a table on the version, not a log line.
         tables.append(
             await _store_table(
-                blob_store, session, partition.rejected, name="_rejected", schema=None,
+                blob_store, session, rejected, name="_rejected", schema=None,
                 source_names={},
             )
         )
@@ -243,8 +257,9 @@ async def ingest_upload(
         source_fingerprint=fingerprint,
         rows_read=rows_read,
         rows_written=partition.clean.height,
-        rows_rejected=partition.rejected.height,
-        reject_sample=_reject_sample(partition.rejected),
+        rows_rejected=rejected.height,
+        step_counts=step_counts,
+        reject_sample=_reject_sample(rejected),
         bytes_read=len(data),
         duration_ms=int((time.perf_counter() - started) * 1000),
         library_versions=library_versions(),
@@ -264,7 +279,7 @@ async def ingest_upload(
         after={
             "rows_read": rows_read,
             "rows_written": partition.clean.height,
-            "rows_rejected": partition.rejected.height,
+            "rows_rejected": rejected.height,
             "source_fingerprint": fingerprint,
         },
     )
@@ -343,6 +358,18 @@ def _totals(frame: pl.DataFrame) -> dict[str, Any] | None:
         if column in frame.columns:
             totals[column] = int(frame.get_column(column).cast(pl.Int64).sum() or 0)
     return totals
+
+
+def _quarantine(recipe_rejected: pl.DataFrame | None, required: pl.DataFrame) -> pl.DataFrame:
+    """The version's `_rejected` table: the recipe's rows, then the required-column rows.
+
+    `_rejected` is a text table (`01` §4.2): the recipe's rows are the source's own text, and
+    the required-column rows are cast to match, so the two concatenate by column name.
+    """
+    parts = [required.cast(dict.fromkeys(required.columns, pl.String))]
+    if recipe_rejected is not None:
+        parts.insert(0, recipe_rejected)
+    return pl.concat(parts, how="diagonal")
 
 
 def _reject_sample(rejected: pl.DataFrame) -> list[dict[str, Any]]:
