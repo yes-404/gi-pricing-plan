@@ -601,3 +601,12 @@ Taken by a small script on the VM around each invocation, written to `~/logs/t4/
 ### P8. Data
 
 Public freMTPL2 and the harness's own synthetic fixtures only. No real policy, claims or exposure data and no secrets are on the VM; the clone used no token.
+
+### Addendum to the Task 4 protocol, 2026-10-21 15:16 BST — reference N fixed, per-invocation `free -m`
+
+Appended after the protocol's push at `4a83ce1f544dc45388f442e0f51c5c17919103a0`; nothing above it is edited. Authority: the maintainer's entry "2026-10-21 15:15:40 BST — Maintainer: RULED on the 15:12:58 ASK (SL-1260, SL-1554) and the nfr-bench-1 protocol ASK", item 3 (`~/gi-pricing-plan.local/channel/to-lead.md`).
+
+1. **N = 4, option (a), is the reference N on nfr-bench-1.** The host's `nproc` is **8** (read over ssh at 15:16:09 BST). The split is **4 vCPU dedicated to the 4 uvicorn workers, and 4 vCPU for the load generator, postgres, redis and minio**. `RL-1685` DP-3 defines a replica as one worker "per dedicated vCPU"; N = 8 would put the workers in competition with the client and the stores. P3's `--workers 4` therefore stands as ruled, and P3's request to confirm N is answered.
+2. **This fixes RL-1685's reference N for G4's dedicated host.** That fixing is a reading of `RL-1685`, so the dated line on NFR-489 and NFR-454 goes in the next records batch, **not on this branch**; this branch edits no spec.
+3. **N is printed in the header of every output** (`RL-1685`'s condition): the harness header prints `replica: N = 4` (`scripts/bench-rating.py`, the header line of `main`, delivered by Task 1 Step 3 and tested by `backend/tests/test_bench_rating_header.py`). Each `.rec` file also carries N, and the readings section checks the header of every one of the 12 outputs for it.
+4. **The quiet threshold is accepted as written** (P6: load1 < 1.0 before each invocation, wait up to 10 minutes, `pgrep -c pytest` = 0, `ps` top-5 limited to the harness, uvicorn, the stores and kernel threads), with one addition: **P5 also records `load1` and `free -m` for each invocation, before and after**, in its `.rec` file and in the run log.
