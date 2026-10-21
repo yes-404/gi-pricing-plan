@@ -111,6 +111,9 @@ describe("AttributionWaterfall", () => {
     const table = screen.getByRole("table", { name: /attribution/i });
     expect(cellUnder(table, /c2/, "Shapley change")).toHaveTextContent("-2.00");
     expect(cellUnder(table, /c2/, "Cumulative")).toHaveTextContent("4.00");
+    // direction is stated in words, not left to bar colour or a minus sign (WCAG 1.4.1)
+    expect(cellUnder(table, /c1/, "Direction")).toHaveTextContent("Increase");
+    expect(cellUnder(table, /c2/, "Direction")).toHaveTextContent("Decrease");
   });
 
   it("FR-266: under order_dependent the isolated amount is shown and the bound is stated", () => {

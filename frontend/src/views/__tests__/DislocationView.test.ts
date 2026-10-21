@@ -77,7 +77,7 @@ describe("DislocationView", () => {
       new ProblemError({ type: "x", title: "Not found", status: 404, code: "NOT_FOUND", detail: "No such run.", errors: [] }),
     );
     render(DislocationView, { props: { slug: "motor-gb", version: "27", run: "nope" } });
-    expect(await screen.findByRole("alert")).toHaveTextContent("No such run.");
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("No such run."));
   });
 
   it("FR-263: a refused /movers read still shows the rest of the run", async () => {

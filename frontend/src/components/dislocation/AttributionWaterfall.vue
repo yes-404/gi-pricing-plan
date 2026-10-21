@@ -54,6 +54,8 @@ const valueLabel = computed(() =>
 const columns = computed<readonly Column<Step>[]>(() => [
   { key: "group", label: "Change group", value: (row) => row.group },
   { key: "value", label: valueLabel.value, value: (row) => formatMinor(row.value) },
+  // Direction in words, so it never rests on bar colour or on a bare minus sign (WCAG 1.4.1).
+  { key: "direction", label: "Direction", value: (row) => (row.value < 0 ? "Decrease" : "Increase") },
   { key: "cumulative", label: "Cumulative", value: (row) => formatMinor(row.cumulative) },
   { key: "mean", label: "Mean change", value: (row) => formatPct(row.meanPct) },
 ]);
@@ -76,12 +78,16 @@ const option = computed(() => ({
       name: "Increase",
       type: "bar" as const,
       stack: "attribution",
+      itemStyle: { color: "#1d4ed8" },
+      label: { show: true, formatter: "+" },
       data: steps.value.map((s) => (s.value >= 0 ? s.value : null)),
     },
     {
       name: "Decrease",
       type: "bar" as const,
       stack: "attribution",
+      itemStyle: { color: "#b45309" },
+      label: { show: true, formatter: "−" },
       data: steps.value.map((s) => (s.value < 0 ? -s.value : null)),
     },
   ],

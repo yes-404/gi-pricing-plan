@@ -122,33 +122,34 @@ async function cite(): Promise<void> {
       </button>
     </form>
 
+    <!-- Live regions are rendered persistently and only their content changes, so a screen
+         reader announces the text (WCAG 4.1.3). -->
     <p
-      v-if="loading"
       role="status"
       class="mt-6 text-sm text-slate-500"
     >
-      Loading…
+      <template v-if="loading">
+        Loading…
+      </template>
+      <template v-else-if="!problem && !result">
+        Cite a Dislocation Run by its id to see it.
+      </template>
     </p>
     <div
-      v-else-if="problem"
       role="alert"
-      class="mt-6 rounded-md border border-red-200 bg-red-50 p-4"
+      :class="problem ? 'mt-6 rounded-md border border-red-200 bg-red-50 p-4' : ''"
     >
-      <p class="text-sm font-medium text-red-800">
-        {{ problem.problem.title }}
-      </p>
-      <p class="mt-1 text-sm text-red-700">
-        {{ problem.problem.detail }}
-      </p>
+      <template v-if="problem">
+        <p class="text-sm font-medium text-red-800">
+          {{ problem.problem.title }}
+        </p>
+        <p class="mt-1 text-sm text-red-700">
+          {{ problem.problem.detail }}
+        </p>
+      </template>
     </div>
-    <p
-      v-else-if="!result"
-      class="mt-6 text-sm text-slate-500"
-    >
-      Cite a Dislocation Run by its id to see it.
-    </p>
 
-    <template v-else>
+    <template v-if="!loading && !problem && result">
       <dl class="mt-6 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
         <dt class="text-slate-500">
           Baseline
