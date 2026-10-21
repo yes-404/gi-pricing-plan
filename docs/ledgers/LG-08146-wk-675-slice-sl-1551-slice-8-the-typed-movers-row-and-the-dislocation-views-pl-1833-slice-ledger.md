@@ -59,6 +59,13 @@ Task rows are appended here as each task starts.
 - `docs/specs/03-rating-engine.md` §5.1: **no new row; one dated sentence appended to the end of the existing `/movers` row's description cell** (the row is S8's own subject; `PL-1833` Task 1.1 requires §5.1's `/movers` row to name `DislocationMover`). Nothing earlier in the row or any other row changed. SL-1260 (RL 8142) adds its own routing and shadow rows: the later of the two re-merges. This reads the dispatch condition "append only" as satisfied by appending within the row; reported to the lead.
 - `frontend/src/router/index.ts`: **one new route entry `rating-dislocation` inserted as a whole object before the existing `quote-sandbox` entry; no existing entry edited.** SL-1275 also appends to `routes`: the later of the two re-merges.
 
+## Rulings recorded (lead 22 relays, 2026-10-21)
+
+- **Closing act (maintainer, to-lead "2026-10-21 15:56:56 BST"):** the stale `docs/roadmap.md` SL-1551 paragraph ("Activation need added 2026-10-10 … the typed movers row in `model-schema` is merged") is corrected in S8's CLOSING commit, not in the activation commit. Owed at close.
+- **`03` §5.1 append (maintainer, "2026-10-21 16:09:34 BST"):** the dated sentence appended inside S8's own `/movers` row is accepted as within "append only". Condition: each appended sentence carries its dated amendment tag. Confirmed at `b594fa50`+: the §5.1 `/movers` row carries "Amended 2026-10-21, WK-675 Slice 8, PL-1833" and the §4.6 "Bands and movers" addition carries "Amended 2026-10-21, WK-675 Slice 8, PL-1833, DP-S8-2 (a), the maintainer's 2026-10-17 19:41:48 BST entry" (`git grep -c` on `03-rating-engine.md` prints 2 lines). Whichever of SL-1551 and SL-1260 merges later re-merges and re-runs its checks.
+- **Flags accepted ("2026-10-21 16:23:35 BST" item 2):** (a) the `rating-dislocation` route entry is inserted before the `quote-sandbox` entry because order matters to route matching, and no existing entry is edited; (b) the `RatingVersionView.vue` link is a write-set addition for FR-25 reachability (`reachability.test.ts`); S9's no-edit list is untouched. **For S10's (SL-1552) leaf note:** S10 later removes this interim link path.
+- **DB grant:** the DB route test's grant comes from lead 23 after this END is relayed.
+
 ## PRs
 
 None. The slice stops at PR-READY; the lead opens the PR.
