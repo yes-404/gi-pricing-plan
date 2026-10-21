@@ -1089,9 +1089,10 @@ class _Wf701:
             raise JourneyStepFailed("K2", "NOT_LISTED_FIRST")
 
 
-def run_wf701_journey(
+def run_wf701_after(
     client: httpx.Client,
     record: Mapping[str, str],
+    wf699: Any,
     *,
     log: Callable[[str], None] = print,
     run_job: JobRunner | None = None,
@@ -1100,13 +1101,28 @@ def run_wf701_journey(
     stream_client: Callable[[], httpx.Client] | None = None,
     before_step: Callable[[str], None] | None = None,
 ) -> Wf701Result:
-    """Walk WF-701's deployment steps on the state `run_wf699_journey` leaves.
+    """Walk WF-701's deployment steps on the state `wf699` (WF-699's `JourneyResult`) left.
 
     `replica_hosts` names the hosts the stack runs `api` on (compose only): given, A2 and C4 assert
     the audit log's COMMIT set equals it; absent, the one `COMPOSE_ONLY` line is printed instead.
     `stream_client` makes the A2/C4 `/score` stream a thread beside the deploy (compose only).
     `before_step(step)` runs before a step, so a test can break the setting that step reads."""
-    wf699 = run_wf699_journey(client, record, log=log, run_job=run_job, job_timeout=job_timeout)
     return _Wf701(
         client, record, wf699, log, run_job, job_timeout, replica_hosts, stream_client, before_step
     ).run()
+
+
+def run_wf701_journey(
+    client: httpx.Client,
+    record: Mapping[str, str],
+    *,
+    log: Callable[[str], None] = print,
+    run_job: JobRunner | None = None,
+    job_timeout: float = 1800.0,
+    **kwargs: Any,
+) -> Wf701Result:
+    """WF-699's journey, then WF-701's (`run_wf701_after`)."""
+    wf699 = run_wf699_journey(client, record, log=log, run_job=run_job, job_timeout=job_timeout)
+    return run_wf701_after(
+        client, record, wf699, log=log, run_job=run_job, job_timeout=job_timeout, **kwargs
+    )

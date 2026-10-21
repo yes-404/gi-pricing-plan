@@ -135,12 +135,13 @@ def test_the_minimum_premium_is_read_from_the_constraints_rung() -> None:
         ]
     }
     none = {"premium_ladder": [{"rung": "constraints", "operation": {"applied": []}}]}
-    assert j.binds_min_premium(applied) and not j.binds_min_premium(none)
+    assert j.binds_min_premium(applied)
+    assert not j.binds_min_premium(none)
     assert not j.binds_min_premium({"premium_ladder": [{"rung": "payable_premium"}]})
 
 
 def test_the_contract_sample_is_deterministic_and_spread() -> None:
-    contract = [
+    contract: list[dict[str, Any]] = [
         {"name": "area", "type": "enum", "domain": list("ABCDEF")},
         {"name": "bonus_malus", "type": "int", "min": 50, "max": 150},
         {"name": "current_premium_minor", "type": "int", "min": 0},
@@ -170,7 +171,114 @@ def test_k1_is_the_shipped_v2_minimum_premium_and_nothing_else() -> None:
 def test_k2_adds_one_declining_constraint_with_a_reason_code() -> None:
     k2: dict[str, Any] = json.loads(j.K2_FILE.read_text(encoding="utf-8"))
     step = k2["add_step"]
-    assert step["type"] == "constraint" and step["on_violation"] == "decline"
-    assert step["reason_code"] and "bonus_malus" in step["condition"]
+    assert step["type"] == "constraint"
+    assert step["on_violation"] == "decline"
+    assert step["reason_code"]
+    assert "bonus_malus" in step["condition"]
     low, high = k2["declined_bonus_malus"]
     assert 140 < low <= high <= 150  # above the limit, inside the contract's 50..150
+
+
+def _run_in_process(
+    api_client: Any,
+    database: Any,
+    blob_store: Any,
+    workspace_id: Any,
+    *,
+    before_step: Any = None,
+) -> tuple[Any, list[str]]:
+    """WF-699's journey, then WF-701's, over the app in process: the harness of
+    `test_wf699_journey.test_wf699_journey_runs_end_to_end`, `run_job` running each Job."""
+    import asyncio
+    from uuid import UUID
+
+    from backend.tests.test_wf699_journey import _world
+
+    from app.worker.dislocation_handlers import register_dislocation_handlers
+    from app.worker.rate_table_handlers import register_rate_table_handlers
+    from app.worker.rating_handlers import register_rating_handlers
+    from app.worker.tasks import execute_job
+
+    loop = asyncio.get_event_loop()
+    record = loop.run_until_complete(_world(database, blob_store, workspace_id))
+    register_rating_handlers()
+    register_dislocation_handlers()
+    register_rate_table_handlers()
+    api_client.base_url = "http://testserver/api/v1"
+    lines: list[str] = []
+
+    def run_job(job_id: str) -> None:
+        loop.run_until_complete(execute_job(database, UUID(job_id), blob_store))
+
+    def hook(step: str) -> None:
+        if before_step is not None:
+            before_step(step, record)
+
+    try:
+        result = j.run_wf701_journey(
+            api_client, record, log=lines.append, run_job=run_job, before_step=hook
+        )
+    except j.JourneyStepFailed as failure:
+        pytest.fail(f"{failure} :: {failure.detail} :: after {lines[-1:]}")
+    return result, lines
+
+
+@pytest.mark.req("FR-238")
+@pytest.mark.req("FR-250")
+@pytest.mark.req("FR-258")
+@pytest.mark.req("FR-259")
+@pytest.mark.req("FR-262")
+@pytest.mark.req("FR-267")
+@pytest.mark.req("FR-268")
+@pytest.mark.req("FR-272")
+@pytest.mark.req("FR-354")
+@pytest.mark.req("FR-429")
+@pytest.mark.req("NFR-494")
+def test_wf701_journey_runs_end_to_end(api_client, database, blob_store, workspace_id) -> None:  # type: ignore[no-untyped-def]
+    """Every in-scope step of WF-701, in order, each by its status and a read-back effect: the
+    refusals by their problem `code` (C2 `EVIDENCE_INCOMPLETE` and `PROMOTION_ORDER_VIOLATION`,
+    C3 `DEPLOY_REQUIRES_APPROVAL`, the FR-238 extra `VALIDATION_FAILED`), K1 and K2 through
+    two approvers, the stream across each switch, C7's band and its exact declined count.
+
+    **One process, no replicas:** the replica limb is the one ruled `COMPOSE-ONLY` line."""
+    result, lines = _run_in_process(api_client, database, blob_store, workspace_id)
+
+    assert list(result.step_status) == list(j.STEP_ORDER)
+    assert set(result.step_status.values()) == {"ok"}
+    assert lines.count(j.FIRST_LINE) == 1
+    assert lines.index(j.FIRST_LINE) < lines.index(j.C7_ERRORS)
+    assert lines.count(j.COMPOSE_ONLY) == 1
+    assert lines.count(j.C7_ERRORS) == 1
+    assert not [line for line in lines if "KNOWN GAP C7-errors" in line]
+    assert any(line.startswith("PRECONDITION dev:") for line in lines)
+    assert result.k1_bundle_hash.startswith("sha256:")
+    assert result.k2_bundle_hash != result.k1_bundle_hash
+    assert result.c4_elapsed_s < j.FUNCTIONAL_BOUND_S
+    assert j.C7_BAND[0] <= result.c7_count <= j.C7_BAND[1]
+    assert result.c7_declined == j.C7_DECLINES
+    assert result.a5_totals["changed"] > 0
+
+
+@pytest.mark.req("FR-259")
+def test_c7_fails_naming_the_band_when_the_sample_rate_is_zero(  # type: ignore[no-untyped-def]
+    api_client, database, blob_store, workspace_id
+) -> None:
+    """R6: with prod's `rating.trace_sample_rate` set to 0.0 through the settings API, the C7 (i)
+    count is 0, outside [3, 45], and the step fails naming the band."""
+
+    def break_the_rate(step: str, record: dict[str, str]) -> None:
+        if step != "C7(i)":
+            return
+        response = api_client.put(
+            "/environments/prod/settings",
+            json={"values": {"rating.trace_sample_rate": 0.0}},
+            headers={
+                "x-dev-principal-id": record["admin_id"],
+                "Workspace-Id": record["workspace_id"],
+            },
+        )
+        assert response.status_code == 200, response.text
+
+    with pytest.raises(pytest.fail.Exception) as failure:
+        _run_in_process(api_client, database, blob_store, workspace_id, before_step=break_the_rate)
+    assert "C7: TRACE_COUNT_0_OUTSIDE_BAND_3_45" in str(failure.value)
