@@ -51,6 +51,7 @@ __all__ = [
     "FITTABLE_OBJECTIVE_STATUSES",
     "OBJECTIVE_CERTIFICATE_CHECKS",
     "OBJECTIVE_CERTIFICATE_CHECKS_SYMBOLIC",
+    "PREVIEW_MAX_GRID_POINTS",
     "TEMPLATE_APPLICABILITY",
     "TEMPLATE_PARAMETERS",
     "TERMINAL_OBJECTIVE_STATUSES",
@@ -67,6 +68,11 @@ __all__ = [
     "ObjectiveCertificate",
     "ObjectiveKind",
     "ObjectiveParameter",
+    "ObjectivePreview",
+    "ObjectivePreviewCurve",
+    "ObjectivePreviewError",
+    "ObjectivePreviewGrid",
+    "ObjectivePreviewRequest",
     "ObjectiveStatus",
     "ObjectiveTemplate",
     "ObjectiveUsage",
@@ -342,8 +348,12 @@ TEMPLATE_PARAMETERS: Final[dict[ObjectiveTemplate, tuple[TemplateParameter, ...]
     ObjectiveTemplate.GAMMA: (),
     ObjectiveTemplate.TWEEDIE: (
         TemplateParameter(
-            name="p", minimum=1.0, maximum=2.0,
-            minimum_exclusive=True, maximum_exclusive=True, default=1.5,
+            name="p",
+            minimum=1.0,
+            maximum=2.0,
+            minimum_exclusive=True,
+            maximum_exclusive=True,
+            default=1.5,
         ),
     ),
     ObjectiveTemplate.CAPPED_GAMMA: (
@@ -371,8 +381,12 @@ TEMPLATE_PARAMETERS: Final[dict[ObjectiveTemplate, tuple[TemplateParameter, ...]
     ),
     ObjectiveTemplate.QUANTILE: (
         TemplateParameter(
-            name="alpha", minimum=0.0, maximum=1.0,
-            minimum_exclusive=True, maximum_exclusive=True, default=0.5,
+            name="alpha",
+            minimum=0.0,
+            maximum=1.0,
+            minimum_exclusive=True,
+            maximum_exclusive=True,
+            default=0.5,
         ),
     ),
     ObjectiveTemplate.ZERO_INFLATED_POISSON: (
@@ -380,9 +394,7 @@ TEMPLATE_PARAMETERS: Final[dict[ObjectiveTemplate, tuple[TemplateParameter, ...]
             name="pi", minimum=0.0, maximum=1.0, minimum_exclusive=True, maximum_exclusive=True
         ),
     ),
-    ObjectiveTemplate.FOCAL_BINOMIAL: (
-        TemplateParameter(name="gamma", minimum=0.0, default=2.0),
-    ),
+    ObjectiveTemplate.FOCAL_BINOMIAL: (TemplateParameter(name="gamma", minimum=0.0, default=2.0),),
 }
 
 #: §4.5's "each template declares its `applicability` block". The template states where its
@@ -390,51 +402,70 @@ TEMPLATE_PARAMETERS: Final[dict[ObjectiveTemplate, tuple[TemplateParameter, ...]
 #: may not widen it.
 TEMPLATE_APPLICABILITY: Final[dict[ObjectiveTemplate, Applicability]] = {
     ObjectiveTemplate.POISSON: Applicability(
-        responses=frozenset({ResponseKind.CLAIM_COUNT}), backends=_GBM,
-        offset_required=True, y_domain=_NON_NEGATIVE,
+        responses=frozenset({ResponseKind.CLAIM_COUNT}),
+        backends=_GBM,
+        offset_required=True,
+        y_domain=_NON_NEGATIVE,
     ),
     ObjectiveTemplate.GAMMA: Applicability(
-        responses=frozenset({ResponseKind.CLAIM_SEVERITY}), backends=_GBM, y_domain=_POSITIVE,
+        responses=frozenset({ResponseKind.CLAIM_SEVERITY}),
+        backends=_GBM,
+        y_domain=_POSITIVE,
     ),
     ObjectiveTemplate.TWEEDIE: Applicability(
-        responses=frozenset({ResponseKind.BURNING_COST}), backends=_GBM,
-        offset_required=True, y_domain=_NON_NEGATIVE,
+        responses=frozenset({ResponseKind.BURNING_COST}),
+        backends=_GBM,
+        offset_required=True,
+        y_domain=_NON_NEGATIVE,
     ),
     ObjectiveTemplate.CAPPED_GAMMA: Applicability(
-        responses=frozenset({ResponseKind.CLAIM_SEVERITY}), backends=_GBM, y_domain=_POSITIVE,
+        responses=frozenset({ResponseKind.CLAIM_SEVERITY}),
+        backends=_GBM,
+        y_domain=_POSITIVE,
     ),
     ObjectiveTemplate.SPLICED_SEVERITY: Applicability(
-        responses=frozenset({ResponseKind.CLAIM_SEVERITY}), backends=_GBM, y_domain=_POSITIVE,
+        responses=frozenset({ResponseKind.CLAIM_SEVERITY}),
+        backends=_GBM,
+        y_domain=_POSITIVE,
     ),
     ObjectiveTemplate.ASYMMETRIC_SQUARED: Applicability(
         responses=frozenset({ResponseKind.BURNING_COST, ResponseKind.CLAIM_SEVERITY}),
-        backends=_GBM, y_domain=_NON_NEGATIVE,
+        backends=_GBM,
+        y_domain=_NON_NEGATIVE,
     ),
     ObjectiveTemplate.ASYMMETRIC_POISSON: Applicability(
-        responses=frozenset({ResponseKind.CLAIM_COUNT}), backends=_GBM,
-        offset_required=True, y_domain=_NON_NEGATIVE,
+        responses=frozenset({ResponseKind.CLAIM_COUNT}),
+        backends=_GBM,
+        offset_required=True,
+        y_domain=_NON_NEGATIVE,
     ),
     ObjectiveTemplate.HUBER: Applicability(
         responses=frozenset({ResponseKind.BURNING_COST, ResponseKind.CLAIM_SEVERITY}),
-        backends=_GBM, y_domain=_NON_NEGATIVE,
+        backends=_GBM,
+        y_domain=_NON_NEGATIVE,
     ),
     ObjectiveTemplate.PSEUDO_HUBER: Applicability(
         responses=frozenset({ResponseKind.BURNING_COST, ResponseKind.CLAIM_SEVERITY}),
-        backends=_GBM, y_domain=_NON_NEGATIVE,
+        backends=_GBM,
+        y_domain=_NON_NEGATIVE,
     ),
     ObjectiveTemplate.QUANTILE: Applicability(
         responses=frozenset(
             {ResponseKind.BURNING_COST, ResponseKind.CLAIM_SEVERITY, ResponseKind.CLAIM_COUNT}
         ),
-        backends=_GBM, y_domain=_NON_NEGATIVE,
+        backends=_GBM,
+        y_domain=_NON_NEGATIVE,
     ),
     ObjectiveTemplate.ZERO_INFLATED_POISSON: Applicability(
-        responses=frozenset({ResponseKind.CLAIM_COUNT}), backends=_GBM,
-        offset_required=True, y_domain=_NON_NEGATIVE,
+        responses=frozenset({ResponseKind.CLAIM_COUNT}),
+        backends=_GBM,
+        offset_required=True,
+        y_domain=_NON_NEGATIVE,
     ),
     ObjectiveTemplate.FOCAL_BINOMIAL: Applicability(
         responses=frozenset({ResponseKind.CONVERSION, ResponseKind.RETENTION}),
-        backends=_GBM, y_domain=YDomain(min_inclusive=0.0, max_inclusive=1.0),
+        backends=_GBM,
+        y_domain=YDomain(min_inclusive=0.0, max_inclusive=1.0),
     ),
 }
 
@@ -471,6 +502,99 @@ class DerivedBlock(BaseModel):
     derivation_tool: Literal["sympy"]
     derivation_version: str
     derived_at: AwareDatetime
+
+
+#: FR-8140 clause 3a: the preview grid's hard maximum point count. A constant here so the
+#: contract carries it (`maximum`) and the backend reads the same number.
+PREVIEW_MAX_GRID_POINTS: Final = 500
+
+
+class ObjectivePreviewGrid(BaseModel):
+    """Where the loss-curve preview evaluates (FR-8140): `n_points` raw scores across `f_range`,
+    at one observation `y` and weight `w`. One observation, because the editor draws one curve."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    y: float
+    w: float = Field(default=1.0, gt=0.0)
+    f_range: tuple[float, float]
+    n_points: int = Field(ge=2, le=PREVIEW_MAX_GRID_POINTS)
+
+    @model_validator(mode="after")
+    def _the_range_is_ordered(self) -> Self:
+        if self.f_range[0] >= self.f_range[1]:
+            raise InputFreeError("f_range must have low < high; an empty range draws no curve.")
+        return self
+
+
+class ObjectivePreviewRequest(BaseModel):
+    """`POST /custom-objectives/preview` (FR-8140, `RL-1616`).
+
+    With no `grid` the route parses only; with one it also derives and evaluates. `values` are
+    the chosen parameter values and default to each parameter's `default`.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    loss: str = Field(min_length=1, max_length=2000)
+    parameters: tuple[ObjectiveParameter, ...] = ()
+    values: dict[str, float] = Field(default_factory=dict)
+    grid: ObjectivePreviewGrid | None = None
+
+    @model_validator(mode="after")
+    def _values_are_declared_and_in_range(self) -> Self:
+        declared = {p.name: p for p in self.parameters}
+        for name, value in self.values.items():
+            parameter = declared.get(name)
+            if parameter is None:
+                raise InputFreeError(f"values names {name!r}, which is not a declared parameter.")
+            if not parameter.min <= value <= parameter.max:
+                raise InputFreeError(f"the value of {name!r} is outside its declared min..max.")
+        return self
+
+
+class ObjectivePreviewError(BaseModel):
+    """Why a preview is not ok: a grammar refusal with its position (`RL-1362` DP-S3-3), or the
+    time bound of FR-8140 clause 3b, which has none."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    reason: Literal["grammar", "timeout"]
+    message: str
+    line: int | None = Field(default=None, ge=1)
+    column: int | None = Field(default=None, ge=0)
+
+
+class ObjectivePreviewCurve(BaseModel):
+    """The loss and its derived derivatives at each grid score. `None` is a non-finite value:
+    JSON cannot carry one, and a curve that hid it would hide the objective's blow-up."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    f: tuple[float, ...]
+    loss: tuple[float | None, ...]
+    gradient: tuple[float | None, ...]
+    hessian: tuple[float | None, ...]
+
+
+class ObjectivePreview(BaseModel):
+    """The answer. Nothing here is stored: it is not a `DerivedBlock` and has no `derived_at`."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    ok: bool
+    error: ObjectivePreviewError | None = None
+    #: Present when a `grid` was given and the loss derived.
+    gradient: str | None = None
+    hessian: str | None = None
+    derivation_version: str | None = None
+    curve: ObjectivePreviewCurve | None = None
+
+    @model_validator(mode="after")
+    def _ok_means_no_error(self) -> Self:
+        if self.ok != (self.error is None):
+            raise InputFreeError("a preview is ok exactly when it carries no error.")
+        return self
 
 
 class CustomObjective(BaseModel):

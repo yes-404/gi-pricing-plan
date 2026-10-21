@@ -10477,6 +10477,270 @@
         "title": "ObjectiveParameter",
         "type": "object"
       },
+      "ObjectivePreview": {
+        "additionalProperties": false,
+        "description": "The answer. Nothing here is stored: it is not a `DerivedBlock` and has no `derived_at`.",
+        "properties": {
+          "curve": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObjectivePreviewCurve"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "derivation_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Derivation Version"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObjectivePreviewError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "gradient": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gradient"
+          },
+          "hessian": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hessian"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "title": "ObjectivePreview",
+        "type": "object"
+      },
+      "ObjectivePreviewCurve": {
+        "additionalProperties": false,
+        "description": "The loss and its derived derivatives at each grid score. `None` is a non-finite value:\nJSON cannot carry one, and a curve that hid it would hide the objective's blow-up.",
+        "properties": {
+          "f": {
+            "items": {
+              "type": "number"
+            },
+            "title": "F",
+            "type": "array"
+          },
+          "gradient": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Gradient",
+            "type": "array"
+          },
+          "hessian": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Hessian",
+            "type": "array"
+          },
+          "loss": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Loss",
+            "type": "array"
+          }
+        },
+        "required": [
+          "f",
+          "loss",
+          "gradient",
+          "hessian"
+        ],
+        "title": "ObjectivePreviewCurve",
+        "type": "object"
+      },
+      "ObjectivePreviewError": {
+        "additionalProperties": false,
+        "description": "Why a preview is not ok: a grammar refusal with its position (`RL-1362` DP-S3-3), or the\ntime bound of FR-8140 clause 3b, which has none.",
+        "properties": {
+          "column": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column"
+          },
+          "line": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "grammar",
+              "timeout"
+            ],
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason",
+          "message"
+        ],
+        "title": "ObjectivePreviewError",
+        "type": "object"
+      },
+      "ObjectivePreviewGrid": {
+        "additionalProperties": false,
+        "description": "Where the loss-curve preview evaluates (FR-8140): `n_points` raw scores across `f_range`,\nat one observation `y` and weight `w`. One observation, because the editor draws one curve.",
+        "properties": {
+          "f_range": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "F Range",
+            "type": "array"
+          },
+          "n_points": {
+            "maximum": 500.0,
+            "minimum": 2.0,
+            "title": "N Points",
+            "type": "integer"
+          },
+          "w": {
+            "default": 1.0,
+            "exclusiveMinimum": 0.0,
+            "title": "W",
+            "type": "number"
+          },
+          "y": {
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        "required": [
+          "y",
+          "f_range",
+          "n_points"
+        ],
+        "title": "ObjectivePreviewGrid",
+        "type": "object"
+      },
+      "ObjectivePreviewRequest": {
+        "additionalProperties": false,
+        "description": "`POST /custom-objectives/preview` (FR-8140, `RL-1616`).\n\nWith no `grid` the route parses only; with one it also derives and evaluates. `values` are\nthe chosen parameter values and default to each parameter's `default`.",
+        "properties": {
+          "grid": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObjectivePreviewGrid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "loss": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Loss",
+            "type": "string"
+          },
+          "parameters": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ObjectiveParameter"
+            },
+            "title": "Parameters",
+            "type": "array"
+          },
+          "values": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "required": [
+          "loss"
+        ],
+        "title": "ObjectivePreviewRequest",
+        "type": "object"
+      },
       "ObjectiveStatus": {
         "description": "FR-163's lifecycle.",
         "enum": [
@@ -22416,6 +22680,133 @@
           }
         },
         "summary": "Create or version a Custom Objective",
+        "tags": [
+          "modelling"
+        ]
+      }
+    },
+    "/api/v1/custom-objectives/preview": {
+      "post": {
+        "description": "Parse, and with a `grid` derive and evaluate, a loss without storing anything (FR-8140).\n\nNeeds `model:fit` and `custom_objective:author` (FR-367), both checked before the flag;\nwhile the flag is off the answer is 409 `OBJECTIVE_KIND_NOT_ENABLED`. **200 with\n`ok: false`** for a loss that does not parse or that times out (`RL-1616`): the editor is\nasking whether this text is valid, not submitting it. Persists nothing and records no Audit\nEvent, because a preview is not the derivation `/derive` stores.",
+        "operationId": "preview_custom_objective_api_v1_custom_objectives_preview_post",
+        "parameters": [
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ObjectivePreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectivePreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
+          }
+        },
+        "summary": "Preview an expression loss: live parse errors and a loss curve",
         "tags": [
           "modelling"
         ]
