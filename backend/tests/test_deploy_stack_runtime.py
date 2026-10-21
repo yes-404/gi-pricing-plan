@@ -357,6 +357,55 @@ def test_a_submitted_job_reaches_a_terminal_state_through_the_compose_worker(
     assert (current.get("result") or {}).get("ref"), f"no compiled-bundle ref on {current!r}"
 
 
+#: How long a Job is watched with no `scheduler` running before it is called stuck. The relay
+#: ticks every second (`app.worker.entrypoint`), so a Job that was going to leave `queued` has
+#: done so well inside this.
+NO_SCHEDULER_WATCH_SECONDS = 15
+
+
+@pytest.mark.req("FR-432")
+@pytest.mark.req("FR-406")
+@pytest.mark.req("FR-413")
+def test_the_scheduler_service_is_what_moves_a_job_out_of_the_outbox(
+    built_n: str, down: None  # noqa: F811
+) -> None:
+    """PL-1688 Task 3: reachable, not only declared; and red with the scheduler stopped.
+
+    The stack comes up with `lb` and every worker and NO `scheduler`: the committed Job must stay
+    `queued` (the relay is a beat schedule entry, so nothing moves it; `scripts/demo.py`: "without
+    `beat`, committed Jobs stay `queued` and nothing says why"). Then the compose `scheduler`
+    service is started and the same Job must reach `succeeded` within `JOB_TERMINAL_BOUND_SECONDS`.
+    The same assertion also proves DP-B1 end to end: the relay's task rides `default`, and a
+    worker set that did not consume it would leave the Job `queued` here.
+    """
+    n = built_n
+    _compose(n, "up", "-d", "--wait", "lb", *_worker_services(n))
+    ws = _governed_workspace(approved=False)
+    headers = ws.users["analyst"]
+    job = _api("POST", f"/api/v1/rating-versions/{ws.rating_version_id}/compile", headers)
+    deadline = time.monotonic() + NO_SCHEDULER_WATCH_SECONDS
+    current = job
+    while time.monotonic() < deadline:
+        time.sleep(1)
+        current = _api("GET", f"/api/v1/jobs/{job['id']}", headers)
+        assert current["status"] == "queued", (
+            f"job {job['id']} left `queued` ({current['status']!r}) with no scheduler running"
+        )
+    print(f"job {job['id']} stayed queued for {NO_SCHEDULER_WATCH_SECONDS}s with no scheduler")
+    _compose(n, "up", "-d", "--wait", "scheduler")
+    started = time.monotonic()
+    deadline = started + JOB_TERMINAL_BOUND_SECONDS
+    while current["status"] not in _TERMINAL and time.monotonic() < deadline:
+        time.sleep(1)
+        current = _api("GET", f"/api/v1/jobs/{job['id']}", headers)
+    elapsed = time.monotonic() - started
+    print(f"job {job['id']} -> {current['status']} {elapsed:.1f}s after the scheduler started")
+    assert current["status"] == "succeeded", (
+        f"job {job['id']} is {current['status']!r} {JOB_TERMINAL_BOUND_SECONDS}s after the "
+        "scheduler started"
+    )
+
+
 # -- PL-8022 E4.3 extended: the io and scoring pools, asserting `succeeded` -------------------
 #
 # Run once in S4's build window (the gate does not set GIP_DEPLOY_TESTS), with the whole stack:
