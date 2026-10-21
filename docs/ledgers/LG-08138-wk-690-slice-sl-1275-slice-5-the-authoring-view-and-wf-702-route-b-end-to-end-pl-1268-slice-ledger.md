@@ -35,6 +35,10 @@ Filed 2026-10-21 under working id 8138 (lead-reserved in eta.md); executor seat 
 | 3b workers / timeout | 2 workers, 5 s from submission | Two keeps a typist's overlapping calls from queueing behind one slow derivation; 5 s is well past a typical `derive` and short enough that a held worker frees fast. SymPy cannot be interrupted, so a started derivation finishes (bounded by FR-145's 200-node/20-depth limits) and its result is discarded; unstarted work is cancelled. |
 | 3d budget | p95 <= 2 s for a 500-point grid | Provisional until 5.7 is measured in the ALONE window; the measured value replaces it through a spec amendment if it does not hold. |
 
+## Spec-first ordering
+
+The FR is not in the slice's literal first commit (the activation commit `41f73db2` is). The FR, §5.1 row, §5.3 line and `model-schema` shapes are `37c0c66f`, which precedes every commit that calls the route (`8d2fe052` backend, `c74da4f1` frontend client). The prep commits `ad9eeb21`/`cd70551b` (14 Oct) hold only stubs and mocked-API tests that call nothing. The B1.4 citation follows in its own commit after, and before any DB run.
+
 ## Tasks
 
 1. **Activation** (`41f73db2`): SL-1275 `active`, this ledger opened, INDEX regenerated, `doc-index.py --check` rc 0, `audit-docs.py` red only on check 31 (the working-id gap 8138, expected until the mint).
@@ -47,7 +51,7 @@ Filed 2026-10-21 under working id 8138 (lead-reserved in eta.md); executor seat 
 ## Findings carried to the lead
 
 - **B4.2 is not built.** `WF-702` B4.2 says a `violated` convexity check escalates to the two-approver rule; the default `custom_objective` policy asks one approver and nothing escalates on a finding. The Route B file sets the workspace policy to two approvers and says so in its docstring. Code and spec disagree here; neither was edited.
-- **`WF-702` B1.4/B1.5 text** says the frontend "parses on every keystroke" and the rejection is `OBJECTIVE_GRAMMAR_VIOLATION`; `RL-1616` has the editor call the route and the route answer 200 `ok: false`. `PL-1665` 5.1' lists a B1.4 citation of the route as a slice disposition, but a `WF-` is not the executor's to amend (`executor.md`), so it is **not done** and waits for the lead.
+- **`WF-702` B1.4 citation: done** (lead OK, "DB GRANT; FR 8140 confirmed; WF-702 B1.4 OK"), as a dated citation on the B1.4 row; B1.5's text is untouched. The row below is the original finding: **`WF-702` B1.4/B1.5 text** says the frontend "parses on every keystroke" and the rejection is `OBJECTIVE_GRAMMAR_VIOLATION`; `RL-1616` has the editor call the route and the route answer 200 `ok: false`. `PL-1665` 5.1' lists a B1.4 citation of the route as a slice disposition, but a `WF-` is not the executor's to amend (`executor.md`), so it is **not done** and waits for the lead.
 - **The editor learns the flag only from the first preview's 409** (the frontend has no settings read), so a flag-off workspace sees an enabled editor until the first keystroke settles.
 
 ## Accessibility review (`accessibility-tester`, a code read, 2026-10-21; PL-1621 5.4)
