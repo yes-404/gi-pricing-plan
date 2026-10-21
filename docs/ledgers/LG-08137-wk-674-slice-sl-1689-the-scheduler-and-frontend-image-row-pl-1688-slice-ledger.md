@@ -42,6 +42,7 @@ Filed 2026-10-21 under working id 8137 (lead-reserved in eta.md). Executor seat 
 - **T1/T2 green** (commit c80009ad): `35 passed`. `docker compose -f deploy/docker-compose.yml --profile app config --services` prints `api frontend lb migrate minio postgres redis scheduler worker-compute worker-default worker-io worker-scoring`. Guard `test_the_backend_image_context_still_excludes_the_frontend` is green at base and head by construction.
 - **T3** (commit 1cc2fe80): `test_the_scheduler_service_is_what_moves_a_job_out_of_the_outbox`, skipped without `GIP_DEPLOY_TESTS=1` (`8 skipped`). Its run, the stopped-scheduler red and the fresh-checkout curl lines are owed to the build window.
 - **T4** (commit after c80009ad): `git grep -n -i nginx -- docs/skills-map.md docs/specs/07-platform.md` printed nothing at base, so the nginx row is added to both, and the Compose rows note the Node build stage.
+- **Write-set addition (SL-1689 option A):** `backend/tests/deploy_stack_helpers.py` joins the write set, ruled in the maintainer's (by delegation) entry "2026-10-21 15:12:08 BST", item (c). `beat_fixture` now runs `up -d --wait scheduler` (no in-process beat) and asserts `one_beat_problems(compose ps -a)` is empty, so exactly one running beat container exists, and it is the `scheduler` service. Red first (always-green stub): `4 failed, 36 passed`, with FAILED lines `test_one_beat_goes_red_on_a_double_or_absent_beat[rows0..rows3]` (two schedulers, scheduler plus a beat on another service, no beat, an exited scheduler). Green with the check: `40 passed`.
 
 ## PRs
 

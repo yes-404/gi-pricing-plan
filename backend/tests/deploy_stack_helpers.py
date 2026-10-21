@@ -266,19 +266,41 @@ def built_n() -> str:
     return n
 
 
+def one_beat_problems(ps: list[dict[str, str]]) -> list[str]:
+    """FR-413: exactly one beat runs. `ps` is `docker compose ps --format json` rows.
+
+    A beat is any running container whose command runs `celery ... beat`, whatever its service:
+    that catches a second `scheduler` and a one-off `run` of another service alike (two beats
+    relay the outbox twice).
+    """
+    beats = [
+        row for row in ps
+        if row.get("State") == "running" and " beat" in f" {row.get('Command', '')}"
+    ]
+    if len(beats) != 1:
+        return [f"{len(beats)} beat containers running, not exactly 1"]
+    if beats[0].get("Service") != "scheduler":
+        return [f"the one beat is service {beats[0].get('Service')!r}, not scheduler"]
+    return []
+
+
 @pytest.fixture
 def beat_fixture(built_n: str) -> Iterator[None]:
-    """Beat as a one-off TEST FIXTURE from the slice's image, not a compose service (SL-1689's).
+    """Starts the compose `scheduler` service (SL-1689; FR-432) and proves it is the only beat.
 
     The outbox relay is a beat schedule entry (`app.worker.entrypoint`), so without a beat
-    process no Job ever leaves the outbox. It is stopped in teardown.
+    process no Job ever leaves the outbox. The fixture starts no beat of its own: it brings up
+    the stack's own `scheduler` and asserts, from `compose ps -a`, that exactly one beat
+    container runs (`one_beat_problems`). It is stopped in teardown.
     """
-    started = _compose(
-        built_n, "run", "--rm", "-d", "worker-default",
-        "celery", "-A", "app.worker.entrypoint", "beat", "--schedule", "/tmp/celerybeat-schedule",
-    )
-    container = started.stdout.strip().splitlines()[-1]
+    _compose(built_n, "up", "-d", "--wait", "scheduler")
+    rows = [
+        json.loads(line)
+        for line in _compose(built_n, "ps", "-a", "--format", "json").stdout.splitlines()
+        if line.strip()
+    ]
+    assert one_beat_problems(rows) == [], rows
     try:
         yield
     finally:
-        subprocess.run(["docker", "rm", "-f", container], check=False, capture_output=True)
+        _compose(built_n, "stop", "scheduler", check=False)
