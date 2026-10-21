@@ -1,5 +1,5 @@
 ---
-id: FD-8150
+id: FD-1838
 family: finding
 title: The deployment switch's pub/sub channel is not isolated per gate slot, so a concurrent subscriber inflates the PREPARE quorum
 status: active
@@ -10,13 +10,13 @@ corrected_by: []
 relates: [WK-1178, WK-674, SL-1711, FD-1823]
 ---
 
-# FD-8150 — The deployment switch's pub/sub channel is not isolated per gate slot, so a concurrent subscriber inflates the PREPARE quorum
+# FD-1838 — The deployment switch's pub/sub channel is not isolated per gate slot, so a concurrent subscriber inflates the PREPARE quorum
 
 ## Finding
 
 **MEDIUM; owner WK-1178; Lean P2 limb (ii)** (work was blocked: SL-1711 run 2, 2026-10-21). Filed on the
 maintainer's (by delegation) entry "2026-10-21 21:13:34 BST" (`to-lead.md`), option (iii)-b, on lead 25's
-report "2026-10-21 21:12:58 BST" (`channel/from-lead-2026-10-09.md`). Filed under working id 8150.
+report "2026-10-21 21:12:58 BST" (`channel/from-lead-2026-10-09.md`). Filed under working id 8150; minted as FD-1838 on 2026-10-21.
 
 The deployment switch's Redis channel name does not depend on the gate slot, and the PREPARE quorum is
 Redis PUBLISH's receiver count, which counts subscribers server-wide. Any process on the box subscribed to
@@ -65,4 +65,4 @@ red-first against a concurrent subscriber on the unsuffixed channel. This record
 
 Open, owner WK-1178. **Deferred with an owner: WK-1178**; the event that next discharges it: a merged
 per-slot namespace with a red-first test against a concurrent subscriber, or a dated ruling accepting the
-absence. Filed under working id 8150.
+absence. Filed under working id 8150; minted as FD-1838 on 2026-10-21.
