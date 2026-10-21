@@ -1,5 +1,5 @@
 ---
-id: PL-8095
+id: PL-1833
 family: plan
 kind: map
 title: WK-675 — Slice 8 (SL-1551), the dislocation views: the typed /movers row as its need and its scope, and where it is built: a dated Work-plan delta to PL-1546
@@ -12,10 +12,10 @@ work: WK-675
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [PL-1546, PL-1286, PL-1501, PL-1267, SL-1551, SL-1388, RL-1504, RL-1473]
+relates: [PL-1546, PL-1286, PL-1501, PL-1267, SL-1551, SL-1388, RL-1504, RL-1473, FD-1796]
 ---
 
-# PL-8095 — WK-675 Slice 8 (SL-1551): the typed `/movers` row as S8's need and scope (delta to PL-1546)
+# PL-1833 — WK-675 Slice 8 (SL-1551): the typed `/movers` row as S8's need and scope (delta to PL-1546)
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L5. It follows
 > `document-ids.md` §1.6, PL row: *"a change is one dated Work-plan delta, a new `PL-` that
@@ -32,7 +32,7 @@ relates: [PL-1546, PL-1286, PL-1501, PL-1267, SL-1551, SL-1388, RL-1504, RL-1473
 > `.claude/roles/executor.md`. Its `LG-` quotes `PL-1546` row 5 and this file's §"Tasks" as its
 > scope. REQUIRED SUB-SKILL: subagent-driven-development (recommended) or executing-plans.
 
-Filed under **working id 8095**, reserved by the lead (`~/gi-pricing-plan.local/handover/eta.md`,
+Filed under **working id 8095** (minted as `PL-1833`, 2026-10-21), reserved by the lead (`~/gi-pricing-plan.local/handover/eta.md`,
 "2026-10-17 19:34:39 BST: **8095 PL** reserved (WK-675 S8 plan delta: PL-1546 row 5 → SL-1551,
 the typed /movers row as need + scope + a DP in-slice vs separate backend slice …)"). Written
 2026-10-17 by the planner (seat planner-s8) on the lead's brief
@@ -176,7 +176,7 @@ tasks must contain and their order.
    commit**, per `.claude/skills/spec-change`, citing the maintainer's 2026-10-17 19:41:48 BST
    entry; this plan does not edit the spec. §5.1's `/movers` row (`:1067`) names the
    response as an array of `DislocationMover`. Dated *(Amended 2026-10-…, WK-675 Slice 8,
-   PL 8095)* at each site.
+   PL-1833)* at each site.
 2. **`model-schema`.** In `dislocation.py`, a `DislocationMover` with every stored column typed:
    `quote_id: str`; `baseline_outcome`, `candidate_outcome`: the frame's outcome strings;
    `baseline_minor`, `candidate_minor`, `change_minor`: `MoneyMinor`; `baseline_error_code`,
