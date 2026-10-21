@@ -228,7 +228,9 @@ def _contract_value(field_: Mapping[str, Any], raw: str) -> Any:
             high is not None and number > Decimal(str(high))
         ):
             raise ValueError(f"{raw!r} is outside {low}..{high}")
-        return raw
+        # A JSON number: `/score` takes int, float or Decimal, `json=` cannot serialise a Decimal,
+        # and the bounds above were checked in Decimal (the value is an exposure, not money).
+        return float(number)
     return raw
 
 

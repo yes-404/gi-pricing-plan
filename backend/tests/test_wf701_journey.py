@@ -165,7 +165,7 @@ def test_policy_inputs_map_real_columns_and_keep_the_template_elsewhere() -> Non
         "current_premium_minor": 55000,
         "area": "A",
         "bonus_malus": 60,
-        "exposure_years": "0.5",
+        "exposure_years": 0.5,
     }
 
 
