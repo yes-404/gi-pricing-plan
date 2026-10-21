@@ -547,9 +547,9 @@ class ObjectivePreviewRequest(BaseModel):
         for name, value in self.values.items():
             parameter = declared.get(name)
             if parameter is None:
-                raise InputFreeError(f"values names {name!r}, which is not a declared parameter.")
+                raise InputFreeError("values names a parameter that is not declared.")
             if not parameter.min <= value <= parameter.max:
-                raise InputFreeError(f"the value of {name!r} is outside its declared min..max.")
+                raise InputFreeError("a value is outside its parameter's declared min..max.")
         return self
 
 
