@@ -17,7 +17,7 @@ relates: [PL-1546, PL-1286, SL-1554, WK-675, WK-1250, FR-217, FR-218, FR-219, FR
 
 # RL-1835 — SL-1554 (WK-675 S9): the three open points of sub-graph mounting in the designer
 
-Disclosure: drafted as **working id RL-1835**; minted as RL-1835 on 2026-10-21, in the D29 batch mint PR. Drafted by
+Disclosure: drafted as **working id RL 8143**; minted as RL-1835 on 2026-10-21, in the D29 batch mint PR. Drafted by
 the decision-maker seat dm-8143. The maintainer adopts, amends or rejects this draft before
 the mint; until then it binds nothing.
 
