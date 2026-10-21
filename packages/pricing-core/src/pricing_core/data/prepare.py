@@ -33,6 +33,11 @@ from typing import Any, Final
 import polars as pl
 
 from pricing_core.data.expressions import GrammarProfile, compile_expression
+from pricing_core.data.ingest import (
+    REJECT_COLUMN_COLUMN,
+    REJECT_REASON_COLUMN,
+    REJECT_STEP_COLUMN,
+)
 from pricing_core.progress import ProgressCallback
 
 __all__ = [
@@ -86,6 +91,15 @@ class PreparationResult:
     stats: dict[str, Any] = field(default_factory=dict)
 
 
+#: A private row index carried through every step (FR-32). Normalised source columns never
+#: start with `_` (`ingest.py`), so it cannot collide; it is dropped before `apply_recipe`
+#: returns.
+_SOURCE_ROW: Final = "_source_row"
+
+#: The steps whose job is to parse, and so the only ones that can turn a value into a null.
+_PARSING_STEPS: Final = frozenset({"cast", "parse_date"})
+
+
 def apply_recipe(
     tables: Mapping[str, pl.DataFrame],
     recipe: Sequence[Mapping[str, Any]],
@@ -97,8 +111,18 @@ def apply_recipe(
     Steps are applied in order and each sees the previous one's output — a recipe is a
     pipeline, and reordering it is a different recipe rather than the same one written
     differently.
+
+    **A cell that does not parse is never silently nulled (FR-32).** A `cast` or
+    `parse_date` that turns a non-null cell into a null quarantines the whole *source* row:
+    it leaves every working table and is returned in `.rejected` as the input's text, with
+    the column and step that failed it. The quarantine is complete for each row — no partly
+    cast row and no row derived from it is written. `stats["steps"]` records each step's
+    heights and its `rows_rejected`, `rows_removed` and `rows_added`, so that
+    `rows_read - sum(rejected) - sum(removed) + sum(added) == rows written`.
     """
-    working = {name: frame for name, frame in tables.items()}
+    sources = dict(tables)
+    working = {name: _with_source_row(name, frame) for name, frame in sources.items()}
+    rejects: list[pl.DataFrame] = []
     stats: dict[str, Any] = {"steps": []}
 
     for index, step in enumerate(recipe):
@@ -116,14 +140,113 @@ def apply_recipe(
         if table not in working:
             raise RecipeError(f"step {index} targets table {table!r}, which is not present")
 
-        before = working[table].height
-        working[table] = _apply_step(kind, working[table], step)
+        before_frame = working[table]
+        before = before_frame.height
+        after_frame = _apply_step(kind, before_frame, step)
+
+        rejected_rows = quarantined = 0
+        if kind in _PARSING_STEPS:
+            failed = _coercion_failures(kind, before_frame, after_frame, step)
+            if failed is not None:
+                indices = failed[_SOURCE_ROW]
+                rejects.append(_quarantine_frame(sources[table], failed, indices))
+                rejected_rows = indices.n_unique()
+                kept = ~after_frame[_SOURCE_ROW].is_in(indices.implode())
+                quarantined = after_frame.height - int(kept.sum())
+                after_frame = after_frame.filter(kept)
+        working[table] = after_frame
+
+        after = after_frame.height
+        delta = after - (before - quarantined)
         stats["steps"].append(
-            {"step": kind, "table": table, "rows_before": before,
-             "rows_after": working[table].height}
+            {
+                "step": kind,
+                "table": table,
+                "rows_before": before,
+                "rows_after": after,
+                "rows_rejected": rejected_rows,
+                "rows_removed": max(-delta, 0) + (quarantined - rejected_rows),
+                "rows_added": max(delta, 0),
+            }
         )
 
-    return PreparationResult(tables=working, stats=stats)
+    rejected = pl.concat(rejects, how="diagonal") if rejects else None
+    return PreparationResult(
+        tables={name: frame.drop(_SOURCE_ROW) for name, frame in working.items()},
+        rejected=rejected,
+        stats=stats,
+    )
+
+
+def _with_source_row(name: str, frame: pl.DataFrame) -> pl.DataFrame:
+    if _SOURCE_ROW in frame.columns:
+        raise RecipeError(f"table {name!r} already has a column named {_SOURCE_ROW!r}")
+    return frame.with_row_index(_SOURCE_ROW)
+
+
+def _coercion_failures(
+    kind: str, before: pl.DataFrame, after: pl.DataFrame, step: Mapping[str, Any]
+) -> pl.DataFrame | None:
+    """The rows where a named column was non-null before the step and is null after it.
+
+    Returns `_source_row`, the first failing column (in the step's declared order), the
+    reason, and the pre-step text of that cell; or `None` when nothing failed. The steps
+    here are row-preserving, so `before` and `after` line up row for row.
+    """
+    params = step.get("params", {})
+    if kind == "cast":
+        targets = [(column, str(dtype)) for column, dtype in params["columns"].items()]
+    else:
+        targets = [(params["column"], params["format"])]
+
+    # Narrow to the failing rows first: the reason text is built per value in Python, which is
+    # affordable for a handful of rejects and not for a whole book that parsed cleanly.
+    any_failed = pl.Series([False] * before.height)
+    for column, _ in targets:
+        any_failed = any_failed | (before[column].is_not_null() & after[column].is_null())
+    if not any_failed.any():
+        return None
+    before, after = before.filter(any_failed), after.filter(any_failed)
+
+    reason: pl.Expr = pl.lit(None, dtype=pl.String)
+    column_of: pl.Expr = pl.lit(None, dtype=pl.String)
+    for column, target in reversed(targets):
+        failed = before[column].is_not_null() & after[column].is_null()
+        text = before[column].cast(pl.String)
+        message = pl.concat_str(
+            pl.lit(f"{column}: {kind} could not parse "),
+            text.map_elements(repr, return_dtype=pl.String),
+            pl.lit(f" as {target}"),
+        )
+        reason = pl.when(failed).then(message).otherwise(reason)
+        column_of = pl.when(failed).then(pl.lit(column)).otherwise(column_of)
+    frame = pl.DataFrame({_SOURCE_ROW: before[_SOURCE_ROW]}).with_columns(
+        reason.alias(REJECT_REASON_COLUMN), column_of.alias(REJECT_COLUMN_COLUMN)
+    )
+    return frame.filter(pl.col(REJECT_COLUMN_COLUMN).is_not_null()).with_columns(
+        pl.lit(kind).alias(REJECT_STEP_COLUMN)
+    )
+
+
+def _quarantine_frame(
+    source: pl.DataFrame, failed: pl.DataFrame, indices: pl.Series
+) -> pl.DataFrame:
+    """The failed rows as the *input's* text (never a step's output), with their reasons.
+
+    One row per source row: a row a later step has duplicated is quarantined once.
+    """
+    failed = failed.unique(subset=_SOURCE_ROW, keep="first", maintain_order=True)
+    text = source.with_row_index(_SOURCE_ROW).select(
+        pl.col(_SOURCE_ROW), pl.all().exclude(_SOURCE_ROW).cast(pl.String)
+    )
+    return failed.join(text, on=_SOURCE_ROW, how="left", maintain_order="left").select(
+        pl.all().exclude(
+            _SOURCE_ROW, REJECT_REASON_COLUMN, REJECT_COLUMN_COLUMN, REJECT_STEP_COLUMN
+        ),
+        REJECT_REASON_COLUMN,
+        REJECT_COLUMN_COLUMN,
+        REJECT_STEP_COLUMN,
+    )
 
 
 def _apply_step(kind: str, frame: pl.DataFrame, step: Mapping[str, Any]) -> pl.DataFrame:
@@ -173,7 +296,8 @@ def _apply_step(kind: str, frame: pl.DataFrame, step: Mapping[str, Any]) -> pl.D
                 compile_expression(params["expression"], profile=GrammarProfile.RECIPE)
             )
         case "deduplicate":
-            return frame.unique(subset=params.get("columns"), keep="first", maintain_order=True)
+            subset = params.get("columns") or [c for c in frame.columns if c != _SOURCE_ROW]
+            return frame.unique(subset=subset, keep="first", maintain_order=True)
         case "pseudonymise":
             return pseudonymise(frame, column=params["column"], key=params["key"])
         case _:

@@ -16,10 +16,12 @@ from uuid import UUID
 import pytest
 import pytest_asyncio
 from backend.tests.approved_rows import add_approved
+from backend.tests.test_ingest_coercion import assert_row_identity
 from sqlalchemy import select
 
 from app.db.models import (
     DatasetVersionRow,
+    IngestionRunRow,
     JobRow,
     ProfileRow,
     RoleAssignmentRow,
@@ -196,6 +198,9 @@ async def _ingest(
                 .limit(1)
             )
         ).scalar_one()
+        run = await session.get(IngestionRunRow, row.ingestion_run_id)
+        assert run is not None
+        assert_row_identity(run)  # G5: every recipe ingest here balances its rows
         return row.id
 
 

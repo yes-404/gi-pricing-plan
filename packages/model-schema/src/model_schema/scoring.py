@@ -44,6 +44,10 @@ __all__ = [
 #: answer mounts the refund sub-graph on `purpose`, and the value it keys on has to exist.
 QuotePurpose = Literal["new_business", "renewal", "mid_term_adjustment", "cancellation", "what_if"]
 
+#: The purposes a sub-graph mount may select (`SubGraphRef.purposes`): `QuotePurpose`'s two
+#: policy-administration members and no other (FR-218; `RL-1344` section 2.3). Stated once here.
+MountPurpose = Literal["mid_term_adjustment", "cancellation"]
+
 #: `scoring.schema.json`'s closed `LadderRung.rung` enum (FR-247, widened by FR-252
 #: to add `instalment_loading`). The contract's declared order is the ladder's own order —
 #: `pricing_core.rating.score` walks this sequence, never the algorithm's own step order.

@@ -48,6 +48,7 @@ from model_schema import (
     CertificateResult,
     CheckStatus,
     EarlyStopping,
+    FactorIntent,
     GbmFunctionRef,
     GbmSpec,
     HessianStrategy,
@@ -86,14 +87,17 @@ def _gbm_spec(version_id: UUID, factor_ids: tuple[UUID, ...], **over: object) ->
 
 
 async def _fitted_gbm(
-    database: Database, blob_store: BlobStore, workspace_id, **over: object
+    database: Database, blob_store: BlobStore, workspace_id,
+    *, area_intent: FactorIntent = FactorIntent.RISK, **over: object,
 ) -> tuple[UUID, JobStatus]:
     actor = await _actuary(database, workspace_id)
     dataset_id = await _dataset(database, blob_store, workspace_id, actor)
     version_id = await _validated_version(
         database, blob_store, workspace_id, actor, dataset_id
     )
-    area = await _factor(database, workspace_id, actor, dataset_id, "area", "area")
+    area = await _factor(
+        database, workspace_id, actor, dataset_id, "area", "area", intent=area_intent
+    )
     split = await _split(database, blob_store, workspace_id, actor, version_id)
 
     async with database.unit_of_work() as session:

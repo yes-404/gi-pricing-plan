@@ -186,6 +186,52 @@ def test_the_seed_reruns_against_a_seeded_database(scratch_seed: Path) -> None:
     assert second["analyst_id"] == first["analyst_id"]
 
 
+@pytest.mark.req("FR-32")
+@pytest.mark.req("FR-31")
+def test_every_seeded_ingestion_run_balances_its_rows(scratch_seed: Path) -> None:
+    """R8b (FD-1744, SL-1738, PL-1737 DP-S1 (i)): the accounting identity, read from each
+    ingestion run the seed made, and the portfolio's own figure (20 000 - 0 - 15 + 0 = 19 985).
+
+    Needs the local stack, so CI skips it; the LG carries the printed lines."""
+    import asyncio
+
+    import seed
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    assert asyncio.run(seed.run(ROWS_FOR_A_HEALTHY_FIT)) == 0
+
+    async def runs() -> list[tuple[int, int, int, list[dict[str, int]]]]:
+        import os
+
+        engine = create_async_engine(os.environ["GIP_DATABASE_URL"])
+        try:
+            async with engine.connect() as connection:
+                rows = await connection.execute(
+                    text(
+                        "select rows_read, rows_rejected, rows_written, step_counts "
+                        "from ingestion_runs"
+                    )
+                )
+                return [tuple(row) for row in rows]
+        finally:
+            await engine.dispose()
+
+    found = asyncio.run(runs())
+    assert found
+    for rows_read, rows_rejected, rows_written, steps in found:
+        removed = added = 0
+        for step in steps:
+            delta = step["rows_out"] - (step["rows_in"] - step["rows_rejected"])
+            removed += max(-delta, 0)
+            added += max(delta, 0)
+        print(f"  run: {rows_read} - {rows_rejected} - {removed} + {added} == {rows_written}")
+        assert rows_read - rows_rejected - removed + added == rows_written
+    portfolio = [r for r in found if r[0] == PORTFOLIO_ROWS]
+    assert portfolio
+    assert all(r[2] == 19_985 for r in portfolio)
+
+
 def test_a_small_seed_is_refused_for_its_degenerate_fit(scratch_seed: Path) -> None:
     """At 2 000 rows area[F] has no claims and fits to a relativity of 1.4e-07 (golden premium
     0 minor units; the engine cannot score it). The seed stops, naming the level, rather than
@@ -213,6 +259,70 @@ def _write_book(directory: Path, policies: int) -> None:
             sev.append(f"{index + 1},{1000 + index}.50")
     (directory / "freMTPL2freq.arff").write_text("\n".join(freq) + "\n", encoding="utf-8")
     (directory / "freMTPL2sev.arff").write_text("\n".join(sev) + "\n", encoding="utf-8")
+
+
+@pytest.mark.req("FR-111")
+def test_claim_severity_is_the_mean_cost_per_claim_and_null_without_a_claim(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """PL-1705 C2: `claim_severity` is `claim_amount_minor / ClaimNb`, unrounded, null where the
+    policy has no claim, and `claim_amount_minor` stays the integer total (FR-10). Policy 1 has
+    two claims totalling 15,001 cents, which an odd count does not divide: the severity is
+    7,500.5 exactly, not 7,500 or 7,501."""
+    import io
+
+    import polars as pl
+    import seed
+
+    freq = ["@relation freMTPL2freq", "@attribute IDpol numeric", "@attribute ClaimNb numeric",
+            "@data", "1,2", "2,0", "3,1"]
+    sev = ["@relation freMTPL2sev", "@attribute IDpol numeric", "@attribute ClaimAmount numeric",
+           "@data", "1,100.01", "1,50.00", "3,33.33"]
+    (tmp_path / "freMTPL2freq.arff").write_text("\n".join(freq) + "\n", encoding="utf-8")
+    (tmp_path / "freMTPL2sev.arff").write_text("\n".join(sev) + "\n", encoding="utf-8")
+    monkeypatch.setattr(seed, "DATA_DIR", tmp_path)
+
+    frame = pl.read_csv(io.BytesIO(build_csv(None)), infer_schema=False).sort("IDpol")
+    rows = {r["IDpol"]: r for r in frame.iter_rows(named=True)}
+
+    assert rows["1"]["claim_amount_minor"] == "15001"  # the integer total, unchanged
+    assert float(rows["1"]["claim_severity"]) == 15001 / 2 == 7500.5
+    assert rows["2"]["claim_amount_minor"] == "0"
+    assert rows["2"]["claim_severity"] is None  # no claim: null, not 0
+    assert rows["3"]["claim_amount_minor"] == "3333"
+    assert float(rows["3"]["claim_severity"]) == 3333.0
+
+
+@pytest.mark.req("FR-111")
+def test_a_claimant_with_no_severity_record_has_an_unknown_amount_not_zero(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """SL-1543 (the maintainer's (by delegation) ruling "2026-10-17 11:23:17 BST"): freMTPL2freq
+    has claimants (ClaimNb > 0) with no row in freMTPL2sev. Their amount is UNKNOWN, so the seed
+    writes null for it — never 0, which the data never contains and which a Gamma fit refuses.
+    A policy with no claim keeps its true 0 total, and a claimant with fewer severity rows than
+    ClaimNb keeps the amounts it has (policy 5: one of two claims recorded)."""
+    import io
+
+    import polars as pl
+    import seed
+
+    freq = ["@relation freMTPL2freq", "@attribute IDpol numeric", "@attribute ClaimNb numeric",
+            "@data", "1,2", "2,0", "3,1", "4,1", "5,2"]
+    sev = ["@relation freMTPL2sev", "@attribute IDpol numeric", "@attribute ClaimAmount numeric",
+           "@data", "1,100.01", "1,50.00", "3,33.33", "5,40.00"]
+    (tmp_path / "freMTPL2freq.arff").write_text("\n".join(freq) + "\n", encoding="utf-8")
+    (tmp_path / "freMTPL2sev.arff").write_text("\n".join(sev) + "\n", encoding="utf-8")
+    monkeypatch.setattr(seed, "DATA_DIR", tmp_path)
+
+    frame = pl.read_csv(io.BytesIO(build_csv(None)), infer_schema=False).sort("IDpol")
+    rows = {r["IDpol"]: r for r in frame.iter_rows(named=True)}
+
+    assert rows["4"]["claim_amount_minor"] is None  # a claimant, no severity record: unknown
+    assert rows["4"]["claim_severity"] is None
+    assert rows["2"]["claim_amount_minor"] == "0"  # no claim: a true zero
+    assert rows["5"]["claim_amount_minor"] == "4000"  # kept: the recorded amount, as ruled
+    assert float(rows["5"]["claim_severity"]) == 2000.0  # 4000 / ClaimNb 2
 
 
 @pytest.mark.req("FR-439")
@@ -348,3 +458,49 @@ def test_the_demo_principals_use_existing_roles_and_cover_the_journey() -> None:
     assert "approver" in DEMO_PRINCIPALS["actuary"]
     assert {"approver", "deployer"} <= set(DEMO_PRINCIPALS["prod_approver"])
     assert not {"approver", "deployer"} & set(DEMO_PRINCIPALS["admin"])
+
+
+@pytest.mark.req("FR-190")
+def test_the_ad_tolerance_accepts_the_measured_ratio_and_refuses_a_duplicated_peril() -> None:
+    """DP-1543-B (A): the seed's declared tolerance is 0.5 (accepts ratios in [0.5, 1.5]).
+
+    The measured demo ratio 1.117 (K=100 mean 0.9816, sd 0.1616) passes; a structure that
+    counts the book twice (ratio about 2.2) or duplicates the dominant peril (> 1.5) fails,
+    so the check bites at the width the failure mode sets, not the fit.
+    """
+    import datetime as dt
+    from decimal import Decimal
+
+    from model import AD_RECONCILIATION_TOLERANCE
+
+    from model_schema import (
+        LargeLossKind,
+        ReconciledPeril,
+        Reconciliation,
+        ReconciliationStatus,
+        new_uuid7,
+    )
+
+    def reconcile(modelled: int) -> Reconciliation:
+        return Reconciliation(
+            dataset_version_id=new_uuid7(),
+            part="holdout",
+            perils=(
+                ReconciledPeril(
+                    peril="AD", large_loss_kind=LargeLossKind.NONE, modelled_burning_cost=modelled
+                ),
+            ),
+            observed_burning_cost=1_000_000,
+            modelled_burning_cost=modelled,
+            tolerance=AD_RECONCILIATION_TOLERANCE,
+            computed_at=dt.datetime(2026, 10, 17, tzinfo=dt.UTC),
+        )
+
+    assert Decimal("0.5") == AD_RECONCILIATION_TOLERANCE
+    measured = reconcile(1_117_460)
+    assert measured.ratio == Decimal("1.117460")
+    assert measured.status is ReconciliationStatus.PASS
+    assert reconcile(500_000).status is ReconciliationStatus.PASS
+    duplicated = reconcile(2_200_000)
+    assert duplicated.status is ReconciliationStatus.FAIL
+    assert reconcile(1_500_001).status is ReconciliationStatus.FAIL

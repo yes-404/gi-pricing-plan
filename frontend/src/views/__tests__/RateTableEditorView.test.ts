@@ -11,6 +11,7 @@ const getRateTable = vi.fn();
 const getCellPage = vi.fn();
 const previewEdit = vi.fn();
 const confirmEdit = vi.fn();
+const bulkOperation = vi.fn();
 
 vi.mock("@/api/ratingVersions", () => ({
   getRatingVersionByRef: (...args: unknown[]) => getRatingVersionByRef(...args),
@@ -20,6 +21,12 @@ vi.mock("@/api/rateTables", () => ({
   getCellPage: (...args: unknown[]) => getCellPage(...args),
   previewEdit: (...args: unknown[]) => previewEdit(...args),
   confirmEdit: (...args: unknown[]) => confirmEdit(...args),
+  getDiffCells: vi.fn(),
+  isJob: () => false,
+  bulkOperation: (...args: unknown[]) => bulkOperation(...args),
+  previewImport: vi.fn(),
+  confirmImport: vi.fn(),
+  exportCsv: vi.fn(),
 }));
 
 const RATING = {
@@ -195,5 +202,33 @@ describe("RateTableEditorView: the edit flow (FR-229, FR-231, FR-234)", () => {
     const { container } = render(RateTableEditorView, { props, ...mounted });
     await screen.findAllByRole("textbox");
     expect(container.textContent ?? "").not.toMatch(/approv|lifecycle|status|draft|pending/i);
+  });
+});
+
+describe("RateTableEditorView: Editor II (FR-231, FR-233, FR-235)", () => {
+  it("offers the changes view, the bulk operation and CSV, each on the version on show", async () => {
+    render(RateTableEditorView, { props, ...mounted });
+    await screen.findAllByRole("textbox");
+    expect(screen.getByRole("region", { name: "Changes against another version" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Bulk operation" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "CSV import and export" })).toBeInTheDocument();
+  });
+
+  it("loads the version a bulk operation made, and says so", async () => {
+    bulkOperation.mockResolvedValue({ ...TABLE, version: 4 });
+    getRateTable.mockResolvedValueOnce(TABLE).mockResolvedValue({ ...TABLE, version: 4 });
+    render(RateTableEditorView, { props, ...mounted });
+    await screen.findAllByRole("textbox");
+
+    await userEvent.type(screen.getByLabelText("Percentage"), "5");
+    await userEvent.click(screen.getByRole("button", { name: "Apply" }));
+
+    await waitFor(() => expect(getRateTable).toHaveBeenLastCalledWith("area@4"));
+    expect(bulkOperation).toHaveBeenCalledWith("area@3", {
+      kind: "uplift_table",
+      parameters: { percentage: "5" },
+    });
+    expect(await screen.findAllByText("Created area@4")).not.toHaveLength(0);
+    expect(getCellPage).toHaveBeenLastCalledWith("area@4", undefined);
   });
 });

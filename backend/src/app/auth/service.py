@@ -5,15 +5,18 @@ Two credential types, one outcome:
 * a **bearer token** from the identity provider — a User;
 * an **API key** — a Service Account, scoped to named environments and to scoring.
 
-Everything that fails here fails the same way: `401` with a code, and an audit event
-(FR-392). The response never says *which* check failed. "Expired" versus "unknown key"
+Everything that fails here fails the same way: `401` with a code, counted by reason and,
+when the credential resolved to a workspace, an audit event (FR-392) that the caller writes
+after the authentication transaction has ended (see `AuthenticationFailed`). The response
+never says *which* check failed. "Expired" versus "unknown key"
 versus "wrong signature" tells an attacker what to change next, and tells a legitimate
 caller nothing they can act on that the trace id does not already give them.
 """
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from enum import StrEnum
 from uuid import UUID
 
 from sqlalchemy import select
@@ -24,12 +27,23 @@ from app.auth.oidc import OidcVerifier, TokenClaims, TokenRejectedError
 from app.db.models import ApiKeyRow, ServiceAccountRow, UserRow, WorkspaceMemberRow
 from app.errors import PlatformError
 from app.observability.logging import get_logger
+from app.observability.metrics import auth_failures
 from app.platform import audit
 from model_schema import ActorKind, JobSource, Principal
 
-__all__ = ["AuthenticatedIdentity", "authenticate_api_key", "authenticate_bearer"]
+__all__ = [
+    "AuthFailureReason",
+    "AuthenticatedIdentity",
+    "AuthenticationFailed",
+    "authenticate_api_key",
+    "authenticate_bearer",
+    "record_auth_failure",
+]
 
 _log = get_logger("app.auth")
+
+#: RL-1685 (PL-1454 DP-1 (b)): the longest a key's `last_used_at` may lag the real last use.
+LAST_USED_WRITE_INTERVAL = timedelta(seconds=60)
 
 #: The Principal an authentication *failure* is recorded against. The caller is by
 #: definition unidentified, and attributing the event to the identity they claimed would
@@ -73,37 +87,84 @@ class AuthenticatedIdentity:
         self.rate_limit_rps = rate_limit_rps
 
 
-def _unauthenticated(code: str = "UNAUTHENTICATED") -> PlatformError:
-    return PlatformError(
-        code,
-        "Authentication failed",
-        401,
-        "The credential presented was not accepted. Quote the trace id when reporting it.",
-    )
+class AuthFailureReason(StrEnum):
+    """The closed label set of `gip_auth_failures_total` (`07` FR-392, PL-1739 DP-3).
 
-
-async def _audit_auth_failure(
-    session: AsyncSession, *, workspace_id: UUID | None, action: str, detail: str
-) -> None:
-    """Record a failed authentication (FR-392, `06` FR-368).
-
-    Skipped when no workspace can be determined: the audit log is chained per workspace,
-    and inventing one to hold an event would corrupt a real chain. Those failures are
-    logged instead — an unauthenticated caller has no workspace by definition, and a
-    workspace's audit log is not the right place for traffic that never reached it.
+    Exactly eight members, and never the presented input: an unknown prefix and a wrong
+    secret share `INVALID_KEY`, so the label is no oracle for which keys exist.
     """
-    if workspace_id is None:
-        _log.warning("authentication failed", extra={"action": action, "reason": detail})
+
+    MALFORMED_KEY = "malformed_key"
+    INVALID_KEY = "invalid_key"
+    ACCOUNT_ARCHIVED = "account_archived"
+    KEY_REVOKED = "key_revoked"
+    KEY_EXPIRED = "key_expired"
+    ENVIRONMENT_NOT_GRANTED = "environment_not_granted"
+    BEARER_EXPIRED = "bearer_expired"
+    BEARER_REJECTED = "bearer_rejected"
+
+
+class AuthenticationFailed(PlatformError):  # noqa: N818 - named by PL-1739; a 401, not an Error
+    """A `401` that also says what to record about it (FR-392).
+
+    Authentication no longer writes its own failure row: the write would be flushed inside
+    a transaction that this very exception rolls back. The caller catches it, lets the
+    authentication transaction end, and calls `record_auth_failure` in one of its own.
+    `workspace_id` is the workspace the credential resolved to, or `None` when it resolved
+    to none.
+    """
+
+    def __init__(
+        self, code: str, reason: AuthFailureReason, workspace_id: UUID | None = None
+    ) -> None:
+        super().__init__(
+            code,
+            "Authentication failed",
+            401,
+            "The credential presented was not accepted. Quote the trace id when reporting it.",
+        )
+        self.reason = reason
+        self.workspace_id = workspace_id
+
+
+async def record_auth_failure(session: AsyncSession, failure: AuthenticationFailed) -> None:
+    """Count a failed authentication and, when it reached a workspace, audit it (FR-392).
+
+    The counter moves first, so a failing audit write is still counted (`07` FR-392, DP-2).
+    The write is not wrapped in `try/except`: a lost row must be a `5xx`, never a silent
+    `401` (NFR-519, `platform/audit.py` module docstring).
+
+    `session` must be inside a transaction of its own that holds nothing else; the caller
+    commits it. Nothing is written when no workspace can be determined: the audit log is
+    chained per workspace, and inventing one would corrupt a real chain. Those failures
+    are logged instead — a caller who reached no workspace has no audit log to be in.
+    """
+    reason = AuthFailureReason(failure.reason)  # a non-member raises before anything moves
+    auth_failures.labels(reason=reason.value).inc()
+    if failure.workspace_id is None:
+        _log.warning(
+            "authentication failed",
+            extra={"action": "principal.auth_failed", "reason": reason.value},
+        )
         return
     await audit.record(
         session,
-        workspace_id=workspace_id,
+        workspace_id=failure.workspace_id,
         actor=_UNKNOWN,
         source=JobSource.API,
-        action=action,
+        action="principal.auth_failed",
         entity_ref="principal:unauthenticated@1",
-        after={"reason": detail},
+        after={"reason": _DETAIL[reason]},
     )
+
+
+#: The `after.reason` text of each keyed-workspace row: the four reasons that reach a workspace.
+_DETAIL = {
+    AuthFailureReason.ACCOUNT_ARCHIVED: "service account archived",
+    AuthFailureReason.KEY_REVOKED: "key revoked",
+    AuthFailureReason.KEY_EXPIRED: "key expired",
+    AuthFailureReason.ENVIRONMENT_NOT_GRANTED: "environment not granted",
+}
 
 
 async def authenticate_bearer(
@@ -113,9 +174,11 @@ async def authenticate_bearer(
     try:
         claims = verifier.verify(token)
     except TokenRejectedError as exc:
-        _log.info("bearer token rejected", extra={"reason": exc.reason})
-        raise _unauthenticated("TOKEN_EXPIRED" if "Expired" in exc.reason else
-                               "UNAUTHENTICATED") from exc
+        expired = "Expired" in exc.reason
+        raise AuthenticationFailed(
+            "TOKEN_EXPIRED" if expired else "UNAUTHENTICATED",
+            AuthFailureReason.BEARER_EXPIRED if expired else AuthFailureReason.BEARER_REJECTED,
+        ) from exc
 
     user = await _upsert_user(session, claims, issuer=verifier.issuer)
 
@@ -178,10 +241,7 @@ async def authenticate_api_key(
     """Verify a Service Account key (FR-389, FR-430)."""
     parsed = parse_key(presented)
     if parsed is None:
-        await _audit_auth_failure(
-            session, workspace_id=None, action="principal.auth_failed", detail="malformed key"
-        )
-        raise _unauthenticated("API_KEY_INVALID")
+        raise AuthenticationFailed("API_KEY_INVALID", AuthFailureReason.MALFORMED_KEY)
 
     key = (
         await session.execute(select(ApiKeyRow).where(ApiKeyRow.prefix == parsed.prefix))
@@ -190,53 +250,42 @@ async def authenticate_api_key(
     if key is None or not verify_secret(parsed.secret, key.secret_hash):
         # Same outcome for "no such prefix" and "wrong secret". Distinguishing them turns
         # the prefix into an oracle for which keys exist.
-        await _audit_auth_failure(
-            session, workspace_id=None, action="principal.auth_failed", detail="invalid key"
-        )
-        raise _unauthenticated("API_KEY_INVALID")
+        raise AuthenticationFailed("API_KEY_INVALID", AuthFailureReason.INVALID_KEY)
 
     account = await session.get(ServiceAccountRow, key.service_account_id)
     if account is None or account.archived_at is not None:
-        await _audit_auth_failure(
-            session,
-            workspace_id=account.workspace_id if account else None,
-            action="principal.auth_failed",
-            detail="service account archived",
+        raise AuthenticationFailed(
+            "API_KEY_INVALID",
+            AuthFailureReason.ACCOUNT_ARCHIVED,
+            account.workspace_id if account else None,
         )
-        raise _unauthenticated("API_KEY_INVALID")
 
     now = datetime.now(UTC)
     if key.revoked_at is not None:
-        await _audit_auth_failure(
-            session,
-            workspace_id=account.workspace_id,
-            action="principal.auth_failed",
-            detail="key revoked",
+        raise AuthenticationFailed(
+            "API_KEY_INVALID", AuthFailureReason.KEY_REVOKED, account.workspace_id
         )
-        raise _unauthenticated("API_KEY_INVALID")
     if key.expires_at <= now:
-        await _audit_auth_failure(
-            session,
-            workspace_id=account.workspace_id,
-            action="principal.auth_failed",
-            detail="key expired",
+        raise AuthenticationFailed(
+            "API_KEY_EXPIRED", AuthFailureReason.KEY_EXPIRED, account.workspace_id
         )
-        raise _unauthenticated("API_KEY_EXPIRED")
 
     # FR-430: a `uat` key can never score against `prod`. Checked against the account's
     # granted environments, not the string inside the key — the key is attacker-supplied
     # and its environment field is a label, not an authorisation.
     if parsed.environment not in set(account.environments):
-        await _audit_auth_failure(
-            session,
-            workspace_id=account.workspace_id,
-            action="principal.auth_failed",
-            detail="environment not granted",
+        raise AuthenticationFailed(
+            "ENVIRONMENT_SCOPE_DENIED",
+            AuthFailureReason.ENVIRONMENT_NOT_GRANTED,
+            account.workspace_id,
         )
-        raise _unauthenticated("ENVIRONMENT_SCOPE_DENIED")
 
-    key.last_used_at = now
-    await session.flush()
+    # RL-1685 (PL-1454 DP-1 (b)): `last_used_at` is a "when was this key last seen" stamp for
+    # an operator, not an audit trail, so it is written only when it is unset or older than
+    # `LAST_USED_WRITE_INTERVAL`. An UPDATE on every request is a commit, a row lock and a
+    # WAL record per quote, on the hot path of NFR-489.
+    if key.last_used_at is None or now - key.last_used_at >= LAST_USED_WRITE_INTERVAL:
+        key.last_used_at = now
 
     return AuthenticatedIdentity(
         principal=Principal(

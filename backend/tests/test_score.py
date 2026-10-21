@@ -44,6 +44,7 @@ from app.main import create_app
 from app.platform import jobs as job_service
 from app.platform import settings as settings_service
 from app.platform import traces
+from app.platform.deployment_switch import LiveRefs
 from app.worker.rating_handlers import register_rating_handlers
 from app.worker.tasks import execute_job
 from app.worker.trace_handlers import register_trace_handlers
@@ -73,7 +74,14 @@ def client(api_settings: Settings) -> Any:
     only assertable if the client does not re-raise.
     """
     with TestClient(create_app(api_settings), raise_server_exceptions=False) as c:
-        yield c
+        # PL-1766 D5.8: `/score` reads the process's own `live` reference, not the table, so a
+        # Deployment planted straight into the table (`plant_deployment`) is pushed into the
+        # running app's reference the way a COMMIT would.
+        _LIVE_APPS.append(c.app)
+        try:
+            yield c
+        finally:
+            _LIVE_APPS.remove(c.app)
 
 
 @pytest_asyncio.fixture
@@ -1397,6 +1405,10 @@ OTHER_VERSION_REF = "rating_version:live-rv@4"
 OTHER_SLUG_REF = "rating_version:another-rv@3"
 
 
+#: The apps a test has running, so `plant_deployment` can load a planted row into their `live`.
+_LIVE_APPS: list[Any] = []
+
+
 async def plant_deployment(
     database: Any, workspace_id: Any, environment: str, ref: str, *, deployed_by: Any = None
 ) -> UUID:
@@ -1421,7 +1433,11 @@ async def plant_deployment(
         )
         session.add(row)
         await session.flush()
-        return row.id
+        planted = row.id
+    for app in _LIVE_APPS:
+        async with database.session() as session:
+            await app.state.live_refs.load_latest(session)
+    return planted
 
 
 @pytest.fixture
@@ -1503,7 +1519,7 @@ def test_a_caller_with_no_environment_and_no_ref_is_refused_even_when_deployment
     ctx = QuoteContext.model_validate(_quote({"rating_version_ref": None}))
 
     with pytest.raises(score_module.PlatformError) as refused:
-        _run(score_module._serving_ref(database, caller, ctx))
+        score_module._serving_ref(LiveRefs(), caller, ctx)
 
     assert refused.value.code == "NO_LIVE_RATING_VERSION"
     assert refused.value.status_code == 409

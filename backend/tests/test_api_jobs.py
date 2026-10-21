@@ -338,6 +338,16 @@ async def test_the_event_stream_ends_when_the_job_is_terminal(
 
 
 @pytest.mark.req("FR-451")
+def test_events_publish_text_event_stream(client: TestClient) -> None:
+    """FD-1684: the SSE route declares text/event-stream, not an empty JSON body."""
+    content = client.app.openapi()["paths"]["/api/v1/jobs/{job_id}/events"]["get"]["responses"][
+        "200"
+    ]["content"]
+    assert set(content) == {"text/event-stream"}
+    assert content["text/event-stream"]["schema"] == {"type": "string"}
+
+
+@pytest.mark.req("FR-451")
 def test_the_routes_appear_in_the_generated_contract() -> None:
     import json
     import pathlib

@@ -131,8 +131,13 @@ def test_every_other_type_still_requires_a_source_column() -> None:
     """Relaxing the field-level `min_length=1` for the interaction arm must not relax it
     for anything else — so the rule moved into the validator rather than being dropped."""
     for kind in (FactorType.IDENTITY, FactorType.SPLINE, FactorType.EXPRESSION):
+        # `expression` is supplied for its own arm, so that the ONLY thing wrong is the empty
+        # `source_columns` -- otherwise the required-arm check refuses first, on its own message.
+        extra: dict[str, object] = (
+            {"expression": "driver_age * 2"} if kind is FactorType.EXPRESSION else {}
+        )
         with pytest.raises(pydantic.ValidationError, match="source_columns"):
-            _factor(type=kind, source_columns=())
+            _factor(type=kind, source_columns=(), **extra)
 
 
 @pytest.mark.req("FR-90")
@@ -165,6 +170,8 @@ def test_only_an_interaction_may_source_no_columns(factor_type: FactorType) -> N
         ids["banding_id"] = uuid4()
     if factor_type is FactorType.GROUPING:
         ids["grouping_id"] = uuid4()
+    if factor_type is FactorType.EXPRESSION:
+        ids["expression"] = "driver_age * 2"
     with pytest.raises(pydantic.ValidationError, match="names no source_columns"):
         _factor(type=factor_type, source_columns=(), **ids)
 

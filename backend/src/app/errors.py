@@ -332,6 +332,8 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # A deploy into an approval-gated Environment without an approved, unexecuted
         # Deployment Request (FR-267, `RL-1301` A.5; WK-674 Slice 2).
         "DEPLOY_REQUIRES_APPROVAL",
+        # FR-268 (WK-674 Slice 5, PL-1766 D5.9): PREPARE was short, so no Deployment was written.
+        "DEPLOY_SWITCH_INCOMPLETE",
         # FR-239 (RL-1379): a compile of a Rating Version that has left `draft`.
         "RATING_VERSION_IMMUTABLE",
         # Rate tables (W10-2), enumerated in 03 §5.1.
@@ -353,6 +355,9 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         # FR-222 as amended (WK-1178 A-2, PL-1464): a `model_call`'s `feature_map` names
         # something other than its Model's Factor slugs or offset column, refused at save.
         "MODEL_CALL_FEATURE_MAP_INVALID",
+        # FR-222 as amended 2026-10-16 (SL 8071): a `model_call` pinning a GBM fitted on a
+        # banded or grouped Factor, refused at save and at compile.
+        "MODEL_CALL_GBM_TRANSFORMED_FACTOR",
         # W10-3C: the save-time seed-lineage equality proof (03 §4.2, FR-234) and
         # the named refusals of the bulk-operation and import operations (03 §5.1).
         "RATE_TABLE_SEED_MISMATCH",

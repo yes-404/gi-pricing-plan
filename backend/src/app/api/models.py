@@ -39,7 +39,7 @@ poll for than to do.
 
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import Annotated, Any, cast
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, Header, Query, Request, Response, status
@@ -101,6 +101,7 @@ from model_schema import (
     RatingVersion,
     RatingVersionCreate,
     RegressionRun,
+    Slug,
     SpecValidation,
     TransparencyArtifact,
 )
@@ -220,6 +221,10 @@ class FactorCreate(BaseModel):
     #: time, twenty seconds and one Job later.
     banding_id: UUID | None = None
     grouping_id: UUID | None = None
+    #: The field is `Factor`'s own, bound rather than restated (`CLAUDE.md` §2): its type,
+    #: bound and description cannot drift from the artifact's. The `expression` arm of
+    #: `Factor`'s validator answers a missing or misplaced formula as a 422 here.
+    expression: str | None = cast(Any, Factor.model_fields["expression"])
 
     def as_factor(self) -> Factor:
         return Factor(id=uuid4(), version=1, **self.model_dump())
@@ -247,11 +252,11 @@ class BandingProposalRequest(BandingProposal):
     day store it.
     """
 
-    slug: str
+    slug: Slug
 
 
 class GroupingProposalRequest(GroupingProposal):
-    slug: str
+    slug: Slug
 
 
 class ModelSpecValidate(BaseModel):

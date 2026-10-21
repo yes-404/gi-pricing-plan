@@ -1,7 +1,11 @@
 """Module-level Celery app for the `celery` CLI.
 
-    celery -A app.worker.entrypoint worker --queues compute --concurrency 2
+    celery -A app.worker.entrypoint worker --queues <pool> --concurrency <n>
     celery -A app.worker.entrypoint beat          # runs the outbox relay on a schedule
+
+One worker per pool: `<pool>` is a `JobQueue` value (`compute`, `scoring`, `io`, `default`).
+`deploy/docker-compose.yml` runs one service each; every queue `DEFAULT_QUEUE_FOR_KIND` routes to
+must be consumed by one (`backend/tests/test_deploy_stack.py` derives that set).
 
 Kept apart from `tasks.py` because constructing the app reads settings and opens a broker
 connection. Every test, every tooling script and the API process import worker code without
@@ -19,7 +23,7 @@ from app.db.session import Database
 from app.observability.logging import configure_logging
 from app.platform.blobs import BlobStore
 from app.platform.tenancy import require_tenant_binding
-from app.worker.celery_app import TASK_RELAY_OUTBOX
+from app.worker.celery_app import RELAY_QUEUE, TASK_RELAY_OUTBOX
 from app.worker.tasks import create_worker
 
 __all__ = ["app"]
@@ -54,7 +58,7 @@ app.conf.beat_schedule = {
     "relay-outbox": {
         "task": TASK_RELAY_OUTBOX,
         "schedule": timedelta(seconds=1),
-        "options": {"queue": "default", "expires": 10},
+        "options": {"queue": RELAY_QUEUE.value, "expires": 10},
     }
 }
 
@@ -67,6 +71,7 @@ from app.worker.model_handlers import register_model_handlers  # noqa: E402
 from app.worker.rate_table_handlers import register_rate_table_handlers  # noqa: E402
 from app.worker.rating_handlers import register_rating_handlers  # noqa: E402
 from app.worker.scoring_handlers import register_scoring_handlers  # noqa: E402
+from app.worker.trace_handlers import register_trace_handlers  # noqa: E402
 
 register_data_handlers()
 register_model_handlers()
@@ -74,3 +79,4 @@ register_rate_table_handlers()
 register_rating_handlers()
 register_scoring_handlers()
 register_dislocation_handlers()
+register_trace_handlers()

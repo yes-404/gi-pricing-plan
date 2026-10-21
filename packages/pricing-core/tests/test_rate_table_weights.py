@@ -202,6 +202,23 @@ def test_a_banding_ref_key_weights_through_apply_banding() -> None:
     assert result.weights == {("18-37",): D("3"), ("38-57",): D("4"), ("58+",): D("8")}
 
 
+@pytest.mark.req("FR-228")
+def test_a_banding_ref_to_a_banding_cut_over_an_expression_is_refused_by_name() -> None:
+    """`RL-1700` (c): no portfolio carries a formula's result as a column (`03` FR-228)."""
+    assert "source_expression" in Banding.model_fields, (
+        "PL-1665 4.1': Banding must carry `source_expression` (FR-97)"
+    )
+    banding = _banding(column=None, source_expression="driver_age / 2")
+    keys = [_key("age_band", banding_ref="banding:age-steps@1")]
+    frame = _portfolio(driver_age=[20, 30], exposure_years=[D("1"), D("2")])
+    cells = [{"age_band": "18-37", "relativity": "1"}]
+    with pytest.raises(WeightJoinError, match=r"age_band.*banding:age-steps@1.*factor_ref") as r:
+        exposure_weights(
+            frame, keys, cells, factors={}, bandings={banding.id: banding}, groupings={}
+        )
+    assert r.value.code == "VALIDATION_FAILED"
+
+
 @pytest.mark.req("FR-231")
 def test_keys_compare_in_their_declared_type() -> None:
     keys = [_key("ncd", "int"), _key("garaged", "bool")]

@@ -50,6 +50,7 @@ from pricing_core.modelling import (
     grouping_evidence,
     propose_banding,
     propose_grouping,
+    source_columns_of,
 )
 
 __all__ = [
@@ -97,18 +98,18 @@ async def propose_banding_for_version(
     version = await datasets.fittable_or_refuse(
         session, workspace_id=workspace_id, version_id=proposal.dataset_version_id
     )
-    frame = await _read_columns(
-        session,
-        blob_store,
-        version,
-        columns=(
-            proposal.column,
-            proposal.exposure_column,
-            proposal.claim_count_column,
-            proposal.claim_amount_column,
-        ),
-    )
     try:
+        frame = await _read_columns(
+            session,
+            blob_store,
+            version,
+            columns=(
+                proposal.exposure_column,
+                proposal.claim_count_column,
+                proposal.claim_amount_column,
+            ),
+            banding_over=proposal,
+        )
         return propose_banding(frame, proposal, dataset_id=version.dataset_id, slug=slug)
     except ModellingError as exc:
         raise _refuse(exc, "The banding could not be proposed") from exc
@@ -171,18 +172,18 @@ async def evaluate_banding_for_version(
         session, workspace_id=workspace_id, version_id=evaluation.dataset_version_id
     )
     banding = evaluation.banding
-    frame = await _read_columns(
-        session,
-        blob_store,
-        version,
-        columns=(
-            banding.column,
-            evaluation.exposure_column,
-            evaluation.claim_count_column,
-            evaluation.claim_amount_column,
-        ),
-    )
     try:
+        frame = await _read_columns(
+            session,
+            blob_store,
+            version,
+            columns=(
+                evaluation.exposure_column,
+                evaluation.claim_count_column,
+                evaluation.claim_amount_column,
+            ),
+            banding_over=banding,
+        )
         stats = band_statistics(
             frame,
             banding,
@@ -302,6 +303,7 @@ async def create_banding(
             "slug": banding.slug,
             "version": version,
             "column": banding.column,
+            "source_expression": banding.source_expression,
             "method": banding.method.value,
             "bands": len(banding.labels),
             "derived_on_dataset_version_id": (
@@ -466,6 +468,7 @@ async def _read_columns(
     version: object,
     *,
     columns: tuple[str, ...],
+    banding_over: Banding | BandingProposal | None = None,
 ) -> pl.DataFrame:
     """The named columns of the version's table, and no others.
 
@@ -486,6 +489,10 @@ async def _read_columns(
     payload = io.BytesIO(await blob_store.read(to_ref(blob)))
     available = set(pl.read_parquet_schema(payload))
     payload.seek(0)
+    if banding_over is not None:
+        # The column a banding is cut over, or the columns its expression reads, parsed by
+        # the one parser against this version's columns (FR-95; `RL-1615` cost (i)).
+        columns = (*source_columns_of(banding_over, available), *columns)
     wanted = [c for c in dict.fromkeys(columns) if c in available]
     if not wanted:
         raise PlatformError(

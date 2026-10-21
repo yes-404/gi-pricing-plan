@@ -162,6 +162,11 @@ class PartitionDiagnostics(BaseModel):
     #: nothing. Optional because a stored `Diagnostics` written before this field must still
     #: validate (`extra="forbid"` refuses unknown keys, not absent ones).
     rows_excluded_zero_weight: int | None = Field(default=None, ge=0)
+    #: How many rows FR-111's severity-population rule removed because the response is
+    #: unknown (null) under `response = claim_severity` (SL-1543, 2026-10-17). `None` means
+    #: the artifact predates the rule or the fit is not a severity fit; `0` means the rule ran
+    #: and removed nothing. A known amount that is not positive is refused, never counted here.
+    rows_excluded_unknown_response: int | None = Field(default=None, ge=0)
     ae_overall: float = Field(ge=0.0)
     ae_by_factor: tuple[AeCell, ...] = ()
     lift: tuple[LiftBin, ...] = ()
@@ -372,6 +377,12 @@ class PermutationOmissionReason(enum.StrEnum):
     OPERAND_OF_INTERACTION = "operand_of_interaction"
     #: The holdout frame has no column for the factor, so there is nothing to shuffle.
     NO_HOLDOUT_COLUMN = "no_holdout_column"
+    #: The factor is an `expression` (FR-95): a formula over several `source_columns`, of
+    #: which the block would shuffle only the first, so any number it printed would be the
+    #: importance of that column and not of the factor. Omitted with this reason, never
+    #: measured wrongly (DP-1274-DIAG, SL-1274). Real support is owed (WK-690).
+    #: **Added 2026-10-16, after which an older build cannot read the value.**
+    EXPRESSION_FACTOR = "expression_factor"
 
 
 class PermutationOmission(BaseModel):
@@ -420,6 +431,12 @@ class PartialDependenceOmissionReason(enum.StrEnum):
     #: an operand of an interaction.** A plain factor on an operand's column is varied through
     #: that same column, so it recombines the operands the same way.
     OPERAND_OF_INTERACTION = "operand_of_interaction"
+    #: The factor is an `expression` (FR-95). It has columns, so `no_source_column` is false
+    #: of it; the sweep would hold only `source_columns[0]` at each value, which is not the
+    #: formula's input, so the curve would be a different quantity under the factor's name.
+    #: Omitted whole, with no points (DP-1274-DIAG, SL-1274). Real support is owed (WK-690).
+    #: **Added 2026-10-16, after which an older build cannot read the value.**
+    EXPRESSION_FACTOR = "expression_factor"
 
 
 class PartialDependenceOmission(BaseModel):

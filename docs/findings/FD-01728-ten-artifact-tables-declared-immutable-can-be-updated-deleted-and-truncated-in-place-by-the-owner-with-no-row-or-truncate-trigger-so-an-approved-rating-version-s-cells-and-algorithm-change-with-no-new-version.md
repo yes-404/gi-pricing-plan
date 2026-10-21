@@ -137,7 +137,7 @@ the only one. The pattern is `backend/tests/test_backtests.py` (the first test i
 
 ## Disposition
 
-Carry forward, owner WK-1178: fixed in P2 (D17), by PL 8016's slice S-a (triggers first, effective even for the owner, so it
+Carry forward, owner WK-1178: fixed in P2 (D17), by PL-1769's slice S-a (SL-1770) (triggers first, effective even for the owner, so it
 closes the live risk fastest; migration-only, low conflict), as ruled at "2026-10-14 12:00:14 BST". The trigger layer is
 tamper-resistant only once S-b (FD-1729) lands: the owner can disable a trigger. It needs a resolution before any P3 start
 (`CLAUDE.md` §14). The event that next confirms or discharges it is the fix's merge, with the owner-write red shown on the

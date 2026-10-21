@@ -11,9 +11,15 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from model_schema import ArtifactRef
-from model_schema.rating import AlgorithmDiff, ChangeSummaryDraft, RateTableChange
+from model_schema.rating import (
+    AlgorithmDiff,
+    ChangeSummaryDraft,
+    RateTableChange,
+    RatingAlgorithm,
+    RatingTableStep,
+)
 
-__all__ = ["draft_change_summary"]
+__all__ = ["draft_change_summary", "pair_rate_tables"]
 
 
 def draft_change_summary(
@@ -25,9 +31,10 @@ def draft_change_summary(
 
     `baseline` `None` means no approved earlier version; `baseline` set with `structural_diff`
     `None` means the baseline has no algorithm (DP-E1-5). The rate-table entries are those
-    whose pinned version differs, one side only included.
+    `pair_rate_tables` names: through the `table` step that names a pin, then by slug for a pin
+    no step entry names (`RL-1707`).
     """
-    tables = sorted(rate_tables, key=lambda entry: entry.slug)
+    tables = sorted(rate_tables, key=_entry_order)
     lines: list[str] = []
     if baseline is None:
         lines.append("No approved earlier version of this algorithm: nothing to compare against.")
@@ -55,6 +62,71 @@ def draft_change_summary(
     )
 
 
+def pair_rate_tables(
+    previous: RatingAlgorithm | None,
+    candidate: RatingAlgorithm,
+    before: Sequence[ArtifactRef],
+    after: Sequence[ArtifactRef],
+) -> list[RateTableChange]:
+    """RL-1707's two passes over the baseline's and the version's rate-table pins.
+
+    Pass 1 pairs each `table` step by `step_id`, as FR-219 does; pass 2 pairs a pin
+    difference no step entry names by slug only where it is the one such ref on each side.
+    Without the baseline's algorithm there is no step entry. No entry carries a diff.
+    """
+    entries: list[RateTableChange] = []
+    named: set[ArtifactRef] = set()
+    if previous is not None:
+        old_steps, new_steps = _table_refs(previous), _table_refs(candidate)
+        for step_id in sorted(old_steps.keys() | new_steps.keys()):
+            old, new = old_steps.get(step_id), new_steps.get(step_id)
+            if old == new:
+                continue
+            if old is not None and new is not None and old.slug == new.slug:
+                entries.append(
+                    RateTableChange(slug=old.slug, step_id=step_id, from_ref=old, to_ref=new)
+                )
+            else:
+                if old is not None:
+                    entries.append(RateTableChange(slug=old.slug, step_id=step_id, from_ref=old))
+                if new is not None:
+                    entries.append(RateTableChange(slug=new.slug, step_id=step_id, to_ref=new))
+            named.update(ref for ref in (old, new) if ref is not None)
+    # DP-5 (a): each side's pins are a set, so a ref listed twice is one pin.
+    removed = (set(before) - set(after)) - named
+    added = (set(after) - set(before)) - named
+    for slug in sorted({ref.slug for ref in removed | added}):
+        gone = [ref for ref in removed if ref.slug == slug]
+        came = [ref for ref in added if ref.slug == slug]
+        if len(gone) == 1 and len(came) == 1:
+            entries.append(RateTableChange(slug=slug, from_ref=gone[0], to_ref=came[0]))
+        else:
+            entries += [RateTableChange(slug=slug, from_ref=ref) for ref in gone]
+            entries += [RateTableChange(slug=slug, to_ref=ref) for ref in came]
+    return entries
+
+
+def _table_refs(algorithm: RatingAlgorithm) -> dict[str, ArtifactRef]:
+    """Each top-level `table` step's rate-table ref by `step_id`; the draft never inlines."""
+    return {
+        step.step_id: step.rate_table_ref
+        for step in algorithm.steps
+        if isinstance(step, RatingTableStep)
+    }
+
+
+def _entry_order(entry: RateTableChange) -> tuple[str, int, str, str, str]:
+    """RL-1707 rule 4: slug, step entries before pin entries, step_id, from_ref, to_ref;
+    a null ref sorts as the empty string (DP-4 (a))."""
+    return (
+        entry.slug,
+        0 if entry.step_id is not None else 1,
+        entry.step_id or "",
+        "" if entry.from_ref is None else str(entry.from_ref),
+        "" if entry.to_ref is None else str(entry.to_ref),
+    )
+
+
 def _structural_lines(diff: AlgorithmDiff) -> list[str]:
     lines = [f"Step added: {step_id}." for step_id in sorted(diff.added_steps)]
     lines += [f"Step removed: {step_id}." for step_id in sorted(diff.removed_steps)]
@@ -69,7 +141,8 @@ def _structural_lines(diff: AlgorithmDiff) -> list[str]:
     ]
     lines += [
         f"Sub-graph mount {mount.mount_point} changed: {mount.before} -> {mount.after}"
-        f"{' (ports changed)' if mount.ports_changed else ''}."
+        f"{' (ports changed)' if mount.ports_changed else ''}"
+        f"{' (purposes changed)' if mount.purposes_changed else ''}."
         for mount in sorted(diff.sub_graph_mounts, key=lambda m: m.mount_point)
     ]
     lines += [
@@ -85,13 +158,14 @@ def _structural_lines(diff: AlgorithmDiff) -> list[str]:
 
 def _table_line(entry: RateTableChange) -> str:
     slug = entry.slug
+    label = slug if entry.step_id is None else f"{slug} (step {entry.step_id})"
     if entry.from_ref is None and entry.to_ref is not None:
-        return f"- {slug}: added, pinned at version {entry.to_ref.version}."
+        return f"- {label}: added, pinned at version {entry.to_ref.version}."
     if entry.to_ref is None and entry.from_ref is not None:
-        return f"- {slug}: removed, was pinned at version {entry.from_ref.version}."
+        return f"- {label}: removed, was pinned at version {entry.from_ref.version}."
     assert entry.from_ref is not None
     assert entry.to_ref is not None
-    moved = f"- {slug}: version {entry.from_ref.version} -> {entry.to_ref.version}"
+    moved = f"- {label}: version {entry.from_ref.version} -> {entry.to_ref.version}"
     if entry.pending or entry.diff is None:
         return (
             f"{moved}, diff pending (a parquet table is not computed here); run "

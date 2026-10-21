@@ -181,6 +181,17 @@ async def test_csv_export_carries_the_hashes(
     assert "sha256:" in lines[1]
 
 
+@pytest.mark.req("FR-451")
+def test_export_publishes_csv_and_json_lines(client: TestClient) -> None:
+    """FD-1684: the format query picks one of two media types; the contract publishes both."""
+    content = client.app.openapi()["paths"]["/api/v1/audit/export"]["get"]["responses"]["200"][
+        "content"
+    ]
+    assert set(content) == {"text/csv", "application/x-ndjson"}
+    assert content["text/csv"]["schema"] == {"type": "string"}
+    assert content["application/x-ndjson"]["schema"] == {"type": "string"}
+
+
 @pytest.mark.req("FR-371")
 async def test_json_export_is_line_delimited(
     client: TestClient, database: Database, workspace_id, principal, auditor_headers
@@ -188,6 +199,7 @@ async def test_json_export_is_line_delimited(
     """An audit log is unbounded; a consumer must be able to start before the export ends."""
     await _events(database, workspace_id, principal)
     response = client.get("/api/v1/audit/export?format=json", headers=auditor_headers)
+    assert response.headers["content-type"].startswith("application/x-ndjson")
     lines = [json.loads(line) for line in response.text.splitlines() if line]
     assert len(lines) == 3
     assert lines[0]["event_hash"].startswith("sha256:")

@@ -60,8 +60,9 @@ _CASES: dict[str, tuple[dict[str, Any], tuple[str, ...], tuple[str, ...]]] = {
 #: Every other raise site under `pricing_core/rating` (a `_raise_named` call, a `CodedError(`
 #: construction, or a `_model_call_failure(` call), with why it is input-free.
 _INPUT_FREE = {
-    # FD-1660's guard: a fixed literal and mount points (authored identifiers), never a value
-    ("rating/analysis.py", "_check_mounts_attributable"): 1,
+    # FD-8070's refusal: the step id, graph names, feature slugs and column, all authored
+    # identifiers, never a quote value (test_rating_column_collision.py)
+    ("rating/compile.py", "check_model_call_columns"): 1,
     ("rating/score.py", "_check_purpose_mount"): 1,  # `purpose` is a closed set of literals
     ("rating/score.py", "_check_billing_surface"): 1,  # names the constant billing-surface keys
     # FR-213's refusal: names the declared step outputs the inputs collide with, never a value
@@ -69,6 +70,9 @@ _INPUT_FREE = {
     # FR-221 as_at refusal: step id and field name only, never the value
     # (test_rating_lookup_as_at.py drives it with a sentinel)
     ("rating/score.py", "_check_as_at_values"): 1,
+    # FR-273 lossless-float refusal: the declared input name only, never the value
+    # (test_rating_score_decimal_input.py drives it with a sentinel-free value assert)
+    ("rating/score.py", "_engine_context"): 1,
     ("rating/score.py", "_check_lookup_misses"): 2,  # step ids only
     ("rating/score.py", "_reraise_engine_failure"): 1,  # engine error is reduced to its type name
     # RL-1346's refusal: clause, rung names and minor-unit differences from `ladder_violations`
@@ -102,6 +106,10 @@ _INPUT_FREE = {
     # WK-1178 SL-1541 (FR-240): step id, refs, peril, role, feature slugs: authored identifiers
     # at compile time, never a quote
     ("rating/compile.py", "check_model_call_coverage"): 1,
+    # WK-1178 SL-8071 (FR-222, FR-240; the maintainer 2026-10-17 00:07:43 BST): compile time over
+    # the model structure, before any quote exists: step id, pinned model ref, Factor slug and kind
+    # only (`test_the_gbm_factor_refusal_message_is_exactly_its_structural_fields` pins the text)
+    ("rating/compile.py", "check_model_call_gbm_factors"): 1,
     ("rating/compile.py", "_refuse_peril_model_calls"): 1,  # :815 step id, ref, names
     ("rating/compile.py", "_resolve_peril_components"): 3,  # refs, fields at fault, peril, status
     # mount point, port and value names (WK-1250 Slice 2)
@@ -121,13 +129,7 @@ _INPUT_SITES = {("rating/score.py", "_validate_inputs"), ("rating/score.py", "_r
 
 
 #: `PlatformError` cannot be raised in this package (import-linter), so a hit is a violation.
-_SITE_NAMES = (
-    "_raise_named",
-    "CodedError",
-    "_model_call_failure",
-    "PlatformError",
-    "_MountNotYetAttributable",
-)
+_SITE_NAMES = ("_raise_named", "CodedError", "_model_call_failure", "PlatformError")
 
 
 def _source_files() -> list[Path]:

@@ -103,3 +103,38 @@ Two things cost time on Debian 13 and are worth knowing:
 - **A plugin in `~/.docker/cli-plugins` is invisible to `sudo docker`**, because root reads
   `/root/.docker`. Install it to `/usr/local/lib/docker/cli-plugins/` so both see it — or
   add your user to the `docker` group and drop `sudo` altogether (needs a new login).
+
+## The deployment path (WK-674 Slice 4)
+
+`api`, `worker` and `migrate` are one image run under three commands, behind the `app` profile,
+so the default `up` is still the three backing services. Build from the repository root and give
+the image the commit it was built from (FR-18):
+
+```bash
+export GIP_BUILD=$(git rev-parse HEAD)
+docker compose -f deploy/docker-compose.yml --profile app build
+docker compose -f deploy/docker-compose.yml --profile app up -d --wait --scale api=2 lb
+```
+
+- **Rolling `api` to a new image is health-gated** (NFR-531). A plain `up --scale api=2`
+  recreates every replica at once, so none is healthy until the new ones pass their healthcheck.
+  Run `GIP_BUILD=<new> deploy/roll-api.sh [-t <seconds>] <project> <compose-file>...`. `lb`
+  re-resolves `api` every second and retries the next upstream, so it needs no change.
+  `roll-api.sh` fails loud, and a failed roll before the old replicas are stopped returns to the
+  pre-roll replicas, removing the new ones.
+- **`migrate`** is a one-shot step (FR-435). `api` and `worker` wait for it to exit 0; nothing
+  migrates at application start.
+  Take a database backup before you run `migrate` against a database that holds production
+  artifacts (`07` FR-416, as amended): a conditionally irreversible migration can be undone only by
+  restoring that backup.
+- **`api`** has no dependency on `worker` (FR-434): `up api lb` starts the scoring API with no
+  compute worker present (NFR-534). `lb` is the stated topology: one nginx, round-robin over the
+  `api` replicas through Docker DNS (`deploy/lb.conf`).
+- **`worker`** runs Celery with a container `mem_limit`; a Job's own `resource_budget.memory_gb`
+  is checked inside the process and fails the Job naming the budget (FR-412, FR-415).
+- **Shutdown** (FD-1211): each process finalizes the interpreter on SIGTERM, then the container is
+  replaced.
+- **Production identity provider:** `deploy/keycloak/` is a reference you operate (FR-437).
+
+`deploy/docker-compose.isolated.yml` is for the runtime tests: it publishes the backing services
+on ephemeral ports so a test project cannot collide with the dev stack.

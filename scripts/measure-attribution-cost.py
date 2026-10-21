@@ -717,9 +717,34 @@ def cmd_sets(args: argparse.Namespace) -> None:
               isolated=[i.isolated_minor for i in result.attribution])  # fmt: skip
 
 
+def _ladder_pass(bundle: Any, book: Any, columns: list[str], spec: Any, ref: Any) -> Any:
+    """One scoring pass keeping each quoted policy's full ladder (`{"minor", "ladder"}`): the
+    replay needs the rungs' recorded operations, which `_score_pass` no longer holds (FD-1573)."""
+    import polars as pl
+
+    from model_schema.scoring import LadderRung
+    from pricing_core.rating.score import score_batch
+
+    declared = [f.name for f in bundle.algorithm.input_contract if f.name in columns]
+    frame = book.select(["quote_id", *declared]).with_columns(
+        pl.lit(spec.purpose).alias("purpose"),
+        pl.lit(spec.as_at.isoformat()).alias("effective_date"),
+        pl.lit(str(ref)).alias("rating_version_ref"),
+    )
+    out: dict[str, dict[str, Any]] = {}
+    for row in score_batch(bundle, frame).collect().iter_rows(named=True):
+        raw = json.loads(row["premium_ladder_json"] or "[]")
+        ladder = [LadderRung.model_validate(r) for r in raw]
+        payable = [r for r in ladder if r.rung == "payable_premium"]
+        out[row["quote_id"]] = {
+            "minor": int(payable[0].value_minor) if row["outcome"] == "quoted" else None,
+            "ladder": ladder,
+        }
+    return out
+
+
 def _pass(fx: Fixture, members: tuple[int, ...] | list[int], book: Any, columns: list[str]) -> Any:
-    """(baseline pass, candidate pass) of `_score_pass` for the baseline against `members`."""
-    from pricing_core.rating.analysis import _score_pass
+    """(baseline pass, candidate pass) of `_ladder_pass` for the baseline against `members`."""
     from pricing_core.rating.compile import compile_bundle
     from pricing_core.rating.runtime import load_bundle
 
@@ -728,8 +753,8 @@ def _pass(fx: Fixture, members: tuple[int, ...] | list[int], book: Any, columns:
     b = load_bundle(asyncio.run(compile_bundle(base_v, resolver)))
     c = load_bundle(asyncio.run(compile_bundle(cand_v, resolver)))
     return (
-        _score_pass(b, book, columns, spec, spec.baseline_ref),
-        _score_pass(c, book, columns, spec, spec.candidate_ref),
+        _ladder_pass(b, book, columns, spec, spec.baseline_ref),
+        _ladder_pass(c, book, columns, spec, spec.candidate_ref),
     )
 
 

@@ -68,6 +68,25 @@ def _find_banding(key: RateTableKey, bandings: Mapping[UUID, Banding]) -> Bandin
     raise WeightJoinError(f"key {key.name!r}: banding {ref} was not supplied")
 
 
+def _find_column_banding(key: RateTableKey, bandings: Mapping[UUID, Banding]) -> str:
+    """The column a `banding_ref` key bands, or a refusal for a Banding cut over a formula.
+
+    No portfolio or quote carries an `expression` Factor's result as a column, so a Banding
+    cut over one (`02` §4.2 `source_expression`) cannot be a key's `banding_ref` (`03`
+    FR-228; `RL-1700` (c)). A key that needs that result binds the `expression` Factor by
+    `factor_ref`, whose resolution evaluates the formula: evaluating it here instead would
+    be a second copy of the formula outside its Factor.
+    """
+    banding = _find_banding(key, bandings)
+    if banding.column is None:
+        raise WeightJoinError(
+            f"key {key.name!r}: banding {key.banding_ref} is cut over an expression "
+            f"({banding.source_expression!r}), and no portfolio carries a formula's result "
+            "as a column. Bind the expression Factor with `factor_ref` instead (FR-228)."
+        )
+    return banding.column
+
+
 def _needed_columns(
     keys: Sequence[RateTableKey],
     factors: Mapping[str, Sequence[Factor]],
@@ -79,7 +98,7 @@ def _needed_columns(
             for factor in factors.get(str(key.factor_ref), ()):
                 needed.update(factor.source_columns)
         elif key.banding_ref is not None:
-            needed.add(_find_banding(key, bandings).column)
+            needed.add(_find_column_banding(key, bandings))
         else:
             needed.add(key.name)
     return needed
@@ -104,16 +123,14 @@ def _resolved_series(
             return matrix.frame[matrix.terms[chain[0].slug]].cast(pl.String)
         if key.banding_ref is not None:
             banding = _find_banding(key, bandings)
-            if banding.column not in frame.columns:
+            name = _find_column_banding(key, bandings)
+            if name not in frame.columns:
                 raise WeightJoinError(
-                    f"key {key.name!r}: banded column {banding.column!r} is absent "
-                    "from the portfolio"
+                    f"key {key.name!r}: banded column {name!r} is absent from the portfolio"
                 )
-            column = frame[banding.column]
+            column = frame[name]
             if not column.dtype.is_numeric():
-                raise WeightJoinError(
-                    f"key {key.name!r}: banded column {banding.column!r} is not numeric"
-                )
+                raise WeightJoinError(f"key {key.name!r}: banded column {name!r} is not numeric")
             return apply_banding(column, banding)
     except FactorResolutionError as exc:
         raise WeightJoinError(str(exc)) from exc

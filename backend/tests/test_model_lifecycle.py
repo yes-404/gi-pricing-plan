@@ -566,9 +566,17 @@ async def test_a_model_whose_dataset_lost_its_standing_cannot_be_approved(
         model = (
             await session.execute(select(ModelRow).where(ModelRow.id == model_id))
         ).scalar_one()
-        version = await session.get(DatasetVersionRow, model.dataset_version_id)
+        dataset_version_id = model.dataset_version_id
+        version = await session.get(DatasetVersionRow, dataset_version_id)
         assert version is not None
-        version.status = DatasetStatus.FAILED.value
+        # FR-53's own path, in legal steps (`VALID_DATASET_TRANSITIONS`): re-validation
+        # starts, then the new report's fails send the version back to draft.
+        version.status = DatasetStatus.VALIDATING.value
+
+    async with database.unit_of_work() as session:
+        version = await session.get(DatasetVersionRow, dataset_version_id)
+        assert version is not None
+        version.status = DatasetStatus.DRAFT.value
 
     async with database.unit_of_work() as session:
         decided = await approval_service.decide(

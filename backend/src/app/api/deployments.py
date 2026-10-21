@@ -4,6 +4,7 @@
 |---|---|---|
 | `POST` | `/api/v1/environments/{env}/deployment-requests` | Submit a Deployment Request |
 | `POST` | `/api/v1/environments/{env}/deployments` | Deploy an approved version |
+| `POST` | `/api/v1/environments/{env}/deployments/rollback` | Roll back (`deployment:promote`) |
 | `GET` | `/api/v1/environments/{env}/deployments` | History, newest first (`rating:read`) |
 
 The two writes are **handler-guarded**, not `requires(...)`: `deployment:promote` is checked with
@@ -16,26 +17,28 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
 
-from app.api.authz import requires
-from app.api.deps import Caller, DatabaseDep, require_caller
+from app.api.authz import CallerDep, CountAfterCheck, management_counter, requires
+from app.api.deps import Caller, DatabaseDep
 from app.api.pagination import DEFAULT_LIMIT, MAX_LIMIT, Page
 from app.api.responses import problems
 from app.platform import deployments as service
 from model_schema import (
     Deployment,
     DeploymentCreate,
+    DeploymentCreated,
     DeploymentRequest,
     DeploymentRequestCreate,
     Permission,
+    RollbackCreate,
 )
 
 __all__ = ["router"]
 
 router = APIRouter(prefix="/environments", tags=["platform"])
 
-AnyCaller = Annotated[Caller, Depends(require_caller)]
+CountDep = Annotated[CountAfterCheck, Depends(management_counter)]
 ReadHistoryDep = Annotated[Caller, Depends(requires(Permission.RATING_READ))]
 
 
@@ -47,7 +50,11 @@ ReadHistoryDep = Annotated[Caller, Depends(requires(Permission.RATING_READ))]
     responses=problems(401, 403, 404, 409, 422),
 )
 async def submit_deployment_request(
-    env: str, body: DeploymentRequestCreate, caller: AnyCaller, database: DatabaseDep
+    env: str,
+    body: DeploymentRequestCreate,
+    caller: CallerDep,
+    count: CountDep,
+    database: DatabaseDep,
 ) -> DeploymentRequest:
     """**201**. **403** without `deployment:promote` on this Environment; **404** for an unknown
     Environment or Rating Version; **409** `VALIDATION_FAILED` for a retired Environment or a
@@ -61,6 +68,7 @@ async def submit_deployment_request(
             actor=caller.principal,
             environment=env,
             body=body,
+            count_management=count,
         )
 
 
@@ -68,23 +76,62 @@ async def submit_deployment_request(
     "/{env}/deployments",
     summary="Deploy an approved version",
     status_code=status.HTTP_201_CREATED,
-    response_model=Deployment,
-    responses=problems(401, 403, 404, 409, 422),
+    response_model=DeploymentCreated,
+    responses=problems(401, 403, 404, 409, 422, 503),
 )
 async def create_deployment(
-    env: str, body: DeploymentCreate, caller: AnyCaller, database: DatabaseDep
-) -> Deployment:
-    """**201**. **409** `DEPLOY_REQUIRES_APPROVAL` for a gated target without an approved,
-    unexecuted request; **409** `PROMOTION_ORDER_VIOLATION`; the Rating Version and Environment
-    refusals of the request route; **422** for a non-Rating-Version reference."""
-    async with database.unit_of_work() as session:
-        return await service.deploy(
-            session,
-            workspace_id=caller.workspace_id,
-            actor=caller.principal,
-            environment=env,
-            body=body,
-        )
+    env: str,
+    body: DeploymentCreate,
+    request: Request,
+    caller: CallerDep,
+    count: CountDep,
+    database: DatabaseDep,
+) -> DeploymentCreated:
+    """**201** with the Deployment and `switch`: the processes that swapped to it and the ones
+    that did not (`03` FR-268). **409** `DEPLOY_REQUIRES_APPROVAL` for a gated target without an
+    approved, unexecuted request; **409** `PROMOTION_ORDER_VIOLATION`; the Rating Version and
+    Environment refusals of the request route; **422** for a non-Rating-Version reference;
+    **503** `DEPLOY_SWITCH_INCOMPLETE` when a subscribed process did not acknowledge PREPARE (no
+    Deployment is written)."""
+    return await service.deploy_and_switch(
+        database,
+        workspace_id=caller.workspace_id,
+        actor=caller.principal,
+        environment=env,
+        body=body,
+        count_management=count,
+        switch=getattr(request.app.state, "switch", None),
+    )
+
+
+@router.post(
+    "/{env}/deployments/rollback",
+    summary="Roll an environment back to an earlier Rating Version",
+    status_code=status.HTTP_201_CREATED,
+    response_model=DeploymentCreated,
+    responses=problems(401, 403, 404, 409, 422, 503),
+)
+async def rollback_deployment(
+    env: str,
+    body: RollbackCreate,
+    request: Request,
+    caller: CallerDep,
+    count: CountDep,
+    database: DatabaseDep,
+) -> DeploymentCreated:
+    """**201** with the new Deployment and `switch` (`03` FR-269). Needs `deployment:promote` on
+    the Environment and no new approval. **409** `VALIDATION_FAILED` when the Rating Version was
+    never deployed to this Environment; **422** for a non-Rating-Version reference; **503**
+    `DEPLOY_SWITCH_INCOMPLETE` when a subscribed process did not acknowledge PREPARE."""
+    return await service.rollback_and_switch(
+        database,
+        workspace_id=caller.workspace_id,
+        actor=caller.principal,
+        environment=env,
+        body=body,
+        count_management=count,
+        switch=getattr(request.app.state, "switch", None),
+    )
 
 
 @router.get(
