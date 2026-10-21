@@ -186,7 +186,8 @@ def contract_sample(
     """`count` distinct input sets spread over the contract's declared domains, deterministic:
     an enum cycles its domain, an int field steps through its `min..max` range, each at its own
     stride, so the sample is a spread and not a column. A field the contract declares without a
-    domain (`current_premium_minor`) keeps the template's value. No random number is drawn."""
+    domain or int range (`current_premium_minor`, the decimal exposure) keeps the template's
+    value. No random number is drawn."""
     rows: list[dict[str, Any]] = []
     strides = (1, 3, 7, 11, 13, 17, 19, 23)
     for i in range(count):
@@ -197,7 +198,11 @@ def contract_sample(
             if field_.get("domain") is not None:
                 domain = list(field_["domain"])
                 row[name] = domain[(i * stride) % len(domain)]
-            elif field_.get("min") is not None and field_.get("max") is not None:
+            elif (
+                field_.get("type") == "int"
+                and field_.get("min") is not None
+                and field_.get("max") is not None
+            ):
                 low, high = int(field_["min"]), int(field_["max"])
                 row[name] = low + (i * stride * 37) % (high - low + 1)
         rows.append(row)

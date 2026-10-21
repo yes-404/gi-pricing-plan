@@ -146,8 +146,10 @@ def test_the_contract_sample_reads_a_contract_as_the_api_returns_it() -> None:
         {"name": "area", "type": "enum", "domain": list("AB"), "min": None, "max": None},
         {"name": "bonus_malus", "type": "int", "domain": None, "min": 50, "max": 150},
         {"name": "current_premium_minor", "type": "int", "domain": None, "min": None, "max": None},
+        {"name": "exposure_years", "type": "decimal", "domain": None, "min": "0.0027", "max": "1"},
     ]
-    rows = j.contract_sample(contract, {"current_premium_minor": 55000}, 20)
+    rows = j.contract_sample(contract, {"current_premium_minor": 55000, "exposure_years": "1"}, 20)
+    assert {row["exposure_years"] for row in rows} == {"1"}
     assert {row["area"] for row in rows} == {"A", "B"}
     assert all(50 <= row["bonus_malus"] <= 150 for row in rows)
     assert {row["current_premium_minor"] for row in rows} == {55000}
