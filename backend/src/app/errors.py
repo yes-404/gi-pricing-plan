@@ -334,6 +334,8 @@ RATING_ERROR_CODES: Final[frozenset[str]] = frozenset(
         "DEPLOY_REQUIRES_APPROVAL",
         # FR-268 (WK-674 Slice 5, PL-1766 D5.9): PREPARE was short, so no Deployment was written.
         "DEPLOY_SWITCH_INCOMPLETE",
+        # FR-270 (WK-674 Slice 6, RL-1834 D1): two ranges of a routing rule overlap.
+        "DEPLOY_DATE_RANGE_OVERLAP",
         # FR-239 (RL-1379): a compile of a Rating Version that has left `draft`.
         "RATING_VERSION_IMMUTABLE",
         # Rate tables (W10-2), enumerated in 03 §5.1.
