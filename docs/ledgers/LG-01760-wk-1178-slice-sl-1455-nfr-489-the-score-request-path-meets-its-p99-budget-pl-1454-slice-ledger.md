@@ -520,3 +520,84 @@ Recorded by executor-1455b on 2026-10-16, from the primary files under `~/gi-pri
 ## PRs
 
 (none yet; Task 0 is not a PR on its own — the slice's one PR carries this ledger at the slice's end.)
+
+## Task 4 on nfr-bench-1 — the measurement protocol, pre-registered 2026-10-21 (before the first timed run)
+
+Written by `exec-nfr1` (executor) on branch `nfr1-sl1455-task4-2026-10-21`, committed and pushed before any timed invocation. Times are BST (`TZ=Europe/London date`) unless marked. This section is the protocol only; the readings go in a later section. Authority: `RL-1755` (corrected reading), `RL-1614`, `RL-1685` item 3, `RL-1716`, and the maintainer's entry "2026-10-21 15:06:15 BST" in `~/gi-pricing-plan.local/channel/to-lead.md` (public freMTPL2 data only, no secrets and no real policy data on the VM; protocol pre-registered; nothing else runs on the VM during a timed run; the VM is never powered off or deleted by the executor).
+
+**What the reading is, and is not.** On nfr-bench-1 the reading is labelled **"measured, dedicated host (G4 discharge)"**. Per `RL-1755` Ruled item 2 (as corrected 2026-10-17 11:22:47 BST): it is the G4 discharge for the **FD-1411 remedy proof**; a near-bound pass or fail may be claimed **for the remedy**, on conditions (a)–(c). It is **not** the NFR-489 exit verdict, which stays SL-1259's (WK-674 S5) per `RL-1614`. This ledger never writes the sweep as P2's NFR-489 PASS or FAIL.
+
+### P1. The tree benched
+
+- Host checkout `~/gi` on nfr-bench-1: HEAD **`44c18e11ca028d25c8b4c9d92077cc0f3622ef8e`**, tree **`03c6397f200868f1a0827c197ffbc6de0bf65eda`** (origin/main when cloned; `git status --short` empty, 0 untracked files).
+- `origin/main` has since moved to `11bddecb9bcafd315617c2d5d198598c6ecfad33` (#1313). `git diff --stat 44c18e11 11bddecb` names only `frontend/package.json` and `frontend/pnpm-lock.yaml`, so the benched backend is identical. The VM is **not** re-cloned; every record names 44c18e11 and its tree.
+- The tree is un-instrumented: none of Task 0's timers, listeners, debug mode or profiler (Task 4 Step 1). The server is the head as committed.
+
+### P2. The host (condition (c) of RL-1755)
+
+nfr-bench-1: GCE `e2-standard-8`, europe-west2-b; **8 vCPU, 31 GiB RAM** (`nproc` 8; `free -g` total 31); Debian 13, kernel 6.12.111+deb13-cloud-amd64; **Python 3.13.5** (Debian system python; the repo's `requires-python` is `>=3.12`), uv 0.13.4, Docker 26.1.5 with docker-compose 2.26.1 (apt). Services, project `gi-pricing`, compose file `deploy/docker-compose.yml`: `postgres:16-alpine`, `redis:7-alpine`, `minio/minio:latest` = **image id `69b2ec208575`** (quay digest `14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e`, created 2025-09-07), which was **copied from the local box by `docker save | ssh … docker load`** because Docker Hub and quay.io refuse the pull; it is the image the local gi-pricing stack runs. Alembic head at set-up: `a4d1f08c3b97`. Machine type is recorded from the instance (the executor confirms it from the metadata server in the readings section).
+
+### P3. The command, rates, repeats and order (Acceptance 2, Task 4 Step 2)
+
+12 invocations, **one rate per invocation, three per rate**, **interleaved** in exactly this order:
+
+`25, 50, 100, 200, 25, 50, 100, 200, 25, 50, 100, 200`
+
+The same command for all 12, per PL-1454 Acceptance 2, with `--workers 4` added because `DP-3 = (b)` makes the replica N worker processes and `RL-1685` Ruled item 3 fixes **N = 4** for Task 4's sweep:
+
+```
+GIP_TEST_DATABASE_URL=postgresql+asyncpg://gipricing:gipricing@localhost:5432/<SCRATCH> \
+  timeout 1500 uv run --directory ~/gi python scripts/bench-rating.py \
+  --http --rates <R> --port 8000 --workers 4 \
+  > ~/logs/t4/inv<NN>-r<R>.out 2> ~/logs/t4/inv<NN>-r<R>.err
+```
+
+- `<SCRATCH>` is a scratch database made once, before invocation 01, by `docker exec gi-pricing-postgres-1 createdb -U gipricing -T gipricing gipricing_sl1455_t4_<epoch>` (named uniquely, not after a worktree leaf, FD-1196/FD-1218). Before the copy the executor reads the template's alembic version row and the tree's alembic head and records both; they must be equal. All 12 invocations use the same scratch database. It is dropped at the end with `dropdb`, and the drop is confirmed with `select count(*) from pg_database where datname = '<SCRATCH>'` = 0.
+- Every invocation's stdout and stderr go to its own file on the VM; **no `/dev/null`**. The logs are copied back to `~/gi-pricing-plan.local/scratch/nfr1-2026-10-21/` (`scp -r`), and the copy is verified by `wc -c` per file on both sides.
+- **N = 4 is the one value the rulings fix for this sweep** (`RL-1685` Ruled item 3). That ruling also says "the reference N for the verdict is fixed when G4's dedicated host is available"; no ruling I have found sets a different N for nfr-bench-1, so N = 4 stands. Every reading states N (the harness header prints `replica: N = 4`). The lead is asked to confirm or change N in review of this protocol; a different N changes only the `--workers` argument, and the change is recorded as a dated amendment, not edited into this section.
+- A killed or timed-out invocation (`timeout 1500` exit 124) is a result to report, not to retry silently. Any non-zero exit of `bench-rating.py` is recorded with its rc and the last 20 lines of its `.err`.
+
+### P4. The reading and the pass threshold, verbatim
+
+NFR-489, `docs/specs/03-rating-engine.md` (`grep -n "NFR-489" docs/specs/03-rating-engine.md`, the table row at `:1532` at origin/main `11bddecb`):
+
+> Real-time scoring p99 < 50 ms server-side at 200 rps per replica for a ~200-step motor structure with one `exact` GBM call (NFR-454). Without a GBM call, p99 < 15 ms. (Clarified 2026-10-05, OQ-1453: the ceiling governs untraced requests; a request served with an inline FR-258 trace is bounded by NFR-490.) (Clarified 2026-10-12, RL-1685, PL-1454 DP-3 (b): "per replica" is N worker processes, as `00` NFR-454 and `00` §2.3 **Replica** define it; every reading states N.)
+
+PL-1454 Acceptance 2, the in-budget predicate, verbatim (`docs/plans/PL-01454-…-leaf-plan.md`, Acceptance 2):
+
+> **In budget** (the diagnostic reading, not a verdict): in **every** one of the 12 invocations, both arms' HTTP rung prints p99 under its budget (50 ms with GBM, 15 ms without), issued rps equals offered rps (no void rung), and errors are 0. DP-6 is ruled (b), so the default-live (exit-demo path) variant of each arm is measured in the same invocations against that arm's budget.
+
+PL-1454 Acceptance 3: "The same invocations' component lines (`score_one` alone) still print PASS for both arms against 50 ms and 15 ms. A p99 that moves by more than run-to-run noise (the spread of the three runs) is reported, not explained away."
+
+PL-1454 Task 4 Step 3 (table and the OVER rule), verbatim, with the label **superseded by `RL-1755`** (the plan's "measured, diagnostic (G4)" label becomes "measured, dedicated host (G4 discharge)", and the plan's "never written as an NFR-489 PASS or FAIL" stays as to the exit verdict):
+
+> Table in the ledger: rate × run × arm with p50, p99, handler p99, issued rps, errors, load start/end. Reading per cell against the budget, labelled "measured, diagnostic (G4)"; never written as an NFR-489 PASS or FAIL. Any OVER: stop, report to the lead; do not tune and re-run inside the same window without a new go.
+
+So: per cell, p99 against 50 ms (GBM arm) or 15 ms (no-GBM arm); an invocation passes only if p99 is under budget, issued rps equals offered rps, and errors are 0. **OVER rule unchanged** (`RL-1755` item 3): on the first OVER cell I **stop**, finish writing that invocation's record, report to the lead, and run nothing further without a new go. Verbatim `RL-1755` Ruled item 2, conditions (a)–(c):
+
+> (a) the host runs nothing but the sweep, its server and its DB, shown by `uptime` + `pgrep -c pytest` = 0 + `ps` top-5 per invocation; (b) the head benched is named by full sha and tree; (c) the host spec (machine type, vCPU, RAM) is recorded in the ledger. If (a) fails for any invocation, that invocation is diagnostic only and is re-run.
+
+### P5. The record kept for every invocation
+
+Taken by a small script on the VM around each invocation, written to `~/logs/t4/inv<NN>-r<R>.rec`, and copied into the table of the readings section:
+
+1. invocation number, rate R, N, start and end time (UTC and BST, ISO-8601 with `TZ`), `timeout` rc and the harness rc;
+2. **before** and **after**: `uptime`, `cut -d' ' -f1 /proc/loadavg` (load1), `pgrep -c pytest` (must print 0), and `ps -eo pid,pcpu,pmem,etime,args --sort=-pcpu | head -n 6` (the top 5 plus the header);
+3. HEAD sha and tree of `~/gi`, and `git -C ~/gi status --short | wc -l`;
+4. the full rung lines and the header lines of the harness output (both arms, bench and default-live; p50, p99, handler p99, issued vs offered rps, errors, the component `score_one` PASS lines);
+5. the container list (`docker ps --format '{{.Names}} {{.Status}}'`), to show only the three compose services run.
+
+### P6. The quiet condition (condition (a))
+
+- Nothing else runs on the VM during a timed invocation: no ssh session beyond the one that launches the invocation and the post-run `scp` (done between invocations only), no apt, no docker pull, no sweep or gate, no other bench, no `py-spy`, no agent polling from the VM. The only processes are the harness, its uvicorn workers, and the three compose services.
+- **Before each invocation, `load1` is read and must be below 1.0**, and after an invocation I wait until `load1 < 1.0` (re-check every 30 s, up to 10 minutes) before the next; an invocation that cannot start within the 10 minutes is not started and is reported. `pgrep -c pytest` must print 0 and the `ps` top-5 must show no process other than the harness's own, uvicorn, postgres, redis, minio and kernel threads. The threshold 1.0 is the executor's choice, since neither the plan nor `RL-1755` gives a number; the lead may change it in review.
+- Condition (a) is judged **per invocation from its `.rec` file** (before and after). An invocation whose record shows a foreign process, `pgrep -c pytest` > 0, or a load1 at start of 1.0 or more is **diagnostic only and is re-run** (the re-run is recorded as an additional numbered invocation at the same position in the order; the original stays in the ledger).
+- The VM is not powered off or deleted by the executor at any point. The maintainer owns power-off.
+
+### P7. Owed in the same session, and run after the 12 invocations
+
+`RL-1755` item 3 and the Task list above owe the same session: (i) Task 1 Step 4, the `--rates 25` run (the first invocation of P3 is exactly that command; its header and rung lines also serve Acceptance 6), (ii) Task 3 Step 5, byte-identity of the bench quote's `/score` response body on `main` and on the head, by the method in `~/gi-pricing-plan.local/handover/nfr-bench-1-byteid-method-2026-10-17.md` (local, not in the repository), and (iii) Acceptance 1's default-live arm limb. Items (ii) and (iii) run **after** invocation 12 and never inside the sweep's window, each with its own record in the readings section; their command lines are not repeated here and are registered in a dated addendum to this section before they run.
+
+### P8. Data
+
+Public freMTPL2 and the harness's own synthetic fixtures only. No real policy, claims or exposure data and no secrets are on the VM; the clone used no token.
