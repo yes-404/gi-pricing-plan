@@ -1,5 +1,6 @@
 {
  "note": "WF-701 candidate K2 (SL-1711, DP-W4): K1 plus one constraint step that DECLINES a quote whose bonus_malus is above 140. A decline is traced at 100 % whatever the sample rate (FR-259). Deployed only through the governed path.",
+ "after": "s_floor",
  "add_step": {
   "step_id": "s_decline_bonus_malus",
   "type": "constraint",

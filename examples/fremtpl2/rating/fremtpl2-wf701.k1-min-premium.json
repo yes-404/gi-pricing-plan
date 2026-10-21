@@ -1,9 +1,16 @@
 {
- "note": "WF-701 candidate K1 (SL-1711): the live algorithm with the minimum premium raised from 150 to 180 (fremtpl2-rate.changes.json, 'min_premium 150 -> 180'). One step is replaced; nothing else moves.",
- "replace_step": {
+ "note": "WF-701 candidate K1 (SL-1711): the live algorithm plus a minimum premium of 180 (fremtpl2-rate.changes.json, 'min_premium 150 -> 180'; the live algorithm has no floor, so the clamp is added, not replaced). One step is added after the premium and before its output; nothing else moves.",
+ "after": "s_premium",
+ "add_step": {
   "step_id": "s_floor",
-  "condition": "adjusted_minor >= 18000",
-  "clamp_bounds": {"min": "18000"}
+  "type": "constraint",
+  "label": "Minimum premium",
+  "condition": "premium_unrounded >= 18000",
+  "on_violation": "clamp",
+  "clamp_bounds": {"min": "18000"},
+  "reason_code": "MIN_PREMIUM_APPLIED",
+  "consumes": ["premium_unrounded"],
+  "produces": ["premium_unrounded"]
  },
- "change_note": "WF-701 K1: minimum premium 150 -> 180"
+ "change_note": "WF-701 K1: minimum premium 180"
 }

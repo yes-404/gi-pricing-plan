@@ -155,16 +155,19 @@ def test_the_contract_sample_is_deterministic_and_spread() -> None:
 
 
 @pytest.mark.req("FR-250")
-def test_k1_is_the_shipped_v2_minimum_premium_and_nothing_else() -> None:
-    """K1's patch applied to the shipped v1 algorithm gives exactly v2's `s_floor`: it is the
-    `min_premium 150 -> 180` change of `fremtpl2-rate.changes.json`, not a new definition."""
+def test_k1_is_the_minimum_premium_of_the_shipped_change() -> None:
+    """K1 adds a clamp to 180 with the reason code the shipped v2 algorithm's `s_floor` carries:
+    it is the `min_premium 150 -> 180` change of `fremtpl2-rate.changes.json`, not a new figure.
+    (The live algorithm has no floor, so the clamp is added after `s_premium`, not replaced.)"""
     rating = _EXAMPLE / "rating"
-    patch: dict[str, Any] = json.loads(j.K1_FILE.read_text(encoding="utf-8"))["replace_step"]
-    v1 = json.loads((rating / "fremtpl2-rate.rating-algorithm.v1.json").read_text(encoding="utf-8"))
+    k1: dict[str, Any] = json.loads(j.K1_FILE.read_text(encoding="utf-8"))
     v2 = json.loads((rating / "fremtpl2-rate.rating-algorithm.v2.json").read_text(encoding="utf-8"))
-    floor1 = next(s for s in v1["steps"] if s["step_id"] == "s_floor")
-    floor2 = next(s for s in v2["steps"] if s["step_id"] == "s_floor")
-    assert {**floor1, **patch} == floor2
+    shipped = next(s for s in v2["steps"] if s["step_id"] == "s_floor")
+    step = k1["add_step"]
+    assert step["clamp_bounds"] == shipped["clamp_bounds"]
+    assert step["reason_code"] == shipped["reason_code"]
+    assert step["on_violation"] == "clamp"
+    assert k1["after"] == "s_premium"
 
 
 @pytest.mark.req("FR-259")

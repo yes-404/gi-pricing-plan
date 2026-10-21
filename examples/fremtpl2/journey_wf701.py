@@ -247,6 +247,7 @@ class _Wf701:
         self.result = Wf701Result()
         self.wf699 = wf699
         self.printed: list[str] = []
+        self.saved: dict[str, dict[str, Any]] = {}
 
     # -- plumbing ----------------------------------------------------------------------------
     def say(self, line: str) -> None:
@@ -344,22 +345,21 @@ class _Wf701:
         self.result.prod_golden_minor = int(self.golden["expected"]["payable_premium_minor"])
 
     # -- a candidate: created, compiled, evidenced, submitted --------------------------------
-    def build(self, label: str, patch: Mapping[str, Any]) -> dict[str, Any]:
-        """Fork the live algorithm with `patch` (K1: one replaced step; K2: one added step), save
-        it as the next version, and create and compile a Rating Version pinning what `rv3` pins."""
+    def build(
+        self, label: str, patch: Mapping[str, Any], *, base: Mapping[str, Any] | None = None
+    ) -> dict[str, Any]:
+        """Fork `base` (default: the live algorithm) with one step added after `patch["after"]`,
+        save it as the next version, and create and compile a Rating Version pinning what `rv3`
+        pins. K1 adds the minimum-premium clamp; K2 forks K1 and adds the decline."""
+        source = base if base is not None else self.algorithm
         body = {
             key: value
-            for key, value in self.algorithm.items()
+            for key, value in source.items()
             if key in ("slug", "input_contract", "outputs", "steps", "sub_graphs")
         }
         steps = [dict(step) for step in body["steps"]]
-        if "replace_step" in patch:
-            change = patch["replace_step"]
-            steps = [{**s, **change} if s["step_id"] == change["step_id"] else s for s in steps]
-        if "add_step" in patch:
-            added = dict(patch["add_step"])
-            at = next(i for i, s in enumerate(steps) if s["step_id"] == "s_floor") + 1
-            steps = [*steps[:at], added, *steps[at:]]
+        at = next(i for i, s in enumerate(steps) if s["step_id"] == patch["after"]) + 1
+        steps = [*steps[:at], dict(patch["add_step"]), *steps[at:]]
         version = self.next_algorithm_version
         self.next_algorithm_version += 1
         saved = self.req(
@@ -394,6 +394,13 @@ class _Wf701:
         if not compiled.get("bundle"):
             raise JourneyStepFailed(label, "COMPILED_BUT_NO_BUNDLE")
         self.say(f"  {label}: rating version {compiled['slug']}@{compiled['version']} compiled")
+        self.saved[label] = self.req(
+            label,
+            "analyst",
+            "GET",
+            f"/rating-algorithms/{saved['slug']}@{saved['version']}",
+            expect=200,
+        )
         return compiled
 
     def regression(self, label: str, version: Mapping[str, Any]) -> dict[str, Any]:
@@ -638,7 +645,9 @@ class _Wf701:
     def candidates(self) -> None:
         self.start("C3(iii)")
         k1 = self.build("K1", json.loads(K1_FILE.read_text(encoding="utf-8")))
-        k2 = self.build("K2", json.loads(K2_FILE.read_text(encoding="utf-8")))
+        k2 = self.build(
+            "K2", json.loads(K2_FILE.read_text(encoding="utf-8")), base=self.saved["K1"]
+        )
         request = self.evidence("K1", k1, floor_minor=18000)
         # C3 (iii), FR-354: after ONE of the two approvers the request is `review`, the version is
         # not approved, and nothing can deploy it; the second, distinct approver completes it.
