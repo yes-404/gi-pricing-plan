@@ -75,6 +75,7 @@ from model_schema import (
 )
 from pricing_core.data.expressions import ExpressionError, GrammarProfile, parse_expression
 from pricing_core.modelling.expression_objective import derive
+from pricing_core.safe_error import safe_error_detail
 
 __all__ = [
     "apply_approval_decision",
@@ -299,14 +300,21 @@ def grammar_refusal(
     `ExpressionError.lineno` and `col_offset` give the position (the column made 1-based). A
     text that does not parse as Python at all is positioned by `SyntaxError`, whose `offset`
     is already 1-based. The one place the position is worked out: create refuses with it
-    (`_require_the_grammar`) and the preview route (FR-8140) answers with it.
+    (`_require_the_grammar`) and the preview route (FR-8140) answers with it. The reason of an
+    `ExpressionError` is `safe_error_detail`'s (NFR-499): the allow-list's text, already
+    positioned as `line N, column M: message`.
     """
     try:
         parse_expression(loss, GrammarProfile.OBJECTIVE, symbols=symbols)
     except ExpressionError as exc:
-        return exc.lineno, None if exc.col_offset is None else exc.col_offset + 1, str(exc)
+        return (
+            exc.lineno,
+            None if exc.col_offset is None else exc.col_offset + 1,
+            safe_error_detail(exc),
+        )
     except SyntaxError as exc:
-        return exc.lineno, exc.offset, exc.msg
+        where = "" if exc.lineno is None else f"line {exc.lineno}, column {exc.offset}: "
+        return exc.lineno, exc.offset, where + exc.msg
     return None
 
 
@@ -319,8 +327,7 @@ def _require_the_grammar(loss: str, *, symbols: frozenset[str]) -> None:
     refusal = grammar_refusal(loss, symbols=symbols)
     if refusal is None:
         return
-    line, column, reason = refusal
-    message = reason if line is None else f"line {line}, column {column}: {reason}"
+    _, _, message = refusal
     raise PlatformError(
         "OBJECTIVE_GRAMMAR_VIOLATION",
         "The loss is outside the objective grammar",

@@ -27,6 +27,7 @@ from model_schema import (
 from pricing_core.data.expression_sympy import OBJECTIVE_SYMBOLS
 from pricing_core.data.expressions import ExpressionError
 from pricing_core.modelling.expression_objective import compile_kernel, derive
+from pricing_core.safe_error import safe_error_detail
 
 __all__ = ["PREVIEW_TIMEOUT_SECONDS", "PREVIEW_WORKERS", "preview", "wait_idle"]
 
@@ -69,7 +70,7 @@ def _run(request: ObjectivePreviewRequest) -> ObjectivePreview:
     except ExpressionError as exc:
         # After the loss parsed there is no source position (`RL-1410`'s derive refusal).
         return ObjectivePreview(
-            ok=False, error=ObjectivePreviewError(reason="grammar", message=str(exc))
+            ok=False, error=ObjectivePreviewError(reason="grammar", message=safe_error_detail(exc))
         )
     f = np.linspace(grid.f_range[0], grid.f_range[1], grid.n_points)
     y = np.full(grid.n_points, grid.y)
