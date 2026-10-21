@@ -1220,7 +1220,7 @@ Date-based routing and shadow scoring, both built and default off per environmen
 id: SL-1689
 family: slice
 title: the scheduler (beat) and frontend-image row: FR-432's last two limbs (FR-432, FR-413, FR-406; FD-1661)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-12
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 604ea084c96efe93f521fb9ba17738e05241e61a
@@ -1231,6 +1231,8 @@ relates: [PL-1237, PL-1666, SL-1258, FD-1661]
 ```
 
 The `scheduler` service (the Celery beat process, which runs the outbox relay today and FR-413's tick when that lands) and the `frontend` image and service, both under the `app` profile on Slice 4's path: FR-432's `scheduler` and `frontend` limbs, which discharge FD-1661 with Slice 4's `worker`. The maintainer (by delegation) placed it in the entries "2026-10-12 02:53:52 BST" item 4 (beat as its own row after S4, serialised on `deploy/docker-compose.yml`) and "2026-10-12 03:09:50 BST" (DP-S4-3 (b): the `frontend` image folds into this row, in P2, with three conditions). Work-plan delta PL-1688 (both of its decision points ruled 05:37:23, so `active` at its mint). **Activation needs:** `SL-1258` merged, with this row's base containing it; `SL-1258`'s worker consuming `default,compute` (DP-B1 ruled (a), an S4 GO condition) and DP-B2 ruled (a), the frontend on `${GIP_WEB_PORT:-5173}`, both in the lead's entry "2026-10-12 05:37:23 BST"; the lane free and serialised on `deploy/docker-compose.yml`; a build window booked for the runtime and fresh-checkout proofs; the maintainer's dispatch GO and the lead's go. Off the exit path. **If the cut ladder takes its lane**, it moves to P3 by the dated line PL-1688 B0.3 pre-names (owner WK-674; discharge event: this row's merge), and is never dropped. *(Cut 2026-10-12 by the planner under working id 9883, reserved by the lead; minted 2026-10-12 as SL-1689 from working id 9883, with PL-1688 from working id 9882.)*
+
+*Activated 2026-10-21 on the maintainer's (by delegation) entry "2026-10-21 15:03:33 BST — Maintainer: GOs on the 15:02:44 work queue", item 3 (build in parallel; its compose SOLO window comes after SL-1711's). Ledger LG-8137.*
 
 
 #### SL-1711 — WK-674 demo slice — the scripted WF-701 deployment steps (A1–A6, C1–C4, C6, C7) over the Slice 4 path, after Slice 5
