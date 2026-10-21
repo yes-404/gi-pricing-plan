@@ -46,6 +46,7 @@ const columns = computed<readonly Column<number>[]>(() => [
   >
     <VChart
       class="h-72 w-full"
+      aria-hidden="true"
       :option="option"
       autoresize
     />

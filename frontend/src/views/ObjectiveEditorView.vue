@@ -14,7 +14,7 @@
  * **The flag is read from the route's own answer.** The frontend has no settings read, so a
  * 409 `OBJECTIVE_KIND_NOT_ENABLED` from the first preview is what disables the editor.
  */
-import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from "vue";
 
 import {
   createObjective,
@@ -64,6 +64,7 @@ const refusal = ref<string | null>(null);
 const notEnabled = ref(false);
 const created = ref<CustomObjective | null>(null);
 const createFailure = ref<string | null>(null);
+const statusEl = ref<HTMLElement | null>(null);
 
 const declared = computed(() => parameters.filter((row) => row.name !== ""));
 
@@ -94,6 +95,8 @@ async function runPreview() {
     if (error instanceof ProblemError && error.code === "OBJECTIVE_KIND_NOT_ENABLED") {
       notEnabled.value = true;
       refusal.value = null;
+      // The textarea the user was typing in is now disabled, which would drop focus to the body.
+      void nextTick(() => statusEl.value?.focus());
     } else {
       refusal.value = error instanceof Error ? error.message : String(error);
     }
@@ -130,6 +133,10 @@ const canCreate = computed(
 
 function addParameter() {
   parameters.push({ name: "", default: 1, min: 0, max: 10, value: 1 });
+  void nextTick(() => {
+    const names = document.querySelectorAll<HTMLInputElement>("[data-parameter-name]");
+    names[names.length - 1]?.focus();
+  });
 }
 
 function create() {
@@ -166,27 +173,44 @@ function create() {
       New expression objective
     </h1>
 
-    <p
-      v-if="notEnabled"
+    <div
+      ref="statusEl"
       role="status"
-      class="mb-4 rounded border border-slate-300 bg-slate-50 p-3 text-sm"
+      tabindex="-1"
+      class="mb-4 text-sm"
     >
-      Expression objectives are not enabled in this workspace
-      (<code>features.expression_objectives_enabled</code> is off).
-    </p>
+      <p
+        v-if="notEnabled"
+        class="rounded border border-slate-500 bg-slate-50 p-3"
+      >
+        Expression objectives are not enabled in this workspace
+        (<code>features.expression_objectives_enabled</code> is off).
+      </p>
+      <p v-else-if="timedOut">
+        The preview timed out. The loss may still be valid; try a simpler expression.
+      </p>
+      <p v-else-if="created">
+        Created {{ created.slug }} version {{ created.version }} as a draft.
+        <a
+          :href="`/objectives/${created.id}/certificate`"
+          class="text-blue-700 underline"
+        >Open it to derive, certify and submit</a>.
+      </p>
+    </div>
 
     <div class="space-y-4">
       <div>
         <label
           for="objective-slug"
           class="block text-sm font-medium"
-        >Slug</label>
+        >Slug (required)</label>
         <input
           id="objective-slug"
           v-model="slug"
           type="text"
+          required
           :disabled="notEnabled"
-          class="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm"
+          class="mt-1 w-full rounded border border-slate-500 px-2 py-1 text-sm"
         >
       </div>
 
@@ -194,17 +218,21 @@ function create() {
         <label
           for="objective-loss"
           class="block text-sm font-medium"
-        >Loss L(y, f, w)</label>
+        >Loss L(y, f, w) (required)</label>
         <textarea
           id="objective-loss"
           v-model="loss"
           rows="3"
           spellcheck="false"
+          required
+          :aria-invalid="grammarError !== null"
+          aria-describedby="objective-loss-error"
           :disabled="notEnabled"
-          class="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm"
+          class="mt-1 w-full rounded border border-slate-500 px-2 py-1 font-mono text-sm"
         />
         <p
           v-if="grammarError"
+          id="objective-loss-error"
           role="alert"
           class="mt-1 text-sm text-red-700"
         >
@@ -217,13 +245,6 @@ function create() {
         >
           {{ refusal }}
         </p>
-        <p
-          v-if="timedOut"
-          role="status"
-          class="mt-1 text-sm text-slate-700"
-        >
-          The preview timed out. The loss may still be valid; try a simpler expression.
-        </p>
       </div>
 
       <fieldset>
@@ -233,6 +254,8 @@ function create() {
         <div
           v-for="(row, index) in parameters"
           :key="index"
+          role="group"
+          :aria-label="`Parameter ${index + 1}`"
           class="mt-2 flex flex-wrap items-end gap-2 text-sm"
         >
           <label>Name
@@ -240,40 +263,42 @@ function create() {
               v-model="row.name"
               type="text"
               :aria-label="`Parameter ${index + 1} name`"
+              data-parameter-name
               :disabled="notEnabled"
-              class="block w-28 rounded border border-slate-300 px-2 py-1"
+              class="block w-28 rounded border border-slate-500 px-2 py-1"
             ></label>
           <label>Default
             <input
               v-model.number="row.default"
               type="number"
               :disabled="notEnabled"
-              class="block w-20 rounded border border-slate-300 px-2 py-1"
+              class="block w-20 rounded border border-slate-500 px-2 py-1"
             ></label>
           <label>Min
             <input
               v-model.number="row.min"
               type="number"
               :disabled="notEnabled"
-              class="block w-20 rounded border border-slate-300 px-2 py-1"
+              class="block w-20 rounded border border-slate-500 px-2 py-1"
             ></label>
           <label>Max
             <input
               v-model.number="row.max"
               type="number"
               :disabled="notEnabled"
-              class="block w-20 rounded border border-slate-300 px-2 py-1"
+              class="block w-20 rounded border border-slate-500 px-2 py-1"
             ></label>
           <label>Preview at
             <input
               v-model.number="row.value"
               type="number"
               :disabled="notEnabled"
-              class="block w-20 rounded border border-slate-300 px-2 py-1"
+              class="block w-20 rounded border border-slate-500 px-2 py-1"
             ></label>
           <button
             type="button"
-            class="rounded border border-slate-300 px-2 py-1"
+            :aria-label="`Remove parameter ${index + 1}`"
+            class="rounded border border-slate-500 px-2 py-1"
             @click="parameters.splice(index, 1)"
           >
             Remove
@@ -282,7 +307,7 @@ function create() {
         <button
           type="button"
           :disabled="notEnabled"
-          class="mt-2 rounded border border-slate-300 px-2 py-1 text-sm"
+          class="mt-2 rounded border border-slate-500 px-2 py-1 text-sm"
           @click="addParameter"
         >
           Add parameter
@@ -298,28 +323,28 @@ function create() {
             v-model.number="grid.y"
             type="number"
             :disabled="notEnabled"
-            class="block w-24 rounded border border-slate-300 px-2 py-1"
+            class="block w-24 rounded border border-slate-500 px-2 py-1"
           ></label>
         <label>Weight w
           <input
             v-model.number="grid.w"
             type="number"
             :disabled="notEnabled"
-            class="block w-24 rounded border border-slate-300 px-2 py-1"
+            class="block w-24 rounded border border-slate-500 px-2 py-1"
           ></label>
         <label>Score f from
           <input
             v-model.number="grid.from"
             type="number"
             :disabled="notEnabled"
-            class="block w-24 rounded border border-slate-300 px-2 py-1"
+            class="block w-24 rounded border border-slate-500 px-2 py-1"
           ></label>
-        <label>to
+        <label>Score f to
           <input
             v-model.number="grid.to"
             type="number"
             :disabled="notEnabled"
-            class="block w-24 rounded border border-slate-300 px-2 py-1"
+            class="block w-24 rounded border border-slate-500 px-2 py-1"
           ></label>
       </fieldset>
 
@@ -348,8 +373,12 @@ function create() {
       <h2 class="font-semibold">
         Derived by the platform
       </h2>
-      <p>Gradient: <code class="font-mono">{{ preview.gradient }}</code></p>
-      <p>Hessian: <code class="font-mono">{{ preview.hessian }}</code></p>
+      <p class="break-words">
+        Gradient: <code class="break-words font-mono">{{ preview.gradient }}</code>
+      </p>
+      <p class="break-words">
+        Hessian: <code class="break-words font-mono">{{ preview.hessian }}</code>
+      </p>
     </div>
 
     <ObjectiveLossCurve
@@ -367,21 +396,17 @@ function create() {
         Create objective
       </button>
       <p
+        v-if="!canCreate && !notEnabled"
+        class="mt-1 text-xs text-slate-700"
+      >
+        Needs a slug, a loss and at least one applicable response.
+      </p>
+      <p
         v-if="createFailure"
         role="alert"
         class="mt-2 text-sm text-red-700"
       >
         {{ createFailure }}
-      </p>
-      <p
-        v-if="created"
-        class="mt-2 text-sm"
-      >
-        Created {{ created.slug }} version {{ created.version }} as a draft.
-        <a
-          :href="`/objectives/${created.id}/certificate`"
-          class="text-blue-700 underline"
-        >Open it to derive, certify and submit</a>.
       </p>
     </div>
   </section>

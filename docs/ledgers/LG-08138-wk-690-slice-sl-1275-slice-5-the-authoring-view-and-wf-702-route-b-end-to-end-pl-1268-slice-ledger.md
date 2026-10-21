@@ -50,6 +50,14 @@ Filed 2026-10-21 under working id 8138 (lead-reserved in eta.md); executor seat 
 - **`WF-702` B1.4/B1.5 text** says the frontend "parses on every keystroke" and the rejection is `OBJECTIVE_GRAMMAR_VIOLATION`; `RL-1616` has the editor call the route and the route answer 200 `ok: false`. `PL-1665` 5.1' lists a B1.4 citation of the route as a slice disposition, but a `WF-` is not the executor's to amend (`executor.md`), so it is **not done** and waits for the lead.
 - **The editor learns the flag only from the first preview's 409** (the frontend has no settings read), so a flag-off workspace sees an enabled editor until the first keystroke settles.
 
+## Accessibility review (`accessibility-tester`, a code read, 2026-10-21; PL-1621 5.4)
+
+Reviewed `ObjectiveEditorView.vue` and `ObjectiveLossCurve.vue`; no screen reader or browser was used, and no axe/Playwright coverage exists to cite. The table carries every plotted point, the chart is non-colour (one series) and the loss textarea, slug and every number input are named. 13 findings; dispositions:
+
+- **Fixed:** created message now inside one persistent `role="status"` region (the same region as the not-enabled and timeout notices, so there is exactly one status); focus moves to that region when the 409 disables the textarea; textarea has `aria-invalid` and `aria-describedby` to its error; input borders `slate-500` (non-text contrast); parameter rows are `role="group"` with row-numbered names and Remove labels; "to" is "Score f to"; required marked on slug and loss; a hint says why Create is disabled; gradient/hessian wrap; new row's name input takes focus; the chart canvas is `aria-hidden` (the table is its text alternative).
+- **Not changed, bound by the prep tests:** the debounced parse error stays `role="alert"` (the prep tests find it by that role, `ObjectiveEditorView.test.ts`); the reviewer would prefer `role="status"` (polite) for text produced mid-typing. Raised to the lead, not silently re-tested.
+- **Not changed, advisory:** the created link is a plain `<a>` (a full page load; the library uses the same href form); raw enum values as response labels; no pending indicator for the 600 ms debounce.
+
 ## PRs
 
 None opened (the lead opens the PR after the gate).
