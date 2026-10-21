@@ -106,7 +106,7 @@ Two things cost time on Debian 13 and are worth knowing:
 
 ## The deployment path (WK-674 Slice 4)
 
-`api`, `worker` and `migrate` are one image run under three commands, behind the `app` profile,
+`api`, the `worker-*` services, `scheduler` and `migrate` are one image run under different commands, behind the `app` profile,
 so the default `up` is still the three backing services. Build from the repository root and give
 the image the commit it was built from (FR-18):
 
@@ -132,6 +132,13 @@ docker compose -f deploy/docker-compose.yml --profile app up -d --wait --scale a
   `api` replicas through Docker DNS (`deploy/lb.conf`).
 - **`worker`** runs Celery with a container `mem_limit`; a Job's own `resource_budget.memory_gb`
   is checked inside the process and fails the Job naming the budget (FR-412, FR-415).
+- **`scheduler`** is the Celery beat process (FR-432): it runs the outbox relay (FR-406), so
+  without it every committed Job stays `queued`. Exactly one copy runs, never scaled: two beats
+  relay twice.
+- **`frontend`** is the built SPA on nginx (FR-432), built from `deploy/frontend.Dockerfile` with
+  the repository root as the context. It serves `/` with a history fallback and proxies `/api/`
+  to `lb`, so the browser stays same-origin. It publishes `${GIP_WEB_PORT:-5173}`, the port the
+  local realm admits; stop the Vite dev server first, or set `GIP_WEB_PORT`.
 - **Shutdown** (FD-1211): each process finalizes the interpreter on SIGTERM, then the container is
   replaced.
 - **Production identity provider:** `deploy/keycloak/` is a reference you operate (FR-437).
