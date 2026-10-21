@@ -271,6 +271,7 @@ def _run_in_process(
     from app.worker.rate_table_handlers import register_rate_table_handlers
     from app.worker.rating_handlers import register_rating_handlers
     from app.worker.tasks import execute_job
+    from app.worker.trace_handlers import register_trace_handlers
 
     loop = asyncio.get_event_loop()
     with _full_level_world():
@@ -278,6 +279,7 @@ def _run_in_process(
     register_rating_handlers()
     register_dislocation_handlers()
     register_rate_table_handlers()
+    register_trace_handlers()  # C7 drains the queued `score.trace_produce` Jobs
     api_client.base_url = "http://testserver/api/v1"
     lines: list[str] = []
 
