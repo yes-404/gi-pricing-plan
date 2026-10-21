@@ -251,6 +251,19 @@ export const routes: RouteRecordRaw[] = [
     }),
   },
   {
+    // `03` §5.3's dislocation views. `:slug` and `:version` are the Rating Version's own
+    // (RL-1473); the Dislocation Run is cited by id in `?run=` (FR-265).
+    path: "/rating/:slug/v/:version/dislocation",
+    name: "rating-dislocation",
+    meta: { requiresAuth: true },
+    component: () => import("@/views/DislocationView.vue"),
+    props: (route) => ({
+      slug: String(route.params.slug),
+      version: String(route.params.version),
+      run: typeof route.query.run === "string" ? route.query.run : undefined,
+    }),
+  },
+  {
     // `03` §5.3's quote sandbox. `:slug` and `:version` are the Rating Version's own (RL-1473).
     path: "/rating/:slug/v/:version/sandbox",
     name: "quote-sandbox",
