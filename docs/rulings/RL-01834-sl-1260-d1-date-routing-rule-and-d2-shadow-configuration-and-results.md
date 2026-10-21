@@ -136,7 +136,7 @@ SL-1260's commit appends this to the FR-270 row of `03-rating-engine.md` §3.10,
 
 > *(Clarified 2026-10-21, WK-674 Slice 6, `RL-1834` D1: "deployment time" is the time a date range is assigned to a deployed version. A range is part of the Environment's routing rule, written by `PUT /api/v1/environments/{env}/routing` under `deployment:promote`, not part of a Deployment. A rule whose ranges overlap is refused there with 409 `DEPLOY_DATE_RANGE_OVERLAP` and nothing is written. A range may name only a Rating Version deployed to that Environment. Routing is used only while the Environment's routing flag is on, and only for a quote that names no Rating Version.)*
 
-`RL-1834` in that text becomes this ruling's minted id when it is minted (the standing mint grep).
+The clarification text above names `RL-1834`, this ruling's minted id (working id RL 8142 when adopted).
 
 **(b) The negative test that no unpromoted version is ever selected.** One new file,
 `backend/tests/test_routing.py`, marked for FR-270. Fixture: Environments `uat` and `prod` of one
