@@ -16,13 +16,15 @@ relates: [WK-674, SL-1455, RL-1685, FD-1411, LG-1760]
 
 **HIGH; owner WK-674** (SL-1455's remedy; `docs/roadmap.md` §12 row 2, "meeting NFR-489"). Filed on
 the maintainer's (by delegation) entry "2026-10-21 15:31:24 BST" (`to-lead.md`), item (1): "A HIGH FD
-against NFR-489 / WK-674 (SL-1455 remedy; §12 row 2 'meeting NFR-489'): GO", on the lead's escalation
-"2026-10-21 15:27:13 BST" (`handover/from-lead-2026-10-09.md`).
+against NFR-489 / WK-674 (SL-1455 remedy; §12 row 2 "meeting NFR-489"): GO", on the lead's escalation
+"2026-10-21 15:27:13 BST" (`channel/from-lead-2026-10-09.md`).
 
 The no-GBM arm of NFR-489 (`docs/specs/03-rating-engine.md` §9: "Without a GBM call, p99 < 15 ms") is
-over budget by a fixed amount of work outside scoring. **It has never been under 15 ms anywhere. This is
-not a regression:** it is a budget the design has not met. The remedy (RL-1685's one request session)
-shrank the overage but did not close it.
+over budget by a fixed amount of work outside scoring. **No recorded reading of this arm has ever been
+under 15 ms. This is not a regression:** it is a budget the design has not been shown to meet. The remedy
+(RL-1685's one request session) appears to have shrunk the overage (p50 from roughly 36–78 ms to about
+21 ms) but did not close it; the earlier readings were taken on other hosts and loads, so that comparison
+is indicative only (see History).
 
 The diagnosis is read-only and nothing was run on a host for it:
 `~/gi-pricing-plan.local/handover/perf-nfr489-diagnosis-2026-10-21.md` (seat perf-nfr489, 2026-10-21
@@ -46,7 +48,7 @@ hold at the measured head 44c18e11 too).
   not warm); the served path returns on a slot hit before the blob (`backend/src/app/api/score.py:304-308`).
   FD-1411:91-97 already corrected this attribution.
 
-**The warm request path** (diagnosis §2): about 12 serial database round trips (9 statements plus the
+**The warm request path** (diagnosis §2; counted from the code, not measured): about 12 serial database round trips (9 statements plus the
 pre-ping `pool_pre_ping=True` at `backend/src/app/db/session.py:42`, plus BEGIN and ROLLBACK) and 1 Redis
 pipeline round trip (`backend/src/app/platform/rate_limit.py:97-100`), all awaited one after another and
 all crossing the docker-proxy userland relay (`.rec:31`: `docker-proxy … -host-port 5432 -container-ip
@@ -73,11 +75,20 @@ slot, GC) are ranked below and not scheduled. Its readings are labelled "diagnos
 
 ## Open question
 
-Whether NFR-489's no-GBM 15 ms includes the default 1 % trace sampling (FR-259), and the per-request
-authentication, rate-limit and database reads, is a spec question. It goes to a decision-maker as an OQ
-after H2 has a reading; it is not a tuning knob, because 1 % is the production default.
+**Narrower than first drafted.** The maintainer's (by delegation) ruling, "2026-10-21 15:31:24 BST" item
+(3), says: "NFR-489 says "server-side". The per-request auth, rate-limit and DB reads are server work, so
+they are inside the 15 ms and are not open. OQ-1453 put caller-requested inline traces outside NFR-489, but
+did not decide the background 1 % FR-259 sampling. That is the only open point." So the per-request
+authentication, rate-limit and database reads are **not** an open question: they count against the 15 ms.
+The one open point is whether NFR-489's no-GBM 15 ms includes the default 1 % background trace sampling
+(FR-259). It is a spec question, not a tuning knob, because 1 % is the production default. The same
+entry sends it to a decision-maker seat, which writes it as an OQ with options and a recommendation,
+after H2 has a reading so the options carry measured costs.
 
 ## Disposition
 
 Open, owner WK-674. This record gives no verdict and no remedy: `docs/roadmap.md` §12 row 2's date is held
-pending the H1 and H2 readings (the maintainer, "2026-10-21 15:31:24 BST"). Filed under working id 8144.
+pending the H1 and H2 readings (the maintainer, "2026-10-21 15:31:24 BST", item (4)). If H1 or H2 brings
+the no-GBM p99 under 15 ms through configuration or deployment topology, the ETA stands; if not, a remedy
+slice or a budget change is the user's decision (row 2's scope is the user's, set 14 Oct), put to the user
+with measured options. Filed under working id 8144.
