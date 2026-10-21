@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/vue";
 import { describe, expect, it, vi } from "vitest";
 
+import type { ObjectivePreviewCurve } from "@/api/objectives";
 import { cellUnder } from "@/test-tables";
 
 import ObjectiveLossCurve from "../ObjectiveLossCurve.vue";
@@ -18,11 +19,12 @@ vi.mock("vue-echarts", () => ({
   },
 }));
 
-const CURVE = [
-  { f: -1, loss: 4.25 },
-  { f: 0, loss: 1.5 },
-  { f: 1, loss: 0.75 },
-];
+const CURVE: ObjectivePreviewCurve = {
+  f: [-1, 0, 1],
+  loss: [4.25, 1.5, 0.75],
+  gradient: [-3, -1, 0],
+  hessian: [2, 2, 2],
+};
 
 function option(): { xAxis: { data: string[] }; series: { name: string; data: number[] }[] } {
   return JSON.parse(screen.getByTestId("chart").textContent ?? "{}");
@@ -41,9 +43,18 @@ describe("ObjectiveLossCurve", () => {
     render(ObjectiveLossCurve, { props: { curve: CURVE } });
 
     const table = screen.getByRole("table", { name: /loss curve/i });
-    expect(within(table).getAllByRole("row")).toHaveLength(CURVE.length + 1);
+    expect(within(table).getAllByRole("row")).toHaveLength(CURVE.f.length + 1);
     expect(cellUnder(table, /^0\s/, "Loss")).toHaveTextContent("1.5");
     expect(cellUnder(table, /^1\s/, "Loss")).toHaveTextContent("0.75");
+  });
+
+  it("shows a non-finite point the route reported as null as a gap, not a number", () => {
+    render(ObjectiveLossCurve, {
+      props: { curve: { ...CURVE, loss: [null, 1.5, 0.75] } },
+    });
+
+    expect(option().series[0]?.data).toEqual([null, 1.5, 0.75]);
+    expect(cellUnder(screen.getByRole("table", { name: /loss curve/i }), /^-1\s/, "Loss")).toHaveTextContent("—");
   });
 
   it("keeps the table in the DOM beside the chart, not behind a disclosure", () => {

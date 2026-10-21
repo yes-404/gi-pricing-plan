@@ -2,15 +2,16 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as api from "@/api/objectives";
+import type { ObjectivePreview } from "@/api/objectives";
 import { ProblemError } from "@/api/problem";
 
 import ObjectiveEditorView from "../ObjectiveEditorView.vue";
 
 // SL-1275 (WK-690 Slice 5), `02` §5.3's Custom objective library editor, against RL-1616's
 // preview route (PL-1665 5.3', 5.4). The API is mocked at the wrapper (`@/api/objectives`),
-// so these prove the view, not the contract. The answer field names are PROVISIONAL until
-// PL-1665 5.1' generates the preview shape; once it exists, annotate `answer` with the
-// generated type (vue-frontend: a fixture bound to its generated type fails `pnpm test`).
+// so these prove the view, not the contract. Every answer is bound to the generated
+// `ObjectivePreview` (PL-1665 5.1' landed the shape; the prep's provisional `position` and
+// `timeout` fields became the generated `line`, `column` and `reason`).
 //
 // One parser (PL-1268 Global Constraints): nothing in these tests, or in the view, may parse
 // or evaluate the loss. The view's only source of parse errors, derivatives and curve points
@@ -25,8 +26,8 @@ function problem(status: number, code: string): ProblemError {
   return new ProblemError({ type: "about:blank", title: code, status, code, errors: [] });
 }
 
-function answer(extra: Record<string, unknown>) {
-  return extra as unknown as Awaited<ReturnType<typeof api.previewObjective>>;
+function answer(preview: ObjectivePreview): ObjectivePreview {
+  return preview;
 }
 
 async function typeLoss(text: string) {
@@ -43,7 +44,10 @@ describe("ObjectiveEditorView", () => {
   it("renders the route's parse error at the position it names", async () => {
     // WF-702 B1.5: `numpy.where(...)` is answered 200 with ok false and a positioned error.
     vi.spyOn(api, "previewObjective").mockResolvedValue(
-      answer({ ok: false, error: { message: "attribute access is not in the grammar", position: 5 } }),
+      answer({
+        ok: false,
+        error: { reason: "grammar", message: "attribute access is not in the grammar", line: 1, column: 5 },
+      }),
     );
     render(ObjectiveEditorView);
 
@@ -59,7 +63,7 @@ describe("ObjectiveEditorView", () => {
     // B2.4: what the Approver reviews is the derivation, not opaque code. The strings are
     // deliberately ones no client-side differentiation would produce for `LOSS`.
     vi.spyOn(api, "previewObjective").mockResolvedValue(
-      answer({ ok: true, gradient: "GRADIENT-FROM-API", hessian: "HESSIAN-FROM-API", curve: [] }),
+      answer({ ok: true, gradient: "GRADIENT-FROM-API", hessian: "HESSIAN-FROM-API" }),
     );
     render(ObjectiveEditorView);
 
@@ -75,7 +79,7 @@ describe("ObjectiveEditorView", () => {
     // typing, and not once per keystroke, which would starve the preview executor (3a/3b).
     const preview = vi
       .spyOn(api, "previewObjective")
-      .mockResolvedValue(answer({ ok: true, curve: [] }));
+      .mockResolvedValue(answer({ ok: true }));
     render(ObjectiveEditorView);
 
     await typeLoss("w");
@@ -107,7 +111,7 @@ describe("ObjectiveEditorView", () => {
     // Condition 3b: a timeout answers `ok: false` with a timeout reason (not a 500). The
     // loss may be perfectly good; the reader must not be told it is wrong.
     vi.spyOn(api, "previewObjective").mockResolvedValue(
-      answer({ ok: false, timeout: true, error: { message: "preview timed out", position: null } }),
+      answer({ ok: false, error: { reason: "timeout", message: "preview timed out" } }),
     );
     render(ObjectiveEditorView);
 
@@ -138,10 +142,27 @@ describe("ObjectiveEditorView", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("grid exceeds the maximum point count");
   });
 
+  it("draws the loss curve from the route's points and tabulates them (NFR-463)", async () => {
+    vi.spyOn(api, "previewObjective").mockResolvedValue(
+      answer({
+        ok: true,
+        gradient: "g",
+        hessian: "h",
+        curve: { f: [0, 1], loss: [2.5, 0.5], gradient: [-1, 1], hessian: [2, 2] },
+      }),
+    );
+    render(ObjectiveEditorView);
+
+    await typeLoss(LOSS);
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(await screen.findByRole("table", { name: /loss curve/i })).toBeInTheDocument();
+  });
+
   it("is create-only: saving creates an expression objective and offers no edit route", async () => {
     // RL-1616 'Editing (need 5.8)': FR-367's "create, edit and version" is met by create,
     // which versions on a reused slug. No edit control and no PATCH/PUT call exist.
-    vi.spyOn(api, "previewObjective").mockResolvedValue(answer({ ok: true, curve: [] }));
+    vi.spyOn(api, "previewObjective").mockResolvedValue(answer({ ok: true }));
     const create = vi.spyOn(api, "createObjective").mockResolvedValue(
       { id: "o1" } as unknown as Awaited<ReturnType<typeof api.createObjective>>,
     );

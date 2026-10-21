@@ -138,13 +138,19 @@ export const routes: RouteRecordRaw[] = [
     }),
   },
   {
-    // `02` §5.3. List only — FR-167. The cell's editor is Phase 2 (FR-150 gates
-    // `expression` authoring off throughout Phase 1), and under FR-24 the cell binds
-    // nothing, so the editor is not a shortfall here.
+    // `02` §5.3. The library is the list (FR-167); the editor beside it is `/objectives/new`.
     path: "/objectives",
     name: "objective-library",
     meta: { requiresAuth: true },
     component: () => import("@/views/ObjectiveLibraryView.vue"),
+  },
+  {
+    // `02` §5.3's editor (WK-690 Slice 5, FR-8140): create-only, reading the preview route.
+    // A static segment outranks `/objectives/:id/certificate`, so no declaration order matters.
+    path: "/objectives/new",
+    name: "objective-editor",
+    meta: { requiresAuth: true },
+    component: () => import("@/views/ObjectiveEditorView.vue"),
   },
   {
     // `02` §5.3. `{id}`, not `:slug@:version` — the 2026-08-18 note's string was retired by

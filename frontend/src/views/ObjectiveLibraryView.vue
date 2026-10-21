@@ -1,12 +1,8 @@
 <script setup lang="ts">
 /**
- * `02` §5.3's Custom objective library, `/objectives` (FR-167).
- *
- * List only. The cell also names an editor with live parse errors, derived gradient/hessian
- * display and a loss-curve preview: under FR-24 that cell binds nothing, and FR-150
- * gates `expression` authoring off throughout Phase 1, so a parse-error editor would be a
- * Phase 2 capability. If one is judged necessary, OQ-587's floor rule makes it a new
- * requirement raised at build time, never a silent addition here.
+ * `02` §5.3's Custom objective library, `/objectives` (FR-167): the list. Its editor, with
+ * live parse errors, the derived gradient/hessian and the loss-curve preview, is
+ * `ObjectiveEditorView` at `/objectives/new` (WK-690 Slice 5, FR-8140), linked from here.
  */
 import { onMounted, ref } from "vue";
 
@@ -62,6 +58,12 @@ onMounted(async () => {
     <h1 class="mb-4 text-xl font-semibold">
       Custom objectives
     </h1>
+    <p class="mb-4 text-sm">
+      <a
+        href="/objectives/new"
+        class="text-blue-700 underline"
+      >New expression objective</a>
+    </p>
     <p
       v-if="failure"
       class="text-sm text-rose-800"
