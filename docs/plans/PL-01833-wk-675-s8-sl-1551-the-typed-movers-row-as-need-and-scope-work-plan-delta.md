@@ -3,7 +3,7 @@ id: PL-1833
 family: plan
 kind: map
 title: WK-675 — Slice 8 (SL-1551), the dislocation views: the typed /movers row as its need and its scope, and where it is built: a dated Work-plan delta to PL-1546
-status: draft                   # draft → active → superseded | retired (§1.2a)
+status: active                  # draft → active → superseded | retired (§1.2a)
 created: 2026-10-17
 owner: planner
 tree: 9469721db3d26480824cc1d715da2ec4ca9044d0
@@ -41,7 +41,7 @@ the typed /movers row as need + scope + a DP in-slice vs separate backend slice 
 `file:line` below was read at that tree unless a branch is named. **No test was run at planning
 time.** **`status: draft`**: DP-S8-1 blocks (§"Decision points"). *(Amended 2026-10-17 by the
 planner (seat planner-s8b), pre-merge: both DPs are ruled (a), §"Decision points"; the plan
-stays `draft` until it is minted, in order, and then goes `active`.)*
+stays `draft` until it is minted, in order, and then goes `active`.)* *(Amended 2026-10-21, executor exec-d28, on the maintainer's (by delegation) GO D28, `to-lead.md` "2026-10-21 15:10:53 BST": minted as `PL-1833` and set `active`, in that order.)*
 
 ## Authority
 
