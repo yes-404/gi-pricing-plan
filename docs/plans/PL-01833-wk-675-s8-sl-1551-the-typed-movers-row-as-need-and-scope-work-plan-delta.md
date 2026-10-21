@@ -4,7 +4,7 @@ family: plan
 kind: map
 title: WK-675 — Slice 8 (SL-1551), the dislocation views: the typed /movers row as its need and its scope, and where it is built: a dated Work-plan delta to PL-1546
 status: active                  # draft → active → superseded | retired (§1.2a)
-created: 2026-10-17
+created: 2026-10-21   # filed 2026-10-17 under working id 8095; minted 2026-10-21 as PL-1833
 owner: planner
 tree: 9469721db3d26480824cc1d715da2ec4ca9044d0
 phase: P2
@@ -16,6 +16,8 @@ relates: [PL-1546, PL-1286, PL-1501, PL-1267, SL-1551, SL-1388, RL-1504, RL-1473
 ---
 
 # PL-1833 — WK-675 Slice 8 (SL-1551): the typed `/movers` row as S8's need and scope (delta to PL-1546)
+
+Disclosure: drafted under working id 8095 on 2026-10-17; minted as PL-1833 on 2026-10-21 (GO D28). `created:` is the mint date, the original kept in its comment.
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L5. It follows
 > `document-ids.md` §1.6, PL row: *"a change is one dated Work-plan delta, a new `PL-` that
