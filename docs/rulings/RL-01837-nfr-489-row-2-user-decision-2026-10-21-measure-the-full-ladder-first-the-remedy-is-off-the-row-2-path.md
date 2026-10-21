@@ -21,8 +21,6 @@ Filed 2026-10-21 under working id 8149; minted as RL-1837 on 2026-10-21. **This 
 
 `work:` is `WK-1178` because `SL-1455` is a WK-1178 slice (`docs/roadmap.md`:2134 at 57adb9e2, "SL-1455 — WK-1178 fix slice"). `WK-674` is in `relates:` because FD 1836 names it as owner ("**HIGH; owner WK-674** (SL-1455's remedy; `docs/roadmap.md` §12 row 2 …)", FD-1836:17 at `origin/d29-records-2026-10-21` b49d3957). This record does not resolve that difference; it reports it.
 
-**Mint note (2026-10-21, minted as RL-1837):** the paragraph above describes the front matter as filed under working id 8149. On the maintainer's ruling of 2026-10-21 16:13 the minted record sets `work: WK-674` and carries `WK-1178` in `relates:`; the difference the paragraph reports is resolved that way.
-
 ## How this was decided — the sequence
 
 Four entries in `~/gi-pricing-plan.local/channel/to-lead.md` are the source. The file is local, so each is quoted below, copied from it by `sed`, unedited.
