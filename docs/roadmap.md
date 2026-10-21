@@ -1202,7 +1202,7 @@ Atomic switchover and rollback on the Slice 4 path, with the rollback's audit li
 id: SL-1260
 family: slice
 title: Slice 6: date-based routing and shadow scoring (FR-270, FR-271, FR-272 audit and NFR-498 for routing and shadow)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                   # draft → active → closed | retired (§1.2a)
 created: 2026-09-29
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 0d5b0765f76320518bfe76ddb30e5013525797c0
@@ -1213,6 +1213,7 @@ relates: [PL-1237]
 ```
 
 Date-based routing and shadow scoring, both built and default off per environment (`RL-1232` Part A, DP-2 (a)), with the audit limb for routing and shadow configuration changes (FR-272, NFR-498). `PL-1237` Task 6. Starts after Slice 5 closes.
+(Activated 2026-10-21 on the maintainer's (by delegation) GO, to-lead "2026-10-21 15:03:33 BST — Maintainer: GOs on the 15:02:44 work queue", item 5: lowest priority, rung 5 of the cut ladder; it takes a gate only when no row-2 slice is waiting. Scope: `PL-1237` Task 6 as changed by `PL-1537` R6.1 to R6.3; dispatched by the lead, transcript 4561857a.)
 
 #### SL-1689 — the scheduler (beat) and frontend-image row: FR-432's last two limbs (FR-432, FR-413, FR-406; FD-1661)
 
