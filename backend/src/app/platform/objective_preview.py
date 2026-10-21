@@ -1,4 +1,4 @@
-"""The Custom Objective preview (`02` FR-8140, `RL-1616` DP-S5-1): stateless, bounded, governed
+"""The Custom Objective preview (`02` FR-1840, `RL-1616` DP-S5-1): stateless, bounded, governed
 by the route, and the same `derive` and `compile_kernel` a fit uses.
 
 Nothing here touches a database or the audit log: a preview is not a derivation (NFR-484's
@@ -31,7 +31,7 @@ from pricing_core.safe_error import safe_error_detail
 
 __all__ = ["PREVIEW_TIMEOUT_SECONDS", "PREVIEW_WORKERS", "preview", "wait_idle"]
 
-#: FR-8140 clause 3b: the executor's fixed worker count and the wall-clock timeout.
+#: FR-1840 clause 3b: the executor's fixed worker count and the wall-clock timeout.
 PREVIEW_WORKERS = 2
 PREVIEW_TIMEOUT_SECONDS = 5.0
 

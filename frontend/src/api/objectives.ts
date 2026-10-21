@@ -83,7 +83,7 @@ export type ObjectivePreviewCurve = components["schemas"]["ObjectivePreviewCurve
 export type CreateCustomObjective = requestComponents["schemas"]["CreateCustomObjective"];
 
 /**
- * The editor's live parse and loss-curve preview (`02` FR-8140, RL-1616): one stateless route.
+ * The editor's live parse and loss-curve preview (`02` FR-1840, RL-1616): one stateless route.
  *
  * **A loss that does not parse is a value, not a throw** — the route answers 200 with
  * `ok: false` and a positioned error, so a keystroke that does not yet parse is not an error

@@ -300,7 +300,7 @@ def grammar_refusal(
     `ExpressionError.lineno` and `col_offset` give the position (the column made 1-based). A
     text that does not parse as Python at all is positioned by `SyntaxError`, whose `offset`
     is already 1-based. The one place the position is worked out: create refuses with it
-    (`_require_the_grammar`) and the preview route (FR-8140) answers with it. The reason of an
+    (`_require_the_grammar`) and the preview route (FR-1840) answers with it. The reason of an
     `ExpressionError` is `safe_error_detail`'s (NFR-499): the allow-list's text, already
     positioned as `line N, column M: message`.
     """

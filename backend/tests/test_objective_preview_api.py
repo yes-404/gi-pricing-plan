@@ -1,4 +1,4 @@
-"""`POST /custom-objectives/preview` over HTTP (FR-8140, `RL-1616` DP-S5-1): who may call it,
+"""`POST /custom-objectives/preview` over HTTP (FR-1840, `RL-1616` DP-S5-1): who may call it,
 the flag, the bounds, and that it leaves nothing behind. The pure core is
 `test_objective_preview.py`; this file needs the database."""
 
@@ -49,7 +49,7 @@ async def _counts(database: Database) -> tuple[int, int, int]:
     return counts[0], counts[1], counts[2]
 
 
-@pytest.mark.req("FR-8140")
+@pytest.mark.req("FR-1840")
 async def test_with_the_flag_on_a_parse_only_call_answers_ok(
     api_client: Any, author: Any, database: Database, workspace_id: Any
 ) -> None:
@@ -60,7 +60,7 @@ async def test_with_the_flag_on_a_parse_only_call_answers_ok(
     assert response.json()["curve"] is None
 
 
-@pytest.mark.req("FR-8140")
+@pytest.mark.req("FR-1840")
 async def test_a_loss_that_does_not_parse_answers_200_ok_false_with_a_position(
     api_client: Any, author: Any, database: Database, workspace_id: Any
 ) -> None:
@@ -75,7 +75,7 @@ async def test_a_loss_that_does_not_parse_answers_200_ok_false_with_a_position(
     assert answer["error"]["column"] is not None
 
 
-@pytest.mark.req("FR-8140")
+@pytest.mark.req("FR-1840")
 async def test_a_malformed_request_answers_422(
     api_client: Any, author: Any, database: Database, workspace_id: Any
 ) -> None:
@@ -84,7 +84,7 @@ async def test_a_malformed_request_answers_422(
     assert response.status_code == 422, response.text
 
 
-@pytest.mark.req("FR-8140")
+@pytest.mark.req("FR-1840")
 async def test_with_a_grid_the_curve_comes_back(
     api_client: Any, author: Any, database: Database, workspace_id: Any
 ) -> None:
@@ -95,7 +95,7 @@ async def test_with_a_grid_the_curve_comes_back(
     assert len(curve["f"]) == len(curve["loss"]) == len(curve["gradient"]) == 40
 
 
-@pytest.mark.req("FR-8140")
+@pytest.mark.req("FR-1840")
 async def test_3a_an_over_cap_grid_is_422_before_any_sympy_work(
     api_client: Any,
     author: Any,
@@ -120,7 +120,7 @@ async def test_3a_an_over_cap_grid_is_422_before_any_sympy_work(
             assert response.json()["ok"] is False
 
 
-@pytest.mark.req("FR-8140")
+@pytest.mark.req("FR-1840")
 async def test_3b_a_timeout_answers_ok_false_not_a_500(
     api_client: Any,
     author: Any,
@@ -162,7 +162,7 @@ async def test_with_both_permissions_and_the_flag_off_the_answer_is_409(
     assert response.json()["code"] == "OBJECTIVE_KIND_NOT_ENABLED"
 
 
-@pytest.mark.req("FR-8140")
+@pytest.mark.req("FR-1840")
 async def test_a_successful_preview_writes_no_row_and_no_audit_event(
     api_client: Any, author: Any, database: Database, workspace_id: Any
 ) -> None:

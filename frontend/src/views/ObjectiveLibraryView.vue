@@ -2,7 +2,7 @@
 /**
  * `02` §5.3's Custom objective library, `/objectives` (FR-167): the list. Its editor, with
  * live parse errors, the derived gradient/hessian and the loss-curve preview, is
- * `ObjectiveEditorView` at `/objectives/new` (WK-690 Slice 5, FR-8140), linked from here.
+ * `ObjectiveEditorView` at `/objectives/new` (WK-690 Slice 5, FR-1840), linked from here.
  */
 import { onMounted, ref } from "vue";
 

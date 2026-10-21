@@ -71,7 +71,7 @@ async def test_wf702_route_b_expression_objective_from_create_to_two_approvals(
     second = _headers((await _principal_with(database, workspace_id, "approver")).id, workspace_id)
 
     # B1.4 / B1.5 — the editor's live parse: a bad attempt is a positioned `ok: false`, and
-    # nothing is stored (the preview route, FR-8140).
+    # nothing is stored (the preview route, FR-1840).
     bad = api_client.post(
         f"{OBJECTIVES}/preview",
         json={"loss": "numpy.where(f < y, 1, 2)", "parameters": []},

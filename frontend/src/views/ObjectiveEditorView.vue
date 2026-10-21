@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * `02` §5.3's Custom objective editor, `/objectives/new` (WK-690 Slice 5, FR-8140, RL-1616).
+ * `02` §5.3's Custom objective editor, `/objectives/new` (WK-690 Slice 5, FR-1840, RL-1616).
  *
  * **One parser, and it is not here.** Parse errors, the derived gradient and hessian, and the
  * loss-curve points all come from the stateless preview route (`previewObjective`); nothing in

@@ -504,13 +504,13 @@ class DerivedBlock(BaseModel):
     derived_at: AwareDatetime
 
 
-#: FR-8140 clause 3a: the preview grid's hard maximum point count. A constant here so the
+#: FR-1840 clause 3a: the preview grid's hard maximum point count. A constant here so the
 #: contract carries it (`maximum`) and the backend reads the same number.
 PREVIEW_MAX_GRID_POINTS: Final = 500
 
 
 class ObjectivePreviewGrid(BaseModel):
-    """Where the loss-curve preview evaluates (FR-8140): `n_points` raw scores across `f_range`,
+    """Where the loss-curve preview evaluates (FR-1840): `n_points` raw scores across `f_range`,
     at one observation `y` and weight `w`. One observation, because the editor draws one curve."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -528,7 +528,7 @@ class ObjectivePreviewGrid(BaseModel):
 
 
 class ObjectivePreviewRequest(BaseModel):
-    """`POST /custom-objectives/preview` (FR-8140, `RL-1616`).
+    """`POST /custom-objectives/preview` (FR-1840, `RL-1616`).
 
     With no `grid` the route parses only; with one it also derives and evaluates. `values` are
     the chosen parameter values and default to each parameter's `default`.
@@ -555,7 +555,7 @@ class ObjectivePreviewRequest(BaseModel):
 
 class ObjectivePreviewError(BaseModel):
     """Why a preview is not ok: a grammar refusal with its position (`RL-1362` DP-S3-3), or the
-    time bound of FR-8140 clause 3b, which has none."""
+    time bound of FR-1840 clause 3b, which has none."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 

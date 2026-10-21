@@ -145,7 +145,7 @@ export const routes: RouteRecordRaw[] = [
     component: () => import("@/views/ObjectiveLibraryView.vue"),
   },
   {
-    // `02` §5.3's editor (WK-690 Slice 5, FR-8140): create-only, reading the preview route.
+    // `02` §5.3's editor (WK-690 Slice 5, FR-1840): create-only, reading the preview route.
     // A static segment outranks `/objectives/:id/certificate`, so no declaration order matters.
     path: "/objectives/new",
     name: "objective-editor",

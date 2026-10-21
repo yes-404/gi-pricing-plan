@@ -1,5 +1,5 @@
 ---
-id: LG-8138
+id: LG-1839
 family: ledger
 title: WK-690 slice SL-1275 — Slice 5, the authoring view and WF-702 Route B end to end (PL-1268, PL-1621, PL-1665) (slice ledger)
 status: active                 # active → closed (§1.2a)
@@ -14,9 +14,9 @@ corrected_by: []
 relates: [PL-1268, PL-1621, PL-1665, RL-1616, SL-1275, SL-1273, SL-1274]
 ---
 
-# LG-8138 — WK-690 slice SL-1275: Slice 5, the authoring view and WF-702 Route B end to end
+# LG-1839 — WK-690 slice SL-1275: Slice 5, the authoring view and WF-702 Route B end to end
 
-Filed 2026-10-21 under working id 8138 (lead-reserved in eta.md); executor seat `exec-1275`, branch `sl-1275-wk690-s5-authoring-view`, base `origin/main` `44c18e11ca028d25c8b4c9d92077cc0f3622ef8e` (re-merged into the branch, rc 0, no conflict).
+Filed 2026-10-21 under working id 8138 (lead-reserved in eta.md); minted as LG-1839 on 2026-10-21; executor seat `exec-1275`, branch `sl-1275-wk690-s5-authoring-view`, base `origin/main` `44c18e11ca028d25c8b4c9d92077cc0f3622ef8e` (re-merged into the branch, rc 0, no conflict).
 
 **GO:** the maintainer's entry "2026-10-21 15:03:33 BST — Maintainer: GOs on the 15:02:44 work queue", item 4: "GO SL-1275 (PL-1268): build in parallel, off the row-2 path. Gate order is SL-1711 first, then by readiness." **MERGE-ACK:** not yet given.
 
@@ -42,7 +42,7 @@ The FR is not in the slice's literal first commit (the activation commit `41f73d
 ## Tasks
 
 1. **Activation** (`41f73db2`): SL-1275 `active`, this ledger opened, INDEX regenerated, `doc-index.py --check` rc 0, `audit-docs.py` red only on check 31 (the working-id gap 8138, expected until the mint).
-2. **Spec first** (`8d2fe052`): `02` §3.7 new FR (working id FR-8140, clauses 3a-3d and the audit sentence), §5.1 row, §5.3 dated built line; `model-schema` shapes `ObjectivePreview*` (the request reuses `ObjectiveParameter`); `generate-contracts.py` wrote `docs/contracts/openapi/generated.json`, `--check` rc 0 ("54 generated contracts match the models"); `pnpm --dir frontend generate:api` rc 0 and `frontend/src/api/generated` is VCS-ignored (`git check-ignore` prints it).
+2. **Spec first** (`8d2fe052`): `02` §3.7 new FR (FR-1840, minted from working id 8140, clauses 3a-3d and the audit sentence), §5.1 row, §5.3 dated built line; `model-schema` shapes `ObjectivePreview*` (the request reuses `ObjectiveParameter`); `generate-contracts.py` wrote `docs/contracts/openapi/generated.json`, `--check` rc 0 ("54 generated contracts match the models"); `pnpm --dir frontend generate:api` rc 0 and `frontend/src/api/generated` is VCS-ignored (`git check-ignore` prints it).
 3. **Backend** (`8d2fe052`): `app/platform/objective_preview.py` and the route in `app/api/custom_objectives.py`; `grammar_refusal` extracted from `_require_the_grammar` so create and preview share one position computation. **Red first:** `uv run ... run-small.sh backend/tests/test_objective_preview.py` at the tree without the module: `ImportError: cannot import name 'objective_preview' from 'app.platform'` (collection error, rc 2). **Green:** `12 passed`. The DB-backed `test_objective_preview_api.py` and `test_wf702_route_b.py` are written and **owed a DB run**.
 4. **Frontend** (`c74da4f1`): `previewObjective`/`createObjective` on the generated types, `ObjectiveLossCurve.vue` (a `ChartFigure` caller), `ObjectiveEditorView.vue`, route `/objectives/new`, library link. **Red first:** at `073fd135`'s stubs the four prep test files give `Tests 17 failed | 1 passed (18)` (the one pass is the route test that the library and certificate routes are undisturbed). **Green:** the same files, `Tests 11 passed` (+ 9 for the client and curve); whole suite `Test Files 129 passed (129), Tests 817 passed (817)`; `pnpm lint` rc 0; `pnpm type-check` rc 0. The prep fixtures' provisional field names (`position`, `timeout`, row-wise `curve`) were re-bound to the generated shapes, as the prep's own comments instruct; every asserted behaviour is unchanged.
 5. **5.5 one parser:** `git diff --name-only origin/main...HEAD -- frontend/src | grep -ciE 'pars|grammar|evaluat'` prints `0` (grep exit 1 is its no-match code).
@@ -51,7 +51,7 @@ The FR is not in the slice's literal first commit (the activation commit `41f73d
 ## Findings carried to the lead
 
 - **B4.2 is built; the earlier "not built" finding was wrong (withdrawn 2026-10-21).** `WF-702` B4.2 ("convexity `violated` triggers the two-approver rule") is met by `02` FR-152 / FR-163 as amended (RL-1362): a `violated` certificate needs the policy's Approvers plus one, so the default policy (1) gives two; `backend/tests/test_objective_submission.py` asserts the increment. The Route B file had set the workspace policy to two approvers (`90078720`, `_two_approvers_required`), which made the request need three and the second approval leave it in `review`. The first DB run failed on exactly that; the override was removed in `1fe70cab` (this slice's own test, written the same day), and the two-approver assertions (`review` after the first, `approved` and `approvers_recorded == 2` after the second) are unchanged, so it is not a weakening. No spec text says "two approvers" for this path in a way that disagrees with the code.
-- **`WF-702` B1.4 citation: done** (lead OK, "DB GRANT; FR 8140 confirmed; WF-702 B1.4 OK"), as a dated citation on the B1.4 row; B1.5's text is untouched. The row below is the original finding: **`WF-702` B1.4/B1.5 text** says the frontend "parses on every keystroke" and the rejection is `OBJECTIVE_GRAMMAR_VIOLATION`; `RL-1616` has the editor call the route and the route answer 200 `ok: false`. `PL-1665` 5.1' lists a B1.4 citation of the route as a slice disposition, but a `WF-` is not the executor's to amend (`executor.md`), so it is **not done** and waits for the lead.
+- **`WF-702` B1.4 citation: done** (lead OK, "DB GRANT; FR-1840 confirmed; WF-702 B1.4 OK"), as a dated citation on the B1.4 row; B1.5's text is untouched. The row below is the original finding: **`WF-702` B1.4/B1.5 text** says the frontend "parses on every keystroke" and the rejection is `OBJECTIVE_GRAMMAR_VIOLATION`; `RL-1616` has the editor call the route and the route answer 200 `ok: false`. `PL-1665` 5.1' lists a B1.4 citation of the route as a slice disposition, but a `WF-` is not the executor's to amend (`executor.md`), so it is **not done** and waits for the lead.
 - **The editor learns the flag only from the first preview's 409** (the frontend has no settings read), so a flag-off workspace sees an enabled editor until the first keystroke settles.
 
 ## Accessibility review (`accessibility-tester`, a code read, 2026-10-21; PL-1621 5.4)

@@ -15,7 +15,7 @@ use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
 const props = defineProps<{ curve: ObjectivePreviewCurve }>();
 
 /**
- * The loss at each score the preview route returned (`02` §5.3, FR-8140), drawn as given:
+ * The loss at each score the preview route returned (`02` §5.3, FR-1840), drawn as given:
  * the route evaluated it with the fit's own kernel, so nothing here computes a value. A point
  * the route reports as `null` (non-finite) stays a gap in the line and a dash in the table.
  */

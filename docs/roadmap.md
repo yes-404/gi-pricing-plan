@@ -1775,7 +1775,7 @@ relates: [PL-1268]
 The Custom objective library's editor with live parse errors, the derived gradient and hessian display, and the loss-curve preview. It consumes OQ-550's ruling (WK-675's) if one exists by then, and otherwise records its `ChartFigure` caller in OQ-550's call-site count. One HTTP test file runs `WF-702` Route B. The flag's default is unchanged. `PL-1268` Slice 5. Starts after Slice 3 closes.
 Minted as `SL-1275` at #943's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `08bd1c5a` (working id 9954 before the mint).
 
-(Activated 2026-10-21 on the maintainer's entry "2026-10-21 15:03:33 BST — Maintainer: GOs on the 15:02:44 work queue" (`to-lead.md`), item 4. `PL-1268` and `PL-1665` are `active`; `PL-1621` stands as `PL-1665` amends it. The slice's one ledger is `LG-8138` (working id reserved by the lead in eta.md; minted at the merge turn). Executor seat `exec-1275`, branch `sl-1275-wk690-s5-authoring-view`.)
+(Activated 2026-10-21 on the maintainer's entry "2026-10-21 15:03:33 BST — Maintainer: GOs on the 15:02:44 work queue" (`to-lead.md`), item 4. `PL-1268` and `PL-1665` are `active`; `PL-1621` stands as `PL-1665` amends it. The slice's one ledger is `LG-1839` (working id reserved by the lead in eta.md; minted at the merge turn). Executor seat `exec-1275`, branch `sl-1275-wk690-s5-authoring-view`.)
 
 #### SL-1622 — WK-690 fix row: FD-1349, FD-1492 and FD-1512 fixed before close, and FD-1294's discharge line
 
