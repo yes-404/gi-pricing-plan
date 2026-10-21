@@ -688,3 +688,5 @@ Reference, invocation 01 (`localhost`, default rate, a different moment): 20.915
 - **Neither route brings the no-GBM p99 under 15 ms.** The lowest no-GBM p99 across the three invocations is 21.270 ms server-side (handler) and 23.930 ms client-side. Per-request time outside `score_one` stays near 12 ms in all three (handler mean 16.1 to 17.7 ms against `score_one` mean 5.3 ms in invocation 01).
 
 **Not run, as the brief said:** a repeat of any rung, a combined container-IP + rate-0 rung, py-spy, per-statement timing, and the H3/H4/H5 tests. The scratch database is left on the host; the three compose services are up and idle; the VM is neither powered off nor deleted.
+
+**Correction of a stamp (2026-10-21 15:55 BST, read from `git log`):** the pre-registration addendum's heading says "15:50 BST", an estimate written without reading the clock. Its commit `4f6d8ee27b7bd598f4b67709c2a8da2d8345572f` has author time 2026-10-21T14:39:24Z = **15:39:24 BST**, which is before the first timed command (the H1 micro-test, then invocation A at 15:39:46 BST). The ordering the addendum claims holds; only its stamp was wrong.
