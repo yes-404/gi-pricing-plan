@@ -610,3 +610,31 @@ Appended after the protocol's push at `4a83ce1f544dc45388f442e0f51c5c17919103a0`
 2. **This fixes RL-1685's reference N for G4's dedicated host.** That fixing is a reading of `RL-1685`, so the dated line on NFR-489 and NFR-454 goes in the next records batch, **not on this branch**; this branch edits no spec.
 3. **N is printed in the header of every output** (`RL-1685`'s condition): the harness header prints `replica: N = 4` (`scripts/bench-rating.py`, the header line of `main`, delivered by Task 1 Step 3 and tested by `backend/tests/test_bench_rating_header.py`). Each `.rec` file also carries N, and the readings section checks the header of every one of the 12 outputs for it.
 4. **The quiet threshold is accepted as written** (P6: load1 < 1.0 before each invocation, wait up to 10 minutes, `pgrep -c pytest` = 0, `ps` top-5 limited to the harness, uvicorn, the stores and kernel threads), with one addition: **P5 also records `load1` and `free -m` for each invocation, before and after**, in its `.rec` file and in the run log.
+
+### Readings — invocation 01 (OVER), 2026-10-21
+
+Appended after the addendum at `742b5628b8abe71f2677de557bb26d3528856445`; nothing above is edited. Read from `~/gi-pricing-plan.local/scratch/nfr1-2026-10-21/logs/t4/inv01-r25.out`, `.err` and `.rec` (copies of `~/logs/t4/` on nfr-bench-1).
+
+**Label: "measured, dedicated host (G4 discharge)"** — the FD-1411 remedy proof only (`RL-1755`, `RL-1614`); never the NFR-489 exit verdict, which stays SL-1259's. **N = 4** (header line 2 of the output: `replica: N = 4 uvicorn worker process(es); NFR-489/454 are read per replica at this N`). Host line 1: `machine: AMD EPYC 7B12, 8 cores, 32.9 GB RAM`. Head benched: `44c18e11ca028d25c8b4c9d92077cc0f3622ef8e`, tree `03c6397f200868f1a0827c197ffbc6de0bf65eda`, `git status --short` 0 lines; un-instrumented. Command as P3 with `<R>` = 25, scratch DB `gipricing_sl1455_t4_1792592230` (template and tree alembic head both `a4d1f08c3b97`).
+
+NFR-489, verbatim (`docs/specs/03-rating-engine.md`, row `:1532` at `11bddecb`): *"Real-time scoring p99 < 50 ms server-side at 200 rps per replica for a ~200-step motor structure with one `exact` GBM call (NFR-454). Without a GBM call, p99 < 15 ms."*
+
+| Arm | Offered / issued rps | p50 ms | p99 ms | Handler p99 ms | Errors | Budget | Reading |
+|---|---|---|---|---|---|---|---|
+| With GBM, bench | 25 / 25.0 | 23.381 | 37.540 | 34.700 | 0 | 50 ms | PASS |
+| With GBM, default-live | 25 / 25.0 | 23.643 | 37.580 | 33.920 | 0 | 50 ms | PASS |
+| Without GBM, bench | 25 / 25.0 | 20.915 | 26.364 | 23.060 | 0 | 15 ms | **OVER** |
+| Without GBM, default-live | 25 / 25.0 | 20.625 | 24.979 | 21.640 | 0 | 15 ms | **OVER** |
+
+Each cell has n = 500. Load during the rungs (harness lines): 0.93 → 0.82, 0.82 → 0.65, 0.95 → 0.74, 0.74 → 0.69; "1-minute load average at exit: 0.69".
+
+**Component half (Acceptance 3), `score_one` alone, quoted from the output:**
+- with GBM: `p99 8.934 ms / 50.0 ms budget — PASS at 1-min load 0.87 → 0.80`;
+- without GBM: `NFR-489 without GBM (199 steps, trace=False) — 1000 calls at 1-min load 0.80 → 0.81`, `mean 5.267 ms  stdev 0.730 ms`, `p99 6.863 ms / 15.0 ms budget — PASS at 1-min load 0.80 → 0.81`.
+The component half passes in both arms; the full-path p99 without GBM (26.364 ms) is over its budget. Not explained or tuned here.
+
+**Quiet condition (a), from `inv01-r25.rec`:** before — start 2026-10-21 14:17:15 UTC / 15:17:15 BST, load1 0.14 (`load average: 0.14, 0.12, 0.08`), `free -m` total 32099, used 1193, free 27900, available 30906, `pgrep -c pytest` 0, `ps` top-5 dockerd, systemd --user, redis, init, containerd; docker ps: postgres, redis, minio only, all healthy. After — end 14:21:34 UTC / 15:21:34 BST, load1 0.69, `free -m` used 1350, free 27659, available 30748, `pgrep -c pytest` 0, top-5 dockerd, docker-proxy, redis, minio, containerd. `harness_rc` 0, `timeout` not triggered, `.err` 0 bytes. Duration 4 min 19 s.
+
+**Gap in the protocol:** P5 takes the `ps` top-5 before and after the invocation, not during it, so no `ps` shows the harness and its workers running. Condition (a) as `RL-1755` words it ("`ps` top-5 per invocation") is met by the before and after samples only; a mid-run sample is not on record.
+
+**Stopped per the OVER rule** (`RL-1755` item 3; PL-1454 Task 4 Step 3) at the first OVER cell. **Not run: invocations 02 to 12** (11 of 12), the Task 3 Step 5 byte-identity, and Acceptance 1's default-live arm limb. No re-run and no tuning inside this window; any further run needs a new go and a dated addendum. The scratch database `gipricing_sl1455_t4_1792592230` is **left on nfr-bench-1**, not dropped; the three compose services are up and idle. The VM is neither powered off nor deleted by the executor.
