@@ -163,6 +163,102 @@ def api_declares_its_worker_count(compose: dict[str, Any]) -> list[str]:
     return problems
 
 
+def _beat_words(compose: dict[str, Any]) -> list[str]:
+    command = compose["services"].get("scheduler", {}).get("command") or []
+    return command.split() if isinstance(command, str) else list(command)
+
+
+def scheduler_runs_beat_from_the_one_image(compose: dict[str, Any]) -> list[str]:
+    """FR-432 / FR-413 / FR-406: the `scheduler` service exists under `app`, from `api`'s image,
+    and runs `celery -A app.worker.entrypoint beat` with a `--schedule` file it can write."""
+    scheduler = compose["services"].get("scheduler")
+    if scheduler is None:
+        return ["no service named scheduler"]
+    problems = []
+    if "app" not in (scheduler.get("profiles") or []):
+        problems.append("scheduler is not under the app profile")
+    if scheduler.get("image") != compose["services"]["api"].get("image"):
+        problems.append("scheduler does not use api's image")
+    words = _beat_words(compose)
+    if words[:4] != ["celery", "-A", "app.worker.entrypoint", "beat"]:
+        problems.append(f"scheduler command is {words!r}, not celery ... beat")
+    if "--schedule" not in words:
+        problems.append("scheduler names no --schedule file (the image's /app is not writable)")
+    return problems
+
+
+def scheduler_is_one_process(compose: dict[str, Any]) -> list[str]:
+    """FR-413: the tick is "a single periodic Celery beat task"; two beats relay twice."""
+    scheduler = compose["services"].get("scheduler", {})
+    copies = max((scheduler.get("deploy") or {}).get("replicas", 1), scheduler.get("scale", 1))
+    return (
+        [f"scheduler runs {copies} copies; two beats relay the outbox twice"] if copies > 1 else []
+    )
+
+
+def scheduler_starts_after_its_dependencies(compose: dict[str, Any]) -> list[str]:
+    """It reads the schema and talks to Redis, as `worker` does, so waits for both."""
+    deps = compose["services"].get("scheduler", {}).get("depends_on") or {}
+    problems = []
+    if (deps.get("migrate") or {}).get("condition") != "service_completed_successfully":
+        problems.append("scheduler does not wait for migrate to complete")
+    if (deps.get("redis") or {}).get("condition") != "service_healthy":
+        problems.append("scheduler does not wait for redis to be healthy")
+    return problems
+
+
+FRONTEND_DOCKERFILE = "deploy/frontend.Dockerfile"
+FRONTEND_NGINX = COMPOSE.parent / "frontend.nginx.conf"
+ROOT_DOCKERIGNORE = COMPOSE.parents[1] / ".dockerignore"
+
+
+def frontend_is_built_from_its_dockerfile(compose: dict[str, Any]) -> list[str]:
+    """FR-432: `frontend` exists under `app` and is built from `deploy/frontend.Dockerfile`."""
+    frontend = compose["services"].get("frontend")
+    if frontend is None:
+        return ["no service named frontend"]
+    problems = []
+    if "app" not in (frontend.get("profiles") or []):
+        problems.append("frontend is not under the app profile")
+    build = frontend.get("build")
+    dockerfile = build.get("dockerfile") if isinstance(build, dict) else None
+    if dockerfile != FRONTEND_DOCKERFILE:
+        problems.append(f"frontend dockerfile is {dockerfile!r}, not {FRONTEND_DOCKERFILE}")
+    if "lb" not in (frontend.get("depends_on") or {}):
+        problems.append("frontend does not depend on lb")
+    ports = [str(p) for p in frontend.get("ports") or []]
+    if not any(p.startswith("${GIP_WEB_PORT:-5173}:") for p in ports):
+        problems.append("frontend does not publish ${GIP_WEB_PORT:-5173} (DP-B2 (a))")
+    return problems
+
+
+def nginx_conf_problems(conf: str) -> list[str]:
+    problems = []
+    if "location /api/" not in conf or "lb:8000" not in conf:
+        problems.append("the nginx conf has no /api/ proxy block to lb:8000")
+    if "try_files" not in conf or "/index.html" not in conf:
+        problems.append("the nginx conf has no history fallback to index.html")
+    return problems
+
+
+def frontend_proxies_api_to_lb(_compose: dict[str, Any]) -> list[str]:
+    """FR-432: the browser stays same-origin: `/api/` goes to `lb:8000`, read from the conf."""
+    if not FRONTEND_NGINX.exists():
+        return [f"{FRONTEND_NGINX.name} does not exist"]
+    return nginx_conf_problems(FRONTEND_NGINX.read_text(encoding="utf-8"))
+
+
+def backend_image_context_still_excludes_the_frontend(_compose: dict[str, Any]) -> list[str]:
+    """Guard (green at base and head): the frontend image brings `frontend/` in through its own
+    ignore file, never by widening the backend image's root `.dockerignore`."""
+    lines = {ln.strip() for ln in ROOT_DOCKERIGNORE.read_text(encoding="utf-8").splitlines()}
+    return [
+        f"the root .dockerignore no longer excludes {x}"
+        for x in ("frontend", "docs")
+        if x not in lines
+    ]
+
+
 CHECKS = [
     api_needs_no_worker,
     migrations_are_their_own_step,
@@ -171,6 +267,12 @@ CHECKS = [
     each_worker_consumes_one_pool,
     one_image_three_roles,
     api_declares_its_worker_count,
+    scheduler_runs_beat_from_the_one_image,
+    scheduler_is_one_process,
+    scheduler_starts_after_its_dependencies,
+    frontend_is_built_from_its_dockerfile,
+    frontend_proxies_api_to_lb,
+    backend_image_context_still_excludes_the_frontend,
 ]
 
 
@@ -252,6 +354,41 @@ def test_api_declares_its_worker_count_through_web_concurrency() -> None:
     assert api_declares_its_worker_count(_load()) == []
 
 
+@pytest.mark.req("FR-432")
+@pytest.mark.req("FR-413")
+@pytest.mark.req("FR-406")
+def test_the_scheduler_runs_beat_from_the_one_image() -> None:
+    assert scheduler_runs_beat_from_the_one_image(_load()) == []
+
+
+@pytest.mark.req("FR-432")
+@pytest.mark.req("FR-413")
+def test_the_scheduler_is_one_process() -> None:
+    assert "scheduler" in _load()["services"], "no service named scheduler"
+    assert scheduler_is_one_process(_load()) == []
+
+
+@pytest.mark.req("FR-432")
+def test_the_scheduler_waits_for_migrate_and_redis() -> None:
+    assert scheduler_starts_after_its_dependencies(_load()) == []
+
+
+@pytest.mark.req("FR-432")
+def test_the_frontend_is_built_from_its_dockerfile_behind_lb() -> None:
+    assert frontend_is_built_from_its_dockerfile(_load()) == []
+
+
+@pytest.mark.req("FR-432")
+def test_the_frontend_proxies_api_to_lb_and_falls_back_to_the_spa() -> None:
+    assert frontend_proxies_api_to_lb(_load()) == []
+
+
+@pytest.mark.req("FR-432")
+def test_the_backend_image_context_still_excludes_the_frontend() -> None:
+    """A guard, not a red-first check: green at the base and at the head."""
+    assert backend_image_context_still_excludes_the_frontend(_load()) == []
+
+
 @pytest.mark.req("FR-434")
 @pytest.mark.req("FR-435")
 def test_the_default_up_is_still_only_the_backing_services() -> None:
@@ -312,9 +449,39 @@ def _break_worker_consumes_two_pools(c: dict[str, Any]) -> None:
     c["services"][name]["command"] = words
 
 
+def _break_scheduler_missing(c: dict[str, Any]) -> None:
+    del c["services"]["scheduler"]
+
+
+def _break_scheduler_runs_a_worker(c: dict[str, Any]) -> None:
+    c["services"]["scheduler"]["command"] = ["celery", "-A", "app.worker.entrypoint", "worker"]
+
+
+def _break_scheduler_other_image(c: dict[str, Any]) -> None:
+    c["services"]["scheduler"]["image"] = "gi-pricing-other:1"
+
+
+def _break_scheduler_two_replicas(c: dict[str, Any]) -> None:
+    c["services"]["scheduler"]["deploy"] = {"replicas": 2}
+
+
+def _break_scheduler_not_after_migrate(c: dict[str, Any]) -> None:
+    del c["services"]["scheduler"]["depends_on"]["migrate"]
+
+
+def _break_frontend_missing(c: dict[str, Any]) -> None:
+    del c["services"]["frontend"]
+
+
+def _break_frontend_other_dockerfile(c: dict[str, Any]) -> None:
+    c["services"]["frontend"]["build"]["dockerfile"] = "deploy/Dockerfile"
+
+
 @pytest.mark.req("FR-434")
 @pytest.mark.req("FR-435")
 @pytest.mark.req("FR-415")
+@pytest.mark.req("FR-432")
+@pytest.mark.req("FR-413")
 @pytest.mark.req("NFR-489")
 @pytest.mark.parametrize(
     ("breaker", "check"),
@@ -328,6 +495,13 @@ def _break_worker_consumes_two_pools(c: dict[str, Any]) -> None:
         (_break_worker_consumes_two_pools, each_worker_consumes_one_pool),
         (_break_api_without_web_concurrency, api_declares_its_worker_count),
         (_break_api_passes_workers_flag, api_declares_its_worker_count),
+        (_break_scheduler_missing, scheduler_runs_beat_from_the_one_image),
+        (_break_scheduler_runs_a_worker, scheduler_runs_beat_from_the_one_image),
+        (_break_scheduler_other_image, scheduler_runs_beat_from_the_one_image),
+        (_break_scheduler_two_replicas, scheduler_is_one_process),
+        (_break_scheduler_not_after_migrate, scheduler_starts_after_its_dependencies),
+        (_break_frontend_missing, frontend_is_built_from_its_dockerfile),
+        (_break_frontend_other_dockerfile, frontend_is_built_from_its_dockerfile),
     ],
 )
 def test_each_check_goes_red_on_the_break_it_exists_for(breaker: Any, check: Any) -> None:
@@ -349,3 +523,15 @@ def test_the_reference_keycloak_is_marked_as_the_deployers_to_operate() -> None:
     assert "ports" not in service, "the reference publishes no port; the proxy fronts it"
     for key in ("KC_DB_PASSWORD", "KC_BOOTSTRAP_ADMIN_PASSWORD"):
         assert ":?" in service["environment"][key], f"{key} must be required, not defaulted"
+
+
+@pytest.mark.req("FR-432")
+@pytest.mark.parametrize(
+    "conf",
+    [
+        "server { location / { try_files $uri /index.html; } }",
+        "server { location /api/ { proxy_pass http://lb:8000; } }",
+    ],
+)
+def test_the_nginx_check_goes_red_on_a_conf_missing_a_limb(conf: str) -> None:
+    assert nginx_conf_problems(conf)

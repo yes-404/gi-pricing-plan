@@ -1,0 +1,17 @@
+# Read by BuildKit in place of the root .dockerignore for `deploy/frontend.Dockerfile`: the
+# context is the repository root, and only the SPA and its OpenAPI contract belong in it.
+*
+!frontend
+!docs
+docs/*
+!docs/contracts
+docs/contracts/*
+!docs/contracts/openapi
+docs/contracts/openapi/*
+!docs/contracts/openapi/generated.json
+!deploy
+deploy/*
+!deploy/frontend.nginx.conf
+frontend/node_modules
+frontend/dist
+**/node_modules

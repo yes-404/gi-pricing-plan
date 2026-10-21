@@ -188,6 +188,39 @@ services:
     depends_on:
       api: {condition: service_healthy}
 
+  # FR-432 / FR-413 / FR-406: the Celery beat process. The outbox relay is a beat schedule entry
+  # (`app.worker.entrypoint`), so without it every committed Job stays `queued` and nothing says
+  # why. EXACTLY ONE copy: two beats relay the outbox twice and FR-413's tick is a single
+  # periodic task, so it is never scaled (`test_deploy_stack.py` holds `deploy.replicas` and
+  # `scale` at 1). The `--schedule` file is kept off the image's read-only-to-`gip` /app, under
+  # /tmp (a writable path inside the container), as `scripts/demo.py` keeps it off the tree.
+  scheduler:
+    profiles: ["app"]
+    image: gi-pricing-app:${GIP_BUILD:-unset}
+    build: *gip-build
+    command: ["celery", "-A", "app.worker.entrypoint", "beat", "--schedule", "/tmp/celerybeat-schedule"]
+    environment: *gip-env
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+    stop_grace_period: 20s
+
+  # FR-432: the built SPA, served by nginx, same-origin with the API (`/api/` -> `lb:8000`;
+  # `deploy/frontend.nginx.conf`). Published on the port the local realm already admits
+  # (`deploy/keycloak-local/realm-gi-pricing.json` admits :5173), so a browser login works with no
+  # realm change; it is also the Vite dev server's port, so run one or the other (PL-1688 DP-B2).
+  # The context is the repository root; the Dockerfile-specific ignore file admits `frontend/`
+  # and the OpenAPI contract only, so the backend image's context is not widened.
+  frontend:
+    profiles: ["app"]
+    image: gi-pricing-frontend:${GIP_BUILD:-unset}
+    build:
+      context: ..
+      dockerfile: deploy/frontend.Dockerfile
+    ports: ["${GIP_WEB_PORT:-5173}:80"]
+    depends_on:
+      lb: {condition: service_started}
+
 volumes:
   pgdata:
   miniodata:
