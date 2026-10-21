@@ -64,7 +64,7 @@ was: docs/workflows/wf-04-deploy-and-monitor.md
 | C4 | Backend | Pre-warms, switches atomically, emits the Audit Event and notification. Total elapsed under 30 s. | `03` NFR-494 |
 | C5 | Backend | **Auto-creates the template Monitors** for the new deployment, so the structure is never live and unmonitored. | `05` FR-310 |
 | C6 | Consumer System | Live quoting proceeds against the new bundle. | `03` FR-250 |
-| C7 | Backend | Samples 1 % of traces, plus 100 % of declines and errors, and persists them. | `03` FR-259 |
+| C7 | Backend | Samples 1 % of traces, plus 100 % of declines and errors, and persists them.*(Amended 2026-10-21, `RL-1712`: "errors" is a served result whose `outcome` is `"error"`, and the real-time path serves none. A quote the platform cannot price is refused with a problem document and is not traced (`03` FR-259, the clarification of 2026-10-21). Its count is D1's error rate (`05` FR-331).)* | `03` FR-259 |
 
 ### Phase D — The first 48 hours (Pricing Actuary)
 
