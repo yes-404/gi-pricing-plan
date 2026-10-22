@@ -779,13 +779,13 @@ async def _cells_diff(args: argparse.Namespace) -> int:
     from uuid import UUID, uuid4
 
     from backend.tests.test_rate_tables_service import _seed_approved_model, _set_threshold
-    from sqlalchemy import select, update
+    from sqlalchemy import select
 
     from app.db.models import JobRow, RateTableRow, RateTableVersionRow
     from app.platform import jobs as job_service
     from app.platform import rate_tables as svc
     from app.worker.tasks import execute_job
-    from model_schema import JobKind, JobStatus, new_uuid7
+    from model_schema import JobKind, JobResult, JobStatus, new_uuid7
     from model_schema.refs import ArtifactRef
 
     seed = _import_seed()
@@ -797,10 +797,12 @@ async def _cells_diff(args: argparse.Namespace) -> int:
     p95: dict[str, float] = {}
     async with env.app.router.lifespan_context(env.app), env.client() as client:
         # 10 000 completed diff_cells Jobs of other keys, seeded first (LG-1444 Hold B).
+        # Completed through the platform's own lifecycle (`jobs.transition`), so every Job
+        # invariant (finished_at, started_at, the audit event) holds by construction.
         for start in range(0, args.seeded_jobs, 500):
             async with env.database.unit_of_work() as session:
                 for i in range(start, min(start + 500, args.seeded_jobs)):
-                    await job_service.submit(
+                    seeded = await job_service.submit(
                         session,
                         JobKind.RATE_TABLE_DIFF_CELLS,
                         {
@@ -813,15 +815,14 @@ async def _cells_diff(args: argparse.Namespace) -> int:
                         actor,
                         workspace_id=workspace_id,
                     )
-        async with env.database.unit_of_work() as session:
-            await session.execute(
-                update(JobRow)
-                .where(
-                    JobRow.workspace_id == workspace_id,
-                    JobRow.kind == JobKind.RATE_TABLE_DIFF_CELLS,
-                )
-                .values(status=JobStatus.SUCCEEDED)
-            )
+                    for state in (JobStatus.RUNNING, JobStatus.SUCCEEDED):
+                        await job_service.transition(
+                            session,
+                            seeded.id,
+                            state,
+                            actor=actor,
+                            result=JobResult(kind="none") if state is JobStatus.SUCCEEDED else None,
+                        )
         for name, storage, cells, threshold in selected:
             await _set_threshold(env.database, workspace_id, threshold)
             levels = [f"L{i:07d}" for i in range(cells)]

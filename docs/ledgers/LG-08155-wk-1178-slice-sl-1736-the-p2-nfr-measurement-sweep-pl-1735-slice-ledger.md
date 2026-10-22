@@ -135,6 +135,29 @@ ModuleNotFoundError: No module named 'backend'
 
 **Cause (a harness defect, not a platform finding):** `_cells_diff` imports `backend.tests.test_rate_tables_service` at its top, before `_Env()` calls `_bootstrap_paths()`, so the repository root is not yet on `sys.path`. The failure is before any seeding, so the seeded-Job shape, the helper signatures and the 202 flow are **still untested**. **Proposed fix** (not made; awaiting the lead): call `_bootstrap_paths()` first in `_cells_diff`, then re-run the same smoke. The unit test cannot see this: it never runs a subcommand.
 
+#### 2026-10-22 — smoke run 2 (head `e971196af1acaaade98a619e1403827f62fb77cb`, load1 3.85, 23 GB available): rc 1, a second harness defect
+
+Fix for run 1 (commit `e971196a`): `_bootstrap_paths()` is now the first statement of `_cells_diff`, and of `_one_way`, which had the same ordering defect (it imported `pricing_core`, `app` and `model_schema` before bootstrapping; `_storage`, `_profile`, `_profile_child` and `contention` import nothing from the repo before they bootstrap or at all). Run 2 got past the imports and seeded 500 Jobs through `job_service.submit`, then failed at the harness's own bulk `UPDATE jobs SET status = 'succeeded'`:
+
+```
+| smoke | rc=1 |
+sqlalchemy.exc.IntegrityError: (sqlalchemy.dialects.postgresql.asyncpg.IntegrityError) <class 'asyncpg.exceptions.CheckViolationError'>: new row for relation "jobs" violates check constraint "ck_jobs_terminal_iff_finished"
+| dropdb gipricing_sl1736_smoke (end) | rc=0 |
+| redis db 1 FLUSHDB (end) | rc=0 |
+| bucket gip-test-blobs-gate-1 removed (end) | rc=0 |
+| zeros | own-DB count=0 redis db 1 dbsize=0 |
+```
+
+Wrapper rc 0 over smoke rc 1. Logs: `~/gi-pricing-plan.local/scratch/sl1736/smoke-wrapper.log` (run 2; run 1's copy is `smoke-run1-wrapper.log`, `smoke-run1.err`), `smoke.err`, `smoke.out` (144 B). **Why the wrapper exited 0:** `smoke.sh` ended with `echo` and `tail` commands, and its EXIT trap `fin()` ended with `mc ls`, so its exit code was the last command's, not the smoke's. It was not designed to propagate; that is a flaw, fixed below.
+
+**Every check constraint on `jobs`** (model `backend/src/app/db/models.py:191-205`, migration `backend/migrations/versions/df53696a2682_platform_core_jobs_audit_events_outbox.py:148-150`), verbatim:
+
+- `ck_jobs_terminal_iff_finished`: `(status IN ('succeeded','failed','cancelled')) = (finished_at IS NOT NULL)`
+- `ck_jobs_finished_after_started`: `finished_at IS NULL OR started_at IS NULL OR finished_at >= started_at`
+- `ck_jobs_trace_id_is_w3c_hex`: `trace_id IS NULL OR trace_id ~ '^[0-9a-f]{32}$'`
+
+**Fix for run 2 (next commit):** the seeded Jobs now move to `succeeded` through the platform's own lifecycle, `jobs.transition` (`queued -> running -> succeeded`, with `result=JobResult(kind="none")`), which sets `started_at`, `finished_at` and writes the audit event by construction (`backend/src/app/platform/jobs.py:199-264`), so no constraint is hand-satisfied and the bulk UPDATE is gone. `smoke.sh` now saves the smoke's rc and `exit`s with it at the end of `fin()`, after the clean-up; its last printed line is `| exit | smoke_rc=<n> |`. Proof is required of run 3: the wrapper rc must equal the smoke rc, both quoted.
+
 #### PLANNED — the four ALONE grants and their non-ALONE companions (not run; each grant is requested from the lead with these exact commands)
 
 Common to every block. `W=/home/puzhenhao1989/gi-pricing-plan/.claude/worktrees/sl-1736`, `OUT=/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1736` (outside the repository; `mkdir -p $OUT`). The tree is the branch head at the grant (`git -C $W rev-parse HEAD`), which must be unchanged from the head named in the request. Every block starts by printing, and the seat quotes: `git -C $W rev-parse HEAD`, `cut -d" " -f1 /proc/loadavg`, `free -g`, `nproc`, `pgrep -af '[p]ytest|[v]itest|[f]lock'`, and `flock -n /tmp/slots/gate-1 true; echo $?` for both gate slots. A window starts only inside its conditions (seat brief item 15): load1 and available memory are read at the start and printed; above the limit the seat waits (re-check every 60 s, up to the D4 limit) or aborts and reports. Foreground, `timeout` on each stage, no detach (S-11, S-12).
