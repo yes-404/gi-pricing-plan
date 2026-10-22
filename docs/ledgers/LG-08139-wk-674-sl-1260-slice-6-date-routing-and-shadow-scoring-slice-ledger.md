@@ -280,7 +280,7 @@ Small runs, beside SL-1551's gate, `GIP_GATE_SLOT` unset, one to two DB-free fil
 | 2 | `test_demo_guide.py::test_the_guide_names_the_endpoints_a_spec_declares...` | asserts `{"OPT"}` instead of `{"RATE"}`, with a dated comment; OPT chosen because its whole endpoint axis (optimisation runs, demand models, GIPP checks) is a later phase, so it stays unbuilt longest | same log | passes (not among the failures) |
 | 3 | `test_error_sinks.py::test_every_failure_sink_on_a_quote_input_path_is_accounted_for` | two `_SINKS` entries for `_shadow_task` and `_shadow_score`; new `test_shadow_log_sanitised.py` (two DB-free sentinel tests, commit "test(shadow)") | `33-i3-sentinel-green.log`, `35-i3-error-sinks.log` | sentinels `2 passed, 2 warnings in 0.32s`; error sinks `9 passed, 2 warnings, 4 errors in 1.53s` (census passes; the 4 errors are DB-fixture setup errors, held) |
 | 4 | `test_settings_environment.py::test_scope_defaults_to_workspace_only_and_three_keys_...` | the three-key set now selects `WORKSPACE_OR_ENVIRONMENT`; sibling `test_the_routing_and_shadow_flags_are_environment_only` asserts the two flags are the only `ENVIRONMENT` keys | not run: the file mixes DB tests | held for a DB lane |
-| 5 | `test_repository_invariants.py::test_the_error_code_registry_matches_the_specs` | waiting on the maintainer's A or B | | open |
+| 5 | `test_repository_invariants.py::test_the_error_code_registry_matches_the_specs` | the maintainer ruled (B) (`to-lead.md` "2026-10-22 19:52:20 BST" item 3, which amends its 17:34:47 reading): `07` §5.1's entry reverted (`git revert` of `bf27b0be`), and `INTERNAL_ERROR` catalogued in `00` §5.3 as a generic code; the test's convention (generic codes owned by `00`/`01`) is kept and `errors.py` is unchanged | `36-i5-repo-invariants.log` | `2 failed, 9 passed in 52.41s`: the registry test passes; the 2 failures are `test_money_discipline_is_enforced_by_the_docs_audit` and `test_journey_citations_are_audited_in_ci`, in the check-31 class (both were in the gate's docs-audit set). `audit-docs.py`: `180 error codes, ownership exclusive` |
 | 6 | `test_audit_docs_ids.py::test_widening_the_scope_roots_...` | 89 became 93 with a dated line citing the four schemas | `32-i6-audit-docs-ids.log` | `2 failed, 116 passed in 57.59s`; the two failures are `test_the_real_tree_passes_all_ten_checks` and `test_doc_id_check_exits_0_on_the_real_tree`, the check-31 class; the widening test passes |
 
 **Red-first for item 3** (`34-i3-sentinel-red-raw-exc.log`): in a scratch edit of `api/score.py`, both `exc_info=safe_job_exc_info(exc)` in
@@ -290,3 +290,8 @@ Small runs, beside SL-1551's gate, `GIP_GATE_SLOT` unset, one to two DB-free fil
 
 `ruff check .` is clean on `backend/tests` and `tests`. `ruff format --check` reports drift in four of the edited files that this
 change did not cause (lines far from the edits), so the new file was formatted and the others left as the repository has them.
+
+**Re-merge of `origin/main` 0dfb4a05 (#1361 merged).** `git merge-tree --write-tree HEAD origin/main` rc 1: one conflict, in the
+generated `docs/INDEX.md`, resolved mechanically (take origin/main's, regenerate under the gate-2 flock, `doc-index.py --check` rc 0, "byte-stable").
+Merge commit `00174d02`. `audit-docs.py` after it: FAILED (2), both check 31 on this ledger's working id (`gap in the full allocation between 1841 and 8139`
+and `id 8139 is created: 2026-10-21, earlier than id 1841's 2026-10-22`).
