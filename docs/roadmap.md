@@ -2857,7 +2857,7 @@ corrected_by: []
 relates: [FD-8169, LG-8173, SL-1711]
 ```
 
-On the maintainer's entry "2026-10-22 16:22:33 BST" (`to-lead.md`): FD 8169 (MEDIUM) is fixed before the exit demo as a quick slice. `BlobStore.ensure_bucket` (`backend/src/app/platform/blobs.py`) did `head_bucket` and, on any `ClientError`, `create_bucket`; two services starting together on a fresh bucket both missed, and the loser raised `BucketAlreadyOwnedByYou` and exited (worker-io exit 2, W2 attempt 1). The fix: `BucketAlreadyOwnedByYou` and `BucketAlreadyExists` from `create_bucket` are success only after a `head_bucket` proves the bucket is reachable; any other code re-raises; the docstring states what is guaranteed. Red first, with a stub client. Delta row to the Work's one plan (Lean P2 L5), like FD-1838's.
+On the maintainer's entry "2026-10-22 16:22:33 BST" (`to-lead.md`): FD 8169 (MEDIUM) is fixed before the exit demo as a quick slice. `BlobStore.ensure_bucket` (`backend/src/app/platform/blobs.py`) did `head_bucket` and, on any `ClientError`, `create_bucket`; two services starting together on a fresh bucket both missed, and the loser raised `BucketAlreadyOwnedByYou` and exited (worker-io exit 2, W2 attempt 1). The fix: `BucketAlreadyOwnedByYou` from `create_bucket` is success with no re-check; `BucketAlreadyExists` (another owner in S3) is success only if a `head_bucket` then succeeds, else the original create error is re-raised, chained to the head error; any other code re-raises; the docstring states what is guaranteed. Red first, with a stub client. Delta row to the Work's one plan (Lean P2 L5), like FD-1838's.
 
 (Activated 2026-10-22 on the maintainer's entry above; executed as `exec-8169` on branch `fix/fd-8169-ensure-bucket-race`; ledger LG-8173.)
 

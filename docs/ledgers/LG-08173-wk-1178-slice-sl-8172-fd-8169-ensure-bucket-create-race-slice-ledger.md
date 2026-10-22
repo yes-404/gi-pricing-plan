@@ -45,7 +45,7 @@ Maintainer amendments of 2026-10-22 (relayed by lead 26, before the runs): `Buck
 
 ### Audit
 
-(not yet)
+RS 8197 CLEAN (aud-8169, 2026-10-22, at `f7075e73`); the lead's verdict: ADOPTED. Findings R1 to R3 are fixed in the 2026-10-22 build-log lines below.
 
 ### Build log
 
@@ -58,6 +58,7 @@ Maintainer amendments of 2026-10-22 (relayed by lead 26, before the runs): `Buck
   - The 2 warnings are the per-worktree test-database teardown notice from `conftest_db.py`; no database was used.
 - 2026-10-22: merged `origin/main` `71e481fa` (merge-tree rc 0), `docs/INDEX.md` regenerated, `doc-index.py --check` rc 0. `audit-docs.py` rc 1 with exactly: check 31 `gap in the full allocation between 1840 and 8172` (working ids, expected) and check 32 `LG-08173…md:14: FD-8169 does not resolve in docs/INDEX.md` (FD 8169 is in the docs batch, not on this branch).
 - 2026-10-22 18:5x BST (exec-8169g, tree `a32ac117` + this line): re-merge of `origin/main` `71e481fa` is a no-op (it is already an ancestor of the branch; no new merge commit). `uv sync --all-packages --frozen` rc 0, `pnpm install --frozen-lockfile` rc 0 (both niced). Docs checks under gate-2: `doc-index.py --check` rc 0, `register-lint.py` rc 0, `audit-docs.py` rc 1 with 4 FAILED rows, all on this slice's own working ids: check 31 (allocation gap 1840..8172), check 32 FD-8169 does not resolve (two rows, the front matter and the build-log line above), and check 32 padded id in the build-log line above (it writes the ledger file name with its zero-padded id; the line is append-only, so it stands until the mint step re-points it). `generate-contracts --check` not run: the diff touches no contracts. Gate script `scratch/fix8169-gate.sh` prepared by substitution from `fd1838-gate.sh`, not launched. Audit still owed.
+- 2026-10-22 (audit fixes R1 to R3, RS 8197): R1, the SL-8172 roadmap row text now states the amended shape (`OwnedByYou` is success with no re-check; `Exists` re-checks with `head_bucket`, else re-raises the original). R2, the commits: `e26b751c` made `OwnedByYou` success directly and `Exists` success only after the `head_bucket` re-check; `6993fbf8` added `raise exc from head_exc` and the `__cause__` assert. R3, the import-closure count in task 4 is 43 files, not 42, at `052aa5e6`, by the same grep verbatim: `git -C <wt> grep -lE "(from app\.platform import .*\bblobs\b|from app\.platform\.blobs import|import app\.platform\.blobs)" -- backend/tests`. The FD 8169 rows of audit-docs check 32 are re-pointed to the batch's real id at the gate turn, after the batch merges.
 
 ## PRs
 
