@@ -104,6 +104,10 @@ HANDLER_GUARDED: dict[tuple[str, str], tuple[tuple[str, int, str], ...]] = {
     ("POST", "/api/v1/environments/{env}/deployments/rollback"): (
         ("platform/deployments.py", 131, "require_permission("),
     ),
+    # WK-674 Slice 6, `RL-1834` D1 item 2: the routing write reaches the same check.
+    ("PUT", "/api/v1/environments/{env}/routing"): (
+        ("platform/deployments.py", 131, "require_permission("),
+    ),
 }
 
 _METHODS = ("get", "post", "put", "patch", "delete")
@@ -309,6 +313,7 @@ RESOURCE_BACKED: dict[tuple[str, str], tuple[dict[str, str], dict[str, Any]]] = 
         {"env": "dev"},
         {"rating_version_ref": "rating_version:sweep-version@1", "reason": "sweep"},
     ),
+    ("PUT", "/api/v1/environments/{env}/routing"): ({"env": "dev"}, {"ranges": []}),
 }
 
 
