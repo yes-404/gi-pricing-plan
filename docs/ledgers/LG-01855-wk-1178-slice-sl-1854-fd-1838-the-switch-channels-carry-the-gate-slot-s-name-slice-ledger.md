@@ -158,4 +158,4 @@ Not yet written.
 
 ## PRs
 
-Not yet opened. The PR title names `SL-1854`.
+- #1363 — `fix(backend): SL-1854 — FD-1838, the switch channels carry the gate slot's name`, opened 2026-10-22; merge commit: not yet merged.
