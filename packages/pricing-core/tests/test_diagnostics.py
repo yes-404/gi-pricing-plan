@@ -738,3 +738,37 @@ def test_a_backtest_excludes_weight_zero_rows_and_reports_the_count() -> None:
         with_zero, without,
         partitions={".partition": holdout.height - _drop_zero(holdout).height},
     )
+
+
+@pytest.mark.req("FR-110")
+def test_the_negative_binomial_unit_deviance_uses_the_declared_theta() -> None:
+    """PL-8162 A-R3. θ is R/MASS `glm.nb`'s (variance μ + μ²/θ), and the unit deviance is
+    2[y·ln(y/μ) − (y+θ)·ln((y+θ)/(μ+θ))] with the `y = 0` limit taken.
+
+    Pinned against values worked by hand for μ = 1, θ = 2:
+      y = 0:  2·[0 − 2·ln(2/3)]            = 4·ln(3/2)            = 1.6218604324326575
+      y = 2:  2·[2·ln 2 − 4·ln(4/3)]       = 4·ln 2 − 8·ln(4/3)   = 0.4711321426255344
+    The Poisson deviance of the same rows is 2·(0 − (0−1)) = 2 and 2·(2·ln 2 − 1), so a NB
+    value equal to it means θ was ignored — the defect this test exists for.
+    """
+    y = np.array([0.0, 2.0])
+    mu = np.array([1.0, 1.0])
+    got = unit_deviance(y, mu, family="negative_binomial", theta=2.0)
+    assert got == pytest.approx([1.6218604324326575, 0.4711321426255344], abs=1e-12)
+    assert not np.allclose(got, unit_deviance(y, mu, family="poisson"))
+    # θ → ∞ is the Poisson limit: the declared θ is what separates the two.
+    big = unit_deviance(y, mu, family="negative_binomial", theta=1e9)
+    assert big == pytest.approx(unit_deviance(y, mu, family="poisson"), abs=1e-6)
+
+
+@pytest.mark.req("FR-110")
+def test_a_negative_binomial_deviance_without_theta_is_refused_not_defaulted() -> None:
+    """PL-8162 DP-T: no θ is supplied by omission, glum's 1.0 included."""
+    y = np.array([0.0, 2.0])
+    mu = np.array([1.0, 1.0])
+    with pytest.raises(ValueError, match="theta"):
+        unit_deviance(y, mu, family="negative_binomial")
+    with pytest.raises(ValueError, match="theta"):
+        deviance(y, mu, family="negative_binomial")
+    with pytest.raises(ValueError, match="theta"):
+        unit_deviance(y, mu, family="negative_binomial", theta=0.0)
