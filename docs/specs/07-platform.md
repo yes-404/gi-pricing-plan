@@ -381,7 +381,7 @@ named by the maintainer's ruling (2026-10-16 09:46:32). `s3_upload_id` is the `u
 `JOB_RESOURCE_BUDGET_EXCEEDED`, `JOB_HANDLER_NOT_REGISTERED`, `JOB_HANDLER_FAILED`,
 `IDEMPOTENCY_KEY_CONFLICT`,
 `RATE_LIMITED`, `BLOB_NOT_FOUND`, `SECRET_NOT_FOUND`, `SETTING_INVALID`,
-`PROMOTION_ORDER_VIOLATION`, `MIGRATION_REQUIRED`, `CONFLICT_STALE_WRITE`.
+`PROMOTION_ORDER_VIOLATION`, `MIGRATION_REQUIRED`, `CONFLICT_STALE_WRITE`, `INTERNAL_ERROR`.
 
 `CONFLICT_STALE_WRITE` was declared in `00` §5.4 from Phase 0 and belonged to no module's
 list until 2026-08-17. It is `07`'s because FR-450 owns "the API implements `00` §5
@@ -396,6 +396,8 @@ service runs without the compute pool (FR-434), and Phase 1a ships the Job machi
 before the `model.*` handlers exist. A kind with no handler is a deployment error and must
 fail the Job with a code naming it, rather than leaving the Job `queued` for ever with
 nothing to explain why.
+
+`INTERNAL_ERROR` *(added 2026-10-22, WK-674 Slice 6, the maintainer's ruling in `to-lead.md` entry "2026-10-22 17:34:47 BST" item 3 and the lead's relay of it; the code has been raised by the request machinery since Phase 0 and `03` §4.13 is the first spec text to name it)*: **an unhandled exception, status 500, title "Internal server error".** The `detail` is the fixed text "The request failed unexpectedly. Quote the trace id when reporting it." and the response carries the request's `trace_id` (`00` §5.3); it carries no exception text, because that text can hold a connection URL or a row of data (R3). The cause is retrieved from the log record for that `trace_id`, whose exception text is sanitised and whose frames are kept. It is `07`'s because the shared request machinery (`TraceMiddleware`, `backend/src/app/errors.py` `unexpected_problem`) raises it for every module, as `CONFLICT_STALE_WRITE` is `07`'s for the same reason; a module that wants a named refusal raises its own code and never relies on this one for a condition it can name.
 
 ### 5.2 Backend interfaces
 
