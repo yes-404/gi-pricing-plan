@@ -114,7 +114,7 @@ finer-level view and FR-127 `spliced`/`excess`.
 
 | limb | FD severity | slice | deliverable |
 |---|---|---|---|
-| FR-110 | MEDIUM | A | glum family-name translation; a declared NB θ (DP-T); the NB deviance; the whole `family` literal fitted; `power(k)` per DP-K |
+| FR-110 | MEDIUM | A | glum family-name translation; a declared NB θ (DP-T); the NB deviance; the whole `family` literal fitted; `power(k)` is struck in slice C (Task C2b, DP-K (i), ruling 1) |
 | FR-89 | MEDIUM | A | the GLM direction check, reported in `GlmDiagnostics` (DP-M) |
 | FR-41 | MEDIUM | B | test only: the stored recipe replayed over the same source bytes gives the same table hashes |
 | FR-33 | LOW | B | test only: a failed run releases its `Idempotency-Key` |
@@ -221,6 +221,8 @@ maintainer's own ruling in the 15:50:37 entry. The plan is `draft` until each is
 
 *(Dated line, 2026-10-22, at activation (SL-8164): ruled by the maintainer's entry "2026-10-22 16:02:49 BST — Maintainer: PL 8162 (FD-1723's residual limbs) ACCEPTED; power(k), θ convention, NB deviance, DP-C, DP-F14, DP-T, DP-M ruled" (`to-lead.md`). **DP-K: `power(k)` STRUCK** (ruling 1). **DP-C: TESTS**, so slices D and E (ruling 4). **DP-T: θ REQUIRED** (ruling 6), and, by ruling 3, "FR-110 states θ in the **R/MASS `glm.nb` form**, variance μ + μ²/θ, the form actuaries quote. The engine converts to glum's form at one boundary (glum α = 1/θ_R), and a test pins the round trip." DP-T and the red A-R3 below were drafted in glum's NB2 form (`v = μ + θ·μ²`), which this line supersedes; they are aligned in place by this pre-merge correction, and the Evidence paragraph on glum's `NegativeBinomialDistribution` keeps describing glum, not the platform. Also ruled: DP-F14 hand-written paths (ruling 5), DP-M as recommended (ruling 7).)*
 
+*(Aligned 2026-10-22 on RS 8189 B1, before this plan's first merge, as the maintainer's entry "2026-10-22 17:57:29 BST — Maintainer: slice C RS 8189: B1 (plan drift) aligned in place; B2 FR-6 = option (a), the adopted narrowing, with the six shapes NAMED as outside it" (`to-lead.md`) accepts. Rulings 1, 3 and 6 of 16:02:49 put FR-110's dated clause in slice C, so these lines change: the limb table's FR-110 row (`power(k)` to slice C); acceptance item 3 (C gains `02` FR-110); acceptance item 7 (relabelled C); acceptance item 15 (three clauses, and FR-6 to B2 (a)); the Tasks table's row 1 (FR-110, C0 to C2b); the Slice C heading; Task C1 (FR-6 narrowed, only the UI half carried, B2 (a)); a new Task C2b (the FR-110 clause); Task A2 (`power(k)` removed). Nothing else of slice A changed. The DP-K option text, which names "slice A's Task A2" as the writer of the strike, is the pre-ruling analysis and is left as filed.)*
+
 ### DP-K — `power(k)` (FR-110): build, part-build, or strike
 
 The rule already given (11:28:56): *"BUILD if glum supports a power link natively … otherwise
@@ -313,7 +315,7 @@ fails on the slice head with the named mutation applied (and not committed), and
 3. **Spec first, in every slice that changes behaviour or a spec.**
    `git log --reverse --format='%h %s' origin/main..<slice head> -- docs/specs/` shows the slice's spec
    commit before or with its first code commit, never after (A: `02` FR-110, FR-89 and the §4/§5
-   diagnostics contract; C: `00` FR-6 and `02` FR-109).
+   diagnostics contract; C: `00` FR-6, `02` FR-109 and `02` FR-110).
 4. **A. NB and inverse Gaussian fit (red A-R1).** A parametrised test over every member of
    `GlmSpec.family`'s literal, each fitted on data simulated from that family with its usual link,
    recovers the simulated coefficients within a stated tolerance. At the base, `negative_binomial`
@@ -330,7 +332,7 @@ fails on the slice head with the named mutation applied (and not committed), and
    the call raises `TypeError` (no `theta` parameter), and with the keyword removed the value equals
    Poisson's. Every one of Task A0's enumerated deviance call sites passes θ for an NB spec (the LG
    tables each).
-7. **A. `power(k)` per DP-K.** Under (i): `grep -n 'power(k)' docs/specs/02-modelling.md` shows only
+7. **C. `power(k)` per DP-K (moved from A by ruling 1).** Under (i): `grep -n 'power(k)' docs/specs/02-modelling.md` shows only
    the struck text and the dated amendment, and `GlmSpec.link`'s literal is unchanged. Under (ii):
    the reds named in DP-K.
 8. **A. The GLM direction is checked (red A-R4).** A GLM fitted with an `increasing` banded factor
@@ -365,9 +367,15 @@ fails on the slice head with the named mutation applied (and not committed), and
     unconstrained booster's. Mutation: drop the constraint before the backend call; the path
     assert fails.
 15. **C. The clauses.** `git diff origin/main...<slice C head> -- docs/specs/00-overview.md docs/specs/02-modelling.md`
-    shows one dated clause under FR-6 and one under FR-109, each naming its §14 carry (FR-6: the
-    shared `provenance` object and the UI display; FR-109: the finer-level diagnostics view), and
-    no other row changed. FR-6's clause cites Task C0's census verbatim.
+    shows one dated clause under FR-6, one under FR-109 and one under FR-110, and no other row
+    changed. FR-6's clause narrows FR-6 to what is built (the per-artifact `produced_by_job_id`,
+    FD-1723's adopted fix), cites Task C0's census verbatim, carries only the UI half to the §14
+    review, and names in one sentence the six shapes without a producing-Job id and the shared
+    `provenance` object as outside the narrowed FR-6, with no §14 carry (RS 8189 B2 = (a), the
+    maintainer's entry "2026-10-22 17:57:29 BST"). FR-109's carries the finer-level diagnostics view
+    to §14. FR-110's strikes `power(k)` with its reason and reinstatement condition, carried to §14
+    (ruling 1), and states the required θ in the R/MASS `glm.nb` form with one conversion boundary
+    (rulings 3 and 6).
 16. **D. FR-7 (DP-C (i)).** A parametrised DB test with one case per declared governed transition
     (Task D0's list from `00` §2 and the declared transition maps, never from `audit.record(` sites)
     performs the transition through its public service or route and asserts an Audit Event with
@@ -411,7 +419,7 @@ fails on the slice head with the named mutation applied (and not committed), and
 
 | Order | Slice | Scope (what the `LG-` quotes) | Requirements, each id | Depends on | Size |
 |---|---|---|---|---|---|
-| 1 | **C** — FR-6 and FR-109 dated clauses (docs only) | Tasks C0 to C2 | `00` §3: FR-6; `02` §3.3: FR-109 | this delta minted; slice C's SL id reserved; may ride a docs batch | 1 |
+| 1 | **C** — FR-6, FR-109 and FR-110 dated clauses (docs only) | Tasks C0 to C2b | `00` §3: FR-6; `02` §3.3: FR-109; `02` §3.4: FR-110 | this delta minted; slice C's SL id reserved; may ride a docs batch | 1 |
 | 2 | **A** — the GLM families (FR-110) and the GLM direction diagnostic (FR-89) | Tasks A0 to A7 | `02` §3.4: FR-110; `02` §3.1: FR-89; `02` FR-172 and FR-178 (the omission pattern, read); FR-114 and FR-115 read only | this delta minted; DP-K, DP-T and DP-M ruled; serialise the contract regeneration with SL-1260 and SL-1551 (below) | 3 (4 under DP-K (ii)) |
 | 3 | **B** — FR-41, FR-33, FR-80, FR-123 tests | Tasks B0 to B3 | `01` §3.2: FR-41; `01` §3.1: FR-33; `01` §3.7: FR-80; `02` §3.5: FR-123 | this delta minted; a DB window (pre-approval (a)) | 2 |
 | 4 | **D** — FR-7 transition audit test | Tasks D0 to D2 | `00` §3: FR-7; `06` read for each Audit Event's `action` | DP-C (i); SL-1260 merged (it adds routing and shadow lifecycles, which D0 must enumerate); a DB window | 3 |
@@ -429,22 +437,30 @@ journey (SL-1711), the designer views (SL-1554), `scripts/measure-*` or `01-data
 NFR rows (SL-1736). Every slice adds its own row under `### WK-1178` in `docs/roadmap.md`: line
 conflicts only.
 
-### Slice C — FR-6 and FR-109 dated clauses
+### Slice C — FR-6, FR-109 and FR-110 dated clauses
 
 - [ ] **C0. Census (read-only).** For FR-6, list every governed Artifact shape in model-schema and
   whether it carries the id of the Job that produced it (field name, `file:line`). Predicate: each
   class named as an Artifact in `00` §2, read in its owning module, not a grep for `job_id`. Record
   the table in the LG.
-- [ ] **C1. FR-6 clause (`spec-change`).** A dated amendment under FR-6 (`00:219`): what is built (the
-  per-artifact producing-Job id, C0's table, each artifact without one named as a gap); what is not
-  (the shared `provenance` object `{entity_type, entity_id, version, produced_by_job_id}` and any UI
-  that reads it); the latter **carried to the §14 review** for an owner, per 11:28:56 *"Owners at
-  §14: FR-6 UI half"*. The `CR-819:128` mis-citation (trace id, not provenance) is noted as corrected
+- [ ] **C1. FR-6 clause (`spec-change`).** A dated amendment under FR-6 (`00:219`) that **narrows FR-6
+  to what is built**: the per-artifact producing-Job id (`produced_by_job_id`, C0's table), FD-1723's
+  adopted fix. Only the **UI half is carried to the §14 review** for an owner, per 11:28:56 *"Owners
+  at §14: FR-6 UI half"*. One sentence names the six shapes without a producing-Job id and the
+  shared `provenance` object `{entity_type, entity_id, version, produced_by_job_id}` as **outside**
+  the narrowed FR-6, with no §14 carry and no tracking row (the maintainer's entry "2026-10-22
+  17:57:29 BST", RS 8189 B2 = (a)). The `CR-819:128` mis-citation (trace id, not provenance) is noted as corrected
   by FD-1723, not edited.
 - [ ] **C2. FR-109 clause (`spec-change`).** A dated amendment under FR-109 (`02:123`): accepted with
   reason. The chain is stored (`parent_grouping_id`) and read by nothing; an actuary can already hold
   both levels as two Groupings and rate on one; the finer-level diagnostics view is **carried to the
   §14 review** for an owner (11:28:56).
+- [ ] **C2b. FR-110 clause (`spec-change`).** A dated amendment under FR-110 (`02:129`), after its
+  existing note, on rulings 1, 3 and 6 of "2026-10-22 16:02:49 BST": (1) `power(k)` **struck**, the
+  existing text kept, with DP-K's glum 3.4.1 probe as the reason, reinstated only by a library that
+  supports exact power links, and carried to the §14 review; (2) `negative_binomial` takes a
+  **required** θ in the R/MASS `glm.nb` form (variance `μ + μ²/θ`, `θ > 0`, never defaulted),
+  converted to glum's form at one boundary, the round-trip test being slice A's.
 - [ ] **C3.** audit-docs under the gate-2 flock; the LG; the roadmap row's status line.
 
 ### Slice A — the GLM families and the GLM direction diagnostic
@@ -462,7 +478,7 @@ conflicts only.
   red line verbatim in the LG. A red by any other cause is a plan defect: STOP.
 - [ ] **A2. Spec (`spec-change`), before the code.** Under FR-110: the family translation (the spec
   spellings are the platform's; glum's are a boundary detail), θ per DP-T in the R/MASS `glm.nb` form (variance `μ + μ²/θ`),
-  stated, the NB deviance, and `power(k)` per DP-K. Under FR-89: the GLM check's rule (axis, mean
+  stated, and the NB deviance (`power(k)` is struck in slice C, Task C2b, ruling 1). Under FR-89: the GLM check's rule (axis, mean
   scale, `1e-9`), where it is reported, and DP-M's omission reasons. The §4 diagnostics data
   contract gains the new field(s).
 - [ ] **A3. model-schema.** The θ validator on `GlmSpec`; `GlmDiagnostics.monotonicity` (and, under
