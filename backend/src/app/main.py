@@ -65,6 +65,7 @@ from app.platform.deployment_switch import (
     SwitchSubscription,
     build_switch_client,
     process_id,
+    switch_stack,
 )
 from app.platform.rate_limit import RateLimiter, build_redis_client
 from app.platform.settings import validate_setting_overrides
@@ -128,7 +129,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # Unlike the rate limiter this does not fail open: a process that cannot subscribe
         # would silently miss every switch, so it does not start.
         switch_client = build_switch_client(settings.redis_url.get_secret_value())
-        switch = RedisSwitch(switch_client, f"{settings.environment.value}:{settings.tenant_id}")
+        switch = RedisSwitch(
+            switch_client, switch_stack(settings.environment.value, settings.tenant_id)
+        )
         # One channel per platform Environment (`dev`, `uat`, `prod`, ...). An Environment
         # created after this process started is not subscribed until it restarts: a deploy into
         # it names no such process. That gap is part of FD-1823 (MEDIUM, WK-674).
