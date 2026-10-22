@@ -252,3 +252,18 @@ prints the script head `9b3e7c15d4a2`, as it reads the scripts). `alembic upgrad
 Cleanup: `dropdb` rc 0; `pg_database` count for the window's database 0; redis db 12 `FLUSHDB`, `DBSIZE` 0
 (it held 1 key at V2's start, from a test run); db 0 was 59 at setup and 62 at the end,
 not 56: it carries other sessions' keys and this window wrote none to it.
+
+**Migration round trip re-run in the no-gate gap (the lead's "GATE END + A GO", FD-1838's gate ended 17:32:38Z).** Tree
+`eaf045d2c2c1e95c6360256ce439416700b385dd`; own fresh database `gipricing_sl-1260_nv3`; `GIP_GATE_SLOT` unset; `lslocks` showed no
+gate-1 or gate-1b holder (only a gate-2 docs flock). `30-migration-roundtrip-gap.log`, 17:33:59 to 17:34:05 UTC, load1 2.18,
+`PUBSUB NUMSUB` 0 for the three unsuffixed channels. After each step, `SELECT version_num FROM alembic_version` and the
+routing/shadow table check:
+
+| Step | rc | `version_num` | Tables (`routing_rules`, `shadow_configs`, `shadow_results`) |
+|---|---|---|---|
+| 1 `createdb` then `alembic upgrade head` | 0 and 0 | `9b3e7c15d4a2` | all three present |
+| 2 `alembic downgrade -1` (`9b3e7c15d4a2 -> a4d1f08c3b97`) | 0 | `a4d1f08c3b97` | `(none)` |
+| 3 `alembic upgrade head` | 0 | `9b3e7c15d4a2` | all three present |
+
+This clean record supersedes the beside-the-gate run above (the Deviation stands as history). Cleanup: `dropdb` rc 0, `pg_database`
+count 0, redis db 12 `DBSIZE` 0, db 0 is 83 (other sessions' keys; none written here).
