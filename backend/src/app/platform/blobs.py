@@ -142,8 +142,8 @@ class BlobStore:
         Safe to call on every start and from several services at once (FD 8169): a
         `create_bucket` that loses the race to a peer answers `BucketAlreadyOwnedByYou`, which
         is success. `BucketAlreadyExists` means another owner in S3, so it is success only if
-        `head_bucket` then succeeds; otherwise the original error is raised, as is any other
-        create failure.
+        `head_bucket` then succeeds; otherwise the original error is raised (chained to the head
+        error), as is any other create failure.
 
         The rule (`RL-1724` DP-U1.2) expires `staging/` objects and aborts incomplete multipart
         uploads after `STAGING_EXPIRY_DAYS`; it is set here, not by an operator, so it holds
@@ -165,8 +165,8 @@ class BlobStore:
                         # access, i.e. the race) is success; otherwise the original error.
                         try:
                             self._client.head_bucket(Bucket=self._bucket)
-                        except ClientError:
-                            raise exc from None
+                        except ClientError as head_exc:
+                            raise exc from head_exc
                     else:
                         raise
             # `put_bucket_lifecycle_configuration` replaces every rule on the bucket, so read

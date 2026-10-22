@@ -492,6 +492,9 @@ async def test_ensure_bucket_raises_bucket_already_exists_when_head_still_fails(
     with pytest.raises(ClientError) as info:
         await _store_with(client).ensure_bucket()
     assert info.value.response["Error"]["Code"] == "BucketAlreadyExists"
+    cause = info.value.__cause__
+    assert isinstance(cause, ClientError)
+    assert cause.response["Error"]["Code"] == head_code  # the head error is chained
     assert client.lifecycle is None
 
 
