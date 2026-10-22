@@ -29,9 +29,12 @@ Working ids 8172 (SL) and 8173 (LG), unminted. Executed by `exec-8169`, base `or
 
 ### Task list
 
-1. RED `fdc29f08`: `backend/tests/test_blobs.py` stub-client tests (no MinIO, no DB): both codes are success and the lifecycle rule is still set; `BucketAlreadyExists` for a bucket `head_bucket` cannot reach re-raises; any other create code re-raises.
-2. FIX `55d8a15e`: `_CREATE_RACE_CODES`; on those codes `create_bucket` is followed by `head_bucket`, which raises if the bucket is not ours. Docstring: safe on every start and from several services at once.
-   **Choice on owned `BucketAlreadyExists`:** the code alone cannot tell "ours" from "another account's" (S3 answers `BucketAlreadyOwnedByYou` only outside us-east-1; MinIO may answer either). So both are success only when the follow-up `head_bucket` succeeds; a foreign bucket still fails there, at start, with a clear cause.
+Maintainer amendments of 2026-10-22 (relayed by lead 26, before the runs): `BucketAlreadyOwnedByYou` is success; `BucketAlreadyExists` means another owner in S3, so it is success only if `head_bucket` then succeeds, else the original error is re-raised; three tests, (iii) proven by a negative control.
+
+1. RED `fdc29f08`: first stub tests (superseded in shape by task 3).
+2. FIX `55d8a15e`: first fix (re-checked `head_bucket` for both codes).
+3. DELTA (the commit after `7569d9d3`, named, not a silent amend): code matches the amendment exactly (`OwnedByYou` passes with no re-check; `Exists` re-heads and raises the original `exc` if that fails; other codes re-raise); docstring states it; tests are (i) OwnedByYou passes, (ii) Exists then head succeeds passes, (iii) Exists then head 403 / 404 raises `BucketAlreadyExists`.
+   **Red-first for the final shape:** to be run with the final tests against `blobs.py` from `origin/main` (log `scratch/fix-8169/red.log`). (iii) raises on the old code too, so it is expected to PASS red; it is proven instead by the negative control (`scratch/fix-8169/negctl-iii.log`).
 
 ### Gate
 

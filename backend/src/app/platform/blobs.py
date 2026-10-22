@@ -82,8 +82,6 @@ _CHUNK_SIZE: Final = 1024 * 1024  # 1 MiB
 STAGING_EXPIRY_DAYS: Final = 2
 UPLOAD_COMPLETE_WITHIN: Final = timedelta(hours=24)
 _STAGING_RULE_ID: Final = "expire-staging"  # the bucket lifecycle rule this module owns
-# `create_bucket` codes meaning a peer won the first-start race (FD 8169).
-_CREATE_RACE_CODES: Final = frozenset({"BucketAlreadyOwnedByYou", "BucketAlreadyExists"})
 
 
 def blob_key(sha256: str) -> str:
@@ -142,9 +140,10 @@ class BlobStore:
         """Create the bucket when absent and set the staging lifecycle rule.
 
         Safe to call on every start and from several services at once (FD 8169): a
-        `create_bucket` that loses the race to a peer (`BucketAlreadyOwnedByYou`, or
-        `BucketAlreadyExists` when `head_bucket` then proves the bucket is ours) counts as
-        success. Any other create failure, or a bucket we cannot reach, raises.
+        `create_bucket` that loses the race to a peer answers `BucketAlreadyOwnedByYou`, which
+        is success. `BucketAlreadyExists` means another owner in S3, so it is success only if
+        `head_bucket` then succeeds; otherwise the original error is raised, as is any other
+        create failure.
 
         The rule (`RL-1724` DP-U1.2) expires `staging/` objects and aborts incomplete multipart
         uploads after `STAGING_EXPIRY_DAYS`; it is set here, not by an operator, so it holds
@@ -158,11 +157,18 @@ class BlobStore:
                 try:
                     self._client.create_bucket(Bucket=self._bucket)
                 except ClientError as exc:
-                    # A peer created it between our head and create. S3 says OwnedByYou;
-                    # MinIO may say Exists. Re-check access so a foreign bucket still raises.
-                    if exc.response.get("Error", {}).get("Code") not in _CREATE_RACE_CODES:
+                    code = exc.response.get("Error", {}).get("Code")
+                    if code == "BucketAlreadyOwnedByYou":
+                        pass  # a peer created it between our head and create: ours
+                    elif code == "BucketAlreadyExists":
+                        # S3 means ANOTHER owner here. Only a head that now succeeds (our
+                        # access, i.e. the race) is success; otherwise the original error.
+                        try:
+                            self._client.head_bucket(Bucket=self._bucket)
+                        except ClientError:
+                            raise exc from None
+                    else:
                         raise
-                    self._client.head_bucket(Bucket=self._bucket)
             # `put_bucket_lifecycle_configuration` replaces every rule on the bucket, so read
             # first and replace only this module's rule, by its ID: an operator's own rules
             # survive a restart.
