@@ -66,4 +66,23 @@ describe("the mount inspector", () => {
     await userEvent.selectOptions(await screen.findByLabelText("Sub-graph version"), REFUND.ref);
     expect(last(emitted() as Record<string, unknown[][]>)["ref"]).toBe(REFUND.ref);
   });
+
+  it("resets the port maps when the pick has another slug (the slice's choice, RS 8156 (v))", async () => {
+    const { emitted } = render(MountInspector, { props: { mount: FEES, subGraphPins: PINS } });
+    await userEvent.selectOptions(await screen.findByLabelText("Sub-graph version"), REFUND.ref);
+    const mount = last(emitted() as Record<string, unknown[][]>);
+    expect(mount["ref"]).toBe(REFUND.ref);
+    expect(mount["inputs"]).toEqual({});
+    expect(mount["outputs"]).toEqual({});
+  });
+
+  it("keeps the port maps when the pick is another version of the same slug", async () => {
+    const v2 = "sub_graph:ipt-and-fees@2";
+    const { emitted } = render(MountInspector, { props: { mount: FEES, subGraphPins: [FEES.ref, v2] } });
+    await userEvent.selectOptions(await screen.findByLabelText("Sub-graph version"), v2);
+    const mount = last(emitted() as Record<string, unknown[][]>);
+    expect(mount["ref"]).toBe(v2);
+    expect(mount["inputs"]).toEqual(FEES.inputs);
+    expect(mount["outputs"]).toEqual(FEES.outputs);
+  });
 });

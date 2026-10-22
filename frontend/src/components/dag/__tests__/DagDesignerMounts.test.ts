@@ -64,6 +64,17 @@ describe("sub-graph mounts on the canvas (RL-1835 (i))", () => {
     expect(plain.getByLabelText(/sub-graph mount m_fees/).className).not.toContain("border-dashed");
   });
 
+  it("draws the conditional mount's edges dashed and the unconditional mount's solid", async () => {
+    render(DagDesigner, { props });
+    await screen.findByLabelText(/sub-graph mount m_refund/);
+    const dash = (target: string): string | null => {
+      const edge = document.querySelector<SVGElement>(`.vue-flow__edge[data-id*="${target}"] path`);
+      return edge === null ? null : (edge.style.strokeDasharray ?? "");
+    };
+    expect(dash("m_refund")).toBe("6 4");
+    expect(dash("m_fees")).toBe("");
+  });
+
   it("shows a validate-route issue located at a mount_point on that node", async () => {
     api.validateRatingAlgorithm.mockResolvedValue({
       issues: [{ code: "GRAPH_CYCLE", message: "m_refund closes a cycle", step_id: "m_refund" }],

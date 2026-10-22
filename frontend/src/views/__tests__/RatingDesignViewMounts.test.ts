@@ -78,4 +78,19 @@ describe("the rating design view with sub-graph mounts", () => {
     expect(screen.getByRole("button", { name: "Add sub-graph mount" })).toBeDisabled();
     expect(screen.getByText("This Rating Version pins no sub-graph")).toBeInTheDocument();
   });
+
+  it("warns of an unpinned mount yet leaves save enabled (RL-1835 (ii) 3)", async () => {
+    api.getRatingVersionByRef.mockResolvedValue({
+      ...RATING,
+      pins: { rate_tables: [], sub_graphs: [FEES.ref] },
+    });
+    render(RatingDesignView, { props, ...mounted });
+    await screen.findByLabelText(/sub-graph mount m_refund/);
+    expect(screen.getByText(/not pinned by this Rating Version/)).toBeInTheDocument();
+    const save = screen.getByRole("button", { name: "Save as new version" });
+    expect(save).toHaveAttribute("aria-disabled", "false");
+    await userEvent.click(save);
+    await screen.findByText("Saved as motor-gb@2");
+    expect(api.saveRatingAlgorithm).toHaveBeenCalledTimes(1);
+  });
 });
