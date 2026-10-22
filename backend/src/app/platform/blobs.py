@@ -82,6 +82,8 @@ _CHUNK_SIZE: Final = 1024 * 1024  # 1 MiB
 STAGING_EXPIRY_DAYS: Final = 2
 UPLOAD_COMPLETE_WITHIN: Final = timedelta(hours=24)
 _STAGING_RULE_ID: Final = "expire-staging"  # the bucket lifecycle rule this module owns
+# `create_bucket` codes meaning a peer won the first-start race (FD 8169).
+_CREATE_RACE_CODES: Final = frozenset({"BucketAlreadyOwnedByYou", "BucketAlreadyExists"})
 
 
 def blob_key(sha256: str) -> str:
@@ -139,16 +141,28 @@ class BlobStore:
     async def ensure_bucket(self) -> None:
         """Create the bucket when absent and set the staging lifecycle rule.
 
-        Idempotent, so startup can always call it. The rule (`RL-1724` DP-U1.2) expires
-        `staging/` objects and aborts incomplete multipart uploads after `STAGING_EXPIRY_DAYS`;
-        it is set here, not by an operator, so it holds under `docker compose up`.
+        Safe to call on every start and from several services at once (FD 8169): a
+        `create_bucket` that loses the race to a peer (`BucketAlreadyOwnedByYou`, or
+        `BucketAlreadyExists` when `head_bucket` then proves the bucket is ours) counts as
+        success. Any other create failure, or a bucket we cannot reach, raises.
+
+        The rule (`RL-1724` DP-U1.2) expires `staging/` objects and aborts incomplete multipart
+        uploads after `STAGING_EXPIRY_DAYS`; it is set here, not by an operator, so it holds
+        under `docker compose up`.
         """
 
         def _ensure() -> None:
             try:
                 self._client.head_bucket(Bucket=self._bucket)
             except ClientError:
-                self._client.create_bucket(Bucket=self._bucket)
+                try:
+                    self._client.create_bucket(Bucket=self._bucket)
+                except ClientError as exc:
+                    # A peer created it between our head and create. S3 says OwnedByYou;
+                    # MinIO may say Exists. Re-check access so a foreign bucket still raises.
+                    if exc.response.get("Error", {}).get("Code") not in _CREATE_RACE_CODES:
+                        raise
+                    self._client.head_bucket(Bucket=self._bucket)
             # `put_bucket_lifecycle_configuration` replaces every rule on the bucket, so read
             # first and replace only this module's rule, by its ID: an operator's own rules
             # survive a restart.
