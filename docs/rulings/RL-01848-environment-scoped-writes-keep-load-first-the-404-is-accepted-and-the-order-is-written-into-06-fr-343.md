@@ -3,7 +3,7 @@ id: RL-1848
 family: ruling
 title: "Environment-scoped writes keep load-first: the 404-before-403 existence answer is accepted within a deployment, and the order rule is written into 06 FR-343 (adopted by the maintainer 2026-10-22 17:21:38 BST, with one amendment)"
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-10-22   # drafted 2026-10-22 under working id 8176; not minted
+created: 2026-10-22   # drafted 2026-10-22 under working id 8176; minted 2026-10-22 as RL-1848
 owner: decision-maker
 tree: 71e481fa5d240ed366cd80c1a8c6cf6cd1d918d5
 phase: P2
@@ -15,6 +15,8 @@ relates: [RL-1301, RL-1834, RL-1401, RL-1687, SL-1260]
 ---
 
 # RL-1848 — Environment-scoped writes keep load-first: the 404-before-403 existence answer is accepted within a deployment, and the order rule is written into 06 FR-343
+
+*Minted 2026-10-22 as RL-1848 from working id 8176, in the docs batch PR. Statements below that call this record or another id "not minted" or "unminted" describe the draft state at adoption, not the tree at the mint.*
 
 Drafted 2026-10-22 under working id 8176 on branch `draft/rl-8176`. It is not minted here and
 carries no INDEX hunk.

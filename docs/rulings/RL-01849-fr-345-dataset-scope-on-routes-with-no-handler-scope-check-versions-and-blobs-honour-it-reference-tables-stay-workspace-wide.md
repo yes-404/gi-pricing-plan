@@ -3,7 +3,7 @@ id: RL-1849
 family: ruling
 title: "FR-345 dataset scope on the routes with no handler scope check: Dataset Version routes and blobs honour a dataset-scoped grant, reference tables stay workspace-wide (adopted by the maintainer 2026-10-22 17:36:24 BST, as amended 17:38:11 BST)"
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-10-22   # drafted and adopted 2026-10-22 under working id 8182; not minted
+created: 2026-10-22   # drafted and adopted 2026-10-22 under working id 8182; minted 2026-10-22 as RL-1849
 owner: decision-maker
 tree: 71e481fa5d240ed366cd80c1a8c6cf6cd1d918d5
 phase: P2
@@ -15,6 +15,8 @@ relates: [RL-1301]
 ---
 
 # RL-1849 — FR-345 dataset scope on the routes with no handler scope check: Dataset Version routes and blobs honour a dataset-scoped grant, reference tables stay workspace-wide
+
+*Minted 2026-10-22 as RL-1849 from working id 8182, in the docs batch PR. Statements below that call this record or another id "not minted" or "unminted" describe the draft state at adoption, not the tree at the mint.*
 
 **Adopted by the maintainer, 2026-10-22 17:36:24 BST, as amended 17:38:11 BST.** Drafted by
 the decision-maker (dm-8182) on 2026-10-22 and recorded as adopted by dm-8182b. The working ids
