@@ -35,7 +35,7 @@ relates: [PL-8162, SL-8164, FD-1723, FR-6, FR-109, FR-110]
 
 ### Gate
 
-Docs-only gate (maintainer-approved, pre-approval 1(e), to-lead "2026-10-22 17:50:51 BST"), run by `scratch/sl-8164/gate-docs.sh` on head `507cfba66edabbfaf9b7dbfff173475835d5226c` (tree `8d2ae6f014ea56742785ca46e85e098ba290290c`); logs in `scratch/sl-8164/gate/`. `git diff --name-only origin/main...HEAD` lists six paths, all under `docs/` (INDEX, this LG, PL-8162, roadmap, 00-overview, 02-modelling). The dated clauses name no test file or function (grep of the `docs/specs` diff: none; the θ round trip is slice A's).
+**Run 1 (pre-fix, SUPERSEDED by run 2 below).** Docs-only gate (maintainer-approved, pre-approval 1(e), to-lead "2026-10-22 17:50:51 BST"), run by `scratch/sl-8164/gate-docs.sh` on head `507cfba66edabbfaf9b7dbfff173475835d5226c` (tree `8d2ae6f014ea56742785ca46e85e098ba290290c`); logs in `scratch/sl-8164/gate/`. `git diff --name-only origin/main...HEAD` lists six paths, all under `docs/` (INDEX, this LG, PL-8162, roadmap, 00-overview, 02-modelling). The dated clauses name no test file or function (grep of the `docs/specs` diff: none; the θ round trip is slice A's).
 
 | Check | rc | Summary |
 |---|---|---|
@@ -49,6 +49,21 @@ Docs-only gate (maintainer-approved, pre-approval 1(e), to-lead "2026-10-22 17:5
 | pytest run 3 (`test_register_owed`, `test_repository_invariants`) | 1 | `3 failed, 20 passed in 76.83s` |
 
 The 13 pytest failures all run the real tree: 11 assert `audit-docs.py` rc 0 (got 1) and 2 assert allocation contiguity (`[(1840, 8162), (8162, 8164)]`, `doc-id.py … gap between 1840 and 8162`). Every one traces to the same check 31 gap above, which the mint closes. Classification: expected until minted, NOT proven; the minted-head re-run must show all three runs green.
+
+**Run 2 (current; supersedes run 1).** Same script, run once on head `b0b2634d6346aa9534c9fe256492f97ca4d1eb3c` (tree `91cd33adf43fef9204c66d9e9c60b0601837a314`; lead's "GATE GO b0b2634d", after the RS 8189 B2 FR-6 reword `d8cc4c75` and the planner's B1 alignment); logs in `scratch/sl-8164/gate/` (run 1's moved to `gate/run1/`), each starting with that sha. `git diff --name-only origin/main...HEAD` lists the same six `docs/` paths as run 1.
+
+| Check | rc | Summary |
+|---|---|---|
+| `audit-docs.py` | 1 | `FAILED (2)`: `check 31: gap in the full allocation between 1840 and 8162`, `between 8162 and 8164` |
+| `doc-index.py --check` | 0 | rc 0 |
+| `register-lint.py` | 0 | rc 0 |
+| `req-coverage.py` | 0 | rc 0 |
+| `generate-contracts.py --check` | 0 | rc 0 |
+| pytest run 1 (`test_audit_docs_finding_citations`, `_ids`, `_process_core_digest`) | 1 | `5 failed, 119 passed in 208.93s (0:03:28)` |
+| pytest run 2 (`test_audit_docs_w37_11_ceiling`, `test_doc_index`, `test_register_lint`) | 1 | `5 failed, 105 passed in 118.37s (0:01:58)` |
+| pytest run 3 (`test_register_owed`, `test_repository_invariants`) | 1 | `3 failed, 20 passed in 79.72s (0:01:19)` |
+
+FAILED lines (identical test ids to run 1): `test_audit_docs_finding_citations::test_a_finding_resolved_only_by_a_closure_record_is_not_flagged`; `test_audit_docs_ids::test_the_real_tree_passes_all_ten_checks`, `::test_doc_id_check_exits_0_on_the_real_tree`; `test_audit_docs_process_core_digest::test_an_unrelated_file_edit_is_the_negative_control_and_stays_green`, `::test_the_committed_digest_currently_matches_the_committed_spec`; `test_audit_docs_w37_11_ceiling::test_audit_docs_end_to_end_exit_0_then_1_then_0_on_an_injected_residue`; `test_doc_index::test_an_index_skipping_a_reserved_block_breaks_contiguity`; `test_register_lint::test_check_29_is_wired_into_the_docs_gate`, `::test_check_29_note_carries_the_residue_line`, `::test_phase1b_residue_count_matches_check_29s_own_count`; `test_register_owed::test_check_29_wiring_is_undisturbed`; `test_repository_invariants::test_money_discipline_is_enforced_by_the_docs_audit`, `::test_journey_citations_are_audited_in_ci`. I read the assert text in each log: each failure shows either `assert 1 == 0` on an `audit-docs.py` run whose output ends in the two check 31 rows, or the allocation-contiguity assert (`[(1840, 8162), (8162, 8164)]`, `doc-id.py … gap between 1840 and 8162`). No other assert text appears. This is the standing 1(f)/1(e) shape (docs-audit set only; audit-docs failing only check 31 on this slice's own working ids). The minted-head re-run must show all three runs green.
 
 ### Audit
 
