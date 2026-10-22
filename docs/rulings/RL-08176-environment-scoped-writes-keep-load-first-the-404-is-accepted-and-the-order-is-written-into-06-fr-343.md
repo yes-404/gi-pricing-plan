@@ -20,6 +20,13 @@ Drafted 2026-10-22 under working id 8176 on branch `draft/rl-8176`. **This is a 
 maintainer to adopt, amend or reject.** It rules nothing until the maintainer adopts it with a
 dated line. It is not minted here and carries no INDEX hunk.
 
+**Provenance — the effort level.** The seat was spawned by lead 26 at effort `high`, as
+`.claude/roles/decision-maker.md`'s "Model / effort" line provides for a decision-maker
+ruling on the maintainer's raise. In the seat's own shell, `echo $CLAUDE_EFFORT` printed
+`medium` (read 2026-10-22 17:14:17 BST). The seat reported the difference to the lead. The
+lead said it would record it in `from-lead` and told the seat to work to the `high`
+standard. Which effort the session actually ran at is not verified here.
+
 **The question.** The maintainer's entry "2026-10-22 17:13:03 BST — Maintainer: the 404-vs-403
 order on env-scoped writes goes to a DECISION-MAKER for an RL; FD 8175 is filed; SL-1260 is not
 blocked" in `~/gi-pricing-plan.local/channel/to-lead.md` (local; copied by `sed`, unedited):
