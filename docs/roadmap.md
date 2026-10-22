@@ -2923,6 +2923,26 @@ The fix of FD-1803 (filed in D21; HIGH, owner WK-1178), planned in PL-1809. `Dec
 
 (Closed 2026-10-18 as a Slice on a clean audit at 7e3b5098 (findings A1 to A4; the lead's verdict "2026-10-18 12:16:55 BST" in `from-lead-2026-10-09.md`): A1 fixed in LG-1811, A2 ruled into the slice by the maintainer ("2026-10-18 12:18:08 BST" in `to-lead.md`) and delivered as test-only commit d2e0fcaa; audit and window results written in LG-1811 (minted 2026-10-18 from working id 8109). MERGE-ACK: not yet given.)
 
+#### SL-8195 — WK-1178 fix slice — FD 8194: a static guard, every test that reaches the freMTPL2 data carries the data-present guard
+
+```yaml
+id: SL-8195
+family: slice
+title: WK-1178 fix slice — FD 8194: a static guard, every test that reaches the freMTPL2 data carries the data-present guard
+status: active                   # draft → active → closed | retired (§1.2a)
+created: 2026-10-22
+owner: executor                  # dispatched by the lead (active)
+tree: 71e481fa5d240ed366cd80c1a8c6cf6cd1d918d5
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-8194, LG-8196]
+```
+
+The remedy of FD 8194 (LOW-MEDIUM, owner WK-1178), ordered by the maintainer's entry "2026-10-22 18:19:23 BST — Maintainer: #1361 CI red (2 freMTPL2 tests without the data guard): the fix plan ACCEPTED; a STATIC guard as an FD" (`to-lead.md`): `examples/fremtpl2/data` is fetched and gitignored, CI never has it, and #1361's two WF-701 journey tests read it through a helper chain with no path literal in the test. **Scope, exactly:** one DB-free test file, `tests/test_fremtpl2_data_guard.py`, which reads each test file's AST, takes per test function the closure of what it reaches inside its file, and fails naming `file::test` when that closure reaches the data (a `fremtpl2/data` literal, a `"data"` path joined to a freMTPL2 file, a module-level alias of the data directory, or a reader derived from `examples/fremtpl2/*.py`) and carries no guard (an `if … .exists…: pytest.skip(…)`, a `skipif` naming `.exists`, or a `DATA_DIR` redirect to synthetic files). No requirement id is claimed. **Order:** merges after #1361 (SL-1711), then re-merges `main` and re-runs the guard so it covers `backend/tests/test_wf701_journey.py`. Ledger `LG-8196`.
+
+(Activated 2026-10-22 as WK-1178's FD 8194 fix slice, on the lead's brief `brief-exec-8194-2026-10-22.md` under the 18:19:23 entry above. Working ids 8194 (FD), 8195 (this row) and 8196 (LG) are unminted.)
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
