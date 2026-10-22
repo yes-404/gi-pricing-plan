@@ -36,7 +36,6 @@ from model_schema import (
 from model_schema.input_free import InputFreeError
 from pricing_core.modelling import BandingError, GlmFitError, fit_glm
 from pricing_core.modelling.factors import FactorResolutionError, resolve_factors
-from pricing_core.modelling.glm import glum_family, r_theta_from_glum_theta
 
 
 def _factor(slug: str, column: str, **over: object) -> Factor:
@@ -1185,6 +1184,8 @@ def test_the_declared_theta_reaches_glum() -> None:
 def test_theta_is_converted_from_the_r_form_to_glums_at_one_place() -> None:
     """Ruling 3 (2026-10-22 16:02:49): θ is R/MASS's (variance μ + μ²/θ); glum's
     `NegativeBinomialDistribution.theta` is its reciprocal (variance μ + θ·μ²)."""
+    from pricing_core.modelling.glm import glum_family, r_theta_from_glum_theta
+
     family = glum_family("negative_binomial", theta=2.0)
     assert float(family.theta) == pytest.approx(0.5)  # 1 / 2, exact in float32
     assert r_theta_from_glum_theta(float(family.theta)) == pytest.approx(2.0)
@@ -1201,6 +1202,8 @@ def test_theta_is_converted_from_the_r_form_to_glums_at_one_place() -> None:
 
 @pytest.mark.req("FR-110")
 def test_the_other_families_are_translated_to_glums_spellings() -> None:
+    from pricing_core.modelling.glm import glum_family
+
     assert glum_family("inverse_gaussian") == "inverse.gaussian"
     assert glum_family("tweedie", power=1.5) == "tweedie(1.5)"
     for name in ("poisson", "gamma", "gaussian", "binomial"):
