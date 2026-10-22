@@ -282,3 +282,91 @@ def test_settle_gives_up_after_the_maximum_wait_and_says_so() -> None:
 def test_a_load_exactly_at_the_limit_has_not_settled() -> None:
     ok, _ = m.settle_load(2.0, 0, 15, read=lambda: 2.0, sleep=lambda _s: None)
     assert ok is False
+
+
+# --- the NFR-467 profile: size selection, summary and guards (PL-1735 Task 5a; ruling 22:52:52) ----
+
+TWO_M, TEN_M = 2_000_000, 10_000_000
+
+
+def _reading(wall: float, delta: int) -> dict[str, Any]:
+    return {"wall_s": wall, "delta_peak_bytes": delta, "vmhwm_bytes": delta + 100}
+
+
+def test_the_default_profile_runs_both_sizes_of_the_pre_registered_rule() -> None:
+    assert m.select_profile_sizes(None) == [TWO_M, TEN_M]
+    assert m.select_profile_sizes(None) == m.NFR_467_RULE["sizes"]
+
+
+def test_a_two_million_only_run_selects_only_that_size() -> None:
+    assert m.select_profile_sizes([TWO_M]) == [TWO_M]
+
+
+def test_selected_sizes_come_back_in_the_rule_order_without_duplicates() -> None:
+    assert m.select_profile_sizes([TEN_M, TWO_M, TWO_M]) == [TWO_M, TEN_M]
+
+
+@pytest.mark.parametrize("bad", [[], [5_000_000], [TWO_M, 1]])
+def test_a_size_outside_the_rule_or_no_size_is_refused(bad: list[int]) -> None:
+    with pytest.raises(ValueError, match="sizes"):
+        m.select_profile_sizes(bad)
+
+
+def test_the_full_summary_reads_the_ratio_and_the_ten_million_time() -> None:
+    summary = m.profile_summary({TWO_M: _reading(9.0, 100), TEN_M: _reading(60.0, 300)})
+    assert summary["partial"] is False
+    assert summary["memory_ratio"] == pytest.approx(3.0)
+    assert summary["memory_verdict"] == "PASS"
+    assert summary["time_s"] == 60.0
+    assert summary["time_band"] == "DIAGNOSTIC-PASS"  # 60 s <= 0.43 x 300 s
+
+
+def test_the_full_summary_marks_a_linear_memory_ratio_over() -> None:
+    summary = m.profile_summary({TWO_M: _reading(9.0, 100), TEN_M: _reading(60.0, 500)})
+    assert summary["memory_ratio"] == pytest.approx(5.0)
+    assert summary["memory_verdict"] == "OVER"
+
+
+def test_a_two_million_only_summary_reads_no_ratio_and_no_ten_million_band() -> None:
+    summary = m.profile_summary({TWO_M: _reading(9.0, 100)})
+    assert summary["partial"] is True
+    assert "memory_ratio" not in summary
+    assert "memory_verdict" not in summary
+    assert "time_band" not in summary
+    assert summary["sizes"] == [TWO_M]
+    assert summary["by_size"][TWO_M] == {"wall_s": 9.0, "delta_peak_bytes": 100}
+    assert "carried to nfr-bench-1" in summary["note"]
+
+
+def test_a_ten_million_only_summary_has_its_time_band_but_no_ratio() -> None:
+    summary = m.profile_summary({TEN_M: _reading(200.0, 300)})
+    assert summary["partial"] is True
+    assert "memory_ratio" not in summary
+    assert summary["time_band"] == "NEAR-BOUND"  # 129 s < 200 s <= 300 s
+
+
+@pytest.mark.parametrize(
+    ("mode", "mem_gb", "disk_gb", "refused"),
+    [
+        ("generate-and-profile", 20.0, 20.0, False),
+        ("generate-and-profile", 20.0, 11.9, True),  # the disk guard applies to generation
+        ("generate-only", 20.0, 11.9, True),
+        ("pregenerated", 20.0, 1.0, False),  # a pregenerated file already holds its disk
+        ("pregenerated", 15.9, 50.0, True),  # the memory guard applies to every mode
+        ("generate-only", 15.9, 50.0, True),
+    ],
+)
+def test_the_profile_guards_by_mode(
+    mode: str, mem_gb: float, disk_gb: float, refused: bool
+) -> None:
+    failure = m.profile_guard_failure(mode, mem_gb, disk_gb)
+    assert (failure is not None) is refused
+
+
+def test_the_profile_command_line_defaults_to_every_size_and_parses_a_subset() -> None:
+    parser = m.build_parser()
+    default = parser.parse_args(["profile", "--tmpdir", "/x"])
+    assert default.sizes is None
+    assert default.mode == "generate-and-profile"
+    subset = parser.parse_args(["profile", "--tmpdir", "/x", "--sizes", "2000000"])
+    assert subset.sizes == [TWO_M]
