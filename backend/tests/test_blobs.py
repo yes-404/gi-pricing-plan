@@ -420,3 +420,71 @@ async def test_a_gone_multipart_upload_with_no_object_is_the_named_failure(
         blob_store._complete_staged("staging/k", "gone", 2)
     assert caught.value.code == "VALIDATION_FAILED"
     assert caught.value.title == "The upload is missing"
+
+
+class _RacingS3:
+    """S3 client stub for a concurrent first start (FD 8169): the bucket is absent at
+    `head_bucket`, a peer creates it before our `create_bucket`, so that call raises
+    `create_code`. After that the bucket exists unless `head_after` says otherwise."""
+
+    def __init__(self, create_code: str, *, head_after: str | None = None) -> None:
+        self.create_code = create_code
+        self.head_after = head_after
+        self.heads = 0
+        self.lifecycle: dict[str, object] | None = None
+
+    def head_bucket(self, Bucket: str) -> None:  # noqa: N803 - boto3 keyword names
+        self.heads += 1
+        if self.heads == 1:
+            raise _client_error("404", "HeadBucket")
+        if self.head_after is not None:
+            raise _client_error(self.head_after, "HeadBucket")
+
+    def create_bucket(self, Bucket: str) -> None:  # noqa: N803
+        raise _client_error(self.create_code, "CreateBucket")
+
+    def get_bucket_lifecycle_configuration(self, Bucket: str) -> dict[str, object]:  # noqa: N803
+        raise _client_error("NoSuchLifecycleConfiguration", "GetBucketLifecycleConfiguration")
+
+    def put_bucket_lifecycle_configuration(
+        self,
+        Bucket: str,  # noqa: N803
+        LifecycleConfiguration: dict[str, object],  # noqa: N803
+    ) -> None:
+        self.lifecycle = LifecycleConfiguration
+
+
+def _store_with(client: _RacingS3) -> BlobStore:
+    store = BlobStore.__new__(BlobStore)
+    store._bucket = "race-bucket"
+    store._client = client  # type: ignore[assignment]
+    return store
+
+
+@pytest.mark.req("FR-421")
+@pytest.mark.parametrize("code", ["BucketAlreadyOwnedByYou", "BucketAlreadyExists"])
+async def test_ensure_bucket_survives_losing_the_create_race(code: str) -> None:
+    """FD 8169: two services starting together both see no bucket; the loser's
+    `create_bucket` answers `code`. That is success, and the lifecycle rule is still set."""
+    client = _RacingS3(code)
+    await _store_with(client).ensure_bucket()
+    assert client.lifecycle is not None
+    assert client.heads == 2  # the bucket was re-checked, not assumed
+
+
+@pytest.mark.req("FR-421")
+async def test_ensure_bucket_still_fails_when_the_existing_bucket_is_not_ours() -> None:
+    """Breaker: `BucketAlreadyExists` for a bucket we cannot reach (another account's) is
+    not success -- swallowing it would leave every later call failing far from the cause."""
+    client = _RacingS3("BucketAlreadyExists", head_after="403")
+    with pytest.raises(ClientError):
+        await _store_with(client).ensure_bucket()
+    assert client.lifecycle is None
+
+
+@pytest.mark.req("FR-421")
+async def test_ensure_bucket_reraises_any_other_create_failure() -> None:
+    client = _RacingS3("AccessDenied")
+    with pytest.raises(ClientError):
+        await _store_with(client).ensure_bucket()
+    assert client.lifecycle is None
