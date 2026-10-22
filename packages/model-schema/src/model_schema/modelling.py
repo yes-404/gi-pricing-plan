@@ -1186,7 +1186,7 @@ class GlmSpec(ModelSpecCommon):
 
     @model_validator(mode="after")
     def _a_negative_binomial_declares_its_theta_and_no_other_family_does(self) -> GlmSpec:
-        """FR-110 (PL-8162 DP-T): θ is declared, never defaulted.
+        """FR-110 (PL-1856 DP-T): θ is declared, never defaulted.
 
         θ is R/MASS `glm.nb`'s (variance μ + μ²/θ); the engine converts it to glum's
         reciprocal at one boundary. glum's own default of 1.0 is a modelling judgement with

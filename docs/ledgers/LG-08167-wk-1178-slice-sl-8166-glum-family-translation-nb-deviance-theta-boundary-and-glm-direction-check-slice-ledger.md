@@ -1,7 +1,7 @@
 ---
 id: LG-8167
 family: ledger
-title: WK-1178 slice SL-8166 — PL-8162 slice A, the glum family translation, the NB deviance, the θ boundary and the GLM direction check, slice ledger
+title: WK-1178 slice SL-8166 — PL-1856 slice A, the glum family translation, the NB deviance, the θ boundary and the GLM direction check, slice ledger
 status: active                 # active → closed (§1.2a)
 created: 2026-10-22
 owner: executor
@@ -9,12 +9,12 @@ tree: 31e03c8ebd3c37b0e42b658b82775339fa95fb19                  # the tree of me
 phase: P2
 work: WK-1178
 slice: SL-8166
-plans: [PL-8162]
+plans: [PL-1856]
 corrected_by: []
-relates: [PL-8162, SL-8166, FD-1723, FR-89, FR-110]
+relates: [PL-1856, SL-8166, FD-1723, FR-89, FR-110]
 ---
 
-# LG-8167 — WK-1178 slice SL-8166: PL-8162 slice A
+# LG-8167 — WK-1178 slice SL-8166: PL-1856 slice A
 
 *(Working ids SL 8166 and LG 8167, reserved by lead 26 on 2026-10-22; unminted.)*
 
@@ -27,7 +27,7 @@ Base: `origin/main` `f3462d8f`. Branch `sl-8166-wk1178-pl8162-a`, worktree `.cla
 
 ### Scope
 
-`PL-8162` slice A: FR-110 (glum family-name translation for all seven `GlmSpec.family` members; the NB θ declared and required; the NB deviance) and FR-89 (the GLM direction check, `GlmDiagnostics.monotonicity` and `monotonicity_omitted`), the builder's θ input. **Where the rulings of to-lead.md "2026-10-22 16:02:49 BST" differ from the plan draft @6b1de3a9, the rulings govern:** θ is R/MASS `glm.nb`'s (variance μ + μ²/θ, ruling 3), converted once to glum's α = 1/θ_R; the plan's DP-T (a)/A-R3 text states glum's form and is brought into line by exec-c at its activation (lead 26, 2026-10-22). `power(k)` is struck in slice C (ruling 1): no DP-K build. DP-M (b) adopted as recommended. FR-110 θ/NB spec text is slice C's; FR-89 text is here.
+`PL-1856` slice A: FR-110 (glum family-name translation for all seven `GlmSpec.family` members; the NB θ declared and required; the NB deviance) and FR-89 (the GLM direction check, `GlmDiagnostics.monotonicity` and `monotonicity_omitted`), the builder's θ input. **Where the rulings of to-lead.md "2026-10-22 16:02:49 BST" differ from the plan draft @6b1de3a9, the rulings govern:** θ is R/MASS `glm.nb`'s (variance μ + μ²/θ, ruling 3), converted once to glum's α = 1/θ_R; the plan's DP-T (a)/A-R3 text states glum's form and is brought into line by exec-c at its activation (lead 26, 2026-10-22). `power(k)` is struck in slice C (ruling 1): no DP-K build. DP-M (b) adopted as recommended. FR-110 θ/NB spec text is slice C's; FR-89 text is here.
 
 **NB-fits-today (ruling 2), by code reading only:** no path. Only `ModelRow(...)` constructor in `backend/src` is `platform/modelling.py:561` (`reserve_model`, status draft, no `fit_result`); `fit_result` is written only at `worker/model_handlers.py:573` (after `fit_glm`), `:1146` (surrogate; `approximation_spec` hardcodes `family="gamma"`, `pricing_core/modelling/transparency.py:113`) and `platform/modelling.py:947`; readers refuse an unfitted row (`_resolve_candidate` `model_handlers.py:691`, backtest `:1232` `MODEL_NOT_FITTED`); migrations only `UPDATE models SET status/diagnostics_id`; no import route in `api/models.py`; no NB in `examples/` or `scripts/`. At the base glum raised for the underscore names (`glum._glm.get_family` accepts `negative.binomial`, `inverse.gaussian` only). A draft NB spec can be stored. **Owed (DB window):** the read-only count of stored draft NB rows.
 
@@ -57,7 +57,7 @@ All runs `run-small.sh` / the single-file vitest guard, under the `small-test` f
 
 ### Deviation (RS 8183 B1, disclosed post hoc 2026-10-22)
 
-The FR-89 spec commit `db41422c` landed AFTER the code commits `e29cefcc` and `53d0433f`, against `PL-8162` acceptance item 3 (spec first). History is not rewritten; the order is recorded here and was found by the auditor on RS 8183 B1.
+The FR-89 spec commit `db41422c` landed AFTER the code commits `e29cefcc` and `53d0433f`, against `PL-1856` acceptance item 3 (spec first). History is not rewritten; the order is recorded here and was found by the auditor on RS 8183 B1.
 
 ### GREEN additions, 2026-10-22 (exec-8166b, tree of merge 480d73ea, load1 3.2-3.6, `GIP_GATE_SLOT` unset)
 

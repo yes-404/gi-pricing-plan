@@ -107,7 +107,7 @@ describe("the model spec builder", () => {
   });
 
   it("asks for a negative binomial's theta and posts it, never defaulting one", async () => {
-    // PL-8162 A6 / DP-T: theta is declared (R/MASS `glm.nb` form), so the field starts
+    // PL-1856 A6 / DP-T: theta is declared (R/MASS `glm.nb` form), so the field starts
     // empty and a spec with none carries no `theta` for the backend to refuse by name.
     const user = userEvent.setup();
     await fillRequired();

@@ -168,7 +168,7 @@ def unit_deviance(
 
     if family == "negative_binomial":
         # R/MASS `glm.nb` form, variance μ + μ²/θ: d = 2[y·ln(y/μ) - (y+θ)·ln((y+θ)/(μ+θ))].
-        # Never defaulted (PL-8162 DP-T): a θ of 1 or ∞ is a different model.
+        # Never defaulted (PL-1856 DP-T): a θ of 1 or ∞ is a different model.
         if theta is None or not theta > 0.0:
             raise ValueError(
                 "the negative_binomial deviance needs the model's declared theta > 0 "
@@ -630,7 +630,7 @@ def _power_of(fit: GlmFitResult, spec: ModelSpec) -> float:
 
 def _theta_of(spec: ModelSpec) -> float | None:
     """The negative-binomial θ (R/MASS form) a GLM spec declares; `None` for every other
-    model. The NB deviance needs it and refuses to default it (PL-8162 DP-T)."""
+    model. The NB deviance needs it and refuses to default it (PL-1856 DP-T)."""
     if isinstance(spec, GlmSpec) and spec.family == "negative_binomial":
         return float(spec.family_params["theta"])
     return None
@@ -653,7 +653,7 @@ def _glm_monotonicity(
     the axis's order; `holds` when no step moves against the direction by more than 1e-9.
     The axis is ordered where the factor has an order — a numeric column, or a banding's
     bands in the banding's own label order — and a declared direction that cannot be swept
-    is recorded with its reason rather than skipped (the FR-178 pattern, PL-8162 DP-M).
+    is recorded with its reason rather than skipped (the FR-178 pattern, PL-1856 DP-M).
     """
     checks: list[MonotonicityCheck] = []
     omitted: list[MonotonicityOmission] = []

@@ -743,7 +743,7 @@ def test_a_backtest_excludes_weight_zero_rows_and_reports_the_count() -> None:
 
 @pytest.mark.req("FR-110")
 def test_the_negative_binomial_unit_deviance_uses_the_declared_theta() -> None:
-    """PL-8162 A-R3. θ is R/MASS `glm.nb`'s (variance μ + μ²/θ), and the unit deviance is
+    """PL-1856 A-R3. θ is R/MASS `glm.nb`'s (variance μ + μ²/θ), and the unit deviance is
     2[y·ln(y/μ) - (y+θ)·ln((y+θ)/(μ+θ))] with the `y = 0` limit taken.
 
     Pinned against values worked by hand for μ = 1, θ = 2:
@@ -764,7 +764,7 @@ def test_the_negative_binomial_unit_deviance_uses_the_declared_theta() -> None:
 
 @pytest.mark.req("FR-110")
 def test_a_negative_binomial_deviance_without_theta_is_refused_not_defaulted() -> None:
-    """PL-8162 DP-T: no θ is supplied by omission, glum's 1.0 included."""
+    """PL-1856 DP-T: no θ is supplied by omission, glum's 1.0 included."""
     y = np.array([0.0, 2.0])
     mu = np.array([1.0, 1.0])
     with pytest.raises(ValueError, match="theta"):
@@ -776,7 +776,7 @@ def test_a_negative_binomial_deviance_without_theta_is_refused_not_defaulted() -
 
 
 # --------------------------------------------------------------------------------------
-# PL-8162 A-R4 / FR-89 — a GLM factor fitted against its declared direction is reported
+# PL-1856 A-R4 / FR-89 — a GLM factor fitted against its declared direction is reported
 # --------------------------------------------------------------------------------------
 
 
@@ -847,7 +847,7 @@ def test_a_glm_without_a_declared_direction_reports_no_check_and_no_omission() -
 @pytest.mark.req("FR-89")
 @pytest.mark.req("FR-178")
 def test_a_declared_direction_that_cannot_be_swept_is_omitted_with_its_reason() -> None:
-    """PL-8162 DP-M (b), FR-178's own pattern: a declared direction always yields a check
+    """PL-1856 DP-M (b), FR-178's own pattern: a declared direction always yields a check
     or an omission naming why not, never nothing. An operand of a cross is not swept alone
     (it would recombine into cells the fit never saw); a text column has no order to sweep."""
     frame = _age_book(slope=0.02)

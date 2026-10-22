@@ -10389,7 +10389,7 @@
         "type": "object"
       },
       "MonotonicityOmissionReason": {
-        "description": "Why a declared GLM direction was not checked (FR-89, PL-8162 DP-M).",
+        "description": "Why a declared GLM direction was not checked (FR-89, PL-1856 DP-M).",
         "enum": [
           "operand_of_interaction",
           "expression_factor",

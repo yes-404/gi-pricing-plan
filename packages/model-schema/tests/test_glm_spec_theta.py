@@ -1,4 +1,4 @@
-"""PL-8162 A-R2 / DP-T: the negative-binomial θ is declared, never defaulted.
+"""PL-1856 A-R2 / DP-T: the negative-binomial θ is declared, never defaulted.
 
 θ is R/MASS `glm.nb`'s (variance μ + μ²/θ) and lives in `family_params["theta"]`. glum's
 1.0 is never adopted by omission, and a θ on any other family is a declared parameter that

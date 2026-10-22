@@ -253,7 +253,7 @@ class TypeIIIOmission(BaseModel):
 
 
 class MonotonicityOmissionReason(enum.StrEnum):
-    """Why a declared GLM direction was not checked (FR-89, PL-8162 DP-M)."""
+    """Why a declared GLM direction was not checked (FR-89, PL-1856 DP-M)."""
 
     #: An operand of an `interaction` is not swept alone: holding it recombines the pair into
     #: cells the fit never saw (FR-178).

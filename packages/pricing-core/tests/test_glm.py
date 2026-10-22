@@ -1086,7 +1086,7 @@ def test_a_thin_band_under_warn_fits_and_the_fit_result_records_a_typed_warning(
         assert type(warning.minimum) is value_type
 
 
-# --- PL-8162 A-R1 / A-R2: every member of `GlmSpec.family` fits ---------------------------
+# --- PL-1856 A-R1 / A-R2: every member of `GlmSpec.family` fits ---------------------------
 
 _NB_THETA_R = 2.0  # R/MASS `glm.nb` form: variance mu + mu**2 / theta
 
