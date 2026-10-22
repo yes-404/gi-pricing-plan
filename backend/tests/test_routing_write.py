@@ -6,6 +6,10 @@ deployment-wide, so a test never changes one; the rule rows are scoped by the fr
 Selection at scoring time is `test_routing.py`'s; this file holds the write.
 """
 
+# Fixtures are imported from the sibling modules that define them, as the other test files do,
+# so a test parameter redefines the imported name (F811).
+# ruff: noqa: F811
+
 from __future__ import annotations
 
 from typing import Any

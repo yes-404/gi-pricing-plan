@@ -33,7 +33,7 @@ from model_schema import (
     new_uuid7,
 )
 
-__all__ = ["select", "write_rule"]
+__all__ = ["select_range", "write_rule"]
 
 _ACTION = "deployment.routing_changed"
 _log = get_logger(__name__)
@@ -178,7 +178,7 @@ async def _latest_deployments(
     return pins
 
 
-async def select(
+async def select_range(
     session: AsyncSession, *, workspace_id: UUID, environment: str, effective_date: date
 ) -> tuple[ArtifactRef, UUID] | None:
     """The Rating Version and Deployment the Environment's current rule selects for a quote with

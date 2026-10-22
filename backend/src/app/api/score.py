@@ -50,9 +50,9 @@ from typing import Annotated, Any, Final
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request, Response, status
-from starlette.background import BackgroundTask
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.background import BackgroundTask
 
 from app.api.authz import requires
 from app.api.deps import Caller, RequestSessionDep, SettingsDep, job_identity
@@ -66,10 +66,10 @@ from app.observability.logging import get_logger
 from app.observability.metrics import ladder_reconciliation_failed
 from app.platform import jobs as job_service
 from app.platform import rate_limit
-from app.platform import routing as routing_service
-from app.platform import shadow as shadow_service
 from app.platform import rating_versions as rating_versions_service
+from app.platform import routing as routing_service
 from app.platform import settings as settings_service
+from app.platform import shadow as shadow_service
 from app.platform import traces as traces_service
 from app.platform.blobs import BlobStore, to_ref
 from app.platform.bundle_slot import BundleSlot
@@ -274,7 +274,10 @@ async def _shadow_task(
         return None
     try:
         flag = await settings_service.resolve(
-            session, settings, caller.workspace_id, "features.shadow_scoring_enabled",
+            session,
+            settings,
+            caller.workspace_id,
+            "features.shadow_scoring_enabled",
             caller.environment,
         )
         if flag.effective_value is not True:
@@ -293,8 +296,15 @@ async def _shadow_task(
         return None
     return BackgroundTask(
         _shadow_score,
-        database, blob_store, slot, caller.workspace_id, caller.environment, ctx, live,
-        live_deployment_id, config[0],
+        database,
+        blob_store,
+        slot,
+        caller.workspace_id,
+        caller.environment,
+        ctx,
+        live,
+        live_deployment_id,
+        config[0],
     )
 
 
@@ -357,7 +367,7 @@ async def _routed(
     )
     if flag.effective_value is not True:
         return None
-    return await routing_service.select(
+    return await routing_service.select_range(
         session,
         workspace_id=caller.workspace_id,
         environment=caller.environment,

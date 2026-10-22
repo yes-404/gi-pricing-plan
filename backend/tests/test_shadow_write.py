@@ -5,6 +5,10 @@ Every test starts from a fresh workspace and fresh Rating Version slugs; Environ
 deployment-wide, so none is changed.
 """
 
+# Fixtures are imported from the sibling modules that define them, as the other test files do,
+# so a test parameter redefines the imported name (F811).
+# ruff: noqa: F811
+
 from __future__ import annotations
 
 from typing import Any

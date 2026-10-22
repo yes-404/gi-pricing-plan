@@ -8,6 +8,10 @@ visible to the assert that follows the request. The shadow flag is an Environmen
 Environments are deployment-wide, so every test that turns it on turns it off again.
 """
 
+# Fixtures are imported from the sibling modules that define them, as the other test files do,
+# so a test parameter redefines the imported name (F811).
+# ruff: noqa: F811
+
 from __future__ import annotations
 
 import json
@@ -17,8 +21,8 @@ from uuid import UUID
 
 import pytest
 from backend.tests.test_score import (  # noqa: F401
-    SCORE_URL,
     _LIVE_APPS,
+    SCORE_URL,
     _quote,
     _run,
     _scored,

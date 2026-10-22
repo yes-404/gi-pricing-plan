@@ -3,6 +3,9 @@
 `test_migration_deployments.py`'s fixture creates and drops.
 """
 
+# The scratch-database fixture is imported from the sibling module that defines it (F811).
+# ruff: noqa: F811
+
 from __future__ import annotations
 
 import pytest
@@ -29,9 +32,7 @@ async def _exists(url: str, table: str) -> bool:
 
 
 async def _privilege(url: str, table: str, kind: str) -> bool:
-    rows = await _run(
-        url, "SELECT has_table_privilege('gip_app', :t, :k)", {"t": table, "k": kind}
-    )
+    rows = await _run(url, "SELECT has_table_privilege('gip_app', :t, :k)", {"t": table, "k": kind})
     return bool(rows[0][0])
 
 

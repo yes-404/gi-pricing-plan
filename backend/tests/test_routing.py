@@ -11,6 +11,10 @@ The routing flag is an Environment setting, and Environments are deployment-wide
 that turns it on turns it off again (`routing_flag`).
 """
 
+# Fixtures are imported from the sibling modules that define them, as the other test files do,
+# so a test parameter redefines the imported name (F811).
+# ruff: noqa: F811
+
 from __future__ import annotations
 
 import json
@@ -20,8 +24,8 @@ from uuid import UUID
 
 import pytest
 from backend.tests.test_score import (  # noqa: F401
-    SCORE_URL,
     _LIVE_APPS,
+    SCORE_URL,
     _quote,
     _run,
     admin_headers,
@@ -192,7 +196,12 @@ def test_a_pin_naming_a_deployment_of_a_different_version_is_ignored(
 
 @pytest.mark.req("FR-270", "FR-449")
 def test_with_the_flag_off_scoring_is_unchanged_and_the_selector_is_not_entered(
-    client, scoring_headers, refs_scored, database, workspace_id, routing_flag,
+    client,
+    scoring_headers,
+    refs_scored,
+    database,
+    workspace_id,
+    routing_flag,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """`RL-1834` D1 (c). Baseline: quotes inside and outside a would-be range, scored with no
@@ -207,13 +216,13 @@ def test_with_the_flag_off_scoring_is_unchanged_and_the_selector_is_not_entered(
     assert [str(r) for r in refs_scored] == [LIVE, LIVE]
 
     calls: list[object] = []
-    real = routing.select
+    real = routing.select_range
 
     async def spy(*args: Any, **kwargs: Any) -> Any:
         calls.append(args)
         return await real(*args, **kwargs)
 
-    monkeypatch.setattr(routing, "select", spy)
+    monkeypatch.setattr(routing, "select_range", spy)
     _run(_write_rule(database, workspace_id, [_range(EARLIER, earlier_id, "2026-01-01", None)]))
     refs_scored.clear()
     again = [_content(_score(client, scoring_headers, d)) for d in dates]

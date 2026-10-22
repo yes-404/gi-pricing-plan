@@ -23,11 +23,11 @@ from app.platform import audit, environments, rbac
 from app.platform.deployments import _require_rating_version
 from model_schema import (
     ArtifactRef,
-    ScoringResult,
     JobSource,
     Permission,
     Principal,
     ScopeType,
+    ScoringResult,
     ShadowConfig,
     ShadowConfigUpdate,
     new_uuid7,
