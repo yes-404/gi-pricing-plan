@@ -7,7 +7,7 @@ export interface FlowEdge {
   target: string;
   label: string;
   /** An edge into or out of a purpose mount: it runs only for some quote purposes (RL-1835 (i) 4). */
-  conditional: boolean;
+  conditional?: true;
 }
 
 /** What the drawing needs of a node: a step or a mount (RL-1835 (i) 1 — a mount is a node). */
@@ -72,7 +72,8 @@ export function edgesOf(steps: readonly RatingStep[], mounts: readonly SubGraphR
           source,
           target: node.id,
           label: name,
-          conditional: node.conditional || (byId.get(source)?.conditional ?? false),
+          // Present only when true: a plain edge keeps its bare shape (graph.test.ts asserts it exactly).
+          ...(node.conditional || byId.get(source)?.conditional ? { conditional: true as const } : {}),
         });
       }
     }
