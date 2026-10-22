@@ -880,6 +880,7 @@ async def _cells_diff(args: argparse.Namespace) -> int:
         )
         for name, storage, cells, threshold in selected:
             await _set_threshold(env.database, workspace_id, threshold)
+            run_started = time.perf_counter()
             levels = [f"L{i:07d}" for i in range(cells)]
             family, slug = f"mf-{uuid4().hex[:8]}", f"tbl-{uuid4().hex[:8]}"
             await _seed_approved_model(
@@ -937,12 +938,22 @@ async def _cells_diff(args: argparse.Namespace) -> int:
             if first.status_code != 202:
                 raise SystemExit(f"{name}: the first request answered {first.status_code}, not 202")
             job_id = UUID(first.json()["id"])
+            setup_s = time.perf_counter() - run_started
+            job_started = time.perf_counter()
             status = await execute_job(env.database, job_id, env.blob_store)
+            job_s = time.perf_counter() - job_started
             async with env.database.session() as session:
                 job = await session.get(JobRow, job_id)
             artifact = (job.result or {}).get("ref") if job is not None else None
             if status is not JobStatus.SUCCEEDED or not artifact:
                 raise SystemExit(f"{name}: the Job did not succeed with its artifact: {status}")
+            _emit(
+                "run-setup",
+                run=name,
+                cells=cells,
+                setup_s=round(setup_s, 1),
+                job_s=round(job_s, 1),
+            )
             samples, cursor = [], None
             _settle_or_stop(f"NFR-1443 {name}")
             load_before, cpu_before = read_load1(), time.process_time()
