@@ -235,6 +235,66 @@ def classify_nfr485(vmhwm_bytes: int) -> str:
     return "PASS" if vmhwm_bytes <= NFR_485_CAP_BYTES else "OVER"
 
 
+def select_profile_sizes(requested: list[int] | None) -> list[int]:
+    """The sizes a `profile` run covers: every size of `NFR_467_RULE` by default, or a subset of
+    them (the 2 M-only run of the maintainer's ruling 2026-10-22 22:52:52), in the rule's order."""
+    rule_sizes = list(NFR_467_RULE["sizes"])
+    if requested is None:
+        return rule_sizes
+    unknown = [r for r in requested if r not in rule_sizes]
+    if not requested or unknown:
+        raise ValueError(f"--sizes must be a non-empty subset of {rule_sizes}, not {requested}")
+    return [size for size in rule_sizes if size in requested]
+
+
+def profile_guard_failure(mode: str, mem_available_gb_: float, disk_free_gb: float) -> str | None:
+    """Why a `profile` size must not start, or None. The memory guard applies to every mode; the
+    disk guard is for generation, so a pregenerated file (which already holds its disk) skips it."""
+    rule = NFR_467_RULE
+    if mem_available_gb_ < rule["mem_available_min_gb"]:
+        return f"MemAvailable {mem_available_gb_} GB < {rule['mem_available_min_gb']} GB"
+    if mode != "pregenerated" and disk_free_gb < rule["disk_free_min_gb"]:
+        return f"free disk {disk_free_gb} GB < {rule['disk_free_min_gb']} GB"
+    return None
+
+
+def profile_summary(readings: dict[int, dict[str, Any]]) -> dict[str, Any]:
+    """NFR-467's reading from the sizes that ran. Both sizes: the 10 M time against 300 s by the
+    DP-1 bands and r = delta-peak(10 M) / delta-peak(2 M) against 5.0. A subset reads neither
+    ratio nor band for the size that did not run (a 2 M-only run reads neither; the 10 M run is
+    carried to nfr-bench-1)."""
+    rule = NFR_467_RULE
+    small_size, large_size = rule["sizes"]
+    summary: dict[str, Any] = {
+        "sizes": sorted(readings),
+        "partial": not (small_size in readings and large_size in readings),
+        "memory_rule": "derived from 'sub-linear', ruled 2026-10-14 13:21:41",
+        "rule": rule,
+    }
+    if large_size in readings:
+        wall = readings[large_size]["wall_s"]
+        summary["time_s"] = wall
+        summary["time_band"] = classify_latency(
+            wall, budget=rule["time_budget_s"], fraction=NEAR_BOUND_FRACTION
+        )
+    if not summary["partial"]:
+        ratio = memory_ratio(
+            readings[large_size]["delta_peak_bytes"], readings[small_size]["delta_peak_bytes"]
+        )
+        summary["memory_ratio"] = ratio
+        summary["memory_verdict"] = classify_nfr467_memory(ratio)
+    else:
+        summary["by_size"] = {
+            size: {"wall_s": r["wall_s"], "delta_peak_bytes": r["delta_peak_bytes"]}
+            for size, r in readings.items()
+        }
+        summary["note"] = (
+            "a subset of the rule's sizes ran: no memory ratio is read, and the size that did "
+            "not run (the 10 M profile) is carried to nfr-bench-1"
+        )
+    return summary
+
+
 def parse_status_kb(text: str, key: str) -> int:
     """A `/proc/<pid>/status` field in bytes (the file reports kB)."""
     for line in text.splitlines():
@@ -1078,7 +1138,7 @@ def _profile(args: argparse.Namespace) -> int:
     tmpdir.mkdir(parents=True, exist_ok=True)
     rule = NFR_467_RULE
     readings: dict[int, dict[str, Any]] = {}
-    for rows in rule["sizes"]:
+    for rows in select_profile_sizes(args.sizes):
         path = tmpdir / f"nfr467-{rows}.parquet"
         free_gb = shutil.disk_usage(tmpdir).free / 2**30
         guards = {
@@ -1086,17 +1146,23 @@ def _profile(args: argparse.Namespace) -> int:
             "disk_free_gb": round(free_gb, 2),
         }
         print(json.dumps({"guards": guards, "rows": rows, "mode": args.mode}))
-        too_little_mem = guards["mem_available_gb"] < rule["mem_available_min_gb"]
-        too_little_disk = free_gb < rule["disk_free_min_gb"]
-        # The disk guard is for generation; a pregenerated file already holds its disk.
-        if too_little_mem or (too_little_disk and args.mode != "pregenerated"):
+        failure = profile_guard_failure(args.mode, guards["mem_available_gb"], free_gb)
+        if failure is not None:
             raise SystemExit(
-                f"guard failed at {rows} rows: {guards}; "
+                f"guard failed at {rows} rows: {failure}; "
                 "name this run an nfr-bench-1 session 2 extra reading"
             )
         if args.mode == "generate-only":
             _generate_parquet(rows, path)
-            print(json.dumps({"generated": str(path), "bytes": path.stat().st_size}))
+            print(
+                json.dumps(
+                    {
+                        "generated": str(path),
+                        "bytes": path.stat().st_size,
+                        "disk_free_gb_after": round(shutil.disk_usage(tmpdir).free / 2**30, 2),
+                    }
+                )
+            )
             continue
         if args.mode == "pregenerated" and not path.is_file():
             raise SystemExit(f"--pregenerated: {path} does not exist; run --generate-only first")
@@ -1124,30 +1190,22 @@ def _profile(args: argparse.Namespace) -> int:
             rows=rows,
             columns=rule["columns"],
             guards=guards,
+            disk_free_gb_after=round(shutil.disk_usage(tmpdir).free / 2**30, 2),
             session=session_header(),
             **readings[rows],
         )
     if args.mode == "generate-only":
         return 0
-    small, large = (readings[r] for r in rule["sizes"])
-    ratio = memory_ratio(large["delta_peak_bytes"], small["delta_peak_bytes"])
-    wall = large["wall_s"]
+    print(json.dumps({"disk_free_gb_at_end": round(shutil.disk_usage(tmpdir).free / 2**30, 2)}))
     _emit(
         "NFR-467",
         label="DIAGNOSTIC (time); a reading (memory)",
-        time_s=wall,
-        time_band=classify_latency(
-            wall, budget=rule["time_budget_s"], fraction=NEAR_BOUND_FRACTION
-        ),
-        memory_ratio=ratio,
-        memory_verdict=classify_nfr467_memory(ratio),
-        memory_rule="derived from 'sub-linear', ruled 2026-10-14 13:21:41",
-        rule=rule,
+        **profile_summary(readings),
     )
     return 0
 
 
-def main() -> int:
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = parser.add_subparsers(dest="command", required=True)
     cont = sub.add_parser("contention", help="Task 0: re-measure the contention factor")
@@ -1180,9 +1238,20 @@ def main() -> int:
         help="generate-only: DB-lane prep, no reading; pregenerated: profile the files a "
         "prep left (deleted after use)",
     )
+    prof.add_argument(
+        "--sizes",
+        type=lambda text: [int(part) for part in text.split(",")],
+        default=None,
+        help="comma-separated subset of NFR_467_RULE's sizes (default: all of them); a subset "
+        "reads no memory ratio",
+    )
     child = sub.add_parser("profile-child", help="(internal) one fresh profiling process")
     child.add_argument("--parquet", type=Path, required=True)
-    args = parser.parse_args()
+    return parser
+
+
+def main() -> int:
+    args = build_parser().parse_args()
 
     if args.command == "contention":
         if args.action == "run":

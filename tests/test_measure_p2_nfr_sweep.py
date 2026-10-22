@@ -284,7 +284,7 @@ def test_a_load_exactly_at_the_limit_has_not_settled() -> None:
     assert ok is False
 
 
-# --- the NFR-467 profile: size selection, summary and guards (PL-1735 Task 5a; ruling 22:52:52) ----
+# --- the NFR-467 profile: size selection, summary and guards (Task 5a; ruling 22:52:52) ---
 
 TWO_M, TEN_M = 2_000_000, 10_000_000
 
