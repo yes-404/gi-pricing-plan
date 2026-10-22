@@ -58,6 +58,7 @@ The 13 pytest failures all run the real tree: 11 assert `audit-docs.py` rc 0 (go
 
 - 2026-10-22 — branch `sl-8164-wk1178-pl8162-c` from `origin/main` @ `f3462d8f`; plan brought from `draft/pl-8162` @ `6b1de3a9`; clauses, roadmap row and this ledger written.
 - 2026-10-22 — re-merged `origin/main` @ `71e481fa` (merge commit `f524df5f`; `git merge-tree --write-tree` rc 1, only `docs/INDEX.md` conflicted, taken from main and regenerated). On `f524df5f` under the gate-2 flock: `doc-index.py --check` rc 0 (`OK (byte-stable)`); `register-lint.py` rc 0 (`OK (0 violations)`); `audit-docs.py` rc 1, `FAILED (2)`, both check 31 (`gap in the full allocation between 1840 and 8162`, `between 8162 and 8164`), the unminted working ids. Full gate owed, queued after FD-1838.
+- 2026-10-22 — RS 8189 B2 (the maintainer's entry "2026-10-22 17:57:29 BST", option (a)): the FR-6 dated clause in `00-overview.md` is reworded in place (unmerged). It now narrows FR-6 to the per-artifact producing-Job id (ten shapes, census kept), carries only the UI half to §14, and adds one transparency sentence (not a carry) naming `DatasetVersion`, `Model`, `CustomObjective`, `RateTable`, `RateTableVersion`, `RatingVersion` and the shared `provenance` object as outside the narrowed FR-6; the "accepted with the gap" wording and the §14 carry of the gap and of the shared object are removed. The `### Gate` table above ran on `507cfba6` and is SUPERSEDED: the docs-only gate re-runs once after the planner's PL 8162 commit (B1) lands, on the lead's "GATE GO <sha>".
 
 ## PRs
 
