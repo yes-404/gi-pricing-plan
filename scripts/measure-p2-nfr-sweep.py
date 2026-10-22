@@ -1051,7 +1051,25 @@ def _profile_child(parquet: Path) -> int:
     return 0
 
 
+def _generate_parquet(rows: int, path: Path) -> None:
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "bench-data.py"),
+            "--rows",
+            str(rows),
+            "--generate-to",
+            str(path),
+        ],
+        check=True,
+    )
+
+
 def _profile(args: argparse.Namespace) -> int:
+    """NFR-467. Three modes on one rule (`NFR_467_RULE`): the default generates, profiles and
+    deletes each size in turn; `--generate-only` is the DB-lane prep (generation is not a
+    reading and takes no window); `--pregenerated` profiles files a prep left, so a window
+    spends its minutes on the profile and not on generating 10 M rows."""
     import shutil
 
     tmpdir = args.tmpdir
@@ -1061,33 +1079,31 @@ def _profile(args: argparse.Namespace) -> int:
     rule = NFR_467_RULE
     readings: dict[int, dict[str, Any]] = {}
     for rows in rule["sizes"]:
+        path = tmpdir / f"nfr467-{rows}.parquet"
         free_gb = shutil.disk_usage(tmpdir).free / 2**30
         guards = {
             "mem_available_gb": round(mem_available_gb(), 2),
             "disk_free_gb": round(free_gb, 2),
         }
-        print(json.dumps({"guards": guards, "rows": rows}))
-        if (
-            guards["mem_available_gb"] < rule["mem_available_min_gb"]
-            or free_gb < rule["disk_free_min_gb"]
-        ):
+        print(json.dumps({"guards": guards, "rows": rows, "mode": args.mode}))
+        too_little_mem = guards["mem_available_gb"] < rule["mem_available_min_gb"]
+        too_little_disk = free_gb < rule["disk_free_min_gb"]
+        # The disk guard is for generation; a pregenerated file already holds its disk.
+        if too_little_mem or (too_little_disk and args.mode != "pregenerated"):
             raise SystemExit(
                 f"guard failed at {rows} rows: {guards}; "
                 "name this run an nfr-bench-1 session 2 extra reading"
             )
-        path = tmpdir / f"nfr467-{rows}.parquet"
+        if args.mode == "generate-only":
+            _generate_parquet(rows, path)
+            print(json.dumps({"generated": str(path), "bytes": path.stat().st_size}))
+            continue
+        if args.mode == "pregenerated" and not path.is_file():
+            raise SystemExit(f"--pregenerated: {path} does not exist; run --generate-only first")
+        _settle_or_stop(f"NFR-467 {rows}")
         try:
-            subprocess.run(
-                [
-                    sys.executable,
-                    str(ROOT / "scripts" / "bench-data.py"),
-                    "--rows",
-                    str(rows),
-                    "--generate-to",
-                    str(path),
-                ],
-                check=True,
-            )
+            if args.mode == "generate-and-profile":
+                _generate_parquet(rows, path)
             child = subprocess.run(
                 [
                     sys.executable,
@@ -1111,6 +1127,8 @@ def _profile(args: argparse.Namespace) -> int:
             session=session_header(),
             **readings[rows],
         )
+    if args.mode == "generate-only":
+        return 0
     small, large = (readings[r] for r in rule["sizes"])
     ratio = memory_ratio(large["delta_peak_bytes"], small["delta_peak_bytes"])
     wall = large["wall_s"]
@@ -1155,6 +1173,13 @@ def main() -> int:
     cells.add_argument("--seeded-jobs", type=int, default=NFR_1443_SEEDED_JOBS)
     prof = sub.add_parser("profile", help="NFR-467: profiling at 2 M and 10 M rows x 80 columns")
     prof.add_argument("--tmpdir", type=Path, required=True, help="the job's directory, not /tmp")
+    prof.add_argument(
+        "--mode",
+        choices=("generate-and-profile", "generate-only", "pregenerated"),
+        default="generate-and-profile",
+        help="generate-only: DB-lane prep, no reading; pregenerated: profile the files a "
+        "prep left (deleted after use)",
+    )
     child = sub.add_parser("profile-child", help="(internal) one fresh profiling process")
     child.add_argument("--parquet", type=Path, required=True)
     args = parser.parse_args()
