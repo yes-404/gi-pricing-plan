@@ -43,7 +43,7 @@ Base: `origin/main` `f3462d8f`. Branch `sl-8166-wk1178-pl8162-a`, worktree `.cla
 
 ### Gate
 
-All runs `run-small.sh` / the single-file vitest guard, under the `small-test` flock; whole files, no `-k`. Logs are copied to `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl-8166/` (originals `/tmp/exec-a-*.log`, which a reboot clears); each opens with `HEAD=`. The closure list is `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl-8166/exec-a-closure.txt`, the pricing-core part `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl-8166/exec-a-pk.txt`.
+All runs `run-small.sh` / the single-file vitest guard, under the `small-test` flock; whole files, no `-k`. Logs are copied to `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl-8166/` (the `/tmp/exec-a-*.log` originals are no longer cited; the durable copies are these files); each opens with `HEAD=`. The closure list is `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl-8166/exec-a-closure.txt`, the pricing-core part `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl-8166/exec-a-pk.txt`.
 
 **Static at head `cd9b3a9a`→`b08fbef6`:** `ruff check` on the 9 changed `.py` files: `All checks passed!`; `mypy`: `Success: no issues found in 244 source files`; `lint-imports`: `Contracts: 4 kept, 0 broken.`; `generate-contracts.py --check`: rc 0, `54 generated contracts match the models`; `pnpm install --frozen-lockfile` and `generate:api` rc 0.
 
@@ -68,6 +68,21 @@ The FR-89 spec commit `db41422c` landed AFTER the code commits `e29cefcc` and `5
 ### Open observation (RS 8183 B4)
 
 A stored draft negative-binomial `GlmSpec` without θ now fails `GlmSpec` validation on load. Counted read-only on 2026-10-22 (exec-8166b, 16:45Z, one SELECT per database, no open transaction) at the maintainer's direction (to-lead "2026-10-22 17:41:48 BST" item 3). `\l` lists `gipricing`, `gipricing_fd-1838_gate`, `postgres`, `template0`, `template1`; the `gip` database is absent. Persisting: `gipricing` (the compose database that survives a run). Per-run: `gipricing_fd-1838_gate` (FD-1838's gate database), counted anyway; `postgres`, `template0` and `template1` are system databases. The only column holding a spec is `models.spec` (JSONB; the one `jsonb` column with `spec` in its name, and the θ is `spec->'family_params'->>'theta'`, per `GlmSpec` in `packages/model-schema/src/model_schema/modelling.py`), draft and non-draft alike. SQL verbatim: `select count(*) as nb_models, count(*) filter (where (spec->'family_params'->>'theta') is null) as nb_without_theta from models where spec->>'family'='negative_binomial'`. Result: `gipricing` 0 NB models, 0 without θ; `gipricing_fd-1838_gate` 0, 0 (`gipricing` holds 0 models in all). The count is 0 everywhere countable here; it says nothing of a deployment this box does not hold. Verdict: **deferred with owner WK-1178**.
+
+### Evidence (RS 8188) — re-run and persisted 2026-10-22 (exec-8166c, head `afdea77451f0c8edcf6a1530ac1677a10c001ecf`, tree `71504d9806e236d419a4f3ed1181462b26ecf0fd`)
+
+RS 8188 found the claims above had no durable log. Each log below opens with `git rev-parse HEAD`, `HEAD^{tree}`, `date -Is` and load1, and ends `rc=0`. This is a re-run on the head above, not the original runs.
+
+- **B2, the six frontend files**, each alone under the item-28 guard (`test -f` printed, exact path, load1 < 6, flock `small-test`), each log showing `Test Files  1 passed (1)`:
+  - `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl-8166/evidence-8188/reachability.log` — `src/router/__tests__/reachability.test.ts`: `Tests  2 passed (2)`, rc=0.
+  - `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl-8166/evidence-8188/routeGraph.log` — `src/router/__tests__/routeGraph.test.ts`: `Tests  9 passed (9)`, rc=0.
+  - `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl-8166/evidence-8188/DemoView.log` — `src/views/__tests__/DemoView.test.ts`: `Tests  7 passed (7)`, rc=0.
+  - `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl-8166/evidence-8188/DiagnosticsView.log` — `src/views/__tests__/DiagnosticsView.test.ts`: `Tests  16 passed (16)`, rc=0.
+  - `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl-8166/evidence-8188/ModelComparisonView.log` — `src/views/__tests__/ModelComparisonView.test.ts`: `Tests  6 passed (6)`, rc=0.
+  - `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl-8166/evidence-8188/ModelDetailView.log` — `src/views/__tests__/ModelDetailView.test.ts`: `Tests  20 passed (20)`, rc=0.
+- **B4, contracts:** `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl-8166/evidence-8188/contracts.log` — `54 generated contracts match the models`, rc=0.
+- **B4, the NB count:** `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl-8166/evidence-8188/nb-count.log` — the SQL verbatim above, run read-only on each database `\l` lists that holds the `models` table: `gipricing` `0 | 0`, `gipricing_fd-1838_gate` `0 | 0`, `gipricing_sl-8185_215125e7` `0 | 0`, each rc=0 (`gipricing_sl-8185_215125e7` is another seat's per-run database, counted anyway; `postgres` and the templates are system databases).
+- **B3, skips:** `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl-8166/evidence-8188/b3-scalar-predict-rs.log` — `PYTEST_ADDOPTS=-rs` through `run-small.sh`, `test_glm_scalar_predict.py` `34 passed, 4 skipped in 3.47s`, rc=0 (the four skips as named above; a first attempt was refused by `run-small.sh` at load1 6.44, exit 66, and re-run when the box was quieter).
 
 ### Audit
 
