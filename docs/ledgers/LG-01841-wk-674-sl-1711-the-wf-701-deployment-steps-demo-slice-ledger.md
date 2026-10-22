@@ -294,6 +294,10 @@ The 13 node ids are the `FAILED` lines of `scratch/sl1711-gate/pytest.log` at be
 - `tests/test_repository_invariants.py::test_journey_citations_are_audited_in_ci`
 - `tests/test_repository_invariants.py::test_money_discipline_is_enforced_by_the_docs_audit`
 
+### Remaining `8136` citations in `docs/`
+
+`git grep -n -o -E ".{0,50}\b8136\b.{0,30}" -- docs` at the head of this section prints three lines (paths abbreviated): `FD-01838-<slug>.md:39: (`origin/sl-1711-wk674-wf701-demo` @135c0b89, LG 8136): rc 1, 40 passed,`; and, in this ledger, line 19 (`Disclosure: drafted under working id 8136; minted as LG-1841 on 2026-10…`) and line 21 (`Filed 2026-10-21 under working id 8136 (lead-reserved in eta.md). Ex…`). The two ledger lines state the working id this record was drafted under and are the record of the mint, so they stay. FD-1838 line 39 stays as written: it is a frozen body (merged in #1358), and its `LG 8136` resolves through the re-pointed row of `docs/findings/register.md` (`LG-1841 @135c0b89`); the maintainer's (by delegation) entry "2026-10-22 13:22:09 BST", item B5, accepted that: "re-pointing register.md:409 in SL-1711's PR is ACCEPTED. FD-1838:39 stays as written: it is a frozen body."
+
 ### Carried observation (not a slice finding)
 
 Exit-demo run length for WF-701 on compose: 2500 s (WF-699 part 1335 s plus WF-701 part 1165 s), which is a **recorded MISS** against the pre-registered 600 s for the WF-701 part (PL-1710 T7), not a fail. No budget exists; the maintainer put it to the §14 plan review before the 12 Nov exit demo (to-lead "2026-10-22 13:22:09 BST"). For the record, the three `dislocation.run` spans of the R5 run above sum to 1784.2 s (515.6, 744.9 and 523.7 s), consistent with run 2's four spans (2326.9 s) recorded in `docs/findings/register.md` row 332's dated line.
