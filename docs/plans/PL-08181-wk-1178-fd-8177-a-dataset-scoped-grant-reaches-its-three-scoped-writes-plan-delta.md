@@ -218,6 +218,17 @@ guard". So both are named here, and both are built so the follow-on slice only *
 
 ### DP-4 — the guard's second shape: a permission check with no resource where the spec names one
 
+**Recorded as satisfying the 17:38:11 entry's Task 5** ("AST-based, red-first twice (names exactly
+the 3 routes at base, plus an injected route), with the **extended predicate** (a spec-named
+scoped resource vs a no-resource check) and an owned exclusion list; each entry is removed by the
+slice that fixes it (RL 8182's slice, FD 8184)"). The mapping:
+- AST-based: Task 5's resolver.
+- Red-first twice: (i) the three routes at base and (ii) an injected route. A third injected
+  route, (iii), exercises the extended predicate.
+- The extended predicate: `ROUTE_SCOPES`, with the §5.1 cross-check as its control.
+- The owned exclusion list: `KNOWN_SCOPE_GAPS`, with the stale-exclusion test forcing each row's
+  removal.
+
 **The shape** (RL 8182 "Also found"; the maintainer's 17:36:24 item 4): `03` §5.1
 (`docs/specs/03-rating-engine.md`:1080, :1083) requires "`dataset:read` on the portfolio Dataset
 Version". The code checks `dataset:read` with **no resource**: `api/dislocation_runs.py`:50–60
