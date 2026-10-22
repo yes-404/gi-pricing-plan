@@ -126,3 +126,24 @@ checking the permission, so an unauthorised caller can tell whether an Environme
 settings write (`api/environment_settings.py`, `ManageSettings` dependency) and Environment retire
 and update check the permission first (403 before 404).
 
+## DB window 2, 2026-10-22 (ENDed 17:20:28 BST) — GREEN at the fix head
+
+Tree `6aa350c7ce7f764b745ae5db3a36f8834d10eb17` (the fix `3d175af3` plus the ledger commit), clean;
+own database `gipricing_sl-1260_028cded7`, redis db 12, beside FD-1838's gate under the maintainer's
+exception, `GIP_GATE_SLOT` unset. `scratch/sl1260-db/window2.sh` halts on the first nonzero rc.
+Setup `10-w2-setup.log`: `createdb` rc 0, `alembic upgrade head` rc 0, `alembic heads` = `9b3e7c15d4a2 (head)`.
+Each log's header carries `date -Is` start and end (UTC) and `PUBSUB CHANNELS 'gip:switch*'`.
+
+| Run | Log | rc | Summary line, verbatim | Start, end (UTC) | Channels at start |
+|---|---|---|---|---|---|
+| a: `test_routing_write.py`, `test_shadow_write.py`, `test_artifact_immutability.py` | `11-w2-green-a.log` | 0 | `155 passed, 4 warnings in 21.80s` | 16:13:06, 16:13:36 | none |
+| b: `test_routing.py`, `test_shadow_scoring.py`, `test_settings.py` | `12-w2-green-b.log` | 0 | `36 passed, 1 warning in 16.37s` | 16:13:36, 16:14:00 | `gip:switch:local:local:dev` |
+| c: `test_api_authorisation_sweep.py`, `test_deployment_route_types.py`, `test_score.py` | `13-w2-green-c.log` | 0 | `79 passed, 3 warnings in 71.34s (0:01:11)` | 16:14:00, 16:15:22 | `gip:switch:local:local:dev` |
+| migration: `test_migration_routing_shadow.py` | `14-w2-green-migration.log` | 0 | `7 passed, 11 warnings in 20.67s` | 16:15:22, 16:20:21 | `gip:switch:local:local:prod` |
+
+Each run has 0 failed, 0 errors and 0 skipped (`grep -c -i "skipped\|error"` is 0 in each log). The
+channels listed are unsuffixed subscribers that were not this window's; no run failed, so no overlap
+reading was needed. Cleanup: `FLUSHDB` on db 12 gives `DBSIZE` 0, db 0 is 56, `dropdb` rc 0, the
+`pg_database` count for the window's database is 0 and no `gip_scratch_*` database is left.
+The negative controls of window 1 stand: the lines they edited are unchanged by `3d175af3`.
+
