@@ -158,6 +158,29 @@ Wrapper rc 0 over smoke rc 1. Logs: `~/gi-pricing-plan.local/scratch/sl1736/smok
 
 **Fix for run 2 (next commit):** the seeded Jobs now move to `succeeded` through the platform's own lifecycle, `jobs.transition` (`queued -> running -> succeeded`, with `result=JobResult(kind="none")`), which sets `started_at`, `finished_at` and writes the audit event by construction (`backend/src/app/platform/jobs.py:199-264`), so no constraint is hand-satisfied and the bulk UPDATE is gone. `smoke.sh` now saves the smoke's rc and `exit`s with it at the end of `fin()`, after the clean-up; its last printed line is `| exit | smoke_rc=<n> |`. Proof is required of run 3: the wrapper rc must equal the smoke rc, both quoted.
 
+#### 2026-10-22 — smoke run 3 (head `c4f7f80ea9ab8c6cb73e9105d588ec61fc0d6714`, tree `fcf268e67e45a6b90a05edaf1c49914dff483988`, load1 3.83, 22 GB available): PASSED as a wiring test; **not a reading**
+
+Command: `timeout 1700 flock -w 900 /tmp/slots/gate-1 bash ~/gi-pricing-plan.local/scratch/sl1736/smoke.sh`, foreground. **Smoke rc 0 and wrapper rc 0** (both quoted: `| smoke | rc=0 |` in the log, `wrapper_rc=0` from the shell). Logs under `~/gi-pricing-plan.local/scratch/sl1736/`: `smoke-wrapper.log`, `smoke.out`, `smoke.err`; run 2's copies are `smoke-run2-wrapper.log`, `smoke-run2.err`. Verbatim from `smoke-wrapper.log`:
+
+```
+| createdb gipricing_sl1736_smoke | rc=0 |
+| alembic upgrade | rc=0 |
+| redis db 1 FLUSHDB (start) | rc=0 |
+| smoke | rc=0 |
+| dropdb gipricing_sl1736_smoke (end) | rc=0 |
+| redis db 1 FLUSHDB (end) | rc=0 |
+| bucket gip-test-blobs-gate-1 removed (end) | rc=0 |
+| zeros | own-DB count=0 redis db 1 dbsize=0 |
+[mc ls g/] aud933-bucket/ gip-bench-compiled-for/ gip-bench-score-batch/ gip-blobs/ gip-test-blobs/ gip-test-blobs-1711/
+| exit | smoke_rc=0 |
+```
+
+What it proved, by the code path it reached: 500 seeded Jobs completed through `jobs.transition`; the rows-10000 table seeded, its two versions asserted `storage: rows`; the first diff request answered 202; the Job ran to `succeeded` with its artifact present; 100 later pages at `limit=50` all answered 200. The one reading line it printed, kept here only to show the output shape and **not read as a measurement** (500 seeded Jobs not 10 000, load1 3.4, one run, no quiet window): `{"reading": "NFR-1443", "run": "rows-10000", "storage": "rows", "cells": 10000, "n": 100, "p50_ms": 39.03, "p95_ms": 45.64, "p99_ms": 47.19, "max_ms": 48.69, "band": "DIAGNOSTIC-PASS", "seeded_jobs": 500}`.
+
+**Not exercised by this smoke** (still unrun code): the other four `cells-diff` runs (parquet storage, 250 000 and 1 000 000 cells, the cell-threshold setting for parquet), the ratio line, and the `one-way`, `storage` and `profile` subcommands. The smoke also did not seed 10 000 Jobs; the cost of 500 Jobs through `jobs.transition` was not timed, so the seeding time of the full 10 000 is unknown (it writes two audit events per Job).
+
+**Negative check of the wrapper's rc propagation** (no slot, no real docker: `PATH` points at a stub `docker` that exits 1, `scratch/sl1736/stub/docker`; log `smoke-negative.log`): `smoke.sh` failed at `createdb` after its 3 retries and the shell reported **`negative_wrapper_rc=1`**, with the last line `| exit | smoke_rc=unset |` (an early failure with no smoke rc exits 1). So the wrapper's rc is the script's own failure rc, not the last cleanup command's.
+
 #### PLANNED — the four ALONE grants and their non-ALONE companions (not run; each grant is requested from the lead with these exact commands)
 
 Common to every block. `W=/home/puzhenhao1989/gi-pricing-plan/.claude/worktrees/sl-1736`, `OUT=/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1736` (outside the repository; `mkdir -p $OUT`). The tree is the branch head at the grant (`git -C $W rev-parse HEAD`), which must be unchanged from the head named in the request. Every block starts by printing, and the seat quotes: `git -C $W rev-parse HEAD`, `cut -d" " -f1 /proc/loadavg`, `free -g`, `nproc`, `pgrep -af '[p]ytest|[v]itest|[f]lock'`, and `flock -n /tmp/slots/gate-1 true; echo $?` for both gate slots. A window starts only inside its conditions (seat brief item 15): load1 and available memory are read at the start and printed; above the limit the seat waits (re-check every 60 s, up to the D4 limit) or aborts and reports. Foreground, `timeout` on each stage, no detach (S-11, S-12).
