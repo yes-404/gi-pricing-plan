@@ -1,5 +1,5 @@
 ---
-id: FD-8184
+id: FD-1853
 family: finding
 title: Portfolio dataset:read is checked with no resource, so a Dataset-scoped grant is refused (latent)
 status: active
@@ -7,14 +7,14 @@ created: 2026-10-22
 owner: auditor
 tree: 71e481fa5d240ed366cd80c1a8c6cf6cd1d918d5
 corrected_by: []
-relates: [WK-1178, WK-676, WK-673, FD-8177, RL-8182]
+relates: [WK-1178, WK-676, WK-673, FD-1852, RL-1849]
 ---
 
-# FD-8184 — Portfolio dataset:read is checked with no resource, so a Dataset-scoped grant is refused (latent)
+# FD-1853 — Portfolio dataset:read is checked with no resource, so a Dataset-scoped grant is refused (latent)
 
 ## Finding
 
-**MEDIUM (latent): the FD-8177 class, correctly specified and unreachable by a P2 user, because no P2 path creates a
+**MEDIUM (latent): the FD-1852 class, correctly specified and unreachable by a P2 user, because no P2 path creates a
 non-workspace grant.** Opened as a candidate on "2026-10-22 17:21:38 BST", rated HIGH on "2026-10-22 17:41:48 BST",
 re-rated by the maintainer (by delegation) on "2026-10-22 17:46:43 BST" (`to-lead.md`), which supersedes the HIGH.
 Owner WK-1178. Filed under working id 8184.
@@ -46,13 +46,13 @@ to the portfolio's Dataset only.
 
 ## Remedy (not made here)
 
-It joins RL 8182's slice (`draft/rl-8182` @5e29e35a), not a new one: the dataset id resolved from the spec or the
+It joins RL-1849's slice (`draft/rl-8182` @5e29e35a), not a new one: the dataset id resolved from the spec or the
 stored run first, then the scoped check, each route red-first, the control asserting the scoped refusal rather than a
 wrong-reason pass; the SL 8185 permanent guard's predicate extended to the shape "a permission check with no resource
 where the spec names a scoped resource", or the reason it cannot be.
 
 ## Disposition
 
-Open, owner WK-1178; **fix before close**, in RL 8182's slice. That slice is queued behind P2 row work and open P2
+Open, owner WK-1178; **fix before close**, in RL-1849's slice. That slice is queued behind P2 row work and open P2
 HIGHs and lands before P2 close if capacity allows; otherwise it is **carried to WK-676 with the condition "before
 `POST /role-assignments` ships"**, never skipped silently. Filed under working id 8184.

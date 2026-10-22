@@ -1,5 +1,5 @@
 ---
-id: RS-8151
+id: RS-1844
 family: research
 kind: audit
 title: SL-1275 (WK-690 Slice 5, the authoring view and WF-702 Route B) slice audit against PL-1268, PL-1621 and PL-1665
@@ -13,7 +13,7 @@ corrected_by: []
 relates: [SL-1275, PL-1268, PL-1621, PL-1665, RL-1616, RL-1362, WF-702]
 ---
 
-# RS-8151 — SL-1275 slice audit
+# RS-1844 — SL-1275 slice audit
 
 *(Working id 8151, reserved by the lead in eta.md. Written by `aud-1275`, 2026-10-22. Check 31 on this id is expected until the mint.)*
 

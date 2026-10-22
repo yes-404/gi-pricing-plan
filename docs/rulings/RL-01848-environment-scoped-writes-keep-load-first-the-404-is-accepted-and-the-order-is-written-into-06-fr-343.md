@@ -1,5 +1,5 @@
 ---
-id: RL-8176
+id: RL-1848
 family: ruling
 title: "Environment-scoped writes keep load-first: the 404-before-403 existence answer is accepted within a deployment, and the order rule is written into 06 FR-343 (adopted by the maintainer 2026-10-22 17:21:38 BST, with one amendment)"
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -14,17 +14,17 @@ corrected_by: []
 relates: [RL-1301, RL-1834, RL-1401, RL-1687, SL-1260]
 ---
 
-# RL-8176 — Environment-scoped writes keep load-first: the 404-before-403 existence answer is accepted within a deployment, and the order rule is written into 06 FR-343
+# RL-1848 — Environment-scoped writes keep load-first: the 404-before-403 existence answer is accepted within a deployment, and the order rule is written into 06 FR-343
 
 Drafted 2026-10-22 under working id 8176 on branch `draft/rl-8176`. It is not minted here and
 carries no INDEX hunk.
 
 **Adopted by the maintainer, 2026-10-22 17:21:38 BST, with one amendment.** The authority is the
-maintainer's entry "2026-10-22 17:21:38 BST — Maintainer: RL 8176 ADOPTED, option (A) with one
-amendment; the RESOURCE_BACKED guard as a test; FD 8177 probe GO" in
+maintainer's entry "2026-10-22 17:21:38 BST — Maintainer: RL-1848 ADOPTED, option (A) with one
+amendment; the RESOURCE_BACKED guard as a test; FD-1852 probe GO" in
 `~/gi-pricing-plan.local/channel/to-lead.md` (local). Its item 1, copied by `sed`, unedited:
 
-> 1. **RL 8176** (draft/rl-8176 @00c5b9fb, dm-8176) is **ADOPTED: (A), keep load-first** for Environment-scoped writes, with no code change. 06 FR-343 gets the dated order clause at the mint. **AMENDMENT:** the revisit triggers add "**any role, built-in or custom, that holds an Environment-scoped write permission without `settings:read`**". The built-in-only trigger misses custom roles, and that is exactly who the 404 would tell something new. FD 8175 = **LOW**; it closes as accepted, citing the minted RL. Its authority is this entry.
+> 1. **RL-1848** (draft/rl-8176 @00c5b9fb, dm-8176) is **ADOPTED: (A), keep load-first** for Environment-scoped writes, with no code change. 06 FR-343 gets the dated order clause at the mint. **AMENDMENT:** the revisit triggers add "**any role, built-in or custom, that holds an Environment-scoped write permission without `settings:read`**". The built-in-only trigger misses custom roles, and that is exactly who the 404 would tell something new. FD-1851 = **LOW**; it closes as accepted, citing the minted RL. Its authority is this entry.
 
 Its items 2–4 rule the guard, custom roles and the dataset observation. They are applied below
 under "What it obliges" and "Acceptance". The draft was adopted at @00c5b9fb. The provenance
@@ -39,14 +39,14 @@ lead said it would record it in `from-lead` and told the seat to work to the `hi
 standard. Which effort the session actually ran at is not verified here.
 
 **The question.** The maintainer's entry "2026-10-22 17:13:03 BST — Maintainer: the 404-vs-403
-order on env-scoped writes goes to a DECISION-MAKER for an RL; FD 8175 is filed; SL-1260 is not
+order on env-scoped writes goes to a DECISION-MAKER for an RL; FD-1851 is filed; SL-1260 is not
 blocked" in `~/gi-pricing-plan.local/channel/to-lead.md` (local; copied by `sed`, unedited):
 
 > - **Seat a decision-maker (opus)** to draft an RL: should Environment-scoped writes converge on permission-first (403 before 404), or is the existence oracle accepted within a workspace? Options, trade-offs (consistency, RL-1301 B.2's resource choice, test churn, what an attacker learns) and one recommendation. If it recommends convergence, it names the owner Work and a slice; it does not sit in SL-1260. I adopt or amend it.
 
 and, from the same entry:
 
-> - **FD 8175:** filed in the next docs batch. Its severity is **proposed by the decision-maker below**, not assumed MEDIUM; within an authenticated workspace, Environment slugs may not be sensitive.
+> - **FD-1851:** filed in the next docs batch. Its severity is **proposed by the decision-maker below**, not assumed MEDIUM; within an authenticated workspace, Environment slugs may not be sensitive.
 
 ## Verified first, at 71e481fa (main) and 6aa350c7 (`origin/sl-1260-wk674-s6`)
 
@@ -141,7 +141,7 @@ checked in the backend on every request against `(principal, permission, resourc
 /datasets/{slug}/dictionary`: `backend/src/app/api/datasets.py`:88 "WriteDatasets =
 Annotated[Caller, Depends(requires(Perm.DATASET_WRITE))]" runs before
 `backend/src/app/platform/datasets.py`:281 `load_dataset` and the scoped check at `:282`. (See
-"What it obliges", item 6, for a side observation on that route, now FD 8177.)
+"What it obliges", item 6, for a side observation on that route, now FD-1852.)
 
 ## Ruled
 
@@ -229,21 +229,21 @@ content:
    > exception lapses if Environments become per-workspace, or if **any role, built-in or custom,
    > holds an Environment-scoped write permission without `settings:read`**.
 2. **No code and no test changes.** SL-1260 is unaffected. Its two writes already follow the rule.
-3. **FD 8175: severity LOW; it closes as accepted, citing this record once minted** (ruled, the
+3. **FD-1851: severity LOW; it closes as accepted, citing this record once minted** (ruled, the
    maintainer's 17:21:38 entry, item 1). This record does not close it here (it is not minted,
-   and FD 8175 is not on this branch).
+   and FD-1851 is not on this branch).
 4. **The `RESOURCE_BACKED` guard: ruled YES, as a test** (the maintainer's 17:21:38 entry, item 2).
    A test asserts that every `RESOURCE_BACKED` key in
    `backend/tests/test_api_authorisation_sweep.py` names an `/api/v1/environments/{env}/` path.
    It is shown **red first** on an injected non-Environment path.
-   - **Owner:** FD 8175's close vehicle, a WK-1178 delta row, test-only and small. **Not SL-1260.**
+   - **Owner:** FD-1851's close vehicle, a WK-1178 delta row, test-only and small. **Not SL-1260.**
      The working ids SL 8178 / LG 8179 are the lead's relay (lead 26, 2026-10-22). They are not in
      the maintainer's entry and are not verified here.
    - **Stop condition,** from the entry, verbatim: "If it fails on main today, STOP and report."
 5. **Custom roles without `settings:read`:** covered by the amendment in item 1's clause (the
    maintainer's entry, item 3: "No further action now").
-6. **The dataset dictionary route: raised here; tracked as FD 8177. Not ruled here.** The
-   maintainer GO'd a red-first probe under FD 8177 (the 17:21:38 entry, item 4). The observation,
+6. **The dataset dictionary route: raised here; tracked as FD-1852. Not ruled here.** The
+   maintainer GO'd a red-first probe under FD-1852 (the 17:21:38 entry, item 4). The observation,
    as raised: `PUT /datasets/{slug}/dictionary` has a
    route-level `requires(Perm.DATASET_WRITE)` (`datasets.py`:88) and a dataset-scoped check in the
    handler (`platform/datasets.py`:282). Because `requires()` passes no resource and `_covers`
@@ -252,7 +252,7 @@ content:
    the route before the handler's scoped check runs. This is the failure RL-1301 B.2 item 2 names
    for Environments. I read it in the source only and did not test it.
 
-**Not decided here:** the existence policy for a read route (none was in the survey), and FD 8177's
+**Not decided here:** the existence policy for a read route (none was in the survey), and FD-1852's
 outcome.
 
 ## Acceptance — the violation that must become detectable
@@ -267,7 +267,7 @@ it unless the route is listed in `RESOURCE_BACKED`.
 - *Violation: a non-Environment route listed in `RESOURCE_BACKED` to make that test pass.* No check
   catches this at 71e481fa. **Ruled 2026-10-22 17:21:38 BST:** a guard test asserts that every
   `RESOURCE_BACKED` key's path starts with `/api/v1/environments/{env}/`. It is shown red first on
-  an injected non-Environment path, and lands in FD 8175's close vehicle (a WK-1178 test-only delta;
+  an injected non-Environment path, and lands in FD-1851's close vehicle (a WK-1178 test-only delta;
   "What it obliges" item 4). This seat runs no tests, so the guard has not been shown red here.
 - The sweep's own red on a load-first non-Environment route was not re-run here (this seat runs no
   tests). Its docstring (`:1–10`) records the class of injection it was built to catch.

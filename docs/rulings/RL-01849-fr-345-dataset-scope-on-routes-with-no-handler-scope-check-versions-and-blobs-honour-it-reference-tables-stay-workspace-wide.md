@@ -1,5 +1,5 @@
 ---
-id: RL-8182
+id: RL-1849
 family: ruling
 title: "FR-345 dataset scope on the routes with no handler scope check: Dataset Version routes and blobs honour a dataset-scoped grant, reference tables stay workspace-wide (adopted by the maintainer 2026-10-22 17:36:24 BST, as amended 17:38:11 BST)"
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
@@ -14,13 +14,13 @@ corrected_by: []
 relates: [RL-1301]
 ---
 
-# RL-8182 — FR-345 dataset scope on the routes with no handler scope check: Dataset Version routes and blobs honour a dataset-scoped grant, reference tables stay workspace-wide
+# RL-1849 — FR-345 dataset scope on the routes with no handler scope check: Dataset Version routes and blobs honour a dataset-scoped grant, reference tables stay workspace-wide
 
 **Adopted by the maintainer, 2026-10-22 17:36:24 BST, as amended 17:38:11 BST.** Drafted by
 the decision-maker (dm-8182) on 2026-10-22 and recorded as adopted by dm-8182b. The working ids
-in prose (FD 8177, FD 8184, PL 8181, RL 8176, SL 8185) are not minted. The authority is item 1
-of the maintainer's entry "2026-10-22 17:36:24 BST — Maintainer: RL 8182 ADOPTED, option (C);
-the other single-Dataset routes join its slice; the id-oracle residual ACCEPTED; FD 8184 probe
+in prose (FD-1852, FD-1853, PL 8181, RL-1848, SL 8185) are not minted. The authority is item 1
+of the maintainer's entry "2026-10-22 17:36:24 BST — Maintainer: RL-1849 ADOPTED, option (C);
+the other single-Dataset routes join its slice; the id-oracle residual ACCEPTED; FD-1853 probe
 GO" in `to-lead.md`, verbatim:
 
 > 1. **ADOPTED: (C), per route by what it acts on:**
@@ -28,13 +28,13 @@ GO" in `to-lead.md`, verbatim:
 >    - blobs.py:52 upload-url/complete is "held under any scope", with the scope check at ingest;
 >    - blobs.py:50 GET is scoped through the owning Dataset Version (job-only blobs workspace-wide; a refusal is the same 404);
 >    - reference_tables.py:50 stays WORKSPACE-wide and **the spec records it** (not a Dataset, no ScopeType, outside FR-345; FR-350 never infers scope).
->    **Order: holds_anywhere → 403; load → 404; scoped → SCOPE_DENIED.** It applies to PL 8181's 3 routes too, and it is one more dated FR-343 sentence, minted with RL 8176's clause (one docs change, both sentences). **Owner:** WK-1178; **its own slice AFTER PL 8181's** (shared files are sequenced, not concurrent). The authority is this entry.
+>    **Order: holds_anywhere → 403; load → 404; scoped → SCOPE_DENIED.** It applies to PL 8181's 3 routes too, and it is one more dated FR-343 sentence, minted with RL-1848's clause (one docs change, both sentences). **Owner:** WK-1178; **its own slice AFTER PL 8181's** (shared files are sequenced, not concurrent). The authority is this entry.
 
 **The amendment that binds over item 1's placement.** The maintainer's entry "2026-10-22
-17:38:11 BST — Maintainer: PL 8181 (FD 8177 fix) DP-0..DP-3 RULED; GO (SL 8185 / LG 8186); my
+17:38:11 BST — Maintainer: PL 8181 (FD-1852 fix) DP-0..DP-3 RULED; GO (SL 8185 / LG 8186); my
 17:36:24 FR-343 placement AMENDED to FR-345" in `to-lead.md`, its DP-2 bullet verbatim:
 
-> - **DP-2 = a dated FR-345 clause** stating the order. **This AMENDS my 17:36:24 item 1:** the scope-order sentence goes in **FR-345** (dataset scope), not FR-343, to avoid two rulings on one row (RL 8176's clause stays in FR-343). FR-343 carries a one-line pointer to FR-345. RL 8182 cites FR-345. The id-oracle residual is stated in the clause; no OQ.
+> - **DP-2 = a dated FR-345 clause** stating the order. **This AMENDS my 17:36:24 item 1:** the scope-order sentence goes in **FR-345** (dataset scope), not FR-343, to avoid two rulings on one row (RL-1848's clause stays in FR-343). FR-343 carries a one-line pointer to FR-345. RL-1849 cites FR-345. The id-oracle residual is stated in the clause; no OQ.
 
 So item 1's "one more dated FR-343 sentence" is **replaced**: the order sentence and the residual
 go in a dated **FR-345** clause, and FR-343 gains only a one-line pointer to it ("What it
@@ -42,7 +42,7 @@ obliges" item 1). Items 2–4 of the 17:36:24 entry are recorded below ("What it
 2, 4 and 5; "Residual"). The draft text that follows ("Verified first", the options and "Why
 (C)") is kept as drafted; where it said "recommended", (C) is now adopted.
 
-**The question.** The maintainer's entry "2026-10-22 17:27:15 BST — Maintainer: FD 8177
+**The question.** The maintainer's entry "2026-10-22 17:27:15 BST — Maintainer: FD-1852
 CONFIRMED HIGH; planner GO for the fix slice; the FR-345 spec question goes to a decision-maker
 in parallel" in `to-lead.md`, verbatim:
 
@@ -56,7 +56,7 @@ Paths are under `backend/src/app/` unless they start with `docs/`.
 `rbac.require_permission` with no `resource` (:194–205). `platform/rbac.py`:205–217 `_covers`
 returns `True` for a `workspace` assignment, and `False` for any scoped assignment when
 `resource is None` (:209–212). So a route-level `requires(DATASET_*)` refuses a principal whose
-only grant is scoped to one Dataset, with 403 `PERMISSION_DENIED`. The FD 8177 probe shows this
+only grant is scoped to one Dataset, with 403 `PERMISSION_DENIED`. The FD-1852 probe shows this
 on `PUT /datasets/{slug}/dictionary` (`/home/puzhenhao1989/gi-pricing-plan.local/scratch/fd-8177/result.md`,
 probe branch `probe/fd-8177-dataset-scoped-write` @`f4c0832f`: `assert 403 == 200`,
 `"code":"PERMISSION_DENIED"`, server log `"scope":"workspace"`).
@@ -96,7 +96,7 @@ handler checks exist (`platform/datasets.py`:282–288, `platform/validation_rul
 `platform/validation.py`:259–264). PL 8181's slice fixes the three routes that put a bare
 `requires` in front of them (the maintainer's 17:27:15 entry).
 
-**6. The order rule now adopted.** RL 8176 (draft branch `draft/rl-8176` @`aab1b741`, adopted by
+**6. The order rule now adopted.** RL-1848 (draft branch `draft/rl-8176` @`aab1b741`, adopted by
 the maintainer 2026-10-22 17:21:38 BST, not minted) obliges a dated clause in `06` FR-343: "a
 route's permission check precedes any lookup of an id its path names … **One exception:** where
 the permission is checked with an **Environment** as the resource". Its reasoning (item 1 of
@@ -158,12 +158,12 @@ only if the action binds to no Dataset's data, and workspace-wide otherwise.**
    A `VR-REF-3` failure on its own Dataset is still reported in that Dataset's validation report.
 5. **Why not (A).** It forces a Dataset onto the two upload routes (a contract change for no
    security gain, since ingestion checks the Dataset anyway) and widens reference data.
-   **Why not (B).** It keeps the defect FD 8177 calls HIGH, only renamed: a scoped grant that
+   **Why not (B).** It keeps the defect FD-1852 calls HIGH, only renamed: a scoped grant that
    cannot read or validate its own Dataset's versions is the "legitimate scoped user locked out"
    case the maintainer's 17:27:15 entry ruled against.
 
-**The refusal order (it interacts with RL 8176).** A dataset-scoped check needs the Dataset id,
-so it comes after a lookup. RL 8176's FR-343 clause admits only the Environment exception to
+**The refusal order (it interacts with RL-1848).** A dataset-scoped check needs the Dataset id,
+so it comes after a lookup. RL-1848's FR-343 clause admits only the Environment exception to
 "permission before lookup", and its reasoning names datasets as the protected case. So each route
 in this ruling, **and each of PL 8181's three routes**, uses this order:
 
@@ -176,14 +176,14 @@ in this ruling, **and each of PL 8181's three routes**, uses this order:
 **Residual — ACCEPTED** (item 3 of the maintainer's 17:36:24 entry). A principal that holds
 the permission on *another* Dataset can tell an unknown id (404) from an out-of-scope one (403
 `SCOPE_DENIED`): after the load, `SCOPE_DENIED` reveals that the id exists. The maintainer
-accepted it, consistent with RL 8176 (A)'s reasoning: it is a workspace-internal oracle to an
+accepted it, consistent with RL-1848 (A)'s reasoning: it is a workspace-internal oracle to an
 already-privileged holder. It is limited to members of the same workspace who already hold the
 permission; `SCOPE_DENIED` is `06` §5.1's actionable distinction; for `dataset_versions.py` the
 ids are UUIDv7, not guessable slugs. **Revisit trigger:** if Dataset slugs or ids become
 sensitive across scopes. Per the 17:38:11 DP-2 amendment, the residual is stated in the FR-345
 clause, and there is no OQ.
 
-**This order is one dated clause in `06` FR-345, not FR-343** (the 17:38:11 amendment): RL 8176's
+**This order is one dated clause in `06` FR-345, not FR-343** (the 17:38:11 amendment): RL-1848's
 clause stays alone in FR-343, and FR-343 carries a one-line pointer to FR-345.
 
 ## What it obliges
@@ -210,7 +210,7 @@ clause stays alone in FR-343, and FR-343 carries a one-line pointer to FR-345.
      or ids become sensitive across scopes. (The 17:38:11 DP-2 amendment: this sentence is
      FR-345's, not FR-343's.)
    - `06` FR-343 gains **one line only**: a pointer that a dataset-scoped check's refusal order
-     is FR-345's (RL-<n>). It gains no order sentence from this ruling; RL 8176's clause is
+     is FR-345's (RL-<n>). It gains no order sentence from this ruling; RL-1848's clause is
      FR-343's only dated clause from this batch.
    - `06` §3's `dataset:read` row (`06-governance.md`:273) gains "and Reference Tables,
      workspace-wide only (FR-345)". This records the pairing the code already has.
@@ -252,7 +252,7 @@ clause stays alone in FR-343, and FR-343 carries a one-line pointer to FR-345.
    `api/validation.py`:67 (the `ReadDatasets` alias and the routes it guards). **Each route gets
    its own red-first test with a scoped principal**, and SL 8185's permanent guard covers them.
    The list routes (`GET /datasets`, sources) stay workspace-wide under the principle.
-5. **FD 8184 — CONFIRMED, HIGH; its fix JOINS this slice** (the maintainer's 17:36:24 item 4
+5. **FD-1853 — CONFIRMED, HIGH; its fix JOINS this slice** (the maintainer's 17:36:24 item 4
    and 17:41:48 item 2). `docs/specs/03-rating-engine.md`:1080 and :1083 require `dataset:read`
    on the portfolio Dataset Version, but `api/rate_tables.py`:430–437 and :528–535 (the diff and
    diff-cells routes) and `api/dislocation_runs.py`:50–59 `_require_dataset_read` (called at :79
@@ -282,7 +282,7 @@ The violations, and what catches each:
   instead of 403.* Caught today by `test_every_operation_refuses_a_caller_holding_no_roles`
   (`backend/tests/test_api_authorisation_sweep.py`:367), which fills each path parameter with an
   unknown UUID and asserts 403. These routes must not be added to `RESOURCE_BACKED` (:299) to make
-  it pass; RL 8176's guard test (Environment paths only) catches that.
+  it pass; RL-1848's guard test (Environment paths only) catches that.
 - *A route pairs a scope-less route-level `requires()` with a handler scoped check.* Caught by PL
   8181's regression guard (the maintainer's 17:27:15 entry), once it lands.
 - *Reference tables are widened to a dataset-scoped grant without a decision.* Caught by item 3's
@@ -293,7 +293,7 @@ This seat runs no tests, so none of these has been shown red here.
 ## Also found — now routed
 
 The draft's "Also found" note (the `03`:1080/:1083 vs no-resource `dataset:read` disagreement) was
-raised as FD 8184, probed, CONFIRMED and graded HIGH; its fix joins this slice ("What it obliges"
+raised as FD-1853, probed, CONFIRMED and graded HIGH; its fix joins this slice ("What it obliges"
 item 5).
 
 ## Revisit trigger

@@ -1,8 +1,8 @@
 ---
-id: RS-8174
+id: RS-1847
 family: research
 kind: audit
-title: SL-1711 (WK-674) delta re-audit, f279e7cc to 1cac9494, against RS 8157 B2 to B5
+title: SL-1711 (WK-674) delta re-audit, f279e7cc to 1cac9494, against RS-1846 B2 to B5
 status: draft
 created: 2026-10-22
 owner: auditor
@@ -10,26 +10,26 @@ tree: f6c5510e0d70b8eaa2fa9b3d2fa59cb1bb25365b
 phase: P2
 work: WK-674
 corrected_by: []
-relates: [SL-1711, PL-1710, RS-8157, LG-1841, FD-1576, FD-1838]
+relates: [SL-1711, PL-1710, RS-1846, LG-1841, FD-1576, FD-1838]
 ---
 
-# RS-8174 — SL-1711 fresh narrow delta re-audit
+# RS-1847 — SL-1711 fresh narrow delta re-audit
 
 *(Working id 8174, written by `aud-1711r`, 2026-10-22, from the brief `brief-aud-1711r-2026-10-22.md` (lead 26). Check 31 on this id is expected until the mint. The ledger is cited as `LG-1841`, its minted id on the branch.)*
 
 ## Question
 
-Does the delta `f279e7cc..1cac9494` on `origin/sl-1711-wk674-wf701-demo` meet the four blocking items B2 to B5 of `RS-8157`, and does it carry anything that is not the R5 fix or evidence? Authority: the maintainer, `to-lead.md` "2026-10-22 16:58:36 BST" (fresh narrow delta re-audit of the R5 fix and the ledger evidence against B2 to B5). Read with "2026-10-22 13:29:19 BST" (items 2 to 4; the row 6 waiver) and "2026-10-22 16:22:33 BST" (the `mc mb` setup accepted).
+Does the delta `f279e7cc..1cac9494` on `origin/sl-1711-wk674-wf701-demo` meet the four blocking items B2 to B5 of `RS-1846`, and does it carry anything that is not the R5 fix or evidence? Authority: the maintainer, `to-lead.md` "2026-10-22 16:58:36 BST" (fresh narrow delta re-audit of the R5 fix and the ledger evidence against B2 to B5). Read with "2026-10-22 13:29:19 BST" (items 2 to 4; the row 6 waiver) and "2026-10-22 16:22:33 BST" (the `mc mb` setup accepted).
 
 ## Method
 
-Object: `1cac9494b31d7df6cc2eeb9729dfd29a43df8d01`, tree `f6c5510e0d70b8eaa2fa9b3d2fa59cb1bb25365b`. Read by `git show/diff` on `origin/` refs only; no test, DB, docker or gate was run by this seat. The delta contains the merge `d25e7e74` of `origin/main` `71e481fa`, so two ranges were kept apart: the slice's net change is `git diff 71e481fa 1cac9494` (13 files, +2404 −64), and the R5 fix is `git diff f279e7cc be830a88` (5 files, +110 −9). B2 to B5 are quoted from `RS-8157` (`origin/aud-1711-2026-10-22`, `31fc1c83`).
+Object: `1cac9494b31d7df6cc2eeb9729dfd29a43df8d01`, tree `f6c5510e0d70b8eaa2fa9b3d2fa59cb1bb25365b`. Read by `git show/diff` on `origin/` refs only; no test, DB, docker or gate was run by this seat. The delta contains the merge `d25e7e74` of `origin/main` `71e481fa`, so two ranges were kept apart: the slice's net change is `git diff 71e481fa 1cac9494` (13 files, +2404 −64), and the R5 fix is `git diff f279e7cc be830a88` (5 files, +110 −9). B2 to B5 are quoted from `RS-1846` (`origin/aud-1711-2026-10-22`, `31fc1c83`).
 
 **The branch tip has moved past the object.** `origin/sl-1711-wk674-wf701-demo` is `1406766c`, one commit after `1cac9494` (`git log 1cac9494..origin/sl-1711-wk674-wf701-demo`), `docs(ledgers): LG-1841 — the 13 docs-audit node ids, collected and passing`: +16 lines in the ledger only (`git diff --stat`). It lists the 13 node ids and says `257 = 124 + 110 + 23`. I checked its arithmetic against the logs (below) but the verdicts here are at `1cac9494`; the lead should name which head the ACK request carries.
 
 ## B2 — R2, R3, R4, R6 red lines quoted in the LG (acceptance 1)
 
-*RS-8157 B2:* "R2, R3, R4, R6 red lines are not quoted … the red-by-cause line the plan requires 'quoted in the LG with its failure line as printed' is absent."
+*RS-1846 B2:* "R2, R3, R4, R6 red lines are not quoted … the red-by-cause line the plan requires 'quoted in the LG with its failure line as printed' is absent."
 
 **MET.** The ledger's section "W1 — in-process reds" (LG-1841 table; lines from `Red | Scratch edit | Log …`) quotes R1, R2a, R2b, R3a, R3b, R3c, R4+R6+R7b and R7a, each with the scratch edit, the log, the result line and the failure line. Checked against the logs in `scratch/sl1711-reds/`:
 
@@ -49,7 +49,7 @@ Every R2 to R7 log first-lines `be830a88` (the head the ledger names); R1 first-
 
 ## B3 — R5 on compose, R7, R9 live (acceptance 4)
 
-*RS-8157 B3:* "R5 on compose and R7 (decline floor removed in a scratch copy) are not quoted, R9 only in process."
+*RS-1846 B3:* "R5 on compose and R7 (decline floor removed in a scratch copy) are not quoted, R9 only in process."
 
 **MET.**
 
@@ -62,7 +62,7 @@ Limit: the quoted R5 line proves the *journey-computed* naming on the real stack
 
 ## B4 — acceptance 5 and 6 (NFR quotes; the PL-1544-form checklist)
 
-*RS-8157 B4:* "the S5 `LG-1824` NFR-494 and NFR-489 lines by tree, and the `PL-1544`-form rehearsal checklist at the head, are absent."
+*RS-1846 B4:* "the S5 `LG-1824` NFR-494 and NFR-489 lines by tree, and the `PL-1544`-form rehearsal checklist at the head, are absent."
 
 **MET, with row 6 waived by a dated line.**
 
@@ -73,11 +73,11 @@ Limit: the quoted R5 line proves the *journey-computed* naming on the real stack
 
 ## B5 — the stale `LG 8136` cites on main
 
-*RS-8157 B5:* "two stale `LG 8136` cites on `main` (the FD-1838 essay line 39, `register.md:409`), not re-pointed by the mint."
+*RS-1846 B5:* "two stale `LG 8136` cites on `main` (the FD-1838 essay line 39, `register.md:409`), not re-pointed by the mint."
 
 **PARTLY MET: the register row is re-pointed, the essay line is not.**
 
-- `register.md`: the FD-1838 row now reads `SL-1711 run 2 (LG-1841 @135c0b89)` (`git diff 71e481fa 1cac9494 -- docs/findings/register.md`); the other register change is the dated line on the FD-1576 row, `register.md:332`. It is appended in that row's form (`***Dated line, 2026-10-22 (measurement; no re-rating).***`) and carries the four spans 549.4, 718.2, 517.1 and 542.3 s (2326.9 s of 2573 s), the `OQ-1789` comparison and the 13:22:09 ruling (iii), "no new FD". Those four spans and the 76 rows match `RS-8157` and `LG-1841`'s compose section.
+- `register.md`: the FD-1838 row now reads `SL-1711 run 2 (LG-1841 @135c0b89)` (`git diff 71e481fa 1cac9494 -- docs/findings/register.md`); the other register change is the dated line on the FD-1576 row, `register.md:332`. It is appended in that row's form (`***Dated line, 2026-10-22 (measurement; no re-rating).***`) and carries the four spans 549.4, 718.2, 517.1 and 542.3 s (2326.9 s of 2573 s), the `OQ-1789` comparison and the 13:22:09 ruling (iii), "no new FD". Those four spans and the 76 rows match `RS-1846` and `LG-1841`'s compose section.
 - The essay `docs/findings/FD-01838-the-deployment-switch-s-pub-sub-channel-is-not-isolated-per-gate-slot-so-a-concurrent-subscriber-inflates-the-prepare-quorum.md:39` still reads `… @135c0b89, LG 8136): rc 1, 40 passed,` at `1cac9494` and at the branch tip (`git grep -n -E '\b8136\b'`: that line and the two intended disclosure lines, LG lines 19 and 21). The brief names only the register row as a re-point, and the essay is a finding body; I do not know whether the lead holds it frozen. **Residual, for the lead:** either re-point that one citation in the SL-1711 PR or add a correcting dated line; otherwise `LG 8136` resolves to nothing after the merge.
 - `LG-1824` :249/:252 quotes match the file at `71e481fa` (B4).
 
@@ -85,13 +85,13 @@ Limit: the quoted R5 line proves the *journey-computed* naming on the real stack
 
 **Evidence spot checks (check 2).** `r5-compose.log`, `r9-compose-down.log`, `w2-up-worker-io-exit.log` first-line `be830a88…`; `docs13-final-1/2/3.log` first-line `1cac9494b31d7df6cc2eeb9729dfd29a43df8d01` and end `124 passed in 190.68s`, `110 passed in 95.55s`, `23 passed in 74.04s`, each `rc=0`. The ledger text (at `1cac9494`) quotes `docs13-1/2/3.log` at `d25e7e74`: `124 passed in 191.26s`, `110 passed in 97.00s`, `23 passed in 68.71s`, `rc=0`, exactly as those files read; they first-line `d25e7e74060edfedace9f8485084d4d7225c92d6`, which is the head the ledger names. The `final` logs are at the later head and are cited only by the tip commit. The R5 and R9 `rc=` values are recording lines (above). 124 + 110 + 23 = 257 matches the tip commit's collect count; `docs13-collect.log` first-lines `1cac9494…`. I did not re-run the 13 tests.
 
-**Disclosures (check 3).** Present and accurate: the W2 attempt-1 failure (`Exited (2)` for `gi-pricing-worker-io-1` in `w2-up-worker-io-exit.log:13`, `BucketAlreadyOwnedByYou` in the log's container output) is assigned to **FD 8169**, "a product defect and not SL-1711's", citing 16:22:33; the `mc mb` setup is stated to **mask the race in this run, not to prove it absent**, as the maintainer's entry words it; the other seat's small-test overlap is disclosed with the HELD/free times and the judgement that R5 is a functional red. One small gap: the `up -d --wait` stderr line the ledger quotes (`container gi-pricing-worker-io-1 exited (2)`) is not itself in the cited log, which holds `ps` and container output; the content is supported, the wording is the seat's.
+**Disclosures (check 3).** Present and accurate: the W2 attempt-1 failure (`Exited (2)` for `gi-pricing-worker-io-1` in `w2-up-worker-io-exit.log:13`, `BucketAlreadyOwnedByYou` in the log's container output) is assigned to **FD-1850**, "a product defect and not SL-1711's", citing 16:22:33; the `mc mb` setup is stated to **mask the race in this run, not to prove it absent**, as the maintainer's entry words it; the other seat's small-test overlap is disclosed with the HELD/free times and the judgement that R5 is a functional red. One small gap: the `up -d --wait` stderr line the ledger quotes (`container gi-pricing-worker-io-1 exited (2)`) is not itself in the cited log, which holds `ps` and container output; the content is supported, the wording is the seat's.
 
-**Scope creep (check 5).** The slice's net change against `71e481fa` is 13 files. Non-evidence, non-R5 code in them is the slice's own build (journey, demo, the two tests and the two rating JSONs), already audited by `RS-8157`; the delta since `f279e7cc` that is the slice's own is `test_wf701_failure_line.py`, `journey.py`, `journey_wf701.py` and `scripts/demo.py` (the R5 fix, authorised by the 13:32:12 ruling, whose item 1 has `JourneyStepFailed` gaining a field) plus the ledger and `register.md`. Everything else in `git diff f279e7cc 1cac9494` (28 files, `git diff --stat f279e7cc 1cac9494 -- . ':!docs/ledgers'`, which lists SL-1275's frontend, backend, model-schema, contract and spec files) is the SL-1275 merge `71e481fa`, not the slice's. No other slice change found. `journey.py` is the shared WF-699 module; the edit adds two defaulted fields and changes no existing call.
+**Scope creep (check 5).** The slice's net change against `71e481fa` is 13 files. Non-evidence, non-R5 code in them is the slice's own build (journey, demo, the two tests and the two rating JSONs), already audited by `RS-1846`; the delta since `f279e7cc` that is the slice's own is `test_wf701_failure_line.py`, `journey.py`, `journey_wf701.py` and `scripts/demo.py` (the R5 fix, authorised by the 13:32:12 ruling, whose item 1 has `JourneyStepFailed` gaining a field) plus the ledger and `register.md`. Everything else in `git diff f279e7cc 1cac9494` (28 files, `git diff --stat f279e7cc 1cac9494 -- . ':!docs/ledgers'`, which lists SL-1275's frontend, backend, model-schema, contract and spec files) is the SL-1275 merge `71e481fa`, not the slice's. No other slice change found. `journey.py` is the shared WF-699 module; the edit adds two defaulted fields and changes no existing call.
 
 ## Findings
 
-- None blocking beyond the B5 residual. Open items for the lead, none of them a defect in the evidence: (1) the FD-1838 essay line 39 `LG 8136`; (2) the object (`1cac9494`) is not the branch tip (`1406766c`); the tip adds the 13 node ids and no code; (3) the gate of record is at `be830a88` and was red on the 13 docs-audit tests; the ACK request needs the post-merge gate or CI line (the maintainer lists CI incl. python); (4) `RS-8157` B1 (the gate of record) is outside this narrow delta and was not re-audited; (5) a `cd /tmp` was issued once by this seat in a Bash call by mistake (the shell reset to the original cwd the same call; no git write followed from `/tmp`).
+- None blocking beyond the B5 residual. Open items for the lead, none of them a defect in the evidence: (1) the FD-1838 essay line 39 `LG 8136`; (2) the object (`1cac9494`) is not the branch tip (`1406766c`); the tip adds the 13 node ids and no code; (3) the gate of record is at `be830a88` and was red on the 13 docs-audit tests; the ACK request needs the post-merge gate or CI line (the maintainer lists CI incl. python); (4) `RS-1846` B1 (the gate of record) is outside this narrow delta and was not re-audited; (5) a `cd /tmp` was issued once by this seat in a Bash call by mistake (the shell reset to the original cwd the same call; no git write followed from `/tmp`).
 
 ## Verdict proposal (the lead's to adopt, amend or reject)
 

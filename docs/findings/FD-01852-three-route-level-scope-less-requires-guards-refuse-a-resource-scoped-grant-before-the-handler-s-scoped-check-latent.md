@@ -1,5 +1,5 @@
 ---
-id: FD-8177
+id: FD-1852
 family: finding
 title: Three route-level scope-less requires() guards refuse a resource-scoped grant before the handler's scoped check (latent)
 status: active
@@ -10,7 +10,7 @@ corrected_by: []
 relates: [WK-1178, WK-676, RL-1301]
 ---
 
-# FD-8177 — Three route-level scope-less requires() guards refuse a resource-scoped grant before the handler's scoped check (latent)
+# FD-1852 — Three route-level scope-less requires() guards refuse a resource-scoped grant before the handler's scoped check (latent)
 
 ## Finding
 

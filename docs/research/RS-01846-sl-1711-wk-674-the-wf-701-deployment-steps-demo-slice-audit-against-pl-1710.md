@@ -1,5 +1,5 @@
 ---
-id: RS-8157
+id: RS-1846
 family: research
 kind: audit
 title: SL-1711 (WK-674, the scripted WF-701 deployment-steps demo) slice audit against PL-1710, at f279e7cc
@@ -13,7 +13,7 @@ corrected_by: []
 relates: [SL-1711, PL-1710, WF-701, FD-1576, OQ-1789, RL-1712]
 ---
 
-# RS-8157 — SL-1711 slice audit
+# RS-1846 — SL-1711 slice audit
 
 *(Working id 8157, reserved by the lead. Written by `aud-1711`, 2026-10-22 13:16 BST, from the brief `brief-aud-1711-2026-10-22.md` (lead 26, 13:13:31 BST). Check 31 on this id is expected until the mint. The ledger is cited as `LG 1841`, its minted id on the branch; the lead's brief calls it LG 8136, its working id.)*
 

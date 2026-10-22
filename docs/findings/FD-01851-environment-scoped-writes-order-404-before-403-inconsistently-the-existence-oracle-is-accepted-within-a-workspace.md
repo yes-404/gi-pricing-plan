@@ -1,5 +1,5 @@
 ---
-id: FD-8175
+id: FD-1851
 family: finding
 title: Environment-scoped writes order 404 before 403 inconsistently; the existence oracle is accepted within a workspace
 status: retired
@@ -7,10 +7,10 @@ created: 2026-10-22
 owner: auditor
 tree: 71e481fa5d240ed366cd80c1a8c6cf6cd1d918d5
 corrected_by: []
-relates: [WK-1178, RL-8176, RL-1301, SL-1260]
+relates: [WK-1178, RL-1848, RL-1301, SL-1260]
 ---
 
-# FD-8175 — Environment-scoped writes order 404 before 403 inconsistently; the existence oracle is accepted within a workspace
+# FD-1851 — Environment-scoped writes order 404 before 403 inconsistently; the existence oracle is accepted within a workspace
 
 ## Finding
 
@@ -37,7 +37,7 @@ At `origin/main` 71e481fa:
 
 ## Disposition
 
-**Accepted** (`status: retired`). RL 8176 (`draft/rl-8176` @aab1b741), adopted by the maintainer (by delegation) on
+**Accepted** (`status: retired`). RL-1848 (`draft/rl-8176` @aab1b741), adopted by the maintainer (by delegation) on
 "2026-10-22 17:21:38 BST", chooses option (A): keep load-first for Environment-scoped writes, with no code change;
 `06` FR-343 gets a dated order clause at the mint. Its amendment adds a revisit trigger: any role, built-in or
 custom, that holds an Environment-scoped write permission without `settings:read`.
