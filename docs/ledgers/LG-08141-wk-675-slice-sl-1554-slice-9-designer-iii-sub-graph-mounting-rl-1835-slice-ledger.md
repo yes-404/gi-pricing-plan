@@ -59,3 +59,42 @@ Entries are appended below as the work lands.
 ### Entry 2026-10-22 — test defect found at GREEN: DagDesignerMounts "shows a validate-route issue … on that node"
 
 At head 0916a2a5 this test failed with `Error: no node m_refund` (test line 72). Cause confirmed, not assumed: the test called `node("m_refund")` synchronously after `render`, before Vue Flow had put its nodes in the DOM. With `await screen.findByLabelText(/sub-graph mount m_refund/)` first, the file passed (11 passed (11)). With that await and the issue dropped from the fixture (`issues: []`), the issue assertion failed (`Unable to find an element with the text: m_refund closes a cycle`, 1 failed | 10 passed (11)), so it still bites. A test defect, not a component defect; the assertion is unchanged. Fixed in its own commit.
+
+### Entry 2026-10-22 — RED/GREEN record (RS 8156 B1) and the N1–N3 tests
+
+RS 8156 (branch `aud-1554-2026-10-22`) found this ledger held no RED or GREEN run; the numbers relayed earlier (24 failures at `7576489f`, 8 files green) were chat only. **They are superseded by the runs below**, each one file per run through the small-test slot, stdout and stderr captured to the log named, `rc` appended by the wrapper. Nothing here is a gate; the full gate is still owed.
+
+**N1–N3, one test commit `ab405217`, written before this entry and with no code change.** Each passes at the current code, so each **pins existing behaviour; no red is possible** (run once each, pass):
+- N1 `DagDesignerMounts.test.ts`: the conditional mount's edges carry `stroke-dasharray: 6 4`, the unconditional mount's edge none (`DagDesigner.vue:119`).
+- N2 `RatingDesignViewMounts.test.ts`: with `pins.sub_graphs` omitting `m_refund`'s version, the not-pinned warning shows, the save control has `aria-disabled="false"`, and a click saves once (RL-1835 (ii) 3 "Testable as").
+- N3 `MountInspector.test.ts`: picking a pin with a different slug resets `inputs` and `outputs` to `{}`; picking another version of the same slug keeps both.
+
+**The slug-change reset (RS 8156 (v)) is a choice outside RL-1835, adopted by the lead as the slice's choice.** `MountInspector.vue` `setRef` resets the port maps when the slug changes, because a map for another fragment's ports would name ports that do not exist, which compile refuses. It is named here and pinned by N3.
+
+**Observation, no change:** clearing an input-port field saves `""` as the parent name (`setInput`), so an empty parent name can be saved for an input the ruling says is required. Not changed in this slice.
+
+RED, at `7576489f` (detached checkout in the slice worktree; its test files, before N1–N3), vitest summary lines verbatim:
+
+| File | Summary | rc | Log |
+|---|---|---|---|
+| `graphMounts.test.ts` | `Test Files  1 failed (1)` / `Tests  4 failed | 1 passed (5)` | 1 | `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/red-graphMounts.log` |
+| `MountInspector.test.ts` | `Test Files  1 failed (1)` / `Tests  6 failed (6)` | 1 | `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/red-MountInspector.log` |
+| `DagDesignerMounts.test.ts` | `Test Files  1 failed (1)` / `Tests  11 failed (11)` | 1 | `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/red-DagDesignerMounts.log` |
+| `RatingDesignViewMounts.test.ts` | `Test Files  1 failed (1)` / `Tests  3 failed (3)` | 1 | `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/red-RatingDesignViewMounts.log` |
+
+4 files, 24 failed (4 + 6 + 11 + 3), the figure the brief relayed.
+
+GREEN, at `ab405217` (the branch head with N1–N3):
+
+| File | Summary | rc | Log |
+|---|---|---|---|
+| `graphMounts.test.ts` | `Test Files  1 passed (1)` / `Tests  5 passed (5)` | 0 | `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/green-graphMounts.log` |
+| `MountInspector.test.ts` | `Test Files  1 passed (1)` / `Tests  8 passed (8)` | 0 | `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/green-MountInspector.log` |
+| `DagDesignerMounts.test.ts` | `Test Files  1 passed (1)` / `Tests  12 passed (12)` | 0 | `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/green-DagDesignerMounts.log` |
+| `NodeNavigator.test.ts` | `Test Files  1 passed (1)` / `Tests  8 passed (8)` | 0 | `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/green-NodeNavigator.log` |
+| `DagDesigner.test.ts` | `Test Files  1 passed (1)` / `Tests  6 passed (6)` | 0 | `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/green-DagDesigner.log` |
+| `DiffOverlay.test.ts` | `Test Files  1 passed (1)` / `Tests  5 passed (5)` | 0 | `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/green-DiffOverlay.log` |
+| `RatingDesignViewMounts.test.ts` | `Test Files  1 passed (1)` / `Tests  4 passed (4)` | 0 | `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/green-RatingDesignViewMounts.log` |
+| `RatingDesignView.test.ts` | `Test Files  1 passed (1)` / `Tests  7 passed (7)` | 0 | `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/green-RatingDesignView.log` |
+
+8 files, 55 passed, 0 failed. One run each: this is not a verdict on flakiness (the :72 race above was one).
