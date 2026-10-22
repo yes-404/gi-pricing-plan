@@ -908,10 +908,11 @@ def main() -> int:
         print(f"  peak RSS across the run: {max(r[2] for r in results):,.0f} MB")
     if args.peak == "hwm":
         hwm_kb = _status_kb("/proc/self/status", "VmHWM")
+        with open("/proc/loadavg") as loadavg:
+            load1 = loadavg.read().split()[0]
         print(
             f"  NFR-485 VmHWM ({args.only}, {args.rows:,} rows x {args.factors} factors): "
-            f"{hwm_kb / 1024:,.0f} MB ({hwm_kb * 1024} bytes); load1 "
-            f"{open('/proc/loadavg').read().split()[0]}"
+            f"{hwm_kb / 1024:,.0f} MB ({hwm_kb * 1024} bytes); load1 {load1}"
         )
     return 0
 

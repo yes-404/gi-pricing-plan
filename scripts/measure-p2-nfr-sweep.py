@@ -165,9 +165,7 @@ def contention_factor(runs: list[dict[str, Any]]) -> dict[str, Any]:
     return result
 
 
-_BENCH_LINE = re.compile(
-    re.escape(CONTENTION_LABEL) + r"\s+([\d.]+) s wall\s+([\d.]+) s cpu"
-)
+_BENCH_LINE = re.compile(re.escape(CONTENTION_LABEL) + r"\s+([\d.]+) s wall\s+([\d.]+) s cpu")
 
 
 def parse_bench_line(output: str) -> tuple[float, float]:
@@ -271,6 +269,7 @@ def git_head() -> str:
 
 def session_header() -> dict[str, Any]:
     """PL-1735 Task 0 Step 5: what every session records at its start and end."""
+
     def run(*cmd: str) -> str:
         return subprocess.run(cmd, capture_output=True, text=True).stdout.strip()
 
@@ -315,8 +314,15 @@ def _contention_run(role: str, out: Path) -> int:
     wall, cpu = parse_bench_line(proc.stdout)
     valid, reason = run_validity(role, load_start, load_end)
     record = {
-        "role": role, "tree": head, "started": started, "load_start": load_start,
-        "load_end": load_end, "wall_s": wall, "cpu_s": cpu, "valid": valid, "reason": reason,
+        "role": role,
+        "tree": head,
+        "started": started,
+        "load_start": load_start,
+        "load_end": load_end,
+        "wall_s": wall,
+        "cpu_s": cpu,
+        "valid": valid,
+        "reason": reason,
     }
     with open(out, "a") as handle:
         handle.write(json.dumps(record) + "\n")
@@ -340,6 +346,7 @@ def _contention_summarize(path: Path) -> int:
         f"min {result['min']:.3f}; spread {result['spread']:.3f}; band {result['band']}"
     )
     return 0
+
 
 # =============================================================================================
 # Shared scaffolding for the database-backed subcommands (NFR-468, NFR-470, NFR-1443)
@@ -429,8 +436,15 @@ async def _timed_get(
 
 
 async def _ingest(
-    env: _Env, *, workspace_id: Any, actor: Any, dataset_id: Any, payload: bytes,
-    media_type: str, filename: str, recipe: list[dict[str, Any]] | None = None,
+    env: _Env,
+    *,
+    workspace_id: Any,
+    actor: Any,
+    dataset_id: Any,
+    payload: bytes,
+    media_type: str,
+    filename: str,
+    recipe: list[dict[str, Any]] | None = None,
 ) -> Any:
     """Upload -> blob -> `dataset.ingest` Job -> execute_job, the path a worker takes
     (`examples/fremtpl2/seed.py::run`'s `ingest`). Returns the new version's id."""
@@ -444,11 +458,18 @@ async def _ingest(
     async with env.database.unit_of_work() as session:
         ref = await env.blob_store.put(session, payload, media_type)
         job = await job_service.submit(
-            session, JobKind.DATASET_INGEST,
-            {"workspace_id": str(workspace_id), "actor": actor.model_dump(mode="json"),
-             "dataset_id": str(dataset_id), "blob": ref.sha256, "filename": filename,
-             "recipe": recipe or []},
-            actor, workspace_id=workspace_id,
+            session,
+            JobKind.DATASET_INGEST,
+            {
+                "workspace_id": str(workspace_id),
+                "actor": actor.model_dump(mode="json"),
+                "dataset_id": str(dataset_id),
+                "blob": ref.sha256,
+                "filename": filename,
+                "recipe": recipe or [],
+            },
+            actor,
+            workspace_id=workspace_id,
         )
     status = await execute_job(env.database, job.id, env.blob_store)
     if status is not JobStatus.SUCCEEDED:
@@ -458,7 +479,8 @@ async def _ingest(
             await session.execute(
                 select(DatasetVersionRow.id)
                 .where(DatasetVersionRow.dataset_id == dataset_id)
-                .order_by(DatasetVersionRow.version.desc()).limit(1)
+                .order_by(DatasetVersionRow.version.desc())
+                .limit(1)
             )
         ).scalar_one()
 
@@ -466,10 +488,11 @@ async def _ingest(
 async def _fremtpl2(env: _Env, rows: int | None, reuse: bool) -> tuple[Any, Any, Any, Any]:
     """Seed freMTPL2 through `seed.py` (or reuse the last seed): returns
     (workspace_id, analyst Principal, dataset_id, [version ids by version number])."""
+    from uuid import UUID
+
     from sqlalchemy import select
 
     from app.db.models import DatasetRow, DatasetVersionRow
-    from uuid import UUID
 
     seed = _import_seed()
     if not reuse:
@@ -480,8 +503,10 @@ async def _fremtpl2(env: _Env, rows: int | None, reuse: bool) -> tuple[Any, Any,
     async with env.database.session() as session:
         dataset_id = (
             await session.execute(
-                select(DatasetRow.id).where(DatasetRow.workspace_id == workspace_id)
-                .order_by(DatasetRow.created_at.desc()).limit(1)
+                select(DatasetRow.id)
+                .where(DatasetRow.workspace_id == workspace_id)
+                .order_by(DatasetRow.created_at.desc())
+                .limit(1)
             )
         ).scalar_one()
         versions = (
@@ -500,11 +525,10 @@ async def _fremtpl2(env: _Env, rows: int | None, reuse: bool) -> tuple[Any, Any,
 async def _one_way(args: argparse.Namespace) -> int:
     from sqlalchemy import text
 
+    import pricing_core.data.profile as profile_module
     from app.platform import datasets as dataset_service
     from app.platform import profiles as profile_service
     from model_schema import RecordGrain, new_uuid7
-
-    import pricing_core.data.profile as profile_module
 
     env = _Env()
     _bootstrap_paths()
@@ -535,9 +559,14 @@ async def _one_way(args: argparse.Namespace) -> int:
         wide_actor = (await seed.grant_demo_principals(env.database, wide_ws))["analyst"]
         async with env.database.unit_of_work() as session:
             dataset = await dataset_service.create_dataset(
-                session, workspace_id=wide_ws, actor=wide_actor,
-                slug=f"wide-{new_uuid7().hex[-6:]}", name="NFR-468 wide synthetic",
-                line_of_business="motor", territory="FR", currency="EUR",
+                session,
+                workspace_id=wide_ws,
+                actor=wide_actor,
+                slug=f"wide-{new_uuid7().hex[-6:]}",
+                name="NFR-468 wide synthetic",
+                line_of_business="motor",
+                territory="FR",
+                currency="EUR",
                 default_record_grain=RecordGrain.POLICY_EXPOSURE,
             )
             wide_dataset = dataset.id
@@ -547,8 +576,12 @@ async def _one_way(args: argparse.Namespace) -> int:
         buffer = io.BytesIO()
         bench_data.synthesise(args.wide_rows).write_parquet(buffer)
         wide_version = await _ingest(
-            env, workspace_id=wide_ws, actor=wide_actor, dataset_id=wide_dataset,
-            payload=buffer.getvalue(), media_type="application/vnd.apache.parquet",
+            env,
+            workspace_id=wide_ws,
+            actor=wide_actor,
+            dataset_id=wide_dataset,
+            payload=buffer.getvalue(),
+            media_type="application/vnd.apache.parquet",
             filename="wide.parquet",
         )
         wide_name = f"wide synthetic 80 columns x {args.wide_rows} rows"
@@ -562,8 +595,10 @@ async def _one_way(args: argparse.Namespace) -> int:
                 columns = [summary.column for summary in profile.one_ways]
                 body_bytes = (
                     await session.execute(
-                        text("select pg_column_size(body) from profiles "
-                             "where dataset_version_id = :v order by created_at desc limit 1"),
+                        text(
+                            "select pg_column_size(body) from profiles "
+                            "where dataset_version_id = :v order by created_at desc limit 1"
+                        ),
                         {"v": version_id},
                     )
                 ).scalar_one()
@@ -572,7 +607,12 @@ async def _one_way(args: argparse.Namespace) -> int:
             url = f"/api/v1/dataset-versions/{version_id}/one-ways"
             headers = env.headers(who.id, ws)
 
-            async def call(column: str, url: str = url, headers: dict[str, str] = headers) -> int:
+            async def call(
+                column: str,
+                url: str = url,
+                headers: dict[str, str] = headers,
+                name: str = name,
+            ) -> int:
                 ns, response = await _timed_get(client, url, headers, column=column)
                 if response.status_code != 200:
                     raise SystemExit(
@@ -599,13 +639,20 @@ async def _one_way(args: argparse.Namespace) -> int:
                     setattr(profile_module, fn, original)
             fields = _latency_fields(samples)
             _emit(
-                "NFR-468", label=LATENCY_LABEL, corpus=name, one_way_columns=len(columns),
-                profile_body_bytes=body_bytes, load_before=load_before, load_after=read_load1(),
+                "NFR-468",
+                label=LATENCY_LABEL,
+                corpus=name,
+                one_way_columns=len(columns),
+                profile_body_bytes=body_bytes,
+                load_before=load_before,
+                load_after=read_load1(),
                 cpu_s=round(time.process_time() - cpu_before, 3),
                 band=classify_latency(
                     fields["p95_ms"], budget=THRESHOLDS_MS["NFR-468"], fraction=NEAR_BOUND_FRACTION
                 ),
-                near_bound_fraction=NEAR_BOUND_FRACTION, session=header, **fields,
+                near_bound_fraction=NEAR_BOUND_FRACTION,
+                session=header,
+                **fields,
             )
     return 0
 
@@ -624,16 +671,23 @@ async def _storage(args: argparse.Namespace) -> int:
     # The identical source again, as a later version: same bytes and recipe as the cleaned v2.
     async with env.app.router.lifespan_context(env.app):
         third = await _ingest(
-            env, workspace_id=workspace_id, actor=actor, dataset_id=dataset_id,
-            payload=seed.build_csv(args.fremtpl2_rows), media_type="text/csv",
-            filename="fremtpl2.csv", recipe=seed.recipe(drop_implausible_exposure=True),
+            env,
+            workspace_id=workspace_id,
+            actor=actor,
+            dataset_id=dataset_id,
+            payload=seed.build_csv(args.fremtpl2_rows),
+            media_type="text/csv",
+            filename="fremtpl2.csv",
+            recipe=seed.recipe(drop_implausible_exposure=True),
         )
     parquet = "application/vnd.apache.parquet"
     async with env.database.session() as session:
         rows = (
             await session.execute(
-                text("select id, version, tables from dataset_versions "
-                     "where dataset_id = :d order by version"),
+                text(
+                    "select id, version, tables from dataset_versions "
+                    "where dataset_id = :d order by version"
+                ),
                 {"d": dataset_id},
             )
         ).all()
@@ -659,36 +713,50 @@ async def _storage(args: argparse.Namespace) -> int:
 
             own = {
                 "dataset_versions_row": await scalar(
-                    "select pg_column_size(t.*) from dataset_versions t where id = :v"),
+                    "select pg_column_size(t.*) from dataset_versions t where id = :v"
+                ),
                 "validation_reports": await scalar(
                     "select coalesce(sum(pg_column_size(t.*)), 0) from validation_reports t "
-                    "where dataset_version_id = :v"),
+                    "where dataset_version_id = :v"
+                ),
                 "profiles": await scalar(
                     "select coalesce(sum(pg_column_size(t.*)), 0) from profiles t "
-                    "where dataset_version_id = :v"),
+                    "where dataset_version_id = :v"
+                ),
                 "non_parquet_blobs": other_blobs,
             }
             overhead = int(sum(own.values()))
             excluded = {
                 "ingestion_runs_rows": await scalar(
                     "select coalesce(sum(pg_column_size(t.*)), 0) from ingestion_runs t "
-                    "where dataset_version_id = :v"),
+                    "where dataset_version_id = :v"
+                ),
                 "ingestion_runs_source_bytes_read": await scalar(
                     "select coalesce(sum(bytes_read), 0) from ingestion_runs "
-                    "where dataset_version_id = :v"),
+                    "where dataset_version_id = :v"
+                ),
                 "audit_events_rows": await scalar(
                     "select coalesce(sum(pg_column_size(t.*)), 0) from audit_events t "
-                    "where entity_ref like '%' || cast(:v as text) || '%'"),
+                    "where entity_ref like '%' || cast(:v as text) || '%'"
+                ),
             }
             ratio = (payload + overhead) / payload if payload else None
             _emit(
-                "NFR-470", version=number, version_id=version_id, is_third_identical=(
-                    version_id == third),
-                payload_bytes=payload, counted_overhead_bytes=overhead, counted=own,
-                excluded=excluded, ratio=ratio, new_parquet_bytes_vs_earlier=new_bytes,
+                "NFR-470",
+                version=number,
+                version_id=version_id,
+                is_third_identical=(version_id == third),
+                payload_bytes=payload,
+                counted_overhead_bytes=overhead,
+                counted=own,
+                excluded=excluded,
+                ratio=ratio,
+                new_parquet_bytes_vs_earlier=new_bytes,
                 band=classify_storage(payload, overhead, new_bytes if version_id == third else 0)
-                if payload else "NO-PAYLOAD",
-                rule=NFR_470_RULE, session=session_header(),
+                if payload
+                else "NO-PAYLOAD",
+                rule=NFR_470_RULE,
+                session=session_header(),
             )
     return 0
 
@@ -709,13 +777,13 @@ CELLS_DIFF_RUNS = (
 async def _cells_diff(args: argparse.Namespace) -> int:
     from uuid import UUID, uuid4
 
+    from backend.tests.test_rate_tables_service import _seed_approved_model, _set_threshold
     from sqlalchemy import select, update
 
     from app.db.models import JobRow, RateTableRow, RateTableVersionRow
     from app.platform import jobs as job_service
     from app.platform import rate_tables as svc
     from app.worker.tasks import execute_job
-    from backend.tests.test_rate_tables_service import _seed_approved_model, _set_threshold
     from model_schema import JobKind, JobStatus, new_uuid7
     from model_schema.refs import ArtifactRef
 
@@ -732,16 +800,25 @@ async def _cells_diff(args: argparse.Namespace) -> int:
             async with env.database.unit_of_work() as session:
                 for i in range(start, min(start + 500, args.seeded_jobs)):
                     await job_service.submit(
-                        session, JobKind.RATE_TABLE_DIFF_CELLS,
-                        {"workspace_id": str(workspace_id), "slug": f"other-{i}",
-                         "version": 2, "against": "previous", "portfolio": None},
-                        actor, workspace_id=workspace_id,
+                        session,
+                        JobKind.RATE_TABLE_DIFF_CELLS,
+                        {
+                            "workspace_id": str(workspace_id),
+                            "slug": f"other-{i}",
+                            "version": 2,
+                            "against": "previous",
+                            "portfolio": None,
+                        },
+                        actor,
+                        workspace_id=workspace_id,
                     )
         async with env.database.unit_of_work() as session:
             await session.execute(
                 update(JobRow)
-                .where(JobRow.workspace_id == workspace_id,
-                       JobRow.kind == JobKind.RATE_TABLE_DIFF_CELLS)
+                .where(
+                    JobRow.workspace_id == workspace_id,
+                    JobRow.kind == JobKind.RATE_TABLE_DIFF_CELLS,
+                )
                 .values(status=JobStatus.SUCCEEDED)
             )
         for name, storage, cells, threshold in selected:
@@ -749,37 +826,57 @@ async def _cells_diff(args: argparse.Namespace) -> int:
             levels = [f"L{i:07d}" for i in range(cells)]
             family, slug = f"mf-{uuid4().hex[:8]}", f"tbl-{uuid4().hex[:8]}"
             await _seed_approved_model(
-                env.database, workspace_id, family,
+                env.database,
+                workspace_id,
+                family,
                 {"driver_age_band": [(lv, 1.0) for lv in levels]},
             )
             await svc.seed_from_model(
-                env.database, workspace_id, actor, env.settings, env.blob_store, slug=slug,
+                env.database,
+                workspace_id,
+                actor,
+                env.settings,
+                env.blob_store,
+                slug=slug,
                 model_ref=ArtifactRef(type="model", slug=family, version=1),
-                factor="driver_age_band", change_note="NFR-1443 measurement",
+                factor="driver_age_band",
+                change_note="NFR-1443 measurement",
             )
             v2 = "driver_age_band,relativity\n" + "".join(f"{lv},1.1\n" for lv in levels)
             await svc.import_confirmed(
-                env.database, workspace_id, actor, env.settings, env.blob_store, slug=slug,
-                version=1, filename="v2.csv", content=v2.encode(),
+                env.database,
+                workspace_id,
+                actor,
+                env.settings,
+                env.blob_store,
+                slug=slug,
+                version=1,
+                filename="v2.csv",
+                content=v2.encode(),
             )
             async with env.database.session() as session:
                 table_id = (
                     await session.execute(
                         select(RateTableRow.id).where(
-                            RateTableRow.workspace_id == workspace_id, RateTableRow.slug == slug)
+                            RateTableRow.workspace_id == workspace_id, RateTableRow.slug == slug
+                        )
                     )
                 ).scalar_one()
                 stored = set(
-                    (await session.execute(
-                        select(RateTableVersionRow.storage)
-                        .where(RateTableVersionRow.rate_table_id == table_id))
+                    (
+                        await session.execute(
+                            select(RateTableVersionRow.storage).where(
+                                RateTableVersionRow.rate_table_id == table_id
+                            )
+                        )
                     ).scalars()
                 )
             if stored != {storage}:
                 raise SystemExit(f"{name}: both versions must be storage={storage}, got {stored}")
             url = f"/api/v1/rate-tables/{slug}@2/diff/cells"
             first = await client.get(
-                url, params={"against": "previous", "limit": NFR_1443_LIMIT}, headers=headers)
+                url, params={"against": "previous", "limit": NFR_1443_LIMIT}, headers=headers
+            )
             if first.status_code != 202:
                 raise SystemExit(f"{name}: the first request answered {first.status_code}, not 202")
             job_id = UUID(first.json()["id"])
@@ -803,21 +900,36 @@ async def _cells_diff(args: argparse.Namespace) -> int:
             fields = _latency_fields(samples)
             p95[name] = fields["p95_ms"]
             _emit(
-                "NFR-1443", label=LATENCY_LABEL, run=name, storage=storage, cells=cells,
-                limit=NFR_1443_LIMIT, seeded_jobs=args.seeded_jobs,
-                load_before=load_before, load_after=read_load1(),
+                "NFR-1443",
+                label=LATENCY_LABEL,
+                run=name,
+                storage=storage,
+                cells=cells,
+                limit=NFR_1443_LIMIT,
+                seeded_jobs=args.seeded_jobs,
+                load_before=load_before,
+                load_after=read_load1(),
                 cpu_s=round(time.process_time() - cpu_before, 3),
                 band=classify_latency(
-                    fields["p95_ms"], budget=THRESHOLDS_MS["NFR-1443"],
-                    fraction=NEAR_BOUND_FRACTION),
-                near_bound_fraction=NEAR_BOUND_FRACTION, session=session_header(), **fields,
+                    fields["p95_ms"], budget=THRESHOLDS_MS["NFR-1443"], fraction=NEAR_BOUND_FRACTION
+                ),
+                near_bound_fraction=NEAR_BOUND_FRACTION,
+                session=session_header(),
+                **fields,
             )
-    for path, small, large in (("rows", "rows-10000", "rows-250000"),
-                               ("parquet", "parquet-10000", "parquet-250000")):
+    for path, small, large in (
+        ("rows", "rows-10000", "rows-250000"),
+        ("parquet", "parquet-10000", "parquet-250000"),
+    ):
         if small in p95 and large in p95:
             ratio = p95[large] / p95[small]
-            _emit("NFR-1443-ratio", label=LATENCY_LABEL, path=path, ratio=ratio,
-                  band=classify_ratio(ratio))
+            _emit(
+                "NFR-1443-ratio",
+                label=LATENCY_LABEL,
+                path=path,
+                ratio=ratio,
+                band=classify_ratio(ratio),
+            )
     return 0
 
 
@@ -828,7 +940,8 @@ def _load_module(name: str, path: Path) -> Any:
     import importlib.util
 
     spec = importlib.util.spec_from_file_location(name, path)
-    assert spec is not None and spec.loader is not None
+    assert spec is not None
+    assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules[name] = module
     spec.loader.exec_module(module)
@@ -847,16 +960,25 @@ def _profile_child(parquet: Path) -> int:
     load_start = read_load1()
     start = time.perf_counter()
     profile_parquet(
-        [str(parquet)], dataset_version_id=uuid4(),
+        [str(parquet)],
+        dataset_version_id=uuid4(),
         one_way_columns=["vehicle_group", "postcode_area", "driver_age"],
     )
     wall = time.perf_counter() - start
     hwm = read_status_bytes("VmHWM")
-    print(json.dumps({
-        "wall_s": wall, "vmhwm_bytes": hwm, "baseline_bytes": baseline,
-        "delta_peak_bytes": hwm - baseline, "payload_bytes": parquet.stat().st_size,
-        "load_start": load_start, "load_end": read_load1(),
-    }))
+    print(
+        json.dumps(
+            {
+                "wall_s": wall,
+                "vmhwm_bytes": hwm,
+                "baseline_bytes": baseline,
+                "delta_peak_bytes": hwm - baseline,
+                "payload_bytes": parquet.stat().st_size,
+                "load_start": load_start,
+                "load_end": read_load1(),
+            }
+        )
+    )
     return 0
 
 
@@ -876,33 +998,64 @@ def _profile(args: argparse.Namespace) -> int:
             "disk_free_gb": round(free_gb, 2),
         }
         print(json.dumps({"guards": guards, "rows": rows}))
-        if (guards["mem_available_gb"] < rule["mem_available_min_gb"]
-                or free_gb < rule["disk_free_min_gb"]):
-            raise SystemExit(f"guard failed at {rows} rows: {guards}; "
-                             "name this run an nfr-bench-1 session 2 extra reading")
+        if (
+            guards["mem_available_gb"] < rule["mem_available_min_gb"]
+            or free_gb < rule["disk_free_min_gb"]
+        ):
+            raise SystemExit(
+                f"guard failed at {rows} rows: {guards}; "
+                "name this run an nfr-bench-1 session 2 extra reading"
+            )
         path = tmpdir / f"nfr467-{rows}.parquet"
         try:
-            subprocess.run([sys.executable, str(ROOT / "scripts" / "bench-data.py"),
-                            "--rows", str(rows), "--generate-to", str(path)], check=True)
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "scripts" / "bench-data.py"),
+                    "--rows",
+                    str(rows),
+                    "--generate-to",
+                    str(path),
+                ],
+                check=True,
+            )
             child = subprocess.run(
-                [sys.executable, str(Path(__file__).resolve()), "profile-child",
-                 "--parquet", str(path)],
-                check=True, capture_output=True, text=True,
+                [
+                    sys.executable,
+                    str(Path(__file__).resolve()),
+                    "profile-child",
+                    "--parquet",
+                    str(path),
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
             )
         finally:
             path.unlink(missing_ok=True)
         readings[rows] = json.loads(child.stdout.strip().splitlines()[-1])
-        _emit("NFR-467-run", rows=rows, columns=rule["columns"], guards=guards,
-              session=session_header(), **readings[rows])
+        _emit(
+            "NFR-467-run",
+            rows=rows,
+            columns=rule["columns"],
+            guards=guards,
+            session=session_header(),
+            **readings[rows],
+        )
     small, large = (readings[r] for r in rule["sizes"])
     ratio = memory_ratio(large["delta_peak_bytes"], small["delta_peak_bytes"])
     wall = large["wall_s"]
     _emit(
-        "NFR-467", label="DIAGNOSTIC (time); a reading (memory)",
-        time_s=wall, time_band=classify_latency(
-            wall, budget=rule["time_budget_s"], fraction=NEAR_BOUND_FRACTION),
-        memory_ratio=ratio, memory_verdict=classify_nfr467_memory(ratio),
-        memory_rule="derived from 'sub-linear', ruled 2026-10-14 13:21:41", rule=rule,
+        "NFR-467",
+        label="DIAGNOSTIC (time); a reading (memory)",
+        time_s=wall,
+        time_band=classify_latency(
+            wall, budget=rule["time_budget_s"], fraction=NEAR_BOUND_FRACTION
+        ),
+        memory_ratio=ratio,
+        memory_verdict=classify_nfr467_memory(ratio),
+        memory_rule="derived from 'sub-linear', ruled 2026-10-14 13:21:41",
+        rule=rule,
     )
     return 0
 
@@ -921,8 +1074,11 @@ def main() -> int:
     one = sub.add_parser("one-way", help="NFR-468: the one-way read (server-side, in-process)")
     for p in (one, sub.add_parser("storage", help="NFR-470: storage overhead and dedup")):
         p.add_argument("--fremtpl2-rows", type=int, default=None, help="default: all 678 013")
-        p.add_argument("--reuse-last-seed", action="store_true",
-                       help="use examples/fremtpl2/data/last-seed.json instead of seeding")
+        p.add_argument(
+            "--reuse-last-seed",
+            action="store_true",
+            help="use examples/fremtpl2/data/last-seed.json instead of seeding",
+        )
         if p is one:
             p.add_argument("--wide-rows", type=int, default=1_000_000)
     cells = sub.add_parser("cells-diff", help="NFR-1443: the cells-diff page")

@@ -19,6 +19,7 @@ import importlib.util
 import math
 from pathlib import Path
 from types import ModuleType
+from typing import Any
 
 import pytest
 
@@ -27,7 +28,8 @@ SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "measure-p2-nfr-sw
 
 def _load() -> ModuleType:
     spec = importlib.util.spec_from_file_location("measure_p2_nfr_sweep", SCRIPT)
-    assert spec is not None and spec.loader is not None
+    assert spec is not None
+    assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -36,7 +38,7 @@ def _load() -> ModuleType:
 m = _load()
 
 
-def _run(role: str, start: float, end: float, wall: float, cpu: float = 1.0) -> dict:
+def _run(role: str, start: float, end: float, wall: float, cpu: float = 1.0) -> dict[str, Any]:
     return {"role": role, "load_start": start, "load_end": end, "wall_s": wall, "cpu_s": cpu}
 
 
@@ -54,7 +56,9 @@ def _run(role: str, start: float, end: float, wall: float, cpu: float = 1.0) -> 
         ("B", 2.0, 1.5, False),  # start must be < 2.0
     ],
 )
-def test_run_validity_follows_the_ruled_regime(role, start, end, valid) -> None:
+def test_run_validity_follows_the_ruled_regime(
+    role: str, start: float, end: float, valid: bool
+) -> None:
     ok, reason = m.run_validity(role, start, end)
     assert ok is valid
     assert (reason == "") is valid
@@ -115,7 +119,9 @@ def test_fewer_than_three_pairs_is_not_a_factor() -> None:
     ("factor", "band"),
     [(2.33, 0.42), (2.3, 0.43), (2.0, 0.5), (3.0, 0.33), (1.0001, 0.99)],
 )
-def test_the_band_is_one_over_factor_rounded_down_to_two_decimals(factor, band) -> None:
+def test_the_band_is_one_over_factor_rounded_down_to_two_decimals(
+    factor: float, band: float
+) -> None:
     assert m.band_from_factor(factor) == band
 
 
@@ -158,7 +164,7 @@ def test_a_missing_benchmark_line_is_an_error_not_a_zero() -> None:
         (300.0001, "DIAGNOSTIC-OVER"),
     ],
 )
-def test_latency_bands_at_the_interim_fraction(ms, band) -> None:
+def test_latency_bands_at_the_interim_fraction(ms: float, band: str) -> None:
     assert m.classify_latency(ms, budget=300.0, fraction=0.43) == band
 
 
@@ -176,7 +182,7 @@ def test_the_latency_fraction_moves_with_the_measured_band() -> None:
         (2.0001, "DIAGNOSTIC-OVER"),
     ],
 )
-def test_ratio_bands(ratio, band) -> None:
+def test_ratio_bands(ratio: float, band: str) -> None:
     assert m.classify_ratio(ratio) == band
 
 
@@ -187,7 +193,7 @@ def test_nearest_rank_percentile() -> None:
     assert m.nearest_rank(values, 99) == 99
     assert m.nearest_rank(values, 100) == 100
     assert m.nearest_rank([5, 1, 3], 95) == 5  # unsorted input, rank ceil(0.95 * 3) = 3
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="empty sample"):
         m.nearest_rank([], 95)
 
 
@@ -199,23 +205,23 @@ def test_nearest_rank_percentile() -> None:
         (1000, 100, 1, "DIAGNOSTIC-OVER"),  # any new bytes for the identical table
     ],
 )
-def test_nfr_470_rule(payload, overhead, new_bytes, verdict) -> None:
+def test_nfr_470_rule(payload: int, overhead: int, new_bytes: int, verdict: str) -> None:
     assert m.classify_storage(payload, overhead, new_bytes) == verdict
 
 
 def test_nfr_470_a_zero_payload_is_an_error() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="positive parquet payload"):
         m.classify_storage(0, 10, 0)
 
 
 @pytest.mark.parametrize(("r", "verdict"), [(4.99, "PASS"), (5.0, "OVER"), (9.0, "OVER")])
-def test_nfr_467_memory_ratio_is_strictly_below_five(r, verdict) -> None:
+def test_nfr_467_memory_ratio_is_strictly_below_five(r: float, verdict: str) -> None:
     assert m.classify_nfr467_memory(r) == verdict
 
 
 def test_nfr_467_memory_ratio_needs_a_positive_small_run() -> None:
     assert m.memory_ratio(236.0, 113.0) == pytest.approx(236.0 / 113.0)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="must be positive"):
         m.memory_ratio(100.0, 0.0)
 
 
@@ -223,7 +229,7 @@ def test_nfr_467_memory_ratio_needs_a_positive_small_run() -> None:
     ("hwm_bytes", "verdict"),
     [(32 * 2**30, "PASS"), (32 * 2**30 + 1, "OVER")],
 )
-def test_nfr_485_cap_is_32_gib(hwm_bytes, verdict) -> None:
+def test_nfr_485_cap_is_32_gib(hwm_bytes: int, verdict: str) -> None:
     assert m.classify_nfr485(hwm_bytes) == verdict
 
 
