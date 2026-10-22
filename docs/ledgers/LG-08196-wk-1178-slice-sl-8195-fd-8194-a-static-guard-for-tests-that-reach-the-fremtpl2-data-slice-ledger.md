@@ -68,7 +68,16 @@ Not yet written (the auditor's).
 
 Also in the file: seven fixture tests pin the checker's shapes (helper chain flagged; literal and alias flagged; skip guard via helper or fixture passes; `DATA_DIR` redirect passes; a comment, an `.exists()` with no skip, or a skip under an unrelated condition are not guards; a test reaching nothing is not flagged).
 
-**Owed:** after #1361 merges, re-merge `main` and re-run `tests/test_fremtpl2_data_guard.py` (it then covers `test_wf701_journey.py`); the gate; `FD 8194`'s record, which a later docs batch writes.
+**2026-10-22, re-merge of `origin/main` (`75f5f401`, after #1359, #1361 and the docs batch #1362), merge commit `b0d2580ceabdea1dd233cd7b55e7207df6618628`.** `git merge-tree --write-tree HEAD origin/main` gave rc=1, the one conflict `docs/INDEX.md`; main's INDEX taken and regenerated, `doc-index.py --check` rc 0 (`byte-stable`). Working-id sweep (`git grep -nE '(FD|RL|SL|LG|PL|RS)[- ]?8(1[4-9][0-9])'`, before 28 lines, after 51; logs `sweep-before.txt`, `sweep-after.txt`): the batch minted other slices' ids, but `git diff origin/main...HEAD` adds no 8xxx id other than 8194/8195/8196, so nothing of this slice's needs re-pointing.
+
+**Red/green lines, all in `~/gi-pricing-plan.local/scratch/fix-8194/`, the log's first line the head it ran on:**
+
+- (a) RED, `71e481fa-red-injected.log`: `FAILED tests/test_fremtpl2_data_guard.py::test_every_test_that_reaches_the_fremtpl2_data_carries_the_guard` / `1 failed, 7 passed in 9.97s`; the assert names `backend/tests/test_zz_injected.py::test_injected_unguarded`. Guarded variant `71e481fa-green-injected-guarded.log`: `8 passed in 9.20s`.
+- (b) GREEN on main plus the file, `71e481fa-green-main.log`: `8 passed in 12.84s`, rc=0.
+- (c) would have caught #1361, `c-proof.log` (`proof.py`, `c/`): `0a6cd6c9 test_wf701_journey.py -> ['test_c7_fails_naming_the_band_when_the_sample_rate_is_zero', 'test_wf701_journey_runs_end_to_end']`.
+- (d) GREEN on the merged head, `b0d2580ceabdea1dd233cd7b55e7207df6618628-merged-guard.log` (`scripts/run-small.sh <wt> tests/test_fremtpl2_data_guard.py`, load1 2.93): `8 passed in 10.33s`, rc=0. main now carries #1361's skipif mark in `test_wf701_journey.py`, so zero offenders.
+
+**Owed:** the code gate; the audit; the PR; the mint at its turn; `FD 8194`'s record, which a later docs batch writes.
 
 ## PRs
 
