@@ -133,3 +133,19 @@ Disclosure: a first attempt had a shell argument slip. Its mutation step failed 
 | b4 | DagDesignerValidation | `Test Files  1 passed (1)` / `Tests  3 passed (3)` | 0 | `…/regfix-b4.log` |
 
 10 files, 65 passed, 0 failed, 0 skipped. `eslint src/components/dag/graph.ts` rc 0; `vue-tsc --noEmit -p tsconfig.app.json` rc 0 (both niced). One run each: not a verdict on flakiness.
+
+### Entry 2026-10-22 — RS 8159 B1: the derived GREEN set missed importers of a changed module (exec-1554h)
+
+**Finding.** RS 8159 B1 (branch `aud-1554c-2026-10-22`, lead verdict NOT-CLEAN adopted): the text-grep rule above misses a test that reaches a changed module only through a component that imports it. `StepInspector.vue:18` has `import { names } from "./graph"`; `QuoteSandboxView.vue:21` has `import { parseRef } from "@/components/dag/graph"`.
+
+**Rule, restated: the import closure, not a text grep.** (1) Changed set = `git diff --name-only origin/main...HEAD -- frontend/src` (13 files, listed above). (2) For every `.ts`/`.vue` under `frontend/src`, parse each `from "…"`, `import("…")` and `vi.mock("…")` specifier (the keywords `from`, `import`, `mock`, `importActual` followed by a quoted string; the script is `/tmp/closure1554.py`), resolve `@/` and relative paths to a file, and add every file that imports a file already in the set; repeat until nothing is added. (3) GREEN = every `*.test.ts` that imports any file in the closure. Script: `/tmp/closure1554.py` (run `python3 -I`, at head ada287f3).
+
+**Closure.** L0 = the 13 changed files. L1 (importers) = `StepInspector.vue`, `StepNode.vue`, `router/index.ts`, `views/QuoteSandboxView.vue`. L2 = `main.ts`. Tests importing a changed file directly or via L1 component: 10 already run (b1–b4) plus `components/dag/__tests__/StepInspector.test.ts` and `views/__tests__/QuoteSandboxView.test.ts`. Tests reaching the closure only through `router/index.ts` (its `RatingDesignView`/`QuoteSandboxView` routes are lazy `() => import(...)`, router/index.ts:247 and :258): `router/__tests__/{guard,index,routeGraph}.test.ts`, `views/__tests__/{DiagnosticsView,ModelComparisonView,ModelDetailView}.test.ts`. **Not run here**; listed for the lead's ruling on whether a lazy route import counts.
+
+**b5** (head `ada287f3a1fba7fc1a4faa51c3e16846b755d1a4`; the b1–b4 logs above start at a91bff43, an earlier head). Guarded: `test -f` each, vitest names exactly those two paths, load1 2.66 (< 6). Log `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/regfix-b5.log`:
+
+| Batch | Files | Summary lines (verbatim) | rc |
+|---|---|---|---|
+| b5 | StepInspector, QuoteSandboxView | `Test Files  2 passed (2)` / `Tests  30 passed (30)` | 0 |
+
+12 files run in total across b1–b5, 0 failed, 0 skipped. One run: not a verdict on flakiness.
