@@ -51,15 +51,19 @@ function setInput(port: string, parent: string): void {
 }
 
 function setOutput(port: string, parent: string): void {
-  const { [port]: _dropped, ...rest } = props.mount.outputs ?? {};
-  edit({ outputs: parent === "" ? rest : { ...rest, [port]: parent } });
+  const outputs = { ...(props.mount.outputs ?? {}) };
+  if (parent === "") delete outputs[port];
+  else outputs[port] = parent;
+  edit({ outputs });
 }
 
 function togglePurpose(purpose: (typeof PURPOSES)[number], on: boolean): void {
   const kept = PURPOSES.filter((p) => (p === purpose ? on : (props.mount.purposes ?? []).includes(p)));
   // None checked means every purpose: the key is omitted, never `[]` (SubGraphRef refuses it).
-  const { purposes: _old, ...rest } = props.mount;
-  emit("update:mount", kept.length === 0 ? rest : { ...rest, purposes: [...kept] });
+  const next = { ...props.mount };
+  if (kept.length === 0) delete next.purposes;
+  else next.purposes = [...kept];
+  emit("update:mount", next);
 }
 
 const field = "w-full rounded-md border border-slate-300 px-2 py-1 text-sm";
