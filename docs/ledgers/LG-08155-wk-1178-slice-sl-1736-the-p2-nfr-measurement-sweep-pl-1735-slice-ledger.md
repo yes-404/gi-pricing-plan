@@ -41,13 +41,14 @@ Requirements: NFR-467, NFR-468, NFR-470, NFR-472 (red-first test + fix), NFR-485
 
 ### Task list
 
-- [ ] Activation commit (L1): this ledger, the row, the plan status.
-- [ ] Task 0 Step 2 (P0): `contention` subcommand and its constants, committed before any factor run.
-- [ ] Task 0 Step 4 (P1): sweep constants, committed before any sweep run.
-- [ ] Task 1: NFR-472 red-first test, then the fix (a DB test; owed a lead-granted DB lane).
-- [ ] Tasks 2, 3, 5, 5a: `one-way`, `storage`, `cells-diff`, `profile` subcommands.
-- [ ] Task 3 Step 4: NFR-470's dated clarification.
-- [ ] Task 4: `bench-model.py --peak hwm`; the dated line (D2 placement).
+- [x] Activation commit (L1): this ledger, the row, the plan status (`4d38616a`).
+- [x] Task 0 Step 2 (P0): the `contention` subcommand, its constants and the pure decision logic, with unit tests (`157d327e`). Written, **not yet run**.
+- [ ] Task 0 Step 3: the factor runs (grants 1 to 3 below, with the B runs between them).
+- [ ] Task 0 Step 4 (P1): the commit that sets `NEAR_BOUND_FRACTION` to the measured band (constant only), before any sweep run. **Until Step 3 lands, `NEAR_BOUND_FRACTION = 0.43` stands, as committed in P0.** Every sweep constant other than the fraction is already in P0 (`157d327e`); P1 is therefore one later commit that changes one number, or, if the factor reading never lands, none (the maintainer's D4 ruling decides).
+- [ ] Task 1: NFR-472 red-first test, then the fix. **Not started: it is a DB-backed test (`backend/tests/test_api_datasets.py`) and needs the lead's written DB lane (executor.md, line 88); the plan's Step 2 expects it red by cause.**
+- [x] Tasks 2, 3, 5, 5a written, **not yet run**: `one-way`, `storage`, `cells-diff`, `profile` subcommands (`9a350904`). The database-backed phases are wiring only until their first smoke in a granted window; see "Owed".
+- [x] Task 3 Step 4: NFR-470's dated clarification on the row (`docs/specs/01-data-management.md`), minted ids substituted (SL-1736, PL-1735, RL-1724). `audit-docs` owed.
+- [x] Task 4 Steps 1 and 3 (instrument): `bench-model.py --peak hwm` (`9a350904`); Step 4's dated line, at D2's placement (below). The shared-VM curve itself is not run.
 - [ ] Task 6: gate, per-NFR rows, hand-off.
 
 ### Gate
@@ -63,6 +64,75 @@ Not yet written (auditor seat).
 #### 2026-10-22 — activation (tree `f3462d8fc1336dc4583fe8a7af92fed399993a55`)
 
 Phase restriction in force: the SL-1711 compose retry is ALONE; edits and git only, no measurement and no test run until the lead releases it.
+
+#### 2026-10-22 — prep commits (base `f3462d8f`)
+
+| Commit | What |
+|---|---|
+| `4d38616a` | activation: this ledger, `SL-1736` row `active` with its dated line, `PL-1735` `active` |
+| `157d327e` | **P0**: `scripts/measure-p2-nfr-sweep.py` constants, pure decision logic and `contention`; `tests/test_measure_p2_nfr_sweep.py` |
+| `9a350904` | the `one-way`, `storage`, `cells-diff`, `profile` subcommands; `bench-model.py --peak hwm` |
+| (next) | NFR-470's dated clarification; the D2 run-list line at `docs/roadmap.md` under the nfr-bench-1 owner row |
+
+**Deviation from the plan, recorded:** the plan puts the thresholds in P1 and the contention subcommand in P0. The thresholds and bands are ruled values and carry no run-dependent number except `NEAR_BOUND_FRACTION`, so they are in P0 with it at the interim 0.43; P1 is the commit that replaces that one number by Task 0's band. Every sweep run's start stamp must still be later than the P1 `%aI` (or, if D4 sends the grant to nfr-bench-1 and the factor never lands, than P0's).
+
+**Dependency to know:** `cells-diff` imports two seeding helpers from `backend/tests/test_rate_tables_service.py` (`_seed_approved_model`, `_set_threshold`), because the plan says to mirror the test fixtures rather than reinvent them; `one-way` and `storage` drive `examples/fremtpl2/seed.py` (`run`, `grant_demo_principals`, `build_csv`, `recipe`). A change to any of those names breaks the harness.
+
+**D3 correction applied:** `CELLS_DIFF_RUNS` in the harness lists five runs.
+
+#### PLANNED — the four ALONE grants and their non-ALONE companions (not run; each grant is requested from the lead with these exact commands)
+
+Common to every block. `W=/home/puzhenhao1989/gi-pricing-plan/.claude/worktrees/sl-1736`, `OUT=/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1736` (outside the repository; `mkdir -p $OUT`). The tree is the branch head at the grant (`git -C $W rev-parse HEAD`), which must be unchanged from the head named in the request. Every block starts by printing, and the seat quotes: `git -C $W rev-parse HEAD`, `cut -d" " -f1 /proc/loadavg`, `free -g`, `nproc`, `pgrep -af '[p]ytest|[v]itest|[f]lock'`, and `flock -n /tmp/slots/gate-1 true; echo $?` for both gate slots. A window starts only inside its conditions (seat brief item 15): load1 and available memory are read at the start and printed; above the limit the seat waits (re-check every 60 s, up to the D4 limit) or aborts and reports. Foreground, `timeout` on each stage, no detach (S-11, S-12).
+
+**Grant 1, 2 and 3: one Task 0 ALONE run (A) each** (≤ 2.4 min + U_fix each; U_fix is `bench-model.py --only proposals`'s whole process, unmeasured). One block, repeated with `A1`, `A2`, `A3`:
+
+```bash
+W=/home/puzhenhao1989/gi-pricing-plan/.claude/worktrees/sl-1736
+OUT=/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1736; mkdir -p "$OUT"
+git -C "$W" rev-parse HEAD; cut -d" " -f1 /proc/loadavg; free -g
+flock -w 900 /tmp/slots/gate-1 -c "export GIP_GATE_SLOT=/tmp/slots/gate-1 LOKY_MAX_CPU_COUNT=2; \
+  timeout 1200 uv run --directory $W python scripts/measure-p2-nfr-sweep.py \
+    contention run --role A --out $OUT/contention.jsonl"; echo "rc=$?"
+```
+
+The `run` subcommand settles load1 below 1.0 for up to `ALONE_SETTLE_MAX_S` = 600 s, polling every 15 s (before the timed run, never during it). If it is still at or above 1.0 it prints `STOP: …` and exits 3 without running: **that is D4's stop to the lead**; the seat records the reading and ends its turn. A run that completes appends one JSON line (role, tree, load at start and end, wall, CPU, validity and reason) to `contention.jsonl`.
+
+**Between grants: B runs (contended), outside any ALONE window** (the regime the sweep itself meets: load1 in [1.0, 2.0) at start and below 2.0 at end). They are measurements too, so each needs the lead's explicit OK when load1 is read to be in that range; they are not run on the seat's own initiative:
+
+```bash
+flock -w 900 /tmp/slots/gate-1 -c "export GIP_GATE_SLOT=/tmp/slots/gate-1 LOKY_MAX_CPU_COUNT=2; \
+  timeout 1200 uv run --directory $W python scripts/measure-p2-nfr-sweep.py \
+    contention run --role B --out $OUT/contention.jsonl"; echo "rc=$?"
+```
+
+A B run whose load1 is outside the regime is recorded as invalid and re-run (the file keeps it, with its reason). The order is A1, B1, A2, B2, A3, B3. After B3: `uv run --directory $W python scripts/measure-p2-nfr-sweep.py contention summarize $OUT/contention.jsonl` (no timing; rc 0 with the factor, band and spread, or rc 1 with fewer than 3 pairs). The seat quotes the whole file and the summary into this ledger, then commits **P1** (the band, if the factor landed and the lead or the maintainer rules it applies).
+
+**Grant 4: Task 5, NFR-1443 cells-diff in an `RL-1441` quiet window** (≤ 9.7 min derived, 4.9 min measured at LG-1444). It needs its own database, bucket and Redis db, so the DB lane is part of the grant (seat brief items 15, 18, 22, 23):
+
+```bash
+W=/home/puzhenhao1989/gi-pricing-plan/.claude/worktrees/sl-1736
+OUT=/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1736; mkdir -p "$OUT"
+DB=gipricing_sl1736; BUCKET=gip-blobs-sl1736
+git -C "$W" rev-parse HEAD; cut -d" " -f1 /proc/loadavg; free -g
+docker exec gi-pricing-postgres-1 createdb -U gipricing -T gipricing "$DB"; echo "createdb rc=$?"
+export GIP_DATABASE_URL="postgresql+asyncpg://gipricing:gipricing@localhost:5432/$DB"
+uv run --directory "$W" alembic upgrade head; echo "alembic rc=$?"
+# the timed window; load1 settled below 2.0 before each run is printed by the subcommand
+flock -w 900 /tmp/slots/gate-1 -c "export GIP_GATE_SLOT=/tmp/slots/gate-1 LOKY_MAX_CPU_COUNT=2 \
+    GIP_DATABASE_URL=$GIP_DATABASE_URL GIP_REDIS_URL=redis://localhost:6379/1 GIP_BLOB_BUCKET=$BUCKET; \
+  timeout 1500 uv run --directory $W python scripts/measure-p2-nfr-sweep.py cells-diff" \
+  > "$OUT/cells-diff.jsonl" 2> "$OUT/cells-diff.err"; echo "rc=$?"
+# cleanup, then the quoted zeros (items 18, 22, 23)
+docker exec gi-pricing-redis-1 redis-cli -n 1 flushdb
+docker exec gi-pricing-minio-1 sh -c 'mc alias set g http://localhost:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" >/dev/null && mc rb --force g/'"$BUCKET"; docker exec gi-pricing-minio-1 mc ls g/
+docker exec gi-pricing-postgres-1 dropdb -U gipricing "$DB"
+docker exec gi-pricing-redis-1 redis-cli -n 1 dbsize
+docker exec gi-pricing-postgres-1 psql -U gipricing -Atc "select count(*) from pg_database where datname = '$DB'"
+```
+
+**Before Grant 4 the executor reads and corrects this block against `scratch/gate-template-demostop.sh`** (the Redis db number, the MinIO alias line and the bucket-removal call are copied from it, item 18), and reports any change as a delta. The `cells-diff` subcommand has never been run: **its first execution is a smoke at `--only rows-10000 --seeded-jobs 500`** inside a non-ALONE DB lane the lead grants, so that wiring errors (a helper's signature, the Job shape the seeded rows need) cost minutes of a smoke and not the quiet window. That smoke is not a reading and is not recorded as one.
+
+**Owed, not in these four grants** (gate-1 windows of the plan, not ALONE): Task 2 `one-way` (≤ 6.7 min + U_gen), Task 3 `storage` (≤ 1.7 min), Task 4's shared-VM `--peak hwm` curve (≤ 7.7 min + 6 × U_build), Task 5a `profile` (≤ 6.9 min + generation; guards MemAvailable ≥ 16 GB, disk ≥ 12 GB; `--tmpdir` the job's directory, never `/tmp`). Their exact commands are written when the lead grants those windows. Also owed: Task 1 (the NFR-472 red-first test and fix, a DB lane), and the checks the phase restriction deferred: `ruff check .`, `ruff format --check` on the changed files, `uv run mypy`, `tests/test_measure_p2_nfr_sweep.py` through `scripts/run-small.sh`, `python3 scripts/audit-docs.py` and `doc-index.py` (INDEX regeneration for the new ledger and the status changes), `python3 scripts/idsweep` (seat brief item 26).
 
 ## PRs
 
