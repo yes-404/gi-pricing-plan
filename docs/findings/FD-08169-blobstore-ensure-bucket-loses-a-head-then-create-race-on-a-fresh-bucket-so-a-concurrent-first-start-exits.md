@@ -43,7 +43,7 @@ the log above.
 ## Interim control
 
 The maintainer's (by delegation) entry accepts pre-creating the per-run bucket with `mc mb` before `up` as W2 setup;
-LG-1841 discloses that this masks the product race in that run.
+LG 1841 discloses that this masks the product race in that run.
 
 ## Remedy (not made here)
 
