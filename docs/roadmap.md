@@ -2841,6 +2841,26 @@ On the maintainer's (by delegation) entry "2026-10-14 12:00:14 BST" (`to-lead.md
 
 (Closed 2026-10-19 as a Slice by the mint step's closing acts (LG-1825 minted from working id 8126), on the pre-PR slice audit of LG-1825 ("### Audit", auditor-1770, 2026-10-19 07:04 BST; range `origin/main...sl-1770-wk1178-append-only-db`), adopted CLEAN by the lead and accepted by the maintainer (by delegation) (to-lead "2026-10-19 07:06:05 BST"); F4 (the FOR UPDATE refusal under the app role) is deferred with owner SL-1771 (LG-1825 "### Audit"). MERGE-ACK: not yet given.)
 
+#### SL-8178 — WK-1178 delta — FD 8175 close vehicle: a guard test that `RESOURCE_BACKED` holds only Environment-scoped paths
+
+```yaml
+id: SL-8178
+family: slice
+title: WK-1178 delta — FD 8175 close vehicle: a guard test that RESOURCE_BACKED holds only Environment-scoped paths
+status: active                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-22
+owner: lead
+tree: 71e481fa5d240ed366cd80c1a8c6cf6cd1d918d5
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-8175, LG-8179, RL-8176]
+```
+
+On the maintainer's entry "2026-10-22 17:21:38 BST" (`to-lead.md`), item 2: the guard "`RESOURCE_BACKED` may hold only `/environments/{env}/` paths" is adopted as a test, red first through an injected non-Environment path, in the FD 8175 close vehicle as a WK-1178 delta row (test-only, small), not in SL-1260; if it failed on `main` the seat was to stop. `backend/tests/test_api_authorisation_sweep_scope.py` reads `RESOURCE_BACKED` from the sweep and asserts every key's path starts `/api/v1/environments/{env}/`; a second test injects non-Environment paths into a copy and asserts the guard returns them. No application code changes. FD 8175 closes as accepted citing `RL-8176` in the docs batch.
+
+(Activated 2026-10-22 on the maintainer's entry above; executed as `exec-8178` on branch `fix/fd-8175-resource-backed-guard`; ledger LG-8179.)
+
 #### SL-1771 — WK-1178 fix slice (S-b) — FD-1729: the application connects as a login role with gip_app's grants, never as the owner
 
 ```yaml
