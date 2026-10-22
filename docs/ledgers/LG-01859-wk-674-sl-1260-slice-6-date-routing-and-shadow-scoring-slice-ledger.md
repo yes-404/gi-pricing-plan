@@ -1,9 +1,9 @@
 ---
-id: LG-8139
+id: LG-1859
 family: ledger
 title: WK-674 slice SL-1260 — Slice 6, date-based routing and shadow scoring (PL-1537 R6.1 to R6.3) (slice ledger)
 status: active                 # active → closed (§1.2a)
-created: 2026-10-21
+created: 2026-10-22              # drafted 2026-10-21 under working id 8139; minted 2026-10-22 as LG-1859
 owner: executor
 tree: 44c18e11
 phase: P2
@@ -14,7 +14,9 @@ corrected_by: []
 relates: [PL-1537, PL-1237, PL-1620, SL-1260, SL-1259, RL-1311, RL-1232]
 ---
 
-# LG-8139 — WK-674 slice SL-1260: Slice 6
+# LG-1859 — WK-674 slice SL-1260: Slice 6
+
+Disclosure: drafted under working id 8139; minted as LG-1859 on 2026-10-22, in this slice's PR.
 
 Filed 2026-10-21 under working id 8139 (lead-reserved in eta.md 15:04:27). Executor seat `exec-1260`, base `origin/main` 44c18e11, branch `sl-1260-wk674-s6`.
 
@@ -206,7 +208,7 @@ unpacks `(event,) = await _events(...)`, exactly one event of the write's action
 | V2b routing skip | `24-nv4-routing-audit-skipped.log` | 1 | `3 failed, 11 passed, 1 warning in 7.51s` | `test_a_rule_naming_a_deployed_version_is_written_and_audited`, `test_a_second_write_appends_and_records_the_previous_rule_as_before`, `test_a_routing_change_cannot_commit_without_its_audit_event` |
 | V2c shadow skip | `25-nv5-shadow-audit-skipped.log` | 1 | `3 failed, 9 passed, 4 warnings in 5.60s` | `test_a_compiled_candidate_is_configured_and_audited`, `test_a_second_write_appends_and_records_the_first_as_before`, `test_a_shadow_change_cannot_commit_without_its_audit_event` |
 
-**The maintainer's ruling, same entry, item 4, verbatim:** "**`_routed`'s unguarded flag read (api/score.py:365, caller :579): DECLARE it, not an FD.** Fail-closed is the right default for PRICING: a routing failure must never silently fall back to the default-live version, because that could quote from the wrong version. Shadow is best-effort by design and guarded. **SL-1260 amends its own 03 routing clause in place** (the slice's FR from T2; SL-1260 is not merged, so in place is fine): "a routing selection failure fails the quote (5xx, problem code named) and never falls back; a shadow failure never affects the response". **Plus a test pinning it** (select_range raises → the quote fails, never default-live). LG-8139 records it."
+**The maintainer's ruling, same entry, item 4, verbatim:** "**`_routed`'s unguarded flag read (api/score.py:365, caller :579): DECLARE it, not an FD.** Fail-closed is the right default for PRICING: a routing failure must never silently fall back to the default-live version, because that could quote from the wrong version. Shadow is best-effort by design and guarded. **SL-1260 amends its own 03 routing clause in place** (the slice's FR from T2; SL-1260 is not merged, so in place is fine): "a routing selection failure fails the quote (5xx, problem code named) and never falls back; a shadow failure never affects the response". **Plus a test pinning it** (select_range raises → the quote fails, never default-live). [the ledger's working id, 8139, elided; minted as LG-1859] records it."
 
 **`_routed` fails closed, declared.** Spec first: `03` §4.13
 Selection gains the sentence "a routing selection failure fails the quote and never falls back" (500
