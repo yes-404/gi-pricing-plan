@@ -50,6 +50,7 @@ from typing import Annotated, Any, Final
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request, Response, status
+from starlette.background import BackgroundTask
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -66,6 +67,7 @@ from app.observability.metrics import ladder_reconciliation_failed
 from app.platform import jobs as job_service
 from app.platform import rate_limit
 from app.platform import routing as routing_service
+from app.platform import shadow as shadow_service
 from app.platform import rating_versions as rating_versions_service
 from app.platform import settings as settings_service
 from app.platform import traces as traces_service
@@ -245,6 +247,98 @@ def _serving_ref(
     return ref, served_by
 
 
+def _names_no_version(ctx: QuoteContext) -> bool:
+    """A default-live quote: it names no Rating Version, so the Environment serves it."""
+    return ctx.options is None or ctx.options.rating_version_ref is None
+
+
+async def _shadow_task(
+    session: AsyncSession,
+    settings: Settings,
+    caller: Caller,
+    ctx: QuoteContext,
+    live: ScoringResult,
+    live_deployment_id: UUID | None,
+    database: Database,
+    blob_store: BlobStore,
+    slot: BundleSlot,
+) -> BackgroundTask | None:
+    """The shadow scoring to run after the response is sent, or `None` (`03` FR-271,
+    `RL-1834` D2 item 4).
+
+    Attached only for a default-live quote, when the Environment's shadow flag resolves true, a
+    configuration exists and a draw falls below its fraction. With the flag off nothing more is
+    read. A failure of the decision is logged and never raised: the quote is already priced.
+    """
+    if caller.environment is None:
+        return None
+    try:
+        flag = await settings_service.resolve(
+            session, settings, caller.workspace_id, "features.shadow_scoring_enabled",
+            caller.environment,
+        )
+        if flag.effective_value is not True:
+            return None
+        config = await shadow_service.current(
+            session, workspace_id=caller.workspace_id, environment=caller.environment
+        )
+        if config is None or random.random() >= config[1]:
+            return None
+    except Exception as exc:
+        _log.error(
+            "shadow scoring decision failed; the quote was still served",
+            exc_info=safe_job_exc_info(exc),
+            extra={"workspace_id": str(caller.workspace_id)},
+        )
+        return None
+    return BackgroundTask(
+        _shadow_score,
+        database, blob_store, slot, caller.workspace_id, caller.environment, ctx, live,
+        live_deployment_id, config[0],
+    )
+
+
+async def _shadow_score(
+    database: Database,
+    blob_store: BlobStore,
+    slot: BundleSlot,
+    workspace_id: UUID,
+    environment: str,
+    ctx: QuoteContext,
+    live: ScoringResult,
+    live_deployment_id: UUID | None,
+    candidate_ref: ArtifactRef,
+) -> None:
+    """Score the same quote against the candidate and append one `shadow_results` row. Runs
+    after the response; a failure is logged and never raised (the `_maybe_sample_trace`
+    precedent, sanitised because the failing call carries the quote context, NFR-499)."""
+    try:
+        compiled = await _compiled_for(
+            database, blob_store, slot, workspace_id=workspace_id, ref=candidate_ref
+        )
+        options = (ctx.options or QuoteContextOptions()).model_copy(
+            update={"rating_version_ref": candidate_ref, "trace": False}
+        )
+        candidate = await score_one(
+            compiled, ctx.model_copy(update={"options": options}), trace=False
+        )
+        async with database.unit_of_work() as session:
+            await shadow_service.record_result(
+                session,
+                workspace_id=workspace_id,
+                environment=environment,
+                live_deployment_id=live_deployment_id,
+                live=live,
+                candidate=candidate,
+            )
+    except Exception as exc:
+        _log.error(
+            "shadow scoring failed; the response was already sent",
+            exc_info=safe_job_exc_info(exc),
+            extra={"workspace_id": str(workspace_id), "candidate": str(candidate_ref)},
+        )
+
+
 async def _routed(
     session: AsyncSession, settings: Settings, caller: Caller, ctx: QuoteContext
 ) -> tuple[ArtifactRef, UUID] | None:
@@ -256,9 +350,7 @@ async def _routed(
     is not called and the path is `_serving_ref`'s alone. The flag is read per request through
     the request's session (the `RL-1685` pattern), so a flag write takes effect at once.
     """
-    if caller.environment is None or (
-        ctx.options is not None and ctx.options.rating_version_ref is not None
-    ):
+    if caller.environment is None or not _names_no_version(ctx):
         return None
     flag = await settings_service.resolve(
         session, settings, caller.workspace_id, "features.date_routing_enabled", caller.environment
@@ -485,6 +577,7 @@ async def score(
     # reports from there. A default-live quote has none, so it is stamped on an immutable copy
     # (never the request); the copy is also what a sampled trace stores, so the off-path
     # re-score (`score.trace_produce`) is not refused for the same gap.
+    default_live = _names_no_version(ctx)
     ctx = _with_resolved_ref(ctx, ref)
     try:
         result = await score_one(compiled, ctx, trace=trace)
@@ -496,11 +589,21 @@ async def score(
             _record_ladder_refusal(caller, compiled, ref, problem)
         raise problem from exc
 
+    # Decided before the trace step, which may close the request's read session.
+    shadow = (
+        await _shadow_task(
+            session, settings, caller, ctx, result, deployment_id, database, blob_store, slot
+        )
+        if default_live
+        else None
+    )
     await _maybe_sample_trace(
         database, settings, caller, ctx, result, deployment_id, read_session=session
     )
 
-    return Response(content=result.model_dump_json(), media_type="application/json")
+    return Response(
+        content=result.model_dump_json(), media_type="application/json", background=shadow
+    )
 
 
 def _record_ladder_refusal(

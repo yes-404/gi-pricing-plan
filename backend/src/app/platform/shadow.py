@@ -17,12 +17,13 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import RatingVersionRow, ShadowConfigRow
+from app.db.models import EnvironmentRow, RatingVersionRow, ShadowConfigRow, ShadowResultRow
 from app.errors import PlatformError
 from app.platform import audit, environments, rbac
 from app.platform.deployments import _require_rating_version
 from model_schema import (
     ArtifactRef,
+    ScoringResult,
     JobSource,
     Permission,
     Principal,
@@ -32,7 +33,7 @@ from model_schema import (
     new_uuid7,
 )
 
-__all__ = ["write_config"]
+__all__ = ["current", "record_result", "write_config"]
 
 _ACTION = "deployment.shadow_configured"
 
@@ -136,3 +137,54 @@ async def write_config(
         after=config.model_dump(mode="json"),
     )
     return config
+
+
+#: Not content: the trace is a debugging aid and `timing_ms` is the wall clock, so two calls
+#: never agree on it. A shadow result holds the premiums exactly as `ScoringResult` does.
+_NOT_CONTENT = {"trace", "timing_ms"}
+
+
+async def current(
+    session: AsyncSession, *, workspace_id: UUID, environment: str
+) -> tuple[ArtifactRef, float] | None:
+    """The Environment's current candidate and sampling fraction, or `None` if none was written.
+    One read through the caller's session (`RL-1834` D2 item 4)."""
+    row = (
+        await session.execute(
+            select(ShadowConfigRow)
+            .join(EnvironmentRow, EnvironmentRow.id == ShadowConfigRow.environment_id)
+            .where(ShadowConfigRow.workspace_id == workspace_id, EnvironmentRow.slug == environment)
+            .order_by(ShadowConfigRow.written_at.desc(), ShadowConfigRow.id.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        return None
+    return ArtifactRef.parse(row.candidate_rating_version_ref), row.fraction
+
+
+async def record_result(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    environment: str,
+    live_deployment_id: UUID | None,
+    live: ScoringResult,
+    candidate: ScoringResult,
+) -> None:
+    """Append one `shadow_results` row (`RL-1834` D2 item 5). It holds the two results and no
+    Quote Context, so it is not a quote-input store (NFR-499)."""
+    env_id = (
+        await session.execute(select(EnvironmentRow.id).where(EnvironmentRow.slug == environment))
+    ).scalar_one()
+    session.add(
+        ShadowResultRow(
+            id=new_uuid7(),
+            workspace_id=workspace_id,
+            environment_id=env_id,
+            live_deployment_id=live_deployment_id,
+            live_result=live.model_dump(mode="json", exclude=_NOT_CONTENT),
+            candidate_result=candidate.model_dump(mode="json", exclude=_NOT_CONTENT),
+        )
+    )
+    await session.flush()
