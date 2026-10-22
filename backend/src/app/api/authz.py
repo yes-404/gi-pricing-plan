@@ -42,6 +42,7 @@ __all__ = [
     "MANAGEMENT_COUNTED_ATTRIBUTE",
     "MANAGEMENT_RATE_LIMIT_SETTING",
     "PERMISSION_ATTRIBUTE",
+    "RESOURCE_CHECKED_IN_HANDLER_ATTRIBUTE",
     "CallerDep",
     "CountAfterCheck",
     "counted_caller",
@@ -65,6 +66,11 @@ PERMISSION_ATTRIBUTE = "__gip_permission__"
 #: inferring it from a status code (the lead's amendment, "an operation declares 429 IFF it
 #: can return 429").
 MANAGEMENT_COUNTED_ATTRIBUTE = "__gip_management_counted__"
+
+#: Stamped (True) on a `requires(..., held_anywhere=True)` dependency: the route only checks the
+#: permission is held under some scope, and its handler checks it on the resource the path names
+#: (FR-345's dated clause of 2026-10-22). The route-scope guard reads it.
+RESOURCE_CHECKED_IN_HANDLER_ATTRIBUTE = "__gip_resource_checked_in_handler__"
 
 #: `require_caller`, which closes the request session after resolving (the handler then runs on
 #: its own sessions, holding no second connection). `requires()` alone depends on `resolve_caller`,
@@ -168,7 +174,11 @@ async def management_counter(
 
 
 def requires(
-    permission: Permission, *, keep_session: bool = False, management_counted: bool = True
+    permission: Permission,
+    *,
+    keep_session: bool = False,
+    management_counted: bool | None = None,
+    held_anywhere: bool = False,
 ) -> Callable[..., Awaitable[Caller]]:
     """Build a dependency that refuses unless the caller holds `permission`.
 
@@ -185,12 +195,29 @@ def requires(
     `management_counted=False`, since a management count closes the session it reads through.
     """
 
+    if held_anywhere and management_counted:
+        raise ValueError(
+            "requires(held_anywhere=True) never counts: the service counts after its scoped check"
+        )
+    counted = not held_anywhere if management_counted is None else management_counted
+
     async def dependency(
         caller: Annotated[Caller, Depends(resolve_caller)],
         request: Request,
         session: RequestSessionDep,
         settings: SettingsDep,
     ) -> Caller:
+        if held_anywhere:
+            if permission.value not in caller.permissions and not await rbac.holds_anywhere(
+                session,
+                workspace_id=caller.workspace_id,
+                principal=caller.principal,
+                permission=permission,
+            ):
+                raise rbac.PermissionDeniedError(permission, None, held_elsewhere=False)
+            if not keep_session:
+                await session.close()
+            return caller
         await rbac.require_permission(
             session,
             workspace_id=caller.workspace_id,
@@ -202,12 +229,13 @@ def requires(
             # hold (FR-347) can never be satisfied.
             credential_permissions=caller.permissions,
         )
-        if management_counted:
+        if counted:
             await _count_caller(request, caller, session, settings)
         elif not keep_session:
             await session.close()
         return caller
 
     setattr(dependency, PERMISSION_ATTRIBUTE, permission)
-    setattr(dependency, MANAGEMENT_COUNTED_ATTRIBUTE, management_counted)
+    setattr(dependency, MANAGEMENT_COUNTED_ATTRIBUTE, counted)
+    setattr(dependency, RESOURCE_CHECKED_IN_HANDLER_ATTRIBUTE, held_anywhere)
     return dependency

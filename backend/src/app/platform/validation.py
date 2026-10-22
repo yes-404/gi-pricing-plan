@@ -13,6 +13,7 @@ summary columns beside the body are indexes and nothing else.
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -231,8 +232,12 @@ async def acknowledge(
     report_id: UUID,
     rule_id: UUID,
     justification: str,
+    count_management: Callable[[], Awaitable[None]] | None = None,
 ) -> AcknowledgementRow:
     """Accept one `warn`, with a reason, audited (FR-46, FR-47).
+
+    `count_management`, when given, is awaited right after the permission check passes, so a
+    `403` is never counted (FR-452).
 
     Three refusals, and each exists because the alternative makes the gate decorative:
     only a `warn` can be acknowledged, only by a principal holding the permission, and
@@ -267,6 +272,20 @@ async def acknowledge(
         ),
     )
     if not permitted:
+        # Held on another Dataset: the scope refusal (`06` §5.1, FR-345), not a role one.
+        if await rbac.holds_anywhere(
+            session,
+            workspace_id=workspace_id,
+            principal=actor,
+            permission=Permission.DATASET_ACKNOWLEDGE_WARNING,
+        ):
+            raise rbac.PermissionDeniedError(
+                Permission.DATASET_ACKNOWLEDGE_WARNING,
+                ResourceRef(scope_type=ScopeType.DATASET, scope_id=version.dataset_id)
+                if version is not None
+                else None,
+                held_elsewhere=True,
+            )
         # `01` §5.1 owns a code for exactly this, so raise it rather than the generic
         # denial: the caller needs to know it is the *role* that is wrong, not the scope.
         # An analyst reading "permission denied" goes looking for a grant; reading this,
@@ -278,6 +297,9 @@ async def acknowledge(
             "FR-46 places this judgement with an actuary. Modelling on warned data "
             "is an actuarial decision, and the acknowledgement is its record.",
         )
+
+    if count_management is not None:
+        await count_management()
 
     report = ValidationReport.model_validate(row.body)
     target = next((r for r in report.results if r.rule_id == rule_id), None)

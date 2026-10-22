@@ -16,7 +16,7 @@ This module is where that is true or not. Three things make it true:
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Awaitable, Callable, Mapping
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
@@ -270,8 +270,12 @@ async def update_dictionary(
     actor: Principal,
     slug: str,
     entries: Mapping[str, DataDictionaryEntry],
+    count_management: Callable[[], Awaitable[None]] | None = None,
 ) -> DatasetRow:
     """Replace the Data Dictionary, audited with before and after (`01` §5.1, NFR-472).
+
+    `count_management`, when given, is awaited right after the scoped permission check passes,
+    so a `403` is never counted (FR-452).
 
     A **replace**, not a merge, and the audit event carries both states. The dictionary
     decides which columns may be modelled at all (FR-12), so "who removed the
@@ -286,6 +290,8 @@ async def update_dictionary(
         permission=Permission.DATASET_WRITE,
         resource=rbac.ResourceRef(scope_type=ScopeType.DATASET, scope_id=row.id),
     )
+    if count_management is not None:
+        await count_management()
 
     before = dict(row.data_dictionary)
     row.data_dictionary = _dictionary_json(entries)
