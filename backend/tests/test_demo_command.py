@@ -463,3 +463,55 @@ def test_the_compose_target_runs_only_the_wf701_journey_and_refuses_before_seedi
             rows=None, skip_seed=True, frontend=False, journey="wf-701", target="compose"
         )
     assert seeded == []
+
+
+@pytest.mark.req("FR-408")
+def test_compose_command_names_the_shipped_file_when_compose_file_is_unset(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Unset `COMPOSE_FILE`: the command passes the shipped file and the `app` profile."""
+    monkeypatch.delenv("COMPOSE_FILE", raising=False)
+    monkeypatch.delenv("GIP_COMPOSE_PROJECT", raising=False)
+    assert demo_script.compose_command("ps") == [
+        "docker",
+        "compose",
+        "-f",
+        "deploy/docker-compose.yml",
+        "--profile",
+        "app",
+        "ps",
+    ]
+    monkeypatch.setenv("GIP_COMPOSE_PROJECT", "other")
+    assert demo_script.compose_command("ps")[:4] == ["docker", "compose", "-p", "other"]
+
+
+@pytest.mark.req("FR-408")
+def test_compose_command_leaves_the_file_list_to_compose_when_compose_file_is_set(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Set `COMPOSE_FILE` (a ':'-separated list): no `-f`, so every compose call the demo makes,
+    the outbox relay's `run` included, reads the same merged files the operator named. A fixed
+    `-f` would drop an override file for that one call."""
+    monkeypatch.setenv("COMPOSE_FILE", "/stack/docker-compose.yml:/stack/override.yml")
+    monkeypatch.delenv("GIP_COMPOSE_PROJECT", raising=False)
+    command = demo_script.compose_command("run", "--rm", "-d", "worker-default")
+    assert "-f" not in command
+    assert command == [
+        "docker",
+        "compose",
+        "--profile",
+        "app",
+        "run",
+        "--rm",
+        "-d",
+        "worker-default",
+    ]
+
+
+@pytest.mark.req("FR-408")
+def test_the_demo_env_keeps_compose_file_for_its_compose_subprocesses(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The compose calls run with `demo_env()`; `COMPOSE_FILE` must reach them."""
+    monkeypatch.setenv("COMPOSE_FILE", "/stack/docker-compose.yml:/stack/override.yml")
+    assert demo_script.demo_env()["COMPOSE_FILE"] == "/stack/docker-compose.yml:/stack/override.yml"
