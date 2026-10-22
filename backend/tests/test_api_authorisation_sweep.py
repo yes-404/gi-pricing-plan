@@ -108,6 +108,10 @@ HANDLER_GUARDED: dict[tuple[str, str], tuple[tuple[str, int, str], ...]] = {
     ("PUT", "/api/v1/environments/{env}/routing"): (
         ("platform/deployments.py", 131, "require_permission("),
     ),
+    # `admin:manage_settings` with the Environment as the resource (`RL-1834` D2 item 3).
+    ("PUT", "/api/v1/environments/{env}/shadow"): (
+        ("platform/shadow.py", 66, "require_permission("),
+    ),
 }
 
 _METHODS = ("get", "post", "put", "patch", "delete")

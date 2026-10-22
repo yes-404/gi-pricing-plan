@@ -6,7 +6,8 @@
 | `POST` | `/api/v1/environments/{env}/deployments` | Deploy an approved version |
 | `POST` | `/api/v1/environments/{env}/deployments/rollback` | Roll back (`deployment:promote`) |
 | `GET` | `/api/v1/environments/{env}/deployments` | History, newest first (`rating:read`) |
-| `PUT` | `/api/v1/environments/{env}/routing` | Write the date-routing rule (`deployment:promote`) |
+| `PUT` | `/api/v1/environments/{env}/routing` | Write the date-routing rule |
+| `PUT` | `/api/v1/environments/{env}/shadow` | Write the shadow configuration |
 
 The two writes are **handler-guarded**, not `requires(...)`: `deployment:promote` is checked with
 the target Environment as the resource, which needs the Environment row the handler loads
@@ -25,7 +26,7 @@ from app.api.deps import Caller, DatabaseDep
 from app.api.pagination import DEFAULT_LIMIT, MAX_LIMIT, Page
 from app.api.responses import problems
 from app.platform import deployments as service
-from app.platform import routing
+from app.platform import routing, shadow
 from model_schema import (
     Deployment,
     DeploymentCreate,
@@ -36,6 +37,8 @@ from model_schema import (
     RollbackCreate,
     RoutingRule,
     RoutingRuleUpdate,
+    ShadowConfig,
+    ShadowConfigUpdate,
 )
 
 __all__ = ["router"]
@@ -182,6 +185,35 @@ async def write_routing_rule(
     reference or a range that does not end after it starts. An empty list clears the rule."""
     async with database.unit_of_work() as session:
         return await routing.write_rule(
+            session,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            environment=env,
+            body=body,
+            count_management=count,
+        )
+
+
+@router.put(
+    "/{env}/shadow",
+    summary="Write an environment's shadow-scoring configuration",
+    response_model=ShadowConfig,
+    responses=problems(401, 403, 404, 409, 422),
+)
+async def write_shadow_config(
+    env: str,
+    body: ShadowConfigUpdate,
+    caller: CallerDep,
+    count: CountDep,
+    database: DatabaseDep,
+) -> ShadowConfig:
+    """**200** with the configuration as written (`03` FR-271; `RL-1834` D2). Needs
+    `admin:manage_settings` on the Environment; handler-guarded. **404** for an unknown
+    Environment; **409** `VALIDATION_FAILED` for a retired one, **409** `BUNDLE_COMPILE_FAILED`
+    for a candidate with no compiled bundle; **422** for a candidate that is not a Rating Version
+    of this workspace, or is a `draft`, or a fraction outside `(0, 1]`."""
+    async with database.unit_of_work() as session:
+        return await shadow.write_config(
             session,
             workspace_id=caller.workspace_id,
             actor=caller.principal,
