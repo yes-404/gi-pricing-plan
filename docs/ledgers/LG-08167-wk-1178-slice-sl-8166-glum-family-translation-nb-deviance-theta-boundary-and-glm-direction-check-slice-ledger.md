@@ -67,7 +67,7 @@ The FR-89 spec commit `db41422c` landed AFTER the code commits `e29cefcc` and `5
 
 ### Open observation (RS 8183 B4)
 
-A stored draft negative-binomial `GlmSpec` without θ now fails `GlmSpec` validation on load. Verdict: **deferred with owner WK-1178**; the per-environment count is owed (only the template database was countable here, 0 by construction, which is not evidence about any deployment).
+A stored draft negative-binomial `GlmSpec` without θ now fails `GlmSpec` validation on load. Counted read-only on 2026-10-22 (exec-8166b, 16:45Z, one SELECT per database, no open transaction) at the maintainer's direction (to-lead "2026-10-22 17:41:48 BST" item 3). `\l` lists `gipricing`, `gipricing_fd-1838_gate`, `postgres`, `template0`, `template1`; the `gip` database is absent. Persisting: `gipricing` (the compose database that survives a run). Per-run: `gipricing_fd-1838_gate` (FD-1838's gate database), counted anyway; `postgres`, `template0` and `template1` are system databases. The only column holding a spec is `models.spec` (JSONB; the one `jsonb` column with `spec` in its name, and the θ is `spec->'family_params'->>'theta'`, per `GlmSpec` in `packages/model-schema/src/model_schema/modelling.py`), draft and non-draft alike. SQL verbatim: `select count(*) as nb_models, count(*) filter (where (spec->'family_params'->>'theta') is null) as nb_without_theta from models where spec->>'family'='negative_binomial'`. Result: `gipricing` 0 NB models, 0 without θ; `gipricing_fd-1838_gate` 0, 0 (`gipricing` holds 0 models in all). The count is 0 everywhere countable here; it says nothing of a deployment this box does not hold. Verdict: **deferred with owner WK-1178**.
 
 ### Audit
 
