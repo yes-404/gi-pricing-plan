@@ -175,12 +175,33 @@ Start/end (UTC): V1 16:31:04 to 16:31:20; V2 16:31:24 to 16:31:38; V3 16:31:38 t
 load1 at start 4.96, 4.66, 4.40. Each log lists the unsuffixed and `gate-1b` `gip:switch*`
 channels and `PUBSUB NUMSUB` for the three unsuffixed ones, none of which this window created.
 
-Two readings. (1) V2 is not "skip the audit write": the test replaces `audit.record` with a
-raiser, so removing the call would leave it green. The mutation that commits the violation is
-swallowing the audit failure, which is what the test then catches. (2) For V3's uncompiled limb
+Two readings. (1) **Corrected below (V2b/V2c):** this note first said that skipping the audit write
+would stay green. That was an unmeasured inference and it was wrong; see the two skip runs below.
+V2 itself (swallowing a failed audit write) is the control for the same-transaction limb. (2) For V3's uncompiled limb
 the run returned 500, not a stored row: the database CHECK `ck_shadow_configs_bundle_hash_format`
 refused the insert. The test fails by name all the same (it expects 409), and the database
 constraint is a second line behind the application check.
+
+**V2b/V2c, the audit call skipped entirely (the maintainer, 2026-10-22 17:34:47 BST item 2).** Mutation:
+`await audit.record(` became `(lambda *a, **k: None)(` at `platform/routing.py:131` and in
+`platform/shadow.py` (the same call). Both fail by name with no new test, because each positive test already
+unpacks `(event,) = await _events(...)`, exactly one event of the write's action with its
+`entity_ref`, `before` and `after`. Reverted, `git status --short` empty, never committed.
+
+| Control | Log | rc | Summary line, verbatim | Failing by name |
+|---|---|---|---|---|
+| V2b routing skip | `24-nv4-routing-audit-skipped.log` | 1 | `3 failed, 11 passed, 1 warning in 7.51s` | `test_a_rule_naming_a_deployed_version_is_written_and_audited`, `test_a_second_write_appends_and_records_the_previous_rule_as_before`, `test_a_routing_change_cannot_commit_without_its_audit_event` |
+| V2c shadow skip | `25-nv5-shadow-audit-skipped.log` | 1 | `3 failed, 9 passed, 4 warnings in 5.60s` | `test_a_compiled_candidate_is_configured_and_audited`, `test_a_second_write_appends_and_records_the_first_as_before`, `test_a_shadow_change_cannot_commit_without_its_audit_event` |
+
+**`_routed` fails closed, declared (the maintainer, same entry, item 4).** Spec first: `03` §4.13
+Selection gains the sentence "a routing selection failure fails the quote and never falls back" (500
+`INTERNAL_ERROR`; commit before the test). Test `test_routing.py::test_a_routing_selection_failure_fails_the_quote_and_never_falls_back`
+(selector healthy: 200 and the live version scored; selector raises: 500, `code` `INTERNAL_ERROR`, no
+version scored). It passes on the current code, `26-b-routing-green.log` rc 0, `8 passed, 1 warning in 8.82s`. The
+red control, `27-nv6-routed-falls-back.log`: `api/score.py:579` `routed = await _routed(...)` wrapped in
+`try/except Exception: routed = None`, rc 1, `1 failed, 7 passed, 1 warning in 9.28s`, failing
+`test_a_routing_selection_failure_fails_the_quote_and_never_falls_back` (`assert 200 == 500`). Reverted,
+`git status --short` empty, never committed. `ruff check .` rc 0 and `ruff format --check` on the test file rc 0.
 
 **Migration round trip** (`20-migration-roundtrip.log`, same database, 16:30:51 to 16:30:59 UTC).
 Before: `routing_rules`, `shadow_configs`, `shadow_results` present, `alembic_version` = `9b3e7c15d4a2`.
@@ -191,13 +212,7 @@ prints the script head `9b3e7c15d4a2`, as it reads the scripts). `alembic upgrad
 
 **Deviation: the round trip ran beside the FD-1838 gate.** The lead's brief placed the round trip in this window; `RL-1626` (d) puts migrations in a no-gate gap, after the gate's END. It ran 16:30:51 to 16:30:59 UTC (17:30:51 to 17:30:59 BST) beside the FD-1838 gate (gate-1b held), on the seat's own per-worktree database `gipricing_sl-1260_nv3`; the gate's database was untouched. The maintainer's split ruling (relayed at about 17:31 BST) arrived after the run, so the run followed the brief it was given. The fault is the brief's, not the seat's. Whether it re-runs in the gap is the maintainer's to decide. After the downgrade the log quotes `alembic_version` (`a4d1f08c3b97`); after the upgrade it quotes `alembic current` only, not a `SELECT` on `alembic_version`.
 
-**Observation, not fixed: `_routed` is not exception-guarded.** `_shadow_task` wraps its flag
-read and its decision in `try/except Exception` that logs and returns `None` (`api/score.py:275-290`,
-`:276` the `settings_service.resolve` call). `_routed` reads its flag at `api/score.py:365` with no
-guard, and its caller does not guard it either (`api/score.py:579`, `routed = await _routed(...)`).
-An exception from the flag read or from `routing_service.select_range` therefore propagates and fails the live
-quote. Routing is a pricing decision, so failing closed is defensible, but the asymmetry with the
-shadow path is undeclared. Raised for the lead.
+**`_routed` observation (resolved above).** It was unguarded (`api/score.py:365`, caller `:579`) while `_shadow_task` is guarded (`:275-290`); the maintainer declared fail-closed for routing and best-effort for shadow, and the spec and a test now say so.
 
 Cleanup: `dropdb` rc 0; `pg_database` count for the window's database 0; redis db 12 `FLUSHDB`, `DBSIZE` 0
 (it held 1 key at V2's start, from a test run); db 0 was 59 at setup and 62 at the end,
