@@ -113,3 +113,84 @@ Quoted from PL-1710: the Tasks table row 2 and the section "SL-1711 — the slic
   - **Reverse (`test_demo_rating_evidence.py`, `test_fremtpl2_algorithm.py`, `test_wf701_journey.py`), same DB:** rc 0, 36 passed in 367 s, log `~/gi-pricing-plan.local/scratch/sl1711e-7r.log`.
   - Both orders green, so the `_full_level_world()` patch of the shared `_DOMAINS`/`_ESTIMATES` does not change what the other two files see (ruling 1(b)); the full gate confirms it.
 - **Cleanup:** dropdb rc 0, `pg_database` count 0, db 12 `DBSIZE` 0.
+
+## The compose SOLO run of the scripted WF-701 demo — exec-1711c, sl-1711 head 4b958a94 (T1 abcc70d2, fix 4b958a94), 2026-10-22 11:05-13:04 BST
+
+**Result: PASS (the maintainer's "2026-10-22 13:04:37 BST" entry).** `demo.py --journey wf-701 --target compose` ran ALONE (no gate, no switch test; the `demo` slot held by one `setsid` holder, PID/PGID 461740, released at the end) against the shipped compose topology as tools-main `f3462d8f` defines it: `api` x2 behind `lb`, the four worker pools, the one-shot `migrate`. Host deviation, recorded as the maintainer's "2026-10-22 00:54:02 BST" entry asked: only the database name, the redis db and the blob bucket differ, through the untracked override `scratch/sl1711-compose-override.yml` (compose hard-codes `gipricing`, redis db 0 and `gip-blobs`).
+
+- **rc 0, the demo's own closing lines verbatim** (`scratch/sl1711-compose-wf701.log`, lines 129, 155, 156 and 158):
+  - `   WF-699 part done in 1335s`
+  - `   WF-701 part done in 1165s: OVER the pre-registered 10 min target (recorded, not tuned)`
+  - `   journey done in 2500s`
+  - `   compose run done in 2573s`
+- **The 600 s target is a recorded MISS, not a failure.** WF-701's part took 1165 s against the pre-registered 600 s. PL-1710 T7 and acceptance 4 say "a miss is recorded, not tuned away", and `demo.py` says the same; the maintainer's "2026-10-22 12:06:24 BST" entry ruled it so. Nothing was tuned in this slice.
+- **Relay watcher:** `scratch/sl1711-relay-watch.log` has 0 KILL lines. The outbox relay (`compose run ... worker-default ... beat`) read `GIP_DATABASE_URL=postgres:5432/gipricing_sl1711_compose`, `GIP_REDIS_URL=redis://redis:6379/13`, `GIP_BLOB_BUCKET=gip-blobs-sl1711-compose` at every 5 s poll.
+- **Window:** the demo started 12:20:58 BST (11:20:58Z) and ended 13:03:57 BST (12:03:57Z), `timeout 3600`.
+- **Image:** `gi-pricing-app:4b958a940b668d4b9f59399d3553902b8a869d7b`, Id `sha256:81f7f6b0e9d4fe5eaacc218ca477a58446288da8ca1b74202b5be282f16a3e68`, Created `2026-10-22T10:47:28Z`; the build's own rc was 0 (`scratch/sl1711-compose-build-h2.log`, 0 ERROR lines). Both `up` and the `config --hash` pre-guard ran under `COMPOSE_FILE=<tools-main compose>:<override>` with no `-f`: postgres `aa63baa2`, redis `d34adc17` and minio `4847f5c0` equalled the running containers' config-hash labels, so `up` re-created none of them. `migrate` ended at `a4d1f08c3b97` in the run's own database.
+- **End guards (re-read clean by the lead and by the maintainer):** the four infra containers the same IDs (postgres `8c11e046ebf2`, redis `a0091f369f6a`, minio `e8e55e262ec9`, keycloak `da16c49c2d82`), healthy; redis db 0 `DBSIZE` 56 and db 13 0; `gipricing` at `d4e81b7a2c95` with environments / tenant_marker / dataset_versions = 3 / 1 / 0; no `gipricing_sl1711_compose` database; the same six buckets with `gip-blobs` at 474 objects; NUMSUB on `gip:switch:local:local:{dev,uat,prod}` 0 / 0 / 0; no `-run-` container; `lslocks` 0; keycloak's bind source still under tools-main.
+
+### The jobs table of the run (`scratch/sl1711-compose-jobs.txt`, 76 rows, all queues)
+
+Per kind, durations are `finished_at - started_at` in seconds, from that file:
+
+| kind | queue | n | status | total s | longest s |
+|---|---|---|---|---|---|
+| dataset.ingest | io | 3 | succeeded | 4.4 | 2.1 |
+| dataset.validate | compute | 12 | succeeded | 1.5 | 0.2 |
+| dataset.derive | compute | 2 | succeeded | 0.8 | 0.4 |
+| model.fit | compute | 3 | succeeded | 37.1 | 19.7 |
+| model.transparency | compute | 1 | succeeded | 25.0 | 25.0 |
+| model.compare | compute | 1 | succeeded | 0.5 | 0.5 |
+| peril_structure.reconcile | compute | 1 | succeeded | 0.4 | 0.4 |
+| rate_table.diff_cells | compute | 1 | succeeded | 0.3 | 0.3 |
+| rating.compile | default | 6 | succeeded | 1.4 | 0.3 |
+| rating.compile | default | 2 | failed `PIN_NOT_APPROVED` | 0.3 | 0.2 |
+| rating.regression | compute | 5 | succeeded | 8.6 | 2.1 |
+| rating.regression | compute | 2 | failed `GOLDEN_QUOTE_MISMATCH` | 9.2 | 6.1 |
+| score.trace_produce | scoring | 33 | succeeded | 6.0 | 0.3 |
+| **dislocation.run** | compute | 4 | succeeded | **2326.9** | **718.2** |
+
+The two failed kinds are the demo's own refusals (the unapproved GBM pin, step C4, and the golden-quote move, step D2), not faults. The four `dislocation.run` spans, in UTC, each on the one compute worker:
+
+| started | finished | duration |
+|---|---|---|
+| 11:23:19 | 11:32:28 | 9 min 9 s |
+| 11:32:29 | 11:44:27 | 11 min 58 s |
+| 11:44:35 | 11:53:12 | 8 min 37 s |
+| 11:54:46 | 12:03:48 | 9 min 2 s |
+
+Together they are 2326.9 s of the 2573 s compose run, about 90 %. By their order the first two belong to the WF-699 part (its D8 and E4 steps name a dislocation run) and the last two to the WF-701 part; the part boundary is the demo's own timer, so this split is read from order, not from a per-job label. No other kind is above 25 s.
+
+**Open question for the auditor:** is a 9 to 12 minute `dislocation.run` at the demo's volumes (678 013 freMTPL2 rows ingested; its `D7` line reports 19985 policies in the attribution sample) a product performance finding that needs an FD (owner, severity, and the NFR it breaches, if any)? This slice decides nothing beyond recording the numbers; its `D7` line cites FD-1576 (full-book attribution cost) as the known cost.
+
+### Conditions
+
+A shared box, in use by other seats (build seats editing only, per the lead's note of that window); **one compute worker at concurrency 2** (`GIP_WORKER_COMPUTE_CONCURRENCY` default 2, `deploy/docker-compose.yml` `worker-compute`), api x2 at `WEB_CONCURRENCY` 1, memory 31 GB total. load1 was 4.63 at the demo start (4.95 just after `up`) and 2.35 at the end. During the run `worker-compute` read 133 % CPU on a `dislocation.run`.
+
+### Rulings (by header, in `~/gi-pricing-plan.local/channel/to-lead.md`)
+
+- "2026-10-22 11:05:58 BST — Maintainer: SL-1711 compose SOLO Phase B GO, with one amendment to my own step 6" (the absolute `-f`; the seven-service `stop`, never a bare `--profile app stop`).
+- "2026-10-22 11:10:17 BST — Maintainer: SL-1711 compose STOP ruling (A), and the order of SL-1275's DB window" (the dedicated bucket `gip-blobs-sl1711-compose`; `mc rb --force` of that bucket only).
+- "2026-10-22 11:14:25 BST — Maintainer: SL-1711 relay BLOCKER ruled: option (1), a slice code fix in demo.py, with guards" (`compose_command` omits `-f` when `COMPOSE_FILE` is set; red-first; the live relay-env kill watcher).
+- "2026-10-22 11:18:46 BST — Maintainer: RESUME for lead 27. Lead 26 stopped for handover at 236k; one ruling (SL-1711 test_demo_command GREEN is option (a))" (only its SL-1711 ruling was applied; its handover framing was superseded the same day).
+- "2026-10-22 11:18:56 BST — Maintainer: lead 26's addendum (config proof at H2; the labels on the infra containers)" (the config-hash pre-guard before `up`).
+- "2026-10-22 11:42:48 BST — Maintainer: SL-1711 test_demo_command ACCEPTED; the compose retry at H2 is GO, with the GIP_BUILD amendment".
+- "2026-10-22 12:06:24 BST — Maintainer: SL-1711 compose retry runs to its END; the 600 s target is recorded per PL-1710, not ruled a fail".
+- "2026-10-22 12:13:55 BST — Maintainer: SL-1711 retry timeout: (i) let it run; (ii) PRE-APPROVED on rc 124" (the re-run with `timeout 3600` as the only change).
+- "2026-10-22 13:04:37 BST — Maintainer: SL-1711 compose SOLO PASSED; SL-1275 re-gate GO, effective on clean end guards".
+
+### Code change that the run proved necessary (H2)
+
+`scripts/demo.py::compose_command` always passed `-f deploy/docker-compose.yml`, so the override never reached the outbox relay's `compose run`, which would have run on `gipricing`, redis db 0 and `gip-blobs` and (through `migrate`) upgraded the shared database. T1 `abcc70d2` adds three tests to `backend/tests/test_demo_command.py` (the "set" pin red by name: `1 failed, 28 passed`, rc 1, 0 errors, 0 skipped, on a per-worktree database `gipricing_sl-1711_118c2dd0`); the fix `4b958a94` (+7 / -2 in `scripts/demo.py`) makes `compose_command` omit `-f` when `COMPOSE_FILE` is set, with `-p` and `--profile app` unchanged. Green at `4b958a94`: `29 passed, 1 warning`, rc 0, 0 failed, 0 errors, 0 skipped. That window's database was dropped (`pg_database` count 0); redis db 0 stayed 56.
+
+### Disclosed deviations
+
+- **Try 1 STOPPED at `up` on `TenantMismatchError`** (`app/platform/tenancy.py:69`): the shared minio's `gip-blobs` carries tenant `local`, the compose stack is configured for `compose-reference` (FR-436). Nothing was written to the shared bucket beyond `ensure_bucket`'s lifecycle-rule merge; ruling (A) of 11:10:17 gave the run its own bucket. The build had no rc captured that time (the log had 0 ERROR lines); every later build captured its rc.
+- **The relay `-f` blocker and its fix H2** (above): found by the lead and the maintainer at the retry's pre-check, before any relay existed.
+- **Run 1 of the retry ended rc 124**: the demo's own `timeout 1800` expired at about 11:19:50Z, during the WF-701 part, after the WF-699 part had taken 1376 s. **Its jobs dump was LOST**: the run's database was dropped at cleanup about 11:19Z, before the 12:06 instruction to dump it first reached the seat. The partial record is the lead's 12:07 BST snapshot, `scratch/sl1711-compose-jobs-lead-snapshot.txt` (run 1's first `dislocation.run` 10:51:34Z to 11:00:48Z, 9 min 14 s; a second `dislocation.run` was still `running` when taken). The maintainer pre-approved the re-run with `timeout 3600` (12:13:55); run 2 above is that re-run.
+- **The relay container was left running after run 1's timeout kill** (`gi-pricing-worker-default-run-03621ab1587b`, up 28 min): the demo died before its own relay stop. The seat stopped it by its full name; it carries `--rm`.
+- **The watcher script's loop check failed in the re-run's first start** (`ps -eo pgid=` pads a six-digit PGID with a space, so `grep -qx` never matched and the watcher exited at once); the seat fixed it with `tr -d " "` and restarted it about 4 s after the demo began, before the relay appeared (`scratch/sl1711-relay-watch.sh`, untracked).
+- **The absolute `-f`:** the build and `up` name `deploy/docker-compose.yml` by its absolute tools-main path, `docker build -f <sl-1711>/deploy/Dockerfile ... <sl-1711 root>`; the maintainer accepted it at 11:05:58 (the Dockerfile is byte-identical between `f3462d8f` and `3ac2e499`).
+- **The `GIP_BUILD` amendment:** the demo's own env also carries `GIP_BUILD=<H2>`, because `compose run` resolves `image: gi-pricing-app:${GIP_BUILD:-unset}` from it (the lead's amendment, accepted at 11:42:48).
+- **tools-main moved during the first Phase B:** a re-audit seat had committed its branch inside tools-main (HEAD `51f1c261`, on a branch). The seat stopped before starting anything; the lead restored `f3462d8f` detached, and the maintainer's "2026-10-22 11:48:11 BST" entry closed the incident with the rule that no seat runs `git checkout` or `git switch` in tools-main.
+- **`ruff format --check scripts/demo.py` exits 1**: the file already fails it on `origin/main` (CI runs `ruff check .` only, `python.yml:199`); the maintainer accepted it as is at 11:18:46.
