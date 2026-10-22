@@ -2145,7 +2145,12 @@ def test_widening_the_scope_roots_reaches_every_non_markdown_file_the_register_e
     # `docs/contracts/schemas/generated/switch-report.schema.json`,
     # `docs/contracts/schemas/generated/deployment-created.schema.json` and
     # `docs/contracts/schemas/generated/rollback-create.schema.json`, registered for F83's reason.
-    assert len(non_markdown) == 89, len(non_markdown)
+    # 89 became 93 (WK-674 Slice 6, SL-1260, 2026-10-22; the four schemas named in
+    # `ONE_SIDED_SLUGS` by the same slice): the generated
+    # `docs/contracts/schemas/generated/routing-rule.schema.json`,
+    # `routing-rule-update.schema.json`, `shadow-config.schema.json` and
+    # `shadow-config-update.schema.json`, registered for F83's reason.
+    assert len(non_markdown) == 93, len(non_markdown)
     assert set(non_markdown) <= rels
 
     # Named individually, so the proof is "one of the 63" and not "63 of something".
