@@ -259,10 +259,17 @@ def beat_command() -> list[str]:
 
 
 def journey_failure_line(failure: Any, journey: str = "wf-699") -> str:
-    """The one line a failed journey prints: the step and the problem's code, built from the
-    failure's fields and never from its text."""
+    """The one line a failed journey prints: the step and the problem's code, then the journey's
+    own `names` and `extra` count when it set them (R5), built from the failure's fields and
+    never from its `detail`, which can carry server text."""
     status = f" (HTTP {failure.status})" if failure.status is not None else ""
-    return f"the {journey.upper()} journey failed at {failure.step}: {failure.code}{status}"
+    line = f"the {journey.upper()} journey failed at {failure.step}: {failure.code}{status}"
+    names = getattr(failure, "names", ())
+    extra = getattr(failure, "extra", 0)
+    parts = [", ".join(names)] if names else []
+    if extra:
+        parts.append(f"+{extra} extra")
+    return f"{line} [{'; '.join(parts)}]" if parts else line
 
 
 def compose_command(*args: str) -> list[str]:

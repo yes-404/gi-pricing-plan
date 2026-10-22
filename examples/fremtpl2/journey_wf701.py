@@ -145,7 +145,13 @@ def check_old_or_new(step: str, hashes: Sequence[str], old: str, new: str) -> No
     """A2 (i) and C4 (i): every response during the switch carries the old or the new hash."""
     stray = sorted({h for h in hashes if h not in (old, new)})
     if stray:
-        raise JourneyStepFailed(step, "BUNDLE_HASH_NEITHER_OLD_NOR_NEW", detail=", ".join(stray))
+        raise JourneyStepFailed(
+            step,
+            "BUNDLE_HASH_NEITHER_OLD_NOR_NEW",
+            detail=", ".join(stray),
+            names=(old, new),
+            extra=len(stray),
+        )
 
 
 def check_none_old(step: str, hashes: Sequence[str], old: str) -> None:
@@ -167,10 +173,14 @@ def check_commit_set(step: str, processes: Mapping[str, str], expected: frozense
     one that is missing when it does not (R5)."""
     got = committed_hosts(processes)
     if got != expected:
-        missing = ",".join(sorted(expected - got)) or "-"
-        extra = ",".join(sorted(got - expected)) or "-"
+        missing = sorted(expected - got)
+        extra = sorted(got - expected)
         raise JourneyStepFailed(
-            step, "COMMIT_SET_DIFFERS_FROM_THE_REPLICAS", detail=f"missing {missing}; extra {extra}"
+            step,
+            "COMMIT_SET_DIFFERS_FROM_THE_REPLICAS",
+            detail=f"missing {','.join(missing) or '-'}; extra {','.join(extra) or '-'}",
+            names=tuple(missing),
+            extra=len(extra),
         )
 
 
