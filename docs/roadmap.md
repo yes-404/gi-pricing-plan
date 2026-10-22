@@ -2923,6 +2923,24 @@ The fix of FD-1803 (filed in D21; HIGH, owner WK-1178), planned in PL-1809. `Dec
 
 (Closed 2026-10-18 as a Slice on a clean audit at 7e3b5098 (findings A1 to A4; the lead's verdict "2026-10-18 12:16:55 BST" in `from-lead-2026-10-09.md`): A1 fixed in LG-1811, A2 ruled into the slice by the maintainer ("2026-10-18 12:18:08 BST" in `to-lead.md`) and delivered as test-only commit d2e0fcaa; audit and window results written in LG-1811 (minted 2026-10-18 from working id 8109). MERGE-ACK: not yet given.)
 
+#### SL-8185 — WK-1178 fix slice — FD 8177: a dataset-scoped grant reaches the dictionary, rule-set and acknowledge writes (held-anywhere route gate), and a permanent route-scope guard
+
+```yaml
+id: SL-8185
+family: slice
+title: WK-1178 fix slice — FD 8177: a dataset-scoped grant reaches the dictionary, rule-set and acknowledge writes (held-anywhere route gate), and a permanent route-scope guard
+status: active                   # draft → active → closed | retired (§1.2a)
+created: 2026-10-22
+owner: planner                   # cut by the planner; lead dispatches (active)
+tree: 71e481fa5d240ed366cd80c1a8c6cf6cd1d918d5
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-8181, FD-8177, FD-8184, RL-8182, SL-1736, FR-343, FR-345]
+```
+
+The fix of FD 8177 (MEDIUM, LATENT: no P2 API creates a scoped grant), planned in PL 8181 and ruled by the maintainer's entries "2026-10-22 17:38:11 BST" (DP-0 to DP-3, GO) and "2026-10-22 17:46:43 BST" (re-rated; the slice continues). `requires(permission, held_anywhere=True)` admits a holder under any scope and never counts; the dictionary, rule-set and acknowledge services load the Dataset, check the permission on it (`SCOPE_DENIED`), then count (FR-452). `06` FR-345 gains the dated order clause and FR-343 a pointer. New: `backend/tests/test_dataset_scoped_writes.py` (13 red at base) and `backend/tests/test_route_scope_guard.py` (two predicates, `ROUTE_SCOPES`, an owned `KNOWN_SCOPE_GAPS`). **Task 4 (the rule-set route) waits for SL-1736 to merge**; until then the rule-set route is a `KNOWN_SCOPE_GAPS` row owned by this slice. Ledger LG-8186.
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
