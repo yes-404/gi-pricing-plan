@@ -1,6 +1,7 @@
 import { request } from "./client";
 import { pageThrough, type Paged } from "./paging";
 import type { components } from "./generated/schema";
+import type { components as requestComponents } from "./generated/schema.requests";
 
 export type CustomObjective = components["schemas"]["CustomObjective"];
 export type ObjectiveStatus = components["schemas"]["ObjectiveStatus"];
@@ -74,4 +75,27 @@ export async function getObjectiveCertificate(id: string): Promise<ObjectiveCert
   return request<ObjectiveCertificate>(
     `/custom-objectives/${encodeURIComponent(id)}/certificate`,
   );
+}
+
+export type ObjectivePreviewRequest = requestComponents["schemas"]["ObjectivePreviewRequest"];
+export type ObjectivePreview = components["schemas"]["ObjectivePreview"];
+export type ObjectivePreviewCurve = components["schemas"]["ObjectivePreviewCurve"];
+export type CreateCustomObjective = requestComponents["schemas"]["CreateCustomObjective"];
+
+/**
+ * The editor's live parse and loss-curve preview (`02` FR-1840, RL-1616): one stateless route.
+ *
+ * **A loss that does not parse is a value, not a throw** — the route answers 200 with
+ * `ok: false` and a positioned error, so a keystroke that does not yet parse is not an error
+ * toast. What does raise a `ProblemError` is a refusal of the *request*: 403 (a permission),
+ * 409 `OBJECTIVE_KIND_NOT_ENABLED` (the flag is off) and 422 `VALIDATION_FAILED` (a bound).
+ * The caller branches on the code, never the status.
+ */
+export async function previewObjective(body: ObjectivePreviewRequest): Promise<ObjectivePreview> {
+  return request<ObjectivePreview>("/custom-objectives/preview", { method: "POST", body });
+}
+
+/** `POST /custom-objectives`: create, or version on a reused slug (the editor is create-only). */
+export async function createObjective(body: CreateCustomObjective): Promise<CustomObjective> {
+  return request<CustomObjective>("/custom-objectives", { method: "POST", body });
 }
