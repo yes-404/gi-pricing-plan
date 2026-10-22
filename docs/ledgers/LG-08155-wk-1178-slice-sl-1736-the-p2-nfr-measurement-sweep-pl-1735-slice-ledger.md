@@ -96,6 +96,18 @@ Phase restriction in force: the SL-1711 compose retry is ALONE; edits and git on
 | `audit-docs.py` (gate-2) | 1 | one FAILED: `check 31: gap in the full allocation between 1838 and 8155` — the working id, cleared by the mint. No line names SL-1736's files |
 | idsweep (`origin/sl-1736-wk1178-nfr-sweep`) | — | `main: 1838 pairs; duplicate numbers:` and an empty CROSS-BRANCH list; no COLLISION line |
 
+#### 2026-10-22 13:16 BST — the harness unit test, re-run once to save its output (tree `6b4a4a1c0233dbfbb69eee9a1a645b0514678f1a`, load1 4.67)
+
+Command: `nice -n 19 ionice -c3 bash $W/scripts/run-small.sh $W tests/test_measure_p2_nfr_sweep.py`, rc 0, log `~/gi-pricing-plan.local/scratch/sl1736/harness-run-small.log`, verbatim:
+
+```
+run-small: waiting for /tmp/slots/small-test at 13:16:24 (load 4.67)
+..........................................                               [100%]
+42 passed in 0.18s
+```
+
+(The 13:06 run, `42 passed in 0.33s`, was not saved to a log; this re-run replaces it as the record.)
+
 #### PLANNED — the four ALONE grants and their non-ALONE companions (not run; each grant is requested from the lead with these exact commands)
 
 Common to every block. `W=/home/puzhenhao1989/gi-pricing-plan/.claude/worktrees/sl-1736`, `OUT=/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1736` (outside the repository; `mkdir -p $OUT`). The tree is the branch head at the grant (`git -C $W rev-parse HEAD`), which must be unchanged from the head named in the request. Every block starts by printing, and the seat quotes: `git -C $W rev-parse HEAD`, `cut -d" " -f1 /proc/loadavg`, `free -g`, `nproc`, `pgrep -af '[p]ytest|[v]itest|[f]lock'`, and `flock -n /tmp/slots/gate-1 true; echo $?` for both gate slots. A window starts only inside its conditions (seat brief item 15): load1 and available memory are read at the start and printed; above the limit the seat waits (re-check every 60 s, up to the D4 limit) or aborts and reports. Foreground, `timeout` on each stage, no detach (S-11, S-12).
