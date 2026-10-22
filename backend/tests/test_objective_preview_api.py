@@ -40,6 +40,14 @@ async def fitter(database: Database, workspace_id: Any) -> dict[str, str]:
     return await _principal_holding(database, workspace_id, {"model:fit", "model:read"})
 
 
+@pytest.fixture
+async def author_without_fit(database: Database, workspace_id: Any) -> dict[str, str]:
+    """`custom_objective:author` without `model:fit`."""
+    return await _principal_holding(
+        database, workspace_id, {"custom_objective:author", "model:read"}
+    )
+
+
 async def _counts(database: Database) -> tuple[int, int, int]:
     async with database.session() as session:
         counts = [
@@ -95,29 +103,50 @@ async def test_with_a_grid_the_curve_comes_back(
     assert len(curve["f"]) == len(curve["loss"]) == len(curve["gradient"]) == 40
 
 
+def _derive_must_not_run(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fail(*_: object, **__: object) -> object:
+        raise AssertionError("SymPy was reached for an over-bound request")
+
+    monkeypatch.setattr(preview_service, "derive", fail)
+
+
+_OVER_NODES = " + ".join(["f"] * 150)  # 299 nodes, over FR-145's 200
+_OVER_DEPTH = "-" * 25 + "f"  # depth 26, over FR-145's 20
+
+
 @pytest.mark.req("FR-1840")
-async def test_3a_an_over_cap_grid_is_422_before_any_sympy_work(
+@pytest.mark.parametrize(
+    "body",
+    [
+        _body(grid=GRID | {"n_points": PREVIEW_MAX_GRID_POINTS + 1}),
+        _body(loss=_OVER_NODES, grid=GRID),
+        _body(loss=_OVER_DEPTH, grid=GRID),
+        _body(loss=_OVER_NODES),
+        _body(loss=_OVER_DEPTH),
+    ],
+    ids=[
+        "grid_points",
+        "nodes_with_grid",
+        "depth_with_grid",
+        "nodes_parse_only",
+        "depth_parse_only",
+    ],
+)
+async def test_3a_a_request_over_an_fr145_bound_is_422_validation_failed_before_any_sympy_work(
     api_client: Any,
     author: Any,
     database: Database,
     workspace_id: Any,
     monkeypatch: pytest.MonkeyPatch,
+    body: dict[str, Any],
 ) -> None:
+    """Over a bound is 422, never 200 `ok: false`: a loss that does not PARSE is the 200 case
+    (`test_a_loss_that_does_not_parse_answers_200_ok_false_with_a_position`)."""
     await _set_flag(database, workspace_id, True)
-
-    def fail(*_: object, **__: object) -> object:
-        raise AssertionError("SymPy was reached for an over-bound request")
-
-    monkeypatch.setattr(preview_service, "derive", fail)
-    over_grid = GRID | {"n_points": PREVIEW_MAX_GRID_POINTS + 1}
-    over_nodes = " + ".join(["f"] * 150)  # 299 nodes, over FR-145's 200
-    for body in (_body(grid=over_grid), _body(loss=over_nodes, grid=GRID)):
-        response = api_client.post(URL, json=body, headers=author)
-        assert response.status_code in (200, 422), response.text
-        if response.status_code == 422:
-            assert response.json()["code"] == "VALIDATION_FAILED"
-        else:  # FR-145's limit is a grammar refusal, answered as one, still before SymPy
-            assert response.json()["ok"] is False
+    _derive_must_not_run(monkeypatch)
+    response = api_client.post(URL, json=body, headers=author)
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "VALIDATION_FAILED"
 
 
 @pytest.mark.req("FR-1840")
@@ -150,6 +179,16 @@ async def test_without_the_author_permission_the_answer_is_403_whatever_the_flag
     for flag in (False, True):
         await _set_flag(database, workspace_id, flag)
         response = api_client.post(URL, json=_body(), headers=fitter)
+        assert response.status_code == 403, response.text
+
+
+@pytest.mark.req("FR-367")
+async def test_without_model_fit_the_answer_is_403_though_the_author_permission_is_held(
+    api_client: Any, author_without_fit: Any, database: Database, workspace_id: Any
+) -> None:
+    for flag in (False, True):
+        await _set_flag(database, workspace_id, flag)
+        response = api_client.post(URL, json=_body(), headers=author_without_fit)
         assert response.status_code == 403, response.text
 
 

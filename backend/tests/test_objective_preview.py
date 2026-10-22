@@ -179,3 +179,37 @@ def test_3b_work_not_yet_started_is_cancelled_at_the_timeout(
     release.set()
     assert preview_service.wait_idle(timeout=5)
     assert len(ran) == preview_service.PREVIEW_WORKERS  # the queued two never started
+
+
+@pytest.mark.req("FR-1840")
+def test_3c_the_preview_executor_is_its_own_and_shared_with_nothing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """PL-1665 5.7, last sentence: a preview never runs on a thread `/score` or any other
+    `asyncio.to_thread` caller uses, and nothing else in `app` can reach the preview's pool."""
+    from pathlib import Path
+
+    seen: list[str] = []
+
+    def record(*_: object, **__: object) -> object:
+        seen.append(threading.current_thread().name)
+        raise RuntimeError("stop after recording the thread")
+
+    monkeypatch.setattr(preview_service, "derive", record)
+    asyncio.run(preview_service.preview(_request(grid=GRID)))
+    other = asyncio.run(asyncio.to_thread(lambda: threading.current_thread().name))
+    assert seen
+    assert seen[0].startswith("objective-preview")
+    assert not other.startswith("objective-preview")
+
+    executor = preview_service._executor
+    assert executor._max_workers == preview_service.PREVIEW_WORKERS
+    source = Path(preview_service.__file__).parents[1]
+    users = [
+        str(path.relative_to(source))
+        for path in source.rglob("*.py")
+        if path != Path(preview_service.__file__)
+        and "_executor" in path.read_text()
+        and "objective_preview" in path.read_text()
+    ]
+    assert users == []
