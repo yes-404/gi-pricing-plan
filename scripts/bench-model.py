@@ -157,6 +157,19 @@ def timed(label: str, *, quiet: bool = False) -> Iterator[list[float]]:
         )
 
 
+#: PL-1735 Task 4: `--peak hwm` refuses to start below this much available memory.
+HWM_MIN_AVAILABLE_GB = 8
+
+
+def _status_kb(path: str, key: str) -> int:
+    """A `kB` field of /proc/meminfo or /proc/<pid>/status."""
+    with open(path) as handle:
+        for line in handle:
+            if line.startswith(key + ":"):
+                return int(line.split()[1])
+    raise ValueError(f"{key} not in {path}")
+
+
 def machine() -> str:
     cores = os.cpu_count() or 0
     with open("/proc/meminfo") as handle:
@@ -839,7 +852,23 @@ def main() -> int:
         help="diagnostics: omit FR-172's per-factor refits, which are one extra "
              "GLM fit each and dominate the wall-clock at any real factor count.",
     )
+    parser.add_argument(
+        "--peak",
+        choices=("statm", "hwm"),
+        default="statm",
+        help="hwm: also print the kernel's VmHWM for this process at the end (NFR-485, "
+             "PL-1735 Task 4: no sampler, one phase per process, so --only glm or --only "
+             "gbm), and refuse to start with less than 8 GB of MemAvailable.",
+    )
     args = parser.parse_args()
+
+    if args.peak == "hwm":
+        if args.only not in ("glm", "gbm"):
+            parser.error("--peak hwm needs --only glm or --only gbm: one phase per process")
+        available_gb = _status_kb("/proc/meminfo", "MemAvailable") / 2**20
+        if available_gb < HWM_MIN_AVAILABLE_GB:
+            print(f"ABORT: MemAvailable {available_gb:.1f} GB < {HWM_MIN_AVAILABLE_GB} GB")
+            return 3
 
     print(f"machine: {machine()}")
     print(f"baseline RSS after imports: {_rss_mb():,.0f} MB")
@@ -877,6 +906,13 @@ def main() -> int:
                 f"{'within' if elapsed <= budget else 'OVER'}"
             )
         print(f"  peak RSS across the run: {max(r[2] for r in results):,.0f} MB")
+    if args.peak == "hwm":
+        hwm_kb = _status_kb("/proc/self/status", "VmHWM")
+        print(
+            f"  NFR-485 VmHWM ({args.only}, {args.rows:,} rows x {args.factors} factors): "
+            f"{hwm_kb / 1024:,.0f} MB ({hwm_kb * 1024} bytes); load1 "
+            f"{open('/proc/loadavg').read().split()[0]}"
+        )
     return 0
 
 

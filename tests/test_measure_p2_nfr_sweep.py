@@ -133,8 +133,9 @@ def test_the_band_uses_floor_not_round() -> None:
 def test_the_benchmark_line_is_parsed_from_bench_model_output() -> None:
     out = (
         "machine: ...\n"
-        "  NFR-477 propose_banding equal_width              0.01 s wall      0.01 s cpu   peak RSS 1 MB\n"
-        "  NFR-477 propose_grouping hierarchical_clustering     8.58 s wall     9.12 s cpu   peak RSS   950 MB\n"
+        "  NFR-477 propose_banding equal_width      0.01 s wall   0.01 s cpu   peak RSS 1 MB\n"
+        "  NFR-477 propose_grouping hierarchical_clustering     8.58 s wall"
+        "     9.12 s cpu   peak RSS   950 MB\n"
     )
     assert m.parse_bench_line(out) == (8.58, 9.12)
 
