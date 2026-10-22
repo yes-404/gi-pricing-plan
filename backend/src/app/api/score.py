@@ -65,6 +65,7 @@ from app.observability.logging import get_logger
 from app.observability.metrics import ladder_reconciliation_failed
 from app.platform import jobs as job_service
 from app.platform import rate_limit
+from app.platform import routing as routing_service
 from app.platform import rating_versions as rating_versions_service
 from app.platform import settings as settings_service
 from app.platform import traces as traces_service
@@ -242,6 +243,34 @@ def _serving_ref(
         entry.deployment_id if entry is not None and entry.rating_version_ref == str(ref) else None
     )
     return ref, served_by
+
+
+async def _routed(
+    session: AsyncSession, settings: Settings, caller: Caller, ctx: QuoteContext
+) -> tuple[ArtifactRef, UUID] | None:
+    """The Rating Version and Deployment date routing selects, or `None` to keep what
+    `_serving_ref` resolved (`03` FR-270, `RL-1834` D1 item 5).
+
+    Entered only for a default-live quote (no explicit ref) of a caller with an Environment,
+    and only when the Environment's routing flag resolves true: with the flag off the selector
+    is not called and the path is `_serving_ref`'s alone. The flag is read per request through
+    the request's session (the `RL-1685` pattern), so a flag write takes effect at once.
+    """
+    if caller.environment is None or (
+        ctx.options is not None and ctx.options.rating_version_ref is not None
+    ):
+        return None
+    flag = await settings_service.resolve(
+        session, settings, caller.workspace_id, "features.date_routing_enabled", caller.environment
+    )
+    if flag.effective_value is not True:
+        return None
+    return await routing_service.select(
+        session,
+        workspace_id=caller.workspace_id,
+        environment=caller.environment,
+        effective_date=ctx.effective_date,
+    )
 
 
 def _with_resolved_ref(ctx: QuoteContext, ref: ArtifactRef) -> QuoteContext:
@@ -445,6 +474,9 @@ async def score(
     populated ladder, and FR-256 makes that a 200.
     """
     ref, deployment_id = _serving_ref(live_refs, caller, ctx)
+    routed = await _routed(session, settings, caller, ctx)
+    if routed is not None:
+        ref, deployment_id = routed
     compiled = await _compiled_for(
         session, blob_store, slot, workspace_id=caller.workspace_id, ref=ref
     )

@@ -19,9 +19,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import DeploymentRow, EnvironmentRow, RoutingRuleRow
 from app.errors import PlatformError
+from app.observability.logging import get_logger
 from app.platform import audit
 from app.platform.deployments import _authorised_environment, _require_rating_version
 from model_schema import (
+    ArtifactRef,
     JobSource,
     Principal,
     RoutedRange,
@@ -31,9 +33,10 @@ from model_schema import (
     new_uuid7,
 )
 
-__all__ = ["write_rule"]
+__all__ = ["select", "write_rule"]
 
 _ACTION = "deployment.routing_changed"
+_log = get_logger(__name__)
 
 
 def _overlaps(a: RoutingRange, b: RoutingRange) -> bool:
@@ -173,3 +176,61 @@ async def _latest_deployments(
             )
         pins[ref] = found
     return pins
+
+
+async def select(
+    session: AsyncSession, *, workspace_id: UUID, environment: str, effective_date: date
+) -> tuple[ArtifactRef, UUID] | None:
+    """The Rating Version and Deployment the Environment's current rule selects for a quote with
+    this effective date, or `None` (`RL-1834` D1 item 5).
+
+    One read of the current rule and one of the Deployments it pins, through the caller's
+    session, with no cache: a rule write takes effect at the next request. A range is a candidate
+    only if its pinned Deployment is a row of **this** Environment whose Rating Version is the
+    range's own; any other range is ignored and logged, so a version never promoted here is never
+    selected, whatever the stored rule says. Ranges of a written rule do not overlap, so the first
+    candidate holding the date is the only one.
+    """
+    rule = (
+        await session.execute(
+            select(RoutingRuleRow)
+            .join(EnvironmentRow, EnvironmentRow.id == RoutingRuleRow.environment_id)
+            .where(RoutingRuleRow.workspace_id == workspace_id, EnvironmentRow.slug == environment)
+            .order_by(RoutingRuleRow.written_at.desc(), RoutingRuleRow.id.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if rule is None:
+        return None
+    for stored in rule.ranges:
+        r = RoutedRange.model_validate(stored)
+        if r.effective_from > effective_date or (
+            r.effective_to is not None and effective_date >= r.effective_to
+        ):
+            continue
+        pinned = (
+            await session.execute(
+                select(DeploymentRow.id)
+                .join(EnvironmentRow, EnvironmentRow.id == DeploymentRow.environment_id)
+                .where(
+                    DeploymentRow.id == r.deployment_id,
+                    DeploymentRow.workspace_id == workspace_id,
+                    EnvironmentRow.slug == environment,
+                    DeploymentRow.rating_version_ref == str(r.rating_version_ref),
+                )
+            )
+        ).scalar_one_or_none()
+        if pinned is None:
+            _log.error(
+                "routing range ignored: its pinned Deployment is not a Deployment of this "
+                "Environment for that Rating Version",
+                extra={
+                    "rating_version_ref": str(r.rating_version_ref),
+                    "deployment_id": str(r.deployment_id),
+                    "workspace_id": str(workspace_id),
+                    "environment": environment,
+                },
+            )
+            continue
+        return r.rating_version_ref, pinned
+    return None
