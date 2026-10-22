@@ -382,3 +382,19 @@ async def test_acknowledge_by_an_actuary_scoped_to_another_dataset_is_scope_deni
                 justification="reviewed",
             )
     assert excinfo.value.code == "SCOPE_DENIED"
+
+
+@pytest.mark.req("FR-452")
+@pytest.mark.parametrize("route", RED_ROUTES)
+def test_a_not_found_after_the_route_gate_is_counted(
+    limited_client: TestClient, world: World, limit_two: None, route: str
+) -> None:
+    """DP-3 (b), the maintainer's "2026-10-22 18:21:15 BST": FR-452 exempts only 401 and 403, so
+    the load `404` a held-anywhere holder gets for an unknown id counts. Limit 2: the `404`
+    spends one, the first `/me` the second, the next `/me` is `429`. Red at base: the `404` is not
+    counted, so the second `/me` is admitted."""
+    _, who, _ = ROUTES[route]
+    headers = world.headers[who]
+    assert _unknown(route, limited_client, headers).status_code == 404
+    assert limited_client.get("/api/v1/me", headers=headers).status_code == 200
+    assert limited_client.get("/api/v1/me", headers=headers).status_code == 429
