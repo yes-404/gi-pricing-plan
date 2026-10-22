@@ -77,6 +77,8 @@ The remaining 101 files are covered by the slice's full code gate, the decisive 
 
 **2026-10-22, housekeeping.** The scratch worktree `sl-8185-redbase` was removed after `docker inspect` of the four shared containers showed no bind source under it (postgres `/var/lib/docker/volumes/gi-pricing_pgdata/_data`, redis `/var/lib/docker/volumes/4ca9d2df…/_data`, minio `/var/lib/docker/volumes/gi-pricing_miniodata/_data`, keycloak `/home/puzhenhao1989/gi-pricing-plan/.claude/worktrees/fix-1838/deploy/keycloak-local`).
 
+The small-run database `gipricing_sl-8185_215125e7` was dropped by the lead in the maintainer's disk clean-up of 2026-10-22 18:32 (0 connections first, rc 0). A later small run recreates it, so it is dropped again before the gate starts. Batch 4 of the closure run: its summary line was lost when the loop was stopped (94 passed by count, no failures seen).
+
 ## PRs
 
 None yet.
