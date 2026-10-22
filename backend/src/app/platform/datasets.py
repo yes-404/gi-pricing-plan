@@ -275,14 +275,21 @@ async def update_dictionary(
     """Replace the Data Dictionary, audited with before and after (`01` §5.1, NFR-472).
 
     `count_management`, when given, is awaited right after the scoped permission check passes,
-    so a `403` is never counted (FR-452).
+    so a `403` is never counted (FR-452); a load `404` is counted, because FR-452 exempts only
+    `401` and `403`.
 
     A **replace**, not a merge, and the audit event carries both states. The dictionary
     decides which columns may be modelled at all (FR-12), so "who removed the
     `special_category` marking from this column, and when?" has to be answerable — and a
     merge would make a removal indistinguishable from an omission.
     """
-    row = await load_dataset(session, workspace_id=workspace_id, slug=slug)
+    try:
+        row = await load_dataset(session, workspace_id=workspace_id, slug=slug)
+    except PlatformError as exc:
+        # FR-452 exempts only 401 and 403: the caller passed the route gate, so a load 404 counts.
+        if exc.status_code == 404 and count_management is not None:
+            await count_management()
+        raise
     await rbac.require_permission(
         session,
         workspace_id=workspace_id,

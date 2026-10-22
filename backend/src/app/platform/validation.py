@@ -237,7 +237,8 @@ async def acknowledge(
     """Accept one `warn`, with a reason, audited (FR-46, FR-47).
 
     `count_management`, when given, is awaited right after the permission check passes, so a
-    `403` is never counted (FR-452).
+    `403` is never counted (FR-452); a report `404` is counted, because FR-452 exempts only
+    `401` and `403`.
 
     Three refusals, and each exists because the alternative makes the gate decorative:
     only a `warn` can be acknowledged, only by a principal holding the permission, and
@@ -255,6 +256,9 @@ async def acknowledge(
 
     row = await session.get(ValidationReportRow, report_id)
     if row is None or row.workspace_id != workspace_id:
+        # FR-452 exempts only 401 and 403: the caller passed the route gate, so a load 404 counts.
+        if count_management is not None:
+            await count_management()
         raise PlatformError(
             "NOT_FOUND", "Validation report not found", 404, f"No report {report_id}."
         )
