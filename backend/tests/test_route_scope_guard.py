@@ -1,4 +1,4 @@
-"""The route-scope guard: a route gate must not contradict the scope its handler checks (FD 8177).
+"""The route-scope guard: a route gate must not contradict the scope its handler checks (FD-1852).
 
 `PL-8181` Task 5; `06` FR-345's dated clause of 2026-10-22. Two predicates, one AST resolver, two
 tables. Nothing here touches a database.
@@ -93,7 +93,7 @@ ROUTE_SCOPES: dict[Route, ScopeType] = {
     ("POST", "/api/v1/environments/{env}/deployments"): E,
     ("POST", "/api/v1/environments/{env}/deployment-requests"): E,
     ("POST", "/api/v1/environments/{env}/deployments/rollback"): E,
-    # -- Acts on one named Dataset or Dataset Version: RL 8182's routes (`KNOWN_SCOPE_GAPS`).
+    # -- Acts on one named Dataset or Dataset Version: RL-1849's routes (`KNOWN_SCOPE_GAPS`).
     ("POST", "/api/v1/dataset-versions/{version_id}/validate"): D,
     ("GET", "/api/v1/dataset-versions/{version_id}/validation-reports"): D,
     ("POST", "/api/v1/dataset-versions/{version_id}/transition"): D,
@@ -114,7 +114,7 @@ ROUTE_SCOPES: dict[Route, ScopeType] = {
     ("GET", "/api/v1/validation-reports/{report_id}"): D,
     ("GET", "/api/v1/datasets/{slug}/rule-set"): D,
     ("GET", "/api/v1/blobs/{sha256}"): D,  # scoped through the owning Dataset Version
-    # -- `03` §5.1 :1080/:1083 require `dataset:read` on the portfolio Dataset Version: FD 8184.
+    # -- `03` §5.1 :1080/:1083 require `dataset:read` on the portfolio Dataset Version: FD-1853.
     ("POST", "/api/v1/dislocation-runs"): D,
     ("POST", "/api/v1/dislocation-runs/estimate"): D,
     ("GET", "/api/v1/dislocation-runs/{run_id}/movers"): D,
@@ -131,18 +131,18 @@ ROUTE_SCOPES: dict[Route, ScopeType] = {
     ("POST", "/api/v1/validation-rules"): W,
     ("POST", "/api/v1/validation-rules/{rule_id}/dry-run"): W,
     ("POST", "/api/v1/validation-rules/{rule_id}/submit"): W,
-    # Reference Tables are not a Dataset, have no ScopeType and sit outside FR-345 (RL 8182).
+    # Reference Tables are not a Dataset, have no ScopeType and sit outside FR-345 (RL-1849).
     ("GET", "/api/v1/reference-tables"): W,
     ("GET", "/api/v1/reference-tables/{slug}/lookup"): W,
     ("GET", "/api/v1/reference-tables/{slug}/versions"): W,
     ("GET", "/api/v1/reference-tables/{slug}/versions/{version}/rows"): W,
-    # Upload is "held under any scope", the scope check at ingest (RL 8182).
+    # Upload is "held under any scope", the scope check at ingest (RL-1849).
     ("POST", "/api/v1/blobs/upload-url"): W,
     ("POST", "/api/v1/blobs/uploads/{upload_id}/complete"): W,
 }
 
-_RL_8182 = ("RL-8182", "the slice RL 8182 cuts")
-_FD_8184 = ("FD-8184", "the slice RL 8182 cuts (FD 8184 joins it)")
+_RL_8182 = ("RL-1849", "the slice RL-1849 cuts")
+_FD_8184 = ("FD-1853", "the slice RL-1849 cuts (FD-1853 joins it)")
 _THIS = ("SL-8192", "SL-8192 (SL 8185 Task 4 follow-on), after SL-1736 merges")
 
 #: The rule-set row is paired with four strict xfails in `test_dataset_scoped_writes.py`
@@ -416,7 +416,7 @@ def _app_failures(routes: dict[Route, APIRoute]) -> dict[Route, list[str]]:
 def test_no_route_gate_contradicts_the_scope_its_handler_checks(
     routes: dict[Route, APIRoute],
 ) -> None:
-    """The app-wide guard. Red at base: names exactly the three FD 8177 routes (dictionary,
+    """The app-wide guard. Red at base: names exactly the three FD-1852 routes (dictionary,
     rule-set, acknowledge), which `KNOWN_SCOPE_GAPS` then carries only for rule-set."""
     bad = {k: v for k, v in _app_failures(routes).items() if k not in KNOWN_SCOPE_GAPS}
     assert not bad, "\n" + "\n".join(
@@ -456,7 +456,7 @@ def test_the_guard_does_not_flag_the_environment_or_workspace_wide_routes(
     routes: dict[Route, APIRoute],
 ) -> None:
     """Negative controls: the deployment routes (handler-guarded, ENVIRONMENT) and
-    `GET /reference-tables` (WORKSPACE, RL 8182) are classified and clean."""
+    `GET /reference-tables` (WORKSPACE, RL-1849) are classified and clean."""
     for key in (
         ("POST", "/api/v1/environments/{env}/deployments"),
         ("GET", "/api/v1/reference-tables"),

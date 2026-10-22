@@ -1,4 +1,4 @@
-"""FD 8177 — a Dataset-scoped grant reaches the three writes whose handler checks the Dataset.
+"""FD-1852 — a Dataset-scoped grant reaches the three writes whose handler checks the Dataset.
 
 `PL-8181` Task 2. `06` FR-345 (dated clause, SL 8185): a permission that can be held on a named
 Dataset is checked held-anywhere first (403 `PERMISSION_DENIED`), then on the resource by the
