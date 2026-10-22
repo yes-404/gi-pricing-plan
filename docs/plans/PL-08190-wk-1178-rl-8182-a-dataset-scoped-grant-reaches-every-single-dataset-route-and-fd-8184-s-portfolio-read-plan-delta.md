@@ -26,12 +26,16 @@ relates: [PL-8181, SL-8185, RL-8182, FD-8184, RL-8176, FR-345, FR-343, FR-350, F
 > create it. Written by planner-8182 (Claude Opus 5.5), 2026-10-22, at tree `71e481fa`
 > (origin/main), with SL 8185's guard read at `sl-8185-wk1178-fd8177-scoped-writes` @`40de35f5`.
 
-**Goal:** a principal whose `dataset:*` grant is scoped to Dataset X uses every route that acts
+## Goal
+
+A principal whose `dataset:*` grant is scoped to Dataset X uses every route that acts
 on X or one of X's Dataset Versions, and is refused on Dataset Y with `SCOPE_DENIED` (a blob:
 the same 404 as an unknown one). The 25 owned rows that RL 8182 and FD 8184 hold in SL 8185's
 `KNOWN_SCOPE_GAPS` are deleted, each after a red-first test.
 
-**Architecture:** SL 8185's `requires(perm, held_anywhere=True)` route gate, then the handler
+## Architecture
+
+SL 8185's `requires(perm, held_anywhere=True)` route gate, then the handler
 loads (404) and checks the permission on the Dataset (403 `SCOPE_DENIED`) through three small
 literal-permission helpers, then counts (FR-452). The guard file changes in its tables only.
 
@@ -73,7 +77,7 @@ there by this planner.
   be skipped silently." See *The carry rule*, below.
 
 RL 8182 itself is `docs/rulings/RL-08182-*.md` on `docs/batch-fd1842-oq-gaterows` @`39c4ae25`
-(minting as RL-1849); FD 8184 is on the same branch (FD-1853 at mint). Its "What it obliges"
+(minting as RL 1849); FD 8184 is on the same branch (FD 1853 at mint). Its "What it obliges"
 items 2–5 are the scope below.
 
 ## Verified first, at `71e481fa`
@@ -292,7 +296,7 @@ guard is green whether or not the gate is held-anywhere.
 - **Dependencies, all before Task 2:** (1) **SL 8185 merged to main** (the helper
   `requires(..., held_anywhere=True)`, `RESOURCE_CHECKED_IN_HANDLER_ATTRIBUTE` and
   `test_route_scope_guard.py` exist only on its branch at `40de35f5`); (2) **the docs batch that
-  mints RL 8182 (RL-1849) and FD 8184 (FD-1853) merged**, carrying DP-1's text if ruled (a);
+  mints RL 8182 (RL 1849) and FD 8184 (FD 1853) merged**, carrying DP-1's text if ruled (a);
   (3) DP-1..DP-3 ruled.
 - **Queue:** behind P2 row work and open P2 HIGHs (17:46:43 item 2). See *The carry rule*.
 - **Lane / order:** backend, one executor. Shares `api/datasets.py`, `api/validation.py`,
@@ -445,7 +449,7 @@ fill and date:
 > *(Dated line, 2026-__-__, the maintainer: PL-8190's slice is CARRIED from WK-1178 to WK-676,
 > owner WK-676, condition "before POST /role-assignments ships" (the maintainer's entry
 > "2026-10-22 17:46:43 BST" item 2). Reason: P2 closes on __ with the slice not started/not
-> merged. FD-8184 (FD-1853) and RL-8182 (RL-1849) move with it; their `KNOWN_SCOPE_GAPS` rows
+> merged. FD-8184 (FD 1853) and RL-8182 (RL 1849) move with it; their `KNOWN_SCOPE_GAPS` rows
 > are re-owned to WK-676's slice in the same change.)*
 
 **Trigger for the lead:** when P2's exit demo is scheduled and this slice has no GO yet, the
