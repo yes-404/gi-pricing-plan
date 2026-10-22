@@ -205,7 +205,10 @@ async def test_a_deployer_without_admin_manage_settings_is_refused(
 @pytest.mark.asyncio
 async def test_an_unknown_environment_is_404(client: TestClient, seat) -> None:
     admin = await seat("admin")
-    assert put_shadow(client, admin, "no-such-env", "rating_version:x@1").status_code == 404
+    assert (
+        put_shadow(client, admin, "no-such-env", "rating_version:no-such-version@1").status_code
+        == 404
+    )
 
 
 @pytest.mark.req("FR-272", "NFR-498")

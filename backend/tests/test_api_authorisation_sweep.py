@@ -110,7 +110,7 @@ HANDLER_GUARDED: dict[tuple[str, str], tuple[tuple[str, int, str], ...]] = {
     ),
     # `admin:manage_settings` with the Environment as the resource (`RL-1834` D2 item 3).
     ("PUT", "/api/v1/environments/{env}/shadow"): (
-        ("platform/shadow.py", 66, "require_permission("),
+        ("platform/shadow.py", 67, "require_permission("),
     ),
 }
 
