@@ -2944,25 +2944,25 @@ The fix of FD-1838 (MEDIUM, owner WK-1178), a Work-plan delta row under WK-1178 
 
 (Activated 2026-10-22 on the maintainer's (by delegation) entry "2026-10-22 15:43:10 BST — Maintainer: SPEED MEASURES …" item 2 (`to-lead.md`): FD-1838 prioritised, built red-first, the remedy as reserved at "2026-10-21 21:13:34 BST". MERGE-ACK: not yet given.)
 
-#### SL-8164 — WK-1178 slice C — PL-8162: FR-6, FR-109 and FR-110 dated clauses (docs only)
+#### SL-1857 — WK-1178 slice C — PL-1856: FR-6, FR-109 and FR-110 dated clauses (docs only)
 
 ```yaml
-id: SL-8164
+id: SL-1857
 family: slice
-title: WK-1178 slice C — PL-8162, the FR-6, FR-109 and FR-110 dated clauses (docs only)
-status: active                   # draft → active → closed | retired (§1.2a)
-created: 2026-10-22
+title: WK-1178 slice C — PL-1856, the FR-6, FR-109 and FR-110 dated clauses (docs only)
+status: closed                   # draft → active → closed | retired (§1.2a) — closed 2026-10-22 at the mint
+created: 2026-10-22   # filed under working id 8164; minted 2026-10-22 as SL-1857
 owner: executor
 tree: f3462d8fc1336dc4583fe8a7af92fed399993a55
 phase: P2
 work: WK-1178
 corrected_by: []
-relates: [PL-8162, FD-1723, FR-6, FR-109, FR-110]
+relates: [PL-1856, FD-1723, FR-6, FR-109, FR-110]
 ```
 
-Slice C of `PL-8162` (WK-1178's dated delta on FD-1723's residual limbs). Docs only: a dated amendment under FR-6 (`00-overview.md`: the per-artifact producing-Job id built, the shared `provenance` object and its UI not, carried to §14), under FR-109 (`02-modelling.md`: accepted with reason, the finer-level view carried to §14) and under FR-110 (`power(k)` struck, a required θ in the R/MASS `glm.nb` form), per the maintainer's entry "2026-10-22 16:02:49 BST" rulings 1, 3 and 6.
+Slice C of `PL-1856` (WK-1178's dated delta on FD-1723's residual limbs). Docs only: a dated amendment under FR-6 (`00-overview.md`: the per-artifact producing-Job id built, the shared `provenance` object and its UI not, carried to §14), under FR-109 (`02-modelling.md`: accepted with reason, the finer-level view carried to §14) and under FR-110 (`power(k)` struck, a required θ in the R/MASS `glm.nb` form), per the maintainer's entry "2026-10-22 16:02:49 BST" rulings 1, 3 and 6.
 
-(Activated 2026-10-22 on the maintainer's "2026-10-22 16:02:49 BST — Maintainer: PL 8162 (FD-1723's residual limbs) ACCEPTED; …" ("GO: slice C now"), with `PL-8162` made `active` by L1 in this slice's PR. Working ids: SL 8164, LG 8165; the ledger is `LG-8165`.)
+(Activated 2026-10-22 on the maintainer's "2026-10-22 16:02:49 BST — Maintainer: PL 8162 (FD-1723's residual limbs) ACCEPTED; …" ("GO: slice C now"), with `PL-1856` made `active` by L1 in this slice's PR. Minted 2026-10-22 as SL-1857 from working id 8164, with its ledger LG-1858 from working id 8165 and its plan PL-1856 from working id 8162. Closed 2026-10-22 at the mint as a docs-only slice, the audit and merge-ack being recorded in LG-1858.)
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 

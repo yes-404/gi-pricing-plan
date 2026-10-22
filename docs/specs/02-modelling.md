@@ -122,7 +122,7 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 | **FR-108** | Groupings are first-class auditable operations: creation, edit, and use in a Model each emit Audit Events (FR-7), and a generated model document lists every grouping with its method and rationale. |
 | **FR-109** | A Grouping may be **hierarchical** — a chain of groupings applied in order (outcode → area → region) — so an actuary can retain the finer level for diagnostics while rating on the coarser one. |
 
-> **FR-109, dated amendment 2026-10-22 (PL-8162 slice C, FD-1723): accepted with reason.** The
+> **FR-109, dated amendment 2026-10-22 (PL-1856 slice C, FD-1723): accepted with reason.** The
 > chain is **stored** (`Grouping.parent_grouping_id`, `modelling.py:593`) and **read by nothing**:
 > no diagnostic, view or rating step follows it. An actuary already gets what the row promises by
 > holding the finer and the coarser level as two Groupings and rating on the coarser one, so the
@@ -149,10 +149,10 @@ Terms from `00-overview.md` §2.2 are used unchanged. Additional terms owned her
 > has no spelling for it and no slice has needed one — and is named here under
 > FR-207's staging rule rather than quietly dropped.
 
-> **FR-110, dated amendment 2026-10-22 (PL-8162 slice C, FD-1723; the maintainer's entry "2026-10-22
+> **FR-110, dated amendment 2026-10-22 (PL-1856 slice C, FD-1723; the maintainer's entry "2026-10-22
 > 16:02:49 BST", rulings 1, 3 and 6).**
 > 1. **`power(k)` is STRUCK from the supported links.** The text above is kept; this amendment
->    supersedes its "remains declared and unbuilt". Reason, verified by the planner in PL-8162:
+>    supersedes its "remains declared and unbuilt". Reason, verified by the planner in PL-1856:
 >    `glum` 3.4.1's `TweedieLink` raises for `0 < k < 1` and casts `k` to `float32`, so any build
 >    would be partial or would fit a different `k` from the one declared. The supported links are
 >    `log`, `logit`, `identity` and `inverse`. **Reinstated only by** a library that supports exact

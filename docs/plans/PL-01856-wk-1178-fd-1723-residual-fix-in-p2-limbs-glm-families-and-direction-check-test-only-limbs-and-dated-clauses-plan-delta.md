@@ -1,10 +1,10 @@
 ---
-id: PL-8162
+id: PL-1856
 family: plan
 kind: map
 title: WK-1178 — FD-1723's residual "Fix in P2" limbs. The GLM families and the GLM direction diagnostic (FR-110, FR-89), the test-only limbs (FR-33, FR-80, FR-41, FR-123, FR-7, FR-14, FR-15) and the dated clauses (FR-6, FR-109, FR-110) — a dated Work-plan delta
-status: active                 # draft → active → superseded | retired (§1.2a) — activated 2026-10-22 by L1 in slice C's PR (SL-8164); all five DPs ruled in "2026-10-22 16:02:49 BST"
-created: 2026-10-22            # filed under working id 8162
+status: active                 # draft → active → superseded | retired (§1.2a) — activated 2026-10-22 by L1 in slice C's PR (SL-1857); all five DPs ruled in "2026-10-22 16:02:49 BST"
+created: 2026-10-22            # filed under working id 8162; minted 2026-10-22 as PL-1856
 owner: planner
 tree: f3462d8fc1336dc4583fe8a7af92fed399993a55
 phase: P2
@@ -15,7 +15,9 @@ corrected_by: []
 relates: [PL-1733, SL-1734, PL-1735, SL-1736, FD-1723, FR-6, FR-7, FR-14, FR-15, FR-33, FR-41, FR-80, FR-89, FR-109, FR-110, FR-123]
 ---
 
-# PL-8162 — WK-1178: FD-1723's residual "Fix in P2" limbs (a dated Work-plan delta)
+# PL-1856 — WK-1178: FD-1723's residual "Fix in P2" limbs (a dated Work-plan delta)
+
+Disclosure: drafted under working id 8162; minted as PL-1856 on 2026-10-22, in slice C's PR (SL-1857).
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L5
 > (`document-ids.md` §1.6, PL row: one plan per Work, slices as rows, no per-slice leaf; a change
@@ -219,7 +221,7 @@ writes `docs/roadmap.md`.
 All five are for the maintainer (by delegation) at this plan's review; DP-K is named for the
 maintainer's own ruling in the 15:50:37 entry. The plan is `draft` until each is ruled.
 
-*(Dated line, 2026-10-22, at activation (SL-8164): ruled by the maintainer's entry "2026-10-22 16:02:49 BST — Maintainer: PL 8162 (FD-1723's residual limbs) ACCEPTED; power(k), θ convention, NB deviance, DP-C, DP-F14, DP-T, DP-M ruled" (`to-lead.md`). **DP-K: `power(k)` STRUCK** (ruling 1). **DP-C: TESTS**, so slices D and E (ruling 4). **DP-T: θ REQUIRED** (ruling 6), and, by ruling 3, "FR-110 states θ in the **R/MASS `glm.nb` form**, variance μ + μ²/θ, the form actuaries quote. The engine converts to glum's form at one boundary (glum α = 1/θ_R), and a test pins the round trip." DP-T and the red A-R3 below were drafted in glum's NB2 form (`v = μ + θ·μ²`), which this line supersedes; they are aligned in place by this pre-merge correction, and the Evidence paragraph on glum's `NegativeBinomialDistribution` keeps describing glum, not the platform. Also ruled: DP-F14 hand-written paths (ruling 5), DP-M as recommended (ruling 7).)*
+*(Dated line, 2026-10-22, at activation (SL-1857): ruled by the maintainer's entry "2026-10-22 16:02:49 BST — Maintainer: PL 8162 (FD-1723's residual limbs) ACCEPTED; power(k), θ convention, NB deviance, DP-C, DP-F14, DP-T, DP-M ruled" (`to-lead.md`). **DP-K: `power(k)` STRUCK** (ruling 1). **DP-C: TESTS**, so slices D and E (ruling 4). **DP-T: θ REQUIRED** (ruling 6), and, by ruling 3, "FR-110 states θ in the **R/MASS `glm.nb` form**, variance μ + μ²/θ, the form actuaries quote. The engine converts to glum's form at one boundary (glum α = 1/θ_R), and a test pins the round trip." DP-T and the red A-R3 below were drafted in glum's NB2 form (`v = μ + θ·μ²`), which this line supersedes; they are aligned in place by this pre-merge correction, and the Evidence paragraph on glum's `NegativeBinomialDistribution` keeps describing glum, not the platform. Also ruled: DP-F14 hand-written paths (ruling 5), DP-M as recommended (ruling 7).)*
 
 *(Aligned 2026-10-22 on RS 8189 B1, before this plan's first merge, as the maintainer's entry "2026-10-22 17:57:29 BST — Maintainer: slice C RS 8189: B1 (plan drift) aligned in place; B2 FR-6 = option (a), the adopted narrowing, with the six shapes NAMED as outside it" (`to-lead.md`) accepts. Rulings 1, 3 and 6 of 16:02:49 put FR-110's dated clause in slice C, so these lines change: the limb table's FR-110 row (`power(k)` to slice C); acceptance item 3 (C gains `02` FR-110); acceptance item 7 (relabelled C); acceptance item 15 (three clauses, and FR-6 to B2 (a)); the Tasks table's row 1 (FR-110, C0 to C2b); the Slice C heading; Task C1 (FR-6 narrowed, only the UI half carried, B2 (a)); a new Task C2b (the FR-110 clause); Task A2 (`power(k)` removed); and, as line 11, the front-matter title (the dated clauses gain FR-110; lead 26's acceptance of 49f5de73). Nothing else of slice A changed. The DP-K option text, which names "slice A's Task A2" as the writer of the strike, is the pre-ruling analysis and is left as filed.)*
 
