@@ -108,6 +108,33 @@ run-small: waiting for /tmp/slots/small-test at 13:16:24 (load 4.67)
 
 (The 13:06 run, `42 passed in 0.33s`, was not saved to a log; this re-run replaces it as the record.)
 
+#### 2026-10-22 — the DB-lane smoke (`cells-diff --only rows-10000 --seeded-jobs 500`): WIRING TEST, NOT A READING; ended rc 1 on a harness defect (tree `40d4ac2883be313c292b5eb3086148789a3e8da6`)
+
+GO: the lead's "GO for the SL-1736 smoke now" (lead 26), on the maintainer's "2026-10-22 13:11:48 BST — Maintainer: SL-1554 build NOTED; SL-1736 smoke GO; the gap order". Command, in the foreground: `timeout 1200 flock -w 900 /tmp/slots/gate-1 bash ~/gi-pricing-plan.local/scratch/sl1736/smoke.sh`; wrapper rc 0, script's smoke line `| smoke | rc=1 |`. Logs under `~/gi-pricing-plan.local/scratch/sl1736/`: `smoke-wrapper.log` (all of the below), `smoke.out` (empty: the failure came before any output), `smoke.err`, `smoke-alembic.log`. Load1 at the start 2.23; available memory 23 GB. The run touched neither the deployment switch nor a gate slot beyond gate-1 itself.
+
+Summary and zeros lines, verbatim from `smoke-wrapper.log`:
+
+```
+| head | 40d4ac2883be313c292b5eb3086148789a3e8da6 |
+| load1 | 2.23 |
+| bucket gip-test-blobs-gate-1 reset (start) | rc=0 |
+| createdb gipricing_sl1736_smoke | rc=0 |
+| alembic upgrade | rc=0 |
+| redis db 1 FLUSHDB (start) | rc=0 |
+| smoke | rc=1 |
+  File ".../scripts/measure-p2-nfr-sweep.py", line 780, in _cells_diff
+    from backend.tests.test_rate_tables_service import _seed_approved_model, _set_threshold
+ModuleNotFoundError: No module named 'backend'
+| dropdb gipricing_sl1736_smoke (end) | rc=0 |
+| redis db 1 FLUSHDB (end) | rc=0 |
+| bucket gip-test-blobs-gate-1 removed (end) | rc=0 |
+| zeros | own-DB count=0 redis db 1 dbsize=0 |
+```
+
+`mc ls g/` after the run: `aud933-bucket/`, `gip-bench-compiled-for/`, `gip-bench-score-batch/`, `gip-blobs/`, `gip-test-blobs/`, `gip-test-blobs-1711/`; no `gip-test-blobs-gate-1`.
+
+**Cause (a harness defect, not a platform finding):** `_cells_diff` imports `backend.tests.test_rate_tables_service` at its top, before `_Env()` calls `_bootstrap_paths()`, so the repository root is not yet on `sys.path`. The failure is before any seeding, so the seeded-Job shape, the helper signatures and the 202 flow are **still untested**. **Proposed fix** (not made; awaiting the lead): call `_bootstrap_paths()` first in `_cells_diff`, then re-run the same smoke. The unit test cannot see this: it never runs a subcommand.
+
 #### PLANNED — the four ALONE grants and their non-ALONE companions (not run; each grant is requested from the lead with these exact commands)
 
 Common to every block. `W=/home/puzhenhao1989/gi-pricing-plan/.claude/worktrees/sl-1736`, `OUT=/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1736` (outside the repository; `mkdir -p $OUT`). The tree is the branch head at the grant (`git -C $W rev-parse HEAD`), which must be unchanged from the head named in the request. Every block starts by printing, and the seat quotes: `git -C $W rev-parse HEAD`, `cut -d" " -f1 /proc/loadavg`, `free -g`, `nproc`, `pgrep -af '[p]ytest|[v]itest|[f]lock'`, and `flock -n /tmp/slots/gate-1 true; echo $?` for both gate slots. A window starts only inside its conditions (seat brief item 15): load1 and available memory are read at the start and printed; above the limit the seat waits (re-check every 60 s, up to the D4 limit) or aborts and reports. Foreground, `timeout` on each stage, no detach (S-11, S-12).
