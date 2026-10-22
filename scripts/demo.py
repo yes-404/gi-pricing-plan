@@ -267,11 +267,16 @@ def journey_failure_line(failure: Any, journey: str = "wf-699") -> str:
 
 def compose_command(*args: str) -> list[str]:
     """`docker compose` on the stack's file and `app` profile; `GIP_COMPOSE_PROJECT` names the
-    project when the stack was not started under the default one."""
+    project when the stack was not started under the default one.
+
+    When the standard `COMPOSE_FILE` variable is set, no `-f` is passed: docker compose then reads
+    the file list from it (':'-separated on Linux), so every call the demo makes, the outbox
+    relay's `run` included, sees the same merged files as the stack the operator named."""
     project = os.environ.get("GIP_COMPOSE_PROJECT")
+    file_args = [] if os.environ.get("COMPOSE_FILE") else ["-f", COMPOSE_FILE]
     return [
         "docker", "compose", *(["-p", project] if project else []),
-        "-f", COMPOSE_FILE, "--profile", "app", *args,
+        *file_args, "--profile", "app", *args,
     ]
 
 
