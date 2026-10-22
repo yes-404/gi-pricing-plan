@@ -35,7 +35,20 @@ relates: [PL-8162, SL-8164, FD-1723, FR-6, FR-109, FR-110]
 
 ### Gate
 
-Docs only. Owed after the ALONE window ends: `audit-docs.py`, `doc-index.py` and `--check` under the gate-2 flock (check 31 for 8164 and 8165 is expected until minted).
+Docs-only gate (maintainer-approved, pre-approval 1(e), to-lead "2026-10-22 17:50:51 BST"), run by `scratch/sl-8164/gate-docs.sh` on head `507cfba66edabbfaf9b7dbfff173475835d5226c` (tree `8d2ae6f014ea56742785ca46e85e098ba290290c`); logs in `scratch/sl-8164/gate/`. `git diff --name-only origin/main...HEAD` lists six paths, all under `docs/` (INDEX, this LG, PL-8162, roadmap, 00-overview, 02-modelling). The dated clauses name no test file or function (grep of the `docs/specs` diff: none; the θ round trip is slice A's).
+
+| Check | rc | Summary |
+|---|---|---|
+| `audit-docs.py` | 1 | `FAILED (2)`: `check 31: gap in the full allocation between 1840 and 8162`, `between 8162 and 8164` (unminted working ids) |
+| `doc-index.py --check` | 0 | `OK (byte-stable)` |
+| `register-lint.py` | 0 | `OK (0 violations)` |
+| `req-coverage.py` | 0 | rc 0 |
+| `generate-contracts.py --check` | 0 | rc 0 |
+| pytest run 1 (`test_audit_docs_finding_citations`, `_ids`, `_process_core_digest`) | 1 | `5 failed, 119 passed in 234.79s` |
+| pytest run 2 (`test_audit_docs_w37_11_ceiling`, `test_doc_index`, `test_register_lint`) | 1 | `5 failed, 105 passed in 96.44s` |
+| pytest run 3 (`test_register_owed`, `test_repository_invariants`) | 1 | `3 failed, 20 passed in 76.83s` |
+
+The 13 pytest failures all run the real tree: 11 assert `audit-docs.py` rc 0 (got 1) and 2 assert allocation contiguity (`[(1840, 8162), (8162, 8164)]`, `doc-id.py … gap between 1840 and 8162`). Every one traces to the same check 31 gap above, which the mint closes. Classification: expected until minted, NOT proven; the minted-head re-run must show all three runs green.
 
 ### Audit
 
