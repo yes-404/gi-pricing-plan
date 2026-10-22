@@ -121,7 +121,7 @@ became 10 and 12. Fix commit `3d175af3774a260e382a4548d0fa24f5178d79b3` (tests o
 
 **Observation, not fixed (FD candidate for the lead).** 404 before 403: `deploy`, `rollback`, the
 deployment-request submit (`platform/deployments.py:130-131` via `_authorised_environment`), the
-routing write (same) and the shadow write (`platform/shadow.py:65-67`) load the Environment before
+routing write (same) and the shadow write (`platform/shadow.py:66-67`) load the Environment before
 checking the permission, so an unauthorised caller can tell whether an Environment exists. The
 settings write (`api/environment_settings.py`, `ManageSettings` dependency) and Environment retire
 and update check the permission first (403 before 404).
@@ -154,3 +154,49 @@ the seat); the harness reset the working directory and no repository state chang
 
 
 **Merged-head tests:** owed to the code gate at the head the lead names (the full suite, ruff, mypy and import-linter at the merge of `origin/main` 71e481fa, head `899e957ec99df16022933ae1a1fd808a054986d1` when written); no further DB window is run before it (the lead, 2026-10-22).
+
+## Negative controls (RS 8180 B1/B2) and the migration round trip, 2026-10-22 (window 3)
+
+Tree `c55410d6f9866e1d8549385b29eab8b25e2e75d2` at every run's start (each log opens with
+`git rev-parse HEAD` and `git diff --stat`, which shows the mutation). Own database
+`gipricing_sl-1260_nv3`, redis db 12, beside FD-1838's gate (gate-1b still held) under the
+maintainer's exception; `GIP_GATE_SLOT` unset; one test file per run via `run-small.sh`;
+`scratch/sl1260-db/window3.sh`. RL-1834's Acceptance, "shown red first on deliberately broken
+input", for the three violations RS 8180 B1/B2 found unrun. Every mutation is a scratch edit,
+reverted with `git checkout -- <file>`, never committed; `git status --short` was empty after each.
+
+| Control | Mutation (file:line at the tree above) | Log | rc | Summary line, verbatim | Failing by name |
+|---|---|---|---|---|---|
+| V1 overlapping ranges stored | `platform/routing.py:97` `if _overlaps(a, b):` became `if False and _overlaps(a, b):` | `21-nv1-overlap.log` | 1 | `3 failed, 11 passed, 1 warning in 7.25s` | `test_routing_write.py::test_overlapping_ranges_are_refused_and_nothing_is_written` [straddles-the-end], [inside], [open-ended] |
+| V2 change commits without its Audit Event | `platform/routing.py:131` the `audit.record(...)` call wrapped in `try/except Exception: pass` | `22-nv2-audit-swallowed.log` | 1 | `1 failed, 13 passed, 1 warning in 7.15s` | `test_routing_write.py::test_a_routing_change_cannot_commit_without_its_audit_event` (`assert failed.status_code == 500`) |
+| V3 draft or uncompiled candidate stored | `platform/shadow.py:88` `or candidate.status == "draft"` removed, and `:98` `if not content_hash:` became `if False and not content_hash:` | `23-nv3-draft-uncompiled.log` | 1 | `2 failed, 10 passed, 4 warnings in 5.40s` | `test_shadow_write.py::test_a_draft_candidate_is_refused` (got 200), `test_an_uncompiled_candidate_is_refused` (got 500) |
+
+Start/end (UTC): V1 16:31:04 to 16:31:20; V2 16:31:24 to 16:31:38; V3 16:31:38 to 16:31:51.
+load1 at start 4.96, 4.66, 4.40. Each log lists the unsuffixed and `gate-1b` `gip:switch*`
+channels and `PUBSUB NUMSUB` for the three unsuffixed ones, none of which this window created.
+
+Two readings. (1) V2 is not "skip the audit write": the test replaces `audit.record` with a
+raiser, so removing the call would leave it green. The mutation that commits the violation is
+swallowing the audit failure, which is what the test then catches. (2) For V3's uncompiled limb
+the run returned 500, not a stored row: the database CHECK `ck_shadow_configs_bundle_hash_format`
+refused the insert. The test fails by name all the same (it expects 409), and the database
+constraint is a second line behind the application check.
+
+**Migration round trip** (`20-migration-roundtrip.log`, same database, 16:30:51 to 16:30:59 UTC).
+Before: `routing_rules`, `shadow_configs`, `shadow_results` present, `alembic_version` = `9b3e7c15d4a2`.
+`alembic downgrade -1` rc 0 (`9b3e7c15d4a2 -> a4d1f08c3b97`); `alembic current` and `alembic_version`
+= `a4d1f08c3b97`, the three tables absent from `information_schema.tables` (`alembic heads` still
+prints the script head `9b3e7c15d4a2`, as it reads the scripts). `alembic upgrade head` rc 0, `alembic current`
+= `9b3e7c15d4a2 (head)`, the three tables present again.
+
+**Observation, not fixed: `_routed` is not exception-guarded.** `_shadow_task` wraps its flag
+read and its decision in `try/except Exception` that logs and returns `None` (`api/score.py:275-290`,
+`:276` the `settings_service.resolve` call). `_routed` reads its flag at `api/score.py:365` with no
+guard, and its caller does not guard it either (`api/score.py:579`, `routed = await _routed(...)`).
+An exception from the flag read or from `routing_service.select_range` therefore propagates and fails the live
+quote. Routing is a pricing decision, so failing closed is defensible, but the asymmetry with the
+shadow path is undeclared. Raised for the lead.
+
+Cleanup: `dropdb` rc 0; `pg_database` count for the window's database 0; redis db 12 `FLUSHDB`, `DBSIZE` 0
+(it held 1 key at V2's start, from a test run); db 0 was 59 at setup and 62 at the end,
+not 56: it carries other sessions' keys and this window wrote none to it.
