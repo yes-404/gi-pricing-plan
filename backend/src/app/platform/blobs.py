@@ -139,7 +139,7 @@ class BlobStore:
     async def ensure_bucket(self) -> None:
         """Create the bucket when absent and set the staging lifecycle rule.
 
-        Safe to call on every start and from several services at once (FD 8169): a
+        Safe to call on every start and from several services at once (FD-1850): a
         `create_bucket` that loses the race to a peer answers `BucketAlreadyOwnedByYou`, which
         is success. `BucketAlreadyExists` means another owner in S3, so it is success only if
         `head_bucket` then succeeds; otherwise the original error is raised (chained to the head

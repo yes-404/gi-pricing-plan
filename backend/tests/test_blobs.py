@@ -423,7 +423,7 @@ async def test_a_gone_multipart_upload_with_no_object_is_the_named_failure(
 
 
 class _RacingS3:
-    """S3 client stub for a concurrent first start (FD 8169): the bucket is absent at
+    """S3 client stub for a concurrent first start (FD-1850): the bucket is absent at
     `head_bucket`, a peer creates it before our `create_bucket`, so that call raises
     `create_code`. After that the bucket exists unless `head_after` says otherwise."""
 
@@ -463,7 +463,7 @@ def _store_with(client: _RacingS3) -> BlobStore:
 
 @pytest.mark.req("FR-421")
 async def test_ensure_bucket_survives_bucket_already_owned_by_you() -> None:
-    """FD 8169 (i): the loser of a first-start create race gets `BucketAlreadyOwnedByYou`;
+    """FD-1850 (i): the loser of a first-start create race gets `BucketAlreadyOwnedByYou`;
     that is success and the lifecycle rule is still set."""
     client = _RacingS3("BucketAlreadyOwnedByYou")
     await _store_with(client).ensure_bucket()
@@ -472,7 +472,7 @@ async def test_ensure_bucket_survives_bucket_already_owned_by_you() -> None:
 
 @pytest.mark.req("FR-421")
 async def test_ensure_bucket_accepts_bucket_already_exists_when_head_now_succeeds() -> None:
-    """FD 8169 (ii): MinIO may answer `BucketAlreadyExists` to the race loser; the re-run
+    """FD-1850 (ii): MinIO may answer `BucketAlreadyExists` to the race loser; the re-run
     `head_bucket` succeeds (our access), so it is success."""
     client = _RacingS3("BucketAlreadyExists")
     await _store_with(client).ensure_bucket()
@@ -485,7 +485,7 @@ async def test_ensure_bucket_accepts_bucket_already_exists_when_head_now_succeed
 async def test_ensure_bucket_raises_bucket_already_exists_when_head_still_fails(
     head_code: str,
 ) -> None:
-    """FD 8169 (iii), breaker: in S3 `BucketAlreadyExists` means another owner. Treating it
+    """FD-1850 (iii), breaker: in S3 `BucketAlreadyExists` means another owner. Treating it
     as success when we still cannot reach the bucket leaves every later call failing far
     from the cause; the original error is raised."""
     client = _RacingS3("BucketAlreadyExists", head_after=head_code)
