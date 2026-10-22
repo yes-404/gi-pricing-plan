@@ -267,3 +267,26 @@ routing/shadow table check:
 
 This clean record supersedes the beside-the-gate run above (the Deviation stands as history). Cleanup: `dropdb` rc 0, `pg_database`
 count 0, redis db 12 `DBSIZE` 0, db 0 is 83 (other sessions' keys; none written here).
+
+## Gate-red fixes (the lead's diagnosis of the SL-1260 gate, `pytest.log`: `19 failed, 6702 passed, 19 skipped, 147 warnings in 2926.38s`)
+
+Thirteen of the 19 are the docs-audit set (check 31 on this ledger's working id). Six were guards catching the slice's own additions.
+Small runs, beside SL-1551's gate, `GIP_GATE_SLOT` unset, one to two DB-free files each, logs under `scratch/sl1260-db/`, tree
+`57b7fa04`-descendant `605fae23` plus the working-tree edit named in each log's `git diff --stat`:
+
+| # | Guard | Fix (commit "test(guards)" unless noted) | Run | Result |
+|---|---|---|---|---|
+| 1 | `test_contracts.py::test_every_one_sided_slug_is_declared` | four `ONE_SIDED_SLUGS` entries (`routing-rule`, `routing-rule-update`, `shadow-config`, `shadow-config-update`), the Slice 5 form | `31-i1-i2-contracts-demoguide.log` | `182 passed, 2 skipped, 2 warnings, 2 errors in 10.75s`: the guard passes; the 2 errors are `test_demo_guide.py`'s DB-backed `test_the_entrance_is_absent_where_development_identity_is` and `test_the_guide_is_served_where_the_demo_runs`, a missing-database setup error, held for a DB lane |
+| 2 | `test_demo_guide.py::test_the_guide_names_the_endpoints_a_spec_declares...` | asserts `{"OPT"}` instead of `{"RATE"}`, with a dated comment; OPT chosen because its whole endpoint axis (optimisation runs, demand models, GIPP checks) is a later phase, so it stays unbuilt longest | same log | passes (not among the failures) |
+| 3 | `test_error_sinks.py::test_every_failure_sink_on_a_quote_input_path_is_accounted_for` | two `_SINKS` entries for `_shadow_task` and `_shadow_score`; new `test_shadow_log_sanitised.py` (two DB-free sentinel tests, commit "test(shadow)") | `33-i3-sentinel-green.log`, `35-i3-error-sinks.log` | sentinels `2 passed, 2 warnings in 0.32s`; error sinks `9 passed, 2 warnings, 4 errors in 1.53s` (census passes; the 4 errors are DB-fixture setup errors, held) |
+| 4 | `test_settings_environment.py::test_scope_defaults_to_workspace_only_and_three_keys_...` | the three-key set now selects `WORKSPACE_OR_ENVIRONMENT`; sibling `test_the_routing_and_shadow_flags_are_environment_only` asserts the two flags are the only `ENVIRONMENT` keys | not run: the file mixes DB tests | held for a DB lane |
+| 5 | `test_repository_invariants.py::test_the_error_code_registry_matches_the_specs` | waiting on the maintainer's A or B | | open |
+| 6 | `test_audit_docs_ids.py::test_widening_the_scope_roots_...` | 89 became 93 with a dated line citing the four schemas | `32-i6-audit-docs-ids.log` | `2 failed, 116 passed in 57.59s`; the two failures are `test_the_real_tree_passes_all_ten_checks` and `test_doc_id_check_exits_0_on_the_real_tree`, the check-31 class; the widening test passes |
+
+**Red-first for item 3** (`34-i3-sentinel-red-raw-exc.log`): in a scratch edit of `api/score.py`, both `exc_info=safe_job_exc_info(exc)` in
+`_shadow_task` and `_shadow_score` became `exc_info=exc`; rc 1, `2 failed, 2 warnings in 0.60s`, failing
+`test_a_shadow_decision_failure_logs_no_quote_input` and `test_a_shadow_scoring_failure_logs_no_quote_input` by name. Reverted with
+`git checkout -- backend/src/app/api/score.py`; `git status --short` showed only the test files; never committed.
+
+`ruff check .` is clean on `backend/tests` and `tests`. `ruff format --check` reports drift in four of the edited files that this
+change did not cause (lines far from the edits), so the new file was formatted and the others left as the repository has them.
