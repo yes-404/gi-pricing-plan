@@ -69,6 +69,10 @@ Each `regfix-b1..b4.log` starts with `a91bff432542f7f60f4748fb5ed13acb20c1155e`,
 
 `flock -w 900 /tmp/slots/gate-2 env -C <detached worktree at ada287f3> python3 scripts/audit-docs.py`: rc=1, `FAILED (1)`: `check 31: gap in the full allocation between 1838 and 8141`. No other check failed. (The worktree was removed afterwards.)
 
+## Findings
+
+B1 (blocking): the derived GREEN set omits two importers of the changed `graph.ts`. Items 1, 3, 4 and 5 above are met.
+
 ## Verdict (proposal; the lead's to issue)
 
 **NOT-CLEAN, one blocking item (B1):** the derived GREEN set omits `StepInspector.test.ts` and `QuoteSandboxView.test.ts`, both of which load the changed `graph.ts`. Everything else in the delta is met. Process note for the lead: the LG's grep cannot see transitive importers; a derivation by import graph is the fix, and it is the same class of miss as the one that hid the regression.
