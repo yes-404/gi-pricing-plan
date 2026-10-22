@@ -523,6 +523,7 @@ async def _fremtpl2(env: _Env, rows: int | None, reuse: bool) -> tuple[Any, Any,
 
 
 async def _one_way(args: argparse.Namespace) -> int:
+    _bootstrap_paths()
     from sqlalchemy import text
 
     import pricing_core.data.profile as profile_module
@@ -531,7 +532,6 @@ async def _one_way(args: argparse.Namespace) -> int:
     from model_schema import RecordGrain, new_uuid7
 
     env = _Env()
-    _bootstrap_paths()
     header = session_header()
     async with env.app.router.lifespan_context(env.app), env.client() as client:
         corpora: list[tuple[str, Any, Any, Any]] = []  # (name, workspace, actor, version id)
@@ -775,6 +775,7 @@ CELLS_DIFF_RUNS = (
 
 
 async def _cells_diff(args: argparse.Namespace) -> int:
+    _bootstrap_paths()
     from uuid import UUID, uuid4
 
     from backend.tests.test_rate_tables_service import _seed_approved_model, _set_threshold
