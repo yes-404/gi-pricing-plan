@@ -1,25 +1,25 @@
 ---
-id: LG-8167
+id: LG-1861
 family: ledger
-title: WK-1178 slice SL-8166 — PL-1856 slice A, the glum family translation, the NB deviance, the θ boundary and the GLM direction check, slice ledger
-status: active                 # active → closed (§1.2a)
-created: 2026-10-22
+title: WK-1178 slice SL-1860 — PL-1856 slice A, the glum family translation, the NB deviance, the θ boundary and the GLM direction check, slice ledger
+status: closed                 # active → closed (§1.2a) — closed 2026-10-22 at the mint, audit CLOSED (RS 8183, RS 8188, the lead's 17:58:43 BST verification)
+created: 2026-10-22   # drafted 2026-10-22 under working id 8167; minted 2026-10-22 as LG-1861
 owner: executor
 tree: 31e03c8ebd3c37b0e42b658b82775339fa95fb19                  # the tree of merge 480d73ea (origin/main 71e481fa into the slice); the LG edits after it are under docs/ledgers and docs/INDEX.md only
 phase: P2
 work: WK-1178
-slice: SL-8166
+slice: SL-1860
 plans: [PL-1856]
 corrected_by: []
-relates: [PL-1856, SL-8166, FD-1723, FR-89, FR-110]
+relates: [PL-1856, SL-1860, FD-1723, FR-89, FR-110]
 ---
 
-# LG-8167 — WK-1178 slice SL-8166: PL-1856 slice A
+# LG-1861 — WK-1178 slice SL-1860: PL-1856 slice A
 
-*(Working ids SL 8166 and LG 8167, reserved by lead 26 on 2026-10-22; unminted.)*
+*(Disclosure: drafted under working ids SL 8166 and LG 8167, reserved by lead 26 on 2026-10-22; minted 2026-10-22 as SL-1860 and LG-1861 in this slice's PR.)*
 
 **GO:** to-lead.md "2026-10-22 16:02:49 BST — Maintainer: PL 8162 (FD-1723's residual limbs) ACCEPTED; …" (slices C, then A, then B).
-**MERGE-ACK:** not yet given. Slice A merges after slice C (its FR-110 clauses).
+**MERGE-ACK:** not yet given (the lead's, at the merge). Slice A merges after slice C (its FR-110 clauses).
 
 ## Tasks
 
@@ -86,13 +86,18 @@ RS 8188 found the claims above had no durable log. Each log below opens with `gi
 
 ### Audit
 
-Not yet.
+Closed 2026-10-22. Sources, each quoted from the channel `~/gi-pricing-plan.local/channel/from-lead-2026-10-09.md` (RS 8183 and RS 8188 are working ids of audit records on the `aud-8166*` branches, unminted and not on this branch):
+
+- **RS 8183** (aud-8166 @cc2f93b2), the slice audit: lead entry "2026-10-22 17:41:35 BST": "RS 8183 (aud-8166 @cc2f93b2) NOT-CLEAN B1–B4 process-only — ADOPTED; SEATED exec-8166b remedies." The remedies are this ledger's Deviation (B1), GREEN additions (B2) and Open observation (B4) sections.
+- **RS 8188** (aud-8166r @4eebb50d), the narrow re-audit of B1–B4: lead entry "2026-10-22 17:52:14 BST": "RS 8188 (aud-8166r @4eebb50d) NOT-CLEAN on EVIDENCE only (B2 5 of 6 frontend logs missing, 1 in /tmp; B4 post-merge contracts + NB count unlogged) — lead verdict ADOPTED: re-run + persist (no claim without a durable log)." The re-run is this ledger's `### Evidence (RS 8188)` section.
+- **The lead's verification:** the maintainer's entry "2026-10-22 17:52:38 BST" (as relayed): "slice A RS 8188 remedy: LEAD verifies persisted logs directly (exists; first lines sha/tree/date/load1 = afdea774; summary = LG 8167 citation verbatim); no fresh auditor." Result, lead entry "2026-10-22 17:58:43 BST": "SLICE A CLOSING EVIDENCE (lead verification per maintainer 17:5x): scratch/sl-8166/evidence-8188/ — 9 run logs each open HEAD afdea774 / tree 71504d98 / date / load1 and end rc=0; … Every summary matches LG 8167 '### Evidence (RS 8188)' at 76aac1e0 verbatim. audit-docs.log FAILED(2) check31 only (no sha header; check output). Slice A audit CLOSED: RS 8183 + RS 8188 + this verification."
 
 ### Build log
 
 - **2026-10-22 — design.** `glm_family` / `r_theta_from_glum_theta` in `glm.py` are the only place the family names and θ conversion are written; `unit_deviance`/`deviance` take `theta` and raise for NB without it; `_theta_of` threads it to the partition, type-III, backtest and comparison call sites. `_glm_monotonicity` reuses `_resolved_axis`, `_representatives` and `_skipped_ids`; a numeric identity factor is swept over its 5th–95th percentile grid and a banding in its own `labels` order; operands, expression factors and unordered factors are recorded as omissions. A GBM-style `_sweep` reuse was not taken: it is bound to `predict_gbm` and sorts labels.
 - **2026-10-22 — DEVIATION, disclosed (lead 26):** the executor's small-test pytest (pid 1798645, `sl-8166`, the loop batch `test_demo_b4_premium.py test_diagnostics.py test_ebm.py`) held `/tmp/slots/small-test` at 16:22 BST, during W2's ALONE window and after the lead's "W2 START". The loop had started the batch before the message was read, and the executor then stopped the loop; the lead reports W2 is a functional red, so no harm. Nothing of the executor's ran after.
 - **2026-10-22 — `pkill -f <pattern>` was used to stop that loop** and also ended the executor's own shell; a pattern kill can hit other seats' processes and is not to be used (lead 26): only own PIDs are stopped. The batch re-runs after W2 END.
+- **2026-10-22 — mint (exec-a3, head `76aac1e0` re-merged with `origin/main` @ `1fe82ee6`):** merge-tree rc 1, `docs/INDEX.md` the only conflict (taken from main and regenerated); the plan's working id (space and hyphen forms, working id 8162) re-pointed to `PL-1856` in 9 files (the quoted GO header on the GO line keeps its working id), the two generated contracts regenerated (`54 generated contracts match the models`); SL 8166 → SL-1860 and LG 8167 → LG-1861 in their own commit; the `SL-1860` roadmap row added (the branch had none) and closed with this ledger.
 
 ## PRs
 
