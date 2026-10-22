@@ -1185,6 +1185,30 @@ class GlmSpec(ModelSpecCommon):
         return self
 
     @model_validator(mode="after")
+    def _a_negative_binomial_declares_its_theta_and_no_other_family_does(self) -> GlmSpec:
+        """FR-110 (PL-8162 DP-T): θ is declared, never defaulted.
+
+        θ is R/MASS `glm.nb`'s (variance μ + μ²/θ); the engine converts it to glum's
+        reciprocal at one boundary. glum's own default of 1.0 is a modelling judgement with
+        no neutral value, so it is never adopted by omission. A θ on any other family is
+        refused because a declared parameter that is silently ignored is the FR-127 class.
+        """
+        theta = self.family_params.get("theta")
+        if self.family == "negative_binomial":
+            if theta is None or not (0.0 < theta < float("inf")):
+                raise InputFreeError(
+                    "a negative_binomial model must declare family_params['theta'] > 0 "
+                    "(R/MASS glm.nb form, variance mu + mu**2/theta); no default is supplied "
+                    "because over-dispersion has no neutral value."
+                )
+        elif theta is not None:
+            raise InputFreeError(
+                f"family_params['theta'] belongs to negative_binomial; the {self.family!r} "
+                "family has no theta, and a declared parameter that is ignored is refused."
+            )
+        return self
+
+    @model_validator(mode="after")
     def _frequency_declares_its_exposure(self) -> GlmSpec:
         """FR-111: a Poisson frequency model without an offset is a rate model that
         thinks it is a count model.
