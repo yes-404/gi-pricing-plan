@@ -203,6 +203,19 @@ red control, `27-nv6-routed-falls-back.log`: `api/score.py:579` `routed = await 
 `test_a_routing_selection_failure_fails_the_quote_and_never_falls_back` (`assert 200 == 500`). Reverted,
 `git status --short` empty, never committed. `ruff check .` rc 0 and `ruff format --check` on the test file rc 0.
 
+**`_routed` test extended (RS 8187 gaps).** `test_a_routing_selection_failure_fails_the_quote_and_never_falls_back`
+is now parametrised on what raises: `select_range` and the routing flag read (`settings_service.resolve`
+for `features.date_routing_enabled`), and it asserts the log names the cause: one ERROR `request failed`
+record whose sanitised exception text begins `RuntimeError` (the class is the stand-in `SanitisedError`, the
+text is `describe(exc)`) and whose traceback frames include the failing function. Green at the head:
+`28-b2-routing-green.log` rc 0, `9 passed, 1 warning in 9.63s`. Red controls, both scratch, reverted
+with `git checkout`, `git status --short` showing only the test file, never committed:
+
+| Control | Log | rc | Summary line, verbatim | Failing by name |
+|---|---|---|---|---|
+| `_routed`'s flag read (`api/score.py:365`) guarded with `except Exception: return None` | `29-nv7-flag-read-falls-back.log` | 1 | `1 failed, 8 passed, 1 warning in 9.60s` | `...never_falls_back[resolve]` (`assert 200 == 500`) |
+| the caller (`api/score.py:579`) re-raises `RuntimeError("masked") from None`, so status, code and "nothing scored" hold but the cause is lost | `30-nv8-cause-masked.log` | 1 | `2 failed, 7 passed, 1 warning in 10.65s` | `...never_falls_back[select_range]`, `...never_falls_back[resolve]` (`assert 'select_range' in [... frames ...]`) |
+
 **Migration round trip** (`20-migration-roundtrip.log`, same database, 16:30:51 to 16:30:59 UTC).
 Before: `routing_rules`, `shadow_configs`, `shadow_results` present, `alembic_version` = `9b3e7c15d4a2`.
 `alembic downgrade -1` rc 0 (`9b3e7c15d4a2 -> a4d1f08c3b97`); `alembic current` and `alembic_version`
