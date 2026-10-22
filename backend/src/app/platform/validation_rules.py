@@ -20,7 +20,7 @@ caller can route around:
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
@@ -805,6 +805,21 @@ async def _to_rule_set(
     )
 
 
+def _audit_state(version: int, body: Mapping[str, Any]) -> dict[str, Any]:
+    """One rule-set version as NFR-472's audit state; `before` and `after` share it."""
+    rules = body["rules"]
+    return {
+        "version": version,
+        "rule_ids": [r["rule_id"] for r in rules],
+        "disabled": [r["rule_id"] for r in rules if not r["enabled"]],
+        "overridden": {
+            r["rule_id"]: r["severity_override"]
+            for r in rules
+            if r["severity_override"] is not None
+        },
+    }
+
+
 async def replace_rule_set(
     session: AsyncSession,
     *,
@@ -852,14 +867,18 @@ async def replace_rule_set(
             "(FR-50) where someone sees it.",
         )
 
-    version = 1 + (
+    latest = (
         await session.execute(
-            select(func.coalesce(func.max(ValidationRuleSetRow.version), 0)).where(
+            select(ValidationRuleSetRow)
+            .where(
                 ValidationRuleSetRow.workspace_id == workspace_id,
                 ValidationRuleSetRow.slug == slug,
             )
+            .order_by(ValidationRuleSetRow.version.desc())
+            .limit(1)
         )
-    ).scalar_one()
+    ).scalar_one_or_none()
+    version = 1 + (latest.version if latest is not None else 0)
 
     row = ValidationRuleSetRow(
         workspace_id=workspace_id,
@@ -905,15 +924,8 @@ async def replace_rule_set(
         source=JobSource.API,
         action="validation_rule_set.replaced",
         entity_ref=f"validation_rule_set:{slug}@{version}",
-        after={
-            "version": version,
-            "rule_ids": [str(r) for r in rule_ids],
-            "disabled": [str(m.rule_id) for m in members if not m.enabled],
-            "overridden": {
-                str(m.rule_id): m.severity_override.value
-                for m in members
-                if m.severity_override is not None
-            },
-        },
+        # NFR-472: the set it replaced, in the same shape as `after` (None for the first).
+        before=_audit_state(latest.version, latest.body) if latest is not None else None,
+        after=_audit_state(version, row.body),
     )
     return await _to_rule_set(session, row, workspace_id=workspace_id, dataset_slug=slug)
