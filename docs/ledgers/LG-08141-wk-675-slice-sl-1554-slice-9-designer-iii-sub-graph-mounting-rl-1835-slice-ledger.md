@@ -84,7 +84,7 @@ RED, at `7576489f` (detached checkout in the slice worktree; its test files, bef
 
 4 files, 24 failed (4 + 6 + 11 + 3), the figure the brief relayed.
 
-**A first RED attempt was discarded.** It ran at the branch head, not at \`7576489f\`, because the commit-msg hook rejected a \`Claude-Session\` trailer on the N1–N3 commit, so that commit did not happen and the checkout to \`7576489f\` aborted on the uncommitted test edits. Its 4 logs were deleted; the RED was re-run at \`7576489f\` after the commit, and only the logs above remain. The test counts prove which commit the kept logs ran at: \`DagDesignerMounts.test.ts\` has 11 tests in the RED log against 12 in the GREEN log, and \`MountInspector.test.ts\` 6 against 8 (N1 and N3 add 1 and 2), so the RED logs ran on the pre-N1–N3 test files.
+**A first RED attempt was discarded.** It ran at the branch head, not at `7576489f`, because the commit-msg hook rejected a `Claude-Session` trailer on the N1–N3 commit, so that commit did not happen and the checkout to `7576489f` aborted on the uncommitted test edits. Its 4 logs were deleted; the RED was re-run at `7576489f` after the commit, and only the logs above remain. The test counts prove which commit the kept logs ran at: `DagDesignerMounts.test.ts` has 11 tests in the RED log against 12 in the GREEN log, and `MountInspector.test.ts` 6 against 8 (N1 and N3 add 1 and 2), so the RED logs ran on the pre-N1–N3 test files.
 
 GREEN, at `ab405217` (the branch head with N1–N3):
 
