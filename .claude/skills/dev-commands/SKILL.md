@@ -254,6 +254,10 @@ lock the same file from unrelated open file descriptions — the child's `flock(
 forever on a lock its own parent holds and never releases until the child exits. Never
 compose the gate command without this export; it is not optional decoration.
 
+The same variable names the deployment switch's Redis channels (FD-1838): `switch_stack` in
+`app.platform.deployment_switch` appends the slot's basename, so two slots do not share a
+PREPARE quorum. A process with no slot (production) is unchanged.
+
 **Why every worktree needs its own database.** `backend/tests/conftest_db.py`'s
 session-scoped teardown `TRUNCATE`s the whole test database at every `pytest` session's
 end. Two executors running full suites concurrently against the same DSN are two sessions
