@@ -207,6 +207,23 @@ What it proved: the **parquet path through setup and the Job**: both versions `s
 
 Commit `2ddf4537`: Task 1's red-first test added (`backend/tests/test_api_datasets.py`, `test_replacing_a_rule_set_is_audited_with_before_and_after`, `req("NFR-472")`), **committed before any run and before the fix**, so the red run to come is on this commit; the same commit carries a harness line `run-setup` that prints each run's setup and Job seconds. Task 1 has not been run.
 
+#### 2026-10-22 — Task 1 (NFR-472), RED: red by its cause (head `c3d94b1779b0f98bceefee982bb0bbbe6b952fa2`, product code as at the test-only commit `2ddf4537`, no fix)
+
+GO: the lead's "Task 1 GO now" under the maintainer's generalised exception (to-lead 17:23:23). Command: `STAGE=red SMOKE_TIMEOUT=1500 timeout 1700 bash ~/gi-pricing-plan.local/scratch/sl1736/task1.sh`, which creates its own database `gipricing_sl1736_t1` from the template, runs `alembic upgrade head` on it, and runs `scripts/run-small.sh <wt> backend/tests/test_api_datasets.py` (one file, the whole file; run-small's command line is fixed, so the new test cannot be selected alone). `| GIP_GATE_SLOT | unset |`; `PUBSUB CHANNELS` listed 1 channel before (2026-10-22T16:26:15+00:00) and after (16:26:54+00:00); run 16:26:15Z to 16:26:54Z; load1 3.51. Logs: `scratch/sl1736/task1-red-wrapper.log` (starts with the head and the `diff --stat origin/main...HEAD`), `task1-red.out`, `task1-red.err`. Wrapper rc 1 = pytest rc 1. Verbatim:
+
+```
+FAILED backend/tests/test_api_datasets.py::test_replacing_a_rule_set_is_audited_with_before_and_after
+1 failed, 31 passed, 1 warning in 25.82s
+>       assert v2.before == v1.after
+E       AssertionError: assert None == {'version': 1, 'disabled': [], 'rule_ids': ['01a1646f-764c-779d-83f2-45732a5b6c6e'], 'overridden': {}}
+E        +  where None = <app.db.models.AuditEventRow object at 0x7fb0bff1ec90>.before
+backend/tests/test_api_datasets.py:248: AssertionError
+```
+
+This is the plan's expected red (Acceptance 1: `v2.before == v1.after` failing with `None` on its left, and on no other line); the 31 others pass. Clean-up verbatim: `| dropdb gipricing_sl1736_t1 (end) | rc=0 |`, `| redis db 1 FLUSHDB (end) | rc=0 |`, `| bucket gip-test-blobs-gate-1 removed (end) | rc=0 |`, `| zeros | own-DB count=0 redis db 1 dbsize=0 |`, `| exit | smoke_rc=1 |`.
+
+The fix, commit `c93ced5a47aa0b60cedaeeb49e4eb58616490591` (`backend/src/app/platform/validation_rules.py` only): a module-level `_audit_state(version, body)` builds both `before` and `after` from a stored rule-set body, and `replace_rule_set` loads the latest existing version (replacing the `max(version)` query: `version = 1 + latest.version`, same value) and passes `before=_audit_state(latest.version, latest.body)` (None for the first version) and `after=_audit_state(version, row.body)`. `after` has the same keys and values as before for the same input (ids as strings in member order, `disabled` the members with `enabled` false, `overridden` the severity overrides as their `.value`). ruff and mypy rc 0 on the file. GREEN is not yet run.
+
 #### PLANNED — the four ALONE grants and their non-ALONE companions (not run; each grant is requested from the lead with these exact commands)
 
 Common to every block. `W=/home/puzhenhao1989/gi-pricing-plan/.claude/worktrees/sl-1736`, `OUT=/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1736` (outside the repository; `mkdir -p $OUT`). The tree is the branch head at the grant (`git -C $W rev-parse HEAD`), which must be unchanged from the head named in the request. Every block starts by printing, and the seat quotes: `git -C $W rev-parse HEAD`, `cut -d" " -f1 /proc/loadavg`, `free -g`, `nproc`, `pgrep -af '[p]ytest|[v]itest|[f]lock'`, and `flock -n /tmp/slots/gate-1 true; echo $?` for both gate slots. A window starts only inside its conditions (seat brief item 15): load1 and available memory are read at the start and printed; above the limit the seat waits (re-check every 60 s, up to the D4 limit) or aborts and reports. Foreground, `timeout` on each stage, no detach (S-11, S-12).
