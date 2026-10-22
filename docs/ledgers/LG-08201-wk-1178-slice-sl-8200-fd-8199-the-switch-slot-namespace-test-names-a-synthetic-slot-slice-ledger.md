@@ -35,7 +35,20 @@ FD 8199 (LOW-MEDIUM, owner WK-1178): `backend/tests/test_deployment_switch_slot_
 
 ### Gate
 
-(RED and GREEN lines are recorded here, verbatim, before the audit. Not run yet: the tests need the per-worktree database, so they wait for a no-gate gap.)
+Run on tree `fix-8199` @ `431c430a23b08e27d9dfd21c6c2072b2a99f5fd1` (tree `7bf0efb4befd96902995805107eb03f1841522ca`), in a no-gate gap opened by the lead (no gate running, all slots free), through `scripts/run-small.sh` of tools-main (read-only use). Per-worktree database `gipricing_fix-8199_a8d78b9c` made with `createdb -T` plus `alembic upgrade head` (rc 0). `GIP_REDIS_URL=redis://localhost:6379/11` (never db 0). Before: `PUBSUB CHANNELS 'gip:switch:*'` empty; `PUBSUB NUMSUB gip:switch:local:local:gate-1:dev` 0. Logs `scratch/fix-8199/431c430a23b08e27d9dfd21c6c2072b2a99f5fd1-*.log`, each named by its head. The injector (`scratch/fix-8199/inject.py`) subscribes to the REAL channel `gip:switch:local:local:gate-1:dev` for 300 s; NUMSUB showed 1 while it ran.
+
+| Run | File | Injected subscriber | rc | Summary |
+|---|---|---|---|---|
+| RED (log `red-old-with-injected`) | `origin/main`'s test file, copied to an untracked `backend/tests/test_zz_red8199_old.py` and removed after | yes, on `gate-1:dev` | 1 | `1 failed, 2 passed in 4.05s`; `FAILED …::test_a_subscriber_on_the_unsuffixed_channel_is_not_counted_in_the_quorum`; `SwitchIncompleteError: 1 of 2 subscribed processes acknowledged PREPARE` |
+| GREEN with (log `green-fixed-with-injected`) | `backend/tests/test_deployment_switch_slot_namespace.py` (fixed) | yes | 0 | `4 passed, 1 warning in 1.10s` |
+| GREEN without (log `green-fixed-without-injected`) | same | no | 0 | `4 passed, 1 warning in 1.08s` |
+| Closure (log `closure-a`) | `test_deployment_switch.py`, `test_deployment_switch_http.py`, `test_score.py` | no | 0 | `69 passed, 3 warnings in 69.90s (0:01:09)` |
+
+**Closure derivation.** The slice changes one test file and no `src` module: `git diff --name-only origin/main...HEAD -- '*.py'` lists only `backend/tests/test_deployment_switch_slot_namespace.py`. Nothing imports a test file, so the closure is that file plus the other tests that import what it imports from `app.platform.deployment_switch`: `git grep -n -E "^(from|import) .*deployment_switch|^from app.platform import .*deployment_switch" -- backend/tests packages tests` lists `test_deployment_switch.py:16`, `test_deployment_switch_http.py:32`, `test_deployment_switch_slot_namespace.py:20` and `test_score.py:47`. The other four files that mention the name (`test_deployment_route_types.py`, `test_deployments.py`, `test_error_sinks.py`, plus three `src` modules) do not import it and do not import any changed file.
+
+**Static checks.** `ruff check` and `ruff format --check` on the changed file: rc 0 and rc 0. `uv run mypy`: `Success: no issues found in 246 source files`.
+
+**Cleanup.** `dropdb` rc 0; `select count(*) from pg_database where datname='gipricing_fix-8199_a8d78b9c'` 0. The runs left 18 ack keys in redis db 11 (switch acks of the `small-test` and `test-…` slots); `FLUSHDB` on db 11, then `redis-cli -n 11 dbsize` 0. `PUBSUB CHANNELS 'gip:switch:*'` empty and NUMSUB on `gate-1:dev` 0 after. Db 0 was not touched (dbsize 56 before and after the flush).
 
 ### Audit
 
@@ -44,6 +57,7 @@ FD 8199 (LOW-MEDIUM, owner WK-1178): `backend/tests/test_deployment_switch_slot_
 ### Build log
 
 - 2026-10-22 — branch `fix/fd-8199-synthetic-gate-slot` from `origin/main` @ `1fe82ee6`; test edit, SL-8200 row and this ledger written; nothing run.
+- 2026-10-22 — head `431c430a`: RED, GREEN and the closure set run in the lead's no-gate gap; lines in Gate above.
 
 ## PRs
 
