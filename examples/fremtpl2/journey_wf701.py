@@ -13,7 +13,7 @@ its status and a server-side effect read back through a route other than the one
 `run_job` is the only in-process substitute; the compose run has none.
 
 **Two candidates, both through the governed path** (DP-W4): K1 is the live algorithm with the
-minimum premium of 180 added (the live algorithm has no floor; LG 8136 deviation 3); K2 is K1
+minimum premium of 180 added (the live algorithm has no floor; LG-1841 deviation 3); K2 is K1
 plus one constraint that declines. Each is a
 Rating Version created, compiled, regression-run, dislocation-run, submitted and approved by two
 distinct principals over HTTP. Their definitions are the two JSON files beside the shipped rating

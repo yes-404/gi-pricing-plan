@@ -1,9 +1,9 @@
 ---
-id: LG-8136
+id: LG-1841
 family: ledger
 title: WK-674 slice SL-1711 — the scripted WF-701 deployment-steps demo (PL-1710) (slice ledger)
 status: active                 # active → closed (§1.2a)
-created: 2026-10-21
+created: 2026-10-22  # original date 2026-10-21, set at the draft; minted 2026-10-22
 owner: executor
 tree: 03c6397f200868f1a0827c197ffbc6de0bf65eda
 phase: P2
@@ -14,7 +14,9 @@ corrected_by: []
 relates: [PL-1710, PL-1237, PL-1537, PL-1620, PL-1544, SL-1711, SL-1258, SL-1259]
 ---
 
-# LG-8136 — WK-674 slice SL-1711: the WF-701 deployment-steps demo
+# LG-1841 — WK-674 slice SL-1711: the WF-701 deployment-steps demo
+
+Disclosure: drafted under working id 8136; minted as LG-1841 on 2026-10-22 (the maintainer's (by delegation) entry "2026-10-22 11:46:33 BST", id order (a)), in the SL-1711 slice PR.
 
 Filed 2026-10-21 under working id 8136 (lead-reserved in eta.md). Executor seat `exec-1711`, base `origin/main` 44c18e11ca028d25c8b4c9d92077cc0f3622ef8e, branch `sl-1711-wk674-wf701-demo`.
 
