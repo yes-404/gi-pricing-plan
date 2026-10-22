@@ -235,3 +235,33 @@ def test_with_the_flag_off_scoring_is_unchanged_and_the_selector_is_not_entered(
     assert _score(client, scoring_headers, dates[0]).status_code == 200
     assert [str(r) for r in refs_scored] == [EARLIER]
     assert len(calls) == 1
+
+
+@pytest.mark.req("FR-270")
+def test_a_routing_selection_failure_fails_the_quote_and_never_falls_back(
+    client,
+    scoring_headers,
+    refs_scored,
+    database,
+    workspace_id,
+    routing_flag,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The maintainer's ruling of 2026-10-22 17:34:47 BST item 4 (`03` §4.13, Selection): with
+    the flag on, a selector that raises refuses the quote 500 `INTERNAL_ERROR`. The default-live
+    version is never scored in its place, because a fallback could price from the wrong Rating
+    Version. The control is the same quote with the selector healthy: it is scored (200)."""
+    _run(plant_deployment(database, workspace_id, "uat", LIVE))
+    routing_flag(True)
+    assert _score(client, scoring_headers).status_code == 200
+    assert [str(r) for r in refs_scored] == [LIVE]
+
+    async def broken(*_a: Any, **_k: Any) -> Any:
+        raise RuntimeError("routing store down")
+
+    monkeypatch.setattr(routing, "select_range", broken)
+    refs_scored.clear()
+    failed = _score(client, scoring_headers)
+    assert failed.status_code == 500
+    assert failed.json()["code"] == "INTERNAL_ERROR"
+    assert refs_scored == []
