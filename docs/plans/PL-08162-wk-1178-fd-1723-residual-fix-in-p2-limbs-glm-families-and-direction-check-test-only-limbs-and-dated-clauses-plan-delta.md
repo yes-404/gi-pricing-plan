@@ -219,6 +219,8 @@ writes `docs/roadmap.md`.
 All five are for the maintainer (by delegation) at this plan's review; DP-K is named for the
 maintainer's own ruling in the 15:50:37 entry. The plan is `draft` until each is ruled.
 
+*(Dated line, 2026-10-22, at activation (SL-8164): ruled by the maintainer's entry "2026-10-22 16:02:49 BST — Maintainer: PL 8162 (FD-1723's residual limbs) ACCEPTED; power(k), θ convention, NB deviance, DP-C, DP-F14, DP-T, DP-M ruled" (`to-lead.md`). **DP-K: `power(k)` STRUCK** (ruling 1). **DP-C: TESTS**, so slices D and E (ruling 4). **DP-T: θ REQUIRED** (ruling 6), and, by ruling 3, "FR-110 states θ in the **R/MASS `glm.nb` form**, variance μ + μ²/θ, the form actuaries quote. The engine converts to glum's form at one boundary (glum α = 1/θ_R), and a test pins the round trip." DP-T and the red A-R3 below were drafted in glum's NB2 form (`v = μ + θ·μ²`), which this line supersedes; they are aligned in place by this pre-merge correction, and the Evidence paragraph on glum's `NegativeBinomialDistribution` keeps describing glum, not the platform. Also ruled: DP-F14 hand-written paths (ruling 5), DP-M as recommended (ruling 7).)*
+
 ### DP-K — `power(k)` (FR-110): build, part-build, or strike
 
 The rule already given (11:28:56): *"BUILD if glum supports a power link natively … otherwise
@@ -243,7 +245,7 @@ glum's predictions to `1e-10`; a `k` in `(0, 1)` refused by name), and its size 
 
 | option | for | against |
 |---|---|---|
-| **(a) Declared and required** (recommended): `family_params["theta"] > 0` is required when `family == "negative_binomial"` and refused on any other family; FR-110 states the NB2 form `v(μ) = μ + θ·μ²` | Small: a validator, no shape change (`family_params` is already `dict[str, float]`), and θ is in `spec_hash` because the spec is. Naming the variance form blocks the silent inversion of a θ copied from R's `glm.nb`. | The actuary must choose θ (in practice from a Poisson fit's over-dispersion, or from R). |
+| **(a) Declared and required** (recommended): `family_params["theta"] > 0` is required when `family == "negative_binomial"` and refused on any other family; FR-110 states θ in the R/MASS `glm.nb` form `v(μ) = μ + μ²/θ`, converted to glum's `α = 1/θ` at one boundary (aligned to ruling 3, see the dated line under the decision points) | Small: a validator, no shape change (`family_params` is already `dict[str, float]`), and θ is in `spec_hash` because the spec is. Naming the variance form blocks the silent inversion of a θ copied from R's `glm.nb`. | The actuary must choose θ (in practice from a Poisson fit's over-dispersion, or from R). |
 | (b) Declared with a stated default, materialised into the stored spec | Lets the builder default the field | Any default for over-dispersion is a modelling judgement with no neutral value; the 11:28:56 entry allows it only *"with its recording"*, and glum's 1.0 is the value it forbids by omission. |
 | (c) Estimated by profile likelihood over a declared grid, as FR-114 does for the Tweedie power | The statistically complete answer | A new spec block, a diagnostics shape and a contract change; larger than the limb, which is MEDIUM. It can be specified later as its own requirement. |
 
@@ -323,8 +325,8 @@ fails on the slice head with the named mutation applied (and not committed), and
    NB fit with `theta=0.5` and one with `theta=2.0` on the same data give different coefficients (the
    declared θ reaches glum).
 6. **A. The NB deviance uses θ (red A-R3).** `unit_deviance(y, mu, family="negative_binomial", theta=0.5)`
-   equals the closed form `2[y·log(y/μ) − (y + 1/θ)·log((1 + θy)/(1 + θμ))]` (the `y = 0` limit
-   taken) to `1e-12`, and differs from the Poisson unit deviance on the same arrays. At the base
+   equals the closed form `2[y·log(y/μ) − (y + θ)·log((y + θ)/(μ + θ))]` in the R/MASS θ (the `y = 0` limit
+   taken; glum's form is the same with `θ_glum = 1/θ`) to `1e-12`, and differs from the Poisson unit deviance on the same arrays. At the base
    the call raises `TypeError` (no `theta` parameter), and with the keyword removed the value equals
    Poisson's. Every one of Task A0's enumerated deviance call sites passes θ for an NB spec (the LG
    tables each).
@@ -459,7 +461,7 @@ conflicts only.
   Task A0 names) and A-R4 (the GLM direction check). Run each through `run-small.sh`; record each
   red line verbatim in the LG. A red by any other cause is a plan defect: STOP.
 - [ ] **A2. Spec (`spec-change`), before the code.** Under FR-110: the family translation (the spec
-  spellings are the platform's; glum's are a boundary detail), θ per DP-T with the NB2 variance
+  spellings are the platform's; glum's are a boundary detail), θ per DP-T in the R/MASS `glm.nb` form (variance `μ + μ²/θ`),
   stated, the NB deviance, and `power(k)` per DP-K. Under FR-89: the GLM check's rule (axis, mean
   scale, `1e-9`), where it is reported, and DP-M's omission reasons. The §4 diagnostics data
   contract gains the new field(s).
@@ -467,7 +469,7 @@ conflicts only.
   DP-M (b), `monotonicity_omitted`, `MonotonicityOmission`, `MonotonicityOmissionReason`). Regenerate
   contracts; run `generate:api`; the contract-guard comparisons per `contract-guard`.
 - [ ] **A4. pricing-core, fit.** In `glm.py`, one translation at the glum boundary, applied before
-  both the CV path and the final fit: `negative_binomial` → `NegativeBinomialDistribution(theta=θ)`,
+  both the CV path and the final fit: `negative_binomial` → `NegativeBinomialDistribution(theta=1/θ)` (the one conversion boundary: glum's θ is the reciprocal of the declared R/MASS θ; a round-trip test pins it),
   `inverse_gaussian` → `"inverse.gaussian"`. The `GLM_FIT_FAILED` message stays for genuine domain
   errors.
 - [ ] **A5. pricing-core, deviance and diagnostics.** `unit_deviance` and `deviance` take
