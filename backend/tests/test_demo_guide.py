@@ -279,7 +279,11 @@ def test_the_guide_names_the_endpoints_a_spec_declares_and_the_contract_lacks() 
     guide = build_guide(repository_root())
     assert guide.unpublished_endpoints, "no module declares an unbuilt endpoint?"
     modules = {endpoint.module for endpoint in guide.unpublished_endpoints}
-    assert {"RATE"} <= modules, modules
+    # RATE dropped out on 2026-10-22 (WK-674 Slice 6, SL-1260: the routing and shadow PUTs were
+    # the last declared RATE endpoints to be built). OPT is the module least likely to finish
+    # next: its whole endpoint axis (optimisation runs, demand models, GIPP checks) belongs to a
+    # later phase, so it stays unbuilt longest.
+    assert {"OPT"} <= modules, modules
 
 
 @pytest.mark.req("FR-409")

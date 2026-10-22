@@ -376,6 +376,14 @@ from model_schema.regression import (
     context_hash,
     suite_content_hash,
 )
+from model_schema.routing import (
+    RoutedRange,
+    RoutingRange,
+    RoutingRule,
+    RoutingRuleUpdate,
+    ShadowConfig,
+    ShadowConfigUpdate,
+)
 from model_schema.scoring import (
     LadderOperation,
     LadderRung,
@@ -743,6 +751,10 @@ __all__ = [
     "RetryState",
     "RollbackCreate",
     "RoundSpec",
+    "RoutedRange",
+    "RoutingRange",
+    "RoutingRule",
+    "RoutingRuleUpdate",
     "RuleOutcome",
     "RuleResult",
     "RuleSetEntry",
@@ -761,6 +773,8 @@ __all__ = [
     "SettingType",
     "Severity",
     "Sha256Hash",
+    "ShadowConfig",
+    "ShadowConfigUpdate",
     "ShapContribution",
     "ShapInteraction",
     "ShapSummary",
