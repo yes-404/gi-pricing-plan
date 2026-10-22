@@ -2964,6 +2964,24 @@ Slice C of `PL-1856` (WK-1178's dated delta on FD-1723's residual limbs). Docs o
 
 (Activated 2026-10-22 on the maintainer's "2026-10-22 16:02:49 BST — Maintainer: PL 8162 (FD-1723's residual limbs) ACCEPTED; …" ("GO: slice C now"), with `PL-1856` made `active` by L1 in this slice's PR. Minted 2026-10-22 as SL-1857 from working id 8164, with its ledger LG-1858 from working id 8165 and its plan PL-1856 from working id 8162. Closed 2026-10-22 at the mint as a docs-only slice, the audit and merge-ack being recorded in LG-1858.)
 
+#### SL-8200 — WK-1178: FD-8199, the switch slot-namespace test names a synthetic slot
+
+```yaml
+id: SL-8200
+family: slice
+title: WK-1178 — FD-8199, the switch slot-namespace test names a synthetic slot (test only)
+status: active                   # draft → active → closed | retired (§1.2a)
+created: 2026-10-22   # filed under working id 8200
+owner: executor
+tree: 1fe82ee673cc8aef2bd3e70b81b8304059fccbc1
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-8199, FD-1838, LG-8201]
+```
+
+Test-only fix of FD-8199 (owner WK-1178): `backend/tests/test_deployment_switch_slot_namespace.py` names a per-run synthetic slot instead of the real `/tmp/slots/gate-1` and `gate-1b`, whose server-wide Redis channels a paired gate shares. Product code is not touched. Ledger `LG-8201`; authority the maintainer's entry "2026-10-22 23:42:23 BST" item 1 (`to-lead.md`).
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml

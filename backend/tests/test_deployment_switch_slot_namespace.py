@@ -31,28 +31,48 @@ from app.platform.deployment_switch import (
 _PLAIN = "local:local"
 
 
+def _synthetic_slot() -> str:
+    """A slot name no real gate holds (FD-8199).
+
+    Redis channels are server-wide, so a test that names a REAL slot (`/tmp/slots/gate-1`)
+    shares its channel with whichever paired gate holds that slot, and that gate's subscriber
+    is counted in the PREPARE quorum. A per-run name cannot collide with one.
+    """
+    return f"/tmp/slots/test-{uuid4().hex[:8]}"
+
+
 def test_without_a_gate_slot_the_stack_is_unchanged(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("GIP_GATE_SLOT", raising=False)
     assert switch_stack("local", "local") == _PLAIN
 
 
 def test_two_gate_slots_get_two_stacks(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GIP_GATE_SLOT", "/tmp/slots/gate-1")
+    monkeypatch.setenv("GIP_GATE_SLOT", _synthetic_slot())
     first = switch_stack("local", "local")
-    monkeypatch.setenv("GIP_GATE_SLOT", "/tmp/slots/gate-1b")
+    monkeypatch.setenv("GIP_GATE_SLOT", _synthetic_slot())
     second = switch_stack("local", "local")
     assert first != second
     assert _PLAIN not in {first, second}
 
 
+@pytest.mark.parametrize("foreign_is_another_slot", [False, True], ids=["plain", "other-slot"])
 async def test_a_subscriber_on_the_unsuffixed_channel_is_not_counted_in_the_quorum(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, foreign_is_another_slot: bool
 ) -> None:
-    """A foreign subscriber (another slot's, or a plain process's) never acknowledges here."""
-    monkeypatch.setenv("GIP_GATE_SLOT", "/tmp/slots/gate-1")
+    """A foreign subscriber (another slot's, or a plain process's) never acknowledges here.
+
+    `other-slot` stands in for a paired gate holding a real slot (FD-8199): its subscriber is
+    on a channel server-wide visible to this run, and the run must still count only its own.
+    """
+    monkeypatch.setenv("GIP_GATE_SLOT", _synthetic_slot())
     client = build_switch_client(Settings().redis_url.get_secret_value())
     foreign = client.pubsub()
-    channel = f"gip:switch:{_PLAIN}:dev"
+    if foreign_is_another_slot:
+        with monkeypatch.context() as other:
+            other.setenv("GIP_GATE_SLOT", _synthetic_slot())
+            channel = f"gip:switch:{switch_stack('local', 'local')}:dev"
+    else:
+        channel = f"gip:switch:{_PLAIN}:dev"
     await foreign.subscribe(channel)
     switch = RedisSwitch(client, switch_stack("local", "local"))
 
