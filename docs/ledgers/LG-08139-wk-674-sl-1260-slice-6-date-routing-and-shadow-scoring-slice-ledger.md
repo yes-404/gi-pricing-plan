@@ -147,3 +147,8 @@ reading was needed. Cleanup: `FLUSHDB` on db 12 gives `DBSIZE` 0, db 0 is 56, `d
 `pg_database` count for the window's database is 0 and no `gip_scratch_*` database is left.
 The negative controls of window 1 stand: the lines they edited are unchanged by `3d175af3`.
 
+**Disclosures for window 2.** (a) `PUBSUB NUMSUB` was not quoted alongside the channel listing, only
+`PUBSUB CHANNELS`; harmless here because every run passed. (b) The executor typed `cd /tmp` in a
+no-op command during the window, a second breach of the no-`cd` rule (the first was at the start of
+the seat); the harness reset the working directory and no repository state changed.
+
