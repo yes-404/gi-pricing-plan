@@ -84,6 +84,18 @@ Phase restriction in force: the SL-1711 compose retry is ALONE; edits and git on
 
 **D3 correction applied:** `CELLS_DIFF_RUNS` in the harness lists five runs.
 
+#### 2026-10-22 13:0x BST — static checks and the harness unit test, beside SL-1275's gate (tree: this branch, base `f3462d8f`; every command under `nice -n 19 ionice -c3`, load1 3.5 to 4.5 < 6)
+
+| Check | rc | Result |
+|---|---|---|
+| `ruff check` on the three changed Python files | 0 | first run: 10 findings (3 auto-fixed import order; SIM115, B023, PT018 ×2, PT011 ×3 fixed by hand); re-run "All checks passed!" |
+| `ruff format --check` on the harness and its test | 0 | formatted. `scripts/bench-model.py` is NOT format-clean at `f3462d8f` (checked on the original blob, rc 1), so it was not reformatted: only my edit is in its diff |
+| `mypy tests/test_measure_p2_nfr_sweep.py` | 0 | first run 8 errors (missing annotations), annotated; "Success: no issues found in 1 source file". `scripts/` is not in mypy's `files` list, so the harness itself is not type-checked by the gate |
+| `run-small.sh <wt> tests/test_measure_p2_nfr_sweep.py` | 0 | `42 passed in 0.33s` (first run `42 passed in 1.14s`). **No red was seen**: the code predated its tests (disclosed above), so no failure by cause was observed |
+| `doc-index.py` regen, then `--check` (gate-2) | 0, 0 | `docs/INDEX.md: OK (byte-stable)`; 4 insertions, 3 deletions |
+| `audit-docs.py` (gate-2) | 1 | one FAILED: `check 31: gap in the full allocation between 1838 and 8155` — the working id, cleared by the mint. No line names SL-1736's files |
+| idsweep (`origin/sl-1736-wk1178-nfr-sweep`) | — | `main: 1838 pairs; duplicate numbers:` and an empty CROSS-BRANCH list; no COLLISION line |
+
 #### PLANNED — the four ALONE grants and their non-ALONE companions (not run; each grant is requested from the lead with these exact commands)
 
 Common to every block. `W=/home/puzhenhao1989/gi-pricing-plan/.claude/worktrees/sl-1736`, `OUT=/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1736` (outside the repository; `mkdir -p $OUT`). The tree is the branch head at the grant (`git -C $W rev-parse HEAD`), which must be unchanged from the head named in the request. Every block starts by printing, and the seat quotes: `git -C $W rev-parse HEAD`, `cut -d" " -f1 /proc/loadavg`, `free -g`, `nproc`, `pgrep -af '[p]ytest|[v]itest|[f]lock'`, and `flock -n /tmp/slots/gate-1 true; echo $?` for both gate slots. A window starts only inside its conditions (seat brief item 15): load1 and available memory are read at the start and printed; above the limit the seat waits (re-check every 60 s, up to the D4 limit) or aborts and reports. Foreground, `timeout` on each stage, no detach (S-11, S-12).
