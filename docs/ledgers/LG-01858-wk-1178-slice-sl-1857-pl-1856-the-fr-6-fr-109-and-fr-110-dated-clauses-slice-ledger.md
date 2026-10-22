@@ -79,7 +79,26 @@ Minted at `28bfb0a64b81783e399e3b84f9c469d22791893c` (tree `478035bc1255e0fd1d8a
 
 ### Audit
 
-(not yet)
+Written 2026-10-22 by the auditor (aud-c3) after the fixes below; the verdicts are the lead's.
+
+**Audit record:** RS 8189 (working id; branch `aud-8164-2026-10-22` @ `d339555808f4b8f9fa8c3df909d285595d2562ed`, `status: draft`), range `origin/main...sl-8164-wk1178-pl8162-c`, tip `507cfba66edabbfaf9b7dbfff173475835d5226c` (tree `8d2ae6f014ea56742785ca46e85e098ba290290c`). **Verdict proposed: NOT-CLEAN, two blocking items (B1, B2), both wording or record, no maths and no code.**
+
+| Blocker | Ruling (authority) | Met by | Evidence read |
+|---|---|---|---|
+| B1: the plan text described slice C as FR-6 + FR-109 only, the diff also carried FR-110 (rulings 1, 3, 6 of "2026-10-22 16:02:49 BST") | aligned in place, as the plan was unmerged: the maintainer's entry "2026-10-22 17:57:29 BST" in `to-lead.md` ("Maintainer: slice C RS 8189: B1 (plan drift) aligned in place; B2 FR-6 = option (a) …") | `b0b2634d` (planner; the plan's dated alignment note lists each changed line, `git show` read: front-matter title gains FR-110, and the INDEX row regenerated) | `git show b0b2634d`: 2 paths, `docs/INDEX.md` and the plan, 3 insertions, 3 deletions |
+| B2: the FR-6 clause departed from FD-1723's adopted fix and widened the §14 carry | same entry, **option (a)**: FR-6 narrowed to what is built (the per-artifact producing-Job id); only the UI half carried to §14, as on 2026-10-14 11:28:56; the six shapes without a `job_id` and the shared `provenance` object named as outside the narrowed FR-6, no carry and no tracking row | `d8cc4c75` (FR-6 dated clause, `00-overview.md`) | `git show d8cc4c75`: 2 paths (`00-overview.md`, this ledger), the clause now reads "FR-6 is **narrowed to what is built: the per-artifact producing-Job id**", names `DatasetVersion`, `Model`, `CustomObjective`, `RateTable`, `RateTableVersion`, `RatingVersion` and the `provenance` object as "**outside the narrowed FR-6**"; "accepted with the gap" is gone |
+
+**Narrow check:** the lead's entry "2026-10-22 18:09:13 BST" in `channel/from-lead-2026-10-09.md` ("SLICE C narrow check of RS 8189 B1/B2 at b0b2634d (lead, per maintainer 17:57:29) … PASS", diff 6 paths all `docs/`). I re-read the two commits above against the blockers and agree with that entry.
+
+**Docs-only gate (pre-approval 1(e), as the Gate section cites):** run 2 at `b0b2634d`, logs under `scratch/sl-8164/gate/` each starting with that sha: `doc-index.py --check`, `register-lint.py`, `req-coverage.py`, `generate-contracts.py --check` rc 0; `audit-docs.py` rc 1 (check 31, the unminted working ids only); the three pytest runs rc 1 (13 failures, the docs-audit set; see the Gate section).
+
+**Mint evidence at `28bfb0a6`** (tree `478035bc1255e0fd1d8a2ffe5a1dd3d8f49710f2`): `audit-docs.py` rc 0; `doc-index.py --check` rc 0; the 13 failing tests re-run green through `run-small.sh`: `124 passed`, `110 passed`, `23 passed` (logs `scratch/sl-8164/gate/minted/small-{1,2,3}.log`, read: each starts with `28bfb0a6`, ends `rc=0`). The failures were the check 31 gap; the mint closed it.
+
+**Post-audit delta `b0b2634d..a9761e31`** (reachable: `b0b2634d` is an ancestor of `a9761e31`), the slice's own commits are two ledger commits (`af7bbd61`, `4b1b5da9`), the merge `8180fab9` of `origin/main` @ `6753c495` (it brings #1361, #1362 and #1363: the code and the other docs in `git diff --stat b0b2634d..a9761e31` are main's), the mint `28bfb0a6`, and two LG-only commits (`1ae3503d`, `a9761e31`). The slice's own contribution is docs only: `git diff --name-only 8180fab9^2 a9761e31` (the branch against main's side of the merge) lists no path outside `docs/`. The mint touched 6 docs paths and, in `00-overview.md`, `02-modelling.md` and the roadmap, changed only working ids to minted ids (working ids 8162 and 8164 to `PL-1856` and `SL-1857`; read in `git diff 8180fab9 28bfb0a6`); the two LG commits change only this ledger. **No clause text changed after the narrow check.**
+
+**Requirements (four verdicts):** FR-6, FR-109 and FR-110 dated clauses delivered as docs (no test applies; the clauses name none, and the θ round trip is slice A's). FR-6 UI half, FR-109 finer-level view, `power(k)` reinstatement: deferred to the §14 review, the owners the maintainer named. The six-shape `job_id` gap and the `provenance` object: not carried and not tracked, by ruling (B2 (a)).
+
+**Proposed verdict: CLEAN after B1 and B2**, the lead's to issue.
 
 ### Build log
 
