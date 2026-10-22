@@ -134,6 +134,21 @@ def test_a_held_port_is_refused_before_anything_starts() -> None:
     demo_script.require_free(port, step="the API")
 
 
+def _effective_demo_source() -> str:
+    """`demo`'s source with `prepare_world`'s body in place of its call: the seed, the record and
+    the two pre-flights moved there (SL-1711) so the compose run shares them, and the source-order
+    tests below assert the order of the flow `demo` still runs."""
+    import inspect
+
+    call = "    record = prepare_world(rows=rows, skip_seed=skip_seed, env=env)\n"
+    world = inspect.getsource(demo_script.prepare_world)
+    body = world.split('"""', 2)[2].split("\n", 1)[1]
+    body = body.replace("    return record\n", "")
+    source = inspect.getsource(demo_script.demo)
+    assert call in source
+    return source.replace(call, body)
+
+
 @pytest.mark.req("FR-50")
 def test_the_rule_set_pre_flight_runs_after_the_seed_record_and_before_the_api_starts() -> None:
     """RL-1407 condition 2 (Acceptance 26): on every path, `--skip-seed` included.
@@ -143,9 +158,7 @@ def test_the_rule_set_pre_flight_runs_after_the_seed_record_and_before_the_api_s
     precede the API command so a workspace with an unrunnable rule set is refused before
     anything is served.
     """
-    import inspect
-
-    source = inspect.getsource(demo_script.demo)
+    source = _effective_demo_source()
     step = '"pre-flight: the demo workspace\'s rule sets are runnable"'
     assert "check-rule-sets-runnable.py" in source
     assert step in source
@@ -226,9 +239,7 @@ def test_the_seed_record_pre_flight_runs_before_the_rule_set_pre_flight() -> Non
     """Acceptance 7: it runs on every path (not inside `if not skip_seed`), right after the
     record is read and BEFORE `check-rule-sets-runnable.py`, which for an absent workspace takes
     its zero branch and prints the wrong message."""
-    import inspect
-
-    source = inspect.getsource(demo_script.demo)
+    source = _effective_demo_source()
     record = source.index("record = read_seed_record()")
     seed_record = source.index("check-seed-record.py")
     rule_sets = source.index("check-rule-sets-runnable.py")
@@ -271,11 +282,16 @@ def test_postcondition_http_error_is_a_refusal(monkeypatch: pytest.MonkeyPatch) 
 @pytest.mark.req("FR-408")
 def test_the_journey_flag_names_one_journey_and_defaults_to_none() -> None:
     """DP-b1 (a): `--journey wf-699` is an option of the one command and is off by default
-    (every Phase 1 demo would otherwise pay for the whole journey)."""
-    assert demo_script.JOURNEYS == ("wf-699",)
+    (every Phase 1 demo would otherwise pay for the whole journey). SL-1711 adds `wf-701` and
+    `--target`, whose default is the local API."""
+    assert demo_script.JOURNEYS == ("wf-699", "wf-701")
     parser = demo_script.build_parser()
     assert parser.parse_args([]).journey is None
+    assert parser.parse_args([]).target == "local"
     assert parser.parse_args(["--journey", "wf-699"]).journey == "wf-699"
+    assert parser.parse_args(["--journey", "wf-701", "--target", "compose"]).target == "compose"
+    with pytest.raises(SystemExit):
+        parser.parse_args(["--journey", "wf-701", "--target", "elsewhere"])
     with pytest.raises(SystemExit):
         parser.parse_args(["--journey", "wf-700"])
 
@@ -372,3 +388,130 @@ def test_the_journey_refuses_when_pnpm_is_absent() -> None:
         assert "pnpm" in str(refusal.value)
         patch.setattr(demo_script.sys, "argv", ["demo.py", "--journey", "wf-699"])
         assert demo_script.main() == 1
+
+
+@pytest.mark.req("FR-408")
+def test_a_wf701_failure_names_its_journey_and_the_step(monkeypatch: pytest.MonkeyPatch) -> None:
+    """R8 (PL-1710): with A1's body refused the command exits non-zero with the one line, in the
+    form of the WF-699 line, naming WF-701 and the step `A1`. `run_journey` maps the journey
+    module's own failure type, so a failure that names another journey cannot slip through."""
+    import sys
+    import types
+
+    class A1FailedError(RuntimeError):
+        step, code, status = "A1", "VALIDATION_FAILED", 422
+
+    def refused(*_args: object, **_kwargs: object) -> None:
+        raise A1FailedError
+
+    walker = types.SimpleNamespace(
+        JourneyStepFailed=A1FailedError,
+        run_wf699_journey=lambda *a, **k: None,
+        run_wf701_after=refused,
+    )
+    monkeypatch.setattr(demo_script, "_load_journey", lambda _name: walker)
+    with pytest.raises(demo_script.DemoRefusedError) as refusal:
+        demo_script.run_journey({}, "wf-701")
+    assert str(refusal.value) == "the WF-701 journey failed at A1: VALIDATION_FAILED (HTTP 422)"
+
+    def demo_that_runs_the_journey(**_kwargs: object) -> int:
+        demo_script.run_journey({}, "wf-701")
+        return 0
+
+    monkeypatch.setattr(demo_script, "demo", demo_that_runs_the_journey)
+    monkeypatch.setattr(sys, "argv", ["demo.py", "--journey", "wf-701"])
+    assert demo_script.main() == 1
+
+
+@pytest.mark.req("FR-408")
+def test_the_compose_target_refuses_naming_the_services_that_are_down() -> None:
+    """R9 (PL-1710): with the stack down the command refuses before it seeds anything, and the
+    message names each missing service. The workers are derived from the routing table, so a
+    pool added to it is required here without an edit to this script."""
+    from app.platform.jobs import DEFAULT_QUEUE_FOR_KIND
+
+    needed = demo_script.compose_services()
+    assert {f"worker-{q.value}" for q in DEFAULT_QUEUE_FOR_KIND.values()} <= needed
+    assert {"postgres", "redis", "minio", "lb", "api"} <= needed
+    with pytest.raises(demo_script.DemoRefusedError) as refusal:
+        demo_script.check_compose_up({})
+    message = str(refusal.value)
+    for service in sorted(needed - {"api"}):
+        assert service in message
+    assert "api (x2; 0 running)" in message
+    # `api` once is still one replica short: A2 and C4 show a COMMIT set of two.
+    one = {name: 1 for name in needed}
+    with pytest.raises(demo_script.DemoRefusedError) as short:
+        demo_script.check_compose_up(one)
+    assert "api (x2; 1 running)" in str(short.value)
+    demo_script.check_compose_up({**one, "api": 2})
+
+
+@pytest.mark.req("FR-408")
+def test_the_compose_target_runs_only_the_wf701_journey_and_refuses_before_seeding(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(demo_script, "compose_running", dict)
+    seeded: list[str] = []
+    monkeypatch.setattr(demo_script, "prepare_world", lambda **_k: seeded.append("seed"))
+    with pytest.raises(demo_script.DemoRefusedError, match="only `--journey wf-701`"):
+        demo_script.demo(
+            rows=None, skip_seed=True, frontend=False, journey="wf-699", target="compose"
+        )
+    with pytest.raises(demo_script.DemoRefusedError, match="Missing"):
+        demo_script.demo(
+            rows=None, skip_seed=True, frontend=False, journey="wf-701", target="compose"
+        )
+    assert seeded == []
+
+
+@pytest.mark.req("FR-408")
+def test_compose_command_names_the_shipped_file_when_compose_file_is_unset(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Unset `COMPOSE_FILE`: the command passes the shipped file and the `app` profile."""
+    monkeypatch.delenv("COMPOSE_FILE", raising=False)
+    monkeypatch.delenv("GIP_COMPOSE_PROJECT", raising=False)
+    assert demo_script.compose_command("ps") == [
+        "docker",
+        "compose",
+        "-f",
+        "deploy/docker-compose.yml",
+        "--profile",
+        "app",
+        "ps",
+    ]
+    monkeypatch.setenv("GIP_COMPOSE_PROJECT", "other")
+    assert demo_script.compose_command("ps")[:4] == ["docker", "compose", "-p", "other"]
+
+
+@pytest.mark.req("FR-408")
+def test_compose_command_leaves_the_file_list_to_compose_when_compose_file_is_set(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Set `COMPOSE_FILE` (a ':'-separated list): no `-f`, so every compose call the demo makes,
+    the outbox relay's `run` included, reads the same merged files the operator named. A fixed
+    `-f` would drop an override file for that one call."""
+    monkeypatch.setenv("COMPOSE_FILE", "/stack/docker-compose.yml:/stack/override.yml")
+    monkeypatch.delenv("GIP_COMPOSE_PROJECT", raising=False)
+    command = demo_script.compose_command("run", "--rm", "-d", "worker-default")
+    assert "-f" not in command
+    assert command == [
+        "docker",
+        "compose",
+        "--profile",
+        "app",
+        "run",
+        "--rm",
+        "-d",
+        "worker-default",
+    ]
+
+
+@pytest.mark.req("FR-408")
+def test_the_demo_env_keeps_compose_file_for_its_compose_subprocesses(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The compose calls run with `demo_env()`; `COMPOSE_FILE` must reach them."""
+    monkeypatch.setenv("COMPOSE_FILE", "/stack/docker-compose.yml:/stack/override.yml")
+    assert demo_script.demo_env()["COMPOSE_FILE"] == "/stack/docker-compose.yml:/stack/override.yml"
