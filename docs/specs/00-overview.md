@@ -401,6 +401,19 @@ pattern; a fixed-text error type; and an error type given its own fixed authored
 other message is
 `The value is not valid (<TYPE>).` `errors[].code` and `errors[].field` are unchanged.
 
+**`INTERNAL_ERROR`.** *(Added 2026-10-22, WK-674 Slice 6, the maintainer's ruling in `to-lead.md`
+entry "2026-10-22 19:52:20 BST" item 3, which amends the "owning platform spec" reading of its entry
+"2026-10-22 17:34:47 BST"; the code has been raised by the request machinery since Phase 0, and `03`
+§4.13 is the first spec text to name it.)* An unhandled exception, a server-side failure the caller cannot fix: status `500`, title "Internal
+server error", `detail` the fixed text "The request failed unexpectedly. Quote the trace id when
+reporting it.", and the request's `trace_id`. The response carries no exception text, because that
+text can hold a connection URL or a row of data (`07` R3); the cause is read from the log record for
+that `trace_id`, whose exception text is sanitised and whose frames are kept. It is a generic code,
+raised by the shared request machinery for every module (`backend/src/app/errors.py`
+`unexpected_problem`, rendered by `TraceMiddleware`), like `VALIDATION_FAILED` and `NOT_FOUND`: no
+module's "Error codes owned by this module" block lists it. A module that can name a refusal raises
+its own code and never relies on this one for a condition it can name.
+
 ### 5.4 Concurrency and idempotency
 
 - Mutating requests on versioned entities require `If-Match: <etag>`; a mismatch yields

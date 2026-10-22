@@ -15927,6 +15927,130 @@
         "title": "RoundSpec",
         "type": "object"
       },
+      "RoutedRange": {
+        "additionalProperties": false,
+        "description": "A stored range: `deployment_id` is the latest Deployment of that Rating Version in the\nEnvironment at write time, set by the server.",
+        "properties": {
+          "deployment_id": {
+            "format": "uuid",
+            "title": "Deployment Id",
+            "type": "string"
+          },
+          "effective_from": {
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "effective_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective To"
+          },
+          "rating_version_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          }
+        },
+        "required": [
+          "rating_version_ref",
+          "effective_from",
+          "deployment_id"
+        ],
+        "title": "RoutedRange",
+        "type": "object"
+      },
+      "RoutingRange": {
+        "additionalProperties": false,
+        "description": "One date range of a routing rule, naming the Rating Version it selects.",
+        "properties": {
+          "effective_from": {
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "effective_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective To"
+          },
+          "rating_version_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          }
+        },
+        "required": [
+          "rating_version_ref",
+          "effective_from"
+        ],
+        "title": "RoutingRange",
+        "type": "object"
+      },
+      "RoutingRule": {
+        "additionalProperties": false,
+        "description": "An Environment's current routing rule (the 200 body and the Audit Event's `after`).",
+        "properties": {
+          "environment": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Environment",
+            "type": "string"
+          },
+          "ranges": {
+            "items": {
+              "$ref": "#/components/schemas/RoutedRange"
+            },
+            "title": "Ranges",
+            "type": "array"
+          },
+          "written_at": {
+            "format": "date-time",
+            "title": "Written At",
+            "type": "string"
+          },
+          "written_by": {
+            "format": "uuid",
+            "title": "Written By",
+            "type": "string"
+          }
+        },
+        "required": [
+          "environment",
+          "ranges",
+          "written_by",
+          "written_at"
+        ],
+        "title": "RoutingRule",
+        "type": "object"
+      },
+      "RoutingRuleUpdate": {
+        "additionalProperties": false,
+        "description": "The body of `PUT /api/v1/environments/{env}/routing`. Empty `ranges` clears the rule.",
+        "properties": {
+          "ranges": {
+            "items": {
+              "$ref": "#/components/schemas/RoutingRange"
+            },
+            "title": "Ranges",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ranges"
+        ],
+        "title": "RoutingRuleUpdate",
+        "type": "object"
+      },
       "RuleCreate": {
         "additionalProperties": false,
         "properties": {
@@ -16764,6 +16888,72 @@
         ],
         "title": "Severity",
         "type": "string"
+      },
+      "ShadowConfig": {
+        "additionalProperties": false,
+        "description": "An Environment's current shadow configuration (the 200 body and the Audit Event's\n`after`). `candidate_bundle_hash` is the candidate's compiled bundle at write time.",
+        "properties": {
+          "candidate_bundle_hash": {
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "title": "Candidate Bundle Hash",
+            "type": "string"
+          },
+          "candidate_rating_version_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "environment": {
+            "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+            "title": "Environment",
+            "type": "string"
+          },
+          "fraction": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 1.0,
+            "title": "Fraction",
+            "type": "number"
+          },
+          "written_at": {
+            "format": "date-time",
+            "title": "Written At",
+            "type": "string"
+          },
+          "written_by": {
+            "format": "uuid",
+            "title": "Written By",
+            "type": "string"
+          }
+        },
+        "required": [
+          "environment",
+          "candidate_rating_version_ref",
+          "candidate_bundle_hash",
+          "fraction",
+          "written_by",
+          "written_at"
+        ],
+        "title": "ShadowConfig",
+        "type": "object"
+      },
+      "ShadowConfigUpdate": {
+        "additionalProperties": false,
+        "description": "The body of `PUT /api/v1/environments/{env}/shadow`. `fraction` is a sampling rate.",
+        "properties": {
+          "candidate_rating_version_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          },
+          "fraction": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 1.0,
+            "title": "Fraction",
+            "type": "number"
+          }
+        },
+        "required": [
+          "candidate_rating_version_ref",
+          "fraction"
+        ],
+        "title": "ShadowConfigUpdate",
+        "type": "object"
       },
       "ShapContribution": {
         "additionalProperties": false,
@@ -28432,6 +28622,308 @@
           }
         },
         "summary": "Roll an environment back to an earlier Rating Version",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/environments/{env}/routing": {
+      "put": {
+        "description": "**200** with the rule as written (`03` FR-270; `RL-1834` D1). Needs `deployment:promote`\non the Environment; handler-guarded like the other writes. **404** for an unknown\nEnvironment; **409** `VALIDATION_FAILED` for a retired Environment or a Rating Version never\ndeployed there, **409** `DEPLOY_DATE_RANGE_OVERLAP`; **422** for a non-Rating-Version\nreference or a range that does not end after it starts. An empty list clears the rule.",
+        "operationId": "write_routing_rule_api_v1_environments__env__routing_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "title": "Env",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoutingRuleUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutingRule"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
+          }
+        },
+        "summary": "Write an environment's date-routing rule",
+        "tags": [
+          "platform"
+        ]
+      }
+    },
+    "/api/v1/environments/{env}/shadow": {
+      "put": {
+        "description": "**200** with the configuration as written (`03` FR-271; `RL-1834` D2). Needs\n`admin:manage_settings` on the Environment; handler-guarded. **404** for an unknown\nEnvironment; **409** `VALIDATION_FAILED` for a retired one, **409** `BUNDLE_COMPILE_FAILED`\nfor a candidate with no compiled bundle; **422** for a candidate that is not a Rating Version\nof this workspace, or is a `draft`, or a fraction outside `(0, 1]`.",
+        "operationId": "write_shadow_config_api_v1_environments__env__shadow_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "env",
+            "required": true,
+            "schema": {
+              "title": "Env",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShadowConfigUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShadowConfig"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
+          }
+        },
+        "summary": "Write an environment's shadow-scoring configuration",
         "tags": [
           "platform"
         ]

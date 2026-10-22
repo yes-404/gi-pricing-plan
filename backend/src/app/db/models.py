@@ -2979,6 +2979,96 @@ class DeploymentRow(Base):
     )
 
 
+class RoutingRuleRow(Base):
+    """One write of an Environment's date-routing rule (`03` §4.13, FR-270; WK-674 Slice 6).
+
+    Append-only: the latest row of an Environment is its current rule, and an empty `ranges`
+    clears it (`RL-1834` D1). `ranges` is the list of `model_schema.RoutedRange`, JSON-dumped.
+    The migration grants the application role `SELECT` and `INSERT` only.
+    """
+
+    __tablename__ = "routing_rules"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    environment_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("environments.id"), nullable=False
+    )
+    ranges: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False)
+    written_by: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    written_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        Index("ix_routing_rules_environment", "workspace_id", "environment_id", "written_at"),
+        {"info": {"immutability": "append_only"}},
+    )
+
+
+class ShadowConfigRow(Base):
+    """One write of an Environment's shadow configuration (`03` §4.13, FR-271; Slice 6).
+
+    Append-only; the latest row of an Environment is current (`RL-1834` D2).
+    `candidate_bundle_hash` is the candidate's compiled bundle at write time.
+    """
+
+    __tablename__ = "shadow_configs"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    environment_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("environments.id"), nullable=False
+    )
+    candidate_rating_version_ref: Mapped[str] = mapped_column(String(100), nullable=False)
+    candidate_bundle_hash: Mapped[str] = mapped_column(String(71), nullable=False)
+    fraction: Mapped[float] = mapped_column(Float, nullable=False)
+    written_by: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    written_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        CheckConstraint("fraction > 0 AND fraction <= 1", name="fraction_in_unit_interval"),
+        CheckConstraint(
+            "candidate_bundle_hash ~ '^sha256:[a-f0-9]{64}$'", name="bundle_hash_format"
+        ),
+        Index("ix_shadow_configs_environment", "workspace_id", "environment_id", "written_at"),
+        {"info": {"immutability": "append_only"}},
+    )
+
+
+class ShadowResultRow(Base):
+    """One shadow-scored quote: the live and the candidate `ScoringResult` (`03` §4.13).
+
+    Append-only. Each result is the `ScoringResult` JSON without `trace` and `timing_ms`, so the
+    premiums are held exactly as `ScoringResult` holds them. No Quote Context is stored, so the
+    table is not a quote-input store (NFR-499). `live_deployment_id` is null when the live
+    quote was served by no Deployment of the Environment.
+    """
+
+    __tablename__ = "shadow_results"
+
+    id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=new_uuid7)
+    workspace_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
+    environment_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("environments.id"), nullable=False
+    )
+    live_deployment_id: Mapped[UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("deployments.id")
+    )
+    scored_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    live_result: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    candidate_result: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+
+    __table_args__ = (
+        Index("ix_shadow_results_environment", "workspace_id", "environment_id", "scored_at"),
+        {"info": {"immutability": "append_only"}},
+    )
+
+
 class DislocationRunRow(Base):
     """One Dislocation Run, the citable artifact (03 §4.6, FR-263, FR-265; PL-1501 Task 2).
 
