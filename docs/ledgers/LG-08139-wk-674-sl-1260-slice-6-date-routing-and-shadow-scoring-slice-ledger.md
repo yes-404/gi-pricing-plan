@@ -39,11 +39,11 @@ and its Acceptance list. Resume under `RL-1834` by exec-1260c, 2026-10-22 (the m
 | T2 | `03` FR-270 clarification, §4.13, §5.1 routing row | done, `5f406245` |
 | T3 | `model-schema` routing and shadow shapes, generated schemas | done, `2720bcce` |
 | T4 | `routing_rules`, `shadow_configs`, `shadow_results`: models, migration `9b3e7c15d4a2`, immutability seed rows, `DEPLOY_DATE_RANGE_OVERLAP`, the two Environment-only flags | written unrun in `c53d75f0`; reviewed 2026-10-22 (below) |
-| T5 | routing write: `platform/routing.py`, `PUT .../routing`, tests first | tests `1f119659`; code next commit; unrun (no DB window) |
-| T6 | selection in `/score` (flag, pin check, byte-identical flag-off), `test_routing.py` | owed |
-| T7 | `PUT .../shadow` route, `deployment.shadow_configured`, tests | owed |
-| T8 | shadow scoring after the response, `shadow_results` writes, tests | owed |
-| T9 | settings tests (R6.1), regenerate contracts and INDEX, gate | owed |
+| T5 | routing write: `platform/routing.py`, `PUT .../routing`, tests first | tests `1f119659`, code `9b154031`; unrun |
+| T6 | selection in `/score` (flag, pin check, flag-off unchanged), `test_routing.py` | tests then code (`routing.select`, `_routed` in `api/score.py`; `_serving_ref` untouched); unrun |
+| T7 | `PUT .../shadow` route, `deployment.shadow_configured`, tests | tests then code (`platform/shadow.py`); unrun; OpenAPI regeneration owed |
+| T8 | shadow scoring after the response, `shadow_results` writes, tests | tests then code (`_shadow_task` in `api/score.py`); unrun |
+| T9 | settings tests (R6.1), migration test; then contracts and INDEX regeneration, ruff format, the gate | tests written, unrun; regeneration and checks owed after the SL-1711 END |
 
 **WIP review of `c53d75f0`, 2026-10-22.** Right: the three tables, columns, `ck_`/`fk_` names
 (they match the model's naming convention), the indexes, the `artifact_append_only()` trigger
