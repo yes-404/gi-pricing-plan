@@ -182,9 +182,22 @@ the run returned 500, not a stored row: the database CHECK `ck_shadow_configs_bu
 refused the insert. The test fails by name all the same (it expects 409), and the database
 constraint is a second line behind the application check.
 
-**V2b/V2c, the audit call skipped entirely (the maintainer, 2026-10-22 17:34:47 BST item 2).** Mutation:
-`await audit.record(` became `(lambda *a, **k: None)(` at `platform/routing.py:131` and in
-`platform/shadow.py` (the same call). Both fail by name with no new test, because each positive test already
+**The maintainer's ruling, `to-lead.md` entry "2026-10-22 17:34:47 BST", item 2, verbatim:** "**V2 is NOT sufficient.** By the lead's own report, "literally skipping the call stays green, because the test makes it raise". So **a routing change that never calls `audit.record` passes the test**, and that is exactly RL-1834's "a change committing without its Audit Event". **Required:** add an assertion that **a successful routing write (and a shadow write) produces exactly one Audit Event row**, of the expected type, in the same unit of work. Then a NEW control, "skip the `audit.record` call entirely" (routing.py:131, and the shadow equivalent), must FAIL BY NAME. Red-first on the added assertion. This is a test addition in the slice, not a weakened test."
+
+**Measured result:** the premise was an unmeasured inference of the seat's and it was false: the existing positive tests already assert exactly one event, so no assertion was added and the new control fails by name at the head. The maintainer accepted the correction (the lead's relay, 2026-10-22: "Measurement beats inference"). **V2b/V2c, the audit call skipped entirely.** Mutation:
+`await audit.record(` became `(lambda *a, **k: None)(`, one line each. The logs 24 and 25 hold `git diff --stat`
+only (`routing.py | 2 +-` and `shadow.py | 2 +-`), not the diff text, so the exact edits are:
+
+```diff
+--- backend/src/app/platform/routing.py  (line 131)
+-    await audit.record(
++    (lambda *a, **k: None)(
+--- backend/src/app/platform/shadow.py   (line 129)
+-    await audit.record(
++    (lambda *a, **k: None)(
+```
+
+The arguments that follow the call line are unchanged and still evaluated. Both fail by name with no new test, because each positive test already
 unpacks `(event,) = await _events(...)`, exactly one event of the write's action with its
 `entity_ref`, `before` and `after`. Reverted, `git status --short` empty, never committed.
 
@@ -193,7 +206,9 @@ unpacks `(event,) = await _events(...)`, exactly one event of the write's action
 | V2b routing skip | `24-nv4-routing-audit-skipped.log` | 1 | `3 failed, 11 passed, 1 warning in 7.51s` | `test_a_rule_naming_a_deployed_version_is_written_and_audited`, `test_a_second_write_appends_and_records_the_previous_rule_as_before`, `test_a_routing_change_cannot_commit_without_its_audit_event` |
 | V2c shadow skip | `25-nv5-shadow-audit-skipped.log` | 1 | `3 failed, 9 passed, 4 warnings in 5.60s` | `test_a_compiled_candidate_is_configured_and_audited`, `test_a_second_write_appends_and_records_the_first_as_before`, `test_a_shadow_change_cannot_commit_without_its_audit_event` |
 
-**`_routed` fails closed, declared (the maintainer, same entry, item 4).** Spec first: `03` §4.13
+**The maintainer's ruling, same entry, item 4, verbatim:** "**`_routed`'s unguarded flag read (api/score.py:365, caller :579): DECLARE it, not an FD.** Fail-closed is the right default for PRICING: a routing failure must never silently fall back to the default-live version, because that could quote from the wrong version. Shadow is best-effort by design and guarded. **SL-1260 amends its own 03 routing clause in place** (the slice's FR from T2; SL-1260 is not merged, so in place is fine): "a routing selection failure fails the quote (5xx, problem code named) and never falls back; a shadow failure never affects the response". **Plus a test pinning it** (select_range raises → the quote fails, never default-live). LG-8139 records it."
+
+**`_routed` fails closed, declared.** Spec first: `03` §4.13
 Selection gains the sentence "a routing selection failure fails the quote and never falls back" (500
 `INTERNAL_ERROR`; commit before the test). Test `test_routing.py::test_a_routing_selection_failure_fails_the_quote_and_never_falls_back`
 (selector healthy: 200 and the live version scored; selector raises: 500, `code` `INTERNAL_ERROR`, no
@@ -215,6 +230,13 @@ with `git checkout`, `git status --short` showing only the test file, never comm
 |---|---|---|---|---|
 | `_routed`'s flag read (`api/score.py:365`) guarded with `except Exception: return None` | `29-nv7-flag-read-falls-back.log` | 1 | `1 failed, 8 passed, 1 warning in 9.60s` | `...never_falls_back[resolve]` (`assert 200 == 500`) |
 | the caller (`api/score.py:579`) re-raises `RuntimeError("masked") from None`, so status, code and "nothing scored" hold but the cause is lost | `30-nv8-cause-masked.log` | 1 | `2 failed, 7 passed, 1 warning in 10.65s` | `...never_falls_back[select_range]`, `...never_falls_back[resolve]` (`assert 'select_range' in [... frames ...]`) |
+
+**`INTERNAL_ERROR` catalogued (the maintainer's ruling (a), relayed by the lead).** `03` §4.13's new clause is the first spec text to name
+it, and `errors.py` lists it in `_GENERIC_ERROR_CODES` ("Codes raised by the shared request machinery rather than owned by one module"). No spec's
+"Error codes owned by this module" block listed it; `07` §5.1 is its owner, as for `CONFLICT_STALE_WRITE`, because `FR-450` makes the
+platform implement `00` §5.3's error model for every module. Its own commit (`07-platform.md` only) adds it to that list with a paragraph
+from `errors.py` `unexpected_problem`: unhandled exception, 500, the fixed detail, the `trace_id`, no exception text. `audit-docs.py` after the
+change: `181 error codes, ownership exclusive`, and the only FAILED line is check 31.
 
 **Migration round trip** (`20-migration-roundtrip.log`, same database, 16:30:51 to 16:30:59 UTC).
 Before: `routing_rules`, `shadow_configs`, `shadow_results` present, `alembic_version` = `9b3e7c15d4a2`.
