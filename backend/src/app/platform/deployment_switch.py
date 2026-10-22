@@ -67,6 +67,7 @@ __all__ = [
     "commit_round",
     "prepare_round",
     "process_id",
+    "switch_stack",
 ]
 
 _log = logging.getLogger(__name__)
@@ -394,6 +395,11 @@ class SwitchRegistry(Protocol):
     """The switch for every Environment: what the deploy service is given."""
 
     def for_environment(self, environment: str) -> SwitchTransport: ...
+
+
+def switch_stack(environment: str, tenant_id: str) -> str:
+    """The stack prefix of this process's switch channels: `<GIP_ENVIRONMENT>:<tenant>`."""
+    return f"{environment}:{tenant_id}"
 
 
 class RedisSwitch:
