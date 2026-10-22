@@ -69,7 +69,7 @@ RS 8156 (branch `aud-1554-2026-10-22`) found this ledger held no RED or GREEN ru
 - N2 `RatingDesignViewMounts.test.ts`: with `pins.sub_graphs` omitting `m_refund`'s version, the not-pinned warning shows, the save control has `aria-disabled="false"`, and a click saves once (RL-1835 (ii) 3 "Testable as").
 - N3 `MountInspector.test.ts`: picking a pin with a different slug resets `inputs` and `outputs` to `{}`; picking another version of the same slug keeps both.
 
-**The slug-change reset (RS 8156 (v)) is a choice outside RL-1835, adopted by the lead as the slice's choice.** `MountInspector.vue` `setRef` resets the port maps when the slug changes, because a map for another fragment's ports would name ports that do not exist, which compile refuses. It is named here and pinned by N3.
+**The slug-change reset (RS 8156 (v)) is ruled implementation within RL-1835's intent; no open question** (the maintainer's to-lead entry "2026-10-22 13:15:28 BST", relayed by lead 26). Reason: a different fragment has different ports, so the old `inputs` and `outputs` maps would point at ports that do not exist, which compile refuses. `MountInspector.vue` `setRef` resets both maps when the slug changes and keeps them for another version of the same slug. N3 pins it.
 
 **Observation, no change:** clearing an input-port field saves `""` as the parent name (`setInput`), so an empty parent name can be saved for an input the ruling says is required. Not changed in this slice.
 
