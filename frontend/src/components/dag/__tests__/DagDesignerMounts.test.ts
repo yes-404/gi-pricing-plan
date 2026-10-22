@@ -69,6 +69,7 @@ describe("sub-graph mounts on the canvas (RL-1835 (i))", () => {
       issues: [{ code: "GRAPH_CYCLE", message: "m_refund closes a cycle", step_id: "m_refund" }],
     });
     render(DagDesigner, { props });
+    await screen.findByLabelText(/sub-graph mount m_refund/);
     expect(await within(node("m_refund")).findByText("m_refund closes a cycle")).toBeInTheDocument();
     expect(within(node("m_fees")).queryByText("m_refund closes a cycle")).toBeNull();
   });
