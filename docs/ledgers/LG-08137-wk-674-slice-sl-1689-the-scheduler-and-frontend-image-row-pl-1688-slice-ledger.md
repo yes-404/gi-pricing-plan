@@ -47,3 +47,32 @@ Filed 2026-10-21 under working id 8137 (lead-reserved in eta.md). Executor seat 
 ## PRs
 
 None yet. The slice stops at PR-READY; the lead opens the PR.
+
+## PREP window — 2026-10-22 (exec-1689, edits only; no compose, no tests)
+
+**GO:** the maintainer's (by delegation) message of 2026-10-22 15:47 ("SL-1689 PREP") and the lead's entry "2026-10-22 15:43:10 BST" in `to-lead.md`. Edits and git only: no compose up/build/run, no pytest or vitest, until SL-1711 merges (PL-1688:121, serialised on `deploy/docker-compose.yml`).
+
+**Done in PREP:** `origin/main` (`f3462d8f`) re-merged into the branch (`git merge --no-ff`); the only conflict was `docs/INDEX.md` (taken from main, regenerated with `doc-index.py`, `--check` rc 0). The branch content was reviewed against PL-1688 Tasks 0 to 4 and the write set: Tasks 1, 2, 3, 4 and option A are all present (commits `c80009ad`, `cac622f8`, `1cc2fe80`, `32257078`); no task is missing. `ruff check` on the three changed test files: rc 0. `ruff format --check` and `mypy` on those files report differences that also exist at `origin/main` (the format check fails on `origin/main`'s copy of all three files; mypy does not cover `backend/tests/`), so they are not this slice's and are not reformatted here.
+
+**Waits for SL-1711's merge** (the lead announces it; `git diff --stat origin/main -- deploy` on tools-main must be empty first):
+1. A second re-merge of `origin/main` onto the branch (`deploy/docker-compose.yml` conflicts are possible: resolve only if mechanical, else STOP).
+2. The DB/compose windows (lead-granted in writing, load1 < 8 and memory floor read at start, two quoted zeros at the end): the Task 3 green run, the stopped-scheduler red, the one-beat red/green, and the fresh-checkout image build and three curl lines (Acceptance 5).
+3. The GREEN set at the re-merged head (below), then the gate, then PR-READY.
+
+**Import-closure GREEN set (seat-brief item 29), derived at branch head after the `f3462d8f` merge.**
+- Changed modules: `git diff --name-only origin/main...HEAD -- backend/src packages frontend/src` prints nothing (0 files). The slice changes tests, deploy files and docs only.
+- Test files that import a changed test module: `git grep -n -E "deploy_stack_helpers|test_deploy_stack" -- backend packages scripts` finds the importers of `backend/tests/deploy_stack_helpers.py`: `backend/tests/test_deploy_stack_runtime.py`, `backend/tests/test_deploy_switch_runtime.py`; `scripts/bench-deploy-path.py` imports `api` and `governed_workspace` (neither changed). `test_deploy_stack.py` reads `deploy/docker-compose.yml` directly.
+- GREEN = `backend/tests/test_deploy_stack.py`, `backend/tests/test_deploy_stack_runtime.py`, `backend/tests/test_deploy_switch_runtime.py`. Re-derive both greps at the re-merged head; add any new importer.
+
+**Exact commands for the windows** (W = `/home/puzhenhao1989/gi-pricing-plan/.claude/worktrees/sl-1689`; the same list is in `~/gi-pricing-plan.local/handover/sl-1689-window-commands-2026-10-22.md`):
+```
+git -C $W fetch origin && git -C $W merge --no-ff origin/main          # then doc-index.py under flock gate-2, --check rc 0
+# shape tests + GREEN set, three files at most per run-small call (3 here; runtime files skip without GIP_DEPLOY_TESTS):
+~/gi-pricing-plan.local/handover/run-small.sh $W backend/tests/test_deploy_stack.py backend/tests/test_deploy_stack_runtime.py backend/tests/test_deploy_switch_runtime.py
+# build window (lead GRANT; read cut -d" " -f1 /proc/loadavg and free -g first):
+SHA=$(git -C $W rev-parse HEAD); echo "logs SHA-first: $SHA"
+GIP_DEPLOY_TESTS=1 uv run --directory $W pytest -q backend/tests/test_deploy_stack_runtime.py -k "scheduler or one_beat" 2>&1 | tee <logdir>/$SHA-t3-green.log
+# red: stop the scheduler (compose stop scheduler inside the test, or run with the scheduler service removed) and quote the 'queued' failure line
+# fresh checkout (Acceptance 5): git -C /home/puzhenhao1989/gi-pricing-plan worktree add <dir> $SHA; docker build -f deploy/frontend.Dockerfile -t gi-pricing-web:$SHA <dir>; then curl -s -o /dev/null -w '%{http_code}' for / , a deep SPA route, /api/v1/... (never 502)
+# end of every DB window: redis-cli -n <db> dbsize = 0 and pg_database count = 0; keycloak bind source restored from tools-main (item 24)
+```
