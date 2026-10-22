@@ -288,7 +288,7 @@ def glum_family(
     handed to `glum` as `NegativeBinomialDistribution(1/θ)`; it is never defaulted, because
     `glum`'s own 1.0 is a modelling judgement.
     """
-    from glum import NegativeBinomialDistribution
+    from glum import NegativeBinomialDistribution  # type: ignore[import-untyped]
 
     if name == "negative_binomial":
         if theta is None or not theta > 0.0:
@@ -325,7 +325,7 @@ def _fit_cv_path(
     passed only so `assign_folds` can read `key_column`/`time_column` by name; the fold
     index it returns is what actually slices the arrays.
     """
-    from glum import GeneralizedLinearRegressor  # type: ignore[import-untyped]
+    from glum import GeneralizedLinearRegressor
 
     cv = spec.cv
     assert cv is not None  # GlmSpec's validator guarantees this whenever select_by == "cv"

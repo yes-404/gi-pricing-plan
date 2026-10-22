@@ -167,7 +167,7 @@ def unit_deviance(
     safe_mu = np.maximum(mu, eps)
 
     if family == "negative_binomial":
-        # R/MASS `glm.nb` form, variance μ + μ²/θ: d = 2[y·ln(y/μ) − (y+θ)·ln((y+θ)/(μ+θ))].
+        # R/MASS `glm.nb` form, variance μ + μ²/θ: d = 2[y·ln(y/μ) - (y+θ)·ln((y+θ)/(μ+θ))].
         # Never defaulted (PL-8162 DP-T): a θ of 1 or ∞ is a different model.
         if theta is None or not theta > 0.0:
             raise ValueError(
@@ -676,7 +676,8 @@ def _glm_monotonicity(
         column = factor.source_columns[0] if factor.source_columns else None
         held_values: list[object]
         if factor.type is FactorType.BANDING and column is not None:
-            assert factor.banding_id is not None and bandings is not None
+            assert factor.banding_id is not None
+            assert bandings is not None
             axis = _resolved_axis(data, factor, bandings=bandings, groupings=groupings)
             assert axis is not None
             representatives = _representatives(axis, data[column])
@@ -690,8 +691,8 @@ def _glm_monotonicity(
             and data[column].dtype.is_numeric()
         ):
             quantiles = [data[column].quantile(float(q)) for q in np.linspace(0.05, 0.95, 10)]
-            held_values = sorted(
-                dict.fromkeys(float(v) for v in quantiles if isinstance(v, int | float))
+            held_values = list(
+                sorted(dict.fromkeys(float(v) for v in quantiles if isinstance(v, int | float)))
             )
         else:
             omit(factor, MonotonicityOmissionReason.UNORDERED_LEVELS)

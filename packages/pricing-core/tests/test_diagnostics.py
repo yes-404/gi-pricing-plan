@@ -744,12 +744,12 @@ def test_a_backtest_excludes_weight_zero_rows_and_reports_the_count() -> None:
 @pytest.mark.req("FR-110")
 def test_the_negative_binomial_unit_deviance_uses_the_declared_theta() -> None:
     """PL-8162 A-R3. θ is R/MASS `glm.nb`'s (variance μ + μ²/θ), and the unit deviance is
-    2[y·ln(y/μ) − (y+θ)·ln((y+θ)/(μ+θ))] with the `y = 0` limit taken.
+    2[y·ln(y/μ) - (y+θ)·ln((y+θ)/(μ+θ))] with the `y = 0` limit taken.
 
     Pinned against values worked by hand for μ = 1, θ = 2:
-      y = 0:  2·[0 − 2·ln(2/3)]            = 4·ln(3/2)            = 1.6218604324326575
-      y = 2:  2·[2·ln 2 − 4·ln(4/3)]       = 4·ln 2 − 8·ln(4/3)   = 0.4711321426255344
-    The Poisson deviance of the same rows is 2·(0 − (0−1)) = 2 and 2·(2·ln 2 − 1), so a NB
+      y = 0:  2·[0 - 2·ln(2/3)]            = 4·ln(3/2)            = 1.6218604324326575
+      y = 2:  2·[2·ln 2 - 4·ln(4/3)]       = 4·ln 2 - 8·ln(4/3)   = 0.4711321426255344
+    The Poisson deviance of the same rows is 2·(0 - (0-1)) = 2 and 2·(2·ln 2 - 1), so a NB
     value equal to it means θ was ignored — the defect this test exists for.
     """
     y = np.array([0.0, 2.0])
