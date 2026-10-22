@@ -3,7 +3,7 @@ id: PL-8181
 family: plan
 kind: map
 title: WK-1178 — FD 8177, a dataset-scoped grant reaches the three writes whose handler checks the Dataset (dictionary, rule set, acknowledgement), and a permanent guard against the pattern — a dated Work-plan delta cutting one slice
-status: draft                  # draft → active → superseded | retired (§1.2a) — draft: DP-0, DP-3 and DP-4 are blocking and open (DP-1 and DP-2 resolved by the maintainer's 2026-10-22 17:36:24 BST entry, RL 8182)
+status: active                 # draft → active → superseded | retired (§1.2a) — ACCEPTED by the maintainer 2026-10-22 17:38:11 BST (DP-0..DP-3 ruled, DP-4 accepted with the guard follow-up); working id, not minted
 created: 2026-10-22
 owner: planner
 tree: 71e481fa5d240ed366cd80c1a8c6cf6cd1d918d5
@@ -12,18 +12,35 @@ work: WK-1178
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [RL-1301, RL-1687, FR-343, FR-345, FR-46, FR-51, FR-452, FR-263]
+relates: [SL-8185, LG-8186, RL-1301, RL-1687, FR-343, FR-345, FR-46, FR-51, FR-452, FR-263]
 ---
 
 # PL-8181 — WK-1178: FD 8177, a dataset-scoped grant reaches its three scoped writes
 
 > **For agentic workers:** a **dated Work-plan delta** under Lean P2 L5 (`document-ids.md`
-> §1.6, PL row). It cuts **one fix slice** (its `SL-` id and its `LG-` id are not reserved
-> yet; this draft calls the slice **"the slice"**). The executor is spawned from
+> §1.6, PL row). It cuts **one fix slice, SL 8185**, whose ledger is **LG 8186** (working ids,
+> the maintainer's 17:38:11 GO). The executor is spawned from
 > `.claude/roles/executor.md` and binds `test-driven-development`, `python-test`,
 > `python-package`, `fastapi-service`, `spec-change`, `dev-commands` and `git-hygiene`. The
 > ledger is filed by the executor at build; this plan names it and does not create it.
 > Written by planner-8177 (Claude Opus 5.5), 2026-10-22, at tree `71e481fa` (origin/main).
+
+**Accepted 2026-10-22 17:38:11 BST by the maintainer.** The entry "2026-10-22 17:38:11 BST —
+Maintainer: PL 8181 (FD 8177 fix) DP-0..DP-3 RULED; GO (SL 8185 / LG 8186); my 17:36:24 FR-343
+placement AMENDED to FR-345" in `to-lead.md`, verbatim:
+
+> The plan is draft/pl-8181 @92c48990 (planner-8177, opus). **ACCEPTED**, its follow-up commit for the guard-predicate extension included.
+> - **DP-0 = WK-1178.** FR-345's owner WK-676 is P3, and FD 8177 is a P2 HIGH, so it is fixed in P2. WK-676 inherits the FR-345 clause as written.
+> - **DP-1 = `requires(perm, held_anywhere=True)`,** via the existing rbac.holds_anywhere (rbac.py:219): PERMISSION_DENIED only when held nowhere, then the handler's scoped check gives 404 or SCOPE_DENIED. That is exactly RL 8182's order. On FR-452: the route gate does not count, and services count after their scoped check. **The tests prove "a 403 is never counted"** for both the route-gate refusal and the scoped refusal.
+> - **DP-2 = a dated FR-345 clause** stating the order. **This AMENDS my 17:36:24 item 1:** the scope-order sentence goes in **FR-345** (dataset scope), not FR-343, to avoid two rulings on one row (RL 8176's clause stays in FR-343). FR-343 carries a one-line pointer to FR-345. RL 8182 cites FR-345. The id-oracle residual is stated in the clause; no OQ.
+> - **DP-3:** acknowledge must raise **SCOPE_DENIED** when the permission is held on another dataset. ACKNOWLEDGE_FORBIDDEN_ROLE stays for a genuine role refusal. A red test distinguishes the two.
+> - **Tasks 1–6 as planned. Task 4 (rule-set) only after SL-1736 merges.** Task 5's guard: AST-based, red-first twice (names exactly the 3 routes at base, plus an injected route), with the **extended predicate** (a spec-named scoped resource vs a no-resource check) and an owned exclusion list; each entry is removed by the slice that fixes it (RL 8182's slice, FD 8184).
+> - **GO:** SL 8185 / LG 8186. Build now (edits); DB windows under pre-approval 1(a); its gate in the queue.
+
+This commit records those rulings. Where the ruling differs from the 17:36:24 revision below,
+the ruling binds: the helper is the `held_anywhere=True` keyword on `requires()`, and the order
+sentence is a dated **FR-345** clause written by this slice (Task 1), not an FR-343 sentence in
+the decision-maker's batch.
 
 ## The ruling this plan carries out
 
@@ -52,8 +69,8 @@ routes join its slice; the id-oracle residual ACCEPTED; FD 8184 probe GO" (RL 81
 
 > 4. [...] **Extend the 17:27:15 permanent guard's predicate** to catch this shape too (a permission check with no resource where the spec names a scoped resource), or say why it cannot.
 
-This resolves DP-1 (the order is option (b)'s) and DP-2 (the residual is accepted, and the order
-sentence is the decision-maker's, in RL 8176 / RL 8182's docs batch, not this slice's). It adds
+This resolves DP-1 (the order is option (b)'s) and DP-2 (the residual is accepted; the sentence's
+placement was then amended to FR-345 by the 17:38:11 entry above). It adds
 DP-4 (the guard's second shape) and makes this slice's helper and guard the ones RL 8182's
 follow-on slice reuses (*Reuse*, below).
 
@@ -104,7 +121,7 @@ Each fact read in the source at the tree above (my own reads, not the relay):
 8. **The built-in roles.** `packages/model-schema/src/model_schema/permissions.py`:137–144:
    `dataset:acknowledge_warning` is held by `pricing_actuary`, not `analyst`.
 
-## Owner Work — **WK-1178** recommended; DP-0 confirms
+## Owner Work — **WK-1178** (DP-0, ruled 17:38:11)
 
 Two candidates, with evidence:
 
@@ -120,15 +137,15 @@ later scoped-RBAC work. Ambiguous enough that the maintainer confirms it (DP-0).
 
 | # | Question | Options | Recommendation | Kind | Blocking | Resolved by |
 |---|---|---|---|---|---|---|
-| DP-0 | Which Work owns the fix? | WK-1178 · WK-676 | **WK-1178** (table above) | scope | yes | |
-| DP-1 | How does a route admit a scoped grant and still refuse a caller with no grant first? | (a) B.2 pattern · (b) "held anywhere" route gate + the existing scoped check · (c) other | **(b)** (below) | decision point | yes | the maintainer's entry 2026-10-22 17:36:24 BST item 1 (RL 8182): the order holds_anywhere → 403, load → 404, scoped → `SCOPE_DENIED` |
-| DP-2 | `06` text: the order for a permission that can be held on a named Dataset | (i) held-anywhere counts as "holding it" for FR-343's order; a holder on another Dataset sees 404 for an unknown slug and `SCOPE_DENIED` for an existing one · (ii) a scoped holder gets 403 for an unknown slug too | **(i)** (below) | decision point | yes | the same entry, items 1 and 3: (i), residual ACCEPTED; the sentence goes into FR-343 in RL 8176 / RL 8182's docs batch |
-| DP-3 | The acknowledge refusal for a holder whose grant is on another Dataset | `SCOPE_DENIED` (`06` §5.1) · keep `ACKNOWLEDGE_FORBIDDEN_ROLE` (`01` §5.1) | **`SCOPE_DENIED`** when held elsewhere; `ACKNOWLEDGE_FORBIDDEN_ROLE` kept when held nowhere | decision point | yes | |
-| DP-4 | How does the permanent guard see "a permission check with no resource where the spec names a scoped one"? | (a) a declared route → expected scope table, checked against the code · (b) derived from each spec's §5.1 permission column · (c) other | **(a), with a spec cross-check as its completeness control** (below) | decision point | yes | |
+| DP-0 | Which Work owns the fix? | WK-1178 · WK-676 | **WK-1178** (table above) | scope | yes | the maintainer's entry 2026-10-22 17:38:11 BST: "DP-0 = WK-1178" |
+| DP-1 | How does a route admit a scoped grant and still refuse a caller with no grant first? | (a) B.2 pattern · (b) "held anywhere" route gate + the existing scoped check · (c) other | **(b)** (below) | decision point | yes | the maintainer's entries 2026-10-22 17:36:24 BST item 1 (RL 8182, the order) and 17:38:11 BST ("DP-1 = `requires(perm, held_anywhere=True)`"; a 403 is never counted, both refusal kinds tested) |
+| DP-2 | `06` text: the order for a permission that can be held on a named Dataset | (i) held-anywhere counts as "holding it" for FR-343's order; a holder on another Dataset sees 404 for an unknown slug and `SCOPE_DENIED` for an existing one · (ii) a scoped holder gets 403 for an unknown slug too | **(i)** (below) | decision point | yes | 17:36:24 items 1 and 3 ((i), residual ACCEPTED), placement amended by 17:38:11: "a dated FR-345 clause"; FR-343 carries a one-line pointer; no OQ |
+| DP-3 | The acknowledge refusal for a holder whose grant is on another Dataset | `SCOPE_DENIED` (`06` §5.1) · keep `ACKNOWLEDGE_FORBIDDEN_ROLE` (`01` §5.1) | **`SCOPE_DENIED`** when held elsewhere; `ACKNOWLEDGE_FORBIDDEN_ROLE` kept when held nowhere | decision point | yes | 17:38:11: "acknowledge must raise SCOPE_DENIED when the permission is held on another dataset. ACKNOWLEDGE_FORBIDDEN_ROLE stays for a genuine role refusal. A red test distinguishes the two." |
+| DP-4 | How does the permanent guard see "a permission check with no resource where the spec names a scoped one"? | (a) a declared route → expected scope table, checked against the code · (b) derived from each spec's §5.1 permission column · (c) other | **(a), with a spec cross-check as its completeness control** (below) | decision point | yes | 17:38:11: ACCEPTED "its follow-up commit for the guard-predicate extension included"; Task 5 "with the **extended predicate** ... and an owned exclusion list" |
 
 ### DP-1 — the design options
 
-| | (a) RL-1301 B.2 pattern: drop the route `requires()`, guard in the handler with the resource | (b) a "held anywhere" route gate (`requires_held_anywhere`) + the handler's scoped check | (c) a route dependency that loads the Dataset by slug and checks with the resource |
+| | (a) RL-1301 B.2 pattern: drop the route `requires()`, guard in the handler with the resource | (b) a "held anywhere" route gate (`requires(perm, held_anywhere=True)`) + the handler's scoped check | (c) a route dependency that loads the Dataset by slug and checks with the resource |
 |---|---|---|---|
 | **Order** | load → 404 → scoped 403. A **no-grant** caller learns whether a dataset slug or a report id exists. | held anywhere? else 403 `PERMISSION_DENIED` → load → 404 → scoped 403 `SCOPE_DENIED` | as (b), but inside the dependency |
 | **RL 8176 (adopted)** | **Breaks its FR-343 order rule**: the one exception is Environments, and its reason (A) item 1 names datasets as ids whose existence is access-controlled. | Kept: a caller with no grant is refused 403 whether or not the id exists. This is exactly RL 8176's option (C) form, applied where its reason says it belongs. | Kept |
@@ -142,37 +159,57 @@ vehicle), it reuses `rbac.holds_anywhere` and the established `count_management`
 the scoped check stays where it is. (a) is ruled out by the adopted RL 8176 and its guard; (c)
 duplicates the check.
 
-**Shape of (b), for the executor.** The builder is `requires_held_anywhere(permission)`, named
-for RL 8182's reuse (*Reuse*, below); it shares `requires()`'s core and is not a keyword flag on
-it. Its dependency (1) admits if `permission.value in caller.permissions` (credential grants, as
+**Shape of (b), for the executor (ruled 17:38:11: `requires(perm, held_anywhere=True)`).** The
+`held_anywhere` keyword on `requires()` (`authz.py`:170), named here for RL 8182's reuse
+(*Reuse*, below). With it, the dependency (1) admits if `permission.value in caller.permissions` (credential grants, as
 `authz.py`:203 passes them today) or `rbac.holds_anywhere(...)` is true; (2) otherwise raises
 `PermissionDeniedError(permission, None, held_elsewhere=False)` (`PERMISSION_DENIED`);
-(3) **never counts** (it takes no `management_counted` argument, so a counting variant cannot be
-written); (4) sets `PERMISSION_ATTRIBUTE` and `RESOURCE_CHECKED_IN_HANDLER_ATTRIBUTE`, which the
+(3) **never counts**: with `held_anywhere=True` the count step is skipped and
+`MANAGEMENT_COUNTED_ATTRIBUTE` is set `False`, and passing `management_counted=True` explicitly
+with it raises `TypeError` at import, so a counting variant cannot be written; (4) sets `PERMISSION_ATTRIBUTE` and `RESOURCE_CHECKED_IN_HANDLER_ATTRIBUTE`, which the
 guard reads.
 
-### DP-2 — the order clause: resolved, and not this slice's spec change
+### DP-2 — the order clause: a dated FR-345 clause, written by this slice (ruled 17:38:11)
 
-Ruled by the maintainer's 17:36:24 entry, items 1 and 3: option (i). A principal holding the
-permission on another Dataset sees 404 for an unknown slug and `SCOPE_DENIED` for an existing
-one. That residual is **ACCEPTED**. The sentence is "one more dated FR-343 sentence, minted with
-RL 8176's clause (one docs change, both sentences)". So it is the decision-maker's docs batch
-that mints RL 8176 and RL 8182 (RL 8182 "What it obliges" item 1), and this slice adds **no spec
-text**. The FR-345 clause this draft first proposed is withdrawn: RL 8182's batch writes FR-345's
-"Where a dataset scope reaches" clause instead. The slice builds against that text once the batch
-has merged (*Clashes and sequencing*).
+Ruled: option (i), the residual **ACCEPTED** (17:36:24 items 1 and 3). Placement **amended by the
+17:38:11 entry**: "the scope-order sentence goes in **FR-345** (dataset scope), not FR-343, to
+avoid two rulings on one row (RL 8176's clause stays in FR-343). FR-343 carries a one-line
+pointer to FR-345. RL 8182 cites FR-345. The id-oracle residual is stated in the clause; no OQ."
+This revision's earlier reading ("this slice adds **no spec text**") is withdrawn.
+
+The slice writes both, spec first (Task 1). The executor uses this wording; the minter re-points
+the working ids at the mint:
+
+- **`06` FR-345** (`docs/specs/06-governance.md`:81), a dated clause appended to the row:
+  > *(Amended <date>, SL 8185, FD 8177; the maintainer 2026-10-22 17:38:11 BST.)* **Order, for a
+  > dataset-scoped check.** A route whose permission may be held on a named Dataset first checks
+  > that the caller holds the permission **under any scope**, before any lookup, and refuses with
+  > 403 `PERMISSION_DENIED` otherwise, whether or not the id exists (FR-343). The Dataset or
+  > Dataset Version is then loaded (404 `NOT_FOUND` if unknown), and the permission is checked
+  > with that Dataset as the resource (403 `SCOPE_DENIED`). A route-level check that names no
+  > resource refuses every scoped grant, which is the failure `RL-1301` B.2 item 2 names. **The
+  > residual, accepted:** a principal holding the permission on another Dataset can tell an
+  > unknown id (404) from an out-of-scope one (403 `SCOPE_DENIED`). Only workspace members already
+  > granted the permission learn this. Revisit if Dataset slugs or ids become sensitive across
+  > scopes.
+- **`06` FR-343** (`:79`), one dated line appended to the row:
+  > *(Amended <date>, SL 8185.)* For a permission held on a named Dataset, the order is FR-345's
+  > (its clause of <date>).
+
+No OQ is raised. RL 8182's own FR-345 clause ("Where a dataset scope reaches") is the
+decision-maker's batch's, and it cites this clause.
 
 ### Reuse — the helper and the guard RL 8182's slice inherits
 
 RL 8182 "What it obliges" item 2: its slice "reuses that slice's refusal helper and regression
 guard". So both are named here, and both are built so the follow-on slice only **adds rows**:
 
-- **The helper:** `requires_held_anywhere(permission)` in `backend/src/app/api/authz.py`, a named
-  builder over `requires(...)`'s shared core, not a keyword flag (DP-1's shape, items 1–4). It
+- **The helper:** `requires(permission, held_anywhere=True)` in `backend/src/app/api/authz.py`
+  (ruled 17:38:11; DP-1's shape, items 1–4). It
   returns the `Caller`, never counts, and tags the dependency with `PERMISSION_ATTRIBUTE` and
   `RESOURCE_CHECKED_IN_HANDLER_ATTRIBUTE`. Its handler takes `management_counter` and passes the
   count to the service, which awaits it after the scoped check. RL 8182's eleven
-  `dataset_versions.py` routes and its `datasets.py` routes use the same builder. The helper
+  `dataset_versions.py` routes and its `datasets.py` routes use the same keyword. The helper
   carries no Dataset knowledge, so an Environment or Model Family route can use it later.
 - **The guard:** `backend/tests/test_route_scope_guard.py`, with two module-level tables and two
   predicates (DP-4). A follow-on slice changes **only the tables**: it deletes its
@@ -194,7 +231,7 @@ workspace-wide by design" (`api/reference_tables.py`:50, which RL 8182 rules sta
 from "checked workspace-wide by mistake" (`dislocation_runs.py`), because the two are the same
 code. The difference is in the spec. So the guard needs a stated expectation for each route.
 
-| | (a) A declared table, route → expected scope | (b) Derived from each spec's §5.1 permission column | (c) A code-side annotation on each route (`requires_held_anywhere(..., scope=ScopeType.DATASET)`) |
+| | (a) A declared table, route → expected scope | (b) Derived from each spec's §5.1 permission column | (c) A code-side annotation on each route (`requires(..., held_anywhere=True, scope=ScopeType.DATASET)`) |
 |---|---|---|---|
 | **What it catches** | Every route whose code disagrees with its row: a declared-`dataset` route with no `ScopeType.DATASET` check reached, or with a scope-less route gate; a declared-`workspace` route that gained a scoped check. | Only rows whose prose the parser reads. The cells are free text ("`dataset:read` on the portfolio Dataset Version", "on that Dataset Version", "requires `rating:read`"), so a parser is a proxy that misses other wordings. | The same as (a), but the expectation lives beside the code it checks, so one edit changes both. It is the code attesting to itself. |
 | **Completeness** | The test fails on any route that holds a `dataset:*` or `deployment:promote` permission (at the route or reached from the handler) and has no row. A new route cannot slip past it. | Bounded by the parser. | None: an unannotated route is invisible. |
@@ -279,28 +316,30 @@ route gate over a scoped check reached from its handler, or a route whose reache
 carry the scope its `ROUTE_SCOPES` row (the spec) names. It starts green on main, with every
 known failure listed and owned.
 
-## The slice (one row under WK-1178)
+## The slice — SL 8185 (one row under WK-1178; ledger LG 8186)
 
 - **Title:** WK-1178 fix slice — FD 8177: a dataset-scoped grant reaches the dictionary, rule-set
-  and acknowledge writes (`requires_held_anywhere`), and a permanent route-scope guard.
-- **Requirements:** `06` FR-343 and FR-345 (as RL 8176 / RL 8182's batch amends them; no spec
-  text in this slice); `01` FR-46, FR-51 (the routes' own FRs, unchanged for workspace-wide
+  and acknowledge writes (`requires(perm, held_anywhere=True)`), and a permanent route-scope guard.
+- **Requirements:** `06` FR-345 (the dated order clause, DP-2) and FR-343 (its one-line pointer); `01` FR-46, FR-51 (the routes' own FRs, unchanged for workspace-wide
   grants); `07` FR-452 (no 403 counted); `03` FR-263 (only through the guard's `KNOWN_SCOPE_GAPS`
   rows for FD 8184).
-- **Dependencies:** **the docs batch that mints RL 8176 and RL 8182 merged to main before Task 3**
-  (the order sentence the code implements, and FR-345's "Where a dataset scope reaches" clause
-  that the guard's `ROUTE_SCOPES` rows cite). **SL-1736 merged to main before Task 4.** FD 8184's
+- **Dependencies:** none before Task 1 (the maintainer: "Build now"). The docs batch that mints
+  RL 8176 and RL 8182 also edits the FR-343 and FR-345 rows, so the **batch PR merges before SL
+  8185's PR**, and SL 8185 re-merges main and re-places its two appended lines after the batch's
+  if the merge conflicts (a mechanical resolution, reported). **SL-1736 merged to main before
+  Task 4.** FD 8184's
   probe result before Task 5's `KNOWN_SCOPE_GAPS` is final (its rows' owner and their table).
 - **Followed by:** RL 8182's slice (WK-1178, the 17:36:24 entry item 1: "its own slice AFTER PL
-  8181's"). It reuses `requires_held_anywhere` and deletes its own `KNOWN_SCOPE_GAPS` rows.
+  8181's"). It reuses `requires(perm, held_anywhere=True)` and deletes its own `KNOWN_SCOPE_GAPS` rows.
 - **Lane / order:** backend, one executor; any lane free of SL-1736's files. Severity HIGH:
   dispatch next after the GO.
-- **Write set:** `backend/src/app/api/authz.py`; `backend/src/app/api/datasets.py`;
+- **Write set:** `docs/specs/06-governance.md` (the FR-345 and FR-343 rows only, Task 1);
+  `backend/src/app/api/authz.py`; `backend/src/app/api/datasets.py`;
   `backend/src/app/api/validation.py`; `backend/src/app/platform/datasets.py`;
   `backend/src/app/platform/validation.py`; `backend/src/app/platform/validation_rules.py` (Task
   4 only: `replace_rule_set`'s signature and its count line); new
   `backend/tests/test_dataset_scoped_writes.py`; new `backend/tests/test_route_scope_guard.py`.
-  **Not** in the write set: any `docs/specs/` file (the decision-maker's batch);
+  **Not** in the write set: any other `docs/specs/` text;
   `test_api_authorisation_sweep.py` (SL-1260 and the FD 8175 vehicle edit it); `rbac.py`'s
   `_covers` (unchanged); `docs/specs/01-data-management.md` (SL-1736 edits it).
 
@@ -309,9 +348,9 @@ known failure listed and owned.
 Test-first: each red is shown at base before its fix, with the rc in the LG. DB-backed tests run
 only through `run-small.sh` (≤3 files), in a DB window the lead grants.
 
-1. **Base.** Re-merge main. Confirm the RL 8176 / RL 8182 batch is present: `git -C <wt> grep -n
-   "Order, for a dataset-scoped check" docs/specs/06-governance.md` returns one line, quoted in
-   the LG. If not, stop and report.
+1. **Spec first** (`spec-change`). Re-merge main. Append DP-2's FR-345 clause and FR-343 pointer,
+   as worded there, in a commit of their own before any code. Run `audit-docs.py` under the
+   gate-2 flock and quote its rc and full FAILED block in the LG.
 2. **Red tests for all three routes** — `backend/tests/test_dataset_scoped_writes.py`, built from
    probe `f4c0832f`'s `test_dataset_scoped_write_probe.py` (its `world` fixture). For each route
    R ∈ {dictionary, rule-set, acknowledge}, with Datasets X and Y in one workspace:
@@ -326,11 +365,23 @@ only through `run-small.sh` (≤3 files), in a DB window the lead grants.
      `PERMISSION_DENIED` (FR-343's order). Green at base; must stay green.
    - **R-scoped-unknown-id:** the X-scoped principal, unknown slug / report id → 404
      `NOT_FOUND` (the accepted residual's other half, RL 8182). Red at base (403).
-   - **Count (dictionary only):** with a management limit set, an out-of-scope `SCOPE_DENIED`
-     leaves the count unchanged (`07` FR-452). Green at base; it fails if the gate counts.
-   Show the nine R-in-scope / R-out-of-scope / R-scoped-unknown-id tests red at base (rc 1, each
-   `FAILED` line quoted), and the rest green.
-3. **The helper.** `requires_held_anywhere(permission)` in `api/authz.py`, per DP-1's shape and
+   - **R-count-gate** (`07` FR-452, ruled 17:38:11: "for both the route-gate refusal and the
+     scoped refusal"): with a management limit set, a no-grant member's 403 `PERMISSION_DENIED`
+     leaves the management count unchanged. Green at base; must stay green.
+   - **R-count-scoped:** the X-scoped principal's 403 on Y asserts `code == "SCOPE_DENIED"`
+     **and** an unchanged count. Red at base (the code is `PERMISSION_DENIED`). After the fix it
+     fails if the route gate or the service counts before the scoped check.
+   - **DP-3's split** (acknowledge, service level, beside `test_validation_reports.py`:134's
+     existing assert): an `analyst` (the role lacks `dataset:acknowledge_warning`) gets
+     `ACKNOWLEDGE_FORBIDDEN_ROLE`, green at base. A `pricing_actuary` scoped to X, acknowledging on
+     Y's report, gets `SCOPE_DENIED`, **red at base** (`ACKNOWLEDGE_FORBIDDEN_ROLE`). Over HTTP the
+     analyst is refused by the route gate with `PERMISSION_DENIED`, as today, since the role
+     holds the permission nowhere. `ACKNOWLEDGE_FORBIDDEN_ROLE` is the service's answer to a
+     direct caller.
+   Show the **13 tests red at base** (rc 1, each `FAILED` line quoted): R-in-scope,
+   R-out-of-scope, R-scoped-unknown-id and R-count-scoped for each of the three routes, plus
+   DP-3's `SCOPE_DENIED` split. Show the rest green.
+3. **The helper.** `requires(permission, held_anywhere=True)` in `api/authz.py`, per DP-1's shape and
    *Reuse*. Switch `api/datasets.py` `put_dictionary` and `api/validation.py` `acknowledge` to it
    plus `management_counter`; `update_dictionary` and `acknowledge` take `count_management` and
    await it right after their scoped check. Make DP-3's refusal change in `acknowledge`. **Do
@@ -384,8 +435,8 @@ only through `run-small.sh` (≤3 files), in a DB window the lead grants.
 ## Acceptance Standard
 
 1. At base (`origin/main` + Task 2's file only), `run-small.sh` on
-   `backend/tests/test_dataset_scoped_writes.py` exits 1 with exactly the nine R-in-scope /
-   R-out-of-scope / R-scoped-unknown-id tests `FAILED`; at the slice head it exits 0.
+   `backend/tests/test_dataset_scoped_writes.py` exits 1 with exactly the 13 tests Task 2 lists
+   as red `FAILED`; at the slice head it exits 0.
 2. At base + Task 5's file only, `test_route_scope_guard.py`'s app-wide test exits 1 and names
    exactly `PUT /api/v1/datasets/{slug}/dictionary`, `PUT /api/v1/datasets/{slug}/rule-set` and
    `POST /api/v1/validation-reports/{report_id}/results/{rule_id}/acknowledge`. At the slice head
@@ -395,14 +446,17 @@ only through `run-small.sh` (≤3 files), in a DB window the lead grants.
 4. `test_api_authorisation_sweep.py` and `test_management_429_declared.py` exit 0 at the slice
    head **with no diff to either file**: `git diff --stat origin/main...HEAD --` on both paths
    is empty.
-5. `git diff --stat origin/main...HEAD -- docs/specs` is empty.
+5. `git diff origin/main...HEAD -- docs/specs` touches only `06-governance.md`'s FR-343 and
+   FR-345 rows and carries DP-2's two texts; `python3 scripts/audit-docs.py` (gate-2 flock)
+   reports no failure in those rows.
 6. The slice gate (both halves, `dev-commands`), on the lead's grant, is green at the slice head;
    the MERGE-ACK quotes its `passed` line.
 
 ## Clashes and sequencing
 
-- **The RL 8176 / RL 8182 docs batch** amends `06` FR-343 and FR-345. This slice writes no spec
-  text and starts its code (Task 3) after that batch merges.
+- **The RL 8176 / RL 8182 docs batch** also appends to `06` FR-343 and FR-345. The batch PR
+  merges first. SL 8185 re-merges main and keeps both rows' appended lines, the batch's first.
+  RL 8182 cites this slice's FR-345 clause.
 - **SL-1736** (`sl-1736-wk1178-nfr-sweep` @`ef1d0efb`) edits `platform/validation_rules.py`
   hunks `@@ -805,6 +805,21 @@`, `@@ -852,14 +867,18 @@` and `@@ -905,15 +924,8 @@`, all inside
   `replace_rule_set`, and `docs/specs/01-data-management.md`. Only Task 4 touches
@@ -436,6 +490,6 @@ in this plan.
 - The three 17:27:15 conditions map to Task 2 (red for all three, the `SCOPE_DENIED` control),
   Task 5 (the guard, with injected reds) and Task 4's ordering (SL-1736). The 17:36:24 item 4
   extension maps to DP-4 and Task 5's predicate 2.
-- DP-1 and DP-2 are resolved by the 17:36:24 entry. DP-0, DP-3 and DP-4 are blocking and open,
-  so the status is `draft`. On the maintainer's ruling, the plan is minted with resolver ids in
-  the table and set `active`.
+- DP-0 to DP-3 were ruled by the maintainer's 17:38:11 entry, and DP-4 was accepted with it
+  (resolver cells above). The status is `active` on that acceptance. The id 8181 is a working
+  id, so check 32 stays red until the mint. SL 8185 / LG 8186 are the GO's ids.
