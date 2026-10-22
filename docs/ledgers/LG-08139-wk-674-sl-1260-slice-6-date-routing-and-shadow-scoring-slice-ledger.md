@@ -295,3 +295,21 @@ change did not cause (lines far from the edits), so the new file was formatted a
 generated `docs/INDEX.md`, resolved mechanically (take origin/main's, regenerate under the gate-2 flock, `doc-index.py --check` rc 0, "byte-stable").
 Merge commit `00174d02`. `audit-docs.py` after it: FAILED (2), both check 31 on this ledger's working id (`gap in the full allocation between 1841 and 8139`
 and `id 8139 is created: 2026-10-21, earlier than id 1841's 2026-10-22`).
+
+**DB-lane runs after SL-1551's gate ENDed (20:05:56Z).** No code gate was running; small runs, own database `gipricing_sl-1260_nv3`
+(fresh, `alembic upgrade head`, `9b3e7c15d4a2 (head)`), redis db 12, `GIP_GATE_SLOT` unset, tree `4a9c5200c8483632f34929664a0c6e0841fd5ab4`
+(each log opens with the tree and `git diff --stat`), load1 2.3 to 2.6, `scratch/sl1260-db/`:
+
+| Log | Files | rc | Summary line, verbatim |
+|---|---|---|---|
+| `37-db-settings-environment.log` | `test_settings_environment.py` (item 4 and its sibling) | 0 | `23 passed, 1 warning in 3.38s` |
+| `38-db-sinks-demoguide.log` | `test_error_sinks.py`, `test_demo_guide.py` (the six fixture cases) | 0 | `25 passed, 4 warnings in 5.61s` |
+| `39-db-routing.log` | `test_routing.py`, `test_routing_write.py`, `test_shadow_write.py` | 0 | `35 passed, 4 warnings in 19.59s` |
+
+Item 4's selector change keeps the expected three-key set unchanged, so that test is no weaker; the two Environment-only flags have their own sibling assertion.
+Cleanup: `dropdb` rc 0, `pg_database` count 0, redis db 12 `DBSIZE` 0, db 0 is 56.
+
+**Re-merge of `origin/main` 75f5f401 (#1362).** `git merge-tree --write-tree HEAD origin/main` rc 1: one conflict, in the generated `docs/INDEX.md`
+(`docs/roadmap.md` and `docs/specs/03-rating-engine.md` auto-merged), resolved as before (origin/main's, regenerated under the gate-2 flock,
+`doc-index.py --check` rc 0). `audit-docs.py` after it: FAILED (2), both check 31 on this ledger's working id (`gap … between 1853 and 8139`, and the
+chronology line, which is resolved at the mint by the mint date with the original in a comment, `mint-and-finish` step 5).
