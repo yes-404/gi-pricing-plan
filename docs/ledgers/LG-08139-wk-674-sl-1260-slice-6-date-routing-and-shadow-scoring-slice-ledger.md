@@ -189,6 +189,8 @@ Before: `routing_rules`, `shadow_configs`, `shadow_results` present, `alembic_ve
 prints the script head `9b3e7c15d4a2`, as it reads the scripts). `alembic upgrade head` rc 0, `alembic current`
 = `9b3e7c15d4a2 (head)`, the three tables present again.
 
+**Deviation: the round trip ran beside the FD-1838 gate.** The maintainer's ruling (relayed by the lead at about 17:31 BST on 2026-10-22) is that the migration round trip is a migration under `RL-1626` (d) and runs in the no-gate gap after the gate's END, not beside it. `20-migration-roundtrip.log` ran 16:30:51 to 16:30:59 UTC (17:30:51 to 17:30:59 BST) while gate-1b was held, on the seat's own database `gipricing_sl-1260_nv3` (the gate's database was untouched), so it runs against that ruling. The seat's brief put the round trip in this window and the correction reached the seat only after the run and its first report (17:33 BST). Whether it re-runs in the gap is the maintainer's to decide. After the downgrade the log quotes `alembic_version` (`a4d1f08c3b97`); after the upgrade it quotes `alembic current` only, not a `SELECT` on `alembic_version`.
+
 **Observation, not fixed: `_routed` is not exception-guarded.** `_shadow_task` wraps its flag
 read and its decision in `try/except Exception` that logs and returns `None` (`api/score.py:275-290`,
 `:276` the `settings_service.resolve` call). `_routed` reads its flag at `api/score.py:365` with no
