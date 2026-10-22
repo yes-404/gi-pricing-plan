@@ -314,6 +314,10 @@ RESOURCE_BACKED: dict[tuple[str, str], tuple[dict[str, str], dict[str, Any]]] = 
         {"rating_version_ref": "rating_version:sweep-version@1", "reason": "sweep"},
     ),
     ("PUT", "/api/v1/environments/{env}/routing"): ({"env": "dev"}, {"ranges": []}),
+    ("PUT", "/api/v1/environments/{env}/shadow"): (
+        {"env": "dev"},
+        {"candidate_rating_version_ref": "rating_version:sweep-version@1", "fraction": 0.5},
+    ),
 }
 
 
