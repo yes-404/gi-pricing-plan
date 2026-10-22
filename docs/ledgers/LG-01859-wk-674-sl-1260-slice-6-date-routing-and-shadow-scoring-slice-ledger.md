@@ -322,7 +322,7 @@ Re-merge of `origin/main` e202f28b (#1360 on #1363): `git merge-tree --write-tre
 (theirs, regenerated, `--check` rc 0). Mint per the lead's allocation (eta 22:42:58 BST, free-checked): working id 8139 became `LG-1859`, in its own commit:
 `git mv` of the file, `id: LG-1859`, `created: 2026-10-22  # drafted 2026-10-21 under working id 8139; minted 2026-10-22 as LG-1859`, a disclosure line under the H1,
 `docs/INDEX.md` regenerated (`doc-index.py --check` rc 0, byte-stable). Whole-tree grep for the old id, `\bLG[ -]0?8139\b`: before the mint 4 lines (the file's
-`id:`, the H1, one quoted ruling line, INDEX); after, 0. The one quoted line (the maintainer's item 4, "LG-8139 records it.") has the id elided in brackets
+`id:`, the H1, one quoted ruling line, INDEX); after, 0. The one quoted line (the maintainer's item 4, the sentence ending "records it.") has the id elided in brackets
 ("[the ledger's working id, 8139, elided; minted as LG-1859] records it."), because check 32 refuses an unresolved id even inside a quote. The prose
 cites "RS 8180" and "RS 8187" stay as they are (those records mint later, on their own branches). `LG-1859` resolves in INDEX and in the file.
 
