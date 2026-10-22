@@ -27,6 +27,7 @@ from model_schema import (
     GbmFunctionRef,
     GbmSpec,
     GlmSpec,
+    MonotonicDirection,
     OffsetSpec,
     Weighting,
     WeightSpec,
@@ -772,3 +773,104 @@ def test_a_negative_binomial_deviance_without_theta_is_refused_not_defaulted() -
         deviance(y, mu, family="negative_binomial")
     with pytest.raises(ValueError, match="theta"):
         unit_deviance(y, mu, family="negative_binomial", theta=0.0)
+
+
+# --------------------------------------------------------------------------------------
+# PL-8162 A-R4 / FR-89 — a GLM factor fitted against its declared direction is reported
+# --------------------------------------------------------------------------------------
+
+
+def _age_book(slope: float, n: int = 6000, seed: int = 20261022) -> pl.DataFrame:
+    """Frequency with log-rate `slope` per year of age, so the fitted direction is known."""
+    rng = np.random.default_rng(seed)
+    age = rng.integers(18, 80, size=n).astype(float)
+    exposure = rng.uniform(0.5, 1.5, size=n)
+    lam = 0.1 * np.exp(slope * (age - 40.0)) * exposure
+    return pl.DataFrame(
+        {
+            "age": age,
+            "area": rng.choice(["a", "b", "c"], size=n),
+            "zone": rng.choice(["x", "y"], size=n),
+            "exposure_years": exposure,
+            "claim_count": rng.poisson(lam).astype(float),
+        }
+    )
+
+
+def _directed(slug: str, direction: MonotonicDirection, **over: object) -> Factor:
+    return _factor(
+        slug, monotonic_direction=direction,
+        monotonic_rationale="Declared by the actuary for this test (FR-89).", **over,
+    )
+
+
+@pytest.mark.req("FR-89")
+def test_a_glm_factor_fitted_against_its_declared_direction_is_reported() -> None:
+    """FR-89: the direction is *checked (not enforced) for GLMs, where a violation is
+    reported as a diagnostic*. Declared `increasing`, simulated to fall: one entry, not
+    held, with a positive violation on the mean scale."""
+    frame = _age_book(slope=-0.02)
+    factors = [_directed("age", MonotonicDirection.INCREASING)]
+    fit, spec = _fitted(frame[:4500], factors)
+    result = compute_diagnostics(fit, spec, factors, train=frame[:4500], holdout=frame[4500:])
+    assert result.glm is not None
+    (check,) = result.glm.monotonicity
+    assert (check.factor, check.declared) == ("age", "increasing")
+    assert check.holds is False
+    assert check.worst_violation > 0.0
+
+
+@pytest.mark.req("FR-89")
+def test_a_glm_factor_fitted_along_its_declared_direction_holds() -> None:
+    frame = _age_book(slope=0.02)
+    factors = [_directed("age", MonotonicDirection.INCREASING)]
+    fit, spec = _fitted(frame[:4500], factors)
+    result = compute_diagnostics(fit, spec, factors, train=frame[:4500], holdout=frame[4500:])
+    assert result.glm is not None
+    (check,) = result.glm.monotonicity
+    assert check.holds is True
+    assert check.worst_violation == 0.0
+    assert result.glm.monotonicity_omitted == ()
+
+
+@pytest.mark.req("FR-89")
+def test_a_glm_without_a_declared_direction_reports_no_check_and_no_omission() -> None:
+    frame = _age_book(slope=0.02)
+    factors = [_factor("age")]
+    fit, spec = _fitted(frame[:4500], factors)
+    result = compute_diagnostics(fit, spec, factors, train=frame[:4500], holdout=frame[4500:])
+    assert result.glm is not None
+    assert result.glm.monotonicity == ()
+    assert result.glm.monotonicity_omitted == ()
+
+
+@pytest.mark.req("FR-89")
+@pytest.mark.req("FR-178")
+def test_a_declared_direction_that_cannot_be_swept_is_omitted_with_its_reason() -> None:
+    """PL-8162 DP-M (b), FR-178's own pattern: a declared direction always yields a check
+    or an omission naming why not, never nothing. An operand of a cross is not swept alone
+    (it would recombine into cells the fit never saw); a text column has no order to sweep."""
+    frame = _age_book(slope=0.02)
+    area = _directed("area", MonotonicDirection.INCREASING)
+    other = _factor("zone")
+    cross = _factor(
+        "area_x_zone", "area", type=FactorType.INTERACTION, source_columns=(),
+        operand_factor_ids=(area.id, other.id),
+    )
+    factors = [area, other, cross]
+    fit, spec = _fitted(frame[:4500], factors)
+    result = compute_diagnostics(fit, spec, factors, train=frame[:4500], holdout=frame[4500:])
+    assert result.glm is not None
+    assert result.glm.monotonicity == ()
+    assert {(o.factor, o.reason.value) for o in result.glm.monotonicity_omitted} == {
+        ("area", "operand_of_interaction"),
+    }
+
+    alone = [_directed("area", MonotonicDirection.INCREASING)]
+    fit, spec = _fitted(frame[:4500], alone)
+    result = compute_diagnostics(fit, spec, alone, train=frame[:4500], holdout=frame[4500:])
+    assert result.glm is not None
+    assert result.glm.monotonicity == ()
+    assert {(o.factor, o.reason.value) for o in result.glm.monotonicity_omitted} == {
+        ("area", "unordered_levels"),
+    }
