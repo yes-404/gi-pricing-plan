@@ -383,3 +383,9 @@ already requires). The lead's verdict: CLEAN.
 databases and the shared stack were untouched, and both gates stayed alive with no failure. Times (UTC, 2026-10-22), from `scratch/sl1260-db/20a-setup.log` and the logs' mtimes: `createdb -T` plus `alembic upgrade head`
 from 22:01:17 to 22:01:20 (the log's `start` and `end` lines; `createdb_rc=0`, `upgrade_rc=0`; no separate stamp for `createdb` or for `alembic` alone); test runs 44 to 46 at 22:01:20 to 22:01:48
 (mtimes 22:01:29.59, 22:01:38 and 22:01:48.40); the `dropdb` (rc 0) has NO recorded time (the cleanup step prints none), only that it ran after 22:01:48.
+
+**The 13 re-run on the merged head `b3a3710f412e69521ce06ed0cd6c5bb35fcd737b`** (the #1364 re-merge and the closing acts; `audit-docs.py` rc 0, `doc-index.py --check` rc 0), `run-small.sh`, DB-free,
+`GIP_GATE_SLOT` unset, one to three files each, logs in `scratch/sl1260-db/`: `47-final-13-a.log` `tests/test_audit_docs_ids.py`: `118 passed in 62.52s (0:01:02)`; `48-final-13-b.log`
+`test_audit_docs_finding_citations.py`, `test_audit_docs_process_core_digest.py`, `test_audit_docs_w37_11_ceiling.py`: `29 passed in 189.58s (0:03:09)`; `49-final-13-c.log`
+`test_doc_index.py`, `test_register_lint.py`, `test_register_owed.py`: `99 passed in 91.71s (0:01:31)`; `50-final-13-d.log` `tests/test_repository_invariants.py`: `11 passed in 56.35s`. All rc 0:
+the 13 that failed in the gate pass now that LG-1859 is contiguous. Owed to the merge, as for every code PR under rule 1(f): the PR's CI python on the head it merges.
