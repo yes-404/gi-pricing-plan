@@ -17,19 +17,27 @@ from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 
+from app.errors import PlatformError
 from app.platform.objectives import grammar_refusal
 from model_schema import (
+    FieldError,
     ObjectivePreview,
     ObjectivePreviewCurve,
     ObjectivePreviewError,
     ObjectivePreviewRequest,
 )
 from pricing_core.data.expression_sympy import OBJECTIVE_SYMBOLS
-from pricing_core.data.expressions import ExpressionError
+from pricing_core.data.expressions import DEFAULT_LIMITS, ExpressionError, measure_expression
 from pricing_core.modelling.expression_objective import compile_kernel, derive
 from pricing_core.safe_error import safe_error_detail
 
-__all__ = ["PREVIEW_TIMEOUT_SECONDS", "PREVIEW_WORKERS", "preview", "wait_idle"]
+__all__ = [
+    "PREVIEW_TIMEOUT_SECONDS",
+    "PREVIEW_WORKERS",
+    "preview",
+    "refuse_over_bound",
+    "wait_idle",
+]
 
 #: FR-1840 clause 3b: the executor's fixed worker count and the wall-clock timeout.
 PREVIEW_WORKERS = 2
@@ -44,6 +52,36 @@ def _settled(_: object) -> None:
     global _pending
     with _pending_lock:
         _pending -= 1
+
+
+def refuse_over_bound(request: ObjectivePreviewRequest) -> None:
+    """FR-1840 clause 3a: a loss over FR-145's node or depth limit is 422 `VALIDATION_FAILED`.
+
+    Checked before any parse-and-derive work. A loss that does not parse as Python at all is not
+    over a bound: it is the editor's 200 `ok: false` (`_run`), so a `SyntaxError` passes here.
+    (The grid's own bound is `ObjectivePreviewGrid`'s, refused by the request model.)
+    """
+    try:
+        size = measure_expression(request.loss)
+    except SyntaxError:
+        return
+    limits = DEFAULT_LIMITS
+    if size.nodes > limits.max_nodes or size.depth > limits.max_depth:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "The loss is over the expression limits",
+            422,
+            f"the loss has {size.nodes} nodes and depth {size.depth}; the limits are "
+            f"{limits.max_nodes} nodes and depth {limits.max_depth} (02 §4.6, FR-145).",
+            errors=(
+                FieldError(
+                    field="loss",
+                    code="VALIDATION_FAILED",
+                    message=f"over the FR-145 limits ({limits.max_nodes} nodes, "
+                    f"depth {limits.max_depth})",
+                ),
+            ),
+        )
 
 
 def _finite(values: np.ndarray) -> tuple[float | None, ...]:

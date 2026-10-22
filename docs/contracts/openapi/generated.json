@@ -22687,7 +22687,7 @@
     },
     "/api/v1/custom-objectives/preview": {
       "post": {
-        "description": "Parse, and with a `grid` derive and evaluate, a loss without storing anything (FR-1840).\n\nNeeds `model:fit` and `custom_objective:author` (FR-367), both checked before the flag;\nwhile the flag is off the answer is 409 `OBJECTIVE_KIND_NOT_ENABLED`. **200 with\n`ok: false`** for a loss that does not parse or that times out (`RL-1616`): the editor is\nasking whether this text is valid, not submitting it. Persists nothing and records no Audit\nEvent, because a preview is not the derivation `/derive` stores.",
+        "description": "Parse, and with a `grid` derive and evaluate, a loss without storing anything (FR-1840).\n\nNeeds `model:fit` and `custom_objective:author` (FR-367), both checked before the flag;\nwhile the flag is off the answer is 409 `OBJECTIVE_KIND_NOT_ENABLED`. **200 with\n`ok: false`** for a loss that does not parse or that times out (`RL-1616`): the editor is\nasking whether this text is valid, not submitting it. **422 `VALIDATION_FAILED`** over a\nFR-145 bound (nodes, depth, the grid), before any derivation (clause 3a).\nPersists nothing and records no Audit Event, because a preview is not the derivation\n`/derive` stores.",
         "operationId": "preview_custom_objective_api_v1_custom_objectives_preview_post",
         "parameters": [
           {

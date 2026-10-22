@@ -325,13 +325,16 @@ async def preview_custom_objective(
     Needs `model:fit` and `custom_objective:author` (FR-367), both checked before the flag;
     while the flag is off the answer is 409 `OBJECTIVE_KIND_NOT_ENABLED`. **200 with
     `ok: false`** for a loss that does not parse or that times out (`RL-1616`): the editor is
-    asking whether this text is valid, not submitting it. Persists nothing and records no Audit
-    Event, because a preview is not the derivation `/derive` stores.
+    asking whether this text is valid, not submitting it. **422 `VALIDATION_FAILED`** over a
+    FR-145 bound (nodes, depth, the grid), before any derivation (clause 3a).
+    Persists nothing and records no Audit Event, because a preview is not the derivation
+    `/derive` stores.
     """
     async with database.session() as session:
         await service.refuse_expression_kind(
             session, settings=settings, workspace_id=caller.workspace_id
         )
+    objective_preview.refuse_over_bound(body)
     return await objective_preview.preview(body)
 
 
