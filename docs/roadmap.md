@@ -2924,6 +2924,26 @@ The fix of FD-1803 (filed in D21; HIGH, owner WK-1178), planned in PL-1809. `Dec
 
 (Closed 2026-10-18 as a Slice on a clean audit at 7e3b5098 (findings A1 to A4; the lead's verdict "2026-10-18 12:16:55 BST" in `from-lead-2026-10-09.md`): A1 fixed in LG-1811, A2 ruled into the slice by the maintainer ("2026-10-18 12:18:08 BST" in `to-lead.md`) and delivered as test-only commit d2e0fcaa; audit and window results written in LG-1811 (minted 2026-10-18 from working id 8109). MERGE-ACK: not yet given.)
 
+#### SL-1854 — WK-1178 fix slice — FD-1838: the deployment switch's channels carry the gate slot's name, so a concurrent subscriber is not counted in the PREPARE quorum
+
+```yaml
+id: SL-1854
+family: slice
+title: WK-1178 fix slice — FD-1838: the deployment switch's channels carry the gate slot's name, so a concurrent subscriber is not counted in the PREPARE quorum
+status: active                   # draft → active → closed | retired (§1.2a)
+created: 2026-10-22   # filed under working id 8170 (lead-reserved in eta.md); minted 2026-10-22 as SL-1854
+owner: executor                  # cut by the lead as a Work-plan delta row (Lean P2 L5); lead dispatches (active)
+tree: f3462d8fc1336dc4583fe8a7af92fed399993a55
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1838, WK-674, SL-1711]
+```
+
+The fix of FD-1838 (MEDIUM, owner WK-1178), a Work-plan delta row under WK-1178 (Lean P2 L5): PUBLISH's receiver count is the PREPARE quorum (`prepare_round` in `backend/src/app/platform/deployment_switch.py`) and counts subscribers on the whole Redis server, so a second process on the same channel is a receiver that never acknowledges. **Scope, exactly:** one helper `switch_stack(environment, tenant_id)` that builds the stack prefix for both of its callers (`backend/src/app/main.py`, `backend/tests/test_deployment_switch_http.py`) and appends `basename($GIP_GATE_SLOT)` when the variable is set, through `RedisSwitch`'s existing `stack` argument; a process with no slot (production) is unchanged. Red first: a test with a foreign subscriber on the unsuffixed channel. Gate scripts and `scripts/run-small.sh` already export `GIP_GATE_SLOT` and are not changed. The ledger is `LG-1855`.
+
+(Activated 2026-10-22 on the maintainer's (by delegation) entry "2026-10-22 15:43:10 BST — Maintainer: SPEED MEASURES …" item 2 (`to-lead.md`): FD-1838 prioritised, built red-first, the remedy as reserved at "2026-10-21 21:13:34 BST". MERGE-ACK: not yet given.)
+
 #### SL-8185 — WK-1178 fix slice — FD-1852: a dataset-scoped grant reaches the dictionary, rule-set and acknowledge writes (held-anywhere route gate), and a permanent route-scope guard
 
 ```yaml
@@ -2941,6 +2961,7 @@ relates: [PL-8181, FD-1852, FD-1853, RL-1849, SL-1736, FR-343, FR-345]
 ```
 
 The fix of FD-1852 (MEDIUM, LATENT: no P2 API creates a scoped grant), planned in PL 8181 and ruled by the maintainer's entries "2026-10-22 17:38:11 BST" (DP-0 to DP-3, GO) and "2026-10-22 17:46:43 BST" (re-rated; the slice continues). `requires(permission, held_anywhere=True)` admits a holder under any scope and never counts; the dictionary, rule-set and acknowledge services load the Dataset, check the permission on it (`SCOPE_DENIED`), then count (FR-452). `06` FR-345 gains the dated order clause and FR-343 a pointer. New: `backend/tests/test_dataset_scoped_writes.py` (13 red at base) and `backend/tests/test_route_scope_guard.py` (two predicates, `ROUTE_SCOPES`, an owned `KNOWN_SCOPE_GAPS`). **Task 4 (the rule-set route) is carried to the follow-on SL 8192 (ledger LG 8193), which activates when SL-1736 merges** (the maintainer, "2026-10-22 18:16:19 BST"); until then the rule-set route is a `KNOWN_SCOPE_GAPS` row owned by SL 8192 and its four tests are strict xfails. Ledger LG-8186.
+
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
