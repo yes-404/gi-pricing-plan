@@ -385,7 +385,7 @@ other message is
 **`INTERNAL_ERROR`.** *(Added 2026-10-22, WK-674 Slice 6, the maintainer's ruling in `to-lead.md`
 entry "2026-10-22 19:52:20 BST" item 3, which amends the "owning platform spec" reading of its entry
 "2026-10-22 17:34:47 BST"; the code has been raised by the request machinery since Phase 0, and `03`
-§4.13 is the first spec text to name it.)* An unhandled exception: status `500`, title "Internal
+§4.13 is the first spec text to name it.)* An unhandled exception, a server-side failure the caller cannot fix: status `500`, title "Internal
 server error", `detail` the fixed text "The request failed unexpectedly. Quote the trace id when
 reporting it.", and the request's `trace_id`. The response carries no exception text, because that
 text can hold a connection URL or a row of data (`07` R3); the cause is read from the log record for
