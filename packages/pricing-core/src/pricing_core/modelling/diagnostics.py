@@ -63,6 +63,8 @@ from model_schema import (
     ModelSpecCommon,
     MonotonicDirection,
     MonotonicityCheck,
+    MonotonicityOmission,
+    MonotonicityOmissionReason,
     PartialDependence,
     PartialDependenceOmission,
     PartialDependenceOmissionReason,
@@ -145,6 +147,7 @@ def unit_deviance(
     *,
     family: str,
     power: float = 1.5,
+    theta: float | None = None,
 ) -> npt.NDArray[np.float64]:
     """Each row's contribution to the deviance, `2·(L(yᵢ;yᵢ) - L(yᵢ;μᵢ))`.
 
@@ -163,7 +166,17 @@ def unit_deviance(
     eps = np.finfo(np.float64).tiny
     safe_mu = np.maximum(mu, eps)
 
-    if family in {"poisson", "negative_binomial"}:
+    if family == "negative_binomial":
+        # R/MASS `glm.nb` form, variance μ + μ²/θ: d = 2[y·ln(y/μ) − (y+θ)·ln((y+θ)/(μ+θ))].
+        # Never defaulted (PL-8162 DP-T): a θ of 1 or ∞ is a different model.
+        if theta is None or not theta > 0.0:
+            raise ValueError(
+                "the negative_binomial deviance needs the model's declared theta > 0 "
+                f"(R/MASS form); got theta={theta!r}."
+            )
+        ratio = np.where(y > 0, y * np.log(np.maximum(y, eps) / safe_mu), 0.0)
+        return 2.0 * (ratio - (y + theta) * np.log((y + theta) / (safe_mu + theta)))
+    if family == "poisson":
         ratio = np.where(y > 0, y * np.log(np.maximum(y, eps) / safe_mu), 0.0)
         return 2.0 * (ratio - (y - mu))
     if family == "gamma":
@@ -195,6 +208,7 @@ def deviance(
     *,
     family: str,
     power: float = 1.5,
+    theta: float | None = None,
     weights: npt.NDArray[np.float64] | None = None,
 ) -> float:
     """The family's total deviance — `unit_deviance` summed, weighted where declared.
@@ -208,7 +222,7 @@ def deviance(
     for that family is wrong, and silently zeroing it would turn a wrong formula into a
     plausible number — so anything past the tolerance raises instead.
     """
-    unit = unit_deviance(y, mu, family=family, power=power)
+    unit = unit_deviance(y, mu, family=family, power=power, theta=theta)
     total = float(np.sum(unit if weights is None else weights * unit))
     if total >= 0.0:
         return total
@@ -344,6 +358,7 @@ def _partition(
     mu: npt.NDArray[np.float64],
     family: str,
     power: float = 1.5,
+    theta: float | None = None,
     excluded_zero_weight: int,
     excluded_unknown_response: int | None,
     bandings: Mapping[UUID, Banding] | None,
@@ -430,7 +445,7 @@ def _partition(
     # because a unit deviance can land at -1e-17 on an exactly-fitted row, and `sqrt` of
     # that is `nan` — one row of which poisons every summary statistic below.
     unit = np.sign(y - mu) * np.sqrt(
-        np.maximum(unit_deviance(y, mu, family=family, power=power), 0.0)
+        np.maximum(unit_deviance(y, mu, family=family, power=power, theta=theta), 0.0)
     )
 
     residuals = (
@@ -469,6 +484,7 @@ def _type_iii(
     full_deviance: float,
     *,
     power: float,
+    theta: float | None = None,
     model_offset: np.ndarray | None = None,
     bandings: Mapping[UUID, Banding] | None,
     groupings: Mapping[UUID, Grouping] | None,
@@ -532,7 +548,9 @@ def _type_iii(
             reduced, data, remaining, reduced_spec,
             model_offset=model_offset, bandings=bandings, groupings=groupings,
         )
-        delta = deviance(y, reduced_mu, family=spec.family, power=power) - full_deviance
+        delta = (
+            deviance(y, reduced_mu, family=spec.family, power=power, theta=theta) - full_deviance
+        )
         df = _term_count(factor, factors, data, bandings, groupings)
         p = float(stats.chi2.sf(max(delta, 0.0), df))
         tests.append(TypeIIITest(factor=factor.slug, deviance_delta=delta, df=df, p_value=p))
@@ -610,6 +628,95 @@ def _power_of(fit: GlmFitResult, spec: ModelSpec) -> float:
     return float(spec.family_params.get("power", 1.5))
 
 
+def _theta_of(spec: ModelSpec) -> float | None:
+    """The negative-binomial θ (R/MASS form) a GLM spec declares; `None` for every other
+    model. The NB deviance needs it and refuses to default it (PL-8162 DP-T)."""
+    if isinstance(spec, GlmSpec) and spec.family == "negative_binomial":
+        return float(spec.family_params["theta"])
+    return None
+
+
+def _glm_monotonicity(
+    fit: GlmFitResult,
+    spec: GlmSpec,
+    factors: Sequence[Factor],
+    data: pl.DataFrame,
+    *,
+    model_offset: np.ndarray | None,
+    bandings: Mapping[UUID, Banding] | None,
+    groupings: Mapping[UUID, Grouping] | None,
+) -> tuple[tuple[MonotonicityCheck, ...], tuple[MonotonicityOmission, ...]]:
+    """FR-89: a GLM's declared direction is *checked (not enforced)* and a violation is
+    reported — the GBM rule (`compute_gbm_diagnostics`) with the GLM scorer.
+
+    The mean prediction over the book with the factor held at each value of its axis, in
+    the axis's order; `holds` when no step moves against the direction by more than 1e-9.
+    The axis is ordered where the factor has an order — a numeric column, or a banding's
+    bands in the banding's own label order — and a declared direction that cannot be swept
+    is recorded with its reason rather than skipped (the FR-178 pattern, PL-8162 DP-M).
+    """
+    checks: list[MonotonicityCheck] = []
+    omitted: list[MonotonicityOmission] = []
+    skipped = _skipped_ids(factors)
+
+    def omit(factor: Factor, reason: MonotonicityOmissionReason) -> None:
+        omitted.append(MonotonicityOmission(factor=factor.slug, reason=reason))
+
+    for factor in factors:
+        direction = factor.monotonic_direction
+        if direction is MonotonicDirection.NONE:
+            continue
+        if factor.id in skipped:
+            omit(factor, MonotonicityOmissionReason.OPERAND_OF_INTERACTION)
+            continue
+        if factor.type is FactorType.EXPRESSION:
+            omit(factor, MonotonicityOmissionReason.EXPRESSION_FACTOR)
+            continue
+
+        column = factor.source_columns[0] if factor.source_columns else None
+        held_values: list[object]
+        if factor.type is FactorType.BANDING and column is not None:
+            assert factor.banding_id is not None and bandings is not None
+            axis = _resolved_axis(data, factor, bandings=bandings, groupings=groupings)
+            assert axis is not None
+            representatives = _representatives(axis, data[column])
+            held_values = [
+                representatives[label]
+                for label in bandings[factor.banding_id].labels
+                if label in representatives
+            ]
+        elif (
+            factor.type is FactorType.IDENTITY and column is not None
+            and data[column].dtype.is_numeric()
+        ):
+            quantiles = [data[column].quantile(float(q)) for q in np.linspace(0.05, 0.95, 10)]
+            held_values = sorted(
+                dict.fromkeys(float(v) for v in quantiles if isinstance(v, int | float))
+            )
+        else:
+            omit(factor, MonotonicityOmissionReason.UNORDERED_LEVELS)
+            continue
+
+        means: list[float] = []
+        for value in held_values:
+            held = data.with_columns(pl.lit(value).cast(data[column].dtype).alias(column))
+            mu = predict_glm(
+                fit, held, factors, spec,
+                model_offset=model_offset, bandings=bandings, groupings=groupings,
+            )
+            means.append(float(np.mean(mu)))
+        steps = np.diff(np.asarray(means, dtype=np.float64))
+        against = -steps if direction is MonotonicDirection.INCREASING else steps
+        worst = float(max(0.0, float(against.max()) if against.size else 0.0))
+        checks.append(
+            MonotonicityCheck(
+                factor=factor.slug, declared=direction.value,
+                holds=worst <= 1e-9, worst_violation=worst,
+            )
+        )
+    return tuple(checks), tuple(omitted)
+
+
 def compute_diagnostics(
     fit: GlmFitResult,
     spec: GlmSpec,
@@ -647,13 +754,15 @@ def compute_diagnostics(
     model_offset_train = train_rows.take(model_offset_train)
     model_offset_holdout = holdout_rows.take(model_offset_holdout)
     power = _power_of(fit, spec)
+    theta = _theta_of(spec)
     train_part = _partition(
         train, spec, factors,
         mu=predict_glm(
             fit, train, factors, spec,
             model_offset=model_offset_train, bandings=bandings, groupings=groupings,
         ),
-        family=spec.family, power=power, excluded_zero_weight=train_rows.excluded,
+        family=spec.family, power=power, theta=theta,
+        excluded_zero_weight=train_rows.excluded,
         excluded_unknown_response=train_rows.excluded_unknown,
         bandings=bandings, groupings=groupings,
     )
@@ -665,7 +774,8 @@ def compute_diagnostics(
             fit, holdout, factors, spec,
             model_offset=model_offset_holdout, bandings=bandings, groupings=groupings,
         ),
-        family=spec.family, power=power, excluded_zero_weight=holdout_rows.excluded,
+        family=spec.family, power=power, theta=theta,
+        excluded_zero_weight=holdout_rows.excluded,
         excluded_unknown_response=holdout_rows.excluded_unknown,
         bandings=bandings, groupings=groupings,
     )
@@ -676,9 +786,9 @@ def compute_diagnostics(
         fit, train, factors, spec,
         model_offset=model_offset_train, bandings=bandings, groupings=groupings,
     )
-    full_deviance = deviance(y, mu, family=spec.family, power=power)
+    full_deviance = deviance(y, mu, family=spec.family, power=power, theta=theta)
     null_deviance = deviance(
-        y, np.full_like(y, float(np.mean(y))), family=spec.family, power=power
+        y, np.full_like(y, float(np.mean(y))), family=spec.family, power=power, theta=theta
     )
 
     parameters = len(fit.coefficients)
@@ -700,9 +810,16 @@ def compute_diagnostics(
         report.update(0.70, "diagnostics: type-III tests")
         tests, tests_omitted = _type_iii(
             train, spec, factors, full_deviance,
-            power=power, model_offset=model_offset_train,
+            power=power, theta=theta, model_offset=model_offset_train,
             bandings=bandings, groupings=groupings,
         )
+
+    report.check_cancelled()
+    report.update(0.90, "diagnostics: declared directions")
+    monotonicity, monotonicity_omitted = _glm_monotonicity(
+        fit, spec, factors, train,
+        model_offset=model_offset_train, bandings=bandings, groupings=groupings,
+    )
 
     report.update(0.95, "diagnostics: complexity")
     exposure_total = float(np.sum(_weights(spec, train)))
@@ -729,6 +846,8 @@ def compute_diagnostics(
             degrees_of_freedom=max(train.height - parameters, 0),
             type_iii_tests=tests,
             type_iii_omitted=tests_omitted,
+            monotonicity=monotonicity,
+            monotonicity_omitted=monotonicity_omitted,
         ),
     )
 
@@ -809,7 +928,8 @@ def backtest_model(
     family, power = _family_of(fit, spec)
     partition = _partition(
         data, spec, factors,
-        mu=mu, family=family, power=power, excluded_zero_weight=rows.excluded,
+        mu=mu, family=family, power=power, theta=_theta_of(spec),
+        excluded_zero_weight=rows.excluded,
         excluded_unknown_response=rows.excluded_unknown,
         bandings=bandings, groupings=groupings,
     )

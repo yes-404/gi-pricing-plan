@@ -261,13 +261,55 @@ def _design(
     return pl.DataFrame(columns), levels
 
 
+
+def _theta(spec: GlmSpec) -> float | None:
+    """The spec's declared NB θ (R/MASS form); `None` for every other family."""
+    return spec.family_params.get("theta") if spec.family == "negative_binomial" else None
+
+
+def r_theta_from_glum_theta(glum_theta: float) -> float:
+    """θ in R/MASS `glm.nb` form (variance μ + μ²/θ) from glum's (variance μ + θ·μ²).
+
+    The two are reciprocals. This and `glum_family` are the only places the conversion is
+    written, so a θ copied from R is never silently inverted (ruling of 2026-10-22 16:02:49).
+    """
+    return 1.0 / float(glum_theta)
+
+
+def glum_family(
+    name: str, *, power: float | None = None, theta: float | None = None
+) -> Any:
+    """The platform's family name (`GlmSpec.family`, FR-110) as `glum` spells it.
+
+    `glum` writes `inverse.gaussian` and `negative.binomial`; the spec writes underscores,
+    and an untranslated name raised `GLM_FIT_FAILED` with a message about the response's
+    domain. Tweedie takes its power positionally (`tweedie(1.5)`; `tweedie(p=1.5)` parses
+    as `float("p=1.5")`). A negative binomial takes `theta` in the **R/MASS** form and is
+    handed to `glum` as `NegativeBinomialDistribution(1/θ)`; it is never defaulted, because
+    `glum`'s own 1.0 is a modelling judgement.
+    """
+    from glum import NegativeBinomialDistribution
+
+    if name == "negative_binomial":
+        if theta is None or not theta > 0.0:
+            raise ValueError("a negative_binomial fit needs a declared theta > 0 (R/MASS form)")
+        return NegativeBinomialDistribution(1.0 / theta)
+    if name == "tweedie":
+        if power is None:
+            raise ValueError("a tweedie fit needs its power")
+        return f"tweedie({power})"
+    if name == "inverse_gaussian":
+        return "inverse.gaussian"
+    return name
+
+
 def _fit_cv_path(
     data: pl.DataFrame,
     x: np.ndarray,
     response: np.ndarray,
     *,
     spec: GlmSpec,
-    family: str,
+    family: Any,
     link: Any,
     offset: np.ndarray | None,
     weights: np.ndarray | None,
@@ -298,6 +340,7 @@ def _fit_cv_path(
     )
 
     power = float(spec.family_params.get("power", 1.5)) if spec.family == "tweedie" else 1.5
+    theta = _theta(spec)
 
     path: list[CvPathPoint] = []
     fold_metrics_at_selected: tuple[CvFoldMetric, ...] = ()
@@ -343,7 +386,8 @@ def _fit_cv_path(
                 else float(test_mask.sum())
             )
             score = deviance(
-                response[test_mask], mu, family=spec.family, power=power, weights=held_weights,
+                response[test_mask], mu, family=spec.family, power=power, theta=theta,
+                weights=held_weights,
             ) / denom
             scores.append(score)
             metrics_this_alpha.append(
@@ -617,7 +661,7 @@ def fit_glm(
     # parses the power by calling `float("p=1.5")`, so every burning cost fit raised a bare
     # `ValueError` from inside the library — not even a named `GlmFitError`, and the whole
     # family was dead. The range is `GlmSpec`'s to check: it is a fact about the spec.
-    family: str = spec.family
+    family: Any = spec.family
     tweedie_fit: TweediePowerFit | None = None
     if family == "tweedie":
         if spec.tweedie is not None:
@@ -630,7 +674,9 @@ def fit_glm(
             if tweedie_fit is not None
             else float(spec.family_params.get("power", 1.5))
         )
-        family = f"tweedie({power})"
+        family = glum_family("tweedie", power=power)
+    else:
+        family = glum_family(family, theta=_theta(spec))
 
     cv_diagnostics: CrossValidationDiagnostics | None = None
     fit_alpha = spec.alpha
