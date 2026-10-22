@@ -10,7 +10,7 @@ const steps = valid.steps;
 describe("a mount counted as a node (RL-1835 (i) 3)", () => {
   it("draws an edge from the producer of each mapped input to the mount", () => {
     const edge = edgesOf(steps, [FEES]).find((e) => e.target === "m_fees");
-    expect(edge).toMatchObject({ source: "s_minprem", label: "office_premium_minor" });
+    expect(edge).toMatchObject({ source: "s_office", label: "office_premium_minor" });
   });
 
   it("draws an edge from the mount to each consumer of a name only it produces", () => {
