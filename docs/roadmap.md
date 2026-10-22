@@ -2919,6 +2919,26 @@ The fix of FD-1803 (filed in D21; HIGH, owner WK-1178), planned in PL-1809. `Dec
 
 (Closed 2026-10-18 as a Slice on a clean audit at 7e3b5098 (findings A1 to A4; the lead's verdict "2026-10-18 12:16:55 BST" in `from-lead-2026-10-09.md`): A1 fixed in LG-1811, A2 ruled into the slice by the maintainer ("2026-10-18 12:18:08 BST" in `to-lead.md`) and delivered as test-only commit d2e0fcaa; audit and window results written in LG-1811 (minted 2026-10-18 from working id 8109). MERGE-ACK: not yet given.)
 
+#### SL-8164 — WK-1178 slice C — PL-8162: FR-6, FR-109 and FR-110 dated clauses (docs only)
+
+```yaml
+id: SL-8164
+family: slice
+title: WK-1178 slice C — PL-8162, the FR-6, FR-109 and FR-110 dated clauses (docs only)
+status: active                   # draft → active → closed | retired (§1.2a)
+created: 2026-10-22
+owner: executor
+tree: f3462d8fc1336dc4583fe8a7af92fed399993a55
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-8162, FD-1723, FR-6, FR-109, FR-110]
+```
+
+Slice C of `PL-8162` (WK-1178's dated delta on FD-1723's residual limbs). Docs only: a dated amendment under FR-6 (`00-overview.md`: the per-artifact producing-Job id built, the shared `provenance` object and its UI not, carried to §14), under FR-109 (`02-modelling.md`: accepted with reason, the finer-level view carried to §14) and under FR-110 (`power(k)` struck, a required θ in the R/MASS `glm.nb` form), per the maintainer's entry "2026-10-22 16:02:49 BST" rulings 1, 3 and 6.
+
+(Activated 2026-10-22 on the maintainer's "2026-10-22 16:02:49 BST — Maintainer: PL 8162 (FD-1723's residual limbs) ACCEPTED; …" ("GO: slice C now"), with `PL-8162` made `active` by L1 in this slice's PR. Working ids: SL 8164, LG 8165; the ledger is `LG-8165`.)
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
