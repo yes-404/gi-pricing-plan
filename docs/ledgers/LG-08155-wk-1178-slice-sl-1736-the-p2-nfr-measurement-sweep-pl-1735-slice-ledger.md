@@ -285,11 +285,15 @@ So, by the clauses checked: **no clause requires a verdict-of-record reading of 
 
 `~/gi-pricing-plan.local/scratch/sl1736/grant5-request.md`: three ALONE windows of 13, 14 and 17 min (44 min), each an A run of Task 0 plus one task (5a, 2, 4), with non-ALONE lanes for the generation prep (P1), Task 3 (L3) and the B runs; the ALONE bar of every window is D4's load1 < 1.0 at the A run, and the tasks after it are held to < 2.0 by the harness. Harness change committed for it (`8853f8fb`): `profile --mode generate-only|pregenerated` and a load1 < 2.0 settle before each profile size (the plan's Task 5a Step 3 asked for the settle; the first version had none). The unit-test file was **not** re-run for that commit (`run-small` refused at load1 6.47); the change is in `_profile`, which no unit test reaches; ruff passes. The freMTPL2 `.arff` files were copied into this worktree's git-ignored `examples/fremtpl2/data/` from the root checkout (needed by Tasks 2 and 3). No window script exists yet.
 
-#### 2026-10-22 — NFR-1443's measured tree: the path list the readings exercised, and the close check (the maintainer's ruling "2026-10-22 22:44:03 BST": option (ii))
+#### 2026-10-22 — NFR-1443's measured tree: the instrument, the system-under-test path list, and the close check (rulings "2026-10-22 22:44:03 BST" option (ii), amended "2026-10-22 22:48:03 BST" option (B))
 
-The NFR-1443 readings (Grant 4, above) were taken on `d235c8a69bf910baf28da95534c72157108cb0a3`. Under option (ii), `d235c8a6` is the measured tree if the code path the readings exercised is unchanged at the exit tree. **The predicate, fixed now:** the 155 paths below.
+*(Delta, named: this entry first listed 155 paths including the harness and the helper modules it borrows. Before any review, the 22:48:03 ruling excluded the instrument, so the list below is 144 paths; nothing else of the entry's meaning changed.)*
 
-**How the list was derived (runnable).** From a fresh interpreter, import the seed modules, then list every module file under the repository (virtualenv and `__pycache__` excluded): `uv run --directory <worktree> python -I ~/gi-pricing-plan.local/scratch/sl1736/closure.py <worktree>`. The seeds are the cells-diff route module `app.api.rate_tables` (the handler `rate_table_diff_cells`), the Job handler and executor that build the cell artifact (`app.worker.rate_table_handlers`, `app.worker.tasks`), the rate-table service `app.platform.rate_tables`, `app.platform.jobs`, `app.platform.blobs`, `app.platform.settings`, `app.config`, `app.db.session`, `app.db.models` (the table classes), and the modules the harness's `cells-diff` imports at run time (`backend.tests.test_rate_tables_service`, which it borrows its seeding helpers from, and `examples/fremtpl2/seed.py`, whose `grant_demo_principals` it calls), plus the harness itself, `scripts/measure-p2-nfr-sweep.py`. Every module any of them imports, transitively, is in the list: that covers the route module, the service and query modules, the rate-table storage readers for `rows` and `parquet` (`pricing_core/rate_tables/*` and `app/platform/rate_tables.py`), the `model-schema` shapes, and the DB models. The script printed 136 paths (rc 0). **Migrations** are not imported, so they are added by a second rule: every file in `backend/migrations/versions/` that names one of the tables the path touches (`rate_tables`, `rate_table_versions`, `jobs`, `blobs`, `audit_events`, `workspace_settings`, `workspaces`, `models`, `factors`, `users`, `workspace_members`, `roles`, `role_assignments`, `outbox`), 18 files of the 60, plus `backend/migrations/env.py`; the check below also names the whole directory `backend/migrations/versions/` so that a migration file ADDED later shows. The list file is `~/gi-pricing-plan.local/scratch/sl1736/nfr1443-path-list.txt` (identical to the block below).
+The NFR-1443 readings (Grant 4 above) were taken on `d235c8a69bf910baf28da95534c72157108cb0a3`. **Option (ii), amended by (B):** `d235c8a6` is the measured tree if the code path the readings exercised is unchanged at the exit tree. The empty-diff list is the **system-under-test paths only**; the harness is the **instrument** and is excluded; **a later harness change does not invalidate these readings, but it is tested in its own right before it measures anything new.**
+
+**The instrument of the Grant 4 readings:** `git rev-parse d235c8a6:scripts/measure-p2-nfr-sweep.py` = **`fcef8a58a69c6099199993d31689d8b9ef040610`**. The seeding helpers the harness borrows are instrument too (blobs at `d235c8a6`): `backend/tests/test_rate_tables_service.py` `85af41f36c672979597dd2379f0411b4c66e41d3`, `examples/fremtpl2/seed.py` `f3a9af535a95c2f099a85659ef01f8b27c0fdb8d`.
+
+**How the system-under-test list was derived (runnable).** `uv run --directory <worktree> python -I ~/gi-pricing-plan.local/scratch/sl1736/closure.py <worktree>` (rc 0, 125 paths). From a fresh interpreter it imports the seeds and prints every module file under the repository (virtualenv and `__pycache__` excluded) that those imports pulled in. The seeds: the cells-diff route module `app.api.rate_tables` (the handler `rate_table_diff_cells` lives in it), the Job handler and executor that build the cell artifact (`app.worker.rate_table_handlers`, `app.worker.tasks`), and the services and storage the route and Job use (`app.platform.rate_tables`, `app.platform.jobs`, `app.platform.blobs`, `app.platform.settings`, `app.config`, `app.db.session`, `app.db.models`). Transitively that covers the route module, the service and query modules, the rate-table storage readers for `rows` and `parquet` (`pricing_core/rate_tables/*` and `app/platform/rate_tables.py`), the `model-schema` shapes and the DB models. **Migrations** are not imported, so a second rule adds the 18 files of the 60 in `backend/migrations/versions/` that name a table the path touches (`rate_tables`, `rate_table_versions`, `jobs`, `blobs`, `audit_events`, `workspace_settings`, `workspaces`, `models`, `factors`, `users`, `workspace_members`, `roles`, `role_assignments`, `outbox`) plus `backend/migrations/env.py`; the check below also names the directory `backend/migrations/versions/` so that a migration file ADDED later shows. 125 + 19 = **144 paths**; the list file is `~/gi-pricing-plan.local/scratch/sl1736/nfr1443-path-list.txt` (identical to the block below).
 
 ```nfr1443-paths
 backend/migrations/env.py
@@ -354,7 +358,6 @@ backend/src/app/platform/settings.py
 backend/src/app/platform/transformations.py
 backend/src/app/platform/validation.py
 backend/src/app/platform/validation_rules.py
-backend/src/app/platform/workspaces.py
 backend/src/app/worker/__init__.py
 backend/src/app/worker/celery_app.py
 backend/src/app/worker/data_handlers.py
@@ -363,15 +366,6 @@ backend/src/app/worker/logs.py
 backend/src/app/worker/progress.py
 backend/src/app/worker/rate_table_handlers.py
 backend/src/app/worker/tasks.py
-backend/tests/approved_rows.py
-backend/tests/blob_fixtures.py
-backend/tests/dry_run_reports.py
-backend/tests/test_api_datasets.py
-backend/tests/test_api_rate_tables.py
-backend/tests/test_rate_tables_service.py
-examples/fremtpl2/algorithm.py
-examples/fremtpl2/arff.py
-examples/fremtpl2/seed.py
 packages/model-schema/src/model_schema/__init__.py
 packages/model-schema/src/model_schema/approvals.py
 packages/model-schema/src/model_schema/audit.py
@@ -446,10 +440,9 @@ packages/pricing-core/src/pricing_core/rating/runtime.py
 packages/pricing-core/src/pricing_core/rating/score.py
 packages/pricing-core/src/pricing_core/rating/vocabulary.py
 packages/pricing-core/src/pricing_core/safe_error.py
-scripts/measure-p2-nfr-sweep.py
 ```
 
-**The close check, verbatim (to be run at the exit tree, with `<exit>` the exit-tree commit):**
+**The close check, verbatim (to be run at the exit tree, `<exit>` the exit-tree commit):**
 
 ```
 git -C <worktree> diff --stat d235c8a6 <exit> -- $(sed -n '/^```nfr1443-paths$/,/^```$/p' docs/ledgers/LG-08155-wk-1178-slice-sl-1736-the-p2-nfr-measurement-sweep-pl-1735-slice-ledger.md | sed '1d;$d') backend/migrations/versions/
@@ -457,7 +450,11 @@ git -C <worktree> diff --stat d235c8a6 <exit> -- $(sed -n '/^```nfr1443-paths$/,
 
 Empty output: the reading stands, recorded under roadmap G4 as "measured on `d235c8a6`, path-identical to the exit tree (diff quoted)". Non-empty: option (i), re-measure in one ALONE window.
 
-**Facts at the time of writing (not a verdict).** (1) `d235c8a6..HEAD` of this branch (`c1c92b87` and later): the check lists only `scripts/measure-p2-nfr-sweep.py` (42 insertions, 17 deletions), the profile modes added after the readings. (2) `d235c8a6..origin/main` (`e202f28b`, fetched 2026-10-22): the check lists five paths: `scripts/measure-p2-nfr-sweep.py` and `backend/tests/test_api_datasets.py` and `backend/src/app/platform/validation_rules.py` (this slice's own files, absent from main until the slice merges, so they are not drift), and **`packages/model-schema/src/model_schema/__init__.py` (+12) and `packages/model-schema/src/model_schema/objectives.py` (+170/-)**, which other work has changed on main since `d235c8a6` and which are in the list because `model_schema/__init__.py` imports the objectives module. Taken literally, the predicate is therefore **already non-empty on main for those two files**, whether or not objectives code is reached by cells-diff paging. (3) The harness file will keep changing for Tasks 2 and 5a; a whole-file comparison of it is non-empty from now on. **Proposal, for the maintainer's decision (not applied): a harness limb that compares only the definitions the cells-diff readings used** (`_cells_diff`, `CELLS_DIFF_RUNS`, `_Env`, `_timed_get`, `_latency_fields`, `nearest_rank`, `classify_latency`, `classify_ratio`, `settle_load`, `_settle_or_stop`, the load/session helpers and the constants), by `python3 -I ~/gi-pricing-plan.local/scratch/sl1736/harness_limb.py <worktree> d235c8a6 <exit>` (prints `IDENTICAL` and rc 0, or the differing names and rc 1; at `d235c8a6` against this branch's HEAD it prints `IDENTICAL (28 of 28 names found ...)`, rc 0). Whether a change confined to `objectives.py` is outside the path is the maintainer's to rule.
+**Facts at the time of writing (not a verdict).** (1) `d235c8a6..HEAD` of this branch: the check prints nothing. (2) `d235c8a6..origin/main` (`e202f28b`, fetched 2026-10-22): three paths: `backend/src/app/platform/validation_rules.py` (this slice's Task 1 fix, in `d235c8a6` and absent from main until the slice merges, so not drift at the exit tree) and **`packages/model-schema/src/model_schema/__init__.py` (+12) and `packages/model-schema/src/model_schema/objectives.py` (+170/-)**, changed on main by other work since `d235c8a6` and in the list because `model_schema/__init__.py` imports the objectives module. Taken literally the predicate is therefore **non-empty on main for those two files today**; whether a change confined to `objectives.py` is outside the path the cells-diff readings exercised is the maintainer's to rule, and I have not applied any narrower predicate.
+
+#### 2026-10-22 — Task 4 (NFR-485): may it run non-ALONE? The plan clauses, quoted (ruling "2026-10-22 22:48:03 BST": Task 4 goes non-ALONE only if its plan clause allows it)
+
+`PL-1735` Task 4 Step 2, verbatim: "On the shared VM, **under the gate-1 slot**: `--only glm` and `--only gbm` at 250 000, 500 000 and 1 000 000 rows, `--factors 60`, each in its own process. Record each `VmHWM`, the two projections to 5 M, labelled "projection, not a reading"." `PL-1735` Global Constraints, verbatim: "**Runs are heavy and hold the gate-1 slot**, as `LG-1444` Hold B did. **They never run beside another held slot or a timing benchmark** (the planner charter's sweep-pause rule applies to every role)." The NFR-485 section: "nfr-bench-1 is used not for quietness (bytes are not slowed by load) but for RAM". **Reading:** Task 4 needs no quiet box and no load bar, but the clause bars it from running beside another held slot, so a "non-ALONE" Task 4 window would still need both other gate slots free, which is the same cost to the paired gates as an ALONE window. **The clause does not allow Task 4 to run beside held slots; it stays in W3.** (`windows-sl1569-sl8035-2026-10-16.md` classes it "gate-1", not ALONE, for the quiet-box sense only.)
 
 #### PLANNED — the four ALONE grants and their non-ALONE companions (not run; each grant is requested from the lead with these exact commands)
 
