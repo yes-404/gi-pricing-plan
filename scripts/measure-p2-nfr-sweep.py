@@ -799,6 +799,8 @@ async def _cells_diff(args: argparse.Namespace) -> int:
         # 10 000 completed diff_cells Jobs of other keys, seeded first (LG-1444 Hold B).
         # Completed through the platform's own lifecycle (`jobs.transition`), so every Job
         # invariant (finished_at, started_at, the audit event) holds by construction.
+        seed_started = datetime.now().astimezone()
+        seed_load = read_load1()
         for start in range(0, args.seeded_jobs, 500):
             async with env.database.unit_of_work() as session:
                 for i in range(start, min(start + 500, args.seeded_jobs)):
@@ -823,6 +825,16 @@ async def _cells_diff(args: argparse.Namespace) -> int:
                             actor=actor,
                             result=JobResult(kind="none") if state is JobStatus.SUCCEEDED else None,
                         )
+        seed_ended = datetime.now().astimezone()
+        _emit(
+            "seed-jobs",
+            jobs=args.seeded_jobs,
+            started=seed_started.isoformat(timespec="seconds"),
+            ended=seed_ended.isoformat(timespec="seconds"),
+            wall_s=round((seed_ended - seed_started).total_seconds(), 1),
+            load_start=seed_load,
+            load_end=read_load1(),
+        )
         for name, storage, cells, threshold in selected:
             await _set_threshold(env.database, workspace_id, threshold)
             levels = [f"L{i:07d}" for i in range(cells)]
