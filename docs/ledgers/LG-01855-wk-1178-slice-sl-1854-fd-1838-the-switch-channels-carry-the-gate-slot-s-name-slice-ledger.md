@@ -1,22 +1,22 @@
 ---
-id: LG-8171
+id: LG-1855
 family: ledger
-title: WK-1178 slice SL-8170 — FD-1838, the deployment switch's channels carry the gate slot's name (slice ledger)
+title: WK-1178 slice SL-1854 — FD-1838, the deployment switch's channels carry the gate slot's name (slice ledger)
 status: active                 # active → closed (§1.2a)
 created: 2026-10-22
 owner: executor
 tree: f3462d8fc1336dc4583fe8a7af92fed399993a55
 phase: P2
 work: WK-1178
-slice: SL-8170
+slice: SL-1854
 plans: []
 corrected_by: []
-relates: [SL-8170, FD-1838, SL-1711]
+relates: [SL-1854, FD-1838, SL-1711]
 ---
 
-# LG-8171 — WK-1178 slice SL-8170: FD-1838, the deployment switch's channels carry the gate slot's name
+# LG-1855 — WK-1178 slice SL-1854: FD-1838, the deployment switch's channels carry the gate slot's name
 
-Filed 2026-10-22 under working id 8171 (lead-reserved in eta.md); executed by `exec-1838`, base `origin/main` `f3462d8fc1336dc4583fe8a7af92fed399993a55`, branch `fix/fd-1838-switch-namespace`.
+Filed 2026-10-22 under working id 8171 (lead-reserved in eta.md); minted 2026-10-22 as LG-1855 (history lines below that quote "LG 8171" or "SL 8170" name this ledger and its slice by their working ids); executed by `exec-1838`, base `origin/main` `f3462d8fc1336dc4583fe8a7af92fed399993a55`, branch `fix/fd-1838-switch-namespace`.
 
 **GO:** the maintainer's (by delegation) entry "2026-10-22 15:43:10 BST — Maintainer: SPEED MEASURES …" item 2 (`to-lead.md`): FD-1838 prioritised, built red-first, the remedy as reserved at "2026-10-21 21:13:34 BST"; dispatched by lead 26 in the brief `brief-exec-1838-2026-10-22.md`.
 **MERGE-ACK:** not yet given.
@@ -25,7 +25,7 @@ Filed 2026-10-22 under working id 8171 (lead-reserved in eta.md); executed by `e
 
 ### Scope
 
-`SL-8170` (a Work-plan delta row under WK-1178, Lean P2 L5), quoted: "one helper `switch_stack(environment, tenant_id)` that builds the stack prefix for both of its callers … and appends `basename($GIP_GATE_SLOT)` when the variable is set, through `RedisSwitch`'s existing `stack` argument; a process with no slot (production) is unchanged. Red first: a test with a foreign subscriber on the unsuffixed channel." Requirements covered: none new; FR-268 (the switch) keeps its behaviour. Remedy per FD-1838's "Remedy (not made here)".
+`SL-1854` (a Work-plan delta row under WK-1178, Lean P2 L5), quoted: "one helper `switch_stack(environment, tenant_id)` that builds the stack prefix for both of its callers … and appends `basename($GIP_GATE_SLOT)` when the variable is set, through `RedisSwitch`'s existing `stack` argument; a process with no slot (production) is unchanged. Red first: a test with a foreign subscriber on the unsuffixed channel." Requirements covered: none new; FR-268 (the switch) keeps its behaviour. Remedy per FD-1838's "Remedy (not made here)".
 
 ### Task list
 
@@ -137,7 +137,7 @@ Pytest: `13 failed, 6646 passed, 19 skipped`; vitest `Test Files  129 passed (12
 - `tests/test_register_owed.py`: `test_check_29_wiring_is_undisturbed`
 - `tests/test_repository_invariants.py`: `test_money_discipline_is_enforced_by_the_docs_audit`, `test_journey_citations_are_audited_in_ci`
 
-**Reading (lead 26, relaying the maintainer's standing 1(f) of "2026-10-22 18:02:34 BST"):** the frontend and the demo are green and the python failures are exactly the docs-audit set, the gate stands. These tests read `scripts/audit-docs.py` on the real tree, which exits 1 at this head on the unminted working ids (check 31: the gap between 1840 and 8170); the 13 re-run on the minted head. The overlap: SL-1260's DB window ran beside this gate by the maintainer's deliberate exception (`to-lead.md` 17:10:35); its TestClients subscribe on the unsuffixed switch channels and this gate's are `gate-1b`-suffixed, and no switch-touching test failed here.
+**Reading (lead 26, relaying the maintainer's standing 1(f) of "2026-10-22 18:02:34 BST"):** the frontend and the demo are green and the python failures are exactly the docs-audit set, the gate stands. These tests read `scripts/audit-docs.py` on the real tree, which exits 1 at this head on the unminted working ids (check 31: a gap in the allocation below the then-unminted ids); the 13 re-run on the minted head. The overlap: SL-1260's DB window ran beside this gate by the maintainer's deliberate exception (`to-lead.md` 17:10:35); its TestClients subscribe on the unsuffixed switch channels and this gate's are `gate-1b`-suffixed, and no switch-touching test failed here.
 
 ### Audit
 
@@ -150,4 +150,4 @@ Not yet written.
 
 ## PRs
 
-Not yet opened. The PR title names `SL-8170`.
+Not yet opened. The PR title names `SL-1854`.
