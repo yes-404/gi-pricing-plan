@@ -112,3 +112,24 @@ Each control is a scratch edit at head `ab48b63e`, run through the small-test sl
 | N3 | `frontend/src/components/dag/MountInspector.vue:46`: `setRef` no longer resets `inputs`/`outputs` (`edit({ ref: next })`) | `Tests  1 failed \| 7 passed (8)` | 1 | `MountInspector.test.ts` > "resets the port maps when the pick has another slug (the slice's choice, RS 8156 (v))" | `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/negctl-N3.log` |
 
 Disclosure: a first attempt had a shell argument slip. Its mutation step failed (nothing was edited) and vitest ran the whole frontend suite three times (826 tests each, 2 failed in `graph.test.ts`, unmutated tree). Those runs are not controls and have no log here. The 2 `graph.test.ts` failures at the unmutated head are unexplained and not investigated.
+
+### Entry 2026-10-22 — graph.test.ts regression: red at the slice head, cause, miss, fix (exec-1554g; to-lead "2026-10-22 13:34:04 BST", maintainer "2026-10-22 13:36:57 BST")
+
+**Regression.** `frontend/src/components/dag/__tests__/graph.test.ts` (main's file, unchanged by this slice) passes at `origin/main` f3462d8f (`Tests` all passed; log `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/graph-f3462d8f.log`) and fails only at the slice head bd236e3b: `Tests 2 failed | 5 passed (7)` (log `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/graph-bd236e3b.log`). The failures are the exact-shape assertions at `graph.test.ts` :11 and :33.
+
+**Cause.** `edgesOf` in `frontend/src/components/dag/graph.ts` set `conditional: <boolean>` on every edge, so plain step edges gained a `conditional: false` key that main's `toEqual` shapes do not have.
+
+**The miss.** `graph.test.ts` imports `graph.ts` but was outside the 8-file GREEN above, so the slice's GREEN never ran it. The earlier disclosure ("2 `graph.test.ts` failures … unexplained and not investigated") is this regression.
+
+**Fix** (commit a91bff43; `graph.test.ts` not edited): `FlowEdge.conditional` is now `conditional?: true`, and `edgesOf` spreads `{ conditional: true }` only on an edge into or out of a purpose mount. Plain step edges and unconditional-mount edges keep main's shape. `DagDesigner.vue` already reads the flag as falsy = solid; no change.
+
+**GREEN is now derived, not hand-picked.** Command (at the fix head a91bff43): `git diff --name-only origin/main...HEAD -- frontend/src` gave 13 files (`api/subGraphs.ts`; `components/dag/{DagDesigner,DiffOverlay,MountInspector,MountNode,NodeNavigator}.vue`, `graph.ts`, `__tests__/{DagDesignerMounts,MountInspector,graphMounts}.test.ts`, `__tests__/mountFixtures.ts`; `views/RatingDesignView.vue`, `views/__tests__/RatingDesignViewMounts.test.ts`). Rule applied: every test file under `frontend/src` whose text names a changed module or a component that wraps it: `grep -rlE "dag/graph|from \"\./graph\"|\.\./graph\"|subGraphs|DagDesigner|DiffOverlay|MountInspector|MountNode|NodeNavigator|RatingDesignView|mountFixtures" src --include=*.test.ts`. That is 10 files (the 9 of the brief plus `DagDesignerValidation.test.ts`, which mounts DagDesigner). Run in guarded batches of at most 3: `test -f` on each path, the vitest call naming exactly those paths, load1 quoted in each log (1.69–1.80, below 6), output showing `Test Files  N` equal to the batch size. Each log starts with `git rev-parse HEAD` = a91bff432542f7f60f4748fb5ed13acb20c1155e.
+
+| Batch | Files | Summary lines (verbatim) | rc | Log |
+|---|---|---|---|---|
+| b1 | graph, graphMounts, MountInspector | `Test Files  3 passed (3)` / `Tests  20 passed (20)` | 0 | `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/regfix-b1.log` |
+| b2 | DagDesignerMounts, RatingDesignViewMounts, NodeNavigator | `Test Files  3 passed (3)` / `Tests  24 passed (24)` | 0 | `…/regfix-b2.log` |
+| b3 | DagDesigner, DiffOverlay, RatingDesignView | `Test Files  3 passed (3)` / `Tests  18 passed (18)` | 0 | `…/regfix-b3.log` |
+| b4 | DagDesignerValidation | `Test Files  1 passed (1)` / `Tests  3 passed (3)` | 0 | `…/regfix-b4.log` |
+
+10 files, 65 passed, 0 failed, 0 skipped. `eslint src/components/dag/graph.ts` rc 0; `vue-tsc --noEmit -p tsconfig.app.json` rc 0 (both niced). One run each: not a verdict on flakiness.
