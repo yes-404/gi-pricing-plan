@@ -2919,6 +2919,26 @@ The fix of FD-1803 (filed in D21; HIGH, owner WK-1178), planned in PL-1809. `Dec
 
 (Closed 2026-10-18 as a Slice on a clean audit at 7e3b5098 (findings A1 to A4; the lead's verdict "2026-10-18 12:16:55 BST" in `from-lead-2026-10-09.md`): A1 fixed in LG-1811, A2 ruled into the slice by the maintainer ("2026-10-18 12:18:08 BST" in `to-lead.md`) and delivered as test-only commit d2e0fcaa; audit and window results written in LG-1811 (minted 2026-10-18 from working id 8109). MERGE-ACK: not yet given.)
 
+#### SL-8170 — WK-1178 fix slice — FD-1838: the deployment switch's channels carry the gate slot's name, so a concurrent subscriber is not counted in the PREPARE quorum
+
+```yaml
+id: SL-8170
+family: slice
+title: WK-1178 fix slice — FD-1838: the deployment switch's channels carry the gate slot's name, so a concurrent subscriber is not counted in the PREPARE quorum
+status: active                   # draft → active → closed | retired (§1.2a)
+created: 2026-10-22   # filed under working id 8170 (lead-reserved in eta.md)
+owner: executor                  # cut by the lead as a Work-plan delta row (Lean P2 L5); lead dispatches (active)
+tree: f3462d8fc1336dc4583fe8a7af92fed399993a55
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1838, WK-674, SL-1711]
+```
+
+The fix of FD-1838 (MEDIUM, owner WK-1178), a Work-plan delta row under WK-1178 (Lean P2 L5): PUBLISH's receiver count is the PREPARE quorum (`prepare_round` in `backend/src/app/platform/deployment_switch.py`) and counts subscribers on the whole Redis server, so a second process on the same channel is a receiver that never acknowledges. **Scope, exactly:** one helper `switch_stack(environment, tenant_id)` that builds the stack prefix for both of its callers (`backend/src/app/main.py`, `backend/tests/test_deployment_switch_http.py`) and appends `basename($GIP_GATE_SLOT)` when the variable is set, through `RedisSwitch`'s existing `stack` argument; a process with no slot (production) is unchanged. Red first: a test with a foreign subscriber on the unsuffixed channel. Gate scripts and `scripts/run-small.sh` already export `GIP_GATE_SLOT` and are not changed. The ledger is `LG-8171`.
+
+(Activated 2026-10-22 on the maintainer's (by delegation) entry "2026-10-22 15:43:10 BST — Maintainer: SPEED MEASURES …" item 2 (`to-lead.md`): FD-1838 prioritised, built red-first, the remedy as reserved at "2026-10-21 21:13:34 BST". MERGE-ACK: not yet given.)
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
