@@ -2,7 +2,7 @@
 id: LG-1859
 family: ledger
 title: WK-674 slice SL-1260 — Slice 6, date-based routing and shadow scoring (PL-1537 R6.1 to R6.3) (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-22              # drafted 2026-10-21 under working id 8139; minted 2026-10-22 as LG-1859
 owner: executor
 tree: 44c18e11
@@ -366,3 +366,20 @@ earlier generalised exception for own-database small runs; the shared stack and 
 **N2, labels.** Seven lines of this ledger labelled a commit sha as a tree (the logs print `git rev-parse HEAD` under the word "tree"). Relabelled "commit" (or
 "head commit") for `6aa350c7`, `c55410d6`, `605fae23`, `eaf045d2`, `4a9c5200`, `5d79bbf4` and the table column of the first window; the front-matter `tree: 44c18e11` is
 the template field, left as it is. The real tree of the minted head is `git rev-parse 5d79bbf4^{tree}` = `e592cd85cb57e557add1b7e797038eb57530acda`.
+
+## Final re-merge, closing acts and the N1b DB-window deviation (2026-10-22)
+
+`origin/main` 1fe82ee6 (#1364 merged; the top id is now 1858, so LG-1859 is contiguous) merged in: `git merge-tree --write-tree HEAD origin/main` rc 1, one conflict in the generated `docs/INDEX.md`
+(theirs, regenerated, `--check` rc 0). Closing acts in the same commit: this ledger `status: closed` and the `SL-1260` roadmap row `status: closed` with its dated line, on `RS 8198`
+(aud-1260c, 57b7fa04..fbf092a9, proposed CLEAN) and the lead's verdict, the from-lead log entry "2026-10-22 23:03:12 BST Lead 26: SL-1260 fixes ACCEPTED @e6acbce6 … VERDICT SL-1260 CLEAN
+(RS 8198 + fixes)". The maintainer noted it at "2026-10-22 23:03:22 BST" (`to-lead.md`).
+
+**Audit.** `RS 8180` (the first audit, NOT-CLEAN on the RL-1834 Acceptance limb, which the controls above remedied), `RS 8187` (items 2 and 4, two gaps closed by the flag-read and caplog assertions) and `RS 8198`
+(the delta after 57b7fa04: N1a, N1b, N2 fixed in `e6acbce6`; N3, that the re-gate predates the merges of 6753c495 and e202f28b, is covered by the PR's CI python on the merged head, which rule 1(f)
+already requires). The lead's verdict: CLEAN.
+
+**Deviation: the N1b DB window ran beside two held code gates.** The N1b red control (above) ran on the seat's own per-worktree database while `gate-1` and `gate-1b` were held; it did `createdb -T` and
+`alembic upgrade head`, which `RL-1626` (d) keeps out of a held gate's company. Cause: the lead's brief for it named `run-small` but did not say no-DB or no-migration; the seat followed the brief. The gates'
+databases and the shared stack were untouched, and both gates stayed alive with no failure. Times (UTC, 2026-10-22), from `scratch/sl1260-db/20a-setup.log` and the logs' mtimes: `createdb -T` plus `alembic upgrade head`
+from 22:01:17 to 22:01:20 (the log's `start` and `end` lines; `createdb_rc=0`, `upgrade_rc=0`; no separate stamp for `createdb` or for `alembic` alone); test runs 44 to 46 at 22:01:20 to 22:01:48
+(mtimes 22:01:29.59, 22:01:38 and 22:01:48.40); the `dropdb` (rc 0) has NO recorded time (the cleanup step prints none), only that it ran after 22:01:48.
