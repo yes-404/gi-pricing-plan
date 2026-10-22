@@ -7,7 +7,7 @@ created: 2026-10-22
 owner: auditor
 tree: 71e481fa5d240ed366cd80c1a8c6cf6cd1d918d5
 corrected_by: []
-relates: [WK-1178, RL-8176, RL-1301, SL-1260, SL-8178]
+relates: [WK-1178, RL-8176, RL-1301, SL-1260]
 ---
 
 # FD-8175 — Environment-scoped writes order 404 before 403 inconsistently; the existence oracle is accepted within a workspace

@@ -7,7 +7,7 @@ created: 2026-10-22
 owner: auditor
 tree: 71e481fa5d240ed366cd80c1a8c6cf6cd1d918d5
 corrected_by: []
-relates: [WK-1178, SL-1711, SL-8172, LG-8173]
+relates: [WK-1178, SL-1711]
 ---
 
 # FD-8169 — BlobStore.ensure_bucket loses a head-then-create race on a fresh bucket, so a concurrent first start exits

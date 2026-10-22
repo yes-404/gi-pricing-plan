@@ -7,7 +7,7 @@ created: 2026-10-22
 owner: auditor
 tree: 71e481fa5d240ed366cd80c1a8c6cf6cd1d918d5
 corrected_by: []
-relates: [WK-1178, WK-676, RL-1301, SL-8185, LG-8186, PL-8181]
+relates: [WK-1178, WK-676, RL-1301]
 ---
 
 # FD-8177 — Three route-level scope-less requires() guards refuse a resource-scoped grant before the handler's scoped check (latent)
