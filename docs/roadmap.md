@@ -1764,7 +1764,7 @@ Minted as `SL-1274` at #943's merge turn, 2026-09-30, with `python3 scripts/doc-
 id: SL-1275
 family: slice
 title: Slice 5: the authoring view, and `WF-702` Route B end to end (`02` §5.3)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                   # draft → active → closed | retired (§1.2a)
 created: 2026-09-30
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: dee49f781fd23f9df2e72161885c77fa17a6f1ab
@@ -1776,6 +1776,10 @@ relates: [PL-1268]
 
 The Custom objective library's editor with live parse errors, the derived gradient and hessian display, and the loss-curve preview. It consumes OQ-550's ruling (WK-675's) if one exists by then, and otherwise records its `ChartFigure` caller in OQ-550's call-site count. One HTTP test file runs `WF-702` Route B. The flag's default is unchanged. `PL-1268` Slice 5. Starts after Slice 3 closes.
 Minted as `SL-1275` at #943's merge turn, 2026-09-30, with `python3 scripts/doc-id.py next --ref origin/main` at `08bd1c5a` (working id 9954 before the mint).
+
+(Activated 2026-10-21 on the maintainer's entry "2026-10-21 15:03:33 BST — Maintainer: GOs on the 15:02:44 work queue" (`to-lead.md`), item 4. `PL-1268` and `PL-1665` are `active`; `PL-1621` stands as `PL-1665` amends it. The slice's one ledger is `LG-1839` (working id reserved by the lead in eta.md; minted at the merge turn). Executor seat `exec-1275`, branch `sl-1275-wk690-s5-authoring-view`.)
+
+(Built and gated 2026-10-22; **stays `active`** on the maintainer's B4 ruling ("2026-10-22 00:57:13 BST": merge-then-measure, precedent SL-1367 Acc 10). Slice audit `RS 8151` NOT-CLEAN, resolved by R1–R3; re-audit `RS 8152` CLEAN for the delta; the code gate re-ran at `96354f9c` (ledger `LG-1839` item 13). **Carried, owner WK-690:** the `PL-1665` 5.7 measurement (3c, 3d) in a TRUE ALONE window, which closes the slice; `features.expression_objectives_enabled` stays default OFF; FR-1840's 3d budget stays provisional until measured. Also carried to WK-690: FD 8153 (`grammar_refusal` `RecursionError` on the create path, MEDIUM).)
 
 #### SL-1622 — WK-690 fix row: FD-1349, FD-1492 and FD-1512 fixed before close, and FD-1294's discharge line
 
