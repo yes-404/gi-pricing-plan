@@ -398,8 +398,16 @@ class SwitchRegistry(Protocol):
 
 
 def switch_stack(environment: str, tenant_id: str) -> str:
-    """The stack prefix of this process's switch channels: `<GIP_ENVIRONMENT>:<tenant>`."""
-    return f"{environment}:{tenant_id}"
+    """The stack prefix of this process's switch channels: `<GIP_ENVIRONMENT>:<tenant>`.
+
+    Under a gate slot (`GIP_GATE_SLOT`, the slot's flock path) the slot's name is appended
+    (FD-1838): PUBLISH's receiver count is the PREPARE quorum and counts subscribers on the
+    whole Redis server whatever the db, so two slots sharing a channel would each count the
+    other as a receiver that never acknowledges. Production sets no slot and is unchanged.
+    """
+    stack = f"{environment}:{tenant_id}"
+    slot = os.environ.get("GIP_GATE_SLOT")
+    return f"{stack}:{os.path.basename(slot)}" if slot else stack
 
 
 class RedisSwitch:
