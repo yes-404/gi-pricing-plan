@@ -139,6 +139,14 @@ Pytest: `13 failed, 6646 passed, 19 skipped`; vitest `Test Files  129 passed (12
 
 **Reading (lead 26, relaying the maintainer's standing 1(f) of "2026-10-22 18:02:34 BST"):** the frontend and the demo are green and the python failures are exactly the docs-audit set, the gate stands. These tests read `scripts/audit-docs.py` on the real tree, which exits 1 at this head on the unminted working ids (check 31: a gap in the allocation below the then-unminted ids); the 13 re-run on the minted head. The overlap: SL-1260's DB window ran beside this gate by the maintainer's deliberate exception (`to-lead.md` 17:10:35); its TestClients subscribe on the unsuffixed switch channels and this gate's are `gate-1b`-suffixed, and no switch-touching test failed here.
 
+**The 13 re-run on the minted head** `89eea73d6e20fdd5dbf861c3809d9f70854cb489` (2026-10-22, `run-small.sh`, DB-free, three calls of at most 3 files; `audit-docs` at that head: rc 0, "All checks passed."):
+
+- `tests/test_audit_docs_finding_citations.py`, `tests/test_audit_docs_ids.py`, `tests/test_audit_docs_process_core_digest.py`: rc=0, `124 passed in 202.81s (0:03:22)`.
+- `tests/test_audit_docs_w37_11_ceiling.py`, `tests/test_doc_index.py`, `tests/test_register_lint.py`: rc=0, `110 passed in 94.71s (0:01:34)`.
+- `tests/test_register_owed.py`, `tests/test_repository_invariants.py`: rc=0, `23 passed in 72.76s (0:01:12)`.
+
+All 13 previously failing tests pass; the gate's pytest count is 13 failed, 6646 passed at `34c427ea`, and the full suite is not re-run for a docs-only delta (mint, merges of main).
+
 ### Audit
 
 Not yet written.
