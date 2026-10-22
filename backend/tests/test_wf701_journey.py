@@ -19,6 +19,7 @@ names.
 from __future__ import annotations
 
 import json
+import os
 import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -29,9 +30,23 @@ from typing import Any
 
 import pytest
 
-_EXAMPLE = Path(__file__).resolve().parents[2] / "examples" / "fremtpl2"
+#: Overridable, like `test_demo_rating_evidence._EXAMPLE`, so the skip below can be run without
+#: touching the real data directory.
+_EXAMPLE = Path(
+    os.environ.get("GIP_FREMTPL2_EXAMPLE_DIR")
+    or Path(__file__).resolve().parents[2] / "examples" / "fremtpl2"
+)
 sys.path.insert(0, str(_EXAMPLE))
 import journey_wf701 as j  # noqa: E402
+
+#: The journey walks the real portfolio rows (`j.portfolio_policies`), and CI does not fetch the
+#: sha256-pinned, gitignored file, so CI SKIPS the two DB tests below; their evidence of record is
+#: the local gate and the compose run (LG-1841). A mark, not an in-body skip: it is decided before
+#: the DB fixtures are set up. The message is the one `test_glm_scalar_predict._demo_modules` uses.
+_needs_fremtpl2_data = pytest.mark.skipif(
+    not (_EXAMPLE / "data" / "freMTPL2freq.arff").exists(),
+    reason="examples/fremtpl2/data is not fetched (sha256-pinned, gitignored)",
+)
 
 
 @pytest.mark.req("FR-259")
@@ -319,6 +334,7 @@ def _run_in_process(
 @pytest.mark.req("FR-354")
 @pytest.mark.req("FR-429")
 @pytest.mark.req("NFR-494")
+@_needs_fremtpl2_data
 def test_wf701_journey_runs_end_to_end(api_client, database, blob_store, workspace_id) -> None:  # type: ignore[no-untyped-def]
     """Every in-scope step of WF-701, in order, each by its status and a read-back effect: the
     refusals by their problem `code` (C2 `EVIDENCE_INCOMPLETE` and `PROMOTION_ORDER_VIOLATION`,
@@ -345,6 +361,7 @@ def test_wf701_journey_runs_end_to_end(api_client, database, blob_store, workspa
 
 
 @pytest.mark.req("FR-259")
+@_needs_fremtpl2_data
 def test_c7_fails_naming_the_band_when_the_sample_rate_is_zero(  # type: ignore[no-untyped-def]
     api_client, database, blob_store, workspace_id
 ) -> None:
