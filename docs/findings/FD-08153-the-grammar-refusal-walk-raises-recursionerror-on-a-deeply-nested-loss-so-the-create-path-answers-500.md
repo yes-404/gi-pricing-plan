@@ -39,7 +39,7 @@ At `sl-1275-wk690-s5-authoring-view` 96354f9c (tree 530c3e1d), read by this reco
   calls itself on every child expression (:238, :253, :255, :259), so its depth is the loss's depth, and it
   runs **before** the node and depth limits are checked. `measure_expression` (:134), which counts iteratively,
   is not on that path.
-- `RS 8152` N1 (the re-audit; file `docs/research/RS-08152-...re-audit-of-the-delta-against-rs-8151.md`, unminted
+- `RS 8152` N1 (the re-audit of the delta against RS 8151, unminted
   at `aud-1275b-2026-10-22` @51f1c261): in-process, `grammar_refusal` raised `RecursionError` on a 2000-character
   unary chain and on `"f+" * 999 + "f"`. That observation is the auditor's; this record's author read the code
   above and did **not** re-run it.

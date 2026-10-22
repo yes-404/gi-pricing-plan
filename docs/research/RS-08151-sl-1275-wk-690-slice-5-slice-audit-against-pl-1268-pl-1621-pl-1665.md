@@ -32,7 +32,7 @@ Ledger SHAs: all twelve SHAs `LG 1839` cites that are reachable commits (`41f73d
 | Item | Evidence | Proposed verdict |
 |---|---|---|
 | 5.1′ spec first: FR with 3a–3d + audit sentence | `FR 1840` in `02` §3.7 carries 3a (500 points), 3b (2 workers, 5 s), 3c, 3d (p95 ≤ 2 s / 500 points) and the NFR-484 audit sentence; `LG 1839` "Decisions" gives a reason for each value | MET |
-| 5.1′ §5.1 row, §5.3 built line, WF-702 B1.4 citation, `model-schema` shapes | all four in the range diff (`02` §5.1 row; §5.3 amendment; `WF-00702` B1.4; `objectives.py` `ObjectivePreview*`, request reuses `ObjectiveParameter`) | MET |
+| 5.1′ §5.1 row, §5.3 built line, WF-702 B1.4 citation, `model-schema` shapes | all four in the range diff (`02` §5.1 row; §5.3 amendment; `WF-702` B1.4; `objectives.py` `ObjectivePreview*`, request reuses `ObjectiveParameter`) | MET |
 | 5.1′ "in the slice's first commit, before any code that calls the route" | the FR is `37c0c66f`, the second commit; the activation `41f73db2` is first. `37c0c66f` precedes every caller (`8d2fe052`, `c74da4f1`); the B1.4 citation (`203fee4c`) is later. `LG 1839` "Spec-first ordering" discloses this | MET in substance; literal "first commit" wording not met, disclosed |
 | 5.1′ `generate-contracts --check` rc 0; `generate:api` leaves `frontend/src/api/generated` empty | rc 0 (this audit, `fd1dbcff`); gate `pnpm generate:api rc=0`; `git check-ignore frontend/src/api/generated` prints the path (VCS-ignored) | MET |
 | 5.2 WF-702 Route B over HTTP, one file | `backend/tests/test_wf702_route_b.py`, two tests (flag on, create to two approvals; flag default, create 409); gate pytest rc 0 | MET, CARRIED by gate |
