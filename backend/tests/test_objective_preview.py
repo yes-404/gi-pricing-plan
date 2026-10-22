@@ -196,7 +196,8 @@ def test_3c_the_preview_executor_is_its_own_and_shared_with_nothing(
         raise RuntimeError("stop after recording the thread")
 
     monkeypatch.setattr(preview_service, "derive", record)
-    asyncio.run(preview_service.preview(_request(grid=GRID)))
+    with pytest.raises(RuntimeError, match="stop after recording"):
+        asyncio.run(preview_service.preview(_request(grid=GRID)))
     other = asyncio.run(asyncio.to_thread(lambda: threading.current_thread().name))
     assert seen
     assert seen[0].startswith("objective-preview")
