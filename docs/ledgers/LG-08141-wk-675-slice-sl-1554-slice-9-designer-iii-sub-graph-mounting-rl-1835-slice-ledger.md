@@ -77,7 +77,7 @@ RED, at `7576489f` (detached checkout in the slice worktree; its test files, bef
 
 | File | Summary | rc | Log |
 |---|---|---|---|
-| `graphMounts.test.ts` | `Test Files  1 failed (1)` / `Tests  4 failed | 1 passed (5)` | 1 | `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/red-graphMounts.log` |
+| `graphMounts.test.ts` | `Test Files  1 failed (1)` / `Tests  4 failed \| 1 passed (5)` (the pipe is escaped for the table; the log line has none) | 1 | `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/red-graphMounts.log` |
 | `MountInspector.test.ts` | `Test Files  1 failed (1)` / `Tests  6 failed (6)` | 1 | `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/red-MountInspector.log` |
 | `DagDesignerMounts.test.ts` | `Test Files  1 failed (1)` / `Tests  11 failed (11)` | 1 | `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/red-DagDesignerMounts.log` |
 | `RatingDesignViewMounts.test.ts` | `Test Files  1 failed (1)` / `Tests  3 failed (3)` | 1 | `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/red-RatingDesignViewMounts.log` |
