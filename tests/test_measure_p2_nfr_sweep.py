@@ -249,3 +249,36 @@ def test_the_pre_registered_constants_are_the_ruled_ones() -> None:
     assert m.CONTENDED_LOAD_END_BELOW == 2.0
     assert m.MIN_PAIRS == 3
     assert m.CONTENTION_LABEL == "NFR-477 propose_grouping hierarchical_clustering"
+
+
+# --- the settle before a timed phase (PL-1735 Tasks 2 and 5: "load settled below 2.0") --------
+
+
+def test_settle_returns_at_once_when_the_load_is_already_below_the_limit() -> None:
+    slept: list[float] = []
+    ok, waited = m.settle_load(2.0, 600, 15, read=lambda: 1.2, sleep=slept.append)
+    assert ok is True
+    assert waited == 0
+    assert slept == []
+
+
+def test_settle_waits_until_the_load_falls_below_the_limit() -> None:
+    readings = iter([3.0, 2.5, 1.9])
+    slept: list[float] = []
+    ok, waited = m.settle_load(2.0, 600, 15, read=lambda: next(readings), sleep=slept.append)
+    assert ok is True
+    assert waited == 30
+    assert slept == [15, 15]
+
+
+def test_settle_gives_up_after_the_maximum_wait_and_says_so() -> None:
+    slept: list[float] = []
+    ok, waited = m.settle_load(2.0, 45, 15, read=lambda: 5.0, sleep=slept.append)
+    assert ok is False
+    assert waited == 45
+    assert len(slept) == 3
+
+
+def test_a_load_exactly_at_the_limit_has_not_settled() -> None:
+    ok, _ = m.settle_load(2.0, 0, 15, read=lambda: 2.0, sleep=lambda _s: None)
+    assert ok is False

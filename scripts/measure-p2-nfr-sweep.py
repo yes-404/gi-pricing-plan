@@ -31,6 +31,7 @@ import re
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -59,6 +60,10 @@ MIN_PAIRS = 3
 #: D4 (GO "2026-10-22 11:53:15 BST"): an ALONE start may settle this long, then STOP to the lead.
 ALONE_SETTLE_MAX_S = 600
 SETTLE_POLL_S = 15
+#: Tasks 2 and 5: load1 must be below this immediately before each timed latency phase
+#: (DP-7 (a): the RL-1441 quiet window); a phase that cannot settle is not run.
+TIMED_PHASE_LOAD_BELOW = 2.0
+TIMED_PHASE_SETTLE_MAX_S = 600
 
 # --- The sweep's thresholds and reading rules (DP-1, DP-3, the NFR sections of PL-1735)
 #: Interim DP-1 band, accepted 12:25:22 (ii) as the conservative rounding of 1/2.3. Replaced by
@@ -241,6 +246,43 @@ def parse_status_kb(text: str, key: str) -> int:
 # =============================================================================================
 # Host readings
 # =============================================================================================
+
+
+def settle_load(
+    limit: float,
+    max_wait_s: float,
+    poll_s: float,
+    *,
+    read: Callable[[], float],
+    sleep: Callable[[float], None],
+) -> tuple[bool, float]:
+    """Wait (outside any timed phase) until load1 is strictly below `limit`.
+
+    Returns (settled, seconds waited). A load exactly at the limit has not settled.
+    """
+    waited = 0.0
+    while read() >= limit:
+        if waited >= max_wait_s:
+            return False, waited
+        sleep(poll_s)
+        waited += poll_s
+    return True, waited
+
+
+def _settle_or_stop(what: str) -> None:
+    ok, waited = settle_load(
+        TIMED_PHASE_LOAD_BELOW,
+        TIMED_PHASE_SETTLE_MAX_S,
+        SETTLE_POLL_S,
+        read=read_load1,
+        sleep=time.sleep,
+    )
+    print(json.dumps({"settle": what, "settled": ok, "waited_s": waited, "load1": read_load1()}))
+    if not ok:
+        raise SystemExit(
+            f"STOP: load1 {read_load1()} not below {TIMED_PHASE_LOAD_BELOW} "
+            f"after {waited} s before {what}; report to the lead (no run taken)"
+        )
 
 
 def read_load1() -> float:
@@ -631,6 +673,7 @@ async def _one_way(args: argparse.Namespace) -> int:
                     raise AssertionError(f"NFR-468: {_fn} called on request")
 
                 setattr(profile_module, fn, _raiser)
+            _settle_or_stop(f"NFR-468 {name}")
             load_before, cpu_before = read_load1(), time.process_time()
             try:
                 samples = [await call(columns[i % len(columns)]) for i in range(NFR_468_N)]
@@ -901,6 +944,7 @@ async def _cells_diff(args: argparse.Namespace) -> int:
             if status is not JobStatus.SUCCEEDED or not artifact:
                 raise SystemExit(f"{name}: the Job did not succeed with its artifact: {status}")
             samples, cursor = [], None
+            _settle_or_stop(f"NFR-1443 {name}")
             load_before, cpu_before = read_load1(), time.process_time()
             for _ in range(NFR_1443_N):
                 params = {"against": "previous", "limit": NFR_1443_LIMIT}
