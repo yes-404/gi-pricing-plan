@@ -18,6 +18,8 @@ that turns it on turns it off again (`routing_flag`).
 from __future__ import annotations
 
 import json
+import logging
+import traceback
 from collections.abc import Callable, Iterator
 from typing import Any
 from uuid import UUID
@@ -238,6 +240,7 @@ def test_with_the_flag_off_scoring_is_unchanged_and_the_selector_is_not_entered(
 
 
 @pytest.mark.req("FR-270")
+@pytest.mark.parametrize("failing", ["select_range", "resolve"])
 def test_a_routing_selection_failure_fails_the_quote_and_never_falls_back(
     client,
     scoring_headers,
@@ -245,23 +248,46 @@ def test_a_routing_selection_failure_fails_the_quote_and_never_falls_back(
     database,
     workspace_id,
     routing_flag,
+    caplog: pytest.LogCaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
+    failing: str,
 ) -> None:
     """The maintainer's ruling of 2026-10-22 17:34:47 BST item 4 (`03` §4.13, Selection): with
-    the flag on, a selector that raises refuses the quote 500 `INTERNAL_ERROR`. The default-live
-    version is never scored in its place, because a fallback could price from the wrong Rating
-    Version. The control is the same quote with the selector healthy: it is scored (200)."""
+    the flag on, a failure to read the routing flag (`resolve`) or to select a range
+    (`select_range`) refuses the quote 500 `INTERNAL_ERROR`. The default-live version is never
+    scored in its place, because a fallback could price from the wrong Rating Version, and the
+    log names the cause: an ERROR "request failed" record whose sanitised exception text begins
+    with the raised class and whose traceback frames include the failing function. The control
+    is the same quote with both healthy: it is scored (200)."""
     _run(plant_deployment(database, workspace_id, "uat", LIVE))
     routing_flag(True)
     assert _score(client, scoring_headers).status_code == 200
     assert [str(r) for r in refs_scored] == [LIVE]
 
-    async def broken(*_a: Any, **_k: Any) -> Any:
-        raise RuntimeError("routing store down")
+    if failing == "select_range":
 
-    monkeypatch.setattr(routing, "select_range", broken)
+        async def select_range(*_a: Any, **_k: Any) -> Any:
+            raise RuntimeError("routing store down")
+
+        monkeypatch.setattr(routing, "select_range", select_range)
+    else:
+        real = settings_service.resolve
+
+        async def resolve(session: Any, settings: Any, workspace: Any, key: str, *a: Any) -> Any:
+            if key == _FLAG:
+                raise RuntimeError("settings store down")
+            return await real(session, settings, workspace, key, *a)
+
+        monkeypatch.setattr(settings_service, "resolve", resolve)
     refs_scored.clear()
-    failed = _score(client, scoring_headers)
+    with caplog.at_level(logging.ERROR):
+        failed = _score(client, scoring_headers)
     assert failed.status_code == 500
     assert failed.json()["code"] == "INTERNAL_ERROR"
     assert refs_scored == []
+    (record,) = [r for r in caplog.records if r.getMessage() == "request failed"]
+    assert record.levelno == logging.ERROR
+    assert record.exc_info is not None
+    _cls, value, tb = record.exc_info
+    assert str(value).startswith("RuntimeError")
+    assert failing in [frame.name for frame in traceback.extract_tb(tb)]
