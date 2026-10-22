@@ -72,12 +72,12 @@ test is also still unrun against its code. The red-first runs and the green runs
 ## DB window 1, 2026-10-22 (ENDed 17:10:55 BST) — red, green and negative-control lines
 
 Own database `gipricing_sl-1260_028cded7`, redis db 12, `scripts/run-small.sh`, logs under
-`/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1260-db/` (each starts with the tree and
+`/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1260-db/` (each starts with the head commit and
 `git diff --stat`). Setup `00-setup.log`: `createdb` rc 0, `alembic upgrade head` rc 0 (first
 application of `9b3e7c15d4a2`), `alembic heads` = `9b3e7c15d4a2 (head)`. The window's chain did not
 halt on a nonzero run; 06 ran after 05 failed (the executor's error, noted by the lead).
 
-| Run | Tree | Log | rc | Summary line, verbatim |
+| Run | Commit | Log | rc | Summary line, verbatim |
 |---|---|---|---|---|
 | RED 1: `test_routing.py` | `9cfddde9` | `01-red-t6-9cfddde9.log` | 1 | `2 failed, 5 passed, 1 warning in 10.49s` |
 | RED 2: `test_shadow_scoring.py` | `bfe16607` | `02-red-t8-bfe16607.log` | 1 | `4 failed, 4 passed, 1 warning in 9.45s` |
@@ -130,7 +130,7 @@ and update check the permission first (403 before 404).
 
 ## DB window 2, 2026-10-22 (ENDed 17:20:28 BST) — GREEN at the fix head
 
-Tree `6aa350c7ce7f764b745ae5db3a36f8834d10eb17` (the fix `3d175af3` plus the ledger commit), clean;
+Commit `6aa350c7ce7f764b745ae5db3a36f8834d10eb17` (the fix `3d175af3` plus the ledger commit), clean;
 own database `gipricing_sl-1260_028cded7`, redis db 12, beside FD-1838's gate under the maintainer's
 exception, `GIP_GATE_SLOT` unset. `scratch/sl1260-db/window2.sh` halts on the first nonzero rc.
 Setup `10-w2-setup.log`: `createdb` rc 0, `alembic upgrade head` rc 0, `alembic heads` = `9b3e7c15d4a2 (head)`.
@@ -159,7 +159,7 @@ the seat); the harness reset the working directory and no repository state chang
 
 ## Negative controls (RS 8180 B1/B2) and the migration round trip, 2026-10-22 (window 3)
 
-Tree `c55410d6f9866e1d8549385b29eab8b25e2e75d2` at every run's start (each log opens with
+Commit `c55410d6f9866e1d8549385b29eab8b25e2e75d2` at every run's start (each log opens with
 `git rev-parse HEAD` and `git diff --stat`, which shows the mutation). Own database
 `gipricing_sl-1260_nv3`, redis db 12, beside FD-1838's gate (gate-1b still held) under the
 maintainer's exception; `GIP_GATE_SLOT` unset; one test file per run via `run-small.sh`;
@@ -167,7 +167,7 @@ maintainer's exception; `GIP_GATE_SLOT` unset; one test file per run via `run-sm
 input", for the three violations RS 8180 B1/B2 found unrun. Every mutation is a scratch edit,
 reverted with `git checkout -- <file>`, never committed; `git status --short` was empty after each.
 
-| Control | Mutation (file:line at the tree above) | Log | rc | Summary line, verbatim | Failing by name |
+| Control | Mutation (file:line at the commit above) | Log | rc | Summary line, verbatim | Failing by name |
 |---|---|---|---|---|---|
 | V1 overlapping ranges stored | `platform/routing.py:97` `if _overlaps(a, b):` became `if False and _overlaps(a, b):` | `21-nv1-overlap.log` | 1 | `3 failed, 11 passed, 1 warning in 7.25s` | `test_routing_write.py::test_overlapping_ranges_are_refused_and_nothing_is_written` [straddles-the-end], [inside], [open-ended] |
 | V2 change commits without its Audit Event | `platform/routing.py:131` the `audit.record(...)` call wrapped in `try/except Exception: pass` | `22-nv2-audit-swallowed.log` | 1 | `1 failed, 13 passed, 1 warning in 7.15s` | `test_routing_write.py::test_a_routing_change_cannot_commit_without_its_audit_event` (`assert failed.status_code == 500`) |
@@ -255,7 +255,7 @@ Cleanup: `dropdb` rc 0; `pg_database` count for the window's database 0; redis d
 (it held 1 key at V2's start, from a test run); db 0 was 59 at setup and 62 at the end,
 not 56: it carries other sessions' keys and this window wrote none to it.
 
-**Migration round trip re-run in the no-gate gap (the lead's "GATE END + A GO", FD-1838's gate ended 17:32:38Z).** Tree
+**Migration round trip re-run in the no-gate gap (the lead's "GATE END + A GO", FD-1838's gate ended 17:32:38Z).** Commit
 `eaf045d2c2c1e95c6360256ce439416700b385dd`; own fresh database `gipricing_sl-1260_nv3`; `GIP_GATE_SLOT` unset; `lslocks` showed no
 gate-1 or gate-1b holder (only a gate-2 docs flock). `30-migration-roundtrip-gap.log`, 17:33:59 to 17:34:05 UTC, load1 2.18,
 `PUBSUB NUMSUB` 0 for the three unsuffixed channels. After each step, `SELECT version_num FROM alembic_version` and the
@@ -274,7 +274,7 @@ count 0, redis db 12 `DBSIZE` 0, db 0 is 83 (other sessions' keys; none written 
 
 Thirteen of the 19 are the docs-audit set (check 31 on this ledger's working id). Six were guards catching the slice's own additions.
 Small runs, beside SL-1551's gate, `GIP_GATE_SLOT` unset, one to two DB-free files each, logs under `scratch/sl1260-db/`, tree
-`57b7fa04`-descendant `605fae23` plus the working-tree edit named in each log's `git diff --stat`:
+commit `605fae23` (a descendant of `57b7fa04`) plus the working-tree edit named in each log's `git diff --stat`:
 
 | # | Guard | Fix (commit "test(guards)" unless noted) | Run | Result |
 |---|---|---|---|---|
@@ -299,8 +299,8 @@ Merge commit `00174d02`. `audit-docs.py` after it: FAILED (2), both check 31 on 
 and `id 8139 is created: 2026-10-21, earlier than id 1841's 2026-10-22`).
 
 **DB-lane runs after SL-1551's gate ENDed (20:05:56Z).** No code gate was running; small runs, own database `gipricing_sl-1260_nv3`
-(fresh, `alembic upgrade head`, `9b3e7c15d4a2 (head)`), redis db 12, `GIP_GATE_SLOT` unset, tree `4a9c5200c8483632f34929664a0c6e0841fd5ab4`
-(each log opens with the tree and `git diff --stat`), load1 2.3 to 2.6, `scratch/sl1260-db/`:
+(fresh, `alembic upgrade head`, `9b3e7c15d4a2 (head)`), redis db 12, `GIP_GATE_SLOT` unset, commit `4a9c5200c8483632f34929664a0c6e0841fd5ab4`
+(each log opens with the head commit and `git diff --stat`; the logs label that line "tree", and it is `git rev-parse HEAD`, a commit), load1 2.3 to 2.6, `scratch/sl1260-db/`:
 
 | Log | Files | rc | Summary line, verbatim |
 |---|---|---|---|
@@ -328,7 +328,7 @@ cites "RS 8180" and "RS 8187" stay as they are (those records mint later, on the
 
 `audit-docs.py` at the minted head `5d79bbf4`: FAILED (1), `check 31: gap in the full allocation between 1855 and 1859`. The id is above the unmerged 1856 to 1858
 of slice C (#1364), so this PR merges after #1364; the chronology line is cleared by the mint date. The 13 tests that failed in the gate, re-run by `run-small.sh`
-on that head, one to three files each, `GIP_GATE_SLOT` unset, tree `5d79bbf463da3ffdfb582005e18c8275d35246d3`, in `scratch/sl1260-db/`:
+on that head, one to three files each, `GIP_GATE_SLOT` unset, commit `5d79bbf463da3ffdfb582005e18c8275d35246d3`, in `scratch/sl1260-db/`:
 
 | Log | Files | Summary line, verbatim | The failures |
 |---|---|---|---|
@@ -340,3 +340,29 @@ on that head, one to three files each, `GIP_GATE_SLOT` unset, tree `5d79bbf463da
 2 + 4 + 5 + 2 = 13, the same 13 as the gate. Each failure's captured audit output is the single line `check 31: gap in the full allocation between 1855 and 1859`
 (`grep -A1 "FAILED ("` in each log), nothing else. They go green when #1364 merges and this branch takes `origin/main`; that re-run, on the merged head, is owed to the
 merge step. Under rule 1(f) the gate stands on the first-gate pytest line `13 failed, 6742 passed` of the re-gate with exactly these 13.
+
+## RS 8198 follow-ups (the lead's verdict CLEAN on three fixes, 2026-10-22)
+
+**N1a, the INTERNAL_ERROR wording (`00` §5.3).** The entry now carries the maintainer's 17:43:37 BST condition (a) wording; nothing else in it changed.
+Before (`docs/specs/00-overview.md:388`): "…is the first spec text to name it.)* An unhandled exception: status `500`, title "Internal".
+After: "…is the first spec text to name it.)* An unhandled exception, a server-side failure the caller cannot fix: status `500`, title "Internal".
+
+**N1b, the red control of `test_the_routing_and_shadow_flags_are_environment_only`.** The sibling test had no recorded red. Mutation, in the worktree only:
+`backend/src/app/platform/settings.py`, the definition of `features.date_routing_enabled`, `scope=SettingScope.ENVIRONMENT` became
+`scope=SettingScope.WORKSPACE_OR_ENVIRONMENT` (a one-line diff, in the log header). Own fresh database, `GIP_GATE_SLOT` unset, commit `7fdc9e24`-based working
+tree (log headers name it), load1 2.7:
+
+| Run | Log | rc | Summary line, verbatim |
+|---|---|---|---|
+| GREEN before | `44-n1b-green-before.log` | 0 | `23 passed, 1 warning in 3.08s` |
+| RED, flag scope flipped | `45-n1b-red-flag-scope-flipped.log` | 1 | `2 failed, 21 passed, 1 warning in 3.31s`: `test_the_routing_and_shadow_flags_are_environment_only` and `test_scope_defaults_to_workspace_only_and_three_keys_are_declared_environment_capable` |
+| GREEN after the revert | `46-n1b-green-after.log` | 0 | `23 passed, 1 warning in 3.34s` |
+
+Revert: `git checkout -- backend/src/app/platform/settings.py`, then `cmp` of the file against a copy taken before the mutation (identical) and `git status --short`
+showing only the two doc files of this change. The mutation was never committed. Disclosure: this run needed a database, so it did `createdb -T` and
+`alembic upgrade head` on the seat's own per-worktree database while the paired gates (gate-1 and gate-1b) were held, under the lead's instruction to run it and the
+earlier generalised exception for own-database small runs; the shared stack and the gates' databases were untouched.
+
+**N2, labels.** Seven lines of this ledger labelled a commit sha as a tree (the logs print `git rev-parse HEAD` under the word "tree"). Relabelled "commit" (or
+"head commit") for `6aa350c7`, `c55410d6`, `605fae23`, `eaf045d2`, `4a9c5200`, `5d79bbf4` and the table column of the first window; the front-matter `tree: 44c18e11` is
+the template field, left as it is. The real tree of the minted head is `git rev-parse 5d79bbf4^{tree}` = `e592cd85cb57e557add1b7e797038eb57530acda`.
