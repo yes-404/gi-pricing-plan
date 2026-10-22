@@ -152,3 +152,5 @@ The negative controls of window 1 stand: the lines they edited are unchanged by 
 no-op command during the window, a second breach of the no-`cd` rule (the first was at the start of
 the seat); the harness reset the working directory and no repository state changed.
 
+
+**Merged-head tests:** owed to the code gate at the head the lead names (the full suite, ruff, mypy and import-linter at the merge of `origin/main` 71e481fa, head `899e957ec99df16022933ae1a1fd808a054986d1` when written); no further DB window is run before it (the lead, 2026-10-22).
