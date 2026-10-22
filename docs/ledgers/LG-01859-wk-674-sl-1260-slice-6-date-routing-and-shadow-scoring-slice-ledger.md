@@ -315,3 +315,28 @@ Cleanup: `dropdb` rc 0, `pg_database` count 0, redis db 12 `DBSIZE` 0, db 0 is 5
 (`docs/roadmap.md` and `docs/specs/03-rating-engine.md` auto-merged), resolved as before (origin/main's, regenerated under the gate-2 flock,
 `doc-index.py --check` rc 0). `audit-docs.py` after it: FAILED (2), both check 31 on this ledger's working id (`gap … between 1853 and 8139`, and the
 chronology line, which is resolved at the mint by the mint date with the original in a comment, `mint-and-finish` step 5).
+
+## Mint, and the 13 docs-audit tests re-run on the minted head (2026-10-22)
+
+Re-merge of `origin/main` e202f28b (#1360 on #1363): `git merge-tree --write-tree HEAD origin/main` rc 1, one conflict in the generated `docs/INDEX.md`
+(theirs, regenerated, `--check` rc 0). Mint per the lead's allocation (eta 22:42:58 BST, free-checked): working id 8139 became `LG-1859`, in its own commit:
+`git mv` of the file, `id: LG-1859`, `created: 2026-10-22  # drafted 2026-10-21 under working id 8139; minted 2026-10-22 as LG-1859`, a disclosure line under the H1,
+`docs/INDEX.md` regenerated (`doc-index.py --check` rc 0, byte-stable). Whole-tree grep for the old id, `\bLG[ -]0?8139\b`: before the mint 4 lines (the file's
+`id:`, the H1, one quoted ruling line, INDEX); after, 0. The one quoted line (the maintainer's item 4, "LG-8139 records it.") has the id elided in brackets
+("[the ledger's working id, 8139, elided; minted as LG-1859] records it."), because check 32 refuses an unresolved id even inside a quote. The prose
+cites "RS 8180" and "RS 8187" stay as they are (those records mint later, on their own branches). `LG-1859` resolves in INDEX and in the file.
+
+`audit-docs.py` at the minted head `5d79bbf4`: FAILED (1), `check 31: gap in the full allocation between 1855 and 1859`. The id is above the unmerged 1856 to 1858
+of slice C (#1364), so this PR merges after #1364; the chronology line is cleared by the mint date. The 13 tests that failed in the gate, re-run by `run-small.sh`
+on that head, one to three files each, `GIP_GATE_SLOT` unset, tree `5d79bbf463da3ffdfb582005e18c8275d35246d3`, in `scratch/sl1260-db/`:
+
+| Log | Files | Summary line, verbatim | The failures |
+|---|---|---|---|
+| `40-r13-a-ids.log` | `tests/test_audit_docs_ids.py` | `2 failed, 116 passed in 67.62s (0:01:07)` | `test_the_real_tree_passes_all_ten_checks`, `test_doc_id_check_exits_0_on_the_real_tree` |
+| `41-r13-b.log` | `test_audit_docs_finding_citations.py`, `test_audit_docs_process_core_digest.py`, `test_audit_docs_w37_11_ceiling.py` | `4 failed, 25 passed in 195.82s (0:03:15)` | `test_a_finding_resolved_only_by_a_closure_record_is_not_flagged`, `test_an_unrelated_file_edit_is_the_negative_control_and_stays_green`, `test_the_committed_digest_currently_matches_the_committed_spec`, `test_audit_docs_end_to_end_exit_0_then_1_then_0_on_an_injected_residue` |
+| `42-r13-c.log` | `test_doc_index.py`, `test_register_lint.py`, `test_register_owed.py` | `5 failed, 94 passed in 98.73s (0:01:38)` | `test_an_index_skipping_a_reserved_block_breaks_contiguity`, `test_check_29_is_wired_into_the_docs_gate`, `test_check_29_note_carries_the_residue_line`, `test_phase1b_residue_count_matches_check_29s_own_count`, `test_check_29_wiring_is_undisturbed` |
+| `43-r13-d.log` | `tests/test_repository_invariants.py` | `2 failed, 9 passed in 52.38s` | `test_money_discipline_is_enforced_by_the_docs_audit`, `test_journey_citations_are_audited_in_ci` |
+
+2 + 4 + 5 + 2 = 13, the same 13 as the gate. Each failure's captured audit output is the single line `check 31: gap in the full allocation between 1855 and 1859`
+(`grep -A1 "FAILED ("` in each log), nothing else. They go green when #1364 merges and this branch takes `origin/main`; that re-run, on the merged head, is owed to the
+merge step. Under rule 1(f) the gate stands on the first-gate pytest line `13 failed, 6742 passed` of the re-gate with exactly these 13.
