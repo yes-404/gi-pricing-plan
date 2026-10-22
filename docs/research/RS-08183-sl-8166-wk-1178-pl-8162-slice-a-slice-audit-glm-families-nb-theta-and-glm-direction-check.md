@@ -25,7 +25,7 @@ Does `origin/main...sl-8166-wk1178-pl8162-a` meet PL 8162 slice A's acceptance i
 
 Range `origin/main...sl-8166-wk1178-pl8162-a`; `origin/main` `71e481fa5d240ed366cd80c1a8c6cf6cd1d918d5`; branch tip `eece638c23b122c17ce899a9f78eb2d6de726a9e`, tree `58390b34bed8926b64951335c149d23afc3e1173`; merge-base `f3462d8fc1336dc4583fe8a7af92fed399993a55` (main has since moved by #1359). 17 commits, 16 files, +804/−18 (`git diff --stat origin/main...<tip>`). Read by `git show/diff` only. No test, DB, docker or gate was run by this seat. Two static runs on a `git archive` copy of the tip: `ruff check` on the 9 changed `.py` files (rc 0, "All checks passed!") and a Python `ast` import scan (below). `PL-8162` read at `draft/pl-8162` `6b1de3a9`; the maintainer's rulings from `to-lead.md` "2026-10-22 16:02:49 BST".
 
-**The branch is not on origin.** `git ls-remote origin sl-8166-wk1178-pl8162-a` prints nothing; the tip exists only in the local worktree `.claude/worktrees/sl-8166` (`git branch -a --list '*8166*'`). Audited from the local ref; the executor must push before any PR (seat-brief item 8).
+**The branch was not on origin when this audit began.** `git ls-remote origin sl-8166-wk1178-pl8162-a` printed nothing; the tip existed only in the local worktree `.claude/worktrees/sl-8166`. The lead pushed it unchanged at about 17:3x BST (lead 26; `refs/heads/sl-8166-wk1178-pl8162-a` = `eece638c`, re-confirmed by `git ls-remote`, no content change). Audited from the local ref, identical to the pushed one. `LG-8167` makes no push or `ls-remote` claim (`grep -n -i -E 'push|ls-remote|origin/'` finds only the base line), so no ledger line was untrue at the remote.
 
 ## Findings
 
@@ -38,7 +38,7 @@ The maths, the θ boundary and the direction rule are correct (sections 2 and 3)
 | B1 | Spec-first order broken (acceptance item 3); not disclosed in LG-8167 | lead rules: accept the deviation (recorded in the LG) or reorder |
 | B2 | "GREEN by import closure" was a text grep; the true closure is larger and part of it was never run (item 29) | gate full suite decisive; LG wording corrected; frontend router tests added |
 | B3 | 2 backend skips are unnamed and may be `conftest_db` skips; 3 of 4 pricing-core skips are inferred, not read | rerun that batch with `-rs` (lead grants) |
-| B4 | Branch unpushed, based on `f3462d8f`; LG has stale or wrong fields; audit section empty | push; re-merge main (item 21); LG corrections below |
+| B4 | Based on `f3462d8f` (branch since pushed by the lead); LG has stale or wrong fields; audit section empty | push; re-merge main (item 21); LG corrections below |
 
 ### 1. Scope from PL 8162 slice A, then evidence (acceptance items 3–6, 8–10; item 7 is `power(k)`, slice C's strike)
 
@@ -121,4 +121,4 @@ Conclusion in the LG: no path to a persisted NB model today. Checked: `ModelRow(
 
 ## Proposed record
 
-NOT-CLEAN, 4 blocking items (B1–B4), all fixable without changing the code. The lead's decisions: B1 accept-and-record or reorder; B2 gate wording and the 6 frontend files; B3 `-rs` rerun; B4 push + re-merge + LG edits. After those, a narrow re-audit (the RE-audit rule) of B1–B4 only, named against the re-merged range.
+NOT-CLEAN, 4 blocking items (B1–B4), all fixable without changing the code. The lead's decisions: B1 accept-and-record or reorder; B2 gate wording and the 6 frontend files; B3 `-rs` rerun; B4 re-merge + LG edits. After those, a narrow re-audit (the RE-audit rule) of B1–B4 only, named against the re-merged range.
