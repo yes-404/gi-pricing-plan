@@ -41,7 +41,23 @@ Maintainer amendments of 2026-10-22 (relayed by lead 26, before the runs): `Buck
 
 ### Gate
 
-(left empty for the lead's gate)
+Full code gate, both halves, slot `gate-1`, on head `04b0a3679924834a2e7fdf664f8e28b41346c135`, tree `b915571bb4f30195645335e49f2c831b06e227a4` (branch `fix/fd-8169-ensure-bucket-race`). Script `scratch/fix8169-gate1.sh`; logs `~/gi-pricing-plan.local/scratch/fix8169-gate/` (`gate.log` holds the table). START `2026-10-22T21:41:17+00:00`, END `2026-10-22T22:58:53+00:00 3.58 2.40 2.84`.
+
+| Stage | rc |
+|---|---|
+| ruff | 0 |
+| mypy | 0 |
+| import_linter | 0 |
+| audit_docs | 1 (this slice's own working ids only: check 31 gap 1855..8172; check 32 padded id at the build-log line of the 2026-10-22 re-merge) |
+| req_coverage | 0 |
+| contracts | 0 |
+| pytest | 1: `13 failed, 6674 passed, 21 skipped, 134 warnings in 3005.65s (0:50:05)` |
+| pnpm install / generate:api / lint / type-check / test / build | 0 / 0 / 0 / 0 / 0 / 0; vitest `Test Files  129 passed (129)`, `Tests  817 passed (817)` |
+| demo `--journey wf-699` | 0 (designed stop 22:57:57; D7 ok) |
+| keycloak restore | rc 0; bind source under tools-main |
+| clean-up | own DB count 0; redis db 1 dbsize 0; redis db 3 dbsize 0; buckets removed |
+
+The 13 pytest failures are exactly the docs-audit set of the 1(f) standing ruling (`test_audit_docs_finding_citations` 1, `test_audit_docs_ids` 2, `test_audit_docs_process_core_digest` 2, `test_audit_docs_w37_11_ceiling` 1, `test_doc_index` 1, `test_register_lint` 3, `test_register_owed` 1, `test_repository_invariants` 2). The gate STANDS under 1(f) (the lead's entry of this date); the conditions before the ACK (mint at its turn, audit-docs rc 0, those tests re-run on the minted head) are still owed.
 
 ### Audit
 
