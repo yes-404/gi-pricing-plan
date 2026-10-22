@@ -100,3 +100,15 @@ GREEN, at `ab405217` (the branch head with N1–N3):
 | `RatingDesignView.test.ts` | `Test Files  1 passed (1)` / `Tests  7 passed (7)` | 0 | `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/green-RatingDesignView.log` |
 
 8 files, 55 passed, 0 failed. One run each: this is not a verdict on flakiness (the :72 race above was one).
+
+### Negative controls (2026-10-22, exec-1554e; the lead's condition on RS 8158)
+
+Each control is a scratch edit at head `ab48b63e`, run through the small-test slot with one test file, then restored with `git checkout -- <file>`. Nothing mutated was committed; `git status --short` was empty after each restore. Each log starts with `git rev-parse HEAD` and `git diff --stat`. Each run also printed load1 before it; the logs show it (N1 11.25, above the brief's < 6 line).
+
+| Control | Mutation (file:line, scratch) | Summary line (verbatim) | rc | Failing test(s) by name | Log |
+|---|---|---|---|---|---|
+| N1 | `frontend/src/components/dag/DagDesigner.vue:119`: removed the `strokeDasharray: "6 4"` conditional-edge style line | `Tests  1 failed \| 11 passed (12)` | 1 | `DagDesignerMounts.test.ts` > "draws the conditional mount's edges dashed and the unconditional mount's solid" | `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/negctl-N1.log` |
+| N2 | `frontend/src/views/RatingDesignView.vue:73`: `canSave` also required every mount's ref to be in `rating.pins.sub_graphs` | `Tests  2 failed \| 2 passed (4)` | 1 | `RatingDesignViewMounts.test.ts` > "warns of an unpinned mount yet leaves save enabled (RL-1835 (ii) 3)"; also "draws the loaded mounts and saves them, without any write to a Rating Version" | `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/negctl-N2.log` |
+| N3 | `frontend/src/components/dag/MountInspector.vue:46`: `setRef` no longer resets `inputs`/`outputs` (`edit({ ref: next })`) | `Tests  1 failed \| 7 passed (8)` | 1 | `MountInspector.test.ts` > "resets the port maps when the pick has another slug (the slice's choice, RS 8156 (v))" | `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/negctl-N3.log` |
+
+Disclosure: a first attempt had a shell argument slip. Its mutation step failed (nothing was edited) and vitest ran the whole frontend suite three times (826 tests each, 2 failed in `graph.test.ts`, unmutated tree). Those runs are not controls and have no log here. The 2 `graph.test.ts` failures at the unmutated head are unexplained and not investigated.
