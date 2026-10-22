@@ -278,6 +278,22 @@ The journey's own C4 line stays "functional bound, not the NFR-494 verdict".
 
 `audit-docs.py` under the gate-2 flock: rc 0, "All checks passed". The 13 tests named in the maintainer's "2026-10-22 15:34:50 BST" entry were re-run by file through `scripts/run-small.sh` at head `d25e7e74060edfedace9f8485084d4d7225c92d6` (the merge; the LG text then uncommitted in the working tree), because `run-small.sh` refuses node ids (refusal 71): `tests/test_audit_docs_finding_citations.py tests/test_audit_docs_ids.py tests/test_audit_docs_process_core_digest.py` → `124 passed in 191.26s (0:03:11)`, rc 0; `tests/test_audit_docs_w37_11_ceiling.py tests/test_doc_index.py tests/test_register_lint.py` → `110 passed in 97.00s (0:01:37)`, rc 0; `tests/test_register_owed.py tests/test_repository_invariants.py` → `23 passed in 68.71s (0:01:08)`, rc 0. Logs `scratch/sl1711-reds/docs13-1.log` to `docs13-3.log`, each first-lined with the head.
 
+The 13 node ids are the `FAILED` lines of `scratch/sl1711-gate/pytest.log` at be830a88 (`sort -u`). `uv run --directory sl-1711 pytest --collect-only -q <the 8 files>` at head `1cac9494b31d7df6cc2eeb9729dfd29a43df8d01` (`scratch/sl1711-reds/docs13-collect.log`, `257 tests collected in 0.31s`, rc 0) collects each of them; 257 = 124 + 110 + 23, the three runs' passed counts at that head (`docs13-final-1.log` to `docs13-final-3.log`: `124 passed in 190.68s`, `110 passed in 95.55s`, `23 passed in 74.04s`, no failed, no skipped), so every collected test, these 13 included, passed. Collected, each exactly as listed:
+
+- `tests/test_audit_docs_finding_citations.py::test_a_finding_resolved_only_by_a_closure_record_is_not_flagged`
+- `tests/test_audit_docs_ids.py::test_doc_id_check_exits_0_on_the_real_tree`
+- `tests/test_audit_docs_ids.py::test_the_real_tree_passes_all_ten_checks`
+- `tests/test_audit_docs_process_core_digest.py::test_an_unrelated_file_edit_is_the_negative_control_and_stays_green`
+- `tests/test_audit_docs_process_core_digest.py::test_the_committed_digest_currently_matches_the_committed_spec`
+- `tests/test_audit_docs_w37_11_ceiling.py::test_audit_docs_end_to_end_exit_0_then_1_then_0_on_an_injected_residue`
+- `tests/test_doc_index.py::test_an_index_skipping_a_reserved_block_breaks_contiguity`
+- `tests/test_register_lint.py::test_check_29_is_wired_into_the_docs_gate`
+- `tests/test_register_lint.py::test_check_29_note_carries_the_residue_line`
+- `tests/test_register_lint.py::test_phase1b_residue_count_matches_check_29s_own_count`
+- `tests/test_register_owed.py::test_check_29_wiring_is_undisturbed`
+- `tests/test_repository_invariants.py::test_journey_citations_are_audited_in_ci`
+- `tests/test_repository_invariants.py::test_money_discipline_is_enforced_by_the_docs_audit`
+
 ### Carried observation (not a slice finding)
 
 Exit-demo run length for WF-701 on compose: 2500 s (WF-699 part 1335 s plus WF-701 part 1165 s), which is a **recorded MISS** against the pre-registered 600 s for the WF-701 part (PL-1710 T7), not a fail. No budget exists; the maintainer put it to the §14 plan review before the 12 Nov exit demo (to-lead "2026-10-22 13:22:09 BST"). For the record, the three `dislocation.run` spans of the R5 run above sum to 1784.2 s (515.6, 744.9 and 523.7 s), consistent with run 2's four spans (2326.9 s) recorded in `docs/findings/register.md` row 332's dated line.
