@@ -1777,6 +1777,8 @@ Minted as `SL-1275` at #943's merge turn, 2026-09-30, with `python3 scripts/doc-
 
 (Activated 2026-10-21 on the maintainer's entry "2026-10-21 15:03:33 BST — Maintainer: GOs on the 15:02:44 work queue" (`to-lead.md`), item 4. `PL-1268` and `PL-1665` are `active`; `PL-1621` stands as `PL-1665` amends it. The slice's one ledger is `LG-1839` (working id reserved by the lead in eta.md; minted at the merge turn). Executor seat `exec-1275`, branch `sl-1275-wk690-s5-authoring-view`.)
 
+(Built and gated 2026-10-22; **stays `active`** on the maintainer's B4 ruling ("2026-10-22 00:57:13 BST": merge-then-measure, precedent SL-1367 Acc 10). Slice audit `RS 8151` NOT-CLEAN, resolved by R1–R3; re-audit `RS 8152` CLEAN for the delta; the code gate re-ran at `96354f9c` (ledger `LG-1839` item 13). **Carried, owner WK-690:** the `PL-1665` 5.7 measurement (3c, 3d) in a TRUE ALONE window, which closes the slice; `features.expression_objectives_enabled` stays default OFF; FR-1840's 3d budget stays provisional until measured. Also carried to WK-690: FD 8153 (`grammar_refusal` `RecursionError` on the create path, MEDIUM).)
+
 #### SL-1622 — WK-690 fix row: FD-1349, FD-1492 and FD-1512 fixed before close, and FD-1294's discharge line
 
 ```yaml
