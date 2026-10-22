@@ -1094,7 +1094,8 @@ _NB_THETA_R = 2.0  # R/MASS `glm.nb` form: variance mu + mu**2 / theta
 def _family_book(family: str, n: int = 8_000, seed: int = 20261022) -> pl.DataFrame:
     """Data simulated from `family` with a +0.5 effect for `urban` on the link scale."""
     rng = np.random.default_rng(seed)
-    urban = rng.integers(0, 2, n)
+    # `rural` is the majority level, so it is the base level and the term is `area[urban]`.
+    urban = (rng.random(n) < 0.3).astype(int)
     exposure = np.ones(n)
     if family == "poisson":
         y = rng.poisson(np.exp(-1.0 + 0.5 * urban)).astype(float)
