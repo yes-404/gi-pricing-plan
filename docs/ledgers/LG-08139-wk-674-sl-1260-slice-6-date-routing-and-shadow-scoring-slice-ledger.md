@@ -58,3 +58,12 @@ the three tables; `test_settings.py` has no test of the two flags (R6.1, RL-1311
 ## PRs
 
 None yet. The slice stops at PR-READY; the lead opens the PR.
+
+## Disclosure — the new tests' RED was never shown (2026-10-22)
+
+The tests of T5 to T9 were written and committed before the code they cover (`1f119659`, `9cfddde9`,
+`0093de4b`, `bfe16607`, `2592edc2`), but none was run at its test commit: the database lane was closed
+(the SL-1711 compose retry, then SL-1275's code gate). So no test's failing state before its code, and no
+"red first on deliberately broken input" the RL-1834 acceptance list asks for, has been observed. Each
+test is also still unrun against its code. The red-first runs and the green runs are owed in the DB window.
+
