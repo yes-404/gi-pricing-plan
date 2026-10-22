@@ -143,8 +143,11 @@ ROUTE_SCOPES: dict[Route, ScopeType] = {
 
 _RL_8182 = ("RL-8182", "the slice RL 8182 cuts")
 _FD_8184 = ("FD-8184", "the slice RL 8182 cuts (FD 8184 joins it)")
-_THIS = ("SL-8185", "SL-8185 Task 4, after SL-1736 merges")
+_THIS = ("SL-8192", "SL-8192 (SL 8185 Task 4 follow-on), after SL-1736 merges")
 
+#: The rule-set row is paired with four strict xfails in `test_dataset_scoped_writes.py`
+#: (`_RULE_SET_OWED`): when SL 8192 fixes the route both XPASS and this row stops failing, so the
+#: run goes red until the mark and the row are deleted together.
 #: Route -> (owner record, the slice that removes the row). A row means: this route fails the
 #: predicate today, the failure is owned, and that slice deletes the row. Working ids are written
 #: in hyphen form until minted (`test_every_known_gap_names_an_owner_in_the_index`).
@@ -563,3 +566,10 @@ def test_the_spec_names_a_dataset_scope_only_for_routes_declared_dataset() -> No
     }
     wrong = [r for r in matched if declared.get(r) is not ScopeType.DATASET]
     assert not wrong, f"spec says a Dataset scope; ROUTE_SCOPES does not (or has no row): {wrong}"
+
+
+@pytest.mark.req("FR-345")
+def test_held_anywhere_with_a_counted_gate_is_a_type_error() -> None:
+    """`held_anywhere=True` never counts: asking it to is refused at construction (PL-8181 DP-1)."""
+    with pytest.raises(TypeError):
+        requires(Perm.DATASET_WRITE, held_anywhere=True, management_counted=True)

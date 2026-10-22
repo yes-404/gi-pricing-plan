@@ -196,7 +196,7 @@ def requires(
     """
 
     if held_anywhere and management_counted:
-        raise ValueError(
+        raise TypeError(
             "requires(held_anywhere=True) never counts: the service counts after its scoped check"
         )
     counted = not held_anywhere if management_counted is None else management_counted

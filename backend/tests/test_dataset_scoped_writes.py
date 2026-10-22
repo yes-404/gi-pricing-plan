@@ -191,6 +191,15 @@ def _unknown(route: str, client: TestClient, headers: dict[str, str]):
     )
 
 
+_RULE_SET_OWED = pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "FD 8177 rule-set limb: owned by SL 8192 (SL 8185 Task 4 follow-on), "
+        "activates when SL-1736 merges"
+    ),
+)
+
+
 # route -> (call, the scoped-to-X principal's key in `world.headers`, the success status)
 ROUTES: dict[str, tuple[Callable[..., Any], str, int]] = {
     "dictionary": (_dictionary, "analyst_x", 200),
@@ -198,9 +207,18 @@ ROUTES: dict[str, tuple[Callable[..., Any], str, int]] = {
     "acknowledge": (_acknowledge, "actuary_x", 201),
 }
 
+#: The routes for the tests that are red at base. The rule-set limb is carried to SL 8192: its four
+#: tests are STRICT xfails, so the day the fix lands they XPASS and fail the run, forcing this mark
+#: and the rule-set row of `test_route_scope_guard.KNOWN_SCOPE_GAPS` out together.
+RED_ROUTES = [
+    "dictionary",
+    pytest.param("rule-set", marks=_RULE_SET_OWED),
+    "acknowledge",
+]
+
 
 @pytest.mark.req("FR-345")
-@pytest.mark.parametrize("route", list(ROUTES))
+@pytest.mark.parametrize("route", RED_ROUTES)
 def test_a_grant_scoped_to_one_dataset_reaches_that_datasets_write(
     client: TestClient, world: World, route: str
 ) -> None:
@@ -211,7 +229,7 @@ def test_a_grant_scoped_to_one_dataset_reaches_that_datasets_write(
 
 
 @pytest.mark.req("FR-345")
-@pytest.mark.parametrize("route", list(ROUTES))
+@pytest.mark.parametrize("route", RED_ROUTES)
 def test_the_same_grant_on_another_dataset_is_refused_by_the_handler_as_scope_denied(
     client: TestClient, world: World, route: str
 ) -> None:
@@ -250,7 +268,7 @@ def test_a_member_with_no_grant_is_refused_by_the_route_before_any_lookup(
 
 
 @pytest.mark.req("FR-345")
-@pytest.mark.parametrize("route", list(ROUTES))
+@pytest.mark.parametrize("route", RED_ROUTES)
 def test_a_scoped_holder_asking_for_an_unknown_id_gets_not_found(
     client: TestClient, world: World, route: str
 ) -> None:
@@ -304,7 +322,7 @@ def test_the_route_gates_refusal_is_not_counted(
 
 
 @pytest.mark.req("FR-452")
-@pytest.mark.parametrize("route", list(ROUTES))
+@pytest.mark.parametrize("route", RED_ROUTES)
 def test_the_scoped_refusal_is_a_scope_denied_and_is_not_counted(
     limited_client: TestClient, world: World, limit_two: None, route: str
 ) -> None:
