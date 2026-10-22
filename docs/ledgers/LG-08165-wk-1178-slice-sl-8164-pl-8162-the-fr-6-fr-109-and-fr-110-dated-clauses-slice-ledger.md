@@ -44,6 +44,7 @@ Docs only. Owed after the ALONE window ends: `audit-docs.py`, `doc-index.py` and
 ### Build log
 
 - 2026-10-22 — branch `sl-8164-wk1178-pl8162-c` from `origin/main` @ `f3462d8f`; plan brought from `draft/pl-8162` @ `6b1de3a9`; clauses, roadmap row and this ledger written.
+- 2026-10-22 — re-merged `origin/main` @ `71e481fa` (merge commit `f524df5f`; `git merge-tree --write-tree` rc 1, only `docs/INDEX.md` conflicted, taken from main and regenerated). On `f524df5f` under the gate-2 flock: `doc-index.py --check` rc 0 (`OK (byte-stable)`); `register-lint.py` rc 0 (`OK (0 violations)`); `audit-docs.py` rc 1, `FAILED (2)`, both check 31 (`gap in the full allocation between 1840 and 8162`, `between 8162 and 8164`), the unminted working ids. Full gate owed, queued after FD-1838.
 
 ## PRs
 
