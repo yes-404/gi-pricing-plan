@@ -154,5 +154,5 @@ Disclosure: a first attempt had a shell argument slip. Its mutation step failed 
 
 - `git merge --no-ff origin/main` (71e481fa) into `beae0dff`: `git merge-tree --write-tree` rc 1, the only conflict `docs/INDEX.md`; taken from main, merge commit `91ad7dd1`, then `docs/INDEX.md` regenerated under the gate-2 flock (`doc-index.py` rc 0, `doc-index.py --check` rc 0 "byte-stable") in its own commit, head `e330bbf5`. The slice touches no contract, so `generate-contracts.py --check` was not run here (the gate runs it).
 - `uv sync --all-packages --frozen` rc 0, `pnpm --dir frontend install --frozen-lockfile` rc 0 (both niced).
-- `audit-docs.py` rc 1 at `e330bbf5`, `FAILED (1)`: `check 31: gap in the full allocation between 1840 and 8141` — the slice's own working id LG-8141, mint pending (expected). The check 36 lines (legacy scoped ids in WF-00702) are warnings, not failures. `register-lint.py` rc 0.
+- `audit-docs.py` rc 1 at `e330bbf5`, `FAILED (1)`: `check 31: gap in the full allocation between 1840 and 8141` — the slice's own working id LG-8141, mint pending (expected). The check 36 lines (legacy scoped ids in WF-702) are warnings, not failures. `register-lint.py` rc 0.
 - No code or test was run in this entry; the GREEN of record is still the gate's full vitest.
