@@ -76,6 +76,10 @@ Phase restriction in force: the SL-1711 compose retry is ALONE; edits and git on
 
 **Deviation from the plan, recorded:** the plan puts the thresholds in P1 and the contention subcommand in P0. The thresholds and bands are ruled values and carry no run-dependent number except `NEAR_BOUND_FRACTION`, so they are in P0 with it at the interim 0.43; P1 is the commit that replaces that one number by Task 0's band. Every sweep run's start stamp must still be later than the P1 `%aI` (or, if D4 sends the grant to nfr-bench-1 and the factor never lands, than P0's).
 
+**Disclosed deviation: not test-first (lead 26, 2026-10-22).** `157d327e` wrote the harness code before its tests existed, so Task 0 and the harness are not test-first as `test-driven-development` and the plan require. No red run was taken before the code. The red runs still possible are shown at the first `run-small` of `tests/test_measure_p2_nfr_sweep.py`, and any red there is recorded here by cause. The same applies to the later subcommands (`9a350904`), which have no unit test of their own.
+
+**Rule for Grant 4 (lead 26):** the Redis db, the MinIO alias and the bucket removal in the Grant 4 block are guesses. They are replaced by lines copied verbatim from `scratch/gate-template-demostop.sh` and the compose-retry file before any grant request is sent.
+
 **Dependency to know:** `cells-diff` imports two seeding helpers from `backend/tests/test_rate_tables_service.py` (`_seed_approved_model`, `_set_threshold`), because the plan says to mirror the test fixtures rather than reinvent them; `one-way` and `storage` drive `examples/fremtpl2/seed.py` (`run`, `grant_demo_principals`, `build_csv`, `recipe`). A change to any of those names breaks the harness.
 
 **D3 correction applied:** `CELLS_DIFF_RUNS` in the harness lists five runs.
