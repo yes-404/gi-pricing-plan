@@ -2,7 +2,7 @@
 id: FD-1730
 family: finding
 title: An upload made through upload-url cannot be ingested, because the completion step FR-421 implies was never built, so the public API cannot ingest a dataset, and the gap was deferred 16 days without an owner
-status: active
+status: closed
 created: 2026-10-14
 owner: auditor
 tree: 8eaf6d5f9cd4204e1e077b44069d4afd395f1461
