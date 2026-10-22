@@ -106,6 +106,32 @@ describe("the model spec builder", () => {
     expect(validateSpec).not.toHaveBeenCalled();
   });
 
+  it("asks for a negative binomial's theta and posts it, never defaulting one", async () => {
+    // PL-8162 A6 / DP-T: theta is declared (R/MASS `glm.nb` form), so the field starts
+    // empty and a spec with none carries no `theta` for the backend to refuse by name.
+    const user = userEvent.setup();
+    await fillRequired();
+    expect(screen.queryByLabelText(/theta/i)).toBeNull();
+
+    await user.selectOptions(screen.getByLabelText("Family"), "negative_binomial");
+    const input = screen.getByLabelText(/theta/i) as HTMLInputElement;
+    expect(input.value).toBe("");
+    await settle();
+    const without = validateSpec.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+    expect(without.family).toBe("negative_binomial");
+    expect(without.family_params).toBeUndefined();
+
+    await user.type(input, "2");
+    await settle();
+    const sent = validateSpec.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+    expect(sent.family_params).toEqual({ theta: 2 });
+
+    await user.selectOptions(screen.getByLabelText("Family"), "gamma");
+    await settle();
+    const gamma = validateSpec.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+    expect(gamma.family_params).toBeUndefined();
+  });
+
   it("keeps the three objective shapes apart when the tab changes", async () => {
     // Decision 1. A shared "objective" abstraction would carry a value across tabs; these
     // are three different contract shapes, and the GLM arm has no `objective` field at all.
