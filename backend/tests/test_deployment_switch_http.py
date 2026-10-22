@@ -36,6 +36,7 @@ from app.platform.deployment_switch import (
     SwitchMessage,
     SwitchSubscription,
     build_switch_client,
+    switch_stack,
 )
 
 # The Slice 2 deployment tests' fixtures and helpers, shared rather than copied.
@@ -82,7 +83,9 @@ class _Peer:
         self._thread = threading.Thread(target=self._loop.run_forever, daemon=True)
         self._thread.start()
         self._client = build_switch_client(settings.redis_url.get_secret_value())
-        switch = RedisSwitch(self._client, f"{settings.environment.value}:{settings.tenant_id}")
+        switch = RedisSwitch(
+            self._client, switch_stack(settings.environment.value, settings.tenant_id)
+        )
         kind = _DeafToCommit if deaf_to_commit else SwitchMember
         self.process = process
         self._subscription = SwitchSubscription(
