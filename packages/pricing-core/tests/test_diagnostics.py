@@ -874,3 +874,30 @@ def test_a_declared_direction_that_cannot_be_swept_is_omitted_with_its_reason() 
     assert {(o.factor, o.reason.value) for o in result.glm.monotonicity_omitted} == {
         ("area", "unordered_levels"),
     }
+
+
+@pytest.mark.req("FR-89")
+def test_a_banded_glm_factor_is_swept_in_band_order_not_label_order() -> None:
+    """The bands are ordered by the banding's own `labels`, not alphabetically: these labels
+    sort in the reverse of the band order, so a lexical sweep would call an increasing
+    effect decreasing (and the converse)."""
+    banding = Banding(
+        id=uuid4(), slug="age-band-rev", dataset_id=uuid4(), version=1,
+        column="age", method=BandingMethod.MANUAL,
+        boundaries=(16.0, 30.0, 45.0, 60.0, 90.0),
+        labels=("d-youngest", "c-young", "b-older", "a-oldest"),
+    )
+    band = _directed(
+        "age_band", MonotonicDirection.INCREASING, type=FactorType.BANDING,
+        banding_id=banding.id, source_columns=("age",),
+    )
+    for slope, expected in ((0.03, True), (-0.03, False)):
+        frame = _age_book(slope=slope)
+        fit = fit_glm(frame[:4500], _spec([band]), [band], bandings={banding.id: banding}).result
+        result = compute_diagnostics(
+            fit, _spec([band]), [band], train=frame[:4500], holdout=frame[4500:],
+            bandings={banding.id: banding},
+        )
+        assert result.glm is not None
+        (check,) = result.glm.monotonicity
+        assert check.holds is expected
