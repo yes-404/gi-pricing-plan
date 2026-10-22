@@ -1,10 +1,26 @@
 import type { RatingStep } from "@/api/ratingAlgorithms";
+import type { SubGraphRef } from "@/api/subGraphs";
 
 export interface FlowEdge {
   id: string;
   source: string;
   target: string;
   label: string;
+  /** An edge into or out of a purpose mount: it runs only for some quote purposes (RL-1835 (i) 4). */
+  conditional: boolean;
+}
+
+/** What the drawing needs of a node: a step or a mount (RL-1835 (i) 1 — a mount is a node). */
+interface GraphNode {
+  id: string;
+  consumes: string[];
+  produces: string[];
+  conditional: boolean;
+  mount: boolean;
+}
+
+export function isPurposeMount(mount: SubGraphRef): boolean {
+  return (mount.purposes ?? []).length > 0;
 }
 
 export function names(value: string | string[] | undefined): string[] {
@@ -12,36 +28,64 @@ export function names(value: string | string[] | undefined): string[] {
   return Array.isArray(value) ? value : [value];
 }
 
-/** One edge per consumed name, from its first producer. Draws; never validates (S3 does). */
-export function edgesOf(steps: readonly RatingStep[]): FlowEdge[] {
-  const producer = new Map<string, string>();
-  for (const step of steps) {
-    for (const name of names(step.produces)) {
-      if (!producer.has(name)) producer.set(name, step.step_id);
+function nodesOf(steps: readonly RatingStep[], mounts: readonly SubGraphRef[]): GraphNode[] {
+  return [
+    ...steps.map((s) => ({
+      id: s.step_id,
+      consumes: names(s.consumes),
+      produces: names(s.produces),
+      conditional: false,
+      mount: false,
+    })),
+    ...mounts.map((m) => ({
+      id: m.mount_point,
+      consumes: Object.values(m.inputs ?? {}),
+      produces: Object.values(m.outputs ?? {}),
+      conditional: isPurposeMount(m),
+      mount: true,
+    })),
+  ];
+}
+
+/**
+ * One edge per consumed name, from its first producer; a mount also draws an edge to each consumer
+ * of a name it re-produces (RL-1628), so its detour is visible. Draws; never validates (S3 does).
+ */
+export function edgesOf(steps: readonly RatingStep[], mounts: readonly SubGraphRef[] = []): FlowEdge[] {
+  const nodes = nodesOf(steps, mounts);
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const producers = new Map<string, string[]>();
+  for (const node of nodes) {
+    for (const name of node.produces) {
+      const list = producers.get(name) ?? [];
+      if (list.length === 0 || (node.mount && !list.includes(node.id))) list.push(node.id);
+      producers.set(name, list);
     }
   }
   const edges: FlowEdge[] = [];
-  for (const step of steps) {
-    for (const name of names(step.consumes)) {
-      const source = producer.get(name);
-      if (source === undefined || source === step.step_id) continue;
-      edges.push({
-        id: `${source}->${step.step_id}:${name}`,
-        source,
-        target: step.step_id,
-        label: name,
-      });
+  for (const node of nodes) {
+    for (const name of node.consumes) {
+      for (const source of producers.get(name) ?? []) {
+        if (source === node.id) continue;
+        edges.push({
+          id: `${source}->${node.id}:${name}`,
+          source,
+          target: node.id,
+          label: name,
+          conditional: node.conditional || (byId.get(source)?.conditional ?? false),
+        });
+      }
     }
   }
   return edges;
 }
 
 /** Kahn's order, ties by declared position; steps left on a cycle are appended in declared order. */
-export function graphOrder(steps: readonly RatingStep[]): string[] {
-  const ids = steps.map((s) => s.step_id);
+export function graphOrder(steps: readonly RatingStep[], mounts: readonly SubGraphRef[] = []): string[] {
+  const ids = [...steps.map((s) => s.step_id), ...mounts.map((m) => m.mount_point)];
   const incoming = new Map(ids.map((id) => [id, 0]));
   const out = new Map<string, string[]>(ids.map((id) => [id, []]));
-  for (const e of edgesOf(steps)) {
+  for (const e of edgesOf(steps, mounts)) {
     incoming.set(e.target, (incoming.get(e.target) ?? 0) + 1);
     out.get(e.source)?.push(e.target);
   }
@@ -69,10 +113,13 @@ const COLUMN = 260;
 const ROW = 120;
 
 /** Column = longest-path depth; row = order within the column. Deterministic. */
-export function layout(steps: readonly RatingStep[]): Record<string, { x: number; y: number }> {
+export function layout(
+  steps: readonly RatingStep[],
+  mounts: readonly SubGraphRef[] = [],
+): Record<string, { x: number; y: number }> {
   const depth = new Map<string, number>();
-  const edges = edgesOf(steps);
-  const order = graphOrder(steps);
+  const edges = edgesOf(steps, mounts);
+  const order = graphOrder(steps, mounts);
   for (const id of order) {
     const parents = edges.filter((e) => e.target === id).map((e) => depth.get(e.source) ?? 0);
     depth.set(id, parents.length === 0 ? 0 : Math.max(...parents) + 1);
