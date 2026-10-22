@@ -53,7 +53,15 @@ FRONTEND_PORT: Final = 5173
 
 #: The scripted journeys `--journey` can run after the seed (RL-1521: `scripts/demo.py`-style ONE
 #: command). Off by default: a Phase 1 demo would otherwise pay for the whole journey.
-JOURNEYS: Final = ("wf-699",)
+JOURNEYS: Final = ("wf-699", "wf-701")
+#: Where `--journey wf-701` runs: the API this command starts (`local`) or the Slice 4 stack's `lb`
+#: that is already up (`compose`, PL-1710 T6), whose `api` replicas the A2/C4 limb is walked on.
+TARGETS: Final = ("local", "compose")
+COMPOSE_FILE: Final = "deploy/docker-compose.yml"
+#: PL-1710 acceptance 4: WF-701's part of the run, alone on the box. A miss is recorded, not tuned.
+WF701_TARGET_SECONDS: Final = 600
+#: A2 and C4 show a COMMIT set of two: `docker compose --profile app up --scale api=2`.
+API_REPLICAS: Final = 2
 
 
 class DemoRefusedError(RuntimeError):
@@ -250,35 +258,131 @@ def beat_command() -> list[str]:
     ]
 
 
-def journey_failure_line(failure: Any) -> str:
-    """The one line a failed journey prints: the step and the problem's code, built from the
-    failure's fields and never from its text."""
+def journey_failure_line(failure: Any, journey: str = "wf-699") -> str:
+    """The one line a failed journey prints: the step and the problem's code, then the journey's
+    own `names` and `extra` count when it set them (R5), built from the failure's fields and
+    never from its `detail`, which can carry server text."""
     status = f" (HTTP {failure.status})" if failure.status is not None else ""
-    return f"the WF-699 journey failed at {failure.step}: {failure.code}{status}"
+    line = f"the {journey.upper()} journey failed at {failure.step}: {failure.code}{status}"
+    names = getattr(failure, "names", ())
+    extra = getattr(failure, "extra", 0)
+    parts = [", ".join(names)] if names else []
+    if extra:
+        parts.append(f"+{extra} extra")
+    return f"{line} [{'; '.join(parts)}]" if parts else line
 
 
-def run_journey(record: dict[str, str]) -> None:
-    """Walk WF-699 over HTTP against the API this command started (`examples/fremtpl2/journey.py`).
+def compose_command(*args: str) -> list[str]:
+    """`docker compose` on the stack's file and `app` profile; `GIP_COMPOSE_PROJECT` names the
+    project when the stack was not started under the default one.
+
+    When the standard `COMPOSE_FILE` variable is set, no `-f` is passed: docker compose then reads
+    the file list from it (':'-separated on Linux), so every call the demo makes, the outbox
+    relay's `run` included, sees the same merged files as the stack the operator named."""
+    project = os.environ.get("GIP_COMPOSE_PROJECT")
+    file_args = [] if os.environ.get("COMPOSE_FILE") else ["-f", COMPOSE_FILE]
+    return [
+        "docker", "compose", *(["-p", project] if project else []),
+        *file_args, "--profile", "app", *args,
+    ]
+
+
+def compose_services() -> set[str]:
+    """The services the stack must be running: the datastores, `lb`, `api`, and one `worker-<pool>`
+    per queue the routing table names (derived, so a new pool is required without an edit)."""
+    from app.platform.jobs import DEFAULT_QUEUE_FOR_KIND
+
+    pools = {f"worker-{queue.value}" for queue in DEFAULT_QUEUE_FOR_KIND.values()}
+    return {"postgres", "redis", "minio", "lb", "api", *pools}
+
+
+def compose_running() -> dict[str, int]:
+    """Each running service and how many containers run it, from `docker compose ps`."""
+    done = subprocess.run(
+        compose_command("ps", "--status", "running", "--format", "{{.Service}}"),
+        cwd=ROOT, capture_output=True, text=True, check=False,
+    )
+    counts: dict[str, int] = {}
+    for name in done.stdout.split():
+        counts[name] = counts.get(name, 0) + 1
+    return counts
+
+
+def check_compose_up(running: dict[str, int]) -> None:
+    """Refuse, naming what is missing, before anything is seeded (R9). `api` must run twice."""
+    missing = sorted(compose_services() - running.keys() - {"api"})
+    if running.get("api", 0) < API_REPLICAS:
+        missing.append(f"api (x{API_REPLICAS}; {running.get('api', 0)} running)")
+    if missing:
+        up = f"up -d --wait --scale api={API_REPLICAS}"
+        raise DemoRefusedError(
+            f"The compose stack is not up. Missing: {', '.join(missing)}. "
+            f"Start it from tools-main: `docker compose -f {COMPOSE_FILE} --profile app {up}`."
+        )
+
+
+def api_hosts() -> frozenset[str]:
+    """The hostname of every `api` container (Docker's default is the short container id)."""
+    done = subprocess.run(
+        compose_command("ps", "-q", "api"), cwd=ROOT, capture_output=True, text=True, check=False
+    )
+    return frozenset(line.strip()[:12] for line in done.stdout.splitlines() if line.strip())
+
+
+def _load_journey(module: str) -> Any:
+    example = ROOT / "examples" / "fremtpl2"
+    sys.path.insert(0, str(example))
+    spec = importlib.util.spec_from_file_location(f"fremtpl2_{module}", example / f"{module}.py")
+    assert spec is not None
+    assert spec.loader is not None
+    loaded = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = loaded
+    spec.loader.exec_module(loaded)
+    return loaded
+
+
+def run_journey(
+    record: dict[str, str], journey_name: str = "wf-699", *, target: str = "local"
+) -> None:
+    """Walk WF-699 (and for `wf-701`, then WF-701's deployment steps) over HTTP against the API
+    this command started, or against the compose stack's `lb` (`examples/fremtpl2/journey.py`,
+    `journey_wf701.py`).
 
     The 20,000-policy sample is the journey's dislocation portfolio, and its output says so.
     """
     import httpx
 
-    example = ROOT / "examples" / "fremtpl2"
-    sys.path.insert(0, str(example))
-    spec = importlib.util.spec_from_file_location("fremtpl2_journey", example / "journey.py")
-    assert spec is not None
-    assert spec.loader is not None
-    journey = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = journey
-    spec.loader.exec_module(journey)
-    print("\n── the WF-699 journey over HTTP " + "─" * 30, flush=True)
+    walker = _load_journey("journey_wf701" if journey_name == "wf-701" else "journey")
+    port = int(os.environ.get("GIP_LB_PORT", "8000")) if target == "compose" else API_PORT
+    base_url = f"http://localhost:{port}/api/v1"
+    print(f"\n── the {journey_name.upper()} journey over HTTP " + "─" * 30, flush=True)
     started = time.monotonic()
-    with httpx.Client(base_url=f"http://localhost:{API_PORT}/api/v1", timeout=120.0) as client:
+
+    def log(line: str) -> None:
+        print(line, flush=True)
+
+    with httpx.Client(base_url=base_url, timeout=120.0) as client:
         try:
-            journey.run_wf699_journey(client, record, log=lambda line: print(line, flush=True))
-        except journey.JourneyStepFailed as failure:
-            raise DemoRefusedError(journey_failure_line(failure)) from failure
+            first = walker.run_wf699_journey(client, record, log=log)
+            if journey_name == "wf-701":
+                split = time.monotonic()
+                print(f"   WF-699 part done in {split - started:.0f}s", flush=True)
+                compose = target == "compose"
+                walker.run_wf701_after(
+                    client, record, first, log=log,
+                    replica_hosts=api_hosts if compose else None,
+                    stream_client=(lambda: httpx.Client(base_url=base_url, timeout=60.0))
+                    if compose else None,
+                )
+                elapsed = time.monotonic() - split
+                verdict = "within" if elapsed <= WF701_TARGET_SECONDS else "OVER"
+                print(
+                    f"   WF-701 part done in {elapsed:.0f}s: {verdict} the pre-registered "
+                    f"{WF701_TARGET_SECONDS // 60} min target (recorded, not tuned)",
+                    flush=True,
+                )
+        except walker.JourneyStepFailed as failure:
+            raise DemoRefusedError(journey_failure_line(failure, journey_name)) from failure
     print(f"   journey done in {time.monotonic() - started:.0f}s", flush=True)
 
 
@@ -294,35 +398,9 @@ def check_served_page(url: str) -> None:
     print(f"   served page: {url} answered 200", flush=True)
 
 
-def demo(*, rows: int | None, skip_seed: bool, frontend: bool, journey: str | None = None) -> int:
-    if journey is not None and not frontend:
-        # G2 is a journey that ENDS with the frontend serving a 200 page (RL-1521). Without the
-        # frontend it would run, wait for Ctrl-C and exit 0 with no such check.
-        raise DemoRefusedError(
-            "--journey needs the frontend: the command ends with it serving a 200 page "
-            "(RL-1521). Drop --no-frontend."
-        )
-    if journey is not None and shutil.which("pnpm") is None:
-        # Refused up front, not after a seed: the fallback below would run the API only.
-        raise DemoRefusedError(
-            "--journey needs pnpm to serve the frontend (RL-1521), and pnpm is not on PATH. "
-            "`npm config set prefix ~/.npm-global && npm i -g pnpm` installs it."
-        )
-    check_environment()
-    started = time.monotonic()
-
-    env = demo_env()
-
-    run(
-        [
-            "docker", "compose", "-f", "deploy/docker-compose.yml",
-            "--profile", "auth", "up", "-d", "--wait",
-        ],
-        step="infrastructure (postgres, redis, minio, keycloak)",
-        env=env,
-    )
-    run(["uv", "run", "alembic", "upgrade", "head"], step="migrations", env=env)
-
+def prepare_world(*, rows: int | None, skip_seed: bool, env: dict[str, str]) -> dict[str, str]:
+    """Seed (unless `skip_seed`), read the seed record, and run the two pre-flights. Shared by the
+    local demo and the compose run: both need the same seeded workspace before a journey."""
     if not skip_seed:
         arff = ROOT / "examples" / "fremtpl2" / "data" / "freMTPL2freq.arff"
         if not arff.is_file():
@@ -359,6 +437,50 @@ def demo(*, rows: int | None, skip_seed: bool, frontend: bool, journey: str | No
         step="pre-flight: the demo workspace's rule sets are runnable",
         env=env,
     )
+    return record
+
+
+def demo(
+    *,
+    rows: int | None,
+    skip_seed: bool,
+    frontend: bool,
+    journey: str | None = None,
+    target: str = "local",
+) -> int:
+    if target == "compose":
+        if journey != "wf-701":
+            raise DemoRefusedError("--target compose runs only `--journey wf-701` (PL-1710 T6).")
+        return demo_compose(rows=rows, skip_seed=skip_seed)
+    if journey is not None and not frontend:
+        # G2 is a journey that ENDS with the frontend serving a 200 page (RL-1521). Without the
+        # frontend it would run, wait for Ctrl-C and exit 0 with no such check.
+        raise DemoRefusedError(
+            "--journey needs the frontend: the command ends with it serving a 200 page "
+            "(RL-1521). Drop --no-frontend."
+        )
+    if journey is not None and shutil.which("pnpm") is None:
+        # Refused up front, not after a seed: the fallback below would run the API only.
+        raise DemoRefusedError(
+            "--journey needs pnpm to serve the frontend (RL-1521), and pnpm is not on PATH. "
+            "`npm config set prefix ~/.npm-global && npm i -g pnpm` installs it."
+        )
+    check_environment()
+    started = time.monotonic()
+
+    env = demo_env()
+
+    run(
+        [
+            "docker", "compose", "-f", "deploy/docker-compose.yml",
+            "--profile", "auth", "up", "-d", "--wait",
+        ],
+        step="infrastructure (postgres, redis, minio, keycloak)",
+        env=env,
+    )
+    run(["uv", "run", "alembic", "upgrade", "head"], step="migrations", env=env)
+
+    record = prepare_world(rows=rows, skip_seed=skip_seed, env=env)
     api = [
         "uv", "run", "uvicorn", "app.main:create_app", "--factory",
         "--app-dir", "backend/src", "--port", str(API_PORT),
@@ -409,7 +531,7 @@ def demo(*, rows: int | None, skip_seed: bool, frontend: bool, journey: str | No
             )
             _still_running(worker_process, step="the Celery worker")
             _still_running(beat_process, step="Celery beat")
-            run_journey(record)
+            run_journey(record, journey)
         if not frontend:
             print(f"\n   API ready: http://localhost:{API_PORT}/docs", flush=True)
             print("   Ctrl-C to stop.\n", flush=True)
@@ -439,6 +561,34 @@ def demo(*, rows: int | None, skip_seed: bool, frontend: bool, journey: str | No
             flush=True,
         )
         _wait_for_interrupt()
+    return 0
+
+
+def demo_compose(*, rows: int | None, skip_seed: bool) -> int:
+    """WF-701 against the Slice 4 stack: refuse first, naming what is down (R9), then seed through
+    the stack's own ports, start the one process the stack lacks (the outbox relay, `beat`), walk
+    the journey over `lb`, and stop the relay. The frontend is not part of this run."""
+    check_environment()
+    check_compose_up(compose_running())
+    started = time.monotonic()
+    env = demo_env()
+    record = prepare_world(rows=rows, skip_seed=skip_seed, env=env)
+    print("\n── the outbox relay (beat) from the stack's image " + "─" * 12, flush=True)
+    relay = subprocess.run(
+        [*compose_command("run", "--rm", "-d", "worker-default"), "celery", "-A",
+         "app.worker.entrypoint", "beat", "--schedule", "/tmp/celerybeat-schedule"],
+        cwd=ROOT, env=env, capture_output=True, text=True, check=False,
+    )
+    if relay.returncode != 0 or not relay.stdout.strip():
+        raise DemoRefusedError(
+            f"the outbox relay did not start ({relay.returncode}): {relay.stderr[-300:]}"
+        )
+    container = relay.stdout.strip().splitlines()[-1]
+    try:
+        run_journey(record, "wf-701", target="compose")
+    finally:
+        subprocess.run(["docker", "rm", "-f", container], check=False, capture_output=True)
+    print(f"\n   compose run done in {time.monotonic() - started:.0f}s", flush=True)
     return 0
 
 
@@ -504,7 +654,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--journey",
         choices=JOURNEYS,
         help="After the seed, start a worker and walk this scripted journey over HTTP, "
-        "then serve the frontend (G2: WF-699 A to E and its deploy step)",
+        "then serve the frontend (G2: WF-699 A to E and its deploy step; wf-701 adds WF-701's "
+        "deployment steps A1-A6, C1-C4, C6, C7)",
+    )
+    parser.add_argument(
+        "--target",
+        choices=TARGETS,
+        default="local",
+        help="`compose` walks `--journey wf-701` against the Slice 4 stack already up "
+        "(`--scale api=2`) instead of starting an API here",
     )
     return parser
 
@@ -517,6 +675,7 @@ def main() -> int:
             skip_seed=args.skip_seed,
             frontend=not args.no_frontend,
             journey=args.journey,
+            target=args.target,
         )
     except DemoRefusedError as exc:
         print(f"\n  {exc}\n", file=sys.stderr, flush=True)
