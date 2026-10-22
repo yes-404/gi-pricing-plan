@@ -50,6 +50,12 @@ Maintainer amendments of 2026-10-22 (relayed by lead 26, before the runs): `Buck
 ### Build log
 
 - 2026-10-22: RED commit `fdc29f08`, FIX commit `55d8a15e`. Static (ruff check rc 0 on both files; mypy on `blobs.py` rc 0; `ruff format --check` flags pre-existing hunks in both files, none in added lines).
+- 2026-10-22 (W2 END 16:57:07 BST), runs on tree `6993fbf873037cb8ffb9a18ad5c757472a056823`, `pytest backend/tests/test_blobs.py -k "owned_by_you or bucket_already_exists or reraises_any_other" -q`, via the small-test flock, load1 2.21-3.35, logs in `~/gi-pricing-plan.local/scratch/fix-8169/`:
+  - RED (`red.log`, final tests with `blobs.py` overlaid from `origin/main`, restored afterwards, empty `git status --short`): `4 failed, 1 passed, 24 deselected, 2 warnings in 0.43s`, rc=1. (i), (ii) and both (iii) cases fail; the one pass is the unchanged "any other code re-raises". (iii) fails on the old code only on the new `__cause__` assertion (old code already raised `BucketAlreadyExists`, unchained); that is the truthful reading.
+  - GREEN (`green.log`): `5 passed, 24 deselected, 2 warnings in 0.11s`, rc=0.
+  - NEGATIVE CONTROL for (iii) (`negctl-iii.log`): mutation at `backend/src/app/platform/blobs.py:166` replaced the re-check `try/except` with `pass` (`BucketAlreadyExists` always succeeds): `3 failed, 2 passed, 24 deselected, 2 warnings in 0.35s`, rc=1; (iii) [403] and [404] red, as is (ii). Restored with `git checkout -- <file>`, `git status --short` empty. The mutation was never committed.
+  - The 2 warnings are the per-worktree test-database teardown notice from `conftest_db.py`; no database was used.
+- 2026-10-22: merged `origin/main` `71e481fa` (merge-tree rc 0), `docs/INDEX.md` regenerated, `doc-index.py --check` rc 0. `audit-docs.py` rc 1 with exactly: check 31 `gap in the full allocation between 1840 and 8172` (working ids, expected) and check 32 `LG-08173…md:14: FD-8169 does not resolve in docs/INDEX.md` (FD 8169 is in the docs batch, not on this branch).
 
 ## PRs
 
