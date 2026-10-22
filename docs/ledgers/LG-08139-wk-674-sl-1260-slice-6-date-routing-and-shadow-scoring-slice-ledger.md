@@ -67,3 +67,62 @@ The tests of T5 to T9 were written and committed before the code they cover (`1f
 "red first on deliberately broken input" the RL-1834 acceptance list asks for, has been observed. Each
 test is also still unrun against its code. The red-first runs and the green runs are owed in the DB window.
 
+## DB window 1, 2026-10-22 (ENDed 17:10:55 BST) — red, green and negative-control lines
+
+Own database `gipricing_sl-1260_028cded7`, redis db 12, `scripts/run-small.sh`, logs under
+`/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1260-db/` (each starts with the tree and
+`git diff --stat`). Setup `00-setup.log`: `createdb` rc 0, `alembic upgrade head` rc 0 (first
+application of `9b3e7c15d4a2`), `alembic heads` = `9b3e7c15d4a2 (head)`. The window's chain did not
+halt on a nonzero run; 06 ran after 05 failed (the executor's error, noted by the lead).
+
+| Run | Tree | Log | rc | Summary line, verbatim |
+|---|---|---|---|---|
+| RED 1: `test_routing.py` | `9cfddde9` | `01-red-t6-9cfddde9.log` | 1 | `2 failed, 5 passed, 1 warning in 10.49s` |
+| RED 2: `test_shadow_scoring.py` | `bfe16607` | `02-red-t8-bfe16607.log` | 1 | `4 failed, 4 passed, 1 warning in 9.45s` |
+| GREEN a | `7b9f2684` | `03-green-a.log` | 1 | `1 failed, 154 passed, 5 warnings in 22.69s` |
+| GREEN b | `7b9f2684` | `04-green-b.log` | 0 | `36 passed, 1 warning in 16.76s` |
+| GREEN c | `7b9f2684` | `05-green-c.log` | 1 | `2 failed, 77 passed, 3 warnings in 74.89s (0:01:14)` |
+| GREEN migration | `7b9f2684` | `06-green-migration.log` | 0 | `7 passed, 11 warnings in 18.57s` |
+| N-T6 (scratch edit) | `7b9f2684` | `07-nt6-skip-pin-check.log` | 1 | `2 failed, 5 passed, 1 warning in 8.07s` |
+| N-T8 (scratch edit) | `7b9f2684` | `08-nt8-candidate-in-response.log` | 1 | `2 failed, 6 passed, 1 warning in 8.90s` |
+
+**Vacuous passes at the test commits, by name.** RED 1: `test_a_version_promoted_only_to_another_environment_is_never_selected`
+passed (nothing is routed before the feature, so nothing unpromoted is selected). The two RED 1
+failures were `test_a_range_inside_its_dates_selects_its_promoted_version` and
+`test_with_the_flag_off_scoring_is_unchanged_and_the_selector_is_not_entered`. RED 2: the four
+passes were the flag-off, no-configuration, draw-at-the-fraction and explicit-ref cases, which hold
+with no feature; the four failures were `test_a_sampled_quote_is_also_scored_by_the_candidate_and_both_results_are_recorded`
+(it holds the "candidate never in the response" assert), `test_a_shadow_result_holds_no_quote_input`,
+`test_a_failure_of_the_candidate_never_reaches_the_caller` and
+`test_the_response_is_the_same_with_and_without_shadow_scoring`.
+
+**Negative controls** (the maintainer's "a vacuous pass proves nothing"; scratch edits, never
+committed, reverted with `git checkout -- <file>`, `git status --short` empty after each).
+N-T6: `backend/src/app/platform/routing.py:223` `if pinned is None:` became `if False:`;
+`test_a_version_promoted_only_to_another_environment_is_never_selected` and
+`test_a_pin_naming_a_deployment_of_a_different_version_is_ignored` failed. N-T8:
+`backend/src/app/api/score.py:615` built the response from the live result with
+`rating_version_ref` replaced by the shadow candidate's (`shadow.args[-1]`);
+`test_a_sampled_quote_is_also_scored_by_the_candidate_and_both_results_are_recorded` and
+`test_the_response_is_the_same_with_and_without_shadow_scoring` failed.
+
+**The three stale pins in GREEN a and c, all test-side** (production code unchanged):
+`test_shadow_write.py::test_an_unknown_environment_is_404` sent the one-character slug
+`rating_version:x@1`, refused at request validation (422) before the handler's 404;
+`test_api_authorisation_sweep.py::test_the_handler_guarded_routes_still_check_at_their_site` pinned
+`platform/shadow.py` line 66 and the guard sits at line 67 (`await rbac.require_permission(`; line 65 is
+`env = await environments._load(session, environment)`); the routing write's row cites
+`platform/deployments.py:131` (`await rbac.require_permission(`, after `:130` `env = await
+environments._load(session, slug, lock=lock)`), which is correct;
+`test_deployment_route_types.py::test_the_route_set_is_pinned` held 8 rows and a union of 10, and
+Slice 6 adds `PUT /api/v1/environments/{env}/routing` (`docs/specs/03-rating-engine.md:1112`) and
+`PUT /api/v1/environments/{env}/shadow` (`:1113`), both already in section 5.1, so the counts
+became 10 and 12. Fix commit `3d175af3774a260e382a4548d0fa24f5178d79b3` (tests only).
+
+**Observation, not fixed (FD candidate for the lead).** 404 before 403: `deploy`, `rollback`, the
+deployment-request submit (`platform/deployments.py:130-131` via `_authorised_environment`), the
+routing write (same) and the shadow write (`platform/shadow.py:65-67`) load the Environment before
+checking the permission, so an unauthorised caller can tell whether an Environment exists. The
+settings write (`api/environment_settings.py`, `ManageSettings` dependency) and Environment retire
+and update check the permission first (403 before 404).
+
