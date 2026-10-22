@@ -30,7 +30,30 @@ No leaf plan (`PL-1620` :26): the scope is `PL-1237` Task 6 as changed by `PL-15
 
 ## Tasks
 
-Task rows are appended here as each task starts.
+Task rows are appended here as each task starts. The order follows `RL-1834`'s "What it obliges"
+and its Acceptance list. Resume under `RL-1834` by exec-1260c, 2026-10-22 (the maintainer's
+(by delegation) entry "2026-10-22 11:44:34 BST", SL-1260 RESUME GO).
+
+| Task | What | State |
+|---|---|---|
+| T2 | `03` FR-270 clarification, §4.13, §5.1 routing row | done, `5f406245` |
+| T3 | `model-schema` routing and shadow shapes, generated schemas | done, `2720bcce` |
+| T4 | `routing_rules`, `shadow_configs`, `shadow_results`: models, migration `9b3e7c15d4a2`, immutability seed rows, `DEPLOY_DATE_RANGE_OVERLAP`, the two Environment-only flags | written unrun in `c53d75f0`; reviewed 2026-10-22 (below) |
+| T5 | routing write: `platform/routing.py`, `PUT .../routing`, tests first | tests `1f119659`; code next commit; unrun (no DB window) |
+| T6 | selection in `/score` (flag, pin check, byte-identical flag-off), `test_routing.py` | owed |
+| T7 | `PUT .../shadow` route, `deployment.shadow_configured`, tests | owed |
+| T8 | shadow scoring after the response, `shadow_results` writes, tests | owed |
+| T9 | settings tests (R6.1), regenerate contracts and INDEX, gate | owed |
+
+**WIP review of `c53d75f0`, 2026-10-22.** Right: the three tables, columns, `ck_`/`fk_` names
+(they match the model's naming convention), the indexes, the `artifact_append_only()` trigger
+pair and the `SELECT, INSERT`-only grants follow `c4a81f6d2e95`'s `deployments` exactly; the
+revision chains onto `a4d1f08c3b97`, the one head; the two flags are Environment-scoped with
+`SAFE_DEFAULT` False (RL-1834 D2 item 1); `DEPLOY_DATE_RANGE_OVERLAP` is registered once; the
+immutability seed rows satisfy each table's one foreign key. Missing or unverified, none run:
+the migration has not been applied; `ruff format` has not been run on the new files;
+`test_migration_deployments.py`'s pattern (grants, triggers, downgrade) has no counterpart for
+the three tables; `test_settings.py` has no test of the two flags (R6.1, RL-1311:275).
 
 ## PRs
 

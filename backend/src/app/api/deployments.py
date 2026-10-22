@@ -6,6 +6,7 @@
 | `POST` | `/api/v1/environments/{env}/deployments` | Deploy an approved version |
 | `POST` | `/api/v1/environments/{env}/deployments/rollback` | Roll back (`deployment:promote`) |
 | `GET` | `/api/v1/environments/{env}/deployments` | History, newest first (`rating:read`) |
+| `PUT` | `/api/v1/environments/{env}/routing` | Write the date-routing rule (`deployment:promote`) |
 
 The two writes are **handler-guarded**, not `requires(...)`: `deployment:promote` is checked with
 the target Environment as the resource, which needs the Environment row the handler loads
@@ -24,6 +25,7 @@ from app.api.deps import Caller, DatabaseDep
 from app.api.pagination import DEFAULT_LIMIT, MAX_LIMIT, Page
 from app.api.responses import problems
 from app.platform import deployments as service
+from app.platform import routing
 from model_schema import (
     Deployment,
     DeploymentCreate,
@@ -32,6 +34,8 @@ from model_schema import (
     DeploymentRequestCreate,
     Permission,
     RollbackCreate,
+    RoutingRule,
+    RoutingRuleUpdate,
 )
 
 __all__ = ["router"]
@@ -156,3 +160,32 @@ async def list_deployments(
         cursor=cursor,
         limit=limit,
     )
+
+
+@router.put(
+    "/{env}/routing",
+    summary="Write an environment's date-routing rule",
+    response_model=RoutingRule,
+    responses=problems(401, 403, 404, 409, 422),
+)
+async def write_routing_rule(
+    env: str,
+    body: RoutingRuleUpdate,
+    caller: CallerDep,
+    count: CountDep,
+    database: DatabaseDep,
+) -> RoutingRule:
+    """**200** with the rule as written (`03` FR-270; `RL-1834` D1). Needs `deployment:promote`
+    on the Environment; handler-guarded like the other writes. **404** for an unknown
+    Environment; **409** `VALIDATION_FAILED` for a retired Environment or a Rating Version never
+    deployed there, **409** `DEPLOY_DATE_RANGE_OVERLAP`; **422** for a non-Rating-Version
+    reference or a range that does not end after it starts. An empty list clears the rule."""
+    async with database.unit_of_work() as session:
+        return await routing.write_rule(
+            session,
+            workspace_id=caller.workspace_id,
+            actor=caller.principal,
+            environment=env,
+            body=body,
+            count_management=count,
+        )
