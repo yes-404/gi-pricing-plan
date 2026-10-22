@@ -49,3 +49,9 @@ None yet.
 ## Record
 
 Entries are appended below as the work lands.
+
+### Entry 2026-10-22 — state of the pre-pause WIP commit e411c85a (recorded as owed since 2026-10-21)
+
+- `frontend/src/components/dag/MountInspector.vue` at `e411c85a` was an **empty stub** (`<script setup lang="ts"></script>` and `<template><form /></template>`, 6 lines). It implements none of (i) item 5 or (iii) items 1–2. The tests that name it (`MountInspector.test.ts`, `DagDesignerMounts.test.ts`) were written, never run, and are red by construction.
+- The body of `e411c85a` carries the line "The migration has not been applied to any DB." That line is **misplaced**: the commit changes `frontend/` only and no migration exists in this slice. The commit is left as pushed (no rewrite); this entry is the correction.
+- Also at `e411c85a`: `graph.ts` (`edgesOf`, `graphOrder`, `layout`) does not yet take mounts, there is no `MountNode.vue`, and `DagDesigner.vue` has no `subGraphPins` prop; `getSubGraph` is `(slug, version)` where Task 1 above writes `getSubGraph(ref)` (the tests use `(slug, version)`; Task 1 is read that way).
