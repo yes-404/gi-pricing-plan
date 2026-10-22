@@ -36,6 +36,7 @@ from model_schema import (
 from model_schema.input_free import InputFreeError
 from pricing_core.modelling import BandingError, GlmFitError, fit_glm
 from pricing_core.modelling.factors import FactorResolutionError, resolve_factors
+from pricing_core.modelling.glm import glum_family, r_theta_from_glum_theta
 
 
 def _factor(slug: str, column: str, **over: object) -> Factor:
@@ -1084,3 +1085,125 @@ def test_a_thin_band_under_warn_fits_and_the_fit_result_records_a_typed_warning(
         assert type(warning.observed) is value_type
         assert warning.minimum == floor
         assert type(warning.minimum) is value_type
+
+
+# --- PL-8162 A-R1 / A-R2: every member of `GlmSpec.family` fits ---------------------------
+
+_NB_THETA_R = 2.0  # R/MASS `glm.nb` form: variance mu + mu**2 / theta
+
+
+def _family_book(family: str, n: int = 8_000, seed: int = 20261022) -> pl.DataFrame:
+    """Data simulated from `family` with a +0.5 effect for `urban` on the link scale."""
+    rng = np.random.default_rng(seed)
+    urban = rng.integers(0, 2, n)
+    exposure = np.ones(n)
+    if family == "poisson":
+        y = rng.poisson(np.exp(-1.0 + 0.5 * urban)).astype(float)
+    elif family == "negative_binomial":
+        mu = np.exp(-1.0 + 0.5 * urban)
+        y = rng.negative_binomial(_NB_THETA_R, _NB_THETA_R / (_NB_THETA_R + mu)).astype(float)
+    elif family == "gamma":
+        mu = np.exp(1.0 + 0.5 * urban)
+        y = rng.gamma(shape=2.0, scale=mu / 2.0)
+    elif family == "inverse_gaussian":
+        mu = np.exp(1.0 + 0.5 * urban)
+        y = rng.wald(mu, 4.0)
+    elif family == "tweedie":
+        lam = np.exp(-0.5 + 0.5 * urban)
+        counts = rng.poisson(lam)
+        y = np.array([rng.gamma(2.0, 1.0, c).sum() for c in counts])
+    elif family == "binomial":
+        p = 1.0 / (1.0 + np.exp(-(-1.0 + 0.5 * urban)))
+        y = rng.binomial(1, p).astype(float)
+    else:  # gaussian, identity link
+        y = 1.0 + 0.5 * urban + rng.normal(0.0, 1.0, n)
+    return pl.DataFrame(
+        {
+            "area": ["urban" if u else "rural" for u in urban],
+            "y": y,
+            "exposure_years": exposure,
+        }
+    )
+
+
+_FAMILIES: list[tuple[str, str, dict[str, float], float]] = [
+    # family, link, family_params, the true urban effect on the link scale
+    ("poisson", "log", {}, 0.5),
+    ("negative_binomial", "log", {"theta": _NB_THETA_R}, 0.5),
+    ("gamma", "log", {}, 0.5),
+    ("inverse_gaussian", "log", {}, 0.5),
+    ("tweedie", "log", {"power": 1.5}, 0.5),
+    ("binomial", "logit", {}, 0.5),
+    ("gaussian", "identity", {}, 0.5),
+]
+
+
+@pytest.mark.req("FR-110")
+@pytest.mark.parametrize(("family", "link", "params", "effect"), _FAMILIES,
+                         ids=[f[0] for f in _FAMILIES])
+def test_every_supported_family_fits_and_recovers_its_effect(
+    family: str, link: str, params: dict[str, float], effect: float
+) -> None:
+    """FR-110 lists seven families; the platform's spellings (`negative_binomial`,
+    `inverse_gaussian`) are not glum's (`negative.binomial`, `inverse.gaussian`). Before the
+    translation both raised `GLM_FIT_FAILED` with a message about the response's domain."""
+    counted = family in {"poisson", "negative_binomial"}
+    spec = _spec(
+        family=family, link=link, family_params=params, response_column="y",
+        offset=(
+            OffsetSpec(kind="log_column", column="exposure_years")
+            if counted else OffsetSpec(kind="none")
+        ),
+    )
+    result = fit_glm(_family_book(family), spec, [_factor("area", "area")]).result
+    by_term = {c.term: c for c in result.coefficients}
+    assert by_term["area[urban]"].estimate == pytest.approx(effect, abs=0.12)
+
+
+@pytest.mark.req("FR-110")
+def test_the_declared_theta_reaches_glum() -> None:
+    """With a covariate beyond one binary factor the NB weights, and so the estimates,
+    depend on θ; two declared θ on the same data must therefore not agree. (A saturated
+    one-factor model would not show it: its MLE is the group mean whatever θ is.)"""
+    base = _frequency_data()
+    rng = np.random.default_rng(7)
+    mu = (base["exposure_years"] * np.exp(-2.0 + 0.03 * (base["driv_age"] - 40))).to_numpy()
+    data = base.with_columns(
+        pl.Series("claim_count", rng.negative_binomial(2, 2 / (2 + mu)).astype(float))
+    )
+    factors = [_factor("area", "area"), _factor("driv_age", "driv_age")]
+
+    def age_coefficient(theta: float) -> float:
+        spec = _spec(family="negative_binomial", family_params={"theta": theta})
+        result = fit_glm(data, spec, factors).result
+        return next(c.estimate for c in result.coefficients if c.term == "driv_age")
+
+    assert abs(age_coefficient(0.5) - age_coefficient(2.0)) > 1e-6
+
+
+@pytest.mark.req("FR-110")
+def test_theta_is_converted_from_the_r_form_to_glums_at_one_place() -> None:
+    """Ruling 3 (2026-10-22 16:02:49): θ is R/MASS's (variance μ + μ²/θ); glum's
+    `NegativeBinomialDistribution.theta` is its reciprocal (variance μ + θ·μ²)."""
+    family = glum_family("negative_binomial", theta=2.0)
+    assert float(family.theta) == pytest.approx(0.5)  # 1 / 2, exact in float32
+    assert r_theta_from_glum_theta(float(family.theta)) == pytest.approx(2.0)
+    # Round trip for a θ glum stores as float32.
+    for theta_r in (0.5, 1.0, 4.0, 32.0):
+        back = r_theta_from_glum_theta(float(glum_family("negative_binomial", theta=theta_r).theta))
+        assert back == pytest.approx(theta_r, rel=1e-6)
+    # Variance check: v(mu) = mu + mu**2 / theta_R.
+    mu = np.array([0.5, 2.0])
+    assert glum_family("negative_binomial", theta=2.0).unit_variance(mu) == pytest.approx(
+        mu + mu**2 / 2.0
+    )
+
+
+@pytest.mark.req("FR-110")
+def test_the_other_families_are_translated_to_glums_spellings() -> None:
+    assert glum_family("inverse_gaussian") == "inverse.gaussian"
+    assert glum_family("tweedie", power=1.5) == "tweedie(1.5)"
+    for name in ("poisson", "gamma", "gaussian", "binomial"):
+        assert glum_family(name) == name
+    with pytest.raises(ValueError, match="theta"):
+        glum_family("negative_binomial")  # never defaulted
