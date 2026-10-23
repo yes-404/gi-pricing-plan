@@ -1,21 +1,21 @@
 ---
-id: RS-8191
+id: RS-1868
 family: research
 kind: audit
-title: SL-1551 (WK-675) Slice 8 slice audit — the typed movers row and the dislocation views (LG 8146, PL-1833)
+title: SL-1551 (WK-675) Slice 8 slice audit — the typed movers row and the dislocation views (LG-1867, PL-1833)
 status: draft
-created: 2026-10-22
+created: 2026-10-23  # drafted 2026-10-22 under working id 8191; minted 2026-10-23 as RS-1868
 owner: auditor
 tree: c1fb3cd35737d08a9a36f0a1ba1f17543eed2ed6
 phase: P2
 work: WK-675
 corrected_by: []
-relates: [SL-1551, LG-8146, PL-1833, FR-263, FR-264, FR-265, FR-266, NFR-463]
+relates: [SL-1551, LG-1867, PL-1833, FR-263, FR-264, FR-265, FR-266, NFR-463]
 ---
 
-# RS-8191 — SL-1551 slice audit
+# RS-1868 — SL-1551 slice audit
 
-*(Working id 8191, written by `aud-1551` (auditor, sonnet, effort medium), 2026-10-22, from `brief-aud-1551-2026-10-22.md` (lead 26). Check 31 on this id is expected until the mint. Ledger cited by its working id `LG-8146`.)*
+*(Minted 2026-10-23 as RS-1868 from working id 8191; the ledger cites below (LG-8146 as written) are re-pointed to LG-1867, its minted id. Working id 8191, written by `aud-1551` (auditor, sonnet, effort medium), 2026-10-22, from `brief-aud-1551-2026-10-22.md` (lead 26). Check 31 on this id is expected until the mint. Ledger cited by its working id `LG-1867`.)*
 
 ## Question
 
@@ -33,11 +33,11 @@ Verdict is the lead's.
 
 | Acc. | Result | Evidence |
 |---|---|---|
-| 1 docs checks | delivered on LG (not re-run here) | LG-8146 build log: `audit-docs` rc 1 only check 31 on 8146, `doc-index --check` rc 0, `register-lint` rc 0 at e9d4cc64 |
+| 1 docs checks | delivered on LG (not re-run here) | LG-1867 build log: `audit-docs` rc 1 only check 31 on 8146, `doc-index --check` rc 0, `register-lint` rc 0 at e9d4cc64 |
 | 2 route typed | **MET** | `generated.json` `/movers` 200 `items` = `{'$ref': '#/components/schemas/DislocationMover'}` |
 | 3 one class | **MET** | one `class DislocationMover` (`dislocation.py:270`); `additionalProperties` False; only `columns` is open; test `test_the_mover_schema_has_one_open_property_and_it_is_columns` |
 | 4 no hand-written shape | **MET** statically | one alias `DislocationMover = components["schemas"]["DislocationMover"]`; `generate-contracts --check` rc 0 recorded in LG (not re-run); `AttributionWaterfall.vue` `interface Step` is a local view model, not an API shape |
-| 5 order gate | **MET**; broken input present but **LG says it was not run** | A=`4496daeb`, B=`b594fa50`, ancestor rc 0 (re-run); `scratch/sl-1551/accept5.log`: positive rc 0, broken rc 1 — contradicts LG-8146 Task 2 "was not run" (B2 below) |
+| 5 order gate | **MET**; broken input present but **LG says it was not run** | A=`4496daeb`, B=`b594fa50`, ancestor rc 0 (re-run); `scratch/sl-1551/accept5.log`: positive rc 0, broken rc 1 — contradicts LG-1867 Task 2 "was not run" (B2 below) |
 | 6 FR tests | **MET** | FR-263/264/265/266 each in a frontend test file (re-run per id); route test `@pytest.mark.req("FR-263")` |
 | 7 rounding/edge | **MET on LG claims** | helper mutated to truncation: 5 red; half-even: 4 red; edge-of-threshold test named; §4.6 dated line present |
 | 8 accessible tables + a11y report | **MET** (static only) | report quoted in LG; 3 fixes, 2 low open, contrast/focus/reflow owed. The plan does not require a browser run |
@@ -45,8 +45,8 @@ Verdict is the lead's.
 
 ### Blocking items
 
-- **B1 — GREEN set not derived by import closure (seat brief item 29).** LG-8146 records frontend runs (127 files, 813 tests rc 0) and one pytest file, but not the changed-module list, the closure commands or the derived file list. `scratch/sl-1551/green-task1.log` ends at "waiting for /tmp/slots/small-test" and has no result. The full gate is decisive (re-merge of `71e481fa` brought main code), but the closure must be quoted before the MERGE-ACK. Remedy: derive and quote it in the LG.
-- **B2 — LG-8146 contradicts its own evidence on Acceptance 5.** Task 2 says the broken-input run "was not run"; `accept5.log` (head 569fd8b8) shows it was (rc 1 vs rc 0), but that log lives under `scratch/`, not in the record. Remedy: correct the LG line and quote the log's seven lines in the LG.
+- **B1 — GREEN set not derived by import closure (seat brief item 29).** LG-1867 records frontend runs (127 files, 813 tests rc 0) and one pytest file, but not the changed-module list, the closure commands or the derived file list. `scratch/sl-1551/green-task1.log` ends at "waiting for /tmp/slots/small-test" and has no result. The full gate is decisive (re-merge of `71e481fa` brought main code), but the closure must be quoted before the MERGE-ACK. Remedy: derive and quote it in the LG.
+- **B2 — LG-1867 contradicts its own evidence on Acceptance 5.** Task 2 says the broken-input run "was not run"; `accept5.log` (head 569fd8b8) shows it was (rc 1 vs rc 0), but that log lives under `scratch/`, not in the record. Remedy: correct the LG line and quote the log's seven lines in the LG.
 - **B3 — Acceptance 9, the two-half gate, is owed** (the decisive green; MERGE-ACK to quote its "Test Files N passed"). Not a defect; listed because the slice is not PR-ready until it passes.
 
 ### Owed (not blocking the audit)

@@ -1569,7 +1569,7 @@ relates: [PL-1286, PL-1371]
 id: SL-1551
 family: slice
 title: Slice 8: Dislocation views (FR-263, FR-264, FR-265, FR-266)
-status: active                   # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
@@ -1584,6 +1584,8 @@ relates: [PL-1286, PL-1371]
 **Activation need added 2026-10-10 (draft, for the lead's batch): the typed movers row in `model-schema` is merged.** The lead's ruling, the entry "2026-10-10 01:54:02 BST — RULINGS on S4 @04eaed4a: (1) red-first on parent commits ACCEPTED; (2) untyped movers ACCEPTED FOR S4 ONLY as an owned gap with a hard gate. Not an OQ: it is decided", item (2), read at `docs/contracts/openapi/generated.json` at `04eaed4a`: `GET /api/v1/dislocation-runs/{run_id}/movers` returns `{"type":"array","items":{"type":"object","additionalProperties":true}}`, "Fully untyped: no typed identifier and no typed money". The typed shape, verbatim: "a row model in model-schema with the known fields typed (the policy/quote identifier; before/after/change in integer minor units; change_pct as the repo's decimal form), plus ONE named open field for the portfolio's own columns (e.g. `columns: dict[str, JsonScalar]`), never a bare open object." The hard gate, verbatim: "the typed row is an ACTIVATION NEED of the first slice that consumes /movers (WK-675's movers view). Its plan gets a dated need line (via D3's or its own delta), and no frontend code may read /movers before the typed row is merged. Owner WK-675. If no consumer exists by WK-673's Work close, it is carried by name at P2's close." This slice's "largest movers" is that consumer. The ACK of the slice that adds the typed row checks the response shape and the regenerated client, per the same item.
 
 (Activated 2026-10-21 on the maintainer's (by delegation) GO, to-lead "2026-10-21 15:10:53 BST" items 1 and 2 and "2026-10-21 15:50:30 BST" ("GO SL-1551 (S8) per 15:10:53 — census its remaining needs first"); scope and order: `PL-1833` (active, #1355), whose DP-S8-1 (a) builds the typed movers row inside this slice as Task 1, gated by its Acceptance 5, so the draft "activation need" paragraph above is superseded by `PL-1833` on that point (the typed row is not a pre-activation need). Same-Work pair with `SL-1554` under `RL-1445` item 2: file sets disjoint per the lead's dispatch record of 2026-10-21 15:56:11 BST. Dispatched by the lead (lane C, seat exec-1551). Ledger: `LG-1867` (minted 2026-10-23 from working id 8146).)
+
+*(Closed 2026-10-23 as a Slice, closing acts in the slice PR; ledger `LG-1867`. Audit: `RS-1868`, written by `aud-1551` over the slice, verdict NOT-CLEAN B1–B3, adopted by the lead (from-lead "2026-10-22 18:16:34"); the record fix verified by the lead 2026-10-22 18:25:52 BST. Gate of record `47faad82` (tree `b682a9186e607887a2dca037bcd9e2cbd6655c52`), END 2026-10-22T23:17:34+00:00; its pytest failures are the docs-audit set plus one test re-run alone and green, which STANDS under the maintainer's standing 1(f) (to-lead "2026-10-23 00:18:10 BST"), with the decimal-guard exemption of the maintainer's (by delegation) ruling "2026-10-22 21:08:55 BST". Merge ACK pending; the merge and its read-back are the lead's.)*
 
 #### SL-1552 — Slice 10: Rating version list (FD-1283 option A; a new `03` §3.4 FR, spec first)
 
