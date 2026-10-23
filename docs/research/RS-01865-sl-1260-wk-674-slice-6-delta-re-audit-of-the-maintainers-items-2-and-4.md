@@ -1,21 +1,23 @@
 ---
-id: RS-8187
+id: RS-1865
 family: research
 kind: audit
 title: SL-1260 (WK-674 Slice 6) delta re-audit of the maintainer's 17:34:47 items 2 and 4, c55410d6..57b7fa04
 status: draft
-created: 2026-10-22
+created: 2026-10-22   # drafted 2026-10-22 under working id 8187; minted 2026-10-23 as RS-1865
 owner: auditor
 tree: 13fc30f525065bec48714d00d6fd4b825595f0c4
 phase: P2
 work: WK-674
 corrected_by: []
-relates: [SL-1260, LG-8139, RS-8180, RL-1834]
+relates: [SL-1260, LG-8139, RS-1864, RL-1834]
 ---
 
-# RS-8187 — SL-1260 delta re-audit, items 2 and 4
+# RS-1865 — SL-1260 delta re-audit, items 2 and 4
 
-*(Working id 8187, reserved by the lead. Written by `aud-1260b`, 2026-10-22, from `brief-aud-1260b-2026-10-22.md` (lead 26); fresh seat, not the author of RS 8180. Check 31 on this id is expected until the mint. `LG-8139` is cited by its working id. Scope is only items 2 and 4 of the maintainer's entry "2026-10-22 17:34:47 BST" and the maintainer's later acceptance of the correction relayed by the lead ("the two control runs (24-nv4, 25-nv5) ARE item 2's red … No duplicate assertions"); everything else is settled by RS 8180.)*
+*Minted 2026-10-23 as RS-1865 from working id 8187, in the SL-1260 audit-records docs PR. Prose below that calls this record or another id "unminted" or names a working id describes the draft state at filing, not the tree at the mint.*
+
+*(Working id 8187, reserved by the lead. Written by `aud-1260b`, 2026-10-22, from `brief-aud-1260b-2026-10-22.md` (lead 26); fresh seat, not the author of RS 1864. Check 31 on this id is expected until the mint. `LG-8139` is cited by its working id. Scope is only items 2 and 4 of the maintainer's entry "2026-10-22 17:34:47 BST" and the maintainer's later acceptance of the correction relayed by the lead ("the two control runs (24-nv4, 25-nv5) ARE item 2's red … No duplicate assertions"); everything else is settled by RS 1864.)*
 
 ## Question
 

@@ -1,19 +1,21 @@
 ---
-id: RS-8198
+id: RS-1866
 family: research
 kind: audit
 title: SL-1260 (WK-674 Slice 6) delta audit of the slice's own commits, 57b7fa04..fbf092a9
 status: draft
-created: 2026-10-22
+created: 2026-10-22   # drafted 2026-10-22 under working id 8198; minted 2026-10-23 as RS-1866
 owner: auditor
 tree: 6015217016a6c4d0c7175afe304a73e14b1c4a4d
 phase: P2
 work: WK-674
 corrected_by: []
-relates: [SL-1260, LG-1859, RS-8180, RS-8187, RL-1834]
+relates: [SL-1260, LG-1859, RS-1864, RS-1865, RL-1834]
 ---
 
-# RS-8198 — SL-1260 delta audit, 57b7fa04..fbf092a9
+# RS-1866 — SL-1260 delta audit, 57b7fa04..fbf092a9
+
+*Minted 2026-10-23 as RS-1866 from working id 8198, in the SL-1260 audit-records docs PR. Prose below that calls this record or another id "unminted" or names a working id describes the draft state at filing, not the tree at the mint.*
 
 *(Working id 8198, lead-allocated. Written by `aud-1260c`, 2026-10-22, from `brief-aud-1260c-2026-10-22.md` (lead 26). Check 31 on this id is expected until the mint. The audited tree is the slice head `fbf092a9b7017922c956ea4fe82525e7739164d7`, tree `6015217016a6c4d0c7175afe304a73e14b1c4a4d`; nothing on the slice branch was edited.)*
 

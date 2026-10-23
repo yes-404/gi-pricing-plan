@@ -1,10 +1,10 @@
 ---
-id: RS-8180
+id: RS-1864
 family: research
 kind: audit
 title: SL-1260 (WK-674 Slice 6, date-based routing and shadow scoring) slice audit against PL-1537 R6.1 to R6.3 and RL-1834, at c55410d6
 status: draft
-created: 2026-10-22
+created: 2026-10-22   # drafted 2026-10-22 under working id 8180; minted 2026-10-23 as RS-1864
 owner: auditor
 tree: c0d01474490b326aba32be97bc843f66e825dead
 phase: P2
@@ -13,7 +13,9 @@ corrected_by: []
 relates: [SL-1260, LG-8139, PL-1537, PL-1237, RL-1834, RL-1301, RL-8176]
 ---
 
-# RS-8180 — SL-1260 slice audit
+# RS-1864 — SL-1260 slice audit
+
+*Minted 2026-10-23 as RS-1864 from working id 8180, in the SL-1260 audit-records docs PR. Prose below that calls this record or another id "unminted" or names a working id describes the draft state at filing, not the tree at the mint.*
 
 *(Working id 8180, reserved by the lead. Written by `aud-1260`, 2026-10-22, from `brief-aud-1260-2026-10-22.md` (lead 26). Check 31 on this id is expected until the mint. The ledger is cited as `LG-8139`, its working id, and `RL 8176` is an unminted draft. Verdicts below are proposals; the lead adopts, amends or rejects them.)*
 
