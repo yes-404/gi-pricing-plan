@@ -208,18 +208,20 @@ async def test_a_non_integral_value_for_an_integer_output_is_an_error_row(
 @pytest.mark.req("FR-214")
 @pytest.mark.parametrize("declared_type", ["relativity", "percentage"])
 @pytest.mark.parametrize(
-    ("expr", "expected"), [("driver_age * 1.5", "27"), ("driver_age * 1.1", "19.8")]
+    ("expr", "expected"), [("driver_age * 1.5", "27.00"), ("driver_age * 1.1", "19.80")]
 )
 async def test_a_fractional_declared_output_is_a_decimal_string_in_batch(
     declared_type: str, expr: str, expected: str
 ) -> None:
-    """The form the `decimal` branch writes for the same value today (`str(Decimal(repr(v)))`);
-    batch's form until the RL-1343 slice (SL-1569) replaces the conversion on every path."""
+    """`RL-1343` rule 3, both paths (SL-1569): the exact string at the output step's declared
+    dp (2 here), the same string `score_one` serves."""
     compiled = await _probe_bundle(declared_type, expr)
-    frame = pl.DataFrame([_ctx_to_row(c) for c in _contexts(1)]).lazy()  # driver_age 18
+    (context,) = _contexts(1)  # driver_age 18
+    frame = pl.DataFrame([_ctx_to_row(context)]).lazy()
     (row,) = score_batch(compiled, frame).collect().to_dicts()
     assert row["error_code"] is None, row["error_code"]
     assert json.loads(row["outputs_json"])["probe_out"] == expected
+    assert (await score_one(compiled, context)).outputs["probe_out"] == expected
 
 
 @pytest.mark.req("FR-254")

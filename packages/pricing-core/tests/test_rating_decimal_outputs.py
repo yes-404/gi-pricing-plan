@@ -11,12 +11,13 @@ from __future__ import annotations
 
 import json
 import re
+from decimal import Decimal
 from typing import Any
 
 import pytest
 from test_rating_ladder_exact import _chain_algorithm, _compile_payload, _context
 
-from pricing_core.rating.score import score_one
+from pricing_core.rating.score import _coerce_output_value, score_one
 
 _POSITIONAL = re.compile(r"^-?[0-9]+(\.[0-9]+)?$")
 
@@ -140,3 +141,28 @@ async def test_a_null_decimal_output_stays_null() -> None:
     omitted, and the producer must not turn that omission into a string or a float."""
     result = await _served("null")
     assert result.outputs.get("probe_out") is None
+
+
+@pytest.mark.req("FR-254")
+@pytest.mark.parametrize("declared_type", ["decimal", "relativity", "percentage"])
+@pytest.mark.parametrize(
+    "value",
+    [27, 19.8, Decimal("19.8"), "1E-7", "-0.00"],
+    ids=["int", "float", "Decimal", "exp", "negzero"],
+)
+def test_the_decimal_family_branch_refuses_anything_but_the_positional_string(
+    declared_type: str, value: Any
+) -> None:
+    """RL-1343 rule 3.4: batch checks the producer's string and converts nothing, so the
+    whole-valued 27 (the blind spot `ScoringResult` cannot see) is refused here too."""
+    with pytest.raises(ValueError, match=declared_type):
+        _coerce_output_value(declared_type, value)
+
+
+@pytest.mark.req("FR-254")
+@pytest.mark.parametrize("declared_type", ["decimal", "relativity", "percentage"])
+def test_the_decimal_family_branch_returns_a_positional_string_unchanged(
+    declared_type: str,
+) -> None:
+    assert _coerce_output_value(declared_type, "19.80") == "19.80"
+    assert _coerce_output_value(declared_type, "0.00") == "0.00"
