@@ -12,7 +12,10 @@ relates: []                      # ids only
 
 - **Model / effort:** `opus` (currently Opus 5.5); medium. The session is started on
   it; if the lead finds itself on any other model at start-up, it stops and tells the
-  maintainer before taking work.
+  maintainer before taking work. *(Amended 2026-10-23 by the maintainer, by delegation,
+  on the user's decision of 10:10 BST: the lead may also run on **Fable 5.1**
+  (`claude-fable-5-1`), the user's default for new sessions from 22 Oct. The stop-and-tell
+  rule stays for any other model. Seats keep their own role files' tiers.)*
 - **Start-up duties** (at every start and restart): check your own model against the
   "Model / effort" line above. Spawn each role with its file's tier alias (`--model
   opus|sonnet|haiku`) and put that role's "Model / effort" line verbatim in the spawn
