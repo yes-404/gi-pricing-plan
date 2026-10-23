@@ -11071,6 +11071,34 @@
         "title": "OneWaySummary",
         "type": "object"
       },
+      "OutputValue": {
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/OutputValue"
+            },
+            "type": "object"
+          },
+          {
+            "items": {
+              "$ref": "#/components/schemas/OutputValue"
+            },
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
       "OverallOutcome": {
         "enum": [
           "pass",
@@ -16497,7 +16525,7 @@
       },
       "ScoringResult": {
         "additionalProperties": false,
-        "description": "`ScoringResult` (`scoring.schema.json:46-63`, `03` §4.4).\n\nInvariants (`scoring.schema.json:59-62`, enforced by `pricing_core.rating.score`, not\nre-validated here): applying every rung's recorded operation to `risk_premium`\nreproduces `payable_premium` exactly (FR-248); a traced and an untraced call on the\nsame bundle and context return an identical premium (`03` R3).",
+        "description": "`ScoringResult` (`scoring.schema.json:46-63`, `03` §4.4).\n\nInvariants (`scoring.schema.json:59-62`, enforced by `pricing_core.rating.score`, not\nre-validated here): applying every rung's recorded operation to `risk_premium`\nreproduces `payable_premium` exactly (FR-248); a traced and an untraced call on the\nsame bundle and context return an identical premium (`03` R3).\n\n`outputs` is the one construction-time check on served output values (`RL-1343` rule 4):\na `float` anywhere in it is refused, so a decimal-family value is a positional string\n(`_build_outputs`). The model does not know declared types, so it cannot tell a whole\n`27` under a declared `decimal` from a valid integer; the producer and batch's check\nclose that.",
         "properties": {
           "bundle_hash": {
             "pattern": "^sha256:[a-f0-9]{64}$",
@@ -16521,7 +16549,9 @@
             "type": "string"
           },
           "outputs": {
-            "additionalProperties": true,
+            "additionalProperties": {
+              "$ref": "#/components/schemas/OutputValue"
+            },
             "title": "Outputs",
             "type": "object"
           },

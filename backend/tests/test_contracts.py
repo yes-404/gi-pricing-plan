@@ -557,7 +557,8 @@ def test_generated_and_authored_agree_on_the_scoring_outputs_value_schema() -> N
     authored = _outputs_schemas(_load(_SCORING_OUTPUTS_SOURCES["authored"]))
     generated = _outputs_schemas(_load(_SCORING_OUTPUTS_SOURCES["generated"]))
     assert authored[0].get("additionalProperties") == generated[0].get("additionalProperties")
-    assert authored[1] == generated[1]
+    # `description` is the authored contract's prose, not part of the shape.
+    assert {k: v for k, v in authored[1].items() if k != "description"} == generated[1]
 
 
 #: The schema a hand-authored contract composes to inherit `00` §4.3's envelope.
