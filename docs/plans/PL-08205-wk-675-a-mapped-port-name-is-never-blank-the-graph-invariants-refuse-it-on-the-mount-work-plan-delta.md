@@ -44,6 +44,13 @@ Written 2026-10-23 from 10:53 BST (`TZ=Europe/London date`, 10:53:24 BST) by the
 (planner-8205), on the lead's brief `brief-planner-8205-2026-10-23.md`. Evidence was read at
 `origin/main` `4e399fd01e8de2fe55d2f128b0e09ee2b2735c6a` (#1365) unless a line names another
 tree. **No test was run at planning time**: every fact below is a read of a named file.
+Continued from 11:01 BST by planner-8205b (brief `brief-planner-8205b-2026-10-23.md`) after the
+first seat was stopped for load; the form, the citations and every line number were re-read.
+
+**Why a delta and not a leaf plan.** The brief asked for a leaf plan. `document-ids.md` §1.6's
+PL row reads *"from Lean P2 L5 **one plan per Work**, slices as rows, no per-slice `leaf`; a
+change is one dated Work-plan delta, a new `PL-` that `relates:` the Work's plan"*. This slice
+is new to WK-675, and `PL-1546` is frozen, so the form is a one-row delta (`kind: map`).
 
 ## Authority
 
@@ -61,6 +68,15 @@ tree. **No test was run at planning time**: every fact below is a read of a name
   fix slice, red-first in packages/model-schema/tests/test_graph_invariant_issues.py; NOT
   SL-1554. […] **The spec text it lists is owed in that slice** (03 §4.1 mount sentence + the two
   error-code rows), spec first."*
+- **The seating order**: the maintainer's entry "2026-10-23 10:57:28 BST — Maintainer: the §14
+  review agenda: the three carries JOIN; the "Before Phase 2" drift is an E3 PROPOSAL; my 10:52
+  seating order recorded here" in `channel/to-lead.md`, first bullet, verbatim in part:
+  *"**My 10:52 seating order, recorded** (it went by message only; the planner could not cite
+  it): the RL 8203 follow-on planner (PL 8205; spec text first; FD 8204 filed), […]"*. The
+  resume is item (D) of the entry "2026-10-23 11:01:38 BST — Maintainer: FD-1713 deploy-stack
+  tests ACCEPTED; disk residue; RESUME order". The 8205b brief names an "11:09 entry"; no
+  entry with that stamp was in `to-lead.md` at 11:01:56 BST (its last header was 11:01:38),
+  so the 10:57:28 entry is cited for the 10:52 order.
 - **The ruling's content**: RL 8203 (→ RL-1876),
   `docs/rulings/RL-08203-a-mount-never-maps-a-port-to-a-blank-name-the-graph-invariants-refuse-it-on-the-mount-and-the-designer-shows-it-through-the-validate-route.md`
   on `draft/rl-8203` @`8cd257f1`. Its sections "Ruled" items 1 to 5, "Spec text owed", "The
@@ -109,6 +125,29 @@ and the designer all see it (FR-1607). `03` §4.1 says so, and `OQ-1843` is clos
 mirrors. Done when the slice closes on its `LG-` with the red on base, the green, the
 broken-input proof, the spec text and the full two-half gate, and FD 8204's register row
 carries the fix's merge sha.
+
+## Status
+
+`draft`. The plan freezes `active` at its merge. The slice is dispatchable when all of these
+hold, each checked by the lead at the GO:
+
+1. RL 8203 is minted on `origin/main` (Task 0's first check prints its id).
+2. SL-1554 is merged (Task 0's second check; DP-2 (a)).
+3. The slice's `SL-` and `LG-` ids are reserved, and FD 8204's id is reserved (it is, in eta).
+4. The maintainer's GO for the slice (L1), with DP-1 and DP-2 answered or defaulted.
+5. No other active slice writes `03` §4.1 or §10, or `rating.py` (the lead's write-set check).
+
+## Spec text owed (RL 8203 "Spec text owed"; the 10:48:01 entry: "spec first")
+
+Each is a Task 1 step, and no new `FR-` is added:
+
+- the mount clause after `03:352` (Task 1 step 1), which carries both refusals and their codes
+  (DP-1 (a): "the two error-code rows");
+- the order clause at the end of the `RL-1474` paragraph `03:356` (step 2);
+- `OQ-1843` decided in `docs/open-questions.md:162` and `03:1615`, mirrored both ways (step 3);
+- the `docs/roadmap.md` §10 "Before WK-675 closes" row, recounted from `1 (1 open)` to
+  `1 (0 open)` (step 4);
+- `req-coverage.py` rc 0 (acceptance item 8).
 
 ## Acceptance Standard
 
@@ -331,9 +370,20 @@ Read at the named heads with `git diff --name-only origin/main...origin/<branch>
   the generated `docs/INDEX.md` (registry-exempt, `delivery-process.core.json` "generated").
   Neither consumes the other's output, so they may build side by side under RL-1445 (at most
   three build slices, one full gate at a time).
+- **vs SL-1552** (S10, same Work; no branch on `origin` at 11:01 BST, read-only prep only).
+  Its write set is read from its plan rows, `PL-1546` row 6 and `PL-1286` S10 (`:313`): a new
+  `03` §3.4 FR and its §5.1 row for a `GET` list route, the backend route, and the `/rating`
+  view. **Code-disjoint**: it does not touch `rating.py`, `test_graph_invariant_issues.py` or
+  `MountInspector.test.ts`. `03` is **section-disjoint** (§3.4 and §5.1 against §4.1 and §10).
+  `docs/roadmap.md` changes in different `SL-` rows. One surface may be shared: the
+  DP-S10-3 OQ (working id 8206, "owed before S10 merges", the 10:57:28 entry item (1)) may add
+  a row to `docs/open-questions.md`, `03` §10 and a roadmap §10 gate row, the tables this slice
+  edits for `OQ-1843`. That is a different row, so at most a mechanical merge conflict.
+  Neither consumes the other's output, so they **may build side by side** (RL-1445). SL-1552
+  also waits on SL-1551 (the 10:57:28 entry: "SL-1552 after SL-1551 merges").
 - **`03` is a known shared file** (RL-1263 item 4). This slice touches §4.1 (`:352`, `:356`)
   and §10 (`:1615`) only. The lead's dispatch checks every other active slice's write set
-  against those sections at the GO. This plan read only the two slices the brief names (no
+  against those sections at the GO. This plan read only the three slices the briefs name (no
   all-refs sweep).
 
 ## Hand-off (not this plan's writes)
@@ -367,4 +417,9 @@ Read at the named heads with `git diff --name-only origin/main...origin/<branch>
   `:716` and `:771`; `03` `:352`, `:356`, `:1118` and `:1615`; `open-questions.md:162`; and
   `roadmap.md:3518` were all read at `4e399fd0`. `MountInspector.vue`'s absence from main was
   checked with `git cat-file -e`. "RL-1876" is the lead's relay, and Task 0 checks it.
+  planner-8205b re-read `rating.py` `:662`, `:704`, `:710` and `:716`; `03` `:352`, `:356`
+  (by phrase) and `:1615`; `open-questions.md:162`; `roadmap.md:3518` and its count
+  `1 (1 open)`, at `4e399fd0`; and RL 8203's file on `origin/draft/rl-8203` @`8cd257f1`.
+- **Contention covers all three slices the briefs name**: SL-1554 (serialise), SL-1569
+  (disjoint) and SL-1552 (disjoint, one possible OQ-table merge conflict).
 - **No decision taken.** DP-1 is a reading with a default. DP-2 is the lead's at the GO.
