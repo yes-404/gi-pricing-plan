@@ -95,6 +95,10 @@ ONE_SIDED_SLUGS: Final[dict[str, str]] = {
     "switch-report": "first written form — 03 §5.1 (WK-674 Slice 5, PL-1766, FR-268)",
     "deployment-created": "first written form — 03 §5.1 (WK-674 Slice 5, PL-1766, FR-268)",
     "rollback-create": "first written form — 03 §5.1 (WK-674 Slice 5, PL-1766 D5.10, FR-269)",
+    "routing-rule": "first written form — 03 §4.13 (WK-674 Slice 6, RL-1834 D1, FR-270)",
+    "routing-rule-update": "first written form — 03 §4.13 (WK-674 Slice 6, RL-1834 D1, FR-270)",
+    "shadow-config": "first written form — 03 §4.13 (WK-674 Slice 6, RL-1834 D2, FR-271)",
+    "shadow-config-update": "first written form — 03 §4.13 (WK-674 Slice 6, RL-1834 D2, FR-271)",
     "upload-url-request": (
         "first written form — 07 §5.1 (WK-1178 SL-1722, DP-1722-WIRE (a), FR-421)"
     ),
