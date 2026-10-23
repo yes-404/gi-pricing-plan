@@ -594,12 +594,14 @@ async def test_a_near_tie_non_rung_money_minor_output_is_the_integer_1235() -> N
 
 @pytest.mark.req("FR-273")
 async def test_the_float_path_fails_the_near_tie_fee_case(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Red first, by planting the float path: the value is the float 1234.5."""
-    result = await _near_tie_fee_result(monkeypatch)
-    assert result.outputs["fee_minor"] == 1234.5
-    assert type(result.outputs["fee_minor"]) is float
-    with pytest.raises(AssertionError):
-        _assert_the_fee_is_the_integer_1235(result)
+    """Red first, by planting the float path: `_build_outputs` would serve the float 1234.5.
+    Since SL-1569 `ScoringResult` refuses a float at construction (RL-1343 rule 4), so the
+    plant can no longer be served: it is a `ValidationError` naming `fee_minor`. Ruled by the
+    maintainer (by delegation), entry of 2026-10-23 11:00 (the lead's relay)."""
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="fee_minor"):
+        await _near_tie_fee_result(monkeypatch)
 
 
 @pytest.mark.req("FR-273")
