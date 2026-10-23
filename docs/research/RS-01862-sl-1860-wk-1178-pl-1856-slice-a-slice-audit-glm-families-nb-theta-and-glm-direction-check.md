@@ -42,6 +42,8 @@ The maths, the θ boundary and the direction rule are correct (sections 2 and 3)
 | B3 | 2 backend skips are unnamed and may be `conftest_db` skips; 3 of 4 pricing-core skips are inferred, not read | rerun that batch with `-rs` (lead grants) |
 | B4 | Based on `f3462d8f` (branch since pushed by the lead); LG has stale or wrong fields; audit section empty | push; re-merge main (item 21); LG corrections below |
 
+*2026-10-23 — B2 follow-up:* the gate-of-record CI run at `b3748d2d` found two misses the unrun closure had hidden: `packages/model-schema/tests/test_input_free_raises.py::test_no_marker_raise_interpolates_a_value` (`modelling.py:1205`, an interpolated family) and `GlmDiagnosticsPanel.test.ts:8` (TS2739, fixture lacking `monotonicity`, `monotonicity_omitted`). Fixed by `ddbd3b5f` (message form only; the guard is untouched) and `f2eb4799` (fixture), recorded in LG-1861's build log; verified by the lead directly, to-lead 2026-10-23 11:16:20 BST.
+
 ### 1. Scope from PL-1856 slice A, then evidence (acceptance items 3–6, 8–10; item 7 is `power(k)`, slice C's strike)
 
 | Item | Evidence | Result |
