@@ -165,3 +165,19 @@ Disclosure: a first attempt had a shell argument slip. Its mutation step failed 
 - Two process notes: a first pass of 7 files started at load1 6.06–7.73 (guard not enforced; the results were not used, the full 21 were re-run under the guard); a second pass saw `rc=124` on 3 files because the `timeout` wrapped the queue wait for the slot, not the test (no test output; superseded by the clean run).
 - Backend: no DB-free backend test file imports a module this slice changed; nothing backend is owed beyond the gate's full pytest.
 - Path correction (exec-1554p, 2026-10-23, after the lead's note): the logs and the re-derived gate script live under `~/gi-pricing-plan.local/scratch/sl-1554/` (`sl1554-green-059af1a5.log`, `sl1554-gate1b.sh`), not the path written above and not `<wt>/scratch/`, which is not git-ignored and fails the template's clean-tree preflight. `sl1554-gate1b.sh` sha256 `ad56e9418a34382d37aaa1b960e2b841eb8b91da005961ec082d8ceb3f9bce4c`; its diff against `sl1554-gate1.sh` is slot `gate-1` to `gate-1b` (L14, L18, L64), log dir `sl1554-gate1b` (L10) and the re-exec path (L14).
+
+### Entry 2026-10-23 — pre-gate prep: audit records folded; log-head check (exec-1554m)
+
+**Audit.** Four audit records, each folded from its aud branch at the sha named, at working ids (the lead mints at the id turn). Each verdict is the record's own proposal, not the lead's:
+
+| Record | Branch @ sha | Proposed verdict, as the record states it |
+|---|---|---|
+| RS-8156 | `aud-1554-2026-10-22` @ `b5c6c048` | NOT-CLEAN, one blocking item (B1): this ledger carried no RED/GREEN record (met by the 2026-10-22 RED/GREEN entry) |
+| RS-8158 | `aud-1554b-2026-10-22` @ `cf0fb018` | CLEAN for the remedy; later voided by RS-8159 (`graph.test.ts` was red at the slice head) |
+| RS-8159 | `aud-1554c-2026-10-22` @ `c395f5e9` | NOT-CLEAN, one blocking item (B1): the derived GREEN set omitted `StepInspector.test.ts` and `QuoteSandboxView.test.ts` (met by the RS 8159 B1 entry and the import-closure re-derivation) |
+| RS-8161 | `aud-1554d-2026-10-22` @ `65479e54` | CLEAN on points 1 and 2 only; point 3 (the 6 lazy-route-only tests, listed as not run here) confirmed listed, not judged |
+
+**Log check: does line 1 of each named log carry a head sha?**
+- Yes (line 1 is a 40-hex head): `graph-f3462d8f.log`, `graph-bd236e3b.log`, `regfix-b1..b4.log` (`a91bff43`), `regfix-b5.log` (`ada287f3`); `sl1554-green-059af1a5.log`, `-batch1-`, `-batch2-` (head `059af1a5`, tree `400cd63b`).
+- Head on line 2 (line 1 is the mutation header comment): `negctl-N1/N2/N3.log` (`HEAD=ab48b63e`).
+- **Owed, no head sha in the log: the 4 `red-*.log` (at `7576489f`) and the 8 `green-*.log` (at `ab405217`)** in `sl1554-vitest/`. Their heads are stated in this ledger's entry only; the logs open with a vitest banner. Not reconstructed.
