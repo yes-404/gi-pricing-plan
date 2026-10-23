@@ -14,10 +14,13 @@ import re
 from decimal import Decimal
 from typing import Any
 
+import polars as pl
 import pytest
 from test_rating_ladder_exact import _chain_algorithm, _compile_payload, _context
+from test_rating_score_batch import _contexts, _ctx_to_row
+from test_rating_score_batch_outputs import _probe_bundle
 
-from pricing_core.rating.score import _coerce_output_value, score_one
+from pricing_core.rating.score import _coerce_output_value, score_batch, score_one
 
 _POSITIONAL = re.compile(r"^-?[0-9]+(\.[0-9]+)?$")
 
@@ -166,3 +169,50 @@ def test_the_decimal_family_branch_returns_a_positional_string_unchanged(
 ) -> None:
     assert _coerce_output_value(declared_type, "19.80") == "19.80"
     assert _coerce_output_value(declared_type, "0.00") == "0.00"
+
+
+@pytest.mark.req("FR-214")
+@pytest.mark.parametrize("declared", ["int", "count"])
+async def test_a_whole_value_under_an_integral_type_is_served_as_the_integer(
+    declared: str,
+) -> None:
+    """Entry (2), "3.0 -> 3". At 4e399fd0 the engine already returns the integer 3 for
+    `3.0 + 0 * x` (probed), so this is a control, not a red: no whole-valued float reaches
+    `_build_outputs` from the engine, and the exact-equality rule is carried by the refusal
+    test below."""
+    result = await _served("3.0 + 0 * risk_premium_minor", declared=declared, result_type=declared)
+    assert result.outputs["probe_out"] == 3
+    assert type(result.outputs["probe_out"]) is int
+    assert '"probe_out":3}' in result.model_dump_json()
+
+
+@pytest.mark.req("FR-214")
+@pytest.mark.parametrize("declared", ["int", "count"])
+async def test_a_near_integer_under_an_integral_type_is_refused_with_rating_type_mismatch(
+    declared: str,
+) -> None:
+    """Entry (1), exact equality with no tolerance: `2.9999999999` is not integral. The
+    refusal is a coded `ValueError` and names no value (NFR-499)."""
+    with pytest.raises(ValueError, match="RATING_TYPE_MISMATCH") as caught:
+        await _served(
+            "2.9999999999 + 0 * risk_premium_minor", declared=declared, result_type=declared
+        )
+    assert "2.9999999999" not in str(caught.value)
+
+
+@pytest.mark.req("FR-255")
+@pytest.mark.parametrize("declared", ["int", "count"])
+async def test_integral_batch_codes_a_near_integer_row_and_completes_the_run(
+    declared: str,
+) -> None:
+    """RL-1567 DP-4 (a): one producer, so batch codes the fault as `/score` does. Q0 (age 18)
+    gives 2.9999999999, the other rows 3.0."""
+    compiled = await _probe_bundle(declared, "driver_age == 18 ? 2.9999999999 : 3.0")
+    frame = pl.DataFrame([_ctx_to_row(c) for c in _contexts(3)]).lazy()
+    rows = {r["quote_id"]: r for r in score_batch(compiled, frame).collect().to_dicts()}
+    assert rows["Q0"]["outcome"] == "error"
+    assert rows["Q0"]["error_code"] == "RATING_TYPE_MISMATCH"
+    assert rows["Q0"]["outputs_json"] is None
+    for quote_id in ("Q1", "Q2"):
+        assert rows[quote_id]["outcome"] == "quoted"
+        assert json.loads(rows[quote_id]["outputs_json"])["probe_out"] == 3
