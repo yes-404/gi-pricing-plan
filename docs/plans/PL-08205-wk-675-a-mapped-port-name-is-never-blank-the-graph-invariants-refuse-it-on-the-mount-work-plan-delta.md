@@ -19,8 +19,8 @@ relates: [PL-1546, PL-1286, OQ-1843, SL-1554, RL-1309, RL-1474, RL-1835, FR-212,
 
 *Disclosure: drafted under working id 8205 (this plan), reserved by the lead in eta on
 2026-10-23, and renumbered at the mint. The ruling it implements is RL 8203, on branch
-`draft/rl-8203` @`8cd257f1`; the lead's brief says it mints as RL-1876 at its turn, written
-here as "RL 8203 (→ RL-1876)". That minted id is the lead's relay: it was not in `to-lead.md`
+`draft/rl-8203` @`8cd257f1`; the lead's brief says it mints as RL 1876 at its turn, written
+here as "RL 8203 (→ RL 1876)", in space form because it is not minted yet (the brief's hyphen form reds audit check 32). That minted id is the lead's relay: it was not in `to-lead.md`
 at 10:53 BST. The finding the ruling's amendment files is FD 8204 (working id, reserved by
 the lead). The slice's `SL-` and `LG-` ids are reserved by the lead at the GO, written below
 as "SL <reserved at GO>" and "LG <reserved at GO>". None of the four working ids is in
@@ -77,8 +77,8 @@ is new to WK-675, and `PL-1546` is frozen, so the form is a one-row delta (`kind
   tests ACCEPTED; disk residue; RESUME order". The 8205b brief names an "11:09 entry"; no
   entry with that stamp was in `to-lead.md` at 11:01:56 BST (its last header was 11:01:38),
   so the 10:57:28 entry is cited for the 10:52 order.
-- **The ruling's content**: RL 8203 (→ RL-1876),
-  `docs/rulings/RL-08203-a-mount-never-maps-a-port-to-a-blank-name-the-graph-invariants-refuse-it-on-the-mount-and-the-designer-shows-it-through-the-validate-route.md`
+- **The ruling's content**: RL 8203 (→ RL 1876),
+  the ruling file `docs/rulings/RL-*-a-mount-never-maps-a-port-to-a-blank-name-the-graph-invariants-refuse-it-on-the-mount-and-the-designer-shows-it-through-the-validate-route.md`
   on `draft/rl-8203` @`8cd257f1`. Its sections "Ruled" items 1 to 5, "Spec text owed", "The
   test the implementing slice carries (red first)", "What it obliges" and "Acceptance" are
   this slice's scope. They are cited by section, not restated where a pointer is enough.
@@ -105,7 +105,7 @@ is new to WK-675, and `PL-1546` is frozen, so the form is a one-row delta (`kind
   output step (FR-214); […]") is `:356`. No row anywhere under `docs/` is keyed by either error
   code. The predicate, verbatim:
   `git grep -n -E '^\| *\*{0,2}`?(RATING_GRAPH_UNRESOLVED_REF|VALIDATION_FAILED)`?' -- docs`
-  prints one hit only, a ruling's table cell (`RL-01401-…md:58`). 03's code list (`:1118`) is
+  prints one hit only, a ruling's table cell (`RL-1401`'s file, `:58`). 03's code list (`:1118`) is
   prose and already names `RATING_GRAPH_UNRESOLVED_REF`. `VALIDATION_FAILED` is generic. See
   DP-1 for how "the two error-code rows" is read.
 - `packages/model-schema/tests/test_graph_invariant_issues.py` (170 lines, no DB) already has
@@ -216,13 +216,13 @@ Under L5 a Work plan's tasks are its slice rows. This row's steps follow the tab
 
 | Order | Slice | Scope (what the `LG-` quotes) | Requirements, each id | Depends on | Lane | Size |
 |---|---|---|---|---|---|---|
-| after SL-1554 merges (WK-675) | SL <reserved at GO> — WK-675 fix slice — RL 8203 (→ RL-1876): a mount never maps a port to a blank parent name; `graph_invariant_issues` refuses it on the mount, naming the port; OQ-1843 closed; FD 8204 | **Spec text** (Task 1): the two dated clauses in `03` §4.1 (after `:352`, and in the `RL-1474` order paragraph at `:356`), `OQ-1843` closed in `docs/open-questions.md` and `03` §10, and the `docs/roadmap.md` §10 gate row recounted. **Tests** (Task 2): three cases in `packages/model-schema/tests/test_graph_invariant_issues.py` (input blank, output blank, control), red first. **Code** (Task 3): `graph_invariant_issues` in `packages/model-schema/src/model_schema/rating.py` reports each blank-mapped port on its mount and leaves blank names out of the mount node and `purpose_only`. **Designer pin** (Task 4): one case in `frontend/src/components/dag/__tests__/MountInspector.test.ts` asserting that a cleared input emits `inputs: {<port>: ""}`. **Finding** (Task 5): FD 8204 (LOW, WK-675), essay plus register row, discharged by this PR. **Write set**: `docs/specs/03-rating-engine.md`, `docs/open-questions.md`, `docs/roadmap.md` (§10 gate row; this slice's `SL-` status lines), `packages/model-schema/src/model_schema/rating.py`, `packages/model-schema/tests/test_graph_invariant_issues.py`, `frontend/src/components/dag/__tests__/MountInspector.test.ts`, the `LG-` under `docs/ledgers/`, FD 8204's essay under `docs/findings/` and its row in `docs/findings/register.md`. **Out of scope**: `MountInspector.vue` and every other non-test frontend file; `inline.py`; `SubGraphRef`'s fields; `docs/contracts/`; a name rule for other value names | `03` §4.1 (data contract, under existing ids): FR-212, FR-217; `03` §3: FR-1607 (unchanged, its route reports the new issue); `OQ-1843`; no new `FR-` | RL 8203 minted (→ RL-1876) on main; **SL-1554 merged** (Task 4's file and the component it tests exist only on `sl-1554-wk675-s9`); FD 8204's id reserved | at GO | ≈ 0.5 lane-day, derived: one function, one test file of three cases, one vitest case, three spec hunks plus the OQ pair and the gate row, one full gate |
+| after SL-1554 merges (WK-675) | SL <reserved at GO> — WK-675 fix slice — RL 8203 (→ RL 1876): a mount never maps a port to a blank parent name; `graph_invariant_issues` refuses it on the mount, naming the port; OQ-1843 closed; FD 8204 | **Spec text** (Task 1): the two dated clauses in `03` §4.1 (after `:352`, and in the `RL-1474` order paragraph at `:356`), `OQ-1843` closed in `docs/open-questions.md` and `03` §10, and the `docs/roadmap.md` §10 gate row recounted. **Tests** (Task 2): three cases in `packages/model-schema/tests/test_graph_invariant_issues.py` (input blank, output blank, control), red first. **Code** (Task 3): `graph_invariant_issues` in `packages/model-schema/src/model_schema/rating.py` reports each blank-mapped port on its mount and leaves blank names out of the mount node and `purpose_only`. **Designer pin** (Task 4): one case in `frontend/src/components/dag/__tests__/MountInspector.test.ts` asserting that a cleared input emits `inputs: {<port>: ""}`. **Finding** (Task 5): FD 8204 (LOW, WK-675), essay plus register row, discharged by this PR. **Write set**: `docs/specs/03-rating-engine.md`, `docs/open-questions.md`, `docs/roadmap.md` (§10 gate row; this slice's `SL-` status lines), `packages/model-schema/src/model_schema/rating.py`, `packages/model-schema/tests/test_graph_invariant_issues.py`, `frontend/src/components/dag/__tests__/MountInspector.test.ts`, the `LG-` under `docs/ledgers/`, FD 8204's essay under `docs/findings/` and its row in `docs/findings/register.md`. **Out of scope**: `MountInspector.vue` and every other non-test frontend file; `inline.py`; `SubGraphRef`'s fields; `docs/contracts/`; a name rule for other value names | `03` §4.1 (data contract, under existing ids): FR-212, FR-217; `03` §3: FR-1607 (unchanged, its route reports the new issue); `OQ-1843`; no new `FR-` | RL 8203 minted (→ RL 1876) on main; **SL-1554 merged** (Task 4's file and the component it tests exist only on `sl-1554-wk675-s9`); FD 8204's id reserved | at GO | ≈ 0.5 lane-day, derived: one function, one test file of three cases, one vitest case, three spec hunks plus the OQ pair and the gate row, one full gate |
 
 ### Task 0: Preconditions (read-only, quoted in the `LG-`)
 
 - [ ] `git -C <wt> grep -n 'id: RL-' -- 'docs/rulings/RL-*a-mount-never-maps-a-port-to-a-blank-name*'`
   on the slice's base prints RL 8203's minted id. Use that id everywhere this plan writes
-  RL-1876. If it differs from RL-1876, use the printed id and say so in the `LG-`.
+  RL 1876. If it differs from RL 1876, use the printed id and say so in the `LG-`.
 - [ ] `git -C <wt> cat-file -e origin/main:frontend/src/components/dag/MountInspector.vue`
   exits 0 (SL-1554 merged). If it does not, Tasks 1 to 3 and 5 may proceed, but the PR waits
   for Task 4. Report it to the lead; do not edit SL-1554's branch.
@@ -329,7 +329,7 @@ Under L5 a Work plan's tasks are its slice rows. This row's steps follow the tab
   WK-675, decision *fix before close with an owner: WK-675*, discharged by this slice. Under
   `document-ids.md` §1.6's FD row the essay and register row are the **auditor's** to author.
   The planner's draft text is at
-  `~/gi-pricing-plan.local/scratch/draft/pl-8205/FD-8204-draft.md`; who files it is the
+  `~/gi-pricing-plan.local/scratch/draft/pl-8205/` (the FD draft file there); who files it is the
   lead's to name at the GO (open question 2 in the report).
 - [ ] At the slice audit the auditor sets FD 8204 `closed`, citing the PR, and the register
   row carries the merge sha.
@@ -416,7 +416,7 @@ Read at the named heads with `git diff --name-only origin/main...origin/<branch>
 - **Facts re-read, not relayed.** `rating.py` `:485-486`, `:606`, `:662`, `:704`, `:710`,
   `:716` and `:771`; `03` `:352`, `:356`, `:1118` and `:1615`; `open-questions.md:162`; and
   `roadmap.md:3518` were all read at `4e399fd0`. `MountInspector.vue`'s absence from main was
-  checked with `git cat-file -e`. "RL-1876" is the lead's relay, and Task 0 checks it.
+  checked with `git cat-file -e`. "RL 1876" is the lead's relay, and Task 0 checks it.
   planner-8205b re-read `rating.py` `:662`, `:704`, `:710` and `:716`; `03` `:352`, `:356`
   (by phrase) and `:1615`; `open-questions.md:162`; `roadmap.md:3518` and its count
   `1 (1 open)`, at `4e399fd0`; and RL 8203's file on `origin/draft/rl-8203` @`8cd257f1`.
