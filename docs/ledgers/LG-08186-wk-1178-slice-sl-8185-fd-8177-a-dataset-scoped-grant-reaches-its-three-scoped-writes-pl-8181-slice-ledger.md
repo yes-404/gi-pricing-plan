@@ -79,6 +79,14 @@ The remaining 101 files are covered by the slice's full code gate, the decisive 
 
 The small-run database `gipricing_sl-8185_215125e7` was dropped by the lead in the maintainer's disk clean-up of 2026-10-22 18:32 (0 connections first, rc 0). A later small run recreates it, so it is dropped again before the gate starts. Batch 4 of the closure run: its summary line was lost when the loop was stopped (94 passed by count, no failures seen).
 
+**2026-10-23, Task 2 of the re-gate brief: the re-merge of `4e399fd0` and the DB-free closure files** (merge `d7d9727a`, fix `ac1dce42`; run on those trees, logs `d7d9727a-small-{aa..ae}.log` and `ac1dce42-small-guard.log` in `~/gi-pricing-plan.local/scratch/sl-8185/`, redis db 12, DBSIZE 0 after). The merge of `origin/main` `4e399fd0` conflicted in `docs/INDEX.md` (taken from main and regenerated, `doc-index.py --check` rc 0) and in `docs/roadmap.md` (both slice blocks, `SL-1857` and this one, kept whole; the lead's ruling of 2026-10-23). Closure re-derived by `python3 -I closure.py <wt>` (the command of the 2026-10-22 entry above, the same five changed modules): 48 source modules, **115** test files (113 before the merge); 14 of them need no database (the other 101 name a database fixture and wait for the gate, the decisive green). The 14 ran through `run-small.sh`, three files each:
+- `aa` rc=0: `18 passed, 8 warnings in 9.45s` (`test_bench_rating_calls.py`, `test_errors.py`, `test_management_429_declared.py`)
+- `ab` rc=0: `15 passed, 2 warnings in 0.38s` (`test_model_specs_expression_estimate.py`, `test_rate_table_route_codes.py`, `test_reconcile_claim_count.py`)
+- `ac` rc=1: `1 failed, 13 passed, 2 warnings in 3.26s` (`test_route_scope_guard.py`, `test_severity_population_golden.py`, `test_shadow_log_sanitised.py`): **RED** `FAILED backend/tests/test_route_scope_guard.py::test_every_covered_route_has_a_row`, `covered routes with no ROUTE_SCOPES row: [('PUT', '/api/v1/environments/{env}/routing')]`. The permanent guard did what it is for: `SL-1260`'s new route (merged by #1365) holds `deployment:promote` on the Environment through `_authorised_environment`, the same check as the three deployment routes. Fix `ac1dce42`: one `E` row in `ROUTE_SCOPES`, no test removed or weakened.
+- `ac1dce42` re-run of the guard file, rc=0: `10 passed, 2 warnings in 1.42s`
+- `ad` rc=1, `ae` rc=1: `14 passed, 2 warnings, 4 errors in 0.75s` and `10 passed, 2 warnings, 6 errors in 2.65s`, every error `RuntimeError: GIP_TEST_DATABASE_URL is not set, and the per-worktree test database ... does not exist yet` (`test_startup_gc_freeze.py`, `test_startup_self_check.py`; `test_error_sinks.py`, `test_api_auth.py`): setup errors of tests that need the database, **owed to the gate**, not failures.
+`ruff check .` rc 0 and `ruff format --check` on the changed file rc 0 before the commit.
+
 ## PRs
 
 None yet.
