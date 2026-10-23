@@ -1116,7 +1116,7 @@ An Environment may be gated by a `deployment` entry in the Approval Policy (`06`
 | `POST` | `/api/v1/environments/{env}/deployment-requests` | Submit a deployment request for approval (FR-267, FR-429) *(Refusals added 2026-10-03, `RL-1401`: 409 `VALIDATION_FAILED` when the Environment is retired; 409 `BUNDLE_COMPILE_FAILED` when the Rating Version has no compiled bundle; §4.12.)* |
 
 **Error codes owned by this module:** `RATING_GRAPH_CYCLIC`, `RATING_GRAPH_UNRESOLVED_REF`,
-`RATING_TYPE_MISMATCH`, `MONETARY_FLOAT_REFUSED`, `EXPRESSION_NON_DETERMINISTIC`,
+`RATING_TYPE_MISMATCH` *(also served per quote, added 2026-10-05, `RL-1567`: **422** from `POST /api/v1/score` and each result of `/score/compare` when a declared `int` or `count` output's value is not integral (FR-214); in batch the same fault is an `"error"` row (FR-255) coded, until SL-1569 merges, `ValueError` (the class SL-1566's batch serialiser raises), and after it, `RATING_TYPE_MISMATCH`)*, `MONETARY_FLOAT_REFUSED`, `EXPRESSION_NON_DETERMINISTIC`,
 `EXPRESSION_UNGUARDED_DIVISION`, `EXPRESSION_SCALE_OVERFLOW`, `EXPRESSION_INVALID_VOCABULARY`,
 `RATING_VERSION_UNPINNED`, `INPUT_CONTRACT_VIOLATION`,
 `REFERENCE_LOOKUP_MISS`, `RATE_TABLE_MISS`, `RATE_TABLE_INCOMPLETE`,

@@ -1376,23 +1376,26 @@ def test_a_non_rung_money_minor_output_is_a_json_integer_on_score(
 
 
 @pytest.mark.req("FR-273")
+@pytest.mark.req("NFR-499")
 def test_the_float_path_fails_the_route_level_fee_assert(
     client: TestClient,
     scoring_headers: dict[str, str],
     compiled_fee_version: Any,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Red first, by planting the float path (`_build_outputs` reads `result[name]`): the body
-    carries `1234.5`, and the same assert fails."""
+    """RL-1343 rule 4 and the maintainer (by delegation), entry "2026-10-05 18:25:42 BST":
+    a planted float path (`_exact` -> None) is an engine-invariant breach, refused at
+    `ScoringResult` construction. It is the NFR-499 internal error, with neither the float
+    nor the input in the body, and never a per-quote code."""
     from pricing_core.rating import score as core_score
 
     monkeypatch.setattr(core_score, "_exact", lambda result, name: None)
     body = {**_quote({"rating_version_ref": SCORED_REF}), "inputs": {"premium_in": 1234}}
     response = client.post(SCORE_URL, json=body, headers=scoring_headers)
-    assert response.status_code == 200, response.text
-    assert '"fee_minor":1234.5' in response.text
-    with pytest.raises(AssertionError):
-        _assert_the_route_serves_the_fee_as_a_json_integer(response)
+    assert response.status_code == 500, response.text
+    assert response.json()["code"] == "INTERNAL_ERROR"
+    assert response.json()["code"] not in score_module._PER_QUOTE_CODES
+    assert "1234" not in response.text
 
 
 # --------------------------------------------------------------------------------------
@@ -1491,29 +1494,6 @@ def test_a_near_integer_under_an_integral_type_is_refused_on_score(
     assert response.status_code == 422, response.text
     assert response.json()["code"] == "RATING_TYPE_MISMATCH"
     assert "2.9999999999" not in response.text  # NFR-499
-
-
-@pytest.mark.req("FR-273")
-@pytest.mark.req("NFR-499")
-def test_the_float_path_is_an_internal_error_that_leaks_no_value(
-    client: TestClient,
-    scoring_headers: dict[str, str],
-    compiled_fee_version: Any,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """RL-1343 rule 4 and the maintainer (by delegation), entry "2026-10-05 18:25:42 BST":
-    a planted float path (`_exact` -> None) is an engine-invariant breach, refused at
-    `ScoringResult` construction. It is the NFR-499 internal error, with neither the float
-    nor the input in the body, and never a per-quote code."""
-    from pricing_core.rating import score as core_score
-
-    monkeypatch.setattr(core_score, "_exact", lambda result, name: None)
-    body = {**_quote({"rating_version_ref": SCORED_REF}), "inputs": {"premium_in": 1234}}
-    response = client.post(SCORE_URL, json=body, headers=scoring_headers)
-    assert response.status_code == 500, response.text
-    assert response.json()["code"] == "INTERNAL_ERROR"
-    assert response.json()["code"] not in score_module._PER_QUOTE_CODES
-    assert "1234" not in response.text
 
 
 # --------------------------------------------------------------------------------------
