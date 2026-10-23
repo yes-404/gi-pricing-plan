@@ -19,6 +19,7 @@ function rating(over: Partial<RatingVersion> & Pick<RatingVersion, "slug" | "ver
     workspace_id: "01a04394-0000-7000-8000-000000000001",
     dataset_version_id: "01a04394-0000-7000-8000-000000000002",
     model_ref: "model:fremtpl2-glm-7edfde@1",
+    model_reference_mode: "exact",
     created_at: "2026-08-27T14:00:00Z",
     created_by: "01a04394-0000-7000-8000-000000000003",
     updated_at: "2026-08-27T14:05:00Z",
@@ -48,7 +49,7 @@ const VERSIONS: RatingVersion[] = [
   rating({
     slug: "fremtpl2-demo", version: 2, status: "draft",
     pins: { rate_tables: ["rate_table:area@3", "rate_table:band@2"] },
-  } as Partial<RatingVersion> & Pick<RatingVersion, "slug" | "version" | "status">),
+  }),
 ];
 
 interface Stub {
