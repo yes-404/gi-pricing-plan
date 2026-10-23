@@ -1589,7 +1589,7 @@ relates: [PL-1286, PL-1371]
 id: SL-1552
 family: slice
 title: Slice 10: Rating version list (FD-1283 option A; a new `03` §3.4 FR, spec first)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
@@ -1599,7 +1599,7 @@ corrected_by: []
 relates: [PL-1286, PL-1371]
 ```
 
-`PL-1286` S10, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. The `/rating` list: versions by status, live badges, effective dates, rows linking to `:slug/v/:version`; spec first, amending the existing `GET /api/v1/rating-versions` §5.1 row per `RL-1483`. **Activation needs:** S8 (order: reverse ladder order, ruled 2026-10-08 14:32:33 BST, item D); `SL-1256` (met); `03` §3.4 serialised with WK-674 S6 (`SL-1260`, `PL-1286:398`). Lane or team fixed at GO. **Cut-ladder rung 2**, with S11 (`handover/cut-ladder-2026-10-08.md`, ruled 2026-10-08 13:21:00 BST); not pre-cut. *(Cut 2026-10-08 by the planner under working id 9462, reserved by the lead; minted 2026-10-10 as SL-1552 in the D2 batch mint.)*
+`PL-1286` S10, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. The `/rating` list: versions by status, live badges, effective dates, rows linking to `:slug/v/:version`; spec first, amending the existing `GET /api/v1/rating-versions` §5.1 row per `RL-1483`. **Activation needs:** S8 (order: reverse ladder order, ruled 2026-10-08 14:32:33 BST, item D); `SL-1256` (met); `03` §3.4 serialised with WK-674 S6 (`SL-1260`, `PL-1286:398`). Lane or team fixed at GO. **Cut-ladder rung 2**, with S11 (`handover/cut-ladder-2026-10-08.md`, ruled 2026-10-08 13:21:00 BST); not pre-cut. *(Cut 2026-10-08 by the planner under working id 9462, reserved by the lead; minted 2026-10-10 as SL-1552 in the D2 batch mint.)* *(Activated 2026-10-23, `draft` → `active`, on the maintainer's (by delegation) entry "2026-10-23 11:14:56 BST — Maintainer: SL-1552 (WK-675 S10) GO under L1; RL 8163 ADOPTED; DP-S10-4 and DP-S11-3 decided" in `to-lead.md`, item (D); ledger LG 8208. `router/index.ts` and `App.vue` stay held until SL-1551's squash is on `origin/main`.)*
 
 #### SL-1553 — Slice 11: Regression suite view (FR-260, FR-261, FR-1221; FD-1283 option A)
 
