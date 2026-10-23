@@ -49,9 +49,20 @@ const groups = computed(() => {
     if (statusFilter.value !== "all" && version.status !== statusFilter.value) continue;
     bySlug.set(version.slug, [...(bySlug.get(version.slug) ?? []), version]);
   }
-  return [...bySlug.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([slug, rows]) => ({ slug, rows: rows.sort((a, b) => b.version - a.version) }));
+  const grouped = [...bySlug.entries()].map(([slug, rows]) => {
+    const byVersion = [...rows].sort((a, b) => b.version - a.version);
+    // DP-S10-4: a group sorts by its newest version's effective_from.
+    const from = byVersion[0]?.effective_from;
+    return { slug, rows: byVersion, from: from ? Date.parse(from) : null };
+  });
+  return grouped.sort((a, b) => {
+    if (a.from !== b.from) {
+      if (a.from === null) return 1;
+      if (b.from === null) return -1;
+      return b.from - a.from;
+    }
+    return a.slug.localeCompare(b.slug);
+  });
 });
 
 /** The environments whose live set holds this version's `slug@version`: no join on `id`. */
