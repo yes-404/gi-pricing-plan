@@ -2973,7 +2973,7 @@ id: SL-1873
 family: slice
 title: WK-1178 — FD-1872, the switch slot-namespace test names a synthetic slot (test only)
 status: closed                   # draft → active → closed | retired (§1.2a)
-created: 2026-10-22   # drafted 2026-10-22 under working id 8200; minted 2026-10-23 as SL-1873
+created: 2026-10-23   # drafted 2026-10-22 under working id 8200; minted 2026-10-23 as SL-1873
 owner: executor
 tree: 1fe82ee673cc8aef2bd3e70b81b8304059fccbc1
 phase: P2

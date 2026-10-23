@@ -27,6 +27,10 @@ Does the slice remedy FD-1872 as the maintainer's entry "2026-10-22 23:42:23 BST
 
 Range `origin/main...4c9be06d` (base `1fe82ee6`; branch `fix/fd-8199-synthetic-gate-slot`). Read by `git show`, `git diff` and `git grep` only; no test, DB, redis or gate was run by this seat, and the slice branch was not edited.
 
+## Findings
+
+No blocking finding: each of the seven checks below is met, and the non-blocking notes follow them. (The heading is added at the mint: the research template requires it, audit-docs check 37; the body below it is unchanged.)
+
 ## Checks
 
 1. **Only the test file changes outside `docs/`.** `git diff --stat origin/main...4c9be06d`: `backend/tests/test_deployment_switch_slot_namespace.py`, `docs/INDEX.md`, `docs/roadmap.md`, the LG. `git diff --name-only origin/main...4c9be06d -- '*.py'` lists the one test file. No product code is touched. **Met.**
@@ -45,7 +49,7 @@ Range `origin/main...4c9be06d` (base `1fe82ee6`; branch `fix/fd-8199-synthetic-g
 
 - The LG's ruff, mypy and cleanup claims (ruff rc 0, `Success: no issues found in 246 source files`, db 11 flushed, db 0 untouched) were not re-verified: that would mean running tools. They rest on the executor's record.
 - LG-1874's Audit section reads "(not yet)"; it is written from this record at the mint, in the slice PR.
-- LG-1874's `created: 2026-10-22` is the draft date; the gate runs are 2026-10-23 BST. Cosmetic.
+- LG-1874's `created: 2026-10-22` is the draft date; the gate runs are 2026-10-23 BST. Cosmetic. (At the mint `created:` became the mint date, 2026-10-23, because audit-docs check 31 requires `created` to be non-decreasing with the id; the draft date stays in the comment on that line.)
 - The maintainer's text names the channel `gip:switch:gate-1:dev`; the real one is `gip:switch:local:local:gate-1:dev` (`deployment_switch.py` :400-410), which the LG uses.
 - audit-docs on the slice head is owed when gate slots are free.
 

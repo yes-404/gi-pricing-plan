@@ -3,7 +3,7 @@ id: LG-1874
 family: ledger
 title: WK-1178 slice SL-1873 — FD-1872, the switch slot-namespace test names a synthetic slot (slice ledger)
 status: closed                 # active → closed (§1.2a)
-created: 2026-10-22   # drafted 2026-10-22 under working id 8201; minted 2026-10-23 as LG-1874
+created: 2026-10-23   # drafted 2026-10-22 under working id 8201; minted 2026-10-23 as LG-1874
 owner: executor
 tree: 1fe82ee673cc8aef2bd3e70b81b8304059fccbc1
 phase: P2
