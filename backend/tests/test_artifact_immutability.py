@@ -400,6 +400,25 @@ _APPEND_ONLY_ROWS: dict[str, str | tuple[str, ...]] = {
         "(SELECT id FROM environments WHERE slug = 'dev'), 'rating_version:motor@1', "
         "'sha256:' || repeat('a', 64), gen_random_uuid(), :body)"
     ),
+    #: **Added 2026-10-21 (WK-674 Slice 6, RL-1834).** The date-routing rule, the shadow
+    #: configuration and the shadow results are appended, never rewritten. The one foreign key
+    #: of each is satisfied by the seeded `dev`.
+    "routing_rules": (
+        "INSERT INTO routing_rules (id, workspace_id, environment_id, ranges, written_by) "
+        "VALUES (:id, :ws, (SELECT id FROM environments WHERE slug = 'dev'), :body, "
+        "gen_random_uuid())"
+    ),
+    "shadow_configs": (
+        "INSERT INTO shadow_configs (id, workspace_id, environment_id, "
+        "candidate_rating_version_ref, candidate_bundle_hash, fraction, written_by) "
+        "VALUES (:id, :ws, (SELECT id FROM environments WHERE slug = 'dev'), "
+        "'rating_version:motor@1', 'sha256:' || repeat('a', 64), 0.5, gen_random_uuid())"
+    ),
+    "shadow_results": (
+        "INSERT INTO shadow_results (id, workspace_id, environment_id, live_result, "
+        "candidate_result) VALUES (:id, :ws, (SELECT id FROM environments WHERE slug = 'dev'), "
+        ":body, :body)"
+    ),
     "diagnostics": (
         "INSERT INTO diagnostics (id, workspace_id, model_id, payload) "
         "VALUES (:id, :ws, gen_random_uuid(), :body)"

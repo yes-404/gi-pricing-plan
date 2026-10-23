@@ -232,3 +232,53 @@ async def test_updating_a_setting_is_audited_with_its_previous_value(
         ).scalars().all()
     assert [e.action for e in events] == ["setting.updated"]
     assert events[0].before["effective_value"] == 0.10
+
+
+# --- WK-674 Slice 6 (RL-1834 D2 item 1; PL-1537 R6.1; RL-1311:275) --------------------------
+
+ROUTING_AND_SHADOW_FLAGS = ("features.date_routing_enabled", "features.shadow_scoring_enabled")
+
+
+@pytest.mark.req("FR-270", "FR-271", "FR-449")
+@pytest.mark.parametrize("key", ROUTING_AND_SHADOW_FLAGS)
+def test_the_routing_and_shadow_flags_are_environment_only_and_off_by_default(key: str) -> None:
+    definition = svc.REGISTRY[key]
+    assert definition.scope is svc.SettingScope.ENVIRONMENT
+    assert definition.feature_flag is True
+    assert definition.default is False
+    assert svc.SAFE_DEFAULT[key] is False
+
+
+@pytest.mark.req("FR-270", "FR-271")
+@pytest.mark.asyncio
+@pytest.mark.parametrize("key", ROUTING_AND_SHADOW_FLAGS)
+async def test_a_workspace_level_write_of_either_flag_is_refused(
+    database: Database, workspace_id, key: str
+) -> None:
+    """Negative: the flag is switched on in one Environment at a time, never workspace-wide."""
+    async with database.unit_of_work() as session:
+        await workspaces.ensure_workspace(session, workspace_id=workspace_id)
+        with pytest.raises(PlatformError) as refused:
+            await svc.set_workspace_setting(session, workspace_id, key, True)
+    assert refused.value.code == "SETTING_INVALID"
+
+
+@pytest.mark.req("FR-270", "FR-271")
+@pytest.mark.asyncio
+@pytest.mark.parametrize("key", ROUTING_AND_SHADOW_FLAGS)
+async def test_an_environment_write_enables_the_flag_in_that_environment_only(
+    database: Database, workspace_id, key: str
+) -> None:
+    """The Environments are deployment-wide, so the flag is put back off in `finally`."""
+    settings = Settings()
+    try:
+        async with database.unit_of_work() as session:
+            await svc.set_environment_setting(session, "uat", key, True, None)
+        async with database.session() as session:
+            uat = await svc.resolve(session, settings, workspace_id, key, "uat")
+            dev = await svc.resolve(session, settings, workspace_id, key, "dev")
+        assert uat.effective_value is True
+        assert dev.effective_value is False
+    finally:
+        async with database.unit_of_work() as session:
+            await svc.set_environment_setting(session, "uat", key, False, None)
