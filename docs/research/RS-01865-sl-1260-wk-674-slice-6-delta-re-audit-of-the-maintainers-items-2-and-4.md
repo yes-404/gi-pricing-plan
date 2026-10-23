@@ -10,18 +10,18 @@ tree: 13fc30f525065bec48714d00d6fd4b825595f0c4
 phase: P2
 work: WK-674
 corrected_by: []
-relates: [SL-1260, LG-8139, RS-1864, RL-1834]
+relates: [SL-1260, LG-1859, RS-1864, RL-1834]
 ---
 
 # RS-1865 — SL-1260 delta re-audit, items 2 and 4
 
 *Minted 2026-10-23 as RS-1865 from working id 8187, in the SL-1260 audit-records docs PR. Prose below that calls this record or another id "unminted" or names a working id describes the draft state at filing, not the tree at the mint.*
 
-*(Working id 8187, reserved by the lead. Written by `aud-1260b`, 2026-10-22, from `brief-aud-1260b-2026-10-22.md` (lead 26); fresh seat, not the author of RS 1864. Check 31 on this id is expected until the mint. `LG-8139` is cited by its working id. Scope is only items 2 and 4 of the maintainer's entry "2026-10-22 17:34:47 BST" and the maintainer's later acceptance of the correction relayed by the lead ("the two control runs (24-nv4, 25-nv5) ARE item 2's red … No duplicate assertions"); everything else is settled by RS 1864.)*
+*(Working id 8187, reserved by the lead. Written by `aud-1260b`, 2026-10-22, from `brief-aud-1260b-2026-10-22.md` (lead 26); fresh seat, not the author of RS 1864. Check 31 on this id is expected until the mint. `LG-1859` is cited by its working id. Scope is only items 2 and 4 of the maintainer's entry "2026-10-22 17:34:47 BST" and the maintainer's later acceptance of the correction relayed by the lead ("the two control runs (24-nv4, 25-nv5) ARE item 2's red … No duplicate assertions"); everything else is settled by RS 1864.)*
 
 ## Question
 
-Do the positive audit-event assertions plus controls V2b/V2c meet item 2, and do the `03` clause, the test, the green and red controls and `LG-8139` meet item 4, of the maintainer's entry "2026-10-22 17:34:47 BST"?
+Do the positive audit-event assertions plus controls V2b/V2c meet item 2, and do the `03` clause, the test, the green and red controls and `LG-1859` meet item 4, of the maintainer's entry "2026-10-22 17:34:47 BST"?
 
 ## Method
 
@@ -56,9 +56,9 @@ Two readings, neither blocking. (a) Each log records the mutation as a `--stat` 
 
 ### Check 3 — other changes in the delta
 
-`git diff --stat c55410d6..57b7fa04`: `backend/tests/test_routing.py` +30, `docs/specs/03-rating-engine.md` 1 line, the `LG-8139` ledger +64 −1 (3 files, +95 −2). Commits: `5148a135` ledger (controls V1 to V3, round trip, `_routed` observation), `ef90399d` and `571d8319` ledger deviation edits, `11114581` spec, `c4333aa6` test, `57b7fa04` ledger. No source change, no scope creep. The round-trip re-run (item 3) is outside this brief.
+`git diff --stat c55410d6..57b7fa04`: `backend/tests/test_routing.py` +30, `docs/specs/03-rating-engine.md` 1 line, the `LG-1859` ledger +64 −1 (3 files, +95 −2). Commits: `5148a135` ledger (controls V1 to V3, round trip, `_routed` observation), `ef90399d` and `571d8319` ledger deviation edits, `11114581` spec, `c4333aa6` test, `57b7fa04` ledger. No source change, no scope creep. The round-trip re-run (item 3) is outside this brief.
 
-### Check 4 — `LG-8139`
+### Check 4 — `LG-1859`
 
 It records item 2 ("V2b/V2c … the maintainer, 2026-10-22 17:34:47 BST item 2", mutation, both control rows with log names, rc, summary lines and failing names, "Reverted … never committed") and item 4 ("`_routed` fails closed, declared", spec-first order, test name, green log, red control). It cites the entry and quotes the clause fragment "a routing selection failure fails the quote and never falls back"; it **paraphrases** the items rather than quoting them verbatim (minor). The **Deviation** line reads "The lead's brief placed the round trip in this window … The fault is the brief's, not the seat's." — it names the lead's brief. Met.
 

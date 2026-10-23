@@ -10,18 +10,18 @@ tree: c0d01474490b326aba32be97bc843f66e825dead
 phase: P2
 work: WK-674
 corrected_by: []
-relates: [SL-1260, LG-8139, PL-1537, PL-1237, RL-1834, RL-1301, RL-8176]
+relates: [SL-1260, LG-1859, PL-1537, PL-1237, RL-1834, RL-1301, RL-1848]
 ---
 
 # RS-1864 — SL-1260 slice audit
 
 *Minted 2026-10-23 as RS-1864 from working id 8180, in the SL-1260 audit-records docs PR. Prose below that calls this record or another id "unminted" or names a working id describes the draft state at filing, not the tree at the mint.*
 
-*(Working id 8180, reserved by the lead. Written by `aud-1260`, 2026-10-22, from `brief-aud-1260-2026-10-22.md` (lead 26). Check 31 on this id is expected until the mint. The ledger is cited as `LG-8139`, its working id, and `RL 8176` is an unminted draft. Verdicts below are proposals; the lead adopts, amends or rejects them.)*
+*(Working id 8180, reserved by the lead. Written by `aud-1260`, 2026-10-22, from `brief-aud-1260-2026-10-22.md` (lead 26). Check 31 on this id is expected until the mint. The ledger is cited as `LG-1859`, its working id, and `RL 1848` is an unminted draft. Verdicts below are proposals; the lead adopts, amends or rejects them.)*
 
 ## Question
 
-Does `origin/main...sl-1260-wk674-s6` meet the acceptance standard of `PL-1537` R6.1 to R6.3 and `RL-1834` (D1, D2, "Acceptance"), and what does `LG-8139` fail to evidence?
+Does `origin/main...sl-1260-wk674-s6` meet the acceptance standard of `PL-1537` R6.1 to R6.3 and `RL-1834` (D1, D2, "Acceptance"), and what does `LG-1859` fail to evidence?
 
 ## Method
 
@@ -45,9 +45,9 @@ Ledger SHAs: all twelve SHAs checked (`5f406245`, `2720bcce`, `c53d75f0`, `1f119
 | 10 | R6.2 audit action names fixed: `deployment.routing_changed`, `deployment.shadow_configured` | `routing._ACTION` and the shadow equivalent are used by `audit.record`; the tests above assert the events. For a flag, `setting.updated` serves as the event (D2 item 1). | delivered |
 | 11 | Migration `9b3e7c15d4a2` | `down_revision = "a4d1f08c3b97"`; `git grep` over `backend/migrations` at the head finds no other file naming either id as `down_revision`, so it is the single head (the window's own `alembic heads` = `9b3e7c15d4a2 (head)`, logs 00 and 10); `downgrade()` drops the three indexes and tables in reverse order (their triggers go with the tables); upgrade REVOKEs UPDATE/DELETE and GRANTs `SELECT, INSERT`. | delivered; the downgrade is **not exercised by any logged run** (reassign to the gate's migration round trip, if it has one) |
 | 12 | R6.3 nothing waits on it; NFR for flag-read latency | Not measured here; `RL-1834` leaves the p99 to the gate item `PL-1237:1010-1011`. | deferred with owner: the code gate, on Slice 4's harness |
-| 13 | `06` FR-343 order rule (`RL 8176` (A), the maintainer's adoption of 2026-10-22 17:21:38 BST) | Not this slice's: the rule is `RL 8176`'s own change to `06`. The slice's behaviour (load the Environment, then check the permission, 404 before 403) is the order that ruling accepts. | reassigned: `RL 8176`'s mint carries the `06` edit |
+| 13 | `06` FR-343 order rule (`RL 1848` (A), the maintainer's adoption of 2026-10-22 17:21:38 BST) | Not this slice's: the rule is `RL 1848`'s own change to `06`. The slice's behaviour (load the Environment, then check the permission, 404 before 403) is the order that ruling accepts. | reassigned: `RL 1848`'s mint carries the `06` edit |
 
-## Red/green (LG-8139 against the logs)
+## Red/green (LG-1859 against the logs)
 
 Every first line of 01 to 08 and 10 to 14 names the tree the ledger names (`9cfddde9`, `bfe16607`, `7b9f2684` plus "scratch edit, uncommitted" for 07 and 08, `6aa350c7`).
 
@@ -60,18 +60,18 @@ Every first line of 01 to 08 and 10 to 14 names the tree the ledger names (`9cfd
 | N-T8 | `2 failed, 6 passed ... in 8.90s` | same; the two named tests failed | yes |
 | window 2 a, b, c, migration (`6aa350c7`) | `155 passed`; `36 passed`; `79 passed`; `7 passed` | same four lines | yes |
 
-- **Vacuous passes are disclosed by name** in `LG-8139` for both red runs: RED 1's one pass (`..._promoted_only_to_another_environment_is_never_selected`) and RED 2's four passes (flag off, no configuration, draw at the fraction, explicit ref).
+- **Vacuous passes are disclosed by name** in `LG-1859` for both red runs: RED 1's one pass (`..._promoted_only_to_another_environment_is_never_selected`) and RED 2's four passes (flag off, no configuration, draw at the fraction, explicit ref).
 - **Negative controls land on the claimed lines.** `routing.py:223` at the head is `if pinned is None:`; `score.py:615` is the `content=` argument of the final `Response(`. N-T6 fails the two tests that hold the pin check; N-T8 fails the two that hold "the candidate is never in the response".
-- **Disclosure that matters most.** `LG-8139` states that no test of T5 to T9 was run at its test commit, so RED exists only for `test_routing.py` and `test_shadow_scoring.py`. `test_routing_write.py` and `test_shadow_write.py` have **no red run at all**, and the overlap, audit-atomicity and draft/uncompiled-candidate checks have no negative control. `LG-8139` says these runs are owed; no log shows them done.
+- **Disclosure that matters most.** `LG-1859` states that no test of T5 to T9 was run at its test commit, so RED exists only for `test_routing.py` and `test_shadow_scoring.py`. `test_routing_write.py` and `test_shadow_write.py` have **no red run at all**, and the overlap, audit-atomicity and draft/uncompiled-candidate checks have no negative control. `LG-1859` says these runs are owed; no log shows them done.
 
 ## The window-1 failures and their fix (`3d175af3`, test-only)
 
 `git show --stat 3d175af3`: `test_api_authorisation_sweep.py` 2 lines, `test_deployment_route_types.py` 8, `test_shadow_write.py` 5; no `src/` file. Checked:
 
-- **Sweep pin.** At the head, `platform/shadow.py` line 66 is `env = await environments._load(session, environment)` and **line 67** is `await rbac.require_permission(`, so the pin at :67 is right. `LG-8139` writes "line 65 is `env = ...`" and "`platform/shadow.py:65-67`" for the load-first observation; both are one line low at the head (66 and 66-67). Prose only, no test depends on it.
+- **Sweep pin.** At the head, `platform/shadow.py` line 66 is `env = await environments._load(session, environment)` and **line 67** is `await rbac.require_permission(`, so the pin at :67 is right. `LG-1859` writes "line 65 is `env = ...`" and "`platform/shadow.py:65-67`" for the load-first observation; both are one line low at the head (66 and 66-67). Prose only, no test depends on it.
 - **Route counts 10 and 12.** The routing and shadow `PUT` rows are in `03` §5.1 (lines 1112, 1113), and the diff adds exactly those two routes; the counts moved by 2. Green at log 13.
 - **404 slug.** The one-character slug `x` was refused at request validation (422); the test change keeps the intent (unknown Environment is 404). Green at log 11.
-- **Guard order (`RL 8176` (A) accepts load-first).** `shadow.write_config` and `routing._authorised_environment` both load the Environment first and check the permission second, as `deploy` already does. Consistent with the adopted ruling; the unminted draft `draft/rl-8176` @`aab1b741` is the source and is not yet in `main`.
+- **Guard order (`RL 1848` (A) accepts load-first).** `shadow.write_config` and `routing._authorised_environment` both load the Environment first and check the permission second, as `deploy` already does. Consistent with the adopted ruling; the unminted draft `draft/rl-8176` @`aab1b741` is the source and is not yet in `main`.
 
 ## Security reading (item 5 of the brief)
 
@@ -81,13 +81,13 @@ Every first line of 01 to 08 and 10 to 14 names the tree the ledger names (`9cfd
 - **Flag off.** Routing: `_routed` returns `None` before `select_range`; shadow: `_shadow_task` returns `None` before any configuration read. `_serving_ref` is untouched. **Observation:** with both flags off a default-live quote now runs two `settings.resolve` reads (routing in `_routed`, shadow in `_shadow_task`) that did not exist before. The response is unchanged (`RL-1834` (c) asks for byte equality, not zero reads); the latency of those reads is the gate's measurement (item 12).
 - **A routing flag read is not guarded by a try.** `_routed` lets a settings-read error propagate (a 500), while `_shadow_task` swallows its own. The ruling does not specify; no test covers a failing flag read. Not a defect against the spec; named so the lead can decide whether it is a finding.
 
-## Disclosures in LG-8139 (item 7)
+## Disclosures in LG-1859 (item 7)
 
 All present in the ledger, none hidden: the chain that did not halt on a nonzero run (window 1 header, "06 ran after 05 failed"); `PUBSUB NUMSUB` not quoted (window 2 (a)); two `cd` slips (window 2 (b) "a second breach ... the first was at the start of the seat"). The first `cd` is only referred to, not described, in the ledger. Each is a charter breach by the executor, not a defect of the product.
 
 ## Merged-head note (item 4)
 
-`LG-8139` last paragraph: **"Merged-head tests: owed to the code gate at the head the lead names (the full suite, ruff, mypy and import-linter at the merge of `origin/main` 71e481fa, head `899e957ec99df16022933ae1a1fd808a054986d1` when written); no further DB window is run before it (the lead, 2026-10-22)."** The line exists and `899e957e` is an ancestor of `c55410d6`. The window-2 GREEN is at `6aa350c7`, before the merge of `71e481fa` (which brought objectives and error sinks), so **nothing in this record is evidence at the merged head**. The code gate is the proof, as the lead ruled; its "Test Files N passed" and pytest summary lines are what the MERGE-ACK must quote.
+`LG-1859` last paragraph: **"Merged-head tests: owed to the code gate at the head the lead names (the full suite, ruff, mypy and import-linter at the merge of `origin/main` 71e481fa, head `899e957ec99df16022933ae1a1fd808a054986d1` when written); no further DB window is run before it (the lead, 2026-10-22)."** The line exists and `899e957e` is an ancestor of `c55410d6`. The window-2 GREEN is at `6aa350c7`, before the merge of `71e481fa` (which brought objectives and error sinks), so **nothing in this record is evidence at the merged head**. The code gate is the proof, as the lead ruled; its "Test Files N passed" and pytest summary lines are what the MERGE-ACK must quote.
 
 ## Findings
 
@@ -95,7 +95,7 @@ All present in the ledger, none hidden: the chain that did not halt on a nonzero
 2. **No red-first for `test_routing_write.py` and `test_shadow_write.py` at all** (disclosed by the ledger). Same remedy as 1; same verdict.
 3. **Migration downgrade is not exercised by any logged run.** Proposed verdict: **reassigned** to the code gate if it runs a downgrade round trip, otherwise **deferred with owner** the executor, for a one-off `alembic downgrade -1` / `upgrade head` in the next window.
 4. **Merged-head tests owed** to the code gate (disclosed; not evidence here).
-5. **Ledger prose slips, non-blocking:** shadow.py line numbers one low (above); `status: active`, `MERGE-ACK: not yet given`, and no Audit section are all still open (the closing acts of `LG-8139` and the `SL-1260` row are the auditor's after a clean audit, `auditor.md`; this record is the audit text to place there).
+5. **Ledger prose slips, non-blocking:** shadow.py line numbers one low (above); `status: active`, `MERGE-ACK: not yet given`, and no Audit section are all still open (the closing acts of `LG-1859` and the `SL-1260` row are the auditor's after a clean audit, `auditor.md`; this record is the audit text to place there).
 6. **Observation, not a finding:** two extra flag reads per default-live quote with both flags off (latency: gate item `PL-1237:1010-1011`); `_routed`'s flag read is not exception-guarded.
 
 ## Verdict proposals (the lead's to adopt, amend or reject)

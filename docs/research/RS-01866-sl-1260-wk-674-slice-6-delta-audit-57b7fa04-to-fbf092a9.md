@@ -21,11 +21,19 @@ relates: [SL-1260, LG-1859, RS-1864, RS-1865, RL-1834]
 
 **Verdict (PROPOSED, the lead's to adopt): CLEAN, with one non-blocking item (N1) and two labelling notes (N2, N3).** No B-item.
 
-## Scope: the delta, re-derived
+## Question
+
+Does the delta 57b7fa04..fbf092a9 meet the brief's scope? The proposed verdict is at the top; the headings Question, Method and Findings were added at the mint so the record carries the RS template's required sections.
+
+## Method
+
+### Scope: the delta, re-derived
 
 `git log --no-merges --first-parent 57b7fa04..fbf092a9` gives exactly the 15 commits the brief names (eb3daf87 … fbf092a9). The three merge commits on the first-parent line (7fdc9e24 = e202f28b, cf2eedfa = 75f5f401, 00174d02 = 0dfb4a05) bring main's commits; `git merge-base --is-ancestor` exits 0 for e202f28b, 6753c495, 75f5f401 and 0dfb4a05 against origin/main. Code changed in the delta: 8 test files only (no `backend/src` change from the slice's own commits; the `main.py`/`deployment_switch.py` change in the range is main's).
 
-## Findings, per commit
+## Findings
+
+### Per commit
 
 | Commit | Claim in LG-1859 | Result |
 |---|---|---|
@@ -35,7 +43,7 @@ relates: [SL-1260, LG-1859, RS-1864, RS-1865, RL-1834]
 | 6e2707a7 | four guard tables | See guard table below. |
 | fffff45e | two shadow sinks listed in `_SINKS` with sentinel tests | Entries are exactly `score.py` `_shadow_task` and `_shadow_score`, `exc_info`, count 1 each, each naming its own test. Red-first: log 34, both sentinels fail by name when `safe_job_exc_info(exc)` becomes `exc`; green log 33 (`2 passed`). |
 | c274c53d, 4a9c5200, 72a05338 | gate-red table; item 5 resolved (B); DB-lane runs; re-merges | Table rows 1–6 match the six FAILED lines of the red gate (see below). DB-lane logs 37/38/39 record `23 passed`, `25 passed`, `35 passed`. |
-| 5d79bbf4, b349bbd4, fbf092a9 | mint of LG 8139 as LG-1859 | See mint check. |
+| 5d79bbf4, b349bbd4, fbf092a9 | mint of LG 1859 as LG-1859 | See mint check. |
 | 605fae23, eaf045d2 | migration round trip; V2b/V2c; INTERNAL_ERROR catalogued | Round trip table consistent (head → `-1` → head, tables absent then present). V2b/V2c diffs now inline. eaf045d2 text on 07 §5.1 is superseded by (B); the history stands. |
 
 ### Guard-table extensions: widened only for this slice's additions
