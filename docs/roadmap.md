@@ -2966,6 +2966,26 @@ Slice C of `PL-1856` (WK-1178's dated delta on FD-1723's residual limbs). Docs o
 
 (Activated 2026-10-22 on the maintainer's "2026-10-22 16:02:49 BST — Maintainer: PL 8162 (FD-1723's residual limbs) ACCEPTED; …" ("GO: slice C now"), with `PL-1856` made `active` by L1 in this slice's PR. Minted 2026-10-22 as SL-1857 from working id 8164, with its ledger LG-1858 from working id 8165 and its plan PL-1856 from working id 8162. Closed 2026-10-22 at the mint as a docs-only slice, the audit and merge-ack being recorded in LG-1858.)
 
+#### SL-1860 — WK-1178 slice A — PL-1856: glum family translation, NB deviance and θ boundary, GLM direction check
+
+```yaml
+id: SL-1860
+family: slice
+title: WK-1178 slice A — PL-1856, the glum family translation, the NB deviance, the θ boundary and the GLM direction check
+status: closed                   # draft → active → closed | retired (§1.2a) — closed 2026-10-22 at the mint
+created: 2026-10-22   # filed under working id 8166; minted 2026-10-22 as SL-1860
+owner: executor
+tree: 31e03c8ebd3c37b0e42b658b82775339fa95fb19
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1856, FD-1723, FR-89, FR-110]
+```
+
+Slice A of `PL-1856` (WK-1178's dated delta on FD-1723's residual limbs): FR-110 (glum family-name translation for all seven `GlmSpec.family` members, the negative-binomial θ declared and required, the NB deviance) and FR-89 (the GLM direction check, `GlmDiagnostics.monotonicity` and `monotonicity_omitted`), with the model-spec builder's θ input. Code, tests, and the FR-89 and FR-110 spec amendments.
+
+(Activated 2026-10-22 on the maintainer's "2026-10-22 16:02:49 BST — Maintainer: PL 8162 (FD-1723's residual limbs) ACCEPTED; …" (slices C, then A, then B). Minted 2026-10-22 as SL-1860 from working id 8166, with its ledger LG-1861 from working id 8167. Closed 2026-10-22 at the mint: the audit is closed on RS-1862, RS-1863 and the lead's 17:58:43 BST verification, recorded in LG-1861; the merge-ack is the lead's, at the merge.)
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
