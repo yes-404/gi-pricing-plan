@@ -1,16 +1,18 @@
 ---
-id: FD-8199
+id: FD-1872
 family: finding
 title: The switch slot-namespace test names real gate slots, so a paired gate's subscriber is counted in its PREPARE quorum
 status: active
-created: 2026-10-23
+created: 2026-10-23   # drafted 2026-10-23 under working id 8199; minted 2026-10-23 as FD-1872
 owner: auditor
 tree: 4e399fd01e8de2fe55d2f128b0e09ee2b2735c6a
 corrected_by: []
-relates: [WK-1178, FD-1838, SL-1551, SL-8200, LG-8201]
+relates: [WK-1178, FD-1838, SL-1551, SL-1873, LG-1874]
 ---
 
-# FD-8199 — The switch slot-namespace test names real gate slots, so a paired gate's subscriber is counted in its PREPARE quorum
+# FD-1872 — The switch slot-namespace test names real gate slots, so a paired gate's subscriber is counted in its PREPARE quorum
+
+Disclosure: drafted under working id 8199; minted as FD-1872 on 2026-10-23, in the fix slice's PR (SL-1873).
 
 ## Finding
 
@@ -34,23 +36,23 @@ At `origin/main` 1fe82ee6, `backend/tests/test_deployment_switch_slot_namespace.
 backend/tests/test_deployment_switch_slot_namespace.py::test_a_subscriber_on_the_unsuffixed_channel_is_not_counted_in_the_quorum`,
 with `SwitchIncompleteError: 1 of 2 subscribed processes acknowledged PREPARE` (:167).
 
-**Reproduced red:** LG-8201's RED run (log `431c430a…-red-old-with-injected.log`): `origin/main`'s test file with a subscriber
+**Reproduced red:** LG-1874's RED run (log `431c430a…-red-old-with-injected.log`): `origin/main`'s test file with a subscriber
 injected on the real `gip:switch:local:local:gate-1:dev` channel, `1 failed, 2 passed in 4.05s`, the same `SwitchIncompleteError`.
 
 **Not measured:** that the unfixed test also disturbs the live gate it shares a channel with (it PUBLISHES a PREPARE for a
 random deployment onto that gate's channel). That is read from the mechanism; no run observed a gate affected.
 
 **Sweep:** `git grep -n '/tmp/slots/gate-' -- backend packages tests frontend scripts` at the fix head `4c9be06d` lists three other
-files, all legitimate (LG-8201 Task list, re-read by the auditor): `backend/tests/test_run_small_script.py:134` (the script
+files, all legitimate (LG-1874 Task list, re-read by the auditor): `backend/tests/test_run_small_script.py:134` (the script
 refuses a caller-set slot; no Redis), `tests/test_root_conftest.py:211,217` (monkeypatched env, acquisition stubbed),
 `tests/test_root_conftest.py:312,316` (a regex over the dev-commands skill text).
 
 ## Remedy
 
-SL-8200 / LG-8201, branch `fix/fd-8199-synthetic-gate-slot`: a per-run `/tmp/slots/test-<8 hex>` at each hit; the
+SL-1873 / LG-1874, branch `fix/fd-8199-synthetic-gate-slot`: a per-run `/tmp/slots/test-<8 hex>` at each hit; the
 parametrized `other-slot` case is the permanent stand-in for a paired gate. Test only.
 
 ## Disposition
 
-Open, owner WK-1178; **fix before close**: SL-8200 (LG-8201). Closed in place citing the PR when that slice merges.
+Open, owner WK-1178; **fix before close**: SL-1873 (LG-1874). Closed in place citing the PR when that slice merges.
 Filed under working id 8199.

@@ -32,7 +32,7 @@ _PLAIN = "local:local"
 
 
 def _synthetic_slot() -> str:
-    """A slot name no real gate holds (FD-8199).
+    """A slot name no real gate holds (FD-1872).
 
     Redis channels are server-wide, so a test that names a REAL slot (`/tmp/slots/gate-1`)
     shares its channel with whichever paired gate holds that slot, and that gate's subscriber
@@ -61,7 +61,7 @@ async def test_a_subscriber_on_the_unsuffixed_channel_is_not_counted_in_the_quor
 ) -> None:
     """A foreign subscriber (another slot's, or a plain process's) never acknowledges here.
 
-    `other-slot` stands in for a paired gate holding a real slot (FD-8199): its subscriber is
+    `other-slot` stands in for a paired gate holding a real slot (FD-1872): its subscriber is
     on a channel server-wide visible to this run, and the run must still count only its own.
     """
     monkeypatch.setenv("GIP_GATE_SLOT", _synthetic_slot())
