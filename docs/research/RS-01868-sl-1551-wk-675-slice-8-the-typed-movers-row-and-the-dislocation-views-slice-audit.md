@@ -15,7 +15,7 @@ relates: [SL-1551, LG-1867, PL-1833, FR-263, FR-264, FR-265, FR-266, NFR-463]
 
 # RS-1868 — SL-1551 slice audit
 
-*(Minted 2026-10-23 as RS-1868 from working id 8191; the ledger cites below (LG-8146 as written) are re-pointed to LG-1867, its minted id. Working id 8191, written by `aud-1551` (auditor, sonnet, effort medium), 2026-10-22, from `brief-aud-1551-2026-10-22.md` (lead 26). Check 31 on this id is expected until the mint. Ledger cited by its working id `LG-1867`.)*
+*(Minted 2026-10-23 as RS-1868 from working id 8191; the ledger cites below (LG 8146 as written) are re-pointed to LG-1867, its minted id. Working id 8191, written by `aud-1551` (auditor, sonnet, effort medium), 2026-10-22, from `brief-aud-1551-2026-10-22.md` (lead 26). Check 31 on this id is expected until the mint. Ledger cited by its working id `LG-1867`.)*
 
 ## Question
 
