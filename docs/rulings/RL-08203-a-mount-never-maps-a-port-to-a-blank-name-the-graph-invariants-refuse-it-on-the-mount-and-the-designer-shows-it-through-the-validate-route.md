@@ -192,3 +192,5 @@ the gate `OQ-1843`'s roadmap row names.
 A `RatingAlgorithm` whose mount maps an output port to `""` and a step consuming `""` is
 accepted today. After the slice, parsing it raises, and `POST /api/v1/rating-algorithms/validate`
 reports the port by name on the mount.
+
+Adopted by the maintainer, to-lead '2026-10-23 10:48:01 BST' item (B), with one amendment: the found output-side gap (an output mapped to "" plus a step consuming "") is FILED AS AN FD (LOW, WK-675) in the follow-on slice, not prose.
