@@ -1,0 +1,57 @@
+{
+  "$defs": {
+    "ArtifactRef": {
+      "description": "Canonical artifact reference {type}:{slug}@{version} (ID-3).",
+      "examples": [
+        "model:motor-ad-frequency@7",
+        "rating_version:motor-gb@27"
+      ],
+      "pattern": "^((banding|custom_metric|custom_objective|dataset|dataset_version|deployment|dossier|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}|factor:[a-z0-9][a-z0-9_-]{1,62})@[1-9][0-9]*$",
+      "title": "ArtifactRef",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "description": "An Environment's current shadow configuration (the 200 body and the Audit Event's\n`after`). `candidate_bundle_hash` is the candidate's compiled bundle at write time.",
+  "properties": {
+    "candidate_bundle_hash": {
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "title": "Candidate Bundle Hash",
+      "type": "string"
+    },
+    "candidate_rating_version_ref": {
+      "$ref": "#/$defs/ArtifactRef"
+    },
+    "environment": {
+      "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+      "title": "Environment",
+      "type": "string"
+    },
+    "fraction": {
+      "exclusiveMinimum": 0,
+      "maximum": 1,
+      "title": "Fraction",
+      "type": "number"
+    },
+    "written_at": {
+      "format": "date-time",
+      "title": "Written At",
+      "type": "string"
+    },
+    "written_by": {
+      "format": "uuid",
+      "title": "Written By",
+      "type": "string"
+    }
+  },
+  "required": [
+    "environment",
+    "candidate_rating_version_ref",
+    "candidate_bundle_hash",
+    "fraction",
+    "written_by",
+    "written_at"
+  ],
+  "title": "ShadowConfig",
+  "type": "object"
+}

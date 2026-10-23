@@ -238,6 +238,25 @@ System-level requirements that no single module owns. Module codes are defined i
 | **FR-25** | **A route the frontend registers is reachable from the application entry by following links alone.** Raised 2026-08-25 (WK-664). The obligation is stated here because it is stated nowhere: `00` §5.6 names the canonical views and their routes, each module's §5.3 gives a View/Route/Contents table, and none of the three columns carries a reachability concept — FR-24 has since ruled a Contents cell prose that binds nothing, so it could not carry one either. The narrow claim is that **no numbered requirement states reachability**; three passages of unnumbered prose do, and each reaches exactly one screen. `03` §5.3's *Interaction requirement* has the premium ladder waterfall *"reachable in one click from any traced quote"* (`03`:546); `04` §5.3 repeats the form for the binding-constraint panel, *"every headline number ... one click from 'which constraint held this back'"* (`04`:313, FR-288); and a dated build note has the factor workbench *"reachable from a `validated` version's detail view"* (`02`:2632). **None of the three is a Contents cell**, so FR-24 does not reach them and could not have ruled on them — they are prose of a different kind, carrying a real obligation and carrying it invisibly. Being unnumbered is the whole problem: **an id sweep cannot see them**, so nothing joins them to each other, to a test, or to the route graph they are all describing. **The third is already silently false, and its mechanism is the argument for this requirement.** `02`:2632 asserts reachability one hop up, and at that hop it is true — `views/DatasetDetailView.vue` links `/data/:slug/v/:version` (`:201`-`:202`), and `VersionDetailView` links `/factors/:id` (`:127`). Every link on the path exists. The cut is three hops upstream at `DatasetListView`, so the claim is **locally true at every hop and globally false**, and no reviewer standing at the factor workbench could have seen it. That is precisely what per-screen prose cannot check and a route-graph test can: reachability is not a property of a link, it is a property of a path, and only the graph has paths in it. **Measured 2026-08-25 against `frontend/src/router/index.ts`: 3 of 18 registered routes are reachable.** The entry is `/`, which redirects to `/data`; `App.vue`'s nav offers `/data`, `/demo` and `/reference`; and the traversal stops there because `frontend/src/views/DatasetListView.vue` contains **no `RouterLink`, no `router.push` and no `<a>`** while rendering each dataset's slug as a plain `<span>` (`:183`-`:184`) — it holds the value a link needs and does not link it. That one view is both the redirect target and the `Data` nav item, so it severs the entire `/data/:slug` subtree beneath it. **The requirement is not satisfied by a route existing, and this is why it is worth a number:** `#223` added three routes on the day this was measured — `/objectives`, `/objectives/:id/certificate` and `/metrics` — and every one is orphaned, taking the orphan count from five to eight while the reachable count did not move. Nothing failed, because nothing was checking. **Reachability is defined over the route graph, not over literal URLs**: a parameterised route is reachable when a reachable view links to it supplying the parameter, so `/data/:slug` is discharged by a dataset row linking its own slug and not by any view knowing a slug in advance. **The demo entrance does not discharge it** — FR-408 puts that whole path behind `dev_auth_enabled`, `False` by default, so it is absent from the deployment this requirement is about; and `backend/src/app/demo/guide.py` links each §5.3 table's *route string*, so a parameterised row opens at the literal `:slug`. **Enforcement is a test over the registered routes, not an assertion**, per `CLAUDE.md` §13: it builds the link graph from the router and the view sources, and fails naming every route with no inbound path from the entry. Scoping it to *registered* routes is deliberate and is what keeps it inside `CLAUDE.md` §0 — it can never demand that a later phase's view be built, only that a view already built be reachable. Two findings are recorded with it rather than left to the implementing slice to rediscover. **First, `/models` is a missing route, not a broken link**: `00` §5.6 declares *Model list / detail / diagnostics* at `/models`, the router registers six `/models/…` paths and no bare `/models`, and `views/ModelComparisonView.vue`'s link to it is therefore the one artifact in the repository that is right — the model subtree has no list entrance at all, so repairing `DatasetListView` alone reconnects the data subtree and leaves the model subtree unreachable. **Second, `WF-698` A9 has no route to it**: the profile view `/data/:slug/v/:version/profile` is orphaned, and `views/VersionDetailView.vue` links that version's validation report and factor workbench while omitting its profile — a step Phase 1b's exit journey requires. Owner: the slice that carries the wiring; the requirement is stated here so the slice has something to be checked against. |
 | **FR-1188** | **At every workstream close, a reviewer verifies that each requirement a workflow step cites still says what the step claims.** For every step of a `docs/workflows/` journey that cites a requirement in the closing workstream's scope, the reviewer reads that requirement's clauses, including its dated amendments. The closure record then states, for each such step, either that the requirement still says it or which step and which clause disagree. A disagreement is filed as a finding. No script does this: `audit-docs.py` checks 14 and 21 score mentions and declarations, never content. The procedure is `.claude/skills/close-workstream` §5c. (OQ-554, decided 2026-09-28 by delegation, option (b); `RL-1184` E9.) |
 
+> **FR-6, dated amendment 2026-10-22 (PL-1856 slice C, FD-1723).** FR-6 is **narrowed to what
+> is built: the per-artifact producing-Job id** (the `produced_by_job_id` element of the
+> reference), carried as `job_id: UUID | None`, not the shared `provenance` object. The census,
+> read in each owning module (`packages/model-schema/src/model_schema/` and the `*Row` tables
+> in `backend/src/app/db/models.py`, at `f3462d8f`), of the governed shapes that carry it:
+> `ValidationReport` (`validation.py:548`), `Profile` (`profiles.py:188`), `Diagnostics`
+> (`diagnostics.py:705`), `ModelComparison` (`comparison.py:249`), `Backtest`
+> (`backtests.py:117`), `TransparencyArtifact` (`transparency.py:208`), `RegressionRun`
+> (`regression.py:326`), `MetricCertificate` (`metrics.py:237`), `ObjectiveCertificate`
+> (`objectives.py:832`) and `DislocationRun` (`dislocation.py:200`). **Only the UI half is
+> carried to the §14 review** for an owner (the maintainer's entry "2026-10-14 11:28:56
+> BST": "Owners at §14: FR-6 UI half"). For transparency, and not as a carry: `DatasetVersion`,
+> `Model`, `CustomObjective`, `RateTable`, `RateTableVersion` and `RatingVersion` carry no
+> `job_id`, and the shared `provenance` object `{entity_type, entity_id, version,
+> produced_by_job_id}` is not built, and all of these are **outside the narrowed FR-6**; a
+> later wish to bring them in is a new FR or an OQ, not this clause. `CR-819:128` cites FR-6
+> for a trace id; that is a trace id, not provenance, and FD-1723 records the correction. The
+> citation is not edited.
+
 ---
 
 ## 4. Data contracts — entity map
@@ -381,6 +400,19 @@ the submitted artifact's own structure only when that identifier matches the sch
 pattern; a fixed-text error type; and an error type given its own fixed authored text. Any
 other message is
 `The value is not valid (<TYPE>).` `errors[].code` and `errors[].field` are unchanged.
+
+**`INTERNAL_ERROR`.** *(Added 2026-10-22, WK-674 Slice 6, the maintainer's ruling in `to-lead.md`
+entry "2026-10-22 19:52:20 BST" item 3, which amends the "owning platform spec" reading of its entry
+"2026-10-22 17:34:47 BST"; the code has been raised by the request machinery since Phase 0, and `03`
+§4.13 is the first spec text to name it.)* An unhandled exception, a server-side failure the caller cannot fix: status `500`, title "Internal
+server error", `detail` the fixed text "The request failed unexpectedly. Quote the trace id when
+reporting it.", and the request's `trace_id`. The response carries no exception text, because that
+text can hold a connection URL or a row of data (`07` R3); the cause is read from the log record for
+that `trace_id`, whose exception text is sanitised and whose frames are kept. It is a generic code,
+raised by the shared request machinery for every module (`backend/src/app/errors.py`
+`unexpected_problem`, rendered by `TraceMiddleware`), like `VALIDATION_FAILED` and `NOT_FOUND`: no
+module's "Error codes owned by this module" block lists it. A module that can name a refusal raises
+its own code and never relies on this one for a condition it can name.
 
 ### 5.4 Concurrency and idempotency
 
