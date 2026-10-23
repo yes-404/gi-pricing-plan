@@ -1,25 +1,25 @@
 ---
-id: RS-1870
+id: RS-1871
 family: research
 kind: audit
-title: SL-1868 (WK-1178) FD-1850 slice audit — ensure_bucket and the first-start create race
+title: SL-1869 (WK-1178) FD-1850 slice audit — ensure_bucket and the first-start create race
 status: draft
-created: 2026-10-22   # drafted 2026-10-22 under working id 8197; minted 2026-10-23 as RS-1870
+created: 2026-10-22   # drafted 2026-10-22 under working id 8197; minted 2026-10-23 as RS-1871
 owner: auditor
 tree: b3dd2c18ae14b9246c85b8f59c99da7881fc3f89
 phase: P2
 work: WK-1178
 corrected_by: []
-relates: [SL-1868, LG-1869, FD-1850]
+relates: [SL-1869, LG-1870, FD-1850]
 ---
 
-# RS-1870 — SL-1868 slice audit (FD-1850, `ensure_bucket`)
+# RS-1871 — SL-1869 slice audit (FD-1850, `ensure_bucket`)
 
-*(Minted 2026-10-23 as RS-1870 from working id 8197, in the slice PR (common brief item 34); statements below that call an id working or unminted describe the draft state at audit, not the tree at the mint. Written by `aud-8169` (auditor, sonnet, effort medium), 2026-10-22, from `brief-aud-8169-2026-10-22.md` (lead 26). Slice and ledger are cited by their working ids `SL-1868` and `LG-1869`.)*
+*(Minted 2026-10-23 as RS-1871 from working id 8197, in the slice PR (common brief item 34); statements below that call an id working or unminted describe the draft state at audit, not the tree at the mint. Written by `aud-8169` (auditor, sonnet, effort medium), 2026-10-22, from `brief-aud-8169-2026-10-22.md` (lead 26). Slice and ledger are cited by their working ids `SL-1869` and `LG-1870`.)*
 
 ## Question
 
-Does `origin/main...fix/fd-8169-ensure-bucket-race` implement the maintainer's entries "2026-10-22 16:22:33 BST" and its correction, and is the evidence in `LG-1869` reachable and honest?
+Does `origin/main...fix/fd-8169-ensure-bucket-race` implement the maintainer's entries "2026-10-22 16:22:33 BST" and its correction, and is the evidence in `LG-1870` reachable and honest?
 
 ## Method
 
@@ -52,7 +52,7 @@ Stub `_RacingS3`. (i) OwnedByYou passes (asserts lifecycle set). (ii) Exists the
 - `red.log` first line `6993fbf873037cb8ffb9a18ad5c757472a056823`; its stat line `blobs.py | 4 ++--… 24 deletions` is the overlay; summary `4 failed, 1 passed, 24 deselected, 2 warnings in 0.43s`, rc=1, FAILED: (i), (ii), (iii)[403], (iii)[404]. Verbatim in LG. (iii) red only through the new `__cause__` assert: disclosed in the LG.
 - `green.log` same first line: `5 passed, 24 deselected, 2 warnings in 0.11s`, rc=0. Verbatim in LG.
 - `negctl-iii.log` same first line: stat `1 insertion(+), 4 deletions(-)` = the `try/except` replaced by `pass` (lines 166-169 of the final file, consistent with LG's "`blobs.py:166`"); summary `3 failed, 2 passed, 24 deselected, 2 warnings in 0.35s`, rc=1; FAILED are (ii), (iii)[403], (iii)[404]. LG's explanation of why (ii) also fails (the `heads == 2` assert) is right. Restored, never committed (LG: `git status --short` empty; not independently re-observable now).
-- Every quoted summary line in LG-1869 exists verbatim in its log.
+- Every quoted summary line in LG-1870 exists verbatim in its log.
 
 ### 4. GREEN scope (item 29)
 
@@ -62,13 +62,13 @@ LG task 4 names the changed module, the importer command and its result, but lis
 
 | Item | Evidence | Result |
 |---|---|---|
-| SL-1868 row | in `docs/roadmap.md`, `status: active`, `relates: [FD-1850, LG-1869, SL-1711]` | present |
-| LG-1869 | five sections; Gate empty, Audit "not yet" (this record fills it); MERGE-ACK "not yet given"; does not claim FD-1850 closed; says FD-1850 is in the docs batch | met |
+| SL-1869 row | in `docs/roadmap.md`, `status: active`, `relates: [FD-1850, LG-1870, SL-1711]` | present |
+| LG-1870 | five sections; Gate empty, Audit "not yet" (this record fills it); MERGE-ACK "not yet given"; does not claim FD-1850 closed; says FD-1850 is in the docs batch | met |
 | FD-1850 essay | not on this branch (LG says docs batch, FD-1850 at mint) | not a defect |
 
 Non-blocking record items:
 
-- **R1 (should fix before merge, one line):** the SL-1868 row text in `docs/roadmap.md` says "`BucketAlreadyOwnedByYou` and `BucketAlreadyExists` from `create_bucket` are success only after a `head_bucket` proves the bucket is reachable". That is the first shape. The final code and the maintainer's amendment: OwnedByYou is success with NO re-check; only `BucketAlreadyExists` re-checks. The row records the superseded belief (CLAUDE.md §0: spec and code disagree).
+- **R1 (should fix before merge, one line):** the SL-1869 row text in `docs/roadmap.md` says "`BucketAlreadyOwnedByYou` and `BucketAlreadyExists` from `create_bucket` are success only after a `head_bucket` proves the bucket is reachable". That is the first shape. The final code and the maintainer's amendment: OwnedByYou is success with NO re-check; only `BucketAlreadyExists` re-checks. The row records the superseded belief (CLAUDE.md §0: spec and code disagree).
 - **R2:** LG task 3 says "the commit after `7569d9d3`, named, not a silent amend" but names no sha; the commits are `e26b751c` and `6993fbf8`.
 - **R3:** LG task 4 says 42 importer files; the same command at head `a32ac117` (`git grep -lE … -- backend/tests`) counts 43 (main has moved; it is the same predicate at another tree). Cite the tree.
 

@@ -2844,27 +2844,27 @@ On the maintainer's (by delegation) entry "2026-10-14 12:00:14 BST" (`to-lead.md
 
 (Closed 2026-10-19 as a Slice by the mint step's closing acts (LG-1825 minted from working id 8126), on the pre-PR slice audit of LG-1825 ("### Audit", auditor-1770, 2026-10-19 07:04 BST; range `origin/main...sl-1770-wk1178-append-only-db`), adopted CLEAN by the lead and accepted by the maintainer (by delegation) (to-lead "2026-10-19 07:06:05 BST"); F4 (the FOR UPDATE refusal under the app role) is deferred with owner SL-1771 (LG-1825 "### Audit"). MERGE-ACK: not yet given.)
 
-#### SL-1868 — WK-1178 fix slice — FD-1850: `ensure_bucket` treats losing the first-start create race as success
+#### SL-1869 — WK-1178 fix slice — FD-1850: `ensure_bucket` treats losing the first-start create race as success
 
 ```yaml
-id: SL-1868
+id: SL-1869
 family: slice
 title: WK-1178 fix slice — FD-1850: ensure_bucket treats losing the first-start create race as success
 status: closed                    # draft → active → closed | retired (§1.2a)
-created: 2026-10-22   # drafted 2026-10-22 under working id 8172; minted 2026-10-23 as SL-1868
+created: 2026-10-22   # drafted 2026-10-22 under working id 8172; minted 2026-10-23 as SL-1869
 owner: lead
 tree: f3462d8fc1336dc4583fe8a7af92fed399993a55
 phase: P2
 work: WK-1178
 corrected_by: []
-relates: [FD-1850, LG-1869, SL-1711]
+relates: [FD-1850, LG-1870, SL-1711]
 ```
 
 On the maintainer's entry "2026-10-22 16:22:33 BST" (`to-lead.md`): FD-1850 (MEDIUM) is fixed before the exit demo as a quick slice. `BlobStore.ensure_bucket` (`backend/src/app/platform/blobs.py`) did `head_bucket` and, on any `ClientError`, `create_bucket`; two services starting together on a fresh bucket both missed, and the loser raised `BucketAlreadyOwnedByYou` and exited (worker-io exit 2, W2 attempt 1). The fix: `BucketAlreadyOwnedByYou` from `create_bucket` is success with no re-check; `BucketAlreadyExists` (another owner in S3) is success only if a `head_bucket` then succeeds, else the original create error is re-raised, chained to the head error; any other code re-raises; the docstring states what is guaranteed. Red first, with a stub client. Delta row to the Work's one plan (Lean P2 L5), like FD-1838's.
 
-(Activated 2026-10-22 on the maintainer's entry above; executed as `exec-8169` on branch `fix/fd-8169-ensure-bucket-race`; ledger LG-1869.)
+(Activated 2026-10-22 on the maintainer's entry above; executed as `exec-8169` on branch `fix/fd-8169-ensure-bucket-race`; ledger LG-1870.)
 
-**Closed 2026-10-23** by the mint step's closing acts (SL-1868 minted from working id 8172, LG-1869 from 8173, RS-1870 from 8197), on the pre-PR slice audit RS-1870 (aud-8169, 2026-10-22), adopted CLEAN by the lead (LG-1869 "### Audit"). Gate of record `04b0a367` STANDS under the standing ruling 1(f) (LG-1869 "### Gate"). MERGE-ACK: pending (the lead's merge). Ledger: LG-1869.
+**Closed 2026-10-23** by the mint step's closing acts (SL-1869 minted from working id 8172, LG-1870 from 8173, RS-1871 from 8197), on the pre-PR slice audit RS-1871 (aud-8169, 2026-10-22), adopted CLEAN by the lead (LG-1870 "### Audit"). Gate of record `04b0a367` STANDS under the standing ruling 1(f) (LG-1870 "### Gate"). MERGE-ACK: pending (the lead's merge). Ledger: LG-1870.
 
 #### SL-1771 — WK-1178 fix slice (S-b) — FD-1729: the application connects as a login role with gip_app's grants, never as the owner
 

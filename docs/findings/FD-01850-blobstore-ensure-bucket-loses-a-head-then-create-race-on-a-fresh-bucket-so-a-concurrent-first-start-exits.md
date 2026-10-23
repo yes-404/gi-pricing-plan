@@ -50,10 +50,10 @@ LG 1841 discloses that this masks the product race in that run.
 The maintainer's (by delegation) entry names it: `ensure_bucket` treats `BucketAlreadyOwnedByYou` as success, and
 `BucketAlreadyExists` by re-heading, re-raising when the bucket is not ours; the docstring's "Idempotent" claim is
 corrected to hold under concurrency; red-first, two concurrent calls on a fresh bucket where one fails today and both
-succeed after. The fixing slice is SL-1868 with LG-1869, branch `fix/fd-8169-ensure-bucket-race` @a32ac117 (unmerged
+succeed after. The fixing slice is SL-1869 with LG-1870, branch `fix/fd-8169-ensure-bucket-race` @a32ac117 (unmerged
 when this record was written).
 
 ## Disposition
 
-Open, owner WK-1178; **fix before close**: SL-1868 (LG-1869), a WK-1178 delta row (Lean P2 L5). Closed in place, citing
+Open, owner WK-1178; **fix before close**: SL-1869 (LG-1870), a WK-1178 delta row (Lean P2 L5). Closed in place, citing
 the PR, when that slice merges. Filed under working id 8169.
