@@ -182,6 +182,12 @@ GENERATED_SHAPES: dict[str, str] = {
     "deployment-created": "DeploymentCreated",
     "switch-report": "SwitchReport",
     "rollback-create": "RollbackCreate",
+    # Added 2026-10-21 (WK-674 Slice 6, RL-1834 D1 and D2): the date-routing rule and the shadow
+    # configuration, bodies and 200s of `PUT .../routing` and `PUT .../shadow`. First written form.
+    "routing-rule": "RoutingRule",
+    "routing-rule-update": "RoutingRuleUpdate",
+    "shadow-config": "ShadowConfig",
+    "shadow-config-update": "ShadowConfigUpdate",
     "deployment-request": "DeploymentRequest",
     "deployment-request-create": "DeploymentRequestCreate",
     # Added 2026-10-04 (WK-674 Slice 2, PL-1392 Task 5, Acceptance 16): the body of

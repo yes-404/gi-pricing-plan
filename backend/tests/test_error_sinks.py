@@ -60,6 +60,10 @@ _SINKS: dict[tuple[str, str, str], tuple[int, str]] = {
         "and test_score.py::test_a_422_for_a_bad_input_names_the_field_and_carries_no_value"),
     ("backend/src/app/api/score.py", "_maybe_sample_trace", "exc_info"): (
         1, "test_score.py::test_a_trace_sampling_failure_logs_no_quote_input"),
+    ("backend/src/app/api/score.py", "_shadow_task", "exc_info"): (
+        1, "test_shadow_log_sanitised.py::test_a_shadow_decision_failure_logs_no_quote_input"),
+    ("backend/src/app/api/score.py", "_shadow_score", "exc_info"): (
+        1, "test_shadow_log_sanitised.py::test_a_shadow_scoring_failure_logs_no_quote_input"),
     ("backend/src/app/platform/deployment_switch.py", "_listen", "exception"): (
         1, "`.exception(` writes the traceback to the log and echoes nothing into a response; "
         "the Redis SwitchMessage consumer, whose payload is deploy-time ids, not quote input "

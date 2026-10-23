@@ -1202,7 +1202,7 @@ Atomic switchover and rollback on the Slice 4 path, with the rollback's audit li
 id: SL-1260
 family: slice
 title: Slice 6: date-based routing and shadow scoring (FR-270, FR-271, FR-272 audit and NFR-498 for routing and shadow)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-09-29
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 0d5b0765f76320518bfe76ddb30e5013525797c0
@@ -1213,6 +1213,8 @@ relates: [PL-1237]
 ```
 
 Date-based routing and shadow scoring, both built and default off per environment (`RL-1232` Part A, DP-2 (a)), with the audit limb for routing and shadow configuration changes (FR-272, NFR-498). `PL-1237` Task 6. Starts after Slice 5 closes.
+(Activated 2026-10-21 on the maintainer's (by delegation) GO, to-lead "2026-10-21 15:03:33 BST — Maintainer: GOs on the 15:02:44 work queue", item 5: lowest priority, rung 5 of the cut ladder; it takes a gate only when no row-2 slice is waiting. Scope: `PL-1237` Task 6 as changed by `PL-1537` R6.1 to R6.3; dispatched by the lead, transcript 4561857a.)
+(Closed 2026-10-22 as a Slice by the executor's closing acts (LG-1859, minted from working id 8139), on the audits RS 8180, RS 8187 and RS 8198 (aud-1260c, 57b7fa04..fbf092a9, proposed CLEAN) and the lead's verdict, the from-lead log entry "2026-10-22 23:03:12 BST Lead 26: SL-1260 fixes ACCEPTED @e6acbce6 … VERDICT SL-1260 CLEAN (RS 8198 + fixes)", noted by the maintainer at "2026-10-22 23:03:22 BST" (`to-lead.md`); range `origin/main...` the slice's branch head, whose ledger records the gate (the re-gate at 72a05338: `13 failed, 6742 passed, 13 skipped, 149 warnings`, the 13 the docs-audit set on the ledger's working id) and the 13 re-run.)
 
 #### SL-1689 — the scheduler (beat) and frontend-image row: FR-432's last two limbs (FR-432, FR-413, FR-406; FD-1661)
 
@@ -2944,6 +2946,26 @@ The fix of FD-1838 (MEDIUM, owner WK-1178), a Work-plan delta row under WK-1178 
 
 (Activated 2026-10-22 on the maintainer's (by delegation) entry "2026-10-22 15:43:10 BST — Maintainer: SPEED MEASURES …" item 2 (`to-lead.md`): FD-1838 prioritised, built red-first, the remedy as reserved at "2026-10-21 21:13:34 BST". MERGE-ACK: not yet given.)
 
+#### SL-1857 — WK-1178 slice C — PL-1856: FR-6, FR-109 and FR-110 dated clauses (docs only)
+
+```yaml
+id: SL-1857
+family: slice
+title: WK-1178 slice C — PL-1856, the FR-6, FR-109 and FR-110 dated clauses (docs only)
+status: closed                   # draft → active → closed | retired (§1.2a) — closed 2026-10-22 at the mint
+created: 2026-10-22   # filed under working id 8164; minted 2026-10-22 as SL-1857
+owner: executor
+tree: f3462d8fc1336dc4583fe8a7af92fed399993a55
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1856, FD-1723, FR-6, FR-109, FR-110]
+```
+
+Slice C of `PL-1856` (WK-1178's dated delta on FD-1723's residual limbs). Docs only: a dated amendment under FR-6 (`00-overview.md`: the per-artifact producing-Job id built, the shared `provenance` object and its UI not, carried to §14), under FR-109 (`02-modelling.md`: accepted with reason, the finer-level view carried to §14) and under FR-110 (`power(k)` struck, a required θ in the R/MASS `glm.nb` form), per the maintainer's entry "2026-10-22 16:02:49 BST" rulings 1, 3 and 6.
+
+(Activated 2026-10-22 on the maintainer's "2026-10-22 16:02:49 BST — Maintainer: PL 8162 (FD-1723's residual limbs) ACCEPTED; …" ("GO: slice C now"), with `PL-1856` made `active` by L1 in this slice's PR. Minted 2026-10-22 as SL-1857 from working id 8164, with its ledger LG-1858 from working id 8165 and its plan PL-1856 from working id 8162. Closed 2026-10-22 at the mint as a docs-only slice, the audit and merge-ack being recorded in LG-1858.)
+
 #### SL-8185 — WK-1178 fix slice — FD-1852: a dataset-scoped grant reaches the dictionary, rule-set and acknowledge writes (held-anywhere route gate), and a permanent route-scope guard
 
 ```yaml
@@ -2961,7 +2983,6 @@ relates: [PL-8181, FD-1852, FD-1853, RL-1849, SL-1736, FR-343, FR-345]
 ```
 
 The fix of FD-1852 (MEDIUM, LATENT: no P2 API creates a scoped grant), planned in PL 8181 and ruled by the maintainer's entries "2026-10-22 17:38:11 BST" (DP-0 to DP-3, GO) and "2026-10-22 17:46:43 BST" (re-rated; the slice continues). `requires(permission, held_anywhere=True)` admits a holder under any scope and never counts; the dictionary, rule-set and acknowledge services load the Dataset, check the permission on it (`SCOPE_DENIED`), then count (FR-452). `06` FR-345 gains the dated order clause and FR-343 a pointer. New: `backend/tests/test_dataset_scoped_writes.py` (13 red at base) and `backend/tests/test_route_scope_guard.py` (two predicates, `ROUTE_SCOPES`, an owned `KNOWN_SCOPE_GAPS`). **Task 4 (the rule-set route) is carried to the follow-on SL 8192 (ledger LG 8193), which activates when SL-1736 merges** (the maintainer, "2026-10-22 18:16:19 BST"); until then the rule-set route is a `KNOWN_SCOPE_GAPS` row owned by SL 8192 and its four tests are strict xfails. Ledger LG-8186.
-
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 

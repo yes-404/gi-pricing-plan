@@ -2,7 +2,7 @@
 id: FD-1679
 family: finding
 title: FR-242's drafted change summary pairs rate-table pins by slug alone, so two pinned versions of one slug are silently dropped or mis-paired
-status: active
+status: closed
 created: 2026-10-12
 owner: auditor
 tree: 604ea084c96efe93f521fb9ba17738e05241e61a

@@ -1,0 +1,63 @@
+{
+  "$defs": {
+    "ArtifactRef": {
+      "description": "Canonical artifact reference {type}:{slug}@{version} (ID-3).",
+      "examples": [
+        "model:motor-ad-frequency@7",
+        "rating_version:motor-gb@27"
+      ],
+      "pattern": "^((banding|custom_metric|custom_objective|dataset|dataset_version|deployment|dossier|gipp_check|grouping|model|monitor|optimisation_run|peril_structure|rate_table|rating_algorithm|rating_version|reference_table|regression_suite|sub_graph|validation_rule|validation_rule_set):[a-z0-9][a-z0-9-]{1,62}|factor:[a-z0-9][a-z0-9_-]{1,62})@[1-9][0-9]*$",
+      "title": "ArtifactRef",
+      "type": "string"
+    },
+    "RoutingRange": {
+      "additionalProperties": false,
+      "description": "One date range of a routing rule, naming the Rating Version it selects.",
+      "properties": {
+        "effective_from": {
+          "format": "date",
+          "title": "Effective From",
+          "type": "string"
+        },
+        "effective_to": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Effective To"
+        },
+        "rating_version_ref": {
+          "$ref": "#/$defs/ArtifactRef"
+        }
+      },
+      "required": [
+        "rating_version_ref",
+        "effective_from"
+      ],
+      "title": "RoutingRange",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The body of `PUT /api/v1/environments/{env}/routing`. Empty `ranges` clears the rule.",
+  "properties": {
+    "ranges": {
+      "items": {
+        "$ref": "#/$defs/RoutingRange"
+      },
+      "title": "Ranges",
+      "type": "array"
+    }
+  },
+  "required": [
+    "ranges"
+  ],
+  "title": "RoutingRuleUpdate",
+  "type": "object"
+}
