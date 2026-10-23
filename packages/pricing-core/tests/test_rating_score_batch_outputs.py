@@ -304,11 +304,17 @@ def test_a_non_integral_or_non_numeric_value_for_an_integral_type_is_refused_wit
 def test_relativity_and_percentage_take_the_decimal_string_form_never_a_float(
     declared_type: str,
 ) -> None:
+    """RL-1343 rule 3.4 (SL-1569; this pinned the conversion before it): batch checks the
+    producer's positional string and converts nothing, so a number, which `_build_outputs`
+    never hands over, is refused, the float's repr `0.30000000000000004` included
+    (RL-1343 :65-66: not the engine's value). The ruled exception to PL-1568's write set:
+    the maintainer (by delegation), entry "2026-10-23 10:48:01 BST", (A)."""
     for value in (27, 19.8, Decimal("1.15"), 0.1 + 0.2):
-        got = _coerce_output_value(declared_type, value)
-        assert type(got) is str
-        assert got == _coerce_output_value("decimal", value)
-    assert _coerce_output_value(declared_type, 0.1 + 0.2) == "0.30000000000000004"
+        with pytest.raises(ValueError, match="positional decimal string"):
+            _coerce_output_value(declared_type, value)
+    got = _coerce_output_value(declared_type, "0.30")
+    assert type(got) is str
+    assert got == _coerce_output_value("decimal", "0.30") == "0.30"
 
 
 @pytest.mark.req("FR-254")
