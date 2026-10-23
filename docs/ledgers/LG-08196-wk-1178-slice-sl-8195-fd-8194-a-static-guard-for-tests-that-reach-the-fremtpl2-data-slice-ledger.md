@@ -78,6 +78,10 @@ Also in the file: seven fixture tests pin the checker's shapes (helper chain fla
 - (d) GREEN on the merged head, `b0d2580ceabdea1dd233cd7b55e7207df6618628-merged-guard.log` (`scripts/run-small.sh <wt> tests/test_fremtpl2_data_guard.py`, load1 2.93): `8 passed in 10.33s`, rc=0. main now carries #1361's skipif mark in `test_wf701_journey.py`, so zero offenders.
 
 **Owed:** the code gate; the audit; the PR; the mint at its turn; `FD 8194`'s record, which a later docs batch writes.
+**2026-10-23, re-merge of `origin/main` (`4e399fd0`, after #1365), merge commit `ca2057fbaf95406f2e8c500116de4d3aae58ddbb` (tree `0230fad3b4c5adfbd08c6590175d05e51a56c7f6`).** `git merge-tree --write-tree HEAD origin/main` gave rc=1, the one conflict `docs/INDEX.md`; main's INDEX taken, regenerated under gate-2, `doc-index.py --check` rc 0 (`OK (byte-stable)`); `docs/roadmap.md` auto-merged. The slice's own diff vs `origin/main` is still `tests/test_fremtpl2_data_guard.py` plus the LG, INDEX and roadmap rows.
+
+- (e) GREEN on the re-merged head, `ca2057fb-guard-run-small.log` (`scripts/run-small.sh <wt> tests/test_fremtpl2_data_guard.py`, redis db 11, DB-free; load1 5.80 at start; DBSIZE 11 = 0 after): `8 passed in 10.70s`, rc=0. The import closure of the slice's changed source (`git diff --name-only origin/main...HEAD -- '*.py'` = `tests/test_fremtpl2_data_guard.py`, which nothing imports) is that file alone; its static scan covers `backend/tests`, `packages/*/tests` and `tests`, so it covers main's new tests. None of the 14 test files main added since `c7a3f8eb` names `fremtpl2` (`git grep -c -i fremtpl2 HEAD -- <file>` printed nothing for each).
+- Gate script `~/gi-pricing-plan.local/scratch/fd8194-gate-g1.sh` is head-independent (`EXPECT_HEAD` required); sha256 `2f141c49c08b2b04339b63e3f091cb44900819ccf407fda9f627aac2f5d09c1d`, unchanged from the previous head. Not launched.
 
 ## PRs
 
