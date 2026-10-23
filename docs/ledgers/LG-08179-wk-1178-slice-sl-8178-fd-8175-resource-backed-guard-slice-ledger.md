@@ -56,3 +56,13 @@ FD-1851 (LOW) closes as accepted, citing `RL-1848` (Environment-scoped writes ke
 ## PRs
 
 (none yet)
+
+## Corrections and strict red run (exec-8178r, 2026-10-23 11:58 BST, appended; earlier lines unchanged)
+
+Per RS 8214 (`aud-8178-2026-10-23` @8cae3a0f) lines B1–B4, adopted by the lead, and the strict reading of the maintainer's "2026-10-22 17:21:38 BST" item 2.
+
+- **B1.** The GO line's quotation above reads "It goes in the FD-1851 close vehicle", a re-point made inside quotation marks. The verbatim form is "It goes in the FD 8175 close vehicle" [FD 8175 = FD-1851 at the mint].
+- **B2.** "FD-1851's own close is owed" is stale: FD-1851 is `status: retired` on main (`docs/findings/FD-01851-environment-scoped-writes-order-404-before-403-inconsistently-the-existence-oracle-is-accepted-within-a-workspace.md`, front matter, `git show origin/main:` at `4e399fd0`+).
+- **B3.** The "2 warnings" are two different things, not both teardown notices. From `strict-red-8178r.log`: (1) `StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.` (`fastapi/testclient.py:1`, raised by importing the sweep module); (2) `UserWarning: could not empty the test database (RuntimeError: GIP_TEST_DATABASE_URL is not set, and the per-worktree test database … does not exist yet. …)` (`conftest_db.py:437`, the teardown notice).
+- **B4.** "The three entries" was the count at the slice's base. `RESOURCE_BACKED` on main (`origin/main:backend/tests/test_api_authorisation_sweep.py`) has five, all under `/api/v1/environments/{env}/`: `POST …/deployments`, `POST …/deployment-requests`, `POST …/deployments/rollback`, `PUT …/routing`, `PUT …/shadow`. The guard passes on all five.
+- **Strict red (scratch, never committed).** On head `1d06b46b497bec8fd9c9a052b3f39ca82433ddeb`, one non-environment key was injected into the REAL mapping (`("POST", "/api/v1/datasets/{dataset_id}/versions"): ({"dataset_id": "x"}, {})` as the first entry of `RESOURCE_BACKED` in `backend/tests/test_api_authorisation_sweep.py`; diff pasted in the log). `scripts/run-small.sh` on `backend/tests/test_api_authorisation_sweep_scope.py` alone, `GIP_REDIS_URL=redis://localhost:6379/11` (load1 3.74 at start; db 11 dbsize 0 after), DB-free: rc=1, `FAILED backend/tests/test_api_authorisation_sweep_scope.py::test_resource_backed_holds_only_environment_scoped_paths`, `1 failed, 1 passed, 2 warnings in 0.86s`; the assert line: `AssertionError: assert [('POST', '/a...d}/versions')] == []`. Log: `~/gi-pricing-plan.local/scratch/fix-8175/strict-red-8178r.log` (first line the sha). Restored with `git checkout -- backend/tests/test_api_authorisation_sweep.py`; restored, `git status --short` empty (porcelain 0).
