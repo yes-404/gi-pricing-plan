@@ -86,3 +86,39 @@ Also in the file: seven fixture tests pin the checker's shapes (helper chain fla
 ## PRs
 
 None yet.
+
+## Corrections after the slice audit (appended 2026-10-23 12:00 BST, head `59759536`)
+
+Appended by executor seat `exec-8194r` on the lead's order, answering B1 and B2 of RS 8213 (the slice audit, proposed NOT-CLEAN on LG wording only; the lead adopted B1 and B2; the guard's code is unchanged). The lines above stay as written; where they disagree with this block, this block governs.
+
+### B1 — what each log actually carries
+
+The Build log's statement "the log's first line the head it ran on" is **false for the three `71e481fa-*` logs**: their first line is a `run-small: waiting …` line and the sha is in the file name only. The Build log also gives `rc=0` / `rc=1` for runs whose log holds no `rc=` line. Read on 2026-10-23, each log under `~/gi-pricing-plan.local/scratch/fix-8194/`:
+
+| Log | Line 1 | Last line | `rc=` line | Head named inside the file |
+|---|---|---|---|---|
+| `71e481fa-red-injected.log` (a, red) | `run-small: waiting for /tmp/slots/small-test at 18:32:36 (load 4.15)` | `1 failed, 7 passed in 9.97s` | none | no (file name only) |
+| `71e481fa-green-main.log` (b, green) | `run-small: waiting for /tmp/slots/small-test at 18:31:55 (load 3.76)` | `8 passed in 12.84s` | none | no (file name only) |
+| `71e481fa-green-injected-guarded.log` | `run-small: waiting for /tmp/slots/small-test at 18:32:47 (load 4.12)` | `8 passed in 9.20s` | none | no (file name only) |
+| `b0d2580ceabdea1dd233cd7b55e7207df6618628-merged-guard.log` (d) | `head b0d2580ceabdea1dd233cd7b55e7207df6618628` | `rc=0` | yes, `rc=0` | yes, line 1 |
+| `c-proof.log` (c) | `head b0d2580ceabdea1dd233cd7b55e7207df6618628` | `rc=0` | yes, `rc=0` | yes, line 1 (the head the proof script ran on; the file it checks is `0a6cd6c9`'s `test_wf701_journey.py`, named on line 3) |
+| `ca2057fb-guard-run-small.log` (e) | `head ca2057fbaf95406f2e8c500116de4d3aae58ddbb tree 0230fad3b4c5adfbd08c6590175d05e51a56c7f6 (merge commit; …)` | `8 passed in 10.70s` | none | yes, line 1 |
+
+**Which recorded rc rests on this ledger's own account, not on the log:** (a) `rc=1`, (b) `rc=0`, the guarded variant `rc=0`, and (e) `rc=0`. For those four runs the log carries the pytest summary line only; the exit code is inferred from it (`1 failed` implies non-zero, `N passed` implies zero) and recorded here by the executor. For (a), (b) and the guarded variant the head is likewise the ledger's account: the Build log names the tree (`origin/main` `71e481fa` plus the new file, plus the injected test for (a)); the log does not. The injected test's content is in no log (RS 8213 check 4); its failure message names `backend/tests/test_zz_injected.py::test_injected_unguarded`. (c) and (d) carry their own `rc=0` and head line.
+
+### B2 — the guard's stated limits (replaces "a static guard that cannot miss")
+
+The slice does not claim a guard that cannot miss; that claim is withdrawn. RS 8213 check 3 probed the guard on fixture strings at `59759536`, with the readers derived from the example (`build_csv`, `build_portfolio_csv`, `portfolio_policies`, `a5_a6`, `uat_and_a`).
+
+**Caught (controls return the offender):** a literal path `'examples/fremtpl2/data/x'`; an f-string path; a `'data' / 'freMTPL2freq.arff'` join; a class method; an async test; a comprehension; and the shapes in the Task list (helper chain, alias, fixture).
+
+**Missed (returns no offender):**
+- a path built from parts inside a function whose text uses lowercase `fremtpl2`: `ROOT / 'examples' / 'fremtpl2' / 'data'`, `Path('examples', 'fremtpl2', 'data')`, `os.path.join(…, 'fremtpl2', 'data', …)` (the join test needs the case-sensitive `freMTPL2` or `.arff`; lowercase `fremtpl2` is recognised only in a module-level alias);
+- a reader imported under another name (`from … import build_csv as bc`) or fetched by string (`getattr(seed, 'build_csv')`);
+- a reader reached through a subprocess (`subprocess.run(['python', 'examples/fremtpl2/seed.py'])`);
+- a reader behind a fixture in `conftest.py`, or a helper in another file (the closure stops at the file; this adds to the two limits already stated above, names matched by name and calls into another test file's helper not followed);
+- an unrelated guard counted as the data guard: `if not Path('/nope').exists(): pytest.skip(…)` anywhere in the test or its closure passes, whatever it tests.
+
+**No live miss is shown at `59759536`:** the green run reports zero offenders, and RS 8213 found that `backend/tests/conftest.py`, the root `conftest.py`, `packages/pricing-core/tests/conftest.py` and `deploy_stack_helpers.py` name no data reader. The missed shapes are latent limits, not shown misses.
+
+**Hardening is a decision for the maintainer and is not done here.** RS 8213 proposes H1 (recognise lowercase `fremtpl2` in a join, `Path(…)` and `os.path.join` inside a function; follow `import … as`) and H2 (require the guard's `.exists()` expression to name the data). If the limits above are accepted as recorded, neither needs a slice. This block changes the ledger's words only; `tests/test_fremtpl2_data_guard.py` is untouched.
