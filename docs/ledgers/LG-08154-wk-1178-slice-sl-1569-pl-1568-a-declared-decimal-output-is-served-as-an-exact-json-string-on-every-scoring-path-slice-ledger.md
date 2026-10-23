@@ -5,7 +5,7 @@ title: WK-1178 slice SL-1569 — a declared decimal output is served as an exact
 status: active                 # active → closed (§1.2a)
 created: 2026-10-23
 owner: executor
-tree: bf67458e
+tree: bf845e11
 phase: P2
 work: WK-1178
 slice: SL-1569
@@ -82,7 +82,7 @@ RED `bb1cc5b4`: `4 failed, 36 passed` (`ValidationError` where `RATING_TYPE_MISM
 
 #### Task 4
 
-RED `02d4bc6d` (direct-call harness, no pytest): `planted FAIL KeyError 'OutputValue'`, `authored`, `generated`, `agree` the same, field-names control PASS. GREEN `4ba9d138`: all five PASS; `scripts/generate-contracts.py --check`: `58 generated contracts match the models`. The same three guard tests then ran under pytest in the window below.
+RED `02d4bc6d` (direct-call harness, no pytest): `planted FAIL KeyError 'OutputValue'`, `authored`, `generated`, `agree` the same, field-names control PASS. GREEN `4ba9d138`: all five PASS; `scripts/generate-contracts.py --check`: `58 generated contracts match the models`. **B2′: this RED/GREEN pair is superseded (no log): the direct-call harness was not kept, so it cannot be re-run at the committed head. The committed-head evidence is `scripts/generate-contracts.py --check` `58 generated contracts match the models`, rc 0, at `bf67458e` (`r/b4-contracts.log`, line 1 = that head sha), and `test_contracts.py` in the backend window log (`w1-green-a.log`, `259 passed, 2 skipped`, which ran on `ef07a2e6` plus an uncommitted diff; the gate decides it, per the Gate section).** The same three guard tests then ran under pytest in the window below.
 
 #### Tasks 3b backend, 5, 7: the DB window (2026-10-23 10:5x–11:03 BST, `scratch/sl-1569/`)
 
@@ -102,7 +102,7 @@ Limb 3, structural, the merge check: **superseded (no log) — the original run'
 
 #### Remedy of RS 8207 (B1–B6), by `exec-1569r`, 2026-10-23
 
-Logs are SHA-first under `scratch/sl-1569/r/` (line 1 is `git rev-parse HEAD` of the worktree; `at.sh` swaps the `packages/` files that differ between the named commit and HEAD to that commit, runs through `run-small.sh` on redis db 13, and restores; porcelain 0 is printed after each run). **B1** RED at `b699c3d1`: `test_every_quote_input_raise_site_has_a_sentinel_case` `Left contains 1 more item: {('rating/score.py', '_build_outputs'): 1}`, `1 failed, 18 passed` (`b1-red.log`); fixed in `03bfe46a` with an `_INPUT_FREE` entry that cites the test driving the raise with `2.9999999999` and asserting the value is absent; GREEN census plus `test_rating_decimal_outputs.py`: `59 passed` (`b1-green.log`). **B6** `bf67458e`: `test_a_decimal_family_output_with_no_exact_read_is_refused_naming_no_value` (3 declared types) — GREEN `43 passed`; mutation control (the `raise ValueError(... has no exact read)` replaced by `pass`, then restored): `3 failed, 40 passed` (`b6-green.log`, `b6-mutation-red.log`).
+Logs are SHA-first under `scratch/sl-1569/r/` (line 1 is `git rev-parse HEAD` of the worktree; `at.sh` swaps the `packages/` files that differ between the named commit and HEAD to that commit, runs through `run-small.sh` on redis db 13, and restores; porcelain 0 is printed after each run). **B1** RED at `b699c3d1`: `test_every_quote_input_raise_site_has_a_sentinel_case` `Left contains 1 more item: {('rating/score.py', '_build_outputs'): 1}`, `1 failed, 18 passed` (`b1-red.log`); fixed in `03bfe46a` with an `_INPUT_FREE` entry that cites the test driving the raise with `2.9999999999` and asserting the value is absent; GREEN census plus `test_rating_decimal_outputs.py`: `59 passed` (`b1-green.log`; **superseded: line 1 was not a head sha**). **B1′ (committed head `bf845e11`):** `test_quote_input_raise_sites.py` alone via `run-small.sh`, redis db 13, load1 4.77 at start: `19 passed in 6.84s`, `rc=0`, porcelain 0, DBSIZE 0 after (`b1-green-committed.log`, line 1 = `git rev-parse HEAD` = `bf845e116c309796c9d016b59c985d14347c17b1`). **B6** `bf67458e`: `test_a_decimal_family_output_with_no_exact_read_is_refused_naming_no_value` (3 declared types) — GREEN `43 passed`; mutation control (the `raise ValueError(... has no exact read)` replaced by `pass`, then restored): `3 failed, 40 passed` (`b6-green.log`, `b6-mutation-red.log`).
 
 **B2 — the re-run lines; they replace the unlogged lines above, which are superseded (no log).** Each is a mutation control or a checkout of the named commit's files, said per line:
 - Tasks 1+3 RED, `packages/` at `4993809d`: `test_rating_decimal_outputs.py` `15 failed, 1 passed` (`b2-task13-red.log`). GREEN `18a261af`: that file + `test_rating_ladder_exact.py` + `test_rating_score_batch.py` `71 passed` (`b2-task13-green.log`).
