@@ -1,9 +1,9 @@
 ---
-id: LG-8146
+id: LG-1867
 family: ledger
 title: WK-675 slice SL-1551 — Slice 8, the typed movers row and the dislocation views (PL-1833) (slice ledger)
 status: active                 # active → closed (§1.2a)
-created: 2026-10-21
+created: 2026-10-23  # drafted 2026-10-21 under working id 8146; minted 2026-10-23 as LG-1867
 owner: executor
 tree: 57adb9e2
 phase: P2
@@ -14,9 +14,9 @@ corrected_by: []
 relates: [PL-1833, PL-1546, PL-1286, SL-1551, SL-1388, SL-1369, SL-1260, SL-1275, SL-1554]
 ---
 
-# LG-8146 — WK-675 slice SL-1551: Slice 8
+# LG-1867 — WK-675 slice SL-1551: Slice 8
 
-Filed 2026-10-21 under working id 8146 (lead-reserved). Executor seat `exec-1551`, base `origin/main` 57adb9e2, branch `sl-1551-wk675-s8`, worktree `.claude/worktrees/sl-1551`.
+Drafted 2026-10-21 under working id 8146; minted 2026-10-23 as LG-1867 (the lead's allocation, eta 10:11:07; the maintainer's `created:` form, to-lead "2026-10-23 00:18:10 BST"). Filed 2026-10-21 under working id 8146 (lead-reserved). Executor seat `exec-1551`, base `origin/main` 57adb9e2, branch `sl-1551-wk675-s8`, worktree `.claude/worktrees/sl-1551`.
 
 **GO:** the maintainer's (by delegation) entries in `to-lead.md`: "2026-10-21 15:10:53 BST" items 1 and 2, and "2026-10-21 15:50:30 BST" ("GO SL-1551 (S8) per 15:10:53 — census its remaining needs first"). Dispatch: the lead's DISPATCH RECORD — SL-1551, `from-lead-2026-10-09.md`, "2026-10-21 15:56:11 BST". Census: `handover/census-planner-1551-2026-10-21.md`. **MERGE-ACK:** not yet given.
 
@@ -96,7 +96,7 @@ Task rows are appended here as each task starts.
   - **The decimal-guard exemption.** The red of the first gate (the `DislocationMover.columns` number-or-string union read as a patternless Decimal) was ruled by the maintainer (by delegation), to-lead "2026-10-22 21:08:55 BST — Maintainer: SL-1551's decimal-guard red = option (3), a NAMED exemption for DislocationMover.columns; my 20:46 premise corrected": option (3), an exemption by exact schema path `components/schemas/DislocationMover/properties/columns/additionalProperties/anyOf`, with its reason (FR-10's scope is money; `columns` holds non-money portfolio factor values), a negative control and a stale-exemption check. That is the "Decimal guard fix" entry above; the controls' logs are the ones it names.
   - **The re-run line.** The slot-namespace test re-run alone on `47faad82`: `3 passed, 1 warning in 0.84s`, rc 0 (`scratch/sl-1551/fd8199-slotns.log`, the entry above). Lead-verified in the lead's log entry "2026-10-23 00:19:21 BST".
   - **Standing.** The maintainer, to-lead "2026-10-23 00:18:10 BST": the gate at `47faad82` STANDS under 1(f) pending that re-run, and at the mint `created:` takes the mint date with the "# drafted 2026-10-21 under working id 8146; minted <date> as LG-<n>" form. The maintainer's confirmation of the re-run: the lead's entry "2026-10-23 00:19:43 BST".
-  - Head `47faad82` to `5eb5a062` changed only this ledger (`git diff --name-only 47faad82 5eb5a062` prints the one `docs/ledgers/LG-08146-…` path).
+  - Head `47faad82` to `5eb5a062` changed only this ledger (`git diff --name-only 47faad82 5eb5a062` prints the one path under `docs/ledgers/`, this ledger's file, then named with working id 8146).
 
 ## PRs
 
