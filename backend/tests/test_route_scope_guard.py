@@ -93,6 +93,7 @@ ROUTE_SCOPES: dict[Route, ScopeType] = {
     ("POST", "/api/v1/environments/{env}/deployments"): E,
     ("POST", "/api/v1/environments/{env}/deployment-requests"): E,
     ("POST", "/api/v1/environments/{env}/deployments/rollback"): E,
+    ("PUT", "/api/v1/environments/{env}/routing"): E,  # SL-1260's route: `_authorised_environment`
     # -- Acts on one named Dataset or Dataset Version: RL-1849's routes (`KNOWN_SCOPE_GAPS`).
     ("POST", "/api/v1/dataset-versions/{version_id}/validate"): D,
     ("GET", "/api/v1/dataset-versions/{version_id}/validation-reports"): D,
