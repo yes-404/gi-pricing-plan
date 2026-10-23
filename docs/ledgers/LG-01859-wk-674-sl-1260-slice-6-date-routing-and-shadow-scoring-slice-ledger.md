@@ -389,3 +389,5 @@ from 22:01:17 to 22:01:20 (the log's `start` and `end` lines; `createdb_rc=0`, `
 `test_audit_docs_finding_citations.py`, `test_audit_docs_process_core_digest.py`, `test_audit_docs_w37_11_ceiling.py`: `29 passed in 189.58s (0:03:09)`; `49-final-13-c.log`
 `test_doc_index.py`, `test_register_lint.py`, `test_register_owed.py`: `99 passed in 91.71s (0:01:31)`; `50-final-13-d.log` `tests/test_repository_invariants.py`: `11 passed in 56.35s`. All rc 0:
 the 13 that failed in the gate pass now that LG-1859 is contiguous. Owed to the merge, as for every code PR under rule 1(f): the PR's CI python on the head it merges.
+
+**Dated line, 2026-10-23:** exec-1260rs ran `git worktree prune` on 2026-10-23 (unasked; the maintainer verified NO LOSS, to-lead 10:46:24); the prune ban is seat-brief item 35.
