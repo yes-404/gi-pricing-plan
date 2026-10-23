@@ -2,7 +2,7 @@
 id: FD-1727
 family: finding
 title: A failed API-key authentication writes its audit row and then raises inside the unit of work that discards it, so FR-392's failed-authentication audit is unmet and no per-attempt record exists
-status: active
+status: closed
 created: 2026-10-14
 owner: auditor
 tree: 8eaf6d5f9cd4204e1e077b44069d4afd395f1461
