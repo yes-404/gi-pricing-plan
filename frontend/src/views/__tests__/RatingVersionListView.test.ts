@@ -123,9 +123,10 @@ describe("the rating version list view (FR-8209)", () => {
     render(RatingVersionListView, mounted);
 
     const headings = await screen.findAllByRole("heading", { level: 2 });
-    expect(headings.map((h) => h.textContent?.trim())).toEqual(["fremtpl2-demo", "motor-gb"]);
+    // DP-S10-4: motor-gb's newest version has an effective_from, fremtpl2-demo's has none (last).
+    expect(headings.map((h) => h.textContent?.trim())).toEqual(["motor-gb", "fremtpl2-demo"]);
     const refs = screen.getAllByText(/^(fremtpl2-demo|motor-gb)@\d+$/).map((e) => e.textContent);
-    expect(refs).toEqual(["fremtpl2-demo@2", "fremtpl2-demo@1", "motor-gb@27"]);
+    expect(refs).toEqual(["motor-gb@27", "fremtpl2-demo@2", "fremtpl2-demo@1"]);
 
     await fireEvent.update(screen.getByLabelText("Status"), "draft");
 
@@ -133,6 +134,25 @@ describe("the rating version list view (FR-8209)", () => {
     expect(screen.queryByText("fremtpl2-demo@1")).not.toBeInTheDocument();
     expect(screen.queryByText("motor-gb@27")).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "motor-gb" })).not.toBeInTheDocument();
+  });
+
+  it("(a) orders groups by the newest version's effective_from desc, none last, ties by slug (DP-S10-4)", async () => {
+    stubFetch({
+      versions: [
+        rating({ slug: "zeta", version: 1, status: "live", effective_from: "2026-03-01T00:00:00Z" }),
+        rating({ slug: "alpha", version: 1, status: "live", effective_from: "2026-03-01T00:00:00Z" }),
+        rating({ slug: "mid", version: 1, status: "live", effective_from: "2026-06-01T00:00:00Z" }),
+        rating({ slug: "nodate", version: 1, status: "live", effective_from: "2026-12-01T00:00:00Z" }),
+        rating({ slug: "nodate", version: 2, status: "draft" }),
+        rating({ slug: "beta", version: 1, status: "draft" }),
+      ],
+    });
+    render(RatingVersionListView, mounted);
+
+    const headings = await screen.findAllByRole("heading", { level: 2 });
+    expect(headings.map((h) => h.textContent?.trim())).toEqual([
+      "mid", "alpha", "zeta", "beta", "nodate",
+    ]);
   });
 
   it("(b) badges a version with the environment it is live in, and only that one", async () => {
