@@ -309,6 +309,29 @@ REGISTRY: dict[str, SettingDefinition] = _define(
         "risk.",
         feature_flag=True,
     ),
+    # Environment-only (`RL-1311` item 3; `RL-1834` D2): a workspace-level write is refused and a
+    # process variable never supplies one, so a flag is switched on in one Environment at a time.
+    SettingDefinition(
+        key="features.date_routing_enabled",
+        type=SettingType.BOOL,
+        default=False,
+        description="Date-based routing (`03` FR-270): a default-live quote is scored by the "
+        "Rating Version whose date range, in the Environment's routing rule, holds its "
+        "effective date. Selection is only among versions already deployed to the "
+        "Environment, so turning it on never makes an unpromoted version live.",
+        feature_flag=True,
+        scope=SettingScope.ENVIRONMENT,
+    ),
+    SettingDefinition(
+        key="features.shadow_scoring_enabled",
+        type=SettingType.BOOL,
+        default=False,
+        description="Shadow scoring (`03` FR-271): a fraction of default-live quotes is also "
+        "scored against the Environment's shadow candidate after the response is sent, and "
+        "the result recorded, never returned to the caller.",
+        feature_flag=True,
+        scope=SettingScope.ENVIRONMENT,
+    ),
 )
 
 #: The safe value for each flag, recorded separately from the default so that a change to
@@ -317,6 +340,8 @@ REGISTRY: dict[str, SettingDefinition] = _define(
 SAFE_DEFAULT: dict[str, bool] = {
     "features.expression_objectives_enabled": False,
     "features.sql_validation_check_enabled": False,
+    "features.date_routing_enabled": False,
+    "features.shadow_scoring_enabled": False,
 }
 
 #: Which settings an environment variable may override, and under what name.

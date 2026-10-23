@@ -64,6 +64,9 @@ ROWS: tuple[Row, ...] = (
         "DeploymentCreated",
     ),
     Row("GET", "/api/v1/environments/{env}/deployments", None, "Deployment", paged=True),
+    # WK-674 Slice 6, `RL-1834` D1: the Environment's date-routing rule.
+    Row("PUT", "/api/v1/environments/{env}/routing", "RoutingRuleUpdate", "RoutingRule"),
+    Row("PUT", "/api/v1/environments/{env}/shadow", "ShadowConfigUpdate", "ShadowConfig"),
     # Row 9: the body and (FD-1416, PL-1528) the 2xx are typed.
     Row("POST", "/api/v1/approval-requests", "ApprovalSubmission", "ApprovalRequest"),
     # Row 8 (Task 6): the withdraw body is `reason` only; the server derives liveness.
@@ -320,16 +323,16 @@ def _environment_operations(document: dict[str, Any]) -> set[tuple[str, str]]:
 
 @pytest.mark.req("FR-428")
 def test_the_route_set_is_pinned(document: dict[str, Any]) -> None:
-    """The operations under `/api/v1/environments` equal the Route table's eight rows plus
-    `SETTINGS_ROUTES`' two, exactly.
+    """The operations under `/api/v1/environments` equal the Route table's ten rows (Slice 6
+    added `PUT .../routing` and `PUT .../shadow`) plus `SETTINGS_ROUTES`' two, exactly.
 
     A route added or removed unchecked fails here naming it.
     """
     live = _environment_operations(document)
     expected = {(row.method, row.path) for row in ENVIRONMENT_ROWS}
-    assert len(expected) == 8
+    assert len(expected) == 10
     union = expected | SETTINGS_ROUTES
-    assert len(union) == 10
+    assert len(union) == 12
     assert live == union, (
         f"extra: {sorted(live - union)}; missing: {sorted(union - live)}"
     )

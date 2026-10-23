@@ -2691,6 +2691,11 @@ _CONTRACT_ARTIFACT_PATHS: Final = (
     "docs/contracts/schemas/generated/deployment-created.schema.json",
     "docs/contracts/schemas/generated/switch-report.schema.json",
     "docs/contracts/schemas/generated/rollback-create.schema.json",
+    # 2026-10-22, RL-1834 (WK-674 Slice 6)
+    "docs/contracts/schemas/generated/routing-rule.schema.json",
+    "docs/contracts/schemas/generated/routing-rule-update.schema.json",
+    "docs/contracts/schemas/generated/shadow-config.schema.json",
+    "docs/contracts/schemas/generated/shadow-config-update.schema.json",
     "docs/contracts/schemas/generated/problem-detail.schema.json",
     "docs/contracts/schemas/generated/profile.schema.json",
     "docs/contracts/schemas/generated/transparency-artifact.schema.json",
