@@ -95,3 +95,5 @@ The two code commits are `03bfe46a` (`test_quote_input_raise_sites.py`) and `bf6
 - Unchanged from RS 8207: the full two-half gate (items 21–23) and `req-coverage`/`audit-docs` rc 0 in it; Task 6 limbs 1–2 as DIAGNOSTIC readings; the NFR-502 timing verdict on nfr-bench-1 (owner WK-1178, base `4e399fd0`, D1 = (b)); the redis-13 / `gip_test_sl1569` zeros are claimed in the LG only (no cleanup log).
 - This record's mint **in the slice's PR, before CI** (seat-brief item 34), with RS 8207's.
 - The slice's closing acts after a clean re-audit.
+
+- B1′/B2′ discharged 2a1588c9, verified by the lead directly, to-lead 2026-10-23 11:38:45 BST.
