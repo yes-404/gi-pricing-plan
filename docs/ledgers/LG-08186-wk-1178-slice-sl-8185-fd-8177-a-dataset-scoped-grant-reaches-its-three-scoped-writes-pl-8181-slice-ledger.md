@@ -87,6 +87,8 @@ The small-run database `gipricing_sl-8185_215125e7` was dropped by the lead in t
 - `ad` rc=1, `ae` rc=1: `14 passed, 2 warnings, 4 errors in 0.75s` and `10 passed, 2 warnings, 6 errors in 2.65s`, every error `RuntimeError: GIP_TEST_DATABASE_URL is not set, and the per-worktree test database ... does not exist yet` (`test_startup_gc_freeze.py`, `test_startup_self_check.py`; `test_error_sinks.py`, `test_api_auth.py`): setup errors of tests that need the database, **owed to the gate**, not failures.
 `ruff check .` rc 0 and `ruff format --check` on the changed file rc 0 before the commit.
 
+- Gate on 7d3f5b09 ABORTED at python half, pytest 76% (ruff/mypy/import-linter/req-coverage/contracts rc 0, audit-docs rc 1 not yet analysed) 2026-10-23 12:14 BST on the user's pause (to-lead 12:13:16); cleanup done; re-run Saturday on 7d3f5b09
+
 ## PRs
 
 None yet.
