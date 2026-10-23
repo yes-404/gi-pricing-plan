@@ -18,7 +18,7 @@ relates: [OQ-1843, RL-1309, RL-1835, RL-1474, FR-212, FR-217, FR-1607, SL-1554, 
 
 Drafted 2026-10-23 under working id 8203 on branch `draft/rl-8203`. **This is a draft for the
 maintainer to adopt, amend or reject.** It rules nothing until the maintainer adopts it with a
-dated line. It is not minted here and carries no INDEX hunk.
+dated line. It is not minted here; its INDEX row is the working id, renumbered at the mint.
 
 **The question.** `OQ-1843` (`docs/open-questions.md:162`, mirrored at
 `docs/specs/03-rating-engine.md:1615`, both at `origin/main` `4e399fd0`): *"May a mounted
@@ -29,7 +29,7 @@ goes to an OQ" in `~/gi-pricing-plan.local/channel/to-lead.md` (local), whose it
 *"it is a design choice the spec leaves open (refuse an empty mapped name, or allow it). Under
 CLAUDE.md §0 / §10, file it as an **OQ** in the next docs batch, with options, trade-offs and a
 recommendation (owner WK-675). It is NOT a silent pick either way, and NOT built in this
-slice."* The observation is RS 8158 (`docs/research/RS-08158-…` on branch
+slice."* The observation is RS 8158 (its file under `docs/research/` on branch
 `aud-1554b-2026-10-22` @`cf0fb018`, section "The empty-string observation: not a defect against
 a named clause").
 
