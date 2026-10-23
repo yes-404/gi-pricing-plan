@@ -1203,8 +1203,8 @@ class GlmSpec(ModelSpecCommon):
                 )
         elif theta is not None:
             raise InputFreeError(
-                f"family_params['theta'] belongs to negative_binomial; the {self.family!r} "
-                "family has no theta, and a declared parameter that is ignored is refused."
+                "family_params['theta'] belongs to negative_binomial; any other family "
+                "has no theta, and a declared parameter that is ignored is refused."
             )
         return self
 
