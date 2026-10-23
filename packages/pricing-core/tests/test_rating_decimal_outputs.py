@@ -20,6 +20,7 @@ from test_rating_ladder_exact import _chain_algorithm, _compile_payload, _contex
 from test_rating_score_batch import _contexts, _ctx_to_row
 from test_rating_score_batch_outputs import _probe_bundle
 
+from pricing_core.rating import score as score_module
 from pricing_core.rating.score import _coerce_output_value, score_batch, score_one
 
 _POSITIONAL = re.compile(r"^-?[0-9]+(\.[0-9]+)?$")
@@ -144,6 +145,21 @@ async def test_a_null_decimal_output_stays_null() -> None:
     omitted, and the producer must not turn that omission into a string or a float."""
     result = await _served("null")
     assert result.outputs.get("probe_out") is None
+
+
+@pytest.mark.req("FR-214")
+@pytest.mark.parametrize("declared", ["decimal", "relativity", "percentage"])
+async def test_a_decimal_family_output_with_no_exact_read_is_refused_naming_no_value(
+    declared: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """RL-1343 rule 3.1: a non-null `result[name]` with no exact read is never served as the
+    float; the `ValueError` names the output and its declared type, not the value (NFR-499)."""
+    monkeypatch.setattr(score_module, "_exact", lambda result, name: None)
+    with pytest.raises(ValueError, match="has no exact read") as caught:
+        await _served("19.8 + 0 * risk_premium_minor", declared=declared, result_type=declared)
+    assert "probe_out" in str(caught.value)
+    assert declared in str(caught.value)
+    assert "19.8" not in str(caught.value)
 
 
 @pytest.mark.req("FR-254")
