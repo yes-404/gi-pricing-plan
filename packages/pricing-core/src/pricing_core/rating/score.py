@@ -798,6 +798,9 @@ def _build_ladder(
 #: it, `_coerce_output_value` checks it.
 _DECIMAL_FAMILY = frozenset({"decimal", "relativity", "percentage"})
 
+#: The declared output types served as a JSON integer (`RL-1567` T1).
+_INTEGRAL_TYPES = frozenset({"int", "count"})
+
 #: `common/money.schema.json#/$defs/Decimal`, minus a signed zero (`round_to_text` writes none).
 _POSITIONAL_DECIMAL = re.compile(r"(?!-0+(\.0+)?$)-?[0-9]+(\.[0-9]+)?")
 
@@ -814,8 +817,10 @@ def _build_outputs(algorithm: RatingAlgorithm, result: Mapping[str, Any]) -> dic
     (`_DECIMAL_FAMILY`) takes the same exact read and the same single rounding, but is
     served as a string written by `round_to_text` with exactly the step's `dp` digits
     (`RL-1343` rules 3.1-3.4, FR-214, FR-226): never the float in `result`, so a decimal
-    output with no exact read and a value other than `None` is refused. Anything else is
-    read straight from the evaluated `result`, unchanged.
+    output with no exact read and a value other than `None` is refused. An `int` or `count`
+    output is the integer of the same exact read when it is integral by exact equality, else
+    the quote is refused with `RATING_TYPE_MISMATCH` (`RL-1567`). Anything else is read
+    straight from the evaluated `result`, unchanged.
     """
     output_steps = output_steps_by_name(algorithm)
     outputs: dict[str, Any] = {}
@@ -829,13 +834,24 @@ def _build_outputs(algorithm: RatingAlgorithm, result: Mapping[str, Any]) -> dic
         name = str(source[0])
         is_rung = declared.name.removesuffix("_minor") in RUNG_ORDER
         in_decimal_family = declared.type in _DECIMAL_FAMILY
+        integral = declared.type in _INTEGRAL_TYPES
         exact = (
             _exact(result, name)
-            if (is_rung or declared.type == "money_minor" or in_decimal_family)
+            if (is_rung or declared.type == "money_minor" or in_decimal_family or integral)
             else None
         )
         rounding = LadderRounding(mode=step.rounding.mode, dp=step.rounding.dp)
-        if exact is not None and in_decimal_family:
+        if exact is not None and integral:
+            # RL-1567 entries (1) and (2): integral means exact equality with the integer part,
+            # no tolerance. The text names the output, never the value (NFR-499).
+            if exact != exact.to_integral_value():
+                _raise_named(
+                    "RATING_TYPE_MISMATCH",
+                    f"output {declared.name!r} is declared {declared.type} and its value "
+                    "is not integral",
+                )
+            outputs[declared.name] = int(exact)
+        elif exact is not None and in_decimal_family:
             outputs[declared.name] = round_to_text(exact, rounding)
         elif exact is not None:
             outputs[declared.name] = round_once(exact, rounding)

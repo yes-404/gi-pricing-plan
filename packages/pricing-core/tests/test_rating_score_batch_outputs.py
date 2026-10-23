@@ -192,15 +192,16 @@ async def test_an_integer_declared_output_is_the_same_json_integer_in_batch_and_
 async def test_a_non_integral_value_for_an_integer_output_is_an_error_row(
     declared_type: str,
 ) -> None:
-    # Until SL-1569 merges the row's code is the class name (RL-1567 item 10, DP-3); after
-    # it, `RATING_TYPE_MISMATCH` from the single producer (SL-1569 re-expects this line).
+    # SL-1569 re-expects the row's code from the class name to `RATING_TYPE_MISMATCH`, from the
+    # single producer (RL-1567 item 10; the maintainer (by delegation), entry
+    # "2026-10-05 18:27:10 BST").
     compiled = await _probe_bundle(declared_type, "driver_age * 1.1")
     frame = pl.DataFrame([_ctx_to_row(c) for c in _contexts(4)]).lazy()
     out = score_batch(compiled, frame).collect().to_dicts()
     assert len(out) == 4
     q0 = next(r for r in out if r["quote_id"] == "Q0")  # driver_age 18 -> 19.8
     assert q0["outcome"] == "error"
-    assert q0["error_code"] == "ValueError"
+    assert q0["error_code"] == "RATING_TYPE_MISMATCH"
     assert q0["outputs_json"] is None
     assert "19.8" not in (q0["error_message"] or "")  # NFR-499: no value in the message
 
@@ -250,14 +251,15 @@ async def test_a_near_integer_under_an_integral_type_is_an_error_row(
     declared_type: str,
 ) -> None:
     # `2.9999999999` is not integral: exact equality with the integer part, no tolerance
-    # (RL-1567 item 6). The code is the class name until SL-1569 merges (item 10).
+    # (RL-1567 item 6). SL-1569 re-expects the code `RATING_TYPE_MISMATCH` (item 10; the
+    # maintainer (by delegation), entry "2026-10-05 18:27:10 BST").
     compiled = await _probe_bundle(declared_type, "driver_age * 0 + 2.9999999999")
     frame = pl.DataFrame([_ctx_to_row(c) for c in _contexts(4)]).lazy()
     out = score_batch(compiled, frame).collect().to_dicts()
     assert len(out) == 4
     for row in out:
         assert row["outcome"] == "error"
-        assert row["error_code"] == "ValueError"
+        assert row["error_code"] == "RATING_TYPE_MISMATCH"
         assert row["outputs_json"] is None
 
 
