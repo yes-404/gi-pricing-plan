@@ -11,7 +11,8 @@ verifier.
 The default password (`gip_app_login`) is for a fresh local volume only; the script refuses
 it unless `--allow-default-password` is passed.
 
-Run: `GIP_MIGRATION_DATABASE_URL=… GIP_APP_DB_PASSWORD=… uv run python scripts/provision-app-role.py`
+Run: `GIP_MIGRATION_DATABASE_URL=… GIP_APP_DB_PASSWORD=… \
+uv run python scripts/provision-app-role.py`
 """
 
 from __future__ import annotations
