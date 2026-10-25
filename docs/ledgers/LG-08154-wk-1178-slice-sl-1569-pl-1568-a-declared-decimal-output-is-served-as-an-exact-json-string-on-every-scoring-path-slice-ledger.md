@@ -161,3 +161,18 @@ Limb 1, p99 ms per run 1/2/3 (V+S = `model_validate` + `model_dump_json`, S = du
 Limb 2 (`verdict.py`, p99 ms per run 1/2/3, 3 runs each tree): `/score` base 19.387 / 36.357 / 19.350 (median 19.387), HEAD 16.387 / 15.499 / 16.280 (median 16.280), delta −3.108; `/score/compare` base 32.480 / 57.672 / 30.722 (median 32.480), HEAD 58.104 / 31.733 / 33.808 (median 33.808), delta +1.328. `NO_STOP_CONDITION`. Both trees carry one outlier run (base /score run 2, base /score/compare run 2, HEAD /score/compare run 1).
 
 Diagnostic readings only; timing verdict CARRIED to nfr-bench-1 (D1 = (b)); not an NFR-502 measurement. Logged against slice A's gate timing rows (gate-1, `ce6eb64e`, 11:03 GMT).
+
+## 2026-10-25 15:25 UTC — gate RED at c62e4e48 and the three oracles re-expressed (exec-1569t)
+
+**RED.** SL-1569 gate `END 2026-10-25T15:19:13+00:00 1.54 1.65 1.75` @c62e4e48: pytest `14 failed, 6838 passed` — 13 docs-audit (1(f) class), 1 real: `backend/tests/test_rating_glm_model_call.py::test_a_model_offset_glm_scores_with_its_source_model` (FR-116) at :202, `assert 0.316648016 == 0.3166480164244357 ± 3.2e-10` (|Δ| ≈ 4.2e-10). The test is main's (SL-1463, #1262, `2edc4d89`), outside this slice's GREEN closure. Diagnosis: `~/gi-pricing-plan.local/scratch/sl-1569/diag-2026-10-25.md` — the slice is right (FR-214, FR-226, RL-1343 §3); the oracle compared at `rel=1e-9` an output the step declares at dp 9 half_even (error up to 5e-10).
+
+**Ruling, verbatim (to-lead 2026-10-25 15:23:06 GMT):** "Ruling (a). My 15:21:30 pre-grant named exact Decimal equality; **amended to the lead's form**, on the ulp-tie argument (the engine's exact Decimal and predict_rows' float can differ in the last ulp, so an exact quantisation at a tie can flip): each of the three asserts becomes **(i)** `served` is a `str` with exactly 9 digits after the point, **and (ii)** `float(served) == pytest.approx(expected, abs=5e-10)` — the declared rounding's own half-quantum, not an arbitrary loosening. **Item 13 OK GRANTED; the out-of-write-set touch GRANTED** … for `backend/tests/test_rating_glm_model_call.py` and `backend/tests/test_rating_peril_scoring_api.py` in SL-1569's branch."
+The 15:21:30 pre-grant (exact `Decimal(served) == expected.quantize(...)`) is superseded by this line; the brief named the 15:21:30 form.
+
+**Changed asserts** (glm_model_call :137, :202; peril_scoring_api :217), each before → after:
+- before: `assert float(response.json()["outputs"]["risk_out"]) == pytest.approx(expected, rel=1e-9)`
+- after: `assert_served_at_declared_scale(response.json()["outputs"]["risk_out"], expected)` — the helper (in `test_rating_glm_model_call.py`, imported by the peril test) asserts `isinstance(served, str)`, `re.fullmatch(rf"-?\d+\.\d{{{RISK_OUT_DP}}}", served)`, and `float(served) == pytest.approx(expected, abs=0.5 * 10**-RISK_OUT_DP)`. `RISK_OUT_DP = 9` is one constant that `_algorithm`'s output-step rounding also reads, so the oracle cannot drift from the declaration. All `req()` markers kept.
+
+**Checks (no test run — gate-1 held, DB-backed):** `ruff check` on the two files rc 0; `py_compile` rc 0. `ruff format --check` rc 1 on both files **and rc 1 on their `HEAD` versions before this edit** (pre-existing, not introduced here; the files are hand-aligned and not format-clean on main either).
+
+GREEN = the re-gate (owed).
