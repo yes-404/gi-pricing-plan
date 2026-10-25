@@ -245,7 +245,7 @@ export const routes: RouteRecordRaw[] = [
     props: true,
   },
   {
-    // `03` §5.3's Rating Version list (FR-8209): the shell's entry to the `03` views.
+    // `03` §5.3's Rating Version list (FR-1903): the shell's entry to the `03` views.
     path: "/rating",
     name: "rating-versions",
     meta: { requiresAuth: true },

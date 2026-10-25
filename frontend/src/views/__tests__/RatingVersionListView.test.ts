@@ -10,7 +10,7 @@ type Environment = components["schemas"]["Environment"];
 /**
  * The view is exercised through the real `api/` modules with `fetch` stubbed, not through a
  * mocked `api/environments`: cases (c) and (d) are about the paging and the failure path
- * (FR-8209), which a mocked client would skip.
+ * (FR-1903), which a mocked client would skip.
  */
 
 function rating(over: Partial<RatingVersion> & Pick<RatingVersion, "slug" | "version" | "status">): RatingVersion {
@@ -117,7 +117,7 @@ async function rowOf(slug: string, version: number) {
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe("the rating version list view (FR-8209)", () => {
+describe("the rating version list view (FR-1903)", () => {
   it("(a) groups the versions by slug, newest version first, and filters by status", async () => {
     stubFetch({});
     render(RatingVersionListView, mounted);

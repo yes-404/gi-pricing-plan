@@ -1,9 +1,9 @@
 ---
-id: RL-8163
+id: RL-1900
 family: ruling
 title: SL-1552 (WK-675 S10) and SL-1553 (WK-675 S11) decided — RatingVersionView stays and /rating becomes the FR-25 entry; live badges are a client-side join over GET /api/v1/environments, "unavailable" on any failure; the list stays client-side filtered and unpaginated, its bound recorded as an OQ; a version's regression runs are listed by a new RegressionRunSummary, newest first, cursor-paginated; the suite view is read-only
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
-created: 2026-10-22
+created: 2026-10-25   # drafted 2026-10-22 under working id 8163; minted 2026-10-25 as RL-1900
 owner: decision-maker
 tree: f3462d8f
 phase: P2
@@ -14,9 +14,9 @@ corrected_by: []
 relates: [PL-1546, PL-1286, SL-1552, SL-1553, WK-675, FD-1283, FR-25, FR-238, FR-241, FR-260, FR-261, FR-1221, FR-1531, RL-1473, RL-1765]
 ---
 
-# RL-8163 — SL-1552 (S10) and SL-1553 (S11): the five open design points of the rating version list and the regression suite view
+# RL-1900 — SL-1552 (S10) and SL-1553 (S11): the five open design points of the rating version list and the regression suite view
 
-Disclosure: drafted as **working id RL 8163** by the decision-maker seat dm-1552 (opus, Opus 5.5)
+Disclosure: drafted as **working id RL-1900** by the decision-maker seat dm-1552 (opus, Opus 5.5)
 on 2026-10-22, on lead 26's brief `handover/brief-dm-1552-2026-10-22.md` (written 15:51:56 BST).
 No maintainer entry in `to-lead.md` orders this record by number (read to line 29480 before 15:55:11 BST
 on 2026-10-22; the last entry is "2026-10-22 15:52:54 BST"). The lead adopts, amends or rejects
@@ -244,4 +244,4 @@ breach would be a write outside the slice's ruled write set, which the slice aud
 
 ## Adoption
 
-Adopted as drafted on 2026-10-23 by the maintainer (by delegation), to-lead "2026-10-23 11:14:56 BST" item (A); DP-S10-4 (the list's display order) was decided in the same entry, item (B), and is recorded in `03` FR 8209 and in LG 8208. This line was appended in SL-1552's PR, which carries the record (Lean P2 L1, common brief item 34); the working id is renumbered at the mint.
+Adopted as drafted on 2026-10-23 by the maintainer (by delegation), to-lead "2026-10-23 11:14:56 BST" item (A); DP-S10-4 (the list's display order) was decided in the same entry, item (B), and is recorded in `03` FR-1903 and in LG-1902. This line was appended in SL-1552's PR, which carries the record (Lean P2 L1, common brief item 34); the working id is renumbered at the mint.
