@@ -643,7 +643,7 @@ async def test_a_gip_app_update_on_factors_is_refused_by_the_trigger_not_only_th
     planted = text("UPDATE factors SET body = '{\"rewritten\": true}' WHERE id = :id")
 
     async def as_gip_app(*, reopen_layer_1: bool) -> None:
-        # `owner_database.session()` never commits, so neither the role switch nor the GRANT survives.
+        # `owner_database.session()` never commits: neither the role switch nor the GRANT survives.
         async with owner_database.session() as session:
             if reopen_layer_1:
                 await session.execute(text("GRANT UPDATE ON factors TO gip_app"))

@@ -457,10 +457,16 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
         "issues TRUNCATE on audit_events; asserts the append-only trigger refuses it",
     ),
     (
+        "backend/tests/test_blobs.py::"
+        "test_gc_deletes_an_old_unreferenced_blob_and_audits_it",
+        "owner-subject",
+        "runs the FR-420 sweep, which DELETEs blobs; the app role has no DELETE (OQ 8252)",
+    ),
+    (
         "backend/tests/test_artifact_immutability.py::"
         "test_a_gip_app_update_on_factors_is_refused_by_the_trigger_not_only_the_grant",
         "owner-subject",
-        "reopens a grant (GRANT UPDATE, DDL) and asserts the append-only trigger refuses the planted UPDATE",
+        "reopens a grant (GRANT, DDL); asserts the append-only trigger refuses the UPDATE",
     ),
     (
         "backend/tests/test_artifact_immutability.py::"
