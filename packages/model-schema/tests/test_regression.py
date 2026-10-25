@@ -350,3 +350,34 @@ def test_the_case_log_hash_is_canonical() -> None:
     other = CasesLog.model_validate({"cases": [], "counterexamples": {}})
     assert cases_log_sha256(one) != cases_log_sha256(other)
     assert len(cases_log_sha256(one)) == 64
+
+
+# --- WK-675 Slice 11 (SL-1553, FR 8211): the run summary the list route returns ----------
+
+@pytest.mark.req("FR-8211")
+def test_a_regression_run_summary_is_the_listed_fields_and_nothing_heavier() -> None:
+    from model_schema.regression import RegressionRun, RegressionRunSummary
+
+    assert set(RegressionRunSummary.model_fields) == {
+        "id", "job_id", "overall", "bundle_hash", "suite_ref", "suite_content_hash",
+        "started_at", "finished_at",
+    }
+    # The persisted record gains no `id`: the id is the row's, carried by the summary only.
+    assert "id" not in RegressionRun.model_fields
+    summary = RegressionRunSummary.model_validate({
+        "id": "0192a3b4-5c6d-7e8f-9a0b-1c2d3e4f5a6b",
+        "job_id": None,
+        "overall": "fail",
+        "bundle_hash": "sha256:" + "b" * 64,
+        "suite_ref": "regression_suite:motor-gb-core@3",
+        "suite_content_hash": "sha256:" + "a" * 64,
+        "started_at": "2026-09-28T09:00:00Z",
+        "finished_at": "2026-09-28T09:00:04Z",
+    })
+    assert RegressionRunSummary.model_validate(
+        summary.model_dump(mode="json", by_alias=True)
+    ) == summary
+    with pytest.raises(ValidationError):
+        RegressionRunSummary.model_validate(
+            {**summary.model_dump(mode="json"), "golden_results": []}
+        )
