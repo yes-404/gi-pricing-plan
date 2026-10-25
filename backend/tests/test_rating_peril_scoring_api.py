@@ -29,6 +29,7 @@ from backend.tests.test_rating_algorithms import _headers, valid_algorithm
 from backend.tests.test_rating_glm_model_call import (
     ROW,
     SCORE_URL,
+    assert_served_at_declared_scale,
 )
 from backend.tests.test_rating_glm_model_call import (
     _algorithm as _glm_algorithm,
@@ -214,7 +215,9 @@ def test_a_rating_version_pinning_an_approved_peril_structure_compiles_and_score
         headers=scoring_headers,
     )
     assert response.status_code == 200, response.text
-    assert float(response.json()["outputs"]["risk_out"]) == pytest.approx(expected, rel=1e-9)
+    # oracle at the declared scale (dp 9, half_even) — to-lead 2026-10-25 15:21:30 GMT
+    # (form: 15:23:06 GMT)
+    assert_served_at_declared_scale(response.json()["outputs"]["risk_out"], expected)
 
 
 @pytest.mark.req("FR-188", "NFR-499")

@@ -11,6 +11,7 @@ the same row (FR-222, FR-193, FR-239, NFR-491).
 from __future__ import annotations
 
 import asyncio
+import re
 from typing import Any
 from uuid import UUID
 
@@ -34,6 +35,14 @@ from pricing_core.rating.compile import Bundle
 
 SCORE_URL = "/api/v1/score"
 ROW = {"area": "urban", "exposure_years": 1.0}
+RISK_OUT_DP = 9  # the output step's declared rounding dp, read by `_algorithm` and the oracle alike
+
+
+def assert_served_at_declared_scale(served: object, expected: float) -> None:
+    """FR-214 / FR-226: `risk_out` is a string of exactly the declared dp, within half a quantum."""
+    assert isinstance(served, str)
+    assert re.fullmatch(rf"-?\d+\.\d{{{RISK_OUT_DP}}}", served), served
+    assert float(served) == pytest.approx(expected, abs=0.5 * 10**-RISK_OUT_DP)
 
 
 def _algorithm(model_ref: str, feature_map: dict[str, str]) -> dict[str, Any]:
@@ -56,7 +65,7 @@ def _algorithm(model_ref: str, feature_map: dict[str, str]) -> dict[str, Any]:
              "mode": "exact", "feature_map": feature_map, "result_type": "decimal",
              "consumes": ["area", "exposure_years"], "produces": ["risk"]},
             {"step_id": "s_out", "type": "output", "label": "Risk", "output_name": "risk_out",
-             "rounding": {"mode": "half_even", "dp": 9}, "consumes": ["risk"]},
+             "rounding": {"mode": "half_even", "dp": RISK_OUT_DP}, "consumes": ["risk"]},
         ],
         "sub_graphs": [],
     }
@@ -134,7 +143,9 @@ def test_a_rating_version_pinning_a_fitted_glm_compiles_and_scores(
         headers=scoring_headers,
     )
     assert response.status_code == 200, response.text
-    assert float(response.json()["outputs"]["risk_out"]) == pytest.approx(expected, rel=1e-9)
+    # oracle at the declared scale (dp 9, half_even) — to-lead 2026-10-25 15:21:30 GMT
+    # (form: 15:23:06 GMT)
+    assert_served_at_declared_scale(response.json()["outputs"]["risk_out"], expected)
 
 
 @pytest.mark.req("FR-116")
@@ -199,7 +210,9 @@ def test_a_model_offset_glm_scores_with_its_source_model(
         headers=scoring_headers,
     )
     assert response.status_code == 200, response.text
-    assert float(response.json()["outputs"]["risk_out"]) == pytest.approx(expected, rel=1e-9)
+    # oracle at the declared scale (dp 9, half_even) — to-lead 2026-10-25 15:21:30 GMT
+    # (form: 15:23:06 GMT)
+    assert_served_at_declared_scale(response.json()["outputs"]["risk_out"], expected)
 
 
 @pytest.mark.req("FR-240")
