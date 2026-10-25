@@ -12,12 +12,12 @@ slice: SL-1455
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [FD-1836, RL-1837, RL-1685, OQ-1453, NFR-489, NFR-490, FR-258, FR-259, WK-674, SL-1455, LG-1760]
+relates: [FD-1836, RL-1837, RL-1685, OQ-8145, OQ-1453, NFR-489, NFR-490, FR-258, FR-259, WK-674, SL-1455, LG-1760]
 ---
 
 # RL-8218 — FD-1836: NFR-489's no-GBM 15 ms includes the background-sampled requests
 
-**DRAFT — binds nothing until the maintainer adopts it.** Drafted 2026-10-25 by the
+Drafted 2026-10-25 by the
 decision-maker (seat dm-1836) on lead 28's brief `brief-dm-1836-2026-10-25.md`. The working ids
 in prose (OQ 8145 and this record's 8218) are not minted.
 
@@ -209,3 +209,5 @@ exclusion stays limited to caller-requested FR-258 inline traces, which NFR-490 
 
 No check can fail on broken input for this record's own text. It decides what a measurement
 counts. The checks above are the ones that enforce it.
+
+Adopted as drafted on (a), to-lead 2026-10-25 11:37:51 GMT.
