@@ -1,16 +1,16 @@
 ---
-id: FD-8215
+id: FD-1919
 family: finding
 title: The mint re-point rewrites working ids inside verbatim quotes, so a frozen record quotes a channel heading that never existed
 status: active
-created: 2026-10-25
+created: 2026-10-25   # drafted 2026-10-25 under working id 8215; minted 2026-10-25 as FD-1919
 owner: auditor
 tree: 3cd5fcf7ee514db1ae8ab681d7cacc1761945091
 corrected_by: []
 relates: [WK-1178]
 ---
 
-# FD-8215 — The mint re-point rewrites working ids inside verbatim quotes, so a frozen record quotes a channel heading that never existed
+# FD-1919 — The mint re-point rewrites working ids inside verbatim quotes, so a frozen record quotes a channel heading that never existed
 
 ## Finding
 
@@ -29,7 +29,7 @@ Item 26 says every hit; step 4 exempts quotes; step 7 of the same skill says "Qu
 
 ## Evidence
 
-Tree: `origin/main` 3cd5fcf7ee514db1ae8ab681d7cacc1761945091 (fetched 2026-10-25). Read-only `git grep` over `docs/`, run beside SL 8185's gate under the maintainer's "2026-10-25 12:55:59 GMT" item (b), load1 3.1 at the start; log `~/gi-pricing-plan.local/scratch/aud-8215-sweep-2026-10-25.log`.
+Tree: `origin/main` 3cd5fcf7ee514db1ae8ab681d7cacc1761945091 (fetched 2026-10-25). Read-only `git grep` over `docs/`, run beside SL-1878's gate under the maintainer's "2026-10-25 12:55:59 GMT" item (b), load1 3.1 at the start; log `~/gi-pricing-plan.local/scratch/aud-8215-sweep-2026-10-25.log`.
 
 Commands (verbatim; `<wt>` is the aud-8215 worktree):
 
@@ -126,5 +126,6 @@ Lines read at `origin/main` 18be14a05a914951f5903d7c4581233dcaeeed32 with `git g
 | A2 | `docs/findings/FD-01852-three-route-level-scope-less-requires-guards-refuse-a-resource-scoped-grant-before-the-handler-s-scoped-check-latent.md` | 19, 56, 64 | "PL 8181" (19, 56), "SL 8185" (56, 64), "LG 8186" (56, 64) | PL-1877, SL-1878, LG-1879 (by SL 8185) | left as filed (class ruling (a), to-lead 2026-10-25 16:51:21 GMT) |
 | A3 | `docs/findings/FD-01853-portfolio-dataset-read-is-checked-with-no-resource-so-a-dataset-scoped-grant-is-refused-latent.md` | 51 | "SL 8185" | SL-1878 | left as filed (class ruling (a), to-lead 2026-10-25 16:51:21 GMT) |
 | A4 | `docs/rulings/RL-01849-fr-345-dataset-scope-on-routes-with-no-handler-scope-check-versions-and-blobs-honour-it-reference-tables-stay-workspace-wide.md` | 23, 33, 36, 98, 111, 134, 170, 210, 220, 221, 222, 223, 226, 255 (14 lines) | "PL 8181" (23, 33, 36, 98, 111, 134, 170, 210, 220, 221), "SL 8185" (23, 36, 221, 222, 223, 226, 255), "LG 8186" (36); line 36 is the quoted heading "17:38:11 BST — Maintainer: PL 8181 (FD-1852 fix) DP-0..DP-3 RULED; GO (SL 8185 / LG 8186)" | PL-1877, SL-1878, LG-1879 | left as filed (class ruling (a), to-lead 2026-10-25 16:51:21 GMT) |
+| A5 | `docs/ledgers/LG-01858-wk-1178-slice-sl-1857-pl-1856-the-fr-6-fr-109-and-fr-110-dated-clauses-slice-ledger.md` | 84 | "RS 8189" | RS-1918 | left as filed (class ruling (a), to-lead 2026-10-25 21:06:06 GMT item (6)) |
 
-If this FD's remedy later rules that a dated re-point line is appended to merged records, rows A1 to A4 take it with the rest. The count of 56 instances in 27 files above is the heading sweep's and is unchanged; with this addendum 4 more records (A1 to A4) are listed under the same disposition.
+If this FD's remedy later rules that a dated re-point line is appended to merged records, rows A1 to A5 take it with the rest. The count of 56 instances in 27 files above is the heading sweep's and is unchanged; with this addendum 4 more records (A1 to A4) are listed under the same disposition.

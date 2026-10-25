@@ -1,9 +1,9 @@
 ---
-id: RL-8060
+id: RL-1917
 family: ruling
-title: PL 8055 DP-A1-1 — the real derived list is the D7 run of the end-to-end test's own world at SL-1543's head, tied to the split test's literal by an equality assert (option a)
+title: PL-1787 DP-A1-1 — the real derived list is the D7 run of the end-to-end test's own world at SL-1543's head, tied to the split test's literal by an equality assert (option a)
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; draft until minted
-created: 2026-10-16
+created: 2026-10-25   # drafted 2026-10-16 under working id 8060; minted 2026-10-25 as RL-1917
 owner: decision-maker
 tree: 0877e6e7a756c4621890713a4d3b016e75e33654
 phase: P2
@@ -13,15 +13,15 @@ supersedes: []
 superseded_by: ~
 corrected_by: []
 corrects: ~
-relates: [PL-8055, PL-1542, PL-1705, PL-1694, SL-1543, SL-1696, LG-1732, FR-264]   # PL-8055 is PL 8055's working id; minted with or after PL 8055, after #1310 (the maintainer 2026-10-16 09:51:34 BST, condition (4)), which writes its minted id; LG-1732 resolves once #1310 is on main
+relates: [PL-1787, PL-1542, PL-1705, PL-1694, SL-1543, SL-1696, LG-1732, FR-264]   # PL-1787 is PL-1787's working id; minted with or after PL-1787, after #1310 (the maintainer 2026-10-16 09:51:34 BST, condition (4)), which writes its minted id; LG-1732 resolves once #1310 is on main
 ---
 
-# RL 8060 — PL 8055 DP-A1-1: which run is "the real derived list"
+# RL-1917 — PL-1787 DP-A1-1: which run is "the real derived list"
 
 *Disclosure: drafted under **working id RL 8060**, reserved by the lead (team-lead) in
 `~/gi-pricing-plan.local/handover/eta.md`, the entry stamped "2026-10-16 09:45:58 BST":
 "RESERVED RL 8060 = the ruling on PL 8055 DP-A1-1 (which run is "the real derived list" for
-SL-1543's A1 D7 split test) (decision-maker-a1)". The plan it rules on, PL 8055, is also a
+SL-1543's A1 D7 split test) (decision-maker-a1)". The plan it rules on, PL-1787, is also a
 working id, filed on `origin/pl-8055-sl1543-a1-delta-2026-10-16` @`397fb2e862ce956061978001c3f78f52af1bb27a`
 and not edited here. The lead mints both; the mint sweep replaces the working ids. Written
 2026-10-16 from 09:48 BST (`TZ=Europe/London date`) by the decision-maker (seat
@@ -30,7 +30,7 @@ claim about behaviour below is a reading of the code at the named tree.*
 
 ## How this was ruled
 
-- **The decision point** is PL 8055's DP-A1-1 (its "Decision points" table, row DP-A1-1, owner
+- **The decision point** is PL-1787's DP-A1-1 (its "Decision points" table, row DP-A1-1, owner
   "the decision-maker (`delivery-process.md` §3)"), on the lead's brief to this seat of
   2026-10-16.
 - **The owner of A1** is `SL-1543`, per the lead's from-lead entry "2026-10-14 20:25:11 BST"
@@ -48,7 +48,7 @@ claim about behaviour below is a reading of the code at the named tree.*
 ## Verified first
 
 Trees: `origin/main` `0877e6e7` for `PL-1694`; `SL-1696`'s head on #1310,
-`d85e3d724f49c4e353bd9d066a3871b841f64aa9`, for the code (the code PL 8055 Task A edits after
+`d85e3d724f49c4e353bd9d066a3871b841f64aa9`, for the code (the code PL-1787 Task A edits after
 #1310 merges). Line numbers are at `d85e3d72` unless named otherwise.
 
 1. **The clause.** `PL-1694` Acceptance 18 (`origin/main`, `:395-404`): *"the D7 split test
@@ -61,7 +61,7 @@ Trees: `origin/main` `0877e6e7` for `PL-1694`; `SL-1696`'s head on #1310,
    hand-written rows, among them `c2` `s_t_region: rate_table_ref x@1 → x@2`, `c3`
    `s_t_area: rate_table_ref y@1 → y@2`, `c5` `s_premium: expr a → b` and `c6`
    `{"kind": "pin", "description": "rate_tables pin rate_table:x@2 added"}`.
-3. **(a)'s red would be by cause (read, not run).** The equality assert of PL 8055 Task A Step 2
+3. **(a)'s red would be by cause (read, not run).** The equality assert of PL-1787 Task A Step 2
    compares that literal with the run's `derived_changes`, which
    `packages/pricing-core/src/pricing_core/rating/analysis.py` `_derive` (`:581`) builds. It
    cannot equal the literal:
@@ -75,7 +75,7 @@ Trees: `origin/main` `0877e6e7` for `PL-1694`; `SL-1696`'s head on #1310,
      demo run had none (`5debb32a`, 11 rows);
    - the counts differ (6 hand-written; 11 on the demo seed, with the same journey code).
    So on `SL-1696`'s code the assert fails on the list's content, not on a missing name. This
-   is a reading; Step 3 of PL 8055 is where it is proved, and its STOP clause (a red that is not
+   is a reading; Step 3 of PL-1787 is where it is proved, and its STOP clause (a red that is not
    at `assert real == expected`) stands.
 4. **`_world`'s derived list is deterministic apart from the model family.**
    - **Order.** Ids are numbered in one fixed order (`:723`): step and mount changes sorted by
@@ -94,7 +94,7 @@ Trees: `origin/main` `0877e6e7` for `PL-1694`; `SL-1696`'s head on #1310,
      description: the journey reads the fitted model back as
      `self.gbm_ref = f"model:{gbm['model_family_slug']}@{gbm['version']}"` (`journey.py:314`)
      and pins it, which derives `models pin model:<family>@1 added` (`5debb32a`'s `c11`). That is
-     PL 8055's P4, and Step 2 substitutes it from `record["gbm_family"]` exactly.
+     PL-1787's P4, and Step 2 substitutes it from `record["gbm_family"]` exactly.
    - **The one place the family could move the order** is the pin sort key (`:671`). It can only
      reorder two pin refs that agree up to the random hex, that is two `model:fremtpl2-gbm-…`
      refs; `_world` makes one. Against every other ref the order is decided by the fixed prefix.
@@ -107,7 +107,7 @@ Trees: `origin/main` `0877e6e7` for `PL-1694`; `SL-1696`'s head on #1310,
 6. **(a) runs in CI.** `test_wf699_journey_runs_end_to_end` (`:330-338`) carries no skip marker,
    and `.github/workflows/python.yml` runs `pytest` with a `postgres` service (`:92`, `:113`).
 7. **(c)'s premise.** `PL-1694`'s write-set row for `backend/tests/test_wf699_journey.py`
-   (`origin/main`, `:232`) says *"no test deleted"*, and PL 8055 Global Constraints adopts it for
+   (`origin/main`, `:232`) says *"no test deleted"*, and PL-1787 Global Constraints adopts it for
    Task A. Folding the split test into the end-to-end test deletes it.
 
 ## Ruled
@@ -116,16 +116,16 @@ Trees: `origin/main` `0877e6e7` for `PL-1694`; `SL-1696`'s head on #1310,
 `derived_changes` of the decomposing D7 run of `test_wf699_journey_runs_end_to_end`'s own world
 (`_world`), at `SL-1543`'s head after its last journey edit. The split test's literal
 `D7_DERIVED_CHANGES` is copied from it, with the world's model family written as
-`{gbm_family}`, and the end-to-end test asserts the literal **equals** that run's list as PL 8055
+`{gbm_family}`, and the end-to-end test asserts the literal **equals** that run's list as PL-1787
 Task A Steps 2 to 5 write it.
 
 **Why (a):**
 
 - It is the only option with a red by cause on `SL-1696`'s list (V3). (b) is green on that code
-  (PL 8055 P2, the auditor's hand evaluation in `LG-1732` `:160`), so it proves nothing.
+  (PL-1787 P2, the auditor's hand evaluation in `LG-1732` `:160`), so it proves nothing.
 - It keeps "copied from a run of the fixed code" true **after** the copy: CI re-proves it on
   every run (V6), and a later journey edit that changes the list reds the assert by name instead
-  of leaving a stale literal (PL 8055 P5). (b) goes stale silently.
+  of leaving a stale literal (PL-1787 P5). (b) goes stale silently.
 - It answers the reason `5debb32a` was reverted (process, not content): the copy lands in Task A,
   before `PL-1542` Task 6's gate, so the gated code contains it.
 - (c) deletes a test (V7) and loses the DB-free check of `split_effects`.
@@ -135,10 +135,10 @@ Task A Steps 2 to 5 write it.
 
 1. **The copy governs the parenthetical.** Where the copied list differs from Acceptance 18's
    predicted forms (V5: `ncd-ladder@3` where it says `@1`), the copy is right and is not a STOP.
-   PL 8055 Step 4's STOP fires only if **no** row's description starts `m_ncd: mount`, or if that
+   PL-1787 Step 4's STOP fires only if **no** row's description starts `m_ncd: mount`, or if that
    row's kind is `table_repointed`. The auditor discharges Acceptance 18's split-test clause
-   against PL 8055 item 1, not against the parenthetical's version number.
-2. **The green runs twice.** PL 8055 Step 5's green run of
+   against PL-1787 item 1, not against the parenthetical's version number.
+2. **The green runs twice.** PL-1787 Step 5's green run of
    `uv run pytest -q backend/tests/test_wf699_journey.py -k end_to_end` is run a second time, in
    the same DB window, through `run-small.sh`. Each run makes a fresh workspace and a new family,
    so two greens prove the substitution and the determinism of V4 on the code, not only on this
@@ -147,15 +147,15 @@ Task A Steps 2 to 5 write it.
 
 ## What it obliges
 
-- **`SL-1543`'s executor:** PL 8055 Task A as written, with the two precisions.
-- **`SL-1543`'s auditor:** PL 8055 item 1, plus precision 2's two green runs in the ledger.
-- **The lead:** mint RL 8060 with PL 8055 (PL 8055 N2 is met by this record); PL 8055's
+- **`SL-1543`'s executor:** PL-1787 Task A as written, with the two precisions.
+- **`SL-1543`'s auditor:** PL-1787 item 1, plus precision 2's two green runs in the ledger.
+- **The lead:** mint RL-1917 with PL-1787 (PL-1787 N2 is met by this record); PL-1787's
   `status` becomes `active` at its mint, which is the plan's own rule, not this record's edit.
 
 ## Acceptance — the violation that must become detectable
 
-A literal that is not the run's list must red. PL 8055 Step 5's broken-input check (one
+A literal that is not the run's list must red. PL-1787 Step 5's broken-input check (one
 character of one description changed, `-k end_to_end` fails at `assert real == expected`) is
 that proof and stays required.
 
-Adopted 2026-10-25 by the lead (lead 28) for filing, per to-lead "2026-10-25 11:24:40 GMT" and "2026-10-25 11:25:53 GMT". The record was confirmed by the maintainer's entry "2026-10-16 09:51:34 BST — Maintainer: RL 8060 (PL 8055 DP-A1-1 → (a)) CONFIRMED" (verified at 5b07a5b6) on four conditions: (1) the red is RUN, not only read, and PL 8055 Step 3 records it in the LG with the differing rows; (2) the uuid4 substitution maps each id to a stable placeholder by first appearance, never "any uuid"; (3) the green run twice in one DB window goes in the LG; (4) mint with or after PL 8055, after #1310. Folded from 88145ef6, whose only delta from 5b07a5b6 is a trailing YAML comment on `relates:` (ids identical), per to-lead "2026-10-25 11:25:53 GMT". `status: active` and `tree:` are as the file carries them. Mints in the FD 8215 PR at its turn (working id 8060 until then).
+Adopted 2026-10-25 by the lead (lead 28) for filing, per to-lead "2026-10-25 11:24:40 GMT" and "2026-10-25 11:25:53 GMT". The record was confirmed by the maintainer's entry "2026-10-16 09:51:34 BST — Maintainer: RL 8060 (PL 8055 DP-A1-1 → (a)) CONFIRMED" (verified at 5b07a5b6) on four conditions: (1) the red is RUN, not only read, and PL-1787 Step 3 records it in the LG with the differing rows; (2) the uuid4 substitution maps each id to a stable placeholder by first appearance, never "any uuid"; (3) the green run twice in one DB window goes in the LG; (4) mint with or after PL-1787, after #1310. Folded from 88145ef6, whose only delta from 5b07a5b6 is a trailing YAML comment on `relates:` (ids identical), per to-lead "2026-10-25 11:25:53 GMT". `status: active` and `tree:` are as the file carries them. Mints in the FD-1919 PR at its turn (working id 8060 until then).
