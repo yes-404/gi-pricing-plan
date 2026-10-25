@@ -16,4 +16,4 @@ $do$;
 ALTER ROLE gip_app_login LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION
   NOBYPASSRLS INHERIT;
 GRANT gip_app TO gip_app_login;
--- No password here: `scripts/provision-app-role.py` sets it, as a SCRAM verifier.
+-- No credential here: `scripts/provision-app-role.py` sets it, as a SCRAM verifier.
