@@ -182,3 +182,5 @@ implementing slice G and checking this skill against the repository before relyi
 2026-08-30 — filed for RFC-895 adoption slice E
 (`docs/plans/INDEX.md#2026-08-30-nt-0012-0013-0014-adoptionmd` §2), against RL-907
 (`docs/rulings/INDEX.md#2026-08-30-nt-0014-q1-q3-q4-rulingsmd`).
+
+2026-10-25 — **Not in use since 2026-09-28 (artifact B has had no writer since then); Phase 3 decides whether it returns — the maintainer, to-lead 2026-10-25 11:47:10 GMT (T1).** Read by the auditor on 2026-10-25 at `ff976406`: `~/gi-pricing-plan.local/handover/runtime-state.json` has mtime 2026-10-05 13:09:09 +0000, `position.written_at` 2026-09-29T21:36:41Z, `in_flight_expensive_verifications.written_at` 2026-10-04T18:59:04Z and `retry_counters.written_at` 2026-10-05T13:09:09Z, and no process runs `write_runtime_state.py`. The file's own stamps are later than the heading's 2026-09-28; the file is stale either way.
