@@ -4,7 +4,7 @@ family: research
 kind: audit
 title: SL-1869 (WK-1178) FD-1850 slice audit — ensure_bucket and the first-start create race
 status: draft
-created: 2026-10-22   # drafted 2026-10-22 under working id 8197; minted 2026-10-23 as RS-1871
+created: 2026-10-23   # drafted 2026-10-22 under working id 8197; minted 2026-10-23 as RS-1871
 owner: auditor
 tree: b3dd2c18ae14b9246c85b8f59c99da7881fc3f89
 phase: P2

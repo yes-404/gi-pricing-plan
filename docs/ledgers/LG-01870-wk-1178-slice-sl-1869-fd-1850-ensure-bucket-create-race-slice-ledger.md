@@ -3,7 +3,7 @@ id: LG-1870
 family: ledger
 title: WK-1178 slice SL-1869 — FD-1850, ensure_bucket treats losing the first-start create race as success (slice ledger)
 status: closed                 # active → closed (§1.2a)
-created: 2026-10-22   # drafted 2026-10-22 under working id 8173; minted 2026-10-23 as LG-1870
+created: 2026-10-23   # drafted 2026-10-22 under working id 8173; minted 2026-10-23 as LG-1870
 owner: executor
 tree: f3462d8fc1336dc4583fe8a7af92fed399993a55
 phase: P2

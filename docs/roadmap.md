@@ -2857,7 +2857,7 @@ id: SL-1869
 family: slice
 title: WK-1178 fix slice — FD-1850: ensure_bucket treats losing the first-start create race as success
 status: closed                    # draft → active → closed | retired (§1.2a)
-created: 2026-10-22   # drafted 2026-10-22 under working id 8172; minted 2026-10-23 as SL-1869
+created: 2026-10-23   # drafted 2026-10-22 under working id 8172; minted 2026-10-23 as SL-1869
 owner: lead
 tree: f3462d8fc1336dc4583fe8a7af92fed399993a55
 phase: P2
