@@ -113,3 +113,18 @@ Known instance, read at the same tree: RL-1848 (file `docs/rulings/RL-01848-…`
 ## Disposition
 
 Accepted disclosure for every instance listed above, per the maintainer's (by delegation) entry "2026-10-23 11:58:33 BST". No body edit to any merged record and no per-instance correcting RL. The remedy is owned by WK-1178 (tooling).
+
+## Addendum 2026-10-25 — working-id cites in frozen records (class ruling (a))
+
+Added 2026-10-25 under the maintainer's (by delegation) entries "2026-10-25 16:50:20 GMT" (RL-1876:32 ruled (a), leave as filed, listed here) and "2026-10-25 16:51:21 GMT" (class ruling (a) for FD-1852, FD-1853, RL-1849 and RL-1876: left as filed, all listed in this FD's instance table, one remedy point, no one-off lines), both in `to-lead.md`. The sweep above counted quoted channel headings only. The records below are the same class one step wider: a merged record cites a working id in the space form, the id was minted afterwards, and the minted record's `created` comment names the working id, so each cite resolves. Nothing was re-pointed and no line was appended to any of them.
+
+Lines read at `origin/main` 18be14a05a914951f5903d7c4581233dcaeeed32 with `git grep -n -E '\b(PL|SL|LG|RS)[ -]0?(8181|8185|8186|8158)\b' 18be14a0 -- 'docs/findings/FD-01852*' 'docs/findings/FD-01853*' 'docs/rulings/RL-01849*' 'docs/rulings/RL-01876*'`. This table is one row per record, not per hit, and its rows are not counted in the 56 instances above.
+
+| # | Record (file) | Lines | Working id text found | Minted as | Outcome |
+|---|---|---|---|---|---|
+| A1 | `docs/rulings/RL-01876-a-mount-never-maps-a-port-to-a-blank-name-the-graph-invariants-refuse-it-on-the-mount-and-the-designer-shows-it-through-the-validate-route.md` | 32 | "RS 8158" | RS-1883 (by SL-1554) | left as filed (class ruling (a), to-lead 2026-10-25 16:51:21 GMT; entry 16:50:20 GMT) |
+| A2 | `docs/findings/FD-01852-three-route-level-scope-less-requires-guards-refuse-a-resource-scoped-grant-before-the-handler-s-scoped-check-latent.md` | 19, 56, 64 | "PL 8181" (19, 56), "SL 8185" (56, 64), "LG 8186" (56, 64) | PL-1877, SL-1878, LG-1879 (by SL 8185) | left as filed (class ruling (a), to-lead 2026-10-25 16:51:21 GMT) |
+| A3 | `docs/findings/FD-01853-portfolio-dataset-read-is-checked-with-no-resource-so-a-dataset-scoped-grant-is-refused-latent.md` | 51 | "SL 8185" | SL-1878 | left as filed (class ruling (a), to-lead 2026-10-25 16:51:21 GMT) |
+| A4 | `docs/rulings/RL-01849-fr-345-dataset-scope-on-routes-with-no-handler-scope-check-versions-and-blobs-honour-it-reference-tables-stay-workspace-wide.md` | 23, 33, 36, 98, 111, 134, 170, 210, 220, 221, 222, 223, 226, 255 (14 lines) | "PL 8181" (23, 33, 36, 98, 111, 134, 170, 210, 220, 221), "SL 8185" (23, 36, 221, 222, 223, 226, 255), "LG 8186" (36); line 36 is the quoted heading "17:38:11 BST — Maintainer: PL 8181 (FD-1852 fix) DP-0..DP-3 RULED; GO (SL 8185 / LG 8186)" | PL-1877, SL-1878, LG-1879 | left as filed (class ruling (a), to-lead 2026-10-25 16:51:21 GMT) |
+
+If this FD's remedy later rules that a dated re-point line is appended to merged records, rows A1 to A4 take it with the rest. The count of 56 instances in 27 files above is the heading sweep's and is unchanged; with this addendum 4 more records (A1 to A4) are listed under the same disposition.
