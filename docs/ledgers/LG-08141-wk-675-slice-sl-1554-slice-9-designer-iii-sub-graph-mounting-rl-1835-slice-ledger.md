@@ -204,3 +204,11 @@ Chain: `7576489f` is committed 10:50:36Z and is an ancestor of the head. `ab4052
 | `sl1554-vitest/green-RatingDesignView.log` | `ab405217` | LG GREEN table; `ab405217` 12:16:33Z precedes the log (`Start at` 12:17:32Z, mtime 12:17:35Z); next commit `fe8b8cae` 12:17:54Z is later and changes 0 `frontend/` files; log ends `rc=0` | yes: chronology and an unchanged `frontend/` fix the tree; no head sha in the log |
 
 Counts: 12 logs; 8 verified yes (all GREEN); 4 partial (all RED); 0 not establishable. Why the four RED rows stay partial: the log carries no sha, and the 1 s gap between the `ab405217` commit (12:16:33Z) and the first RED start (12:16:34Z) leaves the checkout to `7576489f` to the ledger's own account. What does hold: the test counts in the three logs that differ (11, 6, 3) equal the `it(` counts of those files at `7576489f` and not at `ab405217` (12, 8, 4), and the 4 `graphMounts` failures need `graph.ts` as it was before `c91c3223` (`git diff --name-only 7576489f c91c3223 -- frontend` lists `graph.ts`). The gate decides the code; this block only names the trees.
+
+### Entry 2026-10-25 — RS 8231 folded (exec-prep1554)
+
+**Audit.** The written delta audit of the gate head `11c3db18`, folded from `aud-1554d-2026-10-25` @ `8e41438a` at its working id (the lead mints at the id turn). The verdict is the record's own proposal, not the lead's. This entry adds to the 2026-10-23 audit table above and changes no earlier line.
+
+| Record | Branch @ sha | Proposed verdict, as the record states it |
+|---|---|---|
+| RS-8231 | `aud-1554d-2026-10-25` @ `8e41438a` | CLEAN: the delta `beae0dff..11c3db18` is main's re-merge plus docs folds; the slice's own non-docs patch is unchanged (patch-id `7638106b…` at both heads); the gate lines read as claimed |
