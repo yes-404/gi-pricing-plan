@@ -322,22 +322,33 @@ EXPR_SOURCE = "veh_power + 0"
 class _FactorWorld:
     """A GBM really fitted on a given tuple of Factors (and Bandings) over a given book."""
 
-    def __init__(self, backend: str, factors: tuple[Factor, ...],
-                 bandings: tuple[Banding, ...], book: pl.DataFrame) -> None:
+    def __init__(
+        self,
+        backend: str,
+        factors: tuple[Factor, ...],
+        bandings: tuple[Banding, ...],
+        book: pl.DataFrame,
+    ) -> None:
         self.factors = factors
         self.bandings = bandings
         spec = GbmSpec(
-            model_type=backend, model_family_slug="banded-gbm", dataset_version_id=DATASET,
-            split_ref=SplitRef(split_artifact_id=uuid4()), response_column="severity",
+            model_type=backend,
+            model_family_slug="banded-gbm",
+            dataset_version_id=DATASET,
+            split_ref=SplitRef(split_artifact_id=uuid4()),
+            response_column="severity",
             offset=OffsetSpec(kind="none"),
             objective=GbmFunctionRef(kind="builtin", name="reg:gamma"),
             categorical_handling="native",
             hyperparameters={"max_depth": 3, "eta": 0.3, "num_boost_round": 20},
-            early_stopping=None, factors=tuple(f.id for f in factors),
+            early_stopping=None,
+            factors=tuple(f.id for f in factors),
         )
         self.fit = fit_gbm(book, spec, list(factors), bandings={b.id: b for b in bandings})
         self.payload: dict[str, Any] = {
-            "model_family_slug": "banded-gbm", "version": 1, "status": "approved",
+            "model_family_slug": "banded-gbm",
+            "version": 1,
+            "status": "approved",
             "spec": spec.model_dump(mode="json"),
             "fit_result": {
                 **self.fit.result.model_dump(mode="json"),
@@ -349,8 +360,12 @@ class _FactorWorld:
         """`predict_gbm` with the REAL Factors over the quote's raw source columns."""
         frame = pl.DataFrame({name: [value] for name, value in quote.items()})
         series = predict_gbm(
-            self.fit.result, self.fit.booster_bytes, frame, self.factors,
-            bandings={b.id: b for b in self.bandings}, nthread=1,
+            self.fit.result,
+            self.fit.booster_bytes,
+            frame,
+            self.factors,
+            bandings={b.id: b for b in self.bandings},
+            nthread=1,
         )
         return float(series[0])
 
@@ -361,22 +376,36 @@ def _expression_world(backend: str, *, slug: str) -> _FactorWorld:
     `slug == "veh_power"` is E-b (the Factor's slug IS its one source column); any other slug
     is E-a."""
     banding = Banding(
-        id=uuid4(), slug="veh-power-expr-bands", dataset_id=DATASET, version=1,
-        column=None, source_expression=EXPR_SOURCE,
-        method=BandingMethod.MANUAL, boundaries=(0.0, 5.0, 10.0, 20.0), labels=("1", "2", "3"),
+        id=uuid4(),
+        slug="veh-power-expr-bands",
+        dataset_id=DATASET,
+        version=1,
+        column=None,
+        source_expression=EXPR_SOURCE,
+        method=BandingMethod.MANUAL,
+        boundaries=(0.0, 5.0, 10.0, 20.0),
+        labels=("1", "2", "3"),
     )
     factor = Factor(
-        id=uuid4(), slug=slug, dataset_id=DATASET, version=1, type=FactorType.EXPRESSION,
-        source_columns=("veh_power",), expression=EXPR_SOURCE, banding_id=banding.id,
+        id=uuid4(),
+        slug=slug,
+        dataset_id=DATASET,
+        version=1,
+        type=FactorType.EXPRESSION,
+        source_columns=("veh_power",),
+        expression=EXPR_SOURCE,
+        banding_id=banding.id,
     )
     rng = np.random.default_rng(20261025)
     raw = rng.integers(1, 19, 2_000)
     step = np.searchsorted(np.array(banding.boundaries[1:-1]), raw, side="right")
-    book = pl.DataFrame({
-        "veh_power": raw.astype(float),
-        "severity": 100.0 * (1.0 + 2.0 * step) * rng.uniform(0.95, 1.05, 2_000),
-        "claim_count": np.ones(2_000),
-    })
+    book = pl.DataFrame(
+        {
+            "veh_power": raw.astype(float),
+            "severity": 100.0 * (1.0 + 2.0 * step) * rng.uniform(0.95, 1.05, 2_000),
+            "claim_count": np.ones(2_000),
+        }
+    )
     return _FactorWorld(backend, (factor,), (banding,), book)
 
 
@@ -385,23 +414,36 @@ def _cross_world(backend: str) -> _FactorWorld:
     """`area` and `zone` (identity, strings "A"/"B") and their INTERACTION `area_x_zone`. The
     cell "A | B" is dearer (x3) than the other three, so a wrong cell prices apart."""
     area, zone = (
-        Factor(id=uuid4(), slug=name, dataset_id=DATASET, version=1, type=FactorType.IDENTITY,
-               source_columns=(name,))
+        Factor(
+            id=uuid4(),
+            slug=name,
+            dataset_id=DATASET,
+            version=1,
+            type=FactorType.IDENTITY,
+            source_columns=(name,),
+        )
         for name in ("area", "zone")
     )
     cross = Factor(
-        id=uuid4(), slug="area_x_zone", dataset_id=DATASET, version=1,
-        type=FactorType.INTERACTION, operand_factor_ids=(area.id, zone.id),
+        id=uuid4(),
+        slug="area_x_zone",
+        dataset_id=DATASET,
+        version=1,
+        type=FactorType.INTERACTION,
+        operand_factor_ids=(area.id, zone.id),
     )
     rng = np.random.default_rng(20261025)
     areas = rng.choice(["A", "B"], 2_000)
     zones = rng.choice(["A", "B"], 2_000)
     dear = (areas == "A") & (zones == "B")
-    book = pl.DataFrame({
-        "area": areas, "zone": zones,
-        "severity": 100.0 * np.where(dear, 3.0, 1.0) * rng.uniform(0.95, 1.05, 2_000),
-        "claim_count": np.ones(2_000),
-    })
+    book = pl.DataFrame(
+        {
+            "area": areas,
+            "zone": zones,
+            "severity": 100.0 * np.where(dear, 3.0, 1.0) * rng.uniform(0.95, 1.05, 2_000),
+            "claim_count": np.ones(2_000),
+        }
+    )
     return _FactorWorld(backend, (area, zone, cross), (), book)
 
 
@@ -409,24 +451,49 @@ def _probe_algorithm(inputs: dict[str, str], feature_map: dict[str, str]) -> dic
     """Each graph input (name -> `int` or `string`) feeds one `model_call`, mapped by
     `feature_map` (graph name -> model slug)."""
     return {
-        "slug": "banded-gbm-probe", "version": 1,
+        "slug": "banded-gbm-probe",
+        "version": 1,
         "input_contract": [
-            {"name": name, "type": kind, "nullable": False,
-             **({"min": 0, "max": 999} if kind == "int" else {})}
+            {
+                "name": name,
+                "type": kind,
+                "nullable": False,
+                **({"min": 0, "max": 999} if kind == "int" else {}),
+            }
             for name, kind in inputs.items()
         ],
         "outputs": [{"name": "risk_out", "type": "decimal", "required": True}],
         "steps": [
             *(
-                {"step_id": f"s_in_{name}", "type": "input", "label": name, "input_name": name,
-                 "on_missing": "error", "produces": name}
+                {
+                    "step_id": f"s_in_{name}",
+                    "type": "input",
+                    "label": name,
+                    "input_name": name,
+                    "on_missing": "error",
+                    "produces": name,
+                }
                 for name in inputs
             ),
-            {"step_id": "s_risk", "type": "model_call", "label": "Risk", "model_ref": MODEL_REF,
-             "mode": "exact", "feature_map": feature_map, "consumes": list(inputs),
-             "produces": ["risk"], "result_type": "decimal"},
-            {"step_id": "s_out", "type": "output", "label": "Risk", "output_name": "risk_out",
-             "rounding": {"mode": "half_even", "dp": 6}, "consumes": ["risk"]},
+            {
+                "step_id": "s_risk",
+                "type": "model_call",
+                "label": "Risk",
+                "model_ref": MODEL_REF,
+                "mode": "exact",
+                "feature_map": feature_map,
+                "consumes": list(inputs),
+                "produces": ["risk"],
+                "result_type": "decimal",
+            },
+            {
+                "step_id": "s_out",
+                "type": "output",
+                "label": "Risk",
+                "output_name": "risk_out",
+                "rounding": {"mode": "half_even", "dp": 6},
+                "consumes": ["risk"],
+            },
         ],
         "sub_graphs": [],
     }
@@ -444,21 +511,29 @@ class _ProbeResolver:
             return ResolvedArtifact(status="no_maturity_concept", payload=self._algorithm)
         assert str(ref) == MODEL_REF, ref
         return ResolvedArtifact(
-            status="approved", payload=self._world.payload, factors=self._world.factors,
+            status="approved",
+            payload=self._world.payload,
+            factors=self._world.factors,
             bandings=self._world.bandings,
         )
 
 
 def _e_b(backend: str) -> tuple[_FactorWorld, dict[str, Any], dict[str, Any]]:
     world = _expression_world(backend, slug="veh_power")
-    return (world, _probe_algorithm({"veh_power": "int"}, {"veh_power": "veh_power"}),
-            {"veh_power": 2})  # raw 2 is band "1"; "2" is another band's label
+    return (
+        world,
+        _probe_algorithm({"veh_power": "int"}, {"veh_power": "veh_power"}),
+        {"veh_power": 2},
+    )  # raw 2 is band "1"; "2" is another band's label
 
 
 def _e_a(backend: str) -> tuple[_FactorWorld, dict[str, Any], dict[str, Any]]:
     world = _expression_world(backend, slug="veh_power_expr")
-    return (world, _probe_algorithm({"veh_power": "int"}, {"veh_power": "veh_power"}),
-            {"veh_power": 2})  # the slug is no input: required inputs are the source columns
+    return (
+        world,
+        _probe_algorithm({"veh_power": "int"}, {"veh_power": "veh_power"}),
+        {"veh_power": 2},
+    )  # the slug is no input: required inputs are the source columns
 
 
 def _i_cell_swapped(backend: str) -> tuple[_FactorWorld, dict[str, Any], dict[str, Any]]:
