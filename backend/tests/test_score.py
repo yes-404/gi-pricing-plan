@@ -1376,23 +1376,124 @@ def test_a_non_rung_money_minor_output_is_a_json_integer_on_score(
 
 
 @pytest.mark.req("FR-273")
+@pytest.mark.req("NFR-499")
 def test_the_float_path_fails_the_route_level_fee_assert(
     client: TestClient,
     scoring_headers: dict[str, str],
     compiled_fee_version: Any,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Red first, by planting the float path (`_build_outputs` reads `result[name]`): the body
-    carries `1234.5`, and the same assert fails."""
+    """RL-1343 rule 4 and the maintainer (by delegation), entry "2026-10-05 18:25:42 BST":
+    a planted float path (`_exact` -> None) is an engine-invariant breach, refused at
+    `ScoringResult` construction. It is the NFR-499 internal error, with neither the float
+    nor the input in the body, and never a per-quote code."""
     from pricing_core.rating import score as core_score
 
     monkeypatch.setattr(core_score, "_exact", lambda result, name: None)
     body = {**_quote({"rating_version_ref": SCORED_REF}), "inputs": {"premium_in": 1234}}
     response = client.post(SCORE_URL, json=body, headers=scoring_headers)
+    assert response.status_code == 500, response.text
+    assert response.json()["code"] == "INTERNAL_ERROR"
+    assert response.json()["code"] not in score_module._PER_QUOTE_CODES
+    assert "1234" not in response.text
+
+
+# --------------------------------------------------------------------------------------
+# SL-1569 (PL-1568, RL-1343, RL-1567): a declared decimal-family output is an exact JSON string
+# on the route, an int or count output a JSON integer, a non-integral one a 422 per quote.
+# --------------------------------------------------------------------------------------
+
+
+def _probe_algorithm(declared_type: str, expr: str) -> dict[str, Any]:
+    """`_minimal_algorithm` plus `probe_out`, a `declared_type` output over `expr` (input
+    `premium_in`), rounded half_even at dp 2."""
+    algorithm = _minimal_algorithm()
+    algorithm["outputs"].append({"name": "probe_out", "type": declared_type, "required": True})
+    algorithm["steps"] += [
+        {"step_id": "s_probe", "type": "expression", "label": "Probe", "expr": expr,
+         "result_type": declared_type, "consumes": ["premium_in"], "produces": "probe"},
+        {"step_id": "s_out_probe", "type": "output", "label": "Probe out",
+         "output_name": "probe_out", "rounding": {"mode": "half_even", "dp": 2},
+         "consumes": ["probe"]},
+    ]
+    return algorithm
+
+
+@pytest.fixture
+def compiled_probe_version(
+    request: pytest.FixtureRequest,
+    client: TestClient,
+    admin_headers: dict[str, str],
+    database: Any,
+    blob_store: Any,
+    principal: Any,
+    workspace_id: Any,
+) -> Any:
+    """`rating_version:minimal-rv@1` over `_probe_algorithm(*request.param)`."""
+    register_rating_handlers()
+    declared_type, expr = request.param
+    created = client.post(
+        "/api/v1/rating-algorithms", json=_probe_algorithm(declared_type, expr),
+        headers=admin_headers,
+    )
+    assert created.status_code in (200, 201), created.text
+    row = asyncio.get_event_loop().run_until_complete(
+        _insert_version(
+            database, workspace_id, principal.id,
+            algorithm_ref="rating_algorithm:minimal@1", pins=_empty_pins(),
+        )
+    )
+    job = _run_compile_job(client, admin_headers, database, blob_store, row.id)
+    assert job.status is JobStatus.SUCCEEDED, job.error
+    return row
+
+
+DECIMAL_OUTPUT_CASES = [
+    pytest.param(("decimal", "premium_in * 1.5"), "27.00", id="decimal-whole"),
+    pytest.param(("decimal", "premium_in * 1.1"), "19.80", id="decimal-fractional"),
+    pytest.param(("relativity", "premium_in * 1.5"), "27.00", id="relativity-whole"),
+    pytest.param(("percentage", "premium_in * 1.1"), "19.80", id="percentage-fractional"),
+]
+
+
+@pytest.mark.req("FR-214")
+@pytest.mark.req("FR-250")
+@pytest.mark.parametrize(
+    ("compiled_probe_version", "expected"),
+    DECIMAL_OUTPUT_CASES,
+    indirect=["compiled_probe_version"],
+)
+def test_a_decimal_output_is_a_json_string_on_score(
+    client: TestClient,
+    scoring_headers: dict[str, str],
+    compiled_probe_version: Any,
+    expected: str,
+) -> None:
+    body = {**_quote({"rating_version_ref": SCORED_REF}), "inputs": {"premium_in": 18}}
+    response = client.post(SCORE_URL, json=body, headers=scoring_headers)
     assert response.status_code == 200, response.text
-    assert '"fee_minor":1234.5' in response.text
-    with pytest.raises(AssertionError):
-        _assert_the_route_serves_the_fee_as_a_json_integer(response)
+    assert f'"probe_out":"{expected}"' in response.text
+    # The trace summary carries the same string (NFR-502: the model itself is not re-validated).
+    result = ScoringResult.model_validate_json(response.text)
+    assert traces.summarise_result(result)["outputs"]["probe_out"] == expected
+
+
+@pytest.mark.req("FR-214")
+@pytest.mark.parametrize(
+    "compiled_probe_version",
+    [("int", "premium_in * 0 + 2.9999999999"), ("count", "premium_in * 0 + 2.9999999999")],
+    indirect=True,
+)
+def test_a_near_integer_under_an_integral_type_is_refused_on_score(
+    client: TestClient, scoring_headers: dict[str, str], compiled_probe_version: Any
+) -> None:
+    """RL-1567 entries (1) and (2): exact equality with the integer part, no tolerance; the
+    quote is refused 422 with the owned per-quote code and the response names no value."""
+    body = {**_quote({"rating_version_ref": SCORED_REF}), "inputs": {"premium_in": 18}}
+    response = client.post(SCORE_URL, json=body, headers=scoring_headers)
+    assert response.status_code == 422, response.text
+    assert response.json()["code"] == "RATING_TYPE_MISMATCH"
+    assert "2.9999999999" not in response.text  # NFR-499
 
 
 # --------------------------------------------------------------------------------------
