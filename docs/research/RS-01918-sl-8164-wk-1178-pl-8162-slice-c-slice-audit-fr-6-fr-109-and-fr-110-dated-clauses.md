@@ -15,7 +15,7 @@ relates: [SL-1857, LG-1858, PL-1856, FD-1723, FR-6, FR-109, FR-110]
 
 # RS-1918 — SL-1857 slice audit (PL-1856 slice C)
 
-*(Working id 8189, written by `aud-8164` (auditor, sonnet, effort medium), 2026-10-22, from `brief-aud-8164-2026-10-22.md` (lead 26). Check 31 on this id is expected until the mint. Slice and ledger are cited by their working ids `SL-8164` and `LG-8165`.)*
+*(Working id 8189, written by `aud-8164` (auditor, sonnet, effort medium), 2026-10-22, from `brief-aud-8164-2026-10-22.md` (lead 26). Check 31 on this id is expected until the mint. Slice and ledger are cited by their working ids `SL 8164` and `LG 8165`.)*
 
 ## Question
 
@@ -38,7 +38,7 @@ Range `origin/main...sl-8164-wk1178-pl8162-c`: `origin/main` `71e481fa5d240ed366
 
 | Required | Evidence | Result |
 |---|---|---|
-| Item 15: one dated clause under FR-6, naming its §14 carry; census verbatim | `00-overview.md` +21 lines, headed "FR-6, dated amendment 2026-10-22 (PL-8162 slice C, FD-1723)"; FR-6 row (`:219`) untouched. Census read: all 10 `job_id: UUID \| None` lines match at `f3462d8f` (`validation.py:548`, `profiles.py:188`, `diagnostics.py:705`, `comparison.py:249`, `backtests.py:117`, `transparency.py:208`, `regression.py:326`, `metrics.py:237`, `objectives.py:832`, `dislocation.py:200`). The 6 gap classes (`datasets.py:333`, `modelling.py:2121`, `objectives.py:476`, `rating.py:1210`, `:1557`, `:165`) have no `job_id`/`produced_by` field in their class bodies; `db/models.py:1696` is `job_id: Mapped[UUID \| None]`. `00` §2 names 7 Artifact kinds; all are covered (Optimisation Run: no shape). `CR-819:128` is the `trace_id` row (`FR-6, 07 R4`) — noted, not edited | delivered; B2 on its wording |
+| Item 15: one dated clause under FR-6, naming its §14 carry; census verbatim | `00-overview.md` +21 lines, headed "FR-6, dated amendment 2026-10-22 (PL-1856 slice C, FD-1723)"; FR-6 row (`:219`) untouched. Census read: all 10 `job_id: UUID \| None` lines match at `f3462d8f` (`validation.py:548`, `profiles.py:188`, `diagnostics.py:705`, `comparison.py:249`, `backtests.py:117`, `transparency.py:208`, `regression.py:326`, `metrics.py:237`, `objectives.py:832`, `dislocation.py:200`). The 6 gap classes (`datasets.py:333`, `modelling.py:2121`, `objectives.py:476`, `rating.py:1210`, `:1557`, `:165`) have no `job_id`/`produced_by` field in their class bodies; `db/models.py:1696` is `job_id: Mapped[UUID \| None]`. `00` §2 names 7 Artifact kinds; all are covered (Optimisation Run: no shape). `CR-819:128` is the `trace_id` row (`FR-6, 07 R4`) — noted, not edited | delivered; B2 on its wording |
 | Item 15: one dated clause under FR-109, §14 carry | `02-modelling.md` +8 lines directly after the FR-109 row; `parent_grouping_id` at `modelling.py:593`; "accepted with reason"; finer-level diagnostics view carried to §14; quote "Owners at §14: … FR-109" matches the 11:28:56 entry (elision marked) | delivered |
 | Item 1 of the 16:02:49 entry: `power(k)` STRUCK by dated amendment, never deleted; reason; reinstatement condition; §14 carry | FR-110 row (`:137`) and the older blockquote unedited; clause item 1 supersedes "remains declared and unbuilt", gives the glum 3.4.1 `TweedieLink` reason, supported links `log`, `logit`, `identity`, `inverse`, reinstated only by a library with exact power links, carried to §14 | delivered |
 | Item 3 of the 16:02:49 entry + 6: θ in R/MASS `glm.nb` form `μ + μ²/θ`, `θ > 0`, required, never defaulted, one conversion boundary, a round-trip test | clause item 2 says each; "glum α = 1/θ" is consistent with PL-1856 line 472 (`NegativeBinomialDistribution(theta=1/θ)`; glum's own `theta` is the quadratic coefficient) | delivered, wording matches rulings |
@@ -61,7 +61,7 @@ Drift: B2 only. The FR-109 and FR-110 clauses carry no drift.
 
 ### 4. Orphaned obligations
 
-- θ validator, family translation and the round-trip test: owned by slice A (`PL-1856` A1–A3; `RS-8183` read the code). Not orphaned.
+- θ validator, family translation and the round-trip test: owned by slice A (`PL-1856` A1–A3; `RS-1862` read the code). Not orphaned.
 - Strike of `power(k)`: no code names a `power` link (`git grep` of `link.*power` in `packages/model-schema/src`, `packages/pricing-core/src` finds only `family_params["power"]`, the Tweedie index). No code obligation.
 - §14 carries (FR-6 six-shape gap, shared `provenance` object and UI; FR-109 finer-level view; `power(k)` reinstatement): verdict deferred, owner "the §14 review". The maintainer named an owner path for "FR-6 UI half" and FR-109 only; the six-shape `job_id` gap and the `provenance` object have no named owner, which is B2's substance. CLAUDE.md §14 allows no unowned state at the review's acceptance; the phase-exit review before 12 Nov must give each an owner. Lead's call whether to file a tracking row now.
 - FR-109 "no behaviour may be built on the stored chain" is a prohibition, not an obligation.
@@ -81,7 +81,7 @@ Checks quoted match what I re-ran on the tip: `doc-index.py --check` rc 0 (`OK (
 | FR-6 shared `provenance` object, UI, six shapes without a producing-Job id | deferred, owner the §14 review (B2: owner scope to be ruled) |
 | FR-109 finer-level diagnostics view | deferred, owner the §14 review (named by the maintainer, 11:28:56) |
 | FR-110 `power(k)` reinstatement | deferred, owner the §14 review (ruling 1) |
-| FR-110 θ validator, translation, round-trip test | reassigned to slice A (`SL-8166`, audited in `RS-8183`) |
+| FR-110 θ validator, translation, round-trip test | reassigned to slice A (`SL-1860`, audited in `RS-1862`) |
 
 ## Checks run (tree `8d2ae6f0`, detached worktree at `507cfba6`)
 
