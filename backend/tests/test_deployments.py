@@ -406,7 +406,7 @@ async def _scoped_deployer(database: Database, workspace_id: UUID, env_slug: str
     from model_schema import ScopeType
 
     made = await seat("analyst")  # a member with the roles table seeded
-    async with database.unit_of_work() as session:
+    async def _seed(session):
         env = (
             await session.execute(select(EnvironmentRow).where(EnvironmentRow.slug == env_slug))
         ).scalar_one()
@@ -432,6 +432,7 @@ async def _scoped_deployer(database: Database, workspace_id: UUID, env_slug: str
                 select(WorkspaceMemberRow).where(WorkspaceMemberRow.user_id == made.id)
             )
         ).scalar_one_or_none()
+    await seed_as_owner(_seed)
     return made
 
 
