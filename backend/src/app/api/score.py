@@ -108,6 +108,7 @@ _PER_QUOTE_CODES: Final[frozenset[str]] = frozenset(
         "RATE_TABLE_MISS",
         "REFERENCE_LOOKUP_MISS",
         "MODEL_CALL_FAILED",
+        "RATING_TYPE_MISMATCH",  # RL-1567: an int or count output's value is not integral
     }
 )
 
