@@ -2,7 +2,7 @@
 id: FD-1317
 family: finding
 title: Rating condition and clamp_bounds strings are never validated — no vocabulary, syntax or division-guard check (FR-244, FR-274, FR-276)
-status: active
+status: closed
 created: 2026-09-30
 owner: auditor
 tree: 9f63d0feee524815e7e0c68c99a53ac3f80e6c37
