@@ -1,25 +1,25 @@
 ---
-id: RS-8236
+id: RS-1899
 family: research
 kind: audit
 title: SL-1569 (WK-1178, PL-1568) delta audit of the oracle fix and the re-merges, bf845e11 to aaebd5df
 status: draft
-created: 2026-10-25
+created: 2026-10-25   # drafted 2026-10-25 under working id 8236; minted 2026-10-25 as RS-1899
 owner: auditor
 tree: 908c4215d71989df7ce8284d41ed9bf8392763af
 phase: P2
 work: WK-1178
 corrected_by: []
-relates: [SL-1569, PL-1568, LG-8154, RS-8207, RS-8210]
+relates: [SL-1569, PL-1568, LG-1896, RS-1897, RS-1898]
 ---
 
-# RS-8236 — SL-1569 delta audit, `bf845e11..aaebd5df`
+# RS-1899 — SL-1569 delta audit, `bf845e11..aaebd5df`
 
-*(Working id 8236, written by `aud-1569d`, 2026-10-25, from `brief-aud-1569d-2026-10-25.md` (lead 28). Check 31/32 on this id is expected until the mint. The ledger is cited by its working id `LG-8154`. Read by `git` and plain reads only; no test, no DB, no gate was run by this seat. Tree audited: `aaebd5df` (tree `908c4215d71989df7ce8284d41ed9bf8392763af`), the gate head that stands under 1(f).)*
+*(Working id 8236, written by `aud-1569d`, 2026-10-25, from `brief-aud-1569d-2026-10-25.md` (lead 28). Check 31/32 on this id is expected until the mint. The ledger is cited by its working id `LG-1896`. Read by `git` and plain reads only; no test, no DB, no gate was run by this seat. Tree audited: `aaebd5df` (tree `908c4215d71989df7ce8284d41ed9bf8392763af`), the gate head that stands under 1(f).)*
 
 ## Question
 
-RS 8210 audited `bf845e11`. The slice has since gained a fix for the one real red of its gate and several merges. Does the delta `git log bf845e11..aaebd5df` change the slice only as the 2026-10-25 15:23:06 GMT ruling allows, and did the merges bring nothing but main's content?
+RS-1898 audited `bf845e11`. The slice has since gained a fix for the one real red of its gate and several merges. Does the delta `git log bf845e11..aaebd5df` change the slice only as the 2026-10-25 15:23:06 GMT ruling allows, and did the merges bring nothing but main's content?
 
 ## Method
 
@@ -31,19 +31,19 @@ The brief expected three slice-own commits and two merges. The window holds more
 
 | Commit | Kind | Paths |
 |---|---|---|
-| `2a1588c9` | slice-own | `LG-8154` only |
+| `2a1588c9` | slice-own | `LG-1896` only |
 | `3eb04166` | merge (main `ff976406`) | see merge table |
-| `37e7726a` | slice-own | RS 8207 + RS 8210 folded at working ids |
+| `37e7726a` | slice-own | RS-1897 + RS-1898 folded at working ids |
 | `66d5a35d` | slice-own | `docs/INDEX.md` |
-| `aab18283`, `2ec62327` | slice-own | `LG-8154` only |
+| `aab18283`, `2ec62327` | slice-own | `LG-1896` only |
 | `c62e4e48` | merge (main `034781b3`) | see merge table |
 | `5dc23c98` | slice-own, **code** | the two test files |
-| `1f41acc6` | slice-own | `LG-8154` only |
+| `1f41acc6` | slice-own | `LG-1896` only |
 | `93bf1321` | slice-own, comment-only | the two test files |
 | `efb4cf27` | merge (main `01a28e6d`, #1370) | see merge table |
 | `aaebd5df` | merge (main `4e7ca81d`, INDEX-only) | see merge table |
 
-(`git diff --name-only <c>^ <c>` for the five docs commits; `git diff c62e4e48 93bf1321 --stat` = the two test files + `LG-8154`, 3 files.) **No `packages/*/src` or `backend/src` file changed in any slice-own commit of the window.**
+(`git diff --name-only <c>^ <c>` for the five docs commits; `git diff c62e4e48 93bf1321 --stat` = the two test files + `LG-1896`, 3 files.) **No `packages/*/src` or `backend/src` file changed in any slice-own commit of the window.**
 
 ## Merges: every path they brought equals main
 
@@ -80,9 +80,9 @@ def assert_served_at_declared_scale(served: object, expected: float) -> None:
 | three asserts changed | `glm_model_call` `:137` and `:202`, `peril_scoring_api` `:217`: each `float(...) == approx(expected, rel=1e-9)` → `assert_served_at_declared_scale(response.json()["outputs"]["risk_out"], expected)`, with the comment "oracle at the declared scale (dp 9, half_even): str with 9 dp + abs=half-quantum — to-lead 2026-10-25 15:23:06 GMT" | yes |
 | no assert weakened elsewhere | `git diff 4e7ca81d aaebd5df` on the two files, `-` lines filtered of the replaced forms: only the three `rel=1e-9` asserts and the literal `"dp": 9` are removed. The one `approx` left in the two files is the helper's. The new form is stricter on type and scale than the old one and no looser in value (abs 5e-10 against rel 1e-9 at the value 0.3166 is 3.2e-10; the old form was the one that failed) | yes |
 | `FR-116` markers kept | `pytest.mark.req` count 4 in each file on main (`4e7ca81d`) and at `aaebd5df`; the diff touches no marker line | yes |
-| write set | the two files + `LG-8154`; granted by the 15:23:06 line | yes |
+| write set | the two files + `LG-1896`; granted by the 15:23:06 line | yes |
 
-Compared to the maintainer's own check, "Maintainer: SL-1569 oracle fix @93bf1321 VERIFIED in the 15:23:06 form" (`to-lead.md` 15:26:31 GMT): this audit read the same diff and agrees item by item. `LG-8154` (+15 lines at `1f41acc6`) quotes the ruling verbatim, the RED line (`14 failed, 6838 passed` at `c62e4e48`, the one real red `test_a_model_offset_glm_scores_with_its_source_model`, `assert 0.316648016 == 0.3166480164244357 ± 3.2e-10`), the three changed asserts before → after, and marks GREEN as owed to the re-gate.
+Compared to the maintainer's own check, "Maintainer: SL-1569 oracle fix @93bf1321 VERIFIED in the 15:23:06 form" (`to-lead.md` 15:26:31 GMT): this audit read the same diff and agrees item by item. `LG-1896` (+15 lines at `1f41acc6`) quotes the ruling verbatim, the RED line (`14 failed, 6838 passed` at `c62e4e48`, the one real red `test_a_model_offset_glm_scores_with_its_source_model`, `assert 0.316648016 == 0.3166480164244357 ± 3.2e-10`), the three changed asserts before → after, and marks GREEN as owed to the re-gate.
 
 ## The gate at `aaebd5df`
 
@@ -109,22 +109,22 @@ One verdict per path, per slice-own commit (`git show --format= --name-only <c>`
 
 | Commit | Path | Verdict |
 |---|---|---|
-| `2a1588c9` | `LG-8154` | docs; the B1′/B2′ remedy, see below |
-| `37e7726a` | `RS-8207`, `RS-8210` (added) | docs; fold of the two prior audit records at working ids |
+| `2a1588c9` | `LG-1896` | docs; the B1′/B2′ remedy, see below |
+| `37e7726a` | `RS-1897`, `RS-1898` (added) | docs; fold of the two prior audit records at working ids |
 | `66d5a35d` | `docs/INDEX.md` | generated |
-| `aab18283`, `2ec62327` | `LG-8154` | docs; Task 6 diagnostic-window readings (the ledger's own text) |
+| `aab18283`, `2ec62327` | `LG-1896` | docs; Task 6 diagnostic-window readings (the ledger's own text) |
 | `5dc23c98` | `backend/tests/test_rating_glm_model_call.py`, `backend/tests/test_rating_peril_scoring_api.py` | non-docs; the three oracle re-expressions, covered by the 15:23:06 ruling (read in full above) |
-| `1f41acc6` | `LG-8154` | docs; the RED, the ruling and the three changed asserts |
-| `93bf1321` | the same two test files + `LG-8154` | comment-only (the ruling quoted at each assert) + ledger |
+| `1f41acc6` | `LG-1896` | docs; the RED, the ruling and the three changed asserts |
+| `93bf1321` | the same two test files + `LG-1896` | comment-only (the ruling quoted at each assert) + ledger |
 
 No slice-own non-docs change exists outside the three oracle commits' two files, so there is no uncovered non-docs change and no B-item on this axis. The three oracle re-expressions are exactly: `test_rating_glm_model_call.py` `test_a_rating_version_pinning_a_fitted_glm_compiles_and_scores` (:137 before the helper's comment lines), `test_a_model_offset_glm_scores_with_its_source_model` (:202), and `test_rating_peril_scoring_api.py` `test_a_rating_version_pinning_an_approved_peril_structure_compiles_and_scores` (:217); the only other change is the literal `"dp": 9` → `"dp": RISK_OUT_DP` in `_algorithm`. The merges' non-docs paths (main's code) are in the merge table: each equals its main parent.
 
-## Status of RS 8210's B1′ and B2′
+## Status of RS-1898's B1′ and B2′
 
-Both were discharged by `2a1588c9` (RS 8210 line 99: "B1′/B2′ discharged 2a1588c9, verified by the lead directly, to-lead 2026-10-23 11:38:45 BST"); this audit re-read them in `LG-8154` at `aaebd5df`.
+Both were discharged by `2a1588c9` (RS-1898 line 99: "B1′/B2′ discharged 2a1588c9, verified by the lead directly, to-lead 2026-10-23 11:38:45 BST"); this audit re-read them in `LG-1896` at `aaebd5df`.
 
-- **B1′** — "`r/b1-green.log` line 1 is not a head sha, and the census test has no committed-head run … Remedy: one `run-small` run of `test_quote_input_raise_sites.py` + `test_rating_decimal_outputs.py` at the final head, sha on line 1, quoted in the LG (or leave it to the gate … and say so in the LG)." **LANDED** (`2a1588c9`) at `LG-8154:105`: the old `b1-green.log` line is marked "superseded: line 1 was not a head sha"; "B1′ (committed head `bf845e11`): `test_quote_input_raise_sites.py` alone via `run-small.sh` … `19 passed in 6.84s`, `rc=0` … (`b1-green-committed.log`, line 1 = `bf845e116c30…`)". Note: the run is of the census file alone, not the two files the remedy names; the remedy's alternative (the gate includes the file) also applies, and the census entry is still present at `aaebd5df` (`packages/pricing-core/tests/test_quote_input_raise_sites.py:86`, `("rating/score.py", "_build_outputs"): 1`) with the file passing in the gate (not among the 13 `FAILED` lines).
-- **B2′** — "`LG-8154:85` (Task 4 RED `02d4bc6d` / GREEN `4ba9d138`, the direct-call harness) has no log and is not marked superseded. Remedy: mark it 'superseded (no log)' at the line, or re-derive it …". **LANDED** (`2a1588c9`) at `LG-8154:85`: "B2′: this RED/GREEN pair is superseded (no log): the direct-call harness was not kept … The committed-head evidence is `scripts/generate-contracts.py --check` `58 generated contracts match the models`, rc 0, at `bf67458e` (`r/b4-contracts.log`) and `test_contracts.py` in the backend window log …; the gate decides it". Neither is SUPERSEDED as a finding or NOT LANDED. The gate's `contracts.rc` is the decisive run and is read from the stand-under-1(f) entry (rc 0), not re-run here.
+- **B1′** — "`r/b1-green.log` line 1 is not a head sha, and the census test has no committed-head run … Remedy: one `run-small` run of `test_quote_input_raise_sites.py` + `test_rating_decimal_outputs.py` at the final head, sha on line 1, quoted in the LG (or leave it to the gate … and say so in the LG)." **LANDED** (`2a1588c9`) at `LG-1896:105`: the old `b1-green.log` line is marked "superseded: line 1 was not a head sha"; "B1′ (committed head `bf845e11`): `test_quote_input_raise_sites.py` alone via `run-small.sh` … `19 passed in 6.84s`, `rc=0` … (`b1-green-committed.log`, line 1 = `bf845e116c30…`)". Note: the run is of the census file alone, not the two files the remedy names; the remedy's alternative (the gate includes the file) also applies, and the census entry is still present at `aaebd5df` (`packages/pricing-core/tests/test_quote_input_raise_sites.py:86`, `("rating/score.py", "_build_outputs"): 1`) with the file passing in the gate (not among the 13 `FAILED` lines).
+- **B2′** — "`LG-1896:85` (Task 4 RED `02d4bc6d` / GREEN `4ba9d138`, the direct-call harness) has no log and is not marked superseded. Remedy: mark it 'superseded (no log)' at the line, or re-derive it …". **LANDED** (`2a1588c9`) at `LG-1896:85`: "B2′: this RED/GREEN pair is superseded (no log): the direct-call harness was not kept … The committed-head evidence is `scripts/generate-contracts.py --check` `58 generated contracts match the models`, rc 0, at `bf67458e` (`r/b4-contracts.log`) and `test_contracts.py` in the backend window log …; the gate decides it". Neither is SUPERSEDED as a finding or NOT LANDED. The gate's `contracts.rc` is the decisive run and is read from the stand-under-1(f) entry (rc 0), not re-run here.
 
 ## Findings
 

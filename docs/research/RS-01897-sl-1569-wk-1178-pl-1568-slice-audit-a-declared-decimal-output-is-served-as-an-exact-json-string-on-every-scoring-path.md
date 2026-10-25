@@ -1,32 +1,32 @@
 ---
-id: RS-8207
+id: RS-1897
 family: research
 kind: audit
 title: SL-1569 (WK-1178, PL-1568) slice audit at b699c3d1 — a declared decimal output is served as an exact JSON string on every scoring path
 status: draft
-created: 2026-10-23
+created: 2026-10-25   # drafted 2026-10-23 under working id 8207; minted 2026-10-25 as RS-1897
 owner: auditor
 tree: 40aa993134a9c2c88e474d925ea6fc844f638e68
 phase: P2
 work: WK-1178
 corrected_by: []
-relates: [SL-1569, PL-1568, LG-8154, RL-1343, RL-1567, RL-1365]
+relates: [SL-1569, PL-1568, LG-1896, RL-1343, RL-1567, RL-1365]
 ---
 
-# RS-8207 — SL-1569 slice audit (PL-1568) at `b699c3d1`
+# RS-1897 — SL-1569 slice audit (PL-1568) at `b699c3d1`
 
-*(Working id 8207, written by `aud-1569`, 2026-10-23, from `brief-aud-1569-2026-10-23.md` (lead 27). Check 31 on this id is expected until the mint. The ledger is cited as `LG-8154`, its working id. The audit read the object by `git show` / `git diff` only; no test, no DB, no gate was run. `aud-1569` proposes; the verdict is the lead's.)*
+*(Working id 8207, written by `aud-1569`, 2026-10-23, from `brief-aud-1569-2026-10-23.md` (lead 27). Check 31 on this id is expected until the mint. The ledger is cited as `LG-1896`, its working id. The audit read the object by `git show` / `git diff` only; no test, no DB, no gate was run. `aud-1569` proposes; the verdict is the lead's.)*
 
 ## Question
 
-Does branch `sl-1569-wk1178-decimal-outputs` at `b699c3d18c8142adea37dc6d7fdec5228043cd0f`, range `origin/main...b699c3d1` (base `origin/main` = `4e399fd01e8de2fe55d2f128b0e09ee2b2735c6a`, tree `40aa9931`), deliver `PL-1568`'s Acceptance Standard (items 1–28, Tasks 0–8, Global Constraints, write set) as amended by the maintainer's (by delegation) entries "2026-10-23 10:15:22 BST" (GO, D1 = (b)), "2026-10-23 10:48:01 BST" item (A) and "2026-10-23 10:54:28 BST" item 2 (the FR-273 float-path test), and does its ledger `LG-8154` evidence match its logs?
+Does branch `sl-1569-wk1178-decimal-outputs` at `b699c3d18c8142adea37dc6d7fdec5228043cd0f`, range `origin/main...b699c3d1` (base `origin/main` = `4e399fd01e8de2fe55d2f128b0e09ee2b2735c6a`, tree `40aa9931`), deliver `PL-1568`'s Acceptance Standard (items 1–28, Tasks 0–8, Global Constraints, write set) as amended by the maintainer's (by delegation) entries "2026-10-23 10:15:22 BST" (GO, D1 = (b)), "2026-10-23 10:48:01 BST" item (A) and "2026-10-23 10:54:28 BST" item 2 (the FR-273 float-path test), and does its ledger `LG-1896` evidence match its logs?
 
 ## Method
 
 Scope came from `docs/plans/PL-01568-…` (Acceptance Standard `:250-438`, Global Constraints `:440-465`, Write set `:552-575`, §"Spec text owed", Task 3b items 24–28) and the three channel entries (read by heading in `to-lead.md`) **before** the ledger or the diff. Then evidence, each by command at the named object:
 
 - Diff: `git diff origin/main...origin/sl-1569-wk1178-decimal-outputs` (21 files, +864/−69).
-- Ledger: `git show origin/sl-1569-wk1178-decimal-outputs:docs/ledgers/LG-08154-…`.
+- Ledger: `git show origin/sl-1569-wk1178-decimal-outputs:docs/ledgers/LG-01896-…`.
 - Reachability: `git merge-base --is-ancestor <sha> origin/sl-1569-wk1178-decimal-outputs` for the 12 ledger SHAs and the 3 need SHAs (`cad75a7e`, `13a02bba`, `b6dd96fd`): **all 15 exit 0**.
 - Logs: `~/gi-pricing-plan.local/scratch/sl-1569/` (listed below).
 - Spec: the T3 block of `RL-1567` extracted with a Python regex over its ```` ```text ```` fences (blocks 4 and 5), applied with `str.replace(find, new, 1)` to `origin/main:docs/specs/03-rating-engine.md`; compared with the branch's file.
@@ -93,7 +93,7 @@ Outside the write set (or beyond the listed edits within a listed file):
 | `docs/plans/PL-01568-…` (status `active` + an activation note) | GO "10:15:22 BST": "Lean P2 L1 (draft→active rides the slice PR; this header is quoted in the LG)" | ruled |
 | `packages/pricing-core/tests/test_quote_input_raise_sites.py` | **no ruling, and not changed** | **B1: the slice needs this file in its write set and did not touch it** |
 
-### 4. RED/GREEN lines in `LG-8154` against logs (`~/gi-pricing-plan.local/scratch/sl-1569/`, listing: `audit.log changed-src.txt closure-tests.txt closure.py contracts.log docindex*.log lib.sh reqcov.log task0-step3.txt w1-green-a.log w1-head-before-codes.log w1-head.sh w1-red-base.log w1-red.sh w1-setup.* w2-window.sh t6/`)
+### 4. RED/GREEN lines in `LG-1896` against logs (`~/gi-pricing-plan.local/scratch/sl-1569/`, listing: `audit.log changed-src.txt closure-tests.txt closure.py contracts.log docindex*.log lib.sh reqcov.log task0-step3.txt w1-green-a.log w1-head-before-codes.log w1-head.sh w1-red-base.log w1-red.sh w1-setup.* w2-window.sh t6/`)
 
 | LG line | Log | First line = head sha? | Summary matches | Verdict |
 |---|---|---|---|---|
@@ -122,7 +122,7 @@ All backend windows ran at times consistent with the LG (09:53–10:03Z = 10:53�
 3. Item 24 control: disclosed with cause (engine returns int `3`); noted "10:54:28" item 2. ✓
 4. Batch-outputs test rewrite: disclosed; ruled "10:48:01" (A). Quoted red `ValueError: score_batch: a relativity output must be a positional decimal string, got int` — a `ValueError` whose text is the branch's own (no log, B2).
 5. Ladder-exact test: disclosed; **mis-cited** ("11:00"), true header "2026-10-23 10:54:28 BST — Maintainer: SL-1569 DB window under the FREE gate-1b slot (not an exception); the FR-273 float-path test may assert the refusal", item 2 (B5).
-6. **DB-window deviation, stated plainly.** The window ran 10:53–11:03 BST on `GIP_GATE_SLOT` unset (log headers) via `run-small.sh`'s small-test flock (the maintainer's 11:09:09 entry says "`GIP_GATE_SLOT=small-test`"), redis db 13, own DB `gip_test_sl1569`, **beside FD 8199's held gate-1** (`lslocks` in the headers), **not** under the gate-1b slot the maintainer granted at 10:54:28 item 1, and it **continued through the ~10:57 hold** and sent **no WINDOW START/END**. The maintainer's (by delegation) entry "2026-10-23 11:09:09 BST — PL 8205 noted; SL-1569 DB-window DEVIATION accepted on evidence, with two standing corrections": accepted, "backend GREEN `fd09bc7b` '259 passed, 2 skipped' (base '13 failed, 247 passed') counts as the slice's red/green; the gate decides anyway". LG deviation 6 does not mention the hold or the missing WINDOW START/END and does not cite the 11:09:09 acceptance; it should (B5). The `ZEROS` for redis db 13 and the dropped DB are claimed in the LG; the logs do not carry them (no cleanup log) — the LG line is the only record.
+6. **DB-window deviation, stated plainly.** The window ran 10:53–11:03 BST on `GIP_GATE_SLOT` unset (log headers) via `run-small.sh`'s small-test flock (the maintainer's 11:09:09 entry says "`GIP_GATE_SLOT=small-test`"), redis db 13, own DB `gip_test_sl1569`, **beside FD-1872's held gate-1** (`lslocks` in the headers), **not** under the gate-1b slot the maintainer granted at 10:54:28 item 1, and it **continued through the ~10:57 hold** and sent **no WINDOW START/END**. The maintainer's (by delegation) entry "2026-10-23 11:09:09 BST — PL 8205 noted; SL-1569 DB-window DEVIATION accepted on evidence, with two standing corrections": accepted, "backend GREEN `fd09bc7b` '259 passed, 2 skipped' (base '13 failed, 247 passed') counts as the slice's red/green; the gate decides anyway". LG deviation 6 does not mention the hold or the missing WINDOW START/END and does not cite the 11:09:09 acceptance; it should (B5). The `ZEROS` for redis db 13 and the dropped DB are claimed in the LG; the logs do not carry them (no cleanup log) — the LG line is the only record.
 
 ### 7. Spec text
 
@@ -142,7 +142,7 @@ LG `:99`: "The NFR-502 timing verdict is CARRIED to nfr-bench-1, base = main bef
 
 ### 11. Other
 
-- `LG-8154` front matter `tree: fd09bc7b` is the backend commit, not the branch head `b699c3d1` (minor).
+- `LG-1896` front matter `tree: fd09bc7b` is the backend commit, not the branch head `b699c3d1` (minor).
 - Commits are Conventional-Commit shaped; the trailer form is not part of this audit.
 - Barred-word check on the branch's added lines: `git diff origin/main...origin/sl-1569-wk1178-decimal-outputs | grep '^+' | grep -v '^+++' | grep -o -i ".\{25\}delegat.\{12\}"` prints six matches, each in the form "(by delegation)"; none is the barred word.
 
@@ -156,7 +156,7 @@ LG `:99`: "The NFR-502 timing verdict is CARRIED to nfr-bench-1, base = main bef
 - **B2 — twelve LG RED/GREEN lines have no log:** Task 1+3 (`15 failed, 1 passed`, `18 failed, 16 passed`, item 9 red, `71 passed`), Task 2 (`4 failed, 2 passed`, `10 passed`), Task 3b (`4 failed, 36 passed`, item 28 red x4, `53 passed`), deviation 4's red, deviation 5's `119 passed`. Only the three backend `w1-*.log` files exist.
 - **B3 — limb 3 has no evidence:** no `limb3.py` and no output log; the sha256 prefix `6fa80c30e43bf1c4` matches no file in scratch (`t6/limb13.py` is `e9f57bfd60e56eb9`, written after the ledger commit).
 - **B4 — no exit code is captured for `generate-contracts.py --check`, `doc-index.py --check` or `req-coverage.py`** (`contracts.log`, `docindex-check.log`, `reqcov.log` are output only); the LG claims the contracts message without an rc.
-- **B5 — `LG-8154` accuracy:** deviation 5 cites a non-existent "11:00" entry (true header "2026-10-23 10:54:28 BST …" item 2); deviation 6 omits the hold, the missing WINDOW START/END and the 11:09:09 acceptance; the import-closure command is not quoted (only `scratch/` holds it); the stored-data queries 2–3 are not quoted; front matter `tree:` is `fd09bc7b`, not the head.
+- **B5 — `LG-1896` accuracy:** deviation 5 cites a non-existent "11:00" entry (true header "2026-10-23 10:54:28 BST …" item 2); deviation 6 omits the hold, the missing WINDOW START/END and the 11:09:09 acceptance; the import-closure command is not quoted (only `scratch/` holds it); the stored-data queries 2–3 are not quoted; front matter `tree:` is `fd09bc7b`, not the head.
 - **B6 (minor) — a Global Constraint without a test:** the "decimal-family output with no exact read and a non-null value raises `ValueError`" branch (`score.py:859-866`) is untested.
 
 ## Owed
@@ -164,6 +164,6 @@ LG `:99`: "The NFR-502 timing verdict is CARRIED to nfr-bench-1, base = main bef
 - The full two-half gate (items 21–23), through the gate-runner, with `frontend/src/api/generated/schema.d.ts` change recorded (the typed `outputs` value changes the OpenAPI); then `req-coverage.py` and `audit-docs.py` rc 0 in it. Not a B-item: the gate is not yet launched.
 - Task 6 limbs 1–2 as DIAGNOSTIC readings (`w2-window.sh` exists, window not run) — owed to the slice before its close; the plan (as amended by D1 = (b)) makes them a deliverable, not a merge blocker for this audit.
 - The NFR-502 timing verdict on nfr-bench-1: owner WK-1178, base `4e399fd0` (D1 = (b)); the user starts the VM with ≥ 2 h notice.
-- This record's mint **in the slice's PR, before CI** (seat-brief item 34): fold this RS file into the slice branch, mint `RS-8207` with the slice's ids, re-point every cite, audit-docs rc 0.
-- The slice's closing acts after a clean re-audit of B1–B6: `LG-8154` and the `SL-1569` row to `closed` (the auditor's act at slice close), the MERGE-ACK quoting the gate's `Test Files N passed` line.
+- This record's mint **in the slice's PR, before CI** (seat-brief item 34): fold this RS file into the slice branch, mint `RS-1897` with the slice's ids, re-point every cite, audit-docs rc 0.
+- The slice's closing acts after a clean re-audit of B1–B6: `LG-1896` and the `SL-1569` row to `closed` (the auditor's act at slice close), the MERGE-ACK quoting the gate's `Test Files N passed` line.
 - The re-audit rule: after the fixes, re-run the specific checks that found B1 (AST count + the census test's own assert) and B2–B5 (log presence and heads), scoped to what changed, naming the tree.
