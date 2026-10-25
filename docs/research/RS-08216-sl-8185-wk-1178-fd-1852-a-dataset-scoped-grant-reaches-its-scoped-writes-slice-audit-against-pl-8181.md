@@ -73,3 +73,5 @@ No product-code defect found. Read: `authz.py` (+34), `datasets.py` (+9), `valid
 ## Commands run (aud-8185, tree `ff976406` in my worktree unless named)
 
 `git fetch origin` rc 0; `git rev-parse` of main and the slice head; `git merge-base --is-ancestor <sha> origin/sl-8185-…` for 12 SHAs, all rc 0; `git diff --stat`/`--name-only`/`--word-diff` between `origin/main...origin/sl-8185-…`; `git grep` for PL-8181, SL-8192, LG-8193; reads of the plan, LG, `authz.py`, `rbac.py`, the diff of `backend/src`, and `test_route_scope_guard.py` (AST-parsed row counts). Docs checks: see the commit report.
+
+Adopted 2026-10-25 by the lead: CLEAN; B1 met as worded by to-lead 2026-10-22 18:16:19 BST (a); B2/B3 discharged d37510be; B4 superseded by the gate re-run.
