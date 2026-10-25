@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 import pytest_asyncio
+from backend.tests.conftest_db import seed_as_owner
 from fastapi.testclient import TestClient
 
 from app.api.deps import DEV_PRINCIPAL_HEADER
@@ -146,7 +147,7 @@ async def test_settings_are_scoped_to_the_callers_workspace(
     )
 
     other_workspace = new_uuid7()
-    async with database.unit_of_work() as session:
+    async def _seed(session):
         # The workspace row must exist for the membership FK (FR-395), and the caller
         # must *be* a member here (W6b-11): the `Workspace-Id` header is checked against
         # the memberships the database holds, so a role without membership would now
@@ -173,6 +174,7 @@ async def test_settings_are_scoped_to_the_callers_workspace(
         session.add(
             WorkspaceMemberRow(user_id=principal.id, workspace_id=other_workspace)
         )
+    await seed_as_owner(_seed)
 
     other = {
         DEV_PRINCIPAL_HEADER: str(principal.id),

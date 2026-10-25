@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 import pytest_asyncio
+from backend.tests.conftest_db import seed_as_owner
 from backend.tests.dry_run_reports import stored_dry_run_report
 from fastapi.testclient import TestClient
 
@@ -306,9 +307,10 @@ async def _allow_the_type(
     from app.platform import workspaces
 
     reader = new_uuid7()
-    async with database.unit_of_work() as session:
+    async def _seed(session):
         await workspaces.ensure_workspace(session, workspace_id=workspace_id)
         session.add(WorkspaceMemberRow(user_id=reader, workspace_id=workspace_id))
+    await seed_as_owner(_seed)
     policy = client.get(
         "/api/v1/approval-policy", headers=_headers(reader, workspace_id)
     ).json()
@@ -701,9 +703,10 @@ async def test_another_workspaces_request_is_404(
     from app.platform import workspaces
 
     other = new_uuid7()
-    async with database.unit_of_work() as session:
+    async def _seed(session):
         await workspaces.ensure_workspace(session, workspace_id=other)
         session.add(WorkspaceMemberRow(user_id=principal.id, workspace_id=other))
+    await seed_as_owner(_seed)
     response = client.get(
         f"/api/v1/approval-requests/{created['id']}",
         headers=_headers(principal.id, other),

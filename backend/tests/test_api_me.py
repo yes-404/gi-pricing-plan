@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 import pytest_asyncio
+from backend.tests.conftest_db import seed_as_owner
 from fastapi.testclient import TestClient
 
 from app.api.deps import DEV_PRINCIPAL_HEADER
@@ -142,7 +143,7 @@ async def test_me_lists_every_membership_with_its_name(
     from model_schema import new_uuid7
 
     other = new_uuid7()
-    async with database.unit_of_work() as session:
+    async def _seed(session):
         # Named *before* `grant`, deliberately. `grant` calls `ensure_workspace` with no
         # name, and `ensure_workspace` returns an existing row untouched — so naming
         # afterwards would silently do nothing and this assertion would read
@@ -157,6 +158,7 @@ async def test_me_lists_every_membership_with_its_name(
         # the former, which is exactly why it cannot be inferred from the latter.
         session.add(WorkspaceMemberRow(user_id=principal.id, workspace_id=workspace_id))
         session.add(WorkspaceMemberRow(user_id=principal.id, workspace_id=other))
+    await seed_as_owner(_seed)
 
     await grant("pricing_actuary")
 

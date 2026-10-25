@@ -113,7 +113,7 @@ async def test_completing_another_workspaces_upload_is_the_missing_404(
     assert owner.status_code == 202, owner.text  # the control: its own workspace may complete
 
     other = new_uuid7()
-    async with database.unit_of_work() as session:
+    async def _seed(session):
         await workspaces.ensure_workspace(session, workspace_id=other)
         await rbac.seed_builtin_roles(session, other)
         role = (
@@ -131,6 +131,7 @@ async def test_completing_another_workspaces_upload_is_the_missing_404(
             )
         )
         session.add(WorkspaceMemberRow(user_id=principal.id, workspace_id=other))
+    await seed_as_owner(_seed)
     foreign = {DEV_PRINCIPAL_HEADER: str(principal.id), "Workspace-Id": str(other)}
 
     second, _ = _upload(api_client, writer, [_payload()])
