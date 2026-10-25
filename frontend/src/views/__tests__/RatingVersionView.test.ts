@@ -58,6 +58,14 @@ describe("the rating version view", () => {
     expect(link).toHaveAttribute("href", "/rating/fremtpl2-demo/v/1/sandbox");
   });
 
+  it("FR-25, FR-263: links to the dislocation views by the rating version's own slug and version", async () => {
+    getRatingVersion.mockResolvedValue(RATING);
+    render(RatingVersionView, { props, ...mounted });
+
+    const link = await screen.findByRole("link", { name: "Open the dislocation views" });
+    expect(link).toHaveAttribute("href", "/rating/fremtpl2-demo/v/1/dislocation");
+  });
+
   it("FR-25: links one rate table editor per pinned table, with no list call (RL-1475 item 3)", async () => {
     getRatingVersion.mockClear();
     getRatingVersion.mockResolvedValue({
