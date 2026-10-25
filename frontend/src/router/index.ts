@@ -277,6 +277,19 @@ export const routes: RouteRecordRaw[] = [
     }),
   },
   {
+    // `03` §5.3's Regression suite view (FR 8211). `:slug` and `:version` are the Rating
+    // Version's own (RL-1473); the run is cited by id in `?run=`.
+    path: "/rating/:slug/v/:version/tests",
+    name: "rating-tests",
+    meta: { requiresAuth: true },
+    component: () => import("@/views/RegressionSuiteView.vue"),
+    props: (route) => ({
+      slug: String(route.params.slug),
+      version: String(route.params.version),
+      run: typeof route.query.run === "string" ? route.query.run : undefined,
+    }),
+  },
+  {
     // `03` §5.3's quote sandbox. `:slug` and `:version` are the Rating Version's own (RL-1473).
     path: "/rating/:slug/v/:version/sandbox",
     name: "quote-sandbox",

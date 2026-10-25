@@ -57,7 +57,7 @@ function run(over: Partial<RegressionRun> = {}): RegressionRun {
       { name: "old-driver-leeds", status: "fail", expected_minor: 80000, actual_minor: 80150, difference_minor: 150 },
     ],
     property_results: [
-      { name: "premium_positive", status: "pass", cases_run: 50 },
+      { name: "premium_positive", status: "pass", cases_run: 50, counterexample_minimal: false },
       {
         name: "monotone_in_age", status: "fail", cases_run: 50,
         counterexample: { driver_age: 25 }, counterexample_minimal: true,
@@ -214,7 +214,7 @@ describe("the Regression suite view (FR 8211)", () => {
       runs: {
         [NEWEST]: run({
           property_results: [
-            { name: "monotone_in_age", status: "fail", cases_run: 0, counterexample: null, shrink: "completed", error_code: "MONOTONE_NO_COMPARABLE_PAIRS" },
+            { name: "monotone_in_age", status: "fail", cases_run: 0, counterexample: null, counterexample_minimal: false, shrink: "completed", error_code: "MONOTONE_NO_COMPARABLE_PAIRS" },
           ],
         }),
       },
@@ -283,6 +283,8 @@ describe("the Regression suite view (FR 8211)", () => {
     stubFetch({ rating: problem(404, "NOT_FOUND", "No such rating version.") });
     render(RegressionSuiteView, { props });
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("No such rating version.");
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent("No such rating version."),
+    );
   });
 });
