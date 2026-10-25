@@ -328,7 +328,7 @@ async def _world(
     # is built here.
     analyst, actuary = people["analyst"], people["actuary"]
     approver, second = people["approver"], people["second_approver"]
-    model_id = await _approved_model(database, workspace_id)
+    model_id = await _approved_model(database, workspace_id, analyst)
     tables = await demo_model.seed_demo_rate_tables(
         database, Settings(), blob_store, workspace_id, analyst, model_id
     )

@@ -28,6 +28,7 @@ from backend.tests.test_migration_dataset_owner import (  # noqa: F401  (fixture
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 from sqlalchemy import text
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.config import Settings
@@ -145,13 +146,20 @@ async def migrated_scratch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> str:
     """A scratch database migrated to head, so it carries this revision's marker table."""
-    monkeypatch.setenv("GIP_DATABASE_URL", scratch_database)
+    monkeypatch.setenv("GIP_MIGRATION_DATABASE_URL", scratch_database)
     await _upgrade(_alembic_config(), "head")
     return scratch_database
 
 
 def _scratch_settings(base: Settings, url: str) -> Settings:
-    return base.model_copy(update={"database_url": SecretStr(url)})
+    """The application's start-up path on a scratch database: the login role, not the owner
+    that created it (the scratch URL is the owner's, for DDL)."""
+    login = make_url(url).set(
+        username="gip_app_login", password=os.environ.get("GIP_APP_DB_PASSWORD", "gip_app_login")
+    )
+    return base.model_copy(
+        update={"database_url": SecretStr(login.render_as_string(hide_password=False))}
+    )
 
 
 @pytest.mark.req("FR-436")
@@ -182,7 +190,7 @@ async def test_a_database_not_migrated_to_this_revision_stops_startup(
     scratch_database: str,  # noqa: F811
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("GIP_DATABASE_URL", scratch_database)
+    monkeypatch.setenv("GIP_MIGRATION_DATABASE_URL", scratch_database)
     await _upgrade(_alembic_config(), _MARKER_MIGRATION_DOWN_REVISION)
 
     with pytest.raises(TenantMismatchError) as exc:
@@ -200,7 +208,7 @@ async def test_a_database_not_migrated_to_this_revision_stops_startup(
 async def test_the_migration_writes_the_configured_tenant_and_refuses_a_second_row(
     scratch_database: str, monkeypatch: pytest.MonkeyPatch  # noqa: F811
 ) -> None:
-    monkeypatch.setenv("GIP_DATABASE_URL", scratch_database)
+    monkeypatch.setenv("GIP_MIGRATION_DATABASE_URL", scratch_database)
     monkeypatch.setenv("GIP_TENANT_ID", "acme-motor")
     await _upgrade(_alembic_config(), "head")
 

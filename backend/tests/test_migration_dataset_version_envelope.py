@@ -350,28 +350,40 @@ async def test_the_earliest_creation_event_wins_by_sequence(
 
 @pytest.mark.req("FR-34")
 async def test_the_backfill_falls_back_to_the_earliest_member(
-    shadow_versions: AsyncSession,
+    shadow_versions: AsyncSession, owner_database: Database
 ) -> None:
     """A version whose creation event did not survive still gets a creator — the
     workspace's earliest member — so the migration cannot stall on old rows."""
     workspace = new_uuid7()
     earlier_member, later_member = new_uuid7(), new_uuid7()
-    await shadow_versions.execute(
-        text(_INSERT_WORKSPACE), {"id": workspace, "slug": "member-fallback"}
-    )
-    dataset_id = await _seed_dataset(shadow_versions, workspace, slug="motor-ad")
-    v1 = await _seed_version(shadow_versions, workspace, dataset_id, version=1)
-    await _seed_member(
-        shadow_versions, workspace, later_member, created_at=datetime(2026, 8, 2, tzinfo=UTC)
-    )
-    await _seed_member(
-        shadow_versions, workspace, earlier_member, created_at=datetime(2026, 8, 1, tzinfo=UTC)
-    )
+    # `DP-22` (OWNER_FIXTURE_USERS): `workspaces` and `workspace_members` are seed-only for the
+    # application role, so the real rows the shadow's backfill reads are written on the owner.
+    async with owner_database.unit_of_work() as owner_session:
+        await owner_session.execute(
+            text(_INSERT_WORKSPACE), {"id": workspace, "slug": f"member-fallback-{workspace}"}
+        )
+        await _seed_member(
+            owner_session, workspace, later_member, created_at=datetime(2026, 8, 2, tzinfo=UTC)
+        )
+        await _seed_member(
+            owner_session, workspace, earlier_member, created_at=datetime(2026, 8, 1, tzinfo=UTC)
+        )
+    try:
+        dataset_id = await _seed_dataset(shadow_versions, workspace, slug="motor-ad")
+        v1 = await _seed_version(shadow_versions, workspace, dataset_id, version=1)
 
-    for statement in _backfill_statements():
-        await shadow_versions.execute(text(statement))
+        for statement in _backfill_statements():
+            await shadow_versions.execute(text(statement))
 
-    assert (await _envelope_of(shadow_versions, v1))["created_by"] == earlier_member
+        assert (await _envelope_of(shadow_versions, v1))["created_by"] == earlier_member
+    finally:
+        async with owner_database.unit_of_work() as owner_session:
+            await owner_session.execute(
+                text("DELETE FROM workspace_members WHERE workspace_id = :w"), {"w": workspace}
+            )
+            await owner_session.execute(
+                text("DELETE FROM workspaces WHERE id = :w"), {"w": workspace}
+            )
 
 
 @pytest.mark.req("FR-34")

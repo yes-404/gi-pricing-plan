@@ -391,13 +391,29 @@ async def test_the_application_role_cannot_update_or_delete_a_deployment(
         )
         return bool(rows[0][0])
 
+    async def column_privilege(table: str, column: str, kind: str) -> bool:
+        rows = await _run(
+            scratch_database,
+            "SELECT has_column_privilege('gip_app', :t, :c, :k)",
+            {"t": table, "c": column, "k": kind},
+        )
+        return bool(rows[0][0])
+
     assert await privilege("deployments", "INSERT")
     assert not await privilege("deployments", "UPDATE")
     assert not await privilege("deployments", "DELETE")
     assert not await privilege("environments", "DELETE")
     assert not await privilege("deployment_requests", "DELETE")
-    assert await privilege("environments", "UPDATE")
-    assert await privilege("deployment_requests", "UPDATE")
+    # The census grants `UPDATE` by column (b7e4c2a91d36), so `has_table_privilege` is False
+    # for both and the check names the columns: exactly these move, no others.
+    for table, granted, ungranted in (
+        ("environments", ("name", "description", "retired_at"), "slug"),
+        ("deployment_requests", ("approval_request_id", "status"), "id"),
+    ):
+        assert not await privilege(table, "UPDATE")
+        for column in granted:
+            assert await column_privilege(table, column, "UPDATE"), (table, column)
+        assert not await column_privilege(table, ungranted, "UPDATE"), (table, ungranted)
 
 
 # --------------------------------------------------------------------------------------

@@ -250,6 +250,77 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
         "runs Alembic in process, which reads the owner's GIP_MIGRATION_DATABASE_URL",
     ),
     (
+        "backend/tests/test_migration_dataset_version_envelope.py::"
+        "test_the_backfill_falls_back_to_the_earliest_member",
+        "DP-22",
+        "writes workspaces and workspace_members, seed-only for the application role",
+    ),
+    (
+        "backend/tests/test_approval_guard_trigger.py::test_the_trigger_test_fails_on_a_database_one_migration_short_of_head",
+        "migration",
+        "creates and migrates a scratch database (CREATE DATABASE, DDL)",
+    ),
+    (
+        "backend/tests/test_approval_guard_trigger.py::test_the_migration_round_trips_and_head_refuses_what_head_minus_one_allows",
+        "migration",
+        "creates and migrates a scratch database (CREATE DATABASE, DDL)",
+    ),
+    (
+        "backend/tests/test_tenant_binding.py::test_an_empty_marker_table_stops_startup",
+        "migration",
+        "creates and migrates a scratch database (CREATE DATABASE, DDL)",
+    ),
+    (
+        "backend/tests/test_tenant_binding.py::test_a_database_not_migrated_to_this_revision_stops_startup",
+        "migration",
+        "creates and migrates a scratch database (CREATE DATABASE, DDL)",
+    ),
+    (
+        "backend/tests/test_tenant_binding.py::test_the_migration_writes_the_configured_tenant_and_refuses_a_second_row",
+        "migration",
+        "creates and migrates a scratch database (CREATE DATABASE, DDL)",
+    ),
+    (
+        "backend/tests/test_approval_guard_trigger.py::test_with_the_evidence_condition_replaced_by_the_flag_the_forgery_succeeds",
+        "owner-subject",
+        "plants a replacement guard function (CREATE FUNCTION in public, rolled back)",
+    ),
+    (
+        "backend/tests/test_approval_guard_trigger.py::test_the_ref_the_trigger_composes_is_the_one_artifactref_renders[models]",
+        "owner-subject",
+        "plants a replacement guard function (CREATE FUNCTION in public, rolled back)",
+    ),
+    (
+        "backend/tests/test_approval_guard_trigger.py::test_the_ref_the_trigger_composes_is_the_one_artifactref_renders[custom_metrics]",
+        "owner-subject",
+        "plants a replacement guard function (CREATE FUNCTION in public, rolled back)",
+    ),
+    (
+        "backend/tests/test_approval_guard_trigger.py::test_the_ref_the_trigger_composes_is_the_one_artifactref_renders[custom_objectives]",
+        "owner-subject",
+        "plants a replacement guard function (CREATE FUNCTION in public, rolled back)",
+    ),
+    (
+        "backend/tests/test_approval_guard_trigger.py::test_the_ref_the_trigger_composes_is_the_one_artifactref_renders[peril_structures]",
+        "owner-subject",
+        "plants a replacement guard function (CREATE FUNCTION in public, rolled back)",
+    ),
+    (
+        "backend/tests/test_approval_guard_trigger.py::test_the_ref_the_trigger_composes_is_the_one_artifactref_renders[rating_versions]",
+        "owner-subject",
+        "plants a replacement guard function (CREATE FUNCTION in public, rolled back)",
+    ),
+    (
+        "backend/tests/test_approval_guard_trigger.py::test_the_ref_the_trigger_composes_is_the_one_artifactref_renders[validation_rules]",
+        "owner-subject",
+        "plants a replacement guard function (CREATE FUNCTION in public, rolled back)",
+    ),
+    (
+        "backend/tests/test_approval_guard_trigger.py::test_the_ref_the_trigger_composes_is_the_one_artifactref_renders[validation_rule_sets]",
+        "owner-subject",
+        "plants a replacement guard function (CREATE FUNCTION in public, rolled back)",
+    ),
+    (
         "backend/tests/test_wf699_journey.py::test_wf699_journey_runs_end_to_end",
         "bootstrap",
         "the seed's grant_demo_principals creates the workspace, roles and members (no route does)",
