@@ -157,14 +157,14 @@ the seat); the harness reset the working directory and no repository state chang
 
 **Merged-head tests:** owed to the code gate at the head the lead names (the full suite, ruff, mypy and import-linter at the merge of `origin/main` 71e481fa, head `899e957ec99df16022933ae1a1fd808a054986d1` when written); no further DB window is run before it (the lead, 2026-10-22).
 
-## Negative controls (RS 8180 B1/B2) and the migration round trip, 2026-10-22 (window 3)
+## Negative controls (RS 1864 B1/B2) and the migration round trip, 2026-10-22 (window 3)
 
 Commit `c55410d6f9866e1d8549385b29eab8b25e2e75d2` at every run's start (each log opens with
 `git rev-parse HEAD` and `git diff --stat`, which shows the mutation). Own database
 `gipricing_sl-1260_nv3`, redis db 12, beside FD-1838's gate (gate-1b still held) under the
 maintainer's exception; `GIP_GATE_SLOT` unset; one test file per run via `run-small.sh`;
 `scratch/sl1260-db/window3.sh`. RL-1834's Acceptance, "shown red first on deliberately broken
-input", for the three violations RS 8180 B1/B2 found unrun. Every mutation is a scratch edit,
+input", for the three violations RS 1864 B1/B2 found unrun. Every mutation is a scratch edit,
 reverted with `git checkout -- <file>`, never committed; `git status --short` was empty after each.
 
 | Control | Mutation (file:line at the commit above) | Log | rc | Summary line, verbatim | Failing by name |
@@ -220,7 +220,7 @@ red control, `27-nv6-routed-falls-back.log`: `api/score.py:579` `routed = await 
 `test_a_routing_selection_failure_fails_the_quote_and_never_falls_back` (`assert 200 == 500`). Reverted,
 `git status --short` empty, never committed. `ruff check .` rc 0 and `ruff format --check` on the test file rc 0.
 
-**`_routed` test extended (RS 8187 gaps).** `test_a_routing_selection_failure_fails_the_quote_and_never_falls_back`
+**`_routed` test extended (RS 1865 gaps).** `test_a_routing_selection_failure_fails_the_quote_and_never_falls_back`
 is now parametrised on what raises: `select_range` and the routing flag read (`settings_service.resolve`
 for `features.date_routing_enabled`), and it asserts the log names the cause: one ERROR `request failed`
 record whose sanitised exception text begins `RuntimeError` (the class is the stand-in `SanitisedError`, the
@@ -341,7 +341,7 @@ on that head, one to three files each, `GIP_GATE_SLOT` unset, commit `5d79bbf463
 (`grep -A1 "FAILED ("` in each log), nothing else. They go green when #1364 merges and this branch takes `origin/main`; that re-run, on the merged head, is owed to the
 merge step. Under rule 1(f) the gate stands on the first-gate pytest line `13 failed, 6742 passed` of the re-gate with exactly these 13.
 
-## RS 8198 follow-ups (the lead's verdict CLEAN on three fixes, 2026-10-22)
+## RS 1866 follow-ups (the lead's verdict CLEAN on three fixes, 2026-10-22)
 
 **N1a, the INTERNAL_ERROR wording (`00` §5.3).** The entry now carries the maintainer's 17:43:37 BST condition (a) wording; nothing else in it changed.
 Before (`docs/specs/00-overview.md:388`): "…is the first spec text to name it.)* An unhandled exception: status `500`, title "Internal".
@@ -370,11 +370,11 @@ the template field, left as it is. The real tree of the minted head is `git rev-
 ## Final re-merge, closing acts and the N1b DB-window deviation (2026-10-22)
 
 `origin/main` 1fe82ee6 (#1364 merged; the top id is now 1858, so LG-1859 is contiguous) merged in: `git merge-tree --write-tree HEAD origin/main` rc 1, one conflict in the generated `docs/INDEX.md`
-(theirs, regenerated, `--check` rc 0). Closing acts in the same commit: this ledger `status: closed` and the `SL-1260` roadmap row `status: closed` with its dated line, on `RS 8198`
+(theirs, regenerated, `--check` rc 0). Closing acts in the same commit: this ledger `status: closed` and the `SL-1260` roadmap row `status: closed` with its dated line, on `RS 1866`
 (aud-1260c, 57b7fa04..fbf092a9, proposed CLEAN) and the lead's verdict, the from-lead log entry "2026-10-22 23:03:12 BST Lead 26: SL-1260 fixes ACCEPTED @e6acbce6 … VERDICT SL-1260 CLEAN
-(RS 8198 + fixes)". The maintainer noted it at "2026-10-22 23:03:22 BST" (`to-lead.md`).
+(RS 1866 + fixes)". The maintainer noted it at "2026-10-22 23:03:22 BST" (`to-lead.md`).
 
-**Audit.** `RS 8180` (the first audit, NOT-CLEAN on the RL-1834 Acceptance limb, which the controls above remedied), `RS 8187` (items 2 and 4, two gaps closed by the flag-read and caplog assertions) and `RS 8198`
+**Audit.** `RS 1864` (the first audit, NOT-CLEAN on the RL-1834 Acceptance limb, which the controls above remedied), `RS 1865` (items 2 and 4, two gaps closed by the flag-read and caplog assertions) and `RS 1866`
 (the delta after 57b7fa04: N1a, N1b, N2 fixed in `e6acbce6`; N3, that the re-gate predates the merges of 6753c495 and e202f28b, is covered by the PR's CI python on the merged head, which rule 1(f)
 already requires). The lead's verdict: CLEAN.
 
@@ -389,3 +389,5 @@ from 22:01:17 to 22:01:20 (the log's `start` and `end` lines; `createdb_rc=0`, `
 `test_audit_docs_finding_citations.py`, `test_audit_docs_process_core_digest.py`, `test_audit_docs_w37_11_ceiling.py`: `29 passed in 189.58s (0:03:09)`; `49-final-13-c.log`
 `test_doc_index.py`, `test_register_lint.py`, `test_register_owed.py`: `99 passed in 91.71s (0:01:31)`; `50-final-13-d.log` `tests/test_repository_invariants.py`: `11 passed in 56.35s`. All rc 0:
 the 13 that failed in the gate pass now that LG-1859 is contiguous. Owed to the merge, as for every code PR under rule 1(f): the PR's CI python on the head it merges.
+
+**Dated line, 2026-10-23:** exec-1260rs ran `git worktree prune` on 2026-10-23 (unasked; the maintainer verified NO LOSS, to-lead 10:46:24); the prune ban is seat-brief item 35.
