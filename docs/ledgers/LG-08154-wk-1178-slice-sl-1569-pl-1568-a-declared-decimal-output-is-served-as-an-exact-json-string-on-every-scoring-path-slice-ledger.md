@@ -144,3 +144,20 @@ Limb 1, p99 per run 1/2/3 (V+S = `model_validate` + `model_dump_json`, S = dump 
 Limb 2 (base, run 1 only): `/score` p50 12.78, p99 26.555, max 37.294; `/score/compare` p50 32.759, p99 53.959, max 63.979. No HEAD limb 2 reading exists.
 
 Slice A's gate timing rows (gate-1, `ce6eb64e`, 11:03 UTC) overlapped this window; the limb 2 readings are logged against them and are not an NFR-502 measurement.
+
+## 2026-10-25 12:16 UTC — SL-1569 Task 6 limbs 1–2 re-run (exec-1569w2): COMPLETED, DIAGNOSTIC
+
+Window 12:10:44–12:16:08 UTC (5m24s, under the 15 min cap), slot gate-1b, DB `gip_test_sl1569`, redis 2/4, head aab18283, script sha256 331d084b…7ab7850, authority to-lead "2026-10-25 11:22:13 GMT" (A). Slice A's gate had ended (gate-1 free at preflight). Load1 at start 2.88, window samples 1.26–2.73 (watcher max 2.59, armed at ≥ 5.0 and a 900 s cap; never fired). rc=0; ZEROS redis2=0 redis4=0 pg_database[gip_test_sl1569]=0; tree status lines: 0; `git status --porcelain | wc -l` = 0.
+
+Limb 1, p99 ms per run 1/2/3 (V+S = `model_validate` + `model_dump_json`, S = dump only):
+
+| shape/op | base | HEAD |
+|---|---|---|
+| U V+S | 0.177 / 0.207 / 0.196 / 0.222 / 0.177 / 0.214 | 0.155 / 0.206 / 0.144 / 0.194 / 0.231 / 0.236 |
+| U S | 0.091 / 0.093 / 0.070 / 0.106 / 0.068 / 0.122 | 0.100 / 0.103 / 0.074 / 0.099 / 0.117 / 0.120 |
+| T V+S | 0.239 / 0.306 / 0.227 / 0.347 / 0.247 / 0.322 | 0.259 / 0.360 / 0.220 / 0.362 / 0.360 / 0.367 |
+| T S | 0.151 / 0.168 / 0.098 / 0.147 / 0.109 / 0.161 | 0.119 / 0.142 / 0.156 / 0.157 / 0.155 / 0.172 |
+
+Limb 2 (`verdict.py`, p99 ms per run 1/2/3, 3 runs each tree): `/score` base 19.387 / 36.357 / 19.350 (median 19.387), HEAD 16.387 / 15.499 / 16.280 (median 16.280), delta −3.108; `/score/compare` base 32.480 / 57.672 / 30.722 (median 32.480), HEAD 58.104 / 31.733 / 33.808 (median 33.808), delta +1.328. `NO_STOP_CONDITION`. Both trees carry one outlier run (base /score run 2, base /score/compare run 2, HEAD /score/compare run 1).
+
+Diagnostic readings only; timing verdict CARRIED to nfr-bench-1 (D1 = (b)); not an NFR-502 measurement. Logged against slice A's gate timing rows (gate-1, `ce6eb64e`, 11:03 GMT).
