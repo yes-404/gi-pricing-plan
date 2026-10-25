@@ -68,6 +68,8 @@ rc 0: **33 owed rows**, 6 excluded as opening with a resolution marker. Each row
 | FD-1679, FD-1727, FD-1728 | The FD is `closed` in its front matter, but the register row still reads as owed. The auditor's register pass cites the close. |
 | FD-1723 | Owners are named by this review: FR-6's UI half and FR-109 go to the E5 Work row, and FR-127 goes to the E7.2 Work row. **FR-110 `power(k)`** is still the maintainer's choice, build or strike, and no line rules on it yet. The auditor updates the owner cell (E5). |
 
+2026-10-25: the review's FD-1241 register correction is withdrawn — superseded by #1377's verified Resolved (SL-1339/1340/1341 merged).
+
 ## The five questions
 
 1. **Completion.** `scope-audit.py RATE --endpoints` at ff976406, under gate-2, rc 1 (the script exits 1

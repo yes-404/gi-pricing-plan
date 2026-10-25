@@ -51,6 +51,13 @@ import WorkspaceSelector from "./components/WorkspaceSelector.vue";
           Peril structures
         </RouterLink>
         <RouterLink
+          to="/rating"
+          class="text-sm text-slate-600 hover:text-slate-900"
+          active-class="text-slate-900 font-medium"
+        >
+          Rating
+        </RouterLink>
+        <RouterLink
           to="/demo"
           class="text-sm text-slate-600 hover:text-slate-900"
           active-class="text-slate-900 font-medium"

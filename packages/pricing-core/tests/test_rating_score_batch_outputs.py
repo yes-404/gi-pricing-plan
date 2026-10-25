@@ -192,15 +192,16 @@ async def test_an_integer_declared_output_is_the_same_json_integer_in_batch_and_
 async def test_a_non_integral_value_for_an_integer_output_is_an_error_row(
     declared_type: str,
 ) -> None:
-    # Until SL-1569 merges the row's code is the class name (RL-1567 item 10, DP-3); after
-    # it, `RATING_TYPE_MISMATCH` from the single producer (SL-1569 re-expects this line).
+    # SL-1569 re-expects the row's code from the class name to `RATING_TYPE_MISMATCH`, from the
+    # single producer (RL-1567 item 10; the maintainer (by delegation), entry
+    # "2026-10-05 18:27:10 BST").
     compiled = await _probe_bundle(declared_type, "driver_age * 1.1")
     frame = pl.DataFrame([_ctx_to_row(c) for c in _contexts(4)]).lazy()
     out = score_batch(compiled, frame).collect().to_dicts()
     assert len(out) == 4
     q0 = next(r for r in out if r["quote_id"] == "Q0")  # driver_age 18 -> 19.8
     assert q0["outcome"] == "error"
-    assert q0["error_code"] == "ValueError"
+    assert q0["error_code"] == "RATING_TYPE_MISMATCH"
     assert q0["outputs_json"] is None
     assert "19.8" not in (q0["error_message"] or "")  # NFR-499: no value in the message
 
@@ -208,18 +209,20 @@ async def test_a_non_integral_value_for_an_integer_output_is_an_error_row(
 @pytest.mark.req("FR-214")
 @pytest.mark.parametrize("declared_type", ["relativity", "percentage"])
 @pytest.mark.parametrize(
-    ("expr", "expected"), [("driver_age * 1.5", "27"), ("driver_age * 1.1", "19.8")]
+    ("expr", "expected"), [("driver_age * 1.5", "27.00"), ("driver_age * 1.1", "19.80")]
 )
 async def test_a_fractional_declared_output_is_a_decimal_string_in_batch(
     declared_type: str, expr: str, expected: str
 ) -> None:
-    """The form the `decimal` branch writes for the same value today (`str(Decimal(repr(v)))`);
-    batch's form until the RL-1343 slice (SL-1569) replaces the conversion on every path."""
+    """`RL-1343` rule 3, both paths (SL-1569): the exact string at the output step's declared
+    dp (2 here), the same string `score_one` serves."""
     compiled = await _probe_bundle(declared_type, expr)
-    frame = pl.DataFrame([_ctx_to_row(c) for c in _contexts(1)]).lazy()  # driver_age 18
+    (context,) = _contexts(1)  # driver_age 18
+    frame = pl.DataFrame([_ctx_to_row(context)]).lazy()
     (row,) = score_batch(compiled, frame).collect().to_dicts()
     assert row["error_code"] is None, row["error_code"]
     assert json.loads(row["outputs_json"])["probe_out"] == expected
+    assert (await score_one(compiled, context)).outputs["probe_out"] == expected
 
 
 @pytest.mark.req("FR-254")
@@ -248,14 +251,15 @@ async def test_a_near_integer_under_an_integral_type_is_an_error_row(
     declared_type: str,
 ) -> None:
     # `2.9999999999` is not integral: exact equality with the integer part, no tolerance
-    # (RL-1567 item 6). The code is the class name until SL-1569 merges (item 10).
+    # (RL-1567 item 6). SL-1569 re-expects the code `RATING_TYPE_MISMATCH` (item 10; the
+    # maintainer (by delegation), entry "2026-10-05 18:27:10 BST").
     compiled = await _probe_bundle(declared_type, "driver_age * 0 + 2.9999999999")
     frame = pl.DataFrame([_ctx_to_row(c) for c in _contexts(4)]).lazy()
     out = score_batch(compiled, frame).collect().to_dicts()
     assert len(out) == 4
     for row in out:
         assert row["outcome"] == "error"
-        assert row["error_code"] == "ValueError"
+        assert row["error_code"] == "RATING_TYPE_MISMATCH"
         assert row["outputs_json"] is None
 
 
@@ -300,11 +304,17 @@ def test_a_non_integral_or_non_numeric_value_for_an_integral_type_is_refused_wit
 def test_relativity_and_percentage_take_the_decimal_string_form_never_a_float(
     declared_type: str,
 ) -> None:
+    """RL-1343 rule 3.4 (SL-1569; this pinned the conversion before it): batch checks the
+    producer's positional string and converts nothing, so a number, which `_build_outputs`
+    never hands over, is refused, the float's repr `0.30000000000000004` included
+    (RL-1343 :65-66: not the engine's value). The ruled exception to PL-1568's write set:
+    the maintainer (by delegation), entry "2026-10-23 10:48:01 BST", (A)."""
     for value in (27, 19.8, Decimal("1.15"), 0.1 + 0.2):
-        got = _coerce_output_value(declared_type, value)
-        assert type(got) is str
-        assert got == _coerce_output_value("decimal", value)
-    assert _coerce_output_value(declared_type, 0.1 + 0.2) == "0.30000000000000004"
+        with pytest.raises(ValueError, match="positional decimal string"):
+            _coerce_output_value(declared_type, value)
+    got = _coerce_output_value(declared_type, "0.30")
+    assert type(got) is str
+    assert got == _coerce_output_value("decimal", "0.30") == "0.30"
 
 
 @pytest.mark.req("FR-254")

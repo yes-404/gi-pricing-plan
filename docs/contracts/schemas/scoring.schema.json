@@ -49,6 +49,17 @@
         "components": {"type": "object", "additionalProperties": {"$ref": "common/money.schema.json#/$defs/MoneyMinor"}}
       }
     },
+    "OutputValue": {
+      "anyOf": [
+        {"type": "integer"},
+        {"type": "string"},
+        {"type": "boolean"},
+        {"type": "object", "additionalProperties": {"$ref": "#/$defs/OutputValue"}},
+        {"type": "array", "items": {"$ref": "#/$defs/OutputValue"}},
+        {"type": "null"}
+      ],
+      "description": "One served output value (RL-1343 rule 4): an integer, a string, a boolean, null, or a map or list of those. Never a number with a fractional part; a decimal-family output is a positional decimal string (common/money.schema.json#/$defs/Decimal) with exactly the output step's declared dp digits."
+    },
     "ScoringResult": {
       "type": "object",
       "required": ["outcome", "rating_version_ref", "bundle_hash", "premium_ladder", "outputs"],
@@ -57,7 +68,7 @@
         "rating_version_ref": {"$ref": "common/artifact-ref.schema.json"},
         "bundle_hash": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
         "premium_ladder": {"type": "array", "items": {"$ref": "#/$defs/LadderRung"}},
-        "outputs": {"type": "object"},
+        "outputs": {"type": "object", "additionalProperties": {"$ref": "#/$defs/OutputValue"}},
         "decline_reasons": {"type": "array", "items": {"type": "string"}},
         "trace": {"oneOf": [{"$ref": "#/$defs/Trace"}, {"type": "null"}]},
         "timing_ms": {"type": "object", "additionalProperties": {"type": "number"}}

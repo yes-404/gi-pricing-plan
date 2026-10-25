@@ -40,7 +40,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.authz import requires
+from app.api.authz import CountAfterCheck, management_counter, requires
 from app.api.deps import Caller, job_identity
 from app.api.pagination import (
     COUNT_CAP,
@@ -86,6 +86,8 @@ router = APIRouter(tags=["datasets"])
 
 ReadDatasets = Annotated[Caller, Depends(requires(Perm.DATASET_READ))]
 WriteDatasets = Annotated[Caller, Depends(requires(Perm.DATASET_WRITE))]
+#: `dataset:write` held under any scope; the handler checks it on the Dataset and counts (FR-345).
+WriteNamedDataset = Annotated[Caller, Depends(requires(Perm.DATASET_WRITE, held_anywhere=True))]
 
 
 def _database(request: Request) -> Database:
@@ -497,7 +499,11 @@ async def patch_dataset_owner(
     responses=problems(401, 403, 404, 422),
 )
 async def put_dictionary(
-    slug: str, body: DictionaryUpdate, caller: WriteDatasets, database: DatabaseDep
+    slug: str,
+    body: DictionaryUpdate,
+    caller: WriteNamedDataset,
+    count: Annotated[CountAfterCheck, Depends(management_counter)],
+    database: DatabaseDep,
 ) -> Dataset:
     """A replace, audited with before and after (NFR-472)."""
     async with database.unit_of_work() as session:
@@ -507,6 +513,7 @@ async def put_dictionary(
             actor=caller.principal,
             slug=slug,
             entries=body.data_dictionary,
+            count_management=count,
         )
         owner_names = await service.resolve_owner_names(session, {row.owner_id})
         return service.to_schema(row, owner_name=owner_names.get(row.owner_id))
