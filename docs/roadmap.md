@@ -1631,7 +1631,7 @@ relates: [PL-1286, PL-1371]
 id: SL-1554
 family: slice
 title: Slice 9: Designer III — sub-graph mounting (FR-217, FR-218 authoring view)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
@@ -1642,6 +1642,7 @@ relates: [PL-1286, PL-1371]
 ```
 
 `PL-1286` S9, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. Mounting a pinned sub-graph in the designer. **Activation needs:** S3 closed; `SL-1341` (WK-1250 S3) closed. Lane or team fixed at GO. **Cut-ladder rung 1** (`handover/cut-ladder-2026-10-08.md`, ruled 2026-10-08 13:21:00 BST); not pre-cut. *(Cut 2026-10-08 by the planner under working id 9463, reserved by the lead; minted 2026-10-10 as SL-1554 in the D2 batch mint.)*
+(Activated 2026-10-21 on the maintainer's (by delegation) GO, "2026-10-21 15:10:53 BST — Maintainer: GO D28 and SL-1554; build-order item D relaxed" item 2, with RL-1835 adopted by "2026-10-21 15:39:13 BST" (and its 15:39:19 correction: the later-merging of S8, S9, S10, S11 re-merges `origin/main` and re-runs its checks); slice ledger LG-1881.)
 
 #### SL-1639 — WK-675 fix slice — FD-1611: DagDesigner.test.ts stubs the validate route, and the debounce's unmount cancel is proven
 
@@ -2974,6 +2975,26 @@ The fix of FD-1803 (filed in D21; HIGH, owner WK-1178), planned in PL-1809. `Dec
 
 (Closed 2026-10-18 as a Slice on a clean audit at 7e3b5098 (findings A1 to A4; the lead's verdict "2026-10-18 12:16:55 BST" in `from-lead-2026-10-09.md`): A1 fixed in LG-1811, A2 ruled into the slice by the maintainer ("2026-10-18 12:18:08 BST" in `to-lead.md`) and delivered as test-only commit d2e0fcaa; audit and window results written in LG-1811 (minted 2026-10-18 from working id 8109). MERGE-ACK: not yet given.)
 
+#### SL-1888 — WK-1178 fix slice — FD-1887: a static guard, every test that reaches the freMTPL2 data carries the data-present guard
+
+```yaml
+id: SL-1888
+family: slice
+title: WK-1178 fix slice — FD-1887: a static guard, every test that reaches the freMTPL2 data carries the data-present guard
+status: active                   # draft → active → closed | retired (§1.2a)
+created: 2026-10-25   # drafted 2026-10-22 under working id 8195; minted 2026-10-25 as SL-1888
+owner: executor                  # dispatched by the lead (active)
+tree: 71e481fa5d240ed366cd80c1a8c6cf6cd1d918d5
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1887, LG-1889]
+```
+
+The remedy of FD-1887 (LOW-MEDIUM, owner WK-1178), ordered by the maintainer's entry "2026-10-22 18:19:23 BST — Maintainer: #1361 CI red (2 freMTPL2 tests without the data guard): the fix plan ACCEPTED; a STATIC guard as an FD" (`to-lead.md`): `examples/fremtpl2/data` is fetched and gitignored, CI never has it, and #1361's two WF-701 journey tests read it through a helper chain with no path literal in the test. **Scope, exactly:** one DB-free test file, `tests/test_fremtpl2_data_guard.py`, which reads each test file's AST, takes per test function the closure of what it reaches inside its file, and fails naming `file::test` when that closure reaches the data (a `fremtpl2/data` literal, a `"data"` path joined to a freMTPL2 file, a module-level alias of the data directory, or a reader derived from `examples/fremtpl2/*.py`) and carries no guard (an `if … .exists…: pytest.skip(…)`, a `skipif` naming `.exists`, or a `DATA_DIR` redirect to synthetic files). No requirement id is claimed. **Order:** merges after #1361 (SL-1711), then re-merges `main` and re-runs the guard so it covers `backend/tests/test_wf701_journey.py`. Ledger `LG-1889`.
+
+(Activated 2026-10-22 as WK-1178's FD-1887 fix slice, on the lead's brief `brief-exec-8194-2026-10-22.md` under the 18:19:23 entry above. Working ids 8194 (FD), 8195 (this row) and 8196 (LG) were minted 2026-10-25 as FD-1887, SL-1888 and LG-1889.)
+
 #### SL-1854 — WK-1178 fix slice — FD-1838: the deployment switch's channels carry the gate slot's name, so a concurrent subscriber is not counted in the PREPARE quorum
 
 ```yaml
@@ -3013,6 +3034,24 @@ relates: [PL-1856, FD-1723, FR-6, FR-109, FR-110]
 Slice C of `PL-1856` (WK-1178's dated delta on FD-1723's residual limbs). Docs only: a dated amendment under FR-6 (`00-overview.md`: the per-artifact producing-Job id built, the shared `provenance` object and its UI not, carried to §14), under FR-109 (`02-modelling.md`: accepted with reason, the finer-level view carried to §14) and under FR-110 (`power(k)` struck, a required θ in the R/MASS `glm.nb` form), per the maintainer's entry "2026-10-22 16:02:49 BST" rulings 1, 3 and 6.
 
 (Activated 2026-10-22 on the maintainer's "2026-10-22 16:02:49 BST — Maintainer: PL 8162 (FD-1723's residual limbs) ACCEPTED; …" ("GO: slice C now"), with `PL-1856` made `active` by L1 in this slice's PR. Minted 2026-10-22 as SL-1857 from working id 8164, with its ledger LG-1858 from working id 8165 and its plan PL-1856 from working id 8162. Closed 2026-10-22 at the mint as a docs-only slice, the audit and merge-ack being recorded in LG-1858.)
+
+#### SL-1878 — WK-1178 fix slice — FD-1852: a dataset-scoped grant reaches the dictionary, rule-set and acknowledge writes (held-anywhere route gate), and a permanent route-scope guard
+
+```yaml
+id: SL-1878
+family: slice
+title: WK-1178 fix slice — FD-1852: a dataset-scoped grant reaches the dictionary, rule-set and acknowledge writes (held-anywhere route gate), and a permanent route-scope guard
+status: active                   # draft → active → closed | retired (§1.2a)
+created: 2026-10-25                  # drafted 2026-10-22 under working id 8185; minted 2026-10-25 as SL-1878
+owner: planner                   # cut by the planner; lead dispatches (active)
+tree: 71e481fa5d240ed366cd80c1a8c6cf6cd1d918d5
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1877, FD-1852, FD-1853, RL-1849, SL-1736, FR-343, FR-345]
+```
+
+The fix of FD-1852 (MEDIUM, LATENT: no P2 API creates a scoped grant), planned in PL-1877 and ruled by the maintainer's entries "2026-10-22 17:38:11 BST" (DP-0 to DP-3, GO) and "2026-10-22 17:46:43 BST" (re-rated; the slice continues). `requires(permission, held_anywhere=True)` admits a holder under any scope and never counts; the dictionary, rule-set and acknowledge services load the Dataset, check the permission on it (`SCOPE_DENIED`), then count (FR-452). `06` FR-345 gains the dated order clause and FR-343 a pointer. New: `backend/tests/test_dataset_scoped_writes.py` (13 red at base) and `backend/tests/test_route_scope_guard.py` (two predicates, `ROUTE_SCOPES`, an owned `KNOWN_SCOPE_GAPS`). **Task 4 (the rule-set route) is carried to the follow-on SL 8192 (ledger LG 8193), which activates when SL-1736 merges** (the maintainer, "2026-10-22 18:16:19 BST"); until then the rule-set route is a `KNOWN_SCOPE_GAPS` row owned by SL 8192 and its four tests are strict xfails. Ledger LG-1879.
 
 #### SL-1860 — WK-1178 slice A — PL-1856: glum family translation, NB deviance and θ boundary, GLM direction check
 
@@ -3241,7 +3280,7 @@ From “Workstreams” (line 467): Full scoped RBAC, custom roles, break-glass |
 
 **2026-09-30:** also owns `07` §5.3's Service accounts view (`/admin/service-accounts`), placed here in P3 by FD-1284 option D and the maintainer's entry "2026-09-30 05:35:06 BST — SCOPE DECISION: #949 [FD-1284, cited by its working id in the entry], the `07` §5.3 platform views, option D (split by view)" ("Service accounts to **WK-676**"). **A spec change comes first:** `07` §5.1 declares create, rotate and revoke for service accounts but no list `GET` route, and the view needs one. This is placement, not a cut, and nothing is built ahead of P3 (`CLAUDE.md` §0). (Amended 2026-09-30 by the lead, on FD-1284 and the maintainer's entry 05:35:06.)
 
-**2026-10-22:** also owns, as a Phase 3 item, enforcement of the scope kinds `MODEL_FAMILY` and `RATING_ALGORITHM`. `06` FR-345 lists them and `ScopeType` (`packages/model-schema/src/model_schema/permissions.py`) declares them, but nothing enforces them: no Phase 2 API creates a scoped grant, so no check reads one. The enforcement ships with `POST /api/v1/role-assignments` (`06` §5.1), which is itself spec-ahead-of-phase and owned here. Until then the two kinds are declared, not enforced. Placement, not a cut: nothing is built ahead of P3 (`CLAUDE.md` §0). (Added 2026-10-22 by the executor, on the maintainer's entry "2026-10-22 17:46:43 BST" item 3 as relayed by lead 26 in `to-lead.md` 17:47:13 BST: "3b (MODEL_FAMILY/RATING_ALGORITHM) = P3 item for WK-676 in the docs batch"; the `FR-345` text that states the same fact is SL 8185's Task 1, not written here.)
+**2026-10-22:** also owns, as a Phase 3 item, enforcement of the scope kinds `MODEL_FAMILY` and `RATING_ALGORITHM`. `06` FR-345 lists them and `ScopeType` (`packages/model-schema/src/model_schema/permissions.py`) declares them, but nothing enforces them: no Phase 2 API creates a scoped grant, so no check reads one. The enforcement ships with `POST /api/v1/role-assignments` (`06` §5.1), which is itself spec-ahead-of-phase and owned here. Until then the two kinds are declared, not enforced. Placement, not a cut: nothing is built ahead of P3 (`CLAUDE.md` §0). (Added 2026-10-22 by the executor, on the maintainer's entry "2026-10-22 17:46:43 BST" item 3 as relayed by lead 26 in `to-lead.md` 17:47:13 BST: "3b (MODEL_FAMILY/RATING_ALGORITHM) = P3 item for WK-676 in the docs batch"; the `FR-345` text that states the same fact is SL-1878's Task 1, not written here.)
 
 
 ### WK-677 — Approval policies, escalation, evidence enforcement, attestations
