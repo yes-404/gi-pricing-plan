@@ -1,5 +1,5 @@
 ---
-id: RL-8218
+id: RL-1905
 family: ruling
 title: "FD-1836's spec question decided — NFR-489's no-GBM p99 < 15 ms includes the requests FR-259's background sampling writes on the response path (the 1 % default rate and the decline and error floor); readings stay at the production default rate; the budget is not changed"
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; DRAFT until the maintainer adopts it and it is minted
@@ -12,14 +12,14 @@ slice: SL-1455
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [FD-1836, RL-1837, RL-1685, OQ-8145, OQ-1453, NFR-489, NFR-490, FR-258, FR-259, WK-674, SL-1455, LG-1760]
+relates: [FD-1836, RL-1837, RL-1685, OQ-1906, OQ-1453, NFR-489, NFR-490, FR-258, FR-259, WK-674, SL-1455, LG-1760]
 ---
 
-# RL-8218 — FD-1836: NFR-489's no-GBM 15 ms includes the background-sampled requests
+# RL-1905 — FD-1836: NFR-489's no-GBM 15 ms includes the background-sampled requests
 
 Drafted 2026-10-25 by the
 decision-maker (seat dm-1836) on lead 28's brief `brief-dm-1836-2026-10-25.md`. The working ids
-in prose (OQ 8145 and this record's 8218) are not minted.
+in prose (OQ 8145 and this record's 8218) were working ids until the mint of 2026-10-25 (OQ-1906, RL-1905).
 
 ## Authority and scope
 
@@ -41,13 +41,13 @@ in prose (OQ 8145 and this record's 8218) are not minted.
   16:03:00 superseding 16:00:01) settles three things. The full ladder is measured first. The
   remedy is built off the row-2 path. The budget is not changed now and is reviewed in P3
   through an OQ (RL-1837 items 1, 3 and 4).
-- **The open question, as drafted.** OQ 8145 on `origin/oq-8145-nfr489-sampling-2026-10-21`
+- **The open question, as drafted.** OQ-1906 on `origin/oq-8145-nfr489-sampling-2026-10-21`
   @abb13d5b (`docs/open-questions.md` and `docs/specs/03-rating-engine.md` §10, one row each),
   written by seat dm-8145 on 2026-10-21 after H2. It recommends (a). It is not on `main`, so this
   record decides it before it mints. Both mint together (see "For the lead").
 - **Trees read.** `origin/main` ff976406 (the code and spec facts), LG-1760 at
   `origin/nfr1-sl1455-task4-2026-10-21` @cb83e4e1 (the H1 and H2 readings; cb83e4e1 is an
-  ancestor of that branch's tip f1958b8f), and OQ 8145 @abb13d5b.
+  ancestor of that branch's tip f1958b8f), and OQ-1906 @abb13d5b.
 
 ## The question
 
@@ -104,7 +104,7 @@ cell, one run each).
 **(a) Include.** The 15 ms governs every untraced real-time request at the production default
 rate, sampled ones included. OQ-1453's carve-out stays limited to caller-requested FR-258
 traces.
-- *Obliges:* OQ 8145 closed (a). One dated clarification clause on NFR-489 (`03:1559`). The
+- *Obliges:* OQ-1906 closed (a). One dated clarification clause on NFR-489 (`03:1559`). The
   pre-registered ladder protocol is unchanged, because it already runs at the default rate. In
   WK-674's off-path remedy (RL-1837 item 3): a sampled counted unit in the RL-1685 guard, and a
   plan for where the sampled write runs (moving it after the response is a design change under
@@ -114,7 +114,7 @@ traces.
 
 **(b) Exclude.** The ceiling governs only requests that FR-259 did not sample. Readings are
 taken at rate 0, or with the sampled requests removed.
-- *Obliges:* OQ 8145 closed (b). A **new NFR** that bounds sampled requests, because NFR-490
+- *Obliges:* OQ-1906 closed (b). A **new NFR** that bounds sampled requests, because NFR-490
   bounds only caller-requested inline traces. A statement on declined and errored quotes, which
   are always sampled: if they are excluded, a product that declines often has no bounded
   declines. Also an amendment to the pre-registered ladder protocol, to measure at rate 0. All of
@@ -124,7 +124,7 @@ taken at rate 0, or with the sampled requests removed.
   (LG-1760 `:688`).
 
 **(c) Defer to P3,** to the budget-review OQ that RL-1837 item 4 already names.
-- *Obliges:* OQ 8145 mints open, with a "Before Phase 3" gate row. The nfr-bench-1 ladder
+- *Obliges:* OQ-1906 mints open, with a "Before Phase 3" gate row. The nfr-bench-1 ladder
   session must measure both rates, which roughly doubles its no-GBM half. FD-1836 stays without
   its spec answer. WK-674's remedy is planned without knowing whether the sampled write counts.
 - *Effect on the demo and G4:* none on the date. The session takes longer.
@@ -165,11 +165,11 @@ exclusion stays limited to caller-requested FR-258 inline traces, which NFR-490 
 
 - **NFR-489** (`03:1559`) gains one dated clause at this record's mint, in the same commit as
   this record (a spec edit is never made without its ruling in the same commit):
-  *"(Clarified <mint date>, OQ 8145 / RL 8218: the ceiling includes requests FR-259's
+  *"(Clarified 2026-10-25, OQ-1906 / RL-1905: the ceiling includes requests FR-259's
   background sampling persists, at the production default `rating.trace_sample_rate`, and the
   decline and error floor; OQ-1453's exclusion is limited to caller-requested FR-258
   traces.)"* The ids are written in their minted form at the mint.
-- **OQ 8145**, in both mirrors (`docs/open-questions.md` and `03` §10), mints as decided (a),
+- **OQ-1906**, in both mirrors (`docs/open-questions.md` and `03` §10), mints as decided (a),
   citing this record as the resolver. It gets a `docs/roadmap.md` §10 decision-gate row in the
   same commit. The branch @abb13d5b adds no gate row.
 - **The ladder protocol** (LG-1760, pre-registered) is unchanged. Every NFR-489 reading of
@@ -190,9 +190,9 @@ exclusion stays limited to caller-requested FR-258 inline traces, which NFR-490 
    cancelled (to-lead "2026-10-21 16:46:50 BST", *"CANCELLED: the 18:05 NFR-489 full-ladder
    session"*). No 50–200 rps reading exists for either arm. The date is the user's to move,
    through the maintainer. This record does not move it.
-2. **Minting.** This record and OQ 8145 mint together, in one records PR. The OQ comes first in
+2. **Minting.** This record and OQ-1906 mint together, in one records PR. The OQ comes first in
    merge order, because this record resolves it. The NFR-489 clause and the §10 gate row go in
-   the same commit. OQ 8145's working id is not in `relates:` here, so check 31/32 flags only
+   the same commit. OQ-1906's working id is not in `relates:` here, so check 31/32 flags only
    this record's own id. Add it to `relates:` at the mint.
 3. **Record form.** This binds beyond one slice (an NFR's scope), so it is an `RL-` under Lean
    P2 L1, not an LG line.
