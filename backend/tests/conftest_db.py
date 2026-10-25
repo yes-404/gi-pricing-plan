@@ -456,6 +456,372 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
         "owner-subject",
         "issues TRUNCATE on audit_events; asserts the append-only trigger refuses it",
     ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_a_gip_app_update_on_factors_is_refused_by_the_trigger_not_only_the_grant",
+        "owner-subject",
+        "reopens a grant (GRANT UPDATE, DDL) and asserts the append-only trigger refuses the planted UPDATE",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[backtests-UPDATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[backtests-DELETE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[backtests-TRUNCATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[bandings-UPDATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[bandings-DELETE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[bandings-TRUNCATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[deployments-UPDATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[deployments-DELETE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[deployments-TRUNCATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[diagnostics-UPDATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[diagnostics-DELETE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[diagnostics-TRUNCATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[factors-UPDATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[factors-DELETE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[factors-TRUNCATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[groupings-UPDATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[groupings-DELETE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[groupings-TRUNCATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[model_comparisons-UPDATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[model_comparisons-DELETE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[model_comparisons-TRUNCATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[objective_certificates-UPDATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[objective_certificates-DELETE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[objective_certificates-TRUNCATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[rate_table_cells-UPDATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[rate_table_cells-DELETE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[rate_table_cells-TRUNCATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[rate_table_versions-UPDATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[rate_table_versions-DELETE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[rate_table_versions-TRUNCATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[rating_algorithms-UPDATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[rating_algorithms-DELETE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[rating_algorithms-TRUNCATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[reference_rows-UPDATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[reference_rows-DELETE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[reference_rows-TRUNCATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[reference_tables-UPDATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[reference_tables-DELETE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[reference_tables-TRUNCATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[regression_suite_versions-UPDATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[regression_suite_versions-DELETE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[regression_suite_versions-TRUNCATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[regression_suites-UPDATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[regression_suites-DELETE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[regression_suites-TRUNCATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[routing_rules-UPDATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[routing_rules-DELETE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[routing_rules-TRUNCATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[shadow_configs-UPDATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[shadow_configs-DELETE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[shadow_configs-TRUNCATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[shadow_results-UPDATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[shadow_results-DELETE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[shadow_results-TRUNCATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[sub_graph_versions-UPDATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[sub_graph_versions-DELETE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[sub_graph_versions-TRUNCATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[transparency_artifacts-UPDATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[transparency_artifacts-DELETE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_artifact_cannot_be_rewritten_from_the_owner_connection[transparency_artifacts-TRUNCATE]",
+        "owner-subject",
+        "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
+    ),
 )
 
 

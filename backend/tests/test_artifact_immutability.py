@@ -512,7 +512,7 @@ _CASES = [
 @pytest.mark.req("FR-44")
 @pytest.mark.parametrize(("table", "statement"), _CASES)
 async def test_an_artifact_cannot_be_rewritten_from_the_owner_connection(
-    database: Database, workspace_id, table: str, statement: str
+    owner_database: Database, workspace_id, table: str, statement: str
 ) -> None:
     """Each artifact table refuses each of `UPDATE`, `DELETE` and `TRUNCATE`, one case apiece.
 
@@ -524,7 +524,7 @@ async def test_an_artifact_cannot_be_rewritten_from_the_owner_connection(
     """
     row_id = new_uuid7()
     params = _row_params(workspace_id, row_id)
-    async with database.unit_of_work() as session:
+    async with owner_database.unit_of_work() as session:
         for insert in _statements(_APPEND_ONLY_ROWS[table]):
             await session.execute(text(insert), params)
 
@@ -532,12 +532,12 @@ async def test_an_artifact_cannot_be_rewritten_from_the_owner_connection(
         "UPDATE": f"UPDATE {table} SET id = id WHERE id = :id",
         "DELETE": f"DELETE FROM {table} WHERE id = :id",
         # a row trigger does not fire on this, which is why two exist
-        "TRUNCATE": f"TRUNCATE {await _referencing_closure(database, table)}",
+        "TRUNCATE": f"TRUNCATE {await _referencing_closure(owner_database, table)}",
     }[statement]
-    refused = await _probe(database, [(sql, {"id": row_id})])
+    refused = await _probe(owner_database, [(sql, {"id": row_id})])
     assert "append-only" in _assert_refused(refused, f"{table}: {sql}")
 
-    async with database.session() as session:
+    async with owner_database.session() as session:
         survived = (
             await session.execute(
                 text(f"SELECT count(*) FROM {table} WHERE id = :id"), {"id": row_id}
@@ -628,7 +628,7 @@ async def test_a_guarded_artifact_moves_only_forward_from_the_owner_connection(
 
 @pytest.mark.req("FR-44")
 async def test_a_gip_app_update_on_factors_is_refused_by_the_trigger_not_only_the_grant(
-    database: Database, workspace_id
+    owner_database: Database, workspace_id
 ) -> None:
     """FD-1704 and the maintainer's ADD (PL-1769 DP-1 (a)): the planted UPDATE is refused.
 
@@ -638,13 +638,13 @@ async def test_a_gip_app_update_on_factors_is_refused_by_the_trigger_not_only_th
     """
     row_id = new_uuid7()
     row = _row_params(workspace_id, row_id)
-    async with database.unit_of_work() as session:
+    async with owner_database.unit_of_work() as session:
         await session.execute(text(str(_APPEND_ONLY_ROWS["factors"])), row)
     planted = text("UPDATE factors SET body = '{\"rewritten\": true}' WHERE id = :id")
 
     async def as_gip_app(*, reopen_layer_1: bool) -> None:
-        # `database.session()` never commits, so neither the role switch nor the GRANT survives.
-        async with database.session() as session:
+        # `owner_database.session()` never commits, so neither the role switch nor the GRANT survives.
+        async with owner_database.session() as session:
             if reopen_layer_1:
                 await session.execute(text("GRANT UPDATE ON factors TO gip_app"))
             await session.execute(text("SET LOCAL ROLE gip_app"))
@@ -660,7 +660,7 @@ async def test_a_gip_app_update_on_factors_is_refused_by_the_trigger_not_only_th
         await as_gip_app(reopen_layer_1=True)
     assert "factors is append-only: UPDATE rejected (01 FR-42, FR-43)" in str(by_trigger.value)
 
-    async with database.session() as session:
+    async with owner_database.session() as session:
         leaked = (
             await session.execute(
                 text("SELECT has_table_privilege('gip_app', 'factors', 'UPDATE')")
