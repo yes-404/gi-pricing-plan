@@ -21,9 +21,11 @@ def _db(url: str) -> int:
 
 
 @pytest.mark.req("FR-436")
-def test_set_gip_redis_url_db_is_used(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("GIP_REDIS_URL", "redis://localhost:6379/7")
-    assert _db(_DRAW()) == 7
+@pytest.mark.parametrize("n", [1, 2, 3, 4, 11, 12, 13])
+def test_set_gip_redis_url_db_is_used(monkeypatch: pytest.MonkeyPatch, n: int) -> None:
+    # Every n lies outside the 5-10 fallback range, so a draw ignoring the URL fails each case.
+    monkeypatch.setenv("GIP_REDIS_URL", f"redis://localhost:6379/{n}")
+    assert _db(_DRAW()) == n
 
 
 @pytest.mark.req("FR-436")
