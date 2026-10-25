@@ -36,8 +36,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings
 from app.db.session import Database
+from app.platform import rbac, workspaces
 from app.platform.blobs import BlobStore
 from model_schema import ActorKind, Principal, new_uuid7
+
+# The production functions, captured at import: the autouse fixture below replaces the module
+# attributes, so anything here that must run the real function (the wrappers, the seeds on the
+# owner's session) names these, never `workspaces.ensure_workspace` -- that would recurse.
+_ensure_workspace = workspaces.ensure_workspace
+_seed_builtin_roles = rbac.seed_builtin_roles
 
 if TYPE_CHECKING:
     from app.db.models import RoleRow, WorkspaceRow
@@ -533,13 +540,13 @@ async def grant_roles_as_owner(
     from sqlalchemy import select
 
     from app.db.models import RoleAssignmentRow, RoleRow, WorkspaceMemberRow
-    from app.platform import rbac, validation_rules, workspaces
+    from app.platform import validation_rules
     from model_schema import ScopeType
 
     async def seed(session: AsyncSession) -> None:
         if workspace:
-            await workspaces.ensure_workspace(session, workspace_id=workspace_id)
-        await rbac.seed_builtin_roles(session, workspace_id)
+            await _ensure_workspace(session, workspace_id=workspace_id)
+        await _seed_builtin_roles(session, workspace_id)
         if rules_author_id is not None:
             await validation_rules.seed_builtin_rules(
                 session, workspace_id, authored_by=rules_author_id
@@ -594,21 +601,15 @@ async def ensure_workspace(
 ) -> WorkspaceRow:
     """`app.platform.workspaces.ensure_workspace`, executed through `seed_as_owner`."""
     del session
-    from app.platform import workspaces
-
     return await seed_as_owner(
-        lambda owner: workspaces.ensure_workspace(
-            owner, workspace_id=workspace_id, slug=slug, name=name
-        )
+        lambda owner: _ensure_workspace(owner, workspace_id=workspace_id, slug=slug, name=name)
     )
 
 
 async def seed_builtin_roles(session: AsyncSession, workspace_id: UUID) -> list[RoleRow]:
     """`app.platform.rbac.seed_builtin_roles`, executed through `seed_as_owner`."""
     del session
-    from app.platform import rbac
-
-    return await seed_as_owner(lambda owner: rbac.seed_builtin_roles(owner, workspace_id))
+    return await seed_as_owner(lambda owner: _seed_builtin_roles(owner, workspace_id))
 
 
 async def set_workspace_setting(
@@ -637,6 +638,34 @@ async def set_environment_setting(
     return await seed_as_owner(
         lambda owner: settings.set_environment_setting(owner, environment, key, value, updated_by)
     )
+
+
+@pytest.fixture(autouse=True)
+def _seed_through_the_owner_seam(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """**Patches two production functions for every test**:
+    `app.platform.workspaces.ensure_workspace` and `app.platform.rbac.seed_builtin_roles`
+    become this module's owner-routed wrappers.
+
+    Why: the application connects as the login role (FD-1729, S1a), which holds no INSERT on
+    `workspaces`, `roles`, `workspace_members` or `role_assignments`. Tests call these two
+    module-qualified (`workspaces.ensure_workspace(session, ...)`) to seed rows, so without this
+    the 59 call sites would each fail "permission denied". The wrappers run the same function on
+    the owner's engine (`seed_as_owner`); call sites and imports stay as written. Production
+    code has no caller of either in `backend/src`, so no app path is hidden by the patch.
+    `set_workspace_setting` and `set_environment_setting` are deliberately NOT patched: the app
+    calls them (`api/settings.py`, `api/environment_settings.py`), and patching would hide a
+    missing application grant.
+
+    **Opt-out: `@pytest.mark.production_seed`.** A test of the production function itself
+    carries it, gets the original function and runs as the login role, so a regression in the
+    real function is still caught.
+    """
+    if request.node.get_closest_marker("production_seed") is not None:
+        return
+    monkeypatch.setattr(workspaces, "ensure_workspace", ensure_workspace)
+    monkeypatch.setattr(rbac, "seed_builtin_roles", seed_builtin_roles)
 
 
 @pytest_asyncio.fixture
@@ -687,7 +716,6 @@ async def membership(database: Database, workspace_id: UUID, principal: Principa
         from sqlalchemy import select
 
         from app.db.models import WorkspaceMemberRow
-        from app.platform import workspaces
 
         member = principal_id or principal.id
 
@@ -695,7 +723,7 @@ async def membership(database: Database, workspace_id: UUID, principal: Principa
         # per test, truncated at session end), because the login role cannot insert
         # `workspaces` or `workspace_members`.
         async def seed(session: AsyncSession) -> None:
-            await workspaces.ensure_workspace(session, workspace_id=workspace_id)
+            await _ensure_workspace(session, workspace_id=workspace_id)
             existing = (
                 await session.execute(
                     select(WorkspaceMemberRow).where(

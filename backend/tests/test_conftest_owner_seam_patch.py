@@ -44,3 +44,8 @@ async def test_the_patched_functions_run_through_seed_as_owner(
     assert await rbac.seed_builtin_roles(None, uuid4()) == "owner"  # type: ignore[arg-type]
     assert len(calls) == 2
 
+
+@pytest.mark.production_seed
+def test_a_production_seed_test_gets_the_original_functions() -> None:
+    assert workspaces.ensure_workspace is _ORIGINAL_ENSURE_WORKSPACE
+    assert rbac.seed_builtin_roles is _ORIGINAL_SEED_BUILTIN_ROLES
