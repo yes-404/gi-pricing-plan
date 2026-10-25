@@ -1214,7 +1214,7 @@ relates: [PL-1237]
 
 Date-based routing and shadow scoring, both built and default off per environment (`RL-1232` Part A, DP-2 (a)), with the audit limb for routing and shadow configuration changes (FR-272, NFR-498). `PL-1237` Task 6. Starts after Slice 5 closes.
 (Activated 2026-10-21 on the maintainer's (by delegation) GO, to-lead "2026-10-21 15:03:33 BST — Maintainer: GOs on the 15:02:44 work queue", item 5: lowest priority, rung 5 of the cut ladder; it takes a gate only when no row-2 slice is waiting. Scope: `PL-1237` Task 6 as changed by `PL-1537` R6.1 to R6.3; dispatched by the lead, transcript 4561857a.)
-(Closed 2026-10-22 as a Slice by the executor's closing acts (LG-1859, minted from working id 8139), on the audits RS 8180, RS 8187 and RS 8198 (aud-1260c, 57b7fa04..fbf092a9, proposed CLEAN) and the lead's verdict, the from-lead log entry "2026-10-22 23:03:12 BST Lead 26: SL-1260 fixes ACCEPTED @e6acbce6 … VERDICT SL-1260 CLEAN (RS 8198 + fixes)", noted by the maintainer at "2026-10-22 23:03:22 BST" (`to-lead.md`); range `origin/main...` the slice's branch head, whose ledger records the gate (the re-gate at 72a05338: `13 failed, 6742 passed, 13 skipped, 149 warnings`, the 13 the docs-audit set on the ledger's working id) and the 13 re-run.)
+(Closed 2026-10-22 as a Slice by the executor's closing acts (LG-1859, minted from working id 8139), on the audits RS 1864, RS 1865 and RS 1866 (aud-1260c, 57b7fa04..fbf092a9, proposed CLEAN) and the lead's verdict, the from-lead log entry "2026-10-22 23:03:12 BST Lead 26: SL-1260 fixes ACCEPTED @e6acbce6 … VERDICT SL-1260 CLEAN (RS 1866 + fixes)", noted by the maintainer at "2026-10-22 23:03:22 BST" (`to-lead.md`); range `origin/main...` the slice's branch head, whose ledger records the gate (the re-gate at 72a05338: `13 failed, 6742 passed, 13 skipped, 149 warnings`, the 13 the docs-audit set on the ledger's working id) and the 13 re-run.)
 
 #### SL-1689 — the scheduler (beat) and frontend-image row: FR-432's last two limbs (FR-432, FR-413, FR-406; FD-1661)
 
@@ -1241,7 +1241,7 @@ The `scheduler` service (the Celery beat process, which runs the outbox relay to
 id: SL-1711
 family: slice
 title: WK-674 demo slice — the scripted WF-701 deployment steps (A1–A6, C1–C4, C6, C7) over the Slice 4 path, after Slice 5
-status: active                   # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-14
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 1e260c1553acf39844939fe12da685ccfb835e54
@@ -1257,6 +1257,8 @@ A scripted, rehearsable journey walks WF-701's deployment steps A1–A6, C1–C4
 *Dated 2026-10-14 by the planner: activation need "`SL-1258`'s worker consuming `default,compute`" is read as "`SL-1258` merged with every routed pool consumed", per PL-1714 E4.2 and §"Effect on SL-1689"; under its DP-Q1 (b), Task 0 quotes every worker service's command. `PL-1688` is unedited. This row's status and fields are unchanged.*
 
 *Dated 2026-10-14 by the planner (minter-d16e, the D16 rulings sweep): the activation need "`PL-1710` DP-1 to DP-3 ruled" reads as the maintainer's (by delegation) entry "2026-10-14 10:14:13 BST" (`to-lead.md`) gives it: DP-1 (a) and DP-2 (a, the derived set of "2026-10-14 10:13:50 BST") ruled; DP-3 (a) CONDITIONAL, ruled at S5's GO. Under the entry "2026-10-14 11:14:40 BST": C2 is walked as 422 `EVIDENCE_INCOMPLETE` at the prod Deployment Request submission (`07` FR-429 as amended), the `dev` deployment is a labelled PRECONDITION step, and the unapproved-to-`uat` negative is an FR-238 extra, so the Requirements add `03` FR-238; the write set adds the two dated lines in `docs/workflows/WF-00701-deploy-and-monitor.md` that entry orders (C2's two codes; the §1 precondition row) and nothing else under `docs/`. The "analyst 200" probe closes in this slice's `LG-` on its run output (entries "2026-10-14 11:45:50 BST" item 2 and "2026-10-14 11:52:51 BST" item (4)). `PL-1710` carries each at its site.*
+
+**Closed 2026-10-25** as a Slice: merged as #1361 (squash `0dfb4a05`, tree `03b000785b2183a764bb03eebd0a4d46bb6ff74d`) on the maintainer's (by delegation) MERGE-ACK, `to-lead.md` entry "2026-10-22 19:52:20 BST — Maintainer: MERGE-ACK #1361 (SL-1711); docker builder prune GO (the USER's word); SL-1260 item 5 = (B)" (CLAUDE.md §13: a Slice closes on a clean audit and the lead's merge). Ledger: `LG-1841`. The CI skip of the two WF-701 DB tests is `FD-1801`'s.
 
 #### SL-1813 — the compose dataset-ingest smoke on the public upload path (E4.8) and a failed api roll that removes its own new replicas (FR-415, FR-406, FR-1776, NFR-531)
 
@@ -2969,6 +2971,26 @@ relates: [PL-1856, FD-1723, FR-6, FR-109, FR-110]
 Slice C of `PL-1856` (WK-1178's dated delta on FD-1723's residual limbs). Docs only: a dated amendment under FR-6 (`00-overview.md`: the per-artifact producing-Job id built, the shared `provenance` object and its UI not, carried to §14), under FR-109 (`02-modelling.md`: accepted with reason, the finer-level view carried to §14) and under FR-110 (`power(k)` struck, a required θ in the R/MASS `glm.nb` form), per the maintainer's entry "2026-10-22 16:02:49 BST" rulings 1, 3 and 6.
 
 (Activated 2026-10-22 on the maintainer's "2026-10-22 16:02:49 BST — Maintainer: PL 8162 (FD-1723's residual limbs) ACCEPTED; …" ("GO: slice C now"), with `PL-1856` made `active` by L1 in this slice's PR. Minted 2026-10-22 as SL-1857 from working id 8164, with its ledger LG-1858 from working id 8165 and its plan PL-1856 from working id 8162. Closed 2026-10-22 at the mint as a docs-only slice, the audit and merge-ack being recorded in LG-1858.)
+
+#### SL-1860 — WK-1178 slice A — PL-1856: glum family translation, NB deviance and θ boundary, GLM direction check
+
+```yaml
+id: SL-1860
+family: slice
+title: WK-1178 slice A — PL-1856, the glum family translation, the NB deviance, the θ boundary and the GLM direction check
+status: closed                   # draft → active → closed | retired (§1.2a) — closed 2026-10-22 at the mint
+created: 2026-10-22   # filed under working id 8166; minted 2026-10-22 as SL-1860
+owner: executor
+tree: 31e03c8ebd3c37b0e42b658b82775339fa95fb19
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1856, FD-1723, FR-89, FR-110]
+```
+
+Slice A of `PL-1856` (WK-1178's dated delta on FD-1723's residual limbs): FR-110 (glum family-name translation for all seven `GlmSpec.family` members, the negative-binomial θ declared and required, the NB deviance) and FR-89 (the GLM direction check, `GlmDiagnostics.monotonicity` and `monotonicity_omitted`), with the model-spec builder's θ input. Code, tests, and the FR-89 and FR-110 spec amendments.
+
+(Activated 2026-10-22 on the maintainer's "2026-10-22 16:02:49 BST — Maintainer: PL 8162 (FD-1723's residual limbs) ACCEPTED; …" (slices C, then A, then B). Minted 2026-10-22 as SL-1860 from working id 8166, with its ledger LG-1861 from working id 8167. Closed 2026-10-22 at the mint: the audit is closed on RS-1862, RS-1863 and the lead's 17:58:43 BST verification, recorded in LG-1861; the merge-ack is the lead's, at the merge.)
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
