@@ -300,6 +300,35 @@ defect, reported to the lead.
 | 3 | **S1a** — FD-1729 part 1: the login role, the two DSNs, the fixtures, the grants | Tasks S1a-0 to S1a-6 (`PL-1769` S-b Tasks 0, 1.1 to 1.4, 2, 3, 5.1, 5.3, and 6 under DP-S1 (ii)) | `01` §3: FR-44 | DP-S1 ruled; `PL-1769`'s SL-1771 activation needs (SL-1770 merged; the `SL-1455` NFR session finished; DP-15's target and the non-default password named at the GO); SL 8185's and SL-1569's DB windows done; re-merged onto SL 8185 | A (backend db, `deploy/`) | **yes**, no-gate gaps | 1 day |
 | 4 | **S1b** — FD-1729 part 2: the startup refusal, the tamper proof, the exact grant map | Tasks S1b-0 to S1b-4 (`PL-1769` S-b Tasks 1.5, 4, 5.2, 7; 6 again only if S1b edits `deploy/`) | `01` §3: FR-44 | S1a merged; a gate slot for the full gate; **merged before the 4 Nov code freeze** | A | **yes** | 1 day |
 
+*(Delta, row 1 (S4), dated 2026-10-25 from 23:02 GMT, by the planner (seat plan-8227d), on the
+maintainer's entry "2026-10-25 22:43:58 GMT — Maintainer: S2 @84aadaec ACCEPTED (LG 8241, format
+split); RULING — S2 and S4 each get an SL working id + roadmap row at mint (L1), PL 8227 rows carry
+the LG pointer" in `~/gi-pricing-plan.local/channel/to-lead.md`: **S4's slice is SL 8245 and its
+ledger LG 8242** (reserved in `~/gi-pricing-plan.local/handover/eta.md`, 22:41:48 and 22:45:24
+UTC). The SL row mints at S4's turn, in S4's own PR, as a one-line row under WK-1178 in
+`docs/roadmap.md` §6. This row's scope is unchanged.)*
+
+*(Delta, row 2 (S2), dated 2026-10-25 from 23:02 GMT, by the planner (seat plan-8227d), on the same
+22:43:58 GMT entry: **S2's slice is SL 8244 and its ledger LG 8241** (reserved in `eta.md`, 22:39:42
+and 22:45:24 UTC). The SL row mints at S2's turn, in S2's own PR, under WK-1178 in
+`docs/roadmap.md` §6; the old spike S2 row there stays as it is, a tombstone. This row's scope is
+unchanged.)*
+
+*(Delta, row 3 (S1a), dated 2026-10-25 from 23:02 GMT, by the planner (seat plan-8227d), on the same
+22:43:58 GMT entry ("S1a/S1b: same treatment when they reach a ledger (S1a has LG 8237 → reserve its
+SL now too)"): **S1a's slice is SL 8246 and its ledger LG 8237** (reserved in `eta.md`, 21:08:30
+and 22:45:24 UTC). The SL row mints at S1a's turn, in S1a's own PR, under WK-1178 in
+`docs/roadmap.md` §6. This row's scope is unchanged.)*
+
+*(Delta, row 4 (S1b), dated 2026-10-25 from 23:02 GMT, by the planner (seat plan-8227d), on the
+maintainer's entry "2026-10-25 22:56:19 GMT — Maintainer: S2 gate head 42e237d5 noted; PL 8205 dry
+run accepted; S1b O1–O6 RULED; S1a push note" in `~/gi-pricing-plan.local/channel/to-lead.md`, item
+(3) O1 (a): a plan defect, in the ruling's words, **"R-b1/R-b5/R-b6 cannot be red by cause after
+S1a's flip; red form = owner-DSN run"** — the three cause-reds run with `GIP_TEST_APP_DATABASE_URL`
+set to the owner DSN in the throwaway (red) and the default (green). **S1b's ledger is LG 8248**
+(reserved in `eta.md`, 22:46:21 UTC); its SL working id is reserved at S1b's GO (O6). The plan
+body is untouched.)*
+
 **Order and serialisation against today's queue (E7).**
 - **S4** edits `modelling/factors.py` and two test files. Slice A (#1368) does not touch `factors.py`, but it
   edits `model_schema/modelling.py` (where `FactorType` lives) and the GLM fit beside it; S4 runs
