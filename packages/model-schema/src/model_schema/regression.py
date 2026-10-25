@@ -333,6 +333,26 @@ class RegressionRun(BaseModel):
     property_results: list[PropertyResult]
 
 
+class RegressionRunSummary(BaseModel):
+    """One row of a Rating Version's Regression Run list (03 §4.9, FR 8211).
+
+    `id` is the run's UUID (the `regression_runs` primary key); the persisted
+    `RegressionRun` carries none. The summary holds no result lists and no case-log
+    reference: those are read per run, behind `rating:read` (FR-1221).
+    """
+
+    model_config = _FROZEN
+
+    id: UUID
+    job_id: UUID | None = None
+    overall: Literal["pass", "fail"]
+    bundle_hash: Sha256Hash
+    suite_ref: ArtifactRef
+    suite_content_hash: Sha256Hash
+    started_at: datetime
+    finished_at: datetime
+
+
 class GoldenQuoteChangeStep(BaseModel):
     """One suite version that added, removed or substantively changed a golden quote.
 
