@@ -2852,6 +2852,28 @@ On the maintainer's (by delegation) entry "2026-10-14 12:00:14 BST" (`to-lead.md
 
 (Closed 2026-10-19 as a Slice by the mint step's closing acts (LG-1825 minted from working id 8126), on the pre-PR slice audit of LG-1825 ("### Audit", auditor-1770, 2026-10-19 07:04 BST; range `origin/main...sl-1770-wk1178-append-only-db`), adopted CLEAN by the lead and accepted by the maintainer (by delegation) (to-lead "2026-10-19 07:06:05 BST"); F4 (the FOR UPDATE refusal under the app role) is deferred with owner SL-1771 (LG-1825 "### Audit"). MERGE-ACK: not yet given.)
 
+#### SL-1869 — WK-1178 fix slice — FD-1850: `ensure_bucket` treats losing the first-start create race as success
+
+```yaml
+id: SL-1869
+family: slice
+title: WK-1178 fix slice — FD-1850: ensure_bucket treats losing the first-start create race as success
+status: closed                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-23   # drafted 2026-10-22 under working id 8172; minted 2026-10-23 as SL-1869
+owner: lead
+tree: f3462d8fc1336dc4583fe8a7af92fed399993a55
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1850, LG-1870, SL-1711]
+```
+
+On the maintainer's entry "2026-10-22 16:22:33 BST" (`to-lead.md`): FD-1850 (MEDIUM) is fixed before the exit demo as a quick slice. `BlobStore.ensure_bucket` (`backend/src/app/platform/blobs.py`) did `head_bucket` and, on any `ClientError`, `create_bucket`; two services starting together on a fresh bucket both missed, and the loser raised `BucketAlreadyOwnedByYou` and exited (worker-io exit 2, W2 attempt 1). The fix: `BucketAlreadyOwnedByYou` from `create_bucket` is success with no re-check; `BucketAlreadyExists` (another owner in S3) is success only if a `head_bucket` then succeeds, else the original create error is re-raised, chained to the head error; any other code re-raises; the docstring states what is guaranteed. Red first, with a stub client. Delta row to the Work's one plan (Lean P2 L5), like FD-1838's.
+
+(Activated 2026-10-22 on the maintainer's entry above; executed as `exec-8169` on branch `fix/fd-8169-ensure-bucket-race`; ledger LG-1870.)
+
+**Closed 2026-10-23** by the mint step's closing acts (SL-1869 minted from working id 8172, LG-1870 from 8173, RS-1871 from 8197), on the pre-PR slice audit RS-1871 (aud-8169, 2026-10-22), adopted CLEAN by the lead (LG-1870 "### Audit"). Gate of record `04b0a367` STANDS under the standing ruling 1(f) (LG-1870 "### Gate"). MERGE-ACK: pending (the lead's merge). Ledger: LG-1870.
+
 #### SL-1771 — WK-1178 fix slice (S-b) — FD-1729: the application connects as a login role with gip_app's grants, never as the owner
 
 ```yaml
@@ -2993,6 +3015,25 @@ relates: [PL-1856, FD-1723, FR-89, FR-110]
 Slice A of `PL-1856` (WK-1178's dated delta on FD-1723's residual limbs): FR-110 (glum family-name translation for all seven `GlmSpec.family` members, the negative-binomial θ declared and required, the NB deviance) and FR-89 (the GLM direction check, `GlmDiagnostics.monotonicity` and `monotonicity_omitted`), with the model-spec builder's θ input. Code, tests, and the FR-89 and FR-110 spec amendments.
 
 (Activated 2026-10-22 on the maintainer's "2026-10-22 16:02:49 BST — Maintainer: PL 8162 (FD-1723's residual limbs) ACCEPTED; …" (slices C, then A, then B). Minted 2026-10-22 as SL-1860 from working id 8166, with its ledger LG-1861 from working id 8167. Closed 2026-10-22 at the mint: the audit is closed on RS-1862, RS-1863 and the lead's 17:58:43 BST verification, recorded in LG-1861; the merge-ack is the lead's, at the merge.)
+
+#### SL-1873 — WK-1178: FD-1872, the switch slot-namespace test names a synthetic slot
+
+```yaml
+id: SL-1873
+family: slice
+title: WK-1178 — FD-1872, the switch slot-namespace test names a synthetic slot (test only)
+status: closed                   # draft → active → closed | retired (§1.2a)
+created: 2026-10-23   # drafted 2026-10-22 under working id 8200; minted 2026-10-23 as SL-1873
+owner: executor
+tree: 1fe82ee673cc8aef2bd3e70b81b8304059fccbc1
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1872, FD-1838, LG-1874]
+```
+
+Test-only fix of FD-1872 (owner WK-1178): `backend/tests/test_deployment_switch_slot_namespace.py` names a per-run synthetic slot instead of the real `/tmp/slots/gate-1` and `gate-1b`, whose server-wide Redis channels a paired gate shares. Product code is not touched. Ledger `LG-1874`; authority the maintainer's entry "2026-10-22 23:42:23 BST" item 1 (`to-lead.md`).
+(Closed 2026-10-23 as a Slice by the executor's closing acts (LG-1874, minted from working id 8201), on the audit RS-1875 (aud-8199, `origin/main...4c9be06d`, proposed CLEAN) and the lead's verdict, the from-lead log entry "2026-10-23 00:27:17 BST Lead 26: aud-8199 PROPOSED CLEAN … VERDICT (lead): CLEAN"; the gate of record is the full gate-1 run at `ca4bf5c1` (START "GATE START ca4bf5c1bab9b547afaefcde81be4765f7aca8a6 gate-1 Fri Oct 23 10:14:17 BST 2026", "END 2026-10-23T10:33:11+00:00 3.77 3.08 3.43"): pytest `13 failed, 6738 passed, 21 skipped, 147 warnings in 3126.69s (0:52:06)`, the 13 the eight-file docs-audit set on the slice's own working ids (audit-docs `FAILED (1)` = check 31, the gap between 1859 and 8199); frontend `Test Files  129 passed (129)`, `Tests  817 passed (817)`, build rc 0; demo `wf-699` rc 0. The gate STANDS for the code under 1(f), the maintainer's entry "2026-10-23 11:33:52 BST" (`to-lead.md`). Merge ACK pending: the slice's PR opens at its id turn, and the ledger's MERGE-ACK line is added at the merge.)
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
