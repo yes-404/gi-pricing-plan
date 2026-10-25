@@ -25,6 +25,7 @@ import os
 import warnings
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 import pytest
@@ -37,6 +38,10 @@ from app.config import Settings
 from app.db.session import Database
 from app.platform.blobs import BlobStore
 from model_schema import ActorKind, Principal, new_uuid7
+
+if TYPE_CHECKING:
+    from app.db.models import RoleRow, WorkspaceRow
+    from app.platform.settings import SettingDefinition
 
 #: The one database every worktree's compose stack provisions by default
 #: (`deploy/docker-compose.yml`'s `POSTGRES_DB`) and CI always points
@@ -574,6 +579,66 @@ async def grant_roles_as_owner(
     await seed_as_owner(seed)
 
 
+# The wrappers below carry the name and signature of the production function they stand for,
+# so a test re-points one import (`from conftest_db import ensure_workspace`) and its call
+# sites stay as written. The `session` argument is accepted for that parity and **not used**:
+# the write runs on the owner's engine through `seed_as_owner` (same commit and teardown
+# semantics), because the login role holds no INSERT on these tables. The production
+# functions in `backend/src` are untouched and still run as the application.
+async def ensure_workspace(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    slug: str | None = None,
+    name: str | None = None,
+) -> WorkspaceRow:
+    """`app.platform.workspaces.ensure_workspace`, executed through `seed_as_owner`."""
+    del session
+    from app.platform import workspaces
+
+    return await seed_as_owner(
+        lambda owner: workspaces.ensure_workspace(
+            owner, workspace_id=workspace_id, slug=slug, name=name
+        )
+    )
+
+
+async def seed_builtin_roles(session: AsyncSession, workspace_id: UUID) -> list[RoleRow]:
+    """`app.platform.rbac.seed_builtin_roles`, executed through `seed_as_owner`."""
+    del session
+    from app.platform import rbac
+
+    return await seed_as_owner(lambda owner: rbac.seed_builtin_roles(owner, workspace_id))
+
+
+async def set_workspace_setting(
+    session: AsyncSession, workspace_id: UUID, key: str, value: Any
+) -> SettingDefinition:
+    """`app.platform.settings.set_workspace_setting`, executed through `seed_as_owner`."""
+    del session
+    from app.platform import settings
+
+    return await seed_as_owner(
+        lambda owner: settings.set_workspace_setting(owner, workspace_id, key, value)
+    )
+
+
+async def set_environment_setting(
+    session: AsyncSession,
+    environment: str,
+    key: str,
+    value: Any,
+    updated_by: UUID | None,
+) -> tuple[SettingDefinition, Any]:
+    """`app.platform.settings.set_environment_setting`, executed through `seed_as_owner`."""
+    del session
+    from app.platform import settings
+
+    return await seed_as_owner(
+        lambda owner: settings.set_environment_setting(owner, environment, key, value, updated_by)
+    )
+
+
 @pytest_asyncio.fixture
 async def grant(database: Database, workspace_id: UUID, principal: Principal):
     """Seed the built-in roles, grant one to the test principal, and record membership.
@@ -625,7 +690,11 @@ async def membership(database: Database, workspace_id: UUID, principal: Principa
         from app.platform import workspaces
 
         member = principal_id or principal.id
-        async with database.unit_of_work() as session:
+
+        # On the owner's engine (`seed_as_owner`: committed before it returns, never deleted
+        # per test, truncated at session end), because the login role cannot insert
+        # `workspaces` or `workspace_members`.
+        async def seed(session: AsyncSession) -> None:
             await workspaces.ensure_workspace(session, workspace_id=workspace_id)
             existing = (
                 await session.execute(
@@ -636,9 +705,9 @@ async def membership(database: Database, workspace_id: UUID, principal: Principa
                 )
             ).scalar_one_or_none()
             if existing is None:
-                session.add(
-                    WorkspaceMemberRow(user_id=member, workspace_id=workspace_id)
-                )
+                session.add(WorkspaceMemberRow(user_id=member, workspace_id=workspace_id))
+
+        await seed_as_owner(seed)
 
     return _membership
 
