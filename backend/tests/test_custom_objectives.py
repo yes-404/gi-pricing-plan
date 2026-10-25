@@ -200,9 +200,12 @@ async def test_an_expression_objective_is_refused_by_name_while_the_flag_is_off(
     assert off.value.code == "OBJECTIVE_KIND_NOT_ENABLED"
     assert off.value.status_code == 409
 
-    async with database.unit_of_work() as session:
+    async def _seed(session):
         # FR-395: the settings row now references a workspace row.
         await workspaces.ensure_workspace(session, workspace_id=workspace_id)
+
+    await seed_as_owner(_seed)
+    async with database.unit_of_work() as session:
         await settings_service.set_workspace_setting(
             session, workspace_id, "features.expression_objectives_enabled", False
         )
