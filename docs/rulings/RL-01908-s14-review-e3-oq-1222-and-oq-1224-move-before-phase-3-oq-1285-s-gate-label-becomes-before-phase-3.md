@@ -1,9 +1,9 @@
 ---
-id: RL-8220
+id: RL-1908
 family: ruling
 title: §14 review E3 — OQ-1222 and OQ-1224 move to "Before Phase 3" with owner WK-1178; OQ-1285's gate label "Before WK-675 S12" becomes "Before Phase 3"
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; working id until minted in the §14 review PR
-created: 2026-10-25
+created: 2026-10-25   # drafted 2026-10-25 under working id 8220; minted 2026-10-25 as RL-1908
 owner: decision-maker
 tree: ff976406f1bf133cfe040d2c44d383011503988a
 phase: P2
@@ -11,13 +11,13 @@ work: WK-1178
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [OQ-1222, OQ-1224, OQ-1285, WK-1178, WK-675, PL-1371, RL-1645, RL-1524]   # CR 8219 added at the mint
+relates: [OQ-1222, OQ-1224, OQ-1285, WK-1178, WK-675, PL-1371, RL-1645, RL-1524]   # CR-1907 added at the mint
 ---
 
-# RL-8220 — §14 review E3: three gate placements
+# RL-1908 — §14 review E3: three gate placements
 
 *(Working id 8220, reserved by lead 28 in `handover/eta.md` at 2026-10-25 11:35:25 GMT. It
-mints in the §14 review's PR, with the review `CR 8219`. Working ids in prose are in space
+mints in the §14 review's PR, with the review `CR-1907`. Working ids in prose are in space
 form and are not minted.)*
 
 ## How this was ruled
@@ -82,9 +82,9 @@ checked against this record. Line numbers are at `ff976406`; the review's PR may
 
 | Row (`docs/roadmap.md`) | Edit to the ids cell | Count cell: old → new |
 |---|---|---|
-| **Before Phase 2** (:3510) | Remove `**OQ-1222**` and `**OQ-1224**` from the cell. Keep the struck `~~OQ-1223~~ ✔` and its italic note; reword the note's lead-in so that it does not name the two moved ids, or the recount predicate still counts them. | "22 (2 open)" → "**20 (0 open)** — *recounted 2026-10-25 (`RL-8220`): two ids moved to Before Phase 3. Before that:* 22 (2 open) …" (the existing history is kept after it). This follows the `CR-1247` Proposal 5 precedent in the same cell, where a move lowered the total ("20 (5 open)" → "18 (3 open)"). |
-| **Before WK-675 S12** (:3517) | Label: "**Before WK-675 S12** — *added 2026-09-30*" → "**~~Before WK-675 S12~~ Before Phase 3** — *added 2026-09-30; relabelled 2026-10-25 (`RL-8220`): S12 moved to Phase 3 on 2026-10-03 (roadmap:1302); its id moved to the Before Phase 3 row*". Ids cell: remove `**OQ-1285**` and its note (it goes to the Before Phase 3 row). | "1 (1 open)" → "**0 (0 open)** — *recounted 2026-10-25 (`RL-8220`): one id moved to Before Phase 3. Before that:* 1 (1 open)" |
-| **Before Phase 3** (:3524) | Append three bold ids, each with a dated move line: `**OQ-1222**` *(moved 2026-10-25 from Before Phase 2 by `RL-8220`, owner WK-1178: the `monotone` grid's GBM split thresholds)*; `**OQ-1224**` *(moved 2026-10-25 from Before Phase 2 by `RL-8220`, owner WK-1178: pinned Bandings, a `model-schema` change that moves every bundle hash)*; `**OQ-1285**` *(moved 2026-10-25 from Before WK-675 S12 by `RL-8220`, owner WK-675: `/rating/environments` vs `/admin/environments`; S12 moved to Phase 3 on 2026-10-03)*. | At `ff976406`: "17 (8 open)". The decision-maker's branch for this review (`draft/dm-14`) first adds `OQ 8222` and `OQ 8223` to this row (records of the same review; the decision-maker writes the gate row of an OQ it raises), so the row the lead edits reads "19 (10 open)". New: "**22 (13 open)** — *recounted 2026-10-25 from the row's ids: three ids moved here by `RL-8220`. Before that:* 19 (10 open) …". Recount it from the row's ids after all edits. Do not add to the old count. |
+| **Before Phase 2** (:3510) | Remove `**OQ-1222**` and `**OQ-1224**` from the cell. Keep the struck `~~OQ-1223~~ ✔` and its italic note; reword the note's lead-in so that it does not name the two moved ids, or the recount predicate still counts them. | "22 (2 open)" → "**20 (0 open)** — *recounted 2026-10-25 (`RL-1908`): two ids moved to Before Phase 3. Before that:* 22 (2 open) …" (the existing history is kept after it). This follows the `CR-1247` Proposal 5 precedent in the same cell, where a move lowered the total ("20 (5 open)" → "18 (3 open)"). |
+| **Before WK-675 S12** (:3517) | Label: "**Before WK-675 S12** — *added 2026-09-30*" → "**~~Before WK-675 S12~~ Before Phase 3** — *added 2026-09-30; relabelled 2026-10-25 (`RL-1908`): S12 moved to Phase 3 on 2026-10-03 (roadmap:1302); its id moved to the Before Phase 3 row*". Ids cell: remove `**OQ-1285**` and its note (it goes to the Before Phase 3 row). | "1 (1 open)" → "**0 (0 open)** — *recounted 2026-10-25 (`RL-1908`): one id moved to Before Phase 3. Before that:* 1 (1 open)" |
+| **Before Phase 3** (:3524) | Append three bold ids, each with a dated move line: `**OQ-1222**` *(moved 2026-10-25 from Before Phase 2 by `RL-1908`, owner WK-1178: the `monotone` grid's GBM split thresholds)*; `**OQ-1224**` *(moved 2026-10-25 from Before Phase 2 by `RL-1908`, owner WK-1178: pinned Bandings, a `model-schema` change that moves every bundle hash)*; `**OQ-1285**` *(moved 2026-10-25 from Before WK-675 S12 by `RL-1908`, owner WK-675: `/rating/environments` vs `/admin/environments`; S12 moved to Phase 3 on 2026-10-03)*. | At `ff976406`: "17 (8 open)". The decision-maker's branch for this review (`draft/dm-14`) first adds `OQ-1910` and `OQ-1911` to this row (records of the same review; the decision-maker writes the gate row of an OQ it raises), so the row the lead edits reads "19 (10 open)". New: "**22 (13 open)** — *recounted 2026-10-25 from the row's ids: three ids moved here by `RL-1908`. Before that:* 19 (10 open) …". Recount it from the row's ids after all edits. Do not add to the old count. |
 
 **On the S12 row.** Read alone, "row label → Before Phase 3" relabels row :3517 in place. The
 same line says that "Before-Phase-3 gains the three ids". A relabel in place would leave two

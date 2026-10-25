@@ -1,23 +1,23 @@
 ---
-id: CR-8219
+id: CR-1907
 family: closure
 kind: review
 title: Plan review 17 — before the P2 exit demo — the six owed rulings routed to owned records
 status: active                  # write-once; this is the only value this family ever takes
-created: 2026-10-25
+created: 2026-10-25   # drafted 2026-10-25 under working id 8219; minted 2026-10-25 as CR-1907
 owner: lead
 tree: ff976406f1bf133cfe040d2c44d383011503988a
 phase: P2
 work: WK-1178
 corrected_by: []
-relates: [CR-1247, RL-8220, RL-8221, OQ-8222, OQ-8223, PL-8224, SL-8225, LG-8226, FD-1209, FD-1723]     # ids only
+relates: [CR-1247, RL-1908, RL-1909, OQ-1910, OQ-1911, PL-1912, SL-1913, LG-1914, FD-1209, FD-1723]     # ids only
 ---
 
-# CR-8219 — Plan review 17, before the P2 exit demo
+# CR-1907 — Plan review 17, before the P2 exit demo
 
-**Base tree:** origin/main `ff976406f1bf133cfe040d2c44d383011503988a`. Working id CR 8219, reserved
-by lead 28 (`eta.md`, 2026-10-25 11:35:25 GMT), with the sibling ids RL 8220, RL 8221, OQ 8222,
-OQ 8223, PL 8224, SL 8225 and LG 8226. Drafted by the planner (Opus 5.5, effort medium). This is a
+**Base tree:** origin/main `ff976406f1bf133cfe040d2c44d383011503988a`. Working id CR-1907, reserved
+by lead 28 (`eta.md`, 2026-10-25 11:35:25 GMT), with the sibling ids RL-1908, RL-1909, OQ-1910,
+OQ-1911, PL-1912, SL-1913 and LG-1914. Drafted by the planner (Opus 5.5, effort medium). This is a
 **short index** (`.claude/skills/phase-review` §Output). The evidence lives in the records it cites.
 The items E1–E7 come from the planner's working note r5
 (`handover/s14-review-items-draft-2026-10-25-r5.md`, local, not in the repository).
@@ -128,20 +128,20 @@ and the front matter of each FD, RL, PL and SL named above, all at ff976406.
 
 | Item | Family (§1.6) | Working id | Owner | State | Its dated line |
 |---|---|---|---|---|---|
-| E1 WF-701 exit-demo run (option b) | PL delta, `relates: [PL-1544]` | PL 8224 | the planner; WK-1178 | accepted | line 6, first sentence |
-| E2 the full PL-1544 run, Mon 9 Nov 2026 | SL row + LG | SL 8225, LG 8226 | WK-1178 | accepted | line 6, "E2 — the run" |
-| E2 row 6b, a WF-701 browser check | rides E1's PL delta | PL 8224 | the planner | accepted | line 6, "and **yes**" |
-| E3-B OQ-1222 and OQ-1224 → Before Phase 3 | RL (three lines) | RL 8220 | the decision-maker; the §10 edits by the lead | accepted | line 1 |
-| E3-C OQ-1285's label → Before Phase 3 | the same RL | RL 8220 | the decision-maker | accepted | line 1 |
+| E1 WF-701 exit-demo run (option b) | PL delta, `relates: [PL-1544]` | PL-1912 | the planner; WK-1178 | accepted | line 6, first sentence |
+| E2 the full PL-1544 run, Mon 9 Nov 2026 | SL row + LG | SL-1913, LG-1914 | WK-1178 | accepted | line 6, "E2 — the run" |
+| E2 row 6b, a WF-701 browser check | rides E1's PL delta | PL-1912 | the planner | accepted | line 6, "and **yes**" |
+| E3-B OQ-1222 and OQ-1224 → Before Phase 3 | RL (three lines) | RL-1908 | the decision-maker; the §10 edits by the lead | accepted | line 1 |
+| E3-C OQ-1285's label → Before Phase 3 | the same RL | RL-1908 | the decision-maker | accepted | line 1 |
 | E4 the any-marker process finding | dated `process-backlog.md` row (no id) | — | WK-1178; the lead files it in the next docs PR | accepted | line 2 |
 | E5 provenance and diagnostics views | new P3 WK row, `draft` | WK id at the review PR (not reserved) | the maintainer opens it; the planner writes its map plan in P3 | accepted | line 3 |
-| E5 the shared `provenance` object | OQ (P3) | OQ 8222 | the decision-maker | accepted | line 3 |
+| E5 the shared `provenance` object | OQ (P3) | OQ-1910 | the decision-maker | accepted | line 3 |
 | E5 FD-1723's owner cell | register edit | — | the auditor, in the same PR | accepted | line 3 |
 | E7.1 FR-109's finer-level view | rides E5's WK row | — | the E5 Work row | accepted | line 3, "E7.1 rides this row" |
-| E6 OQ 8206: unpaginated, with a cap of 500 | RL closing OQ 8206 | RL 8221 | the decision-maker; minted after OQ 8206 mints in S10's PR | accepted | line 4 |
+| E6 OQ-1901: unpaginated, with a cap of 500 | RL closing OQ-1901 | RL-1909 | the decision-maker; minted after OQ-1901 mints in S10's PR | accepted | line 4 |
 | E6 the gate row | joins "Before the P2 exit demo" (+1) | — | the lead, in SL-1552's PR | accepted | line 4 |
 | E7.2 FR-127 `spliced` and `excess` | new P3 modelling WK row, `draft` | WK id at the review PR (not reserved) | the maintainer opens it | accepted | line 5 |
-| E7.2 the parameter forms | OQ (P3), then the FR-127 amendment with the Work's first slice | OQ 8223 | the decision-maker | accepted | line 5 |
+| E7.2 the parameter forms | OQ (P3), then the FR-127 amendment with the Work's first slice | OQ-1911 | the decision-maker | accepted | line 5 |
 | T1 `CR-1247` P9's three records | owner or withdrawal | — | the lead names one | **proposed** | none yet |
 | T2 `CR-1247` P6's team-wide boundary | owner or withdrawal | — | the lead names one | **proposed** | none yet |
 | FD-1723 FR-110 `power(k)` | build or strike | — | the maintainer | **owed** | none yet |
@@ -151,7 +151,7 @@ and the front matter of each FD, RL, PL and SL named above, all at ff976406.
 1. "**E3-B — ACCEPTED: (i) "Before Phase 3" for both OQ-1222 and OQ-1224**, owner WK-1178 unchanged, for the reasons r5 gives (the interim is loud; OQ-1224's `model-schema` change would re-hash the demo's approved version). **E3-C — ACCEPTED:** OQ-1285's row label "Before WK-675 S12" → "Before Phase 3" (S12 moved 2026-10-03, roadmap:1302). One **RL**, decision-maker, three lines; the §10 row edits (Before-Phase-2 count 2 open → 0, Before-Phase-3 gains the three ids, each with a dated move line) by the lead in the RL's PR. No dated line inside the OQ texts — the gate row carries the timing."
 2. "**E4 — a dated process-backlog row now** (L5, as 11:25:21), owner WK-1178, lead files it in the next docs PR. An RFC only if the row is still open after the 12 Nov exit demo."
 3. "**E5 — ACCEPTED: a new P3 Work row, `draft`**, titled to name both views: *"Provenance and diagnostics views: the per-artifact `produced_by_job_id` display (narrowed FR-6) and the finer-level diagnostics view on the stored grouping chain (FR-109)"*. This dated line opens it; the lead adds the row in the review's PR citing this heading, the planner writes its map plan in P3, I set `active` then. Spec change first (§0): the shared `provenance` object is a P3 **OQ** (decision-maker), not an FR yet. E7.1 rides this row as 11:38:45 (B) accepted. The register's FD-1723 owner cell is updated by the auditor in the same PR."
-4. "**E6 — decided (ii): unpaginated with a cap.** The named figure: **500 rating versions in one workspace**, measured as the row count of `rating_versions` per workspace on any real or demo workspace at each §14 review; a workspace above 500, or a measured `GET /api/v1/rating-versions` p95 above the platform's list budget, reopens the OQ as a slice under option (i). Record: the **RL** (decision-maker) closing OQ 8206, minted in the review's PR after OQ 8206 mints in S10's. **Gate-row form: JOIN the existing "Before the P2 exit demo" row (count +1)**; the S10 branch's new "…§14 plan review" row is folded into the existing row by the lead in SL-1552's PR before its gate (the branch is unmerged, so this is not a plan edit)."
+4. "**E6 — decided (ii): unpaginated with a cap.** The named figure: **500 rating versions in one workspace**, measured as the row count of `rating_versions` per workspace on any real or demo workspace at each §14 review; a workspace above 500, or a measured `GET /api/v1/rating-versions` p95 above the platform's list budget, reopens the OQ as a slice under option (i). Record: the **RL** (decision-maker) closing OQ-1901, minted in the review's PR after OQ-1901 mints in S10's. **Gate-row form: JOIN the existing "Before the P2 exit demo" row (count +1)**; the S10 branch's new "…§14 plan review" row is folded into the existing row by the lead in SL-1552's PR before its gate (the branch is unmerged, so this is not a plan edit)."
 5. "**E7.2 — ACCEPTED, the primary: a new P3 modelling Work row, `draft`**, *"FR-127 `spliced` and `excess` loss treatments: parameters, fit path and `spec_hash`"*, opened by this line the same way as E5's row; spec change first — an **OQ** (decision-maker) for the splice-point / excess-layer parameter forms, then the FR-127 amendment with the Work's first slice. The fallback is not needed."
 6. "**E1 — option (b):** the exit demo shows WF-701 from a pre-seeded state; one **PL delta** (planner) `relates:` the exit-demo plan, recording the live run's measured duration as an observation with **no budget** (a cap from the fit stays refused). **E2 — the run:** one full PL-1544 checklist run (rows 0–9, row 6 included) on the exit tree on **Mon 9 Nov 2026**, owner WK-1178, as an **SL** row + LG; and **yes**, add a WF-701 browser check as row 6b by the same PL delta as E1, since the demo shows WF-701."
 

@@ -1,16 +1,16 @@
 ---
-id: FD-8230
+id: FD-1917
 family: finding
 title: register-owed.py reads the whole Decision cell, so a superseded opening kept below the live owner is listed as owed
 status: active
-created: 2026-10-25
+created: 2026-10-25   # drafted 2026-10-25 under working id 8230; minted 2026-10-25 as FD-1917
 owner: auditor
 tree: ff976406f1bf133cfe040d2c44d383011503988a
 corrected_by: []
-relates: [WK-1178, CR-1247, FD-1165, FD-1166]
+relates: [CR-1907, WK-1178, CR-1247, FD-1165, FD-1166]
 ---
 
-# FD-8230 — register-owed.py reads the whole Decision cell
+# FD-1917 — register-owed.py reads the whole Decision cell
 
 *(Filed under working id 8230, reserved by the lead. Authority: the maintainer's entry "2026-10-25 11:47:10 GMT" (to-lead.md), item T1 (1): "keep, owner WK-1178, filed as an `FD-` with a broken-input proof"; the lead may re-point it to WK-1170 by a dated line if that Work is open at the review tree. At `ff976406` WK-1170 left Phase 2 on 2026-10-08 (`docs/roadmap.md`, the WK-1169 and WK-1170 move line), so the owner stays WK-1178.)*
 
