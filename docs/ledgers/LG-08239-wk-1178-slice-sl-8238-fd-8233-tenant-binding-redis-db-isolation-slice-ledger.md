@@ -51,3 +51,8 @@ Working ids 8238 (SL) and 8239 (LG), unminted. Executed by `exec-fd8233`, base `
 ## PRs
 
 (none yet)
+
+2026-10-25 22:25 GMT — correction (RS 8240 B2): the GO quote above is a paraphrase; the verbatim (i) clause of to-lead 21:05:20 item (4) (the brief named the entry 21:06:06; item (4) is in the 21:05:20 GMT entry, to-lead.md:31030) is: "(i) with `GIP_REDIS_URL` set to each slot's url the chosen db equals that url's db". B1 commit 34f870e279f407d47cafeb7f3fdabaf1f1031ac9 parametrises (i) over {1,2,3,4,11,12,13}.
+  - **GREEN** at `34f870e279f407d47cafeb7f3fdabaf1f1031ac9` (run-small, DB-free): `8 passed, 2 warnings in 0.43s`, rc=0.
+  - **RED** at a4531d80 with only the new test file: NOT RUN — the throwaway worktree needed `uv sync --all-packages --frozen` under run-heavy, which refused rc=76 (gate-1 held, no grant); the step was stopped, not retried by another route. Owed to a gate gap or a grant.
+  - `ruff check` on `backend/tests/test_tenant_binding_redis_db.py` at 34f870e2: `All checks passed!`, rc=0; `ruff format --check`: `1 file already formatted`, rc=0.
