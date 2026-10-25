@@ -104,6 +104,9 @@ Gate of record accepted: to-lead 2026-10-25 23:25:50 GMT
 
 Pending. The slice audit is `RS 8243` (reserved 2026-10-25 22:41:48 UTC for the auditor at gate head `8ac770f5`); the auditor's seat is placed at the gate's END. This section is a placeholder and carries no verdict.
 
+- 2026-10-25 23:43:25 GMT — `RS 8243` (aud-s4, @e5a5691f) proposed CLEAN, ADOPTED CLEAN by the lead; accepted at to-lead 23:41:06 GMT.
+- 2026-10-25 23:43:25 GMT — per-type verdict (PL 8227 item 18), in the ruling's words: BANDING/GROUPING transformed (priced via predict_gbm); EXPRESSION/INTERACTION covered by the slice's refusal tests; SPLINE/POLYNOMIAL refused by name at resolution (`packages/pricing-core/src/pricing_core/modelling/factors.py`:11–27).
+
 ### Build log
 
 Appended per task and per push, never rewritten.
