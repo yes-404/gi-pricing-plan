@@ -4840,6 +4840,116 @@
         "title": "DislocationEstimate",
         "type": "object"
       },
+      "DislocationMover": {
+        "additionalProperties": false,
+        "description": "One row of `GET /dislocation-runs/{id}/movers` (03 §4.6, §5.1; WK-675 Slice 8, PL-1833).\n\nThe stored columns are `dislocation_frame`'s own (a mover is a banded policy, so both\noutcomes are quoted and the premiums are present); `change_pct` is computed at read and is\na positional decimal string, never a float. `columns` is the one open object: the\nportfolio columns joined at read (NFR-499: none is stored).",
+        "properties": {
+          "baseline_error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Error Code"
+          },
+          "baseline_minor": {
+            "description": "Amount in minor units (pence/cents) of the workspace currency.",
+            "title": "Baseline Minor",
+            "type": "integer"
+          },
+          "baseline_outcome": {
+            "title": "Baseline Outcome",
+            "type": "string"
+          },
+          "candidate_error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate Error Code"
+          },
+          "candidate_minor": {
+            "description": "Amount in minor units (pence/cents) of the workspace currency.",
+            "title": "Candidate Minor",
+            "type": "integer"
+          },
+          "candidate_outcome": {
+            "title": "Candidate Outcome",
+            "type": "string"
+          },
+          "change_minor": {
+            "description": "Amount in minor units (pence/cents) of the workspace currency.",
+            "title": "Change Minor",
+            "type": "integer"
+          },
+          "change_pct": {
+            "description": "Exact decimal as a string; never a binary float (FR-10).",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+            "title": "Change Pct",
+            "type": "string"
+          },
+          "columns": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Columns",
+            "type": "object"
+          },
+          "origin_rung": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin Rung"
+          },
+          "quote_id": {
+            "title": "Quote Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "quote_id",
+          "baseline_outcome",
+          "candidate_outcome",
+          "baseline_minor",
+          "candidate_minor",
+          "change_minor",
+          "baseline_error_code",
+          "candidate_error_code",
+          "origin_rung",
+          "change_pct",
+          "columns"
+        ],
+        "title": "DislocationMover",
+        "type": "object"
+      },
       "DislocationOutcomes": {
         "additionalProperties": false,
         "description": "Each policy once by its two outcomes; the first five sum to policy_count (DP-S2-2).",
@@ -7138,6 +7248,22 @@
               }
             ],
             "title": "Leverage Blob"
+          },
+          "monotonicity": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/MonotonicityCheck"
+            },
+            "title": "Monotonicity",
+            "type": "array"
+          },
+          "monotonicity_omitted": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/MonotonicityOmission"
+            },
+            "title": "Monotonicity Omitted",
+            "type": "array"
           },
           "null_deviance": {
             "title": "Null Deviance",
@@ -10352,6 +10478,35 @@
         ],
         "title": "MonotonicityCheck",
         "type": "object"
+      },
+      "MonotonicityOmission": {
+        "additionalProperties": false,
+        "description": "A declared GLM direction that was not checked, and why (FR-89).\n\nA declared direction therefore always yields a `MonotonicityCheck` or one of these,\nnever nothing — the FR-178 pattern.",
+        "properties": {
+          "factor": {
+            "title": "Factor",
+            "type": "string"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/MonotonicityOmissionReason"
+          }
+        },
+        "required": [
+          "factor",
+          "reason"
+        ],
+        "title": "MonotonicityOmission",
+        "type": "object"
+      },
+      "MonotonicityOmissionReason": {
+        "description": "Why a declared GLM direction was not checked (FR-89, PL-1856 DP-M).",
+        "enum": [
+          "operand_of_interaction",
+          "expression_factor",
+          "unordered_levels"
+        ],
+        "title": "MonotonicityOmissionReason",
+        "type": "string"
       },
       "NoNullOutput": {
         "additionalProperties": false,
@@ -27600,8 +27755,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "additionalProperties": true,
-                    "type": "object"
+                    "$ref": "#/components/schemas/DislocationMover"
                   },
                   "title": "Response Get Dislocation Run Movers Api V1 Dislocation Runs  Run Id  Movers Get",
                   "type": "array"
