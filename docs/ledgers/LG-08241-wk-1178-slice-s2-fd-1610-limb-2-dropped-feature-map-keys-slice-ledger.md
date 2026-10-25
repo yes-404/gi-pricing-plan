@@ -56,6 +56,8 @@ head=3ffdbe3f787c195e43ebd3f8ae6a17143777d2e8
 
 **Correction to PL 8227's S2-C0 text (2026-10-25; the plan is frozen, this ledger carries it):** the measurement reads the compiled Bundle blob, not the `rating_versions.bundle` column — that column is `BundleMetadata` (`model-schema` `rating.py`:88–122, `extra=forbid`: content_hash, bytes, compiled_at, blob_sha256), so the plan's `select … bundle::text` query measures nothing (ruled option (1), "2026-10-25 22:26:43 GMT").
 
+**Dated line (2026-10-25, exec-s2docs, on the maintainer's (by delegation) entry "2026-10-25 22:51:27 GMT"):** RS 8247 N2 is filed as OQ 8249 (open, owner WK-1178; `docs/open-questions.md`, mirrored in `03` §10, placed at roadmap "Before Phase 3"), and N4 is corrected by a dated line in `03` §4.10: `dropped_inputs` is computed at score time from the step's `feature_map` names that `consumed` does not hold, and `feature_map` is not in the trace.
+
 ## PRs
 
 (none yet)
