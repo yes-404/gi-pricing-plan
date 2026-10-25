@@ -33,10 +33,10 @@ from alembic.config import Config
 from backend.tests.conftest_db import ENVIRONMENT_SEEDS, empty_the_database
 from backend.tests.conftest_db import test_database_url as _test_database_url
 from sqlalchemy import text
-from sqlalchemy.engine import make_url
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncConnection, create_async_engine
 
+from app.db.session import Database
 from model_schema import new_uuid7
 
 _REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -52,13 +52,13 @@ _SECRET_HASH = "sha256:" + "b" * 64
 
 
 @pytest_asyncio.fixture
-async def scratch_database() -> AsyncIterator[str]:
+async def scratch_database(owner_database: Database) -> AsyncIterator[str]:
     """A throwaway database with no migrations applied, dropped on the way out.
 
     Mirrors `test_migration_dataset_owner.py`'s fixture, except that it **fails** rather
     than skips when PostgreSQL is unreachable: a migration test that skips proves nothing.
     """
-    admin_url = make_url(_test_database_url())
+    admin_url = owner_database.engine.url  # the owner: CREATE DATABASE is DDL
     name = f"gip_scratch_{secrets.token_hex(6)}"
     engine = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
     try:
@@ -216,7 +216,7 @@ async def test_the_upgrade_seeds_the_three_environments_and_leaves_existing_trac
     their `environment` string and get a null `deployment_id`; the column stays a string and
     is never a foreign key, so `staging` cannot dangle.
     """
-    monkeypatch.setenv("GIP_DATABASE_URL", scratch_database)
+    monkeypatch.setenv("GIP_MIGRATION_DATABASE_URL", scratch_database)
     cfg = _alembic_config()
     await _upgrade(cfg, _PREVIOUS_REVISION)
     prod_trace = await _insert_trace(scratch_database, "prod")
@@ -246,7 +246,7 @@ async def test_an_environment_slug_is_unique_across_every_row(
     scratch_database: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A slug is never reissued, retired included (RL-1301 A.6, N1)."""
-    monkeypatch.setenv("GIP_DATABASE_URL", scratch_database)
+    monkeypatch.setenv("GIP_MIGRATION_DATABASE_URL", scratch_database)
     await _upgrade(_alembic_config(), "head")
     await _run(scratch_database, "UPDATE environments SET retired_at = now() WHERE slug = 'uat'")
     with pytest.raises(DBAPIError, match="uq_environments_slug"):
@@ -274,7 +274,7 @@ async def test_a_key_naming_an_unknown_environment_stops_the_upgrade_before_any_
     but unrevoked key does not either (it is refused at authentication and nothing revives
     it). The account's own list is checked on its own.
     """
-    monkeypatch.setenv("GIP_DATABASE_URL", scratch_database)
+    monkeypatch.setenv("GIP_MIGRATION_DATABASE_URL", scratch_database)
     cfg = _alembic_config()
     await _upgrade(cfg, _PREVIOUS_REVISION)
     account = await _insert_account(scratch_database, "batch", ["uat", "prod"])
@@ -300,7 +300,7 @@ async def test_a_key_naming_an_unknown_environment_stops_the_upgrade_before_any_
 async def test_a_service_account_listing_an_unknown_environment_stops_the_upgrade(
     scratch_database: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("GIP_DATABASE_URL", scratch_database)
+    monkeypatch.setenv("GIP_MIGRATION_DATABASE_URL", scratch_database)
     cfg = _alembic_config()
     await _upgrade(cfg, _PREVIOUS_REVISION)
     account = await _insert_account(scratch_database, "legacy", ["dev", "staging"])
@@ -350,7 +350,7 @@ async def test_the_migration_round_trips(
     scratch_database: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """FR-417: `upgrade`, `downgrade -1`, `upgrade`; each step names the revision it reached."""
-    monkeypatch.setenv("GIP_DATABASE_URL", scratch_database)
+    monkeypatch.setenv("GIP_MIGRATION_DATABASE_URL", scratch_database)
     cfg = _alembic_config()
     await _upgrade(cfg, _PREVIOUS_REVISION)
     await _upgrade(cfg, _THIS_REVISION)
@@ -380,7 +380,7 @@ async def test_the_application_role_cannot_update_or_delete_a_deployment(
     scratch_database: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A Deployment is a record: no update path in the application (`00` FR-4)."""
-    monkeypatch.setenv("GIP_DATABASE_URL", scratch_database)
+    monkeypatch.setenv("GIP_MIGRATION_DATABASE_URL", scratch_database)
     await _upgrade(_alembic_config(), "head")
 
     async def privilege(table: str, kind: str) -> bool:
@@ -469,7 +469,7 @@ async def test_an_approved_deployment_request_needs_a_decided_approval_and_the_f
     Task 5's; what this proves is that the migration put the evidence-only trigger on the
     table, so the flag **forged** with `set_config` does not satisfy it.
     """
-    monkeypatch.setenv("GIP_DATABASE_URL", scratch_database)
+    monkeypatch.setenv("GIP_MIGRATION_DATABASE_URL", scratch_database)
     await _upgrade(_alembic_config(), "head")
     env = await _dev_environment_id(scratch_database)
     ws = new_uuid7()

@@ -46,9 +46,7 @@ from alembic.config import Config
 
 # Aliased: pytest collects any module-level name beginning `test_` as a test, and this
 # is a helper, not one.
-from backend.tests.conftest_db import test_database_url as _test_database_url
 from sqlalchemy import text
-from sqlalchemy.engine import make_url
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
@@ -494,9 +492,9 @@ async def test_a_prefix_matching_backfill_would_be_caught(
 
 
 @pytest_asyncio.fixture
-async def scratch_database() -> AsyncIterator[str]:
+async def scratch_database(owner_database: Database) -> AsyncIterator[str]:
     """A throwaway database with no migrations applied, dropped on the way out."""
-    admin_url = make_url(_test_database_url())
+    admin_url = owner_database.engine.url  # the owner: CREATE DATABASE is DDL
     name = f"gip_scratch_{secrets.token_hex(6)}"
     engine = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
     try:
@@ -548,7 +546,7 @@ async def test_the_migration_round_trips_on_seeded_data(
     DDL included — leaves the schema exactly as it found it, and that the backfills run
     against a real, populated database rather than only a shadow.
     """
-    monkeypatch.setenv("GIP_DATABASE_URL", scratch_database)
+    monkeypatch.setenv("GIP_MIGRATION_DATABASE_URL", scratch_database)
     cfg = _alembic_config()
 
     await _upgrade(cfg, _PREVIOUS_REVISION)
@@ -650,7 +648,7 @@ async def test_a_version_with_no_creator_stops_the_migration(
     governed-field argument rests on, and the shadow tables cannot reach it:
     `alter_column(nullable=False)` is not part of `_BACKFILLS`.
     """
-    monkeypatch.setenv("GIP_DATABASE_URL", scratch_database)
+    monkeypatch.setenv("GIP_MIGRATION_DATABASE_URL", scratch_database)
     cfg = _alembic_config()
 
     await _upgrade(cfg, _PREVIOUS_REVISION)

@@ -98,6 +98,7 @@ from backend.tests.conftest_db import (  # noqa: E402,F401
     database,
     grant,
     membership,
+    owner_database,
     principal,
     workspace_id,
 )

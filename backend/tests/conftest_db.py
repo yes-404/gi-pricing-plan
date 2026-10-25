@@ -30,6 +30,7 @@ from uuid import UUID
 import pytest
 import pytest_asyncio
 from sqlalchemy import text
+from sqlalchemy.engine import make_url
 
 from app.config import Settings
 from app.db.session import Database
@@ -44,6 +45,9 @@ from model_schema import ActorKind, Principal, new_uuid7
 #: what the refusal message below is refusing to silently substitute, not as a fallback
 #: `test_database_url()` reaches for on its own any more.
 DEFAULT_TEST_DSN = "postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing"
+
+#: The application's login role (`deploy/postgres/app-login-role.sql`), a member of `gip_app`.
+_APP_LOGIN_ROLE = "gip_app_login"
 
 
 def _worktree_database_name() -> str:
@@ -138,11 +142,125 @@ def _per_worktree_test_database_url() -> str:
     return f"postgresql+asyncpg://gipricing:gipricing@localhost:5432/{name}"
 
 
-def test_database_url() -> str:
+def test_owner_database_url() -> str:
+    """The **owner's** DSN: migrations, provisioning, per-worktree database creation and
+    teardown. `GIP_TEST_DATABASE_URL` overrides it, and its meaning is unchanged -- CI sets
+    it to the owner (`.github/workflows/python.yml`).
+
+    **The asymmetry with `test_database_url()` is the point** (FD-1729): the application's
+    connection is the login role, the owner's is this one, and only this module calls it
+    (a test asserts that). A test that needs the owner takes the `owner_database` fixture,
+    which refuses any test not listed in `OWNER_FIXTURE_USERS`.
+    """
     override = os.environ.get("GIP_TEST_DATABASE_URL")
     if override:
         return override
     return _per_worktree_test_database_url()
+
+
+def test_database_url() -> str:
+    """The **application's** DSN: the same per-worktree database as `test_owner_database_url()`
+    with the login role's credentials (password from `GIP_APP_DB_PASSWORD`, default
+    `gip_app_login`). `GIP_TEST_APP_DATABASE_URL` overrides it.
+
+    Every caller moves to the login role with no edit (FD-1729, PL-1769 Step 3.1): the
+    suite exercises the paths the platform runs, as the role it runs them as.
+    """
+    override = os.environ.get("GIP_TEST_APP_DATABASE_URL")
+    if override:
+        return override
+    return (
+        make_url(test_owner_database_url())
+        .set(
+            username=_APP_LOGIN_ROLE,
+            password=os.environ.get("GIP_APP_DB_PASSWORD", _APP_LOGIN_ROLE),
+        )
+        .render_as_string(hide_password=False)
+    )
+
+
+#: The `(node id, label, reason)` of every test that may use `owner_database` -- closed, and
+#: enforced by construction (`owner_database` fails a test not listed here). `api_settings` /
+#: `api_client` are never among them: they are the application. Labels: `migration`,
+#: `provisioning`, `DP-22` (the five caller-less paths), `owner-subject` (tests that PROVE
+#: the owner is refused, or that tamper), `bootstrap` (the seed's `grant_demo_principals`).
+OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
+    (
+        "backend/tests/test_migration_deployments.py::"
+        "test_the_upgrade_seeds_the_three_environments_and_leaves_existing_traces_alone",
+        "migration",
+        "creates and migrates a scratch database (CREATE DATABASE, DDL)",
+    ),
+    (
+        "backend/tests/test_migration_deployments.py::"
+        "test_an_environment_slug_is_unique_across_every_row",
+        "migration",
+        "creates and migrates a scratch database (CREATE DATABASE, DDL)",
+    ),
+    (
+        "backend/tests/test_migration_deployments.py::"
+        "test_a_key_naming_an_unknown_environment_stops_the_upgrade_before_any_change",
+        "migration",
+        "creates and migrates a scratch database (CREATE DATABASE, DDL)",
+    ),
+    (
+        "backend/tests/test_migration_deployments.py::"
+        "test_a_service_account_listing_an_unknown_environment_stops_the_upgrade",
+        "migration",
+        "creates and migrates a scratch database (CREATE DATABASE, DDL)",
+    ),
+    (
+        "backend/tests/test_migration_deployments.py::test_the_migration_round_trips",
+        "migration",
+        "creates and migrates a scratch database (CREATE DATABASE, DDL)",
+    ),
+    (
+        "backend/tests/test_migration_deployments.py::"
+        "test_the_application_role_cannot_update_or_delete_a_deployment",
+        "owner-subject",
+        "proves the owner-created application role is refused UPDATE/DELETE on a scratch database",
+    ),
+    (
+        "backend/tests/test_migration_deployments.py::"
+        "test_an_approved_deployment_request_needs_a_decided_approval_and_the_flag_is_no_evidence",
+        "migration",
+        "creates and migrates a scratch database (CREATE DATABASE, DDL)",
+    ),
+    (
+        "backend/tests/test_migration_dataset_owner.py::test_an_unresolvable_dataset_stops_the_migration",
+        "migration",
+        "creates and migrates a scratch database (CREATE DATABASE, DDL)",
+    ),
+    (
+        "backend/tests/test_migration_dataset_version_envelope.py::"
+        "test_the_migration_round_trips_on_seeded_data",
+        "migration",
+        "creates and migrates a scratch database (CREATE DATABASE, DDL)",
+    ),
+    (
+        "backend/tests/test_migration_dataset_version_envelope.py::"
+        "test_a_version_with_no_creator_stops_the_migration",
+        "migration",
+        "creates and migrates a scratch database (CREATE DATABASE, DDL)",
+    ),
+    (
+        "backend/tests/test_migration_env_logging.py::"
+        "test_an_in_process_migration_run_leaves_the_app_loggers_enabled",
+        "migration",
+        "runs Alembic in process, which reads the owner's GIP_MIGRATION_DATABASE_URL",
+    ),
+    (
+        "backend/tests/test_wf699_journey.py::test_wf699_journey_runs_end_to_end",
+        "bootstrap",
+        "the seed's grant_demo_principals creates the workspace, roles and members (no route does)",
+    ),
+    (
+        "backend/tests/test_wf699_journey.py::"
+        "test_a_non_glm_stand_in_without_a_transparency_artifact_is_refused",
+        "bootstrap",
+        "the seed's grant_demo_principals creates the workspace, roles and members (no route does)",
+    ),
+)
 
 
 def test_blob_bucket() -> str:
@@ -187,6 +305,13 @@ async def database() -> AsyncIterator[Database]:
             await session.execute(text("SELECT 1"))
     except Exception as exc:
         await db.dispose()
+        if _APP_LOGIN_ROLE in str(exc):
+            # Provisioning is not applied on this database (PL-1769 Step 1.3): a failure to
+            # fix in the environment, never a skip and never a reason to re-route the test.
+            pytest.fail(
+                f"the application login role {_APP_LOGIN_ROLE!r} cannot connect: {exc}; run "
+                "scripts/provision-app-role.py against this cluster"
+            )
         pytest.skip(f"PostgreSQL not reachable at {test_database_url()}: {type(exc).__name__}")
 
     async with db.session() as session:
@@ -196,6 +321,31 @@ async def database() -> AsyncIterator[Database]:
     if not applied:
         pytest.skip("database has no migrations applied; run `uv run alembic upgrade head`")
 
+    yield db
+    await db.dispose()
+
+
+@pytest_asyncio.fixture
+async def owner_database(request: pytest.FixtureRequest) -> AsyncIterator[Database]:
+    """An engine on the **owner's** DSN, for the tests `OWNER_FIXTURE_USERS` lists.
+
+    Fails the test, by construction rather than by review, unless its node id is listed:
+    the application's paths run as the login role (`database`), and an owner connection
+    that any test could take would let a refused path pass unseen.
+    """
+    users = {node_id: label for node_id, label, _ in OWNER_FIXTURE_USERS}
+    if request.node.nodeid not in users:
+        pytest.fail(
+            f"{request.node.nodeid} takes owner_database but is not in OWNER_FIXTURE_USERS "
+            "(backend/tests/conftest_db.py); use `database`, the application's login role"
+        )
+    db = Database(Settings(database_url=test_owner_database_url()))
+    try:
+        async with db.session() as session:
+            await session.execute(text("SELECT 1"))
+    except Exception as exc:
+        await db.dispose()
+        pytest.fail(f"PostgreSQL (owner) not reachable: {type(exc).__name__}: {exc}")
     yield db
     await db.dispose()
 
@@ -394,7 +544,7 @@ async def empty_the_database() -> None:
     still in force afterwards — the one property of this teardown worth pinning, since a
     suspended trigger is silent and these tables are what the platform's governance rests on.
     """
-    db = Database(Settings(database_url=test_database_url()))
+    db = Database(Settings(database_url=test_owner_database_url()))
     try:
         # `unit_of_work`, not `session`: the latter does no transaction management and never
         # commits, so the statement below runs and is rolled back on close. It also gives

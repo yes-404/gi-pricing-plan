@@ -19,7 +19,8 @@ from pathlib import Path
 import pytest
 from alembic import command
 from alembic.config import Config
-from backend.tests.conftest_db import test_database_url
+
+from app.db.session import Database
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -39,7 +40,7 @@ def restore_logger_state() -> Iterator[None]:
 
 @pytest.mark.req("NFR-499")
 async def test_an_in_process_migration_run_leaves_the_app_loggers_enabled(
-    monkeypatch: pytest.MonkeyPatch, restore_logger_state: None
+    monkeypatch: pytest.MonkeyPatch, restore_logger_state: None, owner_database: Database
 ) -> None:
     """`alembic current` runs `env.py` end to end, so it is enough to reach `fileConfig`.
 
@@ -48,7 +49,11 @@ async def test_an_in_process_migration_run_leaves_the_app_loggers_enabled(
     """
     probe = logging.getLogger("app.env_logging_probe")
     probe.disabled = False
-    monkeypatch.setenv("GIP_DATABASE_URL", test_database_url())
+    # Migrations run as the owner and read `GIP_MIGRATION_DATABASE_URL` only (FD-1729).
+    monkeypatch.setenv(
+        "GIP_MIGRATION_DATABASE_URL",
+        owner_database.engine.url.render_as_string(hide_password=False),
+    )
     cfg = Config(str(_REPO_ROOT / "alembic.ini"))
     cfg.set_main_option("script_location", str(_REPO_ROOT / "backend" / "migrations"))
     cfg.set_main_option("prepend_sys_path", str(_REPO_ROOT / "backend" / "src"))
