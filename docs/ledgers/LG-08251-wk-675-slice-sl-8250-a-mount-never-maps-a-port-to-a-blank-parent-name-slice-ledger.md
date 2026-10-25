@@ -39,7 +39,7 @@ Working ids: this ledger is LG 8251 and its slice SL 8250 (lead 28's reservation
 
 ### Gate
 
-Not yet run. Owed: the full two-half gate in a free slot on the lead's grant (GO condition 6).
+Not yet run. Owed (see the Build log): the full two-half gate in a free slot on the lead's grant (GO condition 6).
 
 ### Audit
 
@@ -47,7 +47,15 @@ Not yet seated (GO condition 5: red/green/gate lines are in this ledger first).
 
 ### Build log
 
-Appended per task and per push, never rewritten; every stamp from `date`.
+Appended per task and per push, never rewritten; every stamp from `date`. Runs: `run-small.sh` and `run-heavy.sh --grant "2026-10-25 22:52:52 GMT"`; the model-schema and frontend files named, no DB.
+
+- **2026-10-25 22:55 GMT, GO condition 2 (K2 re-merge).** `git merge --no-ff origin/main` (8c3d3013) onto 754efc9b; one conflict, `docs/INDEX.md` only, taken from main and regenerated under the gate-2 flock (`doc-index.py --check` rc 0). Merge commit f4422297. Decider `audit-docs.py` via run-heavy on f4422297: rc 1, `FAILED (2)`: "check 31: gap in the full allocation between 1904 and 8205" and "check 31: id 8205 is `created:` 2026-10-23, earlier than id 1904's 2026-10-25 — `created` must be non-decreasing with the number" (own-id check 31 only, as the GO expects).
+- **2026-10-25 23:01 GMT, Task 2 RED**, `bash run-small.sh <wt> packages/model-schema/tests/test_graph_invariant_issues.py`, run on tree fc68e16a plus the test file, committed as 4290018b: rc 1, `3 failed, 10 passed`. FAILED: `test_an_input_port_mapped_to_a_blank_name_is_refused_naming_the_port[]`, `[  ]` (message names `''`, not the port: `assert "'claims'" in "step 's_ncd' consumes undefined value '' (FR-212)"`) and `test_an_output_port_mapped_to_a_blank_name_is_refused_naming_the_port` (`assert 0 == 1`, no issue). The control for non-blank names is `test_a_pinned_mount_is_a_node_its_outputs_resolve` (already in the file, same fixture shape), which passes; no new control test was added.
+- **Task 1 spec**, 197a7df4: `03` §4.1 mount clause and `RL-1474` order clause (both dated 2026-10-25, `RL-1876`), `OQ-1843` decided in `docs/open-questions.md` and `03` §10, `docs/roadmap.md` §10 row recounted to `1 (0 open)`. `req-coverage.py` rc 0. `audit-docs.py` on that tree: rc 1, own-id check 31 only, plus check 39 (INDEX stale) which regenerating `docs/INDEX.md` cleared (`doc-index.py --check` rc 0).
+- **Task 3 GREEN**, 0a85d0cb (`rating.py`: blank-name check after the duplicate/mount_point early return, blank names left out of `purpose_only` and the `_MountNode`s): `run-small.sh` on `test_graph_invariant_issues.py` rc 0, `13 passed`. `ruff check` on `rating.py` rc 0. `ruff format --check` on `rating.py` rc 1 on hunks this slice did not touch (lines 57, 277, 751, 873, 1219, 1481, 1623: the file was already unformatted at base); none of the slice's lines is in the diff it prints.
+- **Broken input (acceptance 4)**: with `if not name.strip():` replaced by `if False:` (uncommitted, reverted at once), the same run: rc 1, `3 failed, 10 passed`.
+- **Task 4**, a966d375: `MountInspector.test.ts`, one case (a cleared input port stays `""`). `vitest run src/components/dag/__tests__/MountInspector.test.ts` rc 0, `Test Files  1 passed`, `Tests  9 passed`. Broken input (acceptance 9): `setInput` changed to delete the key on `""` (uncommitted, reverted at once): rc 1, `1 failed | 8 passed`. `eslint` on the test file rc 0.
+- **Owed to the gate:** `vue-tsc` type-check (whole-project), the import-closure GREEN set (common brief item 29), `mypy` (a single-file run reports a pre-existing `rating.py:35` import error under the bare invocation, so the project `uv run mypy` is the decider), the full two-half gate, acceptance items 1, 6, 7, 8, 10, 12.
 
 ## PRs
 
