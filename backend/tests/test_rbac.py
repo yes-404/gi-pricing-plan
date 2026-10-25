@@ -440,6 +440,7 @@ async def test_break_glass_is_audited_and_flagged(
 
 
 @pytest.mark.req("FR-344")
+@pytest.mark.production_seed
 async def test_seeding_roles_is_idempotent(database: Database, workspace_id) -> None:
     async with database.unit_of_work() as session:
         first = await rbac.seed_builtin_roles(session, workspace_id)
