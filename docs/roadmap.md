@@ -1214,7 +1214,7 @@ relates: [PL-1237]
 
 Date-based routing and shadow scoring, both built and default off per environment (`RL-1232` Part A, DP-2 (a)), with the audit limb for routing and shadow configuration changes (FR-272, NFR-498). `PL-1237` Task 6. Starts after Slice 5 closes.
 (Activated 2026-10-21 on the maintainer's (by delegation) GO, to-lead "2026-10-21 15:03:33 BST — Maintainer: GOs on the 15:02:44 work queue", item 5: lowest priority, rung 5 of the cut ladder; it takes a gate only when no row-2 slice is waiting. Scope: `PL-1237` Task 6 as changed by `PL-1537` R6.1 to R6.3; dispatched by the lead, transcript 4561857a.)
-(Closed 2026-10-22 as a Slice by the executor's closing acts (LG-1859, minted from working id 8139), on the audits RS 8180, RS 8187 and RS 8198 (aud-1260c, 57b7fa04..fbf092a9, proposed CLEAN) and the lead's verdict, the from-lead log entry "2026-10-22 23:03:12 BST Lead 26: SL-1260 fixes ACCEPTED @e6acbce6 … VERDICT SL-1260 CLEAN (RS 8198 + fixes)", noted by the maintainer at "2026-10-22 23:03:22 BST" (`to-lead.md`); range `origin/main...` the slice's branch head, whose ledger records the gate (the re-gate at 72a05338: `13 failed, 6742 passed, 13 skipped, 149 warnings`, the 13 the docs-audit set on the ledger's working id) and the 13 re-run.)
+(Closed 2026-10-22 as a Slice by the executor's closing acts (LG-1859, minted from working id 8139), on the audits RS 1864, RS 1865 and RS 1866 (aud-1260c, 57b7fa04..fbf092a9, proposed CLEAN) and the lead's verdict, the from-lead log entry "2026-10-22 23:03:12 BST Lead 26: SL-1260 fixes ACCEPTED @e6acbce6 … VERDICT SL-1260 CLEAN (RS 1866 + fixes)", noted by the maintainer at "2026-10-22 23:03:22 BST" (`to-lead.md`); range `origin/main...` the slice's branch head, whose ledger records the gate (the re-gate at 72a05338: `13 failed, 6742 passed, 13 skipped, 149 warnings`, the 13 the docs-audit set on the ledger's working id) and the 13 re-run.)
 
 #### SL-1689 — the scheduler (beat) and frontend-image row: FR-432's last two limbs (FR-432, FR-413, FR-406; FD-1661)
 
@@ -1241,7 +1241,7 @@ The `scheduler` service (the Celery beat process, which runs the outbox relay to
 id: SL-1711
 family: slice
 title: WK-674 demo slice — the scripted WF-701 deployment steps (A1–A6, C1–C4, C6, C7) over the Slice 4 path, after Slice 5
-status: active                   # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-14
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: 1e260c1553acf39844939fe12da685ccfb835e54
@@ -1257,6 +1257,8 @@ A scripted, rehearsable journey walks WF-701's deployment steps A1–A6, C1–C4
 *Dated 2026-10-14 by the planner: activation need "`SL-1258`'s worker consuming `default,compute`" is read as "`SL-1258` merged with every routed pool consumed", per PL-1714 E4.2 and §"Effect on SL-1689"; under its DP-Q1 (b), Task 0 quotes every worker service's command. `PL-1688` is unedited. This row's status and fields are unchanged.*
 
 *Dated 2026-10-14 by the planner (minter-d16e, the D16 rulings sweep): the activation need "`PL-1710` DP-1 to DP-3 ruled" reads as the maintainer's (by delegation) entry "2026-10-14 10:14:13 BST" (`to-lead.md`) gives it: DP-1 (a) and DP-2 (a, the derived set of "2026-10-14 10:13:50 BST") ruled; DP-3 (a) CONDITIONAL, ruled at S5's GO. Under the entry "2026-10-14 11:14:40 BST": C2 is walked as 422 `EVIDENCE_INCOMPLETE` at the prod Deployment Request submission (`07` FR-429 as amended), the `dev` deployment is a labelled PRECONDITION step, and the unapproved-to-`uat` negative is an FR-238 extra, so the Requirements add `03` FR-238; the write set adds the two dated lines in `docs/workflows/WF-00701-deploy-and-monitor.md` that entry orders (C2's two codes; the §1 precondition row) and nothing else under `docs/`. The "analyst 200" probe closes in this slice's `LG-` on its run output (entries "2026-10-14 11:45:50 BST" item 2 and "2026-10-14 11:52:51 BST" item (4)). `PL-1710` carries each at its site.*
+
+**Closed 2026-10-25** as a Slice: merged as #1361 (squash `0dfb4a05`, tree `03b000785b2183a764bb03eebd0a4d46bb6ff74d`) on the maintainer's (by delegation) MERGE-ACK, `to-lead.md` entry "2026-10-22 19:52:20 BST — Maintainer: MERGE-ACK #1361 (SL-1711); docker builder prune GO (the USER's word); SL-1260 item 5 = (B)" (CLAUDE.md §13: a Slice closes on a clean audit and the lead's merge). Ledger: `LG-1841`. The CI skip of the two WF-701 DB tests is `FD-1801`'s.
 
 #### SL-1813 — the compose dataset-ingest smoke on the public upload path (E4.8) and a failed api roll that removes its own new replicas (FR-415, FR-406, FR-1776, NFR-531)
 
@@ -1569,7 +1571,7 @@ relates: [PL-1286, PL-1371]
 id: SL-1551
 family: slice
 title: Slice 8: Dislocation views (FR-263, FR-264, FR-265, FR-266)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: closed                   # draft → active → closed | retired (§1.2a)
 created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
@@ -1582,6 +1584,10 @@ relates: [PL-1286, PL-1371]
 `PL-1286` S8, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. The change histogram, segment grid, attribution waterfall and largest movers, each chart with its table, the run cited by id. **Activation needs:** `SL-1388` (WK-673 S4) closed. Lane or team fixed at GO. **Cut-ladder rung 7** (conditional on #1164's served page: void if exit demo (b)'s served page is this view); not pre-cut. *(Cut 2026-10-08 by the planner under working id 9464, reserved by the lead; minted 2026-10-10 as SL-1551 in the D2 batch mint.)*
 
 **Activation need added 2026-10-10 (draft, for the lead's batch): the typed movers row in `model-schema` is merged.** The lead's ruling, the entry "2026-10-10 01:54:02 BST — RULINGS on S4 @04eaed4a: (1) red-first on parent commits ACCEPTED; (2) untyped movers ACCEPTED FOR S4 ONLY as an owned gap with a hard gate. Not an OQ: it is decided", item (2), read at `docs/contracts/openapi/generated.json` at `04eaed4a`: `GET /api/v1/dislocation-runs/{run_id}/movers` returns `{"type":"array","items":{"type":"object","additionalProperties":true}}`, "Fully untyped: no typed identifier and no typed money". The typed shape, verbatim: "a row model in model-schema with the known fields typed (the policy/quote identifier; before/after/change in integer minor units; change_pct as the repo's decimal form), plus ONE named open field for the portfolio's own columns (e.g. `columns: dict[str, JsonScalar]`), never a bare open object." The hard gate, verbatim: "the typed row is an ACTIVATION NEED of the first slice that consumes /movers (WK-675's movers view). Its plan gets a dated need line (via D3's or its own delta), and no frontend code may read /movers before the typed row is merged. Owner WK-675. If no consumer exists by WK-673's Work close, it is carried by name at P2's close." This slice's "largest movers" is that consumer. The ACK of the slice that adds the typed row checks the response shape and the regenerated client, per the same item.
+
+(Activated 2026-10-21 on the maintainer's (by delegation) GO, to-lead "2026-10-21 15:10:53 BST" items 1 and 2 and "2026-10-21 15:50:30 BST" ("GO SL-1551 (S8) per 15:10:53 — census its remaining needs first"); scope and order: `PL-1833` (active, #1355), whose DP-S8-1 (a) builds the typed movers row inside this slice as Task 1, gated by its Acceptance 5, so the draft "activation need" paragraph above is superseded by `PL-1833` on that point (the typed row is not a pre-activation need). Same-Work pair with `SL-1554` under `RL-1445` item 2: file sets disjoint per the lead's dispatch record of 2026-10-21 15:56:11 BST. Dispatched by the lead (lane C, seat exec-1551). Ledger: `LG-1867` (minted 2026-10-23 from working id 8146).)
+
+*(Closed 2026-10-23 as a Slice, closing acts in the slice PR; ledger `LG-1867`. Audit: `RS-1868`, written by `aud-1551` over the slice, verdict NOT-CLEAN B1–B3, adopted by the lead (from-lead "2026-10-22 18:16:34"); the record fix verified by the lead 2026-10-22 18:25:52 BST. Gate of record `47faad82` (tree `b682a9186e607887a2dca037bcd9e2cbd6655c52`), END 2026-10-22T23:17:34+00:00; its pytest failures are the docs-audit set plus one test re-run alone and green, which STANDS under the maintainer's standing 1(f) (to-lead "2026-10-23 00:18:10 BST"), with the decimal-guard exemption of the maintainer's (by delegation) ruling "2026-10-22 21:08:55 BST". Merge ACK pending; the merge and its read-back are the lead's.)*
 
 #### SL-1552 — Slice 10: Rating version list (FD-1283 option A; a new `03` §3.4 FR, spec first)
 
@@ -2844,6 +2850,28 @@ On the maintainer's (by delegation) entry "2026-10-14 12:00:14 BST" (`to-lead.md
 
 (Closed 2026-10-19 as a Slice by the mint step's closing acts (LG-1825 minted from working id 8126), on the pre-PR slice audit of LG-1825 ("### Audit", auditor-1770, 2026-10-19 07:04 BST; range `origin/main...sl-1770-wk1178-append-only-db`), adopted CLEAN by the lead and accepted by the maintainer (by delegation) (to-lead "2026-10-19 07:06:05 BST"); F4 (the FOR UPDATE refusal under the app role) is deferred with owner SL-1771 (LG-1825 "### Audit"). MERGE-ACK: not yet given.)
 
+#### SL-1869 — WK-1178 fix slice — FD-1850: `ensure_bucket` treats losing the first-start create race as success
+
+```yaml
+id: SL-1869
+family: slice
+title: WK-1178 fix slice — FD-1850: ensure_bucket treats losing the first-start create race as success
+status: closed                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-23   # drafted 2026-10-22 under working id 8172; minted 2026-10-23 as SL-1869
+owner: lead
+tree: f3462d8fc1336dc4583fe8a7af92fed399993a55
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1850, LG-1870, SL-1711]
+```
+
+On the maintainer's entry "2026-10-22 16:22:33 BST" (`to-lead.md`): FD-1850 (MEDIUM) is fixed before the exit demo as a quick slice. `BlobStore.ensure_bucket` (`backend/src/app/platform/blobs.py`) did `head_bucket` and, on any `ClientError`, `create_bucket`; two services starting together on a fresh bucket both missed, and the loser raised `BucketAlreadyOwnedByYou` and exited (worker-io exit 2, W2 attempt 1). The fix: `BucketAlreadyOwnedByYou` from `create_bucket` is success with no re-check; `BucketAlreadyExists` (another owner in S3) is success only if a `head_bucket` then succeeds, else the original create error is re-raised, chained to the head error; any other code re-raises; the docstring states what is guaranteed. Red first, with a stub client. Delta row to the Work's one plan (Lean P2 L5), like FD-1838's.
+
+(Activated 2026-10-22 on the maintainer's entry above; executed as `exec-8169` on branch `fix/fd-8169-ensure-bucket-race`; ledger LG-1870.)
+
+**Closed 2026-10-23** by the mint step's closing acts (SL-1869 minted from working id 8172, LG-1870 from 8173, RS-1871 from 8197), on the pre-PR slice audit RS-1871 (aud-8169, 2026-10-22), adopted CLEAN by the lead (LG-1870 "### Audit"). Gate of record `04b0a367` STANDS under the standing ruling 1(f) (LG-1870 "### Gate"). MERGE-ACK: pending (the lead's merge). Ledger: LG-1870.
+
 #### SL-1771 — WK-1178 fix slice (S-b) — FD-1729: the application connects as a login role with gip_app's grants, never as the owner
 
 ```yaml
@@ -2965,6 +2993,45 @@ relates: [PL-1856, FD-1723, FR-6, FR-109, FR-110]
 Slice C of `PL-1856` (WK-1178's dated delta on FD-1723's residual limbs). Docs only: a dated amendment under FR-6 (`00-overview.md`: the per-artifact producing-Job id built, the shared `provenance` object and its UI not, carried to §14), under FR-109 (`02-modelling.md`: accepted with reason, the finer-level view carried to §14) and under FR-110 (`power(k)` struck, a required θ in the R/MASS `glm.nb` form), per the maintainer's entry "2026-10-22 16:02:49 BST" rulings 1, 3 and 6.
 
 (Activated 2026-10-22 on the maintainer's "2026-10-22 16:02:49 BST — Maintainer: PL 8162 (FD-1723's residual limbs) ACCEPTED; …" ("GO: slice C now"), with `PL-1856` made `active` by L1 in this slice's PR. Minted 2026-10-22 as SL-1857 from working id 8164, with its ledger LG-1858 from working id 8165 and its plan PL-1856 from working id 8162. Closed 2026-10-22 at the mint as a docs-only slice, the audit and merge-ack being recorded in LG-1858.)
+
+#### SL-1860 — WK-1178 slice A — PL-1856: glum family translation, NB deviance and θ boundary, GLM direction check
+
+```yaml
+id: SL-1860
+family: slice
+title: WK-1178 slice A — PL-1856, the glum family translation, the NB deviance, the θ boundary and the GLM direction check
+status: closed                   # draft → active → closed | retired (§1.2a) — closed 2026-10-22 at the mint
+created: 2026-10-22   # filed under working id 8166; minted 2026-10-22 as SL-1860
+owner: executor
+tree: 31e03c8ebd3c37b0e42b658b82775339fa95fb19
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1856, FD-1723, FR-89, FR-110]
+```
+
+Slice A of `PL-1856` (WK-1178's dated delta on FD-1723's residual limbs): FR-110 (glum family-name translation for all seven `GlmSpec.family` members, the negative-binomial θ declared and required, the NB deviance) and FR-89 (the GLM direction check, `GlmDiagnostics.monotonicity` and `monotonicity_omitted`), with the model-spec builder's θ input. Code, tests, and the FR-89 and FR-110 spec amendments.
+
+(Activated 2026-10-22 on the maintainer's "2026-10-22 16:02:49 BST — Maintainer: PL 8162 (FD-1723's residual limbs) ACCEPTED; …" (slices C, then A, then B). Minted 2026-10-22 as SL-1860 from working id 8166, with its ledger LG-1861 from working id 8167. Closed 2026-10-22 at the mint: the audit is closed on RS-1862, RS-1863 and the lead's 17:58:43 BST verification, recorded in LG-1861; the merge-ack is the lead's, at the merge.)
+
+#### SL-1873 — WK-1178: FD-1872, the switch slot-namespace test names a synthetic slot
+
+```yaml
+id: SL-1873
+family: slice
+title: WK-1178 — FD-1872, the switch slot-namespace test names a synthetic slot (test only)
+status: closed                   # draft → active → closed | retired (§1.2a)
+created: 2026-10-23   # drafted 2026-10-22 under working id 8200; minted 2026-10-23 as SL-1873
+owner: executor
+tree: 1fe82ee673cc8aef2bd3e70b81b8304059fccbc1
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1872, FD-1838, LG-1874]
+```
+
+Test-only fix of FD-1872 (owner WK-1178): `backend/tests/test_deployment_switch_slot_namespace.py` names a per-run synthetic slot instead of the real `/tmp/slots/gate-1` and `gate-1b`, whose server-wide Redis channels a paired gate shares. Product code is not touched. Ledger `LG-1874`; authority the maintainer's entry "2026-10-22 23:42:23 BST" item 1 (`to-lead.md`).
+(Closed 2026-10-23 as a Slice by the executor's closing acts (LG-1874, minted from working id 8201), on the audit RS-1875 (aud-8199, `origin/main...4c9be06d`, proposed CLEAN) and the lead's verdict, the from-lead log entry "2026-10-23 00:27:17 BST Lead 26: aud-8199 PROPOSED CLEAN … VERDICT (lead): CLEAN"; the gate of record is the full gate-1 run at `ca4bf5c1` (START "GATE START ca4bf5c1bab9b547afaefcde81be4765f7aca8a6 gate-1 Fri Oct 23 10:14:17 BST 2026", "END 2026-10-23T10:33:11+00:00 3.77 3.08 3.43"): pytest `13 failed, 6738 passed, 21 skipped, 147 warnings in 3126.69s (0:52:06)`, the 13 the eight-file docs-audit set on the slice's own working ids (audit-docs `FAILED (1)` = check 31, the gap between 1859 and 8199); frontend `Test Files  129 passed (129)`, `Tests  817 passed (817)`, build rc 0; demo `wf-699` rc 0. The gate STANDS for the code under 1(f), the maintainer's entry "2026-10-23 11:33:52 BST" (`to-lead.md`). Merge ACK pending: the slice's PR opens at its id turn, and the ledger's MERGE-ACK line is added at the merge.)
 
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 

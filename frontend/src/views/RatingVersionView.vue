@@ -97,6 +97,14 @@ onMounted(async () => {
               Open the quote sandbox
             </RouterLink>
           </dd>
+          <dd>
+            <RouterLink
+              :to="`/rating/${rating.slug}/v/${rating.version}/dislocation`"
+              class="text-sky-700 underline"
+            >
+              Open the dislocation views
+            </RouterLink>
+          </dd>
         </div>
         <div>
           <dt class="text-slate-500">

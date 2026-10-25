@@ -99,6 +99,8 @@ from model_schema.diagnostics import (
     GlmDiagnostics,
     LiftBin,
     MonotonicityCheck,
+    MonotonicityOmission,
+    MonotonicityOmissionReason,
     PartialDependence,
     PartialDependenceOmission,
     PartialDependenceOmissionReason,
@@ -115,7 +117,13 @@ from model_schema.diagnostics import (
     UniversalDiagnostics,
     Weighting,
 )
-from model_schema.dislocation import DislocationEstimate, DislocationRun, DislocationSpec
+from model_schema.dislocation import (
+    DislocationEstimate,
+    DislocationMover,
+    DislocationRun,
+    DislocationSpec,
+    JsonScalar,
+)
 from model_schema.envelope import ArtifactEnvelope
 from model_schema.graph_errors import GraphCycleError, GraphUnresolvedRefError
 from model_schema.ids import new_uuid7, uuid7_timestamp_ms
@@ -558,6 +566,7 @@ __all__ = [
     "DerivedFrom",
     "Diagnostics",
     "DislocationEstimate",
+    "DislocationMover",
     "DislocationRun",
     "DislocationSpec",
     "DoubleLift",
@@ -622,6 +631,7 @@ __all__ = [
     "JobResult",
     "JobSource",
     "JobStatus",
+    "JsonScalar",
     "LadderOperation",
     "LadderReconciles",
     "LadderRung",
@@ -653,6 +663,8 @@ __all__ = [
     "MonotoneInInput",
     "MonotonicDirection",
     "MonotonicityCheck",
+    "MonotonicityOmission",
+    "MonotonicityOmissionReason",
     "NoNullOutput",
     "ObjectiveBackend",
     "ObjectiveCertificate",
