@@ -260,6 +260,46 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
         "bootstrap",
         "the seed's grant_demo_principals creates the workspace, roles and members (no route does)",
     ),
+    (
+        "backend/tests/test_migration_routing_shadow.py::test_the_migration_round_trips",
+        "migration",
+        "creates and migrates a scratch database (CREATE DATABASE, DDL)",
+    ),
+    (
+        "backend/tests/test_migration_routing_shadow.py::test_the_application_role_may_only_select_and_insert",
+        "owner-subject",
+        "proves a privilege or trigger refusal on a scratch database as its owner",
+    ),
+    (
+        "backend/tests/test_migration_routing_shadow.py::test_even_the_owner_cannot_update_or_delete_a_row",
+        "owner-subject",
+        "proves a privilege or trigger refusal on a scratch database as its owner",
+    ),
+    (
+        "backend/tests/test_migration_routing_shadow.py::test_a_fraction_outside_the_unit_interval_is_refused_by_the_database[0]",
+        "migration",
+        "creates and migrates a scratch database (CREATE DATABASE, DDL)",
+    ),
+    (
+        "backend/tests/test_migration_routing_shadow.py::test_a_fraction_outside_the_unit_interval_is_refused_by_the_database[-0.5]",
+        "migration",
+        "creates and migrates a scratch database (CREATE DATABASE, DDL)",
+    ),
+    (
+        "backend/tests/test_migration_routing_shadow.py::test_a_fraction_outside_the_unit_interval_is_refused_by_the_database[1.5]",
+        "migration",
+        "creates and migrates a scratch database (CREATE DATABASE, DDL)",
+    ),
+    (
+        "backend/tests/test_migration_routing_shadow.py::test_a_malformed_bundle_hash_is_refused_by_the_database",
+        "migration",
+        "creates and migrates a scratch database (CREATE DATABASE, DDL)",
+    ),
+    (
+        "backend/tests/test_migration_environment_settings.py::test_environment_settings_round_trip_leaves_api_keys_unchanged",
+        "migration",
+        "creates and migrates a scratch database (CREATE DATABASE, DDL)",
+    ),
 )
 
 
