@@ -44,6 +44,8 @@ __all__ = [
     "GlmDiagnostics",
     "LiftBin",
     "MonotonicityCheck",
+    "MonotonicityOmission",
+    "MonotonicityOmissionReason",
     "PartialDependence",
     "PartialDependenceOmission",
     "PartialDependenceOmissionReason",
@@ -250,6 +252,33 @@ class TypeIIIOmission(BaseModel):
     reason: TypeIIIOmissionReason
 
 
+class MonotonicityOmissionReason(enum.StrEnum):
+    """Why a declared GLM direction was not checked (FR-89, PL-1856 DP-M)."""
+
+    #: An operand of an `interaction` is not swept alone: holding it recombines the pair into
+    #: cells the fit never saw (FR-178).
+    OPERAND_OF_INTERACTION = "operand_of_interaction"
+    #: An `expression` factor's input is not its source column, so a sweep would hold the
+    #: wrong thing (FR-178, 2026-10-16 amendment).
+    EXPRESSION_FACTOR = "expression_factor"
+    #: The factor's levels have no order to sweep: a grouping, a text identity factor, or a
+    #: cross. A direction over them has no axis to be checked along.
+    UNORDERED_LEVELS = "unordered_levels"
+
+
+class MonotonicityOmission(BaseModel):
+    """A declared GLM direction that was not checked, and why (FR-89).
+
+    A declared direction therefore always yields a `MonotonicityCheck` or one of these,
+    never nothing — the FR-178 pattern.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    factor: str
+    reason: MonotonicityOmissionReason
+
+
 class GlmDiagnostics(BaseModel):
     """GLM-specific evidence (FR-172)."""
 
@@ -269,6 +298,13 @@ class GlmDiagnostics(BaseModel):
     #: FR-178. Factors the type-III block did not test, each with its reason. Empty on every
     #: artifact written before this field existed.
     type_iii_omitted: tuple[TypeIIIOmission, ...] = ()
+    #: FR-89: a GLM's declared direction is *checked, not enforced*, and a violation is
+    #: reported here. Same shape and rule as the GBM's `monotonicity`: the mean prediction
+    #: swept along the factor's axis, `holds` when no step moves against the direction by
+    #: more than 1e-9.
+    monotonicity: tuple[MonotonicityCheck, ...] = ()
+    #: FR-89: declared directions that could not be swept, each with its reason.
+    monotonicity_omitted: tuple[MonotonicityOmission, ...] = ()
     #: Terms dropped as collinear. Named rather than counted: "2 terms aliased" tells a
     #: reader something is wrong and not which factor to fix.
     aliasing: tuple[str, ...] = ()

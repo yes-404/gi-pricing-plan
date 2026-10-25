@@ -79,6 +79,8 @@ const arm = ref<ModelArm>("glm");
 const family = ref<GlmFamily>("poisson");
 const link = ref<GlmLink>("log");
 const tweediePower = ref(1.5);
+/** R/MASS `glm.nb` form (variance μ + μ²/θ). Empty until declared — never defaulted (DP-T). */
+const nbTheta = ref<number | "">("");
 const gbmBackend = ref<"xgboost" | "lightgbm">("xgboost");
 /**
  * The whole `GbmFunctionRef`, not just a name — `ObjectivePicker` owns both arms, and the
@@ -141,6 +143,9 @@ const spec = computed<ModelSpec | null>(() => {
       link: link.value,
       ...(family.value === "tweedie"
         ? { family_params: { power: tweediePower.value } }
+        : {}),
+      ...(family.value === "negative_binomial" && nbTheta.value !== ""
+        ? { family_params: { theta: nbTheta.value } }
         : {}),
     };
   }
@@ -518,6 +523,22 @@ onMounted(async () => {
           v-model.number="tweediePower"
           type="number"
           step="0.1"
+          class="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+        >
+      </FormField>
+
+      <FormField
+        v-if="family === 'negative_binomial'"
+        field-id="nb-theta"
+        label="Theta (R/MASS glm.nb form)"
+        help="Required, greater than 0. Variance is mean + mean² / theta, as R's glm.nb reports it; larger is closer to Poisson."
+      >
+        <input
+          id="nb-theta"
+          v-model.number="nbTheta"
+          type="number"
+          min="0"
+          step="any"
           class="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
         >
       </FormField>
