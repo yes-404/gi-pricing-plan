@@ -39,8 +39,8 @@ def test_database_url_returns_an_explicit_override_without_checking_anything(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """FD-1729 (PL-1769 item 13): `test_database_url()` is the application's login-role DSN.
-    `GIP_TEST_DATABASE_URL` overrides the OWNER's DSN only (`test_owner_database_url()`);
-    the application's override is `GIP_TEST_APP_DATABASE_URL`. Neither path may reach the
+    `GIP_TEST_DATABASE_URL` overrides the OWNER's DSN only; the application's override is
+    `GIP_TEST_APP_DATABASE_URL`. Neither path may reach the
     existence check.
     """
     monkeypatch.setenv("GIP_TEST_DATABASE_URL", "postgresql+asyncpg://x:y@z/explicit")
@@ -51,7 +51,6 @@ def test_database_url_returns_an_explicit_override_without_checking_anything(
         raise AssertionError("an explicit override must never reach the existence check")
 
     monkeypatch.setattr(conftest_db, "_worktree_database_exists", _must_not_be_called)
-    assert conftest_db.test_owner_database_url() == "postgresql+asyncpg://x:y@z/explicit"
     # The owner override is not the application's DSN: same database, login-role credentials.
     assert (
         conftest_db.test_database_url()
@@ -112,12 +111,10 @@ def test_database_url_derives_the_per_worktree_url_when_the_database_exists(
     """
     name = conftest_db._worktree_database_name()
     monkeypatch.setattr(conftest_db, "_worktree_database_exists", lambda n: n == name)
-    owner = conftest_db.test_owner_database_url()
-    assert owner == f"postgresql+asyncpg://gipricing:gipricing@localhost:5432/{name}"
-    assert owner != conftest_db.DEFAULT_TEST_DSN
-    # FD-1729: the application's DSN is the same database as the login role.
     url = conftest_db.test_database_url()
+    # FD-1729: the application's DSN is the per-worktree database as the login role.
     assert url == f"postgresql+asyncpg://gip_app_login:gip_app_login@localhost:5432/{name}"
+    assert url != conftest_db.DEFAULT_TEST_DSN
 
 
 def test_database_url_never_silently_falls_back_to_the_shared_database(
