@@ -1,4 +1,4 @@
-"""FD-1610 limb 2 (PL 8227 S2): a `model_call` key the runtime drops is traced (d), then refused (c).
+"""FD-1610 limb 2 (PL 8227 S2): a `model_call` key the runtime drops is traced (d), then refused.
 
 `runtime._model_call_handler` builds the model's feature row from the `feature_map` keys found in
 the scoring context and silently skips the rest (`runtime.py:758-762` at `102341aa`). The
