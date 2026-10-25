@@ -22,6 +22,14 @@ docker compose -f deploy/docker-compose.yml down          # add -v to drop the v
 `--wait` blocks until every healthcheck passes, so a green exit means the stack is
 genuinely usable rather than merely started.
 
+*(Dated 2026-10-25, on the maintainer's (by delegation) entry "2026-10-25 11:53:23 GMT".)*
+Every published port of this stack (PostgreSQL 5432, Redis 6379, MinIO 9000 and 9001, Keycloak
+8080 and the `lb` port, `GIP_LB_PORT`, default 8000) is bound to `127.0.0.1`. A host outside this
+machine reaches none of them. To use one from another machine, forward it over SSH
+(`ssh -L 8080:127.0.0.1:8080 <host>`). `backend/tests/test_compose_binds.py` fails if a
+service is published without the bind. A running container keeps its old binding until it is
+recreated from a checkout that has this change.
+
 ## The local identity provider (FR-398)
 
 Off by default. Three containers start as before; the provider is a fourth, behind a profile:

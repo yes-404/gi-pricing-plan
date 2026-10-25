@@ -4840,6 +4840,116 @@
         "title": "DislocationEstimate",
         "type": "object"
       },
+      "DislocationMover": {
+        "additionalProperties": false,
+        "description": "One row of `GET /dislocation-runs/{id}/movers` (03 §4.6, §5.1; WK-675 Slice 8, PL-1833).\n\nThe stored columns are `dislocation_frame`'s own (a mover is a banded policy, so both\noutcomes are quoted and the premiums are present); `change_pct` is computed at read and is\na positional decimal string, never a float. `columns` is the one open object: the\nportfolio columns joined at read (NFR-499: none is stored).",
+        "properties": {
+          "baseline_error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Error Code"
+          },
+          "baseline_minor": {
+            "description": "Amount in minor units (pence/cents) of the workspace currency.",
+            "title": "Baseline Minor",
+            "type": "integer"
+          },
+          "baseline_outcome": {
+            "title": "Baseline Outcome",
+            "type": "string"
+          },
+          "candidate_error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate Error Code"
+          },
+          "candidate_minor": {
+            "description": "Amount in minor units (pence/cents) of the workspace currency.",
+            "title": "Candidate Minor",
+            "type": "integer"
+          },
+          "candidate_outcome": {
+            "title": "Candidate Outcome",
+            "type": "string"
+          },
+          "change_minor": {
+            "description": "Amount in minor units (pence/cents) of the workspace currency.",
+            "title": "Change Minor",
+            "type": "integer"
+          },
+          "change_pct": {
+            "description": "Exact decimal as a string; never a binary float (FR-10).",
+            "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+            "title": "Change Pct",
+            "type": "string"
+          },
+          "columns": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Columns",
+            "type": "object"
+          },
+          "origin_rung": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin Rung"
+          },
+          "quote_id": {
+            "title": "Quote Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "quote_id",
+          "baseline_outcome",
+          "candidate_outcome",
+          "baseline_minor",
+          "candidate_minor",
+          "change_minor",
+          "baseline_error_code",
+          "candidate_error_code",
+          "origin_rung",
+          "change_pct",
+          "columns"
+        ],
+        "title": "DislocationMover",
+        "type": "object"
+      },
       "DislocationOutcomes": {
         "additionalProperties": false,
         "description": "Each policy once by its two outcomes; the first five sum to policy_count (DP-S2-2).",
@@ -11116,6 +11226,34 @@
         "title": "OneWaySummary",
         "type": "object"
       },
+      "OutputValue": {
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/OutputValue"
+            },
+            "type": "object"
+          },
+          {
+            "items": {
+              "$ref": "#/components/schemas/OutputValue"
+            },
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
       "OverallOutcome": {
         "enum": [
           "pass",
@@ -16542,7 +16680,7 @@
       },
       "ScoringResult": {
         "additionalProperties": false,
-        "description": "`ScoringResult` (`scoring.schema.json:46-63`, `03` §4.4).\n\nInvariants (`scoring.schema.json:59-62`, enforced by `pricing_core.rating.score`, not\nre-validated here): applying every rung's recorded operation to `risk_premium`\nreproduces `payable_premium` exactly (FR-248); a traced and an untraced call on the\nsame bundle and context return an identical premium (`03` R3).",
+        "description": "`ScoringResult` (`scoring.schema.json:46-63`, `03` §4.4).\n\nInvariants (`scoring.schema.json:59-62`, enforced by `pricing_core.rating.score`, not\nre-validated here): applying every rung's recorded operation to `risk_premium`\nreproduces `payable_premium` exactly (FR-248); a traced and an untraced call on the\nsame bundle and context return an identical premium (`03` R3).\n\n`outputs` is the one construction-time check on served output values (`RL-1343` rule 4):\na `float` anywhere in it is refused, so a decimal-family value is a positional string\n(`_build_outputs`). The model does not know declared types, so it cannot tell a whole\n`27` under a declared `decimal` from a valid integer; the producer and batch's check\nclose that.",
         "properties": {
           "bundle_hash": {
             "pattern": "^sha256:[a-f0-9]{64}$",
@@ -16566,7 +16704,9 @@
             "type": "string"
           },
           "outputs": {
-            "additionalProperties": true,
+            "additionalProperties": {
+              "$ref": "#/components/schemas/OutputValue"
+            },
             "title": "Outputs",
             "type": "object"
           },
@@ -27645,8 +27785,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "additionalProperties": true,
-                    "type": "object"
+                    "$ref": "#/components/schemas/DislocationMover"
                   },
                   "title": "Response Get Dislocation Run Movers Api V1 Dislocation Runs  Run Id  Movers Get",
                   "type": "array"
