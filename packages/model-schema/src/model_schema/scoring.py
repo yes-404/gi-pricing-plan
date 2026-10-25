@@ -175,6 +175,11 @@ class TraceStep(BaseModel):
     `consumed`/`produced` are the engine's own `trace[node_id].input`/`.output` dicts,
     passed through rather than re-derived — `03` does not specify a narrower shape than
     "consumed values, produced value" and the engine's own record already satisfies it.
+
+    `dropped_inputs` is set only on a `model_call` step (FR-222, the maintainer's (by
+    delegation) entries "2026-10-25 11:40:12 GMT" and "2026-10-25 11:53:23 GMT"): the sorted
+    graph names of its `feature_map` that the scoring context did not hold, so the runtime
+    dropped them. `None` when nothing was dropped. Not compared (`03` §4.10).
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -187,6 +192,7 @@ class TraceStep(BaseModel):
     matched: dict[str, object] | None = None
     violation: dict[str, object] | None = None
     elapsed_us: int = Field(ge=0, default=0)
+    dropped_inputs: list[str] | None = None
 
 
 class Trace(BaseModel):
