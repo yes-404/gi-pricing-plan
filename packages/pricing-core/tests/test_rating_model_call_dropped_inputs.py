@@ -107,8 +107,11 @@ async def test_a_dropped_key_that_feeds_a_required_input_is_refused() -> None:
     compiled = await _compiled_with_feature_map({"driver_years": "age_years"})
     ctx = _ctx(
         inputs={
-            "driver_age": _AGE, "channel": "direct", "min_premium_minor": 0,
-            "sanity_cap_minor": 999_999_999, "sanity_floor_minor": 0,
+            "driver_age": _AGE,
+            "channel": "direct",
+            "min_premium_minor": 0,
+            "sanity_cap_minor": 999_999_999,
+            "sanity_floor_minor": 0,
         }
     )
     with pytest.raises(ValueError, match=rf"MODEL_CALL_FAILED.*{_ABSENT}") as caught:
