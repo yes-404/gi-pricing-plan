@@ -236,7 +236,8 @@ async def test_the_gbm_factor_refusal_message_is_exactly_its_structural_fields()
     assert str(caught.value) == (
         f"MODEL_CALL_GBM_TRANSFORMED_FACTOR: step 's_risk': {MODEL_REF} is a GBM fitted on "
         f"transformed Factors [{world.factor.slug} (banding)], which a model_call cannot score: "
-        "the Bundle carries no Bandings or Groupings for a GBM (FR-222, FR-240)"
+        "a GBM is fitted on the Factors' transformed values and the Bundle carries only the raw "
+        "inputs (FR-222, FR-240)"
     )
 
 
