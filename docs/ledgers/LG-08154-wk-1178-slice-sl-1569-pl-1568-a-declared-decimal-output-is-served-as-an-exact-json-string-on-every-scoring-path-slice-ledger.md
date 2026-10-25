@@ -124,3 +124,23 @@ A declared `decimal`, `relativity` or `percentage` output changes on `POST /api/
 ## PRs
 
 (none opened by the executor)
+
+### 2026-10-25 11:14–11:16 UTC — Task 6 limbs 1–2 DIAGNOSTIC window (exec-1569w): ABORTED at limb 2 HEAD run 1 on load1 ≥ 5
+
+Authority: the brief of 2026-10-25 (lead 28), granting one gate-1b DB window as slot holder beside slice A's pytest (gate-1, `ce6eb64e`, held from 11:03 UTC). Diagnostic only: **timing verdict CARRIED to nfr-bench-1 (D1 = (b))**. Tree: HEAD `66d5a35d`, porcelain 0 before and after. Script `w2-window.sh` sha256 `331d084b…7ab7850` (= the staged `4b3066df…6054` plus two lines: `head=<sha>` first, `rc=$?` captured in `fin()` and printed last). Log `w2.log`, load samples `w2-watch.log`, rows `t6/out.jsonl` (all under `~/gi-pricing-plan.local/scratch/sl-1569/`).
+
+**Abort.** The 20 s load watcher read load1 5.25 at 11:15:52 UTC (samples 2.54, 2.60, 4.30, 4.55, 5.25) and sent TERM during `limb2 HEAD run 1` (23 Oct rule: abort at load1 ≥ 5). The trap ran: src restored, test copy removed, redis flushed, own DB dropped. `ZEROS redis2=0 redis4=0 pg_database[gip_test_sl1569]=0`; `tree status lines: 0`; `WINDOW END 2026-10-25T11:15:54+00:00`. `w2.log`'s last line reads `rc=0`, which is the trap's captured status after the TERM-killed child, not the window's verdict. Stages complete: limb 1 base and HEAD (rc 0, 0) and limb 2 base run 1 only. Limb 2 base runs 2–3 and HEAD runs 1–3 are **not run**; `verdict.py` was not run (INCOMPLETE by construction). The lead rules a re-run.
+
+**Readings (DIAGNOSTIC, partial; ms, 1000 calls after 100 warm-up; load 2.3–2.6 during limb 1, 4.5 at the end of limb 2 base run 1, so limb 2 base is itself load-contaminated).**
+Limb 1, p99 per run 1/2/3 (V+S = `model_validate` + `model_dump_json`, S = dump only):
+
+| shape/op | base | HEAD |
+|---|---|---|
+| U V+S | 0.207 / 0.196 / 0.214 | 0.206 / 0.194 / 0.236 |
+| U S | 0.091 / 0.106 / 0.122 | 0.103 / 0.099 / 0.120 |
+| T V+S | 0.306 / 0.347 / 0.322 | 0.360 / 0.362 / 0.367 |
+| T S | 0.151 / 0.147 / 0.161 | 0.142 / 0.156 / 0.172 |
+
+Limb 2 (base, run 1 only): `/score` p50 12.78, p99 26.555, max 37.294; `/score/compare` p50 32.759, p99 53.959, max 63.979. No HEAD limb 2 reading exists.
+
+Slice A's gate timing rows (gate-1, `ce6eb64e`, 11:03 UTC) overlapped this window; the limb 2 readings are logged against them and are not an NFR-502 measurement.
