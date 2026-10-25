@@ -79,3 +79,11 @@ All logs under `~/gi-pricing-plan.local/scratch/sl-1552/`.
 ## PRs
 
 None yet.
+
+## Gate of record and the named exception (dated 2026-10-25)
+
+- **The gate of record is `6975e2be`** (tree `551abc3b8fe7c7200abf02dcea635ef7fe4baf60`), paired gate-1b run, `pytest` summary line verbatim: `14 failed, 6781 passed, 21 skipped, 147 warnings in 2775.33s (0:46:15)`, `rc=1`. The 14 are the 13 failures of the eight docs-audit files (the working ids of this slice not yet minted, the 1(f) set) plus one more, `backend/tests/test_tenant_binding.py::test_the_database_is_checked_before_any_other_store_is_written` (`assert 'local' is None`).
+- **Cause of the 14th, recorded as FD 8233 (LOW, WK-1178):** that test's `redis_url` draws db 1 + `randbelow(15)` and ignores `GIP_REDIS_URL`, so a paired gate's db held the tenant marker. FD 8233 is written in space form here because it is not yet minted.
+- **The named exception** was ruled for this run only, in the to-lead entry "2026-10-25 18:59:00 GMT" (the 14th failure is outside the slice's change set and the cross-gate collision is proven).
+- **The scratch-DB check** was granted in the to-lead entry "2026-10-25 19:00:55 GMT" and ran in the no-gate gap at head `6975e2be`, porcelain 0, load1 3.00: `createdb` rc 0; `alembic upgrade head` rc 0; `pytest backend/tests/test_tenant_binding.py` rc 0, `14 passed, 6 warnings in 19.78s`; `dropdb` rc 0; zeros: DB count 0, redis db 11 dbsize 0, db0 dbsize 56.
+- **Accepted** in the to-lead entry "2026-10-25 19:28:31 GMT": the gate STANDS under 1(f) plus the named exception, final; the gate of record is `6975e2be`.
