@@ -66,6 +66,7 @@ __all__ = [
     "dislocate",
     "dislocation_frame",
     "estimate_attribution_ratings",
+    "mover_change_pct",
     "read_portfolio",
     "select_movers",
     "summarise_dislocation",
@@ -73,6 +74,7 @@ __all__ = [
 
 _STAMPED: Final[tuple[str, ...]] = ("purpose", "effective_date", "rating_version_ref")
 _EXPOSURE_SCALE: Final = 6
+_MOVER_PCT_PLACES: Final = 6
 #: The frame's own columns (RL-1402 S2) but `quote_id`; a portfolio column named as one is refused.
 _FRAME_COLUMNS: Final[tuple[str, ...]] = (
     "baseline_outcome",
@@ -303,6 +305,15 @@ def _compared(frame: pl.DataFrame) -> pl.DataFrame:
 def _banded(frame: pl.DataFrame) -> pl.DataFrame:
     """The compared policies with a positive baseline (RL-1402, Amendment N2)."""
     return _compared(frame).filter(pl.col("baseline_minor") > 0)
+
+
+def mover_change_pct(change_minor: int, baseline_minor: int) -> Decimal:
+    """A mover's `change_pct` (03 §4.6): change ÷ baseline x 100, exact on the integers, rounded
+    once to 6 places **away from zero**, so a selected mover never reads below its threshold
+    (the rule of `abs_change_pct_quantiles`). `baseline_minor` is positive: movers are banded."""
+    scaled = change_minor * 100 * 10**_MOVER_PCT_PLACES
+    magnitude = -(-abs(scaled) // baseline_minor)  # ceiling division on the absolute value
+    return Decimal(magnitude if scaled >= 0 else -magnitude).scaleb(-_MOVER_PCT_PLACES)
 
 
 def select_movers(frame: pl.DataFrame, spec: DislocationSpec) -> pl.DataFrame:
