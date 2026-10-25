@@ -41,7 +41,7 @@ Status: **active** — activated 2026-10-25 in the commit that sets the roadmap 
 
 In S11 (SL-1553), spec first, once this record is adopted:
 
-- **Point 1 (the `/tests` link).** (i) FR-1903 item (4) gets a dated clause: *"Amended
+- **Point 1 (the `/tests` link).** (i) FR 8209 item (4) gets a dated clause: *"Amended
 <date>, WK-675 S11 `SL-1553`, FR 8211: and to `/rating/:slug/v/:version/tests`."* The row text
 is not rewritten. (ii) The S10 list view gains the link, built from `slug@version` with no
 second lookup. (iii) `router/index.ts` registers `/tests`, and `reachability.test.ts` stays
@@ -110,3 +110,5 @@ Not yet.
 Not yet opened.
 
 **Disclosure (2026-10-25, FD 1919 form; the maintainer's 22:55:13 GMT ruling relayed by the lead).** A `sed` over this ledger and `docs/specs/03-rating-engine.md`, re-pointing FR 8209, RL 8163 and LG 8208 to FR-1903, RL-1900 and LG-1902, ran in commit `d3b35fae` (pushed). It rewrote three spans inside verbatim `to-lead.md` quotes in this ledger: the "2026-10-23 11:14:56 BST" heading (RL 8163, `to-lead.md` :30182) and, twice, item (B) of the "2026-10-25 11:22:13 GMT" entry (FR 8209 and RL 8163, `to-lead.md` :30429). The forward fix `aab3e3ef` restored the three spans character for character from `to-lead.md`; no history was rewritten. `e64c4568` and the re-merge `c124e6d9` are unaffected, and no frozen record was touched. This is the quote-alteration class of FD 1919; the line is its accepted disclosure form.
+
+**Disclosure addendum (2026-10-25 23:40 GMT, FD 1919 form; RS 8253 F1, adopted by the lead; the maintainer's 22:57:25 GMT ruling).** The disclosure above counts three spans; the count is four. The fourth is line 44 of this ledger, inside the "RL 8217 What it obliges, verbatim" block (`origin/draft/rl-8217` @2f205360): `d3b35fae` re-pointed its quoted "FR 8209 item (4)" to "FR-1903 item (4)", and `aab3e3ef` did not restore it. This commit restores that span to its source text, character for character; a `diff` of the whole 23-line verbatim block against the RL 8217 file prints nothing. No history was rewritten and the `93bd427b` line is not edited. Found by RS 8253 F1.
