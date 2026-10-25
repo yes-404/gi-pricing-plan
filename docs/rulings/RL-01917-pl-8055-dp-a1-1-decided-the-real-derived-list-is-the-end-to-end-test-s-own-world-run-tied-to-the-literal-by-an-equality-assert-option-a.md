@@ -13,7 +13,7 @@ supersedes: []
 superseded_by: ~
 corrected_by: []
 corrects: ~
-relates: [PL-1787, PL-1542, PL-1705, PL-1694, SL-1543, SL-1696, LG-1732, FR-264]   # PL-1787 is PL-1787's working id; minted with or after PL-1787, after #1310 (the maintainer 2026-10-16 09:51:34 BST, condition (4)), which writes its minted id; LG-1732 resolves once #1310 is on main
+relates: [PL-1787, PL-1542, PL-1705, PL-1694, SL-1543, SL-1696, LG-1732, FR-264]   # PL-8055 is PL 8055's working id; minted with or after PL 8055, after #1310 (the maintainer 2026-10-16 09:51:34 BST, condition (4)), which writes its minted id; LG-1732 resolves once #1310 is on main
 ---
 
 # RL-1917 — PL-1787 DP-A1-1: which run is "the real derived list"
