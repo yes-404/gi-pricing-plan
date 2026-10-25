@@ -92,3 +92,10 @@ The small-run database `gipricing_sl-8185_215125e7` was dropped by the lead in t
 ## PRs
 
 None yet.
+
+### Build log — 2026-10-25 (exec-8185d; adoption conditions B2 and B3 of RS 8216, appended, no earlier line edited)
+
+- **Count correction.** `### Task list`/Build log above say `ROUTE_SCOPES` has 47 rows; at head `01eb5b05` it has **48** (`ac1dce42` added the `PUT /api/v1/environments/{env}/routing` row). Command, run at `01eb5b05`: `python3 -I - <<EOF` parsing `backend/tests/test_route_scope_guard.py` with `ast`, taking the `ROUTE_SCOPES` assignment (line 87) and printing `len(value.keys)`; output: `ROUTE_SCOPES 48`.
+- **`tree:` correction.** Front matter `tree: 40de35f5…` is the Task 5 commit, not the head. `docs/_templates/LG.md` line 37 says only `tree: <commit-sha this was written against>`; it carries no rule that the field is updated, so the front matter is not rewritten. The tree this ledger is now written against is `01eb5b05` (the audited head, RS 8216), before this commit.
+- **Gate.** The 2026-10-23 aborted run on `7d3f5b09` is not a gate row. Re-run owed on the pushed head of this branch, slot gate-1b, after slice A (#1368) leaves gate-1.
+- **Audit.** RS-8216 (`docs/research/RS-08216-…`, working id 8216, folded into this PR) is the slice audit at `01eb5b05`, proposed CLEAN with conditions B1 to B4. Adopted by the lead 2026-10-25: CLEAN; B1 met as worded by the maintainer's 18:16:19 BST entry of 2026-10-22, (a), SL 8192 reserved and named here; B2 discharged by folding PL-8181 from `origin/draft/pl-8181` (`c6f93d5d`), working id kept; B3 discharged by this block; B4 superseded by the gate re-run. The maintainer confirmed the PL 8181 fold at to-lead "2026-10-25 11:15:40 GMT".
