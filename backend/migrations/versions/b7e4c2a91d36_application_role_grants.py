@@ -97,6 +97,9 @@ _PREVIOUS: dict[str, Grant] = {
 #: What `gip_app` holds after it: every public table, one row each (PL-1769 *Table
 #: classification*, rows 1 to 60, and the three routing and shadow tables mapped since).
 _TARGET: dict[str, Grant] = {
+    # Alembic's own revision row: the `database` fixture's "is this database migrated" probe
+    # (`conftest_db.py`, `SELECT count(*) FROM alembic_version`) runs as the login role.
+    "alembic_version": READ,
     "api_keys": _moves("expires_at", "revoked_at", "last_used_at"),
     "approval_decisions": APPEND,
     "approval_policies": _moves("policy", "updated_at"),
