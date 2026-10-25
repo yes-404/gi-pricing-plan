@@ -1,4 +1,4 @@
-"""FD 8194: a test that reaches the freMTPL2 data carries a data-present guard.
+"""FD-1887: a test that reaches the freMTPL2 data carries a data-present guard.
 
 `examples/fremtpl2/data` is fetched (sha256-pinned) and gitignored, so CI never has it. A test
 that reads it unguarded passes on a developer's box and fails in CI: #1361's WF-701 journey did,
