@@ -124,3 +124,44 @@ def test_owner_fixture_users_is_a_closed_labelled_tuple() -> None:
 def test_the_owner_database_fixture_exists() -> None:
     """Step 3.1 ("a new `owner_database` fixture uses the owner's"). Red at main: absent."""
     assert hasattr(conftest_db, "owner_database")
+
+
+def _src_files_naming(root: Path, *names: str) -> list[str]:
+    """Every `.py` under `root` whose text contains any of `names`."""
+    return sorted(
+        str(p.relative_to(root))
+        for p in root.rglob("*.py")
+        if any(n in p.read_text(encoding="utf-8") for n in names)
+    )
+
+
+_SEAM_NAMES = ("conftest_db", "seed_as_owner")
+
+
+@pytest.mark.req("FR-44")
+def test_the_owner_seam_exists_and_is_not_named_anywhere_in_backend_src() -> None:
+    """Condition (i) of the S1a seeding-seam ruling (to-lead 2026-10-25 22:24:25 GMT): the
+    owner-engine seam `conftest_db.seed_as_owner` is test-only -- nothing under
+    `backend/src` names it or its module. Import-linter cannot say this: `backend` is a
+    namespace package, not one of the contract's root packages.
+
+    RED means the seam is absent (`seed_as_owner` missing from `conftest_db`); the zero-hit
+    half is green by construction until a source file names the seam, which the negative
+    case below proves it would notice.
+    """
+    assert callable(getattr(conftest_db, "seed_as_owner", None))
+    assert _src_files_naming(_ROOT / "backend" / "src", *_SEAM_NAMES) == []
+
+
+@pytest.mark.req("FR-44")
+def test_the_seam_guard_notices_a_source_file_that_imports_the_seam(tmp_path: Path) -> None:
+    """Negative case: the same scan, on a copy of `backend/src` with one injected file."""
+    import shutil
+
+    copy = tmp_path / "src"
+    shutil.copytree(_ROOT / "backend" / "src", copy)
+    assert _src_files_naming(copy, *_SEAM_NAMES) == []
+    (copy / "app" / "injected.py").write_text(
+        "from backend.tests.conftest_db import seed_as_owner\n", encoding="utf-8"
+    )
+    assert _src_files_naming(copy, *_SEAM_NAMES) == ["app/injected.py"]
