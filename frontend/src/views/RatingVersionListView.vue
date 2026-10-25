@@ -95,6 +95,7 @@ function pinnedTables(version: RatingVersion) {
 
     <p
       v-if="loading"
+      role="status"
       class="mt-6 text-sm text-slate-500"
     >
       Loading…
@@ -122,7 +123,7 @@ function pinnedTables(version: RatingVersion) {
         <select
           id="status-filter"
           v-model="statusFilter"
-          class="rounded-md border border-slate-300 px-2 py-1"
+          class="rounded-md border border-slate-300 px-2 py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
         >
           <option value="all">
             All
@@ -139,6 +140,7 @@ function pinnedTables(version: RatingVersion) {
 
       <p
         v-if="groups.length === 0"
+        role="status"
         class="mt-6 text-sm text-slate-500"
       >
         No rating versions.
@@ -153,6 +155,9 @@ function pinnedTables(version: RatingVersion) {
           {{ group.slug }}
         </h2>
         <table class="mt-2 w-full text-left text-sm">
+          <caption class="sr-only">
+            {{ group.slug }} versions
+          </caption>
           <thead class="text-slate-500">
             <tr>
               <th scope="col">
@@ -194,6 +199,10 @@ function pinnedTables(version: RatingVersion) {
                   class="text-slate-500"
                 >unavailable</span>
                 <span
+                  v-else-if="liveIn(version).length === 0"
+                  class="text-slate-500"
+                >none</span>
+                <span
                   v-for="env in liveIn(version)"
                   :key="env"
                   class="mr-1 rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-800"
@@ -204,19 +213,22 @@ function pinnedTables(version: RatingVersion) {
               <td class="space-x-2">
                 <RouterLink
                   :to="`/rating/${version.slug}/v/${version.version}/design`"
-                  class="text-sky-700 underline"
+                  :aria-label="`Design ${version.slug}@${version.version}`"
+                  class="inline-block py-1 text-sky-700 underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
                 >
                   Design
                 </RouterLink>
                 <RouterLink
                   :to="`/rating/${version.slug}/v/${version.version}/sandbox`"
-                  class="text-sky-700 underline"
+                  :aria-label="`Sandbox ${version.slug}@${version.version}`"
+                  class="inline-block py-1 text-sky-700 underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
                 >
                   Sandbox
                 </RouterLink>
                 <RouterLink
                   :to="`/rating/${version.slug}/v/${version.version}/dislocation`"
-                  class="text-sky-700 underline"
+                  :aria-label="`Dislocation ${version.slug}@${version.version}`"
+                  class="inline-block py-1 text-sky-700 underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
                 >
                   Dislocation
                 </RouterLink>
@@ -224,7 +236,7 @@ function pinnedTables(version: RatingVersion) {
                   v-for="table in pinnedTables(version)"
                   :key="table.label"
                   :to="`/rating/${version.slug}/v/${version.version}/tables/${table.slug}`"
-                  class="font-mono text-sky-700 underline"
+                  class="inline-block py-1 font-mono text-sky-700 underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
                 >
                   {{ table.label }}
                 </RouterLink>
