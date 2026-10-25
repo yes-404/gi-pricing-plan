@@ -57,6 +57,14 @@ Read-only, in `.claude/worktrees/aud-8194d` at `b781ec96` (`origin/main` `ef3ac6
 5. **One observation, not a B-item.** LG line 124 says "If the limits above are accepted as recorded, neither [H1 nor H2] needs a slice". The FD-1887 essay (Remedy, second step) records the later ruling `to-lead.md` "2026-10-23 12:02:21 BST" (2): H1 and H2 are "hardening owed before the P2 close, owner WK-1178". The two do not conflict in what the slice does (the LG's block is dated 12:00, before the ruling, and the essay is the register of the owed work), but a reader of the LG alone misses the owed step. The lead may add one dated LG line pointing at the essay; no verdict depends on it.
 6. **Reachability of evidence.** `git merge-base --is-ancestor 520f8968 b781ec96` rc 0. The ledger SHAs RS-1890 checked (`d66ad2ed`, `b0d2580c`, `ca2057fb`, `7529198e`, `71e481fa`) were found reachable at `59759536`; `59759536` is an ancestor of `b781ec96` by the range above.
 
+## Findings
+
+- The non-docs patch-id is equal at `59759536` and `b781ec96` (`b947186d…`; Check 1): the guard is code-identical to the audited head.
+- Every path in the slice's own docs delta is in scope (Check 2): the LG, the FD-1887 essay, the register row, RS-1890, the INDEX rows and the SL-1888 roadmap row.
+- RS-1890's B1 and B2 are LANDED as a dated block in LG-1889 (Check 3).
+- RS 8214 is not present on this branch and was not audited (Check 4); the LG-versus-FD pointer (Check 5) is an observation, not a B-item.
+- No B-items.
+
 ## Owed (not run, docs-only seat, no grant)
 
 audit-docs, register-lint, req-coverage, generate-contracts `--check`, the eight docs-audit pytest files (common brief item 30). They belong to the docs-only gate and the mint.
