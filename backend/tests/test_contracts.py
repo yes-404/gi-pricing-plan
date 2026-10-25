@@ -503,6 +503,64 @@ def test_generated_and_authored_agree_on_scoring_field_names() -> None:
     )
 
 
+def _number_paths(node: Any, path: str = "") -> list[str]:
+    """Every path under `node` whose JSON Schema type admits `number` (`RL-1343` rule 4)."""
+    found: list[str] = []
+    if isinstance(node, dict):
+        declared = node.get("type")
+        if declared == "number" or (isinstance(declared, list) and "number" in declared):
+            found.append(path or "/")
+        for key, child in node.items():
+            found.extend(_number_paths(child, f"{path}/{key}"))
+    elif isinstance(node, list):
+        for index, child in enumerate(node):
+            found.extend(_number_paths(child, f"{path}/{index}"))
+    return found
+
+
+def _outputs_schemas(document: dict[str, Any]) -> tuple[Any, Any]:
+    """`ScoringResult.outputs` and the `OutputValue` it points at, from a `$defs` bundle."""
+    defs = document["$defs"]
+    return defs["ScoringResult"]["properties"]["outputs"], defs["OutputValue"]
+
+
+_SCORING_OUTPUTS_SOURCES: Final = {
+    "authored": AUTHORED / "scoring.schema.json",
+    "generated": GENERATED / "score-comparison.schema.json",
+}
+
+
+@pytest.mark.req("FR-451")
+def test_the_outputs_guard_names_the_path_of_a_planted_number() -> None:
+    """Broken input (`CLAUDE.md` §13): a copy of the authored contract whose `OutputValue`
+    admits `number` is found, at its path, by the walker the guard below stands on."""
+    planted = copy.deepcopy(_load(_SCORING_OUTPUTS_SOURCES["authored"]))
+    planted["$defs"]["OutputValue"]["anyOf"].append({"type": "number"})
+    outputs, value = _outputs_schemas(planted)
+    assert _number_paths(outputs) == []
+    assert _number_paths(value) == [f"/anyOf/{len(value['anyOf']) - 1}"]
+
+
+@pytest.mark.req("FR-451")
+@pytest.mark.parametrize("source", sorted(_SCORING_OUTPUTS_SOURCES))
+def test_scoring_outputs_admit_no_non_integer_number(source: str) -> None:
+    """`RL-1343` rule 4, on the hand-authored and the generated contract alike."""
+    outputs, value = _outputs_schemas(_load(_SCORING_OUTPUTS_SOURCES[source]))
+    assert _number_paths(outputs) == [], source
+    assert _number_paths(value) == [], source
+
+
+@pytest.mark.req("FR-451")
+def test_generated_and_authored_agree_on_the_scoring_outputs_value_schema() -> None:
+    """`test_generated_and_authored_agree_on_scoring_field_names` compares names only; this
+    holds the `outputs` value schema itself to the generated one, `$defs.OutputValue` too."""
+    authored = _outputs_schemas(_load(_SCORING_OUTPUTS_SOURCES["authored"]))
+    generated = _outputs_schemas(_load(_SCORING_OUTPUTS_SOURCES["generated"]))
+    assert authored[0].get("additionalProperties") == generated[0].get("additionalProperties")
+    # `description` is the authored contract's prose, not part of the shape.
+    assert {k: v for k, v in authored[1].items() if k != "description"} == generated[1]
+
+
 #: The schema a hand-authored contract composes to inherit `00` §4.3's envelope.
 _ENVELOPE_SCHEMA: Final = "common/artifact-envelope.schema.json"
 
