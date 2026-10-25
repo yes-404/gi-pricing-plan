@@ -1,10 +1,10 @@
 ---
-id: PL-8227
+id: PL-1927
 family: plan
 kind: map
 title: WK-1178 — the open-HIGH slices. FD-1729 split into S1a and S1b (SL-1771 re-cut), FD-1610 limb 2 as S2 (trace the dropped feature_map keys, then refuse a dropped required input), FD-1754's unread GBM Factor types as S4 — a dated Work-plan delta
-status: draft                   # draft → active → superseded | retired (§1.2a) — L1: draft→active rides each slice's PR
-created: 2026-10-25             # filed under working id 8227
+status: active                  # draft → active → superseded | retired (§1.2a) — L1: draft→active rides each slice's PR
+created: 2026-10-25             # drafted 2026-10-25 under working id 8227
 owner: planner
 tree: ff976406f1bf133cfe040d2c44d383011503988a
 phase: P2
@@ -15,7 +15,7 @@ corrected_by: []
 relates: [PL-1769, SL-1771, FD-1729, FD-1610, SL-1541, FD-1754, SL-1758, PL-1856, SL-1569, FR-44, FR-222, FR-239, FR-240]
 ---
 
-# PL 8227 — WK-1178: the open-HIGH slices S1a, S1b, S2 and S4 (a dated Work-plan delta)
+# PL-1927 — WK-1178: the open-HIGH slices S1a, S1b, S2 and S4 (a dated Work-plan delta)
 
 > **For agentic workers:** this is a **dated Work-plan delta** under Lean P2 L5 (`document-ids.md`
 > §1.6, PL row: one plan per Work, slices as rows, no per-slice leaf; a change is one dated delta, a

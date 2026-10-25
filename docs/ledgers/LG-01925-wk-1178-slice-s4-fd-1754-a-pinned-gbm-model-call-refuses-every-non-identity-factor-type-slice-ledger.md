@@ -9,9 +9,9 @@ tree: 8ac770f545eb66ef3677576e210f147ed85cb401
 phase: P2
 work: WK-1178
 slice: SL-1924
-plans: [PL-8227]
+plans: [PL-1927]
 corrected_by: []
-relates: [SL-1924, FD-1754, PL-8227, FR-222, FR-240]
+relates: [SL-1924, FD-1754, PL-1927, FR-222, FR-240]
 ---
 
 # LG-1925 — WK-1178 slice S4: FD-1754, a pinned GBM refuses every non-IDENTITY Factor type
@@ -25,7 +25,7 @@ Working id 8242 (LG), reserved 2026-10-25 22:41:48 UTC by lead 28 in `eta.md`; t
 
 ### Scope
 
-`PL-8227` (draft, `origin/draft/pl-8227` @`d1ac13aa`, `docs/plans/PL-08227-wk-1178-open-high-findings-s1a-s1b-fd-1729-split-s2-fd-1610-limb-2-s4-fd-1754-gbm-factor-read-plan-delta.md`), the row for S4 in its Tasks table: "| 1 | **S4** — FD-1754: the four unread GBM Factor types | Tasks S4-0 to S4-3 | `03` §3: FR-222 (the 2026-10-16 amendment), FR-240 (its 2026-10-16 amendment) | PL-1856 slice A (#1368) merged | B (pricing-core modelling) | no | ½ day |". Its Acceptance Standard item 18 is the probe (INTERACTION, SPLINE, POLYNOMIAL, EXPRESSION on xgboost and lightgbm: `model_call` premium against `predict_gbm(..., factors=<real Factors>)`; the result per type and backend goes in this ledger). Item 19 is "If a type differs silently: it is added at `factors.py:546`".
+`PL-1927` (draft, `origin/draft/pl-8227` @`d1ac13aa`, `docs/plans/PL-01927-wk-1178-open-high-findings-s1a-s1b-fd-1729-split-s2-fd-1610-limb-2-s4-fd-1754-gbm-factor-read-plan-delta.md`), the row for S4 in its Tasks table: "| 1 | **S4** — FD-1754: the four unread GBM Factor types | Tasks S4-0 to S4-3 | `03` §3: FR-222 (the 2026-10-16 amendment), FR-240 (its 2026-10-16 amendment) | PL-1856 slice A (#1368) merged | B (pricing-core modelling) | no | ½ day |". Its Acceptance Standard item 18 is the probe (INTERACTION, SPLINE, POLYNOMIAL, EXPRESSION on xgboost and lightgbm: `model_call` premium against `predict_gbm(..., factors=<real Factors>)`; the result per type and backend goes in this ledger). Item 19 is "If a type differs silently: it is added at `factors.py:546`".
 
 Requirements covered: FR-222 (a dated clause, `docs/specs/03-rating-engine.md`:110) and FR-240 (a dated clause, `03-rating-engine.md`:140). Finding: FD-1754 (`docs/findings/FD-01754-a-gbm-model-call-on-a-banded-or-grouped-factor-scores-with-factors-empty-over-the-graphs-raw-value.md`).
 
@@ -106,7 +106,7 @@ Gate of record accepted: to-lead 2026-10-25 23:25:50 GMT
 Pending. The slice audit is `RS-1926` (reserved 2026-10-25 22:41:48 UTC for the auditor at gate head `8ac770f5`); the auditor's seat is placed at the gate's END. This section is a placeholder and carries no verdict.
 
 - 2026-10-25 23:43:25 GMT — `RS-1926` (aud-s4, @e5a5691f) proposed CLEAN, ADOPTED CLEAN by the lead; accepted at to-lead 23:41:06 GMT.
-- 2026-10-25 23:43:25 GMT — per-type verdict (PL 8227 item 18), in the ruling's words: BANDING/GROUPING transformed (priced via predict_gbm); EXPRESSION/INTERACTION covered by the slice's refusal tests; SPLINE/POLYNOMIAL refused by name at resolution (`packages/pricing-core/src/pricing_core/modelling/factors.py`:11–27).
+- 2026-10-25 23:43:25 GMT — per-type verdict (PL-1927 item 18), in the ruling's words: BANDING/GROUPING transformed (priced via predict_gbm); EXPRESSION/INTERACTION covered by the slice's refusal tests; SPLINE/POLYNOMIAL refused by name at resolution (`packages/pricing-core/src/pricing_core/modelling/factors.py`:11–27).
 
 ### Build log
 

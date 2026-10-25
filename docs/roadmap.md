@@ -2705,10 +2705,10 @@ tree: 8ac770f545eb66ef3677576e210f147ed85cb401
 phase: P2
 work: WK-1178
 corrected_by: []
-relates: [FD-1754, LG-1925, RS-1926, PL-8227]
+relates: [FD-1754, LG-1925, RS-1926, PL-1927]
 ```
 
-FD-1754's second limb: a `model_call` that pins a GBM fitted on any non-identity Factor type (banded, grouped, expression, interaction, spline, polynomial) is refused at save and at compile, not only the banded or grouped case SL-1758 closed (FR-222 and FR-240, as amended). Slice S4 of PL 8227.
+FD-1754's second limb: a `model_call` that pins a GBM fitted on any non-identity Factor type (banded, grouped, expression, interaction, spline, polynomial) is refused at save and at compile, not only the banded or grouped case SL-1758 closed (FR-222 and FR-240, as amended). Slice S4 of PL-1927.
 
 (Minted 2026-10-25 from working id 8245, on the maintainer's (by delegation) entry "2026-10-25 22:43:58 GMT" (one `SL-` row per slice, minted in the slice's PR) and the mint set of "2026-10-25 23:41:06 GMT"; ledger LG-1925, audit RS-1926; executed on branch `draft/s4-fd1754`.)
 

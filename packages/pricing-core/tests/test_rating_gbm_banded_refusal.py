@@ -305,7 +305,7 @@ async def test_a_gbm_fit_error_while_scoring_is_the_named_model_call_failure(
 
 
 # ---------------------------------------------------------------------------
-# S4 (PL 8227; FD-1754's open limb): EXPRESSION and INTERACTION Factors on a pinned GBM.
+# S4 (PL-1927; FD-1754's open limb): EXPRESSION and INTERACTION Factors on a pinned GBM.
 #
 # A GBM `model_call` scores with `factors=()` over the graph's values keyed by the model's
 # feature slugs, i.e. every feature is read as its RAW value under its slug. That is right only
