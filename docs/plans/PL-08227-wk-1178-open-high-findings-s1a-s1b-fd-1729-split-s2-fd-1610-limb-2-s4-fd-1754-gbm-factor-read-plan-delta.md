@@ -320,6 +320,17 @@ SL now too)"): **S1a's slice is SL 8246 and its ledger LG 8237** (reserved in `e
 and 22:45:24 UTC). The SL row mints at S1a's turn, in S1a's own PR, under WK-1178 in
 `docs/roadmap.md` §6. This row's scope is unchanged.)*
 
+*(Delta, row 3 (S1a), second line, dated 2026-10-25 from 23:06 GMT, by the planner (seat
+plan-8227d), on the maintainer's entry "2026-10-25 23:04:28 GMT — Maintainer: S1a pre-gate proof
+RED — RULED option (a) at the HELPER level; SL-1553 throwaway GRANT for `test_regression_runs.py`"
+in `~/gi-pricing-plan.local/channel/to-lead.md`, item (A), beside the 22:43:58 GMT entry above:
+**the fixtures task in this row was under-scoped.** The pre-gate proof at df215d55 was "665
+failed, 2179 passed, 51 errors" rc 1. The ruling fixes it at the helper: `ensure_workspace`,
+`seed_builtin_roles` and the five small seed helpers go through the one owner seam in conftest_db,
+with their call sites unchanged (the rest of item (A) is the ruling's). The S1a ledger LG 8237 carries
+the dated line "pre-gate proof at df215d55: 665 F / 51 E, all seed-path or owner-only classes;
+fixed at the helper". The row and the line above are unchanged.)*
+
 *(Delta, row 4 (S1b), dated 2026-10-25 from 23:02 GMT, by the planner (seat plan-8227d), on the
 maintainer's entry "2026-10-25 22:56:19 GMT — Maintainer: S2 gate head 42e237d5 noted; PL 8205 dry
 run accepted; S1b O1–O6 RULED; S1a push note" in `~/gi-pricing-plan.local/channel/to-lead.md`, item
