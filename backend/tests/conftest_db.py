@@ -372,6 +372,90 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
         "migration",
         "creates and migrates a scratch database (CREATE DATABASE, DDL)",
     ),
+    (
+        "backend/tests/test_audit.py::"
+        "test_tampering_below_the_application_is_detected",
+        "owner-subject",
+        "sets session_replication_role = replica to tamper with audit_events below the triggers",
+    ),
+    (
+        "backend/tests/test_audit.py::"
+        "test_removing_a_middle_event_is_detected",
+        "owner-subject",
+        "sets session_replication_role = replica to tamper with audit_events below the triggers",
+    ),
+    (
+        "backend/tests/test_audit.py::"
+        "test_the_session_teardown_leaves_the_append_only_guard_in_force",
+        "owner-subject",
+        "sets session_replication_role = replica to tamper with audit_events below the triggers",
+    ),
+    (
+        "backend/tests/test_api_audit.py::"
+        "test_verify_reports_a_break_rather_than_failing",
+        "owner-subject",
+        "sets session_replication_role = replica to tamper with audit_events below the triggers",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_a_blobs_content_cannot_change_while_its_lifecycle_can",
+        "owner-subject",
+        "attempts a blobs content UPDATE below the application; asserts the database refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_a_row_guarded_table_refuses_truncate_from_the_owner_connection[approval_requests]",
+        "owner-subject",
+        "issues TRUNCATE on the table; asserts the database refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_a_row_guarded_table_refuses_truncate_from_the_owner_connection[blobs]",
+        "owner-subject",
+        "issues TRUNCATE on the table; asserts the database refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_a_row_guarded_table_refuses_truncate_from_the_owner_connection[deployment_requests]",
+        "owner-subject",
+        "issues TRUNCATE on the table; asserts the database refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_a_row_guarded_table_refuses_truncate_from_the_owner_connection[rating_versions]",
+        "owner-subject",
+        "issues TRUNCATE on the table; asserts the database refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_a_row_guarded_table_refuses_truncate_from_the_owner_connection[validation_rule_sets]",
+        "owner-subject",
+        "issues TRUNCATE on the table; asserts the database refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_a_row_guarded_table_refuses_truncate_from_the_owner_connection[validation_rules]",
+        "owner-subject",
+        "issues TRUNCATE on the table; asserts the database refuses it",
+    ),
+    (
+        "backend/tests/test_audit.py::"
+        "test_update_and_delete_are_rejected_by_the_database[UPDATE audit_events SET action = 'x']",
+        "owner-subject",
+        "issues UPDATE/DELETE on audit_events; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_audit.py::"
+        "test_update_and_delete_are_rejected_by_the_database[DELETE FROM audit_events]",
+        "owner-subject",
+        "issues UPDATE/DELETE on audit_events; asserts the append-only trigger refuses it",
+    ),
+    (
+        "backend/tests/test_audit.py::"
+        "test_truncate_is_rejected",
+        "owner-subject",
+        "issues TRUNCATE on audit_events; asserts the append-only trigger refuses it",
+    ),
 )
 
 

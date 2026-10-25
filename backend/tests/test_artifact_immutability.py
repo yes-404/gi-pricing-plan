@@ -225,7 +225,7 @@ async def test_an_acknowledgement_cannot_be_rewritten_or_removed(
 
 @pytest.mark.req("FR-43")
 async def test_a_blobs_content_cannot_change_while_its_lifecycle_can(
-    database: Database, workspace_id
+    owner_database: Database, workspace_id
 ) -> None:
     """`blobs` is deliberately **not** append-only, and the requirement was corrected to say so.
 
@@ -234,7 +234,7 @@ async def test_a_blobs_content_cannot_change_while_its_lifecycle_can(
     content's own address: changed bytes are a different row, not an edited one.
     """
     digest = (new_uuid7().hex * 2)[:64]  # the column is the bare 64-char digest
-    async with database.unit_of_work() as session:
+    async with owner_database.unit_of_work() as session:
         await session.execute(
             text(
                 "INSERT INTO blobs (sha256, bytes, media_type, ref_count, created_at) "
@@ -244,21 +244,21 @@ async def test_a_blobs_content_cannot_change_while_its_lifecycle_can(
         )
 
     # Lifecycle: permitted, because GC and referencing depend on it.
-    async with database.unit_of_work() as session:
+    async with owner_database.unit_of_work() as session:
         await session.execute(
             text("UPDATE blobs SET ref_count = ref_count + 1 WHERE sha256 = :d"), {"d": digest}
         )
 
     # Content: refused.
     with pytest.raises(DBAPIError) as refused:
-        async with database.unit_of_work() as session:
+        async with owner_database.unit_of_work() as session:
             await session.execute(
                 text("UPDATE blobs SET bytes = 99 WHERE sha256 = :d"), {"d": digest}
             )
     assert "digest of its bytes" in str(refused.value)
 
     # And deletion stays possible: reference-counted GC is a requirement, not a leak.
-    async with database.unit_of_work() as session:
+    async with owner_database.unit_of_work() as session:
         await session.execute(
             text("UPDATE blobs SET ref_count = 0 WHERE sha256 = :d"), {"d": digest}
         )
@@ -687,7 +687,7 @@ _ROW_GUARDED_ONLY = (
 @pytest.mark.req("FR-44")
 @pytest.mark.parametrize("table", _ROW_GUARDED_ONLY)
 async def test_a_row_guarded_table_refuses_truncate_from_the_owner_connection(
-    database: Database, table: str
+    owner_database: Database, table: str
 ) -> None:
     """A row guard does not fire on `TRUNCATE`: six tables had one and could still be emptied.
 
@@ -696,8 +696,8 @@ async def test_a_row_guarded_table_refuses_truncate_from_the_owner_connection(
     trigger already refuses, that message is the one printed here (plan review R2); the catalog
     test `<table>_no_truncate` is the table-specific proof.
     """
-    sql = f"TRUNCATE {await _referencing_closure(database, table)}"
-    refused = await _probe(database, [(sql, {})])
+    sql = f"TRUNCATE {await _referencing_closure(owner_database, table)}"
+    refused = await _probe(owner_database, [(sql, {})])
     message = _assert_refused(refused, sql)
     assert "append-only" in message, message
     print(f"{table}: {message.splitlines()[0] if message else message}")
