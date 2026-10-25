@@ -1,19 +1,20 @@
 ---
-id: LG-8242
+id: LG-1925
 family: ledger
 title: WK-1178 slice S4 — FD-1754, a pinned GBM in a model_call refuses every non-IDENTITY Factor type (slice ledger)
 status: active                 # active → closed (§1.2a)
-created: 2026-10-25
+created: 2026-10-25   # drafted 2026-10-25 under working id 8242; created = mint date
 owner: executor
 tree: 8ac770f545eb66ef3677576e210f147ed85cb401
 phase: P2
 work: WK-1178
+slice: SL-1924
 plans: [PL-8227]
 corrected_by: []
-relates: [FD-1754, PL-8227, FR-222, FR-240]
+relates: [SL-1924, FD-1754, PL-8227, FR-222, FR-240]
 ---
 
-# LG-8242 — WK-1178 slice S4: FD-1754, a pinned GBM refuses every non-IDENTITY Factor type
+# LG-1925 — WK-1178 slice S4: FD-1754, a pinned GBM refuses every non-IDENTITY Factor type
 
 Working id 8242 (LG), reserved 2026-10-25 22:41:48 UTC by lead 28 in `eta.md`; the slice's `SL-` id is not reserved yet (ids are minted at S4's merge turn, after FD 8233's block). Written by `exec-s4lg` before the audit, from the channel files `from-lead-2026-10-09.md` and `to-lead.md`, so the auditor reads the lines here and not in chat. Branch `draft/s4-fd1754`, code head `8ac770f545eb66ef3677576e210f147ed85cb401` (tree `1cf92667fb902632e68d8be1747fba7570cbca79`, merge-base `01a28e6d`). Every line below is quoted from the file and line named after it.
 
@@ -102,9 +103,9 @@ Gate of record accepted: to-lead 2026-10-25 23:25:50 GMT
 
 ### Audit
 
-Pending. The slice audit is `RS 8243` (reserved 2026-10-25 22:41:48 UTC for the auditor at gate head `8ac770f5`); the auditor's seat is placed at the gate's END. This section is a placeholder and carries no verdict.
+Pending. The slice audit is `RS-1926` (reserved 2026-10-25 22:41:48 UTC for the auditor at gate head `8ac770f5`); the auditor's seat is placed at the gate's END. This section is a placeholder and carries no verdict.
 
-- 2026-10-25 23:43:25 GMT — `RS 8243` (aud-s4, @e5a5691f) proposed CLEAN, ADOPTED CLEAN by the lead; accepted at to-lead 23:41:06 GMT.
+- 2026-10-25 23:43:25 GMT — `RS-1926` (aud-s4, @e5a5691f) proposed CLEAN, ADOPTED CLEAN by the lead; accepted at to-lead 23:41:06 GMT.
 - 2026-10-25 23:43:25 GMT — per-type verdict (PL 8227 item 18), in the ruling's words: BANDING/GROUPING transformed (priced via predict_gbm); EXPRESSION/INTERACTION covered by the slice's refusal tests; SPLINE/POLYNOMIAL refused by name at resolution (`packages/pricing-core/src/pricing_core/modelling/factors.py`:11–27).
 
 ### Build log
