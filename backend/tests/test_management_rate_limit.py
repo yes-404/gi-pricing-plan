@@ -15,6 +15,7 @@ from uuid import UUID
 
 import pytest
 import pytest_asyncio
+from backend.tests.conftest_db import seed_as_owner
 from fastapi.testclient import TestClient
 from sqlalchemy import delete
 
@@ -63,10 +64,13 @@ async def set_limit(database: Database, workspace_id: UUID) -> Any:
             await svc.set_workspace_setting(session, workspace_id, LIMIT_KEY, value)
 
     yield _set
-    async with database.unit_of_work() as session:
+
+    async def _remove(session: Any) -> None:
         await session.execute(
             delete(WorkspaceSettingRow).where(WorkspaceSettingRow.workspace_id == workspace_id)
         )
+
+    await seed_as_owner(_remove)
 
 
 def _account(

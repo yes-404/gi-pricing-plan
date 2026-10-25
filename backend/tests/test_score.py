@@ -25,6 +25,7 @@ from uuid import UUID
 
 import pytest
 import pytest_asyncio
+from backend.tests.conftest_db import seed_as_owner
 from backend.tests.outbound_validation_spy import install_outbound_validation_spy
 from backend.tests.test_bundle_slot import _compiled
 from backend.tests.test_rating_version_compile import (
@@ -1021,8 +1022,10 @@ async def _clear_environment_settings(database: Any) -> None:
 
     from app.db.models import EnvironmentSettingRow
 
-    async with database.unit_of_work() as session:
+    async def _remove(session: Any) -> None:
         await session.execute(delete(EnvironmentSettingRow))
+
+    await seed_as_owner(_remove)
 
 
 @pytest.mark.req("FR-259")

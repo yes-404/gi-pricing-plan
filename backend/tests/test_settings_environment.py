@@ -11,9 +11,11 @@ Slice 6 declares (`PL-1537` R6.1).
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 import pytest
 import pytest_asyncio
+from backend.tests.conftest_db import seed_as_owner
 from fastapi.testclient import TestClient
 from sqlalchemy import delete, select
 
@@ -184,8 +186,11 @@ PSI = "validation.psi_warn_threshold"
 async def clean_environment_settings(database: Database):
     """Environments are deployment-wide, so rows written here would outlive the test."""
     yield
-    async with database.unit_of_work() as session:
+
+    async def _remove(session: Any) -> None:
         await session.execute(delete(EnvironmentSettingRow))
+
+    await seed_as_owner(_remove)
 
 
 async def _set(database: Database, environment: str, key: str, value) -> None:

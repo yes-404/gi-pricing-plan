@@ -24,6 +24,7 @@ from uuid import UUID
 
 import pytest
 import pytest_asyncio
+from backend.tests.conftest_db import seed_as_owner
 from fastapi.testclient import TestClient
 from sqlalchemy import delete
 
@@ -79,8 +80,11 @@ async def admin_headers(workspace_id: UUID, principal: Any, grant: Any) -> dict[
 @pytest_asyncio.fixture
 async def clean_environment_settings(database: Database) -> Any:
     yield
-    async with database.unit_of_work() as session:
+
+    async def _remove(session: Any) -> None:
         await session.execute(delete(EnvironmentSettingRow))
+
+    await seed_as_owner(_remove)
 
 
 def _account(
@@ -172,7 +176,11 @@ async def test_the_environment_default_limits_only_its_environment(
     async with database.unit_of_work() as session:
         await workspaces.ensure_workspace(session, workspace_id=workspace_id)
         await svc.set_workspace_setting(session, workspace_id, DEFAULT_KEY, 1)
+
+    async def _clear_environment_rows(session: Any) -> None:
         await session.execute(delete(EnvironmentSettingRow))
+
+    await seed_as_owner(_clear_environment_rows)
     fresh, _ = _account(
         client, admin_headers, environments=["dev", "uat"], slug="second-client"
     )
