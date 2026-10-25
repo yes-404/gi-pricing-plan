@@ -2,10 +2,10 @@
 id: LG-8212
 family: ledger
 title: WK-675 slice SL-1553 — Slice 11, the Regression suite view at /rating/:slug/v/:version/tests (FR 8211) (slice ledger)
-status: active                 # active → closed (§1.2a). Not yet activated in substance: audit-docs check 33 admits only active|closed for a ledger; the roadmap SL-1553 row stays draft until the activation commit
+status: active                 # active → closed (§1.2a)
 created: 2026-10-25
 owner: executor
-tree: e572e0ae67130dc6df54fd6312f5d00c89750517
+tree: 951af0719d155ac58afce69c46e485dbb7a7a49c
 phase: P2
 work: WK-675
 slice: SL-1553
@@ -16,9 +16,9 @@ relates: [SL-1553, PL-1546, PL-1286, RL-1900, RL-8217, FR-8211, FR-260, FR-261, 
 
 # LG-8212 — WK-675 slice SL-1553, Slice 11: the Regression suite view at /rating/:slug/v/:version/tests
 
-Status: **drafted, not activated.** (Front matter reads `active` because check 33 admits no other open value.) Drafted before activation: nothing in this file has been run, and no code is written. Activation (the GO header below, the roadmap `SL-1553` row `draft` to `active`) is one commit after S10's squash is an ancestor of `origin/main` (DP-S11-3).
+Status: **active** — activated 2026-10-25 in the commit that sets the roadmap SL-1553 row `draft` to `active`. Nothing below Tasks has been run before this commit.
 
-**GO:** not yet. DP-S11-3 (to-lead "2026-10-23 11:14:56 BST — Maintainer: SL-1552 (WK-675 S10) GO under L1; RL 8163 ADOPTED; DP-S10-4 and DP-S11-3 decided", item (C)): "yes, S11 (SL-1553) is serialised after S10 merges … S11's GO request comes after SL-1552's squash is an ancestor of origin/main." The lead names the "WK-675 follow-on `rating.py`" row, or records "none at 4e399fd0", before the GO (same entry, item (D)).
+**GO:** to-lead "2026-10-25 22:33:28 GMT — Maintainer: GO — SL-1553 (WK-675 S11, LG 8212, PL-1546 row 7) on `sl-1553-wk675-s11` @e64c4568" — conditions (1)–(6) as in that entry. DP-S11-3 (to-lead "2026-10-23 11:14:56 BST", item (C)) met: SL-1552's squash `85eac5b2` is an ancestor of origin/main. Follow-on `rating.py` row: "none at 01a28e6d" (to-lead "2026-10-25 15:38:26 GMT").
 **MERGE-ACK:** not yet.
 
 ## Tasks
