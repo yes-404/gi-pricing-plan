@@ -2,7 +2,7 @@
 id: FD-1357
 family: finding
 title: seed_from_model cannot seed a GLM with two or more factors, because each seeded row carries one factor key and validation reads every declared key
-status: active
+status: closed
 created: 2026-10-01
 owner: auditor
 tree: 0e2c6a1d7d1539b0f97447c8be43c5931d80cf68
