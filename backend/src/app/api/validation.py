@@ -66,8 +66,9 @@ router = APIRouter(tags=["validation"])
 
 ReadDatasets = Annotated[Caller, Depends(requires(Perm.DATASET_READ))]
 WriteDatasets = Annotated[Caller, Depends(requires(Perm.DATASET_WRITE))]
+#: Held under any scope; the service checks it on the report's Dataset and counts (FR-345).
 AcknowledgeWarnings = Annotated[
-    Caller, Depends(requires(Perm.DATASET_ACKNOWLEDGE_WARNING))
+    Caller, Depends(requires(Perm.DATASET_ACKNOWLEDGE_WARNING, held_anywhere=True))
 ]
 #: The one route whose permission is check-dependent; see `create_rule`.
 DecideApprovals = Annotated[Caller, Depends(requires(Perm.APPROVAL_DECIDE))]
@@ -162,6 +163,7 @@ async def acknowledge(
     rule_id: UUID,
     body: AcknowledgeRequest,
     caller: AcknowledgeWarnings,
+    count: Annotated[CountAfterCheck, Depends(management_counter)],
     database: DatabaseDep,
 ) -> dict[str, Any]:
     """FR-46. Actuary only, justified, audited, once per `(report, rule)`."""
@@ -173,6 +175,7 @@ async def acknowledge(
             report_id=report_id,
             rule_id=rule_id,
             justification=body.justification,
+            count_management=count,
         )
         return {
             "id": str(row.id),

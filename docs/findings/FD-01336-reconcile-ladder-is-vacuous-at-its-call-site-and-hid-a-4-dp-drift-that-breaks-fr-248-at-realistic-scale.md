@@ -2,7 +2,7 @@
 id: FD-1336
 family: finding
 title: reconcile_ladder is vacuous at its call site, so every trace's ladder_reconciled true asserts a reconciliation that was never performed; the vacuity hid a 4 dp drift that breaks FR-248 at realistic scale, and the ladder builder feeds float money into its arithmetic (FR-273)
-status: active
+status: closed
 created: 2026-09-30
 owner: auditor
 tree: 11c76b6c83647c512796fedb9c0143927dcd78cb
