@@ -74,7 +74,7 @@ The 13 pytest failures by file (`grep '^FAILED' pytest.log | sed 's/::.*//' | so
 | # | Severity | Finding |
 |---|---|---|
 | B1 | Low, non-blocking | `pytest.log` does not open with `head=<sha>` / close with `rc=` (item 37); it opens with a progress line. The head and rc are carried by `gate.log` line 1, `pytest.rc` and the summary line, which agree, so the verdict is readable. Process note only (`docs/process/process-backlog.md` class). |
-| B2 | Informational | `audit_docs.log` quotes `rc` only in `audit_docs.rc`; check 36 "legacy form survives" lines are warnings of main's content (WF-00702), not failures. |
+| B2 | Informational | `audit_docs.log` quotes `rc` only in `audit_docs.rc`; check 36 "legacy form survives" lines are warnings of main's content (WF-702), not failures. |
 
 No blocking finding. No `FD-` is proposed.
 
