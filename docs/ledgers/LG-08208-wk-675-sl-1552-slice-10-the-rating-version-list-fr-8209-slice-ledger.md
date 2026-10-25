@@ -37,6 +37,8 @@ Link cite (maintainer 2026-10-21 16:23:35, item 2(b)): the existing link to the 
 
 Holds: `frontend/src/router/index.ts`, `frontend/src/App.vue` and the reachability expectation wait for SL-1551's squash on `origin/main` (merge-dependency verdict, prep §1.4: both slices edit the router block). Not mine: DP-S11-3 (S11 serialised after S10's squash).
 
+Amendment (2026-10-25, RS 8232 B2): `03` FR 8209 clause (2) now carries a dated line: a version live in no environment, when the environments were read, shows 'none' (accessibility review item 4, fixed at 9a001efe), 'unavailable' when they could not be read; it replaces the clause's earlier 'empty badge cell'.
+
 Pairing record (`delivery-process.md` §8 (a)+(b)): same-Work pair with SL-1554 permitted by the 11:14:56 entry; write sets are name-disjoint per prep §1.6 (SL-1554: `components/dag/*`, `RatingDesignView.vue`, `api/subGraphs.ts`; this slice: spec `03`, `api/environments.ts`, `RatingVersionListView.vue` and its test, later router/App.vue).
 
 ### Task list
