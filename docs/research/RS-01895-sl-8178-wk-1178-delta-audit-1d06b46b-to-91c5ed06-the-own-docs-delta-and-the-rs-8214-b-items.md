@@ -54,7 +54,7 @@ Equal. The gate head carries the audited head's code unchanged.
 
 ## 2. The slice's own docs delta
 
-`git diff --name-only 1d06b46b 91c5ed06 -- docs` lists 22 paths; most are main's merge (#1368–#1376). The slice's own docs delta is the diff of each head against its own merge-base (`git diff <mb> <h> -- docs`, `--name-only`): at `1d06b46b` {INDEX.md, LG-01893, roadmap.md}; at `91c5ed06` the same plus `RS-01894`. Main-origin paths (specs 02/03, contracts, findings, other LG/RS, register) are not the slice's.
+`git diff --name-only 1d06b46b 91c5ed06 -- docs` lists 22 paths; most are main's merge (#1368–#1376). The slice's own docs delta is the diff of each head against its own merge-base (`git diff <mb> <h> -- docs`, `--name-only`): at `1d06b46b` {INDEX.md, LG-1893, roadmap.md}; at `91c5ed06` the same plus `RS-1894`. Main-origin paths (specs 02/03, contracts, findings, other LG/RS, register) are not the slice's.
 
 | path | verdict |
 |---|---|
