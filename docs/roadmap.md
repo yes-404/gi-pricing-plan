@@ -3014,6 +3014,25 @@ Slice A of `PL-1856` (WK-1178's dated delta on FD-1723's residual limbs): FR-110
 
 (Activated 2026-10-22 on the maintainer's "2026-10-22 16:02:49 BST — Maintainer: PL 8162 (FD-1723's residual limbs) ACCEPTED; …" (slices C, then A, then B). Minted 2026-10-22 as SL-1860 from working id 8166, with its ledger LG-1861 from working id 8167. Closed 2026-10-22 at the mint: the audit is closed on RS-1862, RS-1863 and the lead's 17:58:43 BST verification, recorded in LG-1861; the merge-ack is the lead's, at the merge.)
 
+#### SL-1873 — WK-1178: FD-1872, the switch slot-namespace test names a synthetic slot
+
+```yaml
+id: SL-1873
+family: slice
+title: WK-1178 — FD-1872, the switch slot-namespace test names a synthetic slot (test only)
+status: closed                   # draft → active → closed | retired (§1.2a)
+created: 2026-10-23   # drafted 2026-10-22 under working id 8200; minted 2026-10-23 as SL-1873
+owner: executor
+tree: 1fe82ee673cc8aef2bd3e70b81b8304059fccbc1
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1872, FD-1838, LG-1874]
+```
+
+Test-only fix of FD-1872 (owner WK-1178): `backend/tests/test_deployment_switch_slot_namespace.py` names a per-run synthetic slot instead of the real `/tmp/slots/gate-1` and `gate-1b`, whose server-wide Redis channels a paired gate shares. Product code is not touched. Ledger `LG-1874`; authority the maintainer's entry "2026-10-22 23:42:23 BST" item 1 (`to-lead.md`).
+(Closed 2026-10-23 as a Slice by the executor's closing acts (LG-1874, minted from working id 8201), on the audit RS-1875 (aud-8199, `origin/main...4c9be06d`, proposed CLEAN) and the lead's verdict, the from-lead log entry "2026-10-23 00:27:17 BST Lead 26: aud-8199 PROPOSED CLEAN … VERDICT (lead): CLEAN"; the gate of record is the full gate-1 run at `ca4bf5c1` (START "GATE START ca4bf5c1bab9b547afaefcde81be4765f7aca8a6 gate-1 Fri Oct 23 10:14:17 BST 2026", "END 2026-10-23T10:33:11+00:00 3.77 3.08 3.43"): pytest `13 failed, 6738 passed, 21 skipped, 147 warnings in 3126.69s (0:52:06)`, the 13 the eight-file docs-audit set on the slice's own working ids (audit-docs `FAILED (1)` = check 31, the gap between 1859 and 8199); frontend `Test Files  129 passed (129)`, `Tests  817 passed (817)`, build rc 0; demo `wf-699` rc 0. The gate STANDS for the code under 1(f), the maintainer's entry "2026-10-23 11:33:52 BST" (`to-lead.md`). Merge ACK pending: the slice's PR opens at its id turn, and the ledger's MERGE-ACK line is added at the merge.)
+
 ### WK-1250 — Sub-graph composition and MTA/cancellation pricing — FR-217's inlining and FR-218's authoring half
 
 ```yaml
