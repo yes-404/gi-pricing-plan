@@ -245,6 +245,13 @@ export const routes: RouteRecordRaw[] = [
     props: true,
   },
   {
+    // `03` §5.3's Rating Version list (FR-8209): the shell's entry to the `03` views.
+    path: "/rating",
+    name: "rating-versions",
+    meta: { requiresAuth: true },
+    component: () => import("@/views/RatingVersionListView.vue"),
+  },
+  {
     // `03` §5.3's DAG designer. `:slug` and `:version` are the Rating Version's own
     // (RL-1473), never its algorithm's.
     path: "/rating/:slug/v/:version/design",

@@ -85,10 +85,6 @@ function pinnedTables(version: RatingVersion) {
     return match ? [{ slug: match[1]!, label: `${match[1]}@${match[2]}` }] : [];
   });
 }
-
-function base(version: RatingVersion): string {
-  return `/rating/${version.slug}/v/${version.version}`;
-}
 </script>
 
 <template>
@@ -207,19 +203,19 @@ function base(version: RatingVersion): string {
               <td>{{ day(version.effective_to) }}</td>
               <td class="space-x-2">
                 <RouterLink
-                  :to="`${base(version)}/design`"
+                  :to="`/rating/${version.slug}/v/${version.version}/design`"
                   class="text-sky-700 underline"
                 >
                   Design
                 </RouterLink>
                 <RouterLink
-                  :to="`${base(version)}/sandbox`"
+                  :to="`/rating/${version.slug}/v/${version.version}/sandbox`"
                   class="text-sky-700 underline"
                 >
                   Sandbox
                 </RouterLink>
                 <RouterLink
-                  :to="`${base(version)}/dislocation`"
+                  :to="`/rating/${version.slug}/v/${version.version}/dislocation`"
                   class="text-sky-700 underline"
                 >
                   Dislocation
@@ -227,7 +223,7 @@ function base(version: RatingVersion): string {
                 <RouterLink
                   v-for="table in pinnedTables(version)"
                   :key="table.label"
-                  :to="`${base(version)}/tables/${table.slug}`"
+                  :to="`/rating/${version.slug}/v/${version.version}/tables/${table.slug}`"
                   class="font-mono text-sky-700 underline"
                 >
                   {{ table.label }}
