@@ -206,6 +206,7 @@ async function save(): Promise<void> {
           v-model:draft="draft"
           :version-mode="rating.model_reference_mode"
           :rate-table-pins="(rating.pins?.rate_tables ?? []).map(String)"
+          :sub-graph-pins="(rating.pins?.sub_graphs ?? []).map(String)"
         />
       </div>
     </template>
