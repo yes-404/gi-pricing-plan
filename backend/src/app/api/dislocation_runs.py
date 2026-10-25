@@ -10,8 +10,9 @@ persisted artifact; `GET …/{id}/movers` is the one reader of the movers blob, 
 from __future__ import annotations
 
 import io
+from datetime import date, datetime
 from decimal import Decimal
-from typing import Annotated, Any
+from typing import Annotated, Any, Final
 from uuid import UUID
 
 import polars as pl
@@ -28,9 +29,15 @@ from app.platform import rbac
 from app.platform.blobs import BlobStore
 from app.platform.datasets import read_version
 from model_schema import JobKind, Permission
-from model_schema.dislocation import DislocationEstimate, DislocationRun, DislocationSpec
+from model_schema.dislocation import (
+    DislocationEstimate,
+    DislocationMover,
+    DislocationRun,
+    DislocationSpec,
+    JsonScalar,
+)
 from model_schema.jobs import Job
-from pricing_core.rating.analysis import read_portfolio
+from pricing_core.rating.analysis import mover_change_pct, read_portfolio
 from pricing_core.safe_error import safe_error_text
 
 router = APIRouter(tags=["rating"])
@@ -144,9 +151,35 @@ async def get_dislocation_run(
     return DislocationRun.model_validate(row.run)
 
 
-def _json_value(value: Any) -> Any:
-    """Exposure is a `Decimal` after `read_portfolio`; on the wire it is a string (FR-10)."""
-    return str(value) if isinstance(value, Decimal) else value
+def _json_value(value: Any) -> JsonScalar:
+    """A portfolio column's wire value: a `Decimal` (exposure, after `read_portfolio`) is a
+    string (FR-10), a date or datetime its ISO string. Any other non-scalar dtype is refused,
+    not widened into the row type (PL-1833 Task 1.3)."""
+    if isinstance(value, Decimal):
+        return str(value)
+    if isinstance(value, date | datetime):
+        return value.isoformat()
+    if value is None or isinstance(value, str | int | float | bool):
+        return value
+    raise PlatformError(
+        "VALIDATION_FAILED",
+        "Portfolio column is not a scalar",
+        422,
+        f"A {type(value).__name__} value cannot be served in a mover row.",
+    )
+
+
+_MOVER_FIELDS: Final = frozenset(DislocationMover.model_fields) - {"change_pct", "columns"}
+
+
+def _mover(row: dict[str, Any]) -> DislocationMover:
+    """A joined row as the typed `DislocationMover`: the stored columns into their fields,
+    `change_pct` computed exactly, every other joined column under `columns`."""
+    return DislocationMover(
+        **{k: row[k] for k in _MOVER_FIELDS},
+        change_pct=mover_change_pct(row["change_minor"], row["baseline_minor"]),
+        columns={k: _json_value(v) for k, v in row.items() if k not in _MOVER_FIELDS},
+    )
 
 
 @router.get(
@@ -159,7 +192,7 @@ async def get_dislocation_run_movers(
     caller: ReadDep,
     database: DatabaseDep,
     blob_store: BlobStoreDep,
-) -> list[dict[str, Any]]:
+) -> list[DislocationMover]:
     """The run's movers in §4.6's mover order, each row joined at read on `quote_id` to the
     portfolio columns of the run's portfolio Dataset Version. Needs `rating:read` and
     `dataset:read`; the stored blob holds no portfolio column (`RL-1504` item 5, NFR-499), and
@@ -194,4 +227,4 @@ async def get_dislocation_run_movers(
             "VALIDATION_FAILED", "Portfolio does not read as a frame", 422, safe_error_text(exc)
         ) from exc
     joined = movers.join(checked, on="quote_id", how="left", maintain_order="left")
-    return [{k: _json_value(v) for k, v in r.items()} for r in joined.iter_rows(named=True)]
+    return [_mover(r) for r in joined.iter_rows(named=True)]
