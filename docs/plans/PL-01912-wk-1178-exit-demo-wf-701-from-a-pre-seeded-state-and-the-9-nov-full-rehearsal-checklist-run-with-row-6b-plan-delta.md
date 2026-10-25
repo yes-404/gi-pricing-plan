@@ -192,7 +192,7 @@ Each item is checked by a command a fresh reviewer can run from the repository r
 3. **No budget is set.** `git grep -n -i -E 'WF-701.*(budget|cap)' -- docs/specs/` prints no new
    line against `origin/main`; `scripts/demo.py:62` still reads `WF701_TARGET_SECONDS: Final =
    600`.
-4. **The run happened on its date, in full.** `LG 8226` (minted id) carries one line per row 0,
+4. **The run happened on its date, in full.** `LG 8226` (working id; its ledger is born in SL-1913's own PR at activation) carries one line per row 0,
    1, 2, 3, 4, 5, 6, 6b, 7, 8, 9, each with its command, its output as printed and the exit
    tree, dated 2026-11-09; row 6b quotes the three timing lines verbatim and records the K1 and
    K2 pages as loaded and `approved`.
