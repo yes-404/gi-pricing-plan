@@ -37,7 +37,11 @@ services:
       POSTGRES_PASSWORD: gipricing            # local only; production uses a secret ref
       POSTGRES_DB: gipricing
     ports: ["5432:5432"]
-    volumes: ["pgdata:/var/lib/postgresql/data"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # FD-1729: the application's login role, on fresh volumes (no password: the compose run
+      # calls scripts/provision-app-role.py).
+      - ./postgres/app-login-role.sql:/docker-entrypoint-initdb.d/10-app-login-role.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U gipricing"]
       interval: 5s
