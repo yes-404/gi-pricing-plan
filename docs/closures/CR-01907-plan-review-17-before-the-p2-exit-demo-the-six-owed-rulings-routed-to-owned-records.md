@@ -10,14 +10,14 @@ tree: ff976406f1bf133cfe040d2c44d383011503988a
 phase: P2
 work: WK-1178
 corrected_by: []
-relates: [CR-1247, RL-1908, RL-1909, OQ-1910, OQ-1911, PL-1912, SL-1913, LG-1914, FD-1209, FD-1723]     # ids only
+relates: [CR-1247, RL-1908, RL-1909, OQ-1910, OQ-1911, PL-1912, SL-1913, FD-1209, FD-1723]     # ids only
 ---
 
 # CR-1907 — Plan review 17, before the P2 exit demo
 
 **Base tree:** origin/main `ff976406f1bf133cfe040d2c44d383011503988a`. Working id CR-1907, reserved
 by lead 28 (`eta.md`, 2026-10-25 11:35:25 GMT), with the sibling ids RL-1908, RL-1909, OQ-1910,
-OQ-1911, PL-1912, SL-1913 and LG-1914. Drafted by the planner (Opus 5.5, effort medium). This is a
+OQ-1911, PL-1912, SL-1913 and LG 8226. Drafted by the planner (Opus 5.5, effort medium). This is a
 **short index** (`.claude/skills/phase-review` §Output). The evidence lives in the records it cites.
 The items E1–E7 come from the planner's working note r5
 (`handover/s14-review-items-draft-2026-10-25-r5.md`, local, not in the repository).
@@ -129,7 +129,7 @@ and the front matter of each FD, RL, PL and SL named above, all at ff976406.
 | Item | Family (§1.6) | Working id | Owner | State | Its dated line |
 |---|---|---|---|---|---|
 | E1 WF-701 exit-demo run (option b) | PL delta, `relates: [PL-1544]` | PL-1912 | the planner; WK-1178 | accepted | line 6, first sentence |
-| E2 the full PL-1544 run, Mon 9 Nov 2026 | SL row + LG | SL-1913, LG-1914 | WK-1178 | accepted | line 6, "E2 — the run" |
+| E2 the full PL-1544 run, Mon 9 Nov 2026 | SL row + LG | SL-1913, LG 8226 | WK-1178 | accepted | line 6, "E2 — the run" |
 | E2 row 6b, a WF-701 browser check | rides E1's PL delta | PL-1912 | the planner | accepted | line 6, "and **yes**" |
 | E3-B OQ-1222 and OQ-1224 → Before Phase 3 | RL (three lines) | RL-1908 | the decision-maker; the §10 edits by the lead | accepted | line 1 |
 | E3-C OQ-1285's label → Before Phase 3 | the same RL | RL-1908 | the decision-maker | accepted | line 1 |

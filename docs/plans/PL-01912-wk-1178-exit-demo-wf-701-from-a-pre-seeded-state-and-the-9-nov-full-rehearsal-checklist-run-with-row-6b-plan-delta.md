@@ -18,7 +18,7 @@ relates: [PL-1544, PL-1577, PL-1644, PL-1710, SL-1711, LG-1841, OQ-1789, WF-699,
 # WK-1178, exit demo: WF-701 from a pre-seeded state, and the 9 Nov full checklist run with row 6b (delta to PL-1544)
 
 *(Drafted 2026-10-25 under working id PL-1912, reserved by the lead in `eta.md` with SL-1913 and
-LG-1914. The ids mint in the §14 plan review's PR, item 34's order.)*
+LG 8226. The ids mint in the §14 plan review's PR, item 34's order.)*
 
 > **For agentic workers:** this is a **dated delta** under Lean P2 L5 (`document-ids.md` §1.6,
 > PL row: *"a change is one dated Work-plan delta, a new `PL-` that `relates:` the Work's
@@ -120,7 +120,7 @@ PROPOSAL; my 10:52 seating order recorded here"*, verbatim:
 
 One full run of `PL-1544` §"Rehearsal checklist", rows 0 to 9 **as written there** (row 6
 included), plus row 6b below, on `main` at the exit tree, on **Monday 9 November 2026**, owner
-**WK-1178**. It is slice `SL-1913`, and its ledger `LG-1914` records each row by command, output
+**WK-1178**. It is slice `SL-1913`, and its ledger `LG 8226` records each row by command, output
 and tree, never from memory. The order is 0, 1, 2, 3, 4, 5, 6, 6b, 7, 8, 9. Row 9 stops the
 demo that row 6b started. A row that fails is recorded as it printed and the run STOPS to the
 lead; no row is re-run until green.
@@ -155,7 +155,7 @@ corrected_by: []
 relates: [PL-1912, PL-1544, LG-1841, SL-1711]
 ```
 
-One full run of `PL-1544` §"Rehearsal checklist", rows 0 to 9 as written there (row 6, the browser path `SL-1711` waived, included), plus row 6b, the WF-701 browser check that PL-1912 adds, on `main` at the exit tree on Monday 9 November 2026; order 0–6, 6b, 7–9. Cut as one WK-1178 slice by the maintainer's entry "2026-10-25 11:32:17 GMT — Maintainer: §14 note r5 — the six owed rulings, decided now (dated lines for the review's rows)", line 6 (E2), in the CLAUDE.md §14 plan review before the 12 Nov exit demo. Its ledger LG-1914 records each row's command, output and tree; WF-701's timing lines are an observation with no budget (PL-1912 E1 item 3). No code, spec or plan file changes. **Activation needs:** PL-1912 minted; the exit tree named by the lead; no gate slot held and no other run on the box (row 1); the lead's GO. *(Row cut 2026-10-25 by the planner in PL-1912; working ids SL-1913 and LG-1914 reserved by the lead in `eta.md`.)*
+One full run of `PL-1544` §"Rehearsal checklist", rows 0 to 9 as written there (row 6, the browser path `SL-1711` waived, included), plus row 6b, the WF-701 browser check that PL-1912 adds, on `main` at the exit tree on Monday 9 November 2026; order 0–6, 6b, 7–9. Cut as one WK-1178 slice by the maintainer's entry "2026-10-25 11:32:17 GMT — Maintainer: §14 note r5 — the six owed rulings, decided now (dated lines for the review's rows)", line 6 (E2), in the CLAUDE.md §14 plan review before the 12 Nov exit demo. Its ledger LG 8226 records each row's command, output and tree; WF-701's timing lines are an observation with no budget (PL-1912 E1 item 3). No code, spec or plan file changes. **Activation needs:** PL-1912 minted; the exit tree named by the lead; no gate slot held and no other run on the box (row 1); the lead's GO. *(Row cut 2026-10-25 by the planner in PL-1912; working ids SL-1913 and LG 8226 reserved by the lead in `eta.md`.)*
 ````
 
 ## Decision points
@@ -168,7 +168,7 @@ line 6, quoted above. The exit tree's sha and SL-1913's GO are the lead's, as fo
 ### Task 1 (SL-1913, Mon 9 Nov 2026): the full checklist run
 
 - [ ] **Step 1:** Record the exit tree, then run `PL-1544` rows 0 to 6 as written there, each
-  row's command, output and tree into LG-1914.
+  row's command, output and tree into LG 8226.
 - [ ] **Step 2:** Run row 6b (above) and record it the same way, the three timing lines
   verbatim as an observation.
 - [ ] **Step 3:** Run `PL-1544` rows 7 to 9 as written there; row 9 stops row 6b's demo.
@@ -192,7 +192,7 @@ Each item is checked by a command a fresh reviewer can run from the repository r
 3. **No budget is set.** `git grep -n -i -E 'WF-701.*(budget|cap)' -- docs/specs/` prints no new
    line against `origin/main`; `scripts/demo.py:62` still reads `WF701_TARGET_SECONDS: Final =
    600`.
-4. **The run happened on its date, in full.** `LG-1914` (minted id) carries one line per row 0,
+4. **The run happened on its date, in full.** `LG 8226` (minted id) carries one line per row 0,
    1, 2, 3, 4, 5, 6, 6b, 7, 8, 9, each with its command, its output as printed and the exit
    tree, dated 2026-11-09; row 6b quotes the three timing lines verbatim and records the K1 and
    K2 pages as loaded and `approved`.
@@ -217,6 +217,6 @@ Each item is checked by a command a fresh reviewer can run from the repository r
    (`RatingVersionView.vue:146-147`); row 6b says so. The local target runs WF-701 with the
    frontend (`demo.py:455-460`); the compose target does not (`:452-453`, `LG-1841` row 6).
 3. *Id forms.* Front matter and the drafted row's YAML use the hyphen form; prose uses the
-   space form for the unminted SL-1913, LG-1914 and CR-1907.
+   space form for the unminted SL-1913, LG 8226 and CR-1907.
 4. *Not decided here.* The exit tree's sha and the GO are the lead's; the 12 Nov presenter's
    script is not this plan's.
