@@ -19,7 +19,7 @@ relates: [PL-1546, PL-1286, OQ-1843, SL-1554, RL-1309, RL-1474, RL-1835, FR-212,
 
 *Disclosure: drafted under working id 8205 (this plan), reserved by the lead in eta on
 2026-10-23, and renumbered at the mint. The ruling it implements is RL 8203, on branch
-`draft/rl-8203` @`8cd257f1`; the lead's brief says it mints as RL 1876 at its turn, written
+`draft/rl-8203` @`7dd23931` (first read at `8cd257f1`; the one ruling commit since, `348888e4`, adds only the adoption line quoted under "Authority"); the lead's brief says it mints as RL 1876 at its turn, written
 here as "RL 8203 (→ RL 1876)", in space form because it is not minted yet (the brief's hyphen form reds audit check 32). That minted id is the lead's relay: it was not in `to-lead.md`
 at 10:53 BST. The finding the ruling's amendment files is FD 8204 (working id, reserved by
 the lead). The slice's `SL-` and `LG-` ids are reserved by the lead at the GO, written below
@@ -46,6 +46,15 @@ Written 2026-10-23 from 10:53 BST (`TZ=Europe/London date`, 10:53:24 BST) by the
 tree. **No test was run at planning time**: every fact below is a read of a named file.
 Continued from 11:01 BST by planner-8205b (brief `brief-planner-8205b-2026-10-23.md`) after the
 first seat was stopped for load; the form, the citations and every line number were re-read.
+
+*Revised 2026-10-25 13:02 GMT (draft, before its GO) by planner-8205c, on the lead's brief
+`brief-planner-8205c-2026-10-25.md`: the two STALE items planner-8205p listed are corrected —
+the Contention section's SL-1569 and SL-1552 entries, re-read at their current `origin` heads
+(`2ec62327`, `6cdec296`) — and the moved heads re-pointed (SL-1554 `4439159e` → `11c3db18`,
+RL 8203 `8cd257f1` → `7dd23931`). `origin/main` re-merged at `3cd5fcf7`; `03`,
+`open-questions.md`, `rating.py` and `test_graph_invariant_issues.py` are unchanged between
+`4e399fd0` and `3cd5fcf7` (`git diff --stat 4e399fd0 origin/main -- <those four>` empty), so
+every line cited at `4e399fd0` in those files still holds. No other plan text changed.*
 
 **Why a delta and not a leaf plan.** The brief asked for a leaf plan. `document-ids.md` §1.6's
 PL row reads *"from Lean P2 L5 **one plan per Work**, slices as rows, no per-slice `leaf`; a
@@ -79,7 +88,7 @@ is new to WK-675, and `PL-1546` is frozen, so the form is a one-row delta (`kind
   so the 10:57:28 entry is cited for the 10:52 order.
 - **The ruling's content**: RL 8203 (→ RL 1876),
   the ruling file `docs/rulings/RL-*-a-mount-never-maps-a-port-to-a-blank-name-the-graph-invariants-refuse-it-on-the-mount-and-the-designer-shows-it-through-the-validate-route.md`
-  on `draft/rl-8203` @`8cd257f1`. Its sections "Ruled" items 1 to 5, "Spec text owed", "The
+  on `draft/rl-8203` @`7dd23931` (read at `8cd257f1`; `348888e4` since adds only the adoption line). Its sections "Ruled" items 1 to 5, "Spec text owed", "The
   test the implementing slice carries (red first)", "What it obliges" and "Acceptance" are
   this slice's scope. They are cited by section, not restated where a pointer is enough.
 - **The question it closes**: `OQ-1843`, `docs/open-questions.md:162` and
@@ -113,7 +122,7 @@ is new to WK-675, and `PL-1546` is frozen, so the form is a one-row delta (`kind
   three mount tests (`:147-170`).
 - **`frontend/src/components/dag/MountInspector.vue` is not on main.** SL-1554 creates it
   (`git diff --diff-filter=A --name-only origin/main...origin/sl-1554-wk675-s9`, at its head
-  `4439159e`). There, `setInput` (`:49-51`) stores whatever the field holds, and `setOutput`
+  `11c3db18`, re-read 2026-10-25; first read at `4439159e`). There, `setInput` (`:49-51`) stores whatever the field holds, and `setOutput`
   (`:53-58`) deletes the key on `""`. None of SL-1554's eight `MountInspector.test.ts` cases
   asserts that a cleared input stores `""`.
 
@@ -357,30 +366,45 @@ Under L5 a Work plan's tasks are its slice rows. This row's steps follow the tab
 
 Read at the named heads with `git diff --name-only origin/main...origin/<branch>`.
 
-- **vs SL-1554** (`sl-1554-wk675-s9` @`4439159e`; same Work): the code files are disjoint
+- **vs SL-1554** (`sl-1554-wk675-s9` @`11c3db18`, merge-base `3cd5fcf7`; same Work): the code files are disjoint
   (SL-1554 is frontend only). The test file `MountInspector.test.ts` is shared: SL-1554 creates
   it, and this slice adds one case. `docs/roadmap.md` is section-disjoint (SL-1554 changes its
   own `SL-` row, this slice changes its own row and the §10 gate row). **A plan dependency
   exists**: this slice consumes SL-1554's output (Task 4). Under RL-1445 item 2 (b) they
   **serialise**, this slice after SL-1554's merge (DP-2 (a)).
-- **vs SL-1569** (`sl-1569-wk1178-decimal-outputs` @`38643ee1`; WK-1178, a different Work):
-  **disjoint**. SL-1569 changes `packages/model-schema/src/model_schema/scoring.py`, not
-  `rating.py`. It does not touch `03`, `docs/open-questions.md` or
-  `test_graph_invariant_issues.py`. Both change `docs/roadmap.md`, in different `SL-` rows, and
-  the generated `docs/INDEX.md` (registry-exempt, `delivery-process.core.json` "generated").
-  Neither consumes the other's output, so they may build side by side under RL-1445 (at most
-  three build slices, one full gate at a time).
-- **vs SL-1552** (S10, same Work; no branch on `origin` at 11:01 BST, read-only prep only).
-  Its write set is read from its plan rows, `PL-1546` row 6 and `PL-1286` S10 (`:313`): a new
-  `03` §3.4 FR and its §5.1 row for a `GET` list route, the backend route, and the `/rating`
-  view. **Code-disjoint**: it does not touch `rating.py`, `test_graph_invariant_issues.py` or
-  `MountInspector.test.ts`. `03` is **section-disjoint** (§3.4 and §5.1 against §4.1 and §10).
-  `docs/roadmap.md` changes in different `SL-` rows. One surface may be shared: the
-  DP-S10-3 OQ (working id 8206, "owed before S10 merges", the 10:57:28 entry item (1)) may add
-  a row to `docs/open-questions.md`, `03` §10 and a roadmap §10 gate row, the tables this slice
-  edits for `OQ-1843`. That is a different row, so at most a mechanical merge conflict.
-  Neither consumes the other's output, so they **may build side by side** (RL-1445). SL-1552
-  also waits on SL-1551 (the 10:57:28 entry: "SL-1552 after SL-1551 merges").
+- **vs SL-1569** (`sl-1569-wk1178-decimal-outputs` @`2ec62327`, merge-base `ff976406`;
+  WK-1178, a different Work): **code-disjoint; `03` disjoint under DP-1 (a), serialise only
+  under DP-1 (b).** Its write set now spans `scoring.py`, `pricing_core/rating/{score,ladder}.py`,
+  `backend/src/app/api/score.py`, `backend/src/app/platform/traces.py`, the scoring contracts and
+  their tests; none is `rating.py`, `test_graph_invariant_issues.py`, `MountInspector.test.ts` or
+  `docs/open-questions.md`. It **does** edit `03`: one hunk, `@@ -1118,3 +1118,3 @@`, rewriting
+  `:1119` (the `RATING_TYPE_MISMATCH` line) inside the error-code list (`git diff -U1
+  origin/main...origin/sl-1569-wk1178-decimal-outputs -- docs/specs/03-rating-engine.md`). Under
+  DP-1 (a) this slice touches `03` at §4.1 (`:352`, `:356`) and §10 (`:1615`) only, so the files
+  merge cleanly. Under DP-1 (b) it would add a line to that same list (`:1118`), the overlap
+  that makes it a conflict: then they **serialise** (RL-1445 item 2). Both change
+  `docs/roadmap.md`, in different `SL-` rows, and the generated `docs/INDEX.md`
+  (registry-exempt, `delivery-process.core.json` "generated"). Neither consumes the other's
+  output, so under DP-1 (a) they may build side by side under RL-1445 (at most three build
+  slices, one full gate at a time).
+- **vs SL-1552** (`sl-1552-wk675-s10` @`6cdec296`, merge-base `ff976406`; S10, same Work).
+  Its write set: `03` (a new §3.4 FR row, working id 8209, inserted after `:144`; its §5.1 `GET
+  /api/v1/rating-versions` row at `:1092`; an OQ 8206 row inserted after `:1615`),
+  `docs/open-questions.md` (OQ 8206 inserted after `:162`), `docs/roadmap.md` (its own `SL-`
+  row, and the §10 row "Before the P2 exit demo" at `:3523`, where OQ 8206 is joined), the
+  frontend `RatingVersionListView.vue`, `api/environments.ts` and a test, its `LG-` and an `RL-`.
+  **Code-disjoint**: it does not touch `rating.py`, `test_graph_invariant_issues.py` or
+  `MountInspector.test.ts`. **Adjacent rows, so a mechanical conflict for whichever merges
+  second**: OQ 8206 is inserted directly after the `OQ-1843` row this slice strikes, in both
+  mirrors (`03:1615`, `open-questions.md:162`, line numbers at `ff976406`, unchanged at
+  `3cd5fcf7`). Measured, not inferred: `git merge-file` of a one-line edit to each `OQ-1843`
+  row against SL-1552's file, base `ff976406`, returns 1 conflict in `03` and 1 in
+  `open-questions.md`; the same test on the roadmap §10 `OQ-1843` gate row (`:3518` at
+  `ff976406`, `:3540` at `3cd5fcf7`) against SL-1552's `:3523` edit returns 0. The second to
+  merge re-merges main and keeps both rows (take both sides; no content choice). Neither
+  consumes the other's output, so they **may build side by side** (RL-1445). SL-1552
+  also waits on SL-1551 (the 10:57:28 entry: "SL-1552 after SL-1551 merges"; SL-1551 is
+  still `status: draft` on `origin/main` `3cd5fcf7`).
 - **`03` is a known shared file** (RL-1263 item 4). This slice touches §4.1 (`:352`, `:356`)
   and §10 (`:1615`) only. The lead's dispatch checks every other active slice's write set
   against those sections at the GO. This plan read only the three slices the briefs name (no
@@ -420,6 +444,8 @@ Read at the named heads with `git diff --name-only origin/main...origin/<branch>
   planner-8205b re-read `rating.py` `:662`, `:704`, `:710` and `:716`; `03` `:352`, `:356`
   (by phrase) and `:1615`; `open-questions.md:162`; `roadmap.md:3518` and its count
   `1 (1 open)`, at `4e399fd0`; and RL 8203's file on `origin/draft/rl-8203` @`8cd257f1`.
-- **Contention covers all three slices the briefs name**: SL-1554 (serialise), SL-1569
-  (disjoint) and SL-1552 (disjoint, one possible OQ-table merge conflict).
+- **Contention covers all three slices the briefs name**, re-read 2026-10-25 at their current
+  heads: SL-1554 (serialise), SL-1569 (code-disjoint; serialise only under DP-1 (b), its
+  `03:1119` edit sits in the error-code list) and SL-1552 (code-disjoint; adjacent `OQ` rows in
+  `03` and `open-questions.md`, a mechanical conflict for whichever merges second).
 - **No decision taken.** DP-1 is a reading with a default. DP-2 is the lead's at the GO.
