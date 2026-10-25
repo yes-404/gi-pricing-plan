@@ -24,18 +24,22 @@ _ROOT = Path(__file__).resolve().parents[2]
 
 
 @pytest.mark.req("FR-44")
-def test_the_application_dsn_defaults_to_the_login_role() -> None:
+def test_the_application_dsn_defaults_to_the_login_role(monkeypatch: pytest.MonkeyPatch) -> None:
     """Step 2.1. Red at main: `config.py`'s default DSN is `gip:gip@…/gip`, not the login role."""
+    monkeypatch.delenv("GIP_DATABASE_URL", raising=False)
     url = Settings().database_url.get_secret_value()
     assert url.startswith("postgresql+asyncpg://gip_app_login:")
     assert "@localhost:5432/" in url
 
 
 @pytest.mark.req("FR-44")
-def test_the_migration_dsn_is_a_separate_optional_secret() -> None:
+def test_the_migration_dsn_is_a_separate_optional_secret(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Step 2.1. Red at main: `Settings` has no `migration_database_url`, and `extra="forbid"`
     makes the keyword a ValidationError.
     """
+    monkeypatch.delenv("GIP_MIGRATION_DATABASE_URL", raising=False)
     assert Settings().migration_database_url is None
     owner = "postgresql+asyncpg://owner:pw@localhost:5432/gipricing"
     settings = Settings(migration_database_url=owner)
