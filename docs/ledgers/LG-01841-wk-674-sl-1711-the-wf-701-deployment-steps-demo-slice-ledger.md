@@ -2,7 +2,7 @@
 id: LG-1841
 family: ledger
 title: WK-674 slice SL-1711 — the scripted WF-701 deployment-steps demo (PL-1710) (slice ledger)
-status: active                 # active → closed (§1.2a)
+status: closed                 # active → closed (§1.2a)
 created: 2026-10-22  # original date 2026-10-21, set at the draft; minted 2026-10-22
 owner: executor
 tree: 03c6397f200868f1a0827c197ffbc6de0bf65eda
@@ -311,3 +311,7 @@ Exit-demo run length for WF-701 on compose: 2500 s (WF-699 part 1335 s plus WF-7
 - **Proof 1, skip when absent** (`scratch/sl1711-ci/0a6cd6c9+wt-skip-nodata.log`, first line `0a6cd6c9cd8a7e9ae0713764ec3b4f7c2f849d26`, working tree with this change uncommitted): `GIP_FREMTPL2_EXAMPLE_DIR` pointing at a scratch copy of `examples/fremtpl2` without `data/`, `run-small` on the one file, no DB URL, `GIP_GATE_SLOT` unset: `14 passed, 2 skipped, 2 warnings in 1.64s`, rc=0. The real `examples/fremtpl2/data/` was never moved and was listed present afterwards.
 - **Proof 2, pass when present** (`scratch/sl1711-ci/0a6cd6c9+wt-pass-data-present.log`, same tree; `GIP_GATE_SLOT` unset, run 2026-10-22T17:27:06Z–17:31:43Z, load1 5.40): per-worktree DB `gipricing_sl-1711_118c2dd0` made by `createdb -T gipricing` (rc 0), `alembic upgrade head` rc 0, `alembic current` `a4d1f08c3b97 (head)`; `run-small` on `backend/tests/test_wf701_journey.py`: `16 passed, 3 warnings in 270.25s (0:04:30)`, rc=0, 0 skipped. Beside it the maintainer's generalised exception for gate-1b: `PUBSUB CHANNELS 'gip:switch*'` before the run listed `gip:switch:local:local:gate-1b:{uat,dev,prod}` and `NUMSUB gip:switch` read 0. Cleanup: `dropdb` rc 0, `pg_database` count for that name 0, redis db 11, 12 and 13 `dbsize` 0 (this file's tests use no redis db of their own; db 0 holds the shared stack's keys, 80, not touched).
 - **ruff:** `ruff check` and `ruff format --check` on `backend/tests/test_wf701_journey.py`, rc 0 and rc 0.
+
+## Closed
+
+**Closed 2026-10-25** at slice close: PR #1361 merged as squash `0dfb4a05` (tree `03b000785b2183a764bb03eebd0a4d46bb6ff74d`) on the maintainer's (by delegation) MERGE-ACK, `to-lead.md` entry "2026-10-22 19:52:20 BST — Maintainer: MERGE-ACK #1361 (SL-1711); docker builder prune GO (the USER's word); SL-1260 item 5 = (B)". The roadmap row `SL-1711` is `closed` in the same commit.
