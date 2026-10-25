@@ -1359,7 +1359,7 @@ async def start_regression_run(
 @router.get(
     "/rating-versions/{rating_version_id}/regression-runs",
     summary="List a rating version's regression runs",
-    responses=problems(401, 403, 404, 422),
+    responses=problems(400, 401, 403, 404, 422),
 )
 async def list_regression_runs(
     rating_version_id: UUID,
