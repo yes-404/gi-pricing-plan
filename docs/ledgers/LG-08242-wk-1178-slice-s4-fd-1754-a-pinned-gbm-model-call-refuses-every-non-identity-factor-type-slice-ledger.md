@@ -65,6 +65,41 @@ Acceptance checks are the red, green and gate lines in the Gate section below.
 
 **Full code gate** — pending: gate START 2026-10-25 22:20:51 UTC on gate-1 (`from-lead-2026-10-09.md:8002`): "S4 GATE START: slot gate-1, flock PID 3028745. Script scratch/s4-gate/s4-gate.sh (sha256 52deebb24b24…), derived from fd8233-gate.sh a5acb997 by substitution only (11 lines: header, W, L, the inner guard ×2 plus flock path, DB names ×4, branch). prelaunch rc 0. START line "START head: 8ac770f545eb66ef3677576e210f147ed85cb401 tree: 1cf92667fb902632e68d8be1747fba7570cbca79 branch: draft/s … 2026-10-25T22:20:51+00:00 1.66". Launched setsid nohup under to-lead 22:18:25." The END line and the rc table are to be appended by the lead after the gate's END; none is written here.
 
+2026-10-25 23:32:20 GMT — superseded by the gate of record below (the placeholder line above is kept, not edited).
+
+**Gate of record** at `8ac770f545eb66ef3677576e210f147ed85cb401`, each line verbatim from `~/gi-pricing-plan.local/scratch/s4-gate/gate/gate.log` (74 lines) with its line number:
+
+```text
+L1: START head: 8ac770f545eb66ef3677576e210f147ed85cb401 tree: 1cf92667fb902632e68d8be1747fba7570cbca79 branch: draft/s4-fd1754 load(date l1 l5 l15): 2026-10-25T22:20:51+00:00 1.66 2.03 2.18
+L25: | ruff | rc=0 |
+L26: | mypy | rc=0 |
+L27: | import_linter | rc=0 |
+L28: | audit_docs | rc=0 |
+L29: | req_coverage | rc=0 |
+L30: | contracts | rc=0 |
+L31: | pytest | rc=0 |
+L32: pytest summary: 6806 passed, 21 skipped, 147 warnings in 2561.98s (0:42:41)
+L34: | pnpm install --frozen-lockfile | rc=0 |
+L35: | pnpm generate:api | rc=0 |
+L36: | pnpm lint | rc=0 |
+L37: | pnpm type-check | rc=0 |
+L38: | pnpm test --maxWorkers=2 | rc=0 |
+L39: | pnpm build | rc=0 |
+L52: | demo | designed stop at 2026-10-25T23:24:11+00:00 (both lines seen) |
+L53: | demo.py --journey wf-699 | rc=0 |
+L54: | demo seconds | 945 |
+L57: | D7 | ok  19985 policies in the sample; rate table edits: +485990825; NCD ladder and expense loading: +3851186; sum +489842011 minor units (full-book attribution cost: FD-1576) |
+L60: | postgres | StartedAt 2026-10-25T16:25:17.035473218Z | PortBindings {"5432/tcp":[{"HostIp":"","HostPort":"5432"}]} | working_dir /home/puzhenhao1989/gi-pricing-plan/.claude/worktrees/tools-main/deploy (under tools-main) |
+L61: | redis | StartedAt 2026-10-25T16:25:16.939049123Z | PortBindings {"6379/tcp":[{"HostIp":"","HostPort":"6379"}]} | working_dir /home/puzhenhao1989/gi-pricing-plan/.claude/worktrees/tools-main/deploy (under tools-main) |
+L62: | minio | StartedAt 2026-10-25T16:25:16.98858877Z | PortBindings {"9000/tcp":[{"HostIp":"","HostPort":"9000"}],"9001/tcp":[{"HostIp":"","HostPort":"9001"}]} | working_dir /home/puzhenhao1989/gi-pricing-plan/.claude/worktrees/tools-main/deploy (under tools-main) |
+L63: | keycloak | StartedAt 2026-10-25T23:24:19.61675574Z | PortBindings {"8080/tcp":[{"HostIp":"","HostPort":"8080"}]} | working_dir /home/puzhenhao1989/gi-pricing-plan/.claude/worktrees/tools-main/deploy (under tools-main) |
+L72: | zeros | own-DB count=0 redis RT db 1 dbsize=0 redis RD db 3 dbsize=0 |
+L73: | END rc parts | python max=0 fe max=0 demo=0 restore rc_kc=0 |
+L74: END 2026-10-25T23:24:52+00:00 3.85 2.59 2.85 (date l1 l5 l15) rc=0
+```
+
+Gate of record accepted: to-lead 2026-10-25 23:25:50 GMT
+
 ### Audit
 
 Pending. The slice audit is `RS 8243` (reserved 2026-10-25 22:41:48 UTC for the auditor at gate head `8ac770f5`); the auditor's seat is placed at the gate's END. This section is a placeholder and carries no verdict.
