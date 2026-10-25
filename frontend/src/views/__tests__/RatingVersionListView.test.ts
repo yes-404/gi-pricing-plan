@@ -260,18 +260,67 @@ describe("the rating version list view (FR-8209)", () => {
 
     const row = await rowOf("fremtpl2-demo", 2);
     const href = (name: string) => within(row).getByRole("link", { name }).getAttribute("href");
-    expect(href("Design")).toBe("/rating/fremtpl2-demo/v/2/design");
-    expect(href("Sandbox")).toBe("/rating/fremtpl2-demo/v/2/sandbox");
-    expect(href("Dislocation")).toBe("/rating/fremtpl2-demo/v/2/dislocation");
+    expect(href("Design fremtpl2-demo@2")).toBe("/rating/fremtpl2-demo/v/2/design");
+    expect(href("Sandbox fremtpl2-demo@2")).toBe("/rating/fremtpl2-demo/v/2/sandbox");
+    expect(href("Dislocation fremtpl2-demo@2")).toBe("/rating/fremtpl2-demo/v/2/dislocation");
     expect(href("area@3")).toBe("/rating/fremtpl2-demo/v/2/tables/area");
     expect(href("band@2")).toBe("/rating/fremtpl2-demo/v/2/tables/band");
 
     const none = await rowOf("fremtpl2-demo", 1);
-    expect(within(none).queryByRole("link", { name: /@\d+$/ })).not.toBeInTheDocument();
+    expect(within(none).queryByRole("link", { name: /^\S+@\d+$/ })).not.toBeInTheDocument();
     // one list read and the environments read; nothing addressed by id or by slug@version.
     expect(new Set(calls.map((u) => u.pathname))).toEqual(
       new Set(["/api/v1/rating-versions", "/api/v1/environments"]),
     );
+  });
+
+  it("(g) names each per-slug table, so a screen reader can tell the tables apart", async () => {
+    stubFetch({});
+    render(RatingVersionListView, mounted);
+
+    await rowOf("motor-gb", 27);
+    expect(screen.getByRole("table", { name: "motor-gb versions" })).toBeInTheDocument();
+    expect(screen.getByRole("table", { name: "fremtpl2-demo versions" })).toBeInTheDocument();
+  });
+
+  it("(g) announces the loading and the empty states as status", async () => {
+    stubFetch({ versions: [] });
+    render(RatingVersionListView, mounted);
+
+    expect(screen.getByRole("status")).toHaveTextContent("Loading…");
+    expect(await screen.findByText("No rating versions.")).toHaveAttribute("role", "status");
+  });
+
+  it("(g) a row link's accessible name carries its version, visible text first (SC 2.5.3)", async () => {
+    stubFetch({});
+    render(RatingVersionListView, mounted);
+
+    const row = await rowOf("motor-gb", 27);
+    for (const word of ["Design", "Sandbox", "Dislocation"]) {
+      const link = within(row).getByRole("link", { name: `${word} motor-gb@27` });
+      expect(link).toHaveTextContent(word);
+      expect(link.className).toContain("inline-block");
+    }
+  });
+
+  it("(g) a version live in no environment reads \"none\"; an unread set still reads \"unavailable\"", async () => {
+    stubFetch({
+      environmentPages: [{ items: [environment("uat", ["rating_version:motor-gb@27"])], next_cursor: null }],
+    });
+    render(RatingVersionListView, mounted);
+
+    const live = await rowOf("motor-gb", 27);
+    expect(within(live).queryByText("none")).not.toBeInTheDocument();
+    const other = await rowOf("fremtpl2-demo", 1);
+    expect(within(other).getByText("none")).toBeInTheDocument();
+  });
+
+  it("(g) a 403 on the environments never reads \"none\"", async () => {
+    stubFetch({ environmentPages: [problem(403, "FORBIDDEN")] });
+    render(RatingVersionListView, mounted);
+
+    await rowOf("motor-gb", 27);
+    expect(screen.queryByText("none")).not.toBeInTheDocument();
   });
 
   it("renders a failed list read as an alert, not an empty list", async () => {
