@@ -131,6 +131,8 @@ lead; no row is re-run until green.
 |---|---|---|
 | 6b | After row 6's check: Ctrl-C row 5's demo; `pgrep -af 'uvicorn\|vite'` (nothing left). Then `uv run python scripts/demo.py --journey wf-701` (full seed; E1's pre-seed command). In the browser: `/demo`, then `/rating-versions/<id>` for K1 and for K2, each `<id>` the item of `GET /api/v1/rating-versions` whose `slug@version` the run printed on its `K1: rating version …` and `K2: rating version …` lines | The run: every WF-701 step in `STEP_ORDER` printed `ok` once; the only other lines are the ruled `COMPOSE-ONLY A2/C4/C6 replica limb` (once) and `C7-errors: refused, not traced (FR-259, RL-1712)` (once); C1's line says K1 is prod's newest deployment; the served page 200; the `/demo` URL printed; the three timing lines quoted verbatim as an observation (E1 item 3). The browser: `/demo` loads; both Rating Version pages load and show `approved`. The deployment is evidenced by C1's line, not by a page (no view shows one at `ff976406`) |
 
+*(Dated 2026-10-25 by the lead, on the maintainer's entry "2026-10-25 11:53:23 GMT — Maintainer: PL 8227 DP-S1 (ii), DP-S2 (i)/(i)/(i), departure (b) accepted; the loopback PR = PL-1769 Step 1.5 delivered early, :187 bound too, full gate": row 6b's browser pages are reached over an SSH port-forward, because the local compose stack binds to `127.0.0.1` once the loopback PR (PL-1769 Step 1.5) lands.)*
+
 Row 7's `test_wf699_journey.py` is unchanged. A `test_wf701_journey.py` run is not added to the
 checklist: it runs in every gate's full pytest (`LG-1841` row 7).
 
