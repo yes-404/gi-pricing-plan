@@ -7,7 +7,7 @@ created: 2026-10-25
 owner: auditor
 tree: ff976406f1bf133cfe040d2c44d383011503988a
 corrected_by: []
-relates: [WK-1178, CR-1247, CR-8219, FD-1165, FD-1166]
+relates: [WK-1178, CR-1247, FD-1165, FD-1166]
 ---
 
 # FD-8230 — register-owed.py reads the whole Decision cell
