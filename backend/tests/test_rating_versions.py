@@ -17,6 +17,7 @@ from typing import Any
 from uuid import UUID
 
 import pytest
+from backend.tests.conftest_db import grant_roles_as_owner
 from backend.tests.test_rating_version_compile import _empty_pins, _minimal_algorithm
 from sqlalchemy import select
 
@@ -37,7 +38,6 @@ from app.platform import approvals as approval_service
 from app.platform import dislocation_runs as dislocation_service
 from app.platform import rating_algorithms as algorithm_service
 from app.platform import rating_versions as rating_service
-from app.platform import rbac
 from app.platform import regression_runs as run_service
 from app.platform import regression_suites as suite_service
 from app.platform.blobs import BlobStore
@@ -61,22 +61,7 @@ from pricing_core.rating.runtime import CompiledBundle, load_bundle
 
 async def _principal(database: Database, workspace_id: UUID, role: str) -> Principal:
     who = Principal(kind=ActorKind.USER, id=new_uuid7(), display=f"{role}@insurer.example")
-    async with database.unit_of_work() as session:
-        await rbac.seed_builtin_roles(session, workspace_id)
-        role_row = (
-            await session.execute(
-                select(RoleRow).where(RoleRow.workspace_id == workspace_id, RoleRow.slug == role)
-            )
-        ).scalar_one()
-        session.add(
-            RoleAssignmentRow(
-                workspace_id=workspace_id,
-                principal_kind="user",
-                principal_id=who.id,
-                role_id=role_row.id,
-                scope_type=ScopeType.WORKSPACE.value,
-            )
-        )
+    await grant_roles_as_owner(workspace_id, who.id, role)
     return who
 
 

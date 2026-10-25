@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+from backend.tests.conftest_db import seed_as_owner
 from backend.tests.test_api_datasets import _headers
 from backend.tests.test_contracts import OPENAPI, _load
 from backend.tests.test_model_jobs import (
@@ -740,7 +741,8 @@ async def _principal_holding(
     from model_schema import ScopeType
 
     who = await _principal_with(database, workspace_id, "auditor")
-    async with database.unit_of_work() as session:
+
+    async def seed(session) -> None:
         role = RoleRow(
             workspace_id=workspace_id,
             slug=f"custom-{who.id}",
@@ -758,6 +760,8 @@ async def _principal_holding(
                 scope_type=ScopeType.WORKSPACE.value,
             )
         )
+
+    await seed_as_owner(seed)
     return _headers(who.id, workspace_id)
 
 

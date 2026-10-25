@@ -7,12 +7,13 @@ from uuid import UUID, uuid4
 
 import pytest
 from backend.tests.approved_rows import add_approved
+from backend.tests.conftest_db import grant_roles_as_owner
 from sqlalchemy import select
 
-from app.db.models import AuditEventRow, RoleAssignmentRow, RoleRow, ValidationReportRow
+from app.db.models import AuditEventRow, ValidationReportRow
 from app.db.session import Database
 from app.errors import PlatformError
-from app.platform import datasets, profiles, rbac, validation
+from app.platform import datasets, profiles, validation
 from model_schema import (
     ActorKind,
     DatasetStatus,
@@ -20,7 +21,6 @@ from model_schema import (
     Principal,
     Profile,
     RuleOutcome,
-    ScopeType,
     Severity,
     ValidationLayer,
     ValidationReport,
@@ -31,21 +31,7 @@ from model_schema.validation import RuleResult
 
 async def _principal_with_role(database: Database, workspace_id, slug: str) -> Principal:
     user = Principal(kind=ActorKind.USER, id=new_uuid7(), display=f"{slug}@insurer.example")
-    async with database.unit_of_work() as session:
-        await rbac.seed_builtin_roles(session, workspace_id)
-        role = (
-            await session.execute(
-                select(RoleRow).where(
-                    RoleRow.workspace_id == workspace_id, RoleRow.slug == slug
-                )
-            )
-        ).scalar_one()
-        session.add(
-            RoleAssignmentRow(
-                workspace_id=workspace_id, principal_kind="user", principal_id=user.id,
-                role_id=role.id, scope_type=ScopeType.WORKSPACE.value,
-            )
-        )
+    await grant_roles_as_owner(workspace_id, user.id, slug)
     return user
 
 

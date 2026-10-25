@@ -23,7 +23,7 @@ import functools
 import hashlib
 import os
 import warnings
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 from pathlib import Path
 from uuid import UUID
 
@@ -31,6 +31,7 @@ import pytest
 import pytest_asyncio
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings
 from app.db.session import Database
@@ -476,6 +477,103 @@ async def blob_store() -> AsyncIterator[BlobStore]:
     yield store
 
 
+async def seed_as_owner[T](seed: Callable[[AsyncSession], Awaitable[T]]) -> T:
+    """Run `seed` against the **owner's** engine: the one seam through which a test writes
+    the rows the application's login role may not (`workspaces`, `roles`, `role_assignments`).
+
+    The application connects as the login role (FD-1729), which holds no INSERT on the
+    tables that define who may do what -- by design, so that a test cannot grant itself a
+    permission through the very connection the permission checks run on. Seeding therefore
+    runs on its own owner engine, opened and disposed here.
+
+    **Commit semantics (S1a seam ruling, condition (ii)).** `unit_of_work` commits when `seed`
+    returns, and the commit happens *before* this function does. The rows are therefore
+    committed, and visible to the application connection (`database`, `api_client`) on its
+    next statement in the same test; there is no shared transaction to wait on.
+
+    **Teardown.** Nothing deletes these rows per test. Isolation is the test's own fresh
+    `workspace_id` (the only isolation an append-only table permits), and the session-scoped
+    `_empty_the_database_after_the_session` fixture truncates the whole database as the owner
+    after the last test -- as a fixture finalizer, so it runs when tests fail too. A seed
+    that raises rolls back and writes nothing.
+
+    **Test-only.** Nothing under `backend/src` may name this module
+    (`test_conftest_db_login_role.py` scans for it).
+    """
+    db = Database(Settings(database_url=test_owner_database_url()))
+    try:
+        async with db.unit_of_work() as session:
+            return await seed(session)
+    finally:
+        await db.dispose()
+
+
+async def grant_roles_as_owner(
+    workspace_id: UUID,
+    principal_id: UUID,
+    *role_slugs: str,
+    workspace: bool = False,
+    membership: bool = False,
+    rules_author_id: UUID | None = None,
+) -> None:
+    """Seed the built-in roles in `workspace_id` and assign `role_slugs` to `principal_id`,
+    through `seed_as_owner` (its docstring states the commit and teardown semantics).
+
+    `workspace` first creates the workspace row (FR-395: `workspace_members` and
+    `workspace_settings` carry a foreign key to it); `membership` adds the principal's
+    workspace membership, idempotently (W6b-11); `rules_author_id` seeds the built-in
+    validation-rule catalogue (FR-68) as that author. The `grant` fixture sets all three;
+    the local helpers that only need a role leave them off.
+    """
+    from sqlalchemy import select
+
+    from app.db.models import RoleAssignmentRow, RoleRow, WorkspaceMemberRow
+    from app.platform import rbac, validation_rules, workspaces
+    from model_schema import ScopeType
+
+    async def seed(session: AsyncSession) -> None:
+        if workspace:
+            await workspaces.ensure_workspace(session, workspace_id=workspace_id)
+        await rbac.seed_builtin_roles(session, workspace_id)
+        if rules_author_id is not None:
+            await validation_rules.seed_builtin_rules(
+                session, workspace_id, authored_by=rules_author_id
+            )
+        for slug in role_slugs:
+            role = (
+                await session.execute(
+                    select(RoleRow).where(
+                        RoleRow.workspace_id == workspace_id, RoleRow.slug == slug
+                    )
+                )
+            ).scalar_one()
+            session.add(
+                RoleAssignmentRow(
+                    workspace_id=workspace_id,
+                    principal_kind="user",
+                    principal_id=principal_id,
+                    role_id=role.id,
+                    scope_type=ScopeType.WORKSPACE.value,
+                )
+            )
+        if membership:
+            # Idempotent: a test may seed its own membership rows first (FR-396's
+            # two-workspace test does), and a duplicate insert would violate
+            # `uq_workspace_members_user_workspace` (`models.py`).
+            existing = (
+                await session.execute(
+                    select(WorkspaceMemberRow).where(
+                        WorkspaceMemberRow.user_id == principal_id,
+                        WorkspaceMemberRow.workspace_id == workspace_id,
+                    )
+                )
+            ).scalar_one_or_none()
+            if existing is None:
+                session.add(WorkspaceMemberRow(user_id=principal_id, workspace_id=workspace_id))
+
+    await seed_as_owner(seed)
+
+
 @pytest_asyncio.fixture
 async def grant(database: Database, workspace_id: UUID, principal: Principal):
     """Seed the built-in roles, grant one to the test principal, and record membership.
@@ -488,60 +586,24 @@ async def grant(database: Database, workspace_id: UUID, principal: Principal):
     resolves through the memberships the database holds, so a granted caller must also be
     a member, or the permission checks this fixture exists to exercise never run.
 
+    The writes run on the owner's engine (`seed_as_owner`), because the application's login
+    role cannot insert them. `database` is requested only for its reachability and migration
+    checks, so an unreachable database skips here exactly as it does for the app path.
+
         await grant("analyst")
     """
 
     async def _grant(role_slug: str, *, principal_id: UUID | None = None) -> None:
-        from sqlalchemy import select
-
-        from app.db.models import RoleAssignmentRow, RoleRow, WorkspaceMemberRow
-        from app.platform import rbac, validation_rules, workspaces
-        from model_schema import ScopeType
-
-        async with database.unit_of_work() as session:
-            # The workspace row arrives first: `workspace_members` and `workspace_settings`
-            # now carry a foreign key to it (FR-395), so seeding either without it is an
-            # integrity error rather than a missing name.
-            await workspaces.ensure_workspace(session, workspace_id=workspace_id)
-            await rbac.seed_builtin_roles(session, workspace_id)
-            # The catalogue arrives with the workspace, exactly as the roles do
-            # (FR-68). `grant` is the only workspace-creation path this suite has, so
-            # seeding hangs off it for the same reason `seed_builtin_roles` does.
-            await validation_rules.seed_builtin_rules(
-                session, workspace_id, authored_by=principal.id
-            )
-            role = (
-                await session.execute(
-                    select(RoleRow).where(
-                        RoleRow.workspace_id == workspace_id, RoleRow.slug == role_slug
-                    )
-                )
-            ).scalar_one()
-            session.add(
-                RoleAssignmentRow(
-                    workspace_id=workspace_id,
-                    principal_kind="user",
-                    principal_id=principal_id or principal.id,
-                    role_id=role.id,
-                    scope_type=ScopeType.WORKSPACE.value,
-                )
-            )
-            # Idempotent: a test may seed its own membership rows first (FR-396's
-            # two-workspace test does), and a duplicate insert would violate
-            # `uq_workspace_members_user_workspace` (`models.py`).
-            member = principal_id or principal.id
-            existing = (
-                await session.execute(
-                    select(WorkspaceMemberRow).where(
-                        WorkspaceMemberRow.user_id == member,
-                        WorkspaceMemberRow.workspace_id == workspace_id,
-                    )
-                )
-            ).scalar_one_or_none()
-            if existing is None:
-                session.add(
-                    WorkspaceMemberRow(user_id=member, workspace_id=workspace_id)
-                )
+        # The catalogue arrives with the workspace, exactly as the roles do (FR-68). `grant`
+        # is the only workspace-creation path this suite has, so seeding hangs off it.
+        await grant_roles_as_owner(
+            workspace_id,
+            principal_id or principal.id,
+            role_slug,
+            workspace=True,
+            membership=True,
+            rules_author_id=principal.id,
+        )
 
     return _grant
 
