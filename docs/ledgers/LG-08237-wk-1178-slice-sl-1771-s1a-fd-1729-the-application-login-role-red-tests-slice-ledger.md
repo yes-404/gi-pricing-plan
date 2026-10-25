@@ -23,7 +23,7 @@ relates: [PL-1769, SL-1771, FD-1729, FR-44]
 
 ### Scope
 
-S1a is the first half of the `SL-1771` re-cut in plan `PL 8227` (working id, unminted; the plan is on branch `draft/pl-8227`, file `docs/plans/PL-08227-wk-1178-open-high-findings-s1a-s1b-fd-1729-split-s2-fd-1610-limb-2-s4-fd-1754-gbm-factor-read-plan-delta.md`, "FD-1729 split into S1a and S1b"). It builds on the `SL-1771` row of `PL-1769` (`docs/INDEX.md` at `origin/main`: "WK-1178 fix slice (S-b) — FD-1729: the application connects as a login role with gip_app's grants, never as the owner"). Finding: `FD-1729`. Requirement: `FR-44` (the privilege layer).
+S1a is the first half of the `SL-1771` re-cut in plan `PL 8227` (working id, unminted; the plan is on branch `draft/pl-8227`, section "FD-1729 split into S1a and S1b"). It builds on the `SL-1771` row of `PL-1769` (`docs/INDEX.md` at `origin/main`: "WK-1178 fix slice (S-b) — FD-1729: the application connects as a login role with gip_app's grants, never as the owner"). Finding: `FD-1729`. Requirement: `FR-44` (the privilege layer).
 
 This ledger holds the **red** half only: four test files drafted at `d1d96465` (`test(backend): draft the S1a reds for FD-1729 …`) and the table of what each one fails on. S1a's code (`deploy/postgres/app-login-role.sql`, `scripts/provision-app-role.py`, the `Settings.migration_database_url` field, `migrations/env.py`, the compose mount, the CI env, `conftest_db`) does not exist yet.
 
