@@ -127,6 +127,39 @@ Not yet.
   - **Teardown:** `docker rm -fv s1a-pg-b61889a9` rc 0; `docker ps -a --filter name=s1a-pg` printed `s1a-pg-b61889a9` before and nothing after; dangling volumes 16 before, 16 after. Redis db 12 held 7 keys after the runs and `DBSIZE` 0 after `FLUSHDB`.
 
 
+### Owner seam for test seeding (to-lead "2026-10-25 22:24:25 GMT", option (a); appended 2026-10-25 GMT)
+
+- **Seam:** `backend/tests/conftest_db.py`: `seed_as_owner(seed)` (one owner-engine unit of work) and `grant_roles_as_owner(workspace_id, principal_id, *slugs, workspace, membership, rules_author_id)`; the `grant` fixture and the 7 local helpers delegate. Heads: guard `db8dddaa` (red: `test_the_owner_seam_exists_and_is_not_named_anywhere_in_backend_src` fails `assert callable(None)`, "1 failed, 7 passed"; negative case injects a file into a tmp copy of `backend/src`), seam `df215d55` (tree `d44c30e5`). Condition (i): a grep guard, not import-linter (`backend` is a namespace package, not a root package of `.importlinter`).
+- **Condition (ii), commit semantics:** `unit_of_work` commits when the seed returns, before `seed_as_owner` returns, so the application connection sees the rows on its next statement in the same test. **Teardown:** no per-test delete; isolation is each test's fresh `workspace_id`; the session-scoped autouse `_empty_the_database_after_the_session` truncates the whole database as the owner after the last test, as a fixture finalizer (it runs when tests fail). A raising seed rolls back.
+- **Predicate 1 (condition (iv)), 8 helpers at `f75906b9`:** `git grep -n -E '^def grant|^async def grant|def _principal' -- backend/tests`:
+```
+backend/tests/conftest_db.py:480:async def grant(database: Database, workspace_id: UUID, principal: Principal):
+backend/tests/test_approval_guard_allowance.py:28:async def _principal_with_role(database: Database, workspace_id: Any, slug: str) -> Principal:
+backend/tests/test_custom_objectives.py:730:async def _principal_holding(
+backend/tests/test_model_lifecycle.py:104:async def _principal_with(
+backend/tests/test_model_nfrs.py:77:async def _principal_with(database: Database, workspace_id: UUID, *roles: str) -> Principal:
+backend/tests/test_rating_versions.py:62:async def _principal(database: Database, workspace_id: UUID, role: str) -> Principal:
+backend/tests/test_validation_reports.py:32:async def _principal_with_role(database: Database, workspace_id, slug: str) -> Principal:
+backend/tests/test_wf01_journey.py:150:async def _principal(database: Database, workspace_id: UUID, role: str) -> Principal:
+```
+  At `df215d55` the same command prints 9 lines: the 8 plus the seam's own `grant_roles_as_owner`.
+- **Predicate 2 is a coarse upper bound, not a count:** `git grep -l -E '\bgrant\b *[,)]|\(grant[,)]|, grant\b' -- 'backend/tests/test_*.py'` prints 63 files at `df215d55`; it matches any mention of the word, not a use of the fixture.
+- **Step 4 (condition (iii), full `backend/tests` on the login-role DSN):** container `s1a-pg-df215d55` (`postgres:16-alpine`, `127.0.0.1:32773`), throwaway `s1a-minio-df215d55` (`127.0.0.1:32774`, bucket `gip-test-blobs-s1aseam` inside it), Redis db 12; provision rc 0, rollback rehearsal rc 0 (`gip_app,gip_app_login` → `gip_app`; shdepend 0, sessions 0), re-provision rc 0, `alembic upgrade head` rc 0. `run-heavy --grant "2026-10-25 22:04:36 GMT" -- … pytest -q backend/tests -p no:cacheprovider`, log `head=df215d55b118396b2ab6edcba9c645ee253d9eaf` … `rc=1`: **`665 failed, 2179 passed, 13 skipped, 128 warnings, 51 errors in 1513.90s (0:25:13)`**. **NOT 0 failed.** Dispositions are in the table below; nothing beyond the seam was changed.
+- **Teardown:** `docker rm -fv s1a-pg-df215d55 s1a-minio-df215d55` rc 0; `docker ps -a --filter name=s1a-pg` printed `s1a-pg-df215d55` before and nothing after; dangling volumes 16 before, 16 after; Redis db 12 `DBSIZE` 31 after the run, 0 after `FLUSHDB`. No bucket was created on the live MinIO.
+
+#### Step-4 failure dispositions (`permission denied` lines in the log: 3259; first-failing table → cause → proposed fix)
+
+| Count (blocks) | Table / symptom | Cause | Proposed fix |
+|---|---|---|---|
+| 460 (the bulk: workspaces 305, roles 101, role_assignments 35, workspace_members 19) | `workspaces`, `roles`, `role_assignments`, `workspace_members` | tests and test helpers outside the 8 call `workspaces.ensure_workspace` / `rbac.seed_builtin_roles` / insert role and member rows on the application connection (41 files match `git grep -l -E 'ensure_workspace|seed_builtin_roles' -- 'backend/tests/*.py'`; `test_model_jobs.py` alone fails 231 blocks through its helper) | route each through `grant_roles_as_owner` / `seed_as_owner` (same seam, no new grant) |
+| 9 (environment_settings 4, workspace_settings 2, blob_uploads 1, service_accounts 1, custom_metrics 1) | `workspace_settings`, `environment_settings`, `service_accounts`, `blob_uploads`, `custom_metrics` | tests seed or tamper with rows on the application connection (`test_settings_environment`, `test_management_rate_limit`, `test_api_service_accounts`, `test_api_blob_uploads`, `test_custom_metrics_table`) | `seed_as_owner`, or list the test in `OWNER_FIXTURE_USERS` if it proves the owner/app boundary |
+| 15 (blobs 5, session_replication_role 4, scoring_traces 2, deployment_requests 2, audit_events 2) | `blobs`, `scoring_traces`, `deployment_requests`, `audit_events` ("must be owner of table audit_events"), `session_replication_role` | append-only-guard tests (`test_blobs`, `test_artifact_immutability`, `test_traces`, `test_deployments`, `test_audit`, `test_api_audit`) tamper as the application, which the login role may not | owner-subject tests: `owner_database` + `OWNER_FIXTURE_USERS` label `owner-subject` |
+| 2 | `test_application_dsns.py` | asserts the stock `@localhost:5432/` default and an unset migration DSN; the run exports `GIP_DATABASE_URL` and `GIP_MIGRATION_DATABASE_URL` | environment-dependent; clear those variables in the test (`monkeypatch.delenv`) |
+| 2 | `test_put_writes_the_value_and_audits_environment_key_old_and_new`, `test_get_reports_every_layers_candidate_for_the_environment` | cascade from the `environment_settings` seed above (wrong layer reported) | cleared by the `environment_settings` fix |
+| 2 | `test_a_warm_score_request_takes_one_pool_checkout` / `…_at_most_nine_statements` ({'checkouts': 2, 'statements': 15}) | **not classified**: no permission line; plausibly the same unseeded-workspace cascade, unproven | re-run after the seeding fix; if still red, a finding |
+
+The count column is by failure block in the log (490 blocks against 665 failed + 51 errors in the summary line; 460 + 9 + 15 + 6 = 490, the 6 being the rows below), not by test; a block carries the first `permission denied` it hit. The split is `scratch/exec-s1aseam/full.log` at `df215d55`.
+
 ## PRs
 
 None yet.
