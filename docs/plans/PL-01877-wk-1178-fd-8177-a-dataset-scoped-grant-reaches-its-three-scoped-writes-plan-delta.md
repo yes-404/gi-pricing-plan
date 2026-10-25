@@ -1,10 +1,10 @@
 ---
-id: PL-8181
+id: PL-1877
 family: plan
 kind: map
 title: WK-1178 — FD 8177, a dataset-scoped grant reaches the three writes whose handler checks the Dataset (dictionary, rule set, acknowledgement), and a permanent guard against the pattern — a dated Work-plan delta cutting one slice
-status: active                 # draft → active → superseded | retired (§1.2a) — ACCEPTED by the maintainer 2026-10-22 17:38:11 BST (DP-0..DP-3 ruled, DP-4 accepted with the guard follow-up); working id, not minted
-created: 2026-10-22
+status: active                 # draft → active → superseded | retired (§1.2a) — ACCEPTED by the maintainer 2026-10-22 17:38:11 BST (DP-0..DP-3 ruled, DP-4 accepted with the guard follow-up); minted 2026-10-25 as PL-1877
+created: 2026-10-25                  # drafted 2026-10-22 under working id 8181; minted 2026-10-25 as PL-1877
 owner: planner
 tree: 71e481fa5d240ed366cd80c1a8c6cf6cd1d918d5
 phase: P2
@@ -12,13 +12,13 @@ work: WK-1178
 supersedes: []
 superseded_by: ~
 corrected_by: []
-relates: [SL-8185, LG-8186, RL-1301, RL-1687, FR-343, FR-345, FR-46, FR-51, FR-452, FR-263]
+relates: [SL-1878, LG-1879, RL-1301, RL-1687, FR-343, FR-345, FR-46, FR-51, FR-452, FR-263]
 ---
 
-# PL-8181 — WK-1178: FD 8177, a dataset-scoped grant reaches its three scoped writes
+# PL-1877 — WK-1178: FD 8177, a dataset-scoped grant reaches its three scoped writes
 
 > **For agentic workers:** a **dated Work-plan delta** under Lean P2 L5 (`document-ids.md`
-> §1.6, PL row). It cuts **one fix slice, SL 8185**, whose ledger is **LG 8186** (working ids,
+> §1.6, PL row). It cuts **one fix slice, SL-1878**, whose ledger is **LG-1879** (working ids,
 > the maintainer's 17:38:11 GO). The executor is spawned from
 > `.claude/roles/executor.md` and binds `test-driven-development`, `python-test`,
 > `python-package`, `fastapi-service`, `spec-change`, `dev-commands` and `git-hygiene`. The
@@ -26,7 +26,7 @@ relates: [SL-8185, LG-8186, RL-1301, RL-1687, FR-343, FR-345, FR-46, FR-51, FR-4
 > Written by planner-8177 (Claude Opus 5.5), 2026-10-22, at tree `71e481fa` (origin/main).
 
 **Accepted 2026-10-22 17:38:11 BST by the maintainer.** The entry "2026-10-22 17:38:11 BST —
-Maintainer: PL 8181 (FD 8177 fix) DP-0..DP-3 RULED; GO (SL 8185 / LG 8186); my 17:36:24 FR-343
+Maintainer: PL-1877 (FD 8177 fix) DP-0..DP-3 RULED; GO (SL-1878 / LG-1879); my 17:36:24 FR-343
 placement AMENDED to FR-345" in `to-lead.md`, verbatim:
 
 > The plan is draft/pl-8181 @92c48990 (planner-8177, opus). **ACCEPTED**, its follow-up commit for the guard-predicate extension included.
@@ -35,7 +35,7 @@ placement AMENDED to FR-345" in `to-lead.md`, verbatim:
 > - **DP-2 = a dated FR-345 clause** stating the order. **This AMENDS my 17:36:24 item 1:** the scope-order sentence goes in **FR-345** (dataset scope), not FR-343, to avoid two rulings on one row (RL 8176's clause stays in FR-343). FR-343 carries a one-line pointer to FR-345. RL 8182 cites FR-345. The id-oracle residual is stated in the clause; no OQ.
 > - **DP-3:** acknowledge must raise **SCOPE_DENIED** when the permission is held on another dataset. ACKNOWLEDGE_FORBIDDEN_ROLE stays for a genuine role refusal. A red test distinguishes the two.
 > - **Tasks 1–6 as planned. Task 4 (rule-set) only after SL-1736 merges.** Task 5's guard: AST-based, red-first twice (names exactly the 3 routes at base, plus an injected route), with the **extended predicate** (a spec-named scoped resource vs a no-resource check) and an owned exclusion list; each entry is removed by the slice that fixes it (RL 8182's slice, FD 8184).
-> - **GO:** SL 8185 / LG 8186. Build now (edits); DB windows under pre-approval 1(a); its gate in the queue.
+> - **GO:** SL-1878 / LG-1879. Build now (edits); DB windows under pre-approval 1(a); its gate in the queue.
 
 This commit records those rulings. Where the ruling differs from the 17:36:24 revision below,
 the ruling binds: the helper is the `held_anywhere=True` keyword on `requires()`, and the order
@@ -63,7 +63,7 @@ P2's close (§14)" (17:27:15).
 routes join its slice; the id-oracle residual ACCEPTED; FD 8184 probe GO" (RL 8182 draft
 `draft/rl-8182` @`a0e4a6d7`), items quoted verbatim where they bind this plan:
 
-> **Order: holds_anywhere → 403; load → 404; scoped → SCOPE_DENIED.** It applies to PL 8181's 3 routes too, and it is one more dated FR-343 sentence, minted with RL 8176's clause (one docs change, both sentences). **Owner:** WK-1178; **its own slice AFTER PL 8181's** (shared files are sequenced, not concurrent).
+> **Order: holds_anywhere → 403; load → 404; scoped → SCOPE_DENIED.** It applies to PL-1877's 3 routes too, and it is one more dated FR-343 sentence, minted with RL 8176's clause (one docs change, both sentences). **Owner:** WK-1178; **its own slice AFTER PL-1877's** (shared files are sequenced, not concurrent).
 
 > 3. **The residual** (SCOPE_DENIED after load reveals that an id exists to a holder scoped to another Dataset): **ACCEPTED**, consistent with RL 8176 (A)'s reasoning (a workspace-internal oracle to an already-privileged holder).
 
@@ -181,7 +181,7 @@ The slice writes both, spec first (Task 1). The executor uses this wording; the 
 the working ids at the mint:
 
 - **`06` FR-345** (`docs/specs/06-governance.md`:81), a dated clause appended to the row:
-  > *(Amended <date>, SL 8185, FD 8177; the maintainer 2026-10-22 17:38:11 BST.)* **Order, for a
+  > *(Amended <date>, SL-1878, FD 8177; the maintainer 2026-10-22 17:38:11 BST.)* **Order, for a
   > dataset-scoped check.** A route whose permission may be held on a named Dataset first checks
   > that the caller holds the permission **under any scope**, before any lookup, and refuses with
   > 403 `PERMISSION_DENIED` otherwise, whether or not the id exists (FR-343). The Dataset or
@@ -193,7 +193,7 @@ the working ids at the mint:
   > granted the permission learn this. Revisit if Dataset slugs or ids become sensitive across
   > scopes.
 - **`06` FR-343** (`:79`), one dated line appended to the row:
-  > *(Amended <date>, SL 8185.)* For a permission held on a named Dataset, the order is FR-345's
+  > *(Amended <date>, SL-1878.)* For a permission held on a named Dataset, the order is FR-345's
   > (its clause of <date>).
 
 No OQ is raised. RL 8182's own FR-345 clause ("Where a dataset scope reaches") is the
@@ -327,7 +327,7 @@ route gate over a scoped check reached from its handler, or a route whose reache
 carry the scope its `ROUTE_SCOPES` row (the spec) names. It starts green on main, with every
 known failure listed and owned.
 
-## The slice — SL 8185 (one row under WK-1178; ledger LG 8186)
+## The slice — SL-1878 (one row under WK-1178; ledger LG-1879)
 
 - **Title:** WK-1178 fix slice — FD 8177: a dataset-scoped grant reaches the dictionary, rule-set
   and acknowledge writes (`requires(perm, held_anywhere=True)`), and a permanent route-scope guard.
@@ -336,7 +336,7 @@ known failure listed and owned.
   rows for FD 8184).
 - **Dependencies:** none before Task 1 (the maintainer: "Build now"). The docs batch that mints
   RL 8176 and RL 8182 also edits the FR-343 and FR-345 rows, so the **batch PR merges before SL
-  8185's PR**, and SL 8185 re-merges main and re-places its two appended lines after the batch's
+  8185's PR**, and SL-1878 re-merges main and re-places its two appended lines after the batch's
   if the merge conflicts (a mechanical resolution, reported). **SL-1736 merged to main before
   Task 4.** FD 8184's
   probe result before Task 5's `KNOWN_SCOPE_GAPS` is final (its rows' owner and their table).
@@ -466,7 +466,7 @@ only through `run-small.sh` (≤3 files), in a DB window the lead grants.
 ## Clashes and sequencing
 
 - **The RL 8176 / RL 8182 docs batch** also appends to `06` FR-343 and FR-345. The batch PR
-  merges first. SL 8185 re-merges main and keeps both rows' appended lines, the batch's first.
+  merges first. SL-1878 re-merges main and keeps both rows' appended lines, the batch's first.
   RL 8182 cites this slice's FR-345 clause.
 - **SL-1736** (`sl-1736-wk1178-nfr-sweep` @`ef1d0efb`) edits `platform/validation_rules.py`
   hunks `@@ -805,6 +805,21 @@`, `@@ -852,14 +867,18 @@` and `@@ -905,15 +924,8 @@`, all inside
@@ -503,4 +503,4 @@ in this plan.
   extension maps to DP-4 and Task 5's predicate 2.
 - DP-0 to DP-3 were ruled by the maintainer's 17:38:11 entry, and DP-4 was accepted with it
   (resolver cells above). The status is `active` on that acceptance. The id 8181 is a working
-  id, so check 32 stays red until the mint. SL 8185 / LG 8186 are the GO's ids.
+  id, so check 32 stays red until the mint. SL-1878 / LG-1879 are the GO's ids.

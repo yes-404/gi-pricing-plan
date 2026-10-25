@@ -1,6 +1,6 @@
 """The route-scope guard: a route gate must not contradict the scope its handler checks (FD-1852).
 
-`PL-8181` Task 5; `06` FR-345's dated clause of 2026-10-22. Two predicates, one AST resolver, two
+`PL-1877` Task 5; `06` FR-345's dated clause of 2026-10-22. Two predicates, one AST resolver, two
 tables. Nothing here touches a database.
 
 **Predicate 1** (the maintainer's "2026-10-22 17:27:15 BST" condition). A route is *gated without
@@ -10,7 +10,7 @@ answers for the workspace only, so it refuses every scoped grant (`RL-1301` B.2 
 route fails if it also *reaches a scoped check* of that permission: a `require_permission` /
 `has_permission` call whose `resource=` is not absent or `None`.
 
-**Predicate 2** (the maintainer's "2026-10-22 17:36:24 BST" item 4, `PL-8181` DP-4 (a)). A check
+**Predicate 2** (the maintainer's "2026-10-22 17:36:24 BST" item 4, `PL-1877` DP-4 (a)). A check
 with no resource where the spec names a scoped one cannot be seen by predicate 1: there is no
 scoped check to pair. The difference between "workspace-wide by design" and "workspace-wide by
 mistake" is in the spec, not the code, so every route holding a covered permission has a row in
@@ -144,7 +144,7 @@ ROUTE_SCOPES: dict[Route, ScopeType] = {
 
 _RL_8182 = ("RL-1849", "the slice RL-1849 cuts")
 _FD_8184 = ("FD-1853", "the slice RL-1849 cuts (FD-1853 joins it)")
-_THIS = ("SL-8192", "SL-8192 (SL 8185 Task 4 follow-on), after SL-1736 merges")
+_THIS = ("SL-8192", "SL 8192 (SL-1878 Task 4 follow-on), after SL-1736 merges")
 
 #: The rule-set row is paired with four strict xfails in `test_dataset_scoped_writes.py`
 #: (`_RULE_SET_OWED`): when SL 8192 fixes the route both XPASS and this row stops failing, so the
@@ -571,6 +571,6 @@ def test_the_spec_names_a_dataset_scope_only_for_routes_declared_dataset() -> No
 
 @pytest.mark.req("FR-345")
 def test_held_anywhere_with_a_counted_gate_is_a_type_error() -> None:
-    """`held_anywhere=True` never counts: asking it to is refused at construction (PL-8181 DP-1)."""
+    """`held_anywhere=True` never counts: asking it to is refused at construction (PL-1877 DP-1)."""
     with pytest.raises(TypeError):
         requires(Perm.DATASET_WRITE, held_anywhere=True, management_counted=True)

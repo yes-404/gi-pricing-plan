@@ -1,6 +1,6 @@
 """FD-1852 — a Dataset-scoped grant reaches the three writes whose handler checks the Dataset.
 
-`PL-8181` Task 2. `06` FR-345 (dated clause, SL 8185): a permission that can be held on a named
+`PL-1877` Task 2. `06` FR-345 (dated clause, SL-1878): a permission that can be held on a named
 Dataset is checked held-anywhere first (403 `PERMISSION_DENIED`), then on the resource by the
 handler (404, then 403 `SCOPE_DENIED`). The three routes were refused at the first step for a
 scoped holder, because `requires()` names no resource and `rbac._covers` answers False for a
@@ -194,7 +194,7 @@ def _unknown(route: str, client: TestClient, headers: dict[str, str]):
 _RULE_SET_OWED = pytest.mark.xfail(
     strict=True,
     reason=(
-        "FD 8177 rule-set limb: owned by SL 8192 (SL 8185 Task 4 follow-on), "
+        "FD 8177 rule-set limb: owned by SL 8192 (SL-1878 Task 4 follow-on), "
         "activates when SL-1736 merges"
     ),
 )
