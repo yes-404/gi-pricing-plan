@@ -56,6 +56,8 @@ Appended per task and per push, never rewritten; every stamp from `date`. Runs: 
 - **Broken input (acceptance 4)**: with `if not name.strip():` replaced by `if False:` (uncommitted, reverted at once), the same run: rc 1, `3 failed, 10 passed`.
 - **Task 4**, a966d375: `MountInspector.test.ts`, one case (a cleared input port stays `""`). `vitest run src/components/dag/__tests__/MountInspector.test.ts` rc 0, `Test Files  1 passed`, `Tests  9 passed`. Broken input (acceptance 9): `setInput` changed to delete the key on `""` (uncommitted, reverted at once): rc 1, `1 failed | 8 passed`. `eslint` on the test file rc 0.
 - **Owed to the gate:** `vue-tsc` type-check (whole-project), the import-closure GREEN set (common brief item 29), `mypy` (a single-file run reports a pre-existing `rating.py:35` import error under the bare invocation, so the project `uv run mypy` is the decider), the full two-half gate, acceptance items 1, 6, 7, 8, 10, 12.
+- **2026-10-25 23:54 GMT, owed `vue-tsc` (run-heavy, grant, non-light), head dc4f061a1f4b7b36bbb969bed3bb5d6035f26348.** `pnpm install --frozen-lockfile`, `generate:api`, `vue-tsc --build --force`: rc 0 (finished 2026-10-25 23:52:20 GMT; log `exec-8205chk-step1.log`, carries `head=dc4f061a…` and ends `rc=0`).
+- **2026-10-25 23:54 GMT, owed project `mypy` (run-heavy, grant), head dc4f061a1f4b7b36bbb969bed3bb5d6035f26348.** `uv run --directory <wt> mypy`: `Success: no issues found in 250 source files`, rc 0 (finished 2026-10-25 23:53:52 GMT; log `exec-8205chk-step2.log`).
 
 ## PRs
 
