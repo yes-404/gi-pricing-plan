@@ -1695,12 +1695,14 @@ def test_a_pending_trace_whose_context_names_a_produced_value_is_not_reproduced_
     planted["inputs"] = {**planted["inputs"], "payable": 1}
 
     async def _plant_and_run() -> tuple[JobStatus, ScoringTraceRow]:
-        async with database.unit_of_work() as session:
+        async def _plant(session: Any) -> None:
             await session.execute(
                 update(ScoringTraceRow)
                 .where(ScoringTraceRow.id == row.id)
                 .values(pending_quote_context=planted)
             )
+
+        await seed_as_owner(_plant)
         status = await execute_job(database, job.id, blob_store)
         async with database.session() as session:
             after = await session.get(ScoringTraceRow, row.id)

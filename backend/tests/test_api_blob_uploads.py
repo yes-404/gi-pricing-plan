@@ -16,9 +16,11 @@ from uuid import UUID
 import httpx
 import pytest
 import pytest_asyncio
+from backend.tests.conftest_db import seed_as_owner
 from botocore.exceptions import ClientError
 from fastapi.testclient import TestClient
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import DEV_PRINCIPAL_HEADER
 from app.db.session import Database
@@ -155,11 +157,14 @@ async def test_a_completion_past_the_deadline_is_refused(
     """Breaker: drop the `complete_by` check -> 202."""
     upload_id, body = _upload(api_client, writer, [_payload()])
     assert "id" in body, "no Blob Upload was recorded, so there is no deadline to pass"
-    async with database.unit_of_work() as session:
+
+    async def _expire(session: AsyncSession) -> None:
         await session.execute(
             text("update blob_uploads set complete_by = now() - interval '1 hour' where id = :id"),
             {"id": upload_id},
         )
+
+    await seed_as_owner(_expire)
     response = _complete(api_client, writer, upload_id)
     assert response.status_code == 409, response.text
     assert response.json()["code"] == "VALIDATION_FAILED"
