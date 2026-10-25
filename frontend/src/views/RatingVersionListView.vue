@@ -12,7 +12,7 @@ type RatingVersionStatus = components["schemas"]["RatingVersionStatus"];
 const STATUSES: RatingVersionStatus[] = ["draft", "review", "approved", "live", "retired"];
 
 const versions = ref<RatingVersion[]>([]);
-/** `null` = the live set was not read in full (403, a failed page, or the page cap): FR-8209. */
+/** `null` = the live set was not read in full (403, a failed page, or the page cap): FR-1903. */
 const environments = ref<Environment[] | null>(null);
 const loading = ref(true);
 const problem = ref<ProblemError | null>(null);
