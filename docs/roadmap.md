@@ -2873,10 +2873,10 @@ On the maintainer's entry "2026-10-22 16:22:33 BST" (`to-lead.md`): FD-1850 (MED
 
 **Closed 2026-10-23** by the mint step's closing acts (SL-1869 minted from working id 8172, LG-1870 from 8173, RS-1871 from 8197), on the pre-PR slice audit RS-1871 (aud-8169, 2026-10-22), adopted CLEAN by the lead (LG-1870 "### Audit"). Gate of record `04b0a367` STANDS under the standing ruling 1(f) (LG-1870 "### Gate"). MERGE-ACK: pending (the lead's merge). Ledger: LG-1870.
 
-#### SL-8178 — WK-1178 delta — FD-1851 close vehicle: a guard test that `RESOURCE_BACKED` holds only Environment-scoped paths
+#### SL-1892 — WK-1178 delta — FD-1851 close vehicle: a guard test that `RESOURCE_BACKED` holds only Environment-scoped paths
 
 ```yaml
-id: SL-8178
+id: SL-1892
 family: slice
 title: WK-1178 delta — FD-1851 close vehicle: a guard test that RESOURCE_BACKED holds only Environment-scoped paths
 status: active                    # draft → active → closed | retired (§1.2a)
@@ -2886,12 +2886,12 @@ tree: 71e481fa5d240ed366cd80c1a8c6cf6cd1d918d5
 phase: P2
 work: WK-1178
 corrected_by: []
-relates: [FD-1851, LG-8179, RL-1848]
+relates: [FD-1851, LG-1893, RL-1848]
 ```
 
 On the maintainer's entry "2026-10-22 17:21:38 BST" (`to-lead.md`), item 2: the guard "`RESOURCE_BACKED` may hold only `/environments/{env}/` paths" is adopted as a test, red first through an injected non-Environment path, in the FD-1851 close vehicle as a WK-1178 delta row (test-only, small), not in SL-1260; if it failed on `main` the seat was to stop. `backend/tests/test_api_authorisation_sweep_scope.py` reads `RESOURCE_BACKED` from the sweep and asserts every key's path starts `/api/v1/environments/{env}/`; a second test injects non-Environment paths into a copy and asserts the guard returns them. No application code changes. FD-1851 closes as accepted citing `RL-1848` in the docs batch.
 
-(Activated 2026-10-22 on the maintainer's entry above; executed as `exec-8178` on branch `fix/fd-8175-resource-backed-guard`; ledger LG-8179.)
+(Activated 2026-10-22 on the maintainer's entry above; executed as `exec-8178` on branch `fix/fd-8175-resource-backed-guard`; ledger LG-1893.)
 
 #### SL-1771 — WK-1178 fix slice (S-b) — FD-1729: the application connects as a login role with gip_app's grants, never as the owner
 

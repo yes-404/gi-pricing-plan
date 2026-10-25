@@ -1,20 +1,20 @@
 ---
-id: LG-8179
+id: LG-1893
 family: ledger
-title: WK-1178 slice SL-8178 — FD-1851 close vehicle, the RESOURCE_BACKED guard test (slice ledger)
+title: WK-1178 slice SL-1892 — FD-1851 close vehicle, the RESOURCE_BACKED guard test (slice ledger)
 status: active                 # active → closed (§1.2a)
-created: 2026-10-22
+created: 2026-10-25   # drafted 2026-10-22 under working id 8179; minted 2026-10-25 as LG-1893
 owner: executor
 tree: 71e481fa5d240ed366cd80c1a8c6cf6cd1d918d5
 phase: P2
 work: WK-1178
-slice: SL-8178
+slice: SL-1892
 plans: []
 corrected_by: []
-relates: [SL-8178, FD-1851, RL-1848]
+relates: [SL-1892, FD-1851, RL-1848]
 ---
 
-# LG-8179 — WK-1178 slice SL-8178: FD-1851 close, the RESOURCE_BACKED guard
+# LG-1893 — WK-1178 slice SL-1892: FD-1851 close, the RESOURCE_BACKED guard
 
 Working ids 8178 (SL) and 8179 (LG), unminted. Executed by `exec-8178`, base `origin/main` `71e481fa5d240ed366cd80c1a8c6cf6cd1d918d5`, branch `fix/fd-8175-resource-backed-guard`.
 
@@ -59,7 +59,7 @@ FD-1851 (LOW) closes as accepted, citing `RL-1848` (Environment-scoped writes ke
 
 ## Corrections and strict red run (exec-8178r, 2026-10-23 11:58 BST, appended; earlier lines unchanged)
 
-Per RS 8214 (`aud-8178-2026-10-23` @8cae3a0f) lines B1–B4, adopted by the lead, and the strict reading of the maintainer's "2026-10-22 17:21:38 BST" item 2.
+Per RS-1894 (`aud-8178-2026-10-23` @8cae3a0f) lines B1–B4, adopted by the lead, and the strict reading of the maintainer's "2026-10-22 17:21:38 BST" item 2.
 
 - **B1.** The GO line's quotation above reads "It goes in the FD-1851 close vehicle", a re-point made inside quotation marks. The verbatim form is "It goes in the FD 8175 close vehicle" [FD 8175 = FD-1851 at the mint].
 - **B2.** "FD-1851's own close is owed" is stale: FD-1851 is `status: retired` on main (`docs/findings/FD-01851-environment-scoped-writes-order-404-before-403-inconsistently-the-existence-oracle-is-accepted-within-a-workspace.md`, front matter, `git show origin/main:` at `4e399fd0`+).

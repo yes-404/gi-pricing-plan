@@ -1,23 +1,23 @@
 ---
-id: RS-8214
+id: RS-1894
 family: research
 kind: audit
-title: SL-8178 (WK-1178 delta) slice audit, the RESOURCE_BACKED guard at 1d06b46b
+title: SL-1892 (WK-1178 delta) slice audit, the RESOURCE_BACKED guard at 1d06b46b
 status: draft
-created: 2026-10-23
+created: 2026-10-25   # drafted 2026-10-23 under working id 8214; minted 2026-10-25 as RS-1894
 owner: auditor
 tree: 1d06b46b497bec8fd9c9a052b3f39ca82433ddeb
 phase: P2
 work: WK-1178
 corrected_by: []
-relates: [SL-8178, LG-8179, FD-1851, RL-1848]
+relates: [SL-1892, LG-1893, FD-1851, RL-1848]
 ---
 
-# RS-8214 — SL-8178 slice audit, the RESOURCE_BACKED guard
+# RS-1894 — SL-1892 slice audit, the RESOURCE_BACKED guard
 
-*(Working id 8214, written by `aud-8178`, 2026-10-23 11:54 BST, from the brief `brief-aud-8178-2026-10-23.md` (lead 27). Check 31/32 on this id and on SL-8178, LG-8179 are expected until the mint. Range audited: `origin/main...1d06b46b` on `fix/fd-8175-resource-backed-guard`; `origin/main` is `ff976406`. No test, database or gate was run by this seat; every run quoted below is the executor's log, read.)*
+*(Working id 8214, written by `aud-8178`, 2026-10-23 11:54 BST, from the brief `brief-aud-8178-2026-10-23.md` (lead 27). Check 31/32 on this id and on SL-1892, LG-1893 are expected until the mint. Range audited: `origin/main...1d06b46b` on `fix/fd-8175-resource-backed-guard`; `origin/main` is `ff976406`. No test, database or gate was run by this seat; every run quoted below is the executor's log, read.)*
 
-**Verdict PROPOSED (the lead's to adopt): CLEAN, with B1 and B2 (appended-line corrections to LG-8179) and the red-first reading in section 3 for the lead to take to the maintainer if the strict reading is wanted.** No blocking defect in the code.
+**Verdict PROPOSED (the lead's to adopt): CLEAN, with B1 and B2 (appended-line corrections to LG-1893) and the red-first reading in section 3 for the lead to take to the maintainer if the strict reading is wanted.** No blocking defect in the code.
 
 ## Question
 
@@ -37,9 +37,9 @@ Scope derived from the authority first (below), then evidence read from the code
 
 **O1 — the assert vs the ruling.** `backend/tests/test_api_authorisation_sweep_scope.py` (48 lines, new): `_outside_the_environment_scope(backed)` returns `sorted(key for key in backed if not key[1].startswith(ENVIRONMENT_PREFIX))`, `ENVIRONMENT_PREFIX = "/api/v1/environments/{env}/"` (trailing slash, so `/api/v1/environments-extra/…` is not accepted). `test_resource_backed_holds_only_environment_scoped_paths` asserts `RESOURCE_BACKED` (imported, not copied: the only project import) is non-empty and `_outside_the_environment_scope(RESOURCE_BACKED) == []`. This is the ruling's predicate, quantified over all keys, on the path element `key[1]`. DELIVERED. The mapping on main holds five entries (deployments, deployment-requests, deployments/rollback, routing, shadow; `backend/tests/test_api_authorisation_sweep.py`:307-325 at `ff976406`, which equals the branch's copy: `git diff --stat ff976406 origin/fix/fd-8175-resource-backed-guard -- backend` is the one new file). All five start with the prefix. The "fails on main today" STOP did not fire: `main-run.log` (first line `71e481fa…`, `2 passed, 2 warnings in 0.19s`, rc=0) at the base, and `rerun-8435ab45-run.log` (first line `8435ab45…`, `2 passed, 2 warnings in 0.34s`, `GIP_REDIS_URL` db 12) at the 5-entry head. Marker `@pytest.mark.req("FR-343")` on both tests; `FR-343` exists (`docs/specs/06-governance.md`:79).
 
-**O3 — vehicle.** Write set `git diff --name-only origin/main...1d06b46b`: the test file, `docs/INDEX.md` (+2 rows SL-8178, LG-8179), `docs/roadmap.md` (+20, the SL-8178 row under WK-1178, `owner: lead`), the LG. Four files, as expected; no `backend/src`, `packages`, contract or spec file. Test-only, WK-1178 delta. DELIVERED.
+**O3 — vehicle.** Write set `git diff --name-only origin/main...1d06b46b`: the test file, `docs/INDEX.md` (+2 rows SL-1892, LG-1893), `docs/roadmap.md` (+20, the SL-1892 row under WK-1178, `owner: lead`), the LG. Four files, as expected; no `backend/src`, `packages`, contract or spec file. Test-only, WK-1178 delta. DELIVERED.
 
-**Cites resolve.** On the branch, no `FD 8175` / `RL 8176` remains (`git grep -E "\b(FD|RL)[ -]0?(8175|8176)\b"` over the tree except INDEX: only the minted-id records themselves). `FD-1851` resolves (register row `docs/findings/register.md`:412 and the essay [FD-1851](../findings/FD-01851-environment-scoped-writes-order-404-before-403-inconsistently-the-existence-oracle-is-accepted-within-a-workspace.md), status `retired` on main = closed-as-accepted); `RL-1848` resolves (`docs/rulings/RL-01848-…md`, active); front matter `relates: [SL-8178, FD-1851, RL-1848]` (LG) and `[FD-1851, LG-8179, RL-1848]` (roadmap row). The test docstrings cite `RL-1848` only.
+**Cites resolve.** On the branch, no `FD 8175` / `RL 8176` remains (`git grep -E "\b(FD|RL)[ -]0?(8175|8176)\b"` over the tree except INDEX: only the minted-id records themselves). `FD-1851` resolves (register row `docs/findings/register.md`:412 and the essay [FD-1851](../findings/FD-01851-environment-scoped-writes-order-404-before-403-inconsistently-the-existence-oracle-is-accepted-within-a-workspace.md), status `retired` on main = closed-as-accepted); `RL-1848` resolves (`docs/rulings/RL-01848-…md`, active); front matter `relates: [SL-1892, FD-1851, RL-1848]` (LG) and `[FD-1851, LG-1893, RL-1848]` (roadmap row). The test docstrings cite `RL-1848` only.
 
 **LG lines vs logs.** The build-log sha/time claims match the log files read: `main-run.log`/`green-run.log`/`weakened-run.log` first line `71e481fa…`; `rerun-8435ab45-run.log` first line `8435ab45…` and the `0.34s`, `load 3.38` claims; `audit-0935.log` ends `FAILED (1): check 31: gap in the full allocation between 1859 and 8178` (the slice's own ids). The committed head `1d06b46b` is the LG-only commit that adds the `8435ab45` bullet (its own sha cannot be in the bullet; the bullet names the code head `8435ab45`, which is the same code and test tree as `1d06b46b`).
 
@@ -56,7 +56,7 @@ Item 2 says "red-first via an injected non-env path".
 
 ## 4. Findings
 
-- **B1 — a verbatim quote in the LG was altered by the id re-point.** LG-8179 `**GO:**` line quotes the entry as "…It goes in the FD-1851 close vehicle…" inside quotation marks; the entry (`to-lead.md` "2026-10-22 17:21:38 BST" item 2) reads "FD 8175 close vehicle". The re-point of `FD 8175`→`FD-1851` (build-log bullet 3) reached into a quotation. Fix: an appended line in LG-8179 noting the quote is of the entry as written (`FD 8175` = `FD-1851`), not an edit of the line. Same class, on main and **out of this slice's write set**: `RL-1848` quotes the entry's heading as "RL-1848 ADOPTED" where the heading reads "RL 8176 ADOPTED" ([RL-1848](../rulings/RL-01848-environment-scoped-writes-keep-load-first-the-404-is-accepted-and-the-order-is-written-into-06-fr-343.md):24-25). Not this slice's; for the lead to route.
+- **B1 — a verbatim quote in the LG was altered by the id re-point.** LG-1893 `**GO:**` line quotes the entry as "…It goes in the FD-1851 close vehicle…" inside quotation marks; the entry (`to-lead.md` "2026-10-22 17:21:38 BST" item 2) reads "FD 8175 close vehicle". The re-point of `FD 8175`→`FD-1851` (build-log bullet 3) reached into a quotation. Fix: an appended line in LG-1893 noting the quote is of the entry as written (`FD 8175` = `FD-1851`), not an edit of the line. Same class, on main and **out of this slice's write set**: `RL-1848` quotes the entry's heading as "RL-1848 ADOPTED" where the heading reads "RL 8176 ADOPTED" ([RL-1848](../rulings/RL-01848-environment-scoped-writes-keep-load-first-the-404-is-accepted-and-the-order-is-written-into-06-fr-343.md):24-25). Not this slice's; for the lead to route.
 - **B2 — LG Scope paragraph is stale.** "**Owed, not on this branch:** FD-1851's own close … happens in the docs batch" — FD-1851 is `retired` on main (register row :412). A correction by an appended line (the readiness file `readiness-8194-8178-2026-10-23.md` B(g)5 reached the same); the line stays, the append says it is discharged.
 - **B3 (note) — the LG's "The 2 warnings are the per-worktree test-database teardown notice" is inexact.** The log (`main-run.log`, `rerun-8435ab45-run.log`) shows two different warnings: a Starlette `httpx` deprecation (`testclient.py:1`) and the `conftest_db.py:437` teardown-notice `UserWarning`. Only the second is the teardown notice. Appended-line correction with B1/B2; no effect on the verdict.
 - **B4 (note) — "The three entries … all pass"** (LG build log, first bullet) is the base `71e481fa` count; main now has five (SL-1260 added `routing` and `shadow`), covered by the `8435ab45` run. Not wrong (dated), but a reader of the ledger alone sees "three". Same appended line.
@@ -72,6 +72,6 @@ No NFR in scope. Broken-input proof: delivered as the weakened-guard run above (
 
 ## 7. Owed before the PR (the lead's, derived)
 
-1. Re-merge `origin/main` (INDEX conflict expected, take theirs and regenerate) and re-run the guard at that head (`run-small`, redis db 11-13, DBSIZE 0). 2. Full code gate, serial, on the granted slot. 3. This RS folded and minted in the PR (item 34), LG "### Audit" filled from it, B1-B3 appended lines. 4. Mint SL-8178/LG-8179 at their turn (`idsweep.sh`, whole-tree grep for `8178`/`8179` in both forms, INDEX regenerated, `--check` rc 0). 5. PR CI incl. python.
+1. Re-merge `origin/main` (INDEX conflict expected, take theirs and regenerate) and re-run the guard at that head (`run-small`, redis db 11-13, DBSIZE 0). 2. Full code gate, serial, on the granted slot. 3. This RS folded and minted in the PR (item 34), LG "### Audit" filled from it, B1-B3 appended lines. 4. Mint SL-1892/LG-1893 at their turn (`idsweep.sh`, whole-tree grep for `8178`/`8179` in both forms, INDEX regenerated, `--check` rc 0). 5. PR CI incl. python.
 
 Pre-merge form fix 2026-10-25 (lead ruling): two padded filename citations at :42 and :59 moved into link targets for check 32; no content change.
