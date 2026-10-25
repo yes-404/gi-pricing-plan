@@ -2,7 +2,7 @@
 id: FD-1698
 family: finding
 title: LightGBM fits silently on a negative or null declared weight, XGBoost raises a raw library error with no platform code, and the EBM names it with an unrelated code
-status: active
+status: closed
 created: 2026-10-12
 owner: auditor
 tree: bf8d7929eaa440def943f002538d02270ff09d22
