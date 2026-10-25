@@ -978,6 +978,66 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
         "trigger probe: issues the tampering statement as the owner "
         "and asserts the trigger, not the privilege check, refuses it",
     ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_an_inherit_false_membership_of_the_owner_is_refused[inherit_false_member_of_the_owner]",
+        "owner-subject",
+        "plants a scratch role membership / BYPASSRLS role as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_an_inherit_false_membership_of_the_owner_is_refused[bypassrls_role]",
+        "owner-subject",
+        "plants a scratch role membership / BYPASSRLS role as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_a_tampered_artifact_trigger_refuses_startup[disable]",
+        "owner-subject",
+        "tampers with an artifact trigger as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_a_tampered_artifact_trigger_refuses_startup[replica]",
+        "owner-subject",
+        "tampers with an artifact trigger as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_a_tampered_artifact_trigger_refuses_startup[drop]",
+        "owner-subject",
+        "tampers with an artifact trigger as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_a_tampered_artifact_trigger_refuses_startup[replace_body]",
+        "owner-subject",
+        "tampers with an artifact trigger as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_every_table_grants_the_application_exactly_its_declared_privileges",
+        "owner-subject",
+        "reads the grants the owner made, over every public table",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_the_grant_comparison_sees_a_drift_in_both_directions[extra_table_grant]",
+        "owner-subject",
+        "plants a grant drift as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_the_grant_comparison_sees_a_drift_in_both_directions[missing_column_grant]",
+        "owner-subject",
+        "plants a grant drift as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_the_grant_comparison_sees_a_drift_in_both_directions[extra_column_grant]",
+        "owner-subject",
+        "plants a grant drift as the owner (rolled back)",
+    ),
 )
 
 
