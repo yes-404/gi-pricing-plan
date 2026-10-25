@@ -19,6 +19,24 @@ relates: [SL-1892, LG-1893, RS-1894]
 
 **Verdict PROPOSED (the lead's to adopt): CLEAN.** The gated code is the audited code, every own-docs change is in scope, and RS-1894's B1 and B2 (and B3, B4) are landed in LG-1893 as appended lines.
 
+## Question
+
+Is the slice's own docs delta from audited head `1d06b46b` to gate head `91c5ed06` in scope, is its non-docs patch-id unchanged between the two heads, and are RS-1894's B1 and B2 landed in LG-1893 as appended lines (the Authority section below states the ruling).
+
+## Method
+
+- Patch-id equality at both heads, by the predicate quoted in section 1.
+- The slice's own docs delta read per head against its own merge-base, by the commands quoted in section 2.
+- RS-1894's B-items compared with the lines of LG-1893, as tabulated in section 3.
+- Checks run and owed, as listed in section 4.
+
+## Findings
+
+- The non-docs patch-id is `8f501517c05f85a9ec9b03dab8a454f36d37a10b` at both heads (section 1).
+- Four own docs paths are in scope: LG-1893, RS-1894, `docs/INDEX.md` and `docs/roadmap.md` (section 2).
+- RS-1894's B1 to B4 are LANDED at LG-1893 lines 64 to 67 (section 3).
+- Proposed verdict: CLEAN. No B-items.
+
 ## Authority
 
 To-lead `## 2026-10-25 19:07:02 GMT — Maintainer: FD 8194 + SL 8178 ACK paths → option (a) written delta audits (8234, 8235)…`: "**RULED (a):** one docs-only sonnet auditor seat per slice … scope = the slice's own docs delta audited head → gate head + the patch-id equality quoted + **verification that RS 8213's B1/B2 and RS 8214's B1/B2 are landed as dated LG lines**". RS 8213 belongs to FD 8194's slice (RS 8234); this record covers RS-1894 only.
