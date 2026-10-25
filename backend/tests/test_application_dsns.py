@@ -58,7 +58,10 @@ def test_the_migration_dsn_gets_the_same_scheme_validator() -> None:
 def test_alembic_refuses_without_the_migration_dsn_and_never_falls_back() -> None:
     """Step 2.1 (`migrations/env.py` "raises a RuntimeError naming GIP_MIGRATION_DATABASE_URL …
     never falls back to the application DSN"). Red at main: env.py reads `database_url`, so the
-    offline run succeeds (rc 0) off the application DSN and prints SQL.
+    offline run does not refuse for the missing migration DSN — it proceeds off the application
+    DSN and exits non-zero for another reason (observed at d1d96465: rc != 0, stderr ending
+    "...No literal value renderer is available..."), so the assert on a `RuntimeError` naming
+    `GIP_MIGRATION_DATABASE_URL` fails.
     """
     env = {k: v for k, v in os.environ.items() if not k.startswith("GIP_")}
     env["GIP_DATABASE_URL"] = "postgresql+asyncpg://gip_app_login:x@localhost:5432/none"
