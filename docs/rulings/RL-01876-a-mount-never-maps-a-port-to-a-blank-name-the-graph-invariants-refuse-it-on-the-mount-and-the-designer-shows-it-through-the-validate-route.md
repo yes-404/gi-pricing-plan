@@ -1,9 +1,9 @@
 ---
-id: RL-8203
+id: RL-1876
 family: ruling
 title: "OQ-1843 decided — a mount never maps a port to a blank parent name; the one graph-invariant function refuses it, located on the mount and naming the port, so save, the validate route and the designer all see it; no contract change and no rule in the inspector (draft for the maintainer to adopt or amend)"
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active
-created: 2026-10-23   # drafted 2026-10-23 under working id 8203; not minted
+created: 2026-10-25   # drafted 2026-10-23 under working id 8203; minted 2026-10-25 as RL-1876
 owner: decision-maker
 tree: 40aa993134a9c2c88e474d925ea6fc844f638e68
 phase: P2
@@ -14,7 +14,7 @@ corrected_by: []
 relates: [OQ-1843, RL-1309, RL-1835, RL-1474, FR-212, FR-217, FR-1607, SL-1554, WK-675]
 ---
 
-# RL-8203 — OQ-1843 decided: a mount never maps a port to a blank parent name, and the graph invariants refuse it on the mount
+# RL-1876 — OQ-1843 decided: a mount never maps a port to a blank parent name, and the graph invariants refuse it on the mount
 
 Drafted 2026-10-23 under working id 8203 on branch `draft/rl-8203`. **This is a draft for the
 maintainer to adopt, amend or reject.** It rules nothing until the maintainer adopts it with a
