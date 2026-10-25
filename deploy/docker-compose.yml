@@ -110,7 +110,10 @@ services:
     image: gi-pricing-app:${GIP_BUILD:-unset}
     build: *gip-build
     command: ["alembic", "upgrade", "head"]
-    environment: *gip-env
+    environment:
+      <<: *gip-env
+      # FD-1729: migrations run as the owner and refuse to fall back to GIP_DATABASE_URL.
+      GIP_MIGRATION_DATABASE_URL: postgresql+asyncpg://gipricing:gipricing@postgres:5432/gipricing
     restart: "no"
     depends_on:
       postgres: {condition: service_healthy}

@@ -200,8 +200,14 @@ def demo_env() -> dict[str, str]:
     return {
         **os.environ,
         "GIP_DEV_AUTH_ENABLED": "true",
+        # FD-1729: the application is the login role; migrations and the seed's owner step
+        # use the owner (the compose stack's, local only).
         "GIP_DATABASE_URL": os.environ.get(
             "GIP_DATABASE_URL",
+            "postgresql+asyncpg://gip_app_login:gip_app_login@localhost:5432/gipricing",
+        ),
+        "GIP_MIGRATION_DATABASE_URL": os.environ.get(
+            "GIP_MIGRATION_DATABASE_URL",
             "postgresql+asyncpg://gipricing:gipricing@localhost:5432/gipricing",
         ),
         "GIP_OIDC_ISSUER": "http://localhost:8080/realms/gi-pricing",
@@ -479,6 +485,11 @@ def demo(
         env=env,
     )
     run(["uv", "run", "alembic", "upgrade", "head"], step="migrations", env=env)
+    run(
+        ["uv", "run", "python", "scripts/provision-app-role.py", "--allow-default-password"],
+        step="application login role (local default password)",
+        env=env,
+    )
 
     record = prepare_world(rows=rows, skip_seed=skip_seed, env=env)
     api = [
