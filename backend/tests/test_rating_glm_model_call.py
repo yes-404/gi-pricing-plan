@@ -143,8 +143,8 @@ def test_a_rating_version_pinning_a_fitted_glm_compiles_and_scores(
         headers=scoring_headers,
     )
     assert response.status_code == 200, response.text
-    # oracle at the declared scale (dp 9, half_even) — to-lead 2026-10-25 15:21:30 GMT
-    # (form: 15:23:06 GMT)
+    # oracle at the declared scale (dp 9, half_even): str with 9 dp + abs=half-quantum
+    # — to-lead 2026-10-25 15:23:06 GMT
     assert_served_at_declared_scale(response.json()["outputs"]["risk_out"], expected)
 
 
@@ -210,8 +210,8 @@ def test_a_model_offset_glm_scores_with_its_source_model(
         headers=scoring_headers,
     )
     assert response.status_code == 200, response.text
-    # oracle at the declared scale (dp 9, half_even) — to-lead 2026-10-25 15:21:30 GMT
-    # (form: 15:23:06 GMT)
+    # oracle at the declared scale (dp 9, half_even): str with 9 dp + abs=half-quantum
+    # — to-lead 2026-10-25 15:23:06 GMT
     assert_served_at_declared_scale(response.json()["outputs"]["risk_out"], expected)
 
 
