@@ -13,6 +13,7 @@ from datetime import date
 
 import pytest
 from backend.tests.approved_rows import add_approved
+from backend.tests.conftest_db import grant_roles_as_owner
 from backend.tests.test_api_datasets import _headers
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -23,40 +24,23 @@ from app.db.models import (
     ModelRow,
     ReferenceRowRow,
     ReferenceTableVersionRow,
-    RoleAssignmentRow,
-    RoleRow,
     SubjectPurgeRow,
 )
 from app.db.session import Database
 from app.errors import PlatformError
-from app.platform import datasets, rbac
+from app.platform import datasets
 from model_schema import (
     ActorKind,
     DatasetKind,
     DatasetStatus,
     Principal,
-    ScopeType,
     new_uuid7,
 )
 
 
 async def _with_role(database: Database, workspace_id, role: str) -> Principal:
     user = Principal(kind=ActorKind.USER, id=new_uuid7(), display="u@insurer.example")
-    async with database.unit_of_work() as session:
-        await rbac.seed_builtin_roles(session, workspace_id)
-        row = (
-            await session.execute(
-                select(RoleRow).where(
-                    RoleRow.workspace_id == workspace_id, RoleRow.slug == role
-                )
-            )
-        ).scalar_one()
-        session.add(
-            RoleAssignmentRow(
-                workspace_id=workspace_id, principal_kind="user", principal_id=user.id,
-                role_id=row.id, scope_type=ScopeType.WORKSPACE.value,
-            )
-        )
+    await grant_roles_as_owner(workspace_id, user.id, role)
     return user
 
 
