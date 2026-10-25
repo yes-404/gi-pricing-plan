@@ -17,6 +17,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+from backend.tests.conftest_db import seed_as_owner
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
@@ -62,7 +63,7 @@ async def _grant(database: Database, workspace_id) -> None:
     from app.platform import rbac
     from model_schema import ScopeType
 
-    async with database.unit_of_work() as session:
+    async def _seed(session):
         await rbac.seed_builtin_roles(session, workspace_id)
         role = (
             await session.execute(
@@ -77,6 +78,7 @@ async def _grant(database: Database, workspace_id) -> None:
                 role_id=role.id, scope_type=ScopeType.WORKSPACE.value,
             )
         )
+    await seed_as_owner(_seed)
 
 
 async def _version(database: Database, workspace_id):

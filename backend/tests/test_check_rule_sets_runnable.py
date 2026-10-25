@@ -15,6 +15,7 @@ from uuid import UUID
 
 import pytest
 from backend.tests.approved_rows import add_approved
+from backend.tests.conftest_db import seed_as_owner
 from sqlalchemy import select
 
 from app.db.models import RoleAssignmentRow, RoleRow, ValidationRuleRow
@@ -38,7 +39,7 @@ def _load() -> Any:
 
 async def _analyst(database: Database, workspace_id: UUID) -> Principal:
     user = Principal(kind=ActorKind.USER, id=new_uuid7(), display="analyst@insurer.example")
-    async with database.unit_of_work() as session:
+    async def _seed(session):
         await rbac.seed_builtin_roles(session, workspace_id)
         role = (
             await session.execute(
@@ -56,6 +57,7 @@ async def _analyst(database: Database, workspace_id: UUID) -> Principal:
                 scope_type=ScopeType.WORKSPACE.value,
             )
         )
+    await seed_as_owner(_seed)
     return user
 
 
