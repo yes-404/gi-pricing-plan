@@ -1,19 +1,19 @@
 ---
-id: RS-8161
+id: RS-1885
 family: research
 kind: audit
 title: SL-1554 (WK-675 Slice 9, Designer III) narrow third re-audit of the import-closure derivation and the b5 log
 status: draft
-created: 2026-10-22
+created: 2026-10-25   # drafted 2026-10-22 under working id 8161; minted 2026-10-25 as RS-1885
 owner: auditor
 tree: 53327067a0639b68cb9cf12330a2d072c4eb16ec
 phase: P2
 work: WK-675
 corrected_by: []
-relates: [SL-1554, PL-1546, RL-1835, RS-8159]
+relates: [SL-1554, PL-1546, RL-1835, RS-1884]
 ---
 
-# RS-8161 — SL-1554 narrow third re-audit
+# RS-1885 — SL-1554 narrow third re-audit
 
 *(Working id 8161, reserved by the lead. Written by `aud-1554d`, 2026-10-22 BST. Check 31 on this id is expected until the mint.)*
 

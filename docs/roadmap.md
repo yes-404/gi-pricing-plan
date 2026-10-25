@@ -1642,7 +1642,7 @@ relates: [PL-1286, PL-1371]
 ```
 
 `PL-1286` S9, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. Mounting a pinned sub-graph in the designer. **Activation needs:** S3 closed; `SL-1341` (WK-1250 S3) closed. Lane or team fixed at GO. **Cut-ladder rung 1** (`handover/cut-ladder-2026-10-08.md`, ruled 2026-10-08 13:21:00 BST); not pre-cut. *(Cut 2026-10-08 by the planner under working id 9463, reserved by the lead; minted 2026-10-10 as SL-1554 in the D2 batch mint.)*
-(Activated 2026-10-21 on the maintainer's (by delegation) GO, "2026-10-21 15:10:53 BST — Maintainer: GO D28 and SL-1554; build-order item D relaxed" item 2, with RL-1835 adopted by "2026-10-21 15:39:13 BST" (and its 15:39:19 correction: the later-merging of S8, S9, S10, S11 re-merges `origin/main` and re-runs its checks); slice ledger LG-8141.)
+(Activated 2026-10-21 on the maintainer's (by delegation) GO, "2026-10-21 15:10:53 BST — Maintainer: GO D28 and SL-1554; build-order item D relaxed" item 2, with RL-1835 adopted by "2026-10-21 15:39:13 BST" (and its 15:39:19 correction: the later-merging of S8, S9, S10, S11 re-merges `origin/main` and re-runs its checks); slice ledger LG-1881.)
 
 #### SL-1639 — WK-675 fix slice — FD-1611: DagDesigner.test.ts stubs the validate route, and the debounce's unmount cancel is proven
 

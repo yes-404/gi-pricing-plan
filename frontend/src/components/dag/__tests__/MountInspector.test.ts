@@ -67,7 +67,7 @@ describe("the mount inspector", () => {
     expect(last(emitted() as Record<string, unknown[][]>)["ref"]).toBe(REFUND.ref);
   });
 
-  it("resets the port maps when the pick has another slug (the slice's choice, RS 8156 (v))", async () => {
+  it("resets the port maps when the pick has another slug (the slice's choice, RS-1882 (v))", async () => {
     const { emitted } = render(MountInspector, { props: { mount: FEES, subGraphPins: PINS } });
     await userEvent.selectOptions(await screen.findByLabelText("Sub-graph version"), REFUND.ref);
     const mount = last(emitted() as Record<string, unknown[][]>);

@@ -1,29 +1,29 @@
 ---
-id: RS-8159
+id: RS-1884
 family: research
 kind: audit
 title: SL-1554 (WK-675 Slice 9, Designer III) re-audit of the graph.test.ts regression fix and its derived GREEN set
 status: draft
-created: 2026-10-22
+created: 2026-10-25   # drafted 2026-10-22 under working id 8159; minted 2026-10-25 as RS-1884
 owner: auditor
 tree: ed8d65a7d8c17a5fe302f632281f142ce5dc9b17
 phase: P2
 work: WK-675
 corrected_by: []
-relates: [SL-1554, PL-1546, RL-1835, RS-8156, RS-8158]
+relates: [SL-1554, PL-1546, RL-1835, RS-1882, RS-1883]
 ---
 
-# RS-8159 — SL-1554 re-audit of the regression-fix delta
+# RS-1884 — SL-1554 re-audit of the regression-fix delta
 
 *(Working id 8159, reserved by the lead. Written by `aud-1554c`, 2026-10-22 13:4x BST. Check 31 on this id is expected until the mint.)*
 
 ## Question
 
-RS 8158's CLEAN is void: `graph.test.ts` (main's file) was red at the slice head. Does the delta `ab48b63e..ada287f3` fix it, and is the GREEN set the LG now claims derived completely? Read-only: no test, gate or DB was run; vitest results are read from the logs.
+RS-1883's CLEAN is void: `graph.test.ts` (main's file) was red at the slice head. Does the delta `ab48b63e..ada287f3` fix it, and is the GREEN set the LG now claims derived completely? Read-only: no test, gate or DB was run; vitest results are read from the logs.
 
 ## Method
 
-Range `origin/main` (`f3462d8fc1336dc4583fe8a7af92fed399993a55`)`...origin/sl-1554-wk675-s9` (`ada287f3a1fba7fc1a4faa51c3e16846b755d1a4`, tree `ed8d65a7d8c17a5fe302f632281f142ce5dc9b17`). Delta since RS 8158: `git diff --stat ab48b63e origin/sl-1554-wk675-s9` = 2 files (the LG; `frontend/src/components/dag/graph.ts`, 5 lines).
+Range `origin/main` (`f3462d8fc1336dc4583fe8a7af92fed399993a55`)`...origin/sl-1554-wk675-s9` (`ada287f3a1fba7fc1a4faa51c3e16846b755d1a4`, tree `ed8d65a7d8c17a5fe302f632281f142ce5dc9b17`). Delta since RS-1883: `git diff --stat ab48b63e origin/sl-1554-wk675-s9` = 2 files (the LG; `frontend/src/components/dag/graph.ts`, 5 lines).
 
 ## 1. The regression and the fix: MET
 

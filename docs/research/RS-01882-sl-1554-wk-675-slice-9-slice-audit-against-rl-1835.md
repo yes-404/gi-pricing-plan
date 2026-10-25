@@ -1,10 +1,10 @@
 ---
-id: RS-8156
+id: RS-1882
 family: research
 kind: audit
 title: SL-1554 (WK-675 Slice 9, Designer III — sub-graph mounting) slice audit against RL-1835
 status: draft
-created: 2026-10-22
+created: 2026-10-25   # drafted 2026-10-22 under working id 8156; minted 2026-10-25 as RS-1882
 owner: auditor
 tree: 578cdb200de333e1725a03740ab516d3e891537d
 phase: P2
@@ -13,13 +13,13 @@ corrected_by: []
 relates: [SL-1554, PL-1546, PL-1286, RL-1835, RL-1344]
 ---
 
-# RS-8156 — SL-1554 slice audit
+# RS-1882 — SL-1554 slice audit
 
 *(Working id 8156, reserved by the lead. Written by `aud-1554`, 2026-10-22. Check 31 on this id is expected until the mint.)*
 
 ## Question
 
-Does the tree `origin/main...sl-1554-wk675-s9` meet RL-1835's acceptance, and what does LG 8141 fail to evidence? Read-only: no test, gate or DB was run; test results below are the seat's, read from the ledger or not at all.
+Does the tree `origin/main...sl-1554-wk675-s9` meet RL-1835's acceptance, and what does LG-1881 fail to evidence? Read-only: no test, gate or DB was run; test results below are the seat's, read from the ledger or not at all.
 
 ## Method
 
@@ -27,7 +27,7 @@ Range `origin/main` (`f3462d8fc1336dc4583fe8a7af92fed399993a55`)`...sl-1554-wk67
 
 ## (i) Write set
 
-`git diff --name-only origin/main...ce22af6e` outside `frontend/`: `docs/INDEX.md`, `docs/roadmap.md` (SL-1554 row `draft → active` plus its one activation line), the LG 8141 file. The same diff restricted to `packages`, `backend`, `docs/contracts`, `docs/specs`, `frontend/src/router`, `frontend/src/api/generated` lists 0 paths. **MET** — RL-1835 "What it obliges" and the LG's file condition with S8 (no router edit).
+`git diff --name-only origin/main...ce22af6e` outside `frontend/`: `docs/INDEX.md`, `docs/roadmap.md` (SL-1554 row `draft → active` plus its one activation line), the LG-1881 file. The same diff restricted to `packages`, `backend`, `docs/contracts`, `docs/specs`, `frontend/src/router`, `frontend/src/api/generated` lists 0 paths. **MET** — RL-1835 "What it obliges" and the LG's file condition with S8 (no router edit).
 
 ## (ii) Generated types
 
@@ -36,11 +36,11 @@ Range `origin/main` (`f3462d8fc1336dc4583fe8a7af92fed399993a55`)`...sl-1554-wk67
 ## (iii) The two test edits after the WIP commit
 
 - **`7576489f`** (`graphMounts.test.ts`, 1 line: source `s_minprem` → `s_office`). In `frontend/src/components/dag/__tests__/fixtures.ts` `s_office` (line 112) produces `office_premium_minor` first and `s_minprem` (line 124) second. Main's `edgesOf` takes the first producer (`origin/main:frontend/src/components/dag/graph.ts`, `if (!producer.has(name))`), the branch's keeps that (`list.length === 0 || (node.mount …)`), and RL-1835 (i) 3 says "the same producer → consumer rule as a step's". The WIP test contradicted the ruling; the edit makes it agree. Commit precedes `c91c3223` (the first code). **MET**; no assertion weakened.
-- **`452b401e`** (`DagDesignerMounts.test.ts:72`, adds `await screen.findByLabelText(/sub-graph mount m_refund/)`). One added line; the issue assertion (`m_refund closes a cycle` inside `m_refund`, absent from `m_fees`) is untouched. LG 8141 records the cause (synchronous `node()` before Vue Flow mounted: `no node m_refund`) and the negative control (await kept, issue removed from the fixture → 1 failed, 10 passed). **MET** as to no weakening; the negative control is the seat's, not re-run here.
+- **`452b401e`** (`DagDesignerMounts.test.ts:72`, adds `await screen.findByLabelText(/sub-graph mount m_refund/)`). One added line; the issue assertion (`m_refund closes a cycle` inside `m_refund`, absent from `m_fees`) is untouched. LG-1881 records the cause (synchronous `node()` before Vue Flow mounted: `no node m_refund`) and the negative control (await kept, issue removed from the fixture → 1 failed, 10 passed). **MET** as to no weakening; the negative control is the seat's, not re-run here.
 
 ## (iv) RED/GREEN record
 
-LG 8141 at `ce22af6e` holds the two entries above (the e411c85a stub and misplaced line; the :72 race). It does **not** hold the RED run (4 files, 24 failures at `7576489f`) or the GREEN run (8 files at the head) the brief relays: `grep -niE "RED|GREEN|24|rc "` over the LG finds none, and no commit body carries them. RL-1835 "Acceptance" requires each violation test "shown red once". **The record is absent from the ledger; I could not verify the numbers from a primary source.** The two owed lines (empty stub of `MountInspector.vue` at `e411c85a`; the misplaced "migration not applied" line) are both written (entry 2026-10-22, first), as GO item 3 asked. Reading `e411c85a` it is true the stub is 6 lines per the LG; not re-read here.
+LG-1881 at `ce22af6e` holds the two entries above (the e411c85a stub and misplaced line; the :72 race). It does **not** hold the RED run (4 files, 24 failures at `7576489f`) or the GREEN run (8 files at the head) the brief relays: `grep -niE "RED|GREEN|24|rc "` over the LG finds none, and no commit body carries them. RL-1835 "Acceptance" requires each violation test "shown red once". **The record is absent from the ledger; I could not verify the numbers from a primary source.** The two owed lines (empty stub of `MountInspector.vue` at `e411c85a`; the misplaced "migration not applied" line) are both written (entry 2026-10-22, first), as GO item 3 asked. Reading `e411c85a` it is true the stub is 6 lines per the LG; not re-read here.
 
 ## Scope against evidence (RL-1835 items)
 
@@ -62,11 +62,11 @@ LG 8141 at `ce22af6e` holds the two entries above (the e411c85a stub and misplac
 
 ## (v) A choice not in RL-1835
 
-`MountInspector.vue` `setRef`: when the picked pin has a **different slug** from the current one, `inputs` and `outputs` are reset to `{}`; the same slug keeps them. RL-1835 (i) 5 and (iii) 1 rule the select and the port rows but not this. It is consistent with the ruling's intent (a port map for another fragment's ports would name ports that do not exist, which compile refuses), and it is not silent data loss of a valid map. **Outside the ruling, not contradicting it; no test covers it, and the LG does not disclose it.** Proposal: the lead adopts it, and LG 8141 names it and one test pins it. Related, small: `setInput` stores `""` when a field is cleared, so an empty parent name can be saved for a required input (the ruling says every input port is required).
+`MountInspector.vue` `setRef`: when the picked pin has a **different slug** from the current one, `inputs` and `outputs` are reset to `{}`; the same slug keeps them. RL-1835 (i) 5 and (iii) 1 rule the select and the port rows but not this. It is consistent with the ruling's intent (a port map for another fragment's ports would name ports that do not exist, which compile refuses), and it is not silent data loss of a valid map. **Outside the ruling, not contradicting it; no test covers it, and the LG does not disclose it.** Proposal: the lead adopts it, and LG-1881 names it and one test pins it. Related, small: `setInput` stores `""` when a field is cleared, so an empty parent name can be saved for a required input (the ruling says every input port is required).
 
 ## (vi) Owed, not defects
 
-The full gate (both halves); the LG 8141 mint (still working id 8141 at `ce22af6e`, `tree:` front-matter `c35113b2`), the LG "PRs" and "MERGE-ACK" lines, its closing acts and the SL-1554 `closed` row; the PR and its CI; the re-merge of `origin/main` before the PR (S8/S10/S11 may merge first, to-lead 15:39:19); a regenerated `docs/INDEX.md` after any mint.
+The full gate (both halves); the LG-1881 mint (still working id 8141 at `ce22af6e`, `tree:` front-matter `c35113b2`), the LG "PRs" and "MERGE-ACK" lines, its closing acts and the SL-1554 `closed` row; the PR and its CI; the re-merge of `origin/main` before the PR (S8/S10/S11 may merge first, to-lead 15:39:19); a regenerated `docs/INDEX.md` after any mint.
 
 ## Findings
 
@@ -74,4 +74,4 @@ No `FD-` is filed: B1 and N1–N3 are slice-ledger and test gaps for the executo
 
 ## Proposal
 
-**NOT-CLEAN, one blocking item** (the verdict is the lead's): (B1) LG 8141 carries no RED/GREEN record, so RL-1835's "shown red once" is not evidenced in a durable artifact. Add the vitest result lines (file count, failed/passed, the commit each ran on) to the LG. Non-blocking: (N1) no test asserts the dashed-edge style; (N2) no test asserts save stays enabled with an unpinned mount ((ii)3 "Testable as"); (N3) the slug-change reset of (v) is undisclosed and unpinned by a test. Everything else in RL-1835 is MET by the code and tests read.
+**NOT-CLEAN, one blocking item** (the verdict is the lead's): (B1) LG-1881 carries no RED/GREEN record, so RL-1835's "shown red once" is not evidenced in a durable artifact. Add the vitest result lines (file count, failed/passed, the commit each ran on) to the LG. Non-blocking: (N1) no test asserts the dashed-edge style; (N2) no test asserts save stays enabled with an unpinned mount ((ii)3 "Testable as"); (N3) the slug-change reset of (v) is undisclosed and unpinned by a test. Everything else in RL-1835 is MET by the code and tests read.

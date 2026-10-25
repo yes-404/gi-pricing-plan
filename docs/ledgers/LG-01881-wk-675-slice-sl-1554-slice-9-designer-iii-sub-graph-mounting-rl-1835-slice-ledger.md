@@ -1,9 +1,9 @@
 ---
-id: LG-8141
+id: LG-1881
 family: ledger
 title: WK-675 slice SL-1554 — Slice 9, Designer III: sub-graph mounting (RL-1835) (slice ledger)
 status: active                 # active → closed (§1.2a)
-created: 2026-10-21
+created: 2026-10-25   # drafted 2026-10-21 under working id 8141; minted 2026-10-25 as LG-1881
 owner: executor
 tree: c35113b2
 phase: P2
@@ -14,7 +14,7 @@ corrected_by: []
 relates: [PL-1546, PL-1286, SL-1554, SL-1551, SL-1341, RL-1835, RL-1344, RL-1309, RL-1628, FR-217, FR-218, FR-219, FR-237, NFR-463]
 ---
 
-# LG-8141 — WK-675 slice SL-1554: Slice 9
+# LG-1881 — WK-675 slice SL-1554: Slice 9
 
 Filed 2026-10-21 under working id 8141 (lead-reserved). Executor seat `exec-1554b`, base `origin/main` c35113b2, branch `sl-1554-wk675-s9`, worktree `.claude/worktrees/sl-1554`.
 
@@ -60,16 +60,16 @@ Entries are appended below as the work lands.
 
 At head 0916a2a5 this test failed with `Error: no node m_refund` (test line 72). Cause confirmed, not assumed: the test called `node("m_refund")` synchronously after `render`, before Vue Flow had put its nodes in the DOM. With `await screen.findByLabelText(/sub-graph mount m_refund/)` first, the file passed (11 passed (11)). With that await and the issue dropped from the fixture (`issues: []`), the issue assertion failed (`Unable to find an element with the text: m_refund closes a cycle`, 1 failed | 10 passed (11)), so it still bites. A test defect, not a component defect; the assertion is unchanged. Fixed in its own commit.
 
-### Entry 2026-10-22 — RED/GREEN record (RS 8156 B1) and the N1–N3 tests
+### Entry 2026-10-22 — RED/GREEN record (RS-1882 B1) and the N1–N3 tests
 
-RS 8156 (branch `aud-1554-2026-10-22`) found this ledger held no RED or GREEN run; the numbers relayed earlier (24 failures at `7576489f`, 8 files green) were chat only. **They are superseded by the runs below**, each one file per run through the small-test slot, stdout and stderr captured to the log named, `rc` appended by the wrapper. Nothing here is a gate; the full gate is still owed.
+RS-1882 (branch `aud-1554-2026-10-22`) found this ledger held no RED or GREEN run; the numbers relayed earlier (24 failures at `7576489f`, 8 files green) were chat only. **They are superseded by the runs below**, each one file per run through the small-test slot, stdout and stderr captured to the log named, `rc` appended by the wrapper. Nothing here is a gate; the full gate is still owed.
 
 **N1–N3, one test commit `ab405217`, written before this entry and with no code change.** Each passes at the current code, so each **pins existing behaviour; no red is possible** (run once each, pass):
 - N1 `DagDesignerMounts.test.ts`: the conditional mount's edges carry `stroke-dasharray: 6 4`, the unconditional mount's edge none (`DagDesigner.vue:119`).
 - N2 `RatingDesignViewMounts.test.ts`: with `pins.sub_graphs` omitting `m_refund`'s version, the not-pinned warning shows, the save control has `aria-disabled="false"`, and a click saves once (RL-1835 (ii) 3 "Testable as").
 - N3 `MountInspector.test.ts`: picking a pin with a different slug resets `inputs` and `outputs` to `{}`; picking another version of the same slug keeps both.
 
-**The slug-change reset (RS 8156 (v)) is ruled implementation within RL-1835's intent; no open question** (the maintainer's to-lead entry "2026-10-22 13:15:28 BST", relayed by lead 26). Reason: a different fragment has different ports, so the old `inputs` and `outputs` maps would point at ports that do not exist, which compile refuses. `MountInspector.vue` `setRef` resets both maps when the slug changes and keeps them for another version of the same slug. N3 pins it.
+**The slug-change reset (RS-1882 (v)) is ruled implementation within RL-1835's intent; no open question** (the maintainer's to-lead entry "2026-10-22 13:15:28 BST", relayed by lead 26). Reason: a different fragment has different ports, so the old `inputs` and `outputs` maps would point at ports that do not exist, which compile refuses. `MountInspector.vue` `setRef` resets both maps when the slug changes and keeps them for another version of the same slug. N3 pins it.
 
 **Observation, no change:** clearing an input-port field saves `""` as the parent name (`setInput`), so an empty parent name can be saved for an input the ruling says is required. Not changed in this slice.
 
@@ -101,7 +101,7 @@ GREEN, at `ab405217` (the branch head with N1–N3):
 
 8 files, 55 passed, 0 failed. One run each: this is not a verdict on flakiness (the :72 race above was one).
 
-### Negative controls (2026-10-22, exec-1554e; the lead's condition on RS 8158)
+### Negative controls (2026-10-22, exec-1554e; the lead's condition on RS-1883)
 
 Each control is a scratch edit at head `ab48b63e`, run through the small-test slot with one test file, then restored with `git checkout -- <file>`. Nothing mutated was committed; `git status --short` was empty after each restore. Each log starts with `git rev-parse HEAD` and `git diff --stat`. Each run also printed load1 before it; the logs show it (N1 11.25, above the brief's < 6 line).
 
@@ -109,7 +109,7 @@ Each control is a scratch edit at head `ab48b63e`, run through the small-test sl
 |---|---|---|---|---|---|
 | N1 | `frontend/src/components/dag/DagDesigner.vue:119`: removed the `strokeDasharray: "6 4"` conditional-edge style line | `Tests  1 failed \| 11 passed (12)` | 1 | `DagDesignerMounts.test.ts` > "draws the conditional mount's edges dashed and the unconditional mount's solid" | `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/negctl-N1.log` |
 | N2 | `frontend/src/views/RatingDesignView.vue:73`: `canSave` also required every mount's ref to be in `rating.pins.sub_graphs` | `Tests  2 failed \| 2 passed (4)` | 1 | `RatingDesignViewMounts.test.ts` > "warns of an unpinned mount yet leaves save enabled (RL-1835 (ii) 3)"; also "draws the loaded mounts and saves them, without any write to a Rating Version" | `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/negctl-N2.log` |
-| N3 | `frontend/src/components/dag/MountInspector.vue:46`: `setRef` no longer resets `inputs`/`outputs` (`edit({ ref: next })`) | `Tests  1 failed \| 7 passed (8)` | 1 | `MountInspector.test.ts` > "resets the port maps when the pick has another slug (the slice's choice, RS 8156 (v))" | `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/negctl-N3.log` |
+| N3 | `frontend/src/components/dag/MountInspector.vue:46`: `setRef` no longer resets `inputs`/`outputs` (`edit({ ref: next })`) | `Tests  1 failed \| 7 passed (8)` | 1 | `MountInspector.test.ts` > "resets the port maps when the pick has another slug (the slice's choice, RS-1882 (v))" | `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/negctl-N3.log` |
 
 Disclosure: a first attempt had a shell argument slip. Its mutation step failed (nothing was edited) and vitest ran the whole frontend suite three times (826 tests each, 2 failed in `graph.test.ts`, unmutated tree). Those runs are not controls and have no log here. The 2 `graph.test.ts` failures at the unmutated head are unexplained and not investigated.
 
@@ -134,9 +134,9 @@ Disclosure: a first attempt had a shell argument slip. Its mutation step failed 
 
 10 files, 65 passed, 0 failed, 0 skipped. `eslint src/components/dag/graph.ts` rc 0; `vue-tsc --noEmit -p tsconfig.app.json` rc 0 (both niced). One run each: not a verdict on flakiness.
 
-### Entry 2026-10-22 — RS 8159 B1: the derived GREEN set missed importers of a changed module (exec-1554h)
+### Entry 2026-10-22 — RS-1884 B1: the derived GREEN set missed importers of a changed module (exec-1554h)
 
-**Finding.** RS 8159 B1 (branch `aud-1554c-2026-10-22`, lead verdict NOT-CLEAN adopted): the text-grep rule above misses a test that reaches a changed module only through a component that imports it. `StepInspector.vue:18` has `import { names } from "./graph"`; `QuoteSandboxView.vue:21` has `import { parseRef } from "@/components/dag/graph"`.
+**Finding.** RS-1884 B1 (branch `aud-1554c-2026-10-22`, lead verdict NOT-CLEAN adopted): the text-grep rule above misses a test that reaches a changed module only through a component that imports it. `StepInspector.vue:18` has `import { names } from "./graph"`; `QuoteSandboxView.vue:21` has `import { parseRef } from "@/components/dag/graph"`.
 
 **Rule, restated: the import closure, not a text grep.** (1) Changed set = `git diff --name-only origin/main...HEAD -- frontend/src` (13 files, listed above). (2) For every `.ts`/`.vue` under `frontend/src`, parse each `from "…"`, `import("…")` and `vi.mock("…")` specifier (the keywords `from`, `import`, `mock`, `importActual` followed by a quoted string; the script is `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/closure1554.py`), resolve `@/` and relative paths to a file, and add every file that imports a file already in the set; repeat until nothing is added. (3) GREEN = every `*.test.ts` that imports any file in the closure. Script: `/home/puzhenhao1989/gi-pricing-plan.local/scratch/sl1554-vitest/closure1554.py` (sha256 `40c76bd2530a6fedb4947fcd393597753bfc5ff924b0967a22ea8f193a556b1b`; run `python3 -I`, at head ada287f3).
 
@@ -154,7 +154,7 @@ Disclosure: a first attempt had a shell argument slip. Its mutation step failed 
 
 - `git merge --no-ff origin/main` (71e481fa) into `beae0dff`: `git merge-tree --write-tree` rc 1, the only conflict `docs/INDEX.md`; taken from main, merge commit `91ad7dd1`, then `docs/INDEX.md` regenerated under the gate-2 flock (`doc-index.py` rc 0, `doc-index.py --check` rc 0 "byte-stable") in its own commit, head `e330bbf5`. The slice touches no contract, so `generate-contracts.py --check` was not run here (the gate runs it).
 - `uv sync --all-packages --frozen` rc 0, `pnpm --dir frontend install --frozen-lockfile` rc 0 (both niced).
-- `audit-docs.py` rc 1 at `e330bbf5`, `FAILED (1)`: `check 31: gap in the full allocation between 1840 and 8141` — the slice's own working id LG-8141, mint pending (expected). The check 36 lines (legacy scoped ids in WF-702) are warnings, not failures. `register-lint.py` rc 0.
+- `audit-docs.py` rc 1 at `e330bbf5`, `FAILED (1)`: `check 31: gap in the full allocation between 1840 and 8141` — the slice's own working id LG-1881, mint pending (expected). The check 36 lines (legacy scoped ids in WF-702) are warnings, not failures. `register-lint.py` rc 0.
 - No code or test was run in this entry; the GREEN of record is still the gate's full vitest.
 
 ### Entry 2026-10-23 — re-merge of origin/main 4e399fd0, GREEN set re-derived by import closure (exec-1554p)
@@ -172,10 +172,10 @@ Disclosure: a first attempt had a shell argument slip. Its mutation step failed 
 
 | Record | Branch @ sha | Proposed verdict, as the record states it |
 |---|---|---|
-| RS-8156 | `aud-1554-2026-10-22` @ `b5c6c048` | NOT-CLEAN, one blocking item (B1): this ledger carried no RED/GREEN record (met by the 2026-10-22 RED/GREEN entry) |
-| RS-8158 | `aud-1554b-2026-10-22` @ `cf0fb018` | CLEAN for the remedy; later voided by RS-8159 (`graph.test.ts` was red at the slice head) |
-| RS-8159 | `aud-1554c-2026-10-22` @ `c395f5e9` | NOT-CLEAN, one blocking item (B1): the derived GREEN set omitted `StepInspector.test.ts` and `QuoteSandboxView.test.ts` (met by the RS 8159 B1 entry and the import-closure re-derivation) |
-| RS-8161 | `aud-1554d-2026-10-22` @ `65479e54` | CLEAN on points 1 and 2 only; point 3 (the 6 lazy-route-only tests, listed as not run here) confirmed listed, not judged |
+| RS-1882 | `aud-1554-2026-10-22` @ `b5c6c048` | NOT-CLEAN, one blocking item (B1): this ledger carried no RED/GREEN record (met by the 2026-10-22 RED/GREEN entry) |
+| RS-1883 | `aud-1554b-2026-10-22` @ `cf0fb018` | CLEAN for the remedy; later voided by RS-1884 (`graph.test.ts` was red at the slice head) |
+| RS-1884 | `aud-1554c-2026-10-22` @ `c395f5e9` | NOT-CLEAN, one blocking item (B1): the derived GREEN set omitted `StepInspector.test.ts` and `QuoteSandboxView.test.ts` (met by the RS-1884 B1 entry and the import-closure re-derivation) |
+| RS-1885 | `aud-1554d-2026-10-22` @ `65479e54` | CLEAN on points 1 and 2 only; point 3 (the 6 lazy-route-only tests, listed as not run here) confirmed listed, not judged |
 
 **Log check: does line 1 of each named log carry a head sha?**
 - Yes (line 1 is a 40-hex head): `graph-f3462d8f.log`, `graph-bd236e3b.log`, `regfix-b1..b4.log` (`a91bff43`), `regfix-b5.log` (`ada287f3`); `sl1554-green-059af1a5.log`, `-batch1-`, `-batch2-` (head `059af1a5`, tree `400cd63b`).
@@ -205,10 +205,10 @@ Chain: `7576489f` is committed 10:50:36Z and is an ancestor of the head. `ab4052
 
 Counts: 12 logs; 8 verified yes (all GREEN); 4 partial (all RED); 0 not establishable. Why the four RED rows stay partial: the log carries no sha, and the 1 s gap between the `ab405217` commit (12:16:33Z) and the first RED start (12:16:34Z) leaves the checkout to `7576489f` to the ledger's own account. What does hold: the test counts in the three logs that differ (11, 6, 3) equal the `it(` counts of those files at `7576489f` and not at `ab405217` (12, 8, 4), and the 4 `graphMounts` failures need `graph.ts` as it was before `c91c3223` (`git diff --name-only 7576489f c91c3223 -- frontend` lists `graph.ts`). The gate decides the code; this block only names the trees.
 
-### Entry 2026-10-25 — RS 8231 folded (exec-prep1554)
+### Entry 2026-10-25 — RS-1886 folded (exec-prep1554)
 
 **Audit.** The written delta audit of the gate head `11c3db18`, folded from `aud-1554d-2026-10-25` @ `8e41438a` at its working id (the lead mints at the id turn). The verdict is the record's own proposal, not the lead's. This entry adds to the 2026-10-23 audit table above and changes no earlier line.
 
 | Record | Branch @ sha | Proposed verdict, as the record states it |
 |---|---|---|
-| RS-8231 | `aud-1554d-2026-10-25` @ `8e41438a` | CLEAN: the delta `beae0dff..11c3db18` is main's re-merge plus docs folds; the slice's own non-docs patch is unchanged (patch-id `7638106b…` at both heads); the gate lines read as claimed |
+| RS-1886 | `aud-1554d-2026-10-25` @ `8e41438a` | CLEAN: the delta `beae0dff..11c3db18` is main's re-merge plus docs folds; the slice's own non-docs patch is unchanged (patch-id `7638106b…` at both heads); the gate lines read as claimed |
