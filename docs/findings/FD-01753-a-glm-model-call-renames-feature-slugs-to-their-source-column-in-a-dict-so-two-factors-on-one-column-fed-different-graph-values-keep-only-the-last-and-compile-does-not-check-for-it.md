@@ -2,7 +2,7 @@
 id: FD-1753
 family: finding
 title: A GLM model_call renames feature slugs to their source column in a dict, so two Factors on one column that are fed different graph values keep only the last, and compile does not check for it
-status: active
+status: closed
 created: 2026-10-17 # original date 2026-10-16, set at the filing; minted 2026-10-17
 owner: auditor
 tree: a2f77b2dcad5aaec41a5f10aa664383caf421e8b

@@ -99,6 +99,19 @@ def round_once(value: Decimal, rounding: LadderRounding) -> int:
         return int(value.quantize(Decimal(1), rounding=ROUNDING_MODES[rounding.mode]))
 
 
+def round_to_text(value: Decimal, rounding: LadderRounding) -> str:
+    """`value` rounded once with an output step's declared rounding (FR-226), written as
+    `RL-1343` rule 3.3 rules: positional, exactly `dp` digits, no point at `dp` 0 and no sign
+    on a zero. Unlike `round_once`, any `dp` is built."""
+    with localcontext(_ctx()):
+        rounded = value.quantize(
+            Decimal(1).scaleb(-rounding.dp), rounding=ROUNDING_MODES[rounding.mode]
+        )
+    if rounded.is_zero():
+        rounded = rounded.copy_abs()
+    return format(rounded, "f")
+
+
 def _terminating_quotient(numerator: Decimal, denominator: Decimal) -> Decimal | None:
     """`numerator / denominator` if it terminates (and fits the context exactly), else None.
 

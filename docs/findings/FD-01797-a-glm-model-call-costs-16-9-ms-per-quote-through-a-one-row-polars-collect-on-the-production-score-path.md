@@ -2,7 +2,7 @@
 id: FD-1797
 family: finding
 title: A GLM model_call costs 16.9 ms per quote through a one-row polars collect on the production score path
-status: active
+status: closed
 created: 2026-10-18   # filed 2026-10-17 under working id 8097; minted 2026-10-18 as FD-1797
 owner: auditor
 tree: 9469721db3d26480824cc1d715da2ec4ca9044d0

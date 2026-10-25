@@ -2,7 +2,7 @@
 id: FD-1241
 family: finding
 title: CR-838 marks FR-217 delivered, but its versioned-artifact, pin and bundle-time inlining limbs are not built
-status: active
+status: closed
 created: 2026-09-29
 owner: auditor
 tree: 49604a31785c8e7709e9b87c3926e27ea1c0f7f2
