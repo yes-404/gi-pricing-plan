@@ -15,13 +15,15 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.pagination import COUNT_CAP, Page, decode_cursor, encode_cursor
 from app.db.models import RegressionRunRow
-from model_schema import RegressionRun
+from app.errors import PlatformError
+from model_schema import RegressionRun, RegressionRunSummary
 
-__all__ = ["fetch_run", "latest_run", "persist_run"]
+__all__ = ["fetch_run", "latest_run", "list_runs", "persist_run"]
 
 
 async def persist_run(
@@ -82,3 +84,80 @@ async def latest_run(
             .limit(1)
         )
     ).scalar_one_or_none()
+
+
+async def list_runs(
+    session: AsyncSession,
+    *,
+    workspace_id: UUID,
+    rating_version_id: UUID,
+    cursor: str | None,
+    limit: int,
+) -> Page[RegressionRunSummary]:
+    """One page of a Rating Version's runs, newest first (`finished_at` desc, `id` desc).
+
+    `id` (a UUIDv7) is the tie-break and the cursor's key. The cursor run is loaded under the
+    same workspace and version filters as the list, so an id from another version or workspace
+    is a 400 exactly like an id that names no run at all (FR-1531 posture; 03 §5.1).
+    """
+    scope = (
+        RegressionRunRow.workspace_id == workspace_id,
+        RegressionRunRow.rating_version_id == rating_version_id,
+    )
+    query = select(RegressionRunRow).where(*scope)
+    after = decode_cursor(cursor)
+    if after is not None:
+        anchor = (
+            await session.execute(
+                select(RegressionRunRow).where(*scope, RegressionRunRow.id == after)
+            )
+        ).scalar_one_or_none()
+        if anchor is None:
+            raise PlatformError(
+                "VALIDATION_FAILED",
+                "Unknown cursor",
+                400,
+                "The cursor is not a Regression Run of this Rating Version. Omit it to start "
+                "from the newest.",
+            )
+        query = query.where(
+            tuple_(RegressionRunRow.finished_at, RegressionRunRow.id)
+            < tuple_(anchor.finished_at, anchor.id)
+        )
+    rows = (
+        await session.scalars(
+            query.order_by(RegressionRunRow.finished_at.desc(), RegressionRunRow.id.desc()).limit(
+                limit + 1
+            )
+        )
+    ).all()
+    total = await session.scalar(
+        select(func.count()).select_from(
+            select(RegressionRunRow.id).where(*scope).limit(COUNT_CAP).subquery()
+        )
+    )
+    page = rows[:limit]
+    return Page[RegressionRunSummary](
+        items=[
+            RegressionRunSummary.model_validate(
+                {
+                    "id": row.id,
+                    **{
+                        key: row.run.get(key)
+                        for key in (
+                            "job_id",
+                            "overall",
+                            "bundle_hash",
+                            "suite_ref",
+                            "suite_content_hash",
+                            "started_at",
+                            "finished_at",
+                        )
+                    },
+                }
+            )
+            for row in page
+        ],
+        next_cursor=encode_cursor(page[-1].id) if len(rows) > limit else None,
+        total_estimate=total or 0,
+    )

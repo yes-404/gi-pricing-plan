@@ -11783,6 +11783,42 @@
         "title": "Page[RateTableDiffCell]",
         "type": "object"
       },
+      "Page_RegressionRunSummary_": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RegressionRunSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Opaque; pass back verbatim. Null when this is the last page.",
+            "title": "Next Cursor"
+          },
+          "total_estimate": {
+            "description": "Matching rows, counted up to 10000. An estimate by design.",
+            "minimum": 0.0,
+            "title": "Total Estimate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total_estimate"
+        ],
+        "title": "Page[RegressionRunSummary]",
+        "type": "object"
+      },
       "Page_SubGraph_": {
         "additionalProperties": false,
         "properties": {
@@ -15549,6 +15585,71 @@
           "property_results"
         ],
         "title": "RegressionRun",
+        "type": "object"
+      },
+      "RegressionRunSummary": {
+        "additionalProperties": false,
+        "description": "One row of a Rating Version's Regression Run list (03 §4.9, FR 8211).\n\n`id` is the run's UUID (the `regression_runs` primary key); the persisted\n`RegressionRun` carries none. The summary holds no result lists and no case-log\nreference: those are read per run, behind `rating:read` (FR-1221).",
+        "properties": {
+          "bundle_hash": {
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "title": "Bundle Hash",
+            "type": "string"
+          },
+          "finished_at": {
+            "format": "date-time",
+            "title": "Finished At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          },
+          "overall": {
+            "enum": [
+              "pass",
+              "fail"
+            ],
+            "title": "Overall",
+            "type": "string"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "suite_content_hash": {
+            "pattern": "^sha256:[a-f0-9]{64}$",
+            "title": "Suite Content Hash",
+            "type": "string"
+          },
+          "suite_ref": {
+            "$ref": "#/components/schemas/ArtifactRef"
+          }
+        },
+        "required": [
+          "id",
+          "overall",
+          "bundle_hash",
+          "suite_ref",
+          "suite_content_hash",
+          "started_at",
+          "finished_at"
+        ],
+        "title": "RegressionRunSummary",
         "type": "object"
       },
       "RegressionSuite": {
@@ -36946,6 +37047,159 @@
       }
     },
     "/api/v1/rating-versions/{rating_version_id}/regression-runs": {
+      "get": {
+        "description": "**200** with a page of run summaries, newest first (`finished_at` desc, `id` desc;\n`03` §5.1, FR 8211). A summary carries no results and no case-log reference — those are\nread per run (FR-1221). **404** for a version outside the caller's workspace; **400**\n`VALIDATION_FAILED` for a cursor that is not a run of this version.",
+        "operationId": "list_regression_runs_api_v1_rating_versions__rating_version_id__regression_runs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rating_version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rating Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+            "in": "header",
+            "name": "Workspace-Id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The workspace to act in, as a UUID. Required when the principal is a member of more than one (`07` FR-397); a principal with exactly one, and a Service Account, send nothing. Checked against the principal's own memberships: a workspace it does not belong to yields `403 WORKSPACE_SCOPE_DENIED`, and an absent selection with several memberships yields `403 WORKSPACE_SELECTION_REQUIRED`.",
+              "title": "Workspace-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_RegressionRunSummary_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Authentication failed"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not permitted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Request validation failed"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Rate limited"
+          }
+        },
+        "summary": "List a rating version's regression runs",
+        "tags": [
+          "modelling"
+        ]
+      },
       "post": {
         "description": "**202** with a Job (`03` §5.1, FR-260/261, `PL-1205` Task 5).\n\nThe `rating.regression` Job runs the algorithm's current Regression Suite against this\nversion's compiled bundle and persists a `RegressionRun` with its case log. A failing\nrun ends the Job `failed` (`PROPERTY_ASSERTION_FAILED` or `GOLDEN_QUOTE_MISMATCH`) and\nthe run is still recorded; FR-257 limb (1) reads it at submission.",
         "operationId": "start_regression_run_api_v1_rating_versions__rating_version_id__regression_runs_post",
