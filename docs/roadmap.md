@@ -2994,6 +2994,24 @@ Slice C of `PL-1856` (WK-1178's dated delta on FD-1723's residual limbs). Docs o
 
 (Activated 2026-10-22 on the maintainer's "2026-10-22 16:02:49 BST — Maintainer: PL 8162 (FD-1723's residual limbs) ACCEPTED; …" ("GO: slice C now"), with `PL-1856` made `active` by L1 in this slice's PR. Minted 2026-10-22 as SL-1857 from working id 8164, with its ledger LG-1858 from working id 8165 and its plan PL-1856 from working id 8162. Closed 2026-10-22 at the mint as a docs-only slice, the audit and merge-ack being recorded in LG-1858.)
 
+#### SL-1878 — WK-1178 fix slice — FD-1852: a dataset-scoped grant reaches the dictionary, rule-set and acknowledge writes (held-anywhere route gate), and a permanent route-scope guard
+
+```yaml
+id: SL-1878
+family: slice
+title: WK-1178 fix slice — FD-1852: a dataset-scoped grant reaches the dictionary, rule-set and acknowledge writes (held-anywhere route gate), and a permanent route-scope guard
+status: active                   # draft → active → closed | retired (§1.2a)
+created: 2026-10-25                  # drafted 2026-10-22 under working id 8185; minted 2026-10-25 as SL-1878
+owner: planner                   # cut by the planner; lead dispatches (active)
+tree: 71e481fa5d240ed366cd80c1a8c6cf6cd1d918d5
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [PL-1877, FD-1852, FD-1853, RL-1849, SL-1736, FR-343, FR-345]
+```
+
+The fix of FD-1852 (MEDIUM, LATENT: no P2 API creates a scoped grant), planned in PL-1877 and ruled by the maintainer's entries "2026-10-22 17:38:11 BST" (DP-0 to DP-3, GO) and "2026-10-22 17:46:43 BST" (re-rated; the slice continues). `requires(permission, held_anywhere=True)` admits a holder under any scope and never counts; the dictionary, rule-set and acknowledge services load the Dataset, check the permission on it (`SCOPE_DENIED`), then count (FR-452). `06` FR-345 gains the dated order clause and FR-343 a pointer. New: `backend/tests/test_dataset_scoped_writes.py` (13 red at base) and `backend/tests/test_route_scope_guard.py` (two predicates, `ROUTE_SCOPES`, an owned `KNOWN_SCOPE_GAPS`). **Task 4 (the rule-set route) is carried to the follow-on SL 8192 (ledger LG 8193), which activates when SL-1736 merges** (the maintainer, "2026-10-22 18:16:19 BST"); until then the rule-set route is a `KNOWN_SCOPE_GAPS` row owned by SL 8192 and its four tests are strict xfails. Ledger LG-1879.
+
 #### SL-1860 — WK-1178 slice A — PL-1856: glum family translation, NB deviance and θ boundary, GLM direction check
 
 ```yaml
@@ -3221,7 +3239,7 @@ From “Workstreams” (line 467): Full scoped RBAC, custom roles, break-glass |
 
 **2026-09-30:** also owns `07` §5.3's Service accounts view (`/admin/service-accounts`), placed here in P3 by FD-1284 option D and the maintainer's entry "2026-09-30 05:35:06 BST — SCOPE DECISION: #949 [FD-1284, cited by its working id in the entry], the `07` §5.3 platform views, option D (split by view)" ("Service accounts to **WK-676**"). **A spec change comes first:** `07` §5.1 declares create, rotate and revoke for service accounts but no list `GET` route, and the view needs one. This is placement, not a cut, and nothing is built ahead of P3 (`CLAUDE.md` §0). (Amended 2026-09-30 by the lead, on FD-1284 and the maintainer's entry 05:35:06.)
 
-**2026-10-22:** also owns, as a Phase 3 item, enforcement of the scope kinds `MODEL_FAMILY` and `RATING_ALGORITHM`. `06` FR-345 lists them and `ScopeType` (`packages/model-schema/src/model_schema/permissions.py`) declares them, but nothing enforces them: no Phase 2 API creates a scoped grant, so no check reads one. The enforcement ships with `POST /api/v1/role-assignments` (`06` §5.1), which is itself spec-ahead-of-phase and owned here. Until then the two kinds are declared, not enforced. Placement, not a cut: nothing is built ahead of P3 (`CLAUDE.md` §0). (Added 2026-10-22 by the executor, on the maintainer's entry "2026-10-22 17:46:43 BST" item 3 as relayed by lead 26 in `to-lead.md` 17:47:13 BST: "3b (MODEL_FAMILY/RATING_ALGORITHM) = P3 item for WK-676 in the docs batch"; the `FR-345` text that states the same fact is SL 8185's Task 1, not written here.)
+**2026-10-22:** also owns, as a Phase 3 item, enforcement of the scope kinds `MODEL_FAMILY` and `RATING_ALGORITHM`. `06` FR-345 lists them and `ScopeType` (`packages/model-schema/src/model_schema/permissions.py`) declares them, but nothing enforces them: no Phase 2 API creates a scoped grant, so no check reads one. The enforcement ships with `POST /api/v1/role-assignments` (`06` §5.1), which is itself spec-ahead-of-phase and owned here. Until then the two kinds are declared, not enforced. Placement, not a cut: nothing is built ahead of P3 (`CLAUDE.md` §0). (Added 2026-10-22 by the executor, on the maintainer's entry "2026-10-22 17:46:43 BST" item 3 as relayed by lead 26 in `to-lead.md` 17:47:13 BST: "3b (MODEL_FAMILY/RATING_ALGORITHM) = P3 item for WK-676 in the docs batch"; the `FR-345` text that states the same fact is SL-1878's Task 1, not written here.)
 
 
 ### WK-677 — Approval policies, escalation, evidence enforcement, attestations
