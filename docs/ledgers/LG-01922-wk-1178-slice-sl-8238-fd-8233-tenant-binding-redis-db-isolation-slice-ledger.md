@@ -1,24 +1,24 @@
 ---
-id: LG-8239
+id: LG-1922
 family: ledger
-title: WK-1178 slice SL-8238 — FD-8233, the tenant-binding tests' Redis db follows GIP_REDIS_URL and avoids the gate dbs (slice ledger)
+title: WK-1178 slice SL-1921 — FD-1920, the tenant-binding tests' Redis db follows GIP_REDIS_URL and avoids the gate dbs (slice ledger)
 status: active                 # active → closed (§1.2a)
-created: 2026-10-25
+created: 2026-10-25   # drafted 2026-10-25 under working id 8239; created = mint date
 owner: executor
 tree: 102341aade6720dc7b71a1e696cc5b6d8017a2f1
 phase: P2
 work: WK-1178
-slice: SL-8238
+slice: SL-1921
 plans: []
 corrected_by: []
-relates: [SL-8238, FD-8233]
+relates: [SL-1921, FD-1920]
 ---
 
-# LG-8239 — WK-1178 slice SL-8238: FD-8233, tenant-binding Redis db isolation
+# LG-1922 — WK-1178 slice SL-1921: FD-1920, tenant-binding Redis db isolation
 
 Working ids 8238 (SL) and 8239 (LG), unminted. Executed by `exec-fd8233`, base `origin/main` `102341aade6720dc7b71a1e696cc5b6d8017a2f1`, branch `fix/fd-8233-tenant-binding-redis-db`.
 
-**GO:** the maintainer's entry "2026-10-25 21:06:06 GMT" (`to-lead.md`), item (4): "GO — FD 8233 fix slice on fix/fd-8233-tenant-binding-redis-db from 102341aa: red-first asserts (i) with GIP_REDIS_URL set the db equals the url's, (ii) unset → db ∉ {1,2,3,4,11,12,13}; DB-free red→green via run-heavy; gate in the next free slot". Remedy accepted at "2026-10-25 18:59:00 GMT": derive the db from `GIP_REDIS_URL` when set, else a range no gate or run-small uses (5–10).
+**GO:** the maintainer's entry "2026-10-25 21:06:06 GMT" (`to-lead.md`), item (4): "GO — FD-1920 fix slice on fix/fd-8233-tenant-binding-redis-db from 102341aa: red-first asserts (i) with GIP_REDIS_URL set the db equals the url's, (ii) unset → db ∉ {1,2,3,4,11,12,13}; DB-free red→green via run-heavy; gate in the next free slot". Remedy accepted at "2026-10-25 18:59:00 GMT": derive the db from `GIP_REDIS_URL` when set, else a range no gate or run-small uses (5–10).
 **MERGE-ACK:** not yet given.
 
 ## Tasks
@@ -52,7 +52,7 @@ Working ids 8238 (SL) and 8239 (LG), unminted. Executed by `exec-fd8233`, base `
 
 (none yet)
 
-2026-10-25 22:25 GMT — correction (RS 8240 B2): the GO quote above is a paraphrase; the verbatim (i) clause of to-lead 21:05:20 item (4) (the brief named the entry 21:06:06; item (4) is in the 21:05:20 GMT entry, to-lead.md:31030) is: "(i) with `GIP_REDIS_URL` set to each slot's url the chosen db equals that url's db". B1 commit 34f870e279f407d47cafeb7f3fdabaf1f1031ac9 parametrises (i) over {1,2,3,4,11,12,13}.
+2026-10-25 22:25 GMT — correction (RS-1923 B2): the GO quote above is a paraphrase; the verbatim (i) clause of to-lead 21:05:20 item (4) (the brief named the entry 21:06:06; item (4) is in the 21:05:20 GMT entry, to-lead.md:31030) is: "(i) with `GIP_REDIS_URL` set to each slot's url the chosen db equals that url's db". B1 commit 34f870e279f407d47cafeb7f3fdabaf1f1031ac9 parametrises (i) over {1,2,3,4,11,12,13}.
   - **GREEN** at `34f870e279f407d47cafeb7f3fdabaf1f1031ac9` (run-small, DB-free): `8 passed, 2 warnings in 0.43s`, rc=0.
   - **RED** at a4531d80 with only the new test file: NOT RUN — the throwaway worktree needed `uv sync --all-packages --frozen` under run-heavy, which refused rc=76 (gate-1 held, no grant); the step was stopped, not retried by another route. Owed to a gate gap or a grant.
   - `ruff check` on `backend/tests/test_tenant_binding_redis_db.py` at 34f870e2: `All checks passed!`, rc=0; `ruff format --check`: `1 file already formatted`, rc=0.

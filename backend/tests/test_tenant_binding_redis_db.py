@@ -1,4 +1,4 @@
-"""FD 8233: the tenant-binding tests' Redis database index must not collide with a gate's.
+"""FD-1920: the tenant-binding tests' Redis database index must not collide with a gate's.
 
 DB-free: it calls the `redis_url` fixture's function and asserts on the string it returns.
 Gates use Redis dbs 1-4 and run-small and seats use 11-13, so an unset `GIP_REDIS_URL`

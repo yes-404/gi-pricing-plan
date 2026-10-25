@@ -2895,12 +2895,12 @@ On the maintainer's entry "2026-10-22 17:21:38 BST" (`to-lead.md`), item 2: the 
 
 (Activated 2026-10-22 on the maintainer's entry above; executed as `exec-8178` on branch `fix/fd-8175-resource-backed-guard`; ledger LG-1893.)
 
-#### SL-8238 — WK-1178 fix slice — FD-8233: the tenant-binding tests' Redis db follows GIP_REDIS_URL and avoids the gate dbs
+#### SL-1921 — WK-1178 fix slice — FD-1920: the tenant-binding tests' Redis db follows GIP_REDIS_URL and avoids the gate dbs
 
 ```yaml
-id: SL-8238
+id: SL-1921
 family: slice
-title: WK-1178 fix slice — FD-8233: the tenant-binding tests' Redis db follows GIP_REDIS_URL and avoids the gate dbs
+title: WK-1178 fix slice — FD-1920: the tenant-binding tests' Redis db follows GIP_REDIS_URL and avoids the gate dbs
 status: active                    # draft → active → closed | retired (§1.2a)
 created: 2026-10-25
 owner: lead
@@ -2908,12 +2908,12 @@ tree: 102341aade6720dc7b71a1e696cc5b6d8017a2f1
 phase: P2
 work: WK-1178
 corrected_by: []
-relates: [FD-8233, LG-8239]
+relates: [FD-1920, LG-1922]
 ```
 
-FD 8233: `redis_url` in `backend/tests/test_tenant_binding.py` drew a Redis db from 1–15, which collided with the gates' dbs (1–4) and the seats' (11–13). The fix returns `GIP_REDIS_URL` when set, else a db in 5–10. Red first in a new DB-free file, `backend/tests/test_tenant_binding_redis_db.py`. Test-only; FR-436 unchanged.
+FD-1920: `redis_url` in `backend/tests/test_tenant_binding.py` drew a Redis db from 1–15, which collided with the gates' dbs (1–4) and the seats' (11–13). The fix returns `GIP_REDIS_URL` when set, else a db in 5–10. Red first in a new DB-free file, `backend/tests/test_tenant_binding_redis_db.py`. Test-only; FR-436 unchanged.
 
-(Activated 2026-10-25 on the maintainer's GO, to-lead 21:06:06 GMT (4); executed as `exec-fd8233` on branch `fix/fd-8233-tenant-binding-redis-db`; ledger LG-8239.)
+(Activated 2026-10-25 on the maintainer's GO, to-lead 21:06:06 GMT (4); executed as `exec-fd8233` on branch `fix/fd-8233-tenant-binding-redis-db`; ledger LG-1922.)
 
 #### SL-1771 — WK-1178 fix slice (S-b) — FD-1729: the application connects as a login role with gip_app's grants, never as the owner
 

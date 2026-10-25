@@ -43,7 +43,7 @@ _MARKER_MIGRATION_DOWN_REVISION = "c4d1e8a7b302"
 def redis_url() -> str:
     """A Redis database index of its own, so a planted marker stays in this test.
 
-    FD 8233: `GIP_REDIS_URL`'s own db when set; else one of 5-10, which no gate (1-4) or
+    FD-1920: `GIP_REDIS_URL`'s own db when set; else one of 5-10, which no gate (1-4) or
     seat run (11-13) uses.
     """
     return os.environ.get("GIP_REDIS_URL") or f"redis://localhost:6379/{5 + secrets.randbelow(6)}"
