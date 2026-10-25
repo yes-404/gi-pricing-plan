@@ -78,6 +78,7 @@ rc 0: **33 owed rows**, 6 excluded as opening with a resolution marker. Each row
    verdicts, which are the lead's to give (§13):
    - FR-1186 is a negative requirement: delivered but untested.
    - NFR-492 and NFR-493: deferred to G4's host (owner: the maintainer, `roadmap.md:572`).
+     *(Corrected 2026-10-25 by the lead, on the maintainer's entry "2026-10-25 11:47:10 GMT — Maintainer: CR 8219 — item 6 dated lines (T1, T2, FR-110 power(k)); §13 verdicts accepted with one owner correction": an owner is a Work row, never a person. **NFR-492 and NFR-493: deferred, owner WK-1178** (the P2 NFR sweep), measured on nfr-bench-1 Thu 30–Fri 31 Oct; the maintainer manages the host, not the requirement.)*
    - NFR-1443: deferred to SL-1736's DIAGNOSTIC sweep (WK-1178).
 
    All eight P2 Works are still `active`, which agrees with `roadmap.md` §6.
