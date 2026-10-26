@@ -444,7 +444,24 @@ delegation) ruled them; the lead's verdict pack is the source of the contents.
 | (5) | **A fresh full gate** on gate-1b at this record's head, after S1b's END | the lead | after S1b's END | the END row, below |
 
 ```text
-gate END: <pending — lead>
+Object measured: ffca3a45a2f83b98e3e3ace080328cb8b031fd64 (tree df19d144), gate-1b, wk675-gate.sh e90dbfb1ae98f26e
+END 2026-10-26T12:42:16+00:00 3.49 2.21 1.99 (date l1 l5 l15) rc=1
+| END rc parts | python max=1 fe max=0 demo=0 restore rc_kc=0 role rc_role=0 skip rc_skip=0 |
+rc files: audit_docs=1, contracts=0, import_linter=0, mypy=0, pytest=1, req_coverage=0, ruff=0
+pytest: 13 failed, 6963 passed, 21 skipped, 5 xfailed, 146 warnings in 3023.89s (0:50:23)
+| pytest skipped | 21 (<= 21) |
+| pnpm install --frozen-lockfile | rc=0 |
+| pnpm generate:api | rc=0 |
+| pnpm lint | rc=0 |
+| pnpm type-check | rc=0 |
+| pnpm test --maxWorkers=2 | rc=0 | Test Files  137 passed (137); Tests  892 passed (892)
+| pnpm build | rc=0 |
+| pg_roles before | gip_app,gip_app_login |
+| pg_roles after provision | gip_app,gip_app_login |
+| pg_roles at END | gip_app,gip_app_login |
+| demo.py --journey wf-699 | rc=0 |
+| D7 | ok  19985 policies in the sample; rate table edits: +485990825; NCD ladder and expense loading: +3851186; sum +489842011 minor units (full-book attribution cost: FD-1576) |
+Ruling: the maintainer (by delegation), to-lead "2026-10-26 12:45:15 GMT — Maintainer: WK-675 gate @ffca3a45 on gate-1b STANDS under 1(f) (verified from the gate dir); S1b read-back VERIFIED; proceed to the mint"
 ```
 
 **Register rows cited by line, because an id token does not always resolve a row** (`grep -n
