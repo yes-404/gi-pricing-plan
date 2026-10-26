@@ -197,6 +197,23 @@ async def test_a_tampered_artifact_trigger_refuses_startup(
             await transaction.rollback()
 
 
+@pytest.mark.req("FR-44")
+async def test_an_enable_always_trigger_is_accepted(owner_database: Database) -> None:
+    """T3 / PL-1769 Step 4.2: the trigger check accepts `tgenabled IN ('O','A')`. `ENABLE ALWAYS`
+    (`'A'`) fires under `session_replication_role = replica` too, so it is no weaker than `'O'`;
+    the `'D'` and `'R'` routes above stay refused."""
+    async with owner_database.engine.connect() as connection:
+        transaction = await connection.begin()
+        try:
+            await connection.execute(
+                text("ALTER TABLE factors ENABLE ALWAYS TRIGGER factors_no_modify")
+            )
+            await connection.execute(text(f"SET LOCAL ROLE {_APP_ROLE}"))
+            await assert_least_privilege(connection)
+        finally:
+            await transaction.rollback()
+
+
 # --- T4-T6 (R-b5, R-b6, R-b1) ---
 
 

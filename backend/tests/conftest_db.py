@@ -1038,6 +1038,12 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
         "owner-subject",
         "plants a grant drift as the owner (rolled back)",
     ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_an_enable_always_trigger_is_accepted",
+        "owner-subject",
+        "sets a trigger to ENABLE ALWAYS as the owner (rolled back)",
+    ),
 )
 
 
