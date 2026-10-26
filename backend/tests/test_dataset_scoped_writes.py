@@ -303,10 +303,13 @@ async def limit_two(database, workspace_id):
         await workspaces.ensure_workspace(session, workspace_id=workspace_id)
         await settings_service.set_workspace_setting(session, workspace_id, LIMIT_KEY, 2)
     yield
-    async with database.unit_of_work() as session:
+
+    async def remove(session: AsyncSession) -> None:
         await session.execute(
             delete(WorkspaceSettingRow).where(WorkspaceSettingRow.workspace_id == workspace_id)
         )
+
+    await seed_as_owner(remove)
 
 
 @pytest.mark.req("FR-452")
