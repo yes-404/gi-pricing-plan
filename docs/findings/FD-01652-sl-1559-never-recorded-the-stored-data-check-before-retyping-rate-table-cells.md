@@ -140,3 +140,16 @@ Zero bad over non-zero denominators (16 versions, 140 cells). Not reachable by t
 ## 2026-10-26 15:55 UTC — Measured close (text per to-lead "2026-10-26 15:03:43 GMT" (3); the status is not flipped here)
 
 No persisted pre-retype data exists in this environment (databases enumerated: gipricing, postgres; step (1), 15:05 UTC section); the instrument detects a planted non-string (counts, at `origin/main` `7ed5c398`: Q1 = 1, Q1b = 1, Q2 = 1, Q3 = 1 over 2 versions and 1 cell, against 0, 0, 0, 0 before the plant); today's writers produce strings (Q1 = 0, Q1b = 0, Q2 = 0, Q3 = 0 over 16 `rows` versions and 140 cells, after the WF-699 journey, rc 0). Nothing remains to remediate. The status change and the closing of the register row are the auditor's act (Tue 27, commit 7).
+
+### The step (3) shim, verbatim (added 2026-10-26 by the lead, on to-lead "2026-10-26 15:56:23 GMT")
+
+A shim that intercepts a production command is a test patch of a production path, so its exact text is recorded here. It was never run in or beside a gate. The file was `~/gi-pricing-plan.local/scratch/fd1652b/shim/docker`, placed first on `PATH` for the `scripts/demo.py --journey wf-699` run only:
+
+```bash
+#!/bin/bash
+# fd1652b: demo.py's compose-up would touch the shared gi-pricing stack; skip every 'docker compose' call, pass the rest through.
+if [ "${1:-}" = compose ]; then echo "shim: skipped docker $*" >&2; exit 0; fi
+exec /usr/bin/docker "$@"
+```
+
+The lead checked after the run that the four `gi-pricing-*` containers were not recreated (Up 3 h / 12 h, healthy, at 15:55 UTC), and the maintainer's own check at 15:56 agrees. `scripts/demo.py`'s coupling to the shared stack is a process-backlog row (2026-10-26).
