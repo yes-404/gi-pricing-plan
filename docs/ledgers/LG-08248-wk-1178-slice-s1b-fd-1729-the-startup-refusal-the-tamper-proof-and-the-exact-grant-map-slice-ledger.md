@@ -151,8 +151,14 @@ Authority: the maintainer's entry "2026-10-26 11:38:32 GMT" (`to-lead.md`), rule
 >
 > - OK: P_OWN uses `pg_has_role(current_user, r.oid, 'MEMBER')` (immutability.py:45). That covers direct and indirect membership, INHERIT FALSE memberships and SET ROLE reachability. It tests rolsuper, rolbypassrls and ownership of `public` tables (:47-55).
 > - OK: `tgenabled IN ('O','A')` (:83,145), a presence check on every expected trigger including `_no_truncate` (:113-127,141-144), and a pinned function-body md5 (:150). session.py:235-239 runs the check on the engine's own connection.
-> - CONCERN (severity high): The check does not look at CREATEROLE. On PostgreSQL 16 a CREATEROLE role can alter the password of any non-superuser role it administers, and can grant itself membership in roles it has ADMIN on. That is a route to the owner role `gipricing`. immutability.py:42-57 never reads `rolcreaterole`. → FD 8265
-> - CONCERN (severity high): The check ignores ADMIN OPTION. A role with admin on the owner group but no membership passes the MEMBER test and can still run `GRANT owner TO self`. `pg_auth_members.admin_option` is never read. → FD 8265
+> - CONCERN (severity high): The check does not look at CREATEROLE. On PostgreSQL 16 a CREATEROLE role can alter the password of any non-superuser role it administers, and can grant itself membership in roles it has ADMIN on. That is a route to the owner role `gipricing`. immutability.py:42-57 never reads `rolcreaterole`.
+
+→ FD 8265 (the lead's marker for the HIGH line above, outside the quote so that the mint re-points it; to-lead 11:38:32 (ii)).
+
+> - CONCERN (severity high): The check ignores ADMIN OPTION. A role with admin on the owner group but no membership passes the MEMBER test and can still run `GRANT owner TO self`. `pg_auth_members.admin_option` is never read.
+
+→ FD 8265 (the lead's marker for the HIGH line above, outside the quote so that the mint re-points it; to-lead 11:38:32 (ii)).
+
 > - CONCERN (severity medium): Predefined roles are not checked. Membership in `pg_write_all_data` bypasses the grant map entirely. `pg_execute_server_program`, `pg_write_server_files` and `pg_read_server_files` are further escape routes. P_OWN returns no row for any of them.
 > - CONCERN (severity medium): PostgreSQL 15 and later allow `GRANT SET ON PARAMETER session_replication_role` to a non-superuser. That bypasses origin-only triggers without ownership or superuser. `pg_parameter_acl` is never read and nothing tests it.
 > - CONCERN (severity medium): Ownership is checked only for relkind r and p in `public` (immutability.py:50-53). Owners of the trigger functions, of schema `public`, and of views or sequences are not checked. A function owner can CREATE OR REPLACE a guard body; the md5 pin (:150) catches that only at the next start. Owning `public` also allows creating shadowing objects.
