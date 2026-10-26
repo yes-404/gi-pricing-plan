@@ -120,3 +120,18 @@ maintainer's entry "2026-10-26 11:38:32 GMT" (`to-lead.md`), with the lead's con
 
 Open, owner WK-1178; **fix before close**, by Fri 31 Oct 2026: the follow-up slice under PL-1927. Closed in place citing the PR
 when that slice merges. Filed under working id 8265.
+
+## Correction — 2026-10-26: HIGH-2 is refuted by measurement
+
+*(Dated 2026-10-26, on the maintainer's entry "2026-10-26 13:50:37 GMT" (Q2), which reproduced the
+lead's probe. The text above stays as filed.)* The ADMIN OPTION route under "The two HIGH routes"
+does **not** hold on PostgreSQL 16. The measurement used a throwaway `postgres:16-alpine`
+(PostgreSQL 16.15), removed after: `GRANT owner_grp TO gip_app_login WITH ADMIN TRUE, INHERIT FALSE,
+SET FALSE` gives `pg_auth_members` admin t / inherit f / set f, and
+`pg_has_role('gip_app_login','owner_grp','MEMBER')` = **t** (USAGE f, SET f). The plain
+`WITH ADMIN OPTION` grant also gives MEMBER = t. On PostgreSQL 16 any `pg_auth_members` row counts as
+MEMBER, so the base `P_OWN` (`immutability.py:42–57`, `pg_has_role(current_user, r.oid, 'MEMBER')`)
+already refuses an admin-only route to an owner. The residual is **HIGH-1 (CREATEROLE)** plus the
+five same-class mediums. The severity stays **HIGH**, on HIGH-1. Remedy item 1 narrows accordingly: `P_OWN` reads
+`rolcreaterole`, and the two ADMIN forms are controls in PL-1927 S1c (acceptance 21). The postgres-pro
+review stays as filed evidence (LG-1947, Step 7.2 section).
