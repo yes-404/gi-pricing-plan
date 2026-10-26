@@ -20,8 +20,10 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
+from backend.tests.conftest_db import seed_as_owner
 from fastapi.testclient import TestClient
 from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import DEV_PRINCIPAL_HEADER
 from app.config import Settings
@@ -117,7 +119,8 @@ async def world(database, grant, membership, workspace_id, principal) -> World:
         member = new_uuid7()
         w.principals[key] = Principal(kind=ActorKind.USER, id=member, display=key)
         await membership(principal_id=member)
-        async with database.unit_of_work() as session:
+
+        async def seed(session: AsyncSession) -> None:
             role = (
                 await session.execute(
                     select(RoleRow).where(
@@ -135,6 +138,8 @@ async def world(database, grant, membership, workspace_id, principal) -> World:
                     scope_id=dataset_id,
                 )
             )
+
+        await seed_as_owner(seed)
         return _headers(member, workspace_id)
 
     w.headers["analyst_x"] = await scoped("analyst_x", "analyst", w.dataset_id["x"])
