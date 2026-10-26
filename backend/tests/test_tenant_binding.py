@@ -32,6 +32,7 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.config import Settings
+from app.db.session import Database
 from app.main import create_app
 from app.platform.blobs import BlobStore
 from app.platform.tenancy import TENANT_BLOB_KEY, TENANT_REDIS_KEY, TenantMismatchError
@@ -194,6 +195,20 @@ async def test_a_database_not_migrated_to_this_revision_stops_startup(
     scratch_database: str,  # noqa: F811
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """FR-436: a database behind the tenant-marker revision refuses startup with the
+    `alembic upgrade head` hint.
+
+    O5 runs `assert_least_privilege` before `require_tenant_binding`, and on a database this
+    far behind it would refuse first (a missing trigger). This test isolates FR-436's upgrade
+    refusal, which is the thing under test; S1b's T3 (`test_application_role.py`) proves the
+    missing-trigger refusal.
+    """
+
+    async def _skip(self: Database) -> None:
+        return None
+
+    # to-lead "2026-10-26 09:33:12 GMT": the FR-436 residue ruled (a): this test only.
+    monkeypatch.setattr(Database, "assert_least_privilege", _skip)
     monkeypatch.setenv("GIP_MIGRATION_DATABASE_URL", scratch_database)
     await _upgrade(_alembic_config(), _MARKER_MIGRATION_DOWN_REVISION)
 
