@@ -993,6 +993,31 @@ def test_blob_bucket() -> str:
     return os.environ.get("GIP_TEST_BUCKET", "gip-test-blobs")
 
 
+def _safe_dsn(dsn: str) -> str:
+    """`host:port as user, database name` -- never the password."""
+    url = make_url(dsn)
+    return f"{url.host}:{url.port} as {url.username}, database {url.database!r}"
+
+
+def _unavailable(configured: bool, message: str) -> None:
+    """A service the suite needs is not usable: FAIL when the environment names it
+    (`configured`), skip only when nothing does (FD-8256).
+
+    A skip on a configured-but-unreachable service lets a gate read green with every test
+    that needs it skipped. `message` never carries a password or key: callers render DSNs
+    with `_safe_dsn` and name an endpoint, never its credentials.
+    """
+    if configured:
+        pytest.fail(message)
+    pytest.skip(message)
+
+
+def _database_configured() -> bool:
+    return bool(
+        os.environ.get("GIP_TEST_DATABASE_URL") or os.environ.get("GIP_TEST_APP_DATABASE_URL")
+    )
+
+
 @pytest_asyncio.fixture
 async def database() -> AsyncIterator[Database]:
     """An engine per test, against a database the migration has already been run on.
@@ -1002,9 +1027,11 @@ async def database() -> AsyncIterator[Database]:
     result is `got Future attached to a different loop`, which reads like a driver bug
     rather than a fixture-scope mistake. Creating an engine per test costs a connection.
 
-    Skips rather than fails when nothing is listening: a developer without the compose
-    stack up should still be able to run the unit tests. CI provides the service, so the
-    skip never hides a regression there.
+    Skips rather than fails only when no database is configured (neither
+    `GIP_TEST_DATABASE_URL` nor `GIP_TEST_APP_DATABASE_URL` is set): a developer without the
+    compose stack up should still be able to run the unit tests. A configured database that
+    is unreachable, or has no migrations, FAILS naming host, port, user and database
+    (FD-8256) -- a skip there would let a gate pass with the DB tests unrun.
     """
     db = Database(Settings(database_url=test_database_url()))
     try:
@@ -1019,14 +1046,21 @@ async def database() -> AsyncIterator[Database]:
                 f"the application login role {_APP_LOGIN_ROLE!r} cannot connect: {exc}; run "
                 "scripts/provision-app-role.py against this cluster"
             )
-        pytest.skip(f"PostgreSQL not reachable at {test_database_url()}: {type(exc).__name__}")
+        _unavailable(
+            _database_configured(),
+            f"PostgreSQL not reachable at {_safe_dsn(test_database_url())}: {type(exc).__name__}",
+        )
 
     async with db.session() as session:
         applied = (
             await session.execute(text("SELECT count(*) FROM alembic_version"))
         ).scalar_one()
     if not applied:
-        pytest.skip("database has no migrations applied; run `uv run alembic upgrade head`")
+        _unavailable(
+            _database_configured(),
+            f"database at {_safe_dsn(test_database_url())} has no migrations applied; "
+            "run `uv run alembic upgrade head`",
+        )
 
     yield db
     await db.dispose()
@@ -1061,14 +1095,20 @@ async def owner_database(request: pytest.FixtureRequest) -> AsyncIterator[Databa
 async def blob_store() -> AsyncIterator[BlobStore]:
     """A blob store against the compose MinIO, with its bucket ensured.
 
-    Skips when MinIO is unreachable, for the same reason the database fixture does — and
-    CI runs a MinIO service so the skip never hides a regression there.
+    Skips when MinIO is unreachable and nothing names it (`GIP_TEST_BUCKET` and
+    `GIP_BLOB_ENDPOINT_URL` both unset); a configured one that is unreachable FAILS naming
+    endpoint and bucket, never a key (FD-8256).
     """
-    store = BlobStore(Settings(blob_bucket=test_blob_bucket()))
+    settings = Settings(blob_bucket=test_blob_bucket())
+    store = BlobStore(settings)
     try:
         await store.ensure_bucket()
     except Exception as exc:
-        pytest.skip(f"MinIO not reachable: {type(exc).__name__}")
+        _unavailable(
+            bool(os.environ.get("GIP_TEST_BUCKET") or os.environ.get("GIP_BLOB_ENDPOINT_URL")),
+            f"MinIO not reachable at {settings.blob_endpoint_url}, bucket "
+            f"{settings.blob_bucket!r}: {type(exc).__name__}",
+        )
     yield store
 
 

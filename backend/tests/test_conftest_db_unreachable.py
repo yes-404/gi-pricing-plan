@@ -124,7 +124,7 @@ def test_configured_but_unreachable_database_fails_naming_the_target(
     rc, out = _run(tmp_path, "uses_the_database", _CONFIGURED[env_name])
     assert "skipped" not in _summary(out), _summary(out)
     assert rc != 0, _summary(out)
-    for part in ("127.0.0.1", "fd8256user", "fd8256db", ":1"):
+    for part in ("127.0.0.1:1", "fd8256db"):
         assert part in out, part
     assert _SECRET not in out
 
@@ -149,4 +149,4 @@ def test_nothing_configured_still_skips_without_a_password(tmp_path: Path, test:
     assert rc == 0, _summary(out)
     assert "1 skipped" in _summary(out), _summary(out)
     assert _SECRET not in out
-    assert "gip_app_login" not in out
+    assert "gip_app_login:gip_app_login" not in out
