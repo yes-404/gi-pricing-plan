@@ -1,10 +1,10 @@
 ---
-id: CR-8261
+id: CR-1952
 family: closure
 kind: work                     # work | phase | review — no other value (§1.2)
 title: WK-675 Work close audit — DAG designer, rate table editor, quote sandbox and compare, dislocation views, rating version list and regression suite view
 status: active                  # write-once; this is the only value this family ever takes
-created: 2026-10-26
+created: 2026-10-26   # drafted 2026-10-26 under working id 8261
 owner: auditor                  # work/phase kind; lead for `kind: review`
 tree: 1e0a8abbc90723ae9c887a901f700b72f6f94cc1
 phase: P2
@@ -13,9 +13,9 @@ corrected_by: []
 relates: [PL-1286, PL-1546, PL-1927, RL-1900, RL-1909, CR-1907, FD-1283, FD-1284, FD-1437, FD-1585, FD-1652, FD-1656, FD-1936]
 ---
 
-# CR-8261 — WK-675 Work close audit
+# CR-1952 — WK-675 Work close audit
 
-*Working id CR 8261, reserved by the lead; it mints at the lead's id turn. The auditor seat
+*Working id CR-1952, reserved by the lead; it mints at the lead's id turn. The auditor seat
 aud-wk675 wrote this record on 2026-10-26 from 10:36 GMT, on the user's instruction relayed by
 the maintainer in `~/gi-pricing-plan.local/channel/to-lead.md`, entry "2026-10-26 10:33:40 GMT —
 Maintainer: INSTRUCTION (the user's, 10:3x GMT) — run the WK-675 close audit now". It follows
@@ -404,7 +404,7 @@ The one hit is `03:1136`, the error-code enumeration. The code is also defined i
 (the enumeration at `:1136` is the only hit, so no endpoint row says when it is raised), against
 WF-699 B9's claim (`:64`, and the §3 row at `:112`) that it is raised at save. That is **not**
 "never named". The defect is a code without an owner, set against a workflow that gives it a
-raise point which FR-227 (`03:115`, RL-1564) assigns to `RATING_TYPE_MISMATCH`. It is FD 8263
+raise point which FR-227 (`03:115`, RL-1564) assigns to `RATING_TYPE_MISMATCH`. It is FD-1954
 (Findings, below).
 
 ### §5d. FR-230 by limb, against PL-1546's row
@@ -437,7 +437,7 @@ delegation) ruled them; the lead's verdict pack is the source of the contents.
 
 | # | Owed | Owner | Date | Discharged by |
 |---|---|---|---|---|
-| (1) | **One docs PR, lane C:** FD-1656's docstring correction (three sites, §5b); the closing acts for SL-1551, SL-1552, SL-1553, SL-1554 and SL-1938, and LG-1902, LG-1933 and LG-1939; RL-1909's four edits applied in `03` (FD 8262); PL-1546 item 3 (one `// FR-xxx` naming line per frontend test, **or** the item amended by a dated line to say the behaviour is tested under the slice's LG) and item 5; and FD 8264's typed-cursor proof re-run on genuinely broken input | the lead (lead 28) | Tue 27 Oct 2026 | that docs PR |
+| (1) | **One docs PR, lane C:** FD-1656's docstring correction (three sites, §5b); the closing acts for SL-1551, SL-1552, SL-1553, SL-1554 and SL-1938, and LG-1902, LG-1933 and LG-1939; RL-1909's four edits applied in `03` (FD-1953); PL-1546 item 3 (one `// FR-xxx` naming line per frontend test, **or** the item amended by a dated line to say the behaviour is tested under the slice's LG) and item 5; and FD-1955's typed-cursor proof re-run on genuinely broken input | the lead (lead 28) | Tue 27 Oct 2026 | that docs PR |
 | (2) | **FD-1585 fix** (the two diff routes answer `RATE_TABLE_MISS`; register `docs/findings/register.md:334`, "The existing rate-table diff routes answer 404 `RATE_TABLE_MISS` …") | WK-675 | Wed 28 Oct 2026 | a gated code slice from `main` |
 | (3) | **FD-1652's stored-data query** (the two read-only `jsonb_typeof` counts; register `docs/findings/register.md:347`) | WK-675 | the next DB window, by Wed 28 Oct 2026 | the counts quoted in FD-1652's register row |
 | (4) | **NFR-463 deferred:** one `accessibility-tester` pass over the six P2 views | WK-675 | Mon 3 Nov 2026 (before the docs freeze) | the measurement lines in the CR addendum |
@@ -500,9 +500,9 @@ form only (never minted here):
 
 | Candidate | Working id | Essay | Severity (proposed; the lead decides) |
 |---|---|---|---|
-| 1. RL-1909's four obliged edits never applied | FD 8262 | `docs/findings/FD-08262-rl-1909-s-four-obliged-edits-were-never-applied-so-oq-1901-reads-open-in-both-mirrors.md` | MEDIUM |
-| 4. WF-699 B9 vs FR-227 | FD 8263 | `docs/findings/FD-08263-wf-699-b9-says-monetary-float-refused-at-save-where-fr-227-refuses-with-rating-type-mismatch-and-no-5x-row-owns-the-code.md` | LOW |
-| the typed cursor's only red (§3) | FD 8264 | `docs/findings/FD-08264-the-regression-run-typed-cursor-has-only-a-red-by-absence-of-the-route-so-its-refusal-has-never-been-shown-failing.md` | MEDIUM |
+| 1. RL-1909's four obliged edits never applied | FD-1953 | `docs/findings/FD-01953-rl-1909-s-four-obliged-edits-were-never-applied-so-oq-1901-reads-open-in-both-mirrors.md` | MEDIUM |
+| 4. WF-699 B9 vs FR-227 | FD-1954 | `docs/findings/FD-01954-wf-699-b9-says-monetary-float-refused-at-save-where-fr-227-refuses-with-rating-type-mismatch-and-no-5x-row-owns-the-code.md` | LOW |
+| the typed cursor's only red (§3) | FD-1955 | `docs/findings/FD-01955-the-regression-run-typed-cursor-has-only-a-red-by-absence-of-the-route-so-its-refusal-has-never-been-shown-failing.md` | MEDIUM |
 
 Candidates 2 and 3 (the unclosed lane-C records; LG-1881's gate line) are process-backlog rows, not
 FDs. A third process-backlog row, not among the candidates, is disclosed in the Verdict (the
@@ -568,7 +568,7 @@ the open owned findings, the slice closing acts, RL-1909's unapplied edits, PL-1
 and 5, and the fresh gate. The owners and dates are in §5e.
 
 **Close statement.** Re-presented as a CR addendum when owed rows (1)–(3) and (5) of §5e have
-landed. The WK-675 row stays "close audit filed (CR 8261), acceptance owed" until the user's dated
+landed. The WK-675 row stays "close audit filed (CR-1952), acceptance owed" until the user's dated
 acceptance line. This record does not write "closed" on that row.
 
 **Disclosure: the INDEX regeneration shows PL-1368 as closed.** `docs/INDEX.md` is generated, and
