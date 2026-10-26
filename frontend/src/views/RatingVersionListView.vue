@@ -233,6 +233,13 @@ function pinnedTables(version: RatingVersion) {
                   Dislocation
                 </RouterLink>
                 <RouterLink
+                  :to="`/rating/${version.slug}/v/${version.version}/tests`"
+                  :aria-label="`Tests ${version.slug}@${version.version}`"
+                  class="inline-block py-1 text-sky-700 underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-700"
+                >
+                  Tests
+                </RouterLink>
+                <RouterLink
                   v-for="table in pinnedTables(version)"
                   :key="table.label"
                   :to="`/rating/${version.slug}/v/${version.version}/tables/${table.slug}`"

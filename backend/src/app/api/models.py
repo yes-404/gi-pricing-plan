@@ -101,6 +101,7 @@ from model_schema import (
     RatingVersion,
     RatingVersionCreate,
     RegressionRun,
+    RegressionRunSummary,
     Slug,
     SpecValidation,
     TransparencyArtifact,
@@ -1353,6 +1354,35 @@ async def start_regression_run(
         response.status_code = status.HTTP_202_ACCEPTED
         response.headers["Location"] = f"/api/v1/jobs/{job.id}"
         return job
+
+
+@router.get(
+    "/rating-versions/{rating_version_id}/regression-runs",
+    summary="List a rating version's regression runs",
+    responses=problems(400, 401, 403, 404, 422),
+)
+async def list_regression_runs(
+    rating_version_id: UUID,
+    caller: Annotated[Caller, Depends(requires(Perm.RATING_READ))],
+    database: DatabaseDep,
+    cursor: str | None = None,
+    limit: Annotated[int, Query(ge=1, le=MAX_LIMIT)] = DEFAULT_LIMIT,
+) -> Page[RegressionRunSummary]:
+    """**200** with a page of run summaries, newest first (`finished_at` desc, `id` desc;
+    `03` §5.1, FR-1932). A summary carries no results and no case-log reference — those are
+    read per run (FR-1221). **404** for a version outside the caller's workspace; **400**
+    `VALIDATION_FAILED` for a cursor that is not a run of this version."""
+    async with database.session() as session:
+        await rating_versions_service.load_rating_version(
+            session, workspace_id=caller.workspace_id, rating_version_id=rating_version_id
+        )
+        return await regression_runs_service.list_runs(
+            session,
+            workspace_id=caller.workspace_id,
+            rating_version_id=rating_version_id,
+            cursor=cursor,
+            limit=limit,
+        )
 
 
 async def _load_run(
