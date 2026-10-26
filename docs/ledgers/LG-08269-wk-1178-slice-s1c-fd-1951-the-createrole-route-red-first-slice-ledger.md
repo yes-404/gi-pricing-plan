@@ -178,7 +178,7 @@ Pending (the S1c auditor).
 
 ### Build log
 
-Commits on `draft/s1c-fd1951` from base `7ed5c398333aa24432bd9917bd204f7b540fb39c`: `e905ada9` tests-only (the reds' commit, base code); `037311cc` the startup checks and the SQL; `6fe1d8c4` the FR-101 test (Q1); then the FR-44 line and this ledger.
+Commits on `draft/s1c-fd1951` from base `7ed5c398333aa24432bd9917bd204f7b540fb39c`: `e905ada9` tests-only (the reds' commit, base code); `2ccb1893` the startup checks (`P_OWN`, `CAN_SET_REPLICATION_ROLE`, the grant map reads PUBLIC); `037311cc` the SQL (the greens ran at this head); `6fe1d8c4` the FR-101 test (Q1); then the FR-44 line and this ledger.
 
 ## PRs
 
