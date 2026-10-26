@@ -61,6 +61,7 @@ from model_schema.modelling import (
 from model_schema.perils import LargeLossKind, PerilMethod, PerilStructure
 from model_schema.rating import RatingAlgorithm, RatingModelCallStep
 from pricing_core.modelling.errors import ModellingError
+from pricing_core.modelling.factors import required_model_inputs
 from pricing_core.modelling.gbm import GbmFitError, load_gbm_booster, predict_gbm
 from pricing_core.modelling.predict import (
     PredictionError,
@@ -595,6 +596,32 @@ def _step_model_refs(step: RatingModelCallStep, payloads: Mapping[str, Any]) -> 
     return [str(ref) for ref in peril_component_refs(structure)]
 
 
+def _required_slugs(
+    step: RatingModelCallStep,
+    payloads: Mapping[str, Any],
+    glm_scorers: Mapping[str, _GlmScorer],
+) -> frozenset[str]:
+    """The feature slugs the models a step scores require (`required_model_inputs`, FR-240).
+
+    The definition `check_model_call_coverage` completes the `feature_map` against at compile;
+    the handler tests the same slugs for presence at score. A GLM's Factors come from its
+    scorer, a GBM scores with none (`feature_order` alone). A pin the Bundle does not carry
+    contributes none: `load_bundle` refuses that elsewhere.
+    """
+    ref_of_step = step.model_ref or step.peril_structure_ref
+    if ref_of_step is None or str(ref_of_step) not in payloads:
+        return frozenset()
+    required: set[str] = set()
+    for ref in _step_model_refs(step, payloads):
+        if ref not in payloads:
+            continue
+        fit_result = payloads[ref].get("fit_result") or {}
+        scorer = glm_scorers.get(ref)
+        factors = scorer.factors if scorer is not None else ()
+        required.update(required_model_inputs(factors, fit_result.get("feature_order", ())))
+    return frozenset(required)
+
+
 def _predict_model(
     step: RatingModelCallStep,
     ref_str: str,
@@ -746,6 +773,11 @@ def _model_call_handler(
         if isinstance(step, RatingModelCallStep)
     }
 
+    required_by_step = {
+        step_id: _required_slugs(step, payloads, glm_scorers)
+        for step_id, step in steps_by_id.items()
+    }
+
     def handler(request: Any) -> dict[str, Any]:
         step = steps_by_id[request.node["id"]]
         context = {k: v for k, v in request.input.items() if k != "$nodes"}
@@ -755,6 +787,22 @@ def _model_call_handler(
                 step, f"model_call step {step.step_id!r} pins nothing.", context
             )
         ref_str = str(ref)
+        # FD-1610 limb 2 (c): a `feature_map` name the context lacks that feeds a required model
+        # input is refused, not scored on a short row (the maintainer's (by delegation) entries
+        # "2026-10-25 11:40:12 GMT" and "2026-10-25 11:53:23 GMT"). The message names the step
+        # and the graph names, never a quote value (NFR-499).
+        absent = sorted(
+            name
+            for name, slug in step.feature_map.items()
+            if name not in context and slug in required_by_step[step.step_id]
+        )
+        if absent:
+            return _model_call_failure(
+                step,
+                f"MODEL_CALL_REQUIRED_INPUT_ABSENT: step {step.step_id!r} maps {absent} onto "
+                "a required model input, and the scoring context holds no such name (FR-222)",
+                context,
+            )
         feature_row = {
             feature_slug: context[graph_name]
             for graph_name, feature_slug in step.feature_map.items()

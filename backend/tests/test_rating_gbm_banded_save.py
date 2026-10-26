@@ -1,5 +1,5 @@
-"""The save check refuses a `model_call` that pins a GBM fitted on a banded or grouped Factor
-(SL 8071; FD 8073 (to be filed after the probe run); FR-222 as amended 2026-10-16).
+"""The save check refuses a `model_call` that pins a GBM fitted on a transformed (non-IDENTITY)
+Factor (SL 8071; FD 8073 (to be filed after the probe run); FR-222 as amended 2026-10-16).
 
 `check_model_call_feature_maps` runs at `POST /api/v1/rating-algorithms`, `POST
 /api/v1/sub-graphs` and `POST /api/v1/sub-graphs/{slug}/versions`; the three share it, so it is
@@ -38,6 +38,7 @@ CODE = "MODEL_CALL_GBM_TRANSFORMED_FACTOR"
 
 def _factor(slug: str, column: str, kind: FactorType) -> Factor:
     return Factor(
+        expression=column if kind is FactorType.EXPRESSION else None,
         id=uuid4(), slug=slug, dataset_id=DATASET, version=1, type=kind,
         source_columns=(column,),
         banding_id=uuid4() if kind is FactorType.BANDING else None,
@@ -143,6 +144,19 @@ async def test_a_grouped_factor_is_refused_at_save(monkeypatch: pytest.MonkeyPat
         await _check(_gbm_row((group,)), _step({"area": "area_group"}))
     assert caught.value.code == CODE
     assert "grouping" in caught.value.detail
+
+
+@pytest.mark.req("FR-222")
+async def test_an_expression_factor_is_refused_at_save(monkeypatch: pytest.MonkeyPatch) -> None:
+    """S4 (FD-1754): every non-IDENTITY type is refused, the message naming the cause."""
+    expr = _factor("age_sq", "driver_age", FactorType.EXPRESSION)
+    _serve(monkeypatch, (expr,))
+    with pytest.raises(PlatformError) as caught:
+        await _check(_gbm_row((expr,)), _step({"driver_age": "age_sq"}))
+    assert caught.value.code == CODE
+    assert caught.value.status_code == 422
+    assert caught.value.title == "A model_call cannot score a GBM fitted on transformed Factors"
+    assert "age_sq (expression)" in caught.value.detail
 
 
 @pytest.mark.req("FR-222")
