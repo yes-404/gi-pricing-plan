@@ -35,3 +35,51 @@ Filed by the retro audit RS-1649. Reads are at the squash-merge `372fa92a` (PR #
 Required by the maintainer's condition, `to-lead.md` "2026-10-11 20:17:38 BST" item 4: "each retro FD names its DISCHARGE PATH and date, not only an owner, so \"delivered-but-untested\" is closed by a TEST that runs, before the P2 close".
 
 Measure on the dev database, read-only, `select count(*) … where jsonb_typeof(...) <> 'string'` over the stored `rows` and `default_row` values PL-1558 names, and record the count in this FD. If non-zero, it becomes a fix row under WK-675. Date, accepted by the lead: the first free window, no later than Fri 2026-10-23, and before the P2 exit demo, Thu 2026-11-12.
+
+## 2026-10-26 15:00 UTC — the stored-data counts (window granted to-lead 14:44:23 (c))
+
+Tree: `origin/main` = `7ed5c398333aa24432bd9917bd204f7b540fb39c`. Run on database `gipricing` in container `gi-pricing-postgres-1`, read-only (`PGOPTIONS='-c default_transaction_read_only=on'`), at `now()` = `2026-10-26 15:00:09.813219+00`. Log: `~/gi-pricing-plan.local/scratch/fd1652/window.log` (local, not in the repository).
+
+**Finding: measured, denominators 0: VACUOUS, NOT a discharge.** Every count is 0, but the database holds no rate-table rows to count over.
+
+Exact SQL, one transaction:
+
+```sql
+BEGIN;
+SET TRANSACTION READ ONLY;
+SET LOCAL statement_timeout = '30s';
+SELECT now(), current_database(), (SELECT version_num FROM alembic_version) AS alembic_head;
+SELECT storage, count(*) FROM rate_table_versions GROUP BY storage ORDER BY storage;
+SELECT count(*) AS cells FROM rate_table_cells;
+SELECT count(*) AS q1_default_row_nonstring FROM rate_table_versions
+ WHERE jsonb_typeof(definition->'default_row') = 'object'
+   AND EXISTS (SELECT 1 FROM jsonb_each(definition->'default_row') e
+               WHERE jsonb_typeof(e.value) <> 'string');
+SELECT count(*) AS q1b_default_row_bad_shape FROM rate_table_versions
+ WHERE definition ? 'default_row'
+   AND jsonb_typeof(definition->'default_row') NOT IN ('object', 'null');
+SELECT count(*) AS q2_cell_value_nonstring FROM rate_table_cells
+ WHERE jsonb_typeof(value) <> 'string';
+SELECT count(*) AS q3_cell_key_nonstring FROM rate_table_cells c
+ WHERE EXISTS (SELECT 1 FROM jsonb_array_elements(c.key) k
+               WHERE jsonb_typeof(k) <> 'string');
+ROLLBACK;
+```
+
+| Query | Result |
+|---|---|
+| `rate_table_versions` by `storage` | 0 rows (no versions at all) |
+| `rate_table_cells` count | 0 |
+| Q1 `default_row` non-string | 0 |
+| Q1b `default_row` bad shape | 0 |
+| Q2 cell value non-string | 0 |
+| Q3 cell key element non-string (planner-added) | 0 |
+| `alembic_version` | `d4e81b7a2c95` |
+
+**Cause.** `gipricing` is the migrations-only template database, never seeded (`.claude/skills/dev-commands/SKILL.md:90` at `origin/main`): it carries no stored rate-table data, so 0 over 0 rows says nothing about the retype. The "dev database" this finding names with stored data does not exist on this stack.
+
+**Alembic head mismatch.** The database is at `d4e81b7a2c95`; `origin/main` is ahead of it (`backend/migrations/versions/e7c3a9b15d82_blob_uploads.py` has `Revises: d4e81b7a2c95`). The plan's head check was meant to run before the queries; it ran after them. The order slip is read-only and disclosed here.
+
+**Not reachable by this SQL.** Cells of Parquet-stored versions live in blobs, not in `rate_table_cells`. Here the `storage` denominator is empty, so there are none in this database; against any populated database those cells would not be covered by these counts.
+
+Status unchanged. The discharge question is the auditor's and the maintainer's.
