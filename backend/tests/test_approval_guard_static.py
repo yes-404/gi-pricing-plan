@@ -283,7 +283,36 @@ def test_a_planted_replication_role_statement_is_refused_and_a_docstring_is_not(
 
 @pytest.mark.req("FR-351")
 @pytest.mark.parametrize(
-    "call", ["asyncio.create_task(g())", "asyncio.gather(g())", "loop.run_in_executor(None, g)"]
+    "sql",
+    [
+        "SET session_replication_role = replica",
+        "set local session_replication_role to replica",
+        "SELECT set_config('session_replication_role', 'replica', false)",
+        "ALTER ROLE gip_app_login SET session_replication_role = replica",
+        "ALTER DATABASE gip SET session_replication_role = replica",
+    ],
+)
+def test_every_statement_that_sets_the_replication_role_is_refused(sql: str) -> None:
+    planted = {"backend/src/app/x.py": f"Q = {sql!r}\n"}
+    assert _replication_role_sql(planted) == ["backend/src/app/x.py:1"]
+
+
+@pytest.mark.req("FR-351")
+@pytest.mark.parametrize(
+    "text",
+    [
+        "SELECT has_parameter_privilege(current_user, 'session_replication_role', 'SET')",
+        "the connection may set session_replication_role, which switches the triggers off",
+    ],
+)
+def test_a_read_or_a_message_naming_the_replication_role_is_not_refused(text: str) -> None:
+    planted = {"backend/src/app/x.py": f"Q = {text!r}\n"}
+    assert _replication_role_sql(planted) == []
+
+
+@pytest.mark.req("FR-351")
+@pytest.mark.parametrize(
+    "call", ["asyncio.create_task(g())","asyncio.gather(g())", "loop.run_in_executor(None, g)"]
 )
 def test_a_planted_task_inside_the_block_is_refused(call: str) -> None:
     source = f"async def f(session):\n    async with approval_decision(session):\n        {call}\n"
