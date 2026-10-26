@@ -268,15 +268,15 @@ The WK-675 section's NFR clause names **one NFR: NFR-463**. The predicate `grep 
 
 | Id | What is missing | PROPOSED §13 verdict |
 |---|---|---|
-| FR-1903 | no `@pytest.mark.req` marker. The view is tested in vitest (§1), and the backend list route is tested at `test_rating_versions.py:191-218` without the FR-1903 marker | **delivered, evidenced outside the instrument**. No verdict is needed. A marker on `test_rating_versions.py:191` would make it visible (§0a) |
-| FR-1186 | a rule with no view, tested only by a negative regex (`RateTableEditorView.test.ts:201-205`), which passes on any view that lacks those words | **delivered but untested** (no test can fail if a status appears under another word). Owner WK-675, or accept at the P2 close |
-| FR-24 | an `00` documentation rule. WK-675's part is its "on-node live validation" exception, which is tested | **delivered**. FR-24 is otherwise a docs rule with no WK-675 deliverable. Reassigned to no Work |
-| FR-25 | no marker. `reachability.test.ts:64-88` asserts it statically | **delivered, evidenced outside the instrument** |
-| NFR-463 | see §4 | **deferred with an owner** (WK-675), or the lead accepts the static evidence |
-| FR-230 (view limb) | no frontend seed action, and no test names FR-230 (PL-1546 item 3) | **delivered but untested** for diff vs seed (`RateTableDiffPanel.vue:145`). The seed action itself has no view: **not started** if the lead reads FR-230 as owing one, or reassigned to no view if the lead reads it as API-only (WF-699 A2 seeds over HTTP) |
-| FR-214, FR-227, FR-212 on-node cycle and orphan display | the UI shows no declared outputs. Type mismatch and cycle on a node are untested in the UI | **delivered but untested** (the UI limb), owner WK-675 |
-| FR-1932 truncated notice and page cap | no test | **delivered but untested**, owner WK-675 |
-| FR-217 / FR-218 / FR-260 / FR-261, by name | the behaviour is tested, but no frontend test names the id (PL-1546 item 3) | **delivered**. Item 3 is not met as written: one comment line per test, or the lead accepts |
+| FR-1903 | no `@pytest.mark.req` marker. The view is tested in vitest (§1), and the backend list route is tested at `test_rating_versions.py:191-218` without the FR-1903 marker | **delivered, evidenced outside the instrument**. No verdict is needed. A marker on `test_rating_versions.py:191` would make it visible (§0a). **LEAD VERDICT (to-lead 10:54:44 adopted): delivered** (vitest asserts, outside the marker instrument) |
+| FR-1186 | a rule with no view, tested only by a negative regex (`RateTableEditorView.test.ts:201-205`), which passes on any view that lacks those words | **delivered but untested** (no test can fail if a status appears under another word). Owner WK-675, or accept at the P2 close. **LEAD VERDICT (to-lead 10:54:44 adopted): delivered but untested** (the negative-regex test cannot fail). Owner WK-675 |
+| FR-24 | an `00` documentation rule. WK-675's part is its "on-node live validation" exception, which is tested | **delivered**. FR-24 is otherwise a docs rule with no WK-675 deliverable. Reassigned to no Work. **LEAD VERDICT (to-lead 10:54:44 adopted): delivered** (on-node live validation tested; otherwise a docs rule) |
+| FR-25 | no marker. `reachability.test.ts:64-88` asserts it statically | **delivered, evidenced outside the instrument**. **LEAD VERDICT (to-lead 10:54:44 adopted): delivered** (vitest asserts; outside the marker instrument) |
+| NFR-463 | see §4 | **deferred with an owner** (WK-675), or the lead accepts the static evidence. **LEAD VERDICT (to-lead 10:54:44 adopted): deferred with an owner: WK-675**, one `accessibility-tester` pass over the six views by Mon 3 Nov 2026 (before the docs freeze); the measurement lines go into the CR addendum |
+| FR-230 (view limb) | no frontend seed action, and no test names FR-230 (PL-1546 item 3) | **delivered but untested** for diff vs seed (`RateTableDiffPanel.vue:145`). The seed action itself has no view: **not started** if the lead reads FR-230 as owing one, or reassigned to no view if the lead reads it as API-only (WF-699 A2 seeds over HTTP). **LEAD VERDICT (to-lead 10:54:44 adopted): by limb, against PL-1546's FR-230 row quoted verbatim in §5d.** Diff-vs-seed: **delivered but untested**, owner WK-675. Seed action: **reassigned** to the owner of the seed endpoint (the API), because the quoted row assigns WK-675 no seed view. See §5d |
+| FR-214, FR-227, FR-212 on-node cycle and orphan display | the UI shows no declared outputs. Type mismatch and cycle on a node are untested in the UI | **delivered but untested** (the UI limb), owner WK-675. **LEAD VERDICT (to-lead 10:54:44 adopted): delivered but untested** (FR-214, FR-227, FR-212 on-node display; the UI limb) |
+| FR-1932 truncated notice and page cap | no test | **delivered but untested**, owner WK-675. **LEAD VERDICT (to-lead 10:54:44 adopted): delivered but untested** (truncated notice and page cap) |
+| FR-217 / FR-218 / FR-260 / FR-261, by name | the behaviour is tested, but no frontend test names the id (PL-1546 item 3) | **delivered**. Item 3 is not met as written: one comment line per test, or the lead accepts. **LEAD VERDICT (to-lead 10:54:44 adopted): delivered.** PL-1546 item 3 is not met by name, so it goes to the owed list (§5b, owed row 1) |
 
 **The §5 retrofit-impossible list.** WK-675 is a frontend Work, and `docs/roadmap.md` §5's items
 are invariants it consumes. "No hand-written API shape": `frontend/src/api/generated` is
@@ -372,7 +372,7 @@ one disagreement).
 | WF-699 | B6 | FR-212 | still says it |
 | WF-699 | B7 | FR-217 | still says it |
 | WF-699 | B8 | FR-226 | still says it |
-| WF-699 | **B9** (and the §3 row at `:112`) | **FR-227** | **disagrees**. B9 (`WF-00699…md:64`) says a `money_minor` times a float-typed value "is refused: `MONETARY_FLOAT_REFUSED`" at save. FR-227 (`03:115`, amended 2026-10-17 by RL-1564) closes `money_minor` both ways at save and refuses every other pair with **`RATING_TYPE_MISMATCH`**. Its closed type list has no float type, and no `03` requirement row says when `MONETARY_FLOAT_REFUSED` (registered at `03:1136`) is raised |
+| WF-699 | **B9** (and the §3 row at `:112`) | **FR-227** | **disagrees**. B9 (the WF-699 file, line `:64`) says a `money_minor` times a float-typed value "is refused: `MONETARY_FLOAT_REFUSED`" at save. FR-227 (`03:115`, amended 2026-10-17 by RL-1564) closes `money_minor` both ways at save and refuses every other pair with **`RATING_TYPE_MISMATCH`**. Its closed type list has no float type, and no `03` requirement row says when `MONETARY_FLOAT_REFUSED` (registered at `03:1136`) is raised |
 | WF-699 | D1 to D5 | FR-260, FR-261 | still says it |
 | WF-699 | D6 to D8 | FR-263, FR-264, FR-266 | still says it |
 | WF-699 | §3 `:111` | FR-212 | still says it. The row gives only `RATING_GRAPH_CYCLIC` for "a cycle or an unresolved reference", where `03` also registers `RATING_GRAPH_UNRESOLVED_REF`. FR-212 names no code, so this is not a disagreement with FR-212 |
@@ -385,6 +385,79 @@ one disagreement).
 
 The one disagreement is an FD candidate (Findings 4). Which side is wrong is `CLAUDE.md` §0's
 question.
+
+**Correction to the B9 row, 2026-10-26 10:57 GMT (lead verdict, to-lead "2026-10-26 10:54:44
+GMT", and the lead's correction in `from-lead-2026-10-09.md`, "2026-10-26 10:55:24 GMT").** The
+lead's first pack said `03` has 0 hits for `MONETARY_FLOAT_REFUSED`. That was a misreading, and
+the count is corrected here with its predicate, at `1e0a8abb` (the tree this record is cut from):
+
+```bash
+git -C <wt> grep -c MONETARY_FLOAT_REFUSED -- docs/specs/03-rating-engine.md
+# docs/specs/03-rating-engine.md:1
+git -C <wt> grep -n MONETARY_FLOAT_REFUSED -- docs/specs/03-rating-engine.md | cut -d: -f1,2
+# docs/specs/03-rating-engine.md:1136
+```
+
+The one hit is `03:1136`, the error-code enumeration. The code is also defined in the backend:
+`backend/src/app/errors.py:323` is the line `        "MONETARY_FLOAT_REFUSED",` inside
+`RATING_ERROR_CODES`. **Reclassified:** the code is enumerated in `03`, but **no §5.x row owns it**
+(the enumeration at `:1136` is the only hit, so no endpoint row says when it is raised), against
+WF-699 B9's claim (`:64`, and the §3 row at `:112`) that it is raised at save. That is **not**
+"never named". The defect is a code without an owner, set against a workflow that gives it a
+raise point which FR-227 (`03:115`, RL-1564) assigns to `RATING_TYPE_MISMATCH`. It is FD 8263
+(Findings, below).
+
+### §5d. FR-230 by limb, against PL-1546's row
+
+The FR (`03:123`) says a rate table can be seeded from a Model and that subsequent manual edits are
+diffed against that seed. It names no view. PL-1546's FR-230 row, quoted verbatim from
+`docs/plans/PL-01546-wk-675-slices-5-to-11-work-plan-delta.md:146` (the only table row of that
+plan that carries FR-230; line 230 is the self-review list of ids):
+
+```text
+| 1 | SL-1547 — S5: Editor II: diff shading, bulk, import, export | `PL-1286` S5 row, plus R5.1–R5.3 | `03` §3.3: FR-230, FR-231, FR-232, FR-233, FR-235; `00`: FR-25; NFR-463; register F-W10-1, F-W10-2 (view limb) | S4 closed; **OQ-1223 decided** (DP-3); `SL-1391` (closed, met); the FD-1366 bulk-operation typing slice (WK-1178) merged | at GO | 1 | no |
+```
+
+The row it cites, `PL-1286:307` (S5), reads "Diff-vs-previous and diff-vs-seed **shading** (FR-230,
+FR-231)". The row's slice title is "diff shading, bulk, import, export". **The quoted row assigns WK-675
+a diff shading, and no seed view or seed action.**
+
+| Limb | Verdict (lead, to-lead 10:54:44, adopted) | Evidence |
+|---|---|---|
+| Diff vs seed | **delivered but untested.** Owner WK-675; the test is owed at the P2 close, or in the sibling of the Tue 27 Oct docs PR | `frontend/src/components/rating/RateTableDiffPanel.vue:145` is `          <option value="seed">`, the diff-against-seed choice; no frontend test names FR-230 |
+| Seed action (seed a rate table from a Model) | **reassigned** to the owner of the seed endpoint, the API (`backend/src/app/api/rate_tables.py:100`, the seed route, §1 above). **Not "not started" against WK-675**, because the quoted row does not assign WK-675 a seed view | the quoted row (above) names shading, bulk, import and export for S5; `git grep -n -i -E 'seed-from-model\|seedFromModel\|seed_from_model' -- frontend/src` (excluding `generated/`) prints nothing, which is consistent with a row that never asked for it. WF-699 A2 seeds over HTTP |
+
+The reading is the quoted row's. If a later ruling reads FR-230 as owing a seed view to WK-675,
+the seed-action limb becomes **not started**.
+
+### §5e. The owed list, RULED (to-lead "2026-10-26 10:54:44 GMT")
+
+Five rows, each with an owner, a date and the artifact that discharges it. The maintainer (by
+delegation) ruled them; the lead's verdict pack is the source of the contents.
+
+| # | Owed | Owner | Date | Discharged by |
+|---|---|---|---|---|
+| (1) | **One docs PR, lane C:** FD-1656's docstring correction (three sites, §5b); the closing acts for SL-1551, SL-1552, SL-1553, SL-1554 and SL-1938, and LG-1902, LG-1933 and LG-1939; RL-1909's four edits applied in `03` (FD 8262); PL-1546 item 3 (one `// FR-xxx` naming line per frontend test, **or** the item amended by a dated line to say the behaviour is tested under the slice's LG) and item 5; and FD 8264's typed-cursor proof re-run on genuinely broken input | the lead (lead 28) | Tue 27 Oct 2026 | that docs PR |
+| (2) | **FD-1585 fix** (the two diff routes answer `RATE_TABLE_MISS`; register `docs/findings/register.md:334`, "The existing rate-table diff routes answer 404 `RATE_TABLE_MISS` …") | WK-675 | Wed 28 Oct 2026 | a gated code slice from `main` |
+| (3) | **FD-1652's stored-data query** (the two read-only `jsonb_typeof` counts; register `docs/findings/register.md:347`) | WK-675 | the next DB window, by Wed 28 Oct 2026 | the counts quoted in FD-1652's register row |
+| (4) | **NFR-463 deferred:** one `accessibility-tester` pass over the six P2 views | WK-675 | Mon 3 Nov 2026 (before the docs freeze) | the measurement lines in the CR addendum |
+| (5) | **A fresh full gate** on gate-1b at this record's head, after S1b's END | the lead | after S1b's END | the END row, below |
+
+```text
+gate END: <pending — lead>
+```
+
+**Register rows cited by line, because an id token does not always resolve a row** (`grep -n
+'<id>' docs/findings/register.md`, at the tree of `44d58c44`): FD-1585 is cited by
+`docs/findings/register.md:334` and its title above (it does not resolve by `(FD-1585)` or
+`**FD-1585**`; the FD-1754 lesson). The others resolve by the token and are given by line:
+F-W10-3 `:67`; FD-1283 `:216`, `:217`; FD-1284 `:217`; FD-1335 `:228`, `:286`, `:287`, `:363`;
+FD-1366 `:287`; FD-1437 `:304`; FD-1652 `:347`; FD-1656 `:352`; FD-1936 `:420`; FD-1611 `:341`.
+
+**Process backlog (owned by no id).** The three process rows are in `docs/process/process-backlog.md`
+(the lean-P2 list of RFC-1506 P6, 8 Oct), dated 2026-10-26: the unclosed lane-C SL and LG
+records (including LG-1939's missing `slice:` and its working-id filename); LG-1881's missing
+gate-of-record line; and the doc-index leaf-plan flip (below).
 
 ## Findings
 
@@ -403,6 +476,23 @@ question.
    amended 2026-10-17, RL-1564) refuses with `RATING_TYPE_MISMATCH`** (§5c).
 
 Not new: FD-1585, FD-1652 and FD-1656 are open, owned by WK-675, and block this close (§5b).
+
+**Dated amendment 2026-10-26 10:57 GMT: dispositions, ruled in to-lead "2026-10-26 10:54:44
+GMT".** Three FD candidates are accepted as findings with essays and register rows, in working-id
+form only (never minted here):
+
+| Candidate | Working id | Essay | Severity (proposed; the lead decides) |
+|---|---|---|---|
+| 1. RL-1909's four obliged edits never applied | FD 8262 | `docs/findings/FD-08262-rl-1909-s-four-obliged-edits-were-never-applied-so-oq-1901-reads-open-in-both-mirrors.md` | MEDIUM |
+| 4. WF-699 B9 vs FR-227 | FD 8263 | `docs/findings/FD-08263-wf-699-b9-says-monetary-float-refused-at-save-where-fr-227-refuses-with-rating-type-mismatch-and-no-5x-row-owns-the-code.md` | LOW |
+| the typed cursor's only red (§3) | FD 8264 | `docs/findings/FD-08264-the-regression-run-typed-cursor-has-only-a-red-by-absence-of-the-route-so-its-refusal-has-never-been-shown-failing.md` | MEDIUM |
+
+Candidates 2 and 3 (the unclosed lane-C records; LG-1881's gate line) are process-backlog rows, not
+FDs. A third process-backlog row, not among the candidates, is disclosed in the Verdict (the
+doc-index leaf-plan flip). The register has no severity scale in its README (`grep -n -i
+severity docs/findings/README.md` prints nothing); the severities follow the register's
+usage: HIGH when a price or data is wrong, MEDIUM when a wrong merge, a false green or a wrong
+governance record is let through, LOW when nothing of that kind moves.
 
 ## Replan check (`CLAUDE.md` §14, `RFC-1248`)
 
@@ -436,6 +526,11 @@ resolution marker).
 the full review before the P2 exit demo, on two conditions: the lead names an owner and a date
 for FD-1585, FD-1652 and FD-1656, and for the slice closing acts. **The verdict is the lead's.**
 
+**Replan check: ADOPTED (lead, to-lead "2026-10-26 10:54:44 GMT").** Q1 yes, Q2 no, Q3 yes,
+Q4 yes, Q5 no; "exit criterion at risk" FIRED; no second full review: CR-1907 is the
+`CLAUDE.md` §14 review before the exit demo (#1390, merged 2026-10-26 at 00:01) and covers it. The fired trigger's
+resolution is the owners and dates of §5e.
+
 ## Verdict
 
 PROPOSED: **not ready for acceptance at `1e0a8abb`.** The deliverables exist and work. Each of the
@@ -449,3 +544,18 @@ every lane-C slice's gate STANDS with green PR CI. The close is still blocked by
 5. the fresh full gate (OWED, gate-1b after S1b's END).
 
 The §5 verdicts are proposals. **The close itself is the user's dated line.**
+
+**LEAD VERDICT (to-lead "2026-10-26 10:54:44 GMT", adopted by the maintainer (by delegation)):
+not ready for acceptance at `1e0a8abb`.** The deliverables exist and work; the close is blocked by
+the open owned findings, the slice closing acts, RL-1909's unapplied edits, PL-1546 items 3
+and 5, and the fresh gate. The owners and dates are in §5e.
+
+**Close statement.** Re-presented as a CR addendum when owed rows (1)–(3) and (5) of §5e have
+landed. The WK-675 row stays "close audit filed (CR 8261), acceptance owed" until the user's dated
+acceptance line. This record does not write "closed" on that row.
+
+**Disclosure: the INDEX regeneration shows PL-1368 as closed.** `docs/INDEX.md` is generated, and
+`scripts/doc-index.py` derives a WK-675 leaf plan as closed once any `CR-` record with
+`work: WK-675` exists. This record is such a record. **That is not an acceptance** of WK-675, and
+it is not hand-edited (the INDEX is generated). It is a process-backlog row
+(`docs/process/process-backlog.md`).
