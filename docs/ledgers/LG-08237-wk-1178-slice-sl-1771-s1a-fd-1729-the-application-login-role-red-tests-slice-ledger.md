@@ -262,3 +262,5 @@ merge-base(c0828e24, 58fdb69f) = 3cd5fcf7ee514db1ae8ab681d7cacc1761945091 — 68
 S1a-5 journey: the full WF-699 journey ran on the login DSN in this gate's demo stage (rc 0, 881 s) — closes S1a-5's journey point.
 
 Audit: RS 8257 (aud-s1a, @afa4ed24) proposed CLEAN, ADOPTED CLEAN by the lead; accepted at to-lead 2026-10-26 03:34:59 GMT; N1–N4 as ruled.
+
+- 2026-10-26 — RS 8257 lint-only edit by the lead, commit 91ec789f (to-lead "2026-10-26 03:42:59 GMT", the RS-1930:38 precedent): three citation tokens only — "essay `FD-08256-…`" → "essay (the FD 8256 file)" (:70), "<LG-08237>" → "<the LG 8237 file>" (:79), "Ruling 23:10:31 (iv)" → "The ruling at to-lead "2026-10-25 23:10:31 GMT" (iv)" (:82); the auditor's content is unchanged; quote-parity 2f1b0f0c..91ec789f rc=0. The RS blob of record for the aud-s1a fold check is afa4ed24's (95deb03a).
