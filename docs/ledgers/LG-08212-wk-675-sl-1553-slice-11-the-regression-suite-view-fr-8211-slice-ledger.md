@@ -86,11 +86,13 @@ Nothing below is run at drafting. "Red" is proven at the slice's GO under a DB w
 
 ### Gate
 
-Not run (draft).
+Gate of record, recorded 2026-10-26 02:35:15 GMT (exec-mint1553): full code gate at `57bf2fbba9dc70084dcbfa889b02ea29c6e56493` (`scratch/sl1553-gate1b/gate/`, first line of `gate.log` `START head: 57bf2fbba9dc70084dcbfa889b02ea29c6e56493`): END rc=1, parts python 1 / fe 0 / demo 0 / restore rc_kc 0. Rc files: audit_docs.rc=1, contracts.rc=0, import_linter.rc=0, mypy.rc=1, pytest.rc=1, req_coverage.rc=0, ruff.rc=0. Pytest summary line: `13 failed, 6899 passed, 21 skipped, 5 xfailed, 147 warnings in 2949.22s (0:49:09)`; the 13 failures are exactly the docs-audit set (test_audit_docs_finding_citations 1, test_audit_docs_ids 2, test_audit_docs_process_core_digest 2, test_audit_docs_w37_11_ceiling 1, test_doc_index 1, test_register_lint 3, test_register_owed 1, test_repository_invariants 2). audit_docs FAILED (2): check 31 `gap in the full allocation between 1904 and 8211`; check 32 `line 14 of the ledger: RL 8217 does not resolve in docs/INDEX.md` (hyphen form in the log). mypy RED, `Found 2 errors in 1 file (checked 250 source files)` (`backend/src/app/platform/regression_runs.py:125`, two arg-type errors on `tuple_`). RED on mypy only (to-lead "2026-10-26 01:06:59 GMT"); fix `eb269d53` under the extended exception; EXCEPTION MET, the 57bf2fbb gate stands for 08ae3a72 (to-lead "2026-10-26 01:14:30 GMT").
+
+The delta 57bf2fbb..08ae3a72 (`git diff --stat 57bf2fbb 08ae3a72`): 5 paths, 51 insertions, 4 deletions: `backend/src/app/api/models.py` (2), `backend/src/app/platform/regression_runs.py` (7), `backend/tests/test_contracts.py` (27), `docs/contracts/openapi/generated.json` (15), this ledger (4).
 
 ### Audit
 
-Not yet.
+RS 8253 (aud-1553b, @2b36b044) proposed NOT-CLEAN on F1, accepted 2026-10-25 23:40:16 GMT; delta addendum at 08ae3a72 (@0771a8eb) proposed CLEAN, ADOPTED CLEAN by the lead; accepted at to-lead 2026-10-26 02:32:54 GMT. Folded into this branch 2026-10-26 02:35:15 GMT (exec-mint1553).
 
 ### Build log
 
