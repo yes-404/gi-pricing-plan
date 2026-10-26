@@ -1662,6 +1662,26 @@ relates: [PL-1638, PL-1546, FD-1611, SL-1557, SL-1559]
 
 The fix slice of the maintainer's (by delegation) entry "2026-10-11 10:38:57 BST — DagDesigner F39 reds: an FD against WK-675 at D10 ADOPTED, with a small fix slice queued; …", item 3; lane C position (0b) of "2026-10-11 10:39:56 BST", item 2. S3's (#1271) live-validation debounce (`useGraphValidation`, 400 ms, `useGraphValidation.ts:14`) calls `/api/v1/rating-algorithms/validate` at every mount, and `DagDesigner.test.ts` is the one test file that renders the designer without mocking `@/api/ratingAlgorithms` (a sweep of the five files at `99f22479`, quoted in the plan). A test body that runs longer than 400 ms under load fires the real fetch, and the F39 guard (`frontend/src/test-setup.ts`) fails it. **Scope, in `frontend/src/components/dag/__tests__/DagDesigner.test.ts` only:** a regression test that lets the debounce elapse after its assertions, red on base with the F39 line; the module mocked for the whole file in the sibling files' pattern (`DagDesignerValidation.test.ts:9–10`); a test that unmounts before the debounce elapses and proves no validate call follows (the cancel already exists at `useGraphValidation.ts:52–54`; DP-1 (a): prove it, no source change). No shared stub helper exists. **Write set:** that file, the `LG-` (LG-1640) and this row's status lines; any non-test change stops the slice. **Gate:** the full two-half gate ("2026-10-11 10:41:41 BST"). Discharges FD-1611. Work-plan delta PL-1638 (`draft`), whose row is this slice's scope. **Activation needs:** FD-1611 filed (D10); the lead's GO naming lane C, and naming S4 (`SL-1559`) if both run at once (`RL-1445` item 2). *(Cut 2026-10-11 by the planner (planner-wk675) under working id 9916, with its plan under 9918, both reserved by the lead; minted 2026-10-11 as SL-1639 and PL-1638 in the slice PR's mint commit, its ledger as LG-1640, and its finding, drafted as working id 9914, is FD-1611, minted in the D10 batch.)* *(Activated 2026-10-11 by the lead's GO to `executor-dagfix`, lane C, entry "2026-10-11 10:52:36 BST" in the eta; DP-1 (a) adopted at the GO: the unmount cancel is proven, no extra flush, no source change.)* *(Closed 2026-10-11 by the executor at the slice head: LG-1640 `closed`; the gate and the auditor's re-check follow, and the lead's merge completes the close.)*
 
+#### SL-1938 — WK-675 slice SL-1938 — a mount never maps a port to a blank parent name (PL-1937; RL-1876)
+
+```yaml
+id: SL-1938
+family: slice
+title: WK-675 slice SL-1938 — a mount never maps a port to a blank parent name (PL-1937; RL-1876)
+status: active                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-26
+owner: lead
+tree: 40ca2645cdaf4c97a57a9fcf52ce1ffde1027521
+phase: P2
+work: WK-675
+corrected_by: []
+relates: [FD-1936, LG-1939, RS-1940, PL-1937]
+```
+
+A mount never maps a port to a blank parent name: `graph_invariant_issues` refuses it on the mount and names the port (RL-1876; FR-217; OQ-1843 closed). The blank-mapped-port fix slice of PL-1937.
+
+(Minted 2026-10-26 from working id 8250, on the maintainer's (by delegation) entry "2026-10-26 02:29:45 GMT" (the PL-1937 real-mint conditions); finding FD-1936, ledger LG-1939, audit RS-1940; executed on branch `draft/pl-8205`.)
+
 ### WK-690 — **`expression` custom objectives** — SymPy derivation, the gradient/hessian compilation target, the authoring UI, and lifting `expression_objectives_enabled` **plus `custom_objective:author` and its check, which `06` FR-367 requires the `expression` kind to arrive with**
 
 ```yaml

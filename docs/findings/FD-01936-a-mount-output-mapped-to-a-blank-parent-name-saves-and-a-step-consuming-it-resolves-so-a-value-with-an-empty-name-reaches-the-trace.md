@@ -1,16 +1,16 @@
 ---
-id: FD-8204
+id: FD-1936
 family: finding
 title: A mount output mapped to a blank parent name saves, and a step consuming it resolves, so a value with an empty name reaches the trace
 status: active                  # active → closed | retired (§1.2a)
-created: 2026-10-25
+created: 2026-10-26               # drafted 2026-10-25 under working id 8204
 owner: auditor
 tree: 8c3d3013c3205fbecd6335e9db182a469426bdb2
 corrected_by: []
-relates: [WK-675, OQ-1843, RL-1876, PL-8205, LG-8251]
+relates: [WK-675, OQ-1843, RL-1876, PL-1937, LG-1939]
 ---
 
-# FD-8204 — A mount output mapped to a blank parent name saves, and a step consuming it resolves, so a value with an empty name reaches the trace
+# FD-1936 — A mount output mapped to a blank parent name saves, and a step consuming it resolves, so a value with an empty name reaches the trace
 
 ## Finding
 
@@ -42,17 +42,17 @@ Read at `origin/main` 8c3d3013, `packages/model-schema/src/model_schema/rating.p
 Executed proof: the slice's red commit 4290018b on the unchanged `rating.py`
 (`test_graph_invariant_issues.py`): rc 1, `3 failed, 10 passed`; the output test gets
 `assert 0 == 1` (no issue). Green at 0a85d0cb: `13 passed`. With the blank-name check disabled
-the same file goes red again, `3 failed, 10 passed` (LG-8251 Build log).
+the same file goes red again, `3 failed, 10 passed` (LG-1939 Build log).
 
 ## Remedy
 
-Made by SL 8250 (PL-8205), commits 197a7df4 (spec, `03` §4.1) and 0a85d0cb (code):
+Made by SL-1938 (PL-1937), commits 197a7df4 (spec, `03` §4.1) and 0a85d0cb (code):
 `graph_invariant_issues` reports each blank-mapped output port as one `VALIDATION_FAILED` issue
 located on the mount, naming the port, and does not count the blank name as produced; an input port
 gets `RATING_GRAPH_UNRESOLVED_REF`. No contract change.
 
 ## Disposition
 
-**Fix before close with an owner: WK-675**, discharged by SL 8250 (PL-8205). Resolved by this slice;
+**Fix before close with an owner: WK-675**, discharged by SL-1938 (PL-1937). Resolved by this slice;
 the auditor sets it `closed` in place, citing the PR, and the register row carries the merge sha
 (owed at merge).
