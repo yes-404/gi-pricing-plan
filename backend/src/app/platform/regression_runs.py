@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import func, select, tuple_
+from sqlalchemy import DateTime, Uuid, func, literal, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.pagination import COUNT_CAP, Page, decode_cursor, encode_cursor
@@ -122,7 +122,10 @@ async def list_runs(
             )
         query = query.where(
             tuple_(RegressionRunRow.finished_at, RegressionRunRow.id)
-            < tuple_(anchor.finished_at, anchor.id)
+            < tuple_(
+                literal(anchor.finished_at, DateTime(timezone=True)),
+                literal(anchor.id, Uuid()),
+            )
         )
     rows = (
         await session.scalars(

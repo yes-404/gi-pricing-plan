@@ -264,7 +264,9 @@ def test_the_regression_runs_list_route_declares_every_status_03_lists() -> None
     listed = set(re.findall(r"(?<![\w-])([1-5]\d\d)(?![\w-])", re.sub(r"\([^)]*\)", "", cell)))
     assert {"200", "400", "404"} <= listed, f"spec row not read: {listed}"
     declared = set(_load(OPENAPI)["paths"][route]["get"]["responses"])
-    assert listed <= declared, f"03 §5.1 lists {sorted(listed - declared)} the route does not declare"
+    assert listed <= declared, (
+        f"03 §5.1 lists {sorted(listed - declared)} the route does not declare"
+    )
 
 
 @pytest.mark.req("FR-10")
