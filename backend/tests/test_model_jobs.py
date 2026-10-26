@@ -19,6 +19,7 @@ from uuid import UUID, uuid4
 
 import numpy as np
 import pytest
+from backend.tests.conftest_db import grant_roles_as_owner
 from backend.tests.test_data_jobs import (
     _ingest,
     _seed_dataset_and_rules,
@@ -33,7 +34,6 @@ from app.platform import datasets as dataset_service
 from app.platform import diagnostics as diagnostics_service
 from app.platform import jobs as job_service
 from app.platform import modelling as model_service
-from app.platform import rbac
 from app.platform import transformations as transform_service
 from app.platform.blobs import BlobStore
 from app.worker.data_handlers import register_data_handlers
@@ -53,7 +53,6 @@ from model_schema import (
     ModelStatus,
     OffsetSpec,
     Principal,
-    ScopeType,
     SplitRef,
     new_uuid7,
 )
@@ -146,45 +145,13 @@ TWEEDIE_BOOK = _tweedie_csv()
 
 
 async def _actuary(database: Database, workspace_id) -> Principal:
-    from app.db.models import RoleAssignmentRow, RoleRow, WorkspaceMemberRow
-
     user = Principal(kind=ActorKind.USER, id=new_uuid7(), display="a@insurer.example")
-    async with database.unit_of_work() as session:
-        # The workspace row must exist for the membership FK (FR-395).
-        from app.platform import workspaces
-
-        await workspaces.ensure_workspace(session, workspace_id=workspace_id)
-        await rbac.seed_builtin_roles(session, workspace_id)
-        for slug in ("analyst", "pricing_actuary"):
-            role = (
-                await session.execute(
-                    select(RoleRow).where(
-                        RoleRow.workspace_id == workspace_id, RoleRow.slug == slug
-                    )
-                )
-            ).scalar_one()
-            session.add(
-                RoleAssignmentRow(
-                    workspace_id=workspace_id, principal_kind="user", principal_id=user.id,
-                    role_id=role.id, scope_type=ScopeType.WORKSPACE.value,
-                )
-            )
-        # W6b-11: the dev caller resolves through the memberships the database holds, so
-        # a role without a membership row is refused before the route's checks run.
-        # Idempotent: a caller may have been seeded a membership first (some files pair
-        # this helper with the `grant` or `membership` fixtures).
-        existing = (
-            await session.execute(
-                select(WorkspaceMemberRow).where(
-                    WorkspaceMemberRow.user_id == user.id,
-                    WorkspaceMemberRow.workspace_id == workspace_id,
-                )
-            )
-        ).scalar_one_or_none()
-        if existing is None:
-            session.add(
-                WorkspaceMemberRow(user_id=user.id, workspace_id=workspace_id)
-            )
+    # W6b-11: the dev caller resolves through the memberships the database holds, so a role
+    # without a membership row is refused before the route's checks run; the workspace row
+    # must exist for the membership FK (FR-395). Both seeds are idempotent.
+    await grant_roles_as_owner(
+        workspace_id, user.id, "analyst", "pricing_actuary", workspace=True, membership=True
+    )
     return user
 
 

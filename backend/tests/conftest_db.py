@@ -475,6 +475,21 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
         "runs the FR-420 sweep, which DELETEs blobs; the app role has no DELETE (OQ 8252)",
     ),
     (
+        "backend/tests/test_blobs.py::test_gc_spares_a_referenced_blob",
+        "owner-subject",
+        "runs the FR-420 sweep, which DELETEs blobs; the app role has no DELETE (OQ 8252)",
+    ),
+    (
+        "backend/tests/test_blobs.py::test_gc_spares_a_young_unreferenced_blob",
+        "owner-subject",
+        "runs the FR-420 sweep, which DELETEs blobs; the app role has no DELETE (OQ 8252)",
+    ),
+    (
+        "backend/tests/test_custom_metrics_table.py::test_a_metric_cannot_be_deleted_or_truncated",
+        "owner-subject",
+        "DELETE and TRUNCATE on custom_metrics; asserts the append-only trigger refuses them",
+    ),
+    (
         "backend/tests/test_artifact_immutability.py::"
         "test_a_gip_app_update_on_factors_is_refused_by_the_trigger_not_only_the_grant",
         "owner-subject",

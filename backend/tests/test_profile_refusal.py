@@ -13,39 +13,20 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 import pytest
+from backend.tests.conftest_db import grant_roles_as_owner
 from sqlalchemy import func, select, text
 
 from app.db.models import DatasetVersionRow, ProfileRow
 from app.db.session import Database
 from app.errors import PlatformError
 from app.platform import datasets, profiles
-from model_schema import ActorKind, Principal, Profile, ScopeType, new_uuid7
+from model_schema import ActorKind, Principal, Profile, new_uuid7
 
 ACTOR = Principal(kind=ActorKind.USER, id=new_uuid7(), display="a@insurer.example")
 
 
 async def _grant(database: Database, workspace_id: UUID) -> None:
-    from app.db.models import RoleAssignmentRow, RoleRow
-    from app.platform import rbac
-
-    async with database.unit_of_work() as session:
-        await rbac.seed_builtin_roles(session, workspace_id)
-        role = (
-            await session.execute(
-                select(RoleRow).where(
-                    RoleRow.workspace_id == workspace_id, RoleRow.slug == "analyst"
-                )
-            )
-        ).scalar_one()
-        session.add(
-            RoleAssignmentRow(
-                workspace_id=workspace_id,
-                principal_kind="user",
-                principal_id=ACTOR.id,
-                role_id=role.id,
-                scope_type=ScopeType.WORKSPACE.value,
-            )
-        )
+    await grant_roles_as_owner(workspace_id, ACTOR.id, "analyst")
 
 
 async def _version(database: Database, workspace_id: UUID) -> UUID:

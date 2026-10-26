@@ -449,7 +449,11 @@ async def test_an_identity_route_is_counted_once_for_a_bearer_caller(
     async with database.unit_of_work() as session:
         identity = await authenticate_bearer(session, verifier, "t")
         await workspaces.ensure_workspace(session, workspace_id=member_of)
+
+    async def _seed_membership(session: Any) -> None:
         session.add(WorkspaceMemberRow(user_id=identity.principal.id, workspace_id=member_of))
+
+    await seed_as_owner(_seed_membership)
     client.app.state.oidc_verifier = verifier  # type: ignore[attr-defined]
     headers = {"Authorization": "Bearer t"}
     calls = _spy_management_count(client, monkeypatch)

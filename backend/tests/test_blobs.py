@@ -188,7 +188,7 @@ async def test_gc_defaults_to_dry_run_and_deletes_nothing(
 
 @pytest.mark.req("FR-420")
 async def test_gc_spares_a_referenced_blob(
-    database: Database, blob_store: BlobStore, workspace_id, principal
+    database: Database, owner_database: Database, blob_store: BlobStore, workspace_id, principal
 ) -> None:
     """Negative: collecting a referenced blob deletes a dataset someone still points at."""
     async with database.unit_of_work() as session:
@@ -196,7 +196,7 @@ async def test_gc_spares_a_referenced_blob(
         await blobs.retain(session, ref.sha256)
     await _age_blob(database, ref.sha256, days=60)
 
-    async with database.unit_of_work() as session:
+    async with owner_database.unit_of_work() as session:
         report = await blob_store.collect_garbage(
             session, actor=principal, workspace_id=workspace_id, dry_run=False
         )
@@ -208,13 +208,13 @@ async def test_gc_spares_a_referenced_blob(
 
 @pytest.mark.req("FR-420")
 async def test_gc_spares_a_young_unreferenced_blob(
-    database: Database, blob_store: BlobStore, workspace_id, principal
+    database: Database, owner_database: Database, blob_store: BlobStore, workspace_id, principal
 ) -> None:
     """A blob exists before the artifact that references it — the grace period is that gap."""
     async with database.unit_of_work() as session:
         ref = await blob_store.put(session, unique(b"just uploaded"), "text/plain")
 
-    async with database.unit_of_work() as session:
+    async with owner_database.unit_of_work() as session:
         report = await blob_store.collect_garbage(
             session, actor=principal, workspace_id=workspace_id, dry_run=False
         )

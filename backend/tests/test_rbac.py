@@ -4,7 +4,9 @@ FR-349)."""
 from __future__ import annotations
 
 import pytest
+from backend.tests.conftest_db import seed_as_owner
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import AuditEventRow, RoleAssignmentRow, RoleRow
 from app.db.session import Database
@@ -35,7 +37,7 @@ async def _assign(
     scope_type: ScopeType = ScopeType.WORKSPACE,
     scope_id=None,
 ) -> None:
-    async with database.unit_of_work() as session:
+    async def seed(session: AsyncSession) -> None:
         await rbac.seed_builtin_roles(session, workspace_id)
         role = (
             await session.execute(
@@ -54,6 +56,8 @@ async def _assign(
                 scope_id=scope_id,
             )
         )
+
+    await seed_as_owner(seed)
 
 
 # -- the role catalogue ---------------------------------------------------------------
