@@ -236,3 +236,29 @@ Head daf64e6d781f8082415b41f7a473ed85760628ec (tree 9bd6c808, base 163146f2), pr
 ## Gate script for S1a (to-lead "2026-10-26 02:01:22 GMT")
 
 - 2026-10-26 — find (5), no FD: the gate template's demo stage exported the owner DSN as GIP_DATABASE_URL and no GIP_MIGRATION_DATABASE_URL; S1a's demo_env (scripts/demo.py:205–212) would then have defaulted the migration DSN to the shared `gipricing` database (migrations, provisioning and the seed's owner step on the wrong database) and served the demo API as the owner. scratch/s1a-gate/s1a-gate.sh :123–124 re-exports GIP_DATABASE_URL = gip_app_login and GIP_MIGRATION_DATABASE_URL = the owner, both on gipricing_s1a_demo. Find (4): backend/migrations/env.py:32–37 raises without GIP_MIGRATION_DATABASE_URL, so the preflight exports both DSNs on the gate DB (:71–72).
+
+## Gate of record (appended 2026-10-26 03:37 GMT; to-lead "2026-10-26 03:34:59 GMT")
+
+2026-10-26 — superseded by the lines below (the "Gate: Not run." and "Audit: Not yet." placeholders above are kept, not edited).
+
+Values read from `~/gi-pricing-plan.local/scratch/s1a-gate/gate/gate.log` and its `*.rc` files:
+
+- START head: `58fdb69f64eecbcd03e65881a88a07f351995272`, tree `b15a017175c5b630e271906aad50121fab0fda9f`, branch draft/s1a-fd1729, 2026-10-26T02:27:00+00:00.
+- END: `END 2026-10-26T03:27:21+00:00 2.39 1.85 1.78 (date l1 l5 l15) rc=1`.
+- END rc parts: `python max=1 fe max=0 demo=0 restore rc_kc=0 role rc_role=0 skip rc_skip=0`.
+- `*.rc` files: ruff.rc=0, mypy.rc=0, import_linter.rc=0, audit_docs.rc=1, req_coverage.rc=0, contracts.rc=0, pytest.rc=1.
+- pytest summary: `13 failed, 6800 passed, 21 skipped, 146 warnings in 2518.84s (0:41:58)`.
+- `| pytest skipped | 21 (<= 21) |`.
+- pg_roles rows: before `gip_app`; after provision `gip_app,gip_app_login`; at END `gip_app,gip_app_login`.
+- audit_docs FAILED (4): check 31 gap between 1863 and 8237; check 31 gap between 8237 and 8252; check 31 gap between 8252 and 8255; check 32 FD-8256 line 10 "SL-8246 does not resolve in docs/INDEX.md" (all on this slice's own working ids).
+- Demo: `demo.py --journey wf-699` rc=0, 881 s; D7 `ok  19985 policies in the sample; rate table edits: +485990825; NCD ladder and expense loading: +3851186; sum +489842011 minor units (full-book attribution cost: FD-1576)`.
+- Restore from tools-main: rc=0 (rc_kc=0); keycloak bind source under tools-main.
+- Frontend half: install, generate:api, lint, type-check, test, build all rc=0.
+
+STANDS under 1(f), to-lead 2026-10-26 03:28:21 GMT.
+
+merge-base(c0828e24, 58fdb69f) = 3cd5fcf7ee514db1ae8ab681d7cacc1761945091 — 6800 passed here vs PL 8205's 6896 is this base's age (main's test additions since), to-lead 03:28:21.
+
+S1a-5 journey: the full WF-699 journey ran on the login DSN in this gate's demo stage (rc 0, 881 s) — closes S1a-5's journey point.
+
+Audit: RS 8257 (aud-s1a, @afa4ed24) proposed CLEAN, ADOPTED CLEAN by the lead; accepted at to-lead 2026-10-26 03:34:59 GMT; N1–N4 as ruled.
