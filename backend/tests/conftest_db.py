@@ -859,112 +859,112 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
         "backend/tests/test_api_me.py::"
         "test_break_glass_is_visible_on_me",
         "DP-22",
-        "runs a production function with no application caller ",
+        "runs a production function with no application caller "
         "(grant_role, grant_break_glass, ensure_member, ...) as the owner",
     ),
     (
         "backend/tests/test_rbac.py::"
         "test_a_grant_within_what_the_granter_holds_succeeds_and_is_audited",
         "DP-22",
-        "runs a production function with no application caller ",
+        "runs a production function with no application caller "
         "(grant_role, grant_break_glass, ensure_member, ...) as the owner",
     ),
     (
         "backend/tests/test_rbac.py::"
         "test_break_glass_is_time_boxed_and_expires",
         "DP-22",
-        "runs a production function with no application caller ",
+        "runs a production function with no application caller "
         "(grant_role, grant_break_glass, ensure_member, ...) as the owner",
     ),
     (
         "backend/tests/test_rbac.py::"
         "test_break_glass_is_audited_and_flagged",
         "DP-22",
-        "runs a production function with no application caller ",
+        "runs a production function with no application caller "
         "(grant_role, grant_break_glass, ensure_member, ...) as the owner",
     ),
     (
         "backend/tests/test_rbac.py::"
         "test_seeding_roles_is_idempotent",
         "DP-22",
-        "runs a production function with no application caller ",
+        "runs a production function with no application caller "
         "(grant_role, grant_break_glass, ensure_member, ...) as the owner",
     ),
     (
         "backend/tests/test_workspace_members.py::"
         "test_a_realm_login_resolves_to_the_seeded_principal",
         "DP-22",
-        "runs a production function with no application caller ",
+        "runs a production function with no application caller "
         "(grant_role, grant_break_glass, ensure_member, ...) as the owner",
     ),
     (
         "backend/tests/test_workspace_members.py::"
         "test_ensuring_a_member_twice_does_not_raise",
         "DP-22",
-        "runs a production function with no application caller ",
+        "runs a production function with no application caller "
         "(grant_role, grant_break_glass, ensure_member, ...) as the owner",
     ),
     (
         "backend/tests/test_workspace_members.py::"
         "test_an_id_that_contradicts_the_stored_identity_is_refused_where_it_arises",
         "DP-22",
-        "runs a production function with no application caller ",
+        "runs a production function with no application caller "
         "(grant_role, grant_break_glass, ensure_member, ...) as the owner",
     ),
     (
         "backend/tests/test_lineage.py::"
         "test_a_subject_purge_is_admin_only_and_recorded",
         "DP-22",
-        "runs a production function with no application caller ",
+        "runs a production function with no application caller "
         "(grant_role, grant_break_glass, ensure_member, ...) as the owner",
     ),
     (
         "backend/tests/test_artifact_immutability.py::"
         "test_a_stored_report_cannot_be_rewritten",
         "owner-subject",
-        "trigger probe: issues the tampering statement as the owner ",
+        "trigger probe: issues the tampering statement as the owner "
         "and asserts the trigger, not the privilege check, refuses it",
     ),
     (
         "backend/tests/test_artifact_immutability.py::"
         "test_a_stored_report_cannot_be_deleted_or_truncated",
         "owner-subject",
-        "trigger probe: issues the tampering statement as the owner ",
+        "trigger probe: issues the tampering statement as the owner "
         "and asserts the trigger, not the privilege check, refuses it",
     ),
     (
         "backend/tests/test_artifact_immutability.py::"
         "test_a_profile_cannot_be_rewritten",
         "owner-subject",
-        "trigger probe: issues the tampering statement as the owner ",
+        "trigger probe: issues the tampering statement as the owner "
         "and asserts the trigger, not the privilege check, refuses it",
     ),
     (
         "backend/tests/test_artifact_immutability.py::"
         "test_an_acknowledgement_cannot_be_rewritten_or_removed",
         "owner-subject",
-        "trigger probe: issues the tampering statement as the owner ",
+        "trigger probe: issues the tampering statement as the owner "
         "and asserts the trigger, not the privilege check, refuses it",
     ),
     (
         "backend/tests/test_backtests.py::"
         "test_a_backtest_cannot_be_rewritten_at_either_layer",
         "owner-subject",
-        "trigger probe: issues the tampering statement as the owner ",
+        "trigger probe: issues the tampering statement as the owner "
         "and asserts the trigger, not the privilege check, refuses it",
     ),
     (
         "backend/tests/test_model_jobs.py::"
         "test_a_fitted_model_cannot_be_rewritten_in_the_database",
         "owner-subject",
-        "trigger probe: issues the tampering statement as the owner ",
+        "trigger probe: issues the tampering statement as the owner "
         "and asserts the trigger, not the privilege check, refuses it",
     ),
     (
         "backend/tests/test_peril_structures.py::"
         "test_a_reconciled_structure_cannot_be_deleted",
         "owner-subject",
-        "trigger probe: issues the tampering statement as the owner ",
+        "trigger probe: issues the tampering statement as the owner "
         "and asserts the trigger, not the privilege check, refuses it",
     ),
 )
