@@ -3070,10 +3070,10 @@ tree: 3ffdbe3f787c195e43ebd3f8ae6a17143777d2e8
 phase: P2
 work: WK-1178
 corrected_by: []
-relates: [FD-1610, LG-1929, RS-1930, PL-8227, OQ-1931]
+relates: [FD-1610, LG-1929, RS-1930, PL-1927, OQ-1931]
 ```
 
-FD-1610's second limb: `TraceStep.dropped_inputs` records the `feature_map` names a `model_call` drops (d), then `MODEL_CALL_REQUIRED_INPUT_ABSENT` refuses a dropped key that feeds a required input (c) (FR-222 and FR-240, as amended). Slice S2 of PL-8227.
+FD-1610's second limb: `TraceStep.dropped_inputs` records the `feature_map` names a `model_call` drops (d), then `MODEL_CALL_REQUIRED_INPUT_ABSENT` refuses a dropped key that feeds a required input (c) (FR-222 and FR-240, as amended). Slice S2 of PL-1927.
 
 (Minted 2026-10-26 from working id 8244, on the maintainer's (by delegation) entry "2026-10-25 22:43:58 GMT" (one `SL-` row per slice, minted in the slice's PR); ledger LG-1929, audit RS-1930, the N2 open question OQ-1931; executed on branch `draft/s2-fd1610`.)
 

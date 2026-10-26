@@ -1,4 +1,4 @@
-"""FD-1610 limb 2 (PL 8227 S2): a `model_call` key the runtime drops is traced (d), then refused.
+"""FD-1610 limb 2 (PL-1927 S2): a `model_call` key the runtime drops is traced (d), then refused.
 
 `runtime._model_call_handler` builds the model's feature row from the `feature_map` keys found in
 the scoring context and silently skips the rest (`runtime.py:758-762` at `102341aa`). The
@@ -8,7 +8,7 @@ and hash unchanged (FR-239 holds by construction). Then (c): a dropped key that 
 model input raises a coded, input-free scoring error". Its entry "2026-10-25 11:53:23 GMT" (DP-S2
 (i)/(i)/(i)) names them: the field is `TraceStep.dropped_inputs: list[str] | None` on the
 model-schema type, the refusal a new `MODEL_CALL_REQUIRED_INPUT_ABSENT` surfaced through
-`_model_call_failure`. PL 8227's Acceptance 12 ((d) red) and 15 ((c) red, both cases).
+`_model_call_failure`. PL-1927's Acceptance 12 ((d) red) and 15 ((c) red, both cases).
 
 The bundles here are built as a pre-SL-1541 bundle was: compiled normally, then the stored
 algorithm payload's `feature_map` is rewritten, because `compile_bundle`'s FR-240 coverage check
@@ -51,7 +51,7 @@ def _risk_step(result: Any) -> Any:
 
 @pytest.mark.req("FR-222")
 async def test_a_dropped_key_that_feeds_no_required_input_is_traced() -> None:
-    """(d) red — PL 8227 Acceptance 12. A `feature_map` key no step produces, beside the one
+    """(d) red — PL-1927 Acceptance 12. A `feature_map` key no step produces, beside the one
     that maps the model's only input, is dropped by the runtime.
 
     RED at `102341aa`: `AttributeError: 'TraceStep' object has no attribute 'dropped_inputs'`
@@ -96,7 +96,7 @@ async def test_a_step_that_drops_nothing_records_none() -> None:
 
 @pytest.mark.req("FR-222")
 async def test_a_dropped_key_that_feeds_a_required_input_is_refused() -> None:
-    """(c) red — PL 8227 Acceptance 15, first case; the 11:40:12 condition "a pre-SL-1541 bundle
+    """(c) red — PL-1927 Acceptance 15, first case; the 11:40:12 condition "a pre-SL-1541 bundle
     with an unmapped required key scores green on base, must refuse after (c)". `feature_map`
     maps a name the context never holds onto the model's only input, `age_years`, so the
     feature row is empty and the runtime scores anyway.

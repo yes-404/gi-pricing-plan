@@ -9,14 +9,14 @@ tree: 3ffdbe3f787c195e43ebd3f8ae6a17143777d2e8
 phase: P2
 work: WK-1178
 slice: SL-1928
-plans: [PL-8227]
+plans: [PL-1927]
 corrected_by: []
-relates: [SL-1928, FD-1610, PL-8227]
+relates: [SL-1928, FD-1610, PL-1927]
 ---
 
 # LG-1929 — WK-1178 slice S2: FD-1610 limb 2, dropped feature_map keys
 
-Working id 8241 (LG), unminted; the slice row S2 of PL 8227 has no working SL id. Branch `draft/s2-fd1610`.
+Working id 8241 (LG), unminted; the slice row S2 of PL-1927 has no working SL id. Branch `draft/s2-fd1610`.
 
 **GO:** the maintainer's entry "2026-10-25 22:16:18 GMT" (`to-lead.md`), amended by "2026-10-25 22:26:43 GMT" (S2-C0 RULED option (1)) and ruled on by "2026-10-25 22:38:42 GMT" (S2-C0 option (a); S2's ledger = LG-1929; format split).
 **MERGE-ACK:** not yet given.
@@ -25,7 +25,7 @@ Working id 8241 (LG), unminted; the slice row S2 of PL 8227 has no working SL id
 
 ### Scope
 
-PL 8227's S2 section (FD-1610 limb 2): (d) `TraceStep.dropped_inputs`, then (c) `MODEL_CALL_REQUIRED_INPUT_ABSENT`; requirement FR-222 (03).
+PL-1927's S2 section (FD-1610 limb 2): (d) `TraceStep.dropped_inputs`, then (c) `MODEL_CALL_REQUIRED_INPUT_ABSENT`; requirement FR-222 (03).
 
 ### Task list
 
@@ -60,7 +60,7 @@ head=3ffdbe3f787c195e43ebd3f8ae6a17143777d2e8
 - Real run (read-only), command (a): `docker exec gi-pricing-postgres-1 psql -U gipricing -At -c "select id, status, algorithm_ref, bundle->>'blob_sha256' from rating_versions where bundle is not null"` rc 0, zero rows. Command (b): one read-only GET per blob_sha256 from bucket `gip-blobs` (Settings.blob_bucket default, `backend/src/app/config.py`; `deploy/` sets no override) at http://127.0.0.1:9000 — **bucket named and not read**: no row, so no GET was issued.
 - rows=0 blobs_read=0 hits=0 required_hits=0 rc=0 — a **boundary zero, not hits=0 alone**. exposure on the dev DB: none measurable — 0 compiled rating versions at 3ffdbe3f787c195e43ebd3f8ae6a17143777d2e8; the proof row is the instrument check.
 
-**Correction to PL 8227's S2-C0 text (2026-10-25; the plan is frozen, this ledger carries it):** the measurement reads the compiled Bundle blob, not the `rating_versions.bundle` column — that column is `BundleMetadata` (`model-schema` `rating.py`:88–122, `extra=forbid`: content_hash, bytes, compiled_at, blob_sha256), so the plan's `select … bundle::text` query measures nothing (ruled option (1), "2026-10-25 22:26:43 GMT").
+**Correction to PL-1927's S2-C0 text (2026-10-25; the plan is frozen, this ledger carries it):** the measurement reads the compiled Bundle blob, not the `rating_versions.bundle` column — that column is `BundleMetadata` (`model-schema` `rating.py`:88–122, `extra=forbid`: content_hash, bytes, compiled_at, blob_sha256), so the plan's `select … bundle::text` query measures nothing (ruled option (1), "2026-10-25 22:26:43 GMT").
 
 **Dated line (2026-10-25, exec-s2docs, on the maintainer's (by delegation) entry "2026-10-25 22:51:27 GMT"):** RS-1930 N2 is filed as OQ-1931 (open, owner WK-1178; `docs/open-questions.md`, mirrored in `03` §10, placed at roadmap "Before Phase 3"), and N4 is corrected by a dated line in `03` §4.10: `dropped_inputs` is computed at score time from the step's `feature_map` names that `consumed` does not hold, and `feature_map` is not in the trace.
 
