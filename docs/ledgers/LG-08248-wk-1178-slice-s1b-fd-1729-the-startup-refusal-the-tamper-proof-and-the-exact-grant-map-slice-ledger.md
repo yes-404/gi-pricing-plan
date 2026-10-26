@@ -113,3 +113,85 @@ pending — S1b GO not yet requested.
 ## PRs
 
 None yet.
+
+## 2026-10-26 11:41 GMT — PL-1769 Step 7.2: postgres-pro review of the grant map and the provisioning (evidence; to-lead 11:38:32 (ii))
+
+Authority: the maintainer's entry "2026-10-26 11:38:32 GMT" (`to-lead.md`), ruled (b), conditions (i), (ii), (v). The review below is the postgres-pro specialist's whole output, static, at `4a55dd22e59363ff8874d14008e9af78dcbd853f` (source `~/gi-pricing-plan.local/scratch/s1b-gate/pgpro-review-2026-10-26.md`), quoted verbatim with each line prefixed `> ` (so its headings stay out of this ledger's outline) and with " → FD 8265" appended to each of the two HIGH lines. No padded or hyphen-form working id appears in it, so none was rewritten.
+
+> # postgres-pro review: PL-1769 Step 7.2, slice S1b of FD-1729 (evidence only)
+>
+> Worktree: /home/puzhenhao1989/gi-pricing-plan/.claude/worktrees/s1b-cut at 4a55dd22e59363ff8874d14008e9af78dcbd853f.
+> Method: static reading only. No DB commands, no docker, no tests. Line numbers in §4 are approximate (`~`), taken from a `sed -n 300,435p` window.
+>
+> ## 1. deploy/postgres/app-login-role.sql and scripts/provision-app-role.py
+>
+> - OK: app-login-role.sql:9-10,16-17 creates and then converges the login role to LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS INHERIT. A re-run resets drift.
+> - OK: provision-app-role.py:55-67 builds the SCRAM-SHA-256 verifier correctly. The plain password never reaches the server. :75 asserts the verifier needs no quoting.
+> - OK: The default password is refused at :95-101 unless `--allow-default-password` is passed. GIP_MIGRATION_DATABASE_URL is required (:102-109), so there is no fallback to the app DSN. The SQL and the password change share one transaction (:78-80).
+> - CONCERN (severity medium): app-login-role.sql:5-7 creates `gip_app` only when it is absent and never converges it. A pre-existing `gip_app` with LOGIN, CREATEROLE, CREATEDB or REPLICATION keeps those attributes and the login role inherits them. P_OWN (immutability.py:42-57) catches only SUPERUSER and BYPASSRLS on it. Fix: add an ALTER ROLE gip_app NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS.
+> - CONCERN (severity medium): app-login-role.sql:18 only adds the `gip_app` membership and never removes others. A hand-granted owner membership stays; P_OWN catches it at startup but the provisioner does not undo it. Role-level settings (ALTER ROLE … SET search_path or session_replication_role), VALID UNTIL and CONNECTION LIMIT are also not reset.
+> - CONCERN (severity low): app-login-role.sql:18 is a plain GRANT. An existing membership keeps its old options (INHERIT FALSE, SET TRUE). `WITH INHERIT TRUE, SET FALSE` states what is needed, since the login role never has to SET ROLE gip_app.
+> - CONCERN (severity low): provision-app-role.py:24-28 claims the password never appears in the log. The verifier does appear under log_statement=all or ddl, and at 4096 iterations (:52, the PostgreSQL default) it can be cracked offline. This is a doc-accuracy issue.
+> - CONCERN (severity low): provision-app-role.py:60 uses password.encode() with no SASLprep, so a non-ASCII password may not match what the server expects. An empty GIP_APP_DB_PASSWORD (:94) is accepted with no minimum-strength check.
+> - CONCERN (severity low): The SQL file has no REVOKE CONNECT ON DATABASE … FROM PUBLIC and no REVOKE CREATE ON SCHEMA public FROM PUBLIC. PostgreSQL 16 already leaves PUBLIC without CREATE on `public`, so nothing is open today, but nothing asserts it.
+>
+> ## 2. backend/migrations/versions/b7e4c2a91d36_application_role_grants.py (grant map)
+>
+> - OK: Grants go to `gip_app` only (:155,287-296). Each table is first reset with REVOKE ALL (:287). No `_TARGET` entry (:215-282) carries TRUNCATE, REFERENCES or TRIGGER.
+> - OK: `jobs` and `outbox` lose DELETE (:243,248). Narrow tables use column-level UPDATE through `_moves`. The seed-only tables are SELECT only (:262,271,279,281).
+> - OK: downgrade() restores `_PREVIOUS` for exactly the tables that changed (:305-310).
+> - CONCERN (severity medium): The migration has no sequence, schema, PUBLIC or default-privilege statements. A grep for `DEFAULT PRIVILEGES`, `ON SEQUENCE` and `ALL SEQUENCES` across backend/migrations and deploy found nothing.
+>   - Sequences: `job_logs.seq` is an Identity column (45172b9caf46_job_logs.py:25). An INSERT into an identity column needs no sequence USAGE, so nothing is missing for it. Not every sequence-like column was verified. A plain serial column would fail closed at runtime.
+>   - Schema: USAGE without CREATE comes from df53696a2682:77.
+>   - Default privileges: there are none, so a future table gives `gip_app` nothing. That is the safe direction, and the test reports "no expected row" (test_application_role.py ~:375). The brief's "ALTER DEFAULT PRIVILEGES consistent with future tables" has nothing to check.
+> - CONCERN (severity medium): df53696a2682:82 revokes UPDATE and DELETE from PUBLIC on `audit_events` only. No other append-only table has an explicit PUBLIC revoke. Nothing grants PUBLIC anything, and the grant-map test ignores PUBLIC (it filters on grantee = :role), so a PUBLIC grant on a table would go unseen.
+> - CONCERN (severity low): `LIFECYCLE` gives whole-table UPDATE (:163) on `models`, `dataset_versions`, `jobs`, `peril_structures`, `rating_versions`, `custom_metrics` and `custom_objectives`. This is intended, but for the guarded tables the triggers are the only barrier, so the startup trigger check is the only protection.
+>
+> ## 3. backend/src/app/db/immutability.py and session.py (assert_least_privilege)
+>
+> - OK: P_OWN uses `pg_has_role(current_user, r.oid, 'MEMBER')` (immutability.py:45). That covers direct and indirect membership, INHERIT FALSE memberships and SET ROLE reachability. It tests rolsuper, rolbypassrls and ownership of `public` tables (:47-55).
+> - OK: `tgenabled IN ('O','A')` (:83,145), a presence check on every expected trigger including `_no_truncate` (:113-127,141-144), and a pinned function-body md5 (:150). session.py:235-239 runs the check on the engine's own connection.
+> - CONCERN (severity high): The check does not look at CREATEROLE. On PostgreSQL 16 a CREATEROLE role can alter the password of any non-superuser role it administers, and can grant itself membership in roles it has ADMIN on. That is a route to the owner role `gipricing`. immutability.py:42-57 never reads `rolcreaterole`. → FD 8265
+> - CONCERN (severity high): The check ignores ADMIN OPTION. A role with admin on the owner group but no membership passes the MEMBER test and can still run `GRANT owner TO self`. `pg_auth_members.admin_option` is never read. → FD 8265
+> - CONCERN (severity medium): Predefined roles are not checked. Membership in `pg_write_all_data` bypasses the grant map entirely. `pg_execute_server_program`, `pg_write_server_files` and `pg_read_server_files` are further escape routes. P_OWN returns no row for any of them.
+> - CONCERN (severity medium): PostgreSQL 15 and later allow `GRANT SET ON PARAMETER session_replication_role` to a non-superuser. That bypasses origin-only triggers without ownership or superuser. `pg_parameter_acl` is never read and nothing tests it.
+> - CONCERN (severity medium): Ownership is checked only for relkind r and p in `public` (immutability.py:50-53). Owners of the trigger functions, of schema `public`, and of views or sequences are not checked. A function owner can CREATE OR REPLACE a guard body; the md5 pin (:150) catches that only at the next start. Owning `public` also allows creating shadowing objects.
+> - CONCERN (severity low): The brief expected `has_table_privilege`, but the code does not use it. At startup nothing verifies that `gip_app` lacks UPDATE, DELETE or TRUNCATE on the append-only tables. Only the owner-path test does that.
+> - CONCERN (severity low): The trigger query (:85-92) matches name, function and enabled state only. It does not check tgtype (BEFORE, ROW, events) or WHEN clauses. Only an owner or a TRIGGER-privilege holder could change those.
+> - CONCERN (severity low): PINNED_GUARD_FUNCTION_MD5 has 15 entries (:63-79), but its comment (:61-62) still says they are "filled from a throwaway in S1b's DB window". The broken-input proof for the pins is noted as owed (`test_the_pinned_guard_function_hashes_match_the_head` docstring, test_application_role.py ~:429).
+>
+> ## 4. backend/tests/test_application_role.py:388–430 and _grant_differences
+>
+> - OK: The comparison runs both ways. Tables missing from the expected map and expected tables absent from the database are both reported (~:375-376). Table-level privilege sets use exact set equality (~:379), and column-level grants are compared exactly (~:382).
+> - OK: The drift test plants a table-level extra (GRANT DELETE ON jobs), a missing column grant (REVOKE UPDATE (status) ON outbox) and an extra column grant (GRANT UPDATE (kind) ON sources) inside a rolled-back transaction, and asserts each is seen. It also asserts there is no DELETE on `jobs` or `outbox`.
+> - CONCERN (severity low): The scope is `public` tables and the `gip_app` grantee only. It does not cover PUBLIC grants, sequences, functions, views, or the login role's direct grants. The `privilege not in table_level` skip (~:372) hides a column-level grant that duplicates a table-level one, which is harmless.
+> - CONCERN (severity low): `information_schema.role_table_grants` lists only grants whose grantee or grantor is an enabled role. Run as the owner, as the test does, this works; under another connection role it could read fewer grants. A pg_class.relacl/aclexplode query would not depend on the role.
+>
+> ## Overall (one line)
+>
+> The grant map and its both-ways test are least-privilege, but provisioning does not converge `gip_app` or strip extra memberships, and the startup check misses CREATEROLE, ADMIN OPTION, predefined roles and parameter privileges as escalation routes; there is no PUBLIC or default-privilege statement, which fails closed.
+>
+> ## Counts
+>
+> high 2, medium 7, low 10 (§1: 0/2/4, §2: 0/2/1, §3: 2/3/3, §4: 0/0/2).
+
+**(v) mitigation verified at the gate head 54e0fca0, throwaway s1b-pgv-54e0fca0.** `postgres:16-alpine` (local image), `-p 127.0.0.1::5432` (host port 32809), anonymous volume; `scripts/provision-app-role.py --allow-default-password` rc 0 ("gip_app_login provisioned"), then `alembic upgrade head` as the owner rc 0 (last revision `b7e4c2a91d36`), from the s1b-cut worktree at `372bfe64` (`git diff --stat 54e0fca0 HEAD -- backend scripts deploy` empty). Both queries, as printed:
+
+```
+SELECT rolname, rolcreaterole, rolsuper FROM pg_roles WHERE rolname LIKE 'gip_app%' ORDER BY 1;
+    rolname    | rolcreaterole | rolsuper 
+---------------+---------------+----------
+ gip_app       | f             | f
+ gip_app_login | f             | f
+(2 rows)
+
+SELECT roleid::regrole, member::regrole, admin_option FROM pg_auth_members WHERE roleid = 'gip_app'::regrole;
+ roleid  |    member     | admin_option 
+---------+---------------+--------------
+ gip_app | gip_app_login | f
+(1 row)
+```
+
+Neither route is present: `rolcreaterole` f and `rolsuper` f for both roles; `admin_option` f. Container proof after `docker rm -fv s1b-pgv-54e0fca0`: `docker ps -a --filter name=s1b-pgv` lists no container (header only); dangling volumes (`docker volume ls -qf dangling=true | wc -l`) 16 before, 16 after.
+
+**Step 7.1 census.** `git grep -n 'gip_app_login\|GIP_DATABASE_URL' docs/specs/07-platform.md` → no output (rc=1) → 07 names no DSN; no 07 line.
