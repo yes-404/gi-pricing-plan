@@ -9,8 +9,9 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from pydantic import ValidationError
 
-from model_schema import RatingAlgorithmDraft, graph_invariant_issues
+from model_schema import RatingAlgorithm, RatingAlgorithmDraft, graph_invariant_issues
 
 
 def _input(step_id: str, name: str) -> dict[str, Any]:
@@ -168,3 +169,29 @@ def test_a_mount_point_equal_to_a_step_id_is_an_issue() -> None:
     issues = graph_invariant_issues(draft)
     assert len(issues) == 1
     assert "mount_point is unique" in issues[0].message
+
+
+@pytest.mark.req("FR-217")
+@pytest.mark.parametrize("blank", ["", "  "])
+def test_an_input_port_mapped_to_a_blank_name_is_refused_naming_the_port(blank: str) -> None:
+    # RL-1876 item 2: one issue on the mount, naming the port, not "consumes undefined value ''".
+    steps = [_input("s_in", "x"), _output("s_out", "out", "ncd")]
+    draft = _mount_draft(steps, [_mount("s_ncd", {"claims": blank}, {"factor": "ncd"})])
+    issues = graph_invariant_issues(draft)
+    assert [(i.code, i.step_id) for i in issues] == [("RATING_GRAPH_UNRESOLVED_REF", "s_ncd")]
+    assert "'claims'" in issues[0].message
+    assert "unmapped" in issues[0].message
+    assert not any("consumes undefined value" in i.message for i in issues)
+
+
+@pytest.mark.req("FR-217")
+def test_an_output_port_mapped_to_a_blank_name_is_refused_naming_the_port() -> None:
+    # The output hole: "" used to count as produced, so a step consuming "" resolved and saved.
+    steps = [_input("s_in", "x"), _output("s_out", "out", "")]
+    draft = _mount_draft(steps, [_mount("s_ncd", {"claims": "x"}, {"factor": ""})])
+    issues = graph_invariant_issues(draft)
+    blank = [i for i in issues if i.code == "VALIDATION_FAILED" and i.step_id == "s_ncd"]
+    assert len(blank) == 1
+    assert "'factor'" in blank[0].message
+    with pytest.raises(ValidationError):
+        RatingAlgorithm.model_validate(draft.model_dump(mode="json"))

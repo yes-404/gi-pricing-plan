@@ -1214,7 +1214,7 @@ relates: [PL-1237]
 
 Date-based routing and shadow scoring, both built and default off per environment (`RL-1232` Part A, DP-2 (a)), with the audit limb for routing and shadow configuration changes (FR-272, NFR-498). `PL-1237` Task 6. Starts after Slice 5 closes.
 (Activated 2026-10-21 on the maintainer's (by delegation) GO, to-lead "2026-10-21 15:03:33 BST — Maintainer: GOs on the 15:02:44 work queue", item 5: lowest priority, rung 5 of the cut ladder; it takes a gate only when no row-2 slice is waiting. Scope: `PL-1237` Task 6 as changed by `PL-1537` R6.1 to R6.3; dispatched by the lead, transcript 4561857a.)
-(Closed 2026-10-22 as a Slice by the executor's closing acts (LG-1859, minted from working id 8139), on the audits RS 1864, RS 1865 and RS 1866 (aud-1260c, 57b7fa04..fbf092a9, proposed CLEAN) and the lead's verdict, the from-lead log entry "2026-10-22 23:03:12 BST Lead 26: SL-1260 fixes ACCEPTED @e6acbce6 … VERDICT SL-1260 CLEAN (RS 1866 + fixes)", noted by the maintainer at "2026-10-22 23:03:22 BST" (`to-lead.md`); range `origin/main...` the slice's branch head, whose ledger records the gate (the re-gate at 72a05338: `13 failed, 6742 passed, 13 skipped, 149 warnings`, the 13 the docs-audit set on the ledger's working id) and the 13 re-run.)
+(Closed 2026-10-22 as a Slice by the executor's closing acts (LG-1859, minted from working id 8139), on the audits RS 1864, RS 1865 and RS 1866 (aud-1260c, 57b7fa04..fbf092a9, proposed CLEAN) and the lead's verdict, the from-lead log entry "2026-10-22 23:03:12 BST Lead 26: SL-1260 fixes ACCEPTED @e6acbce6 … VERDICT SL-1260 CLEAN (RS 8198 + fixes)", noted by the maintainer at "2026-10-22 23:03:22 BST" (`to-lead.md`); range `origin/main...` the slice's branch head, whose ledger records the gate (the re-gate at 72a05338: `13 failed, 6742 passed, 13 skipped, 149 warnings`, the 13 the docs-audit set on the ledger's working id) and the 13 re-run.)
 
 #### SL-1689 — the scheduler (beat) and frontend-image row: FR-432's last two limbs (FR-432, FR-413, FR-406; FD-1661)
 
@@ -1613,7 +1613,7 @@ relates: [PL-1286, PL-1371]
 id: SL-1553
 family: slice
 title: Slice 11: Regression suite view (FR-260, FR-261, FR-1221; FD-1283 option A)
-status: draft                  # draft → active → closed | retired (§1.2a)
+status: active                 # draft → active → closed | retired (§1.2a)
 created: 2026-10-10  # original date 2026-10-08, set at the draft; minted 2026-10-10
 owner: planner                   # cut in the map plan (draft); lead dispatches (active)
 tree: 60e9254c22972c03fb11f10fcce8dae4f1c00dd9
@@ -1623,7 +1623,7 @@ corrected_by: []
 relates: [PL-1286, PL-1371]
 ```
 
-`PL-1286` S11, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. Golden quotes and property results over WK-672's routes; a run-list read route only if the version's evidence gives no run id (DP-4 (a), spec first). **Activation needs:** S10 (order). Lane or team fixed at GO. **Cut-ladder rung 2**, with S10 (`handover/cut-ladder-2026-10-08.md`, ruled 2026-10-08 13:21:00 BST); not pre-cut. *(Cut 2026-10-08 by the planner under working id 9461, reserved by the lead; minted 2026-10-10 as SL-1553 in the D2 batch mint.)*
+`PL-1286` S11, cut as a draft row for the WK-675 Work-plan delta PL-1546, whose row is this slice's scope. Golden quotes and property results over WK-672's routes; a run-list read route only if the version's evidence gives no run id (DP-4 (a), spec first). **Activation needs:** S10 (order). Lane or team fixed at GO. **Cut-ladder rung 2**, with S10 (`handover/cut-ladder-2026-10-08.md`, ruled 2026-10-08 13:21:00 BST); not pre-cut. *(Cut 2026-10-08 by the planner under working id 9461, reserved by the lead; minted 2026-10-10 as SL-1553 in the D2 batch mint.)* *(Activated 2026-10-25 on the maintainer's "2026-10-25 22:33:28 GMT — Maintainer: GO — SL-1553 (WK-675 S11, LG 8212, PL-1546 row 7) on `sl-1553-wk675-s11` @e64c4568", `to-lead "2026-10-25 22:33:28 GMT"`: WK-675 Slice 11; DP-S11-3 met at `85eac5b2` (SL-1552's squash is an ancestor of origin/main); the WK-675 follow-on `rating.py` row is none at 01a28e6d (to-lead "2026-10-25 15:38:26 GMT", S11 open point closed). Plan PL-1546 row 7; ruled by RL-1900 (DP-S11-1/2 (a)) and RL-1934 (points 1 to 3, adopted to-lead "2026-10-25 11:22:13 GMT"). Ledger LG-1933.)*
 
 #### SL-1554 — Slice 9: Designer III — sub-graph mounting (FR-217, FR-218 authoring view)
 
@@ -1661,6 +1661,26 @@ relates: [PL-1638, PL-1546, FD-1611, SL-1557, SL-1559]
 ```
 
 The fix slice of the maintainer's (by delegation) entry "2026-10-11 10:38:57 BST — DagDesigner F39 reds: an FD against WK-675 at D10 ADOPTED, with a small fix slice queued; …", item 3; lane C position (0b) of "2026-10-11 10:39:56 BST", item 2. S3's (#1271) live-validation debounce (`useGraphValidation`, 400 ms, `useGraphValidation.ts:14`) calls `/api/v1/rating-algorithms/validate` at every mount, and `DagDesigner.test.ts` is the one test file that renders the designer without mocking `@/api/ratingAlgorithms` (a sweep of the five files at `99f22479`, quoted in the plan). A test body that runs longer than 400 ms under load fires the real fetch, and the F39 guard (`frontend/src/test-setup.ts`) fails it. **Scope, in `frontend/src/components/dag/__tests__/DagDesigner.test.ts` only:** a regression test that lets the debounce elapse after its assertions, red on base with the F39 line; the module mocked for the whole file in the sibling files' pattern (`DagDesignerValidation.test.ts:9–10`); a test that unmounts before the debounce elapses and proves no validate call follows (the cancel already exists at `useGraphValidation.ts:52–54`; DP-1 (a): prove it, no source change). No shared stub helper exists. **Write set:** that file, the `LG-` (LG-1640) and this row's status lines; any non-test change stops the slice. **Gate:** the full two-half gate ("2026-10-11 10:41:41 BST"). Discharges FD-1611. Work-plan delta PL-1638 (`draft`), whose row is this slice's scope. **Activation needs:** FD-1611 filed (D10); the lead's GO naming lane C, and naming S4 (`SL-1559`) if both run at once (`RL-1445` item 2). *(Cut 2026-10-11 by the planner (planner-wk675) under working id 9916, with its plan under 9918, both reserved by the lead; minted 2026-10-11 as SL-1639 and PL-1638 in the slice PR's mint commit, its ledger as LG-1640, and its finding, drafted as working id 9914, is FD-1611, minted in the D10 batch.)* *(Activated 2026-10-11 by the lead's GO to `executor-dagfix`, lane C, entry "2026-10-11 10:52:36 BST" in the eta; DP-1 (a) adopted at the GO: the unmount cancel is proven, no extra flush, no source change.)* *(Closed 2026-10-11 by the executor at the slice head: LG-1640 `closed`; the gate and the auditor's re-check follow, and the lead's merge completes the close.)*
+
+#### SL-1938 — WK-675 slice SL-1938 — a mount never maps a port to a blank parent name (PL-1937; RL-1876)
+
+```yaml
+id: SL-1938
+family: slice
+title: WK-675 slice SL-1938 — a mount never maps a port to a blank parent name (PL-1937; RL-1876)
+status: active                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-26
+owner: lead
+tree: 40ca2645cdaf4c97a57a9fcf52ce1ffde1027521
+phase: P2
+work: WK-675
+corrected_by: []
+relates: [FD-1936, LG-1939, RS-1940, PL-1937]
+```
+
+A mount never maps a port to a blank parent name: `graph_invariant_issues` refuses it on the mount and names the port (RL-1876; FR-217; OQ-1843 closed). The blank-mapped-port fix slice of PL-1937.
+
+(Minted 2026-10-26 from working id 8250, on the maintainer's (by delegation) entry "2026-10-26 02:29:45 GMT" (the PL-1937 real-mint conditions); finding FD-1936, ledger LG-1939, audit RS-1940; executed on branch `draft/pl-8205`.)
 
 ### WK-690 — **`expression` custom objectives** — SymPy derivation, the gradient/hessian compilation target, the authoring UI, and lifting `expression_objectives_enabled` **plus `custom_objective:author` and its check, which `06` FR-367 requires the `expression` kind to arrive with**
 
@@ -3749,7 +3769,7 @@ you never block on a decision you have not reached.
 | **Before WK-690 Slice 1** — *added 2026-09-29* | ~~OQ-1266~~ ✔ *decided 2026-09-30 by `RL-1289`: `sympy==1.14.0`, cited by `02` §4.6/§4.7 via `uv.lock` (owner WK-690, delivery in Slice 1); raised open 2026-09-29 in `RL-1265`* | 1 (0 open) — *recounted 2026-09-30 (`RL-1289`): decided. Before that:* 1 (1 open) |
 | **Before WK-675's map plan** — *added 2026-09-29 (the decision-maker's gate on `OQ-1231`, at the maintainer's instruction of 2026-09-29 19:49:56 BST)* | ~~OQ-1231~~ ✔ *decided 2026-09-29 by `RL-1261`, option (b); raised open 2026-09-29: whether `StepChange.own_change` is derived from step-definition equality instead of `consumed` equality (owner WK-675). Gated before the map plan, not the compare-view slice, because answer (b) adds backend scope to `POST /api/v1/score/compare` and `diff_traces` and so changes WK-675's slice cuts* | 1 (0 open) — *recounted 2026-09-29 (`RL-1261`): decided. Before that:* 1 (1 open) |
 | **~~Before WK-675 S12~~ → Before Phase 3, relabelled 2026-10-25 (RL-1908)** — *added 2026-09-30; dated 2026-10-25 by the lead, on RL-1908 and the maintainer's entry "2026-10-25 11:32:17 GMT — Maintainer: §14 note r5 — the six owed rulings, decided now (dated lines for the review's rows)", line 1 (E3-C), and "2026-10-25 11:47:56 GMT — Maintainer: RL 8221's \"list budget\" = NFR-526 (API metadata reads p95 < 300 ms) — confirmed; WK-1914/8229 and the S12 tombstone accepted": Slice 12 moved to Phase 3 on 2026-10-03 (this file's dated line of that day), so this gate's one id moved to the Before Phase 3 row and this row stays as a tombstone, not a deletion* | *(none: its one id moved to the Before Phase 3 row on 2026-10-25, RL-1908)* | **0 (0 open)** — *recounted 2026-10-25 (RL-1908): one id moved to Before Phase 3. Before that:* 1 (1 open) |
-| **Before WK-675 closes** — *added 2026-10-22* | **OQ-1843** *raised open 2026-10-22 on the maintainer's entry "2026-10-22 13:26:06 BST" (working id 8160; owner WK-675): whether a mount's input port may be mapped to an empty parent name, and which layer refuses it. Placed at WK-675's close, not a phase gate: FR-212 already refuses the artifact at save, so nothing blocks on it; the answer changes only where an author learns it, and it is not built in SL-1554* | 1 (1 open) |
+| **Before WK-675 closes** — *added 2026-10-22* | ~~**OQ-1843**~~ **decided 2026-10-25 by `RL-1876`** *raised open 2026-10-22 on the maintainer's entry "2026-10-22 13:26:06 BST" (working id 8160; owner WK-675): whether a mount's input port may be mapped to an empty parent name, and which layer refuses it. Placed at WK-675's close, not a phase gate: FR-212 already refuses the artifact at save, so nothing blocks on it; the answer changes only where an author learns it, and it is not built in SL-1554* | 1 (0 open) |
 | **Before WK-1250's Work close** — *added 2026-10-22* | **OQ-1591** *(raised 2026-10-10, owner WK-1250, stated "ruled before WK-1250's Work close": whether a batch run returns an engine trace on request (FR-258, FR-259's RL-890 clarification) or `trace` is always absent from the batch output; WK-1250 is active in P2, so the gate is live; back-filled 2026-10-22)* | 1 (1 open) |
 | **Before the first slice that wires FR-420 garbage collection** — *added 2026-10-25* | **OQ-8252** *raised open 2026-10-25 (working id 8252; owner WK-1178): which role runs FR-420 blob garbage collection, the login role with a new `DELETE` on `blobs` or an owner/maintenance DSN job (recommendation (b)). Placed at the slice that wires a GC caller, not a phase gate: the sweep has no caller in `backend/src` and nothing blocks on it* | 1 (1 open) |
 | **Before the first slice that wires an admin API for role grants and break-glass** — *added 2026-10-26* | **OQ-8255** *raised open 2026-10-26 (working id 8255; owner WK-1178): which role performs role grants and break-glass once an admin API wires `grant_role` and `grant_break_glass`, the login role with INSERT/UPDATE on `role_assignments`, a separate admin/owner DSN, or a SECURITY DEFINER function (recommendation (c)). Placed at the slice that wires an admin API, not a phase gate: neither function has a runtime caller today and nothing blocks on it* | 1 (1 open) |

@@ -509,3 +509,124 @@ def test_a_cancelled_run_ends_the_job_cancelled_not_failed(
     job = w.run()
     assert job.status is JobStatus.CANCELLED
     assert job.error is None
+
+
+# --- WK-675 Slice 11 (SL-1553, FR-1932): the Regression Run list ---------------------------
+
+_SUMMARY_KEYS = {
+    "id", "job_id", "overall", "bundle_hash", "suite_ref", "suite_content_hash",
+    "started_at", "finished_at",
+}
+
+
+@pytest.fixture
+def list_world(api_client, workspace_id, principal, grant, database):
+    """An analyst and two Rating Versions of one workspace; runs are written directly."""
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(grant("analyst"))
+    headers = _headers(principal, workspace_id)
+    rv = loop.run_until_complete(_rating_version(database, workspace_id))
+    other = loop.run_until_complete(_rating_version(database, workspace_id, slug="home-gb"))
+
+    def persist(version: UUID, run: RegressionRun, workspace: UUID | None = None) -> UUID:
+        return loop.run_until_complete(
+            _persist(database, workspace or workspace_id, version, run)
+        )
+
+    def listing(version: UUID, **params: Any) -> Any:
+        return api_client.get(
+            f"/api/v1/rating-versions/{version}/regression-runs", params=params, headers=headers
+        )
+
+    return type("World", (), {
+        "rv": rv, "other": other, "headers": headers, "client": api_client,
+        "persist": staticmethod(persist), "listing": staticmethod(listing),
+        "database": database, "workspace_id": workspace_id,
+    })
+
+
+@pytest.mark.req("FR-1932")
+def test_the_list_is_this_versions_runs_newest_first_as_summaries(list_world) -> None:
+    w = list_world
+    oldest = w.persist(w.rv, _run(overall="pass", minutes=0))
+    failing = w.persist(w.rv, _run(overall="fail", minutes=5))
+    newest = w.persist(w.rv, _run(overall="pass", minutes=10))
+    w.persist(w.other, _run(minutes=20))  # another version's run is not listed
+
+    page = w.listing(w.rv)
+    assert page.status_code == 200, page.text
+    body = page.json()
+    assert [r["id"] for r in body["items"]] == [str(newest), str(failing), str(oldest)]
+    assert body["next_cursor"] is None
+    assert body["total_estimate"] == 3
+    # a failing run is listed with its id, and every row is a summary — no results, no blob
+    assert body["items"][1]["overall"] == "fail"
+    assert all(set(r) == _SUMMARY_KEYS for r in body["items"])
+
+
+@pytest.mark.req("FR-1932")
+def test_a_version_of_another_workspace_or_an_unknown_one_is_a_404(list_world) -> None:
+    w = list_world
+    foreign = asyncio.get_event_loop().run_until_complete(
+        _rating_version(w.database, new_uuid7())
+    )
+    for version in (foreign, new_uuid7()):
+        refused = w.listing(version)
+        assert refused.status_code == 404, refused.text
+        assert refused.json()["code"] == "NOT_FOUND"
+
+
+@pytest.mark.req("FR-1932")
+def test_equal_finished_at_orders_by_id_descending_and_paging_returns_each_run_once(
+    list_world,
+) -> None:
+    """RL-1934 point 3 (iv): the tie-break is the run id, the cursor is that id, and the
+    resume is the `(finished_at, id)` row-value comparison."""
+    w = list_world
+    twins = [w.persist(w.rv, _run(minutes=3, blob=b)) for b in "cde"]  # one finished_at
+    older = w.persist(w.rv, _run(minutes=0))
+    expected = [str(i) for i in sorted(twins, reverse=True)] + [str(older)]
+
+    whole = w.listing(w.rv)
+    assert [r["id"] for r in whole.json()["items"]] == expected
+
+    seen: list[str] = []
+    cursor: str | None = None
+    for _ in range(len(expected) + 1):
+        params: dict[str, Any] = {"limit": 1} | ({"cursor": cursor} if cursor else {})
+        page = w.listing(w.rv, **params)
+        assert page.status_code == 200, page.text
+        seen += [r["id"] for r in page.json()["items"]]
+        cursor = page.json()["next_cursor"]
+        if cursor is None:
+            break
+    assert seen == expected
+
+
+@pytest.mark.req("FR-1932")
+def test_a_cursor_that_is_not_a_run_of_this_version_is_a_400(list_world) -> None:
+    from app.api.pagination import encode_cursor
+
+    w = list_world
+    w.persist(w.rv, _run(minutes=0))
+    elsewhere = w.persist(w.other, _run(minutes=1))
+    foreign_workspace = w.persist(w.rv, _run(minutes=2), workspace=new_uuid7())
+    for name in (elsewhere, foreign_workspace, new_uuid7()):
+        refused = w.listing(w.rv, cursor=encode_cursor(name))
+        assert refused.status_code == 400, refused.text
+        assert refused.json()["code"] == "VALIDATION_FAILED"
+    garbage = w.listing(w.rv, cursor="not-a-cursor")
+    assert garbage.status_code == 400
+    assert garbage.json()["code"] == "VALIDATION_FAILED"
+
+
+@pytest.mark.req("FR-1932")
+def test_the_list_route_does_not_shadow_the_run_read(list_world) -> None:
+    w = list_world
+    run_id = w.persist(w.rv, _run(overall="fail", minutes=0))
+    read = w.client.get(
+        f"/api/v1/rating-versions/{w.rv}/regression-runs/{run_id}", headers=w.headers
+    )
+    assert read.status_code == 200, read.text
+    assert read.json()["overall"] == "fail"
+    assert "id" not in read.json()  # the persisted record carries no id (03 §4.9)
