@@ -36,6 +36,7 @@ describe("the mount inspector", () => {
     expect(last(emitted() as Record<string, unknown[][]>)["outputs"]).toEqual({ total: "fees_total" });
   });
 
+  // FR-218: purposes are omitted when none is checked, and sent in canonical order.
   it("omits purposes when neither box is checked, never sending an empty list", async () => {
     const { emitted } = render(MountInspector, { props: { mount: REFUND, subGraphPins: PINS } });
     const box = await screen.findByLabelText("cancellation");
@@ -45,6 +46,7 @@ describe("the mount inspector", () => {
     expect("purposes" in mount).toBe(false);
   });
 
+  // FR-218: purposes are omitted when none is checked, and sent in canonical order.
   it("sends both purposes in canonical order when both boxes are checked", async () => {
     const { emitted } = render(MountInspector, { props: { mount: REFUND, subGraphPins: PINS } });
     await userEvent.click(await screen.findByLabelText("mid_term_adjustment"));
@@ -54,6 +56,7 @@ describe("the mount inspector", () => {
     ]);
   });
 
+  // FR-217: a mount's sub-graph is one of the Rating Version's pinned versions.
   it("offers exactly the Rating Version's sub-graph pins as the version options", async () => {
     render(MountInspector, { props: { mount: FEES, subGraphPins: PINS } });
     const select = await screen.findByLabelText("Sub-graph version");
