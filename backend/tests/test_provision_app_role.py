@@ -4,6 +4,9 @@ role is provisioned by `deploy/postgres/app-login-role.sql` and `scripts/provisi
 DB-free by design: the SQL file is read as text, the verifier is checked against the
 RFC 7677 vector, and the script's refusals fire before it connects. The convergence proof
 (applied twice, attributes reset) is a DB-window act in S1a's `LG-`, not a test here.
+*(Amended 2026-10-26, SL 8266, FD-1951: the module is DB-backed from S1c, for the last test
+only, which plants a state as the owner in a rolled-back transaction and applies the SQL file
+over it.)*
 
 **Interface drafted here, to be ratified at the GO** (the plan fixes behaviour, not names):
 `scripts/provision-app-role.py` exposes `scram_sha256_verifier(password, *, salt,
@@ -26,6 +29,9 @@ from pathlib import Path
 from types import ModuleType
 
 import pytest
+from sqlalchemy import text
+
+from app.db.session import Database
 
 _ROOT = Path(__file__).resolve().parents[2]
 _SCRIPT = _ROOT / "scripts" / "provision-app-role.py"
@@ -144,3 +150,62 @@ def test_compose_mounts_the_login_role_sql_for_fresh_volumes() -> None:
         "./postgres/app-login-role.sql:/docker-entrypoint-initdb.d/10-app-login-role.sql:ro"
         in compose
     )
+
+
+#: `{case id: (state the owner plants, a probe over the state after the SQL file, the value the
+#: probe must return)}`. The SQL file is applied over the planted state, in one rolled-back
+#: transaction, exactly as `provision-app-role.py` applies it.
+_CONVERGENCE: dict[str, tuple[str, str, object]] = {
+    "b1_gip_app_attributes": (
+        "ALTER ROLE gip_app CREATEROLE CREATEDB REPLICATION",
+        "SELECT rolcreaterole OR rolcreatedb OR rolreplication FROM pg_roles "
+        "WHERE rolname = 'gip_app'",
+        False,
+    ),
+    "b2_membership_options": (
+        "REVOKE gip_app FROM gip_app_login; "
+        "GRANT gip_app TO gip_app_login WITH INHERIT FALSE, SET TRUE",
+        "SELECT inherit_option AND NOT set_option AND NOT admin_option FROM pg_auth_members "
+        "WHERE roleid = 'gip_app'::regrole AND member = 'gip_app_login'::regrole",
+        True,
+    ),
+    "m4_role_settings": (
+        "ALTER ROLE gip_app_login SET search_path = shadow, public",
+        "SELECT count(*) FROM pg_db_role_setting s JOIN pg_roles r ON r.oid = s.setrole "
+        "WHERE r.rolname IN ('gip_app', 'gip_app_login') AND s.setdatabase = 0",
+        0,
+    ),
+    "m4b_database_role_settings": (
+        "DO $p$ BEGIN EXECUTE format("
+        "'ALTER ROLE gip_app_login IN DATABASE %I SET search_path = shadow, public', "
+        "current_database()); END $p$",
+        "SELECT count(*) FROM pg_db_role_setting s JOIN pg_roles r ON r.oid = s.setrole "
+        "WHERE r.rolname IN ('gip_app', 'gip_app_login') AND s.setdatabase <> 0",
+        0,
+    ),
+}
+
+
+@pytest.mark.req("FR-44")
+@pytest.mark.parametrize("case", list(_CONVERGENCE))
+async def test_the_login_role_sql_converges_a_planted_state(
+    owner_database: Database, case: str
+) -> None:
+    """S1c (FD-1951): a pre-existing `gip_app` with CREATEROLE, CREATEDB or REPLICATION, a
+    membership with other options, and role settings (role-wide or per-database) are all
+    reset by the SQL file. The file is applied with the raw driver connection's `execute()`
+    (simple protocol, as `provision-app-role.py` does): a `text()` cannot carry a `DO` block
+    and several statements."""
+    plant, probe, expected = _CONVERGENCE[case]
+    async with owner_database.engine.connect() as connection:
+        transaction = await connection.begin()
+        try:
+            await connection.execute(text("SELECT 1"))  # opens the transaction on the driver
+            raw = await connection.get_raw_connection()
+            driver = raw.driver_connection
+            assert driver is not None
+            await driver.execute(plant)
+            await driver.execute(_SQL.read_text(encoding="utf-8"))
+            assert (await connection.execute(text(probe))).scalar_one() == expected
+        finally:
+            await transaction.rollback()
