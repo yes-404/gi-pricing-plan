@@ -150,6 +150,10 @@ relates: []                      # ids only
   as already-checked and gets LESS scrutiny for it, backwards from what its provenance
   deserves. Put "verify against the primary source, do not implement against my relay" in
   every dispatch, and check a fact before defending it.
+- **A CI wait is not idle time** *(added 2026-10-26 by the lead, on the maintainer's entry
+  "2026-10-26 15:30:41 GMT", after three idle CI waits that day: 13:14, 14:14 and 15:09 GMT)*: before
+  ending a turn with a PR in CI, the next prep or proof is seated, or the entry says why no seat is
+  possible. Watch the CI in the background; never let the watch be the only work in flight.
 - **Tools:** full read; git merge authority; write to handover/status files, plus any
   `docs/` content no other role's charter names — `CLAUDE.md` §12: "a question in no
   charter is the lead's." **Which paths those are is read from the generated ownership
