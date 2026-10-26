@@ -3009,7 +3009,6 @@ owner: lead
 tree: 54e0fca083628964aa1227c0ada467d3d7b3a379
 phase: P2
 work: WK-1178
-plans: [PL-1769, PL-1927]
 corrected_by: []
 relates: [FD-1729, FD-1951, LG-1947, RS-1949, OQ-1950, PL-1927, SL-1942, SL-1771]
 ```
