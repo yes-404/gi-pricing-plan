@@ -89,6 +89,6 @@ Accepted, not findings: path (ii) of FD-1945 (no migrations) is not driven DB-fr
 2. **SL-1771 → `retired`** with the dated re-cut line (02:07:55 item 2); S1b's id is not written, named as "PL-1927's S1b".
 3. **LG-1941 → LG-1941**: `slice:`, `plans:`, `relates:`, title and filename re-pointed through `mint-repoint.py` (dry run to the maintainer), then N1's lines appended.
 4. **Code-hit template minus (ii)** (02:39:03 item 5), `quote-parity rc=0` quoted. Hits at `58fdb69f` outside `docs/`: `backend/tests/conftest_db.py:475,480,485` (`OQ-1943` strings in `OWNER_FIXTURE_USERS`); `conftest_db.py:1004,1034,1100` (`FD-1945` docstrings); `backend/tests/test_blobs.py:232` (`OQ-1943`); `backend/tests/test_conftest_db_unreachable.py:1` (`FD-1945`). Mint targets: OQ-1943→1943, OQ-1944→1944, FD-1945→1945, RS-1946→1946.
-5. OQ-1943/OQ-01944 rows in `open-questions.md`, `07-platform.md` §10, `01-data-management.md` §10 and the two roadmap gate rows, re-pointed to the minted ids; the FD-1945 register row and essay cite the minted SL id.
+5. OQ-1943/OQ-1944 rows in `open-questions.md`, `07-platform.md` §10, `01-data-management.md` §10 and the two roadmap gate rows, re-pointed to the minted ids; the FD-1945 register row and essay cite the minted SL id.
 6. N1's gate lines and the merge-base sha; N2 as a follow-on or at the fold.
 7. After the fold: re-merge, the 13 + audit-docs 0, per 03:28:21.
