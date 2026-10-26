@@ -263,6 +263,7 @@ describe("the rating version list view (FR-1903)", () => {
     expect(href("Design fremtpl2-demo@2")).toBe("/rating/fremtpl2-demo/v/2/design");
     expect(href("Sandbox fremtpl2-demo@2")).toBe("/rating/fremtpl2-demo/v/2/sandbox");
     expect(href("Dislocation fremtpl2-demo@2")).toBe("/rating/fremtpl2-demo/v/2/dislocation");
+    expect(href("Tests fremtpl2-demo@2")).toBe("/rating/fremtpl2-demo/v/2/tests");
     expect(href("area@3")).toBe("/rating/fremtpl2-demo/v/2/tables/area");
     expect(href("band@2")).toBe("/rating/fremtpl2-demo/v/2/tables/band");
 
