@@ -3010,7 +3010,7 @@ tree: 54e0fca083628964aa1227c0ada467d3d7b3a379
 phase: P2
 work: WK-1178
 corrected_by: []
-relates: [FD-1729, FD-1951, LG-1947, RS-1949, OQ-1950, PL-1927, SL-1942, SL-1771]
+relates: [FD-1729, FD-1951, LG-1947, RS-1949, OQ-1950, PL-1927, PL-1769, SL-1942, SL-1771]
 ```
 
 FD-1729's second part: the application refuses to start on a role holding more than the exact grant map, with the trigger-tamper proof and the exact grant map, with the red tests and their red table in the slice ledger. Slice S1b of PL-1927; the CREATEROLE and ADMIN OPTION routes it leaves open are FD-1951.
