@@ -208,3 +208,9 @@ Date, head, the whole last summary line of the log, rc, log path. Dates are the 
 - Run 5: 2026-10-26, @163146f2, `2873 passed, 13 skipped, 136 warnings in 1428.35s (0:23:48)`, rc 0, `~/gi-pricing-plan.local/scratch/exec-s1arun5/full.log`. Three throwaway databases.
 
 Condition (iii) (to-lead 23:04:28 / 23:05:26) MET — accepted by the maintainer, to-lead 2026-10-26 01:42:44 GMT.
+
+2026-10-26 — `gip_app_login` persists on the shared cluster after S1a's gate demo (`provision-app-role.py`, local default password, loopback-only ports): ACCEPTED, to-lead 2026-10-26 01:53:21 GMT; the gate's END row quotes `pg_roles` before/after.
+
+2026-10-26 — FD 8256 red line: head 4bc098a5 (c4a0c907 plus the red test), `~/gi-pricing-plan.local/handover/run-small.sh <s1a-draft> backend/tests/test_conftest_db_unreachable.py`, `5 failed, 1 passed, 2 warnings in 39.50s`, rc 1 (the "configured" cases got `1 skipped` where a failure is asserted).
+
+2026-10-26 — FD 8256 green line: head 2124a622, the same command, `6 passed, 2 warnings in 42.74s`, rc 0; `test_conftest_db_login_role.py` + `test_conftest_db.py` at the same head, `18 passed, 2 warnings in 0.43s`, rc 0.
