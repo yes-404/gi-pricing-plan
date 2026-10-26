@@ -1295,7 +1295,7 @@ owner: maintainer
 phase: P2
 ```
 
-From “Workstreams” (line 385): Frontend: **DAG designer (Vue Flow)**, rate table editor, quote sandbox + ladder waterfall, dislocation views | The DAG designer is the single largest frontend effort in the project
+From “Workstreams” (line 385): Frontend: **DAG designer (Vue Flow)**, rate table editor, quote sandbox + ladder waterfall, dislocation views | The DAG designer is the single largest frontend effort in the project — **close audit filed (CR-1952), acceptance owed** *(dated 2026-10-26 by the auditor, on the maintainer's entry "2026-10-26 10:33:40 GMT" in `to-lead.md`; audited at `1e0a8abb`; the record proposes, the lead gives the §13 verdicts, and the close is the user's dated line)*
 
 *(Dated line, 2026-10-12, the lead's hand-off from planner-wk1250-s3 (branch `pl-9866-9867-lanec-s5-unblock-2026-10-12`), under the maintainer's (by delegation) entry "2026-10-12 02:58:33 BST" (`to-lead.md`; RL-1670): `PL-1668` is a Work-plan delta to `PL-1546` row 1 (`SL-1547`, Slice 5) for `RL-1613`'s contract-changing scope and the bulk-operation typing dependency. `SL-1547`'s activation need "the FD-1366 bulk-operation typing slice merged" names `SL-1669` (dated 2026-10-12, at the D13 mint).)*
 
