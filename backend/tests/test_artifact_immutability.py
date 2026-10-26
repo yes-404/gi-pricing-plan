@@ -21,6 +21,7 @@ from backend.tests.conftest_db import seed_as_owner
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
+from app.db.immutability import _declared
 from app.db.models import Base, DatasetVersionRow
 from app.db.session import Database
 from app.platform import datasets, profiles, validation
@@ -38,21 +39,6 @@ from model_schema import (
 from model_schema.datasets import VALID_DATASET_TRANSITIONS, DatasetStatus
 
 ACTOR = Principal(kind=ActorKind.USER, id=new_uuid7(), display="a@insurer.example")
-
-
-
-def _declared(kind: str) -> tuple[str, ...]:
-    """The tables whose ORM declaration says `kind` (DP-8): derived, never restated.
-
-    Every mapped table declares `immutability` in `__table_args__` (`app/db/models.py`); a table
-    that declares nothing fails `test_every_mapped_table_declares_its_immutability`. The set of
-    tables Layer 1 locks is therefore read from where the table is written, and a new artifact
-    table cannot be forgotten silently (FD-1728). It replaces the list that was written out here,
-    which had thirteen names and was why eleven artifact tables were missed.
-    """
-    return tuple(
-        sorted(t.name for t in Base.metadata.sorted_tables if t.info.get("immutability") == kind)
-    )
 
 
 async def _grant(database: Database, workspace_id) -> None:

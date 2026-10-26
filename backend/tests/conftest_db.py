@@ -30,6 +30,7 @@ from uuid import UUID
 
 import pytest
 import pytest_asyncio
+from pydantic import SecretStr
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -190,6 +191,13 @@ def test_database_url() -> str:
         )
         .render_as_string(hide_password=False)
     )
+
+
+def owner_subject_settings(**overrides: Any) -> Settings:
+    """`Settings` whose database is the OWNER's, for the `owner-subject` start-up tests that must
+    be refused (`test_application_role.py`). Kept here so `test_owner_database_url()` has one
+    caller file, as `test_owner_database_url_is_called_only_inside_conftest_db` requires."""
+    return Settings(database_url=SecretStr(test_owner_database_url()), **overrides)
 
 
 #: The `(node id, label, reason)` of every test that may use `owner_database` -- closed, and
@@ -977,6 +985,72 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
         "owner-subject",
         "trigger probe: issues the tampering statement as the owner "
         "and asserts the trigger, not the privilege check, refuses it",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_an_inherit_false_membership_of_the_owner_is_refused[inherit_false_member_of_the_owner]",
+        "owner-subject",
+        "plants a scratch role membership / BYPASSRLS role as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_an_inherit_false_membership_of_the_owner_is_refused[bypassrls_role]",
+        "owner-subject",
+        "plants a scratch role membership / BYPASSRLS role as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_a_tampered_artifact_trigger_refuses_startup[disable]",
+        "owner-subject",
+        "tampers with an artifact trigger as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_a_tampered_artifact_trigger_refuses_startup[replica]",
+        "owner-subject",
+        "tampers with an artifact trigger as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_a_tampered_artifact_trigger_refuses_startup[drop]",
+        "owner-subject",
+        "tampers with an artifact trigger as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_a_tampered_artifact_trigger_refuses_startup[replace_body]",
+        "owner-subject",
+        "tampers with an artifact trigger as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_every_table_grants_the_application_exactly_its_declared_privileges",
+        "owner-subject",
+        "reads the grants the owner made, over every public table",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_the_grant_comparison_sees_a_drift_in_both_directions[extra_table_grant]",
+        "owner-subject",
+        "plants a grant drift as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_the_grant_comparison_sees_a_drift_in_both_directions[missing_column_grant]",
+        "owner-subject",
+        "plants a grant drift as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_the_grant_comparison_sees_a_drift_in_both_directions[extra_column_grant]",
+        "owner-subject",
+        "plants a grant drift as the owner (rolled back)",
+    ),
+    (
+        "backend/tests/test_application_role.py::"
+        "test_an_enable_always_trigger_is_accepted",
+        "owner-subject",
+        "sets a trigger to ENABLE ALWAYS as the owner (rolled back)",
     ),
 )
 

@@ -106,6 +106,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # ill-typed, out of range, or for an Environment-only key (`RL-1311` item 3a) —
         # stops the process here, with the variable named, rather than failing at first use.
         validate_setting_overrides(settings)
+        # FR-44 (FD-1729): a process connected as an owner or a superuser, or on a database whose
+        # immutability triggers were tampered with, does not start. Before `require_tenant_binding`
+        # on purpose: a refused process writes no tenant marker and does not touch the blob bucket.
+        await database.assert_least_privilege()
         # FR-436: every store must be bound to this deployment's tenant, or the process
         # does not start. Before the probes and before any write to a store, and the check
         # itself orders the stores so that the read-only database check comes first. It also
