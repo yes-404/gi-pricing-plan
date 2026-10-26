@@ -855,6 +855,69 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
         "owner-subject",
         "issues UPDATE/DELETE/TRUNCATE as the owner; asserts the append-only trigger refuses it",
     ),
+    (
+        "backend/tests/test_api_me.py::"
+        "test_break_glass_is_visible_on_me",
+        "DP-22",
+        "runs a production function with no application caller ",
+        "(grant_role, grant_break_glass, ensure_member, ...) as the owner",
+    ),
+    (
+        "backend/tests/test_rbac.py::"
+        "test_a_grant_within_what_the_granter_holds_succeeds_and_is_audited",
+        "DP-22",
+        "runs a production function with no application caller ",
+        "(grant_role, grant_break_glass, ensure_member, ...) as the owner",
+    ),
+    (
+        "backend/tests/test_rbac.py::"
+        "test_break_glass_is_time_boxed_and_expires",
+        "DP-22",
+        "runs a production function with no application caller ",
+        "(grant_role, grant_break_glass, ensure_member, ...) as the owner",
+    ),
+    (
+        "backend/tests/test_rbac.py::"
+        "test_break_glass_is_audited_and_flagged",
+        "DP-22",
+        "runs a production function with no application caller ",
+        "(grant_role, grant_break_glass, ensure_member, ...) as the owner",
+    ),
+    (
+        "backend/tests/test_rbac.py::"
+        "test_seeding_roles_is_idempotent",
+        "DP-22",
+        "runs a production function with no application caller ",
+        "(grant_role, grant_break_glass, ensure_member, ...) as the owner",
+    ),
+    (
+        "backend/tests/test_workspace_members.py::"
+        "test_a_realm_login_resolves_to_the_seeded_principal",
+        "DP-22",
+        "runs a production function with no application caller ",
+        "(grant_role, grant_break_glass, ensure_member, ...) as the owner",
+    ),
+    (
+        "backend/tests/test_workspace_members.py::"
+        "test_ensuring_a_member_twice_does_not_raise",
+        "DP-22",
+        "runs a production function with no application caller ",
+        "(grant_role, grant_break_glass, ensure_member, ...) as the owner",
+    ),
+    (
+        "backend/tests/test_workspace_members.py::"
+        "test_an_id_that_contradicts_the_stored_identity_is_refused_where_it_arises",
+        "DP-22",
+        "runs a production function with no application caller ",
+        "(grant_role, grant_break_glass, ensure_member, ...) as the owner",
+    ),
+    (
+        "backend/tests/test_lineage.py::"
+        "test_a_subject_purge_is_admin_only_and_recorded",
+        "DP-22",
+        "runs a production function with no application caller ",
+        "(grant_role, grant_break_glass, ensure_member, ...) as the owner",
+    ),
 )
 
 
