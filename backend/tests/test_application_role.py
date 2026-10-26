@@ -48,6 +48,7 @@ from app.config import Settings
 from app.db.immutability import (
     P_OWN,
     PINNED_GUARD_FUNCTION_MD5,
+    PREDEFINED_ROLES,
     LeastPrivilegeError,
     _declared,
     assert_least_privilege,
@@ -159,13 +160,6 @@ async def test_an_inherit_false_membership_of_the_owner_is_refused(
 # naming the route. A control before the plant proves the same call passes on the provisioned
 # state, so the raise is the plant's (SL 8266).
 
-_PREDEFINED_ROLES = (
-    "pg_write_all_data",
-    "pg_execute_server_program",
-    "pg_write_server_files",
-    "pg_read_server_files",
-)
-
 #: `{case id: ([statements the owner plants], the route the refusal names)}`.
 _ROUTES: dict[str, tuple[list[str], str]] = {
     "a1_gip_app_createrole": (["ALTER ROLE gip_app CREATEROLE"], r"gip_app \(createrole\)"),
@@ -175,7 +169,7 @@ _ROUTES: dict[str, tuple[list[str], str]] = {
     ),
     **{
         f"m1_{role}": ([f"GRANT {role} TO gip_app_login"], rf"{role} \(predefined role\)")
-        for role in _PREDEFINED_ROLES
+        for role in PREDEFINED_ROLES
     },
     "m2_session_replication_role": (
         ["GRANT SET ON PARAMETER session_replication_role TO gip_app_login"],
@@ -463,7 +457,19 @@ async def _grant_differences(connection: AsyncConnection) -> list[str]:
         if privilege not in table_level[table]:  # a table-level grant is expanded to its columns
             column_level[table].setdefault(column, set()).add(privilege)
 
+    # PUBLIC (grantee 0) must hold nothing: it reaches every role, `gip_app_login` included.
+    public: dict[str, set[str]] = {}
+    for table, privilege in await connection.execute(
+        text(
+            "SELECT c.relname, a.privilege_type FROM pg_class c, aclexplode(c.relacl) a "
+            "WHERE a.grantee = 0 AND c.relnamespace = 'public'::regnamespace "
+            "AND c.relkind IN ('r', 'p')"
+        )
+    ):
+        public.setdefault(table, set()).add(privilege)
+
     differences = [f"{t}: no expected row" for t in sorted(tables - EXPECTED_GRANTS.keys())]
+    differences += [f"{t}: PUBLIC holds {sorted(p)}" for t, p in sorted(public.items())]
     differences += [f"{t}: expected table absent" for t in sorted(EXPECTED_GRANTS.keys() - tables)]
     for table in sorted(tables & EXPECTED_GRANTS.keys()):
         want_table, want_columns = EXPECTED_GRANTS[table]
