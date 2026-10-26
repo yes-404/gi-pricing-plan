@@ -2,7 +2,7 @@
 id: FD-1652
 family: finding
 title: SL-1559 never recorded the stored-data check required before retyping rate-table rows and default_row
-status: active
+status: closed
 created: 2026-10-12
 owner: auditor
 tree: 372fa92ae3ab306bc067c234487ce929dc0e2a04
