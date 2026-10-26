@@ -531,7 +531,7 @@ GBM_MODEL_TYPES = ("xgboost", "lightgbm")
 
 
 def gbm_transformed_factors(factors: Sequence[Factor]) -> tuple[Factor, ...]:
-    """The Factors of a GBM that a `model_call` cannot score: the banded and the grouped.
+    """The Factors of a GBM that a `model_call` cannot score: every type other than IDENTITY.
 
     `fit_gbm` bands or groups the raw column and encodes the resulting label ordinally, but a
     `model_call` scores a GBM with `factors=()` and a Bundle that carries no Bandings or
@@ -539,9 +539,11 @@ def gbm_transformed_factors(factors: Sequence[Factor]) -> tuple[Factor, ...]:
     the label, so it either raises or, when a label spells another band's number, prices the
     wrong band without an error. The one definition: the save check and the compile check
     both refuse a pinned GBM for which this is non-empty (`MODEL_CALL_GBM_TRANSFORMED_FACTOR`).
+
+    Amended 2026-10-25 (the maintainer's S4 decision (1) of "2026-10-25 13:07:06 GMT", option (b)):
+    the filter was the banded and the grouped only, so an EXPRESSION Factor (its slug is its source
+    column) and an INTERACTION Factor (the cross is taken as supplied) reached the runtime's
+    `factors=()` scoring silently. Only an IDENTITY Factor is read as its raw value, so every other
+    type is refused, and a Factor type added later is refused until it is shown scoreable.
     """
-    return tuple(
-        factor
-        for factor in factors
-        if factor.type in (FactorType.BANDING, FactorType.GROUPING)
-    )
+    return tuple(factor for factor in factors if factor.type is not FactorType.IDENTITY)
