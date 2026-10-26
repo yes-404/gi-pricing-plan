@@ -17,7 +17,7 @@ x-gip-env: &gip-env
   GIP_BUILD: ${GIP_BUILD:-unset}
   GIP_TENANT_ID: ${GIP_TENANT_ID:-compose-reference}
   GIP_DEV_AUTH_ENABLED: ${GIP_DEV_AUTH_ENABLED:-true}   # reference path only; FR-437 for production
-  GIP_DATABASE_URL: postgresql+asyncpg://gipricing:gipricing@postgres:5432/gipricing
+  GIP_DATABASE_URL: postgresql+asyncpg://gip_app_login:gip_app_login@postgres:5432/gipricing   # FD-1729: the application's login role (DP-16 (a))
   GIP_REDIS_URL: redis://redis:6379/0
   GIP_BLOB_ENDPOINT_URL: http://minio:9000
   GIP_BLOB_ACCESS_KEY: gipricing
