@@ -431,10 +431,13 @@ async def diff_needs_job(
 ) -> bool:
     """Whether the diff must answer 202 with a Job (03 §5.1, FR-232).
 
-    Either version `storage: parquet` routes the request to a `rate_table.diff` Job;
-    a rows-only pair stays on the synchronous 200 path. Raises the same refusals as
-    `diff` (a missing table or version, a baseless baseline) so the two forms cannot
-    disagree about what exists. Versions are immutable, so a later resolution inside
+    True where either version is `storage: parquet`. The diff route does not call this:
+    it answers from the stored artifact, and the first request for a key is a
+    `rate_table.diff_cells` Job for either storage (`diff_from_artifact`, FR-232,
+    RL-1418, RL-1442). Its caller is the drafted change summary (`rating_versions.py`,
+    FR-242), which marks such a pair `pending` instead of diffing it inline. Raises the
+    same refusals as `diff` (a missing table or version, a baseless baseline) so the two
+    forms cannot disagree about what exists. Versions are immutable, so a later resolution inside
     the worker arrives at the same baseline and the same cells.
 
     A named portfolio is checked here too (`check_portfolio`), so a refused portfolio is
@@ -484,8 +487,8 @@ async def diff(
 
     One compute path for both storages (FR-232): a `parquet` version's cells are
     materialised from its blob the way every bounded table transform does; storage
-    decides whether the API answers 200 or 202 with a Job (`diff_needs_job`), never
-    what the artifact contains.
+    never decides what the artifact contains, and whether the route answers 200 or 202
+    is decided by the stored artifact (`diff_from_artifact`), not by storage.
 
     With `cache` (DP3 (b)) the read path is compute-on-read: a miss computes and
     stores, a hit serves the stored artifact. The key covers both versions' content
