@@ -1,23 +1,24 @@
 ---
-id: LG-8241
+id: LG-1929
 family: ledger
 title: WK-1178 slice S2 — FD-1610 limb 2, the feature_map keys a model_call drops are traced, then refused when they feed a required input (slice ledger)
 status: active                 # active → closed (§1.2a)
-created: 2026-10-25
+created: 2026-10-26               # drafted 2026-10-25 under working id 8241
 owner: executor
 tree: 3ffdbe3f787c195e43ebd3f8ae6a17143777d2e8
 phase: P2
 work: WK-1178
+slice: SL-1928
 plans: [PL-8227]
 corrected_by: []
-relates: [FD-1610, PL-8227]
+relates: [SL-1928, FD-1610, PL-8227]
 ---
 
-# LG-8241 — WK-1178 slice S2: FD-1610 limb 2, dropped feature_map keys
+# LG-1929 — WK-1178 slice S2: FD-1610 limb 2, dropped feature_map keys
 
 Working id 8241 (LG), unminted; the slice row S2 of PL 8227 has no working SL id. Branch `draft/s2-fd1610`.
 
-**GO:** the maintainer's entry "2026-10-25 22:16:18 GMT" (`to-lead.md`), amended by "2026-10-25 22:26:43 GMT" (S2-C0 RULED option (1)) and ruled on by "2026-10-25 22:38:42 GMT" (S2-C0 option (a); S2's ledger = LG 8241; format split).
+**GO:** the maintainer's entry "2026-10-25 22:16:18 GMT" (`to-lead.md`), amended by "2026-10-25 22:26:43 GMT" (S2-C0 RULED option (1)) and ruled on by "2026-10-25 22:38:42 GMT" (S2-C0 option (a); S2's ledger = LG-1929; format split).
 **MERGE-ACK:** not yet given.
 
 ## Tasks
@@ -36,10 +37,10 @@ S2-D1 / (d), (c), spec lines, contracts regeneration, and S2-C0 (the exposure me
 
 ### Audit
 
-RS 8247 (aud-s2, @331cd7f0) proposed CLEAN, ADOPTED CLEAN by the lead; accepted at to-lead 2026-10-25 22:51:27 GMT. The record is `docs/research/RS-08247-s2-fd-1610-limb-2-slice-audit-dropped-inputs-and-model-call-required-input-absent.md`, folded blob-identical from aud-s2 @331cd7f0. Its notes, as ruled at that entry:
+RS-1930 (aud-s2, @331cd7f0) proposed CLEAN, ADOPTED CLEAN by the lead; accepted at to-lead 2026-10-25 22:51:27 GMT. The record is `docs/research/RS-01930-s2-fd-1610-limb-2-slice-audit-dropped-inputs-and-model-call-required-input-absent.md`, folded blob-identical from aud-s2 @331cd7f0. Its notes, as ruled at that entry:
 
 - **N1** — accepted non-blocking; the allow-list comparison is the guard; no new test now.
-- **N2** — ruled: (c) refuses per graph name, the literal 11:53:23 ruling; it stands as ruled for S2 and is filed as OQ 8249 (open, owner WK-1178), with a recommendation.
+- **N2** — ruled: (c) refuses per graph name, the literal 11:53:23 ruling; it stands as ruled for S2 and is filed as OQ-1931 (open, owner WK-1178), with a recommendation.
 - **N3** — accepted — no src change after 3ffdbe3f; S2's gate at 84aadaec is decisive.
 - **N4** — wording: the `03` §4.10 "feature_map" phrase is fixed to name what the trace carries; the line is already on this branch (the dated line in `03` §4.10).
 
@@ -61,7 +62,7 @@ head=3ffdbe3f787c195e43ebd3f8ae6a17143777d2e8
 
 **Correction to PL 8227's S2-C0 text (2026-10-25; the plan is frozen, this ledger carries it):** the measurement reads the compiled Bundle blob, not the `rating_versions.bundle` column — that column is `BundleMetadata` (`model-schema` `rating.py`:88–122, `extra=forbid`: content_hash, bytes, compiled_at, blob_sha256), so the plan's `select … bundle::text` query measures nothing (ruled option (1), "2026-10-25 22:26:43 GMT").
 
-**Dated line (2026-10-25, exec-s2docs, on the maintainer's (by delegation) entry "2026-10-25 22:51:27 GMT"):** RS 8247 N2 is filed as OQ 8249 (open, owner WK-1178; `docs/open-questions.md`, mirrored in `03` §10, placed at roadmap "Before Phase 3"), and N4 is corrected by a dated line in `03` §4.10: `dropped_inputs` is computed at score time from the step's `feature_map` names that `consumed` does not hold, and `feature_map` is not in the trace.
+**Dated line (2026-10-25, exec-s2docs, on the maintainer's (by delegation) entry "2026-10-25 22:51:27 GMT"):** RS-1930 N2 is filed as OQ-1931 (open, owner WK-1178; `docs/open-questions.md`, mirrored in `03` §10, placed at roadmap "Before Phase 3"), and N4 is corrected by a dated line in `03` §4.10: `dropped_inputs` is computed at score time from the step's `feature_map` names that `consumed` does not hold, and `feature_map` is not in the trace.
 
 ## PRs
 
