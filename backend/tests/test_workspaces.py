@@ -45,5 +45,7 @@ async def test_a_membership_cannot_name_a_workspace_that_does_not_exist(
     async def seed(session: AsyncSession) -> None:
         session.add(WorkspaceMemberRow(user_id=new_uuid7(), workspace_id=new_uuid7()))
 
+    # Owner session on purpose: the subject is the FK constraint, not the role. On the app
+    # role this would fail earlier with "permission denied" and test the wrong thing.
     with pytest.raises(IntegrityError):
         await seed_as_owner(seed)

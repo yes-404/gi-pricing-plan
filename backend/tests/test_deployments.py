@@ -406,6 +406,7 @@ async def _scoped_deployer(database: Database, workspace_id: UUID, env_slug: str
     from model_schema import ScopeType
 
     made = await seat("analyst")  # a member with the roles table seeded
+
     async def _seed(session):
         env = (
             await session.execute(select(EnvironmentRow).where(EnvironmentRow.slug == env_slug))
@@ -427,12 +428,15 @@ async def _scoped_deployer(database: Database, workspace_id: UUID, env_slug: str
                 scope_id=env.id,
             )
         )
+
+    await seed_as_owner(_seed)
+    # The read and the assert are about app-visible behaviour: they run on the app connection.
+    async with database.unit_of_work() as session:
         assert (
             await session.execute(
                 select(WorkspaceMemberRow).where(WorkspaceMemberRow.user_id == made.id)
             )
         ).scalar_one_or_none()
-    await seed_as_owner(_seed)
     return made
 
 
