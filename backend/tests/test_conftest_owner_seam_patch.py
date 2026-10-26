@@ -3,7 +3,7 @@ production seeding functions a test calls module-qualified are the owner-routed 
 
 DB-free by design. "Runs on the owner engine" is proved by routing, not by connecting: the
 wrappers reach the database only through `conftest_db.seed_as_owner`, whose body opens an
-engine on `test_owner_database_url()`. A stub of `seed_as_owner` that records the call
+engine on the owner's DSN. A stub of `seed_as_owner` that records the call
 therefore shows the wrapper took the one owner seam, with no database to ask `current_user`.
 """
 
