@@ -918,6 +918,55 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
         "runs a production function with no application caller ",
         "(grant_role, grant_break_glass, ensure_member, ...) as the owner",
     ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_a_stored_report_cannot_be_rewritten",
+        "owner-subject",
+        "trigger probe: issues the tampering statement as the owner ",
+        "and asserts the trigger, not the privilege check, refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_a_stored_report_cannot_be_deleted_or_truncated",
+        "owner-subject",
+        "trigger probe: issues the tampering statement as the owner ",
+        "and asserts the trigger, not the privilege check, refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_a_profile_cannot_be_rewritten",
+        "owner-subject",
+        "trigger probe: issues the tampering statement as the owner ",
+        "and asserts the trigger, not the privilege check, refuses it",
+    ),
+    (
+        "backend/tests/test_artifact_immutability.py::"
+        "test_an_acknowledgement_cannot_be_rewritten_or_removed",
+        "owner-subject",
+        "trigger probe: issues the tampering statement as the owner ",
+        "and asserts the trigger, not the privilege check, refuses it",
+    ),
+    (
+        "backend/tests/test_backtests.py::"
+        "test_a_backtest_cannot_be_rewritten_at_either_layer",
+        "owner-subject",
+        "trigger probe: issues the tampering statement as the owner ",
+        "and asserts the trigger, not the privilege check, refuses it",
+    ),
+    (
+        "backend/tests/test_model_jobs.py::"
+        "test_a_fitted_model_cannot_be_rewritten_in_the_database",
+        "owner-subject",
+        "trigger probe: issues the tampering statement as the owner ",
+        "and asserts the trigger, not the privilege check, refuses it",
+    ),
+    (
+        "backend/tests/test_peril_structures.py::"
+        "test_a_reconciled_structure_cannot_be_deleted",
+        "owner-subject",
+        "trigger probe: issues the tampering statement as the owner ",
+        "and asserts the trigger, not the privilege check, refuses it",
+    ),
 )
 
 

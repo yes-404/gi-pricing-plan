@@ -118,12 +118,16 @@ async def _report(database: Database, workspace_id, version_id):
 
 
 @pytest.mark.req("FR-43")
-async def test_a_stored_report_cannot_be_rewritten(database: Database, workspace_id) -> None:
+async def test_a_stored_report_cannot_be_rewritten(
+    database: Database, owner_database: Database, workspace_id
+) -> None:
     """The exact statement an audit used to turn 190 failures into passes."""
     report_id = await _report(database, workspace_id, await _version(database, workspace_id))
 
+    # Trigger probe: the trigger is what is asserted, so the statement runs as the owner (on the
+    # login role the privilege check refuses first). Setup and reads stay on `database`.
     with pytest.raises(DBAPIError) as refused:
-        async with database.unit_of_work() as session:
+        async with owner_database.unit_of_work() as session:
             await session.execute(
                 text("UPDATE validation_reports SET overall = 'pass' WHERE id = :id"),
                 {"id": report_id},
@@ -142,7 +146,7 @@ async def test_a_stored_report_cannot_be_rewritten(database: Database, workspace
 
 @pytest.mark.req("FR-43")
 async def test_a_stored_report_cannot_be_deleted_or_truncated(
-    database: Database, workspace_id
+    database: Database, owner_database: Database, workspace_id
 ) -> None:
     """`DELETE` removes the evidence; `TRUNCATE` removes all of it.
 
@@ -151,21 +155,25 @@ async def test_a_stored_report_cannot_be_deleted_or_truncated(
     """
     report_id = await _report(database, workspace_id, await _version(database, workspace_id))
 
+    # Trigger probe: the trigger is what is asserted, so the statement runs as the owner (on the
+    # login role the privilege check refuses first). Setup and reads stay on `database`.
     with pytest.raises(DBAPIError) as deleted:
-        async with database.unit_of_work() as session:
+        async with owner_database.unit_of_work() as session:
             await session.execute(
                 text("DELETE FROM validation_reports WHERE id = :id"), {"id": report_id}
             )
     assert "append-only" in str(deleted.value)
 
     with pytest.raises(DBAPIError) as truncated:
-        async with database.unit_of_work() as session:
+        async with owner_database.unit_of_work() as session:
             await session.execute(text("TRUNCATE validation_reports"))
     assert "append-only" in str(truncated.value)
 
 
 @pytest.mark.req("FR-43")
-async def test_a_profile_cannot_be_rewritten(database: Database, workspace_id) -> None:
+async def test_a_profile_cannot_be_rewritten(
+    database: Database, owner_database: Database, workspace_id
+) -> None:
     """A profile is what the factor workbench reads and what drift is measured against.
 
     A rewritten profile makes two runs of the same comparison disagree with no artifact
@@ -181,8 +189,10 @@ async def test_a_profile_cannot_be_rewritten(database: Database, workspace_id) -
             session, workspace_id=workspace_id, actor=ACTOR, profile=profile
         )
 
+    # Trigger probe: the trigger is what is asserted, so the statement runs as the owner (on the
+    # login role the privilege check refuses first). Setup and reads stay on `database`.
     with pytest.raises(DBAPIError) as refused:
-        async with database.unit_of_work() as session:
+        async with owner_database.unit_of_work() as session:
             await session.execute(
                 text("UPDATE profiles SET body = '{}'::jsonb WHERE id = :id"), {"id": profile.id}
             )
@@ -191,7 +201,7 @@ async def test_a_profile_cannot_be_rewritten(database: Database, workspace_id) -
 
 @pytest.mark.req("FR-43")
 async def test_an_acknowledgement_cannot_be_rewritten_or_removed(
-    database: Database, workspace_id
+    database: Database, owner_database: Database, workspace_id
 ) -> None:
     """An acknowledgement is a named person accepting a warning (FR-47).
 
@@ -212,15 +222,17 @@ async def test_an_acknowledgement_cannot_be_rewritten_or_removed(
              "rule": uuid4(), "user": ACTOR.id, "why": "Reviewed with the reserving team."},
         )
 
+    # Trigger probe: the trigger is what is asserted, so the statement runs as the owner (on the
+    # login role the privilege check refuses first). Setup and reads stay on `database`.
     with pytest.raises(DBAPIError) as edited:
-        async with database.unit_of_work() as session:
+        async with owner_database.unit_of_work() as session:
             await session.execute(
                 text("UPDATE validation_acknowledgements SET justification = 'ok'")
             )
     assert "append-only" in str(edited.value)
 
     with pytest.raises(DBAPIError) as removed:
-        async with database.unit_of_work() as session:
+        async with owner_database.unit_of_work() as session:
             await session.execute(text("DELETE FROM validation_acknowledgements"))
     assert "append-only" in str(removed.value)
 

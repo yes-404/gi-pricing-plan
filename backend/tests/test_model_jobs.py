@@ -680,7 +680,7 @@ async def test_a_reservation_whose_fit_failed_can_be_retried(
 
 @pytest.mark.req("FR-203")
 async def test_a_fitted_model_cannot_be_rewritten_in_the_database(
-    database: Database, blob_store, workspace_id
+    database: Database, owner_database: Database, blob_store, workspace_id
 ) -> None:
     """`02` R2 below the application, where `01`'s artifacts already live.
 
@@ -713,8 +713,10 @@ async def test_a_fitted_model_cannot_be_rewritten_in_the_database(
     from sqlalchemy import text
     from sqlalchemy.exc import DBAPIError
 
+    # Trigger probe: the trigger is what is asserted, so the statement runs as the owner (on the
+    # login role the privilege check refuses first).
     with pytest.raises(DBAPIError) as rewritten:
-        async with database.unit_of_work() as session:
+        async with owner_database.unit_of_work() as session:
             await session.execute(
                 text("UPDATE models SET fit_result = '{}'::jsonb WHERE id = :id"),
                 {"id": model_id},
@@ -722,7 +724,7 @@ async def test_a_fitted_model_cannot_be_rewritten_in_the_database(
     assert "immutable" in str(rewritten.value)
 
     with pytest.raises(DBAPIError) as deleted:
-        async with database.unit_of_work() as session:
+        async with owner_database.unit_of_work() as session:
             await session.execute(text("DELETE FROM models WHERE id = :id"), {"id": model_id})
     assert "cannot be deleted" in str(deleted.value)
 
