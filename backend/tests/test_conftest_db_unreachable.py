@@ -1,4 +1,4 @@
-"""FD-8256: the `database` and `blob_store` fixtures must not skip when the service they
+"""FD-1945: the `database` and `blob_store` fixtures must not skip when the service they
 are configured for is unreachable.
 
 A skip on connect failure lets a gate read green with every DB test skipped when the

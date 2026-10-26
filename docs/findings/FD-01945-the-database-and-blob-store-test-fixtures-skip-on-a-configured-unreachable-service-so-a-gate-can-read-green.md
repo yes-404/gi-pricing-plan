@@ -1,20 +1,20 @@
 ---
-id: FD-8256
+id: FD-1945
 family: finding
 title: The database and blob_store test fixtures skip on a configured-but-unreachable service, so a gate can read green with the tests unrun
 status: active
-created: 2026-10-26   # drafted under working id FD 8256 on 2026-10-26; created = mint date
+created: 2026-10-26   # drafted 2026-10-26 under working id 8256
 owner: executor
 tree: 98a4ff195dc7f1da136686051549a4fe1350deb3
 corrected_by: []
-relates: [WK-1178, SL-8246, LG-8237, FD-1729]
+relates: [WK-1178, SL-1942, LG-1941, FD-1729]
 ---
 
-# FD-8256 — The database and blob_store test fixtures skip on a configured-but-unreachable service, so a gate can read green with the tests unrun
+# FD-1945 — The database and blob_store test fixtures skip on a configured-but-unreachable service, so a gate can read green with the tests unrun
 
 ## Finding
 
-**MEDIUM; owner WK-1178. A test-harness defect: a false green lets a wrong merge through; no product code is wrong and no price is affected.** Authority: to-lead "2026-10-26 01:54:05 GMT" (B), scope ruled by to-lead "2026-10-26 01:56:43 GMT". Filed under working id FD 8256.
+**MEDIUM; owner WK-1178. A test-harness defect: a false green lets a wrong merge through; no product code is wrong and no price is affected.** Authority: to-lead "2026-10-26 01:54:05 GMT" (B), scope ruled by to-lead "2026-10-26 01:56:43 GMT". Filed under working id FD-1945.
 
 At `origin/main...draft/s1a-fd1729` c4a0c907, `backend/tests/conftest_db.py` has four paths that turn an unusable configured service into a pass:
 
@@ -37,10 +37,10 @@ MEDIUM: the harm is a wrong merge on a false green, not a wrong price; every pat
 
 ## Remedy
 
-`_unavailable(configured, message)` in `conftest_db.py`: configured → `pytest.fail`, else `pytest.skip`. "Configured" is `GIP_TEST_DATABASE_URL` or `GIP_TEST_APP_DATABASE_URL` (database, incl. no-migrations) or `GIP_TEST_BUCKET` or `GIP_BLOB_ENDPOINT_URL` (blob_store). Messages name host:port, user and database, or endpoint and bucket (`_safe_dsn`), never a password or key. Lands in SL 8246 / LG 8237 (`draft/s1a-fd1729`).
+`_unavailable(configured, message)` in `conftest_db.py`: configured → `pytest.fail`, else `pytest.skip`. "Configured" is `GIP_TEST_DATABASE_URL` or `GIP_TEST_APP_DATABASE_URL` (database, incl. no-migrations) or `GIP_TEST_BUCKET` or `GIP_BLOB_ENDPOINT_URL` (blob_store). Messages name host:port, user and database, or endpoint and bucket (`_safe_dsn`), never a password or key. Lands in SL-1942 / LG-1941 (`draft/s1a-fd1729`).
 
 Skips left in `conftest_db.py`, all in the unconfigured branch of `_unavailable`: database not reachable, database has no migrations, MinIO not reachable (no environment names the service, so a developer without the compose stack still runs the unit tests).
 
 ## Disposition
 
-Open, owner WK-1178; **fix before close**: SL 8246 / LG 8237. Closed in place citing the PR when that slice merges. Filed under working id FD 8256.
+Open, owner WK-1178; **fix before close**: SL-1942 / LG-1941. Closed in place citing the PR when that slice merges. Filed under working id FD-1945.

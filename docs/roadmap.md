@@ -2961,19 +2961,41 @@ FD-1920: `redis_url` in `backend/tests/test_tenant_binding.py` drew a Redis db f
 id: SL-1771
 family: slice
 title: WK-1178 fix slice (S-b) — FD-1729: the application connects as a login role with gip_app's grants, never as the owner
-status: draft                    # draft → active → closed | retired (§1.2a)
+status: retired                  # draft → active → closed | retired (§1.2a)
 created: 2026-10-17 # original date 2026-10-14, set at the draft; minted 2026-10-17
 owner: planner                   # cut by the planner (draft); lead dispatches (active)
 tree: a3fc2e8dd384de6abf909f662f43011b8078fb4e
 phase: P2
 work: WK-1178
 corrected_by: []
-relates: [PL-1769, FD-1704, SL-1770, SL-1455, FD-1729, FD-1728]
+relates: [PL-1769, PL-1927, SL-1942, FD-1704, SL-1770, SL-1455, FD-1729, FD-1728]
 ```
 
 On the same entry, remedy S-b: FD-1729 (HIGH), owner WK-1178, P2. The application and the worker connect as `gip_app_login`, a member of `gip_app` provisioned for compose, CI and the shared container; migrations alone use the owner, through a new `GIP_MIGRATION_DATABASE_URL`. The test `database` fixture runs as the login role. The grants are found red first from that run, written as one migration with a test named on each line, and pinned by an exact map over every table. Startup refuses an owner, a superuser or a disabled artifact trigger. The login role cannot `DISABLE TRIGGER`: that is the proof that S-b makes SL-1770's triggers tamper-resistant. After SL-1770, the G2 merges and the `SL-1455` NFR session, before the 4 Nov P2 code freeze, with a full gate and a compose run on a fresh volume. The login role is asserted not superuser, not owner, `NOBYPASSRLS`, and unable to `SET session_replication_role`, red on `main` (the same entry's superuser item). Plan: `PL-1769`; DP-14 to DP-20 ruled by the maintainer (by delegation), `to-lead.md` "2026-10-14 12:18:57 BST" item (2). *(Cut 2026-10-14 under working id 8041, reserved by the lead, `eta.md` "2026-10-14 12:02:15 BST".)* *(Amended 2026-10-14 by the planner, on the same plan review: every test connection built from `test_database_url()` (37 files) moves to the login role, and an owner connection is named with a reason (plan review R1, 2026-10-14); one membership predicate, P-own (`pg_has_role(…, 'MEMBER')` against owners, superusers and `BYPASSRLS` roles), everywhere (plan review R4, 2026-10-14); the startup trigger check asserts each declared trigger exists with `tgenabled IN ('O','A')` and a pinned function-body hash (plan review R5, 2026-10-14); the red-run grants are diffed against the write-site census in the `LG-` (plan review R6, 2026-10-14); provisioning converges with an unconditional `ALTER ROLE … NOREPLICATION …` and is proved by two runs, rc 0, on a separate compose project (plan review R7, 2026-10-14); a stated, rehearsed rollback, a non-default password on the shared container, set as a pre-hashed SCRAM verifier (plan review R8, 2026-10-14); unused `jobs` and `outbox` `DELETE` revoked (plan review R9, 2026-10-14); the implicit `SELECT`s, `tenant_marker`, the worker check inside `asyncio.run` and `examples/fremtpl2/seed.py` as a DSN consumer in the tasks (plan review R11, 2026-10-14). the five write paths with no production caller are not granted (DP-22, the same entry); every test connection goes through the login role but for one listed owner-only fixture, each user by node id (12:42:33; 13:21:41); `examples/fremtpl2/seed.py` runs as the login role with only its bootstrap (`grant_demo_principals`) on the owner connection (13:21:41); compose binds every published port to `127.0.0.1`, applied to the running shared stack only as a GO-time act the maintainer names (the same entry).)*
 
 (Minted 2026-10-17 as SL-1771 from working id 8041, with PL-1769 from working id 8016, in plans batch P2 mint PR.)
+
+Retired 2026-10-26: re-cut by PL-1927 into S1a (SL-1942) and S1b (PL-1927's S1b row, minted at S1b's PR); nothing was delivered under this id; PL-1769 stays frozen.
+
+#### SL-1942 — WK-1178 fix slice (S1a) — FD-1729 part 1: the application connects as a login role, not the owner (PL-1927's S1a, the re-cut of SL-1771)
+
+```yaml
+id: SL-1942
+family: slice
+title: WK-1178 fix slice (S1a) — FD-1729 part 1: the application connects as a login role, not the owner (PL-1927's S1a, the re-cut of SL-1771)
+status: active                    # draft → active → closed | retired (§1.2a)
+created: 2026-10-26
+owner: lead
+tree: 58fdb69f64eecbcd03e65881a88a07f351995272
+phase: P2
+work: WK-1178
+corrected_by: []
+relates: [FD-1729, FD-1945, LG-1941, RS-1946, OQ-1943, OQ-1944, PL-1927, SL-1771]
+```
+
+FD-1729's first part: the application connects as the `gip_app_login` role, a member of `gip_app`, not as the owner, with the red tests and their red table in the slice ledger. Slice S1a of PL-1927, the re-cut of SL-1771.
+
+(Minted 2026-10-26 from working id 8246, on the maintainer's (by delegation) entry "2026-10-26 02:07:55 GMT" (`to-lead.md`) (S1a mints as a new `SL-` row; SL-1771 is retired) and the mint map of "2026-10-26 02:26:20 GMT"; ledger LG-1941, audit RS-1946; executed on branch `draft/s1a-fd1729`.)
 
 #### SL-1773 — WK-1178 fix slice — FD 8097: a scalar one-row GLM predict for model_call, bit-identical to the polars path
 
@@ -3771,8 +3793,8 @@ you never block on a decision you have not reached.
 | **~~Before WK-675 S12~~ → Before Phase 3, relabelled 2026-10-25 (RL-1908)** — *added 2026-09-30; dated 2026-10-25 by the lead, on RL-1908 and the maintainer's entry "2026-10-25 11:32:17 GMT — Maintainer: §14 note r5 — the six owed rulings, decided now (dated lines for the review's rows)", line 1 (E3-C), and "2026-10-25 11:47:56 GMT — Maintainer: RL 8221's \"list budget\" = NFR-526 (API metadata reads p95 < 300 ms) — confirmed; WK-1914/8229 and the S12 tombstone accepted": Slice 12 moved to Phase 3 on 2026-10-03 (this file's dated line of that day), so this gate's one id moved to the Before Phase 3 row and this row stays as a tombstone, not a deletion* | *(none: its one id moved to the Before Phase 3 row on 2026-10-25, RL-1908)* | **0 (0 open)** — *recounted 2026-10-25 (RL-1908): one id moved to Before Phase 3. Before that:* 1 (1 open) |
 | **Before WK-675 closes** — *added 2026-10-22* | ~~**OQ-1843**~~ **decided 2026-10-25 by `RL-1876`** *raised open 2026-10-22 on the maintainer's entry "2026-10-22 13:26:06 BST" (working id 8160; owner WK-675): whether a mount's input port may be mapped to an empty parent name, and which layer refuses it. Placed at WK-675's close, not a phase gate: FR-212 already refuses the artifact at save, so nothing blocks on it; the answer changes only where an author learns it, and it is not built in SL-1554* | 1 (0 open) |
 | **Before WK-1250's Work close** — *added 2026-10-22* | **OQ-1591** *(raised 2026-10-10, owner WK-1250, stated "ruled before WK-1250's Work close": whether a batch run returns an engine trace on request (FR-258, FR-259's RL-890 clarification) or `trace` is always absent from the batch output; WK-1250 is active in P2, so the gate is live; back-filled 2026-10-22)* | 1 (1 open) |
-| **Before the first slice that wires FR-420 garbage collection** — *added 2026-10-25* | **OQ-8252** *raised open 2026-10-25 (working id 8252; owner WK-1178): which role runs FR-420 blob garbage collection, the login role with a new `DELETE` on `blobs` or an owner/maintenance DSN job (recommendation (b)). Placed at the slice that wires a GC caller, not a phase gate: the sweep has no caller in `backend/src` and nothing blocks on it* | 1 (1 open) |
-| **Before the first slice that wires an admin API for role grants and break-glass** — *added 2026-10-26* | **OQ-8255** *raised open 2026-10-26 (working id 8255; owner WK-1178): which role performs role grants and break-glass once an admin API wires `grant_role` and `grant_break_glass`, the login role with INSERT/UPDATE on `role_assignments`, a separate admin/owner DSN, or a SECURITY DEFINER function (recommendation (c)). Placed at the slice that wires an admin API, not a phase gate: neither function has a runtime caller today and nothing blocks on it* | 1 (1 open) |
+| **Before the first slice that wires FR-420 garbage collection** — *added 2026-10-25* | **OQ-1943** *raised open 2026-10-25 (working id 8252; owner WK-1178): which role runs FR-420 blob garbage collection, the login role with a new `DELETE` on `blobs` or an owner/maintenance DSN job (recommendation (b)). Placed at the slice that wires a GC caller, not a phase gate: the sweep has no caller in `backend/src` and nothing blocks on it* | 1 (1 open) |
+| **Before the first slice that wires an admin API for role grants and break-glass** — *added 2026-10-26* | **OQ-1944** *raised open 2026-10-26 (working id 8255; owner WK-1178): which role performs role grants and break-glass once an admin API wires `grant_role` and `grant_break_glass`, the login role with INSERT/UPDATE on `role_assignments`, a separate admin/owner DSN, or a SECURITY DEFINER function (recommendation (c)). Placed at the slice that wires an admin API, not a phase gate: neither function has a runtime caller today and nothing blocks on it* | 1 (1 open) |
 | ~~**Before the FD-1439 fix plan mints**~~ ✔ **all decided** (FD-1439; discharged by S7, SL-1391, WK-673, the maintainer's (by delegation) 22:28:33 BST entry) — *added 2026-10-05* | ~~**OQ-1440**~~ ✔ *(raised open 2026-10-05: what latency budget a rate-table cells-diff page carries below `07` §1.3 R1's 2 s, on the rows and the parquet path; owner WK-673) — decided 2026-10-05 by RL-1441: (b) plus (e), one `03` §9 route NFR, p95 ≤ 300 ms after the first request for a key, measured at stated sizes, and a page cost bounded by its `limit`, applied by SL-1391 (S7, WK-673) (the maintainer's (by delegation) entry "2026-10-05 20:58:27 BST — FD 9487 and OQ 9486 drafts: the severity path accepted; OQ 9486 DECIDED as (b)+(e)")* | 1 (0 open) — *recounted 2026-10-05 (RL-1441): decided. Before that:* 1 (1 open) |
 | **Before WK-673's declared-reference slice** — *added 2026-10-05* | ~~OQ-1496~~ ✔ *decided 2026-10-05 by `RL-1470` Ruled 9 (#1155): option (c), a model with a `control`-intent factor is scored only with each such factor held at a reference value a versioned artifact declares, and compile refuses it otherwise; a spec change to `02` FR-88 and `03` FR-240 comes first, then its own WK-673 slice, not a G2 blocker (owner WK-673); raised and decided 2026-10-05 from FD-1495* | 1 (0 open) |
 | ~~**Before the FD-1424 fix plan mints**~~ ✔ **all decided** (PL-1562; WK-1178) — *added 2026-10-05* | ~~**OQ-1560**~~ ✔ *(raised open 2026-10-05: which numeric pairs beyond `money_minor` a declared output admits) — decided 2026-10-05 by the maintainer (by delegation), the 17:42:06 BST entry: (A1) `int` → `money_minor` refused, through an explicit `money_minor` expression step; (B3) widening only; delivered by the FD-1424 fix* | 1 (0 open) — *recounted 2026-10-05 (OQ-1560 decided). Before that:* 1 (1 open) |

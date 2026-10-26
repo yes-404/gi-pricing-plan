@@ -1,20 +1,20 @@
 ---
-id: LG-8237
+id: LG-1941
 family: ledger
-title: WK-1178 slice SL-1771 — S1a of FD-1729, the application connects as a login role, not the owner; the red tests and their red table, slice ledger
+title: WK-1178 slice SL-1942 (S1a, the re-cut of SL-1771) of FD-1729, the application connects as a login role, not the owner; the red tests and their red table, slice ledger
 status: active                 # active → closed (§1.2a) — set `closed` only at slice close
-created: 2026-10-25   # working id 8237, unminted
+created: 2026-10-26   # drafted 2026-10-25 under working id 8237
 owner: executor
 tree: d1d96465b05728e617482b5e88a2d56a984c4746                  # the head the red table was measured on; the commit that adds this file is its child
 phase: P2
 work: WK-1178
-slice: SL-1771
-plans: [PL-1769]
+slice: SL-1942
+plans: [PL-1769, PL-1927]
 corrected_by: []
-relates: [PL-1769, SL-1771, FD-1729, FR-44]
+relates: [PL-1769, PL-1927, SL-1771, FD-1729, FR-44]
 ---
 
-# LG-8237 — WK-1178 slice SL-1771 (S1a of FD-1729): the red tests and their red table
+# LG-1941 — WK-1178 slice SL-1771 (S1a of FD-1729): the red tests and their red table
 
 **GO:** none yet. The GO request follows S1a's code, one line, with the maintainer's confirmation. Pre-GO ruling this ledger records: to-lead "2026-10-25 21:05:20 GMT", item (2) "S1a (FD-1729, SL-1771 draft @d1d96465) RULED".
 **MERGE-ACK:** none yet.
@@ -184,7 +184,7 @@ The table (copied from `scratch/s1a-class/classification.md`; the last column of
 
 Totals (script-checked against the appendix): tests 15+14+5+3+3+4+3+2+1+4 = 54 test blocks (+1 "must be owner"); denial lines 75+70+23+15+11+9+9+6+5+4 = 227, plus 5 "must be owner".
 
-- **O1/O2, RULED ("2026-10-25 23:14:44 GMT" (1)):** `BlobStore.collect_garbage` (`backend/src/app/platform/blobs.py`) has no caller in `backend/src` and the census grants no `DELETE` on `blobs`. `test_gc_deletes_an_old_unreferenced_blob_and_audits_it` (`test_blobs.py`) and `test_a_blobs_content_cannot_change_while_its_lifecycle_can` (`test_artifact_immutability.py`) run on `owner_database`. No `DELETE` grant. "Which role runs FR-420 garbage collection" is **OQ 8252** (options: (a) the login role gains `DELETE` on `blobs` when a GC job exists; (b) GC runs under an owner/maintenance DSN as a scheduled job; recommendation (b); owner WK-1178), mirrored in `docs/open-questions.md` and `docs/specs/07-platform.md` §10, with a gate row in `docs/roadmap.md` §10.
+- **O1/O2, RULED ("2026-10-25 23:14:44 GMT" (1)):** `BlobStore.collect_garbage` (`backend/src/app/platform/blobs.py`) has no caller in `backend/src` and the census grants no `DELETE` on `blobs`. `test_gc_deletes_an_old_unreferenced_blob_and_audits_it` (`test_blobs.py`) and `test_a_blobs_content_cannot_change_while_its_lifecycle_can` (`test_artifact_immutability.py`) run on `owner_database`. No `DELETE` grant. "Which role runs FR-420 garbage collection" is **OQ-1943** (options: (a) the login role gains `DELETE` on `blobs` when a GC job exists; (b) GC runs under an owner/maintenance DSN as a scheduled job; recommendation (b); owner WK-1178), mirrored in `docs/open-questions.md` and `docs/specs/07-platform.md` §10, with a gate row in `docs/roadmap.md` §10.
 - **N1, RULED (exact matching kept):** `OWNER_FIXTURE_USERS` is matched by exact `request.node.nodeid` (`owner_database`); a parametrised family lists every parameter id. The 60 ids of `test_an_artifact_cannot_be_rewritten_from_the_owner_connection[<table>-<statement>]` (20 tables x UPDATE, DELETE, TRUNCATE) and the factors trigger test are listed one by one in `backend/tests/conftest_db.py`; the matcher is not widened.
 - **warm_score x2 (`test_a_warm_score_request_takes_one_pool_checkout`, `..._issues_at_most_nine_statements`):** inferred cascade of leaked `environment_settings` rows; re-run in the full suite, classify only if still red.
 
@@ -211,11 +211,11 @@ Condition (iii) (to-lead 23:04:28 / 23:05:26) MET — accepted by the maintainer
 
 2026-10-26 — `gip_app_login` persists on the shared cluster after S1a's gate demo (`provision-app-role.py`, local default password, loopback-only ports): ACCEPTED, to-lead 2026-10-26 01:53:21 GMT; the gate's END row quotes `pg_roles` before/after.
 
-2026-10-26 — FD 8256 red line: head 4bc098a5 (c4a0c907 plus the red test), `~/gi-pricing-plan.local/handover/run-small.sh <s1a-draft> backend/tests/test_conftest_db_unreachable.py`, `5 failed, 1 passed, 2 warnings in 39.50s`, rc 1 (the "configured" cases got `1 skipped` where a failure is asserted).
+2026-10-26 — FD-1945 red line: head 4bc098a5 (c4a0c907 plus the red test), `~/gi-pricing-plan.local/handover/run-small.sh <s1a-draft> backend/tests/test_conftest_db_unreachable.py`, `5 failed, 1 passed, 2 warnings in 39.50s`, rc 1 (the "configured" cases got `1 skipped` where a failure is asserted).
 
-2026-10-26 — FD 8256 green line: head 2124a622, the same command, `6 passed, 2 warnings in 42.74s`, rc 0; `test_conftest_db_login_role.py` + `test_conftest_db.py` at the same head, `18 passed, 2 warnings in 0.43s`, rc 0.
+2026-10-26 — FD-1945 green line: head 2124a622, the same command, `6 passed, 2 warnings in 42.74s`, rc 0; `test_conftest_db_login_role.py` + `test_conftest_db.py` at the same head, `18 passed, 2 warnings in 0.43s`, rc 0.
 
-2026-10-26 — FD 8256 red re-proved with the final test at 45fa2eaf's test file vs c4a0c907's fixture (`git show c4a0c907:backend/tests/conftest_db.py` over `conftest_db.py`, restored after), `~/gi-pricing-plan.local/handover/run-small.sh <s1a-draft> backend/tests/test_conftest_db_unreachable.py`, `5 failed, 1 passed, 2 warnings in 36.39s`, rc 1: the four configured cases fail on `assert 'skipped' not in …` (`1 skipped`), the unconfigured database case on the password assert. Disclosure: `test_conftest_db.py`, run as the conftest guard, made a read-only connect to the shared postgres (no database created); harmless, accepted by the lead.
+2026-10-26 — FD-1945 red re-proved with the final test at 45fa2eaf's test file vs c4a0c907's fixture (`git show c4a0c907:backend/tests/conftest_db.py` over `conftest_db.py`, restored after), `~/gi-pricing-plan.local/handover/run-small.sh <s1a-draft> backend/tests/test_conftest_db_unreachable.py`, `5 failed, 1 passed, 2 warnings in 36.39s`, rc 1: the four configured cases fail on `assert 'skipped' not in …` (`1 skipped`), the unconfigured database case on the password assert. Disclosure: `test_conftest_db.py`, run as the conftest guard, made a read-only connect to the shared postgres (no database created); harmless, accepted by the lead.
 
 ## S1a-5 — the compose run on a throwaway project (to-lead "2026-10-26 01:42:44 GMT" (2); appended 2026-10-26 by the lead from exec-s1a5's FINAL)
 
@@ -250,7 +250,7 @@ Values read from `~/gi-pricing-plan.local/scratch/s1a-gate/gate/gate.log` and it
 - pytest summary: `13 failed, 6800 passed, 21 skipped, 146 warnings in 2518.84s (0:41:58)`.
 - `| pytest skipped | 21 (<= 21) |`.
 - pg_roles rows: before `gip_app`; after provision `gip_app,gip_app_login`; at END `gip_app,gip_app_login`.
-- audit_docs FAILED (4): check 31 gap between 1863 and 8237; check 31 gap between 8237 and 8252; check 31 gap between 8252 and 8255; check 32 FD-8256 line 10 "SL-8246 does not resolve in docs/INDEX.md" (all on this slice's own working ids).
+- audit_docs FAILED (4): check 31 gap between 1863 and 8237; check 31 gap between 8237 and 8252; check 31 gap between 8252 and 8255; check 32 FD-1945 line 10 "SL-1942 does not resolve in docs/INDEX.md" (all on this slice's own working ids).
 - Demo: `demo.py --journey wf-699` rc=0, 881 s; D7 `ok  19985 policies in the sample; rate table edits: +485990825; NCD ladder and expense loading: +3851186; sum +489842011 minor units (full-book attribution cost: FD-1576)`.
 - Restore from tools-main: rc=0 (rc_kc=0); keycloak bind source under tools-main.
 - Frontend half: install, generate:api, lint, type-check, test, build all rc=0.
@@ -261,6 +261,6 @@ merge-base(c0828e24, 58fdb69f) = 3cd5fcf7ee514db1ae8ab681d7cacc1761945091 — 68
 
 S1a-5 journey: the full WF-699 journey ran on the login DSN in this gate's demo stage (rc 0, 881 s) — closes S1a-5's journey point.
 
-Audit: RS 8257 (aud-s1a, @afa4ed24) proposed CLEAN, ADOPTED CLEAN by the lead; accepted at to-lead 2026-10-26 03:34:59 GMT; N1–N4 as ruled.
+Audit: RS-1946 (aud-s1a, @afa4ed24) proposed CLEAN, ADOPTED CLEAN by the lead; accepted at to-lead 2026-10-26 03:34:59 GMT; N1–N4 as ruled.
 
-- 2026-10-26 — RS 8257 lint-only edit by the lead, commit 91ec789f (to-lead "2026-10-26 03:42:59 GMT", the RS-1930:38 precedent): three citation tokens only — the zero-padded FD 8256 file stub (:70) rewritten as "(the FD 8256 file)", the zero-padded LG 8237 placeholder (:79) as "<the LG 8237 file>", and the legacy ruling-reference form (:82) as the ruling's to-lead stamp; the auditor's content is unchanged; quote-parity 2f1b0f0c..91ec789f rc=0. The RS blob of record for the aud-s1a fold check is afa4ed24's (95deb03a).
+- 2026-10-26 — RS-1946 lint-only edit by the lead, commit 91ec789f (to-lead "2026-10-26 03:42:59 GMT", the RS-1930:38 precedent): three citation tokens only — the zero-padded FD-1945 file stub (:70) rewritten as "(the FD-1945 file)", the zero-padded LG-1941 placeholder (:79) as "<the LG-1941 file>", and the legacy ruling-reference form (:82) as the ruling's to-lead stamp; the auditor's content is unchanged; quote-parity 2f1b0f0c..91ec789f rc=0. The RS blob of record for the aud-s1a fold check is afa4ed24's (95deb03a).

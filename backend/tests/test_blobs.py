@@ -229,7 +229,7 @@ async def test_gc_deletes_an_old_unreferenced_blob_and_audits_it(
     database: Database, owner_database: Database, blob_store: BlobStore, workspace_id, principal
 ) -> None:
     """The sweep deletes, and the census grants the application role no DELETE on `blobs`
-    (OQ 8252: which role runs FR-420 garbage collection), so it runs on the owner."""
+    (OQ-1943: which role runs FR-420 garbage collection), so it runs on the owner."""
     async with database.unit_of_work() as session:
         ref = await blob_store.put(session, unique(b"collect me"), "text/plain")
     await _age_blob(database, ref.sha256, days=60)

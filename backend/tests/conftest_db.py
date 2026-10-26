@@ -472,17 +472,17 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
         "backend/tests/test_blobs.py::"
         "test_gc_deletes_an_old_unreferenced_blob_and_audits_it",
         "owner-subject",
-        "runs the FR-420 sweep, which DELETEs blobs; the app role has no DELETE (OQ 8252)",
+        "runs the FR-420 sweep, which DELETEs blobs; the app role has no DELETE (OQ-1943)",
     ),
     (
         "backend/tests/test_blobs.py::test_gc_spares_a_referenced_blob",
         "owner-subject",
-        "runs the FR-420 sweep, which DELETEs blobs; the app role has no DELETE (OQ 8252)",
+        "runs the FR-420 sweep, which DELETEs blobs; the app role has no DELETE (OQ-1943)",
     ),
     (
         "backend/tests/test_blobs.py::test_gc_spares_a_young_unreferenced_blob",
         "owner-subject",
-        "runs the FR-420 sweep, which DELETEs blobs; the app role has no DELETE (OQ 8252)",
+        "runs the FR-420 sweep, which DELETEs blobs; the app role has no DELETE (OQ-1943)",
     ),
     (
         "backend/tests/test_custom_metrics_table.py::test_a_metric_cannot_be_deleted_or_truncated",
@@ -1001,7 +1001,7 @@ def _safe_dsn(dsn: str) -> str:
 
 def _unavailable(configured: bool, message: str) -> None:
     """A service the suite needs is not usable: FAIL when the environment names it
-    (`configured`), skip only when nothing does (FD-8256).
+    (`configured`), skip only when nothing does (FD-1945).
 
     A skip on a configured-but-unreachable service lets a gate read green with every test
     that needs it skipped. `message` never carries a password or key: callers render DSNs
@@ -1031,7 +1031,7 @@ async def database() -> AsyncIterator[Database]:
     `GIP_TEST_DATABASE_URL` nor `GIP_TEST_APP_DATABASE_URL` is set): a developer without the
     compose stack up should still be able to run the unit tests. A configured database that
     is unreachable, or has no migrations, FAILS naming host, port, user and database
-    (FD-8256) -- a skip there would let a gate pass with the DB tests unrun.
+    (FD-1945) -- a skip there would let a gate pass with the DB tests unrun.
     """
     db = Database(Settings(database_url=test_database_url()))
     try:
@@ -1097,7 +1097,7 @@ async def blob_store() -> AsyncIterator[BlobStore]:
 
     Skips when MinIO is unreachable and nothing names it (`GIP_TEST_BUCKET` and
     `GIP_BLOB_ENDPOINT_URL` both unset); a configured one that is unreachable FAILS naming
-    endpoint and bucket, never a key (FD-8256).
+    endpoint and bucket, never a key (FD-1945).
     """
     settings = Settings(blob_bucket=test_blob_bucket())
     store = BlobStore(settings)
