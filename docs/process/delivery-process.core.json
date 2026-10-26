@@ -3,8 +3,8 @@
     "id": "delivery-process-core",
     "version": "1.0.0",
     "derived_from": "docs/process/delivery-process.md",
-    "derived_from_digest": "sha256:73d3e86d05b5672e375ec0e5500c4081120b3315ef7df4220a9175fa1fd87db9",
-    "verified_against_tree": "0651c1e265648cbd3918adfc729ad965b83b1e0b",
+    "derived_from_digest": "sha256:ee7064550be943bd895bc8e44008997d484a230a8a619962e6da730bd2531a2e",
+    "verified_against_tree": "ff976406f1bf133cfe040d2c44d383011503988a",
     "authoritative": false,
     "note": "The markdown spec is authoritative. This file is the mechanical extract: state machine, guards, vocabularies, and runtime-state schema for hooks/watcher scripts. Regenerate or diff-check against the md on every spec change (RFC-895 script C4). Each block is the mechanically-checkable subset of the section it cites, not an exhaustive rendering -- a section may state more than its block records, and a block's silence is not the section's silence.",
     "spec_adopted": "2026-08-29"
@@ -114,6 +114,18 @@
       "definition": ".claude/roles/reporter.md",
       "source": "§3, §13"
     }
+  },
+  "write_boundary": {
+    "applies_to": "every_role",
+    "may_write": [
+      "own_worktree",
+      "~/gi-pricing-plan.local/ (scratch directory)",
+      "targets_named_in_own_charter"
+    ],
+    "never_write_under": [
+      "~/.claude/"
+    ],
+    "source": "§3"
   },
   "hierarchy": {
     "order": [
