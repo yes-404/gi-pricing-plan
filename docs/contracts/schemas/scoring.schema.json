@@ -98,7 +98,8 @@
               "produced": {"type": "object"},
               "matched": {"type": ["object", "null"]},
               "violation": {"type": ["object", "null"]},
-              "elapsed_us": {"type": "integer", "minimum": 0}
+              "elapsed_us": {"type": "integer", "minimum": 0},
+              "dropped_inputs": {"type": ["array", "null"], "items": {"type": "string"}}
             }
           }
         },
