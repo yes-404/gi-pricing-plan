@@ -594,19 +594,21 @@ async def test_a_near_tie_non_rung_money_minor_output_is_the_integer_1235() -> N
 
 @pytest.mark.req("FR-273")
 async def test_the_float_path_fails_the_near_tie_fee_case(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Red first, by planting the float path: the value is the float 1234.5."""
-    result = await _near_tie_fee_result(monkeypatch)
-    assert result.outputs["fee_minor"] == 1234.5
-    assert type(result.outputs["fee_minor"]) is float
-    with pytest.raises(AssertionError):
-        _assert_the_fee_is_the_integer_1235(result)
+    """Red first, by planting the float path: `_build_outputs` would serve the float 1234.5.
+    Since SL-1569 `ScoringResult` refuses a float at construction (RL-1343 rule 4), so the
+    plant can no longer be served: it is a `ValidationError` naming `fee_minor`. Ruled by the
+    maintainer (by delegation), entry of 2026-10-23 11:00 (the lead's relay)."""
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="fee_minor"):
+        await _near_tie_fee_result(monkeypatch)
 
 
 @pytest.mark.req("FR-273")
-async def test_a_decimal_output_is_served_exactly_as_before_rl_1343() -> None:
-    """`RL-1343` items 2 and 3, which bind this slice because it carries the `_build_outputs`
-    change: a declared non-rung `decimal` output keeps its value and its JSON type (a number).
-    Green on the base and after. It is red if `_build_outputs` served the `string()` read."""
+async def test_a_decimal_output_is_served_as_rl_1343_rules() -> None:
+    """`RL-1343` rule 3 (SL-1569; this pinned the number before it): a declared non-rung
+    `decimal` output is the `string()` read rounded once at the output step's declared dp,
+    written positionally, a JSON string."""
     payload = _chain_algorithm(factors=[("office_premium", "{prev} * 1.1", "half_even")])
     payload["outputs"].append({"name": "loaded_ratio", "type": "decimal", "required": True})
     payload["steps"].insert(-1, {
@@ -617,8 +619,8 @@ async def test_a_decimal_output_is_served_exactly_as_before_rl_1343() -> None:
     payload["steps"].insert(-1, _out("s_out_ratio", "loaded_ratio", "ratio_value"))
     result = await score_one(await _compile_payload(payload), _context(risk_premium_minor=61234.5))
     value = result.outputs["loaded_ratio"]
-    assert isinstance(value, float)  # a JSON number, never the exact string and never an int
-    assert value == pytest.approx(68280.7, abs=1)
+    assert isinstance(value, str)  # a JSON string, never a number
+    assert value == "68281"  # 67358 * 1.0137 = 68280.7..., dp 0 by `_out`
     assert json.loads(result.model_dump_json())["outputs"]["loaded_ratio"] == value
 
 

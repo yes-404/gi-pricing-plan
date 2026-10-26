@@ -21,7 +21,15 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictBool,
+    StrictInt,
+    StrictStr,
+    model_validator,
+)
 
 from model_schema.input_free import InputFreeError
 from model_schema.money import MoneyMinor, PositionalDecimalStr
@@ -212,6 +220,14 @@ class Trace(BaseModel):
     ladder_check_version: int | None = Field(default=None, ge=1)
 
 
+type OutputValue = (
+    StrictInt | StrictStr | StrictBool | dict[str, OutputValue] | list[OutputValue] | None
+)
+"""One served output value (`RL-1343` rule 4): an integer, a string, a bool, null, or a map or
+list of those. Never a number with a fractional part, and never a whole-valued `float`:
+every scalar is strict, so a `float` at any depth is a `ValidationError`."""
+
+
 class ScoringResult(BaseModel):
     """`ScoringResult` (`scoring.schema.json:46-63`, `03` §4.4).
 
@@ -219,6 +235,12 @@ class ScoringResult(BaseModel):
     re-validated here): applying every rung's recorded operation to `risk_premium`
     reproduces `payable_premium` exactly (FR-248); a traced and an untraced call on the
     same bundle and context return an identical premium (`03` R3).
+
+    `outputs` is the one construction-time check on served output values (`RL-1343` rule 4):
+    a `float` anywhere in it is refused, so a decimal-family value is a positional string
+    (`_build_outputs`). The model does not know declared types, so it cannot tell a whole
+    `27` under a declared `decimal` from a valid integer; the producer and batch's check
+    close that.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -227,7 +249,7 @@ class ScoringResult(BaseModel):
     rating_version_ref: ArtifactRef
     bundle_hash: str = Field(pattern=r"^sha256:[a-f0-9]{64}$")
     premium_ladder: list[LadderRung]
-    outputs: dict[str, object] = Field(default_factory=dict)
+    outputs: dict[str, OutputValue] = Field(default_factory=dict)
     decline_reasons: list[str] = Field(default_factory=list)
     trace: Trace | None = None
     timing_ms: dict[str, float] = Field(default_factory=dict)

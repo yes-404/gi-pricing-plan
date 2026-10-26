@@ -220,6 +220,7 @@ from pricing_core.rating.ladder import (
     reconcile_ladder,
     recover_operation,
     round_once,
+    round_to_text,
     rung_output_name,
 )
 from pricing_core.rating.runtime import (
@@ -794,6 +795,17 @@ def _build_ladder(
     return rungs
 
 
+#: The declared output types served as `RL-1343`'s exact decimal string: `_build_outputs` writes
+#: it, `_coerce_output_value` checks it.
+_DECIMAL_FAMILY = frozenset({"decimal", "relativity", "percentage"})
+
+#: The declared output types served as a JSON integer (`RL-1567` T1).
+_INTEGRAL_TYPES = frozenset({"int", "count"})
+
+#: `common/money.schema.json#/$defs/Decimal`, minus a signed zero (`round_to_text` writes none).
+_POSITIONAL_DECIMAL = re.compile(r"(?!-0+(\.0+)?$)-?[0-9]+(\.[0-9]+)?")
+
+
 def _build_outputs(algorithm: RatingAlgorithm, result: Mapping[str, Any]) -> dict[str, Any]:
     """`ScoringResult.outputs` — one entry per `AlgorithmOutput`.
 
@@ -802,8 +814,14 @@ def _build_outputs(algorithm: RatingAlgorithm, result: Mapping[str, Any]) -> dic
     run, rounded once with that step's own `RoundSpec`: an integer, never the float and
     never a second rounding (`RL-1329` §4, C2 and S6). So where no clamp binds it equals
     its ladder rung's `value_minor`, and where a clamp binds on it it is the post-clamp
-    value (the bound), as it always was. Anything else — a `decimal` output, for one
-    (`RL-1343`) — is read straight from the evaluated `result`, unchanged.
+    value (the bound), as it always was. A `decimal`, `relativity` or `percentage` output
+    (`_DECIMAL_FAMILY`) takes the same exact read and the same single rounding, but is
+    served as a string written by `round_to_text` with exactly the step's `dp` digits
+    (`RL-1343` rules 3.1-3.4, FR-214, FR-226): never the float in `result`, so a decimal
+    output with no exact read and a value other than `None` is refused. An `int` or `count`
+    output is the integer of the same exact read when it is integral by exact equality, else
+    the quote is refused with `RATING_TYPE_MISMATCH` (`RL-1567`). Anything else is read
+    straight from the evaluated `result`, unchanged.
     """
     output_steps = output_steps_by_name(algorithm)
     outputs: dict[str, Any] = {}
@@ -816,12 +834,34 @@ def _build_outputs(algorithm: RatingAlgorithm, result: Mapping[str, Any]) -> dic
             continue
         name = str(source[0])
         is_rung = declared.name.removesuffix("_minor") in RUNG_ORDER
-        exact = _exact(result, name) if (is_rung or declared.type == "money_minor") else None
-        if exact is not None:
-            outputs[declared.name] = round_once(
-                exact, LadderRounding(mode=step.rounding.mode, dp=step.rounding.dp)
-            )
+        in_decimal_family = declared.type in _DECIMAL_FAMILY
+        integral = declared.type in _INTEGRAL_TYPES
+        exact = (
+            _exact(result, name)
+            if (is_rung or declared.type == "money_minor" or in_decimal_family or integral)
+            else None
+        )
+        rounding = LadderRounding(mode=step.rounding.mode, dp=step.rounding.dp)
+        if exact is not None and integral:
+            # RL-1567 entries (1) and (2): integral means exact equality with the integer part,
+            # no tolerance. The text names the output, never the value (NFR-499).
+            if exact != exact.to_integral_value():
+                _raise_named(
+                    "RATING_TYPE_MISMATCH",
+                    f"output {declared.name!r} is declared {declared.type} and its value "
+                    "is not integral",
+                )
+            outputs[declared.name] = int(exact)
+        elif exact is not None and in_decimal_family:
+            outputs[declared.name] = round_to_text(exact, rounding)
+        elif exact is not None:
+            outputs[declared.name] = round_once(exact, rounding)
         elif name in result:
+            if in_decimal_family and result[name] is not None:
+                # RL-1343 rule 3.1: never the float in `result`; the text names no value.
+                raise ValueError(
+                    f"output {declared.name!r} is declared {declared.type} and has no exact read"
+                )
             outputs[declared.name] = result[name]
     return outputs
 
@@ -1034,18 +1074,12 @@ _KNOWN_OUTPUT_TYPES = frozenset(
 
 def _coerce_output_value(declared_type: str, value: Any) -> int | str | bool:
     """One declared output value -> its canonical, JSON-lossless form, by the algorithm's
-    own declared `type` (FR-227) rather than by the value's incidental Python type —
-    `_build_outputs` (unmodified, per the module docstring) hands back whatever the engine's
-    raw evaluated result happened to be, which for a `decimal`-typed non-rung output is a
-    Python `float` today (verified: nothing converts it, the same way `_build_ladder`'s own
-    `raw = float(result[source_key])` treats every non-money-minor engine value as untyped
-    until something here gives it a type). `money_minor` values already arrive as `int`
-    (`_round_minor`, ladder-derived) and are checked, not re-derived. `decimal` values are
-    converted via `Decimal(repr(value))` — `_round_minor`'s own established idiom in this
-    module, `repr()` rather than the raw float constructor, because `Decimal(1.15)` exposes
-    the float's exact binary expansion — and serialised as a **string**, never a JSON
-    number: `CLAUDE.md` §7, money is integer minor units or `Decimal`, never float, and a
-    JSON number column cannot distinguish an exact `Decimal` from a lossy `float`."""
+    own declared `type` (FR-227) rather than by the value's incidental Python type.
+    `money_minor` values already arrive as `int` (`_build_outputs`) and are checked, not
+    re-derived. A `decimal`, `relativity` or `percentage` value arrives as the producer's
+    positional string (`RL-1343` rule 3, `_build_outputs`), is **checked** against that form
+    and returned unchanged — never converted, so batch and `/score` carry byte-identical
+    strings (FR-254) and a number reaching here is refused (`CLAUDE.md` §7)."""
     if declared_type not in _KNOWN_OUTPUT_TYPES:
         raise ValueError(f"score_batch: cannot serialise a declared output type {declared_type!r}")
     if declared_type == "money_minor":
@@ -1071,11 +1105,16 @@ def _coerce_output_value(declared_type: str, value: Any) -> int | str | bool:
                 f"got {type(value).__name__}"
             )
         return int(value)
-    if declared_type in ("decimal", "relativity", "percentage"):
-        # RL-1567 T1: `relativity` and `percentage` take `decimal`'s string form. SL-1569
-        # (the RL-1343 slice) replaces this conversion with the one producer on every path.
-        as_decimal = value if isinstance(value, Decimal) else Decimal(repr(value))
-        return str(as_decimal)
+    if declared_type in _DECIMAL_FAMILY:
+        # RL-1343 rule 3.4: the producer (`_build_outputs`) wrote the string; batch checks it
+        # and converts nothing. A number, a `Decimal`, an exponent form or a signed zero is a
+        # producer defect and fails that row loudly. The text names types, never the value.
+        if not isinstance(value, str) or not _POSITIONAL_DECIMAL.fullmatch(value):
+            raise ValueError(
+                f"score_batch: a {declared_type} output must be a positional decimal string, "
+                f"got {type(value).__name__}"
+            )
+        return value
     if declared_type == "bool":
         if not isinstance(value, bool):
             raise ValueError(

@@ -79,6 +79,11 @@ _INPUT_FREE = {
     # (`test_the_ladder_refusal_never_carries_a_quote_input` drives it with a sentinel).
     ("rating/score.py", "build_scoring_result"): 1,
     ("rating/score.py", "score_one"): 1,  # a fixed sentence about a missing rating_version_ref
+    # RL-1567 entries (1) and (2): an integral output whose value is not integral; the text names
+    # the output and its declared type, never the value
+    # (`test_a_near_integer_under_an_integral_type_is_refused_with_rating_type_mismatch` drives it
+    # with `2.9999999999` and asserts that value is absent from the message).
+    ("rating/score.py", "_build_outputs"): 1,
     ("rating/score.py", "_raise_named"): 1,  # the constructor helper itself (`from None`)
     # The model-call sentinel re-raised as a coded error: its text is `MODEL_CALL_FAILED: ` plus a
     # static sentence built in `runtime.py`, never a model's or the engine's own error text.

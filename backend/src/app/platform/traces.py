@@ -146,9 +146,11 @@ def summarise_result(result: ScoringResult) -> dict[str, Any]:
     quote inputs that produced it (those travel separately, in `pending_quote_context`).
 
     Every one of these fields is already JSON-exact — `premium_ladder`'s `value_minor` is
-    an `int`, and `outputs`' values are `int`/`str`/`bool` by construction
-    (`_coerce_output_value`, `pricing_core.rating.score` — nothing here is a `float`), so
-    comparing two dicts built this way is an exact comparison, not an approximate one.
+    an `int`, and `outputs`' values are `int`/`str`/`bool`/null or a map or list of those,
+    because `ScoringResult` refuses a `float` at any depth of `outputs` when it is built
+    (`RL-1343` rule 4; a decimal-family value is the positional string `_build_outputs`
+    writes). `_coerce_output_value` runs only in batch, so it is not what makes this
+    exact. Comparing two dicts built this way is an exact comparison, not an approximate one.
     Shared by the serving route (the *served* summary) and the off-path Job (the
     *reproduced* one) so the two are computed the same way — a summary function that
     diverged between the two call sites could pass a broken reproduction.
