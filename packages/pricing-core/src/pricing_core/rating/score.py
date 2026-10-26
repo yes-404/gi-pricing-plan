@@ -194,6 +194,7 @@ from model_schema.rating import (
     RatingConstraintStep,
     RatingInputType,
     RatingLookupStep,
+    RatingModelCallStep,
     RatingTableStep,
 )
 from model_schema.refs import ArtifactRef
@@ -905,16 +906,25 @@ def _build_trace(
         if isinstance(step, RatingConstraintStep) and violated_flag:
             violation = {"reason_code": step.reason_code, "on_violation": step.on_violation}
         trace_data = entry.get("traceData")
+        consumed = dict(entry.get("input") or {})
+        # FD-1610 limb 2 (d): the `feature_map` names the handler drops are the ones the
+        # context (`consumed`) does not hold; they are named, never valued (NFR-499).
+        dropped = (
+            sorted(name for name in step.feature_map if name not in consumed)
+            if isinstance(step, RatingModelCallStep)
+            else []
+        )
         steps.append(
             TraceStep(
                 step_id=step.step_id,
                 type=step.type,
                 label=step.label,
-                consumed=dict(entry.get("input") or {}),
+                consumed=consumed,
                 produced=dict(output),
                 matched=trace_data if isinstance(trace_data, dict) else None,
                 violation=violation,
                 elapsed_us=_parse_elapsed_us(str(entry.get("performance", "0"))),
+                dropped_inputs=dropped or None,
             )
         )
     return Trace(

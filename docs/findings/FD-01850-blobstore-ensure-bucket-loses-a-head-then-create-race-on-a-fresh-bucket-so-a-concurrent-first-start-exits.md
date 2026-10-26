@@ -2,7 +2,7 @@
 id: FD-1850
 family: finding
 title: BlobStore.ensure_bucket loses a head-then-create race on a fresh bucket, so a concurrent first start exits
-status: active
+status: closed
 created: 2026-10-22
 owner: auditor
 tree: 71e481fa5d240ed366cd80c1a8c6cf6cd1d918d5
@@ -57,3 +57,5 @@ when this record was written).
 
 Open, owner WK-1178; **fix before close**: SL-1869 (LG-1870), a WK-1178 delta row (Lean P2 L5). Closed in place, citing
 the PR, when that slice merges. Filed under working id 8169.
+
+**Closed 2026-10-25**, in place, citing PR #1373 (squash `3551718d`), on the maintainer's acceptance "2026-10-25 14:45:22 GMT" (`to-lead.md`). The register row's Resolved cell names the discharging tests.

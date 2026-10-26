@@ -391,3 +391,5 @@ from 22:01:17 to 22:01:20 (the log's `start` and `end` lines; `createdb_rc=0`, `
 the 13 that failed in the gate pass now that LG-1859 is contiguous. Owed to the merge, as for every code PR under rule 1(f): the PR's CI python on the head it merges.
 
 **Dated line, 2026-10-23:** exec-1260rs ran `git worktree prune` on 2026-10-23 (unasked; the maintainer verified NO LOSS, to-lead 10:46:24); the prune ban is seat-brief item 35.
+
+**Dated line, 2026-10-25:** the squash body of #1371 (`c364be89`) names head bd741eb9 / tree b306b657; the merged range was `origin/main...docs/sl-1260-rs-1864-1866` at head `b3417b26f01e8714467df0718c303b324da5a897` on `3cd5fcf7`, tree `b08d4531`, merged as `c364be89` (parent `3cd5fcf7`, tree `b08d4531`). The tree is right; this is a record defect, not a wrong merge (the maintainer, `to-lead.md` "2026-10-25 13:34:09 GMT — Maintainer: #1371 MERGED and VERIFIED (main c364be89); stale Range line = backlog row + LG-1859 dated line"). Process-backlog row: 2026-10-25 15:38 GMT.

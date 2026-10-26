@@ -512,12 +512,27 @@
     },
     "TraceStep": {
       "additionalProperties": false,
-      "description": "One node of a `Trace` (FR-258, `scoring.schema.json:71-86`).\n\n`consumed`/`produced` are the engine's own `trace[node_id].input`/`.output` dicts,\npassed through rather than re-derived — `03` does not specify a narrower shape than\n\"consumed values, produced value\" and the engine's own record already satisfies it.",
+      "description": "One node of a `Trace` (FR-258, `scoring.schema.json:71-86`).\n\n`consumed`/`produced` are the engine's own `trace[node_id].input`/`.output` dicts,\npassed through rather than re-derived — `03` does not specify a narrower shape than\n\"consumed values, produced value\" and the engine's own record already satisfies it.\n\n`dropped_inputs` is set only on a `model_call` step (FR-222, the maintainer's (by\ndelegation) entries \"2026-10-25 11:40:12 GMT\" and \"2026-10-25 11:53:23 GMT\"): the sorted\ngraph names of its `feature_map` that the scoring context did not hold, so the runtime\ndropped them. `None` when nothing was dropped. Not compared (`03` §4.10).",
       "properties": {
         "consumed": {
           "additionalProperties": true,
           "title": "Consumed",
           "type": "object"
+        },
+        "dropped_inputs": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dropped Inputs"
         },
         "elapsed_us": {
           "default": 0,
