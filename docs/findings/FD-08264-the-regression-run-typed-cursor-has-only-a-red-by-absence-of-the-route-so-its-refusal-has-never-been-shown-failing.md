@@ -14,7 +14,7 @@ relates: [WK-675, CR-8261, SL-1553, LG-1933]
 
 ## Finding
 
-**MEDIUM (proposed; the lead decides); owner the lead, through the lane-C docs PR of Tue 27 Oct 2026.** A §13 defect ("enforcement is proven on deliberately broken input"): the check's test may be unable to fail. No product code is shown wrong. Authority: to-lead "2026-10-26 10:54:44 GMT". Filed under working id FD 8264, from CR 8261 §3.
+**MEDIUM (to-lead "2026-10-26 11:04:42 GMT"); owner WK-675, through the lane-C docs PR of Tue 27 Oct 2026.** A §13 defect ("enforcement is proven on deliberately broken input"): the check's test may be unable to fail. No product code is shown wrong. Authority: to-lead "2026-10-26 10:54:44 GMT". Filed under working id FD 8264, from CR 8261 §3.
 
 The typed cursor of the regression-run list (SL-1553) is red-first at backend `892a2f74` with `4 failed, 1 passed, 13 deselected`, because "the four list tests answer 405" (LG-1933:114). The route was absent. That red is by absence of the route, not by the cursor check.
 
@@ -34,4 +34,4 @@ CR 8261 §5e owed row (1): re-run the proof on genuinely broken input in the Tue
 
 ## Disposition
 
-Open, owner the lead; **fix before close**, by Tue 27 Oct 2026. Filed under working id FD 8264.
+Open, owner WK-675; **fix before close**, by Tue 27 Oct 2026. Filed under working id FD 8264.

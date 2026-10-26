@@ -14,7 +14,7 @@ relates: [WK-675, CR-8261, RL-1909]
 
 ## Finding
 
-**MEDIUM (proposed; the lead decides); owner the lead, through the lane-C docs PR of Tue 27 Oct 2026.** A spec-record defect: no price moves. Authority: to-lead "2026-10-26 10:54:44 GMT" (the finding accepted). Filed under working id FD 8262, from CR 8261 §5a (CR-1907 E6).
+**MEDIUM (to-lead "2026-10-26 11:04:42 GMT"); owner WK-675, through the lane-C docs PR of Tue 27 Oct 2026.** A spec-record defect: no price moves. Authority: to-lead "2026-10-26 10:54:44 GMT" (the finding accepted). Filed under working id FD 8262, from CR 8261 §5a (CR-1907 E6).
 
 RL-1909 decides OQ-1901 (`GET /api/v1/rating-versions` stays unpaginated, capped at 500 rating versions per workspace). Its "What it obliges" lists four edits: close OQ-1901, put the cap of 500 into `03` §5.1, strike the mirrors, and recount the gate row. None was applied.
 
@@ -37,4 +37,4 @@ Apply RL-1909's four edits in the lane-C docs PR of Tue 27 Oct 2026 (CR 8261 §5
 
 ## Disposition
 
-Open, owner the lead; **fix before close**, by Tue 27 Oct 2026. Filed under working id FD 8262.
+Open, owner WK-675; **fix before close**, by Tue 27 Oct 2026. Filed under working id FD 8262.

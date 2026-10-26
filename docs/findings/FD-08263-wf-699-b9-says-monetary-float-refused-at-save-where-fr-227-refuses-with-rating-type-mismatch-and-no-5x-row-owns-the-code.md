@@ -14,7 +14,7 @@ relates: [WK-675, CR-8261, RL-1564]
 
 ## Finding
 
-**LOW (proposed; the lead decides); owner the lead, as a spec decision raised in the lane-C docs PR of Tue 27 Oct 2026.** A spec and workflow disagreement on an error code; no price moves. Authority: to-lead "2026-10-26 10:54:44 GMT", with the count corrected by the lead in `from-lead-2026-10-09.md` "2026-10-26 10:55:24 GMT". Filed under working id FD 8263, from CR 8261 §5c.
+**LOW (to-lead "2026-10-26 11:04:42 GMT"); owner WK-675, as a spec decision raised in the lane-C docs PR of Tue 27 Oct 2026.** A spec and workflow disagreement on an error code; no price moves. Authority: to-lead "2026-10-26 10:54:44 GMT", with the count corrected by the lead in `from-lead-2026-10-09.md` "2026-10-26 10:55:24 GMT". Filed under working id FD 8263, from CR 8261 §5c.
 
 WF-699 B9 (`docs/workflows/WF-00699-*.md:64`, and the §3 row at `:112`) says an `expression` step multiplying a `money_minor` by a float-typed value is refused at save with `MONETARY_FLOAT_REFUSED`. FR-227 (`03:115`, amended 2026-10-17 by RL-1564) closes `money_minor` both ways at save and refuses every other pair with `RATING_TYPE_MISMATCH`; its closed type list has no float type.
 
@@ -36,4 +36,4 @@ A spec decision, which side is wrong is `CLAUDE.md` §0's question: either an ow
 
 ## Disposition
 
-Open, owner the lead; decision raised in the Tue 27 Oct 2026 docs PR. Filed under working id FD 8263.
+Open, owner WK-675; decision raised in the Tue 27 Oct 2026 docs PR. Filed under working id FD 8263.
