@@ -72,3 +72,5 @@ Not run today (reds-only grant): the two `with spec_not_found():` wraps, the `sp
 ### 2026-10-26 — docs checks on this ledger's commit
 
 `doc-index.py --root docs --check`: `docs/INDEX.md: OK (byte-stable)`, rc 0 (regenerated first). `audit-docs.py` via `run-heavy.sh --light`: rc 1, only the two lints on this slice's own working ids: `check 31: gap in the full allocation between 1955 and 8271` and `check 32: …LG-08271…:9: SL-8270 does not resolve in docs/INDEX.md`. Both clear at the mint (the ids are working ids until then).
+
+- 2026-10-26 15:59 GMT (lead): `ruff format --check backend/tests/test_api_rate_tables.py` reports "1 file would be reformatted" on this branch, and the SAME on origin/main's copy (tools-main @a9ffc22c). The drift is pre-existing at main, not this slice's; `.github/workflows/python.yml` runs no `ruff format` step. No reformat in this slice (to-lead "2026-10-26 15:58:34 GMT").
