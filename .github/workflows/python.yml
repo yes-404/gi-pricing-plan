@@ -351,12 +351,13 @@ jobs:
           S_import_linter: ${{ steps.importlinter.outcome }}
           S_minio: ${{ steps.minio.outcome }}
           S_migrate: ${{ steps.migrate.outcome }}
+          S_provision: ${{ steps.provision.outcome }}
           S_pytest: ${{ steps.pytest.outcome }}
           S_contracts: ${{ steps.contracts.outcome }}
           S_req_coverage: ${{ steps.reqcoverage.outcome }}
         run: |
           set -u
-          stages="ruff mypy import_linter minio migrate pytest contracts req_coverage"
+          stages="ruff mypy import_linter minio migrate provision pytest contracts req_coverage"
           failed=""
           nfail=0
           ntotal=0
