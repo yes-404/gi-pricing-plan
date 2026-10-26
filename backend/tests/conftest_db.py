@@ -345,6 +345,17 @@ OWNER_FIXTURE_USERS: tuple[tuple[str, str, str], ...] = (
         "the seed's grant_demo_principals creates the workspace, roles and members (no route does)",
     ),
     (
+        "backend/tests/test_wf701_journey.py::test_wf701_journey_runs_end_to_end",
+        "bootstrap",
+        "the seed's grant_demo_principals creates the workspace, roles and members (no route does)",
+    ),
+    (
+        "backend/tests/test_wf701_journey.py::"
+        "test_c7_fails_naming_the_band_when_the_sample_rate_is_zero",
+        "bootstrap",
+        "the seed's grant_demo_principals creates the workspace, roles and members (no route does)",
+    ),
+    (
         "backend/tests/test_migration_routing_shadow.py::test_the_migration_round_trips",
         "migration",
         "creates and migrates a scratch database (CREATE DATABASE, DDL)",
