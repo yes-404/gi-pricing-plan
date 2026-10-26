@@ -64,6 +64,8 @@ head=3ffdbe3f787c195e43ebd3f8ae6a17143777d2e8
 
 **Dated line (2026-10-25, exec-s2docs, on the maintainer's (by delegation) entry "2026-10-25 22:51:27 GMT"):** RS-1930 N2 is filed as OQ-1931 (open, owner WK-1178; `docs/open-questions.md`, mirrored in `03` §10, placed at roadmap "Before Phase 3"), and N4 is corrected by a dated line in `03` §4.10: `dropped_inputs` is computed at score time from the step's `feature_map` names that `consumed` does not hold, and `feature_map` is not in the trace.
 
+**Dated line (2026-10-26, exec-mints2, on the lead's instruction relaying the maintainer's check-22 fix):** RS-1930:38 pipe escaped (check 22); text otherwise byte-identical to the adopted 331cd7f0.
+
 ## PRs
 
 (none yet)
