@@ -8,7 +8,7 @@ export type GoldenQuoteResult = components["schemas"]["GoldenQuoteResult"];
 export type PropertyResult = components["schemas"]["PropertyResult"];
 
 /**
- * How many pages `listRegressionRuns` will fetch before it stops and says so (FR 8211).
+ * How many pages `listRegressionRuns` will fetch before it stops and says so (FR-1932).
  * Ten pages of the server's `MAX_LIMIT` is two thousand runs of one Rating Version, far past
  * what a picker can usefully show; past it the result is `truncated`, newest first, so the
  * runs a pricing actuary wants are the ones kept.

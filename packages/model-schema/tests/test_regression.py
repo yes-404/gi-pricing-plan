@@ -352,9 +352,9 @@ def test_the_case_log_hash_is_canonical() -> None:
     assert len(cases_log_sha256(one)) == 64
 
 
-# --- WK-675 Slice 11 (SL-1553, FR 8211): the run summary the list route returns ----------
+# --- WK-675 Slice 11 (SL-1553, FR-1932): the run summary the list route returns ----------
 
-@pytest.mark.req("FR-8211")
+@pytest.mark.req("FR-1932")
 def test_a_regression_run_summary_is_the_listed_fields_and_nothing_heavier() -> None:
     from model_schema.regression import RegressionRun, RegressionRunSummary
 

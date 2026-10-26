@@ -12,7 +12,7 @@ type RegressionRunSummary = components["schemas"]["RegressionRunSummary"];
 
 /**
  * The view is exercised through the real `api/` modules with `fetch` stubbed: the tests
- * are about which requests the view makes (FR 8211 item (4) and (5): the run list, the run
+ * are about which requests the view makes (FR-1932 item (4) and (5): the run list, the run
  * by id, never a `POST`, never `…/cases` or `/blobs`), which a mocked client would skip.
  */
 
@@ -132,7 +132,7 @@ const props = { slug: "motor-gb", version: "27" };
 beforeEach(() => push.mockReset());
 afterEach(() => vi.unstubAllGlobals());
 
-describe("the Regression suite view (FR 8211)", () => {
+describe("the Regression suite view (FR-1932)", () => {
   it("opens the newest run by default and shows its golden quotes as money from minor units", async () => {
     const { calls } = stubFetch({ pages: [{ items: LIST, next_cursor: null }], runs: { [NEWEST]: run() } });
     render(RegressionSuiteView, { props });

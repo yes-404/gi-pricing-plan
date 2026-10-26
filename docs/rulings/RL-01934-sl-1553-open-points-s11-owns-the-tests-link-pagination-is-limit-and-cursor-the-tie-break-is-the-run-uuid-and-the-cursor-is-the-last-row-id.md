@@ -1,9 +1,9 @@
 ---
-id: RL-8217
+id: RL-1934
 family: ruling
 title: SL-1553 (WK-675 S11) open points decided — S11 owns the list row's /tests link and amends S10's FR by a dated clause; the run list pages with the platform's limit and cursor; the tie-break is the run's UUIDv7 id and the cursor is the last row's id, resolved on the server
 status: active                 # active → superseded | retired (§1.2a) — a ruling opens active; DRAFT until the maintainer adopts it and it is minted
-created: 2026-10-25
+created: 2026-10-26               # drafted 2026-10-25 under working id 8217
 owner: decision-maker
 tree: ff976406f1bf133cfe040d2c44d383011503988a
 phase: P2
@@ -14,11 +14,11 @@ corrected_by: []
 relates: [SL-1553, SL-1552, WK-675, PL-1546, PL-1286, FD-1283, FR-25, FR-260, FR-261, FR-450, FR-1221, FR-1531]
 ---
 
-# RL-8217 — SL-1553 (S11): the three open points of the regression suite view's spec text
+# RL-1934 — SL-1553 (S11): the three open points of the regression suite view's spec text
 
 **DRAFT — binds nothing until the maintainer adopts it.** Drafted 2026-10-25 by the
 decision-maker (seat dm-1553) on lead 28's brief `brief-dm-1553-2026-10-25.md`. The working ids
-in prose (RL 8163, FR 8211, FR 8209, OQ 8206, LG 8212, this record's 8217) are not minted.
+in prose (RL 8163, FR-1932, FR 8209, OQ 8206, LG-1933, this record's 8217) are not minted.
 
 ## Authority and scope
 
@@ -34,13 +34,13 @@ in prose (RL 8163, FR 8211, FR 8209, OQ 8206, LG 8212, this record's 8217) are n
   `origin/draft/rl-8163` @d4258b95) and its DP-S11-1 and DP-S11-2. DP-S11-3 is in the same
   entry, item (C): *"S11 (SL-1553) is serialised after S10 merges (prep §2.3: router block +
   list-row link, §8(b))"*. The S11 spec text is on `origin/sl-1553-wk675-s11` @5b26a818:
-  FR 8211 at `03:185`, the §4.9 `RegressionRunSummary` paragraph at `03:921-927`, the §5.1 row
+  FR-1932 at `03:185`, the §4.9 `RegressionRunSummary` paragraph at `03:921-927`, the §5.1 row
   at `03:1113` and the §5.3 row at `03:1473`.
 - **Why this is an `RL-` and not an LG line.** Point 3 corrects an adopted ruling.
   RL 8163 DP-S11-1 says both *"the existing cursor convention and limits"* and *"newest first
   by `finished_at desc, id desc`"*, and at ff976406 the existing cursor convention cannot carry
   that order (see below). This record makes the two clauses agree. Points 1 and 2 bind only
-  inside the slice, so under Lean P2 L1 they could go in LG 8212. Whether to split them out is
+  inside the slice, so under Lean P2 L1 they could go in LG-1933. Whether to split them out is
   the lead's call (see "For the lead").
 - **Trees read.** `origin/main` ff976406 (the code facts below), `origin/sl-1553-wk675-s11`
   5b26a818 (S11's text), `origin/sl-1552-wk675-s10` 4a4efdd1 (S10's FR 8209; the branch has
@@ -66,11 +66,11 @@ in prose (RL 8163, FR 8211, FR 8209, OQ 8206, LG 8212, this record's 8217) are n
 - RL 8163 "For the lead" item 3 says *"S11's entry link lives in S10's list"*. The maintainer's
   DP-S11-3 serialises S11 after S10 on the grounds *"router block + list-row link"*. Nobody
   ruled whether S10 or S11 writes the link.
-- At 5b26a818, FR 8211 (`03:185`) item (4) describes the view but names no entry link.
+- At 5b26a818, FR-1932 (`03:185`) item (4) describes the view but names no entry link.
 
 **Options.**
 - **(a) S11 adds it.** S11 adds `/tests` to each list row. It amends FR 8209 item (4) with a
-  dated clause naming FR 8211, in the same commit as its router entry. S11 already edits the
+  dated clause naming FR-1932, in the same commit as its router entry. S11 already edits the
   router and the reachability test, and it lands after S10's squash, so editing S10's file
   cannot conflict.
 - **(b) S10 adds it now.** The link would point at a route that does not exist until S11.
@@ -158,7 +158,7 @@ change.
   shared module for one route, plus a timestamp round-trip (timezone, precision) that the
   opaque cursor would then depend on.
 - **(c) Order by `id desc` alone.** This is the jobs and deployments convention. It needs no
-  lookup and no codec change, but it **amends RL 8163 DP-S11-1** and the FR 8211 / §5.1 text
+  lookup and no codec change, but it **amends RL 8163 DP-S11-1** and the FR-1932 / §5.1 text
   ("the order the latest-run read already uses"). The row's id is minted when `persist_run`
   flushes, after the worker sets `finished_at`. Two runs finishing close together on workers
   with skewed clocks could then sort differently from `latest_run`.
@@ -176,7 +176,7 @@ cursor, and here it is resolved by position rather than by `id < after`.
 In S11 (SL-1553), spec first, once this record is adopted:
 
 - **Point 1 (the `/tests` link).** (i) FR 8209 item (4) gets a dated clause: *"Amended
-<date>, WK-675 S11 `SL-1553`, FR 8211: and to `/rating/:slug/v/:version/tests`."* The row text
+<date>, WK-675 S11 `SL-1553`, FR-1932: and to `/rating/:slug/v/:version/tests`."* The row text
 is not rewritten. (ii) The S10 list view gains the link, built from `slug@version` with no
 second lookup. (iii) `router/index.ts` registers `/tests`, and `reachability.test.ts` stays
 green with **no** entry added to its unreachable-routes list. (iv) S11's view-test set adds the
@@ -193,14 +193,14 @@ tie-break and the cursor's key."* (ii) The §5.1 row (`03:1113`) gains *"; 400
 follows (a): one UUID cursor, a `(finished_at, id)` row-value comparison, and the cursor run
 loaded under the same workspace and version filters, so a foreign run id cannot be used to
 probe another version (FR-1531 posture). (iv) S11's backend test, carrying
-`@pytest.mark.req` on FR 8211, pins: two runs with equal `finished_at` order by `id`
+`@pytest.mark.req` on FR-1932, pins: two runs with equal `finished_at` order by `id`
 descending; paging with `limit=1` across them returns each exactly once; a cursor naming
 another version's run answers 400. The test is red at its test commit.
 
 ## For the lead (not ruled here)
 
 1. **Record form.** Point 3 corrects how RL 8163 DP-S11-1 is read, so it stays an `RL-`.
-   Points 1 and 2 bind only inside S11 and, under Lean P2 L1, could be entries in LG 8212
+   Points 1 and 2 bind only inside S11 and, under Lean P2 L1, could be entries in LG-1933
    instead. Keep this record whole or split it.
 2. **Minting.** Under item 34, this record mints in SL-1553's PR, after RL 8163 (which mints in
    S10's PR), with the adoption line appended.

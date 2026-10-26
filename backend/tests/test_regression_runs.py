@@ -521,7 +521,7 @@ def test_a_cancelled_run_ends_the_job_cancelled_not_failed(
     assert job.error is None
 
 
-# --- WK-675 Slice 11 (SL-1553, FR 8211): the Regression Run list ---------------------------
+# --- WK-675 Slice 11 (SL-1553, FR-1932): the Regression Run list ---------------------------
 
 _SUMMARY_KEYS = {
     "id", "job_id", "overall", "bundle_hash", "suite_ref", "suite_content_hash",
@@ -555,7 +555,7 @@ def list_world(api_client, workspace_id, principal, grant, database):
     })
 
 
-@pytest.mark.req("FR-8211")
+@pytest.mark.req("FR-1932")
 def test_the_list_is_this_versions_runs_newest_first_as_summaries(list_world) -> None:
     w = list_world
     oldest = w.persist(w.rv, _run(overall="pass", minutes=0))
@@ -574,7 +574,7 @@ def test_the_list_is_this_versions_runs_newest_first_as_summaries(list_world) ->
     assert all(set(r) == _SUMMARY_KEYS for r in body["items"])
 
 
-@pytest.mark.req("FR-8211")
+@pytest.mark.req("FR-1932")
 def test_a_version_of_another_workspace_or_an_unknown_one_is_a_404(list_world) -> None:
     w = list_world
     foreign = asyncio.get_event_loop().run_until_complete(
@@ -586,11 +586,11 @@ def test_a_version_of_another_workspace_or_an_unknown_one_is_a_404(list_world) -
         assert refused.json()["code"] == "NOT_FOUND"
 
 
-@pytest.mark.req("FR-8211")
+@pytest.mark.req("FR-1932")
 def test_equal_finished_at_orders_by_id_descending_and_paging_returns_each_run_once(
     list_world,
 ) -> None:
-    """RL 8217 point 3 (iv): the tie-break is the run id, the cursor is that id, and the
+    """RL-1934 point 3 (iv): the tie-break is the run id, the cursor is that id, and the
     resume is the `(finished_at, id)` row-value comparison."""
     w = list_world
     twins = [w.persist(w.rv, _run(minutes=3, blob=b)) for b in "cde"]  # one finished_at
@@ -613,7 +613,7 @@ def test_equal_finished_at_orders_by_id_descending_and_paging_returns_each_run_o
     assert seen == expected
 
 
-@pytest.mark.req("FR-8211")
+@pytest.mark.req("FR-1932")
 def test_a_cursor_that_is_not_a_run_of_this_version_is_a_400(list_world) -> None:
     from app.api.pagination import encode_cursor
 
@@ -630,7 +630,7 @@ def test_a_cursor_that_is_not_a_run_of_this_version_is_a_400(list_world) -> None
     assert garbage.json()["code"] == "VALIDATION_FAILED"
 
 
-@pytest.mark.req("FR-8211")
+@pytest.mark.req("FR-1932")
 def test_the_list_route_does_not_shadow_the_run_read(list_world) -> None:
     w = list_world
     run_id = w.persist(w.rv, _run(overall="fail", minutes=0))

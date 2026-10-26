@@ -245,9 +245,9 @@ def test_the_algorithm_diff_response_is_typed_by_its_model() -> None:
 SPEC_RATING_ENGINE = ROOT / "docs" / "specs" / "03-rating-engine.md"
 
 
-@pytest.mark.req("FR-8211")
+@pytest.mark.req("FR-1932")
 def test_the_regression_runs_list_route_declares_every_status_03_lists() -> None:
-    """RS 8253 F2: the list route returned 400 `VALIDATION_FAILED` for a foreign cursor while
+    """RS-1935 F2: the list route returned 400 `VALIDATION_FAILED` for a foreign cursor while
     its decorator omitted 400, so the generated OpenAPI lacked a status `03` §5.1 lists. The
     statuses are read from the spec's own row, never written out here, so the guard follows
     the spec. A parenthetical (ids, dates) is stripped first; only standalone 3-digit codes

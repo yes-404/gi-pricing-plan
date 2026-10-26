@@ -334,7 +334,7 @@ class RegressionRun(BaseModel):
 
 
 class RegressionRunSummary(BaseModel):
-    """One row of a Rating Version's Regression Run list (03 §4.9, FR 8211).
+    """One row of a Rating Version's Regression Run list (03 §4.9, FR-1932).
 
     `id` is the run's UUID (the `regression_runs` primary key); the persisted
     `RegressionRun` carries none. The summary holds no result lists and no case-log

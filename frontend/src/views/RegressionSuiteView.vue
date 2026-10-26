@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * The Regression suite view (03 §5.3, FR 8211): `/rating/:slug/v/:version/tests`. `:slug` and
+ * The Regression suite view (03 §5.3, FR-1932): `/rating/:slug/v/:version/tests`. `:slug` and
  * `:version` are the Rating Version's own (RL-1473). It lists the version's runs newest first,
  * opens the newest by default, honours `?run=<id>`, and marks the run the version's
  * `evidence.regression_suite_run_id` names. It is read-only: it starts no run (RL-1900

@@ -1369,7 +1369,7 @@ async def list_regression_runs(
     limit: Annotated[int, Query(ge=1, le=MAX_LIMIT)] = DEFAULT_LIMIT,
 ) -> Page[RegressionRunSummary]:
     """**200** with a page of run summaries, newest first (`finished_at` desc, `id` desc;
-    `03` §5.1, FR 8211). A summary carries no results and no case-log reference — those are
+    `03` §5.1, FR-1932). A summary carries no results and no case-log reference — those are
     read per run (FR-1221). **404** for a version outside the caller's workspace; **400**
     `VALIDATION_FAILED` for a cursor that is not a run of this version."""
     async with database.session() as session:

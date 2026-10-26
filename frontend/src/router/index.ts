@@ -277,7 +277,7 @@ export const routes: RouteRecordRaw[] = [
     }),
   },
   {
-    // `03` §5.3's Regression suite view (FR 8211). `:slug` and `:version` are the Rating
+    // `03` §5.3's Regression suite view (FR-1932). `:slug` and `:version` are the Rating
     // Version's own (RL-1473); the run is cited by id in `?run=`.
     path: "/rating/:slug/v/:version/tests",
     name: "rating-tests",
