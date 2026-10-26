@@ -94,3 +94,49 @@ Status unchanged. The discharge question is the auditor's and the maintainer's.
 - **`gipricing`** (now() 2026-10-26 15:04:32.104698+00): `rate_table_versions` and `rate_table_cells` exist; `SELECT count(*) FROM rate_table_versions` = **0**; `SELECT count(*) FROM rate_table_cells` = **0**; `SELECT version_num FROM alembic_version` = `d4e81b7a2c95`.
 - **Result.** No database holds rows, so Q1–Q3 run nowhere beyond the 15:00 section's vacuous run. **No persisted pre-retype data exists in this environment.** The ruling's steps (2) (the instrument proved red on a planted JSON number) and (3) (a seeded throwaway, today's writers) follow in Tue 27's window. Status unchanged.
 - *Disclosed:* the first run of the enumeration sent no stdin (`docker exec` without `-i`) and printed no rows; it was re-run with `-i`, and the log records both.
+
+## 2026-10-26 15:35 UTC — step (2): the instrument proved red-first on a planted JSON number (to-lead "2026-10-26 15:03:43 GMT" (2); executor exec-fd1652b)
+
+Tree: `origin/main` = `7ed5c398333aa24432bd9917bd204f7b540fb39c`, worktree `.claude/worktrees/fd1652b` (detached, `HEAD` = that sha). Throwaway: `fd1652b-pg`, container id `9e2414622ddfd9c49c6f529611ffb1816b3a8c7c66e41b3b063cedc43447209f` (`postgres:16-alpine`, local image, published `127.0.0.1:32819->5432`, anonymous volume). Login role provisioned (`scripts/provision-app-role.py --allow-default-password`), then `alembic upgrade head` as the owner: `alembic_version` = `b7e4c2a91d36`, `alembic heads` at the same tree = `b7e4c2a91d36 (head)` — equal. Log: `~/gi-pricing-plan.local/scratch/fd1652b/step2.log` (local, `head=` first, `rc=` last).
+
+The SQL is the 15:00 section's, verbatim (`diff` of the file used against `scratch/fd1652/counts.sql`: identical), run in `BEGIN; SET TRANSACTION READ ONLY; …; ROLLBACK;`. The plant, as the owner, in one transaction (the tables carry no foreign keys, so the chain is a courtesy): one `rate_tables` row; two `rate_table_versions` rows, `storage='rows'`, `definition` = `{"default_row": {"rate": 1}}` (Q1's target) and `{"default_row": 7}` (Q1b's target); one `rate_table_cells` row, `key` = `[1]`, `value` = `5` (Q2 and Q3's target).
+
+| Count | Before the plant (now() 15:35:06.360657+00) | After the plant (now() 15:35:06.56707+00) |
+|---|---|---|
+| `rate_table_versions` by `storage` | 0 rows | `rows` = 2 |
+| `rate_table_cells` | 0 | 1 |
+| Q1 `default_row` non-string | 0 | **1** |
+| Q1b `default_row` bad shape | 0 | **1** |
+| Q2 cell value non-string | 0 | **1** |
+| Q3 cell key element non-string | 0 | **1** |
+
+Every query that the plant targets sees it. The `jsonb_typeof` queries have now printed a failure.
+
+**Removal of the plant.** `rate_table_cells`, `rate_table_versions` and `rate_tables` carry append-only triggers (`artifact_append_only`, `rate_tables_pointer_only`), so a plain `DELETE` is refused. As the owner, in the throwaway only: `BEGIN; SET LOCAL session_replication_role = replica; DELETE FROM rate_table_cells; DELETE FROM rate_table_versions; DELETE FROM rate_tables; COMMIT;` (`DELETE 1`, `DELETE 2`, `DELETE 1`). Counts back: `rate_tables|rate_table_versions|rate_table_cells` = `0|0|0`, and Q-cells/Q1/Q1b/Q2/Q3 all 0.
+
+## 2026-10-26 15:36 UTC — step (3): today's writers, the WF-699 journey on the same throwaway (to-lead "2026-10-26 15:03:43 GMT" (3); executor exec-fd1652b)
+
+Tree: `origin/main` = `7ed5c398333aa24432bd9917bd204f7b540fb39c`. Throwaways (all `--pull never`, `127.0.0.1` published ports, anonymous volumes): `fd1652b-pg` (id as above, port 32819), `fd1652b-redis` id `c31ba9ed08a014da7d85d45c6a96c5747517f4aa1dfd11a1a284ac71302ca18a` (`redis:7-alpine`, port 32820, db 11), `fd1652b-minio` id `dbdd8107f786549beb85aa209ea7bb0728985ad73be34d843b331bc6611d5f10` (`minio/minio:latest`, the compose's tag, port 32821, bucket `gip-blobs-fd1652b`, created by the app). Env: `GIP_DATABASE_URL`, `GIP_MIGRATION_DATABASE_URL`, `GIP_REDIS_URL`, `GIP_BLOB_ENDPOINT_URL`, `GIP_BLOB_BUCKET` pointed at those (`scratch/fd1652b/env.sh`).
+
+**Run.** `scripts/demo.py --journey wf-699` (the gate's form: started beside a log poll, interrupted at "journey done" + "served page … answered 200"), under the `/tmp/slots/demo` lock, via `run-heavy.sh`. Start load1 1.85 (15:36:14 UTC). **rc = 0; 1015 s total; "journey done in 918s"; "served page: http://localhost:5173/ answered 200".** D7 line verbatim: `D7   ok  19985 policies in the sample; rate table edits: +485990825; NCD ladder and expense loading: +3851186; sum +489842011 minor units (full-book attribution cost: FD-1576)`. Log: `scratch/fd1652b/demo.log` (`head=` first, `rc=0` last).
+
+**One deviation from the gate's form, disclosed.** `demo.py` begins with `docker compose -f deploy/docker-compose.yml --profile auth up -d --wait`, which would recreate the shared `gi-pricing-*` stack (the very effect the gate's keycloak restore step exists to undo). A `docker` shim first on `PATH` (`scratch/fd1652b/shim/docker`) skipped every `docker compose …` call and passed anything else through; the log's line 5 records it: `shim: skipped docker compose -f deploy/docker-compose.yml --profile auth up -d --wait`. `demo.py` itself, the alembic step, the role provisioning, the seed, the API, the worker, the beat and the frontend ran unmodified. The local dev-auth path needed no keycloak. The four `gi-pricing-*` containers were listed up afterwards.
+
+**Counts**, the SQL of the 15:00 section verbatim (`scratch/fd1652b/step3-q.log`), now() `2026-10-26 15:53:16.816352+00`, alembic `b7e4c2a91d36`:
+
+| Count | Result |
+|---|---|
+| `rate_table_versions` by `storage` | `rows` = **16** |
+| `rate_table_cells` | **140** |
+| Q1 `default_row` non-string | 0 |
+| Q1b `default_row` bad shape | 0 |
+| Q2 cell value non-string | 0 |
+| Q3 cell key element non-string | 0 |
+
+Zero bad over non-zero denominators (16 versions, 140 cells). Not reachable by this SQL, as in the 15:00 section: the journey's versions are all `rows`; Parquet-stored versions keep their cells in blobs.
+
+**Removal.** `docker rm -fv fd1652b-pg fd1652b-redis fd1652b-minio` printed the three names. `docker ps -a --filter name=fd1652b` afterwards: header only (no rows). Dangling volumes: 17 before, 17 after (`docker volume ls -qf dangling=true | wc -l`). Ports 8000 and 5173 free afterwards. Log: `scratch/fd1652b/removal.log`.
+
+## 2026-10-26 15:55 UTC — Measured close (text per to-lead "2026-10-26 15:03:43 GMT" (3); the status is not flipped here)
+
+No persisted pre-retype data exists in this environment (databases enumerated: gipricing, postgres; step (1), 15:05 UTC section); the instrument detects a planted non-string (counts, at `origin/main` `7ed5c398`: Q1 = 1, Q1b = 1, Q2 = 1, Q3 = 1 over 2 versions and 1 cell, against 0, 0, 0, 0 before the plant); today's writers produce strings (Q1 = 0, Q1b = 0, Q2 = 0, Q3 = 0 over 16 `rows` versions and 140 cells, after the WF-699 journey, rc 0). Nothing remains to remediate. The status change and the closing of the register row are the auditor's act (Tue 27, commit 7).
