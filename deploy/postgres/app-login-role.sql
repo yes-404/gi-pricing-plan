@@ -15,5 +15,23 @@ $do$;
 -- CREATEROLE, CREATEDB or REPLICATION is reset here on every run.
 ALTER ROLE gip_app_login LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION
   NOBYPASSRLS INHERIT;
-GRANT gip_app TO gip_app_login;
+-- Converge gip_app too (FD-1951, SL 8266): a pre-existing gip_app keeps no attribute the
+-- login role could inherit.
+ALTER ROLE gip_app NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+-- RESET ALL DISCARDS EVERY ROLE-LEVEL SETTING AN OPERATOR HAS SET ON THESE TWO ROLES
+-- (search_path, session_replication_role, work_mem, ...), on purpose: a role setting is a
+-- route around the guard (FD-1951 medium 4; to-lead 2026-10-26 13:12:34 GMT, item 4 (a)).
+-- The first pair clears the role-wide settings; the DO block clears the ones made IN DATABASE.
+ALTER ROLE gip_app_login RESET ALL;
+ALTER ROLE gip_app RESET ALL;
+DO $do$
+BEGIN
+  EXECUTE format('ALTER ROLE gip_app_login IN DATABASE %I RESET ALL', current_database());
+  EXECUTE format('ALTER ROLE gip_app IN DATABASE %I RESET ALL', current_database());
+END
+$do$;
+ALTER ROLE gip_app_login VALID UNTIL 'infinity' CONNECTION LIMIT -1;
+ALTER ROLE gip_app VALID UNTIL 'infinity' CONNECTION LIMIT -1;
+-- SET FALSE: the login role never needs SET ROLE gip_app; it inherits gip_app's grants.
+GRANT gip_app TO gip_app_login WITH INHERIT TRUE, SET FALSE;
 -- No credential here: `scripts/provision-app-role.py` sets it, as a SCRAM verifier.
