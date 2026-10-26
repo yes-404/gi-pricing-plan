@@ -83,3 +83,14 @@ ROLLBACK;
 **Not reachable by this SQL.** Cells of Parquet-stored versions live in blobs, not in `rate_table_cells`. Here the `storage` denominator is empty, so there are none in this database; against any populated database those cells would not be covered by these counts.
 
 Status unchanged. The discharge question is the auditor's and the maintainer's.
+
+## 2026-10-26 15:05 UTC — step (1): every database enumerated, read-only (to-lead "2026-10-26 15:03:43 GMT")
+
+*(Run by the lead under that heading's grant, in the conditions of to-lead 14:44:23 (c): one read-only transaction per database, `SET TRANSACTION READ ONLY`, `statement_timeout = '30s'`, SELECT only, `PGOPTIONS=-c default_transaction_read_only=on`. Log: `~/gi-pricing-plan.local/scratch/fd1652/enumerate.log`, `head=7ed5c398333aa24432bd9917bd204f7b540fb39c` first, `rc=0` last, load1 1.08, gate-1/1b/2 free.)*
+
+- **Instances.** There is one PostgreSQL instance, the live stack's `gi-pricing-postgres-1` (postgres:16-alpine), on volume `gi-pricing_pgdata`. That is the only pgdata volume on the host (`docker volume ls`), so no other instance holds data.
+- **Databases** (`SELECT datname FROM pg_database WHERE NOT datistemplate`): `gipricing`, `postgres`.
+- **`postgres`** (now() 2026-10-26 15:04:32.201143+00): `to_regclass('public.rate_table_versions') IS NOT NULL` = false; `rate_table_cells` false; `alembic_version` false. It holds no rate tables.
+- **`gipricing`** (now() 2026-10-26 15:04:32.104698+00): `rate_table_versions` and `rate_table_cells` exist; `SELECT count(*) FROM rate_table_versions` = **0**; `SELECT count(*) FROM rate_table_cells` = **0**; `SELECT version_num FROM alembic_version` = `d4e81b7a2c95`.
+- **Result.** No database holds rows, so Q1–Q3 run nowhere beyond the 15:00 section's vacuous run. **No persisted pre-retype data exists in this environment.** The ruling's steps (2) (the instrument proved red on a planted JSON number) and (3) (a seeded throwaway, today's writers) follow in Tue 27's window. Status unchanged.
+- *Disclosed:* the first run of the enumeration sent no stdin (`docker exec` without `-i`) and printed no rows; it was re-run with `-i`, and the log records both.
