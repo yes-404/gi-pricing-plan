@@ -36,7 +36,12 @@ S2-D1 / (d), (c), spec lines, contracts regeneration, and S2-C0 (the exposure me
 
 ### Audit
 
-(not yet seated)
+RS 8247 (aud-s2, @331cd7f0) proposed CLEAN, ADOPTED CLEAN by the lead; accepted at to-lead 2026-10-25 22:51:27 GMT. The record is `docs/research/RS-08247-s2-fd-1610-limb-2-slice-audit-dropped-inputs-and-model-call-required-input-absent.md`, folded blob-identical from aud-s2 @331cd7f0. Its notes, as ruled at that entry:
+
+- **N1** — accepted non-blocking; the allow-list comparison is the guard; no new test now.
+- **N2** — ruled: (c) refuses per graph name, the literal 11:53:23 ruling; it stands as ruled for S2 and is filed as OQ 8249 (open, owner WK-1178), with a recommendation.
+- **N3** — accepted — no src change after 3ffdbe3f; S2's gate at 84aadaec is decisive.
+- **N4** — wording: the `03` §4.10 "feature_map" phrase is fixed to name what the trace carries; the line is already on this branch (the dated line in `03` §4.10).
 
 ### Build log
 
