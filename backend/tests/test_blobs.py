@@ -425,3 +425,87 @@ async def test_a_gone_multipart_upload_with_no_object_is_the_named_failure(
         blob_store._complete_staged("staging/k", "gone", 2)
     assert caught.value.code == "VALIDATION_FAILED"
     assert caught.value.title == "The upload is missing"
+
+
+class _RacingS3:
+    """S3 client stub for a concurrent first start (FD-1850): the bucket is absent at
+    `head_bucket`, a peer creates it before our `create_bucket`, so that call raises
+    `create_code`. After that the bucket exists unless `head_after` says otherwise."""
+
+    def __init__(self, create_code: str, *, head_after: str | None = None) -> None:
+        self.create_code = create_code
+        self.head_after = head_after
+        self.heads = 0
+        self.lifecycle: dict[str, object] | None = None
+
+    def head_bucket(self, Bucket: str) -> None:  # noqa: N803 - boto3 keyword names
+        self.heads += 1
+        if self.heads == 1:
+            raise _client_error("404", "HeadBucket")
+        if self.head_after is not None:
+            raise _client_error(self.head_after, "HeadBucket")
+
+    def create_bucket(self, Bucket: str) -> None:  # noqa: N803
+        raise _client_error(self.create_code, "CreateBucket")
+
+    def get_bucket_lifecycle_configuration(self, Bucket: str) -> dict[str, object]:  # noqa: N803
+        raise _client_error("NoSuchLifecycleConfiguration", "GetBucketLifecycleConfiguration")
+
+    def put_bucket_lifecycle_configuration(
+        self,
+        Bucket: str,  # noqa: N803
+        LifecycleConfiguration: dict[str, object],  # noqa: N803
+    ) -> None:
+        self.lifecycle = LifecycleConfiguration
+
+
+def _store_with(client: _RacingS3) -> BlobStore:
+    store = BlobStore.__new__(BlobStore)
+    store._bucket = "race-bucket"
+    store._client = client  # type: ignore[assignment]
+    return store
+
+
+@pytest.mark.req("FR-421")
+async def test_ensure_bucket_survives_bucket_already_owned_by_you() -> None:
+    """FD-1850 (i): the loser of a first-start create race gets `BucketAlreadyOwnedByYou`;
+    that is success and the lifecycle rule is still set."""
+    client = _RacingS3("BucketAlreadyOwnedByYou")
+    await _store_with(client).ensure_bucket()
+    assert client.lifecycle is not None
+
+
+@pytest.mark.req("FR-421")
+async def test_ensure_bucket_accepts_bucket_already_exists_when_head_now_succeeds() -> None:
+    """FD-1850 (ii): MinIO may answer `BucketAlreadyExists` to the race loser; the re-run
+    `head_bucket` succeeds (our access), so it is success."""
+    client = _RacingS3("BucketAlreadyExists")
+    await _store_with(client).ensure_bucket()
+    assert client.lifecycle is not None
+    assert client.heads == 2  # the bucket was re-checked, not assumed
+
+
+@pytest.mark.req("FR-421")
+@pytest.mark.parametrize("head_code", ["403", "404"])
+async def test_ensure_bucket_raises_bucket_already_exists_when_head_still_fails(
+    head_code: str,
+) -> None:
+    """FD-1850 (iii), breaker: in S3 `BucketAlreadyExists` means another owner. Treating it
+    as success when we still cannot reach the bucket leaves every later call failing far
+    from the cause; the original error is raised."""
+    client = _RacingS3("BucketAlreadyExists", head_after=head_code)
+    with pytest.raises(ClientError) as info:
+        await _store_with(client).ensure_bucket()
+    assert info.value.response["Error"]["Code"] == "BucketAlreadyExists"
+    cause = info.value.__cause__
+    assert isinstance(cause, ClientError)
+    assert cause.response["Error"]["Code"] == head_code  # the head error is chained
+    assert client.lifecycle is None
+
+
+@pytest.mark.req("FR-421")
+async def test_ensure_bucket_reraises_any_other_create_failure() -> None:
+    client = _RacingS3("AccessDenied")
+    with pytest.raises(ClientError):
+        await _store_with(client).ensure_bucket()
+    assert client.lifecycle is None

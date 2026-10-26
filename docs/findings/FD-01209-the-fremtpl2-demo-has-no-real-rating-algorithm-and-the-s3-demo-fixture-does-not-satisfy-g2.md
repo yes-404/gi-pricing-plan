@@ -2,7 +2,7 @@
 id: FD-1209
 family: finding
 title: The freMTPL2 demo has no real rating algorithm, and Slice 3's demo fixture does not satisfy G2
-status: active
+status: closed
 created: 2026-09-28
 owner: auditor
 tree: 5ec47dc46ac2f174c5d427f5558a6cb365ff8166
@@ -68,3 +68,12 @@ Recorded by the auditor at the WK-672 Work close (`CR-1243`). Read at `origin/ma
 - **Slice 3's seed change is now merged** (#886, squash `6a8b8e70`), so the line above that it was "not verified by the auditor" is answered: `examples/fremtpl2/model.py:327` `_demo_algorithm` is *"`payable = premium_in * 2`. **Not priced from the GLM** (DP-S3-8) … the real algorithm around the approved freMTPL2 models is G2's"*; the label `DEMO_FIXTURE = "demo-fixture"` is at `:316`, and the suite's change note reads *"demo fixture: not priced from the GLM"* (`:434`).
 - **The event has not happened.** No real freMTPL2 algorithm is in the seed (the only algorithm the seed creates is `_demo_algorithm()`, `:386-387`), and no test drives `WF-699` end to end: `git ls-files | grep -iE 'wf.?699|test_wf'` prints only `backend/tests/test_wf01_journey.py`, whose docstring opens *"WF-698 — dataset to approved Model"*.
 - **"Plan review 16" now names two reviews.** The row's event is *"due before plan review 16, not WK-674"*. When it was written, the only review 16 on record was plan review 15's G6 (`CR-1212` Proposal 1): *"A plan review 16 is filed after G1–G5 and before the demo"*, and G1 needs every P2 Work resolved. The maintainer's structure entry of 2026-09-29 15:26:00 BST (`to-lead.md`, local) calls the `CLAUDE.md` §14 review at **this** Work close "plan review 16". Read literally, the event is now due before a review that follows this close directly, and it cannot be met there: the real algorithm is `WF-699` Phases A to C on the approved models, which no WK-672 slice planned. The `decision:` is the lead's; the auditor's proposal is in the WK-672 close record.
+
+## Closed 2026-10-25 — the event is met
+
+*(Dated line, the auditor's register pass on plan review 17's owed item 5; the evidence above is unchanged.)* The event the register row named, "the real freMTPL2 algorithm exists in the seed and `WF-699` runs end to end on it", is met by two closed slices, both ancestors of `origin/main` at `ff976406` (`git merge-base --is-ancestor`, rc 0):
+
+- **SL-1526**, `closed` 2026-10-11, ledger `LG-1641` (`status: closed`), squash `4af5997e`: the seed's Rating Version is priced from the real freMTPL2 GLM, replacing the labelled demo fixture.
+- **SL-1527**, `closed` 2026-10-12, ledger `LG-1647` (`status: closed`), PR #1289, squash `073bf5b4`: the scripted `WF-699` journey over HTTP to a served page; its audit row "PL-1544 5, One command to a served page" reads "MET with two disclosed deviations".
+
+The register row now opens `Resolved 2026-10-25`.
