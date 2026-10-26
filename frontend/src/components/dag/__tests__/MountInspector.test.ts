@@ -85,4 +85,12 @@ describe("the mount inspector", () => {
     expect(mount["inputs"]).toEqual(FEES.inputs);
     expect(mount["outputs"]).toEqual(FEES.outputs);
   });
+
+  it("keeps a cleared input port as \"\", so the validate route can show it on the mount (RL-1876 item 4.1)", async () => {
+    const { emitted } = render(MountInspector, { props: { mount: FEES, subGraphPins: PINS } });
+    await userEvent.clear(await screen.findByLabelText("Input base (money_minor)"));
+    const inputs = last(emitted() as Record<string, unknown[][]>)["inputs"] as Record<string, string>;
+    expect("base" in inputs).toBe(true);
+    expect(inputs["base"]).toBe("");
+  });
 });
