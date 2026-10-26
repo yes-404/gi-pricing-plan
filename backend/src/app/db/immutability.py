@@ -83,7 +83,7 @@ PINNED_GUARD_FUNCTION_MD5: dict[str, str] = {
 _ENABLED_FOR_EVERY_SESSION = frozenset({"O", "A"})
 
 _TRIGGERS = text("""
-    SELECT c.relname AS tbl, t.tgname AS trigger, t.tgenabled AS enabled,
+    SELECT c.relname AS tbl, t.tgname AS trigger, t.tgenabled::text AS enabled,
            p.proname AS function, md5(p.prosrc) AS body_md5
     FROM pg_trigger t
     JOIN pg_class c ON c.oid = t.tgrelid
