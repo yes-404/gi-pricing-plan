@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 import pytest
+from backend.tests.conftest_db import seed_as_owner
 from sqlalchemy import select
 
 from app.db.models import ApprovalDecisionRow, AuditEventRow, RoleAssignmentRow, RoleRow
@@ -34,7 +35,7 @@ def _user(label: str = "u") -> Principal:
 
 
 async def _with_role(database: Database, workspace_id, principal: Principal, role: str):
-    async with database.unit_of_work() as session:
+    async def _seed(session):
         await rbac.seed_builtin_roles(session, workspace_id)
         row = (
             await session.execute(
@@ -52,6 +53,7 @@ async def _with_role(database: Database, workspace_id, principal: Principal, rol
                 scope_type=ScopeType.WORKSPACE.value,
             )
         )
+    await seed_as_owner(_seed)
 
 
 #: Who created the versions these tests submit: nobody who submits or decides here.

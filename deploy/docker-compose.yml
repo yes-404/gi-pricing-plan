@@ -17,7 +17,7 @@ x-gip-env: &gip-env
   GIP_BUILD: ${GIP_BUILD:-unset}
   GIP_TENANT_ID: ${GIP_TENANT_ID:-compose-reference}
   GIP_DEV_AUTH_ENABLED: ${GIP_DEV_AUTH_ENABLED:-true}   # reference path only; FR-437 for production
-  GIP_DATABASE_URL: postgresql+asyncpg://gipricing:gipricing@postgres:5432/gipricing
+  GIP_DATABASE_URL: postgresql+asyncpg://gip_app_login:gip_app_login@postgres:5432/gipricing   # FD-1729: the application's login role (DP-16 (a))
   GIP_REDIS_URL: redis://redis:6379/0
   GIP_BLOB_ENDPOINT_URL: http://minio:9000
   GIP_BLOB_ACCESS_KEY: gipricing
@@ -37,7 +37,11 @@ services:
       POSTGRES_PASSWORD: gipricing            # local only; production uses a secret ref
       POSTGRES_DB: gipricing
     ports: ["127.0.0.1:5432:5432"]
-    volumes: ["pgdata:/var/lib/postgresql/data"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # FD-1729: the application's login role, on fresh volumes (no password: the compose run
+      # calls scripts/provision-app-role.py).
+      - ./postgres/app-login-role.sql:/docker-entrypoint-initdb.d/10-app-login-role.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U gipricing"]
       interval: 5s
@@ -106,7 +110,10 @@ services:
     image: gi-pricing-app:${GIP_BUILD:-unset}
     build: *gip-build
     command: ["alembic", "upgrade", "head"]
-    environment: *gip-env
+    environment:
+      <<: *gip-env
+      # FD-1729: migrations run as the owner and refuse to fall back to GIP_DATABASE_URL.
+      GIP_MIGRATION_DATABASE_URL: postgresql+asyncpg://gipricing:gipricing@postgres:5432/gipricing
     restart: "no"
     depends_on:
       postgres: {condition: service_healthy}

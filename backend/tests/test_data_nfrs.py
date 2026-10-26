@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import polars as pl
 import pytest
+from backend.tests.conftest_db import seed_as_owner
 from sqlalchemy import select
 
 from app.data.ingestion import ingest_upload
@@ -23,7 +24,7 @@ CSV = b"Policy ID,Exposure Years\nP1,1.0\nP2,0.5\n"
 
 async def _analyst(database: Database, workspace_id) -> Principal:
     user = Principal(kind=ActorKind.USER, id=new_uuid7(), display="a@insurer.example")
-    async with database.unit_of_work() as session:
+    async def _seed(session):
         await rbac.seed_builtin_roles(session, workspace_id)
         role = (
             await session.execute(
@@ -38,6 +39,7 @@ async def _analyst(database: Database, workspace_id) -> Principal:
                 role_id=role.id, scope_type=ScopeType.WORKSPACE.value,
             )
         )
+    await seed_as_owner(_seed)
     return user
 
 

@@ -279,6 +279,7 @@ def _full_level_world() -> Iterator[None]:
 def _run_in_process(
     api_client: Any,
     database: Any,
+    owner_database: Any,
     blob_store: Any,
     workspace_id: Any,
     *,
@@ -299,7 +300,7 @@ def _run_in_process(
 
     loop = asyncio.get_event_loop()
     with _full_level_world():
-        record = loop.run_until_complete(_world(database, blob_store, workspace_id))
+        record = loop.run_until_complete(_world(database, owner_database, blob_store, workspace_id))
     register_rating_handlers()
     register_dislocation_handlers()
     register_rate_table_handlers()
@@ -335,14 +336,16 @@ def _run_in_process(
 @pytest.mark.req("FR-429")
 @pytest.mark.req("NFR-494")
 @_needs_fremtpl2_data
-def test_wf701_journey_runs_end_to_end(api_client, database, blob_store, workspace_id) -> None:  # type: ignore[no-untyped-def]
+def test_wf701_journey_runs_end_to_end(  # type: ignore[no-untyped-def]
+    api_client, database, owner_database, blob_store, workspace_id
+) -> None:
     """Every in-scope step of WF-701, in order, each by its status and a read-back effect: the
     refusals by their problem `code` (C2 `EVIDENCE_INCOMPLETE` and `PROMOTION_ORDER_VIOLATION`,
     C3 `DEPLOY_REQUIRES_APPROVAL`, the FR-238 extra `VALIDATION_FAILED`), K1 and K2 through
     two approvers, the stream across each switch, C7's band and its exact declined count.
 
     **One process, no replicas:** the replica limb is the one ruled `COMPOSE-ONLY` line."""
-    result, lines = _run_in_process(api_client, database, blob_store, workspace_id)
+    result, lines = _run_in_process(api_client, database, owner_database, blob_store, workspace_id)
 
     assert list(result.step_status) == list(j.STEP_ORDER)
     assert set(result.step_status.values()) == {"ok"}
@@ -363,7 +366,7 @@ def test_wf701_journey_runs_end_to_end(api_client, database, blob_store, workspa
 @pytest.mark.req("FR-259")
 @_needs_fremtpl2_data
 def test_c7_fails_naming_the_band_when_the_sample_rate_is_zero(  # type: ignore[no-untyped-def]
-    api_client, database, blob_store, workspace_id
+    api_client, database, owner_database, blob_store, workspace_id
 ) -> None:
     """R6: with prod's `rating.trace_sample_rate` set to 0.0 through the settings API, the C7 (i)
     count is 0, outside [3, 45], and the step fails naming the band."""
@@ -382,5 +385,12 @@ def test_c7_fails_naming_the_band_when_the_sample_rate_is_zero(  # type: ignore[
         assert response.status_code == 200, response.text
 
     with pytest.raises(pytest.fail.Exception) as failure:
-        _run_in_process(api_client, database, blob_store, workspace_id, before_step=break_the_rate)
+        _run_in_process(
+            api_client,
+            database,
+            owner_database,
+            blob_store,
+            workspace_id,
+            before_step=break_the_rate,
+        )
     assert "C7: TRACE_COUNT_0_OUTSIDE_BAND_3_45" in str(failure.value)

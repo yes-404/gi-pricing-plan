@@ -36,12 +36,12 @@ from backend.tests.conftest_db import empty_the_database
 from backend.tests.conftest_db import test_database_url as _test_database_url
 from sqlalchemy import func, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-from sqlalchemy.engine import make_url
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession, create_async_engine
 
 from app.db.base import Base
 from app.db.models import RatingVersionRow, approval_guarded_tables
+from app.db.session import Database
 from model_schema import ArtifactRef, new_uuid7
 
 _REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -311,9 +311,10 @@ async def test_every_guarded_table_carries_the_trigger_on_the_test_database() ->
 
 
 @pytest_asyncio.fixture
-async def scratch_database() -> AsyncIterator[str]:
-    """A throwaway database with no migrations applied. Fails, never skips."""
-    admin_url = make_url(_test_database_url())
+async def scratch_database(owner_database: Database) -> AsyncIterator[str]:
+    """A throwaway database with no migrations applied. Fails, never skips. Runs on the
+    owner (`CREATE DATABASE` is DDL; `OWNER_FIXTURE_USERS`, label `migration`)."""
+    admin_url = owner_database.engine.url
     name = f"gip_scratch_{secrets.token_hex(6)}"
     engine = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
     try:
@@ -398,7 +399,7 @@ async def test_the_trigger_test_fails_on_a_database_one_migration_short_of_head(
     """**Red first, T3.** At the revision before the guard's, the presence check fails and
     names every guarded table — a database the suite might run on after a stale template
     (FD-1218) is not silently taken for a guarded one."""
-    monkeypatch.setenv("GIP_DATABASE_URL", scratch_database)
+    monkeypatch.setenv("GIP_MIGRATION_DATABASE_URL", scratch_database)
     await _alembic(command.upgrade, _alembic_config(), _PREVIOUS_REVISION)
     assert await _revision_of(scratch_database) == _PREVIOUS_REVISION
 
@@ -413,7 +414,7 @@ async def test_the_migration_round_trips_and_head_refuses_what_head_minus_one_al
     scratch_database: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """FR-417: upgrade, downgrade -1, upgrade. Each step names the revision it reached."""
-    monkeypatch.setenv("GIP_DATABASE_URL", scratch_database)
+    monkeypatch.setenv("GIP_MIGRATION_DATABASE_URL", scratch_database)
     cfg = _alembic_config()
 
     await _alembic(command.upgrade, cfg, _PREVIOUS_REVISION)
@@ -768,12 +769,12 @@ def separator_planted() -> str:
 @pytest.mark.req("FR-351")
 @pytest.mark.parametrize("table", ALL_GUARDED[:-1])
 async def test_the_ref_the_trigger_composes_is_the_one_artifactref_renders(
-    direct_engine: Any, separator_planted: str, table: str
+    owner_database: Database, separator_planted: str, table: str
 ) -> None:
     """Green: the evidence keyed on `str(ArtifactRef(...))` satisfies the trigger for every
     artifact table. Red on the planted `'/'` separator: the same evidence no longer does."""
     for planted in (False, True):
-        async with direct_engine.connect() as conn:
+        async with owner_database.engine.connect() as conn:
             await conn.begin()
             await _shadow(conn, armed=True, function_sql=separator_planted if planted else None)
             ws = new_uuid7()
@@ -790,7 +791,7 @@ async def test_the_ref_the_trigger_composes_is_the_one_artifactref_renders(
 
 @pytest.mark.req("FR-351")
 async def test_with_the_evidence_condition_replaced_by_the_flag_the_forgery_succeeds(
-    direct_engine: Any,
+    owner_database: Database,
 ) -> None:
     """**Broken input.** Replace the evidence requirement by the flag check on an
     evidence-only table and the forgery goes through, which is what
@@ -801,7 +802,7 @@ async def test_with_the_evidence_condition_replaced_by_the_flag_the_forgery_succ
     assert planted != _GUARD.APPROVAL_GUARD_FUNCTION, (
         "the flag branch moved; this plant no longer mutates it"
     )
-    async with direct_engine.connect() as conn:
+    async with owner_database.engine.connect() as conn:
         await conn.begin()
         await _shadow(conn, armed=True, function_sql=planted)
         await _flag(conn, "on")

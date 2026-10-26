@@ -291,7 +291,9 @@ async def _approved_structure(
     return ArtifactRef(type="peril_structure", slug=demo_model.AD_STRUCTURE_SLUG, version=1)
 
 
-async def _world(database: Any, blob_store: Any, workspace_id: Any) -> dict[str, str]:
+async def _world(
+    database: Any, owner_database: Any, blob_store: Any, workspace_id: Any
+) -> dict[str, str]:
     """The state `scripts/demo.py` finds after the seed: the principals, an approved GLM and a
     fitted-but-unapproved model, the seeded Rating Version `fremtpl2-demo@1` (the dislocation
     baseline) with its algorithm and suite, and a 40-policy portfolio standing in for the
@@ -315,7 +317,9 @@ async def _world(database: Any, blob_store: Any, workspace_id: Any) -> dict[str,
     from model_schema import ModelStatus, new_uuid7
 
     seed = _seed_module()
-    people = await seed.grant_demo_principals(database, workspace_id)
+    # `bootstrap` (OWNER_FIXTURE_USERS): what no public route creates -- workspace, built-in
+    # roles, members -- is the one step on the owner connection.
+    people = await seed.grant_demo_principals(owner_database, workspace_id)
     record = {"workspace_id": str(workspace_id)}
     record |= {f"{name}_id": str(who.id) for name, who in people.items()}
 
@@ -324,7 +328,7 @@ async def _world(database: Any, blob_store: Any, workspace_id: Any) -> dict[str,
     # is built here.
     analyst, actuary = people["analyst"], people["actuary"]
     approver, second = people["approver"], people["second_approver"]
-    model_id = await _approved_model(database, workspace_id)
+    model_id = await _approved_model(database, workspace_id, analyst)
     tables = await demo_model.seed_demo_rate_tables(
         database, Settings(), blob_store, workspace_id, analyst, model_id
     )
@@ -432,7 +436,9 @@ async def _world(database: Any, blob_store: Any, workspace_id: Any) -> dict[str,
 @pytest.mark.req("FR-263")
 @pytest.mark.req("FR-355")
 @pytest.mark.req("FR-429")
-def test_wf699_journey_runs_end_to_end(api_client, database, blob_store, workspace_id) -> None:  # type: ignore[no-untyped-def]
+def test_wf699_journey_runs_end_to_end(  # type: ignore[no-untyped-def]
+    api_client, database, owner_database, blob_store, workspace_id
+) -> None:
     """PL-1544 Acceptance 2, 3 and 4 and the delta's Acceptance 2: every step of `WF-699` A to E
     and the deploy step over HTTP, each deliberate failure asserted by its code, the D4 property
     failing between two adjacent grid values and then passing, and the version deployed
@@ -453,7 +459,9 @@ def test_wf699_journey_runs_end_to_end(api_client, database, blob_store, workspa
     from app.worker.tasks import execute_job
 
     loop = asyncio.get_event_loop()
-    record = loop.run_until_complete(_world(database, blob_store, workspace_id))
+    record = loop.run_until_complete(
+        _world(database, owner_database, blob_store, workspace_id)
+    )
     register_rating_handlers()
     register_dislocation_handlers()
     register_rate_table_handlers()
@@ -809,7 +817,7 @@ def test_the_step_order_names_every_wf699_step_once() -> None:
 
 @pytest.mark.req("FR-211")
 async def test_a_non_glm_stand_in_without_a_transparency_artifact_is_refused(
-    database, workspace_id  # type: ignore[no-untyped-def]
+    database, owner_database, workspace_id  # type: ignore[no-untyped-def]
 ) -> None:
     """A GUARD, not a red-first: it passes on `main` too. It pins the refusal the journey's C5 step
     now satisfies by building the artifact. A non-GLM Model with diagnostics but no transparency
@@ -824,7 +832,7 @@ async def test_a_non_glm_stand_in_without_a_transparency_artifact_is_refused(
     from app.platform import modelling as model_service
     from model_schema import ModelStatus, new_uuid7
 
-    people = await _seed_module().grant_demo_principals(database, workspace_id)
+    people = await _seed_module().grant_demo_principals(owner_database, workspace_id)
     family = f"fremtpl2-gbm-{uuid4().hex[:6]}"
     portfolio_id = new_uuid7()
     async with database.unit_of_work() as session:

@@ -13,6 +13,7 @@ from datetime import date
 
 import pytest
 from backend.tests.approved_rows import add_approved
+from backend.tests.conftest_db import grant_roles_as_owner
 from backend.tests.test_api_datasets import _headers
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -23,40 +24,23 @@ from app.db.models import (
     ModelRow,
     ReferenceRowRow,
     ReferenceTableVersionRow,
-    RoleAssignmentRow,
-    RoleRow,
     SubjectPurgeRow,
 )
 from app.db.session import Database
 from app.errors import PlatformError
-from app.platform import datasets, rbac
+from app.platform import datasets
 from model_schema import (
     ActorKind,
     DatasetKind,
     DatasetStatus,
     Principal,
-    ScopeType,
     new_uuid7,
 )
 
 
 async def _with_role(database: Database, workspace_id, role: str) -> Principal:
     user = Principal(kind=ActorKind.USER, id=new_uuid7(), display="u@insurer.example")
-    async with database.unit_of_work() as session:
-        await rbac.seed_builtin_roles(session, workspace_id)
-        row = (
-            await session.execute(
-                select(RoleRow).where(
-                    RoleRow.workspace_id == workspace_id, RoleRow.slug == role
-                )
-            )
-        ).scalar_one()
-        session.add(
-            RoleAssignmentRow(
-                workspace_id=workspace_id, principal_kind="user", principal_id=user.id,
-                role_id=row.id, scope_type=ScopeType.WORKSPACE.value,
-            )
-        )
+    await grant_roles_as_owner(workspace_id, user.id, role)
     return user
 
 
@@ -513,14 +497,16 @@ async def test_an_archived_version_cannot_be_fitted_on(
 
 @pytest.mark.req("FR-81")
 async def test_a_subject_purge_is_admin_only_and_recorded(
-    database: Database, workspace_id
+    database: Database, owner_database: Database, workspace_id
 ) -> None:
     """FR-81: the purge is recorded even though the data is gone — especially because
     it is. An erasure with no record is indistinguishable from data that was never there."""
     analyst = await _with_role(database, workspace_id, "analyst")
     dataset_id, _ = await _version(database, workspace_id, analyst)
 
-    async with database.unit_of_work() as session:
+    # `purge_subject` has no application caller: both calls (the refusal and the purge) run
+    # as the owner; the setup and the purge/audit reads below stay on the login role.
+    async with owner_database.unit_of_work() as session:
         with pytest.raises(PlatformError) as exc:
             await datasets.purge_subject(
                 session, workspace_id=workspace_id, actor=analyst, dataset_id=dataset_id,
@@ -529,7 +515,7 @@ async def test_a_subject_purge_is_admin_only_and_recorded(
     assert exc.value.code == "PERMISSION_DENIED"
 
     admin = await _with_role(database, workspace_id, "admin")
-    async with database.unit_of_work() as session:
+    async with owner_database.unit_of_work() as session:
         record = await datasets.purge_subject(
             session, workspace_id=workspace_id, actor=admin, dataset_id=dataset_id,
             subject_token="a" * 32, reason="DSAR 2026-114",

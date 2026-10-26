@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import pytest
 import pytest_asyncio
+from backend.tests.conftest_db import seed_as_owner
 from fastapi.testclient import TestClient
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import DEV_PRINCIPAL_HEADER
 from app.config import Environment, Settings
@@ -215,7 +217,7 @@ async def test_another_workspaces_account_is_404_not_403(
     created = _create(client, headers).json()
 
     other_workspace = new_uuid7()
-    async with database.unit_of_work() as session:
+    async def _seed(session):
         # The workspace row must exist for the membership FK (FR-395), and the caller
         # must *be* a member here (W6b-11): the `Workspace-Id` header is checked against
         # the memberships the database holds, so a role without membership would now
@@ -242,6 +244,7 @@ async def test_another_workspaces_account_is_404_not_403(
         session.add(
             WorkspaceMemberRow(user_id=principal.id, workspace_id=other_workspace)
         )
+    await seed_as_owner(_seed)
 
     other_headers = {
         DEV_PRINCIPAL_HEADER: str(principal.id),
@@ -386,9 +389,11 @@ async def test_a_key_issued_for_dev_is_refused_once_dev_leaves_the_grant(
     created = _create(client, headers, environments=["dev", "uat"]).json()
     dev_secret = _secret_for(created, "dev")
 
-    async with database.unit_of_work() as session:
+    async def _narrow(session: AsyncSession) -> None:
         account = await session.get(ServiceAccountRow, created["account"]["id"])
         account.environments = ["uat"]
+
+    await seed_as_owner(_narrow)
 
     async with database.unit_of_work() as session:
         with pytest.raises(PlatformError) as exc:

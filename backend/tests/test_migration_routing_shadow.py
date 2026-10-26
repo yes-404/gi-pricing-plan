@@ -40,7 +40,7 @@ async def _privilege(url: str, table: str, kind: str) -> bool:
 async def test_the_migration_round_trips(
     scratch_database: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("GIP_DATABASE_URL", scratch_database)
+    monkeypatch.setenv("GIP_MIGRATION_DATABASE_URL", scratch_database)
     cfg = _alembic_config()
     await _upgrade(cfg, _PREVIOUS)
     await _upgrade(cfg, _THIS)
@@ -59,7 +59,7 @@ async def test_the_migration_round_trips(
 async def test_the_application_role_may_only_select_and_insert(
     scratch_database: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("GIP_DATABASE_URL", scratch_database)
+    monkeypatch.setenv("GIP_MIGRATION_DATABASE_URL", scratch_database)
     await _upgrade(_alembic_config(), "head")
     for table in _TABLES:
         assert await _privilege(scratch_database, table, "SELECT"), table
@@ -73,7 +73,7 @@ async def test_even_the_owner_cannot_update_or_delete_a_row(
     scratch_database: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The `artifact_append_only()` trigger stops the role the grants cannot."""
-    monkeypatch.setenv("GIP_DATABASE_URL", scratch_database)
+    monkeypatch.setenv("GIP_MIGRATION_DATABASE_URL", scratch_database)
     await _upgrade(_alembic_config(), "head")
     await _run(
         scratch_database,
@@ -94,7 +94,7 @@ async def test_even_the_owner_cannot_update_or_delete_a_row(
 async def test_a_fraction_outside_the_unit_interval_is_refused_by_the_database(
     scratch_database: str, monkeypatch: pytest.MonkeyPatch, fraction: str
 ) -> None:
-    monkeypatch.setenv("GIP_DATABASE_URL", scratch_database)
+    monkeypatch.setenv("GIP_MIGRATION_DATABASE_URL", scratch_database)
     await _upgrade(_alembic_config(), "head")
     with pytest.raises(DBAPIError):
         await _run(
@@ -111,7 +111,7 @@ async def test_a_fraction_outside_the_unit_interval_is_refused_by_the_database(
 async def test_a_malformed_bundle_hash_is_refused_by_the_database(
     scratch_database: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("GIP_DATABASE_URL", scratch_database)
+    monkeypatch.setenv("GIP_MIGRATION_DATABASE_URL", scratch_database)
     await _upgrade(_alembic_config(), "head")
     with pytest.raises(DBAPIError):
         await _run(

@@ -13,7 +13,9 @@ from typing import Any
 from uuid import UUID
 
 import pytest
+from backend.tests.conftest_db import grant_roles_as_owner, seed_as_owner
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import RatingVersionRow, RegressionRunRow
 from app.db.session import Database
@@ -372,8 +374,10 @@ def test_the_case_blob_and_the_run_row_are_refused_without_rating_read_or_across
     from app.db.models import WorkspaceMemberRow
 
     async def enrol() -> None:
-        async with database.unit_of_work() as session:
+        async def seed(session: AsyncSession) -> None:
             session.add(WorkspaceMemberRow(user_id=nobody, workspace_id=workspace_id))
+
+        await seed_as_owner(seed)
 
     asyncio.get_event_loop().run_until_complete(enrol())
     weak = {DEV_PRINCIPAL_HEADER: str(nobody), "Workspace-Id": str(workspace_id)}
@@ -394,23 +398,9 @@ def test_the_case_blob_and_the_run_row_are_refused_without_rating_read_or_across
     second = new_uuid7()
 
     async def seat_in_second_workspace() -> None:
-        from sqlalchemy import select
-
-        from app.db.models import RoleAssignmentRow, RoleRow
-        from app.platform import rbac, workspaces
-        from model_schema import ScopeType
-
-        async with database.unit_of_work() as session:
-            await workspaces.ensure_workspace(session, workspace_id=second)
-            await rbac.seed_builtin_roles(session, second)
-            role = (await session.execute(
-                select(RoleRow).where(RoleRow.workspace_id == second, RoleRow.slug == "approver")
-            )).scalar_one()
-            session.add(RoleAssignmentRow(
-                workspace_id=second, principal_kind="user", principal_id=both,
-                role_id=role.id, scope_type=ScopeType.WORKSPACE.value,
-            ))
-            session.add(WorkspaceMemberRow(user_id=both, workspace_id=second))
+        await grant_roles_as_owner(
+            second, both, "approver", workspace=True, membership=True
+        )
 
     asyncio.get_event_loop().run_until_complete(seat_in_second_workspace())
     home = {DEV_PRINCIPAL_HEADER: str(both), "Workspace-Id": str(workspace_id)}

@@ -10,8 +10,10 @@ from __future__ import annotations
 from typing import Annotated
 
 import pytest
+from backend.tests.conftest_db import seed_as_owner
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import DEV_PRINCIPAL_HEADER, Caller, IdentityDep, require_caller
 from app.auth.oidc import TokenClaims
@@ -85,7 +87,11 @@ async def _membership(database: Database, user_id, workspace_id) -> None:
     """A membership naming a workspace that exists (FR-395's foreign key)."""
     async with database.unit_of_work() as session:
         await workspaces.ensure_workspace(session, workspace_id=workspace_id)
+
+    async def seed(session: AsyncSession) -> None:
         session.add(WorkspaceMemberRow(user_id=user_id, workspace_id=workspace_id))
+
+    await seed_as_owner(seed)
 
 
 async def test_a_multi_membership_principal_without_a_header_is_authenticated(
@@ -105,12 +111,17 @@ async def test_a_multi_membership_principal_without_a_header_is_authenticated(
             workspace_id = new_uuid7()
             # A membership names a workspace that exists (FR-395's foreign key).
             await workspaces.ensure_workspace(session, workspace_id=workspace_id)
+            ids.append(workspace_id)
+
+    async def seed(session: AsyncSession) -> None:
+        for workspace_id in ids:
             session.add(
                 WorkspaceMemberRow(
                     user_id=identity.principal.id, workspace_id=workspace_id
                 )
             )
-            ids.append(workspace_id)
+
+    await seed_as_owner(seed)
 
     client = _with_identity_route(create_app(api_settings))
     client.app.state.oidc_verifier = StubVerifier(claims)

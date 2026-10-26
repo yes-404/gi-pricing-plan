@@ -11,8 +11,10 @@ from typing import Any
 from uuid import UUID
 
 import pytest
+from backend.tests.conftest_db import seed_as_owner
 from fastapi.testclient import TestClient
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import DEV_PRINCIPAL_HEADER
 from app.db.models import RoleAssignmentRow, RoleRow, SubGraphVersionRow
@@ -280,7 +282,8 @@ async def test_a_caller_scoped_to_one_rating_algorithm_is_forbidden(
     await grant("analyst", principal_id=new_uuid7())  # seeds the roles
     caller = new_uuid7()
     await membership(principal_id=caller)
-    async with database.unit_of_work() as session:
+
+    async def seed(session: AsyncSession) -> None:
         role = (await session.execute(
             select(RoleRow).where(RoleRow.workspace_id == workspace_id, RoleRow.slug == "analyst")
         )).scalar_one()
@@ -288,6 +291,8 @@ async def test_a_caller_scoped_to_one_rating_algorithm_is_forbidden(
             workspace_id=workspace_id, principal_kind="user", principal_id=caller,
             role_id=role.id, scope_type=ScopeType.RATING_ALGORITHM.value, scope_id=new_uuid7(),
         ))
+
+    await seed_as_owner(seed)
     response = api_client.request(
         method, path, json=create(),
         headers={DEV_PRINCIPAL_HEADER: str(caller), "Workspace-Id": str(workspace_id)},

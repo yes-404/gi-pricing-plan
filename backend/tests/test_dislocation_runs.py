@@ -18,6 +18,7 @@ import polars as pl
 import pytest
 import pytest_asyncio
 from backend.tests.blob_fixtures import blob_row, digest, job_result_owner
+from backend.tests.conftest_db import seed_as_owner
 from backend.tests.test_rating_version_compile import (
     _empty_pins,
     _headers,
@@ -552,7 +553,7 @@ async def _caller_with(
     """Headers for a member holding exactly `permissions` (a stored custom role: no built-in
     role is narrow enough for the refusals below)."""
     caller = uuid4()
-    async with database.unit_of_work() as session:
+    async def _seed(session):
         role = RoleRow(
             workspace_id=workspace_id, slug=f"narrow-{uuid4().hex[:6]}",
             description=", ".join(permissions), permissions=permissions, builtin=False,
@@ -564,6 +565,7 @@ async def _caller_with(
             role_id=role.id, scope_type=ScopeType.WORKSPACE.value,
         ))
         session.add(WorkspaceMemberRow(user_id=caller, workspace_id=workspace_id))
+    await seed_as_owner(_seed)
     return _headers_of(caller, workspace_id)
 
 

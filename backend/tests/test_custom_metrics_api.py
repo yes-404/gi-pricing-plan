@@ -25,6 +25,7 @@ from uuid import UUID
 import pytest
 import pytest_asyncio
 from backend.tests.approved_rows import mark_approved
+from backend.tests.conftest_db import seed_as_owner
 from backend.tests.test_api_datasets import _headers
 from backend.tests.test_contracts import OPENAPI, _load
 from backend.tests.test_model_jobs_gbm import _gbm_spec
@@ -75,9 +76,10 @@ async def stranger(workspace_id, database) -> dict[str, str]:
     from app.platform import workspaces
 
     stranger_id = new_uuid7()
-    async with database.unit_of_work() as session:
+    async def _seed(session):
         await workspaces.ensure_workspace(session, workspace_id=workspace_id)
         session.add(WorkspaceMemberRow(user_id=stranger_id, workspace_id=workspace_id))
+    await seed_as_owner(_seed)
     return _headers(stranger_id, workspace_id)
 
 

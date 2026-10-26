@@ -29,6 +29,8 @@ def _clean_slate(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     conftest_db._per_worktree_test_database_url.cache_clear()
     monkeypatch.delenv("GIP_TEST_DATABASE_URL", raising=False)
+    monkeypatch.delenv("GIP_TEST_APP_DATABASE_URL", raising=False)
+    monkeypatch.delenv("GIP_APP_DB_PASSWORD", raising=False)
     yield
     conftest_db._per_worktree_test_database_url.cache_clear()
 
@@ -36,13 +38,26 @@ def _clean_slate(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_database_url_returns_an_explicit_override_without_checking_anything(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """FD-1729 (PL-1769 item 13): `test_database_url()` is the application's login-role DSN.
+    `GIP_TEST_DATABASE_URL` overrides the OWNER's DSN only; the application's override is
+    `GIP_TEST_APP_DATABASE_URL`. Neither path may reach the
+    existence check.
+    """
     monkeypatch.setenv("GIP_TEST_DATABASE_URL", "postgresql+asyncpg://x:y@z/explicit")
+    monkeypatch.delenv("GIP_TEST_APP_DATABASE_URL", raising=False)
+    monkeypatch.delenv("GIP_APP_DB_PASSWORD", raising=False)
 
     def _must_not_be_called(name: str) -> bool:
         raise AssertionError("an explicit override must never reach the existence check")
 
     monkeypatch.setattr(conftest_db, "_worktree_database_exists", _must_not_be_called)
-    assert conftest_db.test_database_url() == "postgresql+asyncpg://x:y@z/explicit"
+    # The owner override is not the application's DSN: same database, login-role credentials.
+    assert (
+        conftest_db.test_database_url()
+        == "postgresql+asyncpg://gip_app_login:gip_app_login@z/explicit"
+    )
+    monkeypatch.setenv("GIP_TEST_APP_DATABASE_URL", "postgresql+asyncpg://a:b@c/app")
+    assert conftest_db.test_database_url() == "postgresql+asyncpg://a:b@c/app"
 
 
 def test_worktree_database_name_is_derived_from_this_checkouts_own_directory() -> None:
@@ -97,7 +112,8 @@ def test_database_url_derives_the_per_worktree_url_when_the_database_exists(
     name = conftest_db._worktree_database_name()
     monkeypatch.setattr(conftest_db, "_worktree_database_exists", lambda n: n == name)
     url = conftest_db.test_database_url()
-    assert url == f"postgresql+asyncpg://gipricing:gipricing@localhost:5432/{name}"
+    # FD-1729: the application's DSN is the per-worktree database as the login role.
+    assert url == f"postgresql+asyncpg://gip_app_login:gip_app_login@localhost:5432/{name}"
     assert url != conftest_db.DEFAULT_TEST_DSN
 
 
@@ -151,9 +167,7 @@ def test_worktree_database_exists_reads_a_real_row_when_postgres_answers(
     async def _connect_present(**kwargs: object) -> _FakeConnection:
         return _FakeConnection({"gipricing_real"})
 
-    monkeypatch.setitem(
-        sys.modules, "asyncpg", types.SimpleNamespace(connect=_connect_present)
-    )
+    monkeypatch.setitem(sys.modules, "asyncpg", types.SimpleNamespace(connect=_connect_present))
     assert conftest_db._worktree_database_exists("gipricing_real") is True
     assert conftest_db._worktree_database_exists("gipricing_not-real") is False
 
@@ -175,8 +189,6 @@ def test_worktree_database_exists_against_the_real_postgres_instance() -> None:
         pytest.skip("Postgres is not reachable in this environment")
     assert conftest_db._worktree_database_exists("postgres") is True
     assert (
-        conftest_db._worktree_database_exists(
-            "gipricing_this-database-was-never-created-zzz"
-        )
+        conftest_db._worktree_database_exists("gipricing_this-database-was-never-created-zzz")
         is False
     )

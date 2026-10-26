@@ -154,18 +154,18 @@ async def test_an_event_verifies_against_its_own_content(
 
 @pytest.mark.req("FR-372")
 async def test_tampering_below_the_application_is_detected(
-    database: Database, workspace_id, principal
+    owner_database: Database, workspace_id, principal
 ) -> None:
     """The chain's purpose (FR-372): detect what privileges and triggers cannot prevent.
 
     `session_replication_role = replica` disables triggers, which is exactly how a
     privileged operator would edit the log. The hash chain is the layer that survives it.
     """
-    async with database.unit_of_work() as session:
+    async with owner_database.unit_of_work() as session:
         await _record(session, workspace_id, principal, action="job.submitted")
         await _record(session, workspace_id, principal, action="job.succeeded")
 
-    async with database.unit_of_work() as session:
+    async with owner_database.unit_of_work() as session:
         await session.execute(text("SET LOCAL session_replication_role = replica"))
         await session.execute(
             text(
@@ -174,7 +174,7 @@ async def test_tampering_below_the_application_is_detected(
             ).bindparams(ws=workspace_id)
         )
 
-    async with database.session() as session:
+    async with owner_database.session() as session:
         with pytest.raises(ChainBrokenError) as exc:
             await audit.verify_chain(session, workspace_id)
     assert exc.value.sequence == 2
@@ -183,22 +183,22 @@ async def test_tampering_below_the_application_is_detected(
 
 @pytest.mark.req("FR-372")
 async def test_removing_a_middle_event_is_detected(
-    database: Database, workspace_id, principal
+    owner_database: Database, workspace_id, principal
 ) -> None:
     """A deletion breaks the sequence *and* the prev-hash link. Either alone is enough."""
-    async with database.unit_of_work() as session:
+    async with owner_database.unit_of_work() as session:
         await _record(session, workspace_id, principal, action="job.submitted")
         await _record(session, workspace_id, principal, action="job.running")
         await _record(session, workspace_id, principal, action="job.succeeded")
 
-    async with database.unit_of_work() as session:
+    async with owner_database.unit_of_work() as session:
         await session.execute(text("SET LOCAL session_replication_role = replica"))
         await session.execute(
             text("DELETE FROM audit_events WHERE workspace_id = :ws AND sequence = 2")
             .bindparams(ws=workspace_id)
         )
 
-    async with database.session() as session:
+    async with owner_database.session() as session:
         with pytest.raises(ChainBrokenError) as exc:
             await audit.verify_chain(session, workspace_id)
     assert exc.value.sequence == 3
@@ -209,14 +209,14 @@ async def test_removing_a_middle_event_is_detected(
     "statement", ["UPDATE audit_events SET action = 'x'", "DELETE FROM audit_events"]
 )
 async def test_update_and_delete_are_rejected_by_the_database(
-    database: Database, workspace_id, principal, statement: str
+    owner_database: Database, workspace_id, principal, statement: str
 ) -> None:
     """Negative: the trigger blocks even the table owner, which privileges cannot."""
-    async with database.unit_of_work() as session:
+    async with owner_database.unit_of_work() as session:
         await _record(session, workspace_id, principal)
 
     with pytest.raises((DBAPIError, InternalError, ProgrammingError)) as exc:
-        async with database.unit_of_work() as session:
+        async with owner_database.unit_of_work() as session:
             await session.execute(
                 text(f"{statement} WHERE workspace_id = :ws").bindparams(ws=workspace_id)
             )
@@ -225,7 +225,7 @@ async def test_update_and_delete_are_rejected_by_the_database(
 
 @pytest.mark.req("FR-370")
 async def test_the_session_teardown_leaves_the_append_only_guard_in_force(
-    database: Database,
+    owner_database: Database,
 ) -> None:
     """The suite's own teardown suspends every trigger; this proves it cannot leave one off.
 
@@ -241,7 +241,7 @@ async def test_the_session_teardown_leaves_the_append_only_guard_in_force(
     connection and then asks that connection whether the guard came back — the first version
     of this test did it the other way and passed with the boolean deliberately inverted.
     """
-    async with database.engine.connect() as conn:
+    async with owner_database.engine.connect() as conn:
         async with conn.begin():
             await conn.execute(text(_EMPTY_THE_DATABASE))
 
@@ -261,17 +261,17 @@ async def test_the_session_teardown_leaves_the_append_only_guard_in_force(
 
 
 @pytest.mark.req("FR-370")
-async def test_truncate_is_rejected(database: Database, workspace_id, principal) -> None:
+async def test_truncate_is_rejected(owner_database: Database, workspace_id, principal) -> None:
     """Row triggers do not fire on TRUNCATE — without a statement trigger this wipes the log."""
-    async with database.unit_of_work() as session:
+    async with owner_database.unit_of_work() as session:
         await _record(session, workspace_id, principal)
 
     with pytest.raises((DBAPIError, InternalError, ProgrammingError)) as exc:
-        async with database.unit_of_work() as session:
+        async with owner_database.unit_of_work() as session:
             await session.execute(text("TRUNCATE audit_events"))
     assert "append-only" in str(exc.value)
 
-    async with database.session() as session:
+    async with owner_database.session() as session:
         surviving = (
             await session.execute(
                 select(AuditEventRow).where(AuditEventRow.workspace_id == workspace_id)
